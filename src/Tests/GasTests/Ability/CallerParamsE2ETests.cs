@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using Arch.Core;
 using Ludots.Core.Config;
@@ -65,7 +65,7 @@ namespace Ludots.Tests.GAS
                 That(fxAttrId, Is.GreaterThanOrEqualTo(0));
                 That(fyAttrId, Is.GreaterThanOrEqualTo(0));
 
-                var target = world.Create(new AttributeBuffer());
+                var target = world.Create(new AttributeBuffer(), new DirtyFlags());
                 var requests = new EffectRequestQueue();
 
                 // Publish request with CallerParams overriding default force
@@ -83,14 +83,15 @@ namespace Ludots.Tests.GAS
                 req.CallerParams.TryAddFloat(EffectParamKeys.ForceYAttribute, -50.0f);
                 requests.Publish(req);
 
-                var chainOrders = new OrderQueue();
+                var chainOrders = new OrderQueue(64, new OrderAdmissionResultBuffer(64, 64));
                 chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
                 chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
 
                 var proposalSys = new Ludots.Core.Gameplay.GAS.Systems.EffectProposalProcessingSystem(
-                    world, requests, budget: null, templates: templates,
+                    world, requests, GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME, new Ludots.Core.Engine.DiscreteClock(), budget: null, templates: templates,
                     inputRequests: null, chainOrders: chainOrders,
-                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types);
+                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                    tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
                 proposalSys.Update(0.016f);
 
                 ref var attr = ref world.Get<AttributeBuffer>(target);
@@ -129,7 +130,7 @@ namespace Ludots.Tests.GAS
                 int fxAttrId = AttributeRegistry.GetId("Physics.ForceRequestX");
                 int fyAttrId = AttributeRegistry.GetId("Physics.ForceRequestY");
 
-                var target = world.Create(new AttributeBuffer());
+                var target = world.Create(new AttributeBuffer(), new DirtyFlags());
                 var requests = new EffectRequestQueue();
 
                 int tplId = EffectTemplateIdRegistry.GetId("Effect.Preset.ApplyForce2D");
@@ -142,14 +143,15 @@ namespace Ludots.Tests.GAS
                 };
                 requests.Publish(req);
 
-                var chainOrders = new OrderQueue();
+                var chainOrders = new OrderQueue(64, new OrderAdmissionResultBuffer(64, 64));
                 chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
                 chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
 
                 var proposalSys = new Ludots.Core.Gameplay.GAS.Systems.EffectProposalProcessingSystem(
-                    world, requests, budget: null, templates: templates,
+                    world, requests, GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME, new Ludots.Core.Engine.DiscreteClock(), budget: null, templates: templates,
                     inputRequests: null, chainOrders: chainOrders,
-                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types);
+                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                    tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
                 proposalSys.Update(0.016f);
 
                 // Without CallerParams, force values should be 0 (template doesn't define them in configParams)
@@ -184,7 +186,7 @@ namespace Ludots.Tests.GAS
                 new() { Op = (ushort)GraphNodeOp.ApplyEffectTemplate, A = 1, B = 0, C = 1, Flags = 2, Imm = 777 },
             };
 
-            GraphExecutor.Execute(world, caster: default, explicitTarget: target, targetPos: new IntVector2(0, 0), program, api);
+            GraphExecutor.Execute(world, caster: default, explicitTarget: target, targetPosCm: new IntVector2(0, 0), program, api);
 
             That(requests.Count, Is.EqualTo(1));
             var req = requests[0];
@@ -264,4 +266,3 @@ namespace Ludots.Tests.GAS
         }
     }
 }
-

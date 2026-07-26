@@ -1,5 +1,9 @@
 {
   "startupMapId": "interaction_showcase_hub",
+  "gasRuntimeCapacity": {
+    "orderAdmissionResultCapacity": 8192,
+    "orderAdmissionRejectionCapacity": 4096
+  },
   "commandSource": {
     "targetFilter": { "relationFilter": "Friendly" }
   }

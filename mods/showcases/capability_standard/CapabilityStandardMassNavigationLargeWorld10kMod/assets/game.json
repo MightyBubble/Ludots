@@ -5,6 +5,12 @@
   "targetFps": 0,
   "worldWidthInMacroTiles": 250,
   "worldHeightInMacroTiles": 250,
+  "gasRuntimeCapacity": {
+    "orderQueueCapacity": 16384,
+    "orderAdmissionResultCapacity": 32768,
+    "orderAdmissionRejectionCapacity": 16384,
+    "orderTerminalResultCapacity": 16384
+  },
   "commandSource": {
     "targetFilter": { "relationFilter": "Friendly" },
     "movePathPreviewOrderTypeKeys": [ "massNavigationMove" ]

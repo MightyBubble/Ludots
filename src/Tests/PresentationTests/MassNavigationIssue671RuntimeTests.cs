@@ -237,7 +237,7 @@ public sealed class MassNavigationIssue671RuntimeTests
         var simulation = new MassNavigationSimulationRuntime(config);
         simulation.BindBoardWorld(
             new WorldSizeSpec(new WorldAabbCm(0, 0, 25_000, 25_000), 100),
-            new Ludots.Core.Navigation.GraphWorld.WorldGridLoadedChunks(simulation.WorldConfig.StreamingChunkSizeCm));
+            MassNavigationOrderChainTests.CreateLoadedChunksForTests(simulation));
         var session = new MapSession(new MapId(config.MapId), new MapConfig { Id = config.MapId });
         engine.SetCurrentMapSessionForTests(session);
         var binding = new MassNavigationRuntimeBinding();

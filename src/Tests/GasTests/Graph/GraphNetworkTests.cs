@@ -168,6 +168,72 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void ChunkedStore_BuildLoadedView_IsIndependentOfInsertionAndInputOrder()
+        {
+            long aKey = GraphChunkKey.Pack(-2, 3);
+            long bKey = GraphChunkKey.Pack(5, -1);
+            GraphChunkData chunkA = BuildDeterministicChunk(
+                xOffsetCm: 0,
+                crossEdges: new[]
+                {
+                    new GraphCrossEdge(1, bKey, 0, 2f, tagSetId: 0, depthCm: 3, widthCm: 4)
+                });
+            GraphChunkData chunkB = BuildDeterministicChunk(
+                xOffsetCm: 1000,
+                crossEdges: new[]
+                {
+                    new GraphCrossEdge(0, aKey, 0, 5f, tagSetId: 0, depthCm: 6, widthCm: 7)
+                });
+
+            var first = new ChunkedNodeGraphStore();
+            first.AddOrReplace(aKey, chunkA);
+            first.AddOrReplace(bKey, chunkB);
+            var second = new ChunkedNodeGraphStore();
+            second.AddOrReplace(bKey, chunkB);
+            second.AddOrReplace(aKey, chunkA);
+
+            LoadedGraphView expected = first.BuildLoadedView();
+            LoadedGraphView reversedInsertion = second.BuildLoadedView();
+            LoadedGraphView reversedInput = first.BuildLoadedView(new[] { bKey, aKey, bKey });
+
+            AssertLoadedViewsEqual(expected, reversedInsertion);
+            AssertLoadedViewsEqual(expected, reversedInput);
+        }
+
+        [Test]
+        public void GraphCorridorChunkSelector_OutputIsSortedAndPathOrderIndependent()
+        {
+            long aKey = GraphChunkKey.Pack(4, -2);
+            long bKey = GraphChunkKey.Pack(-3, 5);
+
+            long[] forward = GraphCorridorChunkSelector.Expand(new[] { aKey, bKey }, radius: 1);
+            long[] reverse = GraphCorridorChunkSelector.Expand(new[] { bKey, aKey }, radius: 1);
+
+            That(reverse, Is.EqualTo(forward));
+            for (int i = 1; i < forward.Length; i++)
+            {
+                That(forward[i], Is.GreaterThan(forward[i - 1]));
+            }
+        }
+
+        [Test]
+        public void ChunkedStore_InvalidCrossEdgeTagSet_FailsExplicitly()
+        {
+            long aKey = GraphChunkKey.Pack(0, 0);
+            long bKey = GraphChunkKey.Pack(1, 0);
+            var store = new ChunkedNodeGraphStore();
+            store.AddOrReplace(aKey, BuildDeterministicChunk(
+                xOffsetCm: 0,
+                crossEdges: new[] { new GraphCrossEdge(0, bKey, 0, 1f, tagSetId: 7) }));
+            store.AddOrReplace(bKey, BuildDeterministicChunk(1000, Array.Empty<GraphCrossEdge>()));
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => store.BuildLoadedView())!;
+
+            That(ex.Message, Does.Contain("NAV.GRAPH.ERR.CrossEdgeTagSetOutOfRange"));
+            That(ex.Message, Does.Contain("tagSetId=7"));
+        }
+
+        [Test]
         public void RouteTable_CostMatches_AStarPathCost()
         {
             var rnd = new Random(123);
@@ -290,6 +356,31 @@ namespace Ludots.Tests.GAS
                 sum += best;
             }
             return sum;
+        }
+
+        private static GraphChunkData BuildDeterministicChunk(int xOffsetCm, GraphCrossEdge[] crossEdges)
+        {
+            var builder = new NodeGraphBuilder(2, 2);
+            builder.AddNode(xOffsetCm, 0);
+            builder.AddNode(xOffsetCm + 100, 0);
+            builder.AddEdge(0, 1, 1f, depthCm: 10, widthCm: 20);
+            builder.AddEdge(1, 0, 1.5f, depthCm: 30, widthCm: 40);
+            return new GraphChunkData(builder.Build(), crossEdges);
+        }
+
+        private static void AssertLoadedViewsEqual(LoadedGraphView expected, LoadedGraphView actual)
+        {
+            That(actual.NodeKeys, Is.EqualTo(expected.NodeKeys));
+            That(actual.Graph.PosXcm.ToArray(), Is.EqualTo(expected.Graph.PosXcm.ToArray()));
+            That(actual.Graph.PosYcm.ToArray(), Is.EqualTo(expected.Graph.PosYcm.ToArray()));
+            That(actual.Graph.NodeTagSetId.ToArray(), Is.EqualTo(expected.Graph.NodeTagSetId.ToArray()));
+            That(actual.Graph.TagSets.ToArray(), Is.EqualTo(expected.Graph.TagSets.ToArray()));
+            That(actual.Graph.EdgeStart.ToArray(), Is.EqualTo(expected.Graph.EdgeStart.ToArray()));
+            That(actual.Graph.EdgeTo.ToArray(), Is.EqualTo(expected.Graph.EdgeTo.ToArray()));
+            That(actual.Graph.EdgeBaseCost.ToArray(), Is.EqualTo(expected.Graph.EdgeBaseCost.ToArray()));
+            That(actual.Graph.EdgeTagSetId.ToArray(), Is.EqualTo(expected.Graph.EdgeTagSetId.ToArray()));
+            That(actual.Graph.EdgeDepthCm.ToArray(), Is.EqualTo(expected.Graph.EdgeDepthCm.ToArray()));
+            That(actual.Graph.EdgeWidthCm.ToArray(), Is.EqualTo(expected.Graph.EdgeWidthCm.ToArray()));
         }
     }
 }

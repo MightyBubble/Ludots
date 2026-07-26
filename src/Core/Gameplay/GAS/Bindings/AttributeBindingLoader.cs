@@ -68,6 +68,8 @@ namespace Ludots.Core.Gameplay.GAS.Bindings
                     throw new InvalidOperationException($"Attribute binding '{id}' in {relativePath}: unknown sink '{sink}'.");
                 }
 
+                _sinks.GetSink(sinkId).ValidateBinding((byte)channel, id, relativePath);
+
                 var mode = ParseMode(modeText, id, relativePath);
                 var reset = ParseResetPolicy(resetPolicyText, id, relativePath);
 

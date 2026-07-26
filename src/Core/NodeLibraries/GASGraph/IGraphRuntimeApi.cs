@@ -1,9 +1,11 @@
 using System;
 using Arch.Core;
+using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Navigation.GraphQuery;
+using Ludots.Core.Spatial;
 
 namespace Ludots.Core.NodeLibraries.GASGraph
 {
@@ -23,6 +25,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public static EffectArgs None => default;
     }
 
+    public interface IDerivedAttributeGraphRuntimeApi : IGraphRuntimeApi
+    {
+        const string MissingContractError = "GAS.GRAPH.ERR.MissingDerivedAttributeWriteContract";
+        const string SideEffectForbiddenError = "GAS.GRAPH.ERR.DerivedAttributeSideEffectForbidden";
+
+        void BeginDerivedAttributeWrites(Entity entity, in AttributeBuffer attributes);
+        void EndDerivedAttributeWrites(Entity entity, ref AttributeBuffer attributes, bool commit);
+    }
+
     /// <summary>
     /// Protocol constants for <see cref="IGraphRuntimeApi.GetRelationship"/>.
     /// Decouples Graph VM from concrete TeamRelationship enum.
@@ -39,10 +50,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         bool TryGetGridPos(Entity entity, out IntVector2 gridPos);
         bool HasTag(Entity entity, int tagId);
         bool TryGetAttributeCurrent(Entity entity, int attributeId, out float value);
-        int QueryRadius(IntVector2 center, float radius, Span<Entity> buffer);
-        int QueryCone(IntVector2 origin, int directionDeg, int halfAngleDeg, float rangeCm, Span<Entity> buffer);
-        int QueryRectangle(IntVector2 center, int halfWidthCm, int halfHeightCm, int rotationDeg, Span<Entity> buffer);
-        int QueryLine(IntVector2 origin, int directionDeg, int lengthCm, int halfWidthCm, Span<Entity> buffer);
+        SpatialQueryResult QueryRadius(IntVector2 centerCm, float radiusCm, Span<Entity> buffer);
+        SpatialQueryResult QueryCone(IntVector2 originCm, int directionDeg, int halfAngleDeg, float rangeCm, Span<Entity> buffer);
+        SpatialQueryResult QueryRectangle(IntVector2 centerCm, int halfWidthCm, int halfHeightCm, int rotationDeg, Span<Entity> buffer);
+        SpatialQueryResult QueryLine(IntVector2 originCm, int directionDeg, int lengthCm, int halfWidthCm, Span<Entity> buffer);
         int CollectMapEntities(Span<Entity> buffer)
         {
             throw new InvalidOperationException("Graph entity query runtime is not available.");
@@ -138,15 +149,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             throw new InvalidOperationException("Graph entity query runtime is not available.");
         }
 
-        bool TryMinEntityByDistance(ReadOnlySpan<Entity> entities, IntVector2 center, out Entity entity, out long distanceSquared)
+        bool TryMinEntityByWorldDistanceCm(ReadOnlySpan<Entity> entities, WorldCmInt2 centerCm, out Entity entity, out long distanceSquaredCm)
         {
             throw new InvalidOperationException("Graph entity query runtime is not available.");
         }
 
         // ── Hex spatial queries ──
-        int QueryHexRange(IntVector2 center, int hexRadius, Span<Entity> buffer);
-        int QueryHexRing(IntVector2 center, int hexRadius, Span<Entity> buffer);
-        int QueryHexNeighbors(IntVector2 center, Span<Entity> buffer);
+        SpatialQueryResult QueryHexRange(IntVector2 centerCm, int hexRadius, Span<Entity> buffer);
+        SpatialQueryResult QueryHexRing(IntVector2 centerCm, int hexRadius, Span<Entity> buffer);
+        SpatialQueryResult QueryHexNeighbors(IntVector2 centerCm, Span<Entity> buffer);
 
         int GetTeamId(Entity entity);
         /// <summary>Get the EntityLayer.Category bits for an entity. Returns 0 if no EntityLayer.</summary>
@@ -288,6 +299,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
         void RemoveEffectTemplate(Entity target, int templateId);
         void ModifyAttributeAdd(Entity caster, Entity target, int attributeId, float delta);
+        void ModifyAttributeSet(Entity caster, Entity target, int attributeId, float value);
         void SendEvent(Entity caster, Entity target, int eventTagId, float magnitude);
 
         // ── Entity lifecycle graph composition ──

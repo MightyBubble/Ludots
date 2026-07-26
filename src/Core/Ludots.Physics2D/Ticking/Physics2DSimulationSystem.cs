@@ -118,41 +118,15 @@ namespace Ludots.Core.Physics2D.Ticking
             }
             _stopwatch.Stop();
 
-            int potentialPairs = 0;
-            int contactPairs = 0;
-            var chunks = _world.Query(in _activePairsQuery);
-            foreach (var chunk in chunks)
-            {
-                var pairs = chunk.GetArray<CollisionPair>();
-                potentialPairs += chunk.Count;
-                for (int i = 0; i < chunk.Count; i++)
-                {
-                    if (pairs[i].ContactCount > 0) contactPairs++;
-                }
-            }
+            var pairStatsJob = new CollisionPairStatsJob();
+            _world.InlineQuery<CollisionPairStatsJob, CollisionPair>(in _activePairsQuery, ref pairStatsJob);
 
-            bool anyAwakeDynamicBodies = false;
-            var awakeChunks = _world.Query(in _awakeDynamicBodiesQuery);
-            foreach (var chunk in awakeChunks)
-            {
-                var masses = chunk.GetArray<Mass2D>();
-                for (int i = 0; i < chunk.Count; i++)
-                {
-                    if (masses[i].IsDynamic)
-                    {
-                        anyAwakeDynamicBodies = true;
-                        break;
-                    }
-                }
+            var awakeDynamicBodiesJob = new AwakeDynamicBodiesJob();
+            _world.InlineQuery<AwakeDynamicBodiesJob, Mass2D>(in _awakeDynamicBodiesQuery, ref awakeDynamicBodiesJob);
 
-                if (anyAwakeDynamicBodies)
-                {
-                    break;
-                }
-            }
             _world.Set(_runtimeStateEntity, new Physics2DRuntimeState 
             { 
-                AnyAwakeDynamicBodies = anyAwakeDynamicBodies,
+                AnyAwakeDynamicBodies = awakeDynamicBodiesJob.AnyAwakeDynamicBodies,
                 LastPhysicsStepTime = stepsToRun > 0 ? Time.FixedTotalTime : _world.Get<Physics2DRuntimeState>(_runtimeStateEntity).LastPhysicsStepTime,
                 PhysicsStepDuration = physicsDt,
                 InterpolationAlpha = InterpolationAlpha  // 从 DiscreteRateTickDistributor 获取的物理帧 alpha
@@ -165,8 +139,8 @@ namespace Ludots.Core.Physics2D.Ticking
                 PhysicsHz = _tickPolicy.TargetHz,
                 PhysicsStepsLastFixedTick = stepsToRun,
                 PhysicsUpdateMs = _stopwatch.Elapsed.TotalMilliseconds,
-                PotentialPairs = potentialPairs,
-                ContactPairs = contactPairs,
+                PotentialPairs = pairStatsJob.PotentialPairs,
+                ContactPairs = pairStatsJob.ContactPairs,
                 DynamicBodies = Build.DynamicRigidBodyDescriptors.Count,
                 StaticBodies = Build.StaticRigidBodyDescriptors.Count,
                 DirtyStaticBodies = Build.DirtyStaticBodyCountLastUpdate,
@@ -183,6 +157,34 @@ namespace Ludots.Core.Physics2D.Ticking
 
         public void Dispose()
         {
+        }
+
+        private struct CollisionPairStatsJob : IForEach<CollisionPair>
+        {
+            public int PotentialPairs;
+            public int ContactPairs;
+
+            public void Update(ref CollisionPair pair)
+            {
+                PotentialPairs++;
+                if (pair.ContactCount > 0)
+                {
+                    ContactPairs++;
+                }
+            }
+        }
+
+        private struct AwakeDynamicBodiesJob : IForEach<Mass2D>
+        {
+            public bool AnyAwakeDynamicBodies;
+
+            public void Update(ref Mass2D mass)
+            {
+                if (!AnyAwakeDynamicBodies && mass.IsDynamic)
+                {
+                    AnyAwakeDynamicBodies = true;
+                }
+            }
         }
 
         private void StepOnce(float dt)

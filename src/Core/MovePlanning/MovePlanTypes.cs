@@ -132,7 +132,7 @@ public interface IMovePlanStore
 
 public interface IMovePlanFinalTargetResolver
 {
-    bool TryResolveFinalTarget(in Order order, out Vector2 finalGoalWorldCm);
+    bool TryResolveFinalTarget(World world, in Order order, out Vector2 finalGoalWorldCm);
 }
 
 public interface IMovePlanExecutionSink

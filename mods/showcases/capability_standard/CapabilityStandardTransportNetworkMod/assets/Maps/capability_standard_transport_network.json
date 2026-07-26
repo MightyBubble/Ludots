@@ -8,7 +8,8 @@
       "WidthInMacroTiles": 2,
       "HeightInMacroTiles": 2,
       "GridCellSizeCm": 100,
-      "ChunkSizeCells": 64
+      "ChunkSizeCells": 64,
+      "LoadedChunkCapacity": 64
     }
   ],
   "Entities": []

@@ -257,7 +257,7 @@ namespace Ludots.Tests.GAS
                     "view.test.default",
                     filterProfileId: DefaultProfileId));
 
-                var filters = new FilterProfileRegistry(stack.FilterProfileIdRegistry, world, new TagOps(new TagRuleRegistry(), new GasBudget()));
+                var filters = new FilterProfileRegistry(stack.FilterProfileIdRegistry, world, new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), new GasBudget()));
                 filters.RegisterExpander(
                     FilterAssociationExpandKinds.Controls,
                     domains.CollectControlled,

@@ -6,6 +6,7 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Arch.Core;
 using Ludots.Core.Gameplay.GAS.Config;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Orders;
@@ -87,7 +88,7 @@ namespace Ludots.Tests.GAS
             mapping.SetHoveredEntityProvider((out Entity e) => { e = target; return true; });
 
             var orders = new List<Ludots.Core.Gameplay.GAS.Orders.Order>();
-            mapping.SetOrderSubmitHandler((in Ludots.Core.Gameplay.GAS.Orders.Order order) => orders.Add(order));
+            mapping.SetOrderSubmitHandler((in Ludots.Core.Gameplay.GAS.Orders.Order order) => { orders.Add(order); return OrderSubmitResult.Queued; });
 
             // WoW / TargetFirst: press skill -> immediate order
             input.InjectButtonPress("SkillQ");
@@ -198,7 +199,7 @@ namespace Ludots.Tests.GAS
             });
 
             var orders = new List<Ludots.Core.Gameplay.GAS.Orders.Order>();
-            mapping.SetOrderSubmitHandler((in Ludots.Core.Gameplay.GAS.Orders.Order order) => orders.Add(order));
+            mapping.SetOrderSubmitHandler((in Ludots.Core.Gameplay.GAS.Orders.Order order) => { orders.Add(order); return OrderSubmitResult.Queued; });
 
             input.InjectButtonPress("SkillQ");
             input.Update();

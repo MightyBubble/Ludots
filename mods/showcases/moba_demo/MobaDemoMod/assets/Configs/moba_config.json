@@ -11,10 +11,6 @@
       "rangeCircleColor": [0.3, 0.7, 1.0, 0.2]
     }
   },
-  "movement": {
-    "speedCmPerSec": 600,
-    "stopRadiusCm": 20
-  },
   "commands": {
     "maxPerFrame": 128
   },

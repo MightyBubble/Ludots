@@ -68,6 +68,12 @@ namespace Ludots.Core.Gameplay.GAS
         Ring = 4,   // donut / nova wave
     }
 
+    public enum SpatialQueryOrigin : byte
+    {
+        Default = 0,
+        Source = 1,
+    }
+
     /// <summary>
     /// Identifies which entity from the original EffectContext fills a role
     /// in the payload EffectRequest.
@@ -118,6 +124,7 @@ namespace Ludots.Core.Gameplay.GAS
         public int HalfHeightCm;       // Rectangle half-height
         public int RotationDeg;        // Rectangle rotation
         public int LengthCm;           // Line length
+        public SpatialQueryOrigin Origin;
         public RelationshipFilter RelationFilter;
         public bool ExcludeSource;
         public int MaxTargets;         // 0 = unlimited (budget-limited only)
@@ -185,20 +192,18 @@ namespace Ludots.Core.Gameplay.GAS
         public RelationshipFilter CollisionRelationFilter;
         /// <summary>Whether to ignore the source entity in collision hits.</summary>
         public bool CollisionExcludeSource;
-        /// <summary>Maximum number of distinct collision hits before despawn. 0 = unlimited.</summary>
+        /// <summary>Maximum number of distinct collision hits before despawn. Must fit ProjectileState.HitHistoryCapacity.</summary>
         public int MaxHitCount;
     }
 
     public enum ProjectileTravelMode : byte
     {
-        Legacy = 0,
         Direction = 1,
         TrackTarget = 2,
     }
 
     public enum ProjectileImpactPolicy : byte
     {
-        Legacy = 0,
         DestroyOnFirstHit = 1,
         ContinueOnHit = 2,
     }
@@ -311,8 +316,8 @@ namespace Ludots.Core.Gameplay.GAS
         public RelationEntitySlot SourceSlot;
         public RelationEntitySlot TargetSlot;
         public BlackboardStoredTargetKeys StoredTargetKeys;
-        public string PointMoveOrderTypeKey;
-        public string EntityOrderTypeKey;
+        public int PointMoveOrderTypeId;
+        public int EntityOrderTypeId;
         public int EntityOrderIntArg0;
         public OrderSubmitMode SubmitMode;
     }

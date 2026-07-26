@@ -159,7 +159,8 @@ namespace ChampionSkillSandboxMod.Systems
                     }
                 };
 
-                if (_planner.TrySubmit(in order))
+                OrderSubmitResult submitResult = _planner.Submit(in order);
+                if (OrderSubmitResultSemantics.IsAccepted(submitResult))
                 {
                     issued++;
                 }

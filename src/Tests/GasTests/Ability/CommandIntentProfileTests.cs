@@ -454,7 +454,7 @@ namespace Ludots.Tests.GAS
                 RegisterAbility(abilities, GarrisonAbilityId, GarrisonAbilityTag);
                 RegisterAbility(abilities, WeaponAbilityId, WeaponAbilityTag);
 
-                var orderTypes = new OrderTypeRegistry();
+                var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
                 orderTypes.Register(new OrderTypeConfig { Key = "castAbility", OrderTypeId = 1 });
                 orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 2 });
 
@@ -465,7 +465,7 @@ namespace Ludots.Tests.GAS
                 var intents = new CommandIntentProfileRegistry(
                     profileIds,
                     world,
-                    new TagOps(new TagRuleRegistry(), new GasBudget()),
+                    new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), new GasBudget()),
                     abilities,
                     controlDomains,
                     stances,

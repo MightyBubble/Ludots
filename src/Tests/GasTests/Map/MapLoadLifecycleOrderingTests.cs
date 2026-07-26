@@ -192,10 +192,6 @@ public sealed class MapLoadLifecycleOrderingTests
                     "attributes": {
                       "health": "Health"
                     }
-                  },
-                  "selection": {
-                    "targetFilter": { "relationFilter": "All" },
-                    "movePathPreviewOrderTypeKeys": [ "moveTo" ]
                   }
                 }
                 """);

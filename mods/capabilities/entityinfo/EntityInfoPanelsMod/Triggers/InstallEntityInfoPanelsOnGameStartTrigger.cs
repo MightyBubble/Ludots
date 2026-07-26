@@ -47,12 +47,11 @@ internal sealed class InstallEntityInfoPanelsOnGameStartTrigger : Trigger
         var templateCatalog = new EntityInfoPanelTemplateCatalog();
 
         var service = new EntityInfoPanelService(
-            insightCatalog,
-            presentationTextCatalog,
-            presentationLocaleSelection,
-            engine.GetService(CoreServiceKeys.AbilityDefinitionRegistry),
-            engine.GetService(CoreServiceKeys.TagOps),
-            templateCatalog);
+            insightCatalog: insightCatalog,
+            presentationTextCatalog: presentationTextCatalog,
+            localeSelection: presentationLocaleSelection,
+            abilityDefinitions: engine.GetService(CoreServiceKeys.AbilityDefinitionRegistry),
+            templates: templateCatalog);
         var handles = new EntityInfoPanelHandleStore();
         engine.SetService(EntityInfoPanelServiceKeys.Service, service);
         engine.SetService(EntityInfoPanelServiceKeys.HandleStore, handles);

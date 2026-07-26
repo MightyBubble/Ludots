@@ -711,12 +711,13 @@ internal sealed class ItemSystemShowcasePanelController
 
     private void LoadMap(string mapId)
     {
-        if (_engine == null)
+        GameEngine? engine = _engine;
+        if (engine == null)
         {
             return;
         }
 
-        string? currentMapId = _engine.CurrentMapSession?.MapId.Value;
+        string? currentMapId = engine.CurrentMapSession?.MapId.Value;
         if (string.Equals(currentMapId, mapId, StringComparison.OrdinalIgnoreCase))
         {
             return;
@@ -724,10 +725,10 @@ internal sealed class ItemSystemShowcasePanelController
 
         if (!string.IsNullOrWhiteSpace(currentMapId))
         {
-            _engine.UnloadMap(currentMapId);
+            engine.UnloadMap(currentMapId);
         }
 
-        _engine.LoadMap(mapId);
+        engine.LoadMap(mapId);
     }
 
     private void Run(Action<GameEngine> action)

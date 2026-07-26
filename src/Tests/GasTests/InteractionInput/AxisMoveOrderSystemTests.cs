@@ -242,25 +242,51 @@ namespace Ludots.Tests.GAS
 
             for (int i = 0; i < 64; i++)
             {
-                system.Update(0f);
-                harness.Orders.TryDequeue(out _);
+                RunLogicStep(system, harness.AdmissionResults, harness.Orders);
             }
 
-            long allocated = MeasureUpdateAllocations(system, harness.Orders);
-            allocated = Math.Min(allocated, MeasureUpdateAllocations(system, harness.Orders));
+            long allocated = MeasureUpdateAllocations(system, harness.Orders, harness.AdmissionResults);
+            allocated = Math.Min(allocated, MeasureUpdateAllocations(system, harness.Orders, harness.AdmissionResults));
             Assert.That(allocated, Is.EqualTo(0), "Steady-state axis move ticks must be allocation free.");
         }
 
-        private static long MeasureUpdateAllocations(AxisMoveOrderSystem system, OrderQueue orders)
+        private static long MeasureUpdateAllocations(
+            AxisMoveOrderSystem system,
+            OrderQueue orders,
+            OrderAdmissionResultBuffer admissionResults)
         {
             long before = GC.GetAllocatedBytesForCurrentThread();
             for (int i = 0; i < 10_000; i++)
             {
-                system.Update(0f);
-                orders.TryDequeue(out _);
+                RunLogicStep(system, admissionResults, orders);
             }
 
             return GC.GetAllocatedBytesForCurrentThread() - before;
+        }
+
+        private static void RunLogicStep(
+            AxisMoveOrderSystem system,
+            OrderAdmissionResultBuffer admissionResults,
+            OrderQueue? orders = null)
+        {
+            admissionResults.BeginLogicStep();
+            system.Update(0f);
+            if (orders != null && orders.TryDequeue(out Order order))
+            {
+                var outcome = new OrderAdmissionOutcome(
+                    order.OrderId,
+                    order.OrderTypeId,
+                    OrderAdmissionStage.EntityIntake,
+                    OrderSubmitResult.Activated);
+                if (!admissionResults.TryWrite(in outcome))
+                {
+                    throw new InvalidOperationException(
+                        $"Axis move test failed to write EntityIntake for orderId={order.OrderId}.");
+                }
+            }
+
+            admissionResults.EndEntityIntake();
+            admissionResults.EndLogicStep();
         }
 
         private sealed class Harness
@@ -269,6 +295,7 @@ namespace Ludots.Tests.GAS
             public Dictionary<string, object> Globals = null!;
             public FrozenInputActionReader Input = null!;
             public OrderQueue Orders = null!;
+            public OrderAdmissionResultBuffer AdmissionResults = null!;
             public ControlSchemeRuntime Schemes = null!;
             public Entity Avatar;
             private StringIntRegistry _schemeIds = null!;
@@ -278,7 +305,7 @@ namespace Ludots.Tests.GAS
             {
                 Entity avatar = world.Create(WorldPositionCm.FromCm(StartXcm, StartYcm));
 
-                var orderTypes = new OrderTypeRegistry();
+                var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
                 orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = MoveToOrderTypeId });
 
                 CommandIntentProfileTests.Harness intents = CommandIntentProfileTests.Harness.Create(world);
@@ -311,11 +338,13 @@ namespace Ludots.Tests.GAS
                     orderTypes);
 
                 var input = new FrozenInputActionReader();
+                var admissionResults = new OrderAdmissionResultBuffer(64, 64);
                 return new Harness
                 {
                     World = world,
                     Input = input,
-                    Orders = new OrderQueue(),
+                    Orders = new OrderQueue(64, admissionResults),
+                    AdmissionResults = admissionResults,
                     Schemes = schemes,
                     Avatar = avatar,
                     _schemeIds = schemeIds,

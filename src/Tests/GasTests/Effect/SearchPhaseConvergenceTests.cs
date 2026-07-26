@@ -73,7 +73,7 @@ namespace Ludots.Tests.GAS
             {
                 SpatialQueries = new StubSpatialQueryService(resolved),
                 FanOutBudget = new RootBudgetTable(16),
-                FanOutCommands = new List<FanOutCommand>(),
+                FanOutCommands = new FanOutCommandBuffer(4),
                 ResolverBuffer = new Entity[8],
             };
             runtime.ResetPerEffect();
@@ -143,7 +143,7 @@ namespace Ludots.Tests.GAS
             {
                 SpatialQueries = new StubSpatialQueryService(resolved),
                 FanOutBudget = new RootBudgetTable(16),
-                FanOutCommands = new List<FanOutCommand>(),
+                FanOutCommands = new FanOutCommandBuffer(4),
                 ResolverBuffer = new Entity[8],
             };
             runtime.ResetPerEffect();
@@ -156,6 +156,80 @@ namespace Ludots.Tests.GAS
             var cmd = runtime.FanOutCommands![0];
             That(cmd.PayloadEffectTemplateId, Is.EqualTo(902));
             That(cmd.ResolvedEntity, Is.EqualTo(resolved));
+        }
+
+        [Test]
+        public void PeriodicSearchLifetime_FailsBeforePublishingWhenFanOutCapacityIsExhausted()
+        {
+            using var world = World.Create();
+            var programs = new GraphProgramRegistry();
+            var presetTypes = new PresetTypeRegistry();
+            var builtinHandlers = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(builtinHandlers);
+            var templates = new EffectTemplateRegistry();
+            var executor = new EffectPhaseExecutor(
+                programs,
+                presetTypes,
+                builtinHandlers,
+                GasGraphOpHandlerTable.Instance,
+                templates);
+            var api = new GasGraphRuntimeApi(world, null, null, null);
+            var source = world.Create(WorldPositionCm.FromCm(0, 0));
+            var center = world.Create(WorldPositionCm.FromCm(0, 0));
+            var firstTarget = world.Create(WorldPositionCm.FromCm(100, 0));
+            var secondTarget = world.Create(WorldPositionCm.FromCm(200, 0));
+            var preset = new PresetTypeDefinition { Type = EffectPresetType.PeriodicSearch };
+            preset.DefaultPhaseHandlers[EffectPhaseId.OnPeriod] = PhaseHandler.Builtin(BuiltinHandlerId.ReResolveAndDispatch);
+            presetTypes.Register(in preset);
+
+            const int templateId = 202;
+            templates.Register(templateId, new EffectTemplateData
+            {
+                PresetType = EffectPresetType.PeriodicSearch,
+                TargetQuery = new TargetQueryDescriptor
+                {
+                    Kind = TargetResolverKind.BuiltinSpatial,
+                    Spatial = new BuiltinSpatialDescriptor { Shape = SpatialShape.Circle, RadiusCm = 500 },
+                },
+                TargetFilter = new TargetFilterDescriptor { RelationFilter = RelationshipFilter.All },
+                TargetDispatch = new TargetDispatchDescriptor
+                {
+                    PayloadEffectTemplateId = 903,
+                    ContextMapping = TargetResolverContextMapping.Default,
+                },
+            });
+
+            Entity effect = GameplayEffectFactory.CreateEffect(
+                world,
+                rootId: 9,
+                source,
+                center,
+                durationTicks: 30,
+                lifetimeKind: EffectLifetimeKind.After,
+                periodTicks: 1);
+            world.Get<GameplayEffect>(effect).State = EffectState.Committed;
+            world.Add(effect, new EffectTemplateRef { TemplateId = templateId });
+            var clock = new Ludots.Core.Engine.DiscreteClock();
+            clock.Advance(Ludots.Core.Engine.ClockDomainId.FixedFrame);
+            var queue = new EffectRequestQueue();
+            var system = new EffectLifetimeSystem(
+                world,
+                clock,
+                new GasConditionRegistry(),
+                snapshotCapacity: 1,
+                fanOutCommandCapacity: 1,
+                effectRequests: queue,
+                templates: templates,
+                spatialQueries: new StubSpatialQueryService(firstTarget, secondTarget),
+                phaseExecutor: executor,
+                graphApi: api);
+
+            system.Update(0f);
+            clock.Advance(Ludots.Core.Engine.ClockDomainId.FixedFrame);
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => system.Update(0f))!;
+
+            That(error.Message, Does.StartWith(TargetResolverFanOutHelper.CommandCapacityExceededError));
+            That(queue.Count, Is.Zero);
         }
 
         [Test]
@@ -215,7 +289,7 @@ namespace Ludots.Tests.GAS
                 {
                     SpatialQueries = new StubSpatialQueryService(nonTeamSpatial, hostile),
                     FanOutBudget = new RootBudgetTable(16),
-                    FanOutCommands = new List<FanOutCommand>(),
+                    FanOutCommands = new FanOutCommandBuffer(4),
                     ResolverBuffer = new Entity[8],
                 };
                 runtime.ResetPerEffect();
@@ -291,7 +365,7 @@ namespace Ludots.Tests.GAS
                 {
                     SpatialQueries = new StubSpatialQueryService(hostile),
                     FanOutBudget = new RootBudgetTable(16),
-                    FanOutCommands = new List<FanOutCommand>(),
+                    FanOutCommands = new FanOutCommandBuffer(4),
                     ResolverBuffer = new Entity[8],
                 };
                 runtime.ResetPerEffect();

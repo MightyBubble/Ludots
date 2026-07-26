@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using NUnit.Framework;
 using Arch.Core;
 using Arch.Core.Extensions;
@@ -35,7 +35,8 @@ namespace GasTests
             WidthInMacroTiles = 1,
             HeightInMacroTiles = 1,
             GridCellSizeCm = 100,
-            ChunkSizeCells = 4
+            ChunkSizeCells = 4,
+            LoadedChunkCapacity = 16
         };
 
         private static MapSession CreateSessionWithBoard(string mapId)
@@ -95,7 +96,7 @@ namespace GasTests
             int countBefore = partition.Query(new IntRect(0, 0, 10, 10), buffer, out _);
             Assert.That(countBefore, Is.EqualTo(2));
 
-            // Cleanup �?disposes boards which clears spatial partition
+            // Cleanup 鈥?disposes boards which clears spatial partition
             session.Cleanup(_world);
 
             // Spatial partition should be empty after board disposal

@@ -19,7 +19,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly OrderRuleRegistry _orderRuleRegistry;
         private readonly OrderQueue? _incomingOrders;
         private readonly int _stepRateHz;
+        private readonly OrderAdmissionResultBuffer _admissionResults;
         private readonly Order[] _incomingBatchScratch;
+        private readonly OrderSubmitResult[] _incomingBatchResultsScratch;
+        private readonly OrderAdmissionReservation[] _entityAdmissionReservationsScratch;
+        private readonly bool _closeEntityIntakeOnUpdate;
 
         private readonly GraphProgramRegistry? _graphProgramRegistry;
         private readonly IGraphRuntimeApi? _graphApi;
@@ -34,19 +38,28 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             IClock clock,
             OrderTypeRegistry orderTypeRegistry,
             OrderRuleRegistry orderRuleRegistry,
+            OrderAdmissionResultBuffer admissionResults,
             OrderQueue? incomingOrders = null,
             int stepRateHz = 30,
             GraphProgramRegistry? graphProgramRegistry = null,
-            IGraphRuntimeApi? graphApi = null)
+            IGraphRuntimeApi? graphApi = null,
+            bool closeEntityIntakeOnUpdate = true)
             : base(world)
         {
             _clock = clock;
             _orderTypeRegistry = orderTypeRegistry;
             _orderRuleRegistry = orderRuleRegistry;
             _incomingOrders = incomingOrders;
-            _incomingBatchScratch = incomingOrders != null
-                ? new Order[incomingOrders.Capacity]
+            int incomingCapacity = incomingOrders?.Capacity ?? 0;
+            _incomingBatchScratch = incomingCapacity > 0
+                ? new Order[incomingCapacity]
                 : Array.Empty<Order>();
+            _incomingBatchResultsScratch = incomingCapacity > 0
+                ? new OrderSubmitResult[incomingCapacity]
+                : Array.Empty<OrderSubmitResult>();
+            _entityAdmissionReservationsScratch = incomingCapacity > 0
+                ? new OrderAdmissionReservation[incomingCapacity]
+                : Array.Empty<OrderAdmissionReservation>();
             if (stepRateHz <= 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(stepRateHz), stepRateHz, "stepRateHz must be positive.");
@@ -56,18 +69,19 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
             _graphProgramRegistry = graphProgramRegistry;
             _graphApi = graphApi;
+            _admissionResults = admissionResults
+                ?? throw new ArgumentNullException(nameof(admissionResults));
+            _closeEntityIntakeOnUpdate = closeEntityIntakeOnUpdate;
+            if (_incomingOrders != null && !ReferenceEquals(_incomingOrders.AdmissionResults, _admissionResults))
+            {
+                throw new InvalidOperationException("ORDER.ADMISSION.ERR.AdmissionResultBufferMismatch");
+            }
         }
 
         public override void Update(in float dt)
         {
             int currentStep = _clock.Now(ClockDomainId.Step);
             ProcessIncomingOrders(currentStep);
-
-            var job = new OrderBufferUpdateJob
-            {
-                CurrentStep = currentStep
-            };
-            World.InlineQuery<OrderBufferUpdateJob, OrderBuffer>(in _orderBufferQuery, ref job);
 
             foreach (ref var chunk in World.Query(in _orderBufferQuery))
             {
@@ -76,24 +90,80 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 foreach (var index in chunk)
                 {
                     ref OrderBuffer buffer = ref buffers[index];
+                    Entity entity = Unsafe.Add(ref entityFirst, index);
+                    ReleaseExpiredOrders(ref buffer, currentStep);
                     if (!buffer.HasActive && buffer.HasQueued)
                     {
-                        Entity entity = Unsafe.Add(ref entityFirst, index);
-                        OrderSubmitter.TryPromoteNextQueuedToActive(World, entity, ref buffer, _orderTypeRegistry);
+                        bool promoted = OrderSubmitter.TryPromoteNextQueuedToActive(
+                            World,
+                            entity,
+                            ref buffer,
+                            _orderTypeRegistry,
+                            out OrderSubmitResult failureResult,
+                            out int failedOrderId,
+                            out int failedOrderTypeId);
+                        if (!promoted &&
+                            failedOrderId > 0 &&
+                            failureResult != OrderSubmitResult.Activated)
+                        {
+                            CommitPromotionFailureAdmission(failedOrderId, failedOrderTypeId, failureResult);
+                        }
                     }
                 }
             }
+
+            if (_closeEntityIntakeOnUpdate)
+            {
+                _admissionResults.EndEntityIntake();
+            }
         }
 
-        private struct OrderBufferUpdateJob : IForEach<OrderBuffer>
+        private void ReleaseExpiredOrders(ref OrderBuffer buffer, int currentStep)
         {
-            public int CurrentStep;
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void Update(ref OrderBuffer buffer)
+            int terminalResultCount = 0;
+            for (int i = buffer.QueuedCount - 1; i >= 0; i--)
             {
-                buffer.RemoveExpired(CurrentStep);
-                buffer.ExpirePending(CurrentStep);
+                QueuedOrder queued = buffer.GetQueued(i);
+                if (queued.ExpireStep >= 0 && queued.ExpireStep <= currentStep)
+                {
+                    terminalResultCount++;
+                }
+            }
+
+            if (buffer.HasPending &&
+                buffer.PendingOrder.ExpireStep >= 0 &&
+                buffer.PendingOrder.ExpireStep <= currentStep)
+            {
+                terminalResultCount++;
+            }
+
+            if (terminalResultCount > 0)
+            {
+                _orderTypeRegistry.EnsureTerminalResultCapacity(terminalResultCount);
+            }
+
+            for (int i = buffer.QueuedCount - 1; i >= 0; i--)
+            {
+                QueuedOrder queued = buffer.GetQueued(i);
+                if (queued.ExpireStep < 0 || queued.ExpireStep > currentStep)
+                {
+                    continue;
+                }
+
+                OrderSubmitter.ReleaseQueuedOrderAt(
+                    World,
+                    ref buffer,
+                    _orderTypeRegistry,
+                    i,
+                    OrderTerminalState.Cancelled,
+                    OrderFailureReason.None);
+            }
+
+            if (buffer.HasPending &&
+                buffer.PendingOrder.ExpireStep >= 0 &&
+                buffer.PendingOrder.ExpireStep <= currentStep)
+            {
+                OrderSubmitter.ReleasePendingOrder(World, ref buffer, _orderTypeRegistry);
             }
         }
 
@@ -101,19 +171,114 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         {
             if (_incomingOrders == null) return;
 
-            while (_incomingOrders.TryDequeueBatch(_incomingBatchScratch, out int batchCount))
+            while (_incomingOrders.TryPeekBatch(_incomingBatchScratch, out int batchCount))
             {
                 if (batchCount == 1 && _incomingBatchScratch[0].AdmissionBatchId == 0)
                 {
-                    ProcessIncomingOrder(ref _incomingBatchScratch[0], currentStep);
+                    ProcessSingleIncomingOrder(ref _incomingBatchScratch[0], currentStep);
                     continue;
                 }
 
-                if (!PreflightIncomingBatch(batchCount, currentStep))
+                ProcessIncomingBatch(batchCount, currentStep);
+            }
+        }
+
+        private void ProcessSingleIncomingOrder(ref Order order, int currentStep)
+        {
+            OrderAdmissionReservation reservation = _admissionResults.Reserve(
+                OrderAdmissionStage.EntityIntake,
+                order.OrderId,
+                order.OrderTypeId);
+            bool committed = false;
+            try
+            {
+                // Process before dequeue so an unexpected submit failure keeps GlobalIntake ownership
+                // on the still-queued order instead of silently cancelling the reservation.
+                OrderSubmitResult result = ProcessIncomingOrder(ref order, currentStep);
+                if (!OrderSubmitResultSemantics.IsAccepted(result))
                 {
-                    continue;
+                    // GlobalIntake already Queued this order; EntityIntake rejection must emit a Failed
+                    // terminal so OrderContinuationSystem can release follow-ups keyed by this order id.
+                    EnsureAndPublishFailedTerminal(in order, result);
                 }
 
+                DequeueReservedBatch(expectedBatchCount: 1);
+                CommitAdmission(in reservation, in order, result);
+                committed = true;
+                if (OrderSubmitResultSemantics.IsAccepted(result))
+                {
+                    IncomingRevision++;
+                }
+            }
+            finally
+            {
+                if (!committed && reservation.IsValid)
+                {
+                    _admissionResults.Cancel(in reservation);
+                }
+            }
+        }
+
+        private void ProcessIncomingBatch(int batchCount, int currentStep)
+        {
+            InitializeIncomingBatchScratch(batchCount);
+            if (!_admissionResults.CanReserve(OrderAdmissionStage.EntityIntake, batchCount))
+            {
+                if (!_admissionResults.CanRecordCapacityFailures(OrderAdmissionStage.EntityIntake, batchCount))
+                {
+                    throw new InvalidOperationException(
+                        $"{OrderAdmissionResultBuffer.RejectionCapacityExceededError}: stage={OrderAdmissionStage.EntityIntake}, batchCount={batchCount}, rejectionCapacity={_admissionResults.RejectionCapacity}.");
+                }
+
+                DequeueReservedBatch(batchCount);
+                _admissionResults.RecordCapacityFailures(
+                    _incomingBatchScratch.AsSpan(0, batchCount),
+                    OrderAdmissionStage.EntityIntake);
+                _orderTypeRegistry.EnsureTerminalResultCapacity(batchCount);
+                for (int i = 0; i < batchCount; i++)
+                {
+                    OrderSpatialPayloadOps.Release(World, in _incomingBatchScratch[i]);
+                    PublishFailedTerminal(
+                        in _incomingBatchScratch[i],
+                        OrderSubmitResult.RejectedAdmissionCapacity);
+                }
+
+                return;
+            }
+
+            ReserveEntityAdmissions(batchCount);
+            bool committed = false;
+            bool dequeued = false;
+            try
+            {
+                bool accepted = PreflightIncomingBatch(batchCount, currentStep, out OrderSubmitResult failureResult);
+                if (!accepted)
+                {
+                    DequeueReservedBatch(batchCount);
+                    dequeued = true;
+                    _orderTypeRegistry.EnsureTerminalResultCapacity(batchCount);
+                    for (int i = 0; i < batchCount; i++)
+                    {
+                        if (OrderSubmitResultSemantics.IsAccepted(_incomingBatchResultsScratch[i]))
+                        {
+                            _incomingBatchResultsScratch[i] = failureResult;
+                        }
+
+                        OrderSpatialPayloadOps.Release(World, in _incomingBatchScratch[i]);
+                        PublishFailedTerminal(in _incomingBatchScratch[i], _incomingBatchResultsScratch[i]);
+                        CommitAdmission(
+                            in _entityAdmissionReservationsScratch[i],
+                            in _incomingBatchScratch[i],
+                            _incomingBatchResultsScratch[i]);
+                    }
+
+                    committed = true;
+                    ClearEntityAdmissionReservations(batchCount);
+                    return;
+                }
+
+                DequeueReservedBatch(batchCount);
+                dequeued = true;
                 for (int i = 0; i < batchCount; i++)
                 {
                     ref Order order = ref _incomingBatchScratch[i];
@@ -131,19 +296,102 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             $"Order admission batch {order.AdmissionBatchId} changed after successful preflight: row {i} returned {result}.");
                     }
 
+                    CommitAdmission(in _entityAdmissionReservationsScratch[i], in order, result);
                     IncomingRevision++;
+                }
+
+                committed = true;
+                ClearEntityAdmissionReservations(batchCount);
+            }
+            finally
+            {
+                if (!committed)
+                {
+                    CancelEntityAdmissions(batchCount);
+                    if (dequeued)
+                    {
+                        for (int i = 0; i < batchCount; i++)
+                        {
+                            OrderSpatialPayloadOps.Release(World, in _incomingBatchScratch[i]);
+                        }
+                    }
                 }
             }
         }
 
-        private bool PreflightIncomingBatch(int batchCount, int currentStep)
+        private void InitializeIncomingBatchScratch(int batchCount)
         {
+            for (int i = 0; i < batchCount; i++)
+            {
+                _incomingBatchResultsScratch[i] = OrderSubmitResult.Queued;
+                _entityAdmissionReservationsScratch[i] = default;
+            }
+        }
+
+        private void ReserveEntityAdmissions(int batchCount)
+        {
+            for (int i = 0; i < batchCount; i++)
+            {
+                try
+                {
+                    _entityAdmissionReservationsScratch[i] = _admissionResults.Reserve(
+                        OrderAdmissionStage.EntityIntake,
+                        _incomingBatchScratch[i].OrderId,
+                        _incomingBatchScratch[i].OrderTypeId);
+                }
+                catch
+                {
+                    CancelEntityAdmissions(i);
+                    throw;
+                }
+            }
+        }
+
+        private void DequeueReservedBatch(int expectedBatchCount)
+        {
+            int dequeuedCount = 0;
+            if (_incomingOrders == null ||
+                !_incomingOrders.TryDequeueBatch(_incomingBatchScratch, out dequeuedCount) ||
+                dequeuedCount != expectedBatchCount)
+            {
+                throw new InvalidOperationException(
+                    $"ORDER.ADMISSION.ERR.IntakeQueueChangedDuringReservation: expected={expectedBatchCount}, actual={dequeuedCount}.");
+            }
+        }
+
+        private void ClearEntityAdmissionReservations(int batchCount)
+        {
+            for (int i = 0; i < batchCount; i++)
+            {
+                _entityAdmissionReservationsScratch[i] = default;
+            }
+        }
+
+        private void CancelEntityAdmissions(int count)
+        {
+            for (int i = count - 1; i >= 0; i--)
+            {
+                if (_entityAdmissionReservationsScratch[i].IsValid)
+                {
+                    _admissionResults.Cancel(in _entityAdmissionReservationsScratch[i]);
+                    _entityAdmissionReservationsScratch[i] = default;
+                }
+            }
+        }
+
+        private bool PreflightIncomingBatch(int batchCount, int currentStep, out OrderSubmitResult failureResult)
+        {
+            failureResult = OrderSubmitResult.Queued;
+            int terminalResultCount = 0;
             for (int i = 0; i < batchCount; i++)
             {
                 ref Order order = ref _incomingBatchScratch[i];
                 order.SubmitStep = currentStep;
-                if (!ValidateIncomingOrder(in order))
+                OrderSubmitResult validationResult = ValidateIncomingOrder(in order, out _);
+                if (!OrderSubmitResultSemantics.IsAccepted(validationResult))
                 {
+                    _incomingBatchResultsScratch[i] = validationResult;
+                    failureResult = validationResult;
                     return false;
                 }
 
@@ -155,25 +403,42 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     _orderRuleRegistry,
                     currentStep,
                     _stepRateHz);
+                _incomingBatchResultsScratch[i] = result;
                 if (result != OrderSubmitResult.Activated && result != OrderSubmitResult.Queued)
                 {
+                    failureResult = result;
                     return false;
                 }
+
+                terminalResultCount += OrderSubmitter.CountTerminalResultsRequiredForSubmit(
+                    World,
+                    order.Actor,
+                    in order,
+                    _orderTypeRegistry,
+                    _orderRuleRegistry,
+                    currentStep,
+                    _stepRateHz);
+            }
+
+            if (terminalResultCount > 0)
+            {
+                _orderTypeRegistry.EnsureTerminalResultCapacity(terminalResultCount);
             }
 
             return true;
         }
 
-        private void ProcessIncomingOrder(ref Order order, int currentStep)
+        private OrderSubmitResult ProcessIncomingOrder(ref Order order, int currentStep)
         {
-            IncomingRevision++;
             order.SubmitStep = currentStep;
-            if (!ValidateIncomingOrder(in order))
+
+            OrderSubmitResult validationResult = ValidateIncomingOrder(in order, out OrderTypeConfig config);
+            if (!OrderSubmitResultSemantics.IsAccepted(validationResult))
             {
-                return;
+                OrderSpatialPayloadOps.Release(World, in order);
+                return validationResult;
             }
 
-            OrderTypeConfig config = _orderTypeRegistry.Get(order.OrderTypeId);
             OrderSubmitResult result = OrderSubmitter.Submit(
                 World,
                 order.Actor,
@@ -183,25 +448,67 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 currentStep,
                 _stepRateHz);
 
-            if (result == OrderSubmitResult.Blocked && config.PendingBufferWindowMs > 0)
+            if (result == OrderSubmitResult.RejectedByRule && config.PendingBufferWindowMs > 0)
             {
                 int pendingExpireStep = currentStep + (config.PendingBufferWindowMs * _stepRateHz) / 1000;
-                ref OrderBuffer buffer = ref World.Get<OrderBuffer>(order.Actor);
-                buffer.SetPending(in order, config.Priority, pendingExpireStep, currentStep);
+                ref var buffer = ref World.Get<OrderBuffer>(order.Actor);
+                OrderSubmitter.ReplacePending(
+                    World,
+                    ref buffer,
+                    _orderTypeRegistry,
+                    in order,
+                    config.Priority,
+                    pendingExpireStep,
+                    currentStep);
+                result = OrderSubmitResult.Pending;
             }
+            else if (!OrderSubmitResultSemantics.IsAccepted(result))
+            {
+                OrderSpatialPayloadOps.Release(World, in order);
+            }
+
+            return result;
         }
 
-        private bool ValidateIncomingOrder(in Order order)
+        private void EnsureAndPublishFailedTerminal(in Order order, OrderSubmitResult result)
         {
-            if (!World.IsAlive(order.Actor) || !World.Has<OrderBuffer>(order.Actor))
+            _orderTypeRegistry.EnsureTerminalResultCapacity();
+            PublishFailedTerminal(in order, result);
+        }
+
+        private void PublishFailedTerminal(in Order order, OrderSubmitResult result)
+        {
+            if (OrderSubmitResultSemantics.IsAccepted(result))
             {
-                return false;
+                throw new InvalidOperationException(
+                    $"ORDER.ENTITY_INTAKE.ERR.FailedTerminalRequiresRejection: orderId={order.OrderId}, result={result}.");
             }
 
-            OrderTypeConfig config = _orderTypeRegistry.Get(order.OrderTypeId);
+            var failed = new OrderTerminalOutcome(
+                order.OrderId,
+                order.OrderTypeId,
+                OrderTerminalState.Failed,
+                OrderSubmitResultSemantics.ToFailureReason(result),
+                order.Actor);
+            _orderTypeRegistry.PublishTerminalResult(in failed);
+        }
+
+        private OrderSubmitResult ValidateIncomingOrder(in Order order, out OrderTypeConfig config)
+        {
+            config = default;
+            if (!World.IsAlive(order.Actor) || !World.Has<OrderBuffer>(order.Actor))
+            {
+                return OrderSubmitResult.RejectedInvalidActor;
+            }
+
+            if (!_orderTypeRegistry.TryGet(order.OrderTypeId, out config))
+            {
+                return OrderSubmitResult.RejectedInvalidOrderType;
+            }
+
             if (config.ValidationGraphId <= 0)
             {
-                return true;
+                return OrderSubmitResult.Activated;
             }
 
             if (_graphProgramRegistry == null || _graphApi == null)
@@ -217,16 +524,84 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
 
             var targetPos = new IntVector2((int)order.Args.Spatial.WorldCm.X, (int)order.Args.Spatial.WorldCm.Z);
-            return GasGraphExecutor.ExecuteValidation(
+            bool passed = GasGraphExecutor.ExecuteValidation(
                 World,
                 order.Actor,
                 order.Target,
                 targetPos,
                 validationProgram,
                 _graphApi);
+            return passed ? OrderSubmitResult.Activated : OrderSubmitResult.RejectedValidation;
+        }
+
+        private void CommitAdmission(
+            in OrderAdmissionReservation reservation,
+            in Order order,
+            OrderSubmitResult result)
+        {
+            var outcome = new OrderAdmissionOutcome(order.OrderId, order.OrderTypeId, OrderAdmissionStage.EntityIntake, result);
+            _admissionResults.Commit(in reservation, in outcome);
+        }
+
+        private void CommitPromotionFailureAdmission(int orderId, int orderTypeId, OrderSubmitResult result)
+        {
+            OrderAdmissionReservation reservation = _admissionResults.Reserve(
+                OrderAdmissionStage.EntityIntake,
+                orderId,
+                orderTypeId);
+            var outcome = new OrderAdmissionOutcome(orderId, orderTypeId, OrderAdmissionStage.EntityIntake, result);
+            _admissionResults.Commit(in reservation, in outcome);
         }
 
         public OrderSubmitResult SubmitOrder(Entity entity, in Order order)
+        {
+            if (order.OrderId <= 0)
+            {
+                throw new InvalidOperationException("ORDER.ADMISSION.ERR.DirectSubmitRequiresOrderId");
+            }
+
+            OrderAdmissionReservation reservation;
+            try
+            {
+                reservation = _admissionResults.Reserve(
+                    OrderAdmissionStage.EntityIntake,
+                    order.OrderId,
+                    order.OrderTypeId);
+            }
+            catch
+            {
+                OrderSpatialPayloadOps.Release(World, in order);
+                throw;
+            }
+
+            bool committed = false;
+            try
+            {
+                OrderSubmitResult result = SubmitOrderStateAndReleaseRejected(entity, in order);
+                CommitAdmission(in reservation, in order, result);
+                committed = true;
+                return result;
+            }
+            finally
+            {
+                if (!committed)
+                {
+                    _admissionResults.Cancel(in reservation);
+                }
+            }
+        }
+
+        private OrderSubmitResult SubmitOrderStateAndReleaseRejected(Entity entity, in Order order)
+        {
+            OrderSubmitResult result = SubmitOrderState(entity, in order);
+            if (!OrderSubmitResultSemantics.IsAccepted(result))
+            {
+                OrderSpatialPayloadOps.Release(World, in order);
+            }
+            return result;
+        }
+
+        private OrderSubmitResult SubmitOrderState(Entity entity, in Order order)
         {
             int currentStep = _clock.Now(ClockDomainId.Step);
             return OrderSubmitter.Submit(
@@ -259,10 +634,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
 
             var pendingOrder = buffer.PendingOrder.Order;
-            buffer.ClearPending();
-
             int currentStep = _clock.Now(ClockDomainId.Step);
-            OrderSubmitter.Submit(
+            OrderSubmitResult previewResult = OrderSubmitter.Preview(
                 World,
                 entity,
                 in pendingOrder,
@@ -270,6 +643,56 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 _orderRuleRegistry,
                 currentStep,
                 _stepRateHz);
+
+            OrderAdmissionReservation reservation = _admissionResults.Reserve(
+                OrderAdmissionStage.EntityIntake,
+                pendingOrder.OrderId,
+                pendingOrder.OrderTypeId);
+            bool committed = false;
+            try
+            {
+                if (!OrderSubmitResultSemantics.IsAccepted(previewResult))
+                {
+                    _orderTypeRegistry.EnsureTerminalResultCapacity();
+                }
+
+                OrderSubmitResult result = OrderSubmitter.Submit(
+                    World,
+                    entity,
+                    in pendingOrder,
+                    _orderTypeRegistry,
+                    _orderRuleRegistry,
+                    currentStep,
+                    _stepRateHz);
+                if (result != previewResult)
+                {
+                    throw new InvalidOperationException(
+                        $"ORDER.PENDING.ERR.PreviewChanged: orderId={pendingOrder.OrderId}, preview={previewResult}, result={result}.");
+                }
+
+                buffer.ClearPendingTransferred();
+                if (!OrderSubmitResultSemantics.IsAccepted(result))
+                {
+                    OrderSpatialPayloadOps.Release(World, in pendingOrder);
+                    var failed = new OrderTerminalOutcome(
+                        pendingOrder.OrderId,
+                        pendingOrder.OrderTypeId,
+                        OrderTerminalState.Failed,
+                        OrderSubmitResultSemantics.ToFailureReason(result),
+                        entity);
+                    _orderTypeRegistry.PublishTerminalResult(in failed);
+                }
+
+                CommitAdmission(in reservation, in pendingOrder, result);
+                committed = true;
+            }
+            finally
+            {
+                if (!committed)
+                {
+                    _admissionResults.Cancel(in reservation);
+                }
+            }
         }
 
         public bool TryGetActiveOrder(Entity entity, out Order order)
@@ -294,4 +717,3 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         public OrderRuleRegistry OrderRuleRegistry => _orderRuleRegistry;
     }
 }
-

@@ -209,6 +209,50 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void CompileAbility_TimelineItemMissingKind_IsRejected()
+        {
+            var ex = Throws<InvalidOperationException>(() =>
+                Compile(
+                    """
+                    {
+                      "exec": {
+                        "clockId": "FixedFrame",
+                        "items": [
+                          { "tick": 0 }
+                        ]
+                      }
+                    }
+                    """));
+
+            That(ex!.Message, Does.Contain("exec.items[0].kind"));
+            That(ex.Message, Does.Contain("required"));
+        }
+
+        [TestCase("cooldownValueAttribute", "valueAttribute")]
+        [TestCase("cooldownTag", "tag")]
+        public void CompileAbility_LegacyCooldownField_IsRejected(string legacyField, string canonicalField)
+        {
+            var ex = Throws<InvalidOperationException>(() =>
+                Compile(
+                    $$"""
+                    {
+                      "exec": {
+                        "clockId": "FixedFrame",
+                        "items": [
+                          { "kind": "End", "tick": 0 }
+                        ]
+                      },
+                      "cooldown": {
+                        "{{legacyField}}": "Legacy.Value"
+                      }
+                    }
+                    """));
+
+            That(ex!.Message, Does.Contain(legacyField));
+            That(ex.Message, Does.Contain(canonicalField));
+        }
+
+        [Test]
         public void CompileAbility_InputGateMissingPayload_IsRejected()
         {
             var ex = Throws<InvalidOperationException>(() =>
@@ -267,6 +311,34 @@ namespace Ludots.Tests.GAS
 
             That(ex!.Message, Does.Contain("exec.callerParams[0].entries[0]"));
             That(ex.Message, Does.Contain("object"));
+        }
+
+        [Test]
+        public void CompileAbility_CallerParamsEntryCapacityOverflow_IsRejected()
+        {
+            string entries = string.Join(
+                ",",
+                Enumerable.Range(0, Ludots.Core.Gameplay.GAS.Components.EffectConfigParams.MAX_PARAMS + 1)
+                    .Select(i => $$"""{"key":"param.{{i}}","value":{{i}}}"""));
+
+            var ex = Throws<InvalidOperationException>(() =>
+                Compile(
+                    $$"""
+                    {
+                      "exec": {
+                        "clockId": "FixedFrame",
+                        "callerParams": [
+                          { "entries": [{{entries}}] }
+                        ],
+                        "items": [
+                          { "kind": "End", "tick": 0 }
+                        ]
+                      }
+                    }
+                    """));
+
+            That(ex!.Message, Does.Contain("exec.callerParams[0].entries"));
+            That(ex.Message, Does.Contain("exceeded max"));
         }
 
         [Test]
@@ -560,6 +632,30 @@ namespace Ludots.Tests.GAS
 
             That(ex!.Message, Does.Contain("toggleSpec.activeEffects[0]"));
             That(ex.Message, Does.Contain("non-empty"));
+        }
+
+        [Test]
+        public void CompileAbility_LegacyToggleTagField_IsRejected()
+        {
+            var ex = Throws<InvalidOperationException>(() =>
+                Compile(
+                    """
+                    {
+                      "exec": {
+                        "clockId": "FixedFrame",
+                        "items": [
+                          { "kind": "End", "tick": 0 }
+                        ]
+                      },
+                      "toggleSpec": {
+                        "tag": "State.Toggle"
+                      }
+                    }
+                    """));
+
+            That(ex!.Message, Does.Contain("toggleSpec"));
+            That(ex.Message, Does.Contain("tag"));
+            That(ex.Message, Does.Contain("toggleTag"));
         }
 
         [Test]

@@ -71,12 +71,21 @@ namespace Ludots.Tests.Presentation
     {
         private World _world;
         private PerformerEntityRuntime _buf;
+        private PerformerDefinitionRegistry _defs;
+        private int _primaryDefId;
+        private int _secondaryDefId;
+        private int _tertiaryDefId;
 
         [SetUp]
         public void Setup()
         {
             _world = World.Create();
             _buf = new PerformerEntityRuntime(_world);
+            _defs = new PerformerDefinitionRegistry();
+            _primaryDefId = _defs.Register("test.entity_runtime.primary", new PerformerDefinition());
+            _secondaryDefId = _defs.Register("test.entity_runtime.secondary", new PerformerDefinition());
+            _tertiaryDefId = _defs.Register("test.entity_runtime.tertiary", new PerformerDefinition());
+            _buf.BindDefinitions(_defs);
         }
 
         [TearDown]
@@ -89,7 +98,7 @@ namespace Ludots.Tests.Presentation
         public void Create_ReturnsEntity_AndIsAlive()
         {
             var entity = _world.Create();
-            var performer = _buf.Create(100, entity, 0);
+            var performer = _buf.Create(_primaryDefId, entity, 0);
             Assert.That(_world.IsAlive(performer), Is.True);
         }
 
@@ -98,7 +107,7 @@ namespace Ludots.Tests.Presentation
         {
             Entity entity = _world.Create();
 
-            var performer = _buf.Create(100, entity, 7);
+            var performer = _buf.Create(_primaryDefId, entity, 7);
 
             ref readonly PerformerState state = ref _world.Get<PerformerState>(performer);
             Assert.That(state.ScopeId, Is.EqualTo(7));
@@ -111,7 +120,7 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void Create_WorldAnchor_InitializesWorldFixedTransformSource()
         {
-            var performer = _buf.Create(100, Entity.Null, 11, PresentationAnchorKind.WorldPosition, new Vector3(1f, 2f, 3f), 321, Entity.Null, default);
+            var performer = _buf.Create(_primaryDefId, Entity.Null, 11, PresentationAnchorKind.WorldPosition, new Vector3(1f, 2f, 3f), 321, Entity.Null, default);
 
             ref readonly PerformerState state = ref _world.Get<PerformerState>(performer);
             Assert.That(state.AnchorKind, Is.EqualTo(PresentationAnchorKind.WorldPosition));
@@ -125,8 +134,8 @@ namespace Ludots.Tests.Presentation
         {
             Entity entity = _world.Create();
 
-            var parentPerformer = _buf.Create(100, entity, 7);
-            var childPerformer = _buf.Create(101, entity, 7, PresentationAnchorKind.Entity, Vector3.Zero, 0, parentPerformer, default);
+            var parentPerformer = _buf.Create(_primaryDefId, entity, 7);
+            var childPerformer = _buf.Create(_secondaryDefId, entity, 7, PresentationAnchorKind.Entity, Vector3.Zero, 0, parentPerformer, default);
 
             ref readonly PerformerChildren parentChildren = ref _world.Get<PerformerChildren>(parentPerformer);
             ref readonly PerformerParent childParent = ref _world.Get<PerformerParent>(childPerformer);
@@ -183,7 +192,7 @@ namespace Ludots.Tests.Presentation
         public void Destroy_MakesEntityDead()
         {
             var entity = _world.Create();
-            var performer = _buf.Create(100, entity, 0);
+            var performer = _buf.Create(_primaryDefId, entity, 0);
             _buf.Destroy(performer);
             Assert.That(_world.IsAlive(performer), Is.False);
         }
@@ -193,9 +202,9 @@ namespace Ludots.Tests.Presentation
         {
             var e1 = _world.Create();
             var e2 = _world.Create();
-            var p1 = _buf.Create(1, e1, 42);
-            var p2 = _buf.Create(2, e2, 42);
-            var p3 = _buf.Create(3, e1, 99); // different scope
+            var p1 = _buf.Create(_primaryDefId, e1, 42);
+            var p2 = _buf.Create(_secondaryDefId, e2, 42);
+            var p3 = _buf.Create(_tertiaryDefId, e1, 99); // different scope
 
             _buf.DestroyScope(42);
             Assert.That(_world.IsAlive(p1), Is.False);
@@ -208,9 +217,9 @@ namespace Ludots.Tests.Presentation
         {
             Entity entity = _world.Create();
 
-            var parentPerformer = _buf.Create(1, entity, 5);
-            var childPerformer = _buf.Create(2, entity, 5, PresentationAnchorKind.Entity, Vector3.Zero, 0, parentPerformer, default);
-            var grandChildPerformer = _buf.Create(3, entity, 5, PresentationAnchorKind.Entity, Vector3.Zero, 0, childPerformer, default);
+            var parentPerformer = _buf.Create(_primaryDefId, entity, 5);
+            var childPerformer = _buf.Create(_secondaryDefId, entity, 5, PresentationAnchorKind.Entity, Vector3.Zero, 0, parentPerformer, default);
+            var grandChildPerformer = _buf.Create(_tertiaryDefId, entity, 5, PresentationAnchorKind.Entity, Vector3.Zero, 0, childPerformer, default);
 
             _buf.Destroy(parentPerformer);
 
@@ -225,9 +234,9 @@ namespace Ludots.Tests.Presentation
         {
             Entity entity = _world.Create();
 
-            var rootPerformer = _buf.Create(1, entity, 42);
-            var childPerformer = _buf.Create(2, entity, 99, PresentationAnchorKind.Entity, Vector3.Zero, 0, rootPerformer, default);
-            var unrelatedPerformer = _buf.Create(3, entity, 77);
+            var rootPerformer = _buf.Create(_primaryDefId, entity, 42);
+            var childPerformer = _buf.Create(_secondaryDefId, entity, 99, PresentationAnchorKind.Entity, Vector3.Zero, 0, rootPerformer, default);
+            var unrelatedPerformer = _buf.Create(_tertiaryDefId, entity, 77);
 
             int destroyed = _buf.DestroyScope(42);
 
@@ -241,7 +250,7 @@ namespace Ludots.Tests.Presentation
         public void SetParam_Float_IsResolvable()
         {
             var entity = _world.Create();
-            var performer = _buf.Create(1, entity, 0);
+            var performer = _buf.Create(_primaryDefId, entity, 0);
             _buf.SetParam(performer, 5, ParamLane.Float, 3.14f, 0, default);
             Assert.That(_buf.ResolveFloat(performer, 5, -1f), Is.EqualTo(3.14f).Within(0.001f));
         }
@@ -251,8 +260,8 @@ namespace Ludots.Tests.Presentation
         {
             Entity entity = _world.Create();
 
-            var parentPerformer = _buf.Create(1, entity, 0);
-            var childPerformer = _buf.Create(2, entity, 0, PresentationAnchorKind.Entity, Vector3.Zero, 0, parentPerformer, default);
+            var parentPerformer = _buf.Create(_primaryDefId, entity, 0);
+            var childPerformer = _buf.Create(_secondaryDefId, entity, 0, PresentationAnchorKind.Entity, Vector3.Zero, 0, parentPerformer, default);
             _buf.SetParam(parentPerformer, 15, ParamLane.Float, 9.5f, 0, Vector4.Zero);
 
             Assert.That(_buf.ResolveFloat(childPerformer, 15, -1f), Is.EqualTo(9.5f).Within(0.001f));
@@ -263,7 +272,7 @@ namespace Ludots.Tests.Presentation
         {
             Entity entity = _world.Create();
 
-            var performer = _buf.Create(1, entity, 0);
+            var performer = _buf.Create(_primaryDefId, entity, 0);
             _buf.SetParam(performer, 1, ParamLane.Float, 2.5f, 0, Vector4.Zero);
             _buf.SetParam(performer, 2, ParamLane.Int, 0f, 7, Vector4.Zero);
             _buf.SetParam(performer, 3, ParamLane.Vector, 0f, 0, new Vector4(1f, 2f, 3f, 4f));
@@ -786,10 +795,15 @@ namespace Ludots.Tests.Presentation
             TickAndFlush(0.016f);
             _commands.Clear();
 
+            var query = new QueryDescription().WithAll<PerformerState>();
+            Entity performer = Entity.Null;
+            _world.Query(in query, (Entity e, ref PerformerState s) => { performer = e; });
+            Assert.That(performer, Is.Not.EqualTo(Entity.Null));
+
             _commands.TryAdd(new PerformerCommand
             {
                 CommandKind = PerformerCommandKind.SetParam,
-                PerformerEntity = Entity.Null,
+                PerformerEntity = performer,
                 ParamKey = 10,
                 ParamLane = ParamLane.Float,
                 ParamValue = 4.5f,
@@ -797,7 +811,7 @@ namespace Ludots.Tests.Presentation
             _commands.TryAdd(new PerformerCommand
             {
                 CommandKind = PerformerCommandKind.SetParam,
-                PerformerEntity = Entity.Null,
+                PerformerEntity = performer,
                 ParamKey = 11,
                 ParamLane = ParamLane.Int,
                 IntValue = 9,
@@ -805,17 +819,12 @@ namespace Ludots.Tests.Presentation
             _commands.TryAdd(new PerformerCommand
             {
                 CommandKind = PerformerCommandKind.SetParam,
-                PerformerEntity = Entity.Null,
+                PerformerEntity = performer,
                 ParamKey = 12,
                 ParamLane = ParamLane.Vector,
                 VectorValue = new Vector4(8f, 7f, 6f, 5f),
             });
             TickAndFlush(0.016f);
-
-            var query = new QueryDescription().WithAll<PerformerState>();
-            Entity performer = Entity.Null;
-            _world.Query(in query, (Entity e, ref PerformerState s) => { performer = e; });
-            Assert.That(performer, Is.Not.EqualTo(Entity.Null));
 
             Assert.That(_instances.ResolveFloat(performer, 10, -1f), Is.EqualTo(4.5f).Within(0.001f));
             Assert.That(_instances.ResolveInt(performer, 11, -1), Is.EqualTo(9));
@@ -1171,7 +1180,7 @@ namespace Ludots.Tests.Presentation
                     new PerformerRule
                     {
                         Event = new EventFilter { Kind = PresentationEventKind.EntitySpawned, KeyId = 10 },
-                        Condition = ConditionRef.AlwaysTrue,
+                        Condition = new ConditionRef { Inline = InlineConditionKind.EventMagnitudePositive },
                         Command = new PerformerCommand
                         {
                             CommandKind = PerformerCommandKind.CreatePerformer,
@@ -1206,7 +1215,7 @@ namespace Ludots.Tests.Presentation
                     new PerformerRule
                     {
                         Event = new EventFilter { Kind = PresentationEventKind.EntitySpawned, KeyId = 10 },
-                        Condition = ConditionRef.AlwaysTrue,
+                        Condition = new ConditionRef { Inline = InlineConditionKind.EventMagnitudePositive },
                         Command = new PerformerCommand
                         {
                             CommandKind = PerformerCommandKind.CreatePerformer,
@@ -1224,6 +1233,7 @@ namespace Ludots.Tests.Presentation
                 KeyId = 10,
                 Source = owner,
                 PayloadA = 456,
+                Magnitude = 1f,
             });
 
             _system.Update(0.016f);
@@ -1259,6 +1269,7 @@ namespace Ludots.Tests.Presentation
             });
 
             var owner = _world.Create();
+            var parentPerformer = _world.Create();
             _events.TryAdd(new PresentationEvent
             {
                 Kind = PresentationEventKind.PerformerCreated,
@@ -1267,6 +1278,7 @@ namespace Ludots.Tests.Presentation
                 Target = owner,
                 PayloadA = 23,
                 PayloadB = 77,
+                PerformerEntity = parentPerformer,
             });
 
             _system.Update(0.016f);
@@ -1274,7 +1286,7 @@ namespace Ludots.Tests.Presentation
             var span = _commands.GetSpan();
             Assert.That(span.Length, Is.EqualTo(1));
             Assert.That(span[0].PerformerDefinitionId, Is.EqualTo(99));
-            Assert.That(span[0].ParentEntity.Id, Is.EqualTo(23));
+            Assert.That(span[0].ParentEntity, Is.EqualTo(parentPerformer));
             Assert.That(span[0].ScopeTag, Is.EqualTo(55));
         }
     }

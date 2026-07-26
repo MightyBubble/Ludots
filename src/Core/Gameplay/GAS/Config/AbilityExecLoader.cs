@@ -97,6 +97,14 @@ namespace Ludots.Core.Gameplay.GAS.Config
         {
             var def = new AbilityDefinition();
 
+            if (obj["indicator"] != null)
+            {
+                throw new InvalidOperationException(
+                    $"Ability '{id}' in '{path}' field 'indicator' is removed; use 'targeting.castRangeCm' and 'targeting.impactEffect'. Aim visuals belong in Performer rules.");
+            }
+
+            RejectRemovedAimVisualFields(obj, id, path, currentPath: string.Empty);
+
             // ── exec block ──
             if (obj["exec"] is JsonObject execObj)
             {
@@ -212,14 +220,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
             }
 
             // ── targeting ──
-            if (obj["indicator"] != null)
-            {
-                throw new InvalidOperationException(
-                    $"Ability '{id}' in '{path}' field 'indicator' is removed; use 'targeting.castRangeCm' and 'targeting.impactEffect'. Aim visuals belong in Performer rules.");
-            }
-
-            RejectRemovedAimVisualFields(obj, id, path, currentPath: string.Empty);
-
             if (obj["targeting"] is JsonObject targetingObj)
             {
                 def.Targeting = CompileTargeting(targetingObj, id, path);
@@ -336,9 +336,19 @@ namespace Ludots.Core.Gameplay.GAS.Config
         {
             var cooldown = new AbilityCooldown();
 
-            string attrName = cooldownObj["valueAttribute"]?.GetValue<string>()
-                           ?? cooldownObj["cooldownValueAttribute"]?.GetValue<string>()
-                           ?? string.Empty;
+            if (cooldownObj.ContainsKey("cooldownValueAttribute"))
+            {
+                throw new InvalidOperationException(
+                    $"Ability '{id}' in '{path}' uses unsupported cooldown field 'cooldownValueAttribute'. Use 'valueAttribute'.");
+            }
+
+            if (cooldownObj.ContainsKey("cooldownTag"))
+            {
+                throw new InvalidOperationException(
+                    $"Ability '{id}' in '{path}' uses unsupported cooldown field 'cooldownTag'. Use 'tag'.");
+            }
+
+            string attrName = cooldownObj["valueAttribute"]?.GetValue<string>() ?? string.Empty;
             if (!string.IsNullOrWhiteSpace(attrName))
             {
                 int attrId = AttributeRegistry.GetId(attrName);
@@ -351,9 +361,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 cooldown.CooldownValueAttributeId = attrId;
             }
 
-            string tagName = cooldownObj["tag"]?.GetValue<string>()
-                          ?? cooldownObj["cooldownTag"]?.GetValue<string>()
-                          ?? string.Empty;
+            string tagName = cooldownObj["tag"]?.GetValue<string>() ?? string.Empty;
             if (!string.IsNullOrWhiteSpace(tagName))
             {
                 cooldown.CooldownTagId = TagRegistry.Register(tagName);
@@ -370,7 +378,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
 
         private static void CompileItem(JsonObject itemObj, ref AbilityExecSpec spec, int idx, string id, string path)
         {
-            string kindStr = itemObj["kind"]?.GetValue<string>() ?? "None";
+            string kindStr = RequireNonEmptyString(itemObj["kind"], $"exec.items[{idx}].kind", id, path);
             var kind = ParseItemKind(kindStr);
             if (itemObj["tick"] is not JsonNode tickNode)
             {
@@ -487,7 +495,11 @@ namespace Ludots.Core.Gameplay.GAS.Config
                             float val = valNode.GetValue<JsonElement>().ValueKind == JsonValueKind.Number
                                 ? valNode.GetValue<float>()
                                 : float.Parse(valNode.GetValue<string>(), CultureInfo.InvariantCulture);
-                            cp.TryAddFloat(keyId, val);
+                            if (!cp.TryAddFloat(keyId, val))
+                            {
+                                throw new InvalidOperationException(
+                                    $"Ability '{id}' in '{path}' field 'exec.callerParams[{setIndex}].entries' exceeded max {EffectConfigParams.MAX_PARAMS} params.");
+                            }
                         }
                     }
                 }
@@ -505,13 +517,13 @@ namespace Ludots.Core.Gameplay.GAS.Config
 
         private static AbilityToggleSpec CompileToggleSpec(JsonObject toggleObj, string id, string path)
         {
-            string toggleTag = toggleObj["toggleTag"]?.GetValue<string>()
-                ?? toggleObj["tag"]?.GetValue<string>()
-                ?? string.Empty;
-            if (string.IsNullOrWhiteSpace(toggleTag))
+            if (toggleObj.ContainsKey("tag"))
             {
-                throw new InvalidOperationException($"Ability '{id}' in '{path}' toggleSpec requires 'toggleTag'.");
+                throw new InvalidOperationException(
+                    $"Ability '{id}' in '{path}' uses unsupported toggleSpec field 'tag'. Use 'toggleTag'.");
             }
+
+            string toggleTag = RequireNonEmptyString(toggleObj["toggleTag"], "toggleSpec.toggleTag", id, path);
 
             var toggleSpec = new AbilityToggleSpec
             {

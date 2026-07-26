@@ -29,8 +29,8 @@ namespace Ludots.Tests.GAS
         {
             using var world = World.Create();
             var clock = new DiscreteClock();
-            var orders = new OrderQueue(64);
-            var orderTypes = new OrderTypeRegistry();
+            var orders = new OrderQueue(64, new OrderAdmissionResultBuffer(64, 64));
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig { Key = "attackTarget", OrderTypeId = 102 });
 
             AbilityIdRegistry.Clear();
@@ -143,7 +143,7 @@ namespace Ludots.Tests.GAS
         {
             using var world = World.Create();
             var clock = new DiscreteClock();
-            var orders = new OrderQueue(64);
+            var orders = new OrderQueue(64, new OrderAdmissionResultBuffer(64, 64));
 
             AbilityIdRegistry.Clear();
             int attackAbilityId = AbilityIdRegistry.Register("Ability.Test.Attack");
@@ -212,7 +212,7 @@ namespace Ludots.Tests.GAS
         {
             using var world = World.Create();
             var clock = new DiscreteClock();
-            var orders = new OrderQueue(64);
+            var orders = new OrderQueue(64, new OrderAdmissionResultBuffer(64, 64));
 
             AbilityIdRegistry.Clear();
             int attackAbilityId = AbilityIdRegistry.Register("Ability.Test.Attack");
@@ -303,7 +303,7 @@ namespace Ludots.Tests.GAS
         {
             using var world = World.Create();
             var clock = new DiscreteClock();
-            var orders = new OrderQueue(64);
+            var orders = new OrderQueue(64, new OrderAdmissionResultBuffer(64, 64));
 
             AbilityIdRegistry.Clear();
             TagRegistry.Clear();
@@ -378,7 +378,7 @@ namespace Ludots.Tests.GAS
         {
             using var world = World.Create();
             var clock = new DiscreteClock();
-            var orders = new OrderQueue(64);
+            var orders = new OrderQueue(64, new OrderAdmissionResultBuffer(64, 64));
 
             AbilityIdRegistry.Clear();
             int attackAbilityId = AbilityIdRegistry.Register("Ability.Test.Attack");
@@ -578,7 +578,7 @@ namespace Ludots.Tests.GAS
             var runtime = fixture.CreateSingleDecisionRuntime(orderTypeId: 102, abilityId: fixture.AttackAbilityId, cooldownSteps: 0);
             var actor = fixture.AddActor(runtime);
 
-            var orderTypes = new OrderTypeRegistry();
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig
             {
                 Key = "attackTarget",
@@ -599,8 +599,16 @@ namespace Ludots.Tests.GAS
 
             var spatialUpdate = new SpatialPartitionUpdateSystem(fixture.World, fixture.Partition, fixture.Spec);
             var decision = new UtilityAiDecisionSystem(fixture.World, fixture.Clock, runtime, fixture.Spatial, fixture.Abilities, new GraphProgramRegistry(), null, fixture.Orders);
-            var orderBuffer = new OrderBufferSystem(fixture.World, fixture.Clock, orderTypes, new OrderRuleRegistry(), fixture.Orders, stepRateHz: 30);
+            var orderBuffer = new OrderBufferSystem(
+                fixture.World,
+                fixture.Clock,
+                orderTypes,
+                new OrderRuleRegistry(),
+                fixture.AdmissionResults,
+                fixture.Orders,
+                stepRateHz: 30);
 
+            fixture.AdmissionResults.BeginLogicStep();
             spatialUpdate.Update(1f / 60f);
             decision.Update(1f / 60f);
             orderBuffer.Update(1f / 60f);
@@ -655,6 +663,7 @@ namespace Ludots.Tests.GAS
             private RuntimeFixture(
                 World world,
                 DiscreteClock clock,
+                OrderAdmissionResultBuffer admissionResults,
                 OrderQueue orders,
                 AbilityDefinitionRegistry abilities,
                 ChunkedGridSpatialPartitionWorld partition,
@@ -665,6 +674,7 @@ namespace Ludots.Tests.GAS
             {
                 World = world;
                 Clock = clock;
+                AdmissionResults = admissionResults;
                 Orders = orders;
                 Abilities = abilities;
                 Partition = partition;
@@ -676,6 +686,7 @@ namespace Ludots.Tests.GAS
 
             public World World { get; }
             public DiscreteClock Clock { get; }
+            public OrderAdmissionResultBuffer AdmissionResults { get; }
             public OrderQueue Orders { get; }
             public AbilityDefinitionRegistry Abilities { get; }
             public ChunkedGridSpatialPartitionWorld Partition { get; }
@@ -689,7 +700,8 @@ namespace Ludots.Tests.GAS
             {
                 var world = World.Create();
                 var clock = new DiscreteClock();
-                var orders = new OrderQueue(orderCapacity);
+                var admissionResults = new OrderAdmissionResultBuffer(orderCapacity, orderCapacity);
+                var orders = new OrderQueue(orderCapacity, admissionResults);
                 AbilityIdRegistry.Clear();
                 TagRegistry.Clear();
                 int attackAbilityId = AbilityIdRegistry.Register("Ability.Test.Attack");
@@ -709,7 +721,7 @@ namespace Ludots.Tests.GAS
                 var spec = new WorldSizeSpec(new WorldAabbCm(-1000, -1000, 220000, 220000), 100);
                 var spatial = new SpatialQueryService(new ChunkedGridSpatialPartitionBackend(partition, spec));
                 spatial.SetPositionProvider(entity => world.Get<WorldPositionCm>(entity).ToWorldCmInt2());
-                return new RuntimeFixture(world, clock, orders, abilities, partition, spec, spatial, attackAbilityId, sharedCooldownTagId);
+                return new RuntimeFixture(world, clock, admissionResults, orders, abilities, partition, spec, spatial, attackAbilityId, sharedCooldownTagId);
             }
 
             public Entity AddActor(

@@ -11,21 +11,41 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 {
     public class DeferredTriggerCollectionSystem : BaseSystem<World, float>
     {
-        private static readonly QueryDescription _dirtyQuery = new QueryDescription()
+        private static readonly QueryDescription _bootstrapQuery = new QueryDescription()
             .WithAll<DirtyFlags>();
 
         private readonly DeferredTriggerQueue _triggerQueue;
         private readonly TagOps _tagOps;
+        private readonly DirtyEntityQueue _dirtyEntities;
         private readonly CommandBuffer _commandBuffer = new();
+        private bool _bootstrapPending = true;
 
-        public DeferredTriggerCollectionSystem(World world, DeferredTriggerQueue triggerQueue, TagOps tagOps = null) : base(world)
+        public DeferredTriggerCollectionSystem(
+            World world,
+            DeferredTriggerQueue triggerQueue,
+            TagOps tagOps = null,
+            DirtyEntityQueue dirtyEntities = null) : base(world)
         {
             _triggerQueue = triggerQueue;
-            _tagOps = tagOps ?? new TagOps();
+            _tagOps = tagOps ?? throw new InvalidOperationException(TagOps.MissingTagOpsError);
+            _dirtyEntities = dirtyEntities ?? _tagOps.DirtyEntities;
+            if (!ReferenceEquals(_dirtyEntities, _tagOps.DirtyEntities))
+            {
+                throw new InvalidOperationException("GAS.DIRTY_ENTITY.ERR.MismatchedQueue");
+            }
         }
+
+        public int VisitedEntityCountLastUpdate { get; private set; }
 
         public override void Update(in float dt)
         {
+            if (_bootstrapPending)
+            {
+                _bootstrapPending = false;
+                var bootstrap = new BootstrapJob { World = World, DirtyEntities = _dirtyEntities };
+                World.InlineEntityQuery<BootstrapJob, DirtyFlags>(in _bootstrapQuery, ref bootstrap);
+            }
+
             var job = new CollectionJob
             {
                 World = World,
@@ -34,10 +54,42 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 TagOps = _tagOps
             };
 
-            World.InlineEntityQuery<CollectionJob, DirtyFlags>(in _dirtyQuery, ref job);
+            VisitedEntityCountLastUpdate = 0;
+            int activeCount = _dirtyEntities.Count;
+            for (int i = 0; i < activeCount && _dirtyEntities.TryDequeue(out Entity entity); i++)
+            {
+                if (!World.IsAlive(entity) || !World.Has<DirtyFlags>(entity))
+                {
+                    continue;
+                }
+
+                ref DirtyFlags dirty = ref World.Get<DirtyFlags>(entity);
+                dirty.DeferredTriggerQueued = 0;
+                VisitedEntityCountLastUpdate++;
+                job.Update(entity, ref dirty);
+                if (dirty.IsAnyAttributeDirty() || dirty.IsAnyTagDirty())
+                {
+                    _dirtyEntities.Track(World, entity);
+                }
+            }
             if (_commandBuffer.Size > 0)
             {
                 _commandBuffer.Playback(World);
+            }
+        }
+
+        private struct BootstrapJob : IForEachWithEntity<DirtyFlags>
+        {
+            public World World;
+            public DirtyEntityQueue DirtyEntities;
+
+            public void Update(Entity entity, ref DirtyFlags dirty)
+            {
+                if (dirty.DeferredTriggerQueued == 0 &&
+                    (dirty.IsAnyAttributeDirty() || dirty.IsAnyTagDirty()))
+                {
+                    DirtyEntities.Track(World, entity);
+                }
             }
         }
 
@@ -113,7 +165,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 bool hasCounts = World.Has<TagCountContainer>(entity);
                 if (!hasTags && !hasCounts)
                 {
-                    RemoveDirtyFlagsIfClean(entity, ref dirtyFlags);
+                    ClearDirtyFlagsIfClean(entity, ref dirtyFlags);
                     return;
                 }
 
@@ -143,7 +195,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 }
                 if (!anyDirty)
                 {
-                    RemoveDirtyFlagsIfClean(entity, ref dirtyFlags);
+                    ClearDirtyFlagsIfClean(entity, ref dirtyFlags);
                     return;
                 }
 
@@ -307,15 +359,15 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     CommandBuffer.Add(entity, effChangedLocal);
                 }
 
-                RemoveDirtyFlagsIfClean(entity, ref dirtyFlags);
+                ClearDirtyFlagsIfClean(entity, ref dirtyFlags);
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            private void RemoveDirtyFlagsIfClean(Entity entity, ref DirtyFlags dirtyFlags)
+            private void ClearDirtyFlagsIfClean(Entity entity, ref DirtyFlags dirtyFlags)
             {
                 if (!dirtyFlags.IsAnyAttributeDirty() && !dirtyFlags.IsAnyTagDirty())
                 {
-                    CommandBuffer.Remove<DirtyFlags>(entity);
+                    dirtyFlags.Clear();
                 }
             }
 

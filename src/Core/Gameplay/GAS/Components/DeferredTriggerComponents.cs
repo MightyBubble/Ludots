@@ -44,7 +44,7 @@ namespace Ludots.Core.Gameplay.GAS.Components
         public const int TAG_DIRTY_BYTES = 32; // 256 tags / 8
         
         public ulong AttributeDirtyMask;
-        public fixed byte AttributeDirty[MAX_ATTRS];
+        public byte DeferredTriggerQueued;
         public fixed byte TagDirty[TAG_DIRTY_BYTES];
         
         /// <summary>
@@ -55,7 +55,6 @@ namespace Ludots.Core.Gameplay.GAS.Components
             if (attrId >= 0 && attrId < MAX_ATTRS)
             {
                 AttributeDirtyMask |= 1UL << attrId;
-                AttributeDirty[attrId] = 1;
             }
         }
         
@@ -104,10 +103,6 @@ namespace Ludots.Core.Gameplay.GAS.Components
         public void Clear()
         {
             AttributeDirtyMask = 0UL;
-            for (int i = 0; i < MAX_ATTRS; i++)
-            {
-                AttributeDirty[i] = 0;
-            }
             for (int i = 0; i < TAG_DIRTY_BYTES; i++)
             {
                 TagDirty[i] = 0;
@@ -136,7 +131,6 @@ namespace Ludots.Core.Gameplay.GAS.Components
             if (attrId >= 0 && attrId < MAX_ATTRS)
             {
                 AttributeDirtyMask &= ~(1UL << attrId);
-                AttributeDirty[attrId] = 0;
             }
         }
         

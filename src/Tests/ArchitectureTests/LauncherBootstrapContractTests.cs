@@ -48,12 +48,38 @@ namespace Ludots.Tests.Architecture
             }
             finally
             {
-                await Task.Delay(1_600);
-                if (Directory.Exists(tempDirectory))
-                {
-                    Directory.Delete(tempDirectory, recursive: true);
-                }
+                await DeleteDirectoryWithRetryAsync(tempDirectory, TimeSpan.FromSeconds(5));
             }
+        }
+
+        private static async Task DeleteDirectoryWithRetryAsync(string directory, TimeSpan timeout)
+        {
+            var deadline = DateTime.UtcNow + timeout;
+            Exception? lastFailure = null;
+            while (DateTime.UtcNow <= deadline)
+            {
+                try
+                {
+                    if (Directory.Exists(directory))
+                    {
+                        Directory.Delete(directory, recursive: true);
+                    }
+
+                    return;
+                }
+                catch (IOException ex)
+                {
+                    lastFailure = ex;
+                }
+                catch (UnauthorizedAccessException ex)
+                {
+                    lastFailure = ex;
+                }
+
+                await Task.Delay(100);
+            }
+
+            throw new IOException($"Failed to delete temporary test directory '{directory}'.", lastFailure);
         }
 
         [Test]
@@ -98,8 +124,9 @@ namespace Ludots.Tests.Architecture
                     """);
 
                 var result = GameBootstrapper.InitializeFromBaseDirectory(tempDirectory, "launcher.runtime.json");
+                using var engine = result.Engine;
 
-                Assert.That(result.Engine, Is.Not.Null);
+                Assert.That(engine, Is.Not.Null);
                 Assert.That(result.Config, Is.Not.Null);
                 Assert.That(result.AssetsRoot, Is.EqualTo(Path.Combine(repoRoot, "assets")));
             }
@@ -201,8 +228,9 @@ namespace Ludots.Tests.Architecture
                     """);
 
                 var result = GameBootstrapper.InitializeFromBaseDirectory(tempDirectory, "launcher.runtime.json");
+                using var engine = result.Engine;
 
-                Assert.That(result.Engine, Is.Not.Null);
+                Assert.That(engine, Is.Not.Null);
                 Assert.That(result.Config, Is.Not.Null);
                 Assert.That(result.AssetsRoot, Is.EqualTo(Path.Combine(repoRoot, "assets")));
             }
@@ -942,8 +970,9 @@ namespace Ludots.Tests.Architecture
                 WriteBootstrap(bootstrapPath, "graph-order-fingerprint");
 
                 var result = GameBootstrapper.InitializeFromBaseDirectory(tempDirectory, "launcher.runtime.json");
+                using var engine = result.Engine;
 
-                Assert.That(result.Engine.ModLoader.LoadedModIds, Is.EqualTo(new[] { "LudotsCoreMod", "LowPriorityMod", "HighPriorityMod" }),
+                Assert.That(engine.ModLoader.LoadedModIds, Is.EqualTo(new[] { "LudotsCoreMod", "LowPriorityMod", "HighPriorityMod" }),
                     "Graph-planned order should remain the runtime load order even when priority would have reordered an ad-hoc resolve path.");
             }
             finally

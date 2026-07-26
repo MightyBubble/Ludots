@@ -26,7 +26,7 @@ public sealed class MassNavigationGroupRuntimeTransactionTests
         var simulation = new MassNavigationSimulationRuntime(config);
         simulation.BindBoardWorld(
             new WorldSizeSpec(new WorldAabbCm(0, 0, 25_000, 25_000), 100),
-            new WorldGridLoadedChunks(simulation.WorldConfig.StreamingChunkSizeCm));
+            MassNavigationOrderChainTests.CreateLoadedChunksForTests(simulation));
 
         int profileId = MassNavigationProfileRegistry.Register("test.massNavigation.groupTransaction");
         Entity first = world.Create(new MassNavigationAgent { ProfileId = profileId });
@@ -87,7 +87,7 @@ public sealed class MassNavigationGroupRuntimeTransactionTests
         var simulation = new MassNavigationSimulationRuntime(config);
         simulation.BindBoardWorld(
             new WorldSizeSpec(new WorldAabbCm(0, 0, 25_000, 25_000), 100),
-            new WorldGridLoadedChunks(simulation.WorldConfig.StreamingChunkSizeCm));
+            MassNavigationOrderChainTests.CreateLoadedChunksForTests(simulation));
 
         int profileId = MassNavigationProfileRegistry.Register("test.massNavigation.groupReplacement");
         Entity first = world.Create(new MassNavigationAgent { ProfileId = profileId });
@@ -148,7 +148,7 @@ public sealed class MassNavigationGroupRuntimeTransactionTests
         var simulation = new MassNavigationSimulationRuntime(config);
         simulation.BindBoardWorld(
             new WorldSizeSpec(new WorldAabbCm(0, 0, 25_000, 25_000), 100),
-            new WorldGridLoadedChunks(simulation.WorldConfig.StreamingChunkSizeCm));
+            MassNavigationOrderChainTests.CreateLoadedChunksForTests(simulation));
 
         int profileId = MassNavigationProfileRegistry.Register("test.massNavigation.groupMemberCapacity");
         Entity first = world.Create(new MassNavigationAgent { ProfileId = profileId });

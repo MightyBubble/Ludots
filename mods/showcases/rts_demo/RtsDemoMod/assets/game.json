@@ -1,4 +1,9 @@
 {
   "startupMapId": "rts_entry",
-  "startupInputContexts": ["Default_Gameplay", "Rts_Gameplay"]
+  "startupInputContexts": ["Default_Gameplay", "Rts_Gameplay"],
+  "constants": {
+    "intValues": {
+      "rtsRelationEntityCapacity": 16384
+    }
+  }
 }

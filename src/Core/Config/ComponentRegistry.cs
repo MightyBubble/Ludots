@@ -64,7 +64,8 @@ namespace Ludots.Core.Config
             Register("AttributeBuffer", SetAttributeBuffer);
             Register("EntityLocalClock", SetEntityLocalClock, null, Component<EntityLocalClock>.ComponentType);
             Register("AttributeDerivedGraphBinding", SetAttributeDerivedGraphBinding, null, Component<AttributeDerivedGraphBinding>.ComponentType);
-            Register("AbilityStateBuffer", SetAbilityStateBuffer);
+            Register("AbilityStateBuffer", SetAbilityStateBuffer, null, Component<AbilityStateBuffer>.ComponentType);
+            Register<GrantedSlotBuffer>("GrantedSlotBuffer");
             Register("AbilityProgressionRequirements", SetAbilityProgressionRequirements);
             Register("ProgressionStateBuffer", SetProgressionStateBuffer);
             Register("ProgressionScopeHost", SetProgressionScopeHost);
@@ -73,8 +74,11 @@ namespace Ludots.Core.Config
             Register<ForceInput2D>("ForceInput2D");
             Register<GameplayTagContainer>("GameplayTagContainer");
             Register<TagCountContainer>("TagCountContainer");
+            Register<DirtyFlags>("DirtyFlags");
             Register<TimedTagBuffer>("TimedTagBuffer");
+            Register<AbilityTagGrantReceiver>("AbilityTagGrantReceiver");
             Register("OrderBuffer", SetOrderBuffer, null, Component<OrderBuffer>.ComponentType);
+            Register<OrderSpatialPayloadBuffer>("OrderSpatialPayloadBuffer");
             Register<CommandSourceSelectableTag>("CommandSourceSelectableTag");
             Register("CommandSourceSelectableState", SetCommandSourceSelectableState, null, Component<CommandSourceSelectableState>.ComponentType);
             Register<CommandSourceDragState>("CommandSourceDragState");

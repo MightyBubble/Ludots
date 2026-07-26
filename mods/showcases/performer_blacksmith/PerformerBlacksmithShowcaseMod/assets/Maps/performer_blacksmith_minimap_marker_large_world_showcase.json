@@ -24,7 +24,8 @@
       "WidthInMacroTiles": 256,
       "HeightInMacroTiles": 256,
       "GridCellSizeCm": 100,
-      "ChunkSizeCells": 64
+      "ChunkSizeCells": 64,
+      "LoadedChunkCapacity": 256
     }
   ],
   "DefaultCamera": {

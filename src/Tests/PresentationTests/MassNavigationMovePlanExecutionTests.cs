@@ -37,7 +37,7 @@ public sealed class MassNavigationMovePlanExecutionTests
         var simulation = new MassNavigationSimulationRuntime(config);
         simulation.BindBoardWorld(
             new WorldSizeSpec(new WorldAabbCm(0, 0, 25_000, 25_000), 100),
-            new WorldGridLoadedChunks(simulation.WorldConfig.StreamingChunkSizeCm));
+            MassNavigationOrderChainTests.CreateLoadedChunksForTests(simulation));
 
         int profileId = MassNavigationProfileRegistry.Register("light");
         var layer = new MassNavigationAgentLayer(1u, 1u);

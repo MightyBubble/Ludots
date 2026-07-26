@@ -12,7 +12,14 @@ using Ludots.Core.Gameplay.GAS.Presentation;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Placement;
 using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Gameplay.Exchange;
+using Ludots.Core.Gameplay.Lifecycle;
+using Ludots.Core.Gameplay.Progression;
+using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Spatial;
+using Ludots.Core.Vision;
 
 namespace Ludots.Core.Gameplay.GAS.Systems
 {
@@ -48,6 +55,14 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
     public sealed class EffectProposalProcessingSystem : BaseSystem<World, float>, ITimeSlicedSystem
     {
+        public const string WindowDepthExceededError = "GAS.RESPONSE_CHAIN.ERR.WindowDepthExceeded";
+        public const string CreateCapacityExceededError = "GAS.RESPONSE_CHAIN.ERR.CreateCapacityExceeded";
+        public const string ResponseQueueOverflowError = "GAS.RESPONSE_CHAIN.ERR.ResponseQueueOverflow";
+        public const string InputRequestQueueMissingError = "GAS.RESPONSE_CHAIN.ERR.InputRequestQueueMissing";
+        public const string InputRequestQueueFullError = "GAS.RESPONSE_CHAIN.ERR.InputRequestQueueFull";
+        public const string InputRequestTagMissingError = "GAS.RESPONSE_CHAIN.ERR.InputRequestTagMissing";
+        public const string OrderRequestQueueFullError = "GAS.RESPONSE_CHAIN.ERR.OrderRequestQueueFull";
+
         private readonly EffectRequestQueue _queue;
         private readonly GasBudget _budget;
         private readonly EffectTemplateRegistry _templates;
@@ -62,7 +77,16 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         // Phase Graph execution (optional)
         private readonly EffectPhaseExecutor _phaseExecutor;
         private readonly Ludots.Core.NodeLibraries.GASGraph.IGraphRuntimeApi _graphApi;
-        private readonly Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi _graphApiHost;
+        private readonly BuiltinHandlerExecutionContext _builtinRuntime = new();
+        private readonly RootBudgetTable _fanOutBudget;
+        // An injected budget is advanced by the effect-loop owner once per processing transaction.
+        private readonly bool _ownsFanOutBudget;
+        private readonly FanOutCommandBuffer _instantFanOutCommands;
+        private readonly Entity[] _instantResolverBuffer = new Entity[256];
+        private readonly OrderTypeRegistry? _builtinOrderTypeRegistry;
+        private readonly OrderRuleRegistry? _builtinOrderRuleRegistry;
+        private readonly Ludots.Core.Engine.IClock _clock;
+        private readonly int _builtinStepRateHz;
 
         private static readonly QueryDescription _listenersQuery = new QueryDescription().WithAll<ResponseChainListener>();
 
@@ -71,12 +95,14 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly ProposalResponseQueue _responseQueue = new();
 
         public int MaxWorkUnitsPerSlice { get; set; } = int.MaxValue;
+        public int LastSliceProcessed { get; private set; }
+        public int ListenerCacheRebuildCount { get; private set; }
         public byte DebugWindowPhase => (byte)_phase;
 
         private bool _sliceActive;
         private int _rootCursor;
         private int _rootCountSnapshot;
-        private bool _listenersDirty = true;
+        private int _lastListenerRevision = -1;
 
         private enum WindowPhase : byte
         {
@@ -151,6 +177,17 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 _items[_count++] = proposal;
                 return true;
             }
+
+            public void RemoveLast()
+            {
+                if (_count <= 0)
+                {
+                    throw new InvalidOperationException("GAS.RESPONSE_CHAIN.ERR.WindowRemoveLastEmpty");
+                }
+
+                _count--;
+                _items[_count] = default;
+            }
         }
 
         private sealed class ProposalResponseQueue
@@ -164,6 +201,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
 
             public bool IsEmpty => _count == 0;
+            public int Count => _count;
+            public int AvailableCapacity => _nodes.Length - _count;
 
             public void Clear()
             {
@@ -178,6 +217,31 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 HeapifyUp(_count);
                 _count++;
                 return true;
+            }
+
+            public void RemoveByProposalIndex(int proposalIndex)
+            {
+                int write = 0;
+                for (int i = 0; i < _count; i++)
+                {
+                    if (_nodes[i].Item.ProposalIndex == proposalIndex)
+                    {
+                        continue;
+                    }
+
+                    _nodes[write++] = _nodes[i];
+                }
+
+                for (int i = write; i < _count; i++)
+                {
+                    _nodes[i] = default;
+                }
+
+                _count = write;
+                for (int i = (_count >> 1) - 1; i >= 0; i--)
+                {
+                    HeapifyDown(i);
+                }
             }
 
             public bool TryDequeue(out ProposalResponseItem item)
@@ -250,10 +314,15 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
         }
 
-        public EffectProposalProcessingSystem(World world, EffectRequestQueue queue, GasBudget budget = null, EffectTemplateRegistry templates = null, InputRequestQueue inputRequests = null, OrderQueue chainOrders = null, ResponseChainTelemetryBuffer telemetry = null, OrderRequestQueue orderRequests = null, ResponseChainOrderTypes? responseChainOrderTypes = null, GasPresentationEventBuffer presentationEvents = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null, TagOps tagOps = null)
+        public EffectProposalProcessingSystem(World world, EffectRequestQueue queue, int fanOutCommandCapacity, Ludots.Core.Engine.IClock clock, GasBudget budget = null, EffectTemplateRegistry templates = null, InputRequestQueue inputRequests = null, OrderQueue chainOrders = null, ResponseChainTelemetryBuffer telemetry = null, OrderRequestQueue orderRequests = null, ResponseChainOrderTypes? responseChainOrderTypes = null, GasPresentationEventBuffer presentationEvents = null, EffectPhaseExecutor phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi graphApi = null, TagOps tagOps = null, ISpatialQueryService spatialQueries = null, RuntimeEntitySpawnQueue spawnRequests = null, RuntimeEntityLifecycleQueue lifecycleRequests = null, EntityLifecycleRuntimeServices lifecycleServices = null, ExchangeRuntime exchangeRuntime = null, ProgressionRequirementEvaluator progressionEvaluator = null, OrderTypeRegistry orderTypeRegistry = null, OrderRuleRegistry orderRuleRegistry = null, int stepRateHz = 30, RelationshipRuntime relationshipRuntime = null, KnowledgeAreaRevealRuntime knowledgeAreaRevealRuntime = null, OrderQueue orderIntake = null, RootBudgetTable fanOutBudget = null)
             : base(world)
         {
             _queue = queue;
+            _fanOutBudget = fanOutBudget ?? new RootBudgetTable(fanOutCommandCapacity);
+            _ownsFanOutBudget = fanOutBudget == null;
+            _instantFanOutCommands = new FanOutCommandBuffer(fanOutCommandCapacity);
+            _clock = clock ?? throw new ArgumentNullException(nameof(clock));
+            _queue?.TrackResponseChainListenerLifecycle(world);
             _budget = budget;
             _templates = templates;
             _inputRequests = inputRequests;
@@ -264,10 +333,25 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 responseChainOrderTypes,
                 nameof(EffectProposalProcessingSystem));
             _presentationEvents = presentationEvents;
-            _tagOps = tagOps ?? new TagOps();
+            _tagOps = tagOps;
             _phaseExecutor = phaseExecutor;
-            _graphApiHost = graphApi;
             _graphApi = graphApi;
+            _builtinRuntime.SpatialQueries = spatialQueries;
+            _builtinRuntime.FanOutBudget = _fanOutBudget;
+            _builtinRuntime.FanOutCommands = _instantFanOutCommands;
+            _builtinRuntime.ResolverBuffer = _instantResolverBuffer;
+            _builtinRuntime.SpawnRequests = spawnRequests;
+            _builtinRuntime.LifecycleRequests = lifecycleRequests;
+            _builtinRuntime.LifecycleServices = lifecycleServices;
+            _builtinRuntime.Exchange = exchangeRuntime;
+            _builtinRuntime.ProgressionEvaluator = progressionEvaluator;
+            _builtinRuntime.Relationships = relationshipRuntime;
+            _builtinRuntime.KnowledgeAreaReveal = knowledgeAreaRevealRuntime;
+            _builtinRuntime.TagOps = _tagOps;
+            _builtinRuntime.OrderIntake = orderIntake;
+            _builtinOrderTypeRegistry = orderTypeRegistry;
+            _builtinOrderRuleRegistry = orderRuleRegistry;
+            _builtinStepRateHz = GasStepRate.RequirePositive(stepRateHz, nameof(EffectProposalProcessingSystem));
         }
 
         public override void Update(in float dt)
@@ -278,13 +362,9 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             MaxWorkUnitsPerSlice = prev;
         }
 
-        public void MarkListenersDirty()
-        {
-            _listenersDirty = true;
-        }
-
         public bool UpdateSlice(float dt, int timeBudgetMs)
         {
+            LastSliceProcessed = 0;
             if (_queue == null || _queue.Count == 0)
             {
                 _sliceActive = false;
@@ -294,17 +374,28 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             if (!_sliceActive)
             {
                 _sliceActive = true;
+                if (_ownsFanOutBudget)
+                {
+                    _fanOutBudget.NextFrame();
+                }
+                _instantFanOutCommands.Clear();
+                _builtinRuntime.OrderTypeRegistry = _builtinOrderTypeRegistry;
+                _builtinRuntime.OrderRuleRegistry = _builtinOrderRuleRegistry;
+                _builtinRuntime.StepRateHz = _builtinStepRateHz;
+                _builtinRuntime.CurrentStep = _clock.Now(Ludots.Core.Engine.ClockDomainId.Step);
                 _rootCursor = 0;
                 _rootCountSnapshot = _queue.Count;
                 _phase = WindowPhase.None;
 
-                if (_listenersDirty)
+                int listenerRevision = _queue.ResponseChainListenerRevision;
+                if (_lastListenerRevision != listenerRevision)
                 {
-                    _listenersDirty = false;
+                    _lastListenerRevision = listenerRevision;
                     _listeners.Clear();
                     var job = new CollectListenerEntitiesJob { Entities = _listeners };
                     World.InlineEntityQuery<CollectListenerEntitiesJob, ResponseChainListener>(in _listenersQuery, ref job);
                     if (_listeners.Count > 1) _listeners.Sort(EntityStableComparer.Instance);
+                    ListenerCacheRebuildCount++;
                 }
             }
 
@@ -325,13 +416,13 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     var req = _queue[_rootCursor++];
                     if (!World.IsAlive(req.Target))
                     {
-                        workUnits++;
+                        ConsumeWork(ref workUnits);
                         continue;
                     }
 
                     if (_templates == null || req.TemplateId <= 0 || !_templates.TryGetRef(req.TemplateId, out int rootTplIdx))
                     {
-                        workUnits++;
+                        ConsumeWork(ref workUnits);
                         continue;
                     }
                     ref readonly var rootTpl = ref _templates.GetRef(rootTplIdx);
@@ -370,10 +461,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     };
                     if (!_window.TryAdd(root))
                     {
-                        if (_budget != null) _budget.ResponseDepthDropped++;
-                        _phase = WindowPhase.None;
-                        workUnits++;
-                        continue;
+                        ThrowWindowDepthExceeded(req.RootId, req.TemplateId, "Root");
                     }
  
                     if (_telemetry != null && _emitTelemetry)
@@ -404,7 +492,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         if (_budget != null) _budget.ResponseWindows++;
                     }
 
-                    workUnits++;
+                    ConsumeWork(ref workUnits);
                     continue;
                 }
 
@@ -438,8 +526,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                     case ResponseType.Chain:
                                         if (_creates >= GasConstants.MAX_CREATES_PER_ROOT)
                                         {
-                                            if (_budget != null) _budget.ResponseCreatesDropped++;
-                                            break;
+                                            ThrowCreateCapacityExceeded(_activeReq.RootId, response.EffectTemplateId, "Collect");
                                         }
                                         if (_templates == null || response.EffectTemplateId <= 0 || !_templates.TryGetRef(response.EffectTemplateId, out int tplIdx))
                                         {
@@ -465,8 +552,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                         int newIndex = _window.Count;
                                         if (!_window.TryAdd(chained))
                                         {
-                                            if (_budget != null) _budget.ResponseDepthDropped++;
-                                            break;
+                                            ThrowWindowDepthExceeded(_activeReq.RootId, response.EffectTemplateId, "Collect");
                                         }
                                         _creates++;
                                         if (_budget != null) _budget.ResponseCreates++;
@@ -485,7 +571,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             }
                         }
 
-                        workUnits++;
+                        ConsumeWork(ref workUnits);
                         continue;
                     }
 
@@ -506,10 +592,65 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                 if (_phase == WindowPhase.WaitInput)
                 {
-                    if (!_inputRequestSent && _inputRequests != null && _inputRequestTagId > 0 && _window.Count > 0)
+                    if (!_inputRequestSent)
                     {
+                        if (_inputRequestTagId <= 0)
+                        {
+                            throw new InvalidOperationException(
+                                $"{InputRequestTagMissingError}: rootId={_activeReq.RootId}, templateId={_activeReq.TemplateId}.");
+                        }
+                        if (_window.Count <= 0)
+                        {
+                            ThrowWindowDepthExceeded(_activeReq.RootId, _activeReq.TemplateId, "WaitInput");
+                        }
+                        if (_inputRequests == null)
+                        {
+                            throw new InvalidOperationException(
+                                $"{InputRequestQueueMissingError}: rootId={_activeReq.RootId}, templateId={_activeReq.TemplateId}, requestTagId={_inputRequestTagId}.");
+                        }
+
+                        // Prompt + optional OrderRequest are one visible transaction: preflight both
+                        // capacities before publishing either, so a full OrderRequest queue cannot
+                        // leave an orphan prompt the player cannot answer.
+                        if (_inputRequests.Count >= _inputRequests.Capacity)
+                        {
+                            throw new InvalidOperationException(
+                                $"{InputRequestQueueFullError}: rootId={_activeReq.RootId}, templateId={_activeReq.TemplateId}, requestTagId={_inputRequestTagId}, capacity={_inputRequests.Capacity}.");
+                        }
+
+                        int playerId = 0;
+                        var src = _window[0].Source;
+                        OrderRequest orderRequest = default;
+                        if (_orderRequests != null)
+                        {
+                            if (_orderRequests.Count >= _orderRequests.Capacity)
+                            {
+                                throw new InvalidOperationException(
+                                    $"{OrderRequestQueueFullError}: rootId={_activeReq.RootId}, templateId={_activeReq.TemplateId}, requestTagId={_inputRequestTagId}, capacity={_orderRequests.Capacity}.");
+                            }
+
+                            if (World.IsAlive(src) && World.Has<PlayerOwner>(src))
+                            {
+                                playerId = World.Get<PlayerOwner>(src).PlayerId;
+                            }
+
+                            orderRequest = new OrderRequest
+                            {
+                                RequestId = _activeReq.RootId,
+                                PromptTagId = _inputRequestTagId,
+                                PlayerId = playerId,
+                                Actor = src,
+                                Target = _window[0].Target,
+                                TargetContext = _window[0].TargetContext,
+                                AllowedCount = 0
+                            };
+                            orderRequest.AddAllowed(_responseChainOrderTypes.ChainPass);
+                            orderRequest.AddAllowed(_responseChainOrderTypes.ChainNegate);
+                            if (_inputRequestTagId > 0) orderRequest.AddAllowed(_responseChainOrderTypes.ChainActivateEffect);
+                        }
+
                         var windowId = _nextWindowId++;
-                        _inputRequests.TryEnqueue(new InputRequest
+                        var inputRequest = new InputRequest
                         {
                             RequestId = windowId,
                             RequestTagId = _inputRequestTagId,
@@ -518,9 +659,21 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             Context = _window[0].TargetContext,
                             PayloadA = 0,
                             PayloadB = 0
-                        });
+                        };
+                        if (!_inputRequests.TryEnqueue(in inputRequest))
+                        {
+                            throw new InvalidOperationException(
+                                $"{InputRequestQueueFullError}: rootId={_activeReq.RootId}, templateId={_activeReq.TemplateId}, requestTagId={_inputRequestTagId}, capacity={_inputRequests.Capacity}.");
+                        }
+
+                        if (_orderRequests != null && !_orderRequests.TryEnqueue(in orderRequest))
+                        {
+                            throw new InvalidOperationException(
+                                $"{OrderRequestQueueFullError}: rootId={_activeReq.RootId}, templateId={_activeReq.TemplateId}, requestTagId={_inputRequestTagId}, capacity={_orderRequests.Capacity}.");
+                        }
+
                         _inputRequestSent = true;
- 
+
                         if (_telemetry != null && _emitTelemetry)
                         {
                             _telemetry.TryAdd(new ResponseChainTelemetryEvent
@@ -536,173 +689,267 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                 Context = _window[0].TargetContext
                             });
                         }
- 
-                        if (_orderRequests != null)
-                        {
-                            // Resolve PlayerId from source entity's PlayerOwner component
-                            int playerId = 0;
-                            var src = _window[0].Source;
-                            if (World.IsAlive(src) && World.Has<PlayerOwner>(src))
-                            {
-                                playerId = World.Get<PlayerOwner>(src).PlayerId;
-                            }
-
-                            var req = new OrderRequest
-                            {
-                                RequestId = _activeReq.RootId,
-                                PromptTagId = _inputRequestTagId,
-                                PlayerId = playerId,
-                                Actor = src,
-                                Target = _window[0].Target,
-                                TargetContext = _window[0].TargetContext,
-                                AllowedCount = 0
-                            };
-                            req.AddAllowed(_responseChainOrderTypes.ChainPass);
-                            req.AddAllowed(_responseChainOrderTypes.ChainNegate);
-                            if (_inputRequestTagId > 0) req.AddAllowed(_responseChainOrderTypes.ChainActivateEffect);
-                            _orderRequests.TryEnqueue(req);
-                        }
                     }
 
                     bool progressed = false;
                     if (_chainOrders != null)
                     {
-                        while (_chainOrders.TryDequeue(out var order))
+                        while (_chainOrders.TryPeek(out var nextOrder))
                         {
                             if (workUnits >= MaxWorkUnitsPerSlice) return false;
+
+                            if (nextOrder.OrderTypeId == _responseChainOrderTypes.ChainActivateEffect &&
+                                nextOrder.Args.I0 > 0 &&
+                                _creates >= GasConstants.MAX_CREATES_PER_ROOT)
+                            {
+                                ThrowCreateCapacityExceeded(_activeReq.RootId, nextOrder.Args.I0, "WaitInput");
+                            }
+
+                            if (!TryBeginResponseChainOrderConsumption(
+                                    out var order,
+                                    out OrderAdmissionReservation admissionReservation,
+                                    out bool rejectedForAdmissionCapacity))
+                            {
+                                break;
+                            }
+
                             progressed = true;
-
-                            if (order.OrderTypeId == _responseChainOrderTypes.ChainPass)
+                            if (rejectedForAdmissionCapacity)
                             {
-                                if (_telemetry != null && _emitTelemetry)
-                                {
-                                    _telemetry.TryAdd(new ResponseChainTelemetryEvent
-                                    {
-                                        Kind = ResponseChainTelemetryKind.OrderConsumed,
-                                        RootId = _activeReq.RootId,
-                                        TemplateId = _activeReq.TemplateId,
-                                        TagId = _window[0].TagId,
-                                        ProposalIndex = 0,
-                                        OrderTypeId = order.OrderTypeId,
-                                        Source = order.Actor,
-                                        Target = order.Target,
-                                        Context = order.TargetContext
-                                    });
-                                }
-                                _passStreak++;
-                                if (_passStreak >= 2)
-                                {
-                                    _closeRequested = true;
-                                    break;
-                                }
-
-                                workUnits++;
+                                OrderSpatialPayloadOps.Release(World, in order);
+                                ConsumeWork(ref workUnits);
                                 continue;
                             }
 
-                            _passStreak = 0;
-                            if (order.OrderTypeId == _responseChainOrderTypes.ChainNegate)
+                            bool admissionCommitted = false;
+                            try
                             {
-                                if (_telemetry != null && _emitTelemetry)
+                                if (order.OrderTypeId == _responseChainOrderTypes.ChainPass)
                                 {
-                                    _telemetry.TryAdd(new ResponseChainTelemetryEvent
+                                    if (_telemetry != null && _emitTelemetry)
                                     {
-                                        Kind = ResponseChainTelemetryKind.OrderConsumed,
-                                        RootId = _activeReq.RootId,
-                                        TemplateId = _activeReq.TemplateId,
-                                        TagId = _window[0].TagId,
-                                        ProposalIndex = 0,
-                                        OrderTypeId = order.OrderTypeId,
-                                        Source = order.Actor,
-                                        Target = order.Target,
-                                        Context = order.TargetContext
-                                    });
-                                }
-                                _pendingNegates++;
-                                workUnits++;
-                                continue;
-                            }
+                                        _telemetry.TryAdd(new ResponseChainTelemetryEvent
+                                        {
+                                            Kind = ResponseChainTelemetryKind.OrderConsumed,
+                                            RootId = _activeReq.RootId,
+                                            TemplateId = _activeReq.TemplateId,
+                                            TagId = _window[0].TagId,
+                                            ProposalIndex = 0,
+                                            OrderTypeId = order.OrderTypeId,
+                                            Source = order.Actor,
+                                            Target = order.Target,
+                                            Context = order.TargetContext
+                                        });
+                                    }
 
-                            if (order.OrderTypeId == _responseChainOrderTypes.ChainActivateEffect && order.Args.I0 > 0)
-                            {
-                                if (_telemetry != null && _emitTelemetry)
-                                {
-                                    _telemetry.TryAdd(new ResponseChainTelemetryEvent
+                                    CompleteConsumedResponseChainOrder(
+                                        in admissionReservation,
+                                        in order,
+                                        OrderSubmitResult.Activated,
+                                        ref admissionCommitted);
+                                    _passStreak++;
+                                    if (_passStreak >= 2)
                                     {
-                                        Kind = ResponseChainTelemetryKind.OrderConsumed,
+                                        _closeRequested = true;
+                                        break;
+                                    }
+
+                                    ConsumeWork(ref workUnits);
+                                    continue;
+                                }
+
+                                _passStreak = 0;
+                                if (order.OrderTypeId == _responseChainOrderTypes.ChainNegate)
+                                {
+                                    if (_telemetry != null && _emitTelemetry)
+                                    {
+                                        _telemetry.TryAdd(new ResponseChainTelemetryEvent
+                                        {
+                                            Kind = ResponseChainTelemetryKind.OrderConsumed,
+                                            RootId = _activeReq.RootId,
+                                            TemplateId = _activeReq.TemplateId,
+                                            TagId = _window[0].TagId,
+                                            ProposalIndex = 0,
+                                            OrderTypeId = order.OrderTypeId,
+                                            Source = order.Actor,
+                                            Target = order.Target,
+                                            Context = order.TargetContext
+                                        });
+                                    }
+
+                                    CompleteConsumedResponseChainOrder(
+                                        in admissionReservation,
+                                        in order,
+                                        OrderSubmitResult.Activated,
+                                        ref admissionCommitted);
+                                    _pendingNegates++;
+                                    ConsumeWork(ref workUnits);
+                                    continue;
+                                }
+
+                                if (order.OrderTypeId == _responseChainOrderTypes.ChainActivateEffect && order.Args.I0 > 0)
+                                {
+                                    if (_telemetry != null && _emitTelemetry)
+                                    {
+                                        _telemetry.TryAdd(new ResponseChainTelemetryEvent
+                                        {
+                                            Kind = ResponseChainTelemetryKind.OrderConsumed,
+                                            RootId = _activeReq.RootId,
+                                            TemplateId = order.Args.I0,
+                                            TagId = _window[0].TagId,
+                                            ProposalIndex = 0,
+                                            OrderTypeId = order.OrderTypeId,
+                                            Source = order.Actor,
+                                            Target = order.Target,
+                                            Context = order.TargetContext
+                                        });
+                                    }
+
+                                    if (_templates == null || !_templates.TryGetRef(order.Args.I0, out int tplIdx))
+                                    {
+                                        CompleteConsumedResponseChainOrder(
+                                            in admissionReservation,
+                                            in order,
+                                            OrderSubmitResult.RejectedValidation,
+                                            ref admissionCommitted);
+                                        ConsumeWork(ref workUnits);
+                                        continue;
+                                    }
+
+                                    ref readonly var tpl = ref _templates.GetRef(tplIdx);
+
+                                    if (tpl.ParticipatesInResponse &&
+                                        CountResponsesForEffect(tpl.TagId) > _responseQueue.AvailableCapacity)
+                                    {
+                                        if (_budget != null) _budget.ResponseQueueOverflowDropped++;
+                                        CompleteConsumedResponseChainOrder(
+                                            in admissionReservation,
+                                            in order,
+                                            OrderSubmitResult.RejectedQueueFull,
+                                            ref admissionCommitted);
+                                        ConsumeWork(ref workUnits);
+                                        continue;
+                                    }
+
+                                    var chainedModifiers = tpl.Modifiers;
+                                    ApplyPresetModifiers(ref chainedModifiers, in tpl, in _activeReq);
+                                    var chained = new EffectProposal
+                                    {
                                         RootId = _activeReq.RootId,
+                                        Source = World.IsAlive(order.Actor) ? order.Actor : _activeReq.Source,
+                                        Target = _activeReq.Target,
+                                        TargetContext = _activeReq.TargetContext,
                                         TemplateId = order.Args.I0,
-                                        TagId = _window[0].TagId,
-                                        ProposalIndex = 0,
-                                        OrderTypeId = order.OrderTypeId,
-                                        Source = order.Actor,
-                                        Target = order.Target,
-                                        Context = order.TargetContext
-                                    });
-                                }
-                                if (_creates >= GasConstants.MAX_CREATES_PER_ROOT)
-                                {
-                                    if (_budget != null) _budget.ResponseCreatesDropped++;
-                                    workUnits++;
-                                    continue;
-                                }
-                                if (_templates == null || !_templates.TryGetRef(order.Args.I0, out int tplIdx))
-                                {
-                                    workUnits++;
-                                    continue;
-                                }
-                                ref readonly var tpl = ref _templates.GetRef(tplIdx);
+                                        TagId = tpl.TagId,
+                                        ParticipatesInResponse = tpl.ParticipatesInResponse,
+                                        Cancelled = false,
+                                        Modifiers = chainedModifiers
+                                    };
 
-                                var chainedModifiers = tpl.Modifiers;
-                                ApplyPresetModifiers(ref chainedModifiers, in tpl, in _activeReq);
-                                var chained = new EffectProposal
-                                {
-                                    RootId = _activeReq.RootId,
-                                    Source = World.IsAlive(order.Actor) ? order.Actor : _activeReq.Source,
-                                    Target = _activeReq.Target,
-                                    TargetContext = _activeReq.TargetContext,
-                                    TemplateId = order.Args.I0,
-                                    TagId = tpl.TagId,
-                                    ParticipatesInResponse = tpl.ParticipatesInResponse,
-                                    Cancelled = false,
-                                    Modifiers = chainedModifiers
-                                };
-
-                                int newIndex = _window.Count;
-                                if (!_window.TryAdd(chained))
-                                {
-                                    if (_budget != null) _budget.ResponseDepthDropped++;
-                                    workUnits++;
-                                    continue;
-                                }
-                                _creates++;
-                                if (_budget != null) _budget.ResponseCreates++;
-                                if (_telemetry != null && _emitTelemetry)
-                                {
-                                    _telemetry.TryAdd(new ResponseChainTelemetryEvent
+                                    int newIndex = _window.Count;
+                                    if (!_window.TryAdd(chained))
                                     {
-                                        Kind = ResponseChainTelemetryKind.ProposalAdded,
-                                        RootId = _activeReq.RootId,
-                                        TemplateId = chained.TemplateId,
-                                        TagId = chained.TagId,
-                                        ProposalIndex = newIndex,
-                                        Source = chained.Source,
-                                        Target = chained.Target,
-                                        Context = chained.TargetContext
-                                    });
+                                        CompleteConsumedResponseChainOrder(
+                                            in admissionReservation,
+                                            in order,
+                                            OrderSubmitResult.RejectedQueueFull,
+                                            ref admissionCommitted);
+                                        ConsumeWork(ref workUnits);
+                                        continue;
+                                    }
+
+                                    try
+                                    {
+                                        _creates++;
+                                        if (_budget != null) _budget.ResponseCreates++;
+                                        if (_telemetry != null && _emitTelemetry)
+                                        {
+                                            _telemetry.TryAdd(new ResponseChainTelemetryEvent
+                                            {
+                                                Kind = ResponseChainTelemetryKind.ProposalAdded,
+                                                RootId = _activeReq.RootId,
+                                                TemplateId = chained.TemplateId,
+                                                TagId = chained.TagId,
+                                                ProposalIndex = newIndex,
+                                                Source = chained.Source,
+                                                Target = chained.Target,
+                                                Context = chained.TargetContext
+                                            });
+                                        }
+
+                                        if (tpl.ParticipatesInResponse)
+                                        {
+                                            EnqueueResponsesForEffect(newIndex, tpl.TagId);
+                                        }
+                                    }
+                                    catch (InvalidOperationException ex)
+                                        when (ex.Message.StartsWith(ResponseQueueOverflowError, StringComparison.Ordinal) ||
+                                              ex.Message.StartsWith(WindowDepthExceededError, StringComparison.Ordinal) ||
+                                              ex.Message.StartsWith(CreateCapacityExceededError, StringComparison.Ordinal))
+                                    {
+                                        _responseQueue.RemoveByProposalIndex(newIndex);
+                                        _window.RemoveLast();
+                                        if (_creates > 0)
+                                        {
+                                            _creates--;
+                                            if (_budget != null && _budget.ResponseCreates > 0)
+                                            {
+                                                _budget.ResponseCreates--;
+                                            }
+                                        }
+
+                                        CompleteConsumedResponseChainOrder(
+                                            in admissionReservation,
+                                            in order,
+                                            OrderSubmitResult.RejectedQueueFull,
+                                            ref admissionCommitted);
+                                        ConsumeWork(ref workUnits);
+                                        continue;
+                                    }
+                                    catch
+                                    {
+                                        _responseQueue.RemoveByProposalIndex(newIndex);
+                                        _window.RemoveLast();
+                                        if (_creates > 0)
+                                        {
+                                            _creates--;
+                                            if (_budget != null && _budget.ResponseCreates > 0)
+                                            {
+                                                _budget.ResponseCreates--;
+                                            }
+                                        }
+
+                                        throw;
+                                    }
+
+                                    CompleteConsumedResponseChainOrder(
+                                        in admissionReservation,
+                                        in order,
+                                        OrderSubmitResult.Activated,
+                                        ref admissionCommitted);
+                                    _phase = WindowPhase.Collect;
+                                    ConsumeWork(ref workUnits);
+                                    goto ContinueOuter;
                                 }
 
-                                if (tpl.ParticipatesInResponse)
-                                {
-                                    EnqueueResponsesForEffect(newIndex, tpl.TagId);
-                                }
-
-                                _phase = WindowPhase.Collect;
-                                workUnits++;
-                                goto ContinueOuter;
+                                CompleteConsumedResponseChainOrder(
+                                    in admissionReservation,
+                                    in order,
+                                    OrderSubmitResult.RejectedInvalidOrderType,
+                                    ref admissionCommitted);
+                                ConsumeWork(ref workUnits);
                             }
-
-                            workUnits++;
+                            finally
+                            {
+                                if (!admissionCommitted && admissionReservation.IsValid)
+                                {
+                                    CompleteConsumedResponseChainOrder(
+                                        in admissionReservation,
+                                        in order,
+                                        OrderSubmitResult.RejectedValidation,
+                                        ref admissionCommitted);
+                                }
+                            }
                         }
                     }
 
@@ -719,7 +966,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         return true;
                     }
 
-                    workUnits++;
+                    ConsumeWork(ref workUnits);
                     continue;
 
                 ContinueOuter:
@@ -751,7 +998,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                     Context = e.TargetContext
                                 });
                             }
-                            workUnits++;
+                            ConsumeWork(ref workUnits);
                             continue;
                         }
 
@@ -773,7 +1020,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                     Context = e.TargetContext
                                 });
                             }
-                            workUnits++;
+                            ConsumeWork(ref workUnits);
                             continue;
                         }
 
@@ -794,7 +1041,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                     Context = e.TargetContext
                                 });
                             }
-                            workUnits++;
+                            ConsumeWork(ref workUnits);
                             continue;
                         }
 
@@ -815,7 +1062,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                     Context = e.TargetContext
                                 });
                             }
-                            workUnits++;
+                            ConsumeWork(ref workUnits);
                             continue;
                         }
                         ref readonly var tpl = ref _templates.GetRef(tplIdx);
@@ -823,48 +1070,9 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         // Execute OnCalculate Phase Graphs (after ResponseChain resolves)
                         ExecuteOnCalculatePhase(in e, in tpl);
 
-                        if (IsPureInstantTemplate(in tpl))
+                        if (CanExecuteInstantInline(in tpl))
                         {
-                            ref var attr = ref World.TryGetRef<AttributeBuffer>(e.Target, out bool hasAttr);
-                            float delta = 0f;
-                            if (hasAttr)
-                            {
-                                // Snapshot primary attribute for delta calculation
-                                int primaryAttrId = e.Modifiers.Count > 0 ? e.Modifiers.Get(0).AttributeId : -1;
-                                float before = primaryAttrId >= 0 ? attr.GetCurrent(primaryAttrId) : 0f;
-                                AttributeMutationOps.ApplyModifiers(World, e.Target, in e.Modifiers);
-                                float after = primaryAttrId >= 0 ? attr.GetCurrent(primaryAttrId) : 0f;
-                                delta = after - before;
-                                if (_presentationEvents != null)
-                                {
-                                    _presentationEvents.Publish(new GasPresentationEvent
-                                    {
-                                        Kind = GasPresentationEventKind.EffectApplied,
-                                        Actor = e.Source,
-                                        Target = e.Target,
-                                        EffectTemplateId = e.TemplateId,
-                                        AttributeId = primaryAttrId,
-                                        Delta = delta
-                                    });
-                                }
-                            }
-
-                            // Dispatch OnApply Phase Listeners even for pure-instant effects.
-                            // Modifiers are applied inline above (equivalent to Main handler),
-                            // but Listeners must still fire for observability, e.g. "whenever
-                            // damage is dealt, draw a card" or "thorns: reflect damage on hit".
-                            if (_phaseExecutor != null && _graphApi != null)
-                            {
-                                SetMergedConfigContext(in tpl, in e);
-                                _phaseExecutor.DispatchPhaseListeners(
-                                    World, _graphApi,
-                                    e.Source, e.Target, e.TargetContext,
-                                    default,
-                                    EffectPhaseId.OnApply,
-                                    tpl.TagId,
-                                    e.TemplateId);
-                                ClearConfigContext();
-                            }
+                            ExecuteInstantInline(in e, in tpl);
 
                             if (_telemetry != null && _emitTelemetry)
                             {
@@ -902,8 +1110,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             }
                         }
 
-                        workUnits++;
+                        ConsumeWork(ref workUnits);
                     }
+
+                    if (workUnits >= MaxWorkUnitsPerSlice) return false;
 
                     if (_telemetry != null && _emitTelemetry)
                     {
@@ -927,10 +1137,138 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     _inputRequestSent = false;
                     _pendingNegates = 0;
                     _passStreak = 0;
-                    workUnits++;
+                    ConsumeWork(ref workUnits);
                     continue;
                 }
             }
+        }
+
+        private void ConsumeWork(ref int workUnits)
+        {
+            workUnits++;
+            LastSliceProcessed++;
+        }
+
+        private bool TryBeginResponseChainOrderConsumption(
+            out Order order,
+            out OrderAdmissionReservation reservation,
+            out bool rejectedForAdmissionCapacity)
+        {
+            order = default;
+            reservation = default;
+            rejectedForAdmissionCapacity = false;
+            if (_chainOrders == null || !_chainOrders.TryPeek(out order))
+            {
+                return false;
+            }
+
+            OrderAdmissionResultBuffer admissionResults = _chainOrders.AdmissionResults;
+            if (!admissionResults.LogicStepActive || !admissionResults.EntityIntakeOpen)
+            {
+                return false;
+            }
+
+            if (!admissionResults.CanReserve(OrderAdmissionStage.EntityIntake, 1))
+            {
+                if (!admissionResults.CanRecordCapacityFailures(OrderAdmissionStage.EntityIntake, 1))
+                {
+                    throw new InvalidOperationException(
+                        $"{OrderAdmissionResultBuffer.RejectionCapacityExceededError}: stage={OrderAdmissionStage.EntityIntake}, batchCount=1, rejectionCapacity={admissionResults.RejectionCapacity}.");
+                }
+
+                if (!_chainOrders.TryDequeue(out order))
+                {
+                    throw new InvalidOperationException("GAS.RESPONSE_CHAIN.ERR.QueuedOrderDisappearedDuringAdmissionCapacityRejection");
+                }
+
+                Span<Order> rejected = stackalloc Order[1];
+                rejected[0] = order;
+                admissionResults.RecordCapacityFailures(rejected, OrderAdmissionStage.EntityIntake);
+                rejectedForAdmissionCapacity = true;
+                return true;
+            }
+
+            reservation = admissionResults.Reserve(
+                OrderAdmissionStage.EntityIntake,
+                order.OrderId,
+                order.OrderTypeId);
+            bool dequeued = false;
+            try
+            {
+                if (!_chainOrders.TryDequeue(out Order dequeuedOrder))
+                {
+                    throw new InvalidOperationException("GAS.RESPONSE_CHAIN.ERR.QueuedOrderDisappearedDuringAdmission");
+                }
+
+                order = dequeuedOrder;
+                dequeued = true;
+                return true;
+            }
+            finally
+            {
+                if (!dequeued && reservation.IsValid)
+                {
+                    admissionResults.Cancel(in reservation);
+                }
+            }
+        }
+
+        private void CommitResponseChainOrderAdmission(
+            in OrderAdmissionReservation reservation,
+            in Order order,
+            OrderSubmitResult result)
+        {
+            var outcome = new OrderAdmissionOutcome(
+                order.OrderId,
+                order.OrderTypeId,
+                OrderAdmissionStage.EntityIntake,
+                result);
+            _chainOrders.AdmissionResults.Commit(in reservation, in outcome);
+        }
+
+        private void CompleteConsumedResponseChainOrder(
+            in OrderAdmissionReservation reservation,
+            in Order order,
+            OrderSubmitResult result,
+            ref bool admissionCommitted)
+        {
+            // Commit first and mark ownership closed before Release. If Release throws
+            // (e.g. missing payload buffer), finally must not Commit the same reservation again.
+            CommitResponseChainOrderAdmission(in reservation, in order, result);
+            admissionCommitted = true;
+            OrderSpatialPayloadOps.Release(World, in order);
+        }
+
+        private unsafe int CountResponsesForEffect(int effectTagId)
+        {
+            int matched = 0;
+            for (int li = 0; li < _listeners.Count; li++)
+            {
+                var listenerEntity = _listeners[li];
+                if (!World.IsAlive(listenerEntity))
+                {
+                    continue;
+                }
+
+                ref var listener = ref World.TryGetRef<ResponseChainListener>(listenerEntity, out bool hasListener);
+                if (!hasListener)
+                {
+                    continue;
+                }
+
+                for (int i = 0; i < listener.Count; i++)
+                {
+                    int eventTagId = listener.EventTagIds[i];
+                    if (eventTagId != 0 && effectTagId != eventTagId)
+                    {
+                        continue;
+                    }
+
+                    matched++;
+                }
+            }
+
+            return matched;
         }
 
         public void ResetSlice()
@@ -1008,9 +1346,25 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                 }))
                                 {
                                     if (_budget != null) _budget.ResponseQueueOverflowDropped++;
+                                    throw new InvalidOperationException(
+                                        $"{ResponseQueueOverflowError}: proposalIndex={proposalIndex}, effectTagId={effectTagId}, responseType={responseType}, capacity={GasConstants.MAX_RESPONSES_PER_WINDOW}.");
                                 }
                 }
             }
+        }
+
+        private void ThrowWindowDepthExceeded(int rootId, int templateId, string phase)
+        {
+            if (_budget != null) _budget.ResponseDepthDropped++;
+            throw new InvalidOperationException(
+                $"{WindowDepthExceededError}: rootId={rootId}, templateId={templateId}, phase={phase}, capacity={GasConstants.MAX_DEPTH}.");
+        }
+
+        private void ThrowCreateCapacityExceeded(int rootId, int templateId, string phase)
+        {
+            if (_budget != null) _budget.ResponseCreatesDropped++;
+            throw new InvalidOperationException(
+                $"{CreateCapacityExceededError}: rootId={rootId}, templateId={templateId}, phase={phase}, capacity={GasConstants.MAX_CREATES_PER_ROOT}.");
         }
 
         private static void ApplyPresetModifiers(ref EffectModifiers modifiers, in EffectTemplateData tpl, in EffectRequest req)
@@ -1040,26 +1394,126 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
         }
 
-        private static bool IsPureInstantTemplate(in EffectTemplateData tpl)
+        private void ExecuteInstantInline(in EffectProposal proposal, in EffectTemplateData tpl)
+        {
+            bool hasPhaseRuntime = _phaseExecutor != null && _graphApi != null;
+            if (!hasPhaseRuntime)
+            {
+                if (tpl.PhaseGraphBindings.StepCount > 0 || tpl.HasTargetResolver ||
+                    (tpl.PresetType != EffectPresetType.None &&
+                     tpl.PresetType != EffectPresetType.InstantDamage &&
+                     tpl.PresetType != EffectPresetType.Heal &&
+                     tpl.PresetType != EffectPresetType.ApplyForce2D))
+                {
+                    throw new InvalidOperationException(
+                        $"GAS.INSTANT.ERR.MissingPhaseRuntime: templateId={proposal.TemplateId}, preset={tpl.PresetType}.");
+                }
+
+                ApplyInstantModifiersAndPublish(in proposal);
+                return;
+            }
+
+            EffectConfigParams mergedConfig = BuildMergedConfig(in tpl, in proposal);
+            var context = new EffectContext
+            {
+                RootId = proposal.RootId,
+                Source = proposal.Source,
+                Target = proposal.Target,
+                TargetContext = proposal.TargetContext,
+            };
+            IntVector2 targetPosCm = PlacementPhaseTargetPosResolver.Resolve(World, in context, in mergedConfig);
+            _builtinRuntime.ResetPerEffect();
+            _builtinRuntime.SetModifierOverride(in proposal.Modifiers);
+
+            try
+            {
+                _phaseExecutor!.ExecutePhase(
+                    World, _graphApi!, proposal.Source, proposal.Target, proposal.TargetContext, targetPosCm,
+                    EffectPhaseId.OnResolve, in tpl.PhaseGraphBindings, tpl.PresetType,
+                    tpl.TagId, proposal.TemplateId, in mergedConfig, _builtinRuntime, BuildInstantExecutionSeed(in proposal, EffectPhaseId.OnResolve), proposal.RootId);
+                _phaseExecutor.ExecutePhase(
+                    World, _graphApi, proposal.Source, proposal.Target, proposal.TargetContext, targetPosCm,
+                    EffectPhaseId.OnHit, in tpl.PhaseGraphBindings, tpl.PresetType,
+                    tpl.TagId, proposal.TemplateId, in mergedConfig, _builtinRuntime, BuildInstantExecutionSeed(in proposal, EffectPhaseId.OnHit), proposal.RootId);
+                _phaseExecutor.ExecutePhase(
+                    World, _graphApi, proposal.Source, proposal.Target, proposal.TargetContext, targetPosCm,
+                    EffectPhaseId.OnApply, in tpl.PhaseGraphBindings, tpl.PresetType,
+                    tpl.TagId, proposal.TemplateId, in mergedConfig, _builtinRuntime, BuildInstantExecutionSeed(in proposal, EffectPhaseId.OnApply), proposal.RootId);
+
+                if (_builtinRuntime.HasAttributeDelta)
+                {
+                    PublishInstantApplied(
+                        in proposal,
+                        _builtinRuntime.AttributeDeltaId,
+                        _builtinRuntime.AttributeDelta);
+                }
+                else if (tpl.PresetType == EffectPresetType.None ||
+                         tpl.PresetType == EffectPresetType.InstantDamage ||
+                         tpl.PresetType == EffectPresetType.Heal)
+                {
+                    ApplyInstantModifiersAndPublish(in proposal);
+                }
+
+                PublishBuiltinFanOutCommandsAndRecordDrops();
+            }
+            finally
+            {
+                _instantFanOutCommands.Clear();
+            }
+        }
+
+        private void ApplyInstantModifiersAndPublish(in EffectProposal proposal)
+        {
+            if (!World.IsAlive(proposal.Target) || !World.Has<AttributeBuffer>(proposal.Target)) return;
+
+            int primaryAttributeId = proposal.Modifiers.Count > 0
+                ? proposal.Modifiers.Get(0).AttributeId
+                : -1;
+            float before = primaryAttributeId >= 0
+                ? World.Get<AttributeBuffer>(proposal.Target).GetCurrent(primaryAttributeId)
+                : 0f;
+            AttributeMutationOps.ApplyModifiers(World, proposal.Target, in proposal.Modifiers, _tagOps);
+            float after = primaryAttributeId >= 0
+                ? World.Get<AttributeBuffer>(proposal.Target).GetCurrent(primaryAttributeId)
+                : 0f;
+            PublishInstantApplied(in proposal, primaryAttributeId, after - before);
+        }
+
+        private void PublishInstantApplied(in EffectProposal proposal, int attributeId, float delta)
+        {
+            if (_presentationEvents == null || attributeId < 0) return;
+            _presentationEvents.Publish(new GasPresentationEvent
+            {
+                Kind = GasPresentationEventKind.EffectApplied,
+                Actor = proposal.Source,
+                Target = proposal.Target,
+                EffectTemplateId = proposal.TemplateId,
+                AttributeId = attributeId,
+                Delta = delta,
+            });
+        }
+
+        private static uint BuildInstantExecutionSeed(in EffectProposal proposal, EffectPhaseId phase)
+        {
+            uint hash = 2166136261u;
+            hash = (hash ^ unchecked((uint)proposal.RootId)) * 16777619u;
+            hash = (hash ^ unchecked((uint)proposal.Source.Id)) * 16777619u;
+            hash = (hash ^ unchecked((uint)proposal.Target.Id)) * 16777619u;
+            hash = (hash ^ unchecked((uint)proposal.TemplateId)) * 16777619u;
+            hash = (hash ^ (uint)phase) * 16777619u;
+            return hash == 0u ? 1u : hash;
+        }
+
+        private static bool CanExecuteInstantInline(in EffectTemplateData tpl)
         {
             if (tpl.LifetimeKind != EffectLifetimeKind.Instant) return false;
             if (tpl.PeriodTicks > 0) return false;
-            // Templates with Phase Graph bindings need entity-based processing
-            if (tpl.PhaseGraphBindings.StepCount > 0) return false;
-            // Templates with Phase Listeners need entity-based processing (registration occurs on OnApply)
-            if (tpl.ListenerSetup.Count > 0) return false;
-            // Templates with TargetResolver need entity-based processing for fan-out
-            if (tpl.HasTargetResolver) return false;
-            // Only modifier-driven instant presets can remain on the inline path.
-            // Behavior presets must stay entity-backed so OnApply builtins execute.
-            return tpl.PresetType switch
+            if (tpl.ListenerSetup.Count > 0)
             {
-                EffectPresetType.None => true,
-                EffectPresetType.InstantDamage => true,
-                EffectPresetType.Heal => true,
-                EffectPresetType.ApplyForce2D => true,
-                _ => false,
-            };
+                throw new InvalidOperationException(
+                    "GAS.INSTANT.ERR.PersistentListenerRequiresCrossFrameLifetime");
+            }
+            return true;
         }
 
         private void CreateEntityEffect(in EffectProposal proposal, in EffectTemplateData tpl)
@@ -1072,30 +1526,50 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 Entity existing = FindExistingEffectByTemplate(in container, proposal.TemplateId);
                 if (existing != Entity.Null && World.IsAlive(existing) && World.Has<EffectStack>(existing))
                 {
-                    ref var stack = ref World.Get<EffectStack>(existing);
-                    int oldCount = stack.Count;
-                    if (stack.TryAddStack())
+                    EffectStack stackBefore = World.Get<EffectStack>(existing);
+                    EffectStack stackAfter = stackBefore;
+                    if (stackAfter.TryAddStack())
                     {
                         // Apply duration policy
-                        ref var effect = ref World.Get<GameplayEffect>(existing);
+                        GameplayEffect effectBefore = World.Get<GameplayEffect>(existing);
+                        GameplayEffect effectAfter = effectBefore;
                         switch (tpl.StackPolicy)
                         {
                             case StackPolicy.RefreshDuration:
-                                effect.RemainingTicks = tpl.DurationTicks;
-                                effect.ExpiresAtTick = 0; // Will be recomputed next tick
+                                effectAfter.RemainingTicks = tpl.DurationTicks;
+                                effectAfter.ExpiresAtTick = 0; // Will be recomputed next tick
                                 break;
                             case StackPolicy.AddDuration:
-                                effect.RemainingTicks += tpl.DurationTicks;
-                                effect.ExpiresAtTick = 0;
+                                effectAfter.RemainingTicks += tpl.DurationTicks;
+                                effectAfter.ExpiresAtTick = 0;
                                 break;
                             // KeepDuration: do nothing
                         }
 
-                        // Update tag contributions (delta from oldCount 鈫?newCount)
-                        if (World.Has<EffectGrantedTags>(existing))
+                        World.Get<EffectStack>(existing) = stackAfter;
+                        World.Get<GameplayEffect>(existing) = effectAfter;
+
+                        // Update tag contributions for the committed stack delta.
+                        try
                         {
-                            ref readonly var grantedTags = ref World.Get<EffectGrantedTags>(existing);
-                            EffectTagContributionHelper.UpdateOnEntity(World, proposal.Target, in grantedTags, oldCount, stack.Count, _tagOps, _budget);
+                            if (World.Has<EffectGrantedTags>(existing))
+                            {
+                                EffectGrantedTags grantedTags = World.Get<EffectGrantedTags>(existing);
+                                EffectTagContributionHelper.UpdateOnEntity(
+                                    World,
+                                    proposal.Target,
+                                    in grantedTags,
+                                    stackBefore.Count,
+                                    stackAfter.Count,
+                                    _tagOps,
+                                    _budget);
+                            }
+                        }
+                        catch
+                        {
+                            World.Get<EffectStack>(existing) = stackBefore;
+                            World.Get<GameplayEffect>(existing) = effectBefore;
+                            throw;
                         }
                         MarkAggregateDirtyIfNeeded(proposal.Target, existing);
                         return; // Merged into existing stack, no new entity
@@ -1195,19 +1669,15 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             if (_phaseExecutor == null || _graphApi == null) return true;
 
             var mergedConfig = BuildMergedConfig(in tpl, in proposal);
-            if (_graphApiHost != null && mergedConfig.Count > 0)
-            {
-                _graphApiHost.SetConfigContext(in mergedConfig);
-            }
-
             var context = new EffectContext
             {
+                RootId = proposal.RootId,
                 Source = proposal.Source,
                 Target = proposal.Target,
                 TargetContext = proposal.TargetContext,
             };
             IntVector2 targetPos = PlacementPhaseTargetPosResolver.Resolve(World, in context, in mergedConfig);
-            bool accepted = _phaseExecutor.ExecutePhaseWithValidationResult(
+            return _phaseExecutor.ExecutePhaseWithValidationResult(
                 World, _graphApi,
                 proposal.Source, proposal.Target, proposal.TargetContext,
                 targetPos,
@@ -1216,9 +1686,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 tpl.PresetType,
                 proposal.TagId,
                 proposal.TemplateId,
-                in mergedConfig);
-            ClearConfigContext();
-            return accepted;
+                in mergedConfig,
+                rootId: proposal.RootId);
         }
 
         /// <summary>
@@ -1230,51 +1699,52 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             if (_phaseExecutor == null || _graphApi == null) return;
 
             var mergedConfig = BuildMergedConfig(in tpl, in proposal);
-            if (_graphApiHost != null && mergedConfig.Count > 0)
-            {
-                _graphApiHost.SetConfigContext(in mergedConfig);
-            }
-
             var context = new EffectContext
             {
+                RootId = proposal.RootId,
                 Source = proposal.Source,
                 Target = proposal.Target,
                 TargetContext = proposal.TargetContext,
             };
             IntVector2 targetPos = PlacementPhaseTargetPosResolver.Resolve(World, in context, in mergedConfig);
-            _phaseExecutor.ExecutePhase(
-                World, _graphApi,
-                proposal.Source, proposal.Target, proposal.TargetContext,
-                targetPos,
-                EffectPhaseId.OnCalculate,
-                in tpl.PhaseGraphBindings,
-                tpl.PresetType,
-                proposal.TagId,
-                proposal.TemplateId,
-                in mergedConfig);
-            ClearConfigContext();
-        }
-
-        private void SetConfigContext(in EffectTemplateData tpl)
-        {
-            if (_graphApiHost != null && tpl.ConfigParams.Count > 0)
+            _builtinRuntime.ResetPerEffect();
+            _builtinRuntime.SetModifierOverride(in proposal.Modifiers);
+            try
             {
-                _graphApiHost.SetConfigContext(in tpl.ConfigParams);
+                _phaseExecutor.ExecutePhase(
+                    World, _graphApi,
+                    proposal.Source, proposal.Target, proposal.TargetContext,
+                    targetPos,
+                    EffectPhaseId.OnCalculate,
+                    in tpl.PhaseGraphBindings,
+                    tpl.PresetType,
+                    proposal.TagId,
+                    proposal.TemplateId,
+                    in mergedConfig,
+                    _builtinRuntime,
+                    BuildInstantExecutionSeed(in proposal, EffectPhaseId.OnCalculate),
+                    proposal.RootId);
+                PublishBuiltinFanOutCommandsAndRecordDrops();
+            }
+            finally
+            {
+                _instantFanOutCommands.Clear();
             }
         }
 
-        private void SetMergedConfigContext(in EffectTemplateData tpl, in EffectProposal proposal)
+        private void PublishBuiltinFanOutCommandsAndRecordDrops()
         {
-            if (_graphApiHost == null)
+            if (_builtinRuntime.DroppedCount > 0 && _budget != null)
             {
-                return;
+                _budget.EffectProposalFanOutDropped += _builtinRuntime.DroppedCount;
             }
 
-            var merged = BuildMergedConfig(in tpl, in proposal);
-            if (merged.Count > 0)
+            for (int i = 0; i < _instantFanOutCommands.Count; i++)
             {
-                _graphApiHost.SetConfigContext(in merged);
+                FanOutCommand command = _instantFanOutCommands[i];
+                TargetResolverFanOutHelper.PublishCommand(in command, _queue);
             }
+            _instantFanOutCommands.Clear();
         }
 
         private EffectConfigParams BuildMergedConfig(in EffectTemplateData tpl, in EffectProposal proposal)
@@ -1287,11 +1757,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
 
             return tpl.ConfigParams;
-        }
-
-        private void ClearConfigContext()
-        {
-            _graphApiHost?.ClearConfigContext();
         }
 
         private static unsafe void ApplyModify(ref EffectModifiers modifiers, float modifyValue, ModifierOp op)

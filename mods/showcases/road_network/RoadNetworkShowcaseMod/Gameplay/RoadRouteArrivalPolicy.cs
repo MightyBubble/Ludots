@@ -1,13 +1,14 @@
 using System.Numerics;
+using Arch.Core;
 using Ludots.Core.Gameplay.GAS.Orders;
 
 namespace RoadNetworkShowcaseMod.Gameplay
 {
     internal sealed class RoadRouteArrivalPolicy
     {
-        public bool HasReachedFinalTarget(in Order order, Vector2 position, float arrivalRadiusCm)
+        public bool HasReachedFinalTarget(World world, in Order order, Vector2 position, float arrivalRadiusCm)
         {
-            if (!RoadRouteFinalTargetResolver.TryResolve(in order, out Vector3 destinationWorldCm))
+            if (!RoadRouteFinalTargetResolver.TryResolve(world, in order, out Vector3 destinationWorldCm))
             {
                 return true;
             }

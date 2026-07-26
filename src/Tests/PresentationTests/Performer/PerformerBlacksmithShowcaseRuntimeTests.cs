@@ -142,16 +142,13 @@ namespace Ludots.Tests.Presentation
                 engine.World.Add(building, default(DirtyFlags));
             }
 
-            ref GameplayTagContainer tags = ref engine.World.Get<GameplayTagContainer>(building);
-            ref TagCountContainer counts = ref engine.World.Get<TagCountContainer>(building);
-            ref DirtyFlags dirty = ref engine.World.Get<DirtyFlags>(building);
             if (active)
             {
-                tagOps.AddTag(ref tags, ref counts, workingTagId, ref dirty);
+                tagOps.AddTag(engine.World, building, workingTagId);
             }
             else
             {
-                tagOps.RemoveTag(ref tags, ref counts, workingTagId, ref dirty);
+                tagOps.RemoveTag(engine.World, building, workingTagId);
             }
         }
 

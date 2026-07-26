@@ -445,7 +445,7 @@ namespace Ludots.Tests.Presentation
             modLoader.LoadedModIds.Add("MassNavigationMod");
             var pipeline = new Ludots.Core.Config.ConfigPipeline(vfs, modLoader);
             var catalog = Ludots.Core.Config.ConfigCatalogLoader.Load(pipeline);
-            var orderTypes = new OrderTypeRegistry();
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             var orderRules = new OrderRuleRegistry();
 
             new OrderTypeConfigLoader(pipeline).Load(orderTypes, orderRules, catalog);
@@ -508,7 +508,7 @@ namespace Ludots.Tests.Presentation
                 catalog.Add(new Ludots.Core.Config.ConfigCatalogEntry("GAS/order_types.json", Ludots.Core.Config.ConfigMergePolicy.DeepObject));
 
                 var ex = Assert.Throws<InvalidOperationException>(
-                    () => new OrderTypeConfigLoader(pipeline).Load(new OrderTypeRegistry(), new OrderRuleRegistry(), catalog));
+                    () => new OrderTypeConfigLoader(pipeline).Load(new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity)), new OrderRuleRegistry(), catalog));
 
                 Assert.That(ex!.Message, Does.Contain("LUDOTS_GAS_ORDER_BLACKBOARD_BUILTIN_REDECLARED"));
             }

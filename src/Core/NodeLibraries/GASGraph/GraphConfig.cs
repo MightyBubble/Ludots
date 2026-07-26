@@ -31,8 +31,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public string? BlackboardKey { get; set; }
         public string? ConfigKey { get; set; }
         public string? ValidOutput { get; set; }
+        public string? DroppedOutput { get; set; }
+        public string? QueryCapacityPolicy { get; set; }
 
-        public float Radius { get; set; }
+        public float RadiusCm { get; set; }
         public float RangeCm { get; set; }
         public int DirectionDeg { get; set; }
         public int HalfAngleDeg { get; set; }

@@ -19,6 +19,7 @@ using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Input.CommandSources;
+using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
@@ -27,6 +28,7 @@ using Ludots.Core.UI.EntityCommandPanels;
 using Ludots.UI;
 using Ludots.UI.Skia;
 using NUnit.Framework;
+using RtsDemoMod.Systems;
 
 namespace Ludots.Tests.GAS.Production
 {
@@ -46,6 +48,59 @@ namespace Ludots.Tests.GAS.Production
             "EntityCommandPanelMod",
             "RtsDemoMod"
         };
+
+        [Test]
+        public void GivenMoreThanLegacyRelationScratchCapacity_WhenRuntimeUpdates_ThenItAllocatesNothingAndKeepsEveryChildAttached()
+        {
+            var frameTimesMs = new List<double>();
+            using var engine = CreateEngine();
+            LoadMap(engine, MapId, frameTimesMs);
+            World world = engine.World;
+            Entity parent = world.Create(
+                WorldPositionCm.FromCm(100, 200),
+                new PreviousWorldPositionCm { Value = Fix64Vec2.FromInt(90, 190) });
+            var children = new Entity[300];
+            for (int i = 0; i < children.Length; i++)
+            {
+                children[i] = world.Create(
+                    new ChildOf { Parent = parent },
+                    WorldPositionCm.FromCm(i, i),
+                    new PreviousWorldPositionCm { Value = Fix64Vec2.FromInt(i, i) });
+            }
+
+            using var runtime = new RtsRelationRuntimeSystem(engine, 512);
+            runtime.Update(DeltaTime);
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            runtime.Update(DeltaTime);
+            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+            Assert.That(allocated, Is.Zero, "The steady-state RTS relation pass must not allocate.");
+            for (int i = 0; i < children.Length; i++)
+            {
+                Assert.That(world.Get<ChildOf>(children[i]).Parent, Is.EqualTo(parent));
+                Assert.That(world.Get<WorldPositionCm>(children[i]).Value, Is.EqualTo(Fix64Vec2.FromInt(100, 200)));
+            }
+        }
+
+        [Test]
+        public void GivenRelationScratchCapacityIsExceeded_WhenRuntimeUpdates_ThenItFailsBeforeChangingTheWorld()
+        {
+            var frameTimesMs = new List<double>();
+            using var engine = CreateEngine();
+            LoadMap(engine, MapId, frameTimesMs);
+            World world = engine.World;
+            Entity first = world.Create(new CommandSourceSelectableTag());
+            Entity second = world.Create(new CommandSourceSelectableTag());
+            Entity overflow = world.Create(new CommandSourceSelectableTag());
+
+            using var runtime = new RtsRelationRuntimeSystem(engine, 2);
+            var error = Assert.Throws<InvalidOperationException>(() => runtime.Update(DeltaTime));
+
+            Assert.That(error!.Message, Does.StartWith("RTS.RELATION.ERR.ScratchCapacityExceeded"));
+            Assert.That(world.Has<CommandSourceSelectableState>(first), Is.False);
+            Assert.That(world.Has<CommandSourceSelectableState>(second), Is.False);
+            Assert.That(world.Has<CommandSourceSelectableState>(overflow), Is.False);
+        }
 
         [Test]
         public void RtsToolbar_ResetCameraButton_WritesDefaultCameraRequests()
@@ -555,8 +610,8 @@ namespace Ludots.Tests.GAS.Production
                 Mode = OrderCollectionMode.List,
                 WorldCm = new Vector3(originWorldCm.X, 0f, originWorldCm.Y)
             };
-            spatial.AddPointWorldCm((int)originWorldCm.X, 0, (int)originWorldCm.Y);
-            spatial.AddPointWorldCm((int)targetWorldCm.X, 0, (int)targetWorldCm.Y);
+            spatial.AddInlinePointWorldCm((int)originWorldCm.X, 0, (int)originWorldCm.Y);
+            spatial.AddInlinePointWorldCm((int)targetWorldCm.X, 0, (int)targetWorldCm.Y);
 
             bool enqueued = orderQueue.TryEnqueue(new Order
             {

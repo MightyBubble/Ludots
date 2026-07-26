@@ -1,12 +1,35 @@
+using System;
 using System.Runtime.CompilerServices;
 using Ludots.Core.Gameplay.GAS.Orders;
 
 namespace Ludots.Core.Gameplay.GAS.Components
 {
-    public struct CompletedOrderSignal
+    public enum OrderTerminalState : byte
     {
-        public int OrderId;
-        public int OrderTypeId;
+        Completed = 0,
+        Cancelled = 1,
+        Failed = 2
+    }
+
+    public enum OrderFailureReason : byte
+    {
+        None = 0,
+        MissingBlackboardSlot = 1,
+        NegativeAbilitySlot = 2,
+        AbilitySlotOutOfRange = 3,
+        AbilityUnavailable = 4,
+        AbilityDefinitionMissing = 5,
+        ActivationBlocked = 6,
+        PreconditionFailed = 7,
+        Interrupted = 8,
+        SubmissionQueueFull = 9,
+        SubmissionRuleRejected = 10,
+        SubmissionValidationRejected = 11,
+        SubmissionInvalidActor = 12,
+        SubmissionInvalidOrderType = 13,
+        SubmissionBlackboardCapacity = 14,
+        SubmissionMissingBlackboard = 15,
+        SubmissionAdmissionCapacity = 16
     }
 
     public struct OrderContinuationEntry
@@ -18,6 +41,7 @@ namespace Ludots.Core.Gameplay.GAS.Components
     public struct OrderContinuationBuffer
     {
         public const int MAX_CONTINUATIONS = 8;
+        public const string ExtractionCapacityError = "ORDER.CONTINUATION.ERR.ExtractionCapacity";
 
         [InlineArray(MAX_CONTINUATIONS)]
         private struct OrderContinuationArray
@@ -46,28 +70,22 @@ namespace Ludots.Core.Gameplay.GAS.Components
             return true;
         }
 
-        public bool RemoveByTrigger(int triggerOrderId)
-        {
-            bool removed = false;
-            for (int i = Count - 1; i >= 0; i--)
-            {
-                if (_entries[i].TriggerOrderId != triggerOrderId)
-                {
-                    continue;
-                }
-
-                RemoveAt(i);
-                removed = true;
-            }
-
-            return removed;
-        }
-
         public int Extract(int triggerOrderId, Span<Order> destination)
         {
-            if (triggerOrderId <= 0 || destination.Length == 0 || Count <= 0)
+            if (triggerOrderId <= 0 || Count <= 0)
             {
                 return 0;
+            }
+
+            int matchingCount = CountByTrigger(triggerOrderId);
+            if (matchingCount == 0)
+            {
+                return 0;
+            }
+            if (destination.Length < matchingCount)
+            {
+                throw new InvalidOperationException(
+                    $"{ExtractionCapacityError}: triggerOrderId={triggerOrderId}, matching={matchingCount}, capacity={destination.Length}.");
             }
 
             int written = 0;
@@ -77,10 +95,7 @@ namespace Ludots.Core.Gameplay.GAS.Components
                 OrderContinuationEntry entry = _entries[src];
                 if (entry.TriggerOrderId == triggerOrderId)
                 {
-                    if (written < destination.Length)
-                    {
-                        destination[written++] = entry.Order;
-                    }
+                    destination[written++] = entry.Order;
                     continue;
                 }
 
@@ -96,19 +111,81 @@ namespace Ludots.Core.Gameplay.GAS.Components
             return written;
         }
 
-        private void RemoveAt(int index)
+        public int ExtractAll(Span<Order> destination)
         {
-            if ((uint)index >= (uint)Count)
+            int count = CopyAll(destination);
+            Count = 0;
+            return count;
+        }
+
+        public readonly int CopyByTrigger(int triggerOrderId, Span<Order> destination)
+        {
+            if (triggerOrderId <= 0 || Count <= 0)
             {
-                return;
+                return 0;
             }
 
-            for (int i = index; i < Count - 1; i++)
+            int matchingCount = CountByTrigger(triggerOrderId);
+            if (matchingCount == 0)
             {
-                _entries[i] = _entries[i + 1];
+                return 0;
+            }
+            if (destination.Length < matchingCount)
+            {
+                throw new InvalidOperationException(
+                    $"{ExtractionCapacityError}: triggerOrderId={triggerOrderId}, matching={matchingCount}, capacity={destination.Length}.");
             }
 
-            Count--;
+            int written = 0;
+            for (int i = 0; i < Count; i++)
+            {
+                OrderContinuationEntry entry = _entries[i];
+                if (entry.TriggerOrderId == triggerOrderId)
+                {
+                    destination[written++] = entry.Order;
+                }
+            }
+
+            return written;
+        }
+
+        public readonly int CopyAll(Span<Order> destination)
+        {
+            if (Count <= 0)
+            {
+                return 0;
+            }
+            if (destination.Length < Count)
+            {
+                throw new InvalidOperationException(
+                    $"{ExtractionCapacityError}: all={Count}, capacity={destination.Length}.");
+            }
+
+            for (int i = 0; i < Count; i++)
+            {
+                destination[i] = _entries[i].Order;
+            }
+
+            return Count;
+        }
+
+        public readonly int CountByTrigger(int triggerOrderId)
+        {
+            if (triggerOrderId <= 0 || Count <= 0)
+            {
+                return 0;
+            }
+
+            int count = 0;
+            for (int i = 0; i < Count; i++)
+            {
+                if (_entries[i].TriggerOrderId == triggerOrderId)
+                {
+                    count++;
+                }
+            }
+
+            return count;
         }
     }
 }

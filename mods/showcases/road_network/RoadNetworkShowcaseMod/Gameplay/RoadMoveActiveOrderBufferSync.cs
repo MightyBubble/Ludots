@@ -11,15 +11,18 @@ namespace RoadNetworkShowcaseMod.Gameplay
             if (!world.IsAlive(entity) ||
                 !world.Has<OrderBuffer>(entity))
             {
+                OrderSpatialPayloadOps.Release(world, in order);
                 return false;
             }
 
             ref OrderBuffer buffer = ref world.Get<OrderBuffer>(entity);
             if (!buffer.HasActive)
             {
+                OrderSpatialPayloadOps.Release(world, in order);
                 return false;
             }
 
+            OrderSpatialPayloadOps.Release(world, in buffer.ActiveOrder.Order);
             buffer.ActiveOrder.Order = order;
             return true;
         }

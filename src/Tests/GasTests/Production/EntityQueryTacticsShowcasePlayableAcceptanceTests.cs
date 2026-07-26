@@ -32,7 +32,6 @@ using Ludots.Core.Systems;
 using Ludots.Launcher.Backend;
 using Ludots.Platform.Abstractions;
 using Ludots.UI;
-using Ludots.UI.Skia;
 using NUnit.Framework;
 using SkiaSharp;
 
@@ -100,17 +99,17 @@ namespace Ludots.Tests.GAS.Production
             string[] friendlyNames = config.Scenario.Allies.Select(static actor => actor.Name).ToArray();
             DragSelectNamed(engine, backend, frameTimesMs, friendlyNames);
             AssertCollectionCount(engine, owner, config.Collections.UiBox, friendlyNames.Length);
-            AssertCollectionCount(engine, owner, config.Collections.FormalSelectionMirror, 0);
-            AssertCollectionCount(engine, owner, config.Collections.FormationPrimary, 0);
+            AssertCollectionCount(engine, owner, config.Collections.CommandSourceMirror, friendlyNames.Length);
+            AssertCollectionCount(engine, owner, config.Collections.FormationPrimary, friendlyNames.Length);
             CaptureSnapshot(engine, uiRoot, ground, collections, config, snapshots, frames, screensDir, "ui_box_acquisition_only");
-            timeline.Add("[T+002] Player dragged a friendly box; CommandSourceAcquisition wrote the UI acquisition collection and kept command-source publishing explicit.");
+            timeline.Add("[T+002] Player dragged a friendly box; CommandSourceAcquisition wrote both the UI acquisition collection and the authoritative command source.");
 
             PressButton(engine, backend, GetBinding(bindings, config.Actions.CommitSelection), frameTimesMs);
-            TickUntil(engine, frameTimesMs, () => ReadCollectionSnapshot(engine, owner, config.Collections.FormalSelectionMirror, required: false).Count == friendlyNames.Length, maxFrames: 30);
-            AssertCollectionCount(engine, owner, config.Collections.FormalSelectionMirror, friendlyNames.Length);
+            TickUntil(engine, frameTimesMs, () => ReadCollectionSnapshot(engine, owner, config.Collections.CommandSourceMirror, required: false).Count == friendlyNames.Length, maxFrames: 30);
+            AssertCollectionCount(engine, owner, config.Collections.CommandSourceMirror, friendlyNames.Length);
             AssertCollectionCount(engine, owner, config.Collections.FormationPrimary, friendlyNames.Length);
-            CaptureSnapshot(engine, uiRoot, ground, collections, config, snapshots, frames, screensDir, "formal_selection_committed");
-            timeline.Add("[T+003] Configured commit action copied the UI acquisition collection into command-source and refreshed the formation collection.");
+            CaptureSnapshot(engine, uiRoot, ground, collections, config, snapshots, frames, screensDir, "command_source_confirmed");
+            timeline.Add("[T+003] Configured commit action confirmed the command source and refreshed the formation collection.");
 
             PressButton(engine, backend, GetBinding(bindings, config.Actions.ExecuteGraphs), frameTimesMs);
             TickUntil(engine, frameTimesMs, () => ReadSummaryInt(engine, owner, config.SummaryKeys.SelectedCount) > 0, maxFrames: 30);
@@ -206,19 +205,19 @@ namespace Ludots.Tests.GAS.Production
                     engine,
                     frameTimesMs,
                     () =>
-                        ReadCollectionSnapshot(engine, owner, config.Collections.FormalSelectionMirror, required: false).Count == config.Scenario.Allies.Length &&
+                        ReadCollectionSnapshot(engine, owner, config.Collections.CommandSourceMirror, required: false).Count == config.Scenario.Allies.Length &&
                         ReadSummaryInt(engine, owner, config.SummaryKeys.FormationCount) > 0 &&
                         ReadSummaryInt(engine, owner, config.SummaryKeys.ThreatMax) == relationships.GetMetric(owner, pressureTarget, relationshipTypeId, threatMetricId),
                     maxFrames: 360,
                     diagnostics: () =>
                         $"ui={ReadCollectionSnapshot(engine, owner, config.Collections.UiBox, required: false).Count}, " +
-                        $"formal={ReadCollectionSnapshot(engine, owner, config.Collections.FormalSelectionMirror, required: false).Count}, " +
+                        $"commandSource={ReadCollectionSnapshot(engine, owner, config.Collections.CommandSourceMirror, required: false).Count}, " +
                         $"formation={ReadSummaryInt(engine, owner, config.SummaryKeys.FormationCount)}, " +
                         $"threatMax={ReadSummaryInt(engine, owner, config.SummaryKeys.ThreatMax)}, " +
                         $"targetThreat={relationships.GetMetric(owner, pressureTarget, relationshipTypeId, threatMetricId)}");
 
                 AssertCollectionCount(engine, owner, config.Collections.UiBox, config.Scenario.Allies.Length);
-                AssertCollectionCount(engine, owner, config.Collections.FormalSelectionMirror, config.Scenario.Allies.Length);
+                AssertCollectionCount(engine, owner, config.Collections.CommandSourceMirror, config.Scenario.Allies.Length);
                 AssertCollectionCount(engine, owner, config.Collections.FormationPrimary, config.Scenario.Allies.Length);
 
                 GraphConfig selectedGraphConfig = LoadGraphConfig(engine, config.Graphs.SelectedFriendlies);
@@ -460,11 +459,7 @@ namespace Ludots.Tests.GAS.Production
             engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
             InstallInput(engine);
 
-            var uiRoot = new UIRoot(new SkiaUiRenderer());
-            uiRoot.Resize(1920f, 1080f);
-            engine.SetService(CoreServiceKeys.UIRoot, uiRoot);
-            engine.SetService(CoreServiceKeys.UiTextMeasurer, new SkiaTextMeasurer());
-            engine.SetService(CoreServiceKeys.UiImageSizeProvider, new SkiaImageSizeProvider());
+            AcceptanceUiHostInstaller.Install(engine);
 
             var view = new StubViewController(1920f, 1080f);
             engine.SetService(CoreServiceKeys.ViewController, view);
@@ -897,7 +892,7 @@ namespace Ludots.Tests.GAS.Production
                 ScreenshotFileName: frame.ScreenshotFileName,
                 BattlefieldFileName: battlefieldFileName,
                 UiBoxRevision: ReadCollectionRevision(engine, owner, config.Collections.UiBox),
-                FormalRevision: ReadCollectionRevision(engine, owner, config.Collections.FormalSelectionMirror),
+                CommandSourceRevision: ReadCollectionRevision(engine, owner, config.Collections.CommandSourceMirror),
                 FormationRevision: ReadCollectionRevision(engine, owner, config.Collections.FormationCacheResult),
                 HostileRevision: ReadCollectionRevision(engine, owner, config.Collections.HostileThreatResult),
                 SelectedNames: ReadCollectionNames(engine, owner, config.Collections.SelectedFriendliesResult),
@@ -916,7 +911,7 @@ namespace Ludots.Tests.GAS.Production
             {
                 "map_loaded" => "T+001",
                 "ui_box_acquisition_only" => "T+002",
-                "formal_selection_committed" => "T+003",
+                "command_source_confirmed" => "T+003",
                 "selected_friendlies_graph" => "T+004",
                 "hostile_relation_graph" => "T+005",
                 "formation_cache_graph" => "T+006",
@@ -931,8 +926,8 @@ namespace Ludots.Tests.GAS.Production
             return step switch
             {
                 "map_loaded" => "Boot the showcase and confirm the production HUD is mounted.",
-                "ui_box_acquisition_only" => "Drag-select friendlies and observe collection-only UI acquisition.",
-                "formal_selection_committed" => "Use the configured commit action to publish the UI acquisition into formal selection.",
+                "ui_box_acquisition_only" => "Drag-select friendlies and observe UI acquisition plus command source publishing.",
+                "command_source_confirmed" => "Use the configured commit action to confirm the command source and refresh formation.",
                 "selected_friendlies_graph" => "Run graph query from UI box collection and inspect filters, sorting, aggregate, and extreme output.",
                 "hostile_relation_graph" => "Inspect relation metric and flag graph output over hostile entities.",
                 "formation_cache_graph" => "Rotate formation cache and prove routed units are filtered out.",
@@ -973,7 +968,7 @@ namespace Ludots.Tests.GAS.Production
             const float height = 620f;
 
             EntityCollectionSnapshot uiBox = ReadCollectionSnapshot(engine, owner, config.Collections.UiBox, required: false);
-            EntityCollectionSnapshot formal = ReadCollectionSnapshot(engine, owner, config.Collections.FormalSelectionMirror, required: false);
+            EntityCollectionSnapshot formal = ReadCollectionSnapshot(engine, owner, config.Collections.CommandSourceMirror, required: false);
             EntityCollectionSnapshot formationInput = ReadCollectionSnapshot(engine, owner, config.Collections.FormationPrimary, required: false);
             EntityCollectionSnapshot selected = ReadCollectionSnapshot(engine, owner, config.Collections.SelectedFriendliesResult, required: false);
             EntityCollectionSnapshot hostile = ReadCollectionSnapshot(engine, owner, config.Collections.HostileThreatResult, required: false);
@@ -1106,14 +1101,14 @@ namespace Ludots.Tests.GAS.Production
         {
             return step is
                 "ui_box_acquisition_only" or
-                "formal_selection_committed" or
+                "command_source_confirmed" or
                 "selected_friendlies_graph";
         }
 
         private static bool ShouldDrawFormalRing(string step)
         {
             return step is
-                "formal_selection_committed" or
+                "command_source_confirmed" or
                 "selected_friendlies_graph" or
                 "hostile_relation_graph";
         }
@@ -1183,8 +1178,8 @@ namespace Ludots.Tests.GAS.Production
         {
             return step switch
             {
-                "ui_box_acquisition_only" => "drag box is only a preview collection",
-                "formal_selection_committed" => "Enter commits preview into the squad",
+                "ui_box_acquisition_only" => "drag box publishes command source",
+                "command_source_confirmed" => "Enter confirms the squad pipeline",
                 "selected_friendlies_graph" => "friendly graph chooses the commander and totals squad stats",
                 "hostile_relation_graph" => "enemy graph filters priority threats from relation metrics",
                 "formation_cache_graph" => "formation graph filters routed units and keeps cache stable",
@@ -1199,7 +1194,7 @@ namespace Ludots.Tests.GAS.Production
             return step switch
             {
                 "ui_box_acquisition_only" => "DRAG BOX",
-                "formal_selection_committed" => "COMMIT",
+                "command_source_confirmed" => "COMMIT",
                 "selected_friendlies_graph" => "FRIENDLY",
                 "hostile_relation_graph" => "THREAT",
                 "formation_cache_graph" => "FORMATION",
@@ -1213,8 +1208,8 @@ namespace Ludots.Tests.GAS.Production
         {
             return step switch
             {
-                "ui_box_acquisition_only" => "Preview picked, squad still empty",
-                "formal_selection_committed" => "Preview committed to the squad",
+                "ui_box_acquisition_only" => "Command source acquired",
+                "command_source_confirmed" => "Command source confirmed for the squad",
                 "selected_friendlies_graph" => "Graph selects the best commander",
                 "hostile_relation_graph" => "Relation graph marks the top threat",
                 "formation_cache_graph" => "Routed unit excluded from formation",
@@ -1236,8 +1231,8 @@ namespace Ludots.Tests.GAS.Production
         {
             return step switch
             {
-                "ui_box_acquisition_only" => $"Drag box {uiBox.Count} -> committed squad {formal.Count}; graph result waits.",
-                "formal_selection_committed" => $"Committed squad {formal.Count}; commander graph result {selected.Count}; formation {formation.Count}.",
+                "ui_box_acquisition_only" => $"Drag box {uiBox.Count} -> command source {formal.Count}; graph result waits.",
+                "command_source_confirmed" => $"Command source {formal.Count}; commander graph result {selected.Count}; formation {formation.Count}.",
                 "selected_friendlies_graph" => $"Friendly squad result {selected.Count}: {JoinSnapshotNames(selected)}.",
                 "hostile_relation_graph" => $"Priority enemies {hostile.Count}; top threat {config.Scenario.PressurePulse.TargetName}.",
                 "formation_cache_graph" => $"Input {formationInput.Count} -> Formation {formation.Count}; excluded Routed Scout.",
@@ -1321,7 +1316,7 @@ namespace Ludots.Tests.GAS.Production
             string bestUnit = ReadSummaryEntityName(engine, owner, config.SummaryKeys.SelectedBestEntity);
             return selected.Count > 0
                 ? $"Friendly query: {selected.Count} | best {bestUnit} | command power {ReadSummaryFloat(engine, owner, config.SummaryKeys.SelectedCommandPower):0}"
-                : $"Drag box preview: {uiBox.Count} | committed squad: {formal.Count} | friendly query waits";
+                : $"Drag box preview: {uiBox.Count} | command source: {formal.Count} | friendly query waits";
         }
 
         private static string BuildPlayerThreatLine(
@@ -1356,7 +1351,7 @@ namespace Ludots.Tests.GAS.Production
 
             return formation.Count > 0
                 ? $"Formation: input {formationInput.Count} -> active {formation.Count} | excluded Routed Scout"
-                : "Formation: waiting for committed squad";
+                : "Formation: waiting for command source";
         }
 
         private static void DrawLegend(SKCanvas canvas, SKRect field, SKPaint textPaint, SKPaint faintTextPaint, bool mutedForHud)
@@ -1365,7 +1360,7 @@ namespace Ludots.Tests.GAS.Production
             SKRect rect = new(field.Right - 272f, field.Top + 18f, field.Right - 18f, field.Top + 140f);
             canvas.DrawRoundRect(rect, 14f, 14f, panel);
             canvas.DrawText("Visual channels", rect.Left + 16f, rect.Top + 28f, textPaint);
-            DrawLegendLine(canvas, rect.Left + 18f, rect.Top + 56f, new SKColor(96, 165, 250), "formal selection", faintTextPaint);
+            DrawLegendLine(canvas, rect.Left + 18f, rect.Top + 56f, new SKColor(96, 165, 250), "command source", faintTextPaint);
             DrawLegendLine(canvas, rect.Left + 18f, rect.Top + 80f, new SKColor(110, 231, 183), "selected graph result", faintTextPaint);
             DrawLegendLine(canvas, rect.Left + 18f, rect.Top + 104f, new SKColor(251, 113, 133), "hostile relation result", faintTextPaint);
         }
@@ -2066,7 +2061,7 @@ namespace Ludots.Tests.GAS.Production
                     screenshot = snapshot.ScreenshotFileName,
                     battlefield = snapshot.BattlefieldFileName,
                     ui_box_revision = snapshot.UiBoxRevision,
-                    formal_revision = snapshot.FormalRevision,
+                    command_source_revision = snapshot.CommandSourceRevision,
                     formation_revision = snapshot.FormationRevision,
                     hostile_revision = snapshot.HostileRevision,
                     selected_names = snapshot.SelectedNames,
@@ -2125,7 +2120,7 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine($"- final selected count: `{final.SelectedCount}`");
             sb.AppendLine($"- final threat max: `{final.ThreatMax}`");
             sb.AppendLine($"- final formation count: `{final.FormationCount}`");
-            sb.AppendLine($"- final revisions: ui `{final.UiBoxRevision}`, formal `{final.FormalRevision}`, formation `{final.FormationRevision}`, hostile `{final.HostileRevision}`");
+            sb.AppendLine($"- final revisions: ui `{final.UiBoxRevision}`, command source `{final.CommandSourceRevision}`, formation `{final.FormationRevision}`, hostile `{final.HostileRevision}`");
             sb.AppendLine("- reusable wiring: `ConfigPipeline`, `PlayerInputHandler`, `CommandSourceAcquisitionSystem`, `EntityCollectionStore`, `GraphReturnWriter`, `EntitySetQueryRuntime`, `RelationshipRuntime`, `NarrativeFrontendService`");
             return sb.ToString();
         }
@@ -2194,7 +2189,7 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine($"- map: `{config.MapId}`");
             sb.AppendLine($"- mods: `{string.Join("`, `", launchPlan.OrderedModIds)}`");
             sb.AppendLine($"- graphs: `{config.Graphs.SelectedFriendlies}`, `{config.Graphs.HostileThreats}`, `{config.Graphs.FormationCache}`");
-            sb.AppendLine($"- collections: `{config.Collections.UiBox}`, `{config.Collections.FormalSelectionMirror}`, `{config.Collections.FormationPrimary}`, `{config.Collections.FormationCacheResult}`");
+            sb.AppendLine($"- collections: `{config.Collections.UiBox}`, `{config.Collections.CommandSourceMirror}`, `{config.Collections.FormationPrimary}`, `{config.Collections.FormationCacheResult}`");
             sb.AppendLine($"- relationship type: `{config.Relationships.TacticalIntel}`");
             sb.AppendLine($"- pressure metric: `{config.Scenario.PressurePulse.Metric}`");
             sb.AppendLine($"- warmup graph executions: `{warmupGraphIterations}` iterations plus `{stabilizationGraphIterations}` post-GC stabilization iterations before allocation timing");
@@ -2247,8 +2242,8 @@ namespace Ludots.Tests.GAS.Production
                 "flowchart TD",
                 "    A[ConfigPipeline loads EntityQueryTacticsShowcaseMod] --> B[MapLoader spawns teams, templates, attrs, tags]",
                 "    B --> C[Player drags UI box selection]",
-                "    C --> D[CommandSourceAcquisitionSystem writes UI acquisition collection]",
-                "    D --> E[Configured commit action copies acquisition into command source]",
+                "    C --> D[CommandSourceAcquisitionSystem writes UI acquisition and command source]",
+                "    D --> E[Configured commit action confirms command source]",
                 "    E --> F[Showcase publishes command and formation snapshots to EntityCollectionStore]",
                 "    F --> G[GraphReturnWriter executes graph ops through shared C# EntitySetQueryRuntime API]",
                 "    G --> H[Selection graph filters team/template/tag/attr and writes aggregate summaries]",
@@ -2386,7 +2381,7 @@ namespace Ludots.Tests.GAS.Production
             string ScreenshotFileName,
             string BattlefieldFileName,
             uint UiBoxRevision,
-            uint FormalRevision,
+            uint CommandSourceRevision,
             uint FormationRevision,
             uint HostileRevision,
             string SelectedNames,
@@ -2468,7 +2463,7 @@ namespace Ludots.Tests.GAS.Production
         private sealed class EntityQueryTacticsCollectionConfig
         {
             public string UiBox { get; set; } = string.Empty;
-            public string FormalSelectionMirror { get; set; } = string.Empty;
+            public string CommandSourceMirror { get; set; } = string.Empty;
             public string FormationPrimary { get; set; } = string.Empty;
             public string SelectedFriendliesResult { get; set; } = string.Empty;
             public string HostileThreatResult { get; set; } = string.Empty;

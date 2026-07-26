@@ -2,14 +2,16 @@ namespace Ludots.Core.Gameplay.GAS.Components
 {
     public unsafe struct TimedTagBuffer
     {
+        public const int Capacity = 16;
+
         public int Count;
-        public fixed int TagIds[16];
-        public fixed int ExpireAt[16];
-        public fixed byte ClockIds[16];
+        public fixed int TagIds[Capacity];
+        public fixed int ExpireAt[Capacity];
+        public fixed byte ClockIds[Capacity];
 
         public bool TryAdd(int tagId, int expireAt, GasClockId clockId)
         {
-            if (Count >= 16) return false;
+            if (Count >= Capacity) return false;
             fixed (int* tags = TagIds) tags[Count] = tagId;
             fixed (int* exp = ExpireAt) exp[Count] = expireAt;
             fixed (byte* clocks = ClockIds) clocks[Count] = (byte)clockId;

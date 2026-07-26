@@ -2,6 +2,7 @@ using Arch.Core;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Registry;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
 
@@ -39,7 +40,7 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             var entity = world.Create(new AttributeBuffer());
 
-            int cdAttrId = 1;
+            int cdAttrId = AttributeRegistry.Register("Test.Cooldown.Countdown");
             ref var buf = ref world.Get<AttributeBuffer>(entity);
             buf.SetCurrent(cdAttrId, 10f);
 
@@ -61,7 +62,7 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             var entity = world.Create(new AttributeBuffer());
 
-            int cdAttrId = 1;
+            int cdAttrId = AttributeRegistry.Register("Test.Cooldown.Reset");
             ref var buf = ref world.Get<AttributeBuffer>(entity);
             buf.SetCurrent(cdAttrId, 5f); // mid-cooldown
             That(buf.GetCurrent(cdAttrId), Is.EqualTo(5f));
@@ -77,7 +78,7 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             var entity = world.Create(new AttributeBuffer());
 
-            int cdAttrId = 1;
+            int cdAttrId = AttributeRegistry.Register("Test.Cooldown.Reduction");
             ref var buf = ref world.Get<AttributeBuffer>(entity);
             buf.SetCurrent(cdAttrId, 30f);
 
@@ -97,7 +98,7 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             var entity = world.Create(new AttributeBuffer());
 
-            int cdAttrId = 1;
+            int cdAttrId = AttributeRegistry.Register("Test.Cooldown.Clamp");
             ref var buf = ref world.Get<AttributeBuffer>(entity);
             buf.SetCurrent(cdAttrId, 5f);
 
@@ -116,9 +117,9 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             var entity = world.Create(new AttributeBuffer());
 
-            int cdAttrA = 1;
-            int cdAttrB = 2;
-            int cdAttrC = 3;
+            int cdAttrA = AttributeRegistry.Register("Test.Cooldown.Multi.A");
+            int cdAttrB = AttributeRegistry.Register("Test.Cooldown.Multi.B");
+            int cdAttrC = AttributeRegistry.Register("Test.Cooldown.Multi.C");
 
             ref var buf = ref world.Get<AttributeBuffer>(entity);
             buf.SetCurrent(cdAttrA, 10f);

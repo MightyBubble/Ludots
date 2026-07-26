@@ -792,15 +792,15 @@ namespace Ludots.Core.Presentation.Minimap
 
             bool captureDebugMarkers = _debugMarkerSampleCapacity > 0;
             bool hasKnowledgeResolver = KnowledgeProjectionConsumer.HasResolver(engine.GlobalContext);
+            bool hasKnowledgeViewer = false;
             Entity knowledgeViewer = Entity.Null;
             if (hasKnowledgeResolver &&
-                (!engine.TryGetService(CoreServiceKeys.MinimapKnowledgeViewerProvider, out MinimapKnowledgeViewerProvider knowledgeViewerProvider) ||
-                 !knowledgeViewerProvider(engine, out knowledgeViewer) ||
-                 knowledgeViewer == Entity.Null ||
-                 !engine.World.IsAlive(knowledgeViewer)))
+                engine.TryGetService(CoreServiceKeys.MinimapKnowledgeViewerProvider, out MinimapKnowledgeViewerProvider knowledgeViewerProvider) &&
+                knowledgeViewerProvider(engine, out knowledgeViewer) &&
+                knowledgeViewer != Entity.Null &&
+                engine.World.IsAlive(knowledgeViewer))
             {
-                screenMarkers.MaterializeStagedBucketKeys();
-                return;
+                hasKnowledgeViewer = true;
             }
 
             for (int i = 0; i < count; i++)
@@ -812,9 +812,9 @@ namespace Ludots.Core.Presentation.Minimap
                 float markerSizePx = sizesPx[i];
                 bool useAuthoredStyleBucket = true;
                 Entity owner = owners[i];
-                if (hasKnowledgeResolver)
+                if (hasKnowledgeResolver && owner != Entity.Null)
                 {
-                    if (owner == Entity.Null ||
+                    if (!hasKnowledgeViewer ||
                         !KnowledgeProjectionConsumer.TryResolveForViewer(
                             engine.World,
                             engine.GlobalContext,

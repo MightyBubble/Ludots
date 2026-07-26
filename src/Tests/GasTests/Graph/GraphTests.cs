@@ -65,8 +65,10 @@ namespace Ludots.Tests.GAS
 
             var e1 = world.Create();
             world.Add(e1, new Position { GridPos = new IntVector2(2, 0) });
+            world.Add(e1, WorldPositionCm.FromCm(250, 50));
             world.Add(e1, new GameplayTagContainer());
             world.Add(e1, new AttributeBuffer());
+            world.Add(e1, new DirtyFlags());
             unsafe
             {
                 ref var tags = ref world.Get<GameplayTagContainer>(e1);
@@ -78,8 +80,10 @@ namespace Ludots.Tests.GAS
 
             var e2 = world.Create();
             world.Add(e2, new Position { GridPos = new IntVector2(6, 0) });
+            world.Add(e2, WorldPositionCm.FromCm(650, 50));
             world.Add(e2, new GameplayTagContainer());
             world.Add(e2, new AttributeBuffer());
+            world.Add(e2, new DirtyFlags());
             unsafe
             {
                 ref var tags = ref world.Get<GameplayTagContainer>(e2);
@@ -91,7 +95,7 @@ namespace Ludots.Tests.GAS
 
             var coords = new SpatialCoordinateConverter();
             var spatial = new SpatialQueryService(new PhysicsWorldSpatialBackend(physics, coords));
-            var tagOps = new TagOps();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
             var relationshipRuntime = new RelationshipRuntime(
                 world,
                 new RelationshipTypeRegistry(),
@@ -112,7 +116,7 @@ namespace Ludots.Tests.GAS
 
             var program = new[]
             {
-                new GraphInstruction { Op = (ushort)GraphNodeOp.QueryRadius, ImmF = 8.0f },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.QueryRadius, ImmF = 800.0f },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.QueryFilterTagAny, Imm = 1 },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.QuerySortStable },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.QueryLimit, Imm = 1 },

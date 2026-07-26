@@ -18,7 +18,7 @@ namespace Ludots.Tests.GAS
         [Test]
         public void LoadedGraphRuntime_RebuildsLoadedView_AndProjectsNearestNode()
         {
-            var loadedChunks = new WorldGridLoadedChunks(chunkSizeCm: 1000);
+            var loadedChunks = new WorldGridLoadedChunks(chunkSizeCm: 1000, loadedChunkCapacity: 2);
             var store = new ChunkedNodeGraphStore();
             store.SubscribeToLoadedChunks(loadedChunks);
 
@@ -55,7 +55,7 @@ namespace Ludots.Tests.GAS
         [Test]
         public void AutoPathService_RuntimeBackedGraph_RefreshesProjectionAndPathingFromLoadedChunks()
         {
-            var loadedChunks = new WorldGridLoadedChunks(chunkSizeCm: 1000);
+            var loadedChunks = new WorldGridLoadedChunks(chunkSizeCm: 1000, loadedChunkCapacity: 2);
             var store = new ChunkedNodeGraphStore();
             store.SubscribeToLoadedChunks(loadedChunks);
 

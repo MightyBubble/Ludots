@@ -101,25 +101,27 @@ namespace RoadNetworkShowcaseMod.Systems
             {
                 _globals[LocalOrderSourceHelper.LastOrderDebugKey] =
                     $"type:{order.OrderTypeId},player:{order.PlayerId},actor:{order.Actor.Id}:{order.Actor.WorldId}:{order.Actor.Version},submit:{order.SubmitMode}";
-                bool accepted = _expander.TrySubmit(in order);
-                EmitSubmitCue(in order, accepted);
+                OrderSubmitResult result = _expander.TrySubmit(in order);
+                EmitSubmitCue(in order, OrderSubmitResultSemantics.IsAccepted(result));
+                return result;
             });
             _mapping.SetOrderBatchSubmitHandler((Span<Order> orders) =>
             {
                 if (orders.IsEmpty)
                 {
-                    return true;
+                    return OrderSubmitResult.Queued;
                 }
 
                 _globals[LocalOrderSourceHelper.LastOrderDebugKey] =
                     $"type:{orders[0].OrderTypeId},player:{orders[0].PlayerId},actor:{orders[0].Actor.Id}:{orders[0].Actor.WorldId}:{orders[0].Actor.Version},submit:{orders[0].SubmitMode},batch:{orders.Length}";
-                bool accepted = _expander.TrySubmitSharedBatch(orders);
+                OrderSubmitResult result = _expander.TrySubmitSharedBatch(orders);
+                bool accepted = OrderSubmitResultSemantics.IsAccepted(result);
                 for (int i = 0; i < orders.Length; i++)
                 {
                     EmitSubmitCue(in orders[i], accepted);
                 }
 
-                return accepted;
+                return result;
             });
             _mapping.SetQueueModifierProvider(() =>
             {
@@ -132,7 +134,7 @@ namespace RoadNetworkShowcaseMod.Systems
         private void EmitSubmitCue(in Order order, bool accepted)
         {
             if (_transientMarkers == null ||
-                !OrderWorldSpatialResolver.TryResolveMoveDestination(in order, out var targetWorldCm))
+                !OrderWorldSpatialResolver.TryResolveMoveDestination(_world, in order, out var targetWorldCm))
             {
                 return;
             }

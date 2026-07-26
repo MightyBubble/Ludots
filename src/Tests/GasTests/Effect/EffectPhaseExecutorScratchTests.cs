@@ -17,7 +17,7 @@ namespace Ludots.Tests.GAS
         public void ExecuteGraph_ResetsReferencedScratchRegistersBeforeReuse()
         {
             using var world = World.Create();
-            var target = world.Create(new AttributeBuffer());
+            var target = world.Create(new AttributeBuffer(), new DirtyFlags());
 
             const int attributeId = 7;
             var programs = new GraphProgramRegistry();
@@ -47,12 +47,56 @@ namespace Ludots.Tests.GAS
                 new BuiltinHandlerRegistry(),
                 GasGraphOpHandlerTable.Instance,
                 new EffectTemplateRegistry());
-            var api = new GasGraphRuntimeApi(world, spatialQueries: null, coords: null, eventBus: null, effectRequests: null);
+            var api = new GasGraphRuntimeApi(
+                world,
+                spatialQueries: null,
+                coords: null,
+                eventBus: null,
+                effectRequests: null,
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 
             executor.ExecuteGraph(world, api, target, target, default, default, 1);
             executor.ExecuteGraph(world, api, target, target, default, default, 2);
 
             Assert.That(world.Get<AttributeBuffer>(target).GetCurrent(attributeId), Is.EqualTo(0f));
+        }
+
+        [Test]
+        public void ExecuteGraph_WhenProgramIdExceedsScratchCapacity_FailsWithoutResizing()
+        {
+            using var world = World.Create();
+            var target = world.Create(new AttributeBuffer(), new DirtyFlags());
+
+            var programs = new GraphProgramRegistry();
+            programs.Register(2, new[]
+            {
+                new GraphInstruction
+                {
+                    Op = (ushort)GraphNodeOp.ConstFloat,
+                    Dst = 0,
+                    ImmF = 1f,
+                }
+            });
+
+            var executor = new EffectPhaseExecutor(
+                programs,
+                new PresetTypeRegistry(),
+                new BuiltinHandlerRegistry(),
+                GasGraphOpHandlerTable.Instance,
+                new EffectTemplateRegistry(),
+                graphProgramScratchCapacity: 2);
+            var api = new GasGraphRuntimeApi(
+                world,
+                spatialQueries: null,
+                coords: null,
+                eventBus: null,
+                effectRequests: null,
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+                executor.ExecuteGraph(world, api, target, target, default, default, 2))!;
+
+            Assert.That(ex.Message, Does.StartWith(EffectPhaseExecutor.GraphProgramScratchCapacityExceededError));
         }
     }
 }

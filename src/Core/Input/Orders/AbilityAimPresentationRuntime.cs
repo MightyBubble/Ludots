@@ -100,7 +100,7 @@ namespace Ludots.Core.Input.Orders
         private readonly Entity[] _candidateBuffer = new Entity[MaxPreviewTargets];
         private readonly int[] _rowRoleIdBuffer = new int[MaxPreviewTargets];
         private readonly EntityCollectionRowFlags[] _rowFlagBuffer = new EntityCollectionRowFlags[MaxPreviewTargets];
-        private readonly List<FanOutCommand> _fanOutCommands = new(MaxPreviewTargets);
+        private readonly FanOutCommandBuffer _fanOutCommands = new(MaxPreviewTargets);
         private readonly RootBudgetTable _budget = new(MaxPreviewTargets);
         private readonly Dictionary<int, int> _activeSemanticPreviewKeyIdsByActor = new();
         private readonly Dictionary<int, int> _activeAimSessionKeysByActor = new();
@@ -393,7 +393,7 @@ namespace Ludots.Core.Input.Orders
                 Caster = actor,
                 ExplicitTarget = previewTarget,
                 TargetContext = previewTarget,
-                TargetPos = ToGraphTargetPos(aimWorldCm),
+                TargetPosCm = ToGraphTargetPos(aimWorldCm),
                 Api = _graphApi,
                 F = floats,
                 I = ints,

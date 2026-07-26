@@ -9,6 +9,7 @@ using Ludots.Core.Gameplay.GAS.Presentation;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.Knowledge;
 using Ludots.Core.Config;
 using Ludots.Core.Modding;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
@@ -57,6 +58,8 @@ namespace Ludots.Tests.Presentation
         private PerformerEmitSystem _emitSystem;
         private PresentationStableIdAllocator _stableIds;
         private int _healthAttrId;
+        private Entity _viewer;
+        private KnowledgeProjectionStore _knowledge;
 
         [SetUp]
         public void Setup()
@@ -80,6 +83,10 @@ namespace Ludots.Tests.Presentation
             _stableIds = new PresentationStableIdAllocator();
 
             _healthAttrId = AttributeRegistry.Register("Health");
+            _viewer = _world.Create();
+            _knowledge = new KnowledgeProjectionStore();
+            _globals[CoreServiceKeys.LocalPlayerEntity.Name] = _viewer;
+            _globals[CoreServiceKeys.KnowledgeProjectionResolver.Name] = new KnowledgeProjectionResolver(_knowledge);
 
             LoadCorePerformerDefinitions(_defs, _healthAttrId);
             int healthBarDefId = _defs.GetOrRegisterId(WellKnownPerformerKeys.EntityHealthBar);
@@ -196,7 +203,29 @@ namespace Ludots.Tests.Presentation
                 _world.Add(entity, new EntityTemplateKeyRef { TemplateKeyId = templateKeyId });
             }
 
+            GrantHudKnowledge(entity, includeHealthAttribute: hasAttributes);
             return entity;
+        }
+
+        private void GrantHudKnowledge(Entity entity, bool includeHealthAttribute)
+        {
+            KnowledgeIdMask256 attributeMask = includeHealthAttribute
+                ? KnowledgeIdMask256.Empty.WithId(_healthAttrId)
+                : KnowledgeIdMask256.Empty;
+            _knowledge.Upsert(
+                _viewer,
+                entity,
+                new KnowledgeDisclosureRecord(
+                    KnowledgePresence.LiveVisible,
+                    KnowledgePositionAccess.Live,
+                    attributeMask,
+                    KnowledgeIdMask256.Empty,
+                    KnowledgeIdMask256.Empty,
+                    _viewer,
+                    observedTick: 0,
+                    expiryTick: 0,
+                    confidencePermille: 1000,
+                    revision: 0));
         }
 
         private int CountActiveInstancesInScope(int scopeId)

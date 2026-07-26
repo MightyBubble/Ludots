@@ -22,7 +22,7 @@ namespace Ludots.Tests.GAS
     [TestFixture]
     public class PhaseListenerBatchHexTests
     {
-        private readonly TagOps _tagOps = new TagOps();
+        private readonly TagOps _tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
 
         // ════════════════════════════════════════════════════════════════════
         //  Module C: HexCoordinates Utility Tests
@@ -229,7 +229,7 @@ namespace Ludots.Tests.GAS
             int tagId = TagRegistry.Register("Test.HasTagOp");
             _tagOps.AddTag(ref tags, ref counts, tagId);
 
-            var api = new GasGraphRuntimeApi(world, null, null, null);
+            var api = new GasGraphRuntimeApi(world, tagOps: _tagOps);
             var program = new GraphProgramBuffer();
             program.Add((ushort)GraphNodeOp.LoadCaster, dst: 0);             // E[0] = caster
             program.Add((ushort)GraphNodeOp.HasTag, dst: 0, a: 0, imm: tagId); // B[0] = HasTag(E[0], tagId)
@@ -269,7 +269,7 @@ namespace Ludots.Tests.GAS
                 World = world,
                 Caster = e0,
                 ExplicitTarget = e0,
-                TargetPos = default,
+                TargetPosCm = default,
                 Api = new GasGraphRuntimeApi(world, null, null, null),
                 F = fRegs,
                 I = iRegs,
@@ -329,7 +329,7 @@ namespace Ludots.Tests.GAS
                 World = world,
                 Caster = caster,
                 ExplicitTarget = caster,
-                TargetPos = default,
+                TargetPosCm = default,
                 Api = api,
                 F = fRegs,
                 I = iRegs,
@@ -612,7 +612,7 @@ namespace Ludots.Tests.GAS
                 World = world,
                 Caster = caster,
                 ExplicitTarget = caster,
-                TargetPos = default,
+                TargetPosCm = default,
                 Api = api,
                 F = fRegs,
                 I = iRegs,
@@ -812,7 +812,7 @@ namespace Ludots.Tests.GAS
                 World = world,
                 Caster = caster,
                 ExplicitTarget = target,
-                TargetPos = default,
+                TargetPosCm = default,
                 Api = api,
                 F = _testFloatRegs,
                 I = _testIntRegs,

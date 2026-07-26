@@ -220,7 +220,7 @@ namespace Ludots.Tests.GAS
                 "beam" => 100,
                 _ => 0
             });
-            system.SetOrderSubmitHandler((in Order order) => orders.Add(order));
+            system.SetOrderSubmitHandler((in Order order) => { orders.Add(order); return OrderSubmitResult.Queued; });
 
             using var world = World.Create();
             system.SetLocalPlayer(world.Create(), 1);

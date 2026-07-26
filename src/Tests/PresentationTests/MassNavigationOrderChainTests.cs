@@ -19,6 +19,14 @@ public sealed class MassNavigationOrderChainTests
     internal const int LocalTeamId = 1;
     internal const int EnemyTeamId = 2;
 
+    internal static Ludots.Core.Navigation.GraphWorld.WorldGridLoadedChunks CreateLoadedChunksForTests(
+        MassNavigationSimulationRuntime simulation)
+    {
+        return new Ludots.Core.Navigation.GraphWorld.WorldGridLoadedChunks(
+            simulation.WorldConfig.StreamingChunkSizeCm,
+            simulation.Config.ScenarioRuntime.RuntimeCapacity.LoadedChunkCapacity);
+    }
+
     [Test]
     public void BindBoardWorld_RejectsActiveHotZoneOutsideBoardCenterRange()
     {
@@ -29,7 +37,7 @@ public sealed class MassNavigationOrderChainTests
         InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
             () => simulation.BindBoardWorld(
                 new WorldSizeSpec(new WorldAabbCm(0, 0, 25_000, 25_000), 100),
-                new Ludots.Core.Navigation.GraphWorld.WorldGridLoadedChunks(simulation.WorldConfig.StreamingChunkSizeCm)))!;
+                CreateLoadedChunksForTests(simulation)))!;
 
         Assert.That(ex.Message, Does.Contain("active hot zone"));
         Assert.That(ex.Message, Does.Contain("center x"));
@@ -41,8 +49,7 @@ public sealed class MassNavigationOrderChainTests
     {
         MassNavigationConfig config = CreateConfigForTests();
         var simulation = new MassNavigationSimulationRuntime(config);
-        var loadedChunks = new Ludots.Core.Navigation.GraphWorld.WorldGridLoadedChunks(
-            config.World!.StreamingChunkSizeCm);
+        var loadedChunks = CreateLoadedChunksForTests(simulation);
         simulation.BindBoardWorld(
             new WorldSizeSpec(new WorldAabbCm(0, 0, 25_000, 25_000), 100),
             loadedChunks);
@@ -93,8 +100,7 @@ public sealed class MassNavigationOrderChainTests
     {
         MassNavigationConfig config = CreateConfigForTests();
         var simulation = new MassNavigationSimulationRuntime(config);
-        var loadedChunks = new Ludots.Core.Navigation.GraphWorld.WorldGridLoadedChunks(
-            config.World!.StreamingChunkSizeCm);
+        var loadedChunks = CreateLoadedChunksForTests(simulation);
         simulation.BindBoardWorld(
             new WorldSizeSpec(new WorldAabbCm(0, 0, 25_000, 25_000), 100),
             loadedChunks);

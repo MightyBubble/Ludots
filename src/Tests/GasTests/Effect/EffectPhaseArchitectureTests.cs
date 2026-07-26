@@ -394,6 +394,86 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void PhaseExecutor_OwnsMergedConfigScopeAndClearsItAfterSuccess()
+        {
+            using var world = World.Create();
+            var programs = new GraphProgramRegistry();
+            var templates = new EffectTemplateRegistry();
+            var executor = new EffectPhaseExecutor(
+                programs,
+                new PresetTypeRegistry(),
+                new BuiltinHandlerRegistry(),
+                GasGraphOpHandlerTable.Instance,
+                templates);
+            var api = new GasGraphRuntimeApi(world);
+            Entity caster = world.Create();
+            Entity target = world.Create(new BlackboardIntBuffer());
+            const int graphId = 405;
+            const int configKey = 71;
+            const int blackboardKey = 72;
+            programs.Register(graphId, new[]
+            {
+                new GraphInstruction { Op = (ushort)GraphNodeOp.LoadConfigInt, Dst = 0, Imm = configKey },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardInt, A = 1, B = 0, Imm = blackboardKey },
+            });
+            var behavior = new EffectPhaseGraphBindings();
+            behavior.TryAddStep(EffectPhaseId.OnApply, PhaseSlot.Pre, graphId);
+            var mergedConfig = new EffectConfigParams();
+            mergedConfig.TryAddInt(configKey, 42);
+
+            executor.ExecutePhase(
+                world,
+                api,
+                caster,
+                target,
+                default,
+                default,
+                EffectPhaseId.OnApply,
+                in behavior,
+                EffectPresetType.None,
+                0,
+                0,
+                in mergedConfig);
+
+            Assert.That(world.Get<BlackboardIntBuffer>(target).TryGet(blackboardKey, out int value), Is.True);
+            Assert.That(value, Is.EqualTo(42));
+            Assert.That(api.TryLoadConfigInt(configKey, out _), Is.False);
+        }
+
+        [Test]
+        public void PhaseExecutor_ClearsMergedConfigScopeWhenGraphThrows()
+        {
+            using var world = World.Create();
+            var executor = new EffectPhaseExecutor(
+                new GraphProgramRegistry(),
+                new PresetTypeRegistry(),
+                new BuiltinHandlerRegistry(),
+                GasGraphOpHandlerTable.Instance,
+                new EffectTemplateRegistry());
+            var api = new GasGraphRuntimeApi(world);
+            var behavior = new EffectPhaseGraphBindings();
+            behavior.TryAddStep(EffectPhaseId.OnApply, PhaseSlot.Pre, 406);
+            var mergedConfig = new EffectConfigParams();
+            mergedConfig.TryAddInt(73, 99);
+
+            Assert.Throws<InvalidOperationException>(() => executor.ExecutePhase(
+                world,
+                api,
+                world.Create(),
+                world.Create(),
+                default,
+                default,
+                EffectPhaseId.OnApply,
+                in behavior,
+                EffectPresetType.None,
+                0,
+                0,
+                in mergedConfig));
+
+            Assert.That(api.TryLoadConfigInt(73, out _), Is.False);
+        }
+
+        [Test]
         public void PhaseExecutor_ValidationResult_DefaultsToPassWhenGraphDoesNotWriteB0()
         {
             using var world = World.Create();
@@ -649,7 +729,7 @@ namespace Ludots.Tests.GAS
             var world = World.Create();
             try
             {
-                // Entity WITHOUT BB component — write should be a no-op (no archetype migration in hot path)
+                // Entity WITHOUT BB component must fail without archetype migration in the hot path.
                 var entityNoBB = world.Create();
                 var api = new GasGraphRuntimeApi(world, null, null, null);
 
@@ -660,11 +740,13 @@ namespace Ludots.Tests.GAS
                     new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardFloat, A = 0, Imm = 1, B = 0 },
                 };
 
-                ExecuteProgram(world, api, entityNoBB, entityNoBB, program);
+                var error = Throws<InvalidOperationException>(() =>
+                    ExecuteProgram(world, api, entityNoBB, entityNoBB, program));
 
                 // BB component should NOT be auto-added (archetype migration removed for hot-path safety)
+                That(error!.Message, Does.StartWith(GasGraphRuntimeApi.MissingBlackboardError));
                 That(world.Has<BlackboardFloatBuffer>(entityNoBB), Is.False,
-                    "WriteBlackboardFloat should not auto-add BB component");
+                    "WriteBlackboardFloat must not auto-add BB component");
 
                 // Entity WITH pre-added BB component — write should succeed
                 var entityWithBB = world.Create(new BlackboardFloatBuffer());
@@ -895,7 +977,7 @@ namespace Ludots.Tests.GAS
                 World = world,
                 Caster = caster,
                 ExplicitTarget = target,
-                TargetPos = default,
+                TargetPosCm = default,
                 Api = api,
                 F = f,
                 I = i,
@@ -926,7 +1008,7 @@ namespace Ludots.Tests.GAS
                 World = world,
                 Caster = caster,
                 ExplicitTarget = target,
-                TargetPos = default,
+                TargetPosCm = default,
                 Api = api,
                 F = f,
                 I = iArr,
@@ -957,7 +1039,7 @@ namespace Ludots.Tests.GAS
                 World = world,
                 Caster = caster,
                 ExplicitTarget = target,
-                TargetPos = default,
+                TargetPosCm = default,
                 Api = api,
                 F = f,
                 I = i,
@@ -988,7 +1070,7 @@ namespace Ludots.Tests.GAS
                 World = world,
                 Caster = caster,
                 ExplicitTarget = target,
-                TargetPos = default,
+                TargetPosCm = default,
                 Api = api,
                 F = f,
                 I = i,

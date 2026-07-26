@@ -1,7 +1,7 @@
 {
   "Id": "benchmark_map",
   "Boards": [
-    { "Name": "default", "DataFile": "benchmark.bin" }
+    { "Name": "default", "DataFile": "benchmark.bin", "LoadedChunkCapacity": 256 }
   ],
   "Dependencies": [
     { "Id": "PerformanceMod", "MinVersion": "1.0.0" }

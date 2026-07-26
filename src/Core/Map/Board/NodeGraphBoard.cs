@@ -39,7 +39,7 @@ namespace Ludots.Core.Map.Board
             QueryService = new SpatialQueryService(new ChunkedGridSpatialPartitionBackend(partition, WorldSize));
 
             int streamingChunkSizeCm = config.ChunkSizeCells * config.GridCellSizeCm;
-            LoadedChunksSource = new WorldGridLoadedChunks(streamingChunkSizeCm);
+            LoadedChunksSource = new WorldGridLoadedChunks(streamingChunkSizeCm, config.LoadedChunkCapacity);
             GraphStore = new ChunkedNodeGraphStore();
             GraphStore.SubscribeToLoadedChunks(LoadedChunksSource);
             GraphRuntime = new LoadedGraphRuntime(

@@ -11,6 +11,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
@@ -552,18 +553,11 @@ namespace ChampionSkillSandboxMod.Runtime
                 return;
             }
 
-            if (!engine.World.Has<GameplayTagContainer>(entity))
-            {
-                engine.World.Add(entity, new GameplayTagContainer());
-            }
-
             int tagId = TagRegistry.Register(tagName);
-            ref var tags = ref engine.World.Get<GameplayTagContainer>(entity);
-            if (!tags.HasTag(tagId))
-            {
-                tags.AddTag(tagId);
-                engine.World.Set(entity, tags);
-            }
+            TagStateInstaller.EnsureInstalled(engine.World, entity);
+            TagOps tagOps = engine.GetService(CoreServiceKeys.TagOps)
+                ?? throw new InvalidOperationException("ChampionSkillSandbox requires engine TagOps.");
+            tagOps.AddTag(engine.World, entity, tagId);
         }
 
         private void EnsureMode(GameEngine engine)

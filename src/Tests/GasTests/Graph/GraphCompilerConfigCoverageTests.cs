@@ -16,6 +16,7 @@ using Ludots.Core.Modding;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Scripting;
+using Ludots.Core.Spatial;
 using NUnit.Framework;
 
 namespace Ludots.Tests.GAS
@@ -64,7 +65,7 @@ namespace Ludots.Tests.GAS
         public void GraphsJson_CompilesAndExecutesIntBlackboardConfigAndSelfAttributeOps()
         {
             using var world = World.Create();
-            var caster = world.Create(new AttributeBuffer());
+            var caster = world.Create(new AttributeBuffer(), new DirtyFlags());
             var target = world.Create();
             int copiedAttr = AttributeRegistry.Register("tests.attr.copiedFloat");
             var api = new RecordingGraphApi(world);
@@ -143,7 +144,8 @@ namespace Ludots.Tests.GAS
             var entity = world.Create(
                 new AttributeBuffer(),
                 new ActiveEffectContainer(),
-                new AttributeAggregateDirty());
+                new AttributeAggregateDirty(),
+                new DirtyFlags());
             ref AttributeBuffer buffer = ref world.Get<AttributeBuffer>(entity);
             buffer.SetBase(sourceAttr, 10f);
             buffer.SetCurrent(sourceAttr, 10f);
@@ -154,7 +156,12 @@ namespace Ludots.Tests.GAS
                 "AttributeDerivedGraphBinding",
                 JsonNode.Parse("""{ "graphs": [ "tests.graph.derived-attribute" ] }""")!);
 
-            var system = new AttributeAggregatorSystem(world, programs, new RecordingGraphApi(world));
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
+            using var system = new AttributeAggregatorSystem(
+                world,
+                programs,
+                new GasGraphRuntimeApi(world, tagOps: tagOps),
+                tagOps);
             system.Update(0f);
 
             Assert.That(world.Get<AttributeBuffer>(entity).GetCurrent(derivedAttr), Is.EqualTo(12.5f));
@@ -173,6 +180,177 @@ namespace Ludots.Tests.GAS
                     JsonNode.Parse("""{ "graphProgramIds": [ 1 ] }""")!))!;
 
             Assert.That(ex.Message, Does.Contain("numeric graph ids are internal only"));
+        }
+
+        [Test]
+        public void SpatialQueryCompiler_RejectsMissingCapacityPolicy()
+        {
+            GraphConfig graph = CreateRadiusGraph(queryCapacityPolicy: null, droppedOutput: null);
+
+            var (package, diagnostics) = GraphCompiler.Compile(graph);
+
+            Assert.That(package.HasValue, Is.False);
+            Assert.That(diagnostics, Has.Some.Matches<GraphDiagnostic>(d =>
+                d.Severity == GraphDiagnosticSeverity.Error &&
+                d.Message.Contains("queryCapacityPolicy", StringComparison.Ordinal)));
+        }
+
+        [Test]
+        public void SpatialQueryCompiler_RejectsAllowTruncatedWithoutDroppedOutput()
+        {
+            GraphConfig graph = CreateRadiusGraph("AllowTruncated", droppedOutput: null);
+
+            var (package, diagnostics) = GraphCompiler.Compile(graph);
+
+            Assert.That(package.HasValue, Is.False);
+            Assert.That(diagnostics, Has.Some.Matches<GraphDiagnostic>(d =>
+                d.Severity == GraphDiagnosticSeverity.Error &&
+                d.Message.Contains("droppedOutput", StringComparison.Ordinal)));
+        }
+
+        [Test]
+        public void SpatialQuery_RequireComplete_ThrowsWhenRuntimeDropsTargets()
+        {
+            using var world = World.Create();
+            var api = new RecordingGraphApi(world)
+            {
+                QueryRadiusResponse = new SpatialQueryResult(count: 0, dropped: 3)
+            };
+            var (package, diagnostics) = GraphCompiler.Compile(CreateRadiusGraph("RequireComplete", droppedOutput: null));
+            Assert.That(package.HasValue, Is.True, string.Join(Environment.NewLine, diagnostics));
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+                Ludots.Core.NodeLibraries.GASGraph.GraphExecutor.Execute(
+                    world,
+                    Entity.Null,
+                    Entity.Null,
+                    default,
+                    package!.Value.Program,
+                    api))!;
+
+            Assert.That(ex.Message, Does.Contain("GAS.GRAPH.ERR.SpatialQueryIncomplete"));
+        }
+
+        [Test]
+        public void SpatialQuery_AllowTruncated_PublishesDroppedCount()
+        {
+            using var world = World.Create();
+            Entity caster = world.Create();
+            var api = new RecordingGraphApi(world)
+            {
+                QueryRadiusResponse = new SpatialQueryResult(count: 0, dropped: 7)
+            };
+            GraphConfig graph = CreateRadiusGraph("AllowTruncated", "dropped");
+            graph.Nodes[0].Next = "writeDropped";
+            graph.Nodes.Insert(0, new GraphNodeConfig { Id = "self", Op = "LoadCaster", Next = "query" });
+            graph.Entry = "self";
+            graph.Nodes.Add(new GraphNodeConfig
+            {
+                Id = "writeDropped",
+                Op = "WriteBlackboardInt",
+                BlackboardKey = "tests.bb.dropped",
+                Inputs = new List<string> { "self", "dropped" }
+            });
+            var (package, diagnostics) = GraphCompiler.Compile(graph);
+            Assert.That(package.HasValue, Is.True, string.Join(Environment.NewLine, diagnostics));
+
+            Ludots.Core.NodeLibraries.GASGraph.GraphExecutor.Execute(
+                world,
+                caster,
+                Entity.Null,
+                default,
+                package!.Value.Program,
+                api);
+
+            Assert.That(api.IntBlackboard[(caster, 0)], Is.EqualTo(7));
+        }
+
+        [Test]
+        public void SnapWithoutValidOutput_DoesNotOverwriteValidationResult()
+        {
+            using var world = World.Create();
+            var api = new RecordingGraphApi(world);
+            GraphConfig graph = CreateSnapGraph(validOutput: null, includeOccupiedBool: false);
+            var (package, diagnostics) = GraphCompiler.Compile(graph);
+            Assert.That(package.HasValue, Is.True, string.Join(Environment.NewLine, diagnostics));
+
+            bool valid = Ludots.Core.NodeLibraries.GASGraph.GraphExecutor.ExecuteValidation(
+                world,
+                Entity.Null,
+                Entity.Null,
+                default,
+                package!.Value.Program,
+                api);
+
+            Assert.That(valid, Is.True);
+            GraphInstruction snap = Array.Find(package.Value.Program, ins => ins.Op == (ushort)GraphNodeOp.SnapToNearestInCollection);
+            Assert.That(snap.Flags, Is.EqualTo(byte.MaxValue));
+        }
+
+        [Test]
+        public void SnapWithValidOutput_AllocatesDedicatedBoolRegister()
+        {
+            GraphConfig graph = CreateSnapGraph(validOutput: "snapValid", includeOccupiedBool: false);
+
+            var (package, diagnostics) = GraphCompiler.Compile(graph);
+
+            Assert.That(package.HasValue, Is.True, string.Join(Environment.NewLine, diagnostics));
+            GraphInstruction snap = Array.Find(package!.Value.Program, ins => ins.Op == (ushort)GraphNodeOp.SnapToNearestInCollection);
+            Assert.That(snap.Flags, Is.Not.EqualTo(byte.MaxValue));
+            Assert.That(snap.Flags, Is.Not.EqualTo(0), "B[0] is reserved for the validation result contract.");
+        }
+
+        private static GraphConfig CreateRadiusGraph(string? queryCapacityPolicy, string? droppedOutput)
+        {
+            return new GraphConfig
+            {
+                Id = "tests.graph.radius-capacity",
+                Entry = "query",
+                Nodes = new List<GraphNodeConfig>
+                {
+                    new GraphNodeConfig
+                    {
+                        Id = "query",
+                        Op = "QueryRadius",
+                        RadiusCm = 100f,
+                        QueryCapacityPolicy = queryCapacityPolicy,
+                        DroppedOutput = droppedOutput
+                    }
+                }
+            };
+        }
+
+        private static GraphConfig CreateSnapGraph(string? validOutput, bool includeOccupiedBool)
+        {
+            var nodes = new List<GraphNodeConfig>
+            {
+                new GraphNodeConfig { Id = "self", Op = "LoadCaster", Next = "distance" },
+                new GraphNodeConfig
+                {
+                    Id = "distance",
+                    Op = "ConstFloat",
+                    FloatValue = 100f,
+                    Next = includeOccupiedBool ? "occupied" : "snap"
+                }
+            };
+            if (includeOccupiedBool)
+            {
+                nodes.Add(new GraphNodeConfig { Id = "occupied", Op = "ConstBool", BoolValue = true, Next = "snap" });
+            }
+            nodes.Add(new GraphNodeConfig
+            {
+                Id = "snap",
+                Op = "SnapToNearestInCollection",
+                CollectionKey = "tests.collection.snap",
+                Inputs = new List<string> { "self", "distance" },
+                ValidOutput = validOutput
+            });
+            return new GraphConfig
+            {
+                Id = "tests.graph.snap-valid",
+                Entry = "self",
+                Nodes = nodes
+            };
         }
 
         private GraphProgramRegistry LoadPrograms(string graphJson)
@@ -255,7 +433,7 @@ namespace Ludots.Tests.GAS
     "entry": "self",
     "nodes": [
       { "id": "self", "op": "LoadCaster", "next": "cone" },
-      { "id": "cone", "op": "QueryCone", "directionDeg": 90, "halfAngleDeg": 30, "rangeCm": 800, "next": "layer" },
+      { "id": "cone", "op": "QueryCone", "queryCapacityPolicy": "RequireComplete", "directionDeg": 90, "halfAngleDeg": 30, "rangeCm": 800, "next": "layer" },
       { "id": "layer", "op": "QueryFilterLayer", "layerMask": 2, "next": "notSelf" },
       { "id": "notSelf", "op": "QueryFilterNotEntity", "inputs": [ "self" ], "next": "hostile" },
       { "id": "hostile", "op": "QueryFilterRelationship", "relationshipMode": "Hostile", "inputs": [ "self" ], "next": "zero" },
@@ -264,19 +442,19 @@ namespace Ludots.Tests.GAS
       { "id": "filteredCount", "op": "AggCount", "next": "writeFirst" },
       { "id": "writeFirst", "op": "WriteBlackboardEntity", "blackboardKey": "tests.bb.firstTarget", "inputs": [ "self", "first" ], "next": "writeFilteredCount" },
       { "id": "writeFilteredCount", "op": "WriteBlackboardInt", "blackboardKey": "tests.bb.filteredCount", "inputs": [ "self", "filteredCount" ], "next": "rect" },
-      { "id": "rect", "op": "QueryRectangle", "halfWidthCm": 120, "halfHeightCm": 60, "rotationDeg": 15, "next": "rectCount" },
+      { "id": "rect", "op": "QueryRectangle", "queryCapacityPolicy": "RequireComplete", "halfWidthCm": 120, "halfHeightCm": 60, "rotationDeg": 15, "next": "rectCount" },
       { "id": "rectCount", "op": "AggCount", "next": "writeRectCount" },
       { "id": "writeRectCount", "op": "WriteBlackboardInt", "blackboardKey": "tests.bb.rectCount", "inputs": [ "self", "rectCount" ], "next": "line" },
-      { "id": "line", "op": "QueryLine", "directionDeg": 45, "lengthCm": 500, "halfWidthCm": 25, "next": "lineCount" },
+      { "id": "line", "op": "QueryLine", "queryCapacityPolicy": "RequireComplete", "directionDeg": 45, "lengthCm": 500, "halfWidthCm": 25, "next": "lineCount" },
       { "id": "lineCount", "op": "AggCount", "next": "writeLineCount" },
       { "id": "writeLineCount", "op": "WriteBlackboardInt", "blackboardKey": "tests.bb.lineCount", "inputs": [ "self", "lineCount" ], "next": "hexRange" },
-      { "id": "hexRange", "op": "QueryHexRange", "hexRadius": 2, "next": "hexRangeCount" },
+      { "id": "hexRange", "op": "QueryHexRange", "queryCapacityPolicy": "RequireComplete", "hexRadius": 2, "next": "hexRangeCount" },
       { "id": "hexRangeCount", "op": "AggCount", "next": "writeHexRangeCount" },
       { "id": "writeHexRangeCount", "op": "WriteBlackboardInt", "blackboardKey": "tests.bb.hexRangeCount", "inputs": [ "self", "hexRangeCount" ], "next": "hexRing" },
-      { "id": "hexRing", "op": "QueryHexRing", "hexRadius": 3, "next": "hexRingCount" },
+      { "id": "hexRing", "op": "QueryHexRing", "queryCapacityPolicy": "RequireComplete", "hexRadius": 3, "next": "hexRingCount" },
       { "id": "hexRingCount", "op": "AggCount", "next": "writeHexRingCount" },
       { "id": "writeHexRingCount", "op": "WriteBlackboardInt", "blackboardKey": "tests.bb.hexRingCount", "inputs": [ "self", "hexRingCount" ], "next": "hexNeighbors" },
-      { "id": "hexNeighbors", "op": "QueryHexNeighbors", "next": "hexNeighborCount" },
+      { "id": "hexNeighbors", "op": "QueryHexNeighbors", "queryCapacityPolicy": "RequireComplete", "next": "hexNeighborCount" },
       { "id": "hexNeighborCount", "op": "AggCount", "next": "writeHexNeighborCount" },
       { "id": "writeHexNeighborCount", "op": "WriteBlackboardInt", "blackboardKey": "tests.bb.hexNeighborCount", "inputs": [ "self", "hexNeighborCount" ] }
     ]
@@ -366,45 +544,56 @@ namespace Ludots.Tests.GAS
                 return false;
             }
 
-            public int QueryRadius(IntVector2 center, float radius, Span<Entity> buffer) => 0;
+            public SpatialQueryResult QueryRadiusResponse { get; set; }
 
-            public int QueryCone(IntVector2 origin, int directionDeg, int halfAngleDeg, float rangeCm, Span<Entity> buffer)
+            public SpatialQueryResult QueryRadius(IntVector2 center, float radius, Span<Entity> buffer) => QueryRadiusResponse;
+
+            public SpatialQueryResult QueryCone(IntVector2 origin, int directionDeg, int halfAngleDeg, float rangeCm, Span<Entity> buffer)
             {
                 LastConeDirectionDeg = directionDeg;
                 LastConeHalfAngleDeg = halfAngleDeg;
                 LastConeRangeCm = rangeCm;
-                return Copy(QueryConeResult, buffer);
+                int count = Copy(QueryConeResult, buffer);
+                return new SpatialQueryResult(count, 0);
             }
 
-            public int QueryRectangle(IntVector2 center, int halfWidthCm, int halfHeightCm, int rotationDeg, Span<Entity> buffer)
+            public SpatialQueryResult QueryRectangle(IntVector2 center, int halfWidthCm, int halfHeightCm, int rotationDeg, Span<Entity> buffer)
             {
                 LastRectangleHalfWidthCm = halfWidthCm;
                 LastRectangleHalfHeightCm = halfHeightCm;
                 LastRectangleRotationDeg = rotationDeg;
-                return Copy(QueryRectangleResult, buffer);
+                int count = Copy(QueryRectangleResult, buffer);
+                return new SpatialQueryResult(count, 0);
             }
 
-            public int QueryLine(IntVector2 origin, int directionDeg, int lengthCm, int halfWidthCm, Span<Entity> buffer)
+            public SpatialQueryResult QueryLine(IntVector2 origin, int directionDeg, int lengthCm, int halfWidthCm, Span<Entity> buffer)
             {
                 LastLineDirectionDeg = directionDeg;
                 LastLineLengthCm = lengthCm;
                 LastLineHalfWidthCm = halfWidthCm;
-                return Copy(QueryLineResult, buffer);
+                int count = Copy(QueryLineResult, buffer);
+                return new SpatialQueryResult(count, 0);
             }
 
-            public int QueryHexRange(IntVector2 center, int hexRadius, Span<Entity> buffer)
+            public SpatialQueryResult QueryHexRange(IntVector2 center, int hexRadius, Span<Entity> buffer)
             {
                 LastHexRangeRadius = hexRadius;
-                return Copy(QueryHexRangeResult, buffer);
+                int count = Copy(QueryHexRangeResult, buffer);
+                return new SpatialQueryResult(count, 0);
             }
 
-            public int QueryHexRing(IntVector2 center, int hexRadius, Span<Entity> buffer)
+            public SpatialQueryResult QueryHexRing(IntVector2 center, int hexRadius, Span<Entity> buffer)
             {
                 LastHexRingRadius = hexRadius;
-                return Copy(QueryHexRingResult, buffer);
+                int count = Copy(QueryHexRingResult, buffer);
+                return new SpatialQueryResult(count, 0);
             }
 
-            public int QueryHexNeighbors(IntVector2 center, Span<Entity> buffer) => Copy(QueryHexNeighborsResult, buffer);
+            public SpatialQueryResult QueryHexNeighbors(IntVector2 center, Span<Entity> buffer)
+            {
+                int count = Copy(QueryHexNeighborsResult, buffer);
+                return new SpatialQueryResult(count, 0);
+            }
             public int GetTeamId(Entity entity) => 0;
             public uint GetEntityLayerCategory(Entity entity) => Layers.TryGetValue(entity, out uint layer) ? layer : 0u;
             public int GetRelationship(int teamA, int teamB) => GraphRelationship.Neutral;
@@ -456,6 +645,10 @@ namespace Ludots.Tests.GAS
             public void ApplyEffectTemplate(Entity caster, Entity target, int templateId, in EffectArgs args) { }
             public void RemoveEffectTemplate(Entity target, int templateId) { }
             public void ModifyAttributeAdd(Entity caster, Entity target, int attributeId, float delta) { }
+            public void ModifyAttributeSet(Entity caster, Entity target, int attributeId, float value)
+            {
+                _world.Get<AttributeBuffer>(target).SetCurrent(attributeId, value);
+            }
             public void SendEvent(Entity caster, Entity target, int eventTagId, float magnitude) { }
             public bool TryReadBlackboardFloat(Entity entity, int keyId, out float value) => FloatBlackboard.TryGetValue((entity, keyId), out value);
             public bool TryReadBlackboardInt(Entity entity, int keyId, out int value) => IntBlackboard.TryGetValue((entity, keyId), out value);

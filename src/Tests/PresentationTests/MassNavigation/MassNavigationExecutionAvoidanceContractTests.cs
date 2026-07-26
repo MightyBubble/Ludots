@@ -119,7 +119,7 @@ namespace Ludots.Tests.Presentation
             var runtime = new MassNavigationSimulationRuntime(config);
             runtime.BindBoardWorld(
                 new WorldSizeSpec(new WorldAabbCm(0, 0, 10_000, 10_000), 100),
-                new Ludots.Core.Navigation.GraphWorld.WorldGridLoadedChunks(runtime.WorldConfig.StreamingChunkSizeCm));
+                MassNavigationOrderChainTests.CreateLoadedChunksForTests(runtime));
 
             MassNavigationAgentSeed[] seeds =
             {
@@ -177,7 +177,7 @@ namespace Ludots.Tests.Presentation
             var runtime = new MassNavigationSimulationRuntime(config);
             runtime.BindBoardWorld(
                 new WorldSizeSpec(new WorldAabbCm(0, 0, 10_000, 10_000), 100),
-                new Ludots.Core.Navigation.GraphWorld.WorldGridLoadedChunks(runtime.WorldConfig.StreamingChunkSizeCm));
+                MassNavigationOrderChainTests.CreateLoadedChunksForTests(runtime));
             MassNavigationAgentSeed[] seeds =
             {
                 new(

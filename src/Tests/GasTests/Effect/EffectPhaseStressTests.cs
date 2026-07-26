@@ -189,7 +189,7 @@ namespace Ludots.Tests.GAS
                     var state = new GraphExecutionState
                     {
                         World = world, Caster = entity, ExplicitTarget = entity,
-                        TargetPos = default, Api = api,
+                        TargetPosCm = default, Api = api,
                         F = f, I = iArr, B = b, E = e, Targets = targets,
                         TargetList = new GraphTargetList(targets),
                     };
@@ -210,7 +210,7 @@ namespace Ludots.Tests.GAS
                     var state = new GraphExecutionState
                     {
                         World = world, Caster = entity, ExplicitTarget = entity,
-                        TargetPos = default, Api = api,
+                        TargetPosCm = default, Api = api,
                         F = f, I = iArr, B = b, E = e, Targets = targets,
                         TargetList = new GraphTargetList(targets),
                     };
@@ -286,7 +286,7 @@ namespace Ludots.Tests.GAS
                         var state = new GraphExecutionState
                         {
                             World = world, Caster = caster, ExplicitTarget = ent,
-                            TargetPos = default, Api = api,
+                            TargetPosCm = default, Api = api,
                             F = f, I = iArr, B = b, E = e, Targets = targets,
                             TargetList = new GraphTargetList(targets),
                         };
@@ -312,7 +312,7 @@ namespace Ludots.Tests.GAS
                         var state = new GraphExecutionState
                         {
                             World = world, Caster = caster, ExplicitTarget = entities[i],
-                            TargetPos = default, Api = api,
+                            TargetPosCm = default, Api = api,
                             F = f, I = iArr, B = b, E = e, Targets = targets,
                             TargetList = new GraphTargetList(targets),
                         };

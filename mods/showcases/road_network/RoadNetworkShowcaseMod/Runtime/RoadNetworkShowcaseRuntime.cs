@@ -16,7 +16,6 @@ using RoadNetworkShowcaseMod.Gameplay;
 using RoadNetworkShowcaseMod.UI;
 using Ludots.UI;
 using Ludots.Core.Gameplay.GAS.Orders;
-using Ludots.Core.Config;
 
 namespace RoadNetworkShowcaseMod.Runtime
 {
@@ -181,19 +180,17 @@ namespace RoadNetworkShowcaseMod.Runtime
                 return false;
             }
 
-            if (engine.GetService(CoreServiceKeys.OrderQueue) is not OrderQueue orders ||
-                !engine.GlobalContext.TryGetValue(CoreServiceKeys.GameConfig.Name, out object? configObj) ||
-                configObj is not GameConfig config ||
-                !config.Constants.OrderTypeIds.TryGetValue("moveTo", out int moveToOrderTypeId) ||
-                moveToOrderTypeId <= 0)
+            if (engine.GetService(CoreServiceKeys.OrderQueue) is not OrderQueue orders)
             {
                 return false;
             }
 
+            RoadNetworkOrderTypeIds orderTypeIds = RoadNetworkOrderTypeIds.Require(engine.GlobalContext);
+
             var expander = new RoadMoveOrderExpander(engine.World, engine.GlobalContext, orders, RoadNetworkShowcaseIds.PathPlannerAgentTypeId);
             var order = new Order
             {
-                OrderTypeId = moveToOrderTypeId,
+                OrderTypeId = orderTypeIds.MoveTo,
                 Actor = actor,
                 PlayerId = 1,
                 SubmitMode = OrderSubmitMode.Immediate
@@ -201,7 +198,8 @@ namespace RoadNetworkShowcaseMod.Runtime
             order.Args.Spatial.Kind = OrderSpatialKind.WorldCm;
             order.Args.Spatial.Mode = OrderCollectionMode.Single;
             order.Args.Spatial.WorldCm = targetWorldCm;
-            bool submitted = expander.TrySubmit(in order);
+            OrderSubmitResult submitResult = expander.TrySubmit(in order);
+            bool submitted = OrderSubmitResultSemantics.IsAccepted(submitResult);
             if (submitted)
             {
                 LastSubmitStatus = status;
