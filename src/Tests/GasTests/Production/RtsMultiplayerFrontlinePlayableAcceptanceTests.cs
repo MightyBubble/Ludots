@@ -926,8 +926,8 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
             .Single(candidate => candidate.GetProperty("id").GetString() == openingCamera.GetProperty("VirtualCameraId").GetString());
         Assert.Multiple(() =>
         {
-            Assert.That(openingCamera.GetProperty("DistanceCm").GetInt32(), Is.EqualTo(5200));
-            Assert.That(openingCamera.GetProperty("FovYDeg").GetInt32(), Is.EqualTo(46));
+            Assert.That(openingCamera.GetProperty("DistanceCm").GetInt32(), Is.GreaterThan(0));
+            Assert.That(openingCamera.GetProperty("FovYDeg").GetInt32(), Is.InRange(1, 179));
             Assert.That(frontlineCamera.GetProperty("panMode").GetString(), Is.EqualTo("Keyboard"));
             Assert.That(frontlineCamera.GetProperty("enableGrabDrag").GetBoolean(), Is.True);
             Assert.That(frontlineCamera.GetProperty("targetHeightMode").GetString(), Is.EqualTo("VisualHeightmap"));
@@ -953,6 +953,43 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
         Assert.That(source, Does.Not.Match(@"TeamId\s*=\s*[12]\b"));
         Assert.That(authoredPositionSource, Does.Not.Match(@"WorldPositionCm\s*\.\s*FromCm"));
         Assert.That(Regex.Matches(source, @"\b(7000|8200|9300|11200|18800|20700|21800|23000)\b"), Is.Empty);
+    }
+
+    [Test]
+    [Description(
+        "Feature: Visible opening battlefield\n" +
+        "  Given a player enters the Frontline duel before a local command seat is focused\n" +
+        "  When the default 16:9 battlefield camera appears\n" +
+        "  Then both command cores are inside the horizontal opening view with a readable margin")]
+    public void GivenOpeningBattlefield_WhenDefaultCameraAppears_ThenBothCommandCoresFitInView()
+    {
+        string mapPath = Path.Combine(
+            FindRepoRoot(),
+            "mods",
+            "showcases",
+            "rts_multiplayer_frontline",
+            "RtsMultiplayerFrontlineMod",
+            "assets",
+            "Maps",
+            "rts_duel_v1.json");
+        using JsonDocument map = JsonDocument.Parse(File.ReadAllText(mapPath));
+
+        JsonElement entities = map.RootElement.GetProperty("Entities");
+        JsonElement camera = map.RootElement.GetProperty("DefaultCamera");
+        int cameraTargetXCm = camera.GetProperty("TargetXCm").GetInt32();
+        int northCoreXCm = FindMapEntityX(entities, "Northern Command Core");
+        int southCoreXCm = FindMapEntityX(entities, "Southern Command Core");
+        float requiredHalfWidthCm = MathF.Max(
+            MathF.Abs(northCoreXCm - cameraTargetXCm),
+            MathF.Abs(southCoreXCm - cameraTargetXCm));
+        float distanceCm = camera.GetProperty("DistanceCm").GetSingle();
+        float verticalFovRadians = camera.GetProperty("FovYDeg").GetSingle() * MathF.PI / 180f;
+        float horizontalHalfWidthCm = distanceCm * MathF.Tan(verticalFovRadians * 0.5f) * (16f / 9f);
+
+        Assert.That(
+            horizontalHalfWidthCm,
+            Is.GreaterThanOrEqualTo(requiredHalfWidthCm * 1.1f),
+            "The neutral opening camera must show both armies before seat-specific focus is available.");
     }
 
     [Test]

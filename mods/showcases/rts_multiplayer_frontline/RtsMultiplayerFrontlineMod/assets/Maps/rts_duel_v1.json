@@ -36,8 +36,8 @@
     "TargetYCm": 15000,
     "Yaw": 180,
     "Pitch": 54,
-    "DistanceCm": 5200,
-    "FovYDeg": 46
+    "DistanceCm": 9000,
+    "FovYDeg": 60
   },
   "Boards": [
     { "Name": "default", "SpatialType": "HexGrid", "DataFile": "ra2_shoreline.vtxm" }
