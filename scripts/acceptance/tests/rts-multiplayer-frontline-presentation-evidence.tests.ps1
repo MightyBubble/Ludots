@@ -284,9 +284,128 @@ function New-CompletedRule {
     }
 }
 
+function New-FramebufferRequirement {
+    param(
+        [Parameter(Mandatory = $true)][string]$Role,
+        [Parameter(Mandatory = $true)][string]$Template,
+        [Parameter(Mandatory = $true)][int]$Red,
+        [Parameter(Mandatory = $true)][int]$Green,
+        [Parameter(Mandatory = $true)][int]$Blue
+    )
+
+    return [pscustomobject]@{
+        role = $Role
+        milestones = @("ready")
+        presentationTemplate = $Template
+        acceptedColors = @([pscustomobject]@{ red = $Red; green = $Green; blue = $Blue })
+        maximumChannelDifference = 0
+        minimumPixelsPerInstance = 4
+        minimumPassingInstances = 1
+        regionMarginRatio = 0
+    }
+}
+
+function New-FramebufferPresentationItem {
+    $instances = @(
+        [pscustomobject]@{
+            templateId = 1; visualStableId = 101; template = "fixture.core"
+            screenLeftPx = 1; screenTopPx = 1; screenRightPx = 4; screenBottomPx = 4
+        }
+        [pscustomobject]@{
+            templateId = 2; visualStableId = 102; template = "fixture.harvester"
+            screenLeftPx = 5; screenTopPx = 1; screenRightPx = 8; screenBottomPx = 4
+        }
+        [pscustomobject]@{
+            templateId = 3; visualStableId = 103; template = "fixture.infantry"
+            screenLeftPx = 1; screenTopPx = 5; screenRightPx = 4; screenBottomPx = 8
+        }
+        [pscustomobject]@{
+            templateId = 4; visualStableId = 104; template = "fixture.crystal"
+            screenLeftPx = 5; screenTopPx = 5; screenRightPx = 8; screenBottomPx = 8
+        }
+    )
+    return [ordered]@{
+        process = "fixture-client"
+        milestones = @([ordered]@{
+            milestone = "ready"
+            worldEvidence = [pscustomobject]@{
+                viewportWidthPx = 16
+                viewportHeightPx = 16
+                instances = $instances
+            }
+        })
+    }
+}
+
+function Invoke-FramebufferFixture {
+    param(
+        [Parameter(Mandatory = $true)][string]$Directory,
+        [Parameter(Mandatory = $true)][string]$PngBase64,
+        [Parameter(Mandatory = $true)][string]$DotnetPath,
+        [Parameter(Mandatory = $true)][string]$LauncherAssemblyPath,
+        [Parameter(Mandatory = $true)][string]$WorkingDirectory
+    )
+
+    [System.IO.Directory]::CreateDirectory($Directory) | Out-Null
+    $screenshotPath = Join-Path $Directory "frontline_001_ready.png"
+    [System.IO.File]::WriteAllBytes($screenshotPath, [Convert]::FromBase64String($PngBase64))
+    $requirements = @(
+        New-FramebufferRequirement -Role "core" -Template "fixture.core" -Red 31 -Green 41 -Blue 48
+        New-FramebufferRequirement -Role "harvester" -Template "fixture.harvester" -Red 255 -Green 166 -Blue 31
+        New-FramebufferRequirement -Role "infantry" -Template "fixture.infantry" -Red 209 -Green 224 -Blue 230
+        New-FramebufferRequirement -Role "crystal" -Template "fixture.crystal" -Red 20 -Green 224 -Blue 255
+    )
+    return @(Read-ClientFramebufferPixelEvidence `
+        -Screenshots @([pscustomobject]@{
+            ProcessName = "fixture-client"
+            Milestone = "ready"
+            Path = $screenshotPath
+        }) `
+        -PresentationItems @(New-FramebufferPresentationItem) `
+        -Requirements $requirements `
+        -DotnetPath $DotnetPath `
+        -LauncherAssemblyPath $LauncherAssemblyPath `
+        -ArtifactDirectory $Directory `
+        -WorkingDirectory $WorkingDirectory)
+}
+
 $fixtureRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("ludots-rts-world-evidence-tests-" + [Guid]::NewGuid().ToString("N"))
 [System.IO.Directory]::CreateDirectory($fixtureRoot) | Out-Null
 try {
+    $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..\..")).Path
+    $dotnetPath = Get-DotnetCommand
+    $launcherProject = Join-Path $repoRoot "src\Tools\Ludots.Launcher.Cli\Ludots.Launcher.Cli.csproj"
+    $launcherAssemblyPath = Join-Path $repoRoot "src\Tools\Ludots.Launcher.Cli\bin\Release\net8.0\Ludots.Launcher.Cli.dll"
+    [void](Invoke-NativeTextCommand -Name "build-framebuffer-evidence-cli" -FilePath $dotnetPath `
+        -Arguments @("build", $launcherProject, "-c", "Release", "-m:1", "-nologo", "-clp:ErrorsOnly") `
+        -WorkingDirectory $repoRoot)
+
+    # Scenario: A terrain-and-HUD-only PNG fails even when the sidecar claims all entity boxes exist.
+    $emptyFramebuffer = @(Invoke-FramebufferFixture -Directory (Join-Path $fixtureRoot "framebuffer-empty") `
+        -PngBase64 "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAGUlEQVR4nGOouBT1nxLMMGrAqAGjBgwXAwDd1qMfVAGMlAAAAABJRU5ErkJggg==" `
+        -DotnetPath $dotnetPath -LauncherAssemblyPath $launcherAssemblyPath -WorkingDirectory $repoRoot)
+    Assert-FailsWith -ExpectedMessage "does not visibly contain every required role" -Action {
+        Assert-ClientFramebufferPixelEvidencePassed -Items $emptyFramebuffer
+    }
+
+    # Scenario: The real PNG passes when every player-visible role color occupies its claimed instance box.
+    $completeFramebuffer = @(Invoke-FramebufferFixture -Directory (Join-Path $fixtureRoot "framebuffer-complete") `
+        -PngBase64 "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAOElEQVR4nGOouBT1nxLMACLkNQ3gGMT/v0wejoeIARSHwcUHz+AYxBd58B+Oh4gBFIfBqAFD3QAAxnqlBYGtsNkAAAAASUVORK5CYII=" `
+        -DotnetPath $dotnetPath -LauncherAssemblyPath $launcherAssemblyPath -WorkingDirectory $repoRoot)
+    Assert-ClientFramebufferPixelEvidencePassed -Items $completeFramebuffer
+    if ($completeFramebuffer.Count -ne 1 -or
+        @($completeFramebuffer[0].requirements | Where-Object { -not [bool]$_.passed }).Count -ne 0) {
+        throw "Complete framebuffer fixture did not retain passing evidence for every required role: itemCount=$($completeFramebuffer.Count), failedRequirementCount=$(@($completeFramebuffer[0].requirements | Where-Object { -not [bool]$_.passed }).Count)."
+    }
+
+    # Scenario: One missing required role fails even though the other three roles are real pixels.
+    $missingRoleFramebuffer = @(Invoke-FramebufferFixture -Directory (Join-Path $fixtureRoot "framebuffer-missing-role") `
+        -PngBase64 "iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAMklEQVR4nGOouBT1nxLMACLkNQ3gGMT/v0wejoeIARSHwcUHz+B4iBpAcRiMGjDUDQAACmGiPr2E254AAAAASUVORK5CYII=" `
+        -DotnetPath $dotnetPath -LauncherAssemblyPath $launcherAssemblyPath -WorkingDirectory $repoRoot)
+    Assert-FailsWith -ExpectedMessage "role 'crystal'" -Action {
+        Assert-ClientFramebufferPixelEvidencePassed -Items $missingRoleFramebuffer
+    }
+
     # Scenario: The screenshot, completion record, and sidecar describe the same milestone frame.
     $capture = New-ClientScreenshotCapture -ProcessName "client-a" -ArtifactDirectory $fixtureRoot -Configuration ([pscustomobject]@{
         path = "screens/client-a/frontline.png"

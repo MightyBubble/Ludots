@@ -777,6 +777,161 @@ function Read-ClientPresentationEvidence {
     }
 }
 
+function Read-ClientFramebufferPixelEvidence {
+    param(
+        [Parameter(Mandatory = $true)][System.Collections.IEnumerable]$Screenshots,
+        [Parameter(Mandatory = $true)][System.Collections.IEnumerable]$PresentationItems,
+        [Parameter(Mandatory = $true)][System.Collections.IEnumerable]$Requirements,
+        [Parameter(Mandatory = $true)][string]$DotnetPath,
+        [Parameter(Mandatory = $true)][string]$LauncherAssemblyPath,
+        [Parameter(Mandatory = $true)][string]$ArtifactDirectory,
+        [Parameter(Mandatory = $true)][string]$WorkingDirectory
+    )
+
+    $allRequirements = @($Requirements)
+    if ($allRequirements.Count -eq 0) {
+        throw "Framebuffer pixel evidence requires at least one profile rule."
+    }
+    if (-not (Test-Path -LiteralPath $LauncherAssemblyPath -PathType Leaf)) {
+        throw "Framebuffer pixel evidence launcher assembly is missing: $LauncherAssemblyPath"
+    }
+
+    $outputDirectory = Join-Path $ArtifactDirectory "framebuffer-pixel-evidence"
+    New-Item -ItemType Directory -Path $outputDirectory -Force | Out-Null
+    $results = [System.Collections.Generic.List[object]]::new()
+    foreach ($screenshot in @($Screenshots)) {
+        $processName = [string]$screenshot.ProcessName
+        $milestone = [string]$screenshot.Milestone
+        $presentationMatches = @($PresentationItems | Where-Object { [string]$_.process -ceq $processName })
+        if ($presentationMatches.Count -ne 1) {
+            throw "Client '$processName' has no unique presentation evidence for framebuffer milestone '$milestone'."
+        }
+        $milestoneMatches = @($presentationMatches[0].milestones | Where-Object {
+            [string]$_.milestone -ceq $milestone
+        })
+        if ($milestoneMatches.Count -ne 1) {
+            throw "Client '$processName' has no unique same-frame sidecar for framebuffer milestone '$milestone'."
+        }
+
+        $worldEvidence = $milestoneMatches[0].worldEvidence
+        $milestoneRequirements = @($allRequirements | Where-Object {
+            @($_.milestones | ForEach-Object { [string]$_ }) -ccontains $milestone
+        })
+        if ($milestoneRequirements.Count -eq 0) {
+            throw "Client '$processName' framebuffer milestone '$milestone' has no required player-visible role."
+        }
+
+        $inspectionRequirements = [System.Collections.Generic.List[object]]::new()
+        foreach ($requirement in $milestoneRequirements) {
+            $role = [string]$requirement.role
+            $template = [string]$requirement.presentationTemplate
+            $matchingInstances = @($worldEvidence.instances | Where-Object { [string]$_.template -ceq $template })
+            if ($matchingInstances.Count -eq 0) {
+                throw "Client '$processName' framebuffer milestone '$milestone' has no '$role' presentation region for template '$template'."
+            }
+
+            $marginRatio = [double]$requirement.regionMarginRatio
+            $regions = [System.Collections.Generic.List[object]]::new()
+            foreach ($instance in $matchingInstances) {
+                $instanceWidth = [double]$instance.screenRightPx - [double]$instance.screenLeftPx
+                $instanceHeight = [double]$instance.screenBottomPx - [double]$instance.screenTopPx
+                $horizontalMargin = [int][Math]::Ceiling($instanceWidth * $marginRatio)
+                $verticalMargin = [int][Math]::Ceiling($instanceHeight * $marginRatio)
+                $left = [Math]::Max(0, [int][Math]::Floor([double]$instance.screenLeftPx) - $horizontalMargin)
+                $top = [Math]::Max(0, [int][Math]::Floor([double]$instance.screenTopPx) - $verticalMargin)
+                $right = [Math]::Min([int]$worldEvidence.viewportWidthPx, [int][Math]::Ceiling([double]$instance.screenRightPx) + $horizontalMargin)
+                $bottom = [Math]::Min([int]$worldEvidence.viewportHeightPx, [int][Math]::Ceiling([double]$instance.screenBottomPx) + $verticalMargin)
+                if ($right -le $left -or $bottom -le $top) {
+                    throw "Client '$processName' framebuffer milestone '$milestone' role '$role' produced an empty pixel region."
+                }
+                [void]$regions.Add([ordered]@{
+                    id = "$([int]$instance.templateId):$([int]$instance.visualStableId)"
+                    x = $left
+                    y = $top
+                    width = $right - $left
+                    height = $bottom - $top
+                })
+            }
+
+            [void]$inspectionRequirements.Add([ordered]@{
+                role = $role
+                presentationTemplate = $template
+                maximumChannelDifference = [int]$requirement.maximumChannelDifference
+                minimumPixelsPerRegion = [int]$requirement.minimumPixelsPerInstance
+                minimumPassingRegions = [int]$requirement.minimumPassingInstances
+                acceptedColors = @($requirement.acceptedColors | ForEach-Object {
+                    [ordered]@{
+                        red = [byte]$_.red
+                        green = [byte]$_.green
+                        blue = [byte]$_.blue
+                    }
+                })
+                regions = @($regions)
+            })
+        }
+
+        $request = [ordered]@{
+            schemaVersion = 1
+            imagePath = [System.IO.Path]::GetFullPath([string]$screenshot.Path)
+            expectedWidth = [int]$worldEvidence.viewportWidthPx
+            expectedHeight = [int]$worldEvidence.viewportHeightPx
+            requirements = @($inspectionRequirements)
+        }
+        $artifactBaseName = "$processName-$milestone"
+        $requestPath = Join-Path $outputDirectory "$artifactBaseName.request.json"
+        $resultPath = Join-Path $outputDirectory "$artifactBaseName.result.json"
+        Write-JsonFile -Value $request -Path $requestPath
+        $inspectionJson = Invoke-NativeTextCommand -Name "inspect-framebuffer-$processName-$milestone" `
+            -FilePath $DotnetPath `
+            -Arguments @("exec", "--roll-forward", "Major", $LauncherAssemblyPath,
+                "evidence", "inspect-framebuffer", $requestPath) `
+            -WorkingDirectory $WorkingDirectory
+        try {
+            $inspection = $inspectionJson | ConvertFrom-Json
+        }
+        catch {
+            throw "Client '$processName' framebuffer milestone '$milestone' inspector returned invalid JSON: $($_.Exception.Message)"
+        }
+        Write-JsonFile -Value $inspection -Path $resultPath
+
+        [void]$results.Add([ordered]@{
+            process = $processName
+            milestone = $milestone
+            screenshot = Get-FileEvidence -Path ([string]$screenshot.Path)
+            request = Get-FileEvidence -Path $requestPath
+            result = Get-FileEvidence -Path $resultPath
+            width = [int]$inspection.width
+            height = [int]$inspection.height
+            passed = [bool]$inspection.passed
+            requirements = @($inspection.requirements)
+        })
+    }
+
+    return @($results)
+}
+
+function Assert-ClientFramebufferPixelEvidencePassed {
+    param([Parameter(Mandatory = $true)][System.Collections.IEnumerable]$Items)
+
+    $all = @($Items)
+    if ($all.Count -eq 0) {
+        throw "No client framebuffer pixel evidence was inspected."
+    }
+
+    $failures = [System.Collections.Generic.List[string]]::new()
+    foreach ($item in $all) {
+        foreach ($requirement in @($item.requirements | Where-Object { -not [bool]$_.passed })) {
+            [void]$failures.Add(
+                "client '$([string]$item.process)' milestone '$([string]$item.milestone)' role '$([string]$requirement.role)' " +
+                "has $([int]$requirement.passingRegions)/$([int]$requirement.minimumPassingRegions) passing instances " +
+                "and $([int]$requirement.matchingPixels) matching pixels")
+        }
+    }
+    if ($failures.Count -ne 0) {
+        throw "Framebuffer PNG does not visibly contain every required role: $($failures -join '; ')."
+    }
+}
+
 function Get-ScreenshotCompletionRecord {
     param([Parameter(Mandatory = $true)]$Target)
 
@@ -2051,7 +2206,7 @@ if (-not (Test-Path -LiteralPath $profileFullPath)) {
 }
 
 $profile = Get-Content -LiteralPath $profileFullPath -Raw | ConvertFrom-Json
-if ($profile.schemaVersion -ne 5) {
+if ($profile.schemaVersion -ne 6) {
     throw "Unsupported acceptance profile schemaVersion '$($profile.schemaVersion)'."
 }
 
@@ -2092,6 +2247,62 @@ $configuredScreenshotMilestones = @(
     @($profile.clientScreenshots.clientOne.milestones) + @($profile.clientScreenshots.clientTwo.milestones) |
         ForEach-Object { [string]$_ } |
         Sort-Object -Unique -CaseSensitive)
+$requiredFramebufferEvidence = @($profile.requiredFramebufferEvidence)
+if ($requiredFramebufferEvidence.Count -eq 0) {
+    throw "requiredFramebufferEvidence must declare player-visible entity colors for every screenshot milestone."
+}
+$framebufferRequirementKeys = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
+$framebufferCoveredMilestones = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
+foreach ($requirement in $requiredFramebufferEvidence) {
+    $role = [string]$requirement.role
+    $template = [string]$requirement.presentationTemplate
+    $milestones = @($requirement.milestones | ForEach-Object { [string]$_ })
+    if ([string]::IsNullOrWhiteSpace($role) -or [string]::IsNullOrWhiteSpace($template)) {
+        throw "Every requiredFramebufferEvidence entry must declare non-empty role and presentationTemplate values."
+    }
+    if ($milestones.Count -eq 0 -or @($milestones | Where-Object {
+        $_ -cnotmatch '^[A-Za-z0-9._-]+$' -or -not ($configuredScreenshotMilestones -ccontains $_)
+    }).Count -ne 0) {
+        throw "requiredFramebufferEvidence role '$role' must target configured screenshot milestones."
+    }
+    foreach ($thresholdName in @("maximumChannelDifference", "minimumPixelsPerInstance", "minimumPassingInstances", "regionMarginRatio")) {
+        if ($null -eq $requirement.PSObject.Properties[$thresholdName]) {
+            throw "requiredFramebufferEvidence role '$role' must declare $thresholdName."
+        }
+    }
+    if ([int]$requirement.maximumChannelDifference -lt 0 -or [int]$requirement.maximumChannelDifference -gt 255) {
+        throw "requiredFramebufferEvidence role '$role' maximumChannelDifference must be between 0 and 255."
+    }
+    if ([int]$requirement.minimumPixelsPerInstance -le 0 -or [int]$requirement.minimumPassingInstances -le 0) {
+        throw "requiredFramebufferEvidence role '$role' instance minimums must be positive."
+    }
+    if ([double]$requirement.regionMarginRatio -lt 0 -or [double]$requirement.regionMarginRatio -gt 1) {
+        throw "requiredFramebufferEvidence role '$role' regionMarginRatio must be between 0 and 1."
+    }
+    $acceptedColors = @($requirement.acceptedColors)
+    if ($acceptedColors.Count -eq 0) {
+        throw "requiredFramebufferEvidence role '$role' must declare at least one accepted color."
+    }
+    foreach ($color in $acceptedColors) {
+        foreach ($channel in @("red", "green", "blue")) {
+            if ($null -eq $color.PSObject.Properties[$channel] -or
+                [int]$color.$channel -lt 0 -or [int]$color.$channel -gt 255) {
+                throw "requiredFramebufferEvidence role '$role' has an invalid '$channel' color channel."
+            }
+        }
+    }
+    foreach ($milestone in $milestones) {
+        if (-not $framebufferRequirementKeys.Add("$milestone`n$role")) {
+            throw "requiredFramebufferEvidence duplicates role '$role' for screenshot milestone '$milestone'."
+        }
+        [void]$framebufferCoveredMilestones.Add($milestone)
+    }
+}
+foreach ($milestone in $configuredScreenshotMilestones) {
+    if (-not $framebufferCoveredMilestones.Contains($milestone)) {
+        throw "requiredFramebufferEvidence has no player-visible role for screenshot milestone '$milestone'."
+    }
+}
 $requiredReceiptKeys = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
 foreach ($requirement in $requiredPresentationReceipts) {
     $role = [string]$requirement.role
@@ -2240,7 +2451,7 @@ $exitCode = 0
 $failureMessage = $null
 $verificationReached = $false
 $manifest = [ordered]@{
-    schemaVersion = 8
+    schemaVersion = 9
     acceptanceScope = "three-process-player-input-to-authoritative-frontline-outcome"
     status = "preparing"
     startedAtUtc = [DateTime]::UtcNow.ToString("O")
@@ -2285,6 +2496,7 @@ $manifest = [ordered]@{
             }
         )
         clientPresentation = $profile.clientPresentation
+        requiredFramebufferEvidence = $requiredFramebufferEvidence
     }
     planFingerprint = $null
     orderedModIds = @()
@@ -2292,6 +2504,7 @@ $manifest = [ordered]@{
     clientCredentials = @()
     gameplayEvidence = @()
     screenshots = @()
+    clientFramebufferEvidence = @()
     clientPresentation = @()
     clientWorldEvidence = @()
     runtimeLogs = @()
@@ -2565,6 +2778,17 @@ try {
             -RequiredReceipts $requiredPresentationReceipts
     )
     $manifest.clientPresentation = $clientPresentationItems
+    $clientFramebufferEvidence = @(Read-ClientFramebufferPixelEvidence `
+        -Screenshots $screenshotItems `
+        -PresentationItems $clientPresentationItems `
+        -Requirements $requiredFramebufferEvidence `
+        -DotnetPath $dotnet `
+        -LauncherAssemblyPath $launcherAssembly `
+        -ArtifactDirectory $artifactDirectoryValue `
+        -WorkingDirectory $script:RepoRoot)
+    $manifest.clientFramebufferEvidence = $clientFramebufferEvidence
+    Write-JsonFile -Value $manifest -Path $manifestPath
+    Assert-ClientFramebufferPixelEvidencePassed -Items $clientFramebufferEvidence
     $manifest.clientWorldEvidence = @(
         Assert-ClientWorldPresentationEvidence -PresentationItems $clientPresentationItems `
             -GameplayItems $gameplayItems -Requirements $requiredWorldEvidence

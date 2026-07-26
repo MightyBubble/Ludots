@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 5,
+  "schemaVersion": 6,
   "preset": "rts_multiplayer_frontline_three_process_uat_raylib",
   "adapterId": "raylib",
   "buildMode": "auto",
@@ -40,6 +40,56 @@
     "minimumSubmittedPrimitiveBatches": 1,
     "minimumPrefabVisuals": 1
   },
+  "requiredFramebufferEvidence": [
+    {
+      "role": "commandCore",
+      "milestones": ["ready", "advancing"],
+      "presentationTemplate": "rts.frontline.core.base",
+      "acceptedColors": [
+        { "red": 31, "green": 41, "blue": 48 }
+      ],
+      "maximumChannelDifference": 28,
+      "minimumPixelsPerInstance": 8,
+      "minimumPassingInstances": 1,
+      "regionMarginRatio": 0.08
+    },
+    {
+      "role": "harvesterCargo",
+      "milestones": ["ready", "advancing"],
+      "presentationTemplate": "rts.frontline.harvester.cargo",
+      "acceptedColors": [
+        { "red": 255, "green": 166, "blue": 31 }
+      ],
+      "maximumChannelDifference": 55,
+      "minimumPixelsPerInstance": 3,
+      "minimumPassingInstances": 1,
+      "regionMarginRatio": 0.12
+    },
+    {
+      "role": "infantryBody",
+      "milestones": ["ready", "advancing", "engaging", "completed"],
+      "presentationTemplate": "rts.frontline.infantry.body",
+      "acceptedColors": [
+        { "red": 209, "green": 224, "blue": 230 }
+      ],
+      "maximumChannelDifference": 48,
+      "minimumPixelsPerInstance": 5,
+      "minimumPassingInstances": 1,
+      "regionMarginRatio": 0.08
+    },
+    {
+      "role": "crystalField",
+      "milestones": ["ready", "advancing"],
+      "presentationTemplate": "rts.frontline.crystal.center",
+      "acceptedColors": [
+        { "red": 20, "green": 224, "blue": 255 }
+      ],
+      "maximumChannelDifference": 52,
+      "minimumPixelsPerInstance": 5,
+      "minimumPassingInstances": 1,
+      "regionMarginRatio": 0.08
+    }
+  ],
   "requiredPresentationReceipts": [
     {
       "role": "core",

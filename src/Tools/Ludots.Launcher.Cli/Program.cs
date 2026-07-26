@@ -87,6 +87,31 @@ try
 
             return 0;
         }
+        case "evidence" when command.Secondary == "inspect-framebuffer":
+        {
+            if (command.Operands.Count != 1)
+            {
+                throw new InvalidOperationException("evidence inspect-framebuffer requires exactly one request JSON path.");
+            }
+
+            string requestPath = Path.GetFullPath(command.Operands[0]);
+            if (!File.Exists(requestPath))
+            {
+                throw new FileNotFoundException("Framebuffer inspection request does not exist.", requestPath);
+            }
+
+            var jsonOptions = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
+            FramebufferPixelInspectionRequest request = JsonSerializer.Deserialize<FramebufferPixelInspectionRequest>(
+                File.ReadAllText(requestPath),
+                jsonOptions) ?? throw new InvalidOperationException("Framebuffer inspection request is empty.");
+            FramebufferPixelInspectionResult result = FramebufferPixelEvidenceInspector.Inspect(request);
+            Console.WriteLine(JsonSerializer.Serialize(result, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                WriteIndented = true
+            }));
+            return 0;
+        }
         case "build" when command.Secondary == "app":
         {
             var result = await service.BuildAppAsync(ResolveRequestedAdapter(service, command));
@@ -565,6 +590,7 @@ Commands
   build app [--adapter raylib|web]
   launch [selectors...] [--adapter raylib|web] [--build auto|always|never] [--record <artifactDir>]
   artifacts process-group preset:<id> [--build auto|always|never] [--json]
+  evidence inspect-framebuffer <request.json>
   adapter list
   adapter select --adapter raylib|web
   workspace list
@@ -707,6 +733,7 @@ internal sealed class CliCommand
             "binding" => secondary is "list" or "set" or "delete",
             "preset" => secondary is "list" or "save" or "select" or "delete",
             "artifacts" => secondary is "process-group",
+            "evidence" => secondary is "inspect-framebuffer",
             "sdk" => secondary is "export",
             "mod" => secondary is "create" or "fix-project" or "solution",
             _ => false
