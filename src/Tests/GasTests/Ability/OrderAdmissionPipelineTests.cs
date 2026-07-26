@@ -15,7 +15,7 @@ public sealed class OrderAdmissionPipelineTests
     {
         using var world = World.Create();
         Entity actor = world.Create();
-        var results = CreateAdmissionResults();
+        var results = CreateAdmissionResults(capacity: 256);
         var queue = new OrderQueue(capacity: 64, results);
         var order = new Order { OrderTypeId = 1, PlayerId = 7, Actor = actor };
 
@@ -60,15 +60,9 @@ public sealed class OrderAdmissionPipelineTests
         var results = new OrderAdmissionResultBuffer(capacity: 4, rejectionCapacity: 4);
         var queue = new OrderQueue(capacity: 64, results);
         var orderTypes = CreateOrderTypes();
-        orderTypes.Register(new OrderTypeConfig
-        {
-            Key = "test.move",
-            OrderTypeId = 1,
-            Priority = 100,
-            CanInterruptSelf = true,
-        });
+        orderTypes.Register(CreateOrderType(1, "test.move", canInterruptSelf: true));
         var batch = new[] { new Order { OrderTypeId = 1, PlayerId = 7, Actor = actor } };
-        Assert.That(OrderSubmitResultSemantics.IsAccepted(queue.TryEnqueueSharedBatch(batch, OrderAdmissionSource.Network)), Is.True);
+        Assert.That(OrderSubmitResultSemantics.IsAccepted(queue.TryEnqueueSharedBatch(batch)), Is.True);
         Assert.That(results.TryGet(batch[0].OrderId, OrderAdmissionStage.GlobalIntake, out OrderAdmissionOutcome accepted), Is.True);
 
         var system = new OrderBufferSystem(
@@ -78,9 +72,9 @@ public sealed class OrderAdmissionPipelineTests
             new OrderRuleRegistry(),
             results,
             queue);
-        system.Update(0f);
+        RunAdmissionStep(results, system);
 
-        Assert.That(results.TryRead(out OrderAdmissionOutcome started), Is.True);
+        Assert.That(results.TryGet(batch[0].OrderId, OrderAdmissionStage.EntityIntake, out OrderAdmissionOutcome started), Is.True);
         Assert.Multiple(() =>
         {
             Assert.That(accepted.Stage, Is.EqualTo(OrderAdmissionStage.GlobalIntake));
@@ -92,30 +86,19 @@ public sealed class OrderAdmissionPipelineTests
     }
 
     [Test]
-    public void EntityIntake_WhenResultBufferIsFull_AppliesBackpressureBeforeWorldMutation()
+    public void EntityIntake_WhenResultBufferIsFull_RejectsWithoutWorldMutation()
     {
         using var world = World.Create();
         Entity actor = world.Create(OrderBuffer.CreateEmpty());
+        // Dual-generation needs room for GlobalIntake carry-forward + EntityIntake pair.
+        // Capacity 1 leaves only the carried GlobalIntake slot, so EntityIntake capacity-fails.
         var results = new OrderAdmissionResultBuffer(capacity: 1, rejectionCapacity: 1);
         var queue = new OrderQueue(capacity: 64, results);
         var orderTypes = CreateOrderTypes();
-        orderTypes.Register(new OrderTypeConfig
-        {
-            Key = "test.move",
-            OrderTypeId = 1,
-            Priority = 100,
-            CanInterruptSelf = true,
-        });
-
-        var occupiedOrder = new Order { OrderId = 99, OrderTypeId = 1 };
-        var occupied = new OrderAdmissionOutcome(
-            in occupiedOrder,
-            OrderAdmissionStage.EntityIntake,
-            OrderSubmitResult.Activated);
-        Assert.That(results.TryWrite(in occupied), Is.True);
+        orderTypes.Register(CreateOrderType(1, "test.move", canInterruptSelf: true));
 
         var batch = new[] { new Order { OrderTypeId = 1, PlayerId = 7, Actor = actor } };
-        Assert.That(OrderSubmitResultSemantics.IsAccepted(queue.TryEnqueueSharedBatch(batch, OrderAdmissionSource.Network)), Is.True);
+        Assert.That(OrderSubmitResultSemantics.IsAccepted(queue.TryEnqueueSharedBatch(batch)), Is.True);
         var system = new OrderBufferSystem(
             world,
             new DiscreteClock(),
@@ -124,24 +107,16 @@ public sealed class OrderAdmissionPipelineTests
             results,
             queue);
 
-        system.Update(0f);
-
-        Assert.Multiple(() =>
-        {
-            Assert.That(queue.Count, Is.EqualTo(1));
-            Assert.That(world.Get<OrderBuffer>(actor).HasActive, Is.False);
-            Assert.That(system.AdmissionBackpressureCount, Is.EqualTo(1));
-        });
-
-        Assert.That(results.TryRead(out _), Is.True);
-        system.Update(0f);
+        RunAdmissionStep(results, system);
 
         Assert.Multiple(() =>
         {
             Assert.That(queue.Count, Is.Zero);
-            Assert.That(world.Get<OrderBuffer>(actor).HasActive, Is.True);
-            Assert.That(results.TryRead(out OrderAdmissionOutcome started), Is.True);
-            Assert.That(started.Result, Is.EqualTo(OrderSubmitResult.Activated));
+            Assert.That(world.Get<OrderBuffer>(actor).HasActive, Is.False);
+            Assert.That(
+                results.TryGet(batch[0].OrderId, OrderAdmissionStage.EntityIntake, out OrderAdmissionOutcome rejected),
+                Is.True);
+            Assert.That(rejected.Result, Is.EqualTo(OrderSubmitResult.RejectedAdmissionCapacity));
         });
     }
 
@@ -151,22 +126,16 @@ public sealed class OrderAdmissionPipelineTests
         using var world = World.Create();
         Entity validActor = world.Create(OrderBuffer.CreateEmpty());
         Entity invalidActor = world.Create();
-        var results = new OrderAdmissionResultBuffer(capacity: 2, rejectionCapacity: 2);
+        var results = new OrderAdmissionResultBuffer(capacity: 4, rejectionCapacity: 4);
         var queue = new OrderQueue(capacity: 64, results);
         var orderTypes = CreateOrderTypes();
-        orderTypes.Register(new OrderTypeConfig
-        {
-            Key = "test.move",
-            OrderTypeId = 1,
-            Priority = 100,
-            CanInterruptSelf = true,
-        });
+        orderTypes.Register(CreateOrderType(1, "test.move", canInterruptSelf: true));
         var batch = new[]
         {
             new Order { OrderTypeId = 1, PlayerId = 7, Actor = validActor },
             new Order { OrderTypeId = 1, PlayerId = 7, Actor = invalidActor },
         };
-        Assert.That(OrderSubmitResultSemantics.IsAccepted(queue.TryEnqueueSharedBatch(batch, OrderAdmissionSource.Network)), Is.True);
+        Assert.That(OrderSubmitResultSemantics.IsAccepted(queue.TryEnqueueSharedBatch(batch)), Is.True);
 
         var system = new OrderBufferSystem(
             world,
@@ -175,48 +144,47 @@ public sealed class OrderAdmissionPipelineTests
             new OrderRuleRegistry(),
             results,
             queue);
-        system.Update(0f);
+        RunAdmissionStep(results, system);
 
-        Assert.That(results.TryRead(out OrderAdmissionOutcome validOutcome), Is.True);
-        Assert.That(results.TryRead(out OrderAdmissionOutcome invalidOutcome), Is.True);
+        // Atomic shared-batch failure rewrites every accepted row to the concrete failure result.
+        Assert.That(FindEntityOutcome(results, batch[0].OrderId, OrderSubmitResult.RejectedInvalidActor, out OrderAdmissionOutcome first), Is.True);
+        Assert.That(FindEntityOutcome(results, batch[0].OrderId, OrderSubmitResult.RejectedInvalidActor, out OrderAdmissionOutcome second), Is.True);
         Assert.Multiple(() =>
         {
             Assert.That(world.Get<OrderBuffer>(validActor).HasActive, Is.False);
-            Assert.That(validOutcome.Result, Is.EqualTo(OrderSubmitResult.BatchRejected));
-            Assert.That(invalidOutcome.Result, Is.EqualTo(OrderSubmitResult.InvalidEntity));
-            Assert.That(validOutcome.OrderId, Is.EqualTo(invalidOutcome.OrderId));
-            Assert.That(validOutcome.AdmissionBatchId, Is.Positive);
+            Assert.That(first.Result, Is.EqualTo(OrderSubmitResult.RejectedInvalidActor));
+            Assert.That(second.Result, Is.EqualTo(OrderSubmitResult.RejectedInvalidActor));
+            Assert.That(first.OrderId, Is.EqualTo(second.OrderId));
+            Assert.That(first.AdmissionBatchId, Is.Positive);
+            Assert.That(CountEntityOutcomes(results, batch[0].OrderId, OrderSubmitResult.RejectedInvalidActor), Is.EqualTo(2));
         });
     }
 
     [Test]
-    public void EntityIntake_QueuedOrderPublishesActivationWithoutUsingGameplayRuntimeCursor()
+    public void EntityIntake_QueuedOrderPromotesWithoutRepublishingAdmission()
     {
         using var world = World.Create();
         Entity actor = world.Create(OrderBuffer.CreateEmpty());
         var results = new OrderAdmissionResultBuffer(capacity: 4, rejectionCapacity: 4);
         var queue = new OrderQueue(capacity: 64, results);
         var orderTypes = CreateOrderTypes();
-        orderTypes.Register(new OrderTypeConfig
-        {
-            Key = "test.move",
-            OrderTypeId = 1,
-            Priority = 100,
-            CanInterruptSelf = false,
-            SameTypePolicy = SameTypePolicy.Queue,
-            MaxQueueSize = 2,
-        });
+        orderTypes.Register(CreateOrderType(
+            1,
+            "test.move",
+            canInterruptSelf: false,
+            sameTypePolicy: SameTypePolicy.Queue,
+            maxQueueSize: 2));
 
         ref OrderBuffer buffer = ref world.Get<OrderBuffer>(actor);
         var active = new Order { OrderId = 40, OrderTypeId = 1, Actor = actor };
         buffer.SetActiveDirect(in active, priority: 100);
-        buffer.ActiveOrder.RuntimeInt0 = 3;
+        buffer.ActiveRuntimeInt0 = 3;
 
         var queued = new[]
         {
             new Order { OrderTypeId = 1, PlayerId = 7, Actor = actor },
         };
-        Assert.That(OrderSubmitResultSemantics.IsAccepted(queue.TryEnqueueSharedBatch(queued, OrderAdmissionSource.Network)), Is.True);
+        Assert.That(OrderSubmitResultSemantics.IsAccepted(queue.TryEnqueueSharedBatch(queued)), Is.True);
         var system = new OrderBufferSystem(
             world,
             new DiscreteClock(),
@@ -225,52 +193,41 @@ public sealed class OrderAdmissionPipelineTests
             results,
             queue);
 
-        system.Update(0f);
-        Assert.That(results.TryRead(out OrderAdmissionOutcome waiting), Is.True);
+        RunAdmissionStep(results, system);
+        Assert.That(results.TryGet(queued[0].OrderId, OrderAdmissionStage.EntityIntake, out OrderAdmissionOutcome waiting), Is.True);
         OrderBuffer waitingBuffer = world.Get<OrderBuffer>(actor);
         Assert.Multiple(() =>
         {
             Assert.That(waiting.Result, Is.EqualTo(OrderSubmitResult.Queued));
-            Assert.That(waitingBuffer.ActiveOrder.RuntimeInt0, Is.EqualTo(3));
+            Assert.That(waitingBuffer.ActiveRuntimeInt0, Is.EqualTo(3));
         });
 
         OrderSubmitter.NotifyOrderComplete(world, actor, orderTypes);
-        system.Update(0f);
+        RunAdmissionStep(results, system);
 
-        Assert.That(results.TryRead(out OrderAdmissionOutcome started), Is.True);
         OrderBuffer startedBuffer = world.Get<OrderBuffer>(actor);
         Assert.Multiple(() =>
         {
-            Assert.That(started.Result, Is.EqualTo(OrderSubmitResult.Activated));
-            Assert.That(started.OrderId, Is.EqualTo(waiting.OrderId));
-            Assert.That(startedBuffer.ActiveOrder.AdmissionActivationPublished, Is.EqualTo(1));
-            Assert.That(startedBuffer.ActiveOrder.RuntimeInt0, Is.Zero);
+            Assert.That(startedBuffer.ActiveOrder.Order.OrderId, Is.EqualTo(waiting.OrderId));
+            Assert.That(startedBuffer.ActiveRuntimeInt0, Is.Zero);
+            Assert.That(
+                CountEntityOutcomes(results, queued[0].OrderId, OrderSubmitResult.Activated),
+                Is.Zero,
+                "Promotion is execution progress, not a second admission result.");
         });
     }
 
     [Test]
-    public void EntityIntake_LocalAtomicBatchDoesNotConsumeNetworkFeedbackCapacity()
+    public void EntityIntake_LocalSharedBatchStillPublishesTypedEntityOutcomes()
     {
         using var world = World.Create();
         Entity first = world.Create(OrderBuffer.CreateEmpty());
         Entity second = world.Create(OrderBuffer.CreateEmpty());
-        var results = new OrderAdmissionResultBuffer(capacity: 1, rejectionCapacity: 1);
+        // Shared-batch GlobalIntake + EntityIntake pairs require 2 slots per row.
+        var results = new OrderAdmissionResultBuffer(capacity: 4, rejectionCapacity: 4);
         var queue = new OrderQueue(capacity: 64, results);
         var orderTypes = CreateOrderTypes();
-        orderTypes.Register(new OrderTypeConfig
-        {
-            Key = "test.local",
-            OrderTypeId = 1,
-            Priority = 100,
-            AllowQueuedMode = true,
-        });
-
-        var occupiedOrder = new Order { OrderId = 99, OrderTypeId = 1 };
-        var occupied = new OrderAdmissionOutcome(
-            in occupiedOrder,
-            OrderAdmissionStage.EntityIntake,
-            OrderSubmitResult.Activated);
-        Assert.That(results.TryWrite(in occupied), Is.True);
+        orderTypes.Register(CreateOrderType(1, "test.local", allowQueuedMode: true));
 
         ref OrderBuffer firstBuffer = ref world.Get<OrderBuffer>(first);
         ref OrderBuffer secondBuffer = ref world.Get<OrderBuffer>(second);
@@ -293,31 +250,28 @@ public sealed class OrderAdmissionPipelineTests
             results,
             queue);
 
-        system.Update(0f);
+        RunAdmissionStep(results, system);
         Assert.Multiple(() =>
         {
             Assert.That(queue.Count, Is.Zero);
             Assert.That(world.Get<OrderBuffer>(first).QueuedCount, Is.EqualTo(1));
             Assert.That(world.Get<OrderBuffer>(second).QueuedCount, Is.EqualTo(1));
-            Assert.That(results.Count, Is.EqualTo(1));
-            Assert.That(system.AdmissionBackpressureCount, Is.Zero);
+            Assert.That(FindEntityOutcome(results, localBatch[0].OrderId, OrderSubmitResult.Queued, out _), Is.True);
         });
 
         OrderSubmitter.NotifyOrderComplete(world, first, orderTypes);
         OrderSubmitter.NotifyOrderComplete(world, second, orderTypes);
-        system.Update(0f);
+        RunAdmissionStep(results, system);
 
         Assert.Multiple(() =>
         {
             Assert.That(world.Get<OrderBuffer>(first).ActiveOrder.Order.OrderId, Is.EqualTo(localBatch[0].OrderId));
             Assert.That(world.Get<OrderBuffer>(second).ActiveOrder.Order.OrderId, Is.EqualTo(localBatch[1].OrderId));
-            Assert.That(results.Count, Is.EqualTo(1));
-            Assert.That(system.AdmissionBackpressureCount, Is.Zero);
         });
     }
 
     [Test]
-    public void EntityIntake_ExpiredQueuedOrderWaitsForResultCapacityAndPublishesOnce()
+    public void EntityIntake_ExpiredQueuedOrderPublishesTerminalCancelledOnce()
     {
         using var world = World.Create();
         Entity actor = world.Create(OrderBuffer.CreateEmpty());
@@ -326,22 +280,15 @@ public sealed class OrderAdmissionPipelineTests
         buffer.SetActiveDirect(in active, priority: 100);
 
         var clock = new DiscreteClock();
-        var results = new OrderAdmissionResultBuffer(capacity: 1, rejectionCapacity: 1);
+        var results = new OrderAdmissionResultBuffer(capacity: 4, rejectionCapacity: 4);
         var queue = new OrderQueue(capacity: 64, results);
         var orderTypes = CreateOrderTypes();
-        orderTypes.Register(new OrderTypeConfig
-        {
-            Key = "test.expiring",
-            OrderTypeId = 1,
-            Priority = 100,
-            AllowQueuedMode = true,
-            BufferWindowMs = 100,
-        });
+        orderTypes.Register(CreateOrderType(1, "test.expiring", allowQueuedMode: true, bufferWindowMs: 100));
         var batch = new[]
         {
             new Order { OrderTypeId = 1, Actor = actor, SubmitMode = OrderSubmitMode.Queued },
         };
-        Assert.That(OrderSubmitResultSemantics.IsAccepted(queue.TryEnqueueSharedBatch(batch, OrderAdmissionSource.Network)), Is.True);
+        Assert.That(OrderSubmitResultSemantics.IsAccepted(queue.TryEnqueueSharedBatch(batch)), Is.True);
         var system = new OrderBufferSystem(
             world,
             clock,
@@ -351,35 +298,24 @@ public sealed class OrderAdmissionPipelineTests
             queue,
             stepRateHz: 30);
 
-        system.Update(0f);
-        Assert.That(results.TryRead(out OrderAdmissionOutcome waiting), Is.True);
+        RunAdmissionStep(results, system);
+        Assert.That(results.TryGet(batch[0].OrderId, OrderAdmissionStage.EntityIntake, out OrderAdmissionOutcome waiting), Is.True);
         Assert.That(waiting.Result, Is.EqualTo(OrderSubmitResult.Queued));
 
-        var occupied = new OrderAdmissionOutcome(
-            in active,
-            OrderAdmissionStage.EntityIntake,
-            OrderSubmitResult.Activated);
-        Assert.That(results.TryWrite(in occupied), Is.True);
         clock.Advance(ClockDomainId.Step, 3);
-        system.Update(0f);
+        orderTypes.TerminalResults.Clear();
+        RunAdmissionStep(results, system);
         Assert.Multiple(() =>
         {
-            Assert.That(world.Get<OrderBuffer>(actor).QueuedCount, Is.EqualTo(1));
-            Assert.That(system.AdmissionBackpressureCount, Is.EqualTo(1));
-        });
-
-        Assert.That(results.TryRead(out _), Is.True);
-        system.Update(0f);
-        Assert.That(results.TryRead(out OrderAdmissionOutcome expired), Is.True);
-        Assert.Multiple(() =>
-        {
-            Assert.That(expired.Result, Is.EqualTo(OrderSubmitResult.Expired));
-            Assert.That(expired.OrderId, Is.EqualTo(batch[0].OrderId));
+            Assert.That(orderTypes.TerminalResults.Count, Is.EqualTo(1));
+            Assert.That(orderTypes.TerminalResults[0].State, Is.EqualTo(OrderTerminalState.Cancelled));
+            Assert.That(orderTypes.TerminalResults[0].OrderId, Is.EqualTo(batch[0].OrderId));
             Assert.That(world.Get<OrderBuffer>(actor).QueuedCount, Is.Zero);
         });
 
-        system.Update(0f);
-        Assert.That(results.TryRead(out _), Is.False);
+        orderTypes.TerminalResults.Clear();
+        RunAdmissionStep(results, system);
+        Assert.That(orderTypes.TerminalResults.Count, Is.Zero);
     }
 
     [Test]
@@ -392,22 +328,15 @@ public sealed class OrderAdmissionPipelineTests
         buffer.SetActiveDirect(in active, priority: 100);
 
         var clock = new DiscreteClock();
-        var results = new OrderAdmissionResultBuffer(capacity: 2, rejectionCapacity: 2);
+        var results = new OrderAdmissionResultBuffer(capacity: 4, rejectionCapacity: 4);
         var queue = new OrderQueue(capacity: 64, results);
         var orderTypes = CreateOrderTypes();
-        orderTypes.Register(new OrderTypeConfig
-        {
-            Key = "test.persistent",
-            OrderTypeId = 1,
-            Priority = 100,
-            AllowQueuedMode = true,
-            BufferWindowMs = 100,
-        });
+        orderTypes.Register(CreateOrderType(1, "test.persistent", allowQueuedMode: true, bufferWindowMs: 100));
         var batch = new[]
         {
             new Order { OrderTypeId = 1, Actor = actor, SubmitMode = OrderSubmitMode.PersistentQueued },
         };
-        Assert.That(OrderSubmitResultSemantics.IsAccepted(queue.TryEnqueueSharedBatch(batch, OrderAdmissionSource.Network)), Is.True);
+        Assert.That(OrderSubmitResultSemantics.IsAccepted(queue.TryEnqueueSharedBatch(batch)), Is.True);
         var system = new OrderBufferSystem(
             world,
             clock,
@@ -417,31 +346,31 @@ public sealed class OrderAdmissionPipelineTests
             queue,
             stepRateHz: 30);
 
-        system.Update(0f);
-        Assert.That(results.TryRead(out OrderAdmissionOutcome waiting), Is.True);
+        RunAdmissionStep(results, system);
+        Assert.That(results.TryGet(batch[0].OrderId, OrderAdmissionStage.EntityIntake, out OrderAdmissionOutcome waiting), Is.True);
         Assert.That(waiting.Result, Is.EqualTo(OrderSubmitResult.Queued));
 
         clock.Advance(ClockDomainId.Step, 240);
-        system.Update(0f);
+        RunAdmissionStep(results, system);
         Assert.Multiple(() =>
         {
             Assert.That(world.Get<OrderBuffer>(actor).QueuedCount, Is.EqualTo(1));
-            Assert.That(results.TryRead(out _), Is.False);
         });
 
         OrderSubmitter.NotifyOrderComplete(world, actor, orderTypes);
-        system.Update(0f);
-        Assert.That(results.TryRead(out OrderAdmissionOutcome activated), Is.True);
+        RunAdmissionStep(results, system);
         Assert.Multiple(() =>
         {
-            Assert.That(activated.Result, Is.EqualTo(OrderSubmitResult.Activated));
-            Assert.That(activated.OrderId, Is.EqualTo(batch[0].OrderId));
             Assert.That(world.Get<OrderBuffer>(actor).ActiveOrder.Order.OrderId, Is.EqualTo(batch[0].OrderId));
+            Assert.That(
+                CountEntityOutcomes(results, batch[0].OrderId, OrderSubmitResult.Activated),
+                Is.Zero,
+                "Persistent queue promotion is not a second admission.");
         });
     }
 
     [Test]
-    public unsafe void EntityIntake_ClearQueueCancellationIsAtomicWithResultCapacity()
+    public unsafe void EntityIntake_ClearQueueCancellationPublishesTerminalCancelled()
     {
         using var world = World.Create();
         Entity actor = world.Create(OrderBuffer.CreateEmpty());
@@ -449,23 +378,11 @@ public sealed class OrderAdmissionPipelineTests
         var active = new Order { OrderId = 40, OrderTypeId = 1, Actor = actor };
         buffer.SetActiveDirect(in active, priority: 100);
 
-        var results = new OrderAdmissionResultBuffer(capacity: 3, rejectionCapacity: 3);
+        var results = new OrderAdmissionResultBuffer(capacity: 8, rejectionCapacity: 8);
         var queue = new OrderQueue(capacity: 64, results);
         var orderTypes = CreateOrderTypes();
-        orderTypes.Register(new OrderTypeConfig
-        {
-            Key = "test.waiting",
-            OrderTypeId = 1,
-            Priority = 100,
-            AllowQueuedMode = true,
-        });
-        orderTypes.Register(new OrderTypeConfig
-        {
-            Key = "test.interrupt",
-            OrderTypeId = 2,
-            Priority = 200,
-            ClearQueueOnActivate = true,
-        });
+        orderTypes.Register(CreateOrderType(1, "test.waiting", allowQueuedMode: true));
+        orderTypes.Register(CreateOrderType(2, "test.interrupt", clearQueueOnActivate: true, priority: 200));
         var rules = new OrderRuleRegistry();
         var interruptRules = new OrderRuleSet { InterruptsActiveCount = 1 };
         interruptRules.InterruptsActiveOrderTypeIds[0] = 1;
@@ -478,48 +395,48 @@ public sealed class OrderAdmissionPipelineTests
             results,
             queue);
 
+        int firstWaitingOrderId = 0;
+        int secondWaitingOrderId = 0;
         for (int i = 0; i < 2; i++)
         {
             var waitingBatch = new[]
             {
                 new Order { OrderTypeId = 1, Actor = actor, SubmitMode = OrderSubmitMode.Queued },
             };
-            Assert.That(OrderSubmitResultSemantics.IsAccepted(queue.TryEnqueueSharedBatch(waitingBatch, OrderAdmissionSource.Network)), Is.True);
+            Assert.That(OrderSubmitResultSemantics.IsAccepted(queue.TryEnqueueSharedBatch(waitingBatch)), Is.True);
+            if (i == 0)
+            {
+                firstWaitingOrderId = waitingBatch[0].OrderId;
+            }
+            else
+            {
+                secondWaitingOrderId = waitingBatch[0].OrderId;
+            }
         }
 
-        system.Update(0f);
-        Assert.That(results.TryRead(out _), Is.True);
-        Assert.That(results.TryRead(out _), Is.True);
+        RunAdmissionStep(results, system);
+        Assert.That(FindEntityOutcome(results, firstWaitingOrderId, OrderSubmitResult.Queued, out _), Is.True);
+        Assert.That(FindEntityOutcome(results, secondWaitingOrderId, OrderSubmitResult.Queued, out _), Is.True);
         Assert.That(world.Get<OrderBuffer>(actor).QueuedCount, Is.EqualTo(2));
 
-        var occupied = new OrderAdmissionOutcome(
-            in active,
-            OrderAdmissionStage.EntityIntake,
-            OrderSubmitResult.Activated);
-        Assert.That(results.TryWrite(in occupied), Is.True);
         var interruptBatch = new[]
         {
             new Order { OrderTypeId = 2, Actor = actor, SubmitMode = OrderSubmitMode.Immediate },
         };
-        Assert.That(OrderSubmitResultSemantics.IsAccepted(queue.TryEnqueueSharedBatch(interruptBatch, OrderAdmissionSource.Network)), Is.True);
+        Assert.That(OrderSubmitResultSemantics.IsAccepted(queue.TryEnqueueSharedBatch(interruptBatch)), Is.True);
 
-        system.Update(0f);
+        orderTypes.TerminalResults.Clear();
+        RunAdmissionStep(results, system);
         Assert.Multiple(() =>
         {
-            Assert.That(queue.Count, Is.EqualTo(1));
-            Assert.That(world.Get<OrderBuffer>(actor).ActiveOrder.Order.OrderId, Is.EqualTo(active.OrderId));
-            Assert.That(world.Get<OrderBuffer>(actor).QueuedCount, Is.EqualTo(2));
-        });
-
-        Assert.That(results.TryRead(out _), Is.True);
-        system.Update(0f);
-        Assert.That(results.TryRead(out OrderAdmissionOutcome firstCancelled), Is.True);
-        Assert.That(results.TryRead(out OrderAdmissionOutcome secondCancelled), Is.True);
-        Assert.That(results.TryRead(out OrderAdmissionOutcome interruptActivated), Is.True);
-        Assert.Multiple(() =>
-        {
-            Assert.That(firstCancelled.Result, Is.EqualTo(OrderSubmitResult.Cancelled));
-            Assert.That(secondCancelled.Result, Is.EqualTo(OrderSubmitResult.Cancelled));
+            // Interrupt cancels the displaced active order plus both waiting queued orders.
+            Assert.That(orderTypes.TerminalResults.Count, Is.EqualTo(3));
+            Assert.That(orderTypes.TerminalResults[0].State, Is.EqualTo(OrderTerminalState.Cancelled));
+            Assert.That(orderTypes.TerminalResults[1].State, Is.EqualTo(OrderTerminalState.Cancelled));
+            Assert.That(orderTypes.TerminalResults[2].State, Is.EqualTo(OrderTerminalState.Cancelled));
+            Assert.That(
+                results.TryGet(interruptBatch[0].OrderId, OrderAdmissionStage.EntityIntake, out OrderAdmissionOutcome interruptActivated),
+                Is.True);
             Assert.That(interruptActivated.Result, Is.EqualTo(OrderSubmitResult.Activated));
             Assert.That(world.Get<OrderBuffer>(actor).ActiveOrder.Order.OrderId, Is.EqualTo(interruptBatch[0].OrderId));
             Assert.That(world.Get<OrderBuffer>(actor).QueuedCount, Is.Zero);
@@ -531,4 +448,84 @@ public sealed class OrderAdmissionPipelineTests
 
     private static OrderTypeRegistry CreateOrderTypes() =>
         new(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
+
+    private static OrderTypeConfig CreateOrderType(
+        int orderTypeId,
+        string key,
+        bool canInterruptSelf = false,
+        bool allowQueuedMode = true,
+        bool clearQueueOnActivate = true,
+        int priority = 100,
+        int bufferWindowMs = 500,
+        SameTypePolicy sameTypePolicy = SameTypePolicy.Queue,
+        int maxQueueSize = 3) =>
+        new()
+        {
+            Key = key,
+            OrderTypeId = orderTypeId,
+            Priority = priority,
+            CanInterruptSelf = canInterruptSelf,
+            AllowQueuedMode = allowQueuedMode,
+            ClearQueueOnActivate = clearQueueOnActivate,
+            BufferWindowMs = bufferWindowMs,
+            SameTypePolicy = sameTypePolicy,
+            MaxQueueSize = maxQueueSize,
+            SpatialBlackboardKey = -1,
+            EntityBlackboardKey = -1,
+            IntArg0BlackboardKey = -1,
+        };
+
+    private static void RunAdmissionStep(OrderAdmissionResultBuffer results, OrderBufferSystem system)
+    {
+        results.BeginLogicStep();
+        system.Update(0f);
+        if (results.EntityIntakeOpen)
+        {
+            results.EndEntityIntake();
+        }
+
+        results.EndLogicStep();
+    }
+
+    private static bool FindEntityOutcome(
+        OrderAdmissionResultBuffer results,
+        int orderId,
+        OrderSubmitResult expected,
+        out OrderAdmissionOutcome outcome)
+    {
+        for (int i = 0; i < results.Count; i++)
+        {
+            ref readonly OrderAdmissionOutcome candidate = ref results[i];
+            if (candidate.OrderId == orderId &&
+                candidate.Stage == OrderAdmissionStage.EntityIntake &&
+                candidate.Result == expected)
+            {
+                outcome = candidate;
+                return true;
+            }
+        }
+
+        outcome = default;
+        return false;
+    }
+
+    private static int CountEntityOutcomes(
+        OrderAdmissionResultBuffer results,
+        int orderId,
+        OrderSubmitResult expected)
+    {
+        int count = 0;
+        for (int i = 0; i < results.Count; i++)
+        {
+            ref readonly OrderAdmissionOutcome candidate = ref results[i];
+            if (candidate.OrderId == orderId &&
+                candidate.Stage == OrderAdmissionStage.EntityIntake &&
+                candidate.Result == expected)
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
 }

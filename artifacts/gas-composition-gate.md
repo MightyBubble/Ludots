@@ -2261,3 +2261,66 @@ Behavior remains in the existing runtime spawn request contract. No JSON schema 
 ### 8. Next variant test
 
 A new runtime spawn variant can author `Team`, pass explicit `MembershipTarget`, or both. Explicit membership remains authoritative, and `Team` is only used for consistency validation when present.
+
+---
+
+## GAS Composition Gate - Issue #709 Replicated Mirror Materialization Context
+
+- **Task / Issue**: #709 - restore visible entities on replicated clients
+- **Date**: 2026-07-26
+- **Agent / Author**: Codex
+
+### 1. Core judgment
+
+New variant primary deliverable (A/B/C/D): **A**
+
+Conclusion: **PASS**
+
+One-line reason: the repair passes the engine's existing component authoring
+context into the existing `EntityBuilder`; it adds no graph node, preset
+switch, profile field, lifecycle operation, or parallel materialization path.
+
+### 2. Layer assignment
+
+| Step / capability | Layer | Implementation carrier |
+|---|---:|---|
+| Publish the engine authoring context | N/A | Existing typed Core service registry |
+| Materialize a replicated mirror template | 0 | Existing `EntityBuilder` and component authoring pipeline |
+| Create the player-visible performer | N/A | Existing presentation lifecycle and performer definitions |
+
+### 3. Reuse list
+
+- Handlers: existing template component setters.
+- Queues / Systems: existing client replication apply and presentation lifecycle systems.
+- Resolvers / Registries: existing `ComponentAuthoringContext`, ability registries,
+  entity template registry, template-key registry, and performer registry.
+- Existing presets / graphs: unchanged.
+
+### 4. New Layer 0 ops
+
+N/A. This repairs dependency propagation through the existing materialization op.
+
+### 5. Transaction boundary
+
+The existing mirror create transaction remains unchanged: a template must build
+completely before replication identity and state are committed; any failure
+destroys the partially created entity and is reported explicitly.
+
+### 6. Config SSOT
+
+Entity composition remains in the existing `Entities/templates.json` assets and
+their registered component setters. New JSON schema: **NO**.
+
+### 7. Red flag scan
+
+- [x] No profile inherit or placement enum added.
+- [x] No materialization pipeline parallel to `EntityBuilder` added.
+- [x] No placement validation moved into a lifecycle operation.
+- [x] No empty-context fallback or silent mirror drop added.
+- [x] The engine's configured authoring context remains the single source of truth.
+
+### 8. Next variant test
+
+A new replicated template changes existing template components or graph/effect
+composition and receives the same engine authoring services. It does not add a
+Core gameplay enum or Showcase-private materializer.

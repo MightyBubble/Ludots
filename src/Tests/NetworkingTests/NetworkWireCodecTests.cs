@@ -280,7 +280,7 @@ public sealed class NetworkWireCodecTests
             actorCount: 2,
             orderId: 12,
             admissionBatchId: 3,
-            OrderSubmitResult.Queued,
+            NetworkCommandAdmissionCode.Queued,
             isReplay: false,
             committedTick: 49);
 
@@ -290,8 +290,8 @@ public sealed class NetworkWireCodecTests
             CommandAdmissionWireCodec.TryDecode(buffer, 7, in seat, out NetworkCommandAdmissionOutcome decoded),
             Is.EqualTo(NetworkWireCodecStatus.Success));
         Assert.That(decoded.PlayerId, Is.EqualTo(9));
-        Assert.That(decoded.Result, Is.EqualTo(OrderSubmitResult.Queued));
-        Assert.That(decoded.Stage, Is.EqualTo(OrderAdmissionStage.GlobalIntake));
+        Assert.That(decoded.Result, Is.EqualTo(NetworkCommandAdmissionCode.Queued));
+        Assert.That(decoded.Stage, Is.EqualTo(NetworkCommandAdmissionStage.GlobalIntake));
         Assert.That(decoded.IsReplay, Is.False);
         Assert.That(decoded.CommittedTick, Is.EqualTo(49));
     }
@@ -308,8 +308,8 @@ public sealed class NetworkWireCodecTests
             orderId: 13,
             admissionBatchId: 3,
             admissionBatchIndex: 1,
-            OrderAdmissionStage.EntityIntake,
-            OrderSubmitResult.Activated,
+            NetworkCommandAdmissionStage.EntityIntake,
+            NetworkCommandAdmissionCode.Activated,
             isReplay: false,
             committedTick: 51);
 
@@ -322,8 +322,8 @@ public sealed class NetworkWireCodecTests
             Is.EqualTo(NetworkWireCodecStatus.Success));
         Assert.Multiple(() =>
         {
-            Assert.That(decoded.Stage, Is.EqualTo(OrderAdmissionStage.EntityIntake));
-            Assert.That(decoded.Result, Is.EqualTo(OrderSubmitResult.Activated));
+            Assert.That(decoded.Stage, Is.EqualTo(NetworkCommandAdmissionStage.EntityIntake));
+            Assert.That(decoded.Result, Is.EqualTo(NetworkCommandAdmissionCode.Activated));
             Assert.That(decoded.AdmissionBatchIndex, Is.EqualTo(1));
             Assert.That(decoded.OrderId, Is.EqualTo(13));
             Assert.That(decoded.CommittedTick, Is.EqualTo(51));
@@ -347,8 +347,8 @@ public sealed class NetworkWireCodecTests
                     orderId: 13,
                     admissionBatchId: 3,
                     admissionBatchIndex: 0,
-                    OrderAdmissionStage.EntityIntake,
-                    OrderSubmitResult.Activated,
+                    NetworkCommandAdmissionStage.EntityIntake,
+                    NetworkCommandAdmissionCode.Activated,
                     isReplay: false,
                     committedTick: 0),
                 Throws.TypeOf<ArgumentOutOfRangeException>());
@@ -360,7 +360,7 @@ public sealed class NetworkWireCodecTests
                     actorCount: 1,
                     orderId: 13,
                     admissionBatchId: 3,
-                    OrderSubmitResult.Queued,
+                    NetworkCommandAdmissionCode.Queued,
                     isReplay: false,
                     committedTick: -1),
                 Throws.TypeOf<ArgumentOutOfRangeException>());
@@ -374,8 +374,8 @@ public sealed class NetworkWireCodecTests
             orderId: 13,
             admissionBatchId: 3,
             admissionBatchIndex: 0,
-            OrderAdmissionStage.EntityIntake,
-            OrderSubmitResult.Activated,
+            NetworkCommandAdmissionStage.EntityIntake,
+            NetworkCommandAdmissionCode.Activated,
             isReplay: false,
             committedTick: 51);
         Span<byte> buffer = stackalloc byte[CommandAdmissionWireCodec.SizeInBytes];
@@ -407,7 +407,7 @@ public sealed class NetworkWireCodecTests
             actorCount: 2,
             orderId: 12,
             admissionBatchId: 3,
-            OrderSubmitResult.Queued,
+            NetworkCommandAdmissionCode.Queued,
             isReplay: false,
             committedTick: 49);
 
@@ -423,13 +423,12 @@ public sealed class NetworkWireCodecTests
     {
         var seat = new NetworkCommandSeat(slot: 1, generation: 2, playerId: 9);
         Span<byte> buffer = stackalloc byte[CommandAdmissionWireCodec.SizeInBytes];
-        OrderSubmitResult[] terminalResults =
+        NetworkCommandAdmissionCode[] terminalResults =
         {
-            OrderSubmitResult.InsufficientResources,
-            OrderSubmitResult.Expired,
-            OrderSubmitResult.Cancelled,
+            NetworkCommandAdmissionCode.TerminalFailed,
+            NetworkCommandAdmissionCode.TerminalCancelled,
         };
-        foreach (OrderSubmitResult result in terminalResults)
+        foreach (NetworkCommandAdmissionCode code in terminalResults)
         {
             var outcome = new NetworkCommandAdmissionOutcome(
                 in seat,
@@ -439,8 +438,8 @@ public sealed class NetworkWireCodecTests
                 orderId: 12,
                 admissionBatchId: 3,
                 admissionBatchIndex: 1,
-                OrderAdmissionStage.EntityIntake,
-                result,
+                NetworkCommandAdmissionStage.Terminal,
+                code,
                 isReplay: false,
                 committedTick: 51);
             Assert.That(
@@ -451,8 +450,8 @@ public sealed class NetworkWireCodecTests
                 Is.EqualTo(NetworkWireCodecStatus.Success));
             Assert.Multiple(() =>
             {
-                Assert.That(decoded.Result, Is.EqualTo(result));
-                Assert.That(decoded.Stage, Is.EqualTo(OrderAdmissionStage.EntityIntake));
+                Assert.That(decoded.Result, Is.EqualTo(code));
+                Assert.That(decoded.Stage, Is.EqualTo(NetworkCommandAdmissionStage.Terminal));
                 Assert.That(decoded.AdmissionBatchIndex, Is.EqualTo(1));
             });
         }
@@ -464,7 +463,7 @@ public sealed class NetworkWireCodecTests
         buffer[CommandAdmissionWireCodec.SizeInBytes - 1] = 0;
 
         buffer[CommandAdmissionWireCodec.SizeInBytes - 3] =
-            checked((byte)((byte)OrderSubmitResult.Cancelled + 1));
+            checked((byte)((byte)NetworkCommandAdmissionCode.TerminalCancelled + 1));
         Assert.That(
             CommandAdmissionWireCodec.TryDecode(buffer, 7, in seat, out _),
             Is.EqualTo(NetworkWireCodecStatus.InvalidEnum));
@@ -615,7 +614,7 @@ public sealed class NetworkWireCodecTests
             CommandBatchWireCodec.TryEncode(in header, invalidEnumEntries, commandBuffer, out _),
             Is.EqualTo(NetworkWireCodecStatus.InvalidEnum));
 
-        // Valid encode then truncate mid-entry → MalformedLength.
+        // Valid encode then truncate mid-entry ->MalformedLength.
         Assert.That(
             CommandBatchWireCodec.TryEncode(
                 new NetworkCommandBatchHeader(1, 1, 1, 1, 1, OrderSubmitMode.Immediate),

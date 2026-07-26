@@ -8,8 +8,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
     public enum OrderAdmissionStage : byte
     {
         GlobalIntake = 0,
-        EntityIntake = 1,
-        NetworkIntake = 2
+        EntityIntake = 1
     }
 
     public enum OrderSubmitResult : byte
@@ -17,44 +16,14 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         Activated = 0,
         Queued = 1,
         Pending = 2,
-        Blocked = 3,
-        RejectedByRule = Blocked,
-        QueueFull = 4,
-        RejectedQueueFull = QueueFull,
-        Ignored = 5,
-        InvalidEntity = 6,
-        RejectedInvalidActor = InvalidEntity,
-        BatchRejected = 7,
-        ValidationRejected = 8,
-        RejectedValidation = ValidationRejected,
-        InvalidOrderType = 9,
-        RejectedInvalidOrderType = InvalidOrderType,
-        NetworkRateLimited = 10,
-        NetworkTargetTickExpired = 11,
-        NetworkTargetTickTooFarAhead = 12,
-        NetworkActorLimitExceeded = 13,
-        NetworkAdmissionBackpressured = 14,
-        NetworkInvalidConnectionSeat = 15,
-        NetworkSequenceGap = 16,
-        NetworkSequenceOutsideHistory = 17,
-        NetworkScheduled = 18,
-        NetworkScheduleFull = 19,
-        NetworkInvalidActorHandle = 20,
-        NetworkStaleActorGeneration = 21,
-        NetworkActorNotControlled = 22,
-        NetworkInvalidTargetHandle = 23,
-        NetworkStaleTargetGeneration = 24,
-        NetworkTargetNotKnown = 25,
-        NetworkCommandSchemaMismatch = 26,
-        NetworkMatchNotStarted = 27,
-        NetworkMatchCompleted = 28,
-        InsufficientResources = 29,
-        Expired = 30,
-        Cancelled = 31,
-        NetworkSequenceExhausted = 32,
-        RejectedBlackboardCapacity = 33,
-        RejectedMissingBlackboard = 34,
-        RejectedAdmissionCapacity = 35
+        RejectedQueueFull = 3,
+        RejectedByRule = 4,
+        RejectedValidation = 5,
+        RejectedInvalidActor = 6,
+        RejectedInvalidOrderType = 7,
+        RejectedBlackboardCapacity = 8,
+        RejectedMissingBlackboard = 9,
+        RejectedAdmissionCapacity = 10
     }
 
     public static class OrderSubmitResultSemantics
@@ -75,31 +44,6 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 OrderSubmitResult.RejectedBlackboardCapacity => false,
                 OrderSubmitResult.RejectedMissingBlackboard => false,
                 OrderSubmitResult.RejectedAdmissionCapacity => false,
-                OrderSubmitResult.NetworkScheduled => false,
-                OrderSubmitResult.InsufficientResources => false,
-                OrderSubmitResult.Expired => false,
-                OrderSubmitResult.Cancelled => false,
-                OrderSubmitResult.NetworkRateLimited => false,
-                OrderSubmitResult.NetworkTargetTickExpired => false,
-                OrderSubmitResult.NetworkTargetTickTooFarAhead => false,
-                OrderSubmitResult.NetworkActorLimitExceeded => false,
-                OrderSubmitResult.NetworkAdmissionBackpressured => false,
-                OrderSubmitResult.NetworkInvalidConnectionSeat => false,
-                OrderSubmitResult.NetworkSequenceGap => false,
-                OrderSubmitResult.NetworkSequenceOutsideHistory => false,
-                OrderSubmitResult.NetworkScheduleFull => false,
-                OrderSubmitResult.NetworkInvalidActorHandle => false,
-                OrderSubmitResult.NetworkStaleActorGeneration => false,
-                OrderSubmitResult.NetworkActorNotControlled => false,
-                OrderSubmitResult.NetworkInvalidTargetHandle => false,
-                OrderSubmitResult.NetworkStaleTargetGeneration => false,
-                OrderSubmitResult.NetworkTargetNotKnown => false,
-                OrderSubmitResult.NetworkCommandSchemaMismatch => false,
-                OrderSubmitResult.NetworkMatchNotStarted => false,
-                OrderSubmitResult.NetworkMatchCompleted => false,
-                OrderSubmitResult.NetworkSequenceExhausted => false,
-                OrderSubmitResult.Ignored => false,
-                OrderSubmitResult.BatchRejected => false,
                 _ => throw new ArgumentOutOfRangeException(nameof(result), result, "Unknown order submit result."),
             };
         }
@@ -108,15 +52,11 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         {
             return result switch
             {
-                OrderSubmitResult.QueueFull or OrderSubmitResult.RejectedQueueFull => OrderFailureReason.SubmissionQueueFull,
-                OrderSubmitResult.Blocked or OrderSubmitResult.RejectedByRule or OrderSubmitResult.Ignored or OrderSubmitResult.BatchRejected =>
-                    OrderFailureReason.SubmissionRuleRejected,
-                OrderSubmitResult.ValidationRejected or OrderSubmitResult.RejectedValidation =>
-                    OrderFailureReason.SubmissionValidationRejected,
-                OrderSubmitResult.InvalidEntity or OrderSubmitResult.RejectedInvalidActor =>
-                    OrderFailureReason.SubmissionInvalidActor,
-                OrderSubmitResult.InvalidOrderType or OrderSubmitResult.RejectedInvalidOrderType =>
-                    OrderFailureReason.SubmissionInvalidOrderType,
+                OrderSubmitResult.RejectedQueueFull => OrderFailureReason.SubmissionQueueFull,
+                OrderSubmitResult.RejectedByRule => OrderFailureReason.SubmissionRuleRejected,
+                OrderSubmitResult.RejectedValidation => OrderFailureReason.SubmissionValidationRejected,
+                OrderSubmitResult.RejectedInvalidActor => OrderFailureReason.SubmissionInvalidActor,
+                OrderSubmitResult.RejectedInvalidOrderType => OrderFailureReason.SubmissionInvalidOrderType,
                 OrderSubmitResult.RejectedBlackboardCapacity => OrderFailureReason.SubmissionBlackboardCapacity,
                 OrderSubmitResult.RejectedMissingBlackboard => OrderFailureReason.SubmissionMissingBlackboard,
                 OrderSubmitResult.RejectedAdmissionCapacity => OrderFailureReason.SubmissionAdmissionCapacity,
@@ -133,7 +73,6 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         public readonly int OrderTypeId;
         public readonly int PlayerId;
         public readonly Entity Actor;
-        public readonly OrderAdmissionSource AdmissionSource;
         public readonly int AdmissionBatchId;
         public readonly ushort AdmissionBatchSize;
         public readonly ushort AdmissionBatchIndex;
@@ -146,7 +85,6 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             OrderTypeId = orderTypeId;
             PlayerId = 0;
             Actor = default;
-            AdmissionSource = OrderAdmissionSource.Local;
             AdmissionBatchId = 0;
             AdmissionBatchSize = 0;
             AdmissionBatchIndex = 0;
@@ -163,7 +101,6 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             OrderTypeId = order.OrderTypeId;
             PlayerId = order.PlayerId;
             Actor = order.Actor;
-            AdmissionSource = order.AdmissionSource;
             AdmissionBatchId = order.AdmissionBatchId;
             AdmissionBatchSize = order.AdmissionBatchSize;
             AdmissionBatchIndex = order.AdmissionBatchIndex;
@@ -251,59 +188,6 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         public int HighWatermark { get; private set; }
         public long OverflowCount { get; private set; }
         public uint Generation { get; private set; }
-
-        public int AvailableCapacity => Math.Max(0, Capacity - Count - ReservedCount);
-
-        public bool TryRead(out OrderAdmissionOutcome outcome)
-        {
-            if (Count == 0)
-            {
-                outcome = default;
-                return false;
-            }
-
-            outcome = this[0];
-            if (_currentCount > 0)
-            {
-                for (int i = 1; i < _currentCount; i++)
-                {
-                    _currentItems[i - 1] = _currentItems[i];
-                }
-
-                _currentCount--;
-                return true;
-            }
-
-            if (_currentRejectionCount > 0)
-            {
-                for (int i = 1; i < _currentRejectionCount; i++)
-                {
-                    _currentRejections[i - 1] = _currentRejections[i];
-                }
-
-                _currentRejectionCount--;
-                return true;
-            }
-
-            if (_pendingCount > 0)
-            {
-                for (int i = 1; i < _pendingCount; i++)
-                {
-                    _pendingItems[i - 1] = _pendingItems[i];
-                }
-
-                _pendingCount--;
-                return true;
-            }
-
-            for (int i = 1; i < _pendingRejectionCount; i++)
-            {
-                _pendingRejections[i - 1] = _pendingRejections[i];
-            }
-
-            _pendingRejectionCount--;
-            return true;
-        }
 
         public ref readonly OrderAdmissionOutcome this[int index]
         {
@@ -665,7 +549,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
         private bool ShouldWritePending(OrderAdmissionStage stage)
         {
-            if (stage is OrderAdmissionStage.GlobalIntake or OrderAdmissionStage.NetworkIntake)
+            if (stage == OrderAdmissionStage.GlobalIntake)
             {
                 return !_logicStepActive || !_entityIntakeOpen;
             }
@@ -866,125 +750,6 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             _logicStepActive = false;
             _entityIntakeOpen = false;
             _terminalFaultMessage = null;
-        }
-    }
-
-    internal static class OrderAdmissionTracking
-    {
-        public static bool RequiresNetworkFeedback(in Order order) =>
-            order.AdmissionSource == OrderAdmissionSource.Network;
-
-        public static bool HasWaitingNetworkFeedback(in OrderBuffer buffer)
-        {
-            if (buffer.HasPending && RequiresNetworkFeedback(in buffer.PendingOrder.Order))
-            {
-                return true;
-            }
-
-            for (int i = 0; i < buffer.QueuedCount; i++)
-            {
-                Order queued = buffer.GetQueued(i).Order;
-                if (RequiresNetworkFeedback(in queued))
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        public static int CountRemovedWaiting(in OrderBuffer before, in OrderBuffer after)
-        {
-            int count = 0;
-            if (before.HasPending)
-            {
-                Order pending = before.PendingOrder.Order;
-                if (RequiresNetworkFeedback(in pending) && !Contains(in after, in pending))
-                {
-                    count++;
-                }
-            }
-
-            for (int i = 0; i < before.QueuedCount; i++)
-            {
-                Order queued = before.GetQueued(i).Order;
-                if (RequiresNetworkFeedback(in queued) && !Contains(in after, in queued))
-                {
-                    count++;
-                }
-            }
-
-            return count;
-        }
-
-        public static void PublishRemovedWaiting(
-            OrderAdmissionResultBuffer admissionResults,
-            in OrderBuffer before,
-            in OrderBuffer after,
-            OrderSubmitResult result)
-        {
-            if (before.HasPending)
-            {
-                Order pending = before.PendingOrder.Order;
-                if (RequiresNetworkFeedback(in pending) && !Contains(in after, in pending))
-                {
-                    Publish(admissionResults, in pending, result);
-                }
-            }
-
-            for (int i = 0; i < before.QueuedCount; i++)
-            {
-                Order queued = before.GetQueued(i).Order;
-                if (RequiresNetworkFeedback(in queued) && !Contains(in after, in queued))
-                {
-                    Publish(admissionResults, in queued, result);
-                }
-            }
-        }
-
-        private static bool Contains(in OrderBuffer buffer, in Order order)
-        {
-            if (buffer.HasActive && SameIdentity(in buffer.ActiveOrder.Order, in order))
-            {
-                return true;
-            }
-
-            if (buffer.HasPending && SameIdentity(in buffer.PendingOrder.Order, in order))
-            {
-                return true;
-            }
-
-            for (int i = 0; i < buffer.QueuedCount; i++)
-            {
-                Order queued = buffer.GetQueued(i).Order;
-                if (SameIdentity(in queued, in order))
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        private static bool SameIdentity(in Order left, in Order right) =>
-            left.OrderId == right.OrderId &&
-            left.AdmissionBatchId == right.AdmissionBatchId &&
-            left.AdmissionBatchIndex == right.AdmissionBatchIndex;
-
-        private static void Publish(
-            OrderAdmissionResultBuffer admissionResults,
-            in Order order,
-            OrderSubmitResult result)
-        {
-            var outcome = new OrderAdmissionOutcome(
-                in order,
-                OrderAdmissionStage.EntityIntake,
-                result);
-            if (!admissionResults.TryWrite(in outcome))
-            {
-                throw new System.InvalidOperationException(
-                    $"Order admission result capacity {admissionResults.Capacity} is exhausted.");
-            }
         }
     }
 }

@@ -101,7 +101,8 @@ public static class LiteNetLibNetworkRuntimeInstaller
         NetworkCommandIngress commands = Require(engine, CoreServiceKeys.NetworkCommandIngress);
         NetworkGameplayCommandGate gameplayCommandGate = Require(engine, CoreServiceKeys.NetworkGameplayCommandGate);
         NetworkCommandAdmissionResultBuffer admissions = Require(engine, CoreServiceKeys.NetworkCommandAdmissionResults);
-        OrderAdmissionResultBuffer entityAdmissions = Require(engine, CoreServiceKeys.EntityOrderAdmissionResults);
+        OrderAdmissionResultBuffer orderAdmissions = Require(engine, CoreServiceKeys.OrderAdmissionResultBuffer);
+        OrderTerminalResultBuffer terminalResults = Require(engine, CoreServiceKeys.OrderTerminalResultBuffer);
         var mapSession = engine.CurrentMapSession ??
             throw new InvalidOperationException("Authoritative networking requires the startup map before accepting connections.");
         var controllers = new AuthoritativeSeatControllerRegistry(
@@ -141,7 +142,8 @@ public static class LiteNetLibNetworkRuntimeInstaller
                 commands,
                 gameplayCommandGate,
                 admissions,
-                entityAdmissions,
+                orderAdmissions,
+                terminalResults,
                 controllers,
                 entities,
                 seatFactory.CreateAll(),

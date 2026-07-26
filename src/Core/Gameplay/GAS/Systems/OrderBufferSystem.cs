@@ -29,7 +29,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly IGraphRuntimeApi? _graphApi;
 
         public uint IncomingRevision { get; private set; }
-        public long AdmissionBackpressureCount { get; private set; }
 
         private static readonly QueryDescription _orderBufferQuery = new QueryDescription()
             .WithAll<OrderBuffer>();
@@ -92,26 +91,9 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 {
                     ref OrderBuffer buffer = ref buffers[index];
                     Entity entity = Unsafe.Add(ref entityFirst, index);
-                    if (buffer.HasActive &&
-                        buffer.ActiveOrder.AdmissionActivationPublished == 0 &&
-                        buffer.ActiveOrder.Order.AdmissionBatchId > 0 &&
-                        !HasAdmissionCapacity(in buffer.ActiveOrder.Order, 1))
-                    {
-                        AdmissionBackpressureCount++;
-                        continue;
-                    }
-
-                    PublishUnreportedActivation(entity, ref buffer);
                     ReleaseExpiredOrders(ref buffer, currentStep);
                     if (!buffer.HasActive && buffer.HasQueued)
                     {
-                        Order next = buffer.GetQueued(0).Order;
-                        if (!HasAdmissionCapacity(in next, 1))
-                        {
-                            AdmissionBackpressureCount++;
-                            continue;
-                        }
-
                         bool promoted = OrderSubmitter.TryPromoteNextQueuedToActive(
                             World,
                             entity,
@@ -125,10 +107,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             failureResult != OrderSubmitResult.Activated)
                         {
                             CommitPromotionFailureAdmission(failedOrderId, failedOrderTypeId, failureResult);
-                        }
-                        else if (promoted)
-                        {
-                            PublishUnreportedActivation(entity, ref buffer);
                         }
                     }
                 }
@@ -230,7 +208,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 if (OrderSubmitResultSemantics.IsAccepted(result))
                 {
                     IncomingRevision++;
-                    MarkActiveAdmissionPublished(order.Actor, order.OrderId, result);
                 }
             }
             finally
@@ -312,15 +289,13 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         _orderTypeRegistry,
                         _orderRuleRegistry,
                         currentStep,
-                        _stepRateHz,
-                        _admissionResults);
+                        _stepRateHz);
                     if (result != OrderSubmitResult.Activated && result != OrderSubmitResult.Queued)
                     {
                         throw new InvalidOperationException(
                             $"Order admission batch {order.AdmissionBatchId} changed after successful preflight: row {i} returned {result}.");
                     }
 
-                    MarkActiveAdmissionPublished(order.Actor, order.OrderId, result);
                     CommitAdmission(in _entityAdmissionReservationsScratch[i], in order, result);
                     IncomingRevision++;
                 }
@@ -471,8 +446,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 _orderTypeRegistry,
                 _orderRuleRegistry,
                 currentStep,
-                _stepRateHz,
-                _admissionResults);
+                _stepRateHz);
 
             if (result == OrderSubmitResult.RejectedByRule && config.PendingBufferWindowMs > 0)
             {
@@ -579,87 +553,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _admissionResults.Commit(in reservation, in outcome);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static bool RequiresAdmissionFeedback(in Order order) =>
-            OrderAdmissionTracking.RequiresNetworkFeedback(in order);
-
-        private bool HasAdmissionCapacity(in Order order, int required)
-        {
-            if (!RequiresAdmissionFeedback(in order))
-            {
-                return true;
-            }
-
-            return _admissionResults.AvailableCapacity >= required;
-        }
-
-        private void PublishUnreportedActivation(Entity entity, ref OrderBuffer buffer)
-        {
-            if (!buffer.HasActive ||
-                buffer.ActiveOrder.AdmissionActivationPublished != 0 ||
-                !RequiresAdmissionFeedback(in buffer.ActiveOrder.Order))
-            {
-                return;
-            }
-
-            Order order = buffer.ActiveOrder.Order;
-            if (!HasAdmissionCapacity(in order, 1))
-            {
-                AdmissionBackpressureCount++;
-                return;
-            }
-
-            OrderAdmissionReservation reservation = _admissionResults.Reserve(
-                OrderAdmissionStage.EntityIntake,
-                order.OrderId,
-                order.OrderTypeId);
-            try
-            {
-                var outcome = new OrderAdmissionOutcome(
-                    in order,
-                    OrderAdmissionStage.EntityIntake,
-                    OrderSubmitResult.Activated);
-                _admissionResults.Commit(in reservation, in outcome);
-                buffer.ActiveOrder.AdmissionActivationPublished = 1;
-            }
-            catch
-            {
-                if (reservation.IsValid)
-                {
-                    _admissionResults.Cancel(in reservation);
-                }
-
-                throw;
-            }
-        }
-
-        private void MarkActiveAdmissionPublished(
-            Entity entity,
-            int orderId,
-            OrderSubmitResult result)
-        {
-            if (result != OrderSubmitResult.Activated ||
-                !World.IsAlive(entity) ||
-                !World.Has<OrderBuffer>(entity))
-            {
-                return;
-            }
-
-            ref OrderBuffer buffer = ref World.Get<OrderBuffer>(entity);
-            if (!buffer.HasActive || buffer.ActiveOrder.Order.OrderId != orderId)
-            {
-                return;
-            }
-
-            if (RequiresAdmissionFeedback(in buffer.ActiveOrder.Order))
-            {
-                buffer.ActiveOrder.AdmissionActivationPublished = 0;
-                return;
-            }
-
-            buffer.ActiveOrder.AdmissionActivationPublished = 1;
-        }
-
         public bool TryCancelAll(Entity entity)
         {
             if (!World.IsAlive(entity) || !World.Has<OrderBuffer>(entity))
@@ -667,29 +560,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 return false;
             }
 
-            ref OrderBuffer buffer = ref World.Get<OrderBuffer>(entity);
-            int correlatedWaiting = 0;
-            if (buffer.HasPending && RequiresAdmissionFeedback(in buffer.PendingOrder.Order))
-            {
-                correlatedWaiting++;
-            }
-
-            for (int i = 0; i < buffer.QueuedCount; i++)
-            {
-                Order queued = buffer.GetQueued(i).Order;
-                if (RequiresAdmissionFeedback(in queued))
-                {
-                    correlatedWaiting++;
-                }
-            }
-
-            if (correlatedWaiting > 0 && _admissionResults.AvailableCapacity < correlatedWaiting)
-            {
-                AdmissionBackpressureCount++;
-                return false;
-            }
-
-            OrderSubmitter.CancelAll(World, entity, _orderTypeRegistry, _admissionResults);
+            OrderSubmitter.CancelAll(World, entity, _orderTypeRegistry);
             return true;
         }
 
@@ -751,8 +622,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 _orderTypeRegistry,
                 _orderRuleRegistry,
                 currentStep,
-                _stepRateHz,
-                _admissionResults);
+                _stepRateHz);
         }
 
         public void NotifyOrderComplete(Entity entity)
@@ -804,8 +674,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     _orderTypeRegistry,
                     _orderRuleRegistry,
                     currentStep,
-                    _stepRateHz,
-                    _admissionResults);
+                    _stepRateHz);
                 if (result != previewResult)
                 {
                     throw new InvalidOperationException(

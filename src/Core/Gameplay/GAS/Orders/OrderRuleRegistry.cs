@@ -181,7 +181,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             int orderTypeId = order.OrderTypeId;
             if ((uint)orderTypeId >= OrderTypeRegistry.MaxOrderTypes)
             {
-                return OrderSubmitResult.InvalidOrderType;
+                return OrderSubmitResult.RejectedInvalidOrderType;
             }
 
             int count = _admissionValidatorCounts[orderTypeId];

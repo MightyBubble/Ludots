@@ -1,5 +1,4 @@
 using System;
-using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Networking.Commands;
 
 namespace Ludots.Core.Networking.Protocol
@@ -21,7 +20,9 @@ namespace Ludots.Core.Networking.Protocol
             out int bytesWritten)
         {
             bytesWritten = 0;
-            if (!IsKnownStage(outcome.Stage) || !IsKnownResult(outcome.Result))
+            if (!NetworkCommandAdmissionCodeSemantics.IsKnown(outcome.Stage) ||
+                !NetworkCommandAdmissionCodeSemantics.IsKnown(outcome.Result) ||
+                !NetworkCommandAdmissionCodeSemantics.IsValidStageCode(outcome.Stage, outcome.Result))
             {
                 return NetworkWireCodecStatus.InvalidEnum;
             }
@@ -108,13 +109,18 @@ namespace Ludots.Core.Networking.Protocol
                 return NetworkWireCodecStatus.InvalidEnum;
             }
 
+            var stage = (NetworkCommandAdmissionStage)stageByte;
+            var code = (NetworkCommandAdmissionCode)resultByte;
+            if (!NetworkCommandAdmissionCodeSemantics.IsValidStageCode(stage, code))
+            {
+                return NetworkWireCodecStatus.InvalidEnum;
+            }
+
             if (expectedSessionEpoch == 0 ||
                 sessionEpoch != expectedSessionEpoch ||
                 authenticatedSeat.Slot < 0 ||
                 authenticatedSeat.PlayerId <= 0 ||
-                !NetworkCommandAdmissionOutcome.IsValidCommittedTick(
-                    (OrderAdmissionStage)stageByte,
-                    committedTick) ||
+                !NetworkCommandAdmissionOutcome.IsValidCommittedTick(stage, committedTick) ||
                 actorCount < 0)
             {
                 return NetworkWireCodecStatus.InvalidInput;
@@ -128,22 +134,17 @@ namespace Ludots.Core.Networking.Protocol
                 orderId,
                 admissionBatchId,
                 admissionBatchIndex,
-                (OrderAdmissionStage)stageByte,
-                (OrderSubmitResult)resultByte,
+                stage,
+                code,
                 isReplay: replayByte == 1,
                 committedTick: committedTick);
             return NetworkWireCodecStatus.Success;
         }
 
-        private static bool IsKnownStage(OrderAdmissionStage stage) => IsKnownStageByte((byte)stage);
-
         private static bool IsKnownStageByte(byte value) =>
-            value is >= (byte)OrderAdmissionStage.GlobalIntake
-                and <= (byte)OrderAdmissionStage.NetworkIntake;
-
-        private static bool IsKnownResult(OrderSubmitResult result) => IsKnownResultByte((byte)result);
+            NetworkCommandAdmissionCodeSemantics.IsKnown((NetworkCommandAdmissionStage)value);
 
         private static bool IsKnownResultByte(byte value) =>
-            value <= (byte)OrderSubmitResult.Cancelled;
+            NetworkCommandAdmissionCodeSemantics.IsKnown((NetworkCommandAdmissionCode)value);
     }
 }

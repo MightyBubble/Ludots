@@ -304,7 +304,7 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
         OrderSubmitResult rejected = SubmitTraining(engine, core, playerId: 1, slot: 0, out _);
         Assert.Multiple(() =>
         {
-            Assert.That(rejected, Is.EqualTo(OrderSubmitResult.InsufficientResources));
+            Assert.That(rejected, Is.EqualTo(OrderSubmitResult.RejectedByRule));
             Assert.That(world.Get<OrderBuffer>(core).HasActive, Is.False);
             Assert.That(world.Get<OrderBuffer>(core).HasQueued, Is.False);
         });
@@ -347,7 +347,7 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
         Assert.Multiple(() =>
         {
             Assert.That(firstOutcome, Is.EqualTo(OrderSubmitResult.Queued));
-            Assert.That(secondOutcome, Is.EqualTo(OrderSubmitResult.InsufficientResources));
+            Assert.That(secondOutcome, Is.EqualTo(OrderSubmitResult.RejectedByRule));
             Assert.That(ReadAttribute(world, core, crystalAttributeId), Is.EqualTo(60f));
             Assert.That(world.Get<OrderBuffer>(core).QueuedCount, Is.EqualTo(1));
         });
