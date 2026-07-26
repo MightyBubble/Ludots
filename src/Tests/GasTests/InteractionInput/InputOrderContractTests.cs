@@ -2873,11 +2873,13 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             Assert.That(system.LastActivationResult.State, Is.EqualTo(InputOrderActivationState.Rejected));
             Assert.That(system.LastActivationResult.Actor, Is.EqualTo(foreignActor));
             Assert.That(system.LastActivationResult.OrderId, Is.Zero);
+            Assert.That(system.LastActivationResult.Target, Is.EqualTo(Entity.Null));
             Assert.That(system.LastActivationResult.Rejection, Is.EqualTo(OrderSubmitResult.RejectedInvalidActor));
         }
 
-        [Test]
-        public void CommandIntentRouting_EntityTargetFactsDriveEntityRouteBeforeGroundRule()
+        [TestCase(false)]
+        [TestCase(true)]
+        public void CommandIntentRouting_EntityTargetFactsDriveEntityRouteBeforeGroundRule(bool divergeSubmittedTargets)
         {
             var input = new FrozenInputActionReader();
             input.SetActionState("Command", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
@@ -2902,7 +2904,9 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             Entity targetOwner = world.Create(new PlayerIdentity { PlayerId = 2 });
             var commandHarness = CommandIntentProfileTests.Harness.Create(world);
             Entity commandActor = commandHarness.CreateActor(localPlayer, 1);
+            Entity secondCommandActor = commandHarness.CreateActor(localPlayer, 1);
             Entity clickedTarget = commandHarness.CreateTaggedEntity(targetOwner, "structure.garrisonable");
+            Entity alternateTarget = commandHarness.CreateTaggedEntity(targetOwner, "structure.garrisonable");
             commandHarness.InstallStandardProfile();
 
             var orders = new List<Order>();
@@ -2920,7 +2924,25 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 groundPos = new Vector3(250f, 0f, 400f);
                 return true;
             });
-            system.SetOrderSubmitHandler((in Order order) => { orders.Add(order); return OrderSubmitResult.Queued; });
+            system.SetOrderSubmitHandler((in Order _) =>
+            {
+                Assert.Fail("A shared entity-target command must use the atomic batch submit handler.");
+                return OrderSubmitResult.RejectedValidation;
+            });
+            system.SetOrderBatchSubmitHandler((Span<Order> batch) =>
+            {
+                for (int i = 0; i < batch.Length; i++)
+                {
+                    batch[i].OrderId = 777;
+                    if (divergeSubmittedTargets && i == 1)
+                    {
+                        batch[i].Target = alternateTarget;
+                    }
+                    orders.Add(batch[i]);
+                }
+
+                return OrderSubmitResult.Queued;
+            });
             system.SetOrderIdentityAssigner((ref Order order) => order.OrderId = 777);
             system.SetCommandIntentTargetFactsProvider((InputOrderMapping _, out CommandIntentTargetFacts facts) =>
             {
@@ -2974,7 +2996,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 EntityCollectionKeys.CommandSource,
                 EntityCollectionSourceKind.Explicit,
                 EntityCollectionRoleKind.CommandSource);
-            collections.Replace(localPlayer, in descriptor, new[] { commandActor }, localPlayer);
+            collections.Replace(localPlayer, in descriptor, new[] { commandActor, secondCommandActor }, localPlayer);
             system.SetCommandIntentRouting(
                 world,
                 stack,
@@ -2990,14 +3012,17 @@ namespace Ludots.Tests.GAS.Features.InputRouting
 
             system.Update(0f);
 
-            Assert.That(orders, Has.Count.EqualTo(1));
+            Assert.That(orders, Has.Count.EqualTo(2));
             Assert.That(orders[0].Actor, Is.EqualTo(commandActor));
+            Assert.That(orders[1].Actor, Is.EqualTo(secondCommandActor));
             Assert.That(orders[0].OrderTypeId, Is.EqualTo(1),
                 "An entity target fact must hit the entity rule before the ground move rule.");
             Assert.That(orders[0].Target, Is.EqualTo(clickedTarget),
                 "The winning entity route must preserve the player's clicked target in the submitted order.");
-            Assert.That(system.LastActivationResult.Target, Is.EqualTo(clickedTarget),
-                "The activation result must expose the entity target that was actually submitted.");
+            Assert.That(
+                system.LastActivationResult.Target,
+                Is.EqualTo(divergeSubmittedTargets ? Entity.Null : clickedTarget),
+                "The activation result must expose only an entity target shared by the submitted batch.");
             Assert.That(orders[0].Args.Spatial.Kind, Is.EqualTo(OrderSpatialKind.None),
                 "An entity-only route must not attach an unrelated ground target that changes the command shape.");
         }

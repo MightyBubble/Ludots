@@ -79,9 +79,10 @@ namespace Ludots.Core.Input.Orders
 
     public enum InputOrderActivationState : byte
     {
-        EnteredAiming = 0,
-        Submitted = 1,
-        Rejected = 2
+        None = 0,
+        EnteredAiming = 1,
+        Submitted = 2,
+        Rejected = 3
     }
 
     public readonly struct InputOrderActivationResult
@@ -113,8 +114,16 @@ namespace Ludots.Core.Input.Orders
 
         public static InputOrderActivationResult EnteredAiming(Entity actor) =>
             new(InputOrderActivationState.EnteredAiming, actor, 0, Entity.Null, default);
-        public static InputOrderActivationResult Submitted(Entity actor, int orderId, Entity target) =>
-            new(InputOrderActivationState.Submitted, actor, orderId, target, default);
+        public static InputOrderActivationResult Submitted(Entity actor, int orderId, Entity target)
+        {
+            if (target == default)
+            {
+                throw new InvalidOperationException(
+                    "Submitted input activation target must use Entity.Null for no entity target, not default(Entity).");
+            }
+
+            return new InputOrderActivationResult(InputOrderActivationState.Submitted, actor, orderId, target, default);
+        }
         public static InputOrderActivationResult Rejected(Entity actor, OrderSubmitResult reason) =>
             new(InputOrderActivationState.Rejected, actor, 0, Entity.Null, reason);
         public static InputOrderActivationResult Rejected(Entity actor, int orderId, OrderSubmitResult reason) =>
