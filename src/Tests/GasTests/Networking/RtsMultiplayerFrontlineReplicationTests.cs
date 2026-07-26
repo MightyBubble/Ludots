@@ -1686,6 +1686,11 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         PublishAdmission(observer, commands.LastSubmittedBatchSequence, NetworkCommandAdmissionStage.EntityIntake, NetworkCommandAdmissionCode.Activated);
         AssertHudContains(presentation, overlay, config.Hud.CommandStartedText);
 
+        PublishAdmission(observer, commands.LastSubmittedBatchSequence, NetworkCommandAdmissionStage.Terminal, NetworkCommandAdmissionCode.TerminalCompleted);
+        AssertHudContains(presentation, overlay, config.Hud.CommandCompletedText);
+
+        commands.SubmissionRevision++;
+        commands.LastSubmittedBatchSequence++;
         PublishAdmission(observer, commands.LastSubmittedBatchSequence, NetworkCommandAdmissionStage.NetworkIntake, NetworkCommandAdmissionCode.NetworkActorNotControlled);
         AssertHudContains(
             presentation,

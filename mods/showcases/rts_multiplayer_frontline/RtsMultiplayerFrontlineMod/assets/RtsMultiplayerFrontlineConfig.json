@@ -85,6 +85,7 @@
     "commandQueuedText": "Command queued",
     "commandPendingText": "Command waiting for conditions",
     "commandStartedText": "Command started",
+    "commandCompletedText": "Command completed",
     "commandSubmitRejectionText": {
       "EmptyBatch": "Command not sent: no units were selected",
       "NotConnected": "Command not sent: connection unavailable",

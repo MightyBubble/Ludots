@@ -65,6 +65,8 @@ public sealed class NetworkRuntimeStateObserverTests
 
         observer.OnClientAdmission(in activated);
         observer.OnClientAdmission(in completed);
+        NetworkCommandAdmissionOutcome staleActivated = activated.AsReplay();
+        observer.OnClientAdmission(in staleActivated);
 
         Assert.Multiple(() =>
         {
@@ -74,6 +76,7 @@ public sealed class NetworkRuntimeStateObserverTests
             Assert.That(NetworkCommandAdmissionCodeSemantics.IsAcceptedProgress(summary.Result), Is.True);
             Assert.That(observer.TryGetClientActorAdmission(1, 0, out NetworkCommandAdmissionOutcome actor), Is.True);
             Assert.That(actor.Result, Is.EqualTo(NetworkCommandAdmissionCode.Activated));
+            Assert.That(observer.ClientAdmissionRevision, Is.EqualTo(2));
         });
     }
 

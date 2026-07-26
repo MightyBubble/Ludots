@@ -273,6 +273,7 @@ public sealed class FrontlineHudConfig
     public string CommandQueuedText { get; set; } = string.Empty;
     public string CommandPendingText { get; set; } = string.Empty;
     public string CommandStartedText { get; set; } = string.Empty;
+    public string CommandCompletedText { get; set; } = string.Empty;
     public FrontlineHudLayoutConfig Layout { get; set; } = new();
     public Dictionary<string, string> CommandSubmitRejectionText { get; set; } = new(StringComparer.Ordinal);
     public Dictionary<string, string> CommandAdmissionRejectionText { get; set; } = new(StringComparer.Ordinal);
@@ -305,7 +306,8 @@ public sealed class FrontlineHudConfig
             string.IsNullOrWhiteSpace(CommandAcceptedText) ||
             string.IsNullOrWhiteSpace(CommandQueuedText) ||
             string.IsNullOrWhiteSpace(CommandPendingText) ||
-            string.IsNullOrWhiteSpace(CommandStartedText))
+            string.IsNullOrWhiteSpace(CommandStartedText) ||
+            string.IsNullOrWhiteSpace(CommandCompletedText))
         {
             throw new InvalidOperationException("RTS Frontline HUD copy must be fully configured.");
         }

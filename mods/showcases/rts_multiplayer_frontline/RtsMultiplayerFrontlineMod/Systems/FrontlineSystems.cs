@@ -1153,6 +1153,8 @@ internal sealed class FrontlinePresentationSystem : ISystem<float>
                 hud.CommandQueuedText,
             NetworkCommandAdmissionStage.EntityIntake when admission.Result == NetworkCommandAdmissionCode.Pending =>
                 hud.CommandPendingText,
+            NetworkCommandAdmissionStage.Terminal when admission.Result == NetworkCommandAdmissionCode.TerminalCompleted =>
+                hud.CommandCompletedText,
             _ => hud.ResolveAdmissionRejection(admission.Result),
         };
     }

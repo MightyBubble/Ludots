@@ -420,7 +420,7 @@ namespace Ludots.Core.Networking.Runtime
                     _ => throw new InvalidOperationException(
                         $"Non-rejected EntityIntake cannot carry admission code {outcome.Result}."),
                 },
-                NetworkCommandAdmissionStage.Terminal => 4,
+                NetworkCommandAdmissionStage.Terminal => 6,
                 _ => throw new InvalidOperationException(
                     $"Unknown network command admission stage {outcome.Stage}."),
             };
