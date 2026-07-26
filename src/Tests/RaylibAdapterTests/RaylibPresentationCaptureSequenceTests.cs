@@ -51,10 +51,44 @@ public sealed class RaylibPresentationCaptureSequenceTests
         Assert.That(sequence.HasPending, Is.False);
     }
 
+    [Test]
+    public void SparseConfiguredMilestones_SkipUnselectedStagesWithoutMissingSelectedEvidence()
+    {
+        var source = new TestMilestoneSource(
+            new Dictionary<string, int>(StringComparer.Ordinal)
+            {
+                ["setup"] = 0,
+                ["ready"] = 1,
+                ["gathering"] = 2,
+                ["training"] = 3,
+                ["advancing"] = 4,
+                ["engaging"] = 5,
+                ["completed"] = 6,
+            },
+            new PresentationCaptureMilestoneSnapshot("setup", 0, 1));
+        RaylibPresentationCaptureSequence sequence = RaylibPresentationCaptureSequence.Create(
+            source,
+            "capture.png",
+            "ready,advancing,engaging,completed");
+
+        source.Current = new PresentationCaptureMilestoneSnapshot("ready", 1, 2);
+        Assert.That(sequence.TryPrepareCapture(10, out RaylibPresentationCaptureRequest ready), Is.True);
+        sequence.CompleteCapture(in ready);
+
+        source.Current = new PresentationCaptureMilestoneSnapshot("gathering", 2, 3);
+        Assert.That(sequence.TryPrepareCapture(20, out _), Is.False);
+
+        source.Current = new PresentationCaptureMilestoneSnapshot("training", 3, 4);
+        Assert.That(sequence.TryPrepareCapture(30, out _), Is.False);
+
+        source.Current = new PresentationCaptureMilestoneSnapshot("advancing", 4, 5);
+        Assert.That(sequence.TryPrepareCapture(40, out RaylibPresentationCaptureRequest advancing), Is.True);
+        Assert.That(advancing.Milestone, Is.EqualTo("advancing"));
+    }
+
     [TestCase("formed,,battle", "non-empty ASCII identifier")]
     [TestCase("formed,battle,formed", "configured more than once")]
     [TestCase("battle,formed", "does not follow configured order")]
-    [TestCase("formed,result", "must immediately follow")]
     [TestCase("formed,not-known", "unknown")]
     [TestCase("formed,bad milestone", "non-empty ASCII identifier")]
     public void InvalidConfiguration_FailsBeforeCapture(string configured, string expectedMessage)
