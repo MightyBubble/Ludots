@@ -934,6 +934,7 @@ namespace Ludots.Tests.Presentation
                     Scale = Vector3.One,
                 },
                 new CullState { IsVisible = true, LOD = LODLevel.High },
+                new FacingDirection { AngleRad = 0.25f },
                 new PresentationStableId { Value = 7301 },
                 new PresentationOwnerHasPerformerPayload());
 
@@ -1041,6 +1042,7 @@ namespace Ludots.Tests.Presentation
             movedOwnerTransform.Position = new Vector3(30f, 5f, 40f);
             movedOwnerTransform.Rotation = expectedRotation;
             movedOwnerTransform.Scale = expectedScale;
+            world.Get<FacingDirection>(owner).AngleRad = 1.25f;
             world.Get<WorldPositionCm>(owner).Value = WorldPositionCm.FromCm(3000, 4000).Value;
             sync.Update(0.016f);
             emit.Update(0.016f);
@@ -1050,9 +1052,13 @@ namespace Ludots.Tests.Presentation
             Assert.That(world.Get<PerformerWorldPosition>(body).Value, Is.EqualTo(movedOwnerTransform.Position));
             Assert.That(world.Get<PerformerWorldRotation>(body).Value, Is.EqualTo(expectedRotation));
             Assert.That(world.Get<PerformerWorldScale>(body).Value, Is.EqualTo(expectedScale));
+            Assert.That(world.Get<PerformerWorldFacing>(body).HasValue, Is.EqualTo(1));
+            Assert.That(world.Get<PerformerWorldFacing>(body).AngleRad, Is.EqualTo(1.25f));
             Assert.That(world.Get<PerformerWorldPosition>(marker).Value, Is.EqualTo(movedOwnerTransform.Position));
             Assert.That(world.Get<PerformerWorldRotation>(marker).Value, Is.EqualTo(expectedRotation));
             Assert.That(world.Get<PerformerWorldScale>(marker).Value, Is.EqualTo(expectedScale));
+            Assert.That(world.Get<PerformerWorldFacing>(marker).HasValue, Is.EqualTo(1));
+            Assert.That(world.Get<PerformerWorldFacing>(marker).AngleRad, Is.EqualTo(1.25f));
             Assert.That(world.Get<PerformerState>(body).StableId, Is.EqualTo(bodyStableId));
             Assert.That(world.Get<PerformerState>(marker).StableId, Is.EqualTo(markerStableId));
             Assert.That(world.Get<PerformerState>(body).OwnerStableId, Is.EqualTo(7301));
@@ -1150,6 +1156,93 @@ namespace Ludots.Tests.Presentation
             }
 
             return GC.GetAllocatedBytesForCurrentThread() - before;
+        }
+
+        [Test]
+        public void ParentDrivenTransformPropagation_DoesNotOverwriteIndependentTransformSources()
+        {
+            using var world = World.Create();
+            var instances = new PerformerEntityRuntime(world);
+            var definitions = new PerformerDefinitionRegistry();
+            int definitionId = definitions.Register(
+                "behavior.parent_propagation.independent_source",
+                new PerformerDefinition());
+            instances.BindDefinitions(definitions);
+            Entity owner = world.Create();
+            Entity root = instances.Create(
+                definitionId,
+                owner,
+                1,
+                PresentationAnchorKind.WorldPosition,
+                Vector3.Zero,
+                9301,
+                Entity.Null,
+                definitions.Get(definitionId));
+            TransformSource[] independentSources =
+            [
+                TransformSource.BoneAttached,
+                TransformSource.SplineDriven,
+                TransformSource.WorldFixed,
+            ];
+            Entity[] children = new Entity[independentSources.Length];
+            PerformerTransformSnapshot[] expected = new PerformerTransformSnapshot[independentSources.Length];
+            Vector2[] expectedPlanePositions = new Vector2[independentSources.Length];
+
+            for (int i = 0; i < independentSources.Length; i++)
+            {
+                Entity child = instances.Create(
+                    definitionId,
+                    owner,
+                    i + 2,
+                    PresentationAnchorKind.WorldPosition,
+                    Vector3.Zero,
+                    9302 + i,
+                    root,
+                    definitions.Get(definitionId));
+                Vector3 position = new Vector3(10f + i, 20f + i, 30f + i);
+                Quaternion rotation = Quaternion.CreateFromAxisAngle(Vector3.UnitY, 0.2f + i);
+                Vector3 scale = new Vector3(1f + i, 2f + i, 3f + i);
+                PerformerWorldFacing facing = new PerformerWorldFacing
+                {
+                    AngleRad = 0.4f + i,
+                    HasValue = 1,
+                };
+                Vector2 planePosition = new Vector2(1000f + i, 2000f + i);
+                world.Get<PerformerTransformSource>(child).Value = independentSources[i];
+                world.Get<PerformerWorldPosition>(child).Value = position;
+                world.Get<PerformerWorldPlanePosition>(child).ValueCm = planePosition;
+                world.Get<PerformerWorldRotation>(child).Value = rotation;
+                world.Get<PerformerWorldFacing>(child) = facing;
+                world.Get<PerformerWorldScale>(child).Value = scale;
+                children[i] = child;
+                expected[i] = new PerformerTransformSnapshot
+                {
+                    WorldPosition = position,
+                    WorldRotation = rotation,
+                    WorldScale = scale,
+                    WorldFacing = facing,
+                    TransformSource = independentSources[i],
+                };
+                expectedPlanePositions[i] = planePosition;
+            }
+
+            world.Get<PerformerWorldPosition>(root).Value = new Vector3(100f, 200f, 300f);
+            world.Get<PerformerWorldRotation>(root).Value = Quaternion.CreateFromAxisAngle(Vector3.UnitY, 2.5f);
+            world.Get<PerformerWorldFacing>(root) = new PerformerWorldFacing { AngleRad = 2f, HasValue = 1 };
+            world.Get<PerformerWorldScale>(root).Value = new Vector3(4f, 5f, 6f);
+            instances.PropagateParentDrivenTransforms(root);
+
+            for (int i = 0; i < children.Length; i++)
+            {
+                Entity child = children[i];
+                Assert.That(world.Get<PerformerTransformSource>(child).Value, Is.EqualTo(expected[i].TransformSource));
+                Assert.That(world.Get<PerformerWorldPosition>(child).Value, Is.EqualTo(expected[i].WorldPosition));
+                Assert.That(world.Get<PerformerWorldPlanePosition>(child).ValueCm, Is.EqualTo(expectedPlanePositions[i]));
+                Assert.That(world.Get<PerformerWorldRotation>(child).Value, Is.EqualTo(expected[i].WorldRotation));
+                Assert.That(world.Get<PerformerWorldFacing>(child).HasValue, Is.EqualTo(expected[i].WorldFacing.HasValue));
+                Assert.That(world.Get<PerformerWorldFacing>(child).AngleRad, Is.EqualTo(expected[i].WorldFacing.AngleRad));
+                Assert.That(world.Get<PerformerWorldScale>(child).Value, Is.EqualTo(expected[i].WorldScale));
+            }
         }
 
         [Test]
@@ -1266,7 +1359,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void Attachment_TargetParent_ChildFollowsEntityAnchoredParentTransformSync()
+        public void Attachment_TargetParent_ChildFollowsEntityAnchoredParentTransformSyncAndFreezesWhenDisabled()
         {
             using var world = World.Create();
             var instances = new PerformerEntityRuntime(world);
