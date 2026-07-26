@@ -417,7 +417,7 @@ namespace Ludots.Adapter.Raylib
                         bool hostDebugGuidesSuppressed =
                             activeMapHidesDebugGuides ||
                             benchmarkController is { IsActive: true, SuppressHostDebugGuides: true };
-                        bool drawTerrain = renderDebug.DrawTerrain && !cleanPerformanceMode;
+                        bool drawTerrain = false;
                         bool drawVisualHeightmap = renderDebug.DrawTerrain;
                         bool hasVisualHeightmap = engine.TryGetService(
                             CoreServiceKeys.VisualHeightmap,
