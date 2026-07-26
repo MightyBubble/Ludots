@@ -1171,24 +1171,41 @@ namespace Ludots.Adapter.Raylib
                 extension = ".png";
             }
 
-            string temporaryPath = Path.Combine(
-                directory,
-                $".{Path.GetFileNameWithoutExtension(fullTargetPath)}.{Environment.ProcessId}.{Guid.NewGuid():N}.tmp{extension}");
+            string temporaryFileName =
+                $".{Path.GetFileNameWithoutExtension(fullTargetPath)}.{Environment.ProcessId}.{Guid.NewGuid():N}.tmp{extension}";
+            string workingTemporaryPath = Path.Combine(Environment.CurrentDirectory, temporaryFileName);
+            string targetTemporaryPath = Path.Combine(directory, temporaryFileName);
             try
             {
-                Rl.TakeScreenshot(temporaryPath);
-                if (!File.Exists(temporaryPath) || new FileInfo(temporaryPath).Length == 0)
+                Rl.TakeScreenshot(temporaryFileName);
+                if (!File.Exists(workingTemporaryPath) || new FileInfo(workingTemporaryPath).Length == 0)
                 {
-                    throw new IOException($"Raylib did not write a non-empty screenshot temporary file '{temporaryPath}'.");
+                    throw new IOException(
+                        $"Raylib did not write a non-empty screenshot temporary file '{workingTemporaryPath}'.");
                 }
 
-                File.Move(temporaryPath, fullTargetPath, overwrite: true);
+                if (!string.Equals(workingTemporaryPath, targetTemporaryPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    File.Copy(workingTemporaryPath, targetTemporaryPath, overwrite: true);
+                    if (!File.Exists(targetTemporaryPath) || new FileInfo(targetTemporaryPath).Length == 0)
+                    {
+                        throw new IOException(
+                            $"Screenshot staging did not produce a non-empty temporary file '{targetTemporaryPath}'.");
+                    }
+                }
+
+                File.Move(targetTemporaryPath, fullTargetPath, overwrite: true);
             }
             finally
             {
-                if (File.Exists(temporaryPath))
+                if (File.Exists(workingTemporaryPath))
                 {
-                    File.Delete(temporaryPath);
+                    File.Delete(workingTemporaryPath);
+                }
+                if (!string.Equals(workingTemporaryPath, targetTemporaryPath, StringComparison.OrdinalIgnoreCase) &&
+                    File.Exists(targetTemporaryPath))
+                {
+                    File.Delete(targetTemporaryPath);
                 }
             }
         }
