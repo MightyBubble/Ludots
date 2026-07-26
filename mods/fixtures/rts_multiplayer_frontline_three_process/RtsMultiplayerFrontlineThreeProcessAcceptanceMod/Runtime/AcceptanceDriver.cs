@@ -693,7 +693,8 @@ internal sealed class AcceptanceDriver : ISystem<float>
             }
             _substep = 5;
         }
-        if (!HaveAllSelectedActorsMoved(_plan.Battle.MinimumObservedMoveCm))
+        if (!HaveAllSelectedActorsMoved(_plan.Battle.MinimumObservedMoveCm) ||
+            !AreSelectedActorsVisibleWithPerformerPayload())
         {
             return;
         }
@@ -1916,6 +1917,24 @@ internal sealed class AcceptanceDriver : ISystem<float>
             }
         }
         return liveCount > 0;
+    }
+
+    private bool AreSelectedActorsVisibleWithPerformerPayload()
+    {
+        Entity owner = RequireLocalPlayerEntity();
+        int count = _collections!.CopyEntities(owner, EntityCollectionKeys.CommandSource, _entityScratch);
+        if (count <= 0)
+        {
+            return false;
+        }
+        for (int i = 0; i < count; i++)
+        {
+            if (!HasVisiblePerformerPayload(_entityScratch[i]))
+            {
+                return false;
+            }
+        }
+        return true;
     }
 
     private bool HaveAllSelectedActorsMoved(int minimumCm)

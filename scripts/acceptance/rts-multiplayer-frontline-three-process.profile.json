@@ -43,7 +43,7 @@
   "requiredFramebufferEvidence": [
     {
       "role": "commandCore",
-      "milestones": ["ready", "advancing"],
+      "milestones": ["ready"],
       "presentationTemplate": "rts.frontline.core.base",
       "acceptedColors": [
         { "red": 31, "green": 41, "blue": 48 }
@@ -55,7 +55,7 @@
     },
     {
       "role": "harvesterCargo",
-      "milestones": ["ready", "advancing"],
+      "milestones": ["ready"],
       "presentationTemplate": "rts.frontline.harvester.cargo",
       "acceptedColors": [
         { "red": 255, "green": 166, "blue": 31 }
@@ -93,7 +93,7 @@
   "requiredPresentationReceipts": [
     {
       "role": "core",
-      "milestones": ["ready", "advancing"],
+      "milestones": ["ready"],
       "template": "rts.frontline.core.base",
       "minimumSubmitted": 1,
       "minimumOnscreen": 1,
@@ -102,7 +102,7 @@
     },
     {
       "role": "harvester",
-      "milestones": ["ready", "advancing"],
+      "milestones": ["ready"],
       "template": "rts.frontline.harvester.chassis",
       "minimumSubmitted": 2,
       "minimumOnscreen": 2,
@@ -110,11 +110,20 @@
       "minimumAreaPx2": 320
     },
     {
-      "role": "infantry",
-      "milestones": ["ready", "advancing", "engaging"],
+      "role": "openingInfantry",
+      "milestones": ["ready"],
       "template": "rts.frontline.infantry.body",
       "minimumSubmitted": 2,
       "minimumOnscreen": 2,
+      "minimumShortEdgePx": 14,
+      "minimumAreaPx2": 220
+    },
+    {
+      "role": "frontlineInfantry",
+      "milestones": ["advancing", "engaging"],
+      "template": "rts.frontline.infantry.body",
+      "minimumSubmitted": 1,
+      "minimumOnscreen": 1,
       "minimumShortEdgePx": 14,
       "minimumAreaPx2": 220
     },
