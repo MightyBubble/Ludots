@@ -70,7 +70,9 @@ internal sealed class AcceptanceDriver : ISystem<float>
     private readonly Entity[] _entityScratch = new Entity[32];
     private readonly Entity[] _selectionTargets = new Entity[32];
     private readonly Entity[] _commandActors = new Entity[32];
+    private readonly Entity[] _preservedCommandActors = new Entity[32];
     private readonly List<AcceptanceAdmissionTransitionEvidence> _pendingAdmissionHistory = new();
+    private readonly List<AcceptanceAdmissionTransitionEvidence> _preservedAdmissionHistory = new();
     private readonly NetworkCommandAdmissionOutcome[] _admissionProgressScratch;
 
     private PlayerInputHandler? _input;
@@ -91,9 +93,12 @@ internal sealed class AcceptanceDriver : ISystem<float>
     private int _selectionTargetCount;
     private int _selectionTargetIndex;
     private int _commandActorCount;
+    private int _preservedCommandActorCount;
     private float _gatherCrystalsBeforeCommand;
     private string _pendingCommandAction = string.Empty;
     private ulong _pendingCommandSequence;
+    private string _preservedCommandAction = string.Empty;
+    private ulong _preservedCommandSequence;
     private long _stageStartedTimestamp;
     private long _meetingReachedTimestamp;
     private long _lastEvidenceCheckpointTimestamp;
@@ -280,7 +285,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
     {
         BindClientServices();
         TrackClientObservations();
-        TrackPendingAdmissionProgress();
+        TrackInFlightAdmissionProgress();
         EnforceClientStageTimeout();
         switch (_clientStage)
         {
@@ -593,11 +598,10 @@ internal sealed class AcceptanceDriver : ISystem<float>
         }
         if (_substep == 3)
         {
-            if (!TryCompletePendingCommand())
+            if (!TryPreserveActivatedPendingCommand())
             {
                 return;
             }
-            ValidateTrainingAdmission(requireEntityQueue: false);
             BeginButtonGesture(
                 "SkillQ",
                 expectsCommand: true,
@@ -617,20 +621,29 @@ internal sealed class AcceptanceDriver : ISystem<float>
         }
         if (_substep == 5)
         {
+            if (!TryCompletePreservedCommand())
+            {
+                return;
+            }
+            ValidateTrainingAdmission(requireEntityQueue: false);
+            _substep = 6;
+        }
+        if (_substep == 6)
+        {
             if (!TryCompletePendingCommand())
             {
                 return;
             }
-            _substep = 6;
+            _substep = 7;
         }
-        if (_substep == 6)
+        if (_substep == 7)
         {
             if (_evidence.Gameplay.SecondTrainedInfantryObservedCommittedTick <= 0)
             {
                 return;
             }
             ValidateTrainingAdmission(requireEntityQueue: true);
-            _substep = 7;
+            _substep = 8;
         }
 
         float crystals = ReadAttribute(core, _crystalAttributeId);
@@ -1623,32 +1636,104 @@ internal sealed class AcceptanceDriver : ISystem<float>
         {
             throw new InvalidOperationException("Acceptance has no pending command sequence.");
         }
+
+        if (!TryCompleteCommand(
+                _pendingCommandSequence,
+                _pendingCommandAction,
+                _commandActorCount,
+                _commandActors,
+                _pendingAdmissionHistory))
+        {
+            return false;
+        }
+
+        ClearPendingCommand();
+        return true;
+    }
+
+    private bool TryPreserveActivatedPendingCommand()
+    {
+        if (_pendingCommandSequence == 0)
+        {
+            throw new InvalidOperationException("Acceptance has no pending command sequence to preserve.");
+        }
+        if (_preservedCommandSequence != 0 || _preservedAdmissionHistory.Count != 0)
+        {
+            throw new InvalidOperationException("Acceptance already has a preserved in-flight command.");
+        }
         if (!_observer.TryGetClientAdmission(_pendingCommandSequence, out NetworkCommandAdmissionOutcome summary))
         {
             return false;
         }
-        TrackPendingAdmissionProgress();
-        if (summary.PlayerId != _localPlayerId || summary.SeatSlot != _evidence.SeatSlot)
+
+        TrackAdmissionProgress(_pendingCommandSequence, _pendingAdmissionHistory);
+        ValidateAdmissionSummary(
+            in summary,
+            _pendingCommandSequence,
+            _pendingCommandAction,
+            _commandActorCount);
+        if (summary.Stage == NetworkCommandAdmissionStage.Terminal)
         {
             throw new InvalidOperationException(
-                $"Admission sequence {_pendingCommandSequence} belongs to player {summary.PlayerId}/seat {summary.SeatSlot}, " +
-                $"not {_localPlayerId}/{_evidence.SeatSlot}.");
+                $"Command {_pendingCommandAction} sequence {_pendingCommandSequence} completed before the overlapping queued command was submitted.");
         }
-        if (summary.ActorCount != _commandActorCount || summary.ActorCount <= 0)
+        if (summary.Stage != NetworkCommandAdmissionStage.EntityIntake ||
+            summary.Result != NetworkCommandAdmissionCode.Activated)
         {
-            throw new InvalidOperationException(
-                $"Admission sequence {_pendingCommandSequence} actorCount={summary.ActorCount}; selected actorCount={_commandActorCount}.");
-        }
-        if (IsAdmissionRejection(summary.Result))
-        {
-            throw new InvalidOperationException(
-                $"Command {_pendingCommandAction} sequence {_pendingCommandSequence} was rejected at {summary.Stage}: {summary.Result}.");
+            return false;
         }
 
+        _preservedCommandSequence = _pendingCommandSequence;
+        _preservedCommandAction = _pendingCommandAction;
+        _preservedCommandActorCount = _commandActorCount;
+        Array.Copy(_commandActors, _preservedCommandActors, _commandActorCount);
+        _preservedAdmissionHistory.AddRange(_pendingAdmissionHistory);
+        ClearPendingCommand();
+        return true;
+    }
+
+    private bool TryCompletePreservedCommand()
+    {
+        if (_preservedCommandSequence == 0)
+        {
+            throw new InvalidOperationException("Acceptance has no preserved in-flight command.");
+        }
+
+        if (!TryCompleteCommand(
+                _preservedCommandSequence,
+                _preservedCommandAction,
+                _preservedCommandActorCount,
+                _preservedCommandActors,
+                _preservedAdmissionHistory))
+        {
+            return false;
+        }
+
+        _preservedCommandSequence = 0;
+        _preservedCommandAction = string.Empty;
+        _preservedCommandActorCount = 0;
+        _preservedAdmissionHistory.Clear();
+        return true;
+    }
+
+    private bool TryCompleteCommand(
+        ulong sequence,
+        string action,
+        int actorCount,
+        Entity[] actors,
+        List<AcceptanceAdmissionTransitionEvidence> admissionHistory)
+    {
+        if (!_observer.TryGetClientAdmission(sequence, out NetworkCommandAdmissionOutcome summary))
+        {
+            return false;
+        }
+
+        TrackAdmissionProgress(sequence, admissionHistory);
+        ValidateAdmissionSummary(in summary, sequence, action, actorCount);
         var actorAdmissions = new AcceptanceActorAdmissionEvidence[summary.ActorCount];
         for (int i = 0; i < summary.ActorCount; i++)
         {
-            if (!_observer.TryGetClientActorAdmission(_pendingCommandSequence, checked((ushort)i), out NetworkCommandAdmissionOutcome actor))
+            if (!_observer.TryGetClientActorAdmission(sequence, checked((ushort)i), out NetworkCommandAdmissionOutcome actor))
             {
                 return false;
             }
@@ -1659,7 +1744,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
             if (IsAdmissionRejection(actor.Result))
             {
                 throw new InvalidOperationException(
-                    $"Command {_pendingCommandAction} sequence {_pendingCommandSequence} actor {i} was rejected: {actor.Result}.");
+                    $"Command {action} sequence {sequence} actor {i} was rejected: {actor.Result}.");
             }
             if (actor.Result != NetworkCommandAdmissionCode.Activated)
             {
@@ -1680,9 +1765,9 @@ internal sealed class AcceptanceDriver : ISystem<float>
         bool observedNetworkIntake = false;
         bool observedEntityActivation = false;
         bool observedTerminalCompletion = false;
-        for (int i = 0; i < _pendingAdmissionHistory.Count; i++)
+        for (int i = 0; i < admissionHistory.Count; i++)
         {
-            AcceptanceAdmissionTransitionEvidence transition = _pendingAdmissionHistory[i];
+            AcceptanceAdmissionTransitionEvidence transition = admissionHistory[i];
             observedNetworkIntake |=
                 transition.Stage == NetworkCommandAdmissionStage.NetworkIntake.ToString() &&
                 transition.Result == NetworkCommandAdmissionCode.NetworkScheduled.ToString();
@@ -1696,55 +1781,97 @@ internal sealed class AcceptanceDriver : ISystem<float>
         if (!observedNetworkIntake || !observedEntityActivation || !observedTerminalCompletion)
         {
             throw new InvalidOperationException(
-                $"Command {_pendingCommandAction} sequence {_pendingCommandSequence} did not expose its full " +
+                $"Command {action} sequence {sequence} did not expose its full " +
                 "NetworkIntake-to-Terminal admission history.");
         }
 
-        var handles = new string[_commandActorCount];
-        for (int i = 0; i < _commandActorCount; i++)
+        var handles = new string[actorCount];
+        for (int i = 0; i < actorCount; i++)
         {
-            handles[i] = FormatHandle(_commandActors[i]);
+            handles[i] = FormatHandle(actors[i]);
         }
         _evidence.Commands.Add(new AcceptanceCommandEvidence
         {
-            Action = _pendingCommandAction,
-            ClientBatchSequence = _pendingCommandSequence,
+            Action = action,
+            ClientBatchSequence = sequence,
             ActorCount = summary.ActorCount,
             AdmissionStage = summary.Stage.ToString(),
             AdmissionResult = summary.Result.ToString(),
             ActorHandles = handles,
-            AdmissionHistory = _pendingAdmissionHistory.ToArray(),
+            AdmissionHistory = admissionHistory.ToArray(),
             ActorAdmissions = actorAdmissions,
         });
+        return true;
+    }
+
+    private void ValidateAdmissionSummary(
+        in NetworkCommandAdmissionOutcome summary,
+        ulong sequence,
+        string action,
+        int actorCount)
+    {
+        if (summary.PlayerId != _localPlayerId || summary.SeatSlot != _evidence.SeatSlot)
+        {
+            throw new InvalidOperationException(
+                $"Admission sequence {sequence} belongs to player {summary.PlayerId}/seat {summary.SeatSlot}, " +
+                $"not {_localPlayerId}/{_evidence.SeatSlot}.");
+        }
+        if (summary.ActorCount != actorCount || summary.ActorCount <= 0)
+        {
+            throw new InvalidOperationException(
+                $"Admission sequence {sequence} actorCount={summary.ActorCount}; selected actorCount={actorCount}.");
+        }
+        if (IsAdmissionRejection(summary.Result))
+        {
+            throw new InvalidOperationException(
+                $"Command {action} sequence {sequence} was rejected at {summary.Stage}: {summary.Result}.");
+        }
+    }
+
+    private void ClearPendingCommand()
+    {
         _pendingCommandSequence = 0;
         _pendingCommandAction = string.Empty;
         _commandActorCount = 0;
         _pendingAdmissionHistory.Clear();
-        return true;
     }
 
-    private void TrackPendingAdmissionProgress()
+    private void TrackInFlightAdmissionProgress()
     {
-        if (_pendingCommandSequence == 0 ||
+        if (_pendingCommandSequence != 0)
+        {
+            TrackAdmissionProgress(_pendingCommandSequence, _pendingAdmissionHistory);
+        }
+        if (_preservedCommandSequence != 0)
+        {
+            TrackAdmissionProgress(_preservedCommandSequence, _preservedAdmissionHistory);
+        }
+    }
+
+    private void TrackAdmissionProgress(
+        ulong sequence,
+        List<AcceptanceAdmissionTransitionEvidence> admissionHistory)
+    {
+        if (sequence == 0 ||
             !_observer.TryCopyClientAdmissionProgress(
-                _pendingCommandSequence,
+                sequence,
                 _admissionProgressScratch,
                 out int progressCount))
         {
             return;
         }
 
-        if (_pendingAdmissionHistory.Count > progressCount)
+        if (admissionHistory.Count > progressCount)
         {
             throw new InvalidOperationException(
-                $"Admission history for sequence {_pendingCommandSequence} regressed from " +
-                $"{_pendingAdmissionHistory.Count} to {progressCount} stages.");
+                $"Admission history for sequence {sequence} regressed from " +
+                $"{admissionHistory.Count} to {progressCount} stages.");
         }
 
-        for (int i = _pendingAdmissionHistory.Count; i < progressCount; i++)
+        for (int i = admissionHistory.Count; i < progressCount; i++)
         {
             NetworkCommandAdmissionOutcome outcome = _admissionProgressScratch[i];
-            _pendingAdmissionHistory.Add(new AcceptanceAdmissionTransitionEvidence
+            admissionHistory.Add(new AcceptanceAdmissionTransitionEvidence
             {
                 Stage = outcome.Stage.ToString(),
                 Result = outcome.Result.ToString(),
