@@ -425,6 +425,7 @@ public sealed class NetworkWireCodecTests
         Span<byte> buffer = stackalloc byte[CommandAdmissionWireCodec.SizeInBytes];
         NetworkCommandAdmissionCode[] terminalResults =
         {
+            NetworkCommandAdmissionCode.TerminalCompleted,
             NetworkCommandAdmissionCode.TerminalFailed,
             NetworkCommandAdmissionCode.TerminalCancelled,
         };

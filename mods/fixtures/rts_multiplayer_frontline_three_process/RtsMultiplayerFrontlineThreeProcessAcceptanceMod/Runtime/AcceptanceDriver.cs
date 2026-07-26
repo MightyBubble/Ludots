@@ -1387,12 +1387,12 @@ internal sealed class AcceptanceDriver : ISystem<float>
         AcceptanceCommandEvidence command = _evidence.Commands[^1];
         string expectedAction = requireEntityQueue ? "QueueTrainInfantry" : "TrainInfantry";
         if (!string.Equals(command.Action, expectedAction, StringComparison.Ordinal) ||
-            !string.Equals(command.AdmissionStage, NetworkCommandAdmissionStage.EntityIntake.ToString(), StringComparison.Ordinal) ||
-            !string.Equals(command.AdmissionResult, NetworkCommandAdmissionCode.Activated.ToString(), StringComparison.Ordinal))
+            !string.Equals(command.AdmissionStage, NetworkCommandAdmissionStage.Terminal.ToString(), StringComparison.Ordinal) ||
+            !string.Equals(command.AdmissionResult, NetworkCommandAdmissionCode.TerminalCompleted.ToString(), StringComparison.Ordinal))
         {
             throw new InvalidOperationException(
                 $"Training admission ended as {command.Action}/{command.AdmissionStage}/{command.AdmissionResult}; " +
-                $"expected {expectedAction}/EntityIntake/Activated.");
+                $"expected {expectedAction}/Terminal/TerminalCompleted.");
         }
 
         int queuedIndex = -1;
@@ -1672,12 +1672,14 @@ internal sealed class AcceptanceDriver : ISystem<float>
                 Result = actor.Result.ToString(),
             };
         }
-        if (summary.Stage != NetworkCommandAdmissionStage.EntityIntake || summary.Result != NetworkCommandAdmissionCode.Activated)
+        if (summary.Stage != NetworkCommandAdmissionStage.Terminal ||
+            summary.Result != NetworkCommandAdmissionCode.TerminalCompleted)
         {
             return false;
         }
         bool observedNetworkIntake = false;
         bool observedEntityActivation = false;
+        bool observedTerminalCompletion = false;
         for (int i = 0; i < _pendingAdmissionHistory.Count; i++)
         {
             AcceptanceAdmissionTransitionEvidence transition = _pendingAdmissionHistory[i];
@@ -1687,12 +1689,15 @@ internal sealed class AcceptanceDriver : ISystem<float>
             observedEntityActivation |=
                 transition.Stage == NetworkCommandAdmissionStage.EntityIntake.ToString() &&
                 transition.Result == NetworkCommandAdmissionCode.Activated.ToString();
+            observedTerminalCompletion |=
+                transition.Stage == NetworkCommandAdmissionStage.Terminal.ToString() &&
+                transition.Result == NetworkCommandAdmissionCode.TerminalCompleted.ToString();
         }
-        if (!observedNetworkIntake || !observedEntityActivation)
+        if (!observedNetworkIntake || !observedEntityActivation || !observedTerminalCompletion)
         {
             throw new InvalidOperationException(
                 $"Command {_pendingCommandAction} sequence {_pendingCommandSequence} did not expose its full " +
-                "NetworkIntake-to-EntityIntake admission history.");
+                "NetworkIntake-to-Terminal admission history.");
         }
 
         var handles = new string[_commandActorCount];

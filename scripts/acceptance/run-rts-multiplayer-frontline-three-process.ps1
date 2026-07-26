@@ -1721,8 +1721,8 @@ function Assert-GameplayEvidence {
             $command = $commands[$commandIndex]
             if ([string]$command.action -cne $expectedActions[$commandIndex] -or
                 [uint64]$command.clientBatchSequence -ne [uint64]($commandIndex + 1) -or
-                [string]$command.admissionStage -cne "EntityIntake" -or
-                [string]$command.admissionResult -cne "Activated") {
+                [string]$command.admissionStage -cne "Terminal" -or
+                [string]$command.admissionResult -cne "TerminalCompleted") {
                 throw "Client evidence '$($item.Name)' command $commandIndex has an unexpected action, sequence, or final admission."
             }
             if ([int]$command.actorCount -le 0 -or
@@ -1755,6 +1755,7 @@ function Assert-GameplayEvidence {
             $networkTransitionIndex = -1
             $queuedTransitionIndex = -1
             $entityTransitionIndex = -1
+            $terminalTransitionIndex = -1
             for ($historyIndex = 0; $historyIndex -lt $history.Count; $historyIndex++) {
                 if ($networkTransitionIndex -lt 0 -and [string]$history[$historyIndex].stage -ceq "NetworkIntake" -and
                     [string]$history[$historyIndex].result -ceq "NetworkScheduled") {
@@ -1768,9 +1769,14 @@ function Assert-GameplayEvidence {
                     [string]$history[$historyIndex].result -ceq "Activated") {
                     $entityTransitionIndex = $historyIndex
                 }
+                if ($terminalTransitionIndex -lt 0 -and [string]$history[$historyIndex].stage -ceq "Terminal" -and
+                    [string]$history[$historyIndex].result -ceq "TerminalCompleted") {
+                    $terminalTransitionIndex = $historyIndex
+                }
             }
-            if ($networkTransitionIndex -lt 0 -or $entityTransitionIndex -le $networkTransitionIndex) {
-                throw "Client evidence '$($item.Name)' command '$($command.action)' lacks its network-to-entity admission history."
+            if ($networkTransitionIndex -lt 0 -or $entityTransitionIndex -le $networkTransitionIndex -or
+                $terminalTransitionIndex -le $entityTransitionIndex) {
+                throw "Client evidence '$($item.Name)' command '$($command.action)' lacks its network-to-terminal admission history."
             }
             if ([string]$command.action -ceq "QueueTrainInfantry") {
                 if ($queuedTransitionIndex -le $networkTransitionIndex -or
