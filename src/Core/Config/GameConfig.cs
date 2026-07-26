@@ -91,6 +91,7 @@ namespace Ludots.Core.Config
         public int GraphOutputValueCapacity { get; set; }
         public int AbilityExecMaxWorkUnitsPerSlice { get; set; }
         public int EffectProcessingMaxWorkUnitsPerSlice { get; set; }
+        public int CommandIntentScratchCapacity { get; set; }
 
         public void Validate()
         {
@@ -193,6 +194,12 @@ namespace Ludots.Core.Config
             ValidateFiniteWorkBudget(
                 EffectProcessingMaxWorkUnitsPerSlice,
                 "GameConfig.gasRuntimeCapacity.effectProcessingMaxWorkUnitsPerSlice");
+
+            if (CommandIntentScratchCapacity <= 0)
+            {
+                throw new System.InvalidOperationException(
+                    "GameConfig.gasRuntimeCapacity.commandIntentScratchCapacity must be positive.");
+            }
         }
 
         private static void ValidateFiniteWorkBudget(int value, string path)

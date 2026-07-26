@@ -567,6 +567,77 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void OrderContinuationSystem_PreflightThrow_CancelsReservationsSoLogicStepCanEnd()
+        {
+            using var world = World.Create();
+            var clock = new DiscreteClock();
+            var admissionResults = new OrderAdmissionResultBuffer(8, 8);
+            admissionResults.BeginLogicStep();
+            var orderTypes = CreateOrderTypeRegistry();
+            orderTypes.Register(new OrderTypeConfig
+            {
+                OrderTypeId = CastAbilityOrderTypeId,
+                Label = "Cast",
+                Priority = 100,
+                AllowQueuedMode = true,
+                QueuedModeMaxSize = 8,
+                SpatialBlackboardKey = 3
+            });
+            orderTypes.Register(new OrderTypeConfig
+            {
+                OrderTypeId = MoveToOrderTypeId,
+                Label = "Move",
+                Priority = 60,
+                AllowQueuedMode = true,
+                QueuedModeMaxSize = 8
+            });
+            var rules = new OrderRuleRegistry();
+            Entity actor = world.Create(
+                OrderBuffer.CreateEmpty(),
+                new OrderContinuationBuffer(),
+                new BlackboardSpatialBuffer(),
+                new OrderSpatialPayloadBuffer());
+            var completed = new OrderTerminalOutcome(
+                7,
+                MoveToOrderTypeId,
+                OrderTerminalState.Completed,
+                OrderFailureReason.None,
+                actor);
+            orderTypes.PublishTerminalResult(in completed);
+
+            var followUp = new Order
+            {
+                OrderId = 8,
+                OrderTypeId = CastAbilityOrderTypeId,
+                Actor = actor,
+                SubmitMode = OrderSubmitMode.Immediate,
+                Args = new OrderArgs
+                {
+                    Spatial = new OrderSpatial
+                    {
+                        Kind = OrderSpatialKind.WorldCm,
+                        Mode = OrderCollectionMode.List,
+                        PointCount = OrderSpatial.MaxInlinePoints + 1
+                    }
+                }
+            };
+            ref var continuations = ref world.Get<OrderContinuationBuffer>(actor);
+            Assert.That(continuations.TryAdd(7, in followUp), Is.True);
+            var system = new OrderContinuationSystem(world, clock, orderTypes, rules, admissionResults);
+
+            Assert.Throws<InvalidOperationException>(() => system.Update(0f));
+            Assert.That(admissionResults.ReservedCount, Is.EqualTo(0));
+            Assert.That(continuations.HasEntries, Is.True);
+            Assert.That(continuations.CountByTrigger(7), Is.EqualTo(1));
+            Assert.That(orderTypes.TerminalResults.Count, Is.EqualTo(1));
+            Assert.That(orderTypes.TerminalResults[0].OrderId, Is.EqualTo(7));
+            Assert.That(orderTypes.TerminalResults[0].State, Is.EqualTo(OrderTerminalState.Completed));
+            Assert.That(admissionResults.TryGet(8, OrderAdmissionStage.EntityIntake, out _), Is.False);
+            Assert.DoesNotThrow(() => admissionResults.EndEntityIntake());
+            Assert.DoesNotThrow(() => admissionResults.EndLogicStep());
+        }
+
+        [Test]
         public void OrderContinuationSystem_DestroyedActorAdmissionCapacityMiss_FailsOwnedFollowUpsWithoutPartialReservation()
         {
             using var world = World.Create();
@@ -602,6 +673,88 @@ namespace Ludots.Tests.GAS
             Assert.That(admissionResults.TryGet(9, OrderAdmissionStage.EntityIntake, out var second), Is.True);
             Assert.That(first.Result, Is.EqualTo(OrderSubmitResult.RejectedAdmissionCapacity));
             Assert.That(second.Result, Is.EqualTo(OrderSubmitResult.RejectedAdmissionCapacity));
+        }
+
+        [Test]
+        public void OrderBufferSystem_EntityIntakeRejectAfterGlobalIntakeQueued_PublishesFailedTerminalAndClearsContinuation()
+        {
+            using var world = World.Create();
+            var clock = new DiscreteClock();
+            var admissionResults = new OrderAdmissionResultBuffer(8, 8);
+            admissionResults.BeginLogicStep();
+            var orderQueue = new OrderQueue(8, admissionResults);
+            var orderTypes = CreateOrderTypeRegistry();
+            orderTypes.Register(new OrderTypeConfig
+            {
+                OrderTypeId = CastAbilityOrderTypeId,
+                Label = "Cast",
+                Priority = 100,
+                AllowQueuedMode = true,
+                QueuedModeMaxSize = 8
+            });
+            orderTypes.Register(new OrderTypeConfig
+            {
+                OrderTypeId = MoveToOrderTypeId,
+                Label = "Move",
+                Priority = 60,
+                AllowQueuedMode = true,
+                QueuedModeMaxSize = 8
+            });
+            var rules = new OrderRuleRegistry();
+            var planner = new CompositeOrderPlanner(
+                world,
+                orderQueue,
+                CreateAbilityRegistry(rangeCm: 500f),
+                CastAbilityOrderTypeId,
+                MoveToOrderTypeId);
+
+            AbilityStateBuffer abilities = default;
+            abilities.AddAbility(TestAbilityId);
+            Entity actor = world.Create(
+                WorldPositionCm.FromCm(0, 0),
+                abilities,
+                new OrderContinuationBuffer(),
+                OrderBuffer.CreateEmpty());
+
+            Assert.That(
+                planner.Submit(CreateCastOrder(actor, targetXcm: 900, submitMode: OrderSubmitMode.Immediate)),
+                Is.EqualTo(OrderSubmitResult.Queued));
+            Assert.That(orderQueue.TryPeek(out Order moveOrder), Is.True);
+            Assert.That(moveOrder.OrderTypeId, Is.EqualTo(MoveToOrderTypeId));
+            ref var continuations = ref world.Get<OrderContinuationBuffer>(actor);
+            Assert.That(continuations.CountByTrigger(moveOrder.OrderId), Is.EqualTo(1));
+
+            // GlobalIntake already accepted; EntityIntake must fail with a Failed terminal so follow-ups clear.
+            world.Remove<OrderBuffer>(actor);
+
+            var bufferSystem = new OrderBufferSystem(
+                world,
+                clock,
+                orderTypes,
+                rules,
+                admissionResults,
+                orderQueue,
+                stepRateHz: 30,
+                closeEntityIntakeOnUpdate: false);
+            bufferSystem.Update(0f);
+
+            Assert.That(orderQueue.Count, Is.EqualTo(0));
+            Assert.That(
+                admissionResults.TryGet(moveOrder.OrderId, OrderAdmissionStage.EntityIntake, out var intake),
+                Is.True);
+            Assert.That(intake.Result, Is.EqualTo(OrderSubmitResult.RejectedInvalidActor));
+            Assert.That(orderTypes.TerminalResults.Count, Is.GreaterThanOrEqualTo(1));
+            Assert.That(orderTypes.TerminalResults[0].OrderId, Is.EqualTo(moveOrder.OrderId));
+            Assert.That(orderTypes.TerminalResults[0].State, Is.EqualTo(OrderTerminalState.Failed));
+
+            var continuationSystem = new OrderContinuationSystem(world, clock, orderTypes, rules, admissionResults);
+            continuationSystem.Update(0f);
+
+            Assert.That(world.Get<OrderContinuationBuffer>(actor).HasEntries, Is.False);
+            Assert.That(orderTypes.TerminalResults.Count, Is.GreaterThanOrEqualTo(2));
+            Assert.That(orderTypes.TerminalResults[1].State, Is.EqualTo(OrderTerminalState.Failed));
+            Assert.DoesNotThrow(() => admissionResults.EndEntityIntake());
+            Assert.DoesNotThrow(() => admissionResults.EndLogicStep());
         }
 
         private static OrderQueue CreateOrderQueue(int capacity = 64)

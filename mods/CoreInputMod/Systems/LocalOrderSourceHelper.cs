@@ -102,7 +102,8 @@ namespace CoreInputMod.Systems
 
             using var stream = File.OpenRead(fullPath);
             var config = InputOrderMappingLoader.LoadFromStream(stream);
-            var mapping = new InputOrderMappingSystem(input, config);
+            int commandIntentScratchCapacity = ResolveCommandIntentScratchCapacity();
+            var mapping = new InputOrderMappingSystem(input, config, commandIntentScratchCapacity);
             PlayerEntityLookup players = RequireService<PlayerEntityLookup>(CoreServiceKeys.PlayerEntityLookup.Name);
             var controlDomains = RequireService<Ludots.Core.Gameplay.Relationships.ControlDomainQuery>(
                 CoreServiceKeys.ControlDomainQuery.Name);
@@ -780,6 +781,21 @@ namespace CoreInputMod.Systems
             }
 
             return false;
+        }
+
+        private int ResolveCommandIntentScratchCapacity()
+        {
+            GameConfig gameConfig = RequireService<GameConfig>(CoreServiceKeys.GameConfig.Name);
+            GasRuntimeCapacityConfig capacity = gameConfig.GasRuntimeCapacity
+                ?? throw new InvalidOperationException(
+                    $"{nameof(LocalOrderSourceHelper)} requires GameConfig.gasRuntimeCapacity before input-order mappings install.");
+            if (capacity.CommandIntentScratchCapacity <= 0)
+            {
+                throw new InvalidOperationException(
+                    "GameConfig.gasRuntimeCapacity.commandIntentScratchCapacity must be positive.");
+            }
+
+            return capacity.CommandIntentScratchCapacity;
         }
 
     }

@@ -29,22 +29,23 @@ namespace RoadNetworkShowcaseMod.Gameplay
                 if (!ShouldExpandRoadMove(in order, out _))
                 {
                     Order passthrough = order;
-                    bool enqueued = _incomingOrders.TryEnqueueAssigned(ref passthrough);
-                    WriteStatus(enqueued ? "Passthrough order submitted." : "Passthrough order queue is full.");
-                    return enqueued ? OrderSubmitResult.Queued : OrderSubmitResult.RejectedQueueFull;
+                    OrderSubmitResult passthroughResult = _incomingOrders.SubmitAssigned(ref passthrough);
+                    WriteStatus(FormatSubmitStatus("Passthrough order", passthroughResult));
+                    return passthroughResult;
                 }
 
                 return OrderSubmitResult.RejectedValidation;
             }
 
-            if (!_incomingOrders.TryEnqueueAssigned(ref routeOrder))
+            OrderSubmitResult result = _incomingOrders.SubmitAssigned(ref routeOrder);
+            if (!OrderSubmitResultSemantics.IsAccepted(result))
             {
                 OrderSpatialPayloadOps.Release(_planning.World, in routeOrder);
-                WriteStatus("Road command rejected: order queue is full.");
-                return OrderSubmitResult.RejectedQueueFull;
+                WriteStatus(FormatSubmitStatus("Road command rejected", result));
+                return result;
             }
 
-            return OrderSubmitResult.Queued;
+            return result;
         }
 
         public OrderSubmitResult TrySubmitSharedBatch(Span<Order> orders)
@@ -72,7 +73,7 @@ namespace RoadNetworkShowcaseMod.Gameplay
             OrderSubmitResult result = _incomingOrders.TryEnqueueSharedBatch(orders);
             if (!OrderSubmitResultSemantics.IsAccepted(result))
             {
-                WriteStatus("Road command rejected: order queue is full.");
+                WriteStatus(FormatSubmitStatus("Road command rejected", result));
                 ReleaseBuiltRoutePayloads(orders);
             }
 
@@ -95,6 +96,27 @@ namespace RoadNetworkShowcaseMod.Gameplay
             {
                 OrderSpatialPayloadOps.Release(_planning.World, in orders[i]);
             }
+        }
+
+        private static string FormatSubmitStatus(string prefix, OrderSubmitResult result)
+        {
+            if (OrderSubmitResultSemantics.IsAccepted(result))
+            {
+                return $"{prefix} submitted.";
+            }
+
+            return result switch
+            {
+                OrderSubmitResult.RejectedQueueFull => $"{prefix}: order queue is full.",
+                OrderSubmitResult.RejectedAdmissionCapacity => $"{prefix}: admission capacity exhausted.",
+                OrderSubmitResult.RejectedValidation => $"{prefix}: validation failed.",
+                OrderSubmitResult.RejectedInvalidActor => $"{prefix}: invalid actor.",
+                OrderSubmitResult.RejectedInvalidOrderType => $"{prefix}: invalid order type.",
+                OrderSubmitResult.RejectedByRule => $"{prefix}: rejected by rule.",
+                OrderSubmitResult.RejectedBlackboardCapacity => $"{prefix}: blackboard capacity exhausted.",
+                OrderSubmitResult.RejectedMissingBlackboard => $"{prefix}: missing blackboard.",
+                _ => $"{prefix}: {result}."
+            };
         }
 
         private void WriteStatus(string message)

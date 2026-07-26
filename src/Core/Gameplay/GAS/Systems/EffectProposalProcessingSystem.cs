@@ -177,6 +177,17 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 _items[_count++] = proposal;
                 return true;
             }
+
+            public void RemoveLast()
+            {
+                if (_count <= 0)
+                {
+                    throw new InvalidOperationException("GAS.RESPONSE_CHAIN.ERR.WindowRemoveLastEmpty");
+                }
+
+                _count--;
+                _items[_count] = default;
+            }
         }
 
         private sealed class ProposalResponseQueue
@@ -190,6 +201,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
 
             public bool IsEmpty => _count == 0;
+            public int Count => _count;
+            public int AvailableCapacity => _nodes.Length - _count;
 
             public void Clear()
             {
@@ -204,6 +217,31 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 HeapifyUp(_count);
                 _count++;
                 return true;
+            }
+
+            public void RemoveByProposalIndex(int proposalIndex)
+            {
+                int write = 0;
+                for (int i = 0; i < _count; i++)
+                {
+                    if (_nodes[i].Item.ProposalIndex == proposalIndex)
+                    {
+                        continue;
+                    }
+
+                    _nodes[write++] = _nodes[i];
+                }
+
+                for (int i = write; i < _count; i++)
+                {
+                    _nodes[i] = default;
+                }
+
+                _count = write;
+                for (int i = (_count >> 1) - 1; i >= 0; i--)
+                {
+                    HeapifyDown(i);
+                }
             }
 
             public bool TryDequeue(out ProposalResponseItem item)
@@ -686,148 +724,230 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             bool admissionCommitted = false;
                             try
                             {
-                            if (order.OrderTypeId == _responseChainOrderTypes.ChainPass)
-                            {
-                                if (_telemetry != null && _emitTelemetry)
+                                if (order.OrderTypeId == _responseChainOrderTypes.ChainPass)
                                 {
-                                    _telemetry.TryAdd(new ResponseChainTelemetryEvent
+                                    if (_telemetry != null && _emitTelemetry)
                                     {
-                                        Kind = ResponseChainTelemetryKind.OrderConsumed,
-                                        RootId = _activeReq.RootId,
-                                        TemplateId = _activeReq.TemplateId,
-                                        TagId = _window[0].TagId,
-                                        ProposalIndex = 0,
-                                        OrderTypeId = order.OrderTypeId,
-                                        Source = order.Actor,
-                                        Target = order.Target,
-                                        Context = order.TargetContext
-                                    });
-                                }
-                                CommitResponseChainOrderAdmission(in admissionReservation, in order, OrderSubmitResult.Activated);
-                                admissionCommitted = true;
-                                _passStreak++;
-                                if (_passStreak >= 2)
-                                {
-                                    _closeRequested = true;
-                                    break;
+                                        _telemetry.TryAdd(new ResponseChainTelemetryEvent
+                                        {
+                                            Kind = ResponseChainTelemetryKind.OrderConsumed,
+                                            RootId = _activeReq.RootId,
+                                            TemplateId = _activeReq.TemplateId,
+                                            TagId = _window[0].TagId,
+                                            ProposalIndex = 0,
+                                            OrderTypeId = order.OrderTypeId,
+                                            Source = order.Actor,
+                                            Target = order.Target,
+                                            Context = order.TargetContext
+                                        });
+                                    }
+
+                                    CompleteConsumedResponseChainOrder(
+                                        in admissionReservation,
+                                        in order,
+                                        OrderSubmitResult.Activated,
+                                        ref admissionCommitted);
+                                    _passStreak++;
+                                    if (_passStreak >= 2)
+                                    {
+                                        _closeRequested = true;
+                                        break;
+                                    }
+
+                                    ConsumeWork(ref workUnits);
+                                    continue;
                                 }
 
-                                ConsumeWork(ref workUnits);
-                                continue;
-                            }
-
-                            _passStreak = 0;
-                            if (order.OrderTypeId == _responseChainOrderTypes.ChainNegate)
-                            {
-                                if (_telemetry != null && _emitTelemetry)
+                                _passStreak = 0;
+                                if (order.OrderTypeId == _responseChainOrderTypes.ChainNegate)
                                 {
-                                    _telemetry.TryAdd(new ResponseChainTelemetryEvent
+                                    if (_telemetry != null && _emitTelemetry)
                                     {
-                                        Kind = ResponseChainTelemetryKind.OrderConsumed,
-                                        RootId = _activeReq.RootId,
-                                        TemplateId = _activeReq.TemplateId,
-                                        TagId = _window[0].TagId,
-                                        ProposalIndex = 0,
-                                        OrderTypeId = order.OrderTypeId,
-                                        Source = order.Actor,
-                                        Target = order.Target,
-                                        Context = order.TargetContext
-                                    });
+                                        _telemetry.TryAdd(new ResponseChainTelemetryEvent
+                                        {
+                                            Kind = ResponseChainTelemetryKind.OrderConsumed,
+                                            RootId = _activeReq.RootId,
+                                            TemplateId = _activeReq.TemplateId,
+                                            TagId = _window[0].TagId,
+                                            ProposalIndex = 0,
+                                            OrderTypeId = order.OrderTypeId,
+                                            Source = order.Actor,
+                                            Target = order.Target,
+                                            Context = order.TargetContext
+                                        });
+                                    }
+
+                                    CompleteConsumedResponseChainOrder(
+                                        in admissionReservation,
+                                        in order,
+                                        OrderSubmitResult.Activated,
+                                        ref admissionCommitted);
+                                    _pendingNegates++;
+                                    ConsumeWork(ref workUnits);
+                                    continue;
                                 }
-                                CommitResponseChainOrderAdmission(in admissionReservation, in order, OrderSubmitResult.Activated);
-                                admissionCommitted = true;
-                                _pendingNegates++;
-                                ConsumeWork(ref workUnits);
-                                continue;
-                            }
 
-                            if (order.OrderTypeId == _responseChainOrderTypes.ChainActivateEffect && order.Args.I0 > 0)
-                            {
-                                if (_telemetry != null && _emitTelemetry)
+                                if (order.OrderTypeId == _responseChainOrderTypes.ChainActivateEffect && order.Args.I0 > 0)
                                 {
-                                    _telemetry.TryAdd(new ResponseChainTelemetryEvent
+                                    if (_telemetry != null && _emitTelemetry)
                                     {
-                                        Kind = ResponseChainTelemetryKind.OrderConsumed,
+                                        _telemetry.TryAdd(new ResponseChainTelemetryEvent
+                                        {
+                                            Kind = ResponseChainTelemetryKind.OrderConsumed,
+                                            RootId = _activeReq.RootId,
+                                            TemplateId = order.Args.I0,
+                                            TagId = _window[0].TagId,
+                                            ProposalIndex = 0,
+                                            OrderTypeId = order.OrderTypeId,
+                                            Source = order.Actor,
+                                            Target = order.Target,
+                                            Context = order.TargetContext
+                                        });
+                                    }
+
+                                    if (_templates == null || !_templates.TryGetRef(order.Args.I0, out int tplIdx))
+                                    {
+                                        CompleteConsumedResponseChainOrder(
+                                            in admissionReservation,
+                                            in order,
+                                            OrderSubmitResult.RejectedValidation,
+                                            ref admissionCommitted);
+                                        ConsumeWork(ref workUnits);
+                                        continue;
+                                    }
+
+                                    ref readonly var tpl = ref _templates.GetRef(tplIdx);
+
+                                    if (tpl.ParticipatesInResponse &&
+                                        CountResponsesForEffect(tpl.TagId) > _responseQueue.AvailableCapacity)
+                                    {
+                                        if (_budget != null) _budget.ResponseQueueOverflowDropped++;
+                                        CompleteConsumedResponseChainOrder(
+                                            in admissionReservation,
+                                            in order,
+                                            OrderSubmitResult.RejectedQueueFull,
+                                            ref admissionCommitted);
+                                        ConsumeWork(ref workUnits);
+                                        continue;
+                                    }
+
+                                    var chainedModifiers = tpl.Modifiers;
+                                    ApplyPresetModifiers(ref chainedModifiers, in tpl, in _activeReq);
+                                    var chained = new EffectProposal
+                                    {
                                         RootId = _activeReq.RootId,
+                                        Source = World.IsAlive(order.Actor) ? order.Actor : _activeReq.Source,
+                                        Target = _activeReq.Target,
+                                        TargetContext = _activeReq.TargetContext,
                                         TemplateId = order.Args.I0,
-                                        TagId = _window[0].TagId,
-                                        ProposalIndex = 0,
-                                        OrderTypeId = order.OrderTypeId,
-                                        Source = order.Actor,
-                                        Target = order.Target,
-                                        Context = order.TargetContext
-                                    });
-                                }
-                                if (_templates == null || !_templates.TryGetRef(order.Args.I0, out int tplIdx))
-                                {
-                                    CommitResponseChainOrderAdmission(in admissionReservation, in order, OrderSubmitResult.RejectedValidation);
-                                    admissionCommitted = true;
-                                    ConsumeWork(ref workUnits);
-                                    continue;
-                                }
-                                ref readonly var tpl = ref _templates.GetRef(tplIdx);
+                                        TagId = tpl.TagId,
+                                        ParticipatesInResponse = tpl.ParticipatesInResponse,
+                                        Cancelled = false,
+                                        Modifiers = chainedModifiers
+                                    };
 
-                                var chainedModifiers = tpl.Modifiers;
-                                ApplyPresetModifiers(ref chainedModifiers, in tpl, in _activeReq);
-                                var chained = new EffectProposal
-                                {
-                                    RootId = _activeReq.RootId,
-                                    Source = World.IsAlive(order.Actor) ? order.Actor : _activeReq.Source,
-                                    Target = _activeReq.Target,
-                                    TargetContext = _activeReq.TargetContext,
-                                    TemplateId = order.Args.I0,
-                                    TagId = tpl.TagId,
-                                    ParticipatesInResponse = tpl.ParticipatesInResponse,
-                                    Cancelled = false,
-                                    Modifiers = chainedModifiers
-                                };
-
-                                int newIndex = _window.Count;
-                                if (!_window.TryAdd(chained))
-                                {
-                                    CommitResponseChainOrderAdmission(in admissionReservation, in order, OrderSubmitResult.RejectedQueueFull);
-                                    admissionCommitted = true;
-                                    ConsumeWork(ref workUnits);
-                                    continue;
-                                }
-                                _creates++;
-                                if (_budget != null) _budget.ResponseCreates++;
-                                if (_telemetry != null && _emitTelemetry)
-                                {
-                                    _telemetry.TryAdd(new ResponseChainTelemetryEvent
+                                    int newIndex = _window.Count;
+                                    if (!_window.TryAdd(chained))
                                     {
-                                        Kind = ResponseChainTelemetryKind.ProposalAdded,
-                                        RootId = _activeReq.RootId,
-                                        TemplateId = chained.TemplateId,
-                                        TagId = chained.TagId,
-                                        ProposalIndex = newIndex,
-                                        Source = chained.Source,
-                                        Target = chained.Target,
-                                        Context = chained.TargetContext
-                                    });
+                                        CompleteConsumedResponseChainOrder(
+                                            in admissionReservation,
+                                            in order,
+                                            OrderSubmitResult.RejectedQueueFull,
+                                            ref admissionCommitted);
+                                        ConsumeWork(ref workUnits);
+                                        continue;
+                                    }
+
+                                    try
+                                    {
+                                        _creates++;
+                                        if (_budget != null) _budget.ResponseCreates++;
+                                        if (_telemetry != null && _emitTelemetry)
+                                        {
+                                            _telemetry.TryAdd(new ResponseChainTelemetryEvent
+                                            {
+                                                Kind = ResponseChainTelemetryKind.ProposalAdded,
+                                                RootId = _activeReq.RootId,
+                                                TemplateId = chained.TemplateId,
+                                                TagId = chained.TagId,
+                                                ProposalIndex = newIndex,
+                                                Source = chained.Source,
+                                                Target = chained.Target,
+                                                Context = chained.TargetContext
+                                            });
+                                        }
+
+                                        if (tpl.ParticipatesInResponse)
+                                        {
+                                            EnqueueResponsesForEffect(newIndex, tpl.TagId);
+                                        }
+                                    }
+                                    catch (InvalidOperationException ex)
+                                        when (ex.Message.StartsWith(ResponseQueueOverflowError, StringComparison.Ordinal) ||
+                                              ex.Message.StartsWith(WindowDepthExceededError, StringComparison.Ordinal) ||
+                                              ex.Message.StartsWith(CreateCapacityExceededError, StringComparison.Ordinal))
+                                    {
+                                        _responseQueue.RemoveByProposalIndex(newIndex);
+                                        _window.RemoveLast();
+                                        if (_creates > 0)
+                                        {
+                                            _creates--;
+                                            if (_budget != null && _budget.ResponseCreates > 0)
+                                            {
+                                                _budget.ResponseCreates--;
+                                            }
+                                        }
+
+                                        CompleteConsumedResponseChainOrder(
+                                            in admissionReservation,
+                                            in order,
+                                            OrderSubmitResult.RejectedQueueFull,
+                                            ref admissionCommitted);
+                                        ConsumeWork(ref workUnits);
+                                        continue;
+                                    }
+                                    catch
+                                    {
+                                        _responseQueue.RemoveByProposalIndex(newIndex);
+                                        _window.RemoveLast();
+                                        if (_creates > 0)
+                                        {
+                                            _creates--;
+                                            if (_budget != null && _budget.ResponseCreates > 0)
+                                            {
+                                                _budget.ResponseCreates--;
+                                            }
+                                        }
+
+                                        throw;
+                                    }
+
+                                    CompleteConsumedResponseChainOrder(
+                                        in admissionReservation,
+                                        in order,
+                                        OrderSubmitResult.Activated,
+                                        ref admissionCommitted);
+                                    _phase = WindowPhase.Collect;
+                                    ConsumeWork(ref workUnits);
+                                    goto ContinueOuter;
                                 }
 
-                                if (tpl.ParticipatesInResponse)
-                                {
-                                    EnqueueResponsesForEffect(newIndex, tpl.TagId);
-                                }
-
-                                CommitResponseChainOrderAdmission(in admissionReservation, in order, OrderSubmitResult.Activated);
-                                admissionCommitted = true;
-                                _phase = WindowPhase.Collect;
+                                CompleteConsumedResponseChainOrder(
+                                    in admissionReservation,
+                                    in order,
+                                    OrderSubmitResult.RejectedInvalidOrderType,
+                                    ref admissionCommitted);
                                 ConsumeWork(ref workUnits);
-                                goto ContinueOuter;
-                            }
-
-                            CommitResponseChainOrderAdmission(in admissionReservation, in order, OrderSubmitResult.RejectedInvalidOrderType);
-                            admissionCommitted = true;
-                            ConsumeWork(ref workUnits);
                             }
                             finally
                             {
                                 if (!admissionCommitted && admissionReservation.IsValid)
                                 {
-                                    _chainOrders.AdmissionResults.Cancel(in admissionReservation);
+                                    CompleteConsumedResponseChainOrder(
+                                        in admissionReservation,
+                                        in order,
+                                        OrderSubmitResult.RejectedValidation,
+                                        ref admissionCommitted);
                                 }
                             }
                         }
@@ -1104,6 +1224,51 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 OrderAdmissionStage.EntityIntake,
                 result);
             _chainOrders.AdmissionResults.Commit(in reservation, in outcome);
+        }
+
+        private void CompleteConsumedResponseChainOrder(
+            in OrderAdmissionReservation reservation,
+            in Order order,
+            OrderSubmitResult result,
+            ref bool admissionCommitted)
+        {
+            // Commit first and mark ownership closed before Release. If Release throws
+            // (e.g. missing payload buffer), finally must not Commit the same reservation again.
+            CommitResponseChainOrderAdmission(in reservation, in order, result);
+            admissionCommitted = true;
+            OrderSpatialPayloadOps.Release(World, in order);
+        }
+
+        private unsafe int CountResponsesForEffect(int effectTagId)
+        {
+            int matched = 0;
+            for (int li = 0; li < _listeners.Count; li++)
+            {
+                var listenerEntity = _listeners[li];
+                if (!World.IsAlive(listenerEntity))
+                {
+                    continue;
+                }
+
+                ref var listener = ref World.TryGetRef<ResponseChainListener>(listenerEntity, out bool hasListener);
+                if (!hasListener)
+                {
+                    continue;
+                }
+
+                for (int i = 0; i < listener.Count; i++)
+                {
+                    int eventTagId = listener.EventTagIds[i];
+                    if (eventTagId != 0 && effectTagId != eventTagId)
+                    {
+                        continue;
+                    }
+
+                    matched++;
+                }
+            }
+
+            return matched;
         }
 
         public void ResetSlice()

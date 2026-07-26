@@ -26,12 +26,13 @@ namespace CoreInputMod.Systems
         private readonly Dictionary<string, object> _globals;
         private readonly EntityCollectionStore? _entityCollections;
         private readonly InteractionContextStack? _interactionContextStack;
-        private Entity[] _collectionScratch = new Entity[InputOrderMappingSystem.DefaultCommandIntentScratchCapacity];
+        private readonly Entity[] _collectionScratch;
 
         public InputInteractionContextAccessor(World world, Dictionary<string, object> globals)
         {
             _world = world;
             _globals = globals;
+            _collectionScratch = new Entity[ResolveCommandIntentScratchCapacity(globals)];
             _entityCollections = globals.TryGetValue(CoreServiceKeys.EntityCollectionStore.Name, out var collectionsObj) &&
                                  collectionsObj is EntityCollectionStore collections
                 ? collections
@@ -40,6 +41,27 @@ namespace CoreInputMod.Systems
                                        stackObj is InteractionContextStack stack
                 ? stack
                 : null;
+        }
+
+        private static int ResolveCommandIntentScratchCapacity(Dictionary<string, object> globals)
+        {
+            if (!globals.TryGetValue(CoreServiceKeys.GameConfig.Name, out object? configObj) ||
+                configObj is not Ludots.Core.Config.GameConfig gameConfig)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(InputInteractionContextAccessor)} requires {CoreServiceKeys.GameConfig.Name} with gasRuntimeCapacity.commandIntentScratchCapacity.");
+            }
+
+            Ludots.Core.Config.GasRuntimeCapacityConfig capacity = gameConfig.GasRuntimeCapacity
+                ?? throw new InvalidOperationException(
+                    $"{nameof(InputInteractionContextAccessor)} requires GameConfig.gasRuntimeCapacity.");
+            if (capacity.CommandIntentScratchCapacity <= 0)
+            {
+                throw new InvalidOperationException(
+                    "GameConfig.gasRuntimeCapacity.commandIntentScratchCapacity must be positive.");
+            }
+
+            return capacity.CommandIntentScratchCapacity;
         }
 
         public bool TryGetEntity(string key, out Entity entity)

@@ -423,8 +423,14 @@ namespace EntityCommandPanelMod.Runtime
                         view = ComposeGroupView(in view, in memberView);
                     }
 
-                    if (updateActivationMap && _memberTotal < _memberScratch.Length)
+                    if (updateActivationMap)
                     {
+                        if (_memberTotal >= _memberScratch.Length)
+                        {
+                            throw new InvalidOperationException(
+                                $"ENTITY_COMMAND_PANEL.ERR.MemberScratchCapacity: required={_memberTotal + 1}, capacity={_memberScratch.Length}.");
+                        }
+
                         _memberScratch[_memberTotal++] = new EntityCommandPanelAggregationMember(
                             members[memberIndex],
                             memberSlotIndices[memberIndex]);

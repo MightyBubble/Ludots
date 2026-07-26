@@ -216,6 +216,37 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void RoadMoveOrderExpander_TrySubmit_AdmissionCapacityMiss_ReturnsRejectedAdmissionCapacity_NotQueueFull()
+        {
+            using var world = World.Create();
+            var admissionResults = new OrderAdmissionResultBuffer(capacity: 1, rejectionCapacity: 16);
+            admissionResults.BeginLogicStep();
+            var orderQueue = new OrderQueue(capacity: 16, admissionResults);
+            var pathStore = new PathStore(maxPaths: 8, maxPointsPerPath: 8);
+            var pathService = new RecordingPathService(pathStore, new[]
+            {
+                (0, 0),
+                (200, 0),
+                (450, 150),
+            });
+            var globals = CreateGlobals(pathService, pathStore, moveToOrderTypeId: 77);
+            Entity actor = world.Create(
+                new RoadColumnTag(),
+                new OrderSpatialPayloadBuffer(),
+                WorldPositionCm.FromCm(0, 0));
+            var expander = new RoadMoveOrderExpander(world, globals, orderQueue, RoadNetworkShowcaseIds.PathPlannerAgentTypeId);
+
+            var firstOrder = CreateMoveOrder(actor, orderTypeId: 77, xcm: 450, ycm: 150, submitMode: OrderSubmitMode.Immediate);
+            var secondOrder = CreateMoveOrder(actor, orderTypeId: 77, xcm: 500, ycm: 150, submitMode: OrderSubmitMode.Immediate);
+            Assert.That(expander.TrySubmit(in firstOrder), Is.EqualTo(OrderSubmitResult.Queued));
+            Assert.That(expander.TrySubmit(in secondOrder), Is.EqualTo(OrderSubmitResult.RejectedAdmissionCapacity));
+            Assert.That(globals[RoadMoveOrderExpander.LastSubmitStatusKey], Does.Contain("admission capacity exhausted"));
+            Assert.That(globals[RoadMoveOrderExpander.LastSubmitStatusKey], Does.Not.Contain("queue is full"));
+            admissionResults.EndEntityIntake();
+            admissionResults.EndLogicStep();
+        }
+
+        [Test]
         public void RoadMoveOrderExpander_TrySubmitSharedBatch_MidPlanningFailure_ReleasesEarlierRoutePayloads()
         {
             using var world = World.Create();

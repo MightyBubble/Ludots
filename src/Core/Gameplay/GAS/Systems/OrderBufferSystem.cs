@@ -195,6 +195,13 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 // Process before dequeue so an unexpected submit failure keeps GlobalIntake ownership
                 // on the still-queued order instead of silently cancelling the reservation.
                 OrderSubmitResult result = ProcessIncomingOrder(ref order, currentStep);
+                if (!OrderSubmitResultSemantics.IsAccepted(result))
+                {
+                    // GlobalIntake already Queued this order; EntityIntake rejection must emit a Failed
+                    // terminal so OrderContinuationSystem can release follow-ups keyed by this order id.
+                    EnsureAndPublishFailedTerminal(in order, result);
+                }
+
                 DequeueReservedBatch(expectedBatchCount: 1);
                 CommitAdmission(in reservation, in order, result);
                 committed = true;
@@ -227,9 +234,13 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 _admissionResults.RecordCapacityFailures(
                     _incomingBatchScratch.AsSpan(0, batchCount),
                     OrderAdmissionStage.EntityIntake);
+                _orderTypeRegistry.EnsureTerminalResultCapacity(batchCount);
                 for (int i = 0; i < batchCount; i++)
                 {
                     OrderSpatialPayloadOps.Release(World, in _incomingBatchScratch[i]);
+                    PublishFailedTerminal(
+                        in _incomingBatchScratch[i],
+                        OrderSubmitResult.RejectedAdmissionCapacity);
                 }
 
                 return;
@@ -245,6 +256,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 {
                     DequeueReservedBatch(batchCount);
                     dequeued = true;
+                    _orderTypeRegistry.EnsureTerminalResultCapacity(batchCount);
                     for (int i = 0; i < batchCount; i++)
                     {
                         if (OrderSubmitResultSemantics.IsAccepted(_incomingBatchResultsScratch[i]))
@@ -253,6 +265,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         }
 
                         OrderSpatialPayloadOps.Release(World, in _incomingBatchScratch[i]);
+                        PublishFailedTerminal(in _incomingBatchScratch[i], _incomingBatchResultsScratch[i]);
                         CommitAdmission(
                             in _entityAdmissionReservationsScratch[i],
                             in _incomingBatchScratch[i],
@@ -455,6 +468,29 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
 
             return result;
+        }
+
+        private void EnsureAndPublishFailedTerminal(in Order order, OrderSubmitResult result)
+        {
+            _orderTypeRegistry.EnsureTerminalResultCapacity();
+            PublishFailedTerminal(in order, result);
+        }
+
+        private void PublishFailedTerminal(in Order order, OrderSubmitResult result)
+        {
+            if (OrderSubmitResultSemantics.IsAccepted(result))
+            {
+                throw new InvalidOperationException(
+                    $"ORDER.ENTITY_INTAKE.ERR.FailedTerminalRequiresRejection: orderId={order.OrderId}, result={result}.");
+            }
+
+            var failed = new OrderTerminalOutcome(
+                order.OrderId,
+                order.OrderTypeId,
+                OrderTerminalState.Failed,
+                OrderSubmitResultSemantics.ToFailureReason(result),
+                order.Actor);
+            _orderTypeRegistry.PublishTerminalResult(in failed);
         }
 
         private OrderSubmitResult ValidateIncomingOrder(in Order order, out OrderTypeConfig config)

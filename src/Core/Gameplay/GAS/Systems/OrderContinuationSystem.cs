@@ -137,120 +137,126 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     continue;
                 }
 
-                if (!PreflightContinuationSubmissions(
-                    entity,
-                    extracted.Slice(0, count),
-                    currentStep,
-                    out OrderSubmitResult preflightFailure,
-                    out int terminalResultCount))
-                {
-                    int rejectedCount = continuation.Extract(triggerOrderId, extracted);
-                    if (rejectedCount != count)
-                    {
-                        CancelContinuationAdmissions(reservations, count);
-                        throw new InvalidOperationException(
-                            $"ORDER.CONTINUATION.ERR.BufferChangedDuringPreflightRejection: triggerOrderId={triggerOrderId}, expected={count}, actual={rejectedCount}.");
-                    }
-
-                    PublishRejectedContinuations(
-                        entity,
-                        extracted.Slice(0, count),
-                        reservations,
-                        count,
-                        OrderTerminalState.Failed,
-                        OrderSubmitResultSemantics.ToFailureReason(preflightFailure),
-                        preflightFailure);
-                    _processedCount++;
-                    continue;
-                }
-
-                if (terminalResultCount > count)
-                {
-                    _orderTypeRegistry.EnsureTerminalResultCapacity(terminalResultCount);
-                }
-
-                int extractedCount = continuation.Extract(triggerOrderId, extracted);
-                if (extractedCount != count)
-                {
-                    CancelContinuationAdmissions(reservations, count);
-                    throw new InvalidOperationException(
-                        $"ORDER.CONTINUATION.ERR.BufferChangedDuringAdmission: triggerOrderId={triggerOrderId}, expected={count}, actual={extractedCount}.");
-                }
-
-                ref OrderBuffer buffer = ref World.Get<OrderBuffer>(entity);
-
                 try
                 {
-                    for (int i = 0; i < count; i++)
+                    if (!PreflightContinuationSubmissions(
+                        entity,
+                        extracted.Slice(0, count),
+                        currentStep,
+                        out OrderSubmitResult preflightFailure,
+                        out int terminalResultCount))
                     {
-                        var order = extracted[i];
-                        order.Actor = entity;
-
-                        try
+                        int rejectedCount = continuation.Extract(triggerOrderId, extracted);
+                        if (rejectedCount != count)
                         {
-                            OrderSubmitResult result = OrderSubmitter.Submit(
-                                World,
-                                entity,
-                                in order,
-                                _orderTypeRegistry,
-                                _orderRuleRegistry,
-                                currentStep,
-                                _stepRateHz);
+                            throw new InvalidOperationException(
+                                $"ORDER.CONTINUATION.ERR.BufferChangedDuringPreflightRejection: triggerOrderId={triggerOrderId}, expected={count}, actual={rejectedCount}.");
+                        }
 
-                            if (result == OrderSubmitResult.RejectedByRule)
+                        PublishRejectedContinuations(
+                            entity,
+                            extracted.Slice(0, count),
+                            reservations,
+                            count,
+                            OrderTerminalState.Failed,
+                            OrderSubmitResultSemantics.ToFailureReason(preflightFailure),
+                            preflightFailure);
+                        _processedCount++;
+                        continue;
+                    }
+
+                    if (terminalResultCount > count)
+                    {
+                        _orderTypeRegistry.EnsureTerminalResultCapacity(terminalResultCount);
+                    }
+
+                    int extractedCount = continuation.Extract(triggerOrderId, extracted);
+                    if (extractedCount != count)
+                    {
+                        throw new InvalidOperationException(
+                            $"ORDER.CONTINUATION.ERR.BufferChangedDuringAdmission: triggerOrderId={triggerOrderId}, expected={count}, actual={extractedCount}.");
+                    }
+
+                    ref OrderBuffer buffer = ref World.Get<OrderBuffer>(entity);
+
+                    try
+                    {
+                        for (int i = 0; i < count; i++)
+                        {
+                            var order = extracted[i];
+                            order.Actor = entity;
+
+                            try
                             {
-                                var config = _orderTypeRegistry.Get(order.OrderTypeId);
-                                if (config.PendingBufferWindowMs > 0)
+                                OrderSubmitResult result = OrderSubmitter.Submit(
+                                    World,
+                                    entity,
+                                    in order,
+                                    _orderTypeRegistry,
+                                    _orderRuleRegistry,
+                                    currentStep,
+                                    _stepRateHz);
+
+                                if (result == OrderSubmitResult.RejectedByRule)
                                 {
-                                    int expireStep = currentStep + (config.PendingBufferWindowMs * _stepRateHz) / 1000;
-                                    OrderSubmitter.ReplacePending(
-                                        World,
-                                        ref buffer,
-                                        _orderTypeRegistry,
-                                        in order,
-                                        config.Priority,
-                                        expireStep,
-                                        currentStep);
-                                    CommitAdmission(in reservations[i], in order, OrderSubmitResult.Pending);
-                                    reservations[i] = default;
+                                    var config = _orderTypeRegistry.Get(order.OrderTypeId);
+                                    if (config.PendingBufferWindowMs > 0)
+                                    {
+                                        int expireStep = currentStep + (config.PendingBufferWindowMs * _stepRateHz) / 1000;
+                                        OrderSubmitter.ReplacePending(
+                                            World,
+                                            ref buffer,
+                                            _orderTypeRegistry,
+                                            in order,
+                                            config.Priority,
+                                            expireStep,
+                                            currentStep);
+                                        CommitAdmission(in reservations[i], in order, OrderSubmitResult.Pending);
+                                        reservations[i] = default;
+                                        continue;
+                                    }
+                                }
+
+                                CommitAdmission(in reservations[i], in order, result);
+                                reservations[i] = default;
+
+                                if (OrderSubmitResultSemantics.IsAccepted(result))
+                                {
                                     continue;
                                 }
+
+                                OrderSpatialPayloadOps.Release(World, in order);
+                                var rejected = new OrderTerminalOutcome(
+                                    order.OrderId,
+                                    order.OrderTypeId,
+                                    OrderTerminalState.Failed,
+                                    OrderSubmitResultSemantics.ToFailureReason(result),
+                                    entity);
+                                _orderTypeRegistry.PublishTerminalResult(in rejected);
                             }
-
-                            CommitAdmission(in reservations[i], in order, result);
-                            reservations[i] = default;
-
-                            if (OrderSubmitResultSemantics.IsAccepted(result))
+                            catch
                             {
-                                continue;
+                                RestoreContinuationOwnership(
+                                    ref continuation,
+                                    triggerOrderId,
+                                    extracted.Slice(i, count - i),
+                                    reservations.Slice(i, count - i));
+                                throw;
                             }
-
-                            OrderSpatialPayloadOps.Release(World, in order);
-                            var rejected = new OrderTerminalOutcome(
-                                order.OrderId,
-                                order.OrderTypeId,
-                                OrderTerminalState.Failed,
-                                OrderSubmitResultSemantics.ToFailureReason(result),
-                                entity);
-                            _orderTypeRegistry.PublishTerminalResult(in rejected);
-                        }
-                        catch
-                        {
-                            RestoreContinuationOwnership(
-                                ref continuation,
-                                triggerOrderId,
-                                extracted.Slice(i, count - i),
-                                reservations.Slice(i, count - i));
-                            throw;
                         }
                     }
+                    finally
+                    {
+                        CancelContinuationAdmissions(reservations, count);
+                    }
+
+                    _processedCount++;
                 }
-                finally
+                catch
                 {
                     CancelContinuationAdmissions(reservations, count);
+                    throw;
                 }
-
-                _processedCount++;
             }
         }
 

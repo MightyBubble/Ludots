@@ -23,7 +23,8 @@
     "effectPhaseGraphProgramScratchCapacity": 16384,
     "graphOutputValueCapacity": 16384,
     "abilityExecMaxWorkUnitsPerSlice": 4096,
-    "effectProcessingMaxWorkUnitsPerSlice": 4096
+    "effectProcessingMaxWorkUnitsPerSlice": 4096,
+    "commandIntentScratchCapacity": 4096
   },
   "gridCellSizeCm": 100,
   "worldWidthInMacroTiles": 64,

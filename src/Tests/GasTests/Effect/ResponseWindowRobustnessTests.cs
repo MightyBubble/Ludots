@@ -1,4 +1,6 @@
+using System;
 using Arch.Core;
+using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Input;
@@ -337,6 +339,386 @@ namespace Ludots.Tests.GAS
             {
                 world.Dispose();
             }
+        }
+
+        [Test]
+        public void ProposalProcessing_ChainActivateResponseOverflow_PublishesTypedFailureAndDoesNotDropOrderSilently()
+        {
+            var world = World.Create();
+            try
+            {
+                const int tplRoot = 2300;
+                const int tplFollow = 2301;
+                const int rootTag = 130;
+                const int followTag = 131;
+
+                var templates = new EffectTemplateRegistry();
+                templates.Register(tplRoot, new EffectTemplateData
+                {
+                    TagId = rootTag,
+                    LifetimeKind = EffectLifetimeKind.Instant,
+                    ClockId = GasClockId.Step,
+                    ParticipatesInResponse = true,
+                    Modifiers = default
+                });
+                templates.Register(tplFollow, new EffectTemplateData
+                {
+                    TagId = followTag,
+                    LifetimeKind = EffectLifetimeKind.Instant,
+                    ClockId = GasClockId.Step,
+                    ParticipatesInResponse = true,
+                    Modifiers = default
+                });
+
+                unsafe
+                {
+                    for (int i = 0; i <= GasConstants.MAX_RESPONSES_PER_WINDOW; i++)
+                    {
+                        var listener = new ResponseChainListener();
+                        That(listener.Add(followTag, ResponseType.Modify, priority: i, modifyValue: 1f), Is.True);
+                        world.Add(world.Create(), listener);
+                    }
+                }
+
+                var admissionResults = new OrderAdmissionResultBuffer(64, 64);
+                admissionResults.BeginLogicStep();
+                var chainOrders = new OrderQueue(64, admissionResults);
+                var budget = new GasBudget();
+                var queue = new EffectRequestQueue();
+                var inputRequests = new InputRequestQueue();
+                var orderRequests = new OrderRequestQueue();
+                var target = world.Create(new PlayerOwner { PlayerId = 1 });
+                var rootListener = default(ResponseChainListener);
+                That(rootListener.Add(rootTag, ResponseType.PromptInput, priority: 100, effectTemplateId: tplRoot), Is.True);
+                world.Add(target, rootListener);
+
+                queue.Publish(new EffectRequest
+                {
+                    RootId = 11,
+                    Source = target,
+                    Target = target,
+                    TemplateId = tplRoot
+                });
+
+                var sys = new EffectProposalProcessingSystem(
+                    world,
+                    queue,
+                    GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                    new Ludots.Core.Engine.DiscreteClock(),
+                    budget,
+                    templates,
+                    inputRequests,
+                    chainOrders,
+                    orderRequests: orderRequests,
+                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                    tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
+
+                while (!sys.UpdateSlice(dt: 1f, timeBudgetMs: int.MaxValue)) { }
+
+                var args = default(OrderArgs);
+                args.I0 = tplFollow;
+                var activate = new Order
+                {
+                    OrderTypeId = TestResponseChainOrderTypeIds.ChainActivateEffect,
+                    PlayerId = 1,
+                    Actor = target,
+                    Target = target,
+                    Args = args
+                };
+                That(chainOrders.SubmitAssigned(ref activate), Is.EqualTo(OrderSubmitResult.Queued));
+                That(chainOrders.Count, Is.EqualTo(1));
+
+                while (!sys.UpdateSlice(dt: 1f, timeBudgetMs: int.MaxValue)) { }
+
+                That(chainOrders.Count, Is.EqualTo(0));
+                That(admissionResults.TryGet(activate.OrderId, OrderAdmissionStage.EntityIntake, out var intake), Is.True);
+                That(intake.Result, Is.EqualTo(OrderSubmitResult.RejectedQueueFull));
+                That(budget.ResponseQueueOverflowDropped, Is.EqualTo(1));
+                admissionResults.EndEntityIntake();
+                admissionResults.EndLogicStep();
+            }
+            finally
+            {
+                world.Dispose();
+            }
+        }
+
+        [Test]
+        public void ProposalProcessing_ChainPassWithSpatialPayload_ReleasesPayloadOnSuccess()
+        {
+            var world = World.Create();
+            try
+            {
+                const int tplRoot = 2400;
+                const int rootTag = 140;
+
+                var templates = new EffectTemplateRegistry();
+                templates.Register(tplRoot, new EffectTemplateData
+                {
+                    TagId = rootTag,
+                    LifetimeKind = EffectLifetimeKind.Instant,
+                    ClockId = GasClockId.Step,
+                    ParticipatesInResponse = true,
+                    Modifiers = default
+                });
+
+                var admissionResults = new OrderAdmissionResultBuffer(64, 64);
+                admissionResults.BeginLogicStep();
+                var chainOrders = new OrderQueue(64, admissionResults);
+                var queue = new EffectRequestQueue();
+                var inputRequests = new InputRequestQueue();
+                var orderRequests = new OrderRequestQueue();
+                var target = world.Create(
+                    new PlayerOwner { PlayerId = 1 },
+                    new OrderSpatialPayloadBuffer());
+                var rootListener = default(ResponseChainListener);
+                That(rootListener.Add(rootTag, ResponseType.PromptInput, priority: 100, effectTemplateId: tplRoot), Is.True);
+                world.Add(target, rootListener);
+
+                queue.Publish(new EffectRequest
+                {
+                    RootId = 12,
+                    Source = target,
+                    Target = target,
+                    TemplateId = tplRoot
+                });
+
+                var sys = new EffectProposalProcessingSystem(
+                    world,
+                    queue,
+                    GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                    new Ludots.Core.Engine.DiscreteClock(),
+                    new GasBudget(),
+                    templates,
+                    inputRequests,
+                    chainOrders,
+                    orderRequests: orderRequests,
+                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                    tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
+
+                while (!sys.UpdateSlice(dt: 1f, timeBudgetMs: int.MaxValue)) { }
+
+                int[] xs = { 0, 100, 200 };
+                int[] ys = { 0, 0, 0 };
+                var pass = new Order
+                {
+                    OrderTypeId = TestResponseChainOrderTypeIds.ChainPass,
+                    PlayerId = 1,
+                    Actor = target,
+                    Target = target
+                };
+                OrderSpatialPayloadOps.SetPath(world, target, ref pass, xs, ys, 3);
+                OrderSpatialPayloadHandle handle = pass.Args.Spatial.Payload;
+                That(handle.IsValid, Is.True);
+                That(chainOrders.SubmitAssigned(ref pass), Is.EqualTo(OrderSubmitResult.Queued));
+
+                while (!sys.UpdateSlice(dt: 1f, timeBudgetMs: int.MaxValue)) { }
+
+                That(admissionResults.TryGet(pass.OrderId, OrderAdmissionStage.EntityIntake, out var intake), Is.True);
+                That(intake.Result, Is.EqualTo(OrderSubmitResult.Activated));
+                That(handle.IsValid, Is.True);
+                Throws<InvalidOperationException>(() =>
+                {
+                    ref var payloads = ref world.Get<OrderSpatialPayloadBuffer>(target);
+                    _ = payloads.GetPointCount(in handle);
+                });
+                admissionResults.EndEntityIntake();
+                admissionResults.EndLogicStep();
+            }
+            finally
+            {
+                world.Dispose();
+            }
+        }
+
+        [Test]
+        public void ProposalProcessing_ChainNegateWithSpatialPayload_ReleasesPayloadOnSuccess()
+        {
+            var world = World.Create();
+            try
+            {
+                const int tplRoot = 2401;
+                const int rootTag = 141;
+
+                var templates = new EffectTemplateRegistry();
+                templates.Register(tplRoot, new EffectTemplateData
+                {
+                    TagId = rootTag,
+                    LifetimeKind = EffectLifetimeKind.Instant,
+                    ClockId = GasClockId.Step,
+                    ParticipatesInResponse = true,
+                    Modifiers = default
+                });
+
+                var admissionResults = new OrderAdmissionResultBuffer(64, 64);
+                admissionResults.BeginLogicStep();
+                var chainOrders = new OrderQueue(64, admissionResults);
+                var queue = new EffectRequestQueue();
+                var inputRequests = new InputRequestQueue();
+                var orderRequests = new OrderRequestQueue();
+                var target = world.Create(
+                    new PlayerOwner { PlayerId = 1 },
+                    new OrderSpatialPayloadBuffer());
+                var rootListener = default(ResponseChainListener);
+                That(rootListener.Add(rootTag, ResponseType.PromptInput, priority: 100, effectTemplateId: tplRoot), Is.True);
+                world.Add(target, rootListener);
+
+                queue.Publish(new EffectRequest
+                {
+                    RootId = 13,
+                    Source = target,
+                    Target = target,
+                    TemplateId = tplRoot
+                });
+
+                var sys = new EffectProposalProcessingSystem(
+                    world,
+                    queue,
+                    GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                    new Ludots.Core.Engine.DiscreteClock(),
+                    new GasBudget(),
+                    templates,
+                    inputRequests,
+                    chainOrders,
+                    orderRequests: orderRequests,
+                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                    tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
+
+                while (!sys.UpdateSlice(dt: 1f, timeBudgetMs: int.MaxValue)) { }
+
+                int[] xs = { 0, 100, 200 };
+                int[] ys = { 0, 0, 0 };
+                var negate = new Order
+                {
+                    OrderTypeId = TestResponseChainOrderTypeIds.ChainNegate,
+                    PlayerId = 1,
+                    Actor = target,
+                    Target = target
+                };
+                OrderSpatialPayloadOps.SetPath(world, target, ref negate, xs, ys, 3);
+                OrderSpatialPayloadHandle handle = negate.Args.Spatial.Payload;
+                That(handle.IsValid, Is.True);
+                That(chainOrders.SubmitAssigned(ref negate), Is.EqualTo(OrderSubmitResult.Queued));
+
+                while (!sys.UpdateSlice(dt: 1f, timeBudgetMs: int.MaxValue)) { }
+
+                That(admissionResults.TryGet(negate.OrderId, OrderAdmissionStage.EntityIntake, out var intake), Is.True);
+                That(intake.Result, Is.EqualTo(OrderSubmitResult.Activated));
+                Throws<InvalidOperationException>(() =>
+                {
+                    ref var payloads = ref world.Get<OrderSpatialPayloadBuffer>(target);
+                    _ = payloads.GetPointCount(in handle);
+                });
+                admissionResults.EndEntityIntake();
+                admissionResults.EndLogicStep();
+            }
+            finally
+            {
+                world.Dispose();
+            }
+        }
+
+        [Test]
+        public void ProposalProcessing_ReleaseThrowAfterAdmissionCommit_DoesNotDoubleCommitReservation()
+        {
+            var world = World.Create();
+            try
+            {
+                const int tplRoot = 2402;
+                const int rootTag = 142;
+
+                var templates = new EffectTemplateRegistry();
+                templates.Register(tplRoot, new EffectTemplateData
+                {
+                    TagId = rootTag,
+                    LifetimeKind = EffectLifetimeKind.Instant,
+                    ClockId = GasClockId.Step,
+                    ParticipatesInResponse = true,
+                    Modifiers = default
+                });
+
+                var admissionResults = new OrderAdmissionResultBuffer(64, 64);
+                admissionResults.BeginLogicStep();
+                var chainOrders = new OrderQueue(64, admissionResults);
+                var queue = new EffectRequestQueue();
+                var inputRequests = new InputRequestQueue();
+                var orderRequests = new OrderRequestQueue();
+                var target = world.Create(
+                    new PlayerOwner { PlayerId = 1 },
+                    new OrderSpatialPayloadBuffer());
+                var rootListener = default(ResponseChainListener);
+                That(rootListener.Add(rootTag, ResponseType.PromptInput, priority: 100, effectTemplateId: tplRoot), Is.True);
+                world.Add(target, rootListener);
+
+                queue.Publish(new EffectRequest
+                {
+                    RootId = 14,
+                    Source = target,
+                    Target = target,
+                    TemplateId = tplRoot
+                });
+
+                var sys = new EffectProposalProcessingSystem(
+                    world,
+                    queue,
+                    GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                    new Ludots.Core.Engine.DiscreteClock(),
+                    new GasBudget(),
+                    templates,
+                    inputRequests,
+                    chainOrders,
+                    orderRequests: orderRequests,
+                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                    tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
+
+                while (!sys.UpdateSlice(dt: 1f, timeBudgetMs: int.MaxValue)) { }
+
+                int[] xs = { 0, 100, 200 };
+                int[] ys = { 0, 0, 0 };
+                var pass = new Order
+                {
+                    OrderTypeId = TestResponseChainOrderTypeIds.ChainPass,
+                    PlayerId = 1,
+                    Actor = target,
+                    Target = target
+                };
+                OrderSpatialPayloadOps.SetPath(world, target, ref pass, xs, ys, 3);
+                That(chainOrders.SubmitAssigned(ref pass), Is.EqualTo(OrderSubmitResult.Queued));
+
+                // Valid payload handle remains on the order, but the buffer is gone → Release throws after Commit.
+                world.Remove<OrderSpatialPayloadBuffer>(target);
+
+                Throws<InvalidOperationException>(() =>
+                {
+                    while (!sys.UpdateSlice(dt: 1f, timeBudgetMs: int.MaxValue)) { }
+                });
+
+                That(admissionResults.ReservedCount, Is.EqualTo(0));
+                That(CountEntityIntakeOutcomes(admissionResults, pass.OrderId), Is.EqualTo(1));
+                That(admissionResults.TryGet(pass.OrderId, OrderAdmissionStage.EntityIntake, out var intake), Is.True);
+                That(intake.Result, Is.EqualTo(OrderSubmitResult.Activated));
+                DoesNotThrow(() => admissionResults.EndEntityIntake());
+                DoesNotThrow(() => admissionResults.EndLogicStep());
+            }
+            finally
+            {
+                world.Dispose();
+            }
+        }
+
+        private static int CountEntityIntakeOutcomes(OrderAdmissionResultBuffer results, int orderId)
+        {
+            int matched = 0;
+            for (int i = 0; i < results.Count; i++)
+            {
+                ref readonly var outcome = ref results[i];
+                if (outcome.OrderId == orderId && outcome.Stage == OrderAdmissionStage.EntityIntake)
+                {
+                    matched++;
+                }
+            }
+
+            return matched;
         }
 
         private static int EnsureAttribute(string name)

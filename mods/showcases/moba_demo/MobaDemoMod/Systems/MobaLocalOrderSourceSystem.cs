@@ -44,11 +44,12 @@ namespace MobaDemoMod.Systems
         private readonly EntityCollectionStore _entityCollections;
         private readonly PlayerEntityLookup _playerEntities;
         private readonly ControlDomainQuery _controlDomains;
-        private Entity[] _collectionScratch = new Entity[InputOrderMappingSystem.DefaultCommandIntentScratchCapacity];
+        private readonly Entity[] _collectionScratch;
         
         // Configuration-driven input-order mapping
         private InputOrderMappingSystem? _inputOrderMapping;
         private bool _initialized = false;
+        private readonly int _commandIntentScratchCapacity;
 
         public MobaLocalOrderSourceSystem(World world, Dictionary<string, object> globals, OrderQueue orders, IModContext ctx)
         {
@@ -62,6 +63,17 @@ namespace MobaDemoMod.Systems
                 _castAbilityOrderTypeId = config.Constants.OrderTypeIds["castAbility"];
                 _moveToOrderTypeId = config.Constants.OrderTypeIds["moveTo"];
                 _stopOrderTypeId = config.Constants.OrderTypeIds["stop"];
+                GasRuntimeCapacityConfig capacity = config.GasRuntimeCapacity
+                    ?? throw new InvalidOperationException(
+                        "MobaLocalOrderSourceSystem requires GameConfig.gasRuntimeCapacity.");
+                if (capacity.CommandIntentScratchCapacity <= 0)
+                {
+                    throw new InvalidOperationException(
+                        "GameConfig.gasRuntimeCapacity.commandIntentScratchCapacity must be positive.");
+                }
+
+                _commandIntentScratchCapacity = capacity.CommandIntentScratchCapacity;
+                _collectionScratch = new Entity[_commandIntentScratchCapacity];
             }
             else
             {
@@ -99,7 +111,7 @@ namespace MobaDemoMod.Systems
             
             // Load input-order mappings from mod assets via VFS
             var config = LoadInputOrderMappings();
-            _inputOrderMapping = new InputOrderMappingSystem(input, config);
+            _inputOrderMapping = new InputOrderMappingSystem(input, config, _commandIntentScratchCapacity);
             _globals[CoreServiceKeys.ActiveInputOrderMapping.Name] = _inputOrderMapping;
             _globals[CoreInputMod.Systems.SkillBarOverlaySystem.SkillBarKeyLabelsKey] = new[] { "Q", "W", "E", "R" };
             var bindings = InteractionActionBindingsResolver.Require(_globals, nameof(MobaLocalOrderSourceSystem));

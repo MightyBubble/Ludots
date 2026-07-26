@@ -114,6 +114,16 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
         }
 
         [Test]
+        public void GasRuntimeCapacity_RequiresPositiveCommandIntentScratchCapacity()
+        {
+            var config = CreateValidRuntimeCapacity();
+            config.CommandIntentScratchCapacity = 0;
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(config.Validate)!;
+            Assert.That(ex.Message, Does.Contain("commandIntentScratchCapacity"));
+        }
+
+        [Test]
         public void GasRuntimeCapacity_RequiresPositiveResponseChainOrderQueueCapacity()
         {
             var config = CreateValidRuntimeCapacity();
@@ -1032,6 +1042,7 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
                 GraphOutputValueCapacity = 64,
                 AbilityExecMaxWorkUnitsPerSlice = 32,
                 EffectProcessingMaxWorkUnitsPerSlice = 32,
+                CommandIntentScratchCapacity = 64,
             };
         }
 
