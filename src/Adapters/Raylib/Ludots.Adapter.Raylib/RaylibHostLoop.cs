@@ -283,7 +283,7 @@ namespace Ludots.Adapter.Raylib
                 var fogFieldProjector = new FogGlobalFieldVisualProjector();
                 using var fieldRenderPerformer = new RaylibFieldRenderPerformer();
                 PresentationMaterialRegistry? materials = engine.GetService(CoreServiceKeys.PresentationMaterialRegistry);
-                using var primitiveRenderer = new RaylibPrimitiveRenderer(RaylibPrimitiveRenderMode.Immediate, engine.VFS, materials);
+                using var primitiveRenderer = new RaylibPrimitiveRenderer(RaylibPrimitiveRenderMode.Instanced, engine.VFS, materials);
                 RaylibBenchmarkRenderService? benchmarkRenderer = null;
                 if (engine.TryGetService(CoreServiceKeys.PresentationMeshAssetRegistry, out MeshAssetRegistry benchmarkMeshes))
                 {

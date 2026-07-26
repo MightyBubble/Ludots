@@ -284,7 +284,7 @@ namespace Ludots.Client.Raylib.Rendering
                     continue;
                 }
 
-                SubmitAssetRecursive(
+                DrawAssetRecursive(
                     item.MeshAssetId,
                     item.Position,
                     item.Rotation,
