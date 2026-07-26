@@ -11,6 +11,7 @@ using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Gameplay.Items;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Input.CommandSources;
@@ -103,7 +104,11 @@ namespace CoreInputMod.Systems
 
             using var stream = File.OpenRead(fullPath);
             var config = InputOrderMappingLoader.LoadFromStream(stream);
-            var mapping = new InputOrderMappingSystem(input, config);
+            int commandIntentScratchCapacity = ResolveCommandIntentScratchCapacity();
+            var mapping = new InputOrderMappingSystem(input, config, commandIntentScratchCapacity);
+            PlayerEntityLookup players = RequireService<PlayerEntityLookup>(CoreServiceKeys.PlayerEntityLookup.Name);
+            var controlDomains = RequireService<Ludots.Core.Gameplay.Relationships.ControlDomainQuery>(
+                CoreServiceKeys.ControlDomainQuery.Name);
 
             mapping.SetOrderTypeKeyResolver(key =>
             {
@@ -140,6 +145,13 @@ namespace CoreInputMod.Systems
                     : default;
                 return _world.IsAlive(entity);
             });
+            mapping.SetActivationActorValidator((actor, playerId) =>
+                InputOrderActorAuthorization.IsAuthorized(
+                    _world,
+                    players,
+                    controlDomains,
+                    actor,
+                    playerId));
             mapping.SetCollectionPrimaryEntityProvider(TryResolveCollectionPrimary);
             mapping.SetCollectionEntityListProvider(TryCopyCollectionEntities);
             RequireCommandTargetGate();
@@ -157,32 +169,41 @@ namespace CoreInputMod.Systems
 
                 if (BeforeOrderSubmit != null && !BeforeOrderSubmit(in order))
                 {
-                    return;
+                    return OrderSubmitResult.RejectedByRule;
                 }
 
-                bool accepted;
+                if (!_world.IsAlive(order.Actor))
+                {
+                    return OrderSubmitResult.RejectedInvalidActor;
+                }
+
+                OrderSubmitResult result;
                 if (TryGetReplicatedClientCommandPort(out IReplicatedClientCommandPort networkCommands))
                 {
-                    ReplicatedClientCommandSubmitResult result = networkCommands.Submit(in order);
-                    _globals[LastNetworkSubmitResultDebugKey] = result;
-                    accepted = result == ReplicatedClientCommandSubmitResult.Submitted;
+                    ReplicatedClientCommandSubmitResult networkResult = networkCommands.Submit(in order);
+                    _globals[LastNetworkSubmitResultDebugKey] = networkResult;
+                    result = networkResult == ReplicatedClientCommandSubmitResult.Submitted
+                        ? OrderSubmitResult.Queued
+                        : OrderSubmitResult.RejectedByRule;
                 }
                 else
                 {
-                    accepted = _planner != null
-                        ? _planner.TrySubmit(in order)
-                        : _orders.TryEnqueue(order);
+                    result = _planner != null
+                        ? _planner.Submit(in order)
+                        : _orders.Submit(in order);
                 }
-                if (accepted)
+
+                if (OrderSubmitResultSemantics.IsAccepted(result))
                 {
                     AfterOrderAccepted?.Invoke(in order);
                 }
+                return result;
             });
             mapping.SetOrderBatchSubmitHandler((Span<Order> orders) =>
             {
                 if (orders.IsEmpty)
                 {
-                    return true;
+                    return OrderSubmitResult.Queued;
                 }
 
                 _globals[LastOrderDebugKey] = DescribeOrder(in orders[0]);
@@ -190,24 +211,27 @@ namespace CoreInputMod.Systems
                 {
                     if (BeforeOrderSubmit != null && !BeforeOrderSubmit(in orders[i]))
                     {
-                        return false;
+                        return OrderSubmitResult.RejectedByRule;
                     }
                 }
 
-                bool accepted;
+                OrderSubmitResult result;
                 if (TryGetReplicatedClientCommandPort(out IReplicatedClientCommandPort networkCommands))
                 {
-                    ReplicatedClientCommandSubmitResult result = networkCommands.Submit(orders);
-                    _globals[LastNetworkSubmitResultDebugKey] = result;
-                    accepted = result == ReplicatedClientCommandSubmitResult.Submitted;
+                    ReplicatedClientCommandSubmitResult networkResult = networkCommands.Submit(orders);
+                    _globals[LastNetworkSubmitResultDebugKey] = networkResult;
+                    result = networkResult == ReplicatedClientCommandSubmitResult.Submitted
+                        ? OrderSubmitResult.Queued
+                        : OrderSubmitResult.RejectedByRule;
                 }
                 else
                 {
-                    accepted = _planner != null
+                    result = _planner != null
                         ? _planner.TrySubmitSharedBatch(orders)
                         : _orders.TryEnqueueSharedBatch(orders);
                 }
-                if (accepted)
+
+                if (OrderSubmitResultSemantics.IsAccepted(result))
                 {
                     for (int i = 0; i < orders.Length; i++)
                     {
@@ -215,13 +239,13 @@ namespace CoreInputMod.Systems
                     }
                 }
 
-                return accepted;
+                return result;
             });
             mapping.SetOrderClusterBatchSubmitHandler((Span<Order> orders) =>
             {
                 if (orders.IsEmpty)
                 {
-                    return true;
+                    return OrderSubmitResult.Queued;
                 }
 
                 _globals[LastOrderDebugKey] = DescribeOrder(in orders[0]);
@@ -229,24 +253,27 @@ namespace CoreInputMod.Systems
                 {
                     if (BeforeOrderSubmit != null && !BeforeOrderSubmit(in orders[i]))
                     {
-                        return false;
+                        return OrderSubmitResult.RejectedByRule;
                     }
                 }
 
-                bool accepted;
+                OrderSubmitResult result;
                 if (TryGetReplicatedClientCommandPort(out IReplicatedClientCommandPort networkCommands))
                 {
-                    ReplicatedClientCommandSubmitResult result = networkCommands.Submit(orders);
-                    _globals[LastNetworkSubmitResultDebugKey] = result;
-                    accepted = result == ReplicatedClientCommandSubmitResult.Submitted;
+                    ReplicatedClientCommandSubmitResult networkResult = networkCommands.Submit(orders);
+                    _globals[LastNetworkSubmitResultDebugKey] = networkResult;
+                    result = networkResult == ReplicatedClientCommandSubmitResult.Submitted
+                        ? OrderSubmitResult.Queued
+                        : OrderSubmitResult.RejectedByRule;
                 }
                 else
                 {
-                    accepted = _planner != null
+                    result = _planner != null
                         ? _planner.TrySubmitClusteredBatch(orders)
                         : _orders.TryEnqueueClusteredBatch(orders);
                 }
-                if (accepted)
+
+                if (OrderSubmitResultSemantics.IsAccepted(result))
                 {
                     for (int i = 0; i < orders.Length; i++)
                     {
@@ -254,7 +281,7 @@ namespace CoreInputMod.Systems
                     }
                 }
 
-                return accepted;
+                return result;
             });
             if (TryCreateContextScoredResolver(out var contextResolver))
             {
@@ -361,6 +388,17 @@ namespace CoreInputMod.Systems
                 : default;
         }
 
+        private T RequireService<T>(string key) where T : class
+        {
+            if (!_globals.TryGetValue(key, out object? serviceObj) || serviceObj is not T service)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(LocalOrderSourceHelper)} requires {key} before input-order mappings install.");
+            }
+
+            return service;
+        }
+
         private bool TryGetCommandSourceOwner(out Entity owner)
         {
             owner = Entity.Null;
@@ -447,11 +485,25 @@ namespace CoreInputMod.Systems
                    _context.TryGetCollectionPrimary(owner, collectionKey, out entity);
         }
 
-        private bool TryCopyCollectionEntities(string collectionKey, List<Entity> entities)
+        private bool TryCopyCollectionEntities(
+            string collectionKey,
+            List<Entity> entities,
+            int capacity,
+            out OrderSubmitResult rejection)
         {
             entities.Clear();
-            return TryGetCommandSourceOwner(out Entity owner) &&
-                   _context.TryCopyCollectionEntities(owner, collectionKey, entities);
+            rejection = OrderSubmitResult.RejectedInvalidActor;
+            if (!TryGetCommandSourceOwner(out Entity owner))
+            {
+                return false;
+            }
+
+            return _context.TryCopyCollectionEntities(
+                owner,
+                collectionKey,
+                entities,
+                capacity,
+                out rejection);
         }
 
         private static bool HasEntityValue(Entity entity)
@@ -467,20 +519,18 @@ namespace CoreInputMod.Systems
                 !_globals.TryGetValue(CoreServiceKeys.GraphProgramRegistry.Name, out var graphsObj) ||
                 graphsObj is not Ludots.Core.GraphRuntime.GraphProgramRegistry graphPrograms ||
                 !_globals.TryGetValue(CoreServiceKeys.SpatialQueryService.Name, out var spatialObj) ||
-                spatialObj is not Ludots.Core.Spatial.ISpatialQueryService spatialQueries ||
-                !_globals.TryGetValue(CoreServiceKeys.SpatialCoordinateConverter.Name, out var coordsObj) ||
-                coordsObj is not Ludots.Core.Spatial.ISpatialCoordinateConverter spatialCoords)
+                spatialObj is not Ludots.Core.Spatial.ISpatialQueryService spatialQueries)
             {
                 return false;
             }
 
-            var graphApi = GasGraphRuntimeApi.CreateProduction(
-                _world,
-                spatialQueries,
-                spatialCoords,
-                eventBus: null,
-                effectRequests: null,
-                _globals);
+            if (!_globals.TryGetValue(CoreServiceKeys.GasGraphRuntimeApi.Name, out var graphApiObj) ||
+                graphApiObj is not GasGraphRuntimeApi graphApi)
+            {
+                throw new InvalidOperationException(
+                    "Context-scored order resolution requires the engine-owned production GasGraphRuntimeApi.");
+            }
+
             KnowledgeCommandTargetGate candidateGate = RequireCommandTargetGate();
             resolver = new ContextScoredOrderResolver(_world, contextGroups, graphPrograms, spatialQueries, graphApi, candidateGate.CanTarget);
             return true;
@@ -583,6 +633,7 @@ namespace CoreInputMod.Systems
         {
             private readonly World _world;
             private readonly AbilityDefinitionRegistry _abilityDefinitions;
+            private readonly Dictionary<SkillMappingOverrideCacheKey, InputOrderMapping> _cache = new(64);
 
             public SkillMappingOverrideResolver(World world, AbilityDefinitionRegistry abilityDefinitions)
             {
@@ -610,9 +661,19 @@ namespace CoreInputMod.Systems
 
                 bool hasForm = _world.Has<AbilityFormSlotBuffer>(actor);
                 AbilityFormSlotBuffer formSlots = hasForm ? _world.Get<AbilityFormSlotBuffer>(actor) : default;
+                bool hasItemGranted = _world.Has<ItemGrantedSlotBuffer>(actor);
+                ItemGrantedSlotBuffer itemGrantedSlots = hasItemGranted ? _world.Get<ItemGrantedSlotBuffer>(actor) : default;
                 bool hasGranted = _world.Has<GrantedSlotBuffer>(actor);
                 GrantedSlotBuffer grantedSlots = hasGranted ? _world.Get<GrantedSlotBuffer>(actor) : default;
-                AbilitySlotState slot = AbilitySlotResolver.Resolve(in abilities, in formSlots, hasForm, in grantedSlots, hasGranted, slotIndex);
+                AbilitySlotState slot = AbilitySlotResolver.Resolve(
+                    in abilities,
+                    in formSlots,
+                    hasForm,
+                    in itemGrantedSlots,
+                    hasItemGranted,
+                    in grantedSlots,
+                    hasGranted,
+                    slotIndex);
                 if (slot.AbilityId <= 0 ||
                     !_abilityDefinitions.TryGet(slot.AbilityId, out var abilityDefinition) ||
                     !abilityDefinition.HasInputBindingOverride)
@@ -620,7 +681,13 @@ namespace CoreInputMod.Systems
                     return false;
                 }
 
-                overrideMapping = CloneMapping(mapping);
+                var cacheKey = new SkillMappingOverrideCacheKey(mapping, slot.AbilityId);
+                if (_cache.TryGetValue(cacheKey, out overrideMapping))
+                {
+                    return true;
+                }
+
+                overrideMapping = mapping.Clone();
                 ref readonly var inputOverride = ref abilityDefinition.InputBindingOverride;
                 if (inputOverride.HasTrigger)
                 {
@@ -657,13 +724,13 @@ namespace CoreInputMod.Systems
                     overrideMapping.AutoTargetRangeCm = inputOverride.AutoTargetRangeCm;
                 }
 
+                _cache.Add(cacheKey, overrideMapping);
                 return true;
             }
 
-            private static InputOrderMapping CloneMapping(InputOrderMapping mapping)
-            {
-                return mapping.Clone();
-            }
+            private readonly record struct SkillMappingOverrideCacheKey(
+                InputOrderMapping Mapping,
+                int AbilityId);
         }
 
         private sealed class AutoTargetResolver
@@ -786,6 +853,21 @@ namespace CoreInputMod.Systems
             }
 
             return false;
+        }
+
+        private int ResolveCommandIntentScratchCapacity()
+        {
+            GameConfig gameConfig = RequireService<GameConfig>(CoreServiceKeys.GameConfig.Name);
+            GasRuntimeCapacityConfig capacity = gameConfig.GasRuntimeCapacity
+                ?? throw new InvalidOperationException(
+                    $"{nameof(LocalOrderSourceHelper)} requires GameConfig.gasRuntimeCapacity before input-order mappings install.");
+            if (capacity.CommandIntentScratchCapacity <= 0)
+            {
+                throw new InvalidOperationException(
+                    "GameConfig.gasRuntimeCapacity.commandIntentScratchCapacity must be positive.");
+            }
+
+            return capacity.CommandIntentScratchCapacity;
         }
 
     }

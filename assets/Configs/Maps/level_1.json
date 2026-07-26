@@ -1,7 +1,7 @@
 {
   "id": "level_1_forest",
   "boards": [
-    { "name": "default", "dataFile": "level_1.bin" }
+    { "name": "default", "dataFile": "level_1.bin", "loadedChunkCapacity": 256 }
   ],
   "entities": [
     {

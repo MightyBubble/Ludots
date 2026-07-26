@@ -85,7 +85,8 @@ namespace Ludots.Tests.GasTests
                 world,
                 templates,
                 new EntityTemplateKeyRegistry(),
-                new PresentationStableIdAllocator());
+                new PresentationStableIdAllocator(),
+                new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 
             var state = new LifecycleTransactionState
             {
@@ -177,7 +178,8 @@ namespace Ludots.Tests.GasTests
                 world,
                 templates,
                 templateKeys,
-                new PresentationStableIdAllocator());
+                new PresentationStableIdAllocator(),
+                new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
             var runtime = new BuiltinHandlerExecutionContext { LifecycleServices = lifecycleServices };
             var context = new EffectContext
             {
@@ -187,19 +189,21 @@ namespace Ludots.Tests.GasTests
                 TargetContext = source
             };
 
+            EffectPhaseGraphBindings behavior = default;
             executor.ExecutePhase(
                 world,
                 graphApi,
-                Entity.Null,
-                in context,
+                context.Source,
+                context.Target,
+                context.TargetContext,
                 default,
                 EffectPhaseId.OnApply,
-                default,
+                in behavior,
                 EffectPresetType.DeployConsumeSource,
-                0,
-                effectTemplateId,
-                in tpl.ConfigParams,
-                runtime);
+                effectTagId: 0,
+                effectTemplateId: effectTemplateId,
+                mergedParams: in tpl.ConfigParams,
+                builtinRuntime: runtime);
 
             That(world.Has<PresentationDestroyPending>(source), Is.True);
 
@@ -285,7 +289,8 @@ namespace Ludots.Tests.GasTests
                 world,
                 templates,
                 templateKeys,
-                new PresentationStableIdAllocator());
+                new PresentationStableIdAllocator(),
+                new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
             var runtime = new BuiltinHandlerExecutionContext { LifecycleServices = lifecycleServices };
             var context = new EffectContext
             {
@@ -295,19 +300,21 @@ namespace Ludots.Tests.GasTests
                 TargetContext = source
             };
 
+            EffectPhaseGraphBindings behavior = default;
             executor.ExecutePhase(
                 world,
                 graphApi,
-                Entity.Null,
-                in context,
+                context.Source,
+                context.Target,
+                context.TargetContext,
                 default,
                 EffectPhaseId.OnApply,
-                default,
+                in behavior,
                 EffectPresetType.DeployConsumeSource,
-                0,
-                effectTemplateId,
-                in tpl.ConfigParams,
-                runtime);
+                effectTagId: 0,
+                effectTemplateId: effectTemplateId,
+                mergedParams: in tpl.ConfigParams,
+                builtinRuntime: runtime);
 
             Entity target = default;
             world.Query(new QueryDescription().WithAll<Name>(), (Entity entity, ref Name name) =>
@@ -594,7 +601,8 @@ namespace Ludots.Tests.GasTests
                 world,
                 templates,
                 new EntityTemplateKeyRegistry(),
-                new PresentationStableIdAllocator());
+                new PresentationStableIdAllocator(),
+                new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
             var state = new LifecycleTransactionState
             {
                 Source = source,

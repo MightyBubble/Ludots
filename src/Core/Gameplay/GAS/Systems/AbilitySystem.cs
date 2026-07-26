@@ -31,7 +31,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _effectRequests = effectRequests ?? throw new InvalidOperationException(
                 "LUDOTS_GAS_ABILITY_EFFECT_QUEUE_REQUIRED: AbilitySystem requires EffectRequestQueue to publish activation effects.");
             _abilityDefinitions = abilityDefinitions;
-            _tagOps = tagOps ?? new TagOps();
+            _tagOps = tagOps ?? throw new InvalidOperationException(TagOps.MissingTagOpsError);
             _graphPrograms = graphPrograms;
             _graphApi = graphApi;
             _progressionRequirements = progressionRequirements;

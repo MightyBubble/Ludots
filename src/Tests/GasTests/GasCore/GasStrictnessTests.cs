@@ -2,11 +2,13 @@ using System;
 using System.IO;
 using Arch.Core;
 using Ludots.Core.Config;
+using Ludots.Core.Engine;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Bindings;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Config;
+using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Modding;
@@ -21,7 +23,9 @@ namespace Ludots.Tests.GAS
     [TestFixture]
     public class GasStrictnessTests
     {
-        private readonly TagOps _tagOps = new();
+        private readonly TagOps _tagOps = new(
+            new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME),
+            new TagRuleRegistry());
 
         [Test]
         public void RelationshipFilter_Parse_RejectsAliasesCasingWhitespaceAndNumericValues()
@@ -54,6 +58,55 @@ namespace Ludots.Tests.GAS
             var unsupported = new GasCondition((GasConditionKind)255, tagId: 1, TagSense.Present);
             Throws<ArgumentOutOfRangeException>(() =>
                 GasConditionEvaluator.ShouldExpire(world, target, in unsupported, _tagOps));
+        }
+
+        [Test]
+        public void EffectPipelineSystems_RejectNonPositiveStepRateAtConstruction()
+        {
+            using var world = World.Create();
+
+            Throws<ArgumentOutOfRangeException>(() => new EffectProposalProcessingSystem(
+                world,
+                new EffectRequestQueue(),
+                GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                new DiscreteClock(),
+                responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                stepRateHz: 0));
+            Throws<ArgumentOutOfRangeException>(() => new EffectApplicationSystem(
+                world,
+                GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                new DiscreteClock(),
+                stepRateHz: 0));
+            Throws<ArgumentOutOfRangeException>(() => new EffectLifetimeSystem(
+                world,
+                new DiscreteClock(),
+                new GasConditionRegistry(),
+                snapshotCapacity: 1,
+                fanOutCommandCapacity: GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                stepRateHz: 0));
+        }
+
+        [Test]
+        public void EffectPipelineSystems_RequireGameplayClockAtConstruction()
+        {
+            using var world = World.Create();
+
+            Throws<ArgumentNullException>(() => new EffectProposalProcessingSystem(
+                world,
+                new EffectRequestQueue(),
+                GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                clock: null!,
+                responseChainOrderTypes: TestResponseChainOrderTypeIds.Types));
+            Throws<ArgumentNullException>(() => new EffectApplicationSystem(
+                world,
+                GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                clock: null!));
+            Throws<ArgumentNullException>(() => new EffectLifetimeSystem(
+                world,
+                null!,
+                new GasConditionRegistry(),
+                snapshotCapacity: 1,
+                fanOutCommandCapacity: GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME));
         }
 
         [Test]
@@ -274,7 +327,7 @@ namespace Ludots.Tests.GAS
             var bandRegistry = new RelationshipBandRegistry();
             var changeBuffer = new RelationshipChangeBuffer();
             var relationships = new RelationshipRuntime(world, typeRegistry, metricRegistry, flagRegistry, bandRegistry, changeBuffer, new RelationshipReverseIndex(world));
-            var api = new GasGraphRuntimeApi(world, tagOps: new TagOps(), relationshipRuntime: relationships);
+            var api = new GasGraphRuntimeApi(world, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()), relationshipRuntime: relationships);
 
             Span<float> floats = stackalloc float[GraphVmLimits.MaxFloatRegisters];
             Span<int> ints = stackalloc int[GraphVmLimits.MaxIntRegisters];

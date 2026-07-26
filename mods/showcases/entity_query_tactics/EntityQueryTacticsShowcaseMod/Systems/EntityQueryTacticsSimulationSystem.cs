@@ -408,21 +408,10 @@ namespace EntityQueryTacticsShowcaseMod.Systems
                 throw new InvalidOperationException($"Entity query tactics showcase cannot add invalid tag id '{tagId}'.");
             }
 
-            if (!_world.Has<GameplayTagContainer>(entity))
-            {
-                entity.Add(new GameplayTagContainer());
-            }
-
-            if (!_world.Has<TagCountContainer>(entity))
-            {
-                entity.Add(new TagCountContainer());
-            }
-
-            ref GameplayTagContainer tags = ref _world.Get<GameplayTagContainer>(entity);
-            ref TagCountContainer counts = ref _world.Get<TagCountContainer>(entity);
+            TagStateInstaller.EnsureInstalled(_world, entity);
             TagOps tagOps = _engine.GetService(CoreServiceKeys.TagOps)
                 ?? throw new InvalidOperationException("TagOps is missing.");
-            if (!tagOps.AddTag(ref tags, ref counts, tagId))
+            if (!tagOps.AddTag(_world, entity, tagId))
             {
                 throw new InvalidOperationException($"Entity query tactics showcase tag rule rejected configured tag id '{tagId}'.");
             }
@@ -936,13 +925,8 @@ namespace EntityQueryTacticsShowcaseMod.Systems
 
         private IGraphRuntimeApi CreateGraphApi()
         {
-            return GasGraphRuntimeApi.CreateProduction(
-                _world,
-                _engine.SpatialQueries,
-                _engine.SpatialCoords,
-                _engine.EventBus,
-                _engine.GetService(CoreServiceKeys.EffectRequestQueue),
-                _engine.GlobalContext);
+            return _engine.GetService(CoreServiceKeys.GasGraphRuntimeApi)
+                ?? throw new InvalidOperationException("Engine-owned production GasGraphRuntimeApi is missing.");
         }
 
         private uint NextSeed()

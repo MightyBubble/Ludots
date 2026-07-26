@@ -25,8 +25,69 @@ using Ludots.Core.Navigation.GraphWorld;
 
 namespace Ludots.Core.NodeLibraries.GASGraph.Host
 {
-    public sealed class GasGraphRuntimeApi : IGraphRuntimeApi
+    public sealed class GasGraphRuntimeProductionServices
     {
+        public GasGraphRuntimeProductionServices(
+            World world,
+            ISpatialQueryService spatialQueries,
+            ISpatialCoordinateConverter coords,
+            GameplayEventBus eventBus,
+            EffectRequestQueue effectRequests,
+            TagOps tagOps,
+            RelationshipRuntime relationshipRuntime,
+            RelationshipTypeRegistry typeRegistry,
+            RelationshipMetricRegistry metricRegistry,
+            RelationshipFlagRegistry flagRegistry,
+            RelationshipReasonRegistry reasonRegistry,
+            TargetDispatchPresetRegistry targetDispatchPresets,
+            EntityCollectionStore entityCollections,
+            EntitySetQueryRuntime entityQueries,
+            ControlDomainQuery controlDomains,
+            KnowledgeProjectionResolver knowledgeProjections,
+            IClock clock)
+        {
+            World = world ?? throw new ArgumentNullException(nameof(world));
+            SpatialQueries = spatialQueries ?? throw new ArgumentNullException(nameof(spatialQueries));
+            Coords = coords ?? throw new ArgumentNullException(nameof(coords));
+            EventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
+            EffectRequests = effectRequests ?? throw new ArgumentNullException(nameof(effectRequests));
+            TagOps = tagOps ?? throw new ArgumentNullException(nameof(tagOps));
+            RelationshipRuntime = relationshipRuntime ?? throw new ArgumentNullException(nameof(relationshipRuntime));
+            TypeRegistry = typeRegistry ?? throw new ArgumentNullException(nameof(typeRegistry));
+            MetricRegistry = metricRegistry ?? throw new ArgumentNullException(nameof(metricRegistry));
+            FlagRegistry = flagRegistry ?? throw new ArgumentNullException(nameof(flagRegistry));
+            ReasonRegistry = reasonRegistry ?? throw new ArgumentNullException(nameof(reasonRegistry));
+            TargetDispatchPresets = targetDispatchPresets ?? throw new ArgumentNullException(nameof(targetDispatchPresets));
+            EntityCollections = entityCollections ?? throw new ArgumentNullException(nameof(entityCollections));
+            EntityQueries = entityQueries ?? throw new ArgumentNullException(nameof(entityQueries));
+            ControlDomains = controlDomains ?? throw new ArgumentNullException(nameof(controlDomains));
+            KnowledgeProjections = knowledgeProjections ?? throw new ArgumentNullException(nameof(knowledgeProjections));
+            Clock = clock ?? throw new ArgumentNullException(nameof(clock));
+        }
+
+        public World World { get; }
+        public ISpatialQueryService SpatialQueries { get; }
+        public ISpatialCoordinateConverter Coords { get; }
+        public GameplayEventBus EventBus { get; }
+        public EffectRequestQueue EffectRequests { get; }
+        public TagOps TagOps { get; }
+        public RelationshipRuntime RelationshipRuntime { get; }
+        public RelationshipTypeRegistry TypeRegistry { get; }
+        public RelationshipMetricRegistry MetricRegistry { get; }
+        public RelationshipFlagRegistry FlagRegistry { get; }
+        public RelationshipReasonRegistry ReasonRegistry { get; }
+        public TargetDispatchPresetRegistry TargetDispatchPresets { get; }
+        public EntityCollectionStore EntityCollections { get; }
+        public EntitySetQueryRuntime EntityQueries { get; }
+        public ControlDomainQuery ControlDomains { get; }
+        public KnowledgeProjectionResolver KnowledgeProjections { get; }
+        public IClock Clock { get; }
+    }
+
+    public sealed class GasGraphRuntimeApi : IDerivedAttributeGraphRuntimeApi
+    {
+        public const string MissingBlackboardError = "GAS.GRAPH.ERR.MissingBlackboard";
+
         private readonly World _world;
         private readonly ISpatialQueryService? _spatialQueries;
         private readonly ISpatialCoordinateConverter? _coords;
@@ -57,6 +118,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private int _currentEffectTemplateId;
         private EffectContext _currentEffectContext;
         private bool _hasEffectContext;
+        private Entity _derivedAttributeWriteOwner;
+        private AttributeBuffer _derivedAttributeWriteBuffer;
+        private bool _derivedAttributeWritesActive;
+        private EffectPhaseSideEffectTransaction? _effectSideEffects;
 
         public static GasGraphRuntimeApi CreateProduction(
             World world,
@@ -71,12 +136,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 throw new ArgumentNullException(nameof(services));
             }
 
-            var api = new GasGraphRuntimeApi(
+            return CreateProduction(new GasGraphRuntimeProductionServices(
                 world,
-                spatialQueries,
-                coords,
-                eventBus,
-                effectRequests,
+                spatialQueries ?? throw new InvalidOperationException("Production GasGraphRuntimeApi requires SpatialQueryService."),
+                coords ?? throw new InvalidOperationException("Production GasGraphRuntimeApi requires SpatialCoordinateConverter."),
+                eventBus ?? throw new InvalidOperationException("Production GasGraphRuntimeApi requires GameplayEventBus."),
+                effectRequests ?? throw new InvalidOperationException("Production GasGraphRuntimeApi requires EffectRequestQueue."),
                 RequireService(services, CoreServiceKeys.TagOps),
                 RequireService(services, CoreServiceKeys.RelationshipRuntime),
                 RequireService(services, CoreServiceKeys.RelationshipTypeRegistry),
@@ -85,18 +150,39 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 RequireService(services, CoreServiceKeys.RelationshipReasonRegistry),
                 RequireService(services, CoreServiceKeys.TargetDispatchPresetRegistry),
                 RequireService(services, CoreServiceKeys.EntityCollectionStore),
-                RequireService(services, CoreServiceKeys.EntitySetQueryRuntime));
-            api.BindTopologyServices(
-                OptionalService(services, CoreServiceKeys.ControlDomainQuery),
-                OptionalService(services, CoreServiceKeys.KnowledgeProjectionResolver),
-                OptionalService(services, CoreServiceKeys.Clock));
-            return api;
+                RequireService(services, CoreServiceKeys.EntitySetQueryRuntime),
+                RequireService(services, CoreServiceKeys.ControlDomainQuery),
+                RequireService(services, CoreServiceKeys.KnowledgeProjectionResolver),
+                RequireService(services, CoreServiceKeys.Clock)));
         }
 
-        private static T? OptionalService<T>(IReadOnlyDictionary<string, object> services, ServiceKey<T> key)
-            where T : class
+        public static GasGraphRuntimeApi CreateProduction(GasGraphRuntimeProductionServices services)
         {
-            return services.TryGetValue(key.Name, out object? value) && value is T typed ? typed : null;
+            if (services == null)
+            {
+                throw new ArgumentNullException(nameof(services));
+            }
+
+            var api = new GasGraphRuntimeApi(
+                services.World,
+                services.SpatialQueries,
+                services.Coords,
+                services.EventBus,
+                services.EffectRequests,
+                services.TagOps,
+                services.RelationshipRuntime,
+                services.TypeRegistry,
+                services.MetricRegistry,
+                services.FlagRegistry,
+                services.ReasonRegistry,
+                services.TargetDispatchPresets,
+                services.EntityCollections,
+                services.EntityQueries);
+            api.BindTopologyServices(
+                services.ControlDomains,
+                services.KnowledgeProjections,
+                services.Clock);
+            return api;
         }
 
         private static T RequireService<T>(IReadOnlyDictionary<string, object> services, ServiceKey<T> key)
@@ -146,9 +232,67 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             return _tagOps ?? throw new InvalidOperationException("GAS.GRAPH.ERR.MissingTagOps");
         }
 
+        public void BeginDerivedAttributeWrites(Entity entity, in AttributeBuffer attributes)
+        {
+            if (_derivedAttributeWritesActive)
+            {
+                throw new InvalidOperationException("GAS.GRAPH.ERR.DerivedAttributeWriteScopeAlreadyActive");
+            }
+            if (!_world.IsAlive(entity) || !_world.Has<AttributeBuffer>(entity))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.InvalidDerivedAttributeWriteOwner: entity={entity.Id}.");
+            }
+
+            _derivedAttributeWriteOwner = entity;
+            _derivedAttributeWriteBuffer = attributes;
+            _derivedAttributeWritesActive = true;
+        }
+
+        public void EndDerivedAttributeWrites(Entity entity, ref AttributeBuffer attributes, bool commit)
+        {
+            if (!_derivedAttributeWritesActive || _derivedAttributeWriteOwner != entity)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.GRAPH.ERR.DerivedAttributeWriteScopeMismatch: entity={entity.Id}.");
+            }
+
+            try
+            {
+                if (commit)
+                {
+                    attributes = _derivedAttributeWriteBuffer;
+                }
+            }
+            finally
+            {
+                _derivedAttributeWritesActive = false;
+                _derivedAttributeWriteOwner = default;
+                _derivedAttributeWriteBuffer = default;
+            }
+        }
+
         private RelationshipRuntime RequireRelationshipRuntime()
         {
             return _relationshipRuntime ?? throw new InvalidOperationException("GAS.GRAPH.ERR.MissingRelationshipRuntime");
+        }
+
+        private void RejectDerivedAttributeSideEffect(string operation)
+        {
+            if (_derivedAttributeWritesActive)
+            {
+                throw new InvalidOperationException(
+                    $"{IDerivedAttributeGraphRuntimeApi.SideEffectForbiddenError}: operation={operation}.");
+            }
+        }
+
+        private void RejectNonTransactionalEffectSideEffect(string operation)
+        {
+            if (_effectSideEffects?.IsActive == true)
+            {
+                throw new InvalidOperationException(
+                    $"{EffectPhaseSideEffectTransaction.UnsupportedSideEffectError}: operation={operation}.");
+            }
         }
 
         private TargetDispatchPresetRegistry RequireTargetDispatchPresets()
@@ -179,6 +323,33 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _currentConfigParams = default;
             _hasConfigContext = false;
         }
+
+        public void BeginEffectSideEffectTransaction(EffectPhaseSideEffectTransaction transaction)
+        {
+            if (transaction == null) throw new ArgumentNullException(nameof(transaction));
+            if (_effectSideEffects != null)
+            {
+                throw new InvalidOperationException(EffectPhaseSideEffectTransaction.ScopeAlreadyActiveError);
+            }
+            if (!transaction.IsActive)
+            {
+                throw new InvalidOperationException(EffectPhaseSideEffectTransaction.ScopeNotActiveError);
+            }
+
+            _effectSideEffects = transaction;
+        }
+
+        public void EndEffectSideEffectTransaction(EffectPhaseSideEffectTransaction transaction)
+        {
+            if (!ReferenceEquals(_effectSideEffects, transaction))
+            {
+                throw new InvalidOperationException("GAS.EFFECT_TRANSACTION.ERR.ScopeMismatch");
+            }
+
+            _effectSideEffects = null;
+        }
+
+        internal bool HasActiveEffectSideEffectTransaction => _effectSideEffects?.IsActive == true;
 
         public void BindLoadedGraphRuntime(LoadedGraphRuntime? runtime)
         {
@@ -237,6 +408,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
         public void BeginLifecycleTransaction()
         {
+            RejectDerivedAttributeSideEffect(nameof(BeginLifecycleTransaction));
             var runtime = RequireBuiltinRuntime();
             var services = runtime.LifecycleServices
                 ?? throw new InvalidOperationException("BeginLifecycleTransaction requires LifecycleServices on BuiltinHandlerExecutionContext.");
@@ -303,6 +475,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
         public void InvokeBuiltin(int builtinHandlerId)
         {
+            RejectDerivedAttributeSideEffect(nameof(InvokeBuiltin));
             var runtime = RequireBuiltinRuntime();
             var registry = RequireBuiltinHandlers();
             var templates = RequireEffectTemplates();
@@ -385,6 +558,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
         public bool HasTag(Entity entity, int tagId)
         {
+            if (_effectSideEffects?.TryHasTag(entity, tagId, out bool stagedHasTag) == true)
+            {
+                return stagedHasTag;
+            }
             if (!_world.IsAlive(entity) || !_world.Has<GameplayTagContainer>(entity)) return false;
             ref var tags = ref _world.Get<GameplayTagContainer>(entity);
             return RequireTagOps().HasTag(ref tags, tagId, TagSense.Effective);
@@ -392,6 +569,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
         public bool TryGetAttributeCurrent(Entity entity, int attributeId, out float value)
         {
+            if (_effectSideEffects?.TryGetAttributeCurrent(entity, attributeId, out value) == true)
+            {
+                return true;
+            }
+
+            if (_derivedAttributeWritesActive && entity == _derivedAttributeWriteOwner)
+            {
+                value = _derivedAttributeWriteBuffer.GetCurrent(attributeId);
+                return true;
+            }
+
             if (_world.IsAlive(entity) && _world.Has<AttributeBuffer>(entity))
             {
                 value = _world.Get<AttributeBuffer>(entity).GetCurrent(attributeId);
@@ -402,46 +590,39 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             return false;
         }
 
-        public int QueryRadius(IntVector2 center, float radius, Span<Entity> buffer)
+        public SpatialQueryResult QueryRadius(IntVector2 centerCm, float radiusCm, Span<Entity> buffer)
         {
             if (_spatialQueries == null)
             {
                 throw new System.InvalidOperationException("GAS.GRAPH.ERR.MissingSpatialQueryService");
             }
-            if (_coords == null)
-            {
-                throw new System.InvalidOperationException("GAS.GRAPH.ERR.MissingSpatialCoordinateConverter");
-            }
-            WorldCmInt2 worldCenter = _coords.GridToWorld(center);
-            int radiusCm = radius >= 0f
-                ? (int)(radius * _coords!.GridCellSizeCm + 0.5f)
-                : -(int)(-radius * _coords!.GridCellSizeCm + 0.5f);
-            return _spatialQueries.QueryRadius(worldCenter, radiusCm, buffer).Count;
+            var worldCenter = new WorldCmInt2(centerCm.X, centerCm.Y);
+            int roundedRadiusCm = radiusCm >= 0f
+                ? (int)(radiusCm + 0.5f)
+                : -(int)(-radiusCm + 0.5f);
+            return _spatialQueries.QueryRadius(worldCenter, roundedRadiusCm, buffer);
         }
 
-        public int QueryCone(IntVector2 origin, int directionDeg, int halfAngleDeg, float rangeCm, Span<Entity> buffer)
+        public SpatialQueryResult QueryCone(IntVector2 originCm, int directionDeg, int halfAngleDeg, float rangeCm, Span<Entity> buffer)
         {
             if (_spatialQueries == null) throw new System.InvalidOperationException("GAS.GRAPH.ERR.MissingSpatialQueryService");
-            if (_coords == null) throw new System.InvalidOperationException("GAS.GRAPH.ERR.MissingSpatialCoordinateConverter");
-            WorldCmInt2 worldOrigin = _coords.GridToWorld(origin);
-            int rCm = (int)(rangeCm * _coords.GridCellSizeCm + 0.5f);
-            return _spatialQueries.QueryCone(worldOrigin, directionDeg, halfAngleDeg, rCm, buffer).Count;
+            var worldOrigin = new WorldCmInt2(originCm.X, originCm.Y);
+            int rCm = (int)(rangeCm + 0.5f);
+            return _spatialQueries.QueryCone(worldOrigin, directionDeg, halfAngleDeg, rCm, buffer);
         }
 
-        public int QueryRectangle(IntVector2 center, int halfWidthCm, int halfHeightCm, int rotationDeg, Span<Entity> buffer)
+        public SpatialQueryResult QueryRectangle(IntVector2 centerCm, int halfWidthCm, int halfHeightCm, int rotationDeg, Span<Entity> buffer)
         {
             if (_spatialQueries == null) throw new System.InvalidOperationException("GAS.GRAPH.ERR.MissingSpatialQueryService");
-            if (_coords == null) throw new System.InvalidOperationException("GAS.GRAPH.ERR.MissingSpatialCoordinateConverter");
-            WorldCmInt2 worldCenter = _coords.GridToWorld(center);
-            return _spatialQueries.QueryRectangle(worldCenter, halfWidthCm, halfHeightCm, rotationDeg, buffer).Count;
+            var worldCenter = new WorldCmInt2(centerCm.X, centerCm.Y);
+            return _spatialQueries.QueryRectangle(worldCenter, halfWidthCm, halfHeightCm, rotationDeg, buffer);
         }
 
-        public int QueryLine(IntVector2 origin, int directionDeg, int lengthCm, int halfWidthCm, Span<Entity> buffer)
+        public SpatialQueryResult QueryLine(IntVector2 originCm, int directionDeg, int lengthCm, int halfWidthCm, Span<Entity> buffer)
         {
             if (_spatialQueries == null) throw new System.InvalidOperationException("GAS.GRAPH.ERR.MissingSpatialQueryService");
-            if (_coords == null) throw new System.InvalidOperationException("GAS.GRAPH.ERR.MissingSpatialCoordinateConverter");
-            WorldCmInt2 worldOrigin = _coords.GridToWorld(origin);
-            return _spatialQueries.QueryLine(worldOrigin, directionDeg, lengthCm, halfWidthCm, buffer).Count;
+            var worldOrigin = new WorldCmInt2(originCm.X, originCm.Y);
+            return _spatialQueries.QueryLine(worldOrigin, directionDeg, lengthCm, halfWidthCm, buffer);
         }
 
         public int CollectMapEntities(Span<Entity> buffer)
@@ -486,11 +667,39 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
         public int FilterTagAny(Span<Entity> entities, int count, int tagId)
         {
+            if (_effectSideEffects != null)
+            {
+                int write = 0;
+                for (int i = 0; i < count; i++)
+                {
+                    Entity entity = entities[i];
+                    if (HasTag(entity, tagId))
+                    {
+                        entities[write++] = entity;
+                    }
+                }
+                return write;
+            }
+
             return RequireEntityQueries().FilterTagAny(entities, count, tagId);
         }
 
         public int FilterTagNone(Span<Entity> entities, int count, int tagId)
         {
+            if (_effectSideEffects != null)
+            {
+                int write = 0;
+                for (int i = 0; i < count; i++)
+                {
+                    Entity entity = entities[i];
+                    if (!HasTag(entity, tagId))
+                    {
+                        entities[write++] = entity;
+                    }
+                }
+                return write;
+            }
+
             return RequireEntityQueries().FilterTagNone(entities, count, tagId);
         }
 
@@ -549,9 +758,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             return RequireEntityQueries().TryMinEntityByAttribute(entities, attributeId, out entity, out value);
         }
 
-        public bool TryMinEntityByDistance(ReadOnlySpan<Entity> entities, IntVector2 center, out Entity entity, out long distanceSquared)
+        public bool TryMinEntityByWorldDistanceCm(ReadOnlySpan<Entity> entities, WorldCmInt2 centerCm, out Entity entity, out long distanceSquaredCm)
         {
-            return RequireEntityQueries().TryMinEntityByDistance(entities, center, out entity, out distanceSquared);
+            return RequireEntityQueries().TryMinEntityByWorldDistanceCm(entities, centerCm, out entity, out distanceSquaredCm);
         }
 
         public int GetTeamId(Entity entity)
@@ -572,18 +781,40 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         {
             return (int)TeamManager.GetRelationship(teamA, teamB);
         }
-        public void EnsureRelationshipLink(Entity source, Entity target, int typeId) => RequireRelationshipRuntime().EnsureLink(source, target, typeId);
-        public void RemoveRelationshipLink(Entity source, Entity target, int typeId) => RequireRelationshipRuntime().RemoveLink(source, target, typeId);
+        public void EnsureRelationshipLink(Entity source, Entity target, int typeId)
+        {
+            RejectDerivedAttributeSideEffect(nameof(EnsureRelationshipLink));
+            RejectNonTransactionalEffectSideEffect(nameof(EnsureRelationshipLink));
+            RequireRelationshipRuntime().EnsureLink(source, target, typeId);
+        }
+        public void RemoveRelationshipLink(Entity source, Entity target, int typeId)
+        {
+            RejectDerivedAttributeSideEffect(nameof(RemoveRelationshipLink));
+            RejectNonTransactionalEffectSideEffect(nameof(RemoveRelationshipLink));
+            RequireRelationshipRuntime().RemoveLink(source, target, typeId);
+        }
         public short SetRelationshipMetric(Entity source, Entity target, int metricId, int value, int reasonId, int typeId)
-            => RequireRelationshipRuntime().SetMetric(source, target, typeId, metricId, value, reasonId);
+        {
+            RejectDerivedAttributeSideEffect(nameof(SetRelationshipMetric));
+            RejectNonTransactionalEffectSideEffect(nameof(SetRelationshipMetric));
+            return RequireRelationshipRuntime().SetMetric(source, target, typeId, metricId, value, reasonId);
+        }
         public short AddRelationshipMetric(Entity source, Entity target, int metricId, int delta, int reasonId, int typeId)
-            => RequireRelationshipRuntime().AddMetric(source, target, typeId, metricId, delta, reasonId);
+        {
+            RejectDerivedAttributeSideEffect(nameof(AddRelationshipMetric));
+            RejectNonTransactionalEffectSideEffect(nameof(AddRelationshipMetric));
+            return RequireRelationshipRuntime().AddMetric(source, target, typeId, metricId, delta, reasonId);
+        }
         public short GetRelationshipMetric(Entity source, Entity target, int metricId, int typeId)
             => RequireRelationshipRuntime().GetMetric(source, target, typeId, metricId);
         public bool HasRelationshipFlag(Entity source, Entity target, int flagId, int typeId)
             => RequireRelationshipRuntime().HasFlag(source, target, typeId, flagId);
         public void SetRelationshipFlag(Entity source, Entity target, int flagId, bool enabled, int reasonId, int typeId)
-            => RequireRelationshipRuntime().SetFlag(source, target, typeId, flagId, enabled, reasonId);
+        {
+            RejectDerivedAttributeSideEffect(nameof(SetRelationshipFlag));
+            RejectNonTransactionalEffectSideEffect(nameof(SetRelationshipFlag));
+            RequireRelationshipRuntime().SetFlag(source, target, typeId, flagId, enabled, reasonId);
+        }
         public int CollectOutgoing(Entity source, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
             => RequireRelationshipRuntime().CollectOutgoing(source, typeId, buffer);
         public int CollectIncoming(Entity target, Span<Entity> buffer, int typeId = RelationshipTypeRegistry.AnyTypeId)
@@ -648,7 +879,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
         public void ApplyEffectTemplate(Entity caster, Entity target, int templateId, in EffectArgs args)
         {
-            if (_effectRequests == null)
+            RejectDerivedAttributeSideEffect(nameof(ApplyEffectTemplate));
+            if (_effectSideEffects == null && _effectRequests == null)
             {
                 throw new System.InvalidOperationException("GAS.GRAPH.ERR.MissingEffectRequestQueue");
             }
@@ -656,7 +888,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             // Convert EffectArgs to CallerParams
             var req = new Ludots.Core.Gameplay.GAS.EffectRequest
             {
-                RootId = _hasEffectContext ? _currentEffectContext.RootId : 0,
+                RootId = ResolveChildEffectRootId(),
                 Source = caster,
                 Target = target,
                 TargetContext = default,
@@ -676,12 +908,19 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 }
             }
 
-            _effectRequests.Publish(req);
+            if (_effectSideEffects != null)
+            {
+                _effectSideEffects.StageEffectRequest(in req);
+                return;
+            }
+
+            _effectRequests!.Publish(req);
         }
 
         public void FanOutDispatchEffect(Entity source, Entity target, Entity targetContext, ReadOnlySpan<Entity> targets, int templateId, int payloadPresetId)
         {
-            if (_effectRequests == null)
+            RejectDerivedAttributeSideEffect(nameof(FanOutDispatchEffect));
+            if (_effectSideEffects == null && _effectRequests == null)
             {
                 throw new InvalidOperationException("GAS.GRAPH.ERR.MissingEffectRequestQueue");
             }
@@ -692,8 +931,28 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             }
 
             TargetResolverContextMapping mapping = RequireTargetDispatchPresets().Get(payloadPresetId);
+            if (_effectSideEffects != null)
+            {
+                int rootId = ResolveChildEffectRootId();
+                for (int i = 0; i < targets.Length; i++)
+                {
+                    var command = new FanOutCommand
+                    {
+                        RootId = rootId,
+                        OriginalSource = source,
+                        OriginalTarget = target,
+                        OriginalTargetContext = targetContext,
+                        PayloadEffectTemplateId = templateId,
+                        ContextMapping = mapping,
+                        ResolvedEntity = targets[i],
+                    };
+                    _effectSideEffects.StageFanOutCommand(in command);
+                }
+                return;
+            }
+
             TargetResolverFanOutHelper.PublishResolvedTargets(
-                rootId: _hasEffectContext ? _currentEffectContext.RootId : 0,
+                rootId: ResolveChildEffectRootId(),
                 source,
                 target,
                 targetContext,
@@ -703,8 +962,29 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 _effectRequests);
         }
 
+        private int ResolveChildEffectRootId()
+        {
+            if (!_hasEffectContext)
+            {
+                return 0;
+            }
+
+            if (_currentEffectContext.RootId <= 0)
+            {
+                throw new InvalidOperationException("GAS.GRAPH.ERR.MissingParentEffectRoot");
+            }
+
+            return _currentEffectContext.RootId;
+        }
+
         public void RemoveEffectTemplate(Entity target, int templateId)
         {
+            RejectDerivedAttributeSideEffect(nameof(RemoveEffectTemplate));
+            if (_effectSideEffects != null)
+            {
+                _effectSideEffects.StageEffectCancellation(target, templateId);
+                return;
+            }
             if (!_world.IsAlive(target) || templateId <= 0 || !_world.Has<ActiveEffectContainer>(target))
             {
                 return;
@@ -737,52 +1017,89 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
         public void ModifyAttributeAdd(Entity caster, Entity target, int attributeId, float delta)
         {
-            AttributeMutationOps.AddCurrent(_world, target, attributeId, delta);
+            RejectDerivedAttributeSideEffect(nameof(ModifyAttributeAdd));
+            if (_effectSideEffects != null)
+            {
+                _effectSideEffects.StageAttributeAdd(target, attributeId, delta);
+                return;
+            }
+            AttributeMutationOps.AddCurrent(_world, target, attributeId, delta, RequireTagOps());
+        }
+
+        public void ModifyAttributeSet(Entity caster, Entity target, int attributeId, float value)
+        {
+            if (_effectSideEffects != null)
+            {
+                _effectSideEffects.StageAttributeSet(target, attributeId, value);
+                return;
+            }
+
+            if (_derivedAttributeWritesActive)
+            {
+                if (caster != _derivedAttributeWriteOwner || target != _derivedAttributeWriteOwner)
+                {
+                    throw new InvalidOperationException(
+                        $"GAS.GRAPH.ERR.DerivedAttributeWriteTargetMismatch: owner={_derivedAttributeWriteOwner.Id}, caster={caster.Id}, target={target.Id}.");
+                }
+
+                _derivedAttributeWriteBuffer.SetCurrent(attributeId, value);
+                return;
+            }
+
+            AttributeMutationOps.SetCurrent(_world, target, attributeId, value, RequireTagOps());
         }
 
         public void SendEvent(Entity caster, Entity target, int eventTagId, float magnitude)
         {
+            RejectDerivedAttributeSideEffect(nameof(SendEvent));
             if (_eventBus == null)
             {
                 throw new System.InvalidOperationException("GAS.GRAPH.ERR.MissingGameplayEventBus");
             }
-            _eventBus.Publish(new GameplayEvent
+            var gameplayEvent = new GameplayEvent
             {
                 TagId = eventTagId,
                 Source = caster,
                 Target = target,
                 Magnitude = magnitude
-            });
+            };
+            if (_effectSideEffects != null)
+            {
+                _effectSideEffects.StageGameplayEvent(_eventBus, in gameplayEvent);
+                return;
+            }
+            _eventBus.Publish(gameplayEvent);
         }
 
         // ── Hex spatial queries ──
 
-        public int QueryHexRange(IntVector2 center, int hexRadius, Span<Entity> buffer)
+        public SpatialQueryResult QueryHexRange(IntVector2 centerCm, int hexRadius, Span<Entity> buffer)
         {
             if (_spatialQueries == null) throw new InvalidOperationException("GAS.GRAPH.ERR.MissingSpatialQueryService");
             if (_coords == null) throw new InvalidOperationException("GAS.GRAPH.ERR.MissingSpatialCoordinateConverter");
-            var hexCenter = _coords.WorldToHex(_coords.GridToWorld(center));
-            return _spatialQueries.QueryHexRange(hexCenter, hexRadius, buffer).Count;
+            var hexCenter = _coords.WorldToHex(new WorldCmInt2(centerCm.X, centerCm.Y));
+            return _spatialQueries.QueryHexRange(hexCenter, hexRadius, buffer);
         }
 
-        public int QueryHexRing(IntVector2 center, int hexRadius, Span<Entity> buffer)
+        public SpatialQueryResult QueryHexRing(IntVector2 centerCm, int hexRadius, Span<Entity> buffer)
         {
             if (_spatialQueries == null) throw new InvalidOperationException("GAS.GRAPH.ERR.MissingSpatialQueryService");
             if (_coords == null) throw new InvalidOperationException("GAS.GRAPH.ERR.MissingSpatialCoordinateConverter");
-            var hexCenter = _coords.WorldToHex(_coords.GridToWorld(center));
-            return _spatialQueries.QueryHexRing(hexCenter, hexRadius, buffer).Count;
+            var hexCenter = _coords.WorldToHex(new WorldCmInt2(centerCm.X, centerCm.Y));
+            return _spatialQueries.QueryHexRing(hexCenter, hexRadius, buffer);
         }
 
-        public int QueryHexNeighbors(IntVector2 center, Span<Entity> buffer)
+        public SpatialQueryResult QueryHexNeighbors(IntVector2 centerCm, Span<Entity> buffer)
         {
             // Neighbors = Ring(1)
-            return QueryHexRing(center, 1, buffer);
+            return QueryHexRing(centerCm, 1, buffer);
         }
 
         // ── Blackboard immediate read/write ──
 
         public bool TryReadBlackboardFloat(Entity entity, int keyId, out float value)
         {
+            if (_effectSideEffects?.TryReadBlackboardFloat(entity, keyId, out value) == true) return true;
             value = 0f;
             if (!_world.IsAlive(entity) || !_world.Has<BlackboardFloatBuffer>(entity)) return false;
             ref var bb = ref _world.Get<BlackboardFloatBuffer>(entity);
@@ -791,6 +1108,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
         public bool TryReadBlackboardInt(Entity entity, int keyId, out int value)
         {
+            if (_effectSideEffects?.TryReadBlackboardInt(entity, keyId, out value) == true) return true;
             value = 0;
             if (!_world.IsAlive(entity) || !_world.Has<BlackboardIntBuffer>(entity)) return false;
             ref var bb = ref _world.Get<BlackboardIntBuffer>(entity);
@@ -799,6 +1117,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
         public bool TryReadBlackboardEntity(Entity entity, int keyId, out Entity value)
         {
+            if (_effectSideEffects?.TryReadBlackboardEntity(entity, keyId, out value) == true) return true;
             value = default;
             if (!_world.IsAlive(entity) || !_world.Has<BlackboardEntityBuffer>(entity)) return false;
             ref var bb = ref _world.Get<BlackboardEntityBuffer>(entity);
@@ -807,26 +1126,50 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
         public void WriteBlackboardFloat(Entity entity, int keyId, float value)
         {
-            if (!_world.IsAlive(entity)) return;
-            if (!_world.Has<BlackboardFloatBuffer>(entity)) return; // Component must be pre-added at entity template creation
+            RejectDerivedAttributeSideEffect(nameof(WriteBlackboardFloat));
+            if (_effectSideEffects != null)
+            {
+                _effectSideEffects.StageBlackboardFloat(entity, keyId, value);
+                return;
+            }
+            RequireBlackboard<BlackboardFloatBuffer>(entity);
             ref var bb = ref _world.Get<BlackboardFloatBuffer>(entity);
             bb.Set(keyId, value);
         }
 
         public void WriteBlackboardInt(Entity entity, int keyId, int value)
         {
-            if (!_world.IsAlive(entity)) return;
-            if (!_world.Has<BlackboardIntBuffer>(entity)) return; // Component must be pre-added at entity template creation
+            RejectDerivedAttributeSideEffect(nameof(WriteBlackboardInt));
+            if (_effectSideEffects != null)
+            {
+                _effectSideEffects.StageBlackboardInt(entity, keyId, value);
+                return;
+            }
+            RequireBlackboard<BlackboardIntBuffer>(entity);
             ref var bb = ref _world.Get<BlackboardIntBuffer>(entity);
             bb.Set(keyId, value);
         }
 
         public void WriteBlackboardEntity(Entity entity, int keyId, Entity value)
         {
-            if (!_world.IsAlive(entity)) return;
-            if (!_world.Has<BlackboardEntityBuffer>(entity)) return; // Component must be pre-added at entity template creation
+            RejectDerivedAttributeSideEffect(nameof(WriteBlackboardEntity));
+            if (_effectSideEffects != null)
+            {
+                _effectSideEffects.StageBlackboardEntity(entity, keyId, value);
+                return;
+            }
+            RequireBlackboard<BlackboardEntityBuffer>(entity);
             ref var bb = ref _world.Get<BlackboardEntityBuffer>(entity);
             bb.Set(keyId, value);
+        }
+
+        private void RequireBlackboard<T>(Entity entity)
+        {
+            if (!_world.IsAlive(entity) || !_world.Has<T>(entity))
+            {
+                throw new InvalidOperationException(
+                    $"{MissingBlackboardError}: entity={entity.Id}, component={typeof(T).Name}.");
+            }
         }
 
         // ── Config parameter reading ──

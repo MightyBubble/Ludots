@@ -81,7 +81,7 @@ namespace Ludots.Tests.GAS
                 board.LoadedChunksSource.ActiveChunkKeys.Count,
                 board.GraphRuntime.CurrentGraph.NodeCount,
                 splineCount,
-                string.Join(",", board.LoadedChunksSource.ActiveChunkKeys));
+                string.Join(",", board.LoadedChunksSource.ActiveChunkKeys.OrderBy(static chunkKey => chunkKey)));
         }
 
         private static void FocusLandmark(GameEngine engine, string landmarkName, string status)

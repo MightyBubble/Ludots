@@ -55,6 +55,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 diagnostics.Add(new GraphDiagnostic(GraphDiagnosticSeverity.Error, GraphDiagnosticCodes.MissingNodeRef, $"Entry node '{cfg.Entry}' not found.", graphId, cfg.Entry));
             }
 
+            var valueProducers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            foreach (string nodeId in nodesById.Keys)
+            {
+                valueProducers[nodeId] = nodeId;
+            }
+            foreach (GraphNodeConfig node in nodesById.Values)
+            {
+                RegisterAuxiliaryValue(node.ValidOutput, "validOutput", node, valueProducers, graphId, diagnostics);
+                RegisterAuxiliaryValue(node.DroppedOutput, "droppedOutput", node, valueProducers, graphId, diagnostics);
+            }
+
             foreach (var kvp in nodesById)
             {
                 var node = kvp.Value;
@@ -70,7 +81,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     {
                         var inputId = node.Inputs[i];
                         if (string.IsNullOrWhiteSpace(inputId)) continue;
-                        if (!nodesById.ContainsKey(inputId))
+                        if (!valueProducers.ContainsKey(inputId))
                         {
                             diagnostics.Add(new GraphDiagnostic(GraphDiagnosticSeverity.Error, GraphDiagnosticCodes.MissingNodeRef, $"Node '{node.Id}' input[{i}] references missing node '{inputId}'.", graphId, node.Id));
                         }
@@ -90,10 +101,34 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     }
                 }
 
-                DetectDataDependencyCycle(nodesById, graphId, diagnostics);
+                DetectDataDependencyCycle(nodesById, valueProducers, graphId, diagnostics);
             }
 
             return diagnostics;
+        }
+
+        private static void RegisterAuxiliaryValue(
+            string? outputId,
+            string propertyName,
+            GraphNodeConfig node,
+            Dictionary<string, string> valueProducers,
+            string graphId,
+            List<GraphDiagnostic> diagnostics)
+        {
+            if (string.IsNullOrWhiteSpace(outputId))
+            {
+                return;
+            }
+
+            if (!valueProducers.TryAdd(outputId, node.Id))
+            {
+                diagnostics.Add(new GraphDiagnostic(
+                    GraphDiagnosticSeverity.Error,
+                    GraphDiagnosticCodes.DuplicateNodeId,
+                    $"Node '{node.Id}' {propertyName} '{outputId}' conflicts with an existing value id.",
+                    graphId,
+                    node.Id));
+            }
         }
 
         private static void DetectNextCycle(
@@ -124,6 +159,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static void DetectDataDependencyCycle(
             Dictionary<string, GraphNodeConfig> nodesById,
+            Dictionary<string, string> valueProducers,
             string graphId,
             List<GraphDiagnostic> diagnostics)
         {
@@ -136,7 +172,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             foreach (var kvp in nodesById)
             {
                 if (state[kvp.Key] != 0) continue;
-                if (Visit(kvp.Key, nodesById, state))
+                if (Visit(kvp.Key, nodesById, valueProducers, state))
                 {
                     diagnostics.Add(new GraphDiagnostic(GraphDiagnosticSeverity.Error, GraphDiagnosticCodes.DataDependencyCycle, "Cycle detected in data dependency graph.", graphId));
                     break;
@@ -144,7 +180,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             }
         }
 
-        private static bool Visit(string nodeId, Dictionary<string, GraphNodeConfig> nodesById, Dictionary<string, byte> state)
+        private static bool Visit(
+            string nodeId,
+            Dictionary<string, GraphNodeConfig> nodesById,
+            Dictionary<string, string> valueProducers,
+            Dictionary<string, byte> state)
         {
             state[nodeId] = 1;
             var node = nodesById[nodeId];
@@ -152,13 +192,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             {
                 for (int i = 0; i < node.Inputs.Count; i++)
                 {
-                    var depId = node.Inputs[i];
-                    if (string.IsNullOrWhiteSpace(depId)) continue;
-                    if (!nodesById.ContainsKey(depId)) continue;
+                    string valueId = node.Inputs[i];
+                    if (string.IsNullOrWhiteSpace(valueId)) continue;
+                    if (!valueProducers.TryGetValue(valueId, out string? depId)) continue;
 
                     byte depState = state[depId];
                     if (depState == 1) return true;
-                    if (depState == 0 && Visit(depId, nodesById, state)) return true;
+                    if (depState == 0 && Visit(depId, nodesById, valueProducers, state)) return true;
                 }
             }
             state[nodeId] = 2;
@@ -166,4 +206,3 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
     }
 }
-

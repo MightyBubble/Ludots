@@ -60,9 +60,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         TargetListGet     = 123,  // E[Dst] = TargetList[I[A]]; B[Flags] = valid (0/1)
 
         // ── Hex spatial queries (130-132) ──
-        QueryHexRange     = 130,  // TargetList = HexRange(TargetPos, Imm=radius)
-        QueryHexRing      = 131,  // TargetList = HexRing(TargetPos, Imm=radius)
-        QueryHexNeighbors = 132,  // TargetList = Hex6Neighbors(TargetPos)
+        QueryHexRange     = 130,  // TargetList = HexRange(WorldCmToHex(TargetPosCm), Imm=radius)
+        QueryHexRing      = 131,  // TargetList = HexRing(WorldCmToHex(TargetPosCm), Imm=radius)
+        QueryHexNeighbors = 132,  // TargetList = Hex6Neighbors(WorldCmToHex(TargetPosCm))
 
         // ── Effect / Event Actions ──
         ApplyEffectTemplate = 200,

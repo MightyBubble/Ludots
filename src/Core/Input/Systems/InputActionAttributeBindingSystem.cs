@@ -17,6 +17,7 @@ namespace Ludots.Core.Input.Systems
         private readonly InputActionAttributeBindingRegistry _registry;
         private readonly QueryDescription _cameraBehaviorInputTargetQuery =
             new QueryDescription().WithAll<AttributeBuffer, CameraBehaviorInputTarget>();
+        private Entity _cameraBehaviorInputCarrier = Entity.Null;
 
         public InputActionAttributeBindingSystem(
             World world,
@@ -99,26 +100,42 @@ namespace Ludots.Core.Input.Systems
 
         private Entity ResolveCameraBehaviorInputCarrier()
         {
-            Entity resolved = Entity.Null;
-            int count = 0;
-            World.Query(
-                in _cameraBehaviorInputTargetQuery,
-                (Entity entity, ref AttributeBuffer _, ref CameraBehaviorInputTarget __) =>
-                {
-                    count++;
-                    if (count == 1)
-                    {
-                        resolved = entity;
-                    }
-                });
-
-            if (count == 1)
+            if (_cameraBehaviorInputCarrier != Entity.Null &&
+                World.IsAlive(_cameraBehaviorInputCarrier) &&
+                World.Has<AttributeBuffer>(_cameraBehaviorInputCarrier) &&
+                World.Has<CameraBehaviorInputTarget>(_cameraBehaviorInputCarrier))
             {
-                return resolved;
+                return _cameraBehaviorInputCarrier;
+            }
+
+            var job = new ResolveCameraBehaviorInputCarrierJob();
+            World.InlineEntityQuery<ResolveCameraBehaviorInputCarrierJob, AttributeBuffer, CameraBehaviorInputTarget>(
+                in _cameraBehaviorInputTargetQuery,
+                ref job);
+
+            if (job.Count == 1)
+            {
+                _cameraBehaviorInputCarrier = job.Resolved;
+                return job.Resolved;
             }
 
             throw new InvalidOperationException(
-                $"InputActionAttributeBindingSystem requires exactly one entity with {nameof(CameraBehaviorInputTarget)} and {nameof(AttributeBuffer)}; found {count}.");
+                $"InputActionAttributeBindingSystem requires exactly one entity with {nameof(CameraBehaviorInputTarget)} and {nameof(AttributeBuffer)}; found {job.Count}.");
+        }
+
+        private struct ResolveCameraBehaviorInputCarrierJob : IForEachWithEntity<AttributeBuffer, CameraBehaviorInputTarget>
+        {
+            public Entity Resolved;
+            public int Count;
+
+            public void Update(Entity entity, ref AttributeBuffer attributes, ref CameraBehaviorInputTarget target)
+            {
+                Count++;
+                if (Count == 1)
+                {
+                    Resolved = entity;
+                }
+            }
         }
 
         private static float ReadValue(IInputActionReader input, in InputActionAttributeBindingEntry entry)

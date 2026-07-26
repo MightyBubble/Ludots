@@ -557,13 +557,14 @@ namespace Ludots.Core.Networking.Commands
                 }
                 else
                 {
-                    if (!_orders.TryEnqueueSharedBatch(batch, OrderAdmissionSource.Network))
+                    OrderSubmitResult enqueueResult = _orders.TryEnqueueSharedBatch(batch, OrderAdmissionSource.Network);
+                    if (!OrderSubmitResultSemantics.IsAccepted(enqueueResult))
                     {
                         throw new InvalidOperationException(
                             "OrderQueue capacity changed during single-writer network command admission.");
                     }
 
-                    result = OrderSubmitResult.Queued;
+                    result = enqueueResult;
                 }
 
                 NetworkCommandAdmissionOutcome outcome = CreateScheduledOutcome(

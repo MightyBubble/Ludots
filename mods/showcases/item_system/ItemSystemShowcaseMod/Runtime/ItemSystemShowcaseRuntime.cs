@@ -623,10 +623,7 @@ internal sealed class ItemSystemShowcaseRuntime
         world.Add(_hero, WorldPositionCm.FromCm(1200, 900));
         world.Add(_hero, new AttributeBuffer());
         world.Add(_hero, new ActiveEffectContainer());
-        world.Add(_hero, new GameplayTagContainer());
-        world.Add(_hero, new TagCountContainer());
-        world.Add(_hero, new TimedTagBuffer());
-        world.Add(_hero, new DirtyFlags());
+        TagStateInstaller.EnsureInstalled(world, _hero);
         world.Add(_hero, new AbilityStateBuffer());
         InitAttributes(ref world.Get<AttributeBuffer>(_hero), true);
 
@@ -635,10 +632,7 @@ internal sealed class ItemSystemShowcaseRuntime
         world.Add(_dummy, WorldPositionCm.FromCm(1600, 900));
         world.Add(_dummy, new AttributeBuffer());
         world.Add(_dummy, new ActiveEffectContainer());
-        world.Add(_dummy, new GameplayTagContainer());
-        world.Add(_dummy, new TagCountContainer());
-        world.Add(_dummy, new TimedTagBuffer());
-        world.Add(_dummy, new DirtyFlags());
+        TagStateInstaller.EnsureInstalled(world, _dummy);
         InitAttributes(ref world.Get<AttributeBuffer>(_dummy), false);
 
         _vendor = world.Create(new Name { Value = "Quartermaster" });

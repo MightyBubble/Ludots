@@ -348,8 +348,7 @@
   {
     "id": "Effect.Champion.Geomancer.RunicBeacon",
     "tags": [
-      "Effect.Champion.Manifestation",
-      "Effect.Champion.Summon"
+      "Effect.Champion.Manifestation"
     ],
     "presetType": "CreateUnit",
     "lifetime": "Instant",
@@ -366,8 +365,7 @@
   {
     "id": "Effect.Champion.Geomancer.RuneField",
     "tags": [
-      "Effect.Champion.Manifestation",
-      "Effect.Champion.Zone"
+      "Effect.Champion.Manifestation"
     ],
     "presetType": "CreateUnit",
     "lifetime": "Instant",
@@ -428,8 +426,7 @@
   {
     "id": "Effect.Champion.Geomancer.StonePillar",
     "tags": [
-      "Effect.Champion.Manifestation",
-      "Effect.Champion.Blocker"
+      "Effect.Champion.Manifestation"
     ],
     "presetType": "CreateUnit",
     "lifetime": "Instant",
@@ -446,8 +443,7 @@
   {
     "id": "Effect.Champion.Geomancer.PrismaticBeam",
     "tags": [
-      "Effect.Champion.Damage",
-      "Effect.Champion.Beam"
+      "Effect.Champion.Damage"
     ],
     "presetType": "Search",
     "lifetime": "Instant",
@@ -882,8 +878,7 @@
   {
     "id": "Effect.Champion.SpellEngineer.SpellBeacon",
     "tags": [
-      "Effect.Champion.Manifestation",
-      "Effect.Champion.Summon"
+      "Effect.Champion.Manifestation"
     ],
     "presetType": "CreateUnit",
     "lifetime": "Instant",
@@ -900,8 +895,7 @@
   {
     "id": "Effect.Champion.SpellEngineer.GravityWell",
     "tags": [
-      "Effect.Champion.Manifestation",
-      "Effect.Champion.Zone"
+      "Effect.Champion.Manifestation"
     ],
     "presetType": "CreateUnit",
     "lifetime": "Instant",
@@ -962,8 +956,7 @@
   {
     "id": "Effect.Champion.SpellEngineer.CataclysmRing",
     "tags": [
-      "Effect.Champion.Manifestation",
-      "Effect.Champion.Blocker"
+      "Effect.Champion.Manifestation"
     ],
     "presetType": "CreateUnit",
     "lifetime": "Instant",
@@ -982,8 +975,7 @@
   {
     "id": "Effect.Champion.SpellEngineer.GuidedLaser",
     "tags": [
-      "Effect.Champion.Manifestation",
-      "Effect.Champion.Beam"
+      "Effect.Champion.Manifestation"
     ],
     "presetType": "CreateUnit",
     "lifetime": "Instant",

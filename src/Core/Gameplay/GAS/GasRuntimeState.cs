@@ -15,6 +15,23 @@ namespace Ludots.Core.Gameplay.GAS
         public int InputRequestCount;
         public int ChainOrderCount;
         public int OrderRequestCount;
+
+        public int EffectLifetimeProcessedLastSlice;
+        public int EffectProcessingProcessedLastSlice;
+        public int EffectProposalProcessedLastSlice;
+        public int EffectApplicationProcessedLastSlice;
+        public int EffectLifetimeStageProcessedLastSlice;
+        public int EffectLifetimeDeferredCount;
+        public int EffectLifetimeSnapshotCapacity;
+        public int EffectProcessingMaxWorkUnitsPerSlice;
+    }
+
+    public struct AbilityExecRuntimeState
+    {
+        public int ProcessedLastSlice;
+        public int DeferredEntityCount;
+        public int SnapshotEntityCount;
+        public int SnapshotCapacity;
+        public int MaxWorkUnitsPerSlice;
     }
 }
-

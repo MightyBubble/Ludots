@@ -375,8 +375,11 @@ public sealed class NetworkRuntimeEndToEndTests
             in admitted[1],
             OrderAdmissionStage.EntityIntake,
             OrderSubmitResult.Activated);
+        commandHarness.EntityResults.BeginLogicStep();
         Assert.That(commandHarness.EntityResults.TryWrite(in firstQueued), Is.True);
         Assert.That(commandHarness.EntityResults.TryWrite(in secondActivated), Is.True);
+        commandHarness.EntityResults.EndEntityIntake();
+        commandHarness.EntityResults.EndLogicStep();
         server.PumpTransport();
         client.PumpTransport();
         Assert.That(
@@ -430,7 +433,10 @@ public sealed class NetworkRuntimeEndToEndTests
             in admitted[0],
             OrderAdmissionStage.EntityIntake,
             OrderSubmitResult.Activated);
+        commandHarness.EntityResults.BeginLogicStep();
         Assert.That(commandHarness.EntityResults.TryWrite(in firstActivated), Is.True);
+        commandHarness.EntityResults.EndEntityIntake();
+        commandHarness.EntityResults.EndLogicStep();
         server.PumpTransport();
         client.PumpTransport();
         Assert.That(
@@ -596,8 +602,11 @@ public sealed class NetworkRuntimeEndToEndTests
             in abandonedOrders[1],
             OrderAdmissionStage.EntityIntake,
             OrderSubmitResult.Cancelled);
+        commandHarness.EntityResults.BeginLogicStep();
         Assert.That(commandHarness.EntityResults.TryWrite(in abandonedFirst), Is.True);
         Assert.That(commandHarness.EntityResults.TryWrite(in abandonedSecond), Is.True);
+        commandHarness.EntityResults.EndEntityIntake();
+        commandHarness.EntityResults.EndLogicStep();
         server.AfterAuthoritativeCommit(17);
 
         Assert.Multiple(() =>
@@ -1521,7 +1530,8 @@ public sealed class NetworkRuntimeEndToEndTests
         Assert.That(entities.TryAllocate(first, out NetworkEntityHandle firstHandle), Is.True);
         Assert.That(entities.TryAllocate(second, out NetworkEntityHandle secondHandle), Is.True);
         var knowledge = new KnowledgeProjectionStore(initialCapacity: 4);
-        var orderTypes = new OrderTypeRegistry();
+        var orderTypes = new OrderTypeRegistry(
+            new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
         orderTypes.Register(new OrderTypeConfig { Key = "test.move", OrderTypeId = TestOrderTypeId });
         var schemas = new NetworkCommandSchemaRegistry();
         schemas.Register(new NetworkCommandSchema(
@@ -1532,8 +1542,9 @@ public sealed class NetworkRuntimeEndToEndTests
             NetworkCommandSubmitModeMask.Immediate | NetworkCommandSubmitModeMask.Queued,
             KnowledgePositionAccess.None));
         schemas.Freeze();
-        var orders = new OrderQueue(capacity: 8);
+        var globalAdmissionResults = new OrderAdmissionResultBuffer(capacity: 8);
         var entityResults = new OrderAdmissionResultBuffer(capacity: 8);
+        var orders = new OrderQueue(capacity: 8, globalAdmissionResults);
         var results = new NetworkCommandAdmissionResultBuffer(capacity: 8);
         var config = new NetworkCommandIngressConfig(
             seatCapacity: 1,

@@ -34,6 +34,8 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 var definition = Compile(merged[i].Node, merged[i].Id);
                 _registry.Register(formSetId, in definition);
             }
+
+            AbilityFormSetIdRegistry.Freeze();
         }
 
         public static AbilityFormSetDefinition Compile(JsonObject node, string formSetName)

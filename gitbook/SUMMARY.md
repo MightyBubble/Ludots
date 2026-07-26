@@ -15,6 +15,7 @@
   - [Browser Runtime Provider Adapter Guide](architecture/browser-runtime-provider-adapter-guide.md)
   - [Mod 架构](architecture/mod-architecture.md)
   - [GAS 分层架构](architecture/gas-layered-architecture.md)
+  - [GAS、订单与输入运行时合同](architecture/gas-order-input-runtime-contract.md)
   - [Input Order Routing 与 Spawn Target 基建](architecture/input-order-and-spawn-target.md)
   - [Entity Lifecycle 原子 Op](architecture/entity-lifecycle-atomic-ops.md)
   - [时间体系](architecture/time-system.md)

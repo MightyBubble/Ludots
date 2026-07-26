@@ -540,6 +540,14 @@ namespace Ludots.Tests.GAS
                 flags);
 
             collectionEvents.Update(0.016f);
+            PresentationEvent[] initialAdded = _events.GetSpan()
+                .ToArray()
+                .Where(evt => evt.Kind == PresentationEventKind.EntityCollectionMemberAdded)
+                .ToArray();
+            Assert.That(initialAdded.Length, Is.EqualTo(2));
+            int firstScope = initialAdded.Single(evt => evt.Source == first).PayloadA;
+            int secondScope = initialAdded.Single(evt => evt.Source == second).PayloadA;
+            Assert.That(firstScope, Is.Not.EqualTo(secondScope));
             fixture.Tick();
 
             Entity firstHighlight = fixture.FindPerformer("test.collection.highlight", first);
@@ -563,6 +571,13 @@ namespace Ludots.Tests.GAS
                 flags.Slice(1, 1));
 
             collectionEvents.Update(0.016f);
+            PresentationEvent[] removed = _events.GetSpan()
+                .ToArray()
+                .Where(evt => evt.Kind == PresentationEventKind.EntityCollectionMemberRemoved)
+                .ToArray();
+            Assert.That(removed.Length, Is.EqualTo(1));
+            Assert.That(removed[0].Source, Is.EqualTo(first));
+            Assert.That(removed[0].PayloadA, Is.EqualTo(firstScope));
             fixture.Tick();
 
             Assert.That(_world.IsAlive(firstHighlight), Is.False);
@@ -774,7 +789,7 @@ namespace Ludots.Tests.GAS
                 bandRegistry,
                 changeBuffer,
                 new RelationshipReverseIndex(_world));
-            var tagOps = new TagOps(new TagRuleRegistry(), new GasBudget());
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), new GasBudget());
             var entityQueries = new EntitySetQueryRuntime(_world, tagOps, relationships);
             int assistTypeId = typeRegistry.Register("Assist");
             int priorityMetricId = metricRegistry.Register("Priority", 0, 100, 0);

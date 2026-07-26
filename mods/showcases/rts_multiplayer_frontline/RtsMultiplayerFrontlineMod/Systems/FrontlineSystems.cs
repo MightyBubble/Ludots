@@ -139,8 +139,6 @@ internal sealed class FrontlineTagBinder
         Entity entity,
         ref FrontlineParticipant participant,
         in Team team,
-        ref GameplayTagContainer tags,
-        ref TagCountContainer counts,
         ref FrontlineTagBindingState state)
     {
         if (state.IsBound != 0)
@@ -156,15 +154,15 @@ internal sealed class FrontlineTagBinder
                 : 0;
         if (tagId > 0)
         {
-            _tagOps.AddTag(ref tags, ref counts, tagId);
+            _tagOps.AddTag(world, entity, tagId);
         }
 
         state.IsBound = 1;
     }
 
     public void BindCrystalNode(
-        ref GameplayTagContainer tags,
-        ref TagCountContainer counts,
+        World world,
+        Entity entity,
         ref FrontlineTagBindingState state)
     {
         if (state.IsBound != 0)
@@ -172,7 +170,7 @@ internal sealed class FrontlineTagBinder
             return;
         }
 
-        _tagOps.AddTag(ref tags, ref counts, _crystalNodeTagId);
+        _tagOps.AddTag(world, entity, _crystalNodeTagId);
         state.IsBound = 1;
     }
 
@@ -181,8 +179,8 @@ internal sealed class FrontlineTagBinder
         if (world.Has<FrontlineCrystalNode>(entity))
         {
             BindCrystalNode(
-                ref world.Get<GameplayTagContainer>(entity),
-                ref world.Get<TagCountContainer>(entity),
+                world,
+                entity,
                 ref world.Get<FrontlineTagBindingState>(entity));
             return;
         }
@@ -197,8 +195,6 @@ internal sealed class FrontlineTagBinder
             entity,
             ref world.Get<FrontlineParticipant>(entity),
             in world.Get<Team>(entity),
-            ref world.Get<GameplayTagContainer>(entity),
-            ref world.Get<TagCountContainer>(entity),
             ref world.Get<FrontlineTagBindingState>(entity));
     }
 }
@@ -233,8 +229,6 @@ internal sealed class FrontlineTagBindingSystem : BaseSystem<World, float>
         {
             Span<FrontlineParticipant> participants = chunk.GetSpan<FrontlineParticipant>();
             Span<Team> teams = chunk.GetSpan<Team>();
-            Span<GameplayTagContainer> tags = chunk.GetSpan<GameplayTagContainer>();
-            Span<TagCountContainer> counts = chunk.GetSpan<TagCountContainer>();
             Span<FrontlineTagBindingState> states = chunk.GetSpan<FrontlineTagBindingState>();
             ref Entity first = ref chunk.Entity(0);
             foreach (int index in chunk)
@@ -245,20 +239,17 @@ internal sealed class FrontlineTagBindingSystem : BaseSystem<World, float>
                     entity,
                     ref participants[index],
                     in teams[index],
-                    ref tags[index],
-                    ref counts[index],
                     ref states[index]);
             }
         }
 
         foreach (ref Chunk chunk in World.Query(in NodeQuery))
         {
-            Span<GameplayTagContainer> tags = chunk.GetSpan<GameplayTagContainer>();
-            Span<TagCountContainer> counts = chunk.GetSpan<TagCountContainer>();
             Span<FrontlineTagBindingState> states = chunk.GetSpan<FrontlineTagBindingState>();
+            ref Entity first = ref chunk.Entity(0);
             foreach (int index in chunk)
             {
-                _binder.BindCrystalNode(ref tags[index], ref counts[index], ref states[index]);
+                _binder.BindCrystalNode(World, Unsafe.Add(ref first, index), ref states[index]);
             }
         }
     }

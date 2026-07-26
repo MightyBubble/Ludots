@@ -8,6 +8,8 @@ namespace Ludots.Core.Gameplay.GAS
     /// </summary>
     public class GameplayEventBus
     {
+        public const string CapacityExceededError = "GAS.GAMEPLAY_EVENT_BUS.ERR.CapacityExceeded";
+
         private GameplayEvent[] _currentEvents = new GameplayEvent[GasConstants.MAX_GAMEPLAY_EVENTS_PER_FRAME];
         private GameplayEvent[] _nextEvents = new GameplayEvent[GasConstants.MAX_GAMEPLAY_EVENTS_PER_FRAME];
         private int _currentCount = 0;
@@ -15,6 +17,40 @@ namespace Ludots.Core.Gameplay.GAS
         private int _droppedInNext;
         private int _droppedLastSwap;
         private bool _nextBudgetFused;
+
+        public int Capacity => _nextEvents.Length;
+        public int AvailableNextCapacity => _nextEvents.Length - _nextCount;
+
+        internal readonly struct WriteCheckpoint
+        {
+            internal readonly int NextCount;
+            internal readonly int DroppedInNext;
+            internal readonly bool NextBudgetFused;
+
+            internal WriteCheckpoint(int nextCount, int droppedInNext, bool nextBudgetFused)
+            {
+                NextCount = nextCount;
+                DroppedInNext = droppedInNext;
+                NextBudgetFused = nextBudgetFused;
+            }
+        }
+
+        internal WriteCheckpoint CaptureWriteCheckpoint()
+        {
+            return new WriteCheckpoint(_nextCount, _droppedInNext, _nextBudgetFused);
+        }
+
+        internal void RollbackWrites(in WriteCheckpoint checkpoint)
+        {
+            if (_nextCount < checkpoint.NextCount)
+            {
+                throw new InvalidOperationException("GAS.GAMEPLAY_EVENT.ERR.InvalidWriteRollback");
+            }
+
+            _nextCount = checkpoint.NextCount;
+            _droppedInNext = checkpoint.DroppedInNext;
+            _nextBudgetFused = checkpoint.NextBudgetFused;
+        }
 
         public void Publish(GameplayEvent evt)
         {
@@ -24,8 +60,8 @@ namespace Ludots.Core.Gameplay.GAS
                 {
                     _nextBudgetFused = true;
                 }
-                _droppedInNext++;
-                return;
+                throw new System.InvalidOperationException(
+                    $"{CapacityExceededError}: capacity={_nextEvents.Length}, tagId={evt.TagId}.");
             }
             
             _nextEvents[_nextCount++] = evt;

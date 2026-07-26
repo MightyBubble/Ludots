@@ -67,11 +67,12 @@ namespace Ludots.Core.Gameplay.Lifecycle
         }
 
         public static void CopyAttributeSlice(
-            World world,
+            EntityLifecycleRuntimeServices services,
             Entity target,
             in LifecycleSnapshot snapshot,
             LifecycleTransactionState state)
         {
+            World world = services.World;
             if (state.AttributeSliceCount == 0)
             {
                 throw new InvalidOperationException("CopyAttributeSlice requires at least one configured lifecycle attribute slice.");
@@ -112,7 +113,7 @@ namespace Ludots.Core.Gameplay.Lifecycle
                     LifecycleAttributeValueSource.Current => snapshot.Attributes.GetCurrent(attributeId),
                     _ => throw new InvalidOperationException($"Unsupported lifecycle attribute value source '{state.AttributeSliceSource}'."),
                 };
-                AttributeMutationOps.SetBase(world, target, attributeId, value);
+                AttributeMutationOps.SetBase(world, target, attributeId, value, services.TagOps);
             }
         }
 

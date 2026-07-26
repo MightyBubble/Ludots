@@ -99,7 +99,7 @@ namespace RoadNetworkShowcaseMod.Systems
                     if (selection.Completed)
                     {
                         var arrival = new RoadRouteArrivalPolicy();
-                        if (arrival.HasReachedFinalTarget(in activeOrder, position, execution.FinalArrivalRadiusCm))
+                        if (arrival.HasReachedFinalTarget(World, in activeOrder, position, execution.FinalArrivalRadiusCm))
                         {
                             orderRuntime.LifecycleState = MovePlanLifecycleState.Arrived;
                             orderRuntime.FailureReason = MovePlanFailureReason.None;

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Arch.Core;
+using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 
 namespace Ludots.Core.Gameplay.Quests
@@ -230,6 +231,7 @@ namespace Ludots.Core.Gameplay.Quests
                 _definitions.CreateAttributeBuffer(definition),
                 _definitions.CreateTagContainer(definition),
                 new ActiveEffectContainer());
+            TagStateInstaller.EnsureInstalled(_world, questEntity);
 
             _questIndex[key] = questEntity;
             ref QuestInstanceCm quest = ref _world.Get<QuestInstanceCm>(questEntity);

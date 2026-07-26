@@ -15,14 +15,16 @@ public sealed class OrderAdmissionPipelineTests
     {
         using var world = World.Create();
         Entity actor = world.Create();
-        var queue = new OrderQueue(capacity: 64);
+        var results = CreateAdmissionResults();
+        var queue = new OrderQueue(capacity: 64, results);
         var order = new Order { OrderTypeId = 1, PlayerId = 7, Actor = actor };
 
-        bool accepted = queue.TryEnqueueAssigned(ref order, out OrderAdmissionOutcome acceptedOutcome);
+        bool accepted = queue.TryEnqueueAssigned(ref order);
 
+        Assert.That(accepted, Is.True);
+        Assert.That(results.TryGet(order.OrderId, OrderAdmissionStage.GlobalIntake, out OrderAdmissionOutcome acceptedOutcome), Is.True);
         Assert.Multiple(() =>
         {
-            Assert.That(accepted, Is.True);
             Assert.That(acceptedOutcome.Stage, Is.EqualTo(OrderAdmissionStage.GlobalIntake));
             Assert.That(acceptedOutcome.Result, Is.EqualTo(OrderSubmitResult.Queued));
             Assert.That(acceptedOutcome.OrderId, Is.EqualTo(order.OrderId));
@@ -36,15 +38,16 @@ public sealed class OrderAdmissionPipelineTests
 
         var rejected = new Order { OrderTypeId = 1, PlayerId = 7, Actor = actor };
         int countBefore = queue.Count;
-        bool rejectedAccepted = queue.TryEnqueueAssigned(ref rejected, out OrderAdmissionOutcome rejectedOutcome);
+        bool rejectedAccepted = queue.TryEnqueueAssigned(ref rejected);
 
+        Assert.That(rejectedAccepted, Is.False);
+        Assert.That(results.TryGet(rejected.OrderId, OrderAdmissionStage.GlobalIntake, out OrderAdmissionOutcome rejectedOutcome), Is.True);
         Assert.Multiple(() =>
         {
-            Assert.That(rejectedAccepted, Is.False);
             Assert.That(rejectedOutcome.Stage, Is.EqualTo(OrderAdmissionStage.GlobalIntake));
-            Assert.That(rejectedOutcome.Result, Is.EqualTo(OrderSubmitResult.QueueFull));
+            Assert.That(rejectedOutcome.Result, Is.EqualTo(OrderSubmitResult.RejectedQueueFull));
             Assert.That(rejectedOutcome.PlayerId, Is.EqualTo(7));
-            Assert.That(rejected.OrderId, Is.Zero);
+            Assert.That(rejected.OrderId, Is.GreaterThan(0));
             Assert.That(queue.Count, Is.EqualTo(countBefore));
         });
     }
@@ -54,9 +57,9 @@ public sealed class OrderAdmissionPipelineTests
     {
         using var world = World.Create();
         Entity actor = world.Create(OrderBuffer.CreateEmpty());
-        var queue = new OrderQueue(capacity: 64);
-        var results = new OrderAdmissionResultBuffer(capacity: 4);
-        var orderTypes = new OrderTypeRegistry();
+        var results = new OrderAdmissionResultBuffer(capacity: 4, rejectionCapacity: 4);
+        var queue = new OrderQueue(capacity: 64, results);
+        var orderTypes = CreateOrderTypes();
         orderTypes.Register(new OrderTypeConfig
         {
             Key = "test.move",
@@ -65,20 +68,16 @@ public sealed class OrderAdmissionPipelineTests
             CanInterruptSelf = true,
         });
         var batch = new[] { new Order { OrderTypeId = 1, PlayerId = 7, Actor = actor } };
-        Assert.That(queue.TryEnqueueSharedBatch(batch, OrderAdmissionSource.Network), Is.True);
-        Order order = batch[0];
-        var accepted = new OrderAdmissionOutcome(
-            in order,
-            OrderAdmissionStage.GlobalIntake,
-            OrderSubmitResult.Queued);
+        Assert.That(OrderSubmitResultSemantics.IsAccepted(queue.TryEnqueueSharedBatch(batch, OrderAdmissionSource.Network)), Is.True);
+        Assert.That(results.TryGet(batch[0].OrderId, OrderAdmissionStage.GlobalIntake, out OrderAdmissionOutcome accepted), Is.True);
 
         var system = new OrderBufferSystem(
             world,
             new DiscreteClock(),
             orderTypes,
             new OrderRuleRegistry(),
-            queue,
-            admissionResults: results);
+            results,
+            queue);
         system.Update(0f);
 
         Assert.That(results.TryRead(out OrderAdmissionOutcome started), Is.True);
@@ -97,9 +96,9 @@ public sealed class OrderAdmissionPipelineTests
     {
         using var world = World.Create();
         Entity actor = world.Create(OrderBuffer.CreateEmpty());
-        var queue = new OrderQueue(capacity: 64);
-        var results = new OrderAdmissionResultBuffer(capacity: 1);
-        var orderTypes = new OrderTypeRegistry();
+        var results = new OrderAdmissionResultBuffer(capacity: 1, rejectionCapacity: 1);
+        var queue = new OrderQueue(capacity: 64, results);
+        var orderTypes = CreateOrderTypes();
         orderTypes.Register(new OrderTypeConfig
         {
             Key = "test.move",
@@ -116,14 +115,14 @@ public sealed class OrderAdmissionPipelineTests
         Assert.That(results.TryWrite(in occupied), Is.True);
 
         var batch = new[] { new Order { OrderTypeId = 1, PlayerId = 7, Actor = actor } };
-        Assert.That(queue.TryEnqueueSharedBatch(batch, OrderAdmissionSource.Network), Is.True);
+        Assert.That(OrderSubmitResultSemantics.IsAccepted(queue.TryEnqueueSharedBatch(batch, OrderAdmissionSource.Network)), Is.True);
         var system = new OrderBufferSystem(
             world,
             new DiscreteClock(),
             orderTypes,
             new OrderRuleRegistry(),
-            queue,
-            admissionResults: results);
+            results,
+            queue);
 
         system.Update(0f);
 
@@ -152,9 +151,9 @@ public sealed class OrderAdmissionPipelineTests
         using var world = World.Create();
         Entity validActor = world.Create(OrderBuffer.CreateEmpty());
         Entity invalidActor = world.Create();
-        var queue = new OrderQueue(capacity: 64);
-        var results = new OrderAdmissionResultBuffer(capacity: 2);
-        var orderTypes = new OrderTypeRegistry();
+        var results = new OrderAdmissionResultBuffer(capacity: 2, rejectionCapacity: 2);
+        var queue = new OrderQueue(capacity: 64, results);
+        var orderTypes = CreateOrderTypes();
         orderTypes.Register(new OrderTypeConfig
         {
             Key = "test.move",
@@ -167,15 +166,15 @@ public sealed class OrderAdmissionPipelineTests
             new Order { OrderTypeId = 1, PlayerId = 7, Actor = validActor },
             new Order { OrderTypeId = 1, PlayerId = 7, Actor = invalidActor },
         };
-        Assert.That(queue.TryEnqueueSharedBatch(batch, OrderAdmissionSource.Network), Is.True);
+        Assert.That(OrderSubmitResultSemantics.IsAccepted(queue.TryEnqueueSharedBatch(batch, OrderAdmissionSource.Network)), Is.True);
 
         var system = new OrderBufferSystem(
             world,
             new DiscreteClock(),
             orderTypes,
             new OrderRuleRegistry(),
-            queue,
-            admissionResults: results);
+            results,
+            queue);
         system.Update(0f);
 
         Assert.That(results.TryRead(out OrderAdmissionOutcome validOutcome), Is.True);
@@ -195,9 +194,9 @@ public sealed class OrderAdmissionPipelineTests
     {
         using var world = World.Create();
         Entity actor = world.Create(OrderBuffer.CreateEmpty());
-        var queue = new OrderQueue(capacity: 64);
-        var results = new OrderAdmissionResultBuffer(capacity: 4);
-        var orderTypes = new OrderTypeRegistry();
+        var results = new OrderAdmissionResultBuffer(capacity: 4, rejectionCapacity: 4);
+        var queue = new OrderQueue(capacity: 64, results);
+        var orderTypes = CreateOrderTypes();
         orderTypes.Register(new OrderTypeConfig
         {
             Key = "test.move",
@@ -217,14 +216,14 @@ public sealed class OrderAdmissionPipelineTests
         {
             new Order { OrderTypeId = 1, PlayerId = 7, Actor = actor },
         };
-        Assert.That(queue.TryEnqueueSharedBatch(queued, OrderAdmissionSource.Network), Is.True);
+        Assert.That(OrderSubmitResultSemantics.IsAccepted(queue.TryEnqueueSharedBatch(queued, OrderAdmissionSource.Network)), Is.True);
         var system = new OrderBufferSystem(
             world,
             new DiscreteClock(),
             orderTypes,
             new OrderRuleRegistry(),
-            queue,
-            admissionResults: results);
+            results,
+            queue);
 
         system.Update(0f);
         Assert.That(results.TryRead(out OrderAdmissionOutcome waiting), Is.True);
@@ -255,9 +254,9 @@ public sealed class OrderAdmissionPipelineTests
         using var world = World.Create();
         Entity first = world.Create(OrderBuffer.CreateEmpty());
         Entity second = world.Create(OrderBuffer.CreateEmpty());
-        var queue = new OrderQueue(capacity: 64);
-        var results = new OrderAdmissionResultBuffer(capacity: 1);
-        var orderTypes = new OrderTypeRegistry();
+        var results = new OrderAdmissionResultBuffer(capacity: 1, rejectionCapacity: 1);
+        var queue = new OrderQueue(capacity: 64, results);
+        var orderTypes = CreateOrderTypes();
         orderTypes.Register(new OrderTypeConfig
         {
             Key = "test.local",
@@ -285,14 +284,14 @@ public sealed class OrderAdmissionPipelineTests
             new Order { OrderTypeId = 1, Actor = first, SubmitMode = OrderSubmitMode.Queued },
             new Order { OrderTypeId = 1, Actor = second, SubmitMode = OrderSubmitMode.Queued },
         };
-        Assert.That(queue.TryEnqueueSharedBatch(localBatch), Is.True);
+        Assert.That(OrderSubmitResultSemantics.IsAccepted(queue.TryEnqueueSharedBatch(localBatch)), Is.True);
         var system = new OrderBufferSystem(
             world,
             new DiscreteClock(),
             orderTypes,
             new OrderRuleRegistry(),
-            queue,
-            admissionResults: results);
+            results,
+            queue);
 
         system.Update(0f);
         Assert.Multiple(() =>
@@ -327,9 +326,9 @@ public sealed class OrderAdmissionPipelineTests
         buffer.SetActiveDirect(in active, priority: 100);
 
         var clock = new DiscreteClock();
-        var queue = new OrderQueue(capacity: 64);
-        var results = new OrderAdmissionResultBuffer(capacity: 1);
-        var orderTypes = new OrderTypeRegistry();
+        var results = new OrderAdmissionResultBuffer(capacity: 1, rejectionCapacity: 1);
+        var queue = new OrderQueue(capacity: 64, results);
+        var orderTypes = CreateOrderTypes();
         orderTypes.Register(new OrderTypeConfig
         {
             Key = "test.expiring",
@@ -342,15 +341,15 @@ public sealed class OrderAdmissionPipelineTests
         {
             new Order { OrderTypeId = 1, Actor = actor, SubmitMode = OrderSubmitMode.Queued },
         };
-        Assert.That(queue.TryEnqueueSharedBatch(batch, OrderAdmissionSource.Network), Is.True);
+        Assert.That(OrderSubmitResultSemantics.IsAccepted(queue.TryEnqueueSharedBatch(batch, OrderAdmissionSource.Network)), Is.True);
         var system = new OrderBufferSystem(
             world,
             clock,
             orderTypes,
             new OrderRuleRegistry(),
+            results,
             queue,
-            stepRateHz: 30,
-            admissionResults: results);
+            stepRateHz: 30);
 
         system.Update(0f);
         Assert.That(results.TryRead(out OrderAdmissionOutcome waiting), Is.True);
@@ -393,9 +392,9 @@ public sealed class OrderAdmissionPipelineTests
         buffer.SetActiveDirect(in active, priority: 100);
 
         var clock = new DiscreteClock();
-        var queue = new OrderQueue(capacity: 64);
-        var results = new OrderAdmissionResultBuffer(capacity: 2);
-        var orderTypes = new OrderTypeRegistry();
+        var results = new OrderAdmissionResultBuffer(capacity: 2, rejectionCapacity: 2);
+        var queue = new OrderQueue(capacity: 64, results);
+        var orderTypes = CreateOrderTypes();
         orderTypes.Register(new OrderTypeConfig
         {
             Key = "test.persistent",
@@ -408,15 +407,15 @@ public sealed class OrderAdmissionPipelineTests
         {
             new Order { OrderTypeId = 1, Actor = actor, SubmitMode = OrderSubmitMode.PersistentQueued },
         };
-        Assert.That(queue.TryEnqueueSharedBatch(batch, OrderAdmissionSource.Network), Is.True);
+        Assert.That(OrderSubmitResultSemantics.IsAccepted(queue.TryEnqueueSharedBatch(batch, OrderAdmissionSource.Network)), Is.True);
         var system = new OrderBufferSystem(
             world,
             clock,
             orderTypes,
             new OrderRuleRegistry(),
+            results,
             queue,
-            stepRateHz: 30,
-            admissionResults: results);
+            stepRateHz: 30);
 
         system.Update(0f);
         Assert.That(results.TryRead(out OrderAdmissionOutcome waiting), Is.True);
@@ -450,9 +449,9 @@ public sealed class OrderAdmissionPipelineTests
         var active = new Order { OrderId = 40, OrderTypeId = 1, Actor = actor };
         buffer.SetActiveDirect(in active, priority: 100);
 
-        var queue = new OrderQueue(capacity: 64);
-        var results = new OrderAdmissionResultBuffer(capacity: 3);
-        var orderTypes = new OrderTypeRegistry();
+        var results = new OrderAdmissionResultBuffer(capacity: 3, rejectionCapacity: 3);
+        var queue = new OrderQueue(capacity: 64, results);
+        var orderTypes = CreateOrderTypes();
         orderTypes.Register(new OrderTypeConfig
         {
             Key = "test.waiting",
@@ -476,8 +475,8 @@ public sealed class OrderAdmissionPipelineTests
             new DiscreteClock(),
             orderTypes,
             rules,
-            queue,
-            admissionResults: results);
+            results,
+            queue);
 
         for (int i = 0; i < 2; i++)
         {
@@ -485,7 +484,7 @@ public sealed class OrderAdmissionPipelineTests
             {
                 new Order { OrderTypeId = 1, Actor = actor, SubmitMode = OrderSubmitMode.Queued },
             };
-            Assert.That(queue.TryEnqueueSharedBatch(waitingBatch, OrderAdmissionSource.Network), Is.True);
+            Assert.That(OrderSubmitResultSemantics.IsAccepted(queue.TryEnqueueSharedBatch(waitingBatch, OrderAdmissionSource.Network)), Is.True);
         }
 
         system.Update(0f);
@@ -502,7 +501,7 @@ public sealed class OrderAdmissionPipelineTests
         {
             new Order { OrderTypeId = 2, Actor = actor, SubmitMode = OrderSubmitMode.Immediate },
         };
-        Assert.That(queue.TryEnqueueSharedBatch(interruptBatch, OrderAdmissionSource.Network), Is.True);
+        Assert.That(OrderSubmitResultSemantics.IsAccepted(queue.TryEnqueueSharedBatch(interruptBatch, OrderAdmissionSource.Network)), Is.True);
 
         system.Update(0f);
         Assert.Multiple(() =>
@@ -526,4 +525,10 @@ public sealed class OrderAdmissionPipelineTests
             Assert.That(world.Get<OrderBuffer>(actor).QueuedCount, Is.Zero);
         });
     }
+
+    private static OrderAdmissionResultBuffer CreateAdmissionResults(int capacity = 64) =>
+        new(capacity, capacity);
+
+    private static OrderTypeRegistry CreateOrderTypes() =>
+        new(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
 }

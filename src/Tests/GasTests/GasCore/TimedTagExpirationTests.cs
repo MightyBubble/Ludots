@@ -42,7 +42,7 @@ namespace Ludots.Tests.GAS
             counts.AddCount(testTagId, 1);
             timed.TryAdd(testTagId, 5, GasClockId.Step);
 
-            var system = new TimedTagExpirationSystem(world, clock);
+            var system = new TimedTagExpirationSystem(world, clock, new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 
             // Advance to tick 3 — tag should still exist
             clock.Advance(ClockDomainId.Step, 3);
@@ -85,7 +85,7 @@ namespace Ludots.Tests.GAS
             counts.AddCount(lateTag, 1);
             timed.TryAdd(lateTag, 100, GasClockId.Step);
 
-            var system = new TimedTagExpirationSystem(world, clock);
+            var system = new TimedTagExpirationSystem(world, clock, new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 
             // Advance past earlyTag expiry
             clock.Advance(ClockDomainId.Step, 3);
@@ -120,7 +120,7 @@ namespace Ludots.Tests.GAS
             counts.AddCount(testTagId, 1);
             timed.TryAdd(testTagId, 1, GasClockId.Step);
 
-            var system = new TimedTagExpirationSystem(world, clock);
+            var system = new TimedTagExpirationSystem(world, clock, new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 
             // Clear dirty flags first
             world.Get<DirtyFlags>(entity) = default;

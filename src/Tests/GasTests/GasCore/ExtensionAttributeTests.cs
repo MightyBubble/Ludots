@@ -1,6 +1,4 @@
-using Arch.Core;
 using Ludots.Core.Gameplay.GAS;
-using Ludots.Core.Gameplay.GAS.Components;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
 
@@ -9,22 +7,12 @@ namespace Ludots.Tests.GAS
     [TestFixture]
     public class ExtensionAttributeTests
     {
-        private World _world;
-        private Entity _entity;
         private ExtensionAttributeRegistry _registry;
         
         [SetUp]
         public void Setup()
         {
-            _world = World.Create();
-            _entity = _world.Create();
             _registry = new ExtensionAttributeRegistry();
-        }
-        
-        [TearDown]
-        public void TearDown()
-        {
-            _world?.Dispose();
         }
         
         [Test]
@@ -63,65 +51,5 @@ namespace Ludots.Tests.GAS
             Console.WriteLine($"[ExtensionAttributeTests] TestExtensionAttributeRegistry_TryGetName: ID {id} -> '{retrievedName}'");
         }
         
-        [Test]
-        public void TestExtensionAttributeBuffer_SetGetValue()
-        {
-            // Arrange
-            _world.Add(_entity, new ExtensionAttributeBuffer());
-            ref var buffer = ref _world.Get<ExtensionAttributeBuffer>(_entity);
-            int attrId = 10001;
-            float value = 42.5f;
-            
-            // Act
-            buffer.SetValue(attrId, value);
-            
-            // Assert
-            That(buffer.TryGetValue(attrId, out var retrievedValue), Is.True);
-            That(retrievedValue, Is.EqualTo(value));
-            
-            Console.WriteLine($"[ExtensionAttributeTests] TestExtensionAttributeBuffer_SetGetValue: Set/Get value {value} for attr {attrId}");
-        }
-        
-        [Test]
-        public void TestExtensionAttributeBuffer_SetGetBaseValue()
-        {
-            // Arrange
-            _world.Add(_entity, new ExtensionAttributeBuffer());
-            ref var buffer = ref _world.Get<ExtensionAttributeBuffer>(_entity);
-            int attrId = 10002;
-            float baseValue = 100f;
-            float currentValue = 150f;
-            
-            // Act
-            buffer.SetBaseValue(attrId, baseValue);
-            buffer.SetValue(attrId, currentValue);
-            
-            // Assert
-            That(buffer.TryGetBaseValue(attrId, out var retrievedBase), Is.True);
-            That(retrievedBase, Is.EqualTo(baseValue));
-            That(buffer.TryGetValue(attrId, out var retrievedCurrent), Is.True);
-            That(retrievedCurrent, Is.EqualTo(currentValue));
-            
-            Console.WriteLine($"[ExtensionAttributeTests] TestExtensionAttributeBuffer_SetGetBaseValue: Base={retrievedBase}, Current={retrievedCurrent}");
-        }
-        
-        [Test]
-        public void TestExtensionAttributeBuffer_RemoveAttribute()
-        {
-            // Arrange
-            _world.Add(_entity, new ExtensionAttributeBuffer());
-            ref var buffer = ref _world.Get<ExtensionAttributeBuffer>(_entity);
-            int attrId = 10003;
-            buffer.SetValue(attrId, 50f);
-            
-            // Act
-            bool removed = buffer.RemoveAttribute(attrId);
-            
-            // Assert
-            That(removed, Is.True);
-            That(buffer.TryGetValue(attrId, out _), Is.False);
-            
-            Console.WriteLine($"[ExtensionAttributeTests] TestExtensionAttributeBuffer_RemoveAttribute: Attribute {attrId} removed");
-        }
     }
 }

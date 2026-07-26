@@ -251,15 +251,7 @@ namespace Ludots.Tests.GAS
                     new GraphInstruction { Op = (ushort)GraphNodeOp.AddFloat, Dst = 3, A = 1, B = 2 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardFloat, A = 0, Imm = 1, B = 3 },
                 });
-                var context = new EffectContext
-                {
-                    RootId = 0,
-                    Source = caster,
-                    Target = target,
-                    TargetContext = default,
-                };
-
-                executor.ExecutePhase(world, api, Entity.Null, in context, default,
+                executor.ExecutePhase(world, api, caster, target, default, default,
                     EffectPhaseId.OnApply, in behavior, EffectPresetType.None);
 
                 // Result: Pre writes 10, Main reads 10+20=30, Post reads 30+30=60
@@ -327,15 +319,7 @@ namespace Ludots.Tests.GAS
 
                 var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, handlers, templates);
                 var api = new GasGraphRuntimeApi(world, null, null, null);
-                var context = new EffectContext
-                {
-                    RootId = 0,
-                    Source = caster,
-                    Target = target,
-                    TargetContext = default,
-                };
-
-                executor.ExecutePhase(world, api, Entity.Null, in context, default,
+                executor.ExecutePhase(world, api, caster, target, default, default,
                     EffectPhaseId.OnApply, in behavior, EffectPresetType.None);
 
                 // Pre writes 5, Main skipped, Post reads 5+100=105
@@ -366,16 +350,8 @@ namespace Ludots.Tests.GAS
                 var caster = world.Create();
                 var target = world.Create();
                 var behavior = new EffectPhaseGraphBindings(); // empty
-                var context = new EffectContext
-                {
-                    RootId = 0,
-                    Source = caster,
-                    Target = target,
-                    TargetContext = default,
-                };
-
                 // Should not throw
-                executor.ExecutePhase(world, api, Entity.Null, in context, default,
+                executor.ExecutePhase(world, api, caster, target, default, default,
                     EffectPhaseId.OnApply, in behavior, EffectPresetType.None);
 
                 Pass("No graphs = no-op, no throw");
@@ -401,19 +377,12 @@ namespace Ludots.Tests.GAS
             behavior.TryAddStep(EffectPhaseId.OnApply, PhaseSlot.Pre, 404);
             var source = world.Create();
             var target = world.Create();
-            var context = new EffectContext
-            {
-                RootId = 0,
-                Source = source,
-                Target = target,
-                TargetContext = default,
-            };
-
             var ex = Throws<InvalidOperationException>(() => executor.ExecutePhase(
                 world,
                 api,
-                Entity.Null,
-                in context,
+                source,
+                target,
+                default,
                 default,
                 EffectPhaseId.OnApply,
                 in behavior,
@@ -471,14 +440,9 @@ namespace Ludots.Tests.GAS
                 GasGraphOpHandlerTable.Instance,
                 templates);
             api = new GasGraphRuntimeApi(world);
-            Entity effect = world.Create();
-            var context = new EffectContext
-            {
-                RootId = 71,
-                Source = world.Create(),
-                Target = world.Create(),
-                TargetContext = Entity.Null,
-            };
+            Entity caster = world.Create();
+            Entity target = world.Create();
+            const int rootId = 71;
             EffectConfigParams mergedParams = default;
             var behavior = new EffectPhaseGraphBindings();
             var runtime = new BuiltinHandlerExecutionContext();
@@ -486,8 +450,9 @@ namespace Ludots.Tests.GAS
             var error = Throws<InvalidOperationException>(() => executor.ExecutePhase(
                 world,
                 api,
-                effect,
-                in context,
+                caster,
+                target,
+                Entity.Null,
                 default,
                 EffectPhaseId.OnApply,
                 in behavior,
@@ -495,7 +460,9 @@ namespace Ludots.Tests.GAS
                 effectTagId: 0,
                 effectTemplateId: templateId,
                 in mergedParams,
-                runtime));
+                runtime,
+                randomSeed: 0,
+                rootId: rootId));
 
             That(error!.Message, Does.Contain("does not support reentrant execution"));
             That(invocationCount, Is.EqualTo(1));
@@ -535,41 +502,124 @@ namespace Ludots.Tests.GAS
                 GasGraphOpHandlerTable.Instance,
                 templates);
             var api = new GasGraphRuntimeApi(world);
-            Entity effect = world.Create();
-            var context = new EffectContext
-            {
-                RootId = 72,
-                Source = world.Create(),
-                Target = world.Create(),
-                TargetContext = Entity.Null,
-            };
+            Entity caster = world.Create();
+            Entity target = world.Create();
+            const int rootId = 72;
             var behavior = new EffectPhaseGraphBindings();
 
             var firstError = Throws<InvalidOperationException>(() => executor.ExecutePhase(
                 world,
                 api,
-                effect,
-                in context,
+                caster,
+                target,
+                Entity.Null,
                 default,
                 EffectPhaseId.OnApply,
                 in behavior,
                 EffectPresetType.None,
                 effectTagId: 0,
-                effectTemplateId: templateId));
+                effectTemplateId: templateId,
+                mergedParams: default,
+                randomSeed: 0,
+                rootId: rootId));
             That(firstError!.Message, Is.EqualTo("synthetic phase failure"));
 
             DoesNotThrow(() => executor.ExecutePhase(
                 world,
                 api,
-                effect,
-                in context,
+                caster,
+                target,
+                Entity.Null,
                 default,
                 EffectPhaseId.OnApply,
                 in behavior,
                 EffectPresetType.None,
                 effectTagId: 0,
-                effectTemplateId: templateId));
+                effectTemplateId: templateId,
+                mergedParams: default,
+                randomSeed: 0,
+                rootId: rootId));
             That(invocationCount, Is.EqualTo(2));
+        }
+
+        [Test]
+        public void PhaseExecutor_OwnsMergedConfigScopeAndClearsItAfterSuccess()
+        {
+            using var world = World.Create();
+            var programs = new GraphProgramRegistry();
+            var templates = new EffectTemplateRegistry();
+            var executor = new EffectPhaseExecutor(
+                programs,
+                new PresetTypeRegistry(),
+                new BuiltinHandlerRegistry(),
+                GasGraphOpHandlerTable.Instance,
+                templates);
+            var api = new GasGraphRuntimeApi(world);
+            Entity caster = world.Create();
+            Entity target = world.Create(new BlackboardIntBuffer());
+            const int graphId = 405;
+            const int configKey = 71;
+            const int blackboardKey = 72;
+            programs.Register(graphId, new[]
+            {
+                new GraphInstruction { Op = (ushort)GraphNodeOp.LoadConfigInt, Dst = 0, Imm = configKey },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardInt, A = 1, B = 0, Imm = blackboardKey },
+            });
+            var behavior = new EffectPhaseGraphBindings();
+            behavior.TryAddStep(EffectPhaseId.OnApply, PhaseSlot.Pre, graphId);
+            var mergedConfig = new EffectConfigParams();
+            mergedConfig.TryAddInt(configKey, 42);
+
+            executor.ExecutePhase(
+                world,
+                api,
+                caster,
+                target,
+                default,
+                default,
+                EffectPhaseId.OnApply,
+                in behavior,
+                EffectPresetType.None,
+                0,
+                0,
+                in mergedConfig);
+
+            Assert.That(world.Get<BlackboardIntBuffer>(target).TryGet(blackboardKey, out int value), Is.True);
+            Assert.That(value, Is.EqualTo(42));
+            Assert.That(api.TryLoadConfigInt(configKey, out _), Is.False);
+        }
+
+        [Test]
+        public void PhaseExecutor_ClearsMergedConfigScopeWhenGraphThrows()
+        {
+            using var world = World.Create();
+            var executor = new EffectPhaseExecutor(
+                new GraphProgramRegistry(),
+                new PresetTypeRegistry(),
+                new BuiltinHandlerRegistry(),
+                GasGraphOpHandlerTable.Instance,
+                new EffectTemplateRegistry());
+            var api = new GasGraphRuntimeApi(world);
+            var behavior = new EffectPhaseGraphBindings();
+            behavior.TryAddStep(EffectPhaseId.OnApply, PhaseSlot.Pre, 406);
+            var mergedConfig = new EffectConfigParams();
+            mergedConfig.TryAddInt(73, 99);
+
+            Assert.Throws<InvalidOperationException>(() => executor.ExecutePhase(
+                world,
+                api,
+                world.Create(),
+                world.Create(),
+                default,
+                default,
+                EffectPhaseId.OnApply,
+                in behavior,
+                EffectPresetType.None,
+                0,
+                0,
+                in mergedConfig));
+
+            Assert.That(api.TryLoadConfigInt(73, out _), Is.False);
         }
 
         [Test]
@@ -592,19 +642,12 @@ namespace Ludots.Tests.GAS
 
             var behavior = new EffectPhaseGraphBindings();
             behavior.TryAddStep(EffectPhaseId.OnPropose, PhaseSlot.Pre, graphId);
-            var context = new EffectContext
-            {
-                RootId = 0,
-                Source = caster,
-                Target = target,
-                TargetContext = target,
-            };
-
             bool accepted = executor.ExecutePhaseWithValidationResult(
                 world,
                 api,
-                Entity.Null,
-                in context,
+                caster,
+                target,
+                target,
                 default,
                 EffectPhaseId.OnPropose,
                 in behavior,
@@ -834,7 +877,7 @@ namespace Ludots.Tests.GAS
             var world = World.Create();
             try
             {
-                // Entity WITHOUT BB component — write should be a no-op (no archetype migration in hot path)
+                // Entity WITHOUT BB component must fail without archetype migration in the hot path.
                 var entityNoBB = world.Create();
                 var api = new GasGraphRuntimeApi(world, null, null, null);
 
@@ -845,11 +888,13 @@ namespace Ludots.Tests.GAS
                     new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardFloat, A = 0, Imm = 1, B = 0 },
                 };
 
-                ExecuteProgram(world, api, entityNoBB, entityNoBB, program);
+                var error = Throws<InvalidOperationException>(() =>
+                    ExecuteProgram(world, api, entityNoBB, entityNoBB, program));
 
                 // BB component should NOT be auto-added (archetype migration removed for hot-path safety)
+                That(error!.Message, Does.StartWith(GasGraphRuntimeApi.MissingBlackboardError));
                 That(world.Has<BlackboardFloatBuffer>(entityNoBB), Is.False,
-                    "WriteBlackboardFloat should not auto-add BB component");
+                    "WriteBlackboardFloat must not auto-add BB component");
 
                 // Entity WITH pre-added BB component — write should succeed
                 var entityWithBB = world.Create(new BlackboardFloatBuffer());
@@ -1080,7 +1125,7 @@ namespace Ludots.Tests.GAS
                 World = world,
                 Caster = caster,
                 ExplicitTarget = target,
-                TargetPos = default,
+                TargetPosCm = default,
                 Api = api,
                 F = f,
                 I = i,
@@ -1111,7 +1156,7 @@ namespace Ludots.Tests.GAS
                 World = world,
                 Caster = caster,
                 ExplicitTarget = target,
-                TargetPos = default,
+                TargetPosCm = default,
                 Api = api,
                 F = f,
                 I = iArr,
@@ -1142,7 +1187,7 @@ namespace Ludots.Tests.GAS
                 World = world,
                 Caster = caster,
                 ExplicitTarget = target,
-                TargetPos = default,
+                TargetPosCm = default,
                 Api = api,
                 F = f,
                 I = i,
@@ -1173,7 +1218,7 @@ namespace Ludots.Tests.GAS
                 World = world,
                 Caster = caster,
                 ExplicitTarget = target,
-                TargetPos = default,
+                TargetPosCm = default,
                 Api = api,
                 F = f,
                 I = i,

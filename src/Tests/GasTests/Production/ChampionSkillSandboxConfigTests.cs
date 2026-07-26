@@ -18,6 +18,7 @@ using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.Gameplay.Items;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Orders;
@@ -107,19 +108,20 @@ namespace Ludots.Tests.GAS.Production
             routing.Update(0f);
 
             ref var formSlots = ref engine.World.Get<AbilityFormSlotBuffer>(entity);
+            var itemGrantedSlots = default(ItemGrantedSlotBuffer);
             var grantedSlots = default(GrantedSlotBuffer);
             int hammerQ = AbilityIdRegistry.GetId("Ability.Champion.Jayce.Hammer.ToTheSkies");
             int hammerW = AbilityIdRegistry.GetId("Ability.Champion.Jayce.Hammer.LightningField");
             int cannonR = AbilityIdRegistry.GetId("Ability.Champion.Jayce.Transform.Cannon");
 
             Assert.That(
-                AbilitySlotResolver.Resolve(in abilities, in formSlots, hasForm: true, in grantedSlots, hasGranted: false, slotIndex: 0).AbilityId,
+                AbilitySlotResolver.Resolve(in abilities, in formSlots, hasForm: true, in itemGrantedSlots, hasItemGranted: false, in grantedSlots, hasGranted: false, slotIndex: 0).AbilityId,
                 Is.EqualTo(hammerQ));
             Assert.That(
-                AbilitySlotResolver.Resolve(in abilities, in formSlots, hasForm: true, in grantedSlots, hasGranted: false, slotIndex: 1).AbilityId,
+                AbilitySlotResolver.Resolve(in abilities, in formSlots, hasForm: true, in itemGrantedSlots, hasItemGranted: false, in grantedSlots, hasGranted: false, slotIndex: 1).AbilityId,
                 Is.EqualTo(hammerW));
             Assert.That(
-                AbilitySlotResolver.Resolve(in abilities, in formSlots, hasForm: true, in grantedSlots, hasGranted: false, slotIndex: 3).AbilityId,
+                AbilitySlotResolver.Resolve(in abilities, in formSlots, hasForm: true, in itemGrantedSlots, hasItemGranted: false, in grantedSlots, hasGranted: false, slotIndex: 3).AbilityId,
                 Is.EqualTo(cannonR));
         }
 

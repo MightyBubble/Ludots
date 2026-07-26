@@ -130,7 +130,10 @@
       "NetworkMatchCompleted": "Command rejected: battle has ended",
       "InsufficientResources": "Command rejected: not enough crystals",
       "Expired": "Command expired before it could start",
-      "Cancelled": "Command cancelled before it could start"
+      "Cancelled": "Command cancelled before it could start",
+      "RejectedBlackboardCapacity": "Command rejected: unit cannot store that action data",
+      "RejectedMissingBlackboard": "Command rejected: unit is missing required action data",
+      "RejectedAdmissionCapacity": "Command rejected: command capacity is full"
     }
   }
 }

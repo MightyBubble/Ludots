@@ -43,6 +43,18 @@ namespace Ludots.Tests.GAS.Production
             "SuperweaponContextShowcaseMod"
         };
 
+        [SetUp]
+        public void SetUp()
+        {
+            TagRegistry.Clear();
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            TagRegistry.Clear();
+        }
+
         [Test]
         public void SuperweaponContextShowcase_RoutesTargetsThroughAbilityOwnedInteractionFrame()
         {
@@ -201,6 +213,28 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(source, Does.Not.Contain("SetActiveDirect"));
             Assert.That(source, Does.Not.Contain("OrderId = 65001"));
             Assert.That(source, Does.Not.Contain("World.Remove<AbilityExecInstance>"));
+            Assert.That(source, Does.Contain("OrderBlackboardStateInstaller.RequireInstalled"));
+            Assert.That(source, Does.Not.Contain("World.Add(State.Commander, OrderBuffer.CreateEmpty())"));
+            Assert.That(source, Does.Not.Contain("World.Add(State.Commander, new BlackboardIntBuffer())"));
+            Assert.That(source, Does.Not.Contain("World.Add(State.Commander, new AbilityStateBuffer())"));
+            Assert.That(source, Does.Not.Contain("World.Add(State.Commander, new GrantedSlotBuffer())"));
+
+            string templatePath = Path.Combine(
+                repoRoot,
+                "mods",
+                "showcases",
+                "superweapon_context",
+                "SuperweaponContextShowcaseMod",
+                "assets",
+                "Entities",
+                "templates.json");
+            using JsonDocument templates = JsonDocument.Parse(File.ReadAllText(templatePath, Encoding.UTF8));
+            JsonElement commanderOverride = templates.RootElement.EnumerateArray()
+                .Single(entry => entry.GetProperty("id").GetString() == "interaction_commander");
+            Assert.That(
+                commanderOverride.GetProperty("components").TryGetProperty("GrantedSlotBuffer", out _),
+                Is.True,
+                "The dependent mod must assemble the transient granted-slot state before map runtime starts.");
         }
 
         private static void AssertPerformerRules(string repoRoot)

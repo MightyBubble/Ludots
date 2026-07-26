@@ -498,7 +498,9 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         Assert.That(networkEntities.TryResolve(southernCore, out _), Is.True);
 
         int healthId = RequireAttribute(runtime.Config.HealthAttribute);
-        AttributeMutationOps.SetCurrent(engine.World, southernCore, healthId, 0f);
+        TagOps tagOps = engine.GetService(CoreServiceKeys.TagOps)
+            ?? throw new InvalidOperationException("TagOps service is missing.");
+        AttributeMutationOps.SetCurrent(engine.World, southernCore, healthId, 0f, tagOps);
 
         for (int i = 0; i < 8 && engine.World.IsAlive(southernCore); i++)
         {

@@ -1,3 +1,4 @@
+using System;
 using System.Threading.Tasks;
 using CoreInputMod.ViewMode;
 using Ludots.Core.Engine;
@@ -19,6 +20,7 @@ namespace RtsDemoMod.Triggers
     public sealed class InstallRtsDemoOnGameStartTrigger : Trigger
     {
         private const string InstalledKey = "RtsDemoMod.Installed";
+        private const string RelationEntityCapacityKey = "rtsRelationEntityCapacity";
         private readonly IModContext _ctx;
 
         public InstallRtsDemoOnGameStartTrigger(IModContext ctx)
@@ -59,7 +61,16 @@ namespace RtsDemoMod.Triggers
 
             // Run after effect/spawn processing so relation-driven garrison/build/morph state
             // becomes visible in the same simulation frame.
-            engine.RegisterSystem(new RtsRelationRuntimeSystem(engine), SystemGroup.EffectProcessing);
+            if (!engine.MergedConfig.Constants.IntValues.TryGetValue(RelationEntityCapacityKey, out int relationEntityCapacity) ||
+                relationEntityCapacity <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"[RtsDemoMod] constants.intValues.{RelationEntityCapacityKey} must be explicitly configured as positive.");
+            }
+
+            engine.RegisterSystem(
+                new RtsRelationRuntimeSystem(engine, relationEntityCapacity),
+                SystemGroup.EffectProcessing);
             if (hasLocalPresentation)
             {
                 engine.RegisterPresentationSystem(new RtsCommandSourceCommandPanelSystem(engine));

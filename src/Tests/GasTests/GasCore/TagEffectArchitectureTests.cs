@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Text.Json.Nodes;
 using Arch.Core;
 using Arch.Core.Extensions;
 using Ludots.Core.Config;
@@ -10,6 +11,7 @@ using Ludots.Core.Gameplay.GAS.Config;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
@@ -25,7 +27,7 @@ using Ludots.Core.NodeLibraries.GASGraph.Host;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
 
-namespace Ludots.Tests.GAS
+namespace Ludots.Tests.GAS.Features.EffectExecution
 {
     /// <summary>
     /// Comprehensive tests for the Tag-Effect Architecture:
@@ -45,7 +47,7 @@ namespace Ludots.Tests.GAS
     [TestFixture]
     public class TagEffectArchitectureTests
     {
-        private readonly TagOps _tagOps = new TagOps();
+        private readonly TagOps _tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
 
         [OneTimeSetUp]
         public void OneTimeSetUp()
@@ -208,7 +210,7 @@ namespace Ludots.Tests.GAS
         public unsafe void TagOps_AddTag_WhenTagCountContainerOverflows_IncrementsBudgetAndDoesNotMutate()
         {
             var budget = new GasBudget();
-            var tagOps = new TagOps(new TagRuleRegistry(), budget);
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), budget);
 
             GameplayTagContainer tags = default;
             TagCountContainer counts = default;
@@ -225,6 +227,129 @@ namespace Ludots.Tests.GAS
 
             That(tags.HasTag(overflowTagId), Is.False);
             That(counts.GetCount(overflowTagId), Is.EqualTo(0));
+        }
+
+        [Test]
+        public void GrantToEntity_WhenSecondNewTagOverflows_RollsBackWholeBatchOnce()
+        {
+            using var world = World.Create();
+            var budget = new GasBudget();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), budget);
+            Entity target = world.Create(new GameplayTagContainer(), new TagCountContainer(), new DirtyFlags());
+            ref var tags = ref world.Get<GameplayTagContainer>(target);
+            ref var counts = ref world.Get<TagCountContainer>(target);
+            ref var dirty = ref world.Get<DirtyFlags>(target);
+            for (int tagId = 1; tagId <= 15; tagId++) tagOps.AddTag(ref tags, ref counts, tagId, ref dirty);
+            dirty.Clear();
+            var grants = new EffectGrantedTags();
+            grants.Add(new TagContribution { TagId = 16, Formula = TagContributionFormula.Fixed, Amount = 1 });
+            grants.Add(new TagContribution { TagId = 17, Formula = TagContributionFormula.Fixed, Amount = 1 });
+
+            var ex = Throws<InvalidOperationException>(() => EffectTagContributionHelper.GrantToEntity(world, target, in grants, 1, tagOps, budget));
+
+            That(ex.Message, Is.EqualTo(TagOps.TagCountOverflowError));
+            That(counts.Count, Is.EqualTo(15));
+            That(tags.HasTag(16), Is.False);
+            That(tags.HasTag(17), Is.False);
+            That(dirty.IsTagDirty(16), Is.False);
+            That(budget.TagCountOverflowDropped, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void UpdateOnEntity_WhenLaterContributionOverflows_RestoresEarlierCount()
+        {
+            using var world = World.Create();
+            var budget = new GasBudget();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), budget);
+            Entity target = world.Create(new GameplayTagContainer(), new TagCountContainer(), new DirtyFlags());
+            ref var tags = ref world.Get<GameplayTagContainer>(target);
+            ref var counts = ref world.Get<TagCountContainer>(target);
+            ref var dirty = ref world.Get<DirtyFlags>(target);
+            for (int tagId = 1; tagId <= 15; tagId++) tagOps.AddTag(ref tags, ref counts, tagId, ref dirty);
+            dirty.Clear();
+            var grants = new EffectGrantedTags();
+            grants.Add(new TagContribution { TagId = 14, Formula = TagContributionFormula.Linear, Amount = 1 });
+            grants.Add(new TagContribution { TagId = 16, Formula = TagContributionFormula.Linear, Amount = 1 });
+            grants.Add(new TagContribution { TagId = 17, Formula = TagContributionFormula.Linear, Amount = 1 });
+
+            Throws<InvalidOperationException>(() => EffectTagContributionHelper.UpdateOnEntity(world, target, in grants, 1, 2, tagOps, budget));
+
+            That(counts.GetCount(14), Is.EqualTo(1));
+            That(tags.HasTag(16), Is.False);
+            That(tags.HasTag(17), Is.False);
+            That(dirty.IsTagDirty(14), Is.False);
+            That(budget.TagCountOverflowDropped, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void GrantToEntity_WhenAttachedRuleOverflows_RollsBackRuleCascade()
+        {
+            using var world = World.Create();
+            var budget = new GasBudget();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), budget);
+            var rule = new TagRuleSet();
+            unsafe { rule.AttachedTags[0] = 17; rule.AttachedCount = 1; }
+            tagOps.RegisterTagRuleSet(16, rule);
+            Entity target = world.Create(new GameplayTagContainer(), new TagCountContainer(), new DirtyFlags());
+            ref var tags = ref world.Get<GameplayTagContainer>(target);
+            ref var counts = ref world.Get<TagCountContainer>(target);
+            ref var dirty = ref world.Get<DirtyFlags>(target);
+            for (int tagId = 1; tagId <= 15; tagId++) tagOps.AddTag(ref tags, ref counts, tagId, ref dirty);
+            dirty.Clear();
+            var grants = new EffectGrantedTags();
+            grants.Add(new TagContribution { TagId = 16, Formula = TagContributionFormula.Fixed, Amount = 1 });
+
+            Throws<InvalidOperationException>(() => EffectTagContributionHelper.GrantToEntity(world, target, in grants, 1, tagOps, budget));
+
+            That(tags.HasTag(16), Is.False);
+            That(tags.HasTag(17), Is.False);
+            That(counts.Count, Is.EqualTo(15));
+            That(budget.TagCountOverflowDropped, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void GrantToEntity_WhenServiceOrComponentsMissing_FailsBeforeMutation()
+        {
+            using var world = World.Create();
+            var grants = new EffectGrantedTags();
+            grants.Add(new TagContribution { TagId = 1, Formula = TagContributionFormula.Fixed, Amount = 1 });
+            Entity complete = world.Create(new GameplayTagContainer(), new TagCountContainer(), new DirtyFlags());
+            var missingService = Throws<InvalidOperationException>(() => EffectTagContributionHelper.GrantToEntity(world, complete, in grants, 1, null));
+            That(missingService.Message, Is.EqualTo(TagOps.MissingTagOpsError));
+            That(world.Get<TagCountContainer>(complete).Count, Is.Zero);
+
+            Entity incomplete = world.Create(new TagCountContainer(), new DirtyFlags());
+            var missingComponent = Throws<InvalidOperationException>(() => EffectTagContributionHelper.GrantToEntity(world, incomplete, in grants, 1, new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry())));
+            That(missingComponent.Message, Is.EqualTo(TagOps.MissingGameplayTagContainerError));
+            That(world.Has<GameplayTagContainer>(incomplete), Is.False);
+            That(world.Get<TagCountContainer>(incomplete).Count, Is.Zero);
+        }
+
+        [Test]
+        public void EffectTagContributionTransaction_AfterWarmup_AllocatesZero()
+        {
+            using var world = World.Create();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), new GasBudget());
+            Entity target = world.Create(new GameplayTagContainer(), new TagCountContainer(), new DirtyFlags());
+            var grants = new EffectGrantedTags();
+            grants.Add(new TagContribution { TagId = 1, Formula = TagContributionFormula.Fixed, Amount = 1 });
+            for (int i = 0; i < 32; i++)
+            {
+                EffectTagContributionHelper.GrantToEntity(world, target, in grants, 1, tagOps);
+                EffectTagContributionHelper.RevokeFromEntity(world, target, in grants, 1, tagOps);
+            }
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+            GC.GetAllocatedBytesForCurrentThread();
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 0; i < 1_000; i++)
+            {
+                EffectTagContributionHelper.GrantToEntity(world, target, in grants, 1, tagOps);
+                EffectTagContributionHelper.RevokeFromEntity(world, target, in grants, 1, tagOps);
+            }
+            long after = GC.GetAllocatedBytesForCurrentThread();
+            That(after - before, Is.LessThanOrEqualTo(64));
         }
 
         [Test]
@@ -320,8 +445,11 @@ namespace Ludots.Tests.GAS
         public void BuiltinHandlers_ApplyModifiers_AppliesModifiersToTarget()
         {
             using var world = World.Create();
-            var target = world.Create(new AttributeBuffer());
+            var target = world.Create(new AttributeBuffer(), new DirtyFlags());
             var effect = world.Create();
+            var registry = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(registry);
+            var runtime = new BuiltinHandlerExecutionContext { TagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()) };
 
             var ctx = new EffectContext { Source = effect, Target = target };
             var tpl = new EffectTemplateData();
@@ -330,7 +458,7 @@ namespace Ludots.Tests.GAS
             tpl.Modifiers.Add(attributeId, ModifierOp.Add, 42f);
 
             var mergedParams = new EffectConfigParams();
-            BuiltinHandlers.HandleApplyModifiers(world, effect, ref ctx, in mergedParams, in tpl);
+            registry.Invoke(BuiltinHandlerId.ApplyModifiers, world, effect, ref ctx, in mergedParams, in tpl, runtime);
 
             ref var attrBuf = ref world.Get<AttributeBuffer>(target);
             That(attrBuf.GetCurrent(attributeId), Is.EqualTo(42f));
@@ -345,8 +473,11 @@ namespace Ludots.Tests.GAS
             That(fxKey, Is.Not.EqualTo(0), "EffectParamKeys must be initialized");
             That(fyKey, Is.Not.EqualTo(0), "EffectParamKeys must be initialized");
 
-            var target = world.Create(new AttributeBuffer());
+            var target = world.Create(new AttributeBuffer(), new DirtyFlags());
             var effect = world.Create();
+            var registry = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(registry);
+            var runtime = new BuiltinHandlerExecutionContext { TagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()) };
             const int forceXAttrId = AttributeBuffer.MAX_ATTRS - 2;
             const int forceYAttrId = AttributeBuffer.MAX_ATTRS - 1;
 
@@ -357,7 +488,7 @@ namespace Ludots.Tests.GAS
             mergedParams.TryAddFloat(fxKey, 10f);
             mergedParams.TryAddFloat(fyKey, -3f);
 
-            BuiltinHandlers.HandleApplyForce(world, effect, ref ctx, in mergedParams, in tpl);
+            registry.Invoke(BuiltinHandlerId.ApplyForce, world, effect, ref ctx, in mergedParams, in tpl, runtime);
 
             ref var attrBuf = ref world.Get<AttributeBuffer>(target);
             That(attrBuf.GetCurrent(forceXAttrId), Is.EqualTo(10f));
@@ -433,7 +564,7 @@ namespace Ludots.Tests.GAS
         {
             using var world = World.Create();
             var caster = world.Create(WorldPositionCm.FromCm(1200, 800));
-            var target = world.Create();
+            var target = world.Create(WorldPositionCm.FromCm(1600, 800));
             var effect = world.Create();
             var queue = new RuntimeEntitySpawnQueue(capacity: 4);
             var runtime = new BuiltinHandlerExecutionContext
@@ -445,7 +576,15 @@ namespace Ludots.Tests.GAS
 
             var ctx = new EffectContext { RootId = 4311, Source = caster, Target = target };
             var tpl = new EffectTemplateData();
-            tpl.Projectile = new ProjectileDescriptor { Speed = 500, Range = 1000, ArcHeight = 0, ImpactEffectTemplateId = 42 };
+            tpl.Projectile = new ProjectileDescriptor
+            {
+                Speed = 500,
+                Range = 1000,
+                ArcHeight = 0,
+                ImpactEffectTemplateId = 42,
+                TravelMode = ProjectileTravelMode.TrackTarget,
+                ImpactPolicy = ProjectileImpactPolicy.DestroyOnFirstHit,
+            };
 
             var mergedParams = new EffectConfigParams();
             registry.Invoke(BuiltinHandlerId.CreateProjectile, world, effect, ref ctx, in mergedParams, in tpl, runtime);
@@ -477,7 +616,15 @@ namespace Ludots.Tests.GAS
 
             var ctx = new EffectContext { Source = caster, Target = Entity.Null };
             var tpl = new EffectTemplateData();
-            tpl.Projectile = new ProjectileDescriptor { Speed = 600, Range = 1200, ArcHeight = 0, ImpactEffectTemplateId = 0 };
+            tpl.Projectile = new ProjectileDescriptor
+            {
+                Speed = 600,
+                Range = 1200,
+                ArcHeight = 0,
+                ImpactEffectTemplateId = 0,
+                TravelMode = ProjectileTravelMode.Direction,
+                ImpactPolicy = ProjectileImpactPolicy.DestroyOnFirstHit,
+            };
 
             var mergedParams = new EffectConfigParams();
             mergedParams.TryAddFloat(EffectParamKeys.TargetPosX, 950f);
@@ -495,30 +642,75 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void BuiltinHandlers_CreateProjectile_DirectionWithoutDirection_IsRejectedBeforeSpawn()
+        {
+            using var world = World.Create();
+            var caster = world.Create(WorldPositionCm.FromCm(300, 500));
+            var effect = world.Create();
+            var queue = new RuntimeEntitySpawnQueue(capacity: 4);
+            var runtime = new BuiltinHandlerExecutionContext { SpawnRequests = queue };
+            var registry = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(registry);
+            var context = new EffectContext { Source = caster, Target = Entity.Null };
+            var template = new EffectTemplateData
+            {
+                Projectile = new ProjectileDescriptor
+                {
+                    Speed = 600,
+                    Range = 1200,
+                    TravelMode = ProjectileTravelMode.Direction,
+                    ImpactPolicy = ProjectileImpactPolicy.DestroyOnFirstHit,
+                },
+            };
+            var mergedParams = new EffectConfigParams();
+
+            InvalidOperationException ex = Throws<InvalidOperationException>(() =>
+                registry.Invoke(
+                    BuiltinHandlerId.CreateProjectile,
+                    world,
+                    effect,
+                    ref context,
+                    in mergedParams,
+                    in template,
+                    runtime))!;
+
+            That(ex.Message, Does.Contain("requires a resolvable direction"));
+            That(queue.Count, Is.EqualTo(0));
+        }
+
+        [Test]
         public void ProjectileRuntimeSystem_TargetPointImpact_PublishesCallerParams()
         {
             using var world = World.Create();
             var requests = new EffectRequestQueue();
-            var caster = world.Create(WorldPositionCm.FromCm(100, 200));
+            Fix64Vec2 launchOrigin = Fix64Vec2.FromFloat(100f, 200f);
+            Fix64Vec2 targetPoint = Fix64Vec2.FromFloat(160f, 200f);
+            Fix64Vec2 direction = (targetPoint - launchOrigin).Normalized();
+            var caster = world.Create(new WorldPositionCm { Value = launchOrigin });
             var projectile = world.Create(
                 new ProjectileState
                 {
                     RootId = 4961,
                     Speed = Fix64.FromInt(400),
-                    Range = 1200,
+                    Range = (targetPoint - launchOrigin).Length().RoundToInt(),
                     ArcHeight = 0,
                     ImpactEffectTemplateId = 77,
                     Source = caster,
                     Target = Entity.Null,
-                    LaunchOriginCm = Fix64Vec2.FromFloat(100f, 200f),
+                    LaunchOriginCm = launchOrigin,
                     HasLaunchOrigin = 1,
-                    TargetPointCm = Fix64Vec2.FromFloat(160f, 240f),
+                    TargetPointCm = targetPoint,
                     HasTargetPoint = 1,
+                    Direction = direction,
+                    HasDirection = 1,
+                    TravelMode = ProjectileTravelMode.Direction,
+                    ImpactPolicy = ProjectileImpactPolicy.DestroyOnFirstHit,
                 },
-                WorldPositionCm.FromCm(100, 200),
-                new PreviousWorldPositionCm { Value = WorldPositionCm.FromCm(100, 200).Value });
+                new WorldPositionCm { Value = launchOrigin },
+                new PreviousWorldPositionCm { Value = launchOrigin });
 
-            using var system = new ProjectileRuntimeSystem(world, requests, spatialQueries: null);
+            using var system = new ProjectileRuntimeSystem(
+                world, requests, spatialQueries: null, collisionCandidateCapacity: 128, runtimeEntityCapacity: 64);
             system.Update(0.2f);
 
             That(world.IsAlive(projectile), Is.False, "Projectile should despawn after reaching the preserved target point.");
@@ -535,7 +727,7 @@ namespace Ludots.Tests.GAS
             That(originX, Is.EqualTo(100f).Within(0.01f));
             That(originY, Is.EqualTo(200f).Within(0.01f));
             That(targetX, Is.EqualTo(160f).Within(0.01f));
-            That(targetY, Is.EqualTo(240f).Within(0.01f));
+            That(targetY, Is.EqualTo(200f).Within(0.01f));
         }
 
         [Test]
@@ -580,7 +772,9 @@ namespace Ludots.Tests.GAS
                     WorldPositionCm.FromCm(0, 0),
                     new PreviousWorldPositionCm { Value = WorldPositionCm.FromCm(0, 0).Value });
 
-                using var system = new ProjectileRuntimeSystem(world, requests, new TestLineQueryService(hostile, bystander));
+                using var system = new ProjectileRuntimeSystem(
+                    world, requests, new TestLineQueryService(hostile, bystander),
+                    collisionCandidateCapacity: 128, runtimeEntityCapacity: 64);
                 system.Update(0.3f);
 
                 That(world.IsAlive(projectile), Is.False);
@@ -593,6 +787,121 @@ namespace Ludots.Tests.GAS
             {
                 TeamManager.Clear();
             }
+        }
+
+        [Test]
+        public void ProjectileRuntimeSystem_MoreThanThirtyTwoCandidates_HitsNearestAlongSegment()
+        {
+            using var world = World.Create();
+            var requests = new EffectRequestQueue();
+            Entity caster = world.Create(WorldPositionCm.FromCm(0, 0));
+            var hits = new Entity[33];
+            for (int i = 0; i < 32; i++)
+            {
+                hits[i] = world.Create(WorldPositionCm.FromCm(100 + (i * 10), 0));
+            }
+            Entity nearest = world.Create(WorldPositionCm.FromCm(50, 0));
+            hits[32] = nearest;
+
+            Entity projectile = world.Create(
+                new ProjectileState
+                {
+                    Speed = Fix64.FromInt(1200),
+                    Range = 1500,
+                    HitEffectTemplateId = 88,
+                    TravelMode = ProjectileTravelMode.Direction,
+                    ImpactPolicy = ProjectileImpactPolicy.DestroyOnFirstHit,
+                    CollisionHalfWidthCm = 10,
+                    CollisionRelationFilter = RelationshipFilter.All,
+                    CollisionExcludeSource = 1,
+                    MaxHitCount = 1,
+                    Source = caster,
+                    Direction = Fix64Vec2.UnitX,
+                    HasDirection = 1,
+                },
+                WorldPositionCm.FromCm(0, 0));
+
+            using var system = new ProjectileRuntimeSystem(
+                world, requests, new TestLineQueryService(hits),
+                collisionCandidateCapacity: 128, runtimeEntityCapacity: 64);
+            system.Update(1f);
+
+            Assert.That(world.IsAlive(projectile), Is.False);
+            Assert.That(requests.Count, Is.EqualTo(1));
+            Assert.That(requests[0].Target, Is.EqualTo(nearest));
+        }
+
+        [Test]
+        public void ProjectileRuntimeSystem_QueryOverflow_FailsExplicitlyBeforePublishingPartialHit()
+        {
+            using var world = World.Create();
+            var requests = new EffectRequestQueue();
+            Entity caster = world.Create(WorldPositionCm.FromCm(0, 0));
+            Entity target = world.Create(WorldPositionCm.FromCm(100, 0));
+            world.Create(
+                new ProjectileState
+                {
+                    Speed = Fix64.FromInt(1200),
+                    Range = 1500,
+                    HitEffectTemplateId = 88,
+                    TravelMode = ProjectileTravelMode.Direction,
+                    ImpactPolicy = ProjectileImpactPolicy.DestroyOnFirstHit,
+                    CollisionHalfWidthCm = 10,
+                    CollisionRelationFilter = RelationshipFilter.All,
+                    CollisionExcludeSource = 1,
+                    MaxHitCount = 1,
+                    Source = caster,
+                    Direction = Fix64Vec2.UnitX,
+                    HasDirection = 1,
+                },
+                WorldPositionCm.FromCm(0, 0));
+
+            using var system = new ProjectileRuntimeSystem(
+                world, requests, new TestLineQueryService(dropped: 1, target),
+                collisionCandidateCapacity: 128, runtimeEntityCapacity: 64);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => system.Update(1f))!;
+            Assert.That(ex.Message, Does.StartWith("GAS.PROJECTILE.ERR.CollisionCandidateCapacityExceeded"));
+            Assert.That(requests.Count, Is.Zero);
+        }
+
+        [Test]
+        public void ProjectileRuntimeSystem_UnrepresentableMaxHitCount_FailsBeforePublishingPartialHit()
+        {
+            using var world = World.Create();
+            var requests = new EffectRequestQueue();
+            Entity caster = world.Create(WorldPositionCm.FromCm(0, 0));
+            var hits = new Entity[ProjectileState.HitHistoryCapacity + 1];
+            for (int i = 0; i < hits.Length; i++)
+            {
+                hits[i] = world.Create(WorldPositionCm.FromCm(100 + (i * 10), 0));
+            }
+
+            world.Create(
+                new ProjectileState
+                {
+                    Speed = Fix64.FromInt(1200),
+                    Range = 1500,
+                    HitEffectTemplateId = 88,
+                    TravelMode = ProjectileTravelMode.Direction,
+                    ImpactPolicy = ProjectileImpactPolicy.ContinueOnHit,
+                    CollisionHalfWidthCm = 10,
+                    CollisionRelationFilter = RelationshipFilter.All,
+                    CollisionExcludeSource = 1,
+                    MaxHitCount = ProjectileState.HitHistoryCapacity + 1,
+                    Source = caster,
+                    Direction = Fix64Vec2.UnitX,
+                    HasDirection = 1,
+                },
+                WorldPositionCm.FromCm(0, 0));
+
+            using var system = new ProjectileRuntimeSystem(
+                world, requests, new TestLineQueryService(hits),
+                collisionCandidateCapacity: 128, runtimeEntityCapacity: 64);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => system.Update(1f))!;
+            Assert.That(ex.Message, Does.StartWith("GAS.PROJECTILE.ERR.InvalidMaxHitCount"));
+            Assert.That(requests.Count, Is.Zero);
         }
 
         [Test]
@@ -780,6 +1089,8 @@ namespace Ludots.Tests.GAS
             var graphApi = new GasGraphRuntimeApi(world, spatialQueries: null, coords: null, eventBus: null);
             using var application = new EffectApplicationSystem(
                 world,
+                GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                new Ludots.Core.Engine.DiscreteClock(),
                 templates: templates,
                 spawnRequests: spawnRequests,
                 phaseExecutor: phaseExecutor,
@@ -845,16 +1156,19 @@ namespace Ludots.Tests.GAS
             executor.ExecutePhase(
                 world,
                 graphApi,
-                effect,
-                in context,
+                context.Source,
+                context.Target,
+                context.TargetContext,
                 default,
                 EffectPhaseId.OnApply,
                 in behavior,
                 EffectPresetType.None,
                 effectTagId: 0,
-                effectTemplateId: 2303);
+                effectTemplateId: 2303,
+                mergedParams: default,
+                rootId: context.RootId);
 
-            That(receivedEffect, Is.EqualTo(effect));
+            That(receivedEffect, Is.EqualTo(Entity.Null));
             That(receivedRootId, Is.EqualTo(73));
         }
 
@@ -904,17 +1218,20 @@ namespace Ludots.Tests.GAS
             executor.ExecutePhase(
                 world,
                 graphApi,
-                effect,
-                in context,
+                context.Source,
+                context.Target,
+                context.TargetContext,
                 default,
                 EffectPhaseId.OnApply,
                 in behavior,
                 EffectPresetType.None,
                 effectTagId: 0,
                 effectTemplateId: 2304,
-                runtime);
+                mergedParams: default,
+                builtinRuntime: runtime,
+                rootId: context.RootId);
 
-            That(receivedEffect, Is.EqualTo(effect));
+            That(receivedEffect, Is.EqualTo(Entity.Null));
             That(receivedRootId, Is.EqualTo(89));
         }
 
@@ -979,13 +1296,17 @@ namespace Ludots.Tests.GAS
             var templates = new DataRegistry<EntityTemplate>(CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }"));
             var templateKeys = new EntityTemplateKeyRegistry();
             var stableIds = new Ludots.Core.Presentation.PresentationStableIdAllocator();
+            var spawnRelationships = CreateSpawnRelationshipHarness(world, 7);
             var system = new RuntimeEntitySpawnSystem(
                 world,
                 requests,
                 templates,
                 templateKeys,
                 stableIds,
-                effects);
+                effects,
+                teamLookup: spawnRelationships.Teams,
+                relationships: spawnRelationships.Relationships,
+                memberOfTypeId: spawnRelationships.MemberOfTypeId);
 
             That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
             {
@@ -1023,8 +1344,15 @@ namespace Ludots.Tests.GAS
             That(spawned, Is.Not.EqualTo(Entity.Null));
             That(world.Has<Team>(spawned), Is.True);
             That(world.Get<Team>(spawned).Id, Is.EqualTo(7));
+            That(
+                spawnRelationships.Relationships.HasLink(
+                    spawned,
+                    spawnRelationships.Teams.Get(7),
+                    spawnRelationships.MemberOfTypeId),
+                Is.True);
             That(world.Has<MapEntity>(spawned), Is.True);
             That(world.Get<MapEntity>(spawned).MapId.Value, Is.EqualTo("runtime_spawn_test"));
+            That(world.Has<DirtyFlags>(spawned), Is.True);
             That(world.Has<Ludots.Core.Presentation.Components.PresentationStableId>(spawned), Is.True);
             That(world.Get<Ludots.Core.Presentation.Components.PresentationStableId>(spawned).Value, Is.GreaterThan(0));
 
@@ -1218,6 +1546,337 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void RuntimeEntitySpawnSystem_ReceiptQueueFull_DoesNotLeavePartialSpawnedEntity()
+        {
+            string templateJson = @"[
+              {
+                ""id"": ""test_receipt_capacity_template"",
+                ""components"": {
+                  ""Name"": { ""Value"": ""Template:ReceiptCapacity"" },
+                  ""WorldPositionCm"": { ""Value"": { ""X"": 0, ""Y"": 0 } },
+                  ""FacingDirection"": { ""AngleRad"": 0.0 },
+                  ""AttributeBuffer"": { ""base"": {} },
+                  ""GameplayTagContainer"": {},
+                  ""TagCountContainer"": {}
+                }
+              }
+            ]";
+
+            var pipeline = CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }", templateJson);
+            var templates = new DataRegistry<EntityTemplate>(pipeline);
+            templates.Load("Entities/templates.json", ConfigCatalogLoader.Load(pipeline));
+
+            using var world = World.Create();
+            var requests = new RuntimeEntitySpawnQueue(capacity: 4);
+            var receipts = new RuntimeEntitySpawnReceiptQueue(capacity: 16);
+            for (int i = 0; i < receipts.Capacity; i++)
+            {
+                That(receipts.TryEnqueue(new RuntimeEntitySpawnReceipt
+                {
+                    ReceiptChannelId = 1,
+                    ReceiptId = 1000 + i,
+                    Kind = RuntimeEntitySpawnKind.Template,
+                    TemplateId = "fill",
+                }), Is.True);
+            }
+
+            var templateKeys = new EntityTemplateKeyRegistry();
+            var stableIds = new Ludots.Core.Presentation.PresentationStableIdAllocator();
+            var system = new RuntimeEntitySpawnSystem(
+                world,
+                requests,
+                templates,
+                templateKeys,
+                stableIds,
+                receipts: receipts);
+
+            That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
+            {
+                Kind = RuntimeEntitySpawnKind.Template,
+                TemplateId = "test_receipt_capacity_template",
+                WorldPositionCm = Fix64Vec2.FromInt(9, 11),
+                HasWorldPosition = 1,
+                ReceiptChannelId = 3,
+                ReceiptId = 808,
+                EmitReceipt = 1,
+            }), Is.True);
+
+            var error = Throws<InvalidOperationException>(() => system.Update(0f));
+
+            That(error!.Message, Does.Contain("RuntimeEntitySpawnReceiptQueue capacity exceeded"));
+            That(requests.Count, Is.EqualTo(1), "Capacity failure must leave the spawn request retryable.");
+            int spawnedCount = 0;
+            var query = new QueryDescription().WithAll<Name>();
+            world.Query(in query, (Entity entity, ref Name name) =>
+            {
+                if (string.Equals(name.Value, "Template:ReceiptCapacity", StringComparison.Ordinal))
+                {
+                    spawnedCount++;
+                }
+            });
+            That(spawnedCount, Is.EqualTo(0), "Receipt capacity failure must not leave a partial spawned entity.");
+        }
+
+        [Test]
+        public void RuntimeEntitySpawnSystem_BatchTemplateReceiptCapacity_DoesNotDrainRequests()
+        {
+            string templateJson = @"[
+              {
+                ""id"": ""test_receipt_capacity_batch_template"",
+                ""components"": {
+                  ""Name"": { ""Value"": ""Template:ReceiptCapacityBatch"" },
+                  ""WorldPositionCm"": { ""Value"": { ""X"": 0, ""Y"": 0 } },
+                  ""FacingDirection"": { ""AngleRad"": 0.0 },
+                  ""AttributeBuffer"": { ""base"": {} },
+                  ""GameplayTagContainer"": {},
+                  ""TagCountContainer"": {}
+                }
+              }
+            ]";
+
+            var pipeline = CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }", templateJson);
+            var templates = new DataRegistry<EntityTemplate>(pipeline);
+            templates.Load("Entities/templates.json", ConfigCatalogLoader.Load(pipeline));
+
+            using var world = World.Create();
+            var requests = new RuntimeEntitySpawnQueue(capacity: 4);
+            var receipts = new RuntimeEntitySpawnReceiptQueue(capacity: 16);
+            for (int i = 0; i < receipts.Capacity - 1; i++)
+            {
+                That(receipts.TryEnqueue(new RuntimeEntitySpawnReceipt
+                {
+                    ReceiptChannelId = 1,
+                    ReceiptId = 2000 + i,
+                    Kind = RuntimeEntitySpawnKind.Template,
+                    TemplateId = "fill",
+                }), Is.True);
+            }
+
+            var templateKeys = new EntityTemplateKeyRegistry();
+            var stableIds = new Ludots.Core.Presentation.PresentationStableIdAllocator();
+            var system = new RuntimeEntitySpawnSystem(
+                world,
+                requests,
+                templates,
+                templateKeys,
+                stableIds,
+                receipts: receipts);
+
+            for (int i = 0; i < 2; i++)
+            {
+                That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
+                {
+                    Kind = RuntimeEntitySpawnKind.Template,
+                    TemplateId = "test_receipt_capacity_batch_template",
+                    WorldPositionCm = Fix64Vec2.FromInt(10 + i, 20 + i),
+                    HasWorldPosition = 1,
+                    ReceiptChannelId = 3,
+                    ReceiptId = 900 + i,
+                    EmitReceipt = 1,
+                }), Is.True);
+            }
+
+            var error = Throws<InvalidOperationException>(() => system.Update(0f));
+
+            That(error!.Message, Does.Contain("RuntimeEntitySpawnReceiptQueue capacity exceeded"));
+            That(requests.Count, Is.EqualTo(2), "Batch receipt capacity failure must leave every spawn request retryable.");
+            That(receipts.Count, Is.EqualTo(receipts.Capacity - 1));
+
+            int spawnedCount = 0;
+            var query = new QueryDescription().WithAll<Name>();
+            world.Query(in query, (Entity entity, ref Name name) =>
+            {
+                if (string.Equals(name.Value, "Template:ReceiptCapacityBatch", StringComparison.Ordinal))
+                {
+                    spawnedCount++;
+                }
+            });
+            That(spawnedCount, Is.EqualTo(0), "Batch receipt capacity failure must not leave partial spawned entities.");
+        }
+
+        [Test]
+        public void RuntimeEntitySpawnSystem_BatchTemplateExplicitMembershipWithoutTeam_LinksEverySpawnedEntity()
+        {
+            string templateJson = @"[
+              {
+                ""id"": ""test_explicit_membership_batch_template"",
+                ""components"": {
+                  ""Name"": { ""Value"": ""Template:ExplicitMembershipBatch"" },
+                  ""WorldPositionCm"": { ""Value"": { ""X"": 0, ""Y"": 0 } },
+                  ""FacingDirection"": { ""AngleRad"": 0.0 },
+                  ""AttributeBuffer"": { ""base"": {} },
+                  ""GameplayTagContainer"": {},
+                  ""TagCountContainer"": {}
+                }
+              }
+            ]";
+
+            var pipeline = CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }", templateJson);
+            var templates = new DataRegistry<EntityTemplate>(pipeline);
+            templates.Load("Entities/templates.json", ConfigCatalogLoader.Load(pipeline));
+
+            using var world = World.Create();
+            var requests = new RuntimeEntitySpawnQueue(capacity: 4);
+            var templateKeys = new EntityTemplateKeyRegistry();
+            var stableIds = new Ludots.Core.Presentation.PresentationStableIdAllocator();
+            var spawnRelationships = CreateSpawnRelationshipHarness(world, 9);
+            Entity membershipTarget = spawnRelationships.Teams.Get(9);
+            var system = new RuntimeEntitySpawnSystem(
+                world,
+                requests,
+                templates,
+                templateKeys,
+                stableIds,
+                relationships: spawnRelationships.Relationships,
+                memberOfTypeId: spawnRelationships.MemberOfTypeId);
+
+            for (int i = 0; i < 2; i++)
+            {
+                That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
+                {
+                    Kind = RuntimeEntitySpawnKind.Template,
+                    TemplateId = "test_explicit_membership_batch_template",
+                    WorldPositionCm = Fix64Vec2.FromInt(100 + i, 200 + i),
+                    HasWorldPosition = 1,
+                    MembershipTarget = membershipTarget,
+                    HasMembershipTarget = 1,
+                }), Is.True);
+            }
+
+            system.Update(0f);
+
+            var spawned = new Entity[2];
+            int spawnedCount = 0;
+            var query = new QueryDescription().WithAll<Name>();
+            world.Query(in query, (Entity entity, ref Name name) =>
+            {
+                if (!string.Equals(name.Value, "Template:ExplicitMembershipBatch", StringComparison.Ordinal))
+                {
+                    return;
+                }
+
+                if (spawnedCount < spawned.Length)
+                {
+                    spawned[spawnedCount] = entity;
+                }
+
+                spawnedCount++;
+            });
+
+            That(spawnedCount, Is.EqualTo(2));
+            for (int i = 0; i < spawned.Length; i++)
+            {
+                That(
+                    spawnRelationships.Relationships.HasLink(
+                        spawned[i],
+                        membershipTarget,
+                        spawnRelationships.MemberOfTypeId),
+                    Is.True,
+                    $"Spawned entity at batch row {i} must keep the explicit MembershipTarget even when no Team is authored.");
+            }
+        }
+
+        [Test]
+        public void RuntimeEntitySpawnSystem_OnSpawnEffectWithoutQueue_DoesNotLeavePartialSpawnedEntity()
+        {
+            UnitTypeRegistry.Clear();
+            int unitTypeId = UnitTypeRegistry.Register("TestWolfNoEffectQueue");
+
+            using var world = World.Create();
+            var source = world.Create(
+                new Team { Id = 7 },
+                new MapEntity { MapId = new Ludots.Core.Map.MapId("runtime_spawn_no_effect_queue") });
+            var requests = new RuntimeEntitySpawnQueue(capacity: 4);
+            var templates = new DataRegistry<EntityTemplate>(CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }"));
+            var templateKeys = new EntityTemplateKeyRegistry();
+            var stableIds = new Ludots.Core.Presentation.PresentationStableIdAllocator();
+            var spawnRelationships = CreateSpawnRelationshipHarness(world, 7);
+            var system = new RuntimeEntitySpawnSystem(
+                world,
+                requests,
+                templates,
+                templateKeys,
+                stableIds,
+                effectRequests: null,
+                teamLookup: spawnRelationships.Teams,
+                relationships: spawnRelationships.Relationships,
+                memberOfTypeId: spawnRelationships.MemberOfTypeId);
+
+            That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
+            {
+                Kind = RuntimeEntitySpawnKind.UnitType,
+                Source = source,
+                WorldPositionCm = Fix64Vec2.FromInt(420, 840),
+                UnitTypeId = unitTypeId,
+                OnSpawnEffectTemplateId = 123,
+                CopySourceTeam = 1,
+            }), Is.True);
+
+            var error = Throws<InvalidOperationException>(() => system.Update(0f));
+
+            That(error!.Message, Does.Contain("requires EffectRequestQueue"));
+            That(requests.Count, Is.EqualTo(1));
+            int spawnCount = 0;
+            var query = new QueryDescription().WithAll<Name>();
+            world.Query(in query, (Entity entity, ref Name name) =>
+            {
+                if (string.Equals(name.Value, "Unit:TestWolfNoEffectQueue", StringComparison.Ordinal))
+                {
+                    spawnCount++;
+                }
+            });
+            That(spawnCount, Is.EqualTo(0));
+            UnitTypeRegistry.Clear();
+        }
+
+        [Test]
+        public void RuntimeEntitySpawnSystem_SingleUnitTypeMissingTeamRepresentative_DoesNotDrainRequest()
+        {
+            UnitTypeRegistry.Clear();
+            int unitTypeId = UnitTypeRegistry.Register("TestWolfMissingTeamRep");
+
+            using var world = World.Create();
+            var requests = new RuntimeEntitySpawnQueue(capacity: 4);
+            var templates = new DataRegistry<EntityTemplate>(CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }"));
+            var templateKeys = new EntityTemplateKeyRegistry();
+            var stableIds = new Ludots.Core.Presentation.PresentationStableIdAllocator();
+            var spawnRelationships = CreateSpawnRelationshipHarness(world);
+            var system = new RuntimeEntitySpawnSystem(
+                world,
+                requests,
+                templates,
+                templateKeys,
+                stableIds,
+                teamLookup: spawnRelationships.Teams,
+                relationships: spawnRelationships.Relationships,
+                memberOfTypeId: spawnRelationships.MemberOfTypeId);
+
+            That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
+            {
+                Kind = RuntimeEntitySpawnKind.UnitType,
+                WorldPositionCm = Fix64Vec2.FromInt(420, 840),
+                UnitTypeId = unitTypeId,
+                TeamIdOverride = 7,
+            }), Is.True);
+
+            var error = Throws<InvalidOperationException>(() => system.Update(0f));
+
+            That(error!.Message, Does.Contain("no live team relationship representative"));
+            That(requests.Count, Is.EqualTo(1), "Relationship preflight failure must leave the single spawn request retryable.");
+            int spawnCount = 0;
+            var query = new QueryDescription().WithAll<Name>();
+            world.Query(in query, (Entity entity, ref Name name) =>
+            {
+                if (string.Equals(name.Value, "Unit:TestWolfMissingTeamRep", StringComparison.Ordinal))
+                {
+                    spawnCount++;
+                }
+            });
+            That(spawnCount, Is.EqualTo(0));
+            UnitTypeRegistry.Clear();
+        }
+
+        [Test]
         public void RuntimeEntitySpawnReceiptQueue_ChannelOperations_DoNotConsumeOtherChannels()
         {
             var receipts = new RuntimeEntitySpawnReceiptQueue(capacity: 4);
@@ -1321,6 +1980,228 @@ namespace Ludots.Tests.GAS
             That(count, Is.EqualTo(1));
         }
 
+        [TestCase(RuntimeEntitySpawnKind.UnitType)]
+        [TestCase(RuntimeEntitySpawnKind.Assembly)]
+        public void RuntimeEntitySpawnSystem_NonTemplateOrderPatch_InstallsRequiredBlackboardState(
+            RuntimeEntitySpawnKind kind)
+        {
+            UnitTypeRegistry.Clear();
+            int unitTypeId = kind == RuntimeEntitySpawnKind.UnitType
+                ? UnitTypeRegistry.Register("RuntimeOrderActor")
+                : 0;
+
+            using var world = World.Create();
+            var requests = new RuntimeEntitySpawnQueue(capacity: 4);
+            var receipts = new RuntimeEntitySpawnReceiptQueue(capacity: 4);
+            var templates = new DataRegistry<EntityTemplate>(CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }"));
+            var system = new RuntimeEntitySpawnSystem(
+                world,
+                requests,
+                templates,
+                new EntityTemplateKeyRegistry(),
+                new Ludots.Core.Presentation.PresentationStableIdAllocator(),
+                receipts: receipts);
+
+            That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
+            {
+                Kind = kind,
+                UnitTypeId = unitTypeId,
+                ComponentPatches = new[]
+                {
+                    new RuntimeEntitySpawnComponentPatch("OrderBuffer", JsonNode.Parse("{}")!),
+                },
+                ReceiptChannelId = 21,
+                ReceiptId = (int)kind + 900,
+                EmitReceipt = 1,
+            }), Is.True);
+
+            system.Update(0f);
+
+            That(receipts.TryDequeue(out RuntimeEntitySpawnReceipt receipt), Is.True);
+            That(world.IsAlive(receipt.Entity), Is.True);
+            That(world.Has<OrderBuffer>(receipt.Entity), Is.True);
+            That(world.Has<BlackboardIntBuffer>(receipt.Entity), Is.True);
+            That(world.Has<BlackboardSpatialBuffer>(receipt.Entity), Is.True);
+            That(world.Has<BlackboardEntityBuffer>(receipt.Entity), Is.True);
+            That(world.Has<OrderContinuationBuffer>(receipt.Entity), Is.True);
+
+            UnitTypeRegistry.Clear();
+        }
+
+        [TestCase(RuntimeEntitySpawnKind.UnitType, "AbilityStateBuffer")]
+        [TestCase(RuntimeEntitySpawnKind.UnitType, "AbilityTagGrantReceiver")]
+        [TestCase(RuntimeEntitySpawnKind.Assembly, "AbilityStateBuffer")]
+        [TestCase(RuntimeEntitySpawnKind.Assembly, "AbilityTagGrantReceiver")]
+        public void RuntimeEntitySpawnSystem_NonTemplateAbilityPatch_UsesAuthoredStateContract(
+            RuntimeEntitySpawnKind kind,
+            string componentName)
+        {
+            const int abilityId = 7011;
+            var definitions = new AbilityDefinitionRegistry();
+            var exec = new AbilityExecSpec();
+            exec.SetItem(0, ExecItemKind.TagClip, tick: 0, durationTicks: 20, tagId: 49);
+            definitions.Register(abilityId, new AbilityDefinition { ExecSpec = exec });
+            var authoring = new ComponentAuthoringContext();
+            authoring.Set(ComponentAuthoringServiceKeys.AbilityDefinitionRegistry, definitions);
+            authoring.Set(ComponentAuthoringServiceKeys.AbilityFormSetRegistry, new AbilityFormSetRegistry());
+
+            UnitTypeRegistry.Clear();
+            int unitTypeId = kind == RuntimeEntitySpawnKind.UnitType
+                ? UnitTypeRegistry.Register("RuntimeAbilityActor")
+                : 0;
+            JsonNode componentData = string.Equals(componentName, "AbilityStateBuffer", StringComparison.Ordinal)
+                ? JsonNode.Parse($"{{ \"abilityIds\": [{abilityId}] }}")!
+                : JsonNode.Parse("{}")!;
+
+            using var world = World.Create();
+            var requests = new RuntimeEntitySpawnQueue(capacity: 4);
+            var receipts = new RuntimeEntitySpawnReceiptQueue(capacity: 4);
+            var templates = new DataRegistry<EntityTemplate>(CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }"));
+            var system = new RuntimeEntitySpawnSystem(
+                world,
+                requests,
+                templates,
+                new EntityTemplateKeyRegistry(),
+                new Ludots.Core.Presentation.PresentationStableIdAllocator(),
+                receipts: receipts,
+                authoringContext: authoring);
+
+            That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
+            {
+                Kind = kind,
+                UnitTypeId = unitTypeId,
+                ComponentPatches = new[]
+                {
+                    new RuntimeEntitySpawnComponentPatch(componentName, componentData),
+                },
+                ReceiptChannelId = 22,
+                ReceiptId = (int)kind + 910,
+                EmitReceipt = 1,
+            }), Is.True);
+
+            system.Update(0f);
+
+            That(receipts.TryDequeue(out RuntimeEntitySpawnReceipt receipt), Is.True);
+            That(world.IsAlive(receipt.Entity), Is.True);
+            That(world.Has<GameplayTagContainer>(receipt.Entity), Is.True);
+            That(world.Has<TagCountContainer>(receipt.Entity), Is.True);
+            That(world.Has<DirtyFlags>(receipt.Entity), Is.True);
+            That(world.Has<TimedTagBuffer>(receipt.Entity), Is.True);
+
+            UnitTypeRegistry.Clear();
+        }
+
+        [Test]
+        public void RuntimeEntitySpawnSystem_TemplateAbilityPatch_PreinstallsTimedTagState()
+        {
+            using var world = World.Create();
+            const int abilityId = 7004;
+            var definitions = new AbilityDefinitionRegistry();
+            var exec = new AbilityExecSpec();
+            exec.SetItem(0, ExecItemKind.TagClip, tick: 0, durationTicks: 20, tagId: 43);
+            definitions.Register(abilityId, new AbilityDefinition { ExecSpec = exec });
+            var authoring = new ComponentAuthoringContext();
+            authoring.Set(ComponentAuthoringServiceKeys.AbilityDefinitionRegistry, definitions);
+            authoring.Set(ComponentAuthoringServiceKeys.AbilityFormSetRegistry, new AbilityFormSetRegistry());
+
+            string templateJson = @"[
+              {
+                ""id"": ""runtime_ability_patch"",
+                ""components"": {
+                  ""Name"": { ""Value"": ""Runtime Ability Patch"" }
+                }
+              }
+            ]";
+            var requests = new RuntimeEntitySpawnQueue(capacity: 4);
+            var receipts = new RuntimeEntitySpawnReceiptQueue(capacity: 4);
+            var pipeline = CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }", templateJson);
+            var templates = new DataRegistry<EntityTemplate>(pipeline);
+            templates.Load("Entities/templates.json", ConfigCatalogLoader.Load(pipeline));
+            var system = new RuntimeEntitySpawnSystem(
+                world,
+                requests,
+                templates,
+                new EntityTemplateKeyRegistry(),
+                new Ludots.Core.Presentation.PresentationStableIdAllocator(),
+                receipts: receipts,
+                authoringContext: authoring);
+
+            That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
+            {
+                Kind = RuntimeEntitySpawnKind.Template,
+                TemplateId = "runtime_ability_patch",
+                ComponentPatches = new[]
+                {
+                    new RuntimeEntitySpawnComponentPatch(
+                        "AbilityStateBuffer",
+                        JsonNode.Parse($"{{ \"abilityIds\": [{abilityId}] }}")!),
+                },
+                ReceiptChannelId = 14,
+                ReceiptId = 669,
+                EmitReceipt = 1,
+            }), Is.True);
+
+            system.Update(0f);
+
+            That(receipts.TryDequeue(out RuntimeEntitySpawnReceipt receipt), Is.True);
+            That(world.IsAlive(receipt.Entity), Is.True);
+            That(world.Has<GameplayTagContainer>(receipt.Entity), Is.True);
+            That(world.Has<TagCountContainer>(receipt.Entity), Is.True);
+            That(world.Has<DirtyFlags>(receipt.Entity), Is.True);
+            That(world.Has<TimedTagBuffer>(receipt.Entity), Is.True);
+        }
+
+        [Test]
+        public void RuntimeEntitySpawnSystem_TemplateReceiverPatch_PreinstallsCompleteTargetTagState()
+        {
+            using var world = World.Create();
+            string templateJson = @"[
+              {
+                ""id"": ""runtime_tag_receiver_patch"",
+                ""components"": {
+                  ""Name"": { ""Value"": ""Runtime Tag Receiver Patch"" }
+                }
+              }
+            ]";
+            var requests = new RuntimeEntitySpawnQueue(capacity: 4);
+            var receipts = new RuntimeEntitySpawnReceiptQueue(capacity: 4);
+            var pipeline = CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }", templateJson);
+            var templates = new DataRegistry<EntityTemplate>(pipeline);
+            templates.Load("Entities/templates.json", ConfigCatalogLoader.Load(pipeline));
+            var system = new RuntimeEntitySpawnSystem(
+                world,
+                requests,
+                templates,
+                new EntityTemplateKeyRegistry(),
+                new Ludots.Core.Presentation.PresentationStableIdAllocator(),
+                receipts: receipts);
+
+            That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
+            {
+                Kind = RuntimeEntitySpawnKind.Template,
+                TemplateId = "runtime_tag_receiver_patch",
+                ComponentPatches = new[]
+                {
+                    new RuntimeEntitySpawnComponentPatch(
+                        "AbilityTagGrantReceiver",
+                        JsonNode.Parse("{}")!),
+                },
+                ReceiptChannelId = 14,
+                ReceiptId = 670,
+                EmitReceipt = 1,
+            }), Is.True);
+
+            system.Update(0f);
+
+            That(receipts.TryDequeue(out RuntimeEntitySpawnReceipt receipt), Is.True);
+            That(world.IsAlive(receipt.Entity), Is.True);
+            That(world.Has<AbilityTagGrantReceiver>(receipt.Entity), Is.True);
+            That(world.Has<GameplayTagContainer>(receipt.Entity), Is.True);
+            That(world.Has<TagCountContainer>(receipt.Entity), Is.True);
+            That(world.Has<DirtyFlags>(receipt.Entity), Is.True);
+            That(world.Has<TimedTagBuffer>(receipt.Entity), Is.True);
+        }
+
         [Test]
         public void RuntimeEntitySpawnSystem_SpawnTemplate_CopiesOwnerAndParentWhenRequested()
         {
@@ -1346,12 +2227,16 @@ namespace Ludots.Tests.GAS
             var requests = new RuntimeEntitySpawnQueue(capacity: 4);
             var templateKeys = new EntityTemplateKeyRegistry();
             var stableIds = new Ludots.Core.Presentation.PresentationStableIdAllocator();
+            var spawnRelationships = CreateSpawnRelationshipHarness(world, 5);
             var system = new RuntimeEntitySpawnSystem(
                 world,
                 requests,
                 templates,
                 templateKeys,
-                stableIds);
+                stableIds,
+                teamLookup: spawnRelationships.Teams,
+                relationships: spawnRelationships.Relationships,
+                memberOfTypeId: spawnRelationships.MemberOfTypeId);
 
             That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
             {
@@ -1368,6 +2253,7 @@ namespace Ludots.Tests.GAS
             system.Update(0f);
 
             int count = 0;
+            Entity spawned = Entity.Null;
             var query = new QueryDescription().WithAll<Name, WorldPositionCm, PlayerOwner, ChildOf, Team, MapEntity>();
             world.Query(in query, (Entity entity, ref Name name, ref WorldPositionCm position, ref PlayerOwner owner, ref ChildOf parent, ref Team team, ref MapEntity map) =>
             {
@@ -1377,6 +2263,7 @@ namespace Ludots.Tests.GAS
                 }
 
                 count++;
+                spawned = entity;
                 That(position.Value, Is.EqualTo(Fix64Vec2.FromInt(1110, 2220)));
                 That(owner.PlayerId, Is.EqualTo(12));
                 That(parent.Parent, Is.EqualTo(source));
@@ -1388,6 +2275,12 @@ namespace Ludots.Tests.GAS
             });
 
             That(count, Is.EqualTo(1));
+            That(
+                spawnRelationships.Relationships.HasLink(
+                    spawned,
+                    spawnRelationships.Teams.Get(5),
+                    spawnRelationships.MemberOfTypeId),
+                Is.True);
             That(world.Has<ChildrenBuffer>(source), Is.True);
             That(world.Get<ChildrenBuffer>(source).Count, Is.EqualTo(1));
         }
@@ -1480,8 +2373,9 @@ namespace Ludots.Tests.GAS
             That(receipts.Count, Is.EqualTo(0));
 
             var queue = new DeferredTriggerQueue();
-            using var deferred = new DeferredTriggerCollectionSystem(world, queue);
-            AttributeMutationOps.AddCurrent(world, first, durabilityId, -2f);
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
+            using var deferred = new DeferredTriggerCollectionSystem(world, queue, tagOps);
+            AttributeMutationOps.AddCurrent(world, first, durabilityId, -2f, tagOps);
             deferred.Update(0.016f);
 
             That(queue.AttributeTriggerCount, Is.EqualTo(1));
@@ -1604,12 +2498,16 @@ namespace Ludots.Tests.GAS
             var templates = new DataRegistry<EntityTemplate>(CreateMinimalPipeline(@"{ ""id"": ""noop"", ""presetType"": ""None"" }"));
             var templateKeys = new EntityTemplateKeyRegistry();
             var stableIds = new Ludots.Core.Presentation.PresentationStableIdAllocator();
+            var spawnRelationships = CreateSpawnRelationshipHarness(world, 3);
             var system = new RuntimeEntitySpawnSystem(
                 world,
                 requests,
                 templates,
                 templateKeys,
-                stableIds);
+                stableIds,
+                teamLookup: spawnRelationships.Teams,
+                relationships: spawnRelationships.Relationships,
+                memberOfTypeId: spawnRelationships.MemberOfTypeId);
 
             That(requests.TryEnqueue(new RuntimeEntitySpawnRequest
             {
@@ -1625,6 +2523,7 @@ namespace Ludots.Tests.GAS
             system.Update(0f);
 
             int count = 0;
+            Entity spawned = Entity.Null;
             var query = new QueryDescription().WithAll<Name, PlayerOwner, ChildOf>();
             world.Query(in query, (Entity entity, ref Name name, ref PlayerOwner owner, ref ChildOf parent) =>
             {
@@ -1634,6 +2533,7 @@ namespace Ludots.Tests.GAS
                 }
 
                 count++;
+                spawned = entity;
                 That(owner.PlayerId, Is.EqualTo(9));
                 That(parent.Parent, Is.EqualTo(source));
                 That(world.Has<Team>(entity), Is.True);
@@ -1641,6 +2541,12 @@ namespace Ludots.Tests.GAS
             });
 
             That(count, Is.EqualTo(1));
+            That(
+                spawnRelationships.Relationships.HasLink(
+                    spawned,
+                    spawnRelationships.Teams.Get(3),
+                    spawnRelationships.MemberOfTypeId),
+                Is.True);
             That(world.Has<ChildrenBuffer>(source), Is.True);
             That(world.Get<ChildrenBuffer>(source).Count, Is.EqualTo(1));
 
@@ -1887,6 +2793,42 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void UpdateOnEntity_UsesComputedContributionDeltaForFixedAndLinearPlusBase()
+        {
+            using var world = World.Create();
+            Entity target = world.Create(
+                new GameplayTagContainer(),
+                new TagCountContainer(),
+                new DirtyFlags());
+            var grantedTags = new EffectGrantedTags();
+            grantedTags.Add(new TagContribution
+            {
+                TagId = 51,
+                Formula = TagContributionFormula.Fixed,
+                Amount = 4
+            });
+            grantedTags.Add(new TagContribution
+            {
+                TagId = 52,
+                Formula = TagContributionFormula.LinearPlusBase,
+                Amount = 3,
+                Base = 7
+            });
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
+
+            EffectTagContributionHelper.GrantToEntity(world, target, in grantedTags, 1, tagOps);
+            EffectTagContributionHelper.UpdateOnEntity(world, target, in grantedTags, 1, 3, tagOps);
+
+            ref var counts = ref world.Get<TagCountContainer>(target);
+            That(counts.GetCount(51), Is.EqualTo(4), "Fixed contribution must not grow with stack delta.");
+            That(counts.GetCount(52), Is.EqualTo(16), "LinearPlusBase must apply Compute(3) - Compute(1).");
+
+            EffectTagContributionHelper.UpdateOnEntity(world, target, in grantedTags, 3, 1, tagOps);
+            That(counts.GetCount(51), Is.EqualTo(4));
+            That(counts.GetCount(52), Is.EqualTo(10));
+        }
+
+        [Test]
         public void Integration_TwoEffects_SameTag_DifferentFormulas()
         {
             // Plan scenario: 5 layers effectA (Linear*6=30) + 10 layers effectB (Linear*7=70) = 100
@@ -1968,10 +2910,17 @@ namespace Ludots.Tests.GAS
         private sealed class TestLineQueryService : ISpatialQueryService
         {
             private readonly Entity[] _hits;
+            private readonly int _dropped;
 
             public TestLineQueryService(params Entity[] hits)
             {
                 _hits = hits;
+            }
+
+            public TestLineQueryService(int dropped, params Entity[] hits)
+            {
+                _hits = hits;
+                _dropped = dropped;
             }
 
             public SpatialQueryResult QueryAabb(in WorldAabbCm bounds, Span<Entity> buffer) => default;
@@ -1989,8 +2938,49 @@ namespace Ludots.Tests.GAS
                     buffer[i] = _hits[i];
                 }
 
-                return new SpatialQueryResult(count, 0);
+                return new SpatialQueryResult(count, _dropped);
             }
+        }
+
+        private readonly struct SpawnRelationshipHarness
+        {
+            public SpawnRelationshipHarness(
+                RelationshipRuntime relationships,
+                TeamEntityLookup teams,
+                int memberOfTypeId)
+            {
+                Relationships = relationships;
+                Teams = teams;
+                MemberOfTypeId = memberOfTypeId;
+            }
+
+            public RelationshipRuntime Relationships { get; }
+            public TeamEntityLookup Teams { get; }
+            public int MemberOfTypeId { get; }
+        }
+
+        private static SpawnRelationshipHarness CreateSpawnRelationshipHarness(World world, params int[] teamIds)
+        {
+            var types = new RelationshipTypeRegistry();
+            int memberOfTypeId = types.Register("MemberOf");
+            var relationships = new RelationshipRuntime(
+                world,
+                types,
+                new RelationshipMetricRegistry(),
+                new RelationshipFlagRegistry(),
+                new RelationshipBandRegistry(),
+                new RelationshipChangeBuffer(capacity: 16),
+                new RelationshipReverseIndex(world));
+            var teams = new TeamEntityLookup();
+
+            for (int i = 0; i < teamIds.Length; i++)
+            {
+                int teamId = teamIds[i];
+                Entity teamRepresentative = world.Create(new TeamIdentity { TeamId = teamId });
+                teams.Register(teamId, teamRepresentative);
+            }
+
+            return new SpawnRelationshipHarness(relationships, teams, memberOfTypeId);
         }
 
         private static ConfigPipeline CreateMinimalPipeline(string effectJson, string templatesJson = null)

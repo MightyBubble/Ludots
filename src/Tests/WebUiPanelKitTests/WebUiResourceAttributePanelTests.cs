@@ -66,7 +66,7 @@ public sealed class WebUiResourceAttributePanelTests
 		buffer.SetBase(AttributeRegistry.GetId("attr.sample.derived"), 3.5f);
 
 		var keyRegistry = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-		var graphOutputs = new GraphOutputValueStore(keyRegistry);
+		var graphOutputs = new GraphOutputValueStore(keyRegistry, initialCapacity: 16);
 		graphOutputs.SetFloat(owner, "graph.output.sample.player.total", 42f);
 
 		WebUiResourceAttributeDescriptor descriptor = LoadSampleDescriptor(requireGraphKey: true);
@@ -177,7 +177,7 @@ public sealed class WebUiResourceAttributePanelTests
 		buffer.SetBase(AttributeRegistry.GetId("attr.sample.derived"), 2f);
 
 		var keyRegistry = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-		var graphOutputs = new GraphOutputValueStore(keyRegistry);
+		var graphOutputs = new GraphOutputValueStore(keyRegistry, initialCapacity: 16);
 		WebUiResourceAttributeDescriptor descriptor = LoadSampleDescriptor(requireGraphKey: false);
 		var producer = new WebUiResourceAttributeTopicProducer(
 			WebUiResourceAttributeSampleCatalog.Topic,
@@ -206,7 +206,7 @@ public sealed class WebUiResourceAttributePanelTests
 		buffer.SetBase(AttributeRegistry.GetId("attr.sample.derived"), 2f);
 
 		var keyRegistry = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-		var graphOutputs = new GraphOutputValueStore(keyRegistry);
+		var graphOutputs = new GraphOutputValueStore(keyRegistry, initialCapacity: 16);
 		graphOutputs.SetFloat(owner, "graph.output.sample.player.total", 9f);
 
 		WebUiResourceAttributeDescriptor descriptor = LoadSampleDescriptor(requireGraphKey: true);

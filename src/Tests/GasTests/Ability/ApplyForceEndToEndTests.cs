@@ -138,22 +138,25 @@ namespace Ludots.Tests.GAS
                 That(fxId, Is.GreaterThanOrEqualTo(0));
                 That(fyId, Is.GreaterThanOrEqualTo(0));
 
-                var target = world.Create(new AttributeBuffer(), new ForceInput2D());
+                var target = world.Create(new AttributeBuffer(), new DirtyFlags(), new ForceInput2D());
 
-                GraphExecutor.Execute(world, caster: default, explicitTarget: target, targetPos: new IntVector2(0, 0), program, api);
+                GraphExecutor.Execute(world, caster: default, explicitTarget: target, targetPosCm: new IntVector2(0, 0), program, api);
 
-                var chainOrders = new OrderQueue();
+                var chainOrders = new OrderQueue(64, new OrderAdmissionResultBuffer(64, 64));
                 chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
                 chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
 
                 var proposal = new Ludots.Core.Gameplay.GAS.Systems.EffectProposalProcessingSystem(
                     world,
                     requests,
+                    GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                    new Ludots.Core.Engine.DiscreteClock(),
                     budget: null,
                     templates: templates,
                     inputRequests: null,
                     chainOrders: chainOrders,
-                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types);
+                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                    tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
                 proposal.Update(0.016f);
 
                 ref var attr = ref world.Get<AttributeBuffer>(target);

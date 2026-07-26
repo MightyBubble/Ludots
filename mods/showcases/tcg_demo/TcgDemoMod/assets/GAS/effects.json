@@ -13,7 +13,7 @@
         "value": -30
       }
     ],
-    "participatesInResponse": false
+    "participatesInResponse": true
   },
   {
     "id": "Effect.Tcg.CounterBlast",

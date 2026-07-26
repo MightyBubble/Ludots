@@ -736,7 +736,7 @@ namespace Ludots.Tests.Presentation
             var simulation = new MassNavigationSimulationRuntime(config);
             simulation.BindBoardWorld(
                 new WorldSizeSpec(new WorldAabbCm(0, 0, 10_000, 10_000), 100),
-                new Ludots.Core.Navigation.GraphWorld.WorldGridLoadedChunks(simulation.WorldConfig.StreamingChunkSizeCm));
+                MassNavigationOrderChainTests.CreateLoadedChunksForTests(simulation));
             return simulation;
         }
 

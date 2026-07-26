@@ -1,12 +1,15 @@
 using System.Collections.Generic;
 using System.Numerics;
+using System.Text.Json.Nodes;
 using Arch.Core;
+using Ludots.Core.Config;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Input.Orders;
 using NUnit.Framework;
 
@@ -60,7 +63,7 @@ namespace Ludots.Tests.GAS
             using World world = World.Create();
             BlackboardStoredTargetKeys keys = CreateTestKeys();
             const int setSpawnTargetOrderTypeId = 106;
-            var orderTypes = new OrderTypeRegistry();
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig
             {
                 Key = "setSpawnTarget",
@@ -73,6 +76,7 @@ namespace Ludots.Tests.GAS
             ref OrderBuffer buffer = ref world.Get<OrderBuffer>(host);
             buffer.SetActiveDirect(new Order
             {
+                OrderId = 1,
                 OrderTypeId = setSpawnTargetOrderTypeId,
                 Target = Entity.Null,
                 Args = new OrderArgs
@@ -96,16 +100,418 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void InstantCompleteOrderSystem_DefaultEntityValueDoesNotOverridePointTarget()
+        {
+            using World world = World.Create();
+            BlackboardStoredTargetKeys keys = CreateTestKeys();
+            const int setSpawnTargetOrderTypeId = 107;
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
+            orderTypes.Register(new OrderTypeConfig
+            {
+                Key = "setSpawnTargetDefaultEntity",
+                OrderTypeId = setSpawnTargetOrderTypeId,
+                InstantComplete = true,
+                PersistentStoredTargetKeys = keys,
+            });
+            Entity host = world.Create(
+                OrderBuffer.CreateEmpty(),
+                new BlackboardIntBuffer(),
+                new BlackboardSpatialBuffer(),
+                new BlackboardEntityBuffer());
+            ref OrderBuffer buffer = ref world.Get<OrderBuffer>(host);
+            buffer.SetActiveDirect(new Order
+            {
+                OrderId = 2,
+                OrderTypeId = setSpawnTargetOrderTypeId,
+                Args = OrderArgs.CreateSingleWorldCm(new Vector3(400f, 0f, 600f)),
+            }, priority: 40);
+
+            new InstantCompleteOrderSystem(world, orderTypes).Update(default);
+
+            Assert.That(buffer.HasActive, Is.False);
+            Assert.That(BlackboardStoredTargetOps.TryRead(world, host, in keys, out BlackboardStoredTargetSnapshot target), Is.True);
+            Assert.That(target.Kind, Is.EqualTo(BlackboardStoredTargetKind.Point));
+            Assert.That(target.WorldPositionCm, Is.EqualTo(new Vector3(400f, 0f, 600f)));
+        }
+
+        [Test]
+        public void InstantCompleteOrderSystem_WhenStoredTargetCapacityIsFull_PreservesOldTargetAndActiveOrder()
+        {
+            using World world = World.Create();
+            BlackboardStoredTargetKeys keys = CreateTestKeys();
+            const int setSpawnTargetOrderTypeId = 106;
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
+            orderTypes.Register(new OrderTypeConfig
+            {
+                Key = "setSpawnTarget",
+                OrderTypeId = setSpawnTargetOrderTypeId,
+                InstantComplete = true,
+                PersistentStoredTargetKeys = keys,
+            });
+
+            Entity host = world.Create(
+                OrderBuffer.CreateEmpty(),
+                new BlackboardIntBuffer(),
+                new BlackboardSpatialBuffer(),
+                new BlackboardEntityBuffer());
+            Entity oldTarget = world.Create();
+            BlackboardStoredTargetOps.SetEntity(world, host, oldTarget, in keys);
+            ref BlackboardSpatialBuffer spatial = ref world.Get<BlackboardSpatialBuffer>(host);
+            for (int i = 0; i < BlackboardSpatialBuffer.MAX_ENTRIES; i++)
+            {
+                spatial.SetPoint(-1_000 - i, new Vector3(i, 0f, i));
+            }
+            Assert.That(spatial.EntryCount, Is.EqualTo(BlackboardSpatialBuffer.MAX_ENTRIES));
+            Assert.That(spatial.HasKey(keys.TargetPositionKey), Is.False);
+
+            ref OrderBuffer buffer = ref world.Get<OrderBuffer>(host);
+            buffer.SetActiveDirect(new Order
+            {
+                OrderId = 88,
+                OrderTypeId = setSpawnTargetOrderTypeId,
+                Target = Entity.Null,
+                Args = new OrderArgs
+                {
+                    Spatial = new OrderSpatial
+                    {
+                        Kind = OrderSpatialKind.WorldCm,
+                        Mode = OrderCollectionMode.Single,
+                        WorldCm = new Vector3(500f, 0f, 700f),
+                    },
+                },
+            }, priority: 40);
+            Assert.That(buffer.ActiveOrder.Order.Target, Is.EqualTo(Entity.Null));
+            Assert.That(buffer.ActiveOrder.Order.Args.Spatial.Mode, Is.EqualTo(OrderCollectionMode.Single));
+            var system = new InstantCompleteOrderSystem(world, orderTypes);
+
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => system.Update(default))!;
+
+            Assert.That(error.Message, Does.StartWith("GAS.STORED_TARGET.ERR.BlackboardCapacityExceeded"));
+            Assert.That(buffer.HasActive, Is.True);
+            Assert.That(buffer.ActiveOrder.Order.OrderId, Is.EqualTo(88));
+            Assert.That(BlackboardStoredTargetOps.TryRead(
+                world,
+                host,
+                in keys,
+                out BlackboardStoredTargetSnapshot stored), Is.True);
+            Assert.That(stored.Kind, Is.EqualTo(BlackboardStoredTargetKind.Entity));
+            Assert.That(stored.TargetEntity, Is.EqualTo(oldTarget));
+            Assert.That(world.Get<BlackboardSpatialBuffer>(host).EntryCount,
+                Is.EqualTo(BlackboardSpatialBuffer.MAX_ENTRIES));
+        }
+
+        [Test]
+        public void InstantCompleteOrderSystem_WhenStoredTargetIntCapacityIsFull_PreservesOldTargetAndActiveOrder()
+        {
+            using World world = World.Create();
+            BlackboardStoredTargetKeys keys = CreateTestKeys();
+            const int setSpawnTargetOrderTypeId = 106;
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
+            orderTypes.Register(new OrderTypeConfig
+            {
+                Key = "setSpawnTarget",
+                OrderTypeId = setSpawnTargetOrderTypeId,
+                InstantComplete = true,
+                PersistentStoredTargetKeys = keys,
+            });
+
+            Entity host = world.Create(
+                OrderBuffer.CreateEmpty(),
+                new BlackboardIntBuffer(),
+                new BlackboardSpatialBuffer(),
+                new BlackboardEntityBuffer());
+            Entity oldTarget = world.Create();
+            BlackboardStoredTargetOps.SetEntity(world, host, oldTarget, in keys);
+            ref BlackboardIntBuffer ints = ref world.Get<BlackboardIntBuffer>(host);
+            for (int i = ints.Count; i < GasConstants.MAX_BLACKBOARD_ENTRIES; i++)
+            {
+                ints.Set(-1_000 - i, i);
+            }
+            Assert.That(ints.Count, Is.EqualTo(GasConstants.MAX_BLACKBOARD_ENTRIES));
+
+            ref OrderBuffer buffer = ref world.Get<OrderBuffer>(host);
+            buffer.SetActiveDirect(new Order
+            {
+                OrderId = 89,
+                OrderTypeId = setSpawnTargetOrderTypeId,
+                Target = Entity.Null,
+                Args = new OrderArgs
+                {
+                    Spatial = new OrderSpatial
+                    {
+                        Kind = OrderSpatialKind.Hex,
+                        Mode = OrderCollectionMode.Single,
+                        A0 = 4,
+                        A1 = -3,
+                    },
+                },
+            }, priority: 40);
+            var system = new InstantCompleteOrderSystem(world, orderTypes);
+
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => system.Update(default))!;
+
+            Assert.That(error.Message, Does.StartWith(BlackboardStoredTargetOps.CapacityExceededError));
+            Assert.That(buffer.HasActive, Is.True);
+            Assert.That(buffer.ActiveOrder.Order.OrderId, Is.EqualTo(89));
+            Assert.That(BlackboardStoredTargetOps.TryRead(
+                world,
+                host,
+                in keys,
+                out BlackboardStoredTargetSnapshot stored), Is.True);
+            Assert.That(stored.Kind, Is.EqualTo(BlackboardStoredTargetKind.Entity));
+            Assert.That(stored.TargetEntity, Is.EqualTo(oldTarget));
+            Assert.That(world.Get<BlackboardIntBuffer>(host).Count,
+                Is.EqualTo(GasConstants.MAX_BLACKBOARD_ENTRIES));
+        }
+
+        [Test]
+        public void InstantCompleteOrderSystem_WhenStoredTargetEntityCapacityIsFull_PreservesOldTargetAndActiveOrder()
+        {
+            using World world = World.Create();
+            BlackboardStoredTargetKeys keys = CreateTestKeys();
+            const int setSpawnTargetOrderTypeId = 106;
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
+            orderTypes.Register(new OrderTypeConfig
+            {
+                Key = "setSpawnTarget",
+                OrderTypeId = setSpawnTargetOrderTypeId,
+                InstantComplete = true,
+                PersistentStoredTargetKeys = keys,
+            });
+
+            Entity host = world.Create(
+                OrderBuffer.CreateEmpty(),
+                new BlackboardIntBuffer(),
+                new BlackboardSpatialBuffer(),
+                new BlackboardEntityBuffer());
+            Vector3 oldPoint = new(120f, 0f, 340f);
+            BlackboardStoredTargetOps.SetPoint(world, host, oldPoint, in keys);
+            Entity newTarget = world.Create();
+            ref BlackboardEntityBuffer entities = ref world.Get<BlackboardEntityBuffer>(host);
+            for (int i = 0; i < BlackboardEntityBuffer.MAX_ENTRIES; i++)
+            {
+                entities.Set(-1_000 - i, newTarget);
+            }
+            Assert.That(entities.Count, Is.EqualTo(BlackboardEntityBuffer.MAX_ENTRIES));
+
+            ref OrderBuffer buffer = ref world.Get<OrderBuffer>(host);
+            buffer.SetActiveDirect(new Order
+            {
+                OrderId = 90,
+                OrderTypeId = setSpawnTargetOrderTypeId,
+                Target = newTarget,
+            }, priority: 40);
+            var system = new InstantCompleteOrderSystem(world, orderTypes);
+
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => system.Update(default))!;
+
+            Assert.That(error.Message, Does.StartWith(BlackboardStoredTargetOps.CapacityExceededError));
+            Assert.That(buffer.HasActive, Is.True);
+            Assert.That(buffer.ActiveOrder.Order.OrderId, Is.EqualTo(90));
+            Assert.That(BlackboardStoredTargetOps.TryRead(
+                world,
+                host,
+                in keys,
+                out BlackboardStoredTargetSnapshot stored), Is.True);
+            Assert.That(stored.Kind, Is.EqualTo(BlackboardStoredTargetKind.Point));
+            Assert.That(stored.WorldPositionCm, Is.EqualTo(oldPoint));
+            Assert.That(world.Get<BlackboardEntityBuffer>(host).Count,
+                Is.EqualTo(BlackboardEntityBuffer.MAX_ENTRIES));
+        }
+
+        [Test]
+        public void InstantCompleteOrderSystem_WhenEntityTargetDied_PreservesOldTargetAndActiveOrder()
+        {
+            using World world = World.Create();
+            BlackboardStoredTargetKeys keys = CreateTestKeys();
+            const int setSpawnTargetOrderTypeId = 106;
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
+            orderTypes.Register(new OrderTypeConfig
+            {
+                Key = "setSpawnTarget",
+                OrderTypeId = setSpawnTargetOrderTypeId,
+                InstantComplete = true,
+                PersistentStoredTargetKeys = keys,
+            });
+
+            Entity host = world.Create(
+                OrderBuffer.CreateEmpty(),
+                new BlackboardIntBuffer(),
+                new BlackboardSpatialBuffer(),
+                new BlackboardEntityBuffer());
+            Vector3 oldPoint = new(120f, 0f, 340f);
+            BlackboardStoredTargetOps.SetPoint(world, host, oldPoint, in keys);
+            Entity deadTarget = world.Create();
+            world.Destroy(deadTarget);
+
+            ref OrderBuffer buffer = ref world.Get<OrderBuffer>(host);
+            buffer.SetActiveDirect(new Order
+            {
+                OrderId = 91,
+                OrderTypeId = setSpawnTargetOrderTypeId,
+                Target = deadTarget,
+            }, priority: 40);
+            var system = new InstantCompleteOrderSystem(world, orderTypes);
+
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => system.Update(default))!;
+
+            Assert.That(error.Message, Does.StartWith("GAS.STORED_TARGET.ERR.InvalidTargetEntity"));
+            Assert.That(buffer.HasActive, Is.True);
+            Assert.That(buffer.ActiveOrder.Order.OrderId, Is.EqualTo(91));
+            Assert.That(BlackboardStoredTargetOps.TryRead(
+                world,
+                host,
+                in keys,
+                out BlackboardStoredTargetSnapshot stored), Is.True);
+            Assert.That(stored.Kind, Is.EqualTo(BlackboardStoredTargetKind.Point));
+            Assert.That(stored.WorldPositionCm, Is.EqualTo(oldPoint));
+        }
+
+        [TestCase(nameof(BlackboardIntBuffer))]
+        [TestCase(nameof(BlackboardSpatialBuffer))]
+        [TestCase(nameof(BlackboardEntityBuffer))]
+        public void InstantCompleteOrderSystem_MissingStoredTargetBlackboard_HardFailsBeforeMutation(string missingComponent)
+        {
+            using World world = World.Create();
+            BlackboardStoredTargetKeys keys = CreateTestKeys();
+            const int setSpawnTargetOrderTypeId = 106;
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
+            orderTypes.Register(new OrderTypeConfig
+            {
+                Key = "setSpawnTarget",
+                OrderTypeId = setSpawnTargetOrderTypeId,
+                InstantComplete = true,
+                PersistentStoredTargetKeys = keys,
+            });
+
+            Entity host = world.Create(OrderBuffer.CreateEmpty());
+            if (missingComponent != nameof(BlackboardIntBuffer))
+            {
+                world.Add(host, new BlackboardIntBuffer());
+            }
+            if (missingComponent != nameof(BlackboardSpatialBuffer))
+            {
+                world.Add(host, new BlackboardSpatialBuffer());
+            }
+            if (missingComponent != nameof(BlackboardEntityBuffer))
+            {
+                world.Add(host, new BlackboardEntityBuffer());
+            }
+            world.Get<OrderBuffer>(host).SetActiveDirect(new Order
+            {
+                OrderId = 77,
+                OrderTypeId = setSpawnTargetOrderTypeId,
+                Args = new OrderArgs
+                {
+                    Spatial = new OrderSpatial
+                    {
+                        Kind = OrderSpatialKind.WorldCm,
+                        Mode = OrderCollectionMode.Single,
+                        WorldCm = new Vector3(500f, 0f, 700f),
+                    },
+                },
+            }, priority: 40);
+            var system = new InstantCompleteOrderSystem(world, orderTypes);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => system.Update(default))!;
+
+            Assert.That(ex.Message, Does.StartWith("GAS.ORDER_BLACKBOARD.ERR.MissingState"));
+            ref OrderBuffer result = ref world.Get<OrderBuffer>(host);
+            Assert.That(result.HasActive, Is.True);
+            Assert.That(result.ActiveOrder.Order.OrderId, Is.EqualTo(77));
+            Assert.That(world.Has<BlackboardIntBuffer>(host), Is.EqualTo(missingComponent != nameof(BlackboardIntBuffer)));
+            Assert.That(world.Has<BlackboardSpatialBuffer>(host), Is.EqualTo(missingComponent != nameof(BlackboardSpatialBuffer)));
+            Assert.That(world.Has<BlackboardEntityBuffer>(host), Is.EqualTo(missingComponent != nameof(BlackboardEntityBuffer)));
+        }
+
+        [Test]
+        public void EntityBuilder_OrderBuffer_InstallsStoredTargetBlackboards()
+        {
+            using World world = World.Create();
+            var template = new EntityTemplate
+            {
+                Id = "order_actor",
+                Components =
+                {
+                    ["OrderBuffer"] = JsonNode.Parse("{}")!,
+                },
+            };
+            var templates = new Dictionary<string, EntityTemplate>
+            {
+                [template.Id] = template,
+            };
+
+            Entity entity = new EntityBuilder(world, templates)
+                .UseTemplate(template.Id)
+                .Build();
+
+            Assert.That(world.Has<OrderBuffer>(entity), Is.True);
+            Assert.That(world.Has<BlackboardIntBuffer>(entity), Is.True);
+            Assert.That(world.Has<BlackboardSpatialBuffer>(entity), Is.True);
+            Assert.That(world.Has<BlackboardEntityBuffer>(entity), Is.True);
+            Assert.That(world.Has<OrderContinuationBuffer>(entity), Is.True);
+        }
+
+        [Test]
+        public void TemplateBatchSpawner_OrderBuffer_InstallsStoredTargetBlackboardsInArchetype()
+        {
+            using World world = World.Create();
+            var template = new EntityTemplate
+            {
+                Id = "batch_order_actor",
+                Components =
+                {
+                    ["Name"] = JsonNode.Parse("{ \"Value\": \"BatchOrderActor\" }")!,
+                    ["WorldPositionCm"] = JsonNode.Parse("{ \"Value\": { \"X\": 0, \"Y\": 0 } }")!,
+                    ["FacingDirection"] = JsonNode.Parse("{ \"AngleRad\": 0 }")!,
+                    ["OrderBuffer"] = JsonNode.Parse("{}")!,
+                },
+            };
+            var spawner = new TemplateEntityBatchSpawner(
+                world,
+                new EntityTemplateKeyRegistry(),
+                scratchCapacity: 1);
+            var requests = new[]
+            {
+                new TemplateEntityBatchSpawner.TemplateBatchSpawnRequest(default, hasWorldPosition: false),
+            };
+
+            bool created = spawner.TryCreateBatch(
+                template.Id,
+                template,
+                requests,
+                TemplateBatchSpawnFeatures.None,
+                out ReadOnlySpan<Entity> entities);
+
+            Assert.That(created, Is.True);
+            Assert.That(entities.Length, Is.EqualTo(1));
+            Assert.That(world.Has<OrderBuffer>(entities[0]), Is.True);
+            Assert.That(world.Has<BlackboardIntBuffer>(entities[0]), Is.True);
+            Assert.That(world.Has<BlackboardSpatialBuffer>(entities[0]), Is.True);
+            Assert.That(world.Has<BlackboardEntityBuffer>(entities[0]), Is.True);
+            Assert.That(world.Has<OrderContinuationBuffer>(entities[0]), Is.True);
+        }
+
+        [Test]
         public void SubmitOrderFromBlackboardHandler_SubmitsMoveOrderForPointTarget()
         {
             using World world = World.Create();
             BlackboardStoredTargetKeys keys = CreateTestKeys();
-            var orderTypes = new OrderTypeRegistry();
+            var terminalResults = new OrderTerminalResultBuffer(capacity: 8);
+            var orderTypes = new OrderTypeRegistry(terminalResults);
             orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 101, AllowQueuedMode = true });
             orderTypes.Register(new OrderTypeConfig { Key = "castAbility", OrderTypeId = 100, IntArg0BlackboardKey = OrderBlackboardKeys.Cast_SlotIndex, AllowQueuedMode = true });
+            var admissionResults = new OrderAdmissionResultBuffer(capacity: 8, rejectionCapacity: 8);
+            admissionResults.BeginLogicStep();
+            var orderQueue = new OrderQueue(capacity: 8, admissionResults);
 
             Entity source = world.Create(new BlackboardIntBuffer(), new BlackboardSpatialBuffer(), new BlackboardEntityBuffer());
-            Entity spawned = world.Create(OrderBuffer.CreateEmpty(), new PlayerOwner { PlayerId = 1 });
+            Entity spawned = world.Create(
+                OrderBuffer.CreateEmpty(),
+                new BlackboardIntBuffer(),
+                new BlackboardSpatialBuffer(),
+                new BlackboardEntityBuffer(),
+                new PlayerOwner { PlayerId = 1 });
             BlackboardStoredTargetOps.SetPoint(world, source, new Vector3(900f, 0f, 1200f), in keys);
 
             var registry = new BuiltinHandlerRegistry();
@@ -113,6 +519,7 @@ namespace Ludots.Tests.GAS
 
             var runtime = new BuiltinHandlerExecutionContext
             {
+                OrderIntake = orderQueue,
                 OrderTypeRegistry = orderTypes,
                 CurrentStep = 1,
                 StepRateHz = 30,
@@ -125,8 +532,8 @@ namespace Ludots.Tests.GAS
                     SourceSlot = RelationEntitySlot.Source,
                     TargetSlot = RelationEntitySlot.Target,
                     StoredTargetKeys = keys,
-                    PointMoveOrderTypeKey = "moveTo",
-                    EntityOrderTypeKey = "castAbility",
+                    PointMoveOrderTypeId = 101,
+                    EntityOrderTypeId = 100,
                     EntityOrderIntArg0 = 1,
                     SubmitMode = OrderSubmitMode.Immediate,
                 },
@@ -148,10 +555,39 @@ namespace Ludots.Tests.GAS
                 in template,
                 runtime);
 
+            Assert.That(orderQueue.TryPeek(out Order queuedOrder), Is.True);
+            Assert.That(queuedOrder.OrderId, Is.GreaterThan(0));
+            Assert.That(admissionResults.TryGet(
+                queuedOrder.OrderId,
+                OrderAdmissionStage.GlobalIntake,
+                out OrderAdmissionOutcome globalOutcome), Is.True);
+            Assert.That(globalOutcome.Result, Is.EqualTo(OrderSubmitResult.Queued));
+
+            var orderSystem = new OrderBufferSystem(
+                world,
+                new Ludots.Core.Engine.DiscreteClock(),
+                orderTypes,
+                new OrderRuleRegistry(),
+                admissionResults,
+                orderQueue,
+                stepRateHz: 30);
+            orderSystem.Update(0f);
+
             ref OrderBuffer buffer = ref world.Get<OrderBuffer>(spawned);
             Assert.That(buffer.HasActive, Is.True);
             Assert.That(buffer.ActiveOrder.Order.OrderTypeId, Is.EqualTo(101));
             Assert.That(buffer.ActiveOrder.Order.Args.Spatial.WorldCm.X, Is.EqualTo(900f).Within(0.01f));
+            Assert.That(buffer.ActiveOrder.Order.OrderId, Is.GreaterThan(0));
+            Assert.That(admissionResults.TryGet(
+                buffer.ActiveOrder.Order.OrderId,
+                OrderAdmissionStage.EntityIntake,
+                out OrderAdmissionOutcome entityOutcome), Is.True);
+            Assert.That(entityOutcome.Result, Is.EqualTo(OrderSubmitResult.Activated));
+
+            Assert.That(OrderSubmitter.NotifyOrderComplete(world, spawned, orderTypes), Is.True);
+            Assert.That(terminalResults.Count, Is.EqualTo(1));
+            Assert.That(terminalResults[0].OrderId, Is.EqualTo(queuedOrder.OrderId));
+            Assert.That(terminalResults[0].State, Is.EqualTo(OrderTerminalState.Completed));
         }
 
         [Test]
@@ -160,7 +596,7 @@ namespace Ludots.Tests.GAS
             using World world = World.Create();
             BlackboardStoredTargetKeys keys = CreateTestKeys();
             const int setSpawnTargetOrderTypeId = 106;
-            var orderTypes = new OrderTypeRegistry();
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig
             {
                 Key = "setSpawnTarget",
@@ -174,6 +610,7 @@ namespace Ludots.Tests.GAS
             ref OrderBuffer buffer = ref world.Get<OrderBuffer>(host);
             buffer.SetActiveDirect(new Order
             {
+                OrderId = 1,
                 OrderTypeId = setSpawnTargetOrderTypeId,
                 Actor = host,
                 Target = garrisonTarget,
@@ -193,11 +630,20 @@ namespace Ludots.Tests.GAS
         {
             using World world = World.Create();
             BlackboardStoredTargetKeys keys = CreateTestKeys();
-            var orderTypes = new OrderTypeRegistry();
+            var terminalResults = new OrderTerminalResultBuffer(capacity: 8);
+            var orderTypes = new OrderTypeRegistry(terminalResults);
             orderTypes.Register(new OrderTypeConfig { Key = "castAbility", OrderTypeId = 100, IntArg0BlackboardKey = OrderBlackboardKeys.Cast_SlotIndex, AllowQueuedMode = true });
+            var admissionResults = new OrderAdmissionResultBuffer(capacity: 8, rejectionCapacity: 8);
+            admissionResults.BeginLogicStep();
+            var orderQueue = new OrderQueue(capacity: 8, admissionResults);
 
             Entity source = world.Create(new BlackboardIntBuffer(), new BlackboardSpatialBuffer(), new BlackboardEntityBuffer());
-            Entity spawned = world.Create(OrderBuffer.CreateEmpty(), new PlayerOwner { PlayerId = 1 });
+            Entity spawned = world.Create(
+                OrderBuffer.CreateEmpty(),
+                new BlackboardIntBuffer(),
+                new BlackboardSpatialBuffer(),
+                new BlackboardEntityBuffer(),
+                new PlayerOwner { PlayerId = 1 });
             Entity garrison = world.Create();
             BlackboardStoredTargetOps.SetEntity(world, source, garrison, in keys);
 
@@ -206,6 +652,7 @@ namespace Ludots.Tests.GAS
 
             var runtime = new BuiltinHandlerExecutionContext
             {
+                OrderIntake = orderQueue,
                 OrderTypeRegistry = orderTypes,
                 CurrentStep = 1,
                 StepRateHz = 30,
@@ -218,8 +665,8 @@ namespace Ludots.Tests.GAS
                     SourceSlot = RelationEntitySlot.Source,
                     TargetSlot = RelationEntitySlot.Target,
                     StoredTargetKeys = keys,
-                    PointMoveOrderTypeKey = "moveTo",
-                    EntityOrderTypeKey = "castAbility",
+                    PointMoveOrderTypeId = 101,
+                    EntityOrderTypeId = 100,
                     EntityOrderIntArg0 = 1,
                     SubmitMode = OrderSubmitMode.Immediate,
                 },
@@ -241,11 +688,30 @@ namespace Ludots.Tests.GAS
                 in template,
                 runtime);
 
+            Assert.That(orderQueue.TryPeek(out Order queuedOrder), Is.True);
+            Assert.That(queuedOrder.OrderId, Is.GreaterThan(0));
+
+            var orderSystem = new OrderBufferSystem(
+                world,
+                new Ludots.Core.Engine.DiscreteClock(),
+                orderTypes,
+                new OrderRuleRegistry(),
+                admissionResults,
+                orderQueue,
+                stepRateHz: 30);
+            orderSystem.Update(0f);
+
             ref OrderBuffer buffer = ref world.Get<OrderBuffer>(spawned);
             Assert.That(buffer.HasActive, Is.True);
             Assert.That(buffer.ActiveOrder.Order.OrderTypeId, Is.EqualTo(100));
             Assert.That(buffer.ActiveOrder.Order.Target, Is.EqualTo(garrison));
             Assert.That(buffer.ActiveOrder.Order.Args.I0, Is.EqualTo(1));
+            Assert.That(buffer.ActiveOrder.Order.OrderId, Is.EqualTo(queuedOrder.OrderId));
+
+            Assert.That(OrderSubmitter.NotifyOrderComplete(world, spawned, orderTypes), Is.True);
+            Assert.That(terminalResults.Count, Is.EqualTo(1));
+            Assert.That(terminalResults[0].OrderId, Is.EqualTo(queuedOrder.OrderId));
+            Assert.That(terminalResults[0].State, Is.EqualTo(OrderTerminalState.Completed));
         }
 
         [Test]
@@ -266,8 +732,11 @@ namespace Ludots.Tests.GAS
         {
             using World world = World.Create();
             BlackboardStoredTargetKeys keys = CreateTestKeys();
-            var orderTypes = new OrderTypeRegistry();
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: 8));
             orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 101, AllowQueuedMode = true });
+            var admissionResults = new OrderAdmissionResultBuffer(capacity: 8, rejectionCapacity: 8);
+            admissionResults.BeginLogicStep();
+            var orderQueue = new OrderQueue(capacity: 8, admissionResults);
 
             Entity source = world.Create(new BlackboardIntBuffer(), new BlackboardSpatialBuffer(), new BlackboardEntityBuffer());
             Entity spawned = world.Create(OrderBuffer.CreateEmpty());
@@ -278,6 +747,7 @@ namespace Ludots.Tests.GAS
 
             var runtime = new BuiltinHandlerExecutionContext
             {
+                OrderIntake = orderQueue,
                 OrderTypeRegistry = orderTypes,
                 CurrentStep = 1,
                 StepRateHz = 30,
@@ -290,8 +760,8 @@ namespace Ludots.Tests.GAS
                     SourceSlot = RelationEntitySlot.Source,
                     TargetSlot = RelationEntitySlot.Target,
                     StoredTargetKeys = keys,
-                    PointMoveOrderTypeKey = "moveTo",
-                    EntityOrderTypeKey = "castAbility",
+                    PointMoveOrderTypeId = 101,
+                    EntityOrderTypeId = 100,
                     EntityOrderIntArg0 = 1,
                     SubmitMode = OrderSubmitMode.Immediate,
                 },
@@ -300,14 +770,15 @@ namespace Ludots.Tests.GAS
             var context = new EffectContext { Source = source, Target = spawned };
             var mergedParams = new EffectConfigParams();
 
-            Assert.Throws<InvalidOperationException>(() => registry.Invoke(
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => registry.Invoke(
                 BuiltinHandlerId.SubmitOrderFromBlackboard,
                 world,
                 Entity.Null,
                 ref context,
                 in mergedParams,
                 in template,
-                runtime));
+                runtime))!;
+            Assert.That(error.Message, Does.Contain(nameof(PlayerOwner)));
         }
     }
 
@@ -318,7 +789,7 @@ namespace Ludots.Tests.GAS
         public void TryMatch_EmptyMatch_AlwaysMatchesAliveActor()
         {
             using World world = World.Create();
-            var tagOps = new TagOps();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
             Entity actor = world.Create(new AbilityStateBuffer());
             Assert.That(world.IsAlive(actor), Is.True);
             Assert.That(ActorOrderRoutingMatcher.TryMatch(world, tagOps, actor, new ActorOrderRoutingMatch()), Is.True);
@@ -328,7 +799,7 @@ namespace Ludots.Tests.GAS
         public void TryResolveOrderTypeKey_SelectsHighestPriorityMatchingCandidate()
         {
             using World world = World.Create();
-            var tagOps = new TagOps();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
             Entity producer = world.Create(new AbilityStateBuffer());
             ref AbilityStateBuffer abilities = ref world.Get<AbilityStateBuffer>(producer);
             int trainAbilityId = AbilityIdRegistry.Register("Ability.Rts.Strategy.War3.TrainFootman");
@@ -366,7 +837,7 @@ namespace Ludots.Tests.GAS
         public void TryMatch_UsesAbilityFormSlotOverride()
         {
             using World world = World.Create();
-            var tagOps = new TagOps();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
             Entity producer = world.Create(new AbilityStateBuffer(), new AbilityFormSlotBuffer());
             ref AbilityStateBuffer abilities = ref world.Get<AbilityStateBuffer>(producer);
             int holdAbilityId = AbilityIdRegistry.Register("Ability.Rts.Strategy.Shared.Hold");
@@ -391,7 +862,7 @@ namespace Ludots.Tests.GAS
         public void TryResolveCandidate_WarpGateTag_SkipsTrainSpawnTargetCandidate()
         {
             using World world = World.Create();
-            var tagOps = new TagOps();
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
             int warpGateTagId = TagRegistry.Register("Progression.Rts.WarpGate");
 
             Entity gateway = world.Create(new AbilityStateBuffer(), new GameplayTagContainer(), new TagCountContainer());

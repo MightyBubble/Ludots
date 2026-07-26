@@ -622,7 +622,7 @@ public sealed class NetworkCommandIngressTests
                 controlsTypeId);
             var entities = new NetworkEntityTable(capacity: 16);
             var knowledge = new KnowledgeProjectionStore(initialCapacity: 16);
-            var orderTypes = new OrderTypeRegistry();
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig { Key = "test.world", OrderTypeId = WorldOrderTypeId });
             if (includeEntityTargetSchema)
             {
@@ -649,7 +649,7 @@ public sealed class NetworkCommandIngressTests
             }
 
             schemas.Freeze();
-            var orders = new OrderQueue(capacity: 64);
+            var orders = new OrderQueue(capacity: 64, new OrderAdmissionResultBuffer(64, 64));
             var results = new NetworkCommandAdmissionResultBuffer(capacity: 64);
             var config = new NetworkCommandIngressConfig(
                 seatCapacity: 2,

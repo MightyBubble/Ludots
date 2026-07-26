@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
 using Arch.System;
-using Ludots.Core.Config;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
@@ -38,7 +37,7 @@ namespace RoadNetworkShowcaseMod.Systems
         {
             _world = world;
             _expander = new RoadMoveOrderExpander(world, globals, incomingOrders, RoadNetworkShowcaseIds.PathPlannerAgentTypeId, statusKey: string.Empty);
-            _moveToOrderTypeId = ResolveMoveToOrderTypeId(globals);
+            _moveToOrderTypeId = RoadNetworkOrderTypeIds.Require(globals).MoveTo;
             _aiDecisionCooldown = 0.5f;
         }
 
@@ -226,17 +225,5 @@ namespace RoadNetworkShowcaseMod.Systems
             return found;
         }
 
-        private static int ResolveMoveToOrderTypeId(IReadOnlyDictionary<string, object> globals)
-        {
-            if (!globals.TryGetValue(CoreServiceKeys.GameConfig.Name, out object? configObj) ||
-                configObj is not GameConfig config ||
-                !config.Constants.OrderTypeIds.TryGetValue("moveTo", out int moveToOrderTypeId) ||
-                moveToOrderTypeId <= 0)
-            {
-                throw new InvalidOperationException("RoadNetworkShowcaseMod requires game.json constants.orderTypeIds.moveTo to be configured.");
-            }
-
-            return moveToOrderTypeId;
-        }
     }
 }

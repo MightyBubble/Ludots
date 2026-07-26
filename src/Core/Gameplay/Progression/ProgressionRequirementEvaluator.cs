@@ -37,7 +37,7 @@ namespace Ludots.Core.Gameplay.Progression
             _scopeResolver = scopeResolver ?? new ScopeResolver(world, scopeKeys);
             _graphPrograms = graphPrograms;
             _graphApi = graphApi;
-            _tagOps = tagOps ?? new TagOps();
+            _tagOps = tagOps ?? throw new InvalidOperationException(TagOps.MissingTagOpsError);
         }
 
         public ScopeKeyRegistry ScopeKeys => _scopeKeys;

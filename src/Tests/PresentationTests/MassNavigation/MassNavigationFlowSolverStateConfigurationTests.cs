@@ -361,7 +361,7 @@ namespace Ludots.Tests.Presentation
             var runtime = new MassNavigationSimulationRuntime(config);
             runtime.BindBoardWorld(
                 new WorldSizeSpec(new WorldAabbCm(-5_000, -5_000, 10_000, 10_000), 100),
-                new Ludots.Core.Navigation.GraphWorld.WorldGridLoadedChunks(runtime.WorldConfig.StreamingChunkSizeCm));
+                MassNavigationOrderChainTests.CreateLoadedChunksForTests(runtime));
 
             MassNavigationAgentLayer layer = CreateAgentLayer();
             Entity light = CreateAuthoredAgentEntity(world, localX: 1000f, localY: 1200f, layer);

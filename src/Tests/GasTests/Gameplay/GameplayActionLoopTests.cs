@@ -24,7 +24,8 @@ public sealed class GameplayActionLoopTests
         using World world = World.Create();
         int resourceAttributeId = AttributeRegistry.Register("ActionLoop.Test.Resource");
         OrderTypeRegistry orderTypes = CreateOrderTypes();
-        var orders = new OrderQueue();
+        var admissionResults = new OrderAdmissionResultBuffer(64, 64);
+        var orders = new OrderQueue(64, admissionResults);
         var system = new ResourceTransportSystem(world, orders, orderTypes, OpenGate.Instance);
 
         AttributeBuffer sinkAttributes = default;
@@ -113,7 +114,8 @@ public sealed class GameplayActionLoopTests
             TeamManager.SetRelationshipSymmetric(1, 2, TeamRelationship.Hostile);
             using World world = World.Create();
             OrderTypeRegistry orderTypes = CreateOrderTypes();
-            var orders = new OrderQueue();
+            var admissionResults = new OrderAdmissionResultBuffer(64, 64);
+        var orders = new OrderQueue(64, admissionResults);
             var effects = new EffectRequestQueue();
             var system = new DirectAttackSystem(world, orders, orderTypes, effects, OpenGate.Instance);
 
@@ -237,7 +239,8 @@ public sealed class GameplayActionLoopTests
         using World world = World.Create();
         int resourceAttributeId = AttributeRegistry.Register("ActionLoop.Allocation.Resource");
         OrderTypeRegistry orderTypes = CreateOrderTypes();
-        var orders = new OrderQueue();
+        var admissionResults = new OrderAdmissionResultBuffer(64, 64);
+        var orders = new OrderQueue(64, admissionResults);
         var effects = new EffectRequestQueue();
         var resourceSystem = new ResourceTransportSystem(world, orders, orderTypes, OpenGate.Instance);
         var attackSystem = new DirectAttackSystem(world, orders, orderTypes, effects, OpenGate.Instance);
@@ -314,7 +317,7 @@ public sealed class GameplayActionLoopTests
 
     private static OrderTypeRegistry CreateOrderTypes()
     {
-        var registry = new OrderTypeRegistry();
+        var registry = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
         registry.Register(CreateOrderType("moveTo", 101));
         registry.Register(CreateOrderType("attackTarget", 102));
         registry.Register(CreateOrderType("gather", 172));

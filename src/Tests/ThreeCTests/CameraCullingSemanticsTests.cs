@@ -141,7 +141,7 @@ namespace Ludots.Tests.ThreeC
             Entity entity = CreateCullableEntity(world, 7000, 100);
             var spatial = new StubSpatialQueryService(entity);
             var view = new StubViewController();
-            var loadedChunks = new WorldGridLoadedChunks(chunkSizeCm: 6400);
+            var loadedChunks = new WorldGridLoadedChunks(chunkSizeCm: 6400, loadedChunkCapacity: 1);
             loadedChunks.SetLoaded(GraphChunkKey.Pack(1, 0), loaded: true);
 
             using var system = new CameraCullingSystem(

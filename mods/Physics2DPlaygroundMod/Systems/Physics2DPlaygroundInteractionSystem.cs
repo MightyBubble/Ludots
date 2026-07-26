@@ -56,6 +56,7 @@ namespace Physics2DPlaygroundMod.Systems
         private readonly PerformerDefinitionRegistry _performerDefinitions;
         private readonly ShapeDataStorage2D _shapeStorage;
         private readonly Physics2DSolverConfig _solverConfig;
+        private readonly EffectRequestQueue _effectRequests;
 
         private Entity _chainDemoEntity;
         private bool _chainDemoInited;
@@ -93,6 +94,8 @@ namespace Physics2DPlaygroundMod.Systems
                 ?? throw new InvalidOperationException("Physics2DPlayground requires PerformerCommandBuffer.");
             _performerDefinitions = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry)
                 ?? throw new InvalidOperationException("Physics2DPlayground requires PerformerDefinitionRegistry.");
+            _effectRequests = engine.GetService(CoreServiceKeys.EffectRequestQueue)
+                ?? throw new InvalidOperationException(ResponseChainListenerOps.MissingQueueError);
         }
 
         public void Initialize()
@@ -177,16 +180,11 @@ namespace Physics2DPlaygroundMod.Systems
             }
 
             EnsureChainDemoEntity(templateId);
-            if (!_engine.GlobalContext.TryGetValue(CoreServiceKeys.EffectRequestQueue.Name, out var queueObj) ||
-                queueObj is not EffectRequestQueue queue)
-            {
-                return;
-            }
 
             var caller = default(EffectConfigParams);
             caller.TryAddFloat(EffectParamKeys.ForceXAttribute, 10f);
             caller.TryAddFloat(EffectParamKeys.ForceYAttribute, 0f);
-            queue.Publish(new EffectRequest
+            _effectRequests.Publish(new EffectRequest
             {
                 RootId = 0,
                 Source = _chainDemoEntity,
@@ -202,6 +200,11 @@ namespace Physics2DPlaygroundMod.Systems
         {
             if (_chainDemoInited && _world.IsAlive(_chainDemoEntity))
             {
+                if (!_world.Has<ResponseChainListener>(_chainDemoEntity))
+                {
+                    throw new InvalidOperationException(
+                        $"{ResponseChainListenerOps.MissingListenerError}: entity={_chainDemoEntity.Id}.");
+                }
                 return;
             }
 
@@ -212,8 +215,9 @@ namespace Physics2DPlaygroundMod.Systems
             _chainDemoEntity = _world.Create(
                 new VisualTransform { Position = Vector3.Zero, Rotation = Quaternion.Identity, Scale = Vector3.One },
                 default(AttributeBuffer),
-                default(ActiveEffectContainer),
-                listener);
+                default(DirtyFlags),
+                default(ActiveEffectContainer));
+            ResponseChainListenerOps.Add(_world, _chainDemoEntity, in listener, _effectRequests);
             _chainDemoInited = true;
         }
 

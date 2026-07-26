@@ -53,8 +53,13 @@
       "range": 2000,
       "arcHeight": 0,
       "impactEffect": "Effect.Arpg.Poison",
-      "travelMode": "Legacy",
-      "impactPolicy": "Legacy"
+      "hitEffect": "Effect.Arpg.Poison",
+      "travelMode": "TrackTarget",
+      "impactPolicy": "DestroyOnFirstHit",
+      "collisionHalfWidth": 50,
+      "collisionRelationFilter": "Hostile",
+      "collisionExcludeSource": true,
+      "maxHitCount": 1
     },
     "configParams": {
       "damage_base": {

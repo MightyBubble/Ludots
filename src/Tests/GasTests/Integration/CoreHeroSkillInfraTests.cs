@@ -161,14 +161,16 @@ namespace Ludots.Tests.GAS
                 TargetContext = Entity.Null
             };
 
+            EffectPhaseGraphBindings behavior = default;
             executor.ExecutePhase(
                 world,
                 new GasGraphRuntimeApi(world, null, null, null),
-                Entity.Null,
-                in context,
+                context.Source,
+                context.Target,
+                context.TargetContext,
                 default,
                 EffectPhaseId.OnApply,
-                default,
+                in behavior,
                 EffectPresetType.RevealArea,
                 effectTagId: 0,
                 effectTemplateId: templateId,
@@ -181,11 +183,12 @@ namespace Ludots.Tests.GAS
             executor.ExecutePhase(
                 world,
                 new GasGraphRuntimeApi(world, null, null, null),
-                Entity.Null,
-                in context,
+                context.Source,
+                context.Target,
+                context.TargetContext,
                 default,
                 EffectPhaseId.OnRemove,
-                default,
+                in behavior,
                 EffectPresetType.RevealArea,
                 effectTagId: 0,
                 effectTemplateId: templateId,
@@ -350,14 +353,16 @@ namespace Ludots.Tests.GAS
                 TargetContext = Entity.Null
             };
 
+            EffectPhaseGraphBindings relationBehavior = default;
             executor.ExecutePhase(
                 world,
                 new GasGraphRuntimeApi(world, null, null, null),
-                Entity.Null,
-                in context,
+                context.Source,
+                context.Target,
+                context.TargetContext,
                 default,
                 EffectPhaseId.OnApply,
-                default,
+                in relationBehavior,
                 EffectPresetType.Relation,
                 effectTagId: 0,
                 effectTemplateId: templateId,
@@ -485,7 +490,7 @@ namespace Ludots.Tests.GAS
                 }
             };
             var service = new CapturingSpatialQueryService(resolved);
-            var commands = new List<FanOutCommand>();
+            var commands = new FanOutCommandBuffer(capacity: 4);
             var budget = new RootBudgetTable(16);
             Entity[] buffer = new Entity[4];
             int dropped = 0;
@@ -513,6 +518,44 @@ namespace Ludots.Tests.GAS
             Assert.That(request.Source, Is.EqualTo(source));
             Assert.That(request.Target, Is.EqualTo(resolved));
             Assert.That(request.TargetContext, Is.EqualTo(originalTarget));
+        }
+
+        [Test]
+        public void SearchDispatch_FailsBeforeGrowingBeyondConfiguredCommandCapacity()
+        {
+            using World world = World.Create();
+            Entity source = world.Create(WorldPositionCm.FromCm(0, 0));
+            Entity firstTarget = world.Create(WorldPositionCm.FromCm(100, 0));
+            Entity secondTarget = world.Create(WorldPositionCm.FromCm(200, 0));
+            var context = new EffectContext { RootId = 9, Source = source, Target = firstTarget };
+            var query = new TargetQueryDescriptor();
+            var filter = new TargetFilterDescriptor { RelationFilter = RelationshipFilter.All };
+            var dispatch = new TargetDispatchDescriptor
+            {
+                PayloadEffectTemplateId = 777,
+                ContextMapping = TargetResolverContextMapping.Default,
+            };
+            Entity[] candidates = { firstTarget, secondTarget };
+            var commands = new FanOutCommandBuffer(capacity: 1);
+            var budget = new RootBudgetTable(16);
+            int dropped = 0;
+
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
+                TargetResolverFanOutHelper.ValidateAndCollect(
+                    world,
+                    in context,
+                    in query,
+                    in filter,
+                    in dispatch,
+                    candidates,
+                    candidates.Length,
+                    budget,
+                    commands,
+                    ref dropped))!;
+
+            Assert.That(error.Message, Does.StartWith(TargetResolverFanOutHelper.CommandCapacityExceededError));
+            Assert.That(commands, Has.Count.EqualTo(1));
+            Assert.That(commands.Capacity, Is.EqualTo(1));
         }
 
         [Test]

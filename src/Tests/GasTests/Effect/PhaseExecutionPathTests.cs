@@ -107,7 +107,7 @@ namespace Ludots.Tests.GAS
                 TargetContext = default,
             };
 
-            executor.ExecutePhase(world, api, Entity.Null, in context, default,
+            executor.ExecutePhase(world, api, context.Source, context.Target, context.TargetContext, default,
                 phase, in behavior, EffectPresetType.None);
 
             ref var bb = ref world.Get<BlackboardFloatBuffer>(target);
@@ -148,7 +148,7 @@ namespace Ludots.Tests.GAS
                 TargetContext = default,
             };
 
-            executor.ExecutePhase(world, api, Entity.Null, in context, default,
+            executor.ExecutePhase(world, api, context.Source, context.Target, context.TargetContext, default,
                 phase, in behavior, EffectPresetType.None);
 
             ref var bb = ref world.Get<BlackboardFloatBuffer>(target);
@@ -290,7 +290,7 @@ namespace Ludots.Tests.GAS
             // Execute each phase independently
             for (int i = 0; i < allPhases.Length; i++)
             {
-                executor.ExecutePhase(world, api, Entity.Null, in context, default,
+                executor.ExecutePhase(world, api, context.Source, context.Target, context.TargetContext, default,
                     allPhases[i], in behavior, EffectPresetType.None);
             }
 
@@ -386,7 +386,7 @@ namespace Ludots.Tests.GAS
                 TargetContext = default,
             };
 
-            executor.ExecutePhase(world, api, Entity.Null, in context, default,
+            executor.ExecutePhase(world, api, context.Source, context.Target, context.TargetContext, default,
                 phase, in behavior, EffectPresetType.None);
 
             ref var bb = ref world.Get<BlackboardFloatBuffer>(target);

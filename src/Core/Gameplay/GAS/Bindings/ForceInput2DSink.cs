@@ -14,6 +14,17 @@ namespace Ludots.Core.Gameplay.GAS.Bindings
     {
         private readonly QueryDescription _query = new QueryDescription().WithAll<AttributeBuffer, ForceInput2D>();
 
+        public void ValidateBinding(byte channel, string bindingId, string relativePath)
+        {
+            if (channel <= 1)
+            {
+                return;
+            }
+
+            throw new System.InvalidOperationException(
+                $"Attribute binding '{bindingId}' in {relativePath}: sink '{GasSinkNames.ForceInput2D}' supports channels 0 and 1; found {channel}.");
+        }
+
         public void Apply(World world, AttributeBindingEntry[] entries, int start, int count)
         {
             bool resetX = false;

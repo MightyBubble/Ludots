@@ -329,10 +329,21 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
         World world = engine.World;
         Entity core = FindNamed(world, "Northern Command Core");
         int crystalAttributeId = RequireAttribute("Crystals");
-        AttributeMutationOps.SetCurrent(world, core, crystalAttributeId, 60f);
+        TagOps tagOps = RequireTagOps(engine);
+        AttributeMutationOps.SetCurrent(world, core, crystalAttributeId, 60f, tagOps);
         int startingInfantry = CountNamed(world, "Infantry");
-        OrderSubmitResult firstOutcome = SubmitTraining(engine, core, playerId: 1, slot: 0, out Order first);
-        OrderSubmitResult secondOutcome = SubmitTraining(engine, core, playerId: 1, slot: 0, out _);
+        OrderSubmitResult firstOutcome;
+        OrderSubmitResult secondOutcome;
+        Order first;
+        SubmitTrainingBatch(
+            engine,
+            core,
+            playerId: 1,
+            slot: 0,
+            out firstOutcome,
+            out first,
+            out secondOutcome,
+            out _);
         Assert.Multiple(() =>
         {
             Assert.That(firstOutcome, Is.EqualTo(OrderSubmitResult.Queued));
@@ -375,11 +386,22 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
         World world = engine.World;
         Entity core = FindNamed(world, "Northern Command Core");
         int crystalAttributeId = RequireAttribute("Crystals");
-        AttributeMutationOps.SetCurrent(world, core, crystalAttributeId, 120f);
+        AttributeMutationOps.SetCurrent(world, core, crystalAttributeId, 120f, RequireTagOps(engine));
         List<Entity> startingInfantryEntities = FindTemplateEntities(engine, "rts_frontline_infantry");
         int startingInfantry = startingInfantryEntities.Count;
-        OrderSubmitResult firstResult = SubmitTraining(engine, core, playerId: 1, slot: 0, out Order first);
-        OrderSubmitResult secondResult = SubmitTraining(engine, core, playerId: 1, slot: 0, out Order second);
+        OrderSubmitResult firstResult;
+        OrderSubmitResult secondResult;
+        Order first;
+        Order second;
+        SubmitTrainingBatch(
+            engine,
+            core,
+            playerId: 1,
+            slot: 0,
+            out firstResult,
+            out first,
+            out secondResult,
+            out second);
         Assert.Multiple(() =>
         {
             Assert.That(firstResult, Is.EqualTo(OrderSubmitResult.Queued));
@@ -452,7 +474,7 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
         World world = engine.World;
         Entity core = FindNamed(world, "Northern Command Core");
         int crystalAttributeId = RequireAttribute("Crystals");
-        AttributeMutationOps.SetCurrent(world, core, crystalAttributeId, 60f);
+        AttributeMutationOps.SetCurrent(world, core, crystalAttributeId, 60f, RequireTagOps(engine));
         int startingInfantry = CountNamed(world, "Infantry");
 
         EnqueueCastAbility(engine, core, playerId: 1, slot: 0);
@@ -493,7 +515,7 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
         World world = engine.World;
         Entity core = FindNamed(world, "Southern Command Core");
         int crystalAttributeId = RequireAttribute("Crystals");
-        AttributeMutationOps.SetCurrent(world, core, crystalAttributeId, 60f);
+        AttributeMutationOps.SetCurrent(world, core, crystalAttributeId, 60f, RequireTagOps(engine));
         FrontlineConfig config = GetFrontlineConfig(engine);
         int startingInfantry = CountTemplateEntities(engine, "rts_frontline_infantry");
 
@@ -608,6 +630,9 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
             SubmitMode = OrderSubmitMode.Immediate,
         };
         queue.EnsureOrderId(ref move);
+        OrderAdmissionResultBuffer admission = engine.GetService(CoreServiceKeys.OrderAdmissionResultBuffer)
+            ?? throw new InvalidOperationException("OrderAdmissionResultBuffer service is missing.");
+        admission.BeginLogicStep();
         Assert.That(orders.SubmitOrder(attacker, in move), Is.EqualTo(OrderSubmitResult.Activated));
 
         var attack = new Order
@@ -620,6 +645,8 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
         };
         queue.EnsureOrderId(ref attack);
         OrderSubmitResult attackResult = orders.SubmitOrder(attacker, in attack);
+        admission.EndEntityIntake();
+        admission.EndLogicStep();
         OrderBuffer buffer = world.Get<OrderBuffer>(attacker);
 
         Assert.Multiple(() =>
@@ -723,8 +750,8 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
         LoadMap(engine);
         StartMatch(engine);
 
-        SetHealth(engine.World, FindNamed(engine.World, "Northern Command Core"), 0f);
-        SetHealth(engine.World, FindNamed(engine.World, "Southern Command Core"), 0f);
+        SetHealth(engine, FindNamed(engine.World, "Northern Command Core"), 0f);
+        SetHealth(engine, FindNamed(engine.World, "Southern Command Core"), 0f);
         TickUntil(
             engine,
             () => Equals(ReadSnapshot(engine, "Outcome"), "Draw"),
@@ -747,7 +774,7 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
         LoadMap(engine);
         StartMatch(engine);
 
-        SetHealth(engine.World, FindNamed(engine.World, "Southern Command Core"), 800f);
+        SetHealth(engine, FindNamed(engine.World, "Southern Command Core"), 800f);
         AdvanceFrontlineClockWithoutWorld(engine, 8999);
         Assert.That(ReadSnapshot(engine, "Outcome"), Is.EqualTo("InProgress"));
 
@@ -774,7 +801,7 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
         LoadMap(engine);
         StartMatch(engine);
 
-        SetHealth(engine.World, FindNamed(engine.World, "Northern Command Core"), 500f);
+        SetHealth(engine, FindNamed(engine.World, "Northern Command Core"), 500f);
         AdvanceFrontlineClockWithoutWorld(engine, 8100);
         SetParticipantConnected(engine, sideIndex: 1, connected: false);
         AdvanceFrontlineClockWithoutWorld(engine, 8999);
@@ -806,8 +833,8 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
 
         Entity northernCore = FindNamed(engine.World, "Northern Command Core");
         Entity southernCore = FindNamed(engine.World, "Southern Command Core");
-        SetHealth(engine.World, northernCore, 900f);
-        SetHealth(engine.World, southernCore, 800f);
+        SetHealth(engine, northernCore, 900f);
+        SetHealth(engine, southernCore, 800f);
         AdvanceFrontlineClockWithoutWorld(engine, 8990);
         SetParticipantConnected(engine, sideIndex: 1, connected: false);
 
@@ -815,8 +842,8 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
         TickUntilCommittedTick(engine, 9000);
         Assert.That(ReadSnapshot(engine, "Outcome"), Is.EqualTo("InProgress"));
 
-        SetHealth(engine.World, northernCore, 100f);
-        SetHealth(engine.World, southernCore, 950f);
+        SetHealth(engine, northernCore, 100f);
+        SetHealth(engine, southernCore, 950f);
         SetParticipantConnected(engine, sideIndex: 1, connected: true);
         TickUntilCommittedTick(engine, 9001);
 
@@ -845,8 +872,8 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
 
         Entity northernCore = FindNamed(engine.World, "Northern Command Core");
         Entity southernCore = FindNamed(engine.World, "Southern Command Core");
-        SetHealth(engine.World, northernCore, 900f);
-        SetHealth(engine.World, southernCore, 800f);
+        SetHealth(engine, northernCore, 900f);
+        SetHealth(engine, southernCore, 800f);
         AdvanceFrontlineClockWithoutWorld(engine, 8990);
         SetParticipantConnected(engine, sideIndex: 1, connected: false);
 
@@ -854,7 +881,7 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
         TickUntilCommittedTick(engine, 9000);
         Assert.That(ReadSnapshot(engine, "Outcome"), Is.EqualTo("InProgress"));
 
-        SetHealth(engine.World, northernCore, 0f);
+        SetHealth(engine, northernCore, 0f);
         TickUntilCommittedTick(engine, 9001);
 
         Assert.That(ReadSnapshot(engine, "Outcome"), Is.EqualTo("SideTwoVictory"),
@@ -1314,9 +1341,53 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
         int slot,
         out Order order)
     {
+        OrderBufferSystem orders = engine.GetService(CoreServiceKeys.OrderBufferSystem)
+            ?? throw new InvalidOperationException("OrderBufferSystem service is missing.");
+        order = CreateTrainingOrder(engine, core, playerId, slot);
+        return SubmitOrderInsideLogicStep(engine, orders, core, in order);
+    }
+
+    private static void SubmitTrainingBatch(
+        GameEngine engine,
+        Entity core,
+        int playerId,
+        int slot,
+        out OrderSubmitResult firstResult,
+        out Order first,
+        out OrderSubmitResult secondResult,
+        out Order second)
+    {
+        OrderBufferSystem orders = engine.GetService(CoreServiceKeys.OrderBufferSystem)
+            ?? throw new InvalidOperationException("OrderBufferSystem service is missing.");
+        OrderAdmissionResultBuffer admission = engine.GetService(CoreServiceKeys.OrderAdmissionResultBuffer)
+            ?? throw new InvalidOperationException("OrderAdmissionResultBuffer service is missing.");
+        first = CreateTrainingOrder(engine, core, playerId, slot);
+        second = CreateTrainingOrder(engine, core, playerId, slot);
+        admission.BeginLogicStep();
+        try
+        {
+            firstResult = orders.SubmitOrder(core, in first);
+            secondResult = orders.SubmitOrder(core, in second);
+        }
+        finally
+        {
+            if (admission.EntityIntakeOpen)
+            {
+                admission.EndEntityIntake();
+            }
+
+            if (admission.LogicStepActive)
+            {
+                admission.EndLogicStep();
+            }
+        }
+    }
+
+    private static Order CreateTrainingOrder(GameEngine engine, Entity core, int playerId, int slot)
+    {
         OrderQueue queue = engine.GetService(CoreServiceKeys.OrderQueue)
             ?? throw new InvalidOperationException("OrderQueue service is missing.");
-        order = new Order
+        var order = new Order
         {
             OrderTypeId = RequireOrderType(engine, "castAbility"),
             PlayerId = playerId,
@@ -1326,9 +1397,34 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
             SubmitMode = OrderSubmitMode.PersistentQueued,
         };
         queue.EnsureOrderId(ref order);
-        OrderBufferSystem orders = engine.GetService(CoreServiceKeys.OrderBufferSystem)
-            ?? throw new InvalidOperationException("OrderBufferSystem service is missing.");
-        return orders.SubmitOrder(core, in order);
+        return order;
+    }
+
+    private static OrderSubmitResult SubmitOrderInsideLogicStep(
+        GameEngine engine,
+        OrderBufferSystem orders,
+        Entity actor,
+        in Order order)
+    {
+        OrderAdmissionResultBuffer admission = engine.GetService(CoreServiceKeys.OrderAdmissionResultBuffer)
+            ?? throw new InvalidOperationException("OrderAdmissionResultBuffer service is missing.");
+        admission.BeginLogicStep();
+        try
+        {
+            return orders.SubmitOrder(actor, in order);
+        }
+        finally
+        {
+            if (admission.EntityIntakeOpen)
+            {
+                admission.EndEntityIntake();
+            }
+
+            if (admission.LogicStepActive)
+            {
+                admission.EndLogicStep();
+            }
+        }
     }
 
     private static void EnqueueMove(GameEngine engine, Entity actor, int playerId, int x, int y)
@@ -1380,6 +1476,10 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
         Assert.That(id, Is.GreaterThanOrEqualTo(0), $"Attribute '{name}' must be configured.");
         return id;
     }
+
+    private static TagOps RequireTagOps(GameEngine engine) =>
+        engine.GetService(CoreServiceKeys.TagOps)
+        ?? throw new InvalidOperationException("TagOps service is missing.");
 
     private static Entity FindNamed(World world, string name)
     {
@@ -1468,8 +1568,13 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
     private static float ReadAttribute(World world, Entity entity, int attributeId) =>
         world.Get<AttributeBuffer>(entity).GetCurrent(attributeId);
 
-    private static void SetHealth(World world, Entity entity, float health) =>
-        AttributeMutationOps.SetCurrent(world, entity, RequireAttribute("Health"), health);
+    private static void SetHealth(GameEngine engine, Entity entity, float health) =>
+        AttributeMutationOps.SetCurrent(
+            engine.World,
+            entity,
+            RequireAttribute("Health"),
+            health,
+            RequireTagOps(engine));
 
     private static float DistanceCm(in WorldPositionCm a, in WorldPositionCm b)
     {

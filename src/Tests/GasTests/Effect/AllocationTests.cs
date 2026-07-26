@@ -52,17 +52,21 @@ namespace Ludots.Tests.GAS
                 ref var abilityState = ref world.Get<AbilityStateBuffer>(caster);
                 abilityState.AddAbility(5001);
 
-                var target = world.Create(new AttributeBuffer());
+                var target = world.Create(new AttributeBuffer(), new DirtyFlags());
                 ref var attr = ref world.Get<AttributeBuffer>(target);
                 attr.SetCurrent(0, 1000f);
 
-                var abilitySystem = new AbilitySystem(world, requests, abilityDefs);
+                var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
+                var abilitySystem = new AbilitySystem(world, requests, abilityDefs, tagOps);
                 var proposalSystem = new EffectProposalProcessingSystem(
                     world,
                     requests,
+                    GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                    new Ludots.Core.Engine.DiscreteClock(),
                     budget: null,
                     templates: templates,
-                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types);
+                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                    tagOps: tagOps);
 
                 var args = new AbilitySystem.AbilityActivationArgs(explicitTarget: target);
 
@@ -109,7 +113,7 @@ namespace Ludots.Tests.GAS
             int fxId = AttributeRegistry.Register("Physics.ForceRequestX");
             int fyId = AttributeRegistry.Register("Physics.ForceRequestY");
 
-            var target = world.Create(new AttributeBuffer(), new Ludots.Core.Physics.ForceInput2D());
+            var target = world.Create(new AttributeBuffer(), new DirtyFlags(), new Ludots.Core.Physics.ForceInput2D());
             ref var attr = ref world.Get<AttributeBuffer>(target);
             attr.SetCurrent(fxId, 0f);
             attr.SetCurrent(fyId, 0f);
@@ -131,15 +135,21 @@ namespace Ludots.Tests.GAS
             });
 
             var requests = new EffectRequestQueue();
-            var chainOrders = new Ludots.Core.Gameplay.GAS.Orders.OrderQueue();
+            var admissionResults = new Ludots.Core.Gameplay.GAS.Orders.OrderAdmissionResultBuffer(4, 4);
+            var chainOrders = new Ludots.Core.Gameplay.GAS.Orders.OrderQueue(
+                64,
+                admissionResults);
             var proposal = new EffectProposalProcessingSystem(
                 world,
                 requests,
+                GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                new Ludots.Core.Engine.DiscreteClock(),
                 budget: null,
                 templates: templates,
                 inputRequests: null,
                 chainOrders: chainOrders,
-                responseChainOrderTypes: TestResponseChainOrderTypeIds.Types);
+                responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 
             var sinks = new Ludots.Core.Gameplay.GAS.Bindings.AttributeSinkRegistry();
             Ludots.Core.Gameplay.GAS.Bindings.GasAttributeSinks.RegisterBuiltins(sinks);
@@ -156,11 +166,12 @@ namespace Ludots.Tests.GAS
 
             for (int i = 0; i < 64; i++)
             {
-                chainOrders.TryEnqueue(new Ludots.Core.Gameplay.GAS.Orders.Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
-                chainOrders.TryEnqueue(new Ludots.Core.Gameplay.GAS.Orders.Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
+                admissionResults.BeginLogicStep();
                 requests.Publish(new EffectRequest { Target = target, TemplateId = 1 });
                 proposal.Update(0.016f);
                 bindingSystem.Update(0.016f);
+                admissionResults.EndEntityIntake();
+                admissionResults.EndLogicStep();
             }
 
             GC.Collect();
@@ -171,11 +182,12 @@ namespace Ludots.Tests.GAS
             long before = GC.GetAllocatedBytesForCurrentThread();
             for (int i = 0; i < 10_000; i++)
             {
-                chainOrders.TryEnqueue(new Ludots.Core.Gameplay.GAS.Orders.Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
-                chainOrders.TryEnqueue(new Ludots.Core.Gameplay.GAS.Orders.Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
+                admissionResults.BeginLogicStep();
                 requests.Publish(new EffectRequest { Target = target, TemplateId = 1 });
                 proposal.Update(0.016f);
                 bindingSystem.Update(0.016f);
+                admissionResults.EndEntityIntake();
+                admissionResults.EndLogicStep();
             }
             long after = GC.GetAllocatedBytesForCurrentThread();
 

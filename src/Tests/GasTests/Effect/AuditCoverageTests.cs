@@ -8,6 +8,7 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Config;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Modding;
 using Ludots.Core.NodeLibraries.GASGraph;
@@ -51,8 +52,9 @@ namespace Ludots.Tests.GAS
             BuiltinHandlers.RegisterAll(builtinHandlers);
 
             var templates = new EffectTemplateRegistry();
+            int hpAttrId = AttributeRegistry.Register("Test.Audit.BuiltinPath.Health");
             var mods = default(EffectModifiers);
-            mods.Add(attrId: 0, ModifierOp.Add, -25f);
+            mods.Add(hpAttrId, ModifierOp.Add, -25f);
             templates.Register(1, new EffectTemplateData
             {
                 TagId = 1,
@@ -68,8 +70,8 @@ namespace Ludots.Tests.GAS
             var api = new GasGraphRuntimeApi(world, null, null, null);
 
             var caster = world.Create();
-            var target = world.Create(new AttributeBuffer());
-            world.Get<AttributeBuffer>(target).SetCurrent(0, 100f);
+            var target = world.Create(new AttributeBuffer(), new DirtyFlags());
+            world.Get<AttributeBuffer>(target).SetBase(hpAttrId, 100f);
 
             var behavior = new EffectPhaseGraphBindings();
             var context = new EffectContext
@@ -80,11 +82,12 @@ namespace Ludots.Tests.GAS
                 TargetContext = default,
             };
 
-            executor.ExecutePhase(world, api, Entity.Null, in context, default,
+            executor.ExecutePhase(world, api, context.Source, context.Target, context.TargetContext, default,
                 EffectPhaseId.OnApply, in behavior, EffectPresetType.InstantDamage,
-                effectTagId: 1, effectTemplateId: 1);
+                effectTagId: 1, effectTemplateId: 1,
+                builtinRuntime: new BuiltinHandlerExecutionContext { TagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()) });
 
-            float hp = world.Get<AttributeBuffer>(target).GetCurrent(0);
+            float hp = world.Get<AttributeBuffer>(target).GetCurrent(hpAttrId);
             That(hp, Is.EqualTo(75f), "ApplyModifiers via Builtin handler path should reduce HP by 25");
         }
 
@@ -114,10 +117,11 @@ namespace Ludots.Tests.GAS
 
             var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, handlers, templates);
             var api = new GasGraphRuntimeApi(world, null, null, null);
+            int hpAttrId = AttributeRegistry.Register("Test.Audit.MissingTemplate.Health");
 
             var caster = world.Create();
-            var target = world.Create(new AttributeBuffer());
-            world.Get<AttributeBuffer>(target).SetCurrent(0, 100f);
+            var target = world.Create(new AttributeBuffer(), new DirtyFlags());
+            world.Get<AttributeBuffer>(target).SetBase(hpAttrId, 100f);
 
             var behavior = new EffectPhaseGraphBindings();
             var context = new EffectContext
@@ -130,12 +134,12 @@ namespace Ludots.Tests.GAS
 
             // fail-fast: missing template must throw, not silently skip
             Assert.Throws<InvalidOperationException>(() =>
-                executor.ExecutePhase(world, api, Entity.Null, in context, default,
+                executor.ExecutePhase(world, api, context.Source, context.Target, context.TargetContext, default,
                     EffectPhaseId.OnApply, in behavior, EffectPresetType.InstantDamage,
                     effectTagId: 1, effectTemplateId: 999));
 
             // HP unchanged — exception prevented the handler from running
-            float hp = world.Get<AttributeBuffer>(target).GetCurrent(0);
+            float hp = world.Get<AttributeBuffer>(target).GetCurrent(hpAttrId);
             That(hp, Is.EqualTo(100f), "Exception prevented handler execution, HP unchanged");
         }
 
@@ -163,7 +167,7 @@ namespace Ludots.Tests.GAS
 
                 var budget = new GasBudget();
                 var queue = new EffectRequestQueue();
-                var target = world.Create(new AttributeBuffer());
+                var target = world.Create(new AttributeBuffer(), new DirtyFlags());
 
                 queue.Publish(new EffectRequest
                 {
@@ -177,6 +181,8 @@ namespace Ludots.Tests.GAS
                 var sys = new EffectProposalProcessingSystem(
                     world,
                     queue,
+                    GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                    new Ludots.Core.Engine.DiscreteClock(),
                     budget,
                     templates,
                     inputRequests: null,
@@ -380,7 +386,7 @@ namespace Ludots.Tests.GAS
             var api = new GasGraphRuntimeApi(world, null, null, null);
 
             var caster = world.Create();
-            var target = world.Create(new AttributeBuffer());
+            var target = world.Create(new AttributeBuffer(), new DirtyFlags());
 
             var behavior = new EffectPhaseGraphBindings();
             var context = new EffectContext
@@ -391,9 +397,10 @@ namespace Ludots.Tests.GAS
                 TargetContext = default,
             };
 
-            executor.ExecutePhase(world, api, Entity.Null, in context, default,
+            executor.ExecutePhase(world, api, context.Source, context.Target, context.TargetContext, default,
                 EffectPhaseId.OnApply, in behavior, EffectPresetType.ApplyForce2D,
-                effectTagId: 1, effectTemplateId: 1);
+                effectTagId: 1, effectTemplateId: 1,
+                builtinRuntime: new BuiltinHandlerExecutionContext { TagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()) });
 
             ref var buf = ref world.Get<AttributeBuffer>(target);
             That(buf.GetCurrent(forceXAttrId), Is.EqualTo(100f), "ForceX should be applied");
@@ -437,7 +444,10 @@ namespace Ludots.Tests.GAS
             Ludots.Core.NodeLibraries.GASGraph.Host.GraphIdRegistry.Register("Graph.Shield.Absorb");
 
             var registry = new EffectTemplateRegistry();
-            var loader = new EffectTemplateLoader(pipeline, registry);
+            var loader = new EffectTemplateLoader(
+                pipeline,
+                registry,
+                entityTemplateKeys: new EntityTemplateKeyRegistry());
 
             Assert.DoesNotThrow(() => loader.Load(ConfigCatalogLoader.Load(pipeline), relativePath: "GAS/effects.json"),
                 "Loading MobaDemoMod effects.json via VFS + ConfigPipeline must not throw");
@@ -479,7 +489,10 @@ namespace Ludots.Tests.GAS
             EffectTemplateIdRegistry.Clear();
 
             var registry = new EffectTemplateRegistry();
-            var loader = new EffectTemplateLoader(pipeline, registry);
+            var loader = new EffectTemplateLoader(
+                pipeline,
+                registry,
+                entityTemplateKeys: new EntityTemplateKeyRegistry());
 
             Assert.DoesNotThrow(() => loader.Load(ConfigCatalogLoader.Load(pipeline), relativePath: "GAS/effects.json"),
                 "Core effects.json must load without exceptions");
@@ -494,8 +507,13 @@ namespace Ludots.Tests.GAS
             string dir = AppDomain.CurrentDomain.BaseDirectory;
             while (dir != null)
             {
-                if (System.IO.Directory.Exists(System.IO.Path.Combine(dir, "assets")))
+                if (Directory.Exists(Path.Combine(dir, "assets")) &&
+                    Directory.Exists(Path.Combine(dir, "mods")) &&
+                    File.Exists(Path.Combine(dir, "gitbook", "contributing", "ai-assisted-development.md")))
+                {
                     return dir;
+                }
+
                 dir = System.IO.Directory.GetParent(dir)?.FullName;
             }
             throw new InvalidOperationException("Cannot find repo root (looking for assets/ directory).");

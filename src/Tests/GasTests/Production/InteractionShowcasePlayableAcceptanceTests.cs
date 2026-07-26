@@ -1372,6 +1372,9 @@ namespace Ludots.Tests.GAS.Production
             {
                 details.Add($"mappingMode={mapping.InteractionMode}");
                 details.Add($"mappingAiming={mapping.IsAiming}");
+                details.Add($"activation={mapping.LastActivationResult.State}");
+                details.Add($"activationOrderId={mapping.LastActivationResult.OrderId}");
+                details.Add($"activationRejection={mapping.LastActivationResult.Rejection}");
                 if (mapping.GetMapping(actionId) is InputOrderMapping actionMapping)
                 {
                     details.Add($"TargetType={actionMapping.TargetType}");
@@ -2064,8 +2067,8 @@ namespace Ludots.Tests.GAS.Production
                 Mode = OrderCollectionMode.List,
                 WorldCm = new Vector3(originWorldCm.X, 0f, originWorldCm.Y)
             };
-            spatial.AddPointWorldCm((int)originWorldCm.X, 0, (int)originWorldCm.Y);
-            spatial.AddPointWorldCm((int)endpointWorldCm.X, 0, (int)endpointWorldCm.Y);
+            spatial.AddInlinePointWorldCm((int)originWorldCm.X, 0, (int)originWorldCm.Y);
+            spatial.AddInlinePointWorldCm((int)endpointWorldCm.X, 0, (int)endpointWorldCm.Y);
 
             bool enqueued = orders.TryEnqueue(new Order
             {

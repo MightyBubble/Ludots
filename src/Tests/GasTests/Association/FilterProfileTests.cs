@@ -268,7 +268,7 @@ namespace Ludots.Tests.GAS
                 var ownership = new OwnershipResolver(relationships, ownsTypeId);
                 var domains = new ControlDomainQuery(world, relationships, ownership, ownsTypeId, controlsTypeId);
                 var profileIds = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
-                var filters = new FilterProfileRegistry(profileIds, world, new TagOps(new TagRuleRegistry(), new GasBudget()));
+                var filters = new FilterProfileRegistry(profileIds, world, new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), new GasBudget()));
                 filters.RegisterExpander(
                     FilterAssociationExpandKinds.Controls,
                     domains.CollectControlled,

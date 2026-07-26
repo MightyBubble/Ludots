@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "subject": "pr660",
+  "date": "2026-07-26",
+  "worktree": "C:\\001_AI\\_codex_audit\\Ludots-pr660-086d3f4-exact-20260724-1415",
+  "branch": "codex/issues-649-651-ordering",
+  "base": {
+    "ref": "origin/main",
+    "commit": "5712a4eef4cdb1011cc0694d52e77de95bfe4aaa"
+  },
+  "remote_pr_head_before_final_repair": "832481ece355f7b94b5db5504d7d96542eca4677",
+  "final_pushed_pr_head": "recorded_post_push_in_pr_660_and_issue_689",
+  "verdict": "pass_local_gate_pending_push_checks",
+  "scope": [
+    "Admission lifecycle retirement for player and response-chain orders",
+    "Whole-batch typed rejection for batch and continuation capacity failures",
+    "Pending accepted order retry terminal failure before payload release",
+    "AbilityExec terminal and presentation capacity preflight before authoritative mutation",
+    "AbilityExec invalid targets, missing services, missing graph runtime, and parameter overflow fail typed or fail-fast",
+    "Input command fixed scratch capacity and typed rejection",
+    "Collection command-panel submitted, aiming, and rejection outcomes surfaced",
+    "EffectApplication fixed-capacity scratch lists",
+    "Runtime spawn single and batch preflight before dequeue or world mutation"
+  ],
+  "evidence": [
+    {
+      "command": "dotnet test C:\\001_AI\\_codex_audit\\Ludots-pr660-086d3f4-exact-20260724-1415\\src\\Tests\\ArchitectureTests\\ArchitectureTests.csproj -c Debug --no-restore --nologo",
+      "result": "pass",
+      "passed": 188,
+      "failed": 0
+    },
+    {
+      "command": "dotnet test C:\\001_AI\\_codex_audit\\Ludots-pr660-086d3f4-exact-20260724-1415\\src\\Tests\\GasTests\\GasTests.csproj -c Debug --no-restore --filter \"FullyQualifiedName~InputOrderAbilityAuditTests|FullyQualifiedName~InputOrderContractTests|FullyQualifiedName~CollectionGasEntityCommandPanelAggregationTests|FullyQualifiedName~RoadNetworkShowcaseTests|FullyQualifiedName~OrderCompositePlannerTests|FullyQualifiedName~InteractiveWindowStressTests\" --nologo",
+      "result": "pass",
+      "passed": 213,
+      "failed": 0
+    },
+    {
+      "command": "dotnet test C:\\001_AI\\_codex_audit\\Ludots-pr660-086d3f4-exact-20260724-1415\\src\\Tests\\GasTests\\GasTests.csproj -c Debug --no-restore --nologo",
+      "result": "pass",
+      "passed": 2011,
+      "failed": 0,
+      "skipped_summary": 0,
+      "note": "Console emitted one localized skipped line while the final summary reported skipped 0."
+    },
+    {
+      "command": "git diff --check origin/main...HEAD",
+      "result": "pass"
+    },
+    {
+      "command": "git diff --check",
+      "result": "pass_for_pr_changes",
+      "note": "Only warning came from unrelated dirty artifact files excluded from this closeout."
+    }
+  ],
+  "excluded_dirty_files": [
+    "artifacts/benchmarks/entity-query-tactics-showcase/benchmark-report.md",
+    "artifacts/showcases/capability-standard-physics2d-stress/acceptance.md",
+    "artifacts/showcases/capability-standard-physics2d-stress/keyframes.jsonl"
+  ],
+  "emitted_hook": "ci.audit.completed"
+}

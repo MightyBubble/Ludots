@@ -29,7 +29,7 @@ namespace Ludots.Tests.GAS
             Entity actorA = world.Create();
             Entity actorB = world.Create();
             Entity commandSource = world.Create();
-            var queue = new OrderQueue(capacity: 64);
+            var queue = new OrderQueue(capacity: 64, new OrderAdmissionResultBuffer(64, 64));
 
             Order uninitializedSlot = default;
             uninitializedSlot.OrderTypeId = 1;
@@ -84,7 +84,7 @@ namespace Ludots.Tests.GAS
         {
             using var world = World.Create();
             Entity actor = world.Create(OrderBuffer.CreateEmpty());
-            var registry = new OrderTypeRegistry();
+            var registry = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             registry.Register(new OrderTypeConfig { OrderTypeId = 1 });
 
             var previewOrder = new Order
@@ -128,7 +128,7 @@ namespace Ludots.Tests.GAS
         {
             using var world = World.Create();
             Entity actor = world.Create(OrderBuffer.CreateEmpty(), new BlackboardEntityBuffer());
-            var registry = new OrderTypeRegistry();
+            var registry = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             registry.Register(new OrderTypeConfig
             {
                 OrderTypeId = 1,

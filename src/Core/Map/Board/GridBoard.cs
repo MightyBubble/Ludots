@@ -41,7 +41,9 @@ namespace Ludots.Core.Map.Board
             CoordinateConverter = new SpatialCoordinateConverter(WorldSize);
             GridCellSizeCm = config.GridCellSizeCm;
             ChunkSizeCells = config.ChunkSizeCells;
-            LoadedChunksSource = new WorldGridLoadedChunks(config.ChunkSizeCells * config.GridCellSizeCm);
+            LoadedChunksSource = new WorldGridLoadedChunks(
+                config.ChunkSizeCells * config.GridCellSizeCm,
+                config.LoadedChunkCapacity);
 
             var partition = new ChunkedGridSpatialPartitionWorld(chunkSizeCells: config.ChunkSizeCells);
             SpatialPartition = partition;

@@ -345,23 +345,42 @@ public sealed class FrontlineHudConfig
     private static string[] CompileSubmitResultText(Dictionary<string, string> configured)
     {
         ReplicatedClientCommandSubmitResult[] values = Enum.GetValues<ReplicatedClientCommandSubmitResult>();
-        var compiled = new string[values.Length];
+        int capacity = 0;
+        for (int i = 0; i < values.Length; i++)
+        {
+            int index = (int)values[i];
+            if (index >= capacity)
+            {
+                capacity = index + 1;
+            }
+        }
+
+        var compiled = new string[capacity];
+        var seen = new bool[capacity];
         int expected = 0;
         for (int i = 0; i < values.Length; i++)
         {
             ReplicatedClientCommandSubmitResult value = values[i];
+            int index = (int)value;
+            if (seen[index])
+            {
+                continue;
+            }
+
+            seen[index] = true;
             if (value is ReplicatedClientCommandSubmitResult.None or ReplicatedClientCommandSubmitResult.Submitted)
             {
                 continue;
             }
 
             expected++;
-            string key = value.ToString();
+            string key = Enum.GetName(value)
+                ?? throw new InvalidOperationException($"RTS Frontline HUD has unnamed local command result {index}.");
             if (!configured.TryGetValue(key, out string? text) || string.IsNullOrWhiteSpace(text))
             {
                 throw new InvalidOperationException($"RTS Frontline HUD requires commandSubmitRejectionText.{key}.");
             }
-            compiled[(int)value] = text;
+            compiled[index] = text;
         }
 
         if (configured.Count != expected)
@@ -374,12 +393,31 @@ public sealed class FrontlineHudConfig
 
     private static string[] CompileAdmissionResultText(Dictionary<string, string> configured)
     {
-        OrderSubmitResult[] values = Enum.GetValues<OrderSubmitResult>();
-        var compiled = new string[values.Length];
+        // Enum.GetName/ToString prefer an arbitrary/last alias for duplicate underlying values.
+        // Walk GetNames in metadata order and keep the first name per underlying value as the
+        // canonical config key (Blocked, QueueFull, ...) so alias duplicates stay DRY.
+        string[] names = Enum.GetNames<OrderSubmitResult>();
+        int capacity = OrderAdmissionResultBuffer.SubmitResultCount;
+        var compiled = new string[capacity];
+        var seen = new bool[capacity];
         int expected = 0;
-        for (int i = 0; i < values.Length; i++)
+        for (int i = 0; i < names.Length; i++)
         {
-            OrderSubmitResult value = values[i];
+            string name = names[i];
+            OrderSubmitResult value = Enum.Parse<OrderSubmitResult>(name);
+            int index = (int)value;
+            if ((uint)index >= (uint)capacity)
+            {
+                throw new InvalidOperationException(
+                    $"RTS Frontline HUD order submit result {name} ({index}) exceeds SubmitResultCount {capacity}.");
+            }
+
+            if (seen[index])
+            {
+                continue;
+            }
+
+            seen[index] = true;
             if (value is OrderSubmitResult.Activated or OrderSubmitResult.Queued or
                 OrderSubmitResult.Pending or OrderSubmitResult.NetworkScheduled)
             {
@@ -387,12 +425,11 @@ public sealed class FrontlineHudConfig
             }
 
             expected++;
-            string key = value.ToString();
-            if (!configured.TryGetValue(key, out string? text) || string.IsNullOrWhiteSpace(text))
+            if (!configured.TryGetValue(name, out string? text) || string.IsNullOrWhiteSpace(text))
             {
-                throw new InvalidOperationException($"RTS Frontline HUD requires commandAdmissionRejectionText.{key}.");
+                throw new InvalidOperationException($"RTS Frontline HUD requires commandAdmissionRejectionText.{name}.");
             }
-            compiled[(int)value] = text;
+            compiled[index] = text;
         }
 
         if (configured.Count != expected)

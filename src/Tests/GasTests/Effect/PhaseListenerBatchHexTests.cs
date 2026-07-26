@@ -22,7 +22,7 @@ namespace Ludots.Tests.GAS
     [TestFixture]
     public class PhaseListenerBatchHexTests
     {
-        private readonly TagOps _tagOps = new TagOps();
+        private readonly TagOps _tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
 
         // ════════════════════════════════════════════════════════════════════
         //  Module C: HexCoordinates Utility Tests
@@ -229,7 +229,7 @@ namespace Ludots.Tests.GAS
             int tagId = TagRegistry.Register("Test.HasTagOp");
             _tagOps.AddTag(ref tags, ref counts, tagId);
 
-            var api = new GasGraphRuntimeApi(world, null, null, null);
+            var api = new GasGraphRuntimeApi(world, tagOps: _tagOps);
             var program = new GraphProgramBuffer();
             program.Add((ushort)GraphNodeOp.LoadCaster, dst: 0);             // E[0] = caster
             program.Add((ushort)GraphNodeOp.HasTag, dst: 0, a: 0, imm: tagId); // B[0] = HasTag(E[0], tagId)
@@ -269,7 +269,7 @@ namespace Ludots.Tests.GAS
                 World = world,
                 Caster = e0,
                 ExplicitTarget = e0,
-                TargetPos = default,
+                TargetPosCm = default,
                 Api = new GasGraphRuntimeApi(world, null, null, null),
                 F = fRegs,
                 I = iRegs,
@@ -329,7 +329,7 @@ namespace Ludots.Tests.GAS
                 World = world,
                 Caster = caster,
                 ExplicitTarget = caster,
-                TargetPos = default,
+                TargetPosCm = default,
                 Api = api,
                 F = fRegs,
                 I = iRegs,
@@ -542,7 +542,7 @@ namespace Ludots.Tests.GAS
             };
 
             // Execute OnApply with effectTagId=10 (non-zero to trigger dispatch)
-            executor.ExecutePhase(world, api, Entity.Null, in context, default,
+            executor.ExecutePhase(world, api, context.Source, context.Target, context.TargetContext, default,
                 EffectPhaseId.OnApply, in behavior, EffectPresetType.None, effectTagId: 10, effectTemplateId: 1);
 
             // The listener graph ran — we verify indirectly by checking the event bus is empty
@@ -632,18 +632,20 @@ namespace Ludots.Tests.GAS
             executor.ExecutePhase(
                 world,
                 api,
-                effect,
-                in context,
+                context.Source,
+                context.Target,
+                context.TargetContext,
                 default,
                 EffectPhaseId.OnApply,
                 in behavior,
                 EffectPresetType.None,
                 effectTagId: 0,
                 effectTemplateId: templateId,
-                in mergedParams,
-                runtime);
+                mergedParams: in mergedParams,
+                builtinRuntime: runtime,
+                rootId: context.RootId);
 
-            That(receivedEffect, Is.EqualTo(effect));
+            That(receivedEffect, Is.EqualTo(Entity.Null));
             That(receivedRootId, Is.EqualTo(47));
             That(receivedConfigValue, Is.EqualTo(29));
         }
@@ -681,7 +683,7 @@ namespace Ludots.Tests.GAS
                 TargetContext = default,
             };
 
-            executor.ExecutePhase(world, api, Entity.Null, in context, default,
+            executor.ExecutePhase(world, api, context.Source, context.Target, context.TargetContext, default,
                 EffectPhaseId.OnApply, in behavior, EffectPresetType.None, effectTagId: 10, effectTemplateId: 1);
 
             eventBus.Update();
@@ -721,7 +723,7 @@ namespace Ludots.Tests.GAS
                 World = world,
                 Caster = caster,
                 ExplicitTarget = caster,
-                TargetPos = default,
+                TargetPosCm = default,
                 Api = api,
                 F = fRegs,
                 I = iRegs,
@@ -784,7 +786,7 @@ namespace Ludots.Tests.GAS
                         Target = targets[i],
                         TargetContext = default,
                     };
-                    executor.ExecutePhase(world, api, Entity.Null, in context, default,
+                    executor.ExecutePhase(world, api, context.Source, context.Target, context.TargetContext, default,
                         (EffectPhaseId)phase, in behavior, EffectPresetType.None,
                         effectTagId: 1, effectTemplateId: 1);
                 }
@@ -865,11 +867,11 @@ namespace Ludots.Tests.GAS
                 TargetContext = default,
             };
 
-            executor.ExecutePhase(world, api, Entity.Null, in victim1Context, default,
+            executor.ExecutePhase(world, api, victim1Context.Source, victim1Context.Target, victim1Context.TargetContext, default,
                 EffectPhaseId.OnApply, in behavior, EffectPresetType.None, fireballHitTag, fireballHitTemplate);
-            executor.ExecutePhase(world, api, Entity.Null, in victim2Context, default,
+            executor.ExecutePhase(world, api, victim2Context.Source, victim2Context.Target, victim2Context.TargetContext, default,
                 EffectPhaseId.OnApply, in behavior, EffectPresetType.None, fireballHitTag, fireballHitTemplate);
-            executor.ExecutePhase(world, api, Entity.Null, in victim3Context, default,
+            executor.ExecutePhase(world, api, victim3Context.Source, victim3Context.Target, victim3Context.TargetContext, default,
                 EffectPhaseId.OnApply, in behavior, EffectPresetType.None, fireballHitTag, fireballHitTemplate);
 
             // Verify: 3 bonus graph events (tag 777) + 3 listener events (tag 888) = 6 total events
@@ -949,7 +951,7 @@ namespace Ludots.Tests.GAS
                 World = world,
                 Caster = caster,
                 ExplicitTarget = target,
-                TargetPos = default,
+                TargetPosCm = default,
                 Api = api,
                 F = _testFloatRegs,
                 I = _testIntRegs,

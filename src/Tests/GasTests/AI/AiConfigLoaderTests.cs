@@ -310,7 +310,7 @@ namespace Ludots.Tests.GAS
                 modLoader.LoadedModIds.Add("ModA");
                 var pipeline = new ConfigPipeline(vfs, modLoader);
 
-                var orderTypes = new OrderTypeRegistry();
+                var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
                 orderTypes.Register(new OrderTypeConfig
                 {
                     Key = "attackTarget",
@@ -320,6 +320,8 @@ namespace Ludots.Tests.GAS
                 AbilityIdRegistry.Clear();
                 TagRegistry.Clear();
                 GraphIdRegistry.Clear();
+                OrderBlackboardKeyRegistry.ResetToBuiltins();
+                OrderBlackboardKeyRegistry.Register("Attack.TargetEntity");
                 int abilityId = AbilityIdRegistry.Register("Ability.Test.Attack");
                 var abilities = new AbilityDefinitionRegistry();
                 abilities.Register(abilityId, new AbilityDefinition());
@@ -399,6 +401,7 @@ namespace Ludots.Tests.GAS
 
             public void Dispose()
             {
+                OrderBlackboardKeyRegistry.ResetToBuiltins();
                 try
                 {
                     Directory.Delete(_root, recursive: true);

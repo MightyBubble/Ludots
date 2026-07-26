@@ -270,7 +270,7 @@ namespace CoreInputMod.Systems
             }
             else if (buffer.HasActive &&
                      IsMoveOrderType(buffer.ActiveOrder.Order.OrderTypeId, _moveOrderTypeIds) &&
-                     OrderWorldSpatialResolver.TryResolveMoveDestination(in buffer.ActiveOrder.Order, out activeDestination))
+                     OrderWorldSpatialResolver.TryResolveMoveDestination(_world, in buffer.ActiveOrder.Order, out activeDestination))
             {
                 EmitSegment(actor, originWorldCm, activeDestination, isPrimary, frameId, emittedLines++);
                 EmitWaypoint(actor, activeDestination, isPrimary, frameId, emittedWaypoints++);
@@ -291,7 +291,7 @@ namespace CoreInputMod.Systems
                     continue;
                 }
 
-                if (!OrderWorldSpatialResolver.TryResolveMoveDestination(in queued, out queuedDestination))
+                if (!OrderWorldSpatialResolver.TryResolveMoveDestination(_world, in queued, out queuedDestination))
                 {
                     continue;
                 }
@@ -321,7 +321,7 @@ namespace CoreInputMod.Systems
                 return false;
             }
 
-            int pointCount = OrderWorldSpatialResolver.GetSpatialPointCount(in order.Args.Spatial);
+            int pointCount = OrderWorldSpatialResolver.GetSpatialPointCount(_world, in order);
             if (pointCount <= 0)
             {
                 return false;
@@ -334,7 +334,7 @@ namespace CoreInputMod.Systems
             bool emitted = false;
             for (int pointIndex = startIndex; pointIndex < pointCount; pointIndex++)
             {
-                if (!OrderWorldSpatialResolver.TryResolveMoveWaypoint(in order, pointIndex, out var pointWorldCm))
+                if (!OrderWorldSpatialResolver.TryResolveMoveWaypoint(_world, in order, pointIndex, out var pointWorldCm))
                 {
                     continue;
                 }
@@ -367,7 +367,7 @@ namespace CoreInputMod.Systems
                     buffer.ActiveOrder.Order.OrderId == order.OrderId &&
                     buffer.ActiveOrder.Order.OrderTypeId == order.OrderTypeId)
                 {
-                    return Math.Clamp(buffer.ActiveOrder.RuntimeInt0, 0, pointCount - 1);
+                    return Math.Clamp(buffer.ActiveRuntimeInt0, 0, pointCount - 1);
                 }
             }
 

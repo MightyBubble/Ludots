@@ -4,7 +4,10 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.GraphRuntime;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.NodeLibraries.GASGraph;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Physics;
 using Ludots.Core.Physics2D.Components;
 using NUnit.Framework;
@@ -274,12 +277,14 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void EffectProposalProcessing_DisplacementInstant_RemainsEntityBacked()
+        public void EffectProposalProcessing_DisplacementInstant_ExecutesWithoutEffectEntity()
         {
             using var world = World.Create();
 
             var templates = new EffectTemplateRegistry();
             int templateId = EffectTemplateIdRegistry.Register("Effect.Test.DisplacementEntityBacked");
+            EffectPhaseGraphBindings phaseGraphs = default;
+            Assert.That(phaseGraphs.TryAddStep(EffectPhaseId.OnApply, PhaseSlot.Pre, graphProgramId: 77), Is.True);
             templates.Register(templateId, new EffectTemplateData
             {
                 PresetType = EffectPresetType.Displacement,
@@ -290,11 +295,40 @@ namespace Ludots.Tests.GAS
                     TotalDistanceCm = 480,
                     TotalDurationTicks = 6,
                     OverrideNavigation = true,
-                }
+                },
+                PhaseGraphBindings = phaseGraphs,
             });
 
-            var source = world.Create();
-            var target = world.Create();
+            var presetTypes = new PresetTypeRegistry();
+            var preset = new PresetTypeDefinition
+            {
+                Type = EffectPresetType.Displacement,
+                ActivePhases = PhaseFlags.InstantCore,
+                AllowedLifetimes = LifetimeFlags.InstantOnly,
+            };
+            preset.DefaultPhaseHandlers[EffectPhaseId.OnApply] = PhaseHandler.Builtin(BuiltinHandlerId.ApplyDisplacement);
+            presetTypes.Register(in preset);
+            var builtinHandlers = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(builtinHandlers);
+            var graphPrograms = new GraphProgramRegistry();
+            graphPrograms.Register(77, new[]
+            {
+                new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 1 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.ConstInt, Dst = 0, Imm = 42 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardInt, A = 1, B = 0, Imm = 7 },
+            });
+            var phaseExecutor = new EffectPhaseExecutor(
+                graphPrograms,
+                presetTypes,
+                builtinHandlers,
+                GasGraphOpHandlerTable.Instance,
+                templates);
+            var graphApi = new GasGraphRuntimeApi(world);
+
+            var source = world.Create(new WorldPositionCm { Value = Fix64Vec2.Zero });
+            var target = world.Create(
+                new WorldPositionCm { Value = Fix64Vec2.FromInt(100, 0) },
+                new BlackboardIntBuffer());
             var requests = new EffectRequestQueue();
             requests.Publish(new EffectRequest
             {
@@ -306,9 +340,13 @@ namespace Ludots.Tests.GAS
             var proposal = new EffectProposalProcessingSystem(
                 world,
                 requests,
+                GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                new Ludots.Core.Engine.DiscreteClock(),
                 budget: null,
                 templates: templates,
-                responseChainOrderTypes: TestResponseChainOrderTypeIds.Types);
+                responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                phaseExecutor: phaseExecutor,
+                graphApi: graphApi);
             proposal.Update(0f);
 
             int effectCount = 0;
@@ -320,23 +358,26 @@ namespace Ludots.Tests.GAS
                 }
             });
 
-            That(effectCount, Is.EqualTo(1), "Displacement presets must stay entity-backed so OnApply builtins can execute.");
+            That(effectCount, Is.EqualTo(0), "Instant behavior must execute through the shared phase executor without a transient Effect entity.");
+            int displacementCount = 0;
+            world.Query(in DisplacementQuery, (Entity _, ref DisplacementState state) =>
+            {
+                if (state.TargetEntity == target) displacementCount++;
+            });
+            That(displacementCount, Is.EqualTo(1));
+            Assert.That(world.Get<BlackboardIntBuffer>(target).TryGet(7, out int graphValue), Is.True);
+            Assert.That(graphValue, Is.EqualTo(42));
         }
 
         [Test]
-        public void Displacement_OverrideNavigation_SuppressesForceAndRestoresMoveTag()
+        public void Displacement_OverrideNavigation_InstallsAndClearsMovementSuppression()
         {
             using var world = World.Create();
 
-            int navMoveTagId = TagRegistry.Register("Ability.Nav.Move");
             var source = world.Create(new WorldPositionCm { Value = Fix64Vec2.Zero });
             var target = world.Create(
                 new WorldPositionCm { Value = Fix64Vec2.FromInt(1000, 0) },
-                new ForceInput2D { Force = Fix64Vec2.FromInt(60, 0) },
-                new GameplayTagContainer(),
-                new AbilityExecInstance());
-            ref var tags = ref world.Get<GameplayTagContainer>(target);
-            tags.AddTag(navMoveTagId);
+                new ForceInput2D { Force = Fix64Vec2.FromInt(60, 0) });
 
             world.Create(new DisplacementState
             {
@@ -353,12 +394,11 @@ namespace Ludots.Tests.GAS
             var system = new DisplacementRuntimeSystem(world);
             system.Update(0f);
 
-            That(world.Get<ForceInput2D>(target).Force, Is.EqualTo(Fix64Vec2.Zero));
-            That(world.Get<GameplayTagContainer>(target).HasTag(navMoveTagId), Is.False);
+            That(world.Has<MovementSuppressed2D>(target), Is.True);
 
             system.Update(0f);
 
-            That(world.Get<GameplayTagContainer>(target).HasTag(navMoveTagId), Is.True);
+            That(world.Has<MovementSuppressed2D>(target), Is.False);
         }
 
         [Test]
