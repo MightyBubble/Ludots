@@ -1683,22 +1683,34 @@ internal sealed class AcceptanceDriver : ISystem<float>
 
     private void CaptureSubmittedAttackTarget()
     {
-        if (!string.Equals(_pendingCommandAction, "AttackEnemyInfantry", StringComparison.Ordinal))
+        bool attacksInfantry = string.Equals(
+            _pendingCommandAction,
+            "AttackEnemyInfantry",
+            StringComparison.Ordinal);
+        bool attacksCore = string.Equals(
+            _pendingCommandAction,
+            "AttackEnemyCore",
+            StringComparison.Ordinal);
+        if (!attacksInfantry && !attacksCore)
         {
             return;
         }
 
         InputOrderActivationResult activation = _inputOrderMapping!.LastActivationResult;
         Entity target = activation.Target;
+        int expectedEnemySideIndex = 1 - _localSideIndex;
         if (activation.State != InputOrderActivationState.Submitted ||
             target == Entity.Null ||
             !_world.IsAlive(target) ||
-            !_world.Has<FrontlineInfantry>(target) ||
+            (attacksInfantry
+                ? !_world.Has<FrontlineInfantry>(target)
+                : !_world.Has<FrontlineCore>(target)) ||
             !_world.TryGet(target, out FrontlineParticipant participant) ||
-            participant.SideIndex == _localSideIndex)
+            participant.SideIndex != expectedEnemySideIndex)
         {
             throw new InvalidOperationException(
-                "AttackEnemyInfantry did not submit one live opposing infantry target through the active input mapping.");
+                $"{_pendingCommandAction} did not submit one live opposing " +
+                $"{(attacksInfantry ? "infantry" : "core")} target through the active input mapping.");
         }
 
         _attackTarget = target;

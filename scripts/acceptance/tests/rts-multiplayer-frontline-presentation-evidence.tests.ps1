@@ -46,7 +46,9 @@ function New-WorldInstance {
         [Parameter(Mandatory = $true)][int]$XCm,
         [Parameter(Mandatory = $true)][int]$YCm,
         [double]$ShortEdgePx = 20,
-        [double]$AreaPx2 = 400
+        [double]$AreaPx2 = 400,
+        [double]$ScreenLeftPx = 100,
+        [double]$ScreenTopPx = 100
     )
 
     return [pscustomobject]@{
@@ -56,10 +58,10 @@ function New-WorldInstance {
         template = $Template
         worldXCm = $XCm
         worldYCm = $YCm
-        screenLeftPx = 100
-        screenTopPx = 100
-        screenRightPx = 100 + $ShortEdgePx
-        screenBottomPx = 100 + $ShortEdgePx
+        screenLeftPx = $ScreenLeftPx
+        screenTopPx = $ScreenTopPx
+        screenRightPx = $ScreenLeftPx + $ShortEdgePx
+        screenBottomPx = $ScreenTopPx + $ShortEdgePx
         shortEdgePx = $ShortEdgePx
         areaPx2 = $AreaPx2
     }
@@ -506,6 +508,60 @@ try {
     Assert-FailsWith -ExpectedMessage "did not visibly move" -Action {
         Assert-ClientWorldPresentationEvidence -PresentationItems $notMoved -GameplayItems $gameplayItems `
             -Requirements @(New-AdvancingRule)
+    }
+
+    $distinctLayoutRule = New-AdvancingRule
+    $distinctLayoutRule | Add-Member -NotePropertyName distinctEntityLayout -NotePropertyValue ([pscustomobject]@{
+        template = "rts.frontline.infantry.body"
+        minimumInstances = 2
+        minimumWorldSeparationCm = 100
+        maximumScreenOverlapRatio = 0.5
+    })
+    $worldOverlap = @(
+        New-PresentationItem -ProcessName "client-a" -Milestone "advancing" -CameraXCm 14700 -CameraYCm 15000 -Instances @(
+            New-WorldInstance -OwnerStableId 101 -VisualStableId 1001 -Template "rts.frontline.infantry.body" -XCm 12000 -YCm 15000 -ScreenLeftPx 100
+            New-WorldInstance -OwnerStableId 102 -VisualStableId 1002 -Template "rts.frontline.infantry.body" -XCm 12000 -YCm 15000 -ScreenLeftPx 140
+        )
+        New-PresentationItem -ProcessName "client-b" -Milestone "advancing" -CameraXCm 15300 -CameraYCm 15000 -Instances @(
+            New-WorldInstance -OwnerStableId 201 -VisualStableId 2001 -Template "rts.frontline.infantry.body" -XCm 18000 -YCm 15000 -ScreenLeftPx 100
+            New-WorldInstance -OwnerStableId 202 -VisualStableId 2002 -Template "rts.frontline.infantry.body" -XCm 18140 -YCm 15000 -ScreenLeftPx 140
+        )
+    )
+    Assert-FailsWith -ExpectedMessage "overlaps 'rts.frontline.infantry.body' entities '101' and '102' in the world" -Action {
+        Assert-ClientWorldPresentationEvidence -PresentationItems $worldOverlap -GameplayItems $gameplayItems `
+            -Requirements @($distinctLayoutRule)
+    }
+
+    $screenOverlap = @(
+        New-PresentationItem -ProcessName "client-a" -Milestone "advancing" -CameraXCm 14700 -CameraYCm 15000 -Instances @(
+            New-WorldInstance -OwnerStableId 101 -VisualStableId 1001 -Template "rts.frontline.infantry.body" -XCm 12000 -YCm 15000
+            New-WorldInstance -OwnerStableId 102 -VisualStableId 1002 -Template "rts.frontline.infantry.body" -XCm 12140 -YCm 15000 -ScreenLeftPx 102.4
+        )
+        New-PresentationItem -ProcessName "client-b" -Milestone "advancing" -CameraXCm 15300 -CameraYCm 15000 -Instances @(
+            New-WorldInstance -OwnerStableId 201 -VisualStableId 2001 -Template "rts.frontline.infantry.body" -XCm 18000 -YCm 15000 -ScreenLeftPx 100
+            New-WorldInstance -OwnerStableId 202 -VisualStableId 2002 -Template "rts.frontline.infantry.body" -XCm 18140 -YCm 15000 -ScreenLeftPx 140
+        )
+    )
+    Assert-FailsWith -ExpectedMessage "overlaps 'rts.frontline.infantry.body' entities '101' and '102' on screen" -Action {
+        Assert-ClientWorldPresentationEvidence -PresentationItems $screenOverlap -GameplayItems $gameplayItems `
+            -Requirements @($distinctLayoutRule)
+    }
+
+    $distinctLayout = @(
+        New-PresentationItem -ProcessName "client-a" -Milestone "advancing" -CameraXCm 14700 -CameraYCm 15000 -Instances @(
+            New-WorldInstance -OwnerStableId 101 -VisualStableId 1001 -Template "rts.frontline.infantry.body" -XCm 12000 -YCm 15000 -ScreenLeftPx 100
+            New-WorldInstance -OwnerStableId 102 -VisualStableId 1002 -Template "rts.frontline.infantry.body" -XCm 12140 -YCm 15000 -ScreenLeftPx 140
+        )
+        New-PresentationItem -ProcessName "client-b" -Milestone "advancing" -CameraXCm 15300 -CameraYCm 15000 -Instances @(
+            New-WorldInstance -OwnerStableId 201 -VisualStableId 2001 -Template "rts.frontline.infantry.body" -XCm 18000 -YCm 15000 -ScreenLeftPx 100
+            New-WorldInstance -OwnerStableId 202 -VisualStableId 2002 -Template "rts.frontline.infantry.body" -XCm 18140 -YCm 15000 -ScreenLeftPx 140
+        )
+    )
+    $distinctVerified = @(Assert-ClientWorldPresentationEvidence -PresentationItems $distinctLayout `
+        -GameplayItems $gameplayItems -Requirements @($distinctLayoutRule))
+    if ($distinctVerified.Count -ne 2 -or
+        @($distinctVerified | Where-Object { [int]$_.distinctEntityLayout.instanceCount -ne 2 }).Count -ne 0) {
+        throw "Distinct infantry layout fixture did not preserve two independently visible entities per client."
     }
 
     # Scenario: The correct template in the wrong battlefield region fails.

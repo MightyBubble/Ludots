@@ -158,6 +158,12 @@
       "stableEntityMotion": {
         "template": "rts.frontline.infantry.body",
         "minimumObservedMoveCm": 1000
+      },
+      "distinctEntityLayout": {
+        "template": "rts.frontline.infantry.body",
+        "minimumInstances": 2,
+        "minimumWorldSeparationCm": 100,
+        "maximumScreenOverlapRatio": 0.5
       }
     },
     {
@@ -185,6 +191,12 @@
         }
       ],
       "forbiddenRoles": [],
+      "distinctEntityLayout": {
+        "template": "rts.frontline.infantry.body",
+        "minimumInstances": 2,
+        "minimumWorldSeparationCm": 100,
+        "maximumScreenOverlapRatio": 0.5
+      },
       "requireObservedDamage": true
     },
     {
@@ -212,6 +224,12 @@
         }
       ],
       "forbiddenRoles": [],
+      "distinctEntityLayout": {
+        "template": "rts.frontline.infantry.body",
+        "minimumInstances": 2,
+        "minimumWorldSeparationCm": 100,
+        "maximumScreenOverlapRatio": 0.5
+      },
       "requireObservedDamage": true
     },
     {

@@ -2186,6 +2186,206 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         }
 
         [Test]
+        public void CommandIntentRouting_SharedMixedBatch_AppliesGroupLayoutOnlyToMoveOrders()
+        {
+            var input = new FrozenInputActionReader();
+            input.SetActionState("Command", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
+            var config = new InputOrderMappingConfig
+            {
+                GroupMoveTargetLayout = new GroupMoveTargetLayoutSettings
+                {
+                    Mode = GroupMoveTargetLayoutMode.Grid,
+                    SpacingCm = 120,
+                    OrderTypeKeys = new List<string> { "moveTo" },
+                },
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "Command",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "moveTo",
+                        RequireTarget = true,
+                        TargetType = OrderTargetType.Position,
+                        IsSkillMapping = false,
+                    }
+                }
+            };
+
+            using var world = World.Create();
+            Entity localPlayer = world.Create(new PlayerIdentity { PlayerId = 1 });
+            Entity targetOwner = world.Create(new PlayerIdentity { PlayerId = 2 });
+            var commandHarness = CommandIntentProfileTests.Harness.Create(world);
+            Entity firstMoveActor = commandHarness.CreateActor(localPlayer);
+            Entity attackActor = commandHarness.CreateActor(localPlayer, 2);
+            Entity secondMoveActor = commandHarness.CreateActor(localPlayer);
+            Entity clickedTarget = commandHarness.CreateTaggedEntity(targetOwner, "destructible");
+
+            commandHarness.Intents.Install(CommandIntentProfileTests.Harness.Config(new CommandIntentProfileDefinition
+            {
+                Id = "intent.command.mixed_layout",
+                GroupPolicy = new CommandIntentGroupPolicyDefinition { Kind = "independent" },
+                Rules = new List<CommandIntentRuleDefinition>
+                {
+                    new()
+                    {
+                        Priority = 20,
+                        Actor = new CommandIntentActorPredicateDefinition
+                        {
+                            HasAbilityWithTag = "ability.catalog.weapon",
+                        },
+                        Target = new CommandIntentTargetPredicateDefinition { HasEntity = true },
+                        Route = new CommandIntentRouteDefinition
+                        {
+                            OrderTypeKey = "castAbility",
+                            Slot = "byAbilityTag:ability.catalog.weapon",
+                            TargetShape = CommandIntentTargetShape.Entity,
+                        },
+                    },
+                    new()
+                    {
+                        Priority = 10,
+                        Route = new CommandIntentRouteDefinition
+                        {
+                            OrderTypeKey = "moveTo",
+                            TargetShape = CommandIntentTargetShape.WorldPositionCm,
+                        },
+                    },
+                },
+            }));
+
+            var submitted = new List<Order>(capacity: 3);
+            var system = new InputOrderMappingSystem(input, config);
+            system.CommandActionId = "Command";
+            system.SetLocalPlayer(localPlayer, 1);
+            system.SetOrderTypeKeyResolver(key => key switch
+            {
+                "castAbility" => 1,
+                "moveTo" => 2,
+                _ => 0,
+            });
+            system.SetGroundPositionProvider((out Vector3 groundPos) =>
+            {
+                groundPos = new Vector3(1000f, 0f, 2000f);
+                return true;
+            });
+            system.SetCommandIntentTargetFactsProvider((InputOrderMapping _, out CommandIntentTargetFacts facts) =>
+            {
+                facts = new CommandIntentTargetFacts(clickedTarget, HasEntity: true);
+                return true;
+            });
+            system.SetOrderSubmitHandler((in Order _) =>
+            {
+                Assert.Fail("A shared mixed command must use the atomic batch submit handler.");
+                return OrderSubmitResult.RejectedValidation;
+            });
+            system.SetOrderBatchSubmitHandler((Span<Order> batch) =>
+            {
+                for (int i = 0; i < batch.Length; i++)
+                {
+                    batch[i].OrderId = 5150;
+                    submitted.Add(batch[i]);
+                }
+
+                return OrderSubmitResult.Queued;
+            });
+
+            var collectionKeys = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var stack = new InteractionContextStack(collectionKeys);
+            stack.Push(InteractionContextFrameDescriptor.Create(
+                InteractionContextIds.Default,
+                EntityCollectionKeys.CommandSource,
+                "view.test.command"));
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
+            orderTypes.Register(new OrderTypeConfig { Key = "castAbility", OrderTypeId = 1 });
+            orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 2 });
+            var dispatch = new CastDispatchProfileRegistry(
+                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
+                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
+            dispatch.Install(CastDispatchProfileTests.Harness.Config(new CastDispatchProfileDefinition
+            {
+                Id = "dispatch.all_together",
+                Selector = new CastDispatchSelectorDefinition { Kind = "all" },
+                Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = true },
+            }));
+            var schemes = new ControlSchemeRuntime(
+                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
+                stack,
+                commandHarness.Intents,
+                dispatch,
+                orderTypes);
+            schemes.Install(new ControlSchemesConfig
+            {
+                Schemes = new List<ControlSchemeDefinition>
+                {
+                    new()
+                    {
+                        Id = "scheme.test",
+                        InputContexts = new List<string>(),
+                        Defaults = new ControlSchemeDefaults
+                        {
+                            CommandIntentId = "intent.command.mixed_layout",
+                            CastDispatchProfileId = "dispatch.all_together",
+                        },
+                    }
+                },
+            });
+
+            var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 4);
+            var descriptor = EntityCollectionDescriptor.Create(
+                EntityCollectionKeys.CommandSource,
+                EntityCollectionSourceKind.Explicit,
+                EntityCollectionRoleKind.CommandSource);
+            collections.Replace(
+                localPlayer,
+                in descriptor,
+                new[] { firstMoveActor, attackActor, secondMoveActor },
+                localPlayer);
+            system.SetCommandIntentRouting(
+                world,
+                stack,
+                schemes,
+                commandHarness.Intents,
+                dispatch,
+                collections,
+                (out Entity owner) =>
+                {
+                    owner = localPlayer;
+                    return true;
+                });
+
+            system.Update(0f);
+
+            Assert.That(submitted, Has.Count.EqualTo(3));
+            Assert.That(submitted.Select(order => order.OrderId), Is.All.EqualTo(5150));
+
+            Order firstMove = submitted.Single(order => order.Actor == firstMoveActor);
+            Order attack = submitted.Single(order => order.Actor == attackActor);
+            Order secondMove = submitted.Single(order => order.Actor == secondMoveActor);
+            Assert.Multiple(() =>
+            {
+                Assert.That(firstMove.OrderTypeId, Is.EqualTo(2));
+                Assert.That(firstMove.Target, Is.EqualTo(Entity.Null));
+                Assert.That(firstMove.Args.Spatial.Kind, Is.EqualTo(OrderSpatialKind.WorldCm));
+                Assert.That(firstMove.Args.Spatial.WorldCm, Is.EqualTo(new Vector3(940f, 0f, 2000f)));
+
+                Assert.That(secondMove.OrderTypeId, Is.EqualTo(2));
+                Assert.That(secondMove.Target, Is.EqualTo(Entity.Null));
+                Assert.That(secondMove.Args.Spatial.Kind, Is.EqualTo(OrderSpatialKind.WorldCm));
+                Assert.That(secondMove.Args.Spatial.WorldCm, Is.EqualTo(new Vector3(1060f, 0f, 2000f)));
+
+                Assert.That(attack.OrderTypeId, Is.EqualTo(1));
+                Assert.That(attack.Target, Is.EqualTo(clickedTarget));
+                Assert.That(attack.Args.Spatial.Kind, Is.EqualTo(OrderSpatialKind.None));
+
+                Assert.That(system.LastActivationResult.State, Is.EqualTo(InputOrderActivationState.Submitted));
+                Assert.That(system.LastActivationResult.OrderId, Is.EqualTo(5150));
+                Assert.That(system.LastActivationResult.Target, Is.EqualTo(Entity.Null),
+                    "A mixed batch must not report one shared entity target when only its attack order owns that target.");
+            });
+        }
+
+        [Test]
         public void CommandIntentRouting_ProgrammaticCommandActivationUsesCommandSource()
         {
             var input = new FrozenInputActionReader();

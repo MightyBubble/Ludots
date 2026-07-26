@@ -1476,6 +1476,130 @@ function Assert-NetworkFaultInjectionEvidence {
     }
 }
 
+function Assert-ClientCommandAdmissionEvidence {
+    param(
+        [Parameter(Mandatory = $true)][string]$ClientName,
+        [Parameter(Mandatory = $true)]$Command,
+        [Parameter(Mandatory = $true)][string]$ExpectedAction,
+        [Parameter(Mandatory = $true)][uint64]$ExpectedSequence
+    )
+
+    if ([string]$Command.action -cne $ExpectedAction -or
+        [uint64]$Command.clientBatchSequence -ne $ExpectedSequence -or
+        [string]$Command.admissionStage -cne "Terminal" -or
+        [string]$Command.admissionResult -cne "TerminalCompleted") {
+        throw "Client evidence '$ClientName' command sequence $ExpectedSequence has an unexpected action or final admission."
+    }
+    if ([int]$Command.actorCount -le 0 -or
+        @($Command.actorHandles).Count -ne [int]$Command.actorCount -or
+        @($Command.actorAdmissions).Count -ne [int]$Command.actorCount) {
+        throw "Client evidence '$ClientName' command '$($Command.action)' has inconsistent actor evidence."
+    }
+
+    $uniqueActorHandles = @($Command.actorHandles |
+        Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) } |
+        Sort-Object -Unique)
+    if ($uniqueActorHandles.Count -ne [int]$Command.actorCount) {
+        throw "Client evidence '$ClientName' command '$($Command.action)' has blank or duplicate actor handles."
+    }
+
+    $isQueuedTraining = [string]$Command.action -ceq "QueueTrainInfantry"
+    $expectedActorResult = if ($isQueuedTraining) { "Queued" } else { "Activated" }
+    foreach ($actor in @($Command.actorAdmissions)) {
+        if ([string]$actor.stage -cne "EntityIntake" -or
+            [string]$actor.result -cne $expectedActorResult) {
+            throw "Client evidence '$ClientName' command '$($Command.action)' actor admission " +
+                "expected EntityIntake/$expectedActorResult."
+        }
+    }
+
+    $actorIndexes = @($Command.actorAdmissions | ForEach-Object { [int]$_.batchIndex } | Sort-Object -Unique)
+    if ($actorIndexes.Count -ne [int]$Command.actorCount) {
+        throw "Client evidence '$ClientName' command '$($Command.action)' has duplicate actor admission indexes."
+    }
+    for ($actorIndex = 0; $actorIndex -lt [int]$Command.actorCount; $actorIndex++) {
+        if ($actorIndexes[$actorIndex] -ne $actorIndex) {
+            throw "Client evidence '$ClientName' command '$($Command.action)' does not cover actor index $actorIndex."
+        }
+    }
+
+    $history = @($Command.admissionHistory)
+    $networkTransitionIndex = -1
+    $queuedTransitionIndex = -1
+    $activatedTransitionIndex = -1
+    $terminalTransitionIndex = -1
+    $networkTransitionCount = 0
+    $queuedTransitionCount = 0
+    $activatedTransitionCount = 0
+    $terminalTransitionCount = 0
+    for ($historyIndex = 0; $historyIndex -lt $history.Count; $historyIndex++) {
+        if ([string]$history[$historyIndex].stage -ceq "NetworkIntake" -and
+            [string]$history[$historyIndex].result -ceq "NetworkScheduled") {
+            $networkTransitionCount++
+            if ($networkTransitionIndex -lt 0) {
+                $networkTransitionIndex = $historyIndex
+            }
+        }
+        if ([string]$history[$historyIndex].stage -ceq "EntityIntake" -and
+            [string]$history[$historyIndex].result -ceq "Queued") {
+            $queuedTransitionCount++
+            if ($queuedTransitionIndex -lt 0) {
+                $queuedTransitionIndex = $historyIndex
+            }
+        }
+        if ([string]$history[$historyIndex].stage -ceq "EntityIntake" -and
+            [string]$history[$historyIndex].result -ceq "Activated") {
+            $activatedTransitionCount++
+            if ($activatedTransitionIndex -lt 0) {
+                $activatedTransitionIndex = $historyIndex
+            }
+        }
+        if ([string]$history[$historyIndex].stage -ceq "Terminal" -and
+            [string]$history[$historyIndex].result -ceq "TerminalCompleted") {
+            $terminalTransitionCount++
+            if ($terminalTransitionIndex -lt 0) {
+                $terminalTransitionIndex = $historyIndex
+            }
+        }
+    }
+
+    if ($isQueuedTraining) {
+        if ($activatedTransitionIndex -ge 0) {
+            throw "Client evidence '$ClientName' queued training must not contain EntityIntake/Activated."
+        }
+        if ($networkTransitionCount -ne 1 -or $queuedTransitionCount -ne 1 -or
+            $terminalTransitionCount -ne 1) {
+            throw "Client evidence '$ClientName' queued training must contain exactly one scheduled, queued, and terminal transition."
+        }
+        if ($networkTransitionIndex -lt 0 -or
+            $queuedTransitionIndex -le $networkTransitionIndex -or
+            $terminalTransitionIndex -le $queuedTransitionIndex) {
+            throw "Client evidence '$ClientName' command '$($Command.action)' lacks its ordered network-to-terminal admission history."
+        }
+    }
+    else {
+        if ($networkTransitionCount -ne 1 -or $activatedTransitionCount -ne 1 -or
+            $terminalTransitionCount -ne 1) {
+            throw "Client evidence '$ClientName' command '$($Command.action)' must contain exactly one scheduled, activated, and terminal transition."
+        }
+        if ($networkTransitionIndex -lt 0 -or
+            $activatedTransitionIndex -le $networkTransitionIndex -or
+            $terminalTransitionIndex -le $activatedTransitionIndex) {
+            throw "Client evidence '$ClientName' command '$($Command.action)' lacks its ordered network-to-terminal admission history."
+        }
+        if ([string]$Command.action -ceq "TrainInfantry" -and $queuedTransitionIndex -ge 0) {
+            throw "Client evidence '$ClientName' first training command unexpectedly entered the entity queue."
+        }
+    }
+
+    return [pscustomobject]@{
+        NetworkTransitionIndex = $networkTransitionIndex
+        QueuedTransitionIndex = $queuedTransitionIndex
+        ActivatedTransitionIndex = $activatedTransitionIndex
+        TerminalTransitionIndex = $terminalTransitionIndex
+    }
+}
+
 function Assert-GameplayEvidence {
     param(
         [Parameter(Mandatory = $true)][System.Collections.IEnumerable]$Items,
@@ -1590,7 +1714,7 @@ function Assert-GameplayEvidence {
         throw "Server evidence does not contain two authoritative core-health values."
     }
     $losingCoreHealth = [double]$serverCoreHealth[$losingSide]
-    if ([double]::IsNaN($losingCoreHealth) -or [double]::IsInfinity($losingCoreHealth) -or $losingCoreHealth -gt 0) {
+    if ([double]::IsNaN($losingCoreHealth) -or [double]::IsInfinity($losingCoreHealth) -or $losingCoreHealth -ne 0.0) {
         throw "Server evidence does not show the losing command core at zero health."
     }
 
@@ -1723,74 +1847,11 @@ function Assert-GameplayEvidence {
         }
         for ($commandIndex = 0; $commandIndex -lt $commands.Count; $commandIndex++) {
             $command = $commands[$commandIndex]
-            if ([string]$command.action -cne $expectedActions[$commandIndex] -or
-                [uint64]$command.clientBatchSequence -ne [uint64]($commandIndex + 1) -or
-                [string]$command.admissionStage -cne "Terminal" -or
-                [string]$command.admissionResult -cne "TerminalCompleted") {
-                throw "Client evidence '$($item.Name)' command $commandIndex has an unexpected action, sequence, or final admission."
-            }
-            if ([int]$command.actorCount -le 0 -or
-                @($command.actorHandles).Count -ne [int]$command.actorCount -or
-                @($command.actorAdmissions).Count -ne [int]$command.actorCount) {
-                throw "Client evidence '$($item.Name)' command '$($command.action)' has inconsistent actor evidence."
-            }
-            $uniqueActorHandles = @($command.actorHandles |
-                Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) } |
-                Sort-Object -Unique)
-            if ($uniqueActorHandles.Count -ne [int]$command.actorCount) {
-                throw "Client evidence '$($item.Name)' command '$($command.action)' has blank or duplicate actor handles."
-            }
-            foreach ($actor in @($command.actorAdmissions)) {
-                if ([string]$actor.stage -cne "EntityIntake" -or [string]$actor.result -cne "Activated") {
-                    throw "Client evidence '$($item.Name)' command '$($command.action)' contains a non-final actor admission."
-                }
-            }
-            $actorIndexes = @($command.actorAdmissions | ForEach-Object { [int]$_.batchIndex } | Sort-Object -Unique)
-            if ($actorIndexes.Count -ne [int]$command.actorCount) {
-                throw "Client evidence '$($item.Name)' command '$($command.action)' has duplicate actor admission indexes."
-            }
-            for ($actorIndex = 0; $actorIndex -lt [int]$command.actorCount; $actorIndex++) {
-                if ($actorIndexes[$actorIndex] -ne $actorIndex) {
-                    throw "Client evidence '$($item.Name)' command '$($command.action)' does not cover actor index $actorIndex."
-                }
-            }
-
-            $history = @($command.admissionHistory)
-            $networkTransitionIndex = -1
-            $queuedTransitionIndex = -1
-            $entityTransitionIndex = -1
-            $terminalTransitionIndex = -1
-            for ($historyIndex = 0; $historyIndex -lt $history.Count; $historyIndex++) {
-                if ($networkTransitionIndex -lt 0 -and [string]$history[$historyIndex].stage -ceq "NetworkIntake" -and
-                    [string]$history[$historyIndex].result -ceq "NetworkScheduled") {
-                    $networkTransitionIndex = $historyIndex
-                }
-                if ($queuedTransitionIndex -lt 0 -and [string]$history[$historyIndex].stage -ceq "EntityIntake" -and
-                    [string]$history[$historyIndex].result -ceq "Queued") {
-                    $queuedTransitionIndex = $historyIndex
-                }
-                if ($entityTransitionIndex -lt 0 -and [string]$history[$historyIndex].stage -ceq "EntityIntake" -and
-                    [string]$history[$historyIndex].result -ceq "Activated") {
-                    $entityTransitionIndex = $historyIndex
-                }
-                if ($terminalTransitionIndex -lt 0 -and [string]$history[$historyIndex].stage -ceq "Terminal" -and
-                    [string]$history[$historyIndex].result -ceq "TerminalCompleted") {
-                    $terminalTransitionIndex = $historyIndex
-                }
-            }
-            if ($networkTransitionIndex -lt 0 -or $entityTransitionIndex -le $networkTransitionIndex -or
-                $terminalTransitionIndex -le $entityTransitionIndex) {
-                throw "Client evidence '$($item.Name)' command '$($command.action)' lacks its network-to-terminal admission history."
-            }
-            if ([string]$command.action -ceq "QueueTrainInfantry") {
-                if ($queuedTransitionIndex -le $networkTransitionIndex -or
-                    $entityTransitionIndex -le $queuedTransitionIndex) {
-                    throw "Client evidence '$($item.Name)' queued training did not wait in EntityIntake before activation."
-                }
-            }
-            elseif ([string]$command.action -ceq "TrainInfantry" -and $queuedTransitionIndex -ge 0) {
-                throw "Client evidence '$($item.Name)' first training command unexpectedly entered the entity queue."
-            }
+            [void](Assert-ClientCommandAdmissionEvidence `
+                -ClientName ([string]$item.Name) `
+                -Command $command `
+                -ExpectedAction ([string]$expectedActions[$commandIndex]) `
+                -ExpectedSequence ([uint64]($commandIndex + 1)))
         }
 
         $producedInfantry = [int]$client.gameplay.trainedInfantryCount - [int]$client.gameplay.initialInfantryCount
@@ -1818,30 +1879,43 @@ function Assert-GameplayEvidence {
             $null -eq $immediateTrainingActivations[0].PSObject.Properties["authoritativeCommittedTick"]) {
             throw "Client evidence '$($item.Name)' immediate training lacks one authoritative EntityIntake:Activated transition."
         }
-        $immediateActivatedAuthoritativeTick = [int]$immediateTrainingActivations[0].authoritativeCommittedTick
-        if ($immediateActivatedAuthoritativeTick -le 0 -or
-            $immediateActivatedAuthoritativeTick -gt $serverSpawnTick -or
-            $serverSpawnTick -gt $firstTrainedInfantryObservedTick) {
-            throw "Client evidence '$($item.Name)' immediate training activation, spawn, and observation are not causally ordered."
+        $immediateTrainingTerminals = @($immediateTrainingCommands[0].admissionHistory | Where-Object {
+            [string]$_.stage -ceq "Terminal" -and [string]$_.result -ceq "TerminalCompleted"
+        })
+        if ($immediateTrainingTerminals.Count -ne 1 -or
+            $null -eq $immediateTrainingTerminals[0].PSObject.Properties["authoritativeCommittedTick"]) {
+            throw "Client evidence '$($item.Name)' immediate training lacks one authoritative terminal transition."
         }
+        $immediateActivatedAuthoritativeTick = [int]$immediateTrainingActivations[0].authoritativeCommittedTick
+        $immediateTerminalAuthoritativeTick = [int]$immediateTrainingTerminals[0].authoritativeCommittedTick
         $queuedTrainingCommands = @($trainingCommands | Where-Object { [string]$_.action -ceq "QueueTrainInfantry" })
         if ($queuedTrainingCommands.Count -ne 1) {
             throw "Client evidence '$($item.Name)' must contain exactly one queued infantry training command."
         }
-        $queuedTrainingActivations = @($queuedTrainingCommands[0].admissionHistory | Where-Object {
-            [string]$_.stage -ceq "EntityIntake" -and [string]$_.result -ceq "Activated"
+        $queuedTrainingAdmissions = @($queuedTrainingCommands[0].admissionHistory | Where-Object {
+            [string]$_.stage -ceq "EntityIntake" -and [string]$_.result -ceq "Queued"
         })
-        if ($queuedTrainingActivations.Count -ne 1) {
-            throw "Client evidence '$($item.Name)' queued training must contain exactly one EntityIntake:Activated transition."
+        $queuedTrainingTerminals = @($queuedTrainingCommands[0].admissionHistory | Where-Object {
+            [string]$_.stage -ceq "Terminal" -and [string]$_.result -ceq "TerminalCompleted"
+        })
+        if ($queuedTrainingAdmissions.Count -ne 1 -or $queuedTrainingTerminals.Count -ne 1) {
+            throw "Client evidence '$($item.Name)' queued training must contain one queued admission and one terminal transition."
         }
-        if ($null -eq $queuedTrainingActivations[0].PSObject.Properties["authoritativeCommittedTick"]) {
-            throw "Client evidence '$($item.Name)' queued training activation lacks an authoritative committed tick."
+        if ($null -eq $queuedTrainingAdmissions[0].PSObject.Properties["authoritativeCommittedTick"] -or
+            $null -eq $queuedTrainingTerminals[0].PSObject.Properties["authoritativeCommittedTick"]) {
+            throw "Client evidence '$($item.Name)' queued training lacks authoritative admission or terminal ticks."
         }
-        $queueActivatedAuthoritativeTick = [int]$queuedTrainingActivations[0].authoritativeCommittedTick
-        if ($queueActivatedAuthoritativeTick -lt $serverSpawnTick -or
-            $queueActivatedAuthoritativeTick -gt $serverSecondSpawnTick -or
+        $queuedAuthoritativeTick = [int]$queuedTrainingAdmissions[0].authoritativeCommittedTick
+        $queuedTerminalAuthoritativeTick = [int]$queuedTrainingTerminals[0].authoritativeCommittedTick
+        if ($immediateActivatedAuthoritativeTick -le 0 -or
+            $queuedAuthoritativeTick -le $immediateActivatedAuthoritativeTick -or
+            $queuedAuthoritativeTick -ge $immediateTerminalAuthoritativeTick -or
+            $immediateTerminalAuthoritativeTick -gt $serverSpawnTick -or
+            $serverSpawnTick -gt $firstTrainedInfantryObservedTick -or
+            $queuedTerminalAuthoritativeTick -le $immediateTerminalAuthoritativeTick -or
+            $queuedTerminalAuthoritativeTick -gt $serverSecondSpawnTick -or
             $serverSecondSpawnTick -gt $secondTrainedInfantryObservedTick) {
-            throw "Client evidence '$($item.Name)' queued training activation, second spawn, and observation are not causally ordered."
+            throw "Client evidence '$($item.Name)' queued training admission, ordered completion, spawn, and observation are not causally ordered."
         }
 
         $meetingCommands = @($commands | Where-Object { [string]$_.action -ceq "MoveToMeeting" })
@@ -2094,6 +2168,68 @@ function Assert-ClientWorldPresentationEvidence {
                 })
             }
 
+            $distinctLayoutResult = $null
+            if ($null -ne $rule.PSObject.Properties["distinctEntityLayout"] -and
+                $null -ne $rule.distinctEntityLayout) {
+                $layout = $rule.distinctEntityLayout
+                $layoutTemplate = [string]$layout.template
+                $layoutInstances = @($document.instances | Where-Object {
+                    [string]$_.template -ceq $layoutTemplate
+                })
+                $minimumInstances = [int]$layout.minimumInstances
+                if ($layoutInstances.Count -lt $minimumInstances) {
+                    throw "Client '$processName' screenshot milestone '$milestone' has $($layoutInstances.Count) " +
+                        "'$layoutTemplate' entities; distinct layout requires at least $minimumInstances."
+                }
+
+                $minimumWorldSeparationCm = [int64]$layout.minimumWorldSeparationCm
+                $minimumWorldSeparationSquared = $minimumWorldSeparationCm * $minimumWorldSeparationCm
+                $maximumScreenOverlapRatio = [double]$layout.maximumScreenOverlapRatio
+                for ($leftIndex = 0; $leftIndex -lt $layoutInstances.Count; $leftIndex++) {
+                    $left = $layoutInstances[$leftIndex]
+                    for ($rightIndex = $leftIndex + 1; $rightIndex -lt $layoutInstances.Count; $rightIndex++) {
+                        $right = $layoutInstances[$rightIndex]
+                        if ([int]$left.ownerStableId -eq [int]$right.ownerStableId) {
+                            throw "Client '$processName' screenshot milestone '$milestone' duplicates owner stable id '$([int]$left.ownerStableId)' for '$layoutTemplate'."
+                        }
+
+                        $worldSeparationSquared = Get-WorldEvidenceDistanceSquared `
+                            -LeftX ([int64]$left.worldXCm) -LeftY ([int64]$left.worldYCm) `
+                            -RightX ([int64]$right.worldXCm) -RightY ([int64]$right.worldYCm)
+                        if ($worldSeparationSquared -lt $minimumWorldSeparationSquared) {
+                            throw "Client '$processName' screenshot milestone '$milestone' overlaps '$layoutTemplate' entities " +
+                                "'$([int]$left.ownerStableId)' and '$([int]$right.ownerStableId)' in the world."
+                        }
+
+                        $intersectionWidth = [Math]::Max(0.0,
+                            [Math]::Min([double]$left.screenRightPx, [double]$right.screenRightPx) -
+                            [Math]::Max([double]$left.screenLeftPx, [double]$right.screenLeftPx))
+                        $intersectionHeight = [Math]::Max(0.0,
+                            [Math]::Min([double]$left.screenBottomPx, [double]$right.screenBottomPx) -
+                            [Math]::Max([double]$left.screenTopPx, [double]$right.screenTopPx))
+                        $intersectionArea = $intersectionWidth * $intersectionHeight
+                        $leftArea = ([double]$left.screenRightPx - [double]$left.screenLeftPx) *
+                            ([double]$left.screenBottomPx - [double]$left.screenTopPx)
+                        $rightArea = ([double]$right.screenRightPx - [double]$right.screenLeftPx) *
+                            ([double]$right.screenBottomPx - [double]$right.screenTopPx)
+                        $smallerArea = [Math]::Min($leftArea, $rightArea)
+                        $screenOverlapRatio = $intersectionArea / $smallerArea
+                        if ($screenOverlapRatio -gt $maximumScreenOverlapRatio) {
+                            throw "Client '$processName' screenshot milestone '$milestone' overlaps '$layoutTemplate' entities " +
+                                "'$([int]$left.ownerStableId)' and '$([int]$right.ownerStableId)' on screen " +
+                                "(ratio=$([Math]::Round($screenOverlapRatio, 4)))."
+                        }
+                    }
+                }
+
+                $distinctLayoutResult = [ordered]@{
+                    template = $layoutTemplate
+                    instanceCount = $layoutInstances.Count
+                    minimumWorldSeparationCm = $minimumWorldSeparationCm
+                    maximumScreenOverlapRatio = $maximumScreenOverlapRatio
+                }
+            }
+
             foreach ($forbidden in @($rule.forbiddenRoles)) {
                 $role = [string]$forbidden.role
                 $template = [string]$forbidden.template
@@ -2175,6 +2311,7 @@ function Assert-ClientWorldPresentationEvidence {
                 cameraTargetXCm = [int]$document.cameraTargetXCm
                 cameraTargetYCm = [int]$document.cameraTargetYCm
                 roles = @($roleResults)
+                distinctEntityLayout = $distinctLayoutResult
             })
         }
 
@@ -2421,6 +2558,17 @@ foreach ($requirement in $requiredWorldEvidence) {
         if ([string]::IsNullOrWhiteSpace([string]$requirement.stableEntityMotion.template) -or
             [int]$requirement.stableEntityMotion.minimumObservedMoveCm -le 0) {
             throw "requiredWorldEvidence '$milestone/$perspective' has invalid stableEntityMotion."
+        }
+    }
+    if ($null -ne $requirement.PSObject.Properties["distinctEntityLayout"] -and
+        $null -ne $requirement.distinctEntityLayout) {
+        $layout = $requirement.distinctEntityLayout
+        if ([string]::IsNullOrWhiteSpace([string]$layout.template) -or
+            [int]$layout.minimumInstances -lt 2 -or
+            [int]$layout.minimumWorldSeparationCm -le 0 -or
+            [double]$layout.maximumScreenOverlapRatio -lt 0 -or
+            [double]$layout.maximumScreenOverlapRatio -ge 1) {
+            throw "requiredWorldEvidence '$milestone/$perspective' has invalid distinctEntityLayout."
         }
     }
 }
