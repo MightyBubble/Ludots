@@ -4374,6 +4374,264 @@ namespace Ludots.Core.Presentation.Performers
             }
         }
 
+        public void PropagateParentDrivenTransforms(Entity parent)
+        {
+            if (parent == Entity.Null ||
+                !_world.IsAlive(parent) ||
+                !_world.Has<PerformerChildren>(parent) ||
+                _world.Get<PerformerChildren>(parent).Count == 0)
+            {
+                return;
+            }
+
+            if (_definitions == null)
+            {
+                throw new InvalidOperationException(
+                    "Performer definitions must be bound before propagating parent-driven transforms.");
+            }
+
+            RequireWorldTransform(parent);
+            PropagateParentDrivenTransforms(
+                parent,
+                _world.Get<PerformerWorldPosition>(parent).Value,
+                _world.Get<PerformerWorldRotation>(parent).Value,
+                _world.Get<PerformerWorldFacing>(parent),
+                _world.Get<PerformerWorldScale>(parent).Value);
+        }
+
+        private void PropagateParentDrivenTransforms(
+            Entity parent,
+            in Vector3 parentPosition,
+            in Quaternion parentRotation,
+            in PerformerWorldFacing parentFacing,
+            in Vector3 parentScale)
+        {
+            ref PerformerChildren children = ref _world.Get<PerformerChildren>(parent);
+            for (int i = 0; i < children.Count; i++)
+            {
+                Entity child = children.Get(i);
+                if (!_world.IsAlive(child) ||
+                    !_world.Has<PerformerParent>(child) ||
+                    _world.Get<PerformerParent>(child).Parent != parent)
+                {
+                    continue;
+                }
+
+                if (!_world.Has<PerformerState>(child) ||
+                    !_world.Has<PerformerTransformSource>(child))
+                {
+                    throw new InvalidOperationException(
+                        $"Performer child entity id={child.Id} is missing transform propagation state.");
+                }
+
+                RequireWorldTransform(child);
+                ref readonly PerformerState state = ref _world.Get<PerformerState>(child);
+                if (!_definitions!.TryGet(state.DefId, out PerformerDefinition definition))
+                {
+                    throw new InvalidOperationException(
+                        $"Performer child definition id={state.DefId} is not registered during parent transform propagation.");
+                }
+
+                TransformSource source = _world.Get<PerformerTransformSource>(child).Value;
+                bool hasFastParentAttachment =
+                    (_world.Has<PerfOwnerPayloadAttachedTransformSync>(child) ||
+                     _world.Has<PerfHasAttachmentTick>(child)) &&
+                    definition.SupportsFastParentAttachmentTick &&
+                    (uint)definition.FastParentAttachmentBehaviorIndex < (uint)definition.Behaviors.Length &&
+                    definition.Behaviors[definition.FastParentAttachmentBehaviorIndex].SlotIndex is >= 0 and < 32 &&
+                    (state.BehaviorActiveMask &
+                     (1u << definition.Behaviors[definition.FastParentAttachmentBehaviorIndex].SlotIndex)) != 0;
+                bool changed = hasFastParentAttachment
+                    ? ApplyParentAttachmentTransform(
+                        child,
+                        in state,
+                        definition,
+                        in parentPosition,
+                        in parentRotation,
+                        in parentFacing,
+                        in parentScale)
+                    : source switch
+                    {
+                        TransformSource.InheritParent => ApplyInheritedParentTransform(
+                            child,
+                            in state,
+                            definition,
+                            in parentPosition,
+                            in parentRotation,
+                            in parentFacing,
+                            in parentScale),
+                        TransformSource.AttachedToParent => ApplyParentAttachmentTransform(
+                            child,
+                            in state,
+                            definition,
+                            in parentPosition,
+                            in parentRotation,
+                            in parentFacing,
+                            in parentScale),
+                        _ => false,
+                    };
+
+                if (!changed ||
+                    !_world.Has<PerformerChildren>(child) ||
+                    _world.Get<PerformerChildren>(child).Count == 0)
+                {
+                    continue;
+                }
+
+                PropagateParentDrivenTransforms(
+                    child,
+                    _world.Get<PerformerWorldPosition>(child).Value,
+                    _world.Get<PerformerWorldRotation>(child).Value,
+                    _world.Get<PerformerWorldFacing>(child),
+                    _world.Get<PerformerWorldScale>(child).Value);
+            }
+        }
+
+        private bool ApplyInheritedParentTransform(
+            Entity child,
+            in PerformerState state,
+            PerformerDefinition definition,
+            in Vector3 parentPosition,
+            in Quaternion parentRotation,
+            in PerformerWorldFacing parentFacing,
+            in Vector3 parentScale)
+        {
+            ref PerformerWorldPosition position = ref _world.Get<PerformerWorldPosition>(child);
+            ref PerformerWorldPlanePosition planePosition = ref _world.Get<PerformerWorldPlanePosition>(child);
+            ref PerformerWorldRotation rotation = ref _world.Get<PerformerWorldRotation>(child);
+            ref PerformerWorldFacing facing = ref _world.Get<PerformerWorldFacing>(child);
+            ref PerformerWorldScale scale = ref _world.Get<PerformerWorldScale>(child);
+            PerformerTransformSnapshot performerSnapshot = new PerformerTransformSnapshot
+            {
+                WorldPosition = position.Value,
+                WorldRotation = rotation.Value,
+                WorldScale = scale.Value,
+                WorldFacing = facing,
+                TransformSource = TransformSource.InheritParent,
+            };
+            PerformerTransformSnapshot parentSnapshot = new PerformerTransformSnapshot
+            {
+                WorldPosition = parentPosition,
+                WorldRotation = parentRotation,
+                WorldScale = parentScale,
+                WorldFacing = parentFacing,
+            };
+            AssetBindingConfig assetBinding = PerformerGroundingUtility.ResolvePrimaryAssetBinding(
+                definition,
+                state.BehaviorActiveMask);
+            PerformerResolvedTransform resolved = PerformerGroundingUtility.ResolveTransform(
+                performerSnapshot,
+                parentSnapshot,
+                true,
+                default,
+                false,
+                assetBinding);
+            return ApplyResolvedTransform(
+                child,
+                ref position,
+                ref planePosition,
+                ref rotation,
+                ref facing,
+                ref scale,
+                in resolved);
+        }
+
+        private bool ApplyParentAttachmentTransform(
+            Entity child,
+            in PerformerState state,
+            PerformerDefinition definition,
+            in Vector3 parentPosition,
+            in Quaternion parentRotation,
+            in PerformerWorldFacing parentFacing,
+            in Vector3 parentScale)
+        {
+            if (!TryGetInlineParentAttachment(definition, state.BehaviorActiveMask, out AttachmentConfig config))
+            {
+                return false;
+            }
+
+            Quaternion normalizedParentRotation = WorldPlane2D.NormalizeOrIdentity(parentRotation);
+            Vector3 normalizedParentScale = WorldPlane2D.NormalizeScale(parentScale);
+            Vector3 scaledOffset = config.InheritScale
+                ? normalizedParentScale * config.Offset
+                : config.Offset;
+            Vector3 nextPosition = parentPosition + Vector3.Transform(scaledOffset, normalizedParentRotation);
+            PerformerResolvedTransform resolved = new PerformerResolvedTransform
+            {
+                Position = nextPosition,
+                Rotation = WorldPlane2D.NormalizeOrIdentity(
+                    normalizedParentRotation * WorldPlane2D.NormalizeOrIdentity(config.RotationOffset)),
+                Facing = parentFacing,
+                Scale = config.InheritScale ? normalizedParentScale : Vector3.One,
+            };
+            ref PerformerWorldPosition position = ref _world.Get<PerformerWorldPosition>(child);
+            ref PerformerWorldPlanePosition planePosition = ref _world.Get<PerformerWorldPlanePosition>(child);
+            ref PerformerWorldRotation rotation = ref _world.Get<PerformerWorldRotation>(child);
+            ref PerformerWorldFacing facing = ref _world.Get<PerformerWorldFacing>(child);
+            ref PerformerWorldScale scale = ref _world.Get<PerformerWorldScale>(child);
+            ref PerformerTransformSource source = ref _world.Get<PerformerTransformSource>(child);
+            bool sourceChanged = source.Value != TransformSource.AttachedToParent;
+            source.Value = TransformSource.AttachedToParent;
+            bool transformChanged = ApplyResolvedTransform(
+                child,
+                ref position,
+                ref planePosition,
+                ref rotation,
+                ref facing,
+                ref scale,
+                in resolved);
+            if (sourceChanged && !transformChanged)
+            {
+                MarkTransformDrivenEmitDirty(child);
+            }
+
+            return sourceChanged || transformChanged;
+        }
+
+        private bool ApplyResolvedTransform(
+            Entity performer,
+            ref PerformerWorldPosition position,
+            ref PerformerWorldPlanePosition planePosition,
+            ref PerformerWorldRotation rotation,
+            ref PerformerWorldFacing facing,
+            ref PerformerWorldScale scale,
+            in PerformerResolvedTransform resolved)
+        {
+            Vector2 nextPlanePosition = WorldPlane2D.VisualMetersToLogicCm(in resolved.Position);
+            bool changed =
+                position.Value != resolved.Position ||
+                planePosition.ValueCm != nextPlanePosition ||
+                rotation.Value != resolved.Rotation ||
+                facing.AngleRad != resolved.Facing.AngleRad ||
+                facing.HasValue != resolved.Facing.HasValue ||
+                scale.Value != resolved.Scale;
+            if (!changed)
+            {
+                return false;
+            }
+
+            position.Value = resolved.Position;
+            planePosition.ValueCm = nextPlanePosition;
+            rotation.Value = resolved.Rotation;
+            facing = resolved.Facing;
+            scale.Value = resolved.Scale;
+            MarkTransformDrivenEmitDirty(performer);
+            return true;
+        }
+
+        private void RequireWorldTransform(Entity performer)
+        {
+            if (!_world.Has<PerformerWorldPosition>(performer) ||
+                !_world.Has<PerformerWorldPlanePosition>(performer) ||
+                !_world.Has<PerformerWorldRotation>(performer) ||
+                !_world.Has<PerformerWorldFacing>(performer) ||
+                !_world.Has<PerformerWorldScale>(performer))
+            {
+                throw new InvalidOperationException(
+                    $"Performer entity id={performer.Id} is missing its compiled world transform components.");
+            }
+        }
+
         private static bool DefinitionUsesRequestBackedEmitWork(PerformerDefinition definition, uint activeBehaviorMask)
         {
             if (definition == null ||

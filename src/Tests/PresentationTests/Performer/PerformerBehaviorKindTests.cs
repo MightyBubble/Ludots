@@ -919,6 +919,230 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void InheritParent_OwnerPayloadDescendantsFollowMovedRootAndRetainStableIdentity()
+        {
+            using var world = World.Create();
+            var instances = new PerformerEntityRuntime(world);
+            var definitions = new PerformerDefinitionRegistry();
+            var requests = new PresentationRequestBuffer();
+            Entity owner = world.Create(
+                WorldPositionCm.FromCm(1000, 2000),
+                new VisualTransform
+                {
+                    Position = new Vector3(10f, 0f, 20f),
+                    Rotation = Quaternion.Identity,
+                    Scale = Vector3.One,
+                },
+                new CullState { IsVisible = true, LOD = LODLevel.High },
+                new PresentationStableId { Value = 7301 },
+                new PresentationOwnerHasPerformerPayload());
+
+            int markerDefId = definitions.Register("behavior.inherit_parent.ownerpayload.marker", new PerformerDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AssetBinding,
+                        ActiveByDefault = true,
+                        AssetBinding = new AssetBindingConfig
+                        {
+                            AssetKind = AssetKind.Mesh,
+                            AssetId = 1,
+                            RenderPath = VisualRenderPath.StaticMesh,
+                            Mobility = VisualMobility.Movable,
+                            LocalOffset = Vector3.Zero,
+                            LocalRotation = Quaternion.Identity,
+                            LocalScale = Vector3.One,
+                            AssetIdParamKey = -1,
+                        },
+                    },
+                ],
+            });
+            int bodyDefId = definitions.Register("behavior.inherit_parent.ownerpayload.body", new PerformerDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AssetBinding,
+                        ActiveByDefault = true,
+                        AssetBinding = new AssetBindingConfig
+                        {
+                            AssetKind = AssetKind.Mesh,
+                            AssetId = 2,
+                            RenderPath = VisualRenderPath.StaticMesh,
+                            Mobility = VisualMobility.Movable,
+                            LocalOffset = Vector3.Zero,
+                            LocalRotation = Quaternion.Identity,
+                            LocalScale = Vector3.One,
+                            AssetIdParamKey = -1,
+                        },
+                    },
+                ],
+                Children = [new ChildPerformerRef { DefinitionId = markerDefId, ScopeTag = 2 }],
+            });
+            int rootDefId = definitions.Register("behavior.inherit_parent.ownerpayload.root", new PerformerDefinition
+            {
+                Children = [new ChildPerformerRef { DefinitionId = bodyDefId, ScopeTag = 1 }],
+            });
+            instances.BindDefinitions(definitions);
+            int nextStableId = 9102;
+
+            Span<Entity> created = stackalloc Entity[1];
+            int count = instances.CreateEntityAnchoredRootBatch(
+                definitions,
+                rootDefId,
+                new Entity[] { owner },
+                new[] { 1 },
+                new[] { 9101 },
+                new[] { world.Get<VisualTransform>(owner) },
+                new[] { world.Get<CullState>(owner) },
+                definitions.Get(rootDefId),
+                created,
+                allocateStableId: () => nextStableId++);
+
+            Assert.That(count, Is.EqualTo(1));
+            Entity root = created[0];
+            Entity body = world.Get<PerformerChildren>(root).Get(0);
+            Entity marker = world.Get<PerformerChildren>(body).Get(0);
+            int bodyStableId = world.Get<PerformerState>(body).StableId;
+            int markerStableId = world.Get<PerformerState>(marker).StableId;
+            using var behavior = new PerformerBehaviorSystem(
+                world,
+                instances,
+                definitions,
+                new PresentationEventStream(PresentationTestConstants.EventStreamCapacity),
+                new PresentationOwnerChangeBuffer(8),
+                new SoundRequestBuffer());
+            using var sync = new PerformerEntityTransformSyncSystem(world, instances, definitions);
+            using var emit = new PerformerEmitSystem(
+                world,
+                instances,
+                definitions,
+                requests,
+                new Dictionary<string, object>());
+
+            behavior.Update(0.016f);
+            emit.Update(0.016f);
+            Assert.That(TryFindVisualProxyRequest(requests, owner, bodyDefId, out PresentationVisualProxy initialBodyProxy), Is.True);
+            Assert.That(TryFindVisualProxyRequest(requests, owner, markerDefId, out PresentationVisualProxy initialMarkerProxy), Is.True);
+            int bodyVisualStableId = initialBodyProxy.StableId;
+            int markerVisualStableId = initialMarkerProxy.StableId;
+            Assert.That(bodyVisualStableId, Is.GreaterThan(0));
+            Assert.That(markerVisualStableId, Is.GreaterThan(0));
+            Assert.That(markerVisualStableId, Is.Not.EqualTo(bodyVisualStableId));
+            requests.Clear();
+            Quaternion expectedRotation = Quaternion.CreateFromAxisAngle(Vector3.UnitY, MathF.PI * 0.5f);
+            Vector3 expectedScale = new Vector3(2f, 3f, 4f);
+            ref VisualTransform movedOwnerTransform = ref world.Get<VisualTransform>(owner);
+            movedOwnerTransform.Position = new Vector3(30f, 5f, 40f);
+            movedOwnerTransform.Rotation = expectedRotation;
+            movedOwnerTransform.Scale = expectedScale;
+            world.Get<WorldPositionCm>(owner).Value = WorldPositionCm.FromCm(3000, 4000).Value;
+            sync.Update(0.016f);
+            emit.Update(0.016f);
+
+            Assert.That(world.Get<PerformerTransformSource>(body).Value, Is.EqualTo(TransformSource.InheritParent));
+            Assert.That(world.Get<PerformerTransformSource>(marker).Value, Is.EqualTo(TransformSource.InheritParent));
+            Assert.That(world.Get<PerformerWorldPosition>(body).Value, Is.EqualTo(movedOwnerTransform.Position));
+            Assert.That(world.Get<PerformerWorldRotation>(body).Value, Is.EqualTo(expectedRotation));
+            Assert.That(world.Get<PerformerWorldScale>(body).Value, Is.EqualTo(expectedScale));
+            Assert.That(world.Get<PerformerWorldPosition>(marker).Value, Is.EqualTo(movedOwnerTransform.Position));
+            Assert.That(world.Get<PerformerWorldRotation>(marker).Value, Is.EqualTo(expectedRotation));
+            Assert.That(world.Get<PerformerWorldScale>(marker).Value, Is.EqualTo(expectedScale));
+            Assert.That(world.Get<PerformerState>(body).StableId, Is.EqualTo(bodyStableId));
+            Assert.That(world.Get<PerformerState>(marker).StableId, Is.EqualTo(markerStableId));
+            Assert.That(world.Get<PerformerState>(body).OwnerStableId, Is.EqualTo(7301));
+            Assert.That(world.Get<PerformerState>(marker).OwnerStableId, Is.EqualTo(7301));
+            Assert.That(TryFindVisualProxyRequest(requests, owner, bodyDefId, out PresentationVisualProxy bodyProxy), Is.True);
+            Assert.That(TryFindVisualProxyRequest(requests, owner, markerDefId, out PresentationVisualProxy markerProxy), Is.True);
+            Assert.That(bodyProxy.Position, Is.EqualTo(movedOwnerTransform.Position));
+            Assert.That(bodyProxy.Rotation, Is.EqualTo(expectedRotation));
+            Assert.That(bodyProxy.Scale, Is.EqualTo(expectedScale));
+            Assert.That(bodyProxy.StableId, Is.EqualTo(bodyVisualStableId));
+            Assert.That(bodyProxy.OwnerStableId, Is.EqualTo(7301));
+            Assert.That(markerProxy.Position, Is.EqualTo(movedOwnerTransform.Position));
+            Assert.That(markerProxy.Rotation, Is.EqualTo(expectedRotation));
+            Assert.That(markerProxy.Scale, Is.EqualTo(expectedScale));
+            Assert.That(markerProxy.StableId, Is.EqualTo(markerVisualStableId));
+            Assert.That(markerProxy.OwnerStableId, Is.EqualTo(7301));
+        }
+
+        [Test]
+        public void ParentDrivenTransformPropagation_IsZeroAllocationAfterWarmup()
+        {
+            using var world = World.Create();
+            var instances = new PerformerEntityRuntime(world);
+            var definitions = new PerformerDefinitionRegistry();
+            int childDefId = definitions.Register("behavior.inherit_parent.zero_alloc.child", new PerformerDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AssetBinding,
+                        ActiveByDefault = true,
+                        AssetBinding = new AssetBindingConfig
+                        {
+                            AssetKind = AssetKind.Mesh,
+                            AssetId = 1,
+                            RenderPath = VisualRenderPath.StaticMesh,
+                            Mobility = VisualMobility.Movable,
+                            LocalOffset = Vector3.Zero,
+                            LocalRotation = Quaternion.Identity,
+                            LocalScale = Vector3.One,
+                            AssetIdParamKey = -1,
+                        },
+                    },
+                ],
+            });
+            int rootDefId = definitions.Register(
+                "behavior.inherit_parent.zero_alloc.root",
+                new PerformerDefinition());
+            instances.BindDefinitions(definitions);
+            Entity owner = world.Create();
+            Entity root = instances.Create(
+                rootDefId,
+                owner,
+                1,
+                PresentationAnchorKind.WorldPosition,
+                Vector3.Zero,
+                9201,
+                Entity.Null,
+                definitions.Get(rootDefId));
+            _ = instances.Create(
+                childDefId,
+                owner,
+                2,
+                PresentationAnchorKind.WorldPosition,
+                Vector3.Zero,
+                9202,
+                root,
+                definitions.Get(childDefId));
+
+            for (int i = 0; i < 64; i++)
+            {
+                world.Get<PerformerWorldPosition>(root).Value = new Vector3(i, 0f, i);
+                instances.PropagateParentDrivenTransforms(root);
+            }
+
+            _ = GC.GetAllocatedBytesForCurrentThread();
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 0; i < 10_000; i++)
+            {
+                world.Get<PerformerWorldPosition>(root).Value = new Vector3(i, 0f, i);
+                instances.PropagateParentDrivenTransforms(root);
+            }
+            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+            Assert.That(allocated, Is.EqualTo(0));
+        }
+
+        [Test]
         public void EntityAnchoredRootBatch_AppliesPerRootParamOverrides_BeforeChildrenResolveParentParams()
         {
             using var world = World.Create();
@@ -1128,6 +1352,13 @@ namespace Ludots.Tests.Presentation
             sync.Update(0.016f);
 
             Assert.That(world.Get<PerformerWorldPosition>(parent).Value, Is.EqualTo(new Vector3(30f, 0f, 40f)));
+            Assert.That(world.Get<PerformerWorldPosition>(marker).Value, Is.EqualTo(new Vector3(30f, 0.5f, 40f)));
+            Assert.That(world.Get<PerformerTransformSource>(marker).Value, Is.EqualTo(TransformSource.AttachedToParent));
+
+            Assert.That(instances.SetBehaviorActive(marker, definitions.Get(markerDefId), slotIndex: 1, active: false), Is.True);
+            world.Get<VisualTransform>(owner).Position = new Vector3(50f, 0f, 60f);
+            Assert.DoesNotThrow(() => sync.Update(0.016f));
+            Assert.That(world.Get<PerformerWorldPosition>(parent).Value, Is.EqualTo(new Vector3(50f, 0f, 60f)));
             Assert.That(world.Get<PerformerWorldPosition>(marker).Value, Is.EqualTo(new Vector3(30f, 0.5f, 40f)));
             Assert.That(world.Get<PerformerTransformSource>(marker).Value, Is.EqualTo(TransformSource.AttachedToParent));
         }
@@ -1536,6 +1767,29 @@ namespace Ludots.Tests.Presentation
             var definitions = new PerformerDefinitionRegistry();
             Entity owner = world.Create();
 
+            int childDefId = definitions.Register("behavior.spline.inherited_child", new PerformerDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AssetBinding,
+                        ActiveByDefault = true,
+                        AssetBinding = new AssetBindingConfig
+                        {
+                            AssetKind = AssetKind.Mesh,
+                            AssetId = 1,
+                            RenderPath = VisualRenderPath.StaticMesh,
+                            Mobility = VisualMobility.Movable,
+                            LocalOffset = Vector3.Zero,
+                            LocalRotation = Quaternion.Identity,
+                            LocalScale = Vector3.One,
+                            AssetIdParamKey = -1,
+                        },
+                    },
+                ],
+            });
             int defId = definitions.Register("behavior.spline", new PerformerDefinition
             {
                 Behaviors =
@@ -1559,6 +1813,7 @@ namespace Ludots.Tests.Presentation
 
             instances.BindDefinitions(definitions);
             Entity performer = instances.Create(defId, owner, 0, PresentationAnchorKind.WorldPosition, Vector3.Zero, 7006, Entity.Null, default);
+            Entity child = instances.Create(childDefId, owner, 0, PresentationAnchorKind.WorldPosition, Vector3.Zero, 7007, performer, default);
             world.Get<PerformerState>(performer).BehaviorActiveMask = 1u;
             instances.SetParam(performer, 140, ParamLane.Float, 0f, 0, default);
             instances.SetParam(performer, 141, ParamLane.Float, 2f, 0, default);
@@ -1578,6 +1833,10 @@ namespace Ludots.Tests.Presentation
             Assert.That(instances.ResolveFloat(performer, 140), Is.EqualTo(0.5f).Within(0.001f));
             Assert.That(transformSource.Value, Is.EqualTo(TransformSource.SplineDriven));
             Assert.That(worldPos.Value.X, Is.EqualTo(0.5f).Within(0.001f));
+            Assert.That(world.Get<PerformerTransformSource>(child).Value, Is.EqualTo(TransformSource.InheritParent));
+            Assert.That(world.Get<PerformerWorldPosition>(child).Value, Is.EqualTo(worldPos.Value));
+            Assert.That(world.Get<PerformerWorldRotation>(child).Value, Is.EqualTo(world.Get<PerformerWorldRotation>(performer).Value));
+            Assert.That(world.Get<PerformerWorldScale>(child).Value, Is.EqualTo(world.Get<PerformerWorldScale>(performer).Value));
         }
 
         private static bool TryFindVisualProxyRequest(
