@@ -694,6 +694,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
             _substep = 5;
         }
         if (!HaveAllSelectedActorsMoved(_plan.Battle.MinimumObservedMoveCm) ||
+            !AreSelectedActorsNear(_meetingPoint, _plan.Battle.ArrivalToleranceCm) ||
             !AreSelectedActorsVisibleWithPerformerPayload())
         {
             return;
@@ -708,11 +709,6 @@ internal sealed class AcceptanceDriver : ISystem<float>
             throw new InvalidOperationException(
                 $"Advancing player evidence requires progress stage Advancing; observed {_progress.Stage}.");
         }
-        if (!AreSelectedActorsNear(_meetingPoint, _plan.Battle.ArrivalToleranceCm))
-        {
-            return;
-        }
-
         _evidence.Gameplay.MoveEndPositions = CaptureSelectedPositions();
         _meetingReachedTimestamp = Stopwatch.GetTimestamp();
         CompleteStep("Selected infantry moved to a meeting point derived from the two public crystal fields.");
@@ -2470,7 +2466,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
         if (!TryProjectEntityClick(entity, out Vector2 screen))
         {
             throw new InvalidOperationException(
-                "Acceptance entity has no projectable player-click bounds.");
+                "Acceptance entity has no exact player-click hit within its projected bounds.");
         }
 
         return screen;
@@ -2488,32 +2484,47 @@ internal sealed class AcceptanceDriver : ISystem<float>
             return false;
         }
 
-        screen = new Vector2(
-            (bounds.MinX + bounds.MaxX) * 0.5f,
-            (bounds.MinY + bounds.MaxY) * 0.5f);
-        RequireFiniteScreenPoint(screen, "entity click");
         Entity owner = RequireLocalPlayerEntity();
         CommandSourceAcquisitionConfig acquisition =
             _engine.GetService(CoreServiceKeys.CommandSourceAcquisitionConfig)
             ?? throw new InvalidOperationException(
                 "Acceptance entity click requires command-source acquisition configuration.");
-        Entity hit = CommandSourcePointerHitResolver.FindNearestInspectableEntity(
-            _world,
-            _engine.GlobalContext,
-            owner,
-            screen,
-            acquisition.ClickPickRadiusPixels);
-        if (hit == Entity.Null)
+        const float InnerEdgeFraction = 0.125f;
+        float centerX = (bounds.MinX + bounds.MaxX) * 0.5f;
+        float centerY = (bounds.MinY + bounds.MaxY) * 0.5f;
+        float innerMinX = bounds.MinX + ((bounds.MaxX - bounds.MinX) * InnerEdgeFraction);
+        float innerMaxX = bounds.MaxX - ((bounds.MaxX - bounds.MinX) * InnerEdgeFraction);
+        float innerMinY = bounds.MinY + ((bounds.MaxY - bounds.MinY) * InnerEdgeFraction);
+        float innerMaxY = bounds.MaxY - ((bounds.MaxY - bounds.MinY) * InnerEdgeFraction);
+        Span<Vector2> candidates = stackalloc Vector2[]
         {
-            return false;
-        }
-        if (hit != entity)
+            new(centerX, centerY),
+            new(innerMinX, centerY),
+            new(innerMaxX, centerY),
+            new(centerX, innerMinY),
+            new(centerX, innerMaxY),
+            new(innerMinX, innerMinY),
+            new(innerMaxX, innerMinY),
+            new(innerMinX, innerMaxY),
+            new(innerMaxX, innerMaxY),
+        };
+        for (int i = 0; i < candidates.Length; i++)
         {
-            throw new InvalidOperationException(
-                $"Acceptance player click resolved entity {hit.Id}:{hit.WorldId}, " +
-                $"expected {entity.Id}:{entity.WorldId}.");
+            Vector2 candidate = candidates[i];
+            RequireFiniteScreenPoint(candidate, "entity click");
+            Entity hit = CommandSourcePointerHitResolver.FindNearestInspectableEntity(
+                _world,
+                _engine.GlobalContext,
+                owner,
+                candidate,
+                acquisition.ClickPickRadiusPixels);
+            if (hit == entity)
+            {
+                screen = candidate;
+                return true;
+            }
         }
-        return true;
+        return false;
     }
 
     private float ReadAttribute(Entity entity, int attributeId)
