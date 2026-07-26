@@ -1,4 +1,5 @@
 using System;
+using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 
 namespace Ludots.Core.Networking.Commands
@@ -26,7 +27,7 @@ namespace Ludots.Core.Networking.Commands
             int actorCount,
             int orderId,
             int admissionBatchId,
-            OrderSubmitResult result,
+            NetworkCommandAdmissionCode code,
             bool isReplay,
             int committedTick)
             : this(
@@ -37,8 +38,8 @@ namespace Ludots.Core.Networking.Commands
                 orderId,
                 admissionBatchId,
                 admissionBatchIndex: 0,
-                DeriveStage(result),
-                result,
+                NetworkCommandAdmissionCodeSemantics.DeriveStage(code),
+                code,
                 isReplay,
                 committedTick)
         {
@@ -52,15 +53,28 @@ namespace Ludots.Core.Networking.Commands
             int orderId,
             int admissionBatchId,
             ushort admissionBatchIndex,
-            OrderAdmissionStage stage,
-            OrderSubmitResult result,
+            NetworkCommandAdmissionStage stage,
+            NetworkCommandAdmissionCode code,
             bool isReplay,
             int committedTick)
         {
-            if (!IsKnownStage(stage))
+            if (!NetworkCommandAdmissionCodeSemantics.IsKnown(stage))
             {
-                throw new ArgumentOutOfRangeException(nameof(stage), stage, "Unknown order admission stage.");
+                throw new ArgumentOutOfRangeException(nameof(stage), stage, "Unknown network command admission stage.");
             }
+
+            if (!NetworkCommandAdmissionCodeSemantics.IsKnown(code))
+            {
+                throw new ArgumentOutOfRangeException(nameof(code), code, "Unknown network command admission code.");
+            }
+
+            if (!NetworkCommandAdmissionCodeSemantics.IsValidStageCode(stage, code))
+            {
+                throw new ArgumentException(
+                    $"Network command admission stage {stage} cannot carry code {code}.",
+                    nameof(code));
+            }
+
             if (!IsValidCommittedTick(stage, committedTick))
             {
                 throw new ArgumentOutOfRangeException(nameof(committedTick));
@@ -76,7 +90,7 @@ namespace Ludots.Core.Networking.Commands
             AdmissionBatchId = admissionBatchId;
             AdmissionBatchIndex = admissionBatchIndex;
             Stage = stage;
-            Result = result;
+            Result = code;
             IsReplay = isReplay;
             CommittedTick = committedTick;
         }
@@ -90,14 +104,15 @@ namespace Ludots.Core.Networking.Commands
         public int OrderId { get; }
         public int AdmissionBatchId { get; }
         public ushort AdmissionBatchIndex { get; }
-        public OrderAdmissionStage Stage { get; }
-        public OrderSubmitResult Result { get; }
+        public NetworkCommandAdmissionStage Stage { get; }
+        public NetworkCommandAdmissionCode Result { get; }
         public bool IsReplay { get; }
         public int CommittedTick { get; }
 
-        internal static bool IsValidCommittedTick(OrderAdmissionStage stage, int committedTick) =>
+        internal static bool IsValidCommittedTick(NetworkCommandAdmissionStage stage, int committedTick) =>
             committedTick >= 0 &&
-            (stage != OrderAdmissionStage.EntityIntake || committedTick > 0);
+            (stage != NetworkCommandAdmissionStage.EntityIntake || committedTick > 0) &&
+            (stage != NetworkCommandAdmissionStage.Terminal || committedTick > 0);
 
         public NetworkCommandAdmissionOutcome AsReplay()
         {
@@ -116,15 +131,54 @@ namespace Ludots.Core.Networking.Commands
                 committedTick: CommittedTick);
         }
 
-        private static OrderAdmissionStage DeriveStage(OrderSubmitResult result) =>
-            result is OrderSubmitResult.Queued or OrderSubmitResult.QueueFull
-                ? OrderAdmissionStage.GlobalIntake
-                : OrderAdmissionStage.NetworkIntake;
+        public static NetworkCommandAdmissionOutcome FromCoreAdmission(
+            in NetworkCommandSeat seat,
+            ulong clientBatchSequence,
+            int targetTick,
+            int actorCount,
+            in OrderAdmissionOutcome core,
+            bool isReplay,
+            int committedTick)
+        {
+            return new NetworkCommandAdmissionOutcome(
+                in seat,
+                clientBatchSequence,
+                targetTick,
+                actorCount,
+                core.OrderId,
+                core.AdmissionBatchId,
+                core.AdmissionBatchIndex,
+                NetworkCommandAdmissionCodeSemantics.ProjectCoreAdmissionStage(core.Stage),
+                NetworkCommandAdmissionCodeSemantics.ProjectCoreSubmitResult(core.Result),
+                isReplay,
+                committedTick);
+        }
 
-        private static bool IsKnownStage(OrderAdmissionStage stage) =>
-            stage is OrderAdmissionStage.GlobalIntake
-                or OrderAdmissionStage.EntityIntake
-                or OrderAdmissionStage.NetworkIntake;
+        public static NetworkCommandAdmissionOutcome FromTerminal(
+            in NetworkCommandSeat seat,
+            ulong clientBatchSequence,
+            int targetTick,
+            int actorCount,
+            int orderId,
+            int admissionBatchId,
+            ushort admissionBatchIndex,
+            OrderTerminalState state,
+            bool isReplay,
+            int committedTick)
+        {
+            return new NetworkCommandAdmissionOutcome(
+                in seat,
+                clientBatchSequence,
+                targetTick,
+                actorCount,
+                orderId,
+                admissionBatchId,
+                admissionBatchIndex,
+                NetworkCommandAdmissionStage.Terminal,
+                NetworkCommandAdmissionCodeSemantics.ProjectTerminal(state),
+                isReplay,
+                committedTick);
+        }
     }
 
     public sealed class NetworkCommandAdmissionResultBuffer

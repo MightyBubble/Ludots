@@ -42,7 +42,7 @@ public sealed class NetworkWireCodecAllocationTests
             1,
             1,
             1,
-            OrderSubmitResult.Queued,
+            NetworkCommandAdmissionCode.Queued,
             isReplay: false,
             committedTick: 9);
         var ack = new NetworkSnapshotAcknowledgement(1, 1, 10);

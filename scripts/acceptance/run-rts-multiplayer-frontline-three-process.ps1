@@ -892,6 +892,17 @@ function Read-ClientFramebufferPixelEvidence {
         catch {
             throw "Client '$processName' framebuffer milestone '$milestone' inspector returned invalid JSON: $($_.Exception.Message)"
         }
+        $returnedRequirements = @($inspection.requirements)
+        if ([int]$inspection.schemaVersion -ne 1) {
+            throw "Client '$processName' framebuffer milestone '$milestone' inspector returned unsupported schema '$($inspection.schemaVersion)'."
+        }
+        if ([int]$inspection.width -ne [int]$worldEvidence.viewportWidthPx -or
+            [int]$inspection.height -ne [int]$worldEvidence.viewportHeightPx) {
+            throw "Client '$processName' framebuffer milestone '$milestone' inspector returned dimensions $($inspection.width)x$($inspection.height), expected $($worldEvidence.viewportWidthPx)x$($worldEvidence.viewportHeightPx)."
+        }
+        if ($returnedRequirements.Count -ne $inspectionRequirements.Count) {
+            throw "Client '$processName' framebuffer milestone '$milestone' inspector returned $($returnedRequirements.Count) requirements, expected $($inspectionRequirements.Count)."
+        }
         Write-JsonFile -Value $inspection -Path $resultPath
 
         [void]$results.Add([ordered]@{
@@ -903,7 +914,7 @@ function Read-ClientFramebufferPixelEvidence {
             width = [int]$inspection.width
             height = [int]$inspection.height
             passed = [bool]$inspection.passed
-            requirements = @($inspection.requirements)
+            requirements = $returnedRequirements
         })
     }
 
@@ -920,6 +931,10 @@ function Assert-ClientFramebufferPixelEvidencePassed {
 
     $failures = [System.Collections.Generic.List[string]]::new()
     foreach ($item in $all) {
+        if (-not [bool]$item.passed) {
+            [void]$failures.Add(
+                "client '$([string]$item.process)' milestone '$([string]$item.milestone)' inspector reported passed=false")
+        }
         foreach ($requirement in @($item.requirements | Where-Object { -not [bool]$_.passed })) {
             [void]$failures.Add(
                 "client '$([string]$item.process)' milestone '$([string]$item.milestone)' role '$([string]$requirement.role)' " +

@@ -280,7 +280,7 @@ namespace Ludots.Core.Networking.Runtime
             if (outcome.ClientBatchSequence == 0 ||
                 outcome.ActorCount <= 0 ||
                 outcome.ActorCount > _maxActorsPerCommandBatch ||
-                (outcome.Stage == OrderAdmissionStage.EntityIntake &&
+                (outcome.Stage == NetworkCommandAdmissionStage.EntityIntake &&
                     outcome.AdmissionBatchIndex >= outcome.ActorCount))
             {
                 throw new InvalidOperationException("Client admission outcome exceeds the observer's configured command shape.");
@@ -300,7 +300,7 @@ namespace Ludots.Core.Networking.Runtime
             }
 
             bool changed = false;
-            if (outcome.Stage == OrderAdmissionStage.EntityIntake)
+            if (outcome.Stage == NetworkCommandAdmissionStage.EntityIntake)
             {
                 int actorIndex = GetClientActorAdmissionIndex(batchIndex, outcome.AdmissionBatchIndex);
                 if (!_clientActorAdmissionActive[actorIndex] ||
@@ -403,34 +403,31 @@ namespace Ludots.Core.Networking.Runtime
 
         private static int AdmissionProgressRank(in NetworkCommandAdmissionOutcome outcome)
         {
-            if (IsAdmissionRejection(outcome.Result))
+            if (NetworkCommandAdmissionCodeSemantics.IsRejection(outcome.Result))
             {
                 return 5;
             }
 
-            if (outcome.Stage == OrderAdmissionStage.NetworkIntake)
+            return outcome.Stage switch
             {
-                return 0;
-            }
-
-            if (outcome.Stage == OrderAdmissionStage.GlobalIntake)
-            {
-                return 1;
-            }
-
-            return outcome.Result switch
-            {
-                OrderSubmitResult.Queued => 2,
-                OrderSubmitResult.Pending => 3,
-                _ => 4,
+                NetworkCommandAdmissionStage.NetworkIntake => 0,
+                NetworkCommandAdmissionStage.GlobalIntake => 1,
+                NetworkCommandAdmissionStage.EntityIntake => outcome.Result switch
+                {
+                    NetworkCommandAdmissionCode.Queued => 2,
+                    NetworkCommandAdmissionCode.Pending => 3,
+                    NetworkCommandAdmissionCode.Activated => 4,
+                    _ => throw new InvalidOperationException(
+                        $"Non-rejected EntityIntake cannot carry admission code {outcome.Result}."),
+                },
+                NetworkCommandAdmissionStage.Terminal => 4,
+                _ => throw new InvalidOperationException(
+                    $"Unknown network command admission stage {outcome.Stage}."),
             };
         }
 
-        private static bool IsAdmissionRejection(OrderSubmitResult result) =>
-            result is not OrderSubmitResult.NetworkScheduled and
-                not OrderSubmitResult.Queued and
-                not OrderSubmitResult.Pending and
-                not OrderSubmitResult.Activated;
+        private static bool IsAdmissionRejection(NetworkCommandAdmissionCode code) =>
+            NetworkCommandAdmissionCodeSemantics.IsRejection(code);
 
         private static bool SameAdmission(
             in NetworkCommandAdmissionOutcome left,

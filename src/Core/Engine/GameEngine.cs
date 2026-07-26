@@ -1016,9 +1016,25 @@ namespace Ludots.Core.Engine
             MapLoader.SetEffectRequestQueue(effectRequestQueue);
             NetworkRuntimeConfig? networkConfig = config.Networking;
             networkConfig?.Validate();
-            OrderAdmissionResultBuffer? entityOrderAdmissionResults = networkConfig == null
-                ? null
-                : new OrderAdmissionResultBuffer(networkConfig.EntityAdmissionResultCapacity);
+            if (networkConfig != null)
+            {
+                if (gasRuntimeCapacity.OrderQueueCapacity < networkConfig.MaxActorsPerCommandBatch)
+                {
+                    throw new InvalidOperationException(
+                        $"Gas runtime order queue capacity {gasRuntimeCapacity.OrderQueueCapacity} is below maximum command actor count {networkConfig.MaxActorsPerCommandBatch}.");
+                }
+
+                int minimumCorrelationCapacity = checked(
+                    gasRuntimeCapacity.OrderQueueCapacity +
+                    (networkConfig.NetworkEntityCapacity * (OrderBuffer.MAX_QUEUED_ORDERS + 2)));
+                if (networkConfig.CommandCorrelationCapacity < minimumCorrelationCapacity)
+                {
+                    throw new InvalidOperationException(
+                        $"Networking command correlation capacity {networkConfig.CommandCorrelationCapacity} is below the " +
+                        $"declared waiting-order bound {minimumCorrelationCapacity}.");
+                }
+            }
+
             NetworkCommandAdmissionResultBuffer? networkCommandAdmissionResults = networkConfig == null
                 ? null
                 : new NetworkCommandAdmissionResultBuffer(networkConfig.NetworkAdmissionResultCapacity);
@@ -1360,7 +1376,8 @@ namespace Ludots.Core.Engine
                     networkConfig.CommandSequenceHistoryCapacity,
                     networkConfig.MaxPastTargetTicks,
                     networkConfig.MaxFutureTargetTicks,
-                    checked(networkConfig.PlayerCapacity * networkConfig.CommandBurstBatchCapacity));
+                    checked(networkConfig.PlayerCapacity * networkConfig.CommandBurstBatchCapacity),
+                    networkConfig.CommandCorrelationCapacity);
                 networkGameplayCommandGate = new NetworkGameplayCommandGate();
                 networkCommandIngress = new NetworkCommandIngress(
                     in ingressConfig,
@@ -1574,7 +1591,6 @@ namespace Ludots.Core.Engine
                 SetService(CoreServiceKeys.NetworkGameplayCommandGate, networkGameplayCommandGate);
                 SetService(CoreServiceKeys.NetworkCommandSchemaRegistry, networkCommandSchemas!);
                 SetService(CoreServiceKeys.NetworkCommandAdmissionResults, networkCommandAdmissionResults!);
-                SetService(CoreServiceKeys.EntityOrderAdmissionResults, entityOrderAdmissionResults!);
                 SetService(CoreServiceKeys.NetworkEntityTable, networkEntityTable!);
             }
             SetService(CoreServiceKeys.OrderTypeRegistry, orderTypeRegistry);

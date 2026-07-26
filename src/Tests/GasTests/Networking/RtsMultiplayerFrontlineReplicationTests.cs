@@ -119,6 +119,7 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
                 specs,
                 config.Replication.MatchStateSchemaId,
                 engine.MapLoader.EntityTemplateKeys,
+                RequireAuthoringContext(engine),
                 RequireStableIds(engine)),
             Throws.InvalidOperationException.With.Message.Contains(forbiddenComponent));
     }
@@ -165,6 +166,7 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
                 specs,
                 config.Replication.MatchStateSchemaId,
                 engine.MapLoader.EntityTemplateKeys,
+                RequireAuthoringContext(engine),
                 RequireStableIds(engine)),
             Throws.InvalidOperationException.With.Message.Contains(requiredComponent));
     }
@@ -188,6 +190,7 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
                 specs,
                 config.Replication.MatchStateSchemaId,
                 engine.MapLoader.EntityTemplateKeys,
+                RequireAuthoringContext(engine),
                 RequireStableIds(engine)),
             Throws.InvalidOperationException.With.Message.Contains("Box3D"));
     }
@@ -211,6 +214,7 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
                 specs,
                 config.Replication.MatchStateSchemaId,
                 engine.MapLoader.EntityTemplateKeys,
+                RequireAuthoringContext(engine),
                 RequireStableIds(engine)),
             Throws.InvalidOperationException.With.Message.Contains(forbiddenComponent));
     }
@@ -281,6 +285,7 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
             specs,
             config.Replication.MatchStateSchemaId,
             engine.MapLoader.EntityTemplateKeys,
+            RequireAuthoringContext(engine),
             RequireStableIds(engine));
         int healthId = RequireAttribute(config.HealthAttribute);
         int crystalId = RequireAttribute(config.CrystalAttribute);
@@ -653,6 +658,7 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
             specs,
             config.Replication.MatchStateSchemaId,
             engine.MapLoader.EntityTemplateKeys,
+            RequireAuthoringContext(engine),
             RequireStableIds(engine));
         FrontlineReplicationSpec coreSpec = specs[(int)FrontlineReplicationKind.Core];
         var applier = new FrontlineCoreReplicationApplier(
@@ -909,6 +915,7 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
             specs,
             config.Replication.MatchStateSchemaId,
             engine.MapLoader.EntityTemplateKeys,
+            RequireAuthoringContext(engine),
             RequireStableIds(engine));
         int healthId = RequireAttribute(config.HealthAttribute);
         int crystalId = RequireAttribute(config.CrystalAttribute);
@@ -989,6 +996,7 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
             specs,
             config.Replication.MatchStateSchemaId,
             engine.MapLoader.EntityTemplateKeys,
+            RequireAuthoringContext(engine),
             RequireStableIds(engine));
         var applier = new FrontlineHarvesterReplicationApplier(
             in spec,
@@ -1043,6 +1051,7 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
             specs,
             config.Replication.MatchStateSchemaId,
             engine.MapLoader.EntityTemplateKeys,
+            RequireAuthoringContext(engine),
             RequireStableIds(engine));
         int healthId = RequireAttribute(config.HealthAttribute);
         int crystalId = RequireAttribute(config.CrystalAttribute);
@@ -1594,6 +1603,7 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
             specs,
             config.Replication.MatchStateSchemaId,
             engine.MapLoader.EntityTemplateKeys,
+            RequireAuthoringContext(engine),
             RequireStableIds(engine));
         var applier = new FrontlineMatchStateReplicationApplier(
             config.Replication.MatchStateSchemaId,
@@ -1659,28 +1669,28 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         ScreenOverlayBuffer overlay = RequireOverlay(engine);
         AssertHudContains(presentation, overlay, config.Hud.CommandSendingText);
 
-        PublishAdmission(observer, commands.LastSubmittedBatchSequence, OrderAdmissionStage.NetworkIntake, OrderSubmitResult.NetworkScheduled);
+        PublishAdmission(observer, commands.LastSubmittedBatchSequence, NetworkCommandAdmissionStage.NetworkIntake, NetworkCommandAdmissionCode.NetworkScheduled);
         AssertHudContains(presentation, overlay, config.Hud.CommandSendingText);
 
-        PublishAdmission(observer, commands.LastSubmittedBatchSequence, OrderAdmissionStage.GlobalIntake, OrderSubmitResult.Queued);
+        PublishAdmission(observer, commands.LastSubmittedBatchSequence, NetworkCommandAdmissionStage.GlobalIntake, NetworkCommandAdmissionCode.Queued);
         AssertHudContains(presentation, overlay, config.Hud.CommandAcceptedText);
 
-        PublishAdmission(observer, commands.LastSubmittedBatchSequence, OrderAdmissionStage.EntityIntake, OrderSubmitResult.Queued);
+        PublishAdmission(observer, commands.LastSubmittedBatchSequence, NetworkCommandAdmissionStage.EntityIntake, NetworkCommandAdmissionCode.Queued);
         AssertHudContains(presentation, overlay, config.Hud.CommandQueuedText);
         Assert.That(ReadOverlayStrings(overlay), Does.Not.Contain(config.Hud.CommandStartedText));
 
-        PublishAdmission(observer, commands.LastSubmittedBatchSequence, OrderAdmissionStage.EntityIntake, OrderSubmitResult.Pending);
+        PublishAdmission(observer, commands.LastSubmittedBatchSequence, NetworkCommandAdmissionStage.EntityIntake, NetworkCommandAdmissionCode.Pending);
         AssertHudContains(presentation, overlay, config.Hud.CommandPendingText);
         Assert.That(ReadOverlayStrings(overlay), Does.Not.Contain(config.Hud.CommandStartedText));
 
-        PublishAdmission(observer, commands.LastSubmittedBatchSequence, OrderAdmissionStage.EntityIntake, OrderSubmitResult.Activated);
+        PublishAdmission(observer, commands.LastSubmittedBatchSequence, NetworkCommandAdmissionStage.EntityIntake, NetworkCommandAdmissionCode.Activated);
         AssertHudContains(presentation, overlay, config.Hud.CommandStartedText);
 
-        PublishAdmission(observer, commands.LastSubmittedBatchSequence, OrderAdmissionStage.NetworkIntake, OrderSubmitResult.NetworkActorNotControlled);
+        PublishAdmission(observer, commands.LastSubmittedBatchSequence, NetworkCommandAdmissionStage.NetworkIntake, NetworkCommandAdmissionCode.NetworkActorNotControlled);
         AssertHudContains(
             presentation,
             overlay,
-            config.Hud.ResolveAdmissionRejection(OrderSubmitResult.NetworkActorNotControlled));
+            config.Hud.ResolveAdmissionRejection(NetworkCommandAdmissionCode.NetworkActorNotControlled));
     }
 
     [Test]
@@ -1855,7 +1865,7 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
         Assert.That(sendingCommand.DirtySerial, Is.GreaterThan(0));
         Assert.That(sendingCommand.DirtySerial, Is.Not.EqualTo(delayedConnection.DirtySerial));
 
-        PublishAdmission(observer, commands.LastSubmittedBatchSequence, OrderAdmissionStage.GlobalIntake, OrderSubmitResult.Queued);
+        PublishAdmission(observer, commands.LastSubmittedBatchSequence, NetworkCommandAdmissionStage.GlobalIntake, NetworkCommandAdmissionCode.Queued);
         overlay.Clear();
         presentation.Update(0f);
         ScreenOverlayItem acceptedCommand = RequireOverlayTextItem(overlay, stableId: 71414);
@@ -2045,6 +2055,7 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
             specs,
             config.Replication.MatchStateSchemaId,
             engine.MapLoader.EntityTemplateKeys,
+            RequireAuthoringContext(engine),
             RequireStableIds(engine));
         var applier = new FrontlineMatchStateReplicationApplier(
             config.Replication.MatchStateSchemaId,
@@ -2078,6 +2089,9 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
     private static PresentationStableIdAllocator RequireStableIds(GameEngine engine) =>
         engine.GetService(CoreServiceKeys.PresentationStableIdAllocator)
         ?? throw new InvalidOperationException("PresentationStableIdAllocator is unavailable.");
+
+    private static ComponentAuthoringContext RequireAuthoringContext(GameEngine engine) =>
+        engine.MapLoader.RequireComponentAuthoringContext();
 
     private static FrontlineNetworkEntityBindingSystem CreateBindingSystem(
         GameEngine engine,
@@ -2127,8 +2141,8 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
     private static void PublishAdmission(
         NetworkRuntimeStateObserver observer,
         ulong clientBatchSequence,
-        OrderAdmissionStage stage,
-        OrderSubmitResult result)
+        NetworkCommandAdmissionStage stage,
+        NetworkCommandAdmissionCode code)
     {
         var seat = new NetworkCommandSeat(slot: 0, generation: 1, playerId: 1);
         var outcome = new NetworkCommandAdmissionOutcome(
@@ -2140,7 +2154,7 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
             admissionBatchId: 11,
             admissionBatchIndex: 0,
             stage,
-            result,
+            code,
             isReplay: false,
             committedTick: 300);
         observer.OnClientAdmission(in outcome);

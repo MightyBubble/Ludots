@@ -1387,8 +1387,8 @@ internal sealed class AcceptanceDriver : ISystem<float>
         AcceptanceCommandEvidence command = _evidence.Commands[^1];
         string expectedAction = requireEntityQueue ? "QueueTrainInfantry" : "TrainInfantry";
         if (!string.Equals(command.Action, expectedAction, StringComparison.Ordinal) ||
-            !string.Equals(command.AdmissionStage, OrderAdmissionStage.EntityIntake.ToString(), StringComparison.Ordinal) ||
-            !string.Equals(command.AdmissionResult, OrderSubmitResult.Activated.ToString(), StringComparison.Ordinal))
+            !string.Equals(command.AdmissionStage, NetworkCommandAdmissionStage.EntityIntake.ToString(), StringComparison.Ordinal) ||
+            !string.Equals(command.AdmissionResult, NetworkCommandAdmissionCode.Activated.ToString(), StringComparison.Ordinal))
         {
             throw new InvalidOperationException(
                 $"Training admission ended as {command.Action}/{command.AdmissionStage}/{command.AdmissionResult}; " +
@@ -1400,17 +1400,17 @@ internal sealed class AcceptanceDriver : ISystem<float>
         for (int i = 0; i < command.AdmissionHistory.Length; i++)
         {
             AcceptanceAdmissionTransitionEvidence transition = command.AdmissionHistory[i];
-            if (!string.Equals(transition.Stage, OrderAdmissionStage.EntityIntake.ToString(), StringComparison.Ordinal))
+            if (!string.Equals(transition.Stage, NetworkCommandAdmissionStage.EntityIntake.ToString(), StringComparison.Ordinal))
             {
                 continue;
             }
             if (queuedIndex < 0 &&
-                string.Equals(transition.Result, OrderSubmitResult.Queued.ToString(), StringComparison.Ordinal))
+                string.Equals(transition.Result, NetworkCommandAdmissionCode.Queued.ToString(), StringComparison.Ordinal))
             {
                 queuedIndex = i;
             }
             if (activatedIndex < 0 &&
-                string.Equals(transition.Result, OrderSubmitResult.Activated.ToString(), StringComparison.Ordinal))
+                string.Equals(transition.Result, NetworkCommandAdmissionCode.Activated.ToString(), StringComparison.Ordinal))
             {
                 activatedIndex = i;
             }
@@ -1652,7 +1652,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
             {
                 return false;
             }
-            if (actor.Stage != OrderAdmissionStage.EntityIntake)
+            if (actor.Stage != NetworkCommandAdmissionStage.EntityIntake)
             {
                 return false;
             }
@@ -1661,7 +1661,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
                 throw new InvalidOperationException(
                     $"Command {_pendingCommandAction} sequence {_pendingCommandSequence} actor {i} was rejected: {actor.Result}.");
             }
-            if (actor.Result != OrderSubmitResult.Activated)
+            if (actor.Result != NetworkCommandAdmissionCode.Activated)
             {
                 return false;
             }
@@ -1672,7 +1672,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
                 Result = actor.Result.ToString(),
             };
         }
-        if (summary.Stage != OrderAdmissionStage.EntityIntake || summary.Result != OrderSubmitResult.Activated)
+        if (summary.Stage != NetworkCommandAdmissionStage.EntityIntake || summary.Result != NetworkCommandAdmissionCode.Activated)
         {
             return false;
         }
@@ -1682,11 +1682,11 @@ internal sealed class AcceptanceDriver : ISystem<float>
         {
             AcceptanceAdmissionTransitionEvidence transition = _pendingAdmissionHistory[i];
             observedNetworkIntake |=
-                transition.Stage == OrderAdmissionStage.NetworkIntake.ToString() &&
-                transition.Result == OrderSubmitResult.NetworkScheduled.ToString();
+                transition.Stage == NetworkCommandAdmissionStage.NetworkIntake.ToString() &&
+                transition.Result == NetworkCommandAdmissionCode.NetworkScheduled.ToString();
             observedEntityActivation |=
-                transition.Stage == OrderAdmissionStage.EntityIntake.ToString() &&
-                transition.Result == OrderSubmitResult.Activated.ToString();
+                transition.Stage == NetworkCommandAdmissionStage.EntityIntake.ToString() &&
+                transition.Result == NetworkCommandAdmissionCode.Activated.ToString();
         }
         if (!observedNetworkIntake || !observedEntityActivation)
         {
@@ -2760,11 +2760,11 @@ internal sealed class AcceptanceDriver : ISystem<float>
         return selected;
     }
 
-    private static bool IsAdmissionRejection(OrderSubmitResult result) =>
-        result is not OrderSubmitResult.NetworkScheduled and
-            not OrderSubmitResult.Queued and
-            not OrderSubmitResult.Pending and
-            not OrderSubmitResult.Activated;
+    private static bool IsAdmissionRejection(NetworkCommandAdmissionCode code) =>
+        code is not NetworkCommandAdmissionCode.NetworkScheduled and
+            not NetworkCommandAdmissionCode.Queued and
+            not NetworkCommandAdmissionCode.Pending and
+            not NetworkCommandAdmissionCode.Activated;
 
     private static FrontlineMatchOutcome OutcomeForWinningSide(int sideIndex) => sideIndex switch
     {

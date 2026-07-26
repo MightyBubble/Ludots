@@ -13,7 +13,8 @@ namespace Ludots.Core.Networking.Commands
             int sequenceHistoryCapacity,
             int maxPastTargetTicks,
             int maxFutureTargetTicks,
-            int scheduledBatchCapacity)
+            int scheduledBatchCapacity,
+            int commandCorrelationCapacity)
         {
             SeatCapacity = RequirePositive(seatCapacity, nameof(seatCapacity));
             SimulationTickRateHz = RequirePositive(simulationTickRateHz, nameof(simulationTickRateHz));
@@ -34,6 +35,7 @@ namespace Ludots.Core.Networking.Commands
             MaxPastTargetTicks = maxPastTargetTicks;
             MaxFutureTargetTicks = maxFutureTargetTicks;
             ScheduledBatchCapacity = RequirePositive(scheduledBatchCapacity, nameof(scheduledBatchCapacity));
+            CommandCorrelationCapacity = RequirePositive(commandCorrelationCapacity, nameof(commandCorrelationCapacity));
             if (SequenceHistoryCapacity < ScheduledBatchCapacity)
             {
                 throw new ArgumentException(
@@ -51,6 +53,7 @@ namespace Ludots.Core.Networking.Commands
         public int MaxPastTargetTicks { get; }
         public int MaxFutureTargetTicks { get; }
         public int ScheduledBatchCapacity { get; }
+        public int CommandCorrelationCapacity { get; }
 
         private static int RequirePositive(int value, string name)
         {

@@ -18,7 +18,6 @@ namespace Ludots.Core.Networking.Configuration
         public int SimulationTickRateHz { get; set; }
         public int StatePublishRateHz { get; set; }
         public int NetworkEntityCapacity { get; set; }
-        public int OrderQueueCapacity { get; set; }
         public int MaxCommandBatchesPerSecondPerPlayer { get; set; }
         public int CommandBurstBatchCapacity { get; set; }
         public int MaxActorsPerCommandBatch { get; set; }
@@ -26,7 +25,6 @@ namespace Ludots.Core.Networking.Configuration
         public int MaxPastTargetTicks { get; set; }
         public int MaxFutureTargetTicks { get; set; }
         public int NetworkAdmissionResultCapacity { get; set; }
-        public int EntityAdmissionResultCapacity { get; set; }
         public int CommandCorrelationCapacity { get; set; }
         public int ReconnectWindowSeconds { get; set; }
         public int ReadyCountdownTicks { get; set; }
@@ -66,16 +64,9 @@ namespace Ludots.Core.Networking.Configuration
             }
 
             RequirePositive(NetworkEntityCapacity, nameof(NetworkEntityCapacity));
-            RequirePositive(OrderQueueCapacity, nameof(OrderQueueCapacity));
             RequirePositive(MaxCommandBatchesPerSecondPerPlayer, nameof(MaxCommandBatchesPerSecondPerPlayer));
             RequirePositive(CommandBurstBatchCapacity, nameof(CommandBurstBatchCapacity));
             RequirePositive(MaxActorsPerCommandBatch, nameof(MaxActorsPerCommandBatch));
-            if (OrderQueueCapacity < MaxActorsPerCommandBatch)
-            {
-                throw new InvalidOperationException(
-                    $"Networking order queue capacity {OrderQueueCapacity} is below maximum command actor count {MaxActorsPerCommandBatch}.");
-            }
-
             RequirePositive(CommandSequenceHistoryCapacity, nameof(CommandSequenceHistoryCapacity));
             RequireNonNegative(MaxPastTargetTicks, nameof(MaxPastTargetTicks));
             RequireNonNegative(MaxFutureTargetTicks, nameof(MaxFutureTargetTicks));
@@ -99,23 +90,7 @@ namespace Ludots.Core.Networking.Configuration
                     $"Networking admission result capacity {NetworkAdmissionResultCapacity} cannot replay a maximum command batch of {MaxActorsPerCommandBatch} actors.");
             }
 
-            RequirePositive(EntityAdmissionResultCapacity, nameof(EntityAdmissionResultCapacity));
-            if (EntityAdmissionResultCapacity < MaxActorsPerCommandBatch)
-            {
-                throw new InvalidOperationException(
-                    $"Entity admission result capacity {EntityAdmissionResultCapacity} is below maximum command actor count {MaxActorsPerCommandBatch}.");
-            }
-
             RequirePositive(CommandCorrelationCapacity, nameof(CommandCorrelationCapacity));
-            int minimumCorrelationCapacity = checked(
-                OrderQueueCapacity +
-                (NetworkEntityCapacity * (OrderBuffer.MAX_QUEUED_ORDERS + 2)));
-            if (CommandCorrelationCapacity < minimumCorrelationCapacity)
-            {
-                throw new InvalidOperationException(
-                    $"Networking command correlation capacity {CommandCorrelationCapacity} is below the " +
-                    $"declared waiting-order bound {minimumCorrelationCapacity}.");
-            }
 
             RequirePositive(ReconnectWindowSeconds, nameof(ReconnectWindowSeconds));
             RequirePositive(ReadyCountdownTicks, nameof(ReadyCountdownTicks));

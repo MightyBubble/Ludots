@@ -10,12 +10,6 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         PersistentQueued = 2
     }
 
-    public enum OrderAdmissionSource : byte
-    {
-        Local = 0,
-        Network = 1
-    }
-
     public struct Order
     {
         public Order()
@@ -35,7 +29,6 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         public OrderArgs Args;
         public int SubmitStep;
         public OrderSubmitMode SubmitMode;
-        public OrderAdmissionSource AdmissionSource;
         public int AdmissionBatchId;
         public ushort AdmissionBatchSize;
         public ushort AdmissionBatchIndex;
@@ -89,7 +82,6 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         {
             OrderEntityReferenceContract.Validate(in order, nameof(OrderQueue));
             EnsureOrderId(ref order);
-            order.AdmissionSource = OrderAdmissionSource.Local;
             order.AdmissionBatchId = 0;
             order.AdmissionBatchSize = 0;
             order.AdmissionBatchIndex = 0;
@@ -156,7 +148,6 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             for (int i = 0; i < orders.Length; i++)
             {
                 EnsureOrderId(ref orders[i]);
-                orders[i].AdmissionSource = OrderAdmissionSource.Local;
                 orders[i].AdmissionBatchId = 0;
                 orders[i].AdmissionBatchSize = 0;
                 orders[i].AdmissionBatchIndex = 0;
@@ -187,16 +178,13 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         /// Atomically admits a fan-out batch whose rows represent one logical order. The queue owns
         /// the shared id so producers cannot create ids that collide with other intake paths.
         /// </summary>
-        public OrderSubmitResult TryEnqueueSharedBatch(
-            Span<Order> orders,
-            OrderAdmissionSource admissionSource = OrderAdmissionSource.Local)
+        public OrderSubmitResult TryEnqueueSharedBatch(Span<Order> orders)
         {
             if (orders.IsEmpty)
             {
                 return OrderSubmitResult.Queued;
             }
 
-            ValidateAdmissionSource(admissionSource);
             for (int i = 0; i < orders.Length; i++)
             {
                 ValidateOrderTypeId(orders[i].OrderTypeId);
@@ -225,7 +213,6 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             for (int i = 0; i < orders.Length; i++)
             {
                 orders[i].OrderId = sharedOrderId;
-                orders[i].AdmissionSource = admissionSource;
                 orders[i].AdmissionBatchId = admissionBatchId;
                 orders[i].AdmissionBatchSize = batchSize;
                 orders[i].AdmissionBatchIndex = (ushort)i;
@@ -310,7 +297,6 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                     orders[i].OrderId = clusterOrderId;
                 }
 
-                orders[i].AdmissionSource = OrderAdmissionSource.Local;
                 orders[i].AdmissionBatchId = admissionBatchId;
                 orders[i].AdmissionBatchSize = batchSize;
                 orders[i].AdmissionBatchIndex = (ushort)i;
@@ -374,7 +360,6 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 Order item = _items[sourceIndex];
                 if (batchId > 0 &&
                     (item.AdmissionBatchId != batchId ||
-                     item.AdmissionSource != first.AdmissionSource ||
                      item.AdmissionBatchSize != batchSize ||
                      item.AdmissionBatchIndex != i))
                 {
@@ -424,17 +409,6 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             {
                 throw new InvalidOperationException(
                     $"OrderQueue requires a positive order type id below {OrderTypeRegistry.MaxOrderTypes}; got {orderTypeId}.");
-            }
-        }
-
-        private static void ValidateAdmissionSource(OrderAdmissionSource admissionSource)
-        {
-            if (admissionSource is not OrderAdmissionSource.Local and not OrderAdmissionSource.Network)
-            {
-                throw new ArgumentOutOfRangeException(
-                    nameof(admissionSource),
-                    admissionSource,
-                    "Unknown order admission source.");
             }
         }
 
