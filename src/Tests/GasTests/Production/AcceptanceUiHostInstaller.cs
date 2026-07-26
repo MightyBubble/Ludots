@@ -1,4 +1,6 @@
+using System.Numerics;
 using Ludots.Core.Engine;
+using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Scripting;
 using Ludots.UI;
 using Ludots.UI.Skia;
@@ -21,6 +23,22 @@ internal static class AcceptanceUiHostInstaller
         engine.SetService(CoreServiceKeys.UiTextMeasurer, textMeasurer);
         engine.SetService(CoreServiceKeys.UiImageSizeProvider, imageSizeProvider);
         engine.SetService(CoreServiceKeys.UiSurfaceHost, surfaceHost);
+        engine.SetService(CoreServiceKeys.ViewController, new FixedViewController(width, height));
         return uiRoot;
+    }
+
+    private sealed class FixedViewController : IViewController
+    {
+        public FixedViewController(float width, float height)
+        {
+            Resolution = new Vector2(width, height);
+            AspectRatio = width / height;
+        }
+
+        public Vector2 Resolution { get; }
+
+        public float Fov { get; } = 60f;
+
+        public float AspectRatio { get; }
     }
 }
