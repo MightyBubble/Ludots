@@ -788,64 +788,46 @@ internal sealed class AcceptanceDriver : ISystem<float>
                 return;
             }
 
-            int expectedSurvivors = _plan.Expected.TrainedInfantryCount -
-                _plan.Expected.WinnerCasualtiesBeforeSiege;
-            int liveCount = CollectOwnedInfantry(_localPlayerId, _selectionTargets);
-            if (liveCount > expectedSurvivors)
+            if (!TryRequireExpectedWinnerSurvivorSelection())
             {
                 return;
             }
-            if (liveCount < expectedSurvivors)
-            {
-                throw new InvalidOperationException(
-                    $"Winning side retained {liveCount} infantry before siege selection; expected exactly {expectedSurvivors} after replicated casualties.");
-            }
-            if (!PrepareOwnedInfantrySelection(expectedSurvivors))
-            {
-                return;
-            }
-
             _evidence.Gameplay.EnemyInfantryEnteredVision = true;
+            _evidence.Gameplay.SelectedInfantryHandles = CaptureSelectedHandles();
+            RequestCameraFocus(_siegePoint);
             _substep = 1;
             return;
         }
         if (_substep == 1)
         {
-            if (!AdvancePreparedSelection())
+            if (!TryRequireExpectedWinnerSurvivorSelection())
             {
                 return;
             }
-            _evidence.Gameplay.SelectedInfantryHandles = CaptureSelectedHandles();
-            RequestCameraFocus(_siegePoint);
+            if (!TryBeginFocusedGroundCommand("MoveToSiege", _siegePoint))
+            {
+                return;
+            }
             _substep = 2;
             return;
         }
         if (_substep == 2)
         {
-            if (!TryBeginFocusedGroundCommand("MoveToSiege", _siegePoint))
+            if (!AdvanceGesture())
             {
                 return;
             }
             _substep = 3;
-            return;
         }
         if (_substep == 3)
         {
-            if (!AdvanceGesture())
+            if (!TryCompletePendingCommand())
             {
                 return;
             }
             _substep = 4;
         }
         if (_substep == 4)
-        {
-            if (!TryCompletePendingCommand())
-            {
-                return;
-            }
-            _substep = 5;
-        }
-        if (_substep == 5)
         {
             if (!AreSelectedActorsNear(_siegePoint, _plan.Battle.ArrivalToleranceCm))
             {
@@ -860,9 +842,9 @@ internal sealed class AcceptanceDriver : ISystem<float>
             SortClientEntitiesByHandle(_selectionTargets, liveCount);
             RequireSelectedSet(_selectionTargets.AsSpan(0, liveCount));
             _evidence.Gameplay.SelectedInfantryHandles = CaptureSelectedHandles();
-            _substep = 6;
+            _substep = 5;
         }
-        if (_substep == 6)
+        if (_substep == 5)
         {
             if (!TryResolveVisibleEnemyCore(out _attackTarget))
             {
@@ -874,24 +856,24 @@ internal sealed class AcceptanceDriver : ISystem<float>
             _evidence.Gameplay.AttackTargetHealthBefore = ReadAttribute(_attackTarget, _healthAttributeId);
             _evidence.Gameplay.SelectedInfantryHandles = CaptureSelectedHandles();
             BeginEntityCommand("AttackEnemyCore", _attackTarget);
-            _substep = 7;
+            _substep = 6;
             return;
         }
-        if (_substep == 7)
+        if (_substep == 6)
         {
             if (!AdvanceGesture())
             {
                 return;
             }
-            _substep = 8;
+            _substep = 7;
         }
-        if (_substep == 8)
+        if (_substep == 7)
         {
             if (!TryCompletePendingCommand())
             {
                 return;
             }
-            _substep = 9;
+            _substep = 8;
         }
 
         if (!_world.IsAlive(_attackTarget))
@@ -916,6 +898,26 @@ internal sealed class AcceptanceDriver : ISystem<float>
 
         CompleteStep("The northern commander revealed the enemy core, attacked it, and reduced its health.");
         Transition(ClientStage.WaitingForOutcome, AcceptanceProgressStage.Engaging);
+    }
+
+    private bool TryRequireExpectedWinnerSurvivorSelection()
+    {
+        int expectedSurvivors = _plan.Expected.TrainedInfantryCount -
+            _plan.Expected.WinnerCasualtiesBeforeSiege;
+        int liveCount = CollectOwnedInfantry(_localPlayerId, _selectionTargets);
+        if (liveCount > expectedSurvivors)
+        {
+            return false;
+        }
+        if (liveCount < expectedSurvivors)
+        {
+            throw new InvalidOperationException(
+                $"Winning side retained {liveCount} infantry before siege selection; expected exactly {expectedSurvivors} after replicated casualties.");
+        }
+
+        SortClientEntitiesByHandle(_selectionTargets, liveCount);
+        RequireSelectedSet(_selectionTargets.AsSpan(0, liveCount));
+        return true;
     }
 
     private void UpdateWaitingForOutcome()
