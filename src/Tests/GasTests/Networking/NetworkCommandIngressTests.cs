@@ -316,11 +316,16 @@ public sealed class NetworkCommandIngressTests
         using var harness = Harness.Create(world, scheduledBatchCapacity: 2);
         Entity player = world.Create(new PlayerIdentity { PlayerId = 1 });
         Entity actor = world.Create();
+        Entity fillerActor = world.Create();
         harness.Ownership.EnsureOwnership(player, actor);
         Assert.That(harness.Entities.TryAllocate(actor, out NetworkEntityHandle actorHandle), Is.True);
         var seat = new NetworkCommandSeat(0, 1, 1);
         harness.Ingress.BindSeat(in seat, player, 10);
-        Order filler = new() { OrderTypeId = WorldOrderTypeId };
+        Order filler = new()
+        {
+            OrderTypeId = WorldOrderTypeId,
+            Actor = fillerActor,
+        };
         while (harness.Orders.TryEnqueue(in filler))
         {
         }
