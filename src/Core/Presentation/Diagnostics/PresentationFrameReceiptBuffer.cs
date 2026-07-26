@@ -347,7 +347,7 @@ namespace Ludots.Core.Presentation.Diagnostics
                 Vector3 scaled = Vector3.Multiply(local, item.Scale);
                 Vector3 world = item.Position + Vector3.Transform(scaled, rotation);
                 Vector4 clip = Vector4.Transform(new Vector4(world, 1f), projection.ViewProjection);
-                if (clip.W <= 0.001f)
+                if (clip.W <= 0.001f || clip.Z < 0f || clip.Z > clip.W)
                 {
                     continue;
                 }

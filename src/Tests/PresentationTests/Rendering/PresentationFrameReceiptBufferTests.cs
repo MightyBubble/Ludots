@@ -249,6 +249,49 @@ namespace Ludots.Tests.Presentation
                 Throws.InvalidOperationException);
         }
 
+        [TestCase(-2f)]
+        [TestCase(2f)]
+        public void BuildOnscreenInstanceReceipts_ExcludesInstancesOutsideTheProjectionDepthRange(float z)
+        {
+            var receipts = new PresentationFrameReceiptBuffer(capacity: 1);
+            receipts.RecordSubmitted(
+                ownerStableId: 11,
+                visualStableId: 1011,
+                templateId: 7,
+                worldPosition: new Vector3(0f, 0f, z),
+                position: new Vector3(0f, 0f, z),
+                rotation: Quaternion.Identity,
+                scale: new Vector3(0.2f),
+                localBounds: UnitBounds);
+            var projection = new ProjectionSnapshot(Matrix4x4.Identity, new Vector2(1000f, 500f));
+
+            PresentationOnscreenInstanceReceipt[] result =
+                receipts.BuildOnscreenInstanceReceipts(in projection);
+
+            Assert.That(result, Is.Empty);
+        }
+
+        [Test]
+        public void BuildOnscreenInstanceReceipts_KeepsTheVisiblePartOfBoundsCrossingTheNearPlane()
+        {
+            var receipts = new PresentationFrameReceiptBuffer(capacity: 1);
+            receipts.RecordSubmitted(
+                ownerStableId: 11,
+                visualStableId: 1011,
+                templateId: 7,
+                worldPosition: Vector3.Zero,
+                position: Vector3.Zero,
+                rotation: Quaternion.Identity,
+                scale: Vector3.One,
+                localBounds: UnitBounds);
+            var projection = new ProjectionSnapshot(Matrix4x4.Identity, new Vector2(1000f, 500f));
+
+            PresentationOnscreenInstanceReceipt[] result =
+                receipts.BuildOnscreenInstanceReceipts(in projection);
+
+            Assert.That(result, Has.Length.EqualTo(1));
+        }
+
         [Test]
         public void RecordSubmitted_FailsFastForInvalidIdentityAndCapacityOverflow()
         {

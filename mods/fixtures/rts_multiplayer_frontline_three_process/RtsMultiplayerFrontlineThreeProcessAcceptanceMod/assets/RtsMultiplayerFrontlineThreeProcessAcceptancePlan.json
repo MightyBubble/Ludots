@@ -15,6 +15,7 @@
     "initialCrystals": 40,
     "harvestedCrystals": 120,
     "postTrainingCrystals": 0,
+    "initialHarvesterCount": 2,
     "initialInfantryCount": 2,
     "trainedInfantryCount": 4,
     "winningSideIndex": 0,

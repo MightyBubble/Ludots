@@ -106,6 +106,7 @@ internal sealed class AcceptancePlan
         public int InitialCrystals { get; set; }
         public int HarvestedCrystals { get; set; }
         public int PostTrainingCrystals { get; set; }
+        public int InitialHarvesterCount { get; set; }
         public int InitialInfantryCount { get; set; }
         public int TrainedInfantryCount { get; set; }
         public int WinningSideIndex { get; set; }
@@ -118,7 +119,8 @@ internal sealed class AcceptancePlan
             {
                 throw new InvalidOperationException("Acceptance crystal expectations are invalid.");
             }
-            if (InitialInfantryCount <= 0 || TrainedInfantryCount <= InitialInfantryCount ||
+            if (InitialHarvesterCount <= 0 ||
+                InitialInfantryCount <= 0 || TrainedInfantryCount <= InitialInfantryCount ||
                 WinnerMinimumAttackers <= 0 || WinnerMinimumAttackers > TrainedInfantryCount ||
                 LoserAttackers <= 0 || LoserAttackers > TrainedInfantryCount)
             {
