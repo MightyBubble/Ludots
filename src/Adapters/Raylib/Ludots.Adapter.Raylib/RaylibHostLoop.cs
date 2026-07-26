@@ -373,6 +373,7 @@ namespace Ludots.Adapter.Raylib
                     ? parsedAutoOrbitDegPerSecond
                     : 0f;
                 SyntheticUiPlayback syntheticUiPlayback = ReadSyntheticUiPlayback();
+                bool primitiveProbeLogged = false;
                 int frameIndex = 0;
                 Stopwatch runtimeStopwatch = Stopwatch.StartNew();
                 long previousLoopEnd = Stopwatch.GetTimestamp();
@@ -601,6 +602,15 @@ namespace Ludots.Adapter.Raylib
                             engine.TryGetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer, out PrimitiveDrawBuffer draw) &&
                             engine.TryGetService(CoreServiceKeys.PresentationMeshAssetRegistry, out MeshAssetRegistry meshes))
                         {
+                            if (!primitiveProbeLogged && draw.GetSpan().Length > 0)
+                            {
+                                ref readonly PrimitiveDrawItem probe = ref draw.GetSpan()[0];
+                                AppendRaylibDiagnostic(
+                                    diagnosticPath,
+                                    $"[DEBUG-rts-primitives] first position=({probe.Position.X:F3},{probe.Position.Y:F3},{probe.Position.Z:F3}) scale=({probe.Scale.X:F3},{probe.Scale.Y:F3},{probe.Scale.Z:F3}) color=({probe.Color.X:F3},{probe.Color.Y:F3},{probe.Color.Z:F3},{probe.Color.W:F3}) visibility={probe.Visibility} meshAssetId={probe.MeshAssetId} renderPath={probe.RenderPath}");
+                                primitiveProbeLogged = true;
+                            }
+
                             if (!_emptyBufferWarned && draw.GetSpan().Length == 0)
                             {
                                 System.Diagnostics.Debug.WriteLine("[RaylibHostLoop] PrimitiveDrawBuffer is empty on first render frame; no Marker3D performers emitting?");
@@ -636,6 +646,7 @@ namespace Ludots.Adapter.Raylib
                                 primitiveRenderer.LastGpuSkinnedBatches,
                                 primitiveRenderer.LastGpuSkinnedMatrixBuildMs,
                                 primitiveRenderer.LastGpuSkinnedMeshDrawMs);
+                            Rl.DrawCube(activeCamera.target + new Vector3(0f, 6f, 0f), 4f, 4f, 4f, new Color(255, 0, 255, 255));
                         }
                         else
                         {
