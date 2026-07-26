@@ -48,6 +48,36 @@ public sealed class NetworkRuntimeStateObserverTests
     }
 
     [Test]
+    public void ClientAdmission_TerminalCompletion_RemainsSuccessfulAndPreservesActorAdmission()
+    {
+        var observer = CreateObserver();
+        var seat = new NetworkCommandSeat(slot: 0, generation: 1, playerId: 1);
+        NetworkCommandAdmissionOutcome activated = Outcome(
+            in seat,
+            sequence: 1,
+            NetworkCommandAdmissionStage.EntityIntake,
+            NetworkCommandAdmissionCode.Activated);
+        NetworkCommandAdmissionOutcome completed = Outcome(
+            in seat,
+            sequence: 1,
+            NetworkCommandAdmissionStage.Terminal,
+            NetworkCommandAdmissionCode.TerminalCompleted);
+
+        observer.OnClientAdmission(in activated);
+        observer.OnClientAdmission(in completed);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(observer.TryGetClientAdmission(1, out NetworkCommandAdmissionOutcome summary), Is.True);
+            Assert.That(summary.Stage, Is.EqualTo(NetworkCommandAdmissionStage.Terminal));
+            Assert.That(summary.Result, Is.EqualTo(NetworkCommandAdmissionCode.TerminalCompleted));
+            Assert.That(NetworkCommandAdmissionCodeSemantics.IsAcceptedProgress(summary.Result), Is.True);
+            Assert.That(observer.TryGetClientActorAdmission(1, 0, out NetworkCommandAdmissionOutcome actor), Is.True);
+            Assert.That(actor.Result, Is.EqualTo(NetworkCommandAdmissionCode.Activated));
+        });
+    }
+
+    [Test]
     public void ClientAdmission_SameFrameProgress_RemainsAvailableAsOrderedFixedHistory()
     {
         var observer = CreateObserver();

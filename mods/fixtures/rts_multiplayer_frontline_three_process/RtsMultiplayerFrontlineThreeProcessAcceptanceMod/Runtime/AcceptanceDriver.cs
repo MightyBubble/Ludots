@@ -2761,10 +2761,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
     }
 
     private static bool IsAdmissionRejection(NetworkCommandAdmissionCode code) =>
-        code is not NetworkCommandAdmissionCode.NetworkScheduled and
-            not NetworkCommandAdmissionCode.Queued and
-            not NetworkCommandAdmissionCode.Pending and
-            not NetworkCommandAdmissionCode.Activated;
+        !NetworkCommandAdmissionCodeSemantics.IsAcceptedProgress(code);
 
     private static FrontlineMatchOutcome OutcomeForWinningSide(int sideIndex) => sideIndex switch
     {
