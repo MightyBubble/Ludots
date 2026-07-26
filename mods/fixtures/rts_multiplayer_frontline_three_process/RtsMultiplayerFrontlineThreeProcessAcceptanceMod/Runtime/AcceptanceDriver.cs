@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.CompilerServices;
+using System.Text;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Components;
@@ -1297,9 +1298,90 @@ internal sealed class AcceptanceDriver : ISystem<float>
         };
         if (ElapsedSeconds(_stageStartedTimestamp) > timeout)
         {
+            string diagnostic = _clientStage == ClientStage.Advancing && _substep == 5
+                ? BuildAdvancingGateDiagnostic()
+                : string.Empty;
             throw new TimeoutException(
-                $"Client player {_localPlayerId} timed out after {timeout} seconds in stage {_clientStage}, substep {_substep}.");
+                $"Client player {_localPlayerId} timed out after {timeout} seconds in stage {_clientStage}, substep {_substep}.{diagnostic}");
         }
+    }
+
+    private string BuildAdvancingGateDiagnostic()
+    {
+        bool moved = HaveAllSelectedActorsMoved(_plan.Battle.MinimumObservedMoveCm);
+        bool near = AreSelectedActorsNear(_meetingPoint, _plan.Battle.ArrivalToleranceCm);
+        bool visiblePayload = AreSelectedActorsVisibleWithPerformerPayload();
+        bool onscreenReceipts = AreMovedActorsOnscreenInPresentationReceipts();
+        var builder = new StringBuilder(1024);
+        builder.Append(" [DEBUG-709-ADVANCING] gates moved=").Append(moved)
+            .Append(" near=").Append(near)
+            .Append(" visiblePayload=").Append(visiblePayload)
+            .Append(" onscreenReceipts=").Append(onscreenReceipts)
+            .Append(" meeting=(").Append(_meetingPoint.X).Append(',').Append(_meetingPoint.Y).Append(')')
+            .Append(" camera=(").Append(_engine.GameSession.Camera.State.TargetCm.X)
+            .Append(',').Append(_engine.GameSession.Camera.State.TargetCm.Y).Append(')');
+
+        if (_engine.TryGetService(CoreServiceKeys.CameraCullingDebugState, out CameraCullingDebugState? culling) &&
+            culling != null)
+        {
+            builder.Append(" culling=(").Append(culling.CameraTargetCm.X)
+                .Append(',').Append(culling.CameraTargetCm.Y)
+                .Append(" visible=").Append(culling.VisibleEntityCount)
+                .Append(" revision=").Append(culling.VisibilityRevision).Append(')');
+        }
+
+        Entity owner = RequireLocalPlayerEntity();
+        int selectedCount = _collections!.CopyEntities(owner, EntityCollectionKeys.CommandSource, _entityScratch);
+        builder.Append(" selectedCount=").Append(selectedCount);
+        for (int i = 0; i < selectedCount; i++)
+        {
+            Entity entity = _entityScratch[i];
+            bool alive = _world.IsAlive(entity);
+            PresentationStableId stableId = default;
+            CullState cull = default;
+            PresentationOwnerHasPerformerPayload payload = default;
+            bool hasStableId = alive && _world.TryGet(entity, out stableId);
+            bool hasCull = alive && _world.TryGet(entity, out cull);
+            bool hasPayload = alive && _world.TryGet(entity, out payload);
+            WorldCmInt2 position = alive ? GetWorldPosition(entity) : default;
+            builder.Append(" selected[").Append(i).Append("]={handle=").Append(FormatHandle(entity))
+                .Append(" alive=").Append(alive)
+                .Append(" stable=").Append(hasStableId ? stableId.Value : 0)
+                .Append(" pos=(").Append(position.X).Append(',').Append(position.Y).Append(')')
+                .Append(" cull=").Append(hasCull ? cull.IsVisible : null)
+                .Append(" payload=").Append(hasPayload ? payload.Count : 0).Append('}');
+        }
+
+        ReadOnlySpan<PresentationFrameReceiptItem> receipts = _presentationReceipts!.GetSpan();
+        builder.Append(" receiptCount=").Append(receipts.Length);
+        AcceptancePositionEvidence[] starts = _evidence.Gameplay.MoveStartPositions;
+        for (int i = 0; i < starts.Length; i++)
+        {
+            int submitted = 0;
+            WorldCmInt2 receiptPosition = default;
+            for (int receiptIndex = 0; receiptIndex < receipts.Length; receiptIndex++)
+            {
+                ref readonly PresentationFrameReceiptItem receipt = ref receipts[receiptIndex];
+                if (receipt.OwnerStableId != starts[i].PresentationStableId ||
+                    receipt.TemplateId != _infantryBodyTemplateId)
+                {
+                    continue;
+                }
+
+                submitted++;
+                receiptPosition = new WorldCmInt2(
+                    checked((int)MathF.Round(receipt.WorldPosition.X * 100f)),
+                    checked((int)MathF.Round(receipt.WorldPosition.Z * 100f)));
+            }
+            builder.Append(" start[").Append(i).Append("]={stable=")
+                .Append(starts[i].PresentationStableId)
+                .Append(" bodySubmitted=").Append(submitted)
+                .Append(" bodyOnscreen=").Append(_presentationReceipts.HasOnscreenInstance(
+                    starts[i].PresentationStableId,
+                    _infantryBodyTemplateId))
+                .Append(" receiptPos=(").Append(receiptPosition.X).Append(',').Append(receiptPosition.Y).Append(")}");
+        }
+        return builder.ToString();
     }
 
     private void Transition(ClientStage next, AcceptanceProgressStage progressStage)
