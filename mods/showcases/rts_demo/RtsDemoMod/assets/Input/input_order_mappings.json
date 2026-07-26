@@ -82,6 +82,11 @@
       "modifierBehavior": "IgnoreModifier"
     }
   ],
+  "groupMoveTargetLayout": {
+    "mode": "Grid",
+    "spacingCm": 140,
+    "orderTypeKeys": ["moveTo"]
+  },
   "userOverrides": {
     "enabled": true,
     "persistPath": "user://RtsDemoMod/input_preferences.json"

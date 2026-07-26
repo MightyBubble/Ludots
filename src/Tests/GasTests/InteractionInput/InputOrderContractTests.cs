@@ -1996,6 +1996,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         }
 
         [TestCase(1, 16, true)]
+        [TestCase(4, 16, true)]
         [TestCase(16, 16, true)]
         [TestCase(17, 16, false)]
         [TestCase(
@@ -2015,6 +2016,12 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             input.SetActionState("Command", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
             var config = new InputOrderMappingConfig
             {
+                GroupMoveTargetLayout = new GroupMoveTargetLayoutSettings
+                {
+                    Mode = GroupMoveTargetLayoutMode.Grid,
+                    SpacingCm = 120,
+                    OrderTypeKeys = new List<string> { "moveTo" },
+                },
                 Mappings = new List<InputOrderMapping>
                 {
                     new()
@@ -2144,8 +2151,31 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             if (expectSubmitted)
             {
                 Assert.That(submitted.Count, Is.EqualTo(selectionCount));
+                Assert.That(submitted.Select(order => order.OrderId).Distinct().Count(), Is.EqualTo(1),
+                    "A shared command-intent fan-out must retain one atomic order identity.");
+                Assert.That(submitted.Select(order => order.Args.Spatial.WorldCm).Distinct().Count(), Is.EqualTo(selectionCount),
+                    "Every actor in a shared move command must receive its own stable grid target.");
                 Assert.That(system.LastActivationResult.State, Is.EqualTo(InputOrderActivationState.Submitted));
                 Assert.That(system.LastActivationResult.OrderId, Is.GreaterThan(0));
+                Assert.That(system.LastActivationResult.Target, Is.EqualTo(Entity.Null),
+                    "A position-only shared command must not report an entity target.");
+
+                if (selectionCount == 1)
+                {
+                    Assert.That(submitted[0].Args.Spatial.WorldCm, Is.EqualTo(new Vector3(100f, 0f, 200f)));
+                }
+                else if (selectionCount == 4)
+                {
+                    Assert.That(
+                        submitted.Select(order => order.Args.Spatial.WorldCm),
+                        Is.EquivalentTo(new[]
+                        {
+                            new Vector3(40f, 0f, 140f),
+                            new Vector3(160f, 0f, 140f),
+                            new Vector3(40f, 0f, 260f),
+                            new Vector3(160f, 0f, 260f),
+                        }));
+                }
             }
             else
             {
@@ -2966,6 +2996,8 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 "An entity target fact must hit the entity rule before the ground move rule.");
             Assert.That(orders[0].Target, Is.EqualTo(clickedTarget),
                 "The winning entity route must preserve the player's clicked target in the submitted order.");
+            Assert.That(system.LastActivationResult.Target, Is.EqualTo(clickedTarget),
+                "The activation result must expose the entity target that was actually submitted.");
             Assert.That(orders[0].Args.Spatial.Kind, Is.EqualTo(OrderSpatialKind.None),
                 "An entity-only route must not attach an unrelated ground target that changes the command shape.");
         }

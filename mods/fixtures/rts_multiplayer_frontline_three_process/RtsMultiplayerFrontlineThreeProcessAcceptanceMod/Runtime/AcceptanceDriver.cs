@@ -1656,6 +1656,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
                         $"sequence={_commandPort.LastSubmittedBatchSequence}.");
                 }
                 _pendingCommandSequence = _commandPort.LastSubmittedBatchSequence;
+                CaptureSubmittedAttackTarget();
             }
 
             if (_gesture.Screen.HasValue)
@@ -1678,6 +1679,32 @@ internal sealed class AcceptanceDriver : ISystem<float>
 
         _gesture = default;
         return true;
+    }
+
+    private void CaptureSubmittedAttackTarget()
+    {
+        if (!string.Equals(_pendingCommandAction, "AttackEnemyInfantry", StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        InputOrderActivationResult activation = _inputOrderMapping!.LastActivationResult;
+        Entity target = activation.Target;
+        if (activation.State != InputOrderActivationState.Submitted ||
+            target == Entity.Null ||
+            !_world.IsAlive(target) ||
+            !_world.Has<FrontlineInfantry>(target) ||
+            !_world.TryGet(target, out FrontlineParticipant participant) ||
+            participant.SideIndex == _localSideIndex)
+        {
+            throw new InvalidOperationException(
+                "AttackEnemyInfantry did not submit one live opposing infantry target through the active input mapping.");
+        }
+
+        _attackTarget = target;
+        _evidence.Gameplay.AttackTargetHandle = FormatHandle(target);
+        _evidence.Gameplay.AttackTargetPositionBefore = CapturePosition(target);
+        _evidence.Gameplay.AttackTargetHealthBefore = ReadAttribute(target, _healthAttributeId);
     }
 
     private bool TryCompletePendingCommand()
