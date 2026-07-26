@@ -919,6 +919,272 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void EntityAnchoredOwnerPayload_OneToManyToOneRootsKeepTransformSyncMarkersConsistent()
+        {
+            static PerformerDefinition CreateMovableMeshDefinition(int assetId) => new()
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AssetBinding,
+                        ActiveByDefault = true,
+                        AssetBinding = new AssetBindingConfig
+                        {
+                            AssetKind = AssetKind.Mesh,
+                            AssetId = assetId,
+                            RenderPath = VisualRenderPath.StaticMesh,
+                            Mobility = VisualMobility.Movable,
+                            AssetIdParamKey = -1,
+                        },
+                    },
+                ],
+            };
+
+            using var world = World.Create();
+            var instances = new PerformerEntityRuntime(world);
+            var definitions = new PerformerDefinitionRegistry();
+            var requests = new PresentationRequestBuffer();
+            Entity owner = world.Create(
+                WorldPositionCm.FromCm(1000, 2000),
+                new VisualTransform
+                {
+                    Position = new Vector3(10f, 0f, 20f),
+                    Rotation = Quaternion.Identity,
+                    Scale = Vector3.One,
+                },
+                new CullState { IsVisible = true, LOD = LODLevel.High },
+                new PresentationStableId { Value = 7302 },
+                new PresentationOwnerHasPerformerPayload());
+
+            int bodyADefId = definitions.Register(
+                "behavior.ownerpayload.multiroot.body.a",
+                CreateMovableMeshDefinition(assetId: 1));
+            int bodyBDefId = definitions.Register(
+                "behavior.ownerpayload.multiroot.body.b",
+                CreateMovableMeshDefinition(assetId: 2));
+            int rootADefId = definitions.Register("behavior.ownerpayload.multiroot.root.a", new PerformerDefinition
+            {
+                Behaviors = CreateMovableMeshDefinition(assetId: 3).Behaviors,
+                Children = [new ChildPerformerRef { DefinitionId = bodyADefId, ScopeTag = 11 }],
+            });
+            int rootBDefId = definitions.Register("behavior.ownerpayload.multiroot.root.b", new PerformerDefinition
+            {
+                Behaviors = CreateMovableMeshDefinition(assetId: 4).Behaviors,
+                Children = [new ChildPerformerRef { DefinitionId = bodyBDefId, ScopeTag = 12 }],
+            });
+            instances.BindDefinitions(definitions);
+
+            int nextStableId = 9300;
+            Entity rootA = instances.CreateHierarchy(
+                definitions,
+                rootADefId,
+                owner,
+                scopeId: 1,
+                PresentationAnchorKind.Entity,
+                Vector3.Zero,
+                stableId: 9201,
+                Entity.Null,
+                definitions.Get(rootADefId),
+                allocateStableId: () => nextStableId++);
+            Entity bodyA = world.Get<PerformerChildren>(rootA).Get(0);
+            PresentationOwnerHasPerformerPayload singlePayload =
+                world.Get<PresentationOwnerHasPerformerPayload>(owner);
+            Assert.Multiple(() =>
+            {
+                Assert.That(singlePayload.Count, Is.EqualTo(2));
+                Assert.That(singlePayload.RootCount, Is.EqualTo(1));
+                Assert.That(singlePayload.SingleRootPerformer, Is.EqualTo(rootA));
+                Assert.That(singlePayload.SingleRootTransformSync, Is.EqualTo(1));
+                Assert.That(world.Has<PerfOwnerPayloadTransformSync>(rootA), Is.True);
+            });
+
+            Entity rootB = instances.CreateHierarchy(
+                definitions,
+                rootBDefId,
+                owner,
+                scopeId: 2,
+                PresentationAnchorKind.Entity,
+                Vector3.Zero,
+                stableId: 9202,
+                Entity.Null,
+                definitions.Get(rootBDefId),
+                allocateStableId: () => nextStableId++);
+            Entity bodyB = world.Get<PerformerChildren>(rootB).Get(0);
+            PresentationOwnerHasPerformerPayload multiplePayload =
+                world.Get<PresentationOwnerHasPerformerPayload>(owner);
+            Assert.Multiple(() =>
+            {
+                Assert.That(multiplePayload.Count, Is.EqualTo(4));
+                Assert.That(multiplePayload.RootCount, Is.EqualTo(2));
+                Assert.That(multiplePayload.SingleRootPerformer, Is.EqualTo(Entity.Null));
+                Assert.That(multiplePayload.SingleRootTransformSync, Is.EqualTo(0));
+                Assert.That(world.Has<PerfTransformSyncTick>(rootA), Is.True);
+                Assert.That(world.Has<PerfTransformSyncTick>(rootB), Is.True);
+                Assert.That(world.Has<PerfOwnerPayloadTransformSync>(rootA), Is.False);
+                Assert.That(world.Has<PerfOwnerPayloadTransformSync>(rootB), Is.False);
+            });
+
+            Assert.That(
+                instances.SetBehaviorActive(rootA, definitions.Get(rootADefId), slotIndex: 0, active: false),
+                Is.True);
+            Assert.That(world.Has<PerfOwnerPayloadTransformSync>(rootA), Is.False);
+
+            using var sync = new PerformerEntityTransformSyncSystem(world, instances, definitions);
+            using var emit = new PerformerEmitSystem(
+                world,
+                instances,
+                definitions,
+                requests,
+                new Dictionary<string, object>());
+            ref VisualTransform ownerTransform = ref world.Get<VisualTransform>(owner);
+            Vector3 multipleRootPosition = new(30f, 0f, 40f);
+            ownerTransform.Position = multipleRootPosition;
+            world.Get<WorldPositionCm>(owner).Value = WorldPositionCm.FromCm(3000, 4000).Value;
+            sync.Update(0.016f);
+            emit.Update(0.016f);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(world.Get<PerformerWorldPosition>(rootA).Value, Is.EqualTo(multipleRootPosition));
+                Assert.That(world.Get<PerformerWorldPosition>(rootB).Value, Is.EqualTo(multipleRootPosition));
+                Assert.That(world.Get<PerformerWorldPosition>(bodyA).Value, Is.EqualTo(multipleRootPosition));
+                Assert.That(world.Get<PerformerWorldPosition>(bodyB).Value, Is.EqualTo(multipleRootPosition));
+                Assert.That(
+                    TryFindVisualProxyRequest(requests, owner, bodyADefId, out PresentationVisualProxy bodyAProxy),
+                    Is.True);
+                Assert.That(bodyAProxy.Position, Is.EqualTo(multipleRootPosition));
+                Assert.That(
+                    TryFindVisualProxyRequest(requests, owner, bodyBDefId, out PresentationVisualProxy bodyBProxy),
+                    Is.True);
+                Assert.That(bodyBProxy.Position, Is.EqualTo(multipleRootPosition));
+            });
+
+            requests.Clear();
+            instances.Destroy(rootB);
+            PresentationOwnerHasPerformerPayload restoredPayload =
+                world.Get<PresentationOwnerHasPerformerPayload>(owner);
+            Assert.Multiple(() =>
+            {
+                Assert.That(restoredPayload.Count, Is.EqualTo(2));
+                Assert.That(restoredPayload.RootCount, Is.EqualTo(1));
+                Assert.That(restoredPayload.SingleRootPerformer, Is.EqualTo(rootA));
+                Assert.That(restoredPayload.SingleRootTransformSync, Is.EqualTo(1));
+                Assert.That(world.Has<PerfOwnerPayloadTransformSync>(rootA), Is.True);
+            });
+
+            Vector3 restoredSingleRootPosition = new(50f, 0f, 60f);
+            ownerTransform.Position = restoredSingleRootPosition;
+            world.Get<WorldPositionCm>(owner).Value = WorldPositionCm.FromCm(5000, 6000).Value;
+            sync.Update(0.016f);
+            emit.Update(0.016f);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(world.Get<PerformerWorldPosition>(rootA).Value, Is.EqualTo(restoredSingleRootPosition));
+                Assert.That(world.Get<PerformerWorldPosition>(bodyA).Value, Is.EqualTo(restoredSingleRootPosition));
+                Assert.That(
+                    TryFindVisualProxyRequest(requests, owner, bodyADefId, out PresentationVisualProxy bodyAProxy),
+                    Is.True);
+                Assert.That(bodyAProxy.Position, Is.EqualTo(restoredSingleRootPosition));
+            });
+        }
+
+        [Test]
+        public void EntityAnchoredOwnerPayload_BehaviorEligibilityKeepsPayloadAndFastPathMarkerConsistent()
+        {
+            using var world = World.Create();
+            var instances = new PerformerEntityRuntime(world);
+            var definitions = new PerformerDefinitionRegistry();
+            Entity owner = world.Create(
+                WorldPositionCm.FromCm(1000, 2000),
+                new VisualTransform
+                {
+                    Position = new Vector3(10f, 0f, 20f),
+                    Rotation = Quaternion.Identity,
+                    Scale = Vector3.One,
+                },
+                new CullState { IsVisible = true, LOD = LODLevel.High },
+                new PresentationStableId { Value = 7303 },
+                new PresentationOwnerHasPerformerPayload());
+            int rootDefId = definitions.Register("behavior.ownerpayload.eligibility.root", new PerformerDefinition
+            {
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AssetBinding,
+                        ActiveByDefault = true,
+                        AssetBinding = new AssetBindingConfig
+                        {
+                            AssetKind = AssetKind.Mesh,
+                            AssetId = 1,
+                            RenderPath = VisualRenderPath.StaticMesh,
+                            Mobility = VisualMobility.Movable,
+                            AssetIdParamKey = -1,
+                        },
+                    },
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 1,
+                        Kind = BehaviorKind.Sound,
+                        ActiveByDefault = false,
+                        Sound = new SoundConfig
+                        {
+                            SoundAssetId = 99,
+                            Loop = true,
+                            Volume = 1f,
+                        },
+                    },
+                ],
+            });
+            instances.BindDefinitions(definitions);
+            Entity root = instances.CreateHierarchy(
+                definitions,
+                rootDefId,
+                owner,
+                scopeId: 1,
+                PresentationAnchorKind.Entity,
+                Vector3.Zero,
+                stableId: 9401,
+                Entity.Null,
+                definitions.Get(rootDefId));
+
+            PresentationOwnerHasPerformerPayload initialPayload =
+                world.Get<PresentationOwnerHasPerformerPayload>(owner);
+            Assert.Multiple(() =>
+            {
+                Assert.That(initialPayload.SingleRootTransformSync, Is.EqualTo(1));
+                Assert.That(world.Has<PerfOwnerPayloadTransformSync>(root), Is.True);
+            });
+
+            Assert.That(
+                instances.SetBehaviorActive(root, definitions.Get(rootDefId), slotIndex: 1, active: true),
+                Is.True);
+            PresentationOwnerHasPerformerPayload soundActivePayload =
+                world.Get<PresentationOwnerHasPerformerPayload>(owner);
+            Assert.Multiple(() =>
+            {
+                Assert.That(soundActivePayload.SingleRootTransformSync, Is.EqualTo(0));
+                Assert.That(world.Has<PerfTransformSyncTick>(root), Is.True);
+                Assert.That(world.Has<PerfOwnerPayloadTransformSync>(root), Is.False);
+            });
+
+            Assert.That(
+                instances.SetBehaviorActive(root, definitions.Get(rootDefId), slotIndex: 1, active: false),
+                Is.True);
+            PresentationOwnerHasPerformerPayload restoredPayload =
+                world.Get<PresentationOwnerHasPerformerPayload>(owner);
+            Assert.Multiple(() =>
+            {
+                Assert.That(restoredPayload.SingleRootTransformSync, Is.EqualTo(1));
+                Assert.That(world.Has<PerfOwnerPayloadTransformSync>(root), Is.True);
+            });
+        }
+
+        [Test]
         public void InheritParent_OwnerPayloadDescendantsFollowMovedRootAndRetainStableIdentity()
         {
             using var world = World.Create();

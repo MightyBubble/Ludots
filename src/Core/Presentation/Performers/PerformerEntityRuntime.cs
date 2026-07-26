@@ -1465,7 +1465,9 @@ namespace Ludots.Core.Presentation.Performers
             SyncTickBehaviorMarker<PerfHasOwnerFacingBinding>(entity, hasOwnerFacingBinding);
             SyncTickBehaviorMarker<PerfHasMinimapMarker>(entity, hasMinimapMarker);
             SyncTickBehaviorMarker<PerfTransformSyncTick>(entity, needsTransformSync);
-            SyncTickBehaviorMarker<PerfOwnerPayloadTransformSync>(entity, needsTransformSync && CanUseOwnerPayloadTransformSync(entity));
+            SyncTickBehaviorMarker<PerfOwnerPayloadTransformSync>(
+                entity,
+                needsTransformSync && CanUseCurrentOwnerPayloadTransformSync(entity));
             SyncTickBehaviorMarker<PerfOwnerPayloadAttachedTransformSync>(entity, canUseOwnerPayloadAttachedTransformSync);
             SyncTickBehaviorMarker<PerfHasAnimator>(entity, hasAnimator);
         }
@@ -1526,7 +1528,9 @@ namespace Ludots.Core.Presentation.Performers
             bool needsTransformSync = !canUseOwnerPayloadAttachedTransformSync &&
                 PerformerTransformRequiresTick(entity, depth: 0);
             SyncTickBehaviorMarker<PerfTransformSyncTick>(entity, needsTransformSync);
-            SyncTickBehaviorMarker<PerfOwnerPayloadTransformSync>(entity, needsTransformSync && CanUseOwnerPayloadTransformSync(entity));
+            SyncTickBehaviorMarker<PerfOwnerPayloadTransformSync>(
+                entity,
+                needsTransformSync && CanUseCurrentOwnerPayloadTransformSync(entity));
             SyncTickBehaviorMarker<PerfOwnerPayloadAttachedTransformSync>(entity, canUseOwnerPayloadAttachedTransformSync);
         }
 
@@ -1553,6 +1557,7 @@ namespace Ludots.Core.Presentation.Performers
             state.Version++;
             SyncTickBehaviorMarkers(entity, definition, nextMask);
             SyncEmitWorkMarkers(entity, definition, nextMask);
+            RefreshOwnerPayloadMarker(entity);
             MarkStaticDirty(entity);
             return true;
         }
@@ -3428,7 +3433,7 @@ namespace Ludots.Core.Presentation.Performers
                         Count = 1,
                         RootCount = 1,
                         SingleRootPerformer = performers[index],
-                        SingleRootTransformSync = CanUseOwnerPayloadTransformSync(performers[index]) ? (byte)1 : (byte)0,
+                        SingleRootTransformSync = _world.Has<PerfOwnerPayloadTransformSync>(performers[index]) ? (byte)1 : (byte)0,
                     };
                 }
 
@@ -3849,22 +3854,69 @@ namespace Ludots.Core.Presentation.Performers
                 return;
             }
 
+            bool hasSingleRoot = TryGetSingleRoot(in bucket, out Entity singleRoot);
+            bool singleRootTransformSync =
+                hasSingleRoot &&
+                _world.Has<PerfTransformSyncTick>(singleRoot) &&
+                CanUseOwnerPayloadTransformSync(singleRoot);
             var next = new PresentationOwnerHasPerformerPayload
             {
                 Count = bucket.Count,
-                RootCount = TryGetSingleRoot(in bucket, out Entity singleRoot) ? 1 : CountRoots(in bucket),
+                RootCount = hasSingleRoot ? 1 : CountRoots(in bucket),
                 SingleRootPerformer = singleRoot,
-                SingleRootTransformSync = CanUseOwnerPayloadTransformSync(singleRoot) ? (byte)1 : (byte)0,
+                SingleRootTransformSync = singleRootTransformSync ? (byte)1 : (byte)0,
             };
 
             if (_world.Has<PresentationOwnerHasPerformerPayload>(owner))
             {
                 ref PresentationOwnerHasPerformerPayload marker = ref _world.Get<PresentationOwnerHasPerformerPayload>(owner);
                 marker = next;
+            }
+            else
+            {
+                _world.Add(owner, next);
+            }
+
+            ReconcileOwnerPayloadTransformSyncMarkers(
+                in bucket,
+                singleRootTransformSync ? singleRoot : Entity.Null);
+        }
+
+        private void RefreshOwnerPayloadMarker(Entity performer)
+        {
+            if (performer == Entity.Null ||
+                !_world.IsAlive(performer) ||
+                !_world.Has<PerformerState>(performer))
+            {
                 return;
             }
 
-            _world.Add(owner, next);
+            Entity owner = _world.Get<PerformerState>(performer).OwnerEntity;
+            ref OwnerPerformerBucket bucket = ref CollectionsMarshal.GetValueRefOrNullRef(
+                _byOwner,
+                new OwnerKey(owner));
+            if (!Unsafe.IsNullRef(ref bucket))
+            {
+                WriteOwnerPayloadMarker(owner, in bucket);
+            }
+        }
+
+        private void ReconcileOwnerPayloadTransformSyncMarkers(
+            in OwnerPerformerBucket bucket,
+            Entity fastRoot)
+        {
+            for (int i = 0; i < bucket.Count; i++)
+            {
+                Entity performer = bucket.GetAt(i);
+                if (!IsEntityAnchoredRootPerformer(performer))
+                {
+                    continue;
+                }
+
+                SyncTickBehaviorMarker<PerfOwnerPayloadTransformSync>(
+                    performer,
+                    performer == fastRoot);
+            }
         }
 
         private void RemoveOwnerPayloadMarker(Entity owner)
@@ -3902,6 +3954,22 @@ namespace Ludots.Core.Presentation.Performers
             return _definitions == null ||
                 (_definitions.TryGet(state.DefId, out PerformerDefinition definition) &&
                  DefinitionCanUseOwnerPayloadTransformSync(definition, state.BehaviorActiveMask, depth: 0));
+        }
+
+        private bool CanUseCurrentOwnerPayloadTransformSync(Entity performer)
+        {
+            if (!CanUseOwnerPayloadTransformSync(performer))
+            {
+                return false;
+            }
+
+            Entity owner = _world.Get<PerformerState>(performer).OwnerEntity;
+            ref OwnerPerformerBucket bucket = ref CollectionsMarshal.GetValueRefOrNullRef(
+                _byOwner,
+                new OwnerKey(owner));
+            return !Unsafe.IsNullRef(ref bucket) &&
+                   TryGetSingleRoot(in bucket, out Entity singleRoot) &&
+                   singleRoot == performer;
         }
 
         private bool TryGetSingleRoot(in OwnerPerformerBucket bucket, out Entity root)
