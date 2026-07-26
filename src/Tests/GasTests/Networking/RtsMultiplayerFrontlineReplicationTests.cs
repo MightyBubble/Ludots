@@ -123,6 +123,75 @@ public sealed class RtsMultiplayerFrontlineReplicationTests
             Throws.InvalidOperationException.With.Message.Contains(forbiddenComponent));
     }
 
+    [TestCase("rts_frontline_core")]
+    [TestCase("rts_frontline_harvester")]
+    [TestCase("rts_frontline_infantry")]
+    [TestCase("rts_frontline_crystal_node")]
+    public void FrontlineInteractableTemplates_DeclareBox3DPlayerClickBounds(string templateId)
+    {
+        using GameEngine engine = CreateStartedReplicatedClientEngine();
+        EntityTemplate template = engine.MapLoader.TemplateRegistry.GetAll()
+            .Single(candidate => candidate.Id == templateId);
+
+        Assert.That(template.Components.TryGetValue("SpatialBounds", out JsonNode? boundsNode), Is.True);
+        Assert.That(boundsNode, Is.TypeOf<JsonObject>());
+        Assert.That(boundsNode!["kind"]?.GetValue<string>(), Is.EqualTo("Box3D"));
+        Assert.That(template.Components.TryGetValue("SpatialBox3D", out JsonNode? boxNode), Is.True);
+        Assert.That(boxNode, Is.TypeOf<JsonObject>());
+        Assert.Multiple(() =>
+        {
+            Assert.That(boxNode!["halfSizeXCm"]?.GetValue<int>(), Is.GreaterThan(0));
+            Assert.That(boxNode["halfSizeYCm"]?.GetValue<int>(), Is.GreaterThan(0));
+            Assert.That(boxNode["halfSizeZCm"]?.GetValue<int>(), Is.GreaterThan(0));
+        });
+    }
+
+    [TestCase("SpatialBounds")]
+    [TestCase("SpatialBox3D")]
+    public void ClientTemplateFactory_RejectsMissingPlayerClickBounds(string requiredComponent)
+    {
+        using GameEngine engine = CreateStartedReplicatedClientEngine();
+        engine.LoadMap(MapId);
+        FrontlineConfig config = GetRuntime(engine).Config;
+        FrontlineReplicationSpec[] specs = FrontlineReplication.CreateSpecs(config.Replication);
+        EntityTemplate[] templates = CloneTemplates(engine.MapLoader.TemplateRegistry.GetAll());
+        EntityTemplate core = templates.Single(template => template.Id == "rts_frontline_core");
+        Assert.That(core.Components.Remove(requiredComponent), Is.True);
+
+        Assert.That(
+            () => new FrontlineClientTemplateFactory(
+                engine.World,
+                templates,
+                specs,
+                config.Replication.MatchStateSchemaId,
+                engine.MapLoader.EntityTemplateKeys,
+                RequireStableIds(engine)),
+            Throws.InvalidOperationException.With.Message.Contains(requiredComponent));
+    }
+
+    [Test]
+    public void ClientTemplateFactory_RejectsNonBoxPlayerClickBounds()
+    {
+        using GameEngine engine = CreateStartedReplicatedClientEngine();
+        engine.LoadMap(MapId);
+        FrontlineConfig config = GetRuntime(engine).Config;
+        FrontlineReplicationSpec[] specs = FrontlineReplication.CreateSpecs(config.Replication);
+        EntityTemplate[] templates = CloneTemplates(engine.MapLoader.TemplateRegistry.GetAll());
+        EntityTemplate core = templates.Single(template => template.Id == "rts_frontline_core");
+        var bounds = (JsonObject)core.Components["SpatialBounds"]!;
+        bounds["kind"] = "Point";
+
+        Assert.That(
+            () => new FrontlineClientTemplateFactory(
+                engine.World,
+                templates,
+                specs,
+                config.Replication.MatchStateSchemaId,
+                engine.MapLoader.EntityTemplateKeys,
+                RequireStableIds(engine)),
+            Throws.InvalidOperationException.With.Message.Contains("Box3D"));
+    }
+
     [TestCase("WorldPositionCm")]
     [TestCase("SpatialCellRef")]
     public void ClientTemplateFactory_RejectsSpatialMatchStateTemplateDrift(string forbiddenComponent)

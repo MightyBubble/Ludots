@@ -408,6 +408,7 @@ internal sealed class FrontlineClientTemplateFactory
         RequireComponent(template, "CullState");
         RequireComponent(template, "CommandSourceSelectableTag");
         RequireComponent(template, "CommandSourceSelectableState");
+        RequireBox3DPlayerClickBounds(template);
         RequireComponent(template, ReplicationSchemaComponent);
         if (spec.HasHealth || spec.HasCrystals)
         {
@@ -454,6 +455,40 @@ internal sealed class FrontlineClientTemplateFactory
         {
             throw new InvalidOperationException(
                 $"RTS Frontline replicated template '{template.Id}' requires component '{componentName}'.");
+        }
+    }
+
+    private static void RequireBox3DPlayerClickBounds(EntityTemplate template)
+    {
+        RequireComponent(template, "SpatialBounds");
+        RequireComponent(template, "SpatialBox3D");
+        if (template.Components["SpatialBounds"] is not JsonObject bounds ||
+            bounds["kind"] is not JsonValue kindValue ||
+            !kindValue.TryGetValue(out string? kind) ||
+            !string.Equals(kind, nameof(SpatialBoundsKind.Box3D), StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                $"RTS Frontline replicated template '{template.Id}' requires SpatialBounds kind Box3D.");
+        }
+        if (template.Components["SpatialBox3D"] is not JsonObject box)
+        {
+            throw new InvalidOperationException(
+                $"RTS Frontline replicated template '{template.Id}' requires a SpatialBox3D object.");
+        }
+
+        RequirePositiveHalfSize(template, box, "halfSizeXCm");
+        RequirePositiveHalfSize(template, box, "halfSizeYCm");
+        RequirePositiveHalfSize(template, box, "halfSizeZCm");
+    }
+
+    private static void RequirePositiveHalfSize(EntityTemplate template, JsonObject box, string propertyName)
+    {
+        if (box[propertyName] is not JsonValue value ||
+            !value.TryGetValue(out int halfSizeCm) ||
+            halfSizeCm <= 0)
+        {
+            throw new InvalidOperationException(
+                $"RTS Frontline replicated template '{template.Id}' requires a positive SpatialBox3D.{propertyName}.");
         }
     }
 
@@ -661,6 +696,9 @@ internal abstract class FrontlineReplicationApplier : IClientReplicationSchemaAp
             !world.Has<CullState>(entity) ||
             !world.Has<CommandSourceSelectableTag>(entity) ||
             !world.Has<CommandSourceSelectableState>(entity) ||
+            !world.TryGet(entity, out SpatialBounds spatialBounds) ||
+            spatialBounds.Kind != SpatialBoundsKind.Box3D ||
+            !world.Has<SpatialBox3D>(entity) ||
             ((_spec.HasHealth || _spec.HasCrystals) && !world.Has<AttributeBuffer>(entity)) ||
             (_spec.HasOwner &&
              (!world.Has<Team>(entity) ||
