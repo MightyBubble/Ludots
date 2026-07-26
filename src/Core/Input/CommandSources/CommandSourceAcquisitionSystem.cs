@@ -5,6 +5,7 @@ using Arch.Core;
 using Arch.System;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Input.Interaction;
+using Ludots.Core.Input.Runtime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Scripting;
@@ -184,10 +185,27 @@ namespace Ludots.Core.Input.CommandSources
                 : FindNearestEntity(owner, drag.CurrentScreen, _config.ClickPickRadiusPixels);
             Entity acquired = ResolveClickAcquisition(owner, gestureHovered);
             ApplyClickAcquisition(owner, acquired, acquisitionMode);
-            if (pointer.HasGroundPoint)
+            if (TryResolveGestureGroundWorldCm(in drag, in pointer, out WorldCmInt2 gestureWorldCm))
             {
-                OnEntityAcquired?.Invoke(pointer.GroundWorldCm, acquired);
+                OnEntityAcquired?.Invoke(gestureWorldCm, acquired);
             }
+        }
+
+        private bool TryResolveGestureGroundWorldCm(
+            in CommandSourceDragState drag,
+            in PointerInteractionSnapshot pointer,
+            out WorldCmInt2 worldCm)
+        {
+            if (drag.CurrentScreen == pointer.Pointer)
+            {
+                worldCm = pointer.GroundWorldCm;
+                return pointer.HasGroundPoint;
+            }
+
+            return AuthoritativeGroundPointerHelper.TryResolveFromScreen(
+                _globals,
+                drag.CurrentScreen,
+                out worldCm);
         }
 
         private bool IsAcquisitionSuppressed()

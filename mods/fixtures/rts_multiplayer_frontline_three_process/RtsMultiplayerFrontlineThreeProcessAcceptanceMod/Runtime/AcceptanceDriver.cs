@@ -1410,9 +1410,16 @@ internal sealed class AcceptanceDriver : ISystem<float>
 
         int queuedIndex = -1;
         int activatedIndex = -1;
+        int terminalIndex = -1;
         for (int i = 0; i < command.AdmissionHistory.Length; i++)
         {
             AcceptanceAdmissionTransitionEvidence transition = command.AdmissionHistory[i];
+            if (string.Equals(transition.Stage, NetworkCommandAdmissionStage.Terminal.ToString(), StringComparison.Ordinal) &&
+                string.Equals(transition.Result, NetworkCommandAdmissionCode.TerminalCompleted.ToString(), StringComparison.Ordinal))
+            {
+                terminalIndex = i;
+                continue;
+            }
             if (!string.Equals(transition.Stage, NetworkCommandAdmissionStage.EntityIntake.ToString(), StringComparison.Ordinal))
             {
                 continue;
@@ -1429,29 +1436,60 @@ internal sealed class AcceptanceDriver : ISystem<float>
             }
         }
 
-        if (activatedIndex < 0)
-        {
-            throw new InvalidOperationException($"Training command {expectedAction} never exposed EntityIntake:Activated.");
-        }
         if (requireEntityQueue)
         {
-            if (queuedIndex < 0 || queuedIndex >= activatedIndex)
+            if (queuedIndex < 0 || activatedIndex >= 0)
             {
                 throw new InvalidOperationException(
-                    "Queued infantry training did not expose EntityIntake:Queued before EntityIntake:Activated.");
+                    "Queued infantry training did not expose exactly one EntityIntake:Queued admission.");
             }
-            AcceptanceAdmissionTransitionEvidence activated = command.AdmissionHistory[activatedIndex];
-            if (_evidence.Gameplay.SecondTrainedInfantryObservedCommittedTick <= 0 ||
-                activated.AuthoritativeCommittedTick <= 0 ||
-                activated.AuthoritativeCommittedTick > _evidence.Gameplay.SecondTrainedInfantryObservedCommittedTick)
+            if (_evidence.Commands.Count < 2 || terminalIndex < 0)
             {
                 throw new InvalidOperationException(
-                    "Queued infantry training lacks a causal authoritative activation tick before the second trained infantry observation.");
+                    "Queued infantry training lacks the first command or its own terminal completion evidence.");
+            }
+
+            AcceptanceCommandEvidence firstCommand = _evidence.Commands[^2];
+            if (!string.Equals(firstCommand.Action, "TrainInfantry", StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"Queued infantry training follows {firstCommand.Action}; expected TrainInfantry.");
+            }
+            int firstTerminalIndex = -1;
+            for (int i = 0; i < firstCommand.AdmissionHistory.Length; i++)
+            {
+                AcceptanceAdmissionTransitionEvidence transition = firstCommand.AdmissionHistory[i];
+                if (string.Equals(transition.Stage, NetworkCommandAdmissionStage.Terminal.ToString(), StringComparison.Ordinal) &&
+                    string.Equals(transition.Result, NetworkCommandAdmissionCode.TerminalCompleted.ToString(), StringComparison.Ordinal))
+                {
+                    firstTerminalIndex = i;
+                    break;
+                }
+            }
+            if (firstTerminalIndex < 0)
+            {
+                throw new InvalidOperationException("First infantry training lacks terminal completion evidence.");
+            }
+
+            AcceptanceAdmissionTransitionEvidence queued = command.AdmissionHistory[queuedIndex];
+            AcceptanceAdmissionTransitionEvidence firstTerminal = firstCommand.AdmissionHistory[firstTerminalIndex];
+            AcceptanceAdmissionTransitionEvidence secondTerminal = command.AdmissionHistory[terminalIndex];
+            if (_evidence.Gameplay.SecondTrainedInfantryObservedCommittedTick <= 0 ||
+                queued.AuthoritativeCommittedTick <= 0 ||
+                firstTerminal.AuthoritativeCommittedTick <= 0 ||
+                queued.AuthoritativeCommittedTick >= firstTerminal.AuthoritativeCommittedTick ||
+                secondTerminal.AuthoritativeCommittedTick <= firstTerminal.AuthoritativeCommittedTick ||
+                secondTerminal.AuthoritativeCommittedTick <= queued.AuthoritativeCommittedTick ||
+                secondTerminal.AuthoritativeCommittedTick > _evidence.Gameplay.SecondTrainedInfantryObservedCommittedTick)
+            {
+                throw new InvalidOperationException(
+                    "Queued infantry training lacks a causal queued-to-completed lifecycle before the second trained infantry observation.");
             }
         }
-        else if (queuedIndex >= 0)
+        else if (queuedIndex >= 0 || activatedIndex < 0)
         {
-            throw new InvalidOperationException("The first infantry training command unexpectedly entered the entity queue.");
+            throw new InvalidOperationException(
+                "The first infantry training command did not expose exactly one EntityIntake:Activated admission.");
         }
     }
 
@@ -1746,7 +1784,8 @@ internal sealed class AcceptanceDriver : ISystem<float>
                 throw new InvalidOperationException(
                     $"Command {action} sequence {sequence} actor {i} was rejected: {actor.Result}.");
             }
-            if (actor.Result != NetworkCommandAdmissionCode.Activated)
+            if (actor.Result != NetworkCommandAdmissionCode.Activated &&
+                actor.Result != NetworkCommandAdmissionCode.Queued)
             {
                 return false;
             }
@@ -1764,6 +1803,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
         }
         bool observedNetworkIntake = false;
         bool observedEntityActivation = false;
+        bool observedEntityQueue = false;
         bool observedTerminalCompletion = false;
         for (int i = 0; i < admissionHistory.Count; i++)
         {
@@ -1774,15 +1814,32 @@ internal sealed class AcceptanceDriver : ISystem<float>
             observedEntityActivation |=
                 transition.Stage == NetworkCommandAdmissionStage.EntityIntake.ToString() &&
                 transition.Result == NetworkCommandAdmissionCode.Activated.ToString();
+            observedEntityQueue |=
+                transition.Stage == NetworkCommandAdmissionStage.EntityIntake.ToString() &&
+                transition.Result == NetworkCommandAdmissionCode.Queued.ToString();
             observedTerminalCompletion |=
                 transition.Stage == NetworkCommandAdmissionStage.Terminal.ToString() &&
                 transition.Result == NetworkCommandAdmissionCode.TerminalCompleted.ToString();
         }
-        if (!observedNetworkIntake || !observedEntityActivation || !observedTerminalCompletion)
+        if (!observedNetworkIntake ||
+            observedEntityActivation == observedEntityQueue ||
+            !observedTerminalCompletion)
         {
             throw new InvalidOperationException(
                 $"Command {action} sequence {sequence} did not expose its full " +
                 "NetworkIntake-to-Terminal admission history.");
+        }
+        string expectedEntityResult = observedEntityActivation
+            ? NetworkCommandAdmissionCode.Activated.ToString()
+            : NetworkCommandAdmissionCode.Queued.ToString();
+        for (int i = 0; i < actorAdmissions.Length; i++)
+        {
+            if (!string.Equals(actorAdmissions[i].Result, expectedEntityResult, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"Command {action} sequence {sequence} actor {i} admission " +
+                    $"{actorAdmissions[i].Result} disagrees with batch history {expectedEntityResult}.");
+            }
         }
 
         var handles = new string[actorCount];

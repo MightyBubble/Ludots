@@ -1085,6 +1085,15 @@ namespace Ludots.Tests.GAS
             CreateCommandSourceRuntime(world, globals);
             var inputRuntime = new InputRuntimeSystem(globals, authoritativeInputAccumulator, pointerButtonAccumulator);
             var selectionSystem = CreateCommandSourceAcquisitionSystem(world, globals, local);
+            bool callbackInvoked = false;
+            WorldCmInt2 callbackWorldCm = default;
+            Entity callbackEntity = Entity.Null;
+            selectionSystem.OnEntityAcquired = (worldCm, entity) =>
+            {
+                callbackInvoked = true;
+                callbackWorldCm = worldCm;
+                callbackEntity = entity;
+            };
 
             input.InjectAction("PointerPos", new Vector3(1600f, 1200f, 0f));
             input.InjectButtonPress(InteractionActionBindings.DefaultConfirmActionId);
@@ -1103,6 +1112,13 @@ namespace Ludots.Tests.GAS
             selectionSystem.Update(0f);
 
             AssertCommandSource(globals, local, harvester);
+            Assert.Multiple(() =>
+            {
+                That(callbackInvoked, Is.True);
+                That(callbackEntity, Is.EqualTo(harvester));
+                That(callbackWorldCm.X, Is.EqualTo(1600));
+                That(callbackWorldCm.Y, Is.EqualTo(1200));
+            });
         }
 
         [Test]
