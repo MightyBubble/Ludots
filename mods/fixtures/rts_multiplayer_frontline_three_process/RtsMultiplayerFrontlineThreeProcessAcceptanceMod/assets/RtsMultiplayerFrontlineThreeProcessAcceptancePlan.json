@@ -26,7 +26,10 @@
     "siegeBeyondFarResourceCm": 1500,
     "arrivalToleranceCm": 300,
     "minimumObservedMoveCm": 1000,
-    "winnerHoldAtMeetingSeconds": 2
+    "winnerHoldAtMeetingSeconds": 2,
+    "completionCameraToleranceCm": 25,
+    "completionWitnessRadiusCm": 2200,
+    "minimumCompletionWinnerInfantry": 1
   },
   "presentation": {
     "title": "FRONTLINE LIVE MATCH CHECK",

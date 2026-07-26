@@ -61,8 +61,10 @@ namespace Ludots.Client.Raylib.Rendering
         private bool _proceduralMeshMaterialLoaded;
         private readonly int _maxModelInstancesPerDraw;
         private PresentationFrameReceiptBuffer? _frameReceipts;
-        private int _receiptSourceStableId;
+        private int _receiptSourceOwnerStableId;
+        private int _receiptSourceVisualStableId;
         private int _receiptSourceTemplateId;
+        private Vector3 _receiptSourceWorldPosition;
 
         public int LastInstancedInstances { get; private set; }
         public int LastInstancedBatches { get; private set; }
@@ -128,8 +130,10 @@ namespace Ludots.Client.Raylib.Rendering
             if (meshes == null) throw new ArgumentNullException(nameof(meshes));
 
             _frameReceipts = frameReceipts;
-            _receiptSourceStableId = 0;
+            _receiptSourceOwnerStableId = 0;
+            _receiptSourceVisualStableId = 0;
             _receiptSourceTemplateId = 0;
+            _receiptSourceWorldPosition = default;
 
             LastInstancedInstances = 0;
             LastInstancedBatches = 0;
@@ -840,15 +844,19 @@ namespace Ludots.Client.Raylib.Rendering
 
         private void SetReceiptSource(in PrimitiveDrawItem item)
         {
-            _receiptSourceStableId = item.StableId;
+            _receiptSourceOwnerStableId = item.OwnerStableId;
+            _receiptSourceVisualStableId = item.StableId;
             _receiptSourceTemplateId = item.TemplateId;
+            _receiptSourceWorldPosition = item.Position;
         }
 
         private void RecordSubmittedMesh(in PrefabFinalizedVisual visual)
         {
             _frameReceipts?.RecordSubmitted(
-                _receiptSourceStableId,
+                _receiptSourceOwnerStableId,
+                _receiptSourceVisualStableId,
                 _receiptSourceTemplateId,
+                _receiptSourceWorldPosition,
                 visual.Position,
                 visual.Rotation,
                 visual.Scale,

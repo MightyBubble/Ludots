@@ -421,6 +421,9 @@ function New-ClientScreenshotCapture {
             Milestone = $milestones[$index]
             MilestoneIndex = $index
             Path = [System.IO.Path]::Combine($directory, $fileName)
+            EvidencePath = [System.IO.Path]::ChangeExtension(
+                [System.IO.Path]::Combine($directory, $fileName),
+                ".evidence.json")
             DiagnosticPath = $diagnosticPath
         })
     }
@@ -481,7 +484,7 @@ function Read-ClientPresentationEvidence {
         }
         $completionMatch = [regex]::Match(
             $line,
-            '^\[[^\]]+\]\s+screenshot-complete milestone=(?<milestone>[A-Za-z0-9._-]+) milestoneOrder=(?<order>\d+) milestoneRevision=(?<revision>\d+) frame=(?<frame>\d+) file=(?<file>[^\s]+)\s*$',
+            '^\[[^\]]+\]\s+screenshot-complete milestone=(?<milestone>[A-Za-z0-9._-]+) milestoneOrder=(?<order>\d+) milestoneRevision=(?<revision>\d+) frame=(?<frame>\d+) file=(?<file>[^\s]+) evidence=(?<evidence>[^\s]+)\s*$',
             [System.Text.RegularExpressions.RegexOptions]::CultureInvariant)
         if (-not $completionMatch.Success) {
             throw "Client '$($Capture.ProcessName)' wrote a malformed screenshot completion diagnostic."
@@ -501,12 +504,18 @@ function Read-ClientPresentationEvidence {
         if ($completionMatch.Groups["file"].Value -cne $expectedFile) {
             throw "Client '$($Capture.ProcessName)' milestone '$milestone' completion names file '$($completionMatch.Groups["file"].Value)' instead of '$expectedFile'."
         }
+        $expectedEvidenceFile = [System.IO.Path]::GetFileName([string]$target[0].EvidencePath)
+        if ($completionMatch.Groups["evidence"].Value -cne $expectedEvidenceFile) {
+            throw "Client '$($Capture.ProcessName)' milestone '$milestone' completion names evidence '$($completionMatch.Groups["evidence"].Value)' instead of '$expectedEvidenceFile'."
+        }
         $completionByMilestone[$milestone] = [ordered]@{
             milestone = $milestone
             milestoneOrder = [int]::Parse($completionMatch.Groups["order"].Value, [System.Globalization.CultureInfo]::InvariantCulture)
             milestoneRevision = [uint32]::Parse($completionMatch.Groups["revision"].Value, [System.Globalization.CultureInfo]::InvariantCulture)
             hostFrame = [int]::Parse($completionMatch.Groups["frame"].Value, [System.Globalization.CultureInfo]::InvariantCulture)
             fileName = $expectedFile
+            evidenceFileName = $expectedEvidenceFile
+            evidencePath = [string]$target[0].EvidencePath
         }
     }
 
@@ -630,7 +639,7 @@ function Read-ClientPresentationEvidence {
         foreach ($receiptLine in $receiptLines) {
             $receiptMatch = [regex]::Match(
                 $receiptLine,
-                '^\[[^\]]+\]\s+presentation-receipt template=(?<template>[A-Za-z0-9._:-]+) templateId=(?<templateId>[1-9]\d*) submitted=(?<submitted>[1-9]\d*) onscreen=(?<onscreen>\d+) minShortEdgePx=(?<shortEdge>\d+(?:\.\d+)?) minAreaPx2=(?<area>\d+(?:\.\d+)?)\s*$',
+                '^\[[^\]]+\]\s+presentation-receipt template=(?<template>[A-Za-z0-9._:-]+) templateId=(?<templateId>[1-9]\d*) submitted=(?<submitted>[1-9]\d*) onscreen=(?<onscreen>\d+) minShortEdgePx=(?<shortEdge>\d+(?:\.\d+)?) minAreaPx2=(?<area>\d+(?:\.\d+)?) stateSha256=(?<stateSha256>[0-9A-Fa-f]{64})\s*$',
                 [System.Text.RegularExpressions.RegexOptions]::CultureInvariant)
             if (-not $receiptMatch.Success) {
                 throw "Client '$($Capture.ProcessName)' screenshot milestone '$milestone' has malformed presentation receipt diagnostics."
@@ -648,6 +657,7 @@ function Read-ClientPresentationEvidence {
                 onscreen = [int]::Parse($receiptMatch.Groups["onscreen"].Value, [System.Globalization.CultureInfo]::InvariantCulture)
                 minimumShortEdgePx = [double]::Parse($receiptMatch.Groups["shortEdge"].Value, [System.Globalization.CultureInfo]::InvariantCulture)
                 minimumAreaPx2 = [double]::Parse($receiptMatch.Groups["area"].Value, [System.Globalization.CultureInfo]::InvariantCulture)
+                stateSha256 = $receiptMatch.Groups["stateSha256"].Value.ToLowerInvariant()
             }
         }
 
@@ -679,9 +689,75 @@ function Read-ClientPresentationEvidence {
                 onscreen = [int]$receipt.onscreen
                 minimumShortEdgePx = [double]$receipt.minimumShortEdgePx
                 minimumAreaPx2 = [double]$receipt.minimumAreaPx2
+                stateSha256 = [string]$receipt.stateSha256
             })
         }
         $observed["presentationReceipts"] = @($observedRequiredReceipts)
+
+        $sidecarPath = [string]$completion.evidencePath
+        if (-not (Test-Path -LiteralPath $sidecarPath -PathType Leaf) -or
+            (Get-Item -LiteralPath $sidecarPath).Length -le 0) {
+            throw "Client '$($Capture.ProcessName)' screenshot milestone '$milestone' has no non-empty presentation evidence sidecar: $sidecarPath"
+        }
+        try {
+            $sidecar = Get-Content -LiteralPath $sidecarPath -Raw | ConvertFrom-Json
+        }
+        catch {
+            throw "Client '$($Capture.ProcessName)' screenshot milestone '$milestone' presentation evidence is not valid JSON: $sidecarPath. $($_.Exception.Message)"
+        }
+        if ([int]$sidecar.schemaVersion -ne 2 -or
+            [string]$sidecar.milestone -cne $milestone -or
+            [int]$sidecar.milestoneOrder -ne $milestoneOrder -or
+            [uint32]$sidecar.milestoneRevision -ne $milestoneRevision -or
+            [int]$sidecar.hostFrame -ne $frame) {
+            throw "Client '$($Capture.ProcessName)' screenshot milestone '$milestone' sidecar does not describe the same captured presentation frame."
+        }
+        if ($null -eq $sidecar.PSObject.Properties["cameraTargetXCm"] -or
+            $null -eq $sidecar.PSObject.Properties["cameraTargetYCm"] -or
+            $null -eq $sidecar.PSObject.Properties["viewportWidthPx"] -or
+            $null -eq $sidecar.PSObject.Properties["viewportHeightPx"] -or
+            $null -eq $sidecar.PSObject.Properties["instances"]) {
+            throw "Client '$($Capture.ProcessName)' screenshot milestone '$milestone' sidecar lacks camera or instance evidence."
+        }
+        $viewportWidthPx = [double]$sidecar.viewportWidthPx
+        $viewportHeightPx = [double]$sidecar.viewportHeightPx
+        if ($viewportWidthPx -le 0 -or $viewportHeightPx -le 0) {
+            throw "Client '$($Capture.ProcessName)' screenshot milestone '$milestone' sidecar has an invalid viewport."
+        }
+        $seenInstanceKeys = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
+        foreach ($instance in @($sidecar.instances)) {
+            foreach ($fieldName in @(
+                "ownerStableId", "visualStableId", "templateId", "template", "worldXCm", "worldYCm",
+                "screenLeftPx", "screenTopPx", "screenRightPx", "screenBottomPx",
+                "shortEdgePx", "areaPx2")) {
+                if ($null -eq $instance.PSObject.Properties[$fieldName]) {
+                    throw "Client '$($Capture.ProcessName)' screenshot milestone '$milestone' sidecar instance lacks '$fieldName'."
+                }
+            }
+            if ([int]$instance.ownerStableId -le 0 -or [int]$instance.visualStableId -le 0 -or
+                [int]$instance.templateId -le 0 -or
+                [string]::IsNullOrWhiteSpace([string]$instance.template)) {
+                throw "Client '$($Capture.ProcessName)' screenshot milestone '$milestone' sidecar contains an invalid presentation instance identity."
+            }
+            $instanceKey = "$([int]$instance.templateId):$([int]$instance.visualStableId)"
+            if (-not $seenInstanceKeys.Add($instanceKey)) {
+                throw "Client '$($Capture.ProcessName)' screenshot milestone '$milestone' sidecar duplicates presentation instance '$instanceKey'."
+            }
+            $screenWidth = [double]$instance.screenRightPx - [double]$instance.screenLeftPx
+            $screenHeight = [double]$instance.screenBottomPx - [double]$instance.screenTopPx
+            $expectedShortEdgePx = [Math]::Min($screenWidth, $screenHeight)
+            $expectedAreaPx2 = $screenWidth * $screenHeight
+            if ($screenWidth -le 0 -or $screenHeight -le 0 -or
+                [double]$instance.screenLeftPx -lt 0 -or [double]$instance.screenTopPx -lt 0 -or
+                [double]$instance.screenRightPx -gt $viewportWidthPx -or
+                [double]$instance.screenBottomPx -gt $viewportHeightPx -or
+                [Math]::Abs([double]$instance.shortEdgePx - $expectedShortEdgePx) -gt 0.01 -or
+                [Math]::Abs([double]$instance.areaPx2 - $expectedAreaPx2) -gt 0.1) {
+                throw "Client '$($Capture.ProcessName)' screenshot milestone '$milestone' sidecar instance '$instanceKey' is not actually on screen."
+            }
+        }
+        $observed["worldEvidenceFile"] = Get-FileEvidence -Path $sidecarPath
+        $observed["worldEvidence"] = $sidecar
 
         $recordsByMilestone[$milestone] = $observed
         $previousOrder = $milestoneOrder
@@ -716,7 +792,7 @@ function Get-ScreenshotCompletionRecord {
         $isCompletionLine = $line -match '(?:^|\s)screenshot-complete(?:\s|$)'
         $match = [regex]::Match(
             $line,
-            '^\[[^\]]+\]\s+screenshot-complete milestone=(?<milestone>[A-Za-z0-9._-]+) milestoneOrder=(?<order>\d+) milestoneRevision=(?<revision>\d+) frame=(?<frame>\d+) file=(?<file>[^\s]+)\s*$',
+            '^\[[^\]]+\]\s+screenshot-complete milestone=(?<milestone>[A-Za-z0-9._-]+) milestoneOrder=(?<order>\d+) milestoneRevision=(?<revision>\d+) frame=(?<frame>\d+) file=(?<file>[^\s]+) evidence=(?<evidence>[^\s]+)\s*$',
             [System.Text.RegularExpressions.RegexOptions]::CultureInvariant)
         if ($isCompletionLine -and -not $match.Success) {
             throw "Client '$($Target.ProcessName)' wrote a malformed screenshot completion diagnostic."
@@ -735,6 +811,16 @@ function Get-ScreenshotCompletionRecord {
     if ($completion.Groups["file"].Value -cne $expectedFile) {
         throw "Client '$($Target.ProcessName)' milestone '$milestone' completion names file '$($completion.Groups["file"].Value)' instead of '$expectedFile'."
     }
+    $expectedEvidencePath = if ($null -ne $Target.PSObject.Properties["EvidencePath"]) {
+        [string]$Target.EvidencePath
+    }
+    else {
+        [System.IO.Path]::ChangeExtension([string]$Target.Path, ".evidence.json")
+    }
+    $expectedEvidenceFile = [System.IO.Path]::GetFileName($expectedEvidencePath)
+    if ($completion.Groups["evidence"].Value -cne $expectedEvidenceFile) {
+        throw "Client '$($Target.ProcessName)' milestone '$milestone' completion names evidence '$($completion.Groups["evidence"].Value)' instead of '$expectedEvidenceFile'."
+    }
 
     return [pscustomobject]@{
         ProcessName = [string]$Target.ProcessName
@@ -743,6 +829,7 @@ function Get-ScreenshotCompletionRecord {
         MilestoneRevision = [uint32]::Parse($completion.Groups["revision"].Value, [System.Globalization.CultureInfo]::InvariantCulture)
         HostFrame = [int]::Parse($completion.Groups["frame"].Value, [System.Globalization.CultureInfo]::InvariantCulture)
         Path = [string]$Target.Path
+        EvidencePath = $expectedEvidencePath
         DiagnosticPath = $diagnosticPath
     }
 }
@@ -764,7 +851,9 @@ function Wait-ForScreenshotEvidence {
         $completionRecords = [System.Collections.Generic.List[object]]::new()
         foreach ($target in $all) {
             if (-not (Test-Path -LiteralPath $target.Path -PathType Leaf) -or
-                (Get-Item -LiteralPath $target.Path).Length -le 0) {
+                (Get-Item -LiteralPath $target.Path).Length -le 0 -or
+                -not (Test-Path -LiteralPath $target.EvidencePath -PathType Leaf) -or
+                (Get-Item -LiteralPath $target.EvidencePath).Length -le 0) {
                 $ready = $false
                 break
             }
@@ -780,7 +869,10 @@ function Wait-ForScreenshotEvidence {
     }
 
     $missing = @($all | Where-Object {
-        -not (Test-Path -LiteralPath $_.Path -PathType Leaf) -or (Get-Item -LiteralPath $_.Path).Length -le 0
+        -not (Test-Path -LiteralPath $_.Path -PathType Leaf) -or
+        (Get-Item -LiteralPath $_.Path).Length -le 0 -or
+        -not (Test-Path -LiteralPath $_.EvidencePath -PathType Leaf) -or
+        (Get-Item -LiteralPath $_.EvidencePath).Length -le 0
     } | ForEach-Object { "$($_.ProcessName):$($_.Milestone)" })
     $missingCompletions = @($all | Where-Object {
         $null -eq (Get-ScreenshotCompletionRecord -Target $_)
@@ -1255,8 +1347,8 @@ function Assert-GameplayEvidence {
     $expectedOutcome = if ($winningSide -eq 0) { "SideOneVictory" } elseif ($winningSide -eq 1) { "SideTwoVictory" } else { throw "Unsupported expected winning side $winningSide." }
     foreach ($item in $all) {
         $evidence = $item.Value
-        if ([int]$evidence.schemaVersion -ne 5 -or [string]$evidence.status -cne "passed") {
-            throw "Evidence '$($item.Name)' did not pass schema version 5."
+        if ([int]$evidence.schemaVersion -ne 7 -or [string]$evidence.status -cne "passed") {
+            throw "Evidence '$($item.Name)' did not pass schema version 6."
         }
         if ([int]$evidence.faultCount -ne 0) { throw "Evidence '$($item.Name)' reported $($evidence.faultCount) network faults." }
         if ([string]$evidence.planFingerprint -cne $PlanFingerprint) {
@@ -1388,6 +1480,33 @@ function Assert-GameplayEvidence {
             [int]$client.gameplay.initialVisibleEnemyCoreCount -ne 0 -or
             -not [bool]$client.gameplay.enemyInfantryEnteredVision) {
             throw "Client evidence '$($item.Name)' does not prove initial fog concealment followed by enemy infantry disclosure."
+        }
+        if ($null -eq $client.gameplay.meetingPoint -or $null -eq $client.gameplay.siegePoint) {
+            throw "Client evidence '$($item.Name)' lacks its data-derived meeting and siege points."
+        }
+        if ($null -eq $client.gameplay.attackTargetPositionBefore -or
+            [int]$client.gameplay.attackTargetPositionBefore.presentationStableId -le 0) {
+            throw "Client evidence '$($item.Name)' lacks the attacked entity's positive presentation stable id and position."
+        }
+        if ($null -eq $client.gameplay.defeatedCoreLastPosition -or
+            [int]$client.gameplay.defeatedCoreLastPosition.presentationStableId -le 0) {
+            throw "Client evidence '$($item.Name)' lacks the defeated core's last visible position and stable id."
+        }
+        if ($null -eq $client.gameplay.completedCameraTarget -or
+            [int]$client.gameplay.completedLosingCoreCount -ne 0 -or
+            [int]$client.gameplay.completedWinnerInfantryNearDefeatedCoreCount -le 0 -or
+            [int]$client.gameplay.completedPresentationFrameId -le 0) {
+            throw "Client evidence '$($item.Name)' lacks the verified post-destruction world and camera state."
+        }
+        $completedWitnesses = @($client.gameplay.completedWinnerInfantryNearDefeatedCorePositions)
+        if ($completedWitnesses.Count -ne [int]$client.gameplay.completedWinnerInfantryNearDefeatedCoreCount -or
+            @($completedWitnesses | Where-Object {
+                $null -eq $_ -or
+                $null -eq $_.PSObject.Properties["presentationStableId"] -or
+                [int]$_.presentationStableId -le 0
+            }).Count -ne 0 -or
+            @($completedWitnesses.presentationStableId | Sort-Object -Unique).Count -ne $completedWitnesses.Count) {
+            throw "Client evidence '$($item.Name)' does not bind each completion witness to a unique presentation stable id."
         }
 
         if ($null -eq $client.gameplay.harvesterStartPosition -or $null -eq $client.gameplay.harvesterEndPosition) {
@@ -1602,12 +1721,23 @@ function Assert-GameplayEvidence {
         if ($uniqueStartHandles.Count -ne $startPositions.Count -or $uniqueEndHandles.Count -ne $endPositions.Count) {
             throw "Client evidence '$($item.Name)' contains duplicate movement position handles."
         }
+        $uniqueStartStableIds = @($startPositions | ForEach-Object { [int]$_.presentationStableId } | Sort-Object -Unique)
+        $uniqueEndStableIds = @($endPositions | ForEach-Object { [int]$_.presentationStableId } | Sort-Object -Unique)
+        if ($uniqueStartStableIds.Count -ne $startPositions.Count -or
+            $uniqueEndStableIds.Count -ne $endPositions.Count -or
+            @($uniqueStartStableIds | Where-Object { $_ -le 0 }).Count -ne 0 -or
+            @($uniqueEndStableIds | Where-Object { $_ -le 0 }).Count -ne 0) {
+            throw "Client evidence '$($item.Name)' contains invalid or duplicate movement presentation stable ids."
+        }
         $minimumSquared = [int64]$ExpectedPlan.battle.minimumObservedMoveCm * [int64]$ExpectedPlan.battle.minimumObservedMoveCm
         foreach ($actorHandle in @($meetingCommand.actorHandles)) {
             $start = @($startPositions | Where-Object { [string]$_.handle -ceq [string]$actorHandle })
             $end = @($endPositions | Where-Object { [string]$_.handle -ceq [string]$actorHandle })
             if ($start.Count -ne 1 -or $end.Count -ne 1) {
                 throw "Client evidence '$($item.Name)' cannot correlate movement positions for actor '$actorHandle'."
+            }
+            if ([int]$start[0].presentationStableId -ne [int]$end[0].presentationStableId) {
+                throw "Client evidence '$($item.Name)' actor '$actorHandle' changed presentation stable identity while moving."
             }
             $dx = [int64]$end[0].xCm - [int64]$start[0].xCm
             $dy = [int64]$end[0].yCm - [int64]$start[0].yCm
@@ -1619,6 +1749,258 @@ function Assert-GameplayEvidence {
     if ($winnerClientCount -ne 1 -or $loserClientCount -ne 1) {
         throw "Client evidence must prove one core attack and one opposing-infantry attack."
     }
+}
+
+function Get-WorldEvidenceDistanceSquared {
+    param(
+        [Parameter(Mandatory = $true)][int64]$LeftX,
+        [Parameter(Mandatory = $true)][int64]$LeftY,
+        [Parameter(Mandatory = $true)][int64]$RightX,
+        [Parameter(Mandatory = $true)][int64]$RightY
+    )
+
+    $dx = $LeftX - $RightX
+    $dy = $LeftY - $RightY
+    return ($dx * $dx) + ($dy * $dy)
+}
+
+function Get-GameplayWorldAnchor {
+    param(
+        [Parameter(Mandatory = $true)]$Gameplay,
+        [Parameter(Mandatory = $true)][string]$Anchor,
+        [Parameter(Mandatory = $true)][string]$ProcessName,
+        [Parameter(Mandatory = $true)][string]$Milestone
+    )
+
+    $point = switch -CaseSensitive ($Anchor) {
+        "meeting" { $Gameplay.gameplay.meetingPoint; break }
+        "siege" { $Gameplay.gameplay.siegePoint; break }
+        "defeatedCore" { $Gameplay.gameplay.defeatedCoreLastPosition; break }
+        default { throw "World evidence '$Milestone' for '$ProcessName' uses unsupported anchor '$Anchor'." }
+    }
+    if ($null -eq $point -or $null -eq $point.PSObject.Properties["xCm"] -or
+        $null -eq $point.PSObject.Properties["yCm"]) {
+        throw "Gameplay evidence '$ProcessName' lacks '$Anchor' coordinates for screenshot milestone '$Milestone'."
+    }
+    return [pscustomobject]@{ xCm = [int]$point.xCm; yCm = [int]$point.yCm }
+}
+
+function Get-RequiredPresentationStableIds {
+    param(
+        [Parameter(Mandatory = $true)]$Gameplay,
+        [Parameter(Mandatory = $true)][string]$Source,
+        [Parameter(Mandatory = $true)][string]$ProcessName,
+        [Parameter(Mandatory = $true)][string]$Milestone,
+        [Parameter(Mandatory = $true)][string]$Role
+    )
+
+    $positions = @(switch -CaseSensitive ($Source) {
+        "selectedInfantry" { @($Gameplay.gameplay.moveStartPositions); break }
+        "attackTarget" { @($Gameplay.gameplay.attackTargetPositionBefore); break }
+        "defeatedCore" { @($Gameplay.gameplay.defeatedCoreLastPosition); break }
+        "completedWinnerInfantry" { @($Gameplay.gameplay.completedWinnerInfantryNearDefeatedCorePositions); break }
+        default { throw "World evidence role '$Role' for '${ProcessName}:$Milestone' uses unsupported source '$Source'." }
+    })
+    if ($positions.Count -eq 0 -or @($positions | Where-Object { $null -eq $_ }).Count -ne 0) {
+        throw "Gameplay evidence '$ProcessName' lacks stable identity source '$Source' for role '$Role' at '$Milestone'."
+    }
+    $ids = @($positions | ForEach-Object {
+        if ($null -eq $_.PSObject.Properties["presentationStableId"] -or [int]$_.presentationStableId -le 0) {
+            throw "Gameplay evidence '$ProcessName' has an invalid presentation stable id in '$Source'."
+        }
+        [int]$_.presentationStableId
+    } | Sort-Object -Unique)
+    if ($ids.Count -ne $positions.Count) {
+        throw "Gameplay evidence '$ProcessName' has duplicate presentation stable ids in '$Source'."
+    }
+    return @($ids)
+}
+
+function Assert-ClientWorldPresentationEvidence {
+    param(
+        [Parameter(Mandatory = $true)][System.Collections.IEnumerable]$PresentationItems,
+        [Parameter(Mandatory = $true)][System.Collections.IEnumerable]$GameplayItems,
+        [Parameter(Mandatory = $true)][System.Collections.IEnumerable]$Requirements
+    )
+
+    $presentations = @($PresentationItems)
+    $clients = @($GameplayItems | Where-Object { [string]$_.Value.role -ceq "replicatedClient" })
+    $rules = @($Requirements)
+    if ($presentations.Count -ne 2 -or $clients.Count -ne 2) {
+        throw "World presentation evidence requires exactly two client presentation artifacts and two client gameplay artifacts."
+    }
+    if ($rules.Count -eq 0) {
+        throw "World presentation evidence has no configured requirements."
+    }
+
+    $verified = [System.Collections.Generic.List[object]]::new()
+    foreach ($rule in $rules) {
+        $milestone = [string]$rule.milestone
+        $perspective = [string]$rule.perspective
+        $anchorName = [string]$rule.anchor
+        $positionToleranceCm = [int64]$rule.positionToleranceCm
+        $cameraToleranceCm = [int64]$rule.cameraToleranceCm
+        $positionToleranceSquared = $positionToleranceCm * $positionToleranceCm
+        $cameraToleranceSquared = $cameraToleranceCm * $cameraToleranceCm
+        $matchedPerspectiveCount = 0
+
+        foreach ($clientItem in $clients) {
+            $processName = [string]$clientItem.Name
+            $gameplay = $clientItem.Value
+            $isWinner = [int]$gameplay.seatSlot -eq [int]$gameplay.gameplay.winningSideIndex
+            $matchesPerspective = switch -CaseSensitive ($perspective) {
+                "all" { $true; break }
+                "winner" { $isWinner; break }
+                "loser" { -not $isWinner; break }
+                default { throw "World evidence '$milestone' uses unsupported perspective '$perspective'." }
+            }
+            if (-not $matchesPerspective) {
+                continue
+            }
+            $matchedPerspectiveCount++
+
+            $presentation = @($presentations | Where-Object { [string]$_.process -ceq $processName })
+            if ($presentation.Count -ne 1) {
+                throw "Client '$processName' has no unique presentation artifact."
+            }
+            $milestoneRecord = @($presentation[0].milestones | Where-Object { [string]$_.milestone -ceq $milestone })
+            if ($milestoneRecord.Count -ne 1 -or $null -eq $milestoneRecord[0].worldEvidence) {
+                throw "Client '$processName' has no unique same-frame world sidecar for milestone '$milestone'."
+            }
+            $document = $milestoneRecord[0].worldEvidence
+            $anchor = Get-GameplayWorldAnchor -Gameplay $gameplay -Anchor $anchorName `
+                -ProcessName $processName -Milestone $milestone
+            $cameraDistanceSquared = Get-WorldEvidenceDistanceSquared `
+                -LeftX ([int64]$document.cameraTargetXCm) -LeftY ([int64]$document.cameraTargetYCm) `
+                -RightX ([int64]$anchor.xCm) -RightY ([int64]$anchor.yCm)
+            if ($cameraDistanceSquared -gt $cameraToleranceSquared) {
+                throw "Client '$processName' screenshot milestone '$milestone' camera is outside the '$anchorName' tolerance."
+            }
+
+            $roleResults = [System.Collections.Generic.List[object]]::new()
+            foreach ($roleRequirement in @($rule.requiredRoles)) {
+                $role = [string]$roleRequirement.role
+                $template = [string]$roleRequirement.template
+                $source = [string]$roleRequirement.source
+                $stableIds = @(Get-RequiredPresentationStableIds -Gameplay $gameplay -Source $source `
+                    -ProcessName $processName -Milestone $milestone -Role $role)
+                $matching = @($document.instances | Where-Object {
+                    [string]$_.template -ceq $template -and
+                    ($stableIds.Count -eq 0 -or $stableIds -contains [int]$_.ownerStableId)
+                })
+                if ($matching.Count -eq 0) {
+                    throw "Client '$processName' screenshot milestone '$milestone' has no same-frame stable entity for role '$role' (template '$template')."
+                }
+                $nearAndReadable = @($matching | Where-Object {
+                    $distanceSquared = Get-WorldEvidenceDistanceSquared `
+                        -LeftX ([int64]$_.worldXCm) -LeftY ([int64]$_.worldYCm) `
+                        -RightX ([int64]$anchor.xCm) -RightY ([int64]$anchor.yCm)
+                    $distanceSquared -le $positionToleranceSquared -and
+                        [double]$_.shortEdgePx -ge [double]$roleRequirement.minimumShortEdgePx -and
+                        [double]$_.areaPx2 -ge [double]$roleRequirement.minimumAreaPx2
+                })
+                if ($nearAndReadable.Count -lt [int]$roleRequirement.minimumOnscreen) {
+                    throw "Client '$processName' screenshot milestone '$milestone' role '$role' is missing, unreadable, or in the wrong '$anchorName' region."
+                }
+                $roleResults.Add([ordered]@{
+                    role = $role
+                    template = $template
+                    source = $source
+                    onscreenNearAnchor = $nearAndReadable.Count
+                })
+            }
+
+            foreach ($forbidden in @($rule.forbiddenRoles)) {
+                $role = [string]$forbidden.role
+                $template = [string]$forbidden.template
+                $forbiddenInstances = @($document.instances | Where-Object { [string]$_.template -ceq $template })
+                if ([string]$forbidden.scope -ceq "anchor") {
+                    $forbiddenInstances = @($forbiddenInstances | Where-Object {
+                        (Get-WorldEvidenceDistanceSquared `
+                            -LeftX ([int64]$_.worldXCm) -LeftY ([int64]$_.worldYCm) `
+                            -RightX ([int64]$anchor.xCm) -RightY ([int64]$anchor.yCm)) -le $positionToleranceSquared
+                    })
+                }
+                elseif ([string]$forbidden.scope -cne "screen") {
+                    throw "World evidence forbidden role '$role' uses unsupported scope '$($forbidden.scope)'."
+                }
+                if ($forbiddenInstances.Count -ne 0) {
+                    throw "Client '$processName' screenshot milestone '$milestone' still shows forbidden role '$role' (template '$template')."
+                }
+            }
+
+            if ($null -ne $rule.PSObject.Properties["stableEntityMotion"] -and
+                $null -ne $rule.stableEntityMotion) {
+                $motion = $rule.stableEntityMotion
+                $starts = @($gameplay.gameplay.moveStartPositions)
+                if ($starts.Count -eq 0) {
+                    throw "Client '$processName' has no movement starts for '$milestone'."
+                }
+                $minimumMoveCm = [int64]$motion.minimumObservedMoveCm
+                $minimumMoveSquared = $minimumMoveCm * $minimumMoveCm
+                foreach ($start in $starts) {
+                    $stableId = [int]$start.presentationStableId
+                    $instances = @($document.instances | Where-Object {
+                        [int]$_.ownerStableId -eq $stableId -and
+                        [string]$_.template -ceq [string]$motion.template
+                    })
+                    if ($instances.Count -ne 1) {
+                        throw "Client '$processName' screenshot milestone '$milestone' cannot bind selected stable entity '$stableId' to its visible infantry template."
+                    }
+                    $movedSquared = Get-WorldEvidenceDistanceSquared `
+                        -LeftX ([int64]$instances[0].worldXCm) -LeftY ([int64]$instances[0].worldYCm) `
+                        -RightX ([int64]$start.xCm) -RightY ([int64]$start.yCm)
+                    if ($movedSquared -lt $minimumMoveSquared) {
+                        throw "Client '$processName' screenshot milestone '$milestone' selected stable entity '$stableId' did not visibly move the configured minimum distance."
+                    }
+                }
+            }
+
+            if ($null -ne $rule.PSObject.Properties["requireObservedDamage"] -and
+                [bool]$rule.requireObservedDamage -and
+                ([double]$gameplay.gameplay.attackTargetHealthBefore -le [double]$gameplay.gameplay.attackTargetHealthAfter -or
+                 [double]$gameplay.gameplay.attackTargetHealthAfter -lt 0)) {
+                throw "Client '$processName' screenshot milestone '$milestone' is not backed by observed attack damage."
+            }
+            if ($null -ne $rule.PSObject.Properties["requireCompletedWorldState"] -and
+                [bool]$rule.requireCompletedWorldState) {
+                if ([int]$gameplay.gameplay.completedLosingCoreCount -ne 0) {
+                    throw "Client '$processName' completed gameplay evidence still contains the losing core mirror."
+                }
+                if ([int]$gameplay.gameplay.completedWinnerInfantryNearDefeatedCoreCount -le 0) {
+                    throw "Client '$processName' completed gameplay evidence has no winning infantry near the defeated core."
+                }
+                if ([int]$gameplay.gameplay.completedPresentationFrameId -le 0 -or
+                    [int]$document.hostFrame -lt [int]$gameplay.gameplay.completedPresentationFrameId) {
+                    throw "Client '$processName' completed screenshot predates the verified post-destruction presentation frame."
+                }
+                $completedCamera = $gameplay.gameplay.completedCameraTarget
+                if ($null -eq $completedCamera -or
+                    (Get-WorldEvidenceDistanceSquared `
+                        -LeftX ([int64]$completedCamera.xCm) -LeftY ([int64]$completedCamera.yCm) `
+                        -RightX ([int64]$anchor.xCm) -RightY ([int64]$anchor.yCm)) -gt $cameraToleranceSquared) {
+                    throw "Client '$processName' completed gameplay camera does not frame the defeated core position."
+                }
+            }
+
+            $verified.Add([ordered]@{
+                process = $processName
+                milestone = $milestone
+                perspective = if ($isWinner) { "winner" } else { "loser" }
+                anchor = $anchorName
+                cameraTargetXCm = [int]$document.cameraTargetXCm
+                cameraTargetYCm = [int]$document.cameraTargetYCm
+                roles = @($roleResults)
+            })
+        }
+
+        $expectedPerspectiveCount = if ($perspective -ceq "all") { 2 } else { 1 }
+        if ($matchedPerspectiveCount -ne $expectedPerspectiveCount) {
+            throw "World evidence '$milestone' perspective '$perspective' matched $matchedPerspectiveCount clients; expected $expectedPerspectiveCount."
+        }
+    }
+
+    return @($verified)
 }
 
 function Assert-UdpPortAvailable {
@@ -1669,7 +2051,7 @@ if (-not (Test-Path -LiteralPath $profileFullPath)) {
 }
 
 $profile = Get-Content -LiteralPath $profileFullPath -Raw | ConvertFrom-Json
-if ($profile.schemaVersion -ne 4) {
+if ($profile.schemaVersion -ne 5) {
     throw "Unsupported acceptance profile schemaVersion '$($profile.schemaVersion)'."
 }
 
@@ -1735,6 +2117,78 @@ foreach ($requirement in $requiredPresentationReceipts) {
         }
     }
 }
+$requiredWorldEvidence = @($profile.requiredWorldEvidence)
+if ($requiredWorldEvidence.Count -eq 0) {
+    throw "requiredWorldEvidence must declare the player-visible world states for the battle milestones."
+}
+$worldEvidenceRuleKeys = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
+foreach ($requirement in $requiredWorldEvidence) {
+    $milestone = [string]$requirement.milestone
+    $perspective = [string]$requirement.perspective
+    $anchor = [string]$requirement.anchor
+    if (-not ($configuredScreenshotMilestones -ccontains $milestone)) {
+        throw "requiredWorldEvidence milestone '$milestone' is not configured for screenshots."
+    }
+    if ($perspective -cne "all" -and $perspective -cne "winner" -and $perspective -cne "loser") {
+        throw "requiredWorldEvidence '$milestone' perspective must be winner, loser, or all."
+    }
+    if ($anchor -cne "meeting" -and $anchor -cne "siege" -and $anchor -cne "defeatedCore") {
+        throw "requiredWorldEvidence '$milestone' anchor must be meeting, siege, or defeatedCore."
+    }
+    foreach ($toleranceName in @("positionToleranceCm", "cameraToleranceCm")) {
+        if ($null -eq $requirement.PSObject.Properties[$toleranceName] -or [int]$requirement.$toleranceName -le 0) {
+            throw "requiredWorldEvidence '$milestone/$perspective' must declare positive $toleranceName."
+        }
+    }
+    if (-not $worldEvidenceRuleKeys.Add("$milestone`n$perspective")) {
+        throw "requiredWorldEvidence duplicates milestone '$milestone' perspective '$perspective'."
+    }
+    $requiredRoles = @($requirement.requiredRoles)
+    if ($requiredRoles.Count -eq 0) {
+        throw "requiredWorldEvidence '$milestone/$perspective' must declare at least one required role."
+    }
+    $roleKeys = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::Ordinal)
+    foreach ($roleRequirement in $requiredRoles) {
+        $role = [string]$roleRequirement.role
+        $template = [string]$roleRequirement.template
+        $source = [string]$roleRequirement.source
+        if ([string]::IsNullOrWhiteSpace($role) -or [string]::IsNullOrWhiteSpace($template)) {
+            throw "requiredWorldEvidence '$milestone/$perspective' has a required role without role and template."
+        }
+        if ($source -cne "selectedInfantry" -and $source -cne "attackTarget" -and
+            $source -cne "defeatedCore" -and $source -cne "completedWinnerInfantry") {
+            throw "requiredWorldEvidence role '$role' uses unsupported stable entity source '$source'."
+        }
+        foreach ($thresholdName in @("minimumOnscreen", "minimumShortEdgePx", "minimumAreaPx2")) {
+            if ($null -eq $roleRequirement.PSObject.Properties[$thresholdName] -or
+                [double]$roleRequirement.$thresholdName -le 0) {
+                throw "requiredWorldEvidence role '$role' must declare positive $thresholdName."
+            }
+        }
+        if (-not $roleKeys.Add("$role`n$template`n$source")) {
+            throw "requiredWorldEvidence '$milestone/$perspective' duplicates role '$role'."
+        }
+    }
+    foreach ($forbiddenRole in @($requirement.forbiddenRoles)) {
+        if ([string]::IsNullOrWhiteSpace([string]$forbiddenRole.role) -or
+            [string]::IsNullOrWhiteSpace([string]$forbiddenRole.template) -or
+            ([string]$forbiddenRole.scope -cne "screen" -and [string]$forbiddenRole.scope -cne "anchor")) {
+            throw "requiredWorldEvidence '$milestone/$perspective' has an invalid forbidden role."
+        }
+    }
+    if ($null -ne $requirement.PSObject.Properties["stableEntityMotion"] -and
+        $null -ne $requirement.stableEntityMotion) {
+        if ([string]::IsNullOrWhiteSpace([string]$requirement.stableEntityMotion.template) -or
+            [int]$requirement.stableEntityMotion.minimumObservedMoveCm -le 0) {
+            throw "requiredWorldEvidence '$milestone/$perspective' has invalid stableEntityMotion."
+        }
+    }
+}
+foreach ($requiredRuleKey in @("advancing`nall", "engaging`nwinner", "engaging`nloser", "completed`nall")) {
+    if (-not $worldEvidenceRuleKeys.Contains($requiredRuleKey)) {
+        throw "requiredWorldEvidence lacks mandatory battle view '$($requiredRuleKey.Replace("`n", "/"))'."
+    }
+}
 if ($script:FaultProfileValue -cne "normal" -and $script:FaultProfileValue -cne "unstable") {
     throw "faultProfile must be 'normal' or 'unstable'."
 }
@@ -1786,7 +2240,7 @@ $exitCode = 0
 $failureMessage = $null
 $verificationReached = $false
 $manifest = [ordered]@{
-    schemaVersion = 7
+    schemaVersion = 8
     acceptanceScope = "three-process-player-input-to-authoritative-frontline-outcome"
     status = "preparing"
     startedAtUtc = [DateTime]::UtcNow.ToString("O")
@@ -1839,6 +2293,7 @@ $manifest = [ordered]@{
     gameplayEvidence = @()
     screenshots = @()
     clientPresentation = @()
+    clientWorldEvidence = @()
     runtimeLogs = @()
     credentialValidation = "LUDCRD01/64-byte/SHA256/non-empty/distinct"
     runtimeErrorEvidence = [ordered]@{
@@ -2099,14 +2554,20 @@ try {
             milestoneRevision = [uint32]$_.MilestoneRevision
             hostFrame = [int]$_.HostFrame
             file = Get-FileEvidence -Path $_.Path
+            evidence = Get-FileEvidence -Path $_.EvidencePath
         }
     })
     Assert-DistinctClientMilestoneScreenshots -Screenshots $manifest.screenshots
-    $manifest.clientPresentation = @(
+    $clientPresentationItems = @(
         Read-ClientPresentationEvidence -Capture $clientAScreenshotCapture -Minimums $profile.clientPresentation `
             -RequiredReceipts $requiredPresentationReceipts
         Read-ClientPresentationEvidence -Capture $clientBScreenshotCapture -Minimums $profile.clientPresentation `
             -RequiredReceipts $requiredPresentationReceipts
+    )
+    $manifest.clientPresentation = $clientPresentationItems
+    $manifest.clientWorldEvidence = @(
+        Assert-ClientWorldPresentationEvidence -PresentationItems $clientPresentationItems `
+            -GameplayItems $gameplayItems -Requirements $requiredWorldEvidence
     )
     $manifest.status = "verification-complete"
     $verificationReached = $true

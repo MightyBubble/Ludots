@@ -598,3 +598,79 @@ Core enum or make gameplay teardown depend on presentation state.
 | Add Layer 1 | None |
 | Add Layer 2 | None |
 | Forbidden | Presentation-only death prerequisite; retained zero-health entity; server-side presentation fallback |
+
+## Follow-up Review - Atomic Replication Spatial Preflight
+
+- **Task / Issue**: #709 - reject invalid mirror spatial state before ECS mutation
+- **Date**: 2026-07-26
+- **Agent / Author**: Codex
+
+### 1. Core judgment
+
+New variant primary deliverable (A/B/C/D): **A**
+
+Conclusion: **PASS**
+
+One-line reason: the change strengthens the existing client-replication
+transaction with a side-effect-free preview and the existing spatial bounds
+rule; it adds no gameplay profile, preset switch, graph op, schema, or parallel
+lifecycle pipeline.
+
+### 2. Layer assignment
+
+| Step / capability | Layer (0/1/2/3) | Implementation carrier |
+|---|---:|---|
+| Describe the post-apply spatial state | 0 | Fixed-size replication spatial preview value |
+| Validate a preview against the active world bounds | 0 | Existing spatial membership service |
+| Reject an invalid snapshot before mutation | 1 | Existing `ClientWorldReplicationBridge.Prepare` boundary |
+| Commit ECS, partition, mirror, and knowledge state | 1 | Existing `CommitPrepared` boundary |
+
+### 3. Reuse list
+
+- Handlers: N/A; no GAS handler changes.
+- Queues / Systems: existing `ClientWorldReplicationBridge` prepare/commit and
+  `SpatialPartitionUpdateSystem` membership synchronization.
+- Resolvers / Registries: existing frozen client schema applier registry and
+  active `WorldSizeSpec` owned by the spatial membership service.
+- Existing presets / graphs: unchanged.
+
+### 4. New Layer 0 ops
+
+| Op name | Single responsibility | Why existing ops cannot compose it |
+|---|---|---|
+| Replication spatial preview | Describe whether the entity will be spatially eligible and, if so, its committed position | The current ECS entity still contains the old position during Prepare, and a create has no entity yet |
+
+### 5. Transaction boundary
+
+Schema applicability and the complete post-apply spatial state must be accepted
+before any ECS component, partition membership, bridge slot, mirror baseline, or
+knowledge disclosure mutates. `BindExisting` must perform the same preflight
+before adding mirror components.
+
+### 6. Config SSOT
+
+World bounds remain in the active `WorldSizeSpec`; replicated position encoding
+remains in each registered schema applier. New JSON schema: **NO**.
+
+### 7. Red flag scan
+
+- [x] No profile inheritance or placement enum is added.
+- [x] No materialization pipeline parallel to spawn is created.
+- [x] Placement validation is not moved into a lifecycle op.
+- [x] No unnamed default fallback is added.
+
+### 8. Next variant test
+
+The next gameplay Mod variant changes **graph wiring or effect steps**; any new
+replication schema must explicitly describe its post-apply spatial state through
+the same Core contract, without adding a Core enum.
+
+### Reuse / Add Matrix
+
+| Type | Items |
+|---|---|
+| Reuse | schema applier registry; replication Prepare/CommitPrepared; `ISpatialPartitionMembership`; `WorldSizeSpec`; mirror and knowledge stores |
+| Add Layer 0 op | Fixed-size post-apply spatial preview and bounds predicate |
+| Add Layer 1 | Spatial preflight inside the existing replication transaction |
+| Add Layer 2 | None |
+| Forbidden | Frontline-only bounds check; catch-and-guess rollback; silent index omission; adapter-specific validation |

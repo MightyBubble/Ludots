@@ -1370,7 +1370,7 @@
       "summary": "两名玩家通过独立客户端加入同一权威对局，完成采集、生产、推进、交战与胜负结算的最小 RTS Showcase。",
       "tier": "T1",
       "category": "demo",
-      "binding": "rts_multiplayer_frontline_networked",
+      "binding": null,
       "preset": "rts_multiplayer_frontline_networked_raylib",
       "docsPath": "gitbook/architecture/rts-multiplayer-showcase.md",
       "readmePath": "gitbook/architecture/rts-multiplayer-three-process-acceptance.md",

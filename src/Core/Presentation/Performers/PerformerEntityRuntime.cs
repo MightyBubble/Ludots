@@ -249,6 +249,7 @@ namespace Ludots.Core.Presentation.Performers
             {
                 DefId = defId,
                 StableId = stableId,
+                OwnerStableId = ResolveOwnerStableId(owner, parent),
                 ScopeId = scopeId,
                 OwnerEntity = owner,
                 AnchorKind = anchorKind,
@@ -303,6 +304,43 @@ namespace Ludots.Core.Presentation.Performers
             _structureVersion++;
             AddIndexes(entity, in state, definition);
             return entity;
+        }
+
+        private int ResolveOwnerStableId(Entity owner, Entity parent)
+        {
+            if (parent != Entity.Null)
+            {
+                if (!_world.IsAlive(parent) || !_world.Has<PerformerState>(parent))
+                {
+                    throw new InvalidOperationException(
+                        "Child performer creation requires an alive parent performer state.");
+                }
+
+                ref readonly PerformerState parentState = ref _world.Get<PerformerState>(parent);
+                if (parentState.OwnerEntity != owner)
+                {
+                    throw new InvalidOperationException(
+                        "Child performer owner must match its parent performer owner.");
+                }
+
+                return parentState.OwnerStableId;
+            }
+
+            if (owner == Entity.Null ||
+                !_world.IsAlive(owner) ||
+                !_world.Has<PresentationStableId>(owner))
+            {
+                return 0;
+            }
+
+            int ownerStableId = _world.Get<PresentationStableId>(owner).Value;
+            if (ownerStableId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Performer owner PresentationStableId must be positive. Got {ownerStableId}.");
+            }
+
+            return ownerStableId;
         }
 
         public int CreateEntityAnchoredRootBatch(
@@ -3047,6 +3085,7 @@ namespace Ludots.Core.Presentation.Performers
                     {
                         DefId = defId,
                         StableId = stableIds[ownerIndex],
+                        OwnerStableId = ResolveOwnerStableId(owner, parent),
                         ScopeId = scopeIds[ownerIndex],
                         OwnerEntity = owner,
                         AnchorKind = anchorKind,

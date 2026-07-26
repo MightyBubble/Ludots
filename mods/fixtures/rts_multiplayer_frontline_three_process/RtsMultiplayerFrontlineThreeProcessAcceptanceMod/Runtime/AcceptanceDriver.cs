@@ -34,11 +34,11 @@ internal sealed class AcceptanceDriver : ISystem<float>
     private const string FrontlineRuntimeContextKey = "rts.multiplayer.frontline.runtime";
 
     private static readonly QueryDescription ClientCoreQuery = new QueryDescription()
-        .WithAll<FrontlineCore, FrontlineParticipant, PlayerOwner, WorldPositionCm, VisualTransform, AttributeBuffer, ReplicationMirrorIdentity>();
+        .WithAll<FrontlineCore, FrontlineParticipant, PlayerOwner, WorldPositionCm, VisualTransform, AttributeBuffer, ReplicationMirrorIdentity, PresentationStableId>();
     private static readonly QueryDescription ClientHarvesterQuery = new QueryDescription()
         .WithAll<FrontlineHarvester, FrontlineParticipant, PlayerOwner, WorldPositionCm, VisualTransform, ReplicationMirrorIdentity>();
     private static readonly QueryDescription ClientInfantryQuery = new QueryDescription()
-        .WithAll<FrontlineInfantry, FrontlineParticipant, PlayerOwner, WorldPositionCm, VisualTransform, AttributeBuffer, ReplicationMirrorIdentity>();
+        .WithAll<FrontlineInfantry, FrontlineParticipant, PlayerOwner, WorldPositionCm, VisualTransform, AttributeBuffer, ReplicationMirrorIdentity, PresentationStableId>();
     private static readonly QueryDescription ClientCrystalQuery = new QueryDescription()
         .WithAll<FrontlineCrystalNode, WorldPositionCm, VisualTransform, ReplicationMirrorIdentity>();
     private static readonly QueryDescription ClientMatchQuery = new QueryDescription()
@@ -47,6 +47,8 @@ internal sealed class AcceptanceDriver : ISystem<float>
         .WithAll<FrontlineCore, FrontlineParticipant, WorldPositionCm, AttributeBuffer>();
     private static readonly QueryDescription ServerInfantryQuery = new QueryDescription()
         .WithAll<FrontlineInfantry, FrontlineParticipant>();
+    private static readonly QueryDescription PresentationFrameQuery = new QueryDescription()
+        .WithAll<PresentationFrameState, PresentationFrameStateTag>();
 
     private readonly GameEngine _engine;
     private readonly World _world;
@@ -92,13 +94,16 @@ internal sealed class AcceptanceDriver : ISystem<float>
     private long _lastEvidenceCheckpointTimestamp;
     private bool _serverInitializedGameplay;
     private bool _battlePointsDerived;
+    private bool _hasLosingCoreLastPosition;
     private bool _terminal;
+    private int _completionWorldReadyFrameId = -1;
     private ServerCoreTeardownStage _serverCoreTeardownStage;
     private long _serverCoreTeardownStartedTimestamp;
     private Entity _trackedHarvester = Entity.Null;
     private Entity _attackTarget = Entity.Null;
     private WorldCmInt2 _meetingPoint;
     private WorldCmInt2 _siegePoint;
+    private WorldCmInt2 _losingCoreLastPosition;
 
     public AcceptanceDriver(
         GameEngine engine,
@@ -344,17 +349,24 @@ internal sealed class AcceptanceDriver : ISystem<float>
             return;
         }
 
+        Vector2 ownedCorePosition = _world.Get<WorldPositionCm>(core).Value.ToVector2();
+        if (Vector2.DistanceSquared(_engine.GameSession.Camera.State.TargetCm, ownedCorePosition) > 0.01f)
+        {
+            return;
+        }
+
         CaptureSeats(requireBothConnected: true);
         _localPlayerId = localPlayerId;
         _localSideIndex = sideIndex;
         _evidence.SessionEpoch = handshake.SessionEpoch.Value;
         _evidence.PlayerId = localPlayerId;
         _evidence.SeatSlot = handshake.Seat.Slot;
+        _evidence.SideIndex = sideIndex;
         _evidence.Gameplay.InitialCrystals = (int)MathF.Round(crystals);
         _evidence.Gameplay.InitialInfantryCount = _plan.Expected.InitialInfantryCount;
         _evidence.Gameplay.InitialVisibleEnemyInfantryCount = visibleEnemyInfantry;
         _evidence.Gameplay.InitialVisibleEnemyCoreCount = visibleEnemyCores;
-        CompleteStep("Full snapshot and local player binding are ready.");
+        CompleteStep("Full snapshot, local player binding, and owned-core camera focus are ready.");
         Transition(ClientStage.Ready, AcceptanceProgressStage.Ready);
     }
 
@@ -709,6 +721,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
             }
             _evidence.Gameplay.EnemyInfantryEnteredVision = true;
             _evidence.Gameplay.AttackTargetHandle = FormatHandle(_attackTarget);
+            _evidence.Gameplay.AttackTargetPositionBefore = CapturePosition(_attackTarget);
             _evidence.Gameplay.AttackTargetHealthBefore = ReadAttribute(_attackTarget, _healthAttributeId);
             BeginEntityCommand("AttackEnemyInfantry", _attackTarget);
             _substep = 1;
@@ -810,6 +823,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
             }
             _evidence.Gameplay.EnemyCoreEnteredVision = true;
             _evidence.Gameplay.AttackTargetHandle = FormatHandle(_attackTarget);
+            _evidence.Gameplay.AttackTargetPositionBefore = CapturePosition(_attackTarget);
             _evidence.Gameplay.AttackTargetHealthBefore = ReadAttribute(_attackTarget, _healthAttributeId);
             _evidence.Gameplay.SelectedInfantryHandles = CaptureSelectedHandles();
             BeginEntityCommand("AttackEnemyCore", _attackTarget);
@@ -871,13 +885,103 @@ internal sealed class AcceptanceDriver : ISystem<float>
                 $"Client observed outcome={match.Outcome}, winner={match.WinningSideIndex}; expected side {_plan.Expected.WinningSideIndex}.");
         }
 
+        if (!_hasLosingCoreLastPosition || _evidence.Gameplay.DefeatedCoreLastPosition == null)
+        {
+            throw new InvalidOperationException(
+                "Client reached the final replicated result without ever observing the defeated core position.");
+        }
+
+        int losingSide = 1 - _plan.Expected.WinningSideIndex;
+        if (_substep == 0)
+        {
+            RequestCameraFocus(_losingCoreLastPosition);
+            _substep = 1;
+            return;
+        }
+        if (_substep == 1)
+        {
+            Vector2 cameraTarget = _engine.GameSession.Camera.State.TargetCm;
+            var roundedCameraTarget = new WorldCmInt2(
+                checked((int)MathF.Round(cameraTarget.X)),
+                checked((int)MathF.Round(cameraTarget.Y)));
+            long cameraToleranceSquared =
+                (long)_plan.Battle.CompletionCameraToleranceCm * _plan.Battle.CompletionCameraToleranceCm;
+            if (DistanceSquared(roundedCameraTarget, _losingCoreLastPosition) > cameraToleranceSquared)
+            {
+                return;
+            }
+
+            int losingCoreCount = CountClientCores(losingSide);
+            if (losingCoreCount != 0)
+            {
+                return;
+            }
+            AcceptancePositionEvidence[] witnesses = CaptureInfantryNear(
+                _plan.Expected.WinningSideIndex,
+                _losingCoreLastPosition,
+                _plan.Battle.CompletionWitnessRadiusCm);
+            if (witnesses.Length < _plan.Battle.MinimumCompletionWinnerInfantry)
+            {
+                return;
+            }
+
+            _evidence.Gameplay.CompletedCameraTarget = new AcceptanceWorldPointEvidence
+            {
+                XCm = roundedCameraTarget.X,
+                YCm = roundedCameraTarget.Y,
+            };
+            _evidence.Gameplay.CompletedLosingCoreCount = losingCoreCount;
+            _evidence.Gameplay.CompletedWinnerInfantryNearDefeatedCoreCount = witnesses.Length;
+            _evidence.Gameplay.CompletedWinnerInfantryNearDefeatedCorePositions = witnesses;
+            _completionWorldReadyFrameId = GetPresentationFrameId();
+            _substep = 2;
+            return;
+        }
+        if (GetPresentationFrameId() <= _completionWorldReadyFrameId)
+        {
+            return;
+        }
+
+        Vector2 finalCameraTarget = _engine.GameSession.Camera.State.TargetCm;
+        var roundedFinalCameraTarget = new WorldCmInt2(
+            checked((int)MathF.Round(finalCameraTarget.X)),
+            checked((int)MathF.Round(finalCameraTarget.Y)));
+        long finalCameraToleranceSquared =
+            (long)_plan.Battle.CompletionCameraToleranceCm * _plan.Battle.CompletionCameraToleranceCm;
+        if (DistanceSquared(roundedFinalCameraTarget, _losingCoreLastPosition) > finalCameraToleranceSquared)
+        {
+            throw new InvalidOperationException("Completion camera moved away from the defeated core before capture.");
+        }
+        int finalLosingCoreCount = CountClientCores(losingSide);
+        if (finalLosingCoreCount != 0)
+        {
+            throw new InvalidOperationException("The defeated core mirror reappeared before completion capture.");
+        }
+        AcceptancePositionEvidence[] finalWitnesses = CaptureInfantryNear(
+            _plan.Expected.WinningSideIndex,
+            _losingCoreLastPosition,
+            _plan.Battle.CompletionWitnessRadiusCm);
+        if (finalWitnesses.Length < _plan.Battle.MinimumCompletionWinnerInfantry)
+        {
+            throw new InvalidOperationException("Winning infantry left the defeated core area before completion capture.");
+        }
+
         _evidence.Gameplay.MatchPhase = match.Phase.ToString();
         _evidence.Gameplay.Outcome = match.Outcome.ToString();
         _evidence.Gameplay.OutcomeSource = "replicated-match-state";
         _evidence.Gameplay.WinningSideIndex = match.WinningSideIndex;
         _evidence.Gameplay.CommittedTick = match.CommittedTick;
         _evidence.Gameplay.CommittedTickSource = "replicated-match-state";
-        CompleteStep("The replicated match state reached the expected final result.");
+        _evidence.Gameplay.CompletedCameraTarget = new AcceptanceWorldPointEvidence
+        {
+            XCm = roundedFinalCameraTarget.X,
+            YCm = roundedFinalCameraTarget.Y,
+        };
+        _evidence.Gameplay.CompletedLosingCoreCount = finalLosingCoreCount;
+        _evidence.Gameplay.CompletedWinnerInfantryNearDefeatedCoreCount = finalWitnesses.Length;
+        _evidence.Gameplay.CompletedWinnerInfantryNearDefeatedCorePositions = finalWitnesses;
+        _evidence.Gameplay.CompletedPresentationFrameId = GetPresentationFrameId();
+        CompleteStep("Both clients framed the defeated core position after its mirror disappeared, with winning infantry still present.");
         Pass();
     }
 
@@ -1727,6 +1831,16 @@ internal sealed class AcceptanceDriver : ISystem<float>
         _siegePoint = new WorldCmInt2(
             checked((int)Math.Round(far.X + (ux * _plan.Battle.SiegeBeyondFarResourceCm))),
             checked((int)Math.Round(far.Y + (uy * _plan.Battle.SiegeBeyondFarResourceCm))));
+        _evidence.Gameplay.MeetingPoint = new AcceptanceWorldPointEvidence
+        {
+            XCm = _meetingPoint.X,
+            YCm = _meetingPoint.Y,
+        };
+        _evidence.Gameplay.SiegePoint = new AcceptanceWorldPointEvidence
+        {
+            XCm = _siegePoint.X,
+            YCm = _siegePoint.Y,
+        };
         _battlePointsDerived = true;
     }
 
@@ -1814,12 +1928,20 @@ internal sealed class AcceptanceDriver : ISystem<float>
         {
             ReadOnlySpan<FrontlineParticipant> participants = chunk.GetSpan<FrontlineParticipant>();
             ReadOnlySpan<AttributeBuffer> attributes = chunk.GetSpan<AttributeBuffer>();
+            ref Entity first = ref chunk.Entity(0);
             foreach (int index in chunk)
             {
                 int side = participants[index].SideIndex;
                 if ((uint)side < 2u)
                 {
                     _evidence.Gameplay.ObservedCoreHealthBySide[side] = attributes[index].GetCurrent(_healthAttributeId);
+                    if (side == 1 - _plan.Expected.WinningSideIndex)
+                    {
+                        Entity core = Unsafe.Add(ref first, index);
+                        _losingCoreLastPosition = GetWorldPosition(core);
+                        _hasLosingCoreLastPosition = true;
+                        _evidence.Gameplay.DefeatedCoreLastPosition = CapturePosition(core);
+                    }
                 }
             }
         }
@@ -2043,6 +2165,41 @@ internal sealed class AcceptanceDriver : ISystem<float>
         return count;
     }
 
+    private int CountClientCores(int sideIndex)
+    {
+        int count = 0;
+        foreach (ref Chunk chunk in _world.Query(in ClientCoreQuery))
+        {
+            ReadOnlySpan<FrontlineParticipant> participants = chunk.GetSpan<FrontlineParticipant>();
+            foreach (int index in chunk)
+            {
+                count += participants[index].SideIndex == sideIndex ? 1 : 0;
+            }
+        }
+        return count;
+    }
+
+    private AcceptancePositionEvidence[] CaptureInfantryNear(int sideIndex, WorldCmInt2 point, int radiusCm)
+    {
+        long radiusSquared = (long)radiusCm * radiusCm;
+        var witnesses = new List<AcceptancePositionEvidence>();
+        foreach (ref Chunk chunk in _world.Query(in ClientInfantryQuery))
+        {
+            ReadOnlySpan<FrontlineParticipant> participants = chunk.GetSpan<FrontlineParticipant>();
+            ReadOnlySpan<WorldPositionCm> positions = chunk.GetSpan<WorldPositionCm>();
+            ref Entity first = ref chunk.Entity(0);
+            foreach (int index in chunk)
+            {
+                if (participants[index].SideIndex == sideIndex &&
+                    DistanceSquared(positions[index].ToWorldCmInt2(), point) <= radiusSquared)
+                {
+                    witnesses.Add(CapturePosition(Unsafe.Add(ref first, index)));
+                }
+            }
+        }
+        return witnesses.ToArray();
+    }
+
     private bool TryGetClientMatchState(out FrontlineMatchStateProjection projection)
     {
         projection = default;
@@ -2137,12 +2294,38 @@ internal sealed class AcceptanceDriver : ISystem<float>
     private AcceptancePositionEvidence CapturePosition(Entity entity)
     {
         WorldCmInt2 position = GetWorldPosition(entity);
+        if (!_world.TryGet(entity, out PresentationStableId stableId) || stableId.Value <= 0)
+        {
+            throw new InvalidOperationException("Acceptance entity has no positive presentation stable id.");
+        }
         return new AcceptancePositionEvidence
         {
             Handle = FormatHandle(entity),
+            PresentationStableId = stableId.Value,
             XCm = position.X,
             YCm = position.Y,
         };
+    }
+
+    private int GetPresentationFrameId()
+    {
+        int count = 0;
+        int frameId = -1;
+        foreach (ref Chunk chunk in _world.Query(in PresentationFrameQuery))
+        {
+            ReadOnlySpan<PresentationFrameState> states = chunk.GetSpan<PresentationFrameState>();
+            foreach (int index in chunk)
+            {
+                frameId = states[index].FrameId;
+                count++;
+            }
+        }
+        if (count != 1 || frameId < 0)
+        {
+            throw new InvalidOperationException(
+                $"Acceptance requires one initialized presentation frame state; observed count={count}, frameId={frameId}.");
+        }
+        return frameId;
     }
 
     private WorldCmInt2 GetWorldPosition(Entity entity)
@@ -2304,6 +2487,13 @@ internal sealed class AcceptanceDriver : ISystem<float>
             : null;
         checkpoint.SiegePoint = _battlePointsDerived
             ? new AcceptanceWorldPointCheckpoint { XCm = _siegePoint.X, YCm = _siegePoint.Y }
+            : null;
+        checkpoint.DefeatedCorePoint = _hasLosingCoreLastPosition
+            ? new AcceptanceWorldPointCheckpoint
+            {
+                XCm = _losingCoreLastPosition.X,
+                YCm = _losingCoreLastPosition.Y,
+            }
             : null;
 
         if (_role == NetworkProcessRole.AuthoritativeServer)

@@ -244,6 +244,60 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
+        public void Clear_LateInvalidSpatialRelease_RejectsBeforeRemovingAnyOwnedMirror()
+        {
+            using World world = World.Create();
+            var membership = new RecordingSpatialPartitionMembership();
+            var bridge = Bridge(world, entityCapacity: 2, sessionEpoch: 7, membership, out _, out _);
+            var channel = Channel(capacity: 2);
+            var packet = new ReplicationPacketBuffer(2);
+            var first = new NetworkEntityHandle(0, 1);
+            var second = new NetworkEntityHandle(1, 1);
+            var states = new[] { State(first, 1, 10), State(second, 1, 20) };
+            var visible = new[]
+            {
+                new ReplicationDisclosureInput(first, KnowledgePresence.LiveVisible),
+                new ReplicationDisclosureInput(second, KnowledgePresence.LiveVisible),
+            };
+
+            Assert.That(channel.BuildFull(7, 1, 1, states, visible, packet), Is.EqualTo(ReplicationBuildResult.Success));
+            Assert.That(bridge.Apply(packet), Is.EqualTo(ReplicationBridgeResult.Success));
+            Assert.That(bridge.TryResolve(first, out Entity firstEntity), Is.True);
+            Assert.That(bridge.TryResolve(second, out Entity secondEntity), Is.True);
+
+            states[0] = State(first, 2, 30);
+            states[1] = State(second, 2, 40);
+            Assert.That(channel.BuildDelta(7, 2, 2, 1, states, visible, packet), Is.EqualTo(ReplicationBuildResult.Success));
+            Assert.That(bridge.Prepare(packet), Is.EqualTo(ReplicationBridgeResult.Success));
+            Assert.That(bridge.HasPreparedBatch, Is.True);
+
+            membership.RejectRemoveEntity = secondEntity;
+            membership.Reset();
+
+            Assert.That(bridge.Clear(), Is.EqualTo(ReplicationBridgeResult.EcsStateMismatch));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(bridge.TryResolve(first, out Entity unchangedFirst), Is.True);
+                Assert.That(unchangedFirst, Is.EqualTo(firstEntity));
+                Assert.That(bridge.TryResolve(second, out Entity unchangedSecond), Is.True);
+                Assert.That(unchangedSecond, Is.EqualTo(secondEntity));
+                Assert.That(world.IsAlive(firstEntity), Is.True);
+                Assert.That(world.IsAlive(secondEntity), Is.True);
+                Assert.That(world.Has<ReplicationMirrorIdentity, ReplicationMirrorState>(firstEntity), Is.True);
+                Assert.That(world.Has<ReplicationMirrorIdentity, ReplicationMirrorState>(secondEntity), Is.True);
+                Assert.That(membership.RemoveCount, Is.Zero);
+                Assert.That(bridge.HasPreparedBatch, Is.True);
+                Assert.That(bridge.LastSnapshotId, Is.EqualTo(1));
+            });
+
+            Assert.That(bridge.CommitPrepared(), Is.EqualTo(ReplicationBridgeResult.Success));
+            Assert.That(world.Get<TestAppliedState>(firstEntity).Value, Is.EqualTo(30));
+            Assert.That(world.Get<TestAppliedState>(secondEntity).Value, Is.EqualTo(40));
+            Assert.That(bridge.LastSnapshotId, Is.EqualTo(2));
+        }
+
+        [Test]
         public void Apply_MapsBaselineMismatchToResyncRequired()
         {
             using World world = World.Create();
@@ -402,6 +456,18 @@ namespace Ludots.Tests.Architecture
             public int SynchronizeCount { get; private set; }
             public int DeactivateCount { get; private set; }
             public int RemoveCount { get; private set; }
+            public Entity RejectRemoveEntity { get; set; }
+
+            public SpatialMembershipValidationResult ValidateSynchronize(Entity entity) => SpatialMembershipValidationResult.Success;
+
+            public SpatialMembershipValidationResult ValidateSynchronize(Entity entity, in SpatialMembershipTarget target) => SpatialMembershipValidationResult.Success;
+
+            public SpatialMembershipValidationResult ValidateDeactivate(Entity entity) => SpatialMembershipValidationResult.Success;
+
+            public SpatialMembershipValidationResult ValidateRemove(Entity entity) =>
+                entity == RejectRemoveEntity
+                    ? SpatialMembershipValidationResult.InvalidState
+                    : SpatialMembershipValidationResult.Success;
 
             public void Synchronize(Entity entity) => SynchronizeCount++;
 
@@ -419,6 +485,14 @@ namespace Ludots.Tests.Architecture
 
         private sealed class TestSpatialPartitionMembership : ISpatialPartitionMembership
         {
+            public SpatialMembershipValidationResult ValidateSynchronize(Entity entity) => SpatialMembershipValidationResult.Success;
+
+            public SpatialMembershipValidationResult ValidateSynchronize(Entity entity, in SpatialMembershipTarget target) => SpatialMembershipValidationResult.Success;
+
+            public SpatialMembershipValidationResult ValidateDeactivate(Entity entity) => SpatialMembershipValidationResult.Success;
+
+            public SpatialMembershipValidationResult ValidateRemove(Entity entity) => SpatialMembershipValidationResult.Success;
+
             public void Synchronize(Entity entity) { }
 
             public void Deactivate(Entity entity) { }
@@ -435,6 +509,16 @@ namespace Ludots.Tests.Architecture
 
             public bool CanConceal(World world, Entity entity)
                 => world.Has<TestAppliedState>(entity);
+
+            public bool TryPreviewSpatialMembership(
+                World world,
+                Entity entity,
+                in ReplicatedEntityState state,
+                out SpatialMembershipTarget target)
+            {
+                target = SpatialMembershipTarget.NoMembership;
+                return true;
+            }
 
             public Entity Create(
                 World world,

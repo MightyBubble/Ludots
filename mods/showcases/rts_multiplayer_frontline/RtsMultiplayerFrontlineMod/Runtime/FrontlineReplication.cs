@@ -19,6 +19,7 @@ using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Networking.Replication;
 using Ludots.Core.Networking.Runtime;
 using Ludots.Core.Map;
+using Ludots.Core.Mathematics;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.EntityCollections;
@@ -26,6 +27,7 @@ using Ludots.Core.ParticipantVisibility;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation;
 using Ludots.Core.Scripting;
+using Ludots.Core.Spatial;
 using Ludots.Core.Vision;
 using RtsMultiplayerFrontlineMod.Systems;
 
@@ -400,6 +402,8 @@ internal sealed class FrontlineClientTemplateFactory
     private static void ValidateTemplate(EntityTemplate template, in FrontlineReplicationSpec spec)
     {
         RequireComponent(template, "WorldPositionCm");
+        ForbidSpatialExclusionComponents(template);
+        ForbidComponent(template, "SpatialCellRef");
         RequireComponent(template, "VisualTransform");
         RequireComponent(template, "CullState");
         RequireComponent(template, "CommandSourceSelectableTag");
@@ -432,6 +436,16 @@ internal sealed class FrontlineClientTemplateFactory
         RequireComponent(template, ReplicationSchemaComponent);
         RequireComponent(template, "FrontlineMatchStateEntity");
         RequireComponent(template, "FrontlineMatchStateProjection");
+        ForbidComponent(template, "WorldPositionCm");
+        ForbidComponent(template, "SpatialCellRef");
+    }
+
+    private static void ForbidSpatialExclusionComponents(EntityTemplate template)
+    {
+        ForbidComponent(template, "PresentationStaticTransform");
+        ForbidComponent(template, "SpatialPartitionExcluded");
+        ForbidComponent(template, "PresentationDestroyPending");
+        ForbidComponent(template, "SuspendedTag");
     }
 
     private static void RequireComponent(EntityTemplate template, string componentName)
@@ -440,6 +454,15 @@ internal sealed class FrontlineClientTemplateFactory
         {
             throw new InvalidOperationException(
                 $"RTS Frontline replicated template '{template.Id}' requires component '{componentName}'.");
+        }
+    }
+
+    private static void ForbidComponent(EntityTemplate template, string componentName)
+    {
+        if (template.Components.ContainsKey(componentName))
+        {
+            throw new InvalidOperationException(
+                $"RTS Frontline replicated template '{template.Id}' must not declare component '{componentName}'.");
         }
     }
 }
@@ -489,6 +512,24 @@ internal abstract class FrontlineReplicationApplier : IClientReplicationSchemaAp
 
     public bool CanConceal(World world, Entity entity) =>
         world != null && world.IsAlive(entity) && MatchesFormalEntity(world, entity);
+
+    public bool TryPreviewSpatialMembership(
+        World world,
+        Entity entity,
+        in ReplicatedEntityState state,
+        out SpatialMembershipTarget target)
+    {
+        target = default;
+        if (world == null || !ValidatePayload(state.Values, state.SchemaId))
+        {
+            return false;
+        }
+
+        WorldPositionCm position = DecodePosition(state.Values);
+        WorldCmInt2 positionCm = position.Value.ToWorldCmInt2();
+        target = SpatialMembershipTarget.At(in positionCm);
+        return true;
+    }
 
     public Entity Create(
         World world,
@@ -649,11 +690,7 @@ internal abstract class FrontlineReplicationApplier : IClientReplicationSchemaAp
     {
         SetDisclosureVisibility(world, entity, isVisible: true);
         long valid = values.Value3;
-        WorldPositionCm position = FrontlineReplicationPayload.Has(valid, FrontlineReplicationPayload.PositionValid)
-            ? WorldPositionCm.FromCm(
-                FrontlineReplicationPayload.UnpackLowInt(values.Value0),
-                FrontlineReplicationPayload.UnpackHighInt(values.Value0))
-            : WorldPositionCm.FromCm(0, 0);
+        WorldPositionCm position = DecodePosition(values);
         WorldPositionCm previous = world.Get<WorldPositionCm>(entity);
         world.Set(entity, in position);
         var previousPosition = new PreviousWorldPositionCm
@@ -721,6 +758,13 @@ internal abstract class FrontlineReplicationApplier : IClientReplicationSchemaAp
         }
         _tagBinder.BindReplicatedEntity(world, entity);
     }
+
+    private static WorldPositionCm DecodePosition(in ReplicationStateVector values) =>
+        FrontlineReplicationPayload.Has(values.Value3, FrontlineReplicationPayload.PositionValid)
+            ? WorldPositionCm.FromCm(
+                FrontlineReplicationPayload.UnpackLowInt(values.Value0),
+                FrontlineReplicationPayload.UnpackHighInt(values.Value0))
+            : WorldPositionCm.FromCm(0, 0);
 
     private static void SetDisclosureVisibility(World world, Entity entity, bool isVisible)
     {
@@ -926,6 +970,16 @@ internal sealed class FrontlineMatchStateReplicationApplier : IClientReplication
     public bool CanConceal(World world, Entity entity) =>
         world != null && world.IsAlive(entity) && MatchesFormalEntity(world, entity);
 
+    public bool TryPreviewSpatialMembership(
+        World world,
+        Entity entity,
+        in ReplicatedEntityState state,
+        out SpatialMembershipTarget target)
+    {
+        target = SpatialMembershipTarget.NoMembership;
+        return world != null && Validate(state.SchemaId, state.Values, out _);
+    }
+
     public Entity Create(
         World world,
         in ReplicationMirrorIdentity identity,
@@ -1010,16 +1064,29 @@ internal sealed class FrontlineNetworkEntityBindingSystem : BaseSystem<World, fl
         .WithAll<ReplicationSchemaRef, PresentationDestroyPending>();
 
     private readonly NetworkEntityTable _entities;
+    private readonly GameEngine _engine;
+    private readonly FrontlineReplicationEntityScope _scope;
     private readonly CommandBuffer _commandBuffer = new();
 
-    public FrontlineNetworkEntityBindingSystem(World world, NetworkEntityTable entities)
-        : base(world)
+    public FrontlineNetworkEntityBindingSystem(
+        GameEngine engine,
+        NetworkEntityTable entities,
+        FrontlineConfig config)
+        : base((engine ?? throw new ArgumentNullException(nameof(engine))).World)
     {
+        _engine = engine;
         _entities = entities ?? throw new ArgumentNullException(nameof(entities));
+        _scope = new FrontlineReplicationEntityScope(config ?? throw new ArgumentNullException(nameof(config)));
     }
 
     public override void Update(in float dt)
     {
+        MapSession? session = _engine.CurrentMapSession;
+        if (session == null || !_scope.IsConfiguredMap(session.MapId))
+        {
+            return;
+        }
+
         foreach (ref Chunk chunk in World.Query(in ReplicatedQuery))
         {
             ReadOnlySpan<ReplicationSchemaRef> schemas = chunk.GetSpan<ReplicationSchemaRef>();
@@ -1027,6 +1094,10 @@ internal sealed class FrontlineNetworkEntityBindingSystem : BaseSystem<World, fl
             foreach (int index in chunk)
             {
                 Entity entity = Unsafe.Add(ref first, index);
+                if (!_scope.IsFrontlineEntity(World, entity, schemas[index].SchemaId, session.MapId))
+                {
+                    continue;
+                }
                 if (schemas[index].SchemaId <= 0)
                 {
                     throw new InvalidOperationException("RTS Frontline found a replicated entity with a non-positive schema id.");
@@ -1042,10 +1113,15 @@ internal sealed class FrontlineNetworkEntityBindingSystem : BaseSystem<World, fl
 
         foreach (ref Chunk chunk in World.Query(in PendingDestroyQuery))
         {
+            ReadOnlySpan<ReplicationSchemaRef> schemas = chunk.GetSpan<ReplicationSchemaRef>();
             ref Entity first = ref chunk.Entity(0);
             foreach (int index in chunk)
             {
                 Entity entity = Unsafe.Add(ref first, index);
+                if (!_scope.IsFrontlineEntity(World, entity, schemas[index].SchemaId, session.MapId))
+                {
+                    continue;
+                }
                 if (!_entities.TryResolve(entity, out NetworkEntityHandle handle) ||
                     !_entities.TryRelease(handle))
                 {
@@ -1072,26 +1148,45 @@ internal sealed class FrontlineNetworkEntityBindingSystem : BaseSystem<World, fl
 internal sealed class FrontlineVisionScopeAuthoringSystem : BaseSystem<World, float>
 {
     private static readonly QueryDescription Query = new QueryDescription()
-        .WithAll<FrontlineParticipant, Team, PlayerOwner, VisionEmitterCm>();
+        .WithAll<FrontlineParticipant, Team, PlayerOwner, VisionEmitterCm, ReplicationSchemaRef>()
+        .WithNone<ReplicationMirrorIdentity>();
 
+    private readonly GameEngine _engine;
     private readonly FrontlineSideConfig[] _sides;
+    private readonly FrontlineReplicationEntityScope _scope;
 
-    public FrontlineVisionScopeAuthoringSystem(World world, FrontlineSideConfig[] sides)
-        : base(world)
+    public FrontlineVisionScopeAuthoringSystem(GameEngine engine, FrontlineConfig config)
+        : base((engine ?? throw new ArgumentNullException(nameof(engine))).World)
     {
-        _sides = sides ?? throw new ArgumentNullException(nameof(sides));
+        ArgumentNullException.ThrowIfNull(config);
+        _engine = engine;
+        _sides = config.Sides;
+        _scope = new FrontlineReplicationEntityScope(config);
     }
 
     public override void Update(in float dt)
     {
+        MapSession? session = _engine.CurrentMapSession;
+        if (session == null || !_scope.IsConfiguredMap(session.MapId))
+        {
+            return;
+        }
+
         foreach (ref Chunk chunk in World.Query(in Query))
         {
             ReadOnlySpan<FrontlineParticipant> participants = chunk.GetSpan<FrontlineParticipant>();
             ReadOnlySpan<Team> teams = chunk.GetSpan<Team>();
             ReadOnlySpan<PlayerOwner> owners = chunk.GetSpan<PlayerOwner>();
+            ReadOnlySpan<ReplicationSchemaRef> schemas = chunk.GetSpan<ReplicationSchemaRef>();
             Span<VisionEmitterCm> emitters = chunk.GetSpan<VisionEmitterCm>();
+            ref Entity first = ref chunk.Entity(0);
             foreach (int index in chunk)
             {
+                Entity entity = Unsafe.Add(ref first, index);
+                if (!_scope.IsFrontlineEntity(World, entity, schemas[index].SchemaId, session.MapId))
+                {
+                    continue;
+                }
                 int sideIndex = participants[index].SideIndex;
                 if ((uint)sideIndex >= (uint)_sides.Length ||
                     teams[index].Id != _sides[sideIndex].TeamId ||
@@ -1127,16 +1222,22 @@ internal static class FrontlineReplicatedClientMapBoundary
         }
 
         ValidateRepresentatives(engine.World, session, config.Sides);
+        var scope = new FrontlineReplicationEntityScope(config);
 
         int removed = 0;
         using (var commands = new CommandBuffer())
         {
             foreach (ref Chunk chunk in engine.World.Query(in AuthoredGameplayQuery))
             {
+                ReadOnlySpan<ReplicationSchemaRef> schemas = chunk.GetSpan<ReplicationSchemaRef>();
                 ref Entity first = ref chunk.Entity(0);
                 foreach (int index in chunk)
                 {
                     Entity entity = Unsafe.Add(ref first, index);
+                    if (!scope.IsFrontlineEntity(engine.World, entity, schemas[index].SchemaId, session.MapId))
+                    {
+                        continue;
+                    }
                     commands.Destroy(in entity);
                     removed++;
                 }
@@ -1148,7 +1249,20 @@ internal static class FrontlineReplicatedClientMapBoundary
             }
         }
 
-        int remaining = engine.World.CountEntities(in AuthoredGameplayQuery);
+        int remaining = 0;
+        foreach (ref Chunk chunk in engine.World.Query(in AuthoredGameplayQuery))
+        {
+            ReadOnlySpan<ReplicationSchemaRef> schemas = chunk.GetSpan<ReplicationSchemaRef>();
+            ref Entity first = ref chunk.Entity(0);
+            foreach (int index in chunk)
+            {
+                Entity entity = Unsafe.Add(ref first, index);
+                if (scope.IsFrontlineEntity(engine.World, entity, schemas[index].SchemaId, session.MapId))
+                {
+                    remaining++;
+                }
+            }
+        }
         if (remaining != 0)
         {
             throw new InvalidOperationException(
@@ -1535,7 +1649,7 @@ internal static class FrontlineReplication
         FrontlineConfig config = runtime.Config;
 
         engine.RegisterSystem(
-            new FrontlineVisionScopeAuthoringSystem(engine.World, config.Sides),
+            new FrontlineVisionScopeAuthoringSystem(engine, config),
             SystemGroup.SchemaUpdate);
 
         ConfigureFogProjectionPolicy(engine, config);
@@ -1591,7 +1705,7 @@ internal static class FrontlineReplication
             NetworkEntityTable entities = engine.GetService(CoreServiceKeys.NetworkEntityTable)
                 ?? throw new InvalidOperationException("RTS Frontline authoritative launch requires NetworkEntityTable.");
             engine.RegisterSystem(
-                new FrontlineNetworkEntityBindingSystem(engine.World, entities),
+                new FrontlineNetworkEntityBindingSystem(engine, entities, config),
                 SystemGroup.Cleanup);
         }
     }
@@ -1707,5 +1821,90 @@ internal static class FrontlineReplication
             throw new InvalidOperationException(
                 $"RTS Frontline client applier registration failed for schema {schemaId}: {result}.");
         }
+    }
+}
+
+internal readonly struct FrontlineReplicationEntityScope
+{
+    private readonly MapId _mapId;
+    private readonly int _coreSchemaId;
+    private readonly int _harvesterSchemaId;
+    private readonly int _infantrySchemaId;
+    private readonly int _crystalNodeSchemaId;
+    private readonly int _matchStateSchemaId;
+
+    internal FrontlineReplicationEntityScope(FrontlineConfig config)
+    {
+        ArgumentNullException.ThrowIfNull(config);
+        _mapId = new MapId(config.MapId);
+        _coreSchemaId = config.Replication.CoreSchemaId;
+        _harvesterSchemaId = config.Replication.HarvesterSchemaId;
+        _infantrySchemaId = config.Replication.InfantrySchemaId;
+        _crystalNodeSchemaId = config.Replication.CrystalNodeSchemaId;
+        _matchStateSchemaId = config.Replication.MatchStateSchemaId;
+    }
+
+    internal bool IsConfiguredMap(MapId mapId) => mapId == _mapId;
+
+    internal bool IsFrontlineEntity(World world, Entity entity, int schemaId, MapId focusedMapId)
+    {
+        FrontlineReplicationKind kind;
+        if (schemaId == _coreSchemaId)
+        {
+            kind = FrontlineReplicationKind.Core;
+        }
+        else if (schemaId == _harvesterSchemaId)
+        {
+            kind = FrontlineReplicationKind.Harvester;
+        }
+        else if (schemaId == _infantrySchemaId)
+        {
+            kind = FrontlineReplicationKind.Infantry;
+        }
+        else if (schemaId == _crystalNodeSchemaId)
+        {
+            kind = FrontlineReplicationKind.CrystalNode;
+        }
+        else if (schemaId == _matchStateSchemaId)
+        {
+            kind = FrontlineReplicationKind.MatchState;
+        }
+        else
+        {
+            return false;
+        }
+
+        if (!world.TryGet(entity, out MapEntity mapEntity))
+        {
+            throw new InvalidOperationException(
+                $"RTS Frontline schema {schemaId} requires explicit MapEntity ownership.");
+        }
+        if (mapEntity.MapId != focusedMapId)
+        {
+            return false;
+        }
+
+        int roleCount =
+            (world.Has<FrontlineCore>(entity) ? 1 : 0) +
+            (world.Has<FrontlineHarvester>(entity) ? 1 : 0) +
+            (world.Has<FrontlineInfantry>(entity) ? 1 : 0) +
+            (world.Has<FrontlineCrystalNode>(entity) ? 1 : 0) +
+            (world.Has<FrontlineMatchStateEntity>(entity) ? 1 : 0);
+        bool matchesRole = kind switch
+        {
+            FrontlineReplicationKind.Core => world.Has<FrontlineCore>(entity),
+            FrontlineReplicationKind.Harvester => world.Has<FrontlineHarvester>(entity),
+            FrontlineReplicationKind.Infantry => world.Has<FrontlineInfantry>(entity),
+            FrontlineReplicationKind.CrystalNode => world.Has<FrontlineCrystalNode>(entity),
+            FrontlineReplicationKind.MatchState => world.Has<FrontlineMatchStateEntity>(entity),
+            _ => false,
+        };
+        if (roleCount != 1 || !matchesRole)
+        {
+            throw new InvalidOperationException(
+                $"RTS Frontline schema {schemaId} does not match exactly one configured replication role.");
+        }
+
+        return true;
     }
 }

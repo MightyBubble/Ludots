@@ -10,16 +10,20 @@ try
     string bootstrapPath = args.Length > 0 && !string.IsNullOrWhiteSpace(args[0])
         ? args[0]
         : "launcher.runtime.json";
+    string resolvedBootstrapPath = GameBootstrapper.ResolveBootstrapPath(baseDirectory, bootstrapPath);
+    string hostArtifactBaseDirectory = Path.GetDirectoryName(resolvedBootstrapPath)
+        ?? throw new InvalidOperationException(
+            $"Resolved launcher bootstrap has no parent directory: {resolvedBootstrapPath}");
     GameBootstrapResult bootstrap = GameBootstrapper.InitializeFromBaseDirectory(
         baseDirectory,
-        bootstrapPath);
+        resolvedBootstrapPath);
     if (bootstrap.NetworkHost?.ResolveRole() != NetworkProcessRole.AuthoritativeServer)
     {
         throw new InvalidOperationException(
             "Dedicated server requires an authoritativeServer networkHost bootstrap.");
     }
 
-    LiteNetLibNetworkRuntimeInstaller.Install(in bootstrap, baseDirectory);
+    LiteNetLibNetworkRuntimeInstaller.Install(in bootstrap, hostArtifactBaseDirectory);
     using var shutdown = new CancellationTokenSource();
     Console.CancelKeyPress += (_, eventArgs) =>
     {

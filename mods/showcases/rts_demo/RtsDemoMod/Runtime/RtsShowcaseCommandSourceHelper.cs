@@ -127,7 +127,7 @@ namespace RtsDemoMod.Runtime
                 Yaw = cam?.Yaw,
                 Pitch = cam?.Pitch,
                 DistanceCm = ResolveFocusDistance(uiConfig, cam?.DistanceCm),
-                FovYDeg = cam?.FovYDeg
+                FovYDeg = uiConfig.CameraFocusFovYDeg ?? cam?.FovYDeg
             };
         }
 

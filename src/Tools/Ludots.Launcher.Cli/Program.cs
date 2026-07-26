@@ -46,6 +46,12 @@ try
             Console.WriteLine($"adapter={result.Plan?.AdapterId ?? ResolveRequestedAdapter(service, command)}");
             Console.WriteLine($"pid={result.Pid}");
             Console.WriteLine($"bootstrap={result.BootstrapPath}");
+            foreach (LauncherStartedProcess process in result.Processes)
+            {
+                Console.WriteLine(
+                    $"process={process.Id} role={process.ProcessRole} pid={process.Pid} bootstrap={process.BootstrapPath}");
+            }
+
             if (result.Plan != null)
             {
                 Console.WriteLine($"rootMods={string.Join(", ", result.Plan.RootModIds)}");
@@ -56,6 +62,27 @@ try
             if (!string.IsNullOrWhiteSpace(result.Url))
             {
                 Console.WriteLine(result.Url);
+            }
+
+            return 0;
+        }
+        case "artifacts" when command.Secondary == "process-group":
+        {
+            var selectors = ResolveRequestedSelectors(service, command, allowDefaultPreset: true);
+            LauncherProcessGroupArtifacts artifacts = service.WriteProcessGroupArtifacts(selectors, command.BuildMode);
+            if (command.Json)
+            {
+                Console.WriteLine(JsonSerializer.Serialize(artifacts, new JsonSerializerOptions { WriteIndented = true }));
+            }
+            else
+            {
+                Console.WriteLine($"preset={artifacts.PresetId}");
+                Console.WriteLine($"artifactDirectory={artifacts.ArtifactDirectory}");
+                foreach (LauncherNetworkRoleArtifact process in artifacts.Processes)
+                {
+                    Console.WriteLine(
+                        $"process={process.ProcessId} role={process.ProcessRole} app={process.ApplicationId} bootstrap={process.BootstrapPath}");
+                }
             }
 
             return 0;
@@ -537,6 +564,7 @@ Commands
   build [selectors...] [--adapter raylib|web] [--build auto|always|never]
   build app [--adapter raylib|web]
   launch [selectors...] [--adapter raylib|web] [--build auto|always|never] [--record <artifactDir>]
+  artifacts process-group preset:<id> [--build auto|always|never] [--json]
   adapter list
   adapter select --adapter raylib|web
   workspace list
@@ -678,6 +706,7 @@ internal sealed class CliCommand
             "workspace" => secondary is "list" or "add",
             "binding" => secondary is "list" or "set" or "delete",
             "preset" => secondary is "list" or "save" or "select" or "delete",
+            "artifacts" => secondary is "process-group",
             "sdk" => secondary is "export",
             "mod" => secondary is "create" or "fix-project" or "solution",
             _ => false

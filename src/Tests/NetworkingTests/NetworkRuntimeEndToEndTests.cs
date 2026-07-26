@@ -1653,6 +1653,16 @@ public sealed class NetworkRuntimeEndToEndTests
         public bool CanApply(World world, Entity entity, in ReplicatedEntityState state) => world.Has<TestAppliedState>(entity);
         public bool CanConceal(World world, Entity entity) => world.Has<TestAppliedState>(entity);
 
+        public bool TryPreviewSpatialMembership(
+            World world,
+            Entity entity,
+            in ReplicatedEntityState state,
+            out SpatialMembershipTarget target)
+        {
+            target = SpatialMembershipTarget.NoMembership;
+            return true;
+        }
+
         public Entity Create(World world, in ReplicationMirrorIdentity identity, in ReplicationMirrorState state)
         {
             var applied = new TestAppliedState(state.Values.Value0);
@@ -1701,6 +1711,14 @@ public sealed class NetworkRuntimeEndToEndTests
 
     private sealed class TestSpatialPartitionMembership : ISpatialPartitionMembership
     {
+        public SpatialMembershipValidationResult ValidateSynchronize(Entity entity) => SpatialMembershipValidationResult.Success;
+
+        public SpatialMembershipValidationResult ValidateSynchronize(Entity entity, in SpatialMembershipTarget target) => SpatialMembershipValidationResult.Success;
+
+        public SpatialMembershipValidationResult ValidateDeactivate(Entity entity) => SpatialMembershipValidationResult.Success;
+
+        public SpatialMembershipValidationResult ValidateRemove(Entity entity) => SpatialMembershipValidationResult.Success;
+
         public void Synchronize(Entity entity) { }
 
         public void Deactivate(Entity entity) { }

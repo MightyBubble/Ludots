@@ -1,4 +1,5 @@
 using Arch.Core;
+using Ludots.Core.Spatial;
 
 namespace Ludots.Core.Networking.Replication
 {
@@ -9,6 +10,16 @@ namespace Ludots.Core.Networking.Replication
         bool CanApply(World world, Entity entity, in ReplicatedEntityState state);
 
         bool CanConceal(World world, Entity entity);
+
+        /// <summary>
+        /// Describes the effective spatial state after Create or Apply without mutating the world.
+        /// Non-spatial schemas must explicitly return <see cref="SpatialMembershipTarget.NoMembership"/>.
+        /// </summary>
+        bool TryPreviewSpatialMembership(
+            World world,
+            Entity entity,
+            in ReplicatedEntityState state,
+            out SpatialMembershipTarget target);
 
         Entity Create(
             World world,

@@ -15,6 +15,12 @@ namespace Ludots.Core.Presentation.Rendering
             set => Payload.StableId = value;
         }
 
+        public int OwnerStableId
+        {
+            readonly get => Payload.OwnerStableId;
+            set => Payload.OwnerStableId = value;
+        }
+
         public int MeshAssetId
         {
             readonly get => Payload.MeshAssetId;

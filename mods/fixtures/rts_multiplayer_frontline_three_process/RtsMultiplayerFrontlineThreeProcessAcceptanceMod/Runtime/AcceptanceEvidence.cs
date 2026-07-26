@@ -12,7 +12,7 @@ namespace RtsMultiplayerFrontlineThreeProcessAcceptanceMod.Runtime;
 
 internal sealed class AcceptanceEvidence
 {
-    public int SchemaVersion { get; set; } = 5;
+    public int SchemaVersion { get; set; } = 7;
     public string Status { get; set; } = "running";
     public string Role { get; set; } = string.Empty;
     public string? Failure { get; set; }
@@ -23,6 +23,7 @@ internal sealed class AcceptanceEvidence
     public ulong SessionEpoch { get; set; }
     public int PlayerId { get; set; }
     public int SeatSlot { get; set; } = -1;
+    public int SideIndex { get; set; } = -1;
     public int FaultCount { get; set; }
     public List<AcceptanceSeatEvidence> Seats { get; set; } = new();
     public List<AcceptanceStepEvidence> Steps { get; set; } = new();
@@ -155,13 +156,23 @@ internal sealed class AcceptanceGameplayEvidence
     public string[] SelectedInfantryHandles { get; set; } = Array.Empty<string>();
     public AcceptancePositionEvidence[] MoveStartPositions { get; set; } = Array.Empty<AcceptancePositionEvidence>();
     public AcceptancePositionEvidence[] MoveEndPositions { get; set; } = Array.Empty<AcceptancePositionEvidence>();
+    public AcceptanceWorldPointEvidence? MeetingPoint { get; set; }
+    public AcceptanceWorldPointEvidence? SiegePoint { get; set; }
     public int InitialVisibleEnemyInfantryCount { get; set; } = -1;
     public int InitialVisibleEnemyCoreCount { get; set; } = -1;
     public bool EnemyInfantryEnteredVision { get; set; }
     public bool EnemyCoreEnteredVision { get; set; }
     public string AttackTargetHandle { get; set; } = string.Empty;
+    public AcceptancePositionEvidence? AttackTargetPositionBefore { get; set; }
     public float AttackTargetHealthBefore { get; set; } = -1f;
     public float AttackTargetHealthAfter { get; set; } = -1f;
+    public AcceptancePositionEvidence? DefeatedCoreLastPosition { get; set; }
+    public AcceptanceWorldPointEvidence? CompletedCameraTarget { get; set; }
+    public int CompletedLosingCoreCount { get; set; } = -1;
+    public int CompletedWinnerInfantryNearDefeatedCoreCount { get; set; } = -1;
+    public AcceptancePositionEvidence[] CompletedWinnerInfantryNearDefeatedCorePositions { get; set; } =
+        Array.Empty<AcceptancePositionEvidence>();
+    public int CompletedPresentationFrameId { get; set; } = -1;
     public float?[] ObservedCoreHealthBySide { get; set; } = new float?[2];
     public int?[] ObservedInfantryCountBySide { get; set; } = new int?[2];
     public string MatchPhase { get; set; } = string.Empty;
@@ -175,6 +186,13 @@ internal sealed class AcceptanceGameplayEvidence
 internal sealed class AcceptancePositionEvidence
 {
     public string Handle { get; set; } = string.Empty;
+    public int PresentationStableId { get; set; }
+    public int XCm { get; set; }
+    public int YCm { get; set; }
+}
+
+internal sealed class AcceptanceWorldPointEvidence
+{
     public int XCm { get; set; }
     public int YCm { get; set; }
 }
@@ -190,6 +208,7 @@ internal sealed class AcceptanceRuntimeCheckpoint
     public bool HasBattlePoints { get; set; }
     public AcceptanceWorldPointCheckpoint? MeetingPoint { get; set; }
     public AcceptanceWorldPointCheckpoint? SiegePoint { get; set; }
+    public AcceptanceWorldPointCheckpoint? DefeatedCorePoint { get; set; }
     public int VisibleEnemyCoreCount { get; set; } = -1;
     public int CommittedTick { get; set; }
     public string MatchPhase { get; set; } = string.Empty;

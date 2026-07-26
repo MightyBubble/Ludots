@@ -160,6 +160,36 @@ namespace Ludots.Core.Networking.Runtime
         public bool HasRoomSnapshot { get; private set; }
         public NetworkRoomSnapshotHeader LastRoomSnapshot { get; private set; }
 
+        public int ConnectedSeatCount
+        {
+            get
+            {
+                if (HasRoomSnapshot)
+                {
+                    int roomConnectedCount = 0;
+                    int seatCount = LastRoomSnapshot.SeatCount;
+                    for (int i = 0; i < seatCount; i++)
+                    {
+                        if (_roomSeats[i].ConnectionState == NetworkRoomSeatConnectionState.Connected)
+                        {
+                            roomConnectedCount++;
+                        }
+                    }
+                    return roomConnectedCount;
+                }
+
+                int runtimeConnectedCount = 0;
+                for (int i = 0; i < _seatStates.Length; i++)
+                {
+                    if (_seatStates[i] == NetworkSeatConnectionState.Connected)
+                    {
+                        runtimeConnectedCount++;
+                    }
+                }
+                return runtimeConnectedCount;
+            }
+        }
+
         public NetworkSeatConnectionState GetSeatState(int seatSlot)
         {
             ValidateSeatSlot(seatSlot);

@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 4,
+  "schemaVersion": 5,
   "preset": "rts_multiplayer_frontline_three_process_uat_raylib",
   "adapterId": "raylib",
   "buildMode": "auto",
@@ -16,6 +16,7 @@
     "clientOne": {
       "path": "screens/client-a/frontline.png",
       "milestones": [
+        "ready",
         "advancing",
         "engaging",
         "completed"
@@ -24,6 +25,7 @@
     "clientTwo": {
       "path": "screens/client-b/frontline.png",
       "milestones": [
+        "ready",
         "advancing",
         "engaging",
         "completed"
@@ -41,7 +43,7 @@
   "requiredPresentationReceipts": [
     {
       "role": "core",
-      "milestones": ["advancing"],
+      "milestones": ["ready", "advancing"],
       "template": "rts.frontline.core.base",
       "minimumSubmitted": 1,
       "minimumOnscreen": 1,
@@ -50,7 +52,7 @@
     },
     {
       "role": "harvester",
-      "milestones": ["advancing"],
+      "milestones": ["ready", "advancing"],
       "template": "rts.frontline.harvester.chassis",
       "minimumSubmitted": 2,
       "minimumOnscreen": 2,
@@ -59,7 +61,7 @@
     },
     {
       "role": "infantry",
-      "milestones": ["advancing", "engaging"],
+      "milestones": ["ready", "advancing", "engaging"],
       "template": "rts.frontline.infantry.body",
       "minimumSubmitted": 2,
       "minimumOnscreen": 2,
@@ -68,12 +70,115 @@
     },
     {
       "role": "crystal",
-      "milestones": ["advancing"],
+      "milestones": ["ready", "advancing"],
       "template": "rts.frontline.crystal.center",
       "minimumSubmitted": 1,
       "minimumOnscreen": 1,
       "minimumShortEdgePx": 18,
       "minimumAreaPx2": 360
+    }
+  ],
+  "requiredWorldEvidence": [
+    {
+      "milestone": "advancing",
+      "perspective": "all",
+      "anchor": "meeting",
+      "positionToleranceCm": 7000,
+      "cameraToleranceCm": 100,
+      "requiredRoles": [
+        {
+          "role": "selectedInfantry",
+          "template": "rts.frontline.infantry.body",
+          "source": "selectedInfantry",
+          "minimumOnscreen": 1,
+          "minimumShortEdgePx": 14,
+          "minimumAreaPx2": 220
+        }
+      ],
+      "forbiddenRoles": [],
+      "stableEntityMotion": {
+        "template": "rts.frontline.infantry.body",
+        "minimumObservedMoveCm": 1000
+      }
+    },
+    {
+      "milestone": "engaging",
+      "perspective": "loser",
+      "anchor": "meeting",
+      "positionToleranceCm": 1800,
+      "cameraToleranceCm": 100,
+      "requiredRoles": [
+        {
+          "role": "defendingInfantry",
+          "template": "rts.frontline.infantry.body",
+          "source": "selectedInfantry",
+          "minimumOnscreen": 1,
+          "minimumShortEdgePx": 14,
+          "minimumAreaPx2": 220
+        },
+        {
+          "role": "damagedEnemyInfantry",
+          "template": "rts.frontline.infantry.body",
+          "source": "attackTarget",
+          "minimumOnscreen": 1,
+          "minimumShortEdgePx": 14,
+          "minimumAreaPx2": 220
+        }
+      ],
+      "forbiddenRoles": [],
+      "requireObservedDamage": true
+    },
+    {
+      "milestone": "engaging",
+      "perspective": "winner",
+      "anchor": "siege",
+      "positionToleranceCm": 3500,
+      "cameraToleranceCm": 100,
+      "requiredRoles": [
+        {
+          "role": "attackingInfantry",
+          "template": "rts.frontline.infantry.body",
+          "source": "selectedInfantry",
+          "minimumOnscreen": 2,
+          "minimumShortEdgePx": 14,
+          "minimumAreaPx2": 220
+        },
+        {
+          "role": "damagedEnemyCore",
+          "template": "rts.frontline.core.base",
+          "source": "attackTarget",
+          "minimumOnscreen": 1,
+          "minimumShortEdgePx": 24,
+          "minimumAreaPx2": 700
+        }
+      ],
+      "forbiddenRoles": [],
+      "requireObservedDamage": true
+    },
+    {
+      "milestone": "completed",
+      "perspective": "all",
+      "anchor": "defeatedCore",
+      "positionToleranceCm": 2200,
+      "cameraToleranceCm": 25,
+      "requiredRoles": [
+        {
+          "role": "winningInfantryWitness",
+          "template": "rts.frontline.infantry.body",
+          "source": "completedWinnerInfantry",
+          "minimumOnscreen": 1,
+          "minimumShortEdgePx": 14,
+          "minimumAreaPx2": 220
+        }
+      ],
+      "forbiddenRoles": [
+        {
+          "role": "defeatedCore",
+          "template": "rts.frontline.core.base",
+          "scope": "screen"
+        }
+      ],
+      "requireCompletedWorldState": true
     }
   ],
   "clientInstanceIds": [

@@ -1,6 +1,9 @@
 using Ludots.Adapter.LiteNetLib;
+using Arch.Core;
 using Ludots.Core.Engine.Pacemaker;
+using Ludots.Core.Hosting;
 using Ludots.Core.Networking.Runtime;
+using Ludots.Core.Networking.Session;
 using NUnit.Framework;
 
 namespace Ludots.Tests.NetworkingAdapter;
@@ -114,6 +117,50 @@ public sealed class DeferredNetworkRuntimePortTests
         Assert.That(
             () => deferred.Capture(),
             Throws.InvalidOperationException.With.Message.Contains("does not match runtime role"));
+    }
+
+    [Test]
+    public void ReadinessDecorator_WritesOnlyAfterDeferredRuntimeIsActivatedAndPumped()
+    {
+        string directory = Path.Combine(Path.GetTempPath(), $"ludots-adapter-readiness-{Guid.NewGuid():N}");
+        string path = Path.Combine(directory, "client.json");
+        using World world = World.Create();
+        var inner = new TestClientRuntime();
+        var deferred = new DeferredNetworkRuntimePort(
+            NetworkProcessRole.ReplicatedClient,
+            () => new DeferredNetworkRuntimeComposition(
+                inner,
+                new TestFaultInjectionMetrics(NetworkProcessRole.ReplicatedClient),
+                () => { }));
+        var observer = new NetworkRuntimeStateObserver(2, 2, 2);
+        var seat = new SessionSeatBinding(0, 1, new PlayerId(1));
+        var handshake = SessionHandshakeResponse.Accept(
+            in seat,
+            new ReconnectToken(1, 2),
+            new ProtocolVersion(1, 0),
+            ContentFingerprintBuilder.FromCanonicalBytes(new byte[] { 1 }),
+            new SessionEpoch(709),
+            nextClientBatchSequence: 1);
+        observer.OnClientHandshake(in handshake);
+        try
+        {
+            using var runtime = new NetworkReadinessArtifactRuntime(world, deferred, observer, path);
+            runtime.Activate();
+            Assert.That(File.Exists(path), Is.False);
+
+            runtime.PumpTransport();
+            Assert.That(File.Exists(path), Is.True);
+
+            runtime.Dispose();
+            Assert.That(File.Exists(path), Is.False);
+        }
+        finally
+        {
+            if (Directory.Exists(directory))
+            {
+                Directory.Delete(directory, recursive: true);
+            }
+        }
     }
 
     private sealed class TestClientRuntime : INetworkRuntimePort, IReplicatedClientRuntimeStatus, IPresentationInterpolationSource

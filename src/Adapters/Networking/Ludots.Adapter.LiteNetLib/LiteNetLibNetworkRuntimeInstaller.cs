@@ -18,9 +18,9 @@ public static class LiteNetLibNetworkRuntimeInstaller
 {
     private const int SessionEpochIssueAttempts = 16;
 
-    public static void Install(in GameBootstrapResult bootstrap, string runtimeBaseDirectory)
+    public static void Install(in GameBootstrapResult bootstrap, string hostArtifactBaseDirectory)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(runtimeBaseDirectory);
+        ArgumentException.ThrowIfNullOrWhiteSpace(hostArtifactBaseDirectory);
         GameEngine engine = bootstrap.Engine ?? throw new ArgumentException("Bootstrap engine is required.", nameof(bootstrap));
         NetworkRuntimeConfig config = bootstrap.Config.Networking ??
             throw new InvalidOperationException("Network runtime installation requires merged networking configuration.");
@@ -56,13 +56,29 @@ public static class LiteNetLibNetworkRuntimeInstaller
         engine.SetService(CoreServiceKeys.NetworkRuntimeStateObserver, observer);
         engine.SetService(CoreServiceKeys.NetworkContentFingerprint, contentFingerprint);
 
-        string baseDirectory = Path.GetFullPath(runtimeBaseDirectory);
+        string baseDirectory = Path.GetFullPath(hostArtifactBaseDirectory);
+        string? readinessArtifactPath = host.ResolveReadinessArtifactPath(baseDirectory);
         var deferred = new DeferredNetworkRuntimePort(
             role,
             () => role == NetworkProcessRole.AuthoritativeServer
                 ? ComposeServer(engine, config, host, contentFingerprint, projectors, observer)
                 : ComposeClient(engine, config, host, contentFingerprint, appliers, observer, baseDirectory));
-        engine.ConfigureNetworkRuntime(role, deferred);
+        INetworkRuntimePort installedRuntime = readinessArtifactPath == null
+            ? deferred
+            : new NetworkReadinessArtifactRuntime(
+                engine.World,
+                deferred,
+                observer,
+                readinessArtifactPath);
+        try
+        {
+            engine.ConfigureNetworkRuntime(role, installedRuntime);
+        }
+        catch
+        {
+            installedRuntime.Dispose();
+            throw;
+        }
         engine.SetService(CoreServiceKeys.NetworkFaultInjectionMetrics, (INetworkFaultInjectionMetricsPort)deferred);
     }
 

@@ -49,6 +49,16 @@ namespace Ludots.Core.Hosting
             return InitializeFromBaseDirectory(baseDirectory, "launcher.runtime.json");
         }
 
+        public static string ResolveBootstrapPath(string baseDirectory, string bootstrapFile)
+        {
+            ArgumentException.ThrowIfNullOrWhiteSpace(baseDirectory);
+            ArgumentException.ThrowIfNullOrWhiteSpace(bootstrapFile);
+            string resolvedBaseDirectory = Path.GetFullPath(baseDirectory);
+            return Path.IsPathRooted(bootstrapFile)
+                ? Path.GetFullPath(bootstrapFile)
+                : Path.GetFullPath(Path.Combine(resolvedBaseDirectory, bootstrapFile));
+        }
+
         /// <summary>
         /// New initialization flow using ConfigPipeline for game.json merge:
         /// 1. Read app bootstrap for launch graph metadata
@@ -65,9 +75,7 @@ namespace Ludots.Core.Hosting
             var assetsRoot = FindAssetsRootStrict(baseDir);
 
             // Step 1: Read the launcher bootstrap and resolve the launcher graph.
-            string gameJsonPath = Path.IsPathRooted(gameConfigFile)
-                ? Path.GetFullPath(gameConfigFile)
-                : Path.Combine(baseDir, gameConfigFile);
+            string gameJsonPath = ResolveBootstrapPath(baseDir, gameConfigFile);
             if (!File.Exists(gameJsonPath))
                 throw new FileNotFoundException($"Missing launcher bootstrap next to executable: {gameJsonPath}");
 

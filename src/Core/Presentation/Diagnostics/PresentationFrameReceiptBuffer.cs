@@ -1,14 +1,18 @@
 using System;
+using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.Numerics;
+using System.Security.Cryptography;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Platform.Abstractions;
 
 namespace Ludots.Core.Presentation.Diagnostics
 {
     public readonly record struct PresentationFrameReceiptItem(
-        int StableId,
+        int OwnerStableId,
+        int VisualStableId,
         int TemplateId,
+        Vector3 WorldPosition,
         Vector3 Position,
         Quaternion Rotation,
         Vector3 Scale,
@@ -20,6 +24,28 @@ namespace Ludots.Core.Presentation.Diagnostics
         int OnscreenCount,
         float MinimumShortEdgePx,
         float MinimumAreaPx2);
+
+    public readonly record struct PresentationOnscreenStateReceipt(
+        int SubmissionCount,
+        string StateSha256);
+
+    public readonly record struct PresentationOnscreenInstanceReceipt(
+        int OwnerStableId,
+        int VisualStableId,
+        int TemplateId,
+        int WorldXCm,
+        int WorldYCm,
+        float ScreenLeftPx,
+        float ScreenTopPx,
+        float ScreenRightPx,
+        float ScreenBottomPx)
+    {
+        public float ShortEdgePx =>
+            MathF.Min(ScreenRightPx - ScreenLeftPx, ScreenBottomPx - ScreenTopPx);
+
+        public float AreaPx2 =>
+            (ScreenRightPx - ScreenLeftPx) * (ScreenBottomPx - ScreenTopPx);
+    }
 
     public sealed class PresentationFrameReceiptBuffer
     {
@@ -46,20 +72,26 @@ namespace Ludots.Core.Presentation.Diagnostics
         }
 
         public void RecordSubmitted(
-            int stableId,
+            int ownerStableId,
+            int visualStableId,
             int templateId,
+            in Vector3 worldPosition,
             in Vector3 position,
             in Quaternion rotation,
             in Vector3 scale,
             in ProceduralMeshBounds localBounds)
         {
-            if (stableId == 0 && templateId == 0)
+            if (ownerStableId == 0 && visualStableId == 0 && templateId == 0)
             {
                 return;
             }
-            if (stableId <= 0)
+            if (ownerStableId <= 0)
             {
-                throw new InvalidOperationException("Presentation submission receipts require a positive stable id.");
+                throw new InvalidOperationException("Presentation submission receipts require a positive owner stable id.");
+            }
+            if (visualStableId <= 0)
+            {
+                throw new InvalidOperationException("Presentation submission receipts require a positive visual stable id.");
             }
             if (templateId <= 0)
             {
@@ -79,8 +111,10 @@ namespace Ludots.Core.Presentation.Diagnostics
             }
 
             _items[_count++] = new PresentationFrameReceiptItem(
-                stableId,
+                ownerStableId,
+                visualStableId,
                 templateId,
+                worldPosition,
                 position,
                 rotation,
                 scale,
@@ -96,19 +130,20 @@ namespace Ludots.Core.Presentation.Diagnostics
             for (int i = 0; i < _count; i++)
             {
                 ref readonly PresentationFrameReceiptItem item = ref _items[i];
-                long key = ((long)item.TemplateId << 32) | (uint)item.StableId;
+                long key = ((long)item.TemplateId << 32) | (uint)item.VisualStableId;
                 bool onscreen = TryProjectClippedBounds(in item, in projection, out ScreenBounds bounds);
                 if (!instances.TryGetValue(key, out InstanceProjection instance))
                 {
-                    instances.Add(key, new InstanceProjection(item.TemplateId, onscreen, bounds));
+                    instances.Add(key, new InstanceProjection(in item, onscreen, in bounds));
                     continue;
                 }
 
+                instance.IncludeSource(in item);
                 if (onscreen)
                 {
                     instance.Include(in bounds);
-                    instances[key] = instance;
                 }
+                instances[key] = instance;
             }
 
             var templates = new Dictionary<int, TemplateProjection>();
@@ -130,6 +165,158 @@ namespace Ludots.Core.Presentation.Diagnostics
             }
             Array.Sort(result, static (left, right) => left.TemplateId.CompareTo(right.TemplateId));
             return result;
+        }
+
+        public PresentationOnscreenInstanceReceipt[] BuildOnscreenInstanceReceipts(
+            in ProjectionSnapshot projection)
+        {
+            var instances = new Dictionary<long, InstanceProjection>(_count);
+            for (int i = 0; i < _count; i++)
+            {
+                ref readonly PresentationFrameReceiptItem item = ref _items[i];
+                long key = ((long)item.TemplateId << 32) | (uint)item.VisualStableId;
+                bool onscreen = TryProjectClippedBounds(in item, in projection, out ScreenBounds bounds);
+                if (!instances.TryGetValue(key, out InstanceProjection instance))
+                {
+                    instances.Add(key, new InstanceProjection(in item, onscreen, in bounds));
+                    continue;
+                }
+
+                instance.IncludeSource(in item);
+                if (onscreen)
+                {
+                    instance.Include(in bounds);
+                }
+                instances[key] = instance;
+            }
+
+            var result = new PresentationOnscreenInstanceReceipt[instances.Count];
+            int resultIndex = 0;
+            foreach (InstanceProjection instance in instances.Values)
+            {
+                if (instance.Onscreen)
+                {
+                    result[resultIndex++] = instance.ToOnscreenReceipt();
+                }
+            }
+            if (resultIndex != result.Length)
+            {
+                Array.Resize(ref result, resultIndex);
+            }
+            Array.Sort(
+                result,
+                static (left, right) =>
+                {
+                    int comparison = left.TemplateId.CompareTo(right.TemplateId);
+                    if (comparison != 0) return comparison;
+                    comparison = left.OwnerStableId.CompareTo(right.OwnerStableId);
+                    return comparison != 0
+                        ? comparison
+                        : left.VisualStableId.CompareTo(right.VisualStableId);
+                });
+            return result;
+        }
+
+        public PresentationOnscreenStateReceipt BuildOnscreenStateReceipt(in ProjectionSnapshot projection) =>
+            BuildOnscreenStateReceipt(in projection, templateId: 0, filterByTemplate: false);
+
+        public PresentationOnscreenStateReceipt BuildOnscreenStateReceipt(
+            in ProjectionSnapshot projection,
+            int templateId)
+        {
+            if (templateId <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(templateId));
+            }
+
+            return BuildOnscreenStateReceipt(in projection, templateId, filterByTemplate: true);
+        }
+
+        private PresentationOnscreenStateReceipt BuildOnscreenStateReceipt(
+            in ProjectionSnapshot projection,
+            int templateId,
+            bool filterByTemplate)
+        {
+            var onscreen = new PresentationFrameReceiptItem[_count];
+            int onscreenCount = 0;
+            for (int i = 0; i < _count; i++)
+            {
+                ref readonly PresentationFrameReceiptItem item = ref _items[i];
+                if (filterByTemplate && item.TemplateId != templateId)
+                {
+                    continue;
+                }
+                if (!TryProjectClippedBounds(in item, in projection, out _))
+                {
+                    continue;
+                }
+
+                onscreen[onscreenCount++] = item;
+            }
+
+            Array.Sort(
+                onscreen,
+                index: 0,
+                length: onscreenCount,
+                comparer: PresentationFrameReceiptItemComparer.Instance);
+            using IncrementalHash hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+            Span<byte> field = stackalloc byte[sizeof(int)];
+            BinaryPrimitives.WriteInt32LittleEndian(field, onscreenCount);
+            hash.AppendData(field);
+            for (int i = 0; i < onscreenCount; i++)
+            {
+                AppendCanonical(hash, field, in onscreen[i]);
+            }
+
+            return new PresentationOnscreenStateReceipt(
+                onscreenCount,
+                Convert.ToHexString(hash.GetHashAndReset()));
+        }
+
+        private static void AppendCanonical(
+            IncrementalHash hash,
+            Span<byte> field,
+            in PresentationFrameReceiptItem item)
+        {
+            AppendInt32(hash, field, item.OwnerStableId);
+            AppendInt32(hash, field, item.VisualStableId);
+            AppendInt32(hash, field, item.TemplateId);
+            Vector3 worldPosition = item.WorldPosition;
+            Vector3 position = item.Position;
+            Quaternion rotation = item.Rotation;
+            Vector3 scale = item.Scale;
+            AppendVector3(hash, field, in worldPosition);
+            AppendVector3(hash, field, in position);
+            AppendQuaternion(hash, field, in rotation);
+            AppendVector3(hash, field, in scale);
+            Vector3 min = item.LocalBounds.Min;
+            Vector3 max = item.LocalBounds.Max;
+            AppendVector3(hash, field, in min);
+            AppendVector3(hash, field, in max);
+        }
+
+        private static void AppendVector3(IncrementalHash hash, Span<byte> field, in Vector3 value)
+        {
+            AppendSingle(hash, field, value.X);
+            AppendSingle(hash, field, value.Y);
+            AppendSingle(hash, field, value.Z);
+        }
+
+        private static void AppendQuaternion(IncrementalHash hash, Span<byte> field, in Quaternion value)
+        {
+            AppendSingle(hash, field, value.X);
+            AppendSingle(hash, field, value.Y);
+            AppendSingle(hash, field, value.Z);
+            AppendSingle(hash, field, value.W);
+        }
+
+        private static void AppendSingle(IncrementalHash hash, Span<byte> field, float value) =>
+            AppendInt32(hash, field, BitConverter.SingleToInt32Bits(value));
+
+        private static void AppendInt32(IncrementalHash hash, Span<byte> field, int value)
+        {
+            BinaryPrimitives.WriteInt32LittleEndian(field, value);
+            hash.AppendData(field);
         }
 
         private static bool TryProjectClippedBounds(
@@ -205,21 +392,58 @@ namespace Ludots.Core.Presentation.Diagnostics
 
         private struct InstanceProjection
         {
-            public InstanceProjection(int templateId, bool onscreen, in ScreenBounds bounds)
+            public InstanceProjection(
+                in PresentationFrameReceiptItem item,
+                bool onscreen,
+                in ScreenBounds bounds)
             {
-                TemplateId = templateId;
+                OwnerStableId = item.OwnerStableId;
+                VisualStableId = item.VisualStableId;
+                TemplateId = item.TemplateId;
                 Onscreen = onscreen;
                 Bounds = bounds;
+                WorldPosition = item.WorldPosition;
             }
 
+            public int OwnerStableId;
+            public int VisualStableId;
             public int TemplateId;
             public bool Onscreen;
             public ScreenBounds Bounds;
+            public Vector3 WorldPosition;
+
+            public void IncludeSource(in PresentationFrameReceiptItem item)
+            {
+                if (item.OwnerStableId != OwnerStableId)
+                {
+                    throw new InvalidOperationException(
+                        $"Presentation receipt parts for visualStableId={VisualStableId}, templateId={TemplateId} disagree on the owner stable id.");
+                }
+                if (item.WorldPosition != WorldPosition)
+                {
+                    throw new InvalidOperationException(
+                        $"Presentation receipt parts for ownerStableId={OwnerStableId}, visualStableId={VisualStableId}, templateId={TemplateId} disagree on the entity world position.");
+                }
+            }
 
             public void Include(in ScreenBounds bounds)
             {
                 Bounds = Onscreen ? Bounds.Union(in bounds) : bounds;
                 Onscreen = true;
+            }
+
+            public readonly PresentationOnscreenInstanceReceipt ToOnscreenReceipt()
+            {
+                return new PresentationOnscreenInstanceReceipt(
+                    OwnerStableId,
+                    VisualStableId,
+                    TemplateId,
+                    checked((int)MathF.Round(WorldPosition.X * 100f)),
+                    checked((int)MathF.Round(WorldPosition.Z * 100f)),
+                    Bounds.Left,
+                    Bounds.Top,
+                    Bounds.Right,
+                    Bounds.Bottom);
             }
         }
 
@@ -263,6 +487,57 @@ namespace Ludots.Core.Presentation.Diagnostics
                 OnscreenCount,
                 OnscreenCount > 0 ? MinimumShortEdgePx : 0f,
                 OnscreenCount > 0 ? MinimumAreaPx2 : 0f);
+        }
+
+        private sealed class PresentationFrameReceiptItemComparer : IComparer<PresentationFrameReceiptItem>
+        {
+            public static readonly PresentationFrameReceiptItemComparer Instance = new();
+
+            public int Compare(PresentationFrameReceiptItem left, PresentationFrameReceiptItem right)
+            {
+                int comparison = left.TemplateId.CompareTo(right.TemplateId);
+                if (comparison != 0) return comparison;
+                comparison = left.OwnerStableId.CompareTo(right.OwnerStableId);
+                if (comparison != 0) return comparison;
+                comparison = left.VisualStableId.CompareTo(right.VisualStableId);
+                if (comparison != 0) return comparison;
+                comparison = Compare(left.WorldPosition, right.WorldPosition);
+                if (comparison != 0) return comparison;
+                comparison = Compare(left.Position, right.Position);
+                if (comparison != 0) return comparison;
+                comparison = Compare(left.Rotation, right.Rotation);
+                if (comparison != 0) return comparison;
+                comparison = Compare(left.Scale, right.Scale);
+                if (comparison != 0) return comparison;
+                Vector3 leftMin = left.LocalBounds.Min;
+                Vector3 rightMin = right.LocalBounds.Min;
+                comparison = Compare(leftMin, rightMin);
+                if (comparison != 0) return comparison;
+                Vector3 leftMax = left.LocalBounds.Max;
+                Vector3 rightMax = right.LocalBounds.Max;
+                return Compare(leftMax, rightMax);
+            }
+
+            private static int Compare(Vector3 left, Vector3 right)
+            {
+                int comparison = Compare(left.X, right.X);
+                if (comparison != 0) return comparison;
+                comparison = Compare(left.Y, right.Y);
+                return comparison != 0 ? comparison : Compare(left.Z, right.Z);
+            }
+
+            private static int Compare(Quaternion left, Quaternion right)
+            {
+                int comparison = Compare(left.X, right.X);
+                if (comparison != 0) return comparison;
+                comparison = Compare(left.Y, right.Y);
+                if (comparison != 0) return comparison;
+                comparison = Compare(left.Z, right.Z);
+                return comparison != 0 ? comparison : Compare(left.W, right.W);
+            }
+
+            private static int Compare(float left, float right) =>
+                BitConverter.SingleToInt32Bits(left).CompareTo(BitConverter.SingleToInt32Bits(right));
         }
     }
 }

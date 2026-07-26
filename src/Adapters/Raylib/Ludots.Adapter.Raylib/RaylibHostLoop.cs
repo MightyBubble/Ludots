@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.Numerics;
+using System.Text.Json;
 using Arch.Core;
 using Ludots.Adapter.Raylib.Services;
 using Ludots.Client.Raylib.Rendering;
@@ -768,12 +769,18 @@ namespace Ludots.Adapter.Raylib
 
                             long screenshotStart = Stopwatch.GetTimestamp();
                             TakeScreenshotAtomic(milestoneCapture.Path);
+                            string evidencePath = BuildPresentationEvidencePath(milestoneCapture.Path);
+                            WritePresentationCaptureEvidenceAtomic(
+                                engine,
+                                in milestoneCapture,
+                                in activeCamera,
+                                evidencePath);
                             presentationTiming?.ObserveScreenshot(ElapsedMs(screenshotStart));
                             milestoneCaptureSequence.CompleteCapture(in milestoneCapture);
                             screenshotPending = milestoneCaptureSequence.HasPending;
                             AppendRaylibDiagnostic(
                                 diagnosticPath,
-                                $"screenshot-complete milestone={milestoneCapture.Milestone} milestoneOrder={milestoneCapture.MilestoneOrder} milestoneRevision={milestoneCapture.MilestoneRevision} frame={milestoneCapture.HostFrame} file={Path.GetFileName(milestoneCapture.Path)}");
+                                $"screenshot-complete milestone={milestoneCapture.Milestone} milestoneOrder={milestoneCapture.MilestoneOrder} milestoneRevision={milestoneCapture.MilestoneRevision} frame={milestoneCapture.HostFrame} file={Path.GetFileName(milestoneCapture.Path)} evidence={Path.GetFileName(evidencePath)}");
                             Log.Info(in LogChannels.Engine, $"Captured runtime milestone screenshot: {milestoneCapture.Path}");
                         }
                         else if (milestoneCaptureSequence == null && screenshotPending && frameIndex >= screenshotFrame &&
@@ -939,6 +946,10 @@ namespace Ludots.Adapter.Raylib
 
             PerformerDefinitionRegistry definitions = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry)
                 ?? throw new InvalidOperationException("Presentation frame receipt diagnostics require the performer definition registry.");
+            PresentationOnscreenStateReceipt worldState = receipts.BuildOnscreenStateReceipt(in projection);
+            AppendRaylibDiagnostic(
+                diagnosticPath,
+                $"world-visual-receipt onscreen={worldState.SubmissionCount} stateSha256={worldState.StateSha256}");
             PresentationTemplateReceiptSummary[] summaries = receipts.BuildTemplateSummaries(in projection);
             for (int i = 0; i < summaries.Length; i++)
             {
@@ -950,10 +961,75 @@ namespace Ludots.Adapter.Raylib
                         $"Presentation receipt references performer template id {summary.TemplateId} without a registered name.");
                 }
 
+                PresentationOnscreenStateReceipt templateState = receipts.BuildOnscreenStateReceipt(
+                    in projection,
+                    summary.TemplateId);
                 AppendRaylibDiagnostic(
                     diagnosticPath,
-                    $"presentation-receipt template={template} templateId={summary.TemplateId} submitted={summary.SubmittedCount} onscreen={summary.OnscreenCount} minShortEdgePx={summary.MinimumShortEdgePx:F2} minAreaPx2={summary.MinimumAreaPx2:F2}");
+                    $"presentation-receipt template={template} templateId={summary.TemplateId} submitted={summary.SubmittedCount} onscreen={summary.OnscreenCount} minShortEdgePx={summary.MinimumShortEdgePx:F2} minAreaPx2={summary.MinimumAreaPx2:F2} stateSha256={templateState.StateSha256}");
             }
+        }
+
+        private static void WritePresentationCaptureEvidenceAtomic(
+            GameEngine engine,
+            in RaylibPresentationCaptureRequest capture,
+            in Camera3D camera,
+            string evidencePath)
+        {
+            PresentationFrameReceiptBuffer receipts = engine.GetService(CoreServiceKeys.PresentationFrameReceiptBuffer)
+                ?? throw new InvalidOperationException("Presentation capture evidence requires the receipt buffer service.");
+            IScreenProjector projector = engine.GetService(CoreServiceKeys.ScreenProjector)
+                ?? throw new InvalidOperationException("Presentation capture evidence requires the screen projector service.");
+            if (projector is not IProjectionSnapshotProvider projectionProvider ||
+                !projectionProvider.TryGetProjectionSnapshot(out ProjectionSnapshot projection))
+            {
+                throw new InvalidOperationException("Presentation capture evidence requires a valid projection snapshot.");
+            }
+            PerformerDefinitionRegistry definitions = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry)
+                ?? throw new InvalidOperationException("Presentation capture evidence requires the performer definition registry.");
+            PresentationOnscreenInstanceReceipt[] receiptsByInstance =
+                receipts.BuildOnscreenInstanceReceipts(in projection);
+            var instances = new PresentationCaptureInstanceEvidence[receiptsByInstance.Length];
+            for (int i = 0; i < receiptsByInstance.Length; i++)
+            {
+                ref readonly PresentationOnscreenInstanceReceipt receipt = ref receiptsByInstance[i];
+                string template = definitions.GetName(receipt.TemplateId);
+                if (string.IsNullOrWhiteSpace(template))
+                {
+                    throw new InvalidOperationException(
+                        $"Presentation capture evidence references performer template id {receipt.TemplateId} without a registered name.");
+                }
+
+                instances[i] = new PresentationCaptureInstanceEvidence
+                {
+                    OwnerStableId = receipt.OwnerStableId,
+                    VisualStableId = receipt.VisualStableId,
+                    TemplateId = receipt.TemplateId,
+                    Template = template,
+                    WorldXCm = receipt.WorldXCm,
+                    WorldYCm = receipt.WorldYCm,
+                    ScreenLeftPx = receipt.ScreenLeftPx,
+                    ScreenTopPx = receipt.ScreenTopPx,
+                    ScreenRightPx = receipt.ScreenRightPx,
+                    ScreenBottomPx = receipt.ScreenBottomPx,
+                    ShortEdgePx = receipt.ShortEdgePx,
+                    AreaPx2 = receipt.AreaPx2,
+                };
+            }
+
+            var document = new PresentationCaptureEvidenceDocument
+            {
+                Milestone = capture.Milestone,
+                MilestoneOrder = capture.MilestoneOrder,
+                MilestoneRevision = capture.MilestoneRevision,
+                HostFrame = capture.HostFrame,
+                CameraTargetXCm = checked((int)MathF.Round(camera.target.X * 100f)),
+                CameraTargetYCm = checked((int)MathF.Round(camera.target.Z * 100f)),
+                ViewportWidthPx = checked((int)MathF.Round(projection.Resolution.X)),
+                ViewportHeightPx = checked((int)MathF.Round(projection.Resolution.Y)),
+                Instances = instances,
+            };
+            WriteJsonAtomic(evidencePath, document);
         }
 
         private static bool IsCleanPerformanceScene(IBenchmarkSceneController? benchmarkController)
@@ -1038,6 +1114,49 @@ namespace Ludots.Adapter.Raylib
             return string.IsNullOrWhiteSpace(directory)
                 ? Path.GetFullPath(sequencedFileName)
                 : Path.Combine(directory, sequencedFileName);
+        }
+
+        private static string BuildPresentationEvidencePath(string screenshotPath)
+        {
+            string fullScreenshotPath = Path.GetFullPath(screenshotPath);
+            return Path.ChangeExtension(fullScreenshotPath, ".evidence.json");
+        }
+
+        private static void WriteJsonAtomic(
+            string targetPath,
+            PresentationCaptureEvidenceDocument document)
+        {
+            string fullTargetPath = Path.GetFullPath(targetPath);
+            string directory = Path.GetDirectoryName(fullTargetPath)
+                ?? throw new InvalidOperationException("Presentation evidence target path has no directory.");
+            Directory.CreateDirectory(directory);
+            string temporaryPath = Path.Combine(
+                directory,
+                $".{Path.GetFileName(fullTargetPath)}.{Environment.ProcessId}.{Guid.NewGuid():N}.tmp");
+            try
+            {
+                byte[] payload = JsonSerializer.SerializeToUtf8Bytes(
+                    document,
+                    new JsonSerializerOptions(JsonSerializerDefaults.Web)
+                    {
+                        WriteIndented = true,
+                    });
+                File.WriteAllBytes(temporaryPath, payload);
+                if (!File.Exists(temporaryPath) || new FileInfo(temporaryPath).Length == 0)
+                {
+                    throw new IOException(
+                        $"Presentation evidence writer did not produce a non-empty temporary file '{temporaryPath}'.");
+                }
+
+                File.Move(temporaryPath, fullTargetPath, overwrite: true);
+            }
+            finally
+            {
+                if (File.Exists(temporaryPath))
+                {
+                    File.Delete(temporaryPath);
+                }
+            }
         }
 
         private static void TakeScreenshotAtomic(string targetPath)

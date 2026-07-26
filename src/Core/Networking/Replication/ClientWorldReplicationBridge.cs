@@ -131,6 +131,13 @@ namespace Ludots.Core.Networking.Replication
                 }
             }
 
+            ReplicationBridgeResult spatialValidation = MapSpatialValidation(
+                _spatialMembership.ValidateSynchronize(entity));
+            if (spatialValidation != ReplicationBridgeResult.Success)
+            {
+                return spatialValidation;
+            }
+
             var identity = new ReplicationMirrorIdentity(handle);
             var state = default(ReplicationMirrorState);
             CommitExistingBinding(entity, in identity, in state);
@@ -250,7 +257,6 @@ namespace Ludots.Core.Networking.Replication
 
         public ReplicationBridgeResult Clear()
         {
-            DiscardPrepared();
             for (int slot = 0; slot < _active.Length; slot++)
             {
                 if (!_active[slot])
@@ -266,21 +272,14 @@ namespace Ludots.Core.Networking.Replication
                     return ReplicationBridgeResult.EcsStateMismatch;
                 }
 
-                int schemaId = _schemas[slot];
-                if (!_owned[slot] && schemaId > 0)
+                ReplicationBridgeResult releaseValidation = ValidateRelease(slot);
+                if (releaseValidation != ReplicationBridgeResult.Success)
                 {
-                    if (!_appliers.TryGet(schemaId, out IClientReplicationSchemaApplier applier))
-                    {
-                        return ReplicationBridgeResult.SchemaNotRegistered;
-                    }
-
-                    if (!applier.CanConceal(_world, entity))
-                    {
-                        return ReplicationBridgeResult.SchemaApplyRejected;
-                    }
+                    return releaseValidation;
                 }
             }
 
+            DiscardPrepared();
             for (int slot = 0; slot < _active.Length; slot++)
             {
                 if (_active[slot])
@@ -604,18 +603,10 @@ namespace Ludots.Core.Networking.Replication
                 {
                     case BatchOperationKind.Release:
                     {
-                        int schemaId = _schemas[slot];
-                        if (!_owned[slot] && schemaId > 0)
+                        ReplicationBridgeResult releaseValidation = ValidateRelease(slot);
+                        if (releaseValidation != ReplicationBridgeResult.Success)
                         {
-                            if (!_appliers.TryGet(schemaId, out IClientReplicationSchemaApplier applier))
-                            {
-                                return ReplicationBridgeResult.SchemaNotRegistered;
-                            }
-
-                            if (!applier.CanConceal(_world, _entities[slot]))
-                            {
-                                return ReplicationBridgeResult.SchemaApplyRejected;
-                            }
+                            return releaseValidation;
                         }
 
                         break;
@@ -633,6 +624,22 @@ namespace Ludots.Core.Networking.Replication
                             return ReplicationBridgeResult.SchemaApplyRejected;
                         }
 
+                        if (!applier.TryPreviewSpatialMembership(
+                                _world,
+                                _entities[slot],
+                                in state,
+                                out SpatialMembershipTarget target))
+                        {
+                            return ReplicationBridgeResult.SchemaApplyRejected;
+                        }
+
+                        ReplicationBridgeResult spatialValidation = MapSpatialValidation(
+                            _spatialMembership.ValidateSynchronize(_entities[slot], in target));
+                        if (spatialValidation != ReplicationBridgeResult.Success)
+                        {
+                            return spatialValidation;
+                        }
+
                         break;
                     }
                     case BatchOperationKind.Create:
@@ -648,6 +655,22 @@ namespace Ludots.Core.Networking.Replication
                             return ReplicationBridgeResult.SchemaApplyRejected;
                         }
 
+                        if (!applier.TryPreviewSpatialMembership(
+                                _world,
+                                Entity.Null,
+                                in state,
+                                out SpatialMembershipTarget target))
+                        {
+                            return ReplicationBridgeResult.SchemaApplyRejected;
+                        }
+
+                        ReplicationBridgeResult spatialValidation = MapSpatialValidation(
+                            _spatialMembership.ValidateSynchronize(Entity.Null, in target));
+                        if (spatialValidation != ReplicationBridgeResult.Success)
+                        {
+                            return spatialValidation;
+                        }
+
                         break;
                     }
                     default:
@@ -656,6 +679,45 @@ namespace Ludots.Core.Networking.Replication
             }
 
             return ReplicationBridgeResult.Success;
+        }
+
+        private ReplicationBridgeResult ValidateRelease(int slot)
+        {
+            Entity entity = _entities[slot];
+            if (_owned[slot])
+            {
+                return MapSpatialValidation(_spatialMembership.ValidateRemove(entity));
+            }
+
+            int schemaId = _schemas[slot];
+            if (schemaId > 0)
+            {
+                if (!_appliers.TryGet(schemaId, out IClientReplicationSchemaApplier applier))
+                {
+                    return ReplicationBridgeResult.SchemaNotRegistered;
+                }
+
+                if (!applier.CanConceal(_world, entity))
+                {
+                    return ReplicationBridgeResult.SchemaApplyRejected;
+                }
+            }
+
+            return MapSpatialValidation(_spatialMembership.ValidateDeactivate(entity));
+        }
+
+        private static ReplicationBridgeResult MapSpatialValidation(
+            SpatialMembershipValidationResult result)
+        {
+            return result switch
+            {
+                SpatialMembershipValidationResult.Success => ReplicationBridgeResult.Success,
+                SpatialMembershipValidationResult.PositionOutOfBounds => ReplicationBridgeResult.SpatialApplyRejected,
+                SpatialMembershipValidationResult.EntityUnavailable => ReplicationBridgeResult.EcsStateMismatch,
+                SpatialMembershipValidationResult.InvalidState => ReplicationBridgeResult.EcsStateMismatch,
+                SpatialMembershipValidationResult.InvalidTarget => ReplicationBridgeResult.SchemaApplyRejected,
+                _ => throw new ArgumentOutOfRangeException(nameof(result), result, "Unknown spatial membership validation result."),
+            };
         }
 
         private void CommitExistingBinding(

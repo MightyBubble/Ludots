@@ -18,6 +18,8 @@ namespace RtsDemoMod.Runtime
 
         public float? CameraFocusDistanceCm { get; set; }
 
+        public float? CameraFocusFovYDeg { get; set; }
+
         public float CameraFocusTowardDefaultTargetCm { get; set; }
 
         public RtsCommandSourcePanelMapConfig CommandDeck { get; set; } =
@@ -80,6 +82,14 @@ namespace RtsDemoMod.Runtime
             {
                 throw new InvalidOperationException(
                     $"RTS map '{mapId}' metadata '{MetadataKey}.cameraFocusDistanceCm' must be a positive finite distance.");
+            }
+            if (CameraFocusFovYDeg.HasValue &&
+                (!float.IsFinite(CameraFocusFovYDeg.Value) ||
+                 CameraFocusFovYDeg.Value <= 0f ||
+                 CameraFocusFovYDeg.Value >= 180f))
+            {
+                throw new InvalidOperationException(
+                    $"RTS map '{mapId}' metadata '{MetadataKey}.cameraFocusFovYDeg' must be finite and between 0 and 180 degrees.");
             }
             if (!float.IsFinite(CameraFocusTowardDefaultTargetCm) || CameraFocusTowardDefaultTargetCm < 0f)
             {

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.Camera;
@@ -193,6 +194,30 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
+        public void ValidateSynchronize_DefaultTarget_IsRejectedInsteadOfAssumingNoMembership()
+        {
+            SpatialMembershipTarget target = default;
+
+            Assert.That(
+                _membership.ValidateSynchronize(Entity.Null, in target),
+                Is.EqualTo(SpatialMembershipValidationResult.InvalidTarget));
+        }
+
+        [Test]
+        public void ValidateSynchronize_ProjectedPosition_IsBoundsCheckedEvenWhenEntityIsCurrentlyExcluded()
+        {
+            Entity entity = _world.Create(
+                WorldPositionCm.FromCm(150, 150),
+                new SpatialPartitionExcluded());
+            var outOfBounds = new WorldCmInt2(60_000, 150);
+            SpatialMembershipTarget target = SpatialMembershipTarget.At(in outOfBounds);
+
+            Assert.That(
+                _membership.ValidateSynchronize(entity, in target),
+                Is.EqualTo(SpatialMembershipValidationResult.PositionOutOfBounds));
+        }
+
+        [Test]
         public void ConcealedEntity_DoesNotReappearUnderRealCameraCulling_UntilSynchronize()
         {
             var coords = new SpatialCoordinateConverter(gridCellSizeCm: 100);
@@ -267,6 +292,175 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
+        public void BindExisting_OutOfBounds_RejectsBeforeAddingMirrorComponentsOrSlot()
+        {
+            Entity authored = _world.Create(WorldPositionCm.FromCm(60_000, 150));
+            ClientWorldReplicationBridge bridge = CreatePositionBridge(
+                entityCapacity: 1,
+                out _,
+                out _);
+            var handle = new NetworkEntityHandle(0, 1);
+
+            Assert.That(
+                bridge.BindExisting(handle, authored),
+                Is.EqualTo(ReplicationBridgeResult.SpatialApplyRejected));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(_world.Has<ReplicationMirrorIdentity>(authored), Is.False);
+                Assert.That(_world.Has<ReplicationMirrorState>(authored), Is.False);
+                Assert.That(_world.Has<SpatialCellRef>(authored), Is.False);
+                Assert.That(bridge.TryResolve(handle, out _), Is.False);
+                Assert.That(bridge.LastSnapshotId, Is.Zero);
+            });
+        }
+
+        [Test]
+        public void Apply_OutOfBoundsCreate_RejectsWithoutEntitySlotKnowledgeOrBaselineMutation()
+        {
+            ClientWorldReplicationBridge bridge = CreatePositionBridge(
+                entityCapacity: 1,
+                out _,
+                out _);
+            var channel = Channel(capacity: 1);
+            var packet = new ReplicationPacketBuffer(entityCapacity: 1);
+            var handle = new NetworkEntityHandle(0, 1);
+            var states = new[] { PositionState(handle, revision: 1, xCm: 60_000, yCm: 150) };
+            var visible = new[] { new ReplicationDisclosureInput(handle, KnowledgePresence.LiveVisible) };
+
+            Assert.That(
+                channel.BuildFull(7, 1, 1, states, visible, packet),
+                Is.EqualTo(ReplicationBuildResult.Success));
+            Assert.That(bridge.Apply(packet), Is.EqualTo(ReplicationBridgeResult.SpatialApplyRejected));
+
+            var mirrorQuery = new QueryDescription().WithAll<ReplicationMirrorIdentity>();
+            Assert.Multiple(() =>
+            {
+                Assert.That(_world.CountEntities(in mirrorQuery), Is.Zero);
+                Assert.That(bridge.TryResolve(handle, out _), Is.False);
+                Assert.That(bridge.LastSnapshotId, Is.Zero);
+                Assert.That(bridge.HasPreparedBatch, Is.False);
+            });
+        }
+
+        [Test]
+        public void Apply_OutOfBoundsUpdate_PreservesEcsPartitionKnowledgeAndBaseline()
+        {
+            ClientWorldReplicationBridge bridge = CreatePositionBridge(
+                entityCapacity: 1,
+                out KnowledgeProjectionStore knowledge,
+                out Entity viewer);
+            var channel = Channel(capacity: 1);
+            var packet = new ReplicationPacketBuffer(entityCapacity: 1);
+            var handle = new NetworkEntityHandle(0, 1);
+            var states = new[] { PositionState(handle, revision: 1, xCm: 150, yCm: 150) };
+            var visible = new[] { new ReplicationDisclosureInput(handle, KnowledgePresence.LiveVisible) };
+
+            Assert.That(channel.BuildFull(7, 1, 1, states, visible, packet), Is.EqualTo(ReplicationBuildResult.Success));
+            Assert.That(bridge.Apply(packet), Is.EqualTo(ReplicationBridgeResult.Success));
+            Assert.That(bridge.TryResolve(handle, out Entity mirror), Is.True);
+            Assert.That(PartitionContains(_partition, mirror, 1, 1), Is.True);
+
+            states[0] = PositionState(handle, revision: 2, xCm: 60_000, yCm: 150);
+            Assert.That(channel.BuildDelta(7, 2, 2, 1, states, visible, packet), Is.EqualTo(ReplicationBuildResult.Success));
+            Assert.That(bridge.Apply(packet), Is.EqualTo(ReplicationBridgeResult.SpatialApplyRejected));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(bridge.TryResolve(handle, out Entity unchanged), Is.True);
+                Assert.That(unchanged, Is.EqualTo(mirror));
+                Assert.That(_world.Get<WorldPositionCm>(mirror), Is.EqualTo(WorldPositionCm.FromCm(150, 150)));
+                Assert.That(_world.Get<ReplicationMirrorState>(mirror).Revision, Is.EqualTo(1));
+                Assert.That(PartitionContains(_partition, mirror, 1, 1), Is.True);
+                Assert.That(PartitionContains(_partition, mirror, 600, 1), Is.False);
+                Assert.That(knowledge.TryGet(viewer, mirror, currentTick: 2, out KnowledgeDisclosureRecord disclosure), Is.True);
+                Assert.That(disclosure.Presence, Is.EqualTo(KnowledgePresence.LiveVisible));
+                Assert.That(bridge.LastSnapshotId, Is.EqualTo(1));
+                Assert.That(bridge.HasPreparedBatch, Is.False);
+            });
+
+            states[0] = PositionState(handle, revision: 3, xCm: 250, yCm: 150);
+            Assert.That(channel.BuildDelta(7, 3, 3, 1, states, visible, packet), Is.EqualTo(ReplicationBuildResult.Success));
+            Assert.That(bridge.Apply(packet), Is.EqualTo(ReplicationBridgeResult.Success));
+            Assert.That(_world.Get<WorldPositionCm>(mirror), Is.EqualTo(WorldPositionCm.FromCm(250, 150)));
+            Assert.That(PartitionContains(_partition, mirror, 2, 1), Is.True);
+        }
+
+        [Test]
+        public void Apply_LateOutOfBoundsCreate_RejectsWholeBatchBeforeEarlierRelease()
+        {
+            ClientWorldReplicationBridge bridge = CreatePositionBridge(
+                entityCapacity: 2,
+                out KnowledgeProjectionStore knowledge,
+                out Entity viewer);
+            var channel = Channel(capacity: 2);
+            var packet = new ReplicationPacketBuffer(entityCapacity: 2);
+            var first = new NetworkEntityHandle(0, 1);
+            var second = new NetworkEntityHandle(1, 1);
+            var states = new[] { PositionState(first, revision: 1, xCm: 150, yCm: 150) };
+            var visible = new[] { new ReplicationDisclosureInput(first, KnowledgePresence.LiveVisible) };
+
+            Assert.That(channel.BuildFull(7, 1, 1, states, visible, packet), Is.EqualTo(ReplicationBuildResult.Success));
+            Assert.That(bridge.Apply(packet), Is.EqualTo(ReplicationBridgeResult.Success));
+            Assert.That(bridge.TryResolve(first, out Entity firstMirror), Is.True);
+
+            states[0] = PositionState(second, revision: 1, xCm: 60_000, yCm: 150);
+            visible[0] = new ReplicationDisclosureInput(second, KnowledgePresence.LiveVisible);
+            Assert.That(channel.BuildFull(7, 2, 2, states, visible, packet), Is.EqualTo(ReplicationBuildResult.Success));
+            Assert.That(bridge.Apply(packet), Is.EqualTo(ReplicationBridgeResult.SpatialApplyRejected));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(bridge.TryResolve(first, out Entity unchanged), Is.True);
+                Assert.That(unchanged, Is.EqualTo(firstMirror));
+                Assert.That(_world.IsAlive(firstMirror), Is.True);
+                Assert.That(PartitionContains(_partition, firstMirror, 1, 1), Is.True);
+                Assert.That(knowledge.TryGet(viewer, firstMirror, currentTick: 2, out _), Is.True);
+                Assert.That(bridge.TryResolve(second, out _), Is.False);
+                Assert.That(bridge.LastSnapshotId, Is.EqualTo(1));
+            });
+        }
+
+        [Test]
+        public void Apply_InvalidMembershipConceal_DoesNotConcealMirrorOrPoisonSlot()
+        {
+            Entity authored = _world.Create(WorldPositionCm.FromCm(150, 150));
+            _membership.Update(0f);
+            ClientWorldReplicationBridge bridge = CreatePositionBridge(
+                entityCapacity: 1,
+                out KnowledgeProjectionStore knowledge,
+                out Entity viewer);
+            var channel = Channel(capacity: 1);
+            var packet = new ReplicationPacketBuffer(entityCapacity: 1);
+            var handle = new NetworkEntityHandle(0, 1);
+            var states = new[] { PositionState(handle, revision: 1, xCm: 150, yCm: 150) };
+            var visible = new[] { new ReplicationDisclosureInput(handle, KnowledgePresence.LiveVisible) };
+
+            Assert.That(bridge.BindExisting(handle, authored), Is.EqualTo(ReplicationBridgeResult.Success));
+            Assert.That(channel.BuildFull(7, 1, 1, states, visible, packet), Is.EqualTo(ReplicationBuildResult.Success));
+            Assert.That(bridge.Apply(packet), Is.EqualTo(ReplicationBridgeResult.Success));
+            Assert.That(bridge.TryResolve(handle, out Entity mirror), Is.True);
+            Assert.That(mirror, Is.EqualTo(authored));
+            _world.Get<SpatialCellRef>(mirror).State = (SpatialMembershipState)255;
+
+            var known = new[] { new ReplicationDisclosureInput(handle, KnowledgePresence.Known) };
+            Assert.That(channel.BuildDelta(7, 2, 2, 1, states, known, packet), Is.EqualTo(ReplicationBuildResult.Success));
+            Assert.That(bridge.Apply(packet), Is.EqualTo(ReplicationBridgeResult.EcsStateMismatch));
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(bridge.TryResolve(handle, out Entity unchanged), Is.True);
+                Assert.That(unchanged, Is.EqualTo(mirror));
+                Assert.That(_world.IsAlive(mirror), Is.True);
+                Assert.That(_world.Has<ReplicationMirrorIdentity, ReplicationMirrorState>(mirror), Is.True);
+                Assert.That(_world.Get<WorldPositionCm>(mirror), Is.EqualTo(WorldPositionCm.FromCm(150, 150)));
+                Assert.That(knowledge.TryGet(viewer, mirror, currentTick: 2, out KnowledgeDisclosureRecord disclosure), Is.True);
+                Assert.That(disclosure.Presence, Is.EqualTo(KnowledgePresence.LiveVisible));
+                Assert.That(bridge.LastSnapshotId, Is.EqualTo(1));
+            });
+        }
+
+        [Test]
         public void WarmedTenThousandCrossCellCopiedPositionUpdate_AllocatesZeroAndHasNoDuplicatesOrStaleCells()
         {
             const int count = 10_000;
@@ -280,17 +474,28 @@ namespace Ludots.Tests.Architecture
 
             _membership.Update(0f);
 
-            ShiftAll(entities, dxCm: 500, dyCm: 0);
-            _membership.Update(0f); // warm destination cells / chunk tables
-            ShiftAll(entities, dxCm: -500, dyCm: 0);
-            _membership.Update(0f); // warm return path
-            ShiftAll(entities, dxCm: 500, dyCm: 0);
+            for (int i = 0; i < 64; i++)
+            {
+                ShiftAll(entities, dxCm: 500, dyCm: 0);
+                _membership.Update(0f);
+                ShiftAll(entities, dxCm: -500, dyCm: 0);
+                _membership.Update(0f);
+            }
 
-            _ = GC.GetAllocatedBytesForCurrentThread();
-            long before = GC.GetAllocatedBytesForCurrentThread();
-            _membership.Update(0f);
-            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
-            Assert.That(allocated, Is.EqualTo(0));
+            ShiftAll(entities, dxCm: 500, dyCm: 0);
+            _ = MeasureUpdateAllocations(_membership);
+            ShiftAll(entities, dxCm: -500, dyCm: 0);
+            _ = MeasureUpdateAllocations(_membership);
+
+            ShiftAll(entities, dxCm: 500, dyCm: 0);
+            long forwardAllocated = MeasureUpdateAllocations(_membership);
+            ShiftAll(entities, dxCm: -500, dyCm: 0);
+            long backwardAllocated = MeasureUpdateAllocations(_membership);
+            Assert.Multiple(() =>
+            {
+                Assert.That(forwardAllocated, Is.EqualTo(0));
+                Assert.That(backwardAllocated, Is.EqualTo(0));
+            });
 
             var seen = new HashSet<Entity>();
             Entity[] scanBuffer = new Entity[count + 64];
@@ -322,6 +527,47 @@ namespace Ludots.Tests.Architecture
             }
         }
 
+        private ClientWorldReplicationBridge CreatePositionBridge(
+            int entityCapacity,
+            out KnowledgeProjectionStore knowledge,
+            out Entity viewer)
+        {
+            var appliers = new ClientReplicationSchemaApplierRegistry(schemaCapacity: 1);
+            Assert.That(
+                appliers.Register(1, new PositionReplicationApplier()),
+                Is.EqualTo(ReplicationSchemaRegistrationResult.Success));
+            appliers.Freeze();
+            knowledge = new KnowledgeProjectionStore(initialCapacity: entityCapacity);
+            viewer = _world.Create();
+            return new ClientWorldReplicationBridge(
+                _world,
+                entityCapacity,
+                sessionEpoch: 7,
+                appliers,
+                _membership,
+                knowledge,
+                viewer);
+        }
+
+        private static AuthoritativeReplicationChannel Channel(int capacity) =>
+            new(capacity, baselineCapacity: 2, new ReplicationDisclosureChangeLog(capacity * 4));
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static long MeasureUpdateAllocations(SpatialPartitionUpdateSystem membership)
+        {
+            _ = GC.GetAllocatedBytesForCurrentThread();
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            membership.Update(0f);
+            return GC.GetAllocatedBytesForCurrentThread() - before;
+        }
+
+        private static ReplicatedEntityState PositionState(
+            NetworkEntityHandle handle,
+            uint revision,
+            int xCm,
+            int yCm) =>
+            new(handle, schemaId: 1, revision, new ReplicationStateVector(xCm, yCm, 0, 0));
+
         private static bool PartitionContains(ISpatialPartitionWorld partition, Entity entity, int cellX, int cellY)
         {
             Span<Entity> buffer = stackalloc Entity[64];
@@ -348,6 +594,85 @@ namespace Ludots.Tests.Architecture
             public Vector2 Resolution { get; set; } = new Vector2(1920, 1080);
             public float Fov { get; set; } = 60f;
             public float AspectRatio { get; set; } = 16f / 9f;
+        }
+
+        private sealed class PositionReplicationApplier : IClientReplicationSchemaApplier
+        {
+            public bool CanCreate(World world, in ReplicatedEntityState state) =>
+                world != null && TryDecode(in state, out _);
+
+            public bool CanApply(World world, Entity entity, in ReplicatedEntityState state) =>
+                world != null &&
+                world.IsAlive(entity) &&
+                world.Has<WorldPositionCm>(entity) &&
+                TryDecode(in state, out _);
+
+            public bool CanConceal(World world, Entity entity) =>
+                world != null && world.IsAlive(entity) && world.Has<WorldPositionCm>(entity);
+
+            public bool TryPreviewSpatialMembership(
+                World world,
+                Entity entity,
+                in ReplicatedEntityState state,
+                out SpatialMembershipTarget target)
+            {
+                target = default;
+                if (world == null || !TryDecode(in state, out WorldPositionCm position))
+                {
+                    return false;
+                }
+
+                WorldCmInt2 positionCm = position.Value.ToWorldCmInt2();
+                target = SpatialMembershipTarget.At(in positionCm);
+                return true;
+            }
+
+            public Entity Create(
+                World world,
+                in ReplicationMirrorIdentity identity,
+                in ReplicationMirrorState state)
+            {
+                ReplicationStateVector values = state.Values;
+                var replicated = new ReplicatedEntityState(identity.Handle, state.SchemaId, state.Revision, in values);
+                if (!TryDecode(in replicated, out WorldPositionCm position))
+                {
+                    throw new InvalidOperationException("Validated position replication create payload is invalid.");
+                }
+
+                return world.Create(in identity, in state, in position);
+            }
+
+            public void Apply(World world, Entity entity, in ReplicatedEntityState state)
+            {
+                if (!TryDecode(in state, out WorldPositionCm position))
+                {
+                    throw new InvalidOperationException("Validated position replication update payload is invalid.");
+                }
+
+                world.Set(entity, in position);
+            }
+
+            public void Conceal(World world, Entity entity)
+            {
+                WorldPositionCm concealed = WorldPositionCm.FromCm(0, 0);
+                world.Set(entity, in concealed);
+            }
+
+            private static bool TryDecode(in ReplicatedEntityState state, out WorldPositionCm position)
+            {
+                if (state.SchemaId != 1 ||
+                    state.Values.Value0 < int.MinValue ||
+                    state.Values.Value0 > int.MaxValue ||
+                    state.Values.Value1 < int.MinValue ||
+                    state.Values.Value1 > int.MaxValue)
+                {
+                    position = default;
+                    return false;
+                }
+
+                position = WorldPositionCm.FromCm((int)state.Values.Value0, (int)state.Values.Value1);
+                return true;
+            }
         }
     }
 }

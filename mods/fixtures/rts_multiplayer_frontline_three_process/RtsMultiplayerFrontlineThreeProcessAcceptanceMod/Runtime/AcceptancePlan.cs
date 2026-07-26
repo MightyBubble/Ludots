@@ -138,6 +138,9 @@ internal sealed class AcceptancePlan
         public int ArrivalToleranceCm { get; set; }
         public int MinimumObservedMoveCm { get; set; }
         public int WinnerHoldAtMeetingSeconds { get; set; }
+        public int CompletionCameraToleranceCm { get; set; }
+        public int CompletionWitnessRadiusCm { get; set; }
+        public int MinimumCompletionWinnerInfantry { get; set; }
 
         internal void Validate()
         {
@@ -146,6 +149,9 @@ internal sealed class AcceptancePlan
             RequirePositive(ArrivalToleranceCm, nameof(ArrivalToleranceCm));
             RequirePositive(MinimumObservedMoveCm, nameof(MinimumObservedMoveCm));
             RequirePositive(WinnerHoldAtMeetingSeconds, nameof(WinnerHoldAtMeetingSeconds));
+            RequirePositive(CompletionCameraToleranceCm, nameof(CompletionCameraToleranceCm));
+            RequirePositive(CompletionWitnessRadiusCm, nameof(CompletionWitnessRadiusCm));
+            RequirePositive(MinimumCompletionWinnerInfantry, nameof(MinimumCompletionWinnerInfantry));
         }
     }
 

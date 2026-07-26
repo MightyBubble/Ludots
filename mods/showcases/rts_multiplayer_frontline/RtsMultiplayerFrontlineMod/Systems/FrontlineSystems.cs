@@ -5,6 +5,7 @@ using Arch.Core;
 using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
@@ -13,6 +14,7 @@ using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Map;
 using Ludots.Core.Networking.Commands;
 using Ludots.Core.Networking.Replication;
 using Ludots.Core.Networking.Runtime;
@@ -543,6 +545,8 @@ internal sealed class FrontlinePresentationSystem : ISystem<float>
 {
     private static readonly QueryDescription ReplicatedMatchStateQuery = new QueryDescription()
         .WithAll<FrontlineMatchStateEntity, FrontlineMatchStateProjection, ReplicationSchemaRef, ReplicationMirrorIdentity>();
+    private static readonly QueryDescription OpeningCameraTargetQuery = new QueryDescription()
+        .WithAll<FrontlineCore, PlayerOwner, WorldPositionCm, VisualTransform, ReplicationMirrorIdentity, PresentationStableId>();
 
     private static readonly Vector4 PanelFill = new(0.035f, 0.055f, 0.07f, 0.88f);
     private static readonly Vector4 PanelBorder = new(0.23f, 0.58f, 0.62f, 0.95f);
@@ -576,6 +580,8 @@ internal sealed class FrontlinePresentationSystem : ISystem<float>
     private string _publishedConnectionStatusText = string.Empty;
     private string _publishedOpponentStatusText = string.Empty;
     private string _publishedCommandStatusText = string.Empty;
+    private MapSession? _openingCameraMapSession;
+    private bool _openingCameraFocused;
 
     public FrontlinePresentationSystem(GameEngine engine, FrontlineRuntime runtime)
     {
@@ -595,7 +601,12 @@ internal sealed class FrontlinePresentationSystem : ISystem<float>
     public void Update(in float dt)
     {
         HandleReadyInput();
-        if (!_runtime.IsActive || _overlay == null)
+        if (!_runtime.IsActive)
+        {
+            return;
+        }
+        FocusOpeningCameraOnce();
+        if (_overlay == null)
         {
             return;
         }
@@ -724,6 +735,67 @@ internal sealed class FrontlinePresentationSystem : ISystem<float>
                 stableId: 71411,
                 dirtySerial: (int)outcome);
         }
+    }
+
+    private void FocusOpeningCameraOnce()
+    {
+        MapSession? session = _engine.CurrentMapSession;
+        if (!ReferenceEquals(_openingCameraMapSession, session))
+        {
+            _openingCameraMapSession = session;
+            _openingCameraFocused = false;
+        }
+        if (!_isReplicatedClient || _openingCameraFocused || session == null ||
+            !string.Equals(session.MapId.Value, _runtime.Config.MapId, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        int localPlayerId = _engine.GetService(CoreServiceKeys.LocalPlayerId);
+        if (localPlayerId <= 0)
+        {
+            return;
+        }
+        if (localPlayerId != _runtime.Config.Sides[0].PlayerId &&
+            localPlayerId != _runtime.Config.Sides[1].PlayerId)
+        {
+            throw new InvalidOperationException(
+                $"RTS Frontline opening camera cannot resolve player {localPlayerId} to a configured side.");
+        }
+
+        int ownedCoreCount = 0;
+        WorldCmInt2 target = default;
+        foreach (ref Chunk chunk in _world.Query(in OpeningCameraTargetQuery))
+        {
+            ReadOnlySpan<PlayerOwner> owners = chunk.GetSpan<PlayerOwner>();
+            ReadOnlySpan<WorldPositionCm> positions = chunk.GetSpan<WorldPositionCm>();
+            foreach (int index in chunk)
+            {
+                if (owners[index].PlayerId != localPlayerId)
+                {
+                    continue;
+                }
+
+                target = positions[index].ToWorldCmInt2();
+                ownedCoreCount++;
+            }
+        }
+        if (ownedCoreCount == 0)
+        {
+            return;
+        }
+        if (ownedCoreCount != 1)
+        {
+            throw new InvalidOperationException(
+                $"RTS Frontline opening camera found {ownedCoreCount} owned core mirrors for player {localPlayerId}; expected one.");
+        }
+
+        CameraPoseRequest request = _engine.GetService(CoreServiceKeys.CameraPoseRequest)
+            ?? throw new InvalidOperationException(
+                "RTS Frontline opening camera requires the RTS command-source focus request to run first.");
+        request.TargetCm = new Vector2(target.X, target.Y);
+        _engine.SetService(CoreServiceKeys.CameraPoseRequest, request);
+        _openingCameraFocused = true;
     }
 
     internal FrontlineMatchSnapshot ResolvePresentationSnapshot()

@@ -79,6 +79,55 @@ namespace Ludots.Core.Systems
             World.InlineEntityQuery<MoveJob, WorldPositionCm, SpatialCellRef>(in _trackedQuery, ref moveJob);
         }
 
+        public SpatialMembershipValidationResult ValidateSynchronize(Entity entity)
+        {
+            SpatialMembershipValidationResult entityValidation = ValidateEntityAndState(entity);
+            if (entityValidation != SpatialMembershipValidationResult.Success)
+            {
+                return entityValidation;
+            }
+
+            if (!World.TryGet(entity, out WorldPositionCm position) ||
+                IsSynchronizationExcluded(entity))
+            {
+                return SpatialMembershipValidationResult.Success;
+            }
+
+            WorldCmInt2 worldCm = position.Value.ToWorldCmInt2();
+            return _spec.Contains(worldCm)
+                ? SpatialMembershipValidationResult.Success
+                : SpatialMembershipValidationResult.PositionOutOfBounds;
+        }
+
+        public SpatialMembershipValidationResult ValidateSynchronize(
+            Entity entity,
+            in SpatialMembershipTarget target)
+        {
+            if (entity != Entity.Null)
+            {
+                SpatialMembershipValidationResult entityValidation = ValidateEntityAndState(entity);
+                if (entityValidation != SpatialMembershipValidationResult.Success)
+                {
+                    return entityValidation;
+                }
+            }
+
+            return target.Kind switch
+            {
+                SpatialMembershipTargetKind.NoMembership => SpatialMembershipValidationResult.Success,
+                SpatialMembershipTargetKind.Position => _spec.Contains(target.PositionCm)
+                    ? SpatialMembershipValidationResult.Success
+                    : SpatialMembershipValidationResult.PositionOutOfBounds,
+                _ => SpatialMembershipValidationResult.InvalidTarget,
+            };
+        }
+
+        public SpatialMembershipValidationResult ValidateDeactivate(Entity entity) =>
+            ValidateEntityAndState(entity);
+
+        public SpatialMembershipValidationResult ValidateRemove(Entity entity) =>
+            ValidateEntityAndState(entity);
+
         public void Synchronize(Entity entity)
         {
             RequireLiveEntity(entity);
@@ -167,6 +216,31 @@ namespace Ludots.Core.Systems
                 }
             }
         }
+
+        private SpatialMembershipValidationResult ValidateEntityAndState(Entity entity)
+        {
+            if (entity == Entity.Null || !World.IsAlive(entity))
+            {
+                return SpatialMembershipValidationResult.EntityUnavailable;
+            }
+
+            if (!World.TryGet(entity, out SpatialCellRef cellRef))
+            {
+                return SpatialMembershipValidationResult.Success;
+            }
+
+            return cellRef.State == SpatialMembershipState.Uninitialized ||
+                cellRef.State == SpatialMembershipState.Active ||
+                cellRef.State == SpatialMembershipState.Deactivated
+                    ? SpatialMembershipValidationResult.Success
+                    : SpatialMembershipValidationResult.InvalidState;
+        }
+
+        private bool IsSynchronizationExcluded(Entity entity) =>
+            World.Has<PresentationStaticTransform>(entity) ||
+            World.Has<SpatialPartitionExcluded>(entity) ||
+            World.Has<PresentationDestroyPending>(entity) ||
+            World.Has<SuspendedTag>(entity);
 
         private void ValidateEligiblePositions(in WorldSizeSpec spec)
         {
