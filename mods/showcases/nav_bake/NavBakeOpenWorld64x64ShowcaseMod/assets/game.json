@@ -1,0 +1,5 @@
+{
+  "startupMapId": "nav_bake_open_world_64x64",
+  "startupInputContexts": ["Default_Gameplay"],
+  "targetFps": 60
+}

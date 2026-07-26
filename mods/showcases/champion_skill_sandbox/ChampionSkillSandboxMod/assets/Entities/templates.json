@@ -465,7 +465,9 @@
                                                                                    },
                                                                  "sinkPhysicsCollider":  true,
                                                                  "sinkNavigationObstacle":  true,
-                                                                 "navRadiusCm":  120
+                                                                 "navRadiusCm":  120,
+                                                                 "navMinYcm":  0,
+                                                                 "navMaxYcm":  200
                                                              }
                        }
     },
@@ -552,7 +554,9 @@
                                                                                    },
                                                                  "sinkPhysicsCollider":  true,
                                                                  "sinkNavigationObstacle":  true,
-                                                                 "navRadiusCm":  94
+                                                                 "navRadiusCm":  94,
+                                                                 "navMinYcm":  0,
+                                                                 "navMaxYcm":  200
                                                              },
                            "DestroyWhenParentExecutionEnds":  {
 

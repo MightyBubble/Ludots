@@ -103,6 +103,9 @@ namespace Ludots.Tests.Architecture
             Assert.That(obstacle["sinkNavigationObstacle"]?.GetValue<bool>(), Is.True);
             Assert.That(obstacle["radiusCm"]?.GetValue<float>(), Is.GreaterThan(0f));
             Assert.That(obstacle["navRadiusCm"]?.GetValue<float>(), Is.GreaterThan(0f));
+            Assert.That(obstacle["navMinYcm"], Is.Not.Null, $"{owner} must author navMinYcm for navigation sink.");
+            Assert.That(obstacle["navMaxYcm"], Is.Not.Null, $"{owner} must author navMaxYcm for navigation sink.");
+            Assert.That(obstacle["navMinYcm"]!.GetValue<int>(), Is.LessThan(obstacle["navMaxYcm"]!.GetValue<int>()));
         }
 
         private static JsonObject FindObjectById(JsonArray array, string id)

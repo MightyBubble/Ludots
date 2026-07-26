@@ -178,8 +178,15 @@ namespace Ludots.Core.Navigation.NavMesh
 
             if (triA.Count == 0)
             {
-                artifact = new NavBakeArtifact(new NavTileId(chunkX, chunkY, 0), tileVersion, NavBakeStage.Triangulate, NavBakeErrorCode.NoWalkableDomain, "No walkable triangles.", 0, 0, 0, 0);
-                return false;
+                ulong emptyBuildHash = config.ComputeHash();
+                tile = NavValidEmptyTile.Create(
+                    new NavTileId(chunkX, chunkY, 0),
+                    tileVersion,
+                    emptyBuildHash,
+                    originXcm,
+                    originZcm);
+                artifact = NavValidEmptyTile.CreateSuccessArtifact(tile, "No walkable triangles.");
+                return true;
             }
 
             var n0 = new int[triA.Count];
@@ -221,7 +228,7 @@ namespace Ludots.Core.Navigation.NavMesh
                 tile = readBack;
             }
 
-            artifact = new NavBakeArtifact(tile.TileId, tile.TileVersion, NavBakeStage.Serialize, NavBakeErrorCode.None, "", walkableTriCount, tile.VertexCount, tile.TriangleCount, tile.Portals.Length);
+            artifact = new NavBakeArtifact(tile.TileId, tile.TileVersion, NavBakeStage.Serialize, NavBakeErrorCode.None, "", walkableTriCount, tile.VertexCount, tile.TriangleCount, tile.PortalCount);
             return true;
         }
 
@@ -274,6 +281,11 @@ namespace Ludots.Core.Navigation.NavMesh
             byte minH = Math.Min(p1.H, Math.Min(p2.H, p3.H));
             byte maxH = Math.Max(p1.H, Math.Max(p2.H, p3.H));
             byte areaId = ResolveAreaId(p1.AreaId, p2.AreaId, p3.AreaId);
+
+            if (p1.IsBlocked || p2.IsBlocked || p3.IsBlocked)
+            {
+                return;
+            }
 
             if (minH == maxH)
             {
@@ -680,7 +692,7 @@ namespace Ludots.Core.Navigation.NavMesh
                 if (ccm < minClearance) minClearance = ccm;
             }
             int clearance = Math.Max(0, Math.Min(len / 2, minClearance));
-            dst.Add(new NavBorderPortal(side, u, sv0, u, sv1, x0cm, z0cm, x1cm, z1cm, clearance));
+            dst.Add(new NavBorderPortal(side, u, sv0, u, sv1, x0cm, leftYcm: 0, z0cm, x1cm, rightYcm: 0, z1cm, clearance));
         }
 
         private static void AddHorizontalPortals(
@@ -772,7 +784,7 @@ namespace Ludots.Core.Navigation.NavMesh
                 if (ccm < minClearance) minClearance = ccm;
             }
             int clearance = Math.Max(0, Math.Min(len / 2, minClearance));
-            dst.Add(new NavBorderPortal(side, su0, v, su1, v, x0cm, z0cm, x1cm, z1cm, clearance));
+            dst.Add(new NavBorderPortal(side, su0, v, su1, v, x0cm, leftYcm: 0, z0cm, x1cm, rightYcm: 0, z1cm, clearance));
         }
 
         private static bool IsCellAnyTriangleWalkable(LogicTerrainField terrain, int mapWidth, int mapHeight, int c, int r, in NavBuildConfig config)

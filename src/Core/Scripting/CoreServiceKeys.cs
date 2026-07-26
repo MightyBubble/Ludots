@@ -49,6 +49,7 @@ using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.NavMesh.Bake;
 using Ludots.Core.Navigation.NavMesh.Config;
+using Ludots.Core.Navigation.NavMesh.Surface;
 using Ludots.Core.Navigation.Pathing;
 using Ludots.Core.Navigation.Pathing.Config;
 using Ludots.Core.Navigation.Terrain;
@@ -66,6 +67,7 @@ using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Instancing;
 using Ludots.Core.Presentation.Minimap;
+using Ludots.Core.Presentation.Navigation;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Rendering;
@@ -251,6 +253,12 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<RuntimeEntitySpawnReceiptChannelRegistry> RuntimeEntitySpawnReceiptChannelRegistry = new("RuntimeEntitySpawnReceiptChannelRegistry");
         public static readonly ServiceKey<EntityTemplateKeyRegistry> EntityTemplateKeyRegistry = new("EntityTemplateKeyRegistry");
         public static readonly ServiceKey<CommandSourceAcquisitionConfig> CommandSourceAcquisitionConfig = new("CommandSourceAcquisitionConfig");
+        /// <summary>
+        /// When true, <see cref="Ludots.Core.Input.CommandSources.CommandSourceAcquisitionSystem"/>
+        /// ignores Confirm gestures (click / box-select). Placement modes set this for the duration
+        /// of the mode and clear it on exit; missing or false means acquisition is allowed.
+        /// </summary>
+        public static readonly ServiceKey<bool> CommandSourceAcquisitionSuppressed = new("CommandSourceAcquisitionSuppressed");
         public static readonly ServiceKey<EntityCollectionStore> EntityCollectionStore = new("EntityCollectionStore");
         public static readonly ServiceKey<StringIntRegistry> EntityCollectionKeyRegistry = new("EntityCollectionKeyRegistry");
         public static readonly ServiceKey<DomainRoutedCollectionWriter> DomainRoutedCollectionWriter = new("DomainRoutedCollectionWriter");
@@ -344,6 +352,8 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<GlobalPresentationEventBuffer> GlobalPresentationEventBuffer = new("GlobalPresentationEventBuffer");
         public static readonly ServiceKey<GroundOverlayBuffer> GroundOverlayBuffer = new("GroundOverlayBuffer");
         public static readonly ServiceKey<RoadSplineBuffer> RoadSplineBuffer = new("RoadSplineBuffer");
+        public static readonly ServiceKey<NavMeshPresentationState> NavMeshPresentationState = new("NavMeshPresentationState");
+        public static readonly ServiceKey<NavMeshPresentationBuffer> NavMeshPresentationBuffer = new("NavMeshPresentationBuffer");
         public static readonly ServiceKey<SoundRequestBuffer> SoundRequestBuffer = new("SoundRequestBuffer");
         public static readonly ServiceKey<DebugDrawCommandBuffer> DebugDrawCommandBuffer = new("DebugDrawCommandBuffer");
         // --- Performers ---
@@ -364,12 +374,17 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<LoadedGraphRuntime> LoadedGraphRuntime = new("LoadedGraphRuntime");
         public static readonly ServiceKey<GraphEdgeCostOverlay> GraphEdgeCostOverlay = new("GraphEdgeCostOverlay");
         public static readonly ServiceKey<LogicTerrainField> LogicTerrain = new("LogicTerrain");
+        public static readonly ServiceKey<NavTriangleSurfaceTileIndex> NavTriangleSurface = new("NavTriangleSurface");
+        public static readonly ServiceKey<RuntimeNavTriangleSurfaceService> RuntimeNavTriangleSurface = new("RuntimeNavTriangleSurface");
+        public static readonly ServiceKey<RuntimeNavTriangleSurfaceEditTransaction> RuntimeNavTriangleSurfaceEditTransaction = new("RuntimeNavTriangleSurfaceEditTransaction");
         public static readonly ServiceKey<AgentProfileRegistry> AgentProfiles = new("AgentProfiles");
         public static readonly ServiceKey<NavMeshBakeConfig> NavMeshBakeConfig = new("NavMeshBakeConfig");
         public static readonly ServiceKey<NavMeshProfileRegistry> NavMeshProfiles = new("NavMeshProfiles");
         public static readonly ServiceKey<NavQueryServiceRegistry> NavQueryServices = new("NavQueryServices");
-        public static readonly ServiceKey<NavObstacleSet> RuntimeNavMeshObstacles = new("RuntimeNavMeshObstacles");
+        public static readonly ServiceKey<RuntimeNavObstacleSnapshot> RuntimeNavMeshObstacles = new("RuntimeNavMeshObstacles");
+        public static readonly ServiceKey<NavBakeService> NavBakeService = new("NavBakeService");
         public static readonly ServiceKey<RuntimeIncrementalNavMeshRebuildQueue> RuntimeNavMeshRebuildQueue = new("RuntimeNavMeshRebuildQueue");
+        public static readonly ServiceKey<RuntimeNavMeshTelemetryService> RuntimeNavMeshTelemetry = new("RuntimeNavMeshTelemetry");
         public static readonly ServiceKey<PathingConfig> PathingConfig = new("PathingConfig");
         public static readonly ServiceKey<PathStore> PathStore = new("PathStore");
         public static readonly ServiceKey<IPathService> PathService = new("PathService");

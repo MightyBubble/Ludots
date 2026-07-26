@@ -98,6 +98,12 @@ namespace Ludots.Core.Navigation.Terrain
 
         public abstract int VerticalStepCm { get; }
 
+        /// <summary>
+        /// True when every in-bounds cell shares one uniform authored sample and the sparse
+        /// FlatGrid triangle compiler may emit two triangles per terrain chunk.
+        /// </summary>
+        public virtual bool IsUniformFlatGridSurface => false;
+
         public bool IsInBounds(int col, int row)
             => (uint)col < (uint)WidthCells && (uint)row < (uint)HeightCells;
 
@@ -185,11 +191,20 @@ namespace Ludots.Core.Navigation.Terrain
             int heightCells,
             int cellSizeCm = SpatialScaleDefaults.CellCm,
             int chunkSizeCells = SpatialScaleDefaults.TerrainChunkCells,
-            LogicTerrainCell cell = default)
+            LogicTerrainCell cell = default,
+            int originXcm = 0,
+            int originZcm = 0)
             : base(widthCells, heightCells, chunkSizeCells)
         {
             if (cellSizeCm <= 0) throw new ArgumentOutOfRangeException(nameof(cellSizeCm));
+            // Fail fast on extent overflow before any world-position formula uses origin + size.
+            _ = checked(widthCells * cellSizeCm);
+            _ = checked(heightCells * cellSizeCm);
+            _ = checked(originXcm + (widthCells * cellSizeCm));
+            _ = checked(originZcm + (heightCells * cellSizeCm));
             CellSizeCm = cellSizeCm;
+            OriginXcm = originXcm;
+            OriginZcm = originZcm;
             _cell = cell.Cost > 0f ? cell : new LogicTerrainCell(0, 0, LogicTerrainSurfaceFlags.None);
         }
 
@@ -197,17 +212,23 @@ namespace Ludots.Core.Navigation.Terrain
 
         public int CellSizeCm { get; }
 
+        public int OriginXcm { get; }
+
+        public int OriginZcm { get; }
+
         public override int HorizontalStepCm => CellSizeCm;
 
         public override int VerticalStepCm => CellSizeCm;
+
+        public override bool IsUniformFlatGridSurface => true;
 
         public override LogicTerrainCell GetCell(int col, int row)
             => IsInBounds(col, row) ? _cell : default;
 
         public override void GetWorldPositionMeters(int col, int row, out float xMeters, out float zMeters)
         {
-            xMeters = col * SpatialScaleDefaults.CentimetersToMeters(CellSizeCm);
-            zMeters = row * SpatialScaleDefaults.CentimetersToMeters(CellSizeCm);
+            xMeters = SpatialScaleDefaults.CentimetersToMeters(checked(OriginXcm + checked(col * CellSizeCm)));
+            zMeters = SpatialScaleDefaults.CentimetersToMeters(checked(OriginZcm + checked(row * CellSizeCm)));
         }
     }
 

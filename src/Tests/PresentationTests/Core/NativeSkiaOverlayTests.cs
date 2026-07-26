@@ -364,6 +364,11 @@ public sealed class NativeSkiaOverlayTests
             source,
             Does.Contain("_framebufferTopOverlaySurface.Render("),
             "TopMost minimap must still render after direct UnderUi HUD so it occludes HUD bars/text.");
+        Assert.That(
+            source,
+            Does.Contain("refreshTopOverlay && topOverlayAffectsRasterComposite"),
+            "Clearing TopMost (selection marquee) must invalidate the raster composite while UI stays present; " +
+            "refreshTopOverlay && rasterTopOverlay alone skips rebuild when TopMost becomes empty.");
     }
 
     [Test]

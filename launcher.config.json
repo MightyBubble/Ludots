@@ -130,6 +130,30 @@
       }
     },
     {
+      "name": "nav_bake_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/nav_bake/DynamicNavBakeShowcaseMod",
+        "projectPath": "DynamicNavBakeShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "nav_bake_dynamic_rts",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/nav_bake/NavBakeDynamicRtsShowcaseMod",
+        "projectPath": "NavBakeDynamicRtsShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "nav_bake_open_world_64x64",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/nav_bake/NavBakeOpenWorld64x64ShowcaseMod",
+        "projectPath": "NavBakeOpenWorld64x64ShowcaseMod.csproj"
+      }
+    },
+    {
       "name": "capability_standard_participant_views",
       "target": {
         "type": "path",

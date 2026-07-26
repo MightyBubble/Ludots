@@ -33,6 +33,7 @@
 - [MassNavigation 数值域与确定性边界](mass-navigation-numeric-domain.md)
 - [Logic Terrain and Topology](../reference/logic-terrain-and-topology.md)
 - [NavBakeContext 与统一烘焙服务](../reference/nav-bake-context.md)
+- [动态 3D Navmesh 烘焙架构](dynamic-3d-navmesh-bake.md)
 - [Performer-as-Actor 架构总览](performer-as-actor-architecture.md)
 - [Instanced Batch 外部 Source Contract](instanced-batch-source-contract.md)
 - [Map Batch Performer Param Overrides](map-batch-performer-param-overrides.md)

@@ -173,7 +173,7 @@ Routing 起点：
 - `StreamingChunk` 应由正式配置或 board 分区推导；禁止私有 loader fallback。
 - `MassNavigationConfig.world.streamingChunkSizeCm` 可从 `ChunkSizeCells * GridCellSizeCm` 起步，例如 64 cells * 100cm = `6400cm`。
 - `streamingRadiusCm` 覆盖相机/玩家周围几圈 streaming chunk。
-- 动态门、桥、建筑等持久结构变化走 `Navigation/navmesh.json` 的 `runtime-incremental` + `cdt`，并给实体加 `RuntimeNavMeshStructuralObstacle`。
+- 动态门、桥、建筑等持久结构变化走 `Navigation/navmesh.json` 的 `runtime-incremental`，并给实体加 `RuntimeNavMeshStructuralObstacle`；所选算法必须由当前 Host 注册且声明支持该输入，默认 Host 目前接通 CDT 逻辑地形。
 - 临时人群拥堵、短寿命 blocker 仍归 MassNavigationFlow runtime avoidance，不应触发 navmesh rebuild。
 
 Board 起点：

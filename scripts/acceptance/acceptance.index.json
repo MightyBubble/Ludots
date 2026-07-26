@@ -6,9 +6,9 @@
     "status": "active"
   },
   "counts": {
-    "runnable": 24,
+    "runnable": 27,
     "testOnly": 0,
-    "total": 24
+    "total": 27
   },
   "runnable": [
     {
@@ -170,6 +170,30 @@
       "testFilter": "ItemSystemShowcasePlayableAcceptanceTests",
       "artifactDir": null,
       "hasScreenshotEvidence": false
+    },
+    {
+      "id": "nav_bake_showcase",
+      "preset": "nav_bake_showcase_raylib",
+      "binding": "nav_bake_showcase",
+      "testFilter": "DynamicNavBakeShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/acceptance/nav-bake-showcase",
+      "hasScreenshotEvidence": true
+    },
+    {
+      "id": "nav_bake_dynamic_rts",
+      "preset": "nav_bake_dynamic_rts_raylib",
+      "binding": "nav_bake_dynamic_rts",
+      "testFilter": "DynamicNavBakeShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/acceptance/nav-bake-dynamic-rts",
+      "hasScreenshotEvidence": true
+    },
+    {
+      "id": "nav_bake_open_world_64x64",
+      "preset": "nav_bake_open_world_64x64_raylib",
+      "binding": "nav_bake_open_world_64x64",
+      "testFilter": "DynamicNavBakeShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/acceptance/nav-bake-open-world-64x64",
+      "hasScreenshotEvidence": true
     },
     {
       "id": "progression_scope",

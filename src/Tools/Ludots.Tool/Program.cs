@@ -13,6 +13,8 @@ using Ludots.Core.Map.Hex;
 using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.NavMesh.Bake;
 using Ludots.Core.Navigation.NavMesh.Config;
+using Ludots.Core.Navigation.NavMesh.LayeredSpan;
+using Ludots.Core.Navigation.NavMesh.Surface;
 using Ludots.Core.Navigation.Terrain;
 using Ludots.Core.Physics2D.Navigation;
 using Ludots.Core.Spatial;
@@ -647,12 +649,12 @@ namespace {modId}
                     out string repoRoot,
                     out LogicTerrainField terrain);
 
-                Console.WriteLine($"BakeNavRecastReact: mapId={mapId} modId={modId ?? "(auto)"} topology={terrain.Topology} chunks={terrain.WidthChunks}x{terrain.HeightChunks} obstacles={context.Obstacles.Obstacles.Count}");
+                Console.WriteLine($"BakeNavRecastReact: mapId={mapId} modId={modId ?? "(auto)"} topology={terrain.Topology} chunks={terrain.WidthChunks}x{terrain.HeightChunks} obstacles={context.Obstacles.ObstacleCount}");
                 NavBakeEstimateReport estimate = NavBakeEstimator.Estimate(context);
                 Console.WriteLine($"BakeNavRecastReact estimate: status={estimate.BudgetStatusText} hash={estimate.EstimateHash} terrainHash={estimate.TerrainContentHash} targets={estimate.TargetTileCount} operations={estimate.BakeOperationCount} workUnits={estimate.BudgetWorkUnitCount} seconds={estimate.EstimatedSecondsLow:F1}-{estimate.EstimatedSecondsHigh:F1}");
                 NavBakeEstimator.EnsureBakeAllowed(estimate, largeBakeApproved, acceptedEstimateHash);
 
-                var result = new NavBakeService(new RecastNavBakeAlgorithm(), new CdtNavBakeAlgorithm()).Bake(context);
+                var result = CreateNavBakeService(context.Config).Bake(context);
                 if (result.FailureCount > 0)
                 {
                     PrintNavBakeFailures(result, "BakeNavRecastReact");
@@ -700,6 +702,21 @@ namespace {modId}
                 Console.WriteLine(ex.Message);
                 return 2;
             }
+        }
+
+        static NavBakeService CreateNavBakeService(NavMeshBakeConfig config)
+        {
+            if (config == null) throw new ArgumentNullException(nameof(config));
+            if (config.LayeredSpan == null)
+            {
+                throw new InvalidOperationException("NavMeshBakeConfig.layeredSpan is required to register LayeredSpanNavBakeAlgorithm.");
+            }
+
+            var layeredSpanPool = new LayeredSpanScratchPool(config.LayeredSpan);
+            return new NavBakeService(
+                new RecastNavBakeAlgorithm(),
+                new CdtNavBakeAlgorithm(),
+                new LayeredSpanNavBakeAlgorithm(layeredSpanPool));
         }
 
         static NavBakeContext BuildReactRecastNavBakeContext(
@@ -781,17 +798,20 @@ namespace {modId}
             }
 
             NavMeshBakeConfig bakeConfig = bakeConfigContext.Config;
+            var buildConfig = new NavBuildConfig(heightScale, minUpDot, cliffThreshold);
+            NavTriangleSurfaceTileIndex triangleSurface =
+                LogicTerrainTriangleSurfaceCompiler.Compile(terrain, bakeConfig, buildConfig);
             return new NavBakeContext
             {
                 MapId = mapId,
                 ModId = modId ?? string.Empty,
                 SourceUri = ToCoreSourceUri(repoRoot, inputReactBinPath),
-                Terrain = terrain,
+                TriangleSurface = triangleSurface,
                 Obstacles = obstacles,
                 Config = bakeConfig,
                 AgentProfiles = bakeConfigContext.AgentProfiles,
                 Targets = targets,
-                BuildConfig = new NavBuildConfig(heightScale, minUpDot, cliffThreshold),
+                BuildConfig = buildConfig,
                 TileVersion = (uint)tileVersion,
                 Mode = bakeConfig.ParsedMode,
                 Algorithm = bakeConfig.ParsedAlgorithm,

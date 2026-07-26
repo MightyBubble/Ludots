@@ -1,0 +1,8 @@
+{
+  "startupMapId": "nav_bake_dynamic_rts",
+  "startupInputContexts": ["Default_Gameplay"],
+  "targetFps": 60,
+  "commandSource": {
+    "movePathPreviewOrderTypeKeys": [ "massNavigationMove" ]
+  }
+}

@@ -184,9 +184,14 @@ namespace Ludots.Adapter.Raylib
             }
 
             bool hasCompositeContent = hasUnderlay || hasUiLayer || rasterTopOverlay;
+            // TopMost is baked into the raster composite whenever it is not on a direct GPU path.
+            // Clearing TopMost (e.g. command-source marquee release) must refresh that composite even
+            // when UI stays dirty-free; otherwise the previous marquee stays in the uploaded texture.
+            bool topOverlayAffectsRasterComposite =
+                !directTopOverlayComposite && !orderedDirectOverlayComposite;
             bool refreshComposite = underlayCanvasChanged ||
                 refreshUiLayer ||
-                (refreshTopOverlay && rasterTopOverlay) ||
+                (refreshTopOverlay && topOverlayAffectsRasterComposite) ||
                 hasCompositeContent != _compositeHadContent;
 
             if (framebufferDirectUnderlay || gpuDirectUnderlay)

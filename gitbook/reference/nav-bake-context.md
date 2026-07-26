@@ -24,10 +24,11 @@ Before running a large bake, use the budget model in [Nav Bake Budget and Estima
 
 In scope:
 
-- `NavBakeContext` carries map/profile/layer/obstacle/terrain/targets/build config/source URI.
-- `NavBakeService` dispatches to concrete `INavBakeAlgorithm` adapters.
+- `NavBakeContext` carries exactly one geometry input (`LogicTerrainField` or `NavTriangleSurfaceTileIndex`) plus map/profile/layer/obstacle/targets/build config/source URI.
+- `NavBakeService` dispatches to concrete `INavBakeAlgorithm` adapters only after the selected adapter declares support for the exact mode and input kind.
 - Offline full bake defaults to `recast`; `cdt` is an explicit algorithm adapter.
-- Runtime incremental local rebuild uses `runtime-incremental` + `cdt`.
+- Runtime incremental local rebuild preserves the explicitly selected algorithm; unsupported mode/input combinations fail without selecting another adapter.
+- `layered-span` is a strict algorithm name. Its production adapter (`LayeredSpanNavBakeAlgorithm`) declares triangle-surface offline + runtime-incremental capabilities, consumes `NavTriangleSurfaceTileIndex`, and is registered alongside CDT in the Core host and alongside Recast/CDT in `Ludots.Tool` when `layeredSpan` config is present.
 - `Navigation/navmesh.json` must explicitly define `mode`, `algorithm`, and `runtimeIncremental`; casing is strict.
 - CDT failure returns a failed artifact and never falls back to a grid mesh.
 - CLI and Bridge share `NavBakeTileSelection` for dirty/full targets.
@@ -45,7 +46,7 @@ Given the same `NavBakeContext`, when the CLI adapter and Bridge adapter call `N
 
 As a runtime engineer, I want structural navmesh changes to reuse the bake service, so runtime rebuilds do not invent a second obstacle or terrain pipeline.
 
-Given a dirty `NavTile` and a `runtime-incremental` context, when the rebuild queue calls `NavBakeService`, then only CDT is allowed and successful tiles are published through the existing query stores.
+Given a dirty `NavTile` and a `runtime-incremental` context, when the rebuild queue calls `NavBakeService`, then the configured adapter must declare runtime support for the active input and no other algorithm is tried.
 
 ## UAT Showcase
 
@@ -61,7 +62,7 @@ dotnet test src\Tests\ArchitectureTests\ArchitectureTests.csproj --filter "NavBa
 | Bridge `POST /api/nav/bake-recast-react` with the same fields | Response includes `okCount` / `failCount` / tile base64; the same tile matches the CLI output |
 | Change `Navigation/navmesh.json` `profiles[].maxClimbCm` and rebake | Tile hash changes and the showcase HUD reports the new tile hash |
 | Delete `algorithm` or change casing | Loader fails fast and no fallback tile is produced |
-| Run the architecture contract command above | Strict config, no fallback, explicit obstacle/layer, and runtime incremental CDT contracts pass |
+| Run the architecture contract command above | Strict config, input-union, no fallback, explicit obstacle/layer, and adapter capability contracts pass |
 
 ## Configuration
 
@@ -70,7 +71,7 @@ dotnet test src\Tests\ArchitectureTests\ArchitectureTests.csproj --filter "NavBa
 | Field | Value | Owner | Constraint |
 |---|---|---|---|
 | `mode` | `offline` or `runtime-incremental` | `NavBakeContext.Mode` | Required, strict casing |
-| `algorithm` | `recast` or `cdt` | `NavBakeContext.Algorithm` | Required, strict casing; `runtime-incremental` requires `cdt` |
+| `algorithm` | `recast`, `cdt`, or `layered-span` | `NavBakeContext.Algorithm` | Required, strict casing; selected adapter must be registered and support the active mode/input |
 | `profiles[].id` | AgentProfile id | `AgentProfileRegistry` | Must exist, strict casing |
 | `profiles[].maxClimbCm` | cm | NavMesh profile | Required number |
 | `profiles[].maxSlopeDeg` | degrees | NavMesh profile | Required number |
@@ -82,10 +83,26 @@ dotnet test src\Tests\ArchitectureTests\ArchitectureTests.csproj --filter "NavBa
 | `runtimeIncremental.heightScaleMeters` | float | Runtime `NavBuildConfig` | Required, `> 0` |
 | `runtimeIncremental.minWalkableUpDot` | float | Runtime `NavBuildConfig` | Required, `-1..1` |
 | `runtimeIncremental.cliffHeightThreshold` | int | Runtime `NavBuildConfig` | Required, `>= 0` |
+| `runtimeIncremental.trackedStructuralEntityCapacity` | int | Runtime dirty tracking | Required, `> 0`, no auto growth |
+| `runtimeIncremental.obstaclePrimitiveCapacity` | int | Runtime obstacle snapshot primitives | Required, `> 0`, no auto growth |
+| `runtimeIncremental.polygonVertexCapacity` | int | Runtime obstacle snapshot polygon vertices | Required, `> 0`, no auto growth |
+| `layeredSpan.*` | object | Layered-span adapter + scratch pool | Required explicit object; every capacity and operational field must be present; no defaults |
+
+`layeredSpan` owns the production vertical-slice controls for `LayeredSpanNavBakeAlgorithm`:
+
+| Field | Constraint |
+|---|---|
+| `scratchSlotCount` | `> 0`; pool exhaustion fails naming this field |
+| `rasterCellSizeCm` / `rasterHaloCells` | `> 0` / `>= 0`; tile size must be an exact multiple; halo padding on the triangle CSR must equal `rasterHaloCells * rasterCellSizeCm` |
+| `sameSurfaceToleranceCm` / `maxSimplificationErrorCm` / `maxLawsonFlipCount` | nonnegative integers |
+| `heightRounding` | `floorTowardNegativeInfinity` or `roundHalfAwayFromZero` |
+| stage capacities (`columnCapacity`, `spanCapacity`, … `temporaryConstraintFlagCapacity`) | each `> 0`; capacity failures name the owner and required amount |
+
+Authoring `profiles[].maxSlopeDeg` remains the slope SSOT. The layered-span adapter compiles it on the cold path into canonical integer `minWalkableUpDotQ1M` via the frozen degree table in `LayeredSpanSlopeQ1M` (exact integer degrees in `[0, 89]`; no `MathF.Cos` in the warmed kernel).
 
 `sourceUri` must use VFS form such as `Core:Maps/example.vtxm` or `Core:Maps/example.runtime-navmesh`. The service layer records a URI contract and rejects absolute filesystem paths.
 
-Runtime incremental rebuild is enabled only when the top-level config explicitly selects `mode: runtime-incremental` and `algorithm: cdt`. The default offline full-bake config may stay `mode: offline` and `algorithm: recast`; in that mode runtime dirty services are not registered.
+Runtime incremental rebuild is enabled only when the top-level config explicitly selects `mode: runtime-incremental`. The selected algorithm is preserved by the queue and must have a registered adapter whose capability includes `RuntimeIncrementalLogicTerrain` or `RuntimeIncrementalTriangleSurface` for the active input. The Core host registers CDT and `layered-span` (triangle-surface capabilities) together; selecting Recast there still requires host composition that supplies that adapter.
 
 ## Config To Behavior Tests
 
@@ -93,7 +110,9 @@ Runtime incremental rebuild is enabled only when the top-level config explicitly
 |---|---|---|
 | `algorithm: recast` | Uses `RecastNavBakeAlgorithm` | `NavBakeServiceContractTests` |
 | `algorithm: cdt` | Uses `CdtNavBakeAlgorithm` | `NavBakeServiceContractTests` |
-| `mode: runtime-incremental` with non-CDT algorithm | Fails fast | `NavBakeService_RuntimeIncremental_RequiresCdtAlgorithm` |
+| `algorithm: layered-span` without a registered adapter | Fails fast without selecting Recast/CDT | `NavBakeService_MissingAdapterFailsFast` |
+| Adapter lacks the requested mode/input capability | Fails before invocation and does not try another adapter | `NavBakeService_RejectsUnsupportedCapabilityWithoutFallback` |
+| Terrain and triangle inputs are both present or both absent | Context validation fails | `NavBakeContext_RequiresExactlyOneInput` |
 | Missing `runtimeIncremental` | Loader fails fast | `NavMeshBakeConfig_RequiresExplicitRuntimeIncrementalConfig` |
 | CDT triangulation failure | Failed artifact, no grid fallback | `CdtBakePipeline_DoesNotFallbackToGridMesh` |
 | Direct CDT pipeline call without obstacles or layer id | Fails fast | `CdtBakePipeline_RequiresExplicitObstacleSetAndLayer` |
@@ -106,7 +125,8 @@ Reused:
 - `ConfigPipeline` / `ConfigCatalogLoader` for `Navigation/navmesh.json`.
 - `AgentProfileRegistry` as the geometry profile SSOT.
 - `LogicTerrainField` as the grid/hex terrain input.
-- `NavObstacleSet` from the NAV-3 obstacle authoring SSOT.
+- `NavTriangleSurfaceTileIndex` as the arbitrary 3D triangle input and tile CSR.
+- `INavObstacleSource` from the NAV-3 obstacle authoring SSOT (`NavObstacleSet` cold/offline; `RuntimeNavObstacleSnapshot` runtime).
 - `RecastNavTileBaker` and `CdtNavBakeAlgorithm` as `INavBakeAlgorithm` adapters.
 - `NavQueryServiceRegistry` and `NavTileStore` for runtime publication.
 
@@ -117,7 +137,7 @@ No private loader, fallback layer injection, or second obstacle data source is a
 - Data-driven: mode, algorithm, profile, layer, runtime budget, and build tuning all come from config or context.
 - No fallback: missing config, bad casing, missing obstacle set, bad layer id, or unsupported algorithm fails fast.
 - No duplicate data source: CLI, Bridge, offline bake, and runtime rebuild all go through `NavBakeService` and the NAV-3 obstacle SSOT.
-- Strict casing: `offline`, `runtime-incremental`, `recast`, `cdt`, profile ids, and layer ids are all case-sensitive.
-- Contract tests cover adapter parity, strict config, no grid fallback, explicit obstacle/layer requirements, and runtime incremental CDT gating.
+- Strict casing: `offline`, `runtime-incremental`, `recast`, `cdt`, `layered-span`, profile ids, and layer ids are all case-sensitive.
+- Contract tests cover adapter parity, strict config, the exact-one input union, capability rejection without fallback, no grid fallback, and explicit obstacle/layer requirements.
 - GitBook indexes include this page and the runtime incremental follow-up page.
 - This page links back to #281, #287, and #304.

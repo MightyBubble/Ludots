@@ -184,6 +184,13 @@ namespace Ludots.Core.Input.CommandSources
 
         private bool IsAcquisitionSuppressed()
         {
+            if (_globals.TryGetValue(CoreServiceKeys.CommandSourceAcquisitionSuppressed.Name, out object? suppressObj) &&
+                suppressObj is bool suppressed &&
+                suppressed)
+            {
+                return true;
+            }
+
             return _globals.TryGetValue(CoreServiceKeys.ActiveInputOrderMapping.Name, out var mappingObj) &&
                    mappingObj is Ludots.Core.Input.Orders.InputOrderMappingSystem mapping &&
                    mapping.IsAiming;

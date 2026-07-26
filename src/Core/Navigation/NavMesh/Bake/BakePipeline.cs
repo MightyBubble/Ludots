@@ -64,7 +64,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             int chunkY,
             uint tileVersion,
             in NavBuildConfig config,
-            NavObstacleSet obstacles,
+            INavObstacleSource obstacles,
             string layerId,
             BakePipelineContext context = null)
         {
@@ -86,7 +86,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             int chunkY,
             uint tileVersion,
             in NavBuildConfig config,
-            NavObstacleSet obstacles,
+            INavObstacleSource obstacles,
             string layerId,
             BakePipelineContext context = null)
         {
@@ -95,7 +95,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
 
             if (obstacles == null)
             {
-                throw new InvalidOperationException("BakePipeline requires an explicit NavObstacleSet.");
+                throw new InvalidOperationException("BakePipeline requires an explicit INavObstacleSource.");
             }
 
             if (string.IsNullOrWhiteSpace(layerId) ||
@@ -144,8 +144,22 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
 
             if (walkableCount == 0)
             {
-                var artifact = CreateErrorArtifact(tileId, tileVersion, NavBakeStage.WalkMask, NavBakeErrorCode.NoWalkableDomain, "No walkable triangles in tile.", context);
-                return new BakePipelineResult(false, null, artifact);
+                terrain.GetWorldPositionMeters(startC, startR, out float emptyOriginXm, out float emptyOriginZm);
+                int emptyOriginXcm = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(emptyOriginXm));
+                int emptyOriginZcm = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(emptyOriginZm));
+                NavTile emptyTile = NavValidEmptyTile.Create(
+                    tileId,
+                    tileVersion,
+                    config.ComputeHash(),
+                    emptyOriginXcm,
+                    emptyOriginZcm);
+                context.CurrentStage = NavBakeStage.Serialize;
+                context.Log("Legitimate empty tile: no walkable domain.");
+                NavBakeArtifact emptyArtifact = NavValidEmptyTile.CreateSuccessArtifact(
+                    emptyTile,
+                    "No walkable triangles in tile.",
+                    context.Logs.ToArray());
+                return new BakePipelineResult(true, emptyTile, emptyArtifact);
             }
 
             bool cdtSucceeded = TryCdtPipeline(context, startC, startR, config);
@@ -380,7 +394,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 context.WalkMask.WalkableTriangleCount,
                 tile.VertexCount,
                 tile.TriangleCount,
-                tile.Portals.Length,
+                tile.PortalCount,
                 context.Logs.ToArray());
 
             return new BakePipelineResult(true, tile, artifact);
@@ -684,7 +698,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             }
 
             int clearance = Math.Max(0, Math.Min(len / 2, minClearance == int.MaxValue ? 0 : minClearance));
-            dst.Add(new NavBorderPortal(side, u0, v0, u1, v1, x0cm, z0cm, x1cm, z1cm, clearance));
+            dst.Add(new NavBorderPortal(side, u0, v0, u1, v1, x0cm, leftYcm: 0, z0cm, x1cm, rightYcm: 0, z1cm, clearance));
         }
 
         private static bool IsCellAnyTriangleWalkable(LogicTerrainField terrain, int mapWidth, int mapHeight, int c, int r, in NavBuildConfig config)

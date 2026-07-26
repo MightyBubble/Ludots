@@ -1,0 +1,155 @@
+[
+  {
+    "id": "dynamic_nav_bake_wall_segment_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "dynamic_nav_bake_wall_segment" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "dynamic_nav_bake_wall_segment",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "dynamic_nav_bake_wall_segment" },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "dynamic_nav_bake_wall_segment",
+    "defaultColor": [0.95, 0.42, 0.12, 1.0],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [3.0, 3.0, 1.0]
+        }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0.0,
+          "updatePolicy": "EveryFrame"
+        }
+      }
+    ]
+  },
+  {
+    "id": "dynamic_nav_bake.local_path",
+    "defaultColor": [0.12, 0.96, 0.78, 0.98],
+    "defaultLifetime": -1,
+    "paramDefaults": [
+      { "paramKey": "worldSpline.fill", "lane": "Vector", "vectorValue": [0.08, 0.92, 0.72, 0.42] },
+      { "paramKey": "worldSpline.border", "lane": "Vector", "vectorValue": [0.18, 1.0, 0.86, 0.98] },
+      { "paramKey": "worldSpline.width", "lane": "Float", "floatValue": 0.12 },
+      { "paramKey": "worldSpline.border.width", "lane": "Float", "floatValue": 0.025 }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Spline",
+          "assetId": "cube",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [0.12, 0.12, 0.12]
+        }
+      }
+    ]
+  },
+  {
+    "id": "dynamic_nav_bake.corridor_path",
+    "defaultColor": [1.0, 0.28, 0.82, 0.98],
+    "defaultLifetime": -1,
+    "paramDefaults": [
+      { "paramKey": "worldSpline.fill", "lane": "Vector", "vectorValue": [0.92, 0.18, 0.72, 0.28] },
+      { "paramKey": "worldSpline.border", "lane": "Vector", "vectorValue": [1.0, 0.42, 0.88, 0.98] },
+      { "paramKey": "worldSpline.width", "lane": "Float", "floatValue": 0.18 },
+      { "paramKey": "worldSpline.border.width", "lane": "Float", "floatValue": 0.03 }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Spline",
+          "assetId": "cube",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [0.18, 0.18, 0.18]
+        }
+      }
+    ]
+  },
+  {
+    "id": "dynamic_nav_bake.world_fact_rules",
+    "rules": [
+      {
+        "event": { "kind": "WorldSplineUpdated", "key": "dynamic_nav_bake.local_path" },
+        "command": { "kind": "CreatePerformer", "definitionId": "dynamic_nav_bake.local_path", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "worldSpline.width", "paramLane": "Float", "valueSource": "EventFloatD" }
+      },
+      {
+        "event": { "kind": "WorldSplineUpdated", "key": "dynamic_nav_bake.local_path" },
+        "command": { "kind": "SetParam", "definitionId": "dynamic_nav_bake.local_path", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "worldSpline.p0", "paramLane": "Vector", "valueSource": "Fixed", "vectorValue": [0, 0, 0, 0], "vectorXSource": "EventPositionX", "vectorYSource": "EventPositionY", "vectorZSource": "EventPositionZ", "vectorWSource": "Fixed" }
+      },
+      {
+        "event": { "kind": "WorldSplineUpdated", "key": "dynamic_nav_bake.local_path" },
+        "command": { "kind": "SetParam", "definitionId": "dynamic_nav_bake.local_path", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "worldSpline.p3", "paramLane": "Vector", "valueSource": "Fixed", "vectorValue": [0, 0, 0, 0], "vectorXSource": "EventFloatA", "vectorYSource": "EventFloatB", "vectorZSource": "EventFloatC", "vectorWSource": "Fixed" }
+      },
+      {
+        "event": { "kind": "WorldSplineUpdated", "key": "dynamic_nav_bake.local_path" },
+        "command": { "kind": "SetParam", "definitionId": "dynamic_nav_bake.local_path", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "worldSpline.width", "paramLane": "Float", "valueSource": "EventFloatD" }
+      },
+      {
+        "event": { "kind": "WorldSplineUpdated", "key": "dynamic_nav_bake.local_path" },
+        "command": { "kind": "SetParam", "definitionId": "dynamic_nav_bake.local_path", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "worldSpline.border.width", "paramLane": "Float", "valueSource": "EventMagnitude" }
+      },
+      {
+        "event": { "kind": "WorldSplineEnded", "key": "dynamic_nav_bake.local_path" },
+        "command": { "kind": "DestroyScopedPerformer", "definitionId": "dynamic_nav_bake.local_path", "scopeSource": "EventPayloadA" }
+      },
+      {
+        "event": { "kind": "WorldSplineUpdated", "key": "dynamic_nav_bake.corridor_path" },
+        "command": { "kind": "CreatePerformer", "definitionId": "dynamic_nav_bake.corridor_path", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "worldSpline.width", "paramLane": "Float", "valueSource": "EventFloatD" }
+      },
+      {
+        "event": { "kind": "WorldSplineUpdated", "key": "dynamic_nav_bake.corridor_path" },
+        "command": { "kind": "SetParam", "definitionId": "dynamic_nav_bake.corridor_path", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "worldSpline.p0", "paramLane": "Vector", "valueSource": "Fixed", "vectorValue": [0, 0, 0, 0], "vectorXSource": "EventPositionX", "vectorYSource": "EventPositionY", "vectorZSource": "EventPositionZ", "vectorWSource": "Fixed" }
+      },
+      {
+        "event": { "kind": "WorldSplineUpdated", "key": "dynamic_nav_bake.corridor_path" },
+        "command": { "kind": "SetParam", "definitionId": "dynamic_nav_bake.corridor_path", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "worldSpline.p3", "paramLane": "Vector", "valueSource": "Fixed", "vectorValue": [0, 0, 0, 0], "vectorXSource": "EventFloatA", "vectorYSource": "EventFloatB", "vectorZSource": "EventFloatC", "vectorWSource": "Fixed" }
+      },
+      {
+        "event": { "kind": "WorldSplineUpdated", "key": "dynamic_nav_bake.corridor_path" },
+        "command": { "kind": "SetParam", "definitionId": "dynamic_nav_bake.corridor_path", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "worldSpline.width", "paramLane": "Float", "valueSource": "EventFloatD" }
+      },
+      {
+        "event": { "kind": "WorldSplineUpdated", "key": "dynamic_nav_bake.corridor_path" },
+        "command": { "kind": "SetParam", "definitionId": "dynamic_nav_bake.corridor_path", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "worldSpline.border.width", "paramLane": "Float", "valueSource": "EventMagnitude" }
+      },
+      {
+        "event": { "kind": "WorldSplineEnded", "key": "dynamic_nav_bake.corridor_path" },
+        "command": { "kind": "DestroyScopedPerformer", "definitionId": "dynamic_nav_bake.corridor_path", "scopeSource": "EventPayloadA" }
+      }
+    ]
+  }
+]

@@ -286,12 +286,12 @@ Grand strategy / 4X:
 Open world / streaming:
 
 - Use chunk-window terrain projection and offline regional bake.
-- Use runtime-incremental CDT only for persistent structural changes such as doors, bridges, walls, and buildings.
+- Use a registered runtime-capable bake adapter for persistent structural changes such as doors, bridges, walls, and buildings. The current default host wires CDT for logic terrain.
 - Temporary crowd blockage remains MassNavigationFlow avoidance and should not trigger navmesh rebuild.
 
 ## Runtime Incremental Budget
 
-Runtime incremental rebuild is `runtime-incremental` + `cdt` only. The frame budget is target-tile based:
+Runtime incremental rebuild is selected by `mode: runtime-incremental`; the chosen adapter must declare support for the active input. The current estimator has measured models only for Recast/CDT logic terrain and explicitly rejects `layered-span` or triangle-input estimation until real metrics exist. The frame budget is target-tile based:
 
 ```text
 ticksToPublish = ceil(dirtyTargetTileCount / tileBudgetPerFixedTick)

@@ -669,6 +669,8 @@ namespace Ludots.Tests.Presentation
                 $"{owner} MassNavigationFlow blocker authoring must not implicitly duplicate a physics collider.");
             Assert.That(obstacle["radiusCm"]?.GetValue<float>(), Is.GreaterThan(0f));
             Assert.That(obstacle["navRadiusCm"]?.GetValue<float>(), Is.GreaterThan(0f));
+            Assert.That(obstacle["navMinYcm"], Is.Not.Null);
+            Assert.That(obstacle["navMaxYcm"], Is.Not.Null);
         }
 
         private static void AssertAgentTemplateAuthorsHealth(JsonObject template, float expectedBase, float expectedCurrent)

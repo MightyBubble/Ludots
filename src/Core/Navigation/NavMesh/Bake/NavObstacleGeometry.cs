@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using Ludots.Core.Navigation.NavMesh.Config;
 using Ludots.Core.Navigation.Terrain;
 using Ludots.Core.Spatial;
@@ -13,11 +12,11 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             LogicTerrainField terrain,
             int chunkX,
             int chunkY,
-            NavObstacleSet obstacles,
+            INavObstacleSource obstacles,
             string layerId)
         {
             if (terrain == null) throw new ArgumentNullException(nameof(terrain));
-            if (obstacles?.Obstacles == null || obstacles.Obstacles.Count == 0)
+            if (obstacles == null || obstacles.ObstacleCount == 0)
             {
                 return 0;
             }
@@ -75,10 +74,10 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             int bz,
             int cx,
             int cz,
-            NavObstacleSet obstacles,
+            INavObstacleSource obstacles,
             string layerId)
         {
-            if (obstacles?.Obstacles == null || obstacles.Obstacles.Count == 0)
+            if (obstacles == null || obstacles.ObstacleCount == 0)
             {
                 return false;
             }
@@ -87,36 +86,38 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             int mx = (ax + bx + cx) / 3;
             int mz = (az + bz + cz) / 3;
 
-            for (int i = 0; i < obstacles.Obstacles.Count; i++)
+            for (int i = 0; i < obstacles.ObstacleCount; i++)
             {
-                NavObstacle obstacle = obstacles.Obstacles[i]
-                    ?? throw new InvalidOperationException($"NavObstacleSet.obstacles[{i}] is null.");
-                if (!obstacle.Enabled)
+                if (!obstacles.IsEnabled(i))
                 {
                     continue;
                 }
 
-                if (!string.Equals(obstacle.LayerId, layerId, StringComparison.Ordinal))
+                if (!obstacles.MatchesLayer(i, layerId))
                 {
                     continue;
                 }
 
-                switch (obstacle.Kind)
+                switch (obstacles.GetKind(i))
                 {
                     case NavObstacleKind.Circle:
-                        if (TriangleIntersectsCircle(ax, az, bx, bz, cx, cz, obstacle.Center.Xcm, obstacle.Center.Zcm, obstacle.RadiusCm))
+                    {
+                        obstacles.GetCircle(i, out int centerX, out int centerZ, out int radiusCm);
+                        if (TriangleIntersectsCircle(ax, az, bx, bz, cx, cz, centerX, centerZ, radiusCm))
                         {
                             return true;
                         }
                         break;
+                    }
                     case NavObstacleKind.Polygon:
-                        if (TriangleIntersectsPolygon(ax, az, bx, bz, cx, cz, mx, mz, obstacle.Points))
+                        if (TriangleIntersectsPolygon(ax, az, bx, bz, cx, cz, mx, mz, obstacles, i))
                         {
                             return true;
                         }
                         break;
                     default:
-                        throw new InvalidOperationException($"Nav obstacle '{obstacle.Id}' kind '{obstacle.Kind}' is not supported by navmesh bake.");
+                        throw new InvalidOperationException(
+                            $"Nav obstacle index {i} kind '{obstacles.GetKind(i)}' is not supported by navmesh bake.");
                 }
             }
 
@@ -166,32 +167,32 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             int cz,
             int mx,
             int mz,
-            IReadOnlyList<NavPointCm> polygon)
+            INavObstacleSource obstacles,
+            int obstacleIndex)
         {
-            if (polygon == null || polygon.Count < 3)
+            int vertexCount = obstacles.GetPolygonVertexCount(obstacleIndex);
+            if (vertexCount < 3)
             {
                 throw new InvalidOperationException("Polygon nav obstacle requires at least 3 points.");
             }
 
-            if (PointInPolygon(mx, mz, polygon) ||
-                PointInPolygon(ax, az, polygon) ||
-                PointInPolygon(bx, bz, polygon) ||
-                PointInPolygon(cx, cz, polygon))
+            if (PointInPolygon(mx, mz, obstacles, obstacleIndex, vertexCount) ||
+                PointInPolygon(ax, az, obstacles, obstacleIndex, vertexCount) ||
+                PointInPolygon(bx, bz, obstacles, obstacleIndex, vertexCount) ||
+                PointInPolygon(cx, cz, obstacles, obstacleIndex, vertexCount))
             {
                 return true;
             }
 
-            for (int i = 0, j = polygon.Count - 1; i < polygon.Count; j = i++)
+            for (int i = 0, j = vertexCount - 1; i < vertexCount; j = i++)
             {
-                int px = polygon[i].Xcm;
-                int pz = polygon[i].Zcm;
+                obstacles.GetPolygonVertex(obstacleIndex, i, out int px, out int pz);
                 if (PointInTriangle(px, pz, ax, az, bx, bz, cx, cz))
                 {
                     return true;
                 }
 
-                int qx = polygon[j].Xcm;
-                int qz = polygon[j].Zcm;
+                obstacles.GetPolygonVertex(obstacleIndex, j, out int qx, out int qz);
                 if (SegmentsIntersect(ax, az, bx, bz, qx, qz, px, pz) ||
                     SegmentsIntersect(bx, bz, cx, cz, qx, qz, px, pz) ||
                     SegmentsIntersect(cx, cz, ax, az, qx, qz, px, pz))
@@ -210,16 +211,19 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             zcm = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(zm));
         }
 
-        private static bool PointInPolygon(int xcm, int zcm, IReadOnlyList<NavPointCm> polygon)
+        private static bool PointInPolygon(
+            int xcm,
+            int zcm,
+            INavObstacleSource obstacles,
+            int obstacleIndex,
+            int vertexCount)
         {
             bool inside = false;
-            int j = polygon.Count - 1;
-            for (int i = 0; i < polygon.Count; j = i++)
+            int j = vertexCount - 1;
+            for (int i = 0; i < vertexCount; j = i++)
             {
-                int xi = polygon[i].Xcm;
-                int zi = polygon[i].Zcm;
-                int xj = polygon[j].Xcm;
-                int zj = polygon[j].Zcm;
+                obstacles.GetPolygonVertex(obstacleIndex, i, out int xi, out int zi);
+                obstacles.GetPolygonVertex(obstacleIndex, j, out int xj, out int zj);
 
                 if ((zi > zcm) == (zj > zcm))
                 {

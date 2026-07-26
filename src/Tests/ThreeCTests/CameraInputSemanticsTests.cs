@@ -205,10 +205,85 @@ namespace Ludots.Tests.ThreeC
             Assert.That(manager.State.TargetCm.X, Is.EqualTo(0f).Within(0.01f));
             Assert.That(manager.State.TargetCm.Y, Is.EqualTo(0f).Within(0.01f));
 
+            SetBehaviorInput(input, pointerPosition: new Vector2(960f, 540f));
+            manager.Update(1f);
+
             SetBehaviorInput(input, pointerPosition: Vector2.Zero);
             manager.Update(1f);
 
             Assert.That(manager.State.TargetCm.Length(), Is.GreaterThan(0.01f));
+        }
+
+        [Test]
+        public void VirtualCameraRuntime_EdgePan_FirstPointerFrameAtViewportEdge_DoesNotMoveUntilPointerVisitsInterior()
+        {
+            var (manager, input) = CreateCameraManager(new VirtualCameraDefinition
+            {
+                Id = "EdgePanStartupGuard",
+                Priority = 0,
+                RigKind = CameraRigKind.Orbit,
+                PanMode = CameraPanMode.EdgePan,
+                EdgePanMarginPx = 10f,
+                EdgePanSpeedCmPerSec = 8000f,
+                EdgePanRequiresPointerInsideViewport = true,
+                RotateMode = CameraRotateMode.None,
+                DistanceCm = 5000f,
+                Pitch = 60f,
+                FovYDeg = 60f,
+                Yaw = 180f,
+                EnableZoom = false,
+                AllowUserInput = true
+            }, new StubViewController(1920f, 1080f));
+
+            SetBehaviorInput(input, pointerPosition: Vector2.Zero);
+            manager.Update(1f);
+
+            Assert.That(manager.State.TargetCm, Is.EqualTo(Vector2.Zero),
+                "A window opening under a pointer at its edge must not immediately pan the camera.");
+
+            SetBehaviorInput(input, pointerPosition: new Vector2(960f, 540f));
+            manager.Update(1f);
+            SetBehaviorInput(input, pointerPosition: Vector2.Zero);
+            manager.Update(1f);
+
+            Assert.That(manager.State.TargetCm.Length(), Is.GreaterThan(0.01f),
+                "Edge pan should engage after the player has moved the pointer through the viewport interior.");
+        }
+
+        [Test]
+        public void VirtualCameraRuntime_EdgePan_PointerLeavingViewport_RearmsStartupGuard()
+        {
+            var (manager, input) = CreateCameraManager(new VirtualCameraDefinition
+            {
+                Id = "EdgePanRefocusGuard",
+                Priority = 0,
+                RigKind = CameraRigKind.Orbit,
+                PanMode = CameraPanMode.EdgePan,
+                EdgePanMarginPx = 10f,
+                EdgePanSpeedCmPerSec = 8000f,
+                EdgePanRequiresPointerInsideViewport = true,
+                RotateMode = CameraRotateMode.None,
+                DistanceCm = 5000f,
+                Pitch = 60f,
+                FovYDeg = 60f,
+                Yaw = 180f,
+                EnableZoom = false,
+                AllowUserInput = true
+            }, new StubViewController(1920f, 1080f));
+
+            SetBehaviorInput(input, pointerPosition: new Vector2(960f, 540f));
+            manager.Update(1f);
+            SetBehaviorInput(input, pointerPosition: Vector2.Zero);
+            manager.Update(1f);
+            Vector2 targetBeforeFocusLoss = manager.State.TargetCm;
+
+            SetBehaviorInput(input, pointerPosition: new Vector2(-1f, -1f));
+            manager.Update(1f);
+            SetBehaviorInput(input, pointerPosition: Vector2.Zero);
+            manager.Update(1f);
+
+            Assert.That(manager.State.TargetCm, Is.EqualTo(targetBeforeFocusLoss),
+                "Returning focus while the pointer is at the edge must not resume a latched pan.");
         }
 
         [Test]

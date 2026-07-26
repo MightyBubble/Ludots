@@ -128,6 +128,33 @@
       "buildMode": "auto"
     },
     {
+      "id": "nav_bake_showcase_raylib",
+      "name": "Dynamic NavMesh Construction Lab Raylib",
+      "selectors": [
+        "$nav_bake_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "nav_bake_dynamic_rts_raylib",
+      "name": "Dynamic NavMesh RTS Raylib",
+      "selectors": [
+        "$nav_bake_dynamic_rts"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "nav_bake_open_world_64x64_raylib",
+      "name": "Dynamic NavMesh Open World 64x64 Raylib",
+      "selectors": [
+        "$nav_bake_open_world_64x64"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "capability_standard_participant_views_raylib",
       "name": "Capability Standard Participant Views Raylib",
       "selectors": [

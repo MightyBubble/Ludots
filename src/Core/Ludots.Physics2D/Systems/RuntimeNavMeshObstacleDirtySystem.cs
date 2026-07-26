@@ -1,5 +1,5 @@
 using System;
-using System.Collections.Generic;
+using System.Diagnostics;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Components;
@@ -7,8 +7,10 @@ using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.NavMesh.Bake;
 using Ludots.Core.Navigation.NavMesh.Config;
+using Ludots.Core.Navigation.NavMesh.LayeredSpan;
 using Ludots.Core.Physics2D.Components;
 using Ludots.Core.Scripting;
 
@@ -16,16 +18,35 @@ namespace Ludots.Core.Physics2D.Systems
 {
     public sealed class RuntimeNavMeshObstacleDirtySystem : BaseSystem<World, float>
     {
-        private static readonly QueryDescription _singleQuery = new QueryDescription()
+        private const byte IndexEmpty = 0;
+        private const byte IndexOccupied = 1;
+        private const byte IndexTombstone = 2;
+
+        private static readonly QueryDescription SingleQuery = new QueryDescription()
             .WithAll<WorldPositionCm, ManifestationObstacleIntent2D, ManifestationObstacleBridge2DState, RuntimeNavMeshStructuralObstacle>();
 
-        private static readonly QueryDescription _compoundQuery = new QueryDescription()
+        private static readonly QueryDescription CompoundQuery = new QueryDescription()
             .WithAll<WorldPositionCm, CompoundObstacle2DState, RuntimeNavMeshStructuralObstacle>();
 
         private readonly GameEngine _engine;
         private readonly ShapeDataStorage2D _shapeStorage;
-        private readonly Dictionary<Entity, TrackedObstacle> _tracked = new Dictionary<Entity, TrackedObstacle>();
-        private readonly List<Entity> _seen = new List<Entity>(128);
+
+        private Entity[] _indexKeys = Array.Empty<Entity>();
+        private byte[] _indexState = Array.Empty<byte>();
+        private int[] _indexSlots = Array.Empty<int>();
+        private int _indexMask;
+        private Entity[] _trackedEntities = Array.Empty<Entity>();
+        private WorldAabbCm[] _trackedBounds = Array.Empty<WorldAabbCm>();
+        private int[] _trackedShapeSignatures = Array.Empty<int>();
+        private int[] _trackedPoseSignatures = Array.Empty<int>();
+        private int[] _trackedSeenEpoch = Array.Empty<int>();
+        private int[] _removeScratch = Array.Empty<int>();
+        private RuntimeNavMeshRebuildPublishedTile[] _publishedScratch = Array.Empty<RuntimeNavMeshRebuildPublishedTile>();
+        private NavBakeResultEntry[] _failureScratch = Array.Empty<NavBakeResultEntry>();
+        private int _trackedCount;
+        private int _trackedCapacity;
+        private int _updateEpoch;
+        private bool _trackingConfigured;
 
         public RuntimeNavMeshObstacleDirtySystem(GameEngine engine)
             : base(engine?.World ?? throw new ArgumentNullException(nameof(engine)))
@@ -42,13 +63,12 @@ namespace Ludots.Core.Physics2D.Systems
             bool hasBakeConfig = _engine.TryGetService(CoreServiceKeys.NavMeshBakeConfig, out NavMeshBakeConfig bakeConfig);
             if (!hasBakeConfig || bakeConfig.ParsedMode != NavBakeMode.RuntimeIncremental)
             {
-                _tracked.Clear();
-                _seen.Clear();
+                ClearTracking();
                 return;
             }
 
             if (!_engine.TryGetService(CoreServiceKeys.RuntimeNavMeshRebuildQueue, out RuntimeIncrementalNavMeshRebuildQueue queue) ||
-                !_engine.TryGetService(CoreServiceKeys.RuntimeNavMeshObstacles, out NavObstacleSet obstacleSet))
+                !_engine.TryGetService(CoreServiceKeys.RuntimeNavMeshObstacles, out RuntimeNavObstacleSnapshot obstacleSnapshot))
             {
                 throw new InvalidOperationException("Runtime-incremental navmesh mode requires runtime obstacle and rebuild queue services.");
             }
@@ -58,97 +78,424 @@ namespace Ludots.Core.Physics2D.Systems
                 throw new InvalidOperationException("Runtime-incremental navmesh mode requires NavMeshBakeConfig.runtimeIncremental.");
             }
 
+            EnsureTrackingCapacity(bakeConfig.RuntimeIncremental);
             string layerId = RequireSingleLayerId(bakeConfig);
-            _seen.Clear();
-            obstacleSet.Obstacles.Clear();
-            CaptureSingles(obstacleSet, queue, layerId, bakeConfig.RuntimeIncremental.IncludeNeighborTiles);
-            CaptureCompounds(obstacleSet, queue, layerId, bakeConfig.RuntimeIncremental.IncludeNeighborTiles);
-            RemoveMissingTracked(queue, bakeConfig.RuntimeIncremental.IncludeNeighborTiles);
-            if (queue.PendingTileCount > 0)
+            if (!string.Equals(obstacleSnapshot.BoundLayerId, layerId, StringComparison.Ordinal))
             {
-                queue.ProcessBudget(bakeConfig.RuntimeIncremental.TileBudgetPerFixedTick);
+                throw new InvalidOperationException(
+                    "Runtime nav obstacle snapshot bound layer id must match the single authored nav layer.");
+            }
+
+            if (_updateEpoch == int.MaxValue)
+            {
+                throw new InvalidOperationException("RuntimeNavMeshObstacleDirtySystem update epoch overflow.");
+            }
+
+            _updateEpoch++;
+            long collectAllocBefore = GC.GetAllocatedBytesForCurrentThread();
+            long collectTimeBefore = Stopwatch.GetTimestamp();
+            obstacleSnapshot.BeginCapture();
+
+            var singleJob = new CaptureSingleJob
+            {
+                System = this,
+                Snapshot = obstacleSnapshot,
+                Queue = queue,
+                IncludeNeighbors = bakeConfig.RuntimeIncremental.IncludeNeighborTiles
+            };
+            World.InlineEntityQuery<CaptureSingleJob, WorldPositionCm, ManifestationObstacleIntent2D, ManifestationObstacleBridge2DState>(
+                in SingleQuery,
+                ref singleJob);
+
+            var compoundJob = new CaptureCompoundJob
+            {
+                System = this,
+                Snapshot = obstacleSnapshot,
+                Queue = queue,
+                IncludeNeighbors = bakeConfig.RuntimeIncremental.IncludeNeighborTiles
+            };
+            World.InlineEntityQuery<CaptureCompoundJob, WorldPositionCm, CompoundObstacle2DState>(
+                in CompoundQuery,
+                ref compoundJob);
+
+            RemoveMissingTracked(queue, bakeConfig.RuntimeIncremental.IncludeNeighborTiles);
+            obstacleSnapshot.EndCaptureAndSort();
+            long collectTicks = Stopwatch.GetTimestamp() - collectTimeBefore;
+            long collectAllocated = Math.Max(0L, GC.GetAllocatedBytesForCurrentThread() - collectAllocBefore);
+
+            if (queue.PendingTileCount > 0 || queue.SealedRemainingCount > 0)
+            {
+                long bakeCommitAllocBefore = GC.GetAllocatedBytesForCurrentThread();
+                RuntimeNavMeshRebuildBatchStats stats = queue.ProcessBudgetInto(
+                    bakeConfig.RuntimeIncremental.TileBudgetPerFixedTick,
+                    _publishedScratch.AsSpan(),
+                    _failureScratch.AsSpan());
+                long bakeCommitAllocated = Math.Max(0L, GC.GetAllocatedBytesForCurrentThread() - bakeCommitAllocBefore);
+
+                if (_engine.TryGetService(CoreServiceKeys.RuntimeNavMeshTelemetry, out RuntimeNavMeshTelemetryService telemetry))
+                {
+                    long peakWorkerScratch = ResolveOwnedWorkerScratchBytes(queue.RequestedAlgorithm);
+                    long peakResidentBytes = EstimateResidentBytes(bakeConfig.RuntimeIncremental);
+                    telemetry.RecordHotUpdate(
+                        collectTicks,
+                        stats.BakeTicks,
+                        stats.CommitTicks,
+                        checked(collectAllocated + bakeCommitAllocated),
+                        in stats,
+                        peakWorkerScratch,
+                        peakResidentBytes,
+                        queue.DroppedDirtyCommandCount,
+                        queue.CapacityGrowthCount,
+                        fallbackCount: 0);
+                }
             }
         }
 
-        private void CaptureSingles(
-            NavObstacleSet obstacleSet,
-            RuntimeIncrementalNavMeshRebuildQueue queue,
-            string layerId,
-            bool includeNeighbors)
+        private long ResolveOwnedWorkerScratchBytes(NavBakeAlgorithmKind algorithm)
         {
-            World.Query(in _singleQuery, (Entity entity, ref WorldPositionCm position, ref ManifestationObstacleIntent2D intent, ref ManifestationObstacleBridge2DState state) =>
+            if (algorithm != NavBakeAlgorithmKind.LayeredSpan)
             {
-                if (intent.SinkNavigationObstacle == 0)
-                {
-                    TrackOrRemove(entity, queue, includeNeighbors);
-                    return;
-                }
+                // Recast/CDT do not own a fixed Core scratch pool; never report 0 as proof.
+                return RuntimeNavMeshTelemetryService.AdapterScratchNotOwned;
+            }
 
-                NavObstacle obstacle = BuildObstacle(
-                    entity,
-                    $"runtime-obstacle-{entity.Id}",
-                    intent.Shape,
-                    state.ShapeDataIndex,
-                    position.Value,
-                    ResolveRotation(entity),
-                    layerId);
-                obstacleSet.Obstacles.Add(obstacle);
-                TrackCurrent(entity, obstacle, state.ShapeSignature, state.PoseSignature, queue, includeNeighbors);
-            });
+            if (!_engine.TryGetService(CoreServiceKeys.NavBakeService, out NavBakeService bakeService) ||
+                bakeService == null ||
+                !bakeService.TryGetAlgorithm(NavBakeAlgorithmKind.LayeredSpan, out INavBakeAlgorithm adapter) ||
+                adapter is not LayeredSpanNavBakeAlgorithm layered)
+            {
+                throw new InvalidOperationException(
+                    "LayeredSpan telemetry requires the owned LayeredSpanNavBakeAlgorithm scratch pool; " +
+                    "cannot fabricate peakWorkerScratchBytes from config alone.");
+            }
+
+            return layered.PreallocatedScratchChannelPayloadBytes;
         }
 
-        private void CaptureCompounds(
-            NavObstacleSet obstacleSet,
-            RuntimeIncrementalNavMeshRebuildQueue queue,
-            string layerId,
-            bool includeNeighbors)
+        private long EstimateResidentBytes(NavRuntimeIncrementalConfig runtime)
         {
-            World.Query(in _compoundQuery, (Entity entity, ref WorldPositionCm position, ref CompoundObstacle2DState state) =>
+            if (runtime == null)
             {
-                if (state.SinkNavigationObstacle == 0)
-                {
-                    TrackOrRemove(entity, queue, includeNeighbors);
-                    return;
-                }
+                throw new ArgumentNullException(nameof(runtime));
+            }
 
-                WorldAabbCm combined = default;
-                bool hasBounds = false;
-                Fix64 rotation = ResolveRotation(entity);
-                for (int i = 0; i < state.PieceCount; i++)
-                {
-                    NavObstacle obstacle = BuildObstacle(
-                        entity,
-                        $"runtime-compound-obstacle-{entity.Id}.piece{i}",
-                        state.GetShape(i),
-                        state.GetShapeDataIndex(i),
-                        position.Value,
-                        rotation,
-                        layerId);
-                    obstacleSet.Obstacles.Add(obstacle);
-                    WorldAabbCm bounds = ComputeBounds(obstacle);
-                    combined = hasBounds ? Union(combined, bounds) : bounds;
-                    hasBounds = true;
-                }
+            if (!_engine.TryGetService(CoreServiceKeys.NavQueryServices, out NavQueryServiceRegistry registry) ||
+                registry == null)
+            {
+                throw new InvalidOperationException(
+                    "RuntimeNavMeshObstacleDirtySystem peakResidentBytes requires NavQueryServices; " +
+                    "config-only estimate fallback is forbidden.");
+            }
 
-                if (!hasBounds)
-                {
-                    TrackOrRemove(entity, queue, includeNeighbors);
-                    return;
-                }
+            if (!_engine.TryGetService(CoreServiceKeys.NavMeshBakeConfig, out NavMeshBakeConfig bakeConfig) ||
+                bakeConfig?.Layers == null)
+            {
+                throw new InvalidOperationException(
+                    "RuntimeNavMeshObstacleDirtySystem peakResidentBytes requires NavMeshBakeConfig.Layers; " +
+                    "config-only estimate fallback is forbidden.");
+            }
 
-                TrackCurrent(entity, combined, state.ShapeSignature, state.PoseSignature, queue, includeNeighbors);
-            });
+            if (!_engine.TryGetService(CoreServiceKeys.NavMeshProfiles, out NavMeshProfileRegistry profiles) ||
+                profiles == null)
+            {
+                throw new InvalidOperationException(
+                    "RuntimeNavMeshObstacleDirtySystem peakResidentBytes requires NavMeshProfiles; " +
+                    "config-only estimate fallback is forbidden.");
+            }
+
+            long total = 0L;
+            int stores = 0;
+            for (int li = 0; li < bakeConfig.Layers.Count; li++)
+            {
+                int layer = bakeConfig.Layers[li].Layer;
+                for (int pi = 0; pi < profiles.Count; pi++)
+                {
+                    if (!registry.TryGetStore(layer, pi, out NavTileStore store) || store == null)
+                    {
+                        throw new InvalidOperationException(
+                            $"RuntimeNavMeshObstacleDirtySystem peakResidentBytes requires NavTileStore for layer={layer} profileIndex={pi}; " +
+                            "missing store is an explicit failure (no config-capacity substitute).");
+                    }
+
+                    total = checked(total + store.PreallocatedResidentChannelPayloadBytes);
+                    stores++;
+                }
+            }
+
+            if (stores <= 0)
+            {
+                throw new InvalidOperationException(
+                    "RuntimeNavMeshObstacleDirtySystem peakResidentBytes found zero NavTileStore instances; " +
+                    "cannot fabricate resident bytes from runtimeIncremental capacities.");
+            }
+
+            return total;
         }
 
-        private void TrackCurrent(
+        private void EnsureTrackingCapacity(NavRuntimeIncrementalConfig runtime)
+        {
+            int trackedStructuralEntityCapacity = runtime.TrackedStructuralEntityCapacity;
+            if (trackedStructuralEntityCapacity <= 0)
+            {
+                throw new InvalidOperationException(
+                    "NavMeshBakeConfig.runtimeIncremental.trackedStructuralEntityCapacity must be > 0.");
+            }
+
+            if (_trackingConfigured && _trackedCapacity == trackedStructuralEntityCapacity)
+            {
+                return;
+            }
+
+            if (_trackingConfigured && _trackedCount > 0)
+            {
+                throw new InvalidOperationException(
+                    "RuntimeNavMeshObstacleDirtySystem cannot resize trackedStructuralEntityCapacity while entities are tracked.");
+            }
+
+            _trackedCapacity = trackedStructuralEntityCapacity;
+            int indexCapacity = NextPowerOfTwo(checked(trackedStructuralEntityCapacity * 2));
+            _indexMask = indexCapacity - 1;
+            _indexKeys = new Entity[indexCapacity];
+            _indexState = new byte[indexCapacity];
+            _indexSlots = new int[indexCapacity];
+            _trackedEntities = new Entity[trackedStructuralEntityCapacity];
+            _trackedBounds = new WorldAabbCm[trackedStructuralEntityCapacity];
+            _trackedShapeSignatures = new int[trackedStructuralEntityCapacity];
+            _trackedPoseSignatures = new int[trackedStructuralEntityCapacity];
+            _trackedSeenEpoch = new int[trackedStructuralEntityCapacity];
+            _removeScratch = new int[trackedStructuralEntityCapacity];
+            _publishedScratch = new RuntimeNavMeshRebuildPublishedTile[runtime.PublishedTileCapacity];
+            _failureScratch = new NavBakeResultEntry[runtime.StagedEntryCapacity];
+            _trackedCount = 0;
+            _trackingConfigured = true;
+        }
+
+        private void ClearTracking()
+        {
+            if (_trackedCount == 0)
+            {
+                return;
+            }
+
+            Array.Clear(_indexState, 0, _indexState.Length);
+            _trackedCount = 0;
+        }
+
+        private void CaptureSingle(
             Entity entity,
-            NavObstacle obstacle,
-            int shapeSignature,
-            int poseSignature,
+            ref WorldPositionCm position,
+            ref ManifestationObstacleIntent2D intent,
+            ref ManifestationObstacleBridge2DState state,
+            RuntimeNavObstacleSnapshot snapshot,
             RuntimeIncrementalNavMeshRebuildQueue queue,
             bool includeNeighbors)
         {
-            TrackCurrent(entity, ComputeBounds(obstacle), shapeSignature, poseSignature, queue, includeNeighbors);
+            if (intent.SinkNavigationObstacle == 0)
+            {
+                TrackOrRemove(entity, queue, includeNeighbors);
+                return;
+            }
+
+            WorldAabbCm bounds = WriteShapePrimitive(
+                snapshot,
+                entity,
+                pieceIndex: 0,
+                intent.Shape,
+                state.ShapeDataIndex,
+                position.Value,
+                ResolveRotation(entity),
+                intent.NavMinYcm,
+                intent.NavMaxYcm);
+            TrackCurrent(entity, bounds, state.ShapeSignature, state.PoseSignature, queue, includeNeighbors);
+        }
+
+        private void CaptureCompound(
+            Entity entity,
+            ref WorldPositionCm position,
+            ref CompoundObstacle2DState state,
+            RuntimeNavObstacleSnapshot snapshot,
+            RuntimeIncrementalNavMeshRebuildQueue queue,
+            bool includeNeighbors)
+        {
+            if (state.SinkNavigationObstacle == 0)
+            {
+                TrackOrRemove(entity, queue, includeNeighbors);
+                return;
+            }
+
+            WorldAabbCm combined = default;
+            bool hasBounds = false;
+            Fix64 rotation = ResolveRotation(entity);
+            for (int i = 0; i < state.PieceCount; i++)
+            {
+                WorldAabbCm bounds = WriteShapePrimitive(
+                    snapshot,
+                    entity,
+                    pieceIndex: i,
+                    state.GetShape(i),
+                    state.GetShapeDataIndex(i),
+                    position.Value,
+                    rotation,
+                    state.GetNavMinYcm(i),
+                    state.GetNavMaxYcm(i));
+                combined = hasBounds ? Union(combined, bounds) : bounds;
+                hasBounds = true;
+            }
+
+            if (!hasBounds)
+            {
+                TrackOrRemove(entity, queue, includeNeighbors);
+                return;
+            }
+
+            TrackCurrent(entity, combined, state.ShapeSignature, state.PoseSignature, queue, includeNeighbors);
+        }
+
+        private WorldAabbCm WriteShapePrimitive(
+            RuntimeNavObstacleSnapshot snapshot,
+            Entity entity,
+            int pieceIndex,
+            ManifestationObstacleShape2D shape,
+            int shapeDataIndex,
+            Fix64Vec2 worldPosition,
+            Fix64 rotation,
+            int minYcm,
+            int maxYcm)
+        {
+            if (minYcm >= maxYcm)
+            {
+                throw new InvalidOperationException(
+                    $"Runtime nav obstacle entity {entity.Id} piece {pieceIndex} requires minYcm < maxYcm for half-open [minYcm,maxYcm).");
+            }
+
+            return shape switch
+            {
+                ManifestationObstacleShape2D.Circle => WriteCircle(snapshot, entity, pieceIndex, shapeDataIndex, worldPosition, rotation, minYcm, maxYcm),
+                ManifestationObstacleShape2D.Box => WriteBox(snapshot, entity, pieceIndex, shapeDataIndex, worldPosition, rotation, minYcm, maxYcm),
+                ManifestationObstacleShape2D.Polygon => WritePolygon(snapshot, entity, pieceIndex, shapeDataIndex, worldPosition, rotation, minYcm, maxYcm),
+                _ => throw new InvalidOperationException($"Unsupported runtime nav obstacle shape '{shape}' on entity {entity.Id}.")
+            };
+        }
+
+        private WorldAabbCm WriteCircle(
+            RuntimeNavObstacleSnapshot snapshot,
+            Entity entity,
+            int pieceIndex,
+            int shapeDataIndex,
+            Fix64Vec2 worldPosition,
+            Fix64 rotation,
+            int minYcm,
+            int maxYcm)
+        {
+            if (!_shapeStorage.TryGetCircle(shapeDataIndex, out CircleShapeData circle))
+            {
+                throw new InvalidOperationException(
+                    $"Runtime nav obstacle entity {entity.Id} piece {pieceIndex} references missing circle shape data index {shapeDataIndex}.");
+            }
+
+            Fix64Vec2 center = ShapeWorldTransform2D.GetCircleCenter(worldPosition, rotation, circle);
+            int centerX = center.X.RoundToInt();
+            int centerZ = center.Y.RoundToInt();
+            int radiusCm = circle.Radius.RoundToInt();
+            int index = snapshot.BeginPrimitive(entity.Id, pieceIndex, NavObstacleKind.Circle, minYcm, maxYcm);
+            snapshot.SetCircle(index, centerX, centerZ, radiusCm);
+            return WorldAabbCm.FromCenterRadius(new WorldCmInt2(centerX, centerZ), radiusCm);
+        }
+
+        private WorldAabbCm WriteBox(
+            RuntimeNavObstacleSnapshot snapshot,
+            Entity entity,
+            int pieceIndex,
+            int shapeDataIndex,
+            Fix64Vec2 worldPosition,
+            Fix64 rotation,
+            int minYcm,
+            int maxYcm)
+        {
+            if (!_shapeStorage.TryGetBox(shapeDataIndex, out BoxShapeData box))
+            {
+                throw new InvalidOperationException(
+                    $"Runtime nav obstacle entity {entity.Id} piece {pieceIndex} references missing box shape data index {shapeDataIndex}.");
+            }
+
+            Fix64Vec2 center = ShapeWorldTransform2D.GetBoxCenter(worldPosition, rotation, box);
+            int index = snapshot.BeginPrimitive(entity.Id, pieceIndex, NavObstacleKind.Polygon, minYcm, maxYcm);
+            int vertexOffset = snapshot.BeginPolygonVertices(index, 4);
+
+            int minX = int.MaxValue;
+            int maxX = int.MinValue;
+            int minZ = int.MaxValue;
+            int maxZ = int.MinValue;
+            WriteBoxCorner(snapshot, vertexOffset + 0, center, rotation, -box.HalfWidth, -box.HalfHeight, ref minX, ref maxX, ref minZ, ref maxZ);
+            WriteBoxCorner(snapshot, vertexOffset + 1, center, rotation, box.HalfWidth, -box.HalfHeight, ref minX, ref maxX, ref minZ, ref maxZ);
+            WriteBoxCorner(snapshot, vertexOffset + 2, center, rotation, box.HalfWidth, box.HalfHeight, ref minX, ref maxX, ref minZ, ref maxZ);
+            WriteBoxCorner(snapshot, vertexOffset + 3, center, rotation, -box.HalfWidth, box.HalfHeight, ref minX, ref maxX, ref minZ, ref maxZ);
+            return new WorldAabbCm(minX, minZ, Math.Max(1, maxX - minX), Math.Max(1, maxZ - minZ));
+        }
+
+        private static void WriteBoxCorner(
+            RuntimeNavObstacleSnapshot snapshot,
+            int absoluteVertexIndex,
+            Fix64Vec2 center,
+            Fix64 rotation,
+            Fix64 localX,
+            Fix64 localY,
+            ref int minX,
+            ref int maxX,
+            ref int minY,
+            ref int maxY)
+        {
+            Fix64Vec2 vertex = center + ShapeWorldTransform2D.RotateLocal(new Fix64Vec2(localX, localY), rotation);
+            int xcm = vertex.X.RoundToInt();
+            int zcm = vertex.Y.RoundToInt();
+            snapshot.SetPolygonVertex(absoluteVertexIndex, xcm, zcm);
+            if (xcm < minX) minX = xcm;
+            if (xcm > maxX) maxX = xcm;
+            if (zcm < minY) minY = zcm;
+            if (zcm > maxY) maxY = zcm;
+        }
+
+        private WorldAabbCm WritePolygon(
+            RuntimeNavObstacleSnapshot snapshot,
+            Entity entity,
+            int pieceIndex,
+            int shapeDataIndex,
+            Fix64Vec2 worldPosition,
+            Fix64 rotation,
+            int minYcm,
+            int maxYcm)
+        {
+            if (!_shapeStorage.TryGetPolygon(shapeDataIndex, out PolygonShapeData polygon))
+            {
+                throw new InvalidOperationException(
+                    $"Runtime nav obstacle entity {entity.Id} piece {pieceIndex} references missing polygon shape data index {shapeDataIndex}.");
+            }
+
+            if (polygon.VertexCount < 3)
+            {
+                throw new InvalidOperationException(
+                    $"Runtime nav obstacle entity {entity.Id} piece {pieceIndex} polygon requires at least 3 points.");
+            }
+
+            int index = snapshot.BeginPrimitive(entity.Id, pieceIndex, NavObstacleKind.Polygon, minYcm, maxYcm);
+            int vertexOffset = snapshot.BeginPolygonVertices(index, polygon.VertexCount);
+            int minX = int.MaxValue;
+            int maxX = int.MinValue;
+            int minZ = int.MaxValue;
+            int maxZ = int.MinValue;
+            for (int i = 0; i < polygon.VertexCount; i++)
+            {
+                Fix64Vec2 vertex = ShapeWorldTransform2D.GetPolygonWorldVertex(worldPosition, rotation, polygon, i);
+                int xcm = vertex.X.RoundToInt();
+                int zcm = vertex.Y.RoundToInt();
+                snapshot.SetPolygonVertex(vertexOffset + i, xcm, zcm);
+                if (xcm < minX) minX = xcm;
+                if (xcm > maxX) maxX = xcm;
+                if (zcm < minZ) minZ = zcm;
+                if (zcm > maxZ) maxZ = zcm;
+            }
+
+            return new WorldAabbCm(minX, minZ, Math.Max(1, maxX - minX), Math.Max(1, maxZ - minZ));
         }
 
         private void TrackCurrent(
@@ -159,181 +506,203 @@ namespace Ludots.Core.Physics2D.Systems
             RuntimeIncrementalNavMeshRebuildQueue queue,
             bool includeNeighbors)
         {
-            _seen.Add(entity);
-            var next = new TrackedObstacle(entity, bounds, shapeSignature, poseSignature);
-            if (_tracked.TryGetValue(entity, out TrackedObstacle previous) &&
-                previous.ShapeSignature == shapeSignature &&
-                previous.PoseSignature == poseSignature &&
-                previous.Bounds == bounds)
+            if (TryFindTrackedIndex(entity, out int trackIndex, out int indexSlot))
             {
+                _trackedSeenEpoch[trackIndex] = _updateEpoch;
+                if (_trackedShapeSignatures[trackIndex] == shapeSignature &&
+                    _trackedPoseSignatures[trackIndex] == poseSignature &&
+                    _trackedBounds[trackIndex] == bounds)
+                {
+                    return;
+                }
+
+                WorldAabbCm previousBounds = _trackedBounds[trackIndex];
+                if (OverlapsOrTouches(previousBounds, bounds))
+                {
+                    queue.EnqueueDirtyAabb(Union(previousBounds, bounds), includeNeighbors);
+                }
+                else
+                {
+                    // Long-range teleports (for example, parking pool to gate) dirty both endpoints.
+                    // Unioning them floods dirtyTileCapacity with empty intermediate tiles.
+                    queue.EnqueueDirtyAabb(previousBounds, includeNeighbors);
+                    queue.EnqueueDirtyAabb(bounds, includeNeighbors);
+                }
+
+                _trackedBounds[trackIndex] = bounds;
+                _trackedShapeSignatures[trackIndex] = shapeSignature;
+                _trackedPoseSignatures[trackIndex] = poseSignature;
                 return;
             }
 
-            if (_tracked.TryGetValue(entity, out previous))
+            if (_trackedCount >= _trackedCapacity)
             {
-                queue.EnqueueDirtyAabb(Union(previous.Bounds, bounds), includeNeighbors);
-            }
-            else
-            {
-                queue.EnqueueDirtyAabb(bounds, includeNeighbors);
+                throw new InvalidOperationException(
+                    $"Runtime nav obstacle snapshot exceeded trackedStructuralEntityCapacity ({_trackedCapacity}); required {_trackedCount + 1}.");
             }
 
-            _tracked[entity] = next;
+            trackIndex = _trackedCount;
+            InsertTrackedIndex(entity, trackIndex, indexSlot);
+            _trackedEntities[trackIndex] = entity;
+            _trackedBounds[trackIndex] = bounds;
+            _trackedShapeSignatures[trackIndex] = shapeSignature;
+            _trackedPoseSignatures[trackIndex] = poseSignature;
+            _trackedSeenEpoch[trackIndex] = _updateEpoch;
+            _trackedCount++;
+            queue.EnqueueDirtyAabb(bounds, includeNeighbors);
         }
 
         private void TrackOrRemove(Entity entity, RuntimeIncrementalNavMeshRebuildQueue queue, bool includeNeighbors)
         {
-            _seen.Add(entity);
-            if (_tracked.Remove(entity, out TrackedObstacle previous))
-            {
-                queue.EnqueueDirtyAabb(previous.Bounds, includeNeighbors);
-            }
-        }
-
-        private void RemoveMissingTracked(RuntimeIncrementalNavMeshRebuildQueue queue, bool includeNeighbors)
-        {
-            if (_tracked.Count == 0)
+            if (!TryFindTrackedIndex(entity, out int trackIndex, out _))
             {
                 return;
             }
 
-            var seen = new HashSet<Entity>(_seen);
-            Span<Entity> toRemove = stackalloc Entity[Math.Min(_tracked.Count, 64)];
-            var overflow = (List<Entity>?)null;
+            _trackedSeenEpoch[trackIndex] = _updateEpoch;
+            RemoveTrackedAt(trackIndex, queue, includeNeighbors);
+        }
+
+        private void RemoveMissingTracked(RuntimeIncrementalNavMeshRebuildQueue queue, bool includeNeighbors)
+        {
             int removeCount = 0;
-            foreach (KeyValuePair<Entity, TrackedObstacle> kvp in _tracked)
+            for (int i = 0; i < _trackedCount; i++)
             {
-                if (seen.Contains(kvp.Key) &&
-                    World.IsAlive(kvp.Value.Entity))
+                if (_trackedSeenEpoch[i] == _updateEpoch &&
+                    World.IsAlive(_trackedEntities[i]))
                 {
                     continue;
                 }
 
-                if (removeCount < toRemove.Length)
+                _removeScratch[removeCount++] = i;
+            }
+
+            for (int i = removeCount - 1; i >= 0; i--)
+            {
+                RemoveTrackedAt(_removeScratch[i], queue, includeNeighbors);
+            }
+        }
+
+        private void RemoveTrackedAt(int trackIndex, RuntimeIncrementalNavMeshRebuildQueue queue, bool includeNeighbors)
+        {
+            Entity entity = _trackedEntities[trackIndex];
+            WorldAabbCm bounds = _trackedBounds[trackIndex];
+            queue.EnqueueDirtyAabb(bounds, includeNeighbors);
+
+            if (!TryFindTrackedIndex(entity, out _, out int indexSlot) || _indexState[indexSlot] != IndexOccupied)
+            {
+                throw new InvalidOperationException("Tracked structural entity index desynchronized.");
+            }
+
+            _indexState[indexSlot] = IndexTombstone;
+            _indexKeys[indexSlot] = default;
+            _indexSlots[indexSlot] = -1;
+
+            int last = _trackedCount - 1;
+            if (trackIndex != last)
+            {
+                Entity moved = _trackedEntities[last];
+                _trackedEntities[trackIndex] = moved;
+                _trackedBounds[trackIndex] = _trackedBounds[last];
+                _trackedShapeSignatures[trackIndex] = _trackedShapeSignatures[last];
+                _trackedPoseSignatures[trackIndex] = _trackedPoseSignatures[last];
+                _trackedSeenEpoch[trackIndex] = _trackedSeenEpoch[last];
+                if (!TryFindTrackedIndex(moved, out _, out int movedSlot) || _indexState[movedSlot] != IndexOccupied)
                 {
-                    toRemove[removeCount] = kvp.Key;
+                    throw new InvalidOperationException("Tracked structural entity index desynchronized while compacting.");
                 }
-                else
+
+                _indexSlots[movedSlot] = trackIndex;
+            }
+
+            _trackedCount = last;
+        }
+
+        private bool TryFindTrackedIndex(Entity entity, out int trackIndex, out int indexSlot)
+        {
+            if (_indexKeys.Length == 0)
+            {
+                trackIndex = -1;
+                indexSlot = -1;
+                return false;
+            }
+
+            int start = HashEntity(entity) & _indexMask;
+            int firstTombstone = -1;
+            for (int i = 0; i < _indexKeys.Length; i++)
+            {
+                int slot = (start + i) & _indexMask;
+                byte state = _indexState[slot];
+                if (state == IndexEmpty)
                 {
-                    overflow ??= new List<Entity>();
-                    overflow.Add(kvp.Key);
+                    indexSlot = firstTombstone >= 0 ? firstTombstone : slot;
+                    trackIndex = -1;
+                    return false;
                 }
 
-                removeCount++;
-            }
-
-            int stackCount = Math.Min(removeCount, toRemove.Length);
-            for (int i = 0; i < stackCount; i++)
-            {
-                RemoveTracked(toRemove[i], queue, includeNeighbors);
-            }
-
-            if (overflow != null)
-            {
-                for (int i = 0; i < overflow.Count; i++)
+                if (state == IndexTombstone)
                 {
-                    RemoveTracked(overflow[i], queue, includeNeighbors);
+                    if (firstTombstone < 0)
+                    {
+                        firstTombstone = slot;
+                    }
+
+                    continue;
+                }
+
+                if (_indexKeys[slot].Equals(entity))
+                {
+                    indexSlot = slot;
+                    trackIndex = _indexSlots[slot];
+                    return true;
                 }
             }
+
+            indexSlot = firstTombstone >= 0 ? firstTombstone : -1;
+            trackIndex = -1;
+            return false;
         }
 
-        private void RemoveTracked(Entity entity, RuntimeIncrementalNavMeshRebuildQueue queue, bool includeNeighbors)
+        private void InsertTrackedIndex(Entity entity, int trackIndex, int indexSlot)
         {
-            if (_tracked.Remove(entity, out TrackedObstacle previous))
+            if (indexSlot < 0)
             {
-                queue.EnqueueDirtyAabb(previous.Bounds, includeNeighbors);
+                throw new InvalidOperationException(
+                    $"Runtime nav obstacle snapshot exceeded trackedStructuralEntityCapacity ({_trackedCapacity}); required {_trackedCount + 1}.");
+            }
+
+            _indexKeys[indexSlot] = entity;
+            _indexState[indexSlot] = IndexOccupied;
+            _indexSlots[indexSlot] = trackIndex;
+        }
+
+        private static int HashEntity(Entity entity)
+        {
+            unchecked
+            {
+                int hash = entity.Id;
+                hash = (hash * 397) ^ entity.WorldId;
+                hash = (hash * 397) ^ entity.Version;
+                return hash;
             }
         }
 
-        private NavObstacle BuildObstacle(
-            Entity entity,
-            string id,
-            ManifestationObstacleShape2D shape,
-            int shapeDataIndex,
-            Fix64Vec2 worldPosition,
-            Fix64 rotation,
-            string layerId)
+        private static int NextPowerOfTwo(int value)
         {
-            return shape switch
+            if (value < 1)
             {
-                ManifestationObstacleShape2D.Circle => BuildCircle(id, shapeDataIndex, worldPosition, rotation, layerId),
-                ManifestationObstacleShape2D.Box => BuildBox(id, shapeDataIndex, worldPosition, rotation, layerId),
-                ManifestationObstacleShape2D.Polygon => BuildPolygon(id, shapeDataIndex, worldPosition, rotation, layerId),
-                _ => throw new InvalidOperationException($"Unsupported runtime nav obstacle shape '{shape}' on entity {entity.Id}.")
-            };
-        }
-
-        private NavObstacle BuildCircle(string id, int shapeDataIndex, Fix64Vec2 worldPosition, Fix64 rotation, string layerId)
-        {
-            if (!_shapeStorage.TryGetCircle(shapeDataIndex, out CircleShapeData circle))
-            {
-                throw new InvalidOperationException($"Runtime nav obstacle '{id}' references missing circle shape data index {shapeDataIndex}.");
+                return 1;
             }
 
-            Fix64Vec2 center = ShapeWorldTransform2D.GetCircleCenter(worldPosition, rotation, circle);
-            return new NavObstacle
-            {
-                Id = id,
-                Enabled = true,
-                Kind = NavObstacleKind.Circle,
-                LayerId = layerId,
-                Center = new NavPointCm(center.X.RoundToInt(), center.Y.RoundToInt()),
-                RadiusCm = circle.Radius.RoundToInt()
-            };
-        }
-
-        private NavObstacle BuildBox(string id, int shapeDataIndex, Fix64Vec2 worldPosition, Fix64 rotation, string layerId)
-        {
-            if (!_shapeStorage.TryGetBox(shapeDataIndex, out BoxShapeData box))
-            {
-                throw new InvalidOperationException($"Runtime nav obstacle '{id}' references missing box shape data index {shapeDataIndex}.");
-            }
-
-            Fix64Vec2 center = ShapeWorldTransform2D.GetBoxCenter(worldPosition, rotation, box);
-            Fix64Vec2[] corners =
-            {
-                new Fix64Vec2(-box.HalfWidth, -box.HalfHeight),
-                new Fix64Vec2(box.HalfWidth, -box.HalfHeight),
-                new Fix64Vec2(box.HalfWidth, box.HalfHeight),
-                new Fix64Vec2(-box.HalfWidth, box.HalfHeight),
-            };
-            var obstacle = new NavObstacle
-            {
-                Id = id,
-                Enabled = true,
-                Kind = NavObstacleKind.Polygon,
-                LayerId = layerId,
-            };
-            for (int i = 0; i < corners.Length; i++)
-            {
-                Fix64Vec2 vertex = center + ShapeWorldTransform2D.RotateLocal(corners[i], rotation);
-                obstacle.Points.Add(new NavPointCm(vertex.X.RoundToInt(), vertex.Y.RoundToInt()));
-            }
-
-            return obstacle;
-        }
-
-        private NavObstacle BuildPolygon(string id, int shapeDataIndex, Fix64Vec2 worldPosition, Fix64 rotation, string layerId)
-        {
-            if (!_shapeStorage.TryGetPolygon(shapeDataIndex, out PolygonShapeData polygon))
-            {
-                throw new InvalidOperationException($"Runtime nav obstacle '{id}' references missing polygon shape data index {shapeDataIndex}.");
-            }
-
-            var obstacle = new NavObstacle
-            {
-                Id = id,
-                Enabled = true,
-                Kind = NavObstacleKind.Polygon,
-                LayerId = layerId,
-            };
-            for (int i = 0; i < polygon.VertexCount; i++)
-            {
-                Fix64Vec2 vertex = ShapeWorldTransform2D.GetPolygonWorldVertex(worldPosition, rotation, polygon, i);
-                obstacle.Points.Add(new NavPointCm(vertex.X.RoundToInt(), vertex.Y.RoundToInt()));
-            }
-
-            return obstacle;
+            uint v = (uint)value;
+            v--;
+            v |= v >> 1;
+            v |= v >> 2;
+            v |= v >> 4;
+            v |= v >> 8;
+            v |= v >> 16;
+            v++;
+            return (int)v;
         }
 
         private Fix64 ResolveRotation(Entity entity)
@@ -343,36 +712,6 @@ namespace Ludots.Core.Physics2D.Systems
                 : Fix64.Zero;
         }
 
-        private static WorldAabbCm ComputeBounds(NavObstacle obstacle)
-        {
-            if (obstacle.Kind == NavObstacleKind.Circle)
-            {
-                return WorldAabbCm.FromCenterRadius(
-                    new WorldCmInt2(obstacle.Center.Xcm, obstacle.Center.Zcm),
-                    obstacle.RadiusCm);
-            }
-
-            if (obstacle.Points == null || obstacle.Points.Count < 3)
-            {
-                throw new InvalidOperationException($"Runtime nav obstacle '{obstacle.Id}' polygon requires at least 3 points.");
-            }
-
-            int minX = obstacle.Points[0].Xcm;
-            int maxX = minX;
-            int minY = obstacle.Points[0].Zcm;
-            int maxY = minY;
-            for (int i = 1; i < obstacle.Points.Count; i++)
-            {
-                NavPointCm point = obstacle.Points[i];
-                minX = Math.Min(minX, point.Xcm);
-                maxX = Math.Max(maxX, point.Xcm);
-                minY = Math.Min(minY, point.Zcm);
-                maxY = Math.Max(maxY, point.Zcm);
-            }
-
-            return new WorldAabbCm(minX, minY, Math.Max(1, maxX - minX), Math.Max(1, maxY - minY));
-        }
-
         private static WorldAabbCm Union(WorldAabbCm a, WorldAabbCm b)
         {
             int left = Math.Min(a.Left, b.Left);
@@ -380,6 +719,14 @@ namespace Ludots.Core.Physics2D.Systems
             int right = Math.Max(a.Right, b.Right);
             int bottom = Math.Max(a.Bottom, b.Bottom);
             return new WorldAabbCm(left, top, Math.Max(1, right - left), Math.Max(1, bottom - top));
+        }
+
+        private static bool OverlapsOrTouches(WorldAabbCm a, WorldAabbCm b)
+        {
+            return a.Left <= b.Right &&
+                   b.Left <= a.Right &&
+                   a.Top <= b.Bottom &&
+                   b.Top <= a.Bottom;
         }
 
         private static string RequireSingleLayerId(NavMeshBakeConfig bakeConfig)
@@ -399,19 +746,33 @@ namespace Ludots.Core.Physics2D.Systems
             return layerId;
         }
 
-        private readonly struct TrackedObstacle
+        private struct CaptureSingleJob : IForEachWithEntity<WorldPositionCm, ManifestationObstacleIntent2D, ManifestationObstacleBridge2DState>
         {
-            public readonly Entity Entity;
-            public readonly WorldAabbCm Bounds;
-            public readonly int ShapeSignature;
-            public readonly int PoseSignature;
+            public RuntimeNavMeshObstacleDirtySystem System;
+            public RuntimeNavObstacleSnapshot Snapshot;
+            public RuntimeIncrementalNavMeshRebuildQueue Queue;
+            public bool IncludeNeighbors;
 
-            public TrackedObstacle(Entity entity, WorldAabbCm bounds, int shapeSignature, int poseSignature)
+            public void Update(
+                Entity entity,
+                ref WorldPositionCm position,
+                ref ManifestationObstacleIntent2D intent,
+                ref ManifestationObstacleBridge2DState state)
             {
-                Entity = entity;
-                Bounds = bounds;
-                ShapeSignature = shapeSignature;
-                PoseSignature = poseSignature;
+                System.CaptureSingle(entity, ref position, ref intent, ref state, Snapshot, Queue, IncludeNeighbors);
+            }
+        }
+
+        private struct CaptureCompoundJob : IForEachWithEntity<WorldPositionCm, CompoundObstacle2DState>
+        {
+            public RuntimeNavMeshObstacleDirtySystem System;
+            public RuntimeNavObstacleSnapshot Snapshot;
+            public RuntimeIncrementalNavMeshRebuildQueue Queue;
+            public bool IncludeNeighbors;
+
+            public void Update(Entity entity, ref WorldPositionCm position, ref CompoundObstacle2DState state)
+            {
+                System.CaptureCompound(entity, ref position, ref state, Snapshot, Queue, IncludeNeighbors);
             }
         }
     }

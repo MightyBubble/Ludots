@@ -1,0 +1,20 @@
+{
+  "interactionMode": "SmartCast",
+  "mappings": [
+    {
+      "actionId": "Command",
+      "actorCollectionKey": "collection.command.source",
+      "trigger": "PressedThisFrame",
+      "orderTypeKey": "massNavigationMove",
+      "argsTemplate": {},
+      "requireTarget": true,
+      "targetType": "Position",
+      "isSkillMapping": false,
+      "modifierBehavior": "QueueOnModifier"
+    }
+  ],
+  "userOverrides": {
+    "enabled": false,
+    "persistPath": ""
+  }
+}

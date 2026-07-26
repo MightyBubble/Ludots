@@ -13,13 +13,17 @@ Temporary dynamic avoidance is not part of this page. Unit-to-unit avoidance, sh
 Runtime incremental rebuild adds a production path for sparse structural changes:
 
 - `RuntimeNavMeshObstacleDirtySystem` reads the same SSOT materialized by Physics2D: `ManifestationObstacleIntent2D`, `ManifestationObstacleBridge2DState`, `CompoundObstacle2DState`, and `ShapeDataStorage2D`.
-- Runtime obstacles are stored in the shared `NavObstacleSet` service at `CoreServiceKeys.RuntimeNavMeshObstacles`.
+- Runtime obstacles are projected into a fixed-capacity `RuntimeNavObstacleSnapshot` (`INavObstacleSource`) at `CoreServiceKeys.RuntimeNavMeshObstacles`.
+- Each primitive carries an explicit absolute world-cm half-open vertical interval `[minYcm,maxYcm)` authored on `ManifestationObstacleIntent2D` / `CompoundObstacle2D` and copied into the snapshot SoA; vertical-only changes dirty the same XZ bounds.
 - Only entities marked with `RuntimeNavMeshStructuralObstacle` enter the runtime dirty queue. `SinkNavigationObstacle` still materializes navigation geometry, but the marker distinguishes persistent topology changes from temporary dynamic avoidance.
 - Dirty AABBs are aggregated into chunk-aligned `NavTile` coordinates by `RuntimeIncrementalNavMeshRebuildQueue`.
 - The queue processes a fixed number of tiles per fixed tick using FIFO order.
-- Runtime rebuild is `runtime-incremental` + `cdt`; offline Recast remains the full bake path.
-- Successful rebuilt tiles are atomically published through `NavTileStore.Replace`.
-- `NavQueryService.TryFindPath` runs under a store revision guard and returns `NotReady` instead of a mixed-revision path if a rebuild changes tiles mid-query.
+- Runtime rebuild preserves the configured algorithm and requires its adapter to declare runtime capability for the active terrain or triangle input; no adapter fallback is permitted.
+- The current default `GameEngine` composition registers CDT for runtime logic terrain. Other algorithms fail fast until the host registers their adapters.
+- A dirty batch owns one generation. Its tiles may be rebuilt across multiple fixed ticks, but `NavTileStore` publishes every layer/profile store atomically only after the whole batch succeeds.
+- A fully blocked result publishes a checksum-bearing valid empty tile, so the previous walkable topology is removed instead of being retained as if the bake had failed.
+- A failed tile fails the pending generation and publishes none of its tiles. Changes collected while a generation is being built are ordered into the next generation.
+- `NavQueryService.TryFindPath` runs under a stable store read and returns `NotReady` instead of observing a commit during the query.
 
 The implementation intentionally does not create `ObstacleGeometryProfile2D`, a MassNavigationFlow obstacle sidecar, a private map loader, or a fallback full-bake path.
 
@@ -47,7 +51,7 @@ dotnet test src\Tests\GasTests\GasTests.csproj --filter "RuntimeNavMeshObstacleD
 | Run `RuntimeNavMeshObstacleDirtySystem` in `runtime-incremental` mode | One runtime obstacle is captured, the dirty tile is rebuilt, queue pending count returns to zero |
 | Move an unmarked navigation obstacle | Runtime obstacle count and tile store revision do not change |
 | Move the marked structural obstacle | Previous and current AABBs dirty the tile, `NavTileStore.Revision` increments |
-| Run architecture queue contracts | Dirty AABB mapping, FIFO budget, failed bake preservation, layer strictness, and stable revision read all pass |
+| Run architecture queue contracts | Dirty AABB mapping, fixed work budget, generation-wide commit, failed-generation zero publication, valid empty tile publication, layer strictness, and stable read all pass |
 
 ## Configuration
 
@@ -62,7 +66,10 @@ dotnet test src\Tests\GasTests\GasTests.csproj --filter "RuntimeNavMeshObstacleD
     "includeNeighborTiles": true,
     "heightScaleMeters": 1.0,
     "minWalkableUpDot": 0.6,
-    "cliffHeightThreshold": 1
+    "cliffHeightThreshold": 1,
+    "trackedStructuralEntityCapacity": 256,
+    "obstaclePrimitiveCapacity": 512,
+    "polygonVertexCapacity": 4096
   }
 }
 ```
@@ -72,12 +79,20 @@ Runtime map load creates a separate `NavBakeContext` with:
 | Context field | Runtime value |
 |---|---|
 | `Mode` | `NavBakeMode.RuntimeIncremental` |
-| `Algorithm` | `NavBakeAlgorithmKind.Cdt` |
-| `Terrain` | Current map `LogicTerrainField` |
-| `Obstacles` | `CoreServiceKeys.RuntimeNavMeshObstacles` |
+| `Algorithm` | Explicit configured algorithm; current default host registers `Cdt` |
+| `Terrain` / `TriangleSurface` | Exactly one active input; current default host supplies the map `LogicTerrainField` |
+| `Obstacles` | `CoreServiceKeys.RuntimeNavMeshObstacles` (`RuntimeNavObstacleSnapshot`) |
 | `Targets` | Replaced by the queue with each dirty tile |
 | `BuildConfig` | Derived from `runtimeIncremental` |
 | `Execution` | Single-threaded, one dirty tile context at a time |
+
+`runtimeIncremental` capacity fields are required, strictly positive, and fixed:
+
+| Field | Owner | Constraint |
+|---|---|---|
+| `trackedStructuralEntityCapacity` | Runtime dirty tracking table | Required, `> 0`, no auto growth |
+| `obstaclePrimitiveCapacity` | `RuntimeNavObstacleSnapshot` primitive SoA | Required, `> 0`, no auto growth |
+| `polygonVertexCapacity` | `RuntimeNavObstacleSnapshot` polygon vertex SoA | Required, `> 0`, no auto growth |
 
 Layer ids are strict and case-sensitive. Runtime obstacle capture currently requires exactly one authored nav layer so that no fallback layer attribution is invented.
 
@@ -104,8 +119,12 @@ Entities without `RuntimeNavMeshStructuralObstacle` can still contribute to Phys
 | Change | Behavior | Coverage |
 |---|---|---|
 | `runtimeIncremental.tileBudgetPerFixedTick = 1` | Queue publishes one dirty tile per tick | `RuntimeIncrementalNavMeshRebuildQueue_ProcessesDirtyTilesByBudgetAndPublishesRevision` |
+| Queue uses a registered runtime-capable non-CDT test adapter | Selected algorithm reaches the adapter unchanged | `RuntimeIncrementalNavMeshRebuildQueue_PreservesSelectedAlgorithm` |
+| Triangle input grid has a non-zero origin | Dirty AABB mapping uses its origin, tile size, and counts | `RuntimeIncrementalNavMeshRebuildQueue_TriangleGridDirtyAabbHonorsOriginAndTileSize` |
 | Dirty AABB touches a tile border with `includeNeighborTiles = true` | Neighbor tiles are enqueued and processed FIFO | `RuntimeIncrementalNavMeshRebuildQueue_DirtyAabbMapsToNeighborTilesAndIgnoresOutOfWorld` |
-| Runtime rebuild bake fails | Previous tile remains readable; store revision does not advance | `RuntimeIncrementalNavMeshRebuildQueue_FailedBakeKeepsReadablePreviousTile` |
+| Runtime rebuild bake fails | The pending generation publishes no tiles; every store keeps its previous committed generation | `RuntimeIncrementalNavMeshRebuildQueue_FailedGenerationPublishesNothingAcrossStores` |
+| Runtime rebuild produces no walkable polygons | A valid empty tile is committed with the new generation and replaces the previous walkable tile | `RuntimeIncrementalNavMeshRebuildQueue_ValidEmptyTileRemovesPreviousTopology` |
+| A dirty batch exceeds one fixed-tick budget | Pending results remain invisible until the final tile succeeds, then all stores advance together | `RuntimeIncrementalNavMeshRebuildQueue_GenerationSpansTicksAndCommitsAtomicallyAcrossStores` |
 | Obstacle layer id has wrong casing | Bake fails fast as unknown nav layer | `CdtBake_ConsumesObstacleSetWithStrictLayerId` |
 | Obstacle bridge changes or moves a structural obstacle marker entity | Runtime dirty system rebuilds from bridge state and `ShapeDataStorage2D` | `RuntimeNavMeshObstacleDirtySystem_UsesBridgeStateAsStructuralDirtySource` |
 | Obstacle bridge changes an unmarked navigation obstacle | Runtime dirty system ignores it; MassNavigationFlow avoidance remains responsible | `RuntimeNavMeshObstacleDirtySystem_UsesBridgeStateAsStructuralDirtySource` |
@@ -120,8 +139,8 @@ Reused:
 
 - `ManifestationObstacleBridge2DSystem` and its materialized shape state.
 - `ShapeDataStorage2D`, `ShapeWorldTransform2D`, `ManifestationObstacleIntent2D`, and `CompoundObstacle2DState`.
-- `NavObstacleSet` and `NavObstacleGeometry` for CDT/Recast obstacle filtering.
-- `NavBakeService`, `NavBakeContext`, and `CdtNavBakeAlgorithm`.
+- `INavObstacleSource` (`NavObstacleSet` cold/offline, `RuntimeNavObstacleSnapshot` runtime) and `NavObstacleGeometry` for CDT/Recast obstacle filtering.
+- `NavBakeService`, the exact-one-input `NavBakeContext`, and registered `INavBakeAlgorithm` capabilities.
 - `NavQueryServiceRegistry`, `NavTileStore`, and the existing `.ntil` query format.
 - `GameEngine` service registration and phase ordered system registration.
 
@@ -130,9 +149,9 @@ NAV-10 does not merge another branch. It builds on the NAV-3/NAV-5 code already 
 ## DoD
 
 - Data-driven: runtime rebuild budget and build tuning come from `Navigation/navmesh.json`.
-- No fallback: runtime incremental only accepts CDT, bad config fails fast, failed tiles do not trigger full-map bake.
+- No fallback: missing adapters and unsupported mode/input capabilities fail fast; failed tiles do not trigger another algorithm or a full-map bake.
 - No duplicate source: structural obstacle geometry comes from the Physics2D bridge SSOT, not MassNavigationFlow approximation or a private loader.
 - Strict casing: layer ids are matched with `StringComparison.Ordinal`.
-- Contract tests cover dirty AABB mapping, budget FIFO, failed bake preservation, bootstrap registration gating, obstacle layer strictness, SSOT dirty capture, and revision guarded reads.
-- Remaining showcase gap: #304's headed UAT still needs a real preset that creates/destroys a structural obstacle and demonstrates select/move/path update feedback. Current NAV-10 verification is contract-level only.
+- Contract tests cover active-input dirty AABB mapping, selected-algorithm preservation, fixed work budgeting, generation-wide atomic publication, failed-generation zero publication, valid empty tiles, bootstrap registration gating, obstacle layer strictness, SSOT dirty capture, and stable reads.
+- Remaining gaps: 0GC dirty collection, runtime triangle-surface host composition, and the two headed showcases are tracked by the dynamic 3D bake architecture. Current NAV-10 verification is contract-level only.
 - GitBook indexes link this page, and this page links back to #281 and #304.

@@ -1,0 +1,13 @@
+[
+  { "Path": "MassNavigationConfig.json", "Policy": "DeepObject" },
+  { "Path": "Input/command_intent_profiles.json", "Policy": "DeepObject" },
+  { "Path": "Input/input_order_mappings.json", "Policy": "DeepObject" },
+  { "Path": "Showcases/DynamicNavBake/nav_bake_dynamic_rts.json", "Policy": "Replace" },
+  { "Path": "Showcases/DynamicNavBake/nav_bake_open_world_64x64.json", "Policy": "Replace" },
+  { "Path": "Navigation/navmesh.nav_bake_dynamic_rts.json", "Policy": "Replace" },
+  { "Path": "Navigation/navmesh.nav_bake_open_world_64x64.json", "Policy": "Replace" },
+  { "Path": "Navigation/pathing.json", "Policy": "DeepObject" },
+  { "Path": "Entities/templates.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "Camera/virtual_cameras.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "Presentation/performers.json", "Policy": "ArrayById", "IdField": "id" }
+]

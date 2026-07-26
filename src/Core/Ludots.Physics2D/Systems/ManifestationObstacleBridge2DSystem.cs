@@ -85,6 +85,12 @@ namespace Ludots.Core.Physics2D.Systems
             in ManifestationObstacleIntent2D intent,
             bool removeDirty)
         {
+            if (intent.SinkNavigationObstacle != 0 && intent.NavMinYcm >= intent.NavMaxYcm)
+            {
+                throw new InvalidOperationException(
+                    $"ManifestationObstacleIntent2D entity {entity.Id} requires navMinYcm < navMaxYcm when sinkNavigationObstacle is enabled.");
+            }
+
             int shapeSignature = ComputeShapeSignature(in intent, entity);
             int poseSignature = ComputePoseSignature(in worldPosition, entity);
             int sinkSignature = ComputeSinkSignature(intent.SinkPhysicsCollider, intent.SinkNavigationObstacle);
@@ -336,6 +342,8 @@ namespace Ludots.Core.Physics2D.Systems
             hash = MixSignature(hash, intent.LocalOffsetXCm);
             hash = MixSignature(hash, intent.LocalOffsetYCm);
             hash = MixSignature(hash, intent.NavRadiusCm);
+            hash = MixSignature(hash, intent.NavMinYcm);
+            hash = MixSignature(hash, intent.NavMaxYcm);
 
             if (intent.Shape == ManifestationObstacleShape2D.Polygon &&
                 World.TryGet(entity, out ManifestationObstaclePolygon2D polygon))
@@ -388,7 +396,15 @@ namespace Ludots.Core.Physics2D.Systems
                 ManifestationObstacleShape2D shape = obstacle.GetShape(i);
                 int shapeDataIndex = RegisterCompoundShape(in obstacle, i, shape);
                 int navRadiusCm = ResolveCompoundPieceNavRadiusCm(in obstacle, i, shape, shapeDataIndex);
-                state.SetPiece(i, shape, shapeDataIndex, navRadiusCm);
+                int navMinYcm = obstacle.GetNavMinYcm(i);
+                int navMaxYcm = obstacle.GetNavMaxYcm(i);
+                if (obstacle.SinkNavigationObstacle != 0 && navMinYcm >= navMaxYcm)
+                {
+                    throw new InvalidOperationException(
+                        $"CompoundObstacle2D piece {i} requires navMinYcm < navMaxYcm when sinkNavigationObstacle is enabled.");
+                }
+
+                state.SetPiece(i, shape, shapeDataIndex, navRadiusCm, navMinYcm, navMaxYcm);
             }
 
             return state;
@@ -447,6 +463,8 @@ namespace Ludots.Core.Physics2D.Systems
                 hash = MixSignature(hash, obstacle.GetLocalOffsetXCm(i));
                 hash = MixSignature(hash, obstacle.GetLocalOffsetYCm(i));
                 hash = MixSignature(hash, obstacle.GetNavRadiusCm(i));
+                hash = MixSignature(hash, obstacle.GetNavMinYcm(i));
+                hash = MixSignature(hash, obstacle.GetNavMaxYcm(i));
 
                 if (shape == ManifestationObstacleShape2D.Polygon)
                 {

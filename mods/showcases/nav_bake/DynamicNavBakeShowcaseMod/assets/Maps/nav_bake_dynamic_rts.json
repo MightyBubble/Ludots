@@ -1,0 +1,37 @@
+{
+  "Id": "nav_bake_dynamic_rts",
+  "Tags": [
+    "nav_bake_dynamic_rts",
+    "showcase",
+    "Feature.NavMesh:On"
+  ],
+  "DefaultCamera": {
+    "VirtualCameraId": "Camera.Profile.Tactical",
+    "TargetXCm": 0,
+    "TargetYCm": 0
+  },
+  "VisualHeightmapAsset": "assets/terrain/dynamic_nav_bake_relief.vhtm",
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthInMacroTiles": 2,
+      "HeightInMacroTiles": 2,
+      "GridCellSizeCm": 100,
+      "ChunkSizeCells": 64,
+      "LoadedChunkCapacity": 256
+    }
+  ],
+  "Entities": [
+    {
+      "InstanceId": "nav_bake.local_player",
+      "Template": "mass_navigation_local_player"
+    }
+  ],
+  "Teams": [
+    { "TeamId": 1, "RepresentativeInstanceId": "nav_bake.local_player" }
+  ],
+  "Players": [
+    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "nav_bake.local_player" }
+  ]
+}

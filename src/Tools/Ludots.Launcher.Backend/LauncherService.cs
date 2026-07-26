@@ -297,9 +297,16 @@ public sealed class LauncherService
         return await BuildPlanRuntimeAsync(resolveResult.Plan, config, ct);
     }
 
-    public async Task<LauncherBuildResult> BuildAppAsync(string platformId)
+    public async Task<LauncherBuildResult> BuildAppAsync(
+        string platformId,
+        LauncherBuildMode buildMode = LauncherBuildMode.Always)
     {
         var profile = GetPlatformProfile(platformId);
+        if (buildMode == LauncherBuildMode.Never)
+        {
+            return ValidateNoBuildAppArtifact(platformId, ResolveAppAssemblyPath(profile));
+        }
+
         var output = new StringBuilder();
 
         if (string.Equals(profile.Id, LauncherPlatformIds.Web, StringComparison.OrdinalIgnoreCase) &&
@@ -329,6 +336,33 @@ public sealed class LauncherService
             timeoutMs: 300_000);
         output.AppendLine(dotnetBuild.Output);
         return new LauncherBuildResult(platformId, dotnetBuild.ExitCode == 0, dotnetBuild.ExitCode, output.ToString());
+    }
+
+    internal static LauncherBuildResult ValidateNoBuildAppArtifact(string platformId, string appAssemblyPath)
+    {
+        if (!File.Exists(appAssemblyPath))
+        {
+            return new LauncherBuildResult(
+                platformId,
+                false,
+                1,
+                $"Build mode 'never' requires an existing host application assembly: {appAssemblyPath}");
+        }
+
+        if (new FileInfo(appAssemblyPath).Length <= 0)
+        {
+            return new LauncherBuildResult(
+                platformId,
+                false,
+                1,
+                $"Build mode 'never' requires a non-empty host application assembly: {appAssemblyPath}");
+        }
+
+        return new LauncherBuildResult(
+            platformId,
+            true,
+            0,
+            $"Host application build skipped by request; using existing assembly: {appAssemblyPath}");
     }
 
     public string WriteGameJson(string platformId, IEnumerable<string> modIds)
@@ -402,7 +436,9 @@ public sealed class LauncherService
             return new LauncherLaunchResult(false, failedModBuild.Output, -1, string.Empty, string.Empty, resolveResult.Plan);
         }
 
-        var appBuild = await BuildAppAsync(resolveResult.Plan.AdapterId);
+        var appBuild = await BuildAppAsync(
+            resolveResult.Plan.AdapterId,
+            ParseBuildMode(resolveResult.Plan.BuildMode));
         if (!appBuild.Ok)
         {
             return new LauncherLaunchResult(false, appBuild.Output, -1, string.Empty, string.Empty, resolveResult.Plan);
@@ -1662,10 +1698,9 @@ public sealed class LauncherService
             return new LauncherBuildResult(entry.Info.Id, false, 1, $"Missing main assembly for {entry.Info.Id}: {entry.Info.MainAssemblyPath}");
         }
 
-        if (plan.BuildMode == LauncherBuildMode.Never.ToString().ToLowerInvariant() &&
-            entry.Info.BuildState == LauncherBuildState.Succeeded)
+        if (plan.BuildMode == LauncherBuildMode.Never.ToString().ToLowerInvariant())
         {
-            return new LauncherBuildResult(entry.Info.Id, true, 0, "Build skipped by request.");
+            return ValidateNoBuildModArtifact(entry.Info.Id, entry.Info.MainAssemblyPath);
         }
 
         var projectPath = EnsureProjectFile(entry, config);
@@ -1691,6 +1726,39 @@ public sealed class LauncherService
         }
 
         return new LauncherBuildResult(entry.Info.Id, true, 0, output.ToString());
+    }
+
+    internal static LauncherBuildResult ValidateNoBuildModArtifact(string modId, string mainAssemblyPath)
+    {
+        if (string.IsNullOrWhiteSpace(modId))
+        {
+            throw new ArgumentException("Mod id is required for no-build artifact validation.", nameof(modId));
+        }
+
+        if (string.IsNullOrWhiteSpace(mainAssemblyPath))
+        {
+            throw new ArgumentException("Main assembly path is required for no-build artifact validation.", nameof(mainAssemblyPath));
+        }
+
+        if (!File.Exists(mainAssemblyPath))
+        {
+            return new LauncherBuildResult(
+                modId,
+                false,
+                1,
+                $"Build mode 'never' requires an existing mod assembly for {modId}: {mainAssemblyPath}");
+        }
+
+        if (new FileInfo(mainAssemblyPath).Length <= 0)
+        {
+            return new LauncherBuildResult(
+                modId,
+                false,
+                1,
+                $"Build mode 'never' requires a non-empty mod assembly for {modId}: {mainAssemblyPath}");
+        }
+
+        return new LauncherBuildResult(modId, true, 0, "Build skipped by request.");
     }
 
     private string EnsureProjectFile(CatalogEntry entry, LauncherConfig config)

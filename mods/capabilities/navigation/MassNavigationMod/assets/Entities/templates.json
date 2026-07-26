@@ -405,6 +405,8 @@
         "sinkPhysicsCollider": false,
         "sinkNavigationObstacle": true,
         "navRadiusCm": 100,
+        "navMinYcm": 0,
+        "navMaxYcm": 200,
         "radiusCm": 100,
         "localOffsetXCm": 0,
         "localOffsetYCm": 0

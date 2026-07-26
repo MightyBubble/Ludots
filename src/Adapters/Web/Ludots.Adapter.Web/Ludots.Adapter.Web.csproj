@@ -13,6 +13,7 @@
     <ProjectReference Include="..\..\..\Libraries\Ludots.UI.Skia\Ludots.UI.Skia.csproj" />
     <ProjectReference Include="..\..\..\Libraries\Ludots.UI.HtmlEngine\Ludots.UI.HtmlEngine.csproj" />
     <ProjectReference Include="..\..\..\Core\Ludots.Core.csproj" />
+    <ProjectReference Include="..\..\..\Tools\Ludots.NavBake.Recast\Ludots.NavBake.Recast.csproj" />
   </ItemGroup>
 
 </Project>

@@ -26,7 +26,7 @@ public sealed class MassNavigationRuntime
     {
         ArgumentNullException.ThrowIfNull(engine);
         if (!TryEnsureConfig(engine, out MassNavigationConfig? config) || config is null ||
-            !string.Equals(mapId.Value, config.MapId, StringComparison.Ordinal))
+            !config.SupportsMap(mapId.Value))
         {
             return false;
         }
@@ -78,7 +78,7 @@ public sealed class MassNavigationRuntime
     {
         ArgumentNullException.ThrowIfNull(engine);
         if (!TryEnsureConfig(engine, out MassNavigationConfig? config) || config is null ||
-            !string.Equals(mapId.Value, config.MapId, StringComparison.Ordinal))
+            !config.SupportsMap(mapId.Value))
         {
             return false;
         }

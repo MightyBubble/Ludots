@@ -1,7 +1,6 @@
 using System;
-using Ludots.Core.Map.Hex;
+using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
-using Ludots.Core.Spatial;
 
 namespace Ludots.Core.Navigation.NavMesh
 {
@@ -35,14 +34,47 @@ namespace Ludots.Core.Navigation.NavMesh
     {
         public readonly NavPathStatus Status;
         public readonly int[] PathXcm;
+        public readonly int[] PathYcm;
         public readonly int[] PathZcm;
         public readonly Fix64 TravelCost;
 
+        /// <summary>
+        /// XZ-only constructor for empty failure/not-ready results.
+        /// Non-empty paths must use the overload that supplies PathYcm.
+        /// </summary>
         public NavPathResult(NavPathStatus status, int[] pathXcm, int[] pathZcm, Fix64 travelCost)
         {
             Status = status;
             PathXcm = pathXcm ?? Array.Empty<int>();
             PathZcm = pathZcm ?? Array.Empty<int>();
+            if (PathXcm.Length != PathZcm.Length)
+            {
+                throw new ArgumentException(
+                    $"NavPathResult PathXcm length {PathXcm.Length} must match PathZcm length {PathZcm.Length}.");
+            }
+
+            if (PathXcm.Length != 0)
+            {
+                throw new InvalidOperationException(
+                    "NavPathResult with non-empty points requires PathYcm; use the X/Y/Z overload so surface height is not silently dropped.");
+            }
+
+            PathYcm = Array.Empty<int>();
+            TravelCost = travelCost;
+        }
+
+        public NavPathResult(NavPathStatus status, int[] pathXcm, int[] pathYcm, int[] pathZcm, Fix64 travelCost)
+        {
+            Status = status;
+            PathXcm = pathXcm ?? throw new ArgumentNullException(nameof(pathXcm));
+            PathYcm = pathYcm ?? throw new ArgumentNullException(nameof(pathYcm));
+            PathZcm = pathZcm ?? throw new ArgumentNullException(nameof(pathZcm));
+            if (PathXcm.Length != PathYcm.Length || PathXcm.Length != PathZcm.Length)
+            {
+                throw new ArgumentException(
+                    $"NavPathResult path channel lengths must match (X={PathXcm.Length}, Y={PathYcm.Length}, Z={PathZcm.Length}).");
+            }
+
             TravelCost = travelCost;
         }
     }
@@ -54,32 +86,37 @@ namespace Ludots.Core.Navigation.NavMesh
         private readonly NavTileStore _store;
         private readonly int _layer;
         private readonly NavAreaCostTable _areaCosts;
-        private readonly Fix64 _tileWidthCm;
-        private readonly Fix64 _tileHeightCm;
+        private readonly int _originXcm;
+        private readonly int _originZcm;
+        private readonly int _tileWidthCm;
+        private readonly int _tileHeightCm;
 
-        public NavQueryService(NavTileStore store, int layer = 0, NavAreaCostTable areaCosts = null)
-            : this(store, layer, areaCosts, DefaultTileWidthCm, DefaultTileHeightCm)
-        {
-        }
-
-        public NavQueryService(NavTileStore store, int layer, NavAreaCostTable areaCosts, int tileWidthCm, int tileHeightCm)
-            : this(
-                store,
-                layer,
-                areaCosts,
-                Fix64.FromInt(RequirePositive(tileWidthCm, nameof(tileWidthCm))),
-                Fix64.FromInt(RequirePositive(tileHeightCm, nameof(tileHeightCm))))
-        {
-        }
-
-        private NavQueryService(NavTileStore store, int layer, NavAreaCostTable areaCosts, Fix64 tileWidthCm, Fix64 tileHeightCm)
+        public NavQueryService(
+            NavTileStore store,
+            int layer,
+            NavAreaCostTable areaCosts,
+            in NavQueryTileSpace tileSpace)
         {
             _store = store ?? throw new ArgumentNullException(nameof(store));
             _layer = layer;
             _areaCosts = areaCosts ?? NavAreaCostTable.CreateDefault();
-            _tileWidthCm = tileWidthCm;
-            _tileHeightCm = tileHeightCm;
+            _originXcm = tileSpace.OriginXcm;
+            _originZcm = tileSpace.OriginZcm;
+            _tileWidthCm = tileSpace.TileWidthCm;
+            _tileHeightCm = tileSpace.TileHeightCm;
         }
+
+        /// <summary>
+        /// Explicit origin-zero tile dimensions. Hex or non-zero origins must pass
+        /// <see cref="NavQueryTileSpace"/> — there is no silent Hex-metric default.
+        /// </summary>
+        public NavQueryService(NavTileStore store, int layer, NavAreaCostTable areaCosts, int tileWidthCm, int tileHeightCm)
+            : this(store, layer, areaCosts, new NavQueryTileSpace(0, 0, tileWidthCm, tileHeightCm))
+        {
+        }
+
+        public NavQueryTileSpace TileSpace =>
+            new NavQueryTileSpace(_originXcm, _originZcm, _tileWidthCm, _tileHeightCm);
 
         public bool TryProject(int worldXcm, int worldZcm, out NavLocation loc)
         {
@@ -128,8 +165,8 @@ namespace Ludots.Core.Navigation.NavMesh
                     _store.SnapshotLoadedTiles(),
                     _layer,
                     _areaCosts,
-                    _tileWidthCm.RoundToInt(),
-                    _tileHeightCm.RoundToInt(),
+                    _tileWidthCm,
+                    _tileHeightCm,
                     startXcm,
                     startZcm,
                     goalXcm,
@@ -146,31 +183,13 @@ namespace Ludots.Core.Navigation.NavMesh
             }
         }
 
-        private static readonly Fix64 DefaultTileWidthCm =
-            Fix64.FromFloat(HexCoordinates.HexWidth * SpatialScaleDefaults.TerrainChunkCells * SpatialScaleDefaults.CellCm);
-
-        private static readonly Fix64 DefaultTileHeightCm =
-            Fix64.FromFloat(HexCoordinates.RowSpacing * SpatialScaleDefaults.TerrainChunkCells * SpatialScaleDefaults.CellCm);
-
         private NavTileId LocateTile(int worldXcm, int worldZcm)
         {
-            var xFix = Fix64.FromInt(worldXcm);
-            var zFix = Fix64.FromInt(worldZcm);
-            int cx = (xFix / _tileWidthCm).ToInt();
-            int cz = (zFix / _tileHeightCm).ToInt();
-
-            if (xFix < Fix64.Zero && xFix % _tileWidthCm != Fix64.Zero) cx--;
-            if (zFix < Fix64.Zero && zFix % _tileHeightCm != Fix64.Zero) cz--;
-            if (cx < 0) cx = 0;
-            if (cz < 0) cz = 0;
-
+            // Deterministic floor division against the registry tile-space origin.
+            // Negative world coordinates must produce negative tile indices — never clamp to zero.
+            int cx = MathUtil.FloorDiv(checked(worldXcm - _originXcm), _tileWidthCm);
+            int cz = MathUtil.FloorDiv(checked(worldZcm - _originZcm), _tileHeightCm);
             return new NavTileId(cx, cz, _layer);
-        }
-
-        private static int RequirePositive(int value, string name)
-        {
-            if (value <= 0) throw new ArgumentOutOfRangeException(name);
-            return value;
         }
 
         private static int FindNearestTriangle(NavTile tile, int localXcm, int localZcm)

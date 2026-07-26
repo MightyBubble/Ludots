@@ -48,6 +48,8 @@
           "sinkPhysicsCollider": false,
           "sinkNavigationObstacle": true,
           "navRadiusCm": 500,
+          "navMinYcm": 0,
+          "navMaxYcm": 200,
           "radiusCm": 500,
           "localOffsetXCm": 0,
           "localOffsetYCm": 0
@@ -69,6 +71,8 @@
           "sinkPhysicsCollider": false,
           "sinkNavigationObstacle": true,
           "navRadiusCm": 400,
+          "navMinYcm": 0,
+          "navMaxYcm": 200,
           "radiusCm": 400,
           "localOffsetXCm": 0,
           "localOffsetYCm": 0
@@ -90,6 +94,8 @@
           "sinkPhysicsCollider": false,
           "sinkNavigationObstacle": true,
           "navRadiusCm": 400,
+          "navMinYcm": 0,
+          "navMaxYcm": 200,
           "radiusCm": 400,
           "localOffsetXCm": 0,
           "localOffsetYCm": 0
@@ -111,6 +117,8 @@
           "sinkPhysicsCollider": false,
           "sinkNavigationObstacle": true,
           "navRadiusCm": 500,
+          "navMinYcm": 0,
+          "navMaxYcm": 200,
           "radiusCm": 500,
           "localOffsetXCm": 0,
           "localOffsetYCm": 0
@@ -132,6 +140,8 @@
           "sinkPhysicsCollider": false,
           "sinkNavigationObstacle": true,
           "navRadiusCm": 300,
+          "navMinYcm": 0,
+          "navMaxYcm": 200,
           "radiusCm": 300,
           "localOffsetXCm": 0,
           "localOffsetYCm": 0

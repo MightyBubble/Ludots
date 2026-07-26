@@ -47,12 +47,6 @@ namespace Ludots.Core.Navigation.NavMesh.Config
             _ = config.ParsedMode;
             _ = config.ParsedAlgorithm;
 
-            if (config.ParsedMode == NavBakeMode.RuntimeIncremental &&
-                config.ParsedAlgorithm != NavBakeAlgorithmKind.Cdt)
-            {
-                throw new InvalidOperationException("NavMeshBakeConfig runtime-incremental mode must use algorithm 'cdt'.");
-            }
-
             if (config.Profiles == null || config.Profiles.Count == 0)
             {
                 throw new InvalidOperationException("NavMeshBakeConfig.profiles is empty.");
@@ -68,6 +62,24 @@ namespace Ludots.Core.Navigation.NavMesh.Config
                 config.Areas = new();
             }
 
+            if (config.LayeredSpan == null)
+            {
+                throw new InvalidOperationException("NavMeshBakeConfig.layeredSpan is required.");
+            }
+
+            if (config.TriangleSurface == null)
+            {
+                throw new InvalidOperationException("NavMeshBakeConfig.triangleSurface is required.");
+            }
+
+            if (config.Recast == null)
+            {
+                throw new InvalidOperationException("NavMeshBakeConfig.recast is required.");
+            }
+
+            config.LayeredSpan.Validate();
+            config.TriangleSurface.Validate(layeredSpan: config.LayeredSpan);
+            config.Recast.Validate();
             return config;
         }
 
@@ -183,7 +195,7 @@ namespace Ludots.Core.Navigation.NavMesh.Config
 
         private void ValidateRaw(JsonObject root, string relativePath)
         {
-            RequireOnlyProperties(root, "NavMeshBakeConfig", "mode", "algorithm", "profiles", "layers", "areas", "runtimeIncremental");
+            RequireOnlyProperties(root, "NavMeshBakeConfig", "mode", "algorithm", "profiles", "layers", "areas", "runtimeIncremental", "layeredSpan", "triangleSurface", "recast");
             string mode = RequireString(root, "mode", "NavMeshBakeConfig");
             string algorithm = RequireString(root, "algorithm", "NavMeshBakeConfig");
             _ = NavBakeNames.ParseMode(mode, "NavMeshBakeConfig.mode");
@@ -263,38 +275,252 @@ namespace Ludots.Core.Navigation.NavMesh.Config
                 throw new InvalidOperationException("NavMeshBakeConfig.runtimeIncremental must be an explicit object.");
             }
 
+            const string runtimePath = "NavMeshBakeConfig.runtimeIncremental";
             RequireOnlyProperties(
                 runtimeIncremental,
-                "NavMeshBakeConfig.runtimeIncremental",
+                runtimePath,
                 "tileBudgetPerFixedTick",
                 "includeNeighborTiles",
                 "heightScaleMeters",
                 "minWalkableUpDot",
-                "cliffHeightThreshold");
-            int tileBudget = RequireInt(runtimeIncremental, "tileBudgetPerFixedTick", "NavMeshBakeConfig.runtimeIncremental");
+                "cliffHeightThreshold",
+                "trackedStructuralEntityCapacity",
+                "obstaclePrimitiveCapacity",
+                "polygonVertexCapacity",
+                "dirtyTileCapacity",
+                "stagedEntryCapacity",
+                "publishedTileCapacity",
+                "storeGroupCapacity",
+                "residentTileCapacity",
+                "outputVertexCapacity",
+                "outputTriangleCapacity",
+                "outputPortalCapacity",
+                "initialResidentChunkX",
+                "initialResidentChunkZ",
+                "initialResidentWidthChunks",
+                "initialResidentHeightChunks");
+            int tileBudget = RequireInt(runtimeIncremental, "tileBudgetPerFixedTick", runtimePath);
             if (tileBudget <= 0)
             {
-                throw new InvalidOperationException("NavMeshBakeConfig.runtimeIncremental.tileBudgetPerFixedTick must be > 0.");
+                throw new InvalidOperationException($"{runtimePath}.tileBudgetPerFixedTick must be > 0.");
             }
 
-            RequireBool(runtimeIncremental, "includeNeighborTiles", "NavMeshBakeConfig.runtimeIncremental");
-            float heightScale = RequireFloat(runtimeIncremental, "heightScaleMeters", "NavMeshBakeConfig.runtimeIncremental");
+            RequireBool(runtimeIncremental, "includeNeighborTiles", runtimePath);
+            float heightScale = RequireFloat(runtimeIncremental, "heightScaleMeters", runtimePath);
             if (heightScale <= 0f || float.IsNaN(heightScale))
             {
-                throw new InvalidOperationException("NavMeshBakeConfig.runtimeIncremental.heightScaleMeters must be > 0.");
+                throw new InvalidOperationException($"{runtimePath}.heightScaleMeters must be > 0.");
             }
 
-            float minUpDot = RequireFloat(runtimeIncremental, "minWalkableUpDot", "NavMeshBakeConfig.runtimeIncremental");
+            float minUpDot = RequireFloat(runtimeIncremental, "minWalkableUpDot", runtimePath);
             if (minUpDot < -1f || minUpDot > 1f || float.IsNaN(minUpDot))
             {
-                throw new InvalidOperationException("NavMeshBakeConfig.runtimeIncremental.minWalkableUpDot must be between -1 and 1.");
+                throw new InvalidOperationException($"{runtimePath}.minWalkableUpDot must be between -1 and 1.");
             }
 
-            int cliff = RequireInt(runtimeIncremental, "cliffHeightThreshold", "NavMeshBakeConfig.runtimeIncremental");
+            int cliff = RequireInt(runtimeIncremental, "cliffHeightThreshold", runtimePath);
             if (cliff < 0)
             {
-                throw new InvalidOperationException("NavMeshBakeConfig.runtimeIncremental.cliffHeightThreshold must be >= 0.");
+                throw new InvalidOperationException($"{runtimePath}.cliffHeightThreshold must be >= 0.");
             }
+
+            RequirePositiveInt(runtimeIncremental, "trackedStructuralEntityCapacity", runtimePath);
+            RequirePositiveInt(runtimeIncremental, "obstaclePrimitiveCapacity", runtimePath);
+            RequirePositiveInt(runtimeIncremental, "polygonVertexCapacity", runtimePath);
+            int dirtyTileCapacity = RequirePositiveInt(runtimeIncremental, "dirtyTileCapacity", runtimePath);
+            int stagedEntryCapacity = RequirePositiveInt(runtimeIncremental, "stagedEntryCapacity", runtimePath);
+            int publishedTileCapacity = RequirePositiveInt(runtimeIncremental, "publishedTileCapacity", runtimePath);
+            RequirePositiveInt(runtimeIncremental, "storeGroupCapacity", runtimePath);
+            int residentTileCapacity = RequirePositiveInt(runtimeIncremental, "residentTileCapacity", runtimePath);
+            RequirePositiveInt(runtimeIncremental, "outputVertexCapacity", runtimePath);
+            RequirePositiveInt(runtimeIncremental, "outputTriangleCapacity", runtimePath);
+            RequirePositiveInt(runtimeIncremental, "outputPortalCapacity", runtimePath);
+
+            int initialResidentChunkX = RequireInt(runtimeIncremental, "initialResidentChunkX", runtimePath);
+            int initialResidentChunkZ = RequireInt(runtimeIncremental, "initialResidentChunkZ", runtimePath);
+            if (initialResidentChunkX < 0)
+            {
+                throw new InvalidOperationException($"{runtimePath}.initialResidentChunkX must be >= 0.");
+            }
+
+            if (initialResidentChunkZ < 0)
+            {
+                throw new InvalidOperationException($"{runtimePath}.initialResidentChunkZ must be >= 0.");
+            }
+
+            int initialResidentWidthChunks = RequirePositiveInt(runtimeIncremental, "initialResidentWidthChunks", runtimePath);
+            int initialResidentHeightChunks = RequirePositiveInt(runtimeIncremental, "initialResidentHeightChunks", runtimePath);
+            int initialResidentTiles = checked(initialResidentWidthChunks * initialResidentHeightChunks);
+            if (initialResidentTiles > dirtyTileCapacity)
+            {
+                throw new InvalidOperationException(
+                    $"{runtimePath}.initialResident window ({initialResidentWidthChunks}x{initialResidentHeightChunks}={initialResidentTiles}) " +
+                    $"exceeds dirtyTileCapacity ({dirtyTileCapacity}).");
+            }
+
+            if (initialResidentTiles > residentTileCapacity)
+            {
+                throw new InvalidOperationException(
+                    $"{runtimePath}.initialResident window ({initialResidentWidthChunks}x{initialResidentHeightChunks}={initialResidentTiles}) " +
+                    $"exceeds residentTileCapacity ({residentTileCapacity}).");
+            }
+
+            if (initialResidentTiles > stagedEntryCapacity)
+            {
+                throw new InvalidOperationException(
+                    $"{runtimePath}.initialResident window ({initialResidentWidthChunks}x{initialResidentHeightChunks}={initialResidentTiles}) " +
+                    $"exceeds stagedEntryCapacity ({stagedEntryCapacity}).");
+            }
+
+            if (initialResidentTiles > publishedTileCapacity)
+            {
+                throw new InvalidOperationException(
+                    $"{runtimePath}.initialResident window ({initialResidentWidthChunks}x{initialResidentHeightChunks}={initialResidentTiles}) " +
+                    $"exceeds publishedTileCapacity ({publishedTileCapacity}).");
+            }
+
+            ValidateLayeredSpanRaw(root);
+            ValidateTriangleSurfaceRaw(root);
+            ValidateRecastRaw(root);
+        }
+
+        private static void ValidateRecastRaw(JsonObject root)
+        {
+            if (root["recast"] is not JsonObject recast)
+            {
+                throw new InvalidOperationException("NavMeshBakeConfig.recast must be an explicit object.");
+            }
+
+            const string path = "NavMeshBakeConfig.recast";
+            RequireOnlyProperties(recast, path, "rasterCellSizeCm", "rasterCellHeightCm");
+            RequirePositiveInt(recast, "rasterCellSizeCm", path);
+            RequirePositiveInt(recast, "rasterCellHeightCm", path);
+        }
+
+        private static void ValidateTriangleSurfaceRaw(JsonObject root)
+        {
+            if (root["triangleSurface"] is not JsonObject triangleSurface)
+            {
+                throw new InvalidOperationException("NavMeshBakeConfig.triangleSurface must be an explicit object.");
+            }
+
+            const string path = "NavMeshBakeConfig.triangleSurface";
+            RequireOnlyProperties(triangleSurface, path, "haloPaddingCm");
+            RequireNonNegativeInt(triangleSurface, "haloPaddingCm", path);
+
+            if (root["layeredSpan"] is JsonObject layeredSpan)
+            {
+                int rasterCellSizeCm = RequirePositiveInt(layeredSpan, "rasterCellSizeCm", "NavMeshBakeConfig.layeredSpan");
+                int rasterHaloCells = RequireNonNegativeInt(layeredSpan, "rasterHaloCells", "NavMeshBakeConfig.layeredSpan");
+                int requiredHalo = checked(rasterHaloCells * rasterCellSizeCm);
+                int haloPaddingCm = RequireNonNegativeInt(triangleSurface, "haloPaddingCm", path);
+                if (haloPaddingCm < requiredHalo)
+                {
+                    throw new InvalidOperationException(
+                        $"{path}.haloPaddingCm ({haloPaddingCm}) must be >= " +
+                        $"layeredSpan.rasterHaloCells * rasterCellSizeCm ({requiredHalo}).");
+                }
+            }
+        }
+
+        private static void ValidateLayeredSpanRaw(JsonObject root)
+        {
+            if (root["layeredSpan"] is not JsonObject layeredSpan)
+            {
+                throw new InvalidOperationException("NavMeshBakeConfig.layeredSpan must be an explicit object.");
+            }
+
+            const string path = "NavMeshBakeConfig.layeredSpan";
+            RequireOnlyProperties(
+                layeredSpan,
+                path,
+                "scratchSlotCount",
+                "rasterCellSizeCm",
+                "rasterHaloCells",
+                "sameSurfaceToleranceCm",
+                "maxSimplificationErrorCm",
+                "heightRounding",
+                "maxLawsonFlipCount",
+                "columnCapacity",
+                "spanCapacity",
+                "classifiedSpanCapacity",
+                "walkableSpanCapacity",
+                "linkCapacity",
+                "sheetCapacity",
+                "portalIntervalCapacity",
+                "regionCapacity",
+                "chartCapacity",
+                "ringCapacity",
+                "contourVertexCapacity",
+                "contourEdgeCapacity",
+                "seamCapacity",
+                "canonicalLinkCapacity",
+                "splitPointCapacity",
+                "triangulationVertexCapacity",
+                "triangulationTriangleCapacity",
+                "constrainedEdgeCapacity",
+                "borderPortalCapacity",
+                "polygonVertexCapacity",
+                "adjacencyEdgeCapacity",
+                "bridgeCandidateCapacity",
+                "ringWorkCapacity",
+                "temporaryConstraintFlagCapacity");
+
+            RequirePositiveInt(layeredSpan, "scratchSlotCount", path);
+            RequirePositiveInt(layeredSpan, "rasterCellSizeCm", path);
+            RequireNonNegativeInt(layeredSpan, "rasterHaloCells", path);
+            RequireNonNegativeInt(layeredSpan, "sameSurfaceToleranceCm", path);
+            RequireNonNegativeInt(layeredSpan, "maxSimplificationErrorCm", path);
+            string heightRounding = RequireString(layeredSpan, "heightRounding", path);
+            _ = NavLayeredSpanConfig.ParseHeightRounding(heightRounding, $"{path}.heightRounding");
+            RequireNonNegativeInt(layeredSpan, "maxLawsonFlipCount", path);
+
+            RequirePositiveInt(layeredSpan, "columnCapacity", path);
+            RequirePositiveInt(layeredSpan, "spanCapacity", path);
+            RequirePositiveInt(layeredSpan, "classifiedSpanCapacity", path);
+            RequirePositiveInt(layeredSpan, "walkableSpanCapacity", path);
+            RequirePositiveInt(layeredSpan, "linkCapacity", path);
+            RequirePositiveInt(layeredSpan, "sheetCapacity", path);
+            RequirePositiveInt(layeredSpan, "portalIntervalCapacity", path);
+            RequirePositiveInt(layeredSpan, "regionCapacity", path);
+            RequirePositiveInt(layeredSpan, "chartCapacity", path);
+            RequirePositiveInt(layeredSpan, "ringCapacity", path);
+            RequirePositiveInt(layeredSpan, "contourVertexCapacity", path);
+            RequirePositiveInt(layeredSpan, "contourEdgeCapacity", path);
+            RequirePositiveInt(layeredSpan, "seamCapacity", path);
+            RequirePositiveInt(layeredSpan, "canonicalLinkCapacity", path);
+            RequirePositiveInt(layeredSpan, "splitPointCapacity", path);
+            RequirePositiveInt(layeredSpan, "triangulationVertexCapacity", path);
+            RequirePositiveInt(layeredSpan, "triangulationTriangleCapacity", path);
+            RequirePositiveInt(layeredSpan, "constrainedEdgeCapacity", path);
+            RequirePositiveInt(layeredSpan, "borderPortalCapacity", path);
+            RequirePositiveInt(layeredSpan, "polygonVertexCapacity", path);
+            RequirePositiveInt(layeredSpan, "adjacencyEdgeCapacity", path);
+            RequirePositiveInt(layeredSpan, "bridgeCandidateCapacity", path);
+            RequirePositiveInt(layeredSpan, "ringWorkCapacity", path);
+            RequirePositiveInt(layeredSpan, "temporaryConstraintFlagCapacity", path);
+        }
+
+        private static int RequirePositiveInt(JsonObject obj, string key, string path)
+        {
+            int value = RequireInt(obj, key, path);
+            if (value <= 0)
+            {
+                throw new InvalidOperationException($"{path}.{key} must be > 0.");
+            }
+
+            return value;
+        }
+
+        private static int RequireNonNegativeInt(JsonObject obj, string key, string path)
+        {
+            int value = RequireInt(obj, key, path);
+            if (value < 0)
+            {
+                throw new InvalidOperationException($"{path}.{key} must be >= 0.");
+            }
+
+            return value;
         }
 
         private static void RequireOnlyProperties(JsonObject obj, string path, params string[] allowed)

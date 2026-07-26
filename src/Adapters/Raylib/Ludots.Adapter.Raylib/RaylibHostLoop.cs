@@ -22,6 +22,7 @@ using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.DebugDraw;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Minimap;
+using Ludots.Core.Presentation.Navigation;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Presentation.Performers;
@@ -44,6 +45,7 @@ namespace Ludots.Adapter.Raylib
     internal static class RaylibHostLoop
     {
         private const uint FlagWindowResizable = 4;
+        private const string DeterministicFrameDeltaEnvKey = "LUDOTS_RAYLIB_DETERMINISTIC_FRAME_DELTA";
         private static readonly ServiceKey<IRaylibBenchmarkRenderer> RaylibBenchmarkRendererKey = new("Platform.RaylibBenchmarkRenderer");
         private static bool _uiPointerCaptured;
         private static PointerButton? _uiCapturedPointerButton;
@@ -148,6 +150,33 @@ namespace Ludots.Adapter.Raylib
             return pointerCaptured || wheelCaptured || inputHandled;
         }
 
+        /// <summary>
+        /// Host-frame gate for screenshot / auto-exit: true when the completed host frame
+        /// (the same value published as <see cref="CoreServiceKeys.HostFrameIndex"/> before Tick)
+        /// has reached the authored gate frame.
+        /// </summary>
+        internal static bool MatchesCompletedHostFrame(int completedHostFrameIndex, int gateFrame)
+            => completedHostFrameIndex >= gateFrame;
+
+        internal static float ResolveFrameDeltaSeconds(
+            float measuredDeltaSeconds,
+            int targetFps,
+            bool deterministicCapture)
+        {
+            if (!deterministicCapture)
+            {
+                return measuredDeltaSeconds;
+            }
+
+            if (targetFps <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"{DeterministicFrameDeltaEnvKey}=true requires a positive targetFps; got {targetFps}.");
+            }
+
+            return 1f / targetFps;
+        }
+
         public static void Run(RaylibHostSetup setup)
         {
             var engine = setup.Engine;
@@ -161,6 +190,10 @@ namespace Ludots.Adapter.Raylib
             string title = string.IsNullOrWhiteSpace(config.WindowTitle) ? "Ludots Engine" : config.WindowTitle;
             // targetFps = 0 leaves VSync/FPS uncapped; values below 0 use the host default.
             int targetFps = config.TargetFps == 0 ? 0 : (config.TargetFps < 0 ? 60 : config.TargetFps);
+            bool deterministicFrameDelta = ReadEnvBoolOrDefault(
+                DeterministicFrameDeltaEnvKey,
+                defaultValue: false);
+            _ = ResolveFrameDeltaSeconds(0f, targetFps, deterministicFrameDelta);
             bool windowOpened = false;
             bool windowResizable = config.WindowResizable || config.WindowStartMaximized;
 
@@ -279,6 +312,10 @@ namespace Ludots.Adapter.Raylib
                 GlobalFieldVisualBuffer? globalFieldVisualBuffer = engine.GetService(CoreServiceKeys.GlobalFieldVisualBuffer);
                 var fogFieldProjector = new FogGlobalFieldVisualProjector();
                 using var fieldRenderPerformer = new RaylibFieldRenderPerformer();
+                NavMeshPresentationBuffer navMeshPresentationBuffer = engine.GetService(CoreServiceKeys.NavMeshPresentationBuffer)
+                    ?? throw new InvalidOperationException("Raylib host requires the Core NavMeshPresentationBuffer service.");
+                using var navMeshPresentationRenderer = new RaylibNavMeshPresentationRenderer(
+                    navMeshPresentationBuffer.TileCapacity);
                 PresentationMaterialRegistry? materials = engine.GetService(CoreServiceKeys.PresentationMaterialRegistry);
                 using var primitiveRenderer = new RaylibPrimitiveRenderer(RaylibPrimitiveRenderMode.Instanced, engine.VFS, materials);
                 RaylibBenchmarkRenderService? benchmarkRenderer = null;
@@ -372,7 +409,10 @@ namespace Ludots.Adapter.Raylib
                             uiRoot.Resize(w, h);
                         }
 
-                        float dt = Rl.GetFrameTime();
+                        float dt = ResolveFrameDeltaSeconds(
+                            Rl.GetFrameTime(),
+                            targetFps,
+                            deterministicFrameDelta);
                         presentationTiming?.ObserveFrame(dt * 1000d);
                         var renderDebug = ResolveRenderDebugState(engine);
                         bool activeMapRequestsDeepBackground = ActiveMapHasTag(engine, MapTags.RaylibDeepBackground);
@@ -511,6 +551,17 @@ namespace Ludots.Adapter.Raylib
                         {
                             presentationTiming?.ObserveTerrain(0d, 0d, 0, 0);
                         }
+
+                        if (engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap? navMeshDrapeHeightmap))
+                        {
+                            navMeshPresentationRenderer.BindVisualHeightmap(navMeshDrapeHeightmap);
+                        }
+                        else
+                        {
+                            navMeshPresentationRenderer.BindVisualHeightmap(null);
+                        }
+
+                        navMeshPresentationRenderer.Draw(navMeshPresentationBuffer);
 
                         if (drawFieldOverlays && globalFieldVisualBuffer != null)
                         {
@@ -667,14 +718,11 @@ namespace Ludots.Adapter.Raylib
                         presentationTiming?.ObserveWallFrame(ElapsedMs(wallFrameStart));
                         previousLoopEnd = Stopwatch.GetTimestamp();
 
-                        frameIndex++;
-                        if (timingLogIntervalFrames > 0 && frameIndex % timingLogIntervalFrames == 0)
-                        {
-                            AppendRaylibDiagnostic(diagnosticPath, $"sample frame={frameIndex}");
-                            AppendRaylibDiagnostic(diagnosticPath, BuildTimingDiagnostic(engine, presentationTiming, overlayScene));
-                        }
-
-                        if (screenshotPending && frameIndex >= screenshotFrame &&
+                        // Screenshot / auto-exit use the same HostFrameIndex that was published before
+                        // engine.Tick for this host frame. Capture after present so f0240 is the frame
+                        // whose Tick observed HostFrameIndex=240 and whose timeline gates already ran.
+                        if (screenshotPending &&
+                            MatchesCompletedHostFrame(frameIndex, screenshotFrame) &&
                             runtimeStopwatch.ElapsedMilliseconds >= minRuntimeMsBeforeScreenshot)
                         {
                             string fullScreenshotPath = screenshotSequenceEnabled
@@ -726,15 +774,26 @@ namespace Ludots.Adapter.Raylib
                             Log.Info(in LogChannels.Engine, $"Captured runtime screenshot: {fullScreenshotPath}");
                         }
 
-                        if (autoExitFrame > 0 && frameIndex >= autoExitFrame && !screenshotPending)
+                        if (autoExitFrame > 0 &&
+                            MatchesCompletedHostFrame(frameIndex, autoExitFrame) &&
+                            !screenshotPending)
                         {
                             AppendRaylibDiagnostic(diagnosticPath, $"auto-exit frame={frameIndex}");
                             AppendRaylibDiagnostic(diagnosticPath, BuildTimingDiagnostic(engine, presentationTiming, overlayScene));
                             break;
                         }
+
+                        if (timingLogIntervalFrames > 0 && frameIndex % timingLogIntervalFrames == 0)
+                        {
+                            AppendRaylibDiagnostic(diagnosticPath, $"sample frame={frameIndex}");
+                            AppendRaylibDiagnostic(diagnosticPath, BuildTimingDiagnostic(engine, presentationTiming, overlayScene));
+                        }
+
+                        frameIndex++;
                     }
                     catch (Exception ex)
                     {
+                        AppendRaylibDiagnostic(diagnosticPath, $"exception in game loop: {ex}");
                         Log.Error(in LogChannels.Engine, $"Unhandled exception in game loop: {ex}");
                         break;
                     }
@@ -852,10 +911,24 @@ namespace Ludots.Adapter.Raylib
                 return defaultValue;
             }
 
-            return raw.Equals("1", StringComparison.OrdinalIgnoreCase) ||
-                   raw.Equals("true", StringComparison.OrdinalIgnoreCase) ||
-                   raw.Equals("yes", StringComparison.OrdinalIgnoreCase) ||
-                   raw.Equals("on", StringComparison.OrdinalIgnoreCase);
+            if (raw.Equals("1", StringComparison.OrdinalIgnoreCase) ||
+                raw.Equals("true", StringComparison.OrdinalIgnoreCase) ||
+                raw.Equals("yes", StringComparison.OrdinalIgnoreCase) ||
+                raw.Equals("on", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            if (raw.Equals("0", StringComparison.OrdinalIgnoreCase) ||
+                raw.Equals("false", StringComparison.OrdinalIgnoreCase) ||
+                raw.Equals("no", StringComparison.OrdinalIgnoreCase) ||
+                raw.Equals("off", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            throw new InvalidOperationException(
+                $"Environment variable '{key}' must be one of 1/0, true/false, yes/no, or on/off; got '{raw}'.");
         }
 
         private static int[] ReadEnvFrameList(string key)

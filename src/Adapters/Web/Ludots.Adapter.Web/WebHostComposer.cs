@@ -7,7 +7,9 @@ using Ludots.Core.Engine;
 using Ludots.Core.Hosting;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.Navigation.NavMesh.Bake;
 using Ludots.Core.Scripting;
+using Ludots.NavBake.Recast;
 using Ludots.UI;
 using Ludots.UI.HtmlEngine.Markup;
 using Ludots.UI.Runtime;
@@ -36,7 +38,10 @@ namespace Ludots.Adapter.Web
             ILogBackend effectiveBackend = consoleBackend;
             Log.Initialize(effectiveBackend);
 
-            var result = GameBootstrapper.InitializeFromBaseDirectory(baseDir, gameConfigFile ?? "launcher.runtime.json");
+            var result = GameBootstrapper.InitializeFromBaseDirectory(
+                baseDir,
+                gameConfigFile ?? "launcher.runtime.json",
+                externalNavBakeAdapters: new INavBakeAlgorithm[] { new RecastNavBakeAlgorithm() });
             var engine = result.Engine;
             var config = result.Config;
 

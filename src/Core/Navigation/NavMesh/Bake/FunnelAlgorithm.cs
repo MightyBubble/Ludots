@@ -6,7 +6,8 @@ using Ludots.Core.Spatial;
 namespace Ludots.Core.Navigation.NavMesh.Bake
 {
     /// <summary>
-    /// A portal (gate) for funnel algorithm, representing left and right endpoints.
+    /// A portal (gate) for funnel algorithm, representing left and right endpoints in XZ.
+    /// Prefer <see cref="FunnelPortal3D"/> when portal endpoint heights must be retained.
     /// </summary>
     public readonly struct FunnelPortal
     {
@@ -26,6 +27,51 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
         }
 
         public Vector2 Center => (Left + Right) * 0.5f;
+    }
+
+    /// <summary>
+    /// 3D portal endpoints for funnel conversions that must retain LeftYcm/RightYcm.
+    /// </summary>
+    public readonly struct FunnelPortal3D
+    {
+        public readonly int LeftXcm;
+        public readonly int LeftYcm;
+        public readonly int LeftZcm;
+        public readonly int RightXcm;
+        public readonly int RightYcm;
+        public readonly int RightZcm;
+
+        public FunnelPortal3D(
+            int leftXcm,
+            int leftYcm,
+            int leftZcm,
+            int rightXcm,
+            int rightYcm,
+            int rightZcm)
+        {
+            LeftXcm = leftXcm;
+            LeftYcm = leftYcm;
+            LeftZcm = leftZcm;
+            RightXcm = rightXcm;
+            RightYcm = rightYcm;
+            RightZcm = rightZcm;
+        }
+
+        public static FunnelPortal3D FromBorderPortal(in NavBorderPortal portal)
+            => new FunnelPortal3D(
+                portal.LeftXcm,
+                portal.LeftYcm,
+                portal.LeftZcm,
+                portal.RightXcm,
+                portal.RightYcm,
+                portal.RightZcm);
+
+        public FunnelPortal ToXZPortalMeters()
+            => new FunnelPortal(
+                SpatialScaleDefaults.CentimetersToMeters(LeftXcm),
+                SpatialScaleDefaults.CentimetersToMeters(LeftZcm),
+                SpatialScaleDefaults.CentimetersToMeters(RightXcm),
+                SpatialScaleDefaults.CentimetersToMeters(RightZcm));
     }
 
     /// <summary>
@@ -149,6 +195,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
 
         /// <summary>
         /// Smooths a path given integer coordinates (centimeters).
+        /// XZ-only overload — does not consume portal Y; prefer <see cref="SmoothPathCm3D"/>.
         /// </summary>
         public static FunnelResult SmoothPathCm(
             int startXcm, int startZcm,
@@ -173,6 +220,97 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             }
 
             return SmoothPath(start, goal, portals);
+        }
+
+        /// <summary>
+        /// Smooths a path while retaining portal endpoint Y centimetres for downstream 3D consumers.
+        /// Funnel geometry itself remains XZ; Y channels are returned alongside the smoothed XZ path.
+        /// </summary>
+        public static (FunnelResult XzPath, int[] PathYcm) SmoothPathCm3D(
+            int startXcm,
+            int startYcm,
+            int startZcm,
+            int goalXcm,
+            int goalYcm,
+            int goalZcm,
+            IReadOnlyList<FunnelPortal3D> portals)
+        {
+            if (portals == null) throw new ArgumentNullException(nameof(portals));
+
+            var xzPortals = new List<FunnelPortal>(portals.Count);
+            for (int i = 0; i < portals.Count; i++)
+            {
+                xzPortals.Add(portals[i].ToXZPortalMeters());
+            }
+
+            FunnelResult xz = SmoothPath(
+                new Vector2(
+                    SpatialScaleDefaults.CentimetersToMeters(startXcm),
+                    SpatialScaleDefaults.CentimetersToMeters(startZcm)),
+                new Vector2(
+                    SpatialScaleDefaults.CentimetersToMeters(goalXcm),
+                    SpatialScaleDefaults.CentimetersToMeters(goalZcm)),
+                xzPortals);
+
+            if (!xz.Success || xz.Path.Length == 0)
+            {
+                return (xz, Array.Empty<int>());
+            }
+
+            var pathYcm = new int[xz.Path.Length];
+            pathYcm[0] = startYcm;
+            if (xz.Path.Length == 1)
+            {
+                return (xz, pathYcm);
+            }
+
+            pathYcm[xz.Path.Length - 1] = goalYcm;
+            for (int i = 1; i < xz.Path.Length - 1; i++)
+            {
+                // Sample Y from the nearest portal endpoint in XZ (deterministic: lowest portal index, then left before right).
+                int px = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(xz.Path[i].X));
+                int pz = (int)MathF.Round(SpatialScaleDefaults.MetersToCentimeters(xz.Path[i].Y));
+                pathYcm[i] = SamplePortalYcm(portals, px, pz, startYcm, goalYcm);
+            }
+
+            return (xz, pathYcm);
+        }
+
+        private static int SamplePortalYcm(
+            IReadOnlyList<FunnelPortal3D> portals,
+            int xcm,
+            int zcm,
+            int startYcm,
+            int goalYcm)
+        {
+            long bestDistSq = long.MaxValue;
+            int bestY = startYcm;
+            bool found = false;
+            for (int i = 0; i < portals.Count; i++)
+            {
+                FunnelPortal3D p = portals[i];
+                long dlx = (long)p.LeftXcm - xcm;
+                long dlz = (long)p.LeftZcm - zcm;
+                long distL = (dlx * dlx) + (dlz * dlz);
+                if (distL < bestDistSq)
+                {
+                    bestDistSq = distL;
+                    bestY = p.LeftYcm;
+                    found = true;
+                }
+
+                long drx = (long)p.RightXcm - xcm;
+                long drz = (long)p.RightZcm - zcm;
+                long distR = (drx * drx) + (drz * drz);
+                if (distR < bestDistSq)
+                {
+                    bestDistSq = distR;
+                    bestY = p.RightYcm;
+                    found = true;
+                }
+            }
+
+            return found ? bestY : goalYcm;
         }
 
         /// <summary>

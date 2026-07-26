@@ -448,7 +448,7 @@ Use centimeter integer coordinates from `NavTile` when possible. If a renderer p
 - CLI and Bridge use one `NavBakeContext` and one `NavBakeService`.
 - `maxSlopeDeg`, `maxClimbCm`, `radiusCm`, `heightCm`, `clearanceCm`, `draftCm`, and `beamCm` have one authoring owner each.
 - `areaId` / tags are terrain classification SSOT; cost is per-agent/pathing data.
-- Runtime incremental rebuild remains `runtime-incremental` + `cdt` only.
+- Runtime incremental rebuild preserves the selected algorithm and requires an explicitly registered adapter capability for the active input; missing support fails without fallback.
 - Raylib debug view renders from `NavTile` geometry with cached meshes and deduped edges.
 - No private loader, no fallback mesh, no duplicate obstacle source, no casing aliases.
 - Contract tests cover strict config, source DAG direction, grid production bake, area propagation, per-agent cost behavior, and debug mesh edge dedupe.

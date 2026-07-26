@@ -15,21 +15,29 @@ namespace Ludots.Core.Physics2D.Components
         public fixed byte ShapeValues[MaxPieces];
         public fixed int ShapeDataIndices[MaxPieces];
         public fixed int NavRadiusCms[MaxPieces];
+        public fixed int NavMinYcms[MaxPieces];
+        public fixed int NavMaxYcms[MaxPieces];
 
         public void SetPiece(
             int pieceIndex,
             ManifestationObstacleShape2D shape,
             int shapeDataIndex,
-            int navRadiusCm)
+            int navRadiusCm,
+            int navMinYcm,
+            int navMaxYcm)
         {
             ValidatePieceIndex(pieceIndex);
             fixed (byte* shapeValues = ShapeValues)
             fixed (int* shapeDataIndices = ShapeDataIndices)
             fixed (int* navRadiusCms = NavRadiusCms)
+            fixed (int* navMinYcms = NavMinYcms)
+            fixed (int* navMaxYcms = NavMaxYcms)
             {
                 shapeValues[pieceIndex] = (byte)shape;
                 shapeDataIndices[pieceIndex] = shapeDataIndex;
                 navRadiusCms[pieceIndex] = navRadiusCm;
+                navMinYcms[pieceIndex] = navMinYcm;
+                navMaxYcms[pieceIndex] = navMaxYcm;
             }
 
             if (PieceCount < pieceIndex + 1)
@@ -62,6 +70,24 @@ namespace Ludots.Core.Physics2D.Components
             fixed (int* navRadiusCms = NavRadiusCms)
             {
                 return navRadiusCms[pieceIndex];
+            }
+        }
+
+        public readonly int GetNavMinYcm(int pieceIndex)
+        {
+            ValidateDeclaredPieceIndex(pieceIndex);
+            fixed (int* navMinYcms = NavMinYcms)
+            {
+                return navMinYcms[pieceIndex];
+            }
+        }
+
+        public readonly int GetNavMaxYcm(int pieceIndex)
+        {
+            ValidateDeclaredPieceIndex(pieceIndex);
+            fixed (int* navMaxYcms = NavMaxYcms)
+            {
+                return navMaxYcms[pieceIndex];
             }
         }
 

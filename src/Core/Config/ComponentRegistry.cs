@@ -1034,6 +1034,8 @@ namespace Ludots.Core.Config
                 "sinkPhysicsCollider",
                 "sinkNavigationObstacle",
                 "navRadiusCm",
+                "navMinYcm",
+                "navMaxYcm",
                 "radiusCm",
                 "halfWidthCm",
                 "halfHeightCm",
@@ -1053,6 +1055,31 @@ namespace Ludots.Core.Config
             if (intent.SinkPhysicsCollider == 0 && intent.SinkNavigationObstacle == 0)
             {
                 throw new InvalidOperationException("ManifestationObstacleIntent2D requires at least one sink intent.");
+            }
+
+            if (intent.SinkNavigationObstacle != 0)
+            {
+                bool hasMin = obj.TryGetPropertyValue("navMinYcm", out _);
+                bool hasMax = obj.TryGetPropertyValue("navMaxYcm", out _);
+                if (!hasMin || !hasMax)
+                {
+                    throw new InvalidOperationException(
+                        "ManifestationObstacleIntent2D requires both navMinYcm and navMaxYcm when sinkNavigationObstacle is true.");
+                }
+
+                intent.NavMinYcm = ReadIntProperty(obj, "navMinYcm", "ManifestationObstacleIntent2D");
+                intent.NavMaxYcm = ReadIntProperty(obj, "navMaxYcm", "ManifestationObstacleIntent2D");
+                if (intent.NavMinYcm >= intent.NavMaxYcm)
+                {
+                    throw new InvalidOperationException(
+                        "ManifestationObstacleIntent2D.navMinYcm/navMaxYcm must author half-open [navMinYcm,navMaxYcm) with navMinYcm < navMaxYcm.");
+                }
+            }
+            else
+            {
+                // Physics-only: do not require or interpret vertical nav extents.
+                intent.NavMinYcm = 0;
+                intent.NavMaxYcm = 0;
             }
 
             if (intent.Shape == ManifestationObstacleShape2D.Circle)
@@ -1183,6 +1210,8 @@ namespace Ludots.Core.Config
                 context,
                 "shape",
                 "navRadiusCm",
+                "navMinYcm",
+                "navMaxYcm",
                 "radiusCm",
                 "halfWidthCm",
                 "halfHeightCm",
@@ -1237,6 +1266,27 @@ namespace Ludots.Core.Config
             }
 
             int navRadiusCm = ReadIntProperty(obj, "navRadiusCm", context);
+            int navMinYcm = 0;
+            int navMaxYcm = 0;
+            if (obstacle.SinkNavigationObstacle != 0)
+            {
+                bool hasMin = obj.TryGetPropertyValue("navMinYcm", out _);
+                bool hasMax = obj.TryGetPropertyValue("navMaxYcm", out _);
+                if (!hasMin || !hasMax)
+                {
+                    throw new InvalidOperationException(
+                        $"{context} requires both navMinYcm and navMaxYcm when CompoundObstacle2D.sinkNavigationObstacle is true.");
+                }
+
+                navMinYcm = ReadIntProperty(obj, "navMinYcm", context);
+                navMaxYcm = ReadIntProperty(obj, "navMaxYcm", context);
+                if (navMinYcm >= navMaxYcm)
+                {
+                    throw new InvalidOperationException(
+                        $"{context}.navMinYcm/navMaxYcm must author half-open [navMinYcm,navMaxYcm) with navMinYcm < navMaxYcm.");
+                }
+            }
+
             obstacle.SetPiece(
                 pieceIndex,
                 shape,
@@ -1245,7 +1295,9 @@ namespace Ludots.Core.Config
                 halfHeightCm,
                 localOffsetXCm,
                 localOffsetYCm,
-                navRadiusCm);
+                navRadiusCm,
+                navMinYcm,
+                navMaxYcm);
 
             if (shape == ManifestationObstacleShape2D.Polygon)
             {

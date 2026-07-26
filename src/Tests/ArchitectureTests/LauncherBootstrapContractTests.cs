@@ -11,6 +11,73 @@ namespace Ludots.Tests.Architecture
     public class LauncherBootstrapContractTests
     {
         [Test]
+        public void LauncherBuildNever_RequiresExistingNonEmptyHostArtifact()
+        {
+            var tempDirectory = Path.Combine(Path.GetTempPath(), $"ludots-launcher-no-build-{Guid.NewGuid():N}");
+            var appAssemblyPath = Path.Combine(tempDirectory, "host.dll");
+            Directory.CreateDirectory(tempDirectory);
+
+            try
+            {
+                var missing = LauncherService.ValidateNoBuildAppArtifact(LauncherPlatformIds.Raylib, appAssemblyPath);
+                Assert.That(missing.Ok, Is.False);
+                Assert.That(missing.Output, Does.Contain("requires an existing host application assembly"));
+
+                File.WriteAllBytes(appAssemblyPath, Array.Empty<byte>());
+                var empty = LauncherService.ValidateNoBuildAppArtifact(LauncherPlatformIds.Raylib, appAssemblyPath);
+                Assert.That(empty.Ok, Is.False);
+                Assert.That(empty.Output, Does.Contain("requires a non-empty host application assembly"));
+
+                File.WriteAllBytes(appAssemblyPath, new byte[] { 0x01 });
+                var existing = LauncherService.ValidateNoBuildAppArtifact(LauncherPlatformIds.Raylib, appAssemblyPath);
+                Assert.That(existing.Ok, Is.True);
+                Assert.That(existing.ExitCode, Is.Zero);
+                Assert.That(existing.Output, Does.Contain("build skipped by request"));
+            }
+            finally
+            {
+                if (Directory.Exists(tempDirectory))
+                {
+                    Directory.Delete(tempDirectory, recursive: true);
+                }
+            }
+        }
+
+        [Test]
+        public void LauncherBuildNever_RequiresExistingNonEmptyModArtifact_RegardlessOfStaleness()
+        {
+            var tempDirectory = Path.Combine(Path.GetTempPath(), $"ludots-launcher-no-build-mod-{Guid.NewGuid():N}");
+            var modAssemblyPath = Path.Combine(tempDirectory, "ExampleMod.dll");
+            Directory.CreateDirectory(tempDirectory);
+
+            try
+            {
+                var missing = LauncherService.ValidateNoBuildModArtifact("ExampleMod", modAssemblyPath);
+                Assert.That(missing.Ok, Is.False);
+                Assert.That(missing.Output, Does.Contain("requires an existing mod assembly"));
+
+                File.WriteAllBytes(modAssemblyPath, Array.Empty<byte>());
+                var empty = LauncherService.ValidateNoBuildModArtifact("ExampleMod", modAssemblyPath);
+                Assert.That(empty.Ok, Is.False);
+                Assert.That(empty.Output, Does.Contain("requires a non-empty mod assembly"));
+
+                File.WriteAllBytes(modAssemblyPath, new byte[] { 0x01 });
+                File.SetLastWriteTimeUtc(modAssemblyPath, DateTime.UnixEpoch);
+                var existing = LauncherService.ValidateNoBuildModArtifact("ExampleMod", modAssemblyPath);
+                Assert.That(existing.Ok, Is.True);
+                Assert.That(existing.ExitCode, Is.Zero);
+                Assert.That(existing.Output, Does.Contain("Build skipped by request"));
+            }
+            finally
+            {
+                if (Directory.Exists(tempDirectory))
+                {
+                    Directory.Delete(tempDirectory, recursive: true);
+                }
+            }
+        }
+
+        [Test]
         public async Task RunProcessAsync_ReturnsWithoutHanging_WhenDescendantKeepsRedirectedOutputOpen()
         {
             if (!OperatingSystem.IsWindows())

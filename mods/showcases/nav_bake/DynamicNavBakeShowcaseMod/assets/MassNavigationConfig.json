@@ -1,0 +1,58 @@
+{
+  "mapId": "nav_bake_dynamic_rts",
+  "compatibleMapIds": ["nav_bake_open_world_64x64"],
+  "presentation": {
+    "requiredMeshAssetIds": [
+      "mass_navigation.agent.soldier",
+      "mass_navigation.command.marker",
+      "mass_navigation.blocker.rock",
+      "mass_navigation.hotspot.obelisk"
+    ],
+    "blockerPerformerId": "mass_navigation_blocker",
+    "hotspotPerformerId": "mass_navigation_hotspot_marker",
+    "blockerTemplateId": "mass_navigation_blocker",
+    "hotspotTemplateId": "mass_navigation_hotspot_marker",
+    "teams": []
+  },
+  "scenario": {
+    "agentsPerTeam": 0,
+    "teams": [
+      { "id": 1, "name": "Azure Squad" },
+      { "id": 2, "name": "Crimson Column" },
+      { "id": 3, "name": "Amber Phalanx" },
+      { "id": 4, "name": "Emerald Guard" }
+    ],
+    "spawnLayout": null
+  },
+  "scenarioRuntime": {
+    "autoSpawnConfiguredScenario": false,
+    "runtimeCapacity": {
+      "navigationGroupCapacity": 64,
+      "groupMembershipAgentCapacity": 256,
+      "groupMemberCapacity": 64,
+      "movePlanExecutionGroupCapacity": 64,
+      "movePlanExecutionMemberCapacity": 64,
+      "loadedChunkCapacity": 512,
+      "relationshipDomainCapacity": 4
+    }
+  },
+  "agentProfiles": {
+    "profiles": [
+      {
+        "id": "light",
+        "heavy": false,
+        "visualScale": 0.28,
+        "speedCmPerSecond": 900,
+        "everyNth": 1,
+        "nthOffset": 0
+      }
+    ]
+  },
+  "teamRelationships": {
+    "relationships": []
+  },
+  "streaming": {
+    "retainSeconds": 12,
+    "radiusCm": 12000
+  }
+}

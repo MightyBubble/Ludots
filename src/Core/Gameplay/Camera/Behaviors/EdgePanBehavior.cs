@@ -8,6 +8,7 @@ namespace Ludots.Core.Gameplay.Camera.Behaviors
         private readonly float _marginPx;
         private readonly float _speedCmPerSec;
         private readonly bool _requirePointerInsideViewport;
+        private bool _pointerArmed;
 
         public EdgePanBehavior(float marginPx, float speedCmPerSec, bool requirePointerInsideViewport)
         {
@@ -23,15 +24,32 @@ namespace Ludots.Core.Gameplay.Camera.Behaviors
 
         public void Update(CameraState state, CameraBehaviorContext ctx, float dt)
         {
-            if (state.IsFollowing || dt <= 0f) return;
-            if (!ctx.BehaviorInput.PointerActive) return;
+            if (!ctx.BehaviorInput.PointerActive)
+            {
+                _pointerArmed = false;
+                return;
+            }
+
+            if (state.IsFollowing)
+            {
+                _pointerArmed = false;
+                return;
+            }
+
+            if (dt <= 0f) return;
 
             Vector2 mousePos = ctx.BehaviorInput.PointerPosition;
             Vector2 res = ctx.Viewport.Resolution;
-            if (res.X < 1f || res.Y < 1f) return;
+            if (res.X < 1f || res.Y < 1f)
+            {
+                _pointerArmed = false;
+                return;
+            }
+
             if (_requirePointerInsideViewport &&
                 (mousePos.X < 0f || mousePos.Y < 0f || mousePos.X > res.X || mousePos.Y > res.Y))
             {
+                _pointerArmed = false;
                 return;
             }
 
@@ -43,6 +61,12 @@ namespace Ludots.Core.Gameplay.Camera.Behaviors
 
             if (mousePos.Y < _marginPx) edgeY = 1f;
             else if (mousePos.Y > res.Y - _marginPx) edgeY = -1f;
+
+            if (_requirePointerInsideViewport && !_pointerArmed)
+            {
+                _pointerArmed = MathF.Abs(edgeX) < 0.001f && MathF.Abs(edgeY) < 0.001f;
+                return;
+            }
 
             if (MathF.Abs(edgeX) < 0.001f && MathF.Abs(edgeY) < 0.001f) return;
 

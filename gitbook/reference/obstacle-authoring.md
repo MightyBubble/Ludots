@@ -49,6 +49,7 @@ Runtime exact polygon stamping is a follow-up. NAV-3 keeps MassNavigationFlow ru
 
 - `CompoundObstacle2D.MaxPieces` is the per-entity piece cap.
 - Circle radius, box half extents, polygon vertices, local offsets, and `navRadiusCm` are explicit authored data.
+- Navigation sink also requires explicit absolute world-cm half-open vertical interval `navMinYcm`/`navMaxYcm` with `navMinYcm < navMaxYcm`. Physics-only pieces must not invent nav extents.
 - `navRadiusCm` must be positive for each piece that sinks to navigation.
 - Field names and component names are case-sensitive; aliases are not accepted.
 
@@ -76,6 +77,8 @@ Single circle:
     "sinkNavigationObstacle": true,
     "radiusCm": 250,
     "navRadiusCm": 250,
+    "navMinYcm": 0,
+    "navMaxYcm": 200,
     "localOffsetCm": { "x": 0, "y": 0 }
   }
 }
@@ -95,12 +98,16 @@ Compound obstacle:
         "halfWidthCm": 200,
         "halfHeightCm": 80,
         "navRadiusCm": 216,
+        "navMinYcm": 0,
+        "navMaxYcm": 200,
         "localOffsetCm": { "x": -120, "y": 0 }
       },
       {
         "shape": "Circle",
         "radiusCm": 120,
         "navRadiusCm": 120,
+        "navMinYcm": 0,
+        "navMaxYcm": 200,
         "localOffsetCm": { "x": 180, "y": 0 }
       }
     ]

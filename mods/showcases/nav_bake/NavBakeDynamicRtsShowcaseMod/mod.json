@@ -1,0 +1,16 @@
+{
+  "name": "NavBakeDynamicRtsShowcaseMod",
+  "version": "1.0.0",
+  "description": "RTS Dynamic 3D NavMesh bake showcase entry (nav_bake_dynamic_rts).",
+  "main": "bin/net8.0/NavBakeDynamicRtsShowcaseMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "DynamicNavBakeShowcaseMod": "^1.0.0",
+    "LudotsCoreMod": "^1.0.0",
+    "MassNavigationMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0",
+    "CameraProfilesMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["showcase", "navmesh", "nav-bake", "rts"]
+}

@@ -431,7 +431,23 @@ namespace Ludots.Tests.GAS
             attributeBindingSystem.Update(1f);
             session.Camera.Update(1f);
 
-            Assert.That(session.Camera.State.TargetCm.Length(), Is.GreaterThan(0.01f));
+            Assert.That(session.Camera.State.TargetCm, Is.EqualTo(Vector2.Zero),
+                "Releasing UI capture while the pointer is at the edge must not latch camera movement.");
+
+            backend.MousePosition = new Vector2(960f, 540f);
+            system.Update(1f);
+            actionBindingSystem.Update(1f);
+            attributeBindingSystem.Update(1f);
+            session.Camera.Update(1f);
+
+            backend.MousePosition = Vector2.Zero;
+            system.Update(1f);
+            actionBindingSystem.Update(1f);
+            attributeBindingSystem.Update(1f);
+            session.Camera.Update(1f);
+
+            Assert.That(session.Camera.State.TargetCm.Length(), Is.GreaterThan(0.01f),
+                "Edge pan should engage after the pointer visits the viewport interior.");
         }
 
         [Test]

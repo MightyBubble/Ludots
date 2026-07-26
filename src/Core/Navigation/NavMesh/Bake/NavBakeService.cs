@@ -5,12 +5,16 @@ using System.Threading;
 using System.Threading.Tasks;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh.Config;
+using Ludots.Core.Navigation.NavMesh.LayeredSpan;
+using Ludots.Core.Navigation.NavMesh.Surface;
 
 namespace Ludots.Core.Navigation.NavMesh.Bake
 {
     public interface INavBakeAlgorithm
     {
         NavBakeAlgorithmKind Kind { get; }
+
+        NavBakeAdapterCapabilities Capabilities { get; }
 
         bool TryBake(
             NavBakeContext context,
@@ -21,11 +25,51 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             out NavTile tile,
             out byte[] detourTileBytes,
             out NavBakeArtifact artifact);
+
+        /// <summary>
+        /// Runtime no-allocation bake into a caller-owned banked <see cref="NavTile"/>.
+        /// Default bridge may allocate (Recast/CDT honesty); LayeredSpan overrides for 0GC.
+        /// </summary>
+        bool TryBakeInto(
+            NavBakeContext context,
+            NavBakeTileCoord target,
+            NavLayerConfig layer,
+            NavMeshAgentProfileConfig navProfile,
+            AgentProfileConfig agentProfile,
+            NavTile destination,
+            Span<byte> checksumScratch,
+            out NavBakeArtifact artifact)
+        {
+            if (destination == null) throw new ArgumentNullException(nameof(destination));
+            bool success = TryBake(
+                context,
+                target,
+                layer,
+                navProfile,
+                agentProfile,
+                out NavTile tile,
+                out _,
+                out artifact);
+            if (!success)
+            {
+                destination.ClearTopology();
+                return false;
+            }
+
+            destination.CopyGeometryFrom(tile);
+            return true;
+        }
     }
 
     public sealed class CdtNavBakeAlgorithm : INavBakeAlgorithm
     {
+        private const int DefaultMaxLawsonFlipCount = 100_000;
+
         public NavBakeAlgorithmKind Kind => NavBakeAlgorithmKind.Cdt;
+
+        public NavBakeAdapterCapabilities Capabilities =>
+            NavBakeAdapterCapabilities.OfflineTriangleSurface |
+            NavBakeAdapterCapabilities.RuntimeIncrementalTriangleSurface;
 
         public bool TryBake(
             NavBakeContext context,
@@ -37,31 +81,139 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             out byte[] detourTileBytes,
             out NavBakeArtifact artifact)
         {
-            BakePipelineResult result = BakePipeline.Execute(
-                context.Terrain,
-                target.ChunkX,
-                target.ChunkY,
-                context.TileVersion,
-                context.BuildConfig,
-                context.Obstacles,
-                layer.Id);
+            if (context == null) throw new ArgumentNullException(nameof(context));
+            if (layer == null) throw new ArgumentNullException(nameof(layer));
+            if (navProfile == null) throw new ArgumentNullException(nameof(navProfile));
+            if (agentProfile == null) throw new ArgumentNullException(nameof(agentProfile));
 
-            if (!result.Success || result.Tile == null)
+            if (context.InputKind != NavBakeInputKind.TriangleSurface)
             {
-                tile = null!;
-                detourTileBytes = Array.Empty<byte>();
-                artifact = result.Artifact;
-                return false;
+                throw new NavBakeUnsupportedInputException(
+                    NavBakeAlgorithmKind.Cdt,
+                    NavBakeAdapterCapability.FormatInputKind(context.InputKind),
+                    "CdtNavBakeAlgorithm declares triangle-surface capabilities only.");
             }
 
-            tile = result.Tile.TileId.Layer == layer.Layer
-                ? result.Tile
-                : NavTileLayerRewriter.WithLayer(result.Tile, layer.Layer);
+            NavTriangleSurfaceTileIndex surfaceIndex = context.RequireTriangleSurface();
+            int agentHeightCm = RequireExactPositiveIntCm(agentProfile.HeightCm, $"AgentProfile '{agentProfile.Id}'.heightCm");
+            int agentRadiusCm = RequireExactNonNegativeIntCm(agentProfile.RadiusCm, $"AgentProfile '{agentProfile.Id}'.radiusCm");
+            int minWalkableUpDotQ1M = LayeredSpanSlopeQ1M.CompileMinWalkableUpDotQ1M(
+                navProfile.MaxSlopeDeg,
+                $"NavMeshBakeConfig.profiles['{navProfile.Id}'].maxSlopeDeg");
+
+            if (navProfile.MaxClimbCm < 0)
+            {
+                throw new InvalidOperationException(
+                    $"NavMeshBakeConfig.profiles['{navProfile.Id}'].maxClimbCm must be >= 0.");
+            }
+
+            ulong buildConfigHash = ComputeBuildConfigHash(
+                context.BuildConfig,
+                context.Config.TriangleSurface,
+                navProfile.MaxClimbCm,
+                minWalkableUpDotQ1M,
+                agentHeightCm,
+                agentRadiusCm,
+                layer.Layer);
+
+            var tileId = new NavTileId(target.ChunkX, target.ChunkY, layer.Layer);
+            var request = new CdtTriangleSurfaceBakeRequest(
+                surfaceIndex,
+                target,
+                tileId,
+                context.TileVersion,
+                buildConfigHash,
+                layer.Id,
+                navProfile.MaxClimbCm,
+                minWalkableUpDotQ1M,
+                agentHeightCm,
+                agentRadiusCm,
+                context.Obstacles,
+                DefaultMaxLawsonFlipCount);
+
+            NavTile baked = CdtTriangleSurfaceBaker.Bake(in request);
+            tile = baked.TileId.Layer == layer.Layer
+                ? baked
+                : NavTileLayerRewriter.WithLayer(baked, layer.Layer);
             detourTileBytes = Array.Empty<byte>();
-            artifact = result.Artifact.TileId.Layer == layer.Layer
-                ? result.Artifact
-                : NavTileLayerRewriter.WithLayer(result.Artifact, layer.Layer);
+            artifact = new NavBakeArtifact(
+                tile.TileId,
+                tile.TileVersion,
+                NavBakeStage.Serialize,
+                NavBakeErrorCode.None,
+                message: tile.TriangleCount == 0 ? NavValidEmptyTile.DefaultMessage : string.Empty,
+                walkableTriangleCount: tile.TriangleCount,
+                vertexCount: tile.VertexCount,
+                triangleCount: tile.TriangleCount,
+                portalCount: tile.PortalCount);
             return true;
+        }
+
+        private static ulong ComputeBuildConfigHash(
+            NavBuildConfig buildConfig,
+            NavTriangleSurfaceConfig triangleSurface,
+            int maxClimbCm,
+            int minWalkableUpDotQ1M,
+            int agentHeightCm,
+            int agentRadiusCm,
+            int layer)
+        {
+            if (triangleSurface == null)
+            {
+                throw new InvalidOperationException("NavMeshBakeConfig.triangleSurface is required for CdtNavBakeAlgorithm.");
+            }
+
+            ulong h = buildConfig.ComputeHash();
+            h = Mix(h, triangleSurface.HaloPaddingCm);
+            h = Mix(h, DefaultMaxLawsonFlipCount);
+            h = Mix(h, maxClimbCm);
+            h = Mix(h, minWalkableUpDotQ1M);
+            h = Mix(h, agentHeightCm);
+            h = Mix(h, agentRadiusCm);
+            h = Mix(h, layer);
+            return h;
+        }
+
+        private static ulong Mix(ulong hash, int value)
+            => (hash ^ (ulong)(uint)value) * 1099511628211UL;
+
+        private static int RequireExactPositiveIntCm(float value, string owner)
+        {
+            int cm = RequireExactIntCm(value, owner);
+            if (cm <= 0)
+            {
+                throw new InvalidOperationException($"{owner} must be an exact positive integer centimeter value.");
+            }
+
+            return cm;
+        }
+
+        private static int RequireExactNonNegativeIntCm(float value, string owner)
+        {
+            int cm = RequireExactIntCm(value, owner);
+            if (cm < 0)
+            {
+                throw new InvalidOperationException($"{owner} must be an exact nonnegative integer centimeter value.");
+            }
+
+            return cm;
+        }
+
+        private static int RequireExactIntCm(float value, string owner)
+        {
+            if (float.IsNaN(value) || float.IsInfinity(value))
+            {
+                throw new InvalidOperationException($"{owner} must be a finite number.");
+            }
+
+            int cm = (int)value;
+            if ((float)cm != value)
+            {
+                throw new InvalidOperationException(
+                    $"{owner} must be an exact integer centimeter value for CDT triangle-surface bake; got {value}.");
+            }
+
+            return cm;
         }
     }
 
@@ -164,21 +316,53 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             }
         }
 
+        public bool HasAdapter(NavBakeAlgorithmKind kind) => _algorithms.ContainsKey(kind);
+
+        public bool TryGetAlgorithm(NavBakeAlgorithmKind kind, out INavBakeAlgorithm algorithm)
+            => _algorithms.TryGetValue(kind, out algorithm!);
+
+        public NavBakeAlgorithmKind[] RegisteredKinds
+        {
+            get
+            {
+                var kinds = new NavBakeAlgorithmKind[_algorithms.Count];
+                int i = 0;
+                foreach (NavBakeAlgorithmKind kind in _algorithms.Keys)
+                {
+                    kinds[i++] = kind;
+                }
+
+                Array.Sort(kinds, static (a, b) => ((byte)a).CompareTo((byte)b));
+                return kinds;
+            }
+        }
+
+        public void EnsureSupports(NavBakeContext context)
+        {
+            if (context == null) throw new ArgumentNullException(nameof(context));
+
+            NavBakeAdapterCapabilities required = NavBakeAdapterCapability.Require(context.Mode, context.InputKind);
+            if (!_algorithms.TryGetValue(context.Algorithm, out INavBakeAlgorithm algorithm))
+            {
+                throw new InvalidOperationException(
+                    $"NavBakeService has no adapter for algorithm '{NavBakeNames.FormatAlgorithm(context.Algorithm)}'.");
+            }
+
+            if ((algorithm.Capabilities & required) != required)
+            {
+                throw new InvalidOperationException(
+                    $"NavBakeService algorithm '{NavBakeNames.FormatAlgorithm(context.Algorithm)}' does not support " +
+                    $"{NavBakeNames.FormatMode(context.Mode)}/{NavBakeAdapterCapability.FormatInputKind(context.InputKind)} " +
+                    $"(required {required}, declared {algorithm.Capabilities}).");
+            }
+        }
+
         public NavBakeResult Bake(NavBakeContext context)
         {
             context.Validate();
+            EnsureSupports(context);
 
-            if (context.Mode == NavBakeMode.RuntimeIncremental &&
-                context.Algorithm != NavBakeAlgorithmKind.Cdt)
-            {
-                throw new InvalidOperationException(
-                    "NavBakeService runtime-incremental mode requires algorithm 'cdt'.");
-            }
-
-            if (!_algorithms.TryGetValue(context.Algorithm, out INavBakeAlgorithm algorithm))
-            {
-                throw new InvalidOperationException($"NavBakeService has no adapter for algorithm '{NavBakeNames.FormatAlgorithm(context.Algorithm)}'.");
-            }
+            INavBakeAlgorithm algorithm = _algorithms[context.Algorithm];
 
             int total = checked(context.Targets.Count * context.Config.Layers.Count * context.Config.Profiles.Count);
             var entries = new NavBakeResultEntry[total];
@@ -217,6 +401,39 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
 
             return new NavBakeResult(entries);
         }
+
+        /// <summary>
+        /// Runtime bake into a single preallocated destination. Skips allocating result arrays and
+        /// does not re-run HashSet layer validation (caller must validate once at queue construction).
+        /// </summary>
+        public bool BakeInto(
+            NavBakeContext context,
+            NavBakeTileCoord target,
+            NavLayerConfig layer,
+            NavMeshAgentProfileConfig navProfile,
+            AgentProfileConfig agentProfile,
+            NavTile destination,
+            Span<byte> checksumScratch,
+            out NavBakeArtifact artifact)
+        {
+            if (context == null) throw new ArgumentNullException(nameof(context));
+            if (layer == null) throw new ArgumentNullException(nameof(layer));
+            if (navProfile == null) throw new ArgumentNullException(nameof(navProfile));
+            if (agentProfile == null) throw new ArgumentNullException(nameof(agentProfile));
+            if (destination == null) throw new ArgumentNullException(nameof(destination));
+
+            EnsureSupports(context);
+            INavBakeAlgorithm algorithm = _algorithms[context.Algorithm];
+            return algorithm.TryBakeInto(
+                context,
+                target,
+                layer,
+                navProfile,
+                agentProfile,
+                destination,
+                checksumScratch,
+                out artifact);
+        }
     }
 
     internal static class NavTileLayerRewriter
@@ -224,11 +441,16 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
         public static NavTile WithLayer(NavTile tile, int layer)
         {
             if (tile == null) throw new ArgumentNullException(nameof(tile));
-            return new NavTile(
+            if (tile.TileId.Layer == layer)
+            {
+                return tile;
+            }
+
+            var rewritten = new NavTile(
                 new NavTileId(tile.TileId.ChunkX, tile.TileId.ChunkY, layer),
                 tile.TileVersion,
                 tile.BuildConfigHash,
-                tile.Checksum,
+                checksum: 0UL,
                 tile.OriginXcm,
                 tile.OriginZcm,
                 tile.VertexXcm,
@@ -242,6 +464,12 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 tile.N2,
                 tile.TriAreaIds,
                 tile.Portals);
+            // Offline rewrite may allocate; not on the LayeredSpan runtime 0GC path.
+            rewritten.SetCounts(tile.VertexCount, tile.TriangleCount, tile.PortalCount);
+            using var ms = new MemoryStream();
+            NavTileBinary.Write(ms, rewritten);
+            ms.Position = 0;
+            return NavTileBinary.Read(ms);
         }
 
         public static NavBakeArtifact WithLayer(NavBakeArtifact artifact, int layer)

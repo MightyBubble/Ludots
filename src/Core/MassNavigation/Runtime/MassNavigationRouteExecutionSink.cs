@@ -30,7 +30,9 @@ public readonly struct MassNavigationRouteSinkResult
         int waypointCount,
         int errorCode,
         int orderToken = 0,
-        int agentIndex = -1)
+        int agentIndex = -1,
+        Vector2 startWorldCm = default,
+        Vector2 destinationWorldCm = default)
     {
         Status = status;
         PathStatus = pathStatus;
@@ -40,6 +42,8 @@ public readonly struct MassNavigationRouteSinkResult
         ErrorCode = errorCode;
         OrderToken = orderToken;
         AgentIndex = agentIndex;
+        StartWorldCm = startWorldCm;
+        DestinationWorldCm = destinationWorldCm;
     }
 
     public MassNavigationRouteSinkStatus Status { get; }
@@ -50,8 +54,43 @@ public readonly struct MassNavigationRouteSinkResult
     public int ErrorCode { get; }
     public int OrderToken { get; }
     public int AgentIndex { get; }
+    public Vector2 StartWorldCm { get; }
+    public Vector2 DestinationWorldCm { get; }
     public bool Applied => Status == MassNavigationRouteSinkStatus.Applied;
     public bool Tracked => Status == MassNavigationRouteSinkStatus.Tracked;
+}
+
+/// <summary>
+/// Allocation-free read-only snapshot of one active MassNavigation route.
+/// Lookup never mutates sink state or triggers path solves.
+/// </summary>
+public readonly struct MassNavigationRouteEvidence
+{
+    public MassNavigationRouteEvidence(
+        int orderToken,
+        int agentIndex,
+        PathDomain resolvedDomain,
+        int waypointCount,
+        int currentWaypointIndex,
+        bool routeReady,
+        ulong waypointGeometrySignature)
+    {
+        OrderToken = orderToken;
+        AgentIndex = agentIndex;
+        ResolvedDomain = resolvedDomain;
+        WaypointCount = waypointCount;
+        CurrentWaypointIndex = currentWaypointIndex;
+        RouteReady = routeReady;
+        WaypointGeometrySignature = waypointGeometrySignature;
+    }
+
+    public int OrderToken { get; }
+    public int AgentIndex { get; }
+    public PathDomain ResolvedDomain { get; }
+    public int WaypointCount { get; }
+    public int CurrentWaypointIndex { get; }
+    public bool RouteReady { get; }
+    public ulong WaypointGeometrySignature { get; }
 }
 
 public sealed class MassNavigationRouteExecutionSink
@@ -131,6 +170,125 @@ public sealed class MassNavigationRouteExecutionSink
     }
 
     public int ActiveRouteCount => _routesByKey.Count;
+
+    /// <summary>
+    /// Non-mutating lookup of the single active route bound to <paramref name="agent"/>.
+    /// Returns false when no route exists. Throws when more than one active RouteState
+    /// maps to the same entity (ambiguous; never silently picks one). Allocates zero.
+    /// </summary>
+    public bool TryGetActiveRouteEvidence(Entity agent, out MassNavigationRouteEvidence evidence)
+    {
+        evidence = default;
+        if (agent == Entity.Null)
+        {
+            return false;
+        }
+
+        if (!TryFindUniqueRouteState(agent, out RouteState matched))
+        {
+            return false;
+        }
+
+        evidence = new MassNavigationRouteEvidence(
+            matched.OrderToken,
+            matched.AgentIndex,
+            matched.ResolvedDomain,
+            matched.PointCount,
+            matched.CurrentWaypointIndex,
+            matched.RouteReady,
+            ComputeWaypointGeometrySignature(matched));
+        return true;
+    }
+
+    /// <summary>
+    /// Copies the formal PathService waypoints currently owned by <paramref name="agent"/>.
+    /// Coordinates are WorldCm X/Y (ground plane). Returns false when the agent has no route.
+    /// Throws when the destination spans are too short for the stored waypoint count.
+    /// </summary>
+    public bool TryCopyActiveRouteWaypoints(
+        Entity agent,
+        Span<int> xCmOut,
+        Span<int> yCmOut,
+        out int count)
+    {
+        count = 0;
+        if (agent == Entity.Null)
+        {
+            return false;
+        }
+
+        if (!TryFindUniqueRouteState(agent, out RouteState matched) ||
+            !matched.RouteReady ||
+            matched.PointCount <= 0)
+        {
+            return false;
+        }
+
+        if (xCmOut.Length < matched.PointCount || yCmOut.Length < matched.PointCount)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation route waypoint copy for entity {agent.Id} requires at least {matched.PointCount} slots, " +
+                $"but destination spans were x={xCmOut.Length}, y={yCmOut.Length}.");
+        }
+
+        for (int i = 0; i < matched.PointCount; i++)
+        {
+            xCmOut[i] = matched.PointXCm[i];
+            yCmOut[i] = matched.PointYCm[i];
+        }
+
+        count = matched.PointCount;
+        return true;
+    }
+
+    private bool TryFindUniqueRouteState(Entity agent, out RouteState matched)
+    {
+        matched = null!;
+        RouteState? found = null;
+        foreach (RouteState state in _routesByKey.Values)
+        {
+            if (state.Agent != agent)
+            {
+                continue;
+            }
+
+            if (found != null)
+            {
+                throw new InvalidOperationException(
+                    $"MassNavigation route evidence is ambiguous: more than one active RouteState is bound to entity Id={agent.Id} Version={agent.Version}.");
+            }
+
+            found = state;
+        }
+
+        if (found == null)
+        {
+            return false;
+        }
+
+        matched = found;
+        return true;
+    }
+
+    private static ulong ComputeWaypointGeometrySignature(RouteState state)
+    {
+        const ulong offset = 14695981039346656037UL;
+        const ulong prime = 1099511628211UL;
+        ulong hash = MixFnv(offset, unchecked((ulong)(uint)state.PointCount), prime);
+        for (int i = 0; i < state.PointCount; i++)
+        {
+            hash = MixFnv(hash, unchecked((ulong)(uint)state.PointXCm[i]), prime);
+            hash = MixFnv(hash, unchecked((ulong)(uint)state.PointYCm[i]), prime);
+        }
+
+        return hash;
+    }
+
+    private static ulong MixFnv(ulong current, ulong value, ulong prime)
+    {
+        current ^= value;
+        return unchecked(current * prime);
+    }
 
     internal bool IsBoundTo(IPathService pathService, PathStore pathStore, PathingConfig pathingConfig)
     {
@@ -441,6 +599,48 @@ public sealed class MassNavigationRouteExecutionSink
         }
     }
 
+    /// <summary>
+    /// Marks every active formal route dirty so the next apply re-solves through PathService.
+    /// Does not clear orders or release route ownership — marches continue and repath in place.
+    /// </summary>
+    public void MarkAllActiveRoutesNeedsResolve()
+    {
+        foreach (RouteState state in _routesByKey.Values)
+        {
+            state.MarkNeedsResolve();
+        }
+    }
+
+    /// <summary>
+    /// Releases every active <see cref="RouteState"/> bound to <paramref name="agent"/>.
+    /// Allocation-free: reuses the preallocated key-removal buffer and <see cref="ReleaseRoute"/>.
+    /// <see cref="Entity.Null"/> is rejected and never treated as a wildcard clear of other agents.
+    /// When the entity has no tracked routes, this completes with zero removals (not a partial failure).
+    /// </summary>
+    public void RemoveAgent(Entity agent)
+    {
+        if (agent == Entity.Null)
+        {
+            throw new ArgumentException(
+                "MassNavigation targeted route removal requires a non-null Entity; Entity.Null is not a removable agent.",
+                nameof(agent));
+        }
+
+        _keysToRemove.Clear();
+        foreach (KeyValuePair<long, RouteState> route in _routesByKey)
+        {
+            if (route.Value.Agent == agent)
+            {
+                _keysToRemove.Add(route.Key);
+            }
+        }
+
+        for (int i = 0; i < _keysToRemove.Count; i++)
+        {
+            ReleaseRoute(_keysToRemove[i]);
+        }
+    }
+
     public MassNavigationRouteSinkResult TryApplyTrackedRouteTargets(
         MassNavigationSimulationRuntime simulation,
         World world)
@@ -589,9 +789,27 @@ public sealed class MassNavigationRouteExecutionSink
 
         if (!state.RouteReady)
         {
-            MassNavigationRouteSinkResult solve = TrySolveRoute(simulation, state);
+            MassNavigationRouteSinkResult solve = TrySolveRoute(simulation, state, agentType.Selection.Mode);
             if (!solve.Applied)
             {
+                // Incremental nav rebuild can return NotReady while orders remain live.
+                // Hold the previous polyline and retry next apply — never cancel the march.
+                if (solve.PathStatus == PathStatus.NotReady && state.PointCount > 0)
+                {
+                    AdvanceWaypointCursor(simulation, state);
+                    waypoint = state.CurrentWaypointWorldCm;
+                    resetRecovery = false;
+                    return new MassNavigationRouteSinkResult(
+                        MassNavigationRouteSinkStatus.Applied,
+                        PathStatus.NotReady,
+                        state.ResolvedDomain,
+                        waypoint,
+                        state.PointCount,
+                        errorCode: 0,
+                        orderToken: state.OrderToken,
+                        agentIndex: state.AgentIndex);
+                }
+
                 return solve;
             }
         }
@@ -642,7 +860,8 @@ public sealed class MassNavigationRouteExecutionSink
 
     private MassNavigationRouteSinkResult TrySolveRoute(
         MassNavigationSimulationRuntime simulation,
-        RouteState state)
+        RouteState state,
+        PathSelectionMode selectionMode)
     {
         if (string.IsNullOrWhiteSpace(state.AgentTypeId))
         {
@@ -658,10 +877,19 @@ public sealed class MassNavigationRouteExecutionSink
         }
 
         Vector2 startWorldCm = simulation.GetAgentWorldPositionCm(state.AgentIndex);
+        PathDomain requestDomain = selectionMode switch
+        {
+            PathSelectionMode.PreferGraph => PathDomain.NodeGraph,
+            PathSelectionMode.PreferMesh => PathDomain.NavMesh,
+            PathSelectionMode.AutoCheapest => PathDomain.Auto,
+            PathSelectionMode.Direct => PathDomain.Auto,
+            _ => throw new InvalidOperationException(
+                $"MassNavigation route state has unsupported path selection mode '{selectionMode}'."),
+        };
         var request = new PathRequest(
             state.OrderToken,
             state.Agent,
-            PathDomain.Auto,
+            requestDomain,
             state.AgentTypeId,
             PathEndpoint.FromWorldCm((int)MathF.Round(startWorldCm.X), (int)MathF.Round(startWorldCm.Y)),
             PathEndpoint.FromWorldCm((int)MathF.Round(state.DestinationWorldCm.X), (int)MathF.Round(state.DestinationWorldCm.Y)),
@@ -679,7 +907,9 @@ public sealed class MassNavigationRouteExecutionSink
                 waypointCount: 0,
                 path.ErrorCode,
                 orderToken: state.OrderToken,
-                agentIndex: state.AgentIndex);
+                agentIndex: state.AgentIndex,
+                startWorldCm: startWorldCm,
+                destinationWorldCm: state.DestinationWorldCm);
         }
 
         EnsureScratch(state.MaxPoints > 0 ? state.MaxPoints : 1);
@@ -937,6 +1167,16 @@ public sealed class MassNavigationRouteExecutionSink
             CurrentWaypointIndex = 0;
             LastAppliedWaypointIndex = -1;
             ResolvedDomain = PathDomain.None;
+            ForceResetNextApply = true;
+        }
+
+        /// <summary>
+        /// Marks the route dirty for a fresh PathService solve while keeping the previous polyline
+        /// as a hold-over when the mesh is temporarily NotReady (e.g. incremental bake).
+        /// </summary>
+        public void MarkNeedsResolve()
+        {
+            RouteReady = false;
             ForceResetNextApply = true;
         }
 

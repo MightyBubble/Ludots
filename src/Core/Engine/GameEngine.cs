@@ -62,6 +62,7 @@ using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Instancing;
 using Ludots.Core.Presentation.Minimap;
+using Ludots.Core.Presentation.Navigation;
 using Ludots.Core.Gameplay.GAS.Presentation;
 using Ludots.Core.Presentation.Surfaces;
 using Ludots.Core.Vision.Config;
@@ -81,6 +82,8 @@ using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.NavMesh.Bake;
 using Ludots.Core.Navigation.NavMesh.Config;
+using Ludots.Core.Navigation.NavMesh.LayeredSpan;
+using Ludots.Core.Navigation.NavMesh.Surface;
 using Ludots.Core.Navigation.Terrain;
 using Ludots.Core.Navigation.AOI;
 using Ludots.Core.Diagnostics;
@@ -194,6 +197,8 @@ namespace Ludots.Core.Engine
         public GameplayEventBus EventBus { get; private set; }
 
         private readonly TypedServiceScope _engineServices = new("engine");
+        private INavBakeAlgorithm[] _externalNavBakeAdapters = Array.Empty<INavBakeAlgorithm>();
+        private bool _externalNavBakeAdaptersLocked;
 
         public Dictionary<string, object> GlobalContext => _engineServices.LegacyStore;
 
@@ -217,6 +222,64 @@ namespace Ludots.Core.Engine
             PresentationVisualCapabilityValidator.ValidateTargetLifecycle(capabilities, targetGeneration);
             SetService(CoreServiceKeys.PresentationAdapterCapabilities, capabilities);
         }
+
+        /// <summary>
+        /// Startup-only injection of external nav-bake adapters (e.g. Recast from host composition).
+        /// Core always registers CDT + LayeredSpan; injected adapters are appended by
+        /// <see cref="NavBakeAlgorithmCatalog"/> with duplicate Kind fail-fast.
+        /// </summary>
+        public void RegisterExternalNavBakeAdapters(params INavBakeAlgorithm[] adapters)
+            => RegisterExternalNavBakeAdapters((IReadOnlyList<INavBakeAlgorithm>)adapters);
+
+        public void RegisterExternalNavBakeAdapters(IReadOnlyList<INavBakeAlgorithm> adapters)
+        {
+            if (adapters == null) throw new ArgumentNullException(nameof(adapters));
+            if (_externalNavBakeAdaptersLocked)
+            {
+                throw new InvalidOperationException(
+                    "External nav-bake adapters are locked after first registration or after runtime nav composition.");
+            }
+
+            if (TryGetService(CoreServiceKeys.NavBakeService, out NavBakeService _) ||
+                TryGetService(CoreServiceKeys.RuntimeNavMeshRebuildQueue, out RuntimeIncrementalNavMeshRebuildQueue _))
+            {
+                throw new InvalidOperationException(
+                    "External nav-bake adapters must be registered before runtime nav composition.");
+            }
+
+            if (adapters.Count == 0)
+            {
+                throw new InvalidOperationException(
+                    "RegisterExternalNavBakeAdapters requires at least one external adapter; omit the call for Core-only CDT+LayeredSpan.");
+            }
+
+            var copy = new INavBakeAlgorithm[adapters.Count];
+            var seen = new HashSet<NavBakeAlgorithmKind>();
+            for (int i = 0; i < adapters.Count; i++)
+            {
+                INavBakeAlgorithm adapter = adapters[i]
+                    ?? throw new InvalidOperationException($"External nav-bake adapter[{i}] is null.");
+                if (adapter.Kind is NavBakeAlgorithmKind.Cdt or NavBakeAlgorithmKind.LayeredSpan)
+                {
+                    throw new InvalidOperationException(
+                        $"External nav-bake adapter[{i}] Kind '{adapter.Kind}' is owned by Core and cannot be injected.");
+                }
+
+                if (!seen.Add(adapter.Kind))
+                {
+                    throw new InvalidOperationException(
+                        $"External nav-bake adapter duplicate Kind '{adapter.Kind}'.");
+                }
+
+                copy[i] = adapter;
+            }
+
+            Array.Sort(copy, static (a, b) => ((byte)a.Kind).CompareTo((byte)b.Kind));
+            _externalNavBakeAdapters = copy;
+            _externalNavBakeAdaptersLocked = true;
+        }
+
+        public IReadOnlyList<INavBakeAlgorithm> ExternalNavBakeAdapters => _externalNavBakeAdapters;
 
         public GameSynchronizationContext SyncContext { get; private set; }
 
@@ -1061,6 +1124,10 @@ namespace Ludots.Core.Engine
             var transientMarkerBuffer = new TransientMarkerBuffer();
             var groundOverlayBuffer = new GroundOverlayBuffer(presentationConfig.GroundOverlayCapacity);
             var roadSplineBuffer = new RoadSplineBuffer(presentationConfig.RoadSplineCapacity);
+            var navMeshPresentationState = new NavMeshPresentationState();
+            var navMeshPresentationBuffer = new NavMeshPresentationBuffer(
+                presentationConfig.NavMeshTileCapacity,
+                presentationConfig.NavMeshTileStateCapacity);
             var soundRequestBuffer = new SoundRequestBuffer();
             var worldHudBuffer = new WorldHudBatchBuffer(presentationConfig.WorldHudCapacity);
             var presentationTimingDiagnostics = new PresentationTimingDiagnostics();
@@ -1592,6 +1659,8 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.GlobalPresentationEventBuffer, globalPresentationEvents);
             SetService(CoreServiceKeys.GroundOverlayBuffer, groundOverlayBuffer);
             SetService(CoreServiceKeys.RoadSplineBuffer, roadSplineBuffer);
+            SetService(CoreServiceKeys.NavMeshPresentationState, navMeshPresentationState);
+            SetService(CoreServiceKeys.NavMeshPresentationBuffer, navMeshPresentationBuffer);
             SetService(CoreServiceKeys.SoundRequestBuffer, soundRequestBuffer);
             SetService(CoreServiceKeys.PerformerDefinitionRegistry, performerDefinitions);
             SetService(CoreServiceKeys.PerformerEntityRuntime, performerRuntime);
@@ -1867,6 +1936,10 @@ namespace Ludots.Core.Engine
             RegisterPresentationSystem(presentationEntityFinalizeDestroySystem);
             RegisterPresentationSystem(presentationRequestFlushSystem);
             RegisterPresentationSystem(new MinimapPresentationSystem(this, minimapRuntime, minimapMarkerBuffer, minimapScreenMarkerBuffer, presentationTimingDiagnostics));
+            RegisterPresentationSystem(new NavMeshPresentationSystem(
+                this,
+                navMeshPresentationState,
+                navMeshPresentationBuffer));
             RegisterPresentationSystem(new ChunkDebugPanelPresentationSystem(this, chunkDebugPanelRuntime));
         }
 
@@ -2626,11 +2699,15 @@ namespace Ludots.Core.Engine
                     {
                         int widthCells = checked(boardConfig.WidthInMacroTiles * SpatialScaleDefaults.MacroTileCells);
                         int heightCells = checked(boardConfig.HeightInMacroTiles * SpatialScaleDefaults.MacroTileCells);
+                        int originXcm = gridBoard.WorldSize.Bounds.Left;
+                        int originZcm = gridBoard.WorldSize.Bounds.Top;
                         gridBoard.LogicTerrain = new FlatGridLogicTerrainField(
                             widthCells,
                             heightCells,
                             boardConfig.GridCellSizeCm,
-                            boardConfig.ChunkSizeCells);
+                            boardConfig.ChunkSizeCells,
+                            originXcm: originXcm,
+                            originZcm: originZcm);
                         if (LogicTerrain == null)
                         {
                             LogicTerrain = gridBoard.LogicTerrain;
@@ -2639,7 +2716,7 @@ namespace Ludots.Core.Engine
 
                         Diagnostics.Log.Info(
                             in LogChannels.Engine,
-                            $"Created flat grid LogicTerrainField {widthCells}x{heightCells} cells for board '{board.Name}'");
+                            $"Created flat grid LogicTerrainField {widthCells}x{heightCells} cells origin=({originXcm},{originZcm})cm for board '{board.Name}'");
                     }
                 }
             }
@@ -2832,6 +2909,8 @@ namespace Ludots.Core.Engine
             var stores = new Dictionary<NavQueryServiceKey, NavTileStore>(bakeConfig.Layers.Count * profileRegistry.Count);
             int widthChunks = LogicTerrain.WidthChunks;
             int heightChunks = LogicTerrain.HeightChunks;
+            bool runtimeIncremental = bakeConfig.ParsedMode == NavBakeMode.RuntimeIncremental;
+            LastNavBootstrapUriResolveCount = 0;
 
             for (int li = 0; li < bakeConfig.Layers.Count; li++)
             {
@@ -2839,67 +2918,195 @@ namespace Ludots.Core.Engine
                 for (int pi = 0; pi < profileRegistry.Count; pi++)
                 {
                     int profileIndex = pi;
-                    var uriCache = new Dictionary<NavTileId, string>(256);
-
-                    string ResolveTileUri(NavTileId id)
+                    NavTileStore store;
+                    if (runtimeIncremental)
                     {
-                        if (id.Layer != layer) throw new InvalidOperationException($"NavTileId.Layer mismatch. Expected={layer}, actual={id.Layer}.");
-                        if (uriCache.TryGetValue(id, out var cached)) return cached;
-                        string profileId = profileRegistry.GetId(profileIndex);
-                        string rel = NavAssetPaths.GetNavTileRelativePath(mapId, layer, profileId, id.ChunkX, id.ChunkY);
-                        string uri = ResolveSingleExistingUri(rel);
-                        uriCache[id] = uri;
-                        return uri;
+                        // Runtime-incremental must not resolve/pre-parse/cache world .ntil URIs.
+                        // GetOrLoad before an explicit bake fails with a residency error (no asset fallback).
+                        store = new NavTileStore(
+                            id => throw new InvalidOperationException(
+                                $"NavTile {id} is not resident. Runtime-incremental mode requires an explicit bake before GetOrLoad; no asset fallback."),
+                            bakeConfig.RuntimeIncremental);
                     }
-
-                    for (int cy = 0; cy < heightChunks; cy++)
+                    else
                     {
-                        for (int cx = 0; cx < widthChunks; cx++)
+                        var uriCache = new Dictionary<NavTileId, string>(256);
+
+                        string ResolveTileUri(NavTileId id)
                         {
-                            _ = ResolveTileUri(new NavTileId(cx, cy, layer));
+                            if (id.Layer != layer) throw new InvalidOperationException($"NavTileId.Layer mismatch. Expected={layer}, actual={id.Layer}.");
+                            if (uriCache.TryGetValue(id, out var cached)) return cached;
+                            string profileId = profileRegistry.GetId(profileIndex);
+                            string rel = NavAssetPaths.GetNavTileRelativePath(mapId, layer, profileId, id.ChunkX, id.ChunkY);
+                            string uri = ResolveSingleExistingUri(rel);
+                            LastNavBootstrapUriResolveCount++;
+                            uriCache[id] = uri;
+                            return uri;
                         }
+
+                        for (int cy = 0; cy < heightChunks; cy++)
+                        {
+                            for (int cx = 0; cx < widthChunks; cx++)
+                            {
+                                _ = ResolveTileUri(new NavTileId(cx, cy, layer));
+                            }
+                        }
+
+                        store = new NavTileStore(
+                            id => VFS.GetStream(ResolveTileUri(id)),
+                            bakeConfig.RuntimeIncremental);
                     }
 
-                    var store = new NavTileStore(id => VFS.GetStream(ResolveTileUri(id)));
                     stores[new NavQueryServiceKey(layer, profileIndex)] = store;
                 }
             }
 
-            var navRegistry = new NavQueryServiceRegistry(stores);
-            SetService(CoreServiceKeys.NavQueryServices, navRegistry);
-            if (bakeConfig.ParsedMode == NavBakeMode.RuntimeIncremental)
+            // Query tile-space SSOT must come from the active triangle-surface grid before registry construction.
+            // Runtime-incremental: compile once and reuse. Offline: derive equivalent grid without a second soup compile.
+            if (bakeConfig.TriangleSurface == null)
             {
-                var runtimeObstacles = new NavObstacleSet();
+                throw new InvalidOperationException("NavMeshBakeConfig.triangleSurface is required for nav query tile-space composition.");
+            }
+
+            NavQueryTileSpace queryTileSpace;
+            NavTriangleSurfaceTileIndex? runtimeTriangleSurface = null;
+            RuntimeNavTriangleSurfaceService? runtimeTriangleSurfaceService = null;
+            NavBuildConfig? runtimeBuildConfig = null;
+            if (runtimeIncremental)
+            {
+                ValidateInitialResidentWindow(bakeConfig.RuntimeIncremental, widthChunks, heightChunks);
+                runtimeBuildConfig = new NavBuildConfig(
+                    bakeConfig.RuntimeIncremental.HeightScaleMeters,
+                    bakeConfig.RuntimeIncremental.MinWalkableUpDot,
+                    bakeConfig.RuntimeIncremental.CliffHeightThreshold);
+                // Cold compile once: algorithms consume TriangleSurface only and must not rescan LogicTerrain per dirty tile.
+                runtimeTriangleSurface =
+                    LogicTerrainTriangleSurfaceCompiler.Compile(LogicTerrain, bakeConfig, runtimeBuildConfig.Value);
+                runtimeTriangleSurfaceService = new RuntimeNavTriangleSurfaceService(runtimeTriangleSurface);
+                SetService(CoreServiceKeys.NavTriangleSurface, runtimeTriangleSurface);
+                SetService(CoreServiceKeys.RuntimeNavTriangleSurface, runtimeTriangleSurfaceService);
+                queryTileSpace = NavQueryTileSpace.FromGrid(runtimeTriangleSurface.Grid);
+            }
+            else
+            {
+                NavTriangleSurfaceTileGrid offlineGrid = LogicTerrainTriangleSurfaceCompiler.DeriveTileGrid(
+                    LogicTerrain,
+                    bakeConfig.TriangleSurface.HaloPaddingCm);
+                queryTileSpace = NavQueryTileSpace.FromGrid(offlineGrid);
+            }
+
+            var navRegistry = new NavQueryServiceRegistry(stores, queryTileSpace);
+            SetService(CoreServiceKeys.NavQueryServices, navRegistry);
+            if (runtimeIncremental)
+            {
+                string runtimeLayerId = RequireSingleRuntimeNavLayerId(bakeConfig);
+                var runtimeObstacles = new RuntimeNavObstacleSnapshot(
+                    bakeConfig.RuntimeIncremental.ObstaclePrimitiveCapacity,
+                    bakeConfig.RuntimeIncremental.PolygonVertexCapacity,
+                    runtimeLayerId);
                 SetService(CoreServiceKeys.RuntimeNavMeshObstacles, runtimeObstacles);
                 var runtimeContext = new NavBakeContext
                 {
                     MapId = mapId,
                     ModId = string.Empty,
                     SourceUri = $"Core:Maps/{mapId}.runtime-navmesh",
-                    Terrain = LogicTerrain,
+                    TriangleSurface = runtimeTriangleSurface
+                        ?? throw new InvalidOperationException("Runtime-incremental nav bootstrap missing compiled triangle surface."),
                     Obstacles = runtimeObstacles,
                     Config = bakeConfig,
                     AgentProfiles = agentProfiles,
                     Targets = new[] { new NavBakeTileCoord(0, 0) },
-                    BuildConfig = new NavBuildConfig(
-                        bakeConfig.RuntimeIncremental.HeightScaleMeters,
-                        bakeConfig.RuntimeIncremental.MinWalkableUpDot,
-                        bakeConfig.RuntimeIncremental.CliffHeightThreshold),
+                    BuildConfig = runtimeBuildConfig
+                        ?? throw new InvalidOperationException("Runtime-incremental nav bootstrap missing build config."),
                     TileVersion = 1,
                     Mode = bakeConfig.ParsedMode,
                     Algorithm = bakeConfig.ParsedAlgorithm,
                     Execution = new NavBakeExecutionOptions { Parallel = false, MaxDegreeOfParallelism = 1 }
                 };
+                var layeredSpanPool = new LayeredSpanScratchPool(bakeConfig.LayeredSpan);
+                // Core always owns CDT + LayeredSpan. Hosts inject Recast (and any other external adapters)
+                // through RegisterExternalNavBakeAdapters before map nav composition; no algorithm fallback.
+                INavBakeAlgorithm[] bakeAdapters = NavBakeAlgorithmCatalog.Compose(
+                    new CdtNavBakeAlgorithm(),
+                    new LayeredSpanNavBakeAlgorithm(layeredSpanPool),
+                    _externalNavBakeAdapters);
+                _externalNavBakeAdaptersLocked = true;
+                var bakeService = new NavBakeService(bakeAdapters);
+                SetService(CoreServiceKeys.NavBakeService, bakeService);
                 var runtimeQueue = new RuntimeIncrementalNavMeshRebuildQueue(
-                    new NavBakeService(new CdtNavBakeAlgorithm()),
+                    bakeService,
                     runtimeContext,
                     navRegistry,
                     profileRegistry);
+                EnqueueConfiguredInitialResidentWindow(runtimeQueue, bakeConfig.RuntimeIncremental);
                 SetService(CoreServiceKeys.RuntimeNavMeshRebuildQueue, runtimeQueue);
+                var terrainEditTransaction = new RuntimeNavTriangleSurfaceEditTransaction(
+                    runtimeTriangleSurfaceService
+                        ?? throw new InvalidOperationException("Runtime-incremental nav bootstrap missing RuntimeNavTriangleSurfaceService."),
+                    runtimeQueue,
+                    surface => SetService(CoreServiceKeys.NavTriangleSurface, surface),
+                    bakeConfig.RuntimeIncremental.IncludeNeighborTiles);
+                SetService(CoreServiceKeys.RuntimeNavTriangleSurfaceEditTransaction, terrainEditTransaction);
+                int telemetrySamples = bakeConfig.RuntimeIncremental.PublishedTileCapacity;
+                if (telemetrySamples <= 0)
+                {
+                    throw new InvalidOperationException(
+                        "NavMeshBakeConfig.runtimeIncremental.publishedTileCapacity must be > 0 for RuntimeNavMeshTelemetryService sample capacity.");
+                }
+
+                SetService(CoreServiceKeys.RuntimeNavMeshTelemetry, new RuntimeNavMeshTelemetryService(telemetrySamples));
+                // Do not eagerly bake during map bootstrap; fixed-tick system drains the queue by budget.
             }
             if (MapSessions?.FocusedSession?.PrimaryBoard is INavigableBoard navigableBoard)
             {
                 navigableBoard.NavServices = navRegistry;
+            }
+        }
+
+        public int LastNavBootstrapUriResolveCount { get; private set; }
+
+        private static void ValidateInitialResidentWindow(
+            NavRuntimeIncrementalConfig runtime,
+            int widthChunks,
+            int heightChunks)
+        {
+            if (runtime == null) throw new ArgumentNullException(nameof(runtime));
+            if (runtime.InitialResidentChunkX < 0 ||
+                runtime.InitialResidentChunkZ < 0 ||
+                runtime.InitialResidentWidthChunks <= 0 ||
+                runtime.InitialResidentHeightChunks <= 0)
+            {
+                throw new InvalidOperationException(
+                    "NavMeshBakeConfig.runtimeIncremental.initialResidentChunkX/Z must be >= 0 and width/height chunks must be > 0.");
+            }
+
+            long maxX = checked((long)runtime.InitialResidentChunkX + runtime.InitialResidentWidthChunks);
+            long maxZ = checked((long)runtime.InitialResidentChunkZ + runtime.InitialResidentHeightChunks);
+            if (maxX > widthChunks || maxZ > heightChunks)
+            {
+                throw new InvalidOperationException(
+                    $"NavMeshBakeConfig.runtimeIncremental.initialResident window " +
+                    $"[{runtime.InitialResidentChunkX},{runtime.InitialResidentChunkZ}] " +
+                    $"{runtime.InitialResidentWidthChunks}x{runtime.InitialResidentHeightChunks} is outside world " +
+                    $"{widthChunks}x{heightChunks} chunks. Out-of-world config must fail explicitly (no silent clamp).");
+            }
+        }
+
+        private static void EnqueueConfiguredInitialResidentWindow(
+            RuntimeIncrementalNavMeshRebuildQueue queue,
+            NavRuntimeIncrementalConfig runtime)
+        {
+            if (queue == null) throw new ArgumentNullException(nameof(queue));
+            int x0 = runtime.InitialResidentChunkX;
+            int z0 = runtime.InitialResidentChunkZ;
+            int x1 = checked(x0 + runtime.InitialResidentWidthChunks);
+            int z1 = checked(z0 + runtime.InitialResidentHeightChunks);
+            for (int cz = z0; cz < z1; cz++)
+            {
+                for (int cx = x0; cx < x1; cx++)
+                {
+                    queue.EnqueueDirtyTile(new NavBakeTileCoord(cx, cz));
+                }
             }
         }
 
@@ -2913,8 +3120,30 @@ namespace Ludots.Core.Engine
             RemoveService(CoreServiceKeys.NavMeshBakeConfig);
             RemoveService(CoreServiceKeys.NavMeshProfiles);
             RemoveService(CoreServiceKeys.NavQueryServices);
+            RemoveService(CoreServiceKeys.NavTriangleSurface);
+            RemoveService(CoreServiceKeys.RuntimeNavTriangleSurface);
+            RemoveService(CoreServiceKeys.RuntimeNavTriangleSurfaceEditTransaction);
             RemoveService(CoreServiceKeys.RuntimeNavMeshObstacles);
+            RemoveService(CoreServiceKeys.NavBakeService);
             RemoveService(CoreServiceKeys.RuntimeNavMeshRebuildQueue);
+            RemoveService(CoreServiceKeys.RuntimeNavMeshTelemetry);
+        }
+
+        private static string RequireSingleRuntimeNavLayerId(NavMeshBakeConfig bakeConfig)
+        {
+            if (bakeConfig?.Layers == null || bakeConfig.Layers.Count != 1)
+            {
+                throw new InvalidOperationException("Runtime-incremental navmesh bootstrap currently requires exactly one nav layer.");
+            }
+
+            string layerId = bakeConfig.Layers[0].Id;
+            if (string.IsNullOrWhiteSpace(layerId) ||
+                !string.Equals(layerId.Trim(), layerId, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException("Runtime-incremental navmesh bootstrap requires a non-empty trimmed nav layer id.");
+            }
+
+            return layerId;
         }
 
         private void LoadPathingForSession(MapSession session)
@@ -3146,7 +3375,18 @@ namespace Ludots.Core.Engine
         {
             var agentProfiles = GetService(CoreServiceKeys.AgentProfiles)
                 ?? throw new InvalidOperationException("NavMeshBakeConfig requires AgentProfiles.");
-            return new NavMeshBakeConfigLoader(ConfigPipeline, agentProfiles).Load(ConfigCatalog, ConfigConflictReport);
+            var loader = new NavMeshBakeConfigLoader(ConfigPipeline, agentProfiles);
+            string? mapId = CurrentMapSession?.MapId.Value;
+            if (!string.IsNullOrWhiteSpace(mapId))
+            {
+                string mapScoped = $"Navigation/navmesh.{mapId}.json";
+                if (ConfigCatalog != null && ConfigCatalog.TryGet(mapScoped, out _))
+                {
+                    return loader.Load(ConfigCatalog, ConfigConflictReport, mapScoped);
+                }
+            }
+
+            return loader.Load(ConfigCatalog, ConfigConflictReport);
         }
 
         private string ResolveSingleExistingUri(string relPath)

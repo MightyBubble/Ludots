@@ -55,7 +55,12 @@ public partial class World
     /// <param name="handler">The delegate to call.</param>
     public void SubscribeEntityDestroyed(EntityDestroyedHandler handler)
     {
+#if NETSTANDARD2_1
+        // ArgumentNullException.ThrowIfNull is .NET 6+; netstandard2.1 lacks it.
+        if (handler is null) throw new ArgumentNullException(nameof(handler));
+#else
         ArgumentNullException.ThrowIfNull(handler);
+#endif
         lock (_entityDestroyedHandlersWriteLock)
         {
             EntityDestroyedHandler[] current = Volatile.Read(ref _entityDestroyedHandlers);

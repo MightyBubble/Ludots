@@ -7,9 +7,12 @@ using Ludots.Core.Engine;
 using Ludots.Core.Hosting;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.Navigation.NavMesh.Bake;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Config;
+using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Scripting;
+using Ludots.NavBake.Recast;
 using Ludots.Platform.Abstractions;
 using Ludots.UI;
 using Ludots.UI.Browser;
@@ -38,7 +41,10 @@ namespace Ludots.Adapter.Raylib
             // Check if file logging is requested after config merge
             Log.Initialize(effectiveBackend);
 
-            var result = GameBootstrapper.InitializeFromBaseDirectory(baseDir, gameConfigFile ?? "launcher.runtime.json");
+            var result = GameBootstrapper.InitializeFromBaseDirectory(
+                baseDir,
+                gameConfigFile ?? "launcher.runtime.json",
+                externalNavBakeAdapters: new INavBakeAlgorithm[] { new RecastNavBakeAlgorithm() });
             var engine = result.Engine;
             var config = result.Config;
             IBrowserRuntime? browserRuntime = RaylibBrowserRuntimeInstaller.InstallIfConfigured(engine, config, baseDir);
@@ -92,6 +98,9 @@ namespace Ludots.Adapter.Raylib
             }
             engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
             engine.SetService(CoreServiceKeys.InputBackend, (Core.Input.Runtime.IInputBackend)inputBackend);
+
+            engine.RegisterPresentationAdapterCapabilities(
+                new PresentationAdapterCapabilities(PresentationVisualCapabilities.NavMeshTileGeometry));
 
             ValidateRequiredContextBeforeStart(engine);
 

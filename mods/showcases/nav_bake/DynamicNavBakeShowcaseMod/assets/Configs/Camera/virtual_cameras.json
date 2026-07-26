@@ -1,0 +1,22 @@
+[
+  {
+    "id": "DynamicNavBake.Camera.AutoCapture",
+    "displayName": "Dynamic NavBake Auto Capture",
+    "priority": 200,
+    "rigKind": "Orbit",
+    "distanceCm": 6500,
+    "pitch": 58,
+    "fovYDeg": 50,
+    "yaw": 180,
+    "minDistanceCm": 2500,
+    "maxDistanceCm": 40000,
+    "minPitchDeg": 45,
+    "maxPitchDeg": 72,
+    "panMode": "None",
+    "enableGrabDrag": false,
+    "rotateMode": "None",
+    "enableZoom": false,
+    "followMode": "None",
+    "allowUserInput": false
+  }
+]

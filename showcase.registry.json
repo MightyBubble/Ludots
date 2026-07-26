@@ -804,6 +804,74 @@
       ]
     },
     {
+      "id": "nav_bake_showcase",
+      "path": "mods/showcases/nav_bake/DynamicNavBakeShowcaseMod",
+      "projectPath": "DynamicNavBakeShowcaseMod.csproj",
+      "title": "动态 NavMesh 建造实验场",
+      "summary": "在同一应用中切换 RTS 与 64×64 Chunk 开放世界，放置建筑、抬升地形、逐帧 Bake，并直接观察三种算法的导航网格变化。",
+      "tier": "T1",
+      "category": "showcase",
+      "tags": [
+        "navmesh",
+        "nav-bake",
+        "construction",
+        "open-world"
+      ],
+      "binding": "nav_bake_showcase",
+      "preset": "nav_bake_showcase_raylib",
+      "docsPath": "gitbook/architecture/dynamic-3d-navmesh-bake.md",
+      "readmePath": "mods/showcases/nav_bake/DynamicNavBakeShowcaseMod/README.md",
+      "acceptanceTest": "DynamicNavBakeShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/acceptance/nav-bake-showcase",
+      "screenshot": "artifacts/acceptance/nav-bake-showcase/screens/layered-span_002_f0480.png",
+      "status": "active"
+    },
+    {
+      "id": "nav_bake_dynamic_rts",
+      "path": "mods/showcases/nav_bake/NavBakeDynamicRtsShowcaseMod",
+      "projectPath": "NavBakeDynamicRtsShowcaseMod.csproj",
+      "title": "动态 NavMesh RTS 堡垒",
+      "summary": "8×8 chunk RTS 场景：切换 recast/cdt/layered-span、建墙/拆墙、小队绕路寻路与 runtime-incremental 局部烘焙验收。",
+      "tier": "T1",
+      "category": "showcase",
+      "tags": [
+        "navmesh",
+        "nav-bake",
+        "rts"
+      ],
+      "binding": "nav_bake_dynamic_rts",
+      "preset": "nav_bake_dynamic_rts_raylib",
+      "docsPath": "gitbook/architecture/dynamic-3d-navmesh-bake.md",
+      "readmePath": "mods/showcases/nav_bake/NavBakeDynamicRtsShowcaseMod/README.md",
+      "acceptanceTest": "DynamicNavBakeShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/acceptance/nav-bake-dynamic-rts",
+      "screenshot": "artifacts/acceptance/nav-bake-dynamic-rts/screens/layered-span_003_f3000.png",
+      "status": "active"
+    },
+    {
+      "id": "nav_bake_open_world_64x64",
+      "path": "mods/showcases/nav_bake/NavBakeOpenWorld64x64ShowcaseMod",
+      "projectPath": "NavBakeOpenWorld64x64ShowcaseMod.csproj",
+      "title": "动态 NavMesh 64×64 开放世界",
+      "summary": "4096 chunk 开放世界：4096 节点粗图 corridor、8×8 滑动 resident nav 窗口、热点建墙与三算法对比。",
+      "tier": "T1",
+      "category": "showcase",
+      "tags": [
+        "navmesh",
+        "nav-bake",
+        "open-world",
+        "streaming"
+      ],
+      "binding": "nav_bake_open_world_64x64",
+      "preset": "nav_bake_open_world_64x64_raylib",
+      "docsPath": "gitbook/architecture/dynamic-3d-navmesh-bake.md",
+      "readmePath": "mods/showcases/nav_bake/NavBakeOpenWorld64x64ShowcaseMod/README.md",
+      "acceptanceTest": "DynamicNavBakeShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/acceptance/nav-bake-open-world-64x64",
+      "screenshot": "artifacts/acceptance/nav-bake-open-world-64x64/screens/layered-span_003_f0720.png",
+      "status": "active"
+    },
+    {
       "id": "fourx_association",
       "path": "mods/showcases/fourx_association/FourXAssociationShowcaseMod",
       "projectPath": "FourXAssociationShowcaseMod.csproj",

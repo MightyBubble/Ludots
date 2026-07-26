@@ -817,7 +817,7 @@
         routing: "玩家附近用 Mesh/Auto；远区用 streaming 与驻留策略",
         advice: {
           world: ["大世界可以沿用 64km 级 board。", "StreamingChunk 可从 64 cells * CellCm 起步。", "相机/玩家活动半径决定 loaded window。"],
-          nav: ["动态门/桥/建筑用 runtime-incremental + cdt。", "临时拥堵仍归 MassNavigationFlow avoidance。", "runtime rebuild 预算按 tileBudgetPerFixedTick 控制。"],
+          nav: ["动态门/桥/建筑用 runtime-incremental，并选择 Host 已注册且支持当前输入的算法。", "默认 Host 目前接通 CDT 逻辑地形；临时拥堵仍归 MassNavigationFlow avoidance。", "runtime rebuild 预算按 tileBudgetPerFixedTick 控制。"],
           perf: ["不要让远区 performer 常驻。", "view residency 控制保留时间和半径。", "minimap 与相机跳转要验证 marker 不丢。"]
         }
       }

@@ -5,6 +5,7 @@ using System.Text.Json;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.Modding;
+using Ludots.Core.Navigation.NavMesh.Bake;
 using Ludots.Core.Scripting;
 
 namespace Ludots.Core.Hosting
@@ -43,14 +44,21 @@ namespace Ludots.Core.Hosting
             return InitializeFromBaseDirectory(baseDirectory, "launcher.runtime.json");
         }
 
+        public static GameBootstrapResult InitializeFromBaseDirectory(string baseDirectory, string gameConfigFile)
+            => InitializeFromBaseDirectory(baseDirectory, gameConfigFile, externalNavBakeAdapters: null);
+
         /// <summary>
         /// New initialization flow using ConfigPipeline for game.json merge:
         /// 1. Read app bootstrap for launch graph metadata
-        /// 2. Initialize VFS and ModLoader from the resolved launch plan
-        /// 3. Use ConfigPipeline to merge all game.json files (Core -> Mods)
+        /// 2. Construct GameEngine and register startup-only external nav-bake adapters
+        ///    (host-owned Recast, etc.) immediately — before ConfigPipeline/map nav composition
+        /// 3. Initialize VFS and ModLoader from the resolved launch plan via ConfigPipeline
         /// 4. Pass merged config to GameEngine
         /// </summary>
-        public static GameBootstrapResult InitializeFromBaseDirectory(string baseDirectory, string gameConfigFile)
+        public static GameBootstrapResult InitializeFromBaseDirectory(
+            string baseDirectory,
+            string gameConfigFile,
+            IReadOnlyList<INavBakeAlgorithm>? externalNavBakeAdapters)
         {
             if (string.IsNullOrWhiteSpace(baseDirectory))
                 throw new ArgumentException("Base directory is required.", nameof(baseDirectory));
@@ -82,9 +90,15 @@ namespace Ludots.Core.Hosting
             string graphPath = ResolveRequiredGraphPath(baseDir, gameJsonPath, bootstrapConfig);
             var resolvedPlan = ResolveGraphPlan(graphPath, gameJsonPath, bootstrapConfig);
 
-            // Step 2 & 3: Initialize engine with launcher-resolved plan
-            // Engine will internally use ConfigPipeline to merge game.json
+            // Step 2: Register host-owned external nav-bake adapters immediately after construction
+            // and BEFORE InitializeWithConfigPipeline. Runtime-incremental Recast composition happens
+            // during map nav load; late registration after that is rejected with no fallback.
             var engine = new GameEngine();
+            if (externalNavBakeAdapters != null)
+            {
+                engine.RegisterExternalNavBakeAdapters(externalNavBakeAdapters);
+            }
+
             engine.InitializeWithConfigPipeline(resolvedPlan.ModLoadPlan, assetsRoot);
 
             // Get the merged config from engine

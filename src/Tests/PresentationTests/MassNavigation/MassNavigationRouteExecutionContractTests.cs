@@ -21,6 +21,151 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void RouteSink_TryGetActiveRouteEvidence_IsAbsentBeforeRoute_PresentAfterApply_WithoutMutating()
+        {
+            using var world = World.Create();
+            MassNavigationSimulationRuntime runtime = CreateRuntime(world, out Entity routed, out _);
+            var store = new PathStore(maxPaths: 4, maxPointsPerPath: 8);
+            var pathService = new FakePathService(
+                store,
+                new Vector2(5_000, 5_000),
+                new Vector2(5_300, 5_000),
+                new Vector2(5_800, 5_000));
+            var sink = new MassNavigationRouteExecutionSink(pathService, store, CreatePathingConfig());
+
+            Assert.That(sink.TryGetActiveRouteEvidence(routed, out MassNavigationRouteEvidence before), Is.False);
+            Assert.That(before, Is.EqualTo(default(MassNavigationRouteEvidence)));
+
+            sink.BeginSync();
+            sink.TrackRouteTarget(runtime, world, routed, 0, new Vector2(5_800, 5_000), 441, 128, 8);
+            sink.EndSync();
+
+            MassNavigationRouteSinkResult applied = sink.TryApplyTrackedRouteTargets(runtime, world);
+            Assert.That(applied.Applied, Is.True);
+            Assert.That(pathService.SolveCount, Is.EqualTo(1));
+
+            Assert.That(sink.TryGetActiveRouteEvidence(routed, out MassNavigationRouteEvidence evidence), Is.True);
+            Assert.That(evidence.OrderToken, Is.EqualTo(441));
+            Assert.That(evidence.AgentIndex, Is.EqualTo(0));
+            Assert.That(evidence.ResolvedDomain, Is.EqualTo(PathDomain.NodeGraph));
+            Assert.That(evidence.WaypointCount, Is.EqualTo(3));
+            Assert.That(evidence.CurrentWaypointIndex, Is.EqualTo(1),
+                "Solve copies the start sample then advances past it when the agent already sits on it.");
+            Assert.That(evidence.RouteReady, Is.True);
+            Assert.That(evidence.WaypointGeometrySignature, Is.Not.EqualTo(0UL));
+
+            int solveBeforeLookup = pathService.SolveCount;
+            Assert.That(runtime.TryGetAgentNavigationTargetWorldCm(0, out float targetX, out float targetY), Is.True);
+            var targetBefore = new Vector2(targetX, targetY);
+
+            Assert.That(sink.TryGetActiveRouteEvidence(routed, out MassNavigationRouteEvidence second), Is.True);
+            Assert.That(second.OrderToken, Is.EqualTo(evidence.OrderToken));
+            Assert.That(second.AgentIndex, Is.EqualTo(evidence.AgentIndex));
+            Assert.That(second.ResolvedDomain, Is.EqualTo(evidence.ResolvedDomain));
+            Assert.That(second.WaypointCount, Is.EqualTo(evidence.WaypointCount));
+            Assert.That(second.CurrentWaypointIndex, Is.EqualTo(evidence.CurrentWaypointIndex));
+            Assert.That(second.RouteReady, Is.EqualTo(evidence.RouteReady));
+            Assert.That(second.WaypointGeometrySignature, Is.EqualTo(evidence.WaypointGeometrySignature));
+            Assert.That(pathService.SolveCount, Is.EqualTo(solveBeforeLookup));
+            Assert.That(runtime.TryGetAgentNavigationTargetWorldCm(0, out float afterX, out float afterY), Is.True);
+            Assert.That(new Vector2(afterX, afterY), Is.EqualTo(targetBefore));
+            Assert.That(sink.ActiveRouteCount, Is.EqualTo(1));
+        }
+
+        [TestCase(PathSelectionMode.PreferMesh, PathDomain.NavMesh)]
+        [TestCase(PathSelectionMode.PreferGraph, PathDomain.NodeGraph)]
+        [TestCase(PathSelectionMode.AutoCheapest, PathDomain.Auto)]
+        [TestCase(PathSelectionMode.Direct, PathDomain.Auto)]
+        public void RouteSink_UsesConfiguredSelectionDomainForPathRequest(
+            PathSelectionMode selectionMode,
+            PathDomain expectedDomain)
+        {
+            using var world = World.Create();
+            MassNavigationSimulationRuntime runtime = CreateRuntime(world, out Entity routed, out _);
+            var store = new PathStore(maxPaths: 4, maxPointsPerPath: 8);
+            var pathService = new FakePathService(
+                store,
+                new Vector2(5_000, 5_000),
+                new Vector2(5_800, 5_000));
+            var sink = new MassNavigationRouteExecutionSink(
+                pathService,
+                store,
+                CreatePathingConfig(selectionMode));
+
+            sink.BeginSync();
+            sink.TrackRouteTarget(runtime, world, routed, 0, new Vector2(5_800, 5_000), 441, 128, 8);
+            sink.EndSync();
+            MassNavigationRouteSinkResult applied = sink.TryApplyTrackedRouteTargets(runtime, world);
+
+            Assert.That(applied.Applied, Is.True);
+            Assert.That(pathService.LastRequestDomain, Is.EqualTo(expectedDomain));
+        }
+
+        [Test]
+        public void RouteSink_TargetedRemoval_RemovesOnlyRequestedAgentAndPreservesSibling()
+        {
+            using var world = World.Create();
+            MassNavigationSimulationRuntime runtime = CreateRuntimeWithTwoRoutedAgents(
+                world,
+                out Entity agentA,
+                out Entity agentB);
+            var store = new PathStore(maxPaths: 4, maxPointsPerPath: 8);
+            var sink = new MassNavigationRouteExecutionSink(
+                new GoalEchoPathService(store),
+                store,
+                CreatePathingConfig(),
+                routeStateCapacity: 4,
+                waypointCapacityPerAgent: 8);
+
+            sink.BeginSync();
+            sink.TrackRouteTarget(runtime, world, agentA, 0, new Vector2(5_800, 5_000), requestId: 701, maxExpanded: 128, maxPoints: 8);
+            sink.TrackRouteTarget(runtime, world, agentB, 1, new Vector2(6_200, 5_200), requestId: 702, maxExpanded: 128, maxPoints: 8);
+            sink.EndSync();
+            Assert.That(sink.TryApplyTrackedRouteTargets(runtime, world).Applied, Is.True);
+            Assert.That(sink.ActiveRouteCount, Is.EqualTo(2));
+            Assert.That(sink.TryGetActiveRouteEvidence(agentA, out MassNavigationRouteEvidence evidenceA), Is.True);
+            Assert.That(sink.TryGetActiveRouteEvidence(agentB, out MassNavigationRouteEvidence evidenceB), Is.True);
+
+            Assert.Throws<ArgumentException>(() => sink.RemoveAgent(Entity.Null));
+
+            sink.RemoveAgent(agentA);
+
+            Assert.That(sink.ActiveRouteCount, Is.EqualTo(1));
+            Assert.That(sink.TryGetActiveRouteEvidence(agentA, out _), Is.False);
+            Assert.That(sink.TryGetActiveRouteEvidence(agentB, out MassNavigationRouteEvidence preservedB), Is.True);
+            Assert.That(preservedB.OrderToken, Is.EqualTo(evidenceB.OrderToken));
+            Assert.That(preservedB.AgentIndex, Is.EqualTo(evidenceB.AgentIndex));
+            Assert.That(preservedB.ResolvedDomain, Is.EqualTo(evidenceB.ResolvedDomain));
+            Assert.That(preservedB.WaypointCount, Is.EqualTo(evidenceB.WaypointCount));
+            Assert.That(preservedB.CurrentWaypointIndex, Is.EqualTo(evidenceB.CurrentWaypointIndex));
+            Assert.That(preservedB.RouteReady, Is.EqualTo(evidenceB.RouteReady));
+            Assert.That(evidenceA.OrderToken, Is.EqualTo(701));
+        }
+
+        [Test]
+        public void RouteSink_TryGetActiveRouteEvidence_RejectsAmbiguousRoutesForOneEntity()
+        {
+            using var world = World.Create();
+            MassNavigationSimulationRuntime runtime = CreateRuntime(world, out Entity routed, out _);
+            var store = new PathStore(maxPaths: 4, maxPointsPerPath: 8);
+            var sink = new MassNavigationRouteExecutionSink(
+                new GoalEchoPathService(store),
+                store,
+                CreatePathingConfig(),
+                routeStateCapacity: 2,
+                waypointCapacityPerAgent: 8);
+
+            sink.BeginSync();
+            sink.TrackRouteTarget(runtime, world, routed, 0, new Vector2(5_800, 5_000), 441, 128, 8);
+            sink.TrackRouteTarget(runtime, world, routed, 0, new Vector2(6_200, 5_000), 442, 128, 8);
+            sink.EndSync();
+
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(
+                () => sink.TryGetActiveRouteEvidence(routed, out _))!;
+            Assert.That(error.Message, Does.Contain("more than one active RouteState"));
+        }
+
+        [Test]
         public void RouteSink_AppliesWaypointOnlyForProfilesDeclaredInPathingConfig()
         {
             using var world = World.Create();
@@ -310,7 +455,8 @@ namespace Ludots.Tests.Presentation
             return runtime;
         }
 
-        private static PathingConfig CreatePathingConfig()
+        private static PathingConfig CreatePathingConfig(
+            PathSelectionMode selectionMode = PathSelectionMode.PreferGraph)
         {
             return new PathingConfig
             {
@@ -320,7 +466,7 @@ namespace Ludots.Tests.Presentation
                     {
                         Id = "routed.agent",
                         ProfileId = "routed",
-                        Selection = new PathingSelectionConfig { Mode = PathSelectionMode.PreferGraph },
+                        Selection = new PathingSelectionConfig { Mode = selectionMode },
                     },
                 },
             };
@@ -338,10 +484,12 @@ namespace Ludots.Tests.Presentation
             }
 
             public int SolveCount { get; private set; }
+            public PathDomain LastRequestDomain { get; private set; }
 
             public bool TrySolve(in PathRequest request, out PathResult result)
             {
                 SolveCount++;
+                LastRequestDomain = request.Domain;
                 if (!_store.TryAllocate(_points.Length, out PathHandle handle))
                 {
                     result = new PathResult(request.RequestId, request.Actor, PathStatus.BudgetExceeded, default, 0, 4);

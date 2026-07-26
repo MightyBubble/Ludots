@@ -26,6 +26,8 @@ namespace Ludots.Core.Presentation
         private int? _worldHudCapacity;
         private int? _screenHudCapacity;
         private int? _minimapMarkerCapacity;
+        private int? _navMeshTileCapacity;
+        private int? _navMeshTileStateCapacity;
         private int? _runtimeEntitySpawnQueueCapacity;
         private int? _runtimeEntitySpawnReceiptQueueCapacity;
         private int? _runtimeEntityLifecycleQueueCapacity;
@@ -51,6 +53,8 @@ namespace Ludots.Core.Presentation
         public int WorldHudCapacity { get => _worldHudCapacity ?? 0; set => _worldHudCapacity = value; }
         public int ScreenHudCapacity { get => _screenHudCapacity ?? 0; set => _screenHudCapacity = value; }
         public int MinimapMarkerCapacity { get => _minimapMarkerCapacity ?? 0; set => _minimapMarkerCapacity = value; }
+        public int NavMeshTileCapacity { get => _navMeshTileCapacity ?? 0; set => _navMeshTileCapacity = value; }
+        public int NavMeshTileStateCapacity { get => _navMeshTileStateCapacity ?? 0; set => _navMeshTileStateCapacity = value; }
         public int RuntimeEntitySpawnQueueCapacity { get => _runtimeEntitySpawnQueueCapacity ?? 0; set => _runtimeEntitySpawnQueueCapacity = value; }
         public int RuntimeEntitySpawnReceiptQueueCapacity { get => _runtimeEntitySpawnReceiptQueueCapacity ?? 0; set => _runtimeEntitySpawnReceiptQueueCapacity = value; }
         public int RuntimeEntityLifecycleQueueCapacity { get => _runtimeEntityLifecycleQueueCapacity ?? 0; set => _runtimeEntityLifecycleQueueCapacity = value; }
@@ -88,6 +92,8 @@ namespace Ludots.Core.Presentation
             RequirePositive(_worldHudCapacity, "presentation.worldHudCapacity");
             RequirePositive(_screenHudCapacity, "presentation.screenHudCapacity");
             RequirePositive(_minimapMarkerCapacity, "presentation.minimapMarkerCapacity");
+            RequirePositive(_navMeshTileCapacity, "presentation.navMeshTileCapacity");
+            RequirePositive(_navMeshTileStateCapacity, "presentation.navMeshTileStateCapacity");
             RequirePositive(_runtimeEntitySpawnQueueCapacity, "presentation.runtimeEntitySpawnQueueCapacity");
             RequirePositive(_runtimeEntitySpawnReceiptQueueCapacity, "presentation.runtimeEntitySpawnReceiptQueueCapacity");
             RequirePositive(_runtimeEntityLifecycleQueueCapacity, "presentation.runtimeEntityLifecycleQueueCapacity");

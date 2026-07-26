@@ -25,6 +25,10 @@ namespace Ludots.Core.Gameplay.Spawning
         public int LocalOffsetXCm;
         public int LocalOffsetYCm;
         public int NavRadiusCm;
+        /// <summary>Absolute world-cm half-open nav vertical interval start when SinkNavigationObstacle != 0.</summary>
+        public int NavMinYcm;
+        /// <summary>Absolute world-cm half-open nav vertical interval end (exclusive) when SinkNavigationObstacle != 0.</summary>
+        public int NavMaxYcm;
     }
 
     public struct ManifestationObstaclePolygon2D
@@ -119,6 +123,8 @@ namespace Ludots.Core.Gameplay.Spawning
         public fixed int LocalOffsetXCms[MaxPieces];
         public fixed int LocalOffsetYCms[MaxPieces];
         public fixed int NavRadiusCms[MaxPieces];
+        public fixed int NavMinYcms[MaxPieces];
+        public fixed int NavMaxYcms[MaxPieces];
         public fixed byte PolygonVertexCounts[MaxPieces];
         public fixed int VertexXs[MaxVertices];
         public fixed int VertexYs[MaxVertices];
@@ -131,7 +137,9 @@ namespace Ludots.Core.Gameplay.Spawning
             int halfHeightCm,
             int localOffsetXCm,
             int localOffsetYCm,
-            int navRadiusCm)
+            int navRadiusCm,
+            int navMinYcm,
+            int navMaxYcm)
         {
             ValidatePieceIndex(pieceIndex);
             fixed (byte* shapeValues = ShapeValues)
@@ -141,6 +149,8 @@ namespace Ludots.Core.Gameplay.Spawning
             fixed (int* localOffsetXCms = LocalOffsetXCms)
             fixed (int* localOffsetYCms = LocalOffsetYCms)
             fixed (int* navRadiusCms = NavRadiusCms)
+            fixed (int* navMinYcms = NavMinYcms)
+            fixed (int* navMaxYcms = NavMaxYcms)
             {
                 shapeValues[pieceIndex] = (byte)shape;
                 radiusCms[pieceIndex] = radiusCm;
@@ -149,6 +159,8 @@ namespace Ludots.Core.Gameplay.Spawning
                 localOffsetXCms[pieceIndex] = localOffsetXCm;
                 localOffsetYCms[pieceIndex] = localOffsetYCm;
                 navRadiusCms[pieceIndex] = navRadiusCm;
+                navMinYcms[pieceIndex] = navMinYcm;
+                navMaxYcms[pieceIndex] = navMaxYcm;
             }
 
             if (PieceCount < pieceIndex + 1)
@@ -217,6 +229,24 @@ namespace Ludots.Core.Gameplay.Spawning
             fixed (int* navRadiusCms = NavRadiusCms)
             {
                 return navRadiusCms[pieceIndex];
+            }
+        }
+
+        public readonly int GetNavMinYcm(int pieceIndex)
+        {
+            ValidateDeclaredPieceIndex(pieceIndex);
+            fixed (int* navMinYcms = NavMinYcms)
+            {
+                return navMinYcms[pieceIndex];
+            }
+        }
+
+        public readonly int GetNavMaxYcm(int pieceIndex)
+        {
+            ValidateDeclaredPieceIndex(pieceIndex);
+            fixed (int* navMaxYcms = NavMaxYcms)
+            {
+                return navMaxYcms[pieceIndex];
             }
         }
 

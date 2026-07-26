@@ -53,6 +53,9 @@ namespace Ludots.Tests.GAS
                     SinkNavigationObstacle = 1,
                     HalfWidthCm = 240,
                     HalfHeightCm = 30,
+                    NavRadiusCm = 242,
+                    NavMinYcm = 0,
+                    NavMaxYcm = 200,
                 });
 
             system.Update(0f);
@@ -98,6 +101,8 @@ namespace Ludots.Tests.GAS
                     SinkNavigationObstacle = 1,
                     RadiusCm = 50,
                     NavRadiusCm = 50,
+                    NavMinYcm = 0,
+                    NavMaxYcm = 200,
                 });
 
             system.Update(0f);
@@ -172,6 +177,8 @@ namespace Ludots.Tests.GAS
                   "sinkPhysicsCollider": true,
                   "sinkNavigationObstacle": true,
                   "navRadiusCm": 160,
+                  "navMinYcm": 0,
+                  "navMaxYcm": 200,
                   "localOffsetCm": { "x": 0, "y": 0 }
                 }
                 """)!,
@@ -223,6 +230,8 @@ namespace Ludots.Tests.GAS
                     {
                       "shape": "Box",
                       "navRadiusCm": 120,
+                      "navMinYcm": 0,
+                      "navMaxYcm": 200,
                       "halfWidthCm": 100,
                       "halfHeightCm": 40,
                       "localOffsetCm": { "x": -120, "y": 0 }
@@ -230,6 +239,8 @@ namespace Ludots.Tests.GAS
                     {
                       "shape": "Polygon",
                       "navRadiusCm": 80,
+                      "navMinYcm": 0,
+                      "navMaxYcm": 200,
                       "localOffsetCm": { "x": 160, "y": 20 },
                       "vertices": [
                         { "x": -40, "y": -30 },
@@ -329,7 +340,9 @@ namespace Ludots.Tests.GAS
                     SinkPhysicsCollider = 1,
                     SinkNavigationObstacle = 1,
                     RadiusCm = 10,
-                    NavRadiusCm = 10
+                    NavRadiusCm = 10,
+                    NavMinYcm = 0,
+                    NavMaxYcm = 200
                 });
 
             var compound = new CompoundObstacle2D
@@ -345,7 +358,7 @@ namespace Ludots.Tests.GAS
                 halfHeightCm: 0,
                 localOffsetXCm: 0,
                 localOffsetYCm: 0,
-                navRadiusCm: 10);
+                navRadiusCm: 10, navMinYcm: 0, navMaxYcm: 200);
             world.Add(entity, compound);
 
             var system = new ManifestationObstacleBridge2DSystem(world, _shapeStorage);
@@ -425,6 +438,16 @@ namespace Ludots.Tests.GAS
             AssertRejects(
                 world,
                 "ManifestationObstacleIntent2D",
+                """{ "shape": "Circle", "sinkPhysicsCollider": false, "sinkNavigationObstacle": true, "navRadiusCm": 10, "radiusCm": 10, "localOffsetCm": { "x": 0, "y": 0 } }""",
+                "requires both navMinYcm and navMaxYcm");
+            AssertRejects(
+                world,
+                "ManifestationObstacleIntent2D",
+                """{ "shape": "Circle", "sinkPhysicsCollider": false, "sinkNavigationObstacle": true, "navRadiusCm": 10, "navMinYcm": 10, "navMaxYcm": 10, "radiusCm": 10, "localOffsetCm": { "x": 0, "y": 0 } }""",
+                "navMinYcm < navMaxYcm");
+            AssertRejects(
+                world,
+                "ManifestationObstacleIntent2D",
                 """{ "shape": "Circle", "sinkPhysicsCollider": false, "sinkNavigationObstacle": false, "radiusCm": 10, "navRadiusCm": 10, "localOffsetCm": { "x": 0, "y": 0 } }""",
                 "requires at least one sink intent");
             AssertRejects(
@@ -448,6 +471,8 @@ namespace Ludots.Tests.GAS
                     {
                       "shape": "Polygon",
                       "navRadiusCm": 20,
+                      "navMinYcm": 0,
+                      "navMaxYcm": 200,
                       "localOffsetCm": { "x": 0, "y": 0 },
                       "vertices": [ { "x": 0, "y": 0 }, { "x": 10, "y": 0 } ]
                     }
@@ -466,6 +491,8 @@ namespace Ludots.Tests.GAS
                     {
                       "shape": "Box",
                       "navRadiusCm": 20,
+                      "navMinYcm": 0,
+                      "navMaxYcm": 200,
                       "halfWidthCm": 10,
                       "halfHeightCm": 10,
                       "localOffsetCm": { "x": 0, "y": 0 },

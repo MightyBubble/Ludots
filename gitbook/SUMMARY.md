@@ -34,6 +34,7 @@
   - [Core Field2D](architecture/core-field2d.md)
   - [Global Field Rendering](architecture/global-field-rendering.md)
   - [MassNavigation 数值域与确定性边界](architecture/mass-navigation-numeric-domain.md)
+  - [动态 3D Navmesh 烘焙架构](architecture/dynamic-3d-navmesh-bake.md)
   - [Prefab Grounding 与 Visual Height](architecture/prefab-grounding-and-visual-height.md)
   - [Structure Collision Surfaces](architecture/structure-collision-surfaces.md)
   - [Performer-as-Actor 架构总览](architecture/performer-as-actor-architecture.md)

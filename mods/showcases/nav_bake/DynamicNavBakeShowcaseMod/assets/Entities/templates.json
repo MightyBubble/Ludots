@@ -1,0 +1,37 @@
+[
+  {
+    "id": "dynamic_nav_bake_wall_segment",
+    "components": {
+      "Name": {
+        "Value": "DynamicNavBake.WallSegment"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "VisualHeightmapSampleState": {},
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "AttributeBuffer": {
+        "base": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "RuntimeNavMeshStructuralObstacle": {},
+      "ManifestationObstacleIntent2D": {
+        "shape": "Circle",
+        "sinkPhysicsCollider": false,
+        "sinkNavigationObstacle": true,
+        "navRadiusCm": 150,
+        "navMinYcm": 0,
+        "navMaxYcm": 300,
+        "radiusCm": 150,
+        "localOffsetXCm": 0,
+        "localOffsetYCm": 0
+      }
+    }
+  }
+]

@@ -13,6 +13,7 @@ namespace Ludots.Core.MassNavigation.Runtime;
 public sealed class MassNavigationConfig
 {
     public string MapId { get; set; } = string.Empty;
+    public string[] CompatibleMapIds { get; set; } = Array.Empty<string>();
     public MassNavigationWorldConfig? World { get; set; }
     public MassNavigationFlowSolverConfig Solver { get; set; } = new();
     public MassNavigationPresentationConfig Presentation { get; set; } = new();
@@ -365,6 +366,23 @@ public sealed class MassNavigationConfig
             throw new InvalidOperationException("MassNavigation config requires a non-empty map id.");
         }
 
+        var supportedMapIds = new HashSet<string>(StringComparer.Ordinal) { MapId };
+        for (int i = 0; i < CompatibleMapIds.Length; i++)
+        {
+            string mapId = CompatibleMapIds[i];
+            if (string.IsNullOrWhiteSpace(mapId) || !string.Equals(mapId.Trim(), mapId, StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException(
+                    $"MassNavigation compatibleMapIds[{i}] must be non-empty and trimmed.");
+            }
+
+            if (!supportedMapIds.Add(mapId))
+            {
+                throw new InvalidOperationException(
+                    $"MassNavigation compatibleMapIds[{i}] duplicates supported map id '{mapId}'.");
+            }
+        }
+
         Solver.Validate();
         ScenarioRuntime.Validate();
         Scenario.Validate(ScenarioRuntime);
@@ -408,6 +426,29 @@ public sealed class MassNavigationConfig
                     $"MassNavigation config relationship [{relation.TeamA},{relation.TeamB}] requires a stance key.");
             }
         }
+    }
+
+    public bool SupportsMap(string? mapId)
+    {
+        if (string.IsNullOrEmpty(mapId))
+        {
+            return false;
+        }
+
+        if (string.Equals(MapId, mapId, StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        for (int i = 0; i < CompatibleMapIds.Length; i++)
+        {
+            if (string.Equals(CompatibleMapIds[i], mapId, StringComparison.Ordinal))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void ValidateRelationships()

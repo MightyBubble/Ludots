@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Arch.Core;
@@ -11,6 +12,8 @@ using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.NavMesh.Bake;
 using Ludots.Core.Navigation.NavMesh.Config;
+using Ludots.Core.Navigation.NavMesh.LayeredSpan;
+using Ludots.Core.Navigation.NavMesh.Surface;
 using Ludots.Core.Navigation.Terrain;
 using Ludots.Core.Physics;
 using Ludots.Physics.Broadphase;
@@ -252,7 +255,9 @@ namespace GasTests
                 halfHeightCm: 50,
                 localOffsetXCm: -200,
                 localOffsetYCm: 0,
-                navRadiusCm: 0);
+                navRadiusCm: 0,
+                navMinYcm: 0,
+                navMaxYcm: 200);
             obstacle.SetPiece(
                 1,
                 ManifestationObstacleShape2D.Box,
@@ -261,7 +266,9 @@ namespace GasTests
                 halfHeightCm: 50,
                 localOffsetXCm: 200,
                 localOffsetYCm: 0,
-                navRadiusCm: 0);
+                navRadiusCm: 0,
+                navMinYcm: 0,
+                navMaxYcm: 200);
 
             var compoundEntity = world.Create(
                 WorldPositionCm.FromCm(0, 0),
@@ -323,7 +330,9 @@ namespace GasTests
                 halfHeightCm: 50,
                 localOffsetXCm: 200,
                 localOffsetYCm: 0,
-                navRadiusCm: 0);
+                navRadiusCm: 0,
+                navMinYcm: 0,
+                navMaxYcm: 200);
 
             var compoundEntity = world.Create(
                 WorldPositionCm.FromCm(0, 0),
@@ -379,7 +388,9 @@ namespace GasTests
                 halfHeightCm: 0,
                 localOffsetXCm: 0,
                 localOffsetYCm: 0,
-                navRadiusCm: 0);
+                navRadiusCm: 0,
+                navMinYcm: 0,
+                navMaxYcm: 200);
 
             var compoundEntity = world.Create(
                 WorldPositionCm.FromCm(0, 0),
@@ -424,7 +435,9 @@ namespace GasTests
                 halfHeightCm: 0,
                 localOffsetXCm: 300,
                 localOffsetYCm: 0,
-                navRadiusCm: 0);
+                navRadiusCm: 0,
+                navMinYcm: 0,
+                navMaxYcm: 200);
             obstacle.SetPolygonVertexCount(0, 4);
             obstacle.SetVertex(0, 0, new WorldCmInt2(-40, -40));
             obstacle.SetVertex(0, 1, new WorldCmInt2(40, -40));
@@ -561,7 +574,9 @@ namespace GasTests
                 halfHeightCm: 40,
                 localOffsetXCm: -120,
                 localOffsetYCm: 0,
-                navRadiusCm: 0);
+                navRadiusCm: 0,
+                navMinYcm: 0,
+                navMaxYcm: 200);
             obstacle.SetPiece(
                 1,
                 ManifestationObstacleShape2D.Box,
@@ -570,7 +585,9 @@ namespace GasTests
                 halfHeightCm: 40,
                 localOffsetXCm: 120,
                 localOffsetYCm: 0,
-                navRadiusCm: 0);
+                navRadiusCm: 0,
+                navMinYcm: 0,
+                navMaxYcm: 200);
 
             var obstacleEntity = world.Create(
                 WorldPositionCm.FromCm(0, 0),
@@ -623,7 +640,7 @@ namespace GasTests
             using var world = World.Create();
             var engine = CreateRuntimeNavMeshDirtyEngine(
                 world,
-                out NavObstacleSet obstacles,
+                out RuntimeNavObstacleSnapshot obstacles,
                 out RuntimeIncrementalNavMeshRebuildQueue queue,
                 out NavTileStore store);
 
@@ -635,7 +652,9 @@ namespace GasTests
                     Shape = ManifestationObstacleShape2D.Circle,
                     SinkNavigationObstacle = 1,
                     RadiusCm = 45,
-                    NavRadiusCm = 45
+                    NavRadiusCm = 45,
+                    NavMinYcm = 0,
+                    NavMaxYcm = 200
                 });
             var nonStructuralEntity = world.Create(
                 WorldPositionCm.FromCm(120, 250),
@@ -644,7 +663,9 @@ namespace GasTests
                     Shape = ManifestationObstacleShape2D.Circle,
                     SinkNavigationObstacle = 1,
                     RadiusCm = 35,
-                    NavRadiusCm = 35
+                    NavRadiusCm = 35,
+                    NavMinYcm = 0,
+                    NavMaxYcm = 200
                 });
 
             var bridge = new ManifestationObstacleBridge2DSystem(world, _shapeStorage);
@@ -652,17 +673,19 @@ namespace GasTests
             bridge.Update(0f);
             dirtySystem.Update(0f);
 
-            Assert.That(obstacles.Obstacles.Count, Is.EqualTo(1));
+            Assert.That(obstacles.ObstacleCount, Is.EqualTo(1));
             Assert.That(queue.PendingTileCount, Is.EqualTo(0));
             Assert.That(store.Revision, Is.EqualTo(1u));
             Assert.That(store.TryGet(new NavTileId(0, 0, 0), out NavTile firstTile), Is.True);
+            ulong firstChecksum = firstTile.Checksum;
+            uint firstVersion = firstTile.TileVersion;
 
             world.Set(nonStructuralEntity, WorldPositionCm.FromCm(170, 250));
             world.Add(nonStructuralEntity, new ManifestationObstacleBridge2DDirty());
             bridge.Update(0f);
             dirtySystem.Update(0f);
 
-            Assert.That(obstacles.Obstacles.Count, Is.EqualTo(1));
+            Assert.That(obstacles.ObstacleCount, Is.EqualTo(1));
             Assert.That(store.Revision, Is.EqualTo(1u));
 
             world.Set(obstacleEntity, WorldPositionCm.FromCm(250, 150));
@@ -670,10 +693,11 @@ namespace GasTests
             bridge.Update(0f);
             dirtySystem.Update(0f);
 
-            Assert.That(obstacles.Obstacles.Count, Is.EqualTo(1));
+            Assert.That(obstacles.ObstacleCount, Is.EqualTo(1));
             Assert.That(store.Revision, Is.EqualTo(2u));
             Assert.That(store.TryGet(new NavTileId(0, 0, 0), out NavTile secondTile), Is.True);
-            Assert.That(secondTile.Checksum, Is.Not.EqualTo(firstTile.Checksum));
+            Assert.That(secondTile.TileVersion, Is.Not.EqualTo(firstVersion));
+            Assert.That(secondTile.Checksum, Is.Not.EqualTo(firstChecksum));
         }
 
         [Test]
@@ -689,7 +713,9 @@ namespace GasTests
                     Shape = ManifestationObstacleShape2D.Circle,
                     SinkNavigationObstacle = 1,
                     RadiusCm = 45,
-                    NavRadiusCm = 45
+                    NavRadiusCm = 45,
+                    NavMinYcm = 0,
+                    NavMaxYcm = 200
                 });
 
             var bridge = new ManifestationObstacleBridge2DSystem(world, _shapeStorage);
@@ -711,7 +737,202 @@ namespace GasTests
             Assert.That(store.Revision, Is.EqualTo(1u));
         }
 
-        private static NavMeshBakeConfig CreateRuntimeNavBakeConfig()
+        [Test]
+        public void RuntimeNavMeshObstacleDirtySystem_RemovesDisabledAndDestroyedStructuralObstacles()
+        {
+            using var world = World.Create();
+            var engine = CreateRuntimeNavMeshDirtyEngine(
+                world,
+                out RuntimeNavObstacleSnapshot obstacles,
+                out _,
+                out NavTileStore store);
+            Entity obstacleEntity = world.Create(
+                WorldPositionCm.FromCm(150, 150),
+                new RuntimeNavMeshStructuralObstacle(),
+                new ManifestationObstacleIntent2D
+                {
+                    Shape = ManifestationObstacleShape2D.Circle,
+                    SinkNavigationObstacle = 1,
+                    RadiusCm = 45,
+                    NavRadiusCm = 45,
+                    NavMinYcm = 0,
+                    NavMaxYcm = 200
+                });
+
+            var bridge = new ManifestationObstacleBridge2DSystem(world, _shapeStorage);
+            var dirtySystem = new RuntimeNavMeshObstacleDirtySystem(engine);
+            bridge.Update(0f);
+            dirtySystem.Update(0f);
+            Assert.That(obstacles.ObstacleCount, Is.EqualTo(1));
+            Assert.That(store.Revision, Is.EqualTo(1u));
+
+            ManifestationObstacleIntent2D disabled = world.Get<ManifestationObstacleIntent2D>(obstacleEntity);
+            disabled.SinkNavigationObstacle = 0;
+            world.Set(obstacleEntity, disabled);
+            world.Add(obstacleEntity, new ManifestationObstacleBridge2DDirty());
+            bridge.Update(0f);
+            dirtySystem.Update(0f);
+            Assert.That(obstacles.ObstacleCount, Is.EqualTo(0));
+            Assert.That(store.Revision, Is.EqualTo(2u));
+
+            disabled.SinkNavigationObstacle = 1;
+            world.Set(obstacleEntity, disabled);
+            world.Add(obstacleEntity, new ManifestationObstacleBridge2DDirty());
+            bridge.Update(0f);
+            dirtySystem.Update(0f);
+            Assert.That(obstacles.ObstacleCount, Is.EqualTo(1));
+            Assert.That(store.Revision, Is.EqualTo(3u));
+
+            world.Destroy(obstacleEntity);
+            dirtySystem.Update(0f);
+            Assert.That(obstacles.ObstacleCount, Is.EqualTo(0));
+            Assert.That(store.Revision, Is.EqualTo(4u));
+        }
+
+        [Test]
+        public void RuntimeNavMeshObstacleDirtySystem_CapacityOverflowFailsFastWithConfigOwner()
+        {
+            using (World trackedWorld = World.Create())
+            {
+                NavMeshBakeConfig config = CreateRuntimeNavBakeConfig(
+                    trackedCapacity: 1,
+                    primitiveCapacity: 4,
+                    vertexCapacity: 16);
+                var engine = CreateRuntimeNavMeshDirtyEngine(trackedWorld, out _, out _, out _, config);
+                CreateStructuralCircle(trackedWorld, 100, 100);
+                CreateStructuralCircle(trackedWorld, 200, 100);
+                var bridge = new ManifestationObstacleBridge2DSystem(trackedWorld, _shapeStorage);
+                var dirtySystem = new RuntimeNavMeshObstacleDirtySystem(engine);
+                bridge.Update(0f);
+                InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => dirtySystem.Update(0f))!;
+                Assert.That(ex.Message, Does.Contain("trackedStructuralEntityCapacity"));
+            }
+
+            using (World primitiveWorld = World.Create())
+            {
+                NavMeshBakeConfig config = CreateRuntimeNavBakeConfig(
+                    trackedCapacity: 2,
+                    primitiveCapacity: 1,
+                    vertexCapacity: 16);
+                var engine = CreateRuntimeNavMeshDirtyEngine(primitiveWorld, out _, out _, out _, config);
+                CreateStructuralCircle(primitiveWorld, 100, 100);
+                CreateStructuralCircle(primitiveWorld, 200, 100);
+                var bridge = new ManifestationObstacleBridge2DSystem(primitiveWorld, _shapeStorage);
+                var dirtySystem = new RuntimeNavMeshObstacleDirtySystem(engine);
+                bridge.Update(0f);
+                InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => dirtySystem.Update(0f))!;
+                Assert.That(ex.Message, Does.Contain("obstaclePrimitiveCapacity"));
+            }
+
+            using (World vertexWorld = World.Create())
+            {
+                NavMeshBakeConfig config = CreateRuntimeNavBakeConfig(
+                    trackedCapacity: 1,
+                    primitiveCapacity: 1,
+                    vertexCapacity: 3);
+                var engine = CreateRuntimeNavMeshDirtyEngine(vertexWorld, out _, out _, out _, config);
+                vertexWorld.Create(
+                    WorldPositionCm.FromCm(100, 100),
+                    new RuntimeNavMeshStructuralObstacle(),
+                    new ManifestationObstacleIntent2D
+                    {
+                        Shape = ManifestationObstacleShape2D.Box,
+                        SinkNavigationObstacle = 1,
+                        HalfWidthCm = 20,
+                        HalfHeightCm = 10,
+                        NavRadiusCm = 25,
+                        NavMinYcm = 0,
+                        NavMaxYcm = 200
+                    });
+                var bridge = new ManifestationObstacleBridge2DSystem(vertexWorld, _shapeStorage);
+                var dirtySystem = new RuntimeNavMeshObstacleDirtySystem(engine);
+                bridge.Update(0f);
+                InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => dirtySystem.Update(0f))!;
+                Assert.That(ex.Message, Does.Contain("polygonVertexCapacity"));
+            }
+        }
+
+        [Test]
+        public void RuntimeNavMeshObstacleDirtySystem_SteadyStateCollectionAllocatesZeroBytes()
+        {
+            using var world = World.Create();
+            var engine = CreateRuntimeNavMeshDirtyEngine(world, out _, out _, out _);
+            CreateStructuralCircle(world, 150, 150);
+            var bridge = new ManifestationObstacleBridge2DSystem(world, _shapeStorage);
+            var dirtySystem = new RuntimeNavMeshObstacleDirtySystem(engine);
+            bridge.Update(0f);
+            dirtySystem.Update(0f);
+            for (int i = 0; i < 8; i++)
+            {
+                dirtySystem.Update(0f);
+            }
+
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 0; i < 64; i++)
+            {
+                dirtySystem.Update(0f);
+            }
+            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+            Assert.That(allocated, Is.EqualTo(0L));
+        }
+
+        [Test]
+        public void RuntimeNavMeshObstacleDirtySystem_SnapshotDirtyLayeredSpanPublish_AllocatesZeroAfterWarmup()
+        {
+            using var world = World.Create();
+            NavMeshBakeConfig config = CreateRuntimeNavBakeConfig();
+            config.Algorithm = NavBakeNames.AlgorithmLayeredSpan;
+            config.RuntimeIncremental.TileBudgetPerFixedTick = 4;
+            var engine = CreateRuntimeNavMeshDirtyEngine(
+                world,
+                out RuntimeNavObstacleSnapshot obstacles,
+                out RuntimeIncrementalNavMeshRebuildQueue queue,
+                out NavTileStore store,
+                config,
+                includeLayeredSpan: true);
+            Entity obstacle = CreateStructuralCircle(world, 150, 150);
+            var bridge = new ManifestationObstacleBridge2DSystem(world, _shapeStorage);
+            var dirtySystem = new RuntimeNavMeshObstacleDirtySystem(engine);
+            bridge.Update(0f);
+            dirtySystem.Update(0f);
+            Assert.That(obstacles.ObstacleCount, Is.EqualTo(1));
+            Assert.That(store.Revision, Is.EqualTo(1u));
+            for (int i = 0; i < 8; i++)
+            {
+                dirtySystem.Update(0f);
+            }
+
+            world.Set(obstacle, WorldPositionCm.FromCm(220, 150));
+            world.Add(obstacle, new ManifestationObstacleBridge2DDirty());
+            bridge.Update(0f);
+
+            // Warm the dirty->bake->publish path once outside the measured window.
+            dirtySystem.Update(0f);
+            while (queue.PendingTileCount > 0 || queue.SealedRemainingCount > 0)
+            {
+                dirtySystem.Update(0f);
+            }
+
+            world.Set(obstacle, WorldPositionCm.FromCm(180, 150));
+            world.Add(obstacle, new ManifestationObstacleBridge2DDirty());
+            bridge.Update(0f);
+
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            dirtySystem.Update(0f);
+            while (queue.PendingTileCount > 0 || queue.SealedRemainingCount > 0)
+            {
+                dirtySystem.Update(0f);
+            }
+            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+            Assert.That(allocated, Is.EqualTo(0L), $"Measured managed allocation was {allocated} bytes.");
+            Assert.That(store.Revision, Is.GreaterThanOrEqualTo(2u));
+        }
+
+        private static NavMeshBakeConfig CreateRuntimeNavBakeConfig(
+            int trackedCapacity = 16,
+            int primitiveCapacity = 32,
+            int vertexCapacity = 256)
         {
             return new NavMeshBakeConfig
             {
@@ -732,8 +953,59 @@ namespace GasTests
                     IncludeNeighborTiles = false,
                     HeightScaleMeters = 1f,
                     MinWalkableUpDot = 0.6f,
-                    CliffHeightThreshold = 1
-                }
+                    CliffHeightThreshold = 1,
+                    TrackedStructuralEntityCapacity = trackedCapacity,
+                    ObstaclePrimitiveCapacity = primitiveCapacity,
+                    PolygonVertexCapacity = vertexCapacity,
+                    DirtyTileCapacity = 64,
+                    StagedEntryCapacity = 64,
+                    PublishedTileCapacity = 64,
+                    StoreGroupCapacity = 8,
+                    ResidentTileCapacity = 128,
+                    OutputVertexCapacity = 256,
+                    OutputTriangleCapacity = 512,
+                    OutputPortalCapacity = 64,
+                    InitialResidentChunkX = 0,
+                    InitialResidentChunkZ = 0,
+                    InitialResidentWidthChunks = 1,
+                    InitialResidentHeightChunks = 1
+                },
+                LayeredSpan = new NavLayeredSpanConfig
+                {
+                    ScratchSlotCount = 2,
+                    RasterCellSizeCm = 100,
+                    RasterHaloCells = 1,
+                    SameSurfaceToleranceCm = 5,
+                    MaxSimplificationErrorCm = 0,
+                    HeightRounding = NavLayeredSpanConfig.HeightRoundingRoundHalfAwayFromZero,
+                    MaxLawsonFlipCount = 100_000,
+                    ColumnCapacity = 64,
+                    SpanCapacity = 128,
+                    ClassifiedSpanCapacity = 128,
+                    WalkableSpanCapacity = 128,
+                    LinkCapacity = 256,
+                    SheetCapacity = 128,
+                    PortalIntervalCapacity = 256,
+                    RegionCapacity = 64,
+                    ChartCapacity = 32,
+                    RingCapacity = 32,
+                    ContourVertexCapacity = 256,
+                    ContourEdgeCapacity = 256,
+                    SeamCapacity = 64,
+                    CanonicalLinkCapacity = 256,
+                    SplitPointCapacity = 64,
+                    TriangulationVertexCapacity = 256,
+                    TriangulationTriangleCapacity = 512,
+                    ConstrainedEdgeCapacity = 512,
+                    BorderPortalCapacity = 64,
+                    PolygonVertexCapacity = 256,
+                    AdjacencyEdgeCapacity = 1536,
+                    BridgeCandidateCapacity = 256,
+                    RingWorkCapacity = 64,
+                    TemporaryConstraintFlagCapacity = 512
+                },
+                TriangleSurface = new NavTriangleSurfaceConfig { HaloPaddingCm = 100 },
+                Recast = new NavRecastConfig { RasterCellSizeCm = 10, RasterCellHeightCm = 5 }
             };
         }
 
@@ -755,9 +1027,11 @@ namespace GasTests
 
         private GameEngine CreateRuntimeNavMeshDirtyEngine(
             World world,
-            out NavObstacleSet obstacles,
+            out RuntimeNavObstacleSnapshot obstacles,
             out RuntimeIncrementalNavMeshRebuildQueue queue,
-            out NavTileStore store)
+            out NavTileStore store,
+            NavMeshBakeConfig bakeConfigOverride = null,
+            bool includeLayeredSpan = false)
         {
             var engine = new GameEngine();
             engine.SetService(CoreServiceKeys.World, world);
@@ -766,30 +1040,47 @@ namespace GasTests
                 .SetValue(engine, world);
 
             var terrain = new FlatGridLogicTerrainField(4, 4, chunkSizeCells: 4);
-            NavMeshBakeConfig bakeConfig = CreateRuntimeNavBakeConfig();
+            NavMeshBakeConfig bakeConfig = bakeConfigOverride ?? CreateRuntimeNavBakeConfig();
             AgentProfileRegistry agentProfiles = CreateNavAgentProfiles();
             var navProfiles = new NavMeshProfileRegistry(bakeConfig, agentProfiles);
-            obstacles = new NavObstacleSet();
-            store = new NavTileStore(_ => throw new InvalidOperationException("Runtime navmesh dirty test publishes before disk load."));
+            obstacles = new RuntimeNavObstacleSnapshot(
+                bakeConfig.RuntimeIncremental.ObstaclePrimitiveCapacity,
+                bakeConfig.RuntimeIncremental.PolygonVertexCapacity,
+                GroundNavLayerId);
+            store = new NavTileStore(
+                _ => throw new InvalidOperationException("Runtime navmesh dirty test publishes before disk load."),
+                bakeConfig.RuntimeIncremental);
+            NavBuildConfig buildConfig = new NavBuildConfig(1f, 0.6f, 1);
+            NavTriangleSurfaceTileIndex surface = LogicTerrainTriangleSurfaceCompiler.Compile(
+                terrain,
+                bakeConfig,
+                buildConfig);
             var registry = new NavQueryServiceRegistry(new Dictionary<NavQueryServiceKey, NavTileStore>
             {
                 [new NavQueryServiceKey(0, 0)] = store
-            });
+            }, NavQueryTileSpace.FromGrid(surface.Grid));
+            INavBakeAlgorithm[] adapters = includeLayeredSpan
+                ? new INavBakeAlgorithm[]
+                {
+                    new CdtNavBakeAlgorithm(),
+                    new LayeredSpanNavBakeAlgorithm(new LayeredSpanScratchPool(bakeConfig.LayeredSpan))
+                }
+                : new INavBakeAlgorithm[] { new CdtNavBakeAlgorithm() };
             queue = new RuntimeIncrementalNavMeshRebuildQueue(
-                new NavBakeService(new CdtNavBakeAlgorithm()),
+                new NavBakeService(adapters),
                 new NavBakeContext
                 {
                     MapId = "physics_runtime_navmesh_dirty_contract",
                     SourceUri = "Core:Maps/physics_runtime_navmesh_dirty_contract.runtime-navmesh",
-                    Terrain = terrain,
+                    TriangleSurface = surface,
                     Obstacles = obstacles,
                     Config = bakeConfig,
                     AgentProfiles = agentProfiles,
                     Targets = new[] { new NavBakeTileCoord(0, 0) },
-                    BuildConfig = new NavBuildConfig(1f, 0.6f, 1),
+                    BuildConfig = buildConfig,
                     TileVersion = 3,
                     Mode = NavBakeMode.RuntimeIncremental,
-                    Algorithm = NavBakeAlgorithmKind.Cdt,
+                    Algorithm = bakeConfig.ParsedAlgorithm,
                     Execution = new NavBakeExecutionOptions { Parallel = false, MaxDegreeOfParallelism = 1 }
                 },
                 registry,
@@ -798,6 +1089,22 @@ namespace GasTests
             engine.SetService(CoreServiceKeys.RuntimeNavMeshObstacles, obstacles);
             engine.SetService(CoreServiceKeys.RuntimeNavMeshRebuildQueue, queue);
             return engine;
+        }
+
+        private static Entity CreateStructuralCircle(World world, int xcm, int zcm)
+        {
+            return world.Create(
+                WorldPositionCm.FromCm(xcm, zcm),
+                new RuntimeNavMeshStructuralObstacle(),
+                new ManifestationObstacleIntent2D
+                {
+                    Shape = ManifestationObstacleShape2D.Circle,
+                    SinkNavigationObstacle = 1,
+                    RadiusCm = 20,
+                    NavRadiusCm = 20,
+                    NavMinYcm = 0,
+                    NavMaxYcm = 200
+                });
         }
     }
 }

@@ -92,7 +92,9 @@ public static class NavObstacleAuthoringAdapter
                 state.ShapeDataIndex,
                 position.Value,
                 shapeStorage,
-                layerId));
+                layerId,
+                intent.NavMinYcm,
+                intent.NavMaxYcm));
         });
 
         var compoundQuery = new QueryDescription().WithAll<WorldPositionCm, CompoundObstacle2DState>();
@@ -114,7 +116,9 @@ public static class NavObstacleAuthoringAdapter
                     state.GetShapeDataIndex(i),
                     position.Value,
                     shapeStorage,
-                    layerId));
+                    layerId,
+                    state.GetNavMinYcm(i),
+                    state.GetNavMaxYcm(i)));
             }
         });
 
@@ -129,16 +133,24 @@ public static class NavObstacleAuthoringAdapter
         int shapeDataIndex,
         Fix64Vec2 worldPosition,
         ShapeDataStorage2D shapeStorage,
-        string layerId)
+        string layerId,
+        int minYcm,
+        int maxYcm)
     {
+        if (minYcm >= maxYcm)
+        {
+            throw new InvalidOperationException(
+                $"Nav obstacle '{id}' requires minYcm < maxYcm for half-open [minYcm,maxYcm).");
+        }
+
         Fix64 rotation = world.TryGet(entity, out FacingDirection facing)
             ? Fix64.FromFloat(facing.AngleRad)
             : Fix64.Zero;
         return shape switch
         {
-            ManifestationObstacleShape2D.Circle => BuildCircle(id, shapeDataIndex, worldPosition, rotation, shapeStorage, layerId),
-            ManifestationObstacleShape2D.Box => BuildBox(id, shapeDataIndex, worldPosition, rotation, shapeStorage, layerId),
-            ManifestationObstacleShape2D.Polygon => BuildPolygon(id, shapeDataIndex, worldPosition, rotation, shapeStorage, layerId),
+            ManifestationObstacleShape2D.Circle => BuildCircle(id, shapeDataIndex, worldPosition, rotation, shapeStorage, layerId, minYcm, maxYcm),
+            ManifestationObstacleShape2D.Box => BuildBox(id, shapeDataIndex, worldPosition, rotation, shapeStorage, layerId, minYcm, maxYcm),
+            ManifestationObstacleShape2D.Polygon => BuildPolygon(id, shapeDataIndex, worldPosition, rotation, shapeStorage, layerId, minYcm, maxYcm),
             _ => throw new InvalidOperationException($"Unsupported nav obstacle shape '{shape}'.")
         };
     }
@@ -149,7 +161,9 @@ public static class NavObstacleAuthoringAdapter
         Fix64Vec2 worldPosition,
         Fix64 rotation,
         ShapeDataStorage2D shapeStorage,
-        string layerId)
+        string layerId,
+        int minYcm,
+        int maxYcm)
     {
         if (!shapeStorage.TryGetCircle(shapeDataIndex, out CircleShapeData circle))
         {
@@ -165,6 +179,8 @@ public static class NavObstacleAuthoringAdapter
             LayerId = layerId,
             Center = new NavPointCm(center.X.RoundToInt(), center.Y.RoundToInt()),
             RadiusCm = circle.Radius.RoundToInt(),
+            MinYcm = minYcm,
+            MaxYcm = maxYcm,
         };
     }
 
@@ -174,7 +190,9 @@ public static class NavObstacleAuthoringAdapter
         Fix64Vec2 worldPosition,
         Fix64 rotation,
         ShapeDataStorage2D shapeStorage,
-        string layerId)
+        string layerId,
+        int minYcm,
+        int maxYcm)
     {
         if (!shapeStorage.TryGetBox(shapeDataIndex, out BoxShapeData box))
         {
@@ -195,6 +213,8 @@ public static class NavObstacleAuthoringAdapter
             Enabled = true,
             Kind = NavObstacleKind.Polygon,
             LayerId = layerId,
+            MinYcm = minYcm,
+            MaxYcm = maxYcm,
         };
         for (int i = 0; i < corners.Length; i++)
         {
@@ -211,7 +231,9 @@ public static class NavObstacleAuthoringAdapter
         Fix64Vec2 worldPosition,
         Fix64 rotation,
         ShapeDataStorage2D shapeStorage,
-        string layerId)
+        string layerId,
+        int minYcm,
+        int maxYcm)
     {
         if (!shapeStorage.TryGetPolygon(shapeDataIndex, out PolygonShapeData polygon))
         {
@@ -224,6 +246,8 @@ public static class NavObstacleAuthoringAdapter
             Enabled = true,
             Kind = NavObstacleKind.Polygon,
             LayerId = layerId,
+            MinYcm = minYcm,
+            MaxYcm = maxYcm,
         };
         for (int i = 0; i < polygon.VertexCount; i++)
         {

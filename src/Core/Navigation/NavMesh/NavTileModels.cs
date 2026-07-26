@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 
 namespace Ludots.Core.Navigation.NavMesh
 {
@@ -29,34 +30,93 @@ namespace Ludots.Core.Navigation.NavMesh
         public override string ToString() => $"{ChunkX},{ChunkY},{Layer}";
     }
 
+    /// <summary>
+    /// Shared NavTile artifact. Offline constructors may own exact-fit arrays.
+    /// Runtime banks preallocate capacity channels and fill counts in place without reallocating.
+    /// </summary>
     public sealed class NavTile
     {
-        public readonly NavTileId TileId;
-        public readonly uint TileVersion;
-        public readonly ulong BuildConfigHash;
-        public readonly ulong Checksum;
+        private NavTileId _tileId;
+        private uint _tileVersion;
+        private ulong _buildConfigHash;
+        private ulong _checksum;
+        private int _originXcm;
+        private int _originZcm;
+        private int _vertexCount;
+        private int _triangleCount;
+        private int _portalCount;
 
-        public readonly int OriginXcm;
-        public readonly int OriginZcm;
+        public NavTileId TileId => _tileId;
+        public uint TileVersion => _tileVersion;
+        public ulong BuildConfigHash => _buildConfigHash;
+        public ulong Checksum => _checksum;
 
-        public readonly int[] VertexXcm;
-        public readonly int[] VertexYcm;
-        public readonly int[] VertexZcm;
+        public int OriginXcm => _originXcm;
+        public int OriginZcm => _originZcm;
 
-        public readonly int[] TriA;
-        public readonly int[] TriB;
-        public readonly int[] TriC;
+        public int[] VertexXcm { get; }
+        public int[] VertexYcm { get; }
+        public int[] VertexZcm { get; }
 
-        public readonly int[] N0;
-        public readonly int[] N1;
-        public readonly int[] N2;
+        public int[] TriA { get; }
+        public int[] TriB { get; }
+        public int[] TriC { get; }
 
-        public readonly byte[] TriAreaIds;
+        public int[] N0 { get; }
+        public int[] N1 { get; }
+        public int[] N2 { get; }
 
-        public readonly NavBorderPortal[] Portals;
+        public byte[] TriAreaIds { get; }
 
-        public int VertexCount => VertexXcm.Length;
-        public int TriangleCount => TriA.Length;
+        public NavBorderPortal[] Portals { get; }
+
+        public int VertexCapacity => VertexXcm.Length;
+        public int TriangleCapacity => TriA.Length;
+        public int PortalCapacity => Portals.Length;
+
+        public int VertexCount => _vertexCount;
+        public int TriangleCount => _triangleCount;
+        public int PortalCount => _portalCount;
+
+        /// <summary>
+        /// Exact byte size of all preallocated channel payload arrays owned by this tile
+        /// (VertexX/Y/Z, TriA/B/C, N0/N1/N2, TriAreaIds, Portals).
+        /// </summary>
+        public long PreallocatedChannelPayloadBytes
+            => ComputeBankedChannelPayloadBytes(VertexCapacity, TriangleCapacity, PortalCapacity);
+
+        /// <summary>Active vertex X channel; length equals <see cref="VertexCount"/>, not bank capacity.</summary>
+        public ReadOnlySpan<int> ActiveVertexXcm => VertexXcm.AsSpan(0, _vertexCount);
+
+        /// <summary>Active vertex Y channel; length equals <see cref="VertexCount"/>, not bank capacity.</summary>
+        public ReadOnlySpan<int> ActiveVertexYcm => VertexYcm.AsSpan(0, _vertexCount);
+
+        /// <summary>Active vertex Z channel; length equals <see cref="VertexCount"/>, not bank capacity.</summary>
+        public ReadOnlySpan<int> ActiveVertexZcm => VertexZcm.AsSpan(0, _vertexCount);
+
+        /// <summary>Active triangle A indices; length equals <see cref="TriangleCount"/>, not bank capacity.</summary>
+        public ReadOnlySpan<int> ActiveTriA => TriA.AsSpan(0, _triangleCount);
+
+        /// <summary>Active triangle B indices; length equals <see cref="TriangleCount"/>, not bank capacity.</summary>
+        public ReadOnlySpan<int> ActiveTriB => TriB.AsSpan(0, _triangleCount);
+
+        /// <summary>Active triangle C indices; length equals <see cref="TriangleCount"/>, not bank capacity.</summary>
+        public ReadOnlySpan<int> ActiveTriC => TriC.AsSpan(0, _triangleCount);
+
+        /// <summary>Active neighbor 0; length equals <see cref="TriangleCount"/>, not bank capacity.</summary>
+        public ReadOnlySpan<int> ActiveN0 => N0.AsSpan(0, _triangleCount);
+
+        /// <summary>Active neighbor 1; length equals <see cref="TriangleCount"/>, not bank capacity.</summary>
+        public ReadOnlySpan<int> ActiveN1 => N1.AsSpan(0, _triangleCount);
+
+        /// <summary>Active neighbor 2; length equals <see cref="TriangleCount"/>, not bank capacity.</summary>
+        public ReadOnlySpan<int> ActiveN2 => N2.AsSpan(0, _triangleCount);
+
+        /// <summary>Active triangle area ids; length equals <see cref="TriangleCount"/>, not bank capacity.</summary>
+        public ReadOnlySpan<byte> ActiveTriAreaIds => TriAreaIds.AsSpan(0, _triangleCount);
+
+        /// <summary>Active border portals; length equals <see cref="PortalCount"/>, not bank capacity.</summary>
+        public ReadOnlySpan<NavBorderPortal> ActivePortals => Portals.AsSpan(0, _portalCount);
 
         public NavTile(
             NavTileId tileId,
@@ -115,12 +175,6 @@ namespace Ludots.Core.Navigation.NavMesh
             byte[] triAreaIds,
             NavBorderPortal[] portals)
         {
-            TileId = tileId;
-            TileVersion = tileVersion;
-            BuildConfigHash = buildConfigHash;
-            Checksum = checksum;
-            OriginXcm = originXcm;
-            OriginZcm = originZcm;
             VertexXcm = vertexXcm ?? throw new ArgumentNullException(nameof(vertexXcm));
             VertexYcm = vertexYcm ?? throw new ArgumentNullException(nameof(vertexYcm));
             VertexZcm = vertexZcm ?? throw new ArgumentNullException(nameof(vertexZcm));
@@ -130,8 +184,187 @@ namespace Ludots.Core.Navigation.NavMesh
             N0 = n0 ?? throw new ArgumentNullException(nameof(n0));
             N1 = n1 ?? throw new ArgumentNullException(nameof(n1));
             N2 = n2 ?? throw new ArgumentNullException(nameof(n2));
-            TriAreaIds = triAreaIds ?? new byte[TriA.Length];
             Portals = portals ?? throw new ArgumentNullException(nameof(portals));
+
+            if (VertexYcm.Length != VertexXcm.Length || VertexZcm.Length != VertexXcm.Length)
+            {
+                throw new InvalidOperationException("NavTile vertex channels must share the same capacity.");
+            }
+
+            if (TriB.Length != TriA.Length ||
+                TriC.Length != TriA.Length ||
+                N0.Length != TriA.Length ||
+                N1.Length != TriA.Length ||
+                N2.Length != TriA.Length)
+            {
+                throw new InvalidOperationException("NavTile triangle channels must share the same capacity.");
+            }
+
+            TriAreaIds = triAreaIds ?? new byte[TriA.Length];
+            if (TriAreaIds.Length != TriA.Length)
+            {
+                throw new InvalidOperationException("NavTile triAreaIds capacity must match triangle capacity.");
+            }
+
+            _tileId = tileId;
+            _tileVersion = tileVersion;
+            _buildConfigHash = buildConfigHash;
+            _checksum = checksum;
+            _originXcm = originXcm;
+            _originZcm = originZcm;
+            _vertexCount = VertexXcm.Length;
+            _triangleCount = TriA.Length;
+            _portalCount = Portals.Length;
+        }
+
+        public static long ComputeBankedChannelPayloadBytes(int vertexCapacity, int triangleCapacity, int portalCapacity)
+        {
+            if (vertexCapacity <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(vertexCapacity), "outputVertexCapacity must be > 0.");
+            }
+
+            if (triangleCapacity <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(triangleCapacity), "outputTriangleCapacity must be > 0.");
+            }
+
+            if (portalCapacity <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(portalCapacity), "outputPortalCapacity must be > 0.");
+            }
+
+            return checked(
+                (long)vertexCapacity * sizeof(int) * 3L +
+                (long)triangleCapacity * sizeof(int) * 6L +
+                (long)triangleCapacity * sizeof(byte) +
+                (long)portalCapacity * Unsafe.SizeOf<NavBorderPortal>());
+        }
+
+        public static NavTile CreateBanked(int vertexCapacity, int triangleCapacity, int portalCapacity)
+        {
+            _ = ComputeBankedChannelPayloadBytes(vertexCapacity, triangleCapacity, portalCapacity);
+
+            var tile = new NavTile(
+                default,
+                tileVersion: 0,
+                buildConfigHash: 0UL,
+                checksum: 0UL,
+                originXcm: 0,
+                originZcm: 0,
+                new int[vertexCapacity],
+                new int[vertexCapacity],
+                new int[vertexCapacity],
+                new int[triangleCapacity],
+                new int[triangleCapacity],
+                new int[triangleCapacity],
+                new int[triangleCapacity],
+                new int[triangleCapacity],
+                new int[triangleCapacity],
+                new byte[triangleCapacity],
+                new NavBorderPortal[portalCapacity]);
+            tile._vertexCount = 0;
+            tile._triangleCount = 0;
+            tile._portalCount = 0;
+            return tile;
+        }
+
+        public void AssignHeader(
+            NavTileId tileId,
+            uint tileVersion,
+            ulong buildConfigHash,
+            int originXcm,
+            int originZcm)
+        {
+            _tileId = tileId;
+            _tileVersion = tileVersion;
+            _buildConfigHash = buildConfigHash;
+            _originXcm = originXcm;
+            _originZcm = originZcm;
+        }
+
+        public void SetChecksum(ulong checksum) => _checksum = checksum;
+
+        public void SetCounts(int vertexCount, int triangleCount, int portalCount)
+        {
+            if ((uint)vertexCount > (uint)VertexCapacity)
+            {
+                throw new InvalidOperationException(
+                    $"NavTile vertexCount {vertexCount} exceeds outputVertexCapacity {VertexCapacity}; required {vertexCount}.");
+            }
+
+            if ((uint)triangleCount > (uint)TriangleCapacity)
+            {
+                throw new InvalidOperationException(
+                    $"NavTile triangleCount {triangleCount} exceeds outputTriangleCapacity {TriangleCapacity}; required {triangleCount}.");
+            }
+
+            if ((uint)portalCount > (uint)PortalCapacity)
+            {
+                throw new InvalidOperationException(
+                    $"NavTile portalCount {portalCount} exceeds outputPortalCapacity {PortalCapacity}; required {portalCount}.");
+            }
+
+            _vertexCount = vertexCount;
+            _triangleCount = triangleCount;
+            _portalCount = portalCount;
+        }
+
+        public void ClearTopology()
+        {
+            _vertexCount = 0;
+            _triangleCount = 0;
+            _portalCount = 0;
+            _checksum = 0UL;
+        }
+
+        public void CopyGeometryFrom(NavTile source)
+        {
+            if (source == null) throw new ArgumentNullException(nameof(source));
+            if (source.VertexCount > VertexCapacity)
+            {
+                throw new InvalidOperationException(
+                    $"NavMeshBakeConfig.runtimeIncremental.outputVertexCapacity ({VertexCapacity}) exhausted; required {source.VertexCount}.");
+            }
+
+            if (source.TriangleCount > TriangleCapacity)
+            {
+                throw new InvalidOperationException(
+                    $"NavMeshBakeConfig.runtimeIncremental.outputTriangleCapacity ({TriangleCapacity}) exhausted; required {source.TriangleCount}.");
+            }
+
+            if (source.PortalCount > PortalCapacity)
+            {
+                throw new InvalidOperationException(
+                    $"NavMeshBakeConfig.runtimeIncremental.outputPortalCapacity ({PortalCapacity}) exhausted; required {source.PortalCount}.");
+            }
+
+            AssignHeader(source.TileId, source.TileVersion, source.BuildConfigHash, source.OriginXcm, source.OriginZcm);
+            SetCounts(source.VertexCount, source.TriangleCount, source.PortalCount);
+            if (source.VertexCount > 0)
+            {
+                Array.Copy(source.VertexXcm, VertexXcm, source.VertexCount);
+                Array.Copy(source.VertexYcm, VertexYcm, source.VertexCount);
+                Array.Copy(source.VertexZcm, VertexZcm, source.VertexCount);
+            }
+
+            if (source.TriangleCount > 0)
+            {
+                Array.Copy(source.TriA, TriA, source.TriangleCount);
+                Array.Copy(source.TriB, TriB, source.TriangleCount);
+                Array.Copy(source.TriC, TriC, source.TriangleCount);
+                Array.Copy(source.N0, N0, source.TriangleCount);
+                Array.Copy(source.N1, N1, source.TriangleCount);
+                Array.Copy(source.N2, N2, source.TriangleCount);
+                Array.Copy(source.TriAreaIds, TriAreaIds, source.TriangleCount);
+            }
+
+            if (source.PortalCount > 0)
+            {
+                Array.Copy(source.Portals, Portals, source.PortalCount);
+            }
+
+            _checksum = source.Checksum;
         }
     }
 
@@ -143,8 +376,10 @@ namespace Ludots.Core.Navigation.NavMesh
         public readonly short U1;
         public readonly short V1;
         public readonly int LeftXcm;
+        public readonly int LeftYcm;
         public readonly int LeftZcm;
         public readonly int RightXcm;
+        public readonly int RightYcm;
         public readonly int RightZcm;
         public readonly int ClearanceCm;
 
@@ -155,8 +390,10 @@ namespace Ludots.Core.Navigation.NavMesh
             short u1,
             short v1,
             int leftXcm,
+            int leftYcm,
             int leftZcm,
             int rightXcm,
+            int rightYcm,
             int rightZcm,
             int clearanceCm)
         {
@@ -166,8 +403,10 @@ namespace Ludots.Core.Navigation.NavMesh
             U1 = u1;
             V1 = v1;
             LeftXcm = leftXcm;
+            LeftYcm = leftYcm;
             LeftZcm = leftZcm;
             RightXcm = rightXcm;
+            RightYcm = rightYcm;
             RightZcm = rightZcm;
             ClearanceCm = clearanceCm;
         }

@@ -117,7 +117,10 @@ internal sealed class MassNavigationSimulationStepSystem : ISystem<float>
         if (!result.Applied)
         {
             throw new System.InvalidOperationException(
-                $"MassNavigation route execution failed for order {result.OrderToken}, agent {result.AgentIndex}: status={result.Status}, pathStatus={result.PathStatus}, domain={result.ResolvedDomain}, errorCode={result.ErrorCode}.");
+                $"MassNavigation route execution failed for order {result.OrderToken}, agent {result.AgentIndex}: " +
+                $"status={result.Status}, pathStatus={result.PathStatus}, domain={result.ResolvedDomain}, errorCode={result.ErrorCode}, " +
+                $"startWorldCm=({result.StartWorldCm.X},{result.StartWorldCm.Y}), " +
+                $"destinationWorldCm=({result.DestinationWorldCm.X},{result.DestinationWorldCm.Y}).");
         }
     }
 
