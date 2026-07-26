@@ -942,7 +942,7 @@ function Get-ScreenshotCompletionRecord {
 
     $milestone = [string]$Target.Milestone
     $expectedFile = [System.IO.Path]::GetFileName([string]$Target.Path)
-    $matches = [System.Collections.Generic.List[System.Text.RegularExpressions.Match]]::new()
+    $completionMatches = [System.Collections.Generic.List[System.Text.RegularExpressions.Match]]::new()
     foreach ($line in [System.IO.File]::ReadAllLines($diagnosticPath)) {
         $isCompletionLine = $line -match '(?:^|\s)screenshot-complete(?:\s|$)'
         $match = [regex]::Match(
@@ -953,16 +953,16 @@ function Get-ScreenshotCompletionRecord {
             throw "Client '$($Target.ProcessName)' wrote a malformed screenshot completion diagnostic."
         }
         if ($match.Success -and $match.Groups["milestone"].Value -ceq $milestone) {
-            $matches.Add($match)
+            $completionMatches.Add($match)
         }
     }
-    if ($matches.Count -eq 0) {
+    if ($completionMatches.Count -eq 0) {
         return $null
     }
-    if ($matches.Count -ne 1) {
+    if ($completionMatches.Count -ne 1) {
         throw "Client '$($Target.ProcessName)' wrote duplicate screenshot completion diagnostics for milestone '$milestone'."
     }
-    $completion = $matches[0]
+    $completion = $completionMatches[0]
     if ($completion.Groups["file"].Value -cne $expectedFile) {
         throw "Client '$($Target.ProcessName)' milestone '$milestone' completion names file '$($completion.Groups["file"].Value)' instead of '$expectedFile'."
     }

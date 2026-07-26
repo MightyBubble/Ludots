@@ -426,6 +426,24 @@ try {
         [int]$passEvidence.milestones[0].hostFrame -ne 600) {
         throw "Same-frame receipt fixture did not preserve its owner identity and host frame."
     }
+    $completion = Get-ScreenshotCompletionRecord -Target ([pscustomobject]@{
+        ProcessName = "fixture-client"
+        Milestone = "advancing"
+        Path = (Join-Path $passDirectory "frontline_001_advancing.png")
+        EvidencePath = (Join-Path $passDirectory "frontline_001_advancing.evidence.json")
+        DiagnosticPath = (Join-Path $passDirectory "raylib-diagnostic.log")
+    })
+    if ($null -eq $completion -or [int]$completion.HostFrame -ne 600) {
+        throw "Screenshot completion record was not parsed from the fixture diagnostic."
+    }
+
+    $emptyAdvancingDirectory = Join-Path $fixtureRoot "empty-advancing"
+    [System.IO.Directory]::CreateDirectory($emptyAdvancingDirectory) | Out-Null
+    Assert-FailsWith -ExpectedMessage "has 0 onscreen" -Action {
+        Invoke-ReceiptFixture -Directory $emptyAdvancingDirectory -ReceiptLines @(
+            "[2026-01-01T00:00:00.0000000Z] presentation-receipt template=rts.frontline.infantry.body templateId=4 submitted=2 onscreen=0 minShortEdgePx=0.00 minAreaPx2=0.00 stateSha256=$script:FixtureStateHash"
+        ) -Requirements @(New-ReceiptRequirement -Role "frontlineInfantry" -Template "rts.frontline.infantry.body")
+    }
 
     $forgedBoundsDirectory = Join-Path $fixtureRoot "forged-bounds"
     [System.IO.Directory]::CreateDirectory($forgedBoundsDirectory) | Out-Null
