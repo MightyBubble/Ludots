@@ -67,7 +67,7 @@
     },
     {
       "role": "infantryBody",
-      "milestones": ["ready", "advancing", "engaging", "completed"],
+      "milestones": ["ready", "completed"],
       "presentationTemplate": "rts.frontline.infantry.body",
       "acceptedColors": [
         { "red": 209, "green": 224, "blue": 230 }
@@ -75,6 +75,18 @@
       "maximumChannelDifference": 48,
       "minimumPixelsPerInstance": 5,
       "minimumPassingInstances": 1,
+      "regionMarginRatio": 0.08
+    },
+    {
+      "role": "battleInfantryBodies",
+      "milestones": ["advancing", "engaging"],
+      "presentationTemplate": "rts.frontline.infantry.body",
+      "acceptedColors": [
+        { "red": 209, "green": 224, "blue": 230 }
+      ],
+      "maximumChannelDifference": 48,
+      "minimumPixelsPerInstance": 5,
+      "minimumPassingInstances": 2,
       "regionMarginRatio": 0.08
     },
     {

@@ -1610,7 +1610,6 @@ function Assert-MeetingBarrierCommandCausality {
         throw "Meeting-barrier causality requires exactly two replicated client artifacts."
     }
 
-    $latestBarrierTick = 0
     foreach ($item in $clients) {
         $gameplay = $item.Value.gameplay
         if ($null -eq $gameplay.PSObject.Properties["meetingBarrierCommittedTick"]) {
@@ -1620,25 +1619,29 @@ function Assert-MeetingBarrierCommandCausality {
         if ($barrierTick -le 0) {
             throw "Client evidence '$($item.Name)' has a non-positive meeting barrier tick."
         }
-        $latestBarrierTick = [Math]::Max($latestBarrierTick, $barrierTick)
-    }
-
-    foreach ($item in $clients) {
         $attackCommands = @($item.Value.commands | Where-Object {
             [string]$_.action -ceq "AttackEnemyInfantry" -or
             [string]$_.action -ceq "AttackEnemyCore"
         })
-        if ($attackCommands.Count -ne 1 -or
-            $null -eq $attackCommands[0].PSObject.Properties["observedCommittedTick"]) {
-            throw "Client evidence '$($item.Name)' must contain one attack command with an observed committed tick."
+        if ($attackCommands.Count -ne 1) {
+            throw "Client evidence '$($item.Name)' must contain exactly one attack command."
         }
-        $attackTick = [int]$attackCommands[0].observedCommittedTick
-        if ($attackTick -lt $latestBarrierTick) {
-            throw "Client evidence '$($item.Name)' attacked at committed tick $attackTick before both commanders crossed the meeting barrier at tick $latestBarrierTick."
+        $scheduledTransitions = @($attackCommands[0].admissionHistory | Where-Object {
+            [string]$_.stage -ceq "NetworkIntake" -and
+            [string]$_.result -ceq "NetworkScheduled"
+        })
+        if ($scheduledTransitions.Count -ne 1 -or
+            $null -eq $scheduledTransitions[0].PSObject.Properties["authoritativeCommittedTick"]) {
+            throw "Client evidence '$($item.Name)' attack command lacks one authoritative NetworkIntake/NetworkScheduled transition."
+        }
+        $attackTick = [int]$scheduledTransitions[0].authoritativeCommittedTick
+        if ($attackTick -le 0) {
+            throw "Client evidence '$($item.Name)' attack command has a non-positive authoritative scheduled tick."
+        }
+        if ($attackTick -lt $barrierTick) {
+            throw "Client evidence '$($item.Name)' attack was authoritatively scheduled at tick $attackTick before its local replicated meeting barrier at tick $barrierTick."
         }
     }
-
-    return $latestBarrierTick
 }
 
 function Assert-GameplayEvidence {
@@ -2116,6 +2119,18 @@ function Get-RequiredPresentationStableIds {
     return @($ids)
 }
 
+function Get-DistinctEntityLayoutSources {
+    param(
+        [Parameter(Mandatory = $true)]$Layout
+    )
+
+    if ($null -eq $Layout.PSObject.Properties["sources"] -or $null -eq $Layout.sources) {
+        return
+    }
+
+    $Layout.sources | ForEach-Object { [string]$_ }
+}
+
 function Resolve-GroupMoveTargetLayoutEvidence {
     param(
         [Parameter(Mandatory = $true)]$SourceGraph
@@ -2275,7 +2290,8 @@ function Assert-ClientWorldPresentationEvidence {
                     @($templateInstances)
                 }
                 elseif ($layoutScope -ceq "stableEntitySources") {
-                    $layoutStableIds = @($layout.sources | ForEach-Object {
+                    $layoutSources = @(Get-DistinctEntityLayoutSources -Layout $layout)
+                    $layoutStableIds = @($layoutSources | ForEach-Object {
                         Get-RequiredPresentationStableIds -Gameplay $gameplay -Source ([string]$_) `
                             -ProcessName $processName -Milestone $milestone -Role "distinctEntityLayout"
                     } | Sort-Object -Unique)
@@ -2716,12 +2732,7 @@ foreach ($requirement in $requiredWorldEvidence) {
         $layoutScope = [string]$layout.scope
         $layoutRegion = [string]$layout.region
         $maximumScreenOverlapRatio = [double]$layout.maximumScreenOverlapRatio
-        $layoutSources = if ($null -ne $layout.PSObject.Properties["sources"]) {
-            @($layout.sources | ForEach-Object { [string]$_ })
-        }
-        else {
-            @()
-        }
+        $layoutSources = @(Get-DistinctEntityLayoutSources -Layout $layout)
         if ([string]::IsNullOrWhiteSpace([string]$layout.template) -or
             [int]$layout.minimumInstances -lt 2 -or
             [string]$layout.minimumWorldSeparationSource -cne "groupMoveTargetLayout.spacingCm" -or

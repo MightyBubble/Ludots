@@ -2182,6 +2182,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
 
     private bool HaveExpectedOpposingInfantryReachedMeetingPoint()
     {
+        int expectedOpposingSideIndex = 1 - _localSideIndex;
         int expectedCount = _localSideIndex == _plan.Expected.WinningSideIndex
             ? _plan.Expected.LoserAttackers
             : _plan.Expected.TrainedInfantryCount;
@@ -2198,6 +2199,11 @@ internal sealed class AcceptanceDriver : ISystem<float>
                 if (participants[index].SideIndex == _localSideIndex)
                 {
                     continue;
+                }
+                if (participants[index].SideIndex != expectedOpposingSideIndex)
+                {
+                    throw new InvalidOperationException(
+                        $"Opposing advancing infantry has invalid side index {participants[index].SideIndex}.");
                 }
                 if (!identities[index].Handle.IsValid)
                 {

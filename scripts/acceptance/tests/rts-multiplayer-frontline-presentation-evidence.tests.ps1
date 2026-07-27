@@ -393,6 +393,19 @@ $fixtureRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("ludots-rts-world-ev
 try {
     $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..\..")).Path
     $rtsDemoRoot = Join-Path $repoRoot "mods\showcases\rts_demo\RtsDemoMod"
+    $allVisibleLayoutSources = @(Get-DistinctEntityLayoutSources -Layout ([pscustomobject]@{
+        scope = "allVisibleTemplate"
+    }))
+    if ($allVisibleLayoutSources.Count -ne 0) {
+        throw "All-visible layout without sources did not materialize as an empty source array."
+    }
+    $stableLayoutSources = @(Get-DistinctEntityLayoutSources -Layout ([pscustomobject]@{
+        scope = "stableEntitySources"
+        sources = @("selectedInfantry")
+    }))
+    if ($stableLayoutSources.Count -ne 1 -or $stableLayoutSources[0] -cne "selectedInfantry") {
+        throw "Stable-entity layout did not preserve its configured source array."
+    }
     $fixtureGroupMoveLayoutEvidence = Resolve-GroupMoveTargetLayoutEvidence -SourceGraph ([pscustomobject]@{
         plannedMods = @([pscustomobject]@{ id = "RtsDemoMod"; rootPath = $rtsDemoRoot })
     })
