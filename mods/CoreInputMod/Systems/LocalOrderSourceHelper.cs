@@ -145,6 +145,7 @@ namespace CoreInputMod.Systems
                     : default;
                 return _world.IsAlive(entity);
             });
+            mapping.SetActorWorldPositionProvider(TryResolveActorWorldPosition);
             mapping.SetActivationActorValidator((actor, playerId) =>
                 InputOrderActorAuthorization.IsAuthorized(
                     _world,
@@ -504,6 +505,18 @@ namespace CoreInputMod.Systems
                 entities,
                 capacity,
                 out rejection);
+        }
+
+        private bool TryResolveActorWorldPosition(Entity actor, out WorldCmInt2 worldCm)
+        {
+            worldCm = default;
+            if (!_world.IsAlive(actor) || !_world.TryGet(actor, out WorldPositionCm position))
+            {
+                return false;
+            }
+
+            worldCm = position.ToWorldCmInt2();
+            return true;
         }
 
         private static bool HasEntityValue(Entity entity)

@@ -84,6 +84,7 @@
   ],
   "groupMoveTargetLayout": {
     "mode": "Grid",
+    "assignment": "PreserveRelative",
     "spacingCm": 140,
     "orderTypeKeys": ["moveTo"]
   },

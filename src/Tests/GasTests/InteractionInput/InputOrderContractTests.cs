@@ -22,6 +22,7 @@ using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
 using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
@@ -437,6 +438,13 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             Assert.That(mappingConfig.Mappings.Any(ReferencesOrderTypeKey("moveTo")),
                 Is.True,
                 "RTS local command path must resolve to an explicit move order.");
+            Assert.Multiple(() =>
+            {
+                Assert.That(mappingConfig.GroupMoveTargetLayout.Mode, Is.EqualTo(GroupMoveTargetLayoutMode.Grid));
+                Assert.That(mappingConfig.GroupMoveTargetLayout.Assignment, Is.EqualTo(GroupMoveTargetAssignmentMode.PreserveRelative));
+                Assert.That(mappingConfig.GroupMoveTargetLayout.SpacingCm, Is.EqualTo(140));
+                Assert.That(mappingConfig.GroupMoveTargetLayout.OrderTypeKeys, Is.EqualTo(new[] { "moveTo" }));
+            });
 
             using var gameDoc = JsonDocument.Parse(File.ReadAllText(gamePath));
             var startupContexts = gameDoc.RootElement.GetProperty("startupInputContexts")
@@ -1510,6 +1518,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 GroupMoveTargetLayout = new GroupMoveTargetLayoutSettings
                 {
                     Mode = GroupMoveTargetLayoutMode.Grid,
+                    Assignment = GroupMoveTargetAssignmentMode.ActorOrder,
                     SpacingCm = 120,
                     OrderTypeKeys = new List<string> { "moveTo" },
                 },
@@ -1588,6 +1597,98 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Is.GreaterThan(50f));
         }
 
+        [TestCase(0)]
+        [TestCase(1)]
+        [TestCase(2)]
+        public void PreserveRelative_InvalidPositionContract_RejectsWholeBatchBeforeSubmission(int failureMode)
+        {
+            var input = new FrozenInputActionReader();
+            input.SetActionState("Move", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
+            var config = new InputOrderMappingConfig
+            {
+                GroupMoveTargetLayout = new GroupMoveTargetLayoutSettings
+                {
+                    Mode = GroupMoveTargetLayoutMode.Grid,
+                    Assignment = GroupMoveTargetAssignmentMode.PreserveRelative,
+                    SpacingCm = 140,
+                    OrderTypeKeys = new List<string> { "moveTo" },
+                },
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "Move",
+                        ActorCollectionKey = "actors",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "moveTo",
+                        RequireTarget = true,
+                        TargetType = OrderTargetType.Position,
+                    },
+                },
+            };
+
+            using var world = World.Create();
+            Entity first = world.Create();
+            Entity second = world.Create();
+            int batchSubmissions = 0;
+            int singleSubmissions = 0;
+            var system = new InputOrderMappingSystem(input, config);
+            system.SetLocalPlayer(first, 1);
+            system.SetActorProvider((out Entity actor) => { actor = first; return true; });
+            system.SetCollectionEntityListProvider((string _, List<Entity> actors, int _, out OrderSubmitResult rejection) =>
+            {
+                actors.Add(first);
+                actors.Add(second);
+                rejection = OrderSubmitResult.Activated;
+                return true;
+            });
+            system.SetGroundPositionProvider((out Vector3 position) =>
+            {
+                position = new Vector3(1000f, 0f, 1000f);
+                return true;
+            });
+            system.SetOrderTypeKeyResolver(_ => 101);
+            system.SetActivationActorValidator((actor, playerId) =>
+                playerId == 1 && (actor == first || actor == second));
+            system.SetOrderSubmitHandler((in Order _) =>
+            {
+                singleSubmissions++;
+                return OrderSubmitResult.Queued;
+            });
+            system.SetOrderBatchSubmitHandler((Span<Order> _) =>
+            {
+                batchSubmissions++;
+                return OrderSubmitResult.Queued;
+            });
+            if (failureMode != 0)
+            {
+                system.SetActorWorldPositionProvider((Entity actor, out WorldCmInt2 position) =>
+                {
+                    if (failureMode == 2)
+                    {
+                        position = actor == first
+                            ? new WorldCmInt2(900, 1000)
+                            : new WorldCmInt2(1100, 1000);
+                        return true;
+                    }
+
+                    position = actor == first ? new WorldCmInt2(0, 0) : default;
+                    return actor == first;
+                });
+            }
+
+            system.Update(0f);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(singleSubmissions, Is.Zero);
+                Assert.That(batchSubmissions, Is.Zero);
+                Assert.That(system.LastActivationResult.State, Is.EqualTo(InputOrderActivationState.Rejected));
+                Assert.That(system.LastActivationResult.OrderId, Is.Zero);
+                Assert.That(system.LastActivationResult.Rejection, Is.EqualTo(OrderSubmitResult.RejectedValidation));
+            });
+        }
+
         [Test]
         public void ActorOrderRouting_SkillMapping_IsRejectedByLoader()
         {
@@ -1635,6 +1736,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 GroupMoveTargetLayout = new GroupMoveTargetLayoutSettings
                 {
                     Mode = GroupMoveTargetLayoutMode.Grid,
+                    Assignment = GroupMoveTargetAssignmentMode.ActorOrder,
                     SpacingCm = 120,
                     OrderTypeKeys = new List<string> { "MoveTo" },
                 },
@@ -1706,6 +1808,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 GroupMoveTargetLayout = new GroupMoveTargetLayoutSettings
                 {
                     Mode = GroupMoveTargetLayoutMode.Grid,
+                    Assignment = GroupMoveTargetAssignmentMode.ActorOrder,
                     SpacingCm = 120,
                 },
                 Mappings = new List<InputOrderMapping>
@@ -1728,6 +1831,35 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         }
 
         [Test]
+        public void GroupMoveTargetLayout_GridMode_RequiresExplicitAssignment()
+        {
+            var config = new InputOrderMappingConfig
+            {
+                GroupMoveTargetLayout = new GroupMoveTargetLayoutSettings
+                {
+                    Mode = GroupMoveTargetLayoutMode.Grid,
+                    SpacingCm = 120,
+                    OrderTypeKeys = new List<string> { "moveTo" },
+                },
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "Command",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "moveTo",
+                        RequireTarget = true,
+                        TargetType = OrderTargetType.Position,
+                    },
+                },
+            };
+
+            var ex = Assert.Throws<InvalidOperationException>(() =>
+                InputOrderMappingLoader.Validate(config, "test.json"));
+            Assert.That(ex!.Message, Does.Contain("groupMoveTargetLayout.assignment"));
+        }
+
+        [Test]
         public void GroupMoveTargetLayout_GridMode_RejectsNonPositiveSpacing()
         {
             var config = new InputOrderMappingConfig
@@ -1735,6 +1867,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 GroupMoveTargetLayout = new GroupMoveTargetLayoutSettings
                 {
                     Mode = GroupMoveTargetLayoutMode.Grid,
+                    Assignment = GroupMoveTargetAssignmentMode.ActorOrder,
                     SpacingCm = 0,
                     OrderTypeKeys = new List<string> { "moveTo" },
                 },
@@ -2019,6 +2152,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 GroupMoveTargetLayout = new GroupMoveTargetLayoutSettings
                 {
                     Mode = GroupMoveTargetLayoutMode.Grid,
+                    Assignment = GroupMoveTargetAssignmentMode.ActorOrder,
                     SpacingCm = 120,
                     OrderTypeKeys = new List<string> { "moveTo" },
                 },
@@ -2195,6 +2329,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 GroupMoveTargetLayout = new GroupMoveTargetLayoutSettings
                 {
                     Mode = GroupMoveTargetLayoutMode.Grid,
+                    Assignment = GroupMoveTargetAssignmentMode.PreserveRelative,
                     SpacingCm = 120,
                     OrderTypeKeys = new List<string> { "moveTo" },
                 },
@@ -2220,6 +2355,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             Entity attackActor = commandHarness.CreateActor(localPlayer, 2);
             Entity secondMoveActor = commandHarness.CreateActor(localPlayer);
             Entity clickedTarget = commandHarness.CreateTaggedEntity(targetOwner, "destructible");
+            var positionQueries = new List<Entity>(capacity: 2);
 
             commandHarness.Intents.Install(CommandIntentProfileTests.Harness.Config(new CommandIntentProfileDefinition
             {
@@ -2268,6 +2404,24 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             {
                 groundPos = new Vector3(1000f, 0f, 2000f);
                 return true;
+            });
+            system.SetActorWorldPositionProvider((Entity actor, out WorldCmInt2 position) =>
+            {
+                positionQueries.Add(actor);
+                if (actor == firstMoveActor)
+                {
+                    position = new WorldCmInt2(0, 2000);
+                    return true;
+                }
+
+                if (actor == secondMoveActor)
+                {
+                    position = new WorldCmInt2(100, 2000);
+                    return true;
+                }
+
+                position = default;
+                return false;
             });
             system.SetCommandIntentTargetFactsProvider((InputOrderMapping _, out CommandIntentTargetFacts facts) =>
             {
@@ -2377,6 +2531,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Assert.That(attack.OrderTypeId, Is.EqualTo(1));
                 Assert.That(attack.Target, Is.EqualTo(clickedTarget));
                 Assert.That(attack.Args.Spatial.Kind, Is.EqualTo(OrderSpatialKind.None));
+                Assert.That(positionQueries, Is.EqualTo(new[] { firstMoveActor, secondMoveActor }));
 
                 Assert.That(system.LastActivationResult.State, Is.EqualTo(InputOrderActivationState.Submitted));
                 Assert.That(system.LastActivationResult.OrderId, Is.EqualTo(5150));
@@ -2663,6 +2818,13 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             input.SetActionState("Command", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
             var config = new InputOrderMappingConfig
             {
+                GroupMoveTargetLayout = new GroupMoveTargetLayoutSettings
+                {
+                    Mode = GroupMoveTargetLayoutMode.Grid,
+                    Assignment = GroupMoveTargetAssignmentMode.PreserveRelative,
+                    SpacingCm = 120,
+                    OrderTypeKeys = new List<string> { "moveTo" },
+                },
                 Mappings = new List<InputOrderMapping>
                 {
                     new()
@@ -2682,10 +2844,12 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             Entity firstSource = world.Create();
             Entity secondSource = world.Create();
             Entity firstMember = world.Create();
+            Entity firstMemberB = world.Create();
             Entity secondMember = world.Create();
+            Entity secondMemberB = world.Create();
             var admissionResults = new OrderAdmissionResultBuffer(128, 128);
             var queue = new OrderQueue(capacity: 64, admissionResults);
-            for (int i = 0; i < 63; i++)
+            for (int i = 0; i < 61; i++)
             {
                 var filler = new Order { OrderTypeId = 2, Actor = localPlayer };
                 Assert.That(queue.TryEnqueue(in filler), Is.True);
@@ -2700,6 +2864,25 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 groundPos = new Vector3(100f, 0f, 200f);
                 return true;
             });
+            var positionQueries = new List<Entity>(capacity: 2);
+            system.SetActorWorldPositionProvider((Entity actor, out WorldCmInt2 position) =>
+            {
+                positionQueries.Add(actor);
+                if (actor == firstSource)
+                {
+                    position = new WorldCmInt2(0, 200);
+                    return true;
+                }
+
+                if (actor == secondSource)
+                {
+                    position = new WorldCmInt2(20, 200);
+                    return true;
+                }
+
+                position = default;
+                return false;
+            });
             system.SetOrderSubmitHandler((in Order _) =>
             {
                 Assert.Fail("Expanded command intent must use the clustered batch submit handler.");
@@ -2710,12 +2893,21 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Assert.Fail("Expanded command intent must not use the shared batch handler.");
                 return OrderSubmitResult.RejectedValidation;
             });
-            system.SetOrderClusterBatchSubmitHandler((Span<Order> orders) => queue.TryEnqueueClusteredBatch(orders));
-            var expander = new TestCommandActorExpander(
-                new Dictionary<Entity, Entity>
+            var expandedOrders = new List<Order>(capacity: 4);
+            system.SetOrderClusterBatchSubmitHandler((Span<Order> orders) =>
+            {
+                for (int i = 0; i < orders.Length; i++)
                 {
-                    [firstSource] = firstMember,
-                    [secondSource] = secondMember,
+                    expandedOrders.Add(orders[i]);
+                }
+
+                return queue.TryEnqueueClusteredBatch(orders);
+            });
+            var expander = new TestCommandActorExpander(
+                new Dictionary<Entity, Entity[]>
+                {
+                    [firstSource] = new[] { firstMember, firstMemberB },
+                    [secondSource] = new[] { secondMember, secondMemberB },
                 });
             system.SetCommandActorExpander(expander);
             SetGroundCommandTargetFactsProvider(system);
@@ -2793,8 +2985,8 @@ namespace Ludots.Tests.GAS.Features.InputRouting
 
             Assert.DoesNotThrow(() => system.Update(0f));
 
-            Assert.That(queue.Count, Is.EqualTo(63),
-                "The expanded fan-out must be rejected as one batch when the OrderQueue has only one free slot.");
+            Assert.That(queue.Count, Is.EqualTo(61),
+                "The expanded fan-out must be rejected as one batch when the OrderQueue has only three free slots.");
             Assert.That(system.LastActivationResult.State, Is.EqualTo(InputOrderActivationState.Rejected));
             Assert.That(system.LastActivationResult.OrderId, Is.GreaterThan(0));
             Assert.That(system.LastActivationResult.Rejection, Is.EqualTo(OrderSubmitResult.RejectedQueueFull));
@@ -2804,6 +2996,18 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             Assert.That(outcome.Result, Is.EqualTo(OrderSubmitResult.RejectedQueueFull));
             Assert.That(expander.ExpandCallCount, Is.EqualTo(2),
                 "CastDispatch must select the two sources before the command router expands either source into members.");
+            Assert.Multiple(() =>
+            {
+                Assert.That(expandedOrders, Has.Count.EqualTo(4));
+                Assert.That(expandedOrders[0].CommandSource, Is.EqualTo(firstSource));
+                Assert.That(expandedOrders[1].CommandSource, Is.EqualTo(firstSource));
+                Assert.That(expandedOrders[2].CommandSource, Is.EqualTo(secondSource));
+                Assert.That(expandedOrders[3].CommandSource, Is.EqualTo(secondSource));
+                Assert.That(expandedOrders[0].Args.Spatial.WorldCm, Is.EqualTo(expandedOrders[1].Args.Spatial.WorldCm));
+                Assert.That(expandedOrders[2].Args.Spatial.WorldCm, Is.EqualTo(expandedOrders[3].Args.Spatial.WorldCm));
+                Assert.That(expandedOrders[0].Args.Spatial.WorldCm, Is.Not.EqualTo(expandedOrders[2].Args.Spatial.WorldCm));
+                Assert.That(positionQueries, Is.EqualTo(new[] { firstSource, secondSource }));
+            });
         }
 
         [Test]
@@ -3289,22 +3493,30 @@ namespace Ludots.Tests.GAS.Features.InputRouting
 
         private sealed class TestCommandActorExpander : ICommandActorExpander
         {
-            private readonly IReadOnlyDictionary<Entity, Entity> _membersBySource;
+            private readonly IReadOnlyDictionary<Entity, Entity[]> _membersBySource;
+            private readonly int _maxExpandedActorsPerSource;
+            private readonly int _maxExpandedActorCount;
 
-            public TestCommandActorExpander(IReadOnlyDictionary<Entity, Entity> membersBySource)
+            public TestCommandActorExpander(IReadOnlyDictionary<Entity, Entity[]> membersBySource)
             {
                 _membersBySource = membersBySource;
+                foreach (Entity[] members in membersBySource.Values)
+                {
+                    _maxExpandedActorsPerSource = Math.Max(_maxExpandedActorsPerSource, members.Length);
+                    _maxExpandedActorCount += members.Length;
+                }
             }
 
-            public int MaxExpandedActorsPerSource => 1;
-            public int MaxExpandedActorCount => _membersBySource.Count;
+            public int MaxExpandedActorsPerSource => _maxExpandedActorsPerSource;
+            public int MaxExpandedActorCount => _maxExpandedActorCount;
             public int ExpandCallCount { get; private set; }
 
             public int Expand(Entity source, Span<Entity> destination)
             {
                 ExpandCallCount++;
-                destination[0] = _membersBySource[source];
-                return 1;
+                Entity[] members = _membersBySource[source];
+                members.CopyTo(destination);
+                return members.Length;
             }
         }
 

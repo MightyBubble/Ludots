@@ -422,6 +422,7 @@ try {
     $layoutSpacingCm = [int]$fixtureGroupMoveLayoutEvidence.spacingCm
     if ($layoutSpacingCm -le 0 -or
         [string]$fixtureGroupMoveLayoutEvidence.source -cne "groupMoveTargetLayout.spacingCm" -or
+        [string]$fixtureGroupMoveLayoutEvidence.assignment -cne "PreserveRelative" -or
         [string]::IsNullOrWhiteSpace([string]$fixtureGroupMoveLayoutEvidence.config.sha256)) {
         throw "Formal group-move layout evidence did not preserve its positive spacing source and file hash."
     }
@@ -430,17 +431,22 @@ try {
     Assert-FailsWith -ExpectedMessage "must be Grid and contain moveTo exactly once" -Action {
         Resolve-GroupMoveTargetLayoutEvidence -SourceGraph (New-GroupMoveSourceGraphFixture `
             -Directory (Join-Path $invalidLayoutRoot "mode") `
-            -MappingJson '{"groupMoveTargetLayout":{"mode":"Circle","spacingCm":140,"orderTypeKeys":["moveTo"]}}')
+            -MappingJson '{"groupMoveTargetLayout":{"mode":"Circle","assignment":"PreserveRelative","spacingCm":140,"orderTypeKeys":["moveTo"]}}')
     }
     Assert-FailsWith -ExpectedMessage "must be Grid and contain moveTo exactly once" -Action {
         Resolve-GroupMoveTargetLayoutEvidence -SourceGraph (New-GroupMoveSourceGraphFixture `
             -Directory (Join-Path $invalidLayoutRoot "order") `
-            -MappingJson '{"groupMoveTargetLayout":{"mode":"Grid","spacingCm":140,"orderTypeKeys":["attackTarget"]}}')
+            -MappingJson '{"groupMoveTargetLayout":{"mode":"Grid","assignment":"PreserveRelative","spacingCm":140,"orderTypeKeys":["attackTarget"]}}')
     }
     Assert-FailsWith -ExpectedMessage "must be a positive finite integer" -Action {
         Resolve-GroupMoveTargetLayoutEvidence -SourceGraph (New-GroupMoveSourceGraphFixture `
             -Directory (Join-Path $invalidLayoutRoot "spacing") `
-            -MappingJson '{"groupMoveTargetLayout":{"mode":"Grid","spacingCm":0,"orderTypeKeys":["moveTo"]}}')
+            -MappingJson '{"groupMoveTargetLayout":{"mode":"Grid","assignment":"PreserveRelative","spacingCm":0,"orderTypeKeys":["moveTo"]}}')
+    }
+    Assert-FailsWith -ExpectedMessage "assignment must be PreserveRelative" -Action {
+        Resolve-GroupMoveTargetLayoutEvidence -SourceGraph (New-GroupMoveSourceGraphFixture `
+            -Directory (Join-Path $invalidLayoutRoot "assignment") `
+            -MappingJson '{"groupMoveTargetLayout":{"mode":"Grid","assignment":"ActorOrder","spacingCm":140,"orderTypeKeys":["moveTo"]}}')
     }
     $dotnetPath = Get-DotnetCommand
     $launcherProject = Join-Path $repoRoot "src\Tools\Ludots.Launcher.Cli\Ludots.Launcher.Cli.csproj"

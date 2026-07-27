@@ -2192,6 +2192,9 @@ function Resolve-GroupMoveTargetLayoutEvidence {
         -not ($orderTypeKeys -ccontains "moveTo")) {
         throw "Formal RTS groupMoveTargetLayout must be Grid and contain moveTo exactly once."
     }
+    if ([string]$layout.assignment -cne "PreserveRelative") {
+        throw "Formal RTS groupMoveTargetLayout.assignment must be PreserveRelative."
+    }
     $spacingCm = [double]$layout.spacingCm
     if ([double]::IsNaN($spacingCm) -or [double]::IsInfinity($spacingCm) -or
         $spacingCm -le 0 -or $spacingCm -ne [Math]::Floor($spacingCm)) {
@@ -2202,6 +2205,7 @@ function Resolve-GroupMoveTargetLayoutEvidence {
         source = "groupMoveTargetLayout.spacingCm"
         modId = "RtsDemoMod"
         mode = [string]$layout.mode
+        assignment = [string]$layout.assignment
         orderTypeKeys = $orderTypeKeys
         spacingCm = [int64]$spacingCm
         config = Get-FileEvidence -Path $mappingPath
@@ -2838,7 +2842,7 @@ $exitCode = 0
 $failureMessage = $null
 $verificationReached = $false
 $manifest = [ordered]@{
-    schemaVersion = 10
+    schemaVersion = 11
     acceptanceScope = "three-process-player-input-to-authoritative-frontline-outcome"
     status = "preparing"
     startedAtUtc = [DateTime]::UtcNow.ToString("O")
@@ -2961,6 +2965,7 @@ try {
         source = [string]$groupMoveLayoutEvidence.source
         modId = [string]$groupMoveLayoutEvidence.modId
         mode = [string]$groupMoveLayoutEvidence.mode
+        assignment = [string]$groupMoveLayoutEvidence.assignment
         orderTypeKeys = @($groupMoveLayoutEvidence.orderTypeKeys)
         spacingCm = [int64]$groupMoveLayoutEvidence.spacingCm
     }

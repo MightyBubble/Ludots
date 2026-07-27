@@ -15,6 +15,7 @@
   ],
   "groupMoveTargetLayout": {
     "mode": "Grid",
+    "assignment": "ActorOrder",
     "spacingCm": 1800,
     "orderTypeKeys": [ "massNavigationMove" ]
   },

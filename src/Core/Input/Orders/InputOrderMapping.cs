@@ -230,10 +230,21 @@ namespace Ludots.Core.Input.Orders
         Grid = 1
     }
 
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public enum GroupMoveTargetAssignmentMode
+    {
+        Unspecified = 0,
+        ActorOrder = 1,
+        PreserveRelative = 2
+    }
+
     public sealed class GroupMoveTargetLayoutSettings
     {
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public GroupMoveTargetLayoutMode Mode { get; set; } = GroupMoveTargetLayoutMode.None;
+
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public GroupMoveTargetAssignmentMode Assignment { get; set; } = GroupMoveTargetAssignmentMode.Unspecified;
 
         public int SpacingCm { get; set; } = 120;
 

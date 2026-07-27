@@ -318,6 +318,7 @@ namespace Ludots.Tests.GAS
                 GroupMoveTargetLayout = new GroupMoveTargetLayoutSettings
                 {
                     Mode = GroupMoveTargetLayoutMode.Grid,
+                    Assignment = GroupMoveTargetAssignmentMode.ActorOrder,
                     SpacingCm = 120,
                     OrderTypeKeys = new List<string> { "moveTo" },
                 },
