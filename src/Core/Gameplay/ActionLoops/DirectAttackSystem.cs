@@ -61,7 +61,8 @@ public sealed class DirectAttackSystem : BaseSystem<World, float>
                 if (buffer.HasActive && buffer.ActiveOrder.Order.OrderTypeId == profile.AttackOrderTypeId)
                 {
                     ValidateProfile(in profile);
-                    Entity target = buffer.ActiveOrder.Order.Target;
+                    Order attackOrder = buffer.ActiveOrder.Order;
+                    Entity target = attackOrder.Target;
                     if (!IsValidTarget(target, teams[index].Id, profile.TargetRelation))
                     {
                         OrderSubmitter.NotifyOrderComplete(World, actor, _orderTypes);
@@ -71,6 +72,7 @@ public sealed class DirectAttackSystem : BaseSystem<World, float>
 
                     state.Target = target;
                     state.CooldownTicks = 0;
+                    CaptureExplicitEngagementPoint(in attackOrder, ref state);
                     OrderSubmitter.NotifyOrderComplete(World, actor, _orderTypes);
                     RouteOrEngage(
                         actor,
@@ -177,13 +179,13 @@ public sealed class DirectAttackSystem : BaseSystem<World, float>
         in DirectAttackProfile profile,
         ref DirectAttackState state)
     {
-        if (IsWithinRange(in actorPosition, state.Target, profile.RangeCm))
+        if (CanBeginEngaging(in actorPosition, state.Target, profile.RangeCm))
         {
             BeginEngaging(ref state);
             return;
         }
 
-        WorldCmInt2 targetPosition = World.Get<WorldPositionCm>(state.Target).ToWorldCmInt2();
+        WorldCmInt2 targetPosition = ResolvePursuitTarget(in state);
         var move = new Order
         {
             OrderTypeId = profile.MoveOrderTypeId,
@@ -203,11 +205,78 @@ public sealed class DirectAttackSystem : BaseSystem<World, float>
         state.ExpectedMoveObserved = 0;
     }
 
+    private bool CanBeginEngaging(in WorldPositionCm actorPosition, Entity target, int rangeCm) =>
+        IsWithinRange(in actorPosition, target, rangeCm);
+
+    private WorldCmInt2 ResolvePursuitTarget(in DirectAttackState state)
+    {
+        if (state.HasExplicitEngagementPoint != 0)
+        {
+            return new WorldCmInt2(state.EngagementPointXCm, state.EngagementPointYCm);
+        }
+
+        return World.Get<WorldPositionCm>(state.Target).ToWorldCmInt2();
+    }
+
     private static void BeginEngaging(ref DirectAttackState state)
     {
         state.Phase = DirectAttackPhase.Engaging;
         state.ExpectedMoveOrderId = 0;
         state.ExpectedMoveObserved = 0;
+        state.EngagementPointXCm = 0;
+        state.EngagementPointYCm = 0;
+        state.HasExplicitEngagementPoint = 0;
+    }
+
+    private static void CaptureExplicitEngagementPoint(in Order attackOrder, ref DirectAttackState state)
+    {
+        state.ExpectedMoveObserved = 0;
+        state.EngagementPointXCm = 0;
+        state.EngagementPointYCm = 0;
+        state.HasExplicitEngagementPoint = 0;
+
+        if (attackOrder.Args.Spatial.Kind == OrderSpatialKind.None &&
+            attackOrder.Args.Spatial.Mode == OrderCollectionMode.None)
+        {
+            return;
+        }
+
+        if (attackOrder.Args.Spatial.Kind != OrderSpatialKind.WorldCm ||
+            attackOrder.Args.Spatial.Mode != OrderCollectionMode.Single)
+        {
+            throw new InvalidOperationException(
+                "Direct attack explicit engagement point must be a single world-centimeter target.");
+        }
+
+        Vector3 worldCm = attackOrder.Args.Spatial.WorldCm;
+        if (!TryRoundWorldCm(worldCm.X, out int x) ||
+            !TryRoundWorldCm(worldCm.Z, out int y))
+        {
+            throw new InvalidOperationException(
+                "Direct attack explicit engagement point exceeds the supported world-centimeter range.");
+        }
+
+        state.EngagementPointXCm = x;
+        state.EngagementPointYCm = y;
+        state.HasExplicitEngagementPoint = 1;
+    }
+
+    private static bool TryRoundWorldCm(float value, out int rounded)
+    {
+        rounded = 0;
+        if (!float.IsFinite(value))
+        {
+            return false;
+        }
+
+        double roundedValue = Math.Round(value, MidpointRounding.AwayFromZero);
+        if (roundedValue < int.MinValue || roundedValue > int.MaxValue)
+        {
+            return false;
+        }
+
+        rounded = (int)roundedValue;
+        return true;
     }
 
     private bool IsValidTarget(Entity target, int sourceTeamId, RelationshipFilter filter)

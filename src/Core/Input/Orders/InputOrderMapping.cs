@@ -235,6 +235,11 @@ namespace Ludots.Core.Input.Orders
     {
         Unspecified = 0,
         ActorOrder = 1,
+
+        /// <summary>
+        /// Assigns target slots by preserving actor order along the command direction and lateral axis.
+        /// This is not a general in-transit collision avoidance guarantee.
+        /// </summary>
         PreserveRelative = 2
     }
 
@@ -246,6 +251,10 @@ namespace Ludots.Core.Input.Orders
         [JsonConverter(typeof(JsonStringEnumConverter))]
         public GroupMoveTargetAssignmentMode Assignment { get; set; } = GroupMoveTargetAssignmentMode.Unspecified;
 
+        /// <summary>
+        /// Minimum requested world-centimeter separation between adjacent layout slots.
+        /// The planner may place slots slightly farther apart to survive integer movement quantization.
+        /// </summary>
         public int SpacingCm { get; set; } = 120;
 
         /// <summary>

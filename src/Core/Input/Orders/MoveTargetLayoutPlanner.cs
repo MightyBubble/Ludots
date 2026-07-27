@@ -6,6 +6,8 @@ namespace Ludots.Core.Input.Orders
 {
     internal static class MoveTargetLayoutPlanner
     {
+        private const int IntegerMovementSafetyMarginCm = 1;
+
         public static Vector3 ComputeOffsetTarget(Vector3 anchorWorldCm, int index, int totalCount, int spacingCm)
         {
             if (totalCount <= 0)
@@ -46,7 +48,7 @@ namespace Ludots.Core.Input.Orders
         {
             if (actorWorldCm.IsEmpty)
             {
-                throw new ArgumentOutOfRangeException(nameof(actorWorldCm), "Position-preserving layout requires at least one actor.");
+                throw new ArgumentOutOfRangeException(nameof(actorWorldCm), "Relative-order target layout requires at least one actor.");
             }
 
             int count = actorWorldCm.Length;
@@ -59,7 +61,7 @@ namespace Ludots.Core.Input.Orders
             RequireScratchLength(slotLateralScratch, count, nameof(slotLateralScratch));
             if (spacingCm <= 0)
             {
-                throw new ArgumentOutOfRangeException(nameof(spacingCm), spacingCm, "Position-preserving layout requires spacingCm > 0.");
+                throw new ArgumentOutOfRangeException(nameof(spacingCm), spacingCm, "Relative-order target layout requires spacingCm > 0.");
             }
 
             WorldCmInt2 anchor = ToWorldCmInt2(anchorWorldCm);
@@ -130,11 +132,23 @@ namespace Ludots.Core.Input.Orders
                 throw new ArgumentOutOfRangeException(nameof(spacingCm), spacingCm, "Target layout requires spacingCm > 0.");
             }
 
+            int slotSeparationCm = GetSlotSeparationCm(spacingCm);
             GetGridLayout(totalCount, out int cols, out int rows);
             GetGridCell(index, cols, out int row, out int col);
             return new WorldCmInt2(
-                GetCenteredOffset(col, cols, spacingCm),
-                GetCenteredOffset(row, rows, spacingCm));
+                GetCenteredOffset(col, cols, slotSeparationCm),
+                GetCenteredOffset(row, rows, slotSeparationCm));
+        }
+
+        private static int GetSlotSeparationCm(int spacingCm)
+        {
+            if (spacingCm == int.MaxValue)
+            {
+                throw new InvalidOperationException(
+                    "Target layout spacing leaves no room for the integer movement safety margin.");
+            }
+
+            return spacingCm + IntegerMovementSafetyMarginCm;
         }
 
         private static void GetGridLayout(int count, out int cols, out int rows)
@@ -168,7 +182,7 @@ namespace Ludots.Core.Input.Orders
             {
                 throw new ArgumentOutOfRangeException(
                     nameof(position),
-                    "Position-preserving layout anchor must contain finite X and Z values.");
+                    "Relative-order target layout anchor must contain finite X and Z values.");
             }
 
             double roundedX = Math.Round((double)position.X, MidpointRounding.AwayFromZero);
@@ -178,7 +192,7 @@ namespace Ludots.Core.Input.Orders
             {
                 throw new ArgumentOutOfRangeException(
                     nameof(position),
-                    "Position-preserving layout anchor exceeds the supported signed 32-bit world-centimeter range.");
+                    "Relative-order target layout anchor exceeds the supported signed 32-bit world-centimeter range.");
             }
 
             return new WorldCmInt2((int)roundedX, (int)roundedY);
@@ -276,7 +290,7 @@ namespace Ludots.Core.Input.Orders
             if (scratch.Length < required)
             {
                 throw new ArgumentException(
-                    $"Position-preserving layout requires {name} capacity {required}, actual {scratch.Length}.",
+                    $"Relative-order target layout requires {name} capacity {required}, actual {scratch.Length}.",
                     name);
             }
         }

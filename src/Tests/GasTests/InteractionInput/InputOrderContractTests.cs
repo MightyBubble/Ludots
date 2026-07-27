@@ -443,7 +443,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Assert.That(mappingConfig.GroupMoveTargetLayout.Mode, Is.EqualTo(GroupMoveTargetLayoutMode.Grid));
                 Assert.That(mappingConfig.GroupMoveTargetLayout.Assignment, Is.EqualTo(GroupMoveTargetAssignmentMode.PreserveRelative));
                 Assert.That(mappingConfig.GroupMoveTargetLayout.SpacingCm, Is.EqualTo(140));
-                Assert.That(mappingConfig.GroupMoveTargetLayout.OrderTypeKeys, Is.EqualTo(new[] { "moveTo" }));
+                Assert.That(mappingConfig.GroupMoveTargetLayout.OrderTypeKeys, Is.EqualTo(new[] { "moveTo", "attackTarget" }));
             });
 
             using var gameDoc = JsonDocument.Parse(File.ReadAllText(gamePath));
@@ -2305,9 +2305,9 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                         Is.EquivalentTo(new[]
                         {
                             new Vector3(40f, 0f, 140f),
-                            new Vector3(160f, 0f, 140f),
-                            new Vector3(40f, 0f, 260f),
-                            new Vector3(160f, 0f, 260f),
+                            new Vector3(161f, 0f, 140f),
+                            new Vector3(40f, 0f, 261f),
+                            new Vector3(161f, 0f, 261f),
                         }));
                 }
             }
@@ -2317,6 +2317,143 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Assert.That(system.LastActivationResult.State, Is.EqualTo(InputOrderActivationState.Rejected));
                 Assert.That(system.LastActivationResult.Rejection, Is.EqualTo(OrderSubmitResult.RejectedAdmissionCapacity));
             }
+        }
+
+        [Test]
+        public void CommandIntentRouting_NonSharedParallelFanOut_AppliesGroupLayoutBeforePerActorSubmission()
+        {
+            var input = new FrozenInputActionReader();
+            input.SetActionState("Command", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
+            var config = new InputOrderMappingConfig
+            {
+                GroupMoveTargetLayout = new GroupMoveTargetLayoutSettings
+                {
+                    Mode = GroupMoveTargetLayoutMode.Grid,
+                    Assignment = GroupMoveTargetAssignmentMode.ActorOrder,
+                    SpacingCm = 120,
+                    OrderTypeKeys = new List<string> { "moveTo" },
+                },
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "Command",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "moveTo",
+                        RequireTarget = true,
+                        TargetType = OrderTargetType.Position,
+                        IsSkillMapping = false,
+                    }
+                }
+            };
+
+            using var world = World.Create();
+            Entity localPlayer = world.Create(new PlayerIdentity { PlayerId = 1 });
+            Entity firstActor = world.Create();
+            Entity secondActor = world.Create();
+            var submitted = new List<Order>(capacity: 2);
+            int nextOrderId = 100;
+            var system = new InputOrderMappingSystem(input, config);
+            system.CommandActionId = "Command";
+            system.SetLocalPlayer(localPlayer, 1);
+            system.SetOrderTypeKeyResolver(key => key == "moveTo" ? 2 : 0);
+            system.SetOrderIdentityAssigner((ref Order order) => order.OrderId = nextOrderId++);
+            system.SetGroundPositionProvider((out Vector3 groundPos) =>
+            {
+                groundPos = new Vector3(1000f, 0f, 2000f);
+                return true;
+            });
+            system.SetOrderSubmitHandler((in Order order) =>
+            {
+                submitted.Add(order);
+                return OrderSubmitResult.Queued;
+            });
+            SetGroundCommandTargetFactsProvider(system);
+
+            var commandHarness = CommandIntentProfileTests.Harness.Create(world);
+            commandHarness.Intents.Install(CommandIntentProfileTests.Harness.Config(new CommandIntentProfileDefinition
+            {
+                Id = "intent.command.parallel_layout",
+                GroupPolicy = new CommandIntentGroupPolicyDefinition { Kind = "independent" },
+                Rules = new List<CommandIntentRuleDefinition>
+                {
+                    CommandIntentProfileTests.Harness.GroundRule(priority: 10, orderTypeKey: "moveTo"),
+                },
+            }));
+            var collectionKeys = new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+            var stack = new InteractionContextStack(collectionKeys);
+            stack.Push(InteractionContextFrameDescriptor.Create(
+                InteractionContextIds.Default,
+                EntityCollectionKeys.CommandSource,
+                "view.test.command"));
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
+            orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 2 });
+            var dispatch = new CastDispatchProfileRegistry(
+                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
+                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
+            dispatch.Install(CastDispatchProfileTests.Harness.Config(new CastDispatchProfileDefinition
+            {
+                Id = "dispatch.parallel_per_actor",
+                Selector = new CastDispatchSelectorDefinition { Kind = "all" },
+                Router = new CastDispatchRouterDefinition { Kind = "parallel", SharedOrderId = false },
+            }));
+            var schemes = new ControlSchemeRuntime(
+                new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
+                stack,
+                commandHarness.Intents,
+                dispatch,
+                orderTypes);
+            schemes.Install(new ControlSchemesConfig
+            {
+                Schemes = new List<ControlSchemeDefinition>
+                {
+                    new()
+                    {
+                        Id = "scheme.test",
+                        InputContexts = new List<string>(),
+                        Defaults = new ControlSchemeDefaults
+                        {
+                            CommandIntentId = "intent.command.parallel_layout",
+                            CastDispatchProfileId = "dispatch.parallel_per_actor",
+                        },
+                    }
+                },
+            });
+
+            var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 4, initialRowCapacity: 4);
+            var descriptor = EntityCollectionDescriptor.Create(
+                EntityCollectionKeys.CommandSource,
+                EntityCollectionSourceKind.Explicit,
+                EntityCollectionRoleKind.CommandSource);
+            collections.Replace(localPlayer, in descriptor, new[] { firstActor, secondActor }, localPlayer);
+            system.SetCommandIntentRouting(
+                world,
+                stack,
+                schemes,
+                commandHarness.Intents,
+                dispatch,
+                collections,
+                (out Entity owner) =>
+                {
+                    owner = localPlayer;
+                    return true;
+                });
+
+            system.Update(0f);
+
+            Assert.That(submitted, Has.Count.EqualTo(2));
+            Assert.Multiple(() =>
+            {
+                Assert.That(submitted.Select(order => order.OrderId).Distinct().Count(), Is.EqualTo(2),
+                    "A non-shared parallel command keeps independent order identities.");
+                Assert.That(submitted.Select(order => order.Args.Spatial.WorldCm), Is.EquivalentTo(new[]
+                {
+                    new Vector3(940f, 0f, 2000f),
+                    new Vector3(1061f, 0f, 2000f),
+                }));
+                Assert.That(system.LastActivationResult.State, Is.EqualTo(InputOrderActivationState.Submitted));
+                Assert.That(system.LastActivationResult.OrderId, Is.EqualTo(101));
+            });
         }
 
         [Test]
@@ -2526,7 +2663,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Assert.That(secondMove.OrderTypeId, Is.EqualTo(2));
                 Assert.That(secondMove.Target, Is.EqualTo(Entity.Null));
                 Assert.That(secondMove.Args.Spatial.Kind, Is.EqualTo(OrderSpatialKind.WorldCm));
-                Assert.That(secondMove.Args.Spatial.WorldCm, Is.EqualTo(new Vector3(1060f, 0f, 2000f)));
+                Assert.That(secondMove.Args.Spatial.WorldCm, Is.EqualTo(new Vector3(1061f, 0f, 2000f)));
 
                 Assert.That(attack.OrderTypeId, Is.EqualTo(1));
                 Assert.That(attack.Target, Is.EqualTo(clickedTarget));

@@ -86,7 +86,7 @@
     "mode": "Grid",
     "assignment": "PreserveRelative",
     "spacingCm": 140,
-    "orderTypeKeys": ["moveTo"]
+    "orderTypeKeys": ["moveTo", "attackTarget"]
   },
   "userOverrides": {
     "enabled": true,

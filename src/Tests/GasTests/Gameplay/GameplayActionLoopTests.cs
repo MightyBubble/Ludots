@@ -1,3 +1,4 @@
+using System.Numerics;
 using System.Text.Json.Nodes;
 using Arch.Core;
 using Ludots.Core.Components;
@@ -290,6 +291,107 @@ public sealed class GameplayActionLoopTests
     }
 
     [Test]
+    public void DirectAttack_ExplicitEngagementPointRoutesPursuitAwayFromTargetCenter()
+    {
+        TeamRelationshipSnapshot relationships = TeamManager.CaptureSnapshot();
+        try
+        {
+            TeamManager.Clear();
+            TeamManager.SetRelationshipSymmetric(1, 2, TeamRelationship.Hostile);
+            using World world = World.Create();
+            OrderTypeRegistry orderTypes = CreateOrderTypes();
+            var admissionResults = new OrderAdmissionResultBuffer(64, 64);
+            var orders = new OrderQueue(64, admissionResults);
+            var effects = new EffectRequestQueue();
+            var attackSystem = new DirectAttackSystem(world, orders, orderTypes, effects, OpenGate.Instance);
+
+            Entity target = world.Create(
+                new Team { Id = 2 },
+                new AttributeBuffer(),
+                WorldPositionCm.FromCm(1_000, 0));
+            Entity actorA = CreateDirectAttackActor(
+                world,
+                target,
+                orderId: 80,
+                actorPosition: WorldPositionCm.FromCm(0, -120),
+                engagementPoint: new Vector3(420f, 0f, -120f));
+            Entity actorB = CreateDirectAttackActor(
+                world,
+                target,
+                orderId: 81,
+                actorPosition: WorldPositionCm.FromCm(0, 120),
+                engagementPoint: new Vector3(420f, 0f, 120f));
+
+            attackSystem.Update(1f / 30f);
+
+            Assert.That(orders.TryDequeue(out Order pursuitA), Is.True);
+            Assert.That(orders.TryDequeue(out Order pursuitB), Is.True);
+            Assert.Multiple(() =>
+            {
+                Assert.That(pursuitA.Target, Is.EqualTo(target));
+                Assert.That(pursuitB.Target, Is.EqualTo(target));
+                Assert.That(new[] { pursuitA.Actor, pursuitB.Actor }, Is.EquivalentTo(new[] { actorA, actorB }));
+                Assert.That(
+                    new[] { pursuitA.Args.Spatial.WorldCm, pursuitB.Args.Spatial.WorldCm },
+                    Is.EquivalentTo(new[]
+                    {
+                        new Vector3(420f, 0f, -120f),
+                        new Vector3(420f, 0f, 120f),
+                    }));
+                Assert.That(pursuitA.Args.Spatial.WorldCm, Is.Not.EqualTo(pursuitB.Args.Spatial.WorldCm));
+                Assert.That(effects.Count, Is.Zero);
+            });
+        }
+        finally
+        {
+            TeamManager.RestoreSnapshot(relationships);
+        }
+    }
+
+    [Test]
+    public void DirectAttack_ExplicitEngagementPointBeginsEngagingWhenTargetAlreadyReachable()
+    {
+        TeamRelationshipSnapshot relationships = TeamManager.CaptureSnapshot();
+        try
+        {
+            TeamManager.Clear();
+            TeamManager.SetRelationshipSymmetric(1, 2, TeamRelationship.Hostile);
+            using World world = World.Create();
+            OrderTypeRegistry orderTypes = CreateOrderTypes();
+            var admissionResults = new OrderAdmissionResultBuffer(64, 64);
+            var orders = new OrderQueue(64, admissionResults);
+            var effects = new EffectRequestQueue();
+            var attackSystem = new DirectAttackSystem(world, orders, orderTypes, effects, OpenGate.Instance);
+
+            Entity target = world.Create(
+                new Team { Id = 2 },
+                new AttributeBuffer(),
+                WorldPositionCm.FromCm(1_000, 0));
+            Entity actor = CreateDirectAttackActor(
+                world,
+                target,
+                orderId: 82,
+                actorPosition: WorldPositionCm.FromCm(450, 0),
+                engagementPoint: new Vector3(500f, 0f, 120f));
+
+            attackSystem.Update(1f / 30f);
+
+            Assert.That(orders.TryDequeue(out _), Is.False);
+            DirectAttackState state = world.Get<DirectAttackState>(actor);
+            Assert.Multiple(() =>
+            {
+                Assert.That(effects.Count, Is.Zero);
+                Assert.That(state.Phase, Is.EqualTo(DirectAttackPhase.Engaging));
+                Assert.That(state.HasExplicitEngagementPoint, Is.Zero);
+            });
+        }
+        finally
+        {
+            TeamManager.RestoreSnapshot(relationships);
+        }
+    }
+
+    [Test]
     public void ComponentRegistry_AuthorsSemanticActionLoopProfiles()
     {
         using World world = World.Create();
@@ -432,7 +534,39 @@ public sealed class GameplayActionLoopTests
         return GC.GetAllocatedBytesForCurrentThread() - before;
     }
 
-    private static OrderBuffer ActiveOrder(int orderId, int orderTypeId, Entity target) => new()
+    private static Entity CreateDirectAttackActor(
+        World world,
+        Entity target,
+        int orderId,
+        WorldPositionCm actorPosition,
+        Vector3 engagementPoint)
+    {
+        return world.Create(
+            new DirectAttackProfile
+            {
+                AttackOrderTypeId = 102,
+                MoveOrderTypeId = 101,
+                EffectTemplateId = 77,
+                TargetRelation = RelationshipFilter.Hostile,
+                RangeCm = 650,
+                CooldownTicks = 30,
+            },
+            new DirectAttackState(),
+            ActiveOrder(
+                orderId,
+                102,
+                target,
+                OrderArgs.CreateSingleWorldCm(engagementPoint)),
+            new Team { Id = 1 },
+            new PlayerOwner { PlayerId = 1 },
+            actorPosition);
+    }
+
+    private static OrderBuffer ActiveOrder(
+        int orderId,
+        int orderTypeId,
+        Entity target,
+        OrderArgs args = default) => new()
     {
         ActiveIndex = 0,
         ActiveOrder = new QueuedOrder
@@ -443,6 +577,7 @@ public sealed class GameplayActionLoopTests
                 OrderTypeId = orderTypeId,
                 PlayerId = 1,
                 Target = target,
+                Args = args,
             },
         },
     };

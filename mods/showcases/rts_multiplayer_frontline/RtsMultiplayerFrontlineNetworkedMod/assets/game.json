@@ -46,7 +46,7 @@
       },
       {
         "orderTypeKey": "attackTarget",
-        "targetKind": "NetworkEntity",
+        "targetKind": "WorldPositionAndEntity",
         "allowArg0": false,
         "allowArg1": false,
         "allowedSubmitModes": ["Immediate", "Queued"],

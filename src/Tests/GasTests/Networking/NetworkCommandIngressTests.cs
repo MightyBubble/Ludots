@@ -168,6 +168,70 @@ public sealed class NetworkCommandIngressTests
     }
 
     [Test]
+    public void Schedule_WorldPositionAndEntityTargetPreservesEngagementPointAndEntity()
+    {
+        using World world = World.Create();
+        using var harness = Harness.Create(
+            world,
+            scheduledBatchCapacity: 4,
+            includeEntityTargetSchema: true,
+            entityTargetKind: NetworkCommandTargetKind.WorldPositionAndEntity);
+        Entity player = world.Create(new PlayerIdentity { PlayerId = 1 });
+        Entity actor = world.Create();
+        Entity target = world.Create();
+        harness.Ownership.EnsureOwnership(player, actor);
+        Assert.That(harness.Entities.TryAllocate(actor, out NetworkEntityHandle actorHandle), Is.True);
+        Assert.That(harness.Entities.TryAllocate(target, out NetworkEntityHandle targetHandle), Is.True);
+        var seat = new NetworkCommandSeat(0, 1, 1);
+        harness.Ingress.BindSeat(in seat, player, serverTick: 10);
+        harness.Knowledge.Upsert(
+            player,
+            target,
+            new KnowledgeDisclosureRecord(
+                KnowledgePresence.LiveVisible,
+                KnowledgePositionAccess.Live,
+                default,
+                default,
+                default,
+                player,
+                observedTick: 10,
+                expiryTick: 0,
+                confidencePermille: 1000,
+                revision: 1));
+        var payload = new NetworkCommandTargetPayload(
+            NetworkCommandTargetKind.WorldPositionAndEntity,
+            positionXCm: 345,
+            positionYCm: 0,
+            positionZCm: 678,
+            targetSlot: targetHandle.Slot,
+            targetGeneration: targetHandle.Generation,
+            arg0: 0,
+            arg1: 0);
+        var entry = new NetworkCommandWireEntry(actorHandle, EntityOrderTypeId, in payload);
+
+        NetworkCommandAdmissionOutcome outcome = harness.Ingress.Schedule(
+            in seat,
+            Batch(1, 10, 1),
+            serverTick: 10,
+            committedTick: 9,
+            new[] { entry });
+
+        Assert.That(outcome.Result, Is.EqualTo(NetworkCommandAdmissionCode.NetworkScheduled));
+        Assert.That(harness.Ingress.DrainScheduled(serverTick: 10, committedTick: 9), Is.EqualTo(1));
+        Span<Order> orders = stackalloc Order[1];
+        Assert.That(harness.Orders.TryDequeueBatch(orders, out int count), Is.True);
+        Order order = orders[0];
+        Assert.Multiple(() =>
+        {
+            Assert.That(count, Is.EqualTo(1));
+            Assert.That(order.Target, Is.EqualTo(target));
+            Assert.That(order.Args.Spatial.Kind, Is.EqualTo(OrderSpatialKind.WorldCm));
+            Assert.That(order.Args.Spatial.Mode, Is.EqualTo(OrderCollectionMode.Single));
+            Assert.That(order.Args.Spatial.WorldCm, Is.EqualTo(new Vector3(345f, 0f, 678f)));
+        });
+    }
+
+    [Test]
     public void UnbindAndRebind_PreservesAcceptedFutureBatchAndSequenceHistory()
     {
         using World world = World.Create();
@@ -617,7 +681,8 @@ public sealed class NetworkCommandIngressTests
         public static Harness Create(
             World world,
             int scheduledBatchCapacity,
-            bool includeEntityTargetSchema = false)
+            bool includeEntityTargetSchema = false,
+            NetworkCommandTargetKind entityTargetKind = NetworkCommandTargetKind.NetworkEntity)
         {
             var relationshipTypes = new RelationshipTypeRegistry();
             var relationships = new RelationshipRuntime(
@@ -658,7 +723,7 @@ public sealed class NetworkCommandIngressTests
             {
                 schemas.Register(new NetworkCommandSchema(
                     EntityOrderTypeId,
-                    NetworkCommandTargetKind.NetworkEntity,
+                    entityTargetKind,
                     allowArg0: false,
                     allowArg1: false,
                     NetworkCommandSubmitModeMask.Immediate,

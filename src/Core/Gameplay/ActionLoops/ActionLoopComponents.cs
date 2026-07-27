@@ -70,6 +70,9 @@ public struct DirectAttackState
     public DirectAttackPhase Phase;
     public Entity Target;
     public int ExpectedMoveOrderId;
+    public int EngagementPointXCm;
+    public int EngagementPointYCm;
     public int CooldownTicks;
     public byte ExpectedMoveObserved;
+    public byte HasExplicitEngagementPoint;
 }

@@ -25,6 +25,7 @@ using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Networking.Configuration;
+using Ludots.Core.Networking.Protocol;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
@@ -611,6 +612,8 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
                 Is.EquivalentTo(new[] { OrderSubmitMode.Immediate, OrderSubmitMode.Queued }));
             Assert.That(attackSchema.AllowedSubmitModes,
                 Is.EquivalentTo(new[] { OrderSubmitMode.Immediate, OrderSubmitMode.Queued }));
+            Assert.That(attackSchema.TargetKind, Is.EqualTo(NetworkCommandTargetKind.WorldPositionAndEntity),
+                "Attack commands must carry both the hostile entity and the player-authored engagement point.");
         });
 
         using GameEngine engine = CreateStartedEngine();

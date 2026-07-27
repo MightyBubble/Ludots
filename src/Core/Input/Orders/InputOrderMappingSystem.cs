@@ -1826,37 +1826,31 @@ namespace Ludots.Core.Input.Orders
                 return result;
             }
 
+            EnsureOrderScratch(ref _commandIntentOrdersScratch, dispatchCount);
+            for (int dispatchIndex = 0; dispatchIndex < dispatchCount; dispatchIndex++)
+            {
+                Entity dispatchActor = dispatchActors[dispatchIndex];
+                CommandIntentRoute route = dispatchRoutes[dispatchIndex];
+                _commandIntentOrdersScratch[dispatchIndex] = BuildCommandIntentOrder(
+                    mapping,
+                    dispatchActor,
+                    Entity.Null,
+                    in route,
+                    in targetFacts,
+                    groundWorldCm);
+            }
+
+            Span<Order> dispatchOrders = _commandIntentOrdersScratch.AsSpan(0, dispatchCount);
+            if (!TryApplyGroupMoveTargetLayout(mapping, dispatchOrders))
+            {
+                return RejectCommandIntent(mapping, OrderSubmitResult.RejectedValidation);
+            }
+
             if (routing.SharedOrderId && dispatchCount > 1)
             {
-                if (_orderBatchSubmitHandler == null)
-                {
-                    throw new InvalidOperationException(
-                        "Command intent dispatch profile requires shared order ids for a multi-actor fan-out, but no order batch submit handler is configured.");
-                }
-
-                EnsureOrderScratch(ref _commandIntentOrdersScratch, dispatchCount);
-                for (int dispatchIndex = 0; dispatchIndex < dispatchCount; dispatchIndex++)
-                {
-                    Entity dispatchActor = dispatchActors[dispatchIndex];
-                    CommandIntentRoute route = dispatchRoutes[dispatchIndex];
-                    _commandIntentOrdersScratch[dispatchIndex] = BuildCommandIntentOrder(
-                        mapping,
-                        dispatchActor,
-                        Entity.Null,
-                        in route,
-                        in targetFacts,
-                        groundWorldCm);
-                }
-
-                Span<Order> sharedOrders = _commandIntentOrdersScratch.AsSpan(0, dispatchCount);
-                if (!TryApplyGroupMoveTargetLayout(mapping, sharedOrders))
-                {
-                    return RejectCommandIntent(mapping, OrderSubmitResult.RejectedValidation);
-                }
-
                 OrderSubmitResult result = SubmitAtomicOrderBatch(
                     mapping,
-                    sharedOrders,
+                    dispatchOrders,
                     "command intent shared fan-out");
                 return result;
             }
@@ -1864,15 +1858,7 @@ namespace Ludots.Core.Input.Orders
             int sharedOrderId = 0;
             for (int dispatchIndex = 0; dispatchIndex < dispatchCount; dispatchIndex++)
             {
-                Entity dispatchActor = dispatchActors[dispatchIndex];
-                CommandIntentRoute route = dispatchRoutes[dispatchIndex];
-                Order order = BuildCommandIntentOrder(
-                    mapping,
-                    dispatchActor,
-                    Entity.Null,
-                    in route,
-                    in targetFacts,
-                    groundWorldCm);
+                Order order = dispatchOrders[dispatchIndex];
 
                 if (routing.SharedOrderId)
                 {

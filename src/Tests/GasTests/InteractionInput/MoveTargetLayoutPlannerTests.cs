@@ -10,7 +10,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
     public sealed class MoveTargetLayoutPlannerTests
     {
         [Test]
-        public void PreserveRelative_RealFrontlineFormation_MaintainsConfiguredSpacingAlongTheWholeMove()
+        public void PreserveRelative_RealFrontlineFormation_AssignsStableForwardThenLateralSlots()
         {
             WorldCmInt2[] actors =
             {
@@ -26,11 +26,12 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             Assert.That(slots, Is.EqualTo(new[] { 3, 1, 2, 0 }));
             Assert.That(
                 ComputeMinimumMovingSeparation(actors, anchor, slots, spacingCm: 140),
-                Is.GreaterThanOrEqualTo(139.999));
+                Is.GreaterThanOrEqualTo(139.999),
+                "This authored fixture remains separated, but PreserveRelative is not a general collision-avoidance guarantee.");
         }
 
         [Test]
-        public void PreserveRelative_DiagonalMove_PreservesForwardThenLateralOrder()
+        public void PreserveRelative_DiagonalMove_AssignsForwardThenLateralSlots()
         {
             WorldCmInt2[] actors =
             {
@@ -46,7 +47,8 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             Assert.That(slots, Is.EqualTo(new[] { 0, 2, 1, 3 }));
             Assert.That(
                 ComputeMinimumMovingSeparation(actors, anchor, slots, spacingCm: 200),
-                Is.GreaterThanOrEqualTo(199.999));
+                Is.GreaterThanOrEqualTo(199.999),
+                "This authored fixture remains separated, but PreserveRelative is not a general collision-avoidance guarantee.");
         }
 
         [Test]
@@ -57,6 +59,23 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             int[] slots = ComputeSlots(actors, new Vector3(1000f, 0f, 0f), spacingCm: 140);
 
             Assert.That(slots, Is.EqualTo(new[] { 0, 1 }));
+        }
+
+        [Test]
+        public void GridTargets_TreatConfiguredSpacingAsMinimumWithIntegerMovementMargin()
+        {
+            Vector3 anchor = new(1000f, 0f, 2000f);
+
+            Vector3 left = MoveTargetLayoutPlanner.ComputeOffsetTarget(anchor, index: 0, totalCount: 2, spacingCm: 140);
+            Vector3 right = MoveTargetLayoutPlanner.ComputeOffsetTarget(anchor, index: 1, totalCount: 2, spacingCm: 140);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(left, Is.EqualTo(new Vector3(930f, 0f, 2000f)));
+                Assert.That(right, Is.EqualTo(new Vector3(1071f, 0f, 2000f)));
+                Assert.That(right.X - left.X, Is.GreaterThan(140f),
+                    "The authored spacing remains the minimum accepted separation after integer movement quantization.");
+            });
         }
 
         [Test]
