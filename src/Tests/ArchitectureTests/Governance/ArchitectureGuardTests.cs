@@ -28,6 +28,7 @@ namespace Ludots.Tests.Architecture.Governance
             var expected = new[]
             {
                 nameof(SystemGroup.SchemaUpdate),
+                nameof(SystemGroup.LocalInput),
                 nameof(SystemGroup.InputCollection),
                 nameof(SystemGroup.PostMovement),
                 nameof(SystemGroup.AbilityActivation),
