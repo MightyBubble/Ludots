@@ -68,7 +68,7 @@
 
 - Registry：`SystemFactoryRegistry`、`AttributeRegistry`、`TagRegistry`、`AttributeSinkRegistry`、`AbilityDefinitionRegistry` 等
 - 核心管线：ConfigPipeline、GAS Effect Pipeline、Presentation Pipeline、Trigger Pipeline、Mod Loading、Startup、UI Runtime
-- SystemGroup：`SchemaUpdate → InputCollection → PostMovement → AbilityActivation → EffectProcessing → AttributeCalculation → DeferredTriggerCollection → Cleanup → EventDispatch → ClearPresentationFlags`
+- SystemGroup：`SchemaUpdate → LocalInput → InputCollection → PostMovement → AbilityActivation → EffectProcessing → RuntimeEntityBinding → AttributeCalculation → DeferredTriggerCollection → Cleanup → EventDispatch → ClearPresentationFlags`
 
 ## 6 深度材料
 
