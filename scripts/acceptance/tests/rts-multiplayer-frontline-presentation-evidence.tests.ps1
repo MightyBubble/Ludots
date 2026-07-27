@@ -309,11 +309,13 @@ function New-FramebufferRequirement {
         [Parameter(Mandatory = $true)][string]$Template,
         [Parameter(Mandatory = $true)][int]$Red,
         [Parameter(Mandatory = $true)][int]$Green,
-        [Parameter(Mandatory = $true)][int]$Blue
+        [Parameter(Mandatory = $true)][int]$Blue,
+        [string]$Perspective = "all"
     )
 
     return [pscustomobject]@{
         role = $Role
+        perspective = $Perspective
         milestones = @("ready")
         presentationTemplate = $Template
         acceptedColors = @([pscustomobject]@{ red = $Red; green = $Green; blue = $Blue })
@@ -373,6 +375,7 @@ function Invoke-FramebufferFixture {
         New-FramebufferRequirement -Role "harvester" -Template "fixture.harvester" -Red 255 -Green 166 -Blue 31
         New-FramebufferRequirement -Role "infantry" -Template "fixture.infantry" -Red 209 -Green 224 -Blue 230
         New-FramebufferRequirement -Role "crystal" -Template "fixture.crystal" -Red 20 -Green 224 -Blue 255
+        New-FramebufferRequirement -Role "loserOnly" -Template "fixture.not-present" -Red 0 -Green 0 -Blue 0 -Perspective "loser"
     )
     return @(Read-ClientFramebufferPixelEvidence `
         -Screenshots @([pscustomobject]@{
@@ -381,6 +384,13 @@ function Invoke-FramebufferFixture {
             Path = $screenshotPath
         }) `
         -PresentationItems @(New-FramebufferPresentationItem) `
+        -GameplayItems @([pscustomobject]@{
+            Name = "fixture-client"
+            Value = [pscustomobject]@{
+                seatSlot = 0
+                gameplay = [pscustomobject]@{ winningSideIndex = 0 }
+            }
+        }) `
         -Requirements $requirements `
         -DotnetPath $DotnetPath `
         -LauncherAssemblyPath $LauncherAssemblyPath `

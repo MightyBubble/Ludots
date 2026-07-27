@@ -98,8 +98,12 @@ internal sealed class AcceptanceDriver : ISystem<float>
     private float _gatherCrystalsBeforeCommand;
     private string _pendingCommandAction = string.Empty;
     private ulong _pendingCommandSequence;
+    private long _pendingCommandIssuedInputRevision;
+    private int _pendingCommandIssuedCommittedTick;
     private string _preservedCommandAction = string.Empty;
     private ulong _preservedCommandSequence;
+    private long _preservedCommandIssuedInputRevision;
+    private int _preservedCommandIssuedCommittedTick;
     private long _stageStartedTimestamp;
     private long _meetingReachedTimestamp;
     private long _lastEvidenceCheckpointTimestamp;
@@ -1621,6 +1625,13 @@ internal sealed class AcceptanceDriver : ISystem<float>
             }
             CaptureCommandActors();
             _pendingCommandAction = actionName;
+            _pendingCommandIssuedInputRevision = _input!.UpdateRevision;
+            _pendingCommandIssuedCommittedTick = TryGetCommittedTick();
+            if (_pendingCommandIssuedInputRevision <= 0 || _pendingCommandIssuedCommittedTick <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Command {actionName} requires a positive client input revision and replicated committed tick when issued.");
+            }
         }
         if (worldCm.HasValue)
         {
@@ -1753,7 +1764,9 @@ internal sealed class AcceptanceDriver : ISystem<float>
                 _pendingCommandAction,
                 _commandActorCount,
                 _commandActors,
-                _pendingAdmissionHistory))
+                _pendingAdmissionHistory,
+                _pendingCommandIssuedInputRevision,
+                _pendingCommandIssuedCommittedTick))
         {
             return false;
         }
@@ -1796,6 +1809,8 @@ internal sealed class AcceptanceDriver : ISystem<float>
 
         _preservedCommandSequence = _pendingCommandSequence;
         _preservedCommandAction = _pendingCommandAction;
+        _preservedCommandIssuedInputRevision = _pendingCommandIssuedInputRevision;
+        _preservedCommandIssuedCommittedTick = _pendingCommandIssuedCommittedTick;
         _preservedCommandActorCount = _commandActorCount;
         Array.Copy(_commandActors, _preservedCommandActors, _commandActorCount);
         _preservedAdmissionHistory.AddRange(_pendingAdmissionHistory);
@@ -1815,13 +1830,17 @@ internal sealed class AcceptanceDriver : ISystem<float>
                 _preservedCommandAction,
                 _preservedCommandActorCount,
                 _preservedCommandActors,
-                _preservedAdmissionHistory))
+                _preservedAdmissionHistory,
+                _preservedCommandIssuedInputRevision,
+                _preservedCommandIssuedCommittedTick))
         {
             return false;
         }
 
         _preservedCommandSequence = 0;
         _preservedCommandAction = string.Empty;
+        _preservedCommandIssuedInputRevision = 0;
+        _preservedCommandIssuedCommittedTick = 0;
         _preservedCommandActorCount = 0;
         _preservedAdmissionHistory.Clear();
         return true;
@@ -1832,8 +1851,15 @@ internal sealed class AcceptanceDriver : ISystem<float>
         string action,
         int actorCount,
         Entity[] actors,
-        List<AcceptanceAdmissionTransitionEvidence> admissionHistory)
+        List<AcceptanceAdmissionTransitionEvidence> admissionHistory,
+        long issuedInputRevision,
+        int issuedCommittedTick)
     {
+        if (issuedInputRevision <= 0 || issuedCommittedTick <= 0)
+        {
+            throw new InvalidOperationException(
+                $"Command {action} sequence {sequence} lacks its client issue-time evidence.");
+        }
         if (!_observer.TryGetClientAdmission(sequence, out NetworkCommandAdmissionOutcome summary))
         {
             return false;
@@ -1924,6 +1950,8 @@ internal sealed class AcceptanceDriver : ISystem<float>
         {
             Action = action,
             ClientBatchSequence = sequence,
+            IssuedInputRevision = issuedInputRevision,
+            IssuedCommittedTick = issuedCommittedTick,
             ActorCount = summary.ActorCount,
             AdmissionStage = summary.Stage.ToString(),
             AdmissionResult = summary.Result.ToString(),
@@ -1962,6 +1990,8 @@ internal sealed class AcceptanceDriver : ISystem<float>
     {
         _pendingCommandSequence = 0;
         _pendingCommandAction = string.Empty;
+        _pendingCommandIssuedInputRevision = 0;
+        _pendingCommandIssuedCommittedTick = 0;
         _commandActorCount = 0;
         _pendingAdmissionHistory.Clear();
     }

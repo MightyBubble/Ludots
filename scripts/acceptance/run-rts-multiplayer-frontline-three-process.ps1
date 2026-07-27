@@ -781,6 +781,7 @@ function Read-ClientFramebufferPixelEvidence {
     param(
         [Parameter(Mandatory = $true)][System.Collections.IEnumerable]$Screenshots,
         [Parameter(Mandatory = $true)][System.Collections.IEnumerable]$PresentationItems,
+        [Parameter(Mandatory = $true)][System.Collections.IEnumerable]$GameplayItems,
         [Parameter(Mandatory = $true)][System.Collections.IEnumerable]$Requirements,
         [Parameter(Mandatory = $true)][string]$DotnetPath,
         [Parameter(Mandatory = $true)][string]$LauncherAssemblyPath,
@@ -806,6 +807,12 @@ function Read-ClientFramebufferPixelEvidence {
         if ($presentationMatches.Count -ne 1) {
             throw "Client '$processName' has no unique presentation evidence for framebuffer milestone '$milestone'."
         }
+        $gameplayMatches = @($GameplayItems | Where-Object { [string]$_.Name -ceq $processName })
+        if ($gameplayMatches.Count -ne 1) {
+            throw "Client '$processName' has no unique gameplay evidence for framebuffer milestone '$milestone'."
+        }
+        $isWinner = [int]$gameplayMatches[0].Value.seatSlot -eq
+            [int]$gameplayMatches[0].Value.gameplay.winningSideIndex
         $milestoneMatches = @($presentationMatches[0].milestones | Where-Object {
             [string]$_.milestone -ceq $milestone
         })
@@ -815,7 +822,15 @@ function Read-ClientFramebufferPixelEvidence {
 
         $worldEvidence = $milestoneMatches[0].worldEvidence
         $milestoneRequirements = @($allRequirements | Where-Object {
-            @($_.milestones | ForEach-Object { [string]$_ }) -ccontains $milestone
+            $targetsMilestone = @($_.milestones | ForEach-Object { [string]$_ }) -ccontains $milestone
+            $perspective = [string]$_.perspective
+            $targetsPerspective = switch -CaseSensitive ($perspective) {
+                "all" { $true; break }
+                "winner" { $isWinner; break }
+                "loser" { -not $isWinner; break }
+                default { throw "Framebuffer role '$([string]$_.role)' uses unsupported perspective '$perspective'." }
+            }
+            $targetsMilestone -and $targetsPerspective
         })
         if ($milestoneRequirements.Count -eq 0) {
             throw "Client '$processName' framebuffer milestone '$milestone' has no required player-visible role."
@@ -1626,6 +1641,15 @@ function Assert-MeetingBarrierCommandCausality {
         if ($attackCommands.Count -ne 1) {
             throw "Client evidence '$($item.Name)' must contain exactly one attack command."
         }
+        if ($null -eq $attackCommands[0].PSObject.Properties["issuedInputRevision"] -or
+            [long]$attackCommands[0].issuedInputRevision -le 0 -or
+            $null -eq $attackCommands[0].PSObject.Properties["issuedCommittedTick"]) {
+            throw "Client evidence '$($item.Name)' attack command lacks positive client issue-time evidence."
+        }
+        $issuedTick = [int]$attackCommands[0].issuedCommittedTick
+        if ($issuedTick -le 0) {
+            throw "Client evidence '$($item.Name)' attack command has a non-positive client issue tick."
+        }
         $scheduledTransitions = @($attackCommands[0].admissionHistory | Where-Object {
             [string]$_.stage -ceq "NetworkIntake" -and
             [string]$_.result -ceq "NetworkScheduled"
@@ -1638,8 +1662,11 @@ function Assert-MeetingBarrierCommandCausality {
         if ($attackTick -le 0) {
             throw "Client evidence '$($item.Name)' attack command has a non-positive authoritative scheduled tick."
         }
-        if ($attackTick -lt $barrierTick) {
-            throw "Client evidence '$($item.Name)' attack was authoritatively scheduled at tick $attackTick before its local replicated meeting barrier at tick $barrierTick."
+        if ($attackTick -lt $issuedTick) {
+            throw "Client evidence '$($item.Name)' attack was scheduled at tick $attackTick before the client issued it at replicated tick $issuedTick."
+        }
+        if ($issuedTick -lt $barrierTick) {
+            throw "Client evidence '$($item.Name)' issued its attack at replicated tick $issuedTick before its local meeting barrier at tick $barrierTick."
         }
     }
 }
@@ -2538,7 +2565,7 @@ if (-not (Test-Path -LiteralPath $profileFullPath)) {
 }
 
 $profile = Get-Content -LiteralPath $profileFullPath -Raw | ConvertFrom-Json
-if ($profile.schemaVersion -ne 7) {
+if ($profile.schemaVersion -ne 8) {
     throw "Unsupported acceptance profile schemaVersion '$($profile.schemaVersion)'."
 }
 
@@ -2588,9 +2615,11 @@ $framebufferCoveredMilestones = [System.Collections.Generic.HashSet[string]]::ne
 foreach ($requirement in $requiredFramebufferEvidence) {
     $role = [string]$requirement.role
     $template = [string]$requirement.presentationTemplate
+    $perspective = [string]$requirement.perspective
     $milestones = @($requirement.milestones | ForEach-Object { [string]$_ })
-    if ([string]::IsNullOrWhiteSpace($role) -or [string]::IsNullOrWhiteSpace($template)) {
-        throw "Every requiredFramebufferEvidence entry must declare non-empty role and presentationTemplate values."
+    if ([string]::IsNullOrWhiteSpace($role) -or [string]::IsNullOrWhiteSpace($template) -or
+        ($perspective -cne "all" -and $perspective -cne "winner" -and $perspective -cne "loser")) {
+        throw "Every requiredFramebufferEvidence entry must declare non-empty role and presentationTemplate values plus a supported perspective."
     }
     if ($milestones.Count -eq 0 -or @($milestones | Where-Object {
         $_ -cnotmatch '^[A-Za-z0-9._-]+$' -or -not ($configuredScreenshotMilestones -ccontains $_)
@@ -2624,8 +2653,8 @@ foreach ($requirement in $requiredFramebufferEvidence) {
         }
     }
     foreach ($milestone in $milestones) {
-        if (-not $framebufferRequirementKeys.Add("$milestone`n$role")) {
-            throw "requiredFramebufferEvidence duplicates role '$role' for screenshot milestone '$milestone'."
+        if (-not $framebufferRequirementKeys.Add("$milestone`n$perspective`n$role")) {
+            throw "requiredFramebufferEvidence duplicates role '$role' for screenshot milestone '$milestone' perspective '$perspective'."
         }
         [void]$framebufferCoveredMilestones.Add($milestone)
     }
@@ -3150,6 +3179,7 @@ try {
     $clientFramebufferEvidence = @(Read-ClientFramebufferPixelEvidence `
         -Screenshots $screenshotItems `
         -PresentationItems $clientPresentationItems `
+        -GameplayItems $gameplayItems `
         -Requirements $requiredFramebufferEvidence `
         -DotnetPath $dotnet `
         -LauncherAssemblyPath $launcherAssembly `

@@ -112,6 +112,8 @@ internal sealed class AcceptanceCommandEvidence
 {
     public string Action { get; set; } = string.Empty;
     public ulong ClientBatchSequence { get; set; }
+    public long IssuedInputRevision { get; set; }
+    public int IssuedCommittedTick { get; set; }
     public int ActorCount { get; set; }
     public string AdmissionStage { get; set; } = string.Empty;
     public string AdmissionResult { get; set; } = string.Empty;

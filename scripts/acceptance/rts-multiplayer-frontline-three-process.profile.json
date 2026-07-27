@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 7,
+  "schemaVersion": 8,
   "preset": "rts_multiplayer_frontline_three_process_uat_raylib",
   "adapterId": "raylib",
   "buildMode": "auto",
@@ -43,6 +43,7 @@
   "requiredFramebufferEvidence": [
     {
       "role": "commandCore",
+      "perspective": "all",
       "milestones": ["ready"],
       "presentationTemplate": "rts.frontline.core.base",
       "acceptedColors": [
@@ -55,6 +56,7 @@
     },
     {
       "role": "harvesterCargo",
+      "perspective": "all",
       "milestones": ["ready"],
       "presentationTemplate": "rts.frontline.harvester.cargo",
       "acceptedColors": [
@@ -67,6 +69,7 @@
     },
     {
       "role": "infantryBody",
+      "perspective": "all",
       "milestones": ["ready", "completed"],
       "presentationTemplate": "rts.frontline.infantry.body",
       "acceptedColors": [
@@ -79,6 +82,7 @@
     },
     {
       "role": "battleInfantryBodies",
+      "perspective": "all",
       "milestones": ["advancing", "engaging"],
       "presentationTemplate": "rts.frontline.infantry.body",
       "acceptedColors": [
@@ -90,7 +94,21 @@
       "regionMarginRatio": 0.08
     },
     {
+      "role": "damagedCommandCore",
+      "perspective": "winner",
+      "milestones": ["engaging"],
+      "presentationTemplate": "rts.frontline.core.base",
+      "acceptedColors": [
+        { "red": 31, "green": 41, "blue": 48 }
+      ],
+      "maximumChannelDifference": 28,
+      "minimumPixelsPerInstance": 8,
+      "minimumPassingInstances": 1,
+      "regionMarginRatio": 0.08
+    },
+    {
       "role": "crystalField",
+      "perspective": "all",
       "milestones": ["ready", "advancing"],
       "presentationTemplate": "rts.frontline.crystal.center",
       "acceptedColors": [

@@ -27,12 +27,16 @@ function New-Command {
     param(
         [Parameter(Mandatory = $true)][string]$Action,
         [Parameter(Mandatory = $true)][string]$ActorResult,
-        [Parameter(Mandatory = $true)][System.Collections.IEnumerable]$History
+        [Parameter(Mandatory = $true)][System.Collections.IEnumerable]$History,
+        [long]$IssuedInputRevision = 400,
+        [int]$IssuedCommittedTick = 40
     )
 
     return [pscustomobject]@{
         action = $Action
         clientBatchSequence = 6
+        issuedInputRevision = $IssuedInputRevision
+        issuedCommittedTick = $IssuedCommittedTick
         actorCount = 1
         admissionStage = "Terminal"
         admissionResult = "TerminalCompleted"
@@ -130,10 +134,11 @@ $barrierClients = @(
         Value = [pscustomobject]@{
             gameplay = [pscustomobject]@{ meetingBarrierCommittedTick = 30 }
             commands = @(New-Command -Action "AttackEnemyCore" -ActorResult "Activated" `
+                -IssuedInputRevision 301 -IssuedCommittedTick 31 `
                 -History @(
-                    New-Transition -Stage "NetworkIntake" -Result "NetworkScheduled" -Tick 31
-                    New-Transition -Stage "GlobalIntake" -Result "Queued" -Tick 31
-                    New-Transition -Stage "EntityIntake" -Result "Activated" -Tick 32
+                    New-Transition -Stage "NetworkIntake" -Result "NetworkScheduled" -Tick 32
+                    New-Transition -Stage "GlobalIntake" -Result "Queued" -Tick 32
+                    New-Transition -Stage "EntityIntake" -Result "Activated" -Tick 33
                     New-Transition -Stage "Terminal" -Result "TerminalCompleted" -Tick 41
                 ))
         }
@@ -141,13 +146,14 @@ $barrierClients = @(
     [pscustomobject]@{
         Name = "client-b"
         Value = [pscustomobject]@{
-            gameplay = [pscustomobject]@{ meetingBarrierCommittedTick = 35 }
+            gameplay = [pscustomobject]@{ meetingBarrierCommittedTick = 50 }
             commands = @(New-Command -Action "AttackEnemyInfantry" -ActorResult "Activated" `
+                -IssuedInputRevision 501 -IssuedCommittedTick 51 `
                 -History @(
-                    New-Transition -Stage "NetworkIntake" -Result "NetworkScheduled" -Tick 36
-                    New-Transition -Stage "GlobalIntake" -Result "Queued" -Tick 36
-                    New-Transition -Stage "EntityIntake" -Result "Activated" -Tick 37
-                    New-Transition -Stage "Terminal" -Result "TerminalCompleted" -Tick 40
+                    New-Transition -Stage "NetworkIntake" -Result "NetworkScheduled" -Tick 52
+                    New-Transition -Stage "GlobalIntake" -Result "Queued" -Tick 52
+                    New-Transition -Stage "EntityIntake" -Result "Activated" -Tick 53
+                    New-Transition -Stage "Terminal" -Result "TerminalCompleted" -Tick 60
                 ))
         }
     }
@@ -159,18 +165,19 @@ $earlyAttackClients = @(
     [pscustomobject]@{
         Name = "client-b"
         Value = [pscustomobject]@{
-            gameplay = [pscustomobject]@{ meetingBarrierCommittedTick = 35 }
+            gameplay = [pscustomobject]@{ meetingBarrierCommittedTick = 50 }
             commands = @(New-Command -Action "AttackEnemyInfantry" -ActorResult "Activated" `
+                -IssuedInputRevision 490 -IssuedCommittedTick 49 `
                 -History @(
-                    New-Transition -Stage "NetworkIntake" -Result "NetworkScheduled" -Tick 34
-                    New-Transition -Stage "GlobalIntake" -Result "Queued" -Tick 34
-                    New-Transition -Stage "EntityIntake" -Result "Activated" -Tick 36
-                    New-Transition -Stage "Terminal" -Result "TerminalCompleted" -Tick 40
+                    New-Transition -Stage "NetworkIntake" -Result "NetworkScheduled" -Tick 52
+                    New-Transition -Stage "GlobalIntake" -Result "Queued" -Tick 52
+                    New-Transition -Stage "EntityIntake" -Result "Activated" -Tick 53
+                    New-Transition -Stage "Terminal" -Result "TerminalCompleted" -Tick 60
                 ))
         }
     }
 )
-Assert-FailsWith -ExpectedMessage "before its local replicated meeting barrier" -Action {
+Assert-FailsWith -ExpectedMessage "before its local meeting barrier" -Action {
     Assert-MeetingBarrierCommandCausality -ClientItems $earlyAttackClients
 }
 
