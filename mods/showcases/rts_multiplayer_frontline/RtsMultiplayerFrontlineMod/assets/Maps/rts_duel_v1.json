@@ -1,6 +1,6 @@
 {
   "Id": "rts_duel_v1",
-  "VisualHeightmapAsset": "assets/terrain/rts_duel_v1_shoreline.vhtm",
+  "VisualHeightmapAsset": "assets/terrain/rts_duel_v1_flat.vhtm",
   "TerrainPresentation": {
     "Source": "BoardTerrain",
     "BoardName": "default"
@@ -41,7 +41,7 @@
     "FovYDeg": 60
   },
   "Boards": [
-    { "Name": "default", "SpatialType": "HexGrid", "DataFile": "ra2_shoreline.vtxm" }
+    { "Name": "default", "SpatialType": "HexGrid", "DataFile": "rts_duel_v1_flat.vtxm" }
   ],
   "Entities": [
     {
@@ -83,7 +83,7 @@
         "Name": { "Value": "Northern Command Core" },
         "Team": { "Id": 1 },
         "PlayerOwner": { "PlayerId": 1 },
-        "WorldPositionCm": { "Value": { "X": 7000, "Y": 15000 } },
+        "WorldPositionCm": { "Value": { "X": 13000, "Y": 15000 } },
         "ResourceSinkProfile": {
           "ResourceAttribute": "Crystals",
           "DockOffsetXCm": -800,
@@ -98,7 +98,7 @@
         "Name": { "Value": "Northern Harvester A" },
         "Team": { "Id": 1 },
         "PlayerOwner": { "PlayerId": 1 },
-        "WorldPositionCm": { "Value": { "X": 8200, "Y": 14600 } },
+        "WorldPositionCm": { "Value": { "X": 13800, "Y": 14600 } },
         "FrontlineParticipant": { "SideIndex": 0 }
       }
     },
@@ -108,7 +108,7 @@
         "Name": { "Value": "Northern Harvester B" },
         "Team": { "Id": 1 },
         "PlayerOwner": { "PlayerId": 1 },
-        "WorldPositionCm": { "Value": { "X": 8200, "Y": 15400 } },
+        "WorldPositionCm": { "Value": { "X": 13800, "Y": 15400 } },
         "FrontlineParticipant": { "SideIndex": 0 }
       }
     },
@@ -118,7 +118,7 @@
         "Name": { "Value": "Northern Infantry A" },
         "Team": { "Id": 1 },
         "PlayerOwner": { "PlayerId": 1 },
-        "WorldPositionCm": { "Value": { "X": 9300, "Y": 14600 } },
+        "WorldPositionCm": { "Value": { "X": 14400, "Y": 14400 } },
         "FrontlineParticipant": { "SideIndex": 0 }
       }
     },
@@ -128,7 +128,7 @@
         "Name": { "Value": "Northern Infantry B" },
         "Team": { "Id": 1 },
         "PlayerOwner": { "PlayerId": 1 },
-        "WorldPositionCm": { "Value": { "X": 9300, "Y": 15400 } },
+        "WorldPositionCm": { "Value": { "X": 14400, "Y": 15600 } },
         "FrontlineParticipant": { "SideIndex": 0 }
       }
     },
@@ -136,14 +136,14 @@
       "Template": "rts_frontline_crystal_node",
       "Overrides": {
         "Name": { "Value": "Northern Crystal Field" },
-        "WorldPositionCm": { "Value": { "X": 11200, "Y": 15000 } }
+        "WorldPositionCm": { "Value": { "X": 14200, "Y": 15000 } }
       }
     },
     {
       "Template": "rts_frontline_crystal_node",
       "Overrides": {
         "Name": { "Value": "Southern Crystal Field" },
-        "WorldPositionCm": { "Value": { "X": 18800, "Y": 15000 } }
+        "WorldPositionCm": { "Value": { "X": 15800, "Y": 15000 } }
       }
     },
     {
@@ -153,7 +153,7 @@
         "Name": { "Value": "Southern Command Core" },
         "Team": { "Id": 2 },
         "PlayerOwner": { "PlayerId": 2 },
-        "WorldPositionCm": { "Value": { "X": 23000, "Y": 15000 } },
+        "WorldPositionCm": { "Value": { "X": 17000, "Y": 15000 } },
         "ResourceSinkProfile": {
           "ResourceAttribute": "Crystals",
           "DockOffsetXCm": 800,
@@ -168,7 +168,7 @@
         "Name": { "Value": "Southern Harvester A" },
         "Team": { "Id": 2 },
         "PlayerOwner": { "PlayerId": 2 },
-        "WorldPositionCm": { "Value": { "X": 21800, "Y": 14600 } },
+        "WorldPositionCm": { "Value": { "X": 16200, "Y": 14600 } },
         "FrontlineParticipant": { "SideIndex": 1 }
       }
     },
@@ -178,7 +178,7 @@
         "Name": { "Value": "Southern Harvester B" },
         "Team": { "Id": 2 },
         "PlayerOwner": { "PlayerId": 2 },
-        "WorldPositionCm": { "Value": { "X": 21800, "Y": 15400 } },
+        "WorldPositionCm": { "Value": { "X": 16200, "Y": 15400 } },
         "FrontlineParticipant": { "SideIndex": 1 }
       }
     },
@@ -188,7 +188,7 @@
         "Name": { "Value": "Southern Infantry A" },
         "Team": { "Id": 2 },
         "PlayerOwner": { "PlayerId": 2 },
-        "WorldPositionCm": { "Value": { "X": 20700, "Y": 14600 } },
+        "WorldPositionCm": { "Value": { "X": 15600, "Y": 14400 } },
         "FrontlineParticipant": { "SideIndex": 1 }
       }
     },
@@ -198,7 +198,7 @@
         "Name": { "Value": "Southern Infantry B" },
         "Team": { "Id": 2 },
         "PlayerOwner": { "PlayerId": 2 },
-        "WorldPositionCm": { "Value": { "X": 20700, "Y": 15400 } },
+        "WorldPositionCm": { "Value": { "X": 15600, "Y": 15600 } },
         "FrontlineParticipant": { "SideIndex": 1 }
       }
     }
