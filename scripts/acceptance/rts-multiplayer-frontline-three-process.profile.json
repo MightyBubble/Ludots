@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 6,
+  "schemaVersion": 7,
   "preset": "rts_multiplayer_frontline_three_process_uat_raylib",
   "adapterId": "raylib",
   "buildMode": "auto",
@@ -161,8 +161,10 @@
       },
       "distinctEntityLayout": {
         "template": "rts.frontline.infantry.body",
+        "scope": "allVisibleTemplate",
+        "region": "screen",
         "minimumInstances": 2,
-        "minimumWorldSeparationCm": 100,
+        "minimumWorldSeparationSource": "groupMoveTargetLayout.spacingCm",
         "maximumScreenOverlapRatio": 0.5
       }
     },
@@ -193,8 +195,10 @@
       "forbiddenRoles": [],
       "distinctEntityLayout": {
         "template": "rts.frontline.infantry.body",
+        "scope": "allVisibleTemplate",
+        "region": "screen",
         "minimumInstances": 2,
-        "minimumWorldSeparationCm": 100,
+        "minimumWorldSeparationSource": "groupMoveTargetLayout.spacingCm",
         "maximumScreenOverlapRatio": 0.5
       },
       "requireObservedDamage": true
@@ -226,8 +230,10 @@
       "forbiddenRoles": [],
       "distinctEntityLayout": {
         "template": "rts.frontline.infantry.body",
+        "scope": "allVisibleTemplate",
+        "region": "screen",
         "minimumInstances": 2,
-        "minimumWorldSeparationCm": 100,
+        "minimumWorldSeparationSource": "groupMoveTargetLayout.spacingCm",
         "maximumScreenOverlapRatio": 0.5
       },
       "requireObservedDamage": true

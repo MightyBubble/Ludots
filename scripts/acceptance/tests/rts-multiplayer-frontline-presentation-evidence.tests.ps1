@@ -146,6 +146,23 @@ function Assert-FailsWith {
     throw "Expected fixture to fail with '$ExpectedMessage', but it passed."
 }
 
+function New-GroupMoveSourceGraphFixture {
+    param(
+        [Parameter(Mandatory = $true)][string]$Directory,
+        [Parameter(Mandatory = $true)][string]$MappingJson
+    )
+
+    $inputDirectory = Join-Path $Directory "assets\Input"
+    [System.IO.Directory]::CreateDirectory($inputDirectory) | Out-Null
+    [System.IO.File]::WriteAllText(
+        (Join-Path $inputDirectory "input_order_mappings.json"),
+        $MappingJson,
+        [System.Text.UTF8Encoding]::new($false))
+    return [pscustomobject]@{
+        plannedMods = @([pscustomobject]@{ id = "RtsDemoMod"; rootPath = $Directory })
+    }
+}
+
 function New-GameplayItem {
     param(
         [Parameter(Mandatory = $true)][string]$Name,
@@ -375,6 +392,33 @@ $fixtureRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("ludots-rts-world-ev
 [System.IO.Directory]::CreateDirectory($fixtureRoot) | Out-Null
 try {
     $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..\..")).Path
+    $rtsDemoRoot = Join-Path $repoRoot "mods\showcases\rts_demo\RtsDemoMod"
+    $fixtureGroupMoveLayoutEvidence = Resolve-GroupMoveTargetLayoutEvidence -SourceGraph ([pscustomobject]@{
+        plannedMods = @([pscustomobject]@{ id = "RtsDemoMod"; rootPath = $rtsDemoRoot })
+    })
+    $layoutSpacingCm = [int]$fixtureGroupMoveLayoutEvidence.spacingCm
+    if ($layoutSpacingCm -le 0 -or
+        [string]$fixtureGroupMoveLayoutEvidence.source -cne "groupMoveTargetLayout.spacingCm" -or
+        [string]::IsNullOrWhiteSpace([string]$fixtureGroupMoveLayoutEvidence.config.sha256)) {
+        throw "Formal group-move layout evidence did not preserve its positive spacing source and file hash."
+    }
+
+    $invalidLayoutRoot = Join-Path $fixtureRoot "invalid-layout"
+    Assert-FailsWith -ExpectedMessage "must be Grid and contain moveTo exactly once" -Action {
+        Resolve-GroupMoveTargetLayoutEvidence -SourceGraph (New-GroupMoveSourceGraphFixture `
+            -Directory (Join-Path $invalidLayoutRoot "mode") `
+            -MappingJson '{"groupMoveTargetLayout":{"mode":"Circle","spacingCm":140,"orderTypeKeys":["moveTo"]}}')
+    }
+    Assert-FailsWith -ExpectedMessage "must be Grid and contain moveTo exactly once" -Action {
+        Resolve-GroupMoveTargetLayoutEvidence -SourceGraph (New-GroupMoveSourceGraphFixture `
+            -Directory (Join-Path $invalidLayoutRoot "order") `
+            -MappingJson '{"groupMoveTargetLayout":{"mode":"Grid","spacingCm":140,"orderTypeKeys":["attackTarget"]}}')
+    }
+    Assert-FailsWith -ExpectedMessage "must be a positive finite integer" -Action {
+        Resolve-GroupMoveTargetLayoutEvidence -SourceGraph (New-GroupMoveSourceGraphFixture `
+            -Directory (Join-Path $invalidLayoutRoot "spacing") `
+            -MappingJson '{"groupMoveTargetLayout":{"mode":"Grid","spacingCm":0,"orderTypeKeys":["moveTo"]}}')
+    }
     $dotnetPath = Get-DotnetCommand
     $launcherProject = Join-Path $repoRoot "src\Tools\Ludots.Launcher.Cli\Ludots.Launcher.Cli.csproj"
     $launcherAssemblyPath = Join-Path $repoRoot "src\Tools\Ludots.Launcher.Cli\bin\Release\net8.0\Ludots.Launcher.Cli.dll"
@@ -507,61 +551,109 @@ try {
     )
     Assert-FailsWith -ExpectedMessage "did not visibly move" -Action {
         Assert-ClientWorldPresentationEvidence -PresentationItems $notMoved -GameplayItems $gameplayItems `
-            -Requirements @(New-AdvancingRule)
+            -Requirements @(New-AdvancingRule) -GroupMoveLayoutEvidence $fixtureGroupMoveLayoutEvidence
     }
 
     $distinctLayoutRule = New-AdvancingRule
     $distinctLayoutRule | Add-Member -NotePropertyName distinctEntityLayout -NotePropertyValue ([pscustomobject]@{
         template = "rts.frontline.infantry.body"
+        scope = "allVisibleTemplate"
+        region = "screen"
         minimumInstances = 2
-        minimumWorldSeparationCm = 100
+        minimumWorldSeparationSource = "groupMoveTargetLayout.spacingCm"
         maximumScreenOverlapRatio = 0.5
     })
     $worldOverlap = @(
         New-PresentationItem -ProcessName "client-a" -Milestone "advancing" -CameraXCm 14700 -CameraYCm 15000 -Instances @(
             New-WorldInstance -OwnerStableId 101 -VisualStableId 1001 -Template "rts.frontline.infantry.body" -XCm 12000 -YCm 15000 -ScreenLeftPx 100
-            New-WorldInstance -OwnerStableId 102 -VisualStableId 1002 -Template "rts.frontline.infantry.body" -XCm 12000 -YCm 15000 -ScreenLeftPx 140
+            New-WorldInstance -OwnerStableId 102 -VisualStableId 1002 -Template "rts.frontline.infantry.body" -XCm (12000 + $layoutSpacingCm - 1) -YCm 15000 -ScreenLeftPx 140
         )
         New-PresentationItem -ProcessName "client-b" -Milestone "advancing" -CameraXCm 15300 -CameraYCm 15000 -Instances @(
             New-WorldInstance -OwnerStableId 201 -VisualStableId 2001 -Template "rts.frontline.infantry.body" -XCm 18000 -YCm 15000 -ScreenLeftPx 100
-            New-WorldInstance -OwnerStableId 202 -VisualStableId 2002 -Template "rts.frontline.infantry.body" -XCm 18140 -YCm 15000 -ScreenLeftPx 140
+            New-WorldInstance -OwnerStableId 202 -VisualStableId 2002 -Template "rts.frontline.infantry.body" -XCm (18000 + $layoutSpacingCm) -YCm 15000 -ScreenLeftPx 140
         )
     )
     Assert-FailsWith -ExpectedMessage "overlaps 'rts.frontline.infantry.body' entities '101' and '102' in the world" -Action {
         Assert-ClientWorldPresentationEvidence -PresentationItems $worldOverlap -GameplayItems $gameplayItems `
-            -Requirements @($distinctLayoutRule)
+            -Requirements @($distinctLayoutRule) -GroupMoveLayoutEvidence $fixtureGroupMoveLayoutEvidence
     }
 
     $screenOverlap = @(
         New-PresentationItem -ProcessName "client-a" -Milestone "advancing" -CameraXCm 14700 -CameraYCm 15000 -Instances @(
             New-WorldInstance -OwnerStableId 101 -VisualStableId 1001 -Template "rts.frontline.infantry.body" -XCm 12000 -YCm 15000
-            New-WorldInstance -OwnerStableId 102 -VisualStableId 1002 -Template "rts.frontline.infantry.body" -XCm 12140 -YCm 15000 -ScreenLeftPx 102.4
+            New-WorldInstance -OwnerStableId 102 -VisualStableId 1002 -Template "rts.frontline.infantry.body" -XCm (12000 + $layoutSpacingCm) -YCm 15000 -ScreenLeftPx 102.4
         )
         New-PresentationItem -ProcessName "client-b" -Milestone "advancing" -CameraXCm 15300 -CameraYCm 15000 -Instances @(
             New-WorldInstance -OwnerStableId 201 -VisualStableId 2001 -Template "rts.frontline.infantry.body" -XCm 18000 -YCm 15000 -ScreenLeftPx 100
-            New-WorldInstance -OwnerStableId 202 -VisualStableId 2002 -Template "rts.frontline.infantry.body" -XCm 18140 -YCm 15000 -ScreenLeftPx 140
+            New-WorldInstance -OwnerStableId 202 -VisualStableId 2002 -Template "rts.frontline.infantry.body" -XCm (18000 + $layoutSpacingCm) -YCm 15000 -ScreenLeftPx 140
         )
     )
     Assert-FailsWith -ExpectedMessage "overlaps 'rts.frontline.infantry.body' entities '101' and '102' on screen" -Action {
         Assert-ClientWorldPresentationEvidence -PresentationItems $screenOverlap -GameplayItems $gameplayItems `
-            -Requirements @($distinctLayoutRule)
+            -Requirements @($distinctLayoutRule) -GroupMoveLayoutEvidence $fixtureGroupMoveLayoutEvidence
+    }
+
+    $emptyScreenBox = @(
+        New-PresentationItem -ProcessName "client-a" -Milestone "advancing" -CameraXCm 14700 -CameraYCm 15000 -Instances @(
+            New-WorldInstance -OwnerStableId 101 -VisualStableId 1001 -Template "rts.frontline.infantry.body" -XCm 12000 -YCm 15000
+            New-WorldInstance -OwnerStableId 102 -VisualStableId 1002 -Template "rts.frontline.infantry.body" -XCm (12000 + $layoutSpacingCm) -YCm 15000 -ScreenLeftPx 140 -ShortEdgePx 0
+        )
+        New-PresentationItem -ProcessName "client-b" -Milestone "advancing" -CameraXCm 15300 -CameraYCm 15000 -Instances @(
+            New-WorldInstance -OwnerStableId 201 -VisualStableId 2001 -Template "rts.frontline.infantry.body" -XCm 18000 -YCm 15000
+            New-WorldInstance -OwnerStableId 202 -VisualStableId 2002 -Template "rts.frontline.infantry.body" -XCm (18000 + $layoutSpacingCm) -YCm 15000 -ScreenLeftPx 140
+        )
+    )
+    Assert-FailsWith -ExpectedMessage "non-finite or empty screen box" -Action {
+        Assert-ClientWorldPresentationEvidence -PresentationItems $emptyScreenBox -GameplayItems $gameplayItems `
+            -Requirements @($distinctLayoutRule) -GroupMoveLayoutEvidence $fixtureGroupMoveLayoutEvidence
+    }
+
+    $nonFiniteScreenBox = @(
+        New-PresentationItem -ProcessName "client-a" -Milestone "advancing" -CameraXCm 14700 -CameraYCm 15000 -Instances @(
+            New-WorldInstance -OwnerStableId 101 -VisualStableId 1001 -Template "rts.frontline.infantry.body" -XCm 12000 -YCm 15000
+            New-WorldInstance -OwnerStableId 102 -VisualStableId 1002 -Template "rts.frontline.infantry.body" -XCm (12000 + $layoutSpacingCm) -YCm 15000 -ScreenLeftPx ([double]::NaN)
+        )
+        New-PresentationItem -ProcessName "client-b" -Milestone "advancing" -CameraXCm 15300 -CameraYCm 15000 -Instances @(
+            New-WorldInstance -OwnerStableId 201 -VisualStableId 2001 -Template "rts.frontline.infantry.body" -XCm 18000 -YCm 15000
+            New-WorldInstance -OwnerStableId 202 -VisualStableId 2002 -Template "rts.frontline.infantry.body" -XCm (18000 + $layoutSpacingCm) -YCm 15000 -ScreenLeftPx 140
+        )
+    )
+    Assert-FailsWith -ExpectedMessage "non-finite or empty screen box" -Action {
+        Assert-ClientWorldPresentationEvidence -PresentationItems $nonFiniteScreenBox -GameplayItems $gameplayItems `
+            -Requirements @($distinctLayoutRule) -GroupMoveLayoutEvidence $fixtureGroupMoveLayoutEvidence
     }
 
     $distinctLayout = @(
         New-PresentationItem -ProcessName "client-a" -Milestone "advancing" -CameraXCm 14700 -CameraYCm 15000 -Instances @(
             New-WorldInstance -OwnerStableId 101 -VisualStableId 1001 -Template "rts.frontline.infantry.body" -XCm 12000 -YCm 15000 -ScreenLeftPx 100
-            New-WorldInstance -OwnerStableId 102 -VisualStableId 1002 -Template "rts.frontline.infantry.body" -XCm 12140 -YCm 15000 -ScreenLeftPx 140
+            New-WorldInstance -OwnerStableId 102 -VisualStableId 1002 -Template "rts.frontline.infantry.body" -XCm (12000 + $layoutSpacingCm) -YCm 15000 -ScreenLeftPx 140
         )
         New-PresentationItem -ProcessName "client-b" -Milestone "advancing" -CameraXCm 15300 -CameraYCm 15000 -Instances @(
             New-WorldInstance -OwnerStableId 201 -VisualStableId 2001 -Template "rts.frontline.infantry.body" -XCm 18000 -YCm 15000 -ScreenLeftPx 100
-            New-WorldInstance -OwnerStableId 202 -VisualStableId 2002 -Template "rts.frontline.infantry.body" -XCm 18140 -YCm 15000 -ScreenLeftPx 140
+            New-WorldInstance -OwnerStableId 202 -VisualStableId 2002 -Template "rts.frontline.infantry.body" -XCm (18000 + $layoutSpacingCm) -YCm 15000 -ScreenLeftPx 140
         )
     )
     $distinctVerified = @(Assert-ClientWorldPresentationEvidence -PresentationItems $distinctLayout `
-        -GameplayItems $gameplayItems -Requirements @($distinctLayoutRule))
+        -GameplayItems $gameplayItems -Requirements @($distinctLayoutRule) `
+        -GroupMoveLayoutEvidence $fixtureGroupMoveLayoutEvidence)
     if ($distinctVerified.Count -ne 2 -or
         @($distinctVerified | Where-Object { [int]$_.distinctEntityLayout.instanceCount -ne 2 }).Count -ne 0) {
         throw "Distinct infantry layout fixture did not preserve two independently visible entities per client."
+    }
+
+    $stableScopeRule = New-AdvancingRule
+    $stableScopeRule | Add-Member -NotePropertyName distinctEntityLayout -NotePropertyValue ([pscustomobject]@{
+        template = "rts.frontline.infantry.body"
+        scope = "stableEntitySources"
+        region = "screen"
+        sources = @("selectedInfantry")
+        minimumInstances = 2
+        minimumWorldSeparationSource = "groupMoveTargetLayout.spacingCm"
+        maximumScreenOverlapRatio = 0.5
+    })
+    Assert-FailsWith -ExpectedMessage "distinct layout requires at least 2" -Action {
+        Assert-ClientWorldPresentationEvidence -PresentationItems $distinctLayout -GameplayItems $gameplayItems `
+            -Requirements @($stableScopeRule) -GroupMoveLayoutEvidence $fixtureGroupMoveLayoutEvidence
     }
 
     # Scenario: The correct template in the wrong battlefield region fails.
@@ -586,7 +678,7 @@ try {
     )
     Assert-FailsWith -ExpectedMessage "wrong 'meeting' region" -Action {
         Assert-ClientWorldPresentationEvidence -PresentationItems $wrongRegion -GameplayItems $gameplayItems `
-            -Requirements @($wrongRegionRule)
+            -Requirements @($wrongRegionRule) -GroupMoveLayoutEvidence $fixtureGroupMoveLayoutEvidence
     }
 
     $completedRule = New-CompletedRule
@@ -608,7 +700,7 @@ try {
     )
     Assert-FailsWith -ExpectedMessage "camera is outside" -Action {
         Assert-ClientWorldPresentationEvidence -PresentationItems $wrongCamera -GameplayItems $gameplayItems `
-            -Requirements @($completedRule)
+            -Requirements @($completedRule) -GroupMoveLayoutEvidence $fixtureGroupMoveLayoutEvidence
     }
 
     # Scenario: A losing core still visible to either client fails.
@@ -621,7 +713,7 @@ try {
     )
     Assert-FailsWith -ExpectedMessage "still shows forbidden role" -Action {
         Assert-ClientWorldPresentationEvidence -PresentationItems $coreStillVisible -GameplayItems $gameplayItems `
-            -Requirements @($completedRule)
+            -Requirements @($completedRule) -GroupMoveLayoutEvidence $fixtureGroupMoveLayoutEvidence
     }
 
     # Scenario: A missing core without infantry witnesses in the final region fails.
@@ -631,7 +723,7 @@ try {
     )
     Assert-FailsWith -ExpectedMessage "has no same-frame stable entity" -Action {
         Assert-ClientWorldPresentationEvidence -PresentationItems $noInfantryWitness -GameplayItems $gameplayItems `
-            -Requirements @($completedRule)
+            -Requirements @($completedRule) -GroupMoveLayoutEvidence $fixtureGroupMoveLayoutEvidence
     }
 
     # Scenario: A losing-side infantry cannot stand in for the winning witness recorded by gameplay.
@@ -643,17 +735,19 @@ try {
     )
     Assert-FailsWith -ExpectedMessage "has no same-frame stable entity" -Action {
         Assert-ClientWorldPresentationEvidence -PresentationItems $wrongWinnerIdentity -GameplayItems $gameplayItems `
-            -Requirements @($completedRule)
+            -Requirements @($completedRule) -GroupMoveLayoutEvidence $fixtureGroupMoveLayoutEvidence
     }
 
     # Scenario: One correct client cannot substitute for two correct client views.
     Assert-FailsWith -ExpectedMessage "camera is outside" -Action {
         Assert-ClientWorldPresentationEvidence -PresentationItems @($clientAComplete, $wrongCamera[1]) `
-            -GameplayItems $gameplayItems -Requirements @($completedRule)
+            -GameplayItems $gameplayItems -Requirements @($completedRule) `
+            -GroupMoveLayoutEvidence $fixtureGroupMoveLayoutEvidence
     }
     $verified = @(Assert-ClientWorldPresentationEvidence `
         -PresentationItems @($clientAComplete, $clientBComplete) `
-        -GameplayItems $gameplayItems -Requirements @($completedRule))
+        -GameplayItems $gameplayItems -Requirements @($completedRule) `
+        -GroupMoveLayoutEvidence $fixtureGroupMoveLayoutEvidence)
     if ($verified.Count -ne 2 -or @($verified.process | Sort-Object -Unique).Count -ne 2) {
         throw "Passing world fixture did not prove both client views."
     }

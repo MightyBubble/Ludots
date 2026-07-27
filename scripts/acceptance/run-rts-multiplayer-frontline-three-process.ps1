@@ -1600,6 +1600,47 @@ function Assert-ClientCommandAdmissionEvidence {
     }
 }
 
+function Assert-MeetingBarrierCommandCausality {
+    param(
+        [Parameter(Mandatory = $true)][System.Collections.IEnumerable]$ClientItems
+    )
+
+    $clients = @($ClientItems)
+    if ($clients.Count -ne 2) {
+        throw "Meeting-barrier causality requires exactly two replicated client artifacts."
+    }
+
+    $latestBarrierTick = 0
+    foreach ($item in $clients) {
+        $gameplay = $item.Value.gameplay
+        if ($null -eq $gameplay.PSObject.Properties["meetingBarrierCommittedTick"]) {
+            throw "Client evidence '$($item.Name)' lacks meetingBarrierCommittedTick."
+        }
+        $barrierTick = [int]$gameplay.meetingBarrierCommittedTick
+        if ($barrierTick -le 0) {
+            throw "Client evidence '$($item.Name)' has a non-positive meeting barrier tick."
+        }
+        $latestBarrierTick = [Math]::Max($latestBarrierTick, $barrierTick)
+    }
+
+    foreach ($item in $clients) {
+        $attackCommands = @($item.Value.commands | Where-Object {
+            [string]$_.action -ceq "AttackEnemyInfantry" -or
+            [string]$_.action -ceq "AttackEnemyCore"
+        })
+        if ($attackCommands.Count -ne 1 -or
+            $null -eq $attackCommands[0].PSObject.Properties["observedCommittedTick"]) {
+            throw "Client evidence '$($item.Name)' must contain one attack command with an observed committed tick."
+        }
+        $attackTick = [int]$attackCommands[0].observedCommittedTick
+        if ($attackTick -lt $latestBarrierTick) {
+            throw "Client evidence '$($item.Name)' attacked at committed tick $attackTick before both commanders crossed the meeting barrier at tick $latestBarrierTick."
+        }
+    }
+
+    return $latestBarrierTick
+}
+
 function Assert-GameplayEvidence {
     param(
         [Parameter(Mandatory = $true)][System.Collections.IEnumerable]$Items,
@@ -2007,6 +2048,7 @@ function Assert-GameplayEvidence {
     if ($winnerClientCount -ne 1 -or $loserClientCount -ne 1) {
         throw "Client evidence must prove one core attack and one opposing-infantry attack."
     }
+    [void](Assert-MeetingBarrierCommandCausality -ClientItems $clients)
 }
 
 function Get-WorldEvidenceDistanceSquared {
@@ -2074,11 +2116,62 @@ function Get-RequiredPresentationStableIds {
     return @($ids)
 }
 
+function Resolve-GroupMoveTargetLayoutEvidence {
+    param(
+        [Parameter(Mandatory = $true)]$SourceGraph
+    )
+
+    $rtsDemoMods = @($SourceGraph.plannedMods | Where-Object { [string]$_.id -ceq "RtsDemoMod" })
+    if ($rtsDemoMods.Count -ne 1) {
+        throw "Launcher graph must contain exactly one RtsDemoMod for group-move layout evidence; observed $($rtsDemoMods.Count)."
+    }
+
+    $mappingPath = [System.IO.Path]::GetFullPath((Join-Path `
+        ([string]$rtsDemoMods[0].rootPath) "assets\Input\input_order_mappings.json"))
+    if (-not (Test-Path -LiteralPath $mappingPath -PathType Leaf)) {
+        throw "Formal RTS input mapping is missing: $mappingPath"
+    }
+    try {
+        $mapping = Get-Content -LiteralPath $mappingPath -Raw | ConvertFrom-Json
+    }
+    catch {
+        throw "Formal RTS input mapping is not valid JSON: $mappingPath. $($_.Exception.Message)"
+    }
+    if ($null -eq $mapping.PSObject.Properties["groupMoveTargetLayout"] -or
+        $null -eq $mapping.groupMoveTargetLayout) {
+        throw "Formal RTS input mapping lacks groupMoveTargetLayout."
+    }
+
+    $layout = $mapping.groupMoveTargetLayout
+    $orderTypeKeys = @($layout.orderTypeKeys | ForEach-Object { [string]$_ })
+    $uniqueOrderTypeKeys = @($orderTypeKeys | Sort-Object -Unique -CaseSensitive)
+    if ([string]$layout.mode -cne "Grid" -or
+        $orderTypeKeys.Count -ne $uniqueOrderTypeKeys.Count -or
+        -not ($orderTypeKeys -ccontains "moveTo")) {
+        throw "Formal RTS groupMoveTargetLayout must be Grid and contain moveTo exactly once."
+    }
+    $spacingCm = [double]$layout.spacingCm
+    if ([double]::IsNaN($spacingCm) -or [double]::IsInfinity($spacingCm) -or
+        $spacingCm -le 0 -or $spacingCm -ne [Math]::Floor($spacingCm)) {
+        throw "Formal RTS groupMoveTargetLayout.spacingCm must be a positive finite integer."
+    }
+
+    return [pscustomobject]@{
+        source = "groupMoveTargetLayout.spacingCm"
+        modId = "RtsDemoMod"
+        mode = [string]$layout.mode
+        orderTypeKeys = $orderTypeKeys
+        spacingCm = [int64]$spacingCm
+        config = Get-FileEvidence -Path $mappingPath
+    }
+}
+
 function Assert-ClientWorldPresentationEvidence {
     param(
         [Parameter(Mandatory = $true)][System.Collections.IEnumerable]$PresentationItems,
         [Parameter(Mandatory = $true)][System.Collections.IEnumerable]$GameplayItems,
-        [Parameter(Mandatory = $true)][System.Collections.IEnumerable]$Requirements
+        [Parameter(Mandatory = $true)][System.Collections.IEnumerable]$Requirements,
+        [Parameter(Mandatory = $true)]$GroupMoveLayoutEvidence
     )
 
     $presentations = @($PresentationItems)
@@ -2173,18 +2266,66 @@ function Assert-ClientWorldPresentationEvidence {
                 $null -ne $rule.distinctEntityLayout) {
                 $layout = $rule.distinctEntityLayout
                 $layoutTemplate = [string]$layout.template
-                $layoutInstances = @($document.instances | Where-Object {
+                $templateInstances = @($document.instances | Where-Object {
                     [string]$_.template -ceq $layoutTemplate
                 })
+                $layoutScope = [string]$layout.scope
+                $layoutRegion = [string]$layout.region
+                $layoutInstances = if ($layoutScope -ceq "allVisibleTemplate") {
+                    @($templateInstances)
+                }
+                elseif ($layoutScope -ceq "stableEntitySources") {
+                    $layoutStableIds = @($layout.sources | ForEach-Object {
+                        Get-RequiredPresentationStableIds -Gameplay $gameplay -Source ([string]$_) `
+                            -ProcessName $processName -Milestone $milestone -Role "distinctEntityLayout"
+                    } | Sort-Object -Unique)
+                    foreach ($stableId in $layoutStableIds) {
+                        $stableMatches = @($templateInstances | Where-Object { [int]$_.ownerStableId -eq [int]$stableId })
+                        if ($stableMatches.Count -ne 1) {
+                            throw "Client '$processName' screenshot milestone '$milestone' cannot bind distinct-layout stable entity '$stableId' exactly once."
+                        }
+                    }
+                    @($templateInstances | Where-Object { $layoutStableIds -contains [int]$_.ownerStableId })
+                }
+                else {
+                    throw "Client '$processName' screenshot milestone '$milestone' uses unsupported distinct layout scope '$layoutScope'."
+                }
+                $layoutInstances = @($layoutInstances)
+                if ($layoutRegion -ceq "anchor") {
+                    $layoutInstances = @($layoutInstances | Where-Object {
+                        (Get-WorldEvidenceDistanceSquared `
+                            -LeftX ([int64]$_.worldXCm) -LeftY ([int64]$_.worldYCm) `
+                            -RightX ([int64]$anchor.xCm) -RightY ([int64]$anchor.yCm)) -le $positionToleranceSquared
+                    })
+                }
+                elseif ($layoutRegion -cne "screen") {
+                    throw "Client '$processName' screenshot milestone '$milestone' uses unsupported distinct layout region '$layoutRegion'."
+                }
                 $minimumInstances = [int]$layout.minimumInstances
                 if ($layoutInstances.Count -lt $minimumInstances) {
                     throw "Client '$processName' screenshot milestone '$milestone' has $($layoutInstances.Count) " +
                         "'$layoutTemplate' entities; distinct layout requires at least $minimumInstances."
                 }
 
-                $minimumWorldSeparationCm = [int64]$layout.minimumWorldSeparationCm
+                if ([string]$layout.minimumWorldSeparationSource -cne [string]$GroupMoveLayoutEvidence.source) {
+                    throw "Client '$processName' screenshot milestone '$milestone' distinct layout does not use the formal group-move spacing source."
+                }
+                $minimumWorldSeparationCm = [int64]$GroupMoveLayoutEvidence.spacingCm
                 $minimumWorldSeparationSquared = $minimumWorldSeparationCm * $minimumWorldSeparationCm
                 $maximumScreenOverlapRatio = [double]$layout.maximumScreenOverlapRatio
+                foreach ($instance in $layoutInstances) {
+                    $screenLeft = [double]$instance.screenLeftPx
+                    $screenTop = [double]$instance.screenTopPx
+                    $screenRight = [double]$instance.screenRightPx
+                    $screenBottom = [double]$instance.screenBottomPx
+                    if ([double]::IsNaN($screenLeft) -or [double]::IsInfinity($screenLeft) -or
+                        [double]::IsNaN($screenTop) -or [double]::IsInfinity($screenTop) -or
+                        [double]::IsNaN($screenRight) -or [double]::IsInfinity($screenRight) -or
+                        [double]::IsNaN($screenBottom) -or [double]::IsInfinity($screenBottom) -or
+                        $screenRight -le $screenLeft -or $screenBottom -le $screenTop) {
+                        throw "Client '$processName' screenshot milestone '$milestone' distinct layout contains a non-finite or empty screen box."
+                    }
+                }
                 for ($leftIndex = 0; $leftIndex -lt $layoutInstances.Count; $leftIndex++) {
                     $left = $layoutInstances[$leftIndex]
                     for ($rightIndex = $leftIndex + 1; $rightIndex -lt $layoutInstances.Count; $rightIndex++) {
@@ -2213,7 +2354,13 @@ function Assert-ClientWorldPresentationEvidence {
                         $rightArea = ([double]$right.screenRightPx - [double]$right.screenLeftPx) *
                             ([double]$right.screenBottomPx - [double]$right.screenTopPx)
                         $smallerArea = [Math]::Min($leftArea, $rightArea)
+                        if ($smallerArea -le 0 -or [double]::IsNaN($smallerArea) -or [double]::IsInfinity($smallerArea)) {
+                            throw "Client '$processName' screenshot milestone '$milestone' distinct layout has an invalid overlap denominator."
+                        }
                         $screenOverlapRatio = $intersectionArea / $smallerArea
+                        if ([double]::IsNaN($screenOverlapRatio) -or [double]::IsInfinity($screenOverlapRatio)) {
+                            throw "Client '$processName' screenshot milestone '$milestone' distinct layout produced a non-finite screen overlap ratio."
+                        }
                         if ($screenOverlapRatio -gt $maximumScreenOverlapRatio) {
                             throw "Client '$processName' screenshot milestone '$milestone' overlaps '$layoutTemplate' entities " +
                                 "'$([int]$left.ownerStableId)' and '$([int]$right.ownerStableId)' on screen " +
@@ -2224,7 +2371,10 @@ function Assert-ClientWorldPresentationEvidence {
 
                 $distinctLayoutResult = [ordered]@{
                     template = $layoutTemplate
+                    scope = $layoutScope
+                    region = $layoutRegion
                     instanceCount = $layoutInstances.Count
+                    minimumWorldSeparationSource = [string]$GroupMoveLayoutEvidence.source
                     minimumWorldSeparationCm = $minimumWorldSeparationCm
                     maximumScreenOverlapRatio = $maximumScreenOverlapRatio
                 }
@@ -2372,7 +2522,7 @@ if (-not (Test-Path -LiteralPath $profileFullPath)) {
 }
 
 $profile = Get-Content -LiteralPath $profileFullPath -Raw | ConvertFrom-Json
-if ($profile.schemaVersion -ne 6) {
+if ($profile.schemaVersion -ne 7) {
     throw "Unsupported acceptance profile schemaVersion '$($profile.schemaVersion)'."
 }
 
@@ -2563,11 +2713,31 @@ foreach ($requirement in $requiredWorldEvidence) {
     if ($null -ne $requirement.PSObject.Properties["distinctEntityLayout"] -and
         $null -ne $requirement.distinctEntityLayout) {
         $layout = $requirement.distinctEntityLayout
+        $layoutScope = [string]$layout.scope
+        $layoutRegion = [string]$layout.region
+        $maximumScreenOverlapRatio = [double]$layout.maximumScreenOverlapRatio
+        $layoutSources = if ($null -ne $layout.PSObject.Properties["sources"]) {
+            @($layout.sources | ForEach-Object { [string]$_ })
+        }
+        else {
+            @()
+        }
         if ([string]::IsNullOrWhiteSpace([string]$layout.template) -or
             [int]$layout.minimumInstances -lt 2 -or
-            [int]$layout.minimumWorldSeparationCm -le 0 -or
-            [double]$layout.maximumScreenOverlapRatio -lt 0 -or
-            [double]$layout.maximumScreenOverlapRatio -ge 1) {
+            [string]$layout.minimumWorldSeparationSource -cne "groupMoveTargetLayout.spacingCm" -or
+            $null -ne $layout.PSObject.Properties["minimumWorldSeparationCm"] -or
+            ($layoutScope -cne "allVisibleTemplate" -and $layoutScope -cne "stableEntitySources") -or
+            ($layoutRegion -cne "screen" -and $layoutRegion -cne "anchor") -or
+            ($layoutScope -ceq "allVisibleTemplate" -and $layoutSources.Count -ne 0) -or
+            ($layoutScope -ceq "stableEntitySources" -and $layoutSources.Count -eq 0) -or
+            @($layoutSources | Where-Object {
+                $_ -cne "selectedInfantry" -and $_ -cne "attackTarget" -and
+                $_ -cne "defeatedCore" -and $_ -cne "completedWinnerInfantry"
+            }).Count -ne 0 -or
+            [double]::IsNaN($maximumScreenOverlapRatio) -or
+            [double]::IsInfinity($maximumScreenOverlapRatio) -or
+            $maximumScreenOverlapRatio -lt 0 -or
+            $maximumScreenOverlapRatio -ge 1) {
             throw "requiredWorldEvidence '$milestone/$perspective' has invalid distinctEntityLayout."
         }
     }
@@ -2628,7 +2798,7 @@ $exitCode = 0
 $failureMessage = $null
 $verificationReached = $false
 $manifest = [ordered]@{
-    schemaVersion = 9
+    schemaVersion = 10
     acceptanceScope = "three-process-player-input-to-authoritative-frontline-outcome"
     status = "preparing"
     startedAtUtc = [DateTime]::UtcNow.ToString("O")
@@ -2639,6 +2809,7 @@ $manifest = [ordered]@{
         profile = Get-FileEvidence -Path $profileFullPath
         acceptancePlan = $null
         frontlineConfig = $null
+        groupMoveLayoutConfig = $null
         networkConfig = $null
         sourceLaunchGraph = $null
         roleArtifacts = @()
@@ -2658,6 +2829,7 @@ $manifest = [ordered]@{
             clientTwo = $clientTwoFaultSeedValue
         }
         faultConfiguration = $null
+        groupMoveTargetLayout = $null
         clientScreenshots = @(
             [ordered]@{
                 process = $clientAScreenshotCapture.ProcessName
@@ -2743,6 +2915,15 @@ try {
     $sourceGraphEvidencePath = Join-Path $artifactDirectoryValue "launcher-resolved.graph.json"
     Copy-Item -LiteralPath $sourceGraphPath -Destination $sourceGraphEvidencePath
     $sourceGraph = Get-Content -LiteralPath $sourceGraphPath -Raw | ConvertFrom-Json
+    $groupMoveLayoutEvidence = Resolve-GroupMoveTargetLayoutEvidence -SourceGraph $sourceGraph
+    $manifest.inputs.groupMoveLayoutConfig = $groupMoveLayoutEvidence.config
+    $manifest.effectiveParameters.groupMoveTargetLayout = [ordered]@{
+        source = [string]$groupMoveLayoutEvidence.source
+        modId = [string]$groupMoveLayoutEvidence.modId
+        mode = [string]$groupMoveLayoutEvidence.mode
+        orderTypeKeys = @($groupMoveLayoutEvidence.orderTypeKeys)
+        spacingCm = [int64]$groupMoveLayoutEvidence.spacingCm
+    }
     $frontlineMods = @($sourceGraph.plannedMods | Where-Object { [string]$_.id -ceq "RtsMultiplayerFrontlineMod" })
     if ($frontlineMods.Count -ne 1) {
         throw "Launcher graph must contain exactly one RtsMultiplayerFrontlineMod; observed $($frontlineMods.Count)."
@@ -2968,7 +3149,8 @@ try {
     Assert-ClientFramebufferPixelEvidencePassed -Items $clientFramebufferEvidence
     $manifest.clientWorldEvidence = @(
         Assert-ClientWorldPresentationEvidence -PresentationItems $clientPresentationItems `
-            -GameplayItems $gameplayItems -Requirements $requiredWorldEvidence
+            -GameplayItems $gameplayItems -Requirements $requiredWorldEvidence `
+            -GroupMoveLayoutEvidence $groupMoveLayoutEvidence
     )
     $manifest.status = "verification-complete"
     $verificationReached = $true

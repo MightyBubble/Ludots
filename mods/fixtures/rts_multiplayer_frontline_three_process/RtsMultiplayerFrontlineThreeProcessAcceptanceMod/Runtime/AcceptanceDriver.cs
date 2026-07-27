@@ -113,6 +113,7 @@ internal sealed class AcceptanceDriver : ISystem<float>
     private Entity _trackedHarvester = Entity.Null;
     private Entity _attackTarget = Entity.Null;
     private WorldCmInt2 _meetingPoint;
+    private WorldCmInt2 _opposingMeetingPoint;
     private WorldCmInt2 _siegePoint;
     private WorldCmInt2 _losingCoreLastPosition;
 
@@ -750,7 +751,28 @@ internal sealed class AcceptanceDriver : ISystem<float>
             throw new InvalidOperationException(
                 $"Advancing player evidence requires progress stage Advancing; observed {_progress.Stage}.");
         }
+        if (!TryGetClientMatchState(out FrontlineMatchStateProjection barrierState))
+        {
+            return;
+        }
+        if (barrierState.Phase != FrontlineMatchPhase.InProgress ||
+            barrierState.SideOneConnected == 0 ||
+            barrierState.SideTwoConnected == 0)
+        {
+            throw new InvalidOperationException(
+                "Both connected commanders must remain in an active match while meeting at the frontline.");
+        }
+        if (!HaveExpectedOpposingInfantryReachedMeetingPoint())
+        {
+            return;
+        }
+        if (barrierState.CommittedTick <= 0)
+        {
+            throw new InvalidOperationException(
+                "The frontline meeting barrier requires a positive authoritative committed tick.");
+        }
         _evidence.Gameplay.MoveEndPositions = CaptureSelectedPositions();
+        _evidence.Gameplay.MeetingBarrierCommittedTick = barrierState.CommittedTick;
         _meetingReachedTimestamp = Stopwatch.GetTimestamp();
         CompleteStep("Selected infantry moved to a meeting point derived from the two public crystal fields.");
         Transition(ClientStage.Engaging, AcceptanceProgressStage.Advancing);
@@ -2139,6 +2161,9 @@ internal sealed class AcceptanceDriver : ISystem<float>
         _meetingPoint = new WorldCmInt2(
             checked((int)Math.Round(midpointX - (ux * _plan.Battle.MeetingOffsetCm))),
             checked((int)Math.Round(midpointY - (uy * _plan.Battle.MeetingOffsetCm))));
+        _opposingMeetingPoint = new WorldCmInt2(
+            checked((int)Math.Round(midpointX + (ux * _plan.Battle.MeetingOffsetCm))),
+            checked((int)Math.Round(midpointY + (uy * _plan.Battle.MeetingOffsetCm))));
         _siegePoint = new WorldCmInt2(
             checked((int)Math.Round(far.X + (ux * _plan.Battle.SiegeBeyondFarResourceCm))),
             checked((int)Math.Round(far.Y + (uy * _plan.Battle.SiegeBeyondFarResourceCm))));
@@ -2153,6 +2178,45 @@ internal sealed class AcceptanceDriver : ISystem<float>
             YCm = _siegePoint.Y,
         };
         _battlePointsDerived = true;
+    }
+
+    private bool HaveExpectedOpposingInfantryReachedMeetingPoint()
+    {
+        int expectedCount = _localSideIndex == _plan.Expected.WinningSideIndex
+            ? _plan.Expected.LoserAttackers
+            : _plan.Expected.TrainedInfantryCount;
+        long toleranceSquared =
+            (long)_plan.Battle.ArrivalToleranceCm * _plan.Battle.ArrivalToleranceCm;
+        int reachedCount = 0;
+        foreach (ref Chunk chunk in _world.Query(in ClientInfantryQuery))
+        {
+            ReadOnlySpan<FrontlineParticipant> participants = chunk.GetSpan<FrontlineParticipant>();
+            ReadOnlySpan<WorldPositionCm> positions = chunk.GetSpan<WorldPositionCm>();
+            ReadOnlySpan<ReplicationMirrorIdentity> identities = chunk.GetSpan<ReplicationMirrorIdentity>();
+            foreach (int index in chunk)
+            {
+                if (participants[index].SideIndex == _localSideIndex)
+                {
+                    continue;
+                }
+                if (!identities[index].Handle.IsValid)
+                {
+                    throw new InvalidOperationException(
+                        "Opposing advancing infantry lacks a valid replicated identity.");
+                }
+                if (DistanceSquared(positions[index].ToWorldCmInt2(), _opposingMeetingPoint) <= toleranceSquared)
+                {
+                    reachedCount++;
+                }
+            }
+        }
+
+        if (reachedCount > expectedCount)
+        {
+            throw new InvalidOperationException(
+                $"Observed {reachedCount} opposing infantry at the meeting point; expected {expectedCount}.");
+        }
+        return reachedCount == expectedCount;
     }
 
     private bool AreSelectedActorsNear(WorldCmInt2 destination, int toleranceCm)

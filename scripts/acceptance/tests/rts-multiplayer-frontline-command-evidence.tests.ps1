@@ -25,7 +25,8 @@ function New-Command {
     param(
         [Parameter(Mandatory = $true)][string]$Action,
         [Parameter(Mandatory = $true)][string]$ActorResult,
-        [Parameter(Mandatory = $true)][System.Collections.IEnumerable]$History
+        [Parameter(Mandatory = $true)][System.Collections.IEnumerable]$History,
+        [int]$ObservedCommittedTick = 40
     )
 
     return [pscustomobject]@{
@@ -34,6 +35,7 @@ function New-Command {
         actorCount = 1
         admissionStage = "Terminal"
         admissionResult = "TerminalCompleted"
+        observedCommittedTick = $ObservedCommittedTick
         actorHandles = @("11:1")
         actorAdmissions = @([pscustomobject]@{
             batchIndex = 0
@@ -120,6 +122,32 @@ $duplicateTerminal = New-Command -Action "TrainInfantry" -ActorResult "Activated
 Assert-FailsWith -ExpectedMessage "must contain exactly one scheduled, activated, and terminal transition" -Action {
     Assert-ClientCommandAdmissionEvidence `
         -ClientName "client-a" -Command $duplicateTerminal -ExpectedAction "TrainInfantry" -ExpectedSequence 6
+}
+
+$barrierClients = @(
+    [pscustomobject]@{
+        Name = "client-a"
+        Value = [pscustomobject]@{
+            gameplay = [pscustomobject]@{ meetingBarrierCommittedTick = 30 }
+            commands = @(New-Command -Action "AttackEnemyCore" -ActorResult "Activated" `
+                -History $immediateHistory -ObservedCommittedTick 41)
+        }
+    }
+    [pscustomobject]@{
+        Name = "client-b"
+        Value = [pscustomobject]@{
+            gameplay = [pscustomobject]@{ meetingBarrierCommittedTick = 35 }
+            commands = @(New-Command -Action "AttackEnemyInfantry" -ActorResult "Activated" `
+                -History $immediateHistory -ObservedCommittedTick 40)
+        }
+    }
+)
+[void](Assert-MeetingBarrierCommandCausality -ClientItems $barrierClients)
+
+$earlyAttackClients = @($barrierClients)
+$earlyAttackClients[1].Value.commands[0].observedCommittedTick = 34
+Assert-FailsWith -ExpectedMessage "before both commanders crossed the meeting barrier" -Action {
+    Assert-MeetingBarrierCommandCausality -ClientItems $earlyAttackClients
 }
 
 Write-Output "RTS Frontline command evidence tests passed."

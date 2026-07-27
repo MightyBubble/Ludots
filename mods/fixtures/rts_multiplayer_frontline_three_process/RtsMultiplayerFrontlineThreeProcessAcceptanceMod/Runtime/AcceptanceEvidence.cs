@@ -156,6 +156,7 @@ internal sealed class AcceptanceGameplayEvidence
     public string[] SelectedInfantryHandles { get; set; } = Array.Empty<string>();
     public AcceptancePositionEvidence[] MoveStartPositions { get; set; } = Array.Empty<AcceptancePositionEvidence>();
     public AcceptancePositionEvidence[] MoveEndPositions { get; set; } = Array.Empty<AcceptancePositionEvidence>();
+    public int MeetingBarrierCommittedTick { get; set; } = -1;
     public AcceptanceWorldPointEvidence? MeetingPoint { get; set; }
     public AcceptanceWorldPointEvidence? SiegePoint { get; set; }
     public int InitialVisibleEnemyInfantryCount { get; set; } = -1;

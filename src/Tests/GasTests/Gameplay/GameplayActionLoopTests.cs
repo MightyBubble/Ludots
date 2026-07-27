@@ -8,6 +8,7 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Gameplay.Teams;
 using NUnit.Framework;
 using AuthoringRegistry = Ludots.Core.Config.ComponentRegistry;
@@ -149,6 +150,137 @@ public sealed class GameplayActionLoopTests
                 Assert.That(effects[0].Target, Is.EqualTo(target));
                 Assert.That(effects[0].TemplateId, Is.EqualTo(77));
                 Assert.That(world.Get<DirectAttackState>(actor).CooldownTicks, Is.EqualTo(30));
+            });
+        }
+        finally
+        {
+            TeamManager.RestoreSnapshot(relationships);
+        }
+    }
+
+    [Test]
+    public void DirectAttack_CompletesItsPursuitOrder_AsSoonAsTheTargetEntersRange()
+    {
+        TeamRelationshipSnapshot relationships = TeamManager.CaptureSnapshot();
+        try
+        {
+            TeamManager.Clear();
+            TeamManager.SetRelationshipSymmetric(1, 2, TeamRelationship.Hostile);
+            using World world = World.Create();
+            OrderTypeRegistry orderTypes = CreateOrderTypes();
+            var admissionResults = new OrderAdmissionResultBuffer(64, 64);
+            var orders = new OrderQueue(64, admissionResults);
+            var effects = new EffectRequestQueue();
+            var system = new DirectAttackSystem(world, orders, orderTypes, effects, OpenGate.Instance);
+
+            Entity target = world.Create(
+                new Team { Id = 2 },
+                new AttributeBuffer(),
+                WorldPositionCm.FromCm(1_000, 0));
+            Entity actor = world.Create(
+                new DirectAttackProfile
+                {
+                    AttackOrderTypeId = 102,
+                    MoveOrderTypeId = 101,
+                    EffectTemplateId = 77,
+                    TargetRelation = RelationshipFilter.Hostile,
+                    RangeCm = 650,
+                    CooldownTicks = 30,
+                },
+                new DirectAttackState
+                {
+                    Phase = DirectAttackPhase.Pursuing,
+                    Target = target,
+                    ExpectedMoveOrderId = 9,
+                    ExpectedMoveObserved = 1,
+                },
+                ActiveOrder(orderId: 9, orderTypeId: 101, target),
+                new Team { Id = 1 },
+                new PlayerOwner { PlayerId = 1 },
+                WorldPositionCm.FromCm(400, 0));
+
+            system.Update(1f / 30f);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(world.Get<OrderBuffer>(actor).HasActive, Is.False);
+                Assert.That(world.Get<DirectAttackState>(actor).Phase, Is.EqualTo(DirectAttackPhase.Engaging));
+                Assert.That(effects.Count, Is.Zero);
+            });
+
+            system.Update(1f / 30f);
+            Assert.That(effects.Count, Is.EqualTo(1));
+        }
+        finally
+        {
+            TeamManager.RestoreSnapshot(relationships);
+        }
+    }
+
+    [Test]
+    public void DirectAttack_AttackOrderMovesIntoRangeWithoutReachingTheTargetCenter()
+    {
+        TeamRelationshipSnapshot relationships = TeamManager.CaptureSnapshot();
+        try
+        {
+            TeamManager.Clear();
+            TeamManager.SetRelationshipSymmetric(1, 2, TeamRelationship.Hostile);
+            using World world = World.Create();
+            OrderTypeRegistry orderTypes = CreateOrderTypes();
+            var admissionResults = new OrderAdmissionResultBuffer(64, 64);
+            var orders = new OrderQueue(64, admissionResults);
+            var effects = new EffectRequestQueue();
+            var attackSystem = new DirectAttackSystem(world, orders, orderTypes, effects, OpenGate.Instance);
+            var moveSystem = new MoveToWorldCmOrderSystem(world, orderTypes, moveToOrderTypeId: 101);
+
+            const int attackRangeCm = 650;
+            const int targetXCm = 2_000;
+            int moveSpeedAttributeId = AttributeRegistry.Register("MoveSpeed");
+            AttributeBuffer actorAttributes = default;
+            actorAttributes.SetCurrent(moveSpeedAttributeId, 800f);
+            Entity target = world.Create(
+                new Team { Id = 2 },
+                new AttributeBuffer(),
+                WorldPositionCm.FromCm(targetXCm, 0));
+            Entity actor = world.Create(
+                new DirectAttackProfile
+                {
+                    AttackOrderTypeId = 102,
+                    MoveOrderTypeId = 101,
+                    EffectTemplateId = 77,
+                    TargetRelation = RelationshipFilter.Hostile,
+                    RangeCm = attackRangeCm,
+                    CooldownTicks = 30,
+                },
+                new DirectAttackState(),
+                ActiveOrder(orderId: 8, orderTypeId: 102, target),
+                new Team { Id = 1 },
+                new PlayerOwner { PlayerId = 1 },
+                WorldPositionCm.FromCm(0, 0),
+                actorAttributes);
+
+            attackSystem.Update(1f / 30f);
+            Assert.That(orders.TryDequeue(out Order pursuit), Is.True);
+            world.Set(actor, new OrderBuffer
+            {
+                ActiveIndex = 0,
+                ActiveOrder = new QueuedOrder { Order = pursuit },
+            });
+
+            for (int frame = 0; frame < 120 && effects.Count == 0; frame++)
+            {
+                moveSystem.Update(1f / 30f);
+                attackSystem.Update(1f / 30f);
+            }
+
+            var finalPosition = world.Get<WorldPositionCm>(actor).ToWorldCmInt2();
+            int finalDistanceCm = Math.Abs(targetXCm - finalPosition.X);
+            Assert.Multiple(() =>
+            {
+                Assert.That(effects.Count, Is.EqualTo(1));
+                Assert.That(finalDistanceCm, Is.LessThanOrEqualTo(attackRangeCm));
+                Assert.That(finalDistanceCm, Is.GreaterThanOrEqualTo(attackRangeCm - 30));
+                Assert.That(finalPosition.X, Is.Not.EqualTo(targetXCm));
             });
         }
         finally

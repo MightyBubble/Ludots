@@ -98,6 +98,16 @@ public sealed class DirectAttackSystem : BaseSystem<World, float>
                     if (buffer.ActiveOrder.Order.OrderId == state.ExpectedMoveOrderId)
                     {
                         state.ExpectedMoveObserved = 1;
+                        if (IsWithinRange(in positions[index], state.Target, profile.RangeCm))
+                        {
+                            if (!OrderSubmitter.NotifyOrderComplete(World, actor, _orderTypes))
+                            {
+                                throw new InvalidOperationException(
+                                    "Direct attack could not complete its active pursuit order after entering range.");
+                            }
+
+                            BeginEngaging(ref state);
+                        }
                         continue;
                     }
 
@@ -169,9 +179,7 @@ public sealed class DirectAttackSystem : BaseSystem<World, float>
     {
         if (IsWithinRange(in actorPosition, state.Target, profile.RangeCm))
         {
-            state.Phase = DirectAttackPhase.Engaging;
-            state.ExpectedMoveOrderId = 0;
-            state.ExpectedMoveObserved = 0;
+            BeginEngaging(ref state);
             return;
         }
 
@@ -192,6 +200,13 @@ public sealed class DirectAttackSystem : BaseSystem<World, float>
 
         state.Phase = DirectAttackPhase.Pursuing;
         state.ExpectedMoveOrderId = move.OrderId;
+        state.ExpectedMoveObserved = 0;
+    }
+
+    private static void BeginEngaging(ref DirectAttackState state)
+    {
+        state.Phase = DirectAttackPhase.Engaging;
+        state.ExpectedMoveOrderId = 0;
         state.ExpectedMoveObserved = 0;
     }
 
