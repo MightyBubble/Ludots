@@ -1,0 +1,65 @@
+{
+  "Id": "graph_level_blueprint_showcase",
+  "Tags": ["showcase", "graph_ai", "level_blueprint"],
+  "DefaultCamera": {
+    "TargetXCm": 0,
+    "TargetYCm": 0,
+    "DistanceCm": 4200,
+    "Pitch": 58,
+    "Yaw": 180,
+    "FovYDeg": 42
+  },
+  "Entities": [
+    {
+      "Template": "graph_level_blueprint_marker",
+      "InstanceId": "graph-level-opening-room",
+      "Overrides": { "WorldPositionCm": { "Value": { "X": -1800, "Y": 0 } } }
+    },
+    {
+      "Template": "graph_level_blueprint_marker",
+      "InstanceId": "graph-level-spawn-patrol",
+      "Overrides": { "WorldPositionCm": { "Value": { "X": -600, "Y": 0 } } }
+    },
+    {
+      "Template": "graph_level_blueprint_marker",
+      "InstanceId": "graph-level-secure-objective",
+      "Overrides": { "WorldPositionCm": { "Value": { "X": 600, "Y": 0 } } }
+    },
+    {
+      "Template": "graph_level_blueprint_marker",
+      "InstanceId": "graph-level-open-exit",
+      "Overrides": { "WorldPositionCm": { "Value": { "X": 1800, "Y": 0 } } }
+    },
+    {
+      "Template": "graph_level_blueprint_cursor",
+      "InstanceId": "graph-level-flow-cursor",
+      "Overrides": { "WorldPositionCm": { "Value": { "X": -1800, "Y": 430 } } }
+    },
+    {
+      "Template": "graph_level_blueprint_door",
+      "InstanceId": "graph-level-door-gate",
+      "Overrides": { "WorldPositionCm": { "Value": { "X": -1800, "Y": -540 } } }
+    },
+    {
+      "Template": "graph_level_blueprint_spawn",
+      "InstanceId": "graph-level-patrol-spawn-zone",
+      "Overrides": { "WorldPositionCm": { "Value": { "X": -600, "Y": -540 } } }
+    },
+    {
+      "Template": "graph_level_blueprint_objective",
+      "InstanceId": "graph-level-objective-beacon",
+      "Overrides": { "WorldPositionCm": { "Value": { "X": 600, "Y": -540 } } }
+    },
+    {
+      "Template": "graph_level_blueprint_exit",
+      "InstanceId": "graph-level-exit-gate",
+      "Overrides": { "WorldPositionCm": { "Value": { "X": 1800, "Y": -540 } } }
+    }
+  ],
+  "Teams": [
+    { "TeamId": 1, "RepresentativeInstanceId": "graph-level-opening-room" }
+  ],
+  "Players": [
+    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "graph-level-opening-room" }
+  ]
+}

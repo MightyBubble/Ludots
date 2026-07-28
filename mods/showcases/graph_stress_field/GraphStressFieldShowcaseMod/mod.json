@@ -1,0 +1,12 @@
+{
+  "name": "GraphStressFieldShowcaseMod",
+  "version": "1.0.0",
+  "description": "Graph benchmark showcase for 50k visible ECS graph brains, zero-allocation hot-path evidence, and no primitive drops.",
+  "main": "bin/net8.0/GraphStressFieldShowcaseMod.dll",
+  "priority": 135,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  },
+  "author": "OpenAI Codex",
+  "tags": ["showcase", "graph", "fsm", "behavior-tree", "stress", "benchmark", "ecs"]
+}

@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "showcaseId": "graph_stance_fsm",
+  "mode": "StanceFsm",
+  "mapId": "graph_stance_fsm_showcase",
+  "title": "Graph RTS Stance FSM Capability",
+  "summary": "Four squads visibly pick Hold, Return, Defend, or Attack.",
+  "beatSeconds": 1.0,
+  "graphProgramId": "rts_stance_fsm",
+  "boundary": "Capability scene only: stance switching, not BT or benchmark.",
+  "worldTargets": {
+    "stanceByState": [
+      {
+        "key": 0,
+        "instanceId": "graph-stance-watch-point",
+        "actionLabel": "observe from watch point",
+        "speedCmPerSecond": 460,
+        "wobbleXCm": 90,
+        "wobbleYCm": 90,
+        "wobbleXFrequency": 1.9,
+        "wobbleYFrequency": 1.4,
+        "rotateFacing": true
+      },
+      {
+        "key": 1,
+        "instanceId": "graph-stance-green-cover",
+        "actionLabel": "retreat to green cover",
+        "speedCmPerSecond": 980,
+        "wobbleYCm": 130,
+        "wobbleYFrequency": 2.2,
+        "forceFacing": true,
+        "facingRad": 3.1415927
+      },
+      {
+        "key": 2,
+        "instanceId": "graph-stance-blue-defense-line",
+        "actionLabel": "hold blue defense line",
+        "speedCmPerSecond": 860,
+        "wobbleXCm": 120,
+        "wobbleXFrequency": 1.6,
+        "useActorHomeY": true
+      },
+      {
+        "key": 3,
+        "instanceId": "graph-stance-red-threat",
+        "actionLabel": "attack red threat",
+        "speedCmPerSecond": 1180,
+        "wobbleXCm": 150,
+        "wobbleYCm": 180,
+        "wobbleXFrequency": 3.3,
+        "wobbleYFrequency": 2.5,
+        "forceFacing": true
+      }
+    ]
+  },
+  "outputs": {
+    "stateRegister": 10,
+    "intentRegister": 11,
+    "btNodeRegister": 12,
+    "taskIdRegister": 13,
+    "taskDurationRegister": 14
+  },
+  "stateLabels": {
+    "0": "Hold Fire",
+    "1": "Return Fire",
+    "2": "Defend",
+    "3": "Attack Anything"
+  },
+  "intentLabels": {
+    "0": "Observe",
+    "1": "Hold Lane",
+    "2": "Engage Threat",
+    "3": "Recover"
+  },
+  "taskLabels": {
+    "0": "No Task"
+  },
+  "programs": [
+    {
+      "id": "rts_stance_fsm",
+      "instructions": [
+        { "op": "CompareLtIntImm", "dst": 0, "a": 3, "imm": 30 },
+        { "op": "JumpIfFalse", "a": 0, "imm": 3 },
+        { "op": "ConstInt", "dst": 10, "imm": 1 },
+        { "op": "ConstInt", "dst": 11, "imm": 3 },
+        { "op": "Jump", "imm": 12 },
+        { "op": "CompareLtIntImm", "dst": 0, "a": 2, "imm": 360 },
+        { "op": "JumpIfFalse", "a": 0, "imm": 3 },
+        { "op": "ConstInt", "dst": 10, "imm": 3 },
+        { "op": "ConstInt", "dst": 11, "imm": 2 },
+        { "op": "Jump", "imm": 7 },
+        { "op": "CompareGtIntImm", "dst": 0, "a": 4, "imm": 70 },
+        { "op": "JumpIfFalse", "a": 0, "imm": 3 },
+        { "op": "ConstInt", "dst": 10, "imm": 2 },
+        { "op": "ConstInt", "dst": 11, "imm": 1 },
+        { "op": "Jump", "imm": 2 },
+        { "op": "ConstInt", "dst": 10, "imm": 0 },
+        { "op": "ConstInt", "dst": 11, "imm": 0 }
+      ]
+    }
+  ],
+  "actors": [
+    { "name": "Forward Sentry", "instanceId": "graph-stance-forward-sentry", "state": 0, "enemyDistanceCm": 240, "health": 90, "morale": 82 },
+    { "name": "Line Guard", "instanceId": "graph-stance-line-guard", "state": 0, "enemyDistanceCm": 760, "health": 95, "morale": 86 },
+    { "name": "Damaged Raider", "instanceId": "graph-stance-damaged-raider", "state": 3, "enemyDistanceCm": 220, "health": 24, "morale": 48 },
+    { "name": "Silent Observer", "instanceId": "graph-stance-silent-observer", "state": 2, "enemyDistanceCm": 920, "health": 72, "morale": 42 }
+  ]
+}

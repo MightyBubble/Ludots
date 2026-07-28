@@ -1,0 +1,8 @@
+{
+  "startupMapId": "graph_stress_field_showcase",
+  "startupLocalPlayerId": 1,
+  "presentation": {
+    "primitiveDrawBufferCapacity": 131072,
+    "visualSnapshotBufferCapacity": 131072
+  }
+}

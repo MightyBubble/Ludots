@@ -1,0 +1,25 @@
+{
+  "Id": "graph_stress_field_showcase",
+  "Tags": ["showcase", "graph_ai", "stress_field"],
+  "DefaultCamera": {
+    "TargetXCm": 0,
+    "TargetYCm": 0,
+    "DistanceCm": 17000,
+    "Pitch": 62,
+    "Yaw": 180,
+    "FovYDeg": 48
+  },
+  "Entities": [
+    {
+      "Template": "graph_stress_field_anchor",
+      "InstanceId": "graph-stress-field-anchor",
+      "Overrides": { "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } } }
+    }
+  ],
+  "Teams": [
+    { "TeamId": 1, "RepresentativeInstanceId": "graph-stress-field-anchor" }
+  ],
+  "Players": [
+    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "graph-stress-field-anchor" }
+  ]
+}

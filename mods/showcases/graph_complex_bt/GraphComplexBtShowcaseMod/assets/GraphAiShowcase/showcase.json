@@ -1,0 +1,144 @@
+{
+  "schemaVersion": 1,
+  "showcaseId": "graph_complex_bt",
+  "mode": "ComplexBt",
+  "mapId": "graph_complex_bt_showcase",
+  "title": "Graph Behavior Tree Capability",
+  "summary": "Squads pick tasks, run countdowns, finish, then choose again.",
+  "beatSeconds": 1.0,
+  "graphProgramId": "complex_bt_selector",
+  "boundary": "Capability scene only: task choice and async work, not benchmark.",
+  "worldTargets": {
+    "behaviorByTask": [
+      {
+        "key": 1,
+        "instanceId": "graph-bt-green-cover",
+        "actionLabel": "select green cover",
+        "speedCmPerSecond": 940,
+        "wobbleXCm": 120,
+        "wobbleXFrequency": 2.6
+      },
+      {
+        "key": 2,
+        "instanceId": "graph-bt-red-target",
+        "actionLabel": "suppress red target",
+        "speedCmPerSecond": 940,
+        "wobbleXCm": 190,
+        "wobbleYCm": 120,
+        "wobbleXFrequency": 5.0,
+        "wobbleYFrequency": 3.0
+      },
+      {
+        "key": 3,
+        "instanceId": "graph-bt-yellow-reinforcement",
+        "actionLabel": "call yellow reinforcement",
+        "speedCmPerSecond": 940,
+        "wobbleXCm": 90,
+        "wobbleYCm": 70,
+        "wobbleXFrequency": 4.0,
+        "wobbleYFrequency": 4.0
+      },
+      {
+        "key": 4,
+        "instanceId": "graph-bt-cyan-scout-route",
+        "actionLabel": "sweep cyan route",
+        "speedCmPerSecond": 1220,
+        "wobbleXCm": 320,
+        "wobbleYCm": 180,
+        "wobbleXFrequency": 1.7,
+        "wobbleYFrequency": 1.7
+      },
+      {
+        "key": 5,
+        "instanceId": "graph-bt-purple-rally",
+        "actionLabel": "regroup at purple rally",
+        "speedCmPerSecond": 1050,
+        "wobbleXCm": 150,
+        "wobbleYCm": 120,
+        "wobbleXFrequency": 3.7,
+        "wobbleYFrequency": 3.7
+      }
+    ]
+  },
+  "outputs": {
+    "stateRegister": 10,
+    "intentRegister": 11,
+    "btNodeRegister": 12,
+    "taskIdRegister": 13,
+    "taskDurationRegister": 14
+  },
+  "stateLabels": {
+    "0": "Idle",
+    "1": "Evade",
+    "2": "Engage",
+    "3": "Command",
+    "4": "Scout",
+    "5": "Reposition"
+  },
+  "intentLabels": {
+    "0": "None",
+    "1": "Coordinate",
+    "2": "Suppress",
+    "3": "Recover",
+    "4": "Sweep",
+    "5": "Relocate"
+  },
+  "taskLabels": {
+    "0": "No Task",
+    "1": "Select Cover",
+    "2": "Suppress Target",
+    "3": "Call Reinforcement",
+    "4": "Scout Sweep",
+    "5": "Reposition Squad"
+  },
+  "programs": [
+    {
+      "id": "complex_bt_selector",
+      "instructions": [
+        { "op": "CompareLtIntImm", "dst": 0, "a": 3, "imm": 35 },
+        { "op": "JumpIfFalse", "a": 0, "imm": 6 },
+        { "op": "ConstInt", "dst": 10, "imm": 1 },
+        { "op": "ConstInt", "dst": 12, "imm": 1 },
+        { "op": "ConstInt", "dst": 13, "imm": 1 },
+        { "op": "ConstInt", "dst": 14, "imm": 3 },
+        { "op": "ConstInt", "dst": 11, "imm": 3 },
+        { "op": "Jump", "imm": 29 },
+        { "op": "CompareLtIntImm", "dst": 0, "a": 2, "imm": 300 },
+        { "op": "JumpIfFalse", "a": 0, "imm": 6 },
+        { "op": "ConstInt", "dst": 10, "imm": 2 },
+        { "op": "ConstInt", "dst": 12, "imm": 2 },
+        { "op": "ConstInt", "dst": 13, "imm": 2 },
+        { "op": "ConstInt", "dst": 14, "imm": 2 },
+        { "op": "ConstInt", "dst": 11, "imm": 2 },
+        { "op": "Jump", "imm": 21 },
+        { "op": "CompareGtIntImm", "dst": 0, "a": 4, "imm": 80 },
+        { "op": "JumpIfFalse", "a": 0, "imm": 6 },
+        { "op": "ConstInt", "dst": 10, "imm": 3 },
+        { "op": "ConstInt", "dst": 12, "imm": 3 },
+        { "op": "ConstInt", "dst": 13, "imm": 3 },
+        { "op": "ConstInt", "dst": 14, "imm": 4 },
+        { "op": "ConstInt", "dst": 11, "imm": 1 },
+        { "op": "Jump", "imm": 13 },
+        { "op": "CompareEqIntImm", "dst": 0, "a": 6, "imm": 0 },
+        { "op": "JumpIfFalse", "a": 0, "imm": 6 },
+        { "op": "ConstInt", "dst": 10, "imm": 4 },
+        { "op": "ConstInt", "dst": 12, "imm": 4 },
+        { "op": "ConstInt", "dst": 13, "imm": 4 },
+        { "op": "ConstInt", "dst": 14, "imm": 2 },
+        { "op": "ConstInt", "dst": 11, "imm": 4 },
+        { "op": "Jump", "imm": 5 },
+        { "op": "ConstInt", "dst": 10, "imm": 5 },
+        { "op": "ConstInt", "dst": 12, "imm": 0 },
+        { "op": "ConstInt", "dst": 13, "imm": 5 },
+        { "op": "ConstInt", "dst": 14, "imm": 1 },
+        { "op": "ConstInt", "dst": 11, "imm": 5 }
+      ]
+    }
+  ],
+  "actors": [
+    { "name": "Point Scout", "instanceId": "graph-bt-point-scout", "state": 0, "btNode": 0, "enemyDistanceCm": 240, "health": 86, "morale": 60 },
+    { "name": "Field Commander", "instanceId": "graph-bt-field-commander", "state": 0, "btNode": 0, "enemyDistanceCm": 760, "health": 92, "morale": 94 },
+    { "name": "Wounded Breacher", "instanceId": "graph-bt-wounded-breacher", "state": 0, "btNode": 0, "enemyDistanceCm": 180, "health": 24, "morale": 48 },
+    { "name": "Patrol Pair", "instanceId": "graph-bt-patrol-pair", "state": 0, "btNode": 0, "enemyDistanceCm": 900, "health": 88, "morale": 52 }
+  ]
+}

@@ -1,0 +1,68 @@
+[
+  {
+    "id": "graph_complex_bt_actor",
+    "components": {
+      "Name": { "Value": "Graph BT Actor" },
+      "Team": { "Id": 1 },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": { "base": { "Health": 100 } },
+      "GameplayTagContainer": {}
+    }
+  },
+  {
+    "id": "graph_complex_bt_cover",
+    "components": {
+      "Name": { "Value": "Green Cover" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": { "base": { "Health": 1 } },
+      "GameplayTagContainer": {},
+      "PresentationStaticTransform": {}
+    }
+  },
+  {
+    "id": "graph_complex_bt_target",
+    "components": {
+      "Name": { "Value": "Red Target" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": { "base": { "Health": 500 } },
+      "GameplayTagContainer": {},
+      "PresentationStaticTransform": {}
+    }
+  },
+  {
+    "id": "graph_complex_bt_reinforcement",
+    "components": {
+      "Name": { "Value": "Yellow Reinforcement" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": { "base": { "Health": 1 } },
+      "GameplayTagContainer": {},
+      "PresentationStaticTransform": {}
+    }
+  },
+  {
+    "id": "graph_complex_bt_scout_route",
+    "components": {
+      "Name": { "Value": "Cyan Scout Route" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": { "base": { "Health": 1 } },
+      "GameplayTagContainer": {},
+      "PresentationStaticTransform": {}
+    }
+  },
+  {
+    "id": "graph_complex_bt_rally",
+    "components": {
+      "Name": { "Value": "Purple Rally" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": { "base": { "Health": 1 } },
+      "GameplayTagContainer": {},
+      "PresentationStaticTransform": {}
+    }
+  }
+]

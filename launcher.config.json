@@ -226,6 +226,38 @@
       }
     },
     {
+      "name": "graph_level_blueprint_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/graph_level_blueprint/GraphLevelBlueprintShowcaseMod",
+        "projectPath": "GraphLevelBlueprintShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "graph_stance_fsm_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/graph_stance_fsm/GraphStanceFsmShowcaseMod",
+        "projectPath": "GraphStanceFsmShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "graph_complex_bt_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/graph_complex_bt/GraphComplexBtShowcaseMod",
+        "projectPath": "GraphComplexBtShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "graph_stress_field_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/graph_stress_field/GraphStressFieldShowcaseMod",
+        "projectPath": "GraphStressFieldShowcaseMod.csproj"
+      }
+    },
+    {
       "name": "capability_standard_physics2d_showcase",
       "target": {
         "type": "path",
