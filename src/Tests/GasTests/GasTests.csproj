@@ -113,6 +113,7 @@
     <ProjectReference Include="..\..\..\mods\showcases\graph_stance_fsm\GraphStanceFsmShowcaseMod\GraphStanceFsmShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\graph_complex_bt\GraphComplexBtShowcaseMod\GraphComplexBtShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\graph_stress_field\GraphStressFieldShowcaseMod\GraphStressFieldShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\graph_workbench\GraphWorkbenchShowcaseMod\GraphWorkbenchShowcaseMod.csproj" />
     <ProjectReference Include="..\..\Libraries\Ludots.UI.Skia\Ludots.UI.Skia.csproj" />
   </ItemGroup>
 

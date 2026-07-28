@@ -12,7 +12,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// Hard limit on instructions executed per single Execute call.
         /// Prevents runaway programs (infinite jump loops, etc.) from hanging the frame.
         /// </summary>
-        public const int MaxInstructionsPerExecution = 4096;
+        public const int MaxInstructionsPerExecution = Ludots.Core.GraphRuntime.GraphRuntimeLimits.MaxInstructionsPerExecution;
 
         /// <summary>
         /// Size of the opcode handler table. Must be greater than the highest GraphNodeOp value.
@@ -21,4 +21,3 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public const int HandlerTableSize = 512;
     }
 }
-

@@ -1,0 +1,12 @@
+{
+  "windowTitle": "Ludots Engine - Graph Workbench Showcase",
+  "windowWidth": 1600,
+  "windowHeight": 960,
+  "windowResizable": true,
+  "targetFps": 60,
+  "browserRuntime": {
+    "enabled": true,
+    "required": true,
+    "provider": "cef"
+  }
+}

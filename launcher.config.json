@@ -202,6 +202,14 @@
       }
     },
     {
+      "name": "graph_workbench_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/graph_workbench/GraphWorkbenchShowcaseMod",
+        "projectPath": "GraphWorkbenchShowcaseMod.csproj"
+      }
+    },
+    {
       "name": "browser_minimap_composited_overlay_showcase",
       "target": {
         "type": "path",

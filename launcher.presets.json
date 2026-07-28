@@ -192,6 +192,20 @@
       }
     },
     {
+      "id": "graph_workbench_cef_raylib",
+      "name": "Graph Workbench CEF Raylib",
+      "selectors": [
+        "$graph_workbench_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto",
+      "browserRuntime": {
+        "enabled": true,
+        "required": true,
+        "provider": "cef"
+      }
+    },
+    {
       "id": "browser_minimap_composited_overlay_cef_raylib",
       "name": "Browser Minimap Composited Overlay CEF Raylib",
       "selectors": [

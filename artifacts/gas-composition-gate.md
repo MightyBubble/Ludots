@@ -2,6 +2,63 @@
 
 Current closeouts and prior issue reviews follow.
 
+## GAS Composition Gate - Universal Graph Workbench - 2026-07-28
+
+- **Task / Issue**: Add a universal Graph Workbench showcase and repair the missing common Graph executor required by Graph-driven FSM/BT showcase programs.
+- **Date**: 2026-07-28
+- **Agent / Author**: Codex
+
+### 1. Core judgment
+
+Primary delivery: A. Existing graph programs and handler tables execute through a shared GraphRuntime API.
+
+Result: PASS
+
+Reason: This adds no gameplay op, effect preset enum, profile field, loader family, spawn/morph path, or fallback behavior. The new Core surface is a domain-neutral executor for existing `GraphInstruction` programs; level, GAS, FSM, BT, and user-authored documents still provide behavior through graph composition and domain handler tables.
+
+### 2. Layer assignment
+
+| Step / capability | Layer | Implementation carrier |
+|---|---:|---|
+| Domain-neutral graph execution loop | 0 | `Ludots.Core.GraphRuntime.GraphExecutor` |
+| Handler table contract for ordinary VM state | 0 | `IOpHandlerTable<TState>`, `GraphOpHandler<TState>` |
+| Universal editor showcase | 2 | `mods/showcases/graph_workbench` CEF/DataPlane document compiler |
+| Player-facing docs and UAT surface | 3 | `gitbook/architecture/graph-workbench-showcase.md`, registry/preset entries |
+
+### 3. Reuse list
+
+- Handlers: existing Graph AI FSM/BT handler tables; existing GASGraph handler table remains the ref-struct hot path.
+- Queues / Systems: existing Mod loading, CEF installer, DataPlane, showcase registry, launcher presets.
+- Resolvers / Registries: existing `GraphProgramRegistry`, `CoreServiceKeys`, GraphRuntime instruction format.
+- Existing presets / graphs: existing Graph AI level/FSM/BT/stress showcase graph configs; new Workbench documents compile to the same instruction model.
+
+### 4. New Layer 0 ops
+
+N/A. No graph opcode, effect operation, builtin handler, preset, or gameplay schema was added.
+
+### 5. Transaction boundary
+
+N/A for runtime execution. The Workbench compile path is all-or-error: invalid documents return diagnostics and do not publish a partial program to the runtime/debug view.
+
+### 6. Config SSOT
+
+Behavior remains in graph documents and existing showcase assets. The editor document model is local to the Workbench showcase UI; gameplay runtime behavior continues to compile to `GraphInstruction[]`.
+
+New JSON schema: NO for gameplay. The Workbench has a UI document DTO only for editing and diagnostics.
+
+### 7. Red flag scan
+
+- [x] No profile inherit, placement enum, or preset enum added
+- [x] No parallel spawn, trigger, relationship, FSM, BT, or graph loader pipeline added
+- [x] No silent fallback, compatibility bypass, or default success path added
+- [x] No gameplay JSON schema added outside the showcase document DTO
+
+### 8. Next variant test
+
+The next level blueprint, skill graph, FSM, or BT variant should change graph wiring or domain handler composition, not add a Core enum or a parallel runtime.
+
+---
+
 ## PR #660 / #689 Final Closeout - Player Operation Lifecycle - 2026-07-26
 
 - **Task / Issue**: Finish PR #660 against the #689 player-operation acceptance gate after the stale audit loop: close admission retirement, continuation capacity transaction, input feedback, ability effect atomicity, fixed-capacity runtime behavior, and spawn transaction boundaries without scope expansion or fallback.

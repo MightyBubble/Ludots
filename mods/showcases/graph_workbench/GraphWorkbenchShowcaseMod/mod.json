@@ -1,0 +1,12 @@
+{
+  "name": "GraphWorkbenchShowcaseMod",
+  "version": "1.0.0",
+  "description": "CEF embedded React Flow workbench for editing shared Graph, FSM, and Behavior Tree documents.",
+  "main": "bin/net8.0/GraphWorkbenchShowcaseMod.dll",
+  "priority": 192,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["showcase", "browser-ui", "react-flow", "graph", "fsm", "behavior-tree"]
+}

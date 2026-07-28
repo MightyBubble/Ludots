@@ -27,6 +27,7 @@
   - [实体仿真阶段验收](architecture/entity-simulation-uat.md)
   - [能力标准 Showcase](architecture/capability-standard-showcases.md)
   - [Graph AI Showcase Responsibilities](architecture/graph-ai-showcases.md)
+  - [Graph Workbench Showcase](architecture/graph-workbench-showcase.md)
   - [UAT 可玩 Showcase 矩阵](architecture/uat-playable-showcase-matrix.md)
   - [Map-Owned Participant Contract](architecture/map-owned-participant-contract.md)
   - [Transport Network SSOT](architecture/transport-network-ssot.md)

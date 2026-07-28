@@ -678,6 +678,33 @@
       ]
     },
     {
+      "id": "graph_workbench",
+      "path": "mods/showcases/graph_workbench/GraphWorkbenchShowcaseMod",
+      "projectPath": "GraphWorkbenchShowcaseMod.csproj",
+      "title": "Graph Workbench",
+      "summary": "Tooling showcase: a CEF embedded ReactFlow editor for the shared Graph foundation used by level blueprints, GAS skill graphs, FSM, and behavior trees.",
+      "tier": "T2",
+      "category": "tooling",
+      "binding": "graph_workbench_showcase",
+      "preset": "graph_workbench_cef_raylib",
+      "docsPath": "gitbook/architecture/graph-workbench-showcase.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphWorkbenchShowcaseAcceptanceTests",
+      "artifactDir": null,
+      "screenshot": null,
+      "status": "active",
+      "tags": [
+        "graph",
+        "editor",
+        "level-blueprint",
+        "gas",
+        "fsm",
+        "behavior-tree",
+        "cef",
+        "react-flow"
+      ]
+    },
+    {
       "id": "graph_stance_fsm",
       "path": "mods/showcases/graph_stance_fsm/GraphStanceFsmShowcaseMod",
       "projectPath": "GraphStanceFsmShowcaseMod.csproj",
