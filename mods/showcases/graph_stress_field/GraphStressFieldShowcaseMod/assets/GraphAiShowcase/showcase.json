@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 1,
+  "showcaseId": "graph_stress_field",
+  "mode": "StressField",
+  "mapId": "graph_stress_field_showcase",
+  "title": "Graph AI 50k Benchmark Field",
+  "summary": "50,000 visible dots run FSM+BT graph rules every beat.",
+  "beatSeconds": 1.0,
+  "graphProgramId": "stress_field_fsm",
+  "boundary": "Benchmark scene: count, movement, drops, time, alloc, and Gen0 are pass/fail.",
+  "stressField": {
+    "entityCount": 50000,
+    "fsmProgramId": "stress_field_fsm",
+    "btProgramId": "stress_field_bt",
+    "primitiveStableIdBase": 9000000,
+    "columns": 250,
+    "baseXCm": -8000,
+    "baseYCm": -6400,
+    "spacingCm": 64,
+    "waveAmplitudeCm": 38,
+    "waveFrequency": 4.2,
+    "primitiveScaleMeters": 0.16,
+    "stateColors": [
+      { "state": 0, "r": 0.86, "g": 0.92, "b": 0.62, "a": 0.98 },
+      { "state": 1, "r": 0.22, "g": 0.92, "b": 0.50, "a": 0.98 },
+      { "state": 2, "r": 0.20, "g": 0.70, "b": 1.00, "a": 0.98 },
+      { "state": 3, "r": 1.00, "g": 0.32, "b": 0.20, "a": 0.98 }
+    ]
+  },
+  "outputs": {
+    "stateRegister": 10,
+    "intentRegister": 11,
+    "btNodeRegister": 12,
+    "taskIdRegister": 13,
+    "taskDurationRegister": 14
+  },
+  "stateLabels": {
+    "0": "Hold Fire",
+    "1": "Return Fire",
+    "2": "Defend",
+    "3": "Attack Anything",
+    "4": "Scout",
+    "5": "Reposition"
+  },
+  "intentLabels": {
+    "0": "Observe",
+    "1": "Coordinate",
+    "2": "Suppress",
+    "3": "Recover",
+    "4": "Sweep",
+    "5": "Relocate"
+  },
+  "taskLabels": {
+    "0": "No Task",
+    "1": "Select Cover",
+    "2": "Suppress Target",
+    "3": "Call Reinforcement",
+    "4": "Scout Sweep",
+    "5": "Reposition Squad"
+  },
+  "programs": [
+    {
+      "id": "stress_field_fsm",
+      "instructions": [
+        { "op": "CompareLtIntImm", "dst": 0, "a": 3, "imm": 30 },
+        { "op": "JumpIfFalse", "a": 0, "imm": 3 },
+        { "op": "ConstInt", "dst": 10, "imm": 1 },
+        { "op": "ConstInt", "dst": 11, "imm": 3 },
+        { "op": "Jump", "imm": 12 },
+        { "op": "CompareLtIntImm", "dst": 0, "a": 2, "imm": 360 },
+        { "op": "JumpIfFalse", "a": 0, "imm": 3 },
+        { "op": "ConstInt", "dst": 10, "imm": 3 },
+        { "op": "ConstInt", "dst": 11, "imm": 2 },
+        { "op": "Jump", "imm": 7 },
+        { "op": "CompareGtIntImm", "dst": 0, "a": 4, "imm": 70 },
+        { "op": "JumpIfFalse", "a": 0, "imm": 3 },
+        { "op": "ConstInt", "dst": 10, "imm": 2 },
+        { "op": "ConstInt", "dst": 11, "imm": 1 },
+        { "op": "Jump", "imm": 2 },
+        { "op": "ConstInt", "dst": 10, "imm": 0 },
+        { "op": "ConstInt", "dst": 11, "imm": 0 }
+      ]
+    },
+    {
+      "id": "stress_field_bt",
+      "instructions": [
+        { "op": "CompareLtIntImm", "dst": 0, "a": 3, "imm": 35 },
+        { "op": "JumpIfFalse", "a": 0, "imm": 6 },
+        { "op": "ConstInt", "dst": 10, "imm": 1 },
+        { "op": "ConstInt", "dst": 12, "imm": 1 },
+        { "op": "ConstInt", "dst": 13, "imm": 1 },
+        { "op": "ConstInt", "dst": 14, "imm": 3 },
+        { "op": "ConstInt", "dst": 11, "imm": 3 },
+        { "op": "Jump", "imm": 29 },
+        { "op": "CompareLtIntImm", "dst": 0, "a": 2, "imm": 300 },
+        { "op": "JumpIfFalse", "a": 0, "imm": 6 },
+        { "op": "ConstInt", "dst": 10, "imm": 2 },
+        { "op": "ConstInt", "dst": 12, "imm": 2 },
+        { "op": "ConstInt", "dst": 13, "imm": 2 },
+        { "op": "ConstInt", "dst": 14, "imm": 2 },
+        { "op": "ConstInt", "dst": 11, "imm": 2 },
+        { "op": "Jump", "imm": 21 },
+        { "op": "CompareGtIntImm", "dst": 0, "a": 4, "imm": 80 },
+        { "op": "JumpIfFalse", "a": 0, "imm": 6 },
+        { "op": "ConstInt", "dst": 10, "imm": 3 },
+        { "op": "ConstInt", "dst": 12, "imm": 3 },
+        { "op": "ConstInt", "dst": 13, "imm": 3 },
+        { "op": "ConstInt", "dst": 14, "imm": 4 },
+        { "op": "ConstInt", "dst": 11, "imm": 1 },
+        { "op": "Jump", "imm": 13 },
+        { "op": "CompareEqIntImm", "dst": 0, "a": 6, "imm": 0 },
+        { "op": "JumpIfFalse", "a": 0, "imm": 6 },
+        { "op": "ConstInt", "dst": 10, "imm": 4 },
+        { "op": "ConstInt", "dst": 12, "imm": 4 },
+        { "op": "ConstInt", "dst": 13, "imm": 4 },
+        { "op": "ConstInt", "dst": 14, "imm": 2 },
+        { "op": "ConstInt", "dst": 11, "imm": 4 },
+        { "op": "Jump", "imm": 5 },
+        { "op": "ConstInt", "dst": 10, "imm": 5 },
+        { "op": "ConstInt", "dst": 12, "imm": 0 },
+        { "op": "ConstInt", "dst": 13, "imm": 5 },
+        { "op": "ConstInt", "dst": 14, "imm": 1 },
+        { "op": "ConstInt", "dst": 11, "imm": 5 }
+      ]
+    }
+  ],
+  "actors": []
+}

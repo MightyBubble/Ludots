@@ -1,0 +1,12 @@
+{
+  "name": "GraphStanceFsmShowcaseMod",
+  "version": "1.0.0",
+  "description": "Graph capability showcase for readable RTS stance FSM decisions; benchmark evidence lives in the 50k graph benchmark field.",
+  "main": "bin/net8.0/GraphStanceFsmShowcaseMod.dll",
+  "priority": 135,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  },
+  "author": "OpenAI Codex",
+  "tags": ["showcase", "graph", "fsm", "rts-stance", "capability"]
+}

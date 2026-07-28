@@ -1,0 +1,65 @@
+{
+  "Id": "graph_complex_bt_showcase",
+  "Tags": ["showcase", "graph_ai", "complex_bt"],
+  "DefaultCamera": {
+    "TargetXCm": 0,
+    "TargetYCm": 0,
+    "DistanceCm": 4600,
+    "Pitch": 58,
+    "Yaw": 180,
+    "FovYDeg": 42
+  },
+  "Entities": [
+    {
+      "Template": "graph_complex_bt_actor",
+      "InstanceId": "graph-bt-point-scout",
+      "Overrides": { "WorldPositionCm": { "Value": { "X": -1200, "Y": -620 } } }
+    },
+    {
+      "Template": "graph_complex_bt_actor",
+      "InstanceId": "graph-bt-field-commander",
+      "Overrides": { "WorldPositionCm": { "Value": { "X": -420, "Y": 620 } } }
+    },
+    {
+      "Template": "graph_complex_bt_actor",
+      "InstanceId": "graph-bt-wounded-breacher",
+      "Overrides": { "WorldPositionCm": { "Value": { "X": 420, "Y": -620 } } }
+    },
+    {
+      "Template": "graph_complex_bt_actor",
+      "InstanceId": "graph-bt-patrol-pair",
+      "Overrides": { "WorldPositionCm": { "Value": { "X": 1200, "Y": 620 } } }
+    },
+    {
+      "Template": "graph_complex_bt_cover",
+      "InstanceId": "graph-bt-green-cover",
+      "Overrides": { "WorldPositionCm": { "Value": { "X": -1650, "Y": -1050 } } }
+    },
+    {
+      "Template": "graph_complex_bt_target",
+      "InstanceId": "graph-bt-red-target",
+      "Overrides": { "WorldPositionCm": { "Value": { "X": 1520, "Y": 0 } } }
+    },
+    {
+      "Template": "graph_complex_bt_reinforcement",
+      "InstanceId": "graph-bt-yellow-reinforcement",
+      "Overrides": { "WorldPositionCm": { "Value": { "X": 0, "Y": -1250 } } }
+    },
+    {
+      "Template": "graph_complex_bt_scout_route",
+      "InstanceId": "graph-bt-cyan-scout-route",
+      "Overrides": { "WorldPositionCm": { "Value": { "X": -1500, "Y": 1080 } } }
+    },
+    {
+      "Template": "graph_complex_bt_rally",
+      "InstanceId": "graph-bt-purple-rally",
+      "Overrides": { "WorldPositionCm": { "Value": { "X": 1420, "Y": 1080 } } }
+    }
+  ],
+  "Teams": [
+    { "TeamId": 1, "RepresentativeInstanceId": "graph-bt-point-scout" }
+  ],
+  "Players": [
+    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "graph-bt-point-scout" }
+  ]
+}

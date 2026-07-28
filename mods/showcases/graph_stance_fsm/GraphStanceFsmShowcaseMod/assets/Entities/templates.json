@@ -1,0 +1,57 @@
+[
+  {
+    "id": "graph_stance_fsm_squad",
+    "components": {
+      "Name": { "Value": "Graph Stance Squad" },
+      "Team": { "Id": 1 },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": { "base": { "Health": 100 } },
+      "GameplayTagContainer": {}
+    }
+  },
+  {
+    "id": "graph_stance_fsm_threat",
+    "components": {
+      "Name": { "Value": "Red Threat" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": { "base": { "Health": 999 } },
+      "GameplayTagContainer": {},
+      "PresentationStaticTransform": {}
+    }
+  },
+  {
+    "id": "graph_stance_fsm_defense_line",
+    "components": {
+      "Name": { "Value": "Blue Defense Line" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": { "base": { "Health": 1 } },
+      "GameplayTagContainer": {},
+      "PresentationStaticTransform": {}
+    }
+  },
+  {
+    "id": "graph_stance_fsm_cover",
+    "components": {
+      "Name": { "Value": "Green Cover" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": { "base": { "Health": 1 } },
+      "GameplayTagContainer": {},
+      "PresentationStaticTransform": {}
+    }
+  },
+  {
+    "id": "graph_stance_fsm_watch",
+    "components": {
+      "Name": { "Value": "Watch Point" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": { "base": { "Health": 1 } },
+      "GameplayTagContainer": {},
+      "PresentationStaticTransform": {}
+    }
+  }
+]

@@ -1,0 +1,12 @@
+{
+  "name": "GraphComplexBtShowcaseMod",
+  "version": "1.0.0",
+  "description": "Graph capability showcase for readable behavior-tree task selection and async task completion; benchmark evidence lives in the 50k graph benchmark field.",
+  "main": "bin/net8.0/GraphComplexBtShowcaseMod.dll",
+  "priority": 136,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0"
+  },
+  "author": "OpenAI Codex",
+  "tags": ["showcase", "graph", "behavior-tree", "task", "capability"]
+}

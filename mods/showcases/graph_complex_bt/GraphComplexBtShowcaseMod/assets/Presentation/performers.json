@@ -1,0 +1,152 @@
+[
+  {
+    "id": "graph_complex_bt_actor_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "graph_complex_bt_actor" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "graph_complex_bt_actor_visual",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": { "kind": "EntityDestroyed", "key": "graph_complex_bt_actor" },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "graph_complex_bt_actor_visual",
+    "defaultColor": [0.20, 0.58, 1.0, 1.0],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "cube",
+          "materialId": "default_surface",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Movable",
+          "localScale": [2.7, 2.7, 1.45]
+        }
+      }
+    ]
+  },
+  {
+    "id": "graph_complex_bt_cover_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "graph_complex_bt_cover" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePerformer", "definitionId": "graph_complex_bt_cover_visual", "scopeSource": "EventPayloadA" }
+      }
+    ]
+  },
+  {
+    "id": "graph_complex_bt_cover_visual",
+    "defaultColor": [0.12, 0.84, 0.34, 1.0],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": { "assetKind": "Mesh", "assetId": "cube", "materialId": "default_surface", "renderPath": "InstancedStaticMesh", "mobility": "Static", "localScale": [3.2, 0.7, 1.4] }
+      }
+    ]
+  },
+  {
+    "id": "graph_complex_bt_target_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "graph_complex_bt_target" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePerformer", "definitionId": "graph_complex_bt_target_visual", "scopeSource": "EventPayloadA" }
+      }
+    ]
+  },
+  {
+    "id": "graph_complex_bt_target_visual",
+    "defaultColor": [1.0, 0.14, 0.10, 1.0],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": { "assetKind": "Mesh", "assetId": "cube", "materialId": "default_surface", "renderPath": "InstancedStaticMesh", "mobility": "Static", "localScale": [3.2, 1.2, 3.2] }
+      }
+    ]
+  },
+  {
+    "id": "graph_complex_bt_reinforcement_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "graph_complex_bt_reinforcement" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePerformer", "definitionId": "graph_complex_bt_reinforcement_visual", "scopeSource": "EventPayloadA" }
+      }
+    ]
+  },
+  {
+    "id": "graph_complex_bt_reinforcement_visual",
+    "defaultColor": [1.0, 0.82, 0.16, 1.0],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": { "assetKind": "Mesh", "assetId": "cube", "materialId": "default_surface", "renderPath": "InstancedStaticMesh", "mobility": "Static", "localScale": [1.2, 2.5, 1.2] }
+      }
+    ]
+  },
+  {
+    "id": "graph_complex_bt_scout_route_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "graph_complex_bt_scout_route" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePerformer", "definitionId": "graph_complex_bt_scout_route_visual", "scopeSource": "EventPayloadA" }
+      }
+    ]
+  },
+  {
+    "id": "graph_complex_bt_scout_route_visual",
+    "defaultColor": [0.12, 0.92, 0.92, 1.0],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": { "assetKind": "Mesh", "assetId": "cube", "materialId": "default_surface", "renderPath": "InstancedStaticMesh", "mobility": "Static", "localScale": [2.4, 0.45, 2.4] }
+      }
+    ]
+  },
+  {
+    "id": "graph_complex_bt_rally_bootstrap",
+    "rules": [
+      {
+        "event": { "kind": "EntitySpawned", "key": "graph_complex_bt_rally" },
+        "condition": { "inline": "SourceHasVisualTransform" },
+        "command": { "kind": "CreatePerformer", "definitionId": "graph_complex_bt_rally_visual", "scopeSource": "EventPayloadA" }
+      }
+    ]
+  },
+  {
+    "id": "graph_complex_bt_rally_visual",
+    "defaultColor": [0.66, 0.44, 1.0, 1.0],
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": { "assetKind": "Mesh", "assetId": "cube", "materialId": "default_surface", "renderPath": "InstancedStaticMesh", "mobility": "Static", "localScale": [2.4, 0.45, 2.4] }
+      }
+    ]
+  }
+]

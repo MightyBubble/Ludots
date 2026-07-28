@@ -1,0 +1,60 @@
+{
+  "Id": "graph_stance_fsm_showcase",
+  "Tags": ["showcase", "graph_ai", "stance_fsm"],
+  "DefaultCamera": {
+    "TargetXCm": 0,
+    "TargetYCm": 0,
+    "DistanceCm": 4400,
+    "Pitch": 58,
+    "Yaw": 180,
+    "FovYDeg": 42
+  },
+  "Entities": [
+    {
+      "Template": "graph_stance_fsm_squad",
+      "InstanceId": "graph-stance-forward-sentry",
+      "Overrides": { "WorldPositionCm": { "Value": { "X": -1200, "Y": -520 } } }
+    },
+    {
+      "Template": "graph_stance_fsm_squad",
+      "InstanceId": "graph-stance-line-guard",
+      "Overrides": { "WorldPositionCm": { "Value": { "X": -420, "Y": 520 } } }
+    },
+    {
+      "Template": "graph_stance_fsm_squad",
+      "InstanceId": "graph-stance-damaged-raider",
+      "Overrides": { "WorldPositionCm": { "Value": { "X": 420, "Y": -520 } } }
+    },
+    {
+      "Template": "graph_stance_fsm_squad",
+      "InstanceId": "graph-stance-silent-observer",
+      "Overrides": { "WorldPositionCm": { "Value": { "X": 1200, "Y": 520 } } }
+    },
+    {
+      "Template": "graph_stance_fsm_threat",
+      "InstanceId": "graph-stance-red-threat",
+      "Overrides": { "WorldPositionCm": { "Value": { "X": 1500, "Y": 0 } } }
+    },
+    {
+      "Template": "graph_stance_fsm_defense_line",
+      "InstanceId": "graph-stance-blue-defense-line",
+      "Overrides": { "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } } }
+    },
+    {
+      "Template": "graph_stance_fsm_cover",
+      "InstanceId": "graph-stance-green-cover",
+      "Overrides": { "WorldPositionCm": { "Value": { "X": -1600, "Y": -520 } } }
+    },
+    {
+      "Template": "graph_stance_fsm_watch",
+      "InstanceId": "graph-stance-watch-point",
+      "Overrides": { "WorldPositionCm": { "Value": { "X": 1500, "Y": 920 } } }
+    }
+  ],
+  "Teams": [
+    { "TeamId": 1, "RepresentativeInstanceId": "graph-stance-forward-sentry" }
+  ],
+  "Players": [
+    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": "graph-stance-forward-sentry" }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "actions": [
+    {
+      "id": "GraphLevelBlueprint.TokenMove",
+      "name": "GraphLevelBlueprint_TokenMove",
+      "type": "Axis2D"
+    }
+  ],
+  "contexts": [
+    {
+      "id": "GraphLevelBlueprint.Controls",
+      "name": "Graph Level Blueprint Controls",
+      "priority": 90,
+      "bindings": [
+        {
+          "actionId": "GraphLevelBlueprint.TokenMove",
+          "compositeType": "Vector2",
+          "compositeParts": [
+            { "path": "<Keyboard>/i" },
+            { "path": "<Keyboard>/k" },
+            { "path": "<Keyboard>/j" },
+            { "path": "<Keyboard>/l" }
+          ],
+          "processors": [
+            { "type": "Normalize" }
+          ]
+        }
+      ]
+    }
+  ]
+}

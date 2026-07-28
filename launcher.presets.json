@@ -225,6 +225,42 @@
       "buildMode": "auto"
     },
     {
+      "id": "graph_level_blueprint_raylib",
+      "name": "Graph Level Blueprint Capability Raylib",
+      "selectors": [
+        "$graph_level_blueprint_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "graph_stance_fsm_raylib",
+      "name": "Graph RTS Stance FSM Capability Raylib",
+      "selectors": [
+        "$graph_stance_fsm_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "graph_complex_bt_raylib",
+      "name": "Graph Behavior Tree Capability Raylib",
+      "selectors": [
+        "$graph_complex_bt_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "graph_stress_field_raylib",
+      "name": "Graph AI 50k Benchmark Field Raylib",
+      "selectors": [
+        "$graph_stress_field_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "capability_standard_physics2d_showcase_raylib",
       "name": "Capability Standard Physics2D Raylib",
       "selectors": [
