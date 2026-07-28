@@ -21,8 +21,10 @@ using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Gameplay.Teams;
+using Ludots.Core.Hosting;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.Knowledge;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Networking.Configuration;
 using Ludots.Core.Networking.Protocol;
@@ -34,6 +36,7 @@ using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Scripting;
 using Ludots.Core.Vision;
+using Ludots.Launcher.Backend;
 using Ludots.UI;
 using Ludots.UI.Skia;
 using NUnit.Framework;
@@ -63,10 +66,10 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
 
     [Test]
     [Description(
-        "Feature: The opening battlefield preserves its authored terrain\n" +
-        "  Given Frontline uses a visual heightmap for grounding\n" +
+        "Feature: Symmetric opening battlefield terrain\n" +
+        "  Given Frontline is a two-player competitive duel\n" +
         "  When the map presentation contract is resolved\n" +
-        "  Then the default board remains the visible terrain surface")]
+        "  Then both players start on the same flat authored terrain instead of an asymmetric borrowed shoreline")]
     public void GivenFrontlineTerrain_WhenMapResolves_ThenBoardSurfaceAndHeightTruthAreBothDeclared()
     {
         using GameEngine engine = CreateStartedEngine();
@@ -76,10 +79,58 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
 
         Assert.That(
             mapConfig.VisualHeightmapAsset,
-            Is.EqualTo("assets/terrain/rts_duel_v1_shoreline.vhtm"));
+            Is.EqualTo("assets/terrain/rts_duel_v1_flat.vhtm"));
         Assert.That(mapConfig.TerrainPresentation, Is.Not.Null);
         Assert.That(mapConfig.TerrainPresentation!.Source, Is.EqualTo(TerrainPresentationSource.BoardTerrain));
         Assert.That(mapConfig.TerrainPresentation.BoardName, Is.EqualTo("default"));
+        Assert.That(mapConfig.Boards, Has.Count.EqualTo(1));
+        Assert.That(mapConfig.Boards[0].DataFile, Is.EqualTo("rts_duel_v1_flat.vtxm"));
+    }
+
+    [Test]
+    [Description(
+        "Feature: Room ready controls are playable from the product launcher\n" +
+        "  Given a player starts the networked Frontline showcase from the official preset\n" +
+        "  When the launcher resolves startup input contexts\n" +
+        "  Then the F5 room-ready input context is active alongside Frontline commands without taking WASD from the camera")]
+    public void GivenNetworkedFrontlinePreset_WhenLauncherResolves_ThenRoomReadyControlsAreActive()
+    {
+        var launcher = new LauncherService(FindRepoRoot());
+        LauncherResolveResult result = launcher.Resolve(
+            new[] { "preset:rts_multiplayer_frontline_networked_raylib" },
+            LauncherPlatformIds.Raylib,
+            LauncherBuildMode.Never);
+
+        LauncherResolvedSetting startupInputContexts = result.Plan.Diagnostics.Settings
+            .Single(setting => setting.Key == "startupInputContexts");
+        JsonArray contexts = startupInputContexts.EffectiveValue?.AsArray()
+            ?? throw new InvalidOperationException("startupInputContexts did not resolve to a JSON array.");
+        string[] ids = contexts
+            .Select(item => item?.GetValue<string>() ?? string.Empty)
+            .ToArray();
+
+        Assert.That(ids, Does.Contain("Default_Gameplay"));
+        Assert.That(ids, Does.Contain("Frontline.Gameplay"));
+        Assert.That(ids, Does.Contain("Frontline.RoomControls"));
+        Assert.That(ids, Does.Not.Contain("Rts_Gameplay"));
+
+        using GameEngine engine = CreateStartedEngine();
+        InputConfigRoot input = new InputConfigPipelineLoader(engine.ConfigPipeline).Load();
+        InputContextDef frontline = input.Contexts.Single(context => context.Id == "Frontline.Gameplay");
+        string[] frontlinePaths = FlattenBindingPaths(frontline.Bindings).ToArray();
+        Assert.Multiple(() =>
+        {
+            Assert.That(input.Actions.Any(action => action.Id == "SkillQ"), Is.True);
+            Assert.That(input.Actions.Any(action => action.Id == "CommandSourceAcquire"), Is.True);
+            Assert.That(input.Actions.Any(action => action.Id == "Command"), Is.True);
+            Assert.That(frontlinePaths, Does.Contain("<Keyboard>/q"));
+            Assert.That(frontlinePaths, Does.Contain("<Mouse>/LeftButton"));
+            Assert.That(frontlinePaths, Does.Contain("<Mouse>/RightButton"));
+            Assert.That(frontlinePaths, Does.Not.Contain("<Keyboard>/w"));
+            Assert.That(frontlinePaths, Does.Not.Contain("<Keyboard>/a"));
+            Assert.That(frontlinePaths, Does.Not.Contain("<Keyboard>/s"));
+            Assert.That(frontlinePaths, Does.Not.Contain("<Keyboard>/d"));
+        });
     }
 
     [Test]
@@ -100,6 +151,63 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
         Assert.That(ReadSnapshot(engine, "Outcome"), Is.EqualTo("InProgress"));
         Assert.That(ReadSnapshot(engine, "Phase"), Is.EqualTo("WaitingForPlayers"));
         Assert.That(engine.TriggerManager.Errors, Is.Empty);
+    }
+
+    [Test]
+    [Description(
+        "Feature: Same-screen opponent feedback\n" +
+        "  Given the Frontline duel loads as a one-screen sandbox\n" +
+        "  When both opening armies are revealed by the authored starting vision\n" +
+        "  Then each player has live knowledge for the other player's command core, harvesters, and infantry")]
+    public void GivenOneScreenSandbox_WhenBattleLoads_ThenEachPlayerCanSeeTheEnemyArmy()
+    {
+        using GameEngine engine = CreateStartedEngine();
+        LoadMap(engine);
+
+        FrontlineConfig config = GetFrontlineConfig(engine);
+        KnowledgeProjectionStore knowledge = engine.GetService(CoreServiceKeys.KnowledgeProjectionStore)
+            ?? throw new InvalidOperationException("KnowledgeProjectionStore is missing.");
+
+        for (int sideIndex = 0; sideIndex < config.Sides.Length; sideIndex++)
+        {
+            FrontlineSideConfig side = config.Sides[sideIndex];
+            Entity viewer = engine.CurrentMapSession!.PlayerEntityLookup.Get(side.PlayerId);
+            int visibleEnemyCount = 0;
+            var query = new QueryDescription()
+                .WithAll<FrontlineParticipant, FogOccupantCm>()
+                .WithAny<FrontlineCore, FrontlineHarvester, FrontlineInfantry>();
+
+            foreach (ref Chunk chunk in engine.World.Query(in query))
+            {
+                ReadOnlySpan<FrontlineParticipant> participants = chunk.GetSpan<FrontlineParticipant>();
+                ref Entity first = ref chunk.Entity(0);
+                foreach (int index in chunk)
+                {
+                    if (participants[index].SideIndex == sideIndex)
+                    {
+                        continue;
+                    }
+
+                    Entity enemy = System.Runtime.CompilerServices.Unsafe.Add(ref first, index);
+                    Assert.That(
+                        knowledge.TryGet(
+                            viewer,
+                            enemy,
+                            engine.GameSession.CurrentTick,
+                            out KnowledgeDisclosureRecord record),
+                        Is.True,
+                        $"Player side {sideIndex} must receive the enemy opening unit in the same-screen sandbox.");
+                    Assert.Multiple(() =>
+                    {
+                        Assert.That(record.Presence, Is.EqualTo(KnowledgePresence.LiveVisible));
+                        Assert.That(record.Position, Is.EqualTo(KnowledgePositionAccess.Live));
+                    });
+                    visibleEnemyCount++;
+                }
+            }
+
+            Assert.That(visibleEnemyCount, Is.EqualTo(5));
+        }
     }
 
     [Test]
@@ -914,6 +1022,7 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
         string hud = string.Join("\n", ReadOverlayText(overlay));
 
         Assert.That(hud, Does.Contain("DESTROY THE ENEMY COMMAND CORE"));
+        Assert.That(hud, Does.Contain("ONE SCREEN DUEL"));
         Assert.That(hud, Does.Contain("Waiting for both commanders"));
         Assert.That(hud, Does.Contain("North: NOT READY"));
         Assert.That(hud, Does.Contain("Press F5 when ready"));
@@ -992,16 +1101,20 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
         Assert.That(source, Does.Not.Match(@"PlayerId\s*=\s*[12]\b"));
         Assert.That(source, Does.Not.Match(@"TeamId\s*=\s*[12]\b"));
         Assert.That(authoredPositionSource, Does.Not.Match(@"WorldPositionCm\s*\.\s*FromCm"));
-        Assert.That(Regex.Matches(source, @"\b(7000|8200|9300|11200|18800|20700|21800|23000)\b"), Is.Empty);
+        Assert.That(
+            Regex.Matches(
+                source,
+                @"\b(7000|8200|9300|11200|18800|20700|21800|23000|13000|13800|14200|14400|15600|15800|16200|17000)\b"),
+            Is.Empty);
     }
 
     [Test]
     [Description(
         "Feature: Visible opening battlefield\n" +
-        "  Given a player enters the Frontline duel before a local command seat is focused\n" +
-        "  When the default 16:9 battlefield camera appears\n" +
-        "  Then both command cores are inside the horizontal opening view with a readable margin")]
-    public void GivenOpeningBattlefield_WhenDefaultCameraAppears_ThenBothCommandCoresFitInView()
+        "  Given a player enters the Frontline duel for the first time\n" +
+        "  When the default and seat-focused 16:9 battlefield cameras appear\n" +
+        "  Then both players' starting units and crystal fields stay inside the same screen with a readable margin")]
+    public void GivenOpeningBattlefield_WhenCamerasAppear_ThenBothArmiesFitInOneScreen()
     {
         string mapPath = Path.Combine(
             FindRepoRoot(),
@@ -1016,20 +1129,36 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
 
         JsonElement entities = map.RootElement.GetProperty("Entities");
         JsonElement camera = map.RootElement.GetProperty("DefaultCamera");
-        int cameraTargetXCm = camera.GetProperty("TargetXCm").GetInt32();
-        int northCoreXCm = FindMapEntityX(entities, "Northern Command Core");
-        int southCoreXCm = FindMapEntityX(entities, "Southern Command Core");
-        float requiredHalfWidthCm = MathF.Max(
-            MathF.Abs(northCoreXCm - cameraTargetXCm),
-            MathF.Abs(southCoreXCm - cameraTargetXCm));
-        float distanceCm = camera.GetProperty("DistanceCm").GetSingle();
-        float verticalFovRadians = camera.GetProperty("FovYDeg").GetSingle() * MathF.PI / 180f;
-        float horizontalHalfWidthCm = distanceCm * MathF.Tan(verticalFovRadians * 0.5f) * (16f / 9f);
+        Vector2 defaultTargetCm = new(
+            camera.GetProperty("TargetXCm").GetInt32(),
+            camera.GetProperty("TargetYCm").GetInt32());
+        Vector2[] openingPositions = ReadOpeningBattlefieldPositions(entities).ToArray();
+        Assert.That(openingPositions, Has.Length.EqualTo(12));
 
-        Assert.That(
-            horizontalHalfWidthCm,
-            Is.GreaterThanOrEqualTo(requiredHalfWidthCm * 1.1f),
-            "The neutral opening camera must show both armies before seat-specific focus is available.");
+        AssertCameraFitsPositions(
+            openingPositions,
+            defaultTargetCm,
+            camera.GetProperty("DistanceCm").GetSingle(),
+            camera.GetProperty("FovYDeg").GetSingle(),
+            "The neutral opening camera must show the complete one-screen duel before seat-specific focus is available.");
+
+        JsonElement commandUi = map.RootElement
+            .GetProperty("Metadata")
+            .GetProperty("rts.commandSourceUi");
+        float focusTowardDefaultCm = commandUi.GetProperty("cameraFocusTowardDefaultTargetCm").GetSingle();
+        float focusDistanceCm = commandUi.GetProperty("cameraFocusDistanceCm").GetSingle();
+        float focusFovYDeg = commandUi.GetProperty("cameraFocusFovYDeg").GetSingle();
+        foreach (string coreName in new[] { "Northern Command Core", "Southern Command Core" })
+        {
+            Vector2 corePosition = FindMapEntityPosition(entities, coreName);
+            Vector2 focusTarget = ResolveCommandFocusTarget(corePosition, defaultTargetCm, focusTowardDefaultCm);
+            AssertCameraFitsPositions(
+                openingPositions,
+                focusTarget,
+                focusDistanceCm,
+                focusFovYDeg,
+                $"The {coreName} command-seat focus must still show both armies in one screen.");
+        }
     }
 
     [Test]
@@ -1165,6 +1294,95 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
         }
 
         return count;
+    }
+
+    private static IEnumerable<string> FlattenBindingPaths(IEnumerable<InputBindingDef>? bindings)
+    {
+        if (bindings == null)
+        {
+            yield break;
+        }
+
+        foreach (InputBindingDef binding in bindings)
+        {
+            if (!string.IsNullOrWhiteSpace(binding.Path))
+            {
+                yield return binding.Path;
+            }
+
+            foreach (string path in FlattenBindingPaths(binding.CompositeParts))
+            {
+                yield return path;
+            }
+        }
+    }
+
+    private static IEnumerable<Vector2> ReadOpeningBattlefieldPositions(JsonElement entities)
+    {
+        foreach (JsonElement entity in entities.EnumerateArray())
+        {
+            string? template = entity.GetProperty("Template").GetString();
+            if (template is not "rts_frontline_core" and
+                not "rts_frontline_harvester" and
+                not "rts_frontline_infantry" and
+                not "rts_frontline_crystal_node")
+            {
+                continue;
+            }
+
+            if (!entity.TryGetProperty("Overrides", out JsonElement overrides) ||
+                !overrides.TryGetProperty("WorldPositionCm", out JsonElement position))
+            {
+                throw new InvalidOperationException($"Opening entity template '{template}' must author WorldPositionCm.");
+            }
+
+            JsonElement value = position.GetProperty("Value");
+            yield return new Vector2(
+                value.GetProperty("X").GetInt32(),
+                value.GetProperty("Y").GetInt32());
+        }
+    }
+
+    private static Vector2 ResolveCommandFocusTarget(
+        Vector2 commandSourceCm,
+        Vector2 defaultTargetCm,
+        float focusTowardDefaultCm)
+    {
+        Vector2 towardDefault = defaultTargetCm - commandSourceCm;
+        if (focusTowardDefaultCm <= 0f)
+        {
+            return commandSourceCm;
+        }
+
+        Assert.That(towardDefault.LengthSquared(), Is.GreaterThan(0f),
+            "Command-source focus must have a non-zero direction toward the default opening camera target.");
+        return commandSourceCm + Vector2.Normalize(towardDefault) * focusTowardDefaultCm;
+    }
+
+    private static void AssertCameraFitsPositions(
+        IReadOnlyList<Vector2> positions,
+        Vector2 targetCm,
+        float distanceCm,
+        float fovYDeg,
+        string because)
+    {
+        float requiredHalfWidthCm = 0f;
+        float requiredHalfHeightCm = 0f;
+        for (int i = 0; i < positions.Count; i++)
+        {
+            requiredHalfWidthCm = MathF.Max(requiredHalfWidthCm, MathF.Abs(positions[i].X - targetCm.X));
+            requiredHalfHeightCm = MathF.Max(requiredHalfHeightCm, MathF.Abs(positions[i].Y - targetCm.Y));
+        }
+
+        float verticalFovRadians = fovYDeg * MathF.PI / 180f;
+        float verticalHalfHeightCm = distanceCm * MathF.Tan(verticalFovRadians * 0.5f);
+        float horizontalHalfWidthCm = verticalHalfHeightCm * (16f / 9f);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(horizontalHalfWidthCm, Is.GreaterThanOrEqualTo(requiredHalfWidthCm * 1.1f), because);
+            Assert.That(verticalHalfHeightCm, Is.GreaterThanOrEqualTo(requiredHalfHeightCm * 1.1f), because);
+        });
     }
 
     private static int ReadTemplateBaseAttribute(
@@ -1653,6 +1871,11 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
 
     private static int FindMapEntityX(JsonElement entities, string name)
     {
+        return (int)FindMapEntityPosition(entities, name).X;
+    }
+
+    private static Vector2 FindMapEntityPosition(JsonElement entities, string name)
+    {
         foreach (JsonElement entity in entities.EnumerateArray())
         {
             if (!entity.TryGetProperty("Overrides", out JsonElement overrides) ||
@@ -1662,7 +1885,10 @@ public sealed class RtsMultiplayerFrontlinePlayableAcceptanceTests
             }
             if (string.Equals(authoredName.GetProperty("Value").GetString(), name, StringComparison.Ordinal))
             {
-                return overrides.GetProperty("WorldPositionCm").GetProperty("Value").GetProperty("X").GetInt32();
+                JsonElement position = overrides.GetProperty("WorldPositionCm").GetProperty("Value");
+                return new Vector2(
+                    position.GetProperty("X").GetInt32(),
+                    position.GetProperty("Y").GetInt32());
             }
         }
 
