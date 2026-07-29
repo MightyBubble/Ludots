@@ -11,7 +11,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
     /// </summary>
     public static class GraphExecutor
     {
-        public static void Execute(
+        internal static void Execute(
             World world,
             Entity caster,
             Entity explicitTarget,
@@ -35,7 +35,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             ExecuteCore(world, caster, explicitTarget, targetPosCm, program, api);
         }
 
-        public static void Execute(
+        internal static void Execute(
             World world,
             Entity caster,
             Entity explicitTarget,
@@ -59,7 +59,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// Returns the value of B[0] after execution: true = validation passed, false = rejected.
         /// Fail-closed: B[0] starts at 0 (reject). The validation graph must explicitly write B[0]=1 to pass.
         /// </summary>
-        public static bool ExecuteValidation(
+        internal static bool ExecuteValidation(
             World world,
             Entity caster,
             Entity explicitTarget,
@@ -86,7 +86,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// <summary>
         /// Execute a graph program and return F[0] as the score output.
         /// </summary>
-        public static float ExecuteScore(
+        internal static float ExecuteScore(
             World world,
             Entity caster,
             Entity explicitTarget,
@@ -113,7 +113,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// <summary>
         /// Execute a validation graph from a <see cref="GraphProgramBuffer"/>.
         /// </summary>
-        public static bool ExecuteValidation(
+        internal static bool ExecuteValidation(
             World world,
             Entity caster,
             Entity explicitTarget,
@@ -130,6 +130,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             }
 
             return ExecuteValidation(world, caster, explicitTarget, targetPosCm, tmp.Slice(0, count), api);
+        }
+
+        public static void ExecuteDerived(
+            World world,
+            Entity entity,
+            ReadOnlySpan<GraphInstruction> program,
+            IGraphRuntimeApi api,
+            GraphKind kind)
+        {
+            RequireKind(kind, GraphKind.Derived, nameof(ExecuteDerived));
+            ExecuteCore(world, entity, entity, default, program, api);
         }
 
         private static void RequireKind(GraphKind actual, GraphKind expected, string entrypoint)

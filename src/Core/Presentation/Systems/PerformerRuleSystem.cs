@@ -328,6 +328,7 @@ namespace Ludots.Core.Presentation.Systems
                 throw new InvalidOperationException($"Performer rule condition graphProgramId={graphProgramId} has no instructions.");
             }
 
+            _programs.RequireKind(graphProgramId, GraphKind.Validation);
             ExecuteEventGraph(program, in evt);
 
             // Convention: B[0] holds the boolean condition result
@@ -733,6 +734,7 @@ namespace Ludots.Core.Presentation.Systems
                 throw new InvalidOperationException($"Performer command paramGraphProgramId={graphProgramId} has no instructions.");
             }
 
+            _programs.RequireKind(graphProgramId, GraphKind.Score);
             ExecuteEventGraph(program, in evt);
 
             // Convention: F[0] holds the float result

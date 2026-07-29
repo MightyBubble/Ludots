@@ -21,19 +21,15 @@ namespace Ludots.Core.GraphRuntime
 
         public void Clear() => _programs.Clear();
 
-        /// <summary>
-        /// Registers a programmatically constructed graph without an authored kind.
-        /// Authored graphs must use <see cref="Register(int, GraphInstruction[], GraphKind)"/>.
-        /// </summary>
-        public void Register(int graphId, GraphInstruction[] program)
-        {
-            Register(graphId, program, GraphKind.None);
-        }
-
         public void Register(int graphId, GraphInstruction[] program, GraphKind kind)
         {
             if (graphId <= 0) throw new ArgumentOutOfRangeException(nameof(graphId));
-            if (!_programs.TryAdd(graphId, new GraphProgramRegistration(program ?? Array.Empty<GraphInstruction>(), kind)))
+            if (program == null) throw new ArgumentNullException(nameof(program));
+            if (kind == GraphKind.None || !Enum.IsDefined(typeof(GraphKind), kind))
+            {
+                throw new ArgumentOutOfRangeException(nameof(kind), kind, "Graph registration requires an explicit supported kind.");
+            }
+            if (!_programs.TryAdd(graphId, new GraphProgramRegistration(program, kind)))
             {
                 throw new InvalidOperationException(
                     $"Graph program id {graphId} is already registered; duplicate registration is not allowed.");

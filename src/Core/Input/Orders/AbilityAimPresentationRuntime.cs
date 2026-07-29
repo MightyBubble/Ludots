@@ -378,6 +378,8 @@ namespace Ludots.Core.Input.Orders
                 return 0;
             }
 
+            _graphPrograms.RequireKind(query.GraphProgramId, GraphKind.Query);
+
             Span<float> floats = stackalloc float[GraphVmLimits.MaxFloatRegisters];
             Span<int> ints = stackalloc int[GraphVmLimits.MaxIntRegisters];
             Span<byte> bools = stackalloc byte[GraphVmLimits.MaxBoolRegisters];

@@ -11,6 +11,7 @@ using Ludots.Core.Gameplay.AI.WorldState;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Teams;
+using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 
 namespace Ludots.Core.Gameplay.AI.Config
@@ -1199,6 +1200,8 @@ namespace Ludots.Core.Gameplay.AI.Config
             {
                 throw Fail(path, $"References unknown graph id {graphId}.");
             }
+
+            _validation.Graphs.RequireKind(graphId, GraphKind.Score);
 
             try
             {

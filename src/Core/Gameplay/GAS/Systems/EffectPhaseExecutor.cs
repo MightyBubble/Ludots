@@ -532,6 +532,9 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
             if (program.Length == 0) return;
 
+            GraphKind expectedKind = trackValidationResult ? GraphKind.Validation : GraphKind.Effect;
+            _programs.RequireKind(graphProgramId, expectedKind);
+
             var scratchUsage = GetScratchUsage(graphProgramId, program);
             if (scratchUsage.RegisterCount > 0)
             {
