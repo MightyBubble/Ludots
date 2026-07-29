@@ -2,6 +2,105 @@
 
 Current closeouts and prior issue reviews follow.
 
+## Graph / PresetType / EffectTemplate SSOT - Pre-Implementation Gate - 2026-07-30
+
+- **Task / Issue**: Close the audited Ability, GAS Effect, and Graph contract gaps on current `main`, converge gameplay composition on `Graph -> optional PresetType sugar -> EffectTemplate instance`, and make test execution reproducible from repository-declared SDK and dependencies.
+- **Date**: 2026-07-30
+- **Agent / Author**: Codex, with read-only Pi Opus review, isolated Cursor Graph implementation, and independent SDK/warning audit.
+- **Baseline**: `origin/main` at `9a6af246ccd30d534011960d3663a8be1afac52a`.
+- **Status**: PRE-IMPLEMENTATION. This section must be completed with exact commits and verification before merge.
+
+### 1. Core judgment
+
+Primary delivery: A. Tighten existing Graph, Ability, and Effect contracts and remove parallel or implicit behavior.
+
+Result: PROVISIONAL PASS, subject to implementation and tests.
+
+Reason: The intended repair reuses the existing Graph compiler/runtime, `AbilityExecSystem`, effect proposal pipeline, `EffectTemplateRegistry`, and phase Graph references. It must not add a gameplay enum, preset-specific loader branch, alternate ability producer, fallback path, compatibility reader, or second effect runtime.
+
+### 2. Layer assignment
+
+| Capability | Layer | Required carrier |
+|---|---:|---|
+| Atomic gameplay operation | 0 | Existing registered Graph/GAS op with explicit metadata |
+| Sequence, branch, stage, and reusable behavior | 1 | Graph compiled under an enforced graph kind |
+| Stable authoring shorthand, when justified | 2 | Optional PresetType compiled to the same Graph/effect contract |
+| Concrete duration, tags, parameters, and phase references | 3 | EffectTemplate data |
+| Hero, skill, map, or mode-specific variant | 3 | Mod-owned Graph and EffectTemplate assets; no Core enum |
+
+### 3. Reuse list
+
+- Graph: existing opcode registry, compiler, executor, program config loader, and execution budget.
+- Ability: existing `AbilityExecSystem` as the single production execution owner; legacy admission must delegate or be retired, never disagree.
+- Effect: existing proposal/apply buffers, transaction preflight patterns, effect registry, and phase Graph execution.
+- Configuration: existing Mod asset loading and repository JSON contracts.
+
+### 4. New Layer 0 ops
+
+None planned. If implementation reveals a missing indivisible engine capability, work stops and this gate is amended before adding an op.
+
+### 5. Transaction boundary
+
+- An instant Effect preflights every authoritative write and observable publication for the whole template before its first mutation; any capacity or dependency failure leaves no partial gameplay result.
+- Ability execution has one authoritative production path and one typed invalid-target result.
+- Graph loading and validation fail closed: invalid JSON, unsupported graph kind, empty validation output, unknown op metadata, and fixed-capacity overflow are explicit failures.
+- Graph runtime does not resize or structurally mutate ECS state in the hot path.
+
+### 6. Config SSOT
+
+Graph assets describe behavior; EffectTemplate assets describe concrete effect instances. PresetType, if retained, is only stable authoring sugar compiled to those contracts. SDK version and test/analyzer dependencies are repository-declared; machine-global Roslyn state is not a dependency.
+
+New JSON schema: only if required to enforce an already-declared graph kind or metadata contract. No compatibility fallback is permitted.
+
+### 7. Red flag scan
+
+- [ ] No new gameplay preset enum or preset-specific loader branch
+- [ ] No parallel Ability execution producer or conflicting invalid-target behavior
+- [ ] No Graph kind field without a consumer
+- [ ] No validation default that turns missing output into success
+- [ ] No permissive JSON or unknown-field acceptance where config is authoritative
+- [ ] No silent capacity return, truncation, registry overwrite, or hot-path resize in touched paths
+- [ ] No warning suppression used as a substitute for a root-cause fix
+- [ ] No test dependency on an accidentally installed SDK/analyzer
+
+### 8. Planned verification
+
+- Clean restore/build with the repository-selected SDK.
+- Architecture tests, Graph-focused tests, Ability/Effect tests, then the complete relevant test projects.
+- Warning inventory before/after, with every remaining warning accounted for rather than hidden.
+- `git diff --check` and clean worktree after commit.
+
+### 9. Player-facing UAT
+
+```gherkin
+Feature: Data-driven ability and effect composition
+
+  Scenario: A Mod author creates a new ability variant without changing Core code
+    Given an existing set of engine operations
+    And a new Mod Graph that combines those operations
+    And an EffectTemplate that references the Graph with concrete parameters
+    When a player uses the new ability on a valid target
+    Then the full effect is applied exactly once
+    And no new Core preset type is required
+
+  Scenario: An invalid ability target is rejected consistently
+    Given a player selects a target that the ability cannot affect
+    When the player confirms the ability
+    Then the ability does not start
+    And no partial effect is applied
+    And the player receives one consistent rejection result
+
+  Scenario: An invalid Graph asset cannot silently enter play
+    Given a Mod contains an invalid or unsupported Graph asset
+    When the Mod is loaded
+    Then loading fails with the exact asset and contract error
+    And gameplay does not continue with a default behavior
+```
+
+### 10. Next variant test
+
+A new reveal, area-control, lifecycle, or hero-specific effect must be expressible by Mod-owned Graph and EffectTemplate data. If it requires a new Core preset enum or loader branch, the composition design has failed this gate.
+
 ## PR #660 / #689 Final Closeout - Player Operation Lifecycle - 2026-07-26
 
 - **Task / Issue**: Finish PR #660 against the #689 player-operation acceptance gate after the stale audit loop: close admission retirement, continuation capacity transaction, input feedback, ability effect atomicity, fixed-capacity runtime behavior, and spawn transaction boundaries without scope expansion or fallback.
