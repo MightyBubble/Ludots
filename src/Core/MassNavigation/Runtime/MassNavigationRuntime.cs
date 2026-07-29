@@ -24,7 +24,7 @@ public sealed class MassNavigationRuntime
     public bool HandleMapFocused(GameEngine engine, MapId mapId)
     {
         ArgumentNullException.ThrowIfNull(engine);
-        if (!TryEnsureConfig(engine, out MassNavigationConfig config) ||
+        if (!TryEnsureConfig(engine, out MassNavigationConfig? config) || config is null ||
             !string.Equals(mapId.Value, config.MapId, StringComparison.Ordinal))
         {
             return false;
@@ -76,7 +76,7 @@ public sealed class MassNavigationRuntime
     private bool ReleaseMapState(GameEngine engine, MapId mapId, bool unloadScenario)
     {
         ArgumentNullException.ThrowIfNull(engine);
-        if (!TryEnsureConfig(engine, out MassNavigationConfig config) ||
+        if (!TryEnsureConfig(engine, out MassNavigationConfig? config) || config is null ||
             !string.Equals(mapId.Value, config.MapId, StringComparison.Ordinal))
         {
             return false;
@@ -153,7 +153,7 @@ public sealed class MassNavigationRuntime
         return simulation;
     }
 
-    private bool TryEnsureConfig(GameEngine engine, out MassNavigationConfig config)
+    private bool TryEnsureConfig(GameEngine engine, out MassNavigationConfig? config)
     {
         if (_config != null)
         {
@@ -163,7 +163,7 @@ public sealed class MassNavigationRuntime
 
         if (_configResolved)
         {
-            config = null!;
+            config = null;
             return false;
         }
 
@@ -173,10 +173,11 @@ public sealed class MassNavigationRuntime
         }
 
         var loader = new MassNavigationConfigLoader(engine.ConfigPipeline);
-        if (!loader.TryLoad(engine.ConfigCatalog, engine.ConfigConflictReport, out MassNavigationConfig? loaded))
+        if (!loader.TryLoad(engine.ConfigCatalog, engine.ConfigConflictReport, out MassNavigationConfig? loaded) ||
+            loaded is null)
         {
             _configResolved = true;
-            config = null!;
+            config = null;
             return false;
         }
 

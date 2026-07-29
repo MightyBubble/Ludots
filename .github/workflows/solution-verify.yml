@@ -51,10 +51,6 @@ jobs:
             8.0.x
             9.0.x
 
-      - name: Pin solution verify SDK
-        shell: pwsh
-        run: dotnet new globaljson --sdk-version 9.0.100 --roll-forward latestFeature --force
-
       - name: Build maintained test project graphs
         shell: pwsh
         run: |
