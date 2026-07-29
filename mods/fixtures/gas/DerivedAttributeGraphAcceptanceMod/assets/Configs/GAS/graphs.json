@@ -1,6 +1,7 @@
 [
   {
     "id": "Tests.DerivedAttributeGraph.EngineOwned",
+    "kind": "Derived",
     "entry": "source",
     "nodes": [
       {
