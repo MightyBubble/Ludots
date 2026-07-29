@@ -282,7 +282,7 @@ namespace Ludots.Tests.GAS
                 package!.Value.Program,
                 api);
 
-            Assert.That(valid, Is.True);
+            Assert.That(valid, Is.False, "Validation graphs fail closed when B[0] is never written.");
             GraphInstruction snap = Array.Find(package.Value.Program, ins => ins.Op == (ushort)GraphNodeOp.SnapToNearestInCollection);
             Assert.That(snap.Flags, Is.EqualTo(byte.MaxValue));
         }
@@ -305,6 +305,7 @@ namespace Ludots.Tests.GAS
             return new GraphConfig
             {
                 Id = "tests.graph.radius-capacity",
+                Kind = "Effect",
                 Entry = "query",
                 Nodes = new List<GraphNodeConfig>
                 {
@@ -348,6 +349,7 @@ namespace Ludots.Tests.GAS
             return new GraphConfig
             {
                 Id = "tests.graph.snap-valid",
+                Kind = "Validation",
                 Entry = "self",
                 Nodes = nodes
             };
@@ -393,6 +395,7 @@ namespace Ludots.Tests.GAS
 [
   {
     "id": "tests.graph.int-blackboard-config",
+    "kind": "Effect",
     "entry": "self",
     "nodes": [
       { "id": "self", "op": "LoadCaster", "next": "target" },
@@ -430,6 +433,7 @@ namespace Ludots.Tests.GAS
 [
   {
     "id": "tests.graph.query-coverage",
+    "kind": "Effect",
     "entry": "self",
     "nodes": [
       { "id": "self", "op": "LoadCaster", "next": "cone" },
@@ -466,6 +470,7 @@ namespace Ludots.Tests.GAS
 [
   {
     "id": "tests.graph.derived-attribute",
+    "kind": "Derived",
     "entry": "source",
     "nodes": [
       { "id": "source", "op": "LoadSelfAttribute", "attribute": "tests.attr.source", "next": "bonus" },

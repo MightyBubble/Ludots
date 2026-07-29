@@ -21,6 +21,16 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 return (null, GraphOutputSchema.Empty, diagnostics);
             }
 
+            if (!GraphKindParser.TryParse(cfg.Kind, out GraphKind graphKind))
+            {
+                diagnostics.Add(new GraphDiagnostic(
+                    GraphDiagnosticSeverity.Error,
+                    GraphDiagnosticCodes.UnsupportedGraphKind,
+                    $"Unsupported or missing graph kind '{cfg.Kind}'.",
+                    cfg.Id ?? string.Empty));
+                return (null, GraphOutputSchema.Empty, diagnostics);
+            }
+
             var nodesById = new Dictionary<string, GraphNodeConfig>(StringComparer.OrdinalIgnoreCase);
             for (int i = 0; i < cfg.Nodes.Count; i++)
             {
@@ -537,7 +547,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 return (null, GraphOutputSchema.Empty, diagnostics);
             }
 
-            return (new GraphProgramPackage(cfg.Id, symbols.ToArray(), instructions.ToArray()), outputSchema, diagnostics);
+            return (new GraphProgramPackage(cfg.Id, symbols.ToArray(), instructions.ToArray(), graphKind), outputSchema, diagnostics);
         }
 
         private static (GraphValueType Type, byte? FixedReg) GetOutputTypeAndFixedReg(GraphNodeOp op)

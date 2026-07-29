@@ -54,7 +54,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 sorted.Add((merged[i].Id, merged[i].Node));
             sorted.Sort((a, b) => StringComparer.OrdinalIgnoreCase.Compare(a.Id, b.Id));
 
-            var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true, IncludeFields = true };
+            JsonSerializerOptions options = StrictJsonOptions.CreateCamelCase(includeFields: true);
             var packages = new List<GraphProgramPackage>(sorted.Count);
             var errors = new List<string>();
 
@@ -63,7 +63,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 var (id, obj) = sorted[i];
                 try
                 {
-                    var cfg = obj.Deserialize<GraphConfig>(options);
+                    GraphConfig? cfg;
+                    try
+                    {
+                        cfg = obj.Deserialize<GraphConfig>(options);
+                    }
+                    catch (JsonException ex)
+                    {
+                        throw new InvalidOperationException(
+                            $"Strict JSON rejected graph '{id}' in '{relativePath}': {ex.Message}",
+                            ex);
+                    }
+
                     if (cfg == null) throw new InvalidOperationException("Failed to deserialize graph config.");
                     if (string.IsNullOrWhiteSpace(cfg.Id)) cfg.Id = id;
                     if (!string.Equals(cfg.Id, id, StringComparison.OrdinalIgnoreCase))
@@ -75,7 +86,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     {
                         if (diags[d].Severity == GraphDiagnosticSeverity.Error)
                         {
-                            errors.Add($"Graph '{id}': {diags[d].Code} {diags[d].Message}");
+                            errors.Add($"Graph '{id}' in '{relativePath}': {diags[d].Code} {diags[d].Message}");
                         }
                     }
                     if (pkg.HasValue)
@@ -86,7 +97,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 }
                 catch (Exception ex)
                 {
-                    errors.Add($"Graph '{id}': {ex.Message}");
+                    errors.Add($"Graph '{id}' in '{relativePath}': {ex.Message}");
                 }
             }
 
@@ -104,11 +115,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         {
             for (int i = 0; i < packages.Count; i++)
             {
-                var (name, symbols, program) = packages[i];
+                var (name, symbols, program, kind) = packages[i];
                 GraphProgramSymbolPatcher.Patch(symbols, program, _symbolResolver, _entityCollections);
                 int id = GraphIdRegistry.GetId(name);
                 if (id <= 0) id = GraphIdRegistry.Register(name);
-                _registry.Register(id, program);
+                if (kind == GraphKind.None)
+                {
+                    throw new InvalidOperationException(
+                        $"Graph '{name}' (id={id}) cannot be registered without an authored kind.");
+                }
+
+                _registry.Register(id, program, kind);
                 if (_outputSchemas != null)
                 {
                     GraphOutputSchema schema = _pendingOutputSchemas.TryGetValue(name, out GraphOutputSchema pendingSchema)

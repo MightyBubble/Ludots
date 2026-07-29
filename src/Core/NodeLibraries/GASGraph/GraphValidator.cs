@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Ludots.Core.GraphRuntime;
 
 namespace Ludots.Core.NodeLibraries.GASGraph
 {
@@ -20,6 +21,16 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             {
                 diagnostics.Add(new GraphDiagnostic(GraphDiagnosticSeverity.Error, GraphDiagnosticCodes.MissingGraphId, "Graph id is missing.", string.Empty));
                 return diagnostics;
+            }
+
+            if (!GraphKindParser.TryParse(cfg.Kind, out _))
+            {
+                string shown = string.IsNullOrWhiteSpace(cfg.Kind) ? "<missing>" : cfg.Kind.Trim();
+                diagnostics.Add(new GraphDiagnostic(
+                    GraphDiagnosticSeverity.Error,
+                    GraphDiagnosticCodes.UnsupportedGraphKind,
+                    $"Unsupported or missing graph kind '{shown}'. Supported kinds: Effect, Query, Score, Validation, Derived.",
+                    graphId));
             }
 
             if (string.IsNullOrWhiteSpace(cfg.Entry))

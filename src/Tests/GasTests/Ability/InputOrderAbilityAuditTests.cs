@@ -2960,16 +2960,16 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         // ════════════════════════════════════════════════════════════════════
 
         [Test]
-        public void ExecuteValidation_EmptyProgram_ReturnsTrue()
+        public void ExecuteValidation_EmptyProgram_ReturnsFalse()
         {
             using var world = World.Create();
             var caster = world.Create();
             var target = world.Create();
 
-            // Empty program: B[0] starts at 1 (pass), no instructions change it.
+            // Empty program: B[0] starts at 0 (reject). Missing/unwritten validation result fails closed.
             ReadOnlySpan<GraphInstruction> program = ReadOnlySpan<GraphInstruction>.Empty;
             bool result = GasGraphExecutor.ExecuteValidation(world, caster, target, default, program, null!);
-            That(result, Is.True, "Empty validation program should pass by default (B[0]=1)");
+            That(result, Is.False, "Empty validation program must fail closed (B[0]=0)");
         }
 
         [Test]

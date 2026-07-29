@@ -474,7 +474,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void PhaseExecutor_ValidationResult_DefaultsToPassWhenGraphDoesNotWriteB0()
+        public void PhaseExecutor_ValidationResult_DefaultsToRejectWhenGraphDoesNotWriteB0()
         {
             using var world = World.Create();
             var programs = new GraphProgramRegistry();
@@ -508,7 +508,7 @@ namespace Ludots.Tests.GAS
                 0,
                 default);
 
-            That(accepted, Is.True, "OnPropose validation should pass unless graph explicitly writes B[0]=0.");
+            That(accepted, Is.False, "OnPropose validation must fail closed unless graph explicitly writes B[0]=1.");
         }
 
         [Test]

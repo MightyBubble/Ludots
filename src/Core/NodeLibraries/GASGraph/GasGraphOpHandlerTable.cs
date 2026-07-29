@@ -28,9 +28,84 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         public GasGraphOpHandler[] Handlers { get; }
 
+        private readonly string?[] _descriptions;
+
         private GasGraphOpHandlerTable()
         {
-            Handlers = CreateHandlers();
+            Handlers = new GasGraphOpHandler[GraphVmLimits.HandlerTableSize];
+            _descriptions = new string?[GraphVmLimits.HandlerTableSize];
+            RegisterBuiltins();
+            EnsureRegistrationComplete();
+        }
+
+        /// <summary>
+        /// Registers an executable opcode. Requires a non-empty description and rejects duplicates.
+        /// </summary>
+        public void Register(GraphNodeOp op, GasGraphOpHandler handler, string description)
+        {
+            if (handler == null) throw new ArgumentNullException(nameof(handler));
+            if (string.IsNullOrWhiteSpace(description))
+            {
+                throw new ArgumentException(
+                    $"Graph opcode '{op}' requires a non-empty description.",
+                    nameof(description));
+            }
+
+            ushort code = (ushort)op;
+            if (op == GraphNodeOp.None || code >= Handlers.Length)
+            {
+                throw new ArgumentOutOfRangeException(nameof(op), $"Graph opcode '{op}' ({code}) is not registerable.");
+            }
+
+            if (Handlers[code] != null)
+            {
+                throw new InvalidOperationException(
+                    $"Graph opcode '{op}' ({code}) is already registered; duplicate registration is not allowed.");
+            }
+
+            Handlers[code] = handler;
+            _descriptions[code] = description.Trim();
+        }
+
+        public bool TryGetDescription(GraphNodeOp op, out string description)
+        {
+            ushort code = (ushort)op;
+            if (code < _descriptions.Length && !string.IsNullOrEmpty(_descriptions[code]))
+            {
+                description = _descriptions[code]!;
+                return true;
+            }
+
+            description = string.Empty;
+            return false;
+        }
+
+        public string GetDescription(GraphNodeOp op)
+        {
+            if (!TryGetDescription(op, out string description))
+            {
+                throw new InvalidOperationException($"Graph opcode '{op}' has no registered description.");
+            }
+
+            return description;
+        }
+
+        private void EnsureRegistrationComplete()
+        {
+            foreach (GraphNodeOp op in Enum.GetValues<GraphNodeOp>())
+            {
+                if (op == GraphNodeOp.None)
+                {
+                    continue;
+                }
+
+                ushort code = (ushort)op;
+                if (Handlers[code] == null || string.IsNullOrWhiteSpace(_descriptions[code]))
+                {
+                    throw new InvalidOperationException(
+                        $"Executable graph opcode '{op}' ({code}) is missing required handler/description registration.");
+                }
+            }
         }
 
         /// <summary>
@@ -76,146 +151,120 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             }
         }
 
-        private static GasGraphOpHandler[] CreateHandlers()
+        private void RegisterBuiltins()
         {
-            var h = new GasGraphOpHandler[GraphVmLimits.HandlerTableSize];
-
-            h[(ushort)GraphNodeOp.ConstBool] = HandleConstBool;
-            h[(ushort)GraphNodeOp.ConstInt] = HandleConstInt;
-            h[(ushort)GraphNodeOp.ConstFloat] = HandleConstFloat;
-            h[(ushort)GraphNodeOp.LoadCaster] = HandleLoadCaster;
-            h[(ushort)GraphNodeOp.LoadExplicitTarget] = HandleLoadExplicitTarget;
-            h[(ushort)GraphNodeOp.Jump] = HandleJump;
-            h[(ushort)GraphNodeOp.JumpIfFalse] = HandleJumpIfFalse;
-            h[(ushort)GraphNodeOp.LoadAttribute] = HandleLoadAttribute;
-            h[(ushort)GraphNodeOp.AddFloat] = HandleAddFloat;
-            h[(ushort)GraphNodeOp.MulFloat] = HandleMulFloat;
-            h[(ushort)GraphNodeOp.CompareGtFloat] = HandleCompareGtFloat;
-            h[(ushort)GraphNodeOp.SelectEntity] = HandleSelectEntity;
-            h[(ushort)GraphNodeOp.QueryRadius] = HandleQueryRadius;
-            h[(ushort)GraphNodeOp.QuerySortStable] = HandleQuerySortStable;
-            h[(ushort)GraphNodeOp.QueryLimit] = HandleQueryLimit;
-            h[(ushort)GraphNodeOp.QueryCone] = HandleQueryCone;
-            h[(ushort)GraphNodeOp.QueryRectangle] = HandleQueryRectangle;
-            h[(ushort)GraphNodeOp.QueryLine] = HandleQueryLine;
-            h[(ushort)GraphNodeOp.QueryFilterNotEntity] = HandleQueryFilterNotEntity;
-            h[(ushort)GraphNodeOp.QueryFilterLayer] = HandleQueryFilterLayer;
-            h[(ushort)GraphNodeOp.QueryFilterRelationship] = HandleQueryFilterRelationship;
-            h[(ushort)GraphNodeOp.AggCount] = HandleAggCount;
-            h[(ushort)GraphNodeOp.AggMinByDistance] = HandleAggMinByDistance;
-            h[(ushort)GraphNodeOp.TargetListGet] = HandleTargetListGet;
-            h[(ushort)GraphNodeOp.ApplyEffectTemplate] = HandleApplyEffectTemplate;
-            h[(ushort)GraphNodeOp.FanOutApplyEffect] = HandleFanOutApplyEffect;
-            h[(ushort)GraphNodeOp.RemoveEffectTemplate] = HandleRemoveEffectTemplate;
-            h[(ushort)GraphNodeOp.ModifyAttributeAdd] = HandleModifyAttributeAdd;
-            h[(ushort)GraphNodeOp.SendEvent] = HandleSendEvent;
-            h[(ushort)GraphNodeOp.RelationshipEnsureLink] = HandleRelationshipEnsureLink;
-            h[(ushort)GraphNodeOp.RelationshipRemoveLink] = HandleRelationshipRemoveLink;
-            h[(ushort)GraphNodeOp.RelationshipSetMetric] = HandleRelationshipSetMetric;
-            h[(ushort)GraphNodeOp.RelationshipAddMetric] = HandleRelationshipAddMetric;
-            h[(ushort)GraphNodeOp.RelationshipGetMetric] = HandleRelationshipGetMetric;
-            h[(ushort)GraphNodeOp.RelationshipHasFlag] = HandleRelationshipHasFlag;
-            h[(ushort)GraphNodeOp.RelationshipSetFlag] = HandleRelationshipSetFlag;
-            h[(ushort)GraphNodeOp.RelationshipQueryOutgoing] = HandleRelationshipQueryOutgoing;
-            h[(ushort)GraphNodeOp.RelationshipQueryIncoming] = HandleRelationshipQueryIncoming;
-            h[(ushort)GraphNodeOp.RelationshipQueryMutual] = HandleRelationshipQueryMutual;
-            h[(ushort)GraphNodeOp.RelationshipQueryBetweenPair] = HandleRelationshipQueryBetweenPair;
-            h[(ushort)GraphNodeOp.RelationshipFilterMetricRange] = HandleRelationshipFilterMetricRange;
-            h[(ushort)GraphNodeOp.RelationshipFilterFlag] = HandleRelationshipFilterFlag;
-            h[(ushort)GraphNodeOp.RelationshipSortByMetric] = HandleRelationshipSortByMetric;
-            h[(ushort)GraphNodeOp.RelationshipAggSumMetric] = HandleRelationshipAggSumMetric;
-            h[(ushort)GraphNodeOp.RelationshipAggMaxMetric] = HandleRelationshipAggMaxMetric;
-            h[(ushort)GraphNodeOp.RelationshipAggAverageMetric] = HandleRelationshipAggAverageMetric;
-            h[(ushort)GraphNodeOp.RelationshipAggMinMetric] = HandleRelationshipAggMinMetric;
-            h[(ushort)GraphNodeOp.RelationshipAggMaxEntityByMetric] = HandleRelationshipAggMaxEntityByMetric;
-            h[(ushort)GraphNodeOp.RelationshipAggMinEntityByMetric] = HandleRelationshipAggMinEntityByMetric;
-            h[(ushort)GraphNodeOp.QueryAllMapEntities] = HandleQueryAllMapEntities;
-            h[(ushort)GraphNodeOp.QueryFromCollection] = HandleQueryFromCollection;
-            h[(ushort)GraphNodeOp.QueryFilterTeam] = HandleQueryFilterTeam;
-            h[(ushort)GraphNodeOp.QueryFilterTemplate] = HandleQueryFilterTemplate;
-            h[(ushort)GraphNodeOp.QueryFilterAttributeRange] = HandleQueryFilterAttributeRange;
-            h[(ushort)GraphNodeOp.QueryFilterTagAny] = HandleQueryFilterTagAny;
-            h[(ushort)GraphNodeOp.QueryFilterTagNone] = HandleQueryFilterTagNone;
-            h[(ushort)GraphNodeOp.QuerySortByAttribute] = HandleQuerySortByAttribute;
-            h[(ushort)GraphNodeOp.AggSumAttribute] = HandleAggSumAttribute;
-            h[(ushort)GraphNodeOp.AggAverageAttribute] = HandleAggAverageAttribute;
-            h[(ushort)GraphNodeOp.AggMaxAttribute] = HandleAggMaxAttribute;
-            h[(ushort)GraphNodeOp.AggMinAttribute] = HandleAggMinAttribute;
-            h[(ushort)GraphNodeOp.AggMaxEntityByAttribute] = HandleAggMaxEntityByAttribute;
-            h[(ushort)GraphNodeOp.AggMinEntityByAttribute] = HandleAggMinEntityByAttribute;
-            h[(ushort)GraphNodeOp.BeginLifecycleTransaction] = HandleBeginLifecycleTransaction;
-            h[(ushort)GraphNodeOp.InvokeBuiltin] = HandleInvokeBuiltin;
-
-            // ── Int Math / Bool (29, 31-33) ──
-            h[(ushort)GraphNodeOp.AddInt] = HandleAddInt;
-            h[(ushort)GraphNodeOp.CompareLtInt] = HandleCompareLtInt;
-            h[(ushort)GraphNodeOp.CompareEqInt] = HandleCompareEqInt;
-            h[(ushort)GraphNodeOp.HasTag] = HandleHasTag;
-            h[(ushort)GraphNodeOp.CompareEqEntity] = HandleCompareEqEntity;
-            h[(ushort)GraphNodeOp.RandomFloat01] = HandleRandomFloat01;
-
-            // ── Hex spatial queries (130-132) ──
-            h[(ushort)GraphNodeOp.QueryHexRange] = HandleQueryHexRange;
-            h[(ushort)GraphNodeOp.QueryHexRing] = HandleQueryHexRing;
-            h[(ushort)GraphNodeOp.QueryHexNeighbors] = HandleQueryHexNeighbors;
-
-            // ── Math (22-28) ──
-            h[(ushort)GraphNodeOp.SubFloat] = HandleSubFloat;
-            h[(ushort)GraphNodeOp.DivFloat] = HandleDivFloat;
-            h[(ushort)GraphNodeOp.MinFloat] = HandleMinFloat;
-            h[(ushort)GraphNodeOp.MaxFloat] = HandleMaxFloat;
-            h[(ushort)GraphNodeOp.ClampFloat] = HandleClampFloat;
-            h[(ushort)GraphNodeOp.AbsFloat] = HandleAbsFloat;
-            h[(ushort)GraphNodeOp.NegFloat] = HandleNegFloat;
-
-            // ── Blackboard immediate read/write (300-305) ──
-            h[(ushort)GraphNodeOp.ReadBlackboardFloat] = HandleReadBlackboardFloat;
-            h[(ushort)GraphNodeOp.ReadBlackboardInt] = HandleReadBlackboardInt;
-            h[(ushort)GraphNodeOp.ReadBlackboardEntity] = HandleReadBlackboardEntity;
-            h[(ushort)GraphNodeOp.WriteBlackboardFloat] = HandleWriteBlackboardFloat;
-            h[(ushort)GraphNodeOp.WriteBlackboardInt] = HandleWriteBlackboardInt;
-            h[(ushort)GraphNodeOp.WriteBlackboardEntity] = HandleWriteBlackboardEntity;
-
-            // ── Config parameter reading (310-312) ──
-            h[(ushort)GraphNodeOp.LoadConfigFloat] = HandleLoadConfigFloat;
-            h[(ushort)GraphNodeOp.LoadConfigInt] = HandleLoadConfigInt;
-            h[(ushort)GraphNodeOp.LoadConfigEffectId] = HandleLoadConfigEffectId;
-
-            // ── Context entity loading (320-322) ──
-            h[(ushort)GraphNodeOp.LoadContextSource] = HandleLoadContextSource;
-            h[(ushort)GraphNodeOp.LoadContextTarget] = HandleLoadContextTarget;
-            h[(ushort)GraphNodeOp.LoadContextTargetContext] = HandleLoadContextTargetContext;
-
-            // ── Dynamic dispatch (202-203) ──
-            h[(ushort)GraphNodeOp.ApplyEffectDynamic] = HandleApplyEffectDynamic;
-            h[(ushort)GraphNodeOp.FanOutApplyEffectDynamic] = HandleFanOutApplyEffectDynamic;
-            h[(ushort)GraphNodeOp.FanOutDispatchEffect] = HandleFanOutDispatchEffect;
-            h[(ushort)GraphNodeOp.FanOutDispatchEffectDynamic] = HandleFanOutDispatchEffectDynamic;
-
-            // ── Self attribute access for derived graphs (330-331) ──
-            h[(ushort)GraphNodeOp.LoadSelfAttribute] = HandleLoadSelfAttribute;
-            h[(ushort)GraphNodeOp.WriteSelfAttribute] = HandleWriteSelfAttribute;
-
-            // ── Placement validation (402-406) ──
-            h[(ushort)GraphNodeOp.LoadTargetPosX] = HandleLoadTargetPosX;
-            h[(ushort)GraphNodeOp.LoadTargetPosY] = HandleLoadTargetPosY;
-            h[(ushort)GraphNodeOp.ClampTargetToRange] = HandleClampTargetToRange;
-            h[(ushort)GraphNodeOp.IsPointInCircle] = HandleIsPointInCircle;
-            h[(ushort)GraphNodeOp.SnapToNearestInCollection] = HandleSnapToNearestInCollection;
-            h[(ushort)GraphNodeOp.SnapToNearestGraphEdge] = HandleSnapToNearestGraphEdge;
-
-            // ── Event evaluation context (410-412) ──
-            h[(ushort)GraphNodeOp.LoadViewer] = HandleLoadViewer;
-            h[(ushort)GraphNodeOp.LoadEventPayloadInt] = HandleLoadEventPayloadInt;
-            h[(ushort)GraphNodeOp.LoadEventPayloadFloat] = HandleLoadEventPayloadFloat;
-
-            // ── Topology predicates (397, 420-422) ──
-            h[(ushort)GraphNodeOp.RelationshipHasLink] = HandleRelationshipHasLink;
-            h[(ushort)GraphNodeOp.ControlDomainResolve] = HandleControlDomainResolve;
-            h[(ushort)GraphNodeOp.ControlDomainControls] = HandleControlDomainControls;
-            h[(ushort)GraphNodeOp.KnowledgeHasProjection] = HandleKnowledgeHasProjection;
-
-            return h;
+            Register(GraphNodeOp.ConstBool, HandleConstBool, "ConstBool graph opcode.");
+            Register(GraphNodeOp.ConstInt, HandleConstInt, "ConstInt graph opcode.");
+            Register(GraphNodeOp.ConstFloat, HandleConstFloat, "ConstFloat graph opcode.");
+            Register(GraphNodeOp.LoadCaster, HandleLoadCaster, "LoadCaster graph opcode.");
+            Register(GraphNodeOp.LoadExplicitTarget, HandleLoadExplicitTarget, "LoadExplicitTarget graph opcode.");
+            Register(GraphNodeOp.Jump, HandleJump, "Jump graph opcode.");
+            Register(GraphNodeOp.JumpIfFalse, HandleJumpIfFalse, "JumpIfFalse graph opcode.");
+            Register(GraphNodeOp.LoadAttribute, HandleLoadAttribute, "LoadAttribute graph opcode.");
+            Register(GraphNodeOp.AddFloat, HandleAddFloat, "AddFloat graph opcode.");
+            Register(GraphNodeOp.MulFloat, HandleMulFloat, "MulFloat graph opcode.");
+            Register(GraphNodeOp.CompareGtFloat, HandleCompareGtFloat, "CompareGtFloat graph opcode.");
+            Register(GraphNodeOp.SelectEntity, HandleSelectEntity, "SelectEntity graph opcode.");
+            Register(GraphNodeOp.QueryRadius, HandleQueryRadius, "QueryRadius graph opcode.");
+            Register(GraphNodeOp.QuerySortStable, HandleQuerySortStable, "QuerySortStable graph opcode.");
+            Register(GraphNodeOp.QueryLimit, HandleQueryLimit, "QueryLimit graph opcode.");
+            Register(GraphNodeOp.QueryCone, HandleQueryCone, "QueryCone graph opcode.");
+            Register(GraphNodeOp.QueryRectangle, HandleQueryRectangle, "QueryRectangle graph opcode.");
+            Register(GraphNodeOp.QueryLine, HandleQueryLine, "QueryLine graph opcode.");
+            Register(GraphNodeOp.QueryFilterNotEntity, HandleQueryFilterNotEntity, "QueryFilterNotEntity graph opcode.");
+            Register(GraphNodeOp.QueryFilterLayer, HandleQueryFilterLayer, "QueryFilterLayer graph opcode.");
+            Register(GraphNodeOp.QueryFilterRelationship, HandleQueryFilterRelationship, "QueryFilterRelationship graph opcode.");
+            Register(GraphNodeOp.AggCount, HandleAggCount, "AggCount graph opcode.");
+            Register(GraphNodeOp.AggMinByDistance, HandleAggMinByDistance, "AggMinByDistance graph opcode.");
+            Register(GraphNodeOp.TargetListGet, HandleTargetListGet, "TargetListGet graph opcode.");
+            Register(GraphNodeOp.ApplyEffectTemplate, HandleApplyEffectTemplate, "ApplyEffectTemplate graph opcode.");
+            Register(GraphNodeOp.FanOutApplyEffect, HandleFanOutApplyEffect, "FanOutApplyEffect graph opcode.");
+            Register(GraphNodeOp.RemoveEffectTemplate, HandleRemoveEffectTemplate, "RemoveEffectTemplate graph opcode.");
+            Register(GraphNodeOp.ModifyAttributeAdd, HandleModifyAttributeAdd, "ModifyAttributeAdd graph opcode.");
+            Register(GraphNodeOp.SendEvent, HandleSendEvent, "SendEvent graph opcode.");
+            Register(GraphNodeOp.RelationshipEnsureLink, HandleRelationshipEnsureLink, "RelationshipEnsureLink graph opcode.");
+            Register(GraphNodeOp.RelationshipRemoveLink, HandleRelationshipRemoveLink, "RelationshipRemoveLink graph opcode.");
+            Register(GraphNodeOp.RelationshipSetMetric, HandleRelationshipSetMetric, "RelationshipSetMetric graph opcode.");
+            Register(GraphNodeOp.RelationshipAddMetric, HandleRelationshipAddMetric, "RelationshipAddMetric graph opcode.");
+            Register(GraphNodeOp.RelationshipGetMetric, HandleRelationshipGetMetric, "RelationshipGetMetric graph opcode.");
+            Register(GraphNodeOp.RelationshipHasFlag, HandleRelationshipHasFlag, "RelationshipHasFlag graph opcode.");
+            Register(GraphNodeOp.RelationshipSetFlag, HandleRelationshipSetFlag, "RelationshipSetFlag graph opcode.");
+            Register(GraphNodeOp.RelationshipQueryOutgoing, HandleRelationshipQueryOutgoing, "RelationshipQueryOutgoing graph opcode.");
+            Register(GraphNodeOp.RelationshipQueryIncoming, HandleRelationshipQueryIncoming, "RelationshipQueryIncoming graph opcode.");
+            Register(GraphNodeOp.RelationshipQueryMutual, HandleRelationshipQueryMutual, "RelationshipQueryMutual graph opcode.");
+            Register(GraphNodeOp.RelationshipQueryBetweenPair, HandleRelationshipQueryBetweenPair, "RelationshipQueryBetweenPair graph opcode.");
+            Register(GraphNodeOp.RelationshipFilterMetricRange, HandleRelationshipFilterMetricRange, "RelationshipFilterMetricRange graph opcode.");
+            Register(GraphNodeOp.RelationshipFilterFlag, HandleRelationshipFilterFlag, "RelationshipFilterFlag graph opcode.");
+            Register(GraphNodeOp.RelationshipSortByMetric, HandleRelationshipSortByMetric, "RelationshipSortByMetric graph opcode.");
+            Register(GraphNodeOp.RelationshipAggSumMetric, HandleRelationshipAggSumMetric, "RelationshipAggSumMetric graph opcode.");
+            Register(GraphNodeOp.RelationshipAggMaxMetric, HandleRelationshipAggMaxMetric, "RelationshipAggMaxMetric graph opcode.");
+            Register(GraphNodeOp.RelationshipAggAverageMetric, HandleRelationshipAggAverageMetric, "RelationshipAggAverageMetric graph opcode.");
+            Register(GraphNodeOp.RelationshipAggMinMetric, HandleRelationshipAggMinMetric, "RelationshipAggMinMetric graph opcode.");
+            Register(GraphNodeOp.RelationshipAggMaxEntityByMetric, HandleRelationshipAggMaxEntityByMetric, "RelationshipAggMaxEntityByMetric graph opcode.");
+            Register(GraphNodeOp.RelationshipAggMinEntityByMetric, HandleRelationshipAggMinEntityByMetric, "RelationshipAggMinEntityByMetric graph opcode.");
+            Register(GraphNodeOp.QueryAllMapEntities, HandleQueryAllMapEntities, "QueryAllMapEntities graph opcode.");
+            Register(GraphNodeOp.QueryFromCollection, HandleQueryFromCollection, "QueryFromCollection graph opcode.");
+            Register(GraphNodeOp.QueryFilterTeam, HandleQueryFilterTeam, "QueryFilterTeam graph opcode.");
+            Register(GraphNodeOp.QueryFilterTemplate, HandleQueryFilterTemplate, "QueryFilterTemplate graph opcode.");
+            Register(GraphNodeOp.QueryFilterAttributeRange, HandleQueryFilterAttributeRange, "QueryFilterAttributeRange graph opcode.");
+            Register(GraphNodeOp.QueryFilterTagAny, HandleQueryFilterTagAny, "QueryFilterTagAny graph opcode.");
+            Register(GraphNodeOp.QueryFilterTagNone, HandleQueryFilterTagNone, "QueryFilterTagNone graph opcode.");
+            Register(GraphNodeOp.QuerySortByAttribute, HandleQuerySortByAttribute, "QuerySortByAttribute graph opcode.");
+            Register(GraphNodeOp.AggSumAttribute, HandleAggSumAttribute, "AggSumAttribute graph opcode.");
+            Register(GraphNodeOp.AggAverageAttribute, HandleAggAverageAttribute, "AggAverageAttribute graph opcode.");
+            Register(GraphNodeOp.AggMaxAttribute, HandleAggMaxAttribute, "AggMaxAttribute graph opcode.");
+            Register(GraphNodeOp.AggMinAttribute, HandleAggMinAttribute, "AggMinAttribute graph opcode.");
+            Register(GraphNodeOp.AggMaxEntityByAttribute, HandleAggMaxEntityByAttribute, "AggMaxEntityByAttribute graph opcode.");
+            Register(GraphNodeOp.AggMinEntityByAttribute, HandleAggMinEntityByAttribute, "AggMinEntityByAttribute graph opcode.");
+            Register(GraphNodeOp.BeginLifecycleTransaction, HandleBeginLifecycleTransaction, "BeginLifecycleTransaction graph opcode.");
+            Register(GraphNodeOp.InvokeBuiltin, HandleInvokeBuiltin, "InvokeBuiltin graph opcode.");
+            Register(GraphNodeOp.AddInt, HandleAddInt, "AddInt graph opcode.");
+            Register(GraphNodeOp.CompareLtInt, HandleCompareLtInt, "CompareLtInt graph opcode.");
+            Register(GraphNodeOp.CompareEqInt, HandleCompareEqInt, "CompareEqInt graph opcode.");
+            Register(GraphNodeOp.HasTag, HandleHasTag, "HasTag graph opcode.");
+            Register(GraphNodeOp.CompareEqEntity, HandleCompareEqEntity, "CompareEqEntity graph opcode.");
+            Register(GraphNodeOp.RandomFloat01, HandleRandomFloat01, "RandomFloat01 graph opcode.");
+            Register(GraphNodeOp.QueryHexRange, HandleQueryHexRange, "QueryHexRange graph opcode.");
+            Register(GraphNodeOp.QueryHexRing, HandleQueryHexRing, "QueryHexRing graph opcode.");
+            Register(GraphNodeOp.QueryHexNeighbors, HandleQueryHexNeighbors, "QueryHexNeighbors graph opcode.");
+            Register(GraphNodeOp.SubFloat, HandleSubFloat, "SubFloat graph opcode.");
+            Register(GraphNodeOp.DivFloat, HandleDivFloat, "DivFloat graph opcode.");
+            Register(GraphNodeOp.MinFloat, HandleMinFloat, "MinFloat graph opcode.");
+            Register(GraphNodeOp.MaxFloat, HandleMaxFloat, "MaxFloat graph opcode.");
+            Register(GraphNodeOp.ClampFloat, HandleClampFloat, "ClampFloat graph opcode.");
+            Register(GraphNodeOp.AbsFloat, HandleAbsFloat, "AbsFloat graph opcode.");
+            Register(GraphNodeOp.NegFloat, HandleNegFloat, "NegFloat graph opcode.");
+            Register(GraphNodeOp.ReadBlackboardFloat, HandleReadBlackboardFloat, "ReadBlackboardFloat graph opcode.");
+            Register(GraphNodeOp.ReadBlackboardInt, HandleReadBlackboardInt, "ReadBlackboardInt graph opcode.");
+            Register(GraphNodeOp.ReadBlackboardEntity, HandleReadBlackboardEntity, "ReadBlackboardEntity graph opcode.");
+            Register(GraphNodeOp.WriteBlackboardFloat, HandleWriteBlackboardFloat, "WriteBlackboardFloat graph opcode.");
+            Register(GraphNodeOp.WriteBlackboardInt, HandleWriteBlackboardInt, "WriteBlackboardInt graph opcode.");
+            Register(GraphNodeOp.WriteBlackboardEntity, HandleWriteBlackboardEntity, "WriteBlackboardEntity graph opcode.");
+            Register(GraphNodeOp.LoadConfigFloat, HandleLoadConfigFloat, "LoadConfigFloat graph opcode.");
+            Register(GraphNodeOp.LoadConfigInt, HandleLoadConfigInt, "LoadConfigInt graph opcode.");
+            Register(GraphNodeOp.LoadConfigEffectId, HandleLoadConfigEffectId, "LoadConfigEffectId graph opcode.");
+            Register(GraphNodeOp.LoadContextSource, HandleLoadContextSource, "LoadContextSource graph opcode.");
+            Register(GraphNodeOp.LoadContextTarget, HandleLoadContextTarget, "LoadContextTarget graph opcode.");
+            Register(GraphNodeOp.LoadContextTargetContext, HandleLoadContextTargetContext, "LoadContextTargetContext graph opcode.");
+            Register(GraphNodeOp.ApplyEffectDynamic, HandleApplyEffectDynamic, "ApplyEffectDynamic graph opcode.");
+            Register(GraphNodeOp.FanOutApplyEffectDynamic, HandleFanOutApplyEffectDynamic, "FanOutApplyEffectDynamic graph opcode.");
+            Register(GraphNodeOp.FanOutDispatchEffect, HandleFanOutDispatchEffect, "FanOutDispatchEffect graph opcode.");
+            Register(GraphNodeOp.FanOutDispatchEffectDynamic, HandleFanOutDispatchEffectDynamic, "FanOutDispatchEffectDynamic graph opcode.");
+            Register(GraphNodeOp.LoadSelfAttribute, HandleLoadSelfAttribute, "LoadSelfAttribute graph opcode.");
+            Register(GraphNodeOp.WriteSelfAttribute, HandleWriteSelfAttribute, "WriteSelfAttribute graph opcode.");
+            Register(GraphNodeOp.LoadTargetPosX, HandleLoadTargetPosX, "LoadTargetPosX graph opcode.");
+            Register(GraphNodeOp.LoadTargetPosY, HandleLoadTargetPosY, "LoadTargetPosY graph opcode.");
+            Register(GraphNodeOp.ClampTargetToRange, HandleClampTargetToRange, "ClampTargetToRange graph opcode.");
+            Register(GraphNodeOp.IsPointInCircle, HandleIsPointInCircle, "IsPointInCircle graph opcode.");
+            Register(GraphNodeOp.SnapToNearestInCollection, HandleSnapToNearestInCollection, "SnapToNearestInCollection graph opcode.");
+            Register(GraphNodeOp.SnapToNearestGraphEdge, HandleSnapToNearestGraphEdge, "SnapToNearestGraphEdge graph opcode.");
+            Register(GraphNodeOp.LoadViewer, HandleLoadViewer, "LoadViewer graph opcode.");
+            Register(GraphNodeOp.LoadEventPayloadInt, HandleLoadEventPayloadInt, "LoadEventPayloadInt graph opcode.");
+            Register(GraphNodeOp.LoadEventPayloadFloat, HandleLoadEventPayloadFloat, "LoadEventPayloadFloat graph opcode.");
+            Register(GraphNodeOp.RelationshipHasLink, HandleRelationshipHasLink, "RelationshipHasLink graph opcode.");
+            Register(GraphNodeOp.ControlDomainResolve, HandleControlDomainResolve, "ControlDomainResolve graph opcode.");
+            Register(GraphNodeOp.ControlDomainControls, HandleControlDomainControls, "ControlDomainControls graph opcode.");
+            Register(GraphNodeOp.KnowledgeHasProjection, HandleKnowledgeHasProjection, "KnowledgeHasProjection graph opcode.");
         }
 
         // ── Value Ops ──

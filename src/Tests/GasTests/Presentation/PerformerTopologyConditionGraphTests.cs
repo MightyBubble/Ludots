@@ -340,6 +340,7 @@ namespace Ludots.Tests.Presentation
             var cfg = new GraphConfig
             {
                 Id = "graph.cond.topology_ops",
+                Kind = "Effect",
                 Entry = "src",
                 Nodes = new List<GraphNodeConfig>
                 {
@@ -355,7 +356,7 @@ namespace Ludots.Tests.Presentation
             var (package, diagnostics) = GraphCompiler.Compile(cfg);
             Assert.That(package.HasValue, Is.True, string.Join("; ", diagnostics.ConvertAll(d => d.Message)));
 
-            var (_, symbols, program) = package!.Value;
+            var (_, symbols, program, _) = package!.Value;
             GraphProgramSymbolPatcher.Patch(symbols, program, new StubSymbolResolver(_controlsTypeId));
 
             var (p1Rep, p2Rep, _, unit) = BuildTopology();

@@ -262,7 +262,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         }
 
         /// <summary>
-        /// Execute a phase graph and return whether validation convention B[0] remains set (1 = pass).
+        /// Execute a phase and return whether validation convention B[0] remains pass.
+        /// Vacant phases (no validating graph work) pass. Each executed validating graph
+        /// is seeded fail-closed (B[0]=0) and must explicitly write B[0]=1 to affirm.
+        /// Rejection is sticky across Pre/Main/Post/listener graphs in the phase.
         /// </summary>
         public bool ExecutePhaseWithValidationResult(
             World world,
@@ -540,7 +543,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
             if (trackValidationResult)
             {
-                _boolRegs[0] = validationResult;
+                // Fail-closed per graph: do not inherit a prior pass into B[0].
+                _boolRegs[0] = 0;
             }
 
             // Set up fixed entity registers: E[0]=Caster, E[1]=Target, E[2]=TargetContext
@@ -590,9 +594,9 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             try
             {
                 GasGraphOpHandlerTable.Execute(ref state, program, _handlers);
-                if (trackValidationResult && _boolRegs[0] == 0)
+                if (trackValidationResult)
                 {
-                    validationResult = 0;
+                    validationResult = _boolRegs[0];
                 }
             }
             finally

@@ -91,6 +91,7 @@ namespace Ludots.Tests.GAS
             var cfg = new GraphConfig
             {
                 Id = "Test.RemoveEffectTemplate",
+                Kind = "Effect",
                 Entry = "target",
                 Nodes =
                 {
@@ -581,6 +582,7 @@ namespace Ludots.Tests.GAS
             var cfg = new GraphConfig
             {
                 Id = "Test.DynamicDispatch",
+                Kind = "Effect",
                 Entry = "target",
                 Nodes =
                 {
@@ -605,6 +607,7 @@ namespace Ludots.Tests.GAS
             var cfg = new GraphConfig
             {
                 Id = "Test.FanOutDispatchMissingPreset",
+                Kind = "Effect",
                 Entry = "effectId",
                 Nodes =
                 {
@@ -625,6 +628,7 @@ namespace Ludots.Tests.GAS
             var cfg = new GraphConfig
             {
                 Id = "Test.RelationshipMissingType",
+                Kind = "Effect",
                 Entry = "source",
                 Nodes =
                 {
