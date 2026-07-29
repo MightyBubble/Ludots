@@ -47,7 +47,7 @@ namespace Ludots.Tests.GAS
                     new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = 1f },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 0 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardFloat, A = 0, Imm = 1, B = 0 },
-                });
+                }, GraphKind.Effect);
 
                 // All phases get the same Main graph
                 var ptDef = new PresetTypeDefinition { Type = EffectPresetType.None };

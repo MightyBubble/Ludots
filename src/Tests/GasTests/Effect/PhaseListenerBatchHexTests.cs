@@ -515,7 +515,7 @@ namespace Ludots.Tests.GAS
             var prog = new GraphProgramBuffer();
             prog.Add((ushort)GraphNodeOp.ConstInt, dst: 0, imm: 42);
             int graphId = 1;
-            programs.Register(graphId, ExtractInstructions(prog));
+            programs.Register(graphId, ExtractInstructions(prog), GraphKind.Effect);
 
             // Register listener on target entity (scope=Target, phase=OnApply, tag=wildcard)
             var listenerBuf = new EffectPhaseListenerBuffer();
@@ -712,7 +712,7 @@ namespace Ludots.Tests.GAS
             bonusProg.Add((ushort)GraphNodeOp.ConstFloat, dst: 0, immF: 50f);   // F[0] = 50 (bonus damage)
             bonusProg.Add((ushort)GraphNodeOp.SendEvent, a: 1, imm: 777, b: 0); // SendEvent(target, tag=777, F[0])
             int bonusGraphId = 1;
-            programs.Register(bonusGraphId, ExtractInstructions(bonusProg));
+            programs.Register(bonusGraphId, ExtractInstructions(bonusProg), GraphKind.Effect);
 
             // Register "Searing Chain" listener on caster (scope=Source, phase=OnApply)
             var casterBuf = new EffectPhaseListenerBuffer();

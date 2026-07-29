@@ -63,6 +63,48 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void EffectPhaseTransaction_Rollback_RestoresRootBudgetConsumption()
+        {
+            using var world = World.Create();
+            var budget = new RootBudgetTable(capacity: 8);
+            using var transaction = new EffectPhaseSideEffectTransaction(
+                world,
+                tagOps: null,
+                effectRequests: null,
+                spawnRequests: null,
+                presentationEvents: null,
+                attributeEntityCapacity: 4,
+                rootBudget: budget);
+
+            transaction.Begin();
+            That(budget.TryConsume(rootId: 77, limit: 1), Is.True);
+            transaction.Rollback();
+
+            That(budget.TryConsume(rootId: 77, limit: 1), Is.True);
+        }
+
+        [Test]
+        public void EffectPhaseTransaction_Commit_PreservesRootBudgetConsumption()
+        {
+            using var world = World.Create();
+            var budget = new RootBudgetTable(capacity: 8);
+            using var transaction = new EffectPhaseSideEffectTransaction(
+                world,
+                tagOps: null,
+                effectRequests: null,
+                spawnRequests: null,
+                presentationEvents: null,
+                attributeEntityCapacity: 4,
+                rootBudget: budget);
+
+            transaction.Begin();
+            That(budget.TryConsume(rootId: 88, limit: 1), Is.True);
+            transaction.Commit();
+
+            That(budget.TryConsume(rootId: 88, limit: 1), Is.False);
+        }
+
+        [Test]
         public void TargetResolverFanOut_WhenRootBudgetExceeded_ThrowsBeforeDroppingTarget()
         {
             using var world = World.Create();

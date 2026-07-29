@@ -138,7 +138,7 @@ namespace Ludots.Tests.GAS
                     Op = (ushort)GraphNodeOp.InvokeBuiltin,
                     Imm = (int)BuiltinHandlerId.RevealArea
                 }
-            ]);
+            ], GraphKind.Effect);
             programs.Register(decayGraphId,
             [
                 new GraphInstruction
@@ -146,7 +146,7 @@ namespace Ludots.Tests.GAS
                     Op = (ushort)GraphNodeOp.InvokeBuiltin,
                     Imm = (int)BuiltinHandlerId.DecayRevealArea
                 }
-            ]);
+            ], GraphKind.Effect);
 
             var behavior = new EffectPhaseGraphBindings();
             Assert.That(behavior.TryAddStep(EffectPhaseId.OnApply, PhaseSlot.Main, revealGraphId), Is.True);

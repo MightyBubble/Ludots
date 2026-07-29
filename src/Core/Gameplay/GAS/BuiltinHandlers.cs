@@ -37,20 +37,20 @@ namespace Ludots.Core.Gameplay.GAS
 
         public static void RegisterAll(BuiltinHandlerRegistry registry)
         {
-            registry.Register(BuiltinHandlerId.ApplyModifiers, HandleApplyModifiers);
-            registry.Register(BuiltinHandlerId.ApplyForce, HandleApplyForce);
-            registry.Register(BuiltinHandlerId.SpatialQuery, HandleSpatialQuery);
-            registry.Register(BuiltinHandlerId.DispatchPayload, HandleDispatchPayload);
-            registry.Register(BuiltinHandlerId.ReResolveAndDispatch, HandleReResolveAndDispatch);
-            registry.Register(BuiltinHandlerId.CreateProjectile, HandleCreateProjectile);
-            registry.Register(BuiltinHandlerId.CreateUnit, HandleCreateUnit);
-            registry.Register(BuiltinHandlerId.ApplyDisplacement, HandleApplyDisplacement);
-            registry.Register(BuiltinHandlerId.ApplyRelation, HandleApplyRelation);
-            registry.Register(BuiltinHandlerId.RevealArea, HandleRevealArea);
-            registry.Register(BuiltinHandlerId.DecayRevealArea, HandleDecayRevealArea);
-            registry.Register(BuiltinHandlerId.ExecuteExchange, HandleExecuteExchange);
-            registry.Register(BuiltinHandlerId.CompleteProgression, HandleCompleteProgression);
-            registry.Register(BuiltinHandlerId.SubmitOrderFromBlackboard, HandleSubmitOrderFromBlackboard);
+            registry.Register(BuiltinHandlerId.ApplyModifiers, HandleApplyModifiers, EffectOperationMetadata.GasTransactional(nameof(BuiltinHandlerId.ApplyModifiers)));
+            registry.Register(BuiltinHandlerId.ApplyForce, HandleApplyForce, EffectOperationMetadata.GasTransactional(nameof(BuiltinHandlerId.ApplyForce)));
+            registry.Register(BuiltinHandlerId.SpatialQuery, HandleSpatialQuery, EffectOperationMetadata.Pure(nameof(BuiltinHandlerId.SpatialQuery)));
+            registry.Register(BuiltinHandlerId.DispatchPayload, HandleDispatchPayload, EffectOperationMetadata.GasTransactional(nameof(BuiltinHandlerId.DispatchPayload)));
+            registry.Register(BuiltinHandlerId.ReResolveAndDispatch, HandleReResolveAndDispatch, EffectOperationMetadata.GasTransactional(nameof(BuiltinHandlerId.ReResolveAndDispatch)));
+            registry.Register(BuiltinHandlerId.CreateProjectile, HandleCreateProjectile, EffectOperationMetadata.GasTransactional(nameof(BuiltinHandlerId.CreateProjectile)));
+            registry.Register(BuiltinHandlerId.CreateUnit, HandleCreateUnit, EffectOperationMetadata.GasTransactional(nameof(BuiltinHandlerId.CreateUnit)));
+            registry.Register(BuiltinHandlerId.ApplyDisplacement, HandleApplyDisplacement, EffectOperationMetadata.External(EffectAtomicDomain.Displacement, nameof(BuiltinHandlerId.ApplyDisplacement)));
+            registry.Register(BuiltinHandlerId.ApplyRelation, HandleApplyRelation, EffectOperationMetadata.Unsupported(EffectAtomicDomain.Relationship, nameof(BuiltinHandlerId.ApplyRelation)));
+            registry.Register(BuiltinHandlerId.RevealArea, HandleRevealArea, EffectOperationMetadata.Unsupported(EffectAtomicDomain.Vision, nameof(BuiltinHandlerId.RevealArea)));
+            registry.Register(BuiltinHandlerId.DecayRevealArea, HandleDecayRevealArea, EffectOperationMetadata.Unsupported(EffectAtomicDomain.Vision, nameof(BuiltinHandlerId.DecayRevealArea)));
+            registry.Register(BuiltinHandlerId.ExecuteExchange, HandleExecuteExchange, EffectOperationMetadata.Unsupported(EffectAtomicDomain.Exchange, nameof(BuiltinHandlerId.ExecuteExchange)));
+            registry.Register(BuiltinHandlerId.CompleteProgression, HandleCompleteProgression, EffectOperationMetadata.External(EffectAtomicDomain.Progression, nameof(BuiltinHandlerId.CompleteProgression)));
+            registry.Register(BuiltinHandlerId.SubmitOrderFromBlackboard, HandleSubmitOrderFromBlackboard, EffectOperationMetadata.Unsupported(EffectAtomicDomain.Order, nameof(BuiltinHandlerId.SubmitOrderFromBlackboard)));
             EntityLifecycleBuiltinHandlers.RegisterAll(registry);
         }
 

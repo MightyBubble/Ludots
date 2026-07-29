@@ -381,11 +381,18 @@ namespace Ludots.Core.Gameplay.GAS
     {
         public const int MaxTemplates = 4096;
         public const string DuplicateRegistrationError = "GAS.EFFECT_TEMPLATE.ERR.DuplicateRegistration";
+        public const string RegistrationAfterFinalizationError = "GAS.EFFECT_TEMPLATE.ERR.RegistrationAfterFinalization";
+        public const string UnfinalizedRegistryError = "GAS.EFFECT_PLAN.ERR.UnfinalizedRegistry";
 
         private readonly EffectTemplateData[] _templates = new EffectTemplateData[MaxTemplates];
         private readonly ulong[] _hasBits = new ulong[MaxTemplates >> 6];
+        private readonly EffectExecutionPlanSet[] _executionPlans = new EffectExecutionPlanSet[MaxTemplates];
+        private readonly ulong[] _finalizedPlanBits = new ulong[MaxTemplates >> 6];
         private readonly System.Collections.Generic.Dictionary<int, string> _registrationSource = new();
         private Ludots.Core.Modding.RegistrationConflictReport _conflictReport;
+        private bool _executionPlansFinalized;
+
+        public bool AreExecutionPlansFinalized => _executionPlansFinalized;
 
         public void SetConflictReport(Ludots.Core.Modding.RegistrationConflictReport report)
         {
@@ -396,12 +403,21 @@ namespace Ludots.Core.Gameplay.GAS
         {
             Array.Clear(_templates, 0, _templates.Length);
             Array.Clear(_hasBits, 0, _hasBits.Length);
+            Array.Clear(_executionPlans, 0, _executionPlans.Length);
+            Array.Clear(_finalizedPlanBits, 0, _finalizedPlanBits.Length);
             _registrationSource.Clear();
+            _executionPlansFinalized = false;
         }
 
         public void Register(int templateId, in EffectTemplateData data, string modId = null)
         {
             if ((uint)templateId >= MaxTemplates) throw new ArgumentOutOfRangeException(nameof(templateId));
+            if (_executionPlansFinalized)
+            {
+                throw new InvalidOperationException(
+                    $"{RegistrationAfterFinalizationError}: templateId={templateId}. Clear and rebuild the registry before registering more templates.");
+            }
+
             int word = templateId >> 6;
             int bit = templateId & 63;
             if ((_hasBits[word] & (1UL << bit)) != 0)
@@ -415,6 +431,8 @@ namespace Ludots.Core.Gameplay.GAS
 
             _templates[templateId] = data;
             _hasBits[word] |= 1UL << bit;
+            _executionPlans[templateId] = default;
+            _finalizedPlanBits[word] &= ~(1UL << bit);
             _registrationSource[templateId] = modId ?? "(core)";
         }
 
@@ -469,6 +487,88 @@ namespace Ludots.Core.Gameplay.GAS
         public ref readonly EffectTemplateData GetRef(int templateId)
         {
             return ref _templates[templateId];
+        }
+
+        internal void FinalizeExecutionPlans(int templateId, in EffectExecutionPlanSet executionPlans)
+        {
+            if (!TryGetRef(templateId, out _))
+            {
+                throw new InvalidOperationException($"Cannot finalize execution plans for unregistered effect template {templateId}.");
+            }
+
+            int word = templateId >> 6;
+            int bit = templateId & 63;
+            if ((_finalizedPlanBits[word] & (1UL << bit)) != 0)
+            {
+                throw new InvalidOperationException($"Execution plans for effect template {templateId} are already finalized.");
+            }
+
+            _executionPlans[templateId] = executionPlans;
+            _finalizedPlanBits[word] |= 1UL << bit;
+        }
+
+        internal void CompleteExecutionPlanFinalization()
+        {
+            if (_executionPlansFinalized)
+            {
+                throw new InvalidOperationException("Effect execution plans are already finalized.");
+            }
+
+            for (int word = 0; word < _hasBits.Length; word++)
+            {
+                ulong missing = _hasBits[word] & ~_finalizedPlanBits[word];
+                if (missing == 0)
+                {
+                    continue;
+                }
+
+                int firstMissingBit = System.Numerics.BitOperations.TrailingZeroCount(missing);
+                int templateId = (word << 6) + firstMissingBit;
+                throw new InvalidOperationException(
+                    $"{UnfinalizedRegistryError}: templateId={templateId} has no execution plan.");
+            }
+
+            _executionPlansFinalized = true;
+        }
+
+        public void RequireFinalized()
+        {
+            if (!_executionPlansFinalized)
+            {
+                throw new InvalidOperationException(
+                    $"{UnfinalizedRegistryError}: runtime requires a fully finalized effect template registry.");
+            }
+        }
+
+        public bool TryGetExecutionPlans(int templateId, out EffectExecutionPlanSet executionPlans)
+        {
+            if ((uint)templateId >= MaxTemplates)
+            {
+                executionPlans = default;
+                return false;
+            }
+
+            int word = templateId >> 6;
+            int bit = templateId & 63;
+            if ((_finalizedPlanBits[word] & (1UL << bit)) == 0)
+            {
+                executionPlans = default;
+                return false;
+            }
+
+            executionPlans = _executionPlans[templateId];
+            return true;
+        }
+
+        public ref readonly EffectExecutionPlanSet RequireExecutionPlans(int templateId)
+        {
+            if (!TryGetExecutionPlans(templateId, out _))
+            {
+                throw new InvalidOperationException(
+                    $"GAS.EFFECT_PLAN.ERR.UnfinalizedTemplate: templateId={templateId}.");
+            }
+
+            return ref _executionPlans[templateId];
         }
     }
 }

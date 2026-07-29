@@ -28,7 +28,7 @@ namespace Ludots.Tests.GAS
                 new() { Op = (ushort)GraphNodeOp.ModifyAttributeAdd, A = 2, B = 0, Imm = attributeId },
             };
             var programs = new GraphProgramRegistry();
-            programs.Register(1, program);
+            programs.Register(1, program, GraphKind.Derived);
             var binding = new AttributeDerivedGraphBinding();
             binding.Add(1);
             Entity entity = world.Create(
@@ -62,7 +62,7 @@ namespace Ludots.Tests.GAS
                 new() { Op = (ushort)GraphNodeOp.ApplyEffectTemplate, A = 2, Imm = 123 },
             };
             var programs = new GraphProgramRegistry();
-            programs.Register(1, program);
+            programs.Register(1, program, GraphKind.Derived);
             var binding = new AttributeDerivedGraphBinding();
             binding.Add(1);
             Entity entity = world.Create(
@@ -98,7 +98,7 @@ namespace Ludots.Tests.GAS
                 new() { Op = (ushort)GraphNodeOp.RemoveEffectTemplate, A = 2, Imm = effectTemplateId },
             };
             var programs = new GraphProgramRegistry();
-            programs.Register(1, program);
+            programs.Register(1, program, GraphKind.Derived);
             var binding = new AttributeDerivedGraphBinding();
             binding.Add(1);
             Entity entity = world.Create(
@@ -136,7 +136,7 @@ namespace Ludots.Tests.GAS
                 new() { Op = (ushort)GraphNodeOp.SendEvent, A = 2, B = 0, Imm = 123 },
             };
             var programs = new GraphProgramRegistry();
-            programs.Register(1, program);
+            programs.Register(1, program, GraphKind.Derived);
             var binding = new AttributeDerivedGraphBinding();
             binding.Add(1);
             Entity entity = world.Create(
@@ -175,7 +175,7 @@ namespace Ludots.Tests.GAS
                 },
             };
             var programs = new GraphProgramRegistry();
-            programs.Register(1, program);
+            programs.Register(1, program, GraphKind.Derived);
             var binding = new AttributeDerivedGraphBinding();
             binding.Add(1);
             Entity entity = world.Create(
@@ -288,7 +288,7 @@ namespace Ludots.Tests.GAS
                 new() { Op = (ushort)operation, Imm = 1 },
             };
             var programs = new GraphProgramRegistry();
-            programs.Register(1, program);
+            programs.Register(1, program, GraphKind.Derived);
             var binding = new AttributeDerivedGraphBinding();
             binding.Add(1);
             Entity entity = world.Create(
@@ -323,7 +323,7 @@ namespace Ludots.Tests.GAS
                 new() { Op = (ushort)GraphNodeOp.ApplyEffectTemplate, A = 2, Imm = 123 },
             };
             var programs = new GraphProgramRegistry();
-            programs.Register(1, program);
+            programs.Register(1, program, GraphKind.Derived);
             var binding = new AttributeDerivedGraphBinding();
             binding.Add(1);
             Entity entity = world.Create(
@@ -361,7 +361,7 @@ namespace Ludots.Tests.GAS
                 new() { Op = (ushort)GraphNodeOp.WriteBlackboardFloat, A = 2, B = 0, Imm = blackboardKeyId },
             };
             var programs = new GraphProgramRegistry();
-            programs.Register(1, program);
+            programs.Register(1, program, GraphKind.Derived);
             var binding = new AttributeDerivedGraphBinding();
             binding.Add(1);
             Entity entity = world.Create(
@@ -399,14 +399,14 @@ namespace Ludots.Tests.GAS
                 new() { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 1, ImmF = 2f },
                 new() { Op = (ushort)GraphNodeOp.MulFloat, Dst = 2, A = 0, B = 1 },
                 new() { Op = (ushort)GraphNodeOp.WriteSelfAttribute, A = 2, Imm = intermediateAttributeId },
-            });
+            }, GraphKind.Derived);
             programs.Register(2, new GraphInstruction[]
             {
                 new() { Op = (ushort)GraphNodeOp.LoadSelfAttribute, Dst = 0, Imm = intermediateAttributeId },
                 new() { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 1, ImmF = 3f },
                 new() { Op = (ushort)GraphNodeOp.AddFloat, Dst = 2, A = 0, B = 1 },
                 new() { Op = (ushort)GraphNodeOp.WriteSelfAttribute, A = 2, Imm = resultAttributeId },
-            });
+            }, GraphKind.Derived);
             var binding = new AttributeDerivedGraphBinding();
             binding.Add(1);
             binding.Add(2);
@@ -478,7 +478,7 @@ namespace Ludots.Tests.GAS
             };
 
             var registry = new GraphProgramRegistry();
-            registry.Register(1, program);
+            registry.Register(1, program, GraphKind.Derived);
 
             var binding = new AttributeDerivedGraphBinding();
             binding.Add(1);
@@ -544,7 +544,7 @@ namespace Ludots.Tests.GAS
             };
 
             var registry = new GraphProgramRegistry();
-            registry.Register(1, program);
+            registry.Register(1, program, GraphKind.Derived);
 
             var binding = new AttributeDerivedGraphBinding();
             binding.Add(1);
@@ -623,7 +623,7 @@ namespace Ludots.Tests.GAS
             };
 
             var registry = new GraphProgramRegistry();
-            registry.Register(1, program);
+            registry.Register(1, program, GraphKind.Derived);
 
             var binding = new AttributeDerivedGraphBinding();
             binding.Add(1);

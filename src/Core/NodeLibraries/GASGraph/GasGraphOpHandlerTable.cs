@@ -29,11 +29,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public GasGraphOpHandler[] Handlers { get; }
 
         private readonly string?[] _descriptions;
+        private readonly EffectOperationMetadata[] _operationMetadata;
 
         private GasGraphOpHandlerTable()
         {
             Handlers = new GasGraphOpHandler[GraphVmLimits.HandlerTableSize];
             _descriptions = new string?[GraphVmLimits.HandlerTableSize];
+            _operationMetadata = new EffectOperationMetadata[GraphVmLimits.HandlerTableSize];
             RegisterBuiltins();
             EnsureRegistrationComplete();
         }
@@ -65,6 +67,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
             Handlers[code] = handler;
             _descriptions[code] = description.Trim();
+            _operationMetadata[code] = CreateOperationMetadata(op, description.Trim());
         }
 
         public bool TryGetDescription(GraphNodeOp op, out string description)
@@ -90,6 +93,20 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             return description;
         }
 
+        public bool TryGetOperationMetadata(GraphNodeOp op, out EffectOperationMetadata operationMetadata)
+        {
+            ushort code = (ushort)op;
+            if (code < _operationMetadata.Length &&
+                _operationMetadata[code].Kind != EffectOperationKind.None)
+            {
+                operationMetadata = _operationMetadata[code];
+                return true;
+            }
+
+            operationMetadata = default;
+            return false;
+        }
+
         private void EnsureRegistrationComplete()
         {
             foreach (GraphNodeOp op in Enum.GetValues<GraphNodeOp>())
@@ -100,12 +117,145 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 }
 
                 ushort code = (ushort)op;
-                if (Handlers[code] == null || string.IsNullOrWhiteSpace(_descriptions[code]))
+                if (Handlers[code] == null ||
+                    string.IsNullOrWhiteSpace(_descriptions[code]) ||
+                    _operationMetadata[code].Kind == EffectOperationKind.None)
                 {
                     throw new InvalidOperationException(
-                        $"Executable graph opcode '{op}' ({code}) is missing required handler/description registration.");
+                        $"Executable graph opcode '{op}' ({code}) is missing required handler/description/operation metadata registration.");
                 }
             }
+        }
+
+        private static EffectOperationMetadata CreateOperationMetadata(GraphNodeOp op, string description)
+        {
+            return op switch
+            {
+                GraphNodeOp.ApplyEffectTemplate or
+                GraphNodeOp.FanOutApplyEffect or
+                GraphNodeOp.ApplyEffectDynamic or
+                GraphNodeOp.FanOutApplyEffectDynamic or
+                GraphNodeOp.RemoveEffectTemplate or
+                GraphNodeOp.FanOutDispatchEffect or
+                GraphNodeOp.FanOutDispatchEffectDynamic or
+                GraphNodeOp.ModifyAttributeAdd or
+                GraphNodeOp.SendEvent or
+                GraphNodeOp.WriteBlackboardFloat or
+                GraphNodeOp.WriteBlackboardInt or
+                GraphNodeOp.WriteBlackboardEntity or
+                GraphNodeOp.WriteSelfAttribute
+                    => EffectOperationMetadata.GasTransactional(description),
+
+                GraphNodeOp.InvokeBuiltin
+                    => EffectOperationMetadata.DelegatedBuiltin(description),
+
+                GraphNodeOp.RelationshipEnsureLink or
+                GraphNodeOp.RelationshipRemoveLink or
+                GraphNodeOp.RelationshipSetMetric or
+                GraphNodeOp.RelationshipAddMetric or
+                GraphNodeOp.RelationshipSetFlag
+                    => EffectOperationMetadata.Unsupported(EffectAtomicDomain.Relationship, description),
+
+                GraphNodeOp.BeginLifecycleTransaction
+                    => EffectOperationMetadata.Unsupported(EffectAtomicDomain.Lifecycle, description),
+
+                GraphNodeOp.ConstBool or
+                GraphNodeOp.ConstInt or
+                GraphNodeOp.ConstFloat or
+                GraphNodeOp.LoadCaster or
+                GraphNodeOp.LoadExplicitTarget or
+                GraphNodeOp.Jump or
+                GraphNodeOp.JumpIfFalse or
+                GraphNodeOp.LoadAttribute or
+                GraphNodeOp.AddFloat or
+                GraphNodeOp.MulFloat or
+                GraphNodeOp.SubFloat or
+                GraphNodeOp.DivFloat or
+                GraphNodeOp.MinFloat or
+                GraphNodeOp.MaxFloat or
+                GraphNodeOp.ClampFloat or
+                GraphNodeOp.AbsFloat or
+                GraphNodeOp.NegFloat or
+                GraphNodeOp.RandomFloat01 or
+                GraphNodeOp.AddInt or
+                GraphNodeOp.CompareGtFloat or
+                GraphNodeOp.CompareLtInt or
+                GraphNodeOp.CompareEqInt or
+                GraphNodeOp.HasTag or
+                GraphNodeOp.CompareEqEntity or
+                GraphNodeOp.SelectEntity or
+                GraphNodeOp.QueryRadius or
+                GraphNodeOp.QuerySortStable or
+                GraphNodeOp.QueryLimit or
+                GraphNodeOp.QueryCone or
+                GraphNodeOp.QueryRectangle or
+                GraphNodeOp.QueryLine or
+                GraphNodeOp.QueryFilterNotEntity or
+                GraphNodeOp.QueryFilterLayer or
+                GraphNodeOp.QueryFilterRelationship or
+                GraphNodeOp.AggCount or
+                GraphNodeOp.AggMinByDistance or
+                GraphNodeOp.TargetListGet or
+                GraphNodeOp.QueryHexRange or
+                GraphNodeOp.QueryHexRing or
+                GraphNodeOp.QueryHexNeighbors or
+                GraphNodeOp.ReadBlackboardFloat or
+                GraphNodeOp.ReadBlackboardInt or
+                GraphNodeOp.ReadBlackboardEntity or
+                GraphNodeOp.LoadConfigFloat or
+                GraphNodeOp.LoadConfigInt or
+                GraphNodeOp.LoadConfigEffectId or
+                GraphNodeOp.LoadContextSource or
+                GraphNodeOp.LoadContextTarget or
+                GraphNodeOp.LoadContextTargetContext or
+                GraphNodeOp.LoadSelfAttribute or
+                GraphNodeOp.RelationshipGetMetric or
+                GraphNodeOp.RelationshipHasFlag or
+                GraphNodeOp.RelationshipQueryOutgoing or
+                GraphNodeOp.RelationshipQueryIncoming or
+                GraphNodeOp.RelationshipQueryMutual or
+                GraphNodeOp.RelationshipQueryBetweenPair or
+                GraphNodeOp.RelationshipFilterMetricRange or
+                GraphNodeOp.RelationshipFilterFlag or
+                GraphNodeOp.RelationshipSortByMetric or
+                GraphNodeOp.RelationshipAggSumMetric or
+                GraphNodeOp.RelationshipAggMaxMetric or
+                GraphNodeOp.RelationshipAggAverageMetric or
+                GraphNodeOp.QueryAllMapEntities or
+                GraphNodeOp.QueryFromCollection or
+                GraphNodeOp.QueryFilterTeam or
+                GraphNodeOp.QueryFilterTemplate or
+                GraphNodeOp.QueryFilterAttributeRange or
+                GraphNodeOp.QueryFilterTagAny or
+                GraphNodeOp.QueryFilterTagNone or
+                GraphNodeOp.QuerySortByAttribute or
+                GraphNodeOp.AggSumAttribute or
+                GraphNodeOp.AggAverageAttribute or
+                GraphNodeOp.AggMaxAttribute or
+                GraphNodeOp.AggMinAttribute or
+                GraphNodeOp.AggMaxEntityByAttribute or
+                GraphNodeOp.AggMinEntityByAttribute or
+                GraphNodeOp.RelationshipAggMinMetric or
+                GraphNodeOp.RelationshipAggMaxEntityByMetric or
+                GraphNodeOp.RelationshipAggMinEntityByMetric or
+                GraphNodeOp.RelationshipHasLink or
+                GraphNodeOp.LoadTargetPosX or
+                GraphNodeOp.LoadTargetPosY or
+                GraphNodeOp.ClampTargetToRange or
+                GraphNodeOp.IsPointInCircle or
+                GraphNodeOp.SnapToNearestInCollection or
+                GraphNodeOp.SnapToNearestGraphEdge or
+                GraphNodeOp.LoadViewer or
+                GraphNodeOp.LoadEventPayloadInt or
+                GraphNodeOp.LoadEventPayloadFloat or
+                GraphNodeOp.ControlDomainResolve or
+                GraphNodeOp.ControlDomainControls or
+                GraphNodeOp.KnowledgeHasProjection
+                    => EffectOperationMetadata.Pure(description),
+
+                _ => throw new InvalidOperationException(
+                    $"Executable graph opcode '{op}' is missing explicit effect operation metadata."),
+            };
         }
 
         /// <summary>

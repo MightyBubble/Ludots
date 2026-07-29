@@ -168,13 +168,19 @@ namespace Ludots.Core.Gameplay.Progression
                 return false;
             }
 
-            ref var state = ref _world.TryGetRef<ProgressionStateBuffer>(scopeHost, out bool hasState);
-            if (!hasState)
+            if (!_world.Has<ProgressionStateBuffer>(scopeHost))
             {
                 return false;
             }
 
-            return ApplyChange(ref state, progressionId, in change);
+            ProgressionStateBuffer next = _world.Get<ProgressionStateBuffer>(scopeHost);
+            if (!ApplyChange(ref next, progressionId, in change))
+            {
+                return false;
+            }
+
+            _world.Set(scopeHost, next);
+            return true;
         }
 
         public bool TryComplete(Entity actor, ScopeKey scope, int progressionId)

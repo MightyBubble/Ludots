@@ -141,7 +141,7 @@ namespace Ludots.Tests.Presentation
             {
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ControlDomainResolve, A = 0, Dst = 3 },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.CompareEqEntity, A = 3, B = 2, Dst = 0 },
-            });
+            }, GraphKind.Validation);
 
             // graph.cond.viewer_controls_row_domain: controls-reachable but not the row domain itself
             _programs.Register(ViewerControlsRowDomainProgramId, new[]
@@ -151,7 +151,7 @@ namespace Ludots.Tests.Presentation
                 new GraphInstruction { Op = (ushort)GraphNodeOp.CompareEqEntity, A = 3, B = 2, Dst = 1 },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.JumpIfFalse, A = 1, Imm = 1 },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ConstBool, Dst = 0, Imm = 0 },
-            });
+            }, GraphKind.Validation);
 
             // graph.cond.viewer_has_knowledge_grant: knowledge projection without controls reachability
             _programs.Register(ViewerKnowledgeGrantOnlyProgramId, new[]
@@ -160,7 +160,7 @@ namespace Ludots.Tests.Presentation
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ControlDomainControls, A = 2, B = 0, Dst = 1 },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.JumpIfFalse, A = 1, Imm = 1 },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ConstBool, Dst = 0, Imm = 0 },
-            });
+            }, GraphKind.Validation);
 
             _defs.Register("test.selection_marker.rules", new PerformerDefinition
             {
@@ -272,7 +272,7 @@ namespace Ludots.Tests.Presentation
             _programs.Register(ViewerIsRowDomainProgramId, new[]
             {
                 new GraphInstruction { Op = (ushort)GraphNodeOp.CompareEqEntity, A = 2, B = 0, Dst = 0 },
-            });
+            }, GraphKind.Validation);
             _defs.Register("test.viewer_register", new PerformerDefinition
             {
                 Rules = new[] { SelectionMarkerRule(ViewerIsRowDomainProgramId, DeepGreenMarkerDefId) },
@@ -301,7 +301,7 @@ namespace Ludots.Tests.Presentation
                 new GraphInstruction { Op = (ushort)GraphNodeOp.LoadEventPayloadFloat, Imm = 3, Dst = 0 },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, ImmF = 0.5f, Dst = 1 },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.CompareGtFloat, A = 0, B = 1, Dst = 0 },
-            });
+            }, GraphKind.Validation);
             _defs.Register("test.payload_registers", new PerformerDefinition
             {
                 Rules = new[] { SelectionMarkerRule(ViewerIsRowDomainProgramId, DeepGreenMarkerDefId) },

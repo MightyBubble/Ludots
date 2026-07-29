@@ -79,11 +79,11 @@ namespace Ludots.Tests.GAS
             int postId = 102;
 
             // Pre: write BB[Accum] = 10
-            programs.Register(preId, MakeBbWriteProgram(BbKeyAccum, 10f));
+            programs.Register(preId, MakeBbWriteProgram(BbKeyAccum, 10f), GraphKind.Effect);
             // Main: BB[Accum] += 20
-            programs.Register(mainId, MakeBbAccumProgram(BbKeyAccum, 20f));
+            programs.Register(mainId, MakeBbAccumProgram(BbKeyAccum, 20f), GraphKind.Effect);
             // Post: BB[Accum] += 30
-            programs.Register(postId, MakeBbAccumProgram(BbKeyAccum, 30f));
+            programs.Register(postId, MakeBbAccumProgram(BbKeyAccum, 30f), GraphKind.Effect);
 
             // Register preset with Main graph for target phase
             var ptDef = new PresetTypeDefinition { Type = EffectPresetType.None };
@@ -124,7 +124,7 @@ namespace Ludots.Tests.GAS
             var handlers = GasGraphOpHandlerTable.Instance;
 
             int preId = 200;
-            programs.Register(preId, MakeBbWriteProgram(BbKeyPre, 42f));
+            programs.Register(preId, MakeBbWriteProgram(BbKeyPre, 42f), GraphKind.Effect);
 
             var behavior = new EffectPhaseGraphBindings();
             behavior.TryAddStep(phase, PhaseSlot.Pre, preId);
@@ -257,7 +257,7 @@ namespace Ludots.Tests.GAS
             {
                 int graphId = 300 + i;
                 int bbKey = 50 + i; // unique BB key per phase
-                programs.Register(graphId, MakeBbWriteProgram(bbKey, (float)(i + 1)));
+                programs.Register(graphId, MakeBbWriteProgram(bbKey, (float)(i + 1)), GraphKind.Effect);
                 behavior.TryAddStep(allPhases[i], PhaseSlot.Pre, graphId);
             }
 
@@ -338,11 +338,11 @@ namespace Ludots.Tests.GAS
             int postId = 402;
 
             // Pre: BB[Accum] = 10
-            programs.Register(preId, MakeBbWriteProgram(BbKeyAccum, 10f));
+            programs.Register(preId, MakeBbWriteProgram(BbKeyAccum, 10f), GraphKind.Effect);
             // Main: would overwrite BB[Accum] = 999 (should be SKIPPED)
-            programs.Register(mainId, MakeBbWriteProgram(BbKeyAccum, 999f));
+            programs.Register(mainId, MakeBbWriteProgram(BbKeyAccum, 999f), GraphKind.Effect);
             // Post: BB[Accum] += 30
-            programs.Register(postId, MakeBbAccumProgram(BbKeyAccum, 30f));
+            programs.Register(postId, MakeBbAccumProgram(BbKeyAccum, 30f), GraphKind.Effect);
 
             var ptDef = new PresetTypeDefinition { Type = EffectPresetType.None };
             ptDef.DefaultPhaseHandlers[phase] = PhaseHandler.Graph(mainId);

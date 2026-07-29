@@ -200,7 +200,7 @@ namespace Ludots.Tests.GAS
                 new GraphInstruction { Op = (ushort)GraphNodeOp.LoadContextTarget, Dst = 0 },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 1, ImmF = -7f },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ModifyAttributeAdd, A = 0, B = 1, Imm = durabilityId },
-            });
+            }, GraphKind.Effect);
 
             var bindings = new EffectPhaseGraphBindings();
             That(bindings.TryAddStep(EffectPhaseId.OnPeriod, PhaseSlot.Post, graphId), Is.True);

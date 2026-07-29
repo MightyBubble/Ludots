@@ -26,8 +26,8 @@ public sealed class EffectCompositionSsotTests
         const int presetMainGraphId = 701;
         const int templateMainGraphId = 702;
         var programs = new GraphProgramRegistry();
-        programs.Register(presetMainGraphId, CreateBlackboardWriteProgram(999f));
-        programs.Register(templateMainGraphId, CreateBlackboardWriteProgram(42f));
+        programs.Register(presetMainGraphId, CreateBlackboardWriteProgram(999f), GraphKind.Effect);
+        programs.Register(templateMainGraphId, CreateBlackboardWriteProgram(42f), GraphKind.Effect);
 
         var presets = new PresetTypeRegistry();
         var preset = new PresetTypeDefinition { Type = EffectPresetType.Buff };

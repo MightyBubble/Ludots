@@ -364,6 +364,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         public bool UpdateSlice(float dt, int timeBudgetMs)
         {
+            _templates?.RequireFinalized();
             LastSliceProcessed = 0;
             if (_queue == null || _queue.Count == 0)
             {

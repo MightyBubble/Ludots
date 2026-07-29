@@ -901,6 +901,12 @@ namespace Ludots.Core.Engine
                 tagOps.RegisterTagRuleSet(tagRules[i].TagId, tagRules[i].RuleSet);
             }
             graphConfigLoader.PatchAndRegister(graphPackages);
+            EffectExecutionPlanCompiler.FinalizeAll(
+                effectTemplateRegistry,
+                presetTypes,
+                builtinHandlers,
+                graphProgramRegistry,
+                GasGraphOpHandlerTable.Instance);
             new ContextGroupConfigLoader(ConfigPipeline, contextGroups).Load(ConfigCatalog, ConfigConflictReport);
             itemConfigLoader.Load(ConfigCatalog, ConfigConflictReport);
             exchangeLoader.Load(ConfigCatalog, ConfigConflictReport);

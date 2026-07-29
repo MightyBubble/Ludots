@@ -25,6 +25,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
     private readonly EffectRequestQueue? _effectRequests;
     private readonly RuntimeEntitySpawnQueue? _spawnRequests;
     private readonly GasPresentationEventBuffer? _presentationEvents;
+    private readonly RootBudgetTable? _rootBudget;
     private readonly Entity[] _attributeEntities;
     private readonly AttributeBuffer[] _attributeOriginalValues;
     private readonly AttributeBuffer[] _attributeValues;
@@ -100,6 +101,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
     private RuntimeEntitySpawnQueue.WriteCheckpoint _spawnRequestCheckpoint;
     private int _presentationEventCheckpoint;
     private GameplayEventBus.WriteCheckpoint _gameplayEventCheckpoint;
+    private RootBudgetTable.WriteCheckpoint _rootBudgetCheckpoint;
 
     public EffectPhaseSideEffectTransaction(
         World world,
@@ -107,7 +109,8 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         EffectRequestQueue? effectRequests,
         RuntimeEntitySpawnQueue? spawnRequests,
         GasPresentationEventBuffer? presentationEvents,
-        int attributeEntityCapacity)
+        int attributeEntityCapacity,
+        RootBudgetTable? rootBudget = null)
     {
         if (attributeEntityCapacity <= 0)
         {
@@ -119,6 +122,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         _effectRequests = effectRequests;
         _spawnRequests = spawnRequests;
         _presentationEvents = presentationEvents;
+        _rootBudget = rootBudget;
         _attributeEntities = new Entity[attributeEntityCapacity];
         _attributeOriginalValues = new AttributeBuffer[attributeEntityCapacity];
         _attributeValues = new AttributeBuffer[attributeEntityCapacity];
@@ -201,6 +205,10 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         _gameplayEventBus = null;
         _worldCommitStarted = false;
         _externalCommitStarted = false;
+        if (_rootBudget != null)
+        {
+            _rootBudgetCheckpoint = _rootBudget.CaptureWriteCheckpoint();
+        }
         IsActive = true;
     }
 
@@ -776,6 +784,11 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
                 }
             }
 
+            if (_rootBudget != null)
+            {
+                _rootBudget.CommitWrites(in _rootBudgetCheckpoint);
+            }
+
             End();
         }
         catch
@@ -801,6 +814,10 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
             RollbackWorldWrites();
         }
         ResetAbortedStructuralCommands();
+        if (_rootBudget != null)
+        {
+            _rootBudget.RollbackWrites(in _rootBudgetCheckpoint);
+        }
 
         End();
     }

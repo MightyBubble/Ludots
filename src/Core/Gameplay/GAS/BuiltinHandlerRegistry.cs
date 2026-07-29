@@ -25,14 +25,22 @@ namespace Ludots.Core.Gameplay.GAS
         public const int MaxHandlers = 96;
 
         private readonly BuiltinHandlerFn[] _handlers = new BuiltinHandlerFn[MaxHandlers];
+        private readonly EffectOperationMetadata[] _operationMetadata = new EffectOperationMetadata[MaxHandlers];
 
-        /// <summary>Register a builtin handler function for the given ID.</summary>
-        public void Register(BuiltinHandlerId id, BuiltinHandlerFn fn)
+        /// <summary>Register a builtin handler and its side-effect contract for the given ID.</summary>
+        public void Register(BuiltinHandlerId id, BuiltinHandlerFn fn, in EffectOperationMetadata operationMetadata)
         {
             int idx = (int)id;
             if ((uint)idx >= MaxHandlers)
                 throw new ArgumentOutOfRangeException(nameof(id), $"BuiltinHandlerId {id} ({idx}) exceeds MaxHandlers ({MaxHandlers}).");
+            if (fn == null)
+                throw new ArgumentNullException(nameof(fn));
+            if (operationMetadata.Kind == EffectOperationKind.None)
+                throw new ArgumentException($"BuiltinHandlerId {id} requires operation metadata.", nameof(operationMetadata));
+            if (_handlers[idx] != null)
+                throw new InvalidOperationException($"BuiltinHandlerId {id} ({idx}) is already registered.");
             _handlers[idx] = fn;
+            _operationMetadata[idx] = operationMetadata;
         }
 
         /// <summary>Invoke the handler for the given ID. Throws if not registered.</summary>
@@ -58,6 +66,21 @@ namespace Ludots.Core.Gameplay.GAS
         {
             int idx = (int)id;
             return (uint)idx < MaxHandlers && _handlers[idx] != null;
+        }
+
+        public bool TryGetOperationMetadata(BuiltinHandlerId id, out EffectOperationMetadata operationMetadata)
+        {
+            int idx = (int)id;
+            if ((uint)idx < MaxHandlers &&
+                _handlers[idx] != null &&
+                _operationMetadata[idx].Kind != EffectOperationKind.None)
+            {
+                operationMetadata = _operationMetadata[idx];
+                return true;
+            }
+
+            operationMetadata = default;
+            return false;
         }
     }
 }

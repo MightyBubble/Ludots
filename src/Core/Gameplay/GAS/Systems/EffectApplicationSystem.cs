@@ -161,7 +161,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 effectRequests,
                 spawnRequests,
                 presentationEvents,
-                _resolverBuffer.Length);
+                _resolverBuffer.Length,
+                _fanOutBudget);
         }
 
         private void RefreshBuiltinOrderContext()
@@ -182,6 +183,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         public bool UpdateSlice(float dt, int timeBudgetMs)
         {
+            _templates?.RequireFinalized();
             LastSliceProcessed = 0;
             if (!_sliceActive)
             {

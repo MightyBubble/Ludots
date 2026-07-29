@@ -67,7 +67,7 @@ namespace Ludots.Tests.GAS
                     new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 0 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.ConstInt, Dst = 0, Imm = 1 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardInt, A = 0, Imm = BbKeyProposed, B = 0 },
-                });
+                }, GraphKind.Effect);
 
                 // GP2: OnApply Pre — read Config(baseDamage, dmgMultiplier), compute actual damage,
                 //      write to BB(actualDamage)
@@ -80,7 +80,7 @@ namespace Ludots.Tests.GAS
                     // Write actual damage to target's BB
                     new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 0 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardFloat, A = 0, Imm = BbKeyActualDamage, B = 2 },
-                });
+                }, GraphKind.Effect);
 
                 // GP3: OnApply Main (preset) — read BB(actualDamage), negate it, apply to HP
                 int gpApplyMain = 3;
@@ -92,7 +92,7 @@ namespace Ludots.Tests.GAS
                     // ModifyAttributeAdd(target, HP, -actualDamage)
                     new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 0 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.ModifyAttributeAdd, A = 0, Imm = attrHealth, B = 1 },
-                });
+                }, GraphKind.Effect);
 
                 // GP4: OnApply Post — read BB(actualDamage), accumulate into BB(accumDamage)
                 int gpApplyPost = 4;
@@ -104,7 +104,7 @@ namespace Ludots.Tests.GAS
                     new GraphInstruction { Op = (ushort)GraphNodeOp.AddFloat, Dst = 2, A = 0, B = 1 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 0 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardFloat, A = 0, Imm = BbKeyAccumDamage, B = 2 },
-                });
+                }, GraphKind.Effect);
 
                 // GP5: OnExpire Pre — read BB(accumDamage), compute 50% reflect, write BB(reflectValue)
                 int gpExpirePre = 5;
@@ -116,7 +116,7 @@ namespace Ludots.Tests.GAS
                     new GraphInstruction { Op = (ushort)GraphNodeOp.MulFloat, Dst = 2, A = 0, B = 1 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 0 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardFloat, A = 0, Imm = BbKeyReflectValue, B = 2 },
-                });
+                }, GraphKind.Effect);
 
                 // ── Register preset: None has Main graph for OnApply ──
                 var ptDef = new PresetTypeDefinition { Type = EffectPresetType.None };
@@ -243,7 +243,7 @@ namespace Ludots.Tests.GAS
                     new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = 999f },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 0 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardFloat, A = 0, Imm = 99, B = 0 },
-                });
+                }, GraphKind.Effect);
 
                 // User Pre: load config baseDamage, multiply by 2, apply as HP damage
                 int gpCustomPre = 11;
@@ -255,7 +255,7 @@ namespace Ludots.Tests.GAS
                     new GraphInstruction { Op = (ushort)GraphNodeOp.NegFloat, Dst = 3, A = 2 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 0 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.ModifyAttributeAdd, A = 0, Imm = attrHealth, B = 3 },
-                });
+                }, GraphKind.Effect);
 
                 var ptDef = new PresetTypeDefinition { Type = EffectPresetType.None };
                 ptDef.DefaultPhaseHandlers[EffectPhaseId.OnApply] = PhaseHandler.Graph(gpMainPreset);
@@ -330,7 +330,7 @@ namespace Ludots.Tests.GAS
                     new GraphInstruction { Op = (ushort)GraphNodeOp.NegFloat, Dst = 3, A = 2 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 0 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.ModifyAttributeAdd, A = 0, Imm = attrHealth, B = 3 },
-                });
+                }, GraphKind.Effect);
 
                 var ptDef = new PresetTypeDefinition { Type = EffectPresetType.None };
                 ptDef.DefaultPhaseHandlers[EffectPhaseId.OnApply] = PhaseHandler.Graph(gpShared);

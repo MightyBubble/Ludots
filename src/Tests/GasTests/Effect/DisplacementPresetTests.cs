@@ -316,7 +316,7 @@ namespace Ludots.Tests.GAS
                 new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 1 },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ConstInt, Dst = 0, Imm = 42 },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardInt, A = 1, B = 0, Imm = 7 },
-            });
+            }, GraphKind.Effect);
             var phaseExecutor = new EffectPhaseExecutor(
                 graphPrograms,
                 presetTypes,

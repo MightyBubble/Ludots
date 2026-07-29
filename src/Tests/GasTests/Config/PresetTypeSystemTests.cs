@@ -112,7 +112,7 @@ namespace Ludots.Tests.GAS
         {
             var reg = new BuiltinHandlerRegistry();
             _handlerCallCount = 0;
-            reg.Register(BuiltinHandlerId.ApplyModifiers, TestHandler);
+            reg.Register(BuiltinHandlerId.ApplyModifiers, TestHandler, EffectOperationMetadata.GasTransactional(nameof(BuiltinHandlerId.ApplyModifiers)));
 
             That(reg.IsRegistered(BuiltinHandlerId.ApplyModifiers), Is.True);
 
@@ -149,7 +149,10 @@ namespace Ludots.Tests.GAS
         {
             var reg = new BuiltinHandlerRegistry();
             Assert.Throws<ArgumentOutOfRangeException>(() =>
-                reg.Register((BuiltinHandlerId)999, NoOpHandler));
+                reg.Register(
+                    (BuiltinHandlerId)999,
+                    NoOpHandler,
+                    EffectOperationMetadata.GasTransactional("OverflowTest")));
         }
 
         // ════════════════════════════════════════════════════════════════════

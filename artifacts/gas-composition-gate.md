@@ -1679,3 +1679,56 @@ Behavior remains in the existing runtime spawn request contract. No JSON schema 
 ### 8. Next variant test
 
 A new runtime spawn variant can author `Team`, pass explicit `MembershipTarget`, or both. Explicit membership remains authoritative, and `Team` is only used for consistency validation when present.
+
+---
+
+## GAS Composition Gate - Effect Plan Registry Finalization - 2026-07-30
+
+- **Task / Issue**: Enforce the effect execution-plan SSOT at every production runtime entry.
+- **Date**: 2026-07-30
+- **Agent / Author**: Codex subagent
+
+### 1. Core judgment
+
+Primary delivery: A. Tighten the existing effect-template registration and runtime intake contract.
+
+Result: PASS.
+
+Reason: This change reuses the existing `EffectTemplateRegistry`, `EffectExecutionPlanCompiler`, and proposal/application/lifetime systems. It adds no graph op, preset enum, profile field, loader, fallback, or parallel runtime.
+
+### 2. Layer assignment
+
+| Capability | Layer | Implementation carrier |
+|---|---:|---|
+| Whole-registry plan verification and freeze | 1 | Existing `EffectTemplateRegistry` and `EffectExecutionPlanCompiler` |
+| Runtime plan admission | 1 | Existing proposal/application/lifetime update entries |
+
+### 3. Reuse list
+
+- Handlers: existing builtin and graph operation metadata registries.
+- Queues / Systems: existing proposal, application, and lifetime systems.
+- Resolvers / Registries: existing effect-template, preset-type, graph-program, builtin-handler, and graph-op registries.
+- Existing presets / graphs: unchanged.
+
+### 4. New Layer 0 ops
+
+N/A.
+
+### 5. Transaction boundary
+
+Runtime processing begins only after every registered template has a compiled execution plan. A failed compilation leaves the entire registry unfinalized; no runtime write may begin. A finalized registry is immutable until explicitly cleared and rebuilt.
+
+### 6. Config SSOT
+
+Behavior remains in existing effect templates, preset definitions, and graph assets. New JSON schema: NO.
+
+### 7. Red flag scan
+
+- [x] No profile inherit/placement enum added
+- [x] No parallel effect or graph pipeline added
+- [x] No placement validation moved into a lifecycle op
+- [x] No fallback, compatibility bypass, or silent unfinalized-template acceptance added
+
+### 8. Next variant test
+
+A new Mod variant changes graph wiring or effect-template steps, then passes through the same whole-registry compilation and freeze before runtime starts.
