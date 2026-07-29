@@ -369,27 +369,17 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 }
             }
 
-            if (cfg.RevealArea != null && presetType != EffectPresetType.RevealArea)
-            {
-                throw new InvalidOperationException(
-                    $"Effect template '{cfg.Id}' in {relativePath}: 'revealArea' block is only valid when presetType=RevealArea.");
-            }
-            if (presetType == EffectPresetType.RevealArea)
+            if (cfg.RevealArea != null)
             {
                 if (lifetimeKind != EffectLifetimeKind.Instant && lifetimeKind != EffectLifetimeKind.After)
                 {
                     throw new InvalidOperationException(
-                        $"Effect template '{cfg.Id}' in {relativePath}: presetType RevealArea requires lifetime=Instant or lifetime=After.");
+                        $"Effect template '{cfg.Id}' in {relativePath}: revealArea requires lifetime=Instant or lifetime=After.");
                 }
                 if (lifetimeKind == EffectLifetimeKind.After && periodTicks <= 0)
                 {
                     throw new InvalidOperationException(
-                        $"Effect template '{cfg.Id}' in {relativePath}: presetType RevealArea with lifetime=After requires duration.periodTicks > 0 for refresh.");
-                }
-                if (cfg.RevealArea == null)
-                {
-                    throw new InvalidOperationException(
-                        $"Effect template '{cfg.Id}' in {relativePath}: presetType RevealArea requires a 'revealArea' block.");
+                        $"Effect template '{cfg.Id}' in {relativePath}: revealArea with lifetime=After requires duration.periodTicks > 0 for refresh.");
                 }
 
                 revealArea = CompileRevealArea(cfg.RevealArea, cfg.Id, relativePath);
@@ -1185,6 +1175,21 @@ namespace Ludots.Core.Gameplay.GAS.Config
                     }
                 }
 
+                if (!string.IsNullOrWhiteSpace(phaseCfg.Main))
+                {
+                    if (phaseCfg.SkipMain)
+                    {
+                        throw new InvalidOperationException(
+                            $"Effect template '{ownerId}' in {relativePath}: phaseGraphs.{kvp.Key} cannot declare both main and skipMain=true.");
+                    }
+
+                    int graphId = ResolveGraphProgram(phaseCfg.Main, ownerId, $"phaseGraphs.{kvp.Key}.main", relativePath);
+                    if (!behavior.TryAddStep(phaseId, PhaseSlot.Main, graphId))
+                    {
+                        throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: exceeded max phase steps ({EffectPhaseGraphBindings.MAX_STEPS}).");
+                    }
+                }
+
                 if (!string.IsNullOrWhiteSpace(phaseCfg.Post))
                 {
                     int graphId = ResolveGraphProgram(phaseCfg.Post, ownerId, $"phaseGraphs.{kvp.Key}.post", relativePath);
@@ -1796,7 +1801,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
         {
             var desc = default(TargetDispatchDescriptor);
             bool hasPreset = !string.IsNullOrWhiteSpace(cfg.Preset);
-            bool hasContextMapping = cfg.ContextMapping != null;
+            ContextMappingConfig? contextMapping = cfg.ContextMapping;
 
             if (!string.IsNullOrWhiteSpace(cfg.PayloadEffect))
             {
@@ -1805,7 +1810,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                     throw new InvalidOperationException($"Effect template '{effectId}' in {path}: targetDispatch.payloadEffect '{cfg.PayloadEffect}' not found.");
             }
 
-            if (hasPreset && hasContextMapping)
+            if (hasPreset && contextMapping != null)
             {
                 throw new InvalidOperationException(
                     $"Effect template '{effectId}' in {path}: targetDispatch must define either preset or contextMapping, not both.");
@@ -1824,22 +1829,22 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 return desc;
             }
 
-            if (hasContextMapping)
+            if (contextMapping != null)
             {
                 desc.ContextMapping = new TargetResolverContextMapping
                 {
                     PayloadSource = TargetDispatchPresetLoader.ParseContextSlotStrict(
-                        RequireString(cfg.ContextMapping.PayloadSource, effectId, path, "targetDispatch.contextMapping.payloadSource"),
+                        RequireString(contextMapping.PayloadSource, effectId, path, "targetDispatch.contextMapping.payloadSource"),
                         effectId,
                         "targetDispatch.contextMapping.payloadSource",
                         path),
                     PayloadTarget = TargetDispatchPresetLoader.ParseContextSlotStrict(
-                        RequireString(cfg.ContextMapping.PayloadTarget, effectId, path, "targetDispatch.contextMapping.payloadTarget"),
+                        RequireString(contextMapping.PayloadTarget, effectId, path, "targetDispatch.contextMapping.payloadTarget"),
                         effectId,
                         "targetDispatch.contextMapping.payloadTarget",
                         path),
                     PayloadTargetContext = TargetDispatchPresetLoader.ParseContextSlotStrict(
-                        RequireString(cfg.ContextMapping.PayloadTargetContext, effectId, path, "targetDispatch.contextMapping.payloadTargetContext"),
+                        RequireString(contextMapping.PayloadTargetContext, effectId, path, "targetDispatch.contextMapping.payloadTargetContext"),
                         effectId,
                         "targetDispatch.contextMapping.payloadTargetContext",
                         path),

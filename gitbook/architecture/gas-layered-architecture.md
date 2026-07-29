@@ -1,41 +1,114 @@
 # GAS 分层架构
 
-本页描述 Ludots 当前 GAS 的正式分层和边界。
+本页是 Ability、Effect 与 GAS Graph 组合关系的正式入口。目标是让玩法变化停留在 Mod 数据中，让 Core 只提供稳定、可复用的执行能力。
 
-## 1 宏观分层
+## 1. 概述
 
-GAS 的宏观分层由 `SystemGroup` 固化，重点 phase 包括：
+GAS 的组合顺序是：
+
+`Graph -> 可选 PresetType -> EffectTemplate`
+
+- Graph 描述“怎么做”：操作顺序、分支、阶段与可复用行为。
+- PresetType 是可选的编写简写，只提供稳定的默认阶段处理器。
+- EffectTemplate 是具体内容实例，拥有持续时间、标签、参数和阶段 Graph 引用。
+
+运行时执行的是已经编译的 EffectTemplate。PresetType 不能成为英雄、技能、地图或玩法模式的目录。
+
+## 2. 结构
+
+### Graph
+
+Graph 组合通用原子操作。原子操作只能表达不可再拆的引擎能力，例如修改属性、查询目标、派发 Effect、生成实体或调用视野投射。
+
+Graph 配置必须声明受支持的 `kind`，通过严格 JSON 加载和完整的 opcode 元数据检查。无效配置在 Mod 加载阶段失败，不能进入游戏后再采用默认行为。
+
+### PresetType
+
+PresetType 可以为常见写法提供默认 Main 处理器，例如普通伤害或周期属性修改。它不拥有具体玩法参数，也不阻止模板替换 Main。
+
+新增玩法变体不得新增 Core `EffectPresetType`。只有跨多个游戏长期稳定、且确实减少重复编写的通用简写，才允许经过 GAS 组合门禁后进入 preset 目录。
+
+### EffectTemplate
+
+EffectTemplate 是内容 SSOT，负责：
+
+- lifetime、duration、period 与 clock；
+- 标签、modifier、目标查询与派发参数；
+- `phaseGraphs` 的 Pre、Main、Post；
+- 具体能力参数，例如 `revealArea` 的范围、层和记忆时间。
+
+当 `phaseGraphs.<phase>.main` 存在时，它替换 preset 的默认 Main。没有 Main 且没有 `skipMain` 时，才使用 preset 默认值。`main` 与 `skipMain=true` 同时出现属于配置错误。
+
+## 3. 详情
+
+Effect 的阶段顺序为：
+
+`OnPropose -> OnCalculate -> OnResolve -> OnHit -> OnApply -> OnPeriod -> OnExpire -> OnRemove`
+
+每个阶段按 `Pre -> Main -> Post` 执行。模板 Main 的优先级高于 preset 默认 Main，因此 Graph 是行为组合的最终控制面。
+
+宏观执行顺序由 `SystemGroup` 固定：
 
 - `AbilityActivation`
 - `EffectProcessing`
 - `AttributeCalculation`
 - `DeferredTriggerCollection`
 
-这保证了执行顺序可预期，避免系统靠隐式顺序耦合。
+瞬时 Effect 与持久 Effect 都必须在提交前完成容量和依赖检查。阶段中产生的属性、队列、生成和表现写入属于同一事务；失败时不能留下部分结果。
 
-## 2 核心链路
+## 4. 场景
 
-- 输入与能力激活先转成 `EffectRequest`
-- EffectProcessing 负责 proposal、response、resolve、apply 和 lifetime
-- AttributeCalculation 统一把属性缓冲落到目标层
-- DeferredTriggerCollection 处理延迟触发的收束逻辑
+### 区域视野技能
 
-## 3 Sink 边界
+区域视野不是 preset。Core 提供 `RevealArea` 与 `DecayRevealArea` 原子操作，`Graph.Vision.RevealArea` 和 `Graph.Vision.DecayRevealArea` 负责组合，EffectTemplate 提供半径、视野层、刷新周期和记忆时间。新英雄只新增或复用 Graph 与模板数据。
 
-跨层写入优先通过 Sink：
+### 普通伤害的特殊变体
 
-- `AttributeSinkRegistry` 负责注册和冻结 sink ID
-- `AttributeBindingSystem` 负责把属性缓冲按绑定落地
-- 类型转换、时钟域对齐和写入策略应集中在 sink，而不是扩散到 gameplay 热路径
+模板可以采用 `InstantDamage` 的默认 Main，也可以在 `phaseGraphs.OnApply.main` 指向自定义 Graph，完全替换默认伤害步骤。替换不需要新增 preset 或修改 loader 分支。
 
-## 4 约束
+### 生命周期部署
 
-- 结构变更集中在明确阶段或回放队列中执行
-- effect phase 不依赖某个 sink 的隐式执行顺序
-- gameplay 逻辑不直接越层写物理、UI 或表现状态
+`Graph.Lifecycle.DeployConsumeSource` 组合多个生命周期原子操作。PresetType 只作为可选简写引用该 Graph，不承载部署规则本身。
 
-## 5 深度材料
+## 5. 边界
 
-- 仓库深度版：`docs/architecture/gas_layered_architecture.md`
-- Input / spawn target 基建：`gitbook/architecture/input-order-and-spawn-target.md`
-- 相关实现：`src/Core/Gameplay/GAS/Bindings/`
+- 禁止用 Core enum 表达英雄、技能、地图或模式变体。
+- 禁止在 `EffectTemplateLoader` 增加只服务某个具体玩法名称的分支。
+- 禁止未知 JSON 字段、未知 Graph kind、未知 opcode 或未写验证结果被默认接受。
+- 禁止 registry 重复注册后采用最后一次写入。
+- 禁止固定容量溢出时静默丢弃、截断或在热路径扩容。
+- 禁止阶段执行直接绕过事务写入外部系统。
+
+## 6. UAT
+
+```gherkin
+Feature: 用数据组合新的技能效果
+
+  Scenario: Mod 作者创建新的区域视野技能
+    Given Core 已提供视野投射原子操作
+    And Mod 中有组合视野开启与衰减的 Graph
+    And EffectTemplate 配置了范围、刷新周期和视野层
+    When 玩家释放该技能
+    Then 区域内目标按模板参数被揭示
+    And 效果结束后按同一模板规则衰减
+    And Core 不需要新增 EffectPresetType
+
+  Scenario: 模板替换 preset 的默认行为
+    Given EffectTemplate 选择了一个通用 preset
+    And 该模板为 OnApply 声明了 main Graph
+    When Effect 执行 OnApply
+    Then 只执行模板声明的 main Graph
+    And 不执行 preset 的默认 Main
+
+  Scenario: 无效 Graph 阻止 Mod 启动
+    Given Mod 中的 Graph 使用未知字段、未知 kind 或未知 opcode
+    When 游戏加载该 Mod
+    Then 加载失败并指出具体资产和合同错误
+    And 游戏不会使用默认行为继续运行
+```
+
+相关入口：
+
+- [GAS、订单与输入运行时合同](gas-order-input-runtime-contract.md)
+- [实体生命周期原子操作](entity-lifecycle-atomic-ops.md)
+- [Graph Query Services](../reference/graph-query-services.md)

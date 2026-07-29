@@ -111,7 +111,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void RevealAreaPreset_ExecutesApplyAndRemoveThroughPhaseExecutor()
+        public void RevealAreaMainGraphs_ExecuteApplyAndRemoveThroughPhaseExecutor()
         {
             using World world = World.Create();
             var layers = new FogLayerRegistry();
@@ -128,10 +128,29 @@ namespace Ludots.Tests.GAS
                 new FogOccupantCm { ExposeLayerMask = groundMask });
 
             var presetTypes = new PresetTypeRegistry();
-            var revealPreset = new PresetTypeDefinition { Type = EffectPresetType.RevealArea };
-            revealPreset.DefaultPhaseHandlers[EffectPhaseId.OnApply] = PhaseHandler.Builtin(BuiltinHandlerId.RevealArea);
-            revealPreset.DefaultPhaseHandlers[EffectPhaseId.OnRemove] = PhaseHandler.Builtin(BuiltinHandlerId.DecayRevealArea);
-            presetTypes.Register(in revealPreset);
+            var programs = new GraphProgramRegistry();
+            const int revealGraphId = 5901;
+            const int decayGraphId = 5902;
+            programs.Register(revealGraphId,
+            [
+                new GraphInstruction
+                {
+                    Op = (ushort)GraphNodeOp.InvokeBuiltin,
+                    Imm = (int)BuiltinHandlerId.RevealArea
+                }
+            ]);
+            programs.Register(decayGraphId,
+            [
+                new GraphInstruction
+                {
+                    Op = (ushort)GraphNodeOp.InvokeBuiltin,
+                    Imm = (int)BuiltinHandlerId.DecayRevealArea
+                }
+            ]);
+
+            var behavior = new EffectPhaseGraphBindings();
+            Assert.That(behavior.TryAddStep(EffectPhaseId.OnApply, PhaseSlot.Main, revealGraphId), Is.True);
+            Assert.That(behavior.TryAddStep(EffectPhaseId.OnRemove, PhaseSlot.Main, decayGraphId), Is.True);
 
             var builtinHandlers = new BuiltinHandlerRegistry();
             BuiltinHandlers.RegisterAll(builtinHandlers);
@@ -139,11 +158,11 @@ namespace Ludots.Tests.GAS
             const int templateId = 590;
             templates.Register(templateId, new EffectTemplateData
             {
-                PresetType = EffectPresetType.RevealArea,
+                PresetType = EffectPresetType.None,
                 RevealArea = new KnowledgeAreaRevealDescriptor(1, radiusCm: 150, stackalloc[] { ground }, memoryTtlTicks: 30)
             });
             var executor = new EffectPhaseExecutor(
-                new GraphProgramRegistry(),
+                programs,
                 presetTypes,
                 builtinHandlers,
                 GasGraphOpHandlerTable.Instance,
@@ -162,8 +181,8 @@ namespace Ludots.Tests.GAS
                 Entity.Null,
                 default,
                 EffectPhaseId.OnApply,
-                default,
-                EffectPresetType.RevealArea,
+                behavior,
+                EffectPresetType.None,
                 effectTagId: 0,
                 effectTemplateId: templateId,
                 builtinRuntime: runtime);
@@ -180,8 +199,8 @@ namespace Ludots.Tests.GAS
                 Entity.Null,
                 default,
                 EffectPhaseId.OnRemove,
-                default,
-                EffectPresetType.RevealArea,
+                behavior,
+                EffectPresetType.None,
                 effectTagId: 0,
                 effectTemplateId: templateId,
                 builtinRuntime: runtime);
@@ -193,6 +212,9 @@ namespace Ludots.Tests.GAS
         [Test]
         public void EffectTemplateLoader_RevealArea_CompilesRegisteredScopeAndFogLayers()
         {
+            GraphIdRegistry.Clear();
+            int revealGraphId = GraphIdRegistry.Register("Graph.Vision.RevealArea");
+            int decayGraphId = GraphIdRegistry.Register("Graph.Vision.DecayRevealArea");
             string root = CreateTempRoot("Ludots_Issue590_RevealAreaEffect");
             try
             {
@@ -205,10 +227,15 @@ namespace Ludots.Tests.GAS
                     @"[
   {
     ""id"": ""hero_reveal"",
-    ""presetType"": ""RevealArea"",
+    ""presetType"": ""None"",
     ""lifetime"": ""After"",
     ""duration"": { ""durationTicks"": 30, ""periodTicks"": 5, ""clockId"": ""FixedFrame"" },
     ""participatesInResponse"": true,
+    ""phaseGraphs"": {
+      ""OnApply"": { ""main"": ""Graph.Vision.RevealArea"" },
+      ""OnPeriod"": { ""main"": ""Graph.Vision.RevealArea"" },
+      ""OnRemove"": { ""main"": ""Graph.Vision.DecayRevealArea"" }
+    },
     ""revealArea"": {
       ""radius"": 600,
       ""scope"": ""team"",
@@ -238,7 +265,9 @@ namespace Ludots.Tests.GAS
                 Assert.That(templateId, Is.GreaterThan(0));
                 Assert.That(templates.TryGetRef(templateId, out int index), Is.True);
                 ref readonly EffectTemplateData template = ref templates.GetRef(index);
-                Assert.That(template.PresetType, Is.EqualTo(EffectPresetType.RevealArea));
+                Assert.That(template.PresetType, Is.EqualTo(EffectPresetType.None));
+                Assert.That(template.PhaseGraphBindings.GetGraphId(EffectPhaseId.OnApply, PhaseSlot.Main), Is.EqualTo(revealGraphId));
+                Assert.That(template.PhaseGraphBindings.GetGraphId(EffectPhaseId.OnRemove, PhaseSlot.Main), Is.EqualTo(decayGraphId));
                 Assert.That(template.RevealArea.RadiusCm, Is.EqualTo(600));
                 Assert.That(template.RevealArea.ScopeKeyId, Is.EqualTo(scopes.GetId("team")));
                 Assert.That(template.RevealArea.LayerCount, Is.EqualTo(2));
@@ -249,6 +278,7 @@ namespace Ludots.Tests.GAS
             }
             finally
             {
+                GraphIdRegistry.Clear();
                 TryDeleteDirectory(root);
             }
         }
@@ -256,6 +286,8 @@ namespace Ludots.Tests.GAS
         [Test]
         public void EffectTemplateLoader_RevealArea_FailsFastForUnregisteredFogLayer()
         {
+            GraphIdRegistry.Clear();
+            GraphIdRegistry.Register("Graph.Vision.RevealArea");
             string root = CreateTempRoot("Ludots_Issue590_RevealAreaMissingLayer");
             try
             {
@@ -268,9 +300,12 @@ namespace Ludots.Tests.GAS
                     @"[
   {
     ""id"": ""hero_reveal"",
-    ""presetType"": ""RevealArea"",
+    ""presetType"": ""None"",
     ""lifetime"": ""Instant"",
     ""participatesInResponse"": true,
+    ""phaseGraphs"": {
+      ""OnApply"": { ""main"": ""Graph.Vision.RevealArea"" }
+    },
     ""revealArea"": {
       ""radius"": 600,
       ""scope"": ""team"",
@@ -297,6 +332,7 @@ namespace Ludots.Tests.GAS
             }
             finally
             {
+                GraphIdRegistry.Clear();
                 TryDeleteDirectory(root);
             }
         }

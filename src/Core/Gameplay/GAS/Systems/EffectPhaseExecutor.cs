@@ -235,8 +235,14 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 ExecuteGraph(world, api, caster, target, targetContext, targetPos, preGraphId, effectTemplateId, phase, in mergedParams, builtinRuntime, randomSeed, rootId, trackValidationResult, ref validationResult);
             }
 
-            // ② Main handler (unless SkipMain)
-            if (!behavior.IsSkipMain(phase))
+            // A template-owned Main graph is authoritative. PresetType only supplies
+            // authoring sugar when the concrete template omits Main.
+            int mainGraphId = behavior.GetGraphId(phase, PhaseSlot.Main);
+            if (mainGraphId > 0)
+            {
+                ExecuteGraph(world, api, caster, target, targetContext, targetPos, mainGraphId, effectTemplateId, phase, in mergedParams, builtinRuntime, randomSeed, rootId, trackValidationResult, ref validationResult);
+            }
+            else if (!behavior.IsSkipMain(phase))
             {
                 ExecuteMainHandler(world, api, caster, target, targetContext, targetPos, phase, presetType, effectTemplateId, in mergedParams, builtinRuntime, randomSeed, rootId, trackValidationResult, ref validationResult);
             }

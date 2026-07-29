@@ -1,7 +1,6 @@
 using System;
 using System.Runtime.CompilerServices;
 using Ludots.Core.Association;
-using Ludots.Core.Diagnostics;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Teams;
@@ -36,8 +35,6 @@ namespace Ludots.Core.Gameplay.GAS
         SubmitOrderFromBlackboard = 15,
         /// <summary>Atomic entity template replacement with inheritance profile.</summary>
         DeployConsumeSource = 16,
-        /// <summary>Timed area reveal through Vision/Fog/Knowledge projection.</summary>
-        RevealArea = 17,
     }
 
     // ── TargetResolver: pluggable target fan-out for effects ──
@@ -383,6 +380,7 @@ namespace Ludots.Core.Gameplay.GAS
     public sealed class EffectTemplateRegistry
     {
         public const int MaxTemplates = 4096;
+        public const string DuplicateRegistrationError = "GAS.EFFECT_TEMPLATE.ERR.DuplicateRegistration";
 
         private readonly EffectTemplateData[] _templates = new EffectTemplateData[MaxTemplates];
         private readonly ulong[] _hasBits = new ulong[MaxTemplates >> 6];
@@ -398,27 +396,24 @@ namespace Ludots.Core.Gameplay.GAS
         {
             Array.Clear(_templates, 0, _templates.Length);
             Array.Clear(_hasBits, 0, _hasBits.Length);
+            _registrationSource.Clear();
         }
 
         public void Register(int templateId, in EffectTemplateData data, string modId = null)
         {
             if ((uint)templateId >= MaxTemplates) throw new ArgumentOutOfRangeException(nameof(templateId));
-#if DEBUG
-            {
-                int w = templateId >> 6;
-                int b = templateId & 63;
-                if ((_hasBits[w] & (1UL << b)) != 0)
-                {
-                    string existingMod = _registrationSource.TryGetValue(templateId, out var em) ? em : "(core)";
-                    string newMod = modId ?? "(core)";
-                    Log.Warn(in LogChannels.GAS, $"TemplateId {templateId} registered by '{existingMod}', overwritten by '{newMod}' (last-wins).");
-                    _conflictReport?.Add("EffectTemplateRegistry", templateId.ToString(), existingMod, newMod);
-                }
-            }
-#endif
-            _templates[templateId] = data;
             int word = templateId >> 6;
             int bit = templateId & 63;
+            if ((_hasBits[word] & (1UL << bit)) != 0)
+            {
+                string existingMod = _registrationSource.TryGetValue(templateId, out var em) ? em : "(core)";
+                string newMod = modId ?? "(core)";
+                _conflictReport?.Add("EffectTemplateRegistry", templateId.ToString(), existingMod, newMod);
+                throw new InvalidOperationException(
+                    $"{DuplicateRegistrationError}: templateId={templateId}, existingSource='{existingMod}', newSource='{newMod}'.");
+            }
+
+            _templates[templateId] = data;
             _hasBits[word] |= 1UL << bit;
             _registrationSource[templateId] = modId ?? "(core)";
         }
