@@ -1676,7 +1676,6 @@ namespace Ludots.Core.Engine
             RegisterSystem(stopOrderSystem, SystemGroup.AbilityActivation);
             RegisterSystem(instantCompleteOrderSystem, SystemGroup.AbilityActivation);
             RegisterSystem(reactionSystem, SystemGroup.AbilityActivation);
-            RegisterSystem(abilitySystem, SystemGroup.AbilityActivation);
             RegisterSystem(abilityExecSystem, SystemGroup.AbilityActivation);
             // RFC-0065 CTX-6: exec lifecycle push/pop of interaction context frames.
             RegisterSystem(new AbilityExecInteractionContextSystem(World, interactionContextStack, interactionContextProfileRegistry, abilityDefinitions), SystemGroup.AbilityActivation);
@@ -2180,10 +2179,10 @@ namespace Ludots.Core.Engine
         /// </summary>
         public void PushMap(string innerMapId, Dictionary<string, object> passthrough = null)
         {
-            EnsureMapSessionInfrastructure();
+            MapSessionManager mapSessions = EnsureMapSessionInfrastructure();
 
             var inner = new MapId(innerMapId);
-            var outerSession = MapSessions?.FocusedSession;
+            var outerSession = mapSessions.FocusedSession;
 
             var mapConfig = MapManager.LoadMap(innerMapId);
             if (mapConfig == null)
@@ -2197,7 +2196,7 @@ namespace Ludots.Core.Engine
 
             // Create inner session with parent context from outer
             MapContext parentCtx = outerSession?.Context;
-            var session = MapSessions.CreateSession(inner, mapConfig, parentCtx);
+            var session = mapSessions.CreateSession(inner, mapConfig, parentCtx);
             session.VisualHeightmap = visualHeightmap;
             BindStructureCollisionSession(session, visualHeightmap, structureCollision);
 
@@ -2215,7 +2214,7 @@ namespace Ludots.Core.Engine
             }
 
             // Push focus — outer becomes Suspended
-            MapSessions.PushFocused(inner);
+            mapSessions.PushFocused(inner);
             if (outerSession != null)
             {
                 SetMapEntitiesSuspended(outerSession.MapId, true);

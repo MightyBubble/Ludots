@@ -6,6 +6,7 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.Gameplay.Items;
 using Ludots.Core.Input.Orders;
 using NUnit.Framework;
 
@@ -56,6 +57,44 @@ namespace Ludots.Tests.GAS
             Assert.That(extracted[0].OrderTypeId, Is.EqualTo(CastAbilityOrderTypeId));
             Assert.That(extracted[0].SubmitMode, Is.EqualTo(OrderSubmitMode.Queued));
             Assert.That(extracted[0].Args.I0, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void CompositeOrderPlanner_ItemGrantedHighSlot_EnqueuesMoveAndContinuation()
+        {
+            using var world = World.Create();
+            var orderQueue = CreateOrderQueue();
+            var planner = new CompositeOrderPlanner(
+                world,
+                orderQueue,
+                CreateAbilityRegistry(rangeCm: 500f),
+                CastAbilityOrderTypeId,
+                MoveToOrderTypeId);
+
+            var itemGranted = new ItemGrantedSlotBuffer();
+            itemGranted.SetOverride(slotIndex: 4, abilityId: TestAbilityId, sourceItem: Entity.Null);
+            Entity actor = world.Create(
+                WorldPositionCm.FromCm(0, 0),
+                new AbilityStateBuffer(),
+                itemGranted,
+                new OrderContinuationBuffer(),
+                OrderBuffer.CreateEmpty());
+
+            Order castOrder = CreateCastOrder(actor, targetXcm: 900, submitMode: OrderSubmitMode.Immediate);
+            castOrder.Args.I0 = 4;
+
+            Assert.That(planner.Submit(in castOrder), Is.EqualTo(OrderSubmitResult.Queued));
+            Assert.That(orderQueue.TryDequeue(out Order moveOrder), Is.True);
+            Assert.That(moveOrder.OrderTypeId, Is.EqualTo(MoveToOrderTypeId));
+            Assert.That(moveOrder.Args.Spatial.WorldCm.X, Is.EqualTo(400f).Within(0.01f));
+
+            ref OrderContinuationBuffer continuations = ref world.Get<OrderContinuationBuffer>(actor);
+            Span<Order> extracted = stackalloc Order[OrderContinuationBuffer.MAX_CONTINUATIONS];
+            int continuationCount = continuations.Extract(moveOrder.OrderId, extracted);
+
+            Assert.That(continuationCount, Is.EqualTo(1));
+            Assert.That(extracted[0].OrderTypeId, Is.EqualTo(CastAbilityOrderTypeId));
+            Assert.That(extracted[0].Args.I0, Is.EqualTo(4));
         }
 
         [Test]

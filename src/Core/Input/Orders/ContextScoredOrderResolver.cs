@@ -161,44 +161,15 @@ namespace Ludots.Core.Input.Orders
         private bool TryResolveContextGroup(Entity actor, int rootSlotIndex, out ContextGroupDefinition group)
         {
             group = default;
-            ref var abilities = ref _world.Get<AbilityStateBuffer>(actor);
-            if ((uint)rootSlotIndex >= (uint)abilities.Count)
-            {
-                return false;
-            }
-
-            bool hasForm = _world.Has<AbilityFormSlotBuffer>(actor);
-            AbilityFormSlotBuffer formSlots = hasForm ? _world.Get<AbilityFormSlotBuffer>(actor) : default;
-            bool hasItemGranted = _world.Has<ItemGrantedSlotBuffer>(actor);
-            ItemGrantedSlotBuffer itemGranted = hasItemGranted ? _world.Get<ItemGrantedSlotBuffer>(actor) : default;
-            bool hasGranted = _world.Has<GrantedSlotBuffer>(actor);
-            GrantedSlotBuffer granted = hasGranted ? _world.Get<GrantedSlotBuffer>(actor) : default;
-            var slot = AbilitySlotResolver.Resolve(in abilities, in formSlots, hasForm, in itemGranted, hasItemGranted, in granted, hasGranted, rootSlotIndex);
-            return slot.AbilityId > 0 && _contextGroups.TryGetByRootAbility(slot.AbilityId, out group);
+            return AbilitySlotResolver.TryResolve(_world, actor, rootSlotIndex, out AbilitySlotState slot) &&
+                   slot.AbilityId > 0 &&
+                   _contextGroups.TryGetByRootAbility(slot.AbilityId, out group);
         }
 
         private bool TryFindSlotIndexForAbility(Entity actor, int abilityId, out int slotIndex)
         {
             slotIndex = -1;
-            ref var abilities = ref _world.Get<AbilityStateBuffer>(actor);
-            bool hasForm = _world.Has<AbilityFormSlotBuffer>(actor);
-            AbilityFormSlotBuffer formSlots = hasForm ? _world.Get<AbilityFormSlotBuffer>(actor) : default;
-            bool hasItemGranted = _world.Has<ItemGrantedSlotBuffer>(actor);
-            ItemGrantedSlotBuffer itemGranted = hasItemGranted ? _world.Get<ItemGrantedSlotBuffer>(actor) : default;
-            bool hasGranted = _world.Has<GrantedSlotBuffer>(actor);
-            GrantedSlotBuffer granted = hasGranted ? _world.Get<GrantedSlotBuffer>(actor) : default;
-
-            for (int i = 0; i < abilities.Count; i++)
-            {
-                var slot = AbilitySlotResolver.Resolve(in abilities, in formSlots, hasForm, in itemGranted, hasItemGranted, in granted, hasGranted, i);
-                if (slot.AbilityId == abilityId)
-                {
-                    slotIndex = i;
-                    return true;
-                }
-            }
-
-            return false;
+            return AbilitySlotResolver.TryFindAbility(_world, actor, abilityId, out slotIndex);
         }
 
         private bool TryScoreCandidate(

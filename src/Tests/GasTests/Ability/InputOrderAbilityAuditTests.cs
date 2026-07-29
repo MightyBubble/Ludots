@@ -1575,6 +1575,29 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             That(resolved.AbilityId, Is.EqualTo(100), "hasGranted=false should skip granted buffer");
         }
 
+        [Test]
+        public void AbilitySlotResolver_EmptySlotFailsWithoutThrowing()
+        {
+            var baseSlots = new AbilityStateBuffer();
+            var form = default(AbilityFormSlotBuffer);
+            var itemGranted = default(ItemGrantedSlotBuffer);
+            var granted = default(GrantedSlotBuffer);
+
+            bool resolved = AbilitySlotResolver.TryResolve(
+                in baseSlots,
+                in form,
+                hasForm: false,
+                in itemGranted,
+                hasItemGranted: false,
+                in granted,
+                hasGranted: false,
+                slotIndex: 4,
+                out AbilitySlotState slot);
+
+            That(resolved, Is.False);
+            That(slot.IsConfigured, Is.False);
+        }
+
         // ════════════════════════════════════════════════════════════════════
         // Region: AbilityToggleSpec
         // ════════════════════════════════════════════════════════════════════

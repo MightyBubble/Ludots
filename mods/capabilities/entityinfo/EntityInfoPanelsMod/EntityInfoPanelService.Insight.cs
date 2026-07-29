@@ -427,9 +427,9 @@ public sealed partial class EntityInfoPanelService
         int abilityId,
         out int slotIndex)
     {
-        for (int i = 0; i < baseSlots.Count; i++)
+        for (int i = 0; i < AbilityStateBuffer.CAPACITY; i++)
         {
-            AbilitySlotState slot = AbilitySlotResolver.Resolve(
+            if (!AbilitySlotResolver.TryResolve(
                 in baseSlots,
                 in formSlots,
                 hasForm,
@@ -437,7 +437,11 @@ public sealed partial class EntityInfoPanelService
                 hasItemGranted,
                 in grantedSlots,
                 hasGranted,
-                i);
+                i,
+                out AbilitySlotState slot))
+            {
+                continue;
+            }
             if (slot.AbilityId == abilityId)
             {
                 slotIndex = i;

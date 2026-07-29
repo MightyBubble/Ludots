@@ -120,24 +120,11 @@ namespace Ludots.Core.Gameplay.GAS.Config
             }
 
             // ── onActivateEffects ──
-            if (obj["onActivateEffects"] is JsonArray effectArr)
+            if (obj["onActivateEffects"] != null)
             {
-                var onActivate = default(AbilityOnActivateEffects);
-                for (int i = 0; i < effectArr.Count; i++)
-                {
-                    string effectName = RequireNonEmptyString(effectArr[i], $"onActivateEffects[{i}]", id, path);
-                    int tid = EffectTemplateIdRegistry.GetId(effectName);
-                    if (tid <= 0)
-                    {
-                        throw new InvalidOperationException(
-                            $"Ability '{id}' in '{path}' field 'onActivateEffects[{i}]' references unknown effect template '{effectName}'.");
-                    }
-
-                    onActivate.Add(tid);
-                }
-
-                def.HasOnActivateEffects = onActivate.Count > 0;
-                def.OnActivateEffects = onActivate;
+                throw new InvalidOperationException(
+                    $"Ability '{id}' in '{path}' field 'onActivateEffects' is removed. " +
+                    "Author effects once as exec.items EffectSignal or EffectClip entries.");
             }
 
             if (obj["cooldown"] is JsonObject cooldownObj)
