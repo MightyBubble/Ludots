@@ -594,9 +594,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             try
             {
                 GasGraphOpHandlerTable.Execute(ref state, program, _handlers);
-                if (trackValidationResult)
+                // Sticky reject: a later graph may affirm B[0]=1, but cannot clear an earlier reject.
+                if (trackValidationResult && _boolRegs[0] == 0)
                 {
-                    validationResult = _boolRegs[0];
+                    validationResult = 0;
                 }
             }
             finally
