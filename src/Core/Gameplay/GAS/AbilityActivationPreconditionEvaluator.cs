@@ -37,13 +37,15 @@ namespace Ludots.Core.Gameplay.GAS
                     $"Ability {abilityId} references missing activation validation graphId={precondition.ValidationGraphId}.");
             }
 
+            GraphKind kind = graphPrograms.RequireKind(precondition.ValidationGraphId, GraphKind.Validation);
             return GasGraphExecutor.ExecuteValidation(
                 world,
                 caster,
                 explicitTarget,
                 targetPosCm,
                 validationProgram,
-                graphApi);
+                graphApi,
+                kind);
         }
     }
 }

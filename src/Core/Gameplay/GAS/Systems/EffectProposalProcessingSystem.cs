@@ -1662,7 +1662,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         /// <summary>
         /// Execute OnPropose phase graphs for a proposal.
         /// Called after EffectProposal is created, before ResponseChain window.
-        /// Returns false when the phase graph sets B[0]=0 (placement/validation rejection).
+        /// Returns false when a validating OnPropose graph leaves B[0]=0
+        /// (fail-closed placement/validation rejection). Vacant OnPropose phases pass.
         /// </summary>
         private bool ExecuteOnProposePhase(in EffectProposal proposal, in EffectTemplateData tpl)
         {

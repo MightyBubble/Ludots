@@ -166,27 +166,10 @@ namespace Ludots.Tests.GAS
                 var templates = new EffectTemplateRegistry();
                 var handlers = GasGraphOpHandlerTable.Instance;
 
-                // Graph programs that write to F[0], F[1], F[2] respectively
-                // to record execution order
+                // Graph programs that write BB floats to prove Pre → Main → Post ordering.
                 int preGraphId = 1;
                 int mainGraphId = 2;
                 int postGraphId = 3;
-
-                // Pre: F[0] = 1.0
-                programs.Register(preGraphId, new[]
-                {
-                    new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = 1.0f }
-                });
-                // Main: F[1] = 2.0
-                programs.Register(mainGraphId, new[]
-                {
-                    new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 1, ImmF = 2.0f }
-                });
-                // Post: F[2] = F[0] + F[1] (should be 3.0 only if Pre and Main ran before)
-                programs.Register(postGraphId, new[]
-                {
-                    new GraphInstruction { Op = (ushort)GraphNodeOp.AddFloat, Dst = 2, A = 0, B = 1 }
-                });
 
                 // Preset: Main graph for OnApply
                 var ptDef = new PresetTypeDefinition { Type = EffectPresetType.None };
@@ -202,30 +185,8 @@ namespace Ludots.Tests.GAS
                 var api = new GasGraphRuntimeApi(world, null, null, null);
                 var caster = world.Create();
                 var target = world.Create();
-
-                // We can't directly observe internal registers, but we CAN use a different approach:
-                // Execute and verify via Blackboard writes.
-                // For simplicity, we use a graph that writes BB values to prove ordering.
-
-                // Redesign: Each graph writes a BB float on the target entity to record order
                 world.Add(target, new BlackboardFloatBuffer());
 
-                int bbKeyOrder = 1;
-                // Pre: write BB float key=1 value=10
-                programs.Register(preGraphId, new[]
-                {
-                    new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = 10f },
-                    new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 0 },
-                    new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardFloat, A = 0, Imm = bbKeyOrder, B = 0 }
-                });
-                // Hmm, register collision — entity registers and float registers are separate.
-                // E[0] = LoadExplicitTarget → entity register 0
-                // F[0] = ConstFloat → float register 0
-                // WriteBlackboardFloat: E[A] = E[0], Imm = keyId, F[B] = F[0]
-                // But the above has issue: Dst=0 for ConstFloat writes F[0],
-                // then Dst=0 for LoadExplicitTarget writes E[0] — they are different register files. OK.
-
-                // Let me re-do this more carefully:
                 // Pre graph: F[0]=10.0, E[0]=target, BB.write(E[0], key=1, F[0])
                 programs.Register(preGraphId, new[]
                 {
@@ -509,6 +470,37 @@ namespace Ludots.Tests.GAS
                 default);
 
             That(accepted, Is.False, "OnPropose validation must fail closed unless graph explicitly writes B[0]=1.");
+        }
+
+        [Test]
+        public void PhaseExecutor_ValidationResult_VacantPhasePasses()
+        {
+            using var world = World.Create();
+            var programs = new GraphProgramRegistry();
+            var presetTypes = new PresetTypeRegistry();
+            var builtinHandlers = new BuiltinHandlerRegistry();
+            var templates = new EffectTemplateRegistry();
+            var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, GasGraphOpHandlerTable.Instance, templates);
+            var api = new GasGraphRuntimeApi(world, null, null, null);
+            var caster = world.Create();
+            var target = world.Create();
+            var behavior = new EffectPhaseGraphBindings();
+
+            bool accepted = executor.ExecutePhaseWithValidationResult(
+                world,
+                api,
+                caster,
+                target,
+                target,
+                default,
+                EffectPhaseId.OnPropose,
+                in behavior,
+                EffectPresetType.None,
+                0,
+                0,
+                default);
+
+            That(accepted, Is.True, "Vacant OnPropose phases have no validating graph work and must pass.");
         }
 
         [Test]

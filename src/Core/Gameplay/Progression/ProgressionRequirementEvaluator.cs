@@ -378,6 +378,7 @@ namespace Ludots.Core.Gameplay.Progression
                 throw new InvalidOperationException($"Progression requirement references missing graph {node.GraphProgramId}.");
             }
 
+            GraphKind kind = _graphPrograms.RequireKind(node.GraphProgramId, GraphKind.Validation);
             Entity graphTarget = ResolveEntitySource(node.EntitySource, in node.Scope, in context);
             return Ludots.Core.NodeLibraries.GASGraph.GraphExecutor.ExecuteValidation(
                 _world,
@@ -385,7 +386,8 @@ namespace Ludots.Core.Gameplay.Progression
                 graphTarget,
                 default(IntVector2),
                 program,
-                _graphApi);
+                _graphApi,
+                kind);
         }
 
         private int CountMatchingEntities(in ProgressionRequirementNode node, in RoleResolverContext context)

@@ -26,13 +26,17 @@ namespace Ludots.Core.GraphRuntime
                 return false;
             }
 
-            if (!Enum.TryParse(value.Trim(), ignoreCase: false, out kind))
+            string trimmed = value.Trim();
+            if (!Enum.TryParse(trimmed, ignoreCase: false, out kind) ||
+                kind == GraphKind.None ||
+                !Enum.IsDefined(typeof(GraphKind), kind) ||
+                !string.Equals(kind.ToString(), trimmed, StringComparison.Ordinal))
             {
                 kind = GraphKind.None;
                 return false;
             }
 
-            return kind != GraphKind.None && Enum.IsDefined(typeof(GraphKind), kind);
+            return true;
         }
 
         public static GraphKind ParseRequired(string? value, string graphId)

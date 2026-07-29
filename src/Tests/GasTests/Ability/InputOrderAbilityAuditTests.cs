@@ -2815,7 +2815,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                     Dst = 0,
                     Imm = 0
                 }
-            });
+            }, GraphKind.Validation);
 
             var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig
@@ -2894,7 +2894,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                     Dst = 0,
                     Imm = 0
                 }
-            });
+            }, GraphKind.Validation);
 
             var effectRequests = new EffectRequestQueue();
             var graphApi = new GasGraphRuntimeApi(world, spatialQueries: null, coords: null, eventBus: null, effectRequests: effectRequests);
@@ -2939,7 +2939,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                     Dst = 0,
                     Imm = 0
                 }
-            });
+            }, GraphKind.Validation);
 
             var effectRequests = new EffectRequestQueue();
             var graphApi = new GasGraphRuntimeApi(world, spatialQueries: null, coords: null, eventBus: null, effectRequests: effectRequests);

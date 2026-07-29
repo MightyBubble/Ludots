@@ -52,6 +52,25 @@ namespace Ludots.Tests.GAS.Graph
         }
 
         [Test]
+        public void GraphCompiler_RejectsNumericKindToken()
+        {
+            var cfg = new GraphConfig
+            {
+                Id = "tests.graph.numeric-kind",
+                Kind = "1",
+                Entry = "n0",
+                Nodes = new List<GraphNodeConfig>
+                {
+                    new GraphNodeConfig { Id = "n0", Op = "ConstBool", BoolValue = true }
+                }
+            };
+
+            var (package, diagnostics) = GraphCompiler.Compile(cfg);
+            Assert.That(package, Is.Null);
+            Assert.That(diagnostics.Exists(d => d.Code == GraphDiagnosticCodes.UnsupportedGraphKind), Is.True);
+        }
+
+        [Test]
         public void GraphCompiler_RejectsUnsupportedKind()
         {
             var cfg = new GraphConfig

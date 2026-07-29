@@ -89,7 +89,7 @@ namespace Ludots.Tests.GAS
                 new GraphInstruction { Op = (ushort)GraphNodeOp.HasTag, Dst = 0, A = 2, Imm = downedTagId },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.JumpIfFalse, A = 0, Imm = 1 },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = 25f },
-            });
+            }, GraphKind.Score);
 
             var resolver = new ContextScoredOrderResolver(
                 world,

@@ -853,8 +853,9 @@ namespace Ludots.Core.Gameplay.AI.Utility
                 throw new InvalidOperationException($"AI score graph id {graphId} is not registered.");
             }
 
+            GraphKind kind = _graphs.RequireKind(graphId, GraphKind.Score);
             UtilityAiGraphSafety.ValidateScoreProgram(program, "AI runtime", graphId);
-            return GasGraphExecutor.ExecuteScore(_world, actor, target, default, program, _graphApi);
+            return GasGraphExecutor.ExecuteScore(_world, actor, target, default, program, _graphApi, kind);
         }
 
         private int ReadTargetPriorityBucket(Entity target, int defaultPriority)

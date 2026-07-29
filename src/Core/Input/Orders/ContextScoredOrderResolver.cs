@@ -232,7 +232,15 @@ namespace Ludots.Core.Input.Orders
                     throw new InvalidOperationException($"Missing precondition graph id {candidate.PreconditionGraphId}.");
                 }
 
-                if (!GasGraphExecutor.ExecuteValidation(_world, actor, target, default, preconditionProgram, _graphApi))
+                GraphKind preconditionKind = _graphPrograms.RequireKind(candidate.PreconditionGraphId, GraphKind.Validation);
+                if (!GasGraphExecutor.ExecuteValidation(
+                        _world,
+                        actor,
+                        target,
+                        default,
+                        preconditionProgram,
+                        _graphApi,
+                        preconditionKind))
                 {
                     return false;
                 }
@@ -245,7 +253,15 @@ namespace Ludots.Core.Input.Orders
                     throw new InvalidOperationException($"Missing score graph id {candidate.ScoreGraphId}.");
                 }
 
-                totalScore += GasGraphExecutor.ExecuteScore(_world, actor, target, default, scoreProgram, _graphApi);
+                GraphKind scoreKind = _graphPrograms.RequireKind(candidate.ScoreGraphId, GraphKind.Score);
+                totalScore += GasGraphExecutor.ExecuteScore(
+                    _world,
+                    actor,
+                    target,
+                    default,
+                    scoreProgram,
+                    _graphApi,
+                    scoreKind);
             }
 
             return true;
