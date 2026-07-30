@@ -8,12 +8,12 @@ namespace Ludots.Core.Gameplay.Lifecycle
     {
         public static void RegisterAll(BuiltinHandlerRegistry registry)
         {
-            registry.Register(BuiltinHandlerId.MaterializeTemplate, HandleMaterializeTemplate);
-            registry.Register(BuiltinHandlerId.CopyIdentityComponents, HandleCopyIdentityComponents);
-            registry.Register(BuiltinHandlerId.CopyAttributeSlice, HandleCopyAttributeSlice);
-            registry.Register(BuiltinHandlerId.ClearActiveEffects, HandleClearActiveEffects);
-            registry.Register(BuiltinHandlerId.TransferStableId, HandleTransferStableId);
-            registry.Register(BuiltinHandlerId.ConsumeEntity, HandleConsumeEntity);
+            registry.Register(BuiltinHandlerId.MaterializeTemplate, HandleMaterializeTemplate, EffectOperationMetadata.Unsupported(EffectAtomicDomain.Lifecycle, nameof(BuiltinHandlerId.MaterializeTemplate)));
+            registry.Register(BuiltinHandlerId.CopyIdentityComponents, HandleCopyIdentityComponents, EffectOperationMetadata.Unsupported(EffectAtomicDomain.Lifecycle, nameof(BuiltinHandlerId.CopyIdentityComponents)));
+            registry.Register(BuiltinHandlerId.CopyAttributeSlice, HandleCopyAttributeSlice, EffectOperationMetadata.Unsupported(EffectAtomicDomain.Lifecycle, nameof(BuiltinHandlerId.CopyAttributeSlice)));
+            registry.Register(BuiltinHandlerId.ClearActiveEffects, HandleClearActiveEffects, EffectOperationMetadata.Unsupported(EffectAtomicDomain.Lifecycle, nameof(BuiltinHandlerId.ClearActiveEffects)));
+            registry.Register(BuiltinHandlerId.TransferStableId, HandleTransferStableId, EffectOperationMetadata.Unsupported(EffectAtomicDomain.Lifecycle, nameof(BuiltinHandlerId.TransferStableId)));
+            registry.Register(BuiltinHandlerId.ConsumeEntity, HandleConsumeEntity, EffectOperationMetadata.Unsupported(EffectAtomicDomain.Lifecycle, nameof(BuiltinHandlerId.ConsumeEntity)));
         }
 
         public static void HandleMaterializeTemplate(

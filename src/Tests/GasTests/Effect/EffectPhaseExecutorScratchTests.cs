@@ -29,7 +29,7 @@ namespace Ludots.Tests.GAS
                     Dst = 31,
                     ImmF = 5f,
                 }
-            });
+            }, GraphKind.Effect);
             programs.Register(2, new[]
             {
                 new GraphInstruction
@@ -39,7 +39,7 @@ namespace Ludots.Tests.GAS
                     B = 31,
                     Imm = attributeId,
                 }
-            });
+            }, GraphKind.Effect);
 
             var executor = new EffectPhaseExecutor(
                 programs,
@@ -76,7 +76,7 @@ namespace Ludots.Tests.GAS
                     Dst = 0,
                     ImmF = 1f,
                 }
-            });
+            }, GraphKind.Effect);
 
             var executor = new EffectPhaseExecutor(
                 programs,

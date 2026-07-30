@@ -1,7 +1,6 @@
 [
   {
     "id": "Ability.ItemShowcase.RifleFire",
-    "onActivateEffects": ["Effect.ItemShowcase.RifleFire"],
     "exec": {
       "clockId": "FixedFrame",
       "items": [
@@ -14,7 +13,6 @@
   },
   {
     "id": "Ability.ItemShowcase.MythicPulse",
-    "onActivateEffects": ["Effect.ItemShowcase.MythicPulse"],
     "exec": {
       "clockId": "FixedFrame",
       "items": [
@@ -27,7 +25,6 @@
   },
   {
     "id": "Ability.ItemShowcase.SecondWind",
-    "onActivateEffects": ["Effect.ItemShowcase.SecondWind"],
     "exec": {
       "clockId": "FixedFrame",
       "items": [

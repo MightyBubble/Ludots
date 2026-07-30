@@ -328,7 +328,8 @@ namespace Ludots.Core.Presentation.Systems
                 throw new InvalidOperationException($"Performer rule condition graphProgramId={graphProgramId} has no instructions.");
             }
 
-            ExecuteEventGraph(program, in evt);
+            _programs.RequireKind(graphProgramId, GraphKind.Validation);
+            ExecuteEventGraph(graphProgramId, GraphKind.Validation, program, in evt);
 
             // Convention: B[0] holds the boolean condition result
             return _boolRegs[0] != 0;
@@ -339,8 +340,18 @@ namespace Ludots.Core.Presentation.Systems
         /// E[0]=Source, E[1]=Target, E[2]=Viewer, plus the event payload slots
         /// readable through LoadEventPayloadInt/Float ops.
         /// </summary>
-        private void ExecuteEventGraph(ReadOnlySpan<GraphInstruction> program, in PresentationEvent evt)
+        private void ExecuteEventGraph(
+            int graphProgramId,
+            GraphKind kind,
+            ReadOnlySpan<GraphInstruction> program,
+            in PresentationEvent evt)
         {
+            GraphKindOperationPolicy.RequireAllowed(
+                kind,
+                program,
+                _handlers,
+                graphProgramId,
+                nameof(PerformerRuleSystem));
             Array.Clear(_floatRegs, 0, _floatRegs.Length);
             Array.Clear(_intRegs, 0, _intRegs.Length);
             Array.Clear(_boolRegs, 0, _boolRegs.Length);
@@ -733,7 +744,8 @@ namespace Ludots.Core.Presentation.Systems
                 throw new InvalidOperationException($"Performer command paramGraphProgramId={graphProgramId} has no instructions.");
             }
 
-            ExecuteEventGraph(program, in evt);
+            _programs.RequireKind(graphProgramId, GraphKind.Score);
+            ExecuteEventGraph(graphProgramId, GraphKind.Score, program, in evt);
 
             // Convention: F[0] holds the float result
             return _floatRegs[0];

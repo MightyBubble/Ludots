@@ -616,6 +616,7 @@ namespace Ludots.Tests.GasTests
             var cfg = new GraphConfig
             {
                 Id = "Graph.Lifecycle.DeployConsumeSource",
+                Kind = "Effect",
                 Entry = "begin",
                 Nodes =
                 [
@@ -645,7 +646,7 @@ namespace Ludots.Tests.GasTests
                 new TargetDispatchPresetRegistry(),
                 new EntityTemplateKeyRegistry());
             GraphProgramSymbolPatcher.Patch(package.Value.Symbols, package.Value.Program, symbolResolver);
-            programs.Register(graphId, package.Value.Program);
+            programs.Register(graphId, package.Value.Program, package.Value.Kind);
             return graphId;
         }
 

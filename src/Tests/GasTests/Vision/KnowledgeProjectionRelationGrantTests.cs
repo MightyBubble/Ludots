@@ -234,19 +234,44 @@ namespace Ludots.Tests.GAS
                 tagId: 2);
             var projection = new KnowledgeProjectionStore(initialCapacity: 4);
             var projector = new KnowledgeRelationCollectionProjector(runtime.Relationships, runtime.Collections, catalogRuntime, projection);
-            Span<Entity> sources = stackalloc Entity[4];
-            Span<Entity> targets = stackalloc Entity[4];
+            var sources = new Entity[4];
+            var targets = new Entity[4];
 
             Assert.That(projector.ProjectOutgoing(viewer, allyTypeId, currentTick: 20, sources, targets), Is.EqualTo(2));
+            long allocated = MeasureProjectOutgoingAllocations(
+                projector,
+                viewer,
+                allyTypeId,
+                sources,
+                targets,
+                out int projected);
+            Assert.That(projected, Is.EqualTo(20_000));
+            Assert.That(allocated, Is.EqualTo(0));
+        }
+
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        private static long MeasureProjectOutgoingAllocations(
+            KnowledgeRelationCollectionProjector projector,
+            Entity viewer,
+            int allyTypeId,
+            Entity[] sources,
+            Entity[] targets,
+            out int projected)
+        {
             GC.GetAllocatedBytesForCurrentThread();
             long before = GC.GetAllocatedBytesForCurrentThread();
+            projected = 0;
             for (int i = 0; i < 10_000; i++)
             {
-                projector.ProjectOutgoing(viewer, allyTypeId, currentTick: 20, sources, targets);
+                projected += projector.ProjectOutgoing(
+                    viewer,
+                    allyTypeId,
+                    currentTick: 20,
+                    sources,
+                    targets);
             }
 
-            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
-            Assert.That(allocated, Is.EqualTo(0));
+            return GC.GetAllocatedBytesForCurrentThread() - before;
         }
 
         private static RelationshipCatalogRuntime CreateCatalogRuntime(

@@ -248,13 +248,13 @@ namespace Ludots.Tests.GAS
             var caster = world.Create();
             var target = world.Create();
 
-            // Case 1: Empty program — default pass
-            sb.AppendLine("[MUD][VALID] Case 1: 空校验图 → 默认通过 (B[0]=1)。");
+            // Case 1: Empty program — fail closed
+            sb.AppendLine("[MUD][VALID] Case 1: 空校验图 → 默认拒绝 (B[0]=0)。");
             bool result1 = GasGraphExecutor.ExecuteValidation(
                 world, caster, target, default,
                 ReadOnlySpan<GraphInstruction>.Empty, null!);
             sb.AppendLine($"  Result={result1}");
-            That(result1, Is.True);
+            That(result1, Is.False);
 
             // Case 2: Reject program — SetBool B[0] = 0
             sb.AppendLine("───────────────────────────────────────────────────────────────");

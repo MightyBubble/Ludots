@@ -5,6 +5,8 @@ using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.GraphRuntime;
+using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Physics;
 using Ludots.Core.Systems;
 using Schedulers;
@@ -54,6 +56,15 @@ namespace Ludots.Tests.GAS
             // Arrange: 创建所有系统（跳过需要依赖的系统）
             var reactionSystem = new ReactionSystem(_world, null, _eventBus);
             var effectTemplates = new EffectTemplateRegistry();
+            var builtinHandlers = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(builtinHandlers);
+            EffectExecutionPlanCompiler.FinalizeAll(
+                effectTemplates,
+                new PresetTypeRegistry(),
+                builtinHandlers,
+                new GraphProgramRegistry(),
+                GasGraphOpHandlerTable.Instance,
+                "Test/SystemIntegrationTests.cs");
             var effectRequests = new EffectRequestQueue();
             var clock = new DiscreteClock();
             var clocks = new GasClocks(clock);

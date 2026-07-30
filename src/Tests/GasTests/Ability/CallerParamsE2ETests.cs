@@ -8,6 +8,7 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Config;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.GraphRuntime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
 using Ludots.Core.NodeLibraries.GASGraph;
@@ -58,6 +59,7 @@ namespace Ludots.Tests.GAS
                 var templates = new EffectTemplateRegistry();
                 var loader = new EffectTemplateLoader(pipeline, templates);
                 loader.Load(catalog, relativePath: "GAS/effects.json");
+                FinalizeEffectTemplates(pipeline, catalog, templates);
 
                 using var world = World.Create();
                 int fxAttrId = AttributeRegistry.GetId("Physics.ForceRequestX");
@@ -125,6 +127,7 @@ namespace Ludots.Tests.GAS
                 var templates = new EffectTemplateRegistry();
                 var loader = new EffectTemplateLoader(pipeline, templates);
                 loader.Load(catalog, relativePath: "GAS/effects.json");
+                FinalizeEffectTemplates(pipeline, catalog, templates);
 
                 using var world = World.Create();
                 int fxAttrId = AttributeRegistry.GetId("Physics.ForceRequestX");
@@ -232,7 +235,8 @@ namespace Ludots.Tests.GAS
             File.WriteAllText(Path.Combine(root, "Configs", "config_catalog.json"),
                 """
                 [
-                  { "Path": "GAS/effects.json", "Policy": "ArrayById", "IdField": "id" }
+                  { "Path": "GAS/effects.json", "Policy": "ArrayById", "IdField": "id" },
+                  { "Path": "GAS/preset_types.json", "Policy": "ArrayById", "IdField": "id" }
                 ]
                 """);
             File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
@@ -251,6 +255,38 @@ namespace Ludots.Tests.GAS
                   }
                 ]
                 """);
+            File.WriteAllText(Path.Combine(root, "Configs", "GAS", "preset_types.json"),
+                """
+                [
+                  {
+                    "id": "ApplyForce2D",
+                    "components": ["ForceParams"],
+                    "activePhases": ["OnApply"],
+                    "allowedLifetimes": ["Instant"],
+                    "defaultPhaseHandlers": {
+                      "OnApply": { "type": "builtin", "id": "ApplyForce" }
+                    }
+                  }
+                ]
+                """);
+        }
+
+        private static void FinalizeEffectTemplates(
+            ConfigPipeline pipeline,
+            ConfigCatalog catalog,
+            EffectTemplateRegistry templates)
+        {
+            var presetTypes = new PresetTypeRegistry();
+            new PresetTypeLoader(pipeline, presetTypes).Load(catalog);
+            var builtinHandlers = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(builtinHandlers);
+            EffectExecutionPlanCompiler.FinalizeAll(
+                templates,
+                presetTypes,
+                builtinHandlers,
+                new GraphProgramRegistry(),
+                GasGraphOpHandlerTable.Instance,
+                "GAS/effects.json");
         }
 
         private static string CreateTempRoot()

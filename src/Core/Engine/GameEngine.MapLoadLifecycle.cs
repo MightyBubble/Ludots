@@ -49,18 +49,21 @@ namespace Ludots.Core.Engine
             public IPendingMapLoad PendingLoad { get; }
         }
 
-        private void EnsureMapSessionInfrastructure()
+        private MapSessionManager EnsureMapSessionInfrastructure()
         {
-            if (MapSessions != null)
+            MapSessionManager? mapSessions = MapSessions;
+            if (mapSessions != null)
             {
-                return;
+                return mapSessions;
             }
 
-            MapSessions = new MapSessionManager();
+            mapSessions = new MapSessionManager();
+            MapSessions = mapSessions;
             BoardIdRegistry = new BoardIdRegistry();
-            SetService(CoreServiceKeys.MapSessions, MapSessions);
+            SetService(CoreServiceKeys.MapSessions, mapSessions);
             SetService(CoreServiceKeys.BoardIdRegistry, BoardIdRegistry);
             EnsureSaveParticipantRegistry();
+            return mapSessions;
         }
 
         private void EnsureSaveParticipantRegistry()

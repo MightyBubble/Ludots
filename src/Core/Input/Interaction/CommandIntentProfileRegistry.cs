@@ -321,7 +321,7 @@ namespace Ludots.Core.Input.Interaction
 
             for (int slotIndex = 0; slotIndex < AbilityStateBuffer.CAPACITY; slotIndex++)
             {
-                AbilitySlotState slot = AbilitySlotResolver.Resolve(
+                if (!AbilitySlotResolver.TryResolve(
                     in abilities,
                     in formSlots,
                     hasForm,
@@ -329,7 +329,11 @@ namespace Ludots.Core.Input.Interaction
                     hasItemGranted,
                     in grantedSlots,
                     hasGranted,
-                    slotIndex);
+                    slotIndex,
+                    out AbilitySlotState slot))
+                {
+                    continue;
+                }
                 if (slot.AbilityId > 0 && _abilityDefinitions.HasCatalogTag(slot.AbilityId, catalogTagId))
                 {
                     return true;

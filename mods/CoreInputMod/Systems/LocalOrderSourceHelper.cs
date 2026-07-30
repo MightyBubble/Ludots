@@ -591,28 +591,8 @@ namespace CoreInputMod.Systems
                 }
 
                 int slotIndex = mapping.ArgsTemplate.I0.Value;
-                ref var abilities = ref _world.Get<AbilityStateBuffer>(actor);
-                if ((uint)slotIndex >= (uint)abilities.Count)
-                {
-                    return false;
-                }
-
-                bool hasForm = _world.Has<AbilityFormSlotBuffer>(actor);
-                AbilityFormSlotBuffer formSlots = hasForm ? _world.Get<AbilityFormSlotBuffer>(actor) : default;
-                bool hasItemGranted = _world.Has<ItemGrantedSlotBuffer>(actor);
-                ItemGrantedSlotBuffer itemGrantedSlots = hasItemGranted ? _world.Get<ItemGrantedSlotBuffer>(actor) : default;
-                bool hasGranted = _world.Has<GrantedSlotBuffer>(actor);
-                GrantedSlotBuffer grantedSlots = hasGranted ? _world.Get<GrantedSlotBuffer>(actor) : default;
-                AbilitySlotState slot = AbilitySlotResolver.Resolve(
-                    in abilities,
-                    in formSlots,
-                    hasForm,
-                    in itemGrantedSlots,
-                    hasItemGranted,
-                    in grantedSlots,
-                    hasGranted,
-                    slotIndex);
-                if (slot.AbilityId <= 0 ||
+                if (!AbilitySlotResolver.TryResolve(_world, actor, slotIndex, out AbilitySlotState slot) ||
+                    slot.AbilityId <= 0 ||
                     !_abilityDefinitions.TryGet(slot.AbilityId, out var abilityDefinition) ||
                     !abilityDefinition.HasInputBindingOverride)
                 {

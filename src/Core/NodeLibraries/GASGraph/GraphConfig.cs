@@ -6,7 +6,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
     public sealed class GraphConfig : IIdentifiable
     {
         public string Id { get; set; } = string.Empty;
-        public string Kind { get; set; } = "Effect";
+        /// <summary>Required authored graph kind. Parsed by <see cref="Ludots.Core.GraphRuntime.GraphKindParser"/>.</summary>
+        public string Kind { get; set; } = string.Empty;
         public string Entry { get; set; } = string.Empty;
         public List<GraphNodeConfig> Nodes { get; set; } = new();
         public List<GraphOutputConfig> Outputs { get; set; } = new();

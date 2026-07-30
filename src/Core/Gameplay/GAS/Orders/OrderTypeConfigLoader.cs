@@ -60,7 +60,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         {
             public Dictionary<string, JsonNode?>? OrderBlackboardKeys { get; set; }
             public Dictionary<string, OrderTypeConfigJson>? OrderTypes { get; set; }
-            public Dictionary<string, OrderRuleConfigJson>? OrderRules { get; set; }
+            public required Dictionary<string, OrderRuleConfigJson> OrderRules { get; set; }
         }
 
         public OrderTypeConfigLoader(ConfigPipeline pipeline)

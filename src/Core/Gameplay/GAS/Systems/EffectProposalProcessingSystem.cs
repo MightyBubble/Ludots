@@ -77,7 +77,9 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         // Phase Graph execution (optional)
         private readonly EffectPhaseExecutor _phaseExecutor;
         private readonly Ludots.Core.NodeLibraries.GASGraph.IGraphRuntimeApi _graphApi;
+        private readonly Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi _graphApiHost;
         private readonly BuiltinHandlerExecutionContext _builtinRuntime = new();
+        private readonly EffectPhaseSideEffectTransaction _instantPhaseTransaction;
         private readonly RootBudgetTable _fanOutBudget;
         // An injected budget is advanced by the effect-loop owner once per processing transaction.
         private readonly bool _ownsFanOutBudget;
@@ -336,6 +338,15 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _tagOps = tagOps;
             _phaseExecutor = phaseExecutor;
             _graphApi = graphApi;
+            _graphApiHost = graphApi;
+            _instantPhaseTransaction = new EffectPhaseSideEffectTransaction(
+                world,
+                tagOps,
+                queue,
+                spawnRequests,
+                presentationEvents,
+                Math.Max(1, fanOutCommandCapacity),
+                _fanOutBudget);
             _builtinRuntime.SpatialQueries = spatialQueries;
             _builtinRuntime.FanOutBudget = _fanOutBudget;
             _builtinRuntime.FanOutCommands = _instantFanOutCommands;
@@ -364,6 +375,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         public bool UpdateSlice(float dt, int timeBudgetMs)
         {
+            _templates?.RequireFinalized();
             LastSliceProcessed = 0;
             if (_queue == null || _queue.Count == 0)
             {
@@ -1397,36 +1409,77 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private void ExecuteInstantInline(in EffectProposal proposal, in EffectTemplateData tpl)
         {
             bool hasPhaseRuntime = _phaseExecutor != null && _graphApi != null;
-            if (!hasPhaseRuntime)
+            ref readonly EffectExecutionPlanSet plans = ref _templates!.RequireExecutionPlans(proposal.TemplateId);
+            EffectWindowExecutionPlan activationPlan = plans.Activation;
+            if (activationPlan.Kind == EffectExecutionPlanKind.ExternalAtomicExclusive)
             {
-                if (tpl.PhaseGraphBindings.StepCount > 0 || tpl.HasTargetResolver ||
-                    (tpl.PresetType != EffectPresetType.None &&
-                     tpl.PresetType != EffectPresetType.InstantDamage &&
-                     tpl.PresetType != EffectPresetType.Heal &&
-                     tpl.PresetType != EffectPresetType.ApplyForce2D))
+                if (!hasPhaseRuntime)
                 {
                     throw new InvalidOperationException(
-                        $"GAS.INSTANT.ERR.MissingPhaseRuntime: templateId={proposal.TemplateId}, preset={tpl.PresetType}.");
+                        $"GAS.INSTANT.ERR.MissingPhaseRuntime: templateId={proposal.TemplateId}, plan={activationPlan.Kind}.");
                 }
-
-                ApplyInstantModifiersAndPublish(in proposal);
-                return;
+                if (activationPlan.RequiresListenerPreflight &&
+                    (HasMatchingActivationListener(in proposal, in tpl, EffectPhaseId.OnResolve) ||
+                     HasMatchingActivationListener(in proposal, in tpl, EffectPhaseId.OnHit) ||
+                     HasMatchingActivationListener(in proposal, in tpl, EffectPhaseId.OnApply)))
+                {
+                    throw new InvalidOperationException(
+                        $"{EffectPhaseExecutor.ExternalAtomicListenerConflictError}: templateId={proposal.TemplateId}, domain={activationPlan.Domain}.");
+                }
+            }
+            else if (activationPlan.Kind != EffectExecutionPlanKind.GasTransactional)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.EFFECT_PLAN.ERR.InvalidRuntimePlan: templateId={proposal.TemplateId}, plan={activationPlan.Kind}.");
             }
 
-            EffectConfigParams mergedConfig = BuildMergedConfig(in tpl, in proposal);
-            var context = new EffectContext
-            {
-                RootId = proposal.RootId,
-                Source = proposal.Source,
-                Target = proposal.Target,
-                TargetContext = proposal.TargetContext,
-            };
-            IntVector2 targetPosCm = PlacementPhaseTargetPosResolver.Resolve(World, in context, in mergedConfig);
             _builtinRuntime.ResetPerEffect();
             _builtinRuntime.SetModifierOverride(in proposal.Modifiers);
+            bool useGasTransaction = activationPlan.Kind == EffectExecutionPlanKind.GasTransactional;
+            if (useGasTransaction)
+            {
+                _instantPhaseTransaction.Begin();
+                _builtinRuntime.EffectSideEffects = _instantPhaseTransaction;
+            }
+            bool graphTransactionBound = false;
 
             try
             {
+                if (useGasTransaction && _graphApiHost != null)
+                {
+                    _graphApiHost.BeginEffectSideEffectTransaction(_instantPhaseTransaction);
+                    graphTransactionBound = true;
+                }
+
+                if (!hasPhaseRuntime)
+                {
+                    if (tpl.PhaseGraphBindings.StepCount > 0 || tpl.HasTargetResolver ||
+                        (tpl.PresetType != EffectPresetType.None &&
+                         tpl.PresetType != EffectPresetType.InstantDamage &&
+                         tpl.PresetType != EffectPresetType.Heal &&
+                         tpl.PresetType != EffectPresetType.ApplyForce2D))
+                    {
+                        throw new InvalidOperationException(
+                            $"GAS.INSTANT.ERR.MissingPhaseRuntime: templateId={proposal.TemplateId}, preset={tpl.PresetType}.");
+                    }
+
+                    ApplyInstantModifiersAndPublish(in proposal);
+                    if (useGasTransaction)
+                    {
+                        _instantPhaseTransaction.Commit();
+                    }
+                    return;
+                }
+
+                EffectConfigParams mergedConfig = BuildMergedConfig(in tpl, in proposal);
+                var context = new EffectContext
+                {
+                    RootId = proposal.RootId,
+                    Source = proposal.Source,
+                    Target = proposal.Target,
+                    TargetContext = proposal.TargetContext,
+                };
+                IntVector2 targetPosCm = PlacementPhaseTargetPosResolver.Resolve(World, in context, in mergedConfig);
                 _phaseExecutor!.ExecutePhase(
                     World, _graphApi!, proposal.Source, proposal.Target, proposal.TargetContext, targetPosCm,
                     EffectPhaseId.OnResolve, in tpl.PhaseGraphBindings, tpl.PresetType,
@@ -1447,19 +1500,48 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         _builtinRuntime.AttributeDeltaId,
                         _builtinRuntime.AttributeDelta);
                 }
-                else if (tpl.PresetType == EffectPresetType.None ||
-                         tpl.PresetType == EffectPresetType.InstantDamage ||
-                         tpl.PresetType == EffectPresetType.Heal)
+                else if (useGasTransaction)
                 {
                     ApplyInstantModifiersAndPublish(in proposal);
                 }
 
                 PublishBuiltinFanOutCommandsAndRecordDrops();
+                if (useGasTransaction)
+                {
+                    _instantPhaseTransaction.Commit();
+                }
+            }
+            catch
+            {
+                if (useGasTransaction)
+                {
+                    _instantPhaseTransaction.Rollback();
+                }
+                throw;
             }
             finally
             {
+                if (graphTransactionBound)
+                {
+                    _graphApiHost!.EndEffectSideEffectTransaction(_instantPhaseTransaction);
+                }
+                _builtinRuntime.EffectSideEffects = null;
                 _instantFanOutCommands.Clear();
             }
+        }
+
+        private bool HasMatchingActivationListener(
+            in EffectProposal proposal,
+            in EffectTemplateData template,
+            EffectPhaseId phase)
+        {
+            return _phaseExecutor!.HasMatchingListener(
+                World,
+                proposal.Source,
+                proposal.Target,
+                phase,
+                template.TagId,
+                proposal.TemplateId);
         }
 
         private void ApplyInstantModifiersAndPublish(in EffectProposal proposal)
@@ -1469,6 +1551,21 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             int primaryAttributeId = proposal.Modifiers.Count > 0
                 ? proposal.Modifiers.Get(0).AttributeId
                 : -1;
+            if (_instantPhaseTransaction.IsActive)
+            {
+                float stagedBefore = primaryAttributeId >= 0 &&
+                    _instantPhaseTransaction.TryReadAttributeCurrent(proposal.Target, primaryAttributeId, out float currentBefore)
+                        ? currentBefore
+                        : 0f;
+                _instantPhaseTransaction.StageModifiers(proposal.Target, in proposal.Modifiers);
+                float stagedAfter = primaryAttributeId >= 0 &&
+                    _instantPhaseTransaction.TryReadAttributeCurrent(proposal.Target, primaryAttributeId, out float currentAfter)
+                        ? currentAfter
+                        : 0f;
+                PublishInstantApplied(in proposal, primaryAttributeId, stagedAfter - stagedBefore);
+                return;
+            }
+
             float before = primaryAttributeId >= 0
                 ? World.Get<AttributeBuffer>(proposal.Target).GetCurrent(primaryAttributeId)
                 : 0f;
@@ -1482,7 +1579,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private void PublishInstantApplied(in EffectProposal proposal, int attributeId, float delta)
         {
             if (_presentationEvents == null || attributeId < 0) return;
-            _presentationEvents.Publish(new GasPresentationEvent
+            var presentationEvent = new GasPresentationEvent
             {
                 Kind = GasPresentationEventKind.EffectApplied,
                 Actor = proposal.Source,
@@ -1490,7 +1587,15 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 EffectTemplateId = proposal.TemplateId,
                 AttributeId = attributeId,
                 Delta = delta,
-            });
+            };
+            if (_instantPhaseTransaction.IsActive)
+            {
+                _instantPhaseTransaction.StagePresentationEvent(in presentationEvent);
+            }
+            else
+            {
+                _presentationEvents.Publish(presentationEvent);
+            }
         }
 
         private static uint BuildInstantExecutionSeed(in EffectProposal proposal, EffectPhaseId phase)
@@ -1662,7 +1767,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         /// <summary>
         /// Execute OnPropose phase graphs for a proposal.
         /// Called after EffectProposal is created, before ResponseChain window.
-        /// Returns false when the phase graph sets B[0]=0 (placement/validation rejection).
+        /// Returns false when a validating OnPropose graph leaves B[0]=0
+        /// (fail-closed placement/validation rejection). Vacant OnPropose phases pass.
         /// </summary>
         private bool ExecuteOnProposePhase(in EffectProposal proposal, in EffectTemplateData tpl)
         {
@@ -1742,9 +1848,22 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             for (int i = 0; i < _instantFanOutCommands.Count; i++)
             {
                 FanOutCommand command = _instantFanOutCommands[i];
-                TargetResolverFanOutHelper.PublishCommand(in command, _queue);
+                if (_instantPhaseTransaction.IsActive)
+                {
+                    _instantPhaseTransaction.StageFanOutCommand(in command);
+                }
+                else
+                {
+                    TargetResolverFanOutHelper.PublishCommand(in command, _queue);
+                }
             }
             _instantFanOutCommands.Clear();
+        }
+
+        public override void Dispose()
+        {
+            _instantPhaseTransaction.Dispose();
+            base.Dispose();
         }
 
         private EffectConfigParams BuildMergedConfig(in EffectTemplateData tpl, in EffectProposal proposal)

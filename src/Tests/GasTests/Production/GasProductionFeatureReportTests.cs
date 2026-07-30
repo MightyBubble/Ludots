@@ -175,10 +175,11 @@ namespace Ludots.Tests.GAS.Production
 
             var effectRequests = engine.GetService(CoreServiceKeys.EffectRequestQueue);
             int dotId = EffectTemplateIdRegistry.GetId("Effect.Moba.DOT.Burn");
-            effectRequests.Publish(new EffectRequest { RootId = 0, Source = hero, Target = enemy1, TargetContext = default, TemplateId = dotId });
-            Tick(engine, 25);
-            float e1AfterDot = world.Get<AttributeBuffer>(enemy1).GetCurrent(healthId);
-            steps.Add(CheckNear("DoT Burn applies immediately and ticks once", e1AfterE - 6f, e1AfterDot));
+            effectRequests.Publish(new EffectRequest { RootId = 0, Source = hero, Target = enemy2, TargetContext = default, TemplateId = dotId });
+            GameplayEffect dotEffect = TickUntilCommittedEffect(engine, enemy2, dotId);
+            TickUntilFixedFrame(engine, dotEffect.NextTickAtTick);
+            float e2AfterDot = world.Get<AttributeBuffer>(enemy2).GetCurrent(healthId);
+            steps.Add(CheckNear("DoT Burn applies immediately and ticks once", e2AfterE - 6f, e2AfterDot));
 
             int hotId = EffectTemplateIdRegistry.GetId("Effect.Moba.HOT.Regen");
             int qId = EffectTemplateIdRegistry.GetId("Effect.Moba.Damage.Q");
@@ -358,6 +359,43 @@ namespace Ludots.Tests.GAS.Production
 
                 engine.Tick(1f / 60f);
             }
+        }
+
+        private static GameplayEffect TickUntilCommittedEffect(
+            GameEngine engine,
+            Entity target,
+            int templateId)
+        {
+            World world = engine.World;
+            for (int guard = 0; guard < 10_000; guard++)
+            {
+                if (world.Has<ActiveEffectContainer>(target))
+                {
+                    ActiveEffectContainer container = world.Get<ActiveEffectContainer>(target);
+                    for (int i = 0; i < container.Count; i++)
+                    {
+                        Entity effectEntity = container.GetEntity(i);
+                        if (!world.IsAlive(effectEntity) ||
+                            !world.Has<EffectTemplateRef>(effectEntity) ||
+                            world.Get<EffectTemplateRef>(effectEntity).TemplateId != templateId ||
+                            !world.Has<GameplayEffect>(effectEntity))
+                        {
+                            continue;
+                        }
+
+                        GameplayEffect effect = world.Get<GameplayEffect>(effectEntity);
+                        if (effect.State == EffectState.Committed && effect.NextTickAtTick > 0)
+                        {
+                            return effect;
+                        }
+                    }
+                }
+
+                engine.Tick(1f / 60f);
+            }
+
+            throw new InvalidOperationException(
+                $"Effect template {templateId} did not reach a committed periodic state on target {target.Id}.");
         }
 
         private static int RequireTimedTagExpiration(World world, Entity entity, int tagId)

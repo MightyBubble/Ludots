@@ -439,9 +439,9 @@ namespace Ludots.Tests.GAS
                 actor: player,
                 subject: player,
                 viewer: player);
-            Span<Entity> scopeMembers = stackalloc Entity[4];
-            Span<Entity> relationSources = stackalloc Entity[4];
-            Span<Entity> relationTargets = stackalloc Entity[4];
+            var scopeMembers = new Entity[4];
+            var relationSources = new Entity[4];
+            var relationTargets = new Entity[4];
             Assert.That(
                 resolver.TryResolve(player, target, 2, in viewerScope, in roleContext, scopeMembers, allyTypeId, relationSources, relationTargets, out _),
                 Is.True);
@@ -451,14 +451,18 @@ namespace Ludots.Tests.GAS
                 resolver.TryResolve(player, target, 2, in viewerScope, in roleContext, scopeMembers, allyTypeId, relationSources, relationTargets, out _);
             }
 
-            GC.GetAllocatedBytesForCurrentThread();
-            long before = GC.GetAllocatedBytesForCurrentThread();
-            for (int i = 0; i < 10_000; i++)
-            {
-                resolver.TryResolve(player, target, 2, in viewerScope, in roleContext, scopeMembers, allyTypeId, relationSources, relationTargets, out _);
-            }
-
-            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+            long allocated = MeasureRelationGrantResolutionAllocations(
+                resolver,
+                player,
+                target,
+                in viewerScope,
+                in roleContext,
+                scopeMembers,
+                allyTypeId,
+                relationSources,
+                relationTargets,
+                out int resolvedCount);
+            Assert.That(resolvedCount, Is.EqualTo(10_000));
             Assert.That(allocated, Is.EqualTo(0));
         }
 
@@ -504,15 +508,71 @@ namespace Ludots.Tests.GAS
 
             Assert.That(KnowledgeProjectionConsumer.TryResolve(world, globals, Entity.Null, scout, out _), Is.True);
 
+            long allocated = MeasureConsumerResolutionAllocations(
+                world,
+                globals,
+                scout,
+                out int resolvedCount);
+            Assert.That(resolvedCount, Is.EqualTo(10_000));
+            Assert.That(allocated, Is.EqualTo(0));
+        }
+
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        private static long MeasureRelationGrantResolutionAllocations(
+            KnowledgeProjectionResolver resolver,
+            Entity viewer,
+            Entity target,
+            in ScopeKey viewerScope,
+            in RoleResolverContext roleContext,
+            Entity[] scopeMembers,
+            int relationshipTypeId,
+            Entity[] relationSources,
+            Entity[] relationTargets,
+            out int resolvedCount)
+        {
             GC.GetAllocatedBytesForCurrentThread();
             long before = GC.GetAllocatedBytesForCurrentThread();
+            resolvedCount = 0;
             for (int i = 0; i < 10_000; i++)
             {
-                KnowledgeProjectionConsumer.TryResolve(world, globals, Entity.Null, scout, out _);
+                if (resolver.TryResolve(
+                    viewer,
+                    target,
+                    currentTick: 2,
+                    in viewerScope,
+                    in roleContext,
+                    scopeMembers,
+                    relationshipTypeId,
+                    relationSources,
+                    relationTargets,
+                    out _))
+                {
+                    resolvedCount++;
+                }
             }
 
-            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
-            Assert.That(allocated, Is.EqualTo(0));
+            return GC.GetAllocatedBytesForCurrentThread() - before;
+        }
+
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        private static long MeasureConsumerResolutionAllocations(
+            World world,
+            Dictionary<string, object> globals,
+            Entity target,
+            out int resolvedCount)
+        {
+            GC.GetAllocatedBytesForCurrentThread();
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            resolvedCount = 0;
+            for (int i = 0; i < 10_000; i++)
+            {
+                if (KnowledgeProjectionConsumer.TryResolve(world, globals, Entity.Null, target, out _))
+                {
+                    resolvedCount++;
+                }
+            }
+
+            return GC.GetAllocatedBytesForCurrentThread() - before;
         }
 
         private static TestRuntime CreateRuntime(World world)

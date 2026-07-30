@@ -109,10 +109,9 @@ namespace Ludots.Core.Gameplay.GAS
             var chunks = _world.Query(in _runtimeQuery);
             foreach (var chunk in chunks)
             {
-                var states = chunk.GetArray<GasRuntimeState>();
-                for (int i = 0; i < chunk.Count; i++)
+                if (chunk.Count > 0)
                 {
-                    return states[i];
+                    return chunk.GetArray<GasRuntimeState>()[0];
                 }
             }
 
@@ -137,4 +136,3 @@ namespace Ludots.Core.Gameplay.GAS
         }
     }
 }
-

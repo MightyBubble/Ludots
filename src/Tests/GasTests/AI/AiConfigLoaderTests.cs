@@ -329,14 +329,15 @@ namespace Ludots.Tests.GAS
 
                 var graphs = new GraphProgramRegistry();
                 int graphId = GraphIdRegistry.Register("Graph.AI.Score");
-                graphs.Register(graphId, Array.Empty<GraphInstruction>());
+                graphs.Register(graphId, Array.Empty<GraphInstruction>(), GraphKind.Score);
 
                 return new AiConfigFixture(root, core, pipeline, new AiConfigValidationContext(orderTypes, abilities, graphs), graphs, abilityId, sharedCooldownTagId, graphId);
             }
 
             public void RegisterScoreGraph(params GraphInstruction[] program)
             {
-                _graphs.Register(ScoreGraphId, program);
+                _graphs.Clear();
+                _graphs.Register(ScoreGraphId, program, GraphKind.Score);
             }
 
             public void WriteUtilityConfig(
