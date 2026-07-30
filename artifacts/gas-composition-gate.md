@@ -2,31 +2,32 @@
 
 Current closeouts and prior issue reviews follow.
 
-## Graph / PresetType / EffectTemplate SSOT - Pre-Implementation Gate - 2026-07-30
+## Graph / PresetType / EffectTemplate SSOT - Final Closeout - 2026-07-30
 
 - **Task / Issue**: Close the audited Ability, GAS Effect, and Graph contract gaps on current `main`, converge gameplay composition on `Graph -> optional PresetType sugar -> EffectTemplate instance`, and make test execution reproducible from repository-declared SDK and dependencies.
 - **Date**: 2026-07-30
 - **Agent / Author**: Codex, with read-only Pi Opus review, isolated Cursor Graph implementation, and independent SDK/warning audit.
 - **Baseline**: `origin/main` at `9a6af246ccd30d534011960d3663a8be1afac52a`.
-- **Status**: PRE-IMPLEMENTATION. This section must be completed with exact commits and verification before merge.
+- **Status**: COMPLETE at `dac90b219fceb830684c79d8e924afcc606296b6`; final gate evidence is recorded below.
 
 ### 1. Core judgment
 
 Primary delivery: A. Tighten existing Graph, Ability, and Effect contracts and remove parallel or implicit behavior.
 
-Result: PROVISIONAL PASS, subject to implementation and tests.
+Result: PASS.
 
-Reason: The intended repair reuses the existing Graph compiler/runtime, `AbilityExecSystem`, effect proposal pipeline, `EffectTemplateRegistry`, and phase Graph references. It must not add a gameplay enum, preset-specific loader branch, alternate ability producer, fallback path, compatibility reader, or second effect runtime.
+Reason: The repair reuses the existing Graph compiler/runtime, `AbilityExecSystem`, effect proposal pipeline, `EffectTemplateRegistry`, and phase Graph references. It adds no gameplay enum, preset-specific loader branch, alternate ability producer, fallback path, compatibility reader, or second effect runtime.
 
 ### 2. Layer assignment
 
 | Capability | Layer | Required carrier |
 |---|---:|---|
 | Atomic gameplay operation | 0 | Existing registered Graph/GAS op with explicit metadata |
-| Sequence, branch, stage, and reusable behavior | 1 | Graph compiled under an enforced graph kind |
-| Stable authoring shorthand, when justified | 2 | Optional PresetType compiled to the same Graph/effect contract |
-| Concrete duration, tags, parameters, and phase references | 3 | EffectTemplate data |
-| Hero, skill, map, or mode-specific variant | 3 | Mod-owned Graph and EffectTemplate assets; no Core enum |
+| Ordered commit and rollback | 1 | `EffectPhaseSideEffectTransaction` and frozen execution plan |
+| Sequence, branch, phase, and reusable behavior | 2 | Graph compiled under an enforced graph kind |
+| Concrete duration, tags, parameters, and phase references | 2 | EffectTemplate content SSOT |
+| Stable authoring shorthand, when justified | 3 | Optional PresetType compiled to the same Graph/effect contract |
+| Hero, skill, map, or mode-specific variant | 2 | Mod-owned Graph and EffectTemplate assets; no Core enum |
 
 ### 3. Reuse list
 
@@ -37,11 +38,13 @@ Reason: The intended repair reuses the existing Graph compiler/runtime, `Ability
 
 ### 4. New Layer 0 ops
 
-None planned. If implementation reveals a missing indivisible engine capability, work stops and this gate is amended before adding an op.
+None added. The implementation tightened metadata, execution planning, and transaction ownership around existing operations.
 
 ### 5. Transaction boundary
 
 - An instant Effect preflights every authoritative write and observable publication for the whole template before its first mutation; any capacity or dependency failure leaves no partial gameplay result.
+- `SetParent` is resolved from EffectTemplate data as a GAS-transactional relation operation. Fixed-capacity staging covers both parent buffers, `ChildOf`, position snap, structural playback, stale-read checks, and rollback after a post-playback fault.
+- `RemoveParent` and `EnsureLink` remain uncertified and fail execution-plan finalization. Vision reveal operations were removed from the Effect Graph catalog until they have an equally explicit transaction contract.
 - Ability execution has one authoritative production path and one typed invalid-target result.
 - Graph loading and validation fail closed: invalid JSON, unsupported graph kind, empty validation output, unknown op metadata, and fixed-capacity overflow are explicit failures.
 - Graph runtime does not resize or structurally mutate ECS state in the hot path.
@@ -50,25 +53,36 @@ None planned. If implementation reveals a missing indivisible engine capability,
 
 Graph assets describe behavior; EffectTemplate assets describe concrete effect instances. PresetType, if retained, is only stable authoring sugar compiled to those contracts. SDK version and test/analyzer dependencies are repository-declared; machine-global Roslyn state is not a dependency.
 
-New JSON schema: only if required to enforce an already-declared graph kind or metadata contract. No compatibility fallback is permitted.
+New JSON schema: NO. Existing authored Graph kind and operation metadata are now consumed and enforced. No compatibility fallback is permitted.
 
 ### 7. Red flag scan
 
-- [ ] No new gameplay preset enum or preset-specific loader branch
-- [ ] No parallel Ability execution producer or conflicting invalid-target behavior
-- [ ] No Graph kind field without a consumer
-- [ ] No validation default that turns missing output into success
-- [ ] No permissive JSON or unknown-field acceptance where config is authoritative
-- [ ] No silent capacity return, truncation, registry overwrite, or hot-path resize in touched paths
-- [ ] No warning suppression used as a substitute for a root-cause fix
-- [ ] No test dependency on an accidentally installed SDK/analyzer
+- [x] No new gameplay preset enum or preset-specific loader branch
+- [x] No parallel Ability execution producer or conflicting invalid-target behavior
+- [x] No Graph kind field without a consumer
+- [x] No validation default that turns missing output into success
+- [x] No permissive JSON or unknown-field acceptance where config is authoritative
+- [x] No silent capacity return, truncation, registry overwrite, or hot-path resize in touched paths
+- [x] No warning suppression used as a substitute for a root-cause fix
+- [x] No test dependency on an accidentally installed SDK/analyzer
 
-### 8. Planned verification
+### 8. Verification results
 
-- Clean restore/build with the repository-selected SDK.
-- Architecture tests, Graph-focused tests, Ability/Effect tests, then the complete relevant test projects.
-- Warning inventory before/after, with every remaining warning accounted for rather than hidden.
-- `git diff --check` and clean worktree after commit.
+- Repository-selected SDK: `dotnet --version` -> `9.0.312` from `global.json` (`9.0.100`, `latestFeature`).
+- Fresh detached worktree: `C:\001_AI\LudotsGraphEffectSsotVerify` at `dac90b21`; no shared `bin` or `obj` state from the implementation worktree.
+- Fresh `dotnet restore --force-evaluate` completed for both `GasTests.csproj` and `ArchitectureTests.csproj` using repository-declared dependencies.
+- Fresh Release builds: GasTests project `0 errors`; ArchitectureTests project `0 errors`.
+- Fresh full GasTests run: `2074 passed`, `0 failed`; TRX `C:\Users\sietg\AppData\Local\Temp\LudotsGasSsotResults\ludots-gas-clean-worktree.trx`.
+- Fresh full ArchitectureTests run: `192 passed`, `0 failed`; TRX `C:\Users\sietg\AppData\Local\Temp\LudotsGasSsotResults\ludots-architecture-clean-worktree.trx`.
+- Same-SDK Core Release rebuild comparison: `origin/main` `1558 warnings / 0 errors`; branch `1547 warnings / 0 errors`; `0` new warnings and `11` warnings removed. Remaining repository warnings are not suppressed or claimed as cleared.
+- The 14 fixed `24 byte` allocation failures were NUnit/JIT measurement-window pollution. Strongly typed `NoInlining` measurement methods keep assertions outside the measured hot path; no tolerance, retry, minimum-of-runs, or warning suppression was added.
+- `git diff --check`: PASS. Implementation and verification worktrees were clean after generated acceptance artifacts were restored.
+
+### 8.1 Review evidence
+
+- Pi Opus 4.6 final read-only review: `0` blocking findings; architecture `9.5/10`; new-developer comprehension `8.5/10`.
+- Isolated Cursor Graph lane implemented the strict Graph contract; Codex independently reviewed and re-ran the merged tests.
+- Independent subagent reviews rejected static certification of the composite `ApplyRelation`, identified `SetParent` rollback gaps, kept `RemoveParent` / `EnsureLink` unsupported, and isolated the 24-byte test-instrumentation root cause.
 
 ### 9. Player-facing UAT
 
