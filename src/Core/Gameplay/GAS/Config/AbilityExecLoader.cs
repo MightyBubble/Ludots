@@ -417,18 +417,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 payloadA = (int)ParseExecEffectDispatchTarget(rawDispatchTarget, id, idx, path);
             }
 
-            // For GraphSignal, "graph" field maps to payloadA via GraphIdRegistry
-            if (kind == ExecItemKind.GraphSignal)
-            {
-                string graphName = RequireNonEmptyString(itemObj["graph"], $"exec.items[{idx}].graph", id, path);
-                payloadA = GraphIdRegistry.GetId(graphName);
-                if (payloadA <= 0)
-                {
-                    throw new InvalidOperationException(
-                        $"Ability '{id}' in '{path}' field 'exec.items[{idx}].graph' references unknown graph '{graphName}'.");
-                }
-            }
-
             spec.SetItem(idx, kind, tick, durationTicks, clockId, tagId, templateId, callerParamsIdx, payloadA);
         }
 
@@ -855,14 +843,13 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 "TagClipTarget" => ExecItemKind.TagClipTarget,
                 "EffectSignal" => ExecItemKind.EffectSignal,
                 "EventSignal" => ExecItemKind.EventSignal,
-                "GraphSignal" => ExecItemKind.GraphSignal,
                 "TagSignal" => ExecItemKind.TagSignal,
                 "TagSignalTarget" => ExecItemKind.TagSignalTarget,
                 "InputGate" => ExecItemKind.InputGate,
                 "EventGate" => ExecItemKind.EventGate,
                 "TargetCollectionGate" => ExecItemKind.TargetCollectionGate,
                 "End" => ExecItemKind.End,
-                _ => throw new InvalidOperationException($"Unknown ExecItemKind '{str}'. Valid values: EffectClip, TagClip, TagClipTarget, EffectSignal, EventSignal, GraphSignal, TagSignal, TagSignalTarget, InputGate, EventGate, TargetCollectionGate, End."),
+                _ => throw new InvalidOperationException($"Unknown ExecItemKind '{str}'. Valid values: EffectClip, TagClip, TagClipTarget, EffectSignal, EventSignal, TagSignal, TagSignalTarget, InputGate, EventGate, TargetCollectionGate, End."),
             };
         }
     }

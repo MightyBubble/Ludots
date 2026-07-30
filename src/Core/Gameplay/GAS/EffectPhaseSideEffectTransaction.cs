@@ -1,6 +1,7 @@
 using System;
 using Arch.Buffer;
 using Arch.Core;
+using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Presentation;
 using Ludots.Core.Gameplay.Spawning;
@@ -19,6 +20,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
     public const string ScopeNotActiveError = "GAS.EFFECT_TRANSACTION.ERR.ScopeNotActive";
     public const string UnsupportedSideEffectError = "GAS.EFFECT_TRANSACTION.ERR.UnsupportedSideEffect";
     public const string AttributeTargetInvalidError = "GAS.EFFECT_TRANSACTION.ERR.AttributeTargetInvalid";
+    public const string RelationTargetInvalidError = "GAS.EFFECT_TRANSACTION.ERR.RelationTargetInvalid";
 
     private readonly World _world;
     private readonly TagOps? _tagOps;
@@ -72,6 +74,27 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
     private readonly EffectPhaseListenerBuffer[] _listenerOriginalValues;
     private readonly EffectPhaseListenerBuffer[] _listenerValues;
     private readonly bool[] _listenerExisted;
+    private readonly Entity[] _relationParentEntities;
+    private readonly ChildrenBuffer[] _relationParentOriginalValues;
+    private readonly ChildrenBuffer[] _relationParentValues;
+    private readonly bool[] _relationParentExisted;
+    private readonly bool[] _relationParentShouldExist;
+    private readonly Entity[] _relationChildEntities;
+    private readonly ChildOf[] _relationChildOriginalValues;
+    private readonly ChildOf[] _relationChildValues;
+    private readonly bool[] _relationChildExisted;
+    private readonly bool[] _relationSnapPositions;
+    private readonly WorldPositionCm[] _relationWorldPositionOriginalValues;
+    private readonly WorldPositionCm[] _relationWorldPositionValues;
+    private readonly bool[] _relationWorldPositionExisted;
+    private readonly PreviousWorldPositionCm[] _relationPreviousPositionOriginalValues;
+    private readonly PreviousWorldPositionCm[] _relationPreviousPositionValues;
+    private readonly bool[] _relationPreviousPositionExisted;
+    private readonly Entity[] _relationSnapSourceEntities;
+    private readonly WorldPositionCm[] _relationSnapSourceWorldPositionOriginalValues;
+    private readonly bool[] _relationSnapSourceWorldPositionExisted;
+    private readonly PreviousWorldPositionCm[] _relationSnapSourcePreviousPositionOriginalValues;
+    private readonly bool[] _relationSnapSourcePreviousPositionExisted;
     private CommandBuffer _structuralCommands;
     private readonly CommandBuffer _structuralRollbackCommands;
     private readonly int _structuralCommandCapacity;
@@ -93,6 +116,8 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
     private int _listenerRegistrationCount;
     private int _listenerRemovalCount;
     private int _listenerEntityCount;
+    private int _relationParentCount;
+    private int _relationChildCount;
     private GameplayEventBus? _gameplayEventBus;
     private bool _worldCommitStarted;
     private bool _externalCommitStarted;
@@ -170,7 +195,29 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         _listenerOriginalValues = new EffectPhaseListenerBuffer[listenerEntityCapacity];
         _listenerValues = new EffectPhaseListenerBuffer[listenerEntityCapacity];
         _listenerExisted = new bool[listenerEntityCapacity];
-        _structuralCommandCapacity = checked(attributeEntityCapacity * 4);
+        int relationParentCapacity = checked(attributeEntityCapacity * 2);
+        _relationParentEntities = new Entity[relationParentCapacity];
+        _relationParentOriginalValues = new ChildrenBuffer[relationParentCapacity];
+        _relationParentValues = new ChildrenBuffer[relationParentCapacity];
+        _relationParentExisted = new bool[relationParentCapacity];
+        _relationParentShouldExist = new bool[relationParentCapacity];
+        _relationChildEntities = new Entity[attributeEntityCapacity];
+        _relationChildOriginalValues = new ChildOf[attributeEntityCapacity];
+        _relationChildValues = new ChildOf[attributeEntityCapacity];
+        _relationChildExisted = new bool[attributeEntityCapacity];
+        _relationSnapPositions = new bool[attributeEntityCapacity];
+        _relationWorldPositionOriginalValues = new WorldPositionCm[attributeEntityCapacity];
+        _relationWorldPositionValues = new WorldPositionCm[attributeEntityCapacity];
+        _relationWorldPositionExisted = new bool[attributeEntityCapacity];
+        _relationPreviousPositionOriginalValues = new PreviousWorldPositionCm[attributeEntityCapacity];
+        _relationPreviousPositionValues = new PreviousWorldPositionCm[attributeEntityCapacity];
+        _relationPreviousPositionExisted = new bool[attributeEntityCapacity];
+        _relationSnapSourceEntities = new Entity[attributeEntityCapacity];
+        _relationSnapSourceWorldPositionOriginalValues = new WorldPositionCm[attributeEntityCapacity];
+        _relationSnapSourceWorldPositionExisted = new bool[attributeEntityCapacity];
+        _relationSnapSourcePreviousPositionOriginalValues = new PreviousWorldPositionCm[attributeEntityCapacity];
+        _relationSnapSourcePreviousPositionExisted = new bool[attributeEntityCapacity];
+        _structuralCommandCapacity = checked(attributeEntityCapacity * 8);
         _structuralCommands = new CommandBuffer(_structuralCommandCapacity);
         _structuralRollbackCommands = new CommandBuffer(_structuralCommandCapacity);
     }
@@ -202,6 +249,8 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         _listenerRegistrationCount = 0;
         _listenerRemovalCount = 0;
         _listenerEntityCount = 0;
+        _relationParentCount = 0;
+        _relationChildCount = 0;
         _gameplayEventBus = null;
         _worldCommitStarted = false;
         _externalCommitStarted = false;
@@ -210,6 +259,60 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
             _rootBudgetCheckpoint = _rootBudget.CaptureWriteCheckpoint();
         }
         IsActive = true;
+    }
+
+    public void StageSetParent(Entity subject, Entity parent, bool snapSubjectToParentPosition)
+    {
+        RequireActive();
+        if (!_world.IsAlive(subject) || !_world.IsAlive(parent) || subject == parent)
+        {
+            throw new InvalidOperationException(
+                $"{RelationTargetInvalidError}: subject={subject.Id}, parent={parent.Id}.");
+        }
+        WorldPositionCm parentPosition = default;
+        if (snapSubjectToParentPosition && !TryReadRelationWorldPosition(parent, out parentPosition))
+        {
+            throw new InvalidOperationException(
+                $"GAS.EFFECT_TRANSACTION.ERR.RelationParentPositionMissing: entity={parent.Id}.");
+        }
+
+        int childIndex = GetOrAddRelationChild(subject);
+        Entity currentParent = _relationChildValues[childIndex].Parent;
+        int newParentIndex = GetOrAddRelationParent(parent);
+        ref ChildrenBuffer newParentChildren = ref _relationParentValues[newParentIndex];
+        bool alreadyContained = newParentChildren.Contains(in subject);
+        if (!alreadyContained && newParentChildren.Count >= GasConstants.MAX_CHILDREN_BUFFER_CAPACITY)
+        {
+            throw new InvalidOperationException(
+                $"{CapacityExceededError}: destination=ChildrenBuffer, entity={parent.Id}, capacity={GasConstants.MAX_CHILDREN_BUFFER_CAPACITY}.");
+        }
+
+        if (currentParent != Entity.Null && currentParent != parent && _world.IsAlive(currentParent))
+        {
+            int oldParentIndex = GetOrAddRelationParent(currentParent);
+            _relationParentValues[oldParentIndex].Remove(in subject);
+        }
+        if (!alreadyContained && !newParentChildren.Add(in subject))
+        {
+            throw new InvalidOperationException("GAS.EFFECT_TRANSACTION.ERR.ValidatedRelationCommitFailed");
+        }
+
+        _relationParentShouldExist[newParentIndex] = true;
+        _relationChildValues[childIndex] = new ChildOf { Parent = parent };
+        if (!snapSubjectToParentPosition)
+        {
+            return;
+        }
+
+        WorldPositionCm stagedParentPosition = parentPosition;
+        PreviousWorldPositionCm stagedPreviousPosition =
+            TryReadRelationPreviousPosition(parent, out PreviousWorldPositionCm parentPreviousPosition)
+                ? parentPreviousPosition
+                : new PreviousWorldPositionCm { Value = stagedParentPosition.Value };
+        _relationSnapPositions[childIndex] = true;
+        _relationWorldPositionValues[childIndex] = stagedParentPosition;
+        _relationPreviousPositionValues[childIndex] = stagedPreviousPosition;
+        CaptureRelationSnapSource(childIndex, parent);
     }
 
     public bool TryReadAttributeCurrent(Entity entity, int attributeId, out float value)
@@ -748,6 +851,23 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
             {
                 _world.Get<EffectPhaseListenerBuffer>(_listenerEntities[i]) = _listenerValues[i];
             }
+            for (int i = 0; i < _relationParentCount; i++)
+            {
+                if (_relationParentExisted[i] || _relationParentShouldExist[i])
+                {
+                    _world.Get<ChildrenBuffer>(_relationParentEntities[i]) = _relationParentValues[i];
+                }
+            }
+            for (int i = 0; i < _relationChildCount; i++)
+            {
+                Entity subject = _relationChildEntities[i];
+                _world.Get<ChildOf>(subject) = _relationChildValues[i];
+                if (_relationSnapPositions[i])
+                {
+                    _world.Get<WorldPositionCm>(subject) = _relationWorldPositionValues[i];
+                    _world.Get<PreviousWorldPositionCm>(subject) = _relationPreviousPositionValues[i];
+                }
+            }
 
             CaptureExternalWriteCheckpoints();
             _externalCommitStarted = true;
@@ -1131,6 +1251,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
                 throw new InvalidOperationException("GAS.EFFECT_TRANSACTION.ERR.AggregateTargetInvalid");
             }
         }
+        ValidateRelationState();
         ValidateListenerRegistrations();
         ValidateListenerRemovals();
     }
@@ -1260,6 +1381,132 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         }
 
         PrepareListenerValues();
+        PrepareRelationValues();
+    }
+
+    private void ValidateRelationState()
+    {
+        for (int i = 0; i < _relationParentCount; i++)
+        {
+            Entity parent = _relationParentEntities[i];
+            bool exists = _world.IsAlive(parent) && _world.Has<ChildrenBuffer>(parent);
+            if (!_world.IsAlive(parent) ||
+                exists != _relationParentExisted[i] ||
+                (exists && !ChildrenBuffersEqual(
+                    in _world.Get<ChildrenBuffer>(parent),
+                    in _relationParentOriginalValues[i])))
+            {
+                throw new InvalidOperationException(
+                    $"{RelationTargetInvalidError}: parent={parent.Id}.");
+            }
+        }
+        for (int i = 0; i < _relationChildCount; i++)
+        {
+            Entity subject = _relationChildEntities[i];
+            bool childOfExists = _world.IsAlive(subject) && _world.Has<ChildOf>(subject);
+            if (!_world.IsAlive(subject) ||
+                childOfExists != _relationChildExisted[i] ||
+                (childOfExists &&
+                 _world.Get<ChildOf>(subject).Parent != _relationChildOriginalValues[i].Parent))
+            {
+                throw new InvalidOperationException(
+                    $"{RelationTargetInvalidError}: subject={subject.Id}.");
+            }
+            if (_relationSnapPositions[i] && !RelationPositionsMatchOriginal(subject, i))
+            {
+                throw new InvalidOperationException(
+                    $"{RelationTargetInvalidError}: positionSubject={subject.Id}.");
+            }
+        }
+    }
+
+    private bool RelationPositionsMatchOriginal(Entity subject, int index)
+    {
+        bool worldPositionExists = _world.Has<WorldPositionCm>(subject);
+        if (worldPositionExists != _relationWorldPositionExisted[index] ||
+            (worldPositionExists &&
+             !_world.Get<WorldPositionCm>(subject).Value.Equals(
+                 _relationWorldPositionOriginalValues[index].Value)))
+        {
+            return false;
+        }
+
+        bool previousPositionExists = _world.Has<PreviousWorldPositionCm>(subject);
+        if (previousPositionExists != _relationPreviousPositionExisted[index] ||
+            (previousPositionExists &&
+             !_world.Get<PreviousWorldPositionCm>(subject).Value.Equals(
+                 _relationPreviousPositionOriginalValues[index].Value)))
+        {
+            return false;
+        }
+
+        Entity source = _relationSnapSourceEntities[index];
+        if (!_world.IsAlive(source))
+        {
+            return false;
+        }
+        bool sourceWorldPositionExists = _world.Has<WorldPositionCm>(source);
+        if (sourceWorldPositionExists != _relationSnapSourceWorldPositionExisted[index] ||
+            (sourceWorldPositionExists &&
+             !_world.Get<WorldPositionCm>(source).Value.Equals(
+                 _relationSnapSourceWorldPositionOriginalValues[index].Value)))
+        {
+            return false;
+        }
+
+        bool sourcePreviousPositionExists = _world.Has<PreviousWorldPositionCm>(source);
+        return sourcePreviousPositionExists == _relationSnapSourcePreviousPositionExisted[index] &&
+               (!sourcePreviousPositionExists ||
+                _world.Get<PreviousWorldPositionCm>(source).Value.Equals(
+                    _relationSnapSourcePreviousPositionOriginalValues[index].Value));
+    }
+
+    private static bool ChildrenBuffersEqual(in ChildrenBuffer left, in ChildrenBuffer right)
+    {
+        if (left.Count != right.Count)
+        {
+            return false;
+        }
+        for (int i = 0; i < left.Count; i++)
+        {
+            if (left.Get(i) != right.Get(i))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private void PrepareRelationValues()
+    {
+        for (int i = 0; i < _relationParentCount; i++)
+        {
+            if (_relationParentShouldExist[i] && !_relationParentExisted[i])
+            {
+                _structuralCommands.Add(_relationParentEntities[i], _relationParentValues[i]);
+            }
+        }
+        for (int i = 0; i < _relationChildCount; i++)
+        {
+            Entity subject = _relationChildEntities[i];
+            if (!_relationChildExisted[i])
+            {
+                _structuralCommands.Add(subject, _relationChildValues[i]);
+            }
+            if (!_relationSnapPositions[i])
+            {
+                continue;
+            }
+            if (!_relationWorldPositionExisted[i])
+            {
+                _structuralCommands.Add(subject, _relationWorldPositionValues[i]);
+            }
+            if (!_relationPreviousPositionExisted[i])
+            {
+                _structuralCommands.Add(subject, _relationPreviousPositionValues[i]);
+            }
+        }
     }
 
     private unsafe void PrepareListenerValues()
@@ -1473,6 +1720,39 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
                 _world.Get<EffectPhaseListenerBuffer>(_listenerEntities[i]) = _listenerOriginalValues[i];
             }
         }
+        for (int i = 0; i < _relationParentCount; i++)
+        {
+            Entity parent = _relationParentEntities[i];
+            if (_relationParentExisted[i] &&
+                _world.IsAlive(parent) &&
+                _world.Has<ChildrenBuffer>(parent))
+            {
+                _world.Get<ChildrenBuffer>(parent) = _relationParentOriginalValues[i];
+            }
+        }
+        for (int i = 0; i < _relationChildCount; i++)
+        {
+            Entity subject = _relationChildEntities[i];
+            if (!_world.IsAlive(subject))
+            {
+                continue;
+            }
+            if (_relationChildExisted[i] && _world.Has<ChildOf>(subject))
+            {
+                _world.Get<ChildOf>(subject) = _relationChildOriginalValues[i];
+            }
+            if (_relationSnapPositions[i])
+            {
+                if (_relationWorldPositionExisted[i] && _world.Has<WorldPositionCm>(subject))
+                {
+                    _world.Get<WorldPositionCm>(subject) = _relationWorldPositionOriginalValues[i];
+                }
+                if (_relationPreviousPositionExisted[i] && _world.Has<PreviousWorldPositionCm>(subject))
+                {
+                    _world.Get<PreviousWorldPositionCm>(subject) = _relationPreviousPositionOriginalValues[i];
+                }
+            }
+        }
 
         for (int i = 0; i < _attributeCount; i++)
         {
@@ -1500,6 +1780,40 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
                 _world.Has<EffectPhaseListenerBuffer>(_listenerEntities[i]))
             {
                 _structuralRollbackCommands.Remove<EffectPhaseListenerBuffer>(_listenerEntities[i]);
+            }
+        }
+        for (int i = 0; i < _relationParentCount; i++)
+        {
+            if (_relationParentShouldExist[i] &&
+                !_relationParentExisted[i] &&
+                _world.IsAlive(_relationParentEntities[i]) &&
+                _world.Has<ChildrenBuffer>(_relationParentEntities[i]))
+            {
+                _structuralRollbackCommands.Remove<ChildrenBuffer>(_relationParentEntities[i]);
+            }
+        }
+        for (int i = 0; i < _relationChildCount; i++)
+        {
+            Entity subject = _relationChildEntities[i];
+            if (!_world.IsAlive(subject))
+            {
+                continue;
+            }
+            if (!_relationChildExisted[i] && _world.Has<ChildOf>(subject))
+            {
+                _structuralRollbackCommands.Remove<ChildOf>(subject);
+            }
+            if (_relationSnapPositions[i] &&
+                !_relationWorldPositionExisted[i] &&
+                _world.Has<WorldPositionCm>(subject))
+            {
+                _structuralRollbackCommands.Remove<WorldPositionCm>(subject);
+            }
+            if (_relationSnapPositions[i] &&
+                !_relationPreviousPositionExisted[i] &&
+                _world.Has<PreviousWorldPositionCm>(subject))
+            {
+                _structuralRollbackCommands.Remove<PreviousWorldPositionCm>(subject);
             }
         }
         if (_structuralRollbackCommands.Size > 0)
@@ -1542,6 +1856,120 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         return count;
     }
 
+    private int GetOrAddRelationParent(Entity parent)
+    {
+        int index = FindEntity(_relationParentEntities, _relationParentCount, parent);
+        if (index >= 0)
+        {
+            return index;
+        }
+        if (_relationParentCount >= _relationParentEntities.Length)
+        {
+            throw new InvalidOperationException(
+                $"{CapacityExceededError}: destination=RelationParents, staged={_relationParentCount + 1}, capacity={_relationParentEntities.Length}.");
+        }
+
+        index = _relationParentCount++;
+        _relationParentEntities[index] = parent;
+        bool existed = _world.Has<ChildrenBuffer>(parent);
+        _relationParentExisted[index] = existed;
+        _relationParentShouldExist[index] = false;
+        _relationParentOriginalValues[index] = existed
+            ? _world.Get<ChildrenBuffer>(parent)
+            : default;
+        _relationParentValues[index] = _relationParentOriginalValues[index];
+        return index;
+    }
+
+    private int GetOrAddRelationChild(Entity subject)
+    {
+        int index = FindEntity(_relationChildEntities, _relationChildCount, subject);
+        if (index >= 0)
+        {
+            return index;
+        }
+        if (_relationChildCount >= _relationChildEntities.Length)
+        {
+            throw new InvalidOperationException(
+                $"{CapacityExceededError}: destination=RelationChildren, staged={_relationChildCount + 1}, capacity={_relationChildEntities.Length}.");
+        }
+
+        index = _relationChildCount++;
+        _relationChildEntities[index] = subject;
+        bool childOfExisted = _world.Has<ChildOf>(subject);
+        _relationChildExisted[index] = childOfExisted;
+        _relationChildOriginalValues[index] = childOfExisted
+            ? _world.Get<ChildOf>(subject)
+            : default;
+        _relationChildValues[index] = _relationChildOriginalValues[index];
+        bool worldPositionExisted = _world.Has<WorldPositionCm>(subject);
+        _relationWorldPositionExisted[index] = worldPositionExisted;
+        _relationWorldPositionOriginalValues[index] = worldPositionExisted
+            ? _world.Get<WorldPositionCm>(subject)
+            : default;
+        _relationWorldPositionValues[index] = _relationWorldPositionOriginalValues[index];
+        bool previousPositionExisted = _world.Has<PreviousWorldPositionCm>(subject);
+        _relationPreviousPositionExisted[index] = previousPositionExisted;
+        _relationPreviousPositionOriginalValues[index] = previousPositionExisted
+            ? _world.Get<PreviousWorldPositionCm>(subject)
+            : default;
+        _relationPreviousPositionValues[index] = _relationPreviousPositionOriginalValues[index];
+        _relationSnapPositions[index] = false;
+        _relationSnapSourceEntities[index] = Entity.Null;
+        return index;
+    }
+
+    private void CaptureRelationSnapSource(int index, Entity source)
+    {
+        _relationSnapSourceEntities[index] = source;
+        bool worldPositionExisted = _world.Has<WorldPositionCm>(source);
+        _relationSnapSourceWorldPositionExisted[index] = worldPositionExisted;
+        _relationSnapSourceWorldPositionOriginalValues[index] = worldPositionExisted
+            ? _world.Get<WorldPositionCm>(source)
+            : default;
+        bool previousPositionExisted = _world.Has<PreviousWorldPositionCm>(source);
+        _relationSnapSourcePreviousPositionExisted[index] = previousPositionExisted;
+        _relationSnapSourcePreviousPositionOriginalValues[index] = previousPositionExisted
+            ? _world.Get<PreviousWorldPositionCm>(source)
+            : default;
+    }
+
+    private bool TryReadRelationWorldPosition(Entity entity, out WorldPositionCm position)
+    {
+        int index = FindEntity(_relationChildEntities, _relationChildCount, entity);
+        if (index >= 0 && _relationSnapPositions[index])
+        {
+            position = _relationWorldPositionValues[index];
+            return true;
+        }
+        if (_world.Has<WorldPositionCm>(entity))
+        {
+            position = _world.Get<WorldPositionCm>(entity);
+            return true;
+        }
+
+        position = default;
+        return false;
+    }
+
+    private bool TryReadRelationPreviousPosition(Entity entity, out PreviousWorldPositionCm position)
+    {
+        int index = FindEntity(_relationChildEntities, _relationChildCount, entity);
+        if (index >= 0 && _relationSnapPositions[index])
+        {
+            position = _relationPreviousPositionValues[index];
+            return true;
+        }
+        if (_world.Has<PreviousWorldPositionCm>(entity))
+        {
+            position = _world.Get<PreviousWorldPositionCm>(entity);
+            return true;
+        }
+
+        position = default;
+        return false;
+    }
+
     private void RequireActive()
     {
         if (!IsActive)
@@ -1570,6 +1998,8 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         _listenerRegistrationCount = 0;
         _listenerRemovalCount = 0;
         _listenerEntityCount = 0;
+        _relationParentCount = 0;
+        _relationChildCount = 0;
         _gameplayEventBus = null;
         _worldCommitStarted = false;
         _externalCommitStarted = false;

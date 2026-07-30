@@ -4,6 +4,7 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Presentation;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.GraphRuntime;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
 
@@ -282,6 +283,8 @@ namespace Ludots.Tests.GAS
                 Modifiers = modifiers,
             });
 
+            FinalizeDamageHealPresets(templates, EffectPresetType.InstantDamage);
+
             var requests = new EffectRequestQueue();
             var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
             var proposal = new EffectProposalProcessingSystem(
@@ -308,8 +311,8 @@ namespace Ludots.Tests.GAS
             application.Update(0f);
             aggregator.Update(0f);
 
-            That(attributes.GetCurrent(healthId), Is.EqualTo(50f));
-            That(attributes.GetBase(healthId), Is.EqualTo(100f));
+            That(world.Get<AttributeBuffer>(target).GetCurrent(healthId), Is.EqualTo(50f));
+            That(world.Get<AttributeBuffer>(target).GetBase(healthId), Is.EqualTo(100f));
         }
 
         [Test]
@@ -341,6 +344,8 @@ namespace Ludots.Tests.GAS
                 PeriodTicks = 0,
                 Modifiers = modifiers,
             });
+
+            FinalizeDamageHealPresets(templates, EffectPresetType.InstantDamage);
 
             var requests = new EffectRequestQueue();
             var presentationEvents = new GasPresentationEventBuffer(8);
@@ -404,6 +409,8 @@ namespace Ludots.Tests.GAS
                 Modifiers = modifiers,
             });
 
+            FinalizeDamageHealPresets(templates, EffectPresetType.Heal);
+
             var requests = new EffectRequestQueue();
             var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
             var proposal = new EffectProposalProcessingSystem(
@@ -430,8 +437,8 @@ namespace Ludots.Tests.GAS
             application.Update(0f);
             aggregator.Update(0f);
 
-            That(attributes.GetCurrent(healthId), Is.EqualTo(75f));
-            That(attributes.GetBase(healthId), Is.EqualTo(100f));
+            That(world.Get<AttributeBuffer>(target).GetCurrent(healthId), Is.EqualTo(75f));
+            That(world.Get<AttributeBuffer>(target).GetBase(healthId), Is.EqualTo(100f));
         }
 
         [Test]
@@ -473,6 +480,26 @@ namespace Ludots.Tests.GAS
             That(world.Get<DirtyFlags>(target).DeferredTriggerQueued, Is.EqualTo(0));
             That(world.Has<GameplayAttributeChangedBits>(target), Is.False);
             That(world.Has<AttributeAggregateDirty>(target), Is.True);
+        }
+
+        private static void FinalizeDamageHealPresets(
+            EffectTemplateRegistry templates,
+            EffectPresetType presetType)
+        {
+            var presetTypes = new PresetTypeRegistry();
+            var definition = new PresetTypeDefinition { Type = presetType };
+            definition.DefaultPhaseHandlers[EffectPhaseId.OnApply] =
+                PhaseHandler.Builtin(BuiltinHandlerId.ApplyModifiers);
+            presetTypes.Register(in definition);
+
+            var builtinHandlers = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(builtinHandlers);
+            GasTestEffectExecutionPlanFinalizer.FinalizeAll(
+                templates,
+                presetTypes,
+                builtinHandlers,
+                new GraphProgramRegistry(),
+                $"Test/AttributeAggregatorTests.{presetType}.json");
         }
 
         private static int EnsureAttribute(string name)

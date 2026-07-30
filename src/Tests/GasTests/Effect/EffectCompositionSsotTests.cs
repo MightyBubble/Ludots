@@ -64,7 +64,7 @@ public sealed class EffectCompositionSsotTests
     }
 
     [Test]
-    public void RevealArea_IsGraphComposition_NotCorePreset()
+    public void UncertifiedRevealArea_IsNotPublishedAsPresetOrFormalGraph()
     {
         Assert.That(Enum.GetNames<EffectPresetType>(), Does.Not.Contain("RevealArea"));
 
@@ -78,8 +78,18 @@ public sealed class EffectCompositionSsotTests
         JsonArray graphs = JsonNode.Parse(
             File.ReadAllText(Path.Combine(repoRoot, "assets", "Configs", "GAS", "graphs.json")))!.AsArray();
         string[] graphIds = graphs.Select(node => node!["id"]!.GetValue<string>()).ToArray();
-        Assert.That(graphIds, Does.Contain("Graph.Vision.RevealArea"));
-        Assert.That(graphIds, Does.Contain("Graph.Vision.DecayRevealArea"));
+        Assert.That(graphIds, Does.Not.Contain("Graph.Vision.RevealArea"));
+        Assert.That(graphIds, Does.Not.Contain("Graph.Vision.DecayRevealArea"));
+
+        var builtinHandlers = new BuiltinHandlerRegistry();
+        BuiltinHandlers.RegisterAll(builtinHandlers);
+        Assert.That(
+            builtinHandlers.TryGetOperationMetadata(
+                BuiltinHandlerId.RevealArea,
+                out EffectOperationMetadata revealMetadata),
+            Is.True);
+        Assert.That(revealMetadata.Kind, Is.EqualTo(EffectOperationKind.Unsupported));
+        Assert.That(revealMetadata.Domain, Is.EqualTo(EffectAtomicDomain.Vision));
     }
 
     private static GraphInstruction[] CreateBlackboardWriteProgram(float value)

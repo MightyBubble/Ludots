@@ -284,14 +284,7 @@ namespace Ludots.Tests.GAS
                 evaluator.Evaluate(reqId, in context);
             }
 
-            GC.GetAllocatedBytesForCurrentThread();
-            long before = GC.GetAllocatedBytesForCurrentThread();
-            for (int i = 0; i < 10_000; i++)
-            {
-                evaluator.Evaluate(reqId, in context);
-            }
-
-            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+            long allocated = MeasureRequirementEvaluationAllocations(evaluator, reqId, in context);
             Assert.That(allocated, Is.EqualTo(0));
         }
 
@@ -519,7 +512,7 @@ namespace Ludots.Tests.GAS
             {
                 Type = EffectPresetType.CompleteProgression,
                 Components = ComponentFlags.None,
-                ActivePhases = PhaseFlags.InstantCore,
+                ActivePhases = PhaseFlags.OnApply,
                 AllowedLifetimes = LifetimeFlags.InstantOnly
             };
             preset.DefaultPhaseHandlers[EffectPhaseId.OnApply] = PhaseHandler.Builtin(BuiltinHandlerId.CompleteProgression);
@@ -540,6 +533,13 @@ namespace Ludots.Tests.GAS
 
             var queue = new EffectRequestQueue();
             var graphPrograms = new GraphProgramRegistry();
+            EffectExecutionPlanCompiler.FinalizeAll(
+                templates,
+                presetTypes,
+                builtinHandlers,
+                graphPrograms,
+                GasGraphOpHandlerTable.Instance,
+                "Test/ProgressionRequirementTests.cs");
             var graphApi = new GasGraphRuntimeApi(world, spatialQueries: null, coords: null, eventBus: null, effectRequests: queue);
             var phaseExecutor = new EffectPhaseExecutor(
                 graphPrograms,
@@ -1600,6 +1600,22 @@ namespace Ludots.Tests.GAS
                     in requiredTags)
             };
             return new ProgressionRequirementDefinition(requirementId, nodes, Array.Empty<int>());
+        }
+
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        private static long MeasureRequirementEvaluationAllocations(
+            ProgressionRequirementEvaluator evaluator,
+            int requirementId,
+            in RoleResolverContext context)
+        {
+            GC.GetAllocatedBytesForCurrentThread();
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 0; i < 10_000; i++)
+            {
+                evaluator.Evaluate(requirementId, in context);
+            }
+
+            return GC.GetAllocatedBytesForCurrentThread() - before;
         }
 
         private static int RegisterCityScope(ScopeKeyRegistry scopeKeys)

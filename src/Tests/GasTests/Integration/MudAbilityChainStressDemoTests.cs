@@ -9,6 +9,7 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.GraphRuntime;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
 
@@ -99,6 +100,7 @@ namespace Ludots.Tests.GAS
                     ParticipatesInResponse = true,
                     Modifiers = healMods
                 });
+                FinalizeEffectTemplates(templates);
 
                 var listenerEntity = world.Create();
                 unsafe
@@ -285,6 +287,7 @@ namespace Ludots.Tests.GAS
                     ParticipatesInResponse = false,
                     Modifiers = burnTickMods
                 });
+                FinalizeEffectTemplates(templates);
 
                 var listenerEntity = world.Create();
                 unsafe
@@ -422,6 +425,18 @@ namespace Ludots.Tests.GAS
         {
             int id = AttributeRegistry.GetId(name);
             return id != AttributeRegistry.InvalidId ? id : AttributeRegistry.Register(name);
+        }
+
+        private static void FinalizeEffectTemplates(EffectTemplateRegistry templates)
+        {
+            var builtinHandlers = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(builtinHandlers);
+            GasTestEffectExecutionPlanFinalizer.FinalizeAll(
+                templates,
+                new PresetTypeRegistry(),
+                builtinHandlers,
+                new GraphProgramRegistry(),
+                "Test/MudAbilityChainStressDemoTests.json");
         }
     }
 }

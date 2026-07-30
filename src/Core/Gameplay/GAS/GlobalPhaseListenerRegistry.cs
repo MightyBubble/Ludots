@@ -67,6 +67,22 @@ namespace Ludots.Core.Gameplay.GAS
             return Collect(phase, effectTagId, effectTemplateId, output, out _);
         }
 
+        public bool HasMatch(EffectPhaseId phase, int effectTagId, int effectTemplateId)
+        {
+            byte phaseB = (byte)phase;
+            for (int i = 0; i < _count; i++)
+            {
+                if (PhaseListenerMatcher.Matches(
+                    _phases[i], _listenTagIds[i], _listenEffectIds[i],
+                    phaseB, effectTagId, effectTemplateId))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         public int Collect(EffectPhaseId phase, int effectTagId, int effectTemplateId,
                            Span<PhaseListenerCollectedAction> output, out int dropped)
         {

@@ -379,6 +379,12 @@ namespace Ludots.Core.Input.Orders
             }
 
             _graphPrograms.RequireKind(query.GraphProgramId, GraphKind.Query);
+            GraphKindOperationPolicy.RequireAllowed(
+                GraphKind.Query,
+                program,
+                GasGraphOpHandlerTable.Instance,
+                query.GraphProgramId,
+                nameof(AbilityAimPresentationRuntime));
 
             Span<float> floats = stackalloc float[GraphVmLimits.MaxFloatRegisters];
             Span<int> ints = stackalloc int[GraphVmLimits.MaxIntRegisters];

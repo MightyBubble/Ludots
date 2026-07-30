@@ -68,6 +68,12 @@ namespace Ludots.Tests.GAS
                     ContextMapping = TargetResolverContextMapping.Default,
                 },
             });
+            GasTestEffectExecutionPlanFinalizer.FinalizeAll(
+                templates,
+                presetTypes,
+                builtinHandlers,
+                programs,
+                "Test/SearchPhaseConvergenceTests.SearchHandlers.json");
 
             var runtime = new BuiltinHandlerExecutionContext
             {
@@ -138,6 +144,12 @@ namespace Ludots.Tests.GAS
                     ContextMapping = TargetResolverContextMapping.Default,
                 },
             });
+            GasTestEffectExecutionPlanFinalizer.FinalizeAll(
+                templates,
+                presetTypes,
+                builtinHandlers,
+                programs,
+                "Test/SearchPhaseConvergenceTests.PeriodicSearchHandler.json");
 
             var runtime = new BuiltinHandlerExecutionContext
             {
@@ -198,6 +210,12 @@ namespace Ludots.Tests.GAS
                     ContextMapping = TargetResolverContextMapping.Default,
                 },
             });
+            GasTestEffectExecutionPlanFinalizer.FinalizeAll(
+                templates,
+                presetTypes,
+                builtinHandlers,
+                programs,
+                "Test/SearchPhaseConvergenceTests.PeriodicSearchLifetime.json");
 
             Entity effect = GameplayEffectFactory.CreateEffect(
                 world,
@@ -284,6 +302,12 @@ namespace Ludots.Tests.GAS
                         ContextMapping = TargetResolverContextMapping.Default,
                     },
                 });
+                GasTestEffectExecutionPlanFinalizer.FinalizeAll(
+                    templates,
+                    presetTypes,
+                    builtinHandlers,
+                    programs,
+                    "Test/SearchPhaseConvergenceTests.HostileFilterSkips.json");
 
                 var runtime = new BuiltinHandlerExecutionContext
                 {
@@ -360,6 +384,12 @@ namespace Ludots.Tests.GAS
                         ContextMapping = TargetResolverContextMapping.Default,
                     },
                 });
+                GasTestEffectExecutionPlanFinalizer.FinalizeAll(
+                    templates,
+                    presetTypes,
+                    builtinHandlers,
+                    programs,
+                    "Test/SearchPhaseConvergenceTests.HostileFilterNoTeam.json");
 
                 var runtime = new BuiltinHandlerExecutionContext
                 {

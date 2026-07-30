@@ -152,17 +152,13 @@ namespace Ludots.Tests.GAS
                 resolver.TryResolve(actor, mapping, out _);
             }
 
-            long allocatedBefore = System.GC.GetAllocatedBytesForCurrentThread();
-            int triggerSum = 0;
-            for (int i = 0; i < 1_000; i++)
-            {
-                if (!resolver.TryResolve(actor, mapping, out InputOrderMapping warmedMapping))
-                {
-                    Assert.Fail("Warmed item/granted input override unexpectedly disappeared.");
-                }
-                triggerSum += (int)warmedMapping.Trigger;
-            }
-            long allocated = System.GC.GetAllocatedBytesForCurrentThread() - allocatedBefore;
+            long allocated = MeasureSkillMappingOverrideResolutionAllocations(
+                resolver,
+                actor,
+                mapping,
+                out int resolvedCount,
+                out int triggerSum);
+            Assert.That(resolvedCount, Is.EqualTo(10_000), "Warmed item/granted input override unexpectedly disappeared.");
             Assert.That(triggerSum, Is.GreaterThan(0));
             Assert.That(allocated, Is.Zero, "Warmed skill override resolution must not allocate.");
 
@@ -177,6 +173,33 @@ namespace Ludots.Tests.GAS
             world.Get<AbilityFormSlotBuffer>(actor).Clear(0);
             Assert.That(resolver.TryResolve(actor, mapping, out InputOrderMapping baseMapping), Is.True);
             Assert.That(baseMapping.Trigger, Is.EqualTo(InputTriggerType.PressedThisFrame));
+        }
+
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        private static long MeasureSkillMappingOverrideResolutionAllocations(
+            LocalOrderSourceHelper.SkillMappingOverrideResolver resolver,
+            Entity actor,
+            InputOrderMapping mapping,
+            out int resolvedCount,
+            out int triggerSum)
+        {
+            System.GC.GetAllocatedBytesForCurrentThread();
+            long before = System.GC.GetAllocatedBytesForCurrentThread();
+            int count = 0;
+            int sum = 0;
+            for (int i = 0; i < 10_000; i++)
+            {
+                if (resolver.TryResolve(actor, mapping, out InputOrderMapping warmedMapping))
+                {
+                    count++;
+                    sum += (int)warmedMapping.Trigger;
+                }
+            }
+
+            long allocated = System.GC.GetAllocatedBytesForCurrentThread() - before;
+            resolvedCount = count;
+            triggerSum = sum;
+            return allocated;
         }
 
         private static void RegisterInputOverride(

@@ -318,13 +318,13 @@ namespace Ludots.Core.Gameplay.GAS
             int preGraphId = template.PhaseGraphBindings.GetGraphId(phase, PhaseSlot.Pre);
             if (preGraphId > 0)
             {
-                AnalyzeGraph(templateId, effectName, assetPath, phase, expectedGraphKind, preGraphId, builtinHandlers, graphPrograms, graphHandlers, ref accumulator);
+                AnalyzeGraph(templateId, effectName, assetPath, in template, phase, expectedGraphKind, preGraphId, builtinHandlers, graphPrograms, graphHandlers, ref accumulator);
             }
 
             int mainGraphId = template.PhaseGraphBindings.GetGraphId(phase, PhaseSlot.Main);
             if (mainGraphId > 0)
             {
-                AnalyzeGraph(templateId, effectName, assetPath, phase, expectedGraphKind, mainGraphId, builtinHandlers, graphPrograms, graphHandlers, ref accumulator);
+                AnalyzeGraph(templateId, effectName, assetPath, in template, phase, expectedGraphKind, mainGraphId, builtinHandlers, graphPrograms, graphHandlers, ref accumulator);
             }
             else if (!template.PhaseGraphBindings.IsSkipMain(phase) && presetTypes.IsRegistered(template.PresetType))
             {
@@ -334,11 +334,11 @@ namespace Ludots.Core.Gameplay.GAS
                 {
                     if (handler.Kind == PhaseHandlerKind.Builtin)
                     {
-                        AddBuiltin(templateId, effectName, assetPath, phase, (BuiltinHandlerId)handler.HandlerId, builtinHandlers, ref accumulator);
+                        AddBuiltin(templateId, effectName, assetPath, in template, phase, (BuiltinHandlerId)handler.HandlerId, builtinHandlers, ref accumulator);
                     }
                     else if (handler.Kind == PhaseHandlerKind.Graph)
                     {
-                        AnalyzeGraph(templateId, effectName, assetPath, phase, expectedGraphKind, handler.HandlerId, builtinHandlers, graphPrograms, graphHandlers, ref accumulator);
+                        AnalyzeGraph(templateId, effectName, assetPath, in template, phase, expectedGraphKind, handler.HandlerId, builtinHandlers, graphPrograms, graphHandlers, ref accumulator);
                     }
                     else
                     {
@@ -350,7 +350,7 @@ namespace Ludots.Core.Gameplay.GAS
             int postGraphId = template.PhaseGraphBindings.GetGraphId(phase, PhaseSlot.Post);
             if (postGraphId > 0)
             {
-                AnalyzeGraph(templateId, effectName, assetPath, phase, expectedGraphKind, postGraphId, builtinHandlers, graphPrograms, graphHandlers, ref accumulator);
+                AnalyzeGraph(templateId, effectName, assetPath, in template, phase, expectedGraphKind, postGraphId, builtinHandlers, graphPrograms, graphHandlers, ref accumulator);
             }
         }
 
@@ -358,6 +358,7 @@ namespace Ludots.Core.Gameplay.GAS
             int templateId,
             string effectName,
             string assetPath,
+            in EffectTemplateData template,
             EffectPhaseId phase,
             GraphKind expectedGraphKind,
             int graphId,
@@ -387,7 +388,7 @@ namespace Ludots.Core.Gameplay.GAS
                 }
                 if (metadata.Kind == EffectOperationKind.DelegatedBuiltin)
                 {
-                    AddBuiltin(templateId, effectName, assetPath, phase, (BuiltinHandlerId)instruction.Imm, builtinHandlers, ref accumulator);
+                    AddBuiltin(templateId, effectName, assetPath, in template, phase, (BuiltinHandlerId)instruction.Imm, builtinHandlers, ref accumulator);
                 }
                 else
                 {
@@ -400,12 +401,13 @@ namespace Ludots.Core.Gameplay.GAS
             int templateId,
             string effectName,
             string assetPath,
+            in EffectTemplateData template,
             EffectPhaseId phase,
             BuiltinHandlerId handlerId,
             BuiltinHandlerRegistry builtinHandlers,
             ref WindowAccumulator accumulator)
         {
-            if (!builtinHandlers.TryGetOperationMetadata(handlerId, out EffectOperationMetadata metadata))
+            if (!builtinHandlers.TryResolveOperationMetadata(handlerId, in template, out EffectOperationMetadata metadata))
             {
                 throw CompositionError(MissingOperationMetadataError, assetPath, templateId, effectName, phase, handlerId.ToString(), "Builtin handler is not registered with operation metadata.");
             }

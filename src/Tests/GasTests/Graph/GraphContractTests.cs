@@ -115,6 +115,31 @@ namespace Ludots.Tests.GAS.Graph
         }
 
         [Test]
+        public void GraphProgramConfigLoader_RejectsQueryGraphWithGameplayWrite()
+        {
+            const string json = """
+[
+  {
+    "id": "tests.graph.query-write",
+    "kind": "Query",
+    "entry": "target",
+    "nodes": [
+      { "id": "target", "op": "LoadExplicitTarget", "next": "amount" },
+      { "id": "amount", "op": "ConstFloat", "floatValue": 1.0, "next": "write" },
+      { "id": "write", "op": "ModifyAttributeAdd", "attribute": "tests.attr.health", "inputs": [ "target", "amount" ] }
+    ]
+  }
+]
+""";
+
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => LoadPrograms(json))!;
+
+            Assert.That(error.Message, Does.StartWith(GraphKindOperationPolicy.OperationNotAllowedError));
+            Assert.That(error.Message, Does.Contain("kind='Query'"));
+            Assert.That(error.Message, Does.Contain("operation='ModifyAttributeAdd'"));
+        }
+
+        [Test]
         public void GraphExecutor_ExecuteValidation_FailsClosed_UntilB0WrittenTrue()
         {
             using var world = World.Create();
@@ -162,6 +187,100 @@ namespace Ludots.Tests.GAS.Graph
                 GraphExecutor.ExecuteScore(world, caster, Entity.Null, default, program, null!, GraphKind.Validation));
             Assert.Throws<InvalidOperationException>(() =>
                 GraphExecutor.Execute(world, caster, Entity.Null, default, program, null!, GraphKind.Query));
+        }
+
+        [TestCase(GraphKind.Validation)]
+        [TestCase(GraphKind.Score)]
+        [TestCase(GraphKind.Query)]
+        public void GraphKindOperationPolicy_ReadOnlyKindsRejectGameplayWrites(GraphKind kind)
+        {
+            var program = new[]
+            {
+                new GraphInstruction { Op = (ushort)GraphNodeOp.ModifyAttributeAdd }
+            };
+
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
+                GraphKindOperationPolicy.RequireAllowed(kind, program, GasGraphOpHandlerTable.Instance, 17, "Test"))!;
+
+            Assert.That(error.Message, Does.StartWith(GraphKindOperationPolicy.OperationNotAllowedError));
+            Assert.That(error.Message, Does.Contain($"kind='{kind}'"));
+        }
+
+        [Test]
+        public void GraphKindOperationPolicy_DerivedAllowsOnlySelfAttributeWrite()
+        {
+            var allowed = new[]
+            {
+                new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.WriteSelfAttribute },
+            };
+            var rejected = new[]
+            {
+                new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardFloat },
+            };
+
+            Assert.DoesNotThrow(() => GraphKindOperationPolicy.RequireAllowed(
+                GraphKind.Derived,
+                allowed,
+                GasGraphOpHandlerTable.Instance));
+            Assert.Throws<InvalidOperationException>(() => GraphKindOperationPolicy.RequireAllowed(
+                GraphKind.Derived,
+                rejected,
+                GasGraphOpHandlerTable.Instance));
+        }
+
+        [Test]
+        public void GraphKindOperationPolicy_EffectDefersOperationClassificationToEffectPlan()
+        {
+            var program = new[]
+            {
+                new GraphInstruction { Op = (ushort)GraphNodeOp.ModifyAttributeAdd },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.BeginLifecycleTransaction },
+            };
+
+            Assert.DoesNotThrow(() => GraphKindOperationPolicy.RequireAllowed(
+                GraphKind.Effect,
+                program,
+                GasGraphOpHandlerTable.Instance));
+        }
+
+        [Test]
+        public void GraphKindOperationPolicy_AllowedProgram_DoesNotAllocateAfterWarmup()
+        {
+            var program = new[]
+            {
+                new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.AddFloat },
+            };
+            for (int i = 0; i < 32; i++)
+            {
+                GraphKindOperationPolicy.RequireAllowed(GraphKind.Score, program, GasGraphOpHandlerTable.Instance);
+            }
+
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 0; i < 1_000; i++)
+            {
+                GraphKindOperationPolicy.RequireAllowed(GraphKind.Score, program, GasGraphOpHandlerTable.Instance);
+            }
+            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+
+            Assert.That(allocated, Is.Zero);
+        }
+
+        [Test]
+        public void GraphExecutor_ValidationRejectsGameplayWriteBeforeExecution()
+        {
+            using var world = World.Create();
+            Entity caster = world.Create();
+            var program = new[]
+            {
+                new GraphInstruction { Op = (ushort)GraphNodeOp.ModifyAttributeAdd }
+            };
+
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
+                GraphExecutor.ExecuteValidation(world, caster, Entity.Null, default, program, null!))!;
+
+            Assert.That(error.Message, Does.StartWith(GraphKindOperationPolicy.OperationNotAllowedError));
         }
 
         [Test]

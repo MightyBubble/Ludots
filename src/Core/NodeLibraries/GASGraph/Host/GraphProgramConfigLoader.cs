@@ -125,6 +125,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                         $"Graph '{name}' (id={id}) cannot be registered without an authored kind.");
                 }
 
+                GraphKindOperationPolicy.RequireAllowed(
+                    kind,
+                    program,
+                    GasGraphOpHandlerTable.Instance,
+                    id,
+                    nameof(GraphProgramConfigLoader));
+
                 _registry.Register(id, program, kind);
                 if (_outputSchemas != null)
                 {

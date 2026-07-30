@@ -43,7 +43,7 @@ namespace Ludots.Tests.GAS
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => system.Update(0f))!;
 
-            Assert.That(ex.Message, Does.StartWith("GAS.GRAPH.ERR.DerivedAttributeSideEffectForbidden"));
+            Assert.That(ex.Message, Does.StartWith(GraphKindOperationPolicy.OperationNotAllowedError));
             Assert.That(world.Get<AttributeBuffer>(entity).GetCurrent(attributeId), Is.EqualTo(10f));
             Assert.That(world.Get<DirtyFlags>(entity).IsAnyAttributeDirty(), Is.False);
             Assert.That(tagOps.DirtyEntities.Count, Is.Zero);
@@ -78,7 +78,7 @@ namespace Ludots.Tests.GAS
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => system.Update(0f))!;
 
-            Assert.That(ex.Message, Does.StartWith("GAS.GRAPH.ERR.DerivedAttributeSideEffectForbidden"));
+            Assert.That(ex.Message, Does.StartWith(GraphKindOperationPolicy.OperationNotAllowedError));
             Assert.That(effectRequests.Count, Is.Zero);
             Assert.That(world.Get<AttributeBuffer>(entity).GetCurrent(attributeId), Is.EqualTo(10f));
             Assert.That(tagOps.DirtyEntities.Count, Is.Zero);
@@ -117,7 +117,7 @@ namespace Ludots.Tests.GAS
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => system.Update(0f))!;
 
-            Assert.That(ex.Message, Does.StartWith(IDerivedAttributeGraphRuntimeApi.SideEffectForbiddenError));
+            Assert.That(ex.Message, Does.StartWith(GraphKindOperationPolicy.OperationNotAllowedError));
             Assert.That(world.Get<GameplayEffect>(effect).CancelRequested, Is.False);
             Assert.That(world.Get<AttributeBuffer>(entity).GetCurrent(attributeId), Is.EqualTo(10f));
             Assert.That(tagOps.DirtyEntities.Count, Is.Zero);
@@ -153,7 +153,7 @@ namespace Ludots.Tests.GAS
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => system.Update(0f))!;
 
             eventBus.Update();
-            Assert.That(ex.Message, Does.StartWith(IDerivedAttributeGraphRuntimeApi.SideEffectForbiddenError));
+            Assert.That(ex.Message, Does.StartWith(GraphKindOperationPolicy.OperationNotAllowedError));
             Assert.That(eventBus.Events.Count, Is.Zero);
             Assert.That(world.Get<AttributeBuffer>(entity).GetCurrent(attributeId), Is.EqualTo(10f));
             Assert.That(tagOps.DirtyEntities.Count, Is.Zero);
@@ -191,7 +191,7 @@ namespace Ludots.Tests.GAS
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => system.Update(0f))!;
 
-            Assert.That(ex.Message, Does.StartWith(IDerivedAttributeGraphRuntimeApi.SideEffectForbiddenError));
+            Assert.That(ex.Message, Does.StartWith(GraphKindOperationPolicy.OperationNotAllowedError));
             Assert.That(effectRequests.Count, Is.Zero);
             Assert.That(world.Get<AttributeBuffer>(entity).GetCurrent(attributeId), Is.EqualTo(10f));
             Assert.That(tagOps.DirtyEntities.Count, Is.Zero);
@@ -303,7 +303,7 @@ namespace Ludots.Tests.GAS
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => system.Update(0f))!;
 
-            Assert.That(ex.Message, Does.StartWith(IDerivedAttributeGraphRuntimeApi.SideEffectForbiddenError));
+            Assert.That(ex.Message, Does.StartWith(GraphKindOperationPolicy.OperationNotAllowedError));
             Assert.That(world.Get<AttributeBuffer>(entity).GetCurrent(attributeId), Is.EqualTo(10f));
             Assert.That(tagOps.DirtyEntities.Count, Is.Zero);
             Assert.That(world.Has<AttributeAggregateDirty>(entity), Is.True);
@@ -339,7 +339,7 @@ namespace Ludots.Tests.GAS
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => system.Update(0f))!;
 
-            Assert.That(ex.Message, Does.StartWith("GAS.GRAPH.ERR.DerivedAttributeSideEffectForbidden"));
+            Assert.That(ex.Message, Does.StartWith(GraphKindOperationPolicy.OperationNotAllowedError));
             Assert.That(world.Get<AttributeBuffer>(entity).HasAttribute(derivedAttributeId), Is.False);
             Assert.That(world.Get<AttributeBuffer>(entity).GetCurrent(sourceAttributeId), Is.EqualTo(10f));
             Assert.That(effectRequests.Count, Is.Zero);
@@ -377,7 +377,7 @@ namespace Ludots.Tests.GAS
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => system.Update(0f))!;
 
-            Assert.That(ex.Message, Does.StartWith("GAS.GRAPH.ERR.DerivedAttributeSideEffectForbidden"));
+            Assert.That(ex.Message, Does.StartWith(GraphKindOperationPolicy.OperationNotAllowedError));
             Assert.That(world.Get<BlackboardFloatBuffer>(entity).TryGet(blackboardKeyId, out _), Is.False);
             Assert.That(world.Get<AttributeBuffer>(entity).GetCurrent(sourceAttributeId), Is.EqualTo(10f));
             Assert.That(tagOps.DirtyEntities.Count, Is.Zero);

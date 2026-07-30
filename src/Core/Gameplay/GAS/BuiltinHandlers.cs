@@ -45,12 +45,16 @@ namespace Ludots.Core.Gameplay.GAS
             registry.Register(BuiltinHandlerId.CreateProjectile, HandleCreateProjectile, EffectOperationMetadata.GasTransactional(nameof(BuiltinHandlerId.CreateProjectile)));
             registry.Register(BuiltinHandlerId.CreateUnit, HandleCreateUnit, EffectOperationMetadata.GasTransactional(nameof(BuiltinHandlerId.CreateUnit)));
             registry.Register(BuiltinHandlerId.ApplyDisplacement, HandleApplyDisplacement, EffectOperationMetadata.External(EffectAtomicDomain.Displacement, nameof(BuiltinHandlerId.ApplyDisplacement)));
-            registry.Register(BuiltinHandlerId.ApplyRelation, HandleApplyRelation, EffectOperationMetadata.Unsupported(EffectAtomicDomain.Relationship, nameof(BuiltinHandlerId.ApplyRelation)));
+            registry.Register(
+                BuiltinHandlerId.ApplyRelation,
+                HandleApplyRelation,
+                EffectOperationMetadata.Unsupported(EffectAtomicDomain.Relationship, nameof(BuiltinHandlerId.ApplyRelation)),
+                ResolveApplyRelationOperationMetadata);
             registry.Register(BuiltinHandlerId.RevealArea, HandleRevealArea, EffectOperationMetadata.Unsupported(EffectAtomicDomain.Vision, nameof(BuiltinHandlerId.RevealArea)));
             registry.Register(BuiltinHandlerId.DecayRevealArea, HandleDecayRevealArea, EffectOperationMetadata.Unsupported(EffectAtomicDomain.Vision, nameof(BuiltinHandlerId.DecayRevealArea)));
             registry.Register(BuiltinHandlerId.ExecuteExchange, HandleExecuteExchange, EffectOperationMetadata.Unsupported(EffectAtomicDomain.Exchange, nameof(BuiltinHandlerId.ExecuteExchange)));
             registry.Register(BuiltinHandlerId.CompleteProgression, HandleCompleteProgression, EffectOperationMetadata.External(EffectAtomicDomain.Progression, nameof(BuiltinHandlerId.CompleteProgression)));
-            registry.Register(BuiltinHandlerId.SubmitOrderFromBlackboard, HandleSubmitOrderFromBlackboard, EffectOperationMetadata.Unsupported(EffectAtomicDomain.Order, nameof(BuiltinHandlerId.SubmitOrderFromBlackboard)));
+            registry.Register(BuiltinHandlerId.SubmitOrderFromBlackboard, HandleSubmitOrderFromBlackboard, EffectOperationMetadata.External(EffectAtomicDomain.Order, nameof(BuiltinHandlerId.SubmitOrderFromBlackboard)));
             EntityLifecycleBuiltinHandlers.RegisterAll(registry);
         }
 
@@ -429,12 +433,29 @@ namespace Ludots.Core.Gameplay.GAS
             in EffectConfigParams mergedParams,
             in EffectTemplateData templateData)
         {
-            RejectNonTransactionalPersistentSideEffect(nameof(HandleApplyRelation));
             ref readonly var relation = ref templateData.Relation;
             Entity subject = ResolveRelationEntity(in context, relation.Subject);
+            var runtime = BuiltinHandlerRuntimeScope.Current;
+            if (runtime?.EffectSideEffects?.IsActive == true)
+            {
+                if (relation.Operation != RelationOperation.SetParent)
+                {
+                    throw new InvalidOperationException(
+                        $"{EffectPhaseSideEffectTransaction.UnsupportedSideEffectError}: operation={relation.Operation}.");
+                }
+
+                Entity stagedParent = ResolveRelationEntity(in context, relation.Parent);
+                runtime.EffectSideEffects.StageSetParent(
+                    subject,
+                    stagedParent,
+                    relation.SnapSubjectToParentPosition);
+                return;
+            }
+
             if (!world.IsAlive(subject))
             {
-                return;
+                throw new InvalidOperationException(
+                    $"GAS.RELATION.ERR.SubjectInvalid: entity={subject.Id}.");
             }
 
             switch (relation.Operation)
@@ -444,7 +465,13 @@ namespace Ludots.Core.Gameplay.GAS
                     Entity parent = ResolveRelationEntity(in context, relation.Parent);
                     if (!world.IsAlive(parent))
                     {
-                        return;
+                        throw new InvalidOperationException(
+                            $"GAS.RELATION.ERR.ParentInvalid: entity={parent.Id}.");
+                    }
+                    if (relation.SnapSubjectToParentPosition && !world.Has<WorldPositionCm>(parent))
+                    {
+                        throw new InvalidOperationException(
+                            $"GAS.RELATION.ERR.ParentPositionMissing: entity={parent.Id}.");
                     }
 
                     RelationOps.SetParent(world, subject, parent);
@@ -462,10 +489,10 @@ namespace Ludots.Core.Gameplay.GAS
                     Entity target = ResolveRelationEntity(in context, relation.Parent);
                     if (!world.IsAlive(target))
                     {
-                        return;
+                        throw new InvalidOperationException(
+                            $"GAS.RELATION.ERR.ParentInvalid: entity={target.Id}.");
                     }
 
-                    var runtime = BuiltinHandlerRuntimeScope.Current;
                     if (runtime?.Relationships == null)
                     {
                         throw new InvalidOperationException("Relation operation EnsureLink requires RelationshipRuntime in BuiltinHandlerExecutionContext.");
@@ -479,7 +506,28 @@ namespace Ludots.Core.Gameplay.GAS
                     runtime.Relationships.EnsureLink(subject, target, relation.RelationshipTypeId);
                     break;
                 }
+                default:
+                    throw new InvalidOperationException(
+                        $"GAS.RELATION.ERR.UnsupportedOperation: operation={relation.Operation}.");
             }
+        }
+
+        private static EffectOperationMetadata ResolveApplyRelationOperationMetadata(
+            in EffectTemplateData templateData)
+        {
+            return templateData.Relation.Operation switch
+            {
+                RelationOperation.SetParent => EffectOperationMetadata.GasTransactional("ApplyRelation.SetParent"),
+                RelationOperation.RemoveParent => EffectOperationMetadata.Unsupported(
+                    EffectAtomicDomain.Relationship,
+                    "ApplyRelation.RemoveParent"),
+                RelationOperation.EnsureLink => EffectOperationMetadata.Unsupported(
+                    EffectAtomicDomain.Relationship,
+                    "ApplyRelation.EnsureLink"),
+                _ => EffectOperationMetadata.Unsupported(
+                    EffectAtomicDomain.Relationship,
+                    "ApplyRelation.Invalid"),
+            };
         }
 
         public static void HandleRevealArea(

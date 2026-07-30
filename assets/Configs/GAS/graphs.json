@@ -12,21 +12,5 @@
       { "id": "transferId", "op": "InvokeBuiltin", "builtinHandler": "TransferStableId", "next": "consume" },
       { "id": "consume", "op": "InvokeBuiltin", "builtinHandler": "ConsumeEntity" }
     ]
-  },
-  {
-    "id": "Graph.Vision.RevealArea",
-    "kind": "Effect",
-    "entry": "reveal",
-    "nodes": [
-      { "id": "reveal", "op": "InvokeBuiltin", "builtinHandler": "RevealArea" }
-    ]
-  },
-  {
-    "id": "Graph.Vision.DecayRevealArea",
-    "kind": "Effect",
-    "entry": "decay",
-    "nodes": [
-      { "id": "decay", "op": "InvokeBuiltin", "builtinHandler": "DecayRevealArea" }
-    ]
   }
 ]

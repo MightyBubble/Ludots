@@ -1399,7 +1399,7 @@ namespace Ludots.Core.Engine
                 orderQueue, stepRateHz,
                 graphProgramRegistry, gasGraphApi,
                 closeEntityIntakeOnUpdate: false);
-            var abilityExecSystem = new AbilityExecSystem(World, clock, abilityInputRequestQueue, inputResponseBuffer, effectRequestQueue, gasRuntimeCapacity.AbilityExecSnapshotCapacity, abilityDefinitions, EventBus, cfgCastAbility, cfgCastAbilityStart, gasPresentationEvents, phaseExecutor: phaseExecutor, graphPrograms: graphProgramRegistry, graphApi: gasGraphApi, tagOps: tagOps, orderTypeRegistry: orderTypeRegistry, progressionRequirements: progressionEvaluator, maxWorkUnitsPerSlice: gasRuntimeCapacity.AbilityExecMaxWorkUnitsPerSlice);
+            var abilityExecSystem = new AbilityExecSystem(World, clock, abilityInputRequestQueue, inputResponseBuffer, effectRequestQueue, gasRuntimeCapacity.AbilityExecSnapshotCapacity, abilityDefinitions, EventBus, cfgCastAbility, cfgCastAbilityStart, gasPresentationEvents, graphPrograms: graphProgramRegistry, graphApi: gasGraphApi, tagOps: tagOps, orderTypeRegistry: orderTypeRegistry, progressionRequirements: progressionEvaluator, maxWorkUnitsPerSlice: gasRuntimeCapacity.AbilityExecMaxWorkUnitsPerSlice);
             var abilityEndOrderSystem = new AbilityEndOrderSystem(World, orderTypeRegistry, cfgCastAbilityEnd);
             var stopOrderSystem = new StopOrderSystem(World, orderTypeRegistry, cfgStop);
             var instantCompleteOrderSystem = new InstantCompleteOrderSystem(World, orderTypeRegistry);

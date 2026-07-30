@@ -9,6 +9,7 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Input;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.GraphRuntime;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
@@ -48,6 +49,7 @@ namespace Ludots.Tests.GAS
                     ParticipatesInResponse = true,
                     Modifiers = default
                 });
+                FinalizeEffectTemplates(templates);
  
                 var clock = new DiscreteClock();
                 var conditions = new GasConditionRegistry();
@@ -78,7 +80,7 @@ namespace Ludots.Tests.GAS
                     MaxWorkUnitsPerSlice = int.MaxValue
                 };
  
-                var target = world.Create(new AttributeBuffer(), new ActiveEffectContainer(), new PlayerOwner { PlayerId = 1 });
+                var target = world.Create(new AttributeBuffer(), new ActiveEffectContainer(), new DirtyFlags(), new PlayerOwner { PlayerId = 1 });
                 var listener = default(ResponseChainListener);
                 listener.Add(tag, ResponseType.PromptInput, priority: 100, effectTemplateId: tplRoot);
                 world.Add(target, listener);
@@ -154,6 +156,7 @@ namespace Ludots.Tests.GAS
                 ParticipatesInResponse = true,
                 Modifiers = default
             });
+            FinalizeEffectTemplates(templates);
 
             var requests = new EffectRequestQueue();
             var admissionResults = new OrderAdmissionResultBuffer(8, 8);
@@ -179,7 +182,7 @@ namespace Ludots.Tests.GAS
                 MaxWorkUnitsPerSlice = int.MaxValue
             };
 
-            var actor = world.Create(new AttributeBuffer(), new ActiveEffectContainer(), new PlayerOwner { PlayerId = 1 });
+            var actor = world.Create(new AttributeBuffer(), new ActiveEffectContainer(), new DirtyFlags(), new PlayerOwner { PlayerId = 1 });
             var listener = default(ResponseChainListener);
             listener.Add(tag, ResponseType.PromptInput, priority: 100, effectTemplateId: tplRoot);
             world.Add(actor, listener);
@@ -566,6 +569,18 @@ namespace Ludots.Tests.GAS
             }
 
             return lines.ToArray();
+        }
+
+        private static void FinalizeEffectTemplates(EffectTemplateRegistry templates)
+        {
+            var builtinHandlers = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(builtinHandlers);
+            GasTestEffectExecutionPlanFinalizer.FinalizeAll(
+                templates,
+                new PresetTypeRegistry(),
+                builtinHandlers,
+                new GraphProgramRegistry(),
+                "Test/ResponseChainPresenterPipelineTests.json");
         }
 
         private static (TestInputBackend backend, PlayerInputHandler handler) BuildResponseChainHandler()

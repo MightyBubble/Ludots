@@ -81,6 +81,87 @@ public sealed class EffectExecutionPlanTests
     }
 
     [Test]
+    public void Finalize_SingleTerminalOrderSubmission_CertifiesExternalAtomicActivation()
+    {
+        const int templateId = 114;
+        var templates = new EffectTemplateRegistry();
+        var presets = CreatePreset(
+            EffectPresetType.SubmitOrderFromBlackboard,
+            PhaseHandler.Builtin(BuiltinHandlerId.SubmitOrderFromBlackboard));
+        templates.Register(templateId, new EffectTemplateData
+        {
+            PresetType = EffectPresetType.SubmitOrderFromBlackboard,
+            LifetimeKind = EffectLifetimeKind.Instant,
+        });
+
+        Finalize(templates, presets, new GraphProgramRegistry());
+
+        EffectWindowExecutionPlan plan = templates.RequireExecutionPlans(templateId).Activation;
+        Assert.That(plan.Kind, Is.EqualTo(EffectExecutionPlanKind.ExternalAtomicExclusive));
+        Assert.That(plan.Domain, Is.EqualTo(EffectAtomicDomain.Order));
+        Assert.That(plan.ExternalPhase, Is.EqualTo(EffectPhaseId.OnApply));
+        Assert.That(plan.RequiresListenerPreflight, Is.True);
+    }
+
+    [Test]
+    public void Finalize_RelationSetParent_CertifiesGasTransaction()
+    {
+        const int templateId = 115;
+        var templates = new EffectTemplateRegistry();
+        var presets = CreatePreset(
+            EffectPresetType.Relation,
+            PhaseHandler.Builtin(BuiltinHandlerId.ApplyRelation));
+        templates.Register(templateId, new EffectTemplateData
+        {
+            PresetType = EffectPresetType.Relation,
+            LifetimeKind = EffectLifetimeKind.Instant,
+            Relation = new RelationDescriptor
+            {
+                Operation = RelationOperation.SetParent,
+                Subject = RelationEntitySlot.Source,
+                Parent = RelationEntitySlot.Target,
+            },
+        });
+
+        Finalize(templates, presets, new GraphProgramRegistry());
+
+        Assert.That(
+            templates.RequireExecutionPlans(templateId).Activation.Kind,
+            Is.EqualTo(EffectExecutionPlanKind.GasTransactional));
+    }
+
+    [TestCase(RelationOperation.RemoveParent, "ApplyRelation.RemoveParent")]
+    [TestCase(RelationOperation.EnsureLink, "ApplyRelation.EnsureLink")]
+    public void Finalize_UncertifiedRelationOperation_FailsClosed(
+        RelationOperation operation,
+        string operationName)
+    {
+        const int templateId = 116;
+        var templates = new EffectTemplateRegistry();
+        var presets = CreatePreset(
+            EffectPresetType.Relation,
+            PhaseHandler.Builtin(BuiltinHandlerId.ApplyRelation));
+        templates.Register(templateId, new EffectTemplateData
+        {
+            PresetType = EffectPresetType.Relation,
+            LifetimeKind = EffectLifetimeKind.Instant,
+            Relation = new RelationDescriptor
+            {
+                Operation = operation,
+                Subject = RelationEntitySlot.Source,
+                Parent = RelationEntitySlot.Target,
+                RelationshipTypeId = 1,
+            },
+        });
+
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(
+            () => Finalize(templates, presets, new GraphProgramRegistry()))!;
+
+        Assert.That(error.Message, Does.StartWith(EffectExecutionPlanCompiler.UnsupportedOperationError));
+        Assert.That(error.Message, Does.Contain(operationName));
+    }
+
+    [Test]
     public void Finalize_ExternalCombinedWithGasWrite_FailsAtLoadTime()
     {
         const int templateId = 104;

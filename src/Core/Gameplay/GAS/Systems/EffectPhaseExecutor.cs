@@ -28,6 +28,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
     public sealed class EffectPhaseExecutor
     {
         public const string PhaseListenerDispatchCapacityExceededError = "GAS.PHASE_LISTENER.ERR.DispatchCapacityExceeded";
+        public const string ExternalAtomicListenerConflictError = "GAS.EFFECT_PLAN.ERR.ExternalAtomicListenerConflict";
         public const string GraphProgramScratchCapacityExceededError = "GAS.EFFECT_PHASE.ERR.GraphProgramScratchCapacityExceeded";
         public const int DefaultGraphProgramScratchCapacity = 16384;
         private const int PhaseListenerDispatchScratchCapacity =
@@ -455,6 +456,33 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
         }
 
+        public bool HasMatchingListener(
+            World world,
+            Entity caster,
+            Entity target,
+            EffectPhaseId phase,
+            int effectTagId,
+            int effectTemplateId)
+        {
+            if (world.IsAlive(target) &&
+                world.Has<EffectPhaseListenerBuffer>(target) &&
+                world.Get<EffectPhaseListenerBuffer>(target).HasMatch(
+                    effectTagId, effectTemplateId, phase, PhaseListenerScope.Target))
+            {
+                return true;
+            }
+
+            if (world.IsAlive(caster) &&
+                world.Has<EffectPhaseListenerBuffer>(caster) &&
+                world.Get<EffectPhaseListenerBuffer>(caster).HasMatch(
+                    effectTagId, effectTemplateId, phase, PhaseListenerScope.Source))
+            {
+                return true;
+            }
+
+            return _globalListeners?.HasMatch(phase, effectTagId, effectTemplateId) == true;
+        }
+
         private static void SortByPriorityDescending(Span<PhaseListenerCollectedAction> actions)
         {
             for (int i = 1; i < actions.Length; i++)
@@ -534,6 +562,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
             GraphKind expectedKind = trackValidationResult ? GraphKind.Validation : GraphKind.Effect;
             _programs.RequireKind(graphProgramId, expectedKind);
+            GraphKindOperationPolicy.RequireAllowed(
+                expectedKind,
+                program,
+                _handlers,
+                graphProgramId,
+                nameof(EffectPhaseExecutor));
 
             var scratchUsage = GetScratchUsage(graphProgramId, program);
             if (scratchUsage.RegisterCount > 0)

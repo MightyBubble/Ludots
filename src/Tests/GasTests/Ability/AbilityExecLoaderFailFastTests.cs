@@ -343,7 +343,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void CompileAbility_GraphSignalUnknownGraph_IsRejected()
+        public void CompileAbility_GraphSignal_IsRejectedAsUnknownExecutionKind()
         {
             var ex = Throws<InvalidOperationException>(() =>
                 Compile(
@@ -358,7 +358,8 @@ namespace Ludots.Tests.GAS
                     }
                     """));
 
-            That(ex!.Message, Does.Contain("Graph.Missing"));
+            That(ex!.Message, Does.Contain("Unknown ExecItemKind 'GraphSignal'"));
+            That(ex.Message, Does.Not.Contain("Graph.Missing"));
         }
 
         [Test]

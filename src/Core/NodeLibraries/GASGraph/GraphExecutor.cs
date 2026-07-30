@@ -19,7 +19,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             ReadOnlySpan<GraphInstruction> program,
             IGraphRuntimeApi api)
         {
-            ExecuteCore(world, caster, explicitTarget, targetPosCm, program, api);
+            ExecuteCore(world, caster, explicitTarget, targetPosCm, program, api, GraphKind.Effect);
         }
 
         public static void Execute(
@@ -32,7 +32,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             GraphKind kind)
         {
             RequireKind(kind, GraphKind.Effect, nameof(Execute));
-            ExecuteCore(world, caster, explicitTarget, targetPosCm, program, api);
+            ExecuteCore(world, caster, explicitTarget, targetPosCm, program, api, kind);
         }
 
         internal static void Execute(
@@ -67,7 +67,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             ReadOnlySpan<GraphInstruction> program,
             IGraphRuntimeApi api)
         {
-            return ExecuteValidationCore(world, caster, explicitTarget, targetPosCm, program, api);
+            return ExecuteValidationCore(world, caster, explicitTarget, targetPosCm, program, api, GraphKind.Validation);
         }
 
         public static bool ExecuteValidation(
@@ -80,7 +80,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             GraphKind kind)
         {
             RequireKind(kind, GraphKind.Validation, nameof(ExecuteValidation));
-            return ExecuteValidationCore(world, caster, explicitTarget, targetPosCm, program, api);
+            return ExecuteValidationCore(world, caster, explicitTarget, targetPosCm, program, api, kind);
         }
 
         /// <summary>
@@ -94,7 +94,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             ReadOnlySpan<GraphInstruction> program,
             IGraphRuntimeApi api)
         {
-            return ExecuteScoreCore(world, caster, explicitTarget, targetPosCm, program, api);
+            return ExecuteScoreCore(world, caster, explicitTarget, targetPosCm, program, api, GraphKind.Score);
         }
 
         public static float ExecuteScore(
@@ -107,7 +107,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             GraphKind kind)
         {
             RequireKind(kind, GraphKind.Score, nameof(ExecuteScore));
-            return ExecuteScoreCore(world, caster, explicitTarget, targetPosCm, program, api);
+            return ExecuteScoreCore(world, caster, explicitTarget, targetPosCm, program, api, kind);
         }
 
         /// <summary>
@@ -140,7 +140,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             GraphKind kind)
         {
             RequireKind(kind, GraphKind.Derived, nameof(ExecuteDerived));
-            ExecuteCore(world, entity, entity, default, program, api);
+            ExecuteCore(world, entity, entity, default, program, api, kind);
         }
 
         private static void RequireKind(GraphKind actual, GraphKind expected, string entrypoint)
@@ -158,8 +158,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Entity explicitTarget,
             IntVector2 targetPosCm,
             ReadOnlySpan<GraphInstruction> program,
-            IGraphRuntimeApi api)
+            IGraphRuntimeApi api,
+            GraphKind kind)
         {
+            GraphKindOperationPolicy.RequireAllowed(kind, program, GasGraphOpHandlerTable.Instance, entrypoint: nameof(GraphExecutor));
             Span<float> f = stackalloc float[GraphVmLimits.MaxFloatRegisters];
             Span<int> i = stackalloc int[GraphVmLimits.MaxIntRegisters];
             Span<byte> b = stackalloc byte[GraphVmLimits.MaxBoolRegisters];
@@ -194,8 +196,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Entity explicitTarget,
             IntVector2 targetPosCm,
             ReadOnlySpan<GraphInstruction> program,
-            IGraphRuntimeApi api)
+            IGraphRuntimeApi api,
+            GraphKind kind)
         {
+            GraphKindOperationPolicy.RequireAllowed(kind, program, GasGraphOpHandlerTable.Instance, entrypoint: nameof(ExecuteValidation));
             Span<float> f = stackalloc float[GraphVmLimits.MaxFloatRegisters];
             Span<int> i = stackalloc int[GraphVmLimits.MaxIntRegisters];
             Span<byte> b = stackalloc byte[GraphVmLimits.MaxBoolRegisters];
@@ -235,8 +239,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Entity explicitTarget,
             IntVector2 targetPosCm,
             ReadOnlySpan<GraphInstruction> program,
-            IGraphRuntimeApi api)
+            IGraphRuntimeApi api,
+            GraphKind kind)
         {
+            GraphKindOperationPolicy.RequireAllowed(kind, program, GasGraphOpHandlerTable.Instance, entrypoint: nameof(ExecuteScore));
             Span<float> f = stackalloc float[GraphVmLimits.MaxFloatRegisters];
             Span<int> i = stackalloc int[GraphVmLimits.MaxIntRegisters];
             Span<byte> b = stackalloc byte[GraphVmLimits.MaxBoolRegisters];

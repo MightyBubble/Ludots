@@ -7,6 +7,7 @@ using Ludots.Core.Gameplay.GAS.Input;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.GraphRuntime;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
 
@@ -38,6 +39,7 @@ namespace Ludots.Tests.GAS
                     ParticipatesInResponse = false,
                     Modifiers = mods
                 });
+                FinalizeNonePresets(templates, "ResetSlice");
 
                 var budget = new GasBudget();
                 var queue = new EffectRequestQueue();
@@ -130,6 +132,7 @@ namespace Ludots.Tests.GAS
                         Modifiers = default
                     });
                 }
+                FinalizeNonePresets(templates, "ChainDepthOverflow");
 
                 var listenerEntity = world.Create();
                 unsafe
@@ -206,6 +209,7 @@ namespace Ludots.Tests.GAS
                     ParticipatesInResponse = true,
                     Modifiers = default
                 });
+                FinalizeNonePresets(templates, "ResponseQueueOverflow");
 
                 unsafe
                 {
@@ -369,6 +373,7 @@ namespace Ludots.Tests.GAS
                     ParticipatesInResponse = true,
                     Modifiers = default
                 });
+                FinalizeNonePresets(templates, "ChainActivateOverflow");
 
                 unsafe
                 {
@@ -461,6 +466,7 @@ namespace Ludots.Tests.GAS
                     ParticipatesInResponse = true,
                     Modifiers = default
                 });
+                FinalizeNonePresets(templates, "ChainPassSpatial");
 
                 var admissionResults = new OrderAdmissionResultBuffer(64, 64);
                 admissionResults.BeginLogicStep();
@@ -549,6 +555,7 @@ namespace Ludots.Tests.GAS
                     ParticipatesInResponse = true,
                     Modifiers = default
                 });
+                FinalizeNonePresets(templates, "ChainNegateSpatial");
 
                 var admissionResults = new OrderAdmissionResultBuffer(64, 64);
                 admissionResults.BeginLogicStep();
@@ -636,6 +643,7 @@ namespace Ludots.Tests.GAS
                     ParticipatesInResponse = true,
                     Modifiers = default
                 });
+                FinalizeNonePresets(templates, "ReleaseThrow");
 
                 var admissionResults = new OrderAdmissionResultBuffer(64, 64);
                 admissionResults.BeginLogicStep();
@@ -706,6 +714,19 @@ namespace Ludots.Tests.GAS
             }
         }
 
+        private static void FinalizeNonePresets(EffectTemplateRegistry templates, string caseName)
+        {
+            var presetTypes = new PresetTypeRegistry();
+            var builtinHandlers = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(builtinHandlers);
+            GasTestEffectExecutionPlanFinalizer.FinalizeAll(
+                templates,
+                presetTypes,
+                builtinHandlers,
+                new GraphProgramRegistry(),
+                $"Test/ResponseWindowRobustnessTests.{caseName}.json");
+        }
+
         private static int CountEntityIntakeOutcomes(OrderAdmissionResultBuffer results, int orderId)
         {
             int matched = 0;
@@ -749,6 +770,7 @@ namespace Ludots.Tests.GAS
                 ParticipatesInResponse = true,
                 Modifiers = default
             });
+            FinalizeNonePresets(templates, "PromptInput");
 
             unsafe
             {

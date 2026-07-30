@@ -37,7 +37,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly InputResponseBuffer _inputResponses;
         private readonly EffectRequestQueue _effectRequests;
         private readonly GasPresentationEventBuffer _presentationEvents;
-        private readonly EffectPhaseExecutor _phaseExecutor;
         private readonly GraphProgramRegistry _graphPrograms;
         private readonly IGraphRuntimeApi _graphApi;
         private readonly TagOps _tagOps;
@@ -78,7 +77,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             int castAbilityOrderTypeId = 0,
             int castAbilityStartOrderTypeId = 0,
             GasPresentationEventBuffer presentationEvents = null,
-            EffectPhaseExecutor phaseExecutor = null,
             GraphProgramRegistry graphPrograms = null,
             IGraphRuntimeApi graphApi = null,
             TagOps tagOps = null,
@@ -102,7 +100,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _castAbilityOrderTypeId = castAbilityOrderTypeId;
             _castAbilityStartOrderTypeId = castAbilityStartOrderTypeId;
             _presentationEvents = presentationEvents;
-            _phaseExecutor = phaseExecutor;
             _graphPrograms = graphPrograms;
             _graphApi = graphApi;
             _tagOps = tagOps ?? throw new InvalidOperationException(TagOps.MissingTagOpsError);
@@ -958,15 +955,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         inst.NextItemIndex++;
                         continue;
 
-                    case ExecItemKind.GraphSignal:
-                        EnsurePotentialTimelineTerminalCapacity(actor, in inst);
-                        if (!ExecuteGraphSignal(actor, ref spec, idx, ref inst))
-                        {
-                            return;
-                        }
-                        inst.NextItemIndex++;
-                        continue;
-
                     case ExecItemKind.TagSignal:
                         EnsurePotentialTimelineTerminalCapacity(actor, in inst);
                         FireTagSignal(actor, ref spec, idx);
@@ -1303,28 +1291,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 Target = inst.Target,
                 Magnitude = spec.GetPayloadA(idx)
             });
-            return true;
-        }
-
-        private bool ExecuteGraphSignal(Entity actor, ref AbilityExecSpec spec, int idx,
-            ref AbilityExecInstance inst)
-        {
-            if (_phaseExecutor == null || _graphApi == null)
-            {
-                MarkActiveExecutionFailed(actor, ref inst, AbilityCastFailReason.PreconditionFailed, OrderFailureReason.PreconditionFailed);
-                return false;
-            }
-            int graphProgramId = spec.GetPayloadA(idx);
-            if (graphProgramId <= 0)
-            {
-                MarkActiveExecutionFailed(actor, ref inst, AbilityCastFailReason.PreconditionFailed, OrderFailureReason.PreconditionFailed);
-                return false;
-            }
-
-            Entity target = inst.Target;
-            // TargetPos resolution is deferred to the graph itself via LoadAttribute or spatial queries.
-            // AbilityExecSystem does not depend on Physics2D position components.
-            _phaseExecutor.ExecuteGraph(World, _graphApi, actor, target, default, default, graphProgramId);
             return true;
         }
 

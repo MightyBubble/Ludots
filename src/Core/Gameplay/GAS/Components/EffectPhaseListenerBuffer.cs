@@ -122,6 +122,25 @@ namespace Ludots.Core.Gameplay.GAS.Components
             return TryAdd(listenTagId, listenEffectId, phase, scope, flags, graphProgramId, eventTagId, priority, 0);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool HasMatch(int effectTagId, int effectTemplateId, EffectPhaseId phase, PhaseListenerScope scope)
+        {
+            byte phaseB = (byte)phase;
+            byte scopeB = (byte)scope;
+            for (int i = 0; i < Count; i++)
+            {
+                if (Scopes[i] == scopeB &&
+                    PhaseListenerMatcher.Matches(
+                        Phases[i], ListenTagIds[i], ListenEffectIds[i],
+                        phaseB, effectTagId, effectTemplateId))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         /// <summary>
         /// Remove all listeners registered by a given owner effect.
         /// </summary>

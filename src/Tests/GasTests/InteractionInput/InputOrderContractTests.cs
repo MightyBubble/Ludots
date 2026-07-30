@@ -340,6 +340,10 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                     [CoreServiceKeys.ControlDomainQuery.Name] = controlHarness.Domains,
                     [CoreServiceKeys.GameConfig.Name] = new GameConfig
                     {
+                        GasRuntimeCapacity = new GasRuntimeCapacityConfig
+                        {
+                            CommandIntentScratchCapacity = 64,
+                        },
                         Constants = new GameConstants
                         {
                             OrderTypeIds = new Dictionary<string, int>

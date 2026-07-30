@@ -1,10 +1,12 @@
 using System;
+using System.Runtime.CompilerServices;
 using Arch.Core;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.GraphRuntime;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
 
@@ -35,6 +37,16 @@ namespace Ludots.Tests.GAS
                     ParticipatesInResponse = false,
                     Modifiers = mods
                 });
+
+                var presetTypes = new PresetTypeRegistry();
+                var builtinHandlers = new BuiltinHandlerRegistry();
+                BuiltinHandlers.RegisterAll(builtinHandlers);
+                GasTestEffectExecutionPlanFinalizer.FinalizeAll(
+                    templates,
+                    presetTypes,
+                    builtinHandlers,
+                    new GraphProgramRegistry(),
+                    "Test/AllocationTests.AbilityActivation.json");
 
                 var abilityTemplate = world.Create();
                 world.Add(abilityTemplate, new AbilityTemplate());
@@ -134,6 +146,20 @@ namespace Ludots.Tests.GAS
                     Modifiers = default
             });
 
+            var presetTypes = new PresetTypeRegistry();
+            var applyForcePreset = new PresetTypeDefinition { Type = EffectPresetType.ApplyForce2D };
+            applyForcePreset.DefaultPhaseHandlers[EffectPhaseId.OnApply] =
+                PhaseHandler.Builtin(BuiltinHandlerId.ApplyForce);
+            presetTypes.Register(in applyForcePreset);
+            var builtinHandlers = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(builtinHandlers);
+            GasTestEffectExecutionPlanFinalizer.FinalizeAll(
+                templates,
+                presetTypes,
+                builtinHandlers,
+                new GraphProgramRegistry(),
+                "Test/AllocationTests.ApplyForce.json");
+
             var requests = new EffectRequestQueue();
             var admissionResults = new Ludots.Core.Gameplay.GAS.Orders.OrderAdmissionResultBuffer(4, 4);
             var chainOrders = new Ludots.Core.Gameplay.GAS.Orders.OrderQueue(
@@ -192,6 +218,68 @@ namespace Ludots.Tests.GAS
             long after = GC.GetAllocatedBytesForCurrentThread();
 
             That(after - before, Is.LessThanOrEqualTo(64));
+        }
+
+        [Test]
+        public void RelationSetParent_Transaction_AllocatesZeroAfterWarmup()
+        {
+            using var world = World.Create();
+            Entity parentA = world.Create(new ChildrenBuffer());
+            Entity parentB = world.Create(new ChildrenBuffer());
+            Entity child = world.Create();
+            RelationOps.SetParent(world, child, parentA);
+            using var transaction = new EffectPhaseSideEffectTransaction(
+                world,
+                tagOps: null,
+                effectRequests: null,
+                spawnRequests: null,
+                presentationEvents: null,
+                attributeEntityCapacity: 8);
+
+            RunRelationReparentCycles(transaction, child, parentA, parentB, 64);
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+
+            long allocated = MeasureRelationReparentAllocations(
+                transaction,
+                child,
+                parentA,
+                parentB,
+                10_000);
+
+            That(allocated, Is.Zero);
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static long MeasureRelationReparentAllocations(
+            EffectPhaseSideEffectTransaction transaction,
+            Entity child,
+            Entity parentA,
+            Entity parentB,
+            int count)
+        {
+            GC.GetAllocatedBytesForCurrentThread();
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            RunRelationReparentCycles(transaction, child, parentA, parentB, count);
+            return GC.GetAllocatedBytesForCurrentThread() - before;
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void RunRelationReparentCycles(
+            EffectPhaseSideEffectTransaction transaction,
+            Entity child,
+            Entity parentA,
+            Entity parentB,
+            int count)
+        {
+            for (int i = 0; i < count; i++)
+            {
+                Entity parent = (i & 1) == 0 ? parentB : parentA;
+                transaction.Begin();
+                transaction.StageSetParent(child, parent, snapSubjectToParentPosition: false);
+                transaction.Commit();
+            }
         }
     }
 }

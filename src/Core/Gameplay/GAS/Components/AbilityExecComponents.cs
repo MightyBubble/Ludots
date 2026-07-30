@@ -26,8 +26,6 @@ namespace Ludots.Core.Gameplay.GAS.Components
         EffectSignal = 10,
         /// <summary>Publish a GameplayEvent.</summary>
         EventSignal = 11,
-        /// <summary>Execute a graph program.</summary>
-        GraphSignal = 12,
         /// <summary>Add or remove a tag instantly. PayloadA: 0=add, 1=remove.</summary>
         TagSignal = 13,
         /// <summary>Like TagSignal, but applied to the current Target entity instead of the actor.</summary>
@@ -111,7 +109,7 @@ namespace Ludots.Core.Gameplay.GAS.Components
         public fixed int ItemTemplateIds[MAX_ITEMS];
         /// <summary>Index into the CallerParams pool (0xFF = none).</summary>
         public fixed byte ItemCallerParamsIdx[MAX_ITEMS];
-        /// <summary>Extra payload (graph program ID for GraphSignal, target collection kind for TargetCollectionGate, etc.).</summary>
+        /// <summary>Extra payload (target collection kind, event magnitude, or dispatch target).</summary>
         public fixed int ItemPayloadA[MAX_ITEMS];
 
         public ExecItemKind GetKind(int index) { fixed (byte* p = ItemKinds) return (ExecItemKind)p[index]; }

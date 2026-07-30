@@ -47,6 +47,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             }
 
             _programs.RequireKind(graphId, GraphKind.Query);
+            GraphKindOperationPolicy.RequireAllowed(
+                GraphKind.Query,
+                program,
+                _handlers,
+                graphId,
+                nameof(GraphReturnWriter));
 
             GraphOutputSchema schema = _schemas.Get(graphId);
             if (!schema.HasBindings)
