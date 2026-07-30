@@ -295,6 +295,309 @@ public sealed class EffectExecutionPlanTests
     }
 
     [Test]
+    public void Finalize_ListenerGraphWithUnsupportedOperation_ReportsAssetEffectPhaseAndOperation()
+    {
+        const int templateId = 114;
+        const int listenerGraphId = 214;
+        var templates = new EffectTemplateRegistry();
+        var programs = new GraphProgramRegistry();
+        programs.Register(listenerGraphId,
+        [
+            new GraphInstruction { Op = (ushort)GraphNodeOp.BeginLifecycleTransaction },
+        ], GraphKind.Effect);
+        EffectPhaseListenerBuffer listenerSetup = default;
+        Assert.That(listenerSetup.TryAddTemplate(
+            listenTagId: 0,
+            listenEffectId: 0,
+            EffectPhaseId.OnApply,
+            PhaseListenerScope.Target,
+            PhaseListenerActionFlags.ExecuteGraph,
+            listenerGraphId,
+            eventTagId: 0,
+            priority: 0), Is.True);
+        templates.Register(templateId, new EffectTemplateData
+        {
+            LifetimeKind = EffectLifetimeKind.Instant,
+            ListenerSetup = listenerSetup,
+        });
+
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
+            Finalize(templates, new PresetTypeRegistry(), programs))!;
+
+        Assert.That(error.Message, Does.StartWith(EffectExecutionPlanCompiler.UnsupportedOperationError));
+        Assert.That(error.Message, Does.Contain("asset='Test/effects.json'"));
+        Assert.That(error.Message, Does.Contain("effect='114'"));
+        Assert.That(error.Message, Does.Contain("phase='OnApply'"));
+        Assert.That(error.Message, Does.Contain("BeginLifecycleTransaction"));
+    }
+
+    [Test]
+    public void Finalize_ListenerGraphWithDelegatedBuiltin_FailsClosed()
+    {
+        const int templateId = 115;
+        const int listenerGraphId = 215;
+        var templates = new EffectTemplateRegistry();
+        var programs = new GraphProgramRegistry();
+        programs.Register(listenerGraphId,
+        [
+            new GraphInstruction
+            {
+                Op = (ushort)GraphNodeOp.InvokeBuiltin,
+                Imm = (int)BuiltinHandlerId.ApplyDisplacement,
+            },
+        ], GraphKind.Effect);
+        EffectPhaseListenerBuffer listenerSetup = default;
+        Assert.That(listenerSetup.TryAddTemplate(
+            listenTagId: 0,
+            listenEffectId: 0,
+            EffectPhaseId.OnApply,
+            PhaseListenerScope.Target,
+            PhaseListenerActionFlags.ExecuteGraph,
+            listenerGraphId,
+            eventTagId: 0,
+            priority: 0), Is.True);
+        templates.Register(templateId, new EffectTemplateData
+        {
+            LifetimeKind = EffectLifetimeKind.After,
+            ListenerSetup = listenerSetup,
+        });
+
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
+            Finalize(templates, new PresetTypeRegistry(), programs))!;
+
+        Assert.That(error.Message, Does.StartWith(EffectExecutionPlanCompiler.UnsupportedOperationError));
+        Assert.That(error.Message, Does.Contain("InvokeBuiltin"));
+        Assert.That(error.Message, Does.Contain("listenerIndex=0"));
+        Assert.That(error.Message, Does.Contain("graphId=215"));
+    }
+
+    [Test]
+    public unsafe void Finalize_OnProposeListenerEvent_FailsPurePhaseContract()
+    {
+        const int templateId = 116;
+        var templates = new EffectTemplateRegistry();
+        EffectPhaseListenerBuffer listenerSetup = default;
+        Assert.That(listenerSetup.TryAddTemplate(
+            listenTagId: 0,
+            listenEffectId: 0,
+            EffectPhaseId.OnApply,
+            PhaseListenerScope.Target,
+            PhaseListenerActionFlags.PublishEvent,
+            graphProgramId: 0,
+            eventTagId: 5,
+            priority: 0), Is.True);
+        listenerSetup.Phases[0] = (byte)EffectPhaseId.OnPropose;
+        templates.Register(templateId, new EffectTemplateData
+        {
+            LifetimeKind = EffectLifetimeKind.After,
+            ListenerSetup = listenerSetup,
+        });
+
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
+            Finalize(templates, new PresetTypeRegistry(), new GraphProgramRegistry()))!;
+
+        Assert.That(error.Message, Does.StartWith(EffectExecutionPlanCompiler.InvalidCompositionError));
+        Assert.That(error.Message, Does.Contain("phase='OnPropose'"));
+        Assert.That(error.Message, Does.Contain("pure phase"));
+    }
+
+    [Test]
+    public void Finalize_OnCalculateListenerGasWrite_FailsPurePhaseContract()
+    {
+        const int templateId = 117;
+        const int listenerGraphId = 217;
+        var templates = new EffectTemplateRegistry();
+        var programs = new GraphProgramRegistry();
+        programs.Register(listenerGraphId, GasWriteProgram(), GraphKind.Effect);
+        EffectPhaseListenerBuffer listenerSetup = default;
+        Assert.That(listenerSetup.TryAddTemplate(
+            listenTagId: 0,
+            listenEffectId: 0,
+            EffectPhaseId.OnCalculate,
+            PhaseListenerScope.Target,
+            PhaseListenerActionFlags.ExecuteGraph,
+            listenerGraphId,
+            eventTagId: 0,
+            priority: 0), Is.True);
+        templates.Register(templateId, new EffectTemplateData
+        {
+            LifetimeKind = EffectLifetimeKind.After,
+            ListenerSetup = listenerSetup,
+        });
+
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
+            Finalize(templates, new PresetTypeRegistry(), programs))!;
+
+        Assert.That(error.Message, Does.StartWith(EffectExecutionPlanCompiler.UnsupportedOperationError));
+        Assert.That(error.Message, Does.Contain("WriteBlackboardFloat"));
+        Assert.That(error.Message, Does.Contain("pure phase"));
+    }
+
+    [Test]
+    public void Finalize_ListenerGraphWrongKind_ReportsFullCompositionContext()
+    {
+        const int templateId = 118;
+        const int listenerGraphId = 218;
+        var templates = new EffectTemplateRegistry();
+        var programs = new GraphProgramRegistry();
+        programs.Register(listenerGraphId,
+        [
+            new GraphInstruction { Op = (ushort)GraphNodeOp.ConstBool, Dst = 0, Imm = 1 },
+        ], GraphKind.Effect);
+        EffectPhaseListenerBuffer listenerSetup = default;
+        Assert.That(listenerSetup.TryAddTemplate(
+            listenTagId: 0,
+            listenEffectId: 0,
+            EffectPhaseId.OnPropose,
+            PhaseListenerScope.Target,
+            PhaseListenerActionFlags.ExecuteGraph,
+            listenerGraphId,
+            eventTagId: 0,
+            priority: 0), Is.True);
+        templates.Register(templateId, new EffectTemplateData
+        {
+            LifetimeKind = EffectLifetimeKind.After,
+            ListenerSetup = listenerSetup,
+        });
+
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
+            Finalize(templates, new PresetTypeRegistry(), programs))!;
+
+        Assert.That(error.Message, Does.StartWith(EffectExecutionPlanCompiler.InvalidCompositionError));
+        Assert.That(error.Message, Does.Contain("asset='Test/effects.json'"));
+        Assert.That(error.Message, Does.Contain("effect='118'"));
+        Assert.That(error.Message, Does.Contain("phase='OnPropose'"));
+        Assert.That(error.Message, Does.Contain("listenerIndex=0"));
+        Assert.That(error.Message, Does.Contain("graphId=218"));
+        Assert.That(error.Message, Does.Contain("Validation"));
+    }
+
+    [Test]
+    public void Finalize_MissingListenerGraph_ReportsFullCompositionContext()
+    {
+        const int templateId = 123;
+        const int listenerGraphId = 223;
+        var templates = new EffectTemplateRegistry();
+        EffectPhaseListenerBuffer listenerSetup = default;
+        Assert.That(listenerSetup.TryAddTemplate(
+            listenTagId: 0,
+            listenEffectId: 0,
+            EffectPhaseId.OnApply,
+            PhaseListenerScope.Target,
+            PhaseListenerActionFlags.ExecuteGraph,
+            listenerGraphId,
+            eventTagId: 0,
+            priority: 0), Is.True);
+        templates.Register(templateId, new EffectTemplateData
+        {
+            LifetimeKind = EffectLifetimeKind.After,
+            ListenerSetup = listenerSetup,
+        });
+
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
+            Finalize(templates, new PresetTypeRegistry(), new GraphProgramRegistry()))!;
+
+        Assert.That(error.Message, Does.StartWith(EffectExecutionPlanCompiler.InvalidCompositionError));
+        Assert.That(error.Message, Does.Contain("asset='Test/effects.json'"));
+        Assert.That(error.Message, Does.Contain("effect='123'"));
+        Assert.That(error.Message, Does.Contain("phase='OnApply'"));
+        Assert.That(error.Message, Does.Contain("listenerIndex=0"));
+        Assert.That(error.Message, Does.Contain("graphId=223"));
+    }
+
+    [Test]
+    public void Finalize_ListenerGraphMissingOperationMetadata_ReportsInstructionContext()
+    {
+        const int templateId = 124;
+        const int listenerGraphId = 224;
+        const ushort unknownOperation = ushort.MaxValue;
+        var templates = new EffectTemplateRegistry();
+        var programs = new GraphProgramRegistry();
+        programs.Register(listenerGraphId,
+        [
+            new GraphInstruction { Op = unknownOperation },
+        ], GraphKind.Effect);
+        EffectPhaseListenerBuffer listenerSetup = default;
+        Assert.That(listenerSetup.TryAddTemplate(
+            listenTagId: 0,
+            listenEffectId: 0,
+            EffectPhaseId.OnApply,
+            PhaseListenerScope.Target,
+            PhaseListenerActionFlags.ExecuteGraph,
+            listenerGraphId,
+            eventTagId: 0,
+            priority: 0), Is.True);
+        templates.Register(templateId, new EffectTemplateData
+        {
+            LifetimeKind = EffectLifetimeKind.After,
+            ListenerSetup = listenerSetup,
+        });
+
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
+            Finalize(templates, new PresetTypeRegistry(), programs))!;
+
+        Assert.That(error.Message, Does.StartWith(EffectExecutionPlanCompiler.MissingOperationMetadataError));
+        Assert.That(error.Message, Does.Contain("listenerIndex=0"));
+        Assert.That(error.Message, Does.Contain("graphId=224"));
+        Assert.That(error.Message, Does.Contain("instructionIndex=0"));
+        Assert.That(error.Message, Does.Contain(unknownOperation.ToString()));
+    }
+
+    [Test]
+    public void Finalize_ListenerBufferWithInvalidCount_FailsBeforeFixedBufferRead()
+    {
+        const int templateId = 119;
+        var templates = new EffectTemplateRegistry();
+        var listenerSetup = new EffectPhaseListenerBuffer
+        {
+            Count = EffectPhaseListenerBuffer.CAPACITY + 1,
+        };
+        templates.Register(templateId, new EffectTemplateData
+        {
+            LifetimeKind = EffectLifetimeKind.After,
+            ListenerSetup = listenerSetup,
+        });
+
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
+            Finalize(templates, new PresetTypeRegistry(), new GraphProgramRegistry()))!;
+
+        Assert.That(error.Message, Does.StartWith(EffectExecutionPlanCompiler.InvalidCompositionError));
+        Assert.That(error.Message, Does.Contain($"capacity={EffectPhaseListenerBuffer.CAPACITY}"));
+    }
+
+    [Test]
+    public void Finalize_ListenerGasTransactionalGraph_Succeeds()
+    {
+        const int templateId = 120;
+        const int listenerGraphId = 220;
+        var templates = new EffectTemplateRegistry();
+        var programs = new GraphProgramRegistry();
+        programs.Register(listenerGraphId,
+        [
+            new GraphInstruction { Op = (ushort)GraphNodeOp.SendEvent, Imm = 7 },
+        ], GraphKind.Effect);
+        EffectPhaseListenerBuffer listenerSetup = default;
+        Assert.That(listenerSetup.TryAddTemplate(
+            listenTagId: 0,
+            listenEffectId: 0,
+            EffectPhaseId.OnApply,
+            PhaseListenerScope.Target,
+            PhaseListenerActionFlags.ExecuteGraph,
+            listenerGraphId,
+            eventTagId: 0,
+            priority: 0), Is.True);
+        templates.Register(templateId, new EffectTemplateData
+        {
+            LifetimeKind = EffectLifetimeKind.After,
+            ListenerSetup = listenerSetup,
+        });
+
+        Finalize(templates, new PresetTypeRegistry(), programs);
+
+        Assert.That(templates.AreExecutionPlansFinalized, Is.True);
+    }
+
+    [Test]
     public void Finalize_OnProposeRequiresValidationGraphKind()
     {
         const int templateId = 109;
@@ -316,6 +619,72 @@ public sealed class EffectExecutionPlanTests
         Finalize(templates, new PresetTypeRegistry(), programs);
 
         Assert.That(templates.TryGetExecutionPlans(templateId, out _), Is.True);
+    }
+
+    [Test]
+    public void Finalize_OnProposeInvokeBuiltinIsRejectedBySharedGraphKindPolicy()
+    {
+        const int templateId = 125;
+        const int graphId = 225;
+        var templates = new EffectTemplateRegistry();
+        var programs = new GraphProgramRegistry();
+        programs.Register(graphId,
+        [
+            new GraphInstruction
+            {
+                Op = (ushort)GraphNodeOp.InvokeBuiltin,
+                Imm = (int)BuiltinHandlerId.SpatialQuery,
+            },
+        ], GraphKind.Validation);
+        EffectPhaseGraphBindings bindings = default;
+        Assert.That(bindings.TryAddStep(EffectPhaseId.OnPropose, PhaseSlot.Main, graphId), Is.True);
+        templates.Register(templateId, new EffectTemplateData
+        {
+            LifetimeKind = EffectLifetimeKind.Instant,
+            PhaseGraphBindings = bindings,
+        });
+
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
+            Finalize(templates, new PresetTypeRegistry(), programs))!;
+
+        Assert.That(error.Message, Does.StartWith(EffectExecutionPlanCompiler.UnsupportedOperationError));
+        Assert.That(error.Message, Does.Contain("GraphKind 'Validation'"));
+        Assert.That(templates.AreExecutionPlansFinalized, Is.False);
+    }
+
+    [Test]
+    public void Finalize_ListenerLoadConfigIsRejectedWithoutOwnerTemplateContext()
+    {
+        const int templateId = 126;
+        const int graphId = 226;
+        var templates = new EffectTemplateRegistry();
+        var programs = new GraphProgramRegistry();
+        programs.Register(graphId,
+        [
+            new GraphInstruction { Op = (ushort)GraphNodeOp.LoadConfigFloat, Dst = 0, Imm = 1 },
+        ], GraphKind.Effect);
+        EffectPhaseListenerBuffer listeners = default;
+        Assert.That(listeners.TryAddTemplate(
+            0,
+            0,
+            EffectPhaseId.OnApply,
+            PhaseListenerScope.Target,
+            PhaseListenerActionFlags.ExecuteGraph,
+            graphId,
+            eventTagId: 0,
+            priority: 0), Is.True);
+        templates.Register(templateId, new EffectTemplateData
+        {
+            LifetimeKind = EffectLifetimeKind.After,
+            ListenerSetup = listeners,
+        });
+
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
+            Finalize(templates, new PresetTypeRegistry(), programs))!;
+
+        Assert.That(error.Message, Does.StartWith(EffectExecutionPlanCompiler.UnsupportedOperationError));
+        Assert.That(error.Message, Does.Contain(nameof(GraphNodeOp.LoadConfigFloat)));
+        Assert.That(error.Message, Does.Contain("owner EffectTemplate config context"));
     }
 
     [Test]
@@ -345,6 +714,71 @@ public sealed class EffectExecutionPlanTests
         InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
             templates.Register(112, new EffectTemplateData { LifetimeKind = EffectLifetimeKind.Instant }))!;
         Assert.That(error.Message, Does.StartWith(EffectTemplateRegistry.RegistrationAfterFinalizationError));
+    }
+
+    [Test]
+    public void Registry_ReservedZeroTemplateId_FailsClosed()
+    {
+        var templates = new EffectTemplateRegistry();
+
+        Assert.Throws<ArgumentOutOfRangeException>(() =>
+            templates.Register(0, new EffectTemplateData { LifetimeKind = EffectLifetimeKind.Instant }));
+        Assert.That(templates.TryGet(0, out _), Is.False);
+    }
+
+    [Test]
+    public void Registry_FinalizationRequiresAllFourExecutionWindows()
+    {
+        const int templateId = 120;
+        var templates = new EffectTemplateRegistry();
+        templates.Register(templateId, new EffectTemplateData { LifetimeKind = EffectLifetimeKind.Instant });
+        var plans = new EffectExecutionPlanSet[EffectTemplateRegistry.MaxTemplates];
+        EffectWindowExecutionPlan activation = new(EffectExecutionPlanKind.GasTransactional);
+        plans[templateId] = new EffectExecutionPlanSet(
+            in activation,
+            period: default,
+            expire: default,
+            remove: default);
+
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
+            templates.FinalizeExecutionPlans(plans))!;
+
+        Assert.That(error.Message, Does.StartWith(EffectTemplateRegistry.UnfinalizedRegistryError));
+        Assert.That(templates.AreExecutionPlansFinalized, Is.False);
+        Assert.That(templates.TryGetExecutionPlans(templateId, out _), Is.False);
+    }
+
+    [Test]
+    public void Registry_FailedFinalize_DoesNotExposePartialExecutionPlans()
+    {
+        const int validTemplateId = 121;
+        const int invalidTemplateId = 122;
+        const int invalidGraphId = 222;
+        var templates = new EffectTemplateRegistry();
+        templates.Register(validTemplateId, new EffectTemplateData
+        {
+            LifetimeKind = EffectLifetimeKind.Instant,
+        });
+        var programs = new GraphProgramRegistry();
+        programs.Register(invalidGraphId,
+        [
+            new GraphInstruction { Op = (ushort)GraphNodeOp.BeginLifecycleTransaction },
+        ], GraphKind.Effect);
+        EffectPhaseGraphBindings bindings = default;
+        Assert.That(bindings.TryAddStep(EffectPhaseId.OnApply, PhaseSlot.Main, invalidGraphId), Is.True);
+        templates.Register(invalidTemplateId, new EffectTemplateData
+        {
+            LifetimeKind = EffectLifetimeKind.Instant,
+            PhaseGraphBindings = bindings,
+        });
+
+        Assert.Throws<InvalidOperationException>(() =>
+            Finalize(templates, new PresetTypeRegistry(), programs));
+
+        Assert.That(templates.AreExecutionPlansFinalized, Is.False);
+        Assert.That(templates.TryGetExecutionPlans(validTemplateId, out _), Is.False);
+        Assert.That(templates.TryGetExecutionPlans(invalidTemplateId, out _), Is.False);
+        Assert.Throws<InvalidOperationException>(templates.RequireFinalized);
     }
 
     [Test]

@@ -653,9 +653,20 @@ namespace Ludots.Tests.GAS
                         priority: 0), Is.True);
                 }
 
+                var api = new GasGraphRuntimeApi(world, eventBus: eventBus);
+                using var transaction = new EffectPhaseSideEffectTransaction(
+                    world,
+                    tagOps: null,
+                    effectRequests: null,
+                    spawnRequests: null,
+                    presentationEvents: null,
+                    attributeEntityCapacity: 2);
+                transaction.Begin();
+                api.BeginEffectSideEffectTransaction(transaction);
+
                 executor.DispatchPhaseListeners(
                     world,
-                    api: null!,
+                    api,
                     caster: caster,
                     target: target,
                     targetContext: default,
@@ -663,6 +674,8 @@ namespace Ludots.Tests.GAS
                     phase: EffectPhaseId.OnApply,
                     effectTagId: 1,
                     effectTemplateId: 1);
+                transaction.Commit();
+                api.EndEffectSideEffectTransaction(transaction);
 
                 eventBus.Update();
 

@@ -8,7 +8,7 @@ Current closeouts and prior issue reviews follow.
 - **Date**: 2026-07-30
 - **Agent / Author**: Codex, with read-only Pi Opus review, isolated Cursor Graph implementation, and independent SDK/warning audit.
 - **Baseline**: `origin/main` at `9a6af246ccd30d534011960d3663a8be1afac52a`.
-- **Status**: COMPLETE at `dac90b219fceb830684c79d8e924afcc606296b6`; final gate evidence is recorded below.
+- **Status**: COMPLETE on the reviewed PR head; final gate evidence is recorded below.
 
 ### 1. Core judgment
 
@@ -24,6 +24,7 @@ Reason: The repair reuses the existing Graph compiler/runtime, `AbilityExecSyste
 |---|---:|---|
 | Atomic gameplay operation | 0 | Existing registered Graph/GAS op with explicit metadata |
 | Ordered commit and rollback | 1 | `EffectPhaseSideEffectTransaction` and frozen execution plan |
+| Listener batch certification | 1 | Existing `EffectPhaseExecutor`, listener buffer, and global listener registry |
 | Sequence, branch, phase, and reusable behavior | 2 | Graph compiled under an enforced graph kind |
 | Concrete duration, tags, parameters, and phase references | 2 | EffectTemplate content SSOT |
 | Stable authoring shorthand, when justified | 3 | Optional PresetType compiled to the same Graph/effect contract |
@@ -47,11 +48,15 @@ None added. The implementation tightened metadata, execution planning, and trans
 - `RemoveParent` and `EnsureLink` remain uncertified and fail execution-plan finalization. Vision reveal operations were removed from the Effect Graph catalog until they have an equally explicit transaction contract.
 - Ability execution has one authoritative production path and one typed invalid-target result.
 - Graph loading and validation fail closed: invalid JSON, unsupported graph kind, empty validation output, unknown op metadata, and fixed-capacity overflow are explicit failures.
+- Template-owned listener Graphs are part of the same execution-plan certification as phase Graphs. `OnPropose` listeners require Validation kind; `OnCalculate` listeners require Effect kind; both phases permit pure operations only.
+- Dynamic target, source, and global listeners are collected and certified as one batch before Pre/Main/Post or listener execution. Missing Graphs, wrong kinds, unsupported operations, malformed IDs, invalid fixed-buffer counts, and a missing event bus fail before any phase write or event publication.
+- Every listener action in a non-pure phase, including a `PublishEvent`-only batch, requires the active GAS side-effect transaction. Event-bus capacity failure leaves neither an earlier entity listener event nor an earlier global listener event visible.
+- Listener `InvokeBuiltin` remains closed because collected actions do not carry the owner EffectTemplate/config context. The trigger template must not be substituted for the owner template.
 - Graph runtime does not resize or structurally mutate ECS state in the hot path.
 
 ### 6. Config SSOT
 
-Graph assets describe behavior; EffectTemplate assets describe concrete effect instances. PresetType, if retained, is only stable authoring sugar compiled to those contracts. SDK version and test/analyzer dependencies are repository-declared; machine-global Roslyn state is not a dependency.
+Graph assets describe behavior; EffectTemplate assets describe concrete effect instances, including listener setup. PresetType, if retained, is only stable authoring sugar compiled to those contracts. The effect registry rejects reserved template ID 0 and freezes only after all four execution windows for every registered template are complete. SDK version and test/analyzer dependencies are repository-declared; machine-global Roslyn state is not a dependency.
 
 New JSON schema: NO. Existing authored Graph kind and operation metadata are now consumed and enforced. No compatibility fallback is permitted.
 
@@ -63,26 +68,31 @@ New JSON schema: NO. Existing authored Graph kind and operation metadata are now
 - [x] No validation default that turns missing output into success
 - [x] No permissive JSON or unknown-field acceptance where config is authoritative
 - [x] No silent capacity return, truncation, registry overwrite, or hot-path resize in touched paths
+- [x] No full-capacity result masks an invalid listener registration
+- [x] No listener batch can publish or write before every collected Graph is certified
 - [x] No warning suppression used as a substitute for a root-cause fix
 - [x] No test dependency on an accidentally installed SDK/analyzer
 
 ### 8. Verification results
 
 - Repository-selected SDK: `dotnet --version` -> `9.0.312` from `global.json` (`9.0.100`, `latestFeature`).
-- Fresh detached worktree: `C:\001_AI\LudotsGraphEffectSsotVerify` at `dac90b21`; no shared `bin` or `obj` state from the implementation worktree.
-- Fresh `dotnet restore --force-evaluate` completed for both `GasTests.csproj` and `ArchitectureTests.csproj` using repository-declared dependencies.
-- Fresh Release builds: GasTests project `0 errors`; ArchitectureTests project `0 errors`.
-- Fresh full GasTests run: `2074 passed`, `0 failed`; TRX `C:\Users\sietg\AppData\Local\Temp\LudotsGasSsotResults\ludots-gas-clean-worktree.trx`.
-- Fresh full ArchitectureTests run: `192 passed`, `0 failed`; TRX `C:\Users\sietg\AppData\Local\Temp\LudotsGasSsotResults\ludots-architecture-clean-worktree.trx`.
-- Same-SDK Core Release rebuild comparison: `origin/main` `1558 warnings / 0 errors`; branch `1547 warnings / 0 errors`; `0` new warnings and `11` warnings removed. Remaining repository warnings are not suppressed or claimed as cleared.
+- A clean detached worktree at `dac90b21` completed forced restores and Release builds for both test projects using only repository-declared SDK and NuGet dependencies. The final delta adds no package, SDK, RID, or machine-local tool dependency.
+- Final focused listener/plan/transaction/allocation set: `93 passed`, `0 failed`.
+- Final expanded Graph/Effect/load/integration set: `176 passed`, `0 failed`.
+- Final full GasTests run: `2115 passed`, `0 failed`; the explicit scale benchmark was not executed and the final skipped count was `0`. TRX: `C:\Users\sietg\AppData\Local\Temp\LudotsGasSsotResults\ludots-gas-graph-effect-final.trx`.
+- Final full ArchitectureTests run: `192 passed`, `0 failed`; TRX: `C:\Users\sietg\AppData\Local\Temp\LudotsGasSsotResults\ludots-architecture-graph-effect-final.trx`.
+- Repository .NET toolchain guards: `4 passed`, `0 failed`.
+- The final Release no-incremental audit reports `0` errors and `0` warnings introduced by this delta. The repository still emits `2276` unique pre-existing warnings; `27` occur on unchanged lines in files touched elsewhere by this delta. They are not suppressed or claimed as cleared. This is a reproducible dotnet-only source build, not an offline-hermetic restore or a RID/self-contained deployment publish.
 - The 14 fixed `24 byte` allocation failures were NUnit/JIT measurement-window pollution. Strongly typed `NoInlining` measurement methods keep assertions outside the measured hot path; no tolerance, retry, minimum-of-runs, or warning suppression was added.
-- `git diff --check`: PASS. Implementation and verification worktrees were clean after generated acceptance artifacts were restored.
+- Listener collection, policy checks, register validation, and transaction certification retain exact `0` allocation after warmup across `10,000` dispatches.
+- `git diff --check`: PASS. Test-generated benchmark and acceptance artifacts were restored before review.
 
 ### 8.1 Review evidence
 
-- Pi Opus 4.6 final read-only review: `0` blocking findings; architecture `9.5/10`; new-developer comprehension `8.5/10`.
+- Pi Opus 4.6 initial read-only review of the prior head reported `0` blocking findings; architecture `9.5/10`; new-developer comprehension `8.5/10`.
 - Isolated Cursor Graph lane implemented the strict Graph contract; Codex independently reviewed and re-ran the merged tests.
-- Independent subagent reviews rejected static certification of the composite `ApplyRelation`, identified `SetParent` rollback gaps, kept `RemoveParent` / `EnsureLink` unsupported, and isolated the 24-byte test-instrumentation root cause.
+- Independent subagent reviews rejected static certification of the composite `ApplyRelation`, identified `SetParent` rollback gaps, kept `RemoveParent` / `EnsureLink` unsupported, isolated the 24-byte test-instrumentation root cause, and found the listener batch, fixed-buffer count, reserved ID 0, and four-window finalization gaps closed by the final pass.
+- Final independent Graph/Effect SSOT review: PASS, `102/102` focused tests. Final transaction/capacity/zero-allocation review: PASS, `7/7` focused tests. Final SDK/warning audit: PASS for repository-declared dotnet source builds and `0` warnings introduced by the delta, with the existing warning limitations recorded above.
 
 ### 9. Player-facing UAT
 
@@ -109,6 +119,26 @@ Feature: Data-driven ability and effect composition
     When the Mod is loaded
     Then loading fails with the exact asset and contract error
     And gameplay does not continue with a default behavior
+
+  Scenario: A broken reaction leaves no partial combat result
+    Given a hit would trigger several target or global reactions
+    And one dynamic reaction references an invalid Graph
+    When the hit is resolved
+    Then no phase write or earlier reaction event remains visible
+    And the invalid listener is reported explicitly
+
+  Scenario: A full event queue leaves no half-published reaction batch
+    Given one hit would publish two target or global reaction events
+    And the event queue has room for only one more event
+    When the hit is resolved
+    Then neither reaction event becomes visible
+    And the capacity failure is reported explicitly
+
+  Scenario: Proposal and calculation listeners remain pure
+    Given a Mod configures an event or gameplay write in an OnPropose or OnCalculate listener
+    When the Mod is loaded
+    Then loading fails with the exact effect, phase, listener, and Graph context
+    And the invalid rules never enter a playable session
 ```
 
 ### 10. Next variant test

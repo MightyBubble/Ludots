@@ -48,20 +48,31 @@ namespace Ludots.Tests.GAS
                     new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 0 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardFloat, A = 0, Imm = 1, B = 0 },
                 }, GraphKind.Effect);
+                int validationGraphId = 2;
+                programs.Register(validationGraphId, new[]
+                {
+                    new GraphInstruction { Op = (ushort)GraphNodeOp.ConstBool, Dst = 0, Imm = 1 },
+                }, GraphKind.Validation);
 
-                // All phases get the same Main graph
+                // Proposal uses validation; all other phases use the effect graph.
                 var ptDef = new PresetTypeDefinition { Type = EffectPresetType.None };
                 for (int p = 0; p < EffectPhaseConstants.PhaseCount; p++)
-                    ptDef.DefaultPhaseHandlers[(EffectPhaseId)p] = PhaseHandler.Graph(graphId);
+                {
+                    var phase = (EffectPhaseId)p;
+                    ptDef.DefaultPhaseHandlers[phase] = PhaseHandler.Graph(
+                        phase == EffectPhaseId.OnPropose ? validationGraphId : graphId);
+                }
                 presetTypes.Register(in ptDef);
 
                 // Build behavior with Pre+Post for every phase
                 var behavior = new EffectPhaseGraphBindings();
                 for (int p = 0; p < EffectPhaseConstants.PhaseCount && behavior.StepCount < EffectPhaseGraphBindings.MAX_STEPS; p++)
                 {
-                    behavior.TryAddStep((EffectPhaseId)p, PhaseSlot.Pre, graphId);
+                    var phase = (EffectPhaseId)p;
+                    int phaseGraphId = phase == EffectPhaseId.OnPropose ? validationGraphId : graphId;
+                    behavior.TryAddStep(phase, PhaseSlot.Pre, phaseGraphId);
                     if (behavior.StepCount < EffectPhaseGraphBindings.MAX_STEPS)
-                        behavior.TryAddStep((EffectPhaseId)p, PhaseSlot.Post, graphId);
+                        behavior.TryAddStep(phase, PhaseSlot.Post, phaseGraphId);
                 }
 
                 int entityCount = 500;
@@ -103,8 +114,18 @@ namespace Ludots.Tests.GAS
                         var phase = (EffectPhaseId)p;
                         for (int e = 0; e < entityCount; e++)
                         {
-                            executor.ExecutePhase(world, api, caster, targets[e], default, default,
-                                phase, in behavior, EffectPresetType.None);
+                            if (phase == EffectPhaseId.OnPropose)
+                            {
+                                _ = executor.ExecutePhaseWithValidationResult(
+                                    world, api, caster, targets[e], default, default,
+                                    phase, in behavior, EffectPresetType.None,
+                                    effectTagId: 0, effectTemplateId: 0, mergedParams: default);
+                            }
+                            else
+                            {
+                                executor.ExecutePhase(world, api, caster, targets[e], default, default,
+                                    phase, in behavior, EffectPresetType.None);
+                            }
                         }
                     }
                 }

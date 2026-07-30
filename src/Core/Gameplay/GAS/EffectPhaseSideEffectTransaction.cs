@@ -697,15 +697,27 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         _aggregateDirtyEntities[_aggregateDirtyCount++] = target;
     }
 
-    public void StageListenerRegistration(
+    public unsafe void StageListenerRegistration(
         in EffectContext context,
         in EffectPhaseListenerBuffer setup,
         int ownerEffectId)
     {
         RequireActive();
+        EffectPhaseListenerContract.RequireValidCount(setup.Count, EffectPhaseListenerBuffer.CAPACITY);
         if (setup.Count <= 0)
         {
             return;
+        }
+        for (int listenerIndex = 0; listenerIndex < setup.Count; listenerIndex++)
+        {
+            EffectPhaseListenerContract.RequireValidRegistration(
+                setup.ListenTagIds[listenerIndex],
+                setup.ListenEffectIds[listenerIndex],
+                (EffectPhaseId)setup.Phases[listenerIndex],
+                (PhaseListenerScope)setup.Scopes[listenerIndex],
+                (PhaseListenerActionFlags)setup.ActionFlags[listenerIndex],
+                setup.GraphProgramIds[listenerIndex],
+                setup.EventTagIds[listenerIndex]);
         }
         if (_listenerRegistrationCount >= _listenerRegistrations.Length)
         {

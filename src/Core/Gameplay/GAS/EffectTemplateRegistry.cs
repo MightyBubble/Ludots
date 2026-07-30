@@ -411,7 +411,7 @@ namespace Ludots.Core.Gameplay.GAS
 
         public void Register(int templateId, in EffectTemplateData data, string modId = null)
         {
-            if ((uint)templateId >= MaxTemplates) throw new ArgumentOutOfRangeException(nameof(templateId));
+            if (templateId <= 0 || templateId >= MaxTemplates) throw new ArgumentOutOfRangeException(nameof(templateId));
             if (_executionPlansFinalized)
             {
                 throw new InvalidOperationException(
@@ -489,45 +489,35 @@ namespace Ludots.Core.Gameplay.GAS
             return ref _templates[templateId];
         }
 
-        internal void FinalizeExecutionPlans(int templateId, in EffectExecutionPlanSet executionPlans)
+        internal void FinalizeExecutionPlans(EffectExecutionPlanSet[] executionPlans)
         {
-            if (!TryGetRef(templateId, out _))
+            ArgumentNullException.ThrowIfNull(executionPlans);
+            if (executionPlans.Length != MaxTemplates)
             {
-                throw new InvalidOperationException($"Cannot finalize execution plans for unregistered effect template {templateId}.");
+                throw new ArgumentException(
+                    $"Effect execution plan array must contain exactly {MaxTemplates} entries.",
+                    nameof(executionPlans));
             }
-
-            int word = templateId >> 6;
-            int bit = templateId & 63;
-            if ((_finalizedPlanBits[word] & (1UL << bit)) != 0)
-            {
-                throw new InvalidOperationException($"Execution plans for effect template {templateId} are already finalized.");
-            }
-
-            _executionPlans[templateId] = executionPlans;
-            _finalizedPlanBits[word] |= 1UL << bit;
-        }
-
-        internal void CompleteExecutionPlanFinalization()
-        {
             if (_executionPlansFinalized)
             {
                 throw new InvalidOperationException("Effect execution plans are already finalized.");
             }
 
-            for (int word = 0; word < _hasBits.Length; word++)
+            for (int templateId = 1; templateId < MaxTemplates; templateId++)
             {
-                ulong missing = _hasBits[word] & ~_finalizedPlanBits[word];
-                if (missing == 0)
+                if (!TryGetRef(templateId, out _))
                 {
                     continue;
                 }
-
-                int firstMissingBit = System.Numerics.BitOperations.TrailingZeroCount(missing);
-                int templateId = (word << 6) + firstMissingBit;
-                throw new InvalidOperationException(
-                    $"{UnfinalizedRegistryError}: templateId={templateId} has no execution plan.");
+                if (!executionPlans[templateId].IsFinalized)
+                {
+                    throw new InvalidOperationException(
+                        $"{UnfinalizedRegistryError}: templateId={templateId} does not have all four execution windows finalized.");
+                }
             }
 
+            Array.Copy(executionPlans, _executionPlans, MaxTemplates);
+            Array.Copy(_hasBits, _finalizedPlanBits, _hasBits.Length);
             _executionPlansFinalized = true;
         }
 
@@ -542,7 +532,7 @@ namespace Ludots.Core.Gameplay.GAS
 
         public bool TryGetExecutionPlans(int templateId, out EffectExecutionPlanSet executionPlans)
         {
-            if ((uint)templateId >= MaxTemplates)
+            if (!_executionPlansFinalized || (uint)templateId >= MaxTemplates)
             {
                 executionPlans = default;
                 return false;

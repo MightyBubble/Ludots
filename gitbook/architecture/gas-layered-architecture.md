@@ -37,9 +37,12 @@ EffectTemplate 是内容 SSOT，负责：
 - lifetime、duration、period 与 clock；
 - 标签、modifier、目标查询与派发参数；
 - `phaseGraphs` 的 Pre、Main、Post；
+- `listenerSetup` 的触发阶段、观察范围与 Graph 或事件动作；
 - 具体能力参数，例如 modifier 数值、事件标签和目标派发参数。
 
 当 `phaseGraphs.<phase>.main` 存在时，它替换 preset 的默认 Main。没有 Main 且没有 `skipMain` 时，才使用 preset 默认值。`main` 与 `skipMain=true` 同时出现属于配置错误。
+
+监听器不是模板之外的第二套效果管线。EffectTemplate 声明的 listener Graph 与 Pre、Main、Post 一起进入同一个执行计划认证；整个模板注册表的四个执行窗口全部编译成功后才一次性冻结。任一模板失败时，运行时看不到部分计划，也不能开始处理 Effect。
 
 ## 3. 详情
 
@@ -48,6 +51,12 @@ Effect 的阶段顺序为：
 `OnPropose -> OnCalculate -> OnResolve -> OnHit -> OnApply -> OnPeriod -> OnExpire -> OnRemove`
 
 每个阶段按 `Pre -> Main -> Post` 执行。模板 Main 的优先级高于 preset 默认 Main，因此 Graph 是行为组合的最终控制面。
+
+监听器仍在对应阶段的 Pre、Main、Post 之后执行，但运行时会先收集目标、来源和全局监听器，对整批动作完成字段、依赖、Graph kind、opcode 能力与固定容量认证，然后才允许该阶段产生第一笔写入。动态注册的坏 Graph ID、错误 kind、非法动作或缺失事件总线必须明确失败，不能让较早的监听器先发布事件或修改属性。
+
+`OnPropose` 只能通过验证入口执行，使用 Validation Graph，并且每个实际执行的 Graph 都必须明确写出通过结果；未写结果按拒绝处理。`OnCalculate` 使用 Effect Graph，但与 `OnPropose` 一样只允许纯操作。两个阶段的监听器都禁止发布事件或执行写操作。
+
+listener Graph 当前禁止 `InvokeBuiltin` 和 `LoadConfig*`。监听器动作没有携带其归属 EffectTemplate 的配置上下文，运行时模板是正在触发监听器的 EffectTemplate；在补齐归属模板与配置上下文之前放行，会让反伤、吸血、护盾等反应错误读取触发方参数。非纯阶段的所有 listener 动作都必须绑定现有 GAS 副作用事务，包括只发布事件的动作；事件容量不足、后续 Graph 缺少运行服务或执行失败时，都不能留下前面监听器或阶段的局部结果。
 
 宏观执行顺序由 `SystemGroup` 固定：
 
@@ -80,7 +89,9 @@ Core 提供属性修改、事件发布与 Effect 派发等原子操作。Mod Gra
 - 禁止在 `EffectTemplateLoader` 增加只服务某个具体玩法名称的分支。
 - 禁止未知 JSON 字段、未知 Graph kind、未知 opcode 或未写验证结果被默认接受。
 - 禁止 registry 重复注册后采用最后一次写入。
+- 禁止 EffectTemplate 使用保留 ID 0，或在四个执行窗口未全部编译时冻结 registry。
 - 禁止固定容量溢出时静默丢弃、截断或在热路径扩容。
+- 禁止容量已满掩盖无效 listener 注册；未使用的 Graph ID 或事件 ID 必须严格为 0。
 - 禁止阶段执行直接绕过事务写入外部系统。
 
 ## 6. UAT
@@ -109,6 +120,20 @@ Feature: 用数据组合新的技能效果
     When 游戏加载该 Mod
     Then 加载失败并指出具体资产和合同错误
     And 游戏不会使用默认行为继续运行
+
+  Scenario: 一个损坏的战斗反应不会留下半次结算
+    Given 目标受到攻击时会触发多个伤害反应
+    And 其中一个动态反应引用了不存在的 Graph
+    When 玩家命中该目标
+    Then 本次命中的阶段效果和所有反应都不会部分生效
+    And 不会提前发布命中事件
+    And 游戏明确报告损坏的监听器配置
+
+  Scenario: 纯计算阶段不能偷偷产生玩法副作用
+    Given Mod 作者在 OnPropose 或 OnCalculate 的监听器中配置了事件发布或属性写入
+    When 游戏加载该 Mod
+    Then 加载失败并指出具体模板、阶段和监听器
+    And 玩家不会进入使用了该无效规则的对局
 ```
 
 相关入口：

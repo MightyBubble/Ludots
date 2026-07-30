@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.CompilerServices;
+using Ludots.Core.GraphRuntime;
 
 namespace Ludots.Core.Gameplay.GAS.Components
 {
@@ -50,6 +51,149 @@ namespace Ludots.Core.Gameplay.GAS.Components
         Both = ExecuteGraph | PublishEvent,
     }
 
+    public static class EffectPhaseListenerContract
+    {
+        public const string InvalidRegistrationError = "GAS.PHASE_LISTENER.ERR.InvalidRegistration";
+        public const string InvalidBufferCountError = "GAS.PHASE_LISTENER.ERR.InvalidBufferCount";
+
+        public static bool IsPurePhase(EffectPhaseId phase)
+            => phase is EffectPhaseId.OnPropose or EffectPhaseId.OnCalculate;
+
+        public static GraphKind GetRequiredGraphKind(EffectPhaseId phase)
+            => phase == EffectPhaseId.OnPropose ? GraphKind.Validation : GraphKind.Effect;
+
+        public static bool TryValidateCount(int count, int capacity, out string reason)
+        {
+            if ((uint)count <= (uint)capacity)
+            {
+                reason = string.Empty;
+                return true;
+            }
+
+            reason = $"Listener buffer count must be between 0 and capacity={capacity}; actual={count}.";
+            return false;
+        }
+
+        public static bool TryValidateRegistration(
+            int listenTagId,
+            int listenEffectId,
+            EffectPhaseId phase,
+            PhaseListenerScope scope,
+            PhaseListenerActionFlags flags,
+            int graphProgramId,
+            int eventTagId,
+            out string reason)
+        {
+            if (listenTagId < 0 || listenEffectId < 0)
+            {
+                reason = "Listener match ids must be non-negative; zero is the wildcard.";
+                return false;
+            }
+            if ((uint)phase >= EffectPhaseConstants.PhaseCount)
+            {
+                reason = $"Unknown effect phase value '{(byte)phase}'.";
+                return false;
+            }
+            if (scope is not (PhaseListenerScope.Target or PhaseListenerScope.Source))
+            {
+                reason = $"Unknown listener scope value '{(byte)scope}'.";
+                return false;
+            }
+
+            return TryValidateAction(phase, flags, graphProgramId, eventTagId, out reason);
+        }
+
+        public static bool TryValidateAction(
+            EffectPhaseId phase,
+            PhaseListenerActionFlags flags,
+            int graphProgramId,
+            int eventTagId,
+            out string reason)
+        {
+            if ((uint)phase >= EffectPhaseConstants.PhaseCount)
+            {
+                reason = $"Unknown effect phase value '{(byte)phase}'.";
+                return false;
+            }
+            if (flags is not (PhaseListenerActionFlags.ExecuteGraph or
+                              PhaseListenerActionFlags.PublishEvent or
+                              PhaseListenerActionFlags.Both))
+            {
+                reason = $"Listener action flags '{(byte)flags}' are empty or contain unknown bits.";
+                return false;
+            }
+
+            bool executesGraph = (flags & PhaseListenerActionFlags.ExecuteGraph) != 0;
+            if ((executesGraph && graphProgramId <= 0) || (!executesGraph && graphProgramId != 0))
+            {
+                reason = executesGraph
+                    ? "ExecuteGraph requires a positive graph program id."
+                    : "A graph program id is not allowed when ExecuteGraph is absent.";
+                return false;
+            }
+
+            bool publishesEvent = (flags & PhaseListenerActionFlags.PublishEvent) != 0;
+            if ((publishesEvent && eventTagId <= 0) || (!publishesEvent && eventTagId != 0))
+            {
+                reason = publishesEvent
+                    ? "PublishEvent requires a positive event tag id."
+                    : "An event tag id is not allowed when PublishEvent is absent.";
+                return false;
+            }
+            if (publishesEvent && IsPurePhase(phase))
+            {
+                reason = $"Listener event publication is not allowed in pure phase '{phase}'.";
+                return false;
+            }
+
+            reason = string.Empty;
+            return true;
+        }
+
+        public static void RequireValidCount(int count, int capacity)
+        {
+            if (!TryValidateCount(count, capacity, out string reason))
+            {
+                throw new InvalidOperationException($"{InvalidBufferCountError}: {reason}");
+            }
+        }
+
+        public static void RequireValidRegistration(
+            int listenTagId,
+            int listenEffectId,
+            EffectPhaseId phase,
+            PhaseListenerScope scope,
+            PhaseListenerActionFlags flags,
+            int graphProgramId,
+            int eventTagId)
+        {
+            if (!TryValidateRegistration(
+                    listenTagId,
+                    listenEffectId,
+                    phase,
+                    scope,
+                    flags,
+                    graphProgramId,
+                    eventTagId,
+                    out string reason))
+            {
+                throw new InvalidOperationException($"{InvalidRegistrationError}: {reason}");
+            }
+        }
+
+        public static void RequireValidAction(
+            EffectPhaseId phase,
+            PhaseListenerActionFlags flags,
+            int graphProgramId,
+            int eventTagId)
+        {
+            if (!TryValidateAction(phase, flags, graphProgramId, eventTagId, out string reason))
+            {
+                throw new InvalidOperationException($"{InvalidRegistrationError}: {reason}");
+            }
+        }
+    }
+
     /// <summary>
     /// Collected action produced by listener matching. Used as a scratch buffer during dispatch.
     /// </summary>
@@ -97,6 +241,15 @@ namespace Ludots.Core.Gameplay.GAS.Components
         public bool TryAdd(int listenTagId, int listenEffectId, EffectPhaseId phase, PhaseListenerScope scope,
                            PhaseListenerActionFlags flags, int graphProgramId, int eventTagId, int priority, int ownerEffectId)
         {
+            EffectPhaseListenerContract.RequireValidCount(Count, CAPACITY);
+            EffectPhaseListenerContract.RequireValidRegistration(
+                listenTagId,
+                listenEffectId,
+                phase,
+                scope,
+                flags,
+                graphProgramId,
+                eventTagId);
             if (Count >= CAPACITY) return false;
             int idx = Count;
             ListenTagIds[idx] = listenTagId;
@@ -125,6 +278,7 @@ namespace Ludots.Core.Gameplay.GAS.Components
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool HasMatch(int effectTagId, int effectTemplateId, EffectPhaseId phase, PhaseListenerScope scope)
         {
+            EffectPhaseListenerContract.RequireValidCount(Count, CAPACITY);
             byte phaseB = (byte)phase;
             byte scopeB = (byte)scope;
             for (int i = 0; i < Count; i++)
@@ -146,6 +300,7 @@ namespace Ludots.Core.Gameplay.GAS.Components
         /// </summary>
         public void RemoveByOwner(int ownerEffectId)
         {
+            EffectPhaseListenerContract.RequireValidCount(Count, CAPACITY);
             int write = 0;
             for (int read = 0; read < Count; read++)
             {
@@ -180,6 +335,7 @@ namespace Ludots.Core.Gameplay.GAS.Components
         public int Collect(int effectTagId, int effectTemplateId, EffectPhaseId phase, PhaseListenerScope scope,
                            Span<PhaseListenerCollectedAction> output, out int dropped)
         {
+            EffectPhaseListenerContract.RequireValidCount(Count, CAPACITY);
             int collected = 0;
             dropped = 0;
             byte phaseB = (byte)phase;

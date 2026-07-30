@@ -19,6 +19,76 @@ namespace Ludots.Tests.GAS;
 [TestFixture]
 public sealed class InstantEffectTransactionTests
 {
+    [TestCase(-1)]
+    [TestCase(EffectPhaseListenerBuffer.CAPACITY + 1)]
+    public void ListenerRegistration_InvalidSetupCountFailsBeforeStaging(int invalidCount)
+    {
+        using World world = World.Create();
+        using var transaction = new EffectPhaseSideEffectTransaction(
+            world,
+            tagOps: null,
+            effectRequests: null,
+            spawnRequests: null,
+            presentationEvents: null,
+            attributeEntityCapacity: 2);
+        transaction.Begin();
+        EffectPhaseListenerBuffer setup = default;
+        setup.Count = invalidCount;
+        var context = new EffectContext
+        {
+            Source = world.Create(),
+            Target = world.Create(),
+        };
+
+        InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
+            transaction.StageListenerRegistration(in context, in setup, ownerEffectId: 1))!;
+
+        Assert.That(error.Message, Does.StartWith(EffectPhaseListenerContract.InvalidBufferCountError));
+        transaction.Rollback();
+    }
+
+    [Test]
+    public unsafe void ListenerRegistration_InvalidEntryFailsBeforeStaging()
+    {
+        using World world = World.Create();
+        Entity source = world.Create();
+        Entity target = world.Create();
+        using var transaction = new EffectPhaseSideEffectTransaction(
+            world,
+            tagOps: null,
+            effectRequests: null,
+            spawnRequests: null,
+            presentationEvents: null,
+            attributeEntityCapacity: 2);
+        transaction.Begin();
+        EffectPhaseListenerBuffer setup = default;
+        setup.Count = 1;
+        setup.Phases[0] = (byte)EffectPhaseId.OnApply;
+        setup.Scopes[0] = (byte)PhaseListenerScope.Target;
+        setup.ActionFlags[0] = (byte)PhaseListenerActionFlags.ExecuteGraph;
+        setup.GraphProgramIds[0] = 0;
+        var context = new EffectContext { Source = source, Target = target };
+
+        InvalidOperationException error;
+        try
+        {
+            transaction.StageListenerRegistration(in context, in setup, ownerEffectId: 1);
+            Assert.Fail("Expected invalid listener entry to fail before staging.");
+            return;
+        }
+        catch (InvalidOperationException ex)
+        {
+            error = ex;
+        }
+        setup.GraphProgramIds[0] = 1;
+        transaction.StageListenerRegistration(in context, in setup, ownerEffectId: 1);
+        transaction.Commit();
+
+        Assert.That(error.Message, Does.StartWith(EffectPhaseListenerContract.InvalidRegistrationError));
+        Assert.That(world.Has<EffectPhaseListenerBuffer>(target), Is.True);
+        Assert.That(world.Get<EffectPhaseListenerBuffer>(target).Count, Is.EqualTo(1));
+    }
+
     [Test]
     public void InstantGraph_WhenLaterOperationFails_RollsBackAllStagedSideEffects()
     {

@@ -121,6 +121,12 @@ namespace Ludots.Core.Gameplay.GAS
         public EffectWindowExecutionPlan Period { get; }
         public EffectWindowExecutionPlan Expire { get; }
         public EffectWindowExecutionPlan Remove { get; }
+
+        public bool IsFinalized
+            => Activation.Kind != EffectExecutionPlanKind.Unfinalized &&
+               Period.Kind != EffectExecutionPlanKind.Unfinalized &&
+               Expire.Kind != EffectExecutionPlanKind.Unfinalized &&
+               Remove.Kind != EffectExecutionPlanKind.Unfinalized;
     }
 
     public static class EffectExecutionPlanCompiler
@@ -143,6 +149,7 @@ namespace Ludots.Core.Gameplay.GAS
             ArgumentNullException.ThrowIfNull(graphPrograms);
             ArgumentNullException.ThrowIfNull(graphHandlers);
 
+            var plannedExecutionPlans = new EffectExecutionPlanSet[EffectTemplateRegistry.MaxTemplates];
             for (int templateId = 1; templateId < EffectTemplateRegistry.MaxTemplates; templateId++)
             {
                 if (!templates.TryGetRef(templateId, out int templateIndex))
@@ -156,6 +163,14 @@ namespace Ludots.Core.Gameplay.GAS
                 {
                     effectName = templateId.ToString();
                 }
+
+                AnalyzeListenerGraphs(
+                    templateId,
+                    effectName,
+                    assetPath,
+                    in template,
+                    graphPrograms,
+                    graphHandlers);
 
                 CompilePurePhase(
                     templateId,
@@ -201,11 +216,149 @@ namespace Ludots.Core.Gameplay.GAS
                 EffectWindowExecutionPlan periodPlan = CompileWindow(templateId, effectName, assetPath, in template, "Period", allowExternal: false, in period);
                 EffectWindowExecutionPlan expirePlan = CompileWindow(templateId, effectName, assetPath, in template, "Expire", allowExternal: false, in expire);
                 EffectWindowExecutionPlan removePlan = CompileWindow(templateId, effectName, assetPath, in template, "Remove", allowExternal: false, in remove);
-                var plans = new EffectExecutionPlanSet(in activationPlan, in periodPlan, in expirePlan, in removePlan);
-                templates.FinalizeExecutionPlans(templateId, in plans);
+                plannedExecutionPlans[templateId] = new EffectExecutionPlanSet(
+                    in activationPlan,
+                    in periodPlan,
+                    in expirePlan,
+                    in removePlan);
             }
 
-            templates.CompleteExecutionPlanFinalization();
+            templates.FinalizeExecutionPlans(plannedExecutionPlans);
+        }
+
+        private static unsafe void AnalyzeListenerGraphs(
+            int templateId,
+            string effectName,
+            string assetPath,
+            in EffectTemplateData template,
+            GraphProgramRegistry graphPrograms,
+            GasGraphOpHandlerTable graphHandlers)
+        {
+            EffectPhaseListenerBuffer listeners = template.ListenerSetup;
+            if (!EffectPhaseListenerContract.TryValidateCount(
+                    listeners.Count,
+                    EffectPhaseListenerBuffer.CAPACITY,
+                    out string countError))
+            {
+                throw CompositionError(
+                    InvalidCompositionError,
+                    assetPath,
+                    templateId,
+                    effectName,
+                    default,
+                    "EffectListener",
+                    countError);
+            }
+
+            for (int listenerIndex = 0; listenerIndex < listeners.Count; listenerIndex++)
+            {
+                EffectPhaseId phase = (EffectPhaseId)listeners.Phases[listenerIndex];
+                PhaseListenerScope scope = (PhaseListenerScope)listeners.Scopes[listenerIndex];
+                PhaseListenerActionFlags flags = (PhaseListenerActionFlags)listeners.ActionFlags[listenerIndex];
+                int graphId = listeners.GraphProgramIds[listenerIndex];
+                int eventTagId = listeners.EventTagIds[listenerIndex];
+                if (!EffectPhaseListenerContract.TryValidateRegistration(
+                        listeners.ListenTagIds[listenerIndex],
+                        listeners.ListenEffectIds[listenerIndex],
+                        phase,
+                        scope,
+                        flags,
+                        graphId,
+                        eventTagId,
+                        out string registrationError))
+                {
+                    throw CompositionError(
+                        InvalidCompositionError,
+                        assetPath,
+                        templateId,
+                        effectName,
+                        phase,
+                        "EffectListener",
+                        $"listenerIndex={listenerIndex}. {registrationError}");
+                }
+
+                if ((flags & PhaseListenerActionFlags.ExecuteGraph) == 0)
+                {
+                    continue;
+                }
+
+                if (!graphPrograms.TryGetProgram(graphId, out ReadOnlySpan<GraphInstruction> program))
+                {
+                    throw CompositionError(
+                        InvalidCompositionError,
+                        assetPath,
+                        templateId,
+                        effectName,
+                        phase,
+                        "EffectListener",
+                        $"listenerIndex={listenerIndex}, graphId={graphId}. Listener graph program is not registered.");
+                }
+
+                GraphKind expectedKind = EffectPhaseListenerContract.GetRequiredGraphKind(phase);
+                if (!graphPrograms.TryGetKind(graphId, out GraphKind actualKind) || actualKind != expectedKind)
+                {
+                    throw CompositionError(
+                        InvalidCompositionError,
+                        assetPath,
+                        templateId,
+                        effectName,
+                        phase,
+                        GraphIdRegistry.GetName(graphId),
+                        $"listenerIndex={listenerIndex}, graphId={graphId}. Listener graph kind is '{actualKind}', but '{expectedKind}' is required.");
+                }
+
+                bool requirePureOperations = EffectPhaseListenerContract.IsPurePhase(phase);
+                if (!GraphKindOperationPolicy.TryFindListenerViolation(
+                        expectedKind,
+                        program,
+                        graphHandlers,
+                        requirePureOperations,
+                        out GraphKindOperationPolicy.Violation violation))
+                {
+                    continue;
+                }
+
+                string errorCode = violation.Kind == GraphKindOperationPolicy.ViolationKind.MissingOperationMetadata
+                    ? MissingOperationMetadataError
+                    : UnsupportedOperationError;
+                string operationName = violation.HasMetadata
+                    ? violation.Metadata.Name
+                    : Enum.IsDefined(typeof(GraphNodeOp), violation.Operation)
+                        ? violation.Operation.ToString()
+                        : violation.EncodedOperation.ToString();
+                string allowedOperations = requirePureOperations
+                    ? "Pure"
+                    : "Pure or GasTransactional";
+                string phaseQualifier = requirePureOperations ? " in this pure phase" : string.Empty;
+                string context =
+                    $"listenerIndex={listenerIndex}, graphId={graphId}, instructionIndex={violation.InstructionIndex}.";
+                string reason = violation.Kind switch
+                {
+                    GraphKindOperationPolicy.ViolationKind.MissingOperationMetadata
+                        => $"{context} Listener graph opcode has no operation metadata.",
+                    GraphKindOperationPolicy.ViolationKind.OperationNotAllowed
+                        => $"{context} Operation is not allowed by GraphKind '{expectedKind}'.",
+                    GraphKindOperationPolicy.ViolationKind.ListenerOperationNotAllowed when
+                        violation.Metadata.Kind == EffectOperationKind.DelegatedBuiltin
+                        => $"{context} InvokeBuiltin is not accepted in listener Graphs because listener execution has no owner EffectTemplate context.",
+                    GraphKindOperationPolicy.ViolationKind.ListenerOperationNotAllowed when
+                        violation.Operation is GraphNodeOp.LoadConfigFloat or
+                                               GraphNodeOp.LoadConfigInt or
+                                               GraphNodeOp.LoadConfigEffectId
+                        => $"{context} {violation.Operation} is not accepted in listener Graphs because listener execution has no owner EffectTemplate config context.",
+                    GraphKindOperationPolicy.ViolationKind.ListenerOperationNotAllowed
+                        => $"{context} Listener graphs{phaseQualifier} require statically classified {allowedOperations} operations; metadata kind is '{violation.Metadata.Kind}'.",
+                    _ => throw new ArgumentOutOfRangeException(nameof(violation)),
+                };
+                throw CompositionError(
+                    errorCode,
+                    assetPath,
+                    templateId,
+                    effectName,
+                    phase,
+                    operationName,
+                    reason);
+            }
         }
 
         private static void CompilePurePhase(
@@ -312,9 +465,7 @@ namespace Ludots.Core.Gameplay.GAS
             GasGraphOpHandlerTable graphHandlers,
             ref WindowAccumulator accumulator)
         {
-            GraphKind expectedGraphKind = phase == EffectPhaseId.OnPropose
-                ? GraphKind.Validation
-                : GraphKind.Effect;
+            GraphKind expectedGraphKind = EffectPhaseListenerContract.GetRequiredGraphKind(phase);
             int preGraphId = template.PhaseGraphBindings.GetGraphId(phase, PhaseSlot.Pre);
             if (preGraphId > 0)
             {
@@ -371,6 +522,30 @@ namespace Ludots.Core.Gameplay.GAS
             if (!graphPrograms.TryGetProgram(graphId, out ReadOnlySpan<GraphInstruction> program))
             {
                 throw CompositionError(InvalidCompositionError, assetPath, templateId, effectName, phase, GraphIdRegistry.GetName(graphId), "Graph program is not registered.");
+            }
+
+            if (GraphKindOperationPolicy.TryFindViolation(
+                    expectedGraphKind,
+                    program,
+                    graphHandlers,
+                    out GraphKindOperationPolicy.Violation violation))
+            {
+                string errorCode = violation.Kind == GraphKindOperationPolicy.ViolationKind.MissingOperationMetadata
+                    ? MissingOperationMetadataError
+                    : UnsupportedOperationError;
+                string operationName = violation.HasMetadata
+                    ? violation.Metadata.Name
+                    : Enum.IsDefined(typeof(GraphNodeOp), violation.Operation)
+                        ? violation.Operation.ToString()
+                        : violation.EncodedOperation.ToString();
+                throw CompositionError(
+                    errorCode,
+                    assetPath,
+                    templateId,
+                    effectName,
+                    phase,
+                    operationName,
+                    $"graphId={graphId}, instructionIndex={violation.InstructionIndex}. Operation is not allowed by GraphKind '{expectedGraphKind}'.");
             }
 
             for (int i = 0; i < program.Length; i++)

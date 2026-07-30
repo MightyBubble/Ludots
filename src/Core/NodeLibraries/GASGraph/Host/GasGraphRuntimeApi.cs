@@ -349,6 +349,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         }
 
         internal bool HasActiveEffectSideEffectTransaction => _effectSideEffects?.IsActive == true;
+        internal bool HasGameplayEventBus => _eventBus != null;
 
         public void BindLoadedGraphRuntime(LoadedGraphRuntime? runtime)
         {

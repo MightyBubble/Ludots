@@ -1476,6 +1476,19 @@ namespace Ludots.Core.Gameplay.GAS.Config
                     eventTagId = TagRegistry.Register(lc.EventTag);
 
                 int priority = lc.Priority ?? 0;
+                if (!EffectPhaseListenerContract.TryValidateRegistration(
+                        listenTagId,
+                        listenEffectId,
+                        phaseId,
+                        scope,
+                        flags,
+                        graphProgramId,
+                        eventTagId,
+                        out string listenerError))
+                {
+                    throw new InvalidOperationException(
+                        $"Effect template '{ownerId}' in {relativePath}: phaseListeners[{i}] is invalid. {listenerError}");
+                }
                 if (!result.TryAddTemplate(listenTagId, listenEffectId, phaseId, scope, flags, graphProgramId, eventTagId, priority))
                 {
                     throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: phaseListeners exceeded capacity ({EffectPhaseListenerBuffer.CAPACITY}).");

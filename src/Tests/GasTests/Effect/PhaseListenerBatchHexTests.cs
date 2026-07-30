@@ -533,17 +533,930 @@ namespace Ludots.Tests.GAS
 
             var behavior = new EffectPhaseGraphBindings();
             var api = new GasGraphRuntimeApi(world, null, null, eventBus);
+            var transaction = new EffectPhaseSideEffectTransaction(
+                world,
+                tagOps: null,
+                effectRequests: null,
+                spawnRequests: null,
+                presentationEvents: null,
+                attributeEntityCapacity: 2);
+            transaction.Begin();
+            api.BeginEffectSideEffectTransaction(transaction);
 
             // Execute OnApply with effectTagId=10 (non-zero to trigger dispatch)
             executor.ExecutePhase(world, api, caster, target, default, default,
                 EffectPhaseId.OnApply, in behavior, EffectPresetType.None, effectTagId: 10, effectTemplateId: 1);
+            transaction.Commit();
+            api.EndEffectSideEffectTransaction(transaction);
 
             // The listener graph ran — we verify indirectly by checking the event bus is empty
             // (listener only has ExecuteGraph flag, no PublishEvent)
             eventBus.Update();
             That(eventBus.Events.Count, Is.EqualTo(0));
 
+            transaction.Dispose();
             world.Dispose();
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void ExecutorDispatch_UnsupportedListenerGraph_FailsBeforeExecution(bool useGlobalListener)
+        {
+            using var world = World.Create();
+            var caster = world.Create();
+            var target = world.Create();
+            var programs = new GraphProgramRegistry();
+            const int graphId = 31;
+            programs.Register(graphId,
+            [
+                new GraphInstruction { Op = (ushort)GraphNodeOp.BeginLifecycleTransaction },
+            ], GraphKind.Effect);
+            var globalListeners = new GlobalPhaseListenerRegistry();
+            if (useGlobalListener)
+            {
+                That(globalListeners.Register(
+                    listenTagId: 0,
+                    listenEffectId: 0,
+                    EffectPhaseId.OnApply,
+                    PhaseListenerActionFlags.ExecuteGraph,
+                    graphId,
+                    eventTagId: 0,
+                    priority: 0), Is.True);
+            }
+            else
+            {
+                var listenerBuffer = new EffectPhaseListenerBuffer();
+                That(listenerBuffer.TryAdd(
+                    listenTagId: 0,
+                    listenEffectId: 0,
+                    EffectPhaseId.OnApply,
+                    PhaseListenerScope.Target,
+                    PhaseListenerActionFlags.ExecuteGraph,
+                    graphId,
+                    eventTagId: 0,
+                    priority: 0,
+                    ownerEffectId: 1), Is.True);
+                world.Add(target, listenerBuffer);
+            }
+
+            var executor = new EffectPhaseExecutor(
+                programs,
+                new PresetTypeRegistry(),
+                new BuiltinHandlerRegistry(),
+                GasGraphOpHandlerTable.Instance,
+                new EffectTemplateRegistry(),
+                globalListeners,
+                new GameplayEventBus());
+            var api = new GasGraphRuntimeApi(world);
+            EffectPhaseGraphBindings behavior = default;
+
+            InvalidOperationException error = Throws<InvalidOperationException>(() =>
+                executor.ExecutePhase(
+                    world,
+                    api,
+                    caster,
+                    target,
+                    default,
+                    default,
+                    EffectPhaseId.OnApply,
+                    in behavior,
+                    EffectPresetType.None,
+                    effectTagId: 1,
+                    effectTemplateId: 1))!;
+
+            That(error.Message, Does.StartWith(GraphKindOperationPolicy.ListenerOperationNotAllowedError));
+        }
+
+        [Test]
+        public void ExecutorDispatch_ListenerInvokeBuiltinReportsMissingOwnerTemplateContext()
+        {
+            using var world = World.Create();
+            Entity caster = world.Create();
+            Entity target = world.Create();
+            const int graphId = 35;
+            var programs = new GraphProgramRegistry();
+            programs.Register(graphId,
+            [
+                new GraphInstruction
+                {
+                    Op = (ushort)GraphNodeOp.InvokeBuiltin,
+                    Imm = (int)BuiltinHandlerId.ApplyModifiers,
+                },
+            ], GraphKind.Effect);
+            EffectPhaseListenerBuffer listeners = default;
+            That(listeners.TryAdd(
+                0, 0, EffectPhaseId.OnApply, PhaseListenerScope.Target,
+                PhaseListenerActionFlags.ExecuteGraph, graphId, 0, priority: 0, ownerEffectId: 1), Is.True);
+            world.Add(target, listeners);
+            var executor = new EffectPhaseExecutor(
+                programs,
+                new PresetTypeRegistry(),
+                new BuiltinHandlerRegistry(),
+                GasGraphOpHandlerTable.Instance,
+                new EffectTemplateRegistry());
+            EffectPhaseGraphBindings behavior = default;
+
+            InvalidOperationException error = Throws<InvalidOperationException>(() =>
+                executor.ExecutePhase(
+                    world,
+                    new GasGraphRuntimeApi(world),
+                    caster,
+                    target,
+                    default,
+                    default,
+                    EffectPhaseId.OnApply,
+                    in behavior,
+                    EffectPresetType.None,
+                    effectTagId: 1,
+                    effectTemplateId: 1))!;
+
+            That(error.Message, Does.StartWith(GraphKindOperationPolicy.ListenerOperationNotAllowedError));
+            That(error.Message, Does.Contain("owner EffectTemplate context"));
+        }
+
+        [Test]
+        public void ListenerRegistration_ExecuteGraphWithoutGraphId_FailsClosed()
+        {
+            EffectPhaseListenerBuffer buffer = default;
+            InvalidOperationException entityError = Throws<InvalidOperationException>(() =>
+                buffer.TryAdd(
+                    listenTagId: 0,
+                    listenEffectId: 0,
+                    EffectPhaseId.OnApply,
+                    PhaseListenerScope.Target,
+                    PhaseListenerActionFlags.Both,
+                    graphProgramId: 0,
+                    eventTagId: 10,
+                    priority: 0,
+                    ownerEffectId: 1))!;
+            var globalListeners = new GlobalPhaseListenerRegistry();
+            InvalidOperationException globalError = Throws<InvalidOperationException>(() =>
+                globalListeners.Register(
+                    listenTagId: 0,
+                    listenEffectId: 0,
+                    EffectPhaseId.OnApply,
+                    PhaseListenerActionFlags.Both,
+                    graphProgramId: 0,
+                    eventTagId: 10,
+                    priority: 0))!;
+
+            That(entityError.Message, Does.StartWith("GAS.PHASE_LISTENER.ERR.InvalidRegistration"));
+            That(globalError.Message, Does.StartWith("GAS.PHASE_LISTENER.ERR.InvalidRegistration"));
+            That(buffer.Count, Is.EqualTo(0));
+            That(globalListeners.Count, Is.EqualTo(0));
+        }
+
+        [TestCase(PhaseListenerActionFlags.PublishEvent, -1, 10)]
+        [TestCase(PhaseListenerActionFlags.ExecuteGraph, 10, -1)]
+        public void ListenerRegistration_UnusedIdsMustBeExactlyZero(
+            PhaseListenerActionFlags flags,
+            int graphProgramId,
+            int eventTagId)
+        {
+            EffectPhaseListenerBuffer buffer = default;
+            var globalListeners = new GlobalPhaseListenerRegistry();
+
+            InvalidOperationException entityError = Throws<InvalidOperationException>(() =>
+                buffer.TryAdd(
+                    0,
+                    0,
+                    EffectPhaseId.OnApply,
+                    PhaseListenerScope.Target,
+                    flags,
+                    graphProgramId,
+                    eventTagId,
+                    priority: 0,
+                    ownerEffectId: 1))!;
+            InvalidOperationException globalError = Throws<InvalidOperationException>(() =>
+                globalListeners.Register(
+                    0,
+                    0,
+                    EffectPhaseId.OnApply,
+                    flags,
+                    graphProgramId,
+                    eventTagId,
+                    priority: 0))!;
+
+            That(entityError.Message, Does.StartWith(EffectPhaseListenerContract.InvalidRegistrationError));
+            That(globalError.Message, Does.StartWith(EffectPhaseListenerContract.InvalidRegistrationError));
+        }
+
+        [Test]
+        public void ListenerRegistration_FullCapacityDoesNotMaskInvalidInput()
+        {
+            EffectPhaseListenerBuffer buffer = default;
+            for (int i = 0; i < EffectPhaseListenerBuffer.CAPACITY; i++)
+            {
+                That(buffer.TryAdd(
+                    i,
+                    0,
+                    EffectPhaseId.OnApply,
+                    PhaseListenerScope.Target,
+                    PhaseListenerActionFlags.ExecuteGraph,
+                    graphProgramId: i + 1,
+                    eventTagId: 0,
+                    priority: 0,
+                    ownerEffectId: 1), Is.True);
+            }
+
+            var globalListeners = new GlobalPhaseListenerRegistry();
+            for (int i = 0; i < GlobalPhaseListenerRegistry.MAX_LISTENERS; i++)
+            {
+                That(globalListeners.Register(
+                    i,
+                    0,
+                    EffectPhaseId.OnApply,
+                    PhaseListenerActionFlags.ExecuteGraph,
+                    graphProgramId: i + 1,
+                    eventTagId: 0,
+                    priority: 0), Is.True);
+            }
+
+            InvalidOperationException entityError = Throws<InvalidOperationException>(() =>
+                buffer.TryAdd(
+                    0,
+                    0,
+                    EffectPhaseId.OnApply,
+                    PhaseListenerScope.Target,
+                    PhaseListenerActionFlags.ExecuteGraph,
+                    graphProgramId: 0,
+                    eventTagId: 0,
+                    priority: 0,
+                    ownerEffectId: 1))!;
+            InvalidOperationException globalError = Throws<InvalidOperationException>(() =>
+                globalListeners.Register(
+                    0,
+                    0,
+                    EffectPhaseId.OnApply,
+                    PhaseListenerActionFlags.ExecuteGraph,
+                    graphProgramId: 0,
+                    eventTagId: 0,
+                    priority: 0))!;
+
+            That(entityError.Message, Does.StartWith(EffectPhaseListenerContract.InvalidRegistrationError));
+            That(globalError.Message, Does.StartWith(EffectPhaseListenerContract.InvalidRegistrationError));
+        }
+
+        [TestCase(EffectPhaseId.OnPropose)]
+        [TestCase(EffectPhaseId.OnCalculate)]
+        public void ListenerRegistration_PurePhaseEvent_FailsClosed(EffectPhaseId phase)
+        {
+            EffectPhaseListenerBuffer buffer = default;
+            InvalidOperationException entityError = Throws<InvalidOperationException>(() =>
+                buffer.TryAdd(
+                    listenTagId: 0,
+                    listenEffectId: 0,
+                    phase,
+                    PhaseListenerScope.Target,
+                    PhaseListenerActionFlags.PublishEvent,
+                    graphProgramId: 0,
+                    eventTagId: 10,
+                    priority: 0,
+                    ownerEffectId: 1))!;
+            var globalListeners = new GlobalPhaseListenerRegistry();
+            InvalidOperationException globalError = Throws<InvalidOperationException>(() =>
+                globalListeners.Register(
+                    listenTagId: 0,
+                    listenEffectId: 0,
+                    phase,
+                    PhaseListenerActionFlags.PublishEvent,
+                    graphProgramId: 0,
+                    eventTagId: 10,
+                    priority: 0))!;
+
+            That(entityError.Message, Does.Contain("pure phase"));
+            That(globalError.Message, Does.Contain("pure phase"));
+            That(buffer.Count, Is.EqualTo(0));
+            That(globalListeners.Count, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void ExecutorDispatch_EventListenerWithoutEventBus_FailsBeforeDispatch()
+        {
+            using var world = World.Create();
+            var caster = world.Create();
+            var target = world.Create();
+            EffectPhaseListenerBuffer listeners = default;
+            That(listeners.TryAdd(
+                listenTagId: 0,
+                listenEffectId: 0,
+                EffectPhaseId.OnApply,
+                PhaseListenerScope.Target,
+                PhaseListenerActionFlags.PublishEvent,
+                graphProgramId: 0,
+                eventTagId: 10,
+                priority: 0,
+                ownerEffectId: 1), Is.True);
+            world.Add(target, listeners);
+            var executor = new EffectPhaseExecutor(
+                new GraphProgramRegistry(),
+                new PresetTypeRegistry(),
+                new BuiltinHandlerRegistry(),
+                GasGraphOpHandlerTable.Instance,
+                new EffectTemplateRegistry());
+            EffectPhaseGraphBindings behavior = default;
+
+            InvalidOperationException error = Throws<InvalidOperationException>(() =>
+                executor.ExecutePhase(
+                    world,
+                    new GasGraphRuntimeApi(world),
+                    caster,
+                    target,
+                    default,
+                    default,
+                    EffectPhaseId.OnApply,
+                    in behavior,
+                    EffectPresetType.None,
+                    effectTagId: 1,
+                    effectTemplateId: 1))!;
+
+            That(error.Message, Does.StartWith(EffectPhaseExecutor.MissingListenerEventBusError));
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void ExecutorDispatch_EventOnlyBatchCapacityFailureLeavesNoPartialEvent(bool useGlobalListener)
+        {
+            using var world = World.Create();
+            Entity caster = world.Create();
+            Entity target = world.Create();
+            var eventBus = new GameplayEventBus();
+            for (int i = 0; i < eventBus.Capacity - 1; i++)
+            {
+                eventBus.Publish(new GameplayEvent { TagId = 1, Source = caster, Target = target });
+            }
+
+            var globalListeners = new GlobalPhaseListenerRegistry();
+            if (useGlobalListener)
+            {
+                That(globalListeners.Register(
+                    0, 0, EffectPhaseId.OnApply,
+                    PhaseListenerActionFlags.PublishEvent, 0, 501, priority: 10), Is.True);
+                That(globalListeners.Register(
+                    0, 0, EffectPhaseId.OnApply,
+                    PhaseListenerActionFlags.PublishEvent, 0, 502, priority: 0), Is.True);
+            }
+            else
+            {
+                EffectPhaseListenerBuffer listeners = default;
+                That(listeners.TryAdd(
+                    0, 0, EffectPhaseId.OnApply, PhaseListenerScope.Target,
+                    PhaseListenerActionFlags.PublishEvent, 0, 501, priority: 10, ownerEffectId: 1), Is.True);
+                That(listeners.TryAdd(
+                    0, 0, EffectPhaseId.OnApply, PhaseListenerScope.Target,
+                    PhaseListenerActionFlags.PublishEvent, 0, 502, priority: 0, ownerEffectId: 1), Is.True);
+                world.Add(target, listeners);
+            }
+
+            var executor = new EffectPhaseExecutor(
+                new GraphProgramRegistry(),
+                new PresetTypeRegistry(),
+                new BuiltinHandlerRegistry(),
+                GasGraphOpHandlerTable.Instance,
+                new EffectTemplateRegistry(),
+                globalListeners,
+                eventBus);
+            var api = new GasGraphRuntimeApi(world, eventBus: eventBus);
+            using var transaction = new EffectPhaseSideEffectTransaction(
+                world,
+                tagOps: null,
+                effectRequests: null,
+                spawnRequests: null,
+                presentationEvents: null,
+                attributeEntityCapacity: 2);
+            transaction.Begin();
+            api.BeginEffectSideEffectTransaction(transaction);
+
+            InvalidOperationException error = Throws<InvalidOperationException>(() =>
+                executor.DispatchPhaseListeners(
+                    world,
+                    api,
+                    caster,
+                    target,
+                    default,
+                    default,
+                    EffectPhaseId.OnApply,
+                    effectTagId: 1,
+                    effectTemplateId: 1))!;
+
+            That(error.Message, Does.StartWith(EffectPhaseSideEffectTransaction.CapacityExceededError));
+            That(eventBus.AvailableNextCapacity, Is.EqualTo(1));
+            api.EndEffectSideEffectTransaction(transaction);
+            transaction.Rollback();
+        }
+
+        [TestCase(false)]
+        [TestCase(true)]
+        public void ExecutorDispatch_InvalidLaterGraphLeavesNoEarlierEvent(bool useGlobalListener)
+        {
+            using var world = World.Create();
+            Entity caster = world.Create();
+            Entity target = world.Create();
+            const int missingGraphId = 987;
+            const int eventTagId = 654;
+            var globalListeners = new GlobalPhaseListenerRegistry();
+            if (useGlobalListener)
+            {
+                That(globalListeners.Register(
+                    0, 0, EffectPhaseId.OnApply,
+                    PhaseListenerActionFlags.PublishEvent, 0, eventTagId, priority: 100), Is.True);
+                That(globalListeners.Register(
+                    0, 0, EffectPhaseId.OnApply,
+                    PhaseListenerActionFlags.ExecuteGraph, missingGraphId, 0, priority: 0), Is.True);
+            }
+            else
+            {
+                EffectPhaseListenerBuffer listeners = default;
+                That(listeners.TryAdd(
+                    0, 0, EffectPhaseId.OnApply, PhaseListenerScope.Target,
+                    PhaseListenerActionFlags.PublishEvent, 0, eventTagId, priority: 100, ownerEffectId: 1), Is.True);
+                That(listeners.TryAdd(
+                    0, 0, EffectPhaseId.OnApply, PhaseListenerScope.Target,
+                    PhaseListenerActionFlags.ExecuteGraph, missingGraphId, 0, priority: 0, ownerEffectId: 1), Is.True);
+                world.Add(target, listeners);
+            }
+            var eventBus = new GameplayEventBus();
+            var executor = new EffectPhaseExecutor(
+                new GraphProgramRegistry(),
+                new PresetTypeRegistry(),
+                new BuiltinHandlerRegistry(),
+                GasGraphOpHandlerTable.Instance,
+                new EffectTemplateRegistry(),
+                globalListeners,
+                eventBus);
+
+            InvalidOperationException error = Throws<InvalidOperationException>(() =>
+                executor.DispatchPhaseListeners(
+                    world,
+                    new GasGraphRuntimeApi(world, eventBus: eventBus),
+                    caster,
+                    target,
+                    default,
+                    default,
+                    EffectPhaseId.OnApply,
+                    effectTagId: 1,
+                    effectTemplateId: 1))!;
+
+            eventBus.Update();
+            That(error.Message, Does.Contain($"graphId={missingGraphId}"));
+            That(eventBus.Events.Count, Is.Zero);
+        }
+
+        [Test]
+        public void ExecutorDispatch_ReusedGraphIdWithInvalidRegisterFailsBeforeEarlierEvent()
+        {
+            using var world = World.Create();
+            Entity caster = world.Create();
+            Entity target = world.Create();
+            const int graphId = 990;
+            const int eventTagId = 991;
+            var programs = new GraphProgramRegistry();
+            programs.Register(graphId,
+            [
+                new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = 1f },
+            ], GraphKind.Effect);
+            EffectPhaseListenerBuffer listeners = default;
+            That(listeners.TryAdd(
+                0, 0, EffectPhaseId.OnApply, PhaseListenerScope.Target,
+                PhaseListenerActionFlags.PublishEvent, 0, eventTagId, priority: 100, ownerEffectId: 1), Is.True);
+            That(listeners.TryAdd(
+                0, 0, EffectPhaseId.OnApply, PhaseListenerScope.Target,
+                PhaseListenerActionFlags.ExecuteGraph, graphId, 0, priority: 0, ownerEffectId: 1), Is.True);
+            world.Add(target, listeners);
+            var eventBus = new GameplayEventBus();
+            var executor = new EffectPhaseExecutor(
+                programs,
+                new PresetTypeRegistry(),
+                new BuiltinHandlerRegistry(),
+                GasGraphOpHandlerTable.Instance,
+                new EffectTemplateRegistry(),
+                eventBus: eventBus);
+            var api = new GasGraphRuntimeApi(world, eventBus: eventBus);
+            EffectPhaseGraphBindings behavior = default;
+            using (var transaction = new EffectPhaseSideEffectTransaction(
+                       world,
+                       tagOps: null,
+                       effectRequests: null,
+                       spawnRequests: null,
+                       presentationEvents: null,
+                       attributeEntityCapacity: 2))
+            {
+                transaction.Begin();
+                api.BeginEffectSideEffectTransaction(transaction);
+                executor.ExecutePhase(
+                    world, api, caster, target, default, default,
+                    EffectPhaseId.OnApply, in behavior, EffectPresetType.None,
+                    effectTagId: 1, effectTemplateId: 1);
+                transaction.Commit();
+                api.EndEffectSideEffectTransaction(transaction);
+            }
+            eventBus.Update();
+            That(eventBus.Events.Count, Is.EqualTo(1));
+            eventBus.Update();
+
+            programs.Clear();
+            programs.Register(graphId,
+            [
+                new GraphInstruction
+                {
+                    Op = (ushort)GraphNodeOp.ConstFloat,
+                    Dst = GraphVmLimits.MaxFloatRegisters,
+                    ImmF = 1f,
+                },
+            ], GraphKind.Effect);
+
+            InvalidOperationException error = Throws<InvalidOperationException>(() =>
+                executor.ExecutePhase(
+                    world, api, caster, target, default, default,
+                    EffectPhaseId.OnApply, in behavior, EffectPresetType.None,
+                    effectTagId: 1, effectTemplateId: 1))!;
+
+            eventBus.Update();
+            That(error.Message, Does.StartWith(EffectPhaseExecutor.GraphProgramScratchCapacityExceededError));
+            That(error.Message, Does.Contain("operand=Dst"));
+            That(error.Message, Does.Contain($"registerIndex={GraphVmLimits.MaxFloatRegisters}"));
+            That(eventBus.Events.Count, Is.Zero);
+        }
+
+        [Test]
+        public void ExecutorDispatch_NonPureListenerGraphRequiresTransactionBeforePhaseWrite()
+        {
+            using var world = World.Create();
+            int healthId = AttributeRegistry.Register("Test.ListenerTransactionRequired.Health");
+            Entity caster = world.Create();
+            Entity target = world.Create(new AttributeBuffer(), new DirtyFlags());
+            world.Get<AttributeBuffer>(target).SetBase(healthId, 100f);
+            const int phaseGraphId = 992;
+            const int listenerGraphId = 993;
+            var programs = new GraphProgramRegistry();
+            programs.Register(phaseGraphId,
+            [
+                new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 0 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = -25f },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.ModifyAttributeAdd, A = 0, B = 0, Imm = healthId },
+            ], GraphKind.Effect);
+            programs.Register(listenerGraphId,
+            [
+                new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = 1f },
+            ], GraphKind.Effect);
+            EffectPhaseGraphBindings behavior = default;
+            That(behavior.TryAddStep(EffectPhaseId.OnApply, PhaseSlot.Pre, phaseGraphId), Is.True);
+            EffectPhaseListenerBuffer listeners = default;
+            That(listeners.TryAdd(
+                0, 0, EffectPhaseId.OnApply, PhaseListenerScope.Target,
+                PhaseListenerActionFlags.ExecuteGraph, listenerGraphId, 0, priority: 0, ownerEffectId: 1), Is.True);
+            world.Add(target, listeners);
+            var executor = new EffectPhaseExecutor(
+                programs,
+                new PresetTypeRegistry(),
+                new BuiltinHandlerRegistry(),
+                GasGraphOpHandlerTable.Instance,
+                new EffectTemplateRegistry());
+
+            InvalidOperationException error = Throws<InvalidOperationException>(() =>
+                executor.ExecutePhase(
+                    world,
+                    new GasGraphRuntimeApi(world, tagOps: _tagOps),
+                    caster,
+                    target,
+                    default,
+                    default,
+                    EffectPhaseId.OnApply,
+                    in behavior,
+                    EffectPresetType.None,
+                    effectTagId: 1,
+                    effectTemplateId: 1))!;
+
+            That(error.Message, Does.StartWith(EffectPhaseExecutor.ListenerTransactionRequiredError));
+            That(world.Get<AttributeBuffer>(target).GetCurrent(healthId), Is.EqualTo(100f));
+        }
+
+        [Test]
+        public void ExecutorDispatch_ListenerSendEventRequiresGraphRuntimeBusBeforePhaseWrite()
+        {
+            using var world = World.Create();
+            int healthId = AttributeRegistry.Register("Test.ListenerGraphEventBus.Health");
+            Entity caster = world.Create();
+            Entity target = world.Create(new AttributeBuffer(), new DirtyFlags());
+            world.Get<AttributeBuffer>(target).SetBase(healthId, 100f);
+            const int phaseGraphId = 994;
+            const int listenerGraphId = 995;
+            var programs = new GraphProgramRegistry();
+            programs.Register(phaseGraphId,
+            [
+                new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 0 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = -25f },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.ModifyAttributeAdd, A = 0, B = 0, Imm = healthId },
+            ], GraphKind.Effect);
+            programs.Register(listenerGraphId,
+            [
+                new GraphInstruction { Op = (ushort)GraphNodeOp.SendEvent, Imm = 1 },
+            ], GraphKind.Effect);
+            EffectPhaseGraphBindings behavior = default;
+            That(behavior.TryAddStep(EffectPhaseId.OnApply, PhaseSlot.Pre, phaseGraphId), Is.True);
+            EffectPhaseListenerBuffer listeners = default;
+            That(listeners.TryAdd(
+                0, 0, EffectPhaseId.OnApply, PhaseListenerScope.Target,
+                PhaseListenerActionFlags.ExecuteGraph, listenerGraphId, 0, priority: 0, ownerEffectId: 1), Is.True);
+            world.Add(target, listeners);
+            var executor = new EffectPhaseExecutor(
+                programs,
+                new PresetTypeRegistry(),
+                new BuiltinHandlerRegistry(),
+                GasGraphOpHandlerTable.Instance,
+                new EffectTemplateRegistry(),
+                eventBus: new GameplayEventBus());
+            var api = new GasGraphRuntimeApi(world, tagOps: _tagOps);
+            using var transaction = new EffectPhaseSideEffectTransaction(
+                world,
+                tagOps: _tagOps,
+                effectRequests: null,
+                spawnRequests: null,
+                presentationEvents: null,
+                attributeEntityCapacity: 2);
+            transaction.Begin();
+            api.BeginEffectSideEffectTransaction(transaction);
+
+            InvalidOperationException error = Throws<InvalidOperationException>(() =>
+                executor.ExecutePhase(
+                    world, api, caster, target, default, default,
+                    EffectPhaseId.OnApply, in behavior, EffectPresetType.None,
+                    effectTagId: 1, effectTemplateId: 1))!;
+            api.EndEffectSideEffectTransaction(transaction);
+            transaction.Rollback();
+
+            That(error.Message, Does.Contain(EffectPhaseExecutor.MissingListenerEventBusError));
+            That(world.Get<AttributeBuffer>(target).GetCurrent(healthId), Is.EqualTo(100f));
+        }
+
+        [Test]
+        public void ExecutorPhase_InvalidListenerFailsBeforePhaseGraphWrites()
+        {
+            using var world = World.Create();
+            int healthId = AttributeRegistry.Register("Test.ListenerPreflight.Health");
+            Entity caster = world.Create();
+            Entity target = world.Create(new AttributeBuffer(), new DirtyFlags());
+            world.Get<AttributeBuffer>(target).SetBase(healthId, 100f);
+            const int phaseGraphId = 988;
+            const int missingListenerGraphId = 989;
+            var programs = new GraphProgramRegistry();
+            programs.Register(phaseGraphId,
+            [
+                new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 0 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = -25f },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.ModifyAttributeAdd, A = 0, B = 0, Imm = healthId },
+            ], GraphKind.Effect);
+            EffectPhaseGraphBindings behavior = default;
+            That(behavior.TryAddStep(EffectPhaseId.OnApply, PhaseSlot.Pre, phaseGraphId), Is.True);
+            EffectPhaseListenerBuffer listeners = default;
+            That(listeners.TryAdd(
+                0, 0, EffectPhaseId.OnApply, PhaseListenerScope.Target,
+                PhaseListenerActionFlags.ExecuteGraph, missingListenerGraphId, 0, priority: 0, ownerEffectId: 1), Is.True);
+            world.Add(target, listeners);
+            var executor = new EffectPhaseExecutor(
+                programs,
+                new PresetTypeRegistry(),
+                new BuiltinHandlerRegistry(),
+                GasGraphOpHandlerTable.Instance,
+                new EffectTemplateRegistry());
+
+            Throws<InvalidOperationException>(() =>
+                executor.ExecutePhase(
+                    world,
+                    new GasGraphRuntimeApi(world, tagOps: _tagOps),
+                    caster,
+                    target,
+                    default,
+                    default,
+                    EffectPhaseId.OnApply,
+                    in behavior,
+                    EffectPresetType.None,
+                    effectTagId: 1,
+                    effectTemplateId: 1));
+
+            That(world.Get<AttributeBuffer>(target).GetCurrent(healthId), Is.EqualTo(100f));
+        }
+
+        [Test]
+        public void Executor_OnProposeRequiresValidationEntryPoint()
+        {
+            using var world = World.Create();
+            var executor = new EffectPhaseExecutor(
+                new GraphProgramRegistry(),
+                new PresetTypeRegistry(),
+                new BuiltinHandlerRegistry(),
+                GasGraphOpHandlerTable.Instance,
+                new EffectTemplateRegistry());
+            EffectPhaseGraphBindings behavior = default;
+
+            InvalidOperationException error = Throws<InvalidOperationException>(() =>
+                executor.ExecutePhase(
+                    world,
+                    new GasGraphRuntimeApi(world),
+                    world.Create(),
+                    world.Create(),
+                    default,
+                    default,
+                    EffectPhaseId.OnPropose,
+                    in behavior,
+                    EffectPresetType.None))!;
+
+            That(error.Message, Does.StartWith("GAS.EFFECT_PHASE.ERR.ValidationEntryPointRequired"));
+        }
+
+        [Test]
+        public void Executor_OnProposeValidationListener_UsesValidationGraphKind()
+        {
+            using var world = World.Create();
+            var caster = world.Create();
+            var target = world.Create();
+            const int graphId = 32;
+            var programs = new GraphProgramRegistry();
+            programs.Register(graphId,
+            [
+                new GraphInstruction { Op = (ushort)GraphNodeOp.ConstBool, Dst = 0, Imm = 1 },
+            ], GraphKind.Validation);
+            EffectPhaseListenerBuffer listeners = default;
+            That(listeners.TryAdd(
+                listenTagId: 0,
+                listenEffectId: 0,
+                EffectPhaseId.OnPropose,
+                PhaseListenerScope.Target,
+                PhaseListenerActionFlags.ExecuteGraph,
+                graphId,
+                eventTagId: 0,
+                priority: 0,
+                ownerEffectId: 1), Is.True);
+            world.Add(target, listeners);
+            var executor = new EffectPhaseExecutor(
+                programs,
+                new PresetTypeRegistry(),
+                new BuiltinHandlerRegistry(),
+                GasGraphOpHandlerTable.Instance,
+                new EffectTemplateRegistry());
+            EffectPhaseGraphBindings behavior = default;
+            EffectConfigParams mergedParams = default;
+
+            bool accepted = executor.ExecutePhaseWithValidationResult(
+                world,
+                new GasGraphRuntimeApi(world),
+                caster,
+                target,
+                default,
+                default,
+                EffectPhaseId.OnPropose,
+                in behavior,
+                EffectPresetType.None,
+                effectTagId: 1,
+                effectTemplateId: 1,
+                in mergedParams);
+
+            That(accepted, Is.True);
+        }
+
+        [Test]
+        public void Executor_OnProposeEmptyValidationListener_FailsClosed()
+        {
+            using var world = World.Create();
+            var caster = world.Create();
+            var target = world.Create();
+            const int graphId = 33;
+            var programs = new GraphProgramRegistry();
+            programs.Register(graphId, Array.Empty<GraphInstruction>(), GraphKind.Validation);
+            EffectPhaseListenerBuffer listeners = default;
+            That(listeners.TryAdd(
+                listenTagId: 0,
+                listenEffectId: 0,
+                EffectPhaseId.OnPropose,
+                PhaseListenerScope.Target,
+                PhaseListenerActionFlags.ExecuteGraph,
+                graphId,
+                eventTagId: 0,
+                priority: 0,
+                ownerEffectId: 1), Is.True);
+            world.Add(target, listeners);
+            var executor = new EffectPhaseExecutor(
+                programs,
+                new PresetTypeRegistry(),
+                new BuiltinHandlerRegistry(),
+                GasGraphOpHandlerTable.Instance,
+                new EffectTemplateRegistry());
+            EffectPhaseGraphBindings behavior = default;
+            EffectConfigParams mergedParams = default;
+
+            bool accepted = executor.ExecutePhaseWithValidationResult(
+                world,
+                new GasGraphRuntimeApi(world),
+                caster,
+                target,
+                default,
+                default,
+                EffectPhaseId.OnPropose,
+                in behavior,
+                EffectPresetType.None,
+                effectTagId: 1,
+                effectTemplateId: 1,
+                in mergedParams);
+
+            That(accepted, Is.False);
+        }
+
+        [Test]
+        public void Executor_OnProposeListenerRejectionCannotBeOverwrittenByLaterPass()
+        {
+            using var world = World.Create();
+            Entity caster = world.Create();
+            Entity target = world.Create();
+            const int rejectGraphId = 36;
+            const int passGraphId = 37;
+            var programs = new GraphProgramRegistry();
+            programs.Register(rejectGraphId,
+            [
+                new GraphInstruction { Op = (ushort)GraphNodeOp.ConstBool, Dst = 0, Imm = 0 },
+            ], GraphKind.Validation);
+            programs.Register(passGraphId,
+            [
+                new GraphInstruction { Op = (ushort)GraphNodeOp.ConstBool, Dst = 0, Imm = 1 },
+            ], GraphKind.Validation);
+            EffectPhaseListenerBuffer listeners = default;
+            That(listeners.TryAdd(
+                0, 0, EffectPhaseId.OnPropose, PhaseListenerScope.Target,
+                PhaseListenerActionFlags.ExecuteGraph, rejectGraphId, 0, priority: 100, ownerEffectId: 1), Is.True);
+            That(listeners.TryAdd(
+                0, 0, EffectPhaseId.OnPropose, PhaseListenerScope.Target,
+                PhaseListenerActionFlags.ExecuteGraph, passGraphId, 0, priority: 0, ownerEffectId: 1), Is.True);
+            world.Add(target, listeners);
+            var executor = new EffectPhaseExecutor(
+                programs,
+                new PresetTypeRegistry(),
+                new BuiltinHandlerRegistry(),
+                GasGraphOpHandlerTable.Instance,
+                new EffectTemplateRegistry());
+            EffectPhaseGraphBindings behavior = default;
+            EffectConfigParams mergedParams = default;
+
+            bool accepted = executor.ExecutePhaseWithValidationResult(
+                world,
+                new GasGraphRuntimeApi(world),
+                caster,
+                target,
+                default,
+                default,
+                EffectPhaseId.OnPropose,
+                in behavior,
+                EffectPresetType.None,
+                effectTagId: 1,
+                effectTemplateId: 1,
+                in mergedParams);
+
+            That(accepted, Is.False);
+        }
+
+        [Test]
+        public void Executor_OnCalculateListenerWriteFailsBeforeExecution()
+        {
+            using var world = World.Create();
+            int healthId = AttributeRegistry.Register("Test.OnCalculateListener.Health");
+            Entity caster = world.Create();
+            Entity target = world.Create(new AttributeBuffer(), new DirtyFlags());
+            world.Get<AttributeBuffer>(target).SetBase(healthId, 100f);
+            const int graphId = 38;
+            var programs = new GraphProgramRegistry();
+            programs.Register(graphId,
+            [
+                new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 0 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = -25f },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.ModifyAttributeAdd, A = 0, B = 0, Imm = healthId },
+            ], GraphKind.Effect);
+            EffectPhaseListenerBuffer listeners = default;
+            That(listeners.TryAdd(
+                0, 0, EffectPhaseId.OnCalculate, PhaseListenerScope.Target,
+                PhaseListenerActionFlags.ExecuteGraph, graphId, 0, priority: 0, ownerEffectId: 1), Is.True);
+            world.Add(target, listeners);
+            var executor = new EffectPhaseExecutor(
+                programs,
+                new PresetTypeRegistry(),
+                new BuiltinHandlerRegistry(),
+                GasGraphOpHandlerTable.Instance,
+                new EffectTemplateRegistry());
+            EffectPhaseGraphBindings behavior = default;
+
+            InvalidOperationException error = Throws<InvalidOperationException>(() =>
+                executor.ExecutePhase(
+                    world,
+                    new GasGraphRuntimeApi(world, tagOps: new TagOps(new DirtyEntityQueue(8), new TagRuleRegistry())),
+                    caster,
+                    target,
+                    default,
+                    default,
+                    EffectPhaseId.OnCalculate,
+                    in behavior,
+                    EffectPresetType.None,
+                    effectTagId: 1,
+                    effectTemplateId: 1))!;
+
+            That(error.Message, Does.StartWith(GraphKindOperationPolicy.ListenerOperationNotAllowedError));
+            That(world.Get<AttributeBuffer>(target).GetCurrent(healthId), Is.EqualTo(100f));
         }
 
         [Test]
@@ -571,9 +1484,20 @@ namespace Ludots.Tests.GAS
 
             var behavior = new EffectPhaseGraphBindings();
             var api = new GasGraphRuntimeApi(world, null, null, eventBus);
+            using var transaction = new EffectPhaseSideEffectTransaction(
+                world,
+                tagOps: null,
+                effectRequests: null,
+                spawnRequests: null,
+                presentationEvents: null,
+                attributeEntityCapacity: 2);
+            transaction.Begin();
+            api.BeginEffectSideEffectTransaction(transaction);
 
             executor.ExecutePhase(world, api, caster, target, default, default,
                 EffectPhaseId.OnApply, in behavior, EffectPresetType.None, effectTagId: 10, effectTemplateId: 1);
+            transaction.Commit();
+            api.EndEffectSideEffectTransaction(transaction);
 
             eventBus.Update();
             That(eventBus.Events.Count, Is.EqualTo(1));
@@ -662,18 +1586,49 @@ namespace Ludots.Tests.GAS
             }
 
             var behavior = new EffectPhaseGraphBindings();
+            EffectConfigParams mergedParams = default;
+            using var transaction = new EffectPhaseSideEffectTransaction(
+                world,
+                tagOps: null,
+                effectRequests: null,
+                spawnRequests: null,
+                presentationEvents: null,
+                attributeEntityCapacity: 1);
+            transaction.Begin();
+            api.BeginEffectSideEffectTransaction(transaction);
 
             var sw = System.Diagnostics.Stopwatch.StartNew();
             for (int phase = 0; phase < 8; phase++)
             {
                 for (int i = 0; i < 500; i++)
                 {
-                    executor.ExecutePhase(world, api, caster, targets[i], default, default,
-                        (EffectPhaseId)phase, in behavior, EffectPresetType.None,
-                        effectTagId: 1, effectTemplateId: 1);
+                    if (phase == (int)EffectPhaseId.OnPropose)
+                    {
+                        _ = executor.ExecutePhaseWithValidationResult(
+                            world,
+                            api,
+                            caster,
+                            targets[i],
+                            default,
+                            default,
+                            EffectPhaseId.OnPropose,
+                            in behavior,
+                            EffectPresetType.None,
+                            effectTagId: 1,
+                            effectTemplateId: 1,
+                            in mergedParams);
+                    }
+                    else
+                    {
+                        executor.ExecutePhase(world, api, caster, targets[i], default, default,
+                            (EffectPhaseId)phase, in behavior, EffectPresetType.None,
+                            effectTagId: 1, effectTemplateId: 1);
+                    }
                 }
             }
             sw.Stop();
+            transaction.Commit();
+            api.EndEffectSideEffectTransaction(transaction);
 
             // Only phase OnApply(4) should trigger → 500 events
             eventBus.Update();
@@ -722,6 +1677,15 @@ namespace Ludots.Tests.GAS
 
             var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, GasGraphOpHandlerTable.Instance, templates, globalReg, eventBus);
             var api = new GasGraphRuntimeApi(world, null, null, eventBus, requestQueue);
+            var transaction = new EffectPhaseSideEffectTransaction(
+                world,
+                tagOps: null,
+                effectRequests: requestQueue,
+                spawnRequests: null,
+                presentationEvents: null,
+                attributeEntityCapacity: 4);
+            transaction.Begin();
+            api.BeginEffectSideEffectTransaction(transaction);
 
             // Simulate: caster's Fireball.Hit applies to victim1, victim2, victim3
             var behavior = new EffectPhaseGraphBindings();
@@ -734,6 +1698,8 @@ namespace Ludots.Tests.GAS
                 EffectPhaseId.OnApply, in behavior, EffectPresetType.None, fireballHitTag, fireballHitTemplate);
             executor.ExecutePhase(world, api, caster, victim3, default, default,
                 EffectPhaseId.OnApply, in behavior, EffectPresetType.None, fireballHitTag, fireballHitTemplate);
+            transaction.Commit();
+            api.EndEffectSideEffectTransaction(transaction);
 
             // Verify: 3 bonus graph events (tag 777) + 3 listener events (tag 888) = 6 total events
             eventBus.Update();
@@ -741,6 +1707,7 @@ namespace Ludots.Tests.GAS
 
             Console.WriteLine("[MUD] AOE Fireball + Searing Chain: 3 hits → 6 events (3 graph + 3 listener) ✓");
 
+            transaction.Dispose();
             world.Dispose();
         }
 
@@ -784,11 +1751,11 @@ namespace Ludots.Tests.GAS
         // ════════════════════════════════════════════════════════════════════
 
         // Helper fields for test state — ref struct cannot be returned from methods.
-        private float[] _testFloatRegs;
-        private int[] _testIntRegs;
-        private byte[] _testBoolRegs;
-        private Entity[] _testEntityRegs;
-        private Entity[] _testTargetBuffer;
+        private float[] _testFloatRegs = Array.Empty<float>();
+        private int[] _testIntRegs = Array.Empty<int>();
+        private byte[] _testBoolRegs = Array.Empty<byte>();
+        private Entity[] _testEntityRegs = Array.Empty<Entity>();
+        private Entity[] _testTargetBuffer = Array.Empty<Entity>();
 
         private GraphExecutionState SetupExecution(
             World world, Entity caster, Entity target, GraphProgramBuffer program,

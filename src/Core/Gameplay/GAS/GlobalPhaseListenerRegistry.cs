@@ -27,6 +27,14 @@ namespace Ludots.Core.Gameplay.GAS
         public bool Register(int listenTagId, int listenEffectId, EffectPhaseId phase,
                              PhaseListenerActionFlags flags, int graphProgramId, int eventTagId, int priority)
         {
+            EffectPhaseListenerContract.RequireValidRegistration(
+                listenTagId,
+                listenEffectId,
+                phase,
+                PhaseListenerScope.Target,
+                flags,
+                graphProgramId,
+                eventTagId);
             if (_count >= MAX_LISTENERS) return false;
             int idx = _count;
             _listenTagIds[idx] = listenTagId;

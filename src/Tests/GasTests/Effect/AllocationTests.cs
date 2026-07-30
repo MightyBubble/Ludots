@@ -7,6 +7,8 @@ using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.NodeLibraries.GASGraph;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
 
@@ -249,6 +251,112 @@ namespace Ludots.Tests.GAS
                 10_000);
 
             That(allocated, Is.Zero);
+        }
+
+        [Test]
+        public void PhaseListenerGraphDispatch_AllocatesZeroAfterWarmup()
+        {
+            using var world = World.Create();
+            Entity caster = world.Create();
+            Entity target = world.Create();
+            const int graphId = 1;
+            var programs = new GraphProgramRegistry();
+            programs.Register(graphId,
+            [
+                new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = 1f },
+            ], GraphKind.Effect);
+
+            EffectPhaseListenerBuffer listeners = default;
+            That(listeners.TryAdd(
+                listenTagId: 0,
+                listenEffectId: 0,
+                EffectPhaseId.OnApply,
+                PhaseListenerScope.Target,
+                PhaseListenerActionFlags.ExecuteGraph,
+                graphId,
+                eventTagId: 0,
+                priority: 0,
+                ownerEffectId: 1), Is.True);
+            world.Add(target, listeners);
+
+            var executor = new EffectPhaseExecutor(
+                programs,
+                new PresetTypeRegistry(),
+                new BuiltinHandlerRegistry(),
+                GasGraphOpHandlerTable.Instance,
+                new EffectTemplateRegistry());
+            var api = new GasGraphRuntimeApi(world);
+            EffectPhaseGraphBindings behavior = default;
+            using var transaction = new EffectPhaseSideEffectTransaction(
+                world,
+                tagOps: null,
+                effectRequests: null,
+                spawnRequests: null,
+                presentationEvents: null,
+                attributeEntityCapacity: 2);
+            transaction.Begin();
+            api.BeginEffectSideEffectTransaction(transaction);
+
+            RunPhaseListenerGraphDispatch(executor, world, api, caster, target, in behavior, 64);
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+
+            long allocated = MeasurePhaseListenerGraphDispatchAllocations(
+                executor,
+                world,
+                api,
+                caster,
+                target,
+                in behavior,
+                10_000);
+
+            api.EndEffectSideEffectTransaction(transaction);
+            transaction.Rollback();
+            That(allocated, Is.Zero);
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static long MeasurePhaseListenerGraphDispatchAllocations(
+            EffectPhaseExecutor executor,
+            World world,
+            GasGraphRuntimeApi api,
+            Entity caster,
+            Entity target,
+            in EffectPhaseGraphBindings behavior,
+            int count)
+        {
+            GC.GetAllocatedBytesForCurrentThread();
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            RunPhaseListenerGraphDispatch(executor, world, api, caster, target, in behavior, count);
+            return GC.GetAllocatedBytesForCurrentThread() - before;
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void RunPhaseListenerGraphDispatch(
+            EffectPhaseExecutor executor,
+            World world,
+            GasGraphRuntimeApi api,
+            Entity caster,
+            Entity target,
+            in EffectPhaseGraphBindings behavior,
+            int count)
+        {
+            for (int i = 0; i < count; i++)
+            {
+                executor.ExecutePhase(
+                    world,
+                    api,
+                    caster,
+                    target,
+                    default,
+                    default,
+                    EffectPhaseId.OnApply,
+                    in behavior,
+                    EffectPresetType.None,
+                    effectTagId: 0,
+                    effectTemplateId: 1);
+            }
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
