@@ -14,11 +14,13 @@ GAS 的组合顺序是：
 
 运行时执行的是已经编译的 EffectTemplate。PresetType 不能成为英雄、技能、地图或玩法模式的目录。
 
+Ability 时间线只能通过 `EffectClip` 或 `EffectSignal` 提交 EffectTemplate。玩法 Graph 必须由 EffectTemplate 的 `phaseGraphs` 引用并进入统一的校验、预算和事务执行计划；Ability 不提供直接执行 Effect Graph 的时间线条目。
+
 ## 2. 结构
 
 ### Graph
 
-Graph 组合通用原子操作。原子操作只能表达不可再拆的引擎能力，例如修改属性、查询目标、派发 Effect、生成实体或调用视野投射。
+Graph 组合通用原子操作。原子操作只能表达不可再拆的引擎能力，例如修改属性、查询目标、派发 Effect 或生成实体。
 
 Graph 配置必须声明受支持的 `kind`，通过严格 JSON 加载和完整的 opcode 元数据检查。无效配置在 Mod 加载阶段失败，不能进入游戏后再采用默认行为。
 
@@ -35,7 +37,7 @@ EffectTemplate 是内容 SSOT，负责：
 - lifetime、duration、period 与 clock；
 - 标签、modifier、目标查询与派发参数；
 - `phaseGraphs` 的 Pre、Main、Post；
-- 具体能力参数，例如 `revealArea` 的范围、层和记忆时间。
+- 具体能力参数，例如 modifier 数值、事件标签和目标派发参数。
 
 当 `phaseGraphs.<phase>.main` 存在时，它替换 preset 的默认 Main。没有 Main 且没有 `skipMain` 时，才使用 preset 默认值。`main` 与 `skipMain=true` 同时出现属于配置错误。
 
@@ -58,9 +60,11 @@ Effect 的阶段顺序为：
 
 ## 4. 场景
 
-### 区域视野技能
+### 带事件的伤害变体
 
-区域视野不是 preset。Core 提供 `RevealArea` 与 `DecayRevealArea` 原子操作，`Graph.Vision.RevealArea` 和 `Graph.Vision.DecayRevealArea` 负责组合，EffectTemplate 提供半径、视野层、刷新周期和记忆时间。新英雄只新增或复用 Graph 与模板数据。
+Core 提供属性修改、事件发布与 Effect 派发等原子操作。Mod Graph 负责组合伤害与命中事件，EffectTemplate 提供具体 modifier、事件标签和阶段引用。新技能只新增或复用 Graph 与模板数据。
+
+尚未纳入 Effect 事务或独占原子执行计划的能力不得发布为正式 Effect Graph。当前 `RevealArea` 与 `DecayRevealArea` 仍属于未认证能力，不能作为 EffectTemplate 的阶段 Graph 使用。
 
 ### 普通伤害的特殊变体
 
@@ -84,13 +88,13 @@ Effect 的阶段顺序为：
 ```gherkin
 Feature: 用数据组合新的技能效果
 
-  Scenario: Mod 作者创建新的区域视野技能
-    Given Core 已提供视野投射原子操作
-    And Mod 中有组合视野开启与衰减的 Graph
-    And EffectTemplate 配置了范围、刷新周期和视野层
+  Scenario: Mod 作者创建带命中事件的伤害技能
+    Given Core 已提供属性修改与事件发布原子操作
+    And Mod 中有组合伤害与命中事件的 Graph
+    And EffectTemplate 配置了 modifier、事件标签与阶段 Graph
     When 玩家释放该技能
-    Then 区域内目标按模板参数被揭示
-    And 效果结束后按同一模板规则衰减
+    Then 目标按模板参数受到一次伤害
+    And 命中事件与伤害在同一事务中发布
     And Core 不需要新增 EffectPresetType
 
   Scenario: 模板替换 preset 的默认行为
