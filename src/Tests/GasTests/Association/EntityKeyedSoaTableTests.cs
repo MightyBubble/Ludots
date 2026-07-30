@@ -52,20 +52,12 @@ namespace Ludots.Tests.GAS
             table.Upsert(EntityKeyedSoaKey.ForPair(primary, second), new TestPayload(2, 20), expiryTick: 0, payloadChanged: true, out _);
             table.Upsert(EntityKeyedSoaKey.ForPair(otherPrimary, third), new TestPayload(3, 30), expiryTick: 0, payloadChanged: true, out _);
 
-            Span<EntityKeyedSoaRow<TestPayload>> rows = stackalloc EntityKeyedSoaRow<TestPayload>[4];
+            var rows = new EntityKeyedSoaRow<TestPayload>[4];
             Assert.That(table.CopyByPrimary(primary, currentTick: 1, rows), Is.EqualTo(2));
             Assert.That(rows[0].Key.Secondary, Is.EqualTo(first));
             Assert.That(rows[1].Key.Secondary, Is.EqualTo(second));
 
-            GC.GetAllocatedBytesForCurrentThread();
-            long before = GC.GetAllocatedBytesForCurrentThread();
-            for (int i = 0; i < 10_000; i++)
-            {
-                table.TryGet(EntityKeyedSoaKey.ForPair(primary, first), currentTick: 1, out _, out _, out _);
-                table.CopyByPrimary(primary, currentTick: 1, rows);
-            }
-
-            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+            long allocated = MeasureCopyByPrimaryAllocations(table, primary, first, rows);
             Assert.That(allocated, Is.EqualTo(0));
         }
 
@@ -147,17 +139,51 @@ namespace Ludots.Tests.GAS
 
             Assert.That(store.CopyRecords(viewer, currentTick: 1, targets, records), Is.EqualTo(256));
 
+            long allocated = MeasureProjectionCopyAllocations(
+                store,
+                viewer,
+                targets,
+                records,
+                out int copied);
+            Assert.That(copied, Is.EqualTo(256));
+            Assert.That(allocated, Is.EqualTo(0));
+        }
+
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        private static long MeasureCopyByPrimaryAllocations(
+            EntityKeyedSoaTable<TestPayload> table,
+            Entity primary,
+            Entity first,
+            EntityKeyedSoaRow<TestPayload>[] rows)
+        {
             GC.GetAllocatedBytesForCurrentThread();
             long before = GC.GetAllocatedBytesForCurrentThread();
-            int copied = 0;
+            for (int i = 0; i < 10_000; i++)
+            {
+                table.TryGet(EntityKeyedSoaKey.ForPair(primary, first), currentTick: 1, out _, out _, out _);
+                table.CopyByPrimary(primary, currentTick: 1, rows);
+            }
+
+            return GC.GetAllocatedBytesForCurrentThread() - before;
+        }
+
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        private static long MeasureProjectionCopyAllocations(
+            KnowledgeProjectionStore store,
+            Entity viewer,
+            Entity[] targets,
+            KnowledgeDisclosureRecord[] records,
+            out int copied)
+        {
+            GC.GetAllocatedBytesForCurrentThread();
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            copied = 0;
             for (int i = 0; i < 200; i++)
             {
                 copied = store.CopyRecords(viewer, currentTick: 1, targets, records);
             }
 
-            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
-            Assert.That(copied, Is.EqualTo(256));
-            Assert.That(allocated, Is.EqualTo(0));
+            return GC.GetAllocatedBytesForCurrentThread() - before;
         }
 
         private readonly struct TestPayload
