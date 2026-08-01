@@ -1033,5 +1033,509 @@
         "value": -5
       }
     ]
+  },
+  {
+    "id": "Effect.Champion.Lockout.Ezreal.E",
+    "tags": [
+      "Effect.Champion.Lockout"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 72,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Champion.Ezreal.E",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.Champion.Lockout.Ezreal.Q",
+    "tags": [
+      "Effect.Champion.Lockout"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 30,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Champion.Ezreal.Q",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.Champion.Lockout.Ezreal.R",
+    "tags": [
+      "Effect.Champion.Lockout"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 150,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Champion.Ezreal.R",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.Champion.Lockout.Ezreal.W",
+    "tags": [
+      "Effect.Champion.Lockout"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 54,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Champion.Ezreal.W",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.Champion.Lockout.Garen.E",
+    "tags": [
+      "Effect.Champion.Lockout"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 48,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Champion.Garen.E",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.Champion.Lockout.Garen.Q",
+    "tags": [
+      "Effect.Champion.Lockout"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 36,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Champion.Garen.Q",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.Champion.Lockout.Garen.R",
+    "tags": [
+      "Effect.Champion.Lockout"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 120,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Champion.Garen.R",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.Champion.Lockout.Garen.W",
+    "tags": [
+      "Effect.Champion.Lockout"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 24,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Champion.Garen.W",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.Champion.Lockout.Geomancer.E",
+    "tags": [
+      "Effect.Champion.Lockout"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 66,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Champion.Geomancer.E",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.Champion.Lockout.Geomancer.Q",
+    "tags": [
+      "Effect.Champion.Lockout"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 42,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Champion.Geomancer.Q",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.Champion.Lockout.Geomancer.R",
+    "tags": [
+      "Effect.Champion.Lockout"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 96,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Champion.Geomancer.R",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.Champion.Lockout.Geomancer.W",
+    "tags": [
+      "Effect.Champion.Lockout"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 54,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Champion.Geomancer.W",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.Champion.Lockout.Jayce.E",
+    "tags": [
+      "Effect.Champion.Lockout"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 54,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Champion.Jayce.E",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.Champion.Lockout.Jayce.Q",
+    "tags": [
+      "Effect.Champion.Lockout"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 42,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Champion.Jayce.Q",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.Champion.Lockout.Jayce.R",
+    "tags": [
+      "Effect.Champion.Lockout"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 18,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Champion.Jayce.R",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.Champion.Lockout.Jayce.W",
+    "tags": [
+      "Effect.Champion.Lockout"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 48,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Champion.Jayce.W",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.Champion.Lockout.SpellEngineer.E",
+    "tags": [
+      "Effect.Champion.Lockout"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 90,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Champion.SpellEngineer.E",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.Champion.Lockout.SpellEngineer.Q",
+    "tags": [
+      "Effect.Champion.Lockout"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 48,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Champion.SpellEngineer.Q",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.Champion.Lockout.SpellEngineer.R",
+    "tags": [
+      "Effect.Champion.Lockout"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 132,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Champion.SpellEngineer.R",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.Champion.Lockout.SpellEngineer.W",
+    "tags": [
+      "Effect.Champion.Lockout"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 60,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Champion.SpellEngineer.W",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.ChampionStress.Lockout.FireMage.Q",
+    "tags": [
+      "Effect.ChampionStress.Lockout"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 30,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.ChampionStress.FireMage.Q",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.ChampionStress.Lockout.LaserMage.Q",
+    "tags": [
+      "Effect.ChampionStress.Lockout"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 20,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.ChampionStress.LaserMage.Q",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.ChampionStress.Lockout.Priest.Q",
+    "tags": [
+      "Effect.ChampionStress.Lockout"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 24,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.ChampionStress.Priest.Q",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.ChampionStress.Lockout.Warrior.Q",
+    "tags": [
+      "Effect.ChampionStress.Lockout"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 18,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.ChampionStress.Warrior.Q",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
   }
 ]

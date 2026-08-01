@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.AI.Config;
+using Ludots.Core.Gameplay.AI.Utility;
 using Ludots.Core.Gameplay.AI.WorldState;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Registry;
@@ -67,26 +68,6 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void AiConfigLoader_RejectsUnknownAbilityId()
-        {
-            using var fixture = AiConfigFixture.Create(orderJson: "{ \"OrderTypeKey\": \"attackTarget\", \"AbilityId\": 9090, \"SubmitMode\": 0, \"PlayerId\": 0 }");
-
-            var ex = Assert.Throws<InvalidOperationException>(() => fixture.Load());
-
-            Assert.That(ex!.Message, Does.Contain("unknown ability id 9090"));
-        }
-
-        [Test]
-        public void AiConfigLoader_RejectsUnknownAbilityKey()
-        {
-            using var fixture = AiConfigFixture.Create(orderJson: "{ \"OrderTypeKey\": \"attackTarget\", \"AbilityKey\": \"Ability.Missing\", \"SubmitMode\": 0, \"PlayerId\": 0 }");
-
-            var ex = Assert.Throws<InvalidOperationException>(() => fixture.Load());
-
-            Assert.That(ex!.Message, Does.Contain("unknown ability key 'Ability.Missing'"));
-        }
-
-        [Test]
         public void AiConfigLoader_CompilesUtilityAiToFlatArrays()
         {
             using var fixture = AiConfigFixture.Create();
@@ -103,8 +84,8 @@ namespace Ludots.Tests.GAS
             Assert.That(runtime.UtilityRuntime.TargetFilterOps.Length, Is.EqualTo(2));
             Assert.That(runtime.UtilityRuntime.Tasks.Length, Is.EqualTo(1));
             Assert.That(runtime.UtilityRuntime.Tasks[0].OrderTypeId, Is.EqualTo(AttackOrderTypeId));
-            Assert.That(runtime.UtilityRuntime.Decisions[0].AutocastAbilityId, Is.EqualTo(fixture.AttackAbilityId));
-            Assert.That(runtime.UtilityRuntime.Decisions[0].SharedCooldownTagId, Is.EqualTo(fixture.SharedCooldownTagId));
+            Assert.That(runtime.UtilityRuntime.Tasks[0].AbilitySlotIndex, Is.EqualTo(0));
+            Assert.That(runtime.UtilityRuntime.Decisions[0].TaskOffset, Is.EqualTo(0));
         }
 
         [Test]
@@ -167,17 +148,6 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void AiConfigLoader_RejectsUtilityAiUnknownAbility()
-        {
-            using var fixture = AiConfigFixture.Create();
-            fixture.WriteUtilityConfig(decisionAbilityKey: "Ability.Missing");
-
-            var ex = Assert.Throws<InvalidOperationException>(() => fixture.Load());
-
-            Assert.That(ex!.Message, Does.Contain("unknown ability key 'Ability.Missing'"));
-        }
-
-        [Test]
         public void AiConfigLoader_RejectsUtilityAiUnknownGraph()
         {
             using var fixture = AiConfigFixture.Create();
@@ -197,19 +167,62 @@ namespace Ludots.Tests.GAS
 
             var ex = Assert.Throws<InvalidOperationException>(() => fixture.Load());
 
-            Assert.That(ex!.Message, Does.Contain("GraphScore graph"));
+            Assert.That(ex!.Message, Does.Contain("GAS.GRAPH_KIND.ERR.OperationNotAllowed"));
             Assert.That(ex.Message, Does.Contain("WriteBlackboardFloat"));
         }
 
         [Test]
-        public void AiConfigLoader_RejectsUtilityAiUnknownTag()
+        public void AiConfigLoader_RejectsUtilityAiUnknownSourceTag()
         {
             using var fixture = AiConfigFixture.Create();
-            fixture.WriteUtilityConfig(sharedCooldownTag: "Cooldown.Missing");
+            fixture.WriteUtilityConfig(inputKind: "SourceHasTag", inputTag: "Tag.Missing");
 
             var ex = Assert.Throws<InvalidOperationException>(() => fixture.Load());
 
-            Assert.That(ex!.Message, Does.Contain("unknown gameplay tag 'Cooldown.Missing'"));
+            Assert.That(ex!.Message, Does.Contain("unknown gameplay tag 'Tag.Missing'"));
+        }
+
+        [Test]
+        public void AiConfigLoader_CompilesActuatorReadinessInputFromActuatorKey()
+        {
+            using var fixture = AiConfigFixture.Create();
+            fixture.WriteUtilityConfig(considerationInput: "Input.Ready");
+            fixture.WriteUtilityInputsJson("[ { \"id\": \"Input.Ready\", \"Kind\": \"ActuatorReadiness01\", \"Actuator\": \"Actuator.Primary\" } ]");
+            fixture.WriteUtilityActuatorsJson("[ { \"id\": \"Actuator.Primary\" } ]");
+
+            var runtime = fixture.Load();
+
+            Assert.That(runtime.UtilityRuntime.Inputs[0].Kind, Is.EqualTo(UtilityAiInputKind.ActuatorReadiness01));
+            Assert.That(runtime.UtilityRuntime.Inputs[0].Arg0, Is.EqualTo(0));
+            Assert.That(runtime.UtilityRuntime.Authoring.TryGetActuatorId("Actuator.Primary", out int actuatorId), Is.True);
+            Assert.That(actuatorId, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void AiConfigLoader_RejectsNumericActuatorReadinessInput()
+        {
+            using var fixture = AiConfigFixture.Create();
+            fixture.WriteUtilityConfig(considerationInput: "Input.Ready");
+            fixture.WriteUtilityInputsJson("[ { \"id\": \"Input.Ready\", \"Kind\": \"ActuatorReadiness01\", \"ActuatorId\": 0 } ]");
+            fixture.WriteUtilityActuatorsJson("[ { \"id\": \"Actuator.Primary\" } ]");
+
+            var ex = Assert.Throws<InvalidOperationException>(() => fixture.Load());
+
+            Assert.That(ex!.Message, Does.Contain("ActuatorId"));
+            Assert.That(ex.Message, Does.Contain("Actuator"));
+        }
+
+        [Test]
+        public void AiConfigLoader_RejectsDeadActuatorReadinessFields()
+        {
+            using var fixture = AiConfigFixture.Create();
+            fixture.WriteUtilityConfig();
+            fixture.WriteUtilityActuatorsJson("[ { \"id\": \"Actuator.Primary\", \"ReadinessInput\": \"Input.Distance\" } ]");
+
+            var ex = Assert.Throws<InvalidOperationException>(() => fixture.Load());
+
+            Assert.That(ex!.Message, Does.Contain("ReadinessInput"));
+            Assert.That(ex.Message, Does.Contain("Unexpected field"));
         }
 
         [Test]
@@ -261,8 +274,6 @@ namespace Ludots.Tests.GAS
                 ConfigPipeline pipeline,
                 AiConfigValidationContext validation,
                 GraphProgramRegistry graphs,
-                int attackAbilityId,
-                int sharedCooldownTagId,
                 int scoreGraphId)
             {
                 _root = root;
@@ -270,14 +281,8 @@ namespace Ludots.Tests.GAS
                 _pipeline = pipeline;
                 _validation = validation;
                 _graphs = graphs;
-                AttackAbilityId = attackAbilityId;
-                SharedCooldownTagId = sharedCooldownTagId;
                 ScoreGraphId = scoreGraphId;
             }
-
-            public int AttackAbilityId { get; }
-
-            public int SharedCooldownTagId { get; }
 
             public int ScoreGraphId { get; }
 
@@ -317,21 +322,16 @@ namespace Ludots.Tests.GAS
                     OrderTypeId = AttackOrderTypeId
                 });
 
-                AbilityIdRegistry.Clear();
                 TagRegistry.Clear();
                 GraphIdRegistry.Clear();
                 OrderBlackboardKeyRegistry.ResetToBuiltins();
                 OrderBlackboardKeyRegistry.Register("Attack.TargetEntity");
-                int abilityId = AbilityIdRegistry.Register("Ability.Test.Attack");
-                var abilities = new AbilityDefinitionRegistry();
-                abilities.Register(abilityId, new AbilityDefinition());
-                int sharedCooldownTagId = TagRegistry.Register("Cooldown.Global.Attack");
 
                 var graphs = new GraphProgramRegistry();
                 int graphId = GraphIdRegistry.Register("Graph.AI.Score");
                 graphs.Register(graphId, Array.Empty<GraphInstruction>(), GraphKind.Score);
 
-                return new AiConfigFixture(root, core, pipeline, new AiConfigValidationContext(orderTypes, abilities, graphs), graphs, abilityId, sharedCooldownTagId, graphId);
+                return new AiConfigFixture(root, core, pipeline, new AiConfigValidationContext(orderTypes, graphs), graphs, graphId);
             }
 
             public void RegisterScoreGraph(params GraphInstruction[] program)
@@ -344,10 +344,10 @@ namespace Ludots.Tests.GAS
                 string decisionTargetFilter = "TF.Hostile",
                 string considerationInput = "Input.Distance",
                 string taskOrderTypeKey = "attackTarget",
-                string decisionAbilityKey = "Ability.Test.Attack",
-                string sharedCooldownTag = "Cooldown.Global.Attack",
                 bool includeGraphInput = false,
                 string graphKey = "Graph.AI.Score",
+                string inputKind = "DistanceToTarget",
+                string inputTag = "",
                 string? defaultStance = null)
             {
                 string ai = Path.Combine(_core, "Configs", "AI");
@@ -359,19 +359,21 @@ namespace Ludots.Tests.GAS
                 string inputGraph = includeGraphInput
                     ? $", {{ \"id\": \"Input.Graph\", \"Kind\": \"GraphScore\", \"GraphKey\": \"{graphKey}\" }}"
                     : string.Empty;
+                string primaryInput = string.Equals(inputKind, "SourceHasTag", StringComparison.Ordinal)
+                    ? $"{{ \"id\": \"Input.Distance\", \"Kind\": \"SourceHasTag\", \"Tag\": \"{inputTag}\" }}"
+                    : "{ \"id\": \"Input.Distance\", \"Kind\": \"DistanceToTarget\" }";
                 File.WriteAllText(Path.Combine(ai, "inputs.json"),
-                    "[ { \"id\": \"Input.Distance\", \"Kind\": \"DistanceToTarget\" }" + inputGraph + " ]");
+                    "[ " + primaryInput + inputGraph + " ]");
                 File.WriteAllText(Path.Combine(ai, "normalizations.json"),
                     "[ { \"id\": \"Norm.Close\", \"Kind\": \"RangeInverse\", \"Min\": 0, \"Max\": 900 } ]");
                 File.WriteAllText(Path.Combine(ai, "curves.json"),
                     "[ { \"id\": \"Curve.Linear\", \"Kind\": \"Linear\" } ]");
                 File.WriteAllText(Path.Combine(ai, "tasks.json"),
-                    $"[ {{ \"id\": \"Task.Attack\", \"Kind\": \"SubmitOrder\", \"OrderTypeKey\": \"{taskOrderTypeKey}\", \"SubmitMode\": 0, \"PlayerId\": 0 }} ]");
+                    $"[ {{ \"id\": \"Task.Attack\", \"Kind\": \"SubmitOrder\", \"OrderTypeKey\": \"{taskOrderTypeKey}\", \"AbilitySlotIndex\": 0, \"SubmitMode\": 0, \"PlayerId\": 0 }} ]");
                 File.WriteAllText(Path.Combine(ai, "decisions.json"),
                     "[ { \"id\": \"Decision.Attack\", " +
                     $"\"TargetFilter\": \"{decisionTargetFilter}\", " +
                     "\"Priority\": 10, \"BaseScore\": 1, \"Weight\": 1, " +
-                    $"\"AbilityKey\": \"{decisionAbilityKey}\", \"AbilitySlotIndex\": 0, \"SharedCooldownTag\": \"{sharedCooldownTag}\", " +
                     "\"Autocast\": true, \"OrdinaryAttack\": true, \"RequiresTarget\": true, " +
                     "\"Considerations\": [ { " +
                     $"\"Input\": \"{considerationInput}\", \"Normalization\": \"Norm.Close\", \"Curve\": \"Curve.Linear\", \"Aggregate\": \"Multiply\" }} ], " +
@@ -391,6 +393,16 @@ namespace Ludots.Tests.GAS
             public void WriteProfilesJson(string json)
             {
                 File.WriteAllText(Path.Combine(_core, "Configs", "AI", "profiles.json"), json);
+            }
+
+            public void WriteUtilityInputsJson(string json)
+            {
+                File.WriteAllText(Path.Combine(_core, "Configs", "AI", "inputs.json"), json);
+            }
+
+            public void WriteUtilityActuatorsJson(string json)
+            {
+                File.WriteAllText(Path.Combine(_core, "Configs", "AI", "actuators.json"), json);
             }
 
             public AiCompiledRuntime Load()

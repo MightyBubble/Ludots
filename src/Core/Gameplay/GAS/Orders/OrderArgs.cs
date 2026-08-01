@@ -90,4 +90,82 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
         public OrderSpatial Spatial;
     }
+
+    public enum OrderIntArgSlot : byte
+    {
+        I0 = 0,
+        I1 = 1,
+        I2 = 2,
+        I3 = 3
+    }
+
+    public static class OrderBuilder
+    {
+        public static Order Create(
+            int orderTypeId,
+            int playerId,
+            Entity actor,
+            Entity target,
+            Entity targetContext,
+            OrderSubmitMode submitMode,
+            int submitStep)
+        {
+            if (orderTypeId <= 0)
+            {
+                throw new System.InvalidOperationException(
+                    $"ORDER.BUILDER.ERR.InvalidOrderTypeId: orderTypeId={orderTypeId}.");
+            }
+
+            return new Order
+            {
+                OrderTypeId = orderTypeId,
+                PlayerId = playerId,
+                Actor = actor,
+                Target = target,
+                TargetContext = targetContext,
+                Args = default,
+                SubmitStep = submitStep,
+                SubmitMode = submitMode
+            };
+        }
+
+        public static void SetAbilitySlot(ref Order order, int abilitySlotIndex)
+        {
+            if (abilitySlotIndex < 0)
+            {
+                throw new System.InvalidOperationException(
+                    $"ORDER.BUILDER.ERR.InvalidAbilitySlot: orderTypeId={order.OrderTypeId}, slot={abilitySlotIndex}.");
+            }
+
+            order.Args.I0 = abilitySlotIndex;
+        }
+
+        public static void SetIntArg(ref Order order, OrderIntArgSlot slot, int value)
+        {
+            switch (slot)
+            {
+                case OrderIntArgSlot.I0:
+                    order.Args.I0 = value;
+                    break;
+                case OrderIntArgSlot.I1:
+                    order.Args.I1 = value;
+                    break;
+                case OrderIntArgSlot.I2:
+                    order.Args.I2 = value;
+                    break;
+                case OrderIntArgSlot.I3:
+                    order.Args.I3 = value;
+                    break;
+                default:
+                    throw new System.ArgumentOutOfRangeException(nameof(slot), slot, "Unknown order integer argument slot.");
+            }
+        }
+
+        public static void SetSingleWorldCm(ref Order order, Vector3 worldCm)
+        {
+            order.Args.Spatial.Kind = OrderSpatialKind.WorldCm;
+            order.Args.Spatial.Mode = OrderCollectionMode.Single;
+            order.Args.Spatial.WorldCm = worldCm;
+        }
+    }
 }

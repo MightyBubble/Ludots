@@ -4,7 +4,6 @@ using Arch.System;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.AI.Components;
 using Ludots.Core.Gameplay.AI.Utility;
-using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Spatial;
 
@@ -79,25 +78,29 @@ namespace Ludots.Core.Gameplay.AI.Systems
         private readonly UtilityAiCompiledRuntime _runtime;
         private readonly UtilityAiRuntimeEvaluator _evaluator;
         private readonly OrderQueue _orders;
+        private readonly OrderAdmissionResultBuffer _admissionResults;
+        private readonly OrderTerminalResultBuffer _terminalResults;
 
         private static readonly QueryDescription Query = new QueryDescription()
-            .WithAll<UtilityAiAgent, UtilityAiState, OrderBuffer>();
+            .WithAll<UtilityAiAgent, UtilityAiState>();
 
         public UtilityAiDecisionSystem(
             World world,
             IClock clock,
             UtilityAiCompiledRuntime runtime,
             ISpatialQueryService spatialQueries,
-            Ludots.Core.Gameplay.GAS.AbilityDefinitionRegistry? abilities,
             Ludots.Core.GraphRuntime.GraphProgramRegistry? graphs,
             Ludots.Core.NodeLibraries.GASGraph.IGraphRuntimeApi? graphApi,
-            OrderQueue orders)
+            OrderQueue orders,
+            OrderTerminalResultBuffer terminalResults)
             : base(world)
         {
             _clock = clock;
             _runtime = runtime;
             _orders = orders;
-            _evaluator = new UtilityAiRuntimeEvaluator(world, spatialQueries, abilities, graphs, graphApi, ResolveTargetScratchCapacity(in runtime));
+            _admissionResults = orders?.AdmissionResults ?? throw new ArgumentNullException(nameof(orders));
+            _terminalResults = terminalResults ?? throw new ArgumentNullException(nameof(terminalResults));
+            _evaluator = new UtilityAiRuntimeEvaluator(world, spatialQueries, graphs, graphApi, ResolveTargetScratchCapacity(in runtime));
         }
 
         public override void Update(in float dt)
@@ -108,16 +111,18 @@ namespace Ludots.Core.Gameplay.AI.Systems
             }
 
             int step = _clock.Now(ClockDomainId.Step);
-            var job = new DecisionJob(World, _runtime, _evaluator, _orders, step);
-            World.InlineEntityQuery<DecisionJob, UtilityAiAgent, UtilityAiState, OrderBuffer>(in Query, ref job);
+            var job = new DecisionJob(World, _runtime, _evaluator, _orders, _admissionResults, _terminalResults, step);
+            World.InlineEntityQuery<DecisionJob, UtilityAiAgent, UtilityAiState>(in Query, ref job);
         }
 
-        private struct DecisionJob : IForEachWithEntity<UtilityAiAgent, UtilityAiState, OrderBuffer>
+        private struct DecisionJob : IForEachWithEntity<UtilityAiAgent, UtilityAiState>
         {
             private readonly World _world;
             private readonly UtilityAiCompiledRuntime _runtime;
             private readonly UtilityAiRuntimeEvaluator _evaluator;
             private readonly OrderQueue _orders;
+            private readonly OrderAdmissionResultBuffer _admissionResults;
+            private readonly OrderTerminalResultBuffer _terminalResults;
             private readonly int _step;
 
             public DecisionJob(
@@ -125,18 +130,22 @@ namespace Ludots.Core.Gameplay.AI.Systems
                 UtilityAiCompiledRuntime runtime,
                 UtilityAiRuntimeEvaluator evaluator,
                 OrderQueue orders,
+                OrderAdmissionResultBuffer admissionResults,
+                OrderTerminalResultBuffer terminalResults,
                 int step)
             {
                 _world = world;
                 _runtime = runtime;
                 _evaluator = evaluator;
                 _orders = orders;
+                _admissionResults = admissionResults;
+                _terminalResults = terminalResults;
                 _step = step;
             }
 
-            public void Update(Entity entity, ref UtilityAiAgent agent, ref UtilityAiState state, ref OrderBuffer buffer)
+            public void Update(Entity entity, ref UtilityAiAgent agent, ref UtilityAiState state)
             {
-                if (state.NextThinkStep > _step || buffer.HasActive || buffer.HasQueued || buffer.HasPending)
+                if (IsWaitingForSubmittedOrder(entity, ref state) || state.NextThinkStep > _step)
                 {
                     return;
                 }
@@ -154,8 +163,7 @@ namespace Ludots.Core.Gameplay.AI.Systems
                     in memory,
                     out var best,
                     out int candidateCount,
-                    out var rejectReason,
-                    out var readinessBlockReason);
+                    out var rejectReason);
 
                 bool hasTrace = _world.Has<UtilityAiDecisionTrace>(entity);
                 if (hasTrace)
@@ -163,7 +171,6 @@ namespace Ludots.Core.Gameplay.AI.Systems
                     ref var trace = ref _world.Get<UtilityAiDecisionTrace>(entity);
                     trace.CandidateCount = candidateCount;
                     trace.LastFilterRejectReason = (int)rejectReason;
-                    trace.LastReadinessBlockReason = (int)readinessBlockReason;
                 }
 
                 if (found)
@@ -185,30 +192,23 @@ namespace Ludots.Core.Gameplay.AI.Systems
                             _step,
                             _orders,
                             out int orderTypeId,
-                            out int abilityId,
-                            out int sharedCooldownTagId,
+                            out int orderId,
                             out var taskKind,
                             out var taskStatus))
                     {
-                        ref readonly var submittedDecision = ref _runtime.Decisions[best.DecisionId];
                         state.CurrentDecisionId = best.DecisionId;
                         state.CurrentTarget = best.Target;
                         state.CurrentScore = best.Score;
                         state.LastSwitchStep = _step;
                         state.DecisionStartedStep = _step;
-                        state.CooldownDecisionId = best.DecisionId;
-                        state.DecisionCooldownUntilStep = _step + submittedDecision.CooldownSteps;
-                        if (sharedCooldownTagId > 0)
-                        {
-                            state.SharedCooldownTagId = sharedCooldownTagId;
-                            state.SharedCooldownUntilStep = _step + Math.Max(1, submittedDecision.CooldownSteps);
-                        }
+                        state.LastSubmittedOrderId = orderId;
+                        state.CurrentTaskStatus = (byte)taskStatus;
 
                         if (hasTrace)
                         {
                             ref var trace = ref _world.Get<UtilityAiDecisionTrace>(entity);
                             trace.LastSubmittedOrderTypeId = orderTypeId;
-                            trace.LastSubmittedAbilityId = abilityId;
+                            trace.LastSubmittedOrderId = orderId;
                             trace.LastTaskKind = (int)taskKind;
                             trace.LastTaskStatus = (int)taskStatus;
                         }
@@ -219,6 +219,58 @@ namespace Ludots.Core.Gameplay.AI.Systems
                 {
                     state.NextThinkStep = _step + _runtime.Profiles[agent.ProfileId].DecisionIntervalSteps;
                 }
+            }
+
+            private bool IsWaitingForSubmittedOrder(Entity entity, ref UtilityAiState state)
+            {
+                int orderId = state.LastSubmittedOrderId;
+                if (orderId <= 0)
+                {
+                    return false;
+                }
+
+                if (_terminalResults.TryGet(orderId, out OrderTerminalOutcome terminal))
+                {
+                    state.CurrentTaskStatus = terminal.State == Ludots.Core.Gameplay.GAS.Components.OrderTerminalState.Completed
+                        ? (byte)UtilityAiTaskRunStatus.Complete
+                        : (byte)UtilityAiTaskRunStatus.Blocked;
+                    state.LastSubmittedOrderId = 0;
+                    WriteTaskStatusTrace(entity, state.CurrentTaskStatus);
+                    return true;
+                }
+
+                if (_admissionResults.TryGet(orderId, OrderAdmissionStage.EntityIntake, out OrderAdmissionOutcome entityAdmission) &&
+                    !OrderSubmitResultSemantics.IsAccepted(entityAdmission.Result))
+                {
+                    state.CurrentTaskStatus = (byte)UtilityAiTaskRunStatus.Blocked;
+                    state.LastSubmittedOrderId = 0;
+                    WriteTaskStatusTrace(entity, state.CurrentTaskStatus);
+                    return true;
+                }
+
+                if (_admissionResults.TryGet(orderId, OrderAdmissionStage.GlobalIntake, out OrderAdmissionOutcome globalAdmission) &&
+                    !OrderSubmitResultSemantics.IsAccepted(globalAdmission.Result))
+                {
+                    state.CurrentTaskStatus = (byte)UtilityAiTaskRunStatus.Blocked;
+                    state.LastSubmittedOrderId = 0;
+                    WriteTaskStatusTrace(entity, state.CurrentTaskStatus);
+                    return true;
+                }
+
+                state.CurrentTaskStatus = (byte)UtilityAiTaskRunStatus.Running;
+                WriteTaskStatusTrace(entity, state.CurrentTaskStatus);
+                return true;
+            }
+
+            private void WriteTaskStatusTrace(Entity entity, byte taskStatus)
+            {
+                if (!_world.Has<UtilityAiDecisionTrace>(entity))
+                {
+                    return;
+                }
+
+                ref var trace = ref _world.Get<UtilityAiDecisionTrace>(entity);
+                trace.LastTaskStatus = taskStatus;
             }
         }
 

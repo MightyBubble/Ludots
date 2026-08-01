@@ -1012,7 +1012,7 @@ namespace Ludots.Tests.Presentation
                 Actor = actor,
                 AbilitySlot = 1,
                 AbilityId = 5,
-                FailReason = AbilityCastFailReason.OnCooldown,
+                FailReason = AbilityCastFailReason.TimedLockout,
             });
 
             _projection.Update(0.016f);
@@ -1026,7 +1026,7 @@ namespace Ludots.Tests.Presentation
                     continue;
                 }
 
-                Assert.That(span[i].PayloadB, Is.EqualTo((int)AbilityCastFailReason.OnCooldown));
+                Assert.That(span[i].PayloadB, Is.EqualTo((int)AbilityCastFailReason.TimedLockout));
                 found = true;
                 break;
             }

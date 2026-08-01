@@ -1623,6 +1623,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         private void CreateEntityEffect(in EffectProposal proposal, in EffectTemplateData tpl)
         {
+            EffectConfigParams mergedConfig = BuildMergedConfig(in tpl, in proposal);
+            int durationTicks = ConfigParamsMerger.ResolveDurationTicks(in tpl, in mergedConfig);
+            int periodTicks = ConfigParamsMerger.ResolvePeriodTicks(in tpl, in mergedConfig);
+
             // Stack merge: if template has stack policy and an existing effect exists on target, merge.
             if (tpl.HasStackPolicy && tpl.LifetimeKind != EffectLifetimeKind.Instant
                 && World.IsAlive(proposal.Target) && World.Has<ActiveEffectContainer>(proposal.Target))
@@ -1641,12 +1645,21 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         switch (tpl.StackPolicy)
                         {
                             case StackPolicy.RefreshDuration:
-                                effectAfter.RemainingTicks = tpl.DurationTicks;
+                                effectAfter.TotalTicks = durationTicks;
+                                effectAfter.RemainingTicks = durationTicks;
                                 effectAfter.ExpiresAtTick = 0; // Will be recomputed next tick
                                 break;
                             case StackPolicy.AddDuration:
-                                effectAfter.RemainingTicks += tpl.DurationTicks;
-                                effectAfter.ExpiresAtTick = 0;
+                                effectAfter.TotalTicks += durationTicks;
+                                effectAfter.RemainingTicks += durationTicks;
+                                if (effectAfter.ExpiresAtTick > 0)
+                                {
+                                    effectAfter.ExpiresAtTick += durationTicks;
+                                }
+                                else
+                                {
+                                    effectAfter.ExpiresAtTick = 0;
+                                }
                                 break;
                             // KeepDuration: do nothing
                         }
@@ -1684,7 +1697,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 }
             }
 
-            var newEffect = GameplayEffectFactory.CreateEffect(World, proposal.RootId, proposal.Source, proposal.Target, tpl.DurationTicks, tpl.LifetimeKind, tpl.PeriodTicks, proposal.TargetContext, tpl.ClockId, tpl.ExpireCondition);
+            var newEffect = GameplayEffectFactory.CreateEffect(World, proposal.RootId, proposal.Source, proposal.Target, durationTicks, tpl.LifetimeKind, periodTicks, proposal.TargetContext, tpl.ClockId, tpl.ExpireCondition);
             World.Get<EffectModifiers>(newEffect) = proposal.Modifiers;
 
             ref var effectState = ref World.Get<GameplayEffect>(newEffect);
@@ -1698,15 +1711,9 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
             // Pre-merge CallerParams with template ConfigParams at creation time,
             // storing the merged EffectConfigParams directly on the entity.
-            if (proposal.HasCallerParams)
+            if (mergedConfig.Count > 0)
             {
-                var merged = tpl.ConfigParams;
-                merged.MergeFrom(in proposal.CallerParams);
-                World.Add(newEffect, merged);
-            }
-            else if (tpl.ConfigParams.Count > 0)
-            {
-                World.Add(newEffect, tpl.ConfigParams);
+                World.Add(newEffect, mergedConfig);
             }
 
             // Attach EffectGrantedTags if template declares tag contributions

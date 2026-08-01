@@ -184,10 +184,6 @@ namespace Ludots.Core.Gameplay.AI.Utility
         public readonly float Weight;
         public readonly float MomentumBonus;
         public readonly int MinDurationSteps;
-        public readonly int CooldownSteps;
-        public readonly int AutocastAbilityId;
-        public readonly int AbilitySlotIndex;
-        public readonly int SharedCooldownTagId;
         public readonly UtilityAiDecisionFlags Flags;
 
         public UtilityAiDecisionDefinition(
@@ -201,10 +197,6 @@ namespace Ludots.Core.Gameplay.AI.Utility
             float weight,
             float momentumBonus,
             int minDurationSteps,
-            int cooldownSteps,
-            int autocastAbilityId,
-            int abilitySlotIndex,
-            int sharedCooldownTagId,
             UtilityAiDecisionFlags flags)
         {
             TargetFilterId = targetFilterId;
@@ -217,10 +209,6 @@ namespace Ludots.Core.Gameplay.AI.Utility
             Weight = weight;
             MomentumBonus = momentumBonus;
             MinDurationSteps = minDurationSteps;
-            CooldownSteps = cooldownSteps;
-            AutocastAbilityId = autocastAbilityId;
-            AbilitySlotIndex = abilitySlotIndex;
-            SharedCooldownTagId = sharedCooldownTagId;
             Flags = flags;
         }
     }
@@ -329,7 +317,6 @@ namespace Ludots.Core.Gameplay.AI.Utility
     {
         public readonly UtilityAiTaskKind Kind;
         public readonly int OrderTypeId;
-        public readonly int AbilityId;
         public readonly int AbilitySlotIndex;
         public readonly int SubmitMode;
         public readonly int PlayerId;
@@ -339,7 +326,6 @@ namespace Ludots.Core.Gameplay.AI.Utility
         public UtilityAiTaskDefinition(
             UtilityAiTaskKind kind,
             int orderTypeId,
-            int abilityId,
             int abilitySlotIndex,
             int submitMode,
             int playerId,
@@ -348,7 +334,6 @@ namespace Ludots.Core.Gameplay.AI.Utility
         {
             Kind = kind;
             OrderTypeId = orderTypeId;
-            AbilityId = abilityId;
             AbilitySlotIndex = abilitySlotIndex;
             SubmitMode = submitMode;
             PlayerId = playerId;
@@ -383,16 +368,10 @@ namespace Ludots.Core.Gameplay.AI.Utility
     public readonly struct UtilityAiActuatorDefinition
     {
         public readonly int Id;
-        public readonly int AbilityId;
-        public readonly int ReadinessInputId;
-        public readonly int AimGateInputId;
 
-        public UtilityAiActuatorDefinition(int id, int abilityId, int readinessInputId, int aimGateInputId)
+        public UtilityAiActuatorDefinition(int id)
         {
             Id = id;
-            AbilityId = abilityId;
-            ReadinessInputId = readinessInputId;
-            AimGateInputId = aimGateInputId;
         }
     }
 
@@ -420,8 +399,7 @@ namespace Ludots.Core.Gameplay.AI.Utility
         HasNoneTags = 5,
         LayerAny = 6,
         DistanceMax = 7,
-        AbilityEligible = 8,
-        RecentAttacker = 9
+        RecentAttacker = 8
     }
 
     public enum UtilityAiInputKind : byte
@@ -432,8 +410,7 @@ namespace Ludots.Core.Gameplay.AI.Utility
         ActuatorReadiness01 = 3,
         GraphScore = 4,
         TargetHasTag = 5,
-        SourceHasTag = 6,
-        AbilityReady = 7
+        SourceHasTag = 6
     }
 
     public enum UtilityAiNormalizationKind : byte

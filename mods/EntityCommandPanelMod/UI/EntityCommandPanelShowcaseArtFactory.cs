@@ -12,7 +12,7 @@ namespace EntityCommandPanelMod.UI
             string glyph,
             string hotkey,
             string accentColorHex,
-            short cooldownPermille,
+            short lockoutPermille,
             bool blocked,
             bool active,
             bool empty)
@@ -26,7 +26,7 @@ namespace EntityCommandPanelMod.UI
                 normalizedGlyph, "|",
                 normalizedHotkey, "|",
                 normalizedAccent, "|",
-                cooldownPermille.ToString(System.Globalization.CultureInfo.InvariantCulture), "|",
+                lockoutPermille.ToString(System.Globalization.CultureInfo.InvariantCulture), "|",
                 blocked ? "1" : "0", "|",
                 active ? "1" : "0", "|",
                 empty ? "1" : "0");
@@ -38,9 +38,9 @@ namespace EntityCommandPanelMod.UI
 
             string svg = normalizedTheme switch
             {
-                var theme when string.Equals(theme, EntityCommandPanelShowcaseTheme.Dota2Id, StringComparison.Ordinal) => BuildDotaSlotSvg(normalizedGlyph, normalizedHotkey, normalizedAccent, cooldownPermille, blocked, active, empty),
-                var theme when string.Equals(theme, EntityCommandPanelShowcaseTheme.Sc2Id, StringComparison.Ordinal) => BuildSc2SlotSvg(normalizedGlyph, normalizedHotkey, normalizedAccent, cooldownPermille, blocked, active, empty),
-                _ => BuildLolSlotSvg(normalizedGlyph, normalizedHotkey, normalizedAccent, cooldownPermille, blocked, active, empty)
+                var theme when string.Equals(theme, EntityCommandPanelShowcaseTheme.Dota2Id, StringComparison.Ordinal) => BuildDotaSlotSvg(normalizedGlyph, normalizedHotkey, normalizedAccent, lockoutPermille, blocked, active, empty),
+                var theme when string.Equals(theme, EntityCommandPanelShowcaseTheme.Sc2Id, StringComparison.Ordinal) => BuildSc2SlotSvg(normalizedGlyph, normalizedHotkey, normalizedAccent, lockoutPermille, blocked, active, empty),
+                _ => BuildLolSlotSvg(normalizedGlyph, normalizedHotkey, normalizedAccent, lockoutPermille, blocked, active, empty)
             };
 
             string uri = "data:image/svg+xml;utf8," + Uri.EscapeDataString(svg);
@@ -72,15 +72,15 @@ namespace EntityCommandPanelMod.UI
             return uri;
         }
 
-        private static string BuildLolSlotSvg(string glyph, string hotkey, string accent, short cooldownPermille, bool blocked, bool active, bool empty)
+        private static string BuildLolSlotSvg(string glyph, string hotkey, string accent, short lockoutPermille, bool blocked, bool active, bool empty)
         {
             string fill = empty ? "#1A222D" : "#0B1118";
             string inner = empty ? "#202B38" : "#17222F";
             string border = active ? "#D6B56A" : "#3B4D62";
             string glow = active ? "0.95" : "0.42";
-            string cooldownOverlay = cooldownPermille > 0
+            string lockoutOverlay = lockoutPermille > 0
                 ? $"<rect x='8' y='8' width='112' height='112' rx='14' fill='#020406' opacity='0.62'/>" +
-                  $"<text x='64' y='73' text-anchor='middle' font-family='Segoe UI, Microsoft YaHei, sans-serif' font-size='26' font-weight='800' fill='#F2F7FF'>{cooldownPermille / 10f:0}%</text>"
+                  $"<text x='64' y='73' text-anchor='middle' font-family='Segoe UI, Microsoft YaHei, sans-serif' font-size='26' font-weight='800' fill='#F2F7FF'>{lockoutPermille / 10f:0}%</text>"
                 : string.Empty;
             string blockedStroke = blocked ? "<path d='M20 104 L108 16' stroke='#FB5F69' stroke-width='8' stroke-linecap='round' opacity='0.9'/>" : string.Empty;
             string hotkeyBadge = string.IsNullOrWhiteSpace(hotkey)
@@ -98,20 +98,20 @@ namespace EntityCommandPanelMod.UI
                 $"<rect x='16' y='16' width='96' height='96' rx='12' fill='url(#g)' opacity='0.96'/>" +
                 $"<rect x='16' y='16' width='96' height='96' rx='12' fill='none' stroke='{accent}' stroke-width='2.4' opacity='{glow}'/>" +
                 $"<text x='64' y='76' text-anchor='middle' font-family='Segoe UI, Microsoft YaHei, sans-serif' font-size='42' font-weight='900' fill='#F4F8FD'>{EscapeXml(glyph)}</text>" +
-                cooldownOverlay +
+                lockoutOverlay +
                 blockedStroke +
                 hotkeyBadge +
                 "</svg>";
         }
 
-        private static string BuildDotaSlotSvg(string glyph, string hotkey, string accent, short cooldownPermille, bool blocked, bool active, bool empty)
+        private static string BuildDotaSlotSvg(string glyph, string hotkey, string accent, short lockoutPermille, bool blocked, bool active, bool empty)
         {
             string fill = empty ? "#201915" : "#16100C";
             string inner = empty ? "#2B231D" : "#2A1A10";
             string border = active ? "#D6B07A" : "#5C4632";
-            string cooldownOverlay = cooldownPermille > 0
+            string lockoutOverlay = lockoutPermille > 0
                 ? $"<rect x='10' y='10' width='108' height='108' rx='10' fill='#020100' opacity='0.68'/>" +
-                  $"<text x='64' y='74' text-anchor='middle' font-family='Georgia, Times New Roman, serif' font-size='28' font-weight='700' fill='#F5E6CC'>{cooldownPermille / 10f:0}%</text>"
+                  $"<text x='64' y='74' text-anchor='middle' font-family='Georgia, Times New Roman, serif' font-size='28' font-weight='700' fill='#F5E6CC'>{lockoutPermille / 10f:0}%</text>"
                 : string.Empty;
             string blockedStroke = blocked ? "<path d='M18 106 L110 14' stroke='#9E3C31' stroke-width='9' stroke-linecap='round' opacity='0.88'/>" : string.Empty;
             string hotkeyBadge = string.IsNullOrWhiteSpace(hotkey)
@@ -129,20 +129,20 @@ namespace EntityCommandPanelMod.UI
                 $"<rect x='14' y='14' width='100' height='100' rx='8' fill='url(#g)'/>" +
                 $"<rect x='14' y='14' width='100' height='100' rx='8' fill='none' stroke='#D2A264' stroke-width='1.8' opacity='0.72'/>" +
                 $"<text x='64' y='76' text-anchor='middle' font-family='Georgia, Times New Roman, serif' font-size='42' font-weight='700' fill='#F7E8D1'>{EscapeXml(glyph)}</text>" +
-                cooldownOverlay +
+                lockoutOverlay +
                 blockedStroke +
                 hotkeyBadge +
                 "</svg>";
         }
 
-        private static string BuildSc2SlotSvg(string glyph, string hotkey, string accent, short cooldownPermille, bool blocked, bool active, bool empty)
+        private static string BuildSc2SlotSvg(string glyph, string hotkey, string accent, short lockoutPermille, bool blocked, bool active, bool empty)
         {
             string fill = empty ? "#101D2B" : "#09131F";
             string inner = empty ? "#183043" : "#102437";
             string border = active ? "#7FDBFF" : "#2D4C65";
-            string cooldownOverlay = cooldownPermille > 0
+            string lockoutOverlay = lockoutPermille > 0
                 ? $"<rect x='8' y='8' width='112' height='112' rx='6' fill='#02060B' opacity='0.74'/>" +
-                  $"<text x='64' y='74' text-anchor='middle' font-family='Segoe UI, Microsoft YaHei, sans-serif' font-size='26' font-weight='800' fill='#CFEFFF'>{cooldownPermille / 10f:0}%</text>"
+                  $"<text x='64' y='74' text-anchor='middle' font-family='Segoe UI, Microsoft YaHei, sans-serif' font-size='26' font-weight='800' fill='#CFEFFF'>{lockoutPermille / 10f:0}%</text>"
                 : string.Empty;
             string blockedStroke = blocked ? "<path d='M18 108 L110 16' stroke='#E45B4F' stroke-width='8' stroke-linecap='round' opacity='0.92'/>" : string.Empty;
             string hotkeyBadge = string.IsNullOrWhiteSpace(hotkey)
@@ -161,7 +161,7 @@ namespace EntityCommandPanelMod.UI
                 $"<path d='M14 36 L114 36' stroke='#8BE9FF' stroke-width='1.2' opacity='0.45'/>" +
                 $"<path d='M14 92 L114 92' stroke='#8BE9FF' stroke-width='1.2' opacity='0.18'/>" +
                 $"<text x='64' y='76' text-anchor='middle' font-family='Segoe UI, Microsoft YaHei, sans-serif' font-size='42' font-weight='900' fill='#ECFBFF'>{EscapeXml(glyph)}</text>" +
-                cooldownOverlay +
+                lockoutOverlay +
                 blockedStroke +
                 hotkeyBadge +
                 "</svg>";

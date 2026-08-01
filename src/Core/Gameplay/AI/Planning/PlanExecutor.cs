@@ -29,34 +29,31 @@ namespace Ludots.Core.Gameplay.AI.Planning
                     $"AI plan attempted to submit unregistered order type id {spec.OrderTypeId}.");
             }
 
-            var order = new Order
-            {
-                OrderTypeId = spec.OrderTypeId,
-                PlayerId = spec.PlayerId,
-                Actor = actor,
-                Target = default,
-                TargetContext = default,
-                Args = default,
-                SubmitStep = submitStep,
-                SubmitMode = spec.SubmitMode
-            };
+            var order = OrderBuilder.Create(
+                spec.OrderTypeId,
+                spec.PlayerId,
+                actor,
+                Entity.Null,
+                Entity.Null,
+                spec.SubmitMode,
+                submitStep);
 
             for (int i = 0; i < bindings.Length; i++)
             {
                 ref readonly var b = ref bindings[i];
                 switch (b.Op)
                 {
-                    case ActionBindingOp.IntToOrderI0:
-                        if (ints.TryGet(b.SourceKey, out int i0)) order.Args.I0 = i0;
+                    case ActionBindingOp.IntToOrderArg0:
+                        if (ints.TryGet(b.SourceKey, out int i0)) OrderBuilder.SetIntArg(ref order, OrderIntArgSlot.I0, i0);
                         break;
-                    case ActionBindingOp.IntToOrderI1:
-                        if (ints.TryGet(b.SourceKey, out int i1)) order.Args.I1 = i1;
+                    case ActionBindingOp.IntToOrderArg1:
+                        if (ints.TryGet(b.SourceKey, out int i1)) OrderBuilder.SetIntArg(ref order, OrderIntArgSlot.I1, i1);
                         break;
-                    case ActionBindingOp.IntToOrderI2:
-                        if (ints.TryGet(b.SourceKey, out int i2)) order.Args.I2 = i2;
+                    case ActionBindingOp.IntToOrderArg2:
+                        if (ints.TryGet(b.SourceKey, out int i2)) OrderBuilder.SetIntArg(ref order, OrderIntArgSlot.I2, i2);
                         break;
-                    case ActionBindingOp.IntToOrderI3:
-                        if (ints.TryGet(b.SourceKey, out int i3)) order.Args.I3 = i3;
+                    case ActionBindingOp.IntToOrderArg3:
+                        if (ints.TryGet(b.SourceKey, out int i3)) OrderBuilder.SetIntArg(ref order, OrderIntArgSlot.I3, i3);
                         break;
                     case ActionBindingOp.EntityToTarget:
                         if (entities.TryGet(b.SourceKey, out var t)) order.Target = t;
@@ -71,5 +68,3 @@ namespace Ludots.Core.Gameplay.AI.Planning
         }
     }
 }
-
-

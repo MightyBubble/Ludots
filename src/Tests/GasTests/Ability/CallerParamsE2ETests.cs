@@ -8,12 +8,14 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Config;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Scripting;
+using Ludots.Core.Spatial;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
 using GraphInstruction = Ludots.Core.GraphRuntime.GraphInstruction;
@@ -225,6 +227,108 @@ namespace Ludots.Tests.GAS
             That(pid, Is.EqualTo(42));
         }
 
+        [Test]
+        public void CallerParams_DurationTicks_OverridesMaterializedEffectLifetime()
+        {
+            EffectParamKeys.Initialize();
+
+            using var world = World.Create();
+            var templates = new EffectTemplateRegistry();
+            const int templateId = 801;
+            templates.Register(templateId, new EffectTemplateData
+            {
+                PresetType = EffectPresetType.None,
+                LifetimeKind = EffectLifetimeKind.After,
+                ClockId = GasClockId.Step,
+                DurationTicks = 30,
+                PeriodTicks = 0,
+                ParticipatesInResponse = false,
+            });
+            FinalizeEffectTemplates(templates, "Test/CallerParams.DurationOverride.json");
+
+            var source = world.Create();
+            var target = world.Create();
+            var requests = new EffectRequestQueue();
+            var req = new EffectRequest
+            {
+                RootId = 1,
+                Source = source,
+                Target = target,
+                TemplateId = templateId,
+                HasCallerParams = true,
+            };
+            req.CallerParams.TryAddInt(EffectParamKeys.DurationTicks, 75);
+            requests.Publish(req);
+
+            var proposalSys = new Ludots.Core.Gameplay.GAS.Systems.EffectProposalProcessingSystem(
+                world,
+                requests,
+                GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                new Ludots.Core.Engine.DiscreteClock(),
+                budget: null,
+                templates: templates,
+                inputRequests: null,
+                chainOrders: null,
+                responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
+
+            proposalSys.Update(0.016f);
+
+            That(TryFindEffect(world, templateId, out GameplayEffect effect), Is.True);
+            That(effect.TotalTicks, Is.EqualTo(75));
+            That(effect.RemainingTicks, Is.EqualTo(75));
+        }
+
+        [Test]
+        public void CallerParams_PayloadEffectId_OverridesTargetResolverDispatch()
+        {
+            EffectParamKeys.Initialize();
+
+            using var world = World.Create();
+            var source = world.Create();
+            var originalTarget = world.Create();
+            var resolved = world.Create();
+            var buffer = new[] { resolved };
+            var commands = new FanOutCommandBuffer(4);
+            var budget = new RootBudgetTable(4);
+            var mergedParams = default(EffectConfigParams);
+            mergedParams.TryAddEffectTemplateId(EffectParamKeys.PayloadEffectId, 902);
+
+            int dropped = 0;
+            int count = TargetResolverFanOutHelper.ValidateAndCollect(
+                world,
+                new EffectContext
+                {
+                    RootId = 1,
+                    Source = source,
+                    Target = originalTarget,
+                },
+                new TargetQueryDescriptor
+                {
+                    Kind = TargetResolverKind.BuiltinSpatial,
+                    Spatial = new BuiltinSpatialDescriptor { Shape = SpatialShape.Circle },
+                },
+                new TargetFilterDescriptor
+                {
+                    RelationFilter = RelationshipFilter.All,
+                },
+                new TargetDispatchDescriptor
+                {
+                    PayloadEffectTemplateId = 901,
+                    ContextMapping = TargetResolverContextMapping.Default,
+                },
+                in mergedParams,
+                buffer,
+                candidateCount: 1,
+                budget,
+                commands,
+                ref dropped);
+
+            That(count, Is.EqualTo(1));
+            That(commands.Count, Is.EqualTo(1));
+            That(commands[0].PayloadEffectTemplateId, Is.EqualTo(902));
+        }
+
         // ------------------------------------------------------------
         //  Helpers
         // ------------------------------------------------------------
@@ -287,6 +391,40 @@ namespace Ludots.Tests.GAS
                 new GraphProgramRegistry(),
                 GasGraphOpHandlerTable.Instance,
                 "GAS/effects.json");
+        }
+
+        private static void FinalizeEffectTemplates(EffectTemplateRegistry templates, string sourceName)
+        {
+            var presetTypes = new PresetTypeRegistry();
+            var builtinHandlers = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(builtinHandlers);
+            EffectExecutionPlanCompiler.FinalizeAll(
+                templates,
+                presetTypes,
+                builtinHandlers,
+                new GraphProgramRegistry(),
+                GasGraphOpHandlerTable.Instance,
+                sourceName);
+        }
+
+        private static bool TryFindEffect(World world, int templateId, out GameplayEffect effect)
+        {
+            GameplayEffect foundEffect = default;
+            bool found = false;
+            var query = new QueryDescription().WithAll<GameplayEffect, EffectTemplateRef>();
+            world.Query(in query, (Entity _, ref GameplayEffect current, ref EffectTemplateRef templateRef) =>
+            {
+                if (found || templateRef.TemplateId != templateId)
+                {
+                    return;
+                }
+
+                foundEffect = current;
+                found = true;
+            });
+
+            effect = foundEffect;
+            return found;
         }
 
         private static string CreateTempRoot()

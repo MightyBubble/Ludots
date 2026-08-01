@@ -1703,7 +1703,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var ex = Throws<InvalidOperationException>(() =>
                 Ludots.Core.Gameplay.GAS.Config.AbilityExecLoader.CompileAbility(obj, "Ability.Test.LegacyIndicator", "GAS/abilities.json"));
 
-            That(ex!.Message, Does.Contain("field 'indicator' is removed"));
+            That(ex!.Message, Does.Contain("field 'indicator': declare gameplay targeting"));
         }
 
         [Test]
@@ -1727,7 +1727,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var ex = Throws<InvalidOperationException>(() =>
                 Ludots.Core.Gameplay.GAS.Config.AbilityExecLoader.CompileAbility(obj, "Ability.Test.LegacyAimVisual", "GAS/abilities.json"));
 
-            That(ex!.Message, Does.Contain("field 'targeting.aimVisual' is removed"));
+            That(ex!.Message, Does.Contain("field 'targeting.aimVisual': put aim visuals"));
         }
 
         [Test]
@@ -1749,7 +1749,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var ex = Throws<InvalidOperationException>(() =>
                 Ludots.Core.Gameplay.GAS.Config.AbilityExecLoader.CompileAbility(obj, "Ability.Test.LegacyPreviewPerformer", "GAS/abilities.json"));
 
-            That(ex!.Message, Does.Contain("field 'previewPerformerId' is removed"));
+            That(ex!.Message, Does.Contain("field 'previewPerformerId': put aim visuals"));
         }
 
         [Test]
@@ -2337,7 +2337,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         }
 
         [Test]
-        public void AbilityExecSystem_ToggleDeactivate_BypassesBlockedAnyCooldown_AndClearsTagCount()
+        public void AbilityExecSystem_ToggleDeactivate_BypassesBlockedAnyLockout_AndClearsTagCount()
         {
             using var world = World.Create();
             var actor = world.Create(
@@ -2353,7 +2353,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             const int castAbilityOrderTypeId = 100;
             const int abilityId = 9002;
             const int toggleTagId = 41;
-            const int cooldownTagId = 42;
+            const int lockoutTagId = 42;
 
             ref var abilities = ref world.Get<AbilityStateBuffer>(actor);
             abilities.AddAbility(abilityId);
@@ -2376,10 +2376,10 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             ref var counts = ref world.Get<TagCountContainer>(actor);
             ref var dirty = ref world.Get<DirtyFlags>(actor);
             tagOps.AddTag(ref tags, ref counts, toggleTagId, ref dirty);
-            tagOps.AddTag(ref tags, ref counts, cooldownTagId, ref dirty);
+            tagOps.AddTag(ref tags, ref counts, lockoutTagId, ref dirty);
 
             var blockTags = new AbilityActivationBlockTags();
-            blockTags.BlockedAny.AddTag(cooldownTagId);
+            blockTags.BlockedAny.AddTag(lockoutTagId);
 
             var defs = new AbilityDefinitionRegistry();
             var def = new AbilityDefinition
@@ -2418,10 +2418,10 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             bool completed = system.UpdateSlice(0f, int.MaxValue);
 
             That(completed, Is.True);
-            That(world.Get<GameplayTagContainer>(actor).HasTag(toggleTagId), Is.False, "Toggle should turn off even when reactivate cooldown is present.");
+            That(world.Get<GameplayTagContainer>(actor).HasTag(toggleTagId), Is.False, "Toggle should turn off even when reactivation lockout is present.");
             That(world.Get<TagCountContainer>(actor).GetCount(toggleTagId), Is.EqualTo(0), "Toggle removal must clear TagCountContainer as well as the bitset.");
-            That(world.Get<GameplayTagContainer>(actor).HasTag(cooldownTagId), Is.True, "Turning off a toggle should not remove the reactivation cooldown tag.");
-            That(world.Get<TagCountContainer>(actor).GetCount(cooldownTagId), Is.EqualTo(1));
+            That(world.Get<GameplayTagContainer>(actor).HasTag(lockoutTagId), Is.True, "Turning off a toggle should not remove the reactivation lockout tag.");
+            That(world.Get<TagCountContainer>(actor).GetCount(lockoutTagId), Is.EqualTo(1));
             That(world.Get<OrderBuffer>(actor).HasActive, Is.False);
             That(orderTypes.TerminalResults.Count, Is.EqualTo(1));
             That(orderTypes.TerminalResults[0].OrderId, Is.EqualTo(8));

@@ -2,6 +2,142 @@
 
 Current closeouts and prior issue reviews follow.
 
+## Issues #714-#719 AI/GAS Order Boundary — Pre-Implementation Gate — 2026-07-31
+
+- **Task / Issue**: Implement issues #714-#719 after PR #713, keeping ability lockout as duration Effect data, keeping Utility AI out of GAS ability eligibility, and converging AI output on typed Order contracts and read-only scoring.
+- **Date**: 2026-07-31
+- **Agent / Author**: Codex
+- **Baseline**: `origin/main` cached at `74513182ab420dc950844d26882000ec54e030a7` (`Merge pull request #713 from MightyBubble/codex/gas-graph-effect-ssot`). Network fetch retried but GitHub reset the connection; the cached remote head already includes the confirmed merged PR #713.
+- **Status**: PRE-IMPLEMENTATION PASS.
+
+### 1. Core judgment
+
+新变体主要交付物是（A/B/C/D）: A.
+
+结论: PASS.
+
+一句话理由: Temporary ability lockout is authored as duration Effects that grant tags; abilities read `blockTags`, AI submits typed Orders, and scoring stays read-only.
+
+### 2. Layer assignment
+
+| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
+|-----------|-----------------|----------|
+| Temporary ability lockout | 2 | Existing duration Effect grants the lockout tag; ability exec applies that Effect with `EffectSignal` / `EffectClip`; `blockTags` reads the tag |
+| Ability acceptance/refusal truth | 1 | Existing Order -> GAS activation pipeline and Order admission/terminal results |
+| AI task lifecycle | 1/2 | Existing OrderId, OrderQueue, result buffers, plus stable AI consumption state |
+| Typed Order construction | 1 | Existing `Order`, `OrderQueue`, `OrderTypeRegistry`, shared builder/contract helpers |
+| Read-only scoring | 2 | Existing `GraphKind.Score`, `GraphKindOperationPolicy`, `GraphProgramRegistry`, score execution adapter |
+| Utility AI decisions | 2 | Existing Utility profile/decision/task data after removing GAS-aware fields |
+
+### 3. Reuse list
+
+- Handlers: existing AbilityExec timeline items (`EffectSignal`, `EffectClip`, ordinary-state `TagClip`), existing GAS activation systems.
+- Queues / Systems: `OrderQueue`, `OrderBufferSystem`, `OrderAdmissionResultBuffer`, `OrderTerminalResultBuffer`, `AbilitySystem`, `AbilityExecSystem`, `TimedTagExpirationSystem`, Utility AI systems.
+- Resolvers / Registries: `OrderTypeRegistry`, `AbilityDefinitionRegistry` only inside GAS ownership, `GraphProgramRegistry`, `TagRegistry`, `GraphKindOperationPolicy`.
+- Existing presets / graphs: existing EffectTemplate and Graph assets; no new Core preset enum.
+
+### 4. New Layer 0 ops (if any)
+
+N/A. No new atomic gameplay op is planned. The implementation deletes duplicate concepts and adds boundary helpers around existing Order/scoring contracts.
+
+### 5. Transaction boundary
+
+必须原子 rollback 的步骤: unchanged from existing GAS/Order execution. This task must not introduce a new gameplay transaction. An ability may be accepted or rejected only by the existing Order -> GAS path; effects/tags remain committed by existing GAS effect/timed-tag machinery. AI state changes must follow stable Order results and must not pre-commit gameplay side effects.
+
+### 6. Config SSOT
+
+行为配置落在: effect template / graph / catalog（路径）: ability execution timeline and effect/tag assets under existing GAS config paths; AI profile/task config only describes AI choice and typed Order intent.
+
+是否新增 JSON schema: NO. Current schemas are tightened to the active contract: Utility AI describes choice and typed Order intent; GAS owns ability execution and tag-granting Effects.
+
+### 7. Red flag scan
+
+- [x] 未新增 profile inherit/placement enum
+- [x] 未新建与 spawn 平行的物化管线
+- [x] 未把 placement 校验塞进 lifecycle op
+- [x] 未添加「说不清的」默认 fallback
+- [x] 未新增 Core 专用锁定系统 / tick / 字段
+- [x] 未新增 Utility-to-GAS eligibility facade
+- [x] 未把 command routing 的 local scoring 误并入 Utility AI decisioner
+
+### 8. Next variant test
+
+「下一个 Mod 变体」将修改: effect 步骤 / graph 连线 / typed Order data. It will not require a Core enum or Core 专用锁定字段.
+
+## Issues #714-#719 AI/GAS Order Boundary — Final Closeout — 2026-08-01
+
+- **Task / Issue**: Close the AI/Order/GAS boundary cleanup after PR #713, remove Core cooldown concepts, and preserve `EffectClip` / `EffectSignal` callerParams overrides for effect duration and target-resolver fan-out.
+- **Date**: 2026-08-01
+- **Agent / Author**: Codex
+- **Baseline**: `HEAD == origin/main == 74513182ab420dc950844d26882000ec54e030a7`.
+- **Status**: FINAL PASS.
+
+### 1. Core judgment
+
+新变体主要交付物是（A/B/C/D）: A.
+
+结论: PASS.
+
+一句话理由: 本次没有新增 Core 冷却字段、冷却组件、profile enum 或平行 AI/GAS 管线；技能锁定由 Mod-authored duration Effect 授予限时 tag，Ability 通过 `blockTags` 读取，Utility AI 只评分并提交 typed Order。
+
+### 2. Layer assignment
+
+| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
+|-----------|-----------------|----------|
+| 技能临时锁定 | 2 | EffectTemplate `duration` + `grantedTags`；Ability exec 用 `EffectSignal` / `EffectClip` 对 Source 施加该 Effect；Ability `blockTags` 阻止再次施放 |
+| 执行期状态 | 2 | `TagClip` 仍只表达施法/引导/瞄准等执行状态，不承担冷却语义 |
+| callerParams override | 1/2 | `ConfigParamsMerger` 在正式 Effect proposal / materialization / fan-out 路径合并 template params 与 caller params |
+| AI 决策 | 2 | Utility AI 只做候选过滤、评分、选择、typed Order 构造与提交；不读取 GAS ability eligibility |
+| AI actuator authoring | 2 | `AI/actuators.json` 只保留命名 id 映射；`ActuatorReadiness01` 通过 actuator key 解析，不接受数字 id 或无消费者字段 |
+| 指令面板锁定显示 | 2 | 面板只从当前 tag 状态与对应 EffectTemplate duration 推导展示进度，不拥有冷却规则 |
+
+### 3. Reuse list
+
+- Handlers: existing `EffectSignal`, `EffectClip`, ordinary execution-state `TagClip`, existing GAS activation/timed-tag machinery.
+- Queues / Systems: `OrderQueue`, `OrderBufferSystem`, `OrderAdmissionResultBuffer`, `OrderTerminalResultBuffer`, `AbilityExecSystem`, `EffectProposalProcessingSystem`, `TimedTagExpirationSystem`, Utility AI systems.
+- Resolvers / Registries: `AbilityDefinitionRegistry`, `EffectTemplateRegistry`, `TagRegistry`, `ConfigKeyRegistry`, `GraphProgramRegistry`, `GraphKindOperationPolicy`.
+- Existing presets / graphs: existing Mod-owned EffectTemplate and Graph assets; no new Core preset enum.
+
+### 4. New Layer 0 ops (if any)
+
+N/A. No new atomic gameplay op was added.
+
+### 5. Transaction boundary
+
+必须原子 rollback 的步骤: unchanged from existing GAS effect/order machinery. callerParams are merged before effect materialization and fan-out dispatch so runtime duration and payload-effect selection are authoritative inside the existing Effect proposal/application path. AI state follows Order results and does not commit gameplay side effects.
+
+### 6. Config SSOT
+
+行为配置落在: existing ability exec items, EffectTemplate `duration` / `grantedTags` / target dispatch config, and Mod-owned tag names.
+
+是否新增 JSON schema: NO. Typed callerParams parsing was tightened for existing `exec.callerParams`; no cooldown schema or Core field was introduced.
+
+### 7. Red flag scan
+
+- [x] 未新增 profile inherit/placement enum
+- [x] 未新建与 spawn / effect / order 平行的运行时管线
+- [x] 未新增 Core 专用 cooldown component / field / schema
+- [x] 未把 `TagClip` 当作冷却实现
+- [x] 未把 Utility AI 做成 GAS readiness / cooldown facade
+- [x] 未保留 Utility actuator 死字段或数字 id authoring
+- [x] 未破坏 `EffectClip` / `EffectSignal` callerParams 对 `duration` 与 fan-out payload effect 的覆盖能力
+- [x] 未添加 fallback、静默忽略或兼容旁路
+
+### 8. Verification results
+
+- `dotnet test src/Tests/GasTests/GasTests.csproj --no-restore --filter "FullyQualifiedName~CallerParamsE2ETests|FullyQualifiedName~AbilityExecLoaderFailFastTests|FullyQualifiedName~CommandPanelLockoutCallerParamsTests"` → 35 passed.
+- `dotnet test src/Tests/GasTests/GasTests.csproj --no-restore --no-build --filter "FullyQualifiedName~EntityCommandPanel|FullyQualifiedName~CommandDeck|FullyQualifiedName~CallerParamsE2ETests|FullyQualifiedName~AbilityExecLoaderFailFastTests|FullyQualifiedName~CommandPanelLockoutCallerParamsTests"` → 50 passed.
+- `dotnet test src/Tests/GasTests/GasTests.csproj --no-restore --no-build --filter "FullyQualifiedName~AiConfigLoaderTests|FullyQualifiedName~UtilityAiRuntimeTests|FullyQualifiedName~UtilityAutocastShowcasePlayableAcceptanceTests|FullyQualifiedName~InputOrderConvergenceValidationTests|FullyQualifiedName~ProductionAllModsValidationTests|FullyQualifiedName~ProductionMobaValidationTests|FullyQualifiedName~ChampionSkillSandboxConfigTests|FullyQualifiedName~ConfigMergeE2ETests"` → 104 passed.
+- `dotnet test src/Tests/GasTests/GasTests.csproj --no-restore --no-build --filter "FullyQualifiedName~UxPrototypePlayableAcceptanceTests|FullyQualifiedName~RoadNetwork|FullyQualifiedName~MobaDemo|FullyQualifiedName~ItemSystemShowcasePlayableAcceptanceTests|FullyQualifiedName~InteractionShowcasePlayableAcceptanceTests|FullyQualifiedName~ChampionSkillSandbox"` → 86 passed.
+- `dotnet test src/Tests/GasTests/GasTests.csproj --no-restore --filter "FullyQualifiedName~UtilityAiRuntimeTests|FullyQualifiedName~AiConfigLoaderTests|FullyQualifiedName~AiComponentAuthoringTests"` → 36 passed.
+- Narrow Core cooldown-field scan → no production/schema matches after the diagnostic wording cleanup.
+- Project-facing awkward-disclaimer scan for `我不是`, `不是纳粹`, `纳粹`, `Nazi`, `not a nazi`, `I'm not`, `I am not` → no matches outside third-party library text.
+- `git diff --check` → PASS after final doc closeout.
+
+### 9. Next variant test
+
+「下一个 Mod 变体」将修改: EffectTemplate duration / granted tag / target dispatch payload / graph 连线 / typed Order data. It will not require a Core cooldown field, a new Utility AI GAS-readiness path, or a Core preset enum.
+
 ## Graph / PresetType / EffectTemplate SSOT - Final Closeout - 2026-07-30
 
 - **Task / Issue**: Close the audited Ability, GAS Effect, and Graph contract gaps on current `main`, converge gameplay composition on `Graph -> optional PresetType sugar -> EffectTemplate instance`, and make test execution reproducible from repository-declared SDK and dependencies.

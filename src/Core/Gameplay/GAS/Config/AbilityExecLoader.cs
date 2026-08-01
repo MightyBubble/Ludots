@@ -15,13 +15,29 @@ namespace Ludots.Core.Gameplay.GAS.Config
     /// <summary>
     /// Loads ability definitions from JSON and populates AbilityDefinitionRegistry
     /// with the new AbilityExecSpec execution model.
-    /// JSON format: array of ability objects with "id", "exec", "onActivateEffects", "blockTags" etc.
+    /// JSON format: array of ability objects with "id", "exec", "blockTags" etc.
     /// </summary>
     public sealed class AbilityExecLoader
     {
         private readonly ConfigPipeline _pipeline;
         private readonly AbilityDefinitionRegistry _registry;
         private const int MaxToggleActiveEffects = 4;
+        private static readonly string[] AbilityPropertyNames =
+        {
+            "id",
+            "exec",
+            "blockTags",
+            "catalogTags",
+            "interactionContextProfile",
+            "activationPrecondition",
+            "toggleSpec",
+            "targeting",
+            "presentation",
+            "input",
+            "useRequirement",
+            "showRequirement",
+        };
+
         private static readonly string[] RemovedAimVisualFieldNames =
         {
             "aimVisual",
@@ -100,7 +116,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             if (obj["indicator"] != null)
             {
                 throw new InvalidOperationException(
-                    $"Ability '{id}' in '{path}' field 'indicator' is removed; use 'targeting.castRangeCm' and 'targeting.impactEffect'. Aim visuals belong in Performer rules.");
+                    $"Ability '{id}' in '{path}' field 'indicator': declare gameplay targeting with 'targeting.castRangeCm' and 'targeting.impactEffect'. Put aim visuals in Performer rules.");
             }
 
             RejectRemovedAimVisualFields(obj, id, path, currentPath: string.Empty);
@@ -123,15 +139,11 @@ namespace Ludots.Core.Gameplay.GAS.Config
             if (obj["onActivateEffects"] != null)
             {
                 throw new InvalidOperationException(
-                    $"Ability '{id}' in '{path}' field 'onActivateEffects' is removed. " +
-                    "Author effects once as exec.items EffectSignal or EffectClip entries.");
+                    $"Ability '{id}' in '{path}' field 'onActivateEffects': " +
+                    "author effects once in exec.items with EffectSignal or EffectClip.");
             }
 
-            if (obj["cooldown"] is JsonObject cooldownObj)
-            {
-                def.Cooldown = CompileCooldown(cooldownObj, id, path);
-                def.HasCooldown = def.Cooldown.CooldownValueAttributeId > 0 || def.Cooldown.CooldownTagId > 0;
-            }
+            RequireKnownRootProperties(obj, id, path);
 
             // ── blockTags ──
             if (obj["blockTags"] is JsonObject blockObj)
@@ -251,6 +263,28 @@ namespace Ludots.Core.Gameplay.GAS.Config
             return requirementId;
         }
 
+        private static void RequireKnownRootProperties(JsonObject obj, string id, string path)
+        {
+            foreach (KeyValuePair<string, JsonNode?> kvp in obj)
+            {
+                bool allowed = false;
+                for (int i = 0; i < AbilityPropertyNames.Length; i++)
+                {
+                    if (string.Equals(kvp.Key, AbilityPropertyNames[i], StringComparison.Ordinal))
+                    {
+                        allowed = true;
+                        break;
+                    }
+                }
+
+                if (!allowed)
+                {
+                    throw new InvalidOperationException(
+                        $"Ability '{id}' in '{path}' has unexpected field '{kvp.Key}'. Use only: {string.Join(", ", AbilityPropertyNames)}.");
+                }
+            }
+        }
+
         // ──────────────── ExecSpec ────────────────
 
         private static AbilityExecSpec CompileExecSpec(JsonObject execObj, string id, string path)
@@ -319,50 +353,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
             };
         }
 
-        private static AbilityCooldown CompileCooldown(JsonObject cooldownObj, string id, string path)
-        {
-            var cooldown = new AbilityCooldown();
-
-            if (cooldownObj.ContainsKey("cooldownValueAttribute"))
-            {
-                throw new InvalidOperationException(
-                    $"Ability '{id}' in '{path}' uses unsupported cooldown field 'cooldownValueAttribute'. Use 'valueAttribute'.");
-            }
-
-            if (cooldownObj.ContainsKey("cooldownTag"))
-            {
-                throw new InvalidOperationException(
-                    $"Ability '{id}' in '{path}' uses unsupported cooldown field 'cooldownTag'. Use 'tag'.");
-            }
-
-            string attrName = cooldownObj["valueAttribute"]?.GetValue<string>() ?? string.Empty;
-            if (!string.IsNullOrWhiteSpace(attrName))
-            {
-                int attrId = AttributeRegistry.GetId(attrName);
-                if (attrId <= 0)
-                {
-                    throw new InvalidOperationException(
-                        $"Ability '{id}' in '{path}' cooldown.valueAttribute references unknown attribute '{attrName}'.");
-                }
-
-                cooldown.CooldownValueAttributeId = attrId;
-            }
-
-            string tagName = cooldownObj["tag"]?.GetValue<string>() ?? string.Empty;
-            if (!string.IsNullOrWhiteSpace(tagName))
-            {
-                cooldown.CooldownTagId = TagRegistry.Register(tagName);
-            }
-
-            if (cooldown.CooldownValueAttributeId <= 0 && cooldown.CooldownTagId <= 0)
-            {
-                throw new InvalidOperationException(
-                    $"Ability '{id}' in '{path}' cooldown must declare valueAttribute or tag.");
-            }
-
-            return cooldown;
-        }
-
         private static void CompileItem(JsonObject itemObj, ref AbilityExecSpec spec, int idx, string id, string path)
         {
             string kindStr = RequireNonEmptyString(itemObj["kind"], $"exec.items[{idx}].kind", id, path);
@@ -428,8 +418,8 @@ namespace Ludots.Core.Gameplay.GAS.Config
             }
 
             throw new InvalidOperationException(
-                $"Ability '{abilityId}' item[{itemIndex}] in '{path}' uses unsupported dispatchTarget '{rawValue}'. " +
-                "Supported values: Default, Source, Target, TargetContext.");
+                $"Ability '{abilityId}' item[{itemIndex}] in '{path}' uses unknown dispatchTarget '{rawValue}'. " +
+                "Valid values: Default, Source, Target, TargetContext.");
         }
 
         // ──────────────── CallerParamsPool ────────────────
@@ -465,17 +455,14 @@ namespace Ludots.Core.Gameplay.GAS.Config
                         string key = RequireNonEmptyString(entryObj["key"], $"exec.callerParams[{setIndex}].entries[{entryIndex}].key", id, path);
                         int keyId = ConfigKeyRegistry.Register(key);
 
-                        if (entryObj["value"] is JsonNode valNode)
-                        {
-                            float val = valNode.GetValue<JsonElement>().ValueKind == JsonValueKind.Number
-                                ? valNode.GetValue<float>()
-                                : float.Parse(valNode.GetValue<string>(), CultureInfo.InvariantCulture);
-                            if (!cp.TryAddFloat(keyId, val))
-                            {
-                                throw new InvalidOperationException(
-                                    $"Ability '{id}' in '{path}' field 'exec.callerParams[{setIndex}].entries' exceeded max {EffectConfigParams.MAX_PARAMS} params.");
-                            }
-                        }
+                        CompileCallerParamEntry(
+                            ref cp,
+                            keyId,
+                            entryObj,
+                            id,
+                            path,
+                            $"exec.callerParams[{setIndex}].entries[{entryIndex}]",
+                            $"exec.callerParams[{setIndex}].entries");
                     }
                 }
 
@@ -490,12 +477,104 @@ namespace Ludots.Core.Gameplay.GAS.Config
 
         // ──────────────── Toggle / Targeting ────────────────
 
+        private static void CompileCallerParamEntry(
+            ref EffectConfigParams callerParams,
+            int keyId,
+            JsonObject entryObj,
+            string id,
+            string path,
+            string fieldPath,
+            string capacityFieldPath)
+        {
+            JsonNode? valueNode = entryObj["value"];
+            if (valueNode == null)
+            {
+                throw new InvalidOperationException(
+                    $"Ability '{id}' in '{path}' field '{fieldPath}.value' is required.");
+            }
+
+            string type = entryObj["type"] is JsonNode typeNode
+                ? RequireNonEmptyString(typeNode, $"{fieldPath}.type", id, path)
+                : "Float";
+
+            bool added = type switch
+            {
+                "Float" => callerParams.TryAddFloat(keyId, ParseFloatValue(valueNode, id, path, $"{fieldPath}.value")),
+                "Int" => callerParams.TryAddInt(keyId, ParseIntValue(valueNode, id, path, $"{fieldPath}.value")),
+                "EffectTemplate" => callerParams.TryAddEffectTemplateId(
+                    keyId,
+                    ResolveEffectTemplateParam(valueNode, id, path, $"{fieldPath}.value")),
+                "Attribute" => callerParams.TryAddAttributeId(
+                    keyId,
+                    ResolveAttributeParam(valueNode, id, path, $"{fieldPath}.value")),
+                _ => throw new InvalidOperationException(
+                    $"Ability '{id}' in '{path}' field '{fieldPath}.type' has unknown caller param type '{type}'. Valid values: Float, Int, EffectTemplate, Attribute."),
+            };
+
+            if (!added)
+            {
+                throw new InvalidOperationException(
+                    $"Ability '{id}' in '{path}' field '{capacityFieldPath}' exceeded max {EffectConfigParams.MAX_PARAMS} params.");
+            }
+        }
+
+        private static float ParseFloatValue(JsonNode node, string id, string path, string fieldPath)
+        {
+            try
+            {
+                JsonElement json = node.GetValue<JsonElement>();
+                return json.ValueKind == JsonValueKind.Number
+                    ? json.GetSingle()
+                    : float.Parse(json.GetString() ?? string.Empty, CultureInfo.InvariantCulture);
+            }
+            catch (Exception ex) when (ex is FormatException || ex is InvalidOperationException)
+            {
+                throw new InvalidOperationException(
+                    $"Ability '{id}' in '{path}' field '{fieldPath}' must be a float value.", ex);
+            }
+        }
+
+        private static int ParseIntValue(JsonNode node, string id, string path, string fieldPath)
+        {
+            try
+            {
+                JsonElement json = node.GetValue<JsonElement>();
+                return json.ValueKind == JsonValueKind.Number
+                    ? json.GetInt32()
+                    : int.Parse(json.GetString() ?? string.Empty, CultureInfo.InvariantCulture);
+            }
+            catch (Exception ex) when (ex is FormatException || ex is InvalidOperationException)
+            {
+                throw new InvalidOperationException(
+                    $"Ability '{id}' in '{path}' field '{fieldPath}' must be an integer value.", ex);
+            }
+        }
+
+        private static int ResolveEffectTemplateParam(JsonNode node, string id, string path, string fieldPath)
+        {
+            string templateName = RequireNonEmptyString(node, fieldPath, id, path);
+            int templateId = EffectTemplateIdRegistry.GetId(templateName);
+            if (templateId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Ability '{id}' in '{path}' field '{fieldPath}' references unknown effect template '{templateName}'.");
+            }
+
+            return templateId;
+        }
+
+        private static int ResolveAttributeParam(JsonNode node, string id, string path, string fieldPath)
+        {
+            string attributeName = RequireNonEmptyString(node, fieldPath, id, path);
+            return AttributeRegistry.Register(attributeName);
+        }
+
         private static AbilityToggleSpec CompileToggleSpec(JsonObject toggleObj, string id, string path)
         {
             if (toggleObj.ContainsKey("tag"))
             {
                 throw new InvalidOperationException(
-                    $"Ability '{id}' in '{path}' uses unsupported toggleSpec field 'tag'. Use 'toggleTag'.");
+                    $"Ability '{id}' in '{path}' uses toggleSpec field 'tag'. Use 'toggleTag'.");
             }
 
             string toggleTag = RequireNonEmptyString(toggleObj["toggleTag"], "toggleSpec.toggleTag", id, path);
@@ -605,7 +684,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                         if (string.Equals(key, RemovedAimVisualFieldNames[i], StringComparison.Ordinal))
                         {
                             throw new InvalidOperationException(
-                                $"Ability '{id}' in '{path}' field '{fieldPath}' is removed; aim visuals belong in Performer event-condition-action rules.");
+                                $"Ability '{id}' in '{path}' field '{fieldPath}': put aim visuals in Performer event-condition-action rules.");
                         }
                     }
 
@@ -755,7 +834,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 if (!Enum.TryParse(rawTrigger, ignoreCase: true, out InputTriggerType trigger))
                 {
                     throw new InvalidOperationException(
-                        $"Ability '{id}' in '{path}' input.trigger uses unsupported value '{rawTrigger}'.");
+                        $"Ability '{id}' in '{path}' input.trigger uses unknown value '{rawTrigger}'.");
                 }
 
                 result.Trigger = trigger;
@@ -769,7 +848,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 if (!Enum.TryParse(rawHeldPolicy, ignoreCase: true, out HeldPolicy heldPolicy))
                 {
                     throw new InvalidOperationException(
-                        $"Ability '{id}' in '{path}' input.heldPolicy uses unsupported value '{rawHeldPolicy}'.");
+                        $"Ability '{id}' in '{path}' input.heldPolicy uses unknown value '{rawHeldPolicy}'.");
                 }
 
                 result.HeldPolicy = heldPolicy;
@@ -783,7 +862,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 if (!Enum.TryParse(rawCastMode, ignoreCase: true, out InteractionModeType castMode))
                 {
                     throw new InvalidOperationException(
-                        $"Ability '{id}' in '{path}' input.castModeOverride uses unsupported value '{rawCastMode}'.");
+                        $"Ability '{id}' in '{path}' input.castModeOverride uses unknown value '{rawCastMode}'.");
                 }
 
                 result.CastModeOverride = castMode;
@@ -797,7 +876,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 if (!Enum.TryParse(rawAutoTargetPolicy, ignoreCase: true, out AutoTargetPolicy autoTargetPolicy))
                 {
                     throw new InvalidOperationException(
-                        $"Ability '{id}' in '{path}' input.autoTargetPolicy uses unsupported value '{rawAutoTargetPolicy}'.");
+                        $"Ability '{id}' in '{path}' input.autoTargetPolicy uses unknown value '{rawAutoTargetPolicy}'.");
                 }
 
                 result.AutoTargetPolicy = autoTargetPolicy;
@@ -829,7 +908,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 "FixedFrame" => GasClockId.FixedFrame,
                 "Step" => GasClockId.Step,
                 "EntityLocal" => GasClockId.EntityLocal,
-                "Turn" => throw new InvalidOperationException("GasClockId 'Turn' has been removed. Use Step for turn durations or EntityLocal for entity-scoped logic time."),
+                "Turn" => throw new InvalidOperationException("GasClockId 'Turn': use Step for turn durations or EntityLocal for entity-scoped logic time."),
                 _ => throw new InvalidOperationException($"Unknown GasClockId '{str}'. Valid values: FixedFrame, Step, EntityLocal."),
             };
         }

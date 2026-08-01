@@ -4,16 +4,15 @@ using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.AI.Components;
 using Ludots.Core.Gameplay.Components;
-using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Gameplay.GAS.Scoring;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Layers;
 using Ludots.Core.Mathematics;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Spatial;
-using GasGraphExecutor = Ludots.Core.NodeLibraries.GASGraph.GraphExecutor;
 
 namespace Ludots.Core.Gameplay.AI.Utility
 {
@@ -21,7 +20,6 @@ namespace Ludots.Core.Gameplay.AI.Utility
     {
         private readonly World _world;
         private readonly ISpatialQueryService _spatialQueries;
-        private readonly AbilityDefinitionRegistry? _abilities;
         private readonly GraphProgramRegistry? _graphs;
         private readonly IGraphRuntimeApi? _graphApi;
         private readonly Entity[] _targets;
@@ -29,14 +27,12 @@ namespace Ludots.Core.Gameplay.AI.Utility
         public UtilityAiRuntimeEvaluator(
             World world,
             ISpatialQueryService spatialQueries,
-            AbilityDefinitionRegistry? abilities,
             GraphProgramRegistry? graphs,
             IGraphRuntimeApi? graphApi,
             int targetCapacity = 256)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _spatialQueries = spatialQueries ?? throw new ArgumentNullException(nameof(spatialQueries));
-            _abilities = abilities;
             _graphs = graphs;
             _graphApi = graphApi;
             _targets = new Entity[targetCapacity < 16 ? 16 : targetCapacity];
@@ -51,13 +47,11 @@ namespace Ludots.Core.Gameplay.AI.Utility
             in UtilityAiCombatMemory memory,
             out UtilityAiCandidate best,
             out int candidateCount,
-            out UtilityAiFilterRejectReason rejectReason,
-            out UtilityAiReadinessBlockReason readinessBlockReason)
+            out UtilityAiFilterRejectReason rejectReason)
         {
             best = default;
             candidateCount = 0;
             rejectReason = UtilityAiFilterRejectReason.None;
-            readinessBlockReason = UtilityAiReadinessBlockReason.None;
 
             if ((uint)profileId >= (uint)runtime.Profiles.Length)
             {
@@ -65,6 +59,7 @@ namespace Ludots.Core.Gameplay.AI.Utility
             }
 
             ref readonly var profile = ref runtime.Profiles[profileId];
+            var scoreBudget = GraphScoreEvaluationBudget.Create(profile.MaxCandidates);
             bool found = false;
             int bestPriority = int.MinValue;
             int bestPriorityBucket = int.MinValue;
@@ -79,13 +74,8 @@ namespace Ludots.Core.Gameplay.AI.Utility
                 for (int decisionId = maker.DecisionOffset; decisionId < decisionEnd; decisionId++)
                 {
                     ref readonly var decision = ref runtime.Decisions[decisionId];
-                    if (!CanSwitchToDecision(in runtime, in decision, decisionId, currentStep, in state, out var switchBlockReason))
+                    if (!CanSwitchToDecision(in runtime, in decision, decisionId, currentStep, in state))
                     {
-                        if (switchBlockReason != UtilityAiReadinessBlockReason.None)
-                        {
-                            readinessBlockReason = switchBlockReason;
-                        }
-
                         continue;
                     }
 
@@ -105,15 +95,40 @@ namespace Ludots.Core.Gameplay.AI.Utility
                     for (int targetIndex = 0; targetIndex < targetCount; targetIndex++)
                     {
                         Entity target = _targets[targetIndex];
-                        if (!PassesDecisionReadiness(actor, target, currentStep, in decision, in state, out readinessBlockReason))
+                        if (candidateCount >= profile.MaxCandidates)
                         {
-                            continue;
+                            rejectReason = UtilityAiFilterRejectReason.CandidateBudgetExhausted;
+                            return found;
                         }
 
                         candidateCount++;
                         long distanceSq = DistanceSquared(actor, target);
-                        int priorityBucket = ComputePriorityBucket(runtime, actor, target, currentStep, in decision);
-                        float score = EvaluateDecision(runtime, actor, target, currentStep, in decision);
+                        if (!TryComputePriorityBucket(
+                                runtime,
+                                actor,
+                                target,
+                                currentStep,
+                                in decision,
+                                ref scoreBudget,
+                                out int priorityBucket,
+                                out rejectReason))
+                        {
+                            return found;
+                        }
+
+                        if (!TryEvaluateDecision(
+                                runtime,
+                                actor,
+                                target,
+                                currentStep,
+                                in decision,
+                                ref scoreBudget,
+                                out float score,
+                                out rejectReason))
+                        {
+                            return found;
+                        }
+
                         if (decisionId == state.CurrentDecisionId && target.Equals(state.CurrentTarget))
                         {
                             score += decision.MomentumBonus;
@@ -155,14 +170,12 @@ namespace Ludots.Core.Gameplay.AI.Utility
             int currentStep,
             OrderQueue orders,
             out int submittedOrderTypeId,
-            out int submittedAbilityId,
-            out int submittedSharedCooldownTagId,
+            out int submittedOrderId,
             out UtilityAiTaskKind taskKind,
             out UtilityAiTaskRunStatus taskStatus)
         {
             submittedOrderTypeId = 0;
-            submittedAbilityId = 0;
-            submittedSharedCooldownTagId = 0;
+            submittedOrderId = 0;
             taskKind = UtilityAiTaskKind.SubmitOrder;
             taskStatus = UtilityAiTaskRunStatus.None;
 
@@ -191,17 +204,16 @@ namespace Ludots.Core.Gameplay.AI.Utility
                     case UtilityAiTaskKind.SubmitOrder:
                     default:
                         requiredAny = true;
-                        if (!TrySubmitOrderTask(in task, in decision, actor, in candidate, currentStep, orders, out submittedOrderTypeId, out submittedAbilityId))
+                        if (!TrySubmitOrderTask(in task, actor, in candidate, currentStep, orders, out submittedOrderTypeId, out submittedOrderId))
                         {
                             taskStatus = submittedAny ? UtilityAiTaskRunStatus.Running : UtilityAiTaskRunStatus.Blocked;
                             return submittedAny;
                         }
 
-                        submittedSharedCooldownTagId = ResolveSharedCooldownTag(in decision, submittedAbilityId);
                         submittedAny = true;
                         if (task.Kind == UtilityAiTaskKind.SubmitOrder)
                         {
-                            taskStatus = UtilityAiTaskRunStatus.Complete;
+                            taskStatus = UtilityAiTaskRunStatus.Running;
                             return true;
                         }
                         break;
@@ -209,75 +221,61 @@ namespace Ludots.Core.Gameplay.AI.Utility
             }
 
             taskStatus = submittedAny
-                ? UtilityAiTaskRunStatus.Complete
+                ? UtilityAiTaskRunStatus.Running
                 : requiredAny ? UtilityAiTaskRunStatus.Blocked : UtilityAiTaskRunStatus.None;
             return submittedAny;
         }
 
         private bool TrySubmitOrderTask(
             in UtilityAiTaskDefinition task,
-            in UtilityAiDecisionDefinition decision,
             Entity actor,
             in UtilityAiCandidate candidate,
             int currentStep,
             OrderQueue orders,
             out int submittedOrderTypeId,
-            out int submittedAbilityId)
+            out int submittedOrderId)
         {
             submittedOrderTypeId = 0;
-            submittedAbilityId = 0;
+            submittedOrderId = 0;
             if (task.OrderTypeId <= 0)
             {
                 return false;
             }
 
-            int slotIndex = task.AbilitySlotIndex >= 0
-                ? task.AbilitySlotIndex
-                : decision.AbilitySlotIndex;
-            int abilityId = task.AbilityId > 0
-                ? task.AbilityId
-                : decision.AutocastAbilityId;
-            if (slotIndex < 0 && abilityId > 0 && TryFindAbilitySlot(actor, abilityId, out int resolvedSlot))
-            {
-                slotIndex = resolvedSlot;
-            }
+            var order = OrderBuilder.Create(
+                task.OrderTypeId,
+                task.PlayerId,
+                actor,
+                candidate.Target,
+                Entity.Null,
+                (OrderSubmitMode)(byte)task.SubmitMode,
+                currentStep);
 
-            var order = new Order
+            if (task.AbilitySlotIndex >= 0)
             {
-                Actor = actor,
-                Target = candidate.Target,
-                OrderTypeId = task.OrderTypeId,
-                PlayerId = task.PlayerId,
-                SubmitMode = (OrderSubmitMode)(byte)task.SubmitMode,
-                SubmitStep = currentStep
-            };
-
-            if (slotIndex >= 0)
-            {
-                order.Args.I0 = slotIndex;
+                OrderBuilder.SetAbilitySlot(ref order, task.AbilitySlotIndex);
             }
             else if (task.IntArg0 >= 0)
             {
-                order.Args.I0 = task.IntArg0;
+                OrderBuilder.SetIntArg(ref order, OrderIntArgSlot.I0, task.IntArg0);
             }
 
-            order.Args.I1 = task.IntArg1;
+            OrderBuilder.SetIntArg(ref order, OrderIntArgSlot.I1, task.IntArg1);
 
             if (_world.TryGet(candidate.Target, out WorldPositionCm targetPosition))
             {
                 var pos = targetPosition.Value.ToVector2();
-                order.Args.Spatial.Kind = OrderSpatialKind.WorldCm;
-                order.Args.Spatial.Mode = OrderCollectionMode.Single;
-                order.Args.Spatial.WorldCm = new Vector3(pos.X, 0f, pos.Y);
+                OrderBuilder.SetSingleWorldCm(ref order, new Vector3(pos.X, 0f, pos.Y));
             }
 
-            if (!orders.TryEnqueue(in order))
+            OrderSubmitResult result = orders.SubmitAssigned(ref order);
+            if (!OrderSubmitResultSemantics.IsAccepted(result))
             {
                 return false;
             }
 
             submittedOrderTypeId = task.OrderTypeId;
-            submittedAbilityId = abilityId;
+            submittedOrderId = order.OrderId;
             return true;
         }
 
@@ -459,13 +457,6 @@ namespace Ludots.Core.Gameplay.AI.Utility
                             return false;
                         }
                         break;
-                    case UtilityAiTargetFilterOpKind.AbilityEligible:
-                        if (!IsAbilityReady(actor, target, op.IntA, currentStep, sharedCooldownTagId: 0, out _))
-                        {
-                            rejectReason = UtilityAiFilterRejectReason.AbilityNotEligible;
-                            return false;
-                        }
-                        break;
                     case UtilityAiTargetFilterOpKind.SourceSelf:
                     case UtilityAiTargetFilterOpKind.SpatialRadius:
                     case UtilityAiTargetFilterOpKind.RecentAttacker:
@@ -478,20 +469,30 @@ namespace Ludots.Core.Gameplay.AI.Utility
             return true;
         }
 
-        private float EvaluateDecision(
+        private bool TryEvaluateDecision(
             in UtilityAiCompiledRuntime runtime,
             Entity actor,
             Entity target,
             int currentStep,
-            in UtilityAiDecisionDefinition decision)
+            in UtilityAiDecisionDefinition decision,
+            ref GraphScoreEvaluationBudget scoreBudget,
+            out float score,
+            out UtilityAiFilterRejectReason rejectReason)
         {
+            rejectReason = UtilityAiFilterRejectReason.None;
             float multiply = decision.BaseScore;
             float weighted = 0f;
             int end = decision.ConsiderationOffset + decision.ConsiderationCount;
             for (int i = decision.ConsiderationOffset; i < end; i++)
             {
                 ref readonly var consideration = ref runtime.Considerations[i];
-                float raw = SampleInput(runtime, actor, target, currentStep, consideration.InputId);
+                if (!TrySampleInput(runtime, actor, target, currentStep, consideration.InputId, ref scoreBudget, out float raw))
+                {
+                    rejectReason = UtilityAiFilterRejectReason.ScoreGraphBudgetExhausted;
+                    score = 0f;
+                    return false;
+                }
+
                 float normalized = Normalize(runtime.Normalizations[consideration.NormalizationId], raw);
                 float curved = Curve(runtime.Curves[consideration.CurveId], normalized);
 
@@ -500,7 +501,8 @@ namespace Ludots.Core.Gameplay.AI.Utility
                     case UtilityAiAggregateMode.Veto:
                         if (curved <= 0f)
                         {
-                            return 0f;
+                            score = 0f;
+                            return true;
                         }
                         break;
                     case UtilityAiAggregateMode.WeightedSum:
@@ -514,17 +516,22 @@ namespace Ludots.Core.Gameplay.AI.Utility
                 }
             }
 
-            return (multiply + weighted) * decision.Weight;
+            score = (multiply + weighted) * decision.Weight;
+            return true;
         }
 
-        private int ComputePriorityBucket(
+        private bool TryComputePriorityBucket(
             in UtilityAiCompiledRuntime runtime,
             Entity actor,
             Entity target,
             int currentStep,
-            in UtilityAiDecisionDefinition decision)
+            in UtilityAiDecisionDefinition decision,
+            ref GraphScoreEvaluationBudget scoreBudget,
+            out int bucket,
+            out UtilityAiFilterRejectReason rejectReason)
         {
-            int bucket = 0;
+            bucket = 0;
+            rejectReason = UtilityAiFilterRejectReason.None;
             int end = decision.ConsiderationOffset + decision.ConsiderationCount;
             for (int i = decision.ConsiderationOffset; i < end; i++)
             {
@@ -534,222 +541,61 @@ namespace Ludots.Core.Gameplay.AI.Utility
                     continue;
                 }
 
-                float raw = SampleInput(runtime, actor, target, currentStep, consideration.InputId);
+                if (!TrySampleInput(runtime, actor, target, currentStep, consideration.InputId, ref scoreBudget, out float raw))
+                {
+                    rejectReason = UtilityAiFilterRejectReason.ScoreGraphBudgetExhausted;
+                    return false;
+                }
+
                 float normalized = Normalize(runtime.Normalizations[consideration.NormalizationId], raw);
                 float curved = Curve(runtime.Curves[consideration.CurveId], normalized);
                 bucket += (int)MathF.Round(curved * consideration.Weight);
             }
 
-            return bucket;
+            return true;
         }
 
-        private float SampleInput(in UtilityAiCompiledRuntime runtime, Entity actor, Entity target, int currentStep, int inputId)
+        private bool TrySampleInput(
+            in UtilityAiCompiledRuntime runtime,
+            Entity actor,
+            Entity target,
+            int currentStep,
+            int inputId,
+            ref GraphScoreEvaluationBudget scoreBudget,
+            out float value)
         {
+            value = 0f;
             if ((uint)inputId >= (uint)runtime.Inputs.Length)
             {
-                return 0f;
+                return true;
             }
 
             ref readonly var input = ref runtime.Inputs[inputId];
             switch (input.Kind)
             {
                 case UtilityAiInputKind.Constant:
-                    return input.Arg0;
+                    value = input.Arg0;
+                    return true;
                 case UtilityAiInputKind.DistanceToTarget:
-                    return Distance(actor, target);
+                    value = Distance(actor, target);
+                    return true;
                 case UtilityAiInputKind.TargetPriorityBucket:
-                    return ReadTargetPriorityBucket(target, input.Arg0);
+                    value = ReadTargetPriorityBucket(target, input.Arg0);
+                    return true;
                 case UtilityAiInputKind.TargetHasTag:
-                    return _world.Has<GameplayTagContainer>(target) && _world.Get<GameplayTagContainer>(target).HasTag(input.Arg0) ? 1f : 0f;
+                    value = _world.Has<GameplayTagContainer>(target) && _world.Get<GameplayTagContainer>(target).HasTag(input.Arg0) ? 1f : 0f;
+                    return true;
                 case UtilityAiInputKind.SourceHasTag:
-                    return _world.Has<GameplayTagContainer>(actor) && _world.Get<GameplayTagContainer>(actor).HasTag(input.Arg0) ? 1f : 0f;
-                case UtilityAiInputKind.AbilityReady:
-                    return IsAbilityReady(actor, target, input.Arg0, currentStep, sharedCooldownTagId: 0, out _) ? 1f : 0f;
+                    value = _world.Has<GameplayTagContainer>(actor) && _world.Get<GameplayTagContainer>(actor).HasTag(input.Arg0) ? 1f : 0f;
+                    return true;
                 case UtilityAiInputKind.ActuatorReadiness01:
-                    return TryReadActuatorReadiness(actor, input.Arg0, out float ready) ? ready : 0f;
+                    value = TryReadActuatorReadiness(actor, input.Arg0, out float ready) ? ready : 0f;
+                    return true;
                 case UtilityAiInputKind.GraphScore:
-                    return ExecuteScoreGraph(actor, target, input.GraphId);
+                    return TryExecuteScoreGraph(actor, target, input.GraphId, ref scoreBudget, out value);
                 default:
-                    return 0f;
+                    return true;
             }
-        }
-
-        private bool PassesDecisionReadiness(
-            Entity actor,
-            Entity target,
-            int currentStep,
-            in UtilityAiDecisionDefinition decision,
-            in UtilityAiState state,
-            out UtilityAiReadinessBlockReason blockReason)
-        {
-            blockReason = UtilityAiReadinessBlockReason.None;
-            if ((decision.Flags & UtilityAiDecisionFlags.Autocast) == 0)
-            {
-                return true;
-            }
-
-            int abilityId = decision.AutocastAbilityId;
-            if (abilityId <= 0 && decision.AbilitySlotIndex >= 0)
-            {
-                if (!TryResolveAbilityAtSlot(actor, decision.AbilitySlotIndex, out abilityId))
-                {
-                    blockReason = UtilityAiReadinessBlockReason.AbilityMissing;
-                    return false;
-                }
-            }
-
-            int sharedCooldownTagId = decision.SharedCooldownTagId;
-            if (sharedCooldownTagId <= 0 && abilityId > 0 && _abilities != null && _abilities.TryGet(abilityId, out var ability) && ability.HasCooldown)
-            {
-                sharedCooldownTagId = ability.Cooldown.CooldownTagId;
-            }
-
-            if (sharedCooldownTagId > 0 &&
-                state.SharedCooldownTagId == sharedCooldownTagId &&
-                currentStep < state.SharedCooldownUntilStep)
-            {
-                blockReason = UtilityAiReadinessBlockReason.SharedCooldown;
-                return false;
-            }
-
-            return abilityId <= 0 || IsAbilityReady(actor, target, abilityId, currentStep, sharedCooldownTagId, out blockReason);
-        }
-
-        private int ResolveSharedCooldownTag(in UtilityAiDecisionDefinition decision, int abilityId)
-        {
-            if (decision.SharedCooldownTagId > 0)
-            {
-                return decision.SharedCooldownTagId;
-            }
-
-            if (abilityId > 0 &&
-                _abilities != null &&
-                _abilities.TryGet(abilityId, out var ability) &&
-                ability.HasCooldown)
-            {
-                return ability.Cooldown.CooldownTagId;
-            }
-
-            return 0;
-        }
-
-        private bool IsAbilityReady(
-            Entity actor,
-            Entity target,
-            int abilityId,
-            int currentStep,
-            int sharedCooldownTagId,
-            out UtilityAiReadinessBlockReason blockReason)
-        {
-            blockReason = UtilityAiReadinessBlockReason.None;
-            if (abilityId <= 0)
-            {
-                blockReason = UtilityAiReadinessBlockReason.AbilityMissing;
-                return false;
-            }
-
-            if (_abilities == null || !_abilities.TryGet(abilityId, out var ability))
-            {
-                blockReason = UtilityAiReadinessBlockReason.AbilityMissing;
-                return false;
-            }
-
-            if (ability.HasCooldown)
-            {
-                if (ability.Cooldown.CooldownValueAttributeId > 0 &&
-                    _world.Has<AttributeBuffer>(actor) &&
-                    _world.Get<AttributeBuffer>(actor).GetCurrent(ability.Cooldown.CooldownValueAttributeId) > 0f)
-                {
-                    blockReason = UtilityAiReadinessBlockReason.AbilityCooldown;
-                    return false;
-                }
-
-                int cooldownTag = sharedCooldownTagId > 0 ? sharedCooldownTagId : ability.Cooldown.CooldownTagId;
-                if (cooldownTag > 0 &&
-                    _world.Has<GameplayTagContainer>(actor) &&
-                    _world.Get<GameplayTagContainer>(actor).HasTag(cooldownTag))
-                {
-                    blockReason = UtilityAiReadinessBlockReason.SharedCooldown;
-                    return false;
-                }
-            }
-
-            if (ability.HasActivationBlockTags)
-            {
-                if (!_world.Has<GameplayTagContainer>(actor))
-                {
-                    if (!ability.ActivationBlockTags.RequiredAll.IsEmpty)
-                    {
-                        blockReason = UtilityAiReadinessBlockReason.ActivationBlockTags;
-                        return false;
-                    }
-                }
-                else
-                {
-                    ref var tags = ref _world.Get<GameplayTagContainer>(actor);
-                    if (!ability.ActivationBlockTags.RequiredAll.IsEmpty &&
-                        !tags.ContainsAll(in ability.ActivationBlockTags.RequiredAll))
-                    {
-                        blockReason = UtilityAiReadinessBlockReason.ActivationBlockTags;
-                        return false;
-                    }
-
-                    if (!ability.ActivationBlockTags.BlockedAny.IsEmpty &&
-                        tags.Intersects(in ability.ActivationBlockTags.BlockedAny))
-                    {
-                        blockReason = UtilityAiReadinessBlockReason.ActivationBlockTags;
-                        return false;
-                    }
-                }
-            }
-
-            if (!PassesActuatorGates(actor, abilityId, out blockReason))
-            {
-                return false;
-            }
-
-            if (ability.HasActivationPrecondition &&
-                !AbilityActivationPreconditionEvaluator.Evaluate(
-                    _world,
-                    actor,
-                    target,
-                    default,
-                    abilityId,
-                    in ability.ActivationPrecondition,
-                    _graphs,
-                    _graphApi))
-            {
-                blockReason = UtilityAiReadinessBlockReason.ActivationPrecondition;
-                return false;
-            }
-
-            return true;
-        }
-
-        private bool PassesActuatorGates(Entity actor, int abilityId, out UtilityAiReadinessBlockReason blockReason)
-        {
-            blockReason = UtilityAiReadinessBlockReason.None;
-            if (_world.Has<ActuatorReadiness>(actor))
-            {
-                var readiness = _world.Get<ActuatorReadiness>(actor);
-                if (readiness.ActuatorId == abilityId && readiness.Ready01 < 1f)
-                {
-                    blockReason = UtilityAiReadinessBlockReason.ActuatorNotReady;
-                    return false;
-                }
-            }
-
-            if (_world.Has<AimGate>(actor))
-            {
-                var aimGate = _world.Get<AimGate>(actor);
-                if (aimGate.ActuatorId == abilityId && aimGate.Ready01 < 1f)
-                {
-                    blockReason = UtilityAiReadinessBlockReason.AimGateNotReady;
-                    return false;
-                }
-            }
-
-            return true;
         }
 
         private bool CanSwitchToDecision(
@@ -757,26 +603,8 @@ namespace Ludots.Core.Gameplay.AI.Utility
             in UtilityAiDecisionDefinition decision,
             int decisionId,
             int currentStep,
-            in UtilityAiState state,
-            out UtilityAiReadinessBlockReason blockReason)
+            in UtilityAiState state)
         {
-            blockReason = UtilityAiReadinessBlockReason.None;
-            int sharedCooldownTagId = ResolveSharedCooldownTag(in decision, decision.AutocastAbilityId);
-            if (sharedCooldownTagId > 0 &&
-                state.SharedCooldownTagId == sharedCooldownTagId &&
-                currentStep < state.SharedCooldownUntilStep)
-            {
-                blockReason = UtilityAiReadinessBlockReason.SharedCooldown;
-                return false;
-            }
-
-            if (decision.CooldownSteps > 0 &&
-                state.CooldownDecisionId == decisionId &&
-                currentStep < state.DecisionCooldownUntilStep)
-            {
-                return false;
-            }
-
             if ((uint)state.CurrentDecisionId < (uint)runtime.Decisions.Length)
             {
                 ref readonly var current = ref runtime.Decisions[state.CurrentDecisionId];
@@ -793,34 +621,6 @@ namespace Ludots.Core.Gameplay.AI.Utility
             }
 
             return true;
-        }
-
-        private bool TryFindAbilitySlot(Entity actor, int abilityId, out int slotIndex)
-        {
-            slotIndex = -1;
-            if (!_world.Has<AbilityStateBuffer>(actor))
-            {
-                return false;
-            }
-
-            return AbilitySlotResolver.TryFindAbility(_world, actor, abilityId, out slotIndex);
-        }
-
-        private bool TryResolveAbilityAtSlot(Entity actor, int slotIndex, out int abilityId)
-        {
-            abilityId = 0;
-            if (!_world.Has<AbilityStateBuffer>(actor))
-            {
-                return false;
-            }
-
-            if (!AbilitySlotResolver.TryResolve(_world, actor, slotIndex, out AbilitySlotState slot))
-            {
-                return false;
-            }
-
-            abilityId = slot.AbilityId;
-            return abilityId > 0;
         }
 
         private bool TryReadActuatorReadiness(Entity actor, int actuatorId, out float ready)
@@ -841,21 +641,34 @@ namespace Ludots.Core.Gameplay.AI.Utility
             return true;
         }
 
-        private float ExecuteScoreGraph(Entity actor, Entity target, int graphId)
+        private bool TryExecuteScoreGraph(
+            Entity actor,
+            Entity target,
+            int graphId,
+            ref GraphScoreEvaluationBudget scoreBudget,
+            out float score)
         {
-            if (graphId <= 0 || _graphs == null || _graphApi == null)
+            if (graphId <= 0)
             {
-                return 0f;
+                throw new InvalidOperationException("Utility AI GraphScore input requires a positive graph id.");
             }
 
-            if (!_graphs.TryGetProgram(graphId, out var program))
+            if (_graphs == null || _graphApi == null)
             {
-                throw new InvalidOperationException($"AI score graph id {graphId} is not registered.");
+                throw new InvalidOperationException(
+                    "Utility AI GraphScore input requires GraphProgramRegistry and IGraphRuntimeApi from the engine-owned GAS graph runtime.");
             }
 
-            GraphKind kind = _graphs.RequireKind(graphId, GraphKind.Score);
-            UtilityAiGraphSafety.ValidateScoreProgram(program, "AI runtime", graphId);
-            return GasGraphExecutor.ExecuteScore(_world, actor, target, default, program, _graphApi, kind);
+            return GraphScoreEvaluator.TryEvaluate(
+                _world,
+                _graphs,
+                _graphApi,
+                graphId,
+                actor,
+                target,
+                default,
+                ref scoreBudget,
+                out score);
         }
 
         private int ReadTargetPriorityBucket(Entity target, int defaultPriority)
