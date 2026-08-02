@@ -10,7 +10,6 @@ using Ludots.Core.Gameplay.AI.Utility;
 using Ludots.Core.Gameplay.AI.WorldState;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Orders;
-using Ludots.Core.Gameplay.GAS.Scoring;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
@@ -838,6 +837,7 @@ namespace Ludots.Core.Gameplay.AI.Config
                 {
                     payloadKind = RequireOrderPayloadKind(obj, "OrderPayloadKind", path);
                     orderTypeId = ResolveOrderTypeReference(obj, path);
+                    ValidateOrderTypePayloadContract(payloadKind, orderTypeId, path);
                     ValidateUtilityTaskPayload(payloadKind, abilitySlotIndex, path);
                 }
 
@@ -1073,10 +1073,24 @@ namespace Ludots.Core.Gameplay.AI.Config
                     throw Fail($"{path}.DecisionIntervalSteps", "DecisionIntervalSteps must be positive.");
                 }
 
-                int maxCandidates = TryReadInt(obj, "MaxCandidates", out int authoredMaxCandidates) ? authoredMaxCandidates : 64;
+                if (!TryReadInt(obj, "MaxCandidates", out int maxCandidates))
+                {
+                    throw Fail($"{path}.MaxCandidates", "Profile must explicitly define MaxCandidates.");
+                }
+
                 if (maxCandidates <= 0)
                 {
                     throw Fail($"{path}.MaxCandidates", "MaxCandidates must be positive.");
+                }
+
+                if (!TryReadInt(obj, "MaxGraphScoreInstructions", out int maxGraphScoreInstructions))
+                {
+                    throw Fail($"{path}.MaxGraphScoreInstructions", "Profile must explicitly define MaxGraphScoreInstructions.");
+                }
+
+                if (maxGraphScoreInstructions <= 0 || maxGraphScoreInstructions == int.MaxValue)
+                {
+                    throw Fail($"{path}.MaxGraphScoreInstructions", "MaxGraphScoreInstructions must be positive and finite.");
                 }
 
                 if (obj.ContainsKey("DefaultStanceId"))
@@ -1089,7 +1103,7 @@ namespace Ludots.Core.Gameplay.AI.Config
                     : -1;
 
                 profileIds.Add(id, profiles.Count);
-                profiles.Add(new UtilityAiProfileDefinition(offset, count, interval, maxCandidates, defaultStanceId));
+                profiles.Add(new UtilityAiProfileDefinition(offset, count, interval, maxCandidates, maxGraphScoreInstructions, defaultStanceId));
             }
         }
 
@@ -1204,14 +1218,14 @@ namespace Ludots.Core.Gameplay.AI.Config
                 throw Fail(path, "GraphScore input must declare GraphKey or GraphId.");
             }
 
-            if (_validation == null || _validation.Graphs == null)
+            if (_validation == null || _validation.GraphScorer == null)
             {
-                throw Fail(path, "Graph references require AiConfigValidationContext with GraphProgramRegistry.");
+                throw Fail(path, "Graph references require AiConfigValidationContext with IReadOnlyGraphScorer.");
             }
 
             try
             {
-                GraphScoreEvaluator.RequireScoreProgram(_validation.Graphs, graphId, path);
+                _validation.GraphScorer.RequireScoreGraph(graphId, path);
             }
             catch (InvalidOperationException ex)
             {
@@ -1373,6 +1387,8 @@ namespace Ludots.Core.Gameplay.AI.Config
                 throw Fail(path, "Order must declare OrderTypeKey or OrderTypeId.");
             }
 
+            ValidateOrderTypePayloadContract(payloadKind, orderTypeId, path);
+
             byte submitModeByte = TryReadByte(orderObj, "SubmitMode", out byte sm)
                 ? sm
                 : (byte)OrderSubmitMode.Immediate;
@@ -1409,6 +1425,40 @@ namespace Ludots.Core.Gameplay.AI.Config
             }
 
             throw Fail($"{path}.{key}", $"Unsupported AI order payload kind '{value}'.");
+        }
+
+        private void ValidateOrderTypePayloadContract(AiOrderPayloadKind payloadKind, int orderTypeId, string path)
+        {
+            if (_validation == null)
+            {
+                throw Fail(path, "AI Order references require AiConfigValidationContext with OrderTypeRegistry.");
+            }
+
+            if (!_validation.OrderTypes.TryGet(orderTypeId, out OrderTypeConfig orderType))
+            {
+                throw Fail(path, $"References unknown order type id {orderTypeId}.");
+            }
+
+            OrderPayloadKind actual = ToOrderPayloadKind(payloadKind);
+            if (actual != orderType.PayloadKind)
+            {
+                throw Fail(
+                    $"{path}.OrderPayloadKind",
+                    $"OrderPayloadKind {payloadKind} does not match order type '{orderType.Key}' payloadKind {orderType.PayloadKind}.");
+            }
+        }
+
+        private static OrderPayloadKind ToOrderPayloadKind(AiOrderPayloadKind payloadKind)
+        {
+            return payloadKind switch
+            {
+                AiOrderPayloadKind.None => OrderPayloadKind.None,
+                AiOrderPayloadKind.CastAbility => OrderPayloadKind.CastAbility,
+                AiOrderPayloadKind.MoveToWorldCm => OrderPayloadKind.MoveToWorldCm,
+                AiOrderPayloadKind.Stop => OrderPayloadKind.Stop,
+                AiOrderPayloadKind.TargetEntity => OrderPayloadKind.TargetEntity,
+                _ => throw Fail("OrderPayloadKind", $"Unsupported AI order payload kind '{payloadKind}'.")
+            };
         }
 
         private static void ValidateUtilityTaskPayload(AiOrderPayloadKind payloadKind, int abilitySlotIndex, string path)

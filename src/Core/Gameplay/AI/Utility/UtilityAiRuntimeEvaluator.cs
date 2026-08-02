@@ -7,12 +7,10 @@ using Ludots.Core.Gameplay.AI.Planning;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
-using Ludots.Core.Gameplay.GAS.Scoring;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Layers;
 using Ludots.Core.Mathematics;
-using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Spatial;
 
 namespace Ludots.Core.Gameplay.AI.Utility
@@ -21,21 +19,18 @@ namespace Ludots.Core.Gameplay.AI.Utility
     {
         private readonly World _world;
         private readonly ISpatialQueryService _spatialQueries;
-        private readonly GraphProgramRegistry? _graphs;
-        private readonly IGraphRuntimeApi? _graphApi;
+        private readonly IReadOnlyGraphScorer? _graphScorer;
         private readonly Entity[] _targets;
 
         public UtilityAiRuntimeEvaluator(
             World world,
             ISpatialQueryService spatialQueries,
-            GraphProgramRegistry? graphs,
-            IGraphRuntimeApi? graphApi,
+            IReadOnlyGraphScorer? graphScorer,
             int targetCapacity = 256)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _spatialQueries = spatialQueries ?? throw new ArgumentNullException(nameof(spatialQueries));
-            _graphs = graphs;
-            _graphApi = graphApi;
+            _graphScorer = graphScorer;
             _targets = new Entity[targetCapacity < 16 ? 16 : targetCapacity];
         }
 
@@ -60,7 +55,7 @@ namespace Ludots.Core.Gameplay.AI.Utility
             }
 
             ref readonly var profile = ref runtime.Profiles[profileId];
-            var scoreBudget = GraphScoreEvaluationBudget.Create(profile.MaxCandidates);
+            GraphInstructionBudget graphBudget = GraphInstructionBudget.Create(profile.MaxGraphScoreInstructions);
             bool found = false;
             int bestPriority = int.MinValue;
             int bestPriorityBucket = int.MinValue;
@@ -80,6 +75,14 @@ namespace Ludots.Core.Gameplay.AI.Utility
                         continue;
                     }
 
+                    int remainingCandidates = profile.MaxCandidates - candidateCount;
+                    if (remainingCandidates <= 0)
+                    {
+                        rejectReason = UtilityAiFilterRejectReason.CandidateBudgetExhausted;
+                        best = default;
+                        return false;
+                    }
+
                     int targetCount = AcquireTargets(
                         runtime,
                         actor,
@@ -87,7 +90,15 @@ namespace Ludots.Core.Gameplay.AI.Utility
                         currentStep,
                         in memory,
                         _targets,
+                        remainingCandidates,
                         out rejectReason);
+                    if (rejectReason == UtilityAiFilterRejectReason.CandidateBudgetExhausted ||
+                        rejectReason == UtilityAiFilterRejectReason.ScratchFull)
+                    {
+                        best = default;
+                        return false;
+                    }
+
                     if (targetCount == 0)
                     {
                         continue;
@@ -111,7 +122,7 @@ namespace Ludots.Core.Gameplay.AI.Utility
                                 target,
                                 currentStep,
                                 in decision,
-                                ref scoreBudget,
+                                ref graphBudget,
                                 out int priorityBucket,
                                 out rejectReason))
                         {
@@ -125,7 +136,7 @@ namespace Ludots.Core.Gameplay.AI.Utility
                                 target,
                                 currentStep,
                                 in decision,
-                                ref scoreBudget,
+                                ref graphBudget,
                                 out float score,
                                 out rejectReason))
                         {
@@ -352,6 +363,7 @@ namespace Ludots.Core.Gameplay.AI.Utility
             int currentStep,
             in UtilityAiCombatMemory memory,
             Entity[] scratch,
+            int maxTargets,
             out UtilityAiFilterRejectReason rejectReason)
         {
             rejectReason = UtilityAiFilterRejectReason.None;
@@ -361,6 +373,18 @@ namespace Ludots.Core.Gameplay.AI.Utility
             }
 
             ref readonly var filter = ref runtime.TargetFilters[filterId];
+            int targetLimit = filter.MaxResults < maxTargets ? filter.MaxResults : maxTargets;
+            if (targetLimit <= 0)
+            {
+                rejectReason = UtilityAiFilterRejectReason.CandidateBudgetExhausted;
+                return 0;
+            }
+
+            if (targetLimit > scratch.Length)
+            {
+                targetLimit = scratch.Length;
+            }
+
             bool sourceSelf = false;
             int count = 0;
             if (!_world.TryGet(actor, out WorldPositionCm actorPosition))
@@ -380,12 +404,14 @@ namespace Ludots.Core.Gameplay.AI.Utility
                         sourceSelf = true;
                         break;
                     case UtilityAiTargetFilterOpKind.SpatialRadius:
-                        count = _spatialQueries.QueryRadius(actorPos, op.IntA, scratch).Count;
-                        if (count > filter.MaxResults)
+                        SpatialQueryResult result = _spatialQueries.QueryRadius(actorPos, op.IntA, scratch.AsSpan(0, targetLimit));
+                        count = result.Count;
+                        if (result.Dropped > 0)
                         {
-                            count = filter.MaxResults;
-                            rejectReason = UtilityAiFilterRejectReason.ScratchFull;
+                            rejectReason = UtilityAiFilterRejectReason.CandidateBudgetExhausted;
+                            return 0;
                         }
+
                         break;
                     case UtilityAiTargetFilterOpKind.RecentAttacker:
                         if (memory.LastAttacker == default ||
@@ -414,7 +440,7 @@ namespace Ludots.Core.Gameplay.AI.Utility
             }
 
             int write = 0;
-            for (int i = 0; i < count && write < filter.MaxResults && write < scratch.Length; i++)
+            for (int i = 0; i < count && write < targetLimit; i++)
             {
                 Entity target = scratch[i];
                 if (target.Equals(default) || !_world.IsAlive(target))
@@ -433,11 +459,6 @@ namespace Ludots.Core.Gameplay.AI.Utility
                 }
 
                 scratch[write++] = target;
-            }
-
-            if (write >= scratch.Length)
-            {
-                rejectReason = UtilityAiFilterRejectReason.ScratchFull;
             }
 
             return write;
@@ -541,7 +562,7 @@ namespace Ludots.Core.Gameplay.AI.Utility
             Entity target,
             int currentStep,
             in UtilityAiDecisionDefinition decision,
-            ref GraphScoreEvaluationBudget scoreBudget,
+            ref GraphInstructionBudget graphBudget,
             out float score,
             out UtilityAiFilterRejectReason rejectReason)
         {
@@ -552,7 +573,7 @@ namespace Ludots.Core.Gameplay.AI.Utility
             for (int i = decision.ConsiderationOffset; i < end; i++)
             {
                 ref readonly var consideration = ref runtime.Considerations[i];
-                if (!TrySampleInput(runtime, actor, target, currentStep, consideration.InputId, ref scoreBudget, out float raw))
+                if (!TrySampleInput(runtime, actor, target, currentStep, consideration.InputId, ref graphBudget, out float raw))
                 {
                     rejectReason = UtilityAiFilterRejectReason.ScoreGraphBudgetExhausted;
                     score = 0f;
@@ -592,7 +613,7 @@ namespace Ludots.Core.Gameplay.AI.Utility
             Entity target,
             int currentStep,
             in UtilityAiDecisionDefinition decision,
-            ref GraphScoreEvaluationBudget scoreBudget,
+            ref GraphInstructionBudget graphBudget,
             out int bucket,
             out UtilityAiFilterRejectReason rejectReason)
         {
@@ -607,7 +628,7 @@ namespace Ludots.Core.Gameplay.AI.Utility
                     continue;
                 }
 
-                if (!TrySampleInput(runtime, actor, target, currentStep, consideration.InputId, ref scoreBudget, out float raw))
+                if (!TrySampleInput(runtime, actor, target, currentStep, consideration.InputId, ref graphBudget, out float raw))
                 {
                     rejectReason = UtilityAiFilterRejectReason.ScoreGraphBudgetExhausted;
                     return false;
@@ -627,13 +648,13 @@ namespace Ludots.Core.Gameplay.AI.Utility
             Entity target,
             int currentStep,
             int inputId,
-            ref GraphScoreEvaluationBudget scoreBudget,
+            ref GraphInstructionBudget graphBudget,
             out float value)
         {
             value = 0f;
             if ((uint)inputId >= (uint)runtime.Inputs.Length)
             {
-                return true;
+                throw new InvalidOperationException($"Utility AI input id {inputId} is outside the compiled input table.");
             }
 
             ref readonly var input = ref runtime.Inputs[inputId];
@@ -658,9 +679,9 @@ namespace Ludots.Core.Gameplay.AI.Utility
                     value = TryReadActuatorReadiness(actor, input.Arg0, out float ready) ? ready : 0f;
                     return true;
                 case UtilityAiInputKind.GraphScore:
-                    return TryExecuteScoreGraph(actor, target, input.GraphId, ref scoreBudget, out value);
+                    return TryExecuteScoreGraph(actor, target, input.GraphId, ref graphBudget, out value);
                 default:
-                    return true;
+                    throw new InvalidOperationException($"Utility AI input kind '{input.Kind}' is not supported by the runtime evaluator.");
             }
         }
 
@@ -711,30 +732,41 @@ namespace Ludots.Core.Gameplay.AI.Utility
             Entity actor,
             Entity target,
             int graphId,
-            ref GraphScoreEvaluationBudget scoreBudget,
+            ref GraphInstructionBudget graphBudget,
             out float score)
         {
+            score = 0f;
             if (graphId <= 0)
             {
                 throw new InvalidOperationException("Utility AI GraphScore input requires a positive graph id.");
             }
 
-            if (_graphs == null || _graphApi == null)
+            if (_graphScorer == null)
             {
                 throw new InvalidOperationException(
-                    "Utility AI GraphScore input requires GraphProgramRegistry and IGraphRuntimeApi from the engine-owned GAS graph runtime.");
+                    $"Utility AI GraphScore input graphId={graphId} requires IReadOnlyGraphScorer.");
             }
 
-            return GraphScoreEvaluator.TryEvaluate(
-                _world,
-                _graphs,
-                _graphApi,
-                graphId,
-                actor,
-                target,
-                default,
-                ref scoreBudget,
-                out score);
+            if (_graphScorer.TryEvaluateScore(
+                    actor,
+                    target,
+                    default,
+                    graphId,
+                    ref graphBudget,
+                    out score,
+                    out GraphScoreFailureReason failureReason))
+            {
+                return true;
+            }
+
+            score = 0f;
+            if (failureReason == GraphScoreFailureReason.BudgetExhausted)
+            {
+                return false;
+            }
+
+            throw new InvalidOperationException(
+                $"Utility AI GraphScore input graphId={graphId} failed graph-score contract: {failureReason}.");
         }
 
         private int ReadTargetPriorityBucket(Entity target, int defaultPriority)

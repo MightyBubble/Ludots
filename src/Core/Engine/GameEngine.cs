@@ -577,7 +577,7 @@ namespace Ludots.Core.Engine
             {
                 validation = new Ludots.Core.Gameplay.AI.Config.AiConfigValidationContext(
                     orderTypes,
-                    GetService(CoreServiceKeys.GraphProgramRegistry));
+                    GetService(CoreServiceKeys.GraphScorer));
             }
 
             var loader = new Ludots.Core.Gameplay.AI.Config.AiConfigLoader(ConfigPipeline, atoms, validation);
@@ -907,7 +907,6 @@ namespace Ludots.Core.Engine
                 builtinHandlers,
                 graphProgramRegistry,
                 GasGraphOpHandlerTable.Instance);
-            new ContextGroupConfigLoader(ConfigPipeline, contextGroups).Load(ConfigCatalog, ConfigConflictReport);
             itemConfigLoader.Load(ConfigCatalog, ConfigConflictReport);
             exchangeLoader.Load(ConfigCatalog, ConfigConflictReport);
             var inventoryRuntime = new InventoryRuntimeService(World, itemShapes, itemLayouts, itemDefinitions, ownershipResolver);
@@ -941,6 +940,8 @@ namespace Ludots.Core.Engine
                 clock);
             var gasGraphApi = GasGraphRuntimeApi.CreateProduction(gasGraphProductionServices);
             _gasGraphRuntimeApi = gasGraphApi;
+            var graphScorer = CompiledGraphScoreRuntime.Compile(World, gasGraphApi, graphProgramRegistry);
+            new ContextGroupConfigLoader(ConfigPipeline, contextGroups, graphScorer).Load(ConfigCatalog, ConfigConflictReport);
             var graphReturnWriter = new GraphReturnWriter(
                 World,
                 graphProgramRegistry,
@@ -1421,6 +1422,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.EffectTemplateRegistry, effectTemplateRegistry);
             SetService(CoreServiceKeys.TargetDispatchPresetRegistry, targetDispatchPresetRegistry);
             SetService(CoreServiceKeys.GraphProgramRegistry, graphProgramRegistry);
+            SetService(CoreServiceKeys.GraphScorer, graphScorer);
             SetService(CoreServiceKeys.GasGraphRuntimeProductionServices, gasGraphProductionServices);
             SetService(CoreServiceKeys.GasGraphRuntimeApi, gasGraphApi);
             SetService(CoreServiceKeys.GraphOutputSchemaRegistry, graphOutputSchemas);
@@ -1664,8 +1666,7 @@ namespace Ludots.Core.Engine
                     clock,
                     AiRuntime.UtilityRuntime,
                     SpatialQueries,
-                    graphProgramRegistry,
-                    gasGraphApi,
+                    graphScorer,
                     orderQueue,
                     orderTerminalResults),
                 SystemGroup.PostMovement);

@@ -8,14 +8,14 @@ namespace Ludots.Core.Gameplay.AI.Config
     {
         public AiConfigValidationContext(
             OrderTypeRegistry orderTypes,
-            GraphProgramRegistry? graphs = null)
+            IReadOnlyGraphScorer? graphScorer = null)
         {
             OrderTypes = orderTypes ?? throw new ArgumentNullException(nameof(orderTypes));
-            Graphs = graphs;
+            GraphScorer = graphScorer;
         }
 
         public OrderTypeRegistry OrderTypes { get; }
 
-        public GraphProgramRegistry? Graphs { get; }
+        public IReadOnlyGraphScorer? GraphScorer { get; }
     }
 }

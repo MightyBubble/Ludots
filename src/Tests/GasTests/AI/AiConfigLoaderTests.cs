@@ -5,7 +5,6 @@ using Ludots.Core.Gameplay.AI.Config;
 using Ludots.Core.Gameplay.AI.Planning;
 using Ludots.Core.Gameplay.AI.Utility;
 using Ludots.Core.Gameplay.AI.WorldState;
-using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.GraphRuntime;
@@ -72,6 +71,18 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void AiConfigLoader_RejectsOrderPayloadKindThatContradictsOrderType()
+        {
+            using var fixture = AiConfigFixture.Create(
+                orderJson: "{ \"OrderPayloadKind\": \"Stop\", \"OrderTypeKey\": \"castAbility\", \"SubmitMode\": 0, \"PlayerId\": 0 }");
+
+            var ex = Assert.Throws<InvalidOperationException>(() => fixture.Load());
+
+            Assert.That(ex!.Message, Does.Contain("OrderPayloadKind Stop"));
+            Assert.That(ex.Message, Does.Contain("payloadKind CastAbility"));
+        }
+
+        [Test]
         public void AiConfigLoader_CompilesUtilityAiToFlatArrays()
         {
             using var fixture = AiConfigFixture.Create();
@@ -91,6 +102,47 @@ namespace Ludots.Tests.GAS
             Assert.That(runtime.UtilityRuntime.Tasks[0].PayloadKind, Is.EqualTo(AiOrderPayloadKind.CastAbility));
             Assert.That(runtime.UtilityRuntime.Tasks[0].AbilitySlotIndex, Is.EqualTo(0));
             Assert.That(runtime.UtilityRuntime.Decisions[0].TaskOffset, Is.EqualTo(0));
+            Assert.That(runtime.UtilityRuntime.Profiles[0].MaxCandidates, Is.EqualTo(32));
+            Assert.That(runtime.UtilityRuntime.Profiles[0].MaxGraphScoreInstructions, Is.EqualTo(64));
+        }
+
+        [Test]
+        public void AiConfigLoader_RejectsUtilityAiProfileWithoutMaxCandidates()
+        {
+            using var fixture = AiConfigFixture.Create();
+            fixture.WriteUtilityConfig();
+            fixture.WriteProfilesJson("[ { \"id\": \"Profile.Basic\", \"DecisionIntervalSteps\": 1, \"MaxGraphScoreInstructions\": 64, \"DecisionMakers\": [ \"DM.Combat\" ] } ]");
+
+            var ex = Assert.Throws<InvalidOperationException>(() => fixture.Load());
+
+            Assert.That(ex!.Message, Does.Contain("MaxCandidates"));
+            Assert.That(ex.Message, Does.Contain("must explicitly define"));
+        }
+
+        [Test]
+        public void AiConfigLoader_RejectsUtilityAiProfileWithoutGraphScoreInstructionBudget()
+        {
+            using var fixture = AiConfigFixture.Create();
+            fixture.WriteUtilityConfig();
+            fixture.WriteProfilesJson("[ { \"id\": \"Profile.Basic\", \"DecisionIntervalSteps\": 1, \"MaxCandidates\": 32, \"DecisionMakers\": [ \"DM.Combat\" ] } ]");
+
+            var ex = Assert.Throws<InvalidOperationException>(() => fixture.Load());
+
+            Assert.That(ex!.Message, Does.Contain("MaxGraphScoreInstructions"));
+            Assert.That(ex.Message, Does.Contain("must explicitly define"));
+        }
+
+        [Test]
+        public void AiConfigLoader_RejectsUtilityAiProfileInfiniteGraphScoreInstructionBudget()
+        {
+            using var fixture = AiConfigFixture.Create();
+            fixture.WriteUtilityConfig();
+            fixture.WriteProfilesJson("[ { \"id\": \"Profile.Basic\", \"DecisionIntervalSteps\": 1, \"MaxCandidates\": 32, \"MaxGraphScoreInstructions\": 2147483647, \"DecisionMakers\": [ \"DM.Combat\" ] } ]");
+
+            var ex = Assert.Throws<InvalidOperationException>(() => fixture.Load());
+
+            Assert.That(ex!.Message, Does.Contain("MaxGraphScoreInstructions"));
+            Assert.That(ex.Message, Does.Contain("positive and finite"));
         }
 
         [Test]
@@ -173,7 +225,7 @@ namespace Ludots.Tests.GAS
         {
             using var fixture = AiConfigFixture.Create();
             fixture.WriteUtilityConfig();
-            fixture.WriteProfilesJson("[ { \"id\": \"Profile.Basic\", \"DecisionIntervalSteps\": 1, \"MaxCandidates\": 32, \"DecisionMakers\": [ \"DM.Combat\" ], \"DefaultStanceId\": 0 } ]");
+            fixture.WriteProfilesJson("[ { \"id\": \"Profile.Basic\", \"DecisionIntervalSteps\": 1, \"MaxCandidates\": 32, \"MaxGraphScoreInstructions\": 64, \"DecisionMakers\": [ \"DM.Combat\" ], \"DefaultStanceId\": 0 } ]");
 
             var ex = Assert.Throws<InvalidOperationException>(() => fixture.Load());
 
@@ -234,7 +286,7 @@ namespace Ludots.Tests.GAS
 
             var ex = Assert.Throws<InvalidOperationException>(() => fixture.Load());
 
-            Assert.That(ex!.Message, Does.Contain("GAS.GRAPH_KIND.ERR.OperationNotAllowed"));
+            Assert.That(ex!.Message, Does.Contain(GraphKindOperationPolicy.OperationNotAllowedError));
             Assert.That(ex.Message, Does.Contain("WriteBlackboardFloat"));
         }
 
@@ -332,21 +384,21 @@ namespace Ludots.Tests.GAS
             private readonly string _root;
             private readonly string _core;
             private readonly ConfigPipeline _pipeline;
-            private readonly AiConfigValidationContext _validation;
+            private readonly OrderTypeRegistry _orderTypes;
             private readonly GraphProgramRegistry _graphs;
 
             private AiConfigFixture(
                 string root,
                 string core,
                 ConfigPipeline pipeline,
-                AiConfigValidationContext validation,
+                OrderTypeRegistry orderTypes,
                 GraphProgramRegistry graphs,
                 int scoreGraphId)
             {
                 _root = root;
                 _core = core;
                 _pipeline = pipeline;
-                _validation = validation;
+                _orderTypes = orderTypes;
                 _graphs = graphs;
                 ScoreGraphId = scoreGraphId;
             }
@@ -386,12 +438,14 @@ namespace Ludots.Tests.GAS
                 orderTypes.Register(new OrderTypeConfig
                 {
                     Key = "castAbility",
-                    OrderTypeId = CastOrderTypeId
+                    OrderTypeId = CastOrderTypeId,
+                    PayloadKind = OrderPayloadKind.CastAbility
                 });
                 orderTypes.Register(new OrderTypeConfig
                 {
                     Key = "attackTarget",
-                    OrderTypeId = AttackOrderTypeId
+                    OrderTypeId = AttackOrderTypeId,
+                    PayloadKind = OrderPayloadKind.TargetEntity
                 });
 
                 TagRegistry.Clear();
@@ -403,7 +457,7 @@ namespace Ludots.Tests.GAS
                 int graphId = GraphIdRegistry.Register("Graph.AI.Score");
                 graphs.Register(graphId, Array.Empty<GraphInstruction>(), GraphKind.Score);
 
-                return new AiConfigFixture(root, core, pipeline, new AiConfigValidationContext(orderTypes, graphs), graphs, graphId);
+                return new AiConfigFixture(root, core, pipeline, orderTypes, graphs, graphId);
             }
 
             public void RegisterScoreGraph(params GraphInstruction[] program)
@@ -455,7 +509,7 @@ namespace Ludots.Tests.GAS
                 string defaultStanceProperty = string.IsNullOrWhiteSpace(defaultStance)
                     ? string.Empty
                     : $", \"DefaultStance\": \"{defaultStance}\"";
-                WriteProfilesJson("[ { \"id\": \"Profile.Basic\", \"DecisionIntervalSteps\": 1, \"MaxCandidates\": 32, \"DecisionMakers\": [ \"DM.Combat\" ]" + defaultStanceProperty + " } ]");
+                WriteProfilesJson("[ { \"id\": \"Profile.Basic\", \"DecisionIntervalSteps\": 1, \"MaxCandidates\": 32, \"MaxGraphScoreInstructions\": 64, \"DecisionMakers\": [ \"DM.Combat\" ]" + defaultStanceProperty + " } ]");
                 File.WriteAllText(Path.Combine(ai, "stances.json"), string.IsNullOrWhiteSpace(defaultStance)
                     ? "[]"
                     : $"[ {{ \"id\": \"{defaultStance}\", \"AutoAcquire\": true, \"Retaliate\": true }} ]");
@@ -490,7 +544,10 @@ namespace Ludots.Tests.GAS
             public AiCompiledRuntime Load()
             {
                 var atoms = new AtomRegistry(capacity: 256);
-                var loader = new AiConfigLoader(_pipeline, atoms, _validation);
+                var validation = new AiConfigValidationContext(
+                    _orderTypes,
+                    new RegistryGraphScorer(_graphs));
+                var loader = new AiConfigLoader(_pipeline, atoms, validation);
                 return loader.LoadAndCompile(AiConfigCatalog.CreateDefault());
             }
 
@@ -507,6 +564,72 @@ namespace Ludots.Tests.GAS
                 catch (UnauthorizedAccessException)
                 {
                 }
+            }
+        }
+
+        private sealed class RegistryGraphScorer : IReadOnlyGraphScorer
+        {
+            private readonly GraphProgramRegistry _graphs;
+
+            public RegistryGraphScorer(GraphProgramRegistry graphs)
+            {
+                _graphs = graphs;
+            }
+
+            public void RequireScoreGraph(int graphId, string path)
+            {
+                RequireGraph(graphId, GraphKind.Score, path);
+            }
+
+            public void RequireValidationGraph(int graphId, string path)
+            {
+                RequireGraph(graphId, GraphKind.Validation, path);
+            }
+
+            public bool TryEvaluateScore(
+                Arch.Core.Entity actor,
+                Arch.Core.Entity target,
+                Ludots.Core.Mathematics.IntVector2 targetPosCm,
+                int graphId,
+                ref GraphInstructionBudget budget,
+                out float score,
+                out GraphScoreFailureReason failureReason)
+                => throw new NotSupportedException("AiConfigLoaderTests only validate graph references at load time.");
+
+            public bool TryEvaluateValidation(
+                Arch.Core.Entity actor,
+                Arch.Core.Entity target,
+                Ludots.Core.Mathematics.IntVector2 targetPosCm,
+                int graphId,
+                ref GraphInstructionBudget budget,
+                out bool passed,
+                out GraphScoreFailureReason failureReason)
+                => throw new NotSupportedException("AiConfigLoaderTests only validate graph references at load time.");
+
+            private void RequireGraph(int graphId, GraphKind expected, string path)
+            {
+                if (!_graphs.TryGetKind(graphId, out GraphKind actual))
+                {
+                    throw new InvalidOperationException($"{path}: references unknown graph id {graphId}.");
+                }
+
+                if (actual != expected)
+                {
+                    throw new InvalidOperationException(
+                        $"{path}: references graph id {graphId} with the wrong graph kind; expected {expected}.");
+                }
+
+                if (!_graphs.TryGetProgram(graphId, out var program))
+                {
+                    throw new InvalidOperationException($"{path}: references unknown graph id {graphId}.");
+                }
+
+                GraphKindOperationPolicy.RequireAllowed(
+                    actual,
+                    program,
+                    GasGraphOpHandlerTable.Instance,
+                    graphId,
+                    nameof(AiConfigLoaderTests));
             }
         }
     }

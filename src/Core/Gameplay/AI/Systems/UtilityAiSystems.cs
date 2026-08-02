@@ -5,6 +5,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.AI.Components;
 using Ludots.Core.Gameplay.AI.Utility;
 using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.GraphRuntime;
 using Ludots.Core.Spatial;
 
 namespace Ludots.Core.Gameplay.AI.Systems
@@ -89,8 +90,7 @@ namespace Ludots.Core.Gameplay.AI.Systems
             IClock clock,
             UtilityAiCompiledRuntime runtime,
             ISpatialQueryService spatialQueries,
-            Ludots.Core.GraphRuntime.GraphProgramRegistry? graphs,
-            Ludots.Core.NodeLibraries.GASGraph.IGraphRuntimeApi? graphApi,
+            IReadOnlyGraphScorer? graphScorer,
             OrderQueue orders,
             OrderTerminalResultBuffer terminalResults)
             : base(world)
@@ -100,7 +100,11 @@ namespace Ludots.Core.Gameplay.AI.Systems
             _orders = orders;
             _admissionResults = orders?.AdmissionResults ?? throw new ArgumentNullException(nameof(orders));
             _terminalResults = terminalResults ?? throw new ArgumentNullException(nameof(terminalResults));
-            _evaluator = new UtilityAiRuntimeEvaluator(world, spatialQueries, graphs, graphApi, ResolveTargetScratchCapacity(in runtime));
+            _evaluator = new UtilityAiRuntimeEvaluator(
+                world,
+                spatialQueries,
+                graphScorer,
+                ResolveTargetScratchCapacity(in runtime));
         }
 
         public override void Update(in float dt)
@@ -289,14 +293,6 @@ namespace Ludots.Core.Gameplay.AI.Systems
                 if (runtime.Profiles[i].MaxCandidates > capacity)
                 {
                     capacity = runtime.Profiles[i].MaxCandidates;
-                }
-            }
-
-            for (int i = 0; i < runtime.TargetFilters.Length; i++)
-            {
-                if (runtime.TargetFilters[i].MaxResults > capacity)
-                {
-                    capacity = runtime.TargetFilters[i].MaxResults;
                 }
             }
 

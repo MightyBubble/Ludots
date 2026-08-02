@@ -245,6 +245,7 @@ namespace Ludots.Tests.GAS.Integration.ProductionWiring
             Assert.That(engine.GetService(CoreServiceKeys.GasGraphRuntimeProductionServices), Is.Not.Null);
             Assert.That(engine.GetService(CoreServiceKeys.GasGraphRuntimeApi), Is.Not.Null);
             Assert.That(engine.GetService(CoreServiceKeys.GraphProgramRegistry), Is.Not.Null);
+            Assert.That(engine.GetService(CoreServiceKeys.GraphScorer), Is.Not.Null);
             GraphOutputValueStore graphOutputValues = engine.GetService(CoreServiceKeys.GraphOutputValueStore);
             Assert.That(graphOutputValues, Is.Not.Null);
             Assert.That(

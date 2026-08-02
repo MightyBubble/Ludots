@@ -14,6 +14,7 @@ using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.Items;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.GraphRuntime;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Orders;
@@ -21,7 +22,6 @@ using Ludots.Core.Input.Runtime;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
-using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Utils;
 using Ludots.Core.Scripting;
@@ -454,24 +454,48 @@ namespace CoreInputMod.Systems
             resolver = default!;
             if (!_globals.TryGetValue(CoreServiceKeys.ContextGroupRegistry.Name, out var groupsObj) ||
                 groupsObj is not ContextGroupRegistry contextGroups ||
-                !_globals.TryGetValue(CoreServiceKeys.GraphProgramRegistry.Name, out var graphsObj) ||
-                graphsObj is not Ludots.Core.GraphRuntime.GraphProgramRegistry graphPrograms ||
                 !_globals.TryGetValue(CoreServiceKeys.SpatialQueryService.Name, out var spatialObj) ||
                 spatialObj is not Ludots.Core.Spatial.ISpatialQueryService spatialQueries)
             {
                 return false;
             }
 
-            if (!_globals.TryGetValue(CoreServiceKeys.GasGraphRuntimeApi.Name, out var graphApiObj) ||
-                graphApiObj is not GasGraphRuntimeApi graphApi)
+            if (!_globals.TryGetValue(CoreServiceKeys.GraphScorer.Name, out var scorerObj) ||
+                scorerObj is not IReadOnlyGraphScorer graphScorer)
             {
                 throw new InvalidOperationException(
-                    "Context-scored order resolution requires the engine-owned production GasGraphRuntimeApi.");
+                    "Context-scored order resolution requires the engine-owned IReadOnlyGraphScorer.");
             }
 
             KnowledgeCommandTargetGate candidateGate = RequireCommandTargetGate();
-            resolver = new ContextScoredOrderResolver(_world, contextGroups, graphPrograms, spatialQueries, graphApi, candidateGate.CanTarget);
+            resolver = new ContextScoredOrderResolver(
+                _world,
+                contextGroups,
+                graphScorer,
+                spatialQueries,
+                candidateGate.CanTarget,
+                RequireInputGraphScoreInstructionBudget());
             return true;
+        }
+
+        private int RequireInputGraphScoreInstructionBudget()
+        {
+            if (!_globals.TryGetValue(CoreServiceKeys.GameConfig.Name, out var configObj) ||
+                configObj is not GameConfig config ||
+                config.GasRuntimeCapacity == null)
+            {
+                throw new InvalidOperationException(
+                    "Context-scored order resolution requires GameConfig.gasRuntimeCapacity.inputGraphScoreInstructionBudgetPerResolve.");
+            }
+
+            int budget = config.GasRuntimeCapacity.InputGraphScoreInstructionBudgetPerResolve;
+            if (budget <= 0 || budget == int.MaxValue)
+            {
+                throw new InvalidOperationException(
+                    "GameConfig.gasRuntimeCapacity.inputGraphScoreInstructionBudgetPerResolve must be positive and finite.");
+            }
+
+            return budget;
         }
 
         private bool TryCreateSkillMappingOverrideProvider(out SkillMappingOverrideResolver resolver)

@@ -14,6 +14,7 @@ using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.Map.Hex;
 using Ludots.Core.Mathematics;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Spatial;
@@ -68,7 +69,7 @@ namespace Ludots.Tests.GAS
             var nearLow = fixture.CreateHostile(200, 0, new UtilityAiTargetPriority { Bucket = 1 });
             var farHigh = fixture.CreateHostile(900, 0, new UtilityAiTargetPriority { Bucket = 5 });
             var runtime = new UtilityAiCompiledRuntime(
-                new[] { new UtilityAiProfileDefinition(0, 1, 1, 16, -1) },
+                new[] { new UtilityAiProfileDefinition(0, 1, 1, 16, 64, -1) },
                 new[] { new UtilityAiDecisionMakerDefinition(0, 1, UtilityAiSelectionMode.FixedPriority, 0f) },
                 new[] { new UtilityAiDecisionDefinition(0, 0, 2, 0, 1, 5, 1f, 1f, 0f, 0, UtilityAiDecisionFlags.Autocast | UtilityAiDecisionFlags.RequiresTarget) },
                 new[]
@@ -199,7 +200,41 @@ namespace Ludots.Tests.GAS
             fixture.RunDecision(runtime);
 
             var trace = fixture.World.Get<UtilityAiDecisionTrace>(fixture.Actor);
-            Assert.That(trace.CandidateCount, Is.EqualTo(1));
+            Assert.That(trace.CandidateCount, Is.EqualTo(0));
+            Assert.That(trace.LastFilterRejectReason, Is.EqualTo((int)UtilityAiFilterRejectReason.CandidateBudgetExhausted));
+            Assert.That(fixture.Orders.Count, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void UtilityAiDecisionSystem_CandidateBudgetBoundsTargetDiscoveryWork()
+        {
+            using var fixture = RuntimeFixture.Create();
+            for (int i = 0; i < 10; i++)
+            {
+                _ = fixture.CreateHostile(100 + i * 20, 0);
+            }
+
+            var runtime = fixture.CreateSingleDecisionRuntime(
+                orderTypeId: 102,
+                inputKind: UtilityAiInputKind.Constant,
+                maxResults: 10_000,
+                maxCandidates: 1);
+            fixture.AddActor();
+            var boundedSpatial = new RecordingSpatialQueryService(fixture.Spatial);
+            var decision = new UtilityAiDecisionSystem(
+                fixture.World,
+                fixture.Clock,
+                runtime,
+                boundedSpatial,
+                graphScorer: null,
+                fixture.Orders,
+                fixture.TerminalResults);
+
+            decision.Update(1f / 60f);
+
+            var trace = fixture.World.Get<UtilityAiDecisionTrace>(fixture.Actor);
+            Assert.That(boundedSpatial.LastRadiusBufferLength, Is.EqualTo(1));
+            Assert.That(trace.CandidateCount, Is.EqualTo(0));
             Assert.That(trace.LastFilterRejectReason, Is.EqualTo((int)UtilityAiFilterRejectReason.CandidateBudgetExhausted));
             Assert.That(fixture.Orders.Count, Is.EqualTo(0));
         }
@@ -228,8 +263,8 @@ namespace Ludots.Tests.GAS
             var completeRuntime = fixture.CreateSingleDecisionRuntime(
                 orderTypeId: 102,
                 inputKind: UtilityAiInputKind.Constant,
-                maxResults: 3,
-                maxCandidates: 3);
+                maxResults: 4,
+                maxCandidates: 4);
 
             fixture.RunDecision(completeRuntime);
 
@@ -239,16 +274,54 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void UtilityAiDecisionSystem_TruncatedSpatialCandidateScan_DoesNotSubmitPartialOrder()
+        {
+            using var fixture = RuntimeFixture.Create();
+            var firstVisible = fixture.CreateHostile(100, 0);
+            _ = fixture.CreateHostile(200, 0);
+            var runtime = fixture.CreateSingleDecisionRuntime(
+                orderTypeId: 102,
+                inputKind: UtilityAiInputKind.Constant,
+                maxResults: 8,
+                maxCandidates: 8);
+            fixture.AddActor();
+            var decision = new UtilityAiDecisionSystem(
+                fixture.World,
+                fixture.Clock,
+                runtime,
+                new TruncatedSpatialQueryService(firstVisible),
+                graphScorer: null,
+                fixture.Orders,
+                fixture.TerminalResults);
+
+            decision.Update(1f / 60f);
+
+            var trace = fixture.World.Get<UtilityAiDecisionTrace>(fixture.Actor);
+            Assert.That(trace.CandidateCount, Is.EqualTo(0));
+            Assert.That(trace.LastFilterRejectReason, Is.EqualTo((int)UtilityAiFilterRejectReason.CandidateBudgetExhausted));
+            Assert.That(fixture.Orders.Count, Is.EqualTo(0));
+        }
+
+        [Test]
         public void UtilityAiDecisionSystem_ScoreGraphBudgetExhaustionIsObservable()
         {
             using var fixture = RuntimeFixture.Create();
             _ = fixture.CreateHostile(100, 0);
             const int graphId = 3001;
-            fixture.Graphs.Register(graphId, Array.Empty<GraphInstruction>(), GraphKind.Score);
-            var runtime = fixture.CreateGraphScoreRuntime(orderTypeId: 102, graphId: graphId, maxCandidates: 1, graphConsiderationCount: 2);
+            fixture.Graphs.Register(
+                graphId,
+                new[] { new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = 1f } },
+                GraphKind.Score);
+            var graphScorer = CompiledGraphScoreRuntime.Compile(fixture.World, fixture.GraphApi, fixture.Graphs);
+            var runtime = fixture.CreateGraphScoreRuntime(
+                orderTypeId: 102,
+                graphId: graphId,
+                maxCandidates: 2,
+                graphConsiderationCount: 2,
+                graphScoreInstructionBudget: 1);
             fixture.AddActor();
 
-            fixture.RunDecision(runtime, fixture.Graphs, fixture.GraphApi);
+            fixture.RunDecision(runtime, graphScorer);
 
             var trace = fixture.World.Get<UtilityAiDecisionTrace>(fixture.Actor);
             Assert.That(trace.CandidateCount, Is.EqualTo(1));
@@ -517,16 +590,14 @@ namespace Ludots.Tests.GAS
 
             public UtilityAiDecisionSystem CreateDecisionSystem(
                 UtilityAiCompiledRuntime runtime,
-                GraphProgramRegistry? graphs = null,
-                IGraphRuntimeApi? graphApi = null)
-                => new(World, Clock, runtime, Spatial, graphs, graphApi, Orders, TerminalResults);
+                IReadOnlyGraphScorer? graphScorer = null)
+                => new(World, Clock, runtime, Spatial, graphScorer, Orders, TerminalResults);
 
             public void RunDecision(
                 UtilityAiCompiledRuntime runtime,
-                GraphProgramRegistry? graphs = null,
-                IGraphRuntimeApi? graphApi = null)
+                IReadOnlyGraphScorer? graphScorer = null)
             {
-                var decision = CreateDecisionSystem(runtime, graphs, graphApi);
+                var decision = CreateDecisionSystem(runtime, graphScorer);
                 decision.Update(1f / 60f);
             }
 
@@ -548,7 +619,6 @@ namespace Ludots.Tests.GAS
                     ClearQueueOnActivate = true,
                     EntityBlackboardKey = -1,
                     SpatialBlackboardKey = -1,
-                    IntArg0BlackboardKey = -1
                 });
                 return orderTypes;
             }
@@ -562,7 +632,7 @@ namespace Ludots.Tests.GAS
             {
                 GameplayTagContainer noTags = default;
                 return new UtilityAiCompiledRuntime(
-                    new[] { new UtilityAiProfileDefinition(0, 1, 1, maxCandidates, -1) },
+                    new[] { new UtilityAiProfileDefinition(0, 1, 1, maxCandidates, 64, -1) },
                     new[] { new UtilityAiDecisionMakerDefinition(0, 1, UtilityAiSelectionMode.FixedPriority, 0f) },
                     new[] { new UtilityAiDecisionDefinition(0, 0, 1, 0, 1, 5, 1f, 1f, 0f, 0, UtilityAiDecisionFlags.Autocast | UtilityAiDecisionFlags.OrdinaryAttack | UtilityAiDecisionFlags.RequiresTarget) },
                     new[] { new UtilityAiConsiderationDefinition(0, 0, 0, 1f, UtilityAiAggregateMode.Multiply) },
@@ -587,7 +657,7 @@ namespace Ludots.Tests.GAS
             {
                 GameplayTagContainer noTags = default;
                 return new UtilityAiCompiledRuntime(
-                    new[] { new UtilityAiProfileDefinition(0, 1, 1, 64, -1) },
+                    new[] { new UtilityAiProfileDefinition(0, 1, 1, 64, 64, -1) },
                     new[] { new UtilityAiDecisionMakerDefinition(0, 2, UtilityAiSelectionMode.FixedPriority, 0f) },
                     new[]
                     {
@@ -617,7 +687,8 @@ namespace Ludots.Tests.GAS
                 int orderTypeId,
                 int graphId,
                 int maxCandidates,
-                int graphConsiderationCount)
+                int graphConsiderationCount,
+                int graphScoreInstructionBudget = 64)
             {
                 GameplayTagContainer noTags = default;
                 var considerations = new UtilityAiConsiderationDefinition[graphConsiderationCount];
@@ -627,7 +698,7 @@ namespace Ludots.Tests.GAS
                 }
 
                 return new UtilityAiCompiledRuntime(
-                    new[] { new UtilityAiProfileDefinition(0, 1, 1, maxCandidates, -1) },
+                    new[] { new UtilityAiProfileDefinition(0, 1, 1, maxCandidates, graphScoreInstructionBudget, -1) },
                     new[] { new UtilityAiDecisionMakerDefinition(0, 1, UtilityAiSelectionMode.FixedPriority, 0f) },
                     new[] { new UtilityAiDecisionDefinition(0, 0, considerations.Length, 0, 1, 5, 1f, 1f, 0f, 0, UtilityAiDecisionFlags.Autocast | UtilityAiDecisionFlags.RequiresTarget) },
                     considerations,
@@ -712,6 +783,65 @@ namespace Ludots.Tests.GAS
             public void WriteBlackboardEntity(Entity entity, int keyId, Entity value) { }
             public bool TryLoadConfigFloat(int keyId, out float value) { value = 0f; return false; }
             public bool TryLoadConfigInt(int keyId, out int value) { value = 0; return false; }
+        }
+
+        private sealed class TruncatedSpatialQueryService : ISpatialQueryService
+        {
+            private readonly Entity _firstVisible;
+
+            public TruncatedSpatialQueryService(Entity firstVisible)
+            {
+                _firstVisible = firstVisible;
+            }
+
+            public SpatialQueryResult QueryRadius(WorldCmInt2 center, int radiusCm, Span<Entity> buffer)
+            {
+                buffer[0] = _firstVisible;
+                return new SpatialQueryResult(count: 1, dropped: 1);
+            }
+
+            public SpatialQueryResult QueryAabb(in WorldAabbCm bounds, Span<Entity> buffer) => default;
+            public SpatialQueryResult QueryCone(WorldCmInt2 origin, int directionDeg, int halfAngleDeg, int rangeCm, Span<Entity> buffer) => default;
+            public SpatialQueryResult QueryRectangle(WorldCmInt2 center, int halfWidthCm, int halfHeightCm, int rotationDeg, Span<Entity> buffer) => default;
+            public SpatialQueryResult QueryLine(WorldCmInt2 origin, int directionDeg, int lengthCm, int halfWidthCm, Span<Entity> buffer) => default;
+            public SpatialQueryResult QueryHexRange(HexCoordinates center, int hexRadius, Span<Entity> buffer) => default;
+            public SpatialQueryResult QueryHexRing(HexCoordinates center, int hexRadius, Span<Entity> buffer) => default;
+        }
+
+        private sealed class RecordingSpatialQueryService : ISpatialQueryService
+        {
+            private readonly ISpatialQueryService _inner;
+
+            public RecordingSpatialQueryService(ISpatialQueryService inner)
+            {
+                _inner = inner;
+            }
+
+            public int LastRadiusBufferLength { get; private set; }
+
+            public SpatialQueryResult QueryAabb(in WorldAabbCm bounds, Span<Entity> buffer)
+                => _inner.QueryAabb(in bounds, buffer);
+
+            public SpatialQueryResult QueryRadius(WorldCmInt2 center, int radiusCm, Span<Entity> buffer)
+            {
+                LastRadiusBufferLength = buffer.Length;
+                return _inner.QueryRadius(center, radiusCm, buffer);
+            }
+
+            public SpatialQueryResult QueryCone(WorldCmInt2 origin, int directionDeg, int halfAngleDeg, int rangeCm, Span<Entity> buffer)
+                => _inner.QueryCone(origin, directionDeg, halfAngleDeg, rangeCm, buffer);
+
+            public SpatialQueryResult QueryRectangle(WorldCmInt2 center, int halfWidthCm, int halfHeightCm, int rotationDeg, Span<Entity> buffer)
+                => _inner.QueryRectangle(center, halfWidthCm, halfHeightCm, rotationDeg, buffer);
+
+            public SpatialQueryResult QueryLine(WorldCmInt2 origin, int directionDeg, int lengthCm, int halfWidthCm, Span<Entity> buffer)
+                => _inner.QueryLine(origin, directionDeg, lengthCm, halfWidthCm, buffer);
+
+            public SpatialQueryResult QueryHexRange(HexCoordinates center, int hexRadius, Span<Entity> buffer)
+                => _inner.QueryHexRange(center, hexRadius, buffer);
+
+            public SpatialQueryResult QueryHexRing(HexCoordinates center, int hexRadius, Span<Entity> buffer)
+                => _inner.QueryHexRing(center, hexRadius, buffer);
         }
     }
 }
