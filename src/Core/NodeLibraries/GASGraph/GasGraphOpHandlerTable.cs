@@ -301,6 +301,54 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             }
         }
 
+        public static bool TryExecute(
+            ref GraphExecutionState state,
+            ReadOnlySpan<GraphInstruction> program,
+            GasGraphOpHandlerTable handlers,
+            ref GraphInstructionBudget budget)
+        {
+            var table = handlers.Handlers;
+            int pc = 0;
+            int steps = 0;
+            int maxSteps = GraphVmLimits.MaxInstructionsPerExecution;
+
+            while ((uint)pc < (uint)program.Length)
+            {
+                if (++steps > maxSteps)
+                {
+                    throw new InvalidOperationException(
+                        $"Graph VM exceeded MaxInstructionsPerExecution ({maxSteps}). Possible infinite loop.");
+                }
+
+                if (!budget.TryConsumeInstruction())
+                {
+                    return false;
+                }
+
+                ref readonly var ins = ref program[pc];
+                pc++;
+
+                if (ins.Op == 0) continue;
+
+                if (ins.Op >= table.Length)
+                {
+                    throw new InvalidOperationException(
+                        $"Graph op {ins.Op} exceeds handler table capacity ({table.Length}).");
+                }
+
+                var handler = table[ins.Op];
+                if (handler == null)
+                {
+                    throw new InvalidOperationException(
+                        $"No handler registered for graph op {ins.Op}.");
+                }
+
+                handler(ref state, in ins, ref pc);
+            }
+
+            return true;
+        }
+
         private void RegisterBuiltins()
         {
             Register(GraphNodeOp.ConstBool, HandleConstBool, "ConstBool graph opcode.");

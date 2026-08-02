@@ -1191,21 +1191,14 @@ namespace Ludots.Core.Gameplay.AI.Config
                 throw Fail(path, "GraphScore input must declare GraphKey or GraphId.");
             }
 
-            if (_validation == null || _validation.Graphs == null)
+            if (_validation == null || _validation.GraphScorer == null)
             {
-                throw Fail(path, "Graph references require AiConfigValidationContext with GraphProgramRegistry.");
+                throw Fail(path, "Graph references require AiConfigValidationContext with IReadOnlyGraphScorer.");
             }
-
-            if (!_validation.Graphs.TryGetProgram(graphId, out var program))
-            {
-                throw Fail(path, $"References unknown graph id {graphId}.");
-            }
-
-            _validation.Graphs.RequireKind(graphId, GraphKind.Score);
 
             try
             {
-                UtilityAiGraphSafety.ValidateScoreProgram(program, path, graphId);
+                _validation.GraphScorer.RequireScoreGraph(graphId, path);
             }
             catch (InvalidOperationException ex)
             {

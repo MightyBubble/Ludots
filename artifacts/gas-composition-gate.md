@@ -2,6 +2,65 @@
 
 Current closeouts and prior issue reviews follow.
 
+## GraphScore Readonly Runtime - Issues #716 / #718 - 2026-08-03
+
+- **Task / Issue**: 收敛 AI / Input 的评分 Graph 使用方式：加载期编译只读评分计划，运行时只消费最小 `IReadOnlyGraphScorer`，并用固定 Graph 指令预算 fail-closed。
+- **Date**: 2026-08-03
+- **Agent / Author**: Codex.
+
+### 1. Core judgment
+
+新变体主要交付物: A. 收紧既有 Graph 执行与 AI/Input 评分调用合同。
+
+结论: PASS.
+
+一句话理由: 本次复用已有 GraphProgramRegistry、GraphKindOperationPolicy、GasGraphOpHandlerTable、GraphExecutor、Utility AI runtime、ContextScored 输入 resolver 和 GameConfig capacity；没有新增 graph op、effect preset、profile enum、平行 loader 或 fallback 运行时。
+
+### 2. Layer assignment
+
+| 步骤 / 能力 | Layer | 实现载体 |
+|---|---:|---|
+| Graph kind 与 op 合法性验证 | 1 | `CompiledGraphScoreRuntime.Compile` + `GraphKindOperationPolicy` |
+| 评分 / 校验 Graph 执行预算 | 1 | `GraphInstructionBudget` + budgeted Graph VM execution |
+| Utility AI 评分输入 | 2 | `UtilityAiRuntimeEvaluator` 消费 `IReadOnlyGraphScorer` |
+| ContextScored 输入选择 | 2 | `ContextScoredOrderResolver` 消费 `IReadOnlyGraphScorer` |
+| 配置预算 SSOT | 2 | `GameConfig.gasRuntimeCapacity` |
+
+### 3. Reuse list
+
+- Handlers: existing `GasGraphOpHandlerTable` and registered operation metadata.
+- Queues / Systems: existing Utility AI decision system and input order mapping system.
+- Resolvers / Registries: existing `GraphProgramRegistry`, `GraphIdRegistry`, `ContextGroupRegistry`, `CoreServiceKeys`.
+- Existing presets / graphs: unchanged; score/validation graph assets stay in the existing Graph catalog.
+
+### 4. New Layer 0 ops
+
+N/A. No new graph opcode, builtin handler, effect operation, preset, registry, or gameplay schema was added.
+
+### 5. Transaction boundary
+
+GraphScore has no gameplay write transaction because Score and Validation graphs are pure by policy. The relevant boundary is fail-closed selection: if the shared per-think or per-input-resolution instruction budget is exhausted, Utility AI submits no order and ContextScored returns no partial winner. Unknown graph, wrong kind, unsupported op, missing scorer, and non-finite budgets are explicit failures rather than runtime defaults.
+
+### 6. Config SSOT
+
+Behavior remains in existing Graph assets and AI/context group references. Runtime budgets are in `assets/Configs/game.json` under `gasRuntimeCapacity.utilityAiGraphScoreInstructionBudgetPerThink` and `gasRuntimeCapacity.inputGraphScoreInstructionBudgetPerResolve`.
+
+新增 JSON schema: NO. Existing game capacity config gained two required finite fields.
+
+### 7. Red flag scan
+
+- [x] 未新增 profile inherit / placement enum
+- [x] 未新增 graph op、effect preset、BuiltinHandler 或平行 graph runtime
+- [x] AI/Input 热路径不再持有完整 GraphProgramRegistry / Graph API 来做评分
+- [x] 预算耗尽不返回部分赢家、不提交半成品订单
+- [x] 未知、错 kind、非法写 op 在加载/编译期失败
+- [x] 没有无限预算、静默 0 分、默认通过或 fallback scorer
+- [x] 热路径使用固定预算和已编译数组计划；没有 LINQ、运行时反射或动态集合扩张
+
+### 8. Next variant test
+
+下一个 AI 或输入评分变体只修改 Graph 资产、AI input 或 context group 数据，并继续通过同一个 `IReadOnlyGraphScorer` 与固定预算。若需要新的 Core enum、评分 DSL 或第二套 Graph runtime，本 gate 失败。
+
 ## Graph / PresetType / EffectTemplate SSOT - Final Closeout - 2026-07-30
 
 - **Task / Issue**: Close the audited Ability, GAS Effect, and Graph contract gaps on current `main`, converge gameplay composition on `Graph -> optional PresetType sugar -> EffectTemplate instance`, and make test execution reproducible from repository-declared SDK and dependencies.

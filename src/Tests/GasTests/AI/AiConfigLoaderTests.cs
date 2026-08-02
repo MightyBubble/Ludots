@@ -197,7 +197,7 @@ namespace Ludots.Tests.GAS
 
             var ex = Assert.Throws<InvalidOperationException>(() => fixture.Load());
 
-            Assert.That(ex!.Message, Does.Contain("GraphScore graph"));
+            Assert.That(ex!.Message, Does.Contain(GraphKindOperationPolicy.OperationNotAllowedError));
             Assert.That(ex.Message, Does.Contain("WriteBlackboardFloat"));
         }
 
@@ -252,14 +252,16 @@ namespace Ludots.Tests.GAS
             private readonly string _root;
             private readonly string _core;
             private readonly ConfigPipeline _pipeline;
-            private readonly AiConfigValidationContext _validation;
+            private readonly OrderTypeRegistry _orderTypes;
+            private readonly AbilityDefinitionRegistry _abilities;
             private readonly GraphProgramRegistry _graphs;
 
             private AiConfigFixture(
                 string root,
                 string core,
                 ConfigPipeline pipeline,
-                AiConfigValidationContext validation,
+                OrderTypeRegistry orderTypes,
+                AbilityDefinitionRegistry abilities,
                 GraphProgramRegistry graphs,
                 int attackAbilityId,
                 int sharedCooldownTagId,
@@ -268,7 +270,8 @@ namespace Ludots.Tests.GAS
                 _root = root;
                 _core = core;
                 _pipeline = pipeline;
-                _validation = validation;
+                _orderTypes = orderTypes;
+                _abilities = abilities;
                 _graphs = graphs;
                 AttackAbilityId = attackAbilityId;
                 SharedCooldownTagId = sharedCooldownTagId;
@@ -331,7 +334,7 @@ namespace Ludots.Tests.GAS
                 int graphId = GraphIdRegistry.Register("Graph.AI.Score");
                 graphs.Register(graphId, Array.Empty<GraphInstruction>(), GraphKind.Score);
 
-                return new AiConfigFixture(root, core, pipeline, new AiConfigValidationContext(orderTypes, abilities, graphs), graphs, abilityId, sharedCooldownTagId, graphId);
+                return new AiConfigFixture(root, core, pipeline, orderTypes, abilities, graphs, abilityId, sharedCooldownTagId, graphId);
             }
 
             public void RegisterScoreGraph(params GraphInstruction[] program)
@@ -396,7 +399,11 @@ namespace Ludots.Tests.GAS
             public AiCompiledRuntime Load()
             {
                 var atoms = new AtomRegistry(capacity: 256);
-                var loader = new AiConfigLoader(_pipeline, atoms, _validation);
+                var validation = new AiConfigValidationContext(
+                    _orderTypes,
+                    _abilities,
+                    new RegistryGraphScorer(_graphs));
+                var loader = new AiConfigLoader(_pipeline, atoms, validation);
                 return loader.LoadAndCompile(AiConfigCatalog.CreateDefault());
             }
 
@@ -413,6 +420,72 @@ namespace Ludots.Tests.GAS
                 catch (UnauthorizedAccessException)
                 {
                 }
+            }
+        }
+
+        private sealed class RegistryGraphScorer : IReadOnlyGraphScorer
+        {
+            private readonly GraphProgramRegistry _graphs;
+
+            public RegistryGraphScorer(GraphProgramRegistry graphs)
+            {
+                _graphs = graphs;
+            }
+
+            public void RequireScoreGraph(int graphId, string path)
+            {
+                RequireGraph(graphId, GraphKind.Score, path);
+            }
+
+            public void RequireValidationGraph(int graphId, string path)
+            {
+                RequireGraph(graphId, GraphKind.Validation, path);
+            }
+
+            public bool TryEvaluateScore(
+                Arch.Core.Entity actor,
+                Arch.Core.Entity target,
+                Ludots.Core.Mathematics.IntVector2 targetPosCm,
+                int graphId,
+                ref GraphInstructionBudget budget,
+                out float score,
+                out GraphScoreFailureReason failureReason)
+                => throw new NotSupportedException("AiConfigLoaderTests only validate graph references at load time.");
+
+            public bool TryEvaluateValidation(
+                Arch.Core.Entity actor,
+                Arch.Core.Entity target,
+                Ludots.Core.Mathematics.IntVector2 targetPosCm,
+                int graphId,
+                ref GraphInstructionBudget budget,
+                out bool passed,
+                out GraphScoreFailureReason failureReason)
+                => throw new NotSupportedException("AiConfigLoaderTests only validate graph references at load time.");
+
+            private void RequireGraph(int graphId, GraphKind expected, string path)
+            {
+                if (!_graphs.TryGetKind(graphId, out GraphKind actual))
+                {
+                    throw new InvalidOperationException($"{path}: references unknown graph id {graphId}.");
+                }
+
+                if (actual != expected)
+                {
+                    throw new InvalidOperationException(
+                        $"{path}: references graph id {graphId} with the wrong graph kind; expected {expected}.");
+                }
+
+                if (!_graphs.TryGetProgram(graphId, out var program))
+                {
+                    throw new InvalidOperationException($"{path}: references unknown graph id {graphId}.");
+                }
+
+                GraphKindOperationPolicy.RequireAllowed(
+                    actual,
+                    program,
+                    GasGraphOpHandlerTable.Instance,
+                    graphId,
+                    nameof(AiConfigLoaderTests));
             }
         }
     }

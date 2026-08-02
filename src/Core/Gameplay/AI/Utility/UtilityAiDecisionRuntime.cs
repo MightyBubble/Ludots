@@ -33,7 +33,8 @@ namespace Ludots.Core.Gameplay.AI.Utility
         Distance = 6,
         AbilityNotEligible = 7,
         MissingRecentAttacker = 8,
-        ScratchFull = 9
+        ScratchFull = 9,
+        BudgetExhausted = 10
     }
 
     public enum UtilityAiReadinessBlockReason : int

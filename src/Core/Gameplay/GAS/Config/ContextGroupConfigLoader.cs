@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 
 namespace Ludots.Core.Gameplay.GAS.Config
@@ -11,16 +12,21 @@ namespace Ludots.Core.Gameplay.GAS.Config
     {
         private readonly ConfigPipeline _pipeline;
         private readonly ContextGroupRegistry _registry;
+        private readonly IReadOnlyGraphScorer? _graphScorer;
 
-        public ContextGroupConfigLoader(ConfigPipeline pipeline, ContextGroupRegistry registry)
+        public ContextGroupConfigLoader(
+            ConfigPipeline pipeline,
+            ContextGroupRegistry registry,
+            IReadOnlyGraphScorer? graphScorer = null)
         {
             _pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
             _registry = registry ?? throw new ArgumentNullException(nameof(registry));
+            _graphScorer = graphScorer;
         }
 
         public void Load(
-            ConfigCatalog catalog = null,
-            ConfigConflictReport report = null,
+            ConfigCatalog catalog = default!,
+            ConfigConflictReport report = default!,
             string relativePath = "GAS/context_groups.json")
         {
             _registry.Clear();
@@ -33,7 +39,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 var node = merged[i].Node;
                 int groupId = ContextGroupIdRegistry.Register(merged[i].Id);
                 int rootAbilityId = ResolveAbilityId(node["rootAbilityId"]?.GetValue<string>(), merged[i].Id, "rootAbilityId");
-                var definition = Compile(node, merged[i].Id);
+                var definition = Compile(node, merged[i].Id, _graphScorer);
                 _registry.Register(groupId, rootAbilityId, in definition);
             }
 
@@ -41,6 +47,12 @@ namespace Ludots.Core.Gameplay.GAS.Config
         }
 
         public static ContextGroupDefinition Compile(JsonObject node, string groupName)
+            => Compile(node, groupName, graphScorer: null);
+
+        private static ContextGroupDefinition Compile(
+            JsonObject node,
+            string groupName,
+            IReadOnlyGraphScorer? graphScorer)
         {
             if (node["searchRadiusCm"] is not JsonNode searchNode)
             {
@@ -69,6 +81,8 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 int abilityId = ResolveAbilityId(candidateNode["abilityId"]?.GetValue<string>(), groupName, $"candidates[{i}].abilityId");
                 int preconditionGraphId = ResolveGraphId(candidateNode["preconditionGraph"]?.GetValue<string>());
                 int scoreGraphId = ResolveGraphId(candidateNode["scoreGraph"]?.GetValue<string>());
+                ValidateGraphReference(graphScorer, preconditionGraphId, isScoreGraph: false, groupName, i, "preconditionGraph");
+                ValidateGraphReference(graphScorer, scoreGraphId, isScoreGraph: true, groupName, i, "scoreGraph");
                 if (candidateNode["requiresTarget"] is not JsonNode requiresTargetNode)
                 {
                     throw new InvalidOperationException(
@@ -149,6 +163,43 @@ namespace Ludots.Core.Gameplay.GAS.Config
             }
 
             return graphId;
+        }
+
+        private static void ValidateGraphReference(
+            IReadOnlyGraphScorer? graphScorer,
+            int graphId,
+            bool isScoreGraph,
+            string groupName,
+            int candidateIndex,
+            string fieldName)
+        {
+            if (graphId <= 0)
+            {
+                return;
+            }
+
+            string path = $"Context group '{groupName}' candidates[{candidateIndex}].{fieldName}";
+            if (graphScorer == null)
+            {
+                throw new InvalidOperationException(
+                    $"{path}: graph references require IReadOnlyGraphScorer.");
+            }
+
+            try
+            {
+                if (isScoreGraph)
+                {
+                    graphScorer.RequireScoreGraph(graphId, path);
+                }
+                else
+                {
+                    graphScorer.RequireValidationGraph(graphId, path);
+                }
+            }
+            catch (InvalidOperationException ex)
+            {
+                throw new InvalidOperationException($"{path}: {ex.Message}", ex);
+            }
         }
 
         private static float RequireFloat(JsonObject obj, string fieldName, string groupName, int candidateIndex)

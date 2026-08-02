@@ -5,6 +5,7 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Config;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Modding;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
@@ -26,6 +27,7 @@ namespace Ludots.Tests.GAS
             AbilityFormSetIdRegistry.Clear();
             AttributeRegistry.Clear();
             TagRegistry.Clear();
+            GraphIdRegistry.Clear();
         }
 
         [TearDown]
@@ -181,6 +183,42 @@ namespace Ludots.Tests.GAS
             var ex = Throws<InvalidOperationException>(() => loader.Load(catalog));
 
             That(ex!.Message, Does.Contain("candidates[0].requiresTarget"));
+        }
+
+        [Test]
+        public void ContextGroupConfigLoader_GraphReferenceRequiresReadonlyScorer()
+        {
+            WriteConfig("config_catalog.json",
+                @"[{ ""Path"": ""GAS/context_groups.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
+            WriteConfig("GAS/context_groups.json",
+                """
+                [
+                  {
+                    "id": "strict_context",
+                    "rootAbilityId": "Ability.Root",
+                    "searchRadiusCm": 500,
+                    "candidates": [
+                      {
+                        "abilityId": "Ability.Candidate",
+                        "scoreGraph": "Graph.Context.Score",
+                        "basePriority": 10,
+                        "requiresTarget": false
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            AbilityIdRegistry.Register("Ability.Root");
+            AbilityIdRegistry.Register("Ability.Candidate");
+            GraphIdRegistry.Register("Graph.Context.Score");
+            var (pipeline, catalog) = BuildPipeline();
+            var loader = new ContextGroupConfigLoader(pipeline, new ContextGroupRegistry());
+
+            var ex = Throws<InvalidOperationException>(() => loader.Load(catalog));
+
+            That(ex!.Message, Does.Contain("candidates[0].scoreGraph"));
+            That(ex.Message, Does.Contain("IReadOnlyGraphScorer"));
         }
 
         [Test]

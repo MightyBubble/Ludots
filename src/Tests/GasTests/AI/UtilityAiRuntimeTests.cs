@@ -126,7 +126,15 @@ namespace Ludots.Tests.GAS
             partition.Add(farEnemy, 9, 0);
 
             var schedule = new UtilityAiThinkScheduleSystem(world, clock, runtime);
-            var decision = new UtilityAiDecisionSystem(world, clock, runtime, spatial, abilities, new GraphProgramRegistry(), null, orders);
+            var decision = new UtilityAiDecisionSystem(
+                world,
+                clock,
+                runtime,
+                spatial,
+                abilities,
+                graphScorer: null,
+                graphScoreInstructionBudgetPerThink: 64,
+                orders: orders);
 
             schedule.Update(1f / 60f);
             decision.Update(1f / 60f);
@@ -199,7 +207,15 @@ namespace Ludots.Tests.GAS
             partition.Add(friendly, 2, 0);
             partition.Add(hostile, 8, 0);
 
-            var decision = new UtilityAiDecisionSystem(world, clock, runtime, spatial, abilities, new GraphProgramRegistry(), null, orders);
+            var decision = new UtilityAiDecisionSystem(
+                world,
+                clock,
+                runtime,
+                spatial,
+                abilities,
+                graphScorer: null,
+                graphScoreInstructionBudgetPerThink: 64,
+                orders: orders);
             decision.Update(1f / 60f);
 
             Assert.That(orders.Count, Is.EqualTo(1));
@@ -290,7 +306,15 @@ namespace Ludots.Tests.GAS
             partition.Add(nearLow, 2, 0);
             partition.Add(farHigh, 9, 0);
 
-            var decision = new UtilityAiDecisionSystem(world, clock, runtime, spatial, abilities, new GraphProgramRegistry(), null, orders);
+            var decision = new UtilityAiDecisionSystem(
+                world,
+                clock,
+                runtime,
+                spatial,
+                abilities,
+                graphScorer: null,
+                graphScoreInstructionBudgetPerThink: 64,
+                orders: orders);
             decision.Update(1f / 60f);
 
             Assert.That(orders.Count, Is.EqualTo(1));
@@ -365,7 +389,15 @@ namespace Ludots.Tests.GAS
             var hostile = world.Create(new Team { Id = 2 }, WorldPositionCm.FromCm(500, 0), new OrderBuffer { ActiveIndex = -1 });
             partition.Add(hostile, 5, 0);
 
-            var decision = new UtilityAiDecisionSystem(world, clock, runtime, spatial, abilities, new GraphProgramRegistry(), null, orders);
+            var decision = new UtilityAiDecisionSystem(
+                world,
+                clock,
+                runtime,
+                spatial,
+                abilities,
+                graphScorer: null,
+                graphScoreInstructionBudgetPerThink: 64,
+                orders: orders);
             decision.Update(1f / 60f);
 
             Assert.That(orders.Count, Is.EqualTo(0));
@@ -434,7 +466,15 @@ namespace Ludots.Tests.GAS
             var hostile = world.Create(new Team { Id = 2 }, WorldPositionCm.FromCm(500, 0), new OrderBuffer { ActiveIndex = -1 });
             partition.Add(hostile, 5, 0);
 
-            var decision = new UtilityAiDecisionSystem(world, clock, runtime, spatial, abilities, new GraphProgramRegistry(), null, orders);
+            var decision = new UtilityAiDecisionSystem(
+                world,
+                clock,
+                runtime,
+                spatial,
+                abilities,
+                graphScorer: null,
+                graphScoreInstructionBudgetPerThink: 64,
+                orders: orders);
             decision.Update(1f / 60f);
 
             Assert.That(orders.Count, Is.EqualTo(0));
@@ -598,7 +638,15 @@ namespace Ludots.Tests.GAS
             });
 
             var spatialUpdate = new SpatialPartitionUpdateSystem(fixture.World, fixture.Partition, fixture.Spec);
-            var decision = new UtilityAiDecisionSystem(fixture.World, fixture.Clock, runtime, fixture.Spatial, fixture.Abilities, new GraphProgramRegistry(), null, fixture.Orders);
+            var decision = new UtilityAiDecisionSystem(
+                fixture.World,
+                fixture.Clock,
+                runtime,
+                fixture.Spatial,
+                fixture.Abilities,
+                graphScorer: null,
+                graphScoreInstructionBudgetPerThink: 64,
+                orders: fixture.Orders);
             var orderBuffer = new OrderBufferSystem(
                 fixture.World,
                 fixture.Clock,
@@ -633,7 +681,15 @@ namespace Ludots.Tests.GAS
                 _ = fixture.CreateHostile(x, y);
             }
 
-            var decision = new UtilityAiDecisionSystem(fixture.World, fixture.Clock, runtime, fixture.Spatial, fixture.Abilities, new GraphProgramRegistry(), null, fixture.Orders);
+            var decision = new UtilityAiDecisionSystem(
+                fixture.World,
+                fixture.Clock,
+                runtime,
+                fixture.Spatial,
+                fixture.Abilities,
+                graphScorer: null,
+                graphScoreInstructionBudgetPerThink: 64,
+                orders: fixture.Orders);
             decision.Update(1f / 60f);
             fixture.Orders.Clear();
             ref var actorState = ref fixture.World.Get<UtilityAiState>(fixture.Actor);
@@ -765,7 +821,15 @@ namespace Ludots.Tests.GAS
 
             public void RunDecision(UtilityAiCompiledRuntime runtime)
             {
-                var decision = new UtilityAiDecisionSystem(World, Clock, runtime, Spatial, Abilities, new GraphProgramRegistry(), null, Orders);
+                var decision = new UtilityAiDecisionSystem(
+                    World,
+                    Clock,
+                    runtime,
+                    Spatial,
+                    Abilities,
+                    graphScorer: null,
+                    graphScoreInstructionBudgetPerThink: 64,
+                    orders: Orders);
                 decision.Update(1f / 60f);
             }
 

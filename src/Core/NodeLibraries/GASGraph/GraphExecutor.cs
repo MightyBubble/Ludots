@@ -110,6 +110,32 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             return ExecuteScoreCore(world, caster, explicitTarget, targetPosCm, program, api, kind);
         }
 
+        internal static bool TryExecutePrevalidatedScore(
+            World world,
+            Entity caster,
+            Entity explicitTarget,
+            IntVector2 targetPosCm,
+            ReadOnlySpan<GraphInstruction> program,
+            IGraphRuntimeApi api,
+            ref GraphInstructionBudget budget,
+            out float score)
+        {
+            return TryExecuteScoreCore(world, caster, explicitTarget, targetPosCm, program, api, ref budget, out score);
+        }
+
+        internal static bool TryExecutePrevalidatedValidation(
+            World world,
+            Entity caster,
+            Entity explicitTarget,
+            IntVector2 targetPosCm,
+            ReadOnlySpan<GraphInstruction> program,
+            IGraphRuntimeApi api,
+            ref GraphInstructionBudget budget,
+            out bool passed)
+        {
+            return TryExecuteValidationCore(world, caster, explicitTarget, targetPosCm, program, api, ref budget, out passed);
+        }
+
         /// <summary>
         /// Execute a validation graph from a <see cref="GraphProgramBuffer"/>.
         /// </summary>
@@ -270,6 +296,97 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
             GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
             return f[0];
+        }
+
+        private static bool TryExecuteValidationCore(
+            World world,
+            Entity caster,
+            Entity explicitTarget,
+            IntVector2 targetPosCm,
+            ReadOnlySpan<GraphInstruction> program,
+            IGraphRuntimeApi api,
+            ref GraphInstructionBudget budget,
+            out bool passed)
+        {
+            Span<float> f = stackalloc float[GraphVmLimits.MaxFloatRegisters];
+            Span<int> i = stackalloc int[GraphVmLimits.MaxIntRegisters];
+            Span<byte> b = stackalloc byte[GraphVmLimits.MaxBoolRegisters];
+            Span<Entity> e = stackalloc Entity[GraphVmLimits.MaxEntityRegisters];
+            Span<Entity> targets = stackalloc Entity[GraphVmLimits.MaxTargets];
+            var targetList = new GraphTargetList(targets);
+
+            b[0] = 0;
+            e[0] = caster;
+            e[1] = explicitTarget;
+
+            var state = new GraphExecutionState
+            {
+                World = world,
+                Caster = caster,
+                ExplicitTarget = explicitTarget,
+                TargetPosCm = targetPosCm,
+                Api = api,
+                F = f,
+                I = i,
+                B = b,
+                E = e,
+                Targets = targets,
+                TargetList = targetList
+            };
+
+            if (!GasGraphOpHandlerTable.TryExecute(ref state, program, GasGraphOpHandlerTable.Instance, ref budget))
+            {
+                passed = false;
+                return false;
+            }
+
+            passed = b[0] != 0;
+            return true;
+        }
+
+        private static bool TryExecuteScoreCore(
+            World world,
+            Entity caster,
+            Entity explicitTarget,
+            IntVector2 targetPosCm,
+            ReadOnlySpan<GraphInstruction> program,
+            IGraphRuntimeApi api,
+            ref GraphInstructionBudget budget,
+            out float score)
+        {
+            Span<float> f = stackalloc float[GraphVmLimits.MaxFloatRegisters];
+            Span<int> i = stackalloc int[GraphVmLimits.MaxIntRegisters];
+            Span<byte> b = stackalloc byte[GraphVmLimits.MaxBoolRegisters];
+            Span<Entity> e = stackalloc Entity[GraphVmLimits.MaxEntityRegisters];
+            Span<Entity> targets = stackalloc Entity[GraphVmLimits.MaxTargets];
+            var targetList = new GraphTargetList(targets);
+
+            e[0] = caster;
+            e[1] = explicitTarget;
+
+            var state = new GraphExecutionState
+            {
+                World = world,
+                Caster = caster,
+                ExplicitTarget = explicitTarget,
+                TargetPosCm = targetPosCm,
+                Api = api,
+                F = f,
+                I = i,
+                B = b,
+                E = e,
+                Targets = targets,
+                TargetList = targetList
+            };
+
+            if (!GasGraphOpHandlerTable.TryExecute(ref state, program, GasGraphOpHandlerTable.Instance, ref budget))
+            {
+                score = 0f;
+                return false;
+            }
+
+            score = f[0];
+            return true;
         }
     }
 }

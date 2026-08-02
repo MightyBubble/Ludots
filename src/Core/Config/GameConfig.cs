@@ -92,6 +92,8 @@ namespace Ludots.Core.Config
         public int AbilityExecMaxWorkUnitsPerSlice { get; set; }
         public int EffectProcessingMaxWorkUnitsPerSlice { get; set; }
         public int CommandIntentScratchCapacity { get; set; }
+        public int UtilityAiGraphScoreInstructionBudgetPerThink { get; set; }
+        public int InputGraphScoreInstructionBudgetPerResolve { get; set; }
 
         public void Validate()
         {
@@ -194,6 +196,12 @@ namespace Ludots.Core.Config
             ValidateFiniteWorkBudget(
                 EffectProcessingMaxWorkUnitsPerSlice,
                 "GameConfig.gasRuntimeCapacity.effectProcessingMaxWorkUnitsPerSlice");
+            ValidateFiniteWorkBudget(
+                UtilityAiGraphScoreInstructionBudgetPerThink,
+                "GameConfig.gasRuntimeCapacity.utilityAiGraphScoreInstructionBudgetPerThink");
+            ValidateFiniteWorkBudget(
+                InputGraphScoreInstructionBudgetPerResolve,
+                "GameConfig.gasRuntimeCapacity.inputGraphScoreInstructionBudgetPerResolve");
 
             if (CommandIntentScratchCapacity <= 0)
             {

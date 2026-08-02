@@ -8,7 +8,6 @@ using Ludots.Core.Gameplay.Items;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Spatial;
-using GasGraphExecutor = Ludots.Core.NodeLibraries.GASGraph.GraphExecutor;
 
 namespace Ludots.Core.Input.Orders
 {
@@ -39,31 +38,40 @@ namespace Ludots.Core.Input.Orders
     {
         private readonly World _world;
         private readonly ContextGroupRegistry _contextGroups;
-        private readonly GraphProgramRegistry _graphPrograms;
-        private readonly Ludots.Core.NodeLibraries.GASGraph.IGraphRuntimeApi _graphApi;
+        private readonly IReadOnlyGraphScorer _graphScorer;
         private readonly ISpatialQueryService _spatialQueries;
         private readonly ContextScoredCandidateGate _candidateGate;
+        private readonly int _graphInstructionBudget;
         private readonly Entity[] _queryBuffer = new Entity[256];
 
         public ContextScoredOrderResolver(
             World world,
             ContextGroupRegistry contextGroups,
-            GraphProgramRegistry graphPrograms,
+            IReadOnlyGraphScorer graphScorer,
             ISpatialQueryService spatialQueries,
-            Ludots.Core.NodeLibraries.GASGraph.IGraphRuntimeApi graphApi,
-            ContextScoredCandidateGate candidateGate)
+            ContextScoredCandidateGate candidateGate,
+            int graphInstructionBudget)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _contextGroups = contextGroups ?? throw new ArgumentNullException(nameof(contextGroups));
-            _graphPrograms = graphPrograms ?? throw new ArgumentNullException(nameof(graphPrograms));
+            _graphScorer = graphScorer ?? throw new ArgumentNullException(nameof(graphScorer));
             _spatialQueries = spatialQueries ?? throw new ArgumentNullException(nameof(spatialQueries));
-            _graphApi = graphApi ?? throw new ArgumentNullException(nameof(graphApi));
             _candidateGate = candidateGate ?? throw new ArgumentNullException(nameof(candidateGate));
+            _graphInstructionBudget = ValidateGraphInstructionBudget(graphInstructionBudget);
         }
 
         public bool TryResolve(Entity actor, InputOrderMapping mapping, Entity hoveredEntity, out ContextScoredOrderResolution resolution)
+            => TryResolve(actor, mapping, hoveredEntity, out resolution, out _);
+
+        public bool TryResolve(
+            Entity actor,
+            InputOrderMapping mapping,
+            Entity hoveredEntity,
+            out ContextScoredOrderResolution resolution,
+            out GraphScoreFailureReason failureReason)
         {
             resolution = default;
+            failureReason = GraphScoreFailureReason.None;
 
             if (!_world.IsAlive(actor) || !_world.Has<AbilityStateBuffer>(actor))
             {
@@ -110,6 +118,7 @@ namespace Ludots.Core.Input.Orders
             float bestScore = float.MinValue;
             int bestSlotIndex = -1;
             Entity bestTarget = default;
+            GraphInstructionBudget graphBudget = GraphInstructionBudget.Create(_graphInstructionBudget);
 
             for (int i = 0; i < group.Candidates.Count; i++)
             {
@@ -121,8 +130,26 @@ namespace Ludots.Core.Input.Orders
 
                 if (!candidate.RequiresTarget)
                 {
-                    if (TryScoreCandidate(actor, default, hoveredEntity, actorWorldCm, candidate, out float score) &&
-                        IsBetterCandidate(score, default, candidateSlotIndex, bestScore, bestTarget, bestSlotIndex))
+                    if (!TryScoreCandidate(
+                            actor,
+                            default,
+                            hoveredEntity,
+                            actorWorldCm,
+                            candidate,
+                            ref graphBudget,
+                            out float score,
+                            out failureReason))
+                    {
+                        if (failureReason != GraphScoreFailureReason.None)
+                        {
+                            resolution = default;
+                            return false;
+                        }
+
+                        continue;
+                    }
+
+                    if (IsBetterCandidate(score, default, candidateSlotIndex, bestScore, bestTarget, bestSlotIndex))
                     {
                         bestScore = score;
                         bestSlotIndex = candidateSlotIndex;
@@ -139,8 +166,26 @@ namespace Ludots.Core.Input.Orders
                         continue;
                     }
 
-                    if (TryScoreCandidate(actor, target, hoveredEntity, actorWorldCm, candidate, out float score) &&
-                        IsBetterCandidate(score, target, candidateSlotIndex, bestScore, bestTarget, bestSlotIndex))
+                    if (!TryScoreCandidate(
+                            actor,
+                            target,
+                            hoveredEntity,
+                            actorWorldCm,
+                            candidate,
+                            ref graphBudget,
+                            out float score,
+                            out failureReason))
+                    {
+                        if (failureReason != GraphScoreFailureReason.None)
+                        {
+                            resolution = default;
+                            return false;
+                        }
+
+                        continue;
+                    }
+
+                    if (IsBetterCandidate(score, target, candidateSlotIndex, bestScore, bestTarget, bestSlotIndex))
                     {
                         bestScore = score;
                         bestSlotIndex = candidateSlotIndex;
@@ -178,9 +223,12 @@ namespace Ludots.Core.Input.Orders
             Entity hoveredEntity,
             WorldCmInt2 actorWorldCm,
             in ContextGroupCandidate candidate,
-            out float totalScore)
+            ref GraphInstructionBudget graphBudget,
+            out float totalScore,
+            out GraphScoreFailureReason failureReason)
         {
             totalScore = candidate.BasePriority;
+            failureReason = GraphScoreFailureReason.None;
             WorldCmInt2 targetWorldCm = default;
 
             if (candidate.RequiresTarget)
@@ -227,20 +275,20 @@ namespace Ludots.Core.Input.Orders
 
             if (candidate.PreconditionGraphId > 0)
             {
-                if (!_graphPrograms.TryGetProgram(candidate.PreconditionGraphId, out var preconditionProgram))
-                {
-                    throw new InvalidOperationException($"Missing precondition graph id {candidate.PreconditionGraphId}.");
-                }
-
-                GraphKind preconditionKind = _graphPrograms.RequireKind(candidate.PreconditionGraphId, GraphKind.Validation);
-                if (!GasGraphExecutor.ExecuteValidation(
-                        _world,
+                if (!_graphScorer.TryEvaluateValidation(
                         actor,
                         target,
                         default,
-                        preconditionProgram,
-                        _graphApi,
-                        preconditionKind))
+                        candidate.PreconditionGraphId,
+                        ref graphBudget,
+                        out bool passed,
+                        out failureReason))
+                {
+                    ThrowIfGraphContractFailure(candidate.PreconditionGraphId, failureReason, GraphKind.Validation);
+                    return false;
+                }
+
+                if (!passed)
                 {
                     return false;
                 }
@@ -248,23 +296,34 @@ namespace Ludots.Core.Input.Orders
 
             if (candidate.ScoreGraphId > 0)
             {
-                if (!_graphPrograms.TryGetProgram(candidate.ScoreGraphId, out var scoreProgram))
+                if (!_graphScorer.TryEvaluateScore(
+                        actor,
+                        target,
+                        default,
+                        candidate.ScoreGraphId,
+                        ref graphBudget,
+                        out float graphScore,
+                        out failureReason))
                 {
-                    throw new InvalidOperationException($"Missing score graph id {candidate.ScoreGraphId}.");
+                    ThrowIfGraphContractFailure(candidate.ScoreGraphId, failureReason, GraphKind.Score);
+                    return false;
                 }
 
-                GraphKind scoreKind = _graphPrograms.RequireKind(candidate.ScoreGraphId, GraphKind.Score);
-                totalScore += GasGraphExecutor.ExecuteScore(
-                    _world,
-                    actor,
-                    target,
-                    default,
-                    scoreProgram,
-                    _graphApi,
-                    scoreKind);
+                totalScore += graphScore;
             }
 
             return true;
+        }
+
+        private static void ThrowIfGraphContractFailure(int graphId, GraphScoreFailureReason failureReason, GraphKind expectedKind)
+        {
+            if (failureReason == GraphScoreFailureReason.BudgetExhausted)
+            {
+                return;
+            }
+
+            throw new InvalidOperationException(
+                $"Context-scored order graph id {graphId} failed graph-score contract for {expectedKind}: {failureReason}.");
         }
 
         private static float ComputeDistanceCm(WorldCmInt2 a, WorldCmInt2 b)
@@ -316,6 +375,19 @@ namespace Ludots.Core.Input.Orders
             }
 
             return left.Version.CompareTo(right.Version);
+        }
+
+        private static int ValidateGraphInstructionBudget(int value)
+        {
+            if (value <= 0 || value == int.MaxValue)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(value),
+                    value,
+                    "Context-scored graph instruction budget must be positive and finite.");
+            }
+
+            return value;
         }
 
         private static float ComputeAngleToTargetDeg(WorldCmInt2 actorWorldCm, WorldCmInt2 targetWorldCm, float facingAngleRad)
