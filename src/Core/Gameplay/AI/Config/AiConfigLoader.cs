@@ -838,6 +838,7 @@ namespace Ludots.Core.Gameplay.AI.Config
                 {
                     payloadKind = RequireOrderPayloadKind(obj, "OrderPayloadKind", path);
                     orderTypeId = ResolveOrderTypeReference(obj, path);
+                    ValidateOrderTypePayloadContract(payloadKind, orderTypeId, path);
                     ValidateUtilityTaskPayload(payloadKind, abilitySlotIndex, path);
                 }
 
@@ -1373,6 +1374,8 @@ namespace Ludots.Core.Gameplay.AI.Config
                 throw Fail(path, "Order must declare OrderTypeKey or OrderTypeId.");
             }
 
+            ValidateOrderTypePayloadContract(payloadKind, orderTypeId, path);
+
             byte submitModeByte = TryReadByte(orderObj, "SubmitMode", out byte sm)
                 ? sm
                 : (byte)OrderSubmitMode.Immediate;
@@ -1409,6 +1412,40 @@ namespace Ludots.Core.Gameplay.AI.Config
             }
 
             throw Fail($"{path}.{key}", $"Unsupported AI order payload kind '{value}'.");
+        }
+
+        private void ValidateOrderTypePayloadContract(AiOrderPayloadKind payloadKind, int orderTypeId, string path)
+        {
+            if (_validation == null)
+            {
+                throw Fail(path, "AI Order references require AiConfigValidationContext with OrderTypeRegistry.");
+            }
+
+            if (!_validation.OrderTypes.TryGet(orderTypeId, out OrderTypeConfig orderType))
+            {
+                throw Fail(path, $"References unknown order type id {orderTypeId}.");
+            }
+
+            OrderPayloadKind actual = ToOrderPayloadKind(payloadKind);
+            if (actual != orderType.PayloadKind)
+            {
+                throw Fail(
+                    $"{path}.OrderPayloadKind",
+                    $"OrderPayloadKind {payloadKind} does not match order type '{orderType.Key}' payloadKind {orderType.PayloadKind}.");
+            }
+        }
+
+        private static OrderPayloadKind ToOrderPayloadKind(AiOrderPayloadKind payloadKind)
+        {
+            return payloadKind switch
+            {
+                AiOrderPayloadKind.None => OrderPayloadKind.None,
+                AiOrderPayloadKind.CastAbility => OrderPayloadKind.CastAbility,
+                AiOrderPayloadKind.MoveToWorldCm => OrderPayloadKind.MoveToWorldCm,
+                AiOrderPayloadKind.Stop => OrderPayloadKind.Stop,
+                AiOrderPayloadKind.TargetEntity => OrderPayloadKind.TargetEntity,
+                _ => throw Fail("OrderPayloadKind", $"Unsupported AI order payload kind '{payloadKind}'.")
+            };
         }
 
         private static void ValidateUtilityTaskPayload(AiOrderPayloadKind payloadKind, int abilitySlotIndex, string path)

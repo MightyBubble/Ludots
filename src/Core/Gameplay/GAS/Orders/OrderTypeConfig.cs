@@ -15,6 +15,15 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         RejectNew = 1
     }
 
+    public enum OrderPayloadKind : byte
+    {
+        None = 0,
+        CastAbility = 1,
+        MoveToWorldCm = 2,
+        Stop = 3,
+        TargetEntity = 4
+    }
+
     public sealed class OrderTypeConfig
     {
         public string Key { get; set; } = string.Empty;
@@ -38,6 +47,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         public int SpatialBlackboardKey { get; set; } = OrderBlackboardKeys.Generic_TargetPosition;
         public int EntityBlackboardKey { get; set; } = OrderBlackboardKeys.Generic_TargetEntity;
         public int IntArg0BlackboardKey { get; set; } = -1;
+        public OrderPayloadKind PayloadKind { get; set; } = OrderPayloadKind.None;
         public int ValidationGraphId { get; set; }
         public bool InstantComplete { get; set; }
         public BlackboardStoredTargetKeys PersistentStoredTargetKeys { get; set; }

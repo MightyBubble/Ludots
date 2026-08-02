@@ -381,6 +381,14 @@ namespace EntityCommandPanelMod.Runtime
                 }
 
                 string actionId = actionIds[slotIndex] ?? string.Empty;
+                InteractionModeType slotInteractionMode = interactionMode;
+                if (inputMapping != null &&
+                    !string.IsNullOrWhiteSpace(actionId) &&
+                    inputMapping.TryGetEffectiveInteractionMode(actionId, target, out InteractionModeType effectiveInteractionMode))
+                {
+                    slotInteractionMode = effectiveInteractionMode;
+                }
+
                 string displayLabel = string.Empty;
                 string detailLabel = string.Empty;
                 short lockoutPermille = 0;
@@ -441,7 +449,7 @@ namespace EntityCommandPanelMod.Runtime
                     if (presentation != null &&
                         presentation.ModeHintOverrides.Count > 0)
                     {
-                        abilityInteractionModeKey = ResolveAbilityInteractionModeKey(interactionMode, in abilityDefinition);
+                        abilityInteractionModeKey = ResolveInteractionModeKey(slotInteractionMode);
                         if (presentation.ModeHintOverrides.TryGetValue(abilityInteractionModeKey, out string? overrideHint) &&
                             !string.IsNullOrWhiteSpace(overrideHint))
                         {
@@ -459,7 +467,7 @@ namespace EntityCommandPanelMod.Runtime
                         {
                             if (string.IsNullOrEmpty(abilityInteractionModeKey))
                             {
-                                abilityInteractionModeKey = ResolveAbilityInteractionModeKey(interactionMode, in abilityDefinition);
+                                abilityInteractionModeKey = ResolveInteractionModeKey(slotInteractionMode);
                             }
 
                             detailLabel = BuildDefaultDetailLabel(actionId, abilityInteractionModeKey);
@@ -600,17 +608,6 @@ namespace EntityCommandPanelMod.Runtime
             }
 
             return _progressionRequirements;
-        }
-
-        private static string ResolveAbilityInteractionModeKey(InteractionModeType interactionMode, in AbilityDefinition abilityDefinition)
-        {
-            if (abilityDefinition.HasInputBindingOverride &&
-                abilityDefinition.InputBindingOverride.HasCastModeOverride)
-            {
-                return ResolveInteractionModeKey(abilityDefinition.InputBindingOverride.CastModeOverride);
-            }
-
-            return ResolveInteractionModeKey(interactionMode);
         }
 
         private short ResolveLockoutPermille(Entity target, in AbilityDefinition abilityDefinition)

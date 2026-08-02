@@ -163,6 +163,9 @@
   },
   {
     "id": "Ability.Rts.Strategy.War3.TrainFootman",
+    "catalogTags": [
+      "ability.catalog.rts.train"
+    ],
     "exec": {
       "clockId": "FixedFrame",
       "items": [
@@ -268,6 +271,9 @@
   },
   {
     "id": "Ability.Rts.Strategy.Cnc.TrainRhino",
+    "catalogTags": [
+      "ability.catalog.rts.train"
+    ],
     "exec": {
       "clockId": "FixedFrame",
       "items": [
@@ -349,6 +355,9 @@
   },
   {
     "id": "Ability.Rts.Strategy.Sc2.TrainZealot",
+    "catalogTags": [
+      "ability.catalog.rts.train"
+    ],
     "exec": {
       "clockId": "FixedFrame",
       "items": [

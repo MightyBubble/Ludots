@@ -92,6 +92,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(cast.SpatialBlackboardKey, Is.EqualTo(OrderBlackboardKeys.Cast_TargetPosition));
             Assert.That(cast.EntityBlackboardKey, Is.EqualTo(OrderBlackboardKeys.Cast_TargetEntity));
             Assert.That(cast.IntArg0BlackboardKey, Is.EqualTo(OrderBlackboardKeys.Cast_SlotIndex));
+            Assert.That(cast.PayloadKind, Is.EqualTo(OrderPayloadKind.CastAbility));
             Assert.That(cast.ValidationGraphId, Is.EqualTo(0));
 
             var attack = orderTypes.Get(config.Constants.OrderTypeIds["attackTarget"]);
@@ -101,6 +102,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(attack.SpatialBlackboardKey, Is.EqualTo(attackMovePositionKey));
             Assert.That(attack.EntityBlackboardKey, Is.EqualTo(attackTargetEntityKey));
             Assert.That(attack.IntArg0BlackboardKey, Is.EqualTo(-1));
+            Assert.That(attack.PayloadKind, Is.EqualTo(OrderPayloadKind.TargetEntity));
             Assert.That(attack.ValidationGraphId, Is.EqualTo(0));
 
             var stop = orderTypes.Get(config.Constants.OrderTypeIds["stop"]);
@@ -108,6 +110,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(stop.SpatialBlackboardKey, Is.EqualTo(-1));
             Assert.That(stop.EntityBlackboardKey, Is.EqualTo(-1));
             Assert.That(stop.IntArg0BlackboardKey, Is.EqualTo(-1));
+            Assert.That(stop.PayloadKind, Is.EqualTo(OrderPayloadKind.Stop));
             Assert.That(stop.ValidationGraphId, Is.EqualTo(0));
 
             var chainPass = orderTypes.Get(config.Constants.ResponseChainOrderTypeIds["chainPass"]);

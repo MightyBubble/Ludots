@@ -33,7 +33,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
             "toggleSpec",
             "targeting",
             "presentation",
-            "input",
             "useRequirement",
             "showRequirement",
         };
@@ -157,6 +156,13 @@ namespace Ludots.Core.Gameplay.GAS.Config
                     "author effects once in exec.items with EffectSignal or EffectClip.");
             }
 
+            if (obj["input"] != null)
+            {
+                throw new InvalidOperationException(
+                    $"Ability '{id}' in '{path}' field 'input': ability definitions do not own input trigger, held policy, cast mode, or auto-targeting. " +
+                    "Move those authored facts to Input/input_order_mappings.json.");
+            }
+
             RequireKnownRootProperties(obj, id, path);
 
             // ── blockTags ──
@@ -243,12 +249,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
             {
                 def.Presentation = CompilePresentation(presentationObj, id, path);
                 def.HasPresentation = def.Presentation != null;
-            }
-
-            if (obj["input"] is JsonObject inputObj)
-            {
-                def.InputBindingOverride = CompileInputBindingOverride(inputObj, id, path);
-                def.HasInputBindingOverride = true;
             }
 
             def.UseProgressionRequirementId = ResolveProgressionRequirement(obj, "useRequirement", id, path);
@@ -951,82 +951,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
             }
 
             return parsed.ToString();
-        }
-
-        private static AbilityInputBindingOverride CompileInputBindingOverride(JsonObject inputObj, string id, string path)
-        {
-            var result = new AbilityInputBindingOverride();
-            bool hasAny = false;
-
-            if (inputObj["trigger"] is JsonValue triggerNode)
-            {
-                string rawTrigger = triggerNode.GetValue<string>();
-                if (!Enum.TryParse(rawTrigger, ignoreCase: true, out InputTriggerType trigger))
-                {
-                    throw new InvalidOperationException(
-                        $"Ability '{id}' in '{path}' input.trigger uses unknown value '{rawTrigger}'.");
-                }
-
-                result.Trigger = trigger;
-                result.HasTrigger = true;
-                hasAny = true;
-            }
-
-            if (inputObj["heldPolicy"] is JsonValue heldPolicyNode)
-            {
-                string rawHeldPolicy = heldPolicyNode.GetValue<string>();
-                if (!Enum.TryParse(rawHeldPolicy, ignoreCase: true, out HeldPolicy heldPolicy))
-                {
-                    throw new InvalidOperationException(
-                        $"Ability '{id}' in '{path}' input.heldPolicy uses unknown value '{rawHeldPolicy}'.");
-                }
-
-                result.HeldPolicy = heldPolicy;
-                result.HasHeldPolicy = true;
-                hasAny = true;
-            }
-
-            if (inputObj["castModeOverride"] is JsonValue castModeNode)
-            {
-                string rawCastMode = castModeNode.GetValue<string>();
-                if (!Enum.TryParse(rawCastMode, ignoreCase: true, out InteractionModeType castMode))
-                {
-                    throw new InvalidOperationException(
-                        $"Ability '{id}' in '{path}' input.castModeOverride uses unknown value '{rawCastMode}'.");
-                }
-
-                result.CastModeOverride = castMode;
-                result.HasCastModeOverride = true;
-                hasAny = true;
-            }
-
-            if (inputObj["autoTargetPolicy"] is JsonValue autoTargetPolicyNode)
-            {
-                string rawAutoTargetPolicy = autoTargetPolicyNode.GetValue<string>();
-                if (!Enum.TryParse(rawAutoTargetPolicy, ignoreCase: true, out AutoTargetPolicy autoTargetPolicy))
-                {
-                    throw new InvalidOperationException(
-                        $"Ability '{id}' in '{path}' input.autoTargetPolicy uses unknown value '{rawAutoTargetPolicy}'.");
-                }
-
-                result.AutoTargetPolicy = autoTargetPolicy;
-                result.HasAutoTargetPolicy = true;
-                hasAny = true;
-            }
-
-            if (inputObj["autoTargetRangeCm"] is JsonValue autoTargetRangeNode)
-            {
-                result.AutoTargetRangeCm = autoTargetRangeNode.GetValue<int>();
-                result.HasAutoTargetRangeCm = true;
-                hasAny = true;
-            }
-
-            if (!hasAny)
-            {
-                throw new InvalidOperationException($"Ability '{id}' in '{path}' input must declare at least one override field.");
-            }
-
-            return result;
         }
 
         // ──────────────── Parsing helpers ────────────────

@@ -72,6 +72,18 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void AiConfigLoader_RejectsOrderPayloadKindThatContradictsOrderType()
+        {
+            using var fixture = AiConfigFixture.Create(
+                orderJson: "{ \"OrderPayloadKind\": \"Stop\", \"OrderTypeKey\": \"castAbility\", \"SubmitMode\": 0, \"PlayerId\": 0 }");
+
+            var ex = Assert.Throws<InvalidOperationException>(() => fixture.Load());
+
+            Assert.That(ex!.Message, Does.Contain("OrderPayloadKind Stop"));
+            Assert.That(ex.Message, Does.Contain("payloadKind CastAbility"));
+        }
+
+        [Test]
         public void AiConfigLoader_CompilesUtilityAiToFlatArrays()
         {
             using var fixture = AiConfigFixture.Create();
@@ -386,12 +398,14 @@ namespace Ludots.Tests.GAS
                 orderTypes.Register(new OrderTypeConfig
                 {
                     Key = "castAbility",
-                    OrderTypeId = CastOrderTypeId
+                    OrderTypeId = CastOrderTypeId,
+                    PayloadKind = OrderPayloadKind.CastAbility
                 });
                 orderTypes.Register(new OrderTypeConfig
                 {
                     Key = "attackTarget",
-                    OrderTypeId = AttackOrderTypeId
+                    OrderTypeId = AttackOrderTypeId,
+                    PayloadKind = OrderPayloadKind.TargetEntity
                 });
 
                 TagRegistry.Clear();

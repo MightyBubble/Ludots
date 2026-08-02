@@ -582,6 +582,7 @@ namespace Ludots.Tests.GAS.Production
         public void ChampionSkillSandbox_EzrealArcaneShift_UsesSourceBlinkAndAutoTargetBolt()
         {
             using var engine = CreateEngine();
+            LoadMap(engine, "champion_skill_sandbox");
 
             var abilities = engine.GetService(CoreServiceKeys.AbilityDefinitionRegistry)
                 ?? throw new InvalidOperationException("AbilityDefinitionRegistry missing.");
@@ -589,11 +590,22 @@ namespace Ludots.Tests.GAS.Production
             int abilityId = AbilityIdRegistry.GetId("Ability.Champion.Ezreal.ArcaneShift");
             Assert.That(abilityId, Is.GreaterThan(0));
             Assert.That(abilities.TryGet(abilityId, out var ability), Is.True);
-            Assert.That(ability.HasInputBindingOverride, Is.True);
-            Assert.That(ability.InputBindingOverride.HasAutoTargetPolicy, Is.True);
-            Assert.That(ability.InputBindingOverride.AutoTargetPolicy, Is.EqualTo(AutoTargetPolicy.NearestEnemyInRange));
-            Assert.That(ability.InputBindingOverride.HasAutoTargetRangeCm, Is.True);
-            Assert.That(ability.InputBindingOverride.AutoTargetRangeCm, Is.EqualTo(760));
+
+            var mapping = WaitForActiveInputOrderMapping(engine);
+            InputOrderMapping? arcaneShiftMapping = mapping.GetMapping("SkillE");
+            Assert.That(arcaneShiftMapping, Is.Not.Null);
+            Assert.That(arcaneShiftMapping!.TryResolveAbilitySlot(out int arcaneShiftSlot), Is.True);
+            Assert.That(arcaneShiftSlot, Is.EqualTo(2));
+            Assert.That(arcaneShiftMapping.AutoTargetPolicy, Is.EqualTo(AutoTargetPolicy.NearestEnemyInRange));
+            Assert.That(arcaneShiftMapping.AutoTargetRangeCm, Is.EqualTo(760));
+
+            Entity spellEngineer = FindEntityByName(engine.World, "Spell Engineer Alpha");
+            InputOrderMapping? guidedLaserMapping = mapping.GetMapping("SkillR", spellEngineer);
+            Assert.That(guidedLaserMapping, Is.Not.Null);
+            Assert.That(guidedLaserMapping!.AbilityIdKey, Is.EqualTo("Ability.Champion.SpellEngineer.GuidedLaser"));
+            Assert.That(guidedLaserMapping.Trigger, Is.EqualTo(InputTriggerType.Held));
+            Assert.That(guidedLaserMapping.HeldPolicy, Is.EqualTo(HeldPolicy.StartEnd));
+            Assert.That(guidedLaserMapping.CastModeOverride, Is.EqualTo(InteractionModeType.SmartCast));
 
             Assert.That(ability.ExecSpec.GetKind(1), Is.EqualTo(ExecItemKind.EffectSignal));
             Assert.That(

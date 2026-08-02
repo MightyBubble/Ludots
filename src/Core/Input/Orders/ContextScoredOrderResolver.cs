@@ -71,12 +71,11 @@ namespace Ludots.Core.Input.Orders
                 return false;
             }
 
-            if (mapping.ArgsTemplate.I0 is null)
+            if (!mapping.TryResolveAbilitySlot(out int rootSlotIndex))
             {
                 return false;
             }
 
-            int rootSlotIndex = mapping.ArgsTemplate.I0.Value;
             if (!TryResolveContextGroup(actor, rootSlotIndex, out var group))
             {
                 return false;

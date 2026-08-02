@@ -23,6 +23,7 @@
       "spatialBlackboardKey": "none",
       "entityBlackboardKey": "none",
       "intArg0BlackboardKey": "none",
+      "payloadKind": "None",
       "validationGraph": "none",
       "instantComplete": true,
       "persistentStoredTarget": {

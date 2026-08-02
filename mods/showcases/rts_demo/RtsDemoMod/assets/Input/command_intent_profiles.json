@@ -1,0 +1,43 @@
+{
+  "profiles": [
+    {
+      "id": "intent.command.default",
+      "groupPolicy": {
+        "kind": "independent"
+      },
+      "rules": [
+        {
+          "priority": 30,
+          "actor": {
+            "hasAbilityWithTag": "ability.catalog.rts.train",
+            "blockedAnyTags": [
+              "Progression.Rts.WarpGate"
+            ]
+          },
+          "route": {
+            "orderTypeKey": "setSpawnTarget",
+            "slot": "byAbilityTag:ability.catalog.rts.train"
+          }
+        },
+        {
+          "priority": 20,
+          "target": {
+            "hasEntity": true
+          },
+          "route": {
+            "orderTypeKey": "moveTo"
+          }
+        },
+        {
+          "priority": 10,
+          "target": {
+            "hasEntity": false
+          },
+          "route": {
+            "orderTypeKey": "moveTo"
+          }
+        }
+      ]
+    }
+  ]
+}

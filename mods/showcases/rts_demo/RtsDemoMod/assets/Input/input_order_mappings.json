@@ -5,69 +5,60 @@
       "actionId": "SkillQ",
       "trigger": "PressedThisFrame",
       "orderTypeKey": "castAbility",
-      "argsTemplate": { "i0": 0 },
       "requireTarget": false,
       "targetType": "Position",
-      "isSkillMapping": true,
-      "modifierBehavior": "QueueOnModifier"
+      "modifierBehavior": "QueueOnModifier",
+      "orderPayload": {
+        "kind": "CastAbility",
+        "abilitySlot": 0
+      }
     },
     {
       "actionId": "SkillW",
       "trigger": "PressedThisFrame",
       "orderTypeKey": "castAbility",
-      "argsTemplate": { "i0": 1 },
       "requireTarget": false,
       "targetType": "Entity",
-      "isSkillMapping": true,
-      "modifierBehavior": "QueueOnModifier"
+      "modifierBehavior": "QueueOnModifier",
+      "orderPayload": {
+        "kind": "CastAbility",
+        "abilitySlot": 1
+      }
     },
     {
       "actionId": "SkillE",
       "trigger": "PressedThisFrame",
       "orderTypeKey": "castAbility",
-      "argsTemplate": { "i0": 2 },
       "requireTarget": false,
       "targetType": "None",
-      "isSkillMapping": true,
-      "modifierBehavior": "QueueOnModifier"
+      "modifierBehavior": "QueueOnModifier",
+      "orderPayload": {
+        "kind": "CastAbility",
+        "abilitySlot": 2
+      }
     },
     {
       "actionId": "SkillR",
       "trigger": "PressedThisFrame",
       "orderTypeKey": "castAbility",
-      "argsTemplate": { "i0": 3 },
       "requireTarget": false,
       "targetType": "Position",
-      "isSkillMapping": true,
-      "modifierBehavior": "QueueOnModifier"
+      "modifierBehavior": "QueueOnModifier",
+      "orderPayload": {
+        "kind": "CastAbility",
+        "abilitySlot": 3
+      }
     },
     {
       "actionId": "Command",
       "actorCollectionKey": "collection.command.source",
       "trigger": "PressedThisFrame",
-      "argsTemplate": {},
+      "orderTypeKey": "moveTo",
       "requireTarget": true,
       "targetType": "Position",
-      "isSkillMapping": false,
       "modifierBehavior": "QueueOnModifier",
-      "actorOrderRouting": {
-        "candidates": [
-          {
-            "orderTypeKey": "setSpawnTarget",
-            "priority": 10,
-            "targetType": "HoveredEntityOrPosition",
-            "match": {
-              "abilitySlotIndex": 2,
-              "abilityIdKeySuffix": ".Train",
-              "blockedAnyTags": ["Progression.Rts.WarpGate"]
-            }
-          },
-          {
-            "orderTypeKey": "moveTo",
-            "priority": 0,
-            "match": {}
-          }
-        ]
+      "orderPayload": {
+        "kind": "MoveToWorldCm"
       }
     },
     {
@@ -75,11 +66,12 @@
       "actorCollectionKey": "collection.command.source",
       "trigger": "PressedThisFrame",
       "orderTypeKey": "stop",
-      "argsTemplate": {},
       "requireTarget": false,
       "targetType": "None",
-      "isSkillMapping": false,
-      "modifierBehavior": "IgnoreModifier"
+      "modifierBehavior": "IgnoreModifier",
+      "orderPayload": {
+        "kind": "Stop"
+      }
     }
   ],
   "userOverrides": {

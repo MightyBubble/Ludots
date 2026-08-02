@@ -263,21 +263,13 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             }
 
             if (!definition.HasTargeting ||
-                definition.Targeting.CastRangeCm <= 0f ||
-                ShouldBypassMoveThenCastPlanning(in definition))
+                definition.Targeting.CastRangeCm <= 0f)
             {
                 return MoveThenCastPlanResult.NotApplicable();
             }
 
             rangeCm = definition.Targeting.CastRangeCm;
             return MoveThenCastPlanResult.Planned();
-        }
-
-        private static bool ShouldBypassMoveThenCastPlanning(in AbilityDefinition definition)
-        {
-            return definition.HasInputBindingOverride &&
-                   definition.InputBindingOverride.HasAutoTargetPolicy &&
-                   definition.InputBindingOverride.AutoTargetPolicy != AutoTargetPolicy.None;
         }
 
         private bool TryResolvePlanningOrigin(in Order order, out Vector3 originWorldCm)

@@ -5,91 +5,105 @@
       "actionId": "SkillQ",
       "trigger": "PressedThisFrame",
       "orderTypeKey": "castAbility",
-      "argsTemplate": { "i0": 0 },
       "requireTarget": false,
       "targetType": "Entity",
-      "isSkillMapping": true,
-      "modifierBehavior": "QueueOnModifier"
+      "modifierBehavior": "QueueOnModifier",
+      "orderPayload": {
+        "kind": "CastAbility",
+        "abilitySlot": 0
+      }
     },
     {
       "actionId": "SkillW",
       "trigger": "PressedThisFrame",
       "orderTypeKey": "castAbility",
-      "argsTemplate": { "i0": 1 },
       "requireTarget": false,
       "targetType": "Position",
-      "isSkillMapping": true,
-      "modifierBehavior": "QueueOnModifier"
+      "modifierBehavior": "QueueOnModifier",
+      "orderPayload": {
+        "kind": "CastAbility",
+        "abilitySlot": 1
+      }
     },
     {
       "actionId": "SkillE",
       "trigger": "PressedThisFrame",
       "orderTypeKey": "castAbility",
-      "argsTemplate": { "i0": 2 },
       "requireTarget": false,
       "targetType": "Direction",
-      "isSkillMapping": true,
-      "modifierBehavior": "QueueOnModifier"
+      "modifierBehavior": "QueueOnModifier",
+      "orderPayload": {
+        "kind": "CastAbility",
+        "abilitySlot": 2
+      }
     },
     {
       "actionId": "SkillR",
       "trigger": "PressedThisFrame",
       "orderTypeKey": "castAbility",
-      "argsTemplate": { "i0": 3 },
       "requireTarget": false,
       "targetType": "None",
-      "isSkillMapping": true,
-      "modifierBehavior": "QueueOnModifier"
+      "modifierBehavior": "QueueOnModifier",
+      "orderPayload": {
+        "kind": "CastAbility",
+        "abilitySlot": 3
+      }
     },
     {
       "actionId": "SkillZ",
       "trigger": "DoubleTap",
       "doubleTapWindowSeconds": 0.28,
       "orderTypeKey": "castAbility",
-      "argsTemplate": { "i0": 4 },
       "requireTarget": false,
       "targetType": "Direction",
-      "isSkillMapping": true,
-      "modifierBehavior": "QueueOnModifier"
+      "modifierBehavior": "QueueOnModifier",
+      "orderPayload": {
+        "kind": "CastAbility",
+        "abilitySlot": 4
+      }
     },
     {
       "actionId": "SkillF",
       "trigger": "PressedThisFrame",
       "orderTypeKey": "castAbility",
-      "argsTemplate": { "i0": 5 },
       "requireTarget": false,
       "targetType": "None",
-      "isSkillMapping": true,
-      "modifierBehavior": "QueueOnModifier"
+      "modifierBehavior": "QueueOnModifier",
+      "orderPayload": {
+        "kind": "CastAbility",
+        "abilitySlot": 5
+      }
     },
     {
       "actionId": "ActionAttack",
       "trigger": "PressedThisFrame",
       "orderTypeKey": "castAbility",
-      "argsTemplate": { "i0": 6 },
       "requireTarget": false,
       "targetType": "Entity",
-      "isSkillMapping": true,
-      "modifierBehavior": "QueueOnModifier"
+      "modifierBehavior": "QueueOnModifier",
+      "orderPayload": {
+        "kind": "CastAbility",
+        "abilitySlot": 6
+      }
     },
     {
       "actionId": "RuneBurst",
       "trigger": "PressedThisFrame",
       "orderTypeKey": "castAbility",
-      "argsTemplate": { "i0": 7 },
       "requireTarget": false,
       "targetType": "Vector",
-      "isSkillMapping": true,
-      "modifierBehavior": "QueueOnModifier"
+      "modifierBehavior": "QueueOnModifier",
+      "orderPayload": {
+        "kind": "CastAbility",
+        "abilitySlot": 7
+      }
     },
     {
       "actionId": "Command",
       "trigger": "PressedThisFrame",
       "orderTypeKey": "moveTo",
-      "argsTemplate": {},
       "requireTarget": false,
       "targetType": "None",
-      "isSkillMapping": false,
       "modifierBehavior": "QueueOnModifier"
     },
     {
@@ -97,11 +111,12 @@
       "trigger": "PressedThisFrame",
       "orderTypeKey": "stop",
       "actorCollectionKey": "collection.command.source",
-      "argsTemplate": {},
       "requireTarget": false,
       "targetType": "None",
-      "isSkillMapping": false,
-      "modifierBehavior": "IgnoreModifier"
+      "modifierBehavior": "IgnoreModifier",
+      "orderPayload": {
+        "kind": "Stop"
+      }
     }
   ],
   "userOverrides": {

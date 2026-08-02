@@ -112,6 +112,43 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         }
 
         [Test]
+        public void OrderPayloadKindMismatch_ThrowsDuringRegistryInstall()
+        {
+            var input = new FrozenInputActionReader();
+            var config = new InputOrderMappingConfig
+            {
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "StopButNamedCast",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "castAbility",
+                        TargetType = OrderTargetType.None,
+                        RequireTarget = false,
+                        OrderPayload = InputOrderPayloadTemplate.Stop()
+                    }
+                }
+            };
+
+            var system = new InputOrderMappingSystem(input, config);
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: 4));
+            orderTypes.Register(new OrderTypeConfig
+            {
+                Key = "castAbility",
+                OrderTypeId = 100,
+                PayloadKind = OrderPayloadKind.CastAbility
+            });
+
+            var ex = Assert.Throws<InvalidOperationException>(() =>
+                system.SetOrderTypeRegistry(orderTypes, "test:assets/Input/input_order_mappings.json"));
+
+            Assert.That(ex!.Message, Does.Contain("StopButNamedCast"));
+            Assert.That(ex.Message, Does.Contain("requires orderPayload.kind CastAbility"));
+            Assert.That(ex.Message, Does.Contain("declares Stop"));
+        }
+
+        [Test]
         public void DuplicateActionId_IsRejectedDuringConstruction()
         {
             var config = new InputOrderMappingConfig
@@ -136,6 +173,127 @@ namespace Ludots.Tests.GAS.Features.InputRouting
 
             Assert.That(ex!.Message, Does.Contain("duplicates"));
             Assert.That(ex.Message, Does.Contain("Attack"));
+        }
+
+        [Test]
+        public void AbilityQualifiedSkillMapping_SameActionKeepsActorSpecificHeldStartEnd()
+        {
+            AbilityIdRegistry.Clear();
+            int defaultAbilityId = AbilityIdRegistry.Register("Ability.Test.DefaultR");
+            int guidedAbilityId = AbilityIdRegistry.Register("Ability.Test.GuidedLaser");
+
+            var input = new FrozenInputActionReader();
+            var config = new InputOrderMappingConfig
+            {
+                InteractionMode = InteractionModeType.SmartCast,
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "SkillR",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "castAbility",
+                        OrderPayload = InputOrderPayloadTemplate.CastAbility(3),
+                        TargetType = OrderTargetType.Direction,
+                        RequireTarget = false,
+                    },
+                    new()
+                    {
+                        ActionId = "SkillR",
+                        AbilityIdKey = "Ability.Test.GuidedLaser",
+                        Trigger = InputTriggerType.Held,
+                        HeldPolicy = HeldPolicy.StartEnd,
+                        CastModeOverride = InteractionModeType.SmartCast,
+                        OrderTypeKey = "castAbility",
+                        OrderPayload = InputOrderPayloadTemplate.CastAbility(3),
+                        TargetType = OrderTargetType.Direction,
+                        RequireTarget = false,
+                    },
+                },
+            };
+            InputOrderMappingLoader.ResolveAbilityIdKeys(config, AbilityIdRegistry.GetId, "test.json");
+
+            using var world = World.Create();
+            Entity defaultActor = world.Create();
+            Entity guidedActor = world.Create();
+            Entity activeActor = guidedActor;
+            var orders = new List<Order>();
+            var system = new InputOrderMappingSystem(input, config);
+            system.SetLocalPlayer(guidedActor, 1);
+            system.SetActorProvider((out Entity actor) => { actor = activeActor; return true; });
+            system.SetSkillMappingAbilityProvider((Entity actor, int slotIndex, out int abilityId) =>
+            {
+                Assert.That(slotIndex, Is.EqualTo(3));
+                abilityId = actor == guidedActor ? guidedAbilityId : defaultAbilityId;
+                return true;
+            });
+            system.SetOrderTypeKeyResolver(key => key switch
+            {
+                "castAbility" => 10,
+                "castAbility.Start" => 11,
+                "castAbility.End" => 12,
+                _ => 0,
+            });
+            system.SetOrderSubmitHandler((in Order order) =>
+            {
+                orders.Add(order);
+                return OrderSubmitResult.Queued;
+            });
+
+            input.SetActionState("SkillR", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
+            system.Update(0f);
+            input.SetActionState("SkillR", Vector3.Zero, isDown: false, pressedThisFrame: false, releasedThisFrame: true);
+            system.Update(0f);
+
+            Assert.That(orders.Count, Is.EqualTo(2));
+            Assert.That(orders[0].OrderTypeId, Is.EqualTo(11));
+            Assert.That(orders[1].OrderTypeId, Is.EqualTo(12));
+            Assert.That(orders[0].Args.I0, Is.EqualTo(3));
+            Assert.That(orders[1].Args.I0, Is.EqualTo(3));
+
+            orders.Clear();
+            activeActor = defaultActor;
+            input.SetActionState("SkillR", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
+            system.Update(0f);
+
+            Assert.That(orders.Count, Is.EqualTo(1));
+            Assert.That(orders[0].OrderTypeId, Is.EqualTo(10));
+        }
+
+        [Test]
+        public void InputOrderMappingLoader_RejectsAbilityQualifiedSameActionWithDifferentSlots()
+        {
+            using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(
+                """
+                {
+                  "interactionMode": "SmartCast",
+                  "mappings": [
+                    {
+                      "actionId": "SkillR",
+                      "trigger": "PressedThisFrame",
+                      "orderTypeKey": "castAbility",
+                      "orderPayload": { "kind": "CastAbility", "abilitySlot": 2 },
+                      "requireTarget": false,
+                      "targetType": "Direction"
+                    },
+                    {
+                      "actionId": "SkillR",
+                      "abilityIdKey": "Ability.Test.GuidedLaser",
+                      "trigger": "Held",
+                      "heldPolicy": "StartEnd",
+                      "orderTypeKey": "castAbility",
+                      "orderPayload": { "kind": "CastAbility", "abilitySlot": 3 },
+                      "requireTarget": false,
+                      "targetType": "Direction"
+                    }
+                  ]
+                }
+                """));
+
+            var ex = Assert.Throws<InvalidOperationException>(() => InputOrderMappingLoader.LoadFromStream(stream));
+
+            Assert.That(ex!.Message, Does.Contain("SkillR"));
+            Assert.That(ex.Message, Does.Contain("same orderPayload.abilitySlot"));
         }
 
         [Test]
@@ -280,11 +438,10 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                       "actionId": "SkillQ",
                       "trigger": "PressedThisFrame",
                       "orderTypeKey": "castAbility",
-                      "argsTemplate": { "i0": 0 },
+                      "orderPayload": { "kind": "CastAbility", "abilitySlot": 0 },
                       "requireTarget": true,
                       "targetCollectionKey": "collection.test.explicit.targets",
-                      "targetType": "Entity",
-                      "isSkillMapping": false
+                      "targetType": "Entity"
                     }
                   ]
                 }
@@ -329,6 +486,26 @@ namespace Ludots.Tests.GAS.Features.InputRouting
 
                 var input = new FrozenInputActionReader();
                 input.SetActionState("SkillQ", Vector3.One, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
+                var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: 8));
+                orderTypes.Register(new OrderTypeConfig
+                {
+                    Key = "castAbility",
+                    OrderTypeId = 101,
+                    PayloadKind = OrderPayloadKind.CastAbility
+                });
+                orderTypes.Register(new OrderTypeConfig
+                {
+                    Key = "moveTo",
+                    OrderTypeId = 102,
+                    PayloadKind = OrderPayloadKind.MoveToWorldCm
+                });
+                orderTypes.Register(new OrderTypeConfig
+                {
+                    Key = "stop",
+                    OrderTypeId = 103,
+                    PayloadKind = OrderPayloadKind.Stop
+                });
+
                 var globals = new Dictionary<string, object>
                 {
                     [CoreServiceKeys.AuthoritativeInput.Name] = input,
@@ -338,6 +515,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                     [CoreServiceKeys.EntityCollectionKeyRegistry.Name] = collectionKeys,
                     [CoreServiceKeys.PlayerEntityLookup.Name] = players,
                     [CoreServiceKeys.ControlDomainQuery.Name] = controlHarness.Domains,
+                    [CoreServiceKeys.OrderTypeRegistry.Name] = orderTypes,
                     [CoreServiceKeys.GameConfig.Name] = new GameConfig
                     {
                         GasRuntimeCapacity = new GasRuntimeCapacityConfig
@@ -350,7 +528,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                             {
                                 ["castAbility"] = 101,
                                 ["moveTo"] = 102,
-                                ["stop"] = 1003,
+                                ["stop"] = 103,
                             },
                         },
                     },
@@ -418,11 +596,10 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                       "actionId": "SkillQ",
                       "trigger": "PressedThisFrame",
                       "orderTypeKey": "castAbility",
-                      "argsTemplate": { "i0": 0 },
+                      "orderPayload": { "kind": "CastAbility", "abilitySlot": 0 },
                       "RequireTarget": true,
                       "EntityCollectionKey": "collection.test.explicit.targets",
-                      "TargetType": "Entity",
-                      "isSkillMapping": false
+                      "TargetType": "Entity"
                     }
                   ]
                 }
@@ -431,6 +608,260 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var ex = Assert.Throws<JsonException>(() => InputOrderMappingLoader.LoadFromStream(stream));
 
             Assert.That(ex!.Message, Does.Contain("RequireTarget"));
+        }
+
+        [Test]
+        public void TypedCastAbilityPayload_SubmitsConfiguredAbilitySlotWithoutAuthoredArgSlots()
+        {
+            using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(
+                """
+                {
+                  "interactionMode": "TargetFirst",
+                  "mappings": [
+                    {
+                      "actionId": "SkillQ",
+                      "trigger": "PressedThisFrame",
+                      "orderTypeKey": "castAbility",
+                      "orderPayload": { "kind": "CastAbility", "abilitySlot": 2 },
+                      "requireTarget": false,
+                      "targetType": "None"
+                    }
+                  ]
+                }
+                """));
+
+            InputOrderMappingConfig config = InputOrderMappingLoader.LoadFromStream(stream);
+            var input = new FrozenInputActionReader();
+            input.SetActionState("SkillQ", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
+
+            using var world = World.Create();
+            Entity actor = world.Create();
+            var orders = new List<Order>();
+            var system = new InputOrderMappingSystem(input, config);
+            system.SetLocalPlayer(actor, 1);
+            system.SetActorProvider((out Entity resolvedActor) =>
+            {
+                resolvedActor = actor;
+                return true;
+            });
+            system.SetOrderTypeKeyResolver(key => key == "castAbility" ? 101 : 0);
+            system.SetOrderSubmitHandler((in Order order) =>
+            {
+                orders.Add(order);
+                return OrderSubmitResult.Queued;
+            });
+
+            system.Update(0f);
+
+            Assert.That(orders, Has.Count.EqualTo(1));
+            Assert.That(orders[0].OrderTypeId, Is.EqualTo(101));
+            Assert.That(orders[0].Args.I0, Is.EqualTo(2));
+            var primaryActions = new string[4];
+            Assert.That(system.CopyPrimarySkillActionIds(primaryActions), Is.EqualTo(1));
+            Assert.That(primaryActions[2], Is.EqualTo("SkillQ"));
+        }
+
+        [Test]
+        public void InputOrderMappingLoader_RejectsAuthoredArgSlots()
+        {
+            using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(
+                """
+                {
+                  "interactionMode": "TargetFirst",
+                  "mappings": [
+                    {
+                      "actionId": "SkillQ",
+                      "trigger": "PressedThisFrame",
+                      "orderTypeKey": "castAbility",
+                      "argsTemplate": { "i0": 0 },
+                      "requireTarget": false,
+                      "targetType": "None"
+                    }
+                  ]
+                }
+                """));
+
+            var ex = Assert.Throws<InvalidOperationException>(() => InputOrderMappingLoader.LoadFromStream(stream));
+
+            Assert.That(ex!.Message, Does.Contain("mappings[0].argsTemplate"));
+            Assert.That(ex.Message, Does.Contain("orderPayload"));
+        }
+
+        [Test]
+        public void InputOrderMappingLoader_RejectsDuplicateArgSlotAndTypedPayload()
+        {
+            using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(
+                """
+                {
+                  "interactionMode": "TargetFirst",
+                  "mappings": [
+                    {
+                      "actionId": "SkillQ",
+                      "trigger": "PressedThisFrame",
+                      "orderTypeKey": "castAbility",
+                      "argsTemplate": { "i0": 0 },
+                      "orderPayload": { "kind": "CastAbility", "abilitySlot": 1 },
+                      "requireTarget": false,
+                      "targetType": "None"
+                    }
+                  ]
+                }
+                """));
+
+            var ex = Assert.Throws<InvalidOperationException>(() => InputOrderMappingLoader.LoadFromStream(stream));
+
+            Assert.That(ex!.Message, Does.Contain("mappings[0]"));
+            Assert.That(ex.Message, Does.Contain("argsTemplate"));
+            Assert.That(ex.Message, Does.Contain("orderPayload"));
+        }
+
+        [Test]
+        public void InputOrderMappingLoader_RejectsAuthoredSkillMappingFlag()
+        {
+            using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(
+                """
+                {
+                  "interactionMode": "TargetFirst",
+                  "mappings": [
+                    {
+                      "actionId": "SkillQ",
+                      "trigger": "PressedThisFrame",
+                      "orderTypeKey": "castAbility",
+                      "orderPayload": { "kind": "CastAbility", "abilitySlot": 0 },
+                      "requireTarget": false,
+                      "targetType": "None",
+                      "isSkillMapping": true
+                    }
+                  ]
+                }
+                """));
+
+            var ex = Assert.Throws<InvalidOperationException>(() => InputOrderMappingLoader.LoadFromStream(stream));
+
+            Assert.That(ex!.Message, Does.Contain("mappings[0].isSkillMapping"));
+            Assert.That(ex.Message, Does.Contain("derived"));
+        }
+
+        [Test]
+        public void InputOrderMappingLoader_RejectsInvalidTypedOrderPayloadFields()
+        {
+            AssertInvalidInputMappingJson(
+                """
+                {
+                  "interactionMode": "TargetFirst",
+                  "mappings": [
+                    {
+                      "actionId": "SkillQ",
+                      "trigger": "PressedThisFrame",
+                      "orderTypeKey": "castAbility",
+                      "orderPayload": { "kind": "CastAbility" },
+                      "requireTarget": false,
+                      "targetType": "None"
+                    }
+                  ]
+                }
+                """,
+                "orderPayload.abilitySlot");
+
+            AssertInvalidInputMappingJson(
+                """
+                {
+                  "interactionMode": "TargetFirst",
+                  "mappings": [
+                    {
+                      "actionId": "Move",
+                      "trigger": "PressedThisFrame",
+                      "orderTypeKey": "moveTo",
+                      "orderPayload": { "kind": "MoveToWorldCm", "abilitySlot": 0 },
+                      "requireTarget": true,
+                      "targetType": "Position"
+                    }
+                  ]
+                }
+                """,
+                "abilitySlot is only valid");
+
+            AssertInvalidInputMappingJson(
+                """
+                {
+                  "interactionMode": "TargetFirst",
+                  "mappings": [
+                    {
+                      "actionId": "Stop",
+                      "trigger": "PressedThisFrame",
+                      "orderTypeKey": "stop",
+                      "orderPayload": { "kind": "Stop" },
+                      "requireTarget": true,
+                      "targetType": "Position"
+                    }
+                  ]
+                }
+                """,
+                "kind Stop must not declare a target requirement");
+        }
+
+        [Test]
+        public void InputOrderMappingLoader_RejectsAuthoredGroupMoveTargetLayout()
+        {
+            using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(
+                """
+                {
+                  "interactionMode": "TargetFirst",
+                  "mappings": [
+                    {
+                      "actionId": "Move",
+                      "trigger": "PressedThisFrame",
+                      "orderTypeKey": "moveTo",
+                      "orderPayload": { "kind": "MoveToWorldCm" },
+                      "requireTarget": true,
+                      "targetType": "Position"
+                    }
+                  ],
+                  "groupMoveTargetLayout": {
+                    "mode": "Grid",
+                    "spacingCm": 120,
+                    "orderTypeKeys": [ "moveTo" ]
+                  }
+                }
+                """));
+
+            var ex = Assert.Throws<InvalidOperationException>(() => InputOrderMappingLoader.LoadFromStream(stream));
+
+            Assert.That(ex!.Message, Does.Contain("groupMoveTargetLayout"));
+            Assert.That(ex.Message, Does.Contain("targetLayoutProfiles"));
+        }
+
+        [Test]
+        public void InputOrderMappingLoader_RejectsAuthoredActorOrderRouting()
+        {
+            using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(
+                """
+                {
+                  "interactionMode": "TargetFirst",
+                  "mappings": [
+                    {
+                      "actionId": "Command",
+                      "trigger": "PressedThisFrame",
+                      "requireSelection": true,
+                      "targetType": "Position",
+                      "actorOrderRouting": {
+                        "candidates": [
+                          {
+                            "orderTypeKey": "moveTo",
+                            "priority": 0,
+                            "match": {}
+                          }
+                        ]
+                      }
+                    }
+                  ]
+                }
+                """));
+
+            var ex = Assert.Throws<InvalidOperationException>(() => InputOrderMappingLoader.LoadFromStream(stream));
+
+            Assert.That(ex!.Message, Does.Contain("mappings[0].actorOrderRouting"));
+            Assert.That(ex.Message, Does.Contain("CommandIntent"));
         }
 
         [Test]
@@ -445,10 +876,9 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                       "actionId": "SkillQ",
                       "trigger": "PressedThisFrame",
                       "orderTypeKey": "castAbility",
-                      "argsTemplate": { "i0": 0 },
+                      "orderPayload": { "kind": "CastAbility", "abilitySlot": 0 },
                       "requireTarget": false,
                       "targetType": "Position",
-                      "isSkillMapping": true,
                       "autoTargetPolicy": "NearestEnemyInRange",
                       "autoTargetRangeCm": 600,
                       "cursorTargetPolicy": "NearestInRange",
@@ -475,10 +905,9 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                       "actionId": "SkillQ",
                       "trigger": "PressedThisFrame",
                       "orderTypeKey": "castAbility",
-                      "argsTemplate": { "i0": 0 },
+                      "orderPayload": { "kind": "CastAbility", "abilitySlot": 0 },
                       "requireTarget": true,
                       "targetType": "Entity",
-                      "isSkillMapping": true,
                       "cursorTargetPolicy": "NearestInRange",
                       "cursorTargetRangeCm": 320
                     }
@@ -503,10 +932,9 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                       "actionId": "SkillR",
                       "trigger": "PressedThisFrame",
                       "orderTypeKey": "castAbility",
-                      "argsTemplate": { "i0": 3 },
+                      "orderPayload": { "kind": "CastAbility", "abilitySlot": 3 },
                       "requireTarget": false,
                       "targetType": "Direction",
-                      "isSkillMapping": true,
                       "autoTargetPolicy": "NearestEnemyInRange",
                       "autoTargetRangeCm": 760
                     }
@@ -1037,11 +1465,15 @@ namespace Ludots.Tests.GAS.Features.InputRouting
 
             var config = new InputOrderMappingConfig
             {
-                GroupMoveTargetLayout = new GroupMoveTargetLayoutSettings
+                TargetLayoutProfiles = new List<TargetLayoutProfileDefinition>
                 {
-                    Mode = GroupMoveTargetLayoutMode.Grid,
-                    SpacingCm = 120,
-                    OrderTypeKeys = new List<string> { "moveTo" },
+                    new()
+                    {
+                        Id = "layout.move.grid",
+                        Mode = TargetLayoutMode.Grid,
+                        SpacingCm = 120,
+                        OrderTypeKeys = new List<string> { "moveTo" },
+                    },
                 },
                 Mappings = new List<InputOrderMapping>
                 {
@@ -1052,6 +1484,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                         Trigger = InputTriggerType.PressedThisFrame,
                         RequireTarget = true,
                         TargetType = OrderTargetType.Position,
+                        TargetLayoutProfileId = "layout.move.grid",
                         IsSkillMapping = false,
                         ActorOrderRouting = new ActorOrderRoutingSettings
                         {
@@ -1155,18 +1588,60 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         }
 
         [Test]
-        public void GroupMoveTargetLayout_OrderTypeKeyMatching_IsCaseSensitive()
+        public void CommandAction_ActorOrderRouting_IsRejectedBeforeRuntimeBranching()
+        {
+            var config = new InputOrderMappingConfig
+            {
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "Command",
+                        ActorCollectionKey = "collection.test.actors",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        RequireTarget = true,
+                        TargetType = OrderTargetType.Position,
+                        ActorOrderRouting = new ActorOrderRoutingSettings
+                        {
+                            Candidates = new List<ActorOrderRoutingCandidate>
+                            {
+                                new()
+                                {
+                                    OrderTypeKey = "moveTo",
+                                    Match = new ActorOrderRoutingMatch(),
+                                },
+                            },
+                        },
+                    },
+                },
+            };
+
+            var system = new InputOrderMappingSystem(new FrozenInputActionReader(), config);
+
+            var ex = Assert.Throws<InvalidOperationException>(() => system.CommandActionId = "Command");
+
+            Assert.That(ex!.Message, Does.Contain("Command"));
+            Assert.That(ex.Message, Does.Contain("actorOrderRouting"));
+            Assert.That(ex.Message, Does.Contain("CommandIntent"));
+        }
+
+        [Test]
+        public void TargetLayoutProfile_OrderTypeKeyMatching_IsCaseSensitive()
         {
             var input = new FrozenInputActionReader();
             input.SetActionState("Command", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
 
             var config = new InputOrderMappingConfig
             {
-                GroupMoveTargetLayout = new GroupMoveTargetLayoutSettings
+                TargetLayoutProfiles = new List<TargetLayoutProfileDefinition>
                 {
-                    Mode = GroupMoveTargetLayoutMode.Grid,
-                    SpacingCm = 120,
-                    OrderTypeKeys = new List<string> { "MoveTo" },
+                    new()
+                    {
+                        Id = "layout.move.grid",
+                        Mode = TargetLayoutMode.Grid,
+                        SpacingCm = 120,
+                        OrderTypeKeys = new List<string> { "MoveTo" },
+                    },
                 },
                 Mappings = new List<InputOrderMapping>
                 {
@@ -1179,6 +1654,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                         ArgsTemplate = new OrderArgsTemplate(),
                         RequireTarget = true,
                         TargetType = OrderTargetType.Position,
+                        TargetLayoutProfileId = "layout.move.grid",
                         IsSkillMapping = false,
                     },
                 },
@@ -1229,14 +1705,18 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         }
 
         [Test]
-        public void GroupMoveTargetLayout_GridMode_RequiresOrderTypeKeys()
+        public void TargetLayoutProfile_GridMode_RequiresOrderTypeKeys()
         {
             var config = new InputOrderMappingConfig
             {
-                GroupMoveTargetLayout = new GroupMoveTargetLayoutSettings
+                TargetLayoutProfiles = new List<TargetLayoutProfileDefinition>
                 {
-                    Mode = GroupMoveTargetLayoutMode.Grid,
-                    SpacingCm = 120,
+                    new()
+                    {
+                        Id = "layout.move.grid",
+                        Mode = TargetLayoutMode.Grid,
+                        SpacingCm = 120,
+                    },
                 },
                 Mappings = new List<InputOrderMapping>
                 {
@@ -1248,25 +1728,30 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                         ArgsTemplate = new OrderArgsTemplate(),
                         RequireTarget = true,
                         TargetType = OrderTargetType.Position,
+                        TargetLayoutProfileId = "layout.move.grid",
                     },
                 },
             };
 
             var ex = Assert.Throws<InvalidOperationException>(() =>
                 InputOrderMappingLoader.Validate(config, "test.json"));
-            Assert.That(ex!.Message, Does.Contain("groupMoveTargetLayout.orderTypeKeys"));
+            Assert.That(ex!.Message, Does.Contain("targetLayoutProfiles[0].orderTypeKeys"));
         }
 
         [Test]
-        public void GroupMoveTargetLayout_GridMode_RejectsNonPositiveSpacing()
+        public void TargetLayoutProfile_GridMode_RejectsNonPositiveSpacing()
         {
             var config = new InputOrderMappingConfig
             {
-                GroupMoveTargetLayout = new GroupMoveTargetLayoutSettings
+                TargetLayoutProfiles = new List<TargetLayoutProfileDefinition>
                 {
-                    Mode = GroupMoveTargetLayoutMode.Grid,
-                    SpacingCm = 0,
-                    OrderTypeKeys = new List<string> { "moveTo" },
+                    new()
+                    {
+                        Id = "layout.move.grid",
+                        Mode = TargetLayoutMode.Grid,
+                        SpacingCm = 0,
+                        OrderTypeKeys = new List<string> { "moveTo" },
+                    },
                 },
                 Mappings = new List<InputOrderMapping>
                 {
@@ -1278,17 +1763,18 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                         ArgsTemplate = new OrderArgsTemplate(),
                         RequireTarget = true,
                         TargetType = OrderTargetType.Position,
+                        TargetLayoutProfileId = "layout.move.grid",
                     },
                 },
             };
 
             var ex = Assert.Throws<InvalidOperationException>(() =>
                 InputOrderMappingLoader.Validate(config, "test.json"));
-            Assert.That(ex!.Message, Does.Contain("groupMoveTargetLayout.spacingCm"));
+            Assert.That(ex!.Message, Does.Contain("targetLayoutProfiles[0].spacingCm"));
         }
 
         [Test]
-        public void Remap_PreservesRfc0065MappingSemanticsExceptOrderAndArgs()
+        public void Remap_PreservesRfc0065MappingSemanticsExceptOrderAndTypedPayload()
         {
             var input = new FrozenInputActionReader();
             var config = new InputOrderMappingConfig
@@ -1301,7 +1787,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                         Trigger = InputTriggerType.DoubleTap,
                         DoubleTapWindowSeconds = 0.17f,
                         OrderTypeKey = "moveTo",
-                        ArgsTemplate = new OrderArgsTemplate { I0 = 3, F1 = 2.5f },
+                        OrderPayload = InputOrderPayloadTemplate.MoveToWorldCm(),
                         RequireTarget = true,
                         ActorCollectionKey = "collection.test.actors",
                         TargetCollectionKey = "collection.test.targets",
@@ -1343,9 +1829,9 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 "setSpawnTarget" => 11,
                 _ => 0,
             });
-            var overrideArgs = new OrderArgsTemplate { I1 = 9, F2 = 4.5f };
+            var overridePayload = InputOrderPayloadTemplate.MoveToWorldCm();
 
-            system.Remap("Command", "attackMove", overrideArgs);
+            system.Remap("Command", "attackMove", overridePayload);
 
             InputOrderMapping remapped = system.GetMapping("Command")
                 ?? throw new InvalidOperationException("Missing remapped Command action.");
@@ -1355,9 +1841,11 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Assert.That(remapped.Trigger, Is.EqualTo(InputTriggerType.DoubleTap));
                 Assert.That(remapped.DoubleTapWindowSeconds, Is.EqualTo(0.17f));
                 Assert.That(remapped.OrderTypeKey, Is.EqualTo("attackMove"));
-                Assert.That(remapped.ArgsTemplate.I1, Is.EqualTo(9));
-                Assert.That(remapped.ArgsTemplate.F2, Is.EqualTo(4.5f));
                 Assert.That(remapped.ArgsTemplate.I0, Is.Null);
+                Assert.That(remapped.ArgsTemplate.I1, Is.Null);
+                Assert.That(remapped.ArgsTemplate.F1, Is.Null);
+                Assert.That(remapped.ArgsTemplate.F2, Is.Null);
+                Assert.That(remapped.OrderPayload.Kind, Is.EqualTo(InputOrderPayloadKind.MoveToWorldCm));
                 Assert.That(remapped.RequireTarget, Is.True);
                 Assert.That(remapped.ActorCollectionKey, Is.EqualTo("collection.test.actors"));
                 Assert.That(remapped.TargetCollectionKey, Is.EqualTo("collection.test.targets"));
@@ -2355,6 +2843,8 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             Assert.That(orders[0].Actor, Is.EqualTo(commandActor));
             Assert.That(orders[0].OrderTypeId, Is.EqualTo(1),
                 "An entity target fact must hit the entity rule before the ground move rule.");
+            Assert.That(orders[0].Args.I0, Is.EqualTo(0),
+                "CommandIntent byAbilityTag routes must resolve to the concrete ability slot before order submission.");
         }
 
         private static void SetGroundCommandTargetFactsProvider(InputOrderMappingSystem system)
@@ -3291,6 +3781,13 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             }
 
             throw new DirectoryNotFoundException("Could not locate repository root.");
+        }
+
+        private static void AssertInvalidInputMappingJson(string json, string expectedMessage)
+        {
+            using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(json));
+            var ex = Assert.Throws<InvalidOperationException>(() => InputOrderMappingLoader.LoadFromStream(stream));
+            Assert.That(ex!.Message, Does.Contain(expectedMessage));
         }
 
         private static ControlDomainHarness CreateControlDomain(World world)

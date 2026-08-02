@@ -148,6 +148,66 @@ namespace Ludots.Core.Input.Orders
             };
         }
     }
+
+    [JsonConverter(typeof(JsonStringEnumConverter))]
+    public enum InputOrderPayloadKind
+    {
+        None = 0,
+        CastAbility = 1,
+        TargetEntity = 2,
+        MoveToWorldCm = 3,
+        Stop = 4
+    }
+
+    /// <summary>
+    /// Authored, named order payload fields. Runtime still compiles these into the compact
+    /// OrderArgs ABI, but JSON authors should not need to know slot names.
+    /// </summary>
+    public sealed class InputOrderPayloadTemplate
+    {
+        [JsonConverter(typeof(JsonStringEnumConverter))]
+        public InputOrderPayloadKind Kind { get; set; } = InputOrderPayloadKind.None;
+
+        public int? AbilitySlot { get; set; }
+
+        public InputOrderPayloadTemplate Clone()
+        {
+            return new InputOrderPayloadTemplate
+            {
+                Kind = Kind,
+                AbilitySlot = AbilitySlot
+            };
+        }
+
+        public bool HasAuthoredFields => AbilitySlot.HasValue;
+
+        public static InputOrderPayloadTemplate None() => new();
+
+        public static InputOrderPayloadTemplate CastAbility(int abilitySlot)
+        {
+            if (abilitySlot < 0)
+            {
+                throw new InvalidOperationException(
+                    $"LUDOTS_INPUT_ORDER_PAYLOAD_INVALID: abilitySlot must be non-negative; value={abilitySlot}.");
+            }
+
+            return new InputOrderPayloadTemplate
+            {
+                Kind = InputOrderPayloadKind.CastAbility,
+                AbilitySlot = abilitySlot
+            };
+        }
+
+        public static InputOrderPayloadTemplate MoveToWorldCm() => new()
+        {
+            Kind = InputOrderPayloadKind.MoveToWorldCm
+        };
+
+        public static InputOrderPayloadTemplate Stop() => new()
+        {
+            Kind = InputOrderPayloadKind.Stop
+        };
+    }
     
     /// <summary>
     /// Policy for how Held trigger type generates orders.
@@ -218,23 +278,21 @@ namespace Ludots.Core.Input.Orders
     }
 
     [JsonConverter(typeof(JsonStringEnumConverter))]
-    public enum GroupMoveTargetLayoutMode
+    public enum TargetLayoutMode
     {
         None = 0,
         Grid = 1
     }
 
-    public sealed class GroupMoveTargetLayoutSettings
+    public sealed class TargetLayoutProfileDefinition
     {
+        public string Id { get; set; } = string.Empty;
+
         [JsonConverter(typeof(JsonStringEnumConverter))]
-        public GroupMoveTargetLayoutMode Mode { get; set; } = GroupMoveTargetLayoutMode.None;
+        public TargetLayoutMode Mode { get; set; } = TargetLayoutMode.None;
 
         public int SpacingCm { get; set; } = 120;
 
-        /// <summary>
-        /// Order type keys eligible for a grid target layout when mode is Grid.
-        /// Required when mode is Grid.
-        /// </summary>
         public List<string> OrderTypeKeys { get; set; } = new();
     }
 
@@ -335,7 +393,22 @@ namespace Ludots.Core.Input.Orders
         /// <summary>
         /// Template for order arguments.
         /// </summary>
+        [JsonIgnore]
         public OrderArgsTemplate ArgsTemplate { get; set; } = new();
+
+        /// <summary>
+        /// Named payload compiled at load/construction time into compact runtime order args.
+        /// </summary>
+        public InputOrderPayloadTemplate OrderPayload { get; set; } = new();
+
+        /// <summary>
+        /// Optional ability definition key that qualifies this mapping when multiple mappings share
+        /// the same ActionId and CastAbility slot. Resolved at install time into <see cref="AbilityId"/>.
+        /// </summary>
+        public string AbilityIdKey { get; set; } = string.Empty;
+
+        [JsonIgnore]
+        public int AbilityId { get; set; }
         
         /// <summary>
         /// Whether target data is required.
@@ -353,6 +426,15 @@ namespace Ludots.Core.Input.Orders
         /// Required when targetType is Entity or Entities and the mapping relies on collection target data.
         /// </summary>
         public string TargetCollectionKey { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Optional Formation/Target Layout profile reference. The mapping references layout policy;
+        /// it does not own spacing or shape details.
+        /// </summary>
+        public string TargetLayoutProfileId { get; set; } = string.Empty;
+
+        [JsonIgnore]
+        public int TargetLayoutProfileIndex { get; set; } = -1;
         
         /// <summary>
         /// The type of target required.
@@ -373,6 +455,7 @@ namespace Ludots.Core.Input.Orders
         /// whether the action triggers immediately or enters an aiming phase.
         /// When false (e.g. moveTo, stop), the action always triggers immediately.
         /// </summary>
+        [JsonIgnore]
         public bool IsSkillMapping { get; set; } = false;
         
         /// <summary>
@@ -429,9 +512,14 @@ namespace Ludots.Core.Input.Orders
                 OrderTypeKey = OrderTypeKey,
                 ActorOrderRouting = ActorOrderRouting?.Clone(),
                 ArgsTemplate = ArgsTemplate?.Clone() ?? new OrderArgsTemplate(),
+                OrderPayload = OrderPayload?.Clone() ?? new InputOrderPayloadTemplate(),
+                AbilityIdKey = AbilityIdKey,
+                AbilityId = AbilityId,
                 RequireTarget = RequireTarget,
                 ActorCollectionKey = ActorCollectionKey,
                 TargetCollectionKey = TargetCollectionKey,
+                TargetLayoutProfileId = TargetLayoutProfileId,
+                TargetLayoutProfileIndex = TargetLayoutProfileIndex,
                 TargetType = TargetType,
                 ModifierBehavior = ModifierBehavior,
                 IsSkillMapping = IsSkillMapping,
@@ -443,6 +531,38 @@ namespace Ludots.Core.Input.Orders
                 CursorTargetRangeCm = CursorTargetRangeCm
             };
         }
+
+        public void ApplyDerivedRuntimeFields()
+        {
+            if (OrderPayload == null || OrderPayload.Kind == InputOrderPayloadKind.None)
+            {
+                return;
+            }
+
+            IsSkillMapping = OrderPayload.Kind == InputOrderPayloadKind.CastAbility;
+        }
+
+        public bool TryResolveAbilitySlot(out int slot)
+        {
+            if (OrderPayload != null &&
+                OrderPayload.Kind == InputOrderPayloadKind.CastAbility &&
+                OrderPayload.AbilitySlot is int payloadSlot)
+            {
+                slot = payloadSlot;
+                return true;
+            }
+
+            if (ArgsTemplate != null && ArgsTemplate.I0 is int legacySlot)
+            {
+                slot = legacySlot;
+                return true;
+            }
+
+            slot = -1;
+            return false;
+        }
+
+        public bool HasAbilityQualifier => AbilityId > 0 || !string.IsNullOrWhiteSpace(AbilityIdKey);
     }
     
     /// <summary>
@@ -484,10 +604,10 @@ namespace Ludots.Core.Input.Orders
         public List<InputOrderMapping> Mappings { get; set; } = new();
 
         /// <summary>
-        /// Global target-layout behavior for multi-actor position commands.
+        /// Reusable target-layout profiles. Individual mappings reference profiles by id.
         /// </summary>
-        public GroupMoveTargetLayoutSettings GroupMoveTargetLayout { get; set; } = new();
-        
+        public List<TargetLayoutProfileDefinition> TargetLayoutProfiles { get; set; } = new();
+
         /// <summary>
         /// User override settings.
         /// </summary>
