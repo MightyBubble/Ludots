@@ -10,6 +10,8 @@ namespace Ludots.Core.Gameplay.GAS
         public Entity Target;
         public Entity TargetContext;
         public int TemplateId;
+        public GasClockId ClockId;
+        public bool HasClockId;
 
         /// <summary>
         /// Optional caller-supplied parameter overrides.

@@ -1,3 +1,4 @@
+using System;
 using System.Runtime.CompilerServices;
 
 namespace Ludots.Core.Gameplay.GAS.Components
@@ -227,14 +228,22 @@ namespace Ludots.Core.Gameplay.GAS.Components
                     }
                 }
 
-                // Not found → append if capacity allows
-                if (!found && Count < MAX_PARAMS)
+                if (found)
                 {
-                    Keys[Count] = callerKey;
-                    Types[Count] = caller.Types[ci];
-                    Values[Count] = caller.Values[ci];
-                    Count++;
+                    continue;
                 }
+
+                if (Count >= MAX_PARAMS)
+                {
+                    throw new InvalidOperationException(
+                        $"GAS.CONFIG_PARAMS.ERR.MergeCapacityExceeded: keyId={callerKey}, capacity={MAX_PARAMS}.");
+                }
+
+                // Not found: append to the fixed-capacity parameter table.
+                Keys[Count] = callerKey;
+                Types[Count] = caller.Types[ci];
+                Values[Count] = caller.Values[ci];
+                Count++;
             }
         }
     }

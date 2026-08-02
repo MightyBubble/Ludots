@@ -142,6 +142,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 orders[i].AdmissionBatchSize = 0;
                 orders[i].AdmissionBatchIndex = 0;
             }
+            ValidateUniqueOrderIds(orders);
 
             if (!_admissionResults.CanReserve(OrderAdmissionStage.GlobalIntake, orders.Length))
             {
@@ -189,19 +190,17 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                     $"OrderQueue shared batch size {orders.Length} exceeds {ushort.MaxValue}.");
             }
 
-            Order idSource = orders[0];
-            EnsureOrderId(ref idSource);
-            int sharedOrderId = idSource.OrderId;
             int admissionBatchId = NextAdmissionBatchId();
             ushort batchSize = (ushort)orders.Length;
             _admissionResults.EnsureWritableForNewOrders(OrderAdmissionStage.GlobalIntake, orders.Length);
             for (int i = 0; i < orders.Length; i++)
             {
-                orders[i].OrderId = sharedOrderId;
+                EnsureOrderId(ref orders[i]);
                 orders[i].AdmissionBatchId = admissionBatchId;
                 orders[i].AdmissionBatchSize = batchSize;
                 orders[i].AdmissionBatchIndex = (ushort)i;
             }
+            ValidateUniqueOrderIds(orders);
 
             if (!_admissionResults.CanReserve(OrderAdmissionStage.GlobalIntake, orders.Length))
             {
@@ -264,7 +263,6 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             }
 
             previousCluster = Entity.Null;
-            int clusterOrderId = 0;
             int admissionBatchId = NextAdmissionBatchId();
             ushort batchSize = (ushort)orders.Length;
             _admissionResults.EnsureWritableForNewOrders(OrderAdmissionStage.GlobalIntake, orders.Length);
@@ -273,18 +271,14 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 if (orders[i].CommandSource != previousCluster)
                 {
                     previousCluster = orders[i].CommandSource;
-                    EnsureOrderId(ref orders[i]);
-                    clusterOrderId = orders[i].OrderId;
-                }
-                else
-                {
-                    orders[i].OrderId = clusterOrderId;
                 }
 
+                EnsureOrderId(ref orders[i]);
                 orders[i].AdmissionBatchId = admissionBatchId;
                 orders[i].AdmissionBatchSize = batchSize;
                 orders[i].AdmissionBatchIndex = (ushort)i;
             }
+            ValidateUniqueOrderIds(orders);
 
             if (!_admissionResults.CanReserve(OrderAdmissionStage.GlobalIntake, orders.Length))
             {
@@ -542,6 +536,28 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 {
                     throw new InvalidOperationException(
                         $"OrderQueue atomic batch contains duplicate actor {orders[index].Actor.Id} at rows {prior} and {index}.");
+                }
+            }
+        }
+
+        private static void ValidateUniqueOrderIds(ReadOnlySpan<Order> orders)
+        {
+            for (int i = 0; i < orders.Length; i++)
+            {
+                int orderId = orders[i].OrderId;
+                if (orderId <= 0)
+                {
+                    throw new InvalidOperationException(
+                        $"ORDER.ADMISSION.ERR.InvalidOrderId: row={i}, value={orderId}.");
+                }
+
+                for (int prior = 0; prior < i; prior++)
+                {
+                    if (orders[prior].OrderId == orderId)
+                    {
+                        throw new InvalidOperationException(
+                            $"ORDER.ADMISSION.ERR.DuplicateOrderId: orderId={orderId}, firstRow={prior}, duplicateRow={i}.");
+                    }
                 }
             }
         }

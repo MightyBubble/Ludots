@@ -5,6 +5,8 @@ using Ludots.Core.Gameplay.GAS.Components;
 
 namespace Ludots.Core.Gameplay.AI.Utility
 {
+    using Ludots.Core.Gameplay.AI.Planning;
+
     public sealed class UtilityAiAuthoringCatalog
     {
         private readonly Dictionary<string, int> _profileIds;
@@ -95,7 +97,7 @@ namespace Ludots.Core.Gameplay.AI.Utility
             UtilityAiTaskDefinition[] tasks,
             UtilityAiStanceDefinition[] stances,
             UtilityAiActuatorDefinition[] actuators,
-            UtilityAiAuthoringCatalog authoring = null)
+            UtilityAiAuthoringCatalog? authoring = null)
         {
             Profiles = profiles;
             DecisionMakers = decisionMakers;
@@ -316,29 +318,26 @@ namespace Ludots.Core.Gameplay.AI.Utility
     public readonly struct UtilityAiTaskDefinition
     {
         public readonly UtilityAiTaskKind Kind;
+        public readonly AiOrderPayloadKind PayloadKind;
         public readonly int OrderTypeId;
         public readonly int AbilitySlotIndex;
         public readonly int SubmitMode;
         public readonly int PlayerId;
-        public readonly int IntArg0;
-        public readonly int IntArg1;
 
         public UtilityAiTaskDefinition(
             UtilityAiTaskKind kind,
+            AiOrderPayloadKind payloadKind,
             int orderTypeId,
             int abilitySlotIndex,
             int submitMode,
-            int playerId,
-            int intArg0,
-            int intArg1)
+            int playerId)
         {
             Kind = kind;
+            PayloadKind = payloadKind;
             OrderTypeId = orderTypeId;
             AbilitySlotIndex = abilitySlotIndex;
             SubmitMode = submitMode;
             PlayerId = playerId;
-            IntArg0 = intArg0;
-            IntArg1 = intArg1;
         }
     }
 

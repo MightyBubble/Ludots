@@ -1914,3 +1914,126 @@ Behavior remains in existing effect templates, preset definitions, and graph ass
 ### 8. Next variant test
 
 A new Mod variant changes graph wiring or effect-template steps, then passes through the same whole-registry compilation and freeze before runtime starts.
+
+---
+
+## GAS Composition Gate - PR #721 Stage 1 AI / GAS / AbilityExec / Order Boundary - 2026-08-02
+
+- **Task / Issue**: Finish the remaining Stage 1 architecture fixes on PR #721 without mixing the later GraphScore refactor.
+- **Date**: 2026-08-02
+- **Agent / Author**: Codex
+- **Baseline**: `origin/main=74513182ab420dc950844d26882000ec54e030a7`, PR #721 head `5206e803f32b9fdb6128e7073b45993c5ae4a215`, merge-base `74513182ab420dc950844d26882000ec54e030a7`.
+- **Status**: PASS.
+
+### 1. Core judgment
+
+新变体主要交付物是（A/B/C/D）: A.
+
+结论: PASS.
+
+一句话理由: 本阶段只收紧既有 AbilityExec -> EffectRequest -> EffectTemplate/GAS -> Order 结果链路，修复预算、锁定、回执和参数合同，没有新增 preset enum、profile 开关或平行运行时。
+
+### 2. Layer assignment
+
+| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
+|-----------|-----------------|----------|
+| Utility 预算 fail-closed | 1 | Existing Utility AI evaluator/runtime task status and Order submit boundary |
+| 稳定 Order 回执账本 | 1 | Existing Order terminal result ownership, keyed by OrderId; cross-frame consumers explicitly `Retain` then consume/release |
+| 类型化 Order 构造 | 1 | Existing `Order`, `OrderArgs`, `OrderQueue`, `OrderTypeRegistry`; Utility/PlanExecutor use CastAbility typed construction |
+| UI 锁定投影 | 2 | Existing `ActiveEffectContainer`, `GameplayEffect`, `EffectGrantedTags`, `AbilityActivationBlockTags` |
+| EffectClip caller facts | 2 | Existing `AbilityExecSpec`, `AbilityExecCallerParamsPool`, `EffectRequest`, `EffectProposal`, `EffectTemplateData` |
+
+### 3. Reuse list
+
+- Handlers: existing GAS builtin handlers, phase graph handlers, AbilityExec timeline items.
+- Queues / Systems: `AbilityExecSystem`, `EffectRequestQueue`, `EffectProposalProcessingSystem`, `EffectApplicationSystem`, `EffectLifetimeSystem`, `OrderQueue`, order terminal result ledger, Utility AI systems.
+- Resolvers / Registries: `AbilityDefinitionRegistry`, `EffectTemplateRegistry`, `TagRegistry`, `ConfigKeyRegistry`, `OrderTypeRegistry`, existing graph registries.
+- Existing presets / graphs: existing EffectTemplate + Graph execution plans; no Stage 1 GraphScore plan change.
+
+### 4. New Layer 0 ops (if any)
+
+N/A. No new atomic gameplay op, preset enum, graph op, schema loader, or runtime pipeline was added.
+
+### 5. Transaction boundary
+
+Effect execution still commits through the existing GAS effect transaction path. AbilityExec now supplies per-call EffectClip facts to `EffectRequest`; durable effect state is materialized only by the existing proposal/application/lifetime systems. Order terminal facts remain frame-local unless a cross-frame consumer explicitly retains the OrderId before the result is written, then consumes/releases the ledger slot.
+
+### 6. Config SSOT
+
+行为配置落在: existing ability execution timeline, caller params, effect templates, and graphs under GAS config paths.
+
+是否新增 JSON schema: NO. Existing authoring is tightened: EffectClip must declare `durationTicks`; duplicate `_ep.durationTicks` in the referenced caller params is rejected at load time.
+
+### 7. Red flag scan
+
+- [x] 未新增 profile inherit/placement enum
+- [x] 未新建与 AbilityExec/GAS/Order 平行的运行时管线
+- [x] 未把 UI 变成技能配置反向解析器
+- [x] 未添加默认 fallback、兼容旁路或静默吞错
+- [x] 未把 GraphScore 独立阶段夹带进 PR #721 阶段一
+
+### 8. Next variant test
+
+「下一个 Mod 变体」将修改: effect 步骤 / graph 连线 / typed Order data。若要改变某次技能调用的持续时间、周期或 payload effect，只能通过 EffectClip 字段或 CallerParams 显式传入，并在加载期处理重复或越权配置。
+
+### 9. Player-facing UAT
+
+```gherkin
+Feature: 技能命中后进入短暂锁定
+
+  Scenario: 锁定期间玩家不能重复释放技能
+    Given 玩家装备了一个命中后锁定 30 tick 的技能
+    When 玩家释放技能并成功命中目标
+    Then 技能按钮显示真实剩余锁定进度
+    And 玩家在锁定结束前再次释放时收到明确拒绝
+    When 持续效果到期
+    Then 锁定标记被移除
+    And 玩家可以再次释放技能
+
+Feature: 技能片段决定本次效果生命周期
+
+  Scenario: 技能片段提供持续时间并按调用参数周期生效
+    Given 玩家装备了一个 EffectClip 持续 3 tick 且每 1 tick 触发一次的技能
+    When 玩家释放该技能
+    Then 本次效果使用片段声明的持续时间
+    And 效果按调用参数声明的周期触发
+    When 第 3 tick 结束
+    Then 效果到期并清除它授予的锁定标记
+
+  Scenario: 重复声明同一个调用参数会阻止配置加载
+    Given 一个技能片段和它引用的 CallerParams 都声明了 durationTicks
+    When 游戏加载该技能配置
+    Then 加载失败并指出重复字段所在位置
+
+Feature: AI 在预算不足时不会做半成品选择
+
+  Scenario: 候选过多时本帧不行动
+    Given 场上存在超过 AI 本帧候选预算的可选目标
+    When AI 本帧进行思考
+    Then AI 不提交任何订单
+    And 玩家不会看到基于部分候选产生的动作
+    When 下一次思考可以完整评估候选
+    Then AI 才选择并提交动作
+
+Feature: AI 能稳定等待订单终态
+
+  Scenario: AI 隔多帧仍能收到订单结果
+    Given AI 提交了一个技能订单
+    And 订单终态在本帧产生
+    When AI 多帧之后才查询订单结果
+    Then AI 仍能消费明确的完成或失败结果
+    And 结果在消费后被释放
+
+  Scenario: 多个 AI 同时等待各自订单
+    Given 多个 AI 同时提交不同订单
+    When 这些订单在不同帧完成
+    Then 每个 AI 只通过自己的 OrderId 读取结果
+    And 查询不会随 AI 数量乘以回执数量增长
+
+Feature: AI 只能提交类型化订单
+
+  Scenario: 非法裸参数订单不能进入运行时
+    Given AI 配置直接声明 IntArg0
+    When 游戏加载 AI 配置
+    Then 加载失败并提示使用正式的类型化字段
+```

@@ -99,7 +99,7 @@ namespace Ludots.Tests.GAS.Production
         }
 
         [Test]
-        public void InteractionShowcase_HubMap_PreinstallsTimedTagStateForAbilityActors()
+        public void InteractionShowcase_HubMap_InstallsTagStateWithoutPreseedingLockoutLifetime()
         {
             string repoRoot = FindRepoRoot();
             string assetsRoot = Path.Combine(repoRoot, "assets");
@@ -116,7 +116,10 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(engine.World.Has<GameplayTagContainer>(arcweaver), Is.True);
             Assert.That(engine.World.Has<TagCountContainer>(arcweaver), Is.True);
             Assert.That(engine.World.Has<DirtyFlags>(arcweaver), Is.True);
-            Assert.That(engine.World.Has<TimedTagBuffer>(arcweaver), Is.True);
+            Assert.That(engine.World.Has<TimedTagBuffer>(arcweaver), Is.False,
+                "Ability lockout lifetime must be projected from real active effects, not preseeded timed tags.");
+            Assert.That(engine.World.Has<ActiveEffectContainer>(arcweaver), Is.False,
+                "Active effects are attached by effect application after an ability executes.");
         }
 
         private static string FindRepoRoot()

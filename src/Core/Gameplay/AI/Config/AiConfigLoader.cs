@@ -21,6 +21,7 @@ namespace Ludots.Core.Gameplay.AI.Config
     {
         private static readonly string[] ActionOrderPropertyNames =
         {
+            "OrderPayloadKind",
             "OrderTypeKey",
             "OrderTypeId",
             "SubmitMode",
@@ -31,13 +32,12 @@ namespace Ludots.Core.Gameplay.AI.Config
         {
             "id",
             "Kind",
+            "OrderPayloadKind",
             "OrderTypeKey",
             "OrderTypeId",
             "AbilitySlotIndex",
             "SubmitMode",
-            "PlayerId",
-            "IntArg0",
-            "IntArg1"
+            "PlayerId"
         };
 
         private static readonly string[] ActuatorPropertyNames =
@@ -244,16 +244,23 @@ namespace Ludots.Core.Gameplay.AI.Config
                             }
 
                             string op = RequireString(bObj, "Op", bindingPath);
+                            if (IsBareOrderArgBinding(op))
+                            {
+                                throw Fail($"{bindingPath}.Op", $"Bare order arg binding '{op}' is outside the AI order contract. Use IntToAbilitySlot.");
+                            }
+
                             if (!TryParseBindingOp(op, out var bop))
                             {
                                 throw Fail($"{bindingPath}.Op", $"Unsupported binding op '{op}'.");
                             }
 
-                            int sk = RequireInt(bObj, "SourceKey", bindingPath);
+                            int sk = RequireOrderBlackboardKey(bObj, "SourceKey", $"{bindingPath}.SourceKey");
                             btmp.Add(new ActionBinding(bop, sk));
                         }
                         bindings = btmp.ToArray();
                     }
+
+                    ValidateActionOrderBindings(in orderSpec, bindings, $"AI/goap_actions.json:{id}");
 
                     tmp.Add(new ActionOpDefinition256(
                         preMask: in pre.Mask,
@@ -785,6 +792,26 @@ namespace Ludots.Core.Gameplay.AI.Config
             {
                 string path = $"AI/tasks.json[{i}]";
                 JsonObject obj = RequireObject(arr[i], path);
+                if (obj.ContainsKey("IntArg0"))
+                {
+                    throw Fail($"{path}.IntArg0", "Bare order int args are outside the Utility AI order contract. Use AbilitySlotIndex.");
+                }
+
+                if (obj.ContainsKey("IntArg1"))
+                {
+                    throw Fail($"{path}.IntArg1", "Bare order int args are outside the Utility AI order contract. Use AbilitySlotIndex.");
+                }
+
+                if (obj.ContainsKey("IntArg2"))
+                {
+                    throw Fail($"{path}.IntArg2", "Bare order int args are outside the Utility AI order contract. Use typed OrderPayloadKind fields.");
+                }
+
+                if (obj.ContainsKey("IntArg3"))
+                {
+                    throw Fail($"{path}.IntArg3", "Bare order int args are outside the Utility AI order contract. Use typed OrderPayloadKind fields.");
+                }
+
                 RequireKnownProperties(obj, path, TaskPropertyNames);
                 string id = RequireRecordId(obj, path);
                 string kind = RequireString(obj, "Kind", path);
@@ -805,10 +832,13 @@ namespace Ludots.Core.Gameplay.AI.Config
                 }
 
                 int orderTypeId = 0;
+                AiOrderPayloadKind payloadKind = AiOrderPayloadKind.None;
                 int abilitySlotIndex = TryReadInt(obj, "AbilitySlotIndex", out int slot) ? slot : -1;
                 if (parsedKind == UtilityAiTaskKind.SubmitOrder)
                 {
+                    payloadKind = RequireOrderPayloadKind(obj, "OrderPayloadKind", path);
                     orderTypeId = ResolveOrderTypeReference(obj, path);
+                    ValidateUtilityTaskPayload(payloadKind, abilitySlotIndex, path);
                 }
 
                 int submitMode = TryReadByte(obj, "SubmitMode", out byte sm) ? sm : (byte)OrderSubmitMode.Immediate;
@@ -818,17 +848,14 @@ namespace Ludots.Core.Gameplay.AI.Config
                 }
 
                 int playerId = TryReadInt(obj, "PlayerId", out int authoredPlayerId) ? authoredPlayerId : 0;
-                int intArg0 = TryReadInt(obj, "IntArg0", out int authoredIntArg0) ? authoredIntArg0 : -1;
-                int intArg1 = TryReadInt(obj, "IntArg1", out int authoredIntArg1) ? authoredIntArg1 : 0;
                 ids.Add(id, tasks.Count);
                 tasks.Add(new UtilityAiTaskDefinition(
                     parsedKind,
+                    payloadKind,
                     orderTypeId,
                     abilitySlotIndex,
                     submitMode,
-                    playerId,
-                    intArg0,
-                    intArg1));
+                    playerId));
             }
         }
 
@@ -1303,6 +1330,7 @@ namespace Ludots.Core.Gameplay.AI.Config
             }
 
             RequireKnownProperties(orderObj, path, ActionOrderPropertyNames);
+            AiOrderPayloadKind payloadKind = RequireOrderPayloadKind(orderObj, "OrderPayloadKind", path);
 
             if (_validation == null)
             {
@@ -1354,7 +1382,129 @@ namespace Ludots.Core.Gameplay.AI.Config
             }
 
             int playerId = TryReadInt(orderObj, "PlayerId", out int pid) ? pid : 0;
-            return new ActionOrderSpec(orderTypeId, (OrderSubmitMode)submitModeByte, playerId);
+            return new ActionOrderSpec(payloadKind, orderTypeId, (OrderSubmitMode)submitModeByte, playerId);
+        }
+
+        private static AiOrderPayloadKind RequireOrderPayloadKind(JsonObject obj, string key, string path)
+        {
+            string value = RequireString(obj, key, path);
+            if (string.Equals(value, "CastAbility", StringComparison.OrdinalIgnoreCase))
+            {
+                return AiOrderPayloadKind.CastAbility;
+            }
+
+            if (string.Equals(value, "MoveToWorldCm", StringComparison.OrdinalIgnoreCase))
+            {
+                return AiOrderPayloadKind.MoveToWorldCm;
+            }
+
+            if (string.Equals(value, "Stop", StringComparison.OrdinalIgnoreCase))
+            {
+                return AiOrderPayloadKind.Stop;
+            }
+
+            if (string.Equals(value, "TargetEntity", StringComparison.OrdinalIgnoreCase))
+            {
+                return AiOrderPayloadKind.TargetEntity;
+            }
+
+            throw Fail($"{path}.{key}", $"Unsupported AI order payload kind '{value}'.");
+        }
+
+        private static void ValidateUtilityTaskPayload(AiOrderPayloadKind payloadKind, int abilitySlotIndex, string path)
+        {
+            switch (payloadKind)
+            {
+                case AiOrderPayloadKind.CastAbility:
+                    if (abilitySlotIndex < 0)
+                    {
+                        throw Fail($"{path}.AbilitySlotIndex", "Utility AI SubmitOrder is a typed CastAbility order and requires AbilitySlotIndex.");
+                    }
+                    break;
+                case AiOrderPayloadKind.TargetEntity:
+                case AiOrderPayloadKind.MoveToWorldCm:
+                case AiOrderPayloadKind.Stop:
+                    if (abilitySlotIndex >= 0)
+                    {
+                        throw Fail($"{path}.AbilitySlotIndex", $"AbilitySlotIndex is only valid for CastAbility, not {payloadKind}.");
+                    }
+                    break;
+                case AiOrderPayloadKind.None:
+                default:
+                    throw Fail($"{path}.OrderPayloadKind", $"Unsupported AI order payload kind '{payloadKind}'.");
+            }
+        }
+
+        private static void ValidateActionOrderBindings(in ActionOrderSpec spec, IReadOnlyList<ActionBinding> bindings, string path)
+        {
+            bool hasAbilitySlot = false;
+            bool hasTarget = false;
+            bool hasTargetContext = false;
+            bool hasMoveDestination = false;
+
+            for (int i = 0; i < bindings.Count; i++)
+            {
+                switch (bindings[i].Op)
+                {
+                    case ActionBindingOp.IntToAbilitySlot:
+                        hasAbilitySlot = true;
+                        break;
+                    case ActionBindingOp.EntityToTarget:
+                        hasTarget = true;
+                        break;
+                    case ActionBindingOp.EntityToTargetContext:
+                        hasTargetContext = true;
+                        break;
+                    case ActionBindingOp.EntityPositionToMoveDestination:
+                        hasMoveDestination = true;
+                        break;
+                    default:
+                        throw Fail($"{path}.Bindings[{i}].Op", $"Unsupported binding op '{bindings[i].Op}'.");
+                }
+            }
+
+            switch (spec.PayloadKind)
+            {
+                case AiOrderPayloadKind.CastAbility:
+                    if (!hasAbilitySlot)
+                    {
+                        throw Fail($"{path}.Bindings", "CastAbility order requires an IntToAbilitySlot binding.");
+                    }
+                    if (hasMoveDestination)
+                    {
+                        throw Fail($"{path}.Bindings", "EntityPositionToMoveDestination is not valid for CastAbility.");
+                    }
+                    break;
+                case AiOrderPayloadKind.TargetEntity:
+                    if (!hasTarget)
+                    {
+                        throw Fail($"{path}.Bindings", "TargetEntity order requires an EntityToTarget binding.");
+                    }
+                    if (hasAbilitySlot || hasTargetContext || hasMoveDestination)
+                    {
+                        throw Fail($"{path}.Bindings", "TargetEntity order only accepts EntityToTarget binding.");
+                    }
+                    break;
+                case AiOrderPayloadKind.MoveToWorldCm:
+                    if (!hasMoveDestination)
+                    {
+                        throw Fail($"{path}.Bindings", "MoveToWorldCm order requires an EntityPositionToMoveDestination binding.");
+                    }
+                    if (hasAbilitySlot || hasTarget || hasTargetContext)
+                    {
+                        throw Fail($"{path}.Bindings", "MoveToWorldCm order only accepts EntityPositionToMoveDestination binding.");
+                    }
+                    break;
+                case AiOrderPayloadKind.Stop:
+                    if (bindings.Count != 0)
+                    {
+                        throw Fail($"{path}.Bindings", "Stop order must not declare bindings.");
+                    }
+                    break;
+                case AiOrderPayloadKind.None:
+                default:
+                    throw Fail($"{path}.Order.OrderPayloadKind", $"Unsupported AI order payload kind '{spec.PayloadKind}'.");
+            }
         }
 
         private static void RequireKnownProperties(JsonObject obj, string path, IReadOnlyList<string> allowedProperties)
@@ -1552,14 +1702,20 @@ namespace Ludots.Core.Gameplay.AI.Config
 
         private static bool TryParseBindingOp(string op, out ActionBindingOp result)
         {
-            if (string.Equals(op, "IntToOrderArg0", StringComparison.Ordinal)) { result = ActionBindingOp.IntToOrderArg0; return true; }
-            if (string.Equals(op, "IntToOrderArg1", StringComparison.Ordinal)) { result = ActionBindingOp.IntToOrderArg1; return true; }
-            if (string.Equals(op, "IntToOrderArg2", StringComparison.Ordinal)) { result = ActionBindingOp.IntToOrderArg2; return true; }
-            if (string.Equals(op, "IntToOrderArg3", StringComparison.Ordinal)) { result = ActionBindingOp.IntToOrderArg3; return true; }
+            if (string.Equals(op, "IntToAbilitySlot", StringComparison.Ordinal)) { result = ActionBindingOp.IntToAbilitySlot; return true; }
             if (string.Equals(op, "EntityToTarget", StringComparison.Ordinal)) { result = ActionBindingOp.EntityToTarget; return true; }
             if (string.Equals(op, "EntityToTargetContext", StringComparison.Ordinal)) { result = ActionBindingOp.EntityToTargetContext; return true; }
+            if (string.Equals(op, "EntityPositionToMoveDestination", StringComparison.Ordinal)) { result = ActionBindingOp.EntityPositionToMoveDestination; return true; }
             result = default;
             return false;
+        }
+
+        private static bool IsBareOrderArgBinding(string op)
+        {
+            return string.Equals(op, "IntToOrderArg0", StringComparison.Ordinal) ||
+                   string.Equals(op, "IntToOrderArg1", StringComparison.Ordinal) ||
+                   string.Equals(op, "IntToOrderArg2", StringComparison.Ordinal) ||
+                   string.Equals(op, "IntToOrderArg3", StringComparison.Ordinal);
         }
 
         private static bool TryReadString(JsonObject obj, string key, out string value)
@@ -1581,7 +1737,7 @@ namespace Ludots.Core.Gameplay.AI.Config
             {
                 if (v.TryGetValue(out int i)) { value = i; return true; }
                 if (v.TryGetValue(out long l)) { value = (int)l; return true; }
-                if (v.TryGetValue(out string s) && int.TryParse(s, out int p)) { value = p; return true; }
+                if (v.TryGetValue(out string? s) && int.TryParse(s, out int p)) { value = p; return true; }
             }
             return int.TryParse(node.ToString(), out value);
         }
@@ -1594,7 +1750,7 @@ namespace Ludots.Core.Gameplay.AI.Config
             {
                 if (v.TryGetValue(out byte b)) { value = b; return true; }
                 if (v.TryGetValue(out int i) && (uint)i <= 255u) { value = (byte)i; return true; }
-                if (v.TryGetValue(out string s) && byte.TryParse(s, out byte p)) { value = p; return true; }
+                if (v.TryGetValue(out string? s) && byte.TryParse(s, out byte p)) { value = p; return true; }
             }
             return byte.TryParse(node.ToString(), out value);
         }
@@ -1606,7 +1762,7 @@ namespace Ludots.Core.Gameplay.AI.Config
             if (node is JsonValue v)
             {
                 if (v.TryGetValue(out bool b)) { value = b; return true; }
-                if (v.TryGetValue(out string s) && bool.TryParse(s, out bool p)) { value = p; return true; }
+                if (v.TryGetValue(out string? s) && bool.TryParse(s, out bool p)) { value = p; return true; }
             }
             return bool.TryParse(node.ToString(), out value);
         }
@@ -1619,7 +1775,7 @@ namespace Ludots.Core.Gameplay.AI.Config
             {
                 if (v.TryGetValue(out float f)) { value = f; return true; }
                 if (v.TryGetValue(out double d)) { value = (float)d; return true; }
-                if (v.TryGetValue(out string s) && float.TryParse(s, out float p)) { value = p; return true; }
+                if (v.TryGetValue(out string? s) && float.TryParse(s, out float p)) { value = p; return true; }
             }
             return float.TryParse(node.ToString(), out value);
         }

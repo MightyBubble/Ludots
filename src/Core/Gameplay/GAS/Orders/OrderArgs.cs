@@ -1,7 +1,7 @@
 using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Gameplay.GAS.Components;
- 
+
 namespace Ludots.Core.Gameplay.GAS.Orders
 {
     public enum OrderSpatialKind : byte
@@ -12,7 +12,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         Hex = 3,
         Abstract = 4
     }
- 
+
     public enum OrderCollectionMode : byte
     {
         None = 0,
@@ -20,20 +20,20 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         List = 2,
         Set = 3
     }
- 
+
     public struct OrderSpatial
     {
         public const int MaxPoints = 64;
         public const int MaxInlinePoints = 2;
- 
+
         public OrderSpatialKind Kind;
         public OrderCollectionMode Mode;
- 
+
         public Vector3 WorldCm;
         public int A0;
         public int A1;
         public int A2;
- 
+
         public int PointCount;
         public Vector3 Point0WorldCm;
         public Vector3 Point1WorldCm;
@@ -41,7 +41,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
         public byte HasDestinationWorldCm;
         public Vector3 DestinationWorldCm;
- 
+
         public void AddInlinePointWorldCm(int x, int y, int z)
         {
             Vector3 point = new(x, y, z);
@@ -62,7 +62,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             PointCount++;
         }
     }
- 
+
     public struct OrderArgs
     {
         public static OrderArgs CreateSingleWorldCm(Vector3 worldCm)
@@ -82,7 +82,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         public int I1;
         public int I2;
         public int I3;
- 
+
         public float F0;
         public float F1;
         public float F2;
@@ -127,6 +127,96 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 SubmitStep = submitStep,
                 SubmitMode = submitMode
             };
+        }
+
+        public static Order CreateCastAbility(
+            int orderTypeId,
+            int playerId,
+            Entity actor,
+            Entity target,
+            Entity targetContext,
+            int abilitySlotIndex,
+            OrderSubmitMode submitMode,
+            int submitStep)
+        {
+            var order = Create(orderTypeId, playerId, actor, target, targetContext, submitMode, submitStep);
+            SetAbilitySlot(ref order, abilitySlotIndex);
+            return order;
+        }
+
+        public static Order CreateMoveToWorldCm(
+            int orderTypeId,
+            int playerId,
+            Entity actor,
+            Vector3 destinationWorldCm,
+            OrderSubmitMode submitMode,
+            int submitStep)
+        {
+            var order = Create(orderTypeId, playerId, actor, Entity.Null, Entity.Null, submitMode, submitStep);
+            SetSingleWorldCm(ref order, destinationWorldCm);
+            return order;
+        }
+
+        public static Order CreateMoveToWorldCm(
+            int orderTypeId,
+            int playerId,
+            Entity actor,
+            Entity target,
+            Vector3 destinationWorldCm,
+            OrderSubmitMode submitMode,
+            int submitStep)
+        {
+            if (!target.Equals(Entity.Null))
+            {
+                throw new System.InvalidOperationException(
+                    $"ORDER.BUILDER.ERR.MoveTargetEntityForbidden: orderTypeId={orderTypeId}.");
+            }
+
+            return CreateMoveToWorldCm(orderTypeId, playerId, actor, destinationWorldCm, submitMode, submitStep);
+        }
+
+        public static Order CreateStop(
+            int orderTypeId,
+            int playerId,
+            Entity actor,
+            OrderSubmitMode submitMode,
+            int submitStep)
+        {
+            return Create(orderTypeId, playerId, actor, Entity.Null, Entity.Null, submitMode, submitStep);
+        }
+
+        public static Order CreateStop(
+            int orderTypeId,
+            int playerId,
+            Entity actor,
+            Entity target,
+            OrderSubmitMode submitMode,
+            int submitStep)
+        {
+            if (!target.Equals(Entity.Null))
+            {
+                throw new System.InvalidOperationException(
+                    $"ORDER.BUILDER.ERR.StopTargetForbidden: orderTypeId={orderTypeId}.");
+            }
+
+            return CreateStop(orderTypeId, playerId, actor, submitMode, submitStep);
+        }
+
+        public static Order CreateTargetEntity(
+            int orderTypeId,
+            int playerId,
+            Entity actor,
+            Entity target,
+            OrderSubmitMode submitMode,
+            int submitStep)
+        {
+            if (target.Equals(Entity.Null))
+            {
+                throw new System.InvalidOperationException(
+                    $"ORDER.BUILDER.ERR.TargetEntityRequired: orderTypeId={orderTypeId}.");
+            }
+
+            return Create(orderTypeId, playerId, actor, target, Entity.Null, submitMode, submitStep);
         }
 
         public static void SetAbilitySlot(ref Order order, int abilitySlotIndex)

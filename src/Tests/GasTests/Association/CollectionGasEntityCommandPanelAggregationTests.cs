@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
 using Arch.Core;
 using EntityCommandPanelMod.Runtime;
 using Ludots.Core.Components;
@@ -49,16 +50,12 @@ namespace Ludots.Tests.GAS
         private const int TankTemplateKeyId = 21;
 
         private const string ByTemplateProfileId = "aggregation.by_template";
-        private const string ByFamilyProfileId = "aggregation.by_family";
+        private const string ByFamilyProfileId = "aggregation.tests.by_family";
 
         [SetUp]
         public void SetUp()
         {
-            // Family tags must exist before engine init so the by_family profile's catalog mask
-            // (compiled at profile install) includes them; stim registers first => lower tag id.
             TagRegistry.Clear();
-            TagRegistry.Register(StimFamilyTag);
-            TagRegistry.Register(ChargeFamilyTag);
         }
 
         [TearDown]
@@ -105,14 +102,13 @@ namespace Ludots.Tests.GAS
             var fixture = SelectionFixture.Create(engine);
 
             IEntityCommandPanelSource source = ResolveCollectionSource(engine);
-            var collectionSource = (CollectionGasEntityCommandPanelSource)source;
             var context = new EntityCommandPanelSourceContext(fixture.CollectionOwner, CollectionSourceId, AnyQueryId);
             var slots = new EntityCommandPanelSlotView[8];
 
             Assert.That(EntityCommandPanelSourceDispatch.CopySlots(source, in context, 0, slots), Is.EqualTo(3));
             Assert.That(EntityCommandPanelSourceDispatch.TryGetRevision(source, in context, out uint byFamilyRevision), Is.True);
 
-            collectionSource.SetAggregationProfile(ByTemplateProfileId);
+            SetAggregationProfile(source, ByTemplateProfileId);
 
             Assert.That(EntityCommandPanelSourceDispatch.TryGetRevision(source, in context, out uint byTemplateRevision), Is.True);
             Assert.That(byTemplateRevision, Is.Not.EqualTo(byFamilyRevision),
@@ -128,12 +124,12 @@ namespace Ludots.Tests.GAS
             Assert.That(FirstDetail(slots, copied, EliteChargeAbilityId), Does.Not.Contain("owners |"),
                 "single-member unit-template cell keeps the plain detail.");
 
-            collectionSource.SetAggregationProfile(ByFamilyProfileId);
+            SetAggregationProfile(source, ByFamilyProfileId);
             Assert.That(EntityCommandPanelSourceDispatch.CopySlots(source, in context, 0, slots), Is.EqualTo(3),
                 "switching back restores the family grouping on the next build.");
 
             Assert.Throws<InvalidOperationException>(
-                () => collectionSource.SetAggregationProfile("aggregation.not_installed"),
+                () => SetAggregationProfile(source, "aggregation.not_installed"),
                 "unknown profiles fail fast instead of silently keeping the old grouping.");
         }
 
@@ -395,9 +391,37 @@ namespace Ludots.Tests.GAS
                 RepoModPaths.ResolveExplicit(repoRoot, new[] { "LudotsCoreMod", "EntityCommandPanelMod" }),
                 Path.Combine(repoRoot, "assets"));
             InstallUiServices(engine);
+            RegisterAggregationFamilyTags();
+            InstallTestAggregationProfile(engine);
             engine.TriggerManager.FireEvent(GameEvents.GameStart, engine.CreateContext());
             Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
             return engine;
+        }
+
+        private static void RegisterAggregationFamilyTags()
+        {
+            // The by_family profile compiles its catalog mask during GameStart. Test data tags must
+            // exist by then, while ability catalog tags are registered later with the same ids.
+            TagRegistry.Register(StimFamilyTag);
+            TagRegistry.Register(ChargeFamilyTag);
+        }
+
+        private static void InstallTestAggregationProfile(GameEngine engine)
+        {
+            var registry = engine.GetService(CoreServiceKeys.AbilityAggregationProfileRegistry)
+                ?? throw new InvalidOperationException("AbilityAggregationProfileRegistry missing.");
+            registry.Install(new AbilityAggregationProfilesConfig
+            {
+                Profiles = new List<AbilityAggregationProfileDefinition>
+                {
+                    new()
+                    {
+                        Id = ByFamilyProfileId,
+                        GroupBy = "catalog.castFamily",
+                        Overflow = "nextPanelSlot"
+                    }
+                }
+            });
         }
 
         private static void InstallUiServices(GameEngine engine)
@@ -475,7 +499,22 @@ namespace Ludots.Tests.GAS
             var registry = engine.GetService(CoreServiceKeys.EntityCommandPanelSourceRegistry)
                 ?? throw new InvalidOperationException("EntityCommandPanelSourceRegistry missing.");
             Assert.That(registry.TryGet(CollectionSourceId, out IEntityCommandPanelSource source), Is.True);
+            SetAggregationProfile(source, ByFamilyProfileId);
             return source;
+        }
+
+        private static void SetAggregationProfile(IEntityCommandPanelSource source, string profileId)
+        {
+            MethodInfo method = source.GetType().GetMethod("SetAggregationProfile", new[] { typeof(string) })
+                ?? throw new InvalidOperationException("Collection command panel source must expose SetAggregationProfile.");
+            try
+            {
+                method.Invoke(source, new object[] { profileId });
+            }
+            catch (TargetInvocationException ex) when (ex.InnerException != null)
+            {
+                throw ex.InnerException;
+            }
         }
 
         private static InputOrderMappingSystem CreateMappingSystem(
