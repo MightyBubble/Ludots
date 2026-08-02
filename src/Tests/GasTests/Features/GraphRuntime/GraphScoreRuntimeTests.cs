@@ -22,6 +22,32 @@ namespace Ludots.Tests.GAS.Features.GraphRuntime
     public sealed class GraphScoreRuntimeTests
     {
         [Test]
+        public void GraphScoreRuntime_CompileFreezesScoreProgramSnapshot()
+        {
+            using var world = World.Create();
+            Entity actor = world.Create(WorldPositionCm.FromCm(0, 0));
+            Entity target = world.Create(WorldPositionCm.FromCm(100, 0), new GameplayTagContainer());
+
+            var programs = new GraphProgramRegistry();
+            const int graphId = 76;
+            var program = new[]
+            {
+                new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = 7f },
+            };
+            programs.Register(graphId, program, GraphKind.Score);
+
+            IReadOnlyGraphScorer scorer = CompiledGraphScoreRuntime.Compile(world, new StubGraphApi(world), programs);
+            program[0] = new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = 99f };
+            var budget = GraphInstructionBudget.Create(maxInstructions: 1);
+
+            bool ok = scorer.TryEvaluateScore(actor, target, default, graphId, ref budget, out float score, out var failure);
+
+            Assert.That(ok, Is.True);
+            Assert.That(failure, Is.EqualTo(GraphScoreFailureReason.None));
+            Assert.That(score, Is.EqualTo(7f));
+        }
+
+        [Test]
         public void GraphScoreRuntime_BudgetCountsExecutedInstructions_NotRegisteredProgramLength()
         {
             using var world = World.Create();

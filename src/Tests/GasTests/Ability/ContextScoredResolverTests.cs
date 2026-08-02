@@ -429,7 +429,9 @@ namespace Ludots.Tests.GAS
                 out var failure);
 
             Assert.That(resolved, Is.False);
-            Assert.That(resolution.SlotIndex, Is.EqualTo(0));
+            Assert.That(resolution.Target, Is.EqualTo(default(Entity)),
+                "the already-scored fallback candidate must not leak as a partial winner when a later graph exhausts the budget.");
+            Assert.That(resolution.HasTargetWorldCm, Is.False);
             Assert.That(failure, Is.EqualTo(GraphScoreFailureReason.BudgetExhausted));
         }
 
