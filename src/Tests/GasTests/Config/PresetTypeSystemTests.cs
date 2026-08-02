@@ -555,6 +555,25 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public unsafe void ConfigParams_MergeFrom_NewKeyBeyondCapacity_Throws()
+        {
+            var template = new EffectConfigParams();
+            for (int i = 0; i < EffectConfigParams.MAX_PARAMS; i++)
+            {
+                That(template.TryAddInt(1000 + i, i), Is.True);
+            }
+
+            var caller = new EffectConfigParams();
+            That(caller.TryAddInt(2000, 1), Is.True);
+
+            var ex = Throws<InvalidOperationException>(() => template.MergeFrom(in caller));
+
+            That(ex!.Message, Does.Contain("GAS.CONFIG_PARAMS.ERR.MergeCapacityExceeded"));
+            That(template.Count, Is.EqualTo(EffectConfigParams.MAX_PARAMS));
+            That(template.TryGetInt(2000, out _), Is.False);
+        }
+
+        [Test]
         public unsafe void ConfigParams_MergeFrom_EmptyCaller_NoChange()
         {
             var template = new EffectConfigParams();
@@ -734,7 +753,7 @@ namespace Ludots.Tests.GAS
 
         private static string FindRepoRoot()
         {
-            string dir = AppDomain.CurrentDomain.BaseDirectory;
+            string? dir = AppDomain.CurrentDomain.BaseDirectory;
             while (dir != null)
             {
                 if (System.IO.File.Exists(System.IO.Path.Combine(dir, "assets", "Configs", "GAS", "preset_types.json")))

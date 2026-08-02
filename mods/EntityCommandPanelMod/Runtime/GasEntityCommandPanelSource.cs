@@ -618,36 +618,37 @@ namespace EntityCommandPanelMod.Runtime
             if (!_engine.World.IsAlive(target) ||
                 !abilityDefinition.HasActivationBlockTags ||
                 abilityDefinition.ActivationBlockTags.BlockedAny.IsEmpty ||
-                !_engine.World.Has<TimedTagBuffer>(target))
+                !_engine.World.Has<ActiveEffectContainer>(target))
             {
                 return 0;
             }
 
-            IClock? clock = _engine.GetService(CoreServiceKeys.Clock);
-            if (clock == null)
-            {
-                return 0;
-            }
-
-            ref var timed = ref _engine.World.Get<TimedTagBuffer>(target);
+            ref readonly var activeEffects = ref _engine.World.Get<ActiveEffectContainer>(target);
             int bestPermille = 0;
-            for (int i = 0; i < timed.Count; i++)
+            for (int i = 0; i < activeEffects.Count; i++)
             {
-                int tagId = timed.GetTagId(i);
-                if (tagId <= 0 || !abilityDefinition.ActivationBlockTags.BlockedAny.HasTag(tagId))
+                Entity effectEntity = activeEffects.GetEntity(i);
+                if (!_engine.World.IsAlive(effectEntity) ||
+                    !_engine.World.Has<GameplayEffect>(effectEntity) ||
+                    !_engine.World.Has<EffectGrantedTags>(effectEntity))
                 {
                     continue;
                 }
 
-                GasClockId clockId = timed.GetClockId(i);
-                int now = clock.Now(clockId.ToDomainId());
-                int remainingTicks = Math.Max(0, timed.GetExpireAt(i) - now);
-                if (remainingTicks <= 0)
+                ref readonly var grantedTags = ref _engine.World.Get<EffectGrantedTags>(effectEntity);
+                if (!GrantsAnyBlockedTag(in grantedTags, in abilityDefinition.ActivationBlockTags.BlockedAny))
                 {
                     continue;
                 }
 
-                int totalTicks = ResolveLockoutDurationTicks(in abilityDefinition, tagId);
+                ref readonly var effect = ref _engine.World.Get<GameplayEffect>(effectEntity);
+                int totalTicks = effect.TotalTicks;
+                int remainingTicks = effect.RemainingTicks;
+                if (totalTicks <= 0 || remainingTicks <= 0)
+                {
+                    continue;
+                }
+
                 int permille = totalTicks > 0
                     ? Math.Clamp((int)Math.Round(remainingTicks * 1000d / totalTicks), 0, 1000)
                     : 1000;
@@ -657,105 +658,14 @@ namespace EntityCommandPanelMod.Runtime
             return (short)bestPermille;
         }
 
-        private int ResolveLockoutDurationTicks(in AbilityDefinition abilityDefinition, int tagId)
+        private static bool GrantsAnyBlockedTag(
+            in EffectGrantedTags grantedTags,
+            in GameplayTagContainer blockedTags)
         {
-            if (_effectTemplates == null)
+            for (int i = 0; i < grantedTags.Count; i++)
             {
-                return 0;
-            }
-
-            int durationTicks = 0;
-            ref readonly AbilityExecSpec execSpec = ref abilityDefinition.ExecSpec;
-            for (int itemIndex = 0; itemIndex < execSpec.ItemCount; itemIndex++)
-            {
-                ExecItemKind kind = execSpec.GetKind(itemIndex);
-                if (kind != ExecItemKind.EffectSignal && kind != ExecItemKind.EffectClip)
-                {
-                    continue;
-                }
-
-                int templateId = execSpec.GetTemplateId(itemIndex);
-                if (templateId <= 0 || !_effectTemplates.TryGetRef(templateId, out _))
-                {
-                    continue;
-                }
-
-                ref readonly EffectTemplateData template = ref _effectTemplates.GetRef(templateId);
-                EffectConfigParams mergedParams = BuildExecItemMergedParams(
-                    in template,
-                    in abilityDefinition,
-                    execSpec.GetCallerParamsIdx(itemIndex));
-
-                durationTicks = Math.Max(
-                    durationTicks,
-                    ResolveTemplateLockoutDurationTicks(in template, in mergedParams, tagId, depth: 0));
-            }
-
-            return durationTicks;
-        }
-
-        private static EffectConfigParams BuildExecItemMergedParams(
-            in EffectTemplateData template,
-            in AbilityDefinition abilityDefinition,
-            byte callerParamsIdx)
-        {
-            EffectConfigParams mergedParams = template.ConfigParams;
-            if (abilityDefinition.HasExecCallerParamsPool &&
-                callerParamsIdx != 0xFF &&
-                callerParamsIdx < abilityDefinition.ExecCallerParamsPool.Count)
-            {
-                mergedParams.MergeFrom(in abilityDefinition.ExecCallerParamsPool.Get(callerParamsIdx));
-            }
-
-            return mergedParams;
-        }
-
-        private int ResolveTemplateLockoutDurationTicks(
-            in EffectTemplateData template,
-            in EffectConfigParams mergedParams,
-            int tagId,
-            int depth)
-        {
-            int durationTicks = 0;
-            if (TemplateGrantsTag(in template, tagId))
-            {
-                int effectiveDurationTicks = ConfigParamsMerger.ResolveDurationTicks(in template, in mergedParams);
-                if (effectiveDurationTicks > 0)
-                {
-                    durationTicks = Math.Max(durationTicks, effectiveDurationTicks);
-                }
-            }
-
-            if (_effectTemplates == null || depth >= 4)
-            {
-                return durationTicks;
-            }
-
-            int payloadTemplateId = ConfigParamsMerger.ResolvePayloadEffectTemplateId(
-                in template.TargetDispatch,
-                in mergedParams);
-            if (payloadTemplateId <= 0 || !_effectTemplates.TryGetRef(payloadTemplateId, out _))
-            {
-                return durationTicks;
-            }
-
-            ref readonly EffectTemplateData payloadTemplate = ref _effectTemplates.GetRef(payloadTemplateId);
-            durationTicks = Math.Max(
-                durationTicks,
-                ResolveTemplateLockoutDurationTicks(
-                    in payloadTemplate,
-                    in payloadTemplate.ConfigParams,
-                    tagId,
-                    depth + 1));
-
-            return durationTicks;
-        }
-
-        private static bool TemplateGrantsTag(in EffectTemplateData template, int tagId)
-        {
-            for (int i = 0; i < template.GrantedTags.Count; i++)
-            {
-                if (template.GrantedTags.Get(i).TagId == tagId)
+                int tagId = grantedTags.Get(i).TagId;
+                if (tagId > 0 && blockedTags.HasTag(tagId))
                 {
                     return true;
                 }

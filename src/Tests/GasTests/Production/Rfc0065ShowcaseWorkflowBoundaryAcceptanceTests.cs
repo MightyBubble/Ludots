@@ -121,16 +121,18 @@ namespace Ludots.Tests.GAS.Production
             SubmitPointerCommandWorld(engine, backend, targetWorldCm);
             TickUntil(
                 engine,
-                () => TryReadSharedMoveOrders(engine, actors, out _),
+                () => TryReadAtomicMoveOrders(engine, actors, out _),
                 maxFrames: 48,
                 describeFailure: () => BuildOrderDiagnostics(engine, actors));
 
-            Assert.That(TryReadSharedMoveOrders(engine, actors, out Order[] orders), Is.True);
+            Assert.That(TryReadAtomicMoveOrders(engine, actors, out Order[] orders), Is.True);
             Assert.That(orders.Length, Is.EqualTo(actors.Length));
-            int sharedOrderId = orders[0].OrderId;
-            Assert.That(sharedOrderId, Is.GreaterThan(0));
-            Assert.That(orders.Select(order => order.OrderId), Is.All.EqualTo(sharedOrderId),
-                "dispatch.all_together must fan out with one shared order id.");
+            int admissionBatchId = orders[0].AdmissionBatchId;
+            Assert.That(admissionBatchId, Is.GreaterThan(0));
+            Assert.That(orders.Select(order => order.AdmissionBatchId), Is.All.EqualTo(admissionBatchId),
+                "dispatch.all_together must fan out under one atomic admission batch.");
+            Assert.That(orders.Select(order => order.OrderId), Is.Unique,
+                "each fan-out order must keep its own stable terminal receipt.");
             Assert.That(orders.Select(order => order.Actor), Is.EquivalentTo(actors));
 
             int moveToId = engine.GetService(CoreServiceKeys.OrderTypeRegistry)!.GetId("moveTo");
@@ -389,10 +391,11 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(predicate(), Is.True, $"Predicate was not satisfied within {maxFrames} frames. {describeFailure()}");
         }
 
-        private static bool TryReadSharedMoveOrders(GameEngine engine, Entity[] actors, out Order[] orders)
+        private static bool TryReadAtomicMoveOrders(GameEngine engine, Entity[] actors, out Order[] orders)
         {
             orders = Array.Empty<Order>();
             var captured = new List<Order>(actors.Length);
+            var seenOrderIds = new HashSet<int>();
             for (int i = 0; i < actors.Length; i++)
             {
                 Entity actor = actors[i];
@@ -403,6 +406,10 @@ namespace Ludots.Tests.GAS.Production
 
                 Order order = buffer.ActiveOrder.Order;
                 if (order.OrderId <= 0 ||
+                    !seenOrderIds.Add(order.OrderId) ||
+                    order.AdmissionBatchId <= 0 ||
+                    order.AdmissionBatchSize != actors.Length ||
+                    order.AdmissionBatchIndex != i ||
                     order.Args.Spatial.Kind != OrderSpatialKind.WorldCm ||
                     order.Args.Spatial.Mode != OrderCollectionMode.Single)
                 {
@@ -412,10 +419,10 @@ namespace Ludots.Tests.GAS.Production
                 captured.Add(order);
             }
 
-            int sharedOrderId = captured[0].OrderId;
+            int admissionBatchId = captured[0].AdmissionBatchId;
             for (int i = 1; i < captured.Count; i++)
             {
-                if (captured[i].OrderId != sharedOrderId)
+                if (captured[i].AdmissionBatchId != admissionBatchId)
                 {
                     return false;
                 }
@@ -970,19 +977,19 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine("- Gameplay domain: RFC-0065 SHOW-5 / SHOW-6 production pointer command workflow.");
             sb.AppendLine("- Runtime path: `PlayerInputHandler` -> `InputRuntimeSystem` -> `AuthoritativeInputSnapshotSystem` -> `InteractionShowcaseLocalOrderSourceSystem` -> `InputOrderMappingSystem` -> `CommandIntentArbiter` -> `CommandIntentProfileRegistry.RouteGroup` -> `CastDispatchProfileRegistry.SelectDispatchTargets` -> `OrderQueue` -> `OrderBufferSystem`.");
             sb.AppendLine($"- Launcher binding: `{LauncherBindingName}` (`{ManualGuiLaunchCommand}`).");
-            sb.AppendLine("- Primary success condition: Arcweaver, Vanguard, and Commander all receive the same shared moveTo order id at the target point, even when the hover collection contains an entity.");
-            sb.AppendLine("- Failure branch condition: no active scheme intent, no command-source collection, hidden legacy fallback, non-shared order ids, or missing OrderBuffer promotion.");
+            sb.AppendLine("- Primary success condition: Arcweaver, Vanguard, and Commander all receive unique moveTo order receipts in one atomic admission batch at the target point, even when the hover collection contains an entity.");
+            sb.AppendLine("- Failure branch condition: no active scheme intent, no command-source collection, hidden legacy fallback, split admission batch, duplicate order receipts, or missing OrderBuffer promotion.");
             sb.AppendLine();
             sb.AppendLine("## Timeline");
             sb.AppendLine($"- T+000: verify launcher binding `{LauncherBindingName}` -> `{LauncherTargetPath}` and load `interaction_showcase_hub` with CoreInputMod and InteractionShowcaseMod.");
             sb.AppendLine($"- T+004: production startup has active `{DefaultSchemeId}` and resolves `{DefaultIntentId}`.");
             sb.AppendLine("- T+008: publish local `(owner, collection.command.source)` with Arcweaver, Vanguard, and Commander.");
             sb.AppendLine($"- T+012: submit ground pointer command target ({targetWorldCm.X.ToString(CultureInfo.InvariantCulture)}, {targetWorldCm.Y.ToString(CultureInfo.InvariantCulture)}) through production input.");
-            sb.AppendLine($"- T+016: `dispatch.all_together` fans out {orders.Length.ToString(CultureInfo.InvariantCulture)} moveTo orders with shared order id {orders[0].OrderId.ToString(CultureInfo.InvariantCulture)}.");
+            sb.AppendLine($"- T+016: `dispatch.all_together` fans out {orders.Length.ToString(CultureInfo.InvariantCulture)} moveTo orders in admission batch {orders[0].AdmissionBatchId.ToString(CultureInfo.InvariantCulture)} with order receipts {string.Join(", ", orders.Select(static order => order.OrderId.ToString(CultureInfo.InvariantCulture)))}.");
             sb.AppendLine();
             sb.AppendLine("## Outcome");
             sb.AppendLine("- result: success");
-            sb.AppendLine("- headless evidence: production pointer command intake used scheme default intent, command-source collection, cast dispatch fan-out, shared order id assignment, and OrderBuffer promotion.");
+            sb.AppendLine("- headless evidence: production pointer command intake used scheme default intent, command-source collection, cast dispatch fan-out, atomic admission batch assignment, and OrderBuffer promotion.");
             sb.AppendLine("- visible evidence boundary: this run is headless GasTests evidence; it does not claim a captured raylib/CEF video.");
             sb.AppendLine();
             sb.AppendLine("## Runtime Values");
@@ -994,11 +1001,12 @@ namespace Ludots.Tests.GAS.Production
             sb.AppendLine($"| dispatch.all_together registry id | {dispatchProfileId.ToString(CultureInfo.InvariantCulture)} |");
             sb.AppendLine($"| command source rows | {string.Join(", ", commandSource.Select(static e => e.ToString()))} |");
             sb.AppendLine($"| hover entity ignored by ground command | {hovered} |");
-            sb.AppendLine($"| shared order id | {orders[0].OrderId.ToString(CultureInfo.InvariantCulture)} |");
+            sb.AppendLine($"| admission batch id | {orders[0].AdmissionBatchId.ToString(CultureInfo.InvariantCulture)} |");
+            sb.AppendLine($"| order receipts | {string.Join(", ", orders.Select(static order => order.OrderId.ToString(CultureInfo.InvariantCulture)))} |");
             sb.AppendLine($"| target world cm | ({targetWorldCm.X.ToString(CultureInfo.InvariantCulture)}, {targetWorldCm.Y.ToString(CultureInfo.InvariantCulture)}) |");
             sb.AppendLine();
             sb.AppendLine("## Dispatch Variants");
-            sb.AppendLine("| Profile | Registry id | Selected count | Shared order id | Sequential |");
+            sb.AppendLine("| Profile | Registry id | Selected count | Atomic batch flag | Sequential |");
             sb.AppendLine("|---|---:|---:|---|---|");
             for (int i = 0; i < dispatchVariants.Length; i++)
             {
@@ -1080,11 +1088,15 @@ namespace Ludots.Tests.GAS.Production
                     dispatch = AllTogetherDispatchId,
                     dispatchProfileId,
                     dispatchVariants,
-                    sharedOrderId = orders[0].OrderId,
+                    admissionBatchId = orders[0].AdmissionBatchId,
+                    orderIds = orders.Select(static order => order.OrderId).ToArray(),
                     orders = orders.Select(order => new
                     {
                         actor = order.Actor.Id,
                         order.OrderId,
+                        order.AdmissionBatchId,
+                        order.AdmissionBatchSize,
+                        order.AdmissionBatchIndex,
                         order.OrderTypeId,
                         order.PlayerId,
                         target = new
@@ -1115,11 +1127,11 @@ namespace Ludots.Tests.GAS.Production
                 "    G --> H[\"CommandIntentArbiter.ResolveActiveCommandIntent\"]",
                 "    H --> I[\"CommandIntentProfileRegistry.RouteGroup -> moveTo\"]",
                 "    I --> J[\"CastDispatchProfileRegistry.SelectDispatchTargets dispatch.all_together\"]",
-                "    J --> K[\"OrderQueue assigns shared order id\"]",
+                "    J --> K[\"OrderQueue assigns unique receipts in one admission batch\"]",
                 "    K --> L[\"OrderBufferSystem promotes active moveTo on all actors\"]",
                 "    L --> M[\"Write battle-report, trace.jsonl, path.mmd\"]",
                 "    H -->|no active intent| X[\"Fail: no fallback to legacy mapping\"]",
-                "    J -->|dispatch mismatch| Y[\"Fail: no shared fan-out\"]"
+                "    J -->|dispatch mismatch| Y[\"Fail: no atomic fan-out\"]"
             }) + Environment.NewLine;
         }
 

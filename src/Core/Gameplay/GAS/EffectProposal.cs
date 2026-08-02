@@ -28,6 +28,8 @@ namespace Ludots.Core.Gameplay.GAS
         public Entity TargetContext;
         public int TemplateId;
         public int TagId;
+        public GasClockId ClockId;
+        public bool HasClockId;
         public bool ParticipatesInResponse;
         public bool Cancelled;
         public EffectModifiers Modifiers;

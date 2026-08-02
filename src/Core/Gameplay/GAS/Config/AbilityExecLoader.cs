@@ -57,15 +57,15 @@ namespace Ludots.Core.Gameplay.GAS.Config
         /// Load abilities from the config pipeline and register them.
         /// </summary>
         public void Load(
-            ConfigCatalog catalog = null,
-            ConfigConflictReport report = null,
+            ConfigCatalog? catalog = null,
+            ConfigConflictReport? report = null,
             string relativePath = "GAS/abilities.json")
         {
             _registry.Clear();
             AbilityIdRegistry.Clear();
 
-            var entry = ConfigPipeline.RequireEntry(catalog, relativePath, ConfigMergePolicy.ArrayById, "id");
-            var mergedEntries = _pipeline.MergeArrayByIdFromCatalog(in entry, report);
+            var entry = ConfigPipeline.RequireEntry(catalog!, relativePath, ConfigMergePolicy.ArrayById, "id");
+            var mergedEntries = _pipeline.MergeArrayByIdFromCatalog(in entry, report!);
             var merged = new List<(string Id, JsonObject Node)>(mergedEntries.Count);
             for (int i = 0; i < mergedEntries.Count; i++)
             {
@@ -124,8 +124,22 @@ namespace Ludots.Core.Gameplay.GAS.Config
             // ── exec block ──
             if (obj["exec"] is JsonObject execObj)
             {
-                def.ExecSpec = CompileExecSpec(execObj, id, path);
-                CompileCallerParamsPool(execObj, id, path, out var pool, out bool hasPool);
+                CompileCallerParamsPool(
+                    execObj,
+                    id,
+                    path,
+                    out var pool,
+                    out bool hasPool,
+                    out bool[] callerParamSetsWithDurationTicks,
+                    out int[] callerParamSetParamCounts);
+                def.ExecSpec = CompileExecSpec(
+                    execObj,
+                    id,
+                    path,
+                    hasPool,
+                    pool.Count,
+                    callerParamSetsWithDurationTicks,
+                    callerParamSetParamCounts);
                 def.ExecCallerParamsPool = pool;
                 def.HasExecCallerParamsPool = hasPool;
             }
@@ -176,7 +190,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 bool hasCatalogTags = false;
                 foreach (var t in catalogArr)
                 {
-                    string tag = t?.GetValue<string>();
+                    string? tag = t?.GetValue<string>();
                     if (string.IsNullOrWhiteSpace(tag))
                     {
                         throw new InvalidOperationException(
@@ -194,7 +208,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             // ── interactionContextProfile (RFC-0065 CTX-6) ──
             if (obj["interactionContextProfile"] != null)
             {
-                string contextProfileId = obj["interactionContextProfile"]?.GetValue<string>();
+                string? contextProfileId = obj["interactionContextProfile"]?.GetValue<string>();
                 if (string.IsNullOrWhiteSpace(contextProfileId))
                 {
                     throw new InvalidOperationException(
@@ -287,7 +301,14 @@ namespace Ludots.Core.Gameplay.GAS.Config
 
         // ──────────────── ExecSpec ────────────────
 
-        private static AbilityExecSpec CompileExecSpec(JsonObject execObj, string id, string path)
+        private static AbilityExecSpec CompileExecSpec(
+            JsonObject execObj,
+            string id,
+            string path,
+            bool hasCallerParamsPool,
+            int callerParamsCount,
+            bool[] callerParamSetsWithDurationTicks,
+            int[] callerParamSetParamCounts)
         {
             var spec = default(AbilityExecSpec);
 
@@ -323,7 +344,16 @@ namespace Ludots.Core.Gameplay.GAS.Config
                             $"Ability '{id}' in '{path}' field 'exec.items[{idx}]' must be an object.");
                     }
 
-                    CompileItem(itemObj, ref spec, idx, id, path);
+                    CompileItem(
+                        itemObj,
+                        ref spec,
+                        idx,
+                        id,
+                        path,
+                        hasCallerParamsPool,
+                        callerParamsCount,
+                        callerParamSetsWithDurationTicks,
+                        callerParamSetParamCounts);
                     idx++;
                 }
             }
@@ -353,7 +383,16 @@ namespace Ludots.Core.Gameplay.GAS.Config
             };
         }
 
-        private static void CompileItem(JsonObject itemObj, ref AbilityExecSpec spec, int idx, string id, string path)
+        private static void CompileItem(
+            JsonObject itemObj,
+            ref AbilityExecSpec spec,
+            int idx,
+            string id,
+            string path,
+            bool hasCallerParamsPool,
+            int callerParamsCount,
+            bool[] callerParamSetsWithDurationTicks,
+            int[] callerParamSetParamCounts)
         {
             string kindStr = RequireNonEmptyString(itemObj["kind"], $"exec.items[{idx}].kind", id, path);
             var kind = ParseItemKind(kindStr);
@@ -364,18 +403,37 @@ namespace Ludots.Core.Gameplay.GAS.Config
             }
 
             int tick = tickNode.GetValue<int>();
-            int durationTicks = itemObj["duration"]?.GetValue<int>() ?? 0;
+            int durationTicks = 0;
+            if (kind == ExecItemKind.EffectClip)
+            {
+                if (itemObj["durationTicks"] is not JsonNode durationTicksNode)
+                {
+                    throw new InvalidOperationException(
+                        $"Ability '{id}' in '{path}' field 'exec.items[{idx}].durationTicks' is required for EffectClip.");
+                }
+
+                durationTicks = durationTicksNode.GetValue<int>();
+                if (durationTicks < 0)
+                {
+                    throw new InvalidOperationException(
+                        $"Ability '{id}' in '{path}' field 'exec.items[{idx}].durationTicks' must be non-negative for EffectClip.");
+                }
+            }
+            else
+            {
+                durationTicks = itemObj["duration"]?.GetValue<int>() ?? 0;
+            }
 
             GasClockId clockId = default;
-            string clockStr = itemObj["clock"]?.GetValue<string>();
+            string? clockStr = itemObj["clockId"]?.GetValue<string>() ?? itemObj["clock"]?.GetValue<string>();
             if (!string.IsNullOrWhiteSpace(clockStr)) clockId = ParseClockId(clockStr);
 
             int tagId = 0;
-            string tagStr = itemObj["tag"]?.GetValue<string>();
+            string? tagStr = itemObj["tag"]?.GetValue<string>();
             if (!string.IsNullOrWhiteSpace(tagStr)) tagId = TagRegistry.Register(tagStr);
 
             int templateId = 0;
-            string templateStr = itemObj["template"]?.GetValue<string>();
+            string? templateStr = itemObj["template"]?.GetValue<string>();
             if (!string.IsNullOrWhiteSpace(templateStr))
             {
                 templateId = EffectTemplateIdRegistry.GetId(templateStr);
@@ -389,7 +447,36 @@ namespace Ludots.Core.Gameplay.GAS.Config
             byte callerParamsIdx = 0xFF;
             if (itemObj["callerParamsIdx"] is JsonNode cpNode)
             {
-                callerParamsIdx = (byte)cpNode.GetValue<int>();
+                int rawCallerParamsIdx = cpNode.GetValue<int>();
+                if (rawCallerParamsIdx < 0 || rawCallerParamsIdx > byte.MaxValue)
+                {
+                    throw new InvalidOperationException(
+                        $"Ability '{id}' in '{path}' field 'exec.items[{idx}].callerParamsIdx' must be in byte range.");
+                }
+
+                if (!hasCallerParamsPool || rawCallerParamsIdx >= callerParamsCount)
+                {
+                    throw new InvalidOperationException(
+                        $"Ability '{id}' in '{path}' field 'exec.items[{idx}].callerParamsIdx' references missing exec.callerParams[{rawCallerParamsIdx}].");
+                }
+
+                if (kind == ExecItemKind.EffectClip &&
+                    rawCallerParamsIdx < callerParamSetsWithDurationTicks.Length &&
+                    callerParamSetsWithDurationTicks[rawCallerParamsIdx])
+                {
+                    throw new InvalidOperationException(
+                        $"Ability '{id}' in '{path}' field 'exec.items[{idx}].durationTicks' duplicates exec.callerParams[{rawCallerParamsIdx}] key '_ep.durationTicks'.");
+                }
+
+                if (kind == ExecItemKind.EffectClip &&
+                    rawCallerParamsIdx < callerParamSetParamCounts.Length &&
+                    callerParamSetParamCounts[rawCallerParamsIdx] >= EffectConfigParams.MAX_PARAMS)
+                {
+                    throw new InvalidOperationException(
+                        $"Ability '{id}' in '{path}' field 'exec.items[{idx}].durationTicks' cannot be added because exec.callerParams[{rawCallerParamsIdx}] is at fixed capacity {EffectConfigParams.MAX_PARAMS}.");
+                }
+
+                callerParamsIdx = (byte)rawCallerParamsIdx;
             }
 
             int payloadA = itemObj["payloadA"]?.GetValue<int>() ?? 0;
@@ -424,14 +511,24 @@ namespace Ludots.Core.Gameplay.GAS.Config
 
         // ──────────────── CallerParamsPool ────────────────
 
-        private static void CompileCallerParamsPool(JsonObject execObj, string id, string path,
-            out AbilityExecCallerParamsPool pool, out bool hasPool)
+        private static void CompileCallerParamsPool(
+            JsonObject execObj,
+            string id,
+            string path,
+            out AbilityExecCallerParamsPool pool,
+            out bool hasPool,
+            out bool[] callerParamSetsWithDurationTicks,
+            out int[] callerParamSetParamCounts)
         {
             pool = default;
             hasPool = false;
+            callerParamSetsWithDurationTicks = Array.Empty<bool>();
+            callerParamSetParamCounts = Array.Empty<int>();
 
             if (execObj["callerParams"] is not JsonArray paramsArr) return;
 
+            callerParamSetsWithDurationTicks = new bool[paramsArr.Count];
+            callerParamSetParamCounts = new int[paramsArr.Count];
             for (int setIndex = 0; setIndex < paramsArr.Count; setIndex++)
             {
                 if (paramsArr[setIndex] is not JsonObject setObj)
@@ -441,6 +538,8 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 }
 
                 var cp = default(EffectConfigParams);
+                int[] seenKeys = new int[EffectConfigParams.MAX_PARAMS];
+                int seenKeyCount = 0;
 
                 if (setObj["entries"] is JsonArray entriesArr)
                 {
@@ -454,6 +553,29 @@ namespace Ludots.Core.Gameplay.GAS.Config
 
                         string key = RequireNonEmptyString(entryObj["key"], $"exec.callerParams[{setIndex}].entries[{entryIndex}].key", id, path);
                         int keyId = ConfigKeyRegistry.Register(key);
+                        for (int seenIndex = 0; seenIndex < seenKeyCount; seenIndex++)
+                        {
+                            if (seenKeys[seenIndex] != keyId)
+                            {
+                                continue;
+                            }
+
+                            throw new InvalidOperationException(
+                                $"Ability '{id}' in '{path}' field 'exec.callerParams[{setIndex}].entries[{entryIndex}].key' duplicates " +
+                                $"exec.callerParams[{setIndex}].entries[{seenIndex}].key '{key}'.");
+                        }
+
+                        if (seenKeyCount >= seenKeys.Length)
+                        {
+                            throw new InvalidOperationException(
+                                $"Ability '{id}' in '{path}' field 'exec.callerParams[{setIndex}].entries' exceeded max {EffectConfigParams.MAX_PARAMS} params.");
+                        }
+
+                        seenKeys[seenKeyCount++] = keyId;
+                        if (string.Equals(key, "_ep.durationTicks", StringComparison.OrdinalIgnoreCase))
+                        {
+                            callerParamSetsWithDurationTicks[setIndex] = true;
+                        }
 
                         CompileCallerParamEntry(
                             ref cp,
@@ -466,6 +588,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                     }
                 }
 
+                callerParamSetParamCounts[setIndex] = cp.Count;
                 if (!pool.TryAdd(in cp))
                 {
                     throw new InvalidOperationException(
@@ -617,7 +740,14 @@ namespace Ludots.Core.Gameplay.GAS.Config
 
             if (toggleObj["deactivateExec"] is JsonObject deactivateExec)
             {
-                toggleSpec.DeactivateExecSpec = CompileExecSpec(deactivateExec, id, path);
+                toggleSpec.DeactivateExecSpec = CompileExecSpec(
+                    deactivateExec,
+                    id,
+                    path,
+                    hasCallerParamsPool: false,
+                    callerParamsCount: 0,
+                    callerParamSetsWithDurationTicks: Array.Empty<bool>(),
+                    callerParamSetParamCounts: Array.Empty<int>());
             }
 
             return toggleSpec;

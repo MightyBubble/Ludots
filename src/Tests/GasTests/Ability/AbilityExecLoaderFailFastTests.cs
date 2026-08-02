@@ -320,6 +320,37 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void CompileAbility_CallerParamsDuplicateKey_IsRejectedAtLoadTime()
+        {
+            EffectTemplateIdRegistry.Register("Effect.Tests.Instant");
+
+            var ex = Throws<InvalidOperationException>(() =>
+                Compile(
+                    """
+                    {
+                      "exec": {
+                        "clockId": "FixedFrame",
+                        "callerParams": [
+                          {
+                            "entries": [
+                              { "key": "param.damage", "type": "Int", "value": 10 },
+                              { "key": "param.damage", "type": "Int", "value": 20 }
+                            ]
+                          }
+                        ],
+                        "items": [
+                          { "kind": "EffectSignal", "tick": 0, "template": "Effect.Tests.Instant", "callerParamsIdx": 0 }
+                        ]
+                      }
+                    }
+                    """));
+
+            That(ex!.Message, Does.Contain("exec.callerParams[0].entries[1].key"));
+            That(ex.Message, Does.Contain("duplicates"));
+            That(ex.Message, Does.Contain("exec.callerParams[0].entries[0].key"));
+        }
+
+        [Test]
         public void CompileAbility_CallerParamsTypedEffectTemplate_IsResolved()
         {
             EffectParamKeys.Initialize();
@@ -356,6 +387,91 @@ namespace Ludots.Tests.GAS
             That(callerParams.TryGetRawValue(EffectParamKeys.DurationTicks, out ConfigParamType durationType, out int durationValue), Is.True);
             That(durationType, Is.EqualTo(ConfigParamType.Int));
             That(durationValue, Is.EqualTo(45));
+        }
+
+        [Test]
+        public void CompileAbility_EffectClipRequiresDurationTicks()
+        {
+            EffectTemplateIdRegistry.Register("Effect.Tests.Clip");
+
+            var ex = Throws<InvalidOperationException>(() =>
+                Compile(
+                    """
+                    {
+                      "exec": {
+                        "clockId": "Step",
+                        "items": [
+                          { "kind": "EffectClip", "tick": 0, "template": "Effect.Tests.Clip", "clockId": "Step" }
+                        ]
+                      }
+                    }
+                    """));
+
+            That(ex!.Message, Does.Contain("exec.items[0].durationTicks"));
+            That(ex.Message, Does.Contain("EffectClip"));
+        }
+
+        [Test]
+        public void CompileAbility_EffectClipRejectsDuplicateDurationCallerParam()
+        {
+            EffectParamKeys.Initialize();
+            EffectTemplateIdRegistry.Register("Effect.Tests.Clip");
+
+            var ex = Throws<InvalidOperationException>(() =>
+                Compile(
+                    """
+                    {
+                      "exec": {
+                        "clockId": "Step",
+                        "callerParams": [
+                          {
+                            "entries": [
+                              { "key": "_ep.durationTicks", "type": "Int", "value": 5 }
+                            ]
+                          }
+                        ],
+                        "items": [
+                          { "kind": "EffectClip", "tick": 0, "template": "Effect.Tests.Clip", "durationTicks": 3, "clockId": "Step", "callerParamsIdx": 0 }
+                        ]
+                      }
+                    }
+                    """));
+
+            That(ex!.Message, Does.Contain("exec.items[0].durationTicks"));
+            That(ex.Message, Does.Contain("exec.callerParams[0]"));
+            That(ex.Message, Does.Contain("_ep.durationTicks"));
+        }
+
+        [Test]
+        public void CompileAbility_EffectClipRejectsCallerParamsWithoutRoomForDuration()
+        {
+            EffectTemplateIdRegistry.Register("Effect.Tests.Clip");
+            string entries = string.Join(
+                ",",
+                Enumerable.Range(0, EffectConfigParams.MAX_PARAMS)
+                    .Select(i => $$"""{"key":"param.{{i}}","type":"Int","value":{{i}}}"""));
+
+            var ex = Throws<InvalidOperationException>(() =>
+                Compile(
+                    $$"""
+                    {
+                      "exec": {
+                        "clockId": "Step",
+                        "callerParams": [
+                          {
+                            "entries": [{{entries}}]
+                          }
+                        ],
+                        "items": [
+                          { "kind": "EffectClip", "tick": 0, "template": "Effect.Tests.Clip", "durationTicks": 3, "clockId": "Step", "callerParamsIdx": 0 }
+                        ]
+                      }
+                    }
+                    """));
+
+            That(ex!.Message, Does.Contain("exec.items[0].durationTicks"));
+            That(ex.Message, Does.Contain("exec.callerParams[0]"));
+            That(ex.Message, Does.Contain("capacity"));
         }
 
         [Test]

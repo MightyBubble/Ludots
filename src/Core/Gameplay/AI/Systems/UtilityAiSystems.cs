@@ -191,6 +191,7 @@ namespace Ludots.Core.Gameplay.AI.Systems
                             in best,
                             _step,
                             _orders,
+                            _terminalResults,
                             out int orderTypeId,
                             out int orderId,
                             out var taskKind,
@@ -229,12 +230,18 @@ namespace Ludots.Core.Gameplay.AI.Systems
                     return false;
                 }
 
-                if (_terminalResults.TryGet(orderId, out OrderTerminalOutcome terminal))
+                if (_terminalResults.TryConsume(orderId, out OrderTerminalOutcome terminal))
                 {
                     state.CurrentTaskStatus = terminal.State == Ludots.Core.Gameplay.GAS.Components.OrderTerminalState.Completed
                         ? (byte)UtilityAiTaskRunStatus.Complete
                         : (byte)UtilityAiTaskRunStatus.Blocked;
                     state.LastSubmittedOrderId = 0;
+                    if (!_terminalResults.ReleaseConsumed(orderId))
+                    {
+                        throw new InvalidOperationException(
+                            $"ORDER.TERMINAL.ERR.ReleaseConsumedFailed: orderId={orderId}.");
+                    }
+
                     WriteTaskStatusTrace(entity, state.CurrentTaskStatus);
                     return true;
                 }

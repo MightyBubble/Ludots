@@ -3,6 +3,7 @@ using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.AI.Components;
+using Ludots.Core.Gameplay.AI.Planning;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
@@ -98,7 +99,8 @@ namespace Ludots.Core.Gameplay.AI.Utility
                         if (candidateCount >= profile.MaxCandidates)
                         {
                             rejectReason = UtilityAiFilterRejectReason.CandidateBudgetExhausted;
-                            return found;
+                            best = default;
+                            return false;
                         }
 
                         candidateCount++;
@@ -113,7 +115,8 @@ namespace Ludots.Core.Gameplay.AI.Utility
                                 out int priorityBucket,
                                 out rejectReason))
                         {
-                            return found;
+                            best = default;
+                            return false;
                         }
 
                         if (!TryEvaluateDecision(
@@ -126,7 +129,8 @@ namespace Ludots.Core.Gameplay.AI.Utility
                                 out float score,
                                 out rejectReason))
                         {
-                            return found;
+                            best = default;
+                            return false;
                         }
 
                         if (decisionId == state.CurrentDecisionId && target.Equals(state.CurrentTarget))
@@ -169,6 +173,7 @@ namespace Ludots.Core.Gameplay.AI.Utility
             in UtilityAiCandidate candidate,
             int currentStep,
             OrderQueue orders,
+            OrderTerminalResultBuffer terminalResults,
             out int submittedOrderTypeId,
             out int submittedOrderId,
             out UtilityAiTaskKind taskKind,
@@ -204,7 +209,7 @@ namespace Ludots.Core.Gameplay.AI.Utility
                     case UtilityAiTaskKind.SubmitOrder:
                     default:
                         requiredAny = true;
-                        if (!TrySubmitOrderTask(in task, actor, in candidate, currentStep, orders, out submittedOrderTypeId, out submittedOrderId))
+                        if (!TrySubmitOrderTask(in task, actor, in candidate, currentStep, orders, terminalResults, out submittedOrderTypeId, out submittedOrderId))
                         {
                             taskStatus = submittedAny ? UtilityAiTaskRunStatus.Running : UtilityAiTaskRunStatus.Blocked;
                             return submittedAny;
@@ -232,6 +237,7 @@ namespace Ludots.Core.Gameplay.AI.Utility
             in UtilityAiCandidate candidate,
             int currentStep,
             OrderQueue orders,
+            OrderTerminalResultBuffer terminalResults,
             out int submittedOrderTypeId,
             out int submittedOrderId)
         {
@@ -242,41 +248,101 @@ namespace Ludots.Core.Gameplay.AI.Utility
                 return false;
             }
 
-            var order = OrderBuilder.Create(
-                task.OrderTypeId,
-                task.PlayerId,
-                actor,
-                candidate.Target,
-                Entity.Null,
-                (OrderSubmitMode)(byte)task.SubmitMode,
-                currentStep);
-
-            if (task.AbilitySlotIndex >= 0)
+            Order order;
+            OrderSubmitMode submitMode = (OrderSubmitMode)(byte)task.SubmitMode;
+            switch (task.PayloadKind)
             {
-                OrderBuilder.SetAbilitySlot(ref order, task.AbilitySlotIndex);
+                case AiOrderPayloadKind.CastAbility:
+                    if (task.AbilitySlotIndex < 0)
+                    {
+                        throw new InvalidOperationException(
+                            $"Utility AI SubmitOrder requires AbilitySlotIndex for typed CastAbility orderTypeId={task.OrderTypeId}.");
+                    }
+
+                    order = OrderBuilder.CreateCastAbility(
+                        task.OrderTypeId,
+                        task.PlayerId,
+                        actor,
+                        candidate.Target,
+                        Entity.Null,
+                        task.AbilitySlotIndex,
+                        submitMode,
+                        currentStep);
+
+                    if (_world.TryGet(candidate.Target, out WorldPositionCm castTargetPosition))
+                    {
+                        var pos = castTargetPosition.Value.ToVector2();
+                        OrderBuilder.SetSingleWorldCm(ref order, new Vector3(pos.X, 0f, pos.Y));
+                    }
+                    break;
+
+                case AiOrderPayloadKind.TargetEntity:
+                    order = OrderBuilder.CreateTargetEntity(
+                        task.OrderTypeId,
+                        task.PlayerId,
+                        actor,
+                        candidate.Target,
+                        submitMode,
+                        currentStep);
+                    break;
+
+                case AiOrderPayloadKind.MoveToWorldCm:
+                    if (!_world.TryGet(candidate.Target, out WorldPositionCm moveTargetPosition))
+                    {
+                        throw new InvalidOperationException(
+                            $"ORDER.BUILDER.ERR.MoveDestinationRequired: Utility AI target has no WorldPositionCm for orderTypeId={task.OrderTypeId}.");
+                    }
+
+                    var movePos = moveTargetPosition.Value.ToVector2();
+                    order = OrderBuilder.CreateMoveToWorldCm(
+                        task.OrderTypeId,
+                        task.PlayerId,
+                        actor,
+                        new Vector3(movePos.X, 0f, movePos.Y),
+                        submitMode,
+                        currentStep);
+                    break;
+
+                case AiOrderPayloadKind.Stop:
+                    order = OrderBuilder.CreateStop(
+                        task.OrderTypeId,
+                        task.PlayerId,
+                        actor,
+                        submitMode,
+                        currentStep);
+                    break;
+
+                default:
+                    throw new InvalidOperationException(
+                        $"ORDER.BUILDER.ERR.UnsupportedAiOrderPayloadKind: kind={task.PayloadKind}, orderTypeId={task.OrderTypeId}.");
             }
-            else if (task.IntArg0 >= 0)
+
+            orders.EnsureOrderId(ref order);
+            terminalResults.Retain(order.OrderId);
+            bool retained = true;
+            try
             {
-                OrderBuilder.SetIntArg(ref order, OrderIntArgSlot.I0, task.IntArg0);
+                OrderSubmitResult result = orders.SubmitAssigned(ref order);
+                if (!OrderSubmitResultSemantics.IsAccepted(result))
+                {
+                    terminalResults.Release(order.OrderId);
+                    retained = false;
+                    return false;
+                }
+
+                submittedOrderTypeId = task.OrderTypeId;
+                submittedOrderId = order.OrderId;
+                return true;
             }
-
-            OrderBuilder.SetIntArg(ref order, OrderIntArgSlot.I1, task.IntArg1);
-
-            if (_world.TryGet(candidate.Target, out WorldPositionCm targetPosition))
+            catch
             {
-                var pos = targetPosition.Value.ToVector2();
-                OrderBuilder.SetSingleWorldCm(ref order, new Vector3(pos.X, 0f, pos.Y));
-            }
+                if (retained)
+                {
+                    terminalResults.Release(order.OrderId);
+                }
 
-            OrderSubmitResult result = orders.SubmitAssigned(ref order);
-            if (!OrderSubmitResultSemantics.IsAccepted(result))
-            {
-                return false;
+                throw;
             }
-
-            submittedOrderTypeId = task.OrderTypeId;
-            submittedOrderId = order.OrderId;
-            return true;
         }
 
         private int AcquireTargets(

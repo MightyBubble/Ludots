@@ -4,6 +4,7 @@ using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.AI.Components;
+using Ludots.Core.Gameplay.AI.Planning;
 using Ludots.Core.Gameplay.AI.Systems;
 using Ludots.Core.Gameplay.AI.Utility;
 using Ludots.Core.Gameplay.Components;
@@ -96,7 +97,7 @@ namespace Ludots.Tests.GAS
                     new UtilityAiCurveDefinition(UtilityAiCurveKind.Linear, 1f),
                     new UtilityAiCurveDefinition(UtilityAiCurveKind.Linear, 1f)
                 },
-                new[] { new UtilityAiTaskDefinition(UtilityAiTaskKind.SubmitOrder, 102, 0, (int)OrderSubmitMode.Immediate, 0, -1, 0) },
+                new[] { new UtilityAiTaskDefinition(UtilityAiTaskKind.SubmitOrder, AiOrderPayloadKind.CastAbility, 102, 0, (int)OrderSubmitMode.Immediate, 0) },
                 Array.Empty<UtilityAiStanceDefinition>(),
                 Array.Empty<UtilityAiActuatorDefinition>());
             fixture.AddActor();
@@ -200,7 +201,41 @@ namespace Ludots.Tests.GAS
             var trace = fixture.World.Get<UtilityAiDecisionTrace>(fixture.Actor);
             Assert.That(trace.CandidateCount, Is.EqualTo(1));
             Assert.That(trace.LastFilterRejectReason, Is.EqualTo((int)UtilityAiFilterRejectReason.CandidateBudgetExhausted));
+            Assert.That(fixture.Orders.Count, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void UtilityAiDecisionSystem_TooManyCandidates_WaitsForCompleteEvaluationBeforeActing()
+        {
+            using var fixture = RuntimeFixture.Create();
+            var nearest = fixture.CreateHostile(100, 0);
+            _ = fixture.CreateHostile(200, 0);
+            _ = fixture.CreateHostile(300, 0);
+            var exhaustedRuntime = fixture.CreateSingleDecisionRuntime(
+                orderTypeId: 102,
+                inputKind: UtilityAiInputKind.Constant,
+                maxResults: 3,
+                maxCandidates: 1);
+            fixture.AddActor();
+
+            fixture.RunDecision(exhaustedRuntime);
+
+            Assert.That(fixture.Orders.Count, Is.EqualTo(0));
+            var exhaustedTrace = fixture.World.Get<UtilityAiDecisionTrace>(fixture.Actor);
+            Assert.That(exhaustedTrace.LastFilterRejectReason, Is.EqualTo((int)UtilityAiFilterRejectReason.CandidateBudgetExhausted));
+
+            fixture.Clock.Advance(ClockDomainId.Step, 1);
+            var completeRuntime = fixture.CreateSingleDecisionRuntime(
+                orderTypeId: 102,
+                inputKind: UtilityAiInputKind.Constant,
+                maxResults: 3,
+                maxCandidates: 3);
+
+            fixture.RunDecision(completeRuntime);
+
             Assert.That(fixture.Orders.Count, Is.EqualTo(1));
+            Assert.That(fixture.Orders.TryDequeue(out var order), Is.True);
+            Assert.That(order.Target, Is.EqualTo(nearest));
         }
 
         [Test]
@@ -250,6 +285,85 @@ namespace Ludots.Tests.GAS
             Assert.That(buffer.HasActive, Is.True);
             Assert.That(buffer.ActiveOrder.Order.OrderTypeId, Is.EqualTo(102));
             Assert.That(buffer.ActiveOrder.Order.Target, Is.EqualTo(target));
+        }
+
+        [Test]
+        public void UtilityAiDecisionSystem_ReadsOrderTerminalOutcomeAfterSeveralFramesAndReleasesLedgerSlot()
+        {
+            using var fixture = RuntimeFixture.Create();
+            _ = fixture.CreateHostile(300, 0);
+            var runtime = fixture.CreateSingleDecisionRuntime(orderTypeId: 102);
+            var actor = fixture.AddActor();
+            var orderTypes = fixture.CreateOrderTypes(orderTypeId: 102);
+            var orderBuffer = new OrderBufferSystem(
+                fixture.World,
+                fixture.Clock,
+                orderTypes,
+                new OrderRuleRegistry(),
+                fixture.AdmissionResults,
+                fixture.Orders,
+                stepRateHz: 30);
+
+            fixture.AdmissionResults.BeginLogicStep();
+            fixture.RunDecision(runtime);
+            int orderId = fixture.World.Get<UtilityAiState>(actor).LastSubmittedOrderId;
+            Assert.That(orderId, Is.GreaterThan(0));
+            orderBuffer.Update(1f / 60f);
+
+            Assert.That(OrderSubmitter.NotifyOrderComplete(fixture.World, actor, orderTypes), Is.True);
+            for (int i = 0; i < 3; i++)
+            {
+                fixture.TerminalResults.Clear();
+                fixture.Clock.Advance(ClockDomainId.Step, 1);
+            }
+
+            fixture.RunDecision(runtime);
+
+            var state = fixture.World.Get<UtilityAiState>(actor);
+            var trace = fixture.World.Get<UtilityAiDecisionTrace>(actor);
+            Assert.That(state.LastSubmittedOrderId, Is.EqualTo(0));
+            Assert.That(state.CurrentTaskStatus, Is.EqualTo((byte)UtilityAiTaskRunStatus.Complete));
+            Assert.That(trace.LastTaskStatus, Is.EqualTo((int)UtilityAiTaskRunStatus.Complete));
+            Assert.That(fixture.TerminalResults.LedgerCount, Is.EqualTo(0));
+            Assert.That(fixture.Orders.Count, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void UtilityAiDecisionSystem_MultipleAgentsWaitOnIndependentTerminalOutcomesWithoutLeakingLedgerSlots()
+        {
+            using var fixture = RuntimeFixture.Create(orderCapacity: 8);
+            _ = fixture.CreateHostile(300, 0);
+            var runtime = fixture.CreateSingleDecisionRuntime(orderTypeId: 102);
+            var first = fixture.AddActor();
+            var second = fixture.AddActor();
+            var orderTypes = fixture.CreateOrderTypes(orderTypeId: 102);
+            var orderBuffer = new OrderBufferSystem(
+                fixture.World,
+                fixture.Clock,
+                orderTypes,
+                new OrderRuleRegistry(),
+                fixture.AdmissionResults,
+                fixture.Orders,
+                stepRateHz: 30);
+
+            fixture.AdmissionResults.BeginLogicStep();
+            fixture.RunDecision(runtime);
+            Assert.That(fixture.World.Get<UtilityAiState>(first).LastSubmittedOrderId, Is.GreaterThan(0));
+            Assert.That(fixture.World.Get<UtilityAiState>(second).LastSubmittedOrderId, Is.GreaterThan(0));
+            orderBuffer.Update(1f / 60f);
+
+            Assert.That(OrderSubmitter.NotifyOrderComplete(fixture.World, first, orderTypes), Is.True);
+            Assert.That(OrderSubmitter.NotifyOrderComplete(fixture.World, second, orderTypes), Is.True);
+            Assert.That(fixture.TerminalResults.LedgerCount, Is.EqualTo(2));
+            fixture.TerminalResults.Clear();
+            fixture.Clock.Advance(ClockDomainId.Step, 1);
+
+            fixture.RunDecision(runtime);
+
+            Assert.That(fixture.World.Get<UtilityAiState>(first).CurrentTaskStatus, Is.EqualTo((byte)UtilityAiTaskRunStatus.Complete));
+            Assert.That(fixture.World.Get<UtilityAiState>(second).CurrentTaskStatus, Is.EqualTo((byte)UtilityAiTaskRunStatus.Complete));
+            Assert.That(fixture.TerminalResults.LedgerCount, Is.EqualTo(0));
+            Assert.That(fixture.Orders.Count, Is.EqualTo(0));
         }
 
         [Test]
@@ -461,7 +575,7 @@ namespace Ludots.Tests.GAS
                     new[] { new UtilityAiInputDefinition(inputKind, inputKind == UtilityAiInputKind.Constant ? 1 : 0, 0) },
                     new[] { new UtilityAiNormalizationDefinition(inputKind == UtilityAiInputKind.Constant ? UtilityAiNormalizationKind.Identity : UtilityAiNormalizationKind.RangeInverse, 0f, 250000f) },
                     new[] { new UtilityAiCurveDefinition(UtilityAiCurveKind.Linear, 1f) },
-                    new[] { new UtilityAiTaskDefinition(UtilityAiTaskKind.SubmitOrder, orderTypeId, abilitySlotIndex, (int)OrderSubmitMode.Immediate, 0, -1, 0) },
+                    new[] { new UtilityAiTaskDefinition(UtilityAiTaskKind.SubmitOrder, AiOrderPayloadKind.CastAbility, orderTypeId, abilitySlotIndex, (int)OrderSubmitMode.Immediate, 0) },
                     Array.Empty<UtilityAiStanceDefinition>(),
                     Array.Empty<UtilityAiActuatorDefinition>());
             }
@@ -492,8 +606,8 @@ namespace Ludots.Tests.GAS
                     new[] { new UtilityAiCurveDefinition(UtilityAiCurveKind.Linear, 1f) },
                     new[]
                     {
-                        new UtilityAiTaskDefinition(UtilityAiTaskKind.SubmitOrder, 201, 0, (int)OrderSubmitMode.Immediate, 0, -1, 0),
-                        new UtilityAiTaskDefinition(UtilityAiTaskKind.SubmitOrder, 202, 0, (int)OrderSubmitMode.Immediate, 0, -1, 0)
+                        new UtilityAiTaskDefinition(UtilityAiTaskKind.SubmitOrder, AiOrderPayloadKind.CastAbility, 201, 0, (int)OrderSubmitMode.Immediate, 0),
+                        new UtilityAiTaskDefinition(UtilityAiTaskKind.SubmitOrder, AiOrderPayloadKind.CastAbility, 202, 0, (int)OrderSubmitMode.Immediate, 0)
                     },
                     Array.Empty<UtilityAiStanceDefinition>(),
                     Array.Empty<UtilityAiActuatorDefinition>());
@@ -526,7 +640,7 @@ namespace Ludots.Tests.GAS
                     new[] { new UtilityAiInputDefinition(UtilityAiInputKind.GraphScore, 0, graphId) },
                     new[] { new UtilityAiNormalizationDefinition(UtilityAiNormalizationKind.Identity, 0f, 1f) },
                     new[] { new UtilityAiCurveDefinition(UtilityAiCurveKind.Linear, 1f) },
-                    new[] { new UtilityAiTaskDefinition(UtilityAiTaskKind.SubmitOrder, orderTypeId, 0, (int)OrderSubmitMode.Immediate, 0, -1, 0) },
+                    new[] { new UtilityAiTaskDefinition(UtilityAiTaskKind.SubmitOrder, AiOrderPayloadKind.CastAbility, orderTypeId, 0, (int)OrderSubmitMode.Immediate, 0) },
                     Array.Empty<UtilityAiStanceDefinition>(),
                     Array.Empty<UtilityAiActuatorDefinition>());
             }
