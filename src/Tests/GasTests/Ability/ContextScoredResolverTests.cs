@@ -94,10 +94,10 @@ namespace Ludots.Tests.GAS
             var resolver = new ContextScoredOrderResolver(
                 world,
                 contextGroups,
-                graphPrograms,
+                CreateScorer(world, graphPrograms),
                 new StubSpatialQueryService(targetNormal, targetDowned),
-                new StubGraphApi(world),
-                AllowAllCandidates);
+                AllowAllCandidates,
+                graphInstructionBudget: 64);
 
             var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
             var mapping = new InputOrderMappingSystem(input, new InputOrderMappingConfig
@@ -187,10 +187,10 @@ namespace Ludots.Tests.GAS
             var resolver = new ContextScoredOrderResolver(
                 world,
                 contextGroups,
-                new GraphProgramRegistry(),
+                CreateScorer(world, new GraphProgramRegistry()),
                 new StubSpatialQueryService(target),
-                new StubGraphApi(world),
-                AllowAllCandidates);
+                AllowAllCandidates,
+                graphInstructionBudget: 64);
 
             bool resolved = resolver.TryResolve(
                 actor,
@@ -264,10 +264,10 @@ namespace Ludots.Tests.GAS
             var resolver = new ContextScoredOrderResolver(
                 world,
                 contextGroups,
-                new GraphProgramRegistry(),
+                CreateScorer(world, new GraphProgramRegistry()),
                 new StubSpatialQueryService(higherEntityIdTarget, lowerEntityIdTarget),
-                new StubGraphApi(world),
-                AllowAllCandidates);
+                AllowAllCandidates,
+                graphInstructionBudget: 64);
 
             bool resolved = resolver.TryResolve(
                 actor,
@@ -330,14 +330,14 @@ namespace Ludots.Tests.GAS
             var resolver = new ContextScoredOrderResolver(
                 world,
                 contextGroups,
-                new GraphProgramRegistry(),
+                CreateScorer(world, new GraphProgramRegistry()),
                 new StubSpatialQueryService(deniedTarget, allowedTarget),
-                new StubGraphApi(world),
                 candidateGate: (viewer, candidate) =>
                 {
                     Assert.That(viewer, Is.EqualTo(actor), "the resolver gates with the acting entity as viewer.");
                     return candidate != deniedTarget;
-                });
+                },
+                graphInstructionBudget: 64);
 
             bool resolved = resolver.TryResolve(
                 actor,
@@ -348,6 +348,89 @@ namespace Ludots.Tests.GAS
             Assert.That(resolved, Is.True);
             Assert.That(resolution.Target, Is.EqualTo(allowedTarget),
                 "the gate-denied candidate must never reach scoring; only the allowed one is evaluated.");
+        }
+
+        [Test]
+        public void ContextScoredResolver_GraphBudgetExhaustionDoesNotReturnPartialWinner()
+        {
+            using var world = World.Create();
+
+            const int rootAbilityId = 1400;
+            const int fallbackAbilityId = 1401;
+            const int graphAbilityId = 1402;
+            const int scoreGraphId = 240;
+
+            var actor = world.Create();
+            var abilities = new AbilityStateBuffer();
+            abilities.AddAbility(rootAbilityId);
+            abilities.AddAbility(fallbackAbilityId);
+            abilities.AddAbility(graphAbilityId);
+            world.Add(actor, abilities);
+            world.Add(actor, WorldPositionCm.FromCm(0, 0));
+            world.Add(actor, new FacingDirection { AngleRad = 0f });
+
+            var target = world.Create();
+            world.Add(target, WorldPositionCm.FromCm(100, 0));
+            world.Add(target, new GameplayTagContainer());
+
+            var contextGroups = new ContextGroupRegistry();
+            contextGroups.Register(
+                groupId: 1,
+                rootAbilityId: rootAbilityId,
+                new ContextGroupDefinition(
+                    searchRadiusCm: 300,
+                    new[]
+                    {
+                        new ContextGroupCandidate(
+                            abilityId: fallbackAbilityId,
+                            preconditionGraphId: 0,
+                            scoreGraphId: 0,
+                            basePriority: 10f,
+                            maxDistanceCm: 300,
+                            distanceWeight: 0f,
+                            maxAngleDeg: 180,
+                            angleWeight: 0f,
+                            hoveredBiasScore: 0f,
+                            requiresTarget: true),
+                        new ContextGroupCandidate(
+                            abilityId: graphAbilityId,
+                            preconditionGraphId: 0,
+                            scoreGraphId: scoreGraphId,
+                            basePriority: 0f,
+                            maxDistanceCm: 300,
+                            distanceWeight: 0f,
+                            maxAngleDeg: 180,
+                            angleWeight: 0f,
+                            hoveredBiasScore: 0f,
+                            requiresTarget: true),
+                    }));
+
+            var graphPrograms = new GraphProgramRegistry();
+            graphPrograms.Register(scoreGraphId, new[]
+            {
+                new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = 1f },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = 100f },
+            }, GraphKind.Score);
+            IReadOnlyGraphScorer scorer = CompiledGraphScoreRuntime.Compile(world, new StubGraphApi(world), graphPrograms);
+
+            var resolver = new ContextScoredOrderResolver(
+                world,
+                contextGroups,
+                scorer,
+                new StubSpatialQueryService(target),
+                AllowAllCandidates,
+                graphInstructionBudget: 1);
+
+            bool resolved = resolver.TryResolve(
+                actor,
+                new InputOrderMapping { ArgsTemplate = new OrderArgsTemplate { I0 = 0 } },
+                default,
+                out var resolution,
+                out var failure);
+
+            Assert.That(resolved, Is.False);
+            Assert.That(resolution.SlotIndex, Is.EqualTo(0));
+            Assert.That(failure, Is.EqualTo(GraphScoreFailureReason.BudgetExhausted));
         }
 
         private static InputConfigRoot CreateInputConfig()
@@ -377,6 +460,9 @@ namespace Ludots.Tests.GAS
         {
             return true;
         }
+
+        private static IReadOnlyGraphScorer CreateScorer(World world, GraphProgramRegistry programs)
+            => CompiledGraphScoreRuntime.Compile(world, new StubGraphApi(world), programs);
 
         private sealed class NullInputBackend : IInputBackend
         {

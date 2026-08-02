@@ -6,6 +6,7 @@ using Ludots.Core.Gameplay.AI.Components;
 using Ludots.Core.Gameplay.AI.Utility;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.GraphRuntime;
 using Ludots.Core.Spatial;
 
 namespace Ludots.Core.Gameplay.AI.Systems
@@ -89,15 +90,21 @@ namespace Ludots.Core.Gameplay.AI.Systems
             UtilityAiCompiledRuntime runtime,
             ISpatialQueryService spatialQueries,
             Ludots.Core.Gameplay.GAS.AbilityDefinitionRegistry? abilities,
-            Ludots.Core.GraphRuntime.GraphProgramRegistry? graphs,
-            Ludots.Core.NodeLibraries.GASGraph.IGraphRuntimeApi? graphApi,
+            IReadOnlyGraphScorer? graphScorer,
+            int graphScoreInstructionBudgetPerThink,
             OrderQueue orders)
             : base(world)
         {
             _clock = clock;
             _runtime = runtime;
             _orders = orders;
-            _evaluator = new UtilityAiRuntimeEvaluator(world, spatialQueries, abilities, graphs, graphApi, ResolveTargetScratchCapacity(in runtime));
+            _evaluator = new UtilityAiRuntimeEvaluator(
+                world,
+                spatialQueries,
+                abilities,
+                graphScorer,
+                graphScoreInstructionBudgetPerThink,
+                ResolveTargetScratchCapacity(in runtime));
         }
 
         public override void Update(in float dt)

@@ -15,6 +15,20 @@ namespace Ludots.Core.GraphRuntime
         public GraphKind Kind { get; }
     }
 
+    public readonly struct GraphProgramSnapshot
+    {
+        public GraphProgramSnapshot(int graphId, GraphInstruction[] program, GraphKind kind)
+        {
+            GraphId = graphId;
+            Program = program ?? Array.Empty<GraphInstruction>();
+            Kind = kind;
+        }
+
+        public int GraphId { get; }
+        public GraphInstruction[] Program { get; }
+        public GraphKind Kind { get; }
+    }
+
     public sealed class GraphProgramRegistry
     {
         private readonly Dictionary<int, GraphProgramRegistration> _programs = new();
@@ -80,6 +94,19 @@ namespace Ludots.Core.GraphRuntime
             }
 
             return entry.Kind;
+        }
+
+        public GraphProgramSnapshot[] CreateSnapshot()
+        {
+            var snapshot = new GraphProgramSnapshot[_programs.Count];
+            int index = 0;
+            foreach (var pair in _programs)
+            {
+                snapshot[index++] = new GraphProgramSnapshot(pair.Key, pair.Value.Program, pair.Value.Kind);
+            }
+
+            Array.Sort(snapshot, static (a, b) => a.GraphId.CompareTo(b.GraphId));
+            return snapshot;
         }
     }
 }
