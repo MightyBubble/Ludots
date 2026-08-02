@@ -130,14 +130,14 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void CompositeOrderPlanner_AutoTargetAbility_BypassesMoveThenCastPlanning()
+        public void CompositeOrderPlanner_TargetedAbility_UsesMoveThenCastPlanningWithoutAbilityInputBypass()
         {
             using var world = World.Create();
             var orderQueue = CreateOrderQueue();
             var planner = new CompositeOrderPlanner(
                 world,
                 orderQueue,
-                CreateAbilityRegistry(rangeCm: 500f, autoTargetPolicy: AutoTargetPolicy.NearestEnemyInRange),
+                CreateAbilityRegistry(rangeCm: 500f),
                 CastAbilityOrderTypeId,
                 MoveToOrderTypeId);
 
@@ -147,15 +147,16 @@ namespace Ludots.Tests.GAS
             Entity actor = world.Create(
                 WorldPositionCm.FromCm(0, 0),
                 abilities,
-                OrderBuffer.CreateEmpty());
+                OrderBuffer.CreateEmpty(),
+                new OrderContinuationBuffer());
 
             var castOrder = CreateCastOrder(actor, targetXcm: 900, submitMode: OrderSubmitMode.Immediate);
 
             Assert.That(planner.Submit(in castOrder), Is.EqualTo(OrderSubmitResult.Queued));
-            Assert.That(orderQueue.TryDequeue(out var submittedOrder), Is.True);
-            Assert.That(submittedOrder.OrderTypeId, Is.EqualTo(CastAbilityOrderTypeId));
-            Assert.That(submittedOrder.SubmitMode, Is.EqualTo(OrderSubmitMode.Immediate));
-            Assert.That(world.Has<OrderContinuationBuffer>(actor), Is.False);
+            Assert.That(orderQueue.TryDequeue(out var moveOrder), Is.True);
+            Assert.That(moveOrder.OrderTypeId, Is.EqualTo(MoveToOrderTypeId));
+            Assert.That(moveOrder.SubmitMode, Is.EqualTo(OrderSubmitMode.Immediate));
+            Assert.That(world.Has<OrderContinuationBuffer>(actor), Is.True);
         }
 
         [Test]
@@ -806,9 +807,7 @@ namespace Ludots.Tests.GAS
             return new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
         }
 
-        private static AbilityDefinitionRegistry CreateAbilityRegistry(
-            float rangeCm,
-            AutoTargetPolicy autoTargetPolicy = AutoTargetPolicy.None)
+        private static AbilityDefinitionRegistry CreateAbilityRegistry(float rangeCm)
         {
             var definition = new AbilityDefinition
             {
@@ -818,16 +817,6 @@ namespace Ludots.Tests.GAS
                     CastRangeCm = rangeCm
                 }
             };
-
-            if (autoTargetPolicy != AutoTargetPolicy.None)
-            {
-                definition.HasInputBindingOverride = true;
-                definition.InputBindingOverride = new AbilityInputBindingOverride
-                {
-                    HasAutoTargetPolicy = true,
-                    AutoTargetPolicy = autoTargetPolicy
-                };
-            }
 
             var registry = new AbilityDefinitionRegistry();
             registry.Register(TestAbilityId, in definition);

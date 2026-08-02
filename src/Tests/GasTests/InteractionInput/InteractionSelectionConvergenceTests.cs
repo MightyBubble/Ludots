@@ -314,11 +314,15 @@ namespace Ludots.Tests.GAS
             var cfg = new InputOrderMappingConfig
             {
                 InteractionMode = InteractionModeType.TargetFirst,
-                GroupMoveTargetLayout = new GroupMoveTargetLayoutSettings
+                TargetLayoutProfiles = new List<TargetLayoutProfileDefinition>
                 {
-                    Mode = GroupMoveTargetLayoutMode.Grid,
-                    SpacingCm = 120,
-                    OrderTypeKeys = new List<string> { "moveTo" },
+                    new()
+                    {
+                        Id = "layout.move.grid",
+                        Mode = TargetLayoutMode.Grid,
+                        SpacingCm = 120,
+                        OrderTypeKeys = new List<string> { "moveTo" },
+                    },
                 },
                 Mappings = new List<InputOrderMapping>
                 {
@@ -330,6 +334,7 @@ namespace Ludots.Tests.GAS
                         OrderTypeKey = "moveTo",
                         RequireTarget = true,
                         TargetType = OrderTargetType.Position,
+                        TargetLayoutProfileId = "layout.move.grid",
                         IsSkillMapping = false,
                     },
                 },

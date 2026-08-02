@@ -866,7 +866,7 @@ namespace Ludots.Core.Input.Orders
         {
             if (!_world.IsAlive(actor) ||
                 !_world.Has<AbilityStateBuffer>(actor) ||
-                mapping.ArgsTemplate.I0 is null)
+                !mapping.TryResolveAbilitySlot(out int slotIndex))
             {
                 return 0;
             }
@@ -874,7 +874,7 @@ namespace Ludots.Core.Input.Orders
             return AbilitySlotResolver.TryResolve(
                 _world,
                 actor,
-                mapping.ArgsTemplate.I0.Value,
+                slotIndex,
                 out AbilitySlotState slot)
                 ? slot.AbilityId
                 : 0;
@@ -1168,7 +1168,7 @@ namespace Ludots.Core.Input.Orders
             definition = default;
             if (!_world.IsAlive(actor) ||
                 !_world.Has<AbilityStateBuffer>(actor) ||
-                mapping.ArgsTemplate.I0 is null)
+                !mapping.TryResolveAbilitySlot(out int slotIndex))
             {
                 return false;
             }
@@ -1176,7 +1176,7 @@ namespace Ludots.Core.Input.Orders
             return AbilitySlotResolver.TryResolve(
                        _world,
                        actor,
-                       mapping.ArgsTemplate.I0.Value,
+                       slotIndex,
                        out AbilitySlotState slot) &&
                    slot.AbilityId > 0 &&
                    _abilities.TryGet(slot.AbilityId, out definition);

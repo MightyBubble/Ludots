@@ -35,6 +35,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             public JsonNode? SpatialBlackboardKey { get; set; }
             public JsonNode? EntityBlackboardKey { get; set; }
             public JsonNode? IntArg0BlackboardKey { get; set; }
+            public string? PayloadKind { get; set; }
             public JsonNode? ValidationGraph { get; set; }
             public bool? InstantComplete { get; set; }
             public PersistentStoredTargetConfigJson? PersistentStoredTarget { get; set; }
@@ -174,10 +175,23 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 SpatialBlackboardKey = ResolveBlackboardKey(json.SpatialBlackboardKey, key, path, "spatialBlackboardKey"),
                 EntityBlackboardKey = ResolveBlackboardKey(json.EntityBlackboardKey, key, path, "entityBlackboardKey"),
                 IntArg0BlackboardKey = ResolveBlackboardKey(json.IntArg0BlackboardKey, key, path, "intArg0BlackboardKey"),
+                PayloadKind = ParsePayloadKind(RequireString(json.PayloadKind, key, path, "payloadKind"), key, path),
                 ValidationGraphId = ResolveValidationGraph(json.ValidationGraph, key, path),
                 InstantComplete = RequireBool(json.InstantComplete, key, path, "instantComplete"),
                 PersistentStoredTargetKeys = ResolvePersistentStoredTarget(json.PersistentStoredTarget, json.InstantComplete, key, path),
             };
+        }
+
+        private static OrderPayloadKind ParsePayloadKind(string value, string key, string path)
+        {
+            if (string.Equals(value, "None", StringComparison.Ordinal)) return OrderPayloadKind.None;
+            if (string.Equals(value, "CastAbility", StringComparison.Ordinal)) return OrderPayloadKind.CastAbility;
+            if (string.Equals(value, "MoveToWorldCm", StringComparison.Ordinal)) return OrderPayloadKind.MoveToWorldCm;
+            if (string.Equals(value, "Stop", StringComparison.Ordinal)) return OrderPayloadKind.Stop;
+            if (string.Equals(value, "TargetEntity", StringComparison.Ordinal)) return OrderPayloadKind.TargetEntity;
+
+            throw new InvalidOperationException(
+                $"Order type '{key}' in '{path}' has unsupported payloadKind '{value}'.");
         }
 
         private static BlackboardStoredTargetKeys ResolvePersistentStoredTarget(

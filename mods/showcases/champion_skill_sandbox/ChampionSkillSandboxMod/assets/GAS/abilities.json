@@ -27,10 +27,6 @@
         "Cooldown.Champion.Ezreal.E"
       ]
     },
-    "input": {
-      "autoTargetPolicy": "NearestEnemyInRange",
-      "autoTargetRangeCm": 760
-    },
     "presentation": {
       "displayName": "Arcane Shift",
       "iconGlyph": "E",
@@ -1051,11 +1047,6 @@
       "blockedAny": [
         "Cooldown.Champion.SpellEngineer.R"
       ]
-    },
-    "input": {
-      "trigger": "Held",
-      "heldPolicy": "StartEnd",
-      "castModeOverride": "SmartCast"
     },
     "presentation": {
       "displayName": "Guided Laser",

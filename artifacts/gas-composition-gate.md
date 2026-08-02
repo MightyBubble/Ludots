@@ -57,6 +57,66 @@ A future showcase control variant should change Graph wiring or effect-template 
 
 ---
 
+## Issue #720 Input / Order / Ability SSOT - Pre-Merge Gate - 2026-08-03
+
+- **Task / Issue**: 收敛 InputOrderMapping 的 authored contract，排除 Performer #722；移除 authored `argsTemplate` / `isSkillMapping` / `actorOrderRouting` / `groupMoveTargetLayout` 入口，让玩家输入、CommandIntent 和 AI/Plan 路径都通过 typed Order 入口提交。
+- **Date**: 2026-08-03
+- **Agent / Author**: Codex
+- **Baseline**: `origin/main=74513182ab420dc950844d26882000ec54e030a7`, PR #721 head `279d9fe29bc81a54a50847a9de42ddb99a92a240`, merge-base `74513182ab420dc950844d26882000ec54e030a7`.
+- **Status**: PASS.
+
+### 1. Core judgment
+
+新变体主要交付物是（A/B/C/D）: A.
+
+结论: PASS.
+
+一句话理由: 本切片只收紧现有 Input -> Order -> AbilityExec/GAS 链路的配置所有权，复用 `OrderBuilder`、`CommandIntentProfile`、`AbilitySlotResolver`、`InputOrderMappingSystem` 和现有 GAS 执行链；没有新增 Effect preset、graph op、技能运行时或 Performer 入口。
+
+### 2. Layer assignment
+
+| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
+|-----------|-----------------|----------|
+| authored typed order payload | 1 | `InputOrderPayloadTemplate` 加载期校验后编译到底层 `OrderArgs` |
+| Command action routing | 1/2 | `CommandIntentProfile` actor/target rule 与 `byAbilityTag` slot 解析 |
+| group target layout authoring | 2 | `targetLayoutProfiles` + mapping `targetLayoutProfileId` 引用现有 Grid 展开 |
+| 技能瞄准预览 slot 解析 | 2 | `InputOrderMapping.TryResolveAbilitySlot` + `AbilitySlotResolver`，与实际释放同源 |
+| Utility / Plan order submission | 1 | 现有 `OrderBuilder` typed constructors |
+
+### 3. Reuse list
+
+- Handlers: existing AbilityExec timeline and GAS effect handling unchanged.
+- Queues / Systems: `InputOrderMappingSystem`, `OrderQueue`, `OrderBufferSystem`, `AbilityExecSystem`.
+- Resolvers / Registries: `OrderTypeRegistry`, `CommandIntentProfileRegistry`, `AbilitySlotResolver`, `TagRegistry`.
+- Existing presets / graphs: unchanged; #716/#718 GraphScore stays in PR #723.
+
+### 4. New Layer 0 ops (if any)
+
+N/A. No atomic gameplay op, effect preset, graph op, entity lifecycle op, or Performer command was added.
+
+### 5. Transaction boundary
+
+必须原子 rollback 的步骤: unchanged. This task only changes authoring validation and order construction before the existing order intake. GAS acceptance, effect application, and order terminal receipts remain owned by the existing transaction/result systems.
+
+### 6. Config SSOT
+
+行为配置落在: Input mapping typed payload, CommandIntent profile, target layout profile, ability catalog tags, and existing ability/effect assets.
+
+是否新增 JSON schema: YES - `targetLayoutProfiles`, `orderPayload`, and CommandIntent route fields are ownership-consolidation schema, not new gameplay behavior. They replace retired authored plumbing fields and fail fast on duplicates/illegal combinations.
+
+### 7. Red flag scan
+
+- [x] 未新增 profile inherit/placement enum
+- [x] 未新建与 AbilityExec/GAS/Order 平行的运行时管线
+- [x] 未把旧 `argsTemplate` 作为 authored JSON 兼容入口
+- [x] 未让 Command action 同时走 `actorOrderRouting` 和 CommandIntent
+- [x] 未触碰 Performer #722
+- [x] 未添加 fallback、静默忽略或热路径动态扩容
+
+### 8. Next variant test
+
+「下一个 Mod 变体」将修改: typed order payload fields, CommandIntent rules, target layout profile, ability catalog tags, or existing effect/graph data. It will not require a Core order arg slot contract, duplicate input/ability trigger ownership, actor routing DSL, or Performer schema change.
+
 ## Issues #714-#719 AI/GAS Order Boundary — Pre-Implementation Gate — 2026-07-31
 
 - **Task / Issue**: Implement issues #714-#719 after PR #713, keeping ability lockout as duration Effect data, keeping Utility AI out of GAS ability eligibility, and converging AI output on typed Order contracts and read-only scoring.

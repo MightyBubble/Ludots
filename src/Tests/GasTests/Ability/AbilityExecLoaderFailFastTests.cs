@@ -91,6 +91,31 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void CompileAbility_InputBlock_IsRejected()
+        {
+            var ex = Throws<InvalidOperationException>(() =>
+                Compile(
+                    """
+                    {
+                      "exec": {
+                        "clockId": "FixedFrame",
+                        "items": [
+                          { "kind": "End", "tick": 0 }
+                        ]
+                      },
+                      "input": {
+                        "trigger": "Held",
+                        "heldPolicy": "StartEnd",
+                        "castModeOverride": "SmartCast"
+                      }
+                    }
+                    """));
+
+            That(ex!.Message, Does.Contain("input"));
+            That(ex.Message, Does.Contain("Input/input_order_mappings.json"));
+        }
+
+        [Test]
         public void CompileAbility_MissingClockId_IsRejected()
         {
             var ex = Throws<InvalidOperationException>(() =>

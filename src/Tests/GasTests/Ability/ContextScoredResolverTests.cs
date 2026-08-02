@@ -204,6 +204,66 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void ContextScoredResolver_TypedCastPayload_ResolvesRootAbilitySlot()
+        {
+            using var world = World.Create();
+
+            const int rootAbilityId = 1150;
+            const int candidateAbilityId = 1151;
+
+            var actor = world.Create();
+            var abilities = new AbilityStateBuffer();
+            abilities.AddAbility(rootAbilityId);
+            abilities.AddAbility(candidateAbilityId);
+            world.Add(actor, abilities);
+            world.Add(actor, WorldPositionCm.FromCm(0, 0));
+            world.Add(actor, new FacingDirection { AngleRad = 0f });
+
+            var target = world.Create();
+            world.Add(target, WorldPositionCm.FromCm(100, 0));
+            world.Add(target, new GameplayTagContainer());
+
+            var contextGroups = new ContextGroupRegistry();
+            contextGroups.Register(
+                groupId: 1,
+                rootAbilityId: rootAbilityId,
+                new ContextGroupDefinition(
+                    searchRadiusCm: 300,
+                    new[]
+                    {
+                        new ContextGroupCandidate(
+                            abilityId: candidateAbilityId,
+                            preconditionGraphId: 0,
+                            scoreGraphId: 0,
+                            basePriority: 10f,
+                            maxDistanceCm: 300,
+                            distanceWeight: 0f,
+                            maxAngleDeg: 180,
+                            angleWeight: 0f,
+                            hoveredBiasScore: 0f,
+                            requiresTarget: true)
+                    }));
+
+            var resolver = new ContextScoredOrderResolver(
+                world,
+                contextGroups,
+                new GraphProgramRegistry(),
+                new StubSpatialQueryService(target),
+                new StubGraphApi(world),
+                AllowAllCandidates);
+
+            bool resolved = resolver.TryResolve(
+                actor,
+                new InputOrderMapping { OrderPayload = InputOrderPayloadTemplate.CastAbility(0) },
+                target,
+                out var resolution);
+
+            Assert.That(resolved, Is.True);
+            Assert.That(resolution.SlotIndex, Is.EqualTo(1));
+            Assert.That(resolution.Target, Is.EqualTo(target));
+        }
+
+        [Test]
         public void ContextScoredResolver_TiesBreakByEntityIdThenSlot()
         {
             using var world = World.Create();
@@ -554,13 +614,13 @@ namespace Ludots.Tests.GAS
             public Ludots.Core.Spatial.SpatialQueryResult QueryHexNeighbors(IntVector2 center, Span<Entity> buffer) => default;
             public int GetTeamId(Entity entity) => 0;
             public uint GetEntityLayerCategory(Entity entity) => 0;
-        public int GetRelationship(int teamA, int teamB) => 0;
-        public void ApplyEffectTemplate(Entity caster, Entity target, int templateId) { }
-        public void ApplyEffectTemplate(Entity caster, Entity target, int templateId, in EffectArgs args) { }
-        public void RemoveEffectTemplate(Entity target, int templateId) { }
-        public void ModifyAttributeAdd(Entity caster, Entity target, int attributeId, float delta) { }
-        public void ModifyAttributeSet(Entity caster, Entity target, int attributeId, float value) { }
-        public void SendEvent(Entity caster, Entity target, int eventTagId, float magnitude) { }
+            public int GetRelationship(int teamA, int teamB) => 0;
+            public void ApplyEffectTemplate(Entity caster, Entity target, int templateId) { }
+            public void ApplyEffectTemplate(Entity caster, Entity target, int templateId, in EffectArgs args) { }
+            public void RemoveEffectTemplate(Entity target, int templateId) { }
+            public void ModifyAttributeAdd(Entity caster, Entity target, int attributeId, float delta) { }
+            public void ModifyAttributeSet(Entity caster, Entity target, int attributeId, float value) { }
+            public void SendEvent(Entity caster, Entity target, int eventTagId, float magnitude) { }
             public bool TryReadBlackboardFloat(Entity entity, int keyId, out float value) { value = 0f; return false; }
             public bool TryReadBlackboardInt(Entity entity, int keyId, out int value) { value = 0; return false; }
             public bool TryReadBlackboardEntity(Entity entity, int keyId, out Entity value) { value = default; return false; }

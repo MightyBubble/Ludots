@@ -228,26 +228,42 @@ namespace Ludots.Core.Input.Interaction
                 return false;
             }
 
-            if (rule.HasActorAllTags || rule.HasActorAnyTags)
+            if (rule.HasActorAllTags || rule.HasActorAnyTags || rule.HasActorBlockedAnyTags)
             {
-                if (!_world.IsAlive(actorEntity) || !_world.Has<GameplayTagContainer>(actorEntity))
+                if (!_world.IsAlive(actorEntity))
                 {
                     return false;
                 }
 
-                ref GameplayTagContainer actorTags = ref _world.Get<GameplayTagContainer>(actorEntity);
-                if (rule.HasActorAllTags && !_tagOps.ContainsAll(ref actorTags, in rule.ActorAllTags, TagSense.Effective))
+                bool hasActorTags = _world.Has<GameplayTagContainer>(actorEntity);
+                if ((rule.HasActorAllTags || rule.HasActorAnyTags) && !hasActorTags)
                 {
                     return false;
                 }
 
-                if (rule.HasActorAnyTags && !_tagOps.Intersects(ref actorTags, in rule.ActorAnyTags, TagSense.Effective))
+                if (hasActorTags)
                 {
-                    return false;
+                    ref GameplayTagContainer actorTags = ref _world.Get<GameplayTagContainer>(actorEntity);
+                    if (rule.HasActorAllTags && !_tagOps.ContainsAll(ref actorTags, in rule.ActorAllTags, TagSense.Effective))
+                    {
+                        return false;
+                    }
+
+                    if (rule.HasActorAnyTags && !_tagOps.Intersects(ref actorTags, in rule.ActorAnyTags, TagSense.Effective))
+                    {
+                        return false;
+                    }
+
+                    if (rule.HasActorBlockedAnyTags &&
+                        _tagOps.Intersects(ref actorTags, in rule.ActorBlockedAnyTags, TagSense.Effective))
+                    {
+                        return false;
+                    }
                 }
             }
 
-            if (rule.ActorAbilityCatalogTagId != 0 && !HasAbilityWithCatalogTag(actorEntity, rule.ActorAbilityCatalogTagId))
+            if (rule.ActorAbilityCatalogTagId != 0 &&
+                !TryResolveAbilitySlotByCatalogTag(actorEntity, rule.ActorAbilityCatalogTagId, out _))
             {
                 return false;
             }
@@ -304,10 +320,11 @@ namespace Ludots.Core.Input.Interaction
             return true;
         }
 
-        private bool HasAbilityWithCatalogTag(Entity actor, int catalogTagId)
+        public bool TryResolveAbilitySlotByCatalogTag(Entity actor, int catalogTagId, out int slotIndex)
         {
             if (!_world.IsAlive(actor) || !_world.Has<AbilityStateBuffer>(actor))
             {
+                slotIndex = -1;
                 return false;
             }
 
@@ -319,7 +336,7 @@ namespace Ludots.Core.Input.Interaction
             bool hasGranted = _world.Has<GrantedSlotBuffer>(actor);
             GrantedSlotBuffer grantedSlots = hasGranted ? _world.Get<GrantedSlotBuffer>(actor) : default;
 
-            for (int slotIndex = 0; slotIndex < AbilityStateBuffer.CAPACITY; slotIndex++)
+            for (int candidateSlotIndex = 0; candidateSlotIndex < AbilityStateBuffer.CAPACITY; candidateSlotIndex++)
             {
                 if (!AbilitySlotResolver.TryResolve(
                     in abilities,
@@ -329,17 +346,19 @@ namespace Ludots.Core.Input.Interaction
                     hasItemGranted,
                     in grantedSlots,
                     hasGranted,
-                    slotIndex,
+                    candidateSlotIndex,
                     out AbilitySlotState slot))
                 {
                     continue;
                 }
                 if (slot.AbilityId > 0 && _abilityDefinitions.HasCatalogTag(slot.AbilityId, catalogTagId))
                 {
+                    slotIndex = candidateSlotIndex;
                     return true;
                 }
             }
 
+            slotIndex = -1;
             return false;
         }
 
@@ -417,6 +436,7 @@ namespace Ludots.Core.Input.Interaction
             {
                 rule.HasActorAllTags = TryBuildMask(profileId, actor.AllTags, ref rule.ActorAllTags);
                 rule.HasActorAnyTags = TryBuildMask(profileId, actor.AnyTags, ref rule.ActorAnyTags);
+                rule.HasActorBlockedAnyTags = TryBuildMask(profileId, actor.BlockedAnyTags, ref rule.ActorBlockedAnyTags);
                 if (!string.IsNullOrWhiteSpace(actor.HasAbilityWithTag))
                 {
                     rule.ActorAbilityCatalogTagId = ResolveTagId(profileId, actor.HasAbilityWithTag);
@@ -553,8 +573,10 @@ namespace Ludots.Core.Input.Interaction
             public int Priority;
             public GameplayTagContainer ActorAllTags;
             public GameplayTagContainer ActorAnyTags;
+            public GameplayTagContainer ActorBlockedAnyTags;
             public bool HasActorAllTags;
             public bool HasActorAnyTags;
+            public bool HasActorBlockedAnyTags;
             public int ActorAbilityCatalogTagId;
             public GameplayTagContainer TargetAllTags;
             public GameplayTagContainer TargetAnyTags;
