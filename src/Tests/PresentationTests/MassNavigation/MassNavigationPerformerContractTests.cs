@@ -203,7 +203,7 @@ namespace Ludots.Tests.Presentation
                 ops.Add(op);
             }
 
-            Assert.That(ops, Does.Not.Contain("LoadAttributeBase"), "GAS Graph currently exposes AttributeBase to performer bindings, not as a graph op.");
+            Assert.That(ops, Does.Not.Contain("LoadAttributeBase"), "AttributeBase is read by AttributeBinding behavior, not as a graph op.");
             Assert.That(ops, Does.Contain("ModifyAttributeAdd"));
             JsonObject modifyNode = nodes
                 .Select(node => node?.AsObject())
@@ -702,15 +702,7 @@ namespace Ludots.Tests.Presentation
         private static void AssertHudDefinitionUsesHealthRatio(JsonObject definition, string definitionId, float expectedWidth, float expectedHeight)
         {
             string materialParamKey = AssertHudWorldHudBinding(definition, definitionId, expectedWidth, expectedHeight);
-            JsonArray bindings = definition["bindings"]?.AsArray()
-                ?? throw new InvalidOperationException($"HUD performer '{definitionId}' must declare param bindings.");
-            JsonObject binding = bindings
-                .Select(node => node?.AsObject())
-                .FirstOrDefault(obj => obj?["paramKey"]?.GetValue<string>() == materialParamKey)
-                ?? throw new InvalidOperationException($"HUD performer '{definitionId}' must bind its material param.");
-
-            Assert.That(binding["source"]?.GetValue<string>(), Is.EqualTo("attributeRatio"));
-            Assert.That(binding["attributeId"]?.GetValue<string>(), Is.EqualTo(AgentHealthAttributeName));
+            AssertAttributeBinding(definition, definitionId, materialParamKey, "AttributeRatio");
         }
 
         private static string AssertHudWorldHudBinding(JsonObject definition, string definitionId, float expectedWidth, float expectedHeight)
@@ -733,41 +725,41 @@ namespace Ludots.Tests.Presentation
         private static void AssertWorldTextDefinitionUsesHealthCurrentOverBase(JsonObject definition, string definitionId, int expectedFontSize)
         {
             (string currentParamKey, string baseParamKey) = AssertWorldTextBinding(definition, definitionId, expectedFontSize);
-            JsonArray bindings = definition["bindings"]?.AsArray()
-                ?? throw new InvalidOperationException($"Text performer '{definitionId}' must declare param bindings.");
+            AssertAttributeBinding(definition, definitionId, currentParamKey, "Attribute");
+            AssertAttributeBinding(definition, definitionId, baseParamKey, "AttributeBase");
+        }
 
-            JsonObject currentBinding = bindings
+        private static void AssertAttributeBinding(JsonObject definition, string definitionId, string targetParamKey, string expectedMode)
+        {
+            JsonArray behaviors = definition["behaviors"]?.AsArray()
+                ?? throw new InvalidOperationException($"Performer '{definitionId}' must declare behaviors.");
+            JsonObject attributeBinding = behaviors
                 .Select(node => node?.AsObject())
-                .FirstOrDefault(obj => obj?["paramKey"]?.GetValue<string>() == currentParamKey)
-                ?? throw new InvalidOperationException($"Text performer '{definitionId}' must bind its current Health param.");
-            Assert.That(currentBinding["source"]?.GetValue<string>(), Is.EqualTo("attribute"));
-            Assert.That(currentBinding["attributeId"]?.GetValue<string>(), Is.EqualTo(AgentHealthAttributeName));
+                .Where(obj => obj?["kind"]?.GetValue<string>() == "AttributeBinding")
+                .Select(obj => obj?["attributeBinding"]?.AsObject())
+                .FirstOrDefault(obj => obj?["targetParamKey"]?.GetValue<string>() == targetParamKey)
+                ?? throw new InvalidOperationException($"Performer '{definitionId}' must bind '{targetParamKey}' through AttributeBinding behavior.");
 
-            JsonObject baseBinding = bindings
-                .Select(node => node?.AsObject())
-                .FirstOrDefault(obj => obj?["paramKey"]?.GetValue<string>() == baseParamKey)
-                ?? throw new InvalidOperationException($"Text performer '{definitionId}' must bind its base Health param.");
-            Assert.That(baseBinding["source"]?.GetValue<string>(), Is.EqualTo("attributeBase"));
-            Assert.That(baseBinding["attributeId"]?.GetValue<string>(), Is.EqualTo(AgentHealthAttributeName));
+            Assert.That(attributeBinding["attributeId"]?.GetValue<string>(), Is.EqualTo(AgentHealthAttributeName));
+            Assert.That(attributeBinding["mode"]?.GetValue<string>(), Is.EqualTo(expectedMode));
         }
 
         private static (string CurrentParamKey, string BaseParamKey) AssertWorldTextBinding(JsonObject definition, string definitionId, int expectedFontSize)
         {
-            Assert.That(definition["worldTextMode"]?.GetValue<string>(), Is.EqualTo("AttributeCurrentOverBase"));
-            Assert.That(definition["defaultFontSize"]?.GetValue<int>(), Is.EqualTo(expectedFontSize));
-
             JsonArray behaviors = definition["behaviors"]?.AsArray()
                 ?? throw new InvalidOperationException($"Text performer '{definitionId}' must declare behaviors.");
-            JsonObject assetBinding = behaviors
+            JsonObject worldTextBehavior = behaviors
                 .Select(node => node?.AsObject())
-                .FirstOrDefault(obj => obj?["kind"]?.GetValue<string>() == "AssetBinding")?["assetBinding"]?.AsObject()
-                ?? throw new InvalidOperationException($"Text performer '{definitionId}' must declare an AssetBinding behavior.");
+                .FirstOrDefault(obj => obj?["kind"]?.GetValue<string>() == "WorldText")
+                ?? throw new InvalidOperationException($"Text performer '{definitionId}' must declare a WorldText behavior.");
+            JsonObject worldText = worldTextBehavior["worldText"]?.AsObject()
+                ?? throw new InvalidOperationException($"Text performer '{definitionId}' must declare worldText config.");
 
-            Assert.That(assetBinding["assetKind"]?.GetValue<string>(), Is.EqualTo("WorldText"));
-            Assert.That(assetBinding["assetId"]?.GetValue<string>(), Is.EqualTo("hud.attribute.current_over_base"));
-            Assert.That(assetBinding["mobility"]?.GetValue<string>(), Is.EqualTo("Movable"));
-            string currentParamKey = assetBinding["scaleParamKey"]?.GetValue<string>() ?? string.Empty;
-            string baseParamKey = assetBinding["materialParamKey"]?.GetValue<string>() ?? string.Empty;
+            Assert.That(worldText["textToken"]?.GetValue<string>(), Is.EqualTo("hud.attribute.current_over_base"));
+            Assert.That(worldText["mode"]?.GetValue<string>(), Is.EqualTo("AttributeCurrentOverBase"));
+            Assert.That(worldText["fontSize"]?.GetValue<int>(), Is.EqualTo(expectedFontSize));
+            string currentParamKey = worldText["valueParamKey"]?.GetValue<string>() ?? string.Empty;
+            string baseParamKey = worldText["secondaryValueParamKey"]?.GetValue<string>() ?? string.Empty;
             Assert.That(currentParamKey, Is.EqualTo(HealthCurrentParamKey), $"Text performer '{definitionId}' must drive current value from a semantic param.");
             Assert.That(baseParamKey, Is.EqualTo(HealthBaseParamKey), $"Text performer '{definitionId}' must drive base value from a semantic param.");
             return (currentParamKey, baseParamKey);

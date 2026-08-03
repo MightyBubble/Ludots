@@ -2,18 +2,6 @@
   {
     "_comment": "Shared placement/build ghost: broad low cube footprint for RTS/MMO ability previews.",
     "id": "core_input_preview_build_site",
-    "defaultColor": [
-      0.28,
-      0.82,
-      0.54,
-      0.32
-    ],
-    "defaultLifetime": -1,
-    "positionOffset": [
-      0,
-      0.35,
-      0
-    ],
     "maxVisibilityDistanceCm": 30000,
     "behaviors": [
       {
@@ -30,25 +18,31 @@
             1,
             1
           ]
+        },
+        "style": {
+          "color": [
+            0.28,
+            0.82,
+            0.54,
+            0.32
+          ]
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "persistence": "Scoped"
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.35,
+        0
+      ]
+    }
   },
   {
     "_comment": "Warp-in ghost: rounded sphere that reads as an energy silhouette.",
     "id": "core_input_preview_warp_site",
-    "defaultColor": [
-      0.24,
-      0.78,
-      0.96,
-      0.34
-    ],
-    "defaultLifetime": -1,
-    "positionOffset": [
-      0,
-      0.55,
-      0
-    ],
     "maxVisibilityDistanceCm": 30000,
     "behaviors": [
       {
@@ -65,25 +59,31 @@
             1,
             1
           ]
+        },
+        "style": {
+          "color": [
+            0.24,
+            0.78,
+            0.96,
+            0.34
+          ]
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "persistence": "Scoped"
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.55,
+        0
+      ]
+    }
   },
   {
     "_comment": "Morph ghost: dense organic sphere for transformation-style abilities.",
     "id": "core_input_preview_morph_site",
-    "defaultColor": [
-      0.58,
-      0.84,
-      0.22,
-      0.32
-    ],
-    "defaultLifetime": -1,
-    "positionOffset": [
-      0,
-      0.42,
-      0
-    ],
     "maxVisibilityDistanceCm": 30000,
     "behaviors": [
       {
@@ -100,24 +100,30 @@
             1,
             1
           ]
+        },
+        "style": {
+          "color": [
+            0.58,
+            0.84,
+            0.22,
+            0.32
+          ]
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "persistence": "Scoped"
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.42,
+        0
+      ]
+    }
   },
   {
     "id": "core_input.ability_aim.overlay_base",
-    "defaultColor": [
-      0.24,
-      0.76,
-      0.52,
-      0.24
-    ],
-    "defaultLifetime": -1,
-    "positionOffset": [
-      0,
-      0,
-      0
-    ],
     "maxVisibilityDistanceCm": 30000,
     "paramDefaults": [
       {
@@ -195,17 +201,21 @@
         "lane": "Float",
         "floatValue": 0.025
       }
-    ]
+    ],
+    "lifecycle": {
+      "persistence": "Scoped"
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0,
+        0
+      ]
+    }
   },
   {
     "id": "core_input.ability_aim.range",
     "extends": "core_input.ability_aim.overlay_base",
-    "defaultColor": [
-      0.28,
-      0.52,
-      0.88,
-      0.16
-    ],
     "paramDefaults": [
       {
         "paramKey": "groundOverlay.radius",
@@ -298,6 +308,14 @@
             1,
             0.025
           ]
+        },
+        "style": {
+          "color": [
+            0.28,
+            0.52,
+            0.88,
+            0.16
+          ]
         }
       }
     ]
@@ -319,6 +337,14 @@
             1,
             1,
             0.025
+          ]
+        },
+        "style": {
+          "color": [
+            0.24,
+            0.76,
+            0.52,
+            0.24
           ]
         }
       }
@@ -342,6 +368,14 @@
             0.5,
             0.025
           ]
+        },
+        "style": {
+          "color": [
+            0.24,
+            0.76,
+            0.52,
+            0.24
+          ]
         }
       }
     ]
@@ -363,6 +397,14 @@
             1,
             1,
             0.025
+          ]
+        },
+        "style": {
+          "color": [
+            0.24,
+            0.76,
+            0.52,
+            0.24
           ]
         }
       }
@@ -386,6 +428,14 @@
             1,
             0.025
           ]
+        },
+        "style": {
+          "color": [
+            0.24,
+            0.76,
+            0.52,
+            0.24
+          ]
         }
       }
     ]
@@ -396,18 +446,6 @@
   },
   {
     "id": "core_input.ability_aim.preview",
-    "defaultColor": [
-      1,
-      0.82,
-      0.28,
-      0.45
-    ],
-    "defaultLifetime": -1,
-    "positionOffset": [
-      0,
-      0.2,
-      0
-    ],
     "maxVisibilityDistanceCm": 30000,
     "paramDefaults": [
       {
@@ -443,24 +481,30 @@
           ],
           "scaleParamKey": "core_input.ability_aim.scale",
           "colorParamKey": "core_input.ability_aim.color"
+        },
+        "style": {
+          "color": [
+            1,
+            0.82,
+            0.28,
+            0.45
+          ]
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "persistence": "Scoped"
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.2,
+        0
+      ]
+    }
   },
   {
     "id": "core_input.ability_aim.affected_target",
-    "defaultColor": [
-      1,
-      1,
-      1,
-      1
-    ],
-    "defaultLifetime": -1,
-    "positionOffset": [
-      0,
-      0.35,
-      0
-    ],
     "maxVisibilityDistanceCm": 30000,
     "paramDefaults": [
       {
@@ -502,24 +546,30 @@
           ],
           "scaleParamKey": "marker3d.scale",
           "colorParamKey": "marker3d.color.r"
+        },
+        "style": {
+          "color": [
+            1,
+            1,
+            1,
+            1
+          ]
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "persistence": "Scoped"
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.35,
+        0
+      ]
+    }
   },
   {
     "id": "core_input.move_path.line",
-    "defaultColor": [
-      0.4,
-      0.64,
-      0.78,
-      0.18
-    ],
-    "defaultLifetime": -1,
-    "positionOffset": [
-      0,
-      0,
-      0
-    ],
     "maxVisibilityDistanceCm": 30000,
     "paramDefaults": [
       {
@@ -598,24 +648,30 @@
             0.18,
             0.025
           ]
+        },
+        "style": {
+          "color": [
+            0.4,
+            0.64,
+            0.78,
+            0.18
+          ]
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "persistence": "Scoped"
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0,
+        0
+      ]
+    }
   },
   {
     "id": "core_input.move_path.waypoint",
-    "defaultColor": [
-      0.38,
-      0.58,
-      0.72,
-      0.22
-    ],
-    "defaultLifetime": -1,
-    "positionOffset": [
-      0,
-      0,
-      0
-    ],
     "maxVisibilityDistanceCm": 30000,
     "paramDefaults": [
       {
@@ -684,9 +740,27 @@
             0.26,
             0.035
           ]
+        },
+        "style": {
+          "color": [
+            0.38,
+            0.58,
+            0.72,
+            0.22
+          ]
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "persistence": "Scoped"
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0,
+        0
+      ]
+    }
   },
   {
     "id": "core_input.move_path.rules",

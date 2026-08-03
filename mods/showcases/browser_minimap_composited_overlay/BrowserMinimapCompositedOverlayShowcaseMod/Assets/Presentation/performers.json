@@ -1,12 +1,6 @@
 [
   {
     "id": "blacksmith_minimap_marker_ball",
-    "defaultColor": [
-      1,
-      0.24,
-      0.06,
-      1
-    ],
     "children": [],
     "behaviors": [
       {
@@ -23,6 +17,14 @@
             0.45,
             0.45,
             0.45
+          ]
+        },
+        "style": {
+          "color": [
+            1,
+            0.24,
+            0.06,
+            1
           ]
         }
       },

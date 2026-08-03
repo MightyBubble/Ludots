@@ -1,7 +1,6 @@
 [
   {
     "id": "visual_terrain_editor.chunk_mesh",
-    "defaultLifetime": -1,
     "paramDefaults": [
       {
         "paramKey": "visual_terrain_editor.chunkMesh.asset",
@@ -29,20 +28,54 @@
           "materialParamKey": "visual_terrain_editor.chunkMesh.material"
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "persistence": "Scoped"
+    }
   },
   {
     "id": "visual_terrain_editor.brush.raise",
-    "defaultColor": [0.18, 0.88, 0.95, 0.95],
     "paramDefaults": [
-      { "paramKey": "groundOverlay.fill.r", "lane": "Float", "floatValue": 0.18 },
-      { "paramKey": "groundOverlay.fill.g", "lane": "Float", "floatValue": 0.88 },
-      { "paramKey": "groundOverlay.fill.b", "lane": "Float", "floatValue": 0.95 },
-      { "paramKey": "groundOverlay.fill.a", "lane": "Float", "floatValue": 0.18 },
-      { "paramKey": "groundOverlay.border.r", "lane": "Float", "floatValue": 0.18 },
-      { "paramKey": "groundOverlay.border.g", "lane": "Float", "floatValue": 0.88 },
-      { "paramKey": "groundOverlay.border.b", "lane": "Float", "floatValue": 0.95 },
-      { "paramKey": "groundOverlay.border.a", "lane": "Float", "floatValue": 0.95 }
+      {
+        "paramKey": "groundOverlay.fill.r",
+        "lane": "Float",
+        "floatValue": 0.18
+      },
+      {
+        "paramKey": "groundOverlay.fill.g",
+        "lane": "Float",
+        "floatValue": 0.88
+      },
+      {
+        "paramKey": "groundOverlay.fill.b",
+        "lane": "Float",
+        "floatValue": 0.95
+      },
+      {
+        "paramKey": "groundOverlay.fill.a",
+        "lane": "Float",
+        "floatValue": 0.18
+      },
+      {
+        "paramKey": "groundOverlay.border.r",
+        "lane": "Float",
+        "floatValue": 0.18
+      },
+      {
+        "paramKey": "groundOverlay.border.g",
+        "lane": "Float",
+        "floatValue": 0.88
+      },
+      {
+        "paramKey": "groundOverlay.border.b",
+        "lane": "Float",
+        "floatValue": 0.95
+      },
+      {
+        "paramKey": "groundOverlay.border.a",
+        "lane": "Float",
+        "floatValue": 0.95
+      }
     ],
     "behaviors": [
       {
@@ -54,7 +87,19 @@
           "assetId": "Ring",
           "renderPath": "None",
           "mobility": "Movable",
-          "localScale": [1.0, 0.8, 0.05]
+          "localScale": [
+            1,
+            0.8,
+            0.05
+          ]
+        },
+        "style": {
+          "color": [
+            0.18,
+            0.88,
+            0.95,
+            0.95
+          ]
         }
       }
     ]
@@ -62,60 +107,206 @@
   {
     "id": "visual_terrain_editor.brush.lower",
     "extends": "visual_terrain_editor.brush.raise",
-    "defaultColor": [1.0, 0.44, 0.28, 0.95],
     "paramDefaults": [
-      { "paramKey": "groundOverlay.fill.r", "lane": "Float", "floatValue": 1.0 },
-      { "paramKey": "groundOverlay.fill.g", "lane": "Float", "floatValue": 0.44 },
-      { "paramKey": "groundOverlay.fill.b", "lane": "Float", "floatValue": 0.28 },
-      { "paramKey": "groundOverlay.fill.a", "lane": "Float", "floatValue": 0.18 },
-      { "paramKey": "groundOverlay.border.r", "lane": "Float", "floatValue": 1.0 },
-      { "paramKey": "groundOverlay.border.g", "lane": "Float", "floatValue": 0.44 },
-      { "paramKey": "groundOverlay.border.b", "lane": "Float", "floatValue": 0.28 },
-      { "paramKey": "groundOverlay.border.a", "lane": "Float", "floatValue": 0.95 }
+      {
+        "paramKey": "groundOverlay.fill.r",
+        "lane": "Float",
+        "floatValue": 1
+      },
+      {
+        "paramKey": "groundOverlay.fill.g",
+        "lane": "Float",
+        "floatValue": 0.44
+      },
+      {
+        "paramKey": "groundOverlay.fill.b",
+        "lane": "Float",
+        "floatValue": 0.28
+      },
+      {
+        "paramKey": "groundOverlay.fill.a",
+        "lane": "Float",
+        "floatValue": 0.18
+      },
+      {
+        "paramKey": "groundOverlay.border.r",
+        "lane": "Float",
+        "floatValue": 1
+      },
+      {
+        "paramKey": "groundOverlay.border.g",
+        "lane": "Float",
+        "floatValue": 0.44
+      },
+      {
+        "paramKey": "groundOverlay.border.b",
+        "lane": "Float",
+        "floatValue": 0.28
+      },
+      {
+        "paramKey": "groundOverlay.border.a",
+        "lane": "Float",
+        "floatValue": 0.95
+      }
+    ],
+    "behaviors": [
+      {
+        "slot": "body",
+        "style": {
+          "color": [
+            1,
+            0.44,
+            0.28,
+            0.95
+          ]
+        }
+      }
     ]
   },
   {
     "id": "visual_terrain_editor.brush.rules",
     "rules": [
       {
-        "event": { "kind": "WorldOverlayUpdated", "key": "visual_terrain_editor.brush.raise" },
-        "command": { "kind": "CreatePerformer", "definitionId": "visual_terrain_editor.brush.raise", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "groundOverlay.radius", "paramLane": "Float", "valueSource": "EventFloatA" }
+        "event": {
+          "kind": "WorldOverlayUpdated",
+          "key": "visual_terrain_editor.brush.raise"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "visual_terrain_editor.brush.raise",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.radius",
+          "paramLane": "Float",
+          "valueSource": "EventFloatA"
+        }
       },
       {
-        "event": { "kind": "WorldOverlayUpdated", "key": "visual_terrain_editor.brush.raise" },
-        "command": { "kind": "SetParam", "definitionId": "visual_terrain_editor.brush.raise", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "groundOverlay.radius", "paramLane": "Float", "valueSource": "EventFloatA" }
+        "event": {
+          "kind": "WorldOverlayUpdated",
+          "key": "visual_terrain_editor.brush.raise"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "visual_terrain_editor.brush.raise",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.radius",
+          "paramLane": "Float",
+          "valueSource": "EventFloatA"
+        }
       },
       {
-        "event": { "kind": "WorldOverlayUpdated", "key": "visual_terrain_editor.brush.raise" },
-        "command": { "kind": "SetParam", "definitionId": "visual_terrain_editor.brush.raise", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "groundOverlay.innerRadius", "paramLane": "Float", "valueSource": "EventFloatB" }
+        "event": {
+          "kind": "WorldOverlayUpdated",
+          "key": "visual_terrain_editor.brush.raise"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "visual_terrain_editor.brush.raise",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.innerRadius",
+          "paramLane": "Float",
+          "valueSource": "EventFloatB"
+        }
       },
       {
-        "event": { "kind": "WorldOverlayUpdated", "key": "visual_terrain_editor.brush.raise" },
-        "command": { "kind": "SetParam", "definitionId": "visual_terrain_editor.brush.raise", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "groundOverlay.border.width", "paramLane": "Float", "valueSource": "EventMagnitude" }
+        "event": {
+          "kind": "WorldOverlayUpdated",
+          "key": "visual_terrain_editor.brush.raise"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "visual_terrain_editor.brush.raise",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.width",
+          "paramLane": "Float",
+          "valueSource": "EventMagnitude"
+        }
       },
       {
-        "event": { "kind": "WorldOverlayEnded", "key": "visual_terrain_editor.brush.raise" },
-        "command": { "kind": "DestroyScopedPerformer", "definitionId": "visual_terrain_editor.brush.raise", "scopeSource": "EventPayloadA" }
+        "event": {
+          "kind": "WorldOverlayEnded",
+          "key": "visual_terrain_editor.brush.raise"
+        },
+        "command": {
+          "kind": "DestroyScopedPerformer",
+          "definitionId": "visual_terrain_editor.brush.raise",
+          "scopeSource": "EventPayloadA"
+        }
       },
       {
-        "event": { "kind": "WorldOverlayUpdated", "key": "visual_terrain_editor.brush.lower" },
-        "command": { "kind": "CreatePerformer", "definitionId": "visual_terrain_editor.brush.lower", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "groundOverlay.radius", "paramLane": "Float", "valueSource": "EventFloatA" }
+        "event": {
+          "kind": "WorldOverlayUpdated",
+          "key": "visual_terrain_editor.brush.lower"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "visual_terrain_editor.brush.lower",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.radius",
+          "paramLane": "Float",
+          "valueSource": "EventFloatA"
+        }
       },
       {
-        "event": { "kind": "WorldOverlayUpdated", "key": "visual_terrain_editor.brush.lower" },
-        "command": { "kind": "SetParam", "definitionId": "visual_terrain_editor.brush.lower", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "groundOverlay.radius", "paramLane": "Float", "valueSource": "EventFloatA" }
+        "event": {
+          "kind": "WorldOverlayUpdated",
+          "key": "visual_terrain_editor.brush.lower"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "visual_terrain_editor.brush.lower",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.radius",
+          "paramLane": "Float",
+          "valueSource": "EventFloatA"
+        }
       },
       {
-        "event": { "kind": "WorldOverlayUpdated", "key": "visual_terrain_editor.brush.lower" },
-        "command": { "kind": "SetParam", "definitionId": "visual_terrain_editor.brush.lower", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "groundOverlay.innerRadius", "paramLane": "Float", "valueSource": "EventFloatB" }
+        "event": {
+          "kind": "WorldOverlayUpdated",
+          "key": "visual_terrain_editor.brush.lower"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "visual_terrain_editor.brush.lower",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.innerRadius",
+          "paramLane": "Float",
+          "valueSource": "EventFloatB"
+        }
       },
       {
-        "event": { "kind": "WorldOverlayUpdated", "key": "visual_terrain_editor.brush.lower" },
-        "command": { "kind": "SetParam", "definitionId": "visual_terrain_editor.brush.lower", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "groundOverlay.border.width", "paramLane": "Float", "valueSource": "EventMagnitude" }
+        "event": {
+          "kind": "WorldOverlayUpdated",
+          "key": "visual_terrain_editor.brush.lower"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "visual_terrain_editor.brush.lower",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.width",
+          "paramLane": "Float",
+          "valueSource": "EventMagnitude"
+        }
       },
       {
-        "event": { "kind": "WorldOverlayEnded", "key": "visual_terrain_editor.brush.lower" },
-        "command": { "kind": "DestroyScopedPerformer", "definitionId": "visual_terrain_editor.brush.lower", "scopeSource": "EventPayloadA" }
+        "event": {
+          "kind": "WorldOverlayEnded",
+          "key": "visual_terrain_editor.brush.lower"
+        },
+        "command": {
+          "kind": "DestroyScopedPerformer",
+          "definitionId": "visual_terrain_editor.brush.lower",
+          "scopeSource": "EventPayloadA"
+        }
       }
     ]
   }

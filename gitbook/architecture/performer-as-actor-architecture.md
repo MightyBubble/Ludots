@@ -383,9 +383,6 @@ GAS Domain              Global Domain
 [
   {
     "id": "blacksmith_root",
-    "bindings": [
-      { "paramKey": 100, "source": "attributeRatio", "attributeName": "durability" }
-    ],
     "children": [
       { "definitionId": "blacksmith_workshop_1", "scopeTag": "structure" },
       { "definitionId": "blacksmith_workshop_2", "scopeTag": "structure" },
@@ -416,10 +413,10 @@ GAS Domain              Global Domain
         }
       },
       {
-        "slot": 1, "kind": "AttributeBinding", "activeByDefault": true,
+        "slot": "attribute", "kind": "AttributeBinding", "activeByDefault": true,
         "attributeBinding": {
-          "attributeName": "durability", "targetParamKey": 100,
-          "mode": "attributeRatio",
+          "attributeId": "durability", "targetParamKey": 100,
+          "mode": "AttributeRatio",
           "thresholds": [
             { "threshold": 0.66, "outputParamKey": 101, "outputValue": 0 },
             { "threshold": 0.33, "outputParamKey": 101, "outputValue": 1 },

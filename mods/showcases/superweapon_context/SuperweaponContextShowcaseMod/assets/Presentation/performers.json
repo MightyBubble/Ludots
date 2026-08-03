@@ -1,7 +1,6 @@
 [
   {
     "id": "performer.ability.superweapon.caster_marker",
-    "defaultColor": [1.0, 0.24, 0.18, 0.96],
     "behaviors": [
       {
         "slot": "body",
@@ -12,7 +11,19 @@
           "assetId": "Ring",
           "renderPath": "None",
           "mobility": "Movable",
-          "localScale": [1.95, 1.95, 1.95]
+          "localScale": [
+            1.95,
+            1.95,
+            1.95
+          ]
+        },
+        "style": {
+          "color": [
+            1,
+            0.24,
+            0.18,
+            0.96
+          ]
         }
       },
       {
@@ -21,8 +32,17 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [0, 0.07, 0],
-          "rotationOffset": [0, 0, 0, 1],
+          "offset": [
+            0,
+            0.07,
+            0
+          ],
+          "rotationOffset": [
+            0,
+            0,
+            0,
+            1
+          ],
           "inheritScale": false
         }
       }
@@ -30,7 +50,6 @@
   },
   {
     "id": "performer.ability.superweapon.target_marker",
-    "defaultColor": [0.18, 0.92, 1.0, 0.96],
     "behaviors": [
       {
         "slot": "body",
@@ -41,7 +60,19 @@
           "assetId": "Ring",
           "renderPath": "None",
           "mobility": "Movable",
-          "localScale": [1.7, 1.7, 1.7]
+          "localScale": [
+            1.7,
+            1.7,
+            1.7
+          ]
+        },
+        "style": {
+          "color": [
+            0.18,
+            0.92,
+            1,
+            0.96
+          ]
         }
       },
       {
@@ -50,8 +81,17 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [0, 0.05, 0],
-          "rotationOffset": [0, 0, 0, 1],
+          "offset": [
+            0,
+            0.05,
+            0
+          ],
+          "rotationOffset": [
+            0,
+            0,
+            0,
+            1
+          ],
           "inheritScale": false
         }
       }
@@ -61,7 +101,10 @@
     "id": "performer.ability.superweapon.marker_rules",
     "rules": [
       {
-        "event": { "kind": "EntityCollectionMemberAdded", "key": "collection.ui.superweapon.caster" },
+        "event": {
+          "kind": "EntityCollectionMemberAdded",
+          "key": "collection.ui.superweapon.caster"
+        },
         "command": {
           "kind": "CreatePerformer",
           "definitionId": "performer.ability.superweapon.caster_marker",
@@ -69,7 +112,10 @@
         }
       },
       {
-        "event": { "kind": "EntityCollectionMemberRemoved", "key": "collection.ui.superweapon.caster" },
+        "event": {
+          "kind": "EntityCollectionMemberRemoved",
+          "key": "collection.ui.superweapon.caster"
+        },
         "command": {
           "kind": "DestroyScopedPerformer",
           "definitionId": "performer.ability.superweapon.caster_marker",
@@ -77,7 +123,10 @@
         }
       },
       {
-        "event": { "kind": "EntityCollectionMemberAdded", "key": "collection.ui.superweapon.targets" },
+        "event": {
+          "kind": "EntityCollectionMemberAdded",
+          "key": "collection.ui.superweapon.targets"
+        },
         "command": {
           "kind": "CreatePerformer",
           "definitionId": "performer.ability.superweapon.target_marker",
@@ -85,7 +134,10 @@
         }
       },
       {
-        "event": { "kind": "EntityCollectionMemberRemoved", "key": "collection.ui.superweapon.targets" },
+        "event": {
+          "kind": "EntityCollectionMemberRemoved",
+          "key": "collection.ui.superweapon.targets"
+        },
         "command": {
           "kind": "DestroyScopedPerformer",
           "definitionId": "performer.ability.superweapon.target_marker",

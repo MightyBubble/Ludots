@@ -1793,11 +1793,11 @@ namespace Ludots.Core.Engine
 
             // Phase 7.1: Project gameplay-side presentation facts into the presentation stream
             // and owner-change index consumed by performer owner bindings.
-            // Changed-bit components must remain readable until presentation systems consume them,
-            // so the actual clear runs at the tail of the presentation pipeline.
+            // Changed-bit components are cleared only after projection for the completed fixed step.
             RegisterSystem(gameplayPresentationProjectionSystem, SystemGroup.ClearPresentationFlags);
             RegisterSystem(new ProgressionScopeTagRevisionSystem(World), SystemGroup.ClearPresentationFlags);
             RegisterSystem(new OrderAdmissionGenerationEndSystem(orderAdmissionResults), SystemGroup.ClearPresentationFlags);
+            RegisterSystem(clearPresentationFlagsSystem, SystemGroup.ClearPresentationFlags);
             _cooperativeSimulation = new PhaseOrderedCooperativeSimulation(
                 _systemGroups,
                 OnFixedStepCompleted,
@@ -1852,7 +1852,6 @@ namespace Ludots.Core.Engine
             RegisterPresentationSystem(new PerformerMinimapMarkerSystem(World, performerDefinitions, minimapMarkerBuffer, presentationTimingDiagnostics));
             // PerformerEmitSystem is the Wave 4 asset-binding emitter.
             RegisterPresentationSystem(performerEmitSystem);
-            RegisterPresentationSystem(clearPresentationFlagsSystem);
             RegisterPresentationSystem(surfaceSourceFlushSystem);
             RegisterPresentationSystem(surfaceSourceLifecycleSystem);
             RegisterPresentationSystem(chunkSurfaceBakeSystem);

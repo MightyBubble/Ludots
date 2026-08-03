@@ -241,7 +241,7 @@ namespace Ludots.Core.Presentation.Performers
             in Vector3 worldPosition,
             int stableId,
             Entity parent,
-            PerformerDefinition definition)
+            PerformerDefinition? definition)
         {
             definition = ResolveDefinition(defId, definition);
 
@@ -313,7 +313,7 @@ namespace Ludots.Core.Presentation.Performers
             ReadOnlySpan<int> stableIds,
             ReadOnlySpan<VisualTransform> ownerTransforms,
             ReadOnlySpan<CullState> ownerCulls,
-            PerformerDefinition definition,
+            PerformerDefinition? definition,
             Span<Entity> created,
             Func<int>? allocateStableId = null,
             ReadOnlySpan<ParamDefault[]> rootParamOverrides = default)
@@ -447,7 +447,7 @@ namespace Ludots.Core.Presentation.Performers
             in Vector3 worldPosition,
             int stableId,
             Entity parent,
-            PerformerDefinition definition,
+            PerformerDefinition? definition,
             Func<int>? allocateStableId = null)
         {
             definition = ResolveDefinition(defId, definition);
@@ -1451,7 +1451,7 @@ namespace Ludots.Core.Presentation.Performers
                     for (int i = 0; i < behaviors.Length; i++)
                     {
                         ref readonly BehaviorSlot slot = ref behaviors[i];
-                        if (slot.Kind != BehaviorKind.AssetBinding ||
+                        if (!IsAssetOutputBehavior(slot.Kind) ||
                             slot.SlotIndex is < 0 or >= 32)
                         {
                             continue;
@@ -1908,6 +1908,7 @@ namespace Ludots.Core.Presentation.Performers
                 switch (slot.Kind)
                 {
                     case BehaviorKind.AssetBinding:
+                    case BehaviorKind.WorldText:
                     case BehaviorKind.Grounding:
                     case BehaviorKind.MinimapMarker:
                     case BehaviorKind.Animator:
@@ -2606,9 +2607,6 @@ namespace Ludots.Core.Presentation.Performers
             {
                 switch (bindings[i].Value.Source)
                 {
-                    case ValueSourceKind.Attribute:
-                    case ValueSourceKind.AttributeRatio:
-                    case ValueSourceKind.AttributeBase:
                     case ValueSourceKind.Constant:
                         break;
                     default:
@@ -2655,7 +2653,7 @@ namespace Ludots.Core.Presentation.Performers
             for (int i = 0; i < behaviors.Length; i++)
             {
                 ref readonly BehaviorSlot slot = ref behaviors[i];
-                if (slot.Kind != BehaviorKind.AssetBinding ||
+                if (!IsAssetOutputBehavior(slot.Kind) ||
                     slot.SlotIndex is < 0 or >= 32 ||
                     (activeMask & (1u << slot.SlotIndex)) == 0)
                 {
@@ -2710,7 +2708,7 @@ namespace Ludots.Core.Presentation.Performers
             return false;
         }
 
-        private PerformerDefinition ResolveDefinition(int defId, PerformerDefinition definition)
+        private PerformerDefinition ResolveDefinition(int defId, PerformerDefinition? definition)
         {
             if (definition != null)
             {
@@ -3133,13 +3131,9 @@ namespace Ludots.Core.Presentation.Performers
 
                     if (hasInlineParamBindings)
                     {
-                        bool hasAttributes = _world.IsAlive(owner) && _world.Has<AttributeBuffer>(owner);
-                        AttributeBuffer attributes = hasAttributes ? _world.Get<AttributeBuffer>(owner) : default;
                         ApplyInlineInitialParamBindings(
                             ref floatParams[componentIndex],
-                            definition.Bindings,
-                            ref attributes,
-                            hasAttributes);
+                            definition.Bindings);
                     }
 
                     if (hasInlineAttributeBehaviors &&
@@ -3199,9 +3193,7 @@ namespace Ludots.Core.Presentation.Performers
 
         private static void ApplyInlineInitialParamBindings(
             ref PerformerFloatParams floatParams,
-            PerformerParamBinding[] bindings,
-            ref AttributeBuffer attributes,
-            bool hasAttributes)
+            PerformerParamBinding[] bindings)
         {
             for (int i = 0; i < bindings.Length; i++)
             {
@@ -3211,16 +3203,6 @@ namespace Ludots.Core.Presentation.Performers
                 {
                     case ValueSourceKind.Constant:
                         value = binding.Value.ConstantValue;
-                        break;
-                    case ValueSourceKind.Attribute:
-                    case ValueSourceKind.AttributeRatio:
-                    case ValueSourceKind.AttributeBase:
-                        if (!hasAttributes)
-                        {
-                            continue;
-                        }
-
-                        value = ResolveAttributeValue(ref attributes, binding.Value.SourceId, binding.Value.Source);
                         break;
                     default:
                         continue;
@@ -4364,6 +4346,11 @@ namespace Ludots.Core.Presentation.Performers
             }
 
             return false;
+        }
+
+        private static bool IsAssetOutputBehavior(BehaviorKind kind)
+        {
+            return kind is BehaviorKind.AssetBinding or BehaviorKind.WorldText;
         }
 
         private void MarkStaticDirty(ref PerformerEmitCache emitCache)

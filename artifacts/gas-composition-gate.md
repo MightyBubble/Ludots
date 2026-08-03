@@ -2,6 +2,61 @@
 
 Current closeouts and prior issue reviews follow.
 
+## GAS Composition Gate - Issue 722 Blacksmith Durability Control - 2026-08-03
+
+- **Task / Issue**: Keep the performer blacksmith showcase's manual durability presets authoritative after consolidating performer attribute param authoring under `BehaviorSlot.AttributeBinding`.
+- **Date**: 2026-08-03
+- **Agent / Author**: Codex
+
+### 1. Core judgment
+
+Primary delivery: A. Rewire existing effect Graph steps with an existing Graph operation.
+
+Result: PASS.
+
+Reason: The fix reuses the existing `RemoveEffectTemplate` Graph operation and the existing effect-template/Graph asset pipeline. It adds no preset enum, graph op, profile field, loader, fallback path, or parallel GAS runtime.
+
+### 2. Layer assignment
+
+| Capability | Layer | Implementation carrier |
+|---|---:|---|
+| Stop showcase random drift when a player selects a fixed durability preset | 2 | Existing `RemoveEffectTemplate` node in blacksmith effect Graph assets |
+| Apply the selected durability value | 2 | Existing `LoadAttribute`, `ConstFloat`, `SubFloat`, and `ModifyAttributeAdd` nodes |
+| Admit 30k showcase on-spawn drift effects without Core capacity changes | 2 | Blacksmith mod-owned `gasRuntimeCapacity.effectFanOutCommandCapacity` |
+
+### 3. Reuse list
+
+- Handlers: existing Graph op handler for `RemoveEffectTemplate`.
+- Queues / Systems: existing effect proposal, application, lifetime, and Graph execution systems.
+- Resolvers / Registries: existing `EffectTemplateRegistry` and Graph program registry.
+- Existing presets / graphs: existing blacksmith `SetDurabilityIntact`, `SetDurabilityDamaged`, and `SetDurabilityRuined` Graphs.
+- Existing config surface: mod-owned `assets/game.json` GAS runtime capacity merge.
+
+### 4. New Layer 0 ops
+
+N/A. No atomic op, handler, registry, loader, schema, or runtime pipeline is added.
+
+### 5. Transaction boundary
+
+No new rollback boundary is introduced. Each manual durability control remains one effect application; the Graph first requests cancellation of the random-drift template on the same target, then computes and applies the deterministic durability delta through the existing attribute write path.
+
+### 6. Config SSOT
+
+Behavior configuration stays in `mods/showcases/performer_blacksmith/PerformerBlacksmithShowcaseMod/assets/GAS/graphs.json` and existing effect templates. Showcase-scale capacity stays in `mods/showcases/performer_blacksmith/PerformerBlacksmithShowcaseMod/assets/game.json`. New JSON schema: NO.
+
+### 7. Red flag scan
+
+- [x] No profile inherit/placement enum added
+- [x] No parallel effect, attribute, or performer binding pipeline added
+- [x] No placement or lifecycle concern moved into the Graph
+- [x] No fallback, compatibility bypass, or silent drift masking added
+
+### 8. Next variant test
+
+A future showcase control variant should change Graph wiring or effect-template steps, not Core enums or a second durability-control runtime.
+
+---
+
 ## Graph / PresetType / EffectTemplate SSOT - Final Closeout - 2026-07-30
 
 - **Task / Issue**: Close the audited Ability, GAS Effect, and Graph contract gaps on current `main`, converge gameplay composition on `Graph -> optional PresetType sugar -> EffectTemplate instance`, and make test execution reproducible from repository-declared SDK and dependencies.

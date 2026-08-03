@@ -1,18 +1,6 @@
 [
   {
     "id": "interaction_selection_indicator",
-    "defaultColor": [
-      0.27,
-      0.74,
-      0.96,
-      0.18
-    ],
-    "defaultLifetime": -1,
-    "positionOffset": [
-      0,
-      0.04,
-      0
-    ],
     "bindings": [
       {
         "paramKey": "groundOverlay.innerRadius",
@@ -60,18 +48,30 @@
             1.3,
             1.3
           ]
+        },
+        "style": {
+          "color": [
+            0.27,
+            0.74,
+            0.96,
+            0.18
+          ]
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "persistence": "Scoped"
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.04,
+        0
+      ]
+    }
   },
   {
     "id": "interaction.blink.dispatch_marker",
-    "defaultColor": [
-      0.13,
-      0.88,
-      1.0,
-      0.95
-    ],
     "bindings": [
       {
         "paramKey": "groundOverlay.innerRadius",
@@ -119,6 +119,14 @@
             1.55,
             1.55
           ]
+        },
+        "style": {
+          "color": [
+            0.13,
+            0.88,
+            1,
+            0.95
+          ]
         }
       },
       {
@@ -145,12 +153,6 @@
   },
   {
     "id": "interaction.hover.evidence_marker",
-    "defaultColor": [
-      1.0,
-      0.78,
-      0.18,
-      0.9
-    ],
     "bindings": [
       {
         "paramKey": "groundOverlay.innerRadius",
@@ -197,6 +199,14 @@
             1.4,
             1.4,
             1.4
+          ]
+        },
+        "style": {
+          "color": [
+            1,
+            0.78,
+            0.18,
+            0.9
           ]
         }
       },

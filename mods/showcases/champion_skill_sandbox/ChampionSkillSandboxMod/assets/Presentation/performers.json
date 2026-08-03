@@ -3,239 +3,662 @@
     "id": "champion_skill_sandbox.event_rules",
     "rules": [
       {
-        "event": { "kind": "CastCommitted", "key": "Ability.Champion.Ezreal.ArcaneShift" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.ezreal_arcane_shift", "scopeSource": "Fixed" }
+        "event": {
+          "kind": "CastCommitted",
+          "key": "Ability.Champion.Ezreal.ArcaneShift"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "champion_skill_sandbox.cue.ezreal_arcane_shift",
+          "scopeSource": "Fixed"
+        }
       },
       {
-        "event": { "kind": "CastCommitted", "key": "Ability.Champion.Ezreal.EssenceFlux" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.ezreal_essence_flux_cast", "scopeSource": "Fixed" }
+        "event": {
+          "kind": "CastCommitted",
+          "key": "Ability.Champion.Ezreal.EssenceFlux"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "champion_skill_sandbox.cue.ezreal_essence_flux_cast",
+          "scopeSource": "Fixed"
+        }
       },
       {
-        "event": { "kind": "CastCommitted", "key": "Ability.Champion.Ezreal.MysticShot" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.ezreal_mystic_shot_cast", "scopeSource": "Fixed" }
+        "event": {
+          "kind": "CastCommitted",
+          "key": "Ability.Champion.Ezreal.MysticShot"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "champion_skill_sandbox.cue.ezreal_mystic_shot_cast",
+          "scopeSource": "Fixed"
+        }
       },
       {
-        "event": { "kind": "CastCommitted", "key": "Ability.Champion.Ezreal.TrueshotBarrage" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.ezreal_trueshot_barrage_cast", "scopeSource": "Fixed" }
+        "event": {
+          "kind": "CastCommitted",
+          "key": "Ability.Champion.Ezreal.TrueshotBarrage"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "champion_skill_sandbox.cue.ezreal_trueshot_barrage_cast",
+          "scopeSource": "Fixed"
+        }
       },
       {
-        "event": { "kind": "CastCommitted", "key": "Ability.Champion.Garen.DecisiveStrike" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.garen_decisive_strike", "scopeSource": "Fixed" }
+        "event": {
+          "kind": "CastCommitted",
+          "key": "Ability.Champion.Garen.DecisiveStrike"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "champion_skill_sandbox.cue.garen_decisive_strike",
+          "scopeSource": "Fixed"
+        }
       },
       {
-        "event": { "kind": "CastCommitted", "key": "Ability.Champion.Garen.Courage" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.garen_courage", "scopeSource": "Fixed" }
+        "event": {
+          "kind": "CastCommitted",
+          "key": "Ability.Champion.Garen.Courage"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "champion_skill_sandbox.cue.garen_courage",
+          "scopeSource": "Fixed"
+        }
       },
       {
-        "event": { "kind": "CastCommitted", "key": "Ability.Champion.Garen.Judgment" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.garen_judgment", "scopeSource": "Fixed" }
+        "event": {
+          "kind": "CastCommitted",
+          "key": "Ability.Champion.Garen.Judgment"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "champion_skill_sandbox.cue.garen_judgment",
+          "scopeSource": "Fixed"
+        }
       },
       {
-        "event": { "kind": "CastCommitted", "key": "Ability.Champion.Garen.DemacianJustice" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.garen_demacian_justice_cast", "scopeSource": "Fixed" }
+        "event": {
+          "kind": "CastCommitted",
+          "key": "Ability.Champion.Garen.DemacianJustice"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "champion_skill_sandbox.cue.garen_demacian_justice_cast",
+          "scopeSource": "Fixed"
+        }
       },
       {
-        "event": { "kind": "CastCommitted", "key": "Ability.Champion.Geomancer.RunicBeacon" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.geomancer_runic_beacon", "scopeSource": "Fixed" }
+        "event": {
+          "kind": "CastCommitted",
+          "key": "Ability.Champion.Geomancer.RunicBeacon"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "champion_skill_sandbox.cue.geomancer_runic_beacon",
+          "scopeSource": "Fixed"
+        }
       },
       {
-        "event": { "kind": "CastCommitted", "key": "Ability.Champion.Geomancer.RuneField" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.geomancer_rune_field_cast", "scopeSource": "Fixed" }
+        "event": {
+          "kind": "CastCommitted",
+          "key": "Ability.Champion.Geomancer.RuneField"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "champion_skill_sandbox.cue.geomancer_rune_field_cast",
+          "scopeSource": "Fixed"
+        }
       },
       {
-        "event": { "kind": "CastCommitted", "key": "Ability.Champion.Geomancer.StonePillar" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.geomancer_stone_pillar", "scopeSource": "Fixed" }
+        "event": {
+          "kind": "CastCommitted",
+          "key": "Ability.Champion.Geomancer.StonePillar"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "champion_skill_sandbox.cue.geomancer_stone_pillar",
+          "scopeSource": "Fixed"
+        }
       },
       {
-        "event": { "kind": "CastCommitted", "key": "Ability.Champion.Geomancer.PrismaticBeam" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.geomancer_prismatic_beam_cast", "scopeSource": "Fixed" }
+        "event": {
+          "kind": "CastCommitted",
+          "key": "Ability.Champion.Geomancer.PrismaticBeam"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "champion_skill_sandbox.cue.geomancer_prismatic_beam_cast",
+          "scopeSource": "Fixed"
+        }
       },
       {
-        "event": { "kind": "CastCommitted", "key": "Ability.Champion.Jayce.Cannon.AccelerationGate" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.jayce_acceleration_gate", "scopeSource": "Fixed" }
+        "event": {
+          "kind": "CastCommitted",
+          "key": "Ability.Champion.Jayce.Cannon.AccelerationGate"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "champion_skill_sandbox.cue.jayce_acceleration_gate",
+          "scopeSource": "Fixed"
+        }
       },
       {
-        "event": { "kind": "CastCommitted", "key": "Ability.Champion.Jayce.Cannon.HyperCharge" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.jayce_hyper_charge", "scopeSource": "Fixed" }
+        "event": {
+          "kind": "CastCommitted",
+          "key": "Ability.Champion.Jayce.Cannon.HyperCharge"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "champion_skill_sandbox.cue.jayce_hyper_charge",
+          "scopeSource": "Fixed"
+        }
       },
       {
-        "event": { "kind": "CastCommitted", "key": "Ability.Champion.Jayce.Cannon.ShockBlast" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.jayce_shock_blast_cast", "scopeSource": "Fixed" }
+        "event": {
+          "kind": "CastCommitted",
+          "key": "Ability.Champion.Jayce.Cannon.ShockBlast"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "champion_skill_sandbox.cue.jayce_shock_blast_cast",
+          "scopeSource": "Fixed"
+        }
       },
       {
-        "event": { "kind": "CastCommitted", "key": "Ability.Champion.Jayce.Hammer.LightningField" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.jayce_hammer_lightning_field", "scopeSource": "Fixed" }
+        "event": {
+          "kind": "CastCommitted",
+          "key": "Ability.Champion.Jayce.Hammer.LightningField"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "champion_skill_sandbox.cue.jayce_hammer_lightning_field",
+          "scopeSource": "Fixed"
+        }
       },
       {
-        "event": { "kind": "CastCommitted", "key": "Ability.Champion.Jayce.Hammer.ThunderingBlow" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.jayce_hammer_thundering_blow_cast", "scopeSource": "Fixed" }
+        "event": {
+          "kind": "CastCommitted",
+          "key": "Ability.Champion.Jayce.Hammer.ThunderingBlow"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "champion_skill_sandbox.cue.jayce_hammer_thundering_blow_cast",
+          "scopeSource": "Fixed"
+        }
       },
       {
-        "event": { "kind": "CastCommitted", "key": "Ability.Champion.Jayce.Hammer.ToTheSkies" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.jayce_hammer_to_the_skies_cast", "scopeSource": "Fixed" }
+        "event": {
+          "kind": "CastCommitted",
+          "key": "Ability.Champion.Jayce.Hammer.ToTheSkies"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "champion_skill_sandbox.cue.jayce_hammer_to_the_skies_cast",
+          "scopeSource": "Fixed"
+        }
       },
       {
-        "event": { "kind": "CastCommitted", "key": "Ability.Champion.Jayce.Transform.Cannon" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.jayce_transform_cannon", "scopeSource": "Fixed" }
+        "event": {
+          "kind": "CastCommitted",
+          "key": "Ability.Champion.Jayce.Transform.Cannon"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "champion_skill_sandbox.cue.jayce_transform_cannon",
+          "scopeSource": "Fixed"
+        }
       },
       {
-        "event": { "kind": "CastCommitted", "key": "Ability.Champion.Jayce.Transform.Hammer" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.jayce_transform_hammer", "scopeSource": "Fixed" }
+        "event": {
+          "kind": "CastCommitted",
+          "key": "Ability.Champion.Jayce.Transform.Hammer"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "champion_skill_sandbox.cue.jayce_transform_hammer",
+          "scopeSource": "Fixed"
+        }
       },
       {
-        "event": { "kind": "CastCommitted", "key": "Ability.ChampionStress.Warrior.Cleave" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.stress_warrior_cleave", "scopeSource": "Fixed" }
+        "event": {
+          "kind": "CastCommitted",
+          "key": "Ability.ChampionStress.Warrior.Cleave"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "champion_skill_sandbox.cue.stress_warrior_cleave",
+          "scopeSource": "Fixed"
+        }
       },
       {
-        "event": { "kind": "CastCommitted", "key": "Ability.ChampionStress.FireMage.Fireball" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.stress_fireball_cast", "scopeSource": "Fixed" }
+        "event": {
+          "kind": "CastCommitted",
+          "key": "Ability.ChampionStress.FireMage.Fireball"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "champion_skill_sandbox.cue.stress_fireball_cast",
+          "scopeSource": "Fixed"
+        }
       },
       {
-        "event": { "kind": "CastCommitted", "key": "Ability.ChampionStress.LaserMage.Laser" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.stress_laser_cast", "scopeSource": "Fixed" }
+        "event": {
+          "kind": "CastCommitted",
+          "key": "Ability.ChampionStress.LaserMage.Laser"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "champion_skill_sandbox.cue.stress_laser_cast",
+          "scopeSource": "Fixed"
+        }
       },
       {
-        "event": { "kind": "CastCommitted", "key": "Ability.ChampionStress.Priest.Heal" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.stress_priest_heal_cast", "scopeSource": "Fixed" }
+        "event": {
+          "kind": "CastCommitted",
+          "key": "Ability.ChampionStress.Priest.Heal"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "champion_skill_sandbox.cue.stress_priest_heal_cast",
+          "scopeSource": "Fixed"
+        }
       },
       {
-        "event": { "kind": "CastCommitted", "key": "Ability.Champion.SpellEngineer.SpellBeacon" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.spell_engineer_spell_beacon_cast", "scopeSource": "Fixed" }
+        "event": {
+          "kind": "CastCommitted",
+          "key": "Ability.Champion.SpellEngineer.SpellBeacon"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "champion_skill_sandbox.cue.spell_engineer_spell_beacon_cast",
+          "scopeSource": "Fixed"
+        }
       },
       {
-        "event": { "kind": "CastCommitted", "key": "Ability.Champion.SpellEngineer.GravityWell" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.spell_engineer_gravity_well_cast", "scopeSource": "Fixed" }
+        "event": {
+          "kind": "CastCommitted",
+          "key": "Ability.Champion.SpellEngineer.GravityWell"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "champion_skill_sandbox.cue.spell_engineer_gravity_well_cast",
+          "scopeSource": "Fixed"
+        }
       },
       {
-        "event": { "kind": "CastCommitted", "key": "Ability.Champion.SpellEngineer.CataclysmRing" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.spell_engineer_cataclysm_ring_cast", "scopeSource": "Fixed" }
+        "event": {
+          "kind": "CastCommitted",
+          "key": "Ability.Champion.SpellEngineer.CataclysmRing"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "champion_skill_sandbox.cue.spell_engineer_cataclysm_ring_cast",
+          "scopeSource": "Fixed"
+        }
       },
       {
-        "event": { "kind": "CastCommitted", "key": "Ability.Champion.SpellEngineer.GuidedLaser" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.spell_engineer_guided_laser_cast", "scopeSource": "Fixed" }
+        "event": {
+          "kind": "CastCommitted",
+          "key": "Ability.Champion.SpellEngineer.GuidedLaser"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "champion_skill_sandbox.cue.spell_engineer_guided_laser_cast",
+          "scopeSource": "Fixed"
+        }
       },
       {
-        "event": { "kind": "EffectApplied", "key": "Effect.Champion.Ezreal.ArcaneShiftBoltHit" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.ezreal_arcane_shift", "scopeSource": "Fixed" }
+        "event": {
+          "kind": "EffectApplied",
+          "key": "Effect.Champion.Ezreal.ArcaneShiftBoltHit"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "champion_skill_sandbox.cue.ezreal_arcane_shift",
+          "scopeSource": "Fixed"
+        }
       },
       {
-        "event": { "kind": "EffectActivated", "key": "Effect.Champion.Ezreal.EssenceFluxHit" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.ezreal_essence_flux_hit", "scopeSource": "Fixed" }
+        "event": {
+          "kind": "EffectActivated",
+          "key": "Effect.Champion.Ezreal.EssenceFluxHit"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "champion_skill_sandbox.cue.ezreal_essence_flux_hit",
+          "scopeSource": "Fixed"
+        }
       },
       {
-        "event": { "kind": "EffectApplied", "key": "Effect.Champion.Ezreal.EssenceFluxPop" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.ezreal_essence_flux_hit", "scopeSource": "Fixed" }
+        "event": {
+          "kind": "EffectApplied",
+          "key": "Effect.Champion.Ezreal.EssenceFluxPop"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "champion_skill_sandbox.cue.ezreal_essence_flux_hit",
+          "scopeSource": "Fixed"
+        }
       },
       {
-        "event": { "kind": "EffectApplied", "key": "Effect.Champion.Ezreal.MysticShotHit" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.ezreal_mystic_shot_hit", "scopeSource": "Fixed" }
+        "event": {
+          "kind": "EffectApplied",
+          "key": "Effect.Champion.Ezreal.MysticShotHit"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "champion_skill_sandbox.cue.ezreal_mystic_shot_hit",
+          "scopeSource": "Fixed"
+        }
       },
       {
-        "event": { "kind": "EffectApplied", "key": "Effect.Champion.Ezreal.TrueshotBarrageHit" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.ezreal_trueshot_barrage_hit", "scopeSource": "Fixed" }
+        "event": {
+          "kind": "EffectApplied",
+          "key": "Effect.Champion.Ezreal.TrueshotBarrageHit"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "champion_skill_sandbox.cue.ezreal_trueshot_barrage_hit",
+          "scopeSource": "Fixed"
+        }
       },
       {
-        "event": { "kind": "EffectApplied", "key": "Effect.Champion.Garen.JudgmentHit" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.garen_judgment_hit", "scopeSource": "Fixed" }
+        "event": {
+          "kind": "EffectApplied",
+          "key": "Effect.Champion.Garen.JudgmentHit"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "champion_skill_sandbox.cue.garen_judgment_hit",
+          "scopeSource": "Fixed"
+        }
       },
       {
-        "event": { "kind": "EffectApplied", "key": "Effect.Champion.Garen.DemacianJusticeHit" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.garen_demacian_justice_hit", "scopeSource": "Fixed" }
+        "event": {
+          "kind": "EffectApplied",
+          "key": "Effect.Champion.Garen.DemacianJusticeHit"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "champion_skill_sandbox.cue.garen_demacian_justice_hit",
+          "scopeSource": "Fixed"
+        }
       },
       {
-        "event": { "kind": "EffectApplied", "key": "Effect.Champion.Geomancer.RuneFieldHit" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.geomancer_rune_field_hit", "scopeSource": "Fixed" }
+        "event": {
+          "kind": "EffectApplied",
+          "key": "Effect.Champion.Geomancer.RuneFieldHit"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "champion_skill_sandbox.cue.geomancer_rune_field_hit",
+          "scopeSource": "Fixed"
+        }
       },
       {
-        "event": { "kind": "EffectApplied", "key": "Effect.Champion.Geomancer.PrismaticBeamHit" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.geomancer_prismatic_beam_hit", "scopeSource": "Fixed" }
+        "event": {
+          "kind": "EffectApplied",
+          "key": "Effect.Champion.Geomancer.PrismaticBeamHit"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "champion_skill_sandbox.cue.geomancer_prismatic_beam_hit",
+          "scopeSource": "Fixed"
+        }
       },
       {
-        "event": { "kind": "EffectApplied", "key": "Effect.Champion.Jayce.Cannon.ShockBlastHit" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.jayce_shock_blast_hit", "scopeSource": "Fixed" }
+        "event": {
+          "kind": "EffectApplied",
+          "key": "Effect.Champion.Jayce.Cannon.ShockBlastHit"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "champion_skill_sandbox.cue.jayce_shock_blast_hit",
+          "scopeSource": "Fixed"
+        }
       },
       {
-        "event": { "kind": "EffectApplied", "key": "Effect.Champion.Jayce.Hammer.LightningFieldHit" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.jayce_hammer_lightning_field_hit", "scopeSource": "Fixed" }
+        "event": {
+          "kind": "EffectApplied",
+          "key": "Effect.Champion.Jayce.Hammer.LightningFieldHit"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "champion_skill_sandbox.cue.jayce_hammer_lightning_field_hit",
+          "scopeSource": "Fixed"
+        }
       },
       {
-        "event": { "kind": "EffectApplied", "key": "Effect.Champion.Jayce.Hammer.ThunderingBlowHit" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.jayce_hammer_thundering_blow_hit", "scopeSource": "Fixed" }
+        "event": {
+          "kind": "EffectApplied",
+          "key": "Effect.Champion.Jayce.Hammer.ThunderingBlowHit"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "champion_skill_sandbox.cue.jayce_hammer_thundering_blow_hit",
+          "scopeSource": "Fixed"
+        }
       },
       {
-        "event": { "kind": "EffectApplied", "key": "Effect.Champion.Jayce.Hammer.ToTheSkiesHit" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.jayce_hammer_to_the_skies_hit", "scopeSource": "Fixed" }
+        "event": {
+          "kind": "EffectApplied",
+          "key": "Effect.Champion.Jayce.Hammer.ToTheSkiesHit"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "champion_skill_sandbox.cue.jayce_hammer_to_the_skies_hit",
+          "scopeSource": "Fixed"
+        }
       },
       {
-        "event": { "kind": "EffectApplied", "key": "Effect.ChampionStress.Warrior.CleaveHit" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.stress_warrior_cleave_hit", "scopeSource": "Fixed" }
+        "event": {
+          "kind": "EffectApplied",
+          "key": "Effect.ChampionStress.Warrior.CleaveHit"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "champion_skill_sandbox.cue.stress_warrior_cleave_hit",
+          "scopeSource": "Fixed"
+        }
       },
       {
-        "event": { "kind": "EffectApplied", "key": "Effect.ChampionStress.FireMage.FireballHit" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.stress_fireball_hit", "scopeSource": "Fixed" }
+        "event": {
+          "kind": "EffectApplied",
+          "key": "Effect.ChampionStress.FireMage.FireballHit"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "champion_skill_sandbox.cue.stress_fireball_hit",
+          "scopeSource": "Fixed"
+        }
       },
       {
-        "event": { "kind": "EffectApplied", "key": "Effect.ChampionStress.LaserMage.LaserHit" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.stress_laser_hit", "scopeSource": "Fixed" }
+        "event": {
+          "kind": "EffectApplied",
+          "key": "Effect.ChampionStress.LaserMage.LaserHit"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "champion_skill_sandbox.cue.stress_laser_hit",
+          "scopeSource": "Fixed"
+        }
       },
       {
-        "event": { "kind": "EffectApplied", "key": "Effect.ChampionStress.Priest.Heal" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.stress_priest_heal_hit", "scopeSource": "Fixed" }
+        "event": {
+          "kind": "EffectApplied",
+          "key": "Effect.ChampionStress.Priest.Heal"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "champion_skill_sandbox.cue.stress_priest_heal_hit",
+          "scopeSource": "Fixed"
+        }
       },
       {
-        "event": { "kind": "EffectApplied", "key": "Effect.Champion.SpellEngineer.GravityWellHit" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.spell_engineer_gravity_well_hit", "scopeSource": "Fixed" }
+        "event": {
+          "kind": "EffectApplied",
+          "key": "Effect.Champion.SpellEngineer.GravityWellHit"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "champion_skill_sandbox.cue.spell_engineer_gravity_well_hit",
+          "scopeSource": "Fixed"
+        }
       },
       {
-        "event": { "kind": "EffectApplied", "key": "Effect.Champion.SpellEngineer.GuidedLaserHit" },
-        "condition": { "inline": "SourceHasVisualTransform" },
-        "command": { "kind": "CreatePerformer", "definitionId": "champion_skill_sandbox.cue.spell_engineer_guided_laser_hit", "scopeSource": "Fixed" }
+        "event": {
+          "kind": "EffectApplied",
+          "key": "Effect.Champion.SpellEngineer.GuidedLaserHit"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "champion_skill_sandbox.cue.spell_engineer_guided_laser_hit",
+          "scopeSource": "Fixed"
+        }
       }
     ]
   },
@@ -325,18 +748,6 @@
   },
   {
     "id": "champion_skill_sandbox.selection_indicator",
-    "defaultColor": [
-      0.28,
-      0.88,
-      1,
-      0.16
-    ],
-    "defaultLifetime": -1,
-    "positionOffset": [
-      0,
-      0.04,
-      0
-    ],
     "bindings": [
       {
         "paramKey": "groundOverlay.innerRadius",
@@ -384,24 +795,30 @@
             1.05,
             1.05
           ]
+        },
+        "style": {
+          "color": [
+            0.28,
+            0.88,
+            1,
+            0.16
+          ]
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "persistence": "Scoped"
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.04,
+        0
+      ]
+    }
   },
   {
     "id": "champion_skill_sandbox.hover_indicator",
-    "defaultColor": [
-      1,
-      0.73,
-      0.24,
-      0.2
-    ],
-    "defaultLifetime": -1,
-    "positionOffset": [
-      0,
-      0.06,
-      0
-    ],
     "bindings": [
       {
         "paramKey": "groundOverlay.innerRadius",
@@ -449,24 +866,30 @@
             1.16,
             1.16
           ]
+        },
+        "style": {
+          "color": [
+            1,
+            0.73,
+            0.24,
+            0.2
+          ]
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "persistence": "Scoped"
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.06,
+        0
+      ]
+    }
   },
   {
     "id": "champion_skill_sandbox.mark.ezreal_essence_flux",
-    "defaultColor": [
-      1,
-      0.78,
-      0.28,
-      0.9
-    ],
-    "defaultLifetime": -1,
-    "positionOffset": [
-      0,
-      1.08,
-      0
-    ],
     "rules": [
       {
         "event": {
@@ -512,19 +935,30 @@
             0.18,
             0.18
           ]
+        },
+        "style": {
+          "color": [
+            1,
+            0.78,
+            0.28,
+            0.9
+          ]
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "persistence": "Scoped"
+    },
+    "anchor": {
+      "offset": [
+        0,
+        1.08,
+        0
+      ]
+    }
   },
   {
     "id": "champion_skill_sandbox.projectile.ezreal_e",
-    "defaultColor": [
-      0.44,
-      0.9,
-      1,
-      0.92
-    ],
-    "defaultLifetime": -1,
     "rules": [
       {
         "event": {
@@ -566,19 +1000,23 @@
             0.2,
             0.2
           ]
+        },
+        "style": {
+          "color": [
+            0.44,
+            0.9,
+            1,
+            0.92
+          ]
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "persistence": "Scoped"
+    }
   },
   {
     "id": "champion_skill_sandbox.projectile.ezreal_w",
-    "defaultColor": [
-      0.98,
-      0.82,
-      0.36,
-      0.92
-    ],
-    "defaultLifetime": -1,
     "rules": [
       {
         "event": {
@@ -620,19 +1058,23 @@
             0.24,
             0.24
           ]
+        },
+        "style": {
+          "color": [
+            0.98,
+            0.82,
+            0.36,
+            0.92
+          ]
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "persistence": "Scoped"
+    }
   },
   {
     "id": "champion_skill_sandbox.projectile.ezreal_q",
-    "defaultColor": [
-      0.34,
-      0.86,
-      1,
-      0.92
-    ],
-    "defaultLifetime": -1,
     "rules": [
       {
         "event": {
@@ -674,19 +1116,23 @@
             0.22,
             0.22
           ]
+        },
+        "style": {
+          "color": [
+            0.34,
+            0.86,
+            1,
+            0.92
+          ]
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "persistence": "Scoped"
+    }
   },
   {
     "id": "champion_skill_sandbox.projectile.ezreal_r",
-    "defaultColor": [
-      0.72,
-      0.93,
-      1,
-      0.94
-    ],
-    "defaultLifetime": -1,
     "rules": [
       {
         "event": {
@@ -728,19 +1174,23 @@
             0.34,
             0.34
           ]
+        },
+        "style": {
+          "color": [
+            0.72,
+            0.93,
+            1,
+            0.94
+          ]
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "persistence": "Scoped"
+    }
   },
   {
     "id": "champion_skill_sandbox.projectile.jayce_q",
-    "defaultColor": [
-      0.44,
-      0.84,
-      1,
-      0.92
-    ],
-    "defaultLifetime": -1,
     "rules": [
       {
         "event": {
@@ -782,25 +1232,23 @@
             0.24,
             0.24
           ]
+        },
+        "style": {
+          "color": [
+            0.44,
+            0.84,
+            1,
+            0.92
+          ]
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "persistence": "Scoped"
+    }
   },
   {
     "id": "champion_skill_sandbox.cue.ezreal_arcane_shift",
-    "defaultColor": [
-      0.38,
-      0.9,
-      1,
-      0.82
-    ],
-    "defaultLifetime": 0.26,
-    "alphaFadeOverLifetime": true,
-    "positionOffset": [
-      0,
-      0.7,
-      0
-    ],
     "behaviors": [
       {
         "slot": "body",
@@ -816,24 +1264,31 @@
             0.42,
             0.42
           ]
+        },
+        "style": {
+          "color": [
+            0.38,
+            0.9,
+            1,
+            0.82
+          ],
+          "alphaPolicy": "FadeOverLifetime"
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "durationSeconds": 0.26
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.7,
+        0
+      ]
+    }
   },
   {
     "id": "champion_skill_sandbox.cue.ezreal_essence_flux_cast",
-    "defaultColor": [
-      0.95,
-      0.78,
-      0.34,
-      0.18
-    ],
-    "defaultLifetime": 0.34,
-    "positionOffset": [
-      0,
-      0.04,
-      0
-    ],
     "bindings": [
       {
         "paramKey": "groundOverlay.border.r",
@@ -876,24 +1331,30 @@
             1.5,
             1.5
           ]
+        },
+        "style": {
+          "color": [
+            0.95,
+            0.78,
+            0.34,
+            0.18
+          ]
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "durationSeconds": 0.34
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.04,
+        0
+      ]
+    }
   },
   {
     "id": "champion_skill_sandbox.cue.ezreal_essence_flux_hit",
-    "defaultColor": [
-      0.95,
-      0.78,
-      0.34,
-      0.12
-    ],
-    "defaultLifetime": 0.42,
-    "positionOffset": [
-      0,
-      0.05,
-      0
-    ],
     "bindings": [
       {
         "paramKey": "groundOverlay.innerRadius",
@@ -941,25 +1402,30 @@
             1.24,
             1.24
           ]
+        },
+        "style": {
+          "color": [
+            0.95,
+            0.78,
+            0.34,
+            0.12
+          ]
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "durationSeconds": 0.42
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.05,
+        0
+      ]
+    }
   },
   {
     "id": "champion_skill_sandbox.cue.ezreal_mystic_shot_cast",
-    "defaultColor": [
-      0.38,
-      0.82,
-      1,
-      0.86
-    ],
-    "defaultLifetime": 0.18,
-    "alphaFadeOverLifetime": true,
-    "positionOffset": [
-      0,
-      0.6,
-      0
-    ],
     "behaviors": [
       {
         "slot": "body",
@@ -975,25 +1441,31 @@
             0.26,
             0.26
           ]
+        },
+        "style": {
+          "color": [
+            0.38,
+            0.82,
+            1,
+            0.86
+          ],
+          "alphaPolicy": "FadeOverLifetime"
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "durationSeconds": 0.18
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.6,
+        0
+      ]
+    }
   },
   {
     "id": "champion_skill_sandbox.cue.ezreal_mystic_shot_hit",
-    "defaultColor": [
-      0.55,
-      0.9,
-      1,
-      0.9
-    ],
-    "defaultLifetime": 0.22,
-    "alphaFadeOverLifetime": true,
-    "positionOffset": [
-      0,
-      0.8,
-      0
-    ],
     "behaviors": [
       {
         "slot": "body",
@@ -1009,25 +1481,31 @@
             0.32,
             0.32
           ]
+        },
+        "style": {
+          "color": [
+            0.55,
+            0.9,
+            1,
+            0.9
+          ],
+          "alphaPolicy": "FadeOverLifetime"
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "durationSeconds": 0.22
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.8,
+        0
+      ]
+    }
   },
   {
     "id": "champion_skill_sandbox.cue.ezreal_trueshot_barrage_cast",
-    "defaultColor": [
-      0.7,
-      0.94,
-      1,
-      0.9
-    ],
-    "defaultLifetime": 0.28,
-    "alphaFadeOverLifetime": true,
-    "positionOffset": [
-      0,
-      0.8,
-      0
-    ],
     "behaviors": [
       {
         "slot": "body",
@@ -1043,24 +1521,31 @@
             0.5,
             0.5
           ]
+        },
+        "style": {
+          "color": [
+            0.7,
+            0.94,
+            1,
+            0.9
+          ],
+          "alphaPolicy": "FadeOverLifetime"
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "durationSeconds": 0.28
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.8,
+        0
+      ]
+    }
   },
   {
     "id": "champion_skill_sandbox.cue.ezreal_trueshot_barrage_hit",
-    "defaultColor": [
-      0.74,
-      0.94,
-      1,
-      0.18
-    ],
-    "defaultLifetime": 0.28,
-    "positionOffset": [
-      0,
-      0.06,
-      0
-    ],
     "bindings": [
       {
         "paramKey": "groundOverlay.border.r",
@@ -1103,24 +1588,30 @@
             1.8,
             1.8
           ]
+        },
+        "style": {
+          "color": [
+            0.74,
+            0.94,
+            1,
+            0.18
+          ]
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "durationSeconds": 0.28
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.06,
+        0
+      ]
+    }
   },
   {
     "id": "champion_skill_sandbox.cue.garen_decisive_strike",
-    "defaultColor": [
-      0.95,
-      0.84,
-      0.48,
-      0.18
-    ],
-    "defaultLifetime": 0.32,
-    "positionOffset": [
-      0,
-      0.05,
-      0
-    ],
     "bindings": [
       {
         "paramKey": "groundOverlay.border.r",
@@ -1163,24 +1654,30 @@
             1.18,
             1.18
           ]
+        },
+        "style": {
+          "color": [
+            0.95,
+            0.84,
+            0.48,
+            0.18
+          ]
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "durationSeconds": 0.32
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.05,
+        0
+      ]
+    }
   },
   {
     "id": "champion_skill_sandbox.cue.garen_courage",
-    "defaultColor": [
-      0.78,
-      0.9,
-      0.46,
-      0.14
-    ],
-    "defaultLifetime": 0.46,
-    "positionOffset": [
-      0,
-      0.05,
-      0
-    ],
     "bindings": [
       {
         "paramKey": "groundOverlay.innerRadius",
@@ -1228,24 +1725,30 @@
             1.36,
             1.36
           ]
+        },
+        "style": {
+          "color": [
+            0.78,
+            0.9,
+            0.46,
+            0.14
+          ]
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "durationSeconds": 0.46
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.05,
+        0
+      ]
+    }
   },
   {
     "id": "champion_skill_sandbox.cue.garen_judgment",
-    "defaultColor": [
-      0.9,
-      0.64,
-      0.32,
-      0.12
-    ],
-    "defaultLifetime": 0.5,
-    "positionOffset": [
-      0,
-      0.05,
-      0
-    ],
     "bindings": [
       {
         "paramKey": "groundOverlay.innerRadius",
@@ -1293,25 +1796,30 @@
             2.6,
             2.6
           ]
+        },
+        "style": {
+          "color": [
+            0.9,
+            0.64,
+            0.32,
+            0.12
+          ]
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "durationSeconds": 0.5
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.05,
+        0
+      ]
+    }
   },
   {
     "id": "champion_skill_sandbox.cue.garen_judgment_hit",
-    "defaultColor": [
-      1,
-      0.66,
-      0.42,
-      0.9
-    ],
-    "defaultLifetime": 0.2,
-    "alphaFadeOverLifetime": true,
-    "positionOffset": [
-      0,
-      0.78,
-      0
-    ],
     "behaviors": [
       {
         "slot": "body",
@@ -1327,25 +1835,31 @@
             0.28,
             0.28
           ]
+        },
+        "style": {
+          "color": [
+            1,
+            0.66,
+            0.42,
+            0.9
+          ],
+          "alphaPolicy": "FadeOverLifetime"
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "durationSeconds": 0.2
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.78,
+        0
+      ]
+    }
   },
   {
     "id": "champion_skill_sandbox.cue.garen_demacian_justice_cast",
-    "defaultColor": [
-      1,
-      0.58,
-      0.42,
-      0.84
-    ],
-    "defaultLifetime": 0.22,
-    "alphaFadeOverLifetime": true,
-    "positionOffset": [
-      0,
-      0.92,
-      0
-    ],
     "behaviors": [
       {
         "slot": "body",
@@ -1361,24 +1875,31 @@
             0.44,
             0.44
           ]
+        },
+        "style": {
+          "color": [
+            1,
+            0.58,
+            0.42,
+            0.84
+          ],
+          "alphaPolicy": "FadeOverLifetime"
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "durationSeconds": 0.22
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.92,
+        0
+      ]
+    }
   },
   {
     "id": "champion_skill_sandbox.cue.garen_demacian_justice_hit",
-    "defaultColor": [
-      1,
-      0.54,
-      0.36,
-      0.2
-    ],
-    "defaultLifetime": 0.26,
-    "positionOffset": [
-      0,
-      0.06,
-      0
-    ],
     "bindings": [
       {
         "paramKey": "groundOverlay.border.r",
@@ -1421,25 +1942,30 @@
             1.45,
             1.45
           ]
+        },
+        "style": {
+          "color": [
+            1,
+            0.54,
+            0.36,
+            0.2
+          ]
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "durationSeconds": 0.26
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.06,
+        0
+      ]
+    }
   },
   {
     "id": "champion_skill_sandbox.cue.geomancer_runic_beacon",
-    "defaultColor": [
-      0.54,
-      0.9,
-      0.68,
-      0.88
-    ],
-    "defaultLifetime": 0.22,
-    "alphaFadeOverLifetime": true,
-    "positionOffset": [
-      0,
-      0.72,
-      0
-    ],
     "behaviors": [
       {
         "slot": "body",
@@ -1455,24 +1981,31 @@
             0.34,
             0.34
           ]
+        },
+        "style": {
+          "color": [
+            0.54,
+            0.9,
+            0.68,
+            0.88
+          ],
+          "alphaPolicy": "FadeOverLifetime"
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "durationSeconds": 0.22
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.72,
+        0
+      ]
+    }
   },
   {
     "id": "champion_skill_sandbox.cue.geomancer_rune_field_cast",
-    "defaultColor": [
-      0.84,
-      0.94,
-      0.46,
-      0.18
-    ],
-    "defaultLifetime": 0.42,
-    "positionOffset": [
-      0,
-      0.05,
-      0
-    ],
     "bindings": [
       {
         "paramKey": "groundOverlay.border.r",
@@ -1515,24 +2048,30 @@
             2.2,
             2.2
           ]
+        },
+        "style": {
+          "color": [
+            0.84,
+            0.94,
+            0.46,
+            0.18
+          ]
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "durationSeconds": 0.42
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.05,
+        0
+      ]
+    }
   },
   {
     "id": "champion_skill_sandbox.cue.geomancer_rune_field_hit",
-    "defaultColor": [
-      0.84,
-      0.94,
-      0.46,
-      0.12
-    ],
-    "defaultLifetime": 0.24,
-    "positionOffset": [
-      0,
-      0.05,
-      0
-    ],
     "bindings": [
       {
         "paramKey": "groundOverlay.innerRadius",
@@ -1580,24 +2119,30 @@
             1.18,
             1.18
           ]
+        },
+        "style": {
+          "color": [
+            0.84,
+            0.94,
+            0.46,
+            0.12
+          ]
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "durationSeconds": 0.24
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.05,
+        0
+      ]
+    }
   },
   {
     "id": "champion_skill_sandbox.cue.geomancer_stone_pillar",
-    "defaultColor": [
-      0.95,
-      0.72,
-      0.42,
-      0.16
-    ],
-    "defaultLifetime": 0.34,
-    "positionOffset": [
-      0,
-      0.05,
-      0
-    ],
     "bindings": [
       {
         "paramKey": "groundOverlay.innerRadius",
@@ -1645,25 +2190,30 @@
             1.34,
             1.34
           ]
+        },
+        "style": {
+          "color": [
+            0.95,
+            0.72,
+            0.42,
+            0.16
+          ]
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "durationSeconds": 0.34
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.05,
+        0
+      ]
+    }
   },
   {
     "id": "champion_skill_sandbox.cue.geomancer_prismatic_beam_cast",
-    "defaultColor": [
-      0.5,
-      0.9,
-      1,
-      0.88
-    ],
-    "defaultLifetime": 0.2,
-    "alphaFadeOverLifetime": true,
-    "positionOffset": [
-      0,
-      0.76,
-      0
-    ],
     "behaviors": [
       {
         "slot": "body",
@@ -1679,25 +2229,31 @@
             0.38,
             0.38
           ]
+        },
+        "style": {
+          "color": [
+            0.5,
+            0.9,
+            1,
+            0.88
+          ],
+          "alphaPolicy": "FadeOverLifetime"
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "durationSeconds": 0.2
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.76,
+        0
+      ]
+    }
   },
   {
     "id": "champion_skill_sandbox.cue.geomancer_prismatic_beam_hit",
-    "defaultColor": [
-      0.62,
-      0.94,
-      1,
-      0.92
-    ],
-    "defaultLifetime": 0.2,
-    "alphaFadeOverLifetime": true,
-    "positionOffset": [
-      0,
-      0.82,
-      0
-    ],
     "behaviors": [
       {
         "slot": "body",
@@ -1713,24 +2269,31 @@
             0.3,
             0.3
           ]
+        },
+        "style": {
+          "color": [
+            0.62,
+            0.94,
+            1,
+            0.92
+          ],
+          "alphaPolicy": "FadeOverLifetime"
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "durationSeconds": 0.2
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.82,
+        0
+      ]
+    }
   },
   {
     "id": "champion_skill_sandbox.cue.jayce_acceleration_gate",
-    "defaultColor": [
-      0.52,
-      0.9,
-      0.66,
-      0.12
-    ],
-    "defaultLifetime": 0.38,
-    "positionOffset": [
-      0,
-      0.05,
-      0
-    ],
     "bindings": [
       {
         "paramKey": "groundOverlay.innerRadius",
@@ -1778,25 +2341,30 @@
             1.8,
             1.8
           ]
+        },
+        "style": {
+          "color": [
+            0.52,
+            0.9,
+            0.66,
+            0.12
+          ]
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "durationSeconds": 0.38
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.05,
+        0
+      ]
+    }
   },
   {
     "id": "champion_skill_sandbox.cue.jayce_hyper_charge",
-    "defaultColor": [
-      0.66,
-      0.96,
-      0.72,
-      0.86
-    ],
-    "defaultLifetime": 0.22,
-    "alphaFadeOverLifetime": true,
-    "positionOffset": [
-      0,
-      0.7,
-      0
-    ],
     "behaviors": [
       {
         "slot": "body",
@@ -1812,25 +2380,31 @@
             0.32,
             0.32
           ]
+        },
+        "style": {
+          "color": [
+            0.66,
+            0.96,
+            0.72,
+            0.86
+          ],
+          "alphaPolicy": "FadeOverLifetime"
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "durationSeconds": 0.22
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.7,
+        0
+      ]
+    }
   },
   {
     "id": "champion_skill_sandbox.cue.jayce_shock_blast_cast",
-    "defaultColor": [
-      0.44,
-      0.84,
-      1,
-      0.88
-    ],
-    "defaultLifetime": 0.18,
-    "alphaFadeOverLifetime": true,
-    "positionOffset": [
-      0,
-      0.62,
-      0
-    ],
     "behaviors": [
       {
         "slot": "body",
@@ -1846,25 +2420,31 @@
             0.28,
             0.28
           ]
+        },
+        "style": {
+          "color": [
+            0.44,
+            0.84,
+            1,
+            0.88
+          ],
+          "alphaPolicy": "FadeOverLifetime"
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "durationSeconds": 0.18
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.62,
+        0
+      ]
+    }
   },
   {
     "id": "champion_skill_sandbox.cue.jayce_shock_blast_hit",
-    "defaultColor": [
-      0.64,
-      0.92,
-      1,
-      0.92
-    ],
-    "defaultLifetime": 0.22,
-    "alphaFadeOverLifetime": true,
-    "positionOffset": [
-      0,
-      0.82,
-      0
-    ],
     "behaviors": [
       {
         "slot": "body",
@@ -1880,24 +2460,31 @@
             0.34,
             0.34
           ]
+        },
+        "style": {
+          "color": [
+            0.64,
+            0.92,
+            1,
+            0.92
+          ],
+          "alphaPolicy": "FadeOverLifetime"
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "durationSeconds": 0.22
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.82,
+        0
+      ]
+    }
   },
   {
     "id": "champion_skill_sandbox.cue.jayce_hammer_lightning_field",
-    "defaultColor": [
-      1,
-      0.83,
-      0.46,
-      0.12
-    ],
-    "defaultLifetime": 0.44,
-    "positionOffset": [
-      0,
-      0.05,
-      0
-    ],
     "bindings": [
       {
         "paramKey": "groundOverlay.innerRadius",
@@ -1945,25 +2532,30 @@
             2.8,
             2.8
           ]
+        },
+        "style": {
+          "color": [
+            1,
+            0.83,
+            0.46,
+            0.12
+          ]
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "durationSeconds": 0.44
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.05,
+        0
+      ]
+    }
   },
   {
     "id": "champion_skill_sandbox.cue.jayce_hammer_lightning_field_hit",
-    "defaultColor": [
-      1,
-      0.84,
-      0.52,
-      0.88
-    ],
-    "defaultLifetime": 0.18,
-    "alphaFadeOverLifetime": true,
-    "positionOffset": [
-      0,
-      0.76,
-      0
-    ],
     "behaviors": [
       {
         "slot": "body",
@@ -1979,25 +2571,31 @@
             0.24,
             0.24
           ]
+        },
+        "style": {
+          "color": [
+            1,
+            0.84,
+            0.52,
+            0.88
+          ],
+          "alphaPolicy": "FadeOverLifetime"
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "durationSeconds": 0.18
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.76,
+        0
+      ]
+    }
   },
   {
     "id": "champion_skill_sandbox.cue.jayce_hammer_thundering_blow_cast",
-    "defaultColor": [
-      1,
-      0.66,
-      0.42,
-      0.86
-    ],
-    "defaultLifetime": 0.18,
-    "alphaFadeOverLifetime": true,
-    "positionOffset": [
-      0,
-      0.72,
-      0
-    ],
     "behaviors": [
       {
         "slot": "body",
@@ -2013,25 +2611,31 @@
             0.36,
             0.36
           ]
+        },
+        "style": {
+          "color": [
+            1,
+            0.66,
+            0.42,
+            0.86
+          ],
+          "alphaPolicy": "FadeOverLifetime"
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "durationSeconds": 0.18
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.72,
+        0
+      ]
+    }
   },
   {
     "id": "champion_skill_sandbox.cue.jayce_hammer_thundering_blow_hit",
-    "defaultColor": [
-      1,
-      0.72,
-      0.48,
-      0.9
-    ],
-    "defaultLifetime": 0.2,
-    "alphaFadeOverLifetime": true,
-    "positionOffset": [
-      0,
-      0.84,
-      0
-    ],
     "behaviors": [
       {
         "slot": "body",
@@ -2047,25 +2651,31 @@
             0.3,
             0.3
           ]
+        },
+        "style": {
+          "color": [
+            1,
+            0.72,
+            0.48,
+            0.9
+          ],
+          "alphaPolicy": "FadeOverLifetime"
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "durationSeconds": 0.2
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.84,
+        0
+      ]
+    }
   },
   {
     "id": "champion_skill_sandbox.cue.jayce_hammer_to_the_skies_cast",
-    "defaultColor": [
-      1,
-      0.72,
-      0.34,
-      0.88
-    ],
-    "defaultLifetime": 0.2,
-    "alphaFadeOverLifetime": true,
-    "positionOffset": [
-      0,
-      0.74,
-      0
-    ],
     "behaviors": [
       {
         "slot": "body",
@@ -2081,24 +2691,31 @@
             0.38,
             0.38
           ]
+        },
+        "style": {
+          "color": [
+            1,
+            0.72,
+            0.34,
+            0.88
+          ],
+          "alphaPolicy": "FadeOverLifetime"
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "durationSeconds": 0.2
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.74,
+        0
+      ]
+    }
   },
   {
     "id": "champion_skill_sandbox.cue.jayce_hammer_to_the_skies_hit",
-    "defaultColor": [
-      1,
-      0.72,
-      0.36,
-      0.18
-    ],
-    "defaultLifetime": 0.26,
-    "positionOffset": [
-      0,
-      0.06,
-      0
-    ],
     "bindings": [
       {
         "paramKey": "groundOverlay.border.r",
@@ -2141,25 +2758,30 @@
             1.32,
             1.32
           ]
+        },
+        "style": {
+          "color": [
+            1,
+            0.72,
+            0.36,
+            0.18
+          ]
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "durationSeconds": 0.26
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.06,
+        0
+      ]
+    }
   },
   {
     "id": "champion_skill_sandbox.cue.jayce_transform_cannon",
-    "defaultColor": [
-      0.52,
-      0.7,
-      1,
-      0.86
-    ],
-    "defaultLifetime": 0.22,
-    "alphaFadeOverLifetime": true,
-    "positionOffset": [
-      0,
-      0.72,
-      0
-    ],
     "behaviors": [
       {
         "slot": "body",
@@ -2175,25 +2797,31 @@
             0.34,
             0.34
           ]
+        },
+        "style": {
+          "color": [
+            0.52,
+            0.7,
+            1,
+            0.86
+          ],
+          "alphaPolicy": "FadeOverLifetime"
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "durationSeconds": 0.22
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.72,
+        0
+      ]
+    }
   },
   {
     "id": "champion_skill_sandbox.cue.jayce_transform_hammer",
-    "defaultColor": [
-      1,
-      0.74,
-      0.42,
-      0.86
-    ],
-    "defaultLifetime": 0.22,
-    "alphaFadeOverLifetime": true,
-    "positionOffset": [
-      0,
-      0.72,
-      0
-    ],
     "behaviors": [
       {
         "slot": "body",
@@ -2209,19 +2837,31 @@
             0.34,
             0.34
           ]
+        },
+        "style": {
+          "color": [
+            1,
+            0.74,
+            0.42,
+            0.86
+          ],
+          "alphaPolicy": "FadeOverLifetime"
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "durationSeconds": 0.22
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.72,
+        0
+      ]
+    }
   },
   {
     "id": "champion_skill_sandbox.projectile.stress_fireball",
-    "defaultColor": [
-      1,
-      0.55,
-      0.32,
-      0.92
-    ],
-    "defaultLifetime": -1,
     "rules": [
       {
         "event": {
@@ -2263,19 +2903,23 @@
             0.28,
             0.28
           ]
+        },
+        "style": {
+          "color": [
+            1,
+            0.55,
+            0.32,
+            0.92
+          ]
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "persistence": "Scoped"
+    }
   },
   {
     "id": "champion_skill_sandbox.projectile.stress_laser",
-    "defaultColor": [
-      0.44,
-      0.88,
-      1,
-      0.94
-    ],
-    "defaultLifetime": -1,
     "rules": [
       {
         "event": {
@@ -2317,24 +2961,23 @@
             0.16,
             0.16
           ]
+        },
+        "style": {
+          "color": [
+            0.44,
+            0.88,
+            1,
+            0.94
+          ]
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "persistence": "Scoped"
+    }
   },
   {
     "id": "champion_skill_sandbox.manifestation.runic_beacon",
-    "defaultColor": [
-      0.56,
-      0.92,
-      0.72,
-      0.92
-    ],
-    "defaultLifetime": -1,
-    "positionOffset": [
-      0,
-      0.86,
-      0
-    ],
     "rules": [
       {
         "event": {
@@ -2376,24 +3019,30 @@
             0.38,
             0.38
           ]
+        },
+        "style": {
+          "color": [
+            0.56,
+            0.92,
+            0.72,
+            0.92
+          ]
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "persistence": "Scoped"
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.86,
+        0
+      ]
+    }
   },
   {
     "id": "champion_skill_sandbox.manifestation.rune_field",
-    "defaultColor": [
-      0.84,
-      0.94,
-      0.46,
-      0.12
-    ],
-    "defaultLifetime": -1,
-    "positionOffset": [
-      0,
-      0.05,
-      0
-    ],
     "bindings": [
       {
         "paramKey": "groundOverlay.innerRadius",
@@ -2467,24 +3116,30 @@
             2.2,
             2.2
           ]
+        },
+        "style": {
+          "color": [
+            0.84,
+            0.94,
+            0.46,
+            0.12
+          ]
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "persistence": "Scoped"
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.05,
+        0
+      ]
+    }
   },
   {
     "id": "champion_skill_sandbox.manifestation.stone_pillar",
-    "defaultColor": [
-      0.95,
-      0.72,
-      0.42,
-      0.14
-    ],
-    "defaultLifetime": -1,
-    "positionOffset": [
-      0,
-      0.05,
-      0
-    ],
     "bindings": [
       {
         "paramKey": "groundOverlay.innerRadius",
@@ -2558,24 +3213,30 @@
             1.26,
             1.26
           ]
+        },
+        "style": {
+          "color": [
+            0.95,
+            0.72,
+            0.42,
+            0.14
+          ]
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "persistence": "Scoped"
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.05,
+        0
+      ]
+    }
   },
   {
     "id": "champion_skill_sandbox.manifestation.spell_beacon",
-    "defaultColor": [
-      0.52,
-      0.9,
-      1,
-      0.92
-    ],
-    "defaultLifetime": -1,
-    "positionOffset": [
-      0,
-      0.74,
-      0
-    ],
     "rules": [
       {
         "event": {
@@ -2617,24 +3278,30 @@
             0.34,
             0.34
           ]
+        },
+        "style": {
+          "color": [
+            0.52,
+            0.9,
+            1,
+            0.92
+          ]
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "persistence": "Scoped"
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.74,
+        0
+      ]
+    }
   },
   {
     "id": "champion_skill_sandbox.manifestation.gravity_well",
-    "defaultColor": [
-      0.48,
-      0.62,
-      1,
-      0.12
-    ],
-    "defaultLifetime": -1,
-    "positionOffset": [
-      0,
-      0.05,
-      0
-    ],
     "bindings": [
       {
         "paramKey": "groundOverlay.innerRadius",
@@ -2708,24 +3375,30 @@
             2.4,
             2.4
           ]
+        },
+        "style": {
+          "color": [
+            0.48,
+            0.62,
+            1,
+            0.12
+          ]
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "persistence": "Scoped"
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.05,
+        0
+      ]
+    }
   },
   {
     "id": "champion_skill_sandbox.manifestation.barrier_segment",
-    "defaultColor": [
-      0.98,
-      0.56,
-      0.38,
-      0.16
-    ],
-    "defaultLifetime": -1,
-    "positionOffset": [
-      0,
-      0.05,
-      0
-    ],
     "bindings": [
       {
         "paramKey": "groundOverlay.rotation",
@@ -2808,24 +3481,30 @@
             1,
             1
           ]
+        },
+        "style": {
+          "color": [
+            0.98,
+            0.56,
+            0.38,
+            0.16
+          ]
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "persistence": "Scoped"
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.05,
+        0
+      ]
+    }
   },
   {
     "id": "champion_skill_sandbox.manifestation.guided_laser",
-    "defaultColor": [
-      0.72,
-      0.5,
-      1,
-      0.12
-    ],
-    "defaultLifetime": -1,
-    "positionOffset": [
-      0,
-      0.06,
-      0
-    ],
     "bindings": [
       {
         "paramKey": "groundOverlay.rotation",
@@ -2908,24 +3587,30 @@
             1,
             1
           ]
+        },
+        "style": {
+          "color": [
+            0.72,
+            0.5,
+            1,
+            0.12
+          ]
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "persistence": "Scoped"
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.06,
+        0
+      ]
+    }
   },
   {
     "id": "champion_skill_sandbox.cue.stress_warrior_cleave",
-    "defaultColor": [
-      0.96,
-      0.66,
-      0.34,
-      0.14
-    ],
-    "defaultLifetime": 0.28,
-    "positionOffset": [
-      0,
-      0.05,
-      0
-    ],
     "bindings": [
       {
         "paramKey": "groundOverlay.innerRadius",
@@ -2973,25 +3658,30 @@
             1.54,
             1.54
           ]
+        },
+        "style": {
+          "color": [
+            0.96,
+            0.66,
+            0.34,
+            0.14
+          ]
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "durationSeconds": 0.28
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.05,
+        0
+      ]
+    }
   },
   {
     "id": "champion_skill_sandbox.cue.stress_warrior_cleave_hit",
-    "defaultColor": [
-      1,
-      0.72,
-      0.48,
-      0.88
-    ],
-    "defaultLifetime": 0.18,
-    "alphaFadeOverLifetime": true,
-    "positionOffset": [
-      0,
-      0.8,
-      0
-    ],
     "behaviors": [
       {
         "slot": "body",
@@ -3007,25 +3697,31 @@
             0.24,
             0.24
           ]
+        },
+        "style": {
+          "color": [
+            1,
+            0.72,
+            0.48,
+            0.88
+          ],
+          "alphaPolicy": "FadeOverLifetime"
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "durationSeconds": 0.18
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.8,
+        0
+      ]
+    }
   },
   {
     "id": "champion_skill_sandbox.cue.stress_fireball_cast",
-    "defaultColor": [
-      1,
-      0.56,
-      0.34,
-      0.86
-    ],
-    "defaultLifetime": 0.18,
-    "alphaFadeOverLifetime": true,
-    "positionOffset": [
-      0,
-      0.72,
-      0
-    ],
     "behaviors": [
       {
         "slot": "body",
@@ -3041,24 +3737,31 @@
             0.34,
             0.34
           ]
+        },
+        "style": {
+          "color": [
+            1,
+            0.56,
+            0.34,
+            0.86
+          ],
+          "alphaPolicy": "FadeOverLifetime"
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "durationSeconds": 0.18
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.72,
+        0
+      ]
+    }
   },
   {
     "id": "champion_skill_sandbox.cue.stress_fireball_hit",
-    "defaultColor": [
-      1,
-      0.44,
-      0.28,
-      0.18
-    ],
-    "defaultLifetime": 0.24,
-    "positionOffset": [
-      0,
-      0.06,
-      0
-    ],
     "bindings": [
       {
         "paramKey": "groundOverlay.border.r",
@@ -3101,25 +3804,30 @@
             1.65,
             1.65
           ]
+        },
+        "style": {
+          "color": [
+            1,
+            0.44,
+            0.28,
+            0.18
+          ]
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "durationSeconds": 0.24
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.06,
+        0
+      ]
+    }
   },
   {
     "id": "champion_skill_sandbox.cue.stress_laser_cast",
-    "defaultColor": [
-      0.44,
-      0.88,
-      1,
-      0.88
-    ],
-    "defaultLifetime": 0.16,
-    "alphaFadeOverLifetime": true,
-    "positionOffset": [
-      0,
-      0.7,
-      0
-    ],
     "behaviors": [
       {
         "slot": "body",
@@ -3135,25 +3843,31 @@
             0.26,
             0.26
           ]
+        },
+        "style": {
+          "color": [
+            0.44,
+            0.88,
+            1,
+            0.88
+          ],
+          "alphaPolicy": "FadeOverLifetime"
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "durationSeconds": 0.16
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.7,
+        0
+      ]
+    }
   },
   {
     "id": "champion_skill_sandbox.cue.stress_laser_hit",
-    "defaultColor": [
-      0.62,
-      0.94,
-      1,
-      0.92
-    ],
-    "defaultLifetime": 0.18,
-    "alphaFadeOverLifetime": true,
-    "positionOffset": [
-      0,
-      0.82,
-      0
-    ],
     "behaviors": [
       {
         "slot": "body",
@@ -3169,25 +3883,31 @@
             0.22,
             0.22
           ]
+        },
+        "style": {
+          "color": [
+            0.62,
+            0.94,
+            1,
+            0.92
+          ],
+          "alphaPolicy": "FadeOverLifetime"
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "durationSeconds": 0.18
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.82,
+        0
+      ]
+    }
   },
   {
     "id": "champion_skill_sandbox.cue.stress_priest_heal_cast",
-    "defaultColor": [
-      0.56,
-      0.94,
-      0.62,
-      0.86
-    ],
-    "defaultLifetime": 0.18,
-    "alphaFadeOverLifetime": true,
-    "positionOffset": [
-      0,
-      0.7,
-      0
-    ],
     "behaviors": [
       {
         "slot": "body",
@@ -3203,24 +3923,31 @@
             0.28,
             0.28
           ]
+        },
+        "style": {
+          "color": [
+            0.56,
+            0.94,
+            0.62,
+            0.86
+          ],
+          "alphaPolicy": "FadeOverLifetime"
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "durationSeconds": 0.18
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.7,
+        0
+      ]
+    }
   },
   {
     "id": "champion_skill_sandbox.cue.stress_priest_heal_hit",
-    "defaultColor": [
-      0.56,
-      0.94,
-      0.62,
-      0.14
-    ],
-    "defaultLifetime": 0.22,
-    "positionOffset": [
-      0,
-      0.05,
-      0
-    ],
     "bindings": [
       {
         "paramKey": "groundOverlay.innerRadius",
@@ -3268,25 +3995,30 @@
             1.28,
             1.28
           ]
+        },
+        "style": {
+          "color": [
+            0.56,
+            0.94,
+            0.62,
+            0.14
+          ]
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "durationSeconds": 0.22
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.05,
+        0
+      ]
+    }
   },
   {
     "id": "champion_skill_sandbox.cue.spell_engineer_spell_beacon_cast",
-    "defaultColor": [
-      0.52,
-      0.9,
-      1,
-      0.88
-    ],
-    "defaultLifetime": 0.2,
-    "alphaFadeOverLifetime": true,
-    "positionOffset": [
-      0,
-      0.72,
-      0
-    ],
     "behaviors": [
       {
         "slot": "body",
@@ -3302,24 +4034,31 @@
             0.34,
             0.34
           ]
+        },
+        "style": {
+          "color": [
+            0.52,
+            0.9,
+            1,
+            0.88
+          ],
+          "alphaPolicy": "FadeOverLifetime"
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "durationSeconds": 0.2
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.72,
+        0
+      ]
+    }
   },
   {
     "id": "champion_skill_sandbox.cue.spell_engineer_gravity_well_cast",
-    "defaultColor": [
-      0.5,
-      0.64,
-      1,
-      0.16
-    ],
-    "defaultLifetime": 0.34,
-    "positionOffset": [
-      0,
-      0.05,
-      0
-    ],
     "bindings": [
       {
         "paramKey": "groundOverlay.border.r",
@@ -3362,24 +4101,30 @@
             2.4,
             2.4
           ]
+        },
+        "style": {
+          "color": [
+            0.5,
+            0.64,
+            1,
+            0.16
+          ]
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "durationSeconds": 0.34
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.05,
+        0
+      ]
+    }
   },
   {
     "id": "champion_skill_sandbox.cue.spell_engineer_gravity_well_hit",
-    "defaultColor": [
-      0.48,
-      0.62,
-      1,
-      0.12
-    ],
-    "defaultLifetime": 0.24,
-    "positionOffset": [
-      0,
-      0.05,
-      0
-    ],
     "bindings": [
       {
         "paramKey": "groundOverlay.innerRadius",
@@ -3427,24 +4172,30 @@
             1.18,
             1.18
           ]
+        },
+        "style": {
+          "color": [
+            0.48,
+            0.62,
+            1,
+            0.12
+          ]
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "durationSeconds": 0.24
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.05,
+        0
+      ]
+    }
   },
   {
     "id": "champion_skill_sandbox.cue.spell_engineer_cataclysm_ring_cast",
-    "defaultColor": [
-      1,
-      0.58,
-      0.42,
-      0.12
-    ],
-    "defaultLifetime": 0.36,
-    "positionOffset": [
-      0,
-      0.05,
-      0
-    ],
     "bindings": [
       {
         "paramKey": "groundOverlay.innerRadius",
@@ -3492,25 +4243,30 @@
             3,
             3
           ]
+        },
+        "style": {
+          "color": [
+            1,
+            0.58,
+            0.42,
+            0.12
+          ]
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "durationSeconds": 0.36
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.05,
+        0
+      ]
+    }
   },
   {
     "id": "champion_skill_sandbox.cue.spell_engineer_guided_laser_cast",
-    "defaultColor": [
-      0.74,
-      0.56,
-      1,
-      0.88
-    ],
-    "defaultLifetime": 0.22,
-    "alphaFadeOverLifetime": true,
-    "positionOffset": [
-      0,
-      0.76,
-      0
-    ],
     "behaviors": [
       {
         "slot": "body",
@@ -3526,25 +4282,31 @@
             0.36,
             0.36
           ]
+        },
+        "style": {
+          "color": [
+            0.74,
+            0.56,
+            1,
+            0.88
+          ],
+          "alphaPolicy": "FadeOverLifetime"
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "durationSeconds": 0.22
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.76,
+        0
+      ]
+    }
   },
   {
     "id": "champion_skill_sandbox.cue.spell_engineer_guided_laser_hit",
-    "defaultColor": [
-      0.84,
-      0.72,
-      1,
-      0.92
-    ],
-    "defaultLifetime": 0.18,
-    "alphaFadeOverLifetime": true,
-    "positionOffset": [
-      0,
-      0.82,
-      0
-    ],
     "behaviors": [
       {
         "slot": "body",
@@ -3560,9 +4322,28 @@
             0.28,
             0.28
           ]
+        },
+        "style": {
+          "color": [
+            0.84,
+            0.72,
+            1,
+            0.92
+          ],
+          "alphaPolicy": "FadeOverLifetime"
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "durationSeconds": 0.18
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.82,
+        0
+      ]
+    }
   },
   {
     "id": "champion_skill_sandbox.hero_visual",

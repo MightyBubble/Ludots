@@ -1,6 +1,7 @@
 using System;
 using System.Numerics;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Hud;
 
 namespace Ludots.Core.Presentation.Performers
 {
@@ -20,6 +21,11 @@ namespace Ludots.Core.Presentation.Performers
         public SplineConfig Spline;
         public GroundingConfig Grounding;
         public MinimapMarkerConfig MinimapMarker;
+        public WorldTextConfig WorldText;
+        public BehaviorStyleConfig Style;
+        public BehaviorMotionConfig Motion;
+        public SurfaceAuthoringBlock? SurfaceSource;
+        public InstancedBatchConfig InstancedBatch;
     }
 
     public enum BehaviorKind : byte
@@ -34,6 +40,50 @@ namespace Ludots.Core.Presentation.Performers
         Spline = 8,
         Grounding = 9,
         MinimapMarker = 10,
+        WorldText = 11,
+        SurfaceSource = 12,
+        InstancedBatch = 13,
+    }
+
+    public struct WorldTextConfig
+    {
+        public WorldTextConfig()
+        {
+            TextTokenId = 0;
+            Mode = WorldHudValueMode.None;
+            ValueParamKey = PerformerParamKeyRegistry.UnsetParamKey;
+            SecondaryValueParamKey = PerformerParamKeyRegistry.UnsetParamKey;
+            FontSize = 16;
+        }
+
+        public int TextTokenId;
+        public WorldHudValueMode Mode;
+        public int ValueParamKey;
+        public int SecondaryValueParamKey;
+        public int FontSize;
+    }
+
+    public enum BehaviorAlphaPolicy : byte
+    {
+        None = 0,
+        FadeOverLifetime = 1,
+    }
+
+    public struct BehaviorStyleConfig
+    {
+        public bool HasColor;
+        public Vector4 Color;
+        public BehaviorAlphaPolicy AlphaPolicy;
+    }
+
+    public struct BehaviorMotionConfig
+    {
+        public float YDriftPerSecond;
+    }
+
+    public struct InstancedBatchConfig
+    {
+        public int BatchAssetId;
     }
 
     public struct AssetBindingConfig
