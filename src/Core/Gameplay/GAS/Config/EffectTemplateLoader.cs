@@ -25,8 +25,8 @@ namespace Ludots.Core.Gameplay.GAS.Config
     {
         private readonly ConfigPipeline _pipeline;
         private readonly EffectTemplateRegistry _registry;
-        private readonly GasConditionRegistry _conditions;
-        private readonly TargetDispatchPresetRegistry _targetDispatchPresets;
+        private readonly GasConditionRegistry? _conditions;
+        private readonly TargetDispatchPresetRegistry? _targetDispatchPresets;
         private readonly Ludots.Core.Gameplay.Relationships.RelationshipTypeRegistry? _relationshipTypes;
         private readonly ExchangeOperationRegistry? _exchangeOperations;
         private readonly ScopeKeyRegistry? _progressionScopeKeys;
@@ -45,8 +45,8 @@ namespace Ludots.Core.Gameplay.GAS.Config
         public EffectTemplateLoader(
             ConfigPipeline pipeline,
             EffectTemplateRegistry registry,
-            GasConditionRegistry conditions = null,
-            TargetDispatchPresetRegistry targetDispatchPresets = null,
+            GasConditionRegistry? conditions = null,
+            TargetDispatchPresetRegistry? targetDispatchPresets = null,
             ExchangeOperationRegistry? exchangeOperations = null,
             ScopeKeyRegistry? progressionScopeKeys = null,
             EntityTemplateKeyRegistry? entityTemplateKeys = null,
@@ -67,16 +67,16 @@ namespace Ludots.Core.Gameplay.GAS.Config
         }
 
         public void Load(
-            ConfigCatalog catalog = null,
-            ConfigConflictReport report = null,
+            ConfigCatalog? catalog = null,
+            ConfigConflictReport? report = null,
             string relativePath = "GAS/effects.json")
         {
             _registry.Clear();
             EffectTemplateIdRegistry.Clear();
             UnitTypeRegistry.Clear();
 
-            var entry = ConfigPipeline.RequireEntry(catalog, relativePath, ConfigMergePolicy.ArrayById, "id");
-            var mergedEntries = _pipeline.MergeArrayByIdFromCatalog(in entry, report);
+            var entry = ConfigPipeline.RequireEntry(catalog!, relativePath, ConfigMergePolicy.ArrayById, "id");
+            var mergedEntries = _pipeline.MergeArrayByIdFromCatalog(in entry, report!);
 
             var merged = new List<(string Id, JsonObject Node)>(mergedEntries.Count);
             for (int i = 0; i < mergedEntries.Count; i++)
@@ -540,7 +540,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             };
         }
 
-        private static DisplacementDescriptor CompileDisplacement(DisplacementConfig cfg, string ownerId, string relativePath)
+        private static DisplacementDescriptor CompileDisplacement(DisplacementConfig? cfg, string ownerId, string relativePath)
         {
             if (cfg == null) return default;
 
@@ -588,7 +588,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             };
         }
 
-        private RelationDescriptor CompileRelation(RelationConfig cfg, string ownerId, string relativePath)
+        private RelationDescriptor CompileRelation(RelationConfig? cfg, string ownerId, string relativePath)
         {
             if (cfg == null) return default;
 
@@ -768,7 +768,20 @@ namespace Ludots.Core.Gameplay.GAS.Config
             string entityOrderTypeKey = RequireString(cfg.EntityOrderTypeKey, ownerId, relativePath, "submitOrderFromBlackboard.entityOrderTypeKey");
             int pointMoveOrderTypeId = ResolveOrderTypeId(pointMoveOrderTypeKey, ownerId, relativePath, "submitOrderFromBlackboard.pointMoveOrderTypeKey");
             int entityOrderTypeId = ResolveOrderTypeId(entityOrderTypeKey, ownerId, relativePath, "submitOrderFromBlackboard.entityOrderTypeKey");
-            int entityOrderIntArg0 = RequireInt(cfg.EntityOrderIntArg0, ownerId, relativePath, "submitOrderFromBlackboard.entityOrderIntArg0");
+            ValidateOrderTypePayloadKind(pointMoveOrderTypeId, OrderPayloadKind.MoveToWorldCm, ownerId, relativePath, "submitOrderFromBlackboard.pointMoveOrderTypeKey");
+            if (cfg.EntityOrderIntArg0.HasValue)
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{ownerId}' in {relativePath}: submitOrderFromBlackboard.entityOrderIntArg0 is retired; use submitOrderFromBlackboard.entityOrderPayload.abilitySlot.");
+            }
+
+            CompileSubmitOrderEntityPayload(
+                cfg.EntityOrderPayload,
+                entityOrderTypeId,
+                ownerId,
+                relativePath,
+                out OrderPayloadKind entityOrderPayloadKind,
+                out int entityOrderAbilitySlot);
             OrderSubmitMode submitMode = ParseOrderSubmitMode(
                 RequireString(cfg.SubmitMode, ownerId, relativePath, "submitOrderFromBlackboard.submitMode"),
                 ownerId,
@@ -787,9 +800,87 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 StoredTargetKeys = storedTargetKeys,
                 PointMoveOrderTypeId = pointMoveOrderTypeId,
                 EntityOrderTypeId = entityOrderTypeId,
-                EntityOrderIntArg0 = entityOrderIntArg0,
+                EntityOrderPayloadKind = entityOrderPayloadKind,
+                EntityOrderAbilitySlot = entityOrderAbilitySlot,
                 SubmitMode = submitMode,
             };
+        }
+
+        private void CompileSubmitOrderEntityPayload(
+            SubmitOrderEntityPayloadConfig? cfg,
+            int entityOrderTypeId,
+            string ownerId,
+            string relativePath,
+            out OrderPayloadKind payloadKind,
+            out int abilitySlot)
+        {
+            if (cfg == null)
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{ownerId}' in {relativePath}: submitOrderFromBlackboard.entityOrderPayload is required.");
+            }
+
+            payloadKind = ParseSubmitOrderPayloadKind(
+                RequireString(cfg.Kind, ownerId, relativePath, "submitOrderFromBlackboard.entityOrderPayload.kind"),
+                ownerId,
+                relativePath,
+                "submitOrderFromBlackboard.entityOrderPayload.kind");
+            ValidateOrderTypePayloadKind(entityOrderTypeId, payloadKind, ownerId, relativePath, "submitOrderFromBlackboard.entityOrderPayload.kind");
+
+            switch (payloadKind)
+            {
+                case OrderPayloadKind.CastAbility:
+                    abilitySlot = RequireInt(cfg.AbilitySlot, ownerId, relativePath, "submitOrderFromBlackboard.entityOrderPayload.abilitySlot");
+                    if (abilitySlot < 0)
+                    {
+                        throw new InvalidOperationException(
+                            $"Effect template '{ownerId}' in {relativePath}: submitOrderFromBlackboard.entityOrderPayload.abilitySlot must be non-negative.");
+                    }
+                    return;
+
+                case OrderPayloadKind.TargetEntity:
+                    if (cfg.AbilitySlot.HasValue)
+                    {
+                        throw new InvalidOperationException(
+                            $"Effect template '{ownerId}' in {relativePath}: submitOrderFromBlackboard.entityOrderPayload.abilitySlot is only valid when kind=CastAbility.");
+                    }
+
+                    abilitySlot = 0;
+                    return;
+
+                default:
+                    throw new InvalidOperationException(
+                        $"Effect template '{ownerId}' in {relativePath}: submitOrderFromBlackboard.entityOrderPayload.kind '{payloadKind}' is not supported for entity stored targets.");
+            }
+        }
+
+        private void ValidateOrderTypePayloadKind(
+            int orderTypeId,
+            OrderPayloadKind expected,
+            string ownerId,
+            string relativePath,
+            string fieldName)
+        {
+            if (_orderTypes == null || !_orderTypes.TryGet(orderTypeId, out var orderType))
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{ownerId}' in {relativePath}: {fieldName} requires a registered order type id {orderTypeId}.");
+            }
+
+            if (orderType.PayloadKind != expected)
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{ownerId}' in {relativePath}: {fieldName} references order type '{orderType.Key}' with payloadKind {orderType.PayloadKind}, expected {expected}.");
+            }
+        }
+
+        private static OrderPayloadKind ParseSubmitOrderPayloadKind(string value, string ownerId, string relativePath, string fieldName)
+        {
+            if (string.Equals(value, "CastAbility", StringComparison.Ordinal)) return OrderPayloadKind.CastAbility;
+            if (string.Equals(value, "TargetEntity", StringComparison.Ordinal)) return OrderPayloadKind.TargetEntity;
+
+            throw new InvalidOperationException(
+                $"Effect template '{ownerId}' in {relativePath}: {fieldName} '{value}' is not supported; expected CastAbility or TargetEntity.");
         }
 
         private int ResolveOrderTypeId(string key, string ownerId, string relativePath, string fieldName)
@@ -851,7 +942,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             };
         }
 
-        private static ProjectileDescriptor CompileProjectile(ProjectileConfig cfg, string ownerId, string relativePath)
+        private static ProjectileDescriptor CompileProjectile(ProjectileConfig? cfg, string ownerId, string relativePath)
         {
             if (cfg == null) return default;
 
@@ -938,8 +1029,8 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 "Direction" => ProjectileTravelMode.Direction,
                 "TrackTarget" => ProjectileTravelMode.TrackTarget,
                 "Legacy" => throw new InvalidOperationException(
-                    $"Effect template '{ownerId}' in {relativePath}: projectile.travelMode 'Legacy' was removed; use 'Direction' or 'TrackTarget' and configure collision behavior explicitly."),
-                _ => throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: unsupported projectile.travelMode '{raw}'.")
+                    $"Effect template '{ownerId}' in {relativePath}: projectile.travelMode 'Legacy' was removed: choose 'Direction' or 'TrackTarget' and configure collision behavior explicitly."),
+                _ => throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: unknown projectile.travelMode '{raw}'.")
             };
         }
 
@@ -955,12 +1046,12 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 "DestroyOnFirstHit" => ProjectileImpactPolicy.DestroyOnFirstHit,
                 "ContinueOnHit" => ProjectileImpactPolicy.ContinueOnHit,
                 "Legacy" => throw new InvalidOperationException(
-                    $"Effect template '{ownerId}' in {relativePath}: projectile.impactPolicy 'Legacy' was removed; use 'DestroyOnFirstHit' or 'ContinueOnHit' and configure hitEffect, collisionHalfWidth, and collisionRelationFilter."),
-                _ => throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: unsupported projectile.impactPolicy '{raw}'.")
+                    $"Effect template '{ownerId}' in {relativePath}: projectile.impactPolicy 'Legacy' was removed: choose 'DestroyOnFirstHit' or 'ContinueOnHit' and configure hitEffect, collisionHalfWidth, and collisionRelationFilter."),
+                _ => throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: unknown projectile.impactPolicy '{raw}'.")
             };
         }
 
-        private static UnitCreationDescriptor CompileUnitCreation(UnitCreationConfig cfg, string ownerId, string relativePath)
+        private static UnitCreationDescriptor CompileUnitCreation(UnitCreationConfig? cfg, string ownerId, string relativePath)
         {
             if (cfg == null) return default;
 
@@ -975,7 +1066,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             int unitTypeId = 0;
             if (hasUnitType)
             {
-                unitTypeId = UnitTypeRegistry.Register(cfg.UnitType);
+                unitTypeId = UnitTypeRegistry.Register(cfg.UnitType!);
                 if (unitTypeId <= 0)
                 {
                     throw new InvalidOperationException(
@@ -1031,7 +1122,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 PlacementPattern = placementPattern,
                 FacingPattern = facingPattern,
                 UnitTypeId = unitTypeId,
-                TemplateId = hasTemplateId ? cfg.TemplateId : string.Empty,
+                TemplateId = hasTemplateId ? cfg.TemplateId! : string.Empty,
                 UseTemplateSpawn = hasTemplateId,
                 Count = RequireInt(cfg.Count, ownerId, relativePath, "unitCreation.count"),
                 OffsetRadius = offsetRadius,
@@ -1837,7 +1928,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                         $"Effect template '{effectId}' in {path}: targetDispatch.preset requires TargetDispatchPresetRegistry.");
                 }
 
-                int presetId = _targetDispatchPresets.GetId(cfg.Preset);
+                int presetId = _targetDispatchPresets.GetId(cfg.Preset!);
                 desc.ContextMapping = _targetDispatchPresets.Get(presetId);
                 return desc;
             }
@@ -1875,7 +1966,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             throw new NotImplementedException("LayerMask parsing not yet implemented. Layer name to bit mapping requires a layer registry.");
         }
 
-        private GasConditionHandle CompileExpireCondition(ExpireConditionConfig cfg, string effectId, string path)
+        private GasConditionHandle CompileExpireCondition(ExpireConditionConfig? cfg, string effectId, string path)
         {
             if (cfg == null) return default;
 
@@ -1903,10 +1994,16 @@ namespace Ludots.Core.Gameplay.GAS.Config
             if (_conditions == null)
                 throw new InvalidOperationException($"Effect template '{effectId}' in {path}: expireCondition requires GasConditionRegistry to be provided to the loader.");
 
+            if (_conditions == null)
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{effectId}' in {path}: expireCondition requires GasConditionRegistry.");
+            }
+
             return _conditions.Register(new GasCondition(kind, tagId, sense));
         }
 
-        private static Components.EffectGrantedTags CompileGrantedTags(List<GrantedTagConfig> cfgs, string effectId, string path)
+        private static Components.EffectGrantedTags CompileGrantedTags(List<GrantedTagConfig>? cfgs, string effectId, string path)
         {
             var result = new Components.EffectGrantedTags();
             if (cfgs == null || cfgs.Count == 0) return result;
@@ -1936,7 +2033,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 if (formula == Components.TagContributionFormula.GraphProgram)
                 {
                     throw new InvalidOperationException(
-                        $"Effect template '{effectId}' in {path}: grantedTags[{i}] formula=GraphProgram is not supported until a tag contribution graph evaluator is wired.");
+                        $"Effect template '{effectId}' in {path}: grantedTags[{i}] formula=GraphProgram needs a tag contribution graph evaluator before authoring.");
                 }
 
                 int amount = formula == Components.TagContributionFormula.GraphProgram
@@ -1983,7 +2080,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             return result;
         }
 
-        private static void CompileStackConfig(StackConfig cfg, string effectId, string path,
+        private static void CompileStackConfig(StackConfig? cfg, string effectId, string path,
             out bool hasStackPolicy, out Components.StackPolicy stackPolicy,
             out Components.StackOverflowPolicy stackOverflowPolicy, out int stackLimit)
         {

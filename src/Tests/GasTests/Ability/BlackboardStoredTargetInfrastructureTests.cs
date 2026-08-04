@@ -499,7 +499,7 @@ namespace Ludots.Tests.GAS
             BlackboardStoredTargetKeys keys = CreateTestKeys();
             var terminalResults = new OrderTerminalResultBuffer(capacity: 8);
             var orderTypes = new OrderTypeRegistry(terminalResults);
-            orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 101, AllowQueuedMode = true });
+            orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 101, PayloadKind = OrderPayloadKind.MoveToWorldCm, AllowQueuedMode = true });
             orderTypes.Register(new OrderTypeConfig { Key = "castAbility", OrderTypeId = 100, IntArg0BlackboardKey = OrderBlackboardKeys.Cast_SlotIndex, AllowQueuedMode = true });
             var admissionResults = new OrderAdmissionResultBuffer(capacity: 8, rejectionCapacity: 8);
             admissionResults.BeginLogicStep();
@@ -534,7 +534,8 @@ namespace Ludots.Tests.GAS
                     StoredTargetKeys = keys,
                     PointMoveOrderTypeId = 101,
                     EntityOrderTypeId = 100,
-                    EntityOrderIntArg0 = 1,
+                    EntityOrderPayloadKind = OrderPayloadKind.CastAbility,
+                    EntityOrderAbilitySlot = 1,
                     SubmitMode = OrderSubmitMode.Immediate,
                 },
             };
@@ -632,7 +633,7 @@ namespace Ludots.Tests.GAS
             BlackboardStoredTargetKeys keys = CreateTestKeys();
             var terminalResults = new OrderTerminalResultBuffer(capacity: 8);
             var orderTypes = new OrderTypeRegistry(terminalResults);
-            orderTypes.Register(new OrderTypeConfig { Key = "castAbility", OrderTypeId = 100, IntArg0BlackboardKey = OrderBlackboardKeys.Cast_SlotIndex, AllowQueuedMode = true });
+            orderTypes.Register(new OrderTypeConfig { Key = "castAbility", OrderTypeId = 100, PayloadKind = OrderPayloadKind.CastAbility, IntArg0BlackboardKey = OrderBlackboardKeys.Cast_SlotIndex, AllowQueuedMode = true });
             var admissionResults = new OrderAdmissionResultBuffer(capacity: 8, rejectionCapacity: 8);
             admissionResults.BeginLogicStep();
             var orderQueue = new OrderQueue(capacity: 8, admissionResults);
@@ -667,7 +668,8 @@ namespace Ludots.Tests.GAS
                     StoredTargetKeys = keys,
                     PointMoveOrderTypeId = 101,
                     EntityOrderTypeId = 100,
-                    EntityOrderIntArg0 = 1,
+                    EntityOrderPayloadKind = OrderPayloadKind.CastAbility,
+                    EntityOrderAbilitySlot = 1,
                     SubmitMode = OrderSubmitMode.Immediate,
                 },
             };
@@ -733,7 +735,7 @@ namespace Ludots.Tests.GAS
             using World world = World.Create();
             BlackboardStoredTargetKeys keys = CreateTestKeys();
             var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: 8));
-            orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 101, AllowQueuedMode = true });
+            orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 101, PayloadKind = OrderPayloadKind.MoveToWorldCm, AllowQueuedMode = true });
             var admissionResults = new OrderAdmissionResultBuffer(capacity: 8, rejectionCapacity: 8);
             admissionResults.BeginLogicStep();
             var orderQueue = new OrderQueue(capacity: 8, admissionResults);
@@ -762,7 +764,8 @@ namespace Ludots.Tests.GAS
                     StoredTargetKeys = keys,
                     PointMoveOrderTypeId = 101,
                     EntityOrderTypeId = 100,
-                    EntityOrderIntArg0 = 1,
+                    EntityOrderPayloadKind = OrderPayloadKind.CastAbility,
+                    EntityOrderAbilitySlot = 1,
                     SubmitMode = OrderSubmitMode.Immediate,
                 },
             };
@@ -782,124 +785,4 @@ namespace Ludots.Tests.GAS
         }
     }
 
-    [TestFixture]
-    public sealed class ActorOrderRoutingMatcherTests
-    {
-        [Test]
-        public void TryMatch_EmptyMatch_AlwaysMatchesAliveActor()
-        {
-            using World world = World.Create();
-            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
-            Entity actor = world.Create(new AbilityStateBuffer());
-            Assert.That(world.IsAlive(actor), Is.True);
-            Assert.That(ActorOrderRoutingMatcher.TryMatch(world, tagOps, actor, new ActorOrderRoutingMatch()), Is.True);
-        }
-
-        [Test]
-        public void TryResolveOrderTypeKey_SelectsHighestPriorityMatchingCandidate()
-        {
-            using World world = World.Create();
-            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
-            Entity producer = world.Create(new AbilityStateBuffer());
-            ref AbilityStateBuffer abilities = ref world.Get<AbilityStateBuffer>(producer);
-            int trainAbilityId = AbilityIdRegistry.Register("Ability.Rts.Strategy.War3.TrainFootman");
-            abilities.AddAbility(AbilityIdRegistry.Register("Ability.Test.Slot0"));
-            abilities.AddAbility(AbilityIdRegistry.Register("Ability.Test.Slot1"));
-            abilities.AddAbility(trainAbilityId);
-
-            var candidates = new List<ActorOrderRoutingCandidate>
-            {
-                new()
-                {
-                    OrderTypeKey = "setSpawnTarget",
-                    Priority = 10,
-                    Match = new ActorOrderRoutingMatch
-                    {
-                        AbilitySlotIndex = 2,
-                        AbilityIdKey = "Ability.Rts.Strategy.War3.TrainFootman",
-                    },
-                },
-                new()
-                {
-                    OrderTypeKey = "moveTo",
-                    Priority = 0,
-                    Match = new ActorOrderRoutingMatch(),
-                },
-            };
-
-            Assert.That(
-                ActorOrderRoutingMatcher.TryResolveOrderTypeKey(world, tagOps, producer, candidates, out string orderTypeKey),
-                Is.True);
-            Assert.That(orderTypeKey, Is.EqualTo("setSpawnTarget"));
-        }
-
-        [Test]
-        public void TryMatch_UsesAbilityFormSlotOverride()
-        {
-            using World world = World.Create();
-            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
-            Entity producer = world.Create(new AbilityStateBuffer(), new AbilityFormSlotBuffer());
-            ref AbilityStateBuffer abilities = ref world.Get<AbilityStateBuffer>(producer);
-            int holdAbilityId = AbilityIdRegistry.Register("Ability.Rts.Strategy.Shared.Hold");
-            int trainAbilityId = AbilityIdRegistry.Register("Ability.Rts.Strategy.War3.TrainFootman");
-            abilities.AddAbility(holdAbilityId);
-            abilities.AddAbility(holdAbilityId);
-            abilities.AddAbility(holdAbilityId);
-
-            ref AbilityFormSlotBuffer formSlots = ref world.Get<AbilityFormSlotBuffer>(producer);
-            formSlots.SetOverride(2, trainAbilityId);
-
-            var match = new ActorOrderRoutingMatch
-            {
-                AbilitySlotIndex = 2,
-                AbilityIdKeySuffix = ".Train",
-            };
-
-            Assert.That(ActorOrderRoutingMatcher.TryMatch(world, tagOps, producer, match), Is.True);
-        }
-
-        [Test]
-        public void TryResolveCandidate_WarpGateTag_SkipsTrainSpawnTargetCandidate()
-        {
-            using World world = World.Create();
-            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
-            int warpGateTagId = TagRegistry.Register("Progression.Rts.WarpGate");
-
-            Entity gateway = world.Create(new AbilityStateBuffer(), new GameplayTagContainer(), new TagCountContainer());
-            ref AbilityStateBuffer abilities = ref world.Get<AbilityStateBuffer>(gateway);
-            int trainAbilityId = AbilityIdRegistry.Register("Ability.Rts.Strategy.Sc2.TrainZealot");
-            abilities.AddAbility(AbilityIdRegistry.Register("Ability.Test.Slot0"));
-            abilities.AddAbility(AbilityIdRegistry.Register("Ability.Test.Slot1"));
-            abilities.AddAbility(trainAbilityId);
-
-            ref GameplayTagContainer tags = ref world.Get<GameplayTagContainer>(gateway);
-            tags.AddTag(warpGateTagId);
-
-            var candidates = new List<ActorOrderRoutingCandidate>
-            {
-                new()
-                {
-                    OrderTypeKey = "setSpawnTarget",
-                    Priority = 10,
-                    Match = new ActorOrderRoutingMatch
-                    {
-                        AbilitySlotIndex = 2,
-                        AbilityIdKeySuffix = ".Train",
-                        BlockedAnyTags = new List<string> { "Progression.Rts.WarpGate" },
-                    },
-                },
-                new()
-                {
-                    OrderTypeKey = "moveTo",
-                    Priority = 0,
-                    Match = new ActorOrderRoutingMatch(),
-                },
-            };
-
-            Assert.That(
-                ActorOrderRoutingMatcher.TryResolveCandidate(world, tagOps, gateway, candidates, out ActorOrderRoutingCandidate matched),
-                Is.True);
-            Assert.That(matched.OrderTypeKey, Is.EqualTo("moveTo"));
-        }
-    }
 }

@@ -31,21 +31,10 @@ namespace Ludots.Core.Gameplay.AI.Utility
         BlockedTagPresent = 4,
         Layer = 5,
         Distance = 6,
-        AbilityNotEligible = 7,
-        MissingRecentAttacker = 8,
-        ScratchFull = 9
-    }
-
-    public enum UtilityAiReadinessBlockReason : int
-    {
-        None = 0,
-        AbilityMissing = 1,
-        AbilityCooldown = 2,
-        SharedCooldown = 3,
-        ActivationBlockTags = 4,
-        ActivationPrecondition = 5,
-        ActuatorNotReady = 6,
-        AimGateNotReady = 7
+        MissingRecentAttacker = 7,
+        ScratchFull = 8,
+        CandidateBudgetExhausted = 9,
+        ScoreGraphBudgetExhausted = 10
     }
 
     public enum UtilityAiTaskRunStatus : byte

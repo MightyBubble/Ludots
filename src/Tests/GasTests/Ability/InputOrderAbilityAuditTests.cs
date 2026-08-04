@@ -471,6 +471,57 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         }
 
         [Test]
+        public void OrderBufferSystem_BatchFailureAfterPartialCommit_PreservesOriginalTerminalFailure()
+        {
+            using var world = World.Create();
+            var results = new OrderAdmissionResultBuffer(16, 16);
+            results.BeginLogicStep();
+            var incoming = new OrderQueue(64, results);
+            var terminalResults = new OrderTerminalResultBuffer(capacity: 16);
+            var orderTypes = new OrderTypeRegistry(terminalResults);
+            orderTypes.Register(new OrderTypeConfig
+            {
+                OrderTypeId = 2,
+                Priority = 100,
+                CanInterruptSelf = true,
+                SpatialBlackboardKey = -1,
+                EntityBlackboardKey = -1,
+                IntArg0BlackboardKey = -1,
+            });
+
+            Entity first = world.Create(OrderBuffer.CreateEmpty());
+            Entity second = world.Create(OrderBuffer.CreateEmpty());
+            Entity firstSource = world.Create();
+            Entity secondSource = world.Create();
+            ref OrderBuffer firstBuffer = ref world.Get<OrderBuffer>(first);
+            ref OrderBuffer secondBuffer = ref world.Get<OrderBuffer>(second);
+            var firstActive = new Order { OrderId = 500, Actor = first, OrderTypeId = 2 };
+            var secondActive = new Order { OrderId = 500, Actor = second, OrderTypeId = 2 };
+            firstBuffer.SetActiveDirect(in firstActive, priority: 100);
+            secondBuffer.SetActiveDirect(in secondActive, priority: 100);
+            var batch = new[]
+            {
+                new Order { Actor = first, CommandSource = firstSource, OrderTypeId = 2, SubmitMode = OrderSubmitMode.Immediate },
+                new Order { Actor = second, CommandSource = secondSource, OrderTypeId = 2, SubmitMode = OrderSubmitMode.Immediate },
+            };
+            That(incoming.TryEnqueueClusteredBatch(batch), Is.EqualTo(OrderSubmitResult.Queued));
+            var intake = new OrderBufferSystem(
+                world,
+                new DiscreteClock(),
+                orderTypes,
+                new OrderRuleRegistry(),
+                results,
+                incoming);
+
+            InvalidOperationException ex = Throws<InvalidOperationException>(() => intake.Update(0f))!;
+
+            That(ex.Message, Does.StartWith("ORDER.TERMINAL.ERR.DuplicateOrderId"));
+            That(results.ReservedCount, Is.Zero);
+            That(terminalResults.Count, Is.EqualTo(1));
+            That(terminalResults[0].OrderId, Is.EqualTo(500));
+        }
+
+        [Test]
         public void OrderQueues_SharingAdmissionResults_AssignGloballyUniqueOrderIds()
         {
             var results = new OrderAdmissionResultBuffer(4, 4);
@@ -1370,7 +1421,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         }
 
         [Test]
-        public void OrderQueue_SharedBatch_AssignsOneQueueOwnedId()
+        public void OrderQueue_SharedBatch_AssignsUniqueQueueOwnedIdsAndOneAdmissionBatch()
         {
             using var world = World.Create();
             Entity firstActor = world.Create();
@@ -1384,14 +1435,23 @@ namespace Ludots.Tests.GAS.Features.InputRouting
 
             Assert.That(queue.TryEnqueueSharedBatch(batch), Is.EqualTo(OrderSubmitResult.Queued));
             Assert.That(batch[0].OrderId, Is.GreaterThan(0));
-            Assert.That(batch[1].OrderId, Is.EqualTo(batch[0].OrderId));
-            Assert.That(queue.TryDequeue(out Order first), Is.True);
-            Assert.That(queue.TryDequeue(out Order second), Is.True);
-            Assert.That(second.OrderId, Is.EqualTo(first.OrderId));
+            Assert.That(batch[1].OrderId, Is.GreaterThan(batch[0].OrderId));
+            Assert.That(batch[0].AdmissionBatchId, Is.GreaterThan(0));
+            Assert.That(batch[1].AdmissionBatchId, Is.EqualTo(batch[0].AdmissionBatchId));
+            Assert.That(batch[0].AdmissionBatchSize, Is.EqualTo(2));
+            Assert.That(batch[1].AdmissionBatchSize, Is.EqualTo(2));
+            Assert.That(batch[0].AdmissionBatchIndex, Is.EqualTo(0));
+            Assert.That(batch[1].AdmissionBatchIndex, Is.EqualTo(1));
+            Span<Order> dequeued = stackalloc Order[2];
+            Assert.That(queue.TryDequeueBatch(dequeued, out int count), Is.True);
+            Assert.That(count, Is.EqualTo(2));
+            Assert.That(dequeued[0].OrderId, Is.EqualTo(batch[0].OrderId));
+            Assert.That(dequeued[1].OrderId, Is.EqualTo(batch[1].OrderId));
+            Assert.That(dequeued[1].AdmissionBatchId, Is.EqualTo(dequeued[0].AdmissionBatchId));
         }
 
         [Test]
-        public void OrderQueue_SharedBatch_WhenCapacityIsInsufficient_PublishesOneRejectedSharedId()
+        public void OrderQueue_SharedBatch_WhenCapacityIsInsufficient_PublishesEveryRejectedOrderId()
         {
             using var world = World.Create();
             Entity firstActor = world.Create();
@@ -1410,13 +1470,16 @@ namespace Ludots.Tests.GAS.Features.InputRouting
 
             Assert.That(queue.Count, Is.EqualTo(1));
             Assert.That(batch[0].OrderId, Is.GreaterThan(0));
-            Assert.That(batch[1].OrderId, Is.EqualTo(batch[0].OrderId));
-            Assert.That(results.TryGet(batch[0].OrderId, OrderAdmissionStage.GlobalIntake, out var outcome), Is.True);
-            Assert.That(outcome.Result, Is.EqualTo(OrderSubmitResult.RejectedQueueFull));
+            Assert.That(batch[1].OrderId, Is.GreaterThan(batch[0].OrderId));
+            Assert.That(batch[1].AdmissionBatchId, Is.EqualTo(batch[0].AdmissionBatchId));
+            Assert.That(results.TryGet(batch[0].OrderId, OrderAdmissionStage.GlobalIntake, out var first), Is.True);
+            Assert.That(results.TryGet(batch[1].OrderId, OrderAdmissionStage.GlobalIntake, out var second), Is.True);
+            Assert.That(first.Result, Is.EqualTo(OrderSubmitResult.RejectedQueueFull));
+            Assert.That(second.Result, Is.EqualTo(OrderSubmitResult.RejectedQueueFull));
         }
 
         [Test]
-        public void OrderQueue_SharedBatch_PublishesAssignedSharedIdWhenAdmissionCapacityIsInsufficient()
+        public void OrderQueue_SharedBatch_PublishesAssignedOrderIdsWhenAdmissionCapacityIsInsufficient()
         {
             using var world = World.Create();
             Entity firstActor = world.Create();
@@ -1435,10 +1498,13 @@ namespace Ludots.Tests.GAS.Features.InputRouting
 
             Assert.That(queue.Count, Is.EqualTo(1));
             Assert.That(batch[0].OrderId, Is.GreaterThan(0));
-            Assert.That(batch[1].OrderId, Is.EqualTo(batch[0].OrderId));
+            Assert.That(batch[1].OrderId, Is.GreaterThan(batch[0].OrderId));
+            Assert.That(batch[1].AdmissionBatchId, Is.EqualTo(batch[0].AdmissionBatchId));
             Assert.That(results.GetObservedCount(OrderSubmitResult.RejectedAdmissionCapacity), Is.EqualTo(2));
-            Assert.That(results.TryGet(batch[0].OrderId, OrderAdmissionStage.GlobalIntake, out var outcome), Is.True);
-            Assert.That(outcome.Result, Is.EqualTo(OrderSubmitResult.RejectedAdmissionCapacity));
+            Assert.That(results.TryGet(batch[0].OrderId, OrderAdmissionStage.GlobalIntake, out var first), Is.True);
+            Assert.That(results.TryGet(batch[1].OrderId, OrderAdmissionStage.GlobalIntake, out var second), Is.True);
+            Assert.That(first.Result, Is.EqualTo(OrderSubmitResult.RejectedAdmissionCapacity));
+            Assert.That(second.Result, Is.EqualTo(OrderSubmitResult.RejectedAdmissionCapacity));
         }
 
         [Test]
@@ -1474,14 +1540,16 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         [Test]
         public void PlanExecutor_UnregisteredOrderTypeId_Throws()
         {
+            using var world = World.Create();
             var queue = new OrderQueue(64, new OrderAdmissionResultBuffer(64, 64));
             var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
-            var spec = new ActionOrderSpec(orderTypeId: 42, submitMode: OrderSubmitMode.Immediate);
+            var spec = new ActionOrderSpec(AiOrderPayloadKind.CastAbility, orderTypeId: 42, submitMode: OrderSubmitMode.Immediate);
             var ints = new BlackboardIntBuffer();
             var entities = new BlackboardEntityBuffer();
 
             var ex = Throws<InvalidOperationException>(() =>
                 PlanExecutor.TrySubmitOrder(
+                    world,
                     in spec,
                     ReadOnlySpan<ActionBinding>.Empty,
                     Entity.Null,
@@ -1489,9 +1557,46 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                     ref entities,
                     submitStep: 0,
                     queue,
-                    orderTypes));
+                    orderTypes,
+                    out _));
 
             That(ex!.Message, Does.Contain("unregistered order type id 42"));
+        }
+
+        [Test]
+        public void PlanExecutor_MissingAbilitySlot_FailsBeforeSubmittingUntypedOrder()
+        {
+            using var world = World.Create();
+            var queue = new OrderQueue(64, new OrderAdmissionResultBuffer(64, 64));
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
+            orderTypes.Register(new OrderTypeConfig
+            {
+                Key = "castAbility",
+                OrderTypeId = 42,
+                PayloadKind = OrderPayloadKind.CastAbility,
+                SpatialBlackboardKey = -1,
+                EntityBlackboardKey = -1,
+                IntArg0BlackboardKey = -1
+            });
+            var spec = new ActionOrderSpec(AiOrderPayloadKind.CastAbility, orderTypeId: 42, submitMode: OrderSubmitMode.Immediate);
+            var ints = new BlackboardIntBuffer();
+            var entities = new BlackboardEntityBuffer();
+
+            var ex = Throws<InvalidOperationException>(() =>
+                PlanExecutor.TrySubmitOrder(
+                    world,
+                    in spec,
+                    ReadOnlySpan<ActionBinding>.Empty,
+                    Entity.Null,
+                    ref ints,
+                    ref entities,
+                    submitStep: 0,
+                    queue,
+                    orderTypes,
+                    out _));
+
+            That(ex!.Message, Does.Contain("ORDER.BUILDER.ERR.CastAbilitySlotRequired"));
+            That(queue.Count, Is.Zero);
         }
 
         [Test]
@@ -1667,7 +1772,8 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                   },
                   "targeting": {
                     "castRangeCm": 620,
-                    "impactEffect": "Effect.Guard.Impact"
+                    "impactEffect": "Effect.Guard.Impact",
+                    "allowMoveChase": true
                   }
                 }
                 """)!.AsObject();
@@ -1685,6 +1791,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             That(def.HasTargeting, Is.True);
             That(def.Targeting.CastRangeCm, Is.EqualTo(620f));
             That(def.Targeting.ImpactEffectTemplateId, Is.EqualTo(EffectTemplateIdRegistry.GetId("Effect.Guard.Impact")));
+            That(def.Targeting.AllowMoveChase, Is.True);
         }
 
         [Test]
@@ -1703,7 +1810,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var ex = Throws<InvalidOperationException>(() =>
                 Ludots.Core.Gameplay.GAS.Config.AbilityExecLoader.CompileAbility(obj, "Ability.Test.LegacyIndicator", "GAS/abilities.json"));
 
-            That(ex!.Message, Does.Contain("field 'indicator' is removed"));
+            That(ex!.Message, Does.Contain("field 'indicator': declare gameplay targeting"));
         }
 
         [Test]
@@ -1727,7 +1834,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var ex = Throws<InvalidOperationException>(() =>
                 Ludots.Core.Gameplay.GAS.Config.AbilityExecLoader.CompileAbility(obj, "Ability.Test.LegacyAimVisual", "GAS/abilities.json"));
 
-            That(ex!.Message, Does.Contain("field 'targeting.aimVisual' is removed"));
+            That(ex!.Message, Does.Contain("field 'targeting.aimVisual': put aim visuals"));
         }
 
         [Test]
@@ -1741,7 +1848,8 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                   "previewPerformerId": "performer.aim.preview",
                   "targeting": {
                     "castRangeCm": 620,
-                    "impactEffect": "Effect.Guard.Impact"
+                    "impactEffect": "Effect.Guard.Impact",
+                    "allowMoveChase": true
                   }
                 }
                 """)!.AsObject();
@@ -1749,7 +1857,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var ex = Throws<InvalidOperationException>(() =>
                 Ludots.Core.Gameplay.GAS.Config.AbilityExecLoader.CompileAbility(obj, "Ability.Test.LegacyPreviewPerformer", "GAS/abilities.json"));
 
-            That(ex!.Message, Does.Contain("field 'previewPerformerId' is removed"));
+            That(ex!.Message, Does.Contain("field 'previewPerformerId': put aim visuals"));
         }
 
         [Test]
@@ -2337,7 +2445,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         }
 
         [Test]
-        public void AbilityExecSystem_ToggleDeactivate_BypassesBlockedAnyCooldown_AndClearsTagCount()
+        public void AbilityExecSystem_ToggleDeactivate_BypassesBlockedAnyLockout_AndClearsTagCount()
         {
             using var world = World.Create();
             var actor = world.Create(
@@ -2353,7 +2461,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             const int castAbilityOrderTypeId = 100;
             const int abilityId = 9002;
             const int toggleTagId = 41;
-            const int cooldownTagId = 42;
+            const int lockoutTagId = 42;
 
             ref var abilities = ref world.Get<AbilityStateBuffer>(actor);
             abilities.AddAbility(abilityId);
@@ -2376,10 +2484,10 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             ref var counts = ref world.Get<TagCountContainer>(actor);
             ref var dirty = ref world.Get<DirtyFlags>(actor);
             tagOps.AddTag(ref tags, ref counts, toggleTagId, ref dirty);
-            tagOps.AddTag(ref tags, ref counts, cooldownTagId, ref dirty);
+            tagOps.AddTag(ref tags, ref counts, lockoutTagId, ref dirty);
 
             var blockTags = new AbilityActivationBlockTags();
-            blockTags.BlockedAny.AddTag(cooldownTagId);
+            blockTags.BlockedAny.AddTag(lockoutTagId);
 
             var defs = new AbilityDefinitionRegistry();
             var def = new AbilityDefinition
@@ -2418,10 +2526,10 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             bool completed = system.UpdateSlice(0f, int.MaxValue);
 
             That(completed, Is.True);
-            That(world.Get<GameplayTagContainer>(actor).HasTag(toggleTagId), Is.False, "Toggle should turn off even when reactivate cooldown is present.");
+            That(world.Get<GameplayTagContainer>(actor).HasTag(toggleTagId), Is.False, "Toggle should turn off even when reactivation lockout is present.");
             That(world.Get<TagCountContainer>(actor).GetCount(toggleTagId), Is.EqualTo(0), "Toggle removal must clear TagCountContainer as well as the bitset.");
-            That(world.Get<GameplayTagContainer>(actor).HasTag(cooldownTagId), Is.True, "Turning off a toggle should not remove the reactivation cooldown tag.");
-            That(world.Get<TagCountContainer>(actor).GetCount(cooldownTagId), Is.EqualTo(1));
+            That(world.Get<GameplayTagContainer>(actor).HasTag(lockoutTagId), Is.True, "Turning off a toggle should not remove the reactivation lockout tag.");
+            That(world.Get<TagCountContainer>(actor).GetCount(lockoutTagId), Is.EqualTo(1));
             That(world.Get<OrderBuffer>(actor).HasActive, Is.False);
             That(orderTypes.TerminalResults.Count, Is.EqualTo(1));
             That(orderTypes.TerminalResults[0].OrderId, Is.EqualTo(8));
@@ -2558,12 +2666,13 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             });
             var presentationEvents = new GasPresentationEventBuffer(capacity: 32);
             var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
+            EffectRequestQueue missingEffectRequests = null!;
             var system = new AbilityExecSystem(
                 world,
                 new DiscreteClock(),
                 new InputRequestQueue(),
                 new InputResponseBuffer(),
-                effectRequests: null,
+                missingEffectRequests,
                 16,
                 definitions,
                 castAbilityOrderTypeId: castAbilityOrderTypeId,
@@ -2856,104 +2965,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             That(terminal.OrderId, Is.EqualTo(order.OrderId));
             That(terminal.State, Is.EqualTo(OrderTerminalState.Failed));
             That(terminal.FailureReason, Is.EqualTo(OrderFailureReason.PreconditionFailed));
-        }
-
-        [Test]
-        public void AbilitySystem_RegistryAbility_ActivationPreconditionGraphRejectsActivation()
-        {
-            using var world = World.Create();
-            const int abilityId = 9201;
-            const int validationGraphId = 302;
-
-            var actor = world.Create(new AbilityStateBuffer());
-            ref var abilities = ref world.Get<AbilityStateBuffer>(actor);
-            abilities.AddAbility(abilityId);
-
-            var effects = new AbilityOnActivateEffects();
-            effects.Add(4001);
-
-            var defs = new AbilityDefinitionRegistry();
-            var def = new AbilityDefinition
-            {
-                HasOnActivateEffects = true,
-                OnActivateEffects = effects,
-                HasActivationPrecondition = true,
-                ActivationPrecondition = new AbilityActivationPrecondition
-                {
-                    ValidationGraphId = validationGraphId
-                }
-            };
-            defs.Register(abilityId, in def);
-
-            var graphPrograms = new GraphProgramRegistry();
-            graphPrograms.Register(validationGraphId, new[]
-            {
-                new GraphInstruction
-                {
-                    Op = (ushort)GraphNodeOp.ConstBool,
-                    Dst = 0,
-                    Imm = 0
-                }
-            }, GraphKind.Validation);
-
-            var effectRequests = new EffectRequestQueue();
-            var graphApi = new GasGraphRuntimeApi(world, spatialQueries: null, coords: null, eventBus: null, effectRequests: effectRequests);
-            var system = new AbilitySystem(
-                world,
-                effectRequests,
-                defs,
-                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()),
-                graphPrograms: graphPrograms,
-                graphApi: graphApi);
-
-            bool activated = system.TryActivateAbility(actor, 0);
-
-            That(activated, Is.False);
-            That(effectRequests.Count, Is.EqualTo(0));
-        }
-
-        [Test]
-        public void AbilitySystem_TemplateAbility_ActivationPreconditionGraphRejectsActivation()
-        {
-            using var world = World.Create();
-            const int validationGraphId = 303;
-
-            var templateEffects = new AbilityOnActivateEffects();
-            templateEffects.Add(4002);
-
-            var template = world.Create(
-                new AbilityTemplate(),
-                templateEffects,
-                new AbilityActivationPrecondition { ValidationGraphId = validationGraphId });
-
-            var actor = world.Create(new AbilityStateBuffer());
-            ref var abilities = ref world.Get<AbilityStateBuffer>(actor);
-            abilities.AddAbility(template);
-
-            var graphPrograms = new GraphProgramRegistry();
-            graphPrograms.Register(validationGraphId, new[]
-            {
-                new GraphInstruction
-                {
-                    Op = (ushort)GraphNodeOp.ConstBool,
-                    Dst = 0,
-                    Imm = 0
-                }
-            }, GraphKind.Validation);
-
-            var effectRequests = new EffectRequestQueue();
-            var graphApi = new GasGraphRuntimeApi(world, spatialQueries: null, coords: null, eventBus: null, effectRequests: effectRequests);
-            var system = new AbilitySystem(
-                world,
-                effectRequests,
-                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()),
-                graphPrograms: graphPrograms,
-                graphApi: graphApi);
-
-            bool activated = system.TryActivateAbility(actor, 0);
-
-            That(activated, Is.False);
-            That(effectRequests.Count, Is.EqualTo(0));
         }
 
         // Region: GraphExecutor.ExecuteValidation

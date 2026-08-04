@@ -752,13 +752,15 @@ internal sealed class ItemSystemShowcaseRuntime
             ?? throw new InvalidOperationException("Item showcase requires the Core OrderQueue.");
         OrderTypeRegistry orderTypes = engine.GetService(CoreServiceKeys.OrderTypeRegistry)
             ?? throw new InvalidOperationException("Item showcase requires the Core OrderTypeRegistry.");
-        var order = new Order
-        {
-            Actor = _hero,
-            Target = target,
-            OrderTypeId = orderTypes.GetId("castAbility"),
-            Args = new OrderArgs { I0 = slotIndex }
-        };
+        var order = OrderBuilder.CreateCastAbility(
+            orderTypes.GetId("castAbility"),
+            0,
+            _hero,
+            target,
+            Entity.Null,
+            slotIndex,
+            OrderSubmitMode.Immediate,
+            submitStep: 0);
         return queue.TryEnqueue(in order);
     }
 

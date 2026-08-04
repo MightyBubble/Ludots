@@ -41,12 +41,11 @@ Effect 的生命周期被分解为一组 Phase（例如 OnPropose/OnResolve/OnAp
 
 AbilityActivation 阶段的目标是把输入/指令转成“可处理的请求”，而不是直接改世界状态。
 
-两条典型路径：
+正式生产路径只有一条：
 
-*   `AbilitySystem`：按 AbilityDefinition 直接发布 `EffectRequest`
-  参考：`src/Core/Gameplay/GAS/Systems/AbilitySystem.cs` (L51-L175)
-*   `AbilityExecSystem`：按时间线/步骤执行，并在 step 中发布 `EffectRequest`
-  参考：`src/Core/Gameplay/GAS/Systems/AbilityExecSystem.cs` (L513-L568)
+*   `OrderBufferSystem` 接受类型化 Order，解析 actor、slot、target 与提交语义。
+*   `AbilityExecSystem` 是技能执行过程的唯一 owner，按 AbilityExecSpec 时间线执行，并由 `EffectClip` / `EffectSignal` 发布 `EffectRequest`。
+*   技能暂不可再次释放只由持续 Effect 授予普通 Tag，再由 ability `blockTags` 拒绝下一次激活；Core 不保留一等 cooldown 系统。
 
 ### 2.2 Effect 主循环与响应链
 
@@ -159,4 +158,3 @@ RTS 风格移动同样遵循 sink 分层纪律。
 - 在存在有效 MassNavigationFlow target 时，在 feature 代码里重复实现睡眠唤醒逻辑
 
 关于 authoritative order queue / nav plan / execution 的正式拆分，见 `docs/architecture/order_navigation_movement.md`。
-

@@ -28,7 +28,7 @@ namespace RoadNetworkShowcaseMod.Systems
         private readonly World _world;
         private readonly RoadMoveOrderExpander _expander;
         private readonly int _moveToOrderTypeId;
-        private float _aiDecisionCooldown;
+        private float _aiDecisionIntervalRemaining;
 
         public RoadNetworkAiAndCaptureSystem(
             World world,
@@ -38,7 +38,7 @@ namespace RoadNetworkShowcaseMod.Systems
             _world = world;
             _expander = new RoadMoveOrderExpander(world, globals, incomingOrders, RoadNetworkShowcaseIds.PathPlannerAgentTypeId, statusKey: string.Empty);
             _moveToOrderTypeId = RoadNetworkOrderTypeIds.Require(globals).MoveTo;
-            _aiDecisionCooldown = 0.5f;
+            _aiDecisionIntervalRemaining = 0.5f;
         }
 
         public void Initialize()
@@ -147,13 +147,13 @@ namespace RoadNetworkShowcaseMod.Systems
 
         private void UpdateAiDispatch(float dt)
         {
-            _aiDecisionCooldown -= dt;
-            if (_aiDecisionCooldown > 0f)
+            _aiDecisionIntervalRemaining -= dt;
+            if (_aiDecisionIntervalRemaining > 0f)
             {
                 return;
             }
 
-            _aiDecisionCooldown = 1.25f;
+            _aiDecisionIntervalRemaining = 1.25f;
 
             foreach (ref var columnChunk in _world.Query(in AiColumnQuery))
             {

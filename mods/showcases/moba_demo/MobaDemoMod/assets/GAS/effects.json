@@ -408,5 +408,110 @@
       "totalDurationTicks": 12,
       "overrideNavigation": true
     }
+  },
+  {
+    "id": "Effect.Moba.Lockout.GCD",
+    "tags": [
+      "Effect.Moba.Lockout"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 15,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.GCD",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.Moba.Lockout.Skill.E",
+    "tags": [
+      "Effect.Moba.Lockout"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 240,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Skill.E",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.Moba.Lockout.Skill.Q",
+    "tags": [
+      "Effect.Moba.Lockout"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 180,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Skill.Q",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.Moba.Lockout.Skill.R",
+    "tags": [
+      "Effect.Moba.Lockout"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 600,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Skill.R",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.Moba.Lockout.Skill.W",
+    "tags": [
+      "Effect.Moba.Lockout"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 300,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.Skill.W",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
   }
 ]

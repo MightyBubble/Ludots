@@ -2,8 +2,9 @@ using System;
 using System.IO;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.AI.Config;
+using Ludots.Core.Gameplay.AI.Planning;
+using Ludots.Core.Gameplay.AI.Utility;
 using Ludots.Core.Gameplay.AI.WorldState;
-using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.GraphRuntime;
@@ -18,6 +19,7 @@ namespace Ludots.Tests.GAS
     [NonParallelizable]
     public class AiConfigLoaderTests
     {
+        private const int CastOrderTypeId = 100;
         private const int AttackOrderTypeId = 102;
 
         [Test]
@@ -32,6 +34,8 @@ namespace Ludots.Tests.GAS
             Assert.That(runtime.GoalSelector.Count, Is.EqualTo(1));
             Assert.That(runtime.ActionLibrary.Count, Is.EqualTo(1));
             Assert.That(runtime.ActionLibrary.OrderSpec[0].OrderTypeId, Is.EqualTo(AttackOrderTypeId));
+            Assert.That(runtime.ActionLibrary.OrderSpec[0].PayloadKind, Is.EqualTo(AiOrderPayloadKind.TargetEntity));
+            Assert.That(runtime.ActionLibrary.GetBindings(0).Length, Is.EqualTo(1));
             Assert.That(runtime.GoapGoals.Count, Is.EqualTo(1));
         }
 
@@ -49,7 +53,7 @@ namespace Ludots.Tests.GAS
         [Test]
         public void AiConfigLoader_RejectsUnknownOrderTypeId()
         {
-            using var fixture = AiConfigFixture.Create(orderJson: "{ \"OrderTypeId\": 1234, \"SubmitMode\": 0, \"PlayerId\": 0 }");
+            using var fixture = AiConfigFixture.Create(orderJson: "{ \"OrderPayloadKind\": \"TargetEntity\", \"OrderTypeId\": 1234, \"SubmitMode\": 0, \"PlayerId\": 0 }");
 
             var ex = Assert.Throws<InvalidOperationException>(() => fixture.Load());
 
@@ -59,7 +63,7 @@ namespace Ludots.Tests.GAS
         [Test]
         public void AiConfigLoader_RejectsUnknownOrderTypeKey()
         {
-            using var fixture = AiConfigFixture.Create(orderJson: "{ \"OrderTypeKey\": \"missingOrder\", \"SubmitMode\": 0, \"PlayerId\": 0 }");
+            using var fixture = AiConfigFixture.Create(orderJson: "{ \"OrderPayloadKind\": \"TargetEntity\", \"OrderTypeKey\": \"missingOrder\", \"SubmitMode\": 0, \"PlayerId\": 0 }");
 
             var ex = Assert.Throws<InvalidOperationException>(() => fixture.Load());
 
@@ -67,23 +71,15 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void AiConfigLoader_RejectsUnknownAbilityId()
+        public void AiConfigLoader_RejectsOrderPayloadKindThatContradictsOrderType()
         {
-            using var fixture = AiConfigFixture.Create(orderJson: "{ \"OrderTypeKey\": \"attackTarget\", \"AbilityId\": 9090, \"SubmitMode\": 0, \"PlayerId\": 0 }");
+            using var fixture = AiConfigFixture.Create(
+                orderJson: "{ \"OrderPayloadKind\": \"Stop\", \"OrderTypeKey\": \"castAbility\", \"SubmitMode\": 0, \"PlayerId\": 0 }");
 
             var ex = Assert.Throws<InvalidOperationException>(() => fixture.Load());
 
-            Assert.That(ex!.Message, Does.Contain("unknown ability id 9090"));
-        }
-
-        [Test]
-        public void AiConfigLoader_RejectsUnknownAbilityKey()
-        {
-            using var fixture = AiConfigFixture.Create(orderJson: "{ \"OrderTypeKey\": \"attackTarget\", \"AbilityKey\": \"Ability.Missing\", \"SubmitMode\": 0, \"PlayerId\": 0 }");
-
-            var ex = Assert.Throws<InvalidOperationException>(() => fixture.Load());
-
-            Assert.That(ex!.Message, Does.Contain("unknown ability key 'Ability.Missing'"));
+            Assert.That(ex!.Message, Does.Contain("OrderPayloadKind Stop"));
+            Assert.That(ex.Message, Does.Contain("payloadKind CastAbility"));
         }
 
         [Test]
@@ -102,9 +98,72 @@ namespace Ludots.Tests.GAS
             Assert.That(runtime.UtilityRuntime.TargetFilters.Length, Is.EqualTo(1));
             Assert.That(runtime.UtilityRuntime.TargetFilterOps.Length, Is.EqualTo(2));
             Assert.That(runtime.UtilityRuntime.Tasks.Length, Is.EqualTo(1));
-            Assert.That(runtime.UtilityRuntime.Tasks[0].OrderTypeId, Is.EqualTo(AttackOrderTypeId));
-            Assert.That(runtime.UtilityRuntime.Decisions[0].AutocastAbilityId, Is.EqualTo(fixture.AttackAbilityId));
-            Assert.That(runtime.UtilityRuntime.Decisions[0].SharedCooldownTagId, Is.EqualTo(fixture.SharedCooldownTagId));
+            Assert.That(runtime.UtilityRuntime.Tasks[0].OrderTypeId, Is.EqualTo(CastOrderTypeId));
+            Assert.That(runtime.UtilityRuntime.Tasks[0].PayloadKind, Is.EqualTo(AiOrderPayloadKind.CastAbility));
+            Assert.That(runtime.UtilityRuntime.Tasks[0].AbilitySlotIndex, Is.EqualTo(0));
+            Assert.That(runtime.UtilityRuntime.Decisions[0].TaskOffset, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void AiConfigLoader_RejectsUtilityAiBareOrderIntArgs()
+        {
+            using var fixture = AiConfigFixture.Create();
+            fixture.WriteUtilityConfig();
+            fixture.WriteUtilityTasksJson("[ { \"id\": \"Task.Attack\", \"Kind\": \"SubmitOrder\", \"OrderPayloadKind\": \"CastAbility\", \"OrderTypeKey\": \"castAbility\", \"IntArg0\": 0, \"SubmitMode\": 0, \"PlayerId\": 0 } ]");
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => fixture.Load())!;
+
+            Assert.That(ex.Message, Does.Contain("IntArg0"));
+            Assert.That(ex.Message, Does.Contain("Use AbilitySlotIndex"));
+        }
+
+        [Test]
+        public void AiConfigLoader_RejectsUtilityAiSubmitOrderWithoutPayloadKind()
+        {
+            using var fixture = AiConfigFixture.Create();
+            fixture.WriteUtilityConfig();
+            fixture.WriteUtilityTasksJson("[ { \"id\": \"Task.Attack\", \"Kind\": \"SubmitOrder\", \"OrderTypeKey\": \"castAbility\", \"AbilitySlotIndex\": 0, \"SubmitMode\": 0, \"PlayerId\": 0 } ]");
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => fixture.Load())!;
+
+            Assert.That(ex.Message, Does.Contain("OrderPayloadKind"));
+        }
+
+        [Test]
+        public void AiConfigLoader_RejectsUtilityAiSubmitOrderWithoutAbilitySlot()
+        {
+            using var fixture = AiConfigFixture.Create();
+            fixture.WriteUtilityConfig();
+            fixture.WriteUtilityTasksJson("[ { \"id\": \"Task.Attack\", \"Kind\": \"SubmitOrder\", \"OrderPayloadKind\": \"CastAbility\", \"OrderTypeKey\": \"castAbility\", \"SubmitMode\": 0, \"PlayerId\": 0 } ]");
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => fixture.Load())!;
+
+            Assert.That(ex.Message, Does.Contain("AbilitySlotIndex"));
+            Assert.That(ex.Message, Does.Contain("typed CastAbility"));
+        }
+
+        [Test]
+        public void AiConfigLoader_RejectsGoapBareOrderArgBinding()
+        {
+            using var fixture = AiConfigFixture.Create();
+            fixture.WriteGoapActionsJson("[ { \"id\": \"A0\", \"Cost\": 1, \"Pre\": {\"Mask\":[],\"Values\":[]}, \"Post\": {\"Mask\":[],\"Values\":[]}, \"Order\": { \"OrderPayloadKind\": \"CastAbility\", \"OrderTypeKey\": \"castAbility\", \"SubmitMode\": 0, \"PlayerId\": 0 }, \"Bindings\": [ { \"Op\": \"IntToOrderArg0\", \"SourceKey\": 1 } ] } ]");
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => fixture.Load())!;
+
+            Assert.That(ex.Message, Does.Contain("IntToOrderArg0"));
+            Assert.That(ex.Message, Does.Contain("Use IntToAbilitySlot"));
+        }
+
+        [Test]
+        public void AiConfigLoader_RejectsGoapTargetEntityOrderWithoutTargetBinding()
+        {
+            using var fixture = AiConfigFixture.Create();
+            fixture.WriteGoapActionsJson("[ { \"id\": \"A0\", \"Cost\": 1, \"Pre\": {\"Mask\":[],\"Values\":[]}, \"Post\": {\"Mask\":[],\"Values\":[]}, \"Order\": { \"OrderPayloadKind\": \"TargetEntity\", \"OrderTypeKey\": \"attackTarget\", \"SubmitMode\": 0, \"PlayerId\": 0 }, \"Bindings\": [] } ]");
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => fixture.Load())!;
+
+            Assert.That(ex.Message, Does.Contain("EntityToTarget"));
+            Assert.That(ex.Message, Does.Contain("TargetEntity"));
         }
 
         [Test]
@@ -167,17 +226,6 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void AiConfigLoader_RejectsUtilityAiUnknownAbility()
-        {
-            using var fixture = AiConfigFixture.Create();
-            fixture.WriteUtilityConfig(decisionAbilityKey: "Ability.Missing");
-
-            var ex = Assert.Throws<InvalidOperationException>(() => fixture.Load());
-
-            Assert.That(ex!.Message, Does.Contain("unknown ability key 'Ability.Missing'"));
-        }
-
-        [Test]
         public void AiConfigLoader_RejectsUtilityAiUnknownGraph()
         {
             using var fixture = AiConfigFixture.Create();
@@ -197,19 +245,62 @@ namespace Ludots.Tests.GAS
 
             var ex = Assert.Throws<InvalidOperationException>(() => fixture.Load());
 
-            Assert.That(ex!.Message, Does.Contain("GraphScore graph"));
+            Assert.That(ex!.Message, Does.Contain(GraphKindOperationPolicy.OperationNotAllowedError));
             Assert.That(ex.Message, Does.Contain("WriteBlackboardFloat"));
         }
 
         [Test]
-        public void AiConfigLoader_RejectsUtilityAiUnknownTag()
+        public void AiConfigLoader_RejectsUtilityAiUnknownSourceTag()
         {
             using var fixture = AiConfigFixture.Create();
-            fixture.WriteUtilityConfig(sharedCooldownTag: "Cooldown.Missing");
+            fixture.WriteUtilityConfig(inputKind: "SourceHasTag", inputTag: "Tag.Missing");
 
             var ex = Assert.Throws<InvalidOperationException>(() => fixture.Load());
 
-            Assert.That(ex!.Message, Does.Contain("unknown gameplay tag 'Cooldown.Missing'"));
+            Assert.That(ex!.Message, Does.Contain("unknown gameplay tag 'Tag.Missing'"));
+        }
+
+        [Test]
+        public void AiConfigLoader_CompilesActuatorReadinessInputFromActuatorKey()
+        {
+            using var fixture = AiConfigFixture.Create();
+            fixture.WriteUtilityConfig(considerationInput: "Input.Ready");
+            fixture.WriteUtilityInputsJson("[ { \"id\": \"Input.Ready\", \"Kind\": \"ActuatorReadiness01\", \"Actuator\": \"Actuator.Primary\" } ]");
+            fixture.WriteUtilityActuatorsJson("[ { \"id\": \"Actuator.Primary\" } ]");
+
+            var runtime = fixture.Load();
+
+            Assert.That(runtime.UtilityRuntime.Inputs[0].Kind, Is.EqualTo(UtilityAiInputKind.ActuatorReadiness01));
+            Assert.That(runtime.UtilityRuntime.Inputs[0].Arg0, Is.EqualTo(0));
+            Assert.That(runtime.UtilityRuntime.Authoring.TryGetActuatorId("Actuator.Primary", out int actuatorId), Is.True);
+            Assert.That(actuatorId, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void AiConfigLoader_RejectsNumericActuatorReadinessInput()
+        {
+            using var fixture = AiConfigFixture.Create();
+            fixture.WriteUtilityConfig(considerationInput: "Input.Ready");
+            fixture.WriteUtilityInputsJson("[ { \"id\": \"Input.Ready\", \"Kind\": \"ActuatorReadiness01\", \"ActuatorId\": 0 } ]");
+            fixture.WriteUtilityActuatorsJson("[ { \"id\": \"Actuator.Primary\" } ]");
+
+            var ex = Assert.Throws<InvalidOperationException>(() => fixture.Load());
+
+            Assert.That(ex!.Message, Does.Contain("ActuatorId"));
+            Assert.That(ex.Message, Does.Contain("Actuator"));
+        }
+
+        [Test]
+        public void AiConfigLoader_RejectsDeadActuatorReadinessFields()
+        {
+            using var fixture = AiConfigFixture.Create();
+            fixture.WriteUtilityConfig();
+            fixture.WriteUtilityActuatorsJson("[ { \"id\": \"Actuator.Primary\", \"ReadinessInput\": \"Input.Distance\" } ]");
+
+            var ex = Assert.Throws<InvalidOperationException>(() => fixture.Load());
+
+            Assert.That(ex!.Message, Does.Contain("ReadinessInput"));
+            Assert.That(ex.Message, Does.Contain("Unexpected field"));
         }
 
         [Test]
@@ -252,32 +343,24 @@ namespace Ludots.Tests.GAS
             private readonly string _root;
             private readonly string _core;
             private readonly ConfigPipeline _pipeline;
-            private readonly AiConfigValidationContext _validation;
+            private readonly OrderTypeRegistry _orderTypes;
             private readonly GraphProgramRegistry _graphs;
 
             private AiConfigFixture(
                 string root,
                 string core,
                 ConfigPipeline pipeline,
-                AiConfigValidationContext validation,
+                OrderTypeRegistry orderTypes,
                 GraphProgramRegistry graphs,
-                int attackAbilityId,
-                int sharedCooldownTagId,
                 int scoreGraphId)
             {
                 _root = root;
                 _core = core;
                 _pipeline = pipeline;
-                _validation = validation;
+                _orderTypes = orderTypes;
                 _graphs = graphs;
-                AttackAbilityId = attackAbilityId;
-                SharedCooldownTagId = sharedCooldownTagId;
                 ScoreGraphId = scoreGraphId;
             }
-
-            public int AttackAbilityId { get; }
-
-            public int SharedCooldownTagId { get; }
 
             public int ScoreGraphId { get; }
 
@@ -291,13 +374,13 @@ namespace Ludots.Tests.GAS
                 Directory.CreateDirectory(Path.Combine(core, "Configs", "AI"));
                 Directory.CreateDirectory(Path.Combine(mod, "assets", "Configs", "AI"));
 
-                orderJson ??= "{ \"OrderTypeKey\": \"attackTarget\", \"SubmitMode\": 0, \"PlayerId\": 0 }";
+                orderJson ??= "{ \"OrderPayloadKind\": \"TargetEntity\", \"OrderTypeKey\": \"attackTarget\", \"SubmitMode\": 0, \"PlayerId\": 0 }";
                 projectionJson ??= "[ { \"id\": \"R0\", \"Atom\": \"HasEnemy\", \"Op\": \"EntityIsNonNull\", \"EntityKey\": \"Attack.TargetEntity\" } ]";
 
                 File.WriteAllText(Path.Combine(core, "Configs", "AI", "atoms.json"), "[ { \"id\": \"HasEnemy\" } ]");
                 File.WriteAllText(Path.Combine(core, "Configs", "AI", "projection.json"), projectionJson);
                 File.WriteAllText(Path.Combine(core, "Configs", "AI", "utility.json"), "[ { \"id\": \"G0\", \"GoalPresetId\": 1, \"PlanningStrategyId\": 1, \"Weight\": 1, \"Bool\": [ { \"Atom\": \"HasEnemy\", \"TrueScore\": 1, \"FalseScore\": 0 } ] } ]");
-                File.WriteAllText(Path.Combine(core, "Configs", "AI", "goap_actions.json"), $"[ {{ \"id\": \"A0\", \"Cost\": 1, \"Pre\": {{\"Mask\":[],\"Values\":[]}}, \"Post\": {{\"Mask\":[],\"Values\":[]}}, \"Order\": {orderJson}, \"Bindings\": [] }} ]");
+                File.WriteAllText(Path.Combine(core, "Configs", "AI", "goap_actions.json"), $"[ {{ \"id\": \"A0\", \"Cost\": 1, \"Pre\": {{\"Mask\":[],\"Values\":[]}}, \"Post\": {{\"Mask\":[],\"Values\":[]}}, \"Order\": {orderJson}, \"Bindings\": [ {{ \"Op\": \"EntityToTarget\", \"SourceKey\": \"Attack.TargetEntity\" }} ] }} ]");
                 File.WriteAllText(Path.Combine(core, "Configs", "AI", "goap_goals.json"), "[ { \"id\": \"GG0\", \"GoalPresetId\": 1, \"HeuristicWeight\": 1, \"Goal\": { \"Mask\": [\"HasEnemy\"], \"Values\": [\"HasEnemy\"] } } ]");
                 File.WriteAllText(Path.Combine(core, "Configs", "AI", "htn_domain.json"), "{ \"Tasks\": [], \"Methods\": [], \"Subtasks\": [], \"Roots\": [] }");
 
@@ -313,25 +396,27 @@ namespace Ludots.Tests.GAS
                 var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
                 orderTypes.Register(new OrderTypeConfig
                 {
+                    Key = "castAbility",
+                    OrderTypeId = CastOrderTypeId,
+                    PayloadKind = OrderPayloadKind.CastAbility
+                });
+                orderTypes.Register(new OrderTypeConfig
+                {
                     Key = "attackTarget",
-                    OrderTypeId = AttackOrderTypeId
+                    OrderTypeId = AttackOrderTypeId,
+                    PayloadKind = OrderPayloadKind.TargetEntity
                 });
 
-                AbilityIdRegistry.Clear();
                 TagRegistry.Clear();
                 GraphIdRegistry.Clear();
                 OrderBlackboardKeyRegistry.ResetToBuiltins();
                 OrderBlackboardKeyRegistry.Register("Attack.TargetEntity");
-                int abilityId = AbilityIdRegistry.Register("Ability.Test.Attack");
-                var abilities = new AbilityDefinitionRegistry();
-                abilities.Register(abilityId, new AbilityDefinition());
-                int sharedCooldownTagId = TagRegistry.Register("Cooldown.Global.Attack");
 
                 var graphs = new GraphProgramRegistry();
                 int graphId = GraphIdRegistry.Register("Graph.AI.Score");
                 graphs.Register(graphId, Array.Empty<GraphInstruction>(), GraphKind.Score);
 
-                return new AiConfigFixture(root, core, pipeline, new AiConfigValidationContext(orderTypes, abilities, graphs), graphs, abilityId, sharedCooldownTagId, graphId);
+                return new AiConfigFixture(root, core, pipeline, orderTypes, graphs, graphId);
             }
 
             public void RegisterScoreGraph(params GraphInstruction[] program)
@@ -343,11 +428,11 @@ namespace Ludots.Tests.GAS
             public void WriteUtilityConfig(
                 string decisionTargetFilter = "TF.Hostile",
                 string considerationInput = "Input.Distance",
-                string taskOrderTypeKey = "attackTarget",
-                string decisionAbilityKey = "Ability.Test.Attack",
-                string sharedCooldownTag = "Cooldown.Global.Attack",
+                string taskOrderTypeKey = "castAbility",
                 bool includeGraphInput = false,
                 string graphKey = "Graph.AI.Score",
+                string inputKind = "DistanceToTarget",
+                string inputTag = "",
                 string? defaultStance = null)
             {
                 string ai = Path.Combine(_core, "Configs", "AI");
@@ -359,19 +444,21 @@ namespace Ludots.Tests.GAS
                 string inputGraph = includeGraphInput
                     ? $", {{ \"id\": \"Input.Graph\", \"Kind\": \"GraphScore\", \"GraphKey\": \"{graphKey}\" }}"
                     : string.Empty;
+                string primaryInput = string.Equals(inputKind, "SourceHasTag", StringComparison.Ordinal)
+                    ? $"{{ \"id\": \"Input.Distance\", \"Kind\": \"SourceHasTag\", \"Tag\": \"{inputTag}\" }}"
+                    : "{ \"id\": \"Input.Distance\", \"Kind\": \"DistanceToTarget\" }";
                 File.WriteAllText(Path.Combine(ai, "inputs.json"),
-                    "[ { \"id\": \"Input.Distance\", \"Kind\": \"DistanceToTarget\" }" + inputGraph + " ]");
+                    "[ " + primaryInput + inputGraph + " ]");
                 File.WriteAllText(Path.Combine(ai, "normalizations.json"),
                     "[ { \"id\": \"Norm.Close\", \"Kind\": \"RangeInverse\", \"Min\": 0, \"Max\": 900 } ]");
                 File.WriteAllText(Path.Combine(ai, "curves.json"),
                     "[ { \"id\": \"Curve.Linear\", \"Kind\": \"Linear\" } ]");
                 File.WriteAllText(Path.Combine(ai, "tasks.json"),
-                    $"[ {{ \"id\": \"Task.Attack\", \"Kind\": \"SubmitOrder\", \"OrderTypeKey\": \"{taskOrderTypeKey}\", \"SubmitMode\": 0, \"PlayerId\": 0 }} ]");
+                    $"[ {{ \"id\": \"Task.Attack\", \"Kind\": \"SubmitOrder\", \"OrderPayloadKind\": \"CastAbility\", \"OrderTypeKey\": \"{taskOrderTypeKey}\", \"AbilitySlotIndex\": 0, \"SubmitMode\": 0, \"PlayerId\": 0 }} ]");
                 File.WriteAllText(Path.Combine(ai, "decisions.json"),
                     "[ { \"id\": \"Decision.Attack\", " +
                     $"\"TargetFilter\": \"{decisionTargetFilter}\", " +
                     "\"Priority\": 10, \"BaseScore\": 1, \"Weight\": 1, " +
-                    $"\"AbilityKey\": \"{decisionAbilityKey}\", \"AbilitySlotIndex\": 0, \"SharedCooldownTag\": \"{sharedCooldownTag}\", " +
                     "\"Autocast\": true, \"OrdinaryAttack\": true, \"RequiresTarget\": true, " +
                     "\"Considerations\": [ { " +
                     $"\"Input\": \"{considerationInput}\", \"Normalization\": \"Norm.Close\", \"Curve\": \"Curve.Linear\", \"Aggregate\": \"Multiply\" }} ], " +
@@ -393,10 +480,33 @@ namespace Ludots.Tests.GAS
                 File.WriteAllText(Path.Combine(_core, "Configs", "AI", "profiles.json"), json);
             }
 
+            public void WriteUtilityInputsJson(string json)
+            {
+                File.WriteAllText(Path.Combine(_core, "Configs", "AI", "inputs.json"), json);
+            }
+
+            public void WriteUtilityActuatorsJson(string json)
+            {
+                File.WriteAllText(Path.Combine(_core, "Configs", "AI", "actuators.json"), json);
+            }
+
+            public void WriteUtilityTasksJson(string json)
+            {
+                File.WriteAllText(Path.Combine(_core, "Configs", "AI", "tasks.json"), json);
+            }
+
+            public void WriteGoapActionsJson(string json)
+            {
+                File.WriteAllText(Path.Combine(_core, "Configs", "AI", "goap_actions.json"), json);
+            }
+
             public AiCompiledRuntime Load()
             {
                 var atoms = new AtomRegistry(capacity: 256);
-                var loader = new AiConfigLoader(_pipeline, atoms, _validation);
+                var validation = new AiConfigValidationContext(
+                    _orderTypes,
+                    new RegistryGraphScorer(_graphs));
+                var loader = new AiConfigLoader(_pipeline, atoms, validation);
                 return loader.LoadAndCompile(AiConfigCatalog.CreateDefault());
             }
 
@@ -413,6 +523,72 @@ namespace Ludots.Tests.GAS
                 catch (UnauthorizedAccessException)
                 {
                 }
+            }
+        }
+
+        private sealed class RegistryGraphScorer : IReadOnlyGraphScorer
+        {
+            private readonly GraphProgramRegistry _graphs;
+
+            public RegistryGraphScorer(GraphProgramRegistry graphs)
+            {
+                _graphs = graphs;
+            }
+
+            public void RequireScoreGraph(int graphId, string path)
+            {
+                RequireGraph(graphId, GraphKind.Score, path);
+            }
+
+            public void RequireValidationGraph(int graphId, string path)
+            {
+                RequireGraph(graphId, GraphKind.Validation, path);
+            }
+
+            public bool TryEvaluateScore(
+                Arch.Core.Entity actor,
+                Arch.Core.Entity target,
+                Ludots.Core.Mathematics.IntVector2 targetPosCm,
+                int graphId,
+                ref GraphInstructionBudget budget,
+                out float score,
+                out GraphScoreFailureReason failureReason)
+                => throw new NotSupportedException("AiConfigLoaderTests only validate graph references at load time.");
+
+            public bool TryEvaluateValidation(
+                Arch.Core.Entity actor,
+                Arch.Core.Entity target,
+                Ludots.Core.Mathematics.IntVector2 targetPosCm,
+                int graphId,
+                ref GraphInstructionBudget budget,
+                out bool passed,
+                out GraphScoreFailureReason failureReason)
+                => throw new NotSupportedException("AiConfigLoaderTests only validate graph references at load time.");
+
+            private void RequireGraph(int graphId, GraphKind expected, string path)
+            {
+                if (!_graphs.TryGetKind(graphId, out GraphKind actual))
+                {
+                    throw new InvalidOperationException($"{path}: references unknown graph id {graphId}.");
+                }
+
+                if (actual != expected)
+                {
+                    throw new InvalidOperationException(
+                        $"{path}: references graph id {graphId} with the wrong graph kind; expected {expected}.");
+                }
+
+                if (!_graphs.TryGetProgram(graphId, out var program))
+                {
+                    throw new InvalidOperationException($"{path}: references unknown graph id {graphId}.");
+                }
+
+                GraphKindOperationPolicy.RequireAllowed(
+                    actual,
+                    program,
+                    GasGraphOpHandlerTable.Instance,
+                    graphId,
+                    nameof(AiConfigLoaderTests));
             }
         }
     }

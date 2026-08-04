@@ -125,14 +125,17 @@ Slot 只用于初始成员布局和稳定展开顺序。移动后的 command-gro
 
 ## 多方阵目标
 
-当玩家同时选择多个 anchor，`groupMoveTargetLayout` 为每个 command source 计算不同中心目标，避免多个方阵重叠到同一点。
+当玩家同时选择多个 anchor，mapping 引用的 `targetLayoutProfileId` 会为每个 command source 计算不同中心目标，避免多个方阵重叠到同一点。
 
 ```json
-"groupMoveTargetLayout": {
-  "mode": "Grid",
-  "spacingCm": 1800,
-  "orderTypeKeys": [ "massNavigationMove" ]
-}
+"targetLayoutProfiles": [
+  {
+    "id": "layout.mass-navigation.grid",
+    "mode": "Grid",
+    "spacingCm": 1800,
+    "orderTypeKeys": [ "massNavigationMove" ]
+  }
+]
 ```
 
 成员 fan-out 发生在每个中心目标确定之后；同一 anchor 的成员共享一个 command-group token，不同 anchor 使用不同 token。

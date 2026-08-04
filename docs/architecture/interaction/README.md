@@ -21,7 +21,6 @@
   - `src/Core/Gameplay/GAS/Systems/AbilityFormRoutingSystem.cs`
 - ability 激活 tag gate：
   - `src/Core/Gameplay/GAS/Components/AbilityActivationBlockTags.cs`
-  - `src/Core/Gameplay/GAS/Systems/AbilitySystem.cs`
   - `src/Core/Gameplay/GAS/Systems/AbilityExecSystem.cs`
 - 最小 validation graph primitive：
   - `src/Core/NodeLibraries/GASGraph/GraphExecutor.cs`
@@ -153,7 +152,6 @@ ability 激活阶段只读取两类 gate：
 
 实际执行点：
 
-- `src/Core/Gameplay/GAS/Systems/AbilitySystem.cs`
 - `src/Core/Gameplay/GAS/Systems/AbilityExecSystem.cs`
 - `src/Core/Gameplay/GAS/Config/AbilityExecLoader.cs`
 
@@ -161,7 +159,7 @@ ability 激活阶段只读取两类 gate：
 
 - `silenced`、`stunned`、`rooted` 等离散阻塞
 - combo stage、form、finisher-ready 等离散前置
-- cooldown ready、charge ready、mana ready 等已经投影成 tag 的结果
+- 技能锁定、充能、法力等已经投影成 tag 的结果
 
 ### 5.2 数值 / 上下文检查：最小 validation graph primitive
 
@@ -247,7 +245,7 @@ entity AbilityFormSetRef
   -> match route by effective tags + priority
   -> write AbilityFormSlotBuffer
   -> AbilitySlotResolver (Granted > Form > Base)
-  -> AbilitySystem / AbilityExecSystem / ContextScored / Indicator
+  -> AbilityExecSystem / ContextScored / Indicator
 ```
 
 Template boundary：

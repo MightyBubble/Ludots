@@ -8,6 +8,8 @@ namespace Ludots.Core.Gameplay.AI.Components
 
         public int Length;
         public int Cursor;
+        public int WaitingOrderId;
+        public int WaitingOrderTypeId;
         public fixed int ActionIds[MaxActions];
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -15,6 +17,8 @@ namespace Ludots.Core.Gameplay.AI.Components
         {
             Length = 0;
             Cursor = 0;
+            WaitingOrderId = 0;
+            WaitingOrderTypeId = 0;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -44,7 +48,22 @@ namespace Ludots.Core.Gameplay.AI.Components
             Cursor++;
         }
 
-        public readonly bool IsDone => Cursor >= Length;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void BeginWaitingForOrder(int orderId, int orderTypeId)
+        {
+            WaitingOrderId = orderId;
+            WaitingOrderTypeId = orderTypeId;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void ClearWaitingOrder()
+        {
+            WaitingOrderId = 0;
+            WaitingOrderTypeId = 0;
+        }
+
+        public readonly bool IsWaitingForOrder => WaitingOrderId > 0;
+
+        public readonly bool IsDone => !IsWaitingForOrder && Cursor >= Length;
     }
 }
-

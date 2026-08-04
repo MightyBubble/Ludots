@@ -18,7 +18,7 @@
 - `src/Core/Gameplay/GAS/Orders/OrderSubmitter.cs`
   - 负责按照 order type config 把 order 写入 buffer / blackboard。
 - `src/Core/Gameplay/GAS/AbilityDefinitionRegistry.cs`
-  - 已经提供 `targeting.castRangeCm`，可用于通用施法几何规划。
+  - 已经提供 `targeting.castRangeCm` 与 `targeting.allowMoveChase`，可用于通用施法几何规划。
 
 但缺了一个通用层，把“玩家意图”翻译成“多个 order 的安全组合”：
 
@@ -35,7 +35,7 @@
 - Mod seam: `LocalOrderSourceHelper`
   - 作为 raw submit handler 的唯一接缝。
 - Registry: `AbilityDefinitionRegistry`
-  - 读取 `targeting.castRangeCm` 作为通用 cast 几何。
+  - 读取 `targeting.castRangeCm` 与 `targeting.allowMoveChase` 作为通用 cast 几何。
 - Queue / Buffer: `OrderQueue`、`OrderBuffer`、`OrderSubmitter`
   - 不新增平行队列，不重写 order runtime。
 - Phase: `SystemGroup.AbilityActivation`
@@ -84,7 +84,7 @@
 - 若不是可规划的 cast，直接透传到 `OrderQueue`
 - 若是超距 cast：
   - 解析 actor 当前或 projected 起点
-  - 读取 ability targeting cast range
+  - 读取 ability targeting cast range 与显式 move-chase 策略
   - 计算最近合法施法点
   - 生成前置 `moveTo`
   - 注册 follow-up `castAbility`

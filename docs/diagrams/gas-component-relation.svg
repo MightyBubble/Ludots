@@ -218,10 +218,10 @@ z
     <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="626.4" y="457.073625" transform="rotate(-0 626.4 457.073625)">单例协调器</text>
    </g>
    <g id="text_3">
-    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="309.6" y="270.992188" transform="rotate(-0 309.6 270.992188)">AbilitySystem</text>
+    <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="309.6" y="270.992188" transform="rotate(-0 309.6 270.992188)">AbilityExecSystem</text>
    </g>
    <g id="text_4">
-    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="309.6" y="287.873625" transform="rotate(-0 309.6 287.873625)">能力定义 / 激活 / 执行</text>
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="309.6" y="287.873625" transform="rotate(-0 309.6 287.873625)">Order 接纳 / 时间线执行</text>
    </g>
    <g id="text_5">
     <text style="font-weight: 700; font-size: 12.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="309.6" y="113.672187" transform="rotate(-0 309.6 113.672187)">AbilityExecSpec</text>

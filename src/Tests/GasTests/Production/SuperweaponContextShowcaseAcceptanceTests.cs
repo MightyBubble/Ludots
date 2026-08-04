@@ -209,7 +209,8 @@ namespace Ludots.Tests.GAS.Production
             string source = File.ReadAllText(runtimePath, Encoding.UTF8);
 
             Assert.That(source, Does.Contain("orderQueue.TryEnqueue"));
-            Assert.That(source, Does.Contain("Args = new OrderArgs"));
+            Assert.That(source, Does.Contain("OrderBuilder.CreateCastAbility"));
+            Assert.That(source, Does.Not.Contain("Args = new OrderArgs"));
             Assert.That(source, Does.Not.Contain("SetActiveDirect"));
             Assert.That(source, Does.Not.Contain("OrderId = 65001"));
             Assert.That(source, Does.Not.Contain("World.Remove<AbilityExecInstance>"));

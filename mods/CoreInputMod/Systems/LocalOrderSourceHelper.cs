@@ -11,9 +11,10 @@ using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
-using Ludots.Core.Gameplay.Items;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.GraphRuntime;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Orders;
@@ -21,7 +22,6 @@ using Ludots.Core.Input.Runtime;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
-using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Utils;
 using Ludots.Core.Scripting;
@@ -42,7 +42,6 @@ namespace CoreInputMod.Systems
         private readonly Dictionary<string, object> _globals;
         private readonly OrderQueue _orders;
         private readonly InputInteractionContextAccessor _context;
-        private readonly IReadOnlyDictionary<string, int> _orderTypeIds;
         private readonly OrderTypeRegistry? _orderTypeRegistry;
         private readonly CompositeOrderPlanner? _planner;
         private KnowledgeCommandTargetGate? _commandTargetGate;
@@ -61,14 +60,9 @@ namespace CoreInputMod.Systems
             _context = new InputInteractionContextAccessor(world, globals);
             if (globals.TryGetValue(CoreServiceKeys.GameConfig.Name, out var configObj) && configObj is GameConfig config)
             {
-                _orderTypeIds = config.Constants.OrderTypeIds;
                 CastAbilityOrderTypeId = config.Constants.OrderTypeIds["castAbility"];
                 MoveToOrderTypeId = config.Constants.OrderTypeIds["moveTo"];
                 StopOrderTypeId = config.Constants.OrderTypeIds["stop"];
-            }
-            else
-            {
-                _orderTypeIds = new Dictionary<string, int>();
             }
 
             if (globals.TryGetValue(CoreServiceKeys.AbilityDefinitionRegistry.Name, out var abilitiesObj) &&
@@ -102,27 +96,24 @@ namespace CoreInputMod.Systems
 
             using var stream = File.OpenRead(fullPath);
             var config = InputOrderMappingLoader.LoadFromStream(stream);
+            InputOrderMappingLoader.ResolveAbilityIdKeys(config, AbilityIdRegistry.GetId, uri);
             int commandIntentScratchCapacity = ResolveCommandIntentScratchCapacity();
             var mapping = new InputOrderMappingSystem(input, config, commandIntentScratchCapacity);
             PlayerEntityLookup players = RequireService<PlayerEntityLookup>(CoreServiceKeys.PlayerEntityLookup.Name);
             var controlDomains = RequireService<Ludots.Core.Gameplay.Relationships.ControlDomainQuery>(
                 CoreServiceKeys.ControlDomainQuery.Name);
+            var bindings = InteractionActionBindingsResolver.Require(_globals, nameof(LocalOrderSourceHelper));
+            mapping.ConfirmActionId = bindings.ConfirmActionId;
+            mapping.CancelActionId = bindings.CancelActionId;
+            mapping.CommandActionId = bindings.CommandActionId;
 
-            mapping.SetOrderTypeKeyResolver(key =>
+            if (_orderTypeRegistry == null)
             {
-                if (_orderTypeRegistry != null && _orderTypeRegistry.TryGetId(key, out int registryOrderTypeId))
-                {
-                    return registryOrderTypeId;
-                }
-
-                if (_orderTypeIds.TryGetValue(key, out int configOrderTypeId) && configOrderTypeId > 0)
-                {
-                    return configOrderTypeId;
-                }
-
                 throw new InvalidOperationException(
-                    $"[{ctx.ModId}] input_order_mappings.json references unknown orderTypeKey '{key}'.");
-            });
+                    $"[{ctx.ModId}] input_order_mappings.json requires {CoreServiceKeys.OrderTypeRegistry.Name} so orderTypeKey and orderPayload contracts are validated.");
+            }
+
+            mapping.SetOrderTypeRegistry(_orderTypeRegistry, uri);
             mapping.SetGroundPositionProvider((out Vector3 worldCm) =>
             {
                 worldCm = default;
@@ -155,11 +146,8 @@ namespace CoreInputMod.Systems
             RequireCommandTargetGate();
             mapping.SetHoveredEntityProvider(TryResolveHoveredCommandTarget);
             mapping.SetCommandIntentTargetFactsProvider(TryResolveCommandIntentTargetFacts);
+            mapping.SetSkillMappingAbilityProvider(TryResolveSkillMappingAbility);
             RequireConfigureCommandIntentRouting(mapping);
-            var bindings = InteractionActionBindingsResolver.Require(_globals, nameof(LocalOrderSourceHelper));
-            mapping.ConfirmActionId = bindings.ConfirmActionId;
-            mapping.CancelActionId = bindings.CancelActionId;
-            mapping.CommandActionId = bindings.CommandActionId;
             mapping.SetOrderIdentityAssigner((ref Order order) => _orders.EnsureOrderId(ref order));
             mapping.SetOrderSubmitHandler((in Order order) =>
             {
@@ -250,23 +238,6 @@ namespace CoreInputMod.Systems
             {
                 mapping.SetAutoTargetProvider(autoTargetResolver.TryResolve);
                 mapping.SetCursorTargetProvider(autoTargetResolver.TryResolveCursor);
-            }
-            if (TryCreateSkillMappingOverrideProvider(out var mappingOverrideProvider))
-            {
-                mapping.SetSkillMappingOverrideProvider(mappingOverrideProvider.TryResolve);
-            }
-
-            if (RequiresActorOrderRouting(config))
-            {
-                if (!_globals.TryGetValue(CoreServiceKeys.TagOps.Name, out var tagOpsObj) ||
-                    tagOpsObj is not TagOps tagOps)
-                {
-                    throw new InvalidOperationException(
-                        $"[{ctx.ModId}] input_order_mappings.json defines actorOrderRouting but TagOps is not registered.");
-                }
-
-                mapping.SetActorOrderRoutingResolver((Entity actor, ActorOrderRoutingSettings routing, out ActorOrderRoutingCandidate matchedCandidate) =>
-                    ActorOrderRoutingMatcher.TryResolveCandidate(_world, tagOps, actor, routing.Candidates, out matchedCandidate));
             }
 
             _globals[CoreServiceKeys.ActiveInputOrderMapping.Name] = mapping;
@@ -423,6 +394,19 @@ namespace CoreInputMod.Systems
                    _context.TryGetCollectionPrimary(owner, collectionKey, out entity);
         }
 
+        private bool TryResolveSkillMappingAbility(Entity actor, int slotIndex, out int abilityId)
+        {
+            abilityId = 0;
+            if (!AbilitySlotResolver.TryResolve(_world, actor, slotIndex, out AbilitySlotState slot) ||
+                slot.AbilityId <= 0)
+            {
+                return false;
+            }
+
+            abilityId = slot.AbilityId;
+            return true;
+        }
+
         private bool TryCopyCollectionEntities(
             string collectionKey,
             List<Entity> entities,
@@ -454,37 +438,48 @@ namespace CoreInputMod.Systems
             resolver = default!;
             if (!_globals.TryGetValue(CoreServiceKeys.ContextGroupRegistry.Name, out var groupsObj) ||
                 groupsObj is not ContextGroupRegistry contextGroups ||
-                !_globals.TryGetValue(CoreServiceKeys.GraphProgramRegistry.Name, out var graphsObj) ||
-                graphsObj is not Ludots.Core.GraphRuntime.GraphProgramRegistry graphPrograms ||
                 !_globals.TryGetValue(CoreServiceKeys.SpatialQueryService.Name, out var spatialObj) ||
                 spatialObj is not Ludots.Core.Spatial.ISpatialQueryService spatialQueries)
             {
                 return false;
             }
 
-            if (!_globals.TryGetValue(CoreServiceKeys.GasGraphRuntimeApi.Name, out var graphApiObj) ||
-                graphApiObj is not GasGraphRuntimeApi graphApi)
+            if (!_globals.TryGetValue(CoreServiceKeys.GraphScorer.Name, out var scorerObj) ||
+                scorerObj is not IReadOnlyGraphScorer graphScorer)
             {
                 throw new InvalidOperationException(
-                    "Context-scored order resolution requires the engine-owned production GasGraphRuntimeApi.");
+                    "Context-scored order resolution requires the engine-owned IReadOnlyGraphScorer.");
             }
 
             KnowledgeCommandTargetGate candidateGate = RequireCommandTargetGate();
-            resolver = new ContextScoredOrderResolver(_world, contextGroups, graphPrograms, spatialQueries, graphApi, candidateGate.CanTarget);
+            resolver = new ContextScoredOrderResolver(
+                _world,
+                contextGroups,
+                graphScorer,
+                spatialQueries,
+                candidateGate.CanTarget,
+                RequireInputGraphScoreInstructionBudget());
             return true;
         }
 
-        private bool TryCreateSkillMappingOverrideProvider(out SkillMappingOverrideResolver resolver)
+        private int RequireInputGraphScoreInstructionBudget()
         {
-            resolver = default!;
-            if (!_globals.TryGetValue(CoreServiceKeys.AbilityDefinitionRegistry.Name, out var abilitiesObj) ||
-                abilitiesObj is not AbilityDefinitionRegistry abilityDefinitions)
+            if (!_globals.TryGetValue(CoreServiceKeys.GameConfig.Name, out var configObj) ||
+                configObj is not GameConfig config ||
+                config.GasRuntimeCapacity == null)
             {
-                return false;
+                throw new InvalidOperationException(
+                    "Context-scored order resolution requires GameConfig.gasRuntimeCapacity.inputGraphScoreInstructionBudgetPerResolve.");
             }
 
-            resolver = new SkillMappingOverrideResolver(_world, abilityDefinitions);
-            return true;
+            int budget = config.GasRuntimeCapacity.InputGraphScoreInstructionBudgetPerResolve;
+            if (budget <= 0 || budget == int.MaxValue)
+            {
+                throw new InvalidOperationException(
+                    "GameConfig.gasRuntimeCapacity.inputGraphScoreInstructionBudgetPerResolve must be positive and finite.");
+            }
+
+            return budget;
         }
 
         private bool TryCreateAutoTargetResolver(out AutoTargetResolver resolver)
@@ -565,80 +560,6 @@ namespace CoreInputMod.Systems
             };
 
             return $"type:{order.OrderTypeId},player:{order.PlayerId},actor:{order.Actor.Id}:{order.Actor.WorldId}:{order.Actor.Version},target:{target},slot:{order.Args.I0},spatial:{spatial},submit:{order.SubmitMode}";
-        }
-
-        public sealed class SkillMappingOverrideResolver
-        {
-            private readonly World _world;
-            private readonly AbilityDefinitionRegistry _abilityDefinitions;
-            private readonly Dictionary<SkillMappingOverrideCacheKey, InputOrderMapping> _cache = new(64);
-
-            public SkillMappingOverrideResolver(World world, AbilityDefinitionRegistry abilityDefinitions)
-            {
-                _world = world;
-                _abilityDefinitions = abilityDefinitions;
-            }
-
-            public bool TryResolve(Entity actor, InputOrderMapping mapping, out InputOrderMapping overrideMapping)
-            {
-                overrideMapping = default!;
-                if (!_world.IsAlive(actor) ||
-                    !mapping.IsSkillMapping ||
-                    !mapping.ArgsTemplate.I0.HasValue ||
-                    !_world.Has<AbilityStateBuffer>(actor))
-                {
-                    return false;
-                }
-
-                int slotIndex = mapping.ArgsTemplate.I0.Value;
-                if (!AbilitySlotResolver.TryResolve(_world, actor, slotIndex, out AbilitySlotState slot) ||
-                    slot.AbilityId <= 0 ||
-                    !_abilityDefinitions.TryGet(slot.AbilityId, out var abilityDefinition) ||
-                    !abilityDefinition.HasInputBindingOverride)
-                {
-                    return false;
-                }
-
-                var cacheKey = new SkillMappingOverrideCacheKey(mapping, slot.AbilityId);
-                if (_cache.TryGetValue(cacheKey, out overrideMapping))
-                {
-                    return true;
-                }
-
-                overrideMapping = mapping.Clone();
-                ref readonly var inputOverride = ref abilityDefinition.InputBindingOverride;
-                if (inputOverride.HasTrigger)
-                {
-                    overrideMapping.Trigger = inputOverride.Trigger;
-                }
-
-                if (inputOverride.HasHeldPolicy)
-                {
-                    overrideMapping.HeldPolicy = inputOverride.HeldPolicy;
-                }
-
-                if (inputOverride.HasCastModeOverride)
-                {
-                    overrideMapping.CastModeOverride = inputOverride.CastModeOverride;
-                }
-
-                if (inputOverride.HasAutoTargetPolicy)
-                {
-                    overrideMapping.AutoTargetPolicy = inputOverride.AutoTargetPolicy;
-                }
-
-                if (inputOverride.HasAutoTargetRangeCm)
-                {
-                    overrideMapping.AutoTargetRangeCm = inputOverride.AutoTargetRangeCm;
-                }
-
-                _cache.Add(cacheKey, overrideMapping);
-                return true;
-            }
-
-            private readonly record struct SkillMappingOverrideCacheKey(
-                InputOrderMapping Mapping,
-                int AbilityId);
         }
 
         private sealed class AutoTargetResolver
@@ -747,20 +668,6 @@ namespace CoreInputMod.Systems
 
                 return target != Entity.Null;
             }
-        }
-
-        private static bool RequiresActorOrderRouting(InputOrderMappingConfig config)
-        {
-            for (int i = 0; i < config.Mappings.Count; i++)
-            {
-                InputOrderMapping mapping = config.Mappings[i];
-                if (mapping?.ActorOrderRouting is { Candidates.Count: > 0 })
-                {
-                    return true;
-                }
-            }
-
-            return false;
         }
 
         private int ResolveCommandIntentScratchCapacity()

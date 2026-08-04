@@ -5,74 +5,107 @@
       "actionId": "SkillQ",
       "trigger": "PressedThisFrame",
       "orderTypeKey": "castAbility",
-      "argsTemplate": { "i0": 0 },
       "requireTarget": false,
       "targetType": "Position",
-      "isSkillMapping": true,
-      "modifierBehavior": "QueueOnModifier"
+      "modifierBehavior": "QueueOnModifier",
+      "orderPayload": {
+        "kind": "CastAbility",
+        "abilitySlot": 0
+      }
     },
     {
       "actionId": "SkillW",
       "trigger": "PressedThisFrame",
       "orderTypeKey": "castAbility",
-      "argsTemplate": { "i0": 1 },
       "requireTarget": false,
       "targetType": "Position",
-      "isSkillMapping": true,
-      "modifierBehavior": "QueueOnModifier"
+      "modifierBehavior": "QueueOnModifier",
+      "orderPayload": {
+        "kind": "CastAbility",
+        "abilitySlot": 1
+      }
     },
     {
       "actionId": "SkillE",
       "trigger": "PressedThisFrame",
       "orderTypeKey": "castAbility",
-      "argsTemplate": { "i0": 2 },
       "requireTarget": false,
       "targetType": "Position",
-      "isSkillMapping": true,
-      "modifierBehavior": "QueueOnModifier"
+      "autoTargetPolicy": "NearestEnemyInRange",
+      "autoTargetRangeCm": 760,
+      "modifierBehavior": "QueueOnModifier",
+      "orderPayload": {
+        "kind": "CastAbility",
+        "abilitySlot": 2
+      }
     },
     {
       "actionId": "SkillR",
       "trigger": "PressedThisFrame",
       "orderTypeKey": "castAbility",
-      "argsTemplate": { "i0": 3 },
       "requireTarget": false,
       "targetType": "Direction",
       "cursorTargetPolicy": "NearestEnemyInRange",
       "cursorTargetRangeCm": 320,
-      "isSkillMapping": true,
-      "modifierBehavior": "QueueOnModifier"
+      "modifierBehavior": "QueueOnModifier",
+      "orderPayload": {
+        "kind": "CastAbility",
+        "abilitySlot": 3
+      }
+    },
+    {
+      "actionId": "SkillR",
+      "abilityIdKey": "Ability.Champion.SpellEngineer.GuidedLaser",
+      "trigger": "Held",
+      "heldPolicy": "StartEnd",
+      "castModeOverride": "SmartCast",
+      "orderTypeKey": "castAbility",
+      "requireTarget": false,
+      "targetType": "Direction",
+      "modifierBehavior": "QueueOnModifier",
+      "orderPayload": {
+        "kind": "CastAbility",
+        "abilitySlot": 3
+      }
     },
     {
       "actionId": "Command",
       "actorCollectionKey": "collection.command.source",
       "trigger": "PressedThisFrame",
       "orderTypeKey": "moveTo",
-      "argsTemplate": {},
       "requireTarget": true,
       "targetType": "Position",
-      "isSkillMapping": false,
-      "modifierBehavior": "QueueOnModifier"
+      "modifierBehavior": "QueueOnModifier",
+      "orderPayload": {
+        "kind": "MoveToWorldCm"
+      },
+      "targetLayoutProfileId": "layout.move.grid"
     },
     {
       "actionId": "Stop",
       "actorCollectionKey": "collection.command.source",
       "trigger": "PressedThisFrame",
       "orderTypeKey": "stop",
-      "argsTemplate": {},
       "requireTarget": false,
       "targetType": "None",
-      "isSkillMapping": false,
-      "modifierBehavior": "IgnoreModifier"
+      "modifierBehavior": "IgnoreModifier",
+      "orderPayload": {
+        "kind": "Stop"
+      }
     }
   ],
-  "groupMoveTargetLayout": {
-    "mode": "Grid",
-    "spacingCm": 140,
-    "orderTypeKeys": [ "moveTo" ]
-  },
   "userOverrides": {
     "enabled": true,
     "persistPath": "user://ChampionSkillSandboxMod/input_preferences.json"
-  }
+  },
+  "targetLayoutProfiles": [
+    {
+      "id": "layout.move.grid",
+      "mode": "Grid",
+      "spacingCm": 140,
+      "orderTypeKeys": [
+        "moveTo"
+      ]
+    }
+  ]
 }

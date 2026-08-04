@@ -121,6 +121,46 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void TryRoute_ActorBlockedAnyTags_PreventsMatchedActorRule()
+        {
+            using var world = World.Create();
+            Harness harness = Harness.Create(world);
+            const string blockedTag = "Progression.Rts.WarpGate";
+            harness.Intents.Install(Harness.Config(new CommandIntentProfileDefinition
+            {
+                Id = TestProfileId,
+                GroupPolicy = new CommandIntentGroupPolicyDefinition { Kind = "independent" },
+                Rules = new List<CommandIntentRuleDefinition>
+                {
+                    new()
+                    {
+                        Priority = 20,
+                        Actor = new CommandIntentActorPredicateDefinition
+                        {
+                            HasAbilityWithTag = WeaponAbilityTag,
+                            BlockedAnyTags = new List<string> { blockedTag },
+                        },
+                        Target = new CommandIntentTargetPredicateDefinition { HasEntity = false },
+                        Route = new CommandIntentRouteDefinition { OrderTypeKey = "castAbility", Slot = $"byAbilityTag:{WeaponAbilityTag}" },
+                    },
+                    Harness.GroundRule(priority: 10, orderTypeKey: "moveTo"),
+                },
+            }));
+
+            Entity p1Rep = world.Create(new PlayerIdentity { PlayerId = 1 });
+            Entity actor = harness.CreateActor(p1Rep, WeaponAbilityId);
+            world.Add(actor, new GameplayTagContainer());
+            ref GameplayTagContainer actorTags = ref world.Get<GameplayTagContainer>(actor);
+            actorTags.AddTag(TagRegistry.Register(blockedTag));
+
+            var facts = new CommandIntentTargetFacts(Entity.Null, HasEntity: false);
+            bool routed = harness.Intents.TryRoute(harness.ProfileId(TestProfileId), actor, p1Rep, in facts, out CommandIntentRoute route);
+
+            Assert.That(routed, Is.True);
+            Assert.That(route.OrderTypeId, Is.EqualTo(harness.MoveToOrderId));
+        }
+
+        [Test]
         public void RouteGroup_MixedCapabilityActors_RoutePerActor()
         {
             using var world = World.Create();
@@ -309,10 +349,10 @@ namespace Ludots.Tests.GAS
             var resolver = new KnowledgeProjectionResolver(new KnowledgeProjectionStore());
 
             Assert.Throws<ArgumentNullException>(
-                () => _ = new KnowledgeCommandTargetGate(world, resolver: null, new DiscreteClock()),
+                () => _ = new KnowledgeCommandTargetGate(world, resolver: null!, new DiscreteClock()),
                 "A missing resolver must fail at startup instead of allowing every live entity.");
             Assert.Throws<ArgumentNullException>(
-                () => _ = new KnowledgeCommandTargetGate(world, resolver, clock: null));
+                () => _ = new KnowledgeCommandTargetGate(world, resolver, clock: null!));
         }
 
         [Test]

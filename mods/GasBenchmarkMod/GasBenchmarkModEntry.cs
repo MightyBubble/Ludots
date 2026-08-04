@@ -7,6 +7,8 @@ using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
 using Ludots.Core.Commands;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Input;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Gameplay.GAS; // For GameplayEffectFactory & EventBus
@@ -64,6 +66,7 @@ namespace GasBenchmarkMod
             int healthId = AttributeRegistry.Register("Health");
             int manaId = AttributeRegistry.Register("Mana");
             int damageEventId = TagRegistry.Register("Event.DamageTaken");
+            const int castAbilityOrderTypeId = 100;
 
             var world = World.Create();
             var physicsWorld = new PhysicsWorld();
@@ -75,6 +78,21 @@ namespace GasBenchmarkMod
             var clocks = new GasClocks(clock);
             var conditions = new GasConditionRegistry();
             var tagOps = new TagOps(new DirtyEntityQueue(entityCount), new TagRuleRegistry());
+            var terminalResults = new OrderTerminalResultBuffer(capacity: 65536);
+            var admissionResults = new OrderAdmissionResultBuffer(capacity: 65536, rejectionCapacity: 65536);
+            var orderQueue = new OrderQueue(capacity: 65536, admissionResults);
+            var orderTypes = new OrderTypeRegistry(terminalResults);
+            orderTypes.Register(new OrderTypeConfig
+            {
+                Key = "castAbility",
+                OrderTypeId = castAbilityOrderTypeId,
+                AllowQueuedMode = false,
+                CanInterruptSelf = true,
+                ClearQueueOnActivate = true,
+                IntArg0BlackboardKey = OrderBlackboardKeys.Cast_SlotIndex,
+                EntityBlackboardKey = OrderBlackboardKeys.Cast_TargetEntity,
+                SpatialBlackboardKey = -1,
+            });
 
             var mods = new EffectModifiers();
             mods.Add(healthId, ModifierOp.Add, 5.0f);
@@ -95,18 +113,35 @@ namespace GasBenchmarkMod
             var aggSystem = new AttributeAggregatorSystem(world, tagOps: tagOps);
 
             var proposalSystem = new EffectProposalProcessingSystem(world, effectRequests, fanOutCommandCapacity: 65536, clock, templates: effectTemplates, tagOps: tagOps);
-            var abilitySystem = new AbilitySystem(world, effectRequests, tagOps: tagOps);
-            var reactionSystem = new ReactionSystem(world, abilitySystem, eventBus);
+            var orderBufferSystem = new OrderBufferSystem(
+                world,
+                clock,
+                orderTypes,
+                new OrderRuleRegistry(),
+                admissionResults,
+                orderQueue,
+                closeEntityIntakeOnUpdate: false);
+            var abilityExecSystem = new AbilityExecSystem(
+                world,
+                clock,
+                new InputRequestQueue(),
+                new InputResponseBuffer(),
+                effectRequests,
+                snapshotCapacity: 4096,
+                eventBus: eventBus,
+                castAbilityOrderTypeId: castAbilityOrderTypeId,
+                tagOps: tagOps,
+                orderTypeRegistry: orderTypes);
+            var reactionSystem = new ReactionSystem(world, orderQueue, castAbilityOrderTypeId, eventBus);
             // Removed obsolete systems
 
             var abilityTemplateEntity = world.Create();
             world.Add(abilityTemplateEntity, new AbilityTemplate());
-            world.Add(abilityTemplateEntity, new AbilityOnActivateEffects());
-            unsafe
-            {
-                ref var onActivate = ref world.Get<AbilityOnActivateEffects>(abilityTemplateEntity);
-                onActivate.Add(1);
-            }
+            var execSpec = default(AbilityExecSpec);
+            execSpec.ClockId = GasClockId.Step;
+            execSpec.SetItem(0, ExecItemKind.EffectSignal, tick: 0, templateId: 1);
+            execSpec.SetItem(1, ExecItemKind.End, tick: 0);
+            world.Add(abilityTemplateEntity, execSpec);
 
             context.Log($"[GasBenchmarkMod] Creating {entityCount} entities with Abilities...");
             var entities = new Entity[entityCount];
@@ -119,13 +154,17 @@ namespace GasBenchmarkMod
                 typeof(TagCountContainer),
                 typeof(DirtyFlags),
                 typeof(AbilityStateBuffer),
-                typeof(ReactionBuffer)
+                typeof(ReactionBuffer),
+                typeof(OrderBuffer),
+                typeof(BlackboardIntBuffer),
+                typeof(BlackboardEntityBuffer)
             };
 
             for (int i = 0; i < entityCount; i++)
             {
                 var e = world.Create(archetype);
                 entities[i] = e;
+                world.Set(e, OrderBuffer.CreateEmpty());
 
                 ref var attr = ref world.Get<AttributeBuffer>(e);
                 attr.SetBase(healthId, 100f);
@@ -159,14 +198,19 @@ namespace GasBenchmarkMod
                 
                 eventBus.Update(); // Swap buffers
 
+                terminalResults.Clear();
+                admissionResults.BeginLogicStep();
                 clocks.AdvanceFixedFrame();
                 clocks.AdvanceStep();
                 reactionSystem.Update(dt);
-                abilitySystem.Update(dt);
+                orderBufferSystem.Update(dt);
+                abilityExecSystem.Update(dt);
+                admissionResults.EndEntityIntake();
                 proposalSystem.Update(dt);
                 appSystem.Update(dt);
                 durSystem.Update(dt);
                 aggSystem.Update(dt);
+                admissionResults.EndLogicStep();
             }
 
             context.Log("[GasBenchmarkMod] Warming up GC...");
@@ -192,14 +236,19 @@ namespace GasBenchmarkMod
                 
                 eventBus.Update(); // Swap buffers
 
+                terminalResults.Clear();
+                admissionResults.BeginLogicStep();
                 clocks.AdvanceFixedFrame();
                 clocks.AdvanceStep();
                 reactionSystem.Update(dt);
-                abilitySystem.Update(dt);
+                orderBufferSystem.Update(dt);
+                abilityExecSystem.Update(dt);
+                admissionResults.EndEntityIntake();
                 proposalSystem.Update(dt);
                 appSystem.Update(dt);
                 durSystem.Update(dt);
                 aggSystem.Update(dt);
+                admissionResults.EndLogicStep();
             }
 
             long endAlloc = GC.GetAllocatedBytesForCurrentThread();

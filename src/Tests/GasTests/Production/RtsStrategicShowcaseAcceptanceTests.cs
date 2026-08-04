@@ -124,13 +124,15 @@ namespace Ludots.Tests.GAS.Production
 
             Assert.That(engine.GlobalContext.TryGetValue(CoreServiceKeys.VirtualCameraRequest.Name, out object? virtualRequestObj), Is.True);
             Assert.That(virtualRequestObj, Is.TypeOf<Ludots.Core.Gameplay.Camera.VirtualCameraRequest>());
-            var virtualRequest = (Ludots.Core.Gameplay.Camera.VirtualCameraRequest)virtualRequestObj;
+            var virtualRequest = virtualRequestObj as Ludots.Core.Gameplay.Camera.VirtualCameraRequest
+                ?? throw new InvalidOperationException("VirtualCameraRequest missing after type assertion.");
             Assert.That(virtualRequest.Id, Is.EqualTo("Rts"));
             Assert.That(virtualRequest.ResetRuntimeState, Is.True);
 
             Assert.That(engine.GlobalContext.TryGetValue(CoreServiceKeys.CameraPoseRequest.Name, out object? poseRequestObj), Is.True);
             Assert.That(poseRequestObj, Is.TypeOf<Ludots.Core.Gameplay.Camera.CameraPoseRequest>());
-            var poseRequest = (Ludots.Core.Gameplay.Camera.CameraPoseRequest)poseRequestObj;
+            var poseRequest = poseRequestObj as Ludots.Core.Gameplay.Camera.CameraPoseRequest
+                ?? throw new InvalidOperationException("CameraPoseRequest missing after type assertion.");
             Assert.That(poseRequest.VirtualCameraId, Is.EqualTo("Rts"));
             Assert.That(poseRequest.TargetCm, Is.EqualTo(new Vector2(0f, 0f)));
             Assert.That(poseRequest.Yaw, Is.EqualTo(180f));
@@ -160,12 +162,14 @@ namespace Ludots.Tests.GAS.Production
 
             Assert.That(engine.GlobalContext.TryGetValue(CoreServiceKeys.VirtualCameraRequest.Name, out object? virtualRequestObj), Is.True);
             Assert.That(virtualRequestObj, Is.TypeOf<Ludots.Core.Gameplay.Camera.VirtualCameraRequest>());
-            var virtualRequest = (Ludots.Core.Gameplay.Camera.VirtualCameraRequest)virtualRequestObj;
+            var virtualRequest = virtualRequestObj as Ludots.Core.Gameplay.Camera.VirtualCameraRequest
+                ?? throw new InvalidOperationException("VirtualCameraRequest missing after type assertion.");
             Assert.That(virtualRequest.Id, Is.EqualTo("Rts"));
 
             Assert.That(engine.GlobalContext.TryGetValue(CoreServiceKeys.CameraPoseRequest.Name, out object? poseRequestObj), Is.True);
             Assert.That(poseRequestObj, Is.TypeOf<Ludots.Core.Gameplay.Camera.CameraPoseRequest>());
-            var poseRequest = (Ludots.Core.Gameplay.Camera.CameraPoseRequest)poseRequestObj;
+            var poseRequest = poseRequestObj as Ludots.Core.Gameplay.Camera.CameraPoseRequest
+                ?? throw new InvalidOperationException("CameraPoseRequest missing after type assertion.");
             Assert.That(poseRequest.TargetCm, Is.EqualTo(ReadWorldPosition(engine.World, barracks)));
             Assert.That(poseRequest.DistanceCm, Is.EqualTo(10080f).Within(0.01f));
         }
@@ -652,7 +656,7 @@ namespace Ludots.Tests.GAS.Production
             Func<bool> condition,
             int maxFrames,
             string because,
-            Func<string> onTimeout = null)
+            Func<string>? onTimeout = null)
         {
             for (int i = 0; i < maxFrames; i++)
             {
@@ -1189,7 +1193,7 @@ namespace Ludots.Tests.GAS.Production
                 {
                     ActionId = $"PreviewSlot{slotIndex}",
                     TargetType = OrderTargetType.Position,
-                    ArgsTemplate = new OrderArgsTemplate { I0 = slotIndex }
+                    OrderPayload = InputOrderPayloadTemplate.CastAbility(slotIndex)
                 },
                 new AbilityAimInputState(
                     AbilityAimInputSlot.Target,

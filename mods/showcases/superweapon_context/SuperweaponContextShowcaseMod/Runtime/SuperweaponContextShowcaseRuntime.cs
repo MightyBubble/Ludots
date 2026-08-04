@@ -317,15 +317,15 @@ namespace SuperweaponContextShowcaseMod.Runtime
             var orderQueue = engine.GetService(CoreServiceKeys.OrderQueue)
                 ?? throw new InvalidOperationException("Superweapon context showcase requires OrderQueue.");
             int castStartOrderTypeId = ResolveOrderTypeId(engine, "castAbility.Start");
-            var order = new Order
-            {
-                Actor = State.Commander,
-                OrderTypeId = castStartOrderTypeId,
-                Args = new OrderArgs
-                {
-                    I0 = slotIndex
-                }
-            };
+            var order = OrderBuilder.CreateCastAbility(
+                castStartOrderTypeId,
+                0,
+                State.Commander,
+                Entity.Null,
+                Entity.Null,
+                slotIndex,
+                OrderSubmitMode.Immediate,
+                submitStep: 0);
 
             if (!orderQueue.TryEnqueue(in order))
             {

@@ -49,13 +49,12 @@ public sealed class UtilityAutocastShowcasePlayableAcceptanceTests
         float healthyBefore = ReadHealth(world, healthyAlly);
         float bruteBefore = ReadHealth(world, brute);
         float scoutBefore = ReadHealth(world, scout);
-        int healAbilityId = AbilityIdRegistry.GetId("Ability.UtilityAutocast.HealBurst");
 
-        UtilityAiDecisionTrace submittedTrace = TickUntilSubmitted(engine, world, mage, healAbilityId, maxFrames: 12);
+        UtilityAiDecisionTrace submittedTrace = TickUntilSubmittedOrder(engine, world, mage, injuredAlly, maxFrames: 12);
         Assert.Multiple(() =>
         {
             Assert.That(submittedTrace.CandidateCount, Is.GreaterThan(0));
-            Assert.That(submittedTrace.LastSubmittedAbilityId, Is.EqualTo(healAbilityId));
+            Assert.That(submittedTrace.LastSubmittedOrderId, Is.GreaterThan(0));
             Assert.That(submittedTrace.BestTarget, Is.EqualTo(injuredAlly));
         });
 
@@ -65,16 +64,17 @@ public sealed class UtilityAutocastShowcasePlayableAcceptanceTests
         Assert.That(ReadHealth(world, healthyAlly), Is.GreaterThan(healthyBefore));
         Assert.That(ReadHealth(world, brute), Is.EqualTo(bruteBefore));
         Assert.That(ReadHealth(world, scout), Is.EqualTo(scoutBefore));
+        Assert.That(EntityHasTag(world, mage, "Cooldown.UtilityAutocast.GCD"), Is.True);
 
-        UtilityAiDecisionTrace blockedTrace = TickUntilReadinessBlock(
+        UtilityAiDecisionTrace blockedTrace = TickUntilTaskStatus(
             engine,
             world,
             mage,
-            UtilityAiReadinessBlockReason.SharedCooldown,
+            UtilityAiTaskRunStatus.Blocked,
             maxFrames: 20);
         Assert.That(
-            blockedTrace.LastReadinessBlockReason,
-            Is.EqualTo((int)UtilityAiReadinessBlockReason.SharedCooldown));
+            blockedTrace.LastTaskStatus,
+            Is.EqualTo((int)UtilityAiTaskRunStatus.Blocked));
 
         engine.TriggerManager.FireEventAsync(new EventKey("AIInspector.PrintAiConfig"), engine.CreateContext())
             .GetAwaiter()
@@ -123,11 +123,11 @@ public sealed class UtilityAutocastShowcasePlayableAcceptanceTests
         Assert.That(TeamManager.GetRelationship(1, 2), Is.EqualTo(TeamRelationship.Hostile));
     }
 
-    private static UtilityAiDecisionTrace TickUntilSubmitted(
+    private static UtilityAiDecisionTrace TickUntilSubmittedOrder(
         GameEngine engine,
         World world,
         Entity entity,
-        int abilityId,
+        Entity expectedTarget,
         int maxFrames)
     {
         UtilityAiDecisionTrace last = default;
@@ -135,21 +135,23 @@ public sealed class UtilityAutocastShowcasePlayableAcceptanceTests
         {
             Tick(engine, 1);
             last = world.Get<UtilityAiDecisionTrace>(entity);
-            if (last.LastSubmittedAbilityId == abilityId && last.CandidateCount > 0)
+            if (last.LastSubmittedOrderId > 0 &&
+                last.CandidateCount > 0 &&
+                last.BestTarget == expectedTarget)
             {
                 return last;
             }
         }
 
-        Assert.Fail($"Utility AI did not submit ability {abilityId}; last submitted={last.LastSubmittedAbilityId}, candidates={last.CandidateCount}, readiness={last.LastReadinessBlockReason}.");
+        Assert.Fail($"Utility AI did not submit the expected order; last submitted={last.LastSubmittedOrderId}, candidates={last.CandidateCount}, target={last.BestTarget}.");
         return default;
     }
 
-    private static UtilityAiDecisionTrace TickUntilReadinessBlock(
+    private static UtilityAiDecisionTrace TickUntilTaskStatus(
         GameEngine engine,
         World world,
         Entity entity,
-        UtilityAiReadinessBlockReason expected,
+        UtilityAiTaskRunStatus expected,
         int maxFrames)
     {
         UtilityAiDecisionTrace last = default;
@@ -158,13 +160,13 @@ public sealed class UtilityAutocastShowcasePlayableAcceptanceTests
         {
             Tick(engine, 1);
             last = world.Get<UtilityAiDecisionTrace>(entity);
-            if (last.LastReadinessBlockReason == expectedValue)
+            if (last.LastTaskStatus == expectedValue)
             {
                 return last;
             }
         }
 
-        Assert.Fail($"Utility AI did not report readiness block {expected}; last readiness={last.LastReadinessBlockReason}, candidates={last.CandidateCount}, submitted={last.LastSubmittedAbilityId}.");
+        Assert.Fail($"Utility AI did not report task status {expected}; last status={last.LastTaskStatus}, candidates={last.CandidateCount}, submitted={last.LastSubmittedOrderId}.");
         return default;
     }
 
@@ -188,6 +190,13 @@ public sealed class UtilityAutocastShowcasePlayableAcceptanceTests
         Assert.That(healthId, Is.GreaterThanOrEqualTo(0));
         Assert.That(world.Has<AttributeBuffer>(entity), Is.True);
         return world.Get<AttributeBuffer>(entity).GetCurrent(healthId);
+    }
+
+    private static bool EntityHasTag(World world, Entity entity, string tagName)
+    {
+        int tagId = TagRegistry.GetId(tagName);
+        Assert.That(tagId, Is.GreaterThan(0));
+        return world.TryGet(entity, out GameplayTagContainer tags) && tags.HasTag(tagId);
     }
 
     private static Entity FindEntity(World world, string entityName)

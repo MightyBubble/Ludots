@@ -734,22 +734,13 @@ namespace Ludots.Core.Gameplay.GAS
                             $"SubmitOrderFromBlackboard cannot resolve world position for stored target kind '{storedTarget.Kind}'.");
                     }
 
-                    return new Order
-                    {
-                        OrderTypeId = descriptor.PointMoveOrderTypeId,
-                        PlayerId = playerId,
-                        Actor = orderActor,
-                        SubmitMode = descriptor.SubmitMode,
-                        Args = new OrderArgs
-                        {
-                            Spatial = new OrderSpatial
-                            {
-                                Kind = OrderSpatialKind.WorldCm,
-                                Mode = OrderCollectionMode.Single,
-                                WorldCm = worldPositionCm,
-                            },
-                        },
-                    };
+                    return OrderBuilder.CreateMoveToWorldCm(
+                        descriptor.PointMoveOrderTypeId,
+                        playerId,
+                        orderActor,
+                        worldPositionCm,
+                        descriptor.SubmitMode,
+                        submitStep: 0);
 
                 case BlackboardStoredTargetKind.Entity:
                     if (descriptor.EntityOrderTypeId <= 0)
@@ -764,14 +755,26 @@ namespace Ludots.Core.Gameplay.GAS
                             "SubmitOrderFromBlackboard entity stored target requires a non-null target entity.");
                     }
 
-                    return new Order
+                    return descriptor.EntityOrderPayloadKind switch
                     {
-                        OrderTypeId = descriptor.EntityOrderTypeId,
-                        PlayerId = playerId,
-                        Actor = orderActor,
-                        Target = storedTarget.TargetEntity,
-                        SubmitMode = descriptor.SubmitMode,
-                        Args = new OrderArgs { I0 = descriptor.EntityOrderIntArg0 },
+                        OrderPayloadKind.CastAbility => OrderBuilder.CreateCastAbility(
+                            descriptor.EntityOrderTypeId,
+                            playerId,
+                            orderActor,
+                            storedTarget.TargetEntity,
+                            Entity.Null,
+                            descriptor.EntityOrderAbilitySlot,
+                            descriptor.SubmitMode,
+                            submitStep: 0),
+                        OrderPayloadKind.TargetEntity => OrderBuilder.CreateTargetEntity(
+                            descriptor.EntityOrderTypeId,
+                            playerId,
+                            orderActor,
+                            storedTarget.TargetEntity,
+                            descriptor.SubmitMode,
+                            submitStep: 0),
+                        _ => throw new InvalidOperationException(
+                            $"SubmitOrderFromBlackboard unsupported entity order payload kind '{descriptor.EntityOrderPayloadKind}'.")
                     };
 
                 default:

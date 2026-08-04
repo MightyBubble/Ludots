@@ -68,7 +68,7 @@ namespace Ludots.Tests.GAS
                         ActionId = "SkillQ",
                         Trigger = InputTriggerType.PressedThisFrame,
                         OrderTypeKey = "castAbility",
-                        ArgsTemplate = new OrderArgsTemplate { I0 = 0 },
+                        OrderPayload = InputOrderPayloadTemplate.CastAbility(0),
                         IsSkillMapping = true,
                         RequireTarget = false,
                         TargetType = OrderTargetType.Entity
@@ -146,7 +146,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void InputOrderMapping_SwitchingAimToPerAbilitySmartCast_UsesPerAbilityMode()
+        public void InputOrderMapping_SwitchingAimToMappingSmartCast_UsesMappingMode()
         {
             var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
             var cfg = new InputOrderMappingConfig
@@ -159,7 +159,7 @@ namespace Ludots.Tests.GAS
                         ActionId = "SkillQ",
                         Trigger = InputTriggerType.PressedThisFrame,
                         OrderTypeKey = "castAbility",
-                        ArgsTemplate = new OrderArgsTemplate { I0 = 0 },
+                        OrderPayload = InputOrderPayloadTemplate.CastAbility(0),
                         IsSkillMapping = true,
                         RequireTarget = false,
                         TargetType = OrderTargetType.Entity
@@ -169,10 +169,11 @@ namespace Ludots.Tests.GAS
                         ActionId = "SkillW",
                         Trigger = InputTriggerType.PressedThisFrame,
                         OrderTypeKey = "castAbility",
-                        ArgsTemplate = new OrderArgsTemplate { I0 = 1 },
+                        OrderPayload = InputOrderPayloadTemplate.CastAbility(1),
                         IsSkillMapping = true,
                         RequireTarget = false,
-                        TargetType = OrderTargetType.Entity
+                        TargetType = OrderTargetType.Entity,
+                        CastModeOverride = InteractionModeType.SmartCast
                     }
                 }
             };
@@ -185,18 +186,6 @@ namespace Ludots.Tests.GAS
             mapping.SetLocalPlayer(actor, 1);
             mapping.SetOrderTypeKeyResolver(key => key == "castAbility" ? 1001 : 0);
             mapping.SetHoveredEntityProvider((out Entity e) => { e = target; return true; });
-            mapping.SetSkillMappingOverrideProvider((Entity _, InputOrderMapping source, out InputOrderMapping overrideMapping) =>
-            {
-                overrideMapping = source;
-                if (source.ActionId != "SkillW")
-                {
-                    return false;
-                }
-
-                overrideMapping = source.Clone();
-                overrideMapping.CastModeOverride = InteractionModeType.SmartCast;
-                return true;
-            });
 
             var orders = new List<Ludots.Core.Gameplay.GAS.Orders.Order>();
             mapping.SetOrderSubmitHandler((in Ludots.Core.Gameplay.GAS.Orders.Order order) => { orders.Add(order); return OrderSubmitResult.Queued; });
@@ -212,7 +201,7 @@ namespace Ludots.Tests.GAS
             mapping.Update(0f);
 
             Assert.That(mapping.IsAiming, Is.False,
-                "The new skill's per-ability SmartCast override must not be forced into the previous AimCast state.");
+                "The new skill's mapping-owned SmartCast override must not be forced into the previous AimCast state.");
             Assert.That(orders, Has.Count.EqualTo(1));
             Assert.That(orders[0].Args.I0, Is.EqualTo(1));
             Assert.That(orders[0].Target, Is.EqualTo(target));
@@ -289,7 +278,7 @@ namespace Ludots.Tests.GAS
 
         private static string FindRepoRoot()
         {
-            string dir = TestContext.CurrentContext.TestDirectory;
+            string? dir = TestContext.CurrentContext.TestDirectory;
             while (!string.IsNullOrWhiteSpace(dir))
             {
                 if (File.Exists(Path.Combine(dir, "src", "Core", "Ludots.Core.csproj")))

@@ -66,14 +66,14 @@
     },
     {
       "id": "abilitysys",
-      "title": "2 · AbilitySystem",
+      "title": "2 · AbilityExec",
       "tint": "clay",
       "x": 700,
       "y": 340,
       "w": 280,
       "h": 90,
       "items": [
-        "校验 Tag / Cost / CD"
+        "校验 Tag / Cost / 前置图"
       ]
     },
     {

@@ -437,7 +437,7 @@ namespace Ludots.Tests.Architecture.Governance
             if (hits.Count > 0)
             {
                 Assert.Fail(
-                    "Epic #322 requires ability configs to declare gameplay targeting only: targeting.castRangeCm + targeting.impactEffect. Aim visuals must be event-condition-action performer rules:\n" +
+                    "Epic #322 requires ability configs to declare gameplay targeting only: targeting.castRangeCm + targeting.allowMoveChase + targeting.impactEffect. Aim visuals must be event-condition-action performer rules:\n" +
                     string.Join("\n", hits));
             }
         }

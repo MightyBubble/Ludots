@@ -69,9 +69,9 @@ namespace Ludots.Tests.Presentation
     [TestFixture]
     public class PerformerEntityRuntimeTests
     {
-        private World _world;
-        private PerformerEntityRuntime _buf;
-        private PerformerDefinitionRegistry _defs;
+        private World? _world;
+        private PerformerEntityRuntime? _buf;
+        private PerformerDefinitionRegistry? _defs;
         private int _primaryDefId;
         private int _secondaryDefId;
         private int _tertiaryDefId;
@@ -286,12 +286,12 @@ namespace Ludots.Tests.Presentation
     [TestFixture]
     public class PerformerRuleSystemTests
     {
-        private World _world;
-        private PresentationEventStream _events;
-        private PerformerCommandBuffer _commands;
-        private PerformerDefinitionRegistry _defs;
-        private GraphProgramRegistry _programs;
-        private PerformerRuleSystem _system;
+        private World? _world;
+        private PresentationEventStream? _events;
+        private PerformerCommandBuffer? _commands;
+        private PerformerDefinitionRegistry? _defs;
+        private GraphProgramRegistry? _programs;
+        private PerformerRuleSystem? _system;
 
         [SetUp]
         public void Setup()
@@ -508,13 +508,13 @@ namespace Ludots.Tests.Presentation
     [TestFixture]
     public class PerformerRuntimeSystemTests
     {
-        private World _world;
-        private PerformerCommandBuffer _commands;
-        private PresentationEventStream _events;
-        private PerformerEntityRuntime _instances;
-        private PerformerDefinitionRegistry _definitions;
-        private PerformerRuntimeSystem _system;
-        private PresentationRequestBuffer _requests;
+        private World? _world;
+        private PerformerCommandBuffer? _commands;
+        private PresentationEventStream? _events;
+        private PerformerEntityRuntime? _instances;
+        private PerformerDefinitionRegistry? _definitions;
+        private PerformerRuntimeSystem? _system;
+        private PresentationRequestBuffer? _requests;
 
         [SetUp]
         public void Setup()
@@ -867,10 +867,10 @@ namespace Ludots.Tests.Presentation
     [TestFixture]
     public class GameplayPresentationProjectionGasTests
     {
-        private World _world;
-        private GasPresentationEventBuffer _gasEvents;
-        private PresentationEventStream _stream;
-        private GameplayPresentationProjectionSystem _projection;
+        private World? _world;
+        private GasPresentationEventBuffer? _gasEvents;
+        private PresentationEventStream? _stream;
+        private GameplayPresentationProjectionSystem? _projection;
 
         [SetUp]
         public void Setup()
@@ -1012,7 +1012,7 @@ namespace Ludots.Tests.Presentation
                 Actor = actor,
                 AbilitySlot = 1,
                 AbilityId = 5,
-                FailReason = AbilityCastFailReason.OnCooldown,
+                FailReason = AbilityCastFailReason.TimedLockout,
             });
 
             _projection.Update(0.016f);
@@ -1026,7 +1026,7 @@ namespace Ludots.Tests.Presentation
                     continue;
                 }
 
-                Assert.That(span[i].PayloadB, Is.EqualTo((int)AbilityCastFailReason.OnCooldown));
+                Assert.That(span[i].PayloadB, Is.EqualTo((int)AbilityCastFailReason.TimedLockout));
                 found = true;
                 break;
             }
@@ -1144,12 +1144,12 @@ namespace Ludots.Tests.Presentation
     [TestFixture]
     public class PerformerLifecycleRuleFilterTests
     {
-        private World _world;
-        private PresentationEventStream _events;
-        private PerformerCommandBuffer _commands;
-        private PerformerDefinitionRegistry _defs;
-        private GraphProgramRegistry _programs;
-        private PerformerRuleSystem _system;
+        private World? _world;
+        private PresentationEventStream? _events;
+        private PerformerCommandBuffer? _commands;
+        private PerformerDefinitionRegistry? _defs;
+        private GraphProgramRegistry? _programs;
+        private PerformerRuleSystem? _system;
 
         [SetUp]
         public void Setup()

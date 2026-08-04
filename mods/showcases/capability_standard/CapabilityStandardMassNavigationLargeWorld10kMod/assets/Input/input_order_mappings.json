@@ -6,11 +6,12 @@
       "actorCollectionKey": "collection.command.source",
       "trigger": "PressedThisFrame",
       "orderTypeKey": "massNavigationMove",
-      "argsTemplate": {},
       "requireTarget": true,
       "targetType": "Position",
-      "isSkillMapping": false,
-      "modifierBehavior": "QueueOnModifier"
+      "modifierBehavior": "QueueOnModifier",
+      "orderPayload": {
+        "kind": "MoveToWorldCm"
+      }
     }
   ],
   "userOverrides": {

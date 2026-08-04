@@ -17,6 +17,7 @@
       "spatialBlackboardKey": "none",
       "entityBlackboardKey": "none",
       "intArg0BlackboardKey": "none",
+      "payloadKind": "MoveToWorldCm",
       "validationGraph": "none",
       "instantComplete": false
     }

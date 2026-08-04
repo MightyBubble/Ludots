@@ -159,6 +159,33 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void UpdateAiming_TypedCastPayload_ResolvesAbilitySlotForPreview()
+        {
+            int effectId = RegisterEffect(2011, "Effect.Test.TypedPayload", SpatialShape.Ring, radiusCm: 220, innerRadiusCm: 90);
+            RegisterAbility(1011, castRangeCm: 700f, effectId);
+            Entity actor = CreateActor(1011);
+
+            _runtime.UpdateAiming(
+                actor,
+                new InputOrderMapping
+                {
+                    ActionId = "SkillTyped",
+                    TargetType = OrderTargetType.Position,
+                    OrderPayload = InputOrderPayloadTemplate.CastAbility(0),
+                },
+                CreateInput(new Vector3(250f, 0f, 350f)));
+
+            Assert.That(_world.Has<AbilityAimSessionState>(actor), Is.True);
+            AbilityAimSessionState session = _world.Get<AbilityAimSessionState>(actor);
+            Assert.That(session.AbilityId, Is.EqualTo(1011));
+            Assert.That(session.ImpactEffectTemplateId, Is.EqualTo(effectId));
+            Assert.That(SingleEvent(PresentationEventKind.AbilityAimUpdated, AbilityAimPresentationEventKeys.AreaRing).FloatA,
+                Is.EqualTo(2.2f).Within(0.001f));
+            Assert.That(SingleEvent(PresentationEventKind.AbilityAimUpdated, "Effect.Test.TypedPayload").KeyId,
+                Is.EqualTo(TagRegistry.GetId("Effect.Test.TypedPayload")));
+        }
+
+        [Test]
         public void UpdateAiming_RingImpact_UsesImpactEffectInnerRadius()
         {
             int effectId = RegisterEffect(2002, "Effect.Test.Ring", SpatialShape.Ring, radiusCm: 250, innerRadiusCm: 120);
@@ -704,7 +731,7 @@ namespace Ludots.Tests.GAS
             {
                 ActionId = "Skill",
                 TargetType = TargetType,
-                ArgsTemplate = new OrderArgsTemplate { I0 = 0 }
+                OrderPayload = InputOrderPayloadTemplate.CastAbility(0)
             };
         }
 

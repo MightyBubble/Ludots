@@ -13,7 +13,7 @@
 |------|----------|------|
 | `ContextScored Acquisition 不存在` | 已关闭。`ContextScored` 已进入 `InteractionModeType` 与 `InputOrderMappingSystem` | `src/Core/Input/Orders/InputOrderMapping.cs`、`src/Core/Input/Orders/InputOrderMappingSystem.cs` |
 | `ContextGroup -> ability dispatch` | 已关闭。真实运行时为 registry + loader + resolver 链路 | `src/Core/Gameplay/GAS/ContextGroupRegistry.cs`、`src/Core/Gameplay/GAS/Config/ContextGroupConfigLoader.cs`、`src/Core/Input/Orders/ContextScoredOrderResolver.cs` |
-| `AbilityActivationRequireTags 不存在` | 已关闭。当前仓库使用 `AbilityActivationBlockTags.RequiredAll` / `BlockedAny` | `src/Core/Gameplay/GAS/Components/AbilityActivationBlockTags.cs`、`src/Core/Gameplay/GAS/Systems/AbilitySystem.cs`、`src/Core/Gameplay/GAS/Systems/AbilityExecSystem.cs` |
+| `AbilityActivationRequireTags 不存在` | 已关闭。当前仓库使用 `AbilityActivationBlockTags.RequiredAll` / `BlockedAny` | `src/Core/Gameplay/GAS/Components/AbilityActivationBlockTags.cs`、`src/Core/Gameplay/GAS/Systems/AbilityExecSystem.cs` |
 | `Form-based ability routing 不存在` | 已关闭。当前分支已有 form-set registry + loader + routing system，并通过分层 effective slot 解析接入输入/执行/indicator/context 路径 | `src/Core/Gameplay/GAS/AbilityFormSetRegistry.cs`、`src/Core/Gameplay/GAS/Config/AbilityFormSetConfigLoader.cs`、`src/Core/Gameplay/GAS/Systems/AbilityFormRoutingSystem.cs`、`src/Core/Gameplay/GAS/Components/AbilityStateBuffer.cs` |
 | `CooldownTickSystem 是前置` | 已关闭。当前分支不需要通用 cooldown tick baseline | `src/Tests/GasTests/InputOrderAbilityAuditTests.cs`、`artifacts/acceptance/interaction-showcase/feature_coverage_matrix.md` |
 
@@ -43,7 +43,6 @@
 
 执行点：
 
-- `src/Core/Gameplay/GAS/Systems/AbilitySystem.cs`
 - `src/Core/Gameplay/GAS/Systems/AbilityExecSystem.cs`
 - `src/Core/Gameplay/GAS/Config/AbilityExecLoader.cs`
 
@@ -102,7 +101,7 @@ charges / refill timer 也不应被写成“本分支必须具备的统一底座
 
 - form routing 继续只用 tag 条件（`requiredAll` / `blockedAny` + priority）
 - 不为姿态切换引入新的 `AbilityConditionSystem`
-- 下游 `AbilitySystem`、`AbilityExecSystem`、`ContextScoredOrderResolver`、`AbilityAimPresentationRuntime` 统一消费同一套 effective slot
+- 下游 `AbilityExecSystem`、`ContextScoredOrderResolver`、`AbilityAimPresentationRuntime` 统一消费同一套 effective slot
 
 ---
 

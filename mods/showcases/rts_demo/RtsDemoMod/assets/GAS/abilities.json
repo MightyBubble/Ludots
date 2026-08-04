@@ -49,6 +49,7 @@
     },
     "targeting": {
       "castRangeCm": 1200,
+      "allowMoveChase": true,
       "impactEffect": "Effect.Rts.Shared.EnterGarrison"
     }
   },
@@ -115,6 +116,7 @@
     },
     "targeting": {
       "castRangeCm": 1600,
+      "allowMoveChase": true,
       "impactEffect": "Effect.Rts.War3.CreateLumberMillSite"
     }
   },
@@ -158,11 +160,15 @@
     },
     "targeting": {
       "castRangeCm": 1500,
+      "allowMoveChase": true,
       "impactEffect": "Effect.Rts.War3.CreateGuardTowerSite"
     }
   },
   {
     "id": "Ability.Rts.Strategy.War3.TrainFootman",
+    "catalogTags": [
+      "ability.catalog.rts.train"
+    ],
     "exec": {
       "clockId": "FixedFrame",
       "items": [
@@ -231,6 +237,7 @@
     },
     "targeting": {
       "castRangeCm": 2200,
+      "allowMoveChase": true,
       "impactEffect": "Effect.Rts.Cnc.PlacePowerPlant"
     }
   },
@@ -263,11 +270,15 @@
     },
     "targeting": {
       "castRangeCm": 2200,
+      "allowMoveChase": true,
       "impactEffect": "Effect.Rts.Cnc.PlaceRefinery"
     }
   },
   {
     "id": "Ability.Rts.Strategy.Cnc.TrainRhino",
+    "catalogTags": [
+      "ability.catalog.rts.train"
+    ],
     "exec": {
       "clockId": "FixedFrame",
       "items": [
@@ -349,6 +360,9 @@
   },
   {
     "id": "Ability.Rts.Strategy.Sc2.TrainZealot",
+    "catalogTags": [
+      "ability.catalog.rts.train"
+    ],
     "exec": {
       "clockId": "FixedFrame",
       "items": [
@@ -468,6 +482,7 @@
     },
     "targeting": {
       "castRangeCm": 2600,
+      "allowMoveChase": true,
       "impactEffect": "Effect.Rts.Sc2.WarpZealot"
     }
   },
@@ -511,6 +526,7 @@
     },
     "targeting": {
       "castRangeCm": 1500,
+      "allowMoveChase": true,
       "impactEffect": "Effect.Rts.Zerg.MorphSpawningPool"
     }
   }

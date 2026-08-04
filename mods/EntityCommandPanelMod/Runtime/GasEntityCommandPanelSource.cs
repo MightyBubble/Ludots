@@ -381,9 +381,17 @@ namespace EntityCommandPanelMod.Runtime
                 }
 
                 string actionId = actionIds[slotIndex] ?? string.Empty;
+                InteractionModeType slotInteractionMode = interactionMode;
+                if (inputMapping != null &&
+                    !string.IsNullOrWhiteSpace(actionId) &&
+                    inputMapping.TryGetEffectiveInteractionMode(actionId, target, out InteractionModeType effectiveInteractionMode))
+                {
+                    slotInteractionMode = effectiveInteractionMode;
+                }
+
                 string displayLabel = string.Empty;
                 string detailLabel = string.Empty;
-                short cooldownPermille = 0;
+                short lockoutPermille = 0;
                 AbilityDefinition abilityDefinition = default;
                 bool hasAbilityDefinition = effective.AbilityId > 0 &&
                     abilityDefinitions != null &&
@@ -423,7 +431,7 @@ namespace EntityCommandPanelMod.Runtime
                         flags |= EntityCommandSlotStateFlags.Active;
                     }
 
-                    cooldownPermille = ResolveCooldownPermille(target, in abilityDefinition);
+                    lockoutPermille = ResolveLockoutPermille(target, in abilityDefinition);
 
                     AbilityPresentationConfig? presentation = abilityDefinition.HasPresentation
                         ? abilityDefinition.Presentation
@@ -441,7 +449,7 @@ namespace EntityCommandPanelMod.Runtime
                     if (presentation != null &&
                         presentation.ModeHintOverrides.Count > 0)
                     {
-                        abilityInteractionModeKey = ResolveAbilityInteractionModeKey(interactionMode, in abilityDefinition);
+                        abilityInteractionModeKey = ResolveInteractionModeKey(slotInteractionMode);
                         if (presentation.ModeHintOverrides.TryGetValue(abilityInteractionModeKey, out string? overrideHint) &&
                             !string.IsNullOrWhiteSpace(overrideHint))
                         {
@@ -459,7 +467,7 @@ namespace EntityCommandPanelMod.Runtime
                         {
                             if (string.IsNullOrEmpty(abilityInteractionModeKey))
                             {
-                                abilityInteractionModeKey = ResolveAbilityInteractionModeKey(interactionMode, in abilityDefinition);
+                                abilityInteractionModeKey = ResolveInteractionModeKey(slotInteractionMode);
                             }
 
                             detailLabel = BuildDefaultDetailLabel(actionId, abilityInteractionModeKey);
@@ -476,7 +484,7 @@ namespace EntityCommandPanelMod.Runtime
                     effective.AbilityId,
                     effective.TemplateEntityId,
                     flags,
-                    cooldownPermille,
+                    lockoutPermille,
                     0,
                     0,
                     displayLabel,
@@ -602,52 +610,42 @@ namespace EntityCommandPanelMod.Runtime
             return _progressionRequirements;
         }
 
-        private static string ResolveAbilityInteractionModeKey(InteractionModeType interactionMode, in AbilityDefinition abilityDefinition)
-        {
-            if (abilityDefinition.HasInputBindingOverride &&
-                abilityDefinition.InputBindingOverride.HasCastModeOverride)
-            {
-                return ResolveInteractionModeKey(abilityDefinition.InputBindingOverride.CastModeOverride);
-            }
-
-            return ResolveInteractionModeKey(interactionMode);
-        }
-
-        private short ResolveCooldownPermille(Entity target, in AbilityDefinition abilityDefinition)
+        private short ResolveLockoutPermille(Entity target, in AbilityDefinition abilityDefinition)
         {
             if (!_engine.World.IsAlive(target) ||
                 !abilityDefinition.HasActivationBlockTags ||
                 abilityDefinition.ActivationBlockTags.BlockedAny.IsEmpty ||
-                !_engine.World.Has<TimedTagBuffer>(target))
+                !_engine.World.Has<ActiveEffectContainer>(target))
             {
                 return 0;
             }
 
-            IClock? clock = _engine.GetService(CoreServiceKeys.Clock);
-            if (clock == null)
-            {
-                return 0;
-            }
-
-            ref var timed = ref _engine.World.Get<TimedTagBuffer>(target);
+            ref readonly var activeEffects = ref _engine.World.Get<ActiveEffectContainer>(target);
             int bestPermille = 0;
-            for (int i = 0; i < timed.Count; i++)
+            for (int i = 0; i < activeEffects.Count; i++)
             {
-                int tagId = timed.GetTagId(i);
-                if (tagId <= 0 || !abilityDefinition.ActivationBlockTags.BlockedAny.HasTag(tagId))
+                Entity effectEntity = activeEffects.GetEntity(i);
+                if (!_engine.World.IsAlive(effectEntity) ||
+                    !_engine.World.Has<GameplayEffect>(effectEntity) ||
+                    !_engine.World.Has<EffectGrantedTags>(effectEntity))
                 {
                     continue;
                 }
 
-                GasClockId clockId = timed.GetClockId(i);
-                int now = clock.Now(clockId.ToDomainId());
-                int remainingTicks = Math.Max(0, timed.GetExpireAt(i) - now);
-                if (remainingTicks <= 0)
+                ref readonly var grantedTags = ref _engine.World.Get<EffectGrantedTags>(effectEntity);
+                if (!GrantsAnyBlockedTag(in grantedTags, in abilityDefinition.ActivationBlockTags.BlockedAny))
                 {
                     continue;
                 }
 
-                int totalTicks = ResolveCooldownDurationTicks(in abilityDefinition.ExecSpec, tagId);
+                ref readonly var effect = ref _engine.World.Get<GameplayEffect>(effectEntity);
+                int totalTicks = effect.TotalTicks;
+                int remainingTicks = effect.RemainingTicks;
+                if (totalTicks <= 0 || remainingTicks <= 0)
+                {
+                    continue;
+                }
+
                 int permille = totalTicks > 0
                     ? Math.Clamp((int)Math.Round(remainingTicks * 1000d / totalTicks), 0, 1000)
                     : 1000;
@@ -657,26 +655,20 @@ namespace EntityCommandPanelMod.Runtime
             return (short)bestPermille;
         }
 
-        private static int ResolveCooldownDurationTicks(in AbilityExecSpec execSpec, int tagId)
+        private static bool GrantsAnyBlockedTag(
+            in EffectGrantedTags grantedTags,
+            in GameplayTagContainer blockedTags)
         {
-            int durationTicks = 0;
-            for (int itemIndex = 0; itemIndex < execSpec.ItemCount; itemIndex++)
+            for (int i = 0; i < grantedTags.Count; i++)
             {
-                ExecItemKind kind = execSpec.GetKind(itemIndex);
-                if (kind != ExecItemKind.TagClip && kind != ExecItemKind.TagClipTarget)
+                int tagId = grantedTags.Get(i).TagId;
+                if (tagId > 0 && blockedTags.HasTag(tagId))
                 {
-                    continue;
+                    return true;
                 }
-
-                if (execSpec.GetTagId(itemIndex) != tagId)
-                {
-                    continue;
-                }
-
-                durationTicks = Math.Max(durationTicks, execSpec.GetDurationTicks(itemIndex));
             }
 
-            return durationTicks;
+            return false;
         }
 
         public InputOrderActivationResult ActivateSlot(Entity target, int groupIndex, int slotIndex)

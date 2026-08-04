@@ -319,9 +319,10 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void AbilitySystem_UseRequirement_BlocksUntilEntityScopedProgressionCompletes()
+        public void AbilityExecSystem_UseRequirement_BlocksUntilEntityScopedProgressionCompletes()
         {
             using var world = World.Create();
+            const int castAbilityOrderTypeId = 100;
             int abilityId = AbilityIdRegistry.Register("Ability.TrainGuard");
             int progressionId = ProgressionIdRegistry.Register("Progression.GuardTraining");
             int reqId = ProgressionRequirementIdRegistry.Register("Req.GuardTraining");
@@ -339,8 +340,10 @@ namespace Ludots.Tests.GAS
             var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
             var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys, tagOps: tagOps);
             var definitions = new AbilityDefinitionRegistry();
+            var execSpec = CreateImmediateEndSpec();
             var definition = new AbilityDefinition
             {
+                ExecSpec = execSpec,
                 UseProgressionRequirementId = reqId,
                 HasUseProgressionRequirement = true
             };
@@ -350,16 +353,45 @@ namespace Ludots.Tests.GAS
             abilities.AddAbility(abilityId);
 
             Entity city = world.Create(new ProgressionStateBuffer());
-            Entity barracks = world.Create(abilities);
+            Entity barracks = world.Create(
+                OrderBuffer.CreateEmpty(),
+                new BlackboardIntBuffer(),
+                new BlackboardEntityBuffer(),
+                abilities);
             PrepareScopeHost(world, city);
             PrepareScopeMember(world, barracks);
             Assert.That(evaluator.TryBindScope(barracks, cityScopeId, city), Is.True);
 
-            var system = new AbilitySystem(world, new EffectRequestQueue(), definitions, tagOps, progressionRequirements: evaluator);
-            Assert.That(system.TryActivateAbility(barracks, 0), Is.False);
+            var orderTypes = CreateCastOrderTypes(castAbilityOrderTypeId);
+            var system = new AbilityExecSystem(
+                world,
+                new DiscreteClock(),
+                new InputRequestQueue(),
+                new InputResponseBuffer(),
+                new EffectRequestQueue(),
+                4096,
+                definitions,
+                castAbilityOrderTypeId: castAbilityOrderTypeId,
+                orderTypeRegistry: orderTypes,
+                progressionRequirements: evaluator,
+                tagOps: tagOps);
+
+            SubmitActiveCast(world, barracks, castAbilityOrderTypeId, orderId: 31);
+            system.Update(0f);
+
+            Assert.That(world.Get<OrderBuffer>(barracks).HasActive, Is.False);
+            Assert.That(orderTypes.TerminalResults.Count, Is.EqualTo(1));
+            Assert.That(orderTypes.TerminalResults[0].State, Is.EqualTo(OrderTerminalState.Failed));
+            Assert.That(orderTypes.TerminalResults[0].FailureReason, Is.EqualTo(OrderFailureReason.PreconditionFailed));
+            orderTypes.TerminalResults.Clear();
 
             Assert.That(evaluator.TryComplete(city, progressionId), Is.True);
-            Assert.That(system.TryActivateAbility(barracks, 0), Is.True);
+            SubmitActiveCast(world, barracks, castAbilityOrderTypeId, orderId: 32);
+            system.Update(0f);
+
+            Assert.That(world.Get<OrderBuffer>(barracks).HasActive, Is.False);
+            Assert.That(orderTypes.TerminalResults.Count, Is.EqualTo(1));
+            Assert.That(orderTypes.TerminalResults[0].State, Is.EqualTo(OrderTerminalState.Completed));
         }
 
         [Test]
@@ -577,9 +609,10 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void AbilitySystem_ExplicitUseRequirementRequiresTargetContext()
+        public void AbilityExecSystem_ExplicitUseRequirementRequiresTargetContext()
         {
             using var world = World.Create();
+            const int castAbilityOrderTypeId = 100;
             int abilityId = AbilityIdRegistry.Register("Ability.RaiseEliteGuard");
             int progressionId = ProgressionIdRegistry.Register("Progression.CityEliteGuard");
             int reqId = ProgressionRequirementIdRegistry.Register("Req.CityEliteGuard");
@@ -595,8 +628,10 @@ namespace Ludots.Tests.GAS
             var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
             var evaluator = new ProgressionRequirementEvaluator(world, requirements, new ScopeKeyRegistry(), tagOps: tagOps);
             var definitions = new AbilityDefinitionRegistry();
+            var execSpec = CreateImmediateEndSpec();
             var definition = new AbilityDefinition
             {
+                ExecSpec = execSpec,
                 UseProgressionRequirementId = reqId,
                 HasUseProgressionRequirement = true
             };
@@ -605,14 +640,40 @@ namespace Ludots.Tests.GAS
             var abilities = new AbilityStateBuffer();
             abilities.AddAbility(abilityId);
             Entity city = world.Create(new ProgressionStateBuffer());
-            Entity barracks = world.Create(abilities);
+            Entity barracks = world.Create(
+                OrderBuffer.CreateEmpty(),
+                new BlackboardIntBuffer(),
+                new BlackboardEntityBuffer(),
+                abilities);
             Assert.That(evaluator.TryComplete(city, progressionId), Is.True);
 
-            var system = new AbilitySystem(world, new EffectRequestQueue(), definitions, tagOps, progressionRequirements: evaluator);
-            Assert.That(system.TryActivateAbility(barracks, 0), Is.False);
+            var orderTypes = CreateCastOrderTypes(castAbilityOrderTypeId);
+            var system = new AbilityExecSystem(
+                world,
+                new DiscreteClock(),
+                new InputRequestQueue(),
+                new InputResponseBuffer(),
+                new EffectRequestQueue(),
+                4096,
+                definitions,
+                castAbilityOrderTypeId: castAbilityOrderTypeId,
+                orderTypeRegistry: orderTypes,
+                progressionRequirements: evaluator,
+                tagOps: tagOps);
 
-            var args = new AbilitySystem.AbilityActivationArgs(barracks, ReadOnlySpan<Entity>.Empty, city);
-            Assert.That(system.TryActivateAbility(barracks, 0, in args), Is.True);
+            SubmitActiveCast(world, barracks, castAbilityOrderTypeId, orderId: 41);
+            system.Update(0f);
+
+            Assert.That(orderTypes.TerminalResults.Count, Is.EqualTo(1));
+            Assert.That(orderTypes.TerminalResults[0].State, Is.EqualTo(OrderTerminalState.Failed));
+            Assert.That(orderTypes.TerminalResults[0].FailureReason, Is.EqualTo(OrderFailureReason.PreconditionFailed));
+            orderTypes.TerminalResults.Clear();
+
+            SubmitActiveCast(world, barracks, castAbilityOrderTypeId, orderId: 42, targetContext: city);
+            system.Update(0f);
+
+            Assert.That(orderTypes.TerminalResults.Count, Is.EqualTo(1));
+            Assert.That(orderTypes.TerminalResults[0].State, Is.EqualTo(OrderTerminalState.Completed));
         }
 
         [Test]
@@ -1654,19 +1715,47 @@ namespace Ludots.Tests.GAS
                 new BlackboardEntityBuffer(),
                 abilities);
 
-            var order = new Order
-            {
-                OrderId = orderId,
-                Actor = actor,
-                OrderTypeId = castAbilityOrderTypeId,
-                Args = new OrderArgs { I0 = 0 }
-            };
+            SubmitActiveCast(world, actor, castAbilityOrderTypeId, orderId);
+            return actor;
+        }
+
+        private static AbilityExecSpec CreateImmediateEndSpec()
+        {
+            var spec = default(AbilityExecSpec);
+            spec.ClockId = GasClockId.Step;
+            spec.SetItem(0, ExecItemKind.End, tick: 0);
+            return spec;
+        }
+
+        private static void SubmitActiveCast(
+            World world,
+            Entity actor,
+            int castAbilityOrderTypeId,
+            int orderId,
+            Entity target = default,
+            Entity targetContext = default)
+        {
+            var order = OrderBuilder.CreateCastAbility(
+                castAbilityOrderTypeId,
+                playerId: 0,
+                actor,
+                target,
+                targetContext,
+                abilitySlotIndex: 0,
+                OrderSubmitMode.Immediate,
+                submitStep: 0);
+            order.OrderId = orderId;
             ref var orderBuffer = ref world.Get<OrderBuffer>(actor);
             orderBuffer.SetActiveDirect(in order, priority: 100);
 
             ref var bbInts = ref world.Get<BlackboardIntBuffer>(actor);
             bbInts.Set(OrderBlackboardKeys.Cast_SlotIndex, 0);
-            return actor;
+
+            if (world.Has<BlackboardEntityBuffer>(actor))
+            {
+                ref var bbEntities = ref world.Get<BlackboardEntityBuffer>(actor);
+                bbEntities.Set(OrderBlackboardKeys.Cast_TargetEntity, target);
+            }
         }
 
         private static OrderTypeRegistry CreateCastOrderTypes(int castAbilityOrderTypeId)

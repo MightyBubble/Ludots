@@ -19,7 +19,10 @@
       },
       "pointMoveOrderTypeKey": "moveTo",
       "entityOrderTypeKey": "castAbility",
-      "entityOrderIntArg0": 1,
+      "entityOrderPayload": {
+        "kind": "CastAbility",
+        "abilitySlot": 1
+      },
       "submitMode": "Immediate"
     }
   },

@@ -34,7 +34,7 @@ Feature: 玩家以方阵为操作单位
 - members 有 `OrderBuffer`、`MassNavigationAgent` 和 MovePlan intent/result；
 - 展开顺序由 slot 决定，suspended member 不参与；
 - 任一 member 无效、重复、阻塞或容量不足时，不产生部分激活；
-- 多 anchor 使用配置的 `groupMoveTargetLayout`，不会塌到同一目标；
+- 多 anchor 使用 mapping 引用的 `targetLayoutProfileId`，不会塌到同一目标；
 - MassNavigation 不读取或反写 Order；
 - `Arrived` 完成 order，`Failed` 取消 order 且不触发 continuation；
 - 不验收已删除的 Q/E 假旋转。

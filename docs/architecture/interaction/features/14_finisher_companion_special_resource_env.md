@@ -21,7 +21,7 @@
 ### 当前分支可复用的基础
 
 - discrete gate：`src/Core/Gameplay/GAS/Components/AbilityActivationBlockTags.cs`
-- ability activation：`src/Core/Gameplay/GAS/Systems/AbilitySystem.cs`、`src/Core/Gameplay/GAS/Systems/AbilityExecSystem.cs`
+- ability activation：`src/Core/Gameplay/GAS/Systems/AbilityExecSystem.cs`
 - context-scored finisher style candidate：`src/Core/Input/Orders/ContextScoredOrderResolver.cs`
 - finisher-like candidate resolution 验证：`src/Tests/GasTests/ContextScoredResolverTests.cs`
 
@@ -110,7 +110,7 @@
 
 ### 关键证据
 
-- `src/Core/Gameplay/GAS/Systems/AbilitySystem.cs`
+- `src/Core/Gameplay/GAS/Systems/AbilityExecSystem.cs`
 - `src/Core/Gameplay/GAS/Systems/AbilityExecSystem.cs`
 - `src/Tests/GasTests/InputOrderAbilityAuditTests.cs`
 - `artifacts/acceptance/interaction-showcase/feature_coverage_matrix.md`

@@ -107,7 +107,7 @@ ContextGroupDefinition:
 
 对应实现：
 
-- `src/Core/Gameplay/GAS/Systems/AbilitySystem.cs`
+- `src/Core/Gameplay/GAS/Systems/AbilityExecSystem.cs`
 - `src/Core/Gameplay/GAS/Systems/AbilityExecSystem.cs`
 - `src/Core/Gameplay/GAS/Components/AbilityActivationBlockTags.cs`
 

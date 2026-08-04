@@ -1051,7 +1051,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void Load_SubmitOrderFromBlackboard_RequiresEntityOrderIntArg0()
+        public void Load_SubmitOrderFromBlackboard_RejectsRetiredEntityOrderIntArg0()
         {
             string root = CreateTempRoot();
             try
@@ -1068,7 +1068,7 @@ namespace Ludots.Tests.GAS
                     """
                     [
                       {
-                        "id": "Effect.Test.SubmitOrderMissingIntArg0",
+                        "id": "Effect.Test.SubmitOrderRetiredIntArg0",
                         "tags": ["Effect.Test.SubmitOrder"],
                         "presetType": "SubmitOrderFromBlackboard",
                         "lifetime": "Instant",
@@ -1085,6 +1085,7 @@ namespace Ludots.Tests.GAS
                           },
                           "pointMoveOrderTypeKey": "moveTo",
                           "entityOrderTypeKey": "castAbility",
+                          "entityOrderIntArg0": 1,
                           "submitMode": "Immediate"
                         }
                       }
@@ -1095,6 +1096,64 @@ namespace Ludots.Tests.GAS
                 var ex = Throws<InvalidOperationException>(() =>
                     loader.Load(CreateEffectsCatalog(), relativePath: "GAS/effects.json"));
                 That(ex!.Message, Does.Contain("submitOrderFromBlackboard.entityOrderIntArg0"));
+                That(ex.Message, Does.Contain("entityOrderPayload.abilitySlot"));
+            }
+            finally
+            {
+                OrderBlackboardKeyRegistry.ResetToBuiltins();
+                TryDeleteDirectory(root);
+            }
+        }
+
+        [Test]
+        public void Load_SubmitOrderFromBlackboard_CompilesTypedEntityOrderPayload()
+        {
+            string root = CreateTempRoot();
+            try
+            {
+                OrderBlackboardKeyRegistry.ResetToBuiltins();
+                OrderBlackboardKeyRegistry.Register("Test.SpawnTarget.Kind");
+                OrderBlackboardKeyRegistry.Register("Test.SpawnTarget.Position");
+                OrderBlackboardKeyRegistry.Register("Test.SpawnTarget.Entity");
+                OrderBlackboardKeyRegistry.Register("Test.SpawnTarget.HexQ");
+                OrderBlackboardKeyRegistry.Register("Test.SpawnTarget.HexR");
+
+                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
+                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                    """
+                    [
+                      {
+                        "id": "Effect.Test.SubmitOrderTypedPayload",
+                        "tags": ["Effect.Test.SubmitOrder"],
+                        "presetType": "SubmitOrderFromBlackboard",
+                        "lifetime": "Instant",
+                        "participatesInResponse": false,
+                        "submitOrderFromBlackboard": {
+                          "source": "Source",
+                          "target": "Target",
+                          "storedTarget": {
+                            "targetKindKey": "Test.SpawnTarget.Kind",
+                            "targetPositionKey": "Test.SpawnTarget.Position",
+                            "targetEntityKey": "Test.SpawnTarget.Entity",
+                            "hexQKey": "Test.SpawnTarget.HexQ",
+                            "hexRKey": "Test.SpawnTarget.HexR"
+                          },
+                          "pointMoveOrderTypeKey": "moveTo",
+                          "entityOrderTypeKey": "castAbility",
+                          "entityOrderPayload": { "kind": "CastAbility", "abilitySlot": 1 },
+                          "submitMode": "Immediate"
+                        }
+                      }
+                    ]
+                    """);
+
+                var loader = CreateLoader(root, out var registry, CreateOrderTypes());
+                loader.Load(CreateEffectsCatalog(), relativePath: "GAS/effects.json");
+
+                int effectId = EffectTemplateIdRegistry.GetId("Effect.Test.SubmitOrderTypedPayload");
+                That(registry.TryGet(effectId, out EffectTemplateData data), Is.True);
+                That(data.SubmitOrderFromBlackboard.EntityOrderPayloadKind, Is.EqualTo(OrderPayloadKind.CastAbility));
+                That(data.SubmitOrderFromBlackboard.EntityOrderAbilitySlot, Is.EqualTo(1));
             }
             finally
             {
@@ -1138,7 +1197,7 @@ namespace Ludots.Tests.GAS
                           },
                           "pointMoveOrderTypeKey": "moveTypo",
                           "entityOrderTypeKey": "castAbility",
-                          "entityOrderIntArg0": 1,
+                          "entityOrderPayload": { "kind": "CastAbility", "abilitySlot": 1 },
                           "submitMode": "Immediate"
                         }
                       }
@@ -1262,8 +1321,8 @@ namespace Ludots.Tests.GAS
         private static OrderTypeRegistry CreateOrderTypes()
         {
             var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
-            orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 101 });
-            orderTypes.Register(new OrderTypeConfig { Key = "castAbility", OrderTypeId = 100 });
+            orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 101, PayloadKind = OrderPayloadKind.MoveToWorldCm });
+            orderTypes.Register(new OrderTypeConfig { Key = "castAbility", OrderTypeId = 100, PayloadKind = OrderPayloadKind.CastAbility });
             return orderTypes;
         }
 

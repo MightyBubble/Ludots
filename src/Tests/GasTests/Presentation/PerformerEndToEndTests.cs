@@ -32,34 +32,34 @@ namespace Ludots.Tests.Presentation
     [TestFixture]
     public class PerformerEndToEndTests
     {
-        private World _world;
-        private GasPresentationEventBuffer _gasEvents;
-        private GameplayEventBus _eventBus;
-        private PresentationEventStream _presEvents;
-        private PerformerCommandBuffer _commands;
-        private PerformerDefinitionRegistry _defs;
-        private PerformerEntityRuntime _instances;
-        private GraphProgramRegistry _programs;
-        private Dictionary<string, object> _globals;
-        private PrimitiveDrawBuffer _primitives;
-        private WorldHudBatchBuffer _hud;
-        private GroundOverlayBuffer _overlays;
-        private RoadSplineBuffer _roadSplines;
-        private PresentationRequestBuffer _requests;
-        private SoundRequestBuffer _soundRequests;
-        private PresentationOwnerChangeBuffer _ownerChanges;
-        private PresentationRequestFlushSystem _flush;
-        private GameplayPresentationProjectionSystem _projection;
-        private PresentationEntityLifecycleSystem _entityLifecycle;
-        private PresentationEntityFinalizeDestroySystem _finalizeDestroy;
-        private PerformerRuleSystem _ruleSystem;
-        private PerformerRuntimeSystem _runtimeSystem;
-        private PerformerBehaviorSystem _behaviorSystem;
-        private PerformerEmitSystem _emitSystem;
-        private PresentationStableIdAllocator _stableIds;
+        private World? _world;
+        private GasPresentationEventBuffer? _gasEvents;
+        private GameplayEventBus? _eventBus;
+        private PresentationEventStream? _presEvents;
+        private PerformerCommandBuffer? _commands;
+        private PerformerDefinitionRegistry? _defs;
+        private PerformerEntityRuntime? _instances;
+        private GraphProgramRegistry? _programs;
+        private Dictionary<string, object>? _globals;
+        private PrimitiveDrawBuffer? _primitives;
+        private WorldHudBatchBuffer? _hud;
+        private GroundOverlayBuffer? _overlays;
+        private RoadSplineBuffer? _roadSplines;
+        private PresentationRequestBuffer? _requests;
+        private SoundRequestBuffer? _soundRequests;
+        private PresentationOwnerChangeBuffer? _ownerChanges;
+        private PresentationRequestFlushSystem? _flush;
+        private GameplayPresentationProjectionSystem? _projection;
+        private PresentationEntityLifecycleSystem? _entityLifecycle;
+        private PresentationEntityFinalizeDestroySystem? _finalizeDestroy;
+        private PerformerRuleSystem? _ruleSystem;
+        private PerformerRuntimeSystem? _runtimeSystem;
+        private PerformerBehaviorSystem? _behaviorSystem;
+        private PerformerEmitSystem? _emitSystem;
+        private PresentationStableIdAllocator? _stableIds;
         private int _healthAttrId;
         private Entity _viewer;
-        private KnowledgeProjectionStore _knowledge;
+        private KnowledgeProjectionStore? _knowledge;
 
         [SetUp]
         public void Setup()
@@ -396,7 +396,7 @@ namespace Ludots.Tests.Presentation
                 Target = actor,
                 AbilityId = 9,
                 AbilitySlot = 1,
-                FailReason = AbilityCastFailReason.OnCooldown,
+                FailReason = AbilityCastFailReason.TimedLockout,
             });
 
             TickPipeline(0.016f);

@@ -8,74 +8,70 @@
 - 行为 SSOT 在 JSON：`order_types.json`、`input_order_mappings.json`、`effects.json`
 - 禁止代码层 fallback：路由 unmatched actor 时跳过，不注入默认 order type
 
-## 2 Input：`actorOrderRouting`
+## 2 Input：`CommandIntent` + typed `orderPayload`
 
-在 `input_order_mappings.json` 中，共享输入动作（如 `Command`）可按选中 actor 路由到不同 `orderTypeKey`：
+`actorOrderRouting` 已退役，`input_order_mappings.json` 不再内嵌 actor 侧候选 DSL。共享输入动作（如 `Command`）只声明输入触发、目标来源和 typed `orderPayload`；逐 actor 路由归属 `CommandIntentProfile`。
 
 ```json
 {
   "actionId": "Command",
   "requireSelection": true,
-  "selectionType": "Position",
-  "actorOrderRouting": {
-    "candidates": [
-      {
-        "orderTypeKey": "setSpawnTarget",
-        "priority": 10,
-        "selectionType": "HoveredEntityOrPosition",
-        "match": {
-          "abilitySlotIndex": 2,
-          "abilityIdKeySuffix": ".Train",
-          "blockedAnyTags": [ "Progression.Rts.WarpGate" ]
-        }
-      },
-      {
-        "orderTypeKey": "moveTo",
-        "priority": 0,
-        "match": {}
-      }
-    ]
+  "targetType": "HoveredEntityOrPosition",
+  "orderTypeKey": "moveTo",
+  "orderPayload": {
+    "kind": "MoveToWorldCm"
   }
 }
 ```
 
-### 匹配规则（`ActorOrderRoutingMatcher`）
+### 路由规则
 
-- `requiredAllTags` / `blockedAnyTags`：空列表表示无约束
-- `abilitySlotIndex`：通过 `AbilitySlotResolver` 解析 form/grant 层后的有效 slot
-- `abilityIdKey` / `abilityIdKeySuffix`：与有效 ability id 精确或子串匹配
-- `blockedAnyTags`：actor 带任一 tag 时不匹配（如 Gateway 研究 WarpGate 后跳过 Train 路由）
-- 多 candidate 命中时取最高 `priority`
+- Input mapping 不再声明 `isSkillMapping`；是否是 ability order 由 `orderPayload.kind` 和 order type contract 派生。
+- Input mapping 不再声明 `argsTemplate.i0..i3`；`castAbility` 使用 `orderPayload.abilitySlot`。
+- 同一动作若需要按 actor/target 事实分流，必须使用 `CommandIntentProfile`；同一 mapping 不能同时拥有两套路由真相。
+- `actorOrderRouting`、`isSkillMapping`、`argsTemplate` 出现在 authored JSON 时，loader 必须加载期失败。
 
-### 前置条件
-
-- `isSkillMapping: false`：actor 路由仅用于非技能 Command 类输入
-- `TagOps` 必须已注册：`LocalOrderSourceHelper` 在 mapping 创建期检测 `actorOrderRouting`，缺少 TagOps 时 fail-fast（不延迟到运行时 Command）
-- per-candidate `selectionType` 可覆盖 mapping 级默认值
-
-### Per-candidate selection
-
-- `selectionType` 可选；缺省时继承 mapping 级 `selectionType`
-- `HoveredEntityOrPosition`：优先 hovered command target，否则 ground position（用于 point rally 与 entity/garrison rally 共用一条路由）
-
-Resolver 由 `CoreInputMod.LocalOrderSourceHelper` 注入；mapping 声明了 `actorOrderRouting` 但未注册 TagOps 时，在 mapping 创建期 fail-fast。
-
-## 3 Group move target layout
-
-`groupMoveTargetLayout` 为全局配置，控制多 actor position move 的中性网格目标偏移；它不是 Formation capability：
+### Typed payload 示例
 
 ```json
 {
-  "groupMoveTargetLayout": {
-    "mode": "Grid",
-    "spacingCm": 140,
-    "orderTypeKeys": [ "moveTo" ]
+  "actionId": "AbilityQ",
+  "orderTypeKey": "castAbility",
+  "targetType": "Entity",
+  "orderPayload": {
+    "kind": "CastAbility",
+    "abilitySlot": 0
   }
 }
 ```
 
-- `mode: Grid` 时 `orderTypeKeys` 必填且非空；Core 不得硬编码具体 order type key
-- 混合 actor 路由提交时，仅对命中 `orderTypeKeys` 的子集应用 formation
+## 3 Target layout profiles
+
+`groupMoveTargetLayout` 已退役。多 actor position move 的目标展开由独立 `targetLayoutProfiles` 声明，再由 mapping 通过 `targetLayoutProfileId` 引用：
+
+```json
+{
+  "targetLayoutProfiles": [
+    {
+      "id": "layout.move.grid",
+      "mode": "Grid",
+      "spacingCm": 140,
+      "orderTypeKeys": [ "moveTo" ]
+    }
+  ],
+  "mappings": [
+    {
+      "actionId": "Command",
+      "orderTypeKey": "moveTo",
+      "orderPayload": { "kind": "MoveToWorldCm" },
+      "targetLayoutProfileId": "layout.move.grid"
+    }
+  ]
+}
+```
+
+- `mode: Grid` 时 `orderTypeKeys` 必填且非空；Core 不得硬编码具体 order type key。
+- loader 校验 profile id 唯一、mapping 引用存在、旧 `groupMoveTargetLayout` 明确失败。
 
 ## 4 Order：`instantComplete` + `persistentStoredTarget`
 
@@ -98,10 +94,10 @@ Mod 在 `order_types.json` 注册 instant-complete order：
 
 ## 6 Effect：`SubmitOrderFromBlackboard`
 
-`presetType: SubmitOrderFromBlackboard`（`lifetime: Instant`）在 on-spawn 等时机从 source entity 读取 stored target，向 target entity 提交 Mod 配置的 order：
+`presetType: SubmitOrderFromBlackboard`（`lifetime: Instant`）在 on-spawn 等时机从 source entity 读取 stored target，向 target entity 提交 Mod 配置的 typed order：
 
-- point/hex → `pointMoveOrderTypeKey`（如 `moveTo`）
-- entity → `entityOrderTypeKey` + `entityOrderIntArg0`（如 garrison `castAbility` slot 1）
+- point/hex → `pointMoveOrderTypeKey`（如 `moveTo`，order type 必须声明 `payloadKind: MoveToWorldCm`）
+- entity → `entityOrderTypeKey` + typed `entityOrderPayload`（如 `{ "kind": "CastAbility", "abilitySlot": 1 }`）
 - 目标 entity 必须带 `PlayerOwner`；Core 不接受 `Team.Id` 作为 player 身份 fallback
 - source 无 stored target 时不提交 order（静默 no-op，由 Mod 决定是否配置 on-spawn effect）
 

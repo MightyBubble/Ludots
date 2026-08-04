@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Reflection;
+using Ludots.Core.GraphRuntime;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Architecture.GraphRuntime
@@ -49,6 +51,33 @@ namespace Ludots.Tests.Architecture.GraphRuntime
             {
                 Assert.Fail("GraphRuntime references GAS:\n" + string.Join("\n", hits));
             }
+        }
+
+        [Test]
+        public void Core_MustNotExpose_LegacyUnboundedGraphScoreApi()
+        {
+            Assembly coreAssembly = typeof(CompiledGraphScoreRuntime).Assembly;
+
+            Assert.That(
+                coreAssembly.GetType("Ludots.Core.Gameplay.GAS.Scoring.GraphScoreEvaluator", throwOnError: false),
+                Is.Null,
+                "AI/Input scoring must use IReadOnlyGraphScorer. The old evaluator bypasses the compiled read-only score runtime.");
+
+            Type? legacyBudget = coreAssembly.GetType(
+                "Ludots.Core.Gameplay.GAS.Scoring.GraphScoreEvaluationBudget",
+                throwOnError: false);
+            if (legacyBudget == null)
+            {
+                return;
+            }
+
+            MethodInfo? unboundedFactory = legacyBudget.GetMethod(
+                "CreateUnbounded",
+                BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly);
+            Assert.That(
+                unboundedFactory,
+                Is.Null,
+                "GraphScore budgets must be positive and finite; unbounded score budgets are not an allowed contract.");
         }
 
         private static string FindRepoRoot()

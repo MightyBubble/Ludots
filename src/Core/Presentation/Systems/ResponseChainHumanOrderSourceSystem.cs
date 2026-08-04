@@ -78,7 +78,7 @@ namespace Ludots.Core.Presentation.Systems
             if (input.PressedThisFrame(bindings.ResponseChainActivateActionId))
             {
                 var args = default(OrderArgs);
-                args.I0 = _ui.PromptTagId;
+                OrderBuilder.SetIntArg(ref args, OrderIntArgSlot.I0, _ui.PromptTagId);
                 Submit(new Order
                 {
                     OrderTypeId = _responseChainOrderTypes.ChainActivateEffect,

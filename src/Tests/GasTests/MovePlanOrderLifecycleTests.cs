@@ -15,7 +15,7 @@ public sealed class MovePlanOrderLifecycleTests
     private const int MoveOrderTypeId = 17;
 
     [Test]
-    public void ClusteredBatch_AssignsOneTokenPerSourceAndPreservesAtomicAdmission()
+    public void ClusteredBatch_AssignsUniqueReceiptsAndPreservesAtomicAdmission()
     {
         using var world = World.Create();
         Entity firstSource = world.Create();
@@ -33,8 +33,17 @@ public sealed class MovePlanOrderLifecycleTests
         Assert.Multiple(() =>
         {
             Assert.That(batch[0].OrderId, Is.Positive);
-            Assert.That(batch[1].OrderId, Is.EqualTo(batch[0].OrderId));
-            Assert.That(batch[2].OrderId, Is.Not.EqualTo(batch[0].OrderId));
+            Assert.That(batch[1].OrderId, Is.GreaterThan(batch[0].OrderId));
+            Assert.That(batch[2].OrderId, Is.GreaterThan(batch[1].OrderId));
+            Assert.That(batch[0].AdmissionBatchId, Is.Positive);
+            Assert.That(batch[1].AdmissionBatchId, Is.EqualTo(batch[0].AdmissionBatchId));
+            Assert.That(batch[2].AdmissionBatchId, Is.EqualTo(batch[0].AdmissionBatchId));
+            Assert.That(batch[0].AdmissionBatchSize, Is.EqualTo(3));
+            Assert.That(batch[1].AdmissionBatchSize, Is.EqualTo(3));
+            Assert.That(batch[2].AdmissionBatchSize, Is.EqualTo(3));
+            Assert.That(batch[0].AdmissionBatchIndex, Is.EqualTo(0));
+            Assert.That(batch[1].AdmissionBatchIndex, Is.EqualTo(1));
+            Assert.That(batch[2].AdmissionBatchIndex, Is.EqualTo(2));
             Assert.That(queue.Count, Is.EqualTo(3));
         });
 
@@ -55,7 +64,8 @@ public sealed class MovePlanOrderLifecycleTests
         {
             Assert.That(full.Count, Is.EqualTo(3));
             Assert.That(rejected[0].OrderId, Is.Positive);
-            Assert.That(rejected[1].OrderId, Is.EqualTo(rejected[0].OrderId));
+            Assert.That(rejected[1].OrderId, Is.GreaterThan(rejected[0].OrderId));
+            Assert.That(rejected[1].AdmissionBatchId, Is.EqualTo(rejected[0].AdmissionBatchId));
             Assert.That(full.AdmissionResults.TryGet(rejected[0].OrderId, OrderAdmissionStage.GlobalIntake, out var outcome), Is.True);
             Assert.That(outcome.Result, Is.EqualTo(OrderSubmitResult.RejectedQueueFull));
         });

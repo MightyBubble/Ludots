@@ -281,18 +281,15 @@ namespace InteractionShowcaseMod.Systems
                     continue;
                 }
 
-                var order = new Order
-                {
-                    OrderTypeId = _castAbilityOrderTypeId,
-                    PlayerId = playerId,
-                    Actor = actor,
-                    Target = target,
-                    SubmitMode = OrderSubmitMode.Immediate,
-                    Args = new OrderArgs
-                    {
-                        I0 = 0,
-                    }
-                };
+                var order = OrderBuilder.CreateCastAbility(
+                    _castAbilityOrderTypeId,
+                    playerId,
+                    actor,
+                    target,
+                    Entity.Null,
+                    abilitySlotIndex: 0,
+                    OrderSubmitMode.Immediate,
+                    submitStep: 0);
 
                 if (_orders.TryEnqueue(in order))
                 {

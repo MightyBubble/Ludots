@@ -4,12 +4,7 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        {
-          "kind": "TagClip",
-          "tick": 0,
-          "duration": 72,
-          "tag": "Cooldown.Champion.Ezreal.E"
-        },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Lockout.Ezreal.E", "dispatchTarget": "Source" },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -32,10 +27,6 @@
         "Cooldown.Champion.Ezreal.E"
       ]
     },
-    "input": {
-      "autoTargetPolicy": "NearestEnemyInRange",
-      "autoTargetRangeCm": 760
-    },
     "presentation": {
       "displayName": "Arcane Shift",
       "iconGlyph": "E",
@@ -48,6 +39,7 @@
     },
     "targeting": {
       "castRangeCm": 440,
+      "allowMoveChase": false,
       "impactEffect": "Effect.Champion.Ezreal.ArcaneShift"
     }
   },
@@ -56,12 +48,7 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        {
-          "kind": "TagClip",
-          "tick": 0,
-          "duration": 54,
-          "tag": "Cooldown.Champion.Ezreal.W"
-        },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Lockout.Ezreal.W", "dispatchTarget": "Source" },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -90,6 +77,7 @@
     },
     "targeting": {
       "castRangeCm": 760,
+      "allowMoveChase": true,
       "impactEffect": "Effect.Champion.Ezreal.EssenceFlux"
     }
   },
@@ -98,12 +86,7 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        {
-          "kind": "TagClip",
-          "tick": 0,
-          "duration": 30,
-          "tag": "Cooldown.Champion.Ezreal.Q"
-        },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Lockout.Ezreal.Q", "dispatchTarget": "Source" },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -132,6 +115,7 @@
     },
     "targeting": {
       "castRangeCm": 840,
+      "allowMoveChase": true,
       "impactEffect": "Effect.Champion.Ezreal.MysticShot"
     }
   },
@@ -140,12 +124,7 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        {
-          "kind": "TagClip",
-          "tick": 0,
-          "duration": 150,
-          "tag": "Cooldown.Champion.Ezreal.R"
-        },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Lockout.Ezreal.R", "dispatchTarget": "Source" },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -174,6 +153,7 @@
     },
     "targeting": {
       "castRangeCm": 2200,
+      "allowMoveChase": true,
       "impactEffect": "Effect.Champion.Ezreal.TrueshotBarrage"
     }
   },
@@ -182,12 +162,7 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        {
-          "kind": "TagClip",
-          "tick": 0,
-          "duration": 24,
-          "tag": "Cooldown.Champion.Garen.W"
-        },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Lockout.Garen.W", "dispatchTarget": "Source" },
         {
           "kind": "End",
           "tick": 0
@@ -230,12 +205,7 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        {
-          "kind": "TagClip",
-          "tick": 0,
-          "duration": 36,
-          "tag": "Cooldown.Champion.Garen.Q"
-        },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Lockout.Garen.Q", "dispatchTarget": "Source" },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -264,6 +234,7 @@
     },
     "targeting": {
       "castRangeCm": 320,
+      "allowMoveChase": true,
       "impactEffect": "Effect.Champion.Garen.DecisiveStrike"
     }
   },
@@ -272,12 +243,7 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        {
-          "kind": "TagClip",
-          "tick": 0,
-          "duration": 120,
-          "tag": "Cooldown.Champion.Garen.R"
-        },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Lockout.Garen.R", "dispatchTarget": "Source" },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -306,6 +272,7 @@
     },
     "targeting": {
       "castRangeCm": 520,
+      "allowMoveChase": true,
       "impactEffect": "Effect.Champion.Garen.DemacianJustice"
     }
   },
@@ -314,12 +281,7 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        {
-          "kind": "TagClip",
-          "tick": 0,
-          "duration": 48,
-          "tag": "Cooldown.Champion.Garen.E"
-        },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Lockout.Garen.E", "dispatchTarget": "Source" },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -348,6 +310,7 @@
     },
     "targeting": {
       "castRangeCm": 0,
+      "allowMoveChase": true,
       "impactEffect": "Effect.Champion.Garen.Judgment"
     }
   },
@@ -356,12 +319,7 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        {
-          "kind": "TagClip",
-          "tick": 0,
-          "duration": 42,
-          "tag": "Cooldown.Champion.Geomancer.Q"
-        },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Lockout.Geomancer.Q", "dispatchTarget": "Source" },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -390,6 +348,7 @@
     },
     "targeting": {
       "castRangeCm": 720,
+      "allowMoveChase": true,
       "impactEffect": "Effect.Champion.Geomancer.RunicBeacon"
     }
   },
@@ -398,12 +357,7 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        {
-          "kind": "TagClip",
-          "tick": 0,
-          "duration": 54,
-          "tag": "Cooldown.Champion.Geomancer.W"
-        },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Lockout.Geomancer.W", "dispatchTarget": "Source" },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -432,6 +386,7 @@
     },
     "targeting": {
       "castRangeCm": 720,
+      "allowMoveChase": true,
       "impactEffect": "Effect.Champion.Geomancer.RuneField"
     }
   },
@@ -440,12 +395,7 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        {
-          "kind": "TagClip",
-          "tick": 0,
-          "duration": 66,
-          "tag": "Cooldown.Champion.Geomancer.E"
-        },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Lockout.Geomancer.E", "dispatchTarget": "Source" },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -474,6 +424,7 @@
     },
     "targeting": {
       "castRangeCm": 720,
+      "allowMoveChase": true,
       "impactEffect": "Effect.Champion.Geomancer.StonePillar"
     }
   },
@@ -482,12 +433,7 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        {
-          "kind": "TagClip",
-          "tick": 0,
-          "duration": 96,
-          "tag": "Cooldown.Champion.Geomancer.R"
-        },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Lockout.Geomancer.R", "dispatchTarget": "Source" },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -516,6 +462,7 @@
     },
     "targeting": {
       "castRangeCm": 920,
+      "allowMoveChase": true,
       "impactEffect": "Effect.Champion.Geomancer.PrismaticBeam"
     }
   },
@@ -524,12 +471,7 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        {
-          "kind": "TagClip",
-          "tick": 0,
-          "duration": 54,
-          "tag": "Cooldown.Champion.Jayce.E"
-        },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Lockout.Jayce.E", "dispatchTarget": "Source" },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -558,6 +500,7 @@
     },
     "targeting": {
       "castRangeCm": 640,
+      "allowMoveChase": true,
       "impactEffect": "Effect.Champion.Jayce.Cannon.AccelerationGate"
     }
   },
@@ -566,12 +509,7 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        {
-          "kind": "TagClip",
-          "tick": 0,
-          "duration": 48,
-          "tag": "Cooldown.Champion.Jayce.W"
-        },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Lockout.Jayce.W", "dispatchTarget": "Source" },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -600,6 +538,7 @@
     },
     "targeting": {
       "castRangeCm": 0,
+      "allowMoveChase": true,
       "impactEffect": "Effect.Champion.Jayce.Cannon.HyperCharge"
     }
   },
@@ -608,12 +547,7 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        {
-          "kind": "TagClip",
-          "tick": 0,
-          "duration": 42,
-          "tag": "Cooldown.Champion.Jayce.Q"
-        },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Lockout.Jayce.Q", "dispatchTarget": "Source" },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -642,6 +576,7 @@
     },
     "targeting": {
       "castRangeCm": 880,
+      "allowMoveChase": true,
       "impactEffect": "Effect.Champion.Jayce.Cannon.ShockBlast"
     }
   },
@@ -650,12 +585,7 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        {
-          "kind": "TagClip",
-          "tick": 0,
-          "duration": 48,
-          "tag": "Cooldown.Champion.Jayce.W"
-        },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Lockout.Jayce.W", "dispatchTarget": "Source" },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -684,6 +614,7 @@
     },
     "targeting": {
       "castRangeCm": 0,
+      "allowMoveChase": true,
       "impactEffect": "Effect.Champion.Jayce.Hammer.LightningField"
     }
   },
@@ -692,12 +623,7 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        {
-          "kind": "TagClip",
-          "tick": 0,
-          "duration": 54,
-          "tag": "Cooldown.Champion.Jayce.E"
-        },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Lockout.Jayce.E", "dispatchTarget": "Source" },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -726,6 +652,7 @@
     },
     "targeting": {
       "castRangeCm": 300,
+      "allowMoveChase": true,
       "impactEffect": "Effect.Champion.Jayce.Hammer.ThunderingBlow"
     }
   },
@@ -734,12 +661,7 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        {
-          "kind": "TagClip",
-          "tick": 0,
-          "duration": 42,
-          "tag": "Cooldown.Champion.Jayce.Q"
-        },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Lockout.Jayce.Q", "dispatchTarget": "Source" },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -768,6 +690,7 @@
     },
     "targeting": {
       "castRangeCm": 520,
+      "allowMoveChase": true,
       "impactEffect": "Effect.Champion.Jayce.Hammer.ToTheSkies"
     }
   },
@@ -776,12 +699,7 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        {
-          "kind": "TagClip",
-          "tick": 0,
-          "duration": 18,
-          "tag": "Cooldown.Champion.Jayce.R"
-        },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Lockout.Jayce.R", "dispatchTarget": "Source" },
         {
           "kind": "End",
           "tick": 0
@@ -821,12 +739,7 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        {
-          "kind": "TagClip",
-          "tick": 0,
-          "duration": 18,
-          "tag": "Cooldown.Champion.Jayce.R"
-        },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Lockout.Jayce.R", "dispatchTarget": "Source" },
         {
           "kind": "End",
           "tick": 0
@@ -866,12 +779,7 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        {
-          "kind": "TagClip",
-          "tick": 0,
-          "duration": 18,
-          "tag": "Cooldown.ChampionStress.Warrior.Q"
-        },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.ChampionStress.Lockout.Warrior.Q", "dispatchTarget": "Source" },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -900,6 +808,7 @@
     },
     "targeting": {
       "castRangeCm": 180,
+      "allowMoveChase": true,
       "impactEffect": "Effect.ChampionStress.Warrior.Cleave"
     }
   },
@@ -908,12 +817,7 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        {
-          "kind": "TagClip",
-          "tick": 0,
-          "duration": 30,
-          "tag": "Cooldown.ChampionStress.FireMage.Q"
-        },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.ChampionStress.Lockout.FireMage.Q", "dispatchTarget": "Source" },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -942,6 +846,7 @@
     },
     "targeting": {
       "castRangeCm": 1200,
+      "allowMoveChase": true,
       "impactEffect": "Effect.ChampionStress.FireMage.Fireball"
     }
   },
@@ -950,12 +855,7 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        {
-          "kind": "TagClip",
-          "tick": 0,
-          "duration": 20,
-          "tag": "Cooldown.ChampionStress.LaserMage.Q"
-        },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.ChampionStress.Lockout.LaserMage.Q", "dispatchTarget": "Source" },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -984,6 +884,7 @@
     },
     "targeting": {
       "castRangeCm": 1400,
+      "allowMoveChase": true,
       "impactEffect": "Effect.ChampionStress.LaserMage.Laser"
     }
   },
@@ -992,12 +893,7 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        {
-          "kind": "TagClip",
-          "tick": 0,
-          "duration": 24,
-          "tag": "Cooldown.ChampionStress.Priest.Q"
-        },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.ChampionStress.Lockout.Priest.Q", "dispatchTarget": "Source" },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -1026,6 +922,7 @@
     },
     "targeting": {
       "castRangeCm": 900,
+      "allowMoveChase": true,
       "impactEffect": "Effect.ChampionStress.Priest.Heal"
     }
   },
@@ -1034,12 +931,7 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        {
-          "kind": "TagClip",
-          "tick": 0,
-          "duration": 48,
-          "tag": "Cooldown.Champion.SpellEngineer.Q"
-        },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Lockout.SpellEngineer.Q", "dispatchTarget": "Source" },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -1068,6 +960,7 @@
     },
     "targeting": {
       "castRangeCm": 760,
+      "allowMoveChase": true,
       "impactEffect": "Effect.Champion.SpellEngineer.SpellBeacon"
     }
   },
@@ -1076,12 +969,7 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        {
-          "kind": "TagClip",
-          "tick": 0,
-          "duration": 60,
-          "tag": "Cooldown.Champion.SpellEngineer.W"
-        },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Lockout.SpellEngineer.W", "dispatchTarget": "Source" },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -1110,6 +998,7 @@
     },
     "targeting": {
       "castRangeCm": 760,
+      "allowMoveChase": true,
       "impactEffect": "Effect.Champion.SpellEngineer.GravityWell"
     }
   },
@@ -1118,12 +1007,7 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        {
-          "kind": "TagClip",
-          "tick": 0,
-          "duration": 90,
-          "tag": "Cooldown.Champion.SpellEngineer.E"
-        },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Lockout.SpellEngineer.E", "dispatchTarget": "Source" },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -1157,6 +1041,7 @@
     },
     "targeting": {
       "castRangeCm": 700,
+      "allowMoveChase": true,
       "impactEffect": "Effect.Champion.SpellEngineer.CataclysmRing"
     }
   },
@@ -1165,12 +1050,7 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        {
-          "kind": "TagClip",
-          "tick": 0,
-          "duration": 132,
-          "tag": "Cooldown.Champion.SpellEngineer.R"
-        },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Champion.Lockout.SpellEngineer.R", "dispatchTarget": "Source" },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -1192,11 +1072,6 @@
         "Cooldown.Champion.SpellEngineer.R"
       ]
     },
-    "input": {
-      "trigger": "Held",
-      "heldPolicy": "StartEnd",
-      "castModeOverride": "SmartCast"
-    },
     "presentation": {
       "displayName": "Guided Laser",
       "iconGlyph": "R",
@@ -1208,6 +1083,7 @@
     },
     "targeting": {
       "castRangeCm": 1050,
+      "allowMoveChase": true,
       "impactEffect": "Effect.Champion.SpellEngineer.GuidedLaser"
     }
   }

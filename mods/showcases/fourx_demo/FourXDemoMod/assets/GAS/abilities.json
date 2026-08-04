@@ -4,7 +4,7 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 10, "tag": "Cooldown.GCD" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.4X.Lockout.GCD", "dispatchTarget": "Source" },
         { "kind": "EffectSignal", "tick": 0, "template": "Effect.4X.BuildOutpost" },
         { "kind": "End", "tick": 0 }
       ]
@@ -39,7 +39,7 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 10, "tag": "Cooldown.GCD" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.4X.Lockout.GCD", "dispatchTarget": "Source" },
         { "kind": "EffectSignal", "tick": 0, "template": "Effect.4X.TechResearch" },
         { "kind": "End", "tick": 0 }
       ]
@@ -50,7 +50,7 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 10, "tag": "Cooldown.GCD" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.4X.Lockout.GCD", "dispatchTarget": "Source" },
         { "kind": "EffectSignal", "tick": 0, "template": "Effect.4X.DiplomacyPact" },
         { "kind": "End", "tick": 0 }
       ]
@@ -61,7 +61,7 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        { "kind": "TagClip", "tick": 0, "duration": 10, "tag": "Cooldown.GCD" },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.4X.Lockout.GCD", "dispatchTarget": "Source" },
         { "kind": "EffectSignal", "tick": 0, "template": "Effect.4X.TradeRoute" },
         { "kind": "End", "tick": 0 }
       ]

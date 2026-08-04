@@ -461,51 +461,51 @@ namespace Ludots.Core.Engine
 
             try
             {
-            // 2. Load Mods first (so ConfigPipeline can access their game.json)
-            if (modPlan != null && modPlan.OrderedMods.Count > 0)
-            {
-                if (!string.IsNullOrWhiteSpace(modPlan.PlanFingerprint))
+                // 2. Load Mods first (so ConfigPipeline can access their game.json)
+                if (modPlan != null && modPlan.OrderedMods.Count > 0)
                 {
-                    Diagnostics.Log.Info(
-                        in LogChannels.Engine,
-                        $"Applying launcher-resolved mod plan: fingerprint={modPlan.PlanFingerprint}, schema={modPlan.SchemaVersion?.ToString() ?? "explicit"}, mods={modPlan.OrderedMods.Count}");
+                    if (!string.IsNullOrWhiteSpace(modPlan.PlanFingerprint))
+                    {
+                        Diagnostics.Log.Info(
+                            in LogChannels.Engine,
+                            $"Applying launcher-resolved mod plan: fingerprint={modPlan.PlanFingerprint}, schema={modPlan.SchemaVersion?.ToString() ?? "explicit"}, mods={modPlan.OrderedMods.Count}");
+                    }
+                    else
+                    {
+                        Diagnostics.Log.Info(in LogChannels.Engine, $"Applying explicit mod plan: mods={modPlan.OrderedMods.Count}");
+                    }
+
+                    ModLoader.LoadResolvedPlan(modPlan.OrderedMods);
                 }
-                else
+                else if (modPaths != null && modPaths.Count > 0)
                 {
-                    Diagnostics.Log.Info(in LogChannels.Engine, $"Applying explicit mod plan: mods={modPlan.OrderedMods.Count}");
+                    Diagnostics.Log.Info(in LogChannels.Engine, $"Resolving mod dependencies from explicit mod paths: mods={modPaths.Count}");
+                    ModLoader.LoadMods(modPaths);
                 }
 
-                ModLoader.LoadResolvedPlan(modPlan.OrderedMods);
-            }
-            else if (modPaths != null && modPaths.Count > 0)
-            {
-                Diagnostics.Log.Info(in LogChannels.Engine, $"Resolving mod dependencies from explicit mod paths: mods={modPaths.Count}");
-                ModLoader.LoadMods(modPaths);
-            }
+                // 3. Create ConfigPipeline and merge all game.json files
+                ConfigPipeline = new ConfigPipeline((VirtualFileSystem)VFS, ModLoader);
+                ((MapManager)MapManager).SetConfigPipeline(ConfigPipeline);
+                MergedConfig = ConfigPipeline.MergeGameConfig();
+                (MergedConfig.Presentation
+                    ?? throw new InvalidOperationException("game.json presentation must be explicitly configured.")).Validate();
 
-            // 3. Create ConfigPipeline and merge all game.json files
-            ConfigPipeline = new ConfigPipeline((VirtualFileSystem)VFS, ModLoader);
-            ((MapManager)MapManager).SetConfigPipeline(ConfigPipeline);
-            MergedConfig = ConfigPipeline.MergeGameConfig();
-            (MergedConfig.Presentation
-                ?? throw new InvalidOperationException("game.json presentation must be explicitly configured.")).Validate();
+                ConfigCatalog = Ludots.Core.Config.ConfigCatalogLoader.Load(ConfigPipeline);
+                ConfigConflictReport = new Ludots.Core.Config.ConfigConflictReport();
+                LoadAgentProfiles();
+                AiRuntime = default;
+                Ludots.Core.Config.ComponentRegistry.SetUtilityAiAuthoringCatalog(null!);
 
-            ConfigCatalog = Ludots.Core.Config.ConfigCatalogLoader.Load(ConfigPipeline);
-            ConfigConflictReport = new Ludots.Core.Config.ConfigConflictReport();
-            LoadAgentProfiles();
-            AiRuntime = default;
-            Ludots.Core.Config.ComponentRegistry.SetUtilityAiAuthoringCatalog(null);
+                // Apply log config from merged game.json
+                LogConfigApplier.Apply(MergedConfig.Logging);
 
-            // Apply log config from merged game.json
-            LogConfigApplier.Apply(MergedConfig.Logging);
+                Diagnostics.Log.Info(in LogChannels.Engine, $"Merged GameConfig: StartupMapId={MergedConfig.StartupMapId}, DefaultCoreMod={MergedConfig.DefaultCoreMod}");
+                Diagnostics.Log.Info(in LogChannels.Engine, $"Constants loaded: OrderTypeIds={MergedConfig.Constants.OrderTypeIds.Count}, ResponseChainOrderTypeIds={MergedConfig.Constants.ResponseChainOrderTypeIds.Count}");
 
-            Diagnostics.Log.Info(in LogChannels.Engine, $"Merged GameConfig: StartupMapId={MergedConfig.StartupMapId}, DefaultCoreMod={MergedConfig.DefaultCoreMod}");
-            Diagnostics.Log.Info(in LogChannels.Engine, $"Constants loaded: OrderTypeIds={MergedConfig.Constants.OrderTypeIds.Count}, ResponseChainOrderTypeIds={MergedConfig.Constants.ResponseChainOrderTypeIds.Count}");
-
-            // Store merged config in GlobalContext for access throughout the engine
-            SetService(CoreServiceKeys.GameConfig, MergedConfig);
-            SetService(CoreServiceKeys.ConfigCatalog, ConfigCatalog);
-            SetService(CoreServiceKeys.ConfigConflictReport, ConfigConflictReport);
+                // Store merged config in GlobalContext for access throughout the engine
+                SetService(CoreServiceKeys.GameConfig, MergedConfig);
+                SetService(CoreServiceKeys.ConfigCatalog, ConfigCatalog);
+                SetService(CoreServiceKeys.ConfigConflictReport, ConfigConflictReport);
             }
             catch
             {
@@ -567,7 +567,7 @@ namespace Ludots.Core.Engine
             if (ConfigPipeline == null)
             {
                 AiRuntime = default;
-                Ludots.Core.Config.ComponentRegistry.SetUtilityAiAuthoringCatalog(null);
+                Ludots.Core.Config.ComponentRegistry.SetUtilityAiAuthoringCatalog(null!);
                 return;
             }
 
@@ -577,8 +577,7 @@ namespace Ludots.Core.Engine
             {
                 validation = new Ludots.Core.Gameplay.AI.Config.AiConfigValidationContext(
                     orderTypes,
-                    GetService(CoreServiceKeys.AbilityDefinitionRegistry),
-                    GetService(CoreServiceKeys.GraphProgramRegistry));
+                    GetService(CoreServiceKeys.GraphScorer));
             }
 
             var loader = new Ludots.Core.Gameplay.AI.Config.AiConfigLoader(ConfigPipeline, atoms, validation);
@@ -703,6 +702,7 @@ namespace Ludots.Core.Engine
             _timeFlow = new TimeFlowService();
             Time.TimeScale = _timeFlow.GetEffectiveScalePermille(TimeFlowDomainIds.Simulation) / 1000f;
 
+            TagRegistry.Clear();
             var extensionAttributeRegistry = new ExtensionAttributeRegistry();
             var attributeSchemaUpdateQueue = new AttributeSchemaUpdateQueue();
             var schemaUpdateSystem = new AttributeSchemaUpdateSystem(World, extensionAttributeRegistry, attributeSchemaUpdateQueue);
@@ -907,7 +907,6 @@ namespace Ludots.Core.Engine
                 builtinHandlers,
                 graphProgramRegistry,
                 GasGraphOpHandlerTable.Instance);
-            new ContextGroupConfigLoader(ConfigPipeline, contextGroups).Load(ConfigCatalog, ConfigConflictReport);
             itemConfigLoader.Load(ConfigCatalog, ConfigConflictReport);
             exchangeLoader.Load(ConfigCatalog, ConfigConflictReport);
             var inventoryRuntime = new InventoryRuntimeService(World, itemShapes, itemLayouts, itemDefinitions, ownershipResolver);
@@ -941,6 +940,8 @@ namespace Ludots.Core.Engine
                 clock);
             var gasGraphApi = GasGraphRuntimeApi.CreateProduction(gasGraphProductionServices);
             _gasGraphRuntimeApi = gasGraphApi;
+            var graphScorer = CompiledGraphScoreRuntime.Compile(World, gasGraphApi, graphProgramRegistry);
+            new ContextGroupConfigLoader(ConfigPipeline, contextGroups, graphScorer).Load(ConfigCatalog, ConfigConflictReport);
             var graphReturnWriter = new GraphReturnWriter(
                 World,
                 graphProgramRegistry,
@@ -1253,8 +1254,6 @@ namespace Ludots.Core.Engine
                 static (GameEngine engine, out Entity viewer) =>
                     KnowledgeProjectionConsumer.TryResolveViewer(engine.World, engine.GlobalContext, Entity.Null, out viewer));
 
-            var abilitySystem = new AbilitySystem(World, effectRequestQueue, abilityDefinitions, tagOps, graphProgramRegistry, gasGraphApi, progressionEvaluator);
-            var reactionSystem = new ReactionSystem(World, abilitySystem, EventBus);
             var graphEdgeCostOverlay = new GraphEdgeCostOverlay();
             var cameraBehaviorInput = new CameraBehaviorInputState();
             var cameraImpulseRuntime = new CameraImpulseRuntime();
@@ -1310,6 +1309,7 @@ namespace Ludots.Core.Engine
             int cfgChainActivateEffect = RequireConfiguredOrderTypeId(responseChainOrderTypeIds, orderTypeRegistry, "chainActivateEffect", "constants.responseChainOrderTypeIds");
             int cfgCastAbilityStart = RequireRegisteredOrderTypeId(orderTypeRegistry, "castAbility.Start");
             int cfgCastAbilityEnd = RequireRegisteredOrderTypeId(orderTypeRegistry, "castAbility.End");
+            var reactionSystem = new ReactionSystem(World, orderQueue, cfgCastAbility, EventBus);
 
             // Pointer command intent routing (RFC-0065 INT-1, DEC-14); installed after order types so
             // rule routes validate their orderTypeKey at load time. Target facts are knowledge-gated
@@ -1421,6 +1421,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.EffectTemplateRegistry, effectTemplateRegistry);
             SetService(CoreServiceKeys.TargetDispatchPresetRegistry, targetDispatchPresetRegistry);
             SetService(CoreServiceKeys.GraphProgramRegistry, graphProgramRegistry);
+            SetService(CoreServiceKeys.GraphScorer, graphScorer);
             SetService(CoreServiceKeys.GasGraphRuntimeProductionServices, gasGraphProductionServices);
             SetService(CoreServiceKeys.GasGraphRuntimeApi, gasGraphApi);
             SetService(CoreServiceKeys.GraphOutputSchemaRegistry, graphOutputSchemas);
@@ -1664,10 +1665,10 @@ namespace Ludots.Core.Engine
                     clock,
                     AiRuntime.UtilityRuntime,
                     SpatialQueries,
-                    abilityDefinitions,
-                    graphProgramRegistry,
-                    gasGraphApi,
-                    orderQueue),
+                    graphScorer,
+                    gasRuntimeCapacity.UtilityAiGraphScoreInstructionBudgetPerThink,
+                    orderQueue,
+                    orderTerminalResults),
                 SystemGroup.PostMovement);
             RegisterPhysics2DSystems(
                 clock,
@@ -1677,11 +1678,11 @@ namespace Ludots.Core.Engine
                 componentAuthoringContext);
 
             // Phase 2: AbilityActivation
+            RegisterSystem(reactionSystem, SystemGroup.AbilityActivation);
             RegisterSystem(orderBufferSystem, SystemGroup.AbilityActivation);
             RegisterSystem(abilityEndOrderSystem, SystemGroup.AbilityActivation);
             RegisterSystem(stopOrderSystem, SystemGroup.AbilityActivation);
             RegisterSystem(instantCompleteOrderSystem, SystemGroup.AbilityActivation);
-            RegisterSystem(reactionSystem, SystemGroup.AbilityActivation);
             RegisterSystem(abilityExecSystem, SystemGroup.AbilityActivation);
             // RFC-0065 CTX-6: exec lifecycle push/pop of interaction context frames.
             RegisterSystem(new AbilityExecInteractionContextSystem(World, interactionContextStack, interactionContextProfileRegistry, abilityDefinitions), SystemGroup.AbilityActivation);

@@ -62,7 +62,7 @@ namespace Ludots.Core.Input.Interaction
         public void RegisterSelector(
             string kind,
             CastDispatchSelectorEvaluator evaluator,
-            CastDispatchSelectorInstallValidator validator = null)
+            CastDispatchSelectorInstallValidator? validator = null)
         {
             kind = RequireNewKind(kind, _selectorsByKind.ContainsKey, "Selector");
             _selectorsByKind.Add(kind, new SelectorEntry(
@@ -227,7 +227,7 @@ namespace Ludots.Core.Input.Interaction
                     $"Cast dispatch profile '{definition.Id}' declares unknown router kind '{definition.Router.Kind}'.");
             }
 
-            CastDispatchScorer scorer = null;
+            CastDispatchScorer? scorer = null;
             if (definition.Scorer != null)
             {
                 if (!_scorerKindsByName.TryGetValue(definition.Scorer.Kind, out CastDispatchScorerCompiler scorerCompiler))
@@ -398,7 +398,7 @@ namespace Ludots.Core.Input.Interaction
             if (definition.SharedOrderId == true)
             {
                 throw new InvalidOperationException(
-                    $"Cast dispatch profile '{profileId}' sequential router cannot share an order id.");
+                    $"Cast dispatch profile '{profileId}' sequential router cannot request atomic fan-out.");
             }
 
             return new CastDispatchRouting(SharedOrderId: false, Sequential: true);
@@ -511,12 +511,12 @@ namespace Ludots.Core.Input.Interaction
 
         private sealed class CompiledProfile
         {
-            public CastDispatchSelectorEvaluator Selector;
+            public required CastDispatchSelectorEvaluator Selector;
             public int SelectorN;
             public int AdvanceEventId;
-            public CastDispatchScorer Scorer;
+            public required CastDispatchScorer Scorer;
             public CastDispatchRouting Routing;
-            public Dictionary<long, int> CycleCursors;
+            public required Dictionary<long, int> CycleCursors;
         }
     }
 }

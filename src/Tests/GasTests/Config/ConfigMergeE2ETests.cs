@@ -27,7 +27,7 @@ namespace Ludots.Tests.GAS
     [TestFixture]
     public class ConfigMergeE2ETests
     {
-        private string _root;
+        private string? _root;
 
         [SetUp]
         public void SetUp()
@@ -42,10 +42,10 @@ namespace Ludots.Tests.GAS
             try { Directory.Delete(_root, recursive: true); } catch { }
         }
 
-        // ── Helpers ──
+        // 鈹€鈹€ Helpers 鈹€鈹€
 
         private static (VirtualFileSystem vfs, ModLoader modLoader, ConfigPipeline pipeline, ConfigCatalog catalog)
-            BuildPipeline(string root, string[] modIds = null)
+            BuildPipeline(string root, string[]? modIds = null)
         {
             var vfs = new VirtualFileSystem();
             vfs.Mount("Core", Path.Combine(root, "Core"));
@@ -78,10 +78,10 @@ namespace Ludots.Tests.GAS
             File.WriteAllText(Path.Combine(dir, Path.GetFileName(relativePath)), content);
         }
 
-        // ══════════════════════════════════════════════════════════════════�?
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
         // Scenario 1: Mod overrides a single effect property (ArrayById merge)
         // A mod developer wants to change the damage of a Core-defined effect.
-        // ══════════════════════════════════════════════════════════════════�?
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
         [Test]
         public void Scenario_ModOverridesEffectProperty_MergedCorrectly()
         {
@@ -103,18 +103,18 @@ namespace Ludots.Tests.GAS
             That(merged[0].Node["presetType"]?.GetValue<string>(), Is.EqualTo("Damage"), "Core property should be preserved");
         }
 
-        // ══════════════════════════════════════════════════════════════════�?
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
         // Scenario 2: Mod adds a new ability without touching Core abilities
-        // ══════════════════════════════════════════════════════════════════�?
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
         [Test]
         public void Scenario_ModAddsNewAbility_BothExist()
         {
             WriteFile("Core", "config_catalog.json",
                 @"[{ ""Path"": ""GAS/abilities.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
             WriteFile("Core", "GAS/abilities.json",
-                @"[{ ""id"": ""Slash"", ""cooldown"": 5 }]");
+                @"[{ ""id"": ""Slash"", ""rangeCm"": 500 }]");
             WriteAssetFile("ModA", "GAS/abilities.json",
-                @"[{ ""id"": ""Fireball"", ""cooldown"": 8 }]");
+                @"[{ ""id"": ""Fireball"", ""rangeCm"": 800 }]");
 
             var (_, _, pipeline, catalog) = BuildPipeline(_root, new[] { "ModA" });
             var entry = ConfigPipeline.RequireEntry(catalog, "GAS/abilities.json", ConfigMergePolicy.ArrayById, "id");
@@ -125,9 +125,9 @@ namespace Ludots.Tests.GAS
             That(merged[1].Id, Is.EqualTo("Fireball"));
         }
 
-        // ══════════════════════════════════════════════════════════════════�?
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
         // Scenario 3: Mod deletes a Core-defined tag rule via __delete
-        // ══════════════════════════════════════════════════════════════════�?
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
         [Test]
         public void Scenario_ModDeletesTagRule_ViaDeleteField()
         {
@@ -147,9 +147,9 @@ namespace Ludots.Tests.GAS
             That(merged[0].Id, Is.EqualTo("Silence"));
         }
 
-        // ══════════════════════════════════════════════════════════════════�?
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
         // Scenario 4: Mod deletes via Disabled field
-        // ══════════════════════════════════════════════════════════════════�?
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
         [Test]
         public void Scenario_ModDeletesEntry_ViaDisabled()
         {
@@ -168,9 +168,9 @@ namespace Ludots.Tests.GAS
             That(merged[0].Id, Is.EqualTo("Poison"));
         }
 
-        // ══════════════════════════════════════════════════════════════════�?
-        // Scenario 5: DeepObject merge �?mod adds a new clock field
-        // ══════════════════════════════════════════════════════════════════�?
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
+        // Scenario 5: DeepObject merge 鈥?mod adds a new clock field
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
         [Test]
         public void Scenario_DeepObjectMerge_ModAddsField()
         {
@@ -190,10 +190,10 @@ namespace Ludots.Tests.GAS
             That(merged["mode"]?.GetValue<string>(), Is.EqualTo("Auto"), "Core field preserved");
         }
 
-        // ══════════════════════════════════════════════════════════════════�?
-        // Scenario 6: Three-mod layering �?priority ordering
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
+        // Scenario 6: Three-mod layering 鈥?priority ordering
         // ModB overrides ModA which overrides Core.
-        // ══════════════════════════════════════════════════════════════════�?
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
         [Test]
         public void Scenario_ThreeModLayering_LastModWins()
         {
@@ -216,9 +216,9 @@ namespace Ludots.Tests.GAS
             That(merged[0].Node["splash"]?.GetValue<bool>(), Is.True, "ModB field added");
         }
 
-        // ══════════════════════════════════════════════════════════════════�?
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
         // Scenario 7: ConflictReport records all fragment sources and winners
-        // ══════════════════════════════════════════════════════════════════�?
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
         [Test]
         public void Scenario_ConflictReport_RecordsFragmentsAndWinners()
         {
@@ -241,16 +241,16 @@ namespace Ludots.Tests.GAS
             That(fragments.Count, Is.GreaterThanOrEqualTo(2), "Should record at least Core + ModA fragments");
         }
 
-        // ══════════════════════════════════════════════════════════════════�?
-        // Scenario 8: Single source �?Core only, no mods
-        // ══════════════════════════════════════════════════════════════════�?
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
+        // Scenario 8: Single source 鈥?Core only, no mods
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
         [Test]
         public void Scenario_SingleSource_CoreOnly()
         {
             WriteFile("Core", "config_catalog.json",
                 @"[{ ""Path"": ""GAS/abilities.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
             WriteFile("Core", "GAS/abilities.json",
-                @"[{ ""id"": ""Slash"", ""cooldown"": 5 }, { ""id"": ""Heal"", ""cooldown"": 10 }]");
+                @"[{ ""id"": ""Slash"", ""rangeCm"": 500 }, { ""id"": ""Heal"", ""rangeCm"": 700 }]");
 
             var (_, _, pipeline, catalog) = BuildPipeline(_root);
             var entry = ConfigPipeline.RequireEntry(catalog, "GAS/abilities.json", ConfigMergePolicy.ArrayById, "id");
@@ -261,9 +261,9 @@ namespace Ludots.Tests.GAS
             That(merged[1].Id, Is.EqualTo("Heal"));
         }
 
-        // ══════════════════════════════════════════════════════════════════�?
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
         // Scenario 9: missing catalog entry is a configuration error
-        // ══════════════════════════════════════════════════════════════════�?
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
         [Test]
         public void Scenario_RequireEntry_ThrowsWhenNotInCatalog()
         {
@@ -278,9 +278,9 @@ namespace Ludots.Tests.GAS
             That(ex.Message, Does.Contain("Custom/my_config.json"));
         }
 
-        // ══════════════════════════════════════════════════════════════════�?
-        // Scenario 10: DeepObject �?attribute constraints merge from multiple mods
-        // ══════════════════════════════════════════════════════════════════�?
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
+        // Scenario 10: DeepObject 鈥?attribute constraints merge from multiple mods
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
         [Test]
         public void Scenario_DeepObject_AttributeConstraints_MultiMod()
         {
@@ -306,9 +306,9 @@ namespace Ludots.Tests.GAS
             That(mana["max"]?.GetValue<int>(), Is.EqualTo(500));
         }
 
-        // ══════════════════════════════════════════════════════════════════�?
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
         // Scenario 11: Mod re-adds a previously deleted entry
-        // ══════════════════════════════════════════════════════════════════�?
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
         [Test]
         public void Scenario_ModReAddsDeletedEntry()
         {
@@ -333,9 +333,9 @@ namespace Ludots.Tests.GAS
             That(merged[0].Node["type"]?.GetValue<string>(), Is.EqualTo("holy"), "New field from ModB");
         }
 
-        // ══════════════════════════════════════════════════════════════════�?
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
         // Scenario 12: PresetTypeLoader via ConfigPipeline (full integration)
-        // ══════════════════════════════════════════════════════════════════�?
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
         [Test]
         public void Scenario_PresetTypeLoader_LoadsViaPipeline()
         {
@@ -370,9 +370,9 @@ namespace Ludots.Tests.GAS
             That(def.HasComponent(ComponentFlags.PhaseGraphBindings), Is.True, "ModA component added");
         }
 
-        // ══════════════════════════════════════════════════════════════════�?
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
         // Scenario 13: GasClockConfig DeepObject merge
-        // ══════════════════════════════════════════════════════════════════�?
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
         [Test]
         public void Scenario_GasClockConfig_LoadsViaPipeline()
         {
@@ -391,9 +391,9 @@ namespace Ludots.Tests.GAS
             That(config.Mode, Is.EqualTo(GasStepMode.Auto), "Core mode preserved");
         }
 
-        // ══════════════════════════════════════════════════════════════════�?
-        // Scenario 14: Empty mod fragment �?no crash, Core preserved
-        // ══════════════════════════════════════════════════════════════════�?
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
+        // Scenario 14: Empty mod fragment 鈥?no crash, Core preserved
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
         [Test]
         public void Scenario_EmptyModFragment_CorePreserved()
         {
@@ -411,9 +411,9 @@ namespace Ludots.Tests.GAS
             That(merged[0].Node["damage"]?.GetValue<int>(), Is.EqualTo(100));
         }
 
-        // ══════════════════════════════════════════════════════════════════�?
-        // Scenario 15: No config file exists anywhere �?empty result
-        // ══════════════════════════════════════════════════════════════════�?
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
+        // Scenario 15: No config file exists anywhere 鈥?empty result
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
         [Test]
         public void Scenario_NoConfigExists_EmptyResult()
         {
@@ -427,9 +427,9 @@ namespace Ludots.Tests.GAS
             That(merged.Count, Is.EqualTo(0));
         }
 
-        // ══════════════════════════════════════════════════════════════════�?
-        // Scenario 16: Performer definition with numeric ID �?ArrayById merge
-        // ══════════════════════════════════════════════════════════════════�?
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
+        // Scenario 16: Performer definition with numeric ID 鈥?ArrayById merge
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
         [Test]
         public void Scenario_PerformerDefinition_NumericId_MergesCorrectly()
         {
@@ -454,9 +454,9 @@ namespace Ludots.Tests.GAS
             That(merged[1].Node["defaultLifetime"]?.GetValue<float>(), Is.EqualTo(2.0f).Within(0.01f));
         }
 
-        // ══════════════════════════════════════════════════════════════════�?
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
         // Scenario 17: MergeArrayByIdToEntries preserves insertion order
-        // ══════════════════════════════════════════════════════════════════�?
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
         [Test]
         public void Scenario_InsertionOrder_Preserved()
         {
@@ -475,9 +475,9 @@ namespace Ludots.Tests.GAS
             That(merged[2].Id, Is.EqualTo("B"));
         }
 
-        // ══════════════════════════════════════════════════════════════════�?
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
         // Scenario 18: Case-sensitive ID matching
-        // ══════════════════════════════════════════════════════════════════�?
+        // 鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺愨晲鈺?
         [Test]
         public void Scenario_CaseSensitiveId_KeepsDistinctEntries()
         {

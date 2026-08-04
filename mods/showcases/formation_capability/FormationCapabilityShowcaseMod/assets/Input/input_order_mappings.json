@@ -6,20 +6,27 @@
       "actorCollectionKey": "collection.command.source",
       "trigger": "PressedThisFrame",
       "orderTypeKey": "massNavigationMove",
-      "argsTemplate": {},
       "requireTarget": true,
       "targetType": "Position",
-      "isSkillMapping": false,
-      "modifierBehavior": "QueueOnModifier"
+      "modifierBehavior": "QueueOnModifier",
+      "orderPayload": {
+        "kind": "MoveToWorldCm"
+      },
+      "targetLayoutProfileId": "layout.move.grid"
     }
   ],
-  "groupMoveTargetLayout": {
-    "mode": "Grid",
-    "spacingCm": 1800,
-    "orderTypeKeys": [ "massNavigationMove" ]
-  },
   "userOverrides": {
     "enabled": false,
     "persistPath": ""
-  }
+  },
+  "targetLayoutProfiles": [
+    {
+      "id": "layout.move.grid",
+      "mode": "Grid",
+      "spacingCm": 1800,
+      "orderTypeKeys": [
+        "massNavigationMove"
+      ]
+    }
+  ]
 }

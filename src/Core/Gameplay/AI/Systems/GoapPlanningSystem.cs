@@ -46,6 +46,7 @@ namespace Ludots.Core.Gameplay.AI.Systems
             public void Update(ref AIAgent agent, ref AIWorldState256 worldState, ref AIGoalSelection selection, ref AIPlanningState planning, ref AIPlan32 plan)
             {
                 if (selection.ActivePlanningStrategyId != AIPlanningStrategyIds.Goap) return;
+                if (plan.IsWaitingForOrder) return;
 
                 bool dirty = worldState.Version != planning.LastWorldStateVersion
                           || selection.ActiveGoalPresetId != planning.LastGoalPresetId
@@ -75,4 +76,3 @@ namespace Ludots.Core.Gameplay.AI.Systems
         }
     }
 }
-

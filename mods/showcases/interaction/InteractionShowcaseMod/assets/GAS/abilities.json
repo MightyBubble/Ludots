@@ -4,12 +4,7 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        {
-          "kind": "TagClip",
-          "tick": 0,
-          "duration": 36,
-          "tag": "Cooldown.Arcweaver.Q"
-        },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Arcweaver.Q", "dispatchTarget": "Source" },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -32,12 +27,7 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        {
-          "kind": "TagClip",
-          "tick": 0,
-          "duration": 90,
-          "tag": "Cooldown.Arcweaver.W"
-        },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Arcweaver.W", "dispatchTarget": "Source" },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -51,6 +41,7 @@
     },
     "targeting": {
       "castRangeCm": 520,
+      "allowMoveChase": true,
       "impactEffect": "Effect.Interaction.BlinkStep"
     },
     "blockTags": {
@@ -64,12 +55,7 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        {
-          "kind": "TagClip",
-          "tick": 0,
-          "duration": 48,
-          "tag": "Cooldown.Arcweaver.E"
-        },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Arcweaver.E", "dispatchTarget": "Source" },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -83,6 +69,7 @@
     },
     "targeting": {
       "castRangeCm": 760,
+      "allowMoveChase": true,
       "impactEffect": "Effect.Interaction.FireLance"
     },
     "blockTags": {
@@ -96,12 +83,7 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        {
-          "kind": "TagClip",
-          "tick": 0,
-          "duration": 120,
-          "tag": "Cooldown.Arcweaver.R"
-        },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Arcweaver.R", "dispatchTarget": "Source" },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -116,6 +98,7 @@
     },
     "targeting": {
       "castRangeCm": 0,
+      "allowMoveChase": true,
       "impactEffect": "Effect.Interaction.NovaPulse"
     },
     "blockTags": {
@@ -129,12 +112,7 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        {
-          "kind": "TagClip",
-          "tick": 0,
-          "duration": 72,
-          "tag": "Cooldown.Arcweaver.Z"
-        },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Arcweaver.Z", "dispatchTarget": "Source" },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -148,6 +126,7 @@
     },
     "targeting": {
       "castRangeCm": 360,
+      "allowMoveChase": true,
       "impactEffect": "Effect.Interaction.ArcDash"
     },
     "blockTags": {
@@ -161,12 +140,7 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        {
-          "kind": "TagClip",
-          "tick": 0,
-          "duration": 12,
-          "tag": "Cooldown.Arcweaver.F"
-        },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Arcweaver.F", "dispatchTarget": "Source" },
         {
           "kind": "End",
           "tick": 0
@@ -216,12 +190,7 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        {
-          "kind": "TagClip",
-          "tick": 0,
-          "duration": 150,
-          "tag": "Cooldown.Arcweaver.Rune"
-        },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Arcweaver.Rune", "dispatchTarget": "Source" },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -235,6 +204,7 @@
     },
     "targeting": {
       "castRangeCm": 780,
+      "allowMoveChase": true,
       "impactEffect": "Effect.Interaction.RuneBurst"
     },
     "blockTags": {
@@ -248,12 +218,7 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        {
-          "kind": "TagClip",
-          "tick": 0,
-          "duration": 30,
-          "tag": "Cooldown.Vanguard.Q"
-        },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Vanguard.Q", "dispatchTarget": "Source" },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -276,12 +241,7 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        {
-          "kind": "TagClip",
-          "tick": 0,
-          "duration": 90,
-          "tag": "Cooldown.Vanguard.W"
-        },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Vanguard.W", "dispatchTarget": "Source" },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -295,6 +255,7 @@
     },
     "targeting": {
       "castRangeCm": 440,
+      "allowMoveChase": true,
       "impactEffect": "Effect.Interaction.BannerLeap"
     },
     "blockTags": {
@@ -308,12 +269,7 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        {
-          "kind": "TagClip",
-          "tick": 0,
-          "duration": 42,
-          "tag": "Cooldown.Vanguard.E"
-        },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Vanguard.E", "dispatchTarget": "Source" },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -327,6 +283,7 @@
     },
     "targeting": {
       "castRangeCm": 360,
+      "allowMoveChase": true,
       "impactEffect": "Effect.Interaction.CleaveCone"
     },
     "blockTags": {
@@ -340,12 +297,7 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        {
-          "kind": "TagClip",
-          "tick": 0,
-          "duration": 100,
-          "tag": "Cooldown.Vanguard.R"
-        },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Vanguard.R", "dispatchTarget": "Source" },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -360,6 +312,7 @@
     },
     "targeting": {
       "castRangeCm": 0,
+      "allowMoveChase": true,
       "impactEffect": "Effect.Interaction.Shockwave"
     },
     "blockTags": {
@@ -373,12 +326,7 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        {
-          "kind": "TagClip",
-          "tick": 0,
-          "duration": 60,
-          "tag": "Cooldown.Vanguard.Z"
-        },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Vanguard.Z", "dispatchTarget": "Source" },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -392,6 +340,7 @@
     },
     "targeting": {
       "castRangeCm": 300,
+      "allowMoveChase": true,
       "impactEffect": "Effect.Interaction.ChargeDash"
     },
     "blockTags": {
@@ -405,12 +354,7 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        {
-          "kind": "TagClip",
-          "tick": 0,
-          "duration": 12,
-          "tag": "Cooldown.Vanguard.F"
-        },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Vanguard.F", "dispatchTarget": "Source" },
         {
           "kind": "End",
           "tick": 0
@@ -455,12 +399,7 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        {
-          "kind": "TagClip",
-          "tick": 0,
-          "duration": 120,
-          "tag": "Cooldown.Vanguard.Rune"
-        },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Vanguard.Rune", "dispatchTarget": "Source" },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -474,6 +413,7 @@
     },
     "targeting": {
       "castRangeCm": 520,
+      "allowMoveChase": true,
       "impactEffect": "Effect.Interaction.GroundSlam"
     },
     "blockTags": {
@@ -487,12 +427,7 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        {
-          "kind": "TagClip",
-          "tick": 0,
-          "duration": 36,
-          "tag": "Cooldown.Commander.Q"
-        },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Commander.Q", "dispatchTarget": "Source" },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -515,12 +450,7 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        {
-          "kind": "TagClip",
-          "tick": 0,
-          "duration": 80,
-          "tag": "Cooldown.Commander.W"
-        },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Commander.W", "dispatchTarget": "Source" },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -534,6 +464,7 @@
     },
     "targeting": {
       "castRangeCm": 560,
+      "allowMoveChase": true,
       "impactEffect": "Effect.Interaction.TacticalJump"
     },
     "blockTags": {
@@ -547,12 +478,7 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        {
-          "kind": "TagClip",
-          "tick": 0,
-          "duration": 48,
-          "tag": "Cooldown.Commander.E"
-        },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Commander.E", "dispatchTarget": "Source" },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -566,6 +492,7 @@
     },
     "targeting": {
       "castRangeCm": 720,
+      "allowMoveChase": true,
       "impactEffect": "Effect.Interaction.VolleyLine"
     },
     "blockTags": {
@@ -579,12 +506,7 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        {
-          "kind": "TagClip",
-          "tick": 0,
-          "duration": 120,
-          "tag": "Cooldown.Commander.R"
-        },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Commander.R", "dispatchTarget": "Source" },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -607,12 +529,7 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        {
-          "kind": "TagClip",
-          "tick": 0,
-          "duration": 64,
-          "tag": "Cooldown.Commander.Z"
-        },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Commander.Z", "dispatchTarget": "Source" },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -626,6 +543,7 @@
     },
     "targeting": {
       "castRangeCm": 320,
+      "allowMoveChase": true,
       "impactEffect": "Effect.Interaction.ThrustJump"
     },
     "blockTags": {
@@ -639,12 +557,7 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        {
-          "kind": "TagClip",
-          "tick": 0,
-          "duration": 12,
-          "tag": "Cooldown.Commander.F"
-        },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Commander.F", "dispatchTarget": "Source" },
         {
           "kind": "End",
           "tick": 0
@@ -689,12 +602,7 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        {
-          "kind": "TagClip",
-          "tick": 0,
-          "duration": 180,
-          "tag": "Cooldown.Commander.Rune"
-        },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Commander.Rune", "dispatchTarget": "Source" },
         {
           "kind": "EffectSignal",
           "tick": 0,
@@ -708,6 +616,7 @@
     },
     "targeting": {
       "castRangeCm": 820,
+      "allowMoveChase": true,
       "impactEffect": "Effect.Interaction.OrbitalStrike"
     },
     "blockTags": {
@@ -721,12 +630,7 @@
     "exec": {
       "clockId": "FixedFrame",
       "items": [
-        {
-          "kind": "TagClip",
-          "tick": 0,
-          "duration": 30,
-          "tag": "Cooldown.Stress.Fireball"
-        },
+        { "kind": "EffectSignal", "tick": 0, "template": "Effect.Interaction.Lockout.Stress.Fireball", "dispatchTarget": "Source" },
         {
           "kind": "EffectSignal",
           "tick": 0,

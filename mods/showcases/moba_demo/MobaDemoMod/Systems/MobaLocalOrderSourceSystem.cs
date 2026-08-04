@@ -38,9 +38,7 @@ namespace MobaDemoMod.Systems
         private readonly Dictionary<string, object> _globals;
         private readonly OrderQueue _orders;
         private readonly IModContext _ctx;
-        private readonly int _castAbilityOrderTypeId;
-        private readonly int _moveToOrderTypeId;
-        private readonly int _stopOrderTypeId;
+        private readonly OrderTypeRegistry _orderTypeRegistry;
         private readonly EntityCollectionStore _entityCollections;
         private readonly PlayerEntityLookup _playerEntities;
         private readonly ControlDomainQuery _controlDomains;
@@ -60,9 +58,6 @@ namespace MobaDemoMod.Systems
             
             if (_globals.TryGetValue(CoreServiceKeys.GameConfig.Name, out var configObj) && configObj is GameConfig config)
             {
-                _castAbilityOrderTypeId = config.Constants.OrderTypeIds["castAbility"];
-                _moveToOrderTypeId = config.Constants.OrderTypeIds["moveTo"];
-                _stopOrderTypeId = config.Constants.OrderTypeIds["stop"];
                 GasRuntimeCapacityConfig capacity = config.GasRuntimeCapacity
                     ?? throw new InvalidOperationException(
                         "MobaLocalOrderSourceSystem requires GameConfig.gasRuntimeCapacity.");
@@ -97,6 +92,11 @@ namespace MobaDemoMod.Systems
                     ? controlDomains
                     : throw new InvalidOperationException(
                         $"{nameof(MobaLocalOrderSourceSystem)} requires {CoreServiceKeys.ControlDomainQuery.Name} to be registered.");
+            _orderTypeRegistry = _globals.TryGetValue(CoreServiceKeys.OrderTypeRegistry.Name, out object? orderTypesObj) &&
+                orderTypesObj is OrderTypeRegistry orderTypes
+                    ? orderTypes
+                    : throw new InvalidOperationException(
+                        $"{nameof(MobaLocalOrderSourceSystem)} requires {CoreServiceKeys.OrderTypeRegistry.Name} to validate input order payload contracts.");
         }
 
         public void Initialize() { }
@@ -119,15 +119,9 @@ namespace MobaDemoMod.Systems
             _inputOrderMapping.CancelActionId = bindings.CancelActionId;
             _inputOrderMapping.CommandActionId = bindings.CommandActionId;
             
-            // Order type key resolver
-            _inputOrderMapping.SetOrderTypeKeyResolver(key => key switch
-            {
-                "castAbility" => _castAbilityOrderTypeId,
-                "moveTo" => _moveToOrderTypeId,
-                "stop" => _stopOrderTypeId,
-                _ => throw new InvalidOperationException(
-                    $"[{_ctx.ModId}] input_order_mappings.json references unknown orderTypeKey '{key}'.")
-            });
+            _inputOrderMapping.SetOrderTypeRegistry(
+                _orderTypeRegistry,
+                $"{_ctx.ModId}:assets/Input/input_order_mappings.json");
             
             // Ground position provider
             _inputOrderMapping.SetGroundPositionProvider((out Vector3 worldCm) =>
@@ -172,7 +166,7 @@ namespace MobaDemoMod.Systems
             });
             
             // Order submit handler
-            // Visual feedback (markers, cooldown text) is handled by Core PerformerRuleSystem
+            // Visual feedback (markers, lockout text) is handled by Core PerformerRuleSystem
             // via GAS -> PresentationEvent bridge; no mod-level marker logic needed.
             _inputOrderMapping.SetOrderSubmitHandler((in Order order) =>
             {

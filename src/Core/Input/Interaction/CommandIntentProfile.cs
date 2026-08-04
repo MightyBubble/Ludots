@@ -107,6 +107,7 @@ namespace Ludots.Core.Input.Interaction
         public string HasAbilityWithTag { get; set; }
         public List<string> AllTags { get; set; }
         public List<string> AnyTags { get; set; }
+        public List<string> BlockedAnyTags { get; set; }
     }
 
     /// <summary>

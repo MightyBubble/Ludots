@@ -6,6 +6,7 @@ using Arch.Core;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Input;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Systems;
@@ -112,31 +113,24 @@ namespace Ludots.Tests.GAS
                     world.Add(listenerEntity, listener);
                 }
 
-                var abilityFirebolt = world.Create();
-                world.Add(abilityFirebolt, new AbilityTemplate());
-                world.Add(abilityFirebolt, new AbilityOnActivateEffects());
-                world.Add(abilityFirebolt, new AbilityExecSpec());
-                unsafe
-                {
-                    ref var onActivate = ref world.Get<AbilityOnActivateEffects>(abilityFirebolt);
-                    onActivate.Add(tplFirebolt);
-                }
-
-                var abilityHeal = world.Create();
-                world.Add(abilityHeal, new AbilityTemplate());
-                world.Add(abilityHeal, new AbilityOnActivateEffects());
-                world.Add(abilityHeal, new AbilityExecSpec());
-                unsafe
-                {
-                    ref var onActivate = ref world.Get<AbilityOnActivateEffects>(abilityHeal);
-                    onActivate.Add(tplHeal);
-                }
-
-                var player = world.Create(new AbilityStateBuffer(), new AttributeBuffer(), new DirtyFlags());
-                ref var playerAbilities = ref world.Get<AbilityStateBuffer>(player);
                 var abilityDefs = new AbilityDefinitionRegistry();
-                abilityDefs.RegisterFromEntity(world, abilityFirebolt, 6001);
-                abilityDefs.RegisterFromEntity(world, abilityHeal, 6002);
+                abilityDefs.Register(6001, new AbilityDefinition
+                {
+                    ExecSpec = CreateEffectSignalSpec(tplFirebolt, ExecEffectDispatchTarget.Target)
+                });
+                abilityDefs.Register(6002, new AbilityDefinition
+                {
+                    ExecSpec = CreateEffectSignalSpec(tplHeal, ExecEffectDispatchTarget.Target)
+                });
+
+                var player = world.Create(
+                    OrderBuffer.CreateEmpty(),
+                    new BlackboardIntBuffer(),
+                    new BlackboardEntityBuffer(),
+                    new AbilityStateBuffer(),
+                    new AttributeBuffer(),
+                    new DirtyFlags());
+                ref var playerAbilities = ref world.Get<AbilityStateBuffer>(player);
                 playerAbilities.AddAbility(6001);
                 playerAbilities.AddAbility(6002);
                 world.Get<AttributeBuffer>(player).SetBase(attrHealth, 100f);
@@ -147,7 +141,20 @@ namespace Ludots.Tests.GAS
                 world.Get<AttributeBuffer>(goblinB).SetBase(attrHealth, 100f);
 
                 var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
-                var abilitySystem = new AbilitySystem(world, requests, abilityDefs, tagOps);
+                const int castAbilityOrderTypeId = 100;
+                var terminalResults = new OrderTerminalResultBuffer(capacity: 64);
+                var orderTypes = CreateCastOrderTypes(castAbilityOrderTypeId, terminalResults);
+                var abilityExecSystem = new AbilityExecSystem(
+                    world,
+                    clock,
+                    new InputRequestQueue(),
+                    new InputResponseBuffer(),
+                    requests,
+                    snapshotCapacity: 16,
+                    abilityDefinitions: abilityDefs,
+                    castAbilityOrderTypeId: castAbilityOrderTypeId,
+                    orderTypeRegistry: orderTypes,
+                    tagOps: tagOps);
                 var processing = new EffectProcessingLoopSystem(
                     world,
                     requests,
@@ -157,8 +164,8 @@ namespace Ludots.Tests.GAS
                     GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
                     budget,
                     templates,
-                    null,
-                    null,
+                    new InputRequestQueue(),
+                    new OrderQueue(4, new OrderAdmissionResultBuffer(4, 4)),
                     new ResponseChainTelemetryBuffer(),
                     new OrderRequestQueue(),
                     responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
@@ -187,17 +194,41 @@ namespace Ludots.Tests.GAS
                     if (frame == 0)
                     {
                         sb.AppendLine("[MUD] 你对哥布林A释放【火矢】。");
-                        abilitySystem.TryActivateAbility(player, slotIndex: 0, explicitTarget: goblinA);
+                        SubmitAndRunCast(
+                            world,
+                            abilityExecSystem,
+                            terminalResults,
+                            player,
+                            goblinA,
+                            castAbilityOrderTypeId,
+                            slotIndex: 0,
+                            orderId: 1);
                     }
                     else if (frame == 1)
                     {
                         sb.AppendLine("[MUD] 哥布林B冲上来，你对自己释放【治疗】。");
-                        abilitySystem.TryActivateAbility(player, slotIndex: 1, explicitTarget: player);
+                        SubmitAndRunCast(
+                            world,
+                            abilityExecSystem,
+                            terminalResults,
+                            player,
+                            player,
+                            castAbilityOrderTypeId,
+                            slotIndex: 1,
+                            orderId: 2);
                     }
                     else if (frame == 2)
                     {
                         sb.AppendLine("[MUD] 你对哥布林B释放【火矢】。");
-                        abilitySystem.TryActivateAbility(player, slotIndex: 0, explicitTarget: goblinB);
+                        SubmitAndRunCast(
+                            world,
+                            abilityExecSystem,
+                            terminalResults,
+                            player,
+                            goblinB,
+                            castAbilityOrderTypeId,
+                            slotIndex: 0,
+                            orderId: 3);
                     }
 
                     processing.Update(dt);
@@ -298,15 +329,11 @@ namespace Ludots.Tests.GAS
                     world.Add(listenerEntity, listener);
                 }
 
-                var abilityVolley = world.Create();
-                world.Add(abilityVolley, new AbilityTemplate());
-                world.Add(abilityVolley, new AbilityOnActivateEffects());
-                world.Add(abilityVolley, new AbilityExecSpec());
-                unsafe
+                var abilityDefs = new AbilityDefinitionRegistry();
+                abilityDefs.Register(7001, new AbilityDefinition
                 {
-                    ref var onActivate = ref world.Get<AbilityOnActivateEffects>(abilityVolley);
-                    onActivate.Add(tplVolleyHit);
-                }
+                    ExecSpec = CreateEffectSignalSpec(tplVolleyHit, ExecEffectDispatchTarget.Target)
+                });
 
                 int targetsCount = 2000;
                 var targets = new Entity[targetsCount];
@@ -317,14 +344,29 @@ namespace Ludots.Tests.GAS
                     attr.SetBase(attrHealth, 1000f);
                 }
 
-                var player = world.Create(new AbilityStateBuffer());
+                var player = world.Create(
+                    OrderBuffer.CreateEmpty(),
+                    new BlackboardIntBuffer(),
+                    new BlackboardEntityBuffer(),
+                    new AbilityStateBuffer());
                 ref var abilities = ref world.Get<AbilityStateBuffer>(player);
-                var abilityDefs = new AbilityDefinitionRegistry();
-                abilityDefs.RegisterFromEntity(world, abilityVolley, 7001);
                 abilities.AddAbility(7001);
 
                 var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
-                var abilitySystem = new AbilitySystem(world, requests, abilityDefs, tagOps);
+                const int castAbilityOrderTypeId = 100;
+                var terminalResults = new OrderTerminalResultBuffer(capacity: 64);
+                var orderTypes = CreateCastOrderTypes(castAbilityOrderTypeId, terminalResults);
+                var abilityExecSystem = new AbilityExecSystem(
+                    world,
+                    clock,
+                    new InputRequestQueue(),
+                    new InputResponseBuffer(),
+                    requests,
+                    snapshotCapacity: 16,
+                    abilityDefinitions: abilityDefs,
+                    castAbilityOrderTypeId: castAbilityOrderTypeId,
+                    orderTypeRegistry: orderTypes,
+                    tagOps: tagOps);
                 var processing = new EffectProcessingLoopSystem(
                     world,
                     requests,
@@ -334,8 +376,8 @@ namespace Ludots.Tests.GAS
                     GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
                     budget,
                     templates,
-                    null,
-                    null,
+                    new InputRequestQueue(),
+                    new OrderQueue(4, new OrderAdmissionResultBuffer(4, 4)),
                     new ResponseChainTelemetryBuffer(),
                     new OrderRequestQueue(),
                     responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
@@ -345,11 +387,19 @@ namespace Ludots.Tests.GAS
                 };
 
                 float dt = 1f;
-                var args = new AbilitySystem.AbilityActivationArgs(targetEntities: targets);
+                int nextOrderId = 1;
 
                 for (int i = 0; i < 2; i++)
                 {
-                    abilitySystem.TryActivateAbility(player, 0, in args);
+                    SubmitCastForTargets(
+                        world,
+                        abilityExecSystem,
+                        terminalResults,
+                        player,
+                        targets,
+                        castAbilityOrderTypeId,
+                        slotIndex: 0,
+                        ref nextOrderId);
                     processing.Update(dt);
                     clocks.AdvanceFixedFrame();
                     clocks.AdvanceStep();
@@ -382,7 +432,15 @@ namespace Ludots.Tests.GAS
                     ticksAdvance += Stopwatch.GetTimestamp() - t0;
 
                     t0 = Stopwatch.GetTimestamp();
-                    abilitySystem.TryActivateAbility(player, 0, in args);
+                    SubmitCastForTargets(
+                        world,
+                        abilityExecSystem,
+                        terminalResults,
+                        player,
+                        targets,
+                        castAbilityOrderTypeId,
+                        slotIndex: 0,
+                        ref nextOrderId);
                     ticksActivate += Stopwatch.GetTimestamp() - t0;
 
                     t0 = Stopwatch.GetTimestamp();
@@ -419,6 +477,90 @@ namespace Ludots.Tests.GAS
             {
                 world.Dispose();
             }
+        }
+
+        private static AbilityExecSpec CreateEffectSignalSpec(int templateId, ExecEffectDispatchTarget dispatchTarget)
+        {
+            var spec = default(AbilityExecSpec);
+            spec.ClockId = GasClockId.FixedFrame;
+            spec.SetItem(
+                0,
+                ExecItemKind.EffectSignal,
+                tick: 0,
+                templateId: templateId,
+                payloadA: (int)dispatchTarget);
+            spec.SetItem(1, ExecItemKind.End, tick: 0);
+            return spec;
+        }
+
+        private static OrderTypeRegistry CreateCastOrderTypes(
+            int castAbilityOrderTypeId,
+            OrderTerminalResultBuffer terminalResults)
+        {
+            var orderTypes = new OrderTypeRegistry(terminalResults);
+            orderTypes.Register(new OrderTypeConfig
+            {
+                OrderTypeId = castAbilityOrderTypeId,
+                IntArg0BlackboardKey = OrderBlackboardKeys.Cast_SlotIndex,
+                EntityBlackboardKey = OrderBlackboardKeys.Cast_TargetEntity,
+                SpatialBlackboardKey = -1,
+            });
+            return orderTypes;
+        }
+
+        private static void SubmitCastForTargets(
+            World world,
+            AbilityExecSystem abilityExecSystem,
+            OrderTerminalResultBuffer terminalResults,
+            Entity actor,
+            Entity[] targets,
+            int castAbilityOrderTypeId,
+            int slotIndex,
+            ref int nextOrderId)
+        {
+            for (int i = 0; i < targets.Length; i++)
+            {
+                SubmitAndRunCast(
+                    world,
+                    abilityExecSystem,
+                    terminalResults,
+                    actor,
+                    targets[i],
+                    castAbilityOrderTypeId,
+                    slotIndex,
+                    nextOrderId++);
+            }
+        }
+
+        private static void SubmitAndRunCast(
+            World world,
+            AbilityExecSystem abilityExecSystem,
+            OrderTerminalResultBuffer terminalResults,
+            Entity actor,
+            Entity target,
+            int castAbilityOrderTypeId,
+            int slotIndex,
+            int orderId)
+        {
+            terminalResults.Clear();
+            var order = OrderBuilder.CreateCastAbility(
+                castAbilityOrderTypeId,
+                playerId: 0,
+                actor,
+                target,
+                Entity.Null,
+                slotIndex,
+                OrderSubmitMode.Immediate,
+                submitStep: 0);
+            order.OrderId = orderId;
+            world.Get<OrderBuffer>(actor).SetActiveDirect(in order, priority: 100);
+            world.Get<BlackboardIntBuffer>(actor).Set(OrderBlackboardKeys.Cast_SlotIndex, slotIndex);
+            world.Get<BlackboardEntityBuffer>(actor).Set(OrderBlackboardKeys.Cast_TargetEntity, target);
+            abilityExecSystem.Update(0f);
+
+            That(terminalResults.Count, Is.EqualTo(1));
+            That(terminalResults[0].OrderId, Is.EqualTo(orderId));
+            That(terminalResults[0].State, Is.EqualTo(OrderTerminalState.Completed));
         }
 
         private static int ResolveAttributeId(string name)

@@ -54,14 +54,14 @@
     },
     {
       "id": "ability",
-      "title": "AbilitySystem",
+      "title": "AbilityExecSystem",
       "tint": "clay",
       "x": 280,
       "y": 330,
       "w": 300,
       "h": 110,
       "items": [
-        "能力定义 / 激活 / 执行"
+        "Order 接纳 / 时间线执行"
       ]
     },
     {

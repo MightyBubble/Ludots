@@ -2,24 +2,8 @@ using System.Collections.Generic;
 using Arch.Core;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Gameplay.GAS.Components;
-using Ludots.Core.Input.Orders;
-
 namespace Ludots.Core.Gameplay.GAS
 {
-    public struct AbilityInputBindingOverride
-    {
-        public bool HasTrigger;
-        public InputTriggerType Trigger;
-        public bool HasHeldPolicy;
-        public HeldPolicy HeldPolicy;
-        public bool HasCastModeOverride;
-        public InteractionModeType CastModeOverride;
-        public bool HasAutoTargetPolicy;
-        public AutoTargetPolicy AutoTargetPolicy;
-        public bool HasAutoTargetRangeCm;
-        public int AutoTargetRangeCm;
-    }
-
     public sealed class AbilityPresentationConfig
     {
         public string DisplayName { get; init; } = string.Empty;
@@ -90,6 +74,7 @@ namespace Ludots.Core.Gameplay.GAS
     {
         public float CastRangeCm;
         public int ImpactEffectTemplateId;
+        public bool AllowMoveChase;
     }
 
     /// <summary>
@@ -124,10 +109,6 @@ namespace Ludots.Core.Gameplay.GAS
         public AbilityExecCallerParamsPool ExecCallerParamsPool;
         public bool HasExecCallerParamsPool;
 
-        public AbilityOnActivateEffects OnActivateEffects;
-        public bool HasOnActivateEffects;
-        public AbilityCooldown Cooldown;
-        public bool HasCooldown;
         public AbilityActivationBlockTags ActivationBlockTags;
         public bool HasActivationBlockTags;
         public AbilityActivationPrecondition ActivationPrecondition;
@@ -142,8 +123,6 @@ namespace Ludots.Core.Gameplay.GAS
         public AbilityTargetingConfig Targeting;
         public bool HasPresentation;
         public AbilityPresentationConfig? Presentation;
-        public bool HasInputBindingOverride;
-        public AbilityInputBindingOverride InputBindingOverride;
 
         public int UseProgressionRequirementId;
         public bool HasUseProgressionRequirement;
@@ -277,8 +256,6 @@ namespace Ludots.Core.Gameplay.GAS
 
             var def = new AbilityDefinition
             {
-                HasOnActivateEffects = world.Has<AbilityOnActivateEffects>(templateEntity),
-                HasCooldown = world.Has<AbilityCooldown>(templateEntity),
                 HasActivationBlockTags = world.Has<AbilityActivationBlockTags>(templateEntity),
                 HasActivationPrecondition = world.Has<AbilityActivationPrecondition>(templateEntity),
                 ExecSpec = world.Get<AbilityExecSpec>(templateEntity)
@@ -290,14 +267,6 @@ namespace Ludots.Core.Gameplay.GAS
                 def.HasExecCallerParamsPool = true;
             }
 
-            if (def.HasOnActivateEffects)
-            {
-                def.OnActivateEffects = world.Get<AbilityOnActivateEffects>(templateEntity);
-            }
-            if (def.HasCooldown)
-            {
-                def.Cooldown = world.Get<AbilityCooldown>(templateEntity);
-            }
             if (def.HasActivationBlockTags)
             {
                 def.ActivationBlockTags = world.Get<AbilityActivationBlockTags>(templateEntity);

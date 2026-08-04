@@ -44,7 +44,7 @@ Down → Execute:
 - **现有基建**: `AbilityFormSetRegistry` + `AbilityFormRoutingSystem` + `AbilityFormSlotBuffer`
 - 配置入口: `GAS/ability_form_sets.json`
 - 路由条件: 继续只用 `requiredAll` / `blockedAny` tag route，不引入平行 condition runtime
-- 生效时序: `AbilityFormRoutingSystem` 在 `SystemGroup.InputCollection` 早期先写 form override，后续 `AbilitySystem` / `AbilityExecSystem` / `ContextScoredOrderResolver` / indicator 都统一走 effective slot
+- 生效时序: `AbilityFormRoutingSystem` 在 `SystemGroup.InputCollection` 早期先写 form override，后续 `AbilityExecSystem` / `ContextScoredOrderResolver` / indicator 都统一走 effective slot
 
 配置示例：
 
