@@ -38,6 +38,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 throw new ArgumentOutOfRangeException(nameof(config), $"OrderTypeId {config.OrderTypeId} exceeds max {MaxOrderTypes}.");
             }
 
+            EnsureCompiledPayloadContract(config);
             _configs[config.OrderTypeId] = config;
             int word = config.OrderTypeId >> 6;
             int bit = config.OrderTypeId & 63;
@@ -45,6 +46,32 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             if (!string.IsNullOrWhiteSpace(config.Key))
             {
                 _idsByKey[config.Key] = config.OrderTypeId;
+            }
+        }
+
+        private static void EnsureCompiledPayloadContract(OrderTypeConfig config)
+        {
+            switch (config.PayloadKind)
+            {
+                case OrderPayloadKind.CastAbility:
+                    if (config.IntArg0BlackboardKey < 0)
+                    {
+                        config.CompileRuntimePayload(OrderPayloadKind.CastAbility, OrderBlackboardKeys.Cast_SlotIndex);
+                    }
+                    break;
+                case OrderPayloadKind.None:
+                case OrderPayloadKind.MoveToWorldCm:
+                case OrderPayloadKind.Stop:
+                case OrderPayloadKind.TargetEntity:
+                    if (config.IntArg0BlackboardKey >= 0)
+                    {
+                        throw new InvalidOperationException(
+                            $"Order type '{config.Key}' payloadKind {config.PayloadKind} must not define a compiled int argument blackboard key.");
+                    }
+                    break;
+                default:
+                    throw new InvalidOperationException(
+                        $"Order type '{config.Key}' has unsupported payloadKind {config.PayloadKind}.");
             }
         }
 

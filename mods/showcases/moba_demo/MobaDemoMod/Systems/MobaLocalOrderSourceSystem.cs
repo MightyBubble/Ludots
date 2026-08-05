@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Numerics;
 using Arch.Core;
 using Arch.System;
@@ -46,6 +47,7 @@ namespace MobaDemoMod.Systems
         
         // Configuration-driven input-order mapping
         private InputOrderMappingSystem? _inputOrderMapping;
+        private IReadOnlyList<TargetLayoutProfileDefinition> _targetLayoutProfiles = Array.Empty<TargetLayoutProfileDefinition>();
         private bool _initialized = false;
         private readonly int _commandIntentScratchCapacity;
 
@@ -111,7 +113,7 @@ namespace MobaDemoMod.Systems
             
             // Load input-order mappings from mod assets via VFS
             var config = LoadInputOrderMappings();
-            _inputOrderMapping = new InputOrderMappingSystem(input, config, _commandIntentScratchCapacity);
+            _inputOrderMapping = new InputOrderMappingSystem(input, config, _commandIntentScratchCapacity, _targetLayoutProfiles);
             _globals[CoreServiceKeys.ActiveInputOrderMapping.Name] = _inputOrderMapping;
             _globals[CoreInputMod.Systems.SkillBarOverlaySystem.SkillBarKeyLabelsKey] = new[] { "Q", "W", "E", "R" };
             var bindings = InteractionActionBindingsResolver.Require(_globals, nameof(MobaLocalOrderSourceSystem));
@@ -397,8 +399,21 @@ namespace MobaDemoMod.Systems
         private InputOrderMappingConfig LoadInputOrderMappings()
         {
             string uri = $"{_ctx.ModId}:assets/Input/input_order_mappings.json";
+            _targetLayoutProfiles = LoadTargetLayoutProfiles();
             using var stream = _ctx.VFS.GetStream(uri);
-            return InputOrderMappingLoader.LoadFromStream(stream);
+            return InputOrderMappingLoader.LoadFromStream(stream, _targetLayoutProfiles, uri);
+        }
+
+        private IReadOnlyList<TargetLayoutProfileDefinition> LoadTargetLayoutProfiles()
+        {
+            string uri = $"{_ctx.ModId}:assets/Input/target_layout_profiles.json";
+            if (!_ctx.VFS.TryResolveFullPath(uri, out var fullPath) || !File.Exists(fullPath))
+            {
+                return Array.Empty<TargetLayoutProfileDefinition>();
+            }
+
+            using var stream = File.OpenRead(fullPath);
+            return InputOrderMappingLoader.LoadTargetLayoutProfilesFromStream(stream, uri).TargetLayoutProfiles;
         }
 
         private static void CheckModeSwitchKeys(IInputActionReader input, InputOrderMappingSystem mapping)

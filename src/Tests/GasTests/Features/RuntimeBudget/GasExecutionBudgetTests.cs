@@ -54,18 +54,6 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
         [TestCase(0)]
         [TestCase(-1)]
         [TestCase(int.MaxValue)]
-        public void GasRuntimeCapacity_RejectsNonFiniteUtilityAiGraphScoreInstructionBudget(int invalidBudget)
-        {
-            var config = CreateValidRuntimeCapacity();
-            config.UtilityAiGraphScoreInstructionBudgetPerThink = invalidBudget;
-
-            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(config.Validate)!;
-            Assert.That(ex.Message, Does.Contain("utilityAiGraphScoreInstructionBudgetPerThink"));
-        }
-
-        [TestCase(0)]
-        [TestCase(-1)]
-        [TestCase(int.MaxValue)]
         public void GasRuntimeCapacity_RejectsNonFiniteInputGraphScoreInstructionBudget(int invalidBudget)
         {
             var config = CreateValidRuntimeCapacity();
@@ -1084,7 +1072,6 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
                 AbilityExecMaxWorkUnitsPerSlice = 32,
                 EffectProcessingMaxWorkUnitsPerSlice = 32,
                 CommandIntentScratchCapacity = 64,
-                UtilityAiGraphScoreInstructionBudgetPerThink = 64,
                 InputGraphScoreInstructionBudgetPerResolve = 64,
             };
         }

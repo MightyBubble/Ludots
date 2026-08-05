@@ -478,7 +478,7 @@ namespace Ludots.Tests.GAS
                     AllowQueuedMode = false,
                     ClearQueueOnActivate = true,
                     CanInterruptSelf = true,
-                    IntArg0BlackboardKey = OrderBlackboardKeys.Cast_SlotIndex,
+                    PayloadKind = OrderPayloadKind.CastAbility,
                     EntityBlackboardKey = OrderBlackboardKeys.Cast_TargetEntity,
                     SpatialBlackboardKey = OrderBlackboardKeys.Cast_TargetPosition,
                 });

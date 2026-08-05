@@ -46,10 +46,44 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         public bool ClearQueueOnActivate { get; set; } = true;
         public int SpatialBlackboardKey { get; set; } = OrderBlackboardKeys.Generic_TargetPosition;
         public int EntityBlackboardKey { get; set; } = OrderBlackboardKeys.Generic_TargetEntity;
-        public int IntArg0BlackboardKey { get; set; } = -1;
+        public int IntArg0BlackboardKey { get; private set; } = -1;
         public OrderPayloadKind PayloadKind { get; set; } = OrderPayloadKind.None;
         public int ValidationGraphId { get; set; }
         public bool InstantComplete { get; set; }
         public BlackboardStoredTargetKeys PersistentStoredTargetKeys { get; set; }
+
+        public OrderTypeConfig UseCastAbilityPayload(
+            int abilitySlotBlackboardKey = OrderBlackboardKeys.Cast_SlotIndex)
+        {
+            if (abilitySlotBlackboardKey < 0)
+            {
+                throw new System.InvalidOperationException(
+                    "OrderTypeConfig CastAbility payload requires a non-negative ability slot blackboard key.");
+            }
+
+            PayloadKind = OrderPayloadKind.CastAbility;
+            IntArg0BlackboardKey = abilitySlotBlackboardKey;
+            return this;
+        }
+
+        internal void CompileRuntimePayload(OrderPayloadKind payloadKind, int intArg0BlackboardKey)
+        {
+            if (payloadKind == OrderPayloadKind.CastAbility)
+            {
+                if (intArg0BlackboardKey < 0)
+                {
+                    throw new System.InvalidOperationException(
+                        "OrderTypeConfig CastAbility payload requires a compiled ability slot blackboard key.");
+                }
+            }
+            else if (intArg0BlackboardKey >= 0)
+            {
+                throw new System.InvalidOperationException(
+                    $"OrderTypeConfig payloadKind {payloadKind} must not compile an IntArg0 blackboard key.");
+            }
+
+            PayloadKind = payloadKind;
+            IntArg0BlackboardKey = intArg0BlackboardKey;
+        }
     }
 }

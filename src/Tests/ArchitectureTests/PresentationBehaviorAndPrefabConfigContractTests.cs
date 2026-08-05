@@ -226,7 +226,6 @@ namespace Ludots.Tests.Architecture
       "clearQueueOnActivate": true,
       "spatialBlackboardKey": "Generic.TargetPosition",
       "entityBlackboardKey": "none",
-      "intArg0BlackboardKey": "none",
       "payloadKind": "MoveToWorldCm",
       "validationGraph": "none",
       "instantComplete": false
@@ -246,7 +245,6 @@ namespace Ludots.Tests.Architecture
       "clearQueueOnActivate": true,
       "spatialBlackboardKey": "Attack.MovePosition",
       "entityBlackboardKey": "Attack.TargetEntity",
-      "intArg0BlackboardKey": "none",
       "payloadKind": "TargetEntity",
       "validationGraph": "none",
       "instantComplete": false
@@ -266,7 +264,6 @@ namespace Ludots.Tests.Architecture
       "clearQueueOnActivate": true,
       "spatialBlackboardKey": "none",
       "entityBlackboardKey": "none",
-      "intArg0BlackboardKey": "none",
       "payloadKind": "MoveToWorldCm",
       "validationGraph": "none",
       "instantComplete": false
@@ -324,7 +321,6 @@ namespace Ludots.Tests.Architecture
       "clearQueueOnActivate": true,
       "spatialBlackboardKey": "none",
       "entityBlackboardKey": "none",
-      "intArg0BlackboardKey": "none",
       "payloadKind": "MoveToWorldCm",
       "validationGraph": "none",
       "instantComplete": false
@@ -373,7 +369,6 @@ namespace Ludots.Tests.Architecture
       "clearQueueOnActivate": true,
       "spatialBlackboardKey": "Generic.TargetPosition",
       "entityBlackboardKey": "none",
-      "intArg0BlackboardKey": "none",
       "payloadKind": "MoveToWorldCm",
       "validationGraph": "none",
       "instantComplete": false
@@ -409,7 +404,6 @@ namespace Ludots.Tests.Architecture
       "clearQueueOnActivate": true,
       "spatialBlackboardKey": "none",
       "entityBlackboardKey": "none",
-      "intArg0BlackboardKey": "none",
       "payloadKind": "MoveToWorldCm",
       "validationGraph": "none",
       "instantComplete": false
@@ -445,7 +439,6 @@ namespace Ludots.Tests.Architecture
       "clearQueueOnActivate": true,
       "spatialBlackboardKey": "none",
       "entityBlackboardKey": "none",
-      "intArg0BlackboardKey": "none",
       "payloadKind": "MoveToWorldCm",
       "validationGraph": "none",
       "instantComplete": false
@@ -487,7 +480,6 @@ namespace Ludots.Tests.Architecture
       "clearQueueOnActivate": true,
       "spatialBlackboardKey": "Generic.TargetPosition",
       "entityBlackboardKey": " none ",
-      "intArg0BlackboardKey": "none",
       "payloadKind": "MoveToWorldCm",
       "validationGraph": "none",
       "instantComplete": false
@@ -519,7 +511,6 @@ namespace Ludots.Tests.Architecture
       "clearQueueOnActivate": true,
       "spatialBlackboardKey": "Generic.TargetPosition",
       "entityBlackboardKey": "none",
-      "intArg0BlackboardKey": "none",
       "payloadKind": "MoveToWorldCm",
       "validationGraph": " none "
     }
@@ -558,7 +549,6 @@ namespace Ludots.Tests.Architecture
       "clearQueueOnActivate": true,
       "spatialBlackboardKey": "Generic.TargetPosition",
       "entityBlackboardKey": "none",
-      "intArg0BlackboardKey": "none",
       "payloadKind": "MoveToWorldCm",
       "validationGraph": "none",
       "instantComplete": false
@@ -577,7 +567,6 @@ namespace Ludots.Tests.Architecture
       "clearQueueOnActivate": true,
       "spatialBlackboardKey": "Generic.TargetPosition",
       "entityBlackboardKey": "none",
-      "intArg0BlackboardKey": "none",
       "payloadKind": "MoveToWorldCm",
       "validationGraph": "none",
       "instantComplete": false
@@ -633,7 +622,6 @@ namespace Ludots.Tests.Architecture
       "clearQueueOnActivate": true,
       "spatialBlackboardKey": "Generic.TargetPosition",
       "entityBlackboardKey": "none",
-      "intArg0BlackboardKey": "none",
       "payloadKind": "MoveToWorldCm",
       "validationGraph": "none",
       "instantComplete": false
@@ -653,7 +641,6 @@ namespace Ludots.Tests.Architecture
       "clearQueueOnActivate": true,
       "spatialBlackboardKey": "Generic.TargetPosition",
       "entityBlackboardKey": "none",
-      "intArg0BlackboardKey": "none",
       "payloadKind": "MoveToWorldCm",
       "validationGraph": "none",
       "instantComplete": false
@@ -673,7 +660,6 @@ namespace Ludots.Tests.Architecture
       "clearQueueOnActivate": true,
       "spatialBlackboardKey": "Generic.TargetPosition",
       "entityBlackboardKey": "none",
-      "intArg0BlackboardKey": "none",
       "payloadKind": "MoveToWorldCm",
       "validationGraph": "none",
       "instantComplete": false
@@ -716,7 +702,6 @@ namespace Ludots.Tests.Architecture
       "clearQueueOnActivate": true,
       "spatialBlackboardKey": "Generic.TargetPosition",
       "entityBlackboardKey": "none",
-      "intArg0BlackboardKey": "none",
       "payloadKind": "MoveToWorldCm",
       "validationGraph": "none",
       "instantComplete": false
@@ -736,7 +721,6 @@ namespace Ludots.Tests.Architecture
       "clearQueueOnActivate": true,
       "spatialBlackboardKey": "Generic.TargetPosition",
       "entityBlackboardKey": "none",
-      "intArg0BlackboardKey": "none",
       "payloadKind": "MoveToWorldCm",
       "validationGraph": "none",
       "instantComplete": false
@@ -756,7 +740,6 @@ namespace Ludots.Tests.Architecture
       "clearQueueOnActivate": true,
       "spatialBlackboardKey": "Generic.TargetPosition",
       "entityBlackboardKey": "none",
-      "intArg0BlackboardKey": "none",
       "payloadKind": "MoveToWorldCm",
       "validationGraph": "none",
       "instantComplete": false
@@ -792,7 +775,6 @@ namespace Ludots.Tests.Architecture
       "clearQueueOnActivate": true,
       "spatialBlackboardKey": "Generic.TargetPosition",
       "entityBlackboardKey": "none",
-      "intArg0BlackboardKey": "none",
       "payloadKind": "MoveToWorldCm",
       "validationGraph": "none",
       "instantComplete": false
@@ -828,7 +810,6 @@ namespace Ludots.Tests.Architecture
       "clearQueueOnActivate": true,
       "spatialBlackboardKey": "Generic.TargetPosition",
       "entityBlackboardKey": "none",
-      "intArg0BlackboardKey": "none",
       "validationGraph": "none",
       "instantComplete": false
     }
@@ -839,6 +820,43 @@ namespace Ludots.Tests.Architecture
 
             Assert.That(ex.Message, Does.Contain("moveTo"));
             Assert.That(ex.Message, Does.Contain("payloadKind"));
+        }
+
+        [Test]
+        public void OrderTypeConfigLoader_RejectsBareIntArg0BlackboardKeyAuthoring()
+        {
+            InvalidOperationException ex = LoadInvalidOrderTypesJson("""
+{
+  "orderBlackboardKeys": {},
+  "orderTypes": {
+    "castAbility": {
+      "orderTypeId": 100,
+      "label": "Cast Ability",
+      "maxQueueSize": 8,
+      "sameTypePolicy": "Queue",
+      "queueFullPolicy": "DropOldest",
+      "priority": 60,
+      "bufferWindowMs": 300,
+      "pendingBufferWindowMs": 0,
+      "canInterruptSelf": false,
+      "queuedModeMaxSize": 8,
+      "allowQueuedMode": true,
+      "clearQueueOnActivate": true,
+      "spatialBlackboardKey": "Generic.TargetPosition",
+      "entityBlackboardKey": "none",
+      "intArg0BlackboardKey": "Cast.SlotIndex",
+      "payloadKind": "CastAbility",
+      "validationGraph": "none",
+      "instantComplete": false
+    }
+  },
+  "orderRules": {}
+}
+""");
+
+            Assert.That(ex.Message, Does.Contain("castAbility"));
+            Assert.That(ex.Message, Does.Contain("intArg0BlackboardKey"));
+            Assert.That(ex.Message, Does.Contain("typed payloadFields"));
         }
 
         [Test]
@@ -863,7 +881,6 @@ namespace Ludots.Tests.Architecture
       "clearQueueOnActivate": true,
       "spatialBlackboardKey": "Generic.TargetPosition",
       "entityBlackboardKey": "none",
-      "intArg0BlackboardKey": "none",
       "payloadKind": "Ability",
       "validationGraph": "none",
       "instantComplete": false
@@ -900,7 +917,6 @@ namespace Ludots.Tests.Architecture
       "clearQueueOnActivate": true,
       "spatialBlackboardKey": 201,
       "entityBlackboardKey": "none",
-      "intArg0BlackboardKey": "none",
       "payloadKind": "MoveToWorldCm",
       "validationGraph": "none",
       "instantComplete": false
@@ -938,7 +954,6 @@ namespace Ludots.Tests.Architecture
       "clearQueueOnActivate": true,
       "spatialBlackboardKey": "Generic.TargetPosition",
       "entityBlackboardKey": "none",
-      "intArg0BlackboardKey": "none",
       "payloadKind": "MoveToWorldCm",
       "validationGraph": "none",
       "instantComplete": false
@@ -953,7 +968,7 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
-        public void OrderTypeConfigLoader_ResolvesRegisteredSemanticBlackboardKeys()
+        public void OrderTypeConfigLoader_ResolvesCastAbilityPayloadFieldsBySemanticBlackboardKey()
         {
             OrderBlackboardKeyRegistry.ResetToBuiltins();
             const string customKey = "Test.Order.CustomInt";
@@ -970,9 +985,9 @@ namespace Ludots.Tests.Architecture
     "Test.Order.CustomInt": true
   },
   "orderTypes": {
-    "moveTo": {
-      "orderTypeId": 101,
-      "label": "Move To",
+    "castAbility": {
+      "orderTypeId": 100,
+      "label": "Cast Ability",
       "maxQueueSize": 8,
       "sameTypePolicy": "Queue",
       "queueFullPolicy": "DropOldest",
@@ -985,8 +1000,10 @@ namespace Ludots.Tests.Architecture
       "clearQueueOnActivate": true,
       "spatialBlackboardKey": "Generic.TargetPosition",
       "entityBlackboardKey": "none",
-      "intArg0BlackboardKey": "Test.Order.CustomInt",
-      "payloadKind": "MoveToWorldCm",
+      "payloadKind": "CastAbility",
+      "payloadFields": {
+        "abilitySlotBlackboardKey": "Test.Order.CustomInt"
+      },
       "validationGraph": "none",
       "instantComplete": false
     }
@@ -1007,7 +1024,7 @@ namespace Ludots.Tests.Architecture
                 Assert.That(OrderBlackboardKeyRegistry.TryGetId(customKey, out int customKeyId), Is.True);
                 Assert.That(customKeyId, Is.GreaterThan(0));
                 Assert.That(OrderBlackboardKeyRegistry.GetKey(customKeyId), Is.EqualTo(customKey));
-                Assert.That(orderTypes.Get(101).IntArg0BlackboardKey, Is.EqualTo(customKeyId));
+                Assert.That(orderTypes.Get(100).IntArg0BlackboardKey, Is.EqualTo(customKeyId));
             }
             finally
             {
@@ -1023,9 +1040,9 @@ namespace Ludots.Tests.Architecture
 {
   "orderBlackboardKeys": {},
   "orderTypes": {
-    "moveTo": {
-      "orderTypeId": 101,
-      "label": "Move To",
+    "castAbility": {
+      "orderTypeId": 100,
+      "label": "Cast Ability",
       "maxQueueSize": 8,
       "sameTypePolicy": "Queue",
       "queueFullPolicy": "DropOldest",
@@ -1038,8 +1055,10 @@ namespace Ludots.Tests.Architecture
       "clearQueueOnActivate": true,
       "spatialBlackboardKey": "Generic.TargetPosition",
       "entityBlackboardKey": "none",
-      "intArg0BlackboardKey": "Test.Order.UnknownInt",
-      "payloadKind": "MoveToWorldCm",
+      "payloadKind": "CastAbility",
+      "payloadFields": {
+        "abilitySlotBlackboardKey": "Test.Order.UnknownInt"
+      },
       "validationGraph": "none",
       "instantComplete": false
     }
@@ -1048,7 +1067,7 @@ namespace Ludots.Tests.Architecture
 }
 """);
 
-            Assert.That(ex.Message, Does.Contain("intArg0BlackboardKey"));
+            Assert.That(ex.Message, Does.Contain("payloadFields.abilitySlotBlackboardKey"));
             Assert.That(ex.Message, Does.Contain("Test.Order.UnknownInt"));
         }
 
@@ -1075,7 +1094,6 @@ namespace Ludots.Tests.Architecture
       "clearQueueOnActivate": true,
       "spatialBlackboardKey": "generic.TargetPosition",
       "entityBlackboardKey": "none",
-      "intArg0BlackboardKey": "none",
       "payloadKind": "MoveToWorldCm",
       "validationGraph": "none",
       "instantComplete": false
@@ -1111,7 +1129,6 @@ namespace Ludots.Tests.Architecture
       "clearQueueOnActivate": true,
       "spatialBlackboardKey": "Generic.TargetPosition",
       "entityBlackboardKey": "none",
-      "intArg0BlackboardKey": "none",
       "payloadKind": "MoveToWorldCm",
       "validationGraph": 0
     }

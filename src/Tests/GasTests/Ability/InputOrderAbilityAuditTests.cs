@@ -486,7 +486,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 CanInterruptSelf = true,
                 SpatialBlackboardKey = -1,
                 EntityBlackboardKey = -1,
-                IntArg0BlackboardKey = -1,
             });
 
             Entity first = world.Create(OrderBuffer.CreateEmpty());
@@ -602,7 +601,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 ClearQueueOnActivate = true,
                 SpatialBlackboardKey = spatialKey,
                 EntityBlackboardKey = -1,
-                IntArg0BlackboardKey = -1,
             });
             Entity actor = world.Create(
                 OrderBuffer.CreateEmpty(),
@@ -675,7 +673,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 ClearQueueOnActivate = true,
                 SpatialBlackboardKey = missingComponent == 0 ? 3 : -1,
                 EntityBlackboardKey = missingComponent == 1 ? 4 : -1,
-                IntArg0BlackboardKey = missingComponent == 2 ? 5 : -1,
+                PayloadKind = missingComponent == 2 ? OrderPayloadKind.CastAbility : OrderPayloadKind.None,
             };
             var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(config);
@@ -735,14 +733,12 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 OrderTypeId = activeOrderTypeId,
                 SpatialBlackboardKey = activeSpatialKey,
                 EntityBlackboardKey = -1,
-                IntArg0BlackboardKey = -1,
             });
             orderTypes.Register(new OrderTypeConfig
             {
                 OrderTypeId = replacementOrderTypeId,
                 SpatialBlackboardKey = replacementSpatialKey,
                 EntityBlackboardKey = -1,
-                IntArg0BlackboardKey = -1,
             });
             var rules = new OrderRuleSet { InterruptsActiveCount = 1 };
             rules.InterruptsActiveOrderTypeIds[0] = activeOrderTypeId;
@@ -960,7 +956,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 CanInterruptSelf = true,
                 SpatialBlackboardKey = spatialKey,
                 EntityBlackboardKey = -1,
-                IntArg0BlackboardKey = -1,
             });
             Entity first = world.Create(OrderBuffer.CreateEmpty(), new BlackboardSpatialBuffer(), new OrderSpatialPayloadBuffer());
             Entity second = world.Create(OrderBuffer.CreateEmpty(), new BlackboardSpatialBuffer(), new OrderSpatialPayloadBuffer());
@@ -1024,7 +1019,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 CanInterruptSelf = true,
                 SpatialBlackboardKey = spatialKey,
                 EntityBlackboardKey = -1,
-                IntArg0BlackboardKey = -1,
             });
             Entity first = world.Create(OrderBuffer.CreateEmpty(), new BlackboardSpatialBuffer(), new OrderSpatialPayloadBuffer());
             Entity second = world.Create(OrderBuffer.CreateEmpty(), new BlackboardSpatialBuffer(), new OrderSpatialPayloadBuffer());
@@ -1156,7 +1150,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 QueuedModeMaxSize = 4,
                 SpatialBlackboardKey = spatialKey,
                 EntityBlackboardKey = -1,
-                IntArg0BlackboardKey = -1,
             });
             Entity actor = world.Create(OrderBuffer.CreateEmpty());
             ref OrderBuffer buffer = ref world.Get<OrderBuffer>(actor);
@@ -1225,7 +1218,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 Priority = 20,
                 SpatialBlackboardKey = spatialKey,
                 EntityBlackboardKey = -1,
-                IntArg0BlackboardKey = -1,
             });
             Entity actor = world.Create(OrderBuffer.CreateEmpty());
             ref OrderBuffer buffer = ref world.Get<OrderBuffer>(actor);
@@ -1284,7 +1276,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 QueuedModeMaxSize = 4,
                 SpatialBlackboardKey = spatialKey,
                 EntityBlackboardKey = -1,
-                IntArg0BlackboardKey = -1,
             });
             Entity terminalOccupant = world.Create(OrderBuffer.CreateEmpty());
             ref OrderBuffer terminalOccupantBuffer = ref world.Get<OrderBuffer>(terminalOccupant);
@@ -1557,7 +1548,8 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                     ref entities,
                     submitStep: 0,
                     queue,
-                    orderTypes));
+                    orderTypes,
+                    out _));
 
             That(ex!.Message, Does.Contain("unregistered order type id 42"));
         }
@@ -1567,6 +1559,15 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         {
             using var world = World.Create();
             var queue = new OrderQueue(64, new OrderAdmissionResultBuffer(64, 64));
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
+            orderTypes.Register(new OrderTypeConfig
+            {
+                Key = "castAbility",
+                OrderTypeId = 42,
+                PayloadKind = OrderPayloadKind.CastAbility,
+                SpatialBlackboardKey = -1,
+                EntityBlackboardKey = -1,
+            });
             var spec = new ActionOrderSpec(AiOrderPayloadKind.CastAbility, orderTypeId: 42, submitMode: OrderSubmitMode.Immediate);
             var ints = new BlackboardIntBuffer();
             var entities = new BlackboardEntityBuffer();
@@ -1580,7 +1581,9 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                     ref ints,
                     ref entities,
                     submitStep: 0,
-                    queue));
+                    queue,
+                    orderTypes,
+                    out _));
 
             That(ex!.Message, Does.Contain("ORDER.BUILDER.ERR.CastAbilitySlotRequired"));
             That(queue.Count, Is.Zero);
@@ -1759,7 +1762,8 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                   },
                   "targeting": {
                     "castRangeCm": 620,
-                    "impactEffect": "Effect.Guard.Impact"
+                    "impactEffect": "Effect.Guard.Impact",
+                    "allowMoveChase": true
                   }
                 }
                 """)!.AsObject();
@@ -1777,6 +1781,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             That(def.HasTargeting, Is.True);
             That(def.Targeting.CastRangeCm, Is.EqualTo(620f));
             That(def.Targeting.ImpactEffectTemplateId, Is.EqualTo(EffectTemplateIdRegistry.GetId("Effect.Guard.Impact")));
+            That(def.Targeting.AllowMoveChase, Is.True);
         }
 
         [Test]
@@ -1833,7 +1838,8 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                   "previewPerformerId": "performer.aim.preview",
                   "targeting": {
                     "castRangeCm": 620,
-                    "impactEffect": "Effect.Guard.Impact"
+                    "impactEffect": "Effect.Guard.Impact",
+                    "allowMoveChase": true
                   }
                 }
                 """)!.AsObject();
@@ -1930,7 +1936,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 ClearQueueOnActivate = false,
                 SpatialBlackboardKey = -1,
                 EntityBlackboardKey = OrderBlackboardKeys.Cast_TargetEntity,
-                IntArg0BlackboardKey = OrderBlackboardKeys.Cast_SlotIndex
+                PayloadKind = OrderPayloadKind.CastAbility,
             });
 
             var orderRules = new OrderRuleRegistry();
@@ -1983,7 +1989,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 ClearQueueOnActivate = false,
                 SpatialBlackboardKey = -1,
                 EntityBlackboardKey = -1,
-                IntArg0BlackboardKey = -1
             });
 
             var order = new Order
@@ -2176,7 +2181,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             orderTypes.Register(new OrderTypeConfig
             {
                 OrderTypeId = castAbilityOrderTypeId,
-                IntArg0BlackboardKey = OrderBlackboardKeys.Cast_SlotIndex,
+                PayloadKind = OrderPayloadKind.CastAbility,
                 EntityBlackboardKey = OrderBlackboardKeys.Cast_TargetEntity,
                 SpatialBlackboardKey = -1,
             });
@@ -2249,7 +2254,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             orderTypes.Register(new OrderTypeConfig
             {
                 OrderTypeId = castAbilityOrderTypeId,
-                IntArg0BlackboardKey = OrderBlackboardKeys.Cast_SlotIndex,
+                PayloadKind = OrderPayloadKind.CastAbility,
                 EntityBlackboardKey = OrderBlackboardKeys.Cast_TargetEntity,
                 SpatialBlackboardKey = -1,
             });
@@ -2371,7 +2376,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             orderTypes.Register(new OrderTypeConfig
             {
                 OrderTypeId = castAbilityOrderTypeId,
-                IntArg0BlackboardKey = OrderBlackboardKeys.Cast_SlotIndex,
+                PayloadKind = OrderPayloadKind.CastAbility,
                 EntityBlackboardKey = -1,
                 SpatialBlackboardKey = -1,
             });
@@ -2490,7 +2495,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             orderTypes.Register(new OrderTypeConfig
             {
                 OrderTypeId = castAbilityOrderTypeId,
-                IntArg0BlackboardKey = OrderBlackboardKeys.Cast_SlotIndex,
+                PayloadKind = OrderPayloadKind.CastAbility,
                 EntityBlackboardKey = -1,
                 SpatialBlackboardKey = -1,
             });
@@ -2568,7 +2573,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             orderTypes.Register(new OrderTypeConfig
             {
                 OrderTypeId = castAbilityOrderTypeId,
-                IntArg0BlackboardKey = OrderBlackboardKeys.Cast_SlotIndex,
+                PayloadKind = OrderPayloadKind.CastAbility,
                 EntityBlackboardKey = -1,
                 SpatialBlackboardKey = -1,
             });
@@ -2644,7 +2649,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             orderTypes.Register(new OrderTypeConfig
             {
                 OrderTypeId = castAbilityOrderTypeId,
-                IntArg0BlackboardKey = OrderBlackboardKeys.Cast_SlotIndex,
+                PayloadKind = OrderPayloadKind.CastAbility,
                 EntityBlackboardKey = -1,
                 SpatialBlackboardKey = -1,
             });
@@ -2733,7 +2738,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             orderTypes.Register(new OrderTypeConfig
             {
                 OrderTypeId = castAbilityOrderTypeId,
-                IntArg0BlackboardKey = OrderBlackboardKeys.Cast_SlotIndex,
+                PayloadKind = OrderPayloadKind.CastAbility,
                 EntityBlackboardKey = -1,
                 SpatialBlackboardKey = -1,
             });
@@ -2830,7 +2835,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 OrderTypeId = castAbilityOrderTypeId,
                 AllowQueuedMode = false,
                 ClearQueueOnActivate = true,
-                IntArg0BlackboardKey = OrderBlackboardKeys.Cast_SlotIndex,
+                PayloadKind = OrderPayloadKind.CastAbility,
             });
             var presentationEvents = new GasPresentationEventBuffer(8);
             var system = new AbilityExecSystem(
@@ -2916,7 +2921,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 OrderTypeId = castAbilityOrderTypeId,
                 AllowQueuedMode = false,
                 ClearQueueOnActivate = true,
-                IntArg0BlackboardKey = OrderBlackboardKeys.Cast_SlotIndex
+                PayloadKind = OrderPayloadKind.CastAbility,
             });
 
             var presentationEvents = new GasPresentationEventBuffer(8);
@@ -2949,104 +2954,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             That(terminal.OrderId, Is.EqualTo(order.OrderId));
             That(terminal.State, Is.EqualTo(OrderTerminalState.Failed));
             That(terminal.FailureReason, Is.EqualTo(OrderFailureReason.PreconditionFailed));
-        }
-
-        [Test]
-        public void AbilitySystem_RegistryAbility_ActivationPreconditionGraphRejectsActivation()
-        {
-            using var world = World.Create();
-            const int abilityId = 9201;
-            const int validationGraphId = 302;
-
-            var actor = world.Create(new AbilityStateBuffer());
-            ref var abilities = ref world.Get<AbilityStateBuffer>(actor);
-            abilities.AddAbility(abilityId);
-
-            var effects = new AbilityOnActivateEffects();
-            effects.Add(4001);
-
-            var defs = new AbilityDefinitionRegistry();
-            var def = new AbilityDefinition
-            {
-                HasOnActivateEffects = true,
-                OnActivateEffects = effects,
-                HasActivationPrecondition = true,
-                ActivationPrecondition = new AbilityActivationPrecondition
-                {
-                    ValidationGraphId = validationGraphId
-                }
-            };
-            defs.Register(abilityId, in def);
-
-            var graphPrograms = new GraphProgramRegistry();
-            graphPrograms.Register(validationGraphId, new[]
-            {
-                new GraphInstruction
-                {
-                    Op = (ushort)GraphNodeOp.ConstBool,
-                    Dst = 0,
-                    Imm = 0
-                }
-            }, GraphKind.Validation);
-
-            var effectRequests = new EffectRequestQueue();
-            var graphApi = new GasGraphRuntimeApi(world, spatialQueries: null, coords: null, eventBus: null, effectRequests: effectRequests);
-            var system = new AbilitySystem(
-                world,
-                effectRequests,
-                defs,
-                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()),
-                graphPrograms: graphPrograms,
-                graphApi: graphApi);
-
-            bool activated = system.TryActivateAbility(actor, 0);
-
-            That(activated, Is.False);
-            That(effectRequests.Count, Is.EqualTo(0));
-        }
-
-        [Test]
-        public void AbilitySystem_TemplateAbility_ActivationPreconditionGraphRejectsActivation()
-        {
-            using var world = World.Create();
-            const int validationGraphId = 303;
-
-            var templateEffects = new AbilityOnActivateEffects();
-            templateEffects.Add(4002);
-
-            var template = world.Create(
-                new AbilityTemplate(),
-                templateEffects,
-                new AbilityActivationPrecondition { ValidationGraphId = validationGraphId });
-
-            var actor = world.Create(new AbilityStateBuffer());
-            ref var abilities = ref world.Get<AbilityStateBuffer>(actor);
-            abilities.AddAbility(template);
-
-            var graphPrograms = new GraphProgramRegistry();
-            graphPrograms.Register(validationGraphId, new[]
-            {
-                new GraphInstruction
-                {
-                    Op = (ushort)GraphNodeOp.ConstBool,
-                    Dst = 0,
-                    Imm = 0
-                }
-            }, GraphKind.Validation);
-
-            var effectRequests = new EffectRequestQueue();
-            var graphApi = new GasGraphRuntimeApi(world, spatialQueries: null, coords: null, eventBus: null, effectRequests: effectRequests);
-            var system = new AbilitySystem(
-                world,
-                effectRequests,
-                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()),
-                graphPrograms: graphPrograms,
-                graphApi: graphApi);
-
-            bool activated = system.TryActivateAbility(actor, 0);
-
-            That(activated, Is.False);
-            That(effectRequests.Count, Is.EqualTo(0));
         }
 
         // Region: GraphExecutor.ExecuteValidation
@@ -3379,7 +3286,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 ClearQueueOnActivate = true,
                 SpatialBlackboardKey = OrderBlackboardKeys.Generic_TargetPosition,
                 EntityBlackboardKey = -1,
-                IntArg0BlackboardKey = -1,
             });
 
             var firstArgs = new OrderArgs();

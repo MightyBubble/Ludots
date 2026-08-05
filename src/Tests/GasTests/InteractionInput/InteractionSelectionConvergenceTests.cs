@@ -197,7 +197,7 @@ namespace Ludots.Tests.GAS
                 OrderTypeId = castOrderTypeId,
                 Label = "Cast",
                 Priority = 100,
-                IntArg0BlackboardKey = OrderBlackboardKeys.Cast_SlotIndex,
+                PayloadKind = OrderPayloadKind.CastAbility,
                 EntityBlackboardKey = -1,
                 SpatialBlackboardKey = -1,
             });
@@ -311,19 +311,19 @@ namespace Ludots.Tests.GAS
         public void InputOrderMapping_PositionMoveCommand_WithGroupTargetLayout_AssignsOffsetTargetsAcrossExplicitActorCollection()
         {
             var input = new PlayerInputHandler(new NullInputBackend(), CreateInputConfig());
+            var targetLayoutProfiles = new List<TargetLayoutProfileDefinition>
+            {
+                new()
+                {
+                    Id = "layout.move.grid",
+                    Mode = TargetLayoutMode.Grid,
+                    SpacingCm = 120,
+                    OrderTypeKeys = new List<string> { "moveTo" },
+                },
+            };
             var cfg = new InputOrderMappingConfig
             {
                 InteractionMode = InteractionModeType.TargetFirst,
-                TargetLayoutProfiles = new List<TargetLayoutProfileDefinition>
-                {
-                    new()
-                    {
-                        Id = "layout.move.grid",
-                        Mode = TargetLayoutMode.Grid,
-                        SpacingCm = 120,
-                        OrderTypeKeys = new List<string> { "moveTo" },
-                    },
-                },
                 Mappings = new List<InputOrderMapping>
                 {
                     new()
@@ -344,7 +344,7 @@ namespace Ludots.Tests.GAS
             var local = world.Create();
             var first = world.Create();
             var second = world.Create();
-            var mapping = new InputOrderMappingSystem(input, cfg);
+            var mapping = new InputOrderMappingSystem(input, cfg, targetLayoutProfiles: targetLayoutProfiles);
             mapping.SetLocalPlayer(local, 1);
             mapping.SetOrderTypeKeyResolver(key => key == "moveTo" ? 1002 : 0);
             mapping.SetGroundPositionProvider((out Vector3 worldCm) =>

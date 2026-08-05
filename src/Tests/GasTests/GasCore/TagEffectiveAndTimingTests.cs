@@ -1,6 +1,9 @@
 using Arch.Core;
+using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Input;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Systems;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
@@ -125,7 +128,12 @@ namespace Ludots.Tests.GAS
                 var defs = new AbilityDefinitionRegistry();
                 defs.RegisterFromEntity(world, abilityTemplate, 6001);
 
-                var caster = world.Create(new AbilityStateBuffer(), new GameplayTagContainer());
+                var caster = world.Create(
+                    OrderBuffer.CreateEmpty(),
+                    new BlackboardIntBuffer(),
+                    new BlackboardEntityBuffer(),
+                    new AbilityStateBuffer(),
+                    new GameplayTagContainer());
                 ref var abilityState = ref world.Get<AbilityStateBuffer>(caster);
                 abilityState.AddAbility(6001);
 
@@ -133,8 +141,45 @@ namespace Ludots.Tests.GAS
                 tags.AddTag(tagA);
                 tags.AddTag(tagBlock);
 
-                var sys = new AbilitySystem(world, new EffectRequestQueue(), abilityDefinitions: defs, tagOps: _tagOps);
-                That(sys.TryActivateAbility(caster, slotIndex: 0), Is.False);
+                const int castAbilityOrderTypeId = 100;
+                var terminalResults = new OrderTerminalResultBuffer(capacity: 8);
+                var orderTypes = new OrderTypeRegistry(terminalResults);
+                orderTypes.Register(new OrderTypeConfig
+                {
+                    OrderTypeId = castAbilityOrderTypeId,
+                    PayloadKind = OrderPayloadKind.CastAbility,
+                    EntityBlackboardKey = OrderBlackboardKeys.Cast_TargetEntity,
+                    SpatialBlackboardKey = -1
+                });
+                var order = OrderBuilder.CreateCastAbility(
+                    castAbilityOrderTypeId,
+                    playerId: 0,
+                    caster,
+                    Entity.Null,
+                    Entity.Null,
+                    abilitySlotIndex: 0,
+                    OrderSubmitMode.Immediate,
+                    submitStep: 0);
+                order.OrderId = 1;
+                world.Get<OrderBuffer>(caster).SetActiveDirect(in order, priority: 100);
+                world.Get<BlackboardIntBuffer>(caster).Set(OrderBlackboardKeys.Cast_SlotIndex, 0);
+
+                var sys = new AbilityExecSystem(
+                    world,
+                    new DiscreteClock(),
+                    new InputRequestQueue(),
+                    new InputResponseBuffer(),
+                    new EffectRequestQueue(),
+                    snapshotCapacity: 8,
+                    abilityDefinitions: defs,
+                    castAbilityOrderTypeId: castAbilityOrderTypeId,
+                    orderTypeRegistry: orderTypes,
+                    tagOps: _tagOps);
+                sys.Update(0f);
+
+                That(terminalResults.Count, Is.EqualTo(1));
+                That(terminalResults[0].State, Is.EqualTo(OrderTerminalState.Failed));
+                That(terminalResults[0].FailureReason, Is.EqualTo(OrderFailureReason.ActivationBlocked));
             }
             finally
             {

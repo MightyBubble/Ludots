@@ -4,6 +4,8 @@ using Arch.Core;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Input;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
@@ -19,10 +21,10 @@ namespace Ludots.Tests.GAS
     public class SystemIntegrationTests
     {
         private readonly TagOps _tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
-        private World _world;
-        private GameplayEventBus _eventBus;
-        private PhysicsWorld _physicsWorld;
-        
+        private World _world = null!;
+        private GameplayEventBus _eventBus = null!;
+        private PhysicsWorld _physicsWorld = null!;
+
         [SetUp]
         public void Setup()
         {
@@ -30,8 +32,8 @@ namespace Ludots.Tests.GAS
             _tagOps.ClearRuleRegistry();
             _eventBus = new GameplayEventBus();
             _physicsWorld = new PhysicsWorld();
-            
-            // 设置SharedJobScheduler以支持并行查询
+
+            // 设置SharedJobScheduler以支持并行查�?
             if (World.SharedJobScheduler == null)
             {
                 World.SharedJobScheduler = new JobScheduler(new JobScheduler.Config
@@ -43,18 +45,19 @@ namespace Ludots.Tests.GAS
                 });
             }
         }
-        
+
         [TearDown]
         public void TearDown()
         {
             _world?.Dispose();
         }
-        
+
         [Test]
         public void TestSystemExecutionOrder()
         {
-            // Arrange: 创建所有系统（跳过需要依赖的系统）
-            var reactionSystem = new ReactionSystem(_world, null, _eventBus);
+            // Arrange: 创建所有系统（跳过需要依赖的系统�?
+            var reactionAdmissions = new OrderAdmissionResultBuffer(capacity: 16, rejectionCapacity: 16);
+            var reactionSystem = new ReactionSystem(_world, new OrderQueue(capacity: 16, reactionAdmissions), 1, _eventBus);
             var effectTemplates = new EffectTemplateRegistry();
             var builtinHandlers = new BuiltinHandlerRegistry();
             BuiltinHandlers.RegisterAll(builtinHandlers);
@@ -69,7 +72,18 @@ namespace Ludots.Tests.GAS
             var clock = new DiscreteClock();
             var clocks = new GasClocks(clock);
             var conditions = new GasConditionRegistry();
-            var abilitySystem = new AbilitySystem(_world, effectRequests, tagOps: _tagOps);
+            var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: 16));
+            var abilityExecSystem = new AbilityExecSystem(
+                _world,
+                clock,
+                new InputRequestQueue(),
+                new InputResponseBuffer(),
+                effectRequests,
+                snapshotCapacity: 16,
+                abilityDefinitions: new AbilityDefinitionRegistry(),
+                castAbilityOrderTypeId: 1,
+                orderTypeRegistry: orderTypes,
+                tagOps: _tagOps);
             var proposalSystem = new EffectProposalProcessingSystem(
                 _world,
                 effectRequests,
@@ -82,30 +96,131 @@ namespace Ludots.Tests.GAS
             var appSystem = new EffectApplicationSystem(_world, GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME, clock, effectRequests, tagOps: _tagOps);
             var aggSystem = new AttributeAggregatorSystem(_world, tagOps: _tagOps);
             var lifetimeSystem = new EffectLifetimeSystem(_world, clock, conditions, snapshotCapacity: 4096, fanOutCommandCapacity: GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME, effectRequests: effectRequests, tagOps: _tagOps);
-            
+
             // Act: 按Phase顺序执行
             float dt = 0.016f;
-            
+
             Console.WriteLine("[SystemIntegrationTests] Phase 1: InputCollection (skipped - requires dependencies)");
-            
+
             Console.WriteLine("[SystemIntegrationTests] Phase 2: AbilityActivation");
             reactionSystem.Update(dt);
-            abilitySystem.Update(dt);
-            
+            abilityExecSystem.Update(dt);
+
             Console.WriteLine("[SystemIntegrationTests] Phase 3: EffectProcessing");
             proposalSystem.Update(dt);
             appSystem.Update(dt);
-            
+
             Console.WriteLine("[SystemIntegrationTests] Phase 4: AttributeCalculation");
             aggSystem.Update(dt);
-            
+
             Console.WriteLine("[SystemIntegrationTests] Phase 6: Cleanup");
             lifetimeSystem.Update(dt);
-            
+
             // Assert: 系统执行顺序正确
             Pass("System execution order verified");
         }
-        
+
+        [Test]
+        public void ReactionSystem_GameplayEvent_SubmitsCastAbilityOrderConsumedByAbilityExec()
+        {
+            const int eventTagId = 7001;
+            const int abilityId = 7101;
+            const int castAbilityOrderTypeId = 100;
+
+            var terminalResults = new OrderTerminalResultBuffer(capacity: 16);
+            var admissionResults = new OrderAdmissionResultBuffer(capacity: 16, rejectionCapacity: 16);
+            var orderTypes = new OrderTypeRegistry(terminalResults);
+            orderTypes.Register(new OrderTypeConfig
+            {
+                Key = "castAbility",
+                OrderTypeId = castAbilityOrderTypeId,
+                AllowQueuedMode = false,
+                CanInterruptSelf = true,
+                ClearQueueOnActivate = true,
+                PayloadKind = OrderPayloadKind.CastAbility,
+                EntityBlackboardKey = OrderBlackboardKeys.Cast_TargetEntity,
+                SpatialBlackboardKey = -1,
+            });
+
+            var orderQueue = new OrderQueue(capacity: 16, admissionResults);
+            var clock = new DiscreteClock();
+            var reactionSystem = new ReactionSystem(
+                _world,
+                orderQueue,
+                castAbilityOrderTypeId,
+                _eventBus);
+            var orderBufferSystem = new OrderBufferSystem(
+                _world,
+                clock,
+                orderTypes,
+                new OrderRuleRegistry(),
+                admissionResults,
+                orderQueue,
+                closeEntityIntakeOnUpdate: false);
+
+            var spec = default(AbilityExecSpec);
+            spec.ClockId = GasClockId.Step;
+            spec.SetItem(0, ExecItemKind.End, tick: 0);
+            var definitions = new AbilityDefinitionRegistry();
+            definitions.Register(abilityId, new AbilityDefinition { ExecSpec = spec });
+            var abilityExecSystem = new AbilityExecSystem(
+                _world,
+                clock,
+                new InputRequestQueue(),
+                new InputResponseBuffer(),
+                new EffectRequestQueue(),
+                snapshotCapacity: 16,
+                abilityDefinitions: definitions,
+                eventBus: _eventBus,
+                castAbilityOrderTypeId: castAbilityOrderTypeId,
+                tagOps: _tagOps,
+                orderTypeRegistry: orderTypes);
+
+            AbilityStateBuffer abilities = default;
+            abilities.AddAbility(abilityId);
+            ReactionBuffer reactions = default;
+            That(reactions.Add(eventTagId, abilitySlotIndex: 0), Is.True);
+            Entity source = _world.Create();
+            Entity reactor = _world.Create(
+                OrderBuffer.CreateEmpty(),
+                new BlackboardIntBuffer(),
+                new BlackboardEntityBuffer(),
+                abilities,
+                reactions);
+
+            _eventBus.Publish(new GameplayEvent
+            {
+                TagId = eventTagId,
+                Source = source,
+                Target = reactor,
+            });
+            _eventBus.Update();
+
+            admissionResults.BeginLogicStep();
+            reactionSystem.Update(0f);
+
+            That(orderQueue.TryPeek(out Order queuedOrder), Is.True);
+            That(queuedOrder.OrderTypeId, Is.EqualTo(castAbilityOrderTypeId));
+            That(queuedOrder.Actor, Is.EqualTo(reactor));
+            That(queuedOrder.Target, Is.EqualTo(source));
+
+            orderBufferSystem.Update(0f);
+            That(_world.Get<BlackboardIntBuffer>(reactor).TryGet(OrderBlackboardKeys.Cast_SlotIndex, out int slot), Is.True);
+            That(slot, Is.EqualTo(0));
+            That(_world.Get<BlackboardEntityBuffer>(reactor).TryGet(OrderBlackboardKeys.Cast_TargetEntity, out Entity blackboardTarget), Is.True);
+            That(blackboardTarget, Is.EqualTo(source));
+
+            int orderId = queuedOrder.OrderId;
+            terminalResults.Retain(orderId);
+            abilityExecSystem.Update(0f);
+            admissionResults.EndEntityIntake();
+            admissionResults.EndLogicStep();
+
+            That(terminalResults.TryConsume(orderId, out OrderTerminalOutcome terminal), Is.True);
+            That(terminal.State, Is.EqualTo(OrderTerminalState.Completed));
+            That(terminal.Actor, Is.EqualTo(reactor));
+        }
+
         [Test]
         public void TestEffectLifecycle_StateTransitions()
         {
@@ -122,40 +237,40 @@ namespace Ludots.Tests.GAS
             _world.Add(effectEntity, effect);
             _world.Add(effectEntity, new EffectContext { Source = effectEntity, Target = effectEntity });
             _world.Add(effectEntity, new EffectModifiers());
-            // PendingEffect marker tag removed — state is managed via GameplayEffect.State
-            
+            // PendingEffect marker tag removed �?state is managed via GameplayEffect.State
+
             // Act: 模拟Effect生命周期
             ref var effectRef = ref _world.Get<GameplayEffect>(effectEntity);
-            
+
             // Created -> Pending
             effectRef.State = EffectState.Pending;
             That(effectRef.State, Is.EqualTo(EffectState.Pending));
             Console.WriteLine("[SystemIntegrationTests] Effect state: Created -> Pending");
-            
+
             // Pending -> Trigger
             effectRef.State = EffectState.Trigger;
             That(effectRef.State, Is.EqualTo(EffectState.Trigger));
             Console.WriteLine("[SystemIntegrationTests] Effect state: Pending -> Trigger");
-            
+
             // Trigger -> Calculate
             effectRef.State = EffectState.Calculate;
             That(effectRef.State, Is.EqualTo(EffectState.Calculate));
             Console.WriteLine("[SystemIntegrationTests] Effect state: Trigger -> Calculate");
-            
+
             // Calculate -> Apply
             effectRef.State = EffectState.Apply;
             That(effectRef.State, Is.EqualTo(EffectState.Apply));
             Console.WriteLine("[SystemIntegrationTests] Effect state: Calculate -> Apply");
-            
+
             // Apply -> Committed
             effectRef.State = EffectState.Committed;
             That(effectRef.State, Is.EqualTo(EffectState.Committed));
             Console.WriteLine("[SystemIntegrationTests] Effect state: Apply -> Committed");
-            
+
             // Assert
             Pass("Effect lifecycle state transitions verified");
         }
-        
+
         [Test]
         public void TestTagOps_WithTagRuleSet_Integration()
         {
@@ -163,11 +278,11 @@ namespace Ludots.Tests.GAS
             var entity = _world.Create();
             _world.Add(entity, new GameplayTagContainer());
             _world.Add(entity, new TagCountContainer());
-            
+
             int tagA = 1;
             int tagB = 2;
             int tagC = 3;
-            
+
             // 注册规则：tagA attached tagB, tagA removed tagC
             var ruleSetA = new TagRuleSet();
             unsafe
@@ -178,25 +293,25 @@ namespace Ludots.Tests.GAS
                 ruleSetA.RemovedCount = 1;
             }
             _tagOps.RegisterTagRuleSet(tagA, ruleSetA);
-            
+
             // 先添加tagC
             ref var tagsRef = ref _world.Get<GameplayTagContainer>(entity);
             ref var countsRef = ref _world.Get<TagCountContainer>(entity);
             _tagOps.AddTag(ref tagsRef, ref countsRef, tagC);
-            
+
             // Act: 添加tagA，应该自动添加tagB并移除tagC
             bool result = _tagOps.AddTag(ref tagsRef, ref countsRef, tagA);
-            
+
             // Assert
             That(result, Is.True);
             ref var tags = ref _world.Get<GameplayTagContainer>(entity);
             That(tags.HasTag(tagA), Is.True);
             That(tags.HasTag(tagB), Is.True);
             That(tags.HasTag(tagC), Is.False);
-            
+
             Console.WriteLine($"[SystemIntegrationTests] TestTagOps_WithTagRuleSet_Integration: Tag rules applied correctly");
         }
-        
+
         [Test]
         public void TestDeferredTrigger_Integration()
         {
@@ -205,30 +320,30 @@ namespace Ludots.Tests.GAS
             _world.Add(entity, new AttributeBuffer());
             _world.Add(entity, new ActiveEffectContainer());
             _world.Add(entity, new DirtyFlags());
-            
+
             var triggerQueue = new DeferredTriggerQueue();
             var collectionSystem = new DeferredTriggerCollectionSystem(_world, triggerQueue, _tagOps);
             var processSystem = new DeferredTriggerProcessSystem(_world, triggerQueue, new GameplayEventBus());
-            
+
             // 修改属性值（触发脏标记）
             ref var attrBuffer = ref _world.Get<AttributeBuffer>(entity);
             attrBuffer.SetBase(0, 100f);
             attrBuffer.SetCurrent(0, 150f);
-            
+
             ref var dirtyFlags = ref _world.Get<DirtyFlags>(entity);
             dirtyFlags.MarkAttributeDirty(0);
-            
-            // Act: Phase 5 - 收集延迟触发器
+
+            // Act: Phase 5 - 收集延迟触发�?
             collectionSystem.Update(0.016f);
-            
+
             // Assert: 触发器应该被收集
             That(triggerQueue.AttributeTriggerCount, Is.GreaterThan(0));
             Console.WriteLine($"[SystemIntegrationTests] TestDeferredTrigger_Integration: Collected {triggerQueue.AttributeTriggerCount} attribute triggers");
-            
-            // Act: Phase 5 - 处理延迟触发器
+
+            // Act: Phase 5 - 处理延迟触发�?
             processSystem.Update(0.016f);
-            
-            // Assert: 队列应该被清空
+
+            // Assert: 队列应该被清�?
             That(triggerQueue.AttributeTriggerCount, Is.EqualTo(0));
             Console.WriteLine($"[SystemIntegrationTests] TestDeferredTrigger_Integration: Processed triggers successfully");
         }

@@ -1,0 +1,12 @@
+{
+  "targetLayoutProfiles": [
+    {
+      "id": "layout.move.grid",
+      "mode": "Grid",
+      "spacingCm": 1800,
+      "orderTypeKeys": [
+        "massNavigationMove"
+      ]
+    }
+  ]
+}

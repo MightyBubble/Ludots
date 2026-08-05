@@ -1,0 +1,12 @@
+{
+  "targetLayoutProfiles": [
+    {
+      "id": "layout.move.grid",
+      "mode": "Grid",
+      "spacingCm": 140,
+      "orderTypeKeys": [
+        "moveTo"
+      ]
+    }
+  ]
+}

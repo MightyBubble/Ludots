@@ -14,46 +14,50 @@ namespace Ludots.Core.Gameplay.AI.Systems
         private readonly IClock _clock;
         private readonly ActionLibraryCompiled256 _library;
         private readonly OrderQueue _orders;
-        private readonly OrderTypeRegistry? _orderTypeRegistry;
+        private readonly OrderTypeRegistry _orderTypeRegistry;
+        private readonly OrderTerminalResultBuffer _terminalResults;
 
         private static readonly QueryDescription _query = new QueryDescription()
-            .WithAll<AIAgent, AIPlan32, OrderBuffer, BlackboardIntBuffer, BlackboardEntityBuffer>();
+            .WithAll<AIAgent, AIPlan32, BlackboardIntBuffer, BlackboardEntityBuffer>();
 
         public AIPlanExecutionSystem(
             World world,
             IClock clock,
             ActionLibraryCompiled256 library,
             OrderQueue orders,
-            OrderTypeRegistry? orderTypeRegistry = null)
+            OrderTypeRegistry orderTypeRegistry)
             : base(world)
         {
             _clock = clock;
             _library = library;
             _orders = orders;
-            _orderTypeRegistry = orderTypeRegistry;
+            _orderTypeRegistry = orderTypeRegistry ?? throw new System.ArgumentNullException(nameof(orderTypeRegistry));
+            _terminalResults = _orderTypeRegistry.TerminalResults;
         }
 
         public override void Update(in float dt)
         {
             int step = _clock.Now(ClockDomainId.Step);
-            var job = new ExecuteJob(World, _library, _orders, _orderTypeRegistry, step);
-            World.InlineEntityQuery<ExecuteJob, AIAgent, AIPlan32, OrderBuffer, BlackboardIntBuffer, BlackboardEntityBuffer>(in _query, ref job);
+            var job = new ExecuteJob(World, _library, _orders, _orderTypeRegistry, _terminalResults, step);
+            World.InlineEntityQuery<ExecuteJob, AIAgent, AIPlan32, BlackboardIntBuffer, BlackboardEntityBuffer>(in _query, ref job);
         }
 
-        private struct ExecuteJob : IForEachWithEntity<AIAgent, AIPlan32, OrderBuffer, BlackboardIntBuffer, BlackboardEntityBuffer>
+        private struct ExecuteJob : IForEachWithEntity<AIAgent, AIPlan32, BlackboardIntBuffer, BlackboardEntityBuffer>
         {
             private readonly World _world;
             private readonly ActionLibraryCompiled256 _library;
             private readonly OrderQueue _orders;
-            private readonly OrderTypeRegistry? _orderTypeRegistry;
+            private readonly OrderTypeRegistry _orderTypeRegistry;
+            private readonly OrderTerminalResultBuffer _terminalResults;
             private readonly int _step;
 
-            public ExecuteJob(World world, ActionLibraryCompiled256 library, OrderQueue orders, OrderTypeRegistry? orderTypeRegistry, int step)
+            public ExecuteJob(World world, ActionLibraryCompiled256 library, OrderQueue orders, OrderTypeRegistry orderTypeRegistry, OrderTerminalResultBuffer terminalResults, int step)
             {
                 _world = world;
                 _library = library;
                 _orders = orders;
                 _orderTypeRegistry = orderTypeRegistry;
+                _terminalResults = terminalResults;
                 _step = step;
             }
 
@@ -62,11 +66,43 @@ namespace Ludots.Core.Gameplay.AI.Systems
                 Entity entity,
                 ref AIAgent agent,
                 ref AIPlan32 plan,
-                ref OrderBuffer orderBuffer,
                 ref BlackboardIntBuffer ints,
                 ref BlackboardEntityBuffer entities)
             {
-                if (plan.IsDone || orderBuffer.HasActive) return;
+                if (plan.IsWaitingForOrder)
+                {
+                    if (!_terminalResults.TryConsume(plan.WaitingOrderId, out OrderTerminalOutcome terminal))
+                    {
+                        return;
+                    }
+
+                    if (terminal.OrderTypeId != plan.WaitingOrderTypeId || terminal.Actor != entity)
+                    {
+                        throw new System.InvalidOperationException(
+                            $"AI.PLAN.ERR.TerminalReceiptMismatch: orderId={plan.WaitingOrderId}, expectedType={plan.WaitingOrderTypeId}, actualType={terminal.OrderTypeId}.");
+                    }
+
+                    int completedOrderId = plan.WaitingOrderId;
+                    plan.ClearWaitingOrder();
+                    switch (terminal.State)
+                    {
+                        case OrderTerminalState.Completed:
+                            plan.Advance();
+                            break;
+                        case OrderTerminalState.Failed:
+                        case OrderTerminalState.Cancelled:
+                            plan.Clear();
+                            break;
+                        default:
+                            throw new System.InvalidOperationException(
+                                $"AI.PLAN.ERR.UnknownTerminalState: orderId={completedOrderId}, state={terminal.State}.");
+                    }
+
+                    _terminalResults.ReleaseConsumed(completedOrderId);
+                    return;
+                }
+
+                if (plan.IsDone) return;
 
                 if (!plan.TryGetCurrent(out int actionId)) return;
                 if ((uint)actionId >= (uint)_library.Count)
@@ -90,9 +126,13 @@ namespace Ludots.Core.Gameplay.AI.Systems
                     ref entities,
                     _step,
                     _orders,
-                    _orderTypeRegistry);
+                    _orderTypeRegistry,
+                    out int submittedOrderId);
 
-                if (ok) plan.Advance();
+                if (ok)
+                {
+                    plan.BeginWaitingForOrder(submittedOrderId, _library.OrderSpec[actionId].OrderTypeId);
+                }
             }
         }
     }

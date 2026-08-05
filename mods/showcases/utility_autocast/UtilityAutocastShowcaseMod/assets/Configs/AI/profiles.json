@@ -3,6 +3,7 @@
     "id": "Profile.UtilityAutocast.Mage",
     "DecisionIntervalSteps": 1,
     "MaxCandidates": 32,
+    "MaxGraphScoreInstructions": 64,
     "DecisionMakers": ["DM.UtilityAutocast.Mage"]
   }
 ]

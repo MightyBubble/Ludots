@@ -42,7 +42,7 @@ Order config is authored with semantic keys:
   "orderBlackboardKeys": {},
   "orderTypes": {
     "massNavigationMove": {
-      "intArg0BlackboardKey": "none"
+      "payloadKind": "MoveToWorldCm"
     }
   }
 }

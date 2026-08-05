@@ -1,6 +1,7 @@
 using System;
 using System.Runtime.CompilerServices;
 using Arch.Core;
+using Ludots.Core.Gameplay.GAS.Input;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
@@ -50,19 +51,23 @@ namespace Ludots.Tests.GAS
                     new GraphProgramRegistry(),
                     "Test/AllocationTests.AbilityActivation.json");
 
-                var abilityTemplate = world.Create();
-                world.Add(abilityTemplate, new AbilityTemplate());
-                world.Add(abilityTemplate, new AbilityOnActivateEffects());
-                world.Add(abilityTemplate, new AbilityExecSpec());
-                unsafe
-                {
-                    ref var onActivate = ref world.Get<AbilityOnActivateEffects>(abilityTemplate);
-                    onActivate.Add(1);
-                }
+                var execSpec = default(AbilityExecSpec);
+                execSpec.ClockId = GasClockId.FixedFrame;
+                execSpec.SetItem(
+                    0,
+                    ExecItemKind.EffectSignal,
+                    tick: 0,
+                    templateId: 1,
+                    payloadA: (int)ExecEffectDispatchTarget.Target);
+                execSpec.SetItem(1, ExecItemKind.End, tick: 0);
                 var abilityDefs = new AbilityDefinitionRegistry();
-                abilityDefs.RegisterFromEntity(world, abilityTemplate, 5001);
+                abilityDefs.Register(5001, new AbilityDefinition { ExecSpec = execSpec });
 
-                var caster = world.Create(new AbilityStateBuffer());
+                var caster = world.Create(
+                    OrderBuffer.CreateEmpty(),
+                    new BlackboardIntBuffer(),
+                    new BlackboardEntityBuffer(),
+                    new AbilityStateBuffer());
                 ref var abilityState = ref world.Get<AbilityStateBuffer>(caster);
                 abilityState.AddAbility(5001);
 
@@ -71,7 +76,27 @@ namespace Ludots.Tests.GAS
                 attr.SetCurrent(0, 1000f);
 
                 var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
-                var abilitySystem = new AbilitySystem(world, requests, abilityDefs, tagOps);
+                const int castAbilityOrderTypeId = 100;
+                var terminalResults = new OrderTerminalResultBuffer(capacity: 32);
+                var orderTypes = new OrderTypeRegistry(terminalResults);
+                orderTypes.Register(new OrderTypeConfig
+                {
+                    OrderTypeId = castAbilityOrderTypeId,
+                    PayloadKind = OrderPayloadKind.CastAbility,
+                    EntityBlackboardKey = OrderBlackboardKeys.Cast_TargetEntity,
+                    SpatialBlackboardKey = -1,
+                });
+                var abilityExecSystem = new AbilityExecSystem(
+                    world,
+                    new Ludots.Core.Engine.DiscreteClock(),
+                    new InputRequestQueue(),
+                    new InputResponseBuffer(),
+                    requests,
+                    snapshotCapacity: 16,
+                    abilityDefinitions: abilityDefs,
+                    castAbilityOrderTypeId: castAbilityOrderTypeId,
+                    orderTypeRegistry: orderTypes,
+                    tagOps: tagOps);
                 var proposalSystem = new EffectProposalProcessingSystem(
                     world,
                     requests,
@@ -82,20 +107,22 @@ namespace Ludots.Tests.GAS
                     responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
                     tagOps: tagOps);
 
-                var args = new AbilitySystem.AbilityActivationArgs(explicitTarget: target);
-
                 for (int i = 0; i < 16; i++)
                 {
-                    abilitySystem.TryActivateAbility(caster, 0, in args);
+                    SubmitActiveCast(world, caster, target, castAbilityOrderTypeId, orderId: i + 1);
+                    abilityExecSystem.Update(0.016f);
                     proposalSystem.Update(0.016f);
+                    terminalResults.Clear();
                 }
 
                 GC.Collect();
                 GC.WaitForPendingFinalizers();
                 GC.Collect();
 
-                abilitySystem.TryActivateAbility(caster, 0, in args);
+                SubmitActiveCast(world, caster, target, castAbilityOrderTypeId, orderId: 100);
+                abilityExecSystem.Update(0.016f);
                 proposalSystem.Update(0.016f);
+                terminalResults.Clear();
 
                 GC.Collect();
                 GC.WaitForPendingFinalizers();
@@ -106,8 +133,10 @@ namespace Ludots.Tests.GAS
 
                 for (int i = 0; i < 10_000; i++)
                 {
-                    abilitySystem.TryActivateAbility(caster, 0, in args);
+                    SubmitActiveCast(world, caster, target, castAbilityOrderTypeId, orderId: 1000 + i);
+                    abilityExecSystem.Update(0.016f);
                     proposalSystem.Update(0.016f);
+                    terminalResults.Clear();
                 }
 
                 long after = GC.GetAllocatedBytesForCurrentThread();
@@ -117,6 +146,28 @@ namespace Ludots.Tests.GAS
             {
                 world.Dispose();
             }
+        }
+
+        private static void SubmitActiveCast(
+            World world,
+            Entity caster,
+            Entity target,
+            int castAbilityOrderTypeId,
+            int orderId)
+        {
+            var order = OrderBuilder.CreateCastAbility(
+                castAbilityOrderTypeId,
+                playerId: 0,
+                caster,
+                target,
+                Entity.Null,
+                abilitySlotIndex: 0,
+                OrderSubmitMode.Immediate,
+                submitStep: 0);
+            order.OrderId = orderId;
+            world.Get<OrderBuffer>(caster).SetActiveDirect(in order, priority: 100);
+            world.Get<BlackboardIntBuffer>(caster).Set(OrderBlackboardKeys.Cast_SlotIndex, 0);
+            world.Get<BlackboardEntityBuffer>(caster).Set(OrderBlackboardKeys.Cast_TargetEntity, target);
         }
 
         [Test]
@@ -144,8 +195,8 @@ namespace Ludots.Tests.GAS
                 DurationTicks = 0,
                 PeriodTicks = 0,
                 ExpireCondition = default,
-                    ParticipatesInResponse = false,
-                    Modifiers = default
+                ParticipatesInResponse = false,
+                Modifiers = default
             });
 
             var presetTypes = new PresetTypeRegistry();

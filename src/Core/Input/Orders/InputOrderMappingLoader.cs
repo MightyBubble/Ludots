@@ -24,8 +24,8 @@ namespace Ludots.Core.Input.Orders
         /// Load configuration from ConfigPipeline.
         /// </summary>
         public InputOrderMappingConfig Load(
-            ConfigCatalog catalog = null,
-            ConfigConflictReport report = null,
+            ConfigCatalog? catalog = null,
+            ConfigConflictReport? report = null,
             string relativePath = "Input/input_order_mappings.json")
         {
             var entry = ConfigPipeline.RequireEntry(catalog, relativePath, ConfigMergePolicy.DeepObject);
@@ -39,7 +39,8 @@ namespace Ludots.Core.Input.Orders
             ValidateAuthoredContract(mergedObject, relativePath);
             var config = mergedObject.Deserialize<InputOrderMappingConfig>(JsonOptions);
             config = config ?? throw new InvalidOperationException($"Failed to deserialize '{relativePath}'.");
-            Validate(config, relativePath);
+            var targetLayoutProfiles = LoadTargetLayoutProfiles(catalog, report, ResolveTargetLayoutProfilePath(relativePath));
+            Validate(config, targetLayoutProfiles, relativePath);
             return config;
         }
 
@@ -47,7 +48,13 @@ namespace Ludots.Core.Input.Orders
         /// Load configuration from a file path (for user overrides/preferences).
         /// </summary>
         public static InputOrderMappingConfig LoadFromFile(string filePath)
+            => LoadFromFile(filePath, Array.Empty<TargetLayoutProfileDefinition>());
+
+        public static InputOrderMappingConfig LoadFromFile(
+            string filePath,
+            IReadOnlyList<TargetLayoutProfileDefinition> targetLayoutProfiles)
         {
+            if (targetLayoutProfiles == null) throw new ArgumentNullException(nameof(targetLayoutProfiles));
             if (!System.IO.File.Exists(filePath))
                 return new InputOrderMappingConfig();
 
@@ -57,7 +64,7 @@ namespace Ludots.Core.Input.Orders
             ValidateAuthoredContract(node, filePath);
             var config = node.Deserialize<InputOrderMappingConfig>(JsonOptions);
             config ??= new InputOrderMappingConfig();
-            Validate(config, filePath);
+            Validate(config, targetLayoutProfiles, filePath);
             return config;
         }
 
@@ -65,14 +72,32 @@ namespace Ludots.Core.Input.Orders
         /// Load configuration from a stream (for VFS access).
         /// </summary>
         public static InputOrderMappingConfig LoadFromStream(System.IO.Stream stream)
+            => LoadFromStream(stream, null, "input_order_mappings stream");
+
+        public static InputOrderMappingConfig LoadFromStream(
+            System.IO.Stream stream,
+            IReadOnlyList<TargetLayoutProfileDefinition>? targetLayoutProfiles,
+            string source)
         {
             if (stream == null) throw new ArgumentNullException(nameof(stream));
             JsonNode node = JsonNode.Parse(stream) ??
-                throw new InvalidOperationException("Deserialized null from input_order_mappings stream.");
-            ValidateAuthoredContract(node, "input_order_mappings stream");
+                throw new InvalidOperationException($"Deserialized null from {source}.");
+            ValidateAuthoredContract(node, source);
             var config = node.Deserialize<InputOrderMappingConfig>(JsonOptions);
-            config = config ?? throw new InvalidOperationException("Deserialized null from input_order_mappings stream.");
-            Validate(config, "input_order_mappings stream");
+            config = config ?? throw new InvalidOperationException($"Deserialized null from {source}.");
+            Validate(config, targetLayoutProfiles ?? Array.Empty<TargetLayoutProfileDefinition>(), source);
+            return config;
+        }
+
+        public static TargetLayoutProfileConfig LoadTargetLayoutProfilesFromStream(System.IO.Stream stream, string source)
+        {
+            if (stream == null) throw new ArgumentNullException(nameof(stream));
+            JsonNode node = JsonNode.Parse(stream) ??
+                throw new InvalidOperationException($"Deserialized null from {source}.");
+            ValidateTargetLayoutProfileRoot(node, source);
+            var config = node.Deserialize<TargetLayoutProfileConfig>(JsonOptions);
+            config = config ?? throw new InvalidOperationException($"Deserialized null from {source}.");
+            ValidateTargetLayoutProfiles(config.TargetLayoutProfiles, source);
             return config;
         }
 
@@ -99,7 +124,13 @@ namespace Ludots.Core.Input.Orders
             if (root.ContainsKey("groupMoveTargetLayout"))
             {
                 throw new InvalidOperationException(
-                    $"{source}.groupMoveTargetLayout is retired; use targetLayoutProfiles plus mapping.targetLayoutProfileId.");
+                    $"{source}.groupMoveTargetLayout is retired; author Input/target_layout_profiles.json and reference mapping.targetLayoutProfileId.");
+            }
+
+            if (root.ContainsKey("targetLayoutProfiles"))
+            {
+                throw new InvalidOperationException(
+                    $"{source}.targetLayoutProfiles is retired from input_order_mappings; author Input/target_layout_profiles.json and reference mapping.targetLayoutProfileId.");
             }
 
             if (!root.TryGetPropertyValue("mappings", out JsonNode? mappingsNode))
@@ -164,15 +195,21 @@ namespace Ludots.Core.Input.Orders
         }
 
         public static void Validate(InputOrderMappingConfig config, string source)
+            => Validate(config, Array.Empty<TargetLayoutProfileDefinition>(), source);
+
+        public static void Validate(
+            InputOrderMappingConfig config,
+            IReadOnlyList<TargetLayoutProfileDefinition> targetLayoutProfiles,
+            string source)
         {
             if (config == null) throw new ArgumentNullException(nameof(config));
+            if (targetLayoutProfiles == null) throw new ArgumentNullException(nameof(targetLayoutProfiles));
             if (config.Mappings == null)
             {
                 throw new InvalidOperationException($"Input order mapping config '{source}' must explicitly define mappings.");
             }
 
-            config.TargetLayoutProfiles ??= new List<TargetLayoutProfileDefinition>();
-            ValidateTargetLayoutProfiles(config.TargetLayoutProfiles, source);
+            ValidateTargetLayoutProfiles(targetLayoutProfiles, source);
 
             var actionVariants = new Dictionary<string, ActionMappingVariantSet>(StringComparer.Ordinal);
             for (int i = 0; i < config.Mappings.Count; i++)
@@ -193,11 +230,7 @@ namespace Ludots.Core.Input.Orders
 
                 if (string.IsNullOrWhiteSpace(mapping.OrderTypeKey))
                 {
-                    if (mapping.ActorOrderRouting == null || mapping.ActorOrderRouting.Candidates.Count == 0)
-                    {
-                        throw new InvalidOperationException(
-                            $"{path} must define orderTypeKey or actorOrderRouting.candidates.");
-                    }
+                    throw new InvalidOperationException($"{path}.orderTypeKey must be a non-empty string.");
                 }
                 else if (!string.Equals(mapping.OrderTypeKey, mapping.OrderTypeKey.Trim(), StringComparison.Ordinal))
                 {
@@ -207,48 +240,20 @@ namespace Ludots.Core.Input.Orders
                 mapping.OrderPayload ??= new InputOrderPayloadTemplate();
                 ValidateOrderPayload(mapping, path);
                 mapping.ApplyDerivedRuntimeFields();
+
                 ValidateAbilityQualifier(mapping, path);
                 TrackActionMappingVariant(actionVariants, mapping, path);
-
-                if (mapping.ActorOrderRouting != null)
-                {
-                    if (mapping.IsSkillMapping)
-                    {
-                        throw new InvalidOperationException($"{path}.actorOrderRouting is only valid when isSkillMapping is false.");
-                    }
-
-                    if (mapping.TargetType == OrderTargetType.Entities)
-                    {
-                        throw new InvalidOperationException($"{path}.actorOrderRouting does not support TargetType=Entities.");
-                    }
-
-                    ValidateActorOrderRouting(mapping.ActorOrderRouting, path);
-                }
 
                 ValidateOptionalCollectionKey(mapping.ActorCollectionKey, $"{path}.actorCollectionKey");
                 ValidateOptionalCollectionKey(mapping.TargetCollectionKey, $"{path}.targetCollectionKey");
                 ValidateMappingTargetLayoutReference(
                     mapping,
-                    config.TargetLayoutProfiles,
+                    targetLayoutProfiles,
                     $"{path}.targetLayoutProfileId");
-                if (RequiresActorCollection(mapping) && string.IsNullOrWhiteSpace(mapping.ActorCollectionKey))
-                {
-                    throw new InvalidOperationException(
-                        $"{path}.actorCollectionKey must be configured explicitly when actor collection fan-out or routing is used.");
-                }
-
                 if (RequiresTargetCollection(mapping) && string.IsNullOrWhiteSpace(mapping.TargetCollectionKey))
                 {
                     throw new InvalidOperationException(
                         $"{path}.targetCollectionKey must be configured explicitly when targetType requires collection target data.");
-                }
-
-                if (mapping.ActorOrderRouting == null || mapping.ActorOrderRouting.Candidates.Count == 0)
-                {
-                    if (string.IsNullOrWhiteSpace(mapping.OrderTypeKey))
-                    {
-                        throw new InvalidOperationException($"{path}.orderTypeKey must be a non-empty string.");
-                    }
                 }
 
                 if (mapping.HeldPolicy == HeldPolicy.StartEnd && mapping.Trigger != InputTriggerType.Held)
@@ -339,6 +344,41 @@ namespace Ludots.Core.Input.Orders
 
                 mapping.AbilityId = abilityId;
             }
+        }
+
+        private List<TargetLayoutProfileDefinition> LoadTargetLayoutProfiles(
+            ConfigCatalog catalog,
+            ConfigConflictReport report,
+            string relativePath)
+        {
+            if (catalog == null || !catalog.TryGet(relativePath, out ConfigCatalogEntry entry))
+            {
+                return new List<TargetLayoutProfileDefinition>();
+            }
+
+            JsonObject mergedObject = _pipeline.MergeDeepObjectFromCatalog(in entry, report);
+            if (mergedObject == null)
+            {
+                return new List<TargetLayoutProfileDefinition>();
+            }
+
+            var config = mergedObject.Deserialize<TargetLayoutProfileConfig>(JsonOptions);
+            config = config ?? throw new InvalidOperationException($"Failed to deserialize '{relativePath}'.");
+            ValidateTargetLayoutProfiles(config.TargetLayoutProfiles, relativePath);
+            return config.TargetLayoutProfiles;
+        }
+
+        private static string ResolveTargetLayoutProfilePath(string inputMappingPath)
+        {
+            int slash = inputMappingPath.LastIndexOf('/');
+            if (slash < 0)
+            {
+                slash = inputMappingPath.LastIndexOf('\\');
+            }
+
+            return slash < 0
+                ? "target_layout_profiles.json"
+                : inputMappingPath.Substring(0, slash + 1) + "target_layout_profiles.json";
         }
 
         private static void ValidateAbilityQualifier(InputOrderMapping mapping, string path)
@@ -590,9 +630,14 @@ namespace Ludots.Core.Input.Orders
         }
 
         private static void ValidateTargetLayoutProfiles(
-            List<TargetLayoutProfileDefinition> profiles,
+            IReadOnlyList<TargetLayoutProfileDefinition> profiles,
             string source)
         {
+            if (profiles == null)
+            {
+                throw new InvalidOperationException($"{source}.targetLayoutProfiles must be explicitly defined.");
+            }
+
             var ids = new HashSet<string>(StringComparer.Ordinal);
             for (int i = 0; i < profiles.Count; i++)
             {
@@ -631,6 +676,7 @@ namespace Ludots.Core.Input.Orders
                         $"{path}.spacingCm must be greater than zero when mode is Grid.");
                 }
 
+                var orderTypeKeys = new HashSet<string>(StringComparer.Ordinal);
                 for (int keyIndex = 0; keyIndex < profile.OrderTypeKeys.Count; keyIndex++)
                 {
                     string key = profile.OrderTypeKeys[keyIndex];
@@ -645,13 +691,37 @@ namespace Ludots.Core.Input.Orders
                         throw new InvalidOperationException(
                             $"{path}.orderTypeKeys[{keyIndex}] must not contain leading or trailing whitespace.");
                     }
+
+                    if (!orderTypeKeys.Add(key))
+                    {
+                        throw new InvalidOperationException(
+                            $"{path}.orderTypeKeys[{keyIndex}] duplicates order type key '{key}'.");
+                    }
                 }
+            }
+        }
+
+        private static void ValidateTargetLayoutProfileRoot(JsonNode rootNode, string source)
+        {
+            if (rootNode is not JsonObject root)
+            {
+                throw new InvalidOperationException($"{source} must be a JSON object.");
+            }
+
+            if (!root.ContainsKey("targetLayoutProfiles"))
+            {
+                throw new InvalidOperationException($"{source}.targetLayoutProfiles must be explicitly defined.");
+            }
+
+            if (root["targetLayoutProfiles"] is not JsonArray)
+            {
+                throw new InvalidOperationException($"{source}.targetLayoutProfiles must be an array.");
             }
         }
 
         private static void ValidateMappingTargetLayoutReference(
             InputOrderMapping mapping,
-            List<TargetLayoutProfileDefinition> profiles,
+            IReadOnlyList<TargetLayoutProfileDefinition> profiles,
             string path)
         {
             mapping.TargetLayoutProfileIndex = -1;
@@ -692,12 +762,37 @@ namespace Ludots.Core.Input.Orders
                     $"{path} is only valid for Position target mappings.");
             }
 
+            if (mapping.IsSkillMapping)
+            {
+                throw new InvalidOperationException(
+                    $"{path} is only valid for non-skill position order mappings.");
+            }
+
+            if (!TargetLayoutProfileAllowsOrderType(profiles[profileIndex], mapping.OrderTypeKey))
+            {
+                throw new InvalidOperationException(
+                    $"{path} references target layout profile '{mapping.TargetLayoutProfileId}', but orderTypeKey '{mapping.OrderTypeKey}' is not listed in that profile's orderTypeKeys.");
+            }
+
             mapping.TargetLayoutProfileIndex = profileIndex;
         }
 
-        private static bool RequiresActorCollection(InputOrderMapping mapping)
+        private static bool TargetLayoutProfileAllowsOrderType(TargetLayoutProfileDefinition profile, string orderTypeKey)
         {
-            return mapping.ActorOrderRouting != null;
+            if (profile.OrderTypeKeys == null || string.IsNullOrWhiteSpace(orderTypeKey))
+            {
+                return false;
+            }
+
+            for (int i = 0; i < profile.OrderTypeKeys.Count; i++)
+            {
+                if (string.Equals(profile.OrderTypeKeys[i], orderTypeKey, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private static bool RequiresTargetCollection(InputOrderMapping mapping)
@@ -708,32 +803,6 @@ namespace Ludots.Core.Input.Orders
                     mapping.RequireTarget &&
                     mapping.AutoTargetPolicy == AutoTargetPolicy.None &&
                     mapping.CursorTargetPolicy == AutoTargetPolicy.None);
-        }
-
-        private static void ValidateActorOrderRouting(ActorOrderRoutingSettings routing, string path)
-        {
-            if (routing.Candidates == null || routing.Candidates.Count == 0)
-            {
-                throw new InvalidOperationException($"{path}.actorOrderRouting.candidates must be a non-empty array.");
-            }
-
-            for (int i = 0; i < routing.Candidates.Count; i++)
-            {
-                ActorOrderRoutingCandidate candidate = routing.Candidates[i] ??
-                    throw new InvalidOperationException($"{path}.actorOrderRouting.candidates[{i}] must be an object.");
-                string candidatePath = $"{path}.actorOrderRouting.candidates[{i}]";
-                if (string.IsNullOrWhiteSpace(candidate.OrderTypeKey))
-                {
-                    throw new InvalidOperationException($"{candidatePath}.orderTypeKey must be a non-empty string.");
-                }
-
-                if (!string.Equals(candidate.OrderTypeKey, candidate.OrderTypeKey.Trim(), StringComparison.Ordinal))
-                {
-                    throw new InvalidOperationException($"{candidatePath}.orderTypeKey must not contain leading or trailing whitespace.");
-                }
-
-                candidate.Match ??= new ActorOrderRoutingMatch();
-            }
         }
 
     }

@@ -415,7 +415,6 @@ public sealed class CombatStanceBehaviorTests
                 ClearQueueOnActivate = true,
                 EntityBlackboardKey = -1,
                 SpatialBlackboardKey = -1,
-                IntArg0BlackboardKey = -1
             });
         }
 

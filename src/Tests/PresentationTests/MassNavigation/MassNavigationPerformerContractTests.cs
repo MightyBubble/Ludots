@@ -397,7 +397,7 @@ namespace Ludots.Tests.Presentation
                 ?? throw new InvalidOperationException("MassNavigation orderTypes must be authored.");
             JsonObject moveOrder = orderTypes["massNavigationMove"]?.AsObject()
                 ?? throw new InvalidOperationException("massNavigationMove order type must be authored.");
-            Assert.That(moveOrder["intArg0BlackboardKey"]?.GetValue<string>(), Is.EqualTo("none"));
+            Assert.That(moveOrder.ContainsKey("intArg0BlackboardKey"), Is.False);
             Assert.That(moveOrder["spatialBlackboardKey"]?.GetValue<string>(), Is.EqualTo("none"));
             Assert.That(moveOrder["entityBlackboardKey"]?.GetValue<string>(), Is.EqualTo("none"));
 
@@ -485,8 +485,12 @@ namespace Ludots.Tests.Presentation
                       "clearQueueOnActivate": false,
                       "spatialBlackboardKey": "none",
                       "entityBlackboardKey": "none",
-                      "intArg0BlackboardKey": "Cast.SlotIndex",
-                      "validationGraph": "none"
+                      "payloadKind": "CastAbility",
+                      "payloadFields": {
+                        "abilitySlotBlackboardKey": "Cast.SlotIndex"
+                      },
+                      "validationGraph": "none",
+                      "instantComplete": false
                     }
                   },
                   "orderRules": {}

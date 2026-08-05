@@ -19,8 +19,10 @@
       "clearQueueOnActivate": true,
       "spatialBlackboardKey": "Cast.TargetPosition",
       "entityBlackboardKey": "Cast.TargetEntity",
-      "intArg0BlackboardKey": "Cast.SlotIndex",
       "payloadKind": "CastAbility",
+      "payloadFields": {
+        "abilitySlotBlackboardKey": "Cast.SlotIndex"
+      },
       "validationGraph": "none",
       "instantComplete": false
     },
@@ -39,8 +41,10 @@
       "clearQueueOnActivate": true,
       "spatialBlackboardKey": "Cast.TargetPosition",
       "entityBlackboardKey": "Cast.TargetEntity",
-      "intArg0BlackboardKey": "Cast.SlotIndex",
       "payloadKind": "CastAbility",
+      "payloadFields": {
+        "abilitySlotBlackboardKey": "Cast.SlotIndex"
+      },
       "validationGraph": "none",
       "instantComplete": false
     },
@@ -59,8 +63,10 @@
       "clearQueueOnActivate": true,
       "spatialBlackboardKey": "none",
       "entityBlackboardKey": "none",
-      "intArg0BlackboardKey": "Cast.SlotIndex",
       "payloadKind": "CastAbility",
+      "payloadFields": {
+        "abilitySlotBlackboardKey": "Cast.SlotIndex"
+      },
       "validationGraph": "none",
       "instantComplete": false
     },
@@ -79,7 +85,6 @@
       "clearQueueOnActivate": true,
       "spatialBlackboardKey": "Generic.TargetPosition",
       "entityBlackboardKey": "none",
-      "intArg0BlackboardKey": "none",
       "payloadKind": "MoveToWorldCm",
       "validationGraph": "none",
       "instantComplete": false
@@ -99,7 +104,6 @@
       "clearQueueOnActivate": true,
       "spatialBlackboardKey": "Attack.MovePosition",
       "entityBlackboardKey": "Attack.TargetEntity",
-      "intArg0BlackboardKey": "none",
       "payloadKind": "TargetEntity",
       "validationGraph": "none",
       "instantComplete": false
@@ -119,7 +123,6 @@
       "clearQueueOnActivate": true,
       "spatialBlackboardKey": "none",
       "entityBlackboardKey": "none",
-      "intArg0BlackboardKey": "none",
       "payloadKind": "Stop",
       "validationGraph": "none",
       "instantComplete": false
@@ -139,7 +142,6 @@
       "clearQueueOnActivate": false,
       "spatialBlackboardKey": "none",
       "entityBlackboardKey": "none",
-      "intArg0BlackboardKey": "none",
       "payloadKind": "None",
       "validationGraph": "none",
       "instantComplete": false
@@ -159,7 +161,6 @@
       "clearQueueOnActivate": false,
       "spatialBlackboardKey": "none",
       "entityBlackboardKey": "none",
-      "intArg0BlackboardKey": "none",
       "payloadKind": "None",
       "validationGraph": "none",
       "instantComplete": false
@@ -179,7 +180,6 @@
       "clearQueueOnActivate": false,
       "spatialBlackboardKey": "none",
       "entityBlackboardKey": "none",
-      "intArg0BlackboardKey": "none",
       "payloadKind": "None",
       "validationGraph": "none",
       "instantComplete": false

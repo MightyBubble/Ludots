@@ -1677,7 +1677,7 @@ namespace Ludots.Tests.GAS
                 OrderTypeId = castAbilityOrderTypeId,
                 AllowQueuedMode = false,
                 ClearQueueOnActivate = true,
-                IntArg0BlackboardKey = OrderBlackboardKeys.Cast_SlotIndex,
+                PayloadKind = OrderPayloadKind.CastAbility,
                 EntityBlackboardKey = OrderBlackboardKeys.Cast_TargetEntity,
                 SpatialBlackboardKey = OrderBlackboardKeys.Cast_TargetPosition
             });

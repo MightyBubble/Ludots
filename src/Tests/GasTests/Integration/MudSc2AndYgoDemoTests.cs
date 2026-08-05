@@ -663,7 +663,7 @@ namespace Ludots.Tests.GAS
                 ClearQueueOnActivate = true,
                 SpatialBlackboardKey = OrderBlackboardKeys.Cast_TargetPosition,
                 EntityBlackboardKey = OrderBlackboardKeys.Cast_TargetEntity,
-                IntArg0BlackboardKey = OrderBlackboardKeys.Cast_SlotIndex
+                PayloadKind = OrderPayloadKind.CastAbility
             });
 
             return (types, new OrderRuleRegistry());

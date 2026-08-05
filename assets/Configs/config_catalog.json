@@ -54,6 +54,7 @@
   { "Path": "Input/default_input.json", "Policy": "DeepObject" },
   { "Path": "Input/action_attribute_bindings.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "Input/input_order_mappings.json", "Policy": "DeepObject" },
+  { "Path": "Input/target_layout_profiles.json", "Policy": "DeepObject" },
   { "Path": "Input/filter_profiles.json", "Policy": "DeepObject" },
   { "Path": "Input/command_intent_profiles.json", "Policy": "DeepObject" },
   { "Path": "Input/cast_dispatch_profiles.json", "Policy": "DeepObject" },

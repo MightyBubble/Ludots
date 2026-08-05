@@ -16,7 +16,6 @@
       "clearQueueOnActivate": true,
       "spatialBlackboardKey": "Generic.TargetPosition",
       "entityBlackboardKey": "none",
-      "intArg0BlackboardKey": "none",
       "payloadKind": "None",
       "validationGraph": "none",
       "instantComplete": false
@@ -36,7 +35,6 @@
       "clearQueueOnActivate": true,
       "spatialBlackboardKey": "Generic.TargetPosition",
       "entityBlackboardKey": "none",
-      "intArg0BlackboardKey": "none",
       "payloadKind": "None",
       "validationGraph": "none",
       "instantComplete": false
@@ -56,7 +54,6 @@
       "clearQueueOnActivate": true,
       "spatialBlackboardKey": "none",
       "entityBlackboardKey": "Generic.TargetEntity",
-      "intArg0BlackboardKey": "none",
       "payloadKind": "None",
       "validationGraph": "none",
       "instantComplete": false
@@ -76,7 +73,6 @@
       "clearQueueOnActivate": false,
       "spatialBlackboardKey": "none",
       "entityBlackboardKey": "none",
-      "intArg0BlackboardKey": "none",
       "payloadKind": "None",
       "validationGraph": "none",
       "instantComplete": false
@@ -96,7 +92,6 @@
       "clearQueueOnActivate": true,
       "spatialBlackboardKey": "none",
       "entityBlackboardKey": "none",
-      "intArg0BlackboardKey": "none",
       "payloadKind": "None",
       "validationGraph": "none",
       "instantComplete": false

@@ -36,9 +36,15 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             public JsonNode? EntityBlackboardKey { get; set; }
             public JsonNode? IntArg0BlackboardKey { get; set; }
             public string? PayloadKind { get; set; }
+            public OrderPayloadFieldsConfigJson? PayloadFields { get; set; }
             public JsonNode? ValidationGraph { get; set; }
             public bool? InstantComplete { get; set; }
             public PersistentStoredTargetConfigJson? PersistentStoredTarget { get; set; }
+        }
+
+        public sealed class OrderPayloadFieldsConfigJson
+        {
+            public JsonNode? AbilitySlotBlackboardKey { get; set; }
         }
 
         public sealed class PersistentStoredTargetConfigJson
@@ -70,8 +76,8 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         }
 
         public void RegisterBlackboardKeys(
-            ConfigCatalog catalog = null,
-            ConfigConflictReport report = null,
+            ConfigCatalog? catalog = null,
+            ConfigConflictReport? report = null,
             string relativePath = "GAS/order_types.json")
         {
             OrderTypesRootJson root = LoadOrderTypesRoot(catalog, report, relativePath);
@@ -81,8 +87,8 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         public void Load(
             OrderTypeRegistry orderTypeRegistry,
             OrderRuleRegistry orderRuleRegistry,
-            ConfigCatalog catalog = null,
-            ConfigConflictReport report = null,
+            ConfigCatalog? catalog = null,
+            ConfigConflictReport? report = null,
             string relativePath = "GAS/order_types.json")
         {
             if (orderTypeRegistry == null) throw new ArgumentNullException(nameof(orderTypeRegistry));
@@ -157,7 +163,11 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             int maxQueueSize = RequireQueueSize(json.MaxQueueSize, key, path, "maxQueueSize");
             int queuedModeMaxSize = RequireQueueSize(json.QueuedModeMaxSize, key, path, "queuedModeMaxSize");
 
-            return new OrderTypeConfig
+            RejectRuntimeAbiField(json.IntArg0BlackboardKey, key, path, "intArg0BlackboardKey");
+            OrderPayloadKind payloadKind = ParsePayloadKind(RequireString(json.PayloadKind, key, path, "payloadKind"), key, path);
+            int intArg0BlackboardKey = ResolvePayloadIntArg0BlackboardKey(payloadKind, json.PayloadFields, key, path);
+
+            var config = new OrderTypeConfig
             {
                 Key = key,
                 OrderTypeId = orderTypeId,
@@ -174,12 +184,51 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 ClearQueueOnActivate = RequireBool(json.ClearQueueOnActivate, key, path, "clearQueueOnActivate"),
                 SpatialBlackboardKey = ResolveBlackboardKey(json.SpatialBlackboardKey, key, path, "spatialBlackboardKey"),
                 EntityBlackboardKey = ResolveBlackboardKey(json.EntityBlackboardKey, key, path, "entityBlackboardKey"),
-                IntArg0BlackboardKey = ResolveBlackboardKey(json.IntArg0BlackboardKey, key, path, "intArg0BlackboardKey"),
-                PayloadKind = ParsePayloadKind(RequireString(json.PayloadKind, key, path, "payloadKind"), key, path),
                 ValidationGraphId = ResolveValidationGraph(json.ValidationGraph, key, path),
                 InstantComplete = RequireBool(json.InstantComplete, key, path, "instantComplete"),
                 PersistentStoredTargetKeys = ResolvePersistentStoredTarget(json.PersistentStoredTarget, json.InstantComplete, key, path),
             };
+            config.CompileRuntimePayload(payloadKind, intArg0BlackboardKey);
+            return config;
+        }
+
+        private static void RejectRuntimeAbiField(JsonNode? node, string key, string path, string fieldName)
+        {
+            if (node != null)
+            {
+                throw new InvalidOperationException(
+                    $"Order type '{key}' in '{path}' must not author {fieldName}; use typed payloadFields instead.");
+            }
+        }
+
+        private static int ResolvePayloadIntArg0BlackboardKey(
+            OrderPayloadKind payloadKind,
+            OrderPayloadFieldsConfigJson? payloadFields,
+            string key,
+            string path)
+        {
+            if (payloadKind == OrderPayloadKind.CastAbility)
+            {
+                if (payloadFields == null)
+                {
+                    throw new InvalidOperationException(
+                        $"Order type '{key}' in '{path}' payloadKind CastAbility must explicitly define payloadFields.abilitySlotBlackboardKey.");
+                }
+
+                return ResolveBlackboardKey(
+                    payloadFields.AbilitySlotBlackboardKey,
+                    key,
+                    path,
+                    "payloadFields.abilitySlotBlackboardKey");
+            }
+
+            if (payloadFields != null)
+            {
+                throw new InvalidOperationException(
+                    $"Order type '{key}' in '{path}' payloadFields are only valid for payloadKind CastAbility.");
+            }
+
+            return -1;
         }
 
         private static OrderPayloadKind ParsePayloadKind(string value, string key, string path)
@@ -394,6 +443,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 throw new InvalidOperationException($"Missing required config '{relativePath}'.");
             }
 
+            RejectRetiredOrderTypeFields(mergedObject, relativePath);
             var root = mergedObject.Deserialize<OrderTypesRootJson>(JsonOptions);
             if (root == null)
             {
@@ -416,6 +466,23 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             }
 
             return root;
+        }
+
+        private static void RejectRetiredOrderTypeFields(JsonObject root, string path)
+        {
+            if (root["orderTypes"] is not JsonObject orderTypes)
+            {
+                return;
+            }
+
+            foreach (var kvp in orderTypes)
+            {
+                if (kvp.Value is JsonObject orderType && orderType.ContainsKey("intArg0BlackboardKey"))
+                {
+                    throw new InvalidOperationException(
+                        $"Order type '{kvp.Key}' in '{path}' must not author intArg0BlackboardKey; use typed payloadFields instead.");
+                }
+            }
         }
 
         private static void RegisterConfiguredBlackboardKeys(

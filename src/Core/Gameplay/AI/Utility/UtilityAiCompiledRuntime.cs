@@ -137,6 +137,7 @@ namespace Ludots.Core.Gameplay.AI.Utility
         public readonly int DecisionMakerCount;
         public readonly int DecisionIntervalSteps;
         public readonly int MaxCandidates;
+        public readonly int MaxGraphScoreInstructions;
         public readonly int DefaultStanceId;
 
         public UtilityAiProfileDefinition(
@@ -144,12 +145,14 @@ namespace Ludots.Core.Gameplay.AI.Utility
             int decisionMakerCount,
             int decisionIntervalSteps,
             int maxCandidates,
+            int maxGraphScoreInstructions,
             int defaultStanceId)
         {
             DecisionMakerOffset = decisionMakerOffset;
             DecisionMakerCount = decisionMakerCount;
             DecisionIntervalSteps = decisionIntervalSteps;
             MaxCandidates = maxCandidates;
+            MaxGraphScoreInstructions = maxGraphScoreInstructions;
             DefaultStanceId = defaultStanceId;
         }
     }

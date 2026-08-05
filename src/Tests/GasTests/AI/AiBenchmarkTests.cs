@@ -27,6 +27,8 @@ namespace Ludots.Tests.GAS
             var clock = new DiscreteClock();
             var admissionResults = new OrderAdmissionResultBuffer(10000, 10000);
             var orders = new OrderQueue(capacity: 20000, admissionResults);
+            var terminalResults = new OrderTerminalResultBuffer(capacity: 20000);
+            var orderTypes = CreatePlanningOrderTypes(terminalResults);
 
             var selector = UtilityGoalSelectorCompiled256.Compile(new[]
             {
@@ -66,7 +68,7 @@ namespace Ludots.Tests.GAS
             var goalSys = new AIGoalSelectionSystem(world, selector);
             var planner = new GoapAStarPlanner256(maxNodes: 128);
             var goapSys = new GoapPlanningSystem(world, planner, lib, goalTable);
-            var execSys = new AIPlanExecutionSystem(world, clock, lib, orders);
+            var execSys = new AIPlanExecutionSystem(world, clock, lib, orders, orderTypes);
 
             const int agentCount = 10_000;
             for (int i = 0; i < agentCount; i++)
@@ -88,14 +90,15 @@ namespace Ludots.Tests.GAS
 
             for (int i = 0; i < 10; i++)
             {
+                terminalResults.Clear();
                 admissionResults.BeginLogicStep();
                 goalSys.Update(1f / 60f);
                 goapSys.Update(1f / 60f);
                 execSys.Update(1f / 60f);
+                DrainSubmittedOrdersAsCompleted(orders, terminalResults);
                 admissionResults.EndEntityIntake();
                 admissionResults.EndLogicStep();
                 clock.Advance(ClockDomainId.Step, 1);
-                orders.Clear();
             }
 
             GC.Collect();
@@ -109,14 +112,15 @@ namespace Ludots.Tests.GAS
             const int iterations = 120;
             for (int i = 0; i < iterations; i++)
             {
+                terminalResults.Clear();
                 admissionResults.BeginLogicStep();
                 goalSys.Update(1f / 60f);
                 goapSys.Update(1f / 60f);
                 execSys.Update(1f / 60f);
+                DrainSubmittedOrdersAsCompleted(orders, terminalResults);
                 admissionResults.EndEntityIntake();
                 admissionResults.EndLogicStep();
                 clock.Advance(ClockDomainId.Step, 1);
-                orders.Clear();
             }
 
             sw.Stop();
@@ -139,6 +143,7 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             var clock = new DiscreteClock();
             var orders = new OrderQueue(capacity: 128, new OrderAdmissionResultBuffer(128, 128));
+            var orderTypes = CreatePlanningOrderTypes(new OrderTerminalResultBuffer(128));
 
             var lib = ActionLibraryCompiled256.Compile(new[]
             {
@@ -153,7 +158,7 @@ namespace Ludots.Tests.GAS
                     bindings: new[] { new ActionBinding(ActionBindingOp.IntToAbilitySlot, sourceKey: 1) })
             });
 
-            var execSys = new AIPlanExecutionSystem(world, clock, lib, orders);
+            var execSys = new AIPlanExecutionSystem(world, clock, lib, orders, orderTypes);
 
             var plan = new AIPlan32();
             plan.TryAdd(0);
@@ -181,6 +186,7 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             var clock = new DiscreteClock();
             var orders = new OrderQueue(capacity: 128, new OrderAdmissionResultBuffer(128, 128));
+            var orderTypes = CreatePlanningOrderTypes(new OrderTerminalResultBuffer(128));
 
             var lib = ActionLibraryCompiled256.Compile(new[]
             {
@@ -195,7 +201,7 @@ namespace Ludots.Tests.GAS
                     bindings: new[] { new ActionBinding(ActionBindingOp.EntityToTarget, sourceKey: 2) })
             });
 
-            var execSys = new AIPlanExecutionSystem(world, clock, lib, orders);
+            var execSys = new AIPlanExecutionSystem(world, clock, lib, orders, orderTypes);
             Entity target = world.Create();
 
             var plan = new AIPlan32();
@@ -226,6 +232,7 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             var clock = new DiscreteClock();
             var orders = new OrderQueue(capacity: 128, new OrderAdmissionResultBuffer(128, 128));
+            var orderTypes = CreatePlanningOrderTypes(new OrderTerminalResultBuffer(128));
 
             var lib = ActionLibraryCompiled256.Compile(new[]
             {
@@ -240,7 +247,7 @@ namespace Ludots.Tests.GAS
                     bindings: new[] { new ActionBinding(ActionBindingOp.EntityPositionToMoveDestination, sourceKey: 3) })
             });
 
-            var execSys = new AIPlanExecutionSystem(world, clock, lib, orders);
+            var execSys = new AIPlanExecutionSystem(world, clock, lib, orders, orderTypes);
             Entity destination = world.Create(WorldPositionCm.FromCm(120, -45));
 
             var plan = new AIPlan32();
@@ -272,6 +279,7 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             var clock = new DiscreteClock();
             var orders = new OrderQueue(capacity: 128, new OrderAdmissionResultBuffer(128, 128));
+            var orderTypes = CreatePlanningOrderTypes(new OrderTerminalResultBuffer(128));
 
             var lib = ActionLibraryCompiled256.Compile(new[]
             {
@@ -286,7 +294,7 @@ namespace Ludots.Tests.GAS
                     bindings: Array.Empty<ActionBinding>())
             });
 
-            var execSys = new AIPlanExecutionSystem(world, clock, lib, orders);
+            var execSys = new AIPlanExecutionSystem(world, clock, lib, orders, orderTypes);
 
             var plan = new AIPlan32();
             plan.TryAdd(0);
@@ -315,6 +323,7 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             var clock = new DiscreteClock();
             var orders = new OrderQueue(capacity: 128, new OrderAdmissionResultBuffer(128, 128));
+            var orderTypes = CreatePlanningOrderTypes(new OrderTerminalResultBuffer(128));
 
             var lib = ActionLibraryCompiled256.Compile(new[]
             {
@@ -329,7 +338,7 @@ namespace Ludots.Tests.GAS
                     bindings: Array.Empty<ActionBinding>())
             });
 
-            var execSys = new AIPlanExecutionSystem(world, clock, lib, orders);
+            var execSys = new AIPlanExecutionSystem(world, clock, lib, orders, orderTypes);
 
             var plan = new AIPlan32();
             plan.TryAdd(0);
@@ -346,6 +355,57 @@ namespace Ludots.Tests.GAS
 
             Assert.That(ex.Message, Does.Contain("ORDER.BUILDER.ERR.UnsupportedAiOrderPayloadKind"));
             Assert.That(orders.Count, Is.EqualTo(0));
+        }
+
+        private static OrderTypeRegistry CreatePlanningOrderTypes(OrderTerminalResultBuffer terminalResults)
+        {
+            var orderTypes = new OrderTypeRegistry(terminalResults);
+            orderTypes.Register(new OrderTypeConfig
+            {
+                Key = "castAbility",
+                OrderTypeId = 123,
+                PayloadKind = OrderPayloadKind.CastAbility,
+                SpatialBlackboardKey = -1,
+                EntityBlackboardKey = -1,
+            });
+            orderTypes.Register(new OrderTypeConfig
+            {
+                Key = "targetEntity",
+                OrderTypeId = 124,
+                PayloadKind = OrderPayloadKind.TargetEntity,
+                SpatialBlackboardKey = -1,
+                EntityBlackboardKey = -1,
+            });
+            orderTypes.Register(new OrderTypeConfig
+            {
+                Key = "move",
+                OrderTypeId = 125,
+                PayloadKind = OrderPayloadKind.MoveToWorldCm,
+                SpatialBlackboardKey = -1,
+                EntityBlackboardKey = -1,
+            });
+            orderTypes.Register(new OrderTypeConfig
+            {
+                Key = "stop",
+                OrderTypeId = 126,
+                PayloadKind = OrderPayloadKind.Stop,
+                SpatialBlackboardKey = -1,
+                EntityBlackboardKey = -1,
+            });
+            return orderTypes;
+        }
+
+        private static void DrainSubmittedOrdersAsCompleted(OrderQueue orders, OrderTerminalResultBuffer terminalResults)
+        {
+            while (orders.TryDequeue(out Order order))
+            {
+                terminalResults.Write(new OrderTerminalOutcome(
+                    order.OrderId,
+                    order.OrderTypeId,
+                    OrderTerminalState.Completed,
+                    OrderFailureReason.None,
+                    order.Actor));
+            }
         }
     }
 }

@@ -277,86 +277,6 @@ namespace Ludots.Core.Input.Orders
         AlwaysQueued = 3
     }
 
-    [JsonConverter(typeof(JsonStringEnumConverter))]
-    public enum TargetLayoutMode
-    {
-        None = 0,
-        Grid = 1
-    }
-
-    public sealed class TargetLayoutProfileDefinition
-    {
-        public string Id { get; set; } = string.Empty;
-
-        [JsonConverter(typeof(JsonStringEnumConverter))]
-        public TargetLayoutMode Mode { get; set; } = TargetLayoutMode.None;
-
-        public int SpacingCm { get; set; } = 120;
-
-        public List<string> OrderTypeKeys { get; set; } = new();
-    }
-
-    public sealed class ActorOrderRoutingMatch
-    {
-        public List<string> RequiredAllTags { get; set; } = new();
-        public List<string> BlockedAnyTags { get; set; } = new();
-        public int? AbilitySlotIndex { get; set; }
-        public string? AbilityIdKey { get; set; }
-        public string? AbilityIdKeySuffix { get; set; }
-
-        public ActorOrderRoutingMatch Clone()
-        {
-            return new ActorOrderRoutingMatch
-            {
-                RequiredAllTags = new List<string>(RequiredAllTags),
-                BlockedAnyTags = new List<string>(BlockedAnyTags),
-                AbilitySlotIndex = AbilitySlotIndex,
-                AbilityIdKey = AbilityIdKey,
-                AbilityIdKeySuffix = AbilityIdKeySuffix
-            };
-        }
-    }
-
-    public sealed class ActorOrderRoutingCandidate
-    {
-        public string OrderTypeKey { get; set; } = string.Empty;
-        public int Priority { get; set; }
-        public ActorOrderRoutingMatch Match { get; set; } = new();
-
-        /// <summary>
-        /// Optional per-candidate target resolution. When null, inherits mapping.TargetType.
-        /// </summary>
-        [JsonConverter(typeof(JsonStringEnumConverter))]
-        public OrderTargetType? TargetType { get; set; }
-
-        public ActorOrderRoutingCandidate Clone()
-        {
-            return new ActorOrderRoutingCandidate
-            {
-                OrderTypeKey = OrderTypeKey,
-                Priority = Priority,
-                Match = Match?.Clone() ?? new ActorOrderRoutingMatch(),
-                TargetType = TargetType
-            };
-        }
-    }
-
-    public sealed class ActorOrderRoutingSettings
-    {
-        public List<ActorOrderRoutingCandidate> Candidates { get; set; } = new();
-
-        public ActorOrderRoutingSettings Clone()
-        {
-            var candidates = new List<ActorOrderRoutingCandidate>(Candidates.Count);
-            for (int i = 0; i < Candidates.Count; i++)
-            {
-                candidates.Add(Candidates[i].Clone());
-            }
-
-            return new ActorOrderRoutingSettings { Candidates = candidates };
-        }
-    }
-    
     /// <summary>
     /// A single input-to-order mapping.
     /// </summary>
@@ -381,15 +301,9 @@ namespace Ludots.Core.Input.Orders
         
         /// <summary>
         /// The order type key (must match a key in OrderTypeRegistry).
-        /// Required when <see cref="ActorOrderRouting"/> is null.
         /// </summary>
         public string OrderTypeKey { get; set; } = string.Empty;
         
-        /// <summary>
-        /// Per-actor order type routing for shared input actions such as Command.
-        /// </summary>
-        public ActorOrderRoutingSettings? ActorOrderRouting { get; set; }
-
         /// <summary>
         /// Template for order arguments.
         /// </summary>
@@ -510,7 +424,6 @@ namespace Ludots.Core.Input.Orders
                 Trigger = Trigger,
                 DoubleTapWindowSeconds = DoubleTapWindowSeconds,
                 OrderTypeKey = OrderTypeKey,
-                ActorOrderRouting = ActorOrderRouting?.Clone(),
                 ArgsTemplate = ArgsTemplate?.Clone() ?? new OrderArgsTemplate(),
                 OrderPayload = OrderPayload?.Clone() ?? new InputOrderPayloadTemplate(),
                 AbilityIdKey = AbilityIdKey,
@@ -549,12 +462,6 @@ namespace Ludots.Core.Input.Orders
                 OrderPayload.AbilitySlot is int payloadSlot)
             {
                 slot = payloadSlot;
-                return true;
-            }
-
-            if (ArgsTemplate != null && ArgsTemplate.I0 is int legacySlot)
-            {
-                slot = legacySlot;
                 return true;
             }
 
@@ -602,11 +509,6 @@ namespace Ludots.Core.Input.Orders
         /// List of mappings.
         /// </summary>
         public List<InputOrderMapping> Mappings { get; set; } = new();
-
-        /// <summary>
-        /// Reusable target-layout profiles. Individual mappings reference profiles by id.
-        /// </summary>
-        public List<TargetLayoutProfileDefinition> TargetLayoutProfiles { get; set; } = new();
 
         /// <summary>
         /// User override settings.

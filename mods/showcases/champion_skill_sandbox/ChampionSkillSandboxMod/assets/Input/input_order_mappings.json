@@ -97,15 +97,5 @@
   "userOverrides": {
     "enabled": true,
     "persistPath": "user://ChampionSkillSandboxMod/input_preferences.json"
-  },
-  "targetLayoutProfiles": [
-    {
-      "id": "layout.move.grid",
-      "mode": "Grid",
-      "spacingCm": 140,
-      "orderTypeKeys": [
-        "moveTo"
-      ]
-    }
-  ]
+  }
 }

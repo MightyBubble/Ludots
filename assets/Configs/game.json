@@ -25,7 +25,6 @@
     "abilityExecMaxWorkUnitsPerSlice": 4096,
     "effectProcessingMaxWorkUnitsPerSlice": 4096,
     "commandIntentScratchCapacity": 4096,
-    "utilityAiGraphScoreInstructionBudgetPerThink": 4096,
     "inputGraphScoreInstructionBudgetPerResolve": 1024
   },
   "gridCellSizeCm": 100,

@@ -828,7 +828,89 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             var ex = Assert.Throws<InvalidOperationException>(() => InputOrderMappingLoader.LoadFromStream(stream));
 
             Assert.That(ex!.Message, Does.Contain("groupMoveTargetLayout"));
-            Assert.That(ex.Message, Does.Contain("targetLayoutProfiles"));
+            Assert.That(ex.Message, Does.Contain("target_layout_profiles.json"));
+        }
+
+        [Test]
+        public void InputOrderMappingLoader_RejectsEmbeddedTargetLayoutProfiles()
+        {
+            using var stream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(
+                """
+                {
+                  "interactionMode": "TargetFirst",
+                  "mappings": [
+                    {
+                      "actionId": "Move",
+                      "trigger": "PressedThisFrame",
+                      "orderTypeKey": "moveTo",
+                      "orderPayload": { "kind": "MoveToWorldCm" },
+                      "requireTarget": true,
+                      "targetType": "Position",
+                      "targetLayoutProfileId": "layout.move.grid"
+                    }
+                  ],
+                  "targetLayoutProfiles": [
+                    {
+                      "id": "layout.move.grid",
+                      "mode": "Grid",
+                      "spacingCm": 120,
+                      "orderTypeKeys": [ "moveTo" ]
+                    }
+                  ]
+                }
+                """));
+
+            var ex = Assert.Throws<InvalidOperationException>(() => InputOrderMappingLoader.LoadFromStream(stream));
+
+            Assert.That(ex!.Message, Does.Contain("targetLayoutProfiles"));
+            Assert.That(ex.Message, Does.Contain("target_layout_profiles.json"));
+        }
+
+        [Test]
+        public void InputOrderMappingLoader_LoadsTargetLayoutProfilesFromSeparateConfig()
+        {
+            using var layoutStream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(
+                """
+                {
+                  "targetLayoutProfiles": [
+                    {
+                      "id": "layout.move.grid",
+                      "mode": "Grid",
+                      "spacingCm": 120,
+                      "orderTypeKeys": [ "moveTo" ]
+                    }
+                  ]
+                }
+                """));
+            TargetLayoutProfileConfig layouts = InputOrderMappingLoader.LoadTargetLayoutProfilesFromStream(
+                layoutStream,
+                "test:assets/Input/target_layout_profiles.json");
+
+            using var mappingStream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(
+                """
+                {
+                  "interactionMode": "TargetFirst",
+                  "mappings": [
+                    {
+                      "actionId": "Move",
+                      "trigger": "PressedThisFrame",
+                      "orderTypeKey": "moveTo",
+                      "orderPayload": { "kind": "MoveToWorldCm" },
+                      "requireTarget": true,
+                      "targetType": "Position",
+                      "targetLayoutProfileId": "layout.move.grid"
+                    }
+                  ]
+                }
+                """));
+
+            InputOrderMappingConfig config = InputOrderMappingLoader.LoadFromStream(
+                mappingStream,
+                layouts.TargetLayoutProfiles,
+                "test:assets/Input/input_order_mappings.json");
+
+            Assert.That(layouts.TargetLayoutProfiles.Count, Is.EqualTo(1));
+            Assert.That(config.Mappings[0].TargetLayoutProfileIndex, Is.EqualTo(0));
         }
 
         [Test]
@@ -1628,21 +1710,18 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         [Test]
         public void TargetLayoutProfile_OrderTypeKeyMatching_IsCaseSensitive()
         {
-            var input = new FrozenInputActionReader();
-            input.SetActionState("Command", Vector3.Zero, isDown: true, pressedThisFrame: true, releasedThisFrame: false);
-
+            var targetLayoutProfiles = new List<TargetLayoutProfileDefinition>
+            {
+                new()
+                {
+                    Id = "layout.move.grid",
+                    Mode = TargetLayoutMode.Grid,
+                    SpacingCm = 120,
+                    OrderTypeKeys = new List<string> { "MoveTo" },
+                },
+            };
             var config = new InputOrderMappingConfig
             {
-                TargetLayoutProfiles = new List<TargetLayoutProfileDefinition>
-                {
-                    new()
-                    {
-                        Id = "layout.move.grid",
-                        Mode = TargetLayoutMode.Grid,
-                        SpacingCm = 120,
-                        OrderTypeKeys = new List<string> { "MoveTo" },
-                    },
-                },
                 Mappings = new List<InputOrderMapping>
                 {
                     new()
@@ -1660,64 +1739,62 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 },
             };
 
-            using var world = World.Create();
-            Entity unitA = world.Create();
-            Entity unitB = world.Create();
-            var orders = new List<Order>();
-            var system = new InputOrderMappingSystem(input, config);
-            system.ConfirmActionId = "Confirm";
-            system.CancelActionId = "Cancel";
-            system.CommandActionId = "PointerCommand";
-            system.SetLocalPlayer(unitA, 1);
-            system.SetOrderTypeKeyResolver(key => key == "moveTo" ? 101 : 0);
-            system.SetCollectionEntityListProvider((string collectionKey, List<Entity> list, int capacity, out OrderSubmitResult rejection) =>
-            {
-                Assert.That(collectionKey, Is.EqualTo("collection.test.actors"));
-                list.Add(unitA);
-                list.Add(unitB);
-                rejection = OrderSubmitResult.Activated;
-                return true;
-            });
-            system.SetGroundPositionProvider((out Vector3 groundPos) =>
-            {
-                groundPos = new Vector3(1000f, 0f, 1000f);
-                return true;
-            });
-            system.SetOrderSubmitHandler((in Order _) =>
-            {
-                Assert.Fail("Multi-actor collection dispatch must use the atomic batch submit handler.");
-                return OrderSubmitResult.RejectedValidation;
-            });
-            system.SetOrderBatchSubmitHandler((Span<Order> batch) =>
-            {
-                for (int i = 0; i < batch.Length; i++)
+            var ex = Assert.Throws<InvalidOperationException>(() =>
+                InputOrderMappingLoader.Validate(config, targetLayoutProfiles, "test.json"));
+            Assert.That(ex!.Message, Does.Contain("orderTypeKey 'moveTo'"));
+            Assert.That(ex.Message, Does.Contain("orderTypeKeys"));
+        }
+
+        [Test]
+        public void TargetLayoutProfile_GridMode_RequiresExplicitSpacingInSeparateConfig()
+        {
+            using var layoutStream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(
+                """
                 {
-                    orders.Add(batch[i]);
+                  "targetLayoutProfiles": [
+                    {
+                      "id": "layout.move.grid",
+                      "mode": "Grid",
+                      "orderTypeKeys": [ "moveTo" ]
+                    }
+                  ]
                 }
+                """));
 
-                return OrderSubmitResult.Queued;
-            });
+            var ex = Assert.Throws<InvalidOperationException>(() =>
+                InputOrderMappingLoader.LoadTargetLayoutProfilesFromStream(
+                    layoutStream,
+                    "test:assets/Input/target_layout_profiles.json"));
+            Assert.That(ex!.Message, Does.Contain("spacingCm"));
+        }
 
-            system.Update(0f);
+        [Test]
+        public void TargetLayoutProfile_SeparateConfig_RequiresRootArray()
+        {
+            using var layoutStream = new MemoryStream(System.Text.Encoding.UTF8.GetBytes("{}"));
 
-            Assert.That(orders.Count, Is.EqualTo(2));
-            Assert.That(orders[0].Args.Spatial.WorldCm, Is.EqualTo(orders[1].Args.Spatial.WorldCm));
+            var ex = Assert.Throws<InvalidOperationException>(() =>
+                InputOrderMappingLoader.LoadTargetLayoutProfilesFromStream(
+                    layoutStream,
+                    "test:assets/Input/target_layout_profiles.json"));
+            Assert.That(ex!.Message, Does.Contain("targetLayoutProfiles"));
+            Assert.That(ex.Message, Does.Contain("explicitly defined"));
         }
 
         [Test]
         public void TargetLayoutProfile_GridMode_RequiresOrderTypeKeys()
         {
+            var targetLayoutProfiles = new List<TargetLayoutProfileDefinition>
+            {
+                new()
+                {
+                    Id = "layout.move.grid",
+                    Mode = TargetLayoutMode.Grid,
+                    SpacingCm = 120,
+                },
+            };
             var config = new InputOrderMappingConfig
             {
-                TargetLayoutProfiles = new List<TargetLayoutProfileDefinition>
-                {
-                    new()
-                    {
-                        Id = "layout.move.grid",
-                        Mode = TargetLayoutMode.Grid,
-                        SpacingCm = 120,
-                    },
-                },
                 Mappings = new List<InputOrderMapping>
                 {
                     new()
@@ -1734,25 +1811,25 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             };
 
             var ex = Assert.Throws<InvalidOperationException>(() =>
-                InputOrderMappingLoader.Validate(config, "test.json"));
+                InputOrderMappingLoader.Validate(config, targetLayoutProfiles, "test.json"));
             Assert.That(ex!.Message, Does.Contain("targetLayoutProfiles[0].orderTypeKeys"));
         }
 
         [Test]
         public void TargetLayoutProfile_GridMode_RejectsNonPositiveSpacing()
         {
+            var targetLayoutProfiles = new List<TargetLayoutProfileDefinition>
+            {
+                new()
+                {
+                    Id = "layout.move.grid",
+                    Mode = TargetLayoutMode.Grid,
+                    SpacingCm = 0,
+                    OrderTypeKeys = new List<string> { "moveTo" },
+                },
+            };
             var config = new InputOrderMappingConfig
             {
-                TargetLayoutProfiles = new List<TargetLayoutProfileDefinition>
-                {
-                    new()
-                    {
-                        Id = "layout.move.grid",
-                        Mode = TargetLayoutMode.Grid,
-                        SpacingCm = 0,
-                        OrderTypeKeys = new List<string> { "moveTo" },
-                    },
-                },
                 Mappings = new List<InputOrderMapping>
                 {
                     new()
@@ -1769,7 +1846,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             };
 
             var ex = Assert.Throws<InvalidOperationException>(() =>
-                InputOrderMappingLoader.Validate(config, "test.json"));
+                InputOrderMappingLoader.Validate(config, targetLayoutProfiles, "test.json"));
             Assert.That(ex!.Message, Does.Contain("targetLayoutProfiles[0].spacingCm"));
         }
 
@@ -1870,6 +1947,73 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             InputOrderMapping original = config.Mappings[0];
             Assert.That(original.ActorOrderRouting!.Candidates[0].Match.RequiredAllTags, Is.EquivalentTo(new[] { "producer" }),
                 "Remap must deep-copy nested routing data instead of aliasing the source mapping.");
+        }
+
+        [Test]
+        public void RemapAndPreferences_PreserveExternalTargetLayoutProfiles()
+        {
+            var input = new FrozenInputActionReader();
+            var targetLayoutProfiles = new List<TargetLayoutProfileDefinition>
+            {
+                new()
+                {
+                    Id = "layout.move.grid",
+                    Mode = TargetLayoutMode.Grid,
+                    SpacingCm = 120,
+                    OrderTypeKeys = new List<string> { "moveTo", "attackMove" },
+                },
+            };
+            var config = new InputOrderMappingConfig
+            {
+                Mappings = new List<InputOrderMapping>
+                {
+                    new()
+                    {
+                        ActionId = "Command",
+                        Trigger = InputTriggerType.PressedThisFrame,
+                        OrderTypeKey = "moveTo",
+                        OrderPayload = InputOrderPayloadTemplate.MoveToWorldCm(),
+                        RequireTarget = true,
+                        TargetType = OrderTargetType.Position,
+                        TargetLayoutProfileId = "layout.move.grid",
+                    },
+                },
+            };
+            string path = Path.Combine(TestContext.CurrentContext.WorkDirectory, $"input-preferences-{Guid.NewGuid():N}.json");
+            try
+            {
+                var system = new InputOrderMappingSystem(input, config, targetLayoutProfiles: targetLayoutProfiles);
+                system.SetOrderTypeKeyResolver(key => key switch
+                {
+                    "moveTo" => 9,
+                    "attackMove" => 10,
+                    _ => 0,
+                });
+                system.Remap("Command", "attackMove", InputOrderPayloadTemplate.MoveToWorldCm());
+                system.SaveUserPreferences(path);
+
+                var reloaded = new InputOrderMappingSystem(input, config, targetLayoutProfiles: targetLayoutProfiles);
+                reloaded.SetOrderTypeKeyResolver(key => key switch
+                {
+                    "moveTo" => 9,
+                    "attackMove" => 10,
+                    _ => 0,
+                });
+                reloaded.LoadUserPreferences(path);
+
+                InputOrderMapping mapping = reloaded.GetMapping("Command")
+                    ?? throw new InvalidOperationException("Missing reloaded Command mapping.");
+                Assert.That(mapping.OrderTypeKey, Is.EqualTo("attackMove"));
+                Assert.That(mapping.TargetLayoutProfileId, Is.EqualTo("layout.move.grid"));
+                Assert.That(mapping.TargetLayoutProfileIndex, Is.EqualTo(0));
+            }
+            finally
+            {
+                if (File.Exists(path))
+                {
+                    File.Delete(path);
+                }
+            }
         }
 
         [Test]

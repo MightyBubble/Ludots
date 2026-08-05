@@ -3,6 +3,8 @@ using System.Diagnostics;
 using Arch.Core;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Input;
+using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Physics;
@@ -28,6 +30,7 @@ namespace Ludots.Core.Gameplay.GAS.Benchmarks
             int healthId = AttributeRegistry.Register("Health");
             int manaId = AttributeRegistry.Register("Mana");
             int damageEventId = TagRegistry.Register("Event.DamageTaken");
+            const int castAbilityOrderTypeId = 100;
             
             // 2. Setup World
             var world = World.Create();
@@ -40,6 +43,21 @@ namespace Ludots.Core.Gameplay.GAS.Benchmarks
             var clocks = new GasClocks(clock);
             var conditions = new GasConditionRegistry();
             var tagOps = new TagOps(new DirtyEntityQueue(entityCount), new TagRuleRegistry());
+            var terminalResults = new OrderTerminalResultBuffer(capacity: 65536);
+            var admissionResults = new OrderAdmissionResultBuffer(capacity: 65536, rejectionCapacity: 65536);
+            var orderQueue = new OrderQueue(capacity: 65536, admissionResults);
+            var orderTypes = new OrderTypeRegistry(terminalResults);
+            orderTypes.Register(new OrderTypeConfig
+            {
+                Key = "castAbility",
+                OrderTypeId = castAbilityOrderTypeId,
+                AllowQueuedMode = false,
+                CanInterruptSelf = true,
+                ClearQueueOnActivate = true,
+                PayloadKind = OrderPayloadKind.CastAbility,
+                EntityBlackboardKey = OrderBlackboardKeys.Cast_TargetEntity,
+                SpatialBlackboardKey = -1,
+            });
 
             var mods = new EffectModifiers();
             mods.Add(healthId, ModifierOp.Add, 5.0f);
@@ -68,18 +86,35 @@ namespace Ludots.Core.Gameplay.GAS.Benchmarks
                 templates: effectTemplates,
                 responseChainOrderTypes: BenchmarkResponseChainOrderTypes,
                 tagOps: tagOps);
-            var abilitySystem = new AbilitySystem(world, effectRequests, tagOps: tagOps);
-            var reactionSystem = new ReactionSystem(world, abilitySystem, eventBus);
+            var orderBufferSystem = new OrderBufferSystem(
+                world,
+                clock,
+                orderTypes,
+                new OrderRuleRegistry(),
+                admissionResults,
+                orderQueue,
+                closeEntityIntakeOnUpdate: false);
+            var abilityExecSystem = new AbilityExecSystem(
+                world,
+                clock,
+                new InputRequestQueue(),
+                new InputResponseBuffer(),
+                effectRequests,
+                snapshotCapacity: 4096,
+                eventBus: eventBus,
+                castAbilityOrderTypeId: castAbilityOrderTypeId,
+                tagOps: tagOps,
+                orderTypeRegistry: orderTypes);
+            var reactionSystem = new ReactionSystem(world, orderQueue, castAbilityOrderTypeId, eventBus);
             
             // 4. Create Global Ability Template (Flyweight)
             var abilityTemplateEntity = world.Create();
             world.Add(abilityTemplateEntity, new AbilityTemplate());
-            world.Add(abilityTemplateEntity, new AbilityOnActivateEffects());
-            unsafe
-            {
-                ref var onActivate = ref world.Get<AbilityOnActivateEffects>(abilityTemplateEntity);
-                onActivate.Add(1);
-            }
+            var execSpec = default(AbilityExecSpec);
+            execSpec.ClockId = GasClockId.Step;
+            execSpec.SetItem(0, ExecItemKind.EffectSignal, tick: 0, templateId: 1);
+            execSpec.SetItem(1, ExecItemKind.End, tick: 0);
+            world.Add(abilityTemplateEntity, execSpec);
 
             // 5. Create Entities
             Console.WriteLine($"Creating {entityCount} entities with Abilities...");
@@ -92,13 +127,17 @@ namespace Ludots.Core.Gameplay.GAS.Benchmarks
                 typeof(TagCountContainer),
                 typeof(DirtyFlags),
                 typeof(AbilityStateBuffer),
-                typeof(ReactionBuffer)
+                typeof(ReactionBuffer),
+                typeof(OrderBuffer),
+                typeof(BlackboardIntBuffer),
+                typeof(BlackboardEntityBuffer)
             };
             
             for (int i = 0; i < entityCount; i++)
             {
                 var e = world.Create(archetype);
                 entities[i] = e;
+                world.Set(e, OrderBuffer.CreateEmpty());
                 
                 ref var attr = ref world.Get<AttributeBuffer>(e);
                 attr.SetBase(healthId, 100f);
@@ -143,14 +182,19 @@ namespace Ludots.Core.Gameplay.GAS.Benchmarks
                 
                 eventBus.Update(); // Update Bus
 
-                reactionSystem.Update(dt); // Drives AbilitySystem
-                abilitySystem.Update(dt);  // Process deferred structural changes
+                terminalResults.Clear();
+                admissionResults.BeginLogicStep();
+                reactionSystem.Update(dt);
+                orderBufferSystem.Update(dt);
+                abilityExecSystem.Update(dt);
+                admissionResults.EndEntityIntake();
                 proposalSystem.Update(dt);
                 appSystem.Update(dt);
                 clocks.AdvanceFixedFrame();
                 clocks.AdvanceStep();
                 durSystem.Update(dt);
                 aggSystem.Update(dt);
+                admissionResults.EndLogicStep();
             }
             
             long endAlloc = GC.GetAllocatedBytesForCurrentThread();

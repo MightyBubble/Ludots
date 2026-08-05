@@ -2,10 +2,10 @@ using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.AI.Components;
+using Ludots.Core.Gameplay.AI.Planning;
 using Ludots.Core.Gameplay.AI.Systems;
 using Ludots.Core.Gameplay.AI.Utility;
 using Ludots.Core.Gameplay.Components;
-using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
@@ -107,12 +107,8 @@ namespace Ludots.Tests.GAS.Features.GraphRuntime
             using var world = World.Create();
             var clock = new DiscreteClock();
             var admissionResults = new OrderAdmissionResultBuffer(16, 16);
+            var terminalResults = new OrderTerminalResultBuffer(16);
             var orders = new OrderQueue(16, admissionResults);
-
-            AbilityIdRegistry.Clear();
-            int attackAbilityId = AbilityIdRegistry.Register("Ability.Test.Attack");
-            var abilities = new AbilityDefinitionRegistry();
-            abilities.Register(attackAbilityId, new AbilityDefinition());
 
             TeamManager.Clear();
             TeamManager.SetRelationshipSymmetric(1, 2, TeamRelationship.Hostile);
@@ -128,11 +124,11 @@ namespace Ludots.Tests.GAS.Features.GraphRuntime
             IReadOnlyGraphScorer scorer = CompiledGraphScoreRuntime.Compile(world, new StubGraphApi(world), programs);
 
             var runtime = new UtilityAiCompiledRuntime(
-                new[] { new UtilityAiProfileDefinition(0, 1, 1, 16, -1) },
+                new[] { new UtilityAiProfileDefinition(0, 1, 1, 16, 1, -1) },
                 new[] { new UtilityAiDecisionMakerDefinition(0, 1, UtilityAiSelectionMode.FixedPriority, 0f) },
                 new[]
                 {
-                    new UtilityAiDecisionDefinition(0, 0, 1, 0, 1, 10, 1f, 1f, 0f, 0, 0, attackAbilityId, 0, 0, UtilityAiDecisionFlags.Autocast | UtilityAiDecisionFlags.RequiresTarget)
+                    new UtilityAiDecisionDefinition(0, 0, 1, 0, 1, 10, 1f, 1f, 0f, 0, UtilityAiDecisionFlags.Autocast | UtilityAiDecisionFlags.RequiresTarget)
                 },
                 new[] { new UtilityAiConsiderationDefinition(0, 0, 0, 1f, UtilityAiAggregateMode.Multiply) },
                 new[] { new UtilityAiTargetFilterDefinition(0, 2, 16) },
@@ -144,7 +140,7 @@ namespace Ludots.Tests.GAS.Features.GraphRuntime
                 new[] { new UtilityAiInputDefinition(UtilityAiInputKind.GraphScore, 0, scoreGraphId) },
                 new[] { new UtilityAiNormalizationDefinition(UtilityAiNormalizationKind.Identity, 0f, 1f) },
                 new[] { new UtilityAiCurveDefinition(UtilityAiCurveKind.Linear, 1f) },
-                new[] { new UtilityAiTaskDefinition(UtilityAiTaskKind.SubmitOrder, 102, attackAbilityId, 0, (int)OrderSubmitMode.Immediate, 0, -1, 0) },
+                new[] { new UtilityAiTaskDefinition(UtilityAiTaskKind.SubmitOrder, AiOrderPayloadKind.CastAbility, 102, 0, (int)OrderSubmitMode.Immediate, 0) },
                 System.Array.Empty<UtilityAiStanceDefinition>(),
                 System.Array.Empty<UtilityAiActuatorDefinition>());
 
@@ -159,11 +155,8 @@ namespace Ludots.Tests.GAS.Features.GraphRuntime
                 new UtilityAiDecisionTrace(),
                 new UtilityAiCombatMemory(),
                 new OrderBuffer { ActiveIndex = -1 },
-                new AbilityStateBuffer(),
                 new Team { Id = 1 },
                 WorldPositionCm.FromCm(0, 0));
-            ref var actorAbilities = ref world.Get<AbilityStateBuffer>(actor);
-            actorAbilities.AddAbility(attackAbilityId);
             partition.Add(actor, 0, 0);
 
             Entity hostile = world.Create(new Team { Id = 2 }, WorldPositionCm.FromCm(500, 0), new OrderBuffer { ActiveIndex = -1 });
@@ -174,17 +167,16 @@ namespace Ludots.Tests.GAS.Features.GraphRuntime
                 clock,
                 runtime,
                 spatial,
-                abilities,
                 scorer,
-                graphScoreInstructionBudgetPerThink: 1,
-                orders: orders);
+                orders: orders,
+                terminalResults: terminalResults);
 
             decision.Update(1f / 60f);
 
             Assert.That(orders.Count, Is.EqualTo(0));
             Assert.That(
                 world.Get<UtilityAiDecisionTrace>(actor).LastFilterRejectReason,
-                Is.EqualTo((int)UtilityAiFilterRejectReason.BudgetExhausted));
+                Is.EqualTo((int)UtilityAiFilterRejectReason.ScoreGraphBudgetExhausted));
         }
 
         private sealed class StubGraphApi : IGraphRuntimeApi

@@ -238,6 +238,7 @@ namespace Ludots.Core.Input.Orders
 
         private readonly IInputActionReader _input;
         private readonly InputOrderMappingConfig _config;
+        private readonly IReadOnlyList<TargetLayoutProfileDefinition> _targetLayoutProfiles;
         private readonly Dictionary<string, InputOrderMapping> _mappingsByActionId;
         private readonly Dictionary<string, InputOrderMapping[]> _mappingVariantsByActionId;
         private readonly Dictionary<string, InputOrderMapping> _userOverrides;
@@ -403,11 +404,13 @@ namespace Ludots.Core.Input.Orders
         public InputOrderMappingSystem(
             IInputActionReader input,
             InputOrderMappingConfig config,
-            int commandIntentScratchCapacity = DefaultCommandIntentScratchCapacity)
+            int commandIntentScratchCapacity = DefaultCommandIntentScratchCapacity,
+            IReadOnlyList<TargetLayoutProfileDefinition>? targetLayoutProfiles = null)
         {
             _input = input ?? throw new ArgumentNullException(nameof(input));
             _config = config ?? throw new ArgumentNullException(nameof(config));
-            InputOrderMappingLoader.Validate(_config, "InputOrderMappingSystem config");
+            _targetLayoutProfiles = targetLayoutProfiles ?? Array.Empty<TargetLayoutProfileDefinition>();
+            InputOrderMappingLoader.Validate(_config, _targetLayoutProfiles, "InputOrderMappingSystem config");
             if (commandIntentScratchCapacity <= 0)
             {
                 throw new ArgumentOutOfRangeException(
@@ -1317,7 +1320,7 @@ namespace Ludots.Core.Input.Orders
         private InputOrderMapping ResolveEffectiveMapping(string actionId, InputOrderMapping mapping, out Entity resolvedActor)
         {
             bool hasUserOverride = _userOverrides.TryGetValue(actionId, out var overrideMapping);
-            InputOrderMapping effectiveMapping = hasUserOverride ? overrideMapping : mapping;
+            InputOrderMapping? effectiveMapping = hasUserOverride ? overrideMapping : mapping;
             resolvedActor = effectiveMapping.IsSkillMapping
                 ? ResolvePrimaryActor(effectiveMapping)
                 : default;
@@ -1327,7 +1330,7 @@ namespace Ludots.Core.Input.Orders
         private InputOrderMapping ResolveEffectiveMappingForActor(string actionId, InputOrderMapping mapping, Entity actor)
         {
             bool hasUserOverride = _userOverrides.TryGetValue(actionId, out var overrideMapping);
-            InputOrderMapping effectiveMapping = hasUserOverride ? overrideMapping : mapping;
+            InputOrderMapping? effectiveMapping = hasUserOverride ? overrideMapping : mapping;
             return ResolveAbilityQualifiedMapping(actionId, effectiveMapping, actor, hasUserOverride);
         }
 
@@ -2579,16 +2582,40 @@ namespace Ludots.Core.Input.Orders
 
         private void ApplyGroupMoveTargetLayout(InputOrderMapping mapping, string orderTypeKey, int totalCount, int index, ref Order order)
         {
-            if (totalCount <= 1 ||
-                mapping.IsSkillMapping ||
-                mapping.TargetType != OrderTargetType.Position ||
-                !TryGetTargetLayoutProfile(mapping, out TargetLayoutProfileDefinition profile) ||
-                !IsTargetLayoutOrderType(profile, orderTypeKey) ||
-                profile.Mode != TargetLayoutMode.Grid ||
-                order.Args.Spatial.Kind != OrderSpatialKind.WorldCm ||
-                order.Args.Spatial.Mode != OrderCollectionMode.Single)
+            if (totalCount <= 1 || string.IsNullOrEmpty(mapping.TargetLayoutProfileId))
             {
                 return;
+            }
+
+            if (mapping.IsSkillMapping || mapping.TargetType != OrderTargetType.Position)
+            {
+                throw new InvalidOperationException(
+                    $"Input mapping '{mapping.ActionId}' targetLayoutProfileId is only valid for non-skill position orders.");
+            }
+
+            if (!TryGetTargetLayoutProfile(mapping, out TargetLayoutProfileDefinition profile))
+            {
+                throw new InvalidOperationException(
+                    $"Input mapping '{mapping.ActionId}' references target layout profile '{mapping.TargetLayoutProfileId}', but no validated profile is available.");
+            }
+
+            if (!IsTargetLayoutOrderType(profile, orderTypeKey))
+            {
+                throw new InvalidOperationException(
+                    $"Input mapping '{mapping.ActionId}' target layout profile '{mapping.TargetLayoutProfileId}' does not allow orderTypeKey '{orderTypeKey}'.");
+            }
+
+            if (profile.Mode != TargetLayoutMode.Grid)
+            {
+                throw new InvalidOperationException(
+                    $"Input mapping '{mapping.ActionId}' target layout profile '{mapping.TargetLayoutProfileId}' uses unsupported mode {profile.Mode}.");
+            }
+
+            if (order.Args.Spatial.Kind != OrderSpatialKind.WorldCm ||
+                order.Args.Spatial.Mode != OrderCollectionMode.Single)
+            {
+                throw new InvalidOperationException(
+                    $"Input mapping '{mapping.ActionId}' target layout profile '{mapping.TargetLayoutProfileId}' requires a single world-centimeter target.");
             }
 
             order.Args.Spatial.WorldCm = MoveTargetLayoutPlanner.ComputeOffsetTarget(
@@ -2609,13 +2636,13 @@ namespace Ludots.Core.Input.Orders
             out TargetLayoutProfileDefinition profile)
         {
             if (mapping.TargetLayoutProfileIndex < 0 ||
-                mapping.TargetLayoutProfileIndex >= _config.TargetLayoutProfiles.Count)
+                mapping.TargetLayoutProfileIndex >= _targetLayoutProfiles.Count)
             {
                 profile = default!;
                 return false;
             }
 
-            profile = _config.TargetLayoutProfiles[mapping.TargetLayoutProfileIndex];
+            profile = _targetLayoutProfiles[mapping.TargetLayoutProfileIndex];
             return true;
         }
 
@@ -2754,6 +2781,7 @@ namespace Ludots.Core.Input.Orders
 
             InputOrderMappingLoader.Validate(
                 new InputOrderMappingConfig { Mappings = new List<InputOrderMapping> { newMapping } },
+                _targetLayoutProfiles,
                 $"input mapping override '{actionId}'");
             ValidateOrderTypeKeys(newMapping);
             _userOverrides[actionId] = newMapping;
@@ -3080,7 +3108,7 @@ namespace Ludots.Core.Input.Orders
                 effectivePath = effectivePath.Replace("user://",
                     Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "/Ludots/");
             }
-            var overrideConfig = InputOrderMappingLoader.LoadFromFile(effectivePath);
+            var overrideConfig = InputOrderMappingLoader.LoadFromFile(effectivePath, _targetLayoutProfiles);
             _userOverrides.Clear();
             foreach (var mapping in overrideConfig.Mappings)
             {
