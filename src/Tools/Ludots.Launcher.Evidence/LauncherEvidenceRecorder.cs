@@ -996,10 +996,11 @@ public static class LauncherEvidenceRecorder
 
         var failures = new List<string>();
 
-        AddAcceptanceCheck(markerLive.DummyCount == start.DummyCount + 1,
-            $"Projection click should spawn one Dummy by the live capture, but count moved {start.DummyCount} -> {markerLive.DummyCount}.", failures);
+        int expectedDummyCount = start.DummyCount + CameraAcceptanceIds.ProjectionSpawnCountDefault;
+        AddAcceptanceCheck(markerLive.DummyCount == expectedDummyCount,
+            $"Projection click should spawn the configured projection batch by the live capture, but count moved {start.DummyCount} -> {markerLive.DummyCount}.", failures);
 
-        CameraSnapshot spawnedSnapshot = markerLive.DummyCount > 0 ? markerLive : markerExpired;
+        CameraSnapshot spawnedSnapshot = markerLive.DummyCount > start.DummyCount ? markerLive : markerExpired;
         if (spawnedSnapshot.ClickTargetWorldCm.HasValue)
         {
             Vector2 click = spawnedSnapshot.ClickTargetWorldCm.Value;

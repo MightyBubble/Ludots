@@ -41,7 +41,12 @@ namespace Ludots.Tests.Architecture
                     outputDrainTimeoutMs: 250);
                 stopwatch.Stop();
 
-                Assert.That(result.ExitCode, Is.Zero);
+                Assert.That(result.ProcessExitCode, Is.Zero);
+                Assert.That(result.WorkflowExitCode, Is.EqualTo(-3));
+                Assert.That(result.Status, Is.EqualTo(ProcessRunStatus.OutputDrainFailed));
+                Assert.That(result.ProcessExited, Is.True);
+                Assert.That(result.ProcessTreeExitConfirmed, Is.False);
+                Assert.That(result.OutputComplete, Is.False);
                 Assert.That(result.Output, Does.Contain("parent-done"));
                 Assert.That(result.Output, Does.Contain("Redirected output remained open"));
                 Assert.That(stopwatch.Elapsed, Is.LessThan(TimeSpan.FromSeconds(2)));

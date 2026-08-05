@@ -9,6 +9,65 @@ using Ludots.Core.Modding;
 
 namespace Ludots.Launcher.Backend;
 
+internal enum ProcessRunStatus
+{
+    Success,
+    ProcessFailed,
+    TimedOutCleanly,
+    TerminationFailed,
+    OutputDrainFailed
+}
+
+internal enum ProcessRunFailureStage
+{
+    CaptureProcessTree,
+    TerminateProcessTree,
+    ConfirmProcessTreeExit,
+    DrainOutput,
+    CancelStandardOutputRead,
+    CancelStandardErrorRead
+}
+
+internal sealed record ProcessRunFailure(ProcessRunFailureStage Stage, Exception Exception);
+
+internal sealed record ProcessRunResult(
+    ProcessRunStatus Status,
+    int? ProcessExitCode,
+    string Output,
+    bool TimedOut,
+    bool ProcessExited,
+    bool ProcessTreeExitConfirmed,
+    bool OutputComplete,
+    int ProcessId,
+    string FileName,
+    string Arguments,
+    IReadOnlyList<ProcessRunFailure> Failures)
+{
+    public bool Succeeded => Status == ProcessRunStatus.Success;
+
+    public int WorkflowExitCode => Status switch
+    {
+        ProcessRunStatus.Success or ProcessRunStatus.ProcessFailed => ProcessExitCode ?? -4,
+        ProcessRunStatus.TimedOutCleanly => -1,
+        ProcessRunStatus.TerminationFailed => -2,
+        ProcessRunStatus.OutputDrainFailed => -3,
+        _ => -4
+    };
+}
+
+internal sealed record ProcessRunOperations(
+    Action<Process> KillProcessTree,
+    Func<Task, TimeSpan, Task> ConfirmProcessExitAsync,
+    Action<Process> CancelStandardOutputRead,
+    Action<Process> CancelStandardErrorRead)
+{
+    public static ProcessRunOperations Default { get; } = new(
+        process => process.Kill(entireProcessTree: true),
+        (processExited, timeout) => processExited.WaitAsync(timeout),
+        process => process.CancelOutputRead(),
+        process => process.CancelErrorRead());
+}
+
 public sealed class LauncherService
 {
     private const int LaunchGraphSchemaVersion = 1;
@@ -309,17 +368,17 @@ public sealed class LauncherService
             {
                 var install = await RunNodePackageCommandAsync("ci", profile.ClientProjectDirectory, timeoutMs: 300_000);
                 output.AppendLine(install.Output);
-                if (install.ExitCode != 0)
+                if (!install.Succeeded)
                 {
-                    return new LauncherBuildResult(platformId, false, install.ExitCode, output.ToString());
+                    return new LauncherBuildResult(platformId, false, install.WorkflowExitCode, output.ToString());
                 }
             }
 
             var clientBuild = await RunNodePackageCommandAsync("run build", profile.ClientProjectDirectory, timeoutMs: 300_000);
             output.AppendLine(clientBuild.Output);
-            if (clientBuild.ExitCode != 0)
+            if (!clientBuild.Succeeded)
             {
-                return new LauncherBuildResult(platformId, false, clientBuild.ExitCode, output.ToString());
+                return new LauncherBuildResult(platformId, false, clientBuild.WorkflowExitCode, output.ToString());
             }
         }
 
@@ -328,7 +387,7 @@ public sealed class LauncherService
             _repoRoot,
             timeoutMs: 300_000);
         output.AppendLine(dotnetBuild.Output);
-        return new LauncherBuildResult(platformId, dotnetBuild.ExitCode == 0, dotnetBuild.ExitCode, output.ToString());
+        return new LauncherBuildResult(platformId, dotnetBuild.Succeeded, dotnetBuild.WorkflowExitCode, output.ToString());
     }
 
     public string WriteGameJson(string platformId, IEnumerable<string> modIds)
@@ -450,7 +509,7 @@ public sealed class LauncherService
         var solutionPath = Path.Combine(entry.Info.RootPath, $"{entry.Info.Id}.sln");
 
         var create = await RunDotnetAsync($"new sln -n {entry.Info.Id} --force", entry.Info.RootPath, timeoutMs: 30_000);
-        if (create.ExitCode != 0)
+        if (!create.Succeeded)
         {
             throw new InvalidOperationException(create.Output);
         }
@@ -458,7 +517,10 @@ public sealed class LauncherService
         var projectPath = EnsureProjectFile(entry, config);
         if (File.Exists(projectPath))
         {
-            await RunDotnetAsync($"sln \"{solutionPath}\" add \"{projectPath}\"", entry.Info.RootPath, timeoutMs: 30_000);
+            await RunDotnetOrThrowAsync(
+                $"sln \"{solutionPath}\" add \"{projectPath}\"",
+                entry.Info.RootPath,
+                timeoutMs: 30_000);
         }
 
         foreach (var dependencyId in entry.Manifest.Dependencies.Keys.OrderBy(id => id, StringComparer.OrdinalIgnoreCase))
@@ -467,14 +529,20 @@ public sealed class LauncherService
             var dependencyProjectPath = ResolveBuildProjectPath(config, dependency.Info.RootPath, dependency.Info.Id, dependency.Info.ProjectPath);
             if (!string.IsNullOrWhiteSpace(dependencyProjectPath) && File.Exists(dependencyProjectPath))
             {
-                await RunDotnetAsync($"sln \"{solutionPath}\" add \"{dependencyProjectPath}\"", entry.Info.RootPath, timeoutMs: 30_000);
+                await RunDotnetOrThrowAsync(
+                    $"sln \"{solutionPath}\" add \"{dependencyProjectPath}\"",
+                    entry.Info.RootPath,
+                    timeoutMs: 30_000);
             }
         }
 
         var coreProjectPath = Path.Combine(_repoRoot, "src", "Core", "Ludots.Core.csproj");
         if (File.Exists(coreProjectPath))
         {
-            await RunDotnetAsync($"sln \"{solutionPath}\" add \"{coreProjectPath}\"", entry.Info.RootPath, timeoutMs: 30_000);
+            await RunDotnetOrThrowAsync(
+                $"sln \"{solutionPath}\" add \"{coreProjectPath}\"",
+                entry.Info.RootPath,
+                timeoutMs: 30_000);
         }
 
         return solutionPath;
@@ -1547,9 +1615,9 @@ public sealed class LauncherService
             projectDirectory,
             timeoutMs: 300_000);
         output.AppendLine(publish.Output);
-        if (publish.ExitCode != 0)
+        if (!publish.Succeeded)
         {
-            return new[] { new LauncherBuildResult(resultId, false, publish.ExitCode, output.ToString()) };
+            return new[] { new LauncherBuildResult(resultId, false, publish.WorkflowExitCode, output.ToString()) };
         }
 
         if (!ValidateBrowserRuntimePackage(browserRuntime, out string packageValidationMessage))
@@ -1676,9 +1744,9 @@ public sealed class LauncherService
             projectDirectory,
             timeoutMs: 300_000);
         output.AppendLine(build.Output);
-        if (build.ExitCode != 0)
+        if (!build.Succeeded)
         {
-            return new LauncherBuildResult(entry.Info.Id, false, build.ExitCode, output.ToString());
+            return new LauncherBuildResult(entry.Info.Id, false, build.WorkflowExitCode, output.ToString());
         }
 
         var referenceExportPath = ExportReferenceAssembly(entry.Info, projectDirectory);
@@ -2179,17 +2247,31 @@ public sealed class LauncherService
         return latest;
     }
 
-    internal static async Task<(int ExitCode, string Output)> RunProcessAsync(
+    internal static async Task<ProcessRunResult> RunProcessAsync(
         string fileName,
         string arguments,
         string workingDirectory,
         int timeoutMs,
-        int outputDrainTimeoutMs = 5_000)
+        int outputDrainTimeoutMs = 5_000,
+        int terminationTimeoutMs = 10_000,
+        ProcessRunOperations? operations = null)
     {
+        if (timeoutMs <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(timeoutMs), timeoutMs, "Process timeout must be positive.");
+        }
+
         if (outputDrainTimeoutMs <= 0)
         {
             throw new ArgumentOutOfRangeException(nameof(outputDrainTimeoutMs), outputDrainTimeoutMs, "Output drain timeout must be positive.");
         }
+
+        if (terminationTimeoutMs <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(terminationTimeoutMs), terminationTimeoutMs, "Termination timeout must be positive.");
+        }
+
+        operations ??= ProcessRunOperations.Default;
 
         var startInfo = new ProcessStartInfo(fileName, arguments)
         {
@@ -2203,20 +2285,16 @@ public sealed class LauncherService
         };
 
         using var process = Process.Start(startInfo) ?? throw new InvalidOperationException($"Failed to start process '{fileName}'.");
+        int processId = process.Id;
+        long processStartTimeUtcTicks = process.StartTime.ToUniversalTime().Ticks;
         var processExited = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-        process.Exited += (_, _) => processExited.TrySetResult(true);
-        process.EnableRaisingEvents = true;
-        if (process.HasExited)
-        {
-            processExited.TrySetResult(true);
-        }
-
+        EventHandler processExitedHandler = (_, _) => processExited.TrySetResult(true);
         var outputGate = new object();
         var stdout = new StringBuilder();
         var stderr = new StringBuilder();
         var stdoutClosed = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
         var stderrClosed = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
-        process.OutputDataReceived += (_, eventArgs) =>
+        DataReceivedEventHandler stdoutHandler = (_, eventArgs) =>
         {
             if (eventArgs.Data is null)
             {
@@ -2229,7 +2307,7 @@ public sealed class LauncherService
                 stdout.AppendLine(eventArgs.Data);
             }
         };
-        process.ErrorDataReceived += (_, eventArgs) =>
+        DataReceivedEventHandler stderrHandler = (_, eventArgs) =>
         {
             if (eventArgs.Data is null)
             {
@@ -2242,115 +2320,199 @@ public sealed class LauncherService
                 stderr.AppendLine(eventArgs.Data);
             }
         };
-        process.BeginOutputReadLine();
-        process.BeginErrorReadLine();
-
-        using var timeoutSource = new CancellationTokenSource(timeoutMs);
-        bool timedOut = false;
-        bool timedOutProcessTerminated = false;
-        var cleanupFailures = new List<string>();
+        process.Exited += processExitedHandler;
+        process.OutputDataReceived += stdoutHandler;
+        process.ErrorDataReceived += stderrHandler;
         try
         {
-            await processExited.Task.WaitAsync(timeoutSource.Token);
-        }
-        catch (OperationCanceledException)
-        {
-            timedOut = true;
+            process.EnableRaisingEvents = true;
+            if (process.HasExited)
+            {
+                processExited.TrySetResult(true);
+            }
+
+            process.BeginOutputReadLine();
+            process.BeginErrorReadLine();
+
+            using var timeoutSource = new CancellationTokenSource(timeoutMs);
+            var failures = new List<ProcessRunFailure>();
+            bool timedOut = false;
+            bool rootProcessExited = false;
+            bool processTreeExitConfirmed = false;
             try
             {
-                if (!process.HasExited)
-                {
-                    process.Kill(entireProcessTree: true);
-                }
-
-                await processExited.Task.WaitAsync(TimeSpan.FromSeconds(10));
-                timedOutProcessTerminated = process.HasExited;
+                await processExited.Task.WaitAsync(timeoutSource.Token);
+                rootProcessExited = true;
             }
-            catch (Exception ex)
+            catch (OperationCanceledException) when (timeoutSource.IsCancellationRequested)
             {
-                if (process.HasExited)
+                timedOut = true;
+                DateTime terminationDeadlineUtc = DateTime.UtcNow.AddMilliseconds(terminationTimeoutMs);
+                WindowsProcessTreeSnapshot? processTreeSnapshot = null;
+
+                try
                 {
-                    timedOutProcessTerminated = true;
+                    processTreeSnapshot = WindowsProcessTreeSnapshot.Capture(processId, processStartTimeUtcTicks);
                 }
-                else
+                catch (Exception ex)
                 {
-                    cleanupFailures.Add(
-                        $"[launcher] Timed-out process could not be confirmed stopped: {ex.GetType().Name}: {ex.Message}");
+                    failures.Add(new ProcessRunFailure(ProcessRunFailureStage.CaptureProcessTree, ex));
+                }
+
+                try
+                {
+                    if (!process.HasExited)
+                    {
+                        operations.KillProcessTree(process);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    failures.Add(new ProcessRunFailure(ProcessRunFailureStage.TerminateProcessTree, ex));
+                }
+
+                try
+                {
+                    await operations.ConfirmProcessExitAsync(
+                        processExited.Task,
+                        GetRemainingTerminationTime(terminationDeadlineUtc, processId));
+                    rootProcessExited = process.HasExited;
+                    if (!rootProcessExited)
+                    {
+                        throw new TimeoutException($"Process {processId} remained alive after process-tree termination completed.");
+                    }
+
+                    if (processTreeSnapshot == null)
+                    {
+                        throw new InvalidOperationException(
+                            $"Process tree rooted at {processId} could not be captured before termination.");
+                    }
+
+                    await processTreeSnapshot.ConfirmExitedAsync(
+                        GetRemainingTerminationTime(terminationDeadlineUtc, processId));
+                    processTreeExitConfirmed = true;
+                }
+                catch (Exception ex)
+                {
+                    failures.Add(new ProcessRunFailure(ProcessRunFailureStage.ConfirmProcessTreeExit, ex));
                 }
             }
-        }
 
-        bool outputClosed = false;
-        try
-        {
-            await Task.WhenAll(stdoutClosed.Task, stderrClosed.Task).WaitAsync(TimeSpan.FromMilliseconds(outputDrainTimeoutMs));
-            outputClosed = true;
-        }
-        catch (TimeoutException)
-        {
+            bool outputComplete = false;
             try
             {
-                process.CancelOutputRead();
+                await Task.WhenAll(stdoutClosed.Task, stderrClosed.Task).WaitAsync(TimeSpan.FromMilliseconds(outputDrainTimeoutMs));
+                outputComplete = true;
             }
-            catch (Exception ex)
+            catch (TimeoutException ex)
             {
-                cleanupFailures.Add(
-                    $"[launcher] Failed to cancel stdout capture after drain timeout: {ex.GetType().Name}: {ex.Message}");
+                failures.Add(new ProcessRunFailure(ProcessRunFailureStage.DrainOutput, ex));
+
+                if (!stdoutClosed.Task.IsCompleted)
+                {
+                    try
+                    {
+                        operations.CancelStandardOutputRead(process);
+                    }
+                    catch (Exception cancelException)
+                    {
+                        failures.Add(new ProcessRunFailure(ProcessRunFailureStage.CancelStandardOutputRead, cancelException));
+                    }
+                }
+
+                if (!stderrClosed.Task.IsCompleted)
+                {
+                    try
+                    {
+                        operations.CancelStandardErrorRead(process);
+                    }
+                    catch (Exception cancelException)
+                    {
+                        failures.Add(new ProcessRunFailure(ProcessRunFailureStage.CancelStandardErrorRead, cancelException));
+                    }
+                }
             }
 
-            try
+            string capturedStdout;
+            string capturedStderr;
+            lock (outputGate)
             {
-                process.CancelErrorRead();
+                capturedStdout = stdout.ToString().TrimEnd();
+                capturedStderr = stderr.ToString().TrimEnd();
             }
-            catch (Exception ex)
+
+            var outputParts = new List<string>(3);
+            if (timedOut)
             {
-                cleanupFailures.Add(
-                    $"[launcher] Failed to cancel stderr capture after drain timeout: {ex.GetType().Name}: {ex.Message}");
+                outputParts.Add($"Process timed out after {timeoutMs} ms.");
             }
-        }
 
-        string capturedStdout;
-        string capturedStderr;
-        lock (outputGate)
-        {
-            capturedStdout = stdout.ToString().TrimEnd();
-            capturedStderr = stderr.ToString().TrimEnd();
-        }
-
-        var outputParts = new List<string>(3);
-        if (timedOut)
-        {
-            outputParts.Add($"Process timed out after {timeoutMs} ms.");
-            if (!timedOutProcessTerminated)
+            if (!string.IsNullOrWhiteSpace(capturedStdout))
             {
-                outputParts.Add("[launcher] Timed-out process did not confirm termination; build outputs may still be changing.");
+                outputParts.Add(capturedStdout);
             }
-        }
 
-        if (!string.IsNullOrWhiteSpace(capturedStdout))
+            if (!string.IsNullOrWhiteSpace(capturedStderr))
+            {
+                outputParts.Add(capturedStderr);
+            }
+
+            if (!outputComplete)
+            {
+                outputParts.Add($"[launcher] Redirected output remained open for {outputDrainTimeoutMs} ms after process exit; capture was stopped explicitly.");
+            }
+
+            foreach (ProcessRunFailure failure in failures)
+            {
+                outputParts.Add($"[launcher] {failure.Stage} failed for process {processId} ({fileName} {arguments}): {failure.Exception.GetType().FullName}: {failure.Exception.Message}");
+            }
+
+            int? processExitCode = rootProcessExited ? process.ExitCode : null;
+            bool terminationFailed = timedOut &&
+                (!rootProcessExited || !processTreeExitConfirmed || failures.Any(failure =>
+                    failure.Stage is ProcessRunFailureStage.CaptureProcessTree or
+                        ProcessRunFailureStage.TerminateProcessTree or
+                        ProcessRunFailureStage.ConfirmProcessTreeExit));
+            ProcessRunStatus status = terminationFailed
+                ? ProcessRunStatus.TerminationFailed
+                : !outputComplete
+                    ? ProcessRunStatus.OutputDrainFailed
+                    : timedOut
+                        ? ProcessRunStatus.TimedOutCleanly
+                        : processExitCode == 0
+                            ? ProcessRunStatus.Success
+                            : ProcessRunStatus.ProcessFailed;
+
+            return new ProcessRunResult(
+                status,
+                processExitCode,
+                string.Join(Environment.NewLine, outputParts),
+                timedOut,
+                rootProcessExited,
+                processTreeExitConfirmed,
+                outputComplete,
+                processId,
+                fileName,
+                arguments,
+                failures.ToArray());
+        }
+        finally
         {
-            outputParts.Add(capturedStdout);
+            process.Exited -= processExitedHandler;
+            process.OutputDataReceived -= stdoutHandler;
+            process.ErrorDataReceived -= stderrHandler;
         }
+    }
 
-        if (!string.IsNullOrWhiteSpace(capturedStderr))
+    private static TimeSpan GetRemainingTerminationTime(DateTime deadlineUtc, int processId)
+    {
+        TimeSpan remaining = deadlineUtc - DateTime.UtcNow;
+        if (remaining <= TimeSpan.Zero)
         {
-            outputParts.Add(capturedStderr);
+            throw new TimeoutException($"Process tree rooted at {processId} exceeded its termination deadline.");
         }
 
-        if (!outputClosed)
-        {
-            outputParts.Add($"[launcher] Redirected output remained open for {outputDrainTimeoutMs} ms after process exit; capture was stopped explicitly.");
-        }
-
-        if (cleanupFailures.Count > 0)
-        {
-            outputParts.AddRange(cleanupFailures);
-        }
-
-        int exitCode = timedOut
-            ? (timedOutProcessTerminated && cleanupFailures.Count == 0 ? -1 : -2)
-            : process.ExitCode;
-        return (exitCode, string.Join(Environment.NewLine, outputParts));
+        return remaining;
     }
 
     private static string ResolveDotnetCommand()
@@ -2387,9 +2549,18 @@ public sealed class LauncherService
                string.Equals(fileName, "dotnet.exe", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static Task<(int ExitCode, string Output)> RunDotnetAsync(string arguments, string workingDirectory, int timeoutMs)
+    private static Task<ProcessRunResult> RunDotnetAsync(string arguments, string workingDirectory, int timeoutMs)
     {
         return RunProcessAsync(ResolveDotnetCommand(), arguments, workingDirectory, timeoutMs);
+    }
+
+    private static async Task RunDotnetOrThrowAsync(string arguments, string workingDirectory, int timeoutMs)
+    {
+        ProcessRunResult result = await RunDotnetAsync(arguments, workingDirectory, timeoutMs);
+        if (!result.Succeeded)
+        {
+            throw new InvalidOperationException(result.Output);
+        }
     }
 
     private string GetLudotsToolProjectPath()
@@ -2415,9 +2586,9 @@ public sealed class LauncherService
             output.AppendLine(build.Output);
         }
 
-        if (build.ExitCode != 0)
+        if (!build.Succeeded)
         {
-            return (build.ExitCode, output.ToString());
+            return (build.WorkflowExitCode, output.ToString());
         }
 
         var toolAssemblyPath = GetLudotsToolAssemblyPath();
@@ -2436,10 +2607,10 @@ public sealed class LauncherService
             output.AppendLine(run.Output);
         }
 
-        return (run.ExitCode, output.ToString());
+        return (run.WorkflowExitCode, output.ToString());
     }
 
-    private static Task<(int ExitCode, string Output)> RunNodePackageCommandAsync(string arguments, string workingDirectory, int timeoutMs)
+    private static Task<ProcessRunResult> RunNodePackageCommandAsync(string arguments, string workingDirectory, int timeoutMs)
     {
         if (OperatingSystem.IsWindows())
         {
