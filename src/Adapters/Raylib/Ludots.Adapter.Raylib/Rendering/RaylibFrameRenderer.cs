@@ -24,7 +24,9 @@ namespace Ludots.Adapter.Raylib
     internal enum RaylibFramePass
     {
         Clear,
+        BeginWorldTexture,
         BeginWorld3D,
+        Skybox,
         DebugGuides,
         Terrain,
         GlobalField,
@@ -34,6 +36,7 @@ namespace Ludots.Adapter.Raylib
         RoadSpline,
         DebugDraw,
         EndWorld3D,
+        PostProcessComposite,
         BrowserLayer,
         OverlayComposite,
     }
@@ -49,7 +52,9 @@ namespace Ludots.Adapter.Raylib
         bool HasGroundOverlays,
         bool HasRoadSplines,
         bool DrawDebugDraw,
-        bool DrawSkiaUi);
+        bool DrawSkiaUi,
+        bool DrawEnvironment,
+        bool UsePostProcess);
 
     internal readonly record struct RaylibRenderFrame(
         Camera3D ActiveCamera,
@@ -81,6 +86,7 @@ namespace Ludots.Adapter.Raylib
         private readonly SkiaUiRenderer _skiaRenderer;
         private readonly RaylibOverlayCompositor _overlayCompositor;
         private readonly RaylibBrowserLayerRenderer _browserLayerRenderer;
+        private readonly RaylibRenderEnvironmentRenderer _environmentRenderer;
         private readonly RaylibTerrainRenderer _terrainRenderer;
         private readonly RaylibVisualHeightmapRenderer _visualHeightmapRenderer;
         private readonly RaylibFieldRenderPerformer _fieldRenderPerformer;
@@ -97,6 +103,7 @@ namespace Ludots.Adapter.Raylib
             SkiaUiRenderer skiaRenderer,
             RaylibOverlayCompositor overlayCompositor,
             RaylibBrowserLayerRenderer browserLayerRenderer,
+            RaylibRenderEnvironmentRenderer environmentRenderer,
             RaylibTerrainRenderer terrainRenderer,
             RaylibVisualHeightmapRenderer visualHeightmapRenderer,
             RaylibFieldRenderPerformer fieldRenderPerformer,
@@ -112,6 +119,7 @@ namespace Ludots.Adapter.Raylib
             _skiaRenderer = skiaRenderer ?? throw new ArgumentNullException(nameof(skiaRenderer));
             _overlayCompositor = overlayCompositor ?? throw new ArgumentNullException(nameof(overlayCompositor));
             _browserLayerRenderer = browserLayerRenderer ?? throw new ArgumentNullException(nameof(browserLayerRenderer));
+            _environmentRenderer = environmentRenderer ?? throw new ArgumentNullException(nameof(environmentRenderer));
             _terrainRenderer = terrainRenderer ?? throw new ArgumentNullException(nameof(terrainRenderer));
             _visualHeightmapRenderer = visualHeightmapRenderer ?? throw new ArgumentNullException(nameof(visualHeightmapRenderer));
             _fieldRenderPerformer = fieldRenderPerformer ?? throw new ArgumentNullException(nameof(fieldRenderPerformer));
@@ -126,41 +134,85 @@ namespace Ludots.Adapter.Raylib
         public RaylibRenderFrameResult RenderFrame(in RaylibRenderFrame frame)
         {
             bool emptyBufferWarned = frame.EmptyBufferWarned;
-            long beginDrawingStart = Stopwatch.GetTimestamp();
-            Rl.BeginDrawing();
-            _presentationTiming?.ObserveBeginDrawing(ElapsedMs(beginDrawingStart));
-            Restore3DDepthState();
-            Rl.ClearBackground(frame.ActiveMapRequestsDeepBackground
-                ? new Color(6, 10, 16, 255)
-                : new Color(0, 0, 0, 255));
+            bool drawingActive = false;
+            bool worldFrameActive = false;
+            bool mode3DActive = false;
+            bool frameCompleted = false;
 
-            long mode3DStart = Stopwatch.GetTimestamp();
-            Restore3DDepthState();
-            CameraRenderState3D activeCameraState = frame.ActiveCameraState;
-            BeginCoreMode3D(frame.ActiveCamera, in activeCameraState);
-            Restore3DDepthState();
+            try
+            {
+                long beginDrawingStart = Stopwatch.GetTimestamp();
+                Rl.BeginDrawing();
+                drawingActive = true;
+                _presentationTiming?.ObserveBeginDrawing(ElapsedMs(beginDrawingStart));
+                Restore3DDepthState();
+                worldFrameActive = true;
+                _environmentRenderer.BeginWorldFrame(frame.Width, frame.Height, frame.ActiveMapRequestsDeepBackground);
 
-            DrawDebugGuides(in frame);
-            DrawTerrain(in frame);
-            DrawGlobalFields(in frame);
-            bool benchmarkDrew = DrawBenchmarkScene(frame.ActiveCamera);
-            emptyBufferWarned = DrawPrimitiveVisuals(in frame, benchmarkDrew, emptyBufferWarned);
-            DrawGroundOverlays(frame.CleanPerformanceMode);
-            DrawRoadSplines(frame.CleanPerformanceMode);
-            DrawDebugCommands(in frame);
+                long mode3DStart = Stopwatch.GetTimestamp();
+                Restore3DDepthState();
+                CameraRenderState3D activeCameraState = frame.ActiveCameraState;
+                mode3DActive = true;
+                BeginCoreMode3D(frame.ActiveCamera, in activeCameraState);
+                Restore3DDepthState();
 
-            EndCoreMode3D();
-            _presentationTiming?.ObserveMode3D(ElapsedMs(mode3DStart));
+                _environmentRenderer.DrawSkybox(frame.ActiveCamera, frame.TimeSeconds);
+                DrawDebugGuides(in frame);
+                DrawTerrain(in frame);
+                DrawGlobalFields(in frame);
+                bool benchmarkDrew = DrawBenchmarkScene(frame.ActiveCamera);
+                emptyBufferWarned = DrawPrimitiveVisuals(in frame, benchmarkDrew, emptyBufferWarned);
+                DrawGroundOverlays(frame.CleanPerformanceMode);
+                DrawRoadSplines(frame.CleanPerformanceMode);
+                DrawDebugCommands(in frame);
 
-            DrawUiLayers(in frame);
-            return new RaylibRenderFrameResult(emptyBufferWarned);
+                EndCoreMode3D();
+                mode3DActive = false;
+                _presentationTiming?.ObserveMode3D(ElapsedMs(mode3DStart));
+                _environmentRenderer.EndWorldFrame(frame.TimeSeconds);
+                worldFrameActive = false;
+
+                DrawUiLayers(in frame);
+                frameCompleted = true;
+                return new RaylibRenderFrameResult(emptyBufferWarned);
+            }
+            finally
+            {
+                if (!frameCompleted)
+                {
+                    if (mode3DActive)
+                    {
+                        EndCoreMode3D();
+                    }
+
+                    if (worldFrameActive)
+                    {
+                        _environmentRenderer.AbortWorldFrame();
+                    }
+
+                    if (drawingActive)
+                    {
+                        Rl.EndDrawing();
+                    }
+                }
+            }
         }
 
         public static int BuildPassPlan(in RaylibFramePassPlanInput input, Span<RaylibFramePass> output)
         {
             int count = 0;
             Add(output, ref count, RaylibFramePass.Clear);
+            if (input.UsePostProcess)
+            {
+                Add(output, ref count, RaylibFramePass.BeginWorldTexture);
+            }
+
             Add(output, ref count, RaylibFramePass.BeginWorld3D);
+            if (input.DrawEnvironment)
+            {
+                Add(output, ref count, RaylibFramePass.Skybox);
+            }
+
             if (input.DrawDebugGuides)
             {
                 Add(output, ref count, RaylibFramePass.DebugGuides);
@@ -202,6 +254,11 @@ namespace Ludots.Adapter.Raylib
             }
 
             Add(output, ref count, RaylibFramePass.EndWorld3D);
+            if (input.UsePostProcess)
+            {
+                Add(output, ref count, RaylibFramePass.PostProcessComposite);
+            }
+
             if (input.DrawSkiaUi)
             {
                 Add(output, ref count, RaylibFramePass.BrowserLayer);
@@ -246,7 +303,7 @@ namespace Ludots.Adapter.Raylib
                 visualHeightmapForTerrain is IVisualHeightmapRenderSource visualTerrainSource)
             {
                 long terrainStart = Stopwatch.GetTimestamp();
-                _visualHeightmapRenderer.Render(visualTerrainSource, frame.ActiveCamera);
+                _visualHeightmapRenderer.Render(visualTerrainSource, frame.ActiveCamera, frame.TimeSeconds);
                 _presentationTiming?.ObserveTerrain(
                     ElapsedMs(terrainStart),
                     _visualHeightmapRenderer.ChunkBuildMsLastFrame,
@@ -258,7 +315,7 @@ namespace Ludots.Adapter.Raylib
             if (frame.DrawTerrain)
             {
                 long terrainStart = Stopwatch.GetTimestamp();
-                _terrainRenderer.Render(_engine.VertexMap, frame.ActiveCamera);
+                _terrainRenderer.Render(_engine.VertexMap, frame.ActiveCamera, frame.TimeSeconds);
                 _presentationTiming?.ObserveTerrain(
                     ElapsedMs(terrainStart),
                     _terrainRenderer.ChunkBuildMsLastFrame,

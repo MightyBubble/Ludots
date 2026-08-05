@@ -71,6 +71,7 @@ namespace CapabilityStandardStaticPerformer30kMod.Runtime
         private const string MinimapMarkerScatterSeedMetadataKey = "minimapMarkerScatterSeed";
         private const string ForcePanelEnvKey = "LUDOTS_CAPABILITY_STANDARD_STATIC_PERFORMER_30K_FORCE_PANEL";
         private const string ForceBenchmarkUiEnvKey = "LUDOTS_CAPABILITY_STANDARD_STATIC_PERFORMER_30K_FORCE_BENCHMARK_UI";
+        private const string AutoWorkingEnvKey = "LUDOTS_CAPABILITY_STANDARD_STATIC_PERFORMER_30K_AUTO_WORKING";
         private const float PanelRefreshIntervalSeconds = 0.25f;
         private const float LargeCrowdPanelRefreshIntervalSeconds = 1.5f;
 
@@ -97,6 +98,7 @@ namespace CapabilityStandardStaticPerformer30kMod.Runtime
         private bool _autoMeshBenchmarkApplied;
         private bool _autoDynamicWorkerBenchmarkApplied;
         private bool _autoMinimapMarkerShowcaseApplied;
+        private bool _autoWorkingApplied;
         private float _panelRefreshCooldown;
         private bool _panelDirty = true;
         private CapabilityStandardStaticPerformer30kPanelState _cachedPanelState = CapabilityStandardStaticPerformer30kPanelState.Empty;
@@ -160,6 +162,7 @@ namespace CapabilityStandardStaticPerformer30kMod.Runtime
             _autoDynamicWorkerBenchmarkApplied = IsDynamicWorkerBenchmarkMode(engine) && CountDynamicWorkerEntities(engine) > 0;
             _autoMinimapMarkerShowcaseApplied = IsMinimapMarkerShowcaseMode(engine) && CountMinimapMarkerBallEntities(engine) > 0;
             TryApplyStartupBenchmarkLayout(engine);
+            TryApplyAutoWorkingState(engine);
             MarkPanelDirty();
             return Task.CompletedTask;
         }
@@ -178,6 +181,7 @@ namespace CapabilityStandardStaticPerformer30kMod.Runtime
             _autoMeshBenchmarkApplied = false;
             _autoDynamicWorkerBenchmarkApplied = false;
             _autoMinimapMarkerShowcaseApplied = false;
+            _autoWorkingApplied = false;
             _panelDirty = true;
             _panelRefreshCooldown = 0f;
             _cachedPanelState = CapabilityStandardStaticPerformer30kPanelState.Empty;
@@ -196,6 +200,7 @@ namespace CapabilityStandardStaticPerformer30kMod.Runtime
             if (IsInteractiveMode(engine))
             {
                 RefreshRootEntity(engine);
+                TryApplyAutoWorkingState(engine);
             }
 
             _panelRefreshCooldown = MathF.Max(0f, _panelRefreshCooldown - (1f / 60f));
@@ -216,7 +221,34 @@ namespace CapabilityStandardStaticPerformer30kMod.Runtime
                 return;
             }
 
-            _isWorking = !_isWorking;
+            SetWorkingState(engine, !_isWorking, $"Working => {(!_isWorking ? "ON" : "OFF")}");
+        }
+
+        private void TryApplyAutoWorkingState(GameEngine engine)
+        {
+            if (_autoWorkingApplied || !ReadStrictBoolEnv(AutoWorkingEnvKey))
+            {
+                return;
+            }
+
+            if (_destroyed || _buildingEntity == Entity.Null || !engine.World.IsAlive(_buildingEntity))
+            {
+                return;
+            }
+
+            SetWorkingState(engine, enabled: true, "Auto working => ON");
+            _autoWorkingApplied = true;
+        }
+
+        private void SetWorkingState(GameEngine engine, bool enabled, string flashLabel)
+        {
+            if (_isWorking == enabled)
+            {
+                _autoWorkingApplied = _autoWorkingApplied || enabled;
+                return;
+            }
+
+            _isWorking = enabled;
             EnsureGameplayTagState(engine, _buildingEntity);
             TagOps tagOps = engine.GetService(CoreServiceKeys.TagOps)
                 ?? throw new InvalidOperationException("TagOps service missing.");
@@ -229,7 +261,7 @@ namespace CapabilityStandardStaticPerformer30kMod.Runtime
                 tagOps.RemoveTag(engine.World, _buildingEntity, _workingTagId);
             }
 
-            Flash($"Working => {(_isWorking ? "ON" : "OFF")}");
+            Flash(flashLabel);
         }
 
         internal void ToggleDayNight()
@@ -1551,6 +1583,7 @@ namespace CapabilityStandardStaticPerformer30kMod.Runtime
             _autoMeshBenchmarkApplied = false;
             _autoDynamicWorkerBenchmarkApplied = false;
             _autoMinimapMarkerShowcaseApplied = false;
+            _autoWorkingApplied = false;
             MarkPanelDirty();
         }
 

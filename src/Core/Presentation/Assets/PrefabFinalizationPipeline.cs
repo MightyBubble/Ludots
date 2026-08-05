@@ -316,6 +316,25 @@ namespace Ludots.Core.Presentation.Assets
 
                 case PrefabVisualPartKind.Vfx:
                     ValidatePartContract(part, stableId);
+                    if (!meshes.TryGetDescriptor(part.EffectAssetId, out MeshAssetDescriptor effectDescriptor))
+                    {
+                        throw new InvalidOperationException(
+                            $"Prefab VFX part stableId={stableId} references unknown effectAssetId={part.EffectAssetId}.");
+                    }
+
+                    if (!effectDescriptor.VfxEffectData.IsValid)
+                    {
+                        throw new InvalidOperationException(
+                            $"Prefab VFX part stableId={stableId} references effectAssetId={part.EffectAssetId} without valid VFX effect data.");
+                    }
+
+                    if (part.VfxSpawnModeAuthored &&
+                        part.VfxSpawnMode != effectDescriptor.VfxEffectData.SpawnMode)
+                    {
+                        throw new InvalidOperationException(
+                            $"Prefab VFX part stableId={stableId} declares spawnMode={part.VfxSpawnMode}, but effectAssetId={part.EffectAssetId} declares spawnMode={effectDescriptor.VfxEffectData.SpawnMode}. VFX spawn mode must be authored on the effect asset only.");
+                    }
+
                     output.Add(PrefabFinalizedVisual.Vfx(
                         stableId,
                         position,
@@ -323,7 +342,7 @@ namespace Ludots.Core.Presentation.Assets
                         scale,
                         color,
                         part.EffectAssetId,
-                        part.VfxSpawnMode));
+                        effectDescriptor.VfxEffectData.SpawnMode));
                     return;
 
                 case PrefabVisualPartKind.Surface:

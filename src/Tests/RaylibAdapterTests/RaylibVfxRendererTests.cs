@@ -12,11 +12,14 @@ namespace Ludots.Tests.RaylibAdapter;
 public sealed class RaylibVfxRendererTests
 {
     [Test]
-    public void TryBuildDirectVfxVisual_PerformerVfxPrimitive_BuildsLoopEffectVisual()
+    public void TryBuildDirectVfxVisual_PerformerVfxPrimitive_UsesAuthoredEffectSpawnMode()
     {
+        var meshes = new MeshAssetRegistry();
+        MeshAssetDescriptor descriptor = CreateSphereEffectDescriptor(0, PrefabVfxSpawnMode.Loop);
+        int effectAssetId = meshes.Register("effect.looping.smoke", in descriptor);
         var primitive = new PrimitiveDrawItem
         {
-            MeshAssetId = 42,
+            MeshAssetId = effectAssetId,
             Position = new Vector3(1f, 2f, 3f),
             Rotation = Quaternion.Identity,
             Scale = new Vector3(2f, 3f, 4f),
@@ -30,13 +33,14 @@ public sealed class RaylibVfxRendererTests
 
         bool handled = RaylibPrimitiveRenderer.TryBuildDirectVfxVisual(
             in primitive,
+            meshes,
             scaleMul: 0.5f,
             out PrefabFinalizedVisual visual);
 
         Assert.That(handled, Is.True);
         Assert.That(visual.Kind, Is.EqualTo(PrefabVisualPartKind.Vfx));
         Assert.That(visual.StableId, Is.EqualTo(99));
-        Assert.That(visual.EffectAssetId, Is.EqualTo(42));
+        Assert.That(visual.EffectAssetId, Is.EqualTo(effectAssetId));
         Assert.That(visual.VfxSpawnMode, Is.EqualTo(PrefabVfxSpawnMode.Loop));
         Assert.That(visual.Scale, Is.EqualTo(new Vector3(1f, 1.5f, 2f)));
     }
@@ -63,7 +67,7 @@ public sealed class RaylibVfxRendererTests
             color: new Vector4(0.35f, 0.95f, 1f, 0.85f),
             effectAssetId: 42,
             spawnMode: PrefabVfxSpawnMode.Loop);
-        MeshAssetDescriptor descriptor = CreateSphereEffectDescriptor(42);
+        MeshAssetDescriptor descriptor = CreateSphereEffectDescriptor(42, PrefabVfxSpawnMode.Loop);
 
         RaylibVfxEmitterPlan plan = RaylibVfxRenderer.BuildEmitterPlan(
             in visual,
@@ -74,6 +78,8 @@ public sealed class RaylibVfxRendererTests
         Assert.That(plan.SpawnMode, Is.EqualTo(PrefabVfxSpawnMode.Loop));
         Assert.That(plan.ParticleCount, Is.EqualTo(24));
         Assert.That(plan.RingSegments, Is.EqualTo(20));
+        Assert.That(plan.ShellRingCount, Is.EqualTo(2));
+        Assert.That(plan.BeamCount, Is.EqualTo(3));
         Assert.That(plan.ShellRadius, Is.GreaterThan(0f));
         Assert.That(plan.OrbitPhase, Is.GreaterThan(0f));
         Assert.That(plan.CoreColor.W, Is.GreaterThan(0f));
@@ -91,7 +97,7 @@ public sealed class RaylibVfxRendererTests
             color: Vector4.One,
             effectAssetId: 77,
             spawnMode: PrefabVfxSpawnMode.Once);
-        MeshAssetDescriptor descriptor = CreateSphereEffectDescriptor(77);
+        MeshAssetDescriptor descriptor = CreateSphereEffectDescriptor(77, PrefabVfxSpawnMode.Once);
 
         RaylibVfxEmitterPlan plan = RaylibVfxRenderer.BuildEmitterPlan(
             in visual,
@@ -134,8 +140,9 @@ public sealed class RaylibVfxRendererTests
             effectAssetId: 91,
             spawnMode: PrefabVfxSpawnMode.Loop);
         MeshAssetDescriptor descriptor = MeshAssetDescriptor.Primitive(91, PrimitiveMeshKind.Cube);
-        descriptor.VfxEffectData = new VfxEffectAssetData(new VfxEmitterDescriptor(
+        descriptor.VfxEffectData = CreateEffectData(
             VfxEmitterShape.PrimitiveCube,
+            PrefabVfxSpawnMode.Loop,
             particleCount: 9,
             ringSegments: 11,
             radiusScale: 0.8f,
@@ -143,7 +150,9 @@ public sealed class RaylibVfxRendererTests
             particleRadiusScale: 0.06f,
             lifetimeSeconds: 0.5f,
             pulseSpeedRadPerSecond: 3.2f,
-            orbitSpeedRadPerSecond: 1.1f));
+            orbitSpeedRadPerSecond: 1.1f,
+            shellRingCount: 1,
+            beamCount: 2);
 
         RaylibVfxEmitterPlan plan = RaylibVfxRenderer.BuildEmitterPlan(
             in visual,
@@ -153,13 +162,16 @@ public sealed class RaylibVfxRendererTests
         Assert.That(plan.Shape, Is.EqualTo(VfxEmitterShape.PrimitiveCube));
         Assert.That(plan.ParticleCount, Is.EqualTo(9));
         Assert.That(plan.RingSegments, Is.EqualTo(11));
+        Assert.That(plan.ShellRingCount, Is.EqualTo(1));
+        Assert.That(plan.BeamCount, Is.EqualTo(2));
     }
 
-    private static MeshAssetDescriptor CreateSphereEffectDescriptor(int id)
+    private static MeshAssetDescriptor CreateSphereEffectDescriptor(int id, PrefabVfxSpawnMode spawnMode)
     {
         MeshAssetDescriptor descriptor = MeshAssetDescriptor.Primitive(id, PrimitiveMeshKind.Sphere);
-        descriptor.VfxEffectData = new VfxEffectAssetData(new VfxEmitterDescriptor(
+        descriptor.VfxEffectData = CreateEffectData(
             VfxEmitterShape.PrimitiveSphere,
+            spawnMode,
             particleCount: 24,
             ringSegments: 20,
             radiusScale: 1.15f,
@@ -167,7 +179,42 @@ public sealed class RaylibVfxRendererTests
             particleRadiusScale: 0.085f,
             lifetimeSeconds: 0.75f,
             pulseSpeedRadPerSecond: 5.2f,
-            orbitSpeedRadPerSecond: 1.7f));
+            orbitSpeedRadPerSecond: 1.7f,
+            shellRingCount: 2,
+            beamCount: 3);
         return descriptor;
+    }
+
+    private static VfxEffectAssetData CreateEffectData(
+        VfxEmitterShape shape,
+        PrefabVfxSpawnMode spawnMode,
+        int particleCount,
+        int ringSegments,
+        float radiusScale,
+        float coreRadiusScale,
+        float particleRadiusScale,
+        float lifetimeSeconds,
+        float pulseSpeedRadPerSecond,
+        float orbitSpeedRadPerSecond,
+        int shellRingCount,
+        int beamCount)
+    {
+        return new VfxEffectAssetData(
+            new VfxEmitterDescriptor(
+                shape,
+                particleCount,
+                ringSegments,
+                radiusScale,
+                coreRadiusScale,
+                particleRadiusScale,
+                lifetimeSeconds,
+                pulseSpeedRadPerSecond,
+                orbitSpeedRadPerSecond,
+                shellRingCount,
+                beamCount),
+            spawnMode,
+            new Vector4(0.20f, 0.85f, 1.00f, 0.88f),
+            new Vector4(0.55f, 0.95f, 1.00f, 0.62f),
+            new Vector4(1.00f, 0.92f, 0.32f, 0.86f));
     }
 }

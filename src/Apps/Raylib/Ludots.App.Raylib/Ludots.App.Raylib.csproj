@@ -53,6 +53,18 @@
       <Link>water.fs</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="..\..\..\Platforms\Desktop\skybox.vs">
+      <Link>skybox.vs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\..\Platforms\Desktop\skybox.fs">
+      <Link>skybox.fs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\..\Platforms\Desktop\postprocess.fs">
+      <Link>postprocess.fs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Include="launcher.runtime.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
@@ -60,6 +72,9 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="launcher.visual-terrain-editor.runtime.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Include="raylib.launch.graph.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="launcher.mass-navigation.runtime.json">

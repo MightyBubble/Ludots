@@ -22,13 +22,17 @@ public sealed class RaylibFrameRendererTests
                 HasGroundOverlays: true,
                 HasRoadSplines: true,
                 DrawDebugDraw: true,
-                DrawSkiaUi: true),
+                DrawSkiaUi: true,
+                DrawEnvironment: true,
+                UsePostProcess: true),
             passes);
 
         Assert.That(passes[..count].ToArray(), Is.EqualTo(new[]
         {
             RaylibFramePass.Clear,
+            RaylibFramePass.BeginWorldTexture,
             RaylibFramePass.BeginWorld3D,
+            RaylibFramePass.Skybox,
             RaylibFramePass.DebugGuides,
             RaylibFramePass.Terrain,
             RaylibFramePass.GlobalField,
@@ -38,6 +42,7 @@ public sealed class RaylibFrameRendererTests
             RaylibFramePass.RoadSpline,
             RaylibFramePass.DebugDraw,
             RaylibFramePass.EndWorld3D,
+            RaylibFramePass.PostProcessComposite,
             RaylibFramePass.BrowserLayer,
             RaylibFramePass.OverlayComposite,
         }));
@@ -59,7 +64,9 @@ public sealed class RaylibFrameRendererTests
                 HasGroundOverlays: false,
                 HasRoadSplines: false,
                 DrawDebugDraw: false,
-                DrawSkiaUi: false),
+                DrawSkiaUi: false,
+                DrawEnvironment: false,
+                UsePostProcess: false),
             passes);
 
         Assert.That(passes[..count].ToArray(), Is.EqualTo(new[]
@@ -89,9 +96,11 @@ public sealed class RaylibFrameRendererTests
                     HasBenchmarkRenderer: true,
                     DrawPrimitives: true,
                     HasGroundOverlays: true,
-                    HasRoadSplines: true,
-                    DrawDebugDraw: true,
-                    DrawSkiaUi: true),
+                HasRoadSplines: true,
+                DrawDebugDraw: true,
+                DrawSkiaUi: true,
+                DrawEnvironment: true,
+                UsePostProcess: true),
                 passes);
         }
         catch (InvalidOperationException ex)

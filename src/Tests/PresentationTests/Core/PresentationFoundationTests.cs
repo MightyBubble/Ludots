@@ -1624,13 +1624,32 @@ namespace Ludots.Tests.Presentation
             var meshes = new MeshAssetRegistry();
 
             int cubeId = meshes.GetId(WellKnownMeshKeys.Cube);
+            MeshAssetDescriptor effectDescriptor = MeshAssetDescriptor.Primitive(0, PrimitiveMeshKind.Sphere);
+            effectDescriptor.VfxEffectData = new VfxEffectAssetData(
+                new VfxEmitterDescriptor(
+                    VfxEmitterShape.PrimitiveSphere,
+                    particleCount: 6,
+                    ringSegments: 8,
+                    radiusScale: 1f,
+                    coreRadiusScale: 0.35f,
+                    particleRadiusScale: 0.18f,
+                    lifetimeSeconds: 1.2f,
+                    pulseSpeedRadPerSecond: 2f,
+                    orbitSpeedRadPerSecond: 1f,
+                    shellRingCount: 1,
+                    beamCount: 1),
+                PrefabVfxSpawnMode.Loop,
+                new Vector4(0.8f, 0.9f, 1f, 1f),
+                new Vector4(0.3f, 0.6f, 1f, 0.55f),
+                new Vector4(1f, 0.85f, 0.35f, 0.9f));
+            int effectId = meshes.Register("test.prefab.typed_root.effect", in effectDescriptor);
             int typedPrefabMeshId = meshes.Register(
                 "test.prefab.typed_root",
                 MeshAssetDescriptor.Prefab(
                     0,
                     PrefabPart.Default(cubeId),
                     PrefabPart.Decal(materialId: 17, size: new Vector2(2f, 3f)),
-                    PrefabPart.Vfx(effectAssetId: 23, spawnMode: PrefabVfxSpawnMode.Loop),
+                    PrefabPart.Vfx(effectAssetId: effectId, spawnMode: PrefabVfxSpawnMode.Once),
                     PrefabPart.Surface(cubeId, materialId: 31, tiling: new Vector2(2f, 2f))));
             int prefabId = prefabs.Register(
                 "test.prefab.typed_root",

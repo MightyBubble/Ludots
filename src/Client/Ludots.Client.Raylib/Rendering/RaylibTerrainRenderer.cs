@@ -21,19 +21,39 @@ namespace Ludots.Client.Raylib.Rendering
 
         private Shader _terrainShader;
         private Material _terrainMaterial;
-        private int _locTerrainLightPos;
         private int _locTerrainViewPos;
+        private int _locTerrainSunDirection;
+        private int _locTerrainSunColor;
+        private int _locTerrainAmbientColor;
         private int _locTerrainAmbient;
         private int _locTerrainIntensity;
+        private int _locTerrainFogColor;
+        private int _locTerrainFogNear;
+        private int _locTerrainFogFar;
+        private int _locTerrainFogDensity;
 
         private Shader _waterShader;
         private Material _waterMaterial;
-        private int _locWaterLightPos;
         private int _locWaterViewPos;
+        private int _locWaterSunDirection;
+        private int _locWaterSunColor;
+        private int _locWaterAmbientColor;
         private int _locWaterAmbient;
         private int _locWaterIntensity;
+        private int _locWaterFogColor;
+        private int _locWaterFogNear;
+        private int _locWaterFogFar;
+        private int _locWaterFogDensity;
+        private int _locWaterTime;
+        private int _locWaterShallowColor;
+        private int _locWaterDeepColor;
+        private int _locWaterWaveAmplitude;
+        private int _locWaterWaveFrequency;
+        private int _locWaterWaveSpeed;
+        private int _locWaterFresnelStrength;
 
         private int _frameIndex;
+        private RaylibRenderEnvironmentConfig _environmentConfig = RaylibRenderEnvironmentConfig.CreateDefault();
 
         public int DrawnChunkCountLastFrame { get; private set; }
         public int BuiltChunkCountLastFrame { get; private set; }
@@ -45,18 +65,20 @@ namespace Ludots.Client.Raylib.Rendering
         public float VisibleRadius { get; set; } = 900f;
         public float SimplifiedCliffRadius { get; set; } = 350f;
 
-        public Vector3 LightPosition { get; set; } = new Vector3(50f, 200f, 100f);
-        public float Ambient { get; set; } = 0.8f;
-        public float LightIntensity { get; set; } = 1.0f;
+        public RaylibRenderEnvironmentConfig EnvironmentConfig
+        {
+            get => _environmentConfig;
+            set => _environmentConfig = value?.NormalizeAndValidate() ?? throw new ArgumentNullException(nameof(value));
+        }
 
         public float HeightScale { get; set; } = 2.0f;
 
-        public void Render(VertexMap map, in Camera3D camera)
+        public void Render(VertexMap map, in Camera3D camera, double timeSeconds)
         {
             if (map == null) return;
 
             EnsureInitialized(map);
-            UpdateUniforms(camera);
+            UpdateUniforms(camera, timeSeconds);
 
             _frameIndex++;
             DrawnChunkCountLastFrame = 0;
@@ -97,7 +119,9 @@ namespace Ludots.Client.Raylib.Rendering
                     Rl.DrawMesh(chunk.TerrainMesh, _terrainMaterial, identity);
                     if (chunk.WaterMesh.vertexCount > 0)
                     {
+                        Rl.BeginBlendMode(BlendMode.BLEND_ALPHA);
                         Rl.DrawMesh(chunk.WaterMesh, _waterMaterial, identity);
+                        Rl.EndBlendMode();
                         WaterVertexCountLastFrame += chunk.WaterMesh.vertexCount;
                     }
                     Rl.rlEnableBackfaceCulling();
@@ -120,40 +144,94 @@ namespace Ludots.Client.Raylib.Rendering
             _terrainMaterial = Rl.LoadMaterialDefault();
             _terrainMaterial.shader = _terrainShader;
 
-            _locTerrainLightPos = Rl.GetShaderLocation(_terrainShader, "uLightPos");
-            _locTerrainViewPos = Rl.GetShaderLocation(_terrainShader, "uViewPos");
-            _locTerrainAmbient = Rl.GetShaderLocation(_terrainShader, "uAmbient");
-            _locTerrainIntensity = Rl.GetShaderLocation(_terrainShader, "uLightIntensity");
+            _locTerrainViewPos = RaylibShaderBindingGuard.RequireUniform(_terrainShader, "uViewPos", "terrain");
+            _locTerrainSunDirection = RaylibShaderBindingGuard.RequireUniform(_terrainShader, "uSunDirection", "terrain");
+            _locTerrainSunColor = RaylibShaderBindingGuard.RequireUniform(_terrainShader, "uSunColor", "terrain");
+            _locTerrainAmbientColor = RaylibShaderBindingGuard.RequireUniform(_terrainShader, "uAmbientColor", "terrain");
+            _locTerrainAmbient = RaylibShaderBindingGuard.RequireUniform(_terrainShader, "uAmbient", "terrain");
+            _locTerrainIntensity = RaylibShaderBindingGuard.RequireUniform(_terrainShader, "uLightIntensity", "terrain");
+            _locTerrainFogColor = RaylibShaderBindingGuard.RequireUniform(_terrainShader, "uFogColor", "terrain");
+            _locTerrainFogNear = RaylibShaderBindingGuard.RequireUniform(_terrainShader, "uFogNear", "terrain");
+            _locTerrainFogFar = RaylibShaderBindingGuard.RequireUniform(_terrainShader, "uFogFar", "terrain");
+            _locTerrainFogDensity = RaylibShaderBindingGuard.RequireUniform(_terrainShader, "uFogDensity", "terrain");
 
             _waterShader = Rl.LoadShader(Path.Combine(baseDir, "water.vs"), Path.Combine(baseDir, "water.fs"));
             if (_waterShader.id == 0) throw new InvalidOperationException("Failed to load water shader (shader.id == 0).");
             _waterMaterial = Rl.LoadMaterialDefault();
             _waterMaterial.shader = _waterShader;
 
-            _locWaterLightPos = Rl.GetShaderLocation(_waterShader, "uLightPos");
-            _locWaterViewPos = Rl.GetShaderLocation(_waterShader, "uViewPos");
-            _locWaterAmbient = Rl.GetShaderLocation(_waterShader, "uAmbient");
-            _locWaterIntensity = Rl.GetShaderLocation(_waterShader, "uLightIntensity");
+            _locWaterViewPos = RaylibShaderBindingGuard.RequireUniform(_waterShader, "uViewPos", "water");
+            _locWaterSunDirection = RaylibShaderBindingGuard.RequireUniform(_waterShader, "uSunDirection", "water");
+            _locWaterSunColor = RaylibShaderBindingGuard.RequireUniform(_waterShader, "uSunColor", "water");
+            _locWaterAmbientColor = RaylibShaderBindingGuard.RequireUniform(_waterShader, "uAmbientColor", "water");
+            _locWaterAmbient = RaylibShaderBindingGuard.RequireUniform(_waterShader, "uAmbient", "water");
+            _locWaterIntensity = RaylibShaderBindingGuard.RequireUniform(_waterShader, "uLightIntensity", "water");
+            _locWaterFogColor = RaylibShaderBindingGuard.RequireUniform(_waterShader, "uFogColor", "water");
+            _locWaterFogNear = RaylibShaderBindingGuard.RequireUniform(_waterShader, "uFogNear", "water");
+            _locWaterFogFar = RaylibShaderBindingGuard.RequireUniform(_waterShader, "uFogFar", "water");
+            _locWaterFogDensity = RaylibShaderBindingGuard.RequireUniform(_waterShader, "uFogDensity", "water");
+            _locWaterTime = RaylibShaderBindingGuard.RequireUniform(_waterShader, "uTime", "water");
+            _locWaterShallowColor = RaylibShaderBindingGuard.RequireUniform(_waterShader, "uWaterShallowColor", "water");
+            _locWaterDeepColor = RaylibShaderBindingGuard.RequireUniform(_waterShader, "uWaterDeepColor", "water");
+            _locWaterWaveAmplitude = RaylibShaderBindingGuard.RequireUniform(_waterShader, "uWaveAmplitude", "water");
+            _locWaterWaveFrequency = RaylibShaderBindingGuard.RequireUniform(_waterShader, "uWaveFrequency", "water");
+            _locWaterWaveSpeed = RaylibShaderBindingGuard.RequireUniform(_waterShader, "uWaveSpeed", "water");
+            _locWaterFresnelStrength = RaylibShaderBindingGuard.RequireUniform(_waterShader, "uFresnelStrength", "water");
 
             _initialized = true;
         }
 
-        private void UpdateUniforms(in Camera3D camera)
+        private void UpdateUniforms(in Camera3D camera, double timeSeconds)
         {
-            Vector3 lightPos = LightPosition;
+            RaylibRenderEnvironmentConfig config = EnvironmentConfig;
+            RaylibLightingConfig lighting = config.Lighting;
+            RaylibWaterRenderConfig water = config.Water;
             Vector3 viewPos = camera.position;
-            float ambient = Ambient;
-            float intensity = LightIntensity;
+            Vector3 sunDirection = lighting.SunDirection;
+            Vector3 sunColor = lighting.SunColor;
+            Vector3 ambientColor = lighting.AmbientColor;
+            Vector3 fogColor = lighting.FogColor;
+            float ambient = lighting.AmbientStrength;
+            float intensity = lighting.SunStrength;
+            float fogNear = lighting.FogNearMeters;
+            float fogFar = lighting.FogFarMeters;
+            float fogDensity = lighting.FogDensity;
+            float time = (float)(timeSeconds % 100000.0);
+            Vector3 waterShallowColor = water.ShallowColor;
+            Vector3 waterDeepColor = water.DeepColor;
+            float waveAmplitude = water.WaveAmplitudeMeters;
+            float waveFrequency = water.WaveFrequency;
+            float waveSpeed = water.WaveSpeed;
+            float fresnelStrength = water.FresnelStrength;
 
-            Rl.SetShaderValue(_terrainShader, _locTerrainLightPos, &lightPos, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
             Rl.SetShaderValue(_terrainShader, _locTerrainViewPos, &viewPos, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
+            Rl.SetShaderValue(_terrainShader, _locTerrainSunDirection, &sunDirection, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
+            Rl.SetShaderValue(_terrainShader, _locTerrainSunColor, &sunColor, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
+            Rl.SetShaderValue(_terrainShader, _locTerrainAmbientColor, &ambientColor, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
             Rl.SetShaderValue(_terrainShader, _locTerrainAmbient, &ambient, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
             Rl.SetShaderValue(_terrainShader, _locTerrainIntensity, &intensity, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+            Rl.SetShaderValue(_terrainShader, _locTerrainFogColor, &fogColor, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
+            Rl.SetShaderValue(_terrainShader, _locTerrainFogNear, &fogNear, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+            Rl.SetShaderValue(_terrainShader, _locTerrainFogFar, &fogFar, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+            Rl.SetShaderValue(_terrainShader, _locTerrainFogDensity, &fogDensity, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
 
-            Rl.SetShaderValue(_waterShader, _locWaterLightPos, &lightPos, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
             Rl.SetShaderValue(_waterShader, _locWaterViewPos, &viewPos, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
+            Rl.SetShaderValue(_waterShader, _locWaterSunDirection, &sunDirection, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
+            Rl.SetShaderValue(_waterShader, _locWaterSunColor, &sunColor, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
+            Rl.SetShaderValue(_waterShader, _locWaterAmbientColor, &ambientColor, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
             Rl.SetShaderValue(_waterShader, _locWaterAmbient, &ambient, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
             Rl.SetShaderValue(_waterShader, _locWaterIntensity, &intensity, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+            Rl.SetShaderValue(_waterShader, _locWaterFogColor, &fogColor, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
+            Rl.SetShaderValue(_waterShader, _locWaterFogNear, &fogNear, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+            Rl.SetShaderValue(_waterShader, _locWaterFogFar, &fogFar, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+            Rl.SetShaderValue(_waterShader, _locWaterFogDensity, &fogDensity, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+            Rl.SetShaderValue(_waterShader, _locWaterTime, &time, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+            Rl.SetShaderValue(_waterShader, _locWaterShallowColor, &waterShallowColor, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
+            Rl.SetShaderValue(_waterShader, _locWaterDeepColor, &waterDeepColor, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
+            Rl.SetShaderValue(_waterShader, _locWaterWaveAmplitude, &waveAmplitude, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+            Rl.SetShaderValue(_waterShader, _locWaterWaveFrequency, &waveFrequency, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+            Rl.SetShaderValue(_waterShader, _locWaterWaveSpeed, &waveSpeed, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+            Rl.SetShaderValue(_waterShader, _locWaterFresnelStrength, &fresnelStrength, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
         }
 
         private ref ChunkGpu GetOrCreateChunk(VertexMap map, int chunkX, int chunkY, bool simplifiedCliffs)

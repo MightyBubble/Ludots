@@ -17,6 +17,7 @@ namespace Ludots.Core.Presentation.Assets
         public bool AlignToSurface;
         public bool TerrainFacing;
         public PrefabVfxSpawnMode VfxSpawnMode;
+        public bool VfxSpawnModeAuthored;
         public PrefabPartGrounding Grounding;
 
         public static PrefabPart Default(int meshAssetId)
@@ -36,6 +37,7 @@ namespace Ludots.Core.Presentation.Assets
                 AlignToSurface = false,
                 TerrainFacing = false,
                 VfxSpawnMode = PrefabVfxSpawnMode.Once,
+                VfxSpawnModeAuthored = false,
                 Grounding = PrefabPartGrounding.None,
             };
         }

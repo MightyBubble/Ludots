@@ -231,13 +231,14 @@ namespace Ludots.Tests.Presentation
         {
             var meshes = new MeshAssetRegistry();
             int cubeId = meshes.GetId(WellKnownMeshKeys.Cube);
+            int effectId = RegisterVfxEffect(meshes, "prefab.mixed_visuals.effect", PrefabVfxSpawnMode.Loop);
             int prefabId = meshes.Register(
                 "prefab.mixed_visuals",
                 MeshAssetDescriptor.Prefab(
                     0,
                     PrefabPart.Default(cubeId),
                     PrefabPart.Decal(materialId: 22, size: new Vector2(4f, 5f)),
-                    PrefabPart.Vfx(effectAssetId: 33, spawnMode: PrefabVfxSpawnMode.Loop),
+                    PrefabPart.Vfx(effectAssetId: effectId, spawnMode: PrefabVfxSpawnMode.Once),
                     PrefabPart.Surface(cubeId, materialId: 44, tiling: new Vector2(2f, 3f))));
 
             var output = new PrefabFinalizedVisualBuffer();
@@ -264,7 +265,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(visuals[1].AlignToSurface, Is.True);
 
             Assert.That(visuals[2].Kind, Is.EqualTo(PrefabVisualPartKind.Vfx));
-            Assert.That(visuals[2].EffectAssetId, Is.EqualTo(33));
+            Assert.That(visuals[2].EffectAssetId, Is.EqualTo(effectId));
             Assert.That(visuals[2].VfxSpawnMode, Is.EqualTo(PrefabVfxSpawnMode.Loop));
 
             Assert.That(visuals[3].Kind, Is.EqualTo(PrefabVisualPartKind.Surface));
@@ -272,6 +273,33 @@ namespace Ludots.Tests.Presentation
             Assert.That(visuals[3].MaterialId, Is.EqualTo(44));
             Assert.That(visuals[3].Tiling, Is.EqualTo(new Vector2(2f, 3f)));
             Assert.That(visuals[3].TerrainFacing, Is.True);
+        }
+
+        [Test]
+        public void PrefabFinalizationPipeline_WhenAuthoredPrefabVfxSpawnModeConflictsWithEffectAsset_ThrowsExplicitly()
+        {
+            var meshes = new MeshAssetRegistry();
+            int effectId = RegisterVfxEffect(meshes, "prefab.conflicting_vfx.effect", PrefabVfxSpawnMode.Loop);
+            PrefabPart vfxPart = PrefabPart.Vfx(effectAssetId: effectId, spawnMode: PrefabVfxSpawnMode.Once);
+            vfxPart.VfxSpawnModeAuthored = true;
+            int prefabId = meshes.Register(
+                "prefab.conflicting_vfx",
+                MeshAssetDescriptor.Prefab(0, vfxPart));
+
+            var output = new PrefabFinalizedVisualBuffer();
+
+            var ex = Assert.Throws<InvalidOperationException>(() =>
+                PrefabFinalizationPipeline.FinalizeVisuals(
+                    meshes,
+                    prefabId,
+                    stableId: 31,
+                    position: Vector3.Zero,
+                    rotation: Quaternion.Identity,
+                    scale: Vector3.One,
+                    color: Vector4.One,
+                    output));
+
+            Assert.That(ex!.Message, Does.Contain("VFX spawn mode must be authored on the effect asset only"));
         }
 
         [Test]
@@ -1124,6 +1152,29 @@ namespace Ludots.Tests.Presentation
             }
 
             return new ChunkedVisualHeightmapRuntime(descriptor, store);
+        }
+
+        private static int RegisterVfxEffect(MeshAssetRegistry meshes, string key, PrefabVfxSpawnMode spawnMode)
+        {
+            MeshAssetDescriptor descriptor = MeshAssetDescriptor.Primitive(0, PrimitiveMeshKind.Sphere);
+            descriptor.VfxEffectData = new VfxEffectAssetData(
+                new VfxEmitterDescriptor(
+                    VfxEmitterShape.PrimitiveSphere,
+                    particleCount: 6,
+                    ringSegments: 8,
+                    radiusScale: 1f,
+                    coreRadiusScale: 0.35f,
+                    particleRadiusScale: 0.18f,
+                    lifetimeSeconds: 1.2f,
+                    pulseSpeedRadPerSecond: 2f,
+                    orbitSpeedRadPerSecond: 1f,
+                    shellRingCount: 1,
+                    beamCount: 1),
+                spawnMode,
+                new Vector4(0.8f, 0.9f, 1f, 1f),
+                new Vector4(0.3f, 0.6f, 1f, 0.55f),
+                new Vector4(1f, 0.85f, 0.35f, 0.9f));
+            return meshes.Register(key, in descriptor);
         }
 
         private sealed class CountingGroundProjector : IVisualGroundProjector

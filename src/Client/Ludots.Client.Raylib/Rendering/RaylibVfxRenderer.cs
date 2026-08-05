@@ -22,6 +22,8 @@ namespace Ludots.Client.Raylib.Rendering
         float ParticleRadius,
         int ParticleCount,
         int RingSegments,
+        int ShellRingCount,
+        int BeamCount,
         float OrbitPhase,
         Vector4 CoreColor,
         Vector4 ShellColor,
@@ -35,9 +37,14 @@ namespace Ludots.Client.Raylib.Rendering
         private readonly HashSet<RaylibVfxEffectKey> _activeKeys = new();
         private readonly List<RaylibVfxEffectKey> _inactiveKeys = new();
 
+        public int LastDrawnEffectCount { get; private set; }
+
+        public int TotalDrawnEffectCount { get; private set; }
+
         public void BeginFrame()
         {
             _activeKeys.Clear();
+            LastDrawnEffectCount = 0;
         }
 
         public void Draw(in PrefabFinalizedVisual visual, MeshAssetRegistry effectAssets, double timeSeconds)
@@ -83,6 +90,8 @@ namespace Ludots.Client.Raylib.Rendering
             }
 
             Draw(in plan);
+            LastDrawnEffectCount++;
+            TotalDrawnEffectCount++;
         }
 
         public void EndFrame()
@@ -150,9 +159,10 @@ namespace Ludots.Client.Raylib.Rendering
                 ? 1f - life01
                 : 0.72f + (pulse01 * 0.28f);
 
-            Vector4 core = BlendSemanticColor(visual.Color, visual.EffectAssetId, 0.6f);
-            Vector4 shell = LerpColor(core, new Vector4(1f, 1f, 1f, core.W), 0.35f);
-            Vector4 particle = LerpColor(core, shell, 0.5f);
+            VfxEffectAssetData effect = effectDescriptor.VfxEffectData;
+            Vector4 core = ModulateColor(effect.CoreColor, visual.Color);
+            Vector4 shell = ModulateColor(effect.ShellColor, visual.Color);
+            Vector4 particle = ModulateColor(effect.ParticleColor, visual.Color);
             core.W *= alphaMultiplier;
             shell.W *= alphaMultiplier * 0.72f;
             particle.W *= alphaMultiplier * 0.9f;
@@ -176,6 +186,8 @@ namespace Ludots.Client.Raylib.Rendering
                 MathF.Max(0.012f, shellRadius * emitter.ParticleRadiusScale),
                 emitter.ParticleCount,
                 emitter.RingSegments,
+                emitter.ShellRingCount,
+                emitter.BeamCount,
                 age * emitter.OrbitSpeedRadPerSecond,
                 ClampColor(core),
                 ClampColor(shell),
@@ -185,21 +197,26 @@ namespace Ludots.Client.Raylib.Rendering
         private static void Draw(in RaylibVfxEmitterPlan plan)
         {
             DrawCore(in plan);
-            DrawRotatedRing(plan.Position, plan.Rotation, plan.ShellRadius, plan.RingSegments, plan.ShellColor);
-            DrawRotatedRing(
-                plan.Position,
-                plan.Rotation * Quaternion.CreateFromAxisAngle(Vector3.UnitX, MathF.PI * 0.5f),
-                plan.ShellRadius * 0.82f,
-                Math.Max(3, plan.RingSegments - 4),
-                MultiplyColor(plan.ShellColor, 0.92f, 1f, 1.1f, 0.8f));
+            DrawShellRings(in plan);
 
             Vector3 right = Vector3.Normalize(Vector3.Transform(Vector3.UnitX, plan.Rotation));
             Vector3 up = Vector3.Normalize(Vector3.Transform(Vector3.UnitY, plan.Rotation));
             Vector3 forward = Vector3.Normalize(Vector3.Transform(-Vector3.UnitZ, plan.Rotation));
             Color beamColor = ToRaylibColor(MultiplyColor(plan.CoreColor, 1.1f, 1.08f, 1.18f, 0.82f));
-            Rl.DrawLine3D(plan.Position - (right * plan.ShellRadius), plan.Position + (right * plan.ShellRadius), beamColor);
-            Rl.DrawLine3D(plan.Position - (up * plan.ShellRadius * 0.8f), plan.Position + (up * plan.ShellRadius * 0.8f), beamColor);
-            Rl.DrawLine3D(plan.Position - (forward * plan.ShellRadius * 0.9f), plan.Position + (forward * plan.ShellRadius * 0.9f), beamColor);
+            if (plan.BeamCount >= 1)
+            {
+                Rl.DrawLine3D(plan.Position - (right * plan.ShellRadius), plan.Position + (right * plan.ShellRadius), beamColor);
+            }
+
+            if (plan.BeamCount >= 2)
+            {
+                Rl.DrawLine3D(plan.Position - (up * plan.ShellRadius * 0.8f), plan.Position + (up * plan.ShellRadius * 0.8f), beamColor);
+            }
+
+            if (plan.BeamCount >= 3)
+            {
+                Rl.DrawLine3D(plan.Position - (forward * plan.ShellRadius * 0.9f), plan.Position + (forward * plan.ShellRadius * 0.9f), beamColor);
+            }
 
             DrawParticles(in plan);
         }
@@ -254,6 +271,30 @@ namespace Ludots.Client.Raylib.Rendering
             }
         }
 
+        private static void DrawShellRings(in RaylibVfxEmitterPlan plan)
+        {
+            for (int ring = 0; ring < plan.ShellRingCount; ring++)
+            {
+                Quaternion ringRotation = ring switch
+                {
+                    0 => plan.Rotation,
+                    1 => plan.Rotation * Quaternion.CreateFromAxisAngle(Vector3.UnitX, MathF.PI * 0.5f),
+                    _ => plan.Rotation * Quaternion.CreateFromAxisAngle(Vector3.UnitZ, ring * MathF.PI / Math.Max(1, plan.ShellRingCount)),
+                };
+                float radiusScale = ring == 0 ? 1f : MathF.Max(0.45f, 0.88f - (ring * 0.06f));
+                int segments = Math.Max(3, plan.RingSegments - (ring * 4));
+                Vector4 color = ring == 0
+                    ? plan.ShellColor
+                    : MultiplyColor(plan.ShellColor, 0.92f, 1f, 1.1f, MathF.Max(0.35f, 0.8f - (ring * 0.1f)));
+                DrawRotatedRing(
+                    plan.Position,
+                    ringRotation,
+                    plan.ShellRadius * radiusScale,
+                    segments,
+                    color);
+            }
+        }
+
         internal static RaylibVfxEffectKey ComposeEffectKey(int stableId, int effectAssetId)
         {
             return new RaylibVfxEffectKey(stableId, effectAssetId);
@@ -287,33 +328,6 @@ namespace Ludots.Client.Raylib.Rendering
             return origin + Vector3.Transform(local, WorldPlane2D.NormalizeOrIdentity(rotation));
         }
 
-        private static Vector4 BlendSemanticColor(Vector4 baseColor, int semanticId, float semanticWeight)
-        {
-            Vector4 semanticColor = ResolveSemanticColor(semanticId, baseColor.W);
-            Vector4 tinted = LerpColor(baseColor, semanticColor, semanticWeight);
-            tinted.W = Math.Max(baseColor.W, semanticColor.W * 0.8f);
-            return tinted;
-        }
-
-        private static Vector4 ResolveSemanticColor(int semanticId, float alpha)
-        {
-            uint seed = semanticId == 0 ? 0x9E3779B9u : Hash((uint)semanticId);
-            float r = 0.28f + (((seed >> 0) & 0xFF) / 255f) * 0.62f;
-            float g = 0.28f + (((seed >> 8) & 0xFF) / 255f) * 0.62f;
-            float b = 0.28f + (((seed >> 16) & 0xFF) / 255f) * 0.62f;
-            return new Vector4(r, g, b, Math.Clamp(alpha, 0.35f, 1f));
-        }
-
-        private static uint Hash(uint value)
-        {
-            value ^= value >> 16;
-            value *= 0x7FEB352Du;
-            value ^= value >> 15;
-            value *= 0x846CA68Bu;
-            value ^= value >> 16;
-            return value;
-        }
-
         private static Vector4 MultiplyColor(Vector4 color, float r, float g, float b, float a)
         {
             return new Vector4(
@@ -323,14 +337,13 @@ namespace Ludots.Client.Raylib.Rendering
                 Math.Clamp(color.W * a, 0f, 1f));
         }
 
-        private static Vector4 LerpColor(Vector4 from, Vector4 to, float t)
+        private static Vector4 ModulateColor(Vector4 authored, Vector4 tint)
         {
-            t = Math.Clamp(t, 0f, 1f);
             return new Vector4(
-                from.X + (to.X - from.X) * t,
-                from.Y + (to.Y - from.Y) * t,
-                from.Z + (to.Z - from.Z) * t,
-                from.W + (to.W - from.W) * t);
+                authored.X * tint.X,
+                authored.Y * tint.Y,
+                authored.Z * tint.Z,
+                authored.W * tint.W);
         }
 
         private static Vector4 ClampColor(Vector4 color)

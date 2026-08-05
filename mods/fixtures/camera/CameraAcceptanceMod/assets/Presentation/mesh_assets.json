@@ -13,8 +13,14 @@
         "particleRadiusScale": 0.085,
         "lifetimeSeconds": 0.75,
         "pulseSpeedRadPerSecond": 5.2,
-        "orbitSpeedRadPerSecond": 1.7
-      }
+        "orbitSpeedRadPerSecond": 1.7,
+        "shellRingCount": 2,
+        "beamCount": 3
+      },
+      "spawnMode": "Loop",
+      "coreColor": [0.20, 0.85, 1.00, 0.88],
+      "shellColor": [0.55, 0.95, 1.00, 0.62],
+      "particleColor": [1.00, 0.92, 0.32, 0.86]
     }
   }
 ]

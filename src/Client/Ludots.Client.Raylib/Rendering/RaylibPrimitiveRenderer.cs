@@ -86,6 +86,8 @@ namespace Ludots.Client.Raylib.Rendering
         public int TotalDecalVisualCount { get; private set; }
         public int TotalVfxVisualCount { get; private set; }
         public int TotalSurfaceVisualCount { get; private set; }
+        public int LastDrawnVfxEffectCount => _vfxRenderer.LastDrawnEffectCount;
+        public int TotalDrawnVfxEffectCount => _vfxRenderer.TotalDrawnEffectCount;
 
         public RaylibIsmRenderBridge IsmBridge => _ismBridge;
 
@@ -400,7 +402,7 @@ namespace Ludots.Client.Raylib.Rendering
             float scaleMul,
             double timeSeconds)
         {
-            if (!TryBuildDirectVfxVisual(in item, scaleMul, out PrefabFinalizedVisual visual))
+            if (!TryBuildDirectVfxVisual(in item, meshes, scaleMul, out PrefabFinalizedVisual visual))
             {
                 return false;
             }
@@ -416,7 +418,7 @@ namespace Ludots.Client.Raylib.Rendering
             float scaleMul,
             double timeSeconds)
         {
-            if (!TryBuildDirectVfxVisual(in item, scaleMul, out PrefabFinalizedVisual visual))
+            if (!TryBuildDirectVfxVisual(in item, meshes, scaleMul, out PrefabFinalizedVisual visual))
             {
                 return false;
             }
@@ -427,9 +429,15 @@ namespace Ludots.Client.Raylib.Rendering
 
         internal static bool TryBuildDirectVfxVisual(
             in PrimitiveDrawItem item,
+            MeshAssetRegistry meshes,
             float scaleMul,
             out PrefabFinalizedVisual visual)
         {
+            if (meshes == null)
+            {
+                throw new ArgumentNullException(nameof(meshes));
+            }
+
             if (item.AssetKind != AssetKind.VFX)
             {
                 visual = default;
@@ -448,6 +456,18 @@ namespace Ludots.Client.Raylib.Rendering
                     $"VFX primitive effectAssetId={item.MeshAssetId} requires a positive stableId.");
             }
 
+            if (!meshes.TryGetDescriptor(item.MeshAssetId, out MeshAssetDescriptor descriptor))
+            {
+                throw new InvalidOperationException(
+                    $"VFX primitive stableId={item.StableId} references unknown effect asset id {item.MeshAssetId}.");
+            }
+
+            if (!descriptor.VfxEffectData.IsValid)
+            {
+                throw new InvalidOperationException(
+                    $"VFX primitive stableId={item.StableId} effectAssetId={item.MeshAssetId} must declare vfx effect data.");
+            }
+
             visual = PrefabFinalizedVisual.Vfx(
                 item.StableId,
                 item.Position,
@@ -455,7 +475,7 @@ namespace Ludots.Client.Raylib.Rendering
                 item.Scale * scaleMul,
                 item.Color,
                 item.MeshAssetId,
-                PrefabVfxSpawnMode.Loop);
+                descriptor.VfxEffectData.SpawnMode);
             return true;
         }
 
@@ -758,7 +778,7 @@ namespace Ludots.Client.Raylib.Rendering
 
         public string BuildVisualKindDiagnosticSummary()
         {
-            return $"prefab-visual-counts lastFrame(mesh={LastMeshVisualCount},decal={LastDecalVisualCount},vfx={LastVfxVisualCount},surface={LastSurfaceVisualCount}) total(mesh={TotalMeshVisualCount},decal={TotalDecalVisualCount},vfx={TotalVfxVisualCount},surface={TotalSurfaceVisualCount})";
+            return $"prefab-visual-counts lastFrame(mesh={LastMeshVisualCount},decal={LastDecalVisualCount},vfx={LastVfxVisualCount},surface={LastSurfaceVisualCount}) total(mesh={TotalMeshVisualCount},decal={TotalDecalVisualCount},vfx={TotalVfxVisualCount},surface={TotalSurfaceVisualCount}) vfx-draws(last={_vfxRenderer.LastDrawnEffectCount},total={_vfxRenderer.TotalDrawnEffectCount})";
         }
 
         public string BuildPrimitiveLaneDiagnosticSummary(MeshAssetRegistry meshes)
@@ -2151,22 +2171,7 @@ namespace Ludots.Client.Raylib.Rendering
             if (_initialized) return;
 
             _cubeMesh = Rl.GenMeshCube(1f, 1f, 1f);
-            if (_cubeMesh.colors == null)
-            {
-                int bytes = _cubeMesh.vertexCount * 4;
-                _cubeMesh.colors = (byte*)Rl.MemAlloc(bytes);
-                for (int i = 0; i < bytes; i++) _cubeMesh.colors[i] = 255;
-            }
-            Rl.UploadMesh(ref _cubeMesh, false);
-
             _sphereMesh = Rl.GenMeshSphere(0.5f, 8, 8);
-            if (_sphereMesh.colors == null)
-            {
-                int bytes = _sphereMesh.vertexCount * 4;
-                _sphereMesh.colors = (byte*)Rl.MemAlloc(bytes);
-                for (int i = 0; i < bytes; i++) _sphereMesh.colors[i] = 255;
-            }
-            Rl.UploadMesh(ref _sphereMesh, false);
 
             string baseDir = AppContext.BaseDirectory;
             _shader = Rl.LoadShader(Path.Combine(baseDir, "instancing.vs"), Path.Combine(baseDir, "instancing.fs"));

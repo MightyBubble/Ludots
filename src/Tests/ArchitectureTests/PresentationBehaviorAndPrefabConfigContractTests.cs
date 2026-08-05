@@ -82,8 +82,14 @@ namespace Ludots.Tests.Architecture
         "particleRadiusScale": 0.085,
         "lifetimeSeconds": 0.75,
         "pulseSpeedRadPerSecond": 5.2,
-        "orbitSpeedRadPerSecond": 1.7
-      }
+        "orbitSpeedRadPerSecond": 1.7,
+        "shellRingCount": 2,
+        "beamCount": 3
+      },
+      "spawnMode": "Loop",
+      "coreColor": [0.2, 0.85, 1, 0.88],
+      "shellColor": [0.55, 0.95, 1, 0.62],
+      "particleColor": [1, 0.92, 0.32, 0.86]
     }
   }
 ]
@@ -216,8 +222,14 @@ namespace Ludots.Tests.Architecture
         "particleRadiusScale": 0.085,
         "lifetimeSeconds": 0.75,
         "pulseSpeedRadPerSecond": 5.2,
-        "orbitSpeedRadPerSecond": 1.7
-      }
+        "orbitSpeedRadPerSecond": 1.7,
+        "shellRingCount": 2,
+        "beamCount": 3
+      },
+      "spawnMode": "Loop",
+      "coreColor": [0.2, 0.85, 1, 0.88],
+      "shellColor": [0.55, 0.95, 1, 0.62],
+      "particleColor": [1, 0.92, 0.32, 0.86]
     }
   }
 ]
@@ -258,8 +270,14 @@ namespace Ludots.Tests.Architecture
         "particleRadiusScale": 0.085,
         "lifetimeSeconds": 0.75,
         "pulseSpeedRadPerSecond": 5.2,
-        "orbitSpeedRadPerSecond": 1.7
-      }
+        "orbitSpeedRadPerSecond": 1.7,
+        "shellRingCount": 2,
+        "beamCount": 3
+      },
+      "spawnMode": "Loop",
+      "coreColor": [0.2, 0.85, 1, 0.88],
+      "shellColor": [0.55, 0.95, 1, 0.62],
+      "particleColor": [1, 0.92, 0.32, 0.86]
     }
   }
 ]
@@ -1521,6 +1539,12 @@ namespace Ludots.Tests.Architecture
             Assert.That(meshAsset["primitiveKind"]?.GetValue<string>(), Is.EqualTo("Sphere"));
             Assert.That(meshAsset["vfx"]?["emitter"]?["shape"]?.GetValue<string>(), Is.EqualTo("PrimitiveSphere"));
             Assert.That(meshAsset["vfx"]?["emitter"]?["particleCount"]?.GetValue<int>(), Is.GreaterThan(0));
+            Assert.That(meshAsset["vfx"]?["emitter"]?["shellRingCount"]?.GetValue<int>(), Is.GreaterThanOrEqualTo(0));
+            Assert.That(meshAsset["vfx"]?["emitter"]?["beamCount"]?.GetValue<int>(), Is.GreaterThanOrEqualTo(0));
+            Assert.That(meshAsset["vfx"]?["spawnMode"]?.GetValue<string>(), Is.EqualTo("Loop"));
+            Assert.That(meshAsset["vfx"]?["coreColor"], Is.TypeOf<JsonArray>());
+            Assert.That(meshAsset["vfx"]?["shellColor"], Is.TypeOf<JsonArray>());
+            Assert.That(meshAsset["vfx"]?["particleColor"], Is.TypeOf<JsonArray>());
 
             JsonArray hostAssets = ReadJsonArray(Path.Combine(presentationDirectory, "host_assets.json"));
             foreach (JsonNode? node in hostAssets)

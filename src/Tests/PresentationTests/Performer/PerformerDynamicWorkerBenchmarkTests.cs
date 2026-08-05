@@ -140,7 +140,12 @@ namespace Ludots.Tests.Presentation
             const string expectedHeightmapAsset = "assets/terrain/performer_blacksmith_minimap_marker_large_world_relief.vhtm";
             Assert.That(engine.CurrentMapSession?.MapConfig.VisualHeightmapAsset, Is.EqualTo(expectedHeightmapAsset));
             Assert.That(engine.CurrentMapSession?.MapConfig.DefaultCamera?.VirtualCameraId, Is.EqualTo("PerformerBlacksmith.Camera.LargeWorldHeightmap"));
-            Assert.That(engine.GetService(CoreServiceKeys.VisualHeightmap), Is.AssignableTo<IVisualHeightmapRenderSource>());
+            IVisualHeightmapRenderSource renderSource = engine.GetService(CoreServiceKeys.VisualHeightmap) as IVisualHeightmapRenderSource
+                ?? throw new InvalidOperationException("VisualHeightmap render source missing.");
+            Assert.That(renderSource.RenderProfile.WaterEnabled, Is.True);
+            Assert.That(renderSource.RenderProfile.SeaLevelCm, Is.EqualTo(0f));
+            Assert.That(renderSource.RenderProfile.DisplayHeightScale, Is.EqualTo(1.25f));
+            Assert.That(renderSource.RenderProfile.ColorContrast, Is.EqualTo(1.35f));
 
             VirtualCameraRegistry cameraRegistry = engine.GetService(CoreServiceKeys.VirtualCameraRegistry)
                 ?? throw new InvalidOperationException("VirtualCameraRegistry missing.");

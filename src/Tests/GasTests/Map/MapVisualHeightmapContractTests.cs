@@ -132,6 +132,37 @@ namespace Ludots.Tests.Gas
         }
 
         [Test]
+        public void LoadMap_BindsVisualHeightmapRenderProfileThroughRenderSource()
+        {
+            WriteHeightmap("outer.vhtm", -75);
+            WriteMap("outer_map", """
+            {
+              "id": "outer_map",
+              "visualHeightmap": {
+                "asset": "assets/terrain/outer.vhtm",
+                "renderProfile": {
+                  "waterEnabled": true,
+                  "seaLevelCm": 0,
+                  "displayHeightScale": 500,
+                  "colorContrast": 1.4
+                }
+              }
+            }
+            """);
+
+            using var engine = CreateEngine();
+            engine.LoadMap("outer_map");
+
+            IVisualHeightmap heightmap = engine.GetService(CoreServiceKeys.VisualHeightmap);
+            Assert.That(heightmap, Is.AssignableTo<IVisualHeightmapRenderSource>());
+            var renderSource = (IVisualHeightmapRenderSource)heightmap;
+            Assert.That(renderSource.RenderProfile.WaterEnabled, Is.True);
+            Assert.That(renderSource.RenderProfile.SeaLevelCm, Is.EqualTo(0f));
+            Assert.That(renderSource.RenderProfile.DisplayHeightScale, Is.EqualTo(500f));
+            Assert.That(renderSource.RenderProfile.ColorContrast, Is.EqualTo(1.4f));
+        }
+
+        [Test]
         public void LoadMap_WhenDeclaredVisualHeightmapMissing_ThrowsExplicitly()
         {
             WriteMap("outer_map", """

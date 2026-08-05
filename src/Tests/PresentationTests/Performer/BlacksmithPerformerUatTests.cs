@@ -655,16 +655,23 @@ namespace Ludots.Tests.Presentation
             private static void RegisterVfxEffect(MeshAssetRegistry meshAssets, string key)
             {
                 MeshAssetDescriptor descriptor = MeshAssetDescriptor.Primitive(0, PrimitiveMeshKind.Sphere);
-                descriptor.VfxEffectData = new VfxEffectAssetData(new VfxEmitterDescriptor(
-                    VfxEmitterShape.PrimitiveSphere,
-                    particleCount: 24,
-                    ringSegments: 20,
-                    radiusScale: 1.15f,
-                    coreRadiusScale: 0.28f,
-                    particleRadiusScale: 0.085f,
-                    lifetimeSeconds: 0.75f,
-                    pulseSpeedRadPerSecond: 5.2f,
-                    orbitSpeedRadPerSecond: 1.7f));
+                descriptor.VfxEffectData = new VfxEffectAssetData(
+                    new VfxEmitterDescriptor(
+                        VfxEmitterShape.PrimitiveSphere,
+                        particleCount: 24,
+                        ringSegments: 20,
+                        radiusScale: 1.15f,
+                        coreRadiusScale: 0.28f,
+                        particleRadiusScale: 0.085f,
+                        lifetimeSeconds: 0.75f,
+                        pulseSpeedRadPerSecond: 5.2f,
+                        orbitSpeedRadPerSecond: 1.7f,
+                        shellRingCount: 2,
+                        beamCount: 0),
+                    PrefabVfxSpawnMode.Loop,
+                    new Vector4(0.42f, 0.43f, 0.39f, 0.48f),
+                    new Vector4(0.72f, 0.72f, 0.67f, 0.32f),
+                    new Vector4(0.86f, 0.83f, 0.74f, 0.42f));
                 meshAssets.Register(key, in descriptor);
             }
 

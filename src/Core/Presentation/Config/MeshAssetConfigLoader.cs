@@ -206,6 +206,7 @@ namespace Ludots.Core.Presentation.Config
                 part.Tiling = ParseVector2WithDefault(p?["tiling"], part.Tiling == Vector2.Zero ? Vector2.One : part.Tiling);
                 part.AlignToSurface = p?["alignToSurface"]?.GetValue<bool>() ?? part.AlignToSurface;
                 part.TerrainFacing = p?["terrainFacing"]?.GetValue<bool>() ?? part.TerrainFacing;
+                part.VfxSpawnModeAuthored = kind == PrefabVisualPartKind.Vfx && p?["spawnMode"] != null;
 
                 parts[j] = part;
             }
@@ -247,7 +248,11 @@ namespace Ludots.Core.Presentation.Config
             ValidateObjectFields(
                 obj,
                 $"Presentation/mesh_assets.json asset '{key}' vfx",
-                "emitter");
+                "emitter",
+                "spawnMode",
+                "coreColor",
+                "shellColor",
+                "particleColor");
 
             if (obj["emitter"] is not JsonObject emitter)
             {
@@ -266,7 +271,9 @@ namespace Ludots.Core.Presentation.Config
                 "particleRadiusScale",
                 "lifetimeSeconds",
                 "pulseSpeedRadPerSecond",
-                "orbitSpeedRadPerSecond");
+                "orbitSpeedRadPerSecond",
+                "shellRingCount",
+                "beamCount");
 
             string shapeLabel = $"Presentation/mesh_assets.json asset '{key}' vfx.emitter.shape";
             VfxEmitterShape shape = ReadRequiredEnum<VfxEmitterShape>(emitter["shape"], shapeLabel);
@@ -275,16 +282,25 @@ namespace Ludots.Core.Presentation.Config
                 throw new InvalidOperationException($"{shapeLabel} must not be None.");
             }
 
-            return new VfxEffectAssetData(new VfxEmitterDescriptor(
-                shape,
-                ReadRequiredPositiveInt(emitter["particleCount"], $"Presentation/mesh_assets.json asset '{key}' vfx.emitter.particleCount"),
-                ReadRequiredMinInt(emitter["ringSegments"], 3, $"Presentation/mesh_assets.json asset '{key}' vfx.emitter.ringSegments"),
-                ReadRequiredPositiveFloat(emitter["radiusScale"], $"Presentation/mesh_assets.json asset '{key}' vfx.emitter.radiusScale"),
-                ReadRequiredPositiveFloat(emitter["coreRadiusScale"], $"Presentation/mesh_assets.json asset '{key}' vfx.emitter.coreRadiusScale"),
-                ReadRequiredPositiveFloat(emitter["particleRadiusScale"], $"Presentation/mesh_assets.json asset '{key}' vfx.emitter.particleRadiusScale"),
-                ReadRequiredPositiveFloat(emitter["lifetimeSeconds"], $"Presentation/mesh_assets.json asset '{key}' vfx.emitter.lifetimeSeconds"),
-                ReadRequiredNonNegativeFloat(emitter["pulseSpeedRadPerSecond"], $"Presentation/mesh_assets.json asset '{key}' vfx.emitter.pulseSpeedRadPerSecond"),
-                ReadRequiredNonNegativeFloat(emitter["orbitSpeedRadPerSecond"], $"Presentation/mesh_assets.json asset '{key}' vfx.emitter.orbitSpeedRadPerSecond")));
+            string assetLabel = $"Presentation/mesh_assets.json asset '{key}' vfx";
+            PrefabVfxSpawnMode spawnMode = ReadRequiredEnum<PrefabVfxSpawnMode>(obj["spawnMode"], $"{assetLabel}.spawnMode");
+            return new VfxEffectAssetData(
+                new VfxEmitterDescriptor(
+                    shape,
+                    ReadRequiredPositiveInt(emitter["particleCount"], $"Presentation/mesh_assets.json asset '{key}' vfx.emitter.particleCount"),
+                    ReadRequiredMinInt(emitter["ringSegments"], 3, $"Presentation/mesh_assets.json asset '{key}' vfx.emitter.ringSegments"),
+                    ReadRequiredPositiveFloat(emitter["radiusScale"], $"Presentation/mesh_assets.json asset '{key}' vfx.emitter.radiusScale"),
+                    ReadRequiredPositiveFloat(emitter["coreRadiusScale"], $"Presentation/mesh_assets.json asset '{key}' vfx.emitter.coreRadiusScale"),
+                    ReadRequiredPositiveFloat(emitter["particleRadiusScale"], $"Presentation/mesh_assets.json asset '{key}' vfx.emitter.particleRadiusScale"),
+                    ReadRequiredPositiveFloat(emitter["lifetimeSeconds"], $"Presentation/mesh_assets.json asset '{key}' vfx.emitter.lifetimeSeconds"),
+                    ReadRequiredNonNegativeFloat(emitter["pulseSpeedRadPerSecond"], $"Presentation/mesh_assets.json asset '{key}' vfx.emitter.pulseSpeedRadPerSecond"),
+                    ReadRequiredNonNegativeFloat(emitter["orbitSpeedRadPerSecond"], $"Presentation/mesh_assets.json asset '{key}' vfx.emitter.orbitSpeedRadPerSecond"),
+                    ReadRequiredMinInt(emitter["shellRingCount"], 0, $"Presentation/mesh_assets.json asset '{key}' vfx.emitter.shellRingCount"),
+                    ReadRequiredIntRange(emitter["beamCount"], 0, 3, $"Presentation/mesh_assets.json asset '{key}' vfx.emitter.beamCount")),
+                spawnMode,
+                ReadRequiredColor(obj["coreColor"], $"{assetLabel}.coreColor"),
+                ReadRequiredColor(obj["shellColor"], $"{assetLabel}.shellColor"),
+                ReadRequiredColor(obj["particleColor"], $"{assetLabel}.particleColor"));
         }
 
         private static PrefabVfxSpawnMode ParseSpawnMode(string? spawnModeText)
@@ -416,6 +432,46 @@ namespace Ludots.Core.Presentation.Config
             if (!float.IsFinite(value) || value < 0f)
             {
                 throw new InvalidOperationException($"{label} must be a finite number greater than or equal to 0.");
+            }
+
+            return value;
+        }
+
+        private static int ReadRequiredIntRange(JsonNode? node, int min, int max, string label)
+        {
+            int value = ReadRequiredMinInt(node, min, label);
+            if (value > max)
+            {
+                throw new InvalidOperationException($"{label} must be less than or equal to {max}.");
+            }
+
+            return value;
+        }
+
+        private static Vector4 ReadRequiredColor(JsonNode? node, string label)
+        {
+            if (node is not JsonArray arr || arr.Count != 4)
+            {
+                throw new InvalidOperationException($"{label} must be an array of exactly four normalized numbers.");
+            }
+
+            return new Vector4(
+                ReadColorChannel(arr[0], $"{label}[0]"),
+                ReadColorChannel(arr[1], $"{label}[1]"),
+                ReadColorChannel(arr[2], $"{label}[2]"),
+                ReadColorChannel(arr[3], $"{label}[3]"));
+        }
+
+        private static float ReadColorChannel(JsonNode? node, string label)
+        {
+            if (node is not JsonValue valueNode || !valueNode.TryGetValue(out float value))
+            {
+                throw new InvalidOperationException($"{label} must be a finite number between 0 and 1.");
+            }
+
+            if (!float.IsFinite(value) || value < 0f || value > 1f)
+            {
+                throw new InvalidOperationException($"{label} must be between 0 and 1.");
             }
 
             return value;
