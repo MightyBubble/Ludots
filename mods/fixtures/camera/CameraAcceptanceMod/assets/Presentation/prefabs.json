@@ -22,7 +22,7 @@
       },
       {
         "kind": "Vfx",
-        "effectAssetId": 201,
+        "effectAssetId": "effect.camera.projection_cue",
         "localPosition": [0, 0.18, 0],
         "localScale": [0.5, 0.5, 0.5],
         "colorTint": [0.35, 0.95, 1, 0.85],

@@ -598,10 +598,16 @@ namespace Ludots.Core.Presentation.Config
                 node,
                 $"Instanced batch '{batchKey}' behavior '{behaviorKey}' target.effectAssetId");
             int effectAssetId = _meshes.GetId(effectKey);
-            if (effectAssetId <= 0 || !_meshes.TryGetDescriptor(effectAssetId, out _))
+            if (effectAssetId <= 0 || !_meshes.TryGetDescriptor(effectAssetId, out MeshAssetDescriptor descriptor))
             {
                 throw new InvalidOperationException(
                     $"Instanced batch '{batchKey}' behavior '{behaviorKey}' references unknown effect asset '{effectKey}'.");
+            }
+
+            if (!descriptor.VfxEffectData.IsValid)
+            {
+                throw new InvalidOperationException(
+                    $"Instanced batch '{batchKey}' behavior '{behaviorKey}' references effect asset '{effectKey}' without vfx emitter data.");
             }
 
             return effectAssetId;

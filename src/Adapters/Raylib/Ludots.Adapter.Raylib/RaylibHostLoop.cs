@@ -163,6 +163,10 @@ namespace Ludots.Adapter.Raylib
             int targetFps = config.TargetFps == 0 ? 0 : (config.TargetFps < 0 ? 60 : config.TargetFps);
             bool windowOpened = false;
             bool windowResizable = config.WindowResizable || config.WindowStartMaximized;
+            string? diagnosticPath = Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_DIAGNOSTIC_PATH");
+            AppendRaylibDiagnostic(
+                diagnosticPath,
+                $"launch-stage run-enter map={config.StartupMapId} size={screenWidth}x{screenHeight} targetFps={targetFps}");
 
             var terrainRenderer = new RaylibTerrainRenderer
             {
@@ -183,6 +187,7 @@ namespace Ludots.Adapter.Raylib
 
             try
             {
+                AppendRaylibDiagnostic(diagnosticPath, "launch-stage before-init-window");
                 if (windowResizable)
                 {
                     Rl.SetConfigFlags(FlagWindowResizable);
@@ -190,6 +195,7 @@ namespace Ludots.Adapter.Raylib
 
                 Rl.InitWindow(screenWidth, screenHeight, title);
                 windowOpened = true;
+                AppendRaylibDiagnostic(diagnosticPath, "launch-stage after-init-window");
                 if (config.WindowStartMaximized)
                 {
                     Rl.MaximizeWindow();
@@ -274,6 +280,7 @@ namespace Ludots.Adapter.Raylib
                 }
 
                 ValidateRequiredContextBeforeLoop(engine);
+                AppendRaylibDiagnostic(diagnosticPath, "launch-stage after-required-context");
 
                 var debugDrawRenderer = new RaylibDebugDrawRenderer { PlaneY = 0.35f };
                 GlobalFieldVisualBuffer? globalFieldVisualBuffer = engine.GetService(CoreServiceKeys.GlobalFieldVisualBuffer);
@@ -291,18 +298,36 @@ namespace Ludots.Adapter.Raylib
                     benchmarkRenderer = new RaylibBenchmarkRenderService(primitiveRenderer, benchmarkMeshes, benchmarkHud, benchmarkOverlay);
                     engine.SetService(RaylibBenchmarkRendererKey, (IRaylibBenchmarkRenderer)benchmarkRenderer);
                 }
+                var frameRenderer = new RaylibFrameRenderer(
+                    engine,
+                    uiRoot,
+                    skiaRenderer,
+                    overlayCompositor,
+                    browserLayerRenderer,
+                    terrainRenderer,
+                    visualHeightmapRenderer,
+                    fieldRenderPerformer,
+                    primitiveRenderer,
+                    debugDrawRenderer,
+                    benchmarkRenderer,
+                    globalFieldVisualBuffer,
+                    screenOverlayBuffer,
+                    presentationTiming);
 
+                AppendRaylibDiagnostic(diagnosticPath, "launch-stage before-engine-start");
                 engine.Start();
+                AppendRaylibDiagnostic(diagnosticPath, "launch-stage after-engine-start");
                 if (string.IsNullOrWhiteSpace(config.StartupMapId))
                 {
                     throw new InvalidOperationException("Invalid launcher bootstrap: 'StartupMapId' cannot be empty.");
                 }
+                AppendRaylibDiagnostic(diagnosticPath, $"launch-stage before-load-map map={config.StartupMapId}");
                 engine.LoadStartupMap();
+                AppendRaylibDiagnostic(diagnosticPath, "launch-stage after-load-map");
 
                 int lastW = screenWidth;
                 int lastH = screenHeight;
                 string? screenshotPath = Environment.GetEnvironmentVariable("LUDOTS_TAKE_SCREENSHOT_PATH");
-                string? diagnosticPath = Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_DIAGNOSTIC_PATH");
                 string? screenshotTargetPath = string.IsNullOrWhiteSpace(screenshotPath)
                     ? null
                     : Path.GetFullPath(screenshotPath);
@@ -338,6 +363,9 @@ namespace Ludots.Adapter.Raylib
                 float autoOrbitDegPerSecond = float.TryParse(Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_AUTO_ORBIT_DEG_PER_SEC"), out float parsedAutoOrbitDegPerSecond)
                     ? parsedAutoOrbitDegPerSecond
                     : 0f;
+                AppendRaylibDiagnostic(
+                    diagnosticPath,
+                    $"launch-stage before-frame-loop autoExitFrame={autoExitFrame} screenshotPending={screenshotPending} autoOrbit={autoOrbitDegPerSecond}");
                 SyntheticUiPlayback syntheticUiPlayback = ReadSyntheticUiPlayback();
                 int frameIndex = 0;
                 Stopwatch runtimeStopwatch = Stopwatch.StartNew();
@@ -458,188 +486,29 @@ namespace Ludots.Adapter.Raylib
                         }
                         presentationTiming?.ObserveHostPostTick(ElapsedMs(postTickStart));
 
-                        long beginDrawingStart = Stopwatch.GetTimestamp();
-                        Rl.BeginDrawing();
-                        presentationTiming?.ObserveBeginDrawing(ElapsedMs(beginDrawingStart));
-                        Restore3DDepthState();
-                        Rl.ClearBackground(activeMapRequestsDeepBackground
-                            ? new Raylib_cs.Color(6, 10, 16, 255)
-                            : new Raylib_cs.Color(0, 0, 0, 255));
-
                         var activeCamera = cameraAdapter.Camera;
                         CameraRenderState3D activeCameraState = cameraPresenter.SmoothedRenderState;
-                        long mode3DStart = Stopwatch.GetTimestamp();
-                        Restore3DDepthState();
-                        BeginCoreMode3D(activeCamera, in activeCameraState);
-                        Restore3DDepthState();
-
-                        if (drawDebugDraw &&
-                            !(drawVisualHeightmap && hasVisualHeightmap) &&
-                            !hostDebugGuidesSuppressed)
-                        {
-                            DrawInfiniteGrid(activeCamera.target, 300, 1.0f, 10);
-
-                            var target = activeCamera.target;
-                            Rl.DrawLine3D(target, target + new Vector3(2.0f, 0, 0), Color.RED);
-                            Rl.DrawLine3D(target, target + new Vector3(0, 0, 2.0f), Color.BLUE);
-                            Rl.DrawLine3D(target, target + new Vector3(0, 2.0f, 0), Color.GREEN);
-                        }
-
-                        if (drawVisualHeightmap &&
-                            engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap? visualHeightmapForTerrain) &&
-                            visualHeightmapForTerrain is IVisualHeightmapRenderSource visualTerrainSource)
-                        {
-                            long terrainStart = Stopwatch.GetTimestamp();
-                            visualHeightmapRenderer.Render(visualTerrainSource, activeCamera);
-                            presentationTiming?.ObserveTerrain(
-                                ElapsedMs(terrainStart),
-                                visualHeightmapRenderer.ChunkBuildMsLastFrame,
-                                visualHeightmapRenderer.DrawnChunkCountLastFrame,
-                                visualHeightmapRenderer.BuiltChunkCountLastFrame);
-                        }
-                        else if (drawTerrain)
-                        {
-                            long terrainStart = Stopwatch.GetTimestamp();
-                            terrainRenderer.Render(engine.VertexMap, activeCamera);
-                            presentationTiming?.ObserveTerrain(
-                                ElapsedMs(terrainStart),
-                                terrainRenderer.ChunkBuildMsLastFrame,
-                                terrainRenderer.DrawnChunkCountLastFrame,
-                                terrainRenderer.BuiltChunkCountLastFrame);
-                        }
-                        else
-                        {
-                            presentationTiming?.ObserveTerrain(0d, 0d, 0, 0);
-                        }
-
-                        if (drawFieldOverlays && globalFieldVisualBuffer != null)
-                        {
-                            long fieldRenderStart = Stopwatch.GetTimestamp();
-                            fieldRenderPerformer.Draw(globalFieldVisualBuffer);
-                            presentationTiming?.ObserveGlobalFieldRender(
-                                ElapsedMs(fieldRenderStart),
-                                fieldRenderPerformer.LastFieldTextureCount,
-                                fieldRenderPerformer.LastDirtyUploadCount,
-                                fieldRenderPerformer.LastDirtyUploadArea,
-                                fieldRenderPerformer.LastDrawCount);
-                        }
-                        else
-                        {
-                            presentationTiming?.ObserveGlobalFieldRender(0d, 0, 0, 0, 0);
-                        }
-
-                        bool benchmarkDrew = false;
-                        if (benchmarkRenderer != null)
-                        {
-                            benchmarkDrew = benchmarkRenderer.Draw(activeCamera);
-                        }
-
-                        if (!benchmarkDrew &&
-                            drawPrimitives &&
-                            engine.TryGetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer, out PrimitiveDrawBuffer draw) &&
-                            engine.TryGetService(CoreServiceKeys.PresentationMeshAssetRegistry, out MeshAssetRegistry meshes))
-                        {
-                            if (!_emptyBufferWarned && draw.GetSpan().Length == 0)
-                            {
-                                System.Diagnostics.Debug.WriteLine("[RaylibHostLoop] PrimitiveDrawBuffer is empty on first render frame; no Marker3D performers emitting?");
-                                _emptyBufferWarned = true;
-                            }
-                            long primitiveStart = Stopwatch.GetTimestamp();
-                            PrimitiveDrawBuffer? snapshot = engine.GetService(CoreServiceKeys.PresentationVisualSnapshotBuffer);
-                            SkinnedVisualBatchBuffer? skinnedBatch = engine.GetService(CoreServiceKeys.PresentationSkinnedVisualBatchBuffer);
-                            engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap? visualHeightmap);
-                            primitiveRenderer.Draw(draw, activeCamera, snapshot, skinnedBatch, meshes, renderDebug.AcceptanceScaleMultiplier, visualHeightmap);
-                            presentationTiming?.ObservePrimitiveRender(
-                                ElapsedMs(primitiveStart),
-                                primitiveRenderer.LastInstancedInstances,
-                                primitiveRenderer.LastInstancedBatches,
-                                primitiveRenderer.LastInstancedMatrixBuildMs,
-                                primitiveRenderer.LastInstancedMeshDrawMs,
-                                primitiveRenderer.LastInstancedMatrixCacheHits,
-                                primitiveRenderer.LastInstancedMatrixCacheMisses,
-                                primitiveRenderer.LastPersistentSyncMs,
-                                primitiveRenderer.LastPersistentBucketDrawMs,
-                                primitiveRenderer.LastImmediateDrawMs,
-                                primitiveRenderer.LastImmediateSkippedCount,
-                                skinnedBatch?.Count ?? 0,
-                                primitiveRenderer.LastGpuSkinnedInstances,
-                                primitiveRenderer.LastGpuSkinnedBatches,
-                                primitiveRenderer.LastGpuSkinnedMatrixBuildMs,
-                                primitiveRenderer.LastGpuSkinnedMeshDrawMs);
-                        }
-                        else
-                        {
-                            presentationTiming?.ObservePrimitiveRender(0d, 0, 0);
-                        }
-
-                        // Draw ground overlays (range circles, cones, etc.)
-                        if (!cleanPerformanceMode &&
-                            engine.TryGetService(CoreServiceKeys.GroundOverlayBuffer, out GroundOverlayBuffer overlays) &&
-                            overlays.Count > 0)
-                        {
-                            long groundOverlayStart = Stopwatch.GetTimestamp();
-                            DrawGroundOverlays(overlays);
-                            presentationTiming?.ObserveGroundOverlayRender(ElapsedMs(groundOverlayStart), overlays.Count);
-                        }
-                        else
-                        {
-                            presentationTiming?.ObserveGroundOverlayRender(0d, 0);
-                        }
-
-                        if (!cleanPerformanceMode &&
-                            engine.GlobalContext.TryGetValue(CoreServiceKeys.RoadSplineBuffer.Name, out var splineObj) &&
-                            splineObj is RoadSplineBuffer roadSplines && roadSplines.Count > 0)
-                        {
-                            long roadSplineStart = Stopwatch.GetTimestamp();
-                            DrawRoadSplines(roadSplines);
-                            presentationTiming?.ObserveRoadSplineRender(ElapsedMs(roadSplineStart), roadSplines.Count);
-                        }
-                        else
-                        {
-                            presentationTiming?.ObserveRoadSplineRender(0d, 0);
-                        }
-
-                        if (drawDebugDraw &&
-                            engine.TryGetService(CoreServiceKeys.DebugDrawCommandBuffer, out DebugDrawCommandBuffer dd))
-                        {
-                            long debugDrawStart = Stopwatch.GetTimestamp();
-                            debugDrawRenderer.Draw(dd);
-                            presentationTiming?.ObserveDebugDrawRender(
-                                ElapsedMs(debugDrawStart),
-                                dd.Lines.Count + dd.Circles.Count + dd.Boxes.Count);
-                        }
-                        else
-                        {
-                            presentationTiming?.ObserveDebugDrawRender(0d, 0);
-                        }
-
-                        EndCoreMode3D();
-                        presentationTiming?.ObserveMode3D(ElapsedMs(mode3DStart));
-
-                        if (drawSkiaUi)
-                        {
-                            browserLayerRenderer.Render(uiRoot.Scene, lastW, lastH);
-                        }
-
-                        long overlayStart = Stopwatch.GetTimestamp();
-                        OverlayCompositeResult overlayResult = overlayCompositor.Render(
+                        RaylibRenderFrameResult frameRenderResult = frameRenderer.RenderFrame(new RaylibRenderFrame(
+                            activeCamera,
+                            activeCameraState,
+                            renderDebug,
                             overlayScene,
-                            uiRoot,
-                            skiaRenderer,
+                            lastW,
+                            lastH,
+                            runtimeStopwatch.Elapsed.TotalSeconds,
+                            activeMapRequestsDeepBackground,
+                            hostDebugGuidesSuppressed,
+                            drawTerrain,
+                            drawVisualHeightmap,
+                            hasVisualHeightmap,
+                            drawPrimitives,
+                            drawDebugDraw,
+                            drawFieldOverlays,
                             drawSkiaUi,
-                            hostDiagnosticUiSuppressed);
-                        presentationTiming?.ObserveUiRender(overlayResult.UiRenderMs);
-                        presentationTiming?.ObserveUiUpload(overlayResult.UploadMs);
-                        presentationTiming?.ObserveCompositeSkip(!overlayResult.RefreshComposite);
-                        screenOverlayBuffer?.Clear();
-                        presentationTiming?.ObserveScreenOverlayDraw(
-                            ElapsedMs(overlayStart),
-                            overlayResult.PaintMs,
-                            overlayResult.CompositeMs,
-                            overlayResult.UploadMs,
-                            overlayResult.FinalDrawMs,
-                            overlayCompositor.OverlayRenderer.RebuiltLaneCountLastFrame,
-                            overlayCompositor.OverlayRenderer.CachedTextLayoutCount);
+                            cleanPerformanceMode,
+                            hostDiagnosticUiSuppressed,
+                            _emptyBufferWarned));
+                        _emptyBufferWarned = frameRenderResult.EmptyBufferWarned;
                         if (timingLogIntervalFrames > 0 && frameIndex % timingLogIntervalFrames == 0)
                         {
                             SkiaOverlayRenderer overlaySkiaRenderer = overlayCompositor.OverlayRenderer;
@@ -747,58 +616,6 @@ namespace Ludots.Adapter.Raylib
                 visualHeightmapRenderer.Dispose();
                 engine.Dispose();
             }
-        }
-
-        private static unsafe void BeginCoreMode3D(in Camera3D camera, in CameraRenderState3D cameraState)
-        {
-            Rl.rlDrawRenderBatchActive();
-            Rl.rlMatrixMode((int)RlMatrixMode.RL_PROJECTION);
-            Rl.rlPushMatrix();
-            Rl.rlLoadIdentity();
-
-            CameraClipPlanes clipPlanes = CameraViewportUtil.ResolveClipPlanes(in cameraState);
-            float aspect = MathF.Max(0.001f, Rl.GetScreenWidth() / (float)Math.Max(1, Rl.GetScreenHeight()));
-            if (camera.projection == CameraProjection.CAMERA_ORTHOGRAPHIC)
-            {
-                double top = camera.fovy / 2.0;
-                double right = top * aspect;
-                Rl.rlOrtho(-right, right, -top, top, clipPlanes.NearMeters, clipPlanes.FarMeters);
-            }
-            else
-            {
-                double top = clipPlanes.NearMeters * Math.Tan(WorldPlane2D.DegToRadValue(camera.fovy) * 0.5);
-                double right = top * aspect;
-                Rl.rlFrustum(-right, right, -top, top, clipPlanes.NearMeters, clipPlanes.FarMeters);
-            }
-
-            Rl.rlMatrixMode((int)RlMatrixMode.RL_MODELVIEW);
-            Rl.rlLoadIdentity();
-            Matrix4x4 view = Matrix4x4.CreateLookAt(camera.position, camera.target, camera.up);
-            RaylibMatrix raylibView = RaylibMatrix.FromSystemNumerics(in view);
-            MultMatrix(in raylibView);
-            Rl.rlEnableDepthTest();
-        }
-
-        private static unsafe void MultMatrix(in RaylibMatrix matrix)
-        {
-            float* values = stackalloc float[16]
-            {
-                matrix.m0, matrix.m1, matrix.m2, matrix.m3,
-                matrix.m4, matrix.m5, matrix.m6, matrix.m7,
-                matrix.m8, matrix.m9, matrix.m10, matrix.m11,
-                matrix.m12, matrix.m13, matrix.m14, matrix.m15
-            };
-            Rl.rlMultMatrixf(values);
-        }
-
-        private static void EndCoreMode3D()
-        {
-            Rl.rlDrawRenderBatchActive();
-            Rl.rlMatrixMode((int)RlMatrixMode.RL_PROJECTION);
-            Rl.rlPopMatrix();
-            Rl.rlMatrixMode((int)RlMatrixMode.RL_MODELVIEW);
-            Rl.rlLoadIdentity();
-            Rl.rlDisableDepthTest();
         }
 
         private static void AppendRaylibDiagnostic(string? diagnosticPath, string message)
@@ -1091,13 +908,6 @@ namespace Ludots.Adapter.Raylib
                 '|' => PackDiagnosticGlyph(0b00100, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100, 0b00100),
                 _ => PackDiagnosticGlyph(0b11111, 0b10001, 0b00001, 0b00110, 0b00100, 0b00000, 0b00100),
             };
-        }
-
-        private static void Restore3DDepthState()
-        {
-            Rl.rlEnableDepthTest();
-            Rl.rlEnableDepthMask();
-            Rl.rlEnableBackfaceCulling();
         }
 
         private static string BuildTimingDiagnostic(
@@ -1733,346 +1543,5 @@ namespace Ludots.Adapter.Raylib
         {
             return (Stopwatch.GetTimestamp() - startTicks) * 1000.0 / Stopwatch.Frequency;
         }
-
-        private static void DrawInfiniteGrid(Vector3 anchor, int halfCount, float spacing, int majorEvery)
-        {
-            float y = -0.05f;
-            float extent = halfCount * spacing;
-
-            float minX = anchor.X - extent;
-            float minZ = anchor.Z - extent;
-
-            float startX = MathF.Floor(minX / spacing) * spacing;
-            float startZ = MathF.Floor(minZ / spacing) * spacing;
-
-            float endX = startX + 2f * extent;
-            float endZ = startZ + 2f * extent;
-
-            var minor = new Color(80, 80, 80, 255);
-            var major = new Color(130, 130, 130, 255);
-
-            int lineCount = halfCount * 2;
-            for (int i = 0; i <= lineCount; i++)
-            {
-                float x = startX + i * spacing;
-                float z = startZ + i * spacing;
-
-                int xi = (int)MathF.Round(x / spacing);
-                int zi = (int)MathF.Round(z / spacing);
-
-                var xCol = majorEvery > 0 && (xi % majorEvery) == 0 ? major : minor;
-                var zCol = majorEvery > 0 && (zi % majorEvery) == 0 ? major : minor;
-
-                Rl.DrawLine3D(new Vector3(x, y, startZ), new Vector3(x, y, endZ), xCol);
-                Rl.DrawLine3D(new Vector3(startX, y, z), new Vector3(endX, y, z), zCol);
-            }
-        }
-
-        private static void DrawGroundOverlays(GroundOverlayBuffer overlays)
-        {
-            var span = overlays.GetSpan();
-            for (int i = 0; i < span.Length; i++)
-            {
-                ref readonly var item = ref span[i];
-                switch (item.Shape)
-                {
-                    case GroundOverlayShape.Circle:
-                        DrawGroundCircle(in item);
-                        break;
-                    case GroundOverlayShape.Cone:
-                        DrawGroundCone(in item);
-                        break;
-                    case GroundOverlayShape.Ring:
-                        DrawGroundRing(in item);
-                        break;
-                    case GroundOverlayShape.Line:
-                        DrawGroundLine(in item);
-                        break;
-                }
-            }
-        }
-
-        private static void DrawRoadSplines(RoadSplineBuffer splines)
-        {
-            ReadOnlySpan<float> p0x = splines.P0X;
-            ReadOnlySpan<float> p0y = splines.P0Y;
-            ReadOnlySpan<float> p0z = splines.P0Z;
-            ReadOnlySpan<float> p1x = splines.P1X;
-            ReadOnlySpan<float> p1y = splines.P1Y;
-            ReadOnlySpan<float> p1z = splines.P1Z;
-            ReadOnlySpan<float> p2x = splines.P2X;
-            ReadOnlySpan<float> p2y = splines.P2Y;
-            ReadOnlySpan<float> p2z = splines.P2Z;
-            ReadOnlySpan<float> p3x = splines.P3X;
-            ReadOnlySpan<float> p3y = splines.P3Y;
-            ReadOnlySpan<float> p3z = splines.P3Z;
-            ReadOnlySpan<float> width = splines.Width;
-            ReadOnlySpan<float> borderWidth = splines.BorderWidth;
-            ReadOnlySpan<float> fillR = splines.FillR;
-            ReadOnlySpan<float> fillG = splines.FillG;
-            ReadOnlySpan<float> fillB = splines.FillB;
-            ReadOnlySpan<float> fillA = splines.FillA;
-            ReadOnlySpan<float> borderR = splines.BorderR;
-            ReadOnlySpan<float> borderG = splines.BorderG;
-            ReadOnlySpan<float> borderB = splines.BorderB;
-            ReadOnlySpan<float> borderA = splines.BorderA;
-
-            for (int i = 0; i < splines.Count; i++)
-            {
-                Vector3 p0 = new(p0x[i], p0y[i], p0z[i]);
-                Vector3 p1 = new(p1x[i], p1y[i], p1z[i]);
-                Vector3 p2 = new(p2x[i], p2y[i], p2z[i]);
-                Vector3 p3 = new(p3x[i], p3y[i], p3z[i]);
-                float drawWidth = MathF.Max(0.02f, width[i]);
-                float drawBorder = MathF.Max(0.01f, borderWidth[i]);
-                var fill = ToRaylibColor(new Vector4(fillR[i], fillG[i], fillB[i], fillA[i]));
-                var border = ToRaylibColor(new Vector4(borderR[i], borderG[i], borderB[i], borderA[i]));
-                DrawRoadSplineRibbon(p0, p1, p2, p3, drawWidth, fill, border, drawBorder);
-            }
-        }
-
-        private static void DrawRoadSplineRibbon(
-            in Vector3 p0,
-            in Vector3 p1,
-            in Vector3 p2,
-            in Vector3 p3,
-            float width,
-            Color fill,
-            Color border,
-            float borderWidth)
-        {
-            const int samples = 20;
-            Span<Vector3> points = stackalloc Vector3[samples + 1];
-            for (int i = 0; i <= samples; i++)
-            {
-                float t = i / (float)samples;
-                points[i] = EvaluateCubicBezier(p0, p1, p2, p3, t);
-            }
-
-            if (fill.a > 0)
-            {
-                int lanes = Math.Max(1, (int)MathF.Ceiling(width / 0.08f));
-                for (int lane = 0; lane < lanes; lane++)
-                {
-                    float alpha = lanes == 1 ? 0f : lane / (float)(lanes - 1);
-                    float offset = (alpha - 0.5f) * width;
-                    DrawOffsetPolyline(points, offset, fill);
-                }
-            }
-
-            if (border.a > 0)
-            {
-                float edgeOffset = (width * 0.5f) + borderWidth;
-                DrawOffsetPolyline(points, edgeOffset, border);
-                DrawOffsetPolyline(points, -edgeOffset, border);
-            }
-        }
-
-        private static void DrawOffsetPolyline(ReadOnlySpan<Vector3> points, float offset, Color color)
-        {
-            if (points.Length < 2)
-            {
-                return;
-            }
-
-            Vector3 previous = OffsetPoint(points, 0, offset);
-            for (int i = 1; i < points.Length; i++)
-            {
-                Vector3 current = OffsetPoint(points, i, offset);
-                Rl.DrawLine3D(previous, current, color);
-                previous = current;
-            }
-        }
-
-        private static Vector3 OffsetPoint(ReadOnlySpan<Vector3> points, int index, float offset)
-        {
-            Vector3 current = points[index];
-            Vector3 forward = index == points.Length - 1
-                ? current - points[index - 1]
-                : points[index + 1] - current;
-            Vector2 lateral = new(-forward.Z, forward.X);
-            float length = lateral.Length();
-            if (length <= 0.0001f)
-            {
-                return current;
-            }
-
-            lateral /= length;
-            return new Vector3(current.X + lateral.X * offset, current.Y, current.Z + lateral.Y * offset);
-        }
-
-        private static Vector3 EvaluateCubicBezier(in Vector3 p0, in Vector3 p1, in Vector3 p2, in Vector3 p3, float t)
-        {
-            float oneMinusT = 1f - t;
-            float a = oneMinusT * oneMinusT * oneMinusT;
-            float b = 3f * oneMinusT * oneMinusT * t;
-            float c = 3f * oneMinusT * t * t;
-            float d = t * t * t;
-            return (p0 * a) + (p1 * b) + (p2 * c) + (p3 * d);
-        }
-
-        private static void DrawGroundCircle(in GroundOverlayItem item)
-        {
-            const int segments = 48;
-            float step = MathF.PI * 2f / segments;
-            var center = item.Center;
-
-            // Draw fill as multiple concentric rings (approximation since Raylib has no DrawTriangle3D)
-            if (item.FillColor.W > 0.01f)
-            {
-                var fillColor = ToRaylibColor(item.FillColor);
-                const int fillRings = 4;
-                for (int r = 1; r <= fillRings; r++)
-                {
-                    float radius = item.Radius * r / fillRings;
-                    for (int s = 0; s < segments; s++)
-                    {
-                        float a0 = s * step;
-                        float a1 = (s + 1) * step;
-                        var p0 = new Vector3(center.X + MathF.Cos(a0) * radius, center.Y, center.Z + MathF.Sin(a0) * radius);
-                        var p1 = new Vector3(center.X + MathF.Cos(a1) * radius, center.Y, center.Z + MathF.Sin(a1) * radius);
-                        Rl.DrawLine3D(p0, p1, fillColor);
-                    }
-                }
-            }
-
-            // Draw border as line loop (outermost ring, thicker appearance via slight offset)
-            if (item.BorderColor.W > 0.01f && item.BorderWidth > 0f)
-            {
-                var border = ToRaylibColor(item.BorderColor);
-                for (int s = 0; s < segments; s++)
-                {
-                    float a0 = s * step;
-                    float a1 = (s + 1) * step;
-                    var p0 = new Vector3(center.X + MathF.Cos(a0) * item.Radius, center.Y, center.Z + MathF.Sin(a0) * item.Radius);
-                    var p1 = new Vector3(center.X + MathF.Cos(a1) * item.Radius, center.Y, center.Z + MathF.Sin(a1) * item.Radius);
-                    Rl.DrawLine3D(p0, p1, border);
-                }
-            }
-        }
-
-        private static void DrawGroundRing(in GroundOverlayItem item)
-        {
-            const int segments = 48;
-            float innerRadius = Math.Clamp(item.InnerRadius, 0f, item.Radius);
-            float outerRadius = MathF.Max(item.Radius, innerRadius);
-            var center = item.Center;
-
-            if (item.FillColor.W > 0.01f && outerRadius > innerRadius)
-            {
-                var fillColor = ToRaylibColor(item.FillColor);
-                const int bands = 6;
-                for (int band = 0; band < bands; band++)
-                {
-                    float radius = innerRadius + (outerRadius - innerRadius) * (band + 0.5f) / bands;
-                    DrawGroundArcLoop(center, radius, 0f, MathF.PI * 2f, segments, fillColor);
-                }
-            }
-
-            if (item.BorderColor.W > 0.01f && item.BorderWidth > 0f)
-            {
-                var border = ToRaylibColor(item.BorderColor);
-                DrawGroundArcLoop(center, outerRadius, 0f, MathF.PI * 2f, segments, border);
-                if (innerRadius > 0.001f)
-                {
-                    DrawGroundArcLoop(center, innerRadius, 0f, MathF.PI * 2f, segments, border);
-                }
-            }
-        }
-
-        private static void DrawGroundCone(in GroundOverlayItem item)
-        {
-            const int segments = 24;
-            float radius = MathF.Max(item.Radius, 0f);
-            float start = item.Rotation - item.Angle;
-            float end = item.Rotation + item.Angle;
-            var center = item.Center;
-
-            if (radius <= 0f)
-            {
-                return;
-            }
-
-            if (item.FillColor.W > 0.01f)
-            {
-                var fillColor = ToRaylibColor(item.FillColor);
-                const int bands = 6;
-                for (int band = 1; band <= bands; band++)
-                {
-                    float ringRadius = radius * band / bands;
-                    DrawGroundArcLoop(center, ringRadius, start, end, segments, fillColor);
-                }
-            }
-
-            if (item.BorderColor.W > 0.01f && item.BorderWidth > 0f)
-            {
-                var border = ToRaylibColor(item.BorderColor);
-                DrawGroundArcLoop(center, radius, start, end, segments, border);
-                var left = new Vector3(center.X + MathF.Cos(start) * radius, center.Y, center.Z + MathF.Sin(start) * radius);
-                var right = new Vector3(center.X + MathF.Cos(end) * radius, center.Y, center.Z + MathF.Sin(end) * radius);
-                Rl.DrawLine3D(center, left, border);
-                Rl.DrawLine3D(center, right, border);
-            }
-        }
-
-        private static void DrawGroundLine(in GroundOverlayItem item)
-        {
-            float length = item.Length > 0f ? item.Length : item.Radius;
-            if (length <= 0f)
-            {
-                return;
-            }
-
-            float dx = MathF.Cos(item.Rotation) * length;
-            float dz = MathF.Sin(item.Rotation) * length;
-            var a = item.Center;
-            var b = new Vector3(a.X + dx, a.Y, a.Z + dz);
-            float halfWidth = MathF.Max(0f, item.Width) * 0.5f;
-            var normal = new Vector3(-MathF.Sin(item.Rotation), 0f, MathF.Cos(item.Rotation));
-
-            if (item.FillColor.W > 0.01f)
-            {
-                var fill = ToRaylibColor(item.FillColor);
-                int stripes = halfWidth > 0.001f ? Math.Clamp((int)MathF.Ceiling(halfWidth / 0.12f), 1, 8) : 1;
-                for (int stripe = -stripes; stripe <= stripes; stripe++)
-                {
-                    float offset = stripes == 0 ? 0f : halfWidth * stripe / Math.Max(stripes, 1);
-                    var delta = normal * offset;
-                    Rl.DrawLine3D(a + delta, b + delta, fill);
-                }
-            }
-
-            if (item.BorderColor.W > 0.01f)
-            {
-                var border = ToRaylibColor(item.BorderColor);
-                Rl.DrawLine3D(a, b, border);
-                if (halfWidth > 0.001f)
-                {
-                    var delta = normal * halfWidth;
-                    Rl.DrawLine3D(a + delta, b + delta, border);
-                    Rl.DrawLine3D(a - delta, b - delta, border);
-                }
-            }
-        }
-
-        private static void DrawGroundArcLoop(Vector3 center, float radius, float startAngle, float endAngle, int segments, Color color)
-        {
-            if (segments <= 0 || radius <= 0f)
-            {
-                return;
-            }
-
-            float step = (endAngle - startAngle) / segments;
-            for (int s = 0; s < segments; s++)
-            {
-                float a0 = startAngle + s * step;
-                float a1 = startAngle + (s + 1) * step;
-                var p0 = new Vector3(center.X + MathF.Cos(a0) * radius, center.Y, center.Z + MathF.Sin(a0) * radius);
-                var p1 = new Vector3(center.X + MathF.Cos(a1) * radius, center.Y, center.Z + MathF.Sin(a1) * radius);
-                Rl.DrawLine3D(p0, p1, color);
-            }
-        }
-
-        private static Color ToRaylibColor(Vector4 c) => RaylibColorUtil.ToRaylibColor(in c);
     }
 }

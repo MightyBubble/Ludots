@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Collections.Generic;
+using System.Text.Json.Nodes;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
@@ -55,6 +56,240 @@ namespace Ludots.Tests.Architecture
             var ex = Assert.Throws<InvalidOperationException>(() =>
                 new MeshAssetConfigLoader(pipeline, meshes, prefabs).Load(catalog));
             Assert.That(ex!.Message, Does.Contain("must declare an explicit kind"));
+        }
+
+        [Test]
+        public void MeshAssetConfigLoader_PrefabVfxEffectAssetId_ResolvesMeshAssetKey()
+        {
+            string root = Path.Combine(Path.GetTempPath(), "Ludots_PresentationVfxConfigContracts", Guid.NewGuid().ToString("N"));
+            string core = Path.Combine(root, "Core");
+            Directory.CreateDirectory(Path.Combine(core, "Configs", "Presentation"));
+            WriteCatalog(core, "Presentation/mesh_assets.json", "ArrayById", "id", "Presentation/prefabs.json", "ArrayById", "id");
+            File.WriteAllText(Path.Combine(core, "Configs", "Presentation", "mesh_assets.json"), """
+[
+  { "id": "cube", "type": "Primitive", "primitiveKind": "Cube" },
+  {
+    "id": "effect.spark",
+    "type": "Primitive",
+    "primitiveKind": "Sphere",
+    "vfx": {
+      "emitter": {
+        "shape": "PrimitiveSphere",
+        "particleCount": 24,
+        "ringSegments": 20,
+        "radiusScale": 1.15,
+        "coreRadiusScale": 0.28,
+        "particleRadiusScale": 0.085,
+        "lifetimeSeconds": 0.75,
+        "pulseSpeedRadPerSecond": 5.2,
+        "orbitSpeedRadPerSecond": 1.7
+      }
+    }
+  }
+]
+""");
+            File.WriteAllText(Path.Combine(core, "Configs", "Presentation", "prefabs.json"), """
+[
+  {
+    "id": "prefab.vfx",
+    "parts": [
+      {
+        "kind": "Vfx",
+        "effectAssetId": "effect.spark",
+        "spawnMode": "Loop"
+      }
+    ]
+  }
+]
+""");
+
+            var vfs = new VirtualFileSystem();
+            vfs.Mount("Core", core);
+            var pipeline = new ConfigPipeline(vfs, modLoader: null!);
+            var catalog = ConfigCatalogLoader.Load(pipeline);
+            var meshes = new MeshAssetRegistry();
+            var prefabs = new PrefabRegistry();
+
+            new MeshAssetConfigLoader(pipeline, meshes, prefabs).Load(catalog);
+
+            int prefabMeshId = meshes.GetId("prefab.vfx");
+            Assert.That(meshes.TryGetDescriptor(prefabMeshId, out MeshAssetDescriptor descriptor), Is.True);
+            Assert.That(descriptor.PrefabParts[0].EffectAssetId, Is.EqualTo(meshes.GetId("effect.spark")));
+            Assert.That(descriptor.PrefabParts[0].VfxSpawnMode, Is.EqualTo(PrefabVfxSpawnMode.Loop));
+        }
+
+        [Test]
+        public void MeshAssetConfigLoader_PrefabVfxEffectAssetId_RejectsRawNumber()
+        {
+            string root = Path.Combine(Path.GetTempPath(), "Ludots_PresentationVfxConfigContracts", Guid.NewGuid().ToString("N"));
+            string core = Path.Combine(root, "Core");
+            Directory.CreateDirectory(Path.Combine(core, "Configs", "Presentation"));
+            WriteCatalog(core, "Presentation/mesh_assets.json", "ArrayById", "id", "Presentation/prefabs.json", "ArrayById", "id");
+            File.WriteAllText(Path.Combine(core, "Configs", "Presentation", "mesh_assets.json"), """
+[
+  { "id": "cube", "type": "Primitive", "primitiveKind": "Cube" }
+]
+""");
+            File.WriteAllText(Path.Combine(core, "Configs", "Presentation", "prefabs.json"), """
+[
+  {
+    "id": "prefab.bad.vfx",
+    "parts": [
+      {
+        "kind": "Vfx",
+        "effectAssetId": 201
+      }
+    ]
+  }
+]
+""");
+
+            var vfs = new VirtualFileSystem();
+            vfs.Mount("Core", core);
+            var pipeline = new ConfigPipeline(vfs, modLoader: null!);
+            var catalog = ConfigCatalogLoader.Load(pipeline);
+            var meshes = new MeshAssetRegistry();
+            var prefabs = new PrefabRegistry();
+
+            var ex = Assert.Throws<InvalidOperationException>(() =>
+                new MeshAssetConfigLoader(pipeline, meshes, prefabs).Load(catalog));
+            Assert.That(ex!.Message, Does.Contain("effectAssetId must be a non-empty asset key"));
+        }
+
+        [Test]
+        public void MeshAssetConfigLoader_PrefabVfxEffectAssetId_RejectsAssetWithoutVfxEmitterData()
+        {
+            string root = Path.Combine(Path.GetTempPath(), "Ludots_PresentationVfxConfigContracts", Guid.NewGuid().ToString("N"));
+            string core = Path.Combine(root, "Core");
+            Directory.CreateDirectory(Path.Combine(core, "Configs", "Presentation"));
+            WriteCatalog(core, "Presentation/mesh_assets.json", "ArrayById", "id", "Presentation/prefabs.json", "ArrayById", "id");
+            File.WriteAllText(Path.Combine(core, "Configs", "Presentation", "mesh_assets.json"), """
+[
+  { "id": "effect.spark", "type": "Billboard" }
+]
+""");
+            File.WriteAllText(Path.Combine(core, "Configs", "Presentation", "prefabs.json"), """
+[
+  {
+    "id": "prefab.bad.vfx",
+    "parts": [
+      {
+        "kind": "Vfx",
+        "effectAssetId": "effect.spark"
+      }
+    ]
+  }
+]
+""");
+
+            var vfs = new VirtualFileSystem();
+            vfs.Mount("Core", core);
+            var pipeline = new ConfigPipeline(vfs, modLoader: null!);
+            var catalog = ConfigCatalogLoader.Load(pipeline);
+            var meshes = new MeshAssetRegistry();
+            var prefabs = new PrefabRegistry();
+
+            var ex = Assert.Throws<InvalidOperationException>(() =>
+                new MeshAssetConfigLoader(pipeline, meshes, prefabs).Load(catalog));
+            Assert.That(ex!.Message, Does.Contain("without vfx emitter data"));
+        }
+
+        [Test]
+        public void MeshAssetConfigLoader_VfxEmitterShape_RejectsNumericString()
+        {
+            string root = Path.Combine(Path.GetTempPath(), "Ludots_PresentationVfxConfigContracts", Guid.NewGuid().ToString("N"));
+            string core = Path.Combine(root, "Core");
+            Directory.CreateDirectory(Path.Combine(core, "Configs", "Presentation"));
+            WriteCatalog(core, "Presentation/mesh_assets.json", "ArrayById", "id");
+            File.WriteAllText(Path.Combine(core, "Configs", "Presentation", "mesh_assets.json"), """
+[
+  {
+    "id": "effect.spark",
+    "type": "Billboard",
+    "vfx": {
+      "emitter": {
+        "shape": "99",
+        "particleCount": 24,
+        "ringSegments": 20,
+        "radiusScale": 1.15,
+        "coreRadiusScale": 0.28,
+        "particleRadiusScale": 0.085,
+        "lifetimeSeconds": 0.75,
+        "pulseSpeedRadPerSecond": 5.2,
+        "orbitSpeedRadPerSecond": 1.7
+      }
+    }
+  }
+]
+""");
+
+            var vfs = new VirtualFileSystem();
+            vfs.Mount("Core", core);
+            var pipeline = new ConfigPipeline(vfs, modLoader: null!);
+            var catalog = ConfigCatalogLoader.Load(pipeline);
+            var meshes = new MeshAssetRegistry();
+
+            var ex = Assert.Throws<InvalidOperationException>(() =>
+                new MeshAssetConfigLoader(pipeline, meshes).Load(catalog));
+            Assert.That(ex!.Message, Does.Contain("vfx.emitter.shape"));
+            Assert.That(ex.Message, Does.Contain("not a numeric string"));
+        }
+
+        [Test]
+        public void MeshAssetConfigLoader_PrefabVfxSpawnMode_RejectsNumericString()
+        {
+            string root = Path.Combine(Path.GetTempPath(), "Ludots_PresentationVfxConfigContracts", Guid.NewGuid().ToString("N"));
+            string core = Path.Combine(root, "Core");
+            Directory.CreateDirectory(Path.Combine(core, "Configs", "Presentation"));
+            WriteCatalog(core, "Presentation/mesh_assets.json", "ArrayById", "id", "Presentation/prefabs.json", "ArrayById", "id");
+            File.WriteAllText(Path.Combine(core, "Configs", "Presentation", "mesh_assets.json"), """
+[
+  {
+    "id": "effect.spark",
+    "type": "Primitive",
+    "primitiveKind": "Sphere",
+    "vfx": {
+      "emitter": {
+        "shape": "PrimitiveSphere",
+        "particleCount": 24,
+        "ringSegments": 20,
+        "radiusScale": 1.15,
+        "coreRadiusScale": 0.28,
+        "particleRadiusScale": 0.085,
+        "lifetimeSeconds": 0.75,
+        "pulseSpeedRadPerSecond": 5.2,
+        "orbitSpeedRadPerSecond": 1.7
+      }
+    }
+  }
+]
+""");
+            File.WriteAllText(Path.Combine(core, "Configs", "Presentation", "prefabs.json"), """
+[
+  {
+    "id": "prefab.bad.spawn",
+    "parts": [
+      {
+        "kind": "Vfx",
+        "effectAssetId": "effect.spark",
+        "spawnMode": "99"
+      }
+    ]
+  }
+]
+""");
+
+            var vfs = new VirtualFileSystem();
+            vfs.Mount("Core", core);
+            var pipeline = new ConfigPipeline(vfs, modLoader: null!);
+            var catalog = ConfigCatalogLoader.Load(pipeline);
+            var meshes = new MeshAssetRegistry();
+            var prefabs = new PrefabRegistry();
+
+            var ex = Assert.Throws<InvalidOperationException>(() =>
+                new MeshAssetConfigLoader(pipeline, meshes, prefabs).Load(catalog));
+            Assert.That(ex!.Message, Does.Contain("VFX spawnMode"));
+            Assert.That(ex.Message, Does.Contain("not a numeric string"));
         }
 
         [Test]
@@ -113,6 +348,33 @@ namespace Ludots.Tests.Architecture
 
             Assert.That(engine.GetService(CoreServiceKeys.PresentationBehaviorRegistry), Is.Not.Null);
             Assert.That(engine.GetService(CoreServiceKeys.PresentationBehaviorResolver), Is.Not.Null);
+        }
+
+        [Test]
+        public void BlacksmithSmokeShowcases_AuthorVfxEmitterWithoutRaylibHostTexture()
+        {
+            string repoRoot = FindRepoRoot();
+
+            AssertSmokeAssetIsPrimitiveVfx(
+                repoRoot,
+                Path.Combine(
+                    "mods",
+                    "showcases",
+                    "performer_blacksmith",
+                    "PerformerBlacksmithShowcaseMod",
+                    "assets",
+                    "Presentation"),
+                "blacksmith.smoke.billboard");
+            AssertSmokeAssetIsPrimitiveVfx(
+                repoRoot,
+                Path.Combine(
+                    "mods",
+                    "showcases",
+                    "capability_standard",
+                    "CapabilityStandardStaticPerformer30kMod",
+                    "assets",
+                    "Presentation"),
+                "capability_static_performer.smoke.billboard");
         }
 
         [Test]
@@ -1217,11 +1479,15 @@ namespace Ludots.Tests.Architecture
                 color: System.Numerics.Vector4.One,
                 output);
 
-            PrefabVisualPartKind[] kinds = output.GetSpan().ToArray().Select(static visual => visual.Kind).ToArray();
+            PrefabFinalizedVisual[] visuals = output.GetSpan().ToArray();
+            PrefabVisualPartKind[] kinds = visuals.Select(static visual => visual.Kind).ToArray();
             Assert.That(kinds, Does.Contain(PrefabVisualPartKind.Mesh));
             Assert.That(kinds, Does.Contain(PrefabVisualPartKind.Decal));
             Assert.That(kinds, Does.Contain(PrefabVisualPartKind.Vfx));
             Assert.That(kinds, Does.Contain(PrefabVisualPartKind.Surface));
+            Assert.That(
+                visuals.Single(static visual => visual.Kind == PrefabVisualPartKind.Vfx).EffectAssetId,
+                Is.EqualTo(meshes.GetId("effect.camera.projection_cue")));
         }
 
         private static string FindRepoRoot()
@@ -1239,6 +1505,51 @@ namespace Ludots.Tests.Architecture
             }
 
             throw new DirectoryNotFoundException("Could not locate repo root containing src/Core/Ludots.Core.csproj");
+        }
+
+        private static void AssertSmokeAssetIsPrimitiveVfx(
+            string repoRoot,
+            string presentationRelativeDirectory,
+            string smokeAssetId)
+        {
+            string presentationDirectory = Path.Combine(repoRoot, presentationRelativeDirectory);
+            JsonObject meshAsset = RequireJsonObjectById(
+                Path.Combine(presentationDirectory, "mesh_assets.json"),
+                smokeAssetId);
+
+            Assert.That(meshAsset["type"]?.GetValue<string>(), Is.EqualTo("Primitive"));
+            Assert.That(meshAsset["primitiveKind"]?.GetValue<string>(), Is.EqualTo("Sphere"));
+            Assert.That(meshAsset["vfx"]?["emitter"]?["shape"]?.GetValue<string>(), Is.EqualTo("PrimitiveSphere"));
+            Assert.That(meshAsset["vfx"]?["emitter"]?["particleCount"]?.GetValue<int>(), Is.GreaterThan(0));
+
+            JsonArray hostAssets = ReadJsonArray(Path.Combine(presentationDirectory, "host_assets.json"));
+            foreach (JsonNode? node in hostAssets)
+            {
+                Assert.That(
+                    node?["assetId"]?.GetValue<string>(),
+                    Is.Not.EqualTo(smokeAssetId),
+                    "Raylib host texture registration must not target authored Primitive VFX smoke.");
+            }
+        }
+
+        private static JsonObject RequireJsonObjectById(string path, string id)
+        {
+            foreach (JsonNode? node in ReadJsonArray(path))
+            {
+                if (node is JsonObject candidate &&
+                    string.Equals(candidate["id"]?.GetValue<string>(), id, StringComparison.Ordinal))
+                {
+                    return candidate;
+                }
+            }
+
+            throw new InvalidOperationException($"Config object '{id}' was not found in '{path}'.");
+        }
+
+        private static JsonArray ReadJsonArray(string path)
+        {
+            return JsonNode.Parse(File.ReadAllText(path))?.AsArray()
+                ?? throw new InvalidOperationException($"Config file '{path}' must contain a JSON array.");
         }
 
         private static void WriteCatalog(string coreRoot, params string[] triples)

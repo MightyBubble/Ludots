@@ -1,0 +1,20 @@
+[
+  {
+    "id": "effect.camera.projection_cue",
+    "type": "Primitive",
+    "primitiveKind": "Sphere",
+    "vfx": {
+      "emitter": {
+        "shape": "PrimitiveSphere",
+        "particleCount": 24,
+        "ringSegments": 20,
+        "radiusScale": 1.15,
+        "coreRadiusScale": 0.28,
+        "particleRadiusScale": 0.085,
+        "lifetimeSeconds": 0.75,
+        "pulseSpeedRadPerSecond": 5.2,
+        "orbitSpeedRadPerSecond": 1.7
+      }
+    }
+  }
+]

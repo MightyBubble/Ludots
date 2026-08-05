@@ -140,6 +140,7 @@ namespace Ludots.Tests.Presentation
                 "src",
                 "Tests",
                 "PresentationTests",
+                "Performer",
                 "BlacksmithPerformerUatTests.cs");
 
             string source = File.ReadAllText(sourcePath);
@@ -584,12 +585,31 @@ namespace Ludots.Tests.Presentation
                 {
                     return kind switch
                     {
-                        AssetKind.Mesh or AssetKind.SkinnedMesh or AssetKind.VFX => meshAssets.GetId(key),
+                        AssetKind.Mesh or AssetKind.SkinnedMesh => meshAssets.GetId(key),
+                        AssetKind.VFX => ResolveVfxFixtureAssetId(key),
                         AssetKind.Spline when string.Equals(key, PatrolSplineAssetKey, StringComparison.Ordinal) => PatrolSplineAssetId,
                         AssetKind.Sound when string.Equals(key, HammerSoundAssetKey, StringComparison.Ordinal) => HammerSoundAssetId,
                         _ => throw new InvalidOperationException(
                             $"Blacksmith performer UAT has no fixture asset registered for {kind} '{key}'."),
                     };
+                }
+
+                int ResolveVfxFixtureAssetId(string key)
+                {
+                    int assetId = meshAssets.GetId(key);
+                    if (assetId <= 0)
+                    {
+                        return 0;
+                    }
+
+                    if (!meshAssets.TryGetDescriptor(assetId, out MeshAssetDescriptor descriptor) ||
+                        !descriptor.VfxEffectData.IsValid)
+                    {
+                        throw new InvalidOperationException(
+                            $"Blacksmith performer UAT VFX fixture asset '{key}' must declare vfx emitter data.");
+                    }
+
+                    return assetId;
                 }
 
                 int ResolveUnsupportedEffectTemplateId(string key)
@@ -612,7 +632,7 @@ namespace Ludots.Tests.Presentation
                 RegisterPrimitiveMesh(meshAssets, WorkshopDamagedAssetKey);
                 RegisterPrimitiveMesh(meshAssets, WorkshopRuinedAssetKey);
                 RegisterPrimitiveMesh(meshAssets, FurnaceAssetKey);
-                RegisterPrimitiveMesh(meshAssets, SmokeAssetKey);
+                RegisterVfxEffect(meshAssets, SmokeAssetKey);
                 RegisterPrimitiveMesh(meshAssets, WorkerAssetKey);
                 materialAssets.Register(
                     BrickNorthMaterialKey,
@@ -629,6 +649,22 @@ namespace Ludots.Tests.Presentation
             private static void RegisterPrimitiveMesh(MeshAssetRegistry meshAssets, string key)
             {
                 MeshAssetDescriptor descriptor = MeshAssetDescriptor.Primitive(0, PrimitiveMeshKind.Cube);
+                meshAssets.Register(key, in descriptor);
+            }
+
+            private static void RegisterVfxEffect(MeshAssetRegistry meshAssets, string key)
+            {
+                MeshAssetDescriptor descriptor = MeshAssetDescriptor.Primitive(0, PrimitiveMeshKind.Sphere);
+                descriptor.VfxEffectData = new VfxEffectAssetData(new VfxEmitterDescriptor(
+                    VfxEmitterShape.PrimitiveSphere,
+                    particleCount: 24,
+                    ringSegments: 20,
+                    radiusScale: 1.15f,
+                    coreRadiusScale: 0.28f,
+                    particleRadiusScale: 0.085f,
+                    lifetimeSeconds: 0.75f,
+                    pulseSpeedRadPerSecond: 5.2f,
+                    orbitSpeedRadPerSecond: 1.7f));
                 meshAssets.Register(key, in descriptor);
             }
 

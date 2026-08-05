@@ -48,6 +48,7 @@ namespace Ludots.Client.Raylib.Rendering
         private readonly Dictionary<GpuSkinnedInstanceBatchKey, GpuSkinnedInstanceBatch> _gpuSkinnedInstanceBatches = new();
         private readonly List<GpuSkinnedInstanceBatch> _activeGpuSkinnedInstanceBatches = new(64);
         private readonly RaylibIsmRenderBridge _ismBridge = new RaylibIsmRenderBridge();
+        private readonly RaylibVfxRenderer _vfxRenderer = new();
 
         private readonly Dictionary<int, CachedModel> _modelCache = new Dictionary<int, CachedModel>();
         private readonly Dictionary<int, CachedProceduralMesh> _proceduralMeshCache = new Dictionary<int, CachedProceduralMesh>();
@@ -100,14 +101,14 @@ namespace Ludots.Client.Raylib.Rendering
             _maxModelInstancesPerDraw = ResolveMaxModelInstancesPerDraw();
         }
 
-        public void Draw(PrimitiveDrawBuffer draw, Camera3D camera, MeshAssetRegistry meshes, float scaleMul = 1f, IVisualHeightmap? visualHeightmap = null)
+        public void Draw(PrimitiveDrawBuffer draw, Camera3D camera, MeshAssetRegistry meshes, float scaleMul = 1f, IVisualHeightmap? visualHeightmap = null, double timeSeconds = 0d)
         {
-            Draw(draw, camera, snapshot: null, skinnedBatch: null, meshes, scaleMul, visualHeightmap);
+            Draw(draw, camera, snapshot: null, skinnedBatch: null, meshes, scaleMul, visualHeightmap, timeSeconds);
         }
 
-        public void Draw(PrimitiveDrawBuffer draw, Camera3D camera, PrimitiveDrawBuffer? snapshot, MeshAssetRegistry meshes, float scaleMul = 1f, IVisualHeightmap? visualHeightmap = null)
+        public void Draw(PrimitiveDrawBuffer draw, Camera3D camera, PrimitiveDrawBuffer? snapshot, MeshAssetRegistry meshes, float scaleMul = 1f, IVisualHeightmap? visualHeightmap = null, double timeSeconds = 0d)
         {
-            Draw(draw, camera, snapshot, skinnedBatch: null, meshes, scaleMul, visualHeightmap);
+            Draw(draw, camera, snapshot, skinnedBatch: null, meshes, scaleMul, visualHeightmap, timeSeconds);
         }
 
         public void Draw(
@@ -117,7 +118,8 @@ namespace Ludots.Client.Raylib.Rendering
             SkinnedVisualBatchBuffer? skinnedBatch,
             MeshAssetRegistry meshes,
             float scaleMul = 1f,
-            IVisualHeightmap? visualHeightmap = null)
+            IVisualHeightmap? visualHeightmap = null,
+            double timeSeconds = 0d)
         {
             if (draw == null) throw new ArgumentNullException(nameof(draw));
             if (meshes == null) throw new ArgumentNullException(nameof(meshes));
@@ -144,47 +146,55 @@ namespace Ludots.Client.Raylib.Rendering
             LastVfxVisualCount = 0;
             LastSurfaceVisualCount = 0;
             var finalizationContext = new PrefabFinalizationContext(visualHeightmap);
+            _vfxRenderer.BeginFrame();
 
-            var span = draw.GetSpan();
-            bool usePersistentStaticLanes = snapshot != null;
-            if (usePersistentStaticLanes)
+            try
             {
-                _ismBridge.SyncPersistentLanes(snapshot);
-                LastPersistentSyncMs = _ismBridge.LastPersistentSyncMs;
-                LastPersistentCreates = _ismBridge.Planner.LastCreateCount;
-                LastPersistentUpdates = _ismBridge.Planner.LastUpdateCount;
-                LastPersistentRemoves = _ismBridge.Planner.LastRemoveCount;
-                long bucketStart = Stopwatch.GetTimestamp();
-                DrawPersistentStaticLanes(camera, meshes, scaleMul, in finalizationContext);
-                LastPersistentBucketDrawMs = (Stopwatch.GetTimestamp() - bucketStart) * 1000d / Stopwatch.Frequency;
-                if (skinnedBatch != null)
+                var span = draw.GetSpan();
+                bool usePersistentStaticLanes = snapshot != null;
+                if (usePersistentStaticLanes)
                 {
-                    DrawSkinnedBatch(skinnedBatch, camera, meshes, scaleMul, in finalizationContext);
+                    _ismBridge.SyncPersistentLanes(snapshot);
+                    LastPersistentSyncMs = _ismBridge.LastPersistentSyncMs;
+                    LastPersistentCreates = _ismBridge.Planner.LastCreateCount;
+                    LastPersistentUpdates = _ismBridge.Planner.LastUpdateCount;
+                    LastPersistentRemoves = _ismBridge.Planner.LastRemoveCount;
+                    long bucketStart = Stopwatch.GetTimestamp();
+                    DrawPersistentStaticLanes(camera, meshes, scaleMul, timeSeconds, in finalizationContext);
+                    LastPersistentBucketDrawMs = (Stopwatch.GetTimestamp() - bucketStart) * 1000d / Stopwatch.Frequency;
+                    if (skinnedBatch != null)
+                    {
+                        DrawSkinnedBatch(skinnedBatch, camera, meshes, scaleMul, timeSeconds, in finalizationContext);
+                    }
+
+                    long dynamicLaneStart = Stopwatch.GetTimestamp();
+                    DrawSnapshotDynamicLanes(span, camera, meshes, scaleMul, skinnedBatchActive: skinnedBatch != null, timeSeconds, in finalizationContext);
+                    LastImmediateDrawMs = (Stopwatch.GetTimestamp() - dynamicLaneStart) * 1000d / Stopwatch.Frequency;
+
+                    return;
                 }
 
-                long dynamicLaneStart = Stopwatch.GetTimestamp();
-                DrawSnapshotDynamicLanes(span, camera, meshes, scaleMul, skinnedBatchActive: skinnedBatch != null, in finalizationContext);
-                LastImmediateDrawMs = (Stopwatch.GetTimestamp() - dynamicLaneStart) * 1000d / Stopwatch.Frequency;
+                if (_mode == RaylibPrimitiveRenderMode.Instanced)
+                {
+                    DrawHybridInstanced(span, camera, meshes, scaleMul, timeSeconds, in finalizationContext);
+                    return;
+                }
 
-                return;
+                long immediateDrawStart = Stopwatch.GetTimestamp();
+                DrawImmediateWithDescriptors(span, camera, meshes, scaleMul, persistentStaticLanesActive: false, skinnedBatchActive: false, timeSeconds, in finalizationContext);
+                LastImmediateDrawMs = (Stopwatch.GetTimestamp() - immediateDrawStart) * 1000d / Stopwatch.Frequency;
             }
-
-            if (_mode == RaylibPrimitiveRenderMode.Instanced)
+            finally
             {
-                DrawHybridInstanced(span, camera, meshes, scaleMul, in finalizationContext);
-                return;
+                _vfxRenderer.EndFrame();
             }
-
-            long immediateDrawStart = Stopwatch.GetTimestamp();
-            DrawImmediateWithDescriptors(span, camera, meshes, scaleMul, persistentStaticLanesActive: false, skinnedBatchActive: false, in finalizationContext);
-            LastImmediateDrawMs = (Stopwatch.GetTimestamp() - immediateDrawStart) * 1000d / Stopwatch.Frequency;
         }
 
-        private void DrawPersistentStaticLanes(Camera3D camera, MeshAssetRegistry meshes, float scaleMul, in PrefabFinalizationContext finalizationContext)
+        private void DrawPersistentStaticLanes(Camera3D camera, MeshAssetRegistry meshes, float scaleMul, double timeSeconds, in PrefabFinalizationContext finalizationContext)
         {
             foreach (RaylibIsmRenderBridge.Bucket bucket in _ismBridge.ActiveBuckets)
             {
-                DrawInstancedBucket(bucket, meshes, scaleMul);
+                DrawInstancedBucket(bucket, meshes, scaleMul, timeSeconds);
             }
         }
 
@@ -195,6 +205,7 @@ namespace Ludots.Client.Raylib.Rendering
             float scaleMul,
             bool persistentStaticLanesActive,
             bool skinnedBatchActive,
+            double timeSeconds,
             in PrefabFinalizationContext finalizationContext)
         {
             for (int i = 0; i < span.Length; i++)
@@ -223,13 +234,7 @@ namespace Ludots.Client.Raylib.Rendering
                     continue;
                 }
 
-                DrawAssetRecursive(
-                    item.MeshAssetId, item.Position,
-                    item.Rotation,
-                    item.Scale * scaleMul, item.Color,
-                    camera,
-                    meshes,
-                    in finalizationContext);
+                DrawPrimitiveItem(in item, camera, meshes, scaleMul, timeSeconds, in finalizationContext);
             }
         }
 
@@ -239,6 +244,7 @@ namespace Ludots.Client.Raylib.Rendering
             MeshAssetRegistry meshes,
             float scaleMul,
             bool skinnedBatchActive,
+            double timeSeconds,
             in PrefabFinalizationContext finalizationContext)
         {
             EnsureInitialized();
@@ -269,15 +275,7 @@ namespace Ludots.Client.Raylib.Rendering
                     continue;
                 }
 
-                SubmitAssetRecursive(
-                    item.MeshAssetId,
-                    item.Position,
-                    item.Rotation,
-                    item.Scale * scaleMul,
-                    item.Color,
-                    camera,
-                    meshes,
-                    in finalizationContext);
+                SubmitPrimitiveItem(in item, camera, meshes, scaleMul, timeSeconds, in finalizationContext);
             }
 
             FlushInstancedBatches();
@@ -295,7 +293,7 @@ namespace Ludots.Client.Raylib.Rendering
             return _ismBridge.ActiveBindings.ContainsKey(item.StableId);
         }
 
-        private void DrawHybridInstanced(ReadOnlySpan<PrimitiveDrawItem> span, Camera3D camera, MeshAssetRegistry meshes, float scaleMul, in PrefabFinalizationContext finalizationContext)
+        private void DrawHybridInstanced(ReadOnlySpan<PrimitiveDrawItem> span, Camera3D camera, MeshAssetRegistry meshes, float scaleMul, double timeSeconds, in PrefabFinalizationContext finalizationContext)
         {
             EnsureInitialized();
 
@@ -312,27 +310,71 @@ namespace Ludots.Client.Raylib.Rendering
                     continue;
                 }
 
-                SubmitAssetRecursive(
-                    item.MeshAssetId,
-                    item.Position,
-                    item.Rotation,
-                    item.Scale * scaleMul,
-                    item.Color,
-                    camera,
-                    meshes,
-                    in finalizationContext);
+                SubmitPrimitiveItem(in item, camera, meshes, scaleMul, timeSeconds, in finalizationContext);
             }
 
             FlushInstancedBatches();
         }
 
-        private void SubmitAssetRecursive(int meshAssetId, Vector3 position, Quaternion rotation, Vector3 scale, Vector4 color, Camera3D camera, MeshAssetRegistry meshes, in PrefabFinalizationContext finalizationContext)
+        private void SubmitPrimitiveItem(
+            in PrimitiveDrawItem item,
+            Camera3D camera,
+            MeshAssetRegistry meshes,
+            float scaleMul,
+            double timeSeconds,
+            in PrefabFinalizationContext finalizationContext)
+        {
+            if (TrySubmitDirectVfx(in item, camera, meshes, scaleMul, timeSeconds))
+            {
+                return;
+            }
+
+            SubmitAssetRecursive(
+                item.MeshAssetId,
+                item.Position,
+                item.Rotation,
+                item.Scale * scaleMul,
+                item.Color,
+                camera,
+                meshes,
+                item.StableId,
+                timeSeconds,
+                in finalizationContext);
+        }
+
+        private void DrawPrimitiveItem(
+            in PrimitiveDrawItem item,
+            Camera3D camera,
+            MeshAssetRegistry meshes,
+            float scaleMul,
+            double timeSeconds,
+            in PrefabFinalizationContext finalizationContext)
+        {
+            if (TryDrawDirectVfx(in item, camera, meshes, scaleMul, timeSeconds))
+            {
+                return;
+            }
+
+            DrawAssetRecursive(
+                item.MeshAssetId,
+                item.Position,
+                item.Rotation,
+                item.Scale * scaleMul,
+                item.Color,
+                camera,
+                meshes,
+                item.StableId,
+                timeSeconds,
+                in finalizationContext);
+        }
+
+        private void SubmitAssetRecursive(int meshAssetId, Vector3 position, Quaternion rotation, Vector3 scale, Vector4 color, Camera3D camera, MeshAssetRegistry meshes, int stableId, double timeSeconds, in PrefabFinalizationContext finalizationContext)
         {
             _prefabVisuals.Clear();
             PrefabFinalizationPipeline.FinalizeVisuals(
                 meshes,
                 meshAssetId,
-                stableId: 0,
+                stableId,
                 position,
                 rotation,
                 scale,
@@ -342,7 +384,7 @@ namespace Ludots.Client.Raylib.Rendering
 
             foreach (ref readonly var visual in _prefabVisuals.GetSpan())
             {
-                SubmitFinalizedVisual(in visual, camera);
+                SubmitFinalizedVisual(in visual, camera, meshes, timeSeconds);
             }
         }
 
@@ -351,7 +393,73 @@ namespace Ludots.Client.Raylib.Rendering
             return item.AssetKind == AssetKind.Surface || item.RenderPath.IsSurfaceLane();
         }
 
-        private void SubmitFinalizedVisual(in PrefabFinalizedVisual visual, Camera3D camera)
+        private bool TrySubmitDirectVfx(
+            in PrimitiveDrawItem item,
+            Camera3D camera,
+            MeshAssetRegistry meshes,
+            float scaleMul,
+            double timeSeconds)
+        {
+            if (!TryBuildDirectVfxVisual(in item, scaleMul, out PrefabFinalizedVisual visual))
+            {
+                return false;
+            }
+
+            SubmitFinalizedVisual(in visual, camera, meshes, timeSeconds);
+            return true;
+        }
+
+        private bool TryDrawDirectVfx(
+            in PrimitiveDrawItem item,
+            Camera3D camera,
+            MeshAssetRegistry meshes,
+            float scaleMul,
+            double timeSeconds)
+        {
+            if (!TryBuildDirectVfxVisual(in item, scaleMul, out PrefabFinalizedVisual visual))
+            {
+                return false;
+            }
+
+            DrawFinalizedVisual(in visual, camera, meshes, timeSeconds);
+            return true;
+        }
+
+        internal static bool TryBuildDirectVfxVisual(
+            in PrimitiveDrawItem item,
+            float scaleMul,
+            out PrefabFinalizedVisual visual)
+        {
+            if (item.AssetKind != AssetKind.VFX)
+            {
+                visual = default;
+                return false;
+            }
+
+            if (item.MeshAssetId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"VFX primitive stableId={item.StableId} requires a positive effect meshAssetId.");
+            }
+
+            if (item.StableId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"VFX primitive effectAssetId={item.MeshAssetId} requires a positive stableId.");
+            }
+
+            visual = PrefabFinalizedVisual.Vfx(
+                item.StableId,
+                item.Position,
+                item.Rotation,
+                item.Scale * scaleMul,
+                item.Color,
+                item.MeshAssetId,
+                PrefabVfxSpawnMode.Loop);
+            return true;
+        }
+
+        private void SubmitFinalizedVisual(in PrefabFinalizedVisual visual, Camera3D camera, MeshAssetRegistry meshes, double timeSeconds)
         {
             TrackVisualKind(visual.Kind);
 
@@ -367,7 +475,7 @@ namespace Ludots.Client.Raylib.Rendering
                     DrawDecalVisual(in visual);
                     break;
                 case PrefabVisualPartKind.Vfx:
-                    DrawVfxVisual(in visual);
+                    DrawVfxVisual(in visual, meshes, timeSeconds);
                     break;
                 case PrefabVisualPartKind.Surface:
                     DrawSurfaceVisual(in visual, camera);
@@ -431,7 +539,7 @@ namespace Ludots.Client.Raylib.Rendering
             }
         }
 
-        private void DrawSkinnedBatch(SkinnedVisualBatchBuffer skinnedBatch, Camera3D camera, MeshAssetRegistry meshes, float scaleMul, in PrefabFinalizationContext finalizationContext)
+        private void DrawSkinnedBatch(SkinnedVisualBatchBuffer skinnedBatch, Camera3D camera, MeshAssetRegistry meshes, float scaleMul, double timeSeconds, in PrefabFinalizationContext finalizationContext)
         {
             var span = skinnedBatch.GetSpan();
             PrepareGpuSkinnedInstanceBatches();
@@ -461,6 +569,8 @@ namespace Ludots.Client.Raylib.Rendering
                     item.Color,
                     camera,
                     meshes,
+                    item.StableId,
+                    timeSeconds,
                     in finalizationContext);
             }
 
@@ -599,13 +709,13 @@ namespace Ludots.Client.Raylib.Rendering
             };
         }
 
-        private void DrawAssetRecursive(int meshAssetId, Vector3 position, Quaternion rotation, Vector3 scale, Vector4 color, Camera3D camera, MeshAssetRegistry meshes, in PrefabFinalizationContext finalizationContext)
+        private void DrawAssetRecursive(int meshAssetId, Vector3 position, Quaternion rotation, Vector3 scale, Vector4 color, Camera3D camera, MeshAssetRegistry meshes, int stableId, double timeSeconds, in PrefabFinalizationContext finalizationContext)
         {
             _prefabVisuals.Clear();
             PrefabFinalizationPipeline.FinalizeVisuals(
                 meshes,
                 meshAssetId,
-                stableId: 0,
+                stableId,
                 position,
                 rotation,
                 scale,
@@ -615,11 +725,11 @@ namespace Ludots.Client.Raylib.Rendering
 
             foreach (ref readonly var visual in _prefabVisuals.GetSpan())
             {
-                DrawFinalizedVisual(in visual, camera);
+                DrawFinalizedVisual(in visual, camera, meshes, timeSeconds);
             }
         }
 
-        private void DrawFinalizedVisual(in PrefabFinalizedVisual visual, Camera3D camera)
+        private void DrawFinalizedVisual(in PrefabFinalizedVisual visual, Camera3D camera, MeshAssetRegistry meshes, double timeSeconds)
         {
             TrackVisualKind(visual.Kind);
 
@@ -635,7 +745,7 @@ namespace Ludots.Client.Raylib.Rendering
                     DrawDecalVisual(in visual);
                     break;
                 case PrefabVisualPartKind.Vfx:
-                    DrawVfxVisual(in visual);
+                    DrawVfxVisual(in visual, meshes, timeSeconds);
                     break;
                 case PrefabVisualPartKind.Surface:
                     DrawSurfaceVisual(in visual, camera);
@@ -752,27 +862,9 @@ namespace Ludots.Client.Raylib.Rendering
             Rl.DrawLine3D(center, markerTop, edge);
         }
 
-        private void DrawVfxVisual(in PrefabFinalizedVisual visual)
+        private void DrawVfxVisual(in PrefabFinalizedVisual visual, MeshAssetRegistry meshes, double timeSeconds)
         {
-            Quaternion rotation = WorldPlane2D.NormalizeOrIdentity(visual.Rotation);
-            float baseExtent = MathF.Max(0.12f, MathF.Max(MathF.Abs(visual.Scale.X), MathF.Max(MathF.Abs(visual.Scale.Y), MathF.Abs(visual.Scale.Z))) * 0.45f);
-            float radius = visual.VfxSpawnMode == PrefabVfxSpawnMode.Loop
-                ? baseExtent * 1.15f
-                : baseExtent * 0.9f;
-            Vector4 pulseColor = BlendSemanticColor(visual.Color, visual.EffectAssetId, 0.6f);
-            Vector4 shellColor = LerpColor(pulseColor, new Vector4(1f, 1f, 1f, pulseColor.W), 0.35f);
-
-            DrawPrototypeSphere(visual.Position, radius * 0.28f, pulseColor);
-            DrawRotatedRing(visual.Position, rotation, radius, 12, MultiplyColor(shellColor, 1f, 1f, 1f, 0.72f));
-            DrawRotatedRing(visual.Position, rotation * Quaternion.CreateFromAxisAngle(Vector3.UnitX, MathF.PI * 0.5f), radius * 0.82f, 10, MultiplyColor(shellColor, 0.92f, 1f, 1.1f, 0.64f));
-
-            Vector3 right = Vector3.Normalize(Vector3.Transform(Vector3.UnitX, rotation));
-            Vector3 up = Vector3.Normalize(Vector3.Transform(Vector3.UnitY, rotation));
-            Vector3 forward = Vector3.Normalize(Vector3.Transform(-Vector3.UnitZ, rotation));
-            Color beamColor = ToRaylibColor(MultiplyColor(pulseColor, 1.1f, 1.08f, 1.18f, 0.88f));
-            Rl.DrawLine3D(visual.Position - (right * radius), visual.Position + (right * radius), beamColor);
-            Rl.DrawLine3D(visual.Position - (up * radius * 0.8f), visual.Position + (up * radius * 0.8f), beamColor);
-            Rl.DrawLine3D(visual.Position - (forward * radius * 0.9f), visual.Position + (forward * radius * 0.9f), beamColor);
+            _vfxRenderer.Draw(in visual, meshes, timeSeconds);
         }
 
         private void DrawSurfaceVisual(in PrefabFinalizedVisual visual, Camera3D camera)
@@ -1664,6 +1756,12 @@ namespace Ludots.Client.Raylib.Rendering
             for (int i = 0; i < span.Length; i++)
             {
                 ref readonly var item = ref span[i];
+                if (item.AssetKind == AssetKind.VFX)
+                {
+                    throw new InvalidOperationException(
+                        $"{nameof(DrawInstanced)} cannot draw VFX primitives because it has no frame time. Use {nameof(Draw)} with timeSeconds.");
+                }
+
                 if (!meshes.TryGetPrimitiveKind(item.MeshAssetId, out var kind)) continue;
 
                 SubmitPrimitive(kind, item.Position, item.Rotation, item.Scale, item.Color);
@@ -1686,7 +1784,7 @@ namespace Ludots.Client.Raylib.Rendering
             LastInstancedMatrixCacheMisses = 0;
         }
 
-        public void DrawInstancedBucket(RaylibIsmRenderBridge.Bucket bucket, MeshAssetRegistry meshes, float scaleMul = 1f)
+        public void DrawInstancedBucket(RaylibIsmRenderBridge.Bucket bucket, MeshAssetRegistry meshes, float scaleMul = 1f, double timeSeconds = 0d)
         {
             if (bucket == null) throw new ArgumentNullException(nameof(bucket));
             if (meshes == null) throw new ArgumentNullException(nameof(meshes));
@@ -1707,6 +1805,11 @@ namespace Ludots.Client.Raylib.Rendering
             for (int i = 0; i < items.Count; i++)
             {
                 PrimitiveDrawItem item = items[i];
+                if (TryDrawDirectVfx(in item, default, meshes, scaleMul, timeSeconds))
+                {
+                    continue;
+                }
+
                 if (!meshes.TryGetDescriptor(item.MeshAssetId, out MeshAssetDescriptor descriptor))
                 {
                     continue;
@@ -1728,6 +1831,8 @@ namespace Ludots.Client.Raylib.Rendering
                             item.Color,
                             default,
                             meshes,
+                            item.StableId,
+                            timeSeconds,
                             new PrefabFinalizationContext(null));
                         break;
                 }
@@ -1738,6 +1843,14 @@ namespace Ludots.Client.Raylib.Rendering
 
         private bool TryDrawModelInstancedBucket(RaylibIsmRenderBridge.Bucket bucket, List<PrimitiveDrawItem> items, MeshAssetRegistry meshes, float scaleMul)
         {
+            for (int i = 0; i < items.Count; i++)
+            {
+                if (items[i].AssetKind != AssetKind.Mesh)
+                {
+                    return false;
+                }
+            }
+
             PrimitiveDrawItem first = items[0];
             if (!meshes.TryGetDescriptor(first.MeshAssetId, out MeshAssetDescriptor descriptor) ||
                 descriptor.Type != MeshAssetType.Model)

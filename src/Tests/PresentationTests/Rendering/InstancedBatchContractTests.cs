@@ -1415,7 +1415,7 @@ namespace Ludots.Tests.Presentation
             registry = new InstancedBatchAssetRegistry();
 
             meshes.Register("mesh.unit", MeshAssetDescriptor.Model(0));
-            meshes.Register("effect.batch.spark", MeshAssetDescriptor.Billboard(0));
+            meshes.Register("effect.batch.spark", CreateEffectDescriptor());
 
             materials.Register("material.unit", MaterialAssetDomain.Surface, Array.Empty<string>(), MaterialAssetFlags.None);
             return new InstancedBatchAssetConfigLoader(
@@ -1433,6 +1433,22 @@ namespace Ludots.Tests.Presentation
             return eventKind == PresentationEventKind.EffectApplied
                 ? EffectTemplateIdRegistry.GetId(key)
                 : AbilityIdRegistry.GetId(key);
+        }
+
+        private static MeshAssetDescriptor CreateEffectDescriptor()
+        {
+            MeshAssetDescriptor descriptor = MeshAssetDescriptor.Primitive(0, PrimitiveMeshKind.Sphere);
+            descriptor.VfxEffectData = new VfxEffectAssetData(new VfxEmitterDescriptor(
+                VfxEmitterShape.PrimitiveSphere,
+                particleCount: 24,
+                ringSegments: 20,
+                radiusScale: 1.15f,
+                coreRadiusScale: 0.28f,
+                particleRadiusScale: 0.085f,
+                lifetimeSeconds: 0.75f,
+                pulseSpeedRadPerSecond: 5.2f,
+                orbitSpeedRadPerSecond: 1.7f));
+            return descriptor;
         }
 
         private static int ResolvePresentationEventKey(PresentationEventKind eventKind, string key)

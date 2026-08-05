@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Numerics;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
@@ -103,23 +104,30 @@ namespace Ludots.Core.Presentation.Config
 
         private MeshAssetDescriptor ParseDescriptor(JsonNode node, string key)
         {
-            string typeStr = node["type"]?.GetValue<string>();
-            if (!Enum.TryParse<MeshAssetType>(typeStr, ignoreCase: false, out var type))
+            MeshAssetType type = ReadRequiredEnum<MeshAssetType>(
+                node["type"],
+                $"Presentation/mesh_assets.json asset '{key}' type");
+            if (type == MeshAssetType.None)
             {
-                throw new InvalidOperationException($"Presentation/mesh_assets.json asset '{key}' has invalid or missing type '{typeStr}'.");
+                throw new InvalidOperationException($"Presentation/mesh_assets.json asset '{key}' type must not be None.");
             }
 
             switch (type)
             {
                 case MeshAssetType.Primitive:
                 {
-                    string kindStr = node["primitiveKind"]?.GetValue<string>();
-                    if (!Enum.TryParse<PrimitiveMeshKind>(kindStr, ignoreCase: false, out var kind))
+                    PrimitiveMeshKind kind = ReadRequiredEnum<PrimitiveMeshKind>(
+                        node["primitiveKind"],
+                        $"Presentation/mesh_assets.json primitive asset '{key}' primitiveKind");
+                    if (kind == PrimitiveMeshKind.None)
                     {
-                        throw new InvalidOperationException($"Presentation/mesh_assets.json primitive asset '{key}' has invalid or missing primitiveKind '{kindStr}'.");
+                        throw new InvalidOperationException(
+                            $"Presentation/mesh_assets.json primitive asset '{key}' primitiveKind must not be None.");
                     }
 
-                    return MeshAssetDescriptor.Primitive(0, kind);
+                    var descriptor = MeshAssetDescriptor.Primitive(0, kind);
+                    descriptor.VfxEffectData = ParseVfxEffectData(node["vfx"], key);
+                    return descriptor;
                 }
                 case MeshAssetType.Model:
                 case MeshAssetType.Billboard:
@@ -130,14 +138,18 @@ namespace Ludots.Core.Presentation.Config
                             $"Presentation/mesh_assets.json asset '{key}' declares sourceUris. Platform paths belong in Presentation/host_assets.json.");
                     }
 
-                    return type == MeshAssetType.Billboard
+                    var descriptor = type == MeshAssetType.Billboard
                         ? MeshAssetDescriptor.Billboard(0, Array.Empty<string>())
                         : MeshAssetDescriptor.Model(0, Array.Empty<string>());
+                    descriptor.VfxEffectData = ParseVfxEffectData(node["vfx"], key);
+                    return descriptor;
                 }
                 case MeshAssetType.Prefab:
                 {
                     var parts = ParseParts(node["parts"]);
-                    return MeshAssetDescriptor.Prefab(0, parts);
+                    var descriptor = MeshAssetDescriptor.Prefab(0, parts);
+                    descriptor.VfxEffectData = ParseVfxEffectData(node["vfx"], key);
+                    return descriptor;
                 }
                 default:
                     throw new InvalidOperationException($"Presentation/mesh_assets.json asset '{key}' uses unsupported mesh asset type '{type}'.");
@@ -159,10 +171,9 @@ namespace Ludots.Core.Presentation.Config
                     throw new InvalidOperationException($"Prefab part at index {j} must declare an explicit kind.");
                 }
 
-                if (!Enum.TryParse(kindText, ignoreCase: false, out PrefabVisualPartKind kind))
-                {
-                    throw new InvalidOperationException($"Prefab part has invalid kind '{kindText}'.");
-                }
+                PrefabVisualPartKind kind = ParseRequiredEnumText<PrefabVisualPartKind>(
+                    kindText,
+                    $"Prefab part at index {j} kind");
 
                 string meshRef = p?["meshAssetId"]?.GetValue<string>();
                 int meshId = 0;
@@ -175,7 +186,7 @@ namespace Ludots.Core.Presentation.Config
                         p?["materialId"]?.GetValue<int>() ?? 0,
                         ParseVector2WithDefault(p?["size"], Vector2.One)),
                     PrefabVisualPartKind.Vfx => PrefabPart.Vfx(
-                        p?["effectAssetId"]?.GetValue<int>() ?? 0,
+                        ResolveEffectAssetId(p?["effectAssetId"], $"Prefab part at index {j}"),
                         ParseSpawnMode(p?["spawnMode"]?.GetValue<string>())),
                     PrefabVisualPartKind.Surface => PrefabPart.Surface(
                         meshId,
@@ -191,7 +202,6 @@ namespace Ludots.Core.Presentation.Config
                 part.ColorTint = ParseVector4WithDefault(p?["colorTint"], Vector4.One);
                 part.Grounding = ParseGrounding(p?["grounding"]);
                 part.MaterialId = p?["materialId"]?.GetValue<int>() ?? part.MaterialId;
-                part.EffectAssetId = p?["effectAssetId"]?.GetValue<int>() ?? part.EffectAssetId;
                 part.Size = ParseVector2WithDefault(p?["size"], part.Size == Vector2.Zero ? Vector2.One : part.Size);
                 part.Tiling = ParseVector2WithDefault(p?["tiling"], part.Tiling == Vector2.Zero ? Vector2.One : part.Tiling);
                 part.AlignToSurface = p?["alignToSurface"]?.GetValue<bool>() ?? part.AlignToSurface;
@@ -202,17 +212,89 @@ namespace Ludots.Core.Presentation.Config
             return parts;
         }
 
+        private int ResolveEffectAssetId(JsonNode? node, string partLabel)
+        {
+            string effectKey = ReadRequiredString(node, $"{partLabel} effectAssetId");
+            int effectAssetId = _meshRegistry.GetId(effectKey);
+            if (effectAssetId <= 0 || !_meshRegistry.TryGetDescriptor(effectAssetId, out MeshAssetDescriptor descriptor))
+            {
+                throw new InvalidOperationException(
+                    $"{partLabel} references unknown VFX effect asset '{effectKey}'.");
+            }
+
+            if (!descriptor.VfxEffectData.IsValid)
+            {
+                throw new InvalidOperationException(
+                    $"{partLabel} references VFX effect asset '{effectKey}' without vfx emitter data.");
+            }
+
+            return effectAssetId;
+        }
+
+        private static VfxEffectAssetData ParseVfxEffectData(JsonNode? node, string key)
+        {
+            if (node == null)
+            {
+                return default;
+            }
+
+            if (node is not JsonObject obj)
+            {
+                throw new InvalidOperationException(
+                    $"Presentation/mesh_assets.json asset '{key}' vfx must be an object.");
+            }
+
+            ValidateObjectFields(
+                obj,
+                $"Presentation/mesh_assets.json asset '{key}' vfx",
+                "emitter");
+
+            if (obj["emitter"] is not JsonObject emitter)
+            {
+                throw new InvalidOperationException(
+                    $"Presentation/mesh_assets.json asset '{key}' vfx.emitter must be an object.");
+            }
+
+            ValidateObjectFields(
+                emitter,
+                $"Presentation/mesh_assets.json asset '{key}' vfx.emitter",
+                "shape",
+                "particleCount",
+                "ringSegments",
+                "radiusScale",
+                "coreRadiusScale",
+                "particleRadiusScale",
+                "lifetimeSeconds",
+                "pulseSpeedRadPerSecond",
+                "orbitSpeedRadPerSecond");
+
+            string shapeLabel = $"Presentation/mesh_assets.json asset '{key}' vfx.emitter.shape";
+            VfxEmitterShape shape = ReadRequiredEnum<VfxEmitterShape>(emitter["shape"], shapeLabel);
+            if (shape == VfxEmitterShape.None)
+            {
+                throw new InvalidOperationException($"{shapeLabel} must not be None.");
+            }
+
+            return new VfxEffectAssetData(new VfxEmitterDescriptor(
+                shape,
+                ReadRequiredPositiveInt(emitter["particleCount"], $"Presentation/mesh_assets.json asset '{key}' vfx.emitter.particleCount"),
+                ReadRequiredMinInt(emitter["ringSegments"], 3, $"Presentation/mesh_assets.json asset '{key}' vfx.emitter.ringSegments"),
+                ReadRequiredPositiveFloat(emitter["radiusScale"], $"Presentation/mesh_assets.json asset '{key}' vfx.emitter.radiusScale"),
+                ReadRequiredPositiveFloat(emitter["coreRadiusScale"], $"Presentation/mesh_assets.json asset '{key}' vfx.emitter.coreRadiusScale"),
+                ReadRequiredPositiveFloat(emitter["particleRadiusScale"], $"Presentation/mesh_assets.json asset '{key}' vfx.emitter.particleRadiusScale"),
+                ReadRequiredPositiveFloat(emitter["lifetimeSeconds"], $"Presentation/mesh_assets.json asset '{key}' vfx.emitter.lifetimeSeconds"),
+                ReadRequiredNonNegativeFloat(emitter["pulseSpeedRadPerSecond"], $"Presentation/mesh_assets.json asset '{key}' vfx.emitter.pulseSpeedRadPerSecond"),
+                ReadRequiredNonNegativeFloat(emitter["orbitSpeedRadPerSecond"], $"Presentation/mesh_assets.json asset '{key}' vfx.emitter.orbitSpeedRadPerSecond")));
+        }
+
         private static PrefabVfxSpawnMode ParseSpawnMode(string? spawnModeText)
         {
             string resolved = string.IsNullOrWhiteSpace(spawnModeText)
                 ? nameof(PrefabVfxSpawnMode.Once)
                 : spawnModeText;
-            if (!Enum.TryParse(resolved, ignoreCase: false, out PrefabVfxSpawnMode spawnMode))
-            {
-                throw new InvalidOperationException($"Prefab part VFX spawnMode has invalid value '{resolved}'.");
-            }
-
-            return spawnMode;
+            return ParseRequiredEnumText<PrefabVfxSpawnMode>(
+                resolved,
+                "Prefab part VFX spawnMode");
         }
 
         private static PrefabPartGrounding ParseGrounding(JsonNode node)
@@ -228,10 +310,9 @@ namespace Ludots.Core.Presentation.Config
             }
 
             string modeText = obj["mode"]?.GetValue<string>() ?? nameof(PrefabPartGroundingMode.None);
-            if (!Enum.TryParse(modeText, ignoreCase: false, out PrefabPartGroundingMode mode))
-            {
-                throw new InvalidOperationException($"Prefab part grounding has invalid mode '{modeText}'.");
-            }
+            PrefabPartGroundingMode mode = ParseRequiredEnumText<PrefabPartGroundingMode>(
+                modeText,
+                "Prefab part grounding mode");
 
             int layerIndex = obj["layerIndex"]?.GetValue<int>() ?? 0;
             if (layerIndex < 0)
@@ -244,6 +325,122 @@ namespace Ludots.Core.Presentation.Config
                 obj["verticalOffsetMeters"]?.GetValue<float>() ?? 0f,
                 obj["alignToGroundNormal"]?.GetValue<bool>() ?? false,
                 layerIndex);
+        }
+
+        private static string ReadRequiredString(JsonNode? node, string label)
+        {
+            if (node is not JsonValue valueNode || !valueNode.TryGetValue(out string? value))
+            {
+                throw new InvalidOperationException($"{label} must be a non-empty asset key.");
+            }
+
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                throw new InvalidOperationException($"{label} must be a non-empty asset key.");
+            }
+
+            if (!string.Equals(value, value.Trim(), StringComparison.Ordinal))
+            {
+                throw new InvalidOperationException($"{label} must not include leading or trailing whitespace.");
+            }
+
+            return value;
+        }
+
+        private static T ReadRequiredEnum<T>(JsonNode? node, string label)
+            where T : struct, Enum
+        {
+            string value = ReadRequiredString(node, label);
+            return ParseRequiredEnumText<T>(value, label);
+        }
+
+        private static T ParseRequiredEnumText<T>(string value, string label)
+            where T : struct, Enum
+        {
+            if (int.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out _))
+            {
+                throw new InvalidOperationException($"{label} has invalid value '{value}'. Use the enum name, not a numeric string.");
+            }
+
+            if (!Enum.TryParse(value, ignoreCase: false, out T parsed) ||
+                !Enum.IsDefined(typeof(T), parsed))
+            {
+                throw new InvalidOperationException($"{label} has invalid value '{value}'.");
+            }
+
+            return parsed;
+        }
+
+        private static int ReadRequiredPositiveInt(JsonNode? node, string label)
+        {
+            return ReadRequiredMinInt(node, 1, label);
+        }
+
+        private static int ReadRequiredMinInt(JsonNode? node, int min, string label)
+        {
+            if (node is not JsonValue valueNode || !valueNode.TryGetValue(out int value))
+            {
+                throw new InvalidOperationException($"{label} must be an integer greater than or equal to {min}.");
+            }
+
+            if (value < min)
+            {
+                throw new InvalidOperationException($"{label} must be greater than or equal to {min}.");
+            }
+
+            return value;
+        }
+
+        private static float ReadRequiredPositiveFloat(JsonNode? node, string label)
+        {
+            if (node is not JsonValue valueNode || !valueNode.TryGetValue(out float value))
+            {
+                throw new InvalidOperationException($"{label} must be a finite number greater than 0.");
+            }
+
+            if (!float.IsFinite(value) || value <= 0f)
+            {
+                throw new InvalidOperationException($"{label} must be a finite number greater than 0.");
+            }
+
+            return value;
+        }
+
+        private static float ReadRequiredNonNegativeFloat(JsonNode? node, string label)
+        {
+            if (node is not JsonValue valueNode || !valueNode.TryGetValue(out float value))
+            {
+                throw new InvalidOperationException($"{label} must be a finite number greater than or equal to 0.");
+            }
+
+            if (!float.IsFinite(value) || value < 0f)
+            {
+                throw new InvalidOperationException($"{label} must be a finite number greater than or equal to 0.");
+            }
+
+            return value;
+        }
+
+        private static void ValidateObjectFields(JsonObject obj, string context, params string[] allowedFields)
+        {
+            foreach (var property in obj)
+            {
+                bool allowed = false;
+                for (int i = 0; i < allowedFields.Length; i++)
+                {
+                    if (string.Equals(property.Key, allowedFields[i], StringComparison.Ordinal))
+                    {
+                        allowed = true;
+                        break;
+                    }
+                }
+
+                if (!allowed)
+                {
+                    throw new InvalidOperationException(
+                        $"{context} uses unsupported field '{property.Key}'.");
+                }
+            }
         }
 
         private static Vector3 ParseVector3(JsonNode node)

@@ -52,14 +52,5 @@
     "sourceUris": [
       "PerformerBlacksmithShowcaseMod:assets/Models/Knight.glb"
     ]
-  },
-  {
-    "id": "blacksmith.smoke.billboard.raylib",
-    "assetKind": "Mesh",
-    "assetId": "blacksmith.smoke.billboard",
-    "backendId": "raylib",
-    "sourceUris": [
-      "PerformerBlacksmithShowcaseMod:assets/Textures/smoke_puff.png"
-    ]
   }
 ]

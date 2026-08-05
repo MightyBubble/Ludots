@@ -52,14 +52,5 @@
     "sourceUris": [
       "CapabilityStandardStaticPerformer30kMod:assets/Models/Knight.glb"
     ]
-  },
-  {
-    "id": "capability_static_performer.smoke.billboard.raylib",
-    "assetKind": "Mesh",
-    "assetId": "capability_static_performer.smoke.billboard",
-    "backendId": "raylib",
-    "sourceUris": [
-      "CapabilityStandardStaticPerformer30kMod:assets/Textures/smoke_puff.png"
-    ]
   }
 ]

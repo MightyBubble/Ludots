@@ -25,7 +25,21 @@
   },
   {
     "id": "blacksmith.smoke.billboard",
-    "type": "Billboard"
+    "type": "Primitive",
+    "primitiveKind": "Sphere",
+    "vfx": {
+      "emitter": {
+        "shape": "PrimitiveSphere",
+        "particleCount": 32,
+        "ringSegments": 24,
+        "radiusScale": 1.4,
+        "coreRadiusScale": 0.22,
+        "particleRadiusScale": 0.075,
+        "lifetimeSeconds": 1.2,
+        "pulseSpeedRadPerSecond": 2.6,
+        "orbitSpeedRadPerSecond": 0.65
+      }
+    }
   },
   {
     "id": "blacksmith.worker.patrol",

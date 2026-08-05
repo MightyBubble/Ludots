@@ -1204,7 +1204,7 @@ namespace Ludots.Core.Engine
                     AssetKind.Mesh => meshAssets.GetId(key),
                     AssetKind.SkinnedMesh => meshAssets.GetId(key),
                     AssetKind.Decal => meshAssets.GetId(key),
-                    AssetKind.VFX => meshAssets.GetId(key),
+                    AssetKind.VFX => ResolveVfxEffectAssetId(key),
                     AssetKind.Spline => meshAssets.GetId(key),
                     AssetKind.Surface => meshAssets.GetId(key),
                     AssetKind.Sound => meshAssets.GetId(key),
@@ -1214,6 +1214,25 @@ namespace Ludots.Core.Engine
                 },
                 instancedBatchAssets.GetId,
                 entityCollectionKeyRegistry.Register).Load(ConfigCatalog, ConfigConflictReport);
+
+            int ResolveVfxEffectAssetId(string key)
+            {
+                int assetId = meshAssets.GetId(key);
+                if (assetId <= 0)
+                {
+                    return 0;
+                }
+
+                if (!meshAssets.TryGetDescriptor(assetId, out MeshAssetDescriptor descriptor) ||
+                    !descriptor.VfxEffectData.IsValid)
+                {
+                    throw new InvalidOperationException(
+                        $"Performer behavior VFX asset '{key}' must declare vfx emitter data.");
+                }
+
+                return assetId;
+            }
+
             performerDefinitions.RebuildCompiledViews();
             MapLoader.SetPresentationRuntime(
                 presentationStableIds,
