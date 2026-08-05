@@ -278,6 +278,10 @@
       "farSlotBlend": 0.38,
       "nearSlotBlendDistanceSq": 4000000
     },
+    "route": {
+      "waypointAdvanceStopThresholdScale": 2,
+      "waypointAdvanceBodyRadiusScale": 1.5
+    },
     "steering": {
       "separationRadiusCm": 200,
       "goalArrivalRadiusCm": 1200,

@@ -60,5 +60,11 @@
   "flow": {
     "iterationsPerStep": 16,
     "maxIterationsPerStep": 1024
+  },
+  "semantics": {
+    "route": {
+      "waypointAdvanceStopThresholdScale": 2,
+      "waypointAdvanceBodyRadiusScale": 1.5
+    }
   }
 }

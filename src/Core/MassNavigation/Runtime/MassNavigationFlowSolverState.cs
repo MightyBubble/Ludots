@@ -432,7 +432,7 @@ public sealed partial class MassNavigationFlowSolverState
             _teams[unitIndex] = seed.TeamId;
             _teamRuntimeIndices[unitIndex] = teamStateIndex;
             _teamLocalIndices[unitIndex] = localIndex;
-            _flowRuntimeIndices[unitIndex] = ResolveFlowStateIndex(teamStateIndex, seed.Layer);
+            _flowRuntimeIndices[unitIndex] = ResolveFlowStateIndex(teamStateIndex, seed.Layer, allowCreate: true);
             _layerCategoryMasks[unitIndex] = seed.Layer.CategoryMask;
             _layerInteractionMasks[unitIndex] = seed.Layer.InteractionMask;
             _navMasses[unitIndex] = seed.NavMass;
@@ -466,27 +466,6 @@ public sealed partial class MassNavigationFlowSolverState
         }
 
         _maxInteractingBodyRadiiDirty = true;
-        MarkFlowDirty();
-    }
-
-    public void SetTeamTarget(int teamId, Vector2 targetCm)
-    {
-        if (!TryGetTeamState(teamId, out TeamRuntimeState team))
-        {
-            return;
-        }
-
-        float hintX = targetCm.X - team.TargetX;
-        float hintY = targetCm.Y - team.TargetY;
-        Vector2 resolved = ResolveNavigableTarget(
-            targetCm.X,
-            targetCm.Y,
-            hintX,
-            hintY,
-            Semantics.TargetProjection.TeamTargetClearanceCm);
-        team.TargetX = resolved.X;
-        team.TargetY = resolved.Y;
-        ResetTeamArrivalState(teamId);
         MarkFlowDirty();
     }
 
@@ -550,7 +529,7 @@ public sealed partial class MassNavigationFlowSolverState
         _maxInteractingBodyRadiiDirty = true;
         if ((uint)_teamRuntimeIndices[index] < (uint)_teamStates.Count)
         {
-            _flowRuntimeIndices[index] = ResolveFlowStateIndex(_teamRuntimeIndices[index], layer);
+            _flowRuntimeIndices[index] = ResolveFlowStateIndex(_teamRuntimeIndices[index], layer, allowCreate: false);
             if (teamOrLayerChanged || MathF.Abs(previousBodyRadiusCm - bodyRadiusCm) > float.Epsilon)
             {
                 MarkFlowDirty();
@@ -942,7 +921,7 @@ public sealed partial class MassNavigationFlowSolverState
                 float ny;
                 if (d2 > Semantics.Solver.DirectionEpsilonSq)
                 {
-                    float invD = FastInvSqrt(d2);
+                    float invD = SafeInverseSqrt(d2);
                     nx = dx * invD;
                     ny = dy * invD;
                 }
@@ -951,7 +930,7 @@ public sealed partial class MassNavigationFlowSolverState
                     float hintLenSq = hintX * hintX + hintY * hintY;
                     if (hintLenSq > Semantics.Solver.DirectionEpsilonSq)
                     {
-                        float invHint = FastInvSqrt(hintLenSq);
+                        float invHint = SafeInverseSqrt(hintLenSq);
                         nx = hintX * invHint;
                         ny = hintY * invHint;
                     }
@@ -1317,7 +1296,7 @@ public sealed partial class MassNavigationFlowSolverState
         for (int teamStateIndex = 0; teamStateIndex < _teamStates.Count; teamStateIndex++)
         {
             TeamRuntimeState team = _teamStates[teamStateIndex];
-            int flowStateIndex = ResolveFlowStateIndex(teamStateIndex, layer);
+            int flowStateIndex = ResolveFlowStateIndex(teamStateIndex, layer, allowCreate: true);
             int cols = Math.Max(1, (int)Math.Ceiling(Math.Sqrt(team.UnitCount)));
             int rows = Math.Max(1, (int)Math.Ceiling(team.UnitCount / (double)cols));
             float colCenter = (cols - 1) * 0.5f;
@@ -1541,7 +1520,7 @@ public sealed partial class MassNavigationFlowSolverState
             _teams[unitIndex] = seed.TeamId;
             _teamRuntimeIndices[unitIndex] = teamStateIndex;
             _teamLocalIndices[unitIndex] = teamLocalWriteCursor[teamStateIndex]++;
-            _flowRuntimeIndices[unitIndex] = ResolveFlowStateIndex(teamStateIndex, seed.Layer);
+            _flowRuntimeIndices[unitIndex] = ResolveFlowStateIndex(teamStateIndex, seed.Layer, allowCreate: true);
             _layerCategoryMasks[unitIndex] = seed.Layer.CategoryMask;
             _layerInteractionMasks[unitIndex] = seed.Layer.InteractionMask;
             _navMasses[unitIndex] = seed.NavMass;
@@ -1607,7 +1586,7 @@ public sealed partial class MassNavigationFlowSolverState
                     continue;
                 }
 
-                float invDist = FastInvSqrt(distSq);
+                float invDist = SafeInverseSqrt(distSq);
                 dx *= invDist;
                 dy *= invDist;
 
@@ -1637,7 +1616,7 @@ public sealed partial class MassNavigationFlowSolverState
                             float obstacleDistSq = (ovx * ovx) + (ovy * ovy);
                             if (obstacleDistSq > Semantics.Solver.NormalizationEpsilonSq)
                             {
-                                float invObstacleDist = FastInvSqrt(obstacleDistSq);
+                                float invObstacleDist = SafeInverseSqrt(obstacleDistSq);
                                 float obstacleDist = obstacleDistSq * invObstacleDist;
                                 float obstacleWeight = Semantics.Solver.FlowObstacleNeighborWeight / (obstacleDist * obstacleDist);
                                 avoidX += (ovx * invObstacleDist) * obstacleWeight;
@@ -1657,7 +1636,7 @@ public sealed partial class MassNavigationFlowSolverState
                 }
                 else
                 {
-                    float invFlow = FastInvSqrt(flowLengthSq);
+                    float invFlow = SafeInverseSqrt(flowLengthSq);
                     flow[flowIndex] = flowX * invFlow;
                     flow[flowIndex + 1] = flowY * invFlow;
                 }
@@ -1807,7 +1786,7 @@ public sealed partial class MassNavigationFlowSolverState
 
                     if (!suppressTargetMotion && targetDistSq > targetStopThresholdSq)
                     {
-                        float invDist = FastInvSqrt(targetDistSq);
+                        float invDist = SafeInverseSqrt(targetDistSq);
                         desiredX = toTargetX * invDist;
                         desiredY = toTargetY * invDist;
 
@@ -1840,7 +1819,7 @@ public sealed partial class MassNavigationFlowSolverState
                                 if (_staticCost[rowOffset + nx] > Semantics.Solver.FlowBlockedCellThreshold)
                                 {
                                     float obstacleDistanceSq = ox * ox + oy * oy;
-                                    float invObstacleDistance = FastInvSqrt(obstacleDistanceSq);
+                                    float invObstacleDistance = SafeInverseSqrt(obstacleDistanceSq);
                                     float invObstacleDistanceSq = invObstacleDistance * invObstacleDistance;
                                     avoidX += (-ox * invObstacleDistance) * (Semantics.Solver.FlowObstacleNeighborWeight * invObstacleDistanceSq);
                                     avoidY += (-oy * invObstacleDistance) * (Semantics.Solver.FlowObstacleNeighborWeight * invObstacleDistanceSq);
@@ -1853,7 +1832,7 @@ public sealed partial class MassNavigationFlowSolverState
                         float flowLengthSq = desiredX * desiredX + desiredY * desiredY;
                         if (flowLengthSq > Semantics.Solver.NormalizationEpsilonSq)
                         {
-                            float invFlow = FastInvSqrt(flowLengthSq);
+                            float invFlow = SafeInverseSqrt(flowLengthSq);
                             desiredX *= invFlow;
                             desiredY *= invFlow;
                         }
@@ -1926,7 +1905,7 @@ public sealed partial class MassNavigationFlowSolverState
 
                     if (!suppressTargetMotion && slotDistSq > Semantics.Solver.DirectionEpsilonSq)
                     {
-                        float invSlot = FastInvSqrt(slotDistSq);
+                        float invSlot = SafeInverseSqrt(slotDistSq);
                         float slotDirX = toSlotX * invSlot;
                         float slotDirY = toSlotY * invSlot;
                         float slotBlend = slotDistSq < Semantics.Group.NearSlotBlendDistanceSq
@@ -1937,7 +1916,7 @@ public sealed partial class MassNavigationFlowSolverState
                         float desiredLengthSq = desiredX * desiredX + desiredY * desiredY;
                         if (desiredLengthSq > Semantics.Solver.NormalizationEpsilonSq)
                         {
-                            float invDesired = FastInvSqrt(desiredLengthSq);
+                            float invDesired = SafeInverseSqrt(desiredLengthSq);
                             desiredX *= invDesired;
                             desiredY *= invDesired;
                         }
@@ -2026,7 +2005,7 @@ public sealed partial class MassNavigationFlowSolverState
                             float pairSeparationRadius = ResolvePairSeparationRadiusCm(i, j, sepRadiusCm);
                             if (d2 < pairSeparationRadius * pairSeparationRadius && d2 > Semantics.Solver.DirectionEpsilonSq)
                             {
-                                float invD = FastInvSqrt(d2);
+                                float invD = SafeInverseSqrt(d2);
                                 float d = d2 * invD;
                                 float force = 1f - (d / pairSeparationRadius);
                                 float response = ComputeSeparationResponse(teamStateIndex, _teamRuntimeIndices[j], i, j);
@@ -2054,7 +2033,7 @@ public sealed partial class MassNavigationFlowSolverState
                 float pushRadius = _obsRadius[obstacleIndex] + _bodyRadiiCm[i] + Semantics.Obstacle.SoftPushPaddingCm;
                 if (d2 < pushRadius * pushRadius && d2 > Semantics.Solver.DirectionEpsilonSq)
                 {
-                    float invD = FastInvSqrt(d2);
+                    float invD = SafeInverseSqrt(d2);
                     float d = d2 * invD;
                     float pushStrength = (pushRadius - d) / pushRadius;
                     float pushForce = pushStrength * pushStrength * Semantics.Obstacle.SoftPushForceScale;
@@ -2086,7 +2065,7 @@ public sealed partial class MassNavigationFlowSolverState
             float desiredVelocitySq = desiredVelocityX * desiredVelocityX + desiredVelocityY * desiredVelocityY;
             if (desiredVelocitySq > speed * speed)
             {
-                float scale = speed * FastInvSqrt(desiredVelocitySq);
+                float scale = speed * SafeInverseSqrt(desiredVelocitySq);
                 desiredVelocityX *= scale;
                 desiredVelocityY *= scale;
             }
@@ -2599,7 +2578,7 @@ public sealed partial class MassNavigationFlowSolverState
         float overlap;
         if (d2 > Semantics.Solver.DirectionEpsilonSq)
         {
-            float invD = FastInvSqrt(d2);
+            float invD = SafeInverseSqrt(d2);
             float distance = d2 * invD;
             nx = dx * invD;
             ny = dy * invD;
@@ -2670,7 +2649,7 @@ public sealed partial class MassNavigationFlowSolverState
                 float ny;
                 if (d2 > Semantics.Solver.DirectionEpsilonSq)
                 {
-                    float invD = FastInvSqrt(d2);
+                    float invD = SafeInverseSqrt(d2);
                     nx = dx * invD;
                     ny = dy * invD;
                 }
@@ -2696,7 +2675,7 @@ public sealed partial class MassNavigationFlowSolverState
         }
     }
 
-    private int ResolveFlowStateIndex(int teamStateIndex, MassNavigationAgentLayer layer)
+    private int ResolveFlowStateIndex(int teamStateIndex, MassNavigationAgentLayer layer, bool allowCreate)
     {
         for (int i = 0; i < _flowStates.Count; i++)
         {
@@ -2707,6 +2686,15 @@ public sealed partial class MassNavigationFlowSolverState
             {
                 return i;
             }
+        }
+
+        if (!allowCreate)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation flow state for teamStateIndex {teamStateIndex} " +
+                $"layer categoryMask={layer.CategoryMask} interactionMask={layer.InteractionMask} " +
+                "is not registered. FlowRuntimeState combinations must be established on cold paths " +
+                "(Reset/ResetAuthoredAgents/AppendAuthoredAgents); SetUnitRuntimeProfile must not allocate.");
         }
 
         _flowStates.Add(new FlowRuntimeState(teamStateIndex, layer.CategoryMask, layer.InteractionMask, _gridCellCount));
@@ -2769,7 +2757,7 @@ public sealed partial class MassNavigationFlowSolverState
         return false;
     }
 
-    private float FastInvSqrt(float value)
+    private float SafeInverseSqrt(float value)
     {
         return value < Semantics.Solver.InverseSqrtMinValue ? 0f : 1f / MathF.Sqrt(value);
     }

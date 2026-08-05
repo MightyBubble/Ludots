@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
-using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
@@ -291,6 +291,10 @@ public sealed class MassNavigationConfig
             "nearSlotBlend",
             "farSlotBlend",
             "nearSlotBlendDistanceSq");
+        RequireProperties(
+            RequireProperty(semantics, "route"),
+            "waypointAdvanceStopThresholdScale",
+            "waypointAdvanceBodyRadiusScale");
         RequireProperties(
             RequireProperty(semantics, "steering"),
             "separationRadiusCm",
@@ -591,7 +595,7 @@ public sealed class MassNavigationConfigLoader
     public bool TryLoad(
         ConfigCatalog catalog,
         ConfigConflictReport report,
-        out MassNavigationConfig? config,
+        [NotNullWhen(true)] out MassNavigationConfig? config,
         string relativePath = DefaultRelativePath)
     {
         config = null;
