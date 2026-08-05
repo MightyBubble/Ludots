@@ -1,10 +1,9 @@
 {
   "abilities": {
-    "skillQ": { "rangeCm": 600, "cooldownTicks": 180 },
-    "skillW": { "rangeCm": 0, "cooldownTicks": 300 },
-    "skillE": { "rangeCm": 800, "cooldownTicks": 240 },
-    "skillR": { "rangeCm": 1000, "cooldownTicks": 600 },
-    "globalCooldownTicks": 15,
+    "skillQ": { "rangeCm": 600 },
+    "skillW": { "rangeCm": 0 },
+    "skillE": { "rangeCm": 800 },
+    "skillR": { "rangeCm": 1000 },
     "indicator": {
       "validColor": [0.3, 0.8, 1.0, 0.4],
       "invalidColor": [1.0, 0.3, 0.2, 0.3],

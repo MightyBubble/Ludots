@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Config;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Modding;
@@ -80,7 +81,7 @@ namespace Ludots.Tests.GAS
                 var ex = Throws<AggregateException>(() => loader.Load(CreateAbilitiesCatalog(), relativePath: "GAS/abilities.json"));
 
                 That(ex!.Flatten().InnerExceptions[0].Message, Does.Contain("onActivateEffects"));
-                That(ex.Flatten().InnerExceptions[0].Message, Does.Contain("removed"));
+                That(ex.Flatten().InnerExceptions[0].Message, Does.Contain("author effects once"));
                 That(ex.Flatten().InnerExceptions[0].Message, Does.Contain("EffectSignal or EffectClip"));
             }
             finally
@@ -229,30 +230,6 @@ namespace Ludots.Tests.GAS
             That(ex.Message, Does.Contain("required"));
         }
 
-        [TestCase("cooldownValueAttribute", "valueAttribute")]
-        [TestCase("cooldownTag", "tag")]
-        public void CompileAbility_LegacyCooldownField_IsRejected(string legacyField, string canonicalField)
-        {
-            var ex = Throws<InvalidOperationException>(() =>
-                Compile(
-                    $$"""
-                    {
-                      "exec": {
-                        "clockId": "FixedFrame",
-                        "items": [
-                          { "kind": "End", "tick": 0 }
-                        ]
-                      },
-                      "cooldown": {
-                        "{{legacyField}}": "Legacy.Value"
-                      }
-                    }
-                    """));
-
-            That(ex!.Message, Does.Contain(legacyField));
-            That(ex.Message, Does.Contain(canonicalField));
-        }
-
         [Test]
         public void CompileAbility_InputGateMissingPayload_IsRejected()
         {
@@ -343,6 +320,45 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void CompileAbility_CallerParamsTypedEffectTemplate_IsResolved()
+        {
+            EffectParamKeys.Initialize();
+            int payloadTemplateId = EffectTemplateIdRegistry.Register("Effect.Payload.Override");
+
+            var ability = Compile(
+                """
+                {
+                  "exec": {
+                    "clockId": "FixedFrame",
+                    "callerParams": [
+                      {
+                        "entries": [
+                          { "key": "_ep.payloadEffectId", "type": "EffectTemplate", "value": "Effect.Payload.Override" },
+                          { "key": "_ep.durationTicks", "type": "Int", "value": 45 }
+                        ]
+                      }
+                    ],
+                    "items": [
+                      { "kind": "EffectSignal", "tick": 0, "template": "Effect.Payload.Override", "callerParamsIdx": 0 }
+                    ]
+                  }
+                }
+                """);
+
+            That(ability.HasExecCallerParamsPool, Is.True);
+            That(ability.ExecSpec.GetCallerParamsIdx(0), Is.EqualTo(0));
+
+            ref readonly EffectConfigParams callerParams = ref ability.ExecCallerParamsPool.Get(0);
+            That(callerParams.TryGetRawValue(EffectParamKeys.PayloadEffectId, out ConfigParamType payloadType, out int payloadValue), Is.True);
+            That(payloadType, Is.EqualTo(ConfigParamType.EffectTemplateId));
+            That(payloadValue, Is.EqualTo(payloadTemplateId));
+
+            That(callerParams.TryGetRawValue(EffectParamKeys.DurationTicks, out ConfigParamType durationType, out int durationValue), Is.True);
+            That(durationType, Is.EqualTo(ConfigParamType.Int));
+            That(durationValue, Is.EqualTo(45));
+        }
+
+        [Test]
         public void CompileAbility_GraphSignal_IsRejectedAsUnknownExecutionKind()
         {
             var ex = Throws<InvalidOperationException>(() =>
@@ -387,7 +403,7 @@ namespace Ludots.Tests.GAS
                     }
                     """));
 
-            That(ex!.Message, Does.Contain("field 'indicator' is removed"));
+            That(ex!.Message, Does.Contain("field 'indicator': declare gameplay targeting"));
         }
 
         [Test]
@@ -413,7 +429,7 @@ namespace Ludots.Tests.GAS
                     }
                     """));
 
-            That(ex!.Message, Does.Contain("field 'indicator' is removed"));
+            That(ex!.Message, Does.Contain("field 'indicator': declare gameplay targeting"));
         }
 
         [Test]
@@ -438,7 +454,7 @@ namespace Ludots.Tests.GAS
                     }
                     """));
 
-            That(ex!.Message, Does.Contain("field 'indicator' is removed"));
+            That(ex!.Message, Does.Contain("field 'indicator': declare gameplay targeting"));
         }
 
         [Test]
@@ -465,7 +481,7 @@ namespace Ludots.Tests.GAS
                     }
                     """));
 
-            That(ex!.Message, Does.Contain("field 'indicator' is removed"));
+            That(ex!.Message, Does.Contain("field 'indicator': declare gameplay targeting"));
         }
 
         [Test]
@@ -493,7 +509,7 @@ namespace Ludots.Tests.GAS
                     }
                     """));
 
-            That(ex!.Message, Does.Contain("field 'indicator' is removed"));
+            That(ex!.Message, Does.Contain("field 'indicator': declare gameplay targeting"));
         }
 
         [Test]
@@ -520,7 +536,7 @@ namespace Ludots.Tests.GAS
                     }
                     """));
 
-            That(ex!.Message, Does.Contain("field 'indicator' is removed"));
+            That(ex!.Message, Does.Contain("field 'indicator': declare gameplay targeting"));
         }
 
         [Test]
@@ -547,7 +563,7 @@ namespace Ludots.Tests.GAS
                     }
                     """));
 
-            That(ex!.Message, Does.Contain("field 'indicator' is removed"));
+            That(ex!.Message, Does.Contain("field 'indicator': declare gameplay targeting"));
         }
 
         [Test]
@@ -574,7 +590,7 @@ namespace Ludots.Tests.GAS
                     }
                     """));
 
-            That(ex!.Message, Does.Contain("field 'indicator' is removed"));
+            That(ex!.Message, Does.Contain("field 'indicator': declare gameplay targeting"));
         }
 
         [Test]

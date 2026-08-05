@@ -577,7 +577,6 @@ namespace Ludots.Core.Engine
             {
                 validation = new Ludots.Core.Gameplay.AI.Config.AiConfigValidationContext(
                     orderTypes,
-                    GetService(CoreServiceKeys.AbilityDefinitionRegistry),
                     GetService(CoreServiceKeys.GraphProgramRegistry));
             }
 
@@ -1664,10 +1663,10 @@ namespace Ludots.Core.Engine
                     clock,
                     AiRuntime.UtilityRuntime,
                     SpatialQueries,
-                    abilityDefinitions,
                     graphProgramRegistry,
                     gasGraphApi,
-                    orderQueue),
+                    orderQueue,
+                    orderTerminalResults),
                 SystemGroup.PostMovement);
             RegisterPhysics2DSystems(
                 clock,

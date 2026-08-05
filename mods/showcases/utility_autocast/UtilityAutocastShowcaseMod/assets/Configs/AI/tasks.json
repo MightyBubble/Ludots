@@ -3,7 +3,6 @@
     "id": "Task.UtilityAutocast.Attack",
     "Kind": "SubmitOrder",
     "OrderTypeKey": "castAbility",
-    "AbilityKey": "Ability.UtilityAutocast.Attack",
     "AbilitySlotIndex": 0,
     "SubmitMode": 0,
     "PlayerId": 0
@@ -12,7 +11,6 @@
     "id": "Task.UtilityAutocast.HealBurst",
     "Kind": "SubmitOrder",
     "OrderTypeKey": "castAbility",
-    "AbilityKey": "Ability.UtilityAutocast.HealBurst",
     "AbilitySlotIndex": 1,
     "SubmitMode": 0,
     "PlayerId": 0
@@ -21,7 +19,6 @@
     "id": "Task.UtilityAutocast.Curse",
     "Kind": "SubmitOrder",
     "OrderTypeKey": "castAbility",
-    "AbilityKey": "Ability.UtilityAutocast.Curse",
     "AbilitySlotIndex": 2,
     "SubmitMode": 0,
     "PlayerId": 0

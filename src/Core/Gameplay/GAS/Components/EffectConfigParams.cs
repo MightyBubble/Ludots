@@ -68,6 +68,24 @@ namespace Ludots.Core.Gameplay.GAS.Components
             return false;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool TryGetRawValue(int keyId, out ConfigParamType type, out int rawValue)
+        {
+            for (int i = 0; i < Count; i++)
+            {
+                if (Keys[i] == keyId)
+                {
+                    type = (ConfigParamType)Types[i];
+                    rawValue = Values[i];
+                    return true;
+                }
+            }
+
+            type = default;
+            rawValue = 0;
+            return false;
+        }
+
         /// <summary>Add a float parameter. Returns false if capacity exceeded.</summary>
         public bool TryAddFloat(int keyId, float value)
         {

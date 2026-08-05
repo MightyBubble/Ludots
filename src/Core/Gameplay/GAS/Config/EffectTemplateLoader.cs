@@ -938,8 +938,8 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 "Direction" => ProjectileTravelMode.Direction,
                 "TrackTarget" => ProjectileTravelMode.TrackTarget,
                 "Legacy" => throw new InvalidOperationException(
-                    $"Effect template '{ownerId}' in {relativePath}: projectile.travelMode 'Legacy' was removed; use 'Direction' or 'TrackTarget' and configure collision behavior explicitly."),
-                _ => throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: unsupported projectile.travelMode '{raw}'.")
+                    $"Effect template '{ownerId}' in {relativePath}: projectile.travelMode 'Legacy': choose 'Direction' or 'TrackTarget' and configure collision behavior explicitly."),
+                _ => throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: unknown projectile.travelMode '{raw}'.")
             };
         }
 
@@ -955,8 +955,8 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 "DestroyOnFirstHit" => ProjectileImpactPolicy.DestroyOnFirstHit,
                 "ContinueOnHit" => ProjectileImpactPolicy.ContinueOnHit,
                 "Legacy" => throw new InvalidOperationException(
-                    $"Effect template '{ownerId}' in {relativePath}: projectile.impactPolicy 'Legacy' was removed; use 'DestroyOnFirstHit' or 'ContinueOnHit' and configure hitEffect, collisionHalfWidth, and collisionRelationFilter."),
-                _ => throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: unsupported projectile.impactPolicy '{raw}'.")
+                    $"Effect template '{ownerId}' in {relativePath}: projectile.impactPolicy 'Legacy': choose 'DestroyOnFirstHit' or 'ContinueOnHit' and configure hitEffect, collisionHalfWidth, and collisionRelationFilter."),
+                _ => throw new InvalidOperationException($"Effect template '{ownerId}' in {relativePath}: unknown projectile.impactPolicy '{raw}'.")
             };
         }
 
@@ -1936,7 +1936,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 if (formula == Components.TagContributionFormula.GraphProgram)
                 {
                     throw new InvalidOperationException(
-                        $"Effect template '{effectId}' in {path}: grantedTags[{i}] formula=GraphProgram is not supported until a tag contribution graph evaluator is wired.");
+                        $"Effect template '{effectId}' in {path}: grantedTags[{i}] formula=GraphProgram needs a tag contribution graph evaluator before authoring.");
                 }
 
                 int amount = formula == Components.TagContributionFormula.GraphProgram

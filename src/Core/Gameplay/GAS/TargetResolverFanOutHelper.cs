@@ -248,6 +248,7 @@ namespace Ludots.Core.Gameplay.GAS
 
             int maxTargets = filter.MaxTargets > 0 ? filter.MaxTargets : candidateCount;
             int added = 0;
+            int payloadEffectTemplateId = ConfigParamsMerger.ResolvePayloadEffectTemplateId(in dispatch, in mergedParams);
 
             for (int i = 0; i < candidateCount && added < maxTargets; i++)
             {
@@ -305,7 +306,7 @@ namespace Ludots.Core.Gameplay.GAS
                     OriginalSource = ctx.Source,
                     OriginalTarget = ctx.Target,
                     OriginalTargetContext = ctx.TargetContext,
-                    PayloadEffectTemplateId = dispatch.PayloadEffectTemplateId,
+                    PayloadEffectTemplateId = payloadEffectTemplateId,
                     ContextMapping = dispatch.ContextMapping,
                     ResolvedEntity = entity
                 });

@@ -17,7 +17,7 @@ namespace EntityCommandPanelMod.Runtime
     /// Collection-selection GAS command panel source (RFC-0065 PNL-4). Grouping is fully delegated
     /// to the <see cref="AbilityAggregationProfileRegistry"/> kernel (DEC-10): every kernel group is
     /// one panel cell, the cell view is composed from the group's member slot views (representative
-    /// icon/label from the first member, state flags OR-ed, cooldown max, badge = member count).
+    /// icon/label from the first member, state flags OR-ed, lockout max, badge = member count).
     /// <see cref="CopyAggregationMembers"/> exposes the surviving member set for CommandDeck route
     /// profiles; <see cref="ActivateSlot"/> activates every surviving member behind the displayed
     /// group cell. <see cref="SetAggregationProfile"/> switches the active profile at
@@ -357,7 +357,7 @@ namespace EntityCommandPanelMod.Runtime
         /// <summary>
         /// One kernel group = one panel cell: <see cref="AbilityAggregationProfileRegistry.BuildGroups"/>
         /// decides membership, this method only composes the per-cell view from the members' slot
-        /// views (query filter, flags OR, cooldown max, badge count) and maps activation to the
+        /// views (query filter, flags OR, lockout max, badge count) and maps activation to the
         /// group's surviving members.
         /// </summary>
         private int BuildAggregatedSlots(
@@ -494,7 +494,7 @@ namespace EntityCommandPanelMod.Runtime
             return false;
         }
 
-        /// <summary>Group view synthesis: representative icon/label stays, flags OR, cooldown max.</summary>
+        /// <summary>Group view synthesis: representative icon/label stays, flags OR, lockout max.</summary>
         private static EntityCommandPanelSlotView ComposeGroupView(
             in EntityCommandPanelSlotView representative,
             in EntityCommandPanelSlotView next)
@@ -504,7 +504,7 @@ namespace EntityCommandPanelMod.Runtime
                 representative.AbilityId,
                 representative.TemplateEntityId,
                 representative.StateFlags | next.StateFlags,
-                Math.Max(representative.CooldownPermille, next.CooldownPermille),
+                Math.Max(representative.LockoutPermille, next.LockoutPermille),
                 representative.ChargesCurrent,
                 representative.ChargesMax,
                 representative.DisplayLabel,
@@ -725,7 +725,7 @@ namespace EntityCommandPanelMod.Runtime
                 slot.AbilityId,
                 slot.TemplateEntityId,
                 slot.StateFlags,
-                slot.CooldownPermille,
+                slot.LockoutPermille,
                 slot.ChargesCurrent,
                 slot.ChargesMax,
                 displayLabel,

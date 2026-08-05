@@ -213,7 +213,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     }
 
                     // Toggle check comes before activation block tags so a toggled-on ability
-                    // can always be turned off, even while its reactivate cooldown is present.
+                    // can always be turned off, even while its reactivation lockout tag is present.
                     if (hasAbilityDef &&
                         abilityDef.HasToggleSpec &&
                         abilityDef.ToggleSpec.ToggleTagId > 0 &&

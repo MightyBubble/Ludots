@@ -383,7 +383,7 @@ namespace EntityCommandPanelMod.Runtime
                 string actionId = actionIds[slotIndex] ?? string.Empty;
                 string displayLabel = string.Empty;
                 string detailLabel = string.Empty;
-                short cooldownPermille = 0;
+                short lockoutPermille = 0;
                 AbilityDefinition abilityDefinition = default;
                 bool hasAbilityDefinition = effective.AbilityId > 0 &&
                     abilityDefinitions != null &&
@@ -423,7 +423,7 @@ namespace EntityCommandPanelMod.Runtime
                         flags |= EntityCommandSlotStateFlags.Active;
                     }
 
-                    cooldownPermille = ResolveCooldownPermille(target, in abilityDefinition);
+                    lockoutPermille = ResolveLockoutPermille(target, in abilityDefinition);
 
                     AbilityPresentationConfig? presentation = abilityDefinition.HasPresentation
                         ? abilityDefinition.Presentation
@@ -476,7 +476,7 @@ namespace EntityCommandPanelMod.Runtime
                     effective.AbilityId,
                     effective.TemplateEntityId,
                     flags,
-                    cooldownPermille,
+                    lockoutPermille,
                     0,
                     0,
                     displayLabel,
@@ -613,7 +613,7 @@ namespace EntityCommandPanelMod.Runtime
             return ResolveInteractionModeKey(interactionMode);
         }
 
-        private short ResolveCooldownPermille(Entity target, in AbilityDefinition abilityDefinition)
+        private short ResolveLockoutPermille(Entity target, in AbilityDefinition abilityDefinition)
         {
             if (!_engine.World.IsAlive(target) ||
                 !abilityDefinition.HasActivationBlockTags ||
@@ -647,7 +647,7 @@ namespace EntityCommandPanelMod.Runtime
                     continue;
                 }
 
-                int totalTicks = ResolveCooldownDurationTicks(in abilityDefinition.ExecSpec, tagId);
+                int totalTicks = ResolveLockoutDurationTicks(in abilityDefinition, tagId);
                 int permille = totalTicks > 0
                     ? Math.Clamp((int)Math.Round(remainingTicks * 1000d / totalTicks), 0, 1000)
                     : 1000;
@@ -657,26 +657,111 @@ namespace EntityCommandPanelMod.Runtime
             return (short)bestPermille;
         }
 
-        private static int ResolveCooldownDurationTicks(in AbilityExecSpec execSpec, int tagId)
+        private int ResolveLockoutDurationTicks(in AbilityDefinition abilityDefinition, int tagId)
         {
+            if (_effectTemplates == null)
+            {
+                return 0;
+            }
+
             int durationTicks = 0;
+            ref readonly AbilityExecSpec execSpec = ref abilityDefinition.ExecSpec;
             for (int itemIndex = 0; itemIndex < execSpec.ItemCount; itemIndex++)
             {
                 ExecItemKind kind = execSpec.GetKind(itemIndex);
-                if (kind != ExecItemKind.TagClip && kind != ExecItemKind.TagClipTarget)
+                if (kind != ExecItemKind.EffectSignal && kind != ExecItemKind.EffectClip)
                 {
                     continue;
                 }
 
-                if (execSpec.GetTagId(itemIndex) != tagId)
+                int templateId = execSpec.GetTemplateId(itemIndex);
+                if (templateId <= 0 || !_effectTemplates.TryGetRef(templateId, out _))
                 {
                     continue;
                 }
 
-                durationTicks = Math.Max(durationTicks, execSpec.GetDurationTicks(itemIndex));
+                ref readonly EffectTemplateData template = ref _effectTemplates.GetRef(templateId);
+                EffectConfigParams mergedParams = BuildExecItemMergedParams(
+                    in template,
+                    in abilityDefinition,
+                    execSpec.GetCallerParamsIdx(itemIndex));
+
+                durationTicks = Math.Max(
+                    durationTicks,
+                    ResolveTemplateLockoutDurationTicks(in template, in mergedParams, tagId, depth: 0));
             }
 
             return durationTicks;
+        }
+
+        private static EffectConfigParams BuildExecItemMergedParams(
+            in EffectTemplateData template,
+            in AbilityDefinition abilityDefinition,
+            byte callerParamsIdx)
+        {
+            EffectConfigParams mergedParams = template.ConfigParams;
+            if (abilityDefinition.HasExecCallerParamsPool &&
+                callerParamsIdx != 0xFF &&
+                callerParamsIdx < abilityDefinition.ExecCallerParamsPool.Count)
+            {
+                mergedParams.MergeFrom(in abilityDefinition.ExecCallerParamsPool.Get(callerParamsIdx));
+            }
+
+            return mergedParams;
+        }
+
+        private int ResolveTemplateLockoutDurationTicks(
+            in EffectTemplateData template,
+            in EffectConfigParams mergedParams,
+            int tagId,
+            int depth)
+        {
+            int durationTicks = 0;
+            if (TemplateGrantsTag(in template, tagId))
+            {
+                int effectiveDurationTicks = ConfigParamsMerger.ResolveDurationTicks(in template, in mergedParams);
+                if (effectiveDurationTicks > 0)
+                {
+                    durationTicks = Math.Max(durationTicks, effectiveDurationTicks);
+                }
+            }
+
+            if (_effectTemplates == null || depth >= 4)
+            {
+                return durationTicks;
+            }
+
+            int payloadTemplateId = ConfigParamsMerger.ResolvePayloadEffectTemplateId(
+                in template.TargetDispatch,
+                in mergedParams);
+            if (payloadTemplateId <= 0 || !_effectTemplates.TryGetRef(payloadTemplateId, out _))
+            {
+                return durationTicks;
+            }
+
+            ref readonly EffectTemplateData payloadTemplate = ref _effectTemplates.GetRef(payloadTemplateId);
+            durationTicks = Math.Max(
+                durationTicks,
+                ResolveTemplateLockoutDurationTicks(
+                    in payloadTemplate,
+                    in payloadTemplate.ConfigParams,
+                    tagId,
+                    depth + 1));
+
+            return durationTicks;
+        }
+
+        private static bool TemplateGrantsTag(in EffectTemplateData template, int tagId)
+        {
+            for (int i = 0; i < template.GrantedTags.Count; i++)
+            {
+                if (template.GrantedTags.Get(i).TagId == tagId)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         public InputOrderActivationResult ActivateSlot(Entity target, int groupIndex, int slotIndex)

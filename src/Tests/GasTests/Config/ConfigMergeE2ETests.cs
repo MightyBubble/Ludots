@@ -112,9 +112,9 @@ namespace Ludots.Tests.GAS
             WriteFile("Core", "config_catalog.json",
                 @"[{ ""Path"": ""GAS/abilities.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
             WriteFile("Core", "GAS/abilities.json",
-                @"[{ ""id"": ""Slash"", ""cooldown"": 5 }]");
+                @"[{ ""id"": ""Slash"", ""rangeCm"": 500 }]");
             WriteAssetFile("ModA", "GAS/abilities.json",
-                @"[{ ""id"": ""Fireball"", ""cooldown"": 8 }]");
+                @"[{ ""id"": ""Fireball"", ""rangeCm"": 800 }]");
 
             var (_, _, pipeline, catalog) = BuildPipeline(_root, new[] { "ModA" });
             var entry = ConfigPipeline.RequireEntry(catalog, "GAS/abilities.json", ConfigMergePolicy.ArrayById, "id");
@@ -250,7 +250,7 @@ namespace Ludots.Tests.GAS
             WriteFile("Core", "config_catalog.json",
                 @"[{ ""Path"": ""GAS/abilities.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
             WriteFile("Core", "GAS/abilities.json",
-                @"[{ ""id"": ""Slash"", ""cooldown"": 5 }, { ""id"": ""Heal"", ""cooldown"": 10 }]");
+                @"[{ ""id"": ""Slash"", ""rangeCm"": 500 }, { ""id"": ""Heal"", ""rangeCm"": 700 }]");
 
             var (_, _, pipeline, catalog) = BuildPipeline(_root);
             var entry = ConfigPipeline.RequireEntry(catalog, "GAS/abilities.json", ConfigMergePolicy.ArrayById, "id");
