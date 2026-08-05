@@ -1,7 +1,6 @@
 [
   {
     "id": "physics2d_playground.spawned_box",
-    "defaultLifetime": -1,
     "behaviors": [
       {
         "slot": "body",
@@ -20,6 +19,9 @@
           ]
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "persistence": "Scoped"
+    }
   }
 ]

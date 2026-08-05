@@ -3,8 +3,13 @@
     "id": "formation_capability_showcase_formation_anchor_bootstrap",
     "rules": [
       {
-        "event": { "kind": "EntitySpawned", "key": "formation_capability_showcase_formation_anchor" },
-        "condition": { "inline": "SourceHasVisualTransform" },
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "formation_capability_showcase_formation_anchor"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
         "command": {
           "kind": "CreatePerformer",
           "definitionId": "formation_capability_showcase_formation_anchor",
@@ -12,7 +17,10 @@
         }
       },
       {
-        "event": { "kind": "EntityDestroyed", "key": "formation_capability_showcase_formation_anchor" },
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "formation_capability_showcase_formation_anchor"
+        },
         "command": {
           "kind": "DestroyPerformerScope",
           "scopeSource": "EventPayloadA"
@@ -24,8 +32,13 @@
     "id": "formation_capability_showcase_soldier_azure_light_bootstrap",
     "rules": [
       {
-        "event": { "kind": "EntitySpawned", "key": "formation_capability_showcase_soldier_azure_light" },
-        "condition": { "inline": "SourceHasVisualTransform" },
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "formation_capability_showcase_soldier_azure_light"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
         "command": {
           "kind": "CreatePerformer",
           "definitionId": "formation_capability_showcase_soldier_azure_light",
@@ -33,7 +46,10 @@
         }
       },
       {
-        "event": { "kind": "EntityDestroyed", "key": "formation_capability_showcase_soldier_azure_light" },
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "formation_capability_showcase_soldier_azure_light"
+        },
         "command": {
           "kind": "DestroyPerformerScope",
           "scopeSource": "EventPayloadA"
@@ -45,8 +61,13 @@
     "id": "formation_capability_showcase_soldier_azure_heavy_bootstrap",
     "rules": [
       {
-        "event": { "kind": "EntitySpawned", "key": "formation_capability_showcase_soldier_azure_heavy" },
-        "condition": { "inline": "SourceHasVisualTransform" },
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "formation_capability_showcase_soldier_azure_heavy"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
         "command": {
           "kind": "CreatePerformer",
           "definitionId": "formation_capability_showcase_soldier_azure_heavy",
@@ -54,7 +75,10 @@
         }
       },
       {
-        "event": { "kind": "EntityDestroyed", "key": "formation_capability_showcase_soldier_azure_heavy" },
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "formation_capability_showcase_soldier_azure_heavy"
+        },
         "command": {
           "kind": "DestroyPerformerScope",
           "scopeSource": "EventPayloadA"
@@ -66,8 +90,13 @@
     "id": "formation_capability_showcase_soldier_crimson_light_bootstrap",
     "rules": [
       {
-        "event": { "kind": "EntitySpawned", "key": "formation_capability_showcase_soldier_crimson_light" },
-        "condition": { "inline": "SourceHasVisualTransform" },
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "formation_capability_showcase_soldier_crimson_light"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
         "command": {
           "kind": "CreatePerformer",
           "definitionId": "formation_capability_showcase_soldier_crimson_light",
@@ -75,7 +104,10 @@
         }
       },
       {
-        "event": { "kind": "EntityDestroyed", "key": "formation_capability_showcase_soldier_crimson_light" },
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "formation_capability_showcase_soldier_crimson_light"
+        },
         "command": {
           "kind": "DestroyPerformerScope",
           "scopeSource": "EventPayloadA"
@@ -87,8 +119,13 @@
     "id": "formation_capability_showcase_soldier_crimson_heavy_bootstrap",
     "rules": [
       {
-        "event": { "kind": "EntitySpawned", "key": "formation_capability_showcase_soldier_crimson_heavy" },
-        "condition": { "inline": "SourceHasVisualTransform" },
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "formation_capability_showcase_soldier_crimson_heavy"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
         "command": {
           "kind": "CreatePerformer",
           "definitionId": "formation_capability_showcase_soldier_crimson_heavy",
@@ -96,7 +133,10 @@
         }
       },
       {
-        "event": { "kind": "EntityDestroyed", "key": "formation_capability_showcase_soldier_crimson_heavy" },
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "formation_capability_showcase_soldier_crimson_heavy"
+        },
         "command": {
           "kind": "DestroyPerformerScope",
           "scopeSource": "EventPayloadA"
@@ -106,10 +146,12 @@
   },
   {
     "id": "formation_capability_showcase_formation_anchor",
-    "defaultColor": [0.92, 0.94, 0.86, 1.0],
     "rules": [
       {
-        "event": { "kind": "EntityCollectionMemberAdded", "key": "collection.command.source" },
+        "event": {
+          "kind": "EntityCollectionMemberAdded",
+          "key": "collection.command.source"
+        },
         "command": {
           "kind": "CreatePerformer",
           "definitionId": "formation_capability_showcase_formation_command_marker",
@@ -117,7 +159,10 @@
         }
       },
       {
-        "event": { "kind": "EntityCollectionMemberRemoved", "key": "collection.command.source" },
+        "event": {
+          "kind": "EntityCollectionMemberRemoved",
+          "key": "collection.command.source"
+        },
         "command": {
           "kind": "DestroyScopedPerformer",
           "definitionId": "formation_capability_showcase_formation_command_marker",
@@ -126,8 +171,14 @@
       }
     ],
     "children": [
-      { "definitionId": "formation_capability_showcase_formation_health_hud", "scopeTag": "structure" },
-      { "definitionId": "formation_capability_showcase_formation_health_text", "scopeTag": "structure" }
+      {
+        "definitionId": "formation_capability_showcase_formation_health_hud",
+        "scopeTag": "structure"
+      },
+      {
+        "definitionId": "formation_capability_showcase_formation_health_text",
+        "scopeTag": "structure"
+      }
     ],
     "behaviors": [
       {
@@ -136,22 +187,26 @@
         "activeByDefault": true,
         "minimapMarker": {
           "shape": "Circle",
-          "color": [0.92, 0.94, 0.86, 1.0],
-          "sizePx": 7.0,
+          "color": [
+            0.92,
+            0.94,
+            0.86,
+            1
+          ],
+          "sizePx": 7,
           "colorParamKey": "none",
           "sizeParamKey": "none",
           "visibilityParamKey": "none",
           "orientationMode": "PerformerForward",
           "orientationParamKey": "none",
-          "orientationOffsetRad": 0.0,
-          "orientationLengthPx": 8.0
+          "orientationOffsetRad": 0,
+          "orientationLengthPx": 8
         }
       }
     ]
   },
   {
     "id": "formation_capability_showcase_soldier_azure_light",
-    "defaultColor": [0.38, 0.72, 1.0, 1.0],
     "behaviors": [
       {
         "slot": "body",
@@ -163,7 +218,19 @@
           "materialId": "default_surface",
           "renderPath": "GpuSkinnedInstance",
           "mobility": "Movable",
-          "localScale": [0.45, 0.45, 0.45]
+          "localScale": [
+            0.45,
+            0.45,
+            0.45
+          ]
+        },
+        "style": {
+          "color": [
+            0.38,
+            0.72,
+            1,
+            1
+          ]
         }
       },
       {
@@ -172,7 +239,7 @@
         "activeByDefault": true,
         "grounding": {
           "mode": "SnapToGround",
-          "offset": 0.0,
+          "offset": 0,
           "updatePolicy": "EveryFrame"
         }
       },
@@ -193,26 +260,34 @@
         "activeByDefault": true,
         "minimapMarker": {
           "shape": "Circle",
-          "color": [0.38, 0.72, 1.0, 1.0],
-          "sizePx": 3.0,
+          "color": [
+            0.38,
+            0.72,
+            1,
+            1
+          ],
+          "sizePx": 3,
           "colorParamKey": "none",
           "sizeParamKey": "none",
           "visibilityParamKey": "none",
           "orientationMode": "PerformerForward",
           "orientationParamKey": "none",
-          "orientationOffsetRad": 0.0,
-          "orientationLengthPx": 4.0
+          "orientationOffsetRad": 0,
+          "orientationLengthPx": 4
         }
       }
     ],
     "paramDefaults": [
-      { "paramKey": "mass_navigation.agent.locomotion.speed", "lane": "Float", "floatValue": 1.0 }
+      {
+        "paramKey": "mass_navigation.agent.locomotion.speed",
+        "lane": "Float",
+        "floatValue": 1
+      }
     ]
   },
   {
     "id": "formation_capability_showcase_soldier_azure_heavy",
     "extends": "formation_capability_showcase_soldier_azure_light",
-    "defaultColor": [0.50, 0.78, 1.0, 1.0],
     "behaviors": [
       {
         "slot": "body",
@@ -224,7 +299,19 @@
           "materialId": "default_surface",
           "renderPath": "GpuSkinnedInstance",
           "mobility": "Movable",
-          "localScale": [0.62, 0.62, 0.62]
+          "localScale": [
+            0.62,
+            0.62,
+            0.62
+          ]
+        },
+        "style": {
+          "color": [
+            0.5,
+            0.78,
+            1,
+            1
+          ]
         }
       },
       {
@@ -233,15 +320,20 @@
         "activeByDefault": true,
         "minimapMarker": {
           "shape": "Circle",
-          "color": [0.50, 0.78, 1.0, 1.0],
+          "color": [
+            0.5,
+            0.78,
+            1,
+            1
+          ],
           "sizePx": 4.5,
           "colorParamKey": "none",
           "sizeParamKey": "none",
           "visibilityParamKey": "none",
           "orientationMode": "PerformerForward",
           "orientationParamKey": "none",
-          "orientationOffsetRad": 0.0,
-          "orientationLengthPx": 5.0
+          "orientationOffsetRad": 0,
+          "orientationLengthPx": 5
         }
       }
     ]
@@ -249,7 +341,6 @@
   {
     "id": "formation_capability_showcase_soldier_crimson_light",
     "extends": "formation_capability_showcase_soldier_azure_light",
-    "defaultColor": [1.0, 0.34, 0.28, 1.0],
     "behaviors": [
       {
         "slot": "minimap",
@@ -257,15 +348,31 @@
         "activeByDefault": true,
         "minimapMarker": {
           "shape": "Circle",
-          "color": [1.0, 0.34, 0.28, 1.0],
-          "sizePx": 3.0,
+          "color": [
+            1,
+            0.34,
+            0.28,
+            1
+          ],
+          "sizePx": 3,
           "colorParamKey": "none",
           "sizeParamKey": "none",
           "visibilityParamKey": "none",
           "orientationMode": "PerformerForward",
           "orientationParamKey": "none",
-          "orientationOffsetRad": 0.0,
-          "orientationLengthPx": 4.0
+          "orientationOffsetRad": 0,
+          "orientationLengthPx": 4
+        }
+      },
+      {
+        "slot": "body",
+        "style": {
+          "color": [
+            1,
+            0.34,
+            0.28,
+            1
+          ]
         }
       }
     ]
@@ -273,7 +380,6 @@
   {
     "id": "formation_capability_showcase_soldier_crimson_heavy",
     "extends": "formation_capability_showcase_soldier_azure_heavy",
-    "defaultColor": [1.0, 0.46, 0.34, 1.0],
     "behaviors": [
       {
         "slot": "minimap",
@@ -281,15 +387,31 @@
         "activeByDefault": true,
         "minimapMarker": {
           "shape": "Circle",
-          "color": [1.0, 0.46, 0.34, 1.0],
+          "color": [
+            1,
+            0.46,
+            0.34,
+            1
+          ],
           "sizePx": 4.5,
           "colorParamKey": "none",
           "sizeParamKey": "none",
           "visibilityParamKey": "none",
           "orientationMode": "PerformerForward",
           "orientationParamKey": "none",
-          "orientationOffsetRad": 0.0,
-          "orientationLengthPx": 5.0
+          "orientationOffsetRad": 0,
+          "orientationLengthPx": 5
+        }
+      },
+      {
+        "slot": "body",
+        "style": {
+          "color": [
+            1,
+            0.46,
+            0.34,
+            1
+          ]
         }
       }
     ]
@@ -308,7 +430,11 @@
           "materialId": "default_surface",
           "renderPath": "InstancedStaticMesh",
           "mobility": "Movable",
-          "localScale": [1.35, 0.07, 1.35]
+          "localScale": [
+            1.35,
+            0.07,
+            1.35
+          ]
         }
       }
     ]
@@ -326,7 +452,11 @@
           "materialParamKey": "massNavigation.agent.health.ratio",
           "renderPath": "None",
           "mobility": "Movable",
-          "localScale": [118.0, 8.0, 1.0]
+          "localScale": [
+            118,
+            8,
+            1
+          ]
         }
       }
     ]
@@ -334,24 +464,73 @@
   {
     "id": "formation_capability_showcase_formation_health_text",
     "extends": "mass_navigation_agent_health_text_heavy",
-    "defaultFontSize": 13
+    "behaviors": [
+      {
+        "slot": "body",
+        "worldText": {
+          "fontSize": 13
+        }
+      }
+    ]
   },
   {
     "id": "formation_capability.obstacle_overlay",
-    "defaultColor": [1.0, 0.82, 0.24, 1.0],
-    "defaultLifetime": -1,
     "paramDefaults": [
-      { "paramKey": "groundOverlay.radius", "lane": "Float", "floatValue": 1.0 },
-      { "paramKey": "groundOverlay.innerRadius", "lane": "Float", "floatValue": 0.0 },
-      { "paramKey": "groundOverlay.fill.r", "lane": "Float", "floatValue": 0.28 },
-      { "paramKey": "groundOverlay.fill.g", "lane": "Float", "floatValue": 0.22 },
-      { "paramKey": "groundOverlay.fill.b", "lane": "Float", "floatValue": 0.08 },
-      { "paramKey": "groundOverlay.fill.a", "lane": "Float", "floatValue": 0.42 },
-      { "paramKey": "groundOverlay.border.r", "lane": "Float", "floatValue": 1.0 },
-      { "paramKey": "groundOverlay.border.g", "lane": "Float", "floatValue": 0.82 },
-      { "paramKey": "groundOverlay.border.b", "lane": "Float", "floatValue": 0.24 },
-      { "paramKey": "groundOverlay.border.a", "lane": "Float", "floatValue": 1.0 },
-      { "paramKey": "groundOverlay.border.width", "lane": "Float", "floatValue": 0.06 }
+      {
+        "paramKey": "groundOverlay.radius",
+        "lane": "Float",
+        "floatValue": 1
+      },
+      {
+        "paramKey": "groundOverlay.innerRadius",
+        "lane": "Float",
+        "floatValue": 0
+      },
+      {
+        "paramKey": "groundOverlay.fill.r",
+        "lane": "Float",
+        "floatValue": 0.28
+      },
+      {
+        "paramKey": "groundOverlay.fill.g",
+        "lane": "Float",
+        "floatValue": 0.22
+      },
+      {
+        "paramKey": "groundOverlay.fill.b",
+        "lane": "Float",
+        "floatValue": 0.08
+      },
+      {
+        "paramKey": "groundOverlay.fill.a",
+        "lane": "Float",
+        "floatValue": 0.42
+      },
+      {
+        "paramKey": "groundOverlay.border.r",
+        "lane": "Float",
+        "floatValue": 1
+      },
+      {
+        "paramKey": "groundOverlay.border.g",
+        "lane": "Float",
+        "floatValue": 0.82
+      },
+      {
+        "paramKey": "groundOverlay.border.b",
+        "lane": "Float",
+        "floatValue": 0.24
+      },
+      {
+        "paramKey": "groundOverlay.border.a",
+        "lane": "Float",
+        "floatValue": 1
+      },
+      {
+        "paramKey": "groundOverlay.border.width",
+        "lane": "Float",
+        "floatValue": 0.06
+      }
     ],
     "behaviors": [
       {
@@ -363,20 +542,59 @@
           "assetId": "Ring",
           "renderPath": "None",
           "mobility": "Movable",
-          "localScale": [1.0, 0.0, 0.06]
+          "localScale": [
+            1,
+            0,
+            0.06
+          ]
+        },
+        "style": {
+          "color": [
+            1,
+            0.82,
+            0.24,
+            1
+          ]
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "persistence": "Scoped"
+    }
   },
   {
     "id": "formation_capability.formation_outline.azure",
-    "defaultColor": [0.54, 0.86, 1.0, 0.96],
-    "defaultLifetime": -1,
     "paramDefaults": [
-      { "paramKey": "worldSpline.fill", "lane": "Vector", "vectorValue": [0.18, 0.54, 0.88, 0.24] },
-      { "paramKey": "worldSpline.border", "lane": "Vector", "vectorValue": [0.54, 0.86, 1.0, 0.96] },
-      { "paramKey": "worldSpline.width", "lane": "Float", "floatValue": 0.08 },
-      { "paramKey": "worldSpline.border.width", "lane": "Float", "floatValue": 0.08 }
+      {
+        "paramKey": "worldSpline.fill",
+        "lane": "Vector",
+        "vectorValue": [
+          0.18,
+          0.54,
+          0.88,
+          0.24
+        ]
+      },
+      {
+        "paramKey": "worldSpline.border",
+        "lane": "Vector",
+        "vectorValue": [
+          0.54,
+          0.86,
+          1,
+          0.96
+        ]
+      },
+      {
+        "paramKey": "worldSpline.width",
+        "lane": "Float",
+        "floatValue": 0.08
+      },
+      {
+        "paramKey": "worldSpline.border.width",
+        "lane": "Float",
+        "floatValue": 0.08
+      }
     ],
     "behaviors": [
       {
@@ -388,20 +606,59 @@
           "assetId": "cube",
           "renderPath": "None",
           "mobility": "Movable",
-          "localScale": [0.08, 0.08, 0.08]
+          "localScale": [
+            0.08,
+            0.08,
+            0.08
+          ]
+        },
+        "style": {
+          "color": [
+            0.54,
+            0.86,
+            1,
+            0.96
+          ]
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "persistence": "Scoped"
+    }
   },
   {
     "id": "formation_capability.formation_outline.crimson",
-    "defaultColor": [1.0, 0.52, 0.42, 0.96],
-    "defaultLifetime": -1,
     "paramDefaults": [
-      { "paramKey": "worldSpline.fill", "lane": "Vector", "vectorValue": [0.82, 0.22, 0.18, 0.22] },
-      { "paramKey": "worldSpline.border", "lane": "Vector", "vectorValue": [1.0, 0.52, 0.42, 0.96] },
-      { "paramKey": "worldSpline.width", "lane": "Float", "floatValue": 0.08 },
-      { "paramKey": "worldSpline.border.width", "lane": "Float", "floatValue": 0.08 }
+      {
+        "paramKey": "worldSpline.fill",
+        "lane": "Vector",
+        "vectorValue": [
+          0.82,
+          0.22,
+          0.18,
+          0.22
+        ]
+      },
+      {
+        "paramKey": "worldSpline.border",
+        "lane": "Vector",
+        "vectorValue": [
+          1,
+          0.52,
+          0.42,
+          0.96
+        ]
+      },
+      {
+        "paramKey": "worldSpline.width",
+        "lane": "Float",
+        "floatValue": 0.08
+      },
+      {
+        "paramKey": "worldSpline.border.width",
+        "lane": "Float",
+        "floatValue": 0.08
+      }
     ],
     "behaviors": [
       {
@@ -413,81 +670,311 @@
           "assetId": "cube",
           "renderPath": "None",
           "mobility": "Movable",
-          "localScale": [0.08, 0.08, 0.08]
+          "localScale": [
+            0.08,
+            0.08,
+            0.08
+          ]
+        },
+        "style": {
+          "color": [
+            1,
+            0.52,
+            0.42,
+            0.96
+          ]
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "persistence": "Scoped"
+    }
   },
   {
     "id": "formation_capability.world_fact_rules",
     "rules": [
       {
-        "event": { "kind": "WorldOverlayUpdated", "key": "formation_capability.obstacle_overlay" },
-        "command": { "kind": "CreatePerformer", "definitionId": "formation_capability.obstacle_overlay", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "groundOverlay.radius", "paramLane": "Float", "valueSource": "EventFloatA" }
+        "event": {
+          "kind": "WorldOverlayUpdated",
+          "key": "formation_capability.obstacle_overlay"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "formation_capability.obstacle_overlay",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.radius",
+          "paramLane": "Float",
+          "valueSource": "EventFloatA"
+        }
       },
       {
-        "event": { "kind": "WorldOverlayUpdated", "key": "formation_capability.obstacle_overlay" },
-        "command": { "kind": "SetParam", "definitionId": "formation_capability.obstacle_overlay", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "groundOverlay.radius", "paramLane": "Float", "valueSource": "EventFloatA" }
+        "event": {
+          "kind": "WorldOverlayUpdated",
+          "key": "formation_capability.obstacle_overlay"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "formation_capability.obstacle_overlay",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.radius",
+          "paramLane": "Float",
+          "valueSource": "EventFloatA"
+        }
       },
       {
-        "event": { "kind": "WorldOverlayUpdated", "key": "formation_capability.obstacle_overlay" },
-        "command": { "kind": "SetParam", "definitionId": "formation_capability.obstacle_overlay", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "groundOverlay.innerRadius", "paramLane": "Float", "valueSource": "EventFloatB" }
+        "event": {
+          "kind": "WorldOverlayUpdated",
+          "key": "formation_capability.obstacle_overlay"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "formation_capability.obstacle_overlay",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.innerRadius",
+          "paramLane": "Float",
+          "valueSource": "EventFloatB"
+        }
       },
       {
-        "event": { "kind": "WorldOverlayUpdated", "key": "formation_capability.obstacle_overlay" },
-        "command": { "kind": "SetParam", "definitionId": "formation_capability.obstacle_overlay", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "groundOverlay.border.width", "paramLane": "Float", "valueSource": "EventMagnitude" }
+        "event": {
+          "kind": "WorldOverlayUpdated",
+          "key": "formation_capability.obstacle_overlay"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "formation_capability.obstacle_overlay",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "groundOverlay.border.width",
+          "paramLane": "Float",
+          "valueSource": "EventMagnitude"
+        }
       },
       {
-        "event": { "kind": "WorldOverlayEnded", "key": "formation_capability.obstacle_overlay" },
-        "command": { "kind": "DestroyScopedPerformer", "definitionId": "formation_capability.obstacle_overlay", "scopeSource": "EventPayloadA" }
+        "event": {
+          "kind": "WorldOverlayEnded",
+          "key": "formation_capability.obstacle_overlay"
+        },
+        "command": {
+          "kind": "DestroyScopedPerformer",
+          "definitionId": "formation_capability.obstacle_overlay",
+          "scopeSource": "EventPayloadA"
+        }
       },
       {
-        "event": { "kind": "WorldSplineUpdated", "key": "formation_capability.formation_outline.azure" },
-        "command": { "kind": "CreatePerformer", "definitionId": "formation_capability.formation_outline.azure", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "worldSpline.width", "paramLane": "Float", "valueSource": "EventFloatD" }
+        "event": {
+          "kind": "WorldSplineUpdated",
+          "key": "formation_capability.formation_outline.azure"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "formation_capability.formation_outline.azure",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "worldSpline.width",
+          "paramLane": "Float",
+          "valueSource": "EventFloatD"
+        }
       },
       {
-        "event": { "kind": "WorldSplineUpdated", "key": "formation_capability.formation_outline.azure" },
-        "command": { "kind": "SetParam", "definitionId": "formation_capability.formation_outline.azure", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "worldSpline.p0", "paramLane": "Vector", "valueSource": "Fixed", "vectorValue": [0, 0, 0, 0], "vectorXSource": "EventPositionX", "vectorYSource": "EventPositionY", "vectorZSource": "EventPositionZ", "vectorWSource": "Fixed" }
+        "event": {
+          "kind": "WorldSplineUpdated",
+          "key": "formation_capability.formation_outline.azure"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "formation_capability.formation_outline.azure",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "worldSpline.p0",
+          "paramLane": "Vector",
+          "valueSource": "Fixed",
+          "vectorValue": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "vectorXSource": "EventPositionX",
+          "vectorYSource": "EventPositionY",
+          "vectorZSource": "EventPositionZ",
+          "vectorWSource": "Fixed"
+        }
       },
       {
-        "event": { "kind": "WorldSplineUpdated", "key": "formation_capability.formation_outline.azure" },
-        "command": { "kind": "SetParam", "definitionId": "formation_capability.formation_outline.azure", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "worldSpline.p3", "paramLane": "Vector", "valueSource": "Fixed", "vectorValue": [0, 0, 0, 0], "vectorXSource": "EventFloatA", "vectorYSource": "EventFloatB", "vectorZSource": "EventFloatC", "vectorWSource": "Fixed" }
+        "event": {
+          "kind": "WorldSplineUpdated",
+          "key": "formation_capability.formation_outline.azure"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "formation_capability.formation_outline.azure",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "worldSpline.p3",
+          "paramLane": "Vector",
+          "valueSource": "Fixed",
+          "vectorValue": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "vectorXSource": "EventFloatA",
+          "vectorYSource": "EventFloatB",
+          "vectorZSource": "EventFloatC",
+          "vectorWSource": "Fixed"
+        }
       },
       {
-        "event": { "kind": "WorldSplineUpdated", "key": "formation_capability.formation_outline.azure" },
-        "command": { "kind": "SetParam", "definitionId": "formation_capability.formation_outline.azure", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "worldSpline.width", "paramLane": "Float", "valueSource": "EventFloatD" }
+        "event": {
+          "kind": "WorldSplineUpdated",
+          "key": "formation_capability.formation_outline.azure"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "formation_capability.formation_outline.azure",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "worldSpline.width",
+          "paramLane": "Float",
+          "valueSource": "EventFloatD"
+        }
       },
       {
-        "event": { "kind": "WorldSplineUpdated", "key": "formation_capability.formation_outline.azure" },
-        "command": { "kind": "SetParam", "definitionId": "formation_capability.formation_outline.azure", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "worldSpline.border.width", "paramLane": "Float", "valueSource": "EventMagnitude" }
+        "event": {
+          "kind": "WorldSplineUpdated",
+          "key": "formation_capability.formation_outline.azure"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "formation_capability.formation_outline.azure",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "worldSpline.border.width",
+          "paramLane": "Float",
+          "valueSource": "EventMagnitude"
+        }
       },
       {
-        "event": { "kind": "WorldSplineEnded", "key": "formation_capability.formation_outline.azure" },
-        "command": { "kind": "DestroyScopedPerformer", "definitionId": "formation_capability.formation_outline.azure", "scopeSource": "EventPayloadA" }
+        "event": {
+          "kind": "WorldSplineEnded",
+          "key": "formation_capability.formation_outline.azure"
+        },
+        "command": {
+          "kind": "DestroyScopedPerformer",
+          "definitionId": "formation_capability.formation_outline.azure",
+          "scopeSource": "EventPayloadA"
+        }
       },
       {
-        "event": { "kind": "WorldSplineUpdated", "key": "formation_capability.formation_outline.crimson" },
-        "command": { "kind": "CreatePerformer", "definitionId": "formation_capability.formation_outline.crimson", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "worldSpline.width", "paramLane": "Float", "valueSource": "EventFloatD" }
+        "event": {
+          "kind": "WorldSplineUpdated",
+          "key": "formation_capability.formation_outline.crimson"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "formation_capability.formation_outline.crimson",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "worldSpline.width",
+          "paramLane": "Float",
+          "valueSource": "EventFloatD"
+        }
       },
       {
-        "event": { "kind": "WorldSplineUpdated", "key": "formation_capability.formation_outline.crimson" },
-        "command": { "kind": "SetParam", "definitionId": "formation_capability.formation_outline.crimson", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "worldSpline.p0", "paramLane": "Vector", "valueSource": "Fixed", "vectorValue": [0, 0, 0, 0], "vectorXSource": "EventPositionX", "vectorYSource": "EventPositionY", "vectorZSource": "EventPositionZ", "vectorWSource": "Fixed" }
+        "event": {
+          "kind": "WorldSplineUpdated",
+          "key": "formation_capability.formation_outline.crimson"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "formation_capability.formation_outline.crimson",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "worldSpline.p0",
+          "paramLane": "Vector",
+          "valueSource": "Fixed",
+          "vectorValue": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "vectorXSource": "EventPositionX",
+          "vectorYSource": "EventPositionY",
+          "vectorZSource": "EventPositionZ",
+          "vectorWSource": "Fixed"
+        }
       },
       {
-        "event": { "kind": "WorldSplineUpdated", "key": "formation_capability.formation_outline.crimson" },
-        "command": { "kind": "SetParam", "definitionId": "formation_capability.formation_outline.crimson", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "worldSpline.p3", "paramLane": "Vector", "valueSource": "Fixed", "vectorValue": [0, 0, 0, 0], "vectorXSource": "EventFloatA", "vectorYSource": "EventFloatB", "vectorZSource": "EventFloatC", "vectorWSource": "Fixed" }
+        "event": {
+          "kind": "WorldSplineUpdated",
+          "key": "formation_capability.formation_outline.crimson"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "formation_capability.formation_outline.crimson",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "worldSpline.p3",
+          "paramLane": "Vector",
+          "valueSource": "Fixed",
+          "vectorValue": [
+            0,
+            0,
+            0,
+            0
+          ],
+          "vectorXSource": "EventFloatA",
+          "vectorYSource": "EventFloatB",
+          "vectorZSource": "EventFloatC",
+          "vectorWSource": "Fixed"
+        }
       },
       {
-        "event": { "kind": "WorldSplineUpdated", "key": "formation_capability.formation_outline.crimson" },
-        "command": { "kind": "SetParam", "definitionId": "formation_capability.formation_outline.crimson", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "worldSpline.width", "paramLane": "Float", "valueSource": "EventFloatD" }
+        "event": {
+          "kind": "WorldSplineUpdated",
+          "key": "formation_capability.formation_outline.crimson"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "formation_capability.formation_outline.crimson",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "worldSpline.width",
+          "paramLane": "Float",
+          "valueSource": "EventFloatD"
+        }
       },
       {
-        "event": { "kind": "WorldSplineUpdated", "key": "formation_capability.formation_outline.crimson" },
-        "command": { "kind": "SetParam", "definitionId": "formation_capability.formation_outline.crimson", "scopeSource": "EventPayloadA", "useEventPosition": true, "paramKey": "worldSpline.border.width", "paramLane": "Float", "valueSource": "EventMagnitude" }
+        "event": {
+          "kind": "WorldSplineUpdated",
+          "key": "formation_capability.formation_outline.crimson"
+        },
+        "command": {
+          "kind": "SetParam",
+          "definitionId": "formation_capability.formation_outline.crimson",
+          "scopeSource": "EventPayloadA",
+          "useEventPosition": true,
+          "paramKey": "worldSpline.border.width",
+          "paramLane": "Float",
+          "valueSource": "EventMagnitude"
+        }
       },
       {
-        "event": { "kind": "WorldSplineEnded", "key": "formation_capability.formation_outline.crimson" },
-        "command": { "kind": "DestroyScopedPerformer", "definitionId": "formation_capability.formation_outline.crimson", "scopeSource": "EventPayloadA" }
+        "event": {
+          "kind": "WorldSplineEnded",
+          "key": "formation_capability.formation_outline.crimson"
+        },
+        "command": {
+          "kind": "DestroyScopedPerformer",
+          "definitionId": "formation_capability.formation_outline.crimson",
+          "scopeSource": "EventPayloadA"
+        }
       }
     ]
   }

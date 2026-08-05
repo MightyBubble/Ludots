@@ -69,6 +69,14 @@ namespace Ludots.Tests.Architecture.Governance
                 projectionSource,
                 Does.Contain("_gasEvents.Clear();"),
                 "GameplayPresentationProjectionSystem owns GAS event cleanup after projection.");
+            Assert.That(
+                engineSource,
+                Does.Contain("RegisterSystem(clearPresentationFlagsSystem, SystemGroup.ClearPresentationFlags);"),
+                "Gameplay changed-bit cleanup must stay in the fixed ClearPresentationFlags phase after projection.");
+            Assert.That(
+                engineSource,
+                Does.Not.Contain("RegisterPresentationSystem(clearPresentationFlagsSystem)"),
+                "The visual loop must not clear gameplay changed-bit components before a sliced simulation reaches ClearPresentationFlags.");
         }
 
         [Test]

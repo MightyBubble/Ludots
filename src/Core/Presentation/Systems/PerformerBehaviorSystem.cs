@@ -804,7 +804,6 @@ namespace Ludots.Core.Presentation.Systems
         {
             PerformerParamBinding[] bindings = definition.Bindings;
             if (bindings == null || bindings.Length == 0) return;
-            bool hasAttributes = World.IsAlive(owner) && World.Has<AttributeBuffer>(owner);
             for (int i = 0; i < bindings.Length; i++)
             {
                 ref readonly PerformerParamBinding binding = ref bindings[i];
@@ -822,14 +821,6 @@ namespace Ludots.Core.Presentation.Systems
                         break;
                     case ValueSourceKind.FacingDegrees:
                         SetParam(entity, binding.ParamKey, ParamLane.Float, WorldPlane2D.RadToDegValue(ResolveFacingRadians(owner)), 0, Vector4.Zero);
-                        break;
-                    case ValueSourceKind.Attribute:
-                    case ValueSourceKind.AttributeRatio:
-                    case ValueSourceKind.AttributeBase:
-                        if (!hasAttributes) continue;
-                        ref AttributeBuffer attributes = ref World.Get<AttributeBuffer>(owner);
-                        float resolved = ResolveAttributeValue(ref attributes, value.SourceId, value.Source);
-                        SetParam(entity, binding.ParamKey, ParamLane.Float, resolved, 0, Vector4.Zero);
                         break;
                     case ValueSourceKind.Constant:
                         SetParam(entity, binding.ParamKey, ParamLane.Float, value.ConstantValue, 0, Vector4.Zero);
@@ -870,14 +861,6 @@ namespace Ludots.Core.Presentation.Systems
             ref AttributeBuffer attributes,
             in PerformerDefinition.OwnerAttributeWorkItem work)
         {
-            int[] paramBindingIndices = work.ParamBindingIndices;
-            for (int i = 0; i < paramBindingIndices.Length; i++)
-            {
-                ref readonly PerformerParamBinding binding = ref definition.Bindings[paramBindingIndices[i]];
-                float resolved = ResolveAttributeValue(ref attributes, binding.Value.SourceId, binding.Value.Source);
-                SetParam(entity, binding.ParamKey, ParamLane.Float, resolved, 0, Vector4.Zero);
-            }
-
             int[] behaviorIndices = work.BehaviorIndices;
             for (int i = 0; i < behaviorIndices.Length; i++)
             {
@@ -2057,7 +2040,7 @@ namespace Ludots.Core.Presentation.Systems
             if (primaryAssetBehaviorIndex >= 0 && primaryAssetBehaviorIndex < behaviors.Length)
             {
                 ref readonly BehaviorSlot primarySlot = ref behaviors[primaryAssetBehaviorIndex];
-                if (primarySlot.Kind == BehaviorKind.AssetBinding &&
+                if (IsAssetOutputBehavior(primarySlot.Kind) &&
                     IsBehaviorActive(activeBehaviorMask, primarySlot.SlotIndex))
                 {
                     return primarySlot.AssetBinding;
@@ -2067,7 +2050,7 @@ namespace Ludots.Core.Presentation.Systems
             for (int i = 0; i < behaviors.Length; i++)
             {
                 ref readonly BehaviorSlot slot = ref behaviors[i];
-                if (slot.Kind == BehaviorKind.AssetBinding &&
+                if (IsAssetOutputBehavior(slot.Kind) &&
                     IsBehaviorActive(activeBehaviorMask, slot.SlotIndex))
                 {
                     return slot.AssetBinding;
@@ -2101,6 +2084,7 @@ namespace Ludots.Core.Presentation.Systems
                 switch (slot.Kind)
                 {
                     case BehaviorKind.AssetBinding:
+                    case BehaviorKind.WorldText:
                         break;
                     case BehaviorKind.Animator:
                         break;
@@ -2268,7 +2252,7 @@ namespace Ludots.Core.Presentation.Systems
             if (primaryAssetBehaviorIndex >= 0 && primaryAssetBehaviorIndex < behaviors.Length)
             {
                 ref readonly BehaviorSlot primarySlot = ref behaviors[primaryAssetBehaviorIndex];
-                if (primarySlot.Kind == BehaviorKind.AssetBinding &&
+                if (IsAssetOutputBehavior(primarySlot.Kind) &&
                     IsBehaviorActive(state.BehaviorActiveMask, primarySlot.SlotIndex))
                 {
                     assetBinding = primarySlot.AssetBinding;
@@ -2278,7 +2262,7 @@ namespace Ludots.Core.Presentation.Systems
                     for (int i = 0; i < behaviors.Length; i++)
                     {
                         ref readonly BehaviorSlot slot = ref behaviors[i];
-                        if (slot.Kind == BehaviorKind.AssetBinding && IsBehaviorActive(state.BehaviorActiveMask, slot.SlotIndex))
+                        if (IsAssetOutputBehavior(slot.Kind) && IsBehaviorActive(state.BehaviorActiveMask, slot.SlotIndex))
                         {
                             assetBinding = slot.AssetBinding;
                             break;
@@ -2291,7 +2275,7 @@ namespace Ludots.Core.Presentation.Systems
                 for (int i = 0; i < behaviors.Length; i++)
                 {
                     ref readonly BehaviorSlot slot = ref behaviors[i];
-                    if (slot.Kind == BehaviorKind.AssetBinding && IsBehaviorActive(state.BehaviorActiveMask, slot.SlotIndex))
+                    if (IsAssetOutputBehavior(slot.Kind) && IsBehaviorActive(state.BehaviorActiveMask, slot.SlotIndex))
                     {
                         assetBinding = slot.AssetBinding;
                         break;
@@ -2445,6 +2429,11 @@ namespace Ludots.Core.Presentation.Systems
         private static bool IsBehaviorActive(uint mask, int slotIndex)
         {
             return slotIndex is >= 0 and < 32 && (mask & (1u << slotIndex)) != 0;
+        }
+
+        private static bool IsAssetOutputBehavior(BehaviorKind kind)
+        {
+            return kind is BehaviorKind.AssetBinding or BehaviorKind.WorldText;
         }
 
     }

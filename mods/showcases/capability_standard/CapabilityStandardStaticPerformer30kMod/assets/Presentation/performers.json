@@ -3,8 +3,13 @@
     "id": "capability_static_performer_showcase_bootstrap",
     "rules": [
       {
-        "event": { "kind": "EntitySpawned", "key": "capability_static_performer_building" },
-        "condition": { "inline": "SourceHasVisualTransform" },
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "capability_static_performer_building"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
         "command": {
           "kind": "CreatePerformer",
           "definitionId": "capability_static_performer_root",
@@ -12,7 +17,10 @@
         }
       },
       {
-        "event": { "kind": "EntityDestroyed", "key": "capability_static_performer_building" },
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "capability_static_performer_building"
+        },
         "command": {
           "kind": "DestroyPerformerScope",
           "scopeSource": "EventPayloadA"
@@ -24,8 +32,13 @@
     "id": "capability_static_performer_mesh_benchmark_bootstrap",
     "rules": [
       {
-        "event": { "kind": "EntitySpawned", "key": "capability_static_performer_mesh_benchmark_entity" },
-        "condition": { "inline": "None" },
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "capability_static_performer_mesh_benchmark_entity"
+        },
+        "condition": {
+          "inline": "None"
+        },
         "command": {
           "kind": "CreatePerformer",
           "definitionId": "capability_static_performer_mesh_benchmark_ism",
@@ -33,7 +46,10 @@
         }
       },
       {
-        "event": { "kind": "EntityDestroyed", "key": "capability_static_performer_mesh_benchmark_entity" },
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "capability_static_performer_mesh_benchmark_entity"
+        },
         "command": {
           "kind": "DestroyPerformerScope",
           "scopeSource": "EventPayloadA"
@@ -45,8 +61,13 @@
     "id": "capability_static_performer_mesh_hudbar_benchmark_bootstrap",
     "rules": [
       {
-        "event": { "kind": "EntitySpawned", "key": "capability_static_performer_mesh_hudbar_benchmark_entity" },
-        "condition": { "inline": "None" },
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "capability_static_performer_mesh_hudbar_benchmark_entity"
+        },
+        "condition": {
+          "inline": "None"
+        },
         "command": {
           "kind": "CreatePerformer",
           "definitionId": "capability_static_performer_mesh_benchmark_hudbar",
@@ -54,7 +75,10 @@
         }
       },
       {
-        "event": { "kind": "EntityDestroyed", "key": "capability_static_performer_mesh_hudbar_benchmark_entity" },
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "capability_static_performer_mesh_hudbar_benchmark_entity"
+        },
         "command": {
           "kind": "DestroyPerformerScope",
           "scopeSource": "EventPayloadA"
@@ -66,8 +90,13 @@
     "id": "capability_static_performer_mesh_hudtext_benchmark_bootstrap",
     "rules": [
       {
-        "event": { "kind": "EntitySpawned", "key": "capability_static_performer_mesh_hudtext_benchmark_entity" },
-        "condition": { "inline": "None" },
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "capability_static_performer_mesh_hudtext_benchmark_entity"
+        },
+        "condition": {
+          "inline": "None"
+        },
         "command": {
           "kind": "CreatePerformer",
           "definitionId": "capability_static_performer_mesh_benchmark_hudtext",
@@ -75,7 +104,10 @@
         }
       },
       {
-        "event": { "kind": "EntityDestroyed", "key": "capability_static_performer_mesh_hudtext_benchmark_entity" },
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "capability_static_performer_mesh_hudtext_benchmark_entity"
+        },
         "command": {
           "kind": "DestroyPerformerScope",
           "scopeSource": "EventPayloadA"
@@ -87,8 +119,13 @@
     "id": "capability_static_performer_dynamic_worker_bootstrap",
     "rules": [
       {
-        "event": { "kind": "EntitySpawned", "key": "capability_static_performer_dynamic_worker_entity" },
-        "condition": { "inline": "SourceHasVisualTransform" },
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "capability_static_performer_dynamic_worker_entity"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
         "command": {
           "kind": "CreatePerformer",
           "definitionId": "capability_static_performer_dynamic_worker_actor",
@@ -96,7 +133,10 @@
         }
       },
       {
-        "event": { "kind": "EntityDestroyed", "key": "capability_static_performer_dynamic_worker_entity" },
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "capability_static_performer_dynamic_worker_entity"
+        },
         "command": {
           "kind": "DestroyPerformerScope",
           "scopeSource": "EventPayloadA"
@@ -108,8 +148,13 @@
     "id": "capability_static_performer_minimap_marker_ball_bootstrap",
     "rules": [
       {
-        "event": { "kind": "EntitySpawned", "key": "capability_static_performer_minimap_marker_ball_entity" },
-        "condition": { "inline": "SourceHasVisualTransform" },
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "capability_static_performer_minimap_marker_ball_entity"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
         "command": {
           "kind": "CreatePerformer",
           "definitionId": "capability_static_performer_minimap_marker_ball",
@@ -117,7 +162,10 @@
         }
       },
       {
-        "event": { "kind": "EntityDestroyed", "key": "capability_static_performer_minimap_marker_ball_entity" },
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "capability_static_performer_minimap_marker_ball_entity"
+        },
         "command": {
           "kind": "DestroyPerformerScope",
           "scopeSource": "EventPayloadA"
@@ -127,10 +175,15 @@
   },
   {
     "id": "capability_static_performer_minimap_marker_ball",
-    "defaultColor": [1.0, 0.24, 0.06, 1.0],
     "children": [
-      { "definitionId": "capability_static_performer_durability_hud_bar_benchmark", "scopeTag": "structure" },
-      { "definitionId": "capability_static_performer_durability_hud_text_benchmark", "scopeTag": "structure" }
+      {
+        "definitionId": "capability_static_performer_durability_hud_bar_benchmark",
+        "scopeTag": "structure"
+      },
+      {
+        "definitionId": "capability_static_performer_durability_hud_text_benchmark",
+        "scopeTag": "structure"
+      }
     ],
     "behaviors": [
       {
@@ -143,8 +196,24 @@
           "materialId": "default_surface",
           "renderPath": "InstancedStaticMesh",
           "mobility": "Movable",
-          "localOffset": [0.0, 5.6, 0.0],
-          "localScale": [6.0, 6.0, 6.0]
+          "localOffset": [
+            0,
+            5.6,
+            0
+          ],
+          "localScale": [
+            6,
+            6,
+            6
+          ]
+        },
+        "style": {
+          "color": [
+            1,
+            0.24,
+            0.06,
+            1
+          ]
         }
       },
       {
@@ -157,8 +226,16 @@
           "materialId": "default_surface",
           "renderPath": "InstancedStaticMesh",
           "mobility": "Movable",
-          "localOffset": [7.0, 5.6, 0.0],
-          "localScale": [4.5, 0.45, 0.9]
+          "localOffset": [
+            7,
+            5.6,
+            0
+          ],
+          "localScale": [
+            4.5,
+            0.45,
+            0.9
+          ]
         }
       },
       {
@@ -167,7 +244,7 @@
         "activeByDefault": true,
         "grounding": {
           "mode": "SnapToGround",
-          "offset": 0.0,
+          "offset": 0,
           "updatePolicy": "EveryFrame"
         }
       },
@@ -177,15 +254,20 @@
         "activeByDefault": true,
         "minimapMarker": {
           "shape": "Circle",
-          "color": [1.0, 0.24, 0.06, 1.0],
-          "sizePx": 11.0,
+          "color": [
+            1,
+            0.24,
+            0.06,
+            1
+          ],
+          "sizePx": 11,
           "colorParamKey": "none",
           "sizeParamKey": "none",
           "visibilityParamKey": "none",
           "orientationMode": "PerformerForward",
           "orientationParamKey": "none",
-          "orientationOffsetRad": 0.0,
-          "orientationLengthPx": 15.0
+          "orientationOffsetRad": 0,
+          "orientationLengthPx": 15
         }
       }
     ]
@@ -202,10 +284,22 @@
           "assetId": "capability_static_performer.building.north.intact",
           "assetSwapParamKey": "capability_static_performer.workshop.assetState",
           "assetSwapTable": [
-            { "paramValue": 0, "assetId": "capability_static_performer.building.north.intact" },
-            { "paramValue": 1, "assetId": "capability_static_performer.building.south.intact" },
-            { "paramValue": 2, "assetId": "capability_static_performer.building.damaged" },
-            { "paramValue": 3, "assetId": "capability_static_performer.building.ruined" }
+            {
+              "paramValue": 0,
+              "assetId": "capability_static_performer.building.north.intact"
+            },
+            {
+              "paramValue": 1,
+              "assetId": "capability_static_performer.building.south.intact"
+            },
+            {
+              "paramValue": 2,
+              "assetId": "capability_static_performer.building.damaged"
+            },
+            {
+              "paramValue": 3,
+              "assetId": "capability_static_performer.building.ruined"
+            }
           ],
           "materialId": "default_surface",
           "renderPath": "InstancedStaticMesh",
@@ -217,7 +311,10 @@
   {
     "id": "capability_static_performer_dynamic_worker_actor",
     "children": [
-      { "definitionId": "capability_static_performer_dynamic_worker_tool_attachment", "scopeTag": "structure" }
+      {
+        "definitionId": "capability_static_performer_dynamic_worker_tool_attachment",
+        "scopeTag": "structure"
+      }
     ],
     "behaviors": [
       {
@@ -249,13 +346,17 @@
         "activeByDefault": true,
         "grounding": {
           "mode": "SnapToGround",
-          "offset": 0.0,
+          "offset": 0,
           "updatePolicy": "EveryFrame"
         }
       }
     ],
     "paramDefaults": [
-      { "paramKey": "capability_static_performer.worker.locomotion.speed", "lane": "Float", "floatValue": 1.0 }
+      {
+        "paramKey": "capability_static_performer.worker.locomotion.speed",
+        "lane": "Float",
+        "floatValue": 1
+      }
     ]
   },
   {
@@ -267,8 +368,17 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [0.0, 0.65, -0.35],
-          "rotationOffset": [0.0, 0.0, 0.0, 1.0],
+          "offset": [
+            0,
+            0.65,
+            -0.35
+          ],
+          "rotationOffset": [
+            0,
+            0,
+            0,
+            1
+          ],
           "inheritScale": false
         }
       }
@@ -277,7 +387,10 @@
   {
     "id": "capability_static_performer_mesh_benchmark_hudbar",
     "children": [
-      { "definitionId": "capability_static_performer_durability_hud_bar_benchmark", "scopeTag": "structure" }
+      {
+        "definitionId": "capability_static_performer_durability_hud_bar_benchmark",
+        "scopeTag": "structure"
+      }
     ],
     "behaviors": [
       {
@@ -289,10 +402,22 @@
           "assetId": "capability_static_performer.building.north.intact",
           "assetSwapParamKey": "capability_static_performer.workshop.assetState",
           "assetSwapTable": [
-            { "paramValue": 0, "assetId": "capability_static_performer.building.north.intact" },
-            { "paramValue": 1, "assetId": "capability_static_performer.building.south.intact" },
-            { "paramValue": 2, "assetId": "capability_static_performer.building.damaged" },
-            { "paramValue": 3, "assetId": "capability_static_performer.building.ruined" }
+            {
+              "paramValue": 0,
+              "assetId": "capability_static_performer.building.north.intact"
+            },
+            {
+              "paramValue": 1,
+              "assetId": "capability_static_performer.building.south.intact"
+            },
+            {
+              "paramValue": 2,
+              "assetId": "capability_static_performer.building.damaged"
+            },
+            {
+              "paramValue": 3,
+              "assetId": "capability_static_performer.building.ruined"
+            }
           ],
           "materialId": "default_surface",
           "renderPath": "InstancedStaticMesh",
@@ -308,23 +433,49 @@
           "targetParamKey": "capability_static_performer.durability.ratio",
           "mode": "AttributeRatio",
           "thresholds": [
-            { "threshold": 0.0, "outputParamKey": "capability_static_performer.workshop.assetState", "outputValue": 3.0 },
-            { "threshold": 0.5, "outputParamKey": "capability_static_performer.workshop.assetState", "outputValue": 2.0 }
+            {
+              "threshold": 0,
+              "outputParamKey": "capability_static_performer.workshop.assetState",
+              "outputValue": 3
+            },
+            {
+              "threshold": 0.5,
+              "outputParamKey": "capability_static_performer.workshop.assetState",
+              "outputValue": 2
+            }
           ]
         }
       }
     ],
     "paramDefaults": [
-      { "paramKey": "capability_static_performer.durability.ratio", "lane": "Float", "floatValue": 1.0 },
-      { "paramKey": "capability_static_performer.workshop.assetState", "lane": "Int", "intValue": 0 },
-      { "paramKey": "capability_static_performer.durability.hud.ratio", "lane": "Float", "floatValue": 1.0 }
+      {
+        "paramKey": "capability_static_performer.durability.ratio",
+        "lane": "Float",
+        "floatValue": 1
+      },
+      {
+        "paramKey": "capability_static_performer.workshop.assetState",
+        "lane": "Int",
+        "intValue": 0
+      },
+      {
+        "paramKey": "capability_static_performer.durability.hud.ratio",
+        "lane": "Float",
+        "floatValue": 1
+      }
     ]
   },
   {
     "id": "capability_static_performer_mesh_benchmark_hudtext",
     "children": [
-      { "definitionId": "capability_static_performer_durability_hud_bar_benchmark", "scopeTag": "structure" },
-      { "definitionId": "capability_static_performer_durability_hud_text_benchmark", "scopeTag": "structure" }
+      {
+        "definitionId": "capability_static_performer_durability_hud_bar_benchmark",
+        "scopeTag": "structure"
+      },
+      {
+        "definitionId": "capability_static_performer_durability_hud_text_benchmark",
+        "scopeTag": "structure"
+      }
     ],
     "behaviors": [
       {
@@ -336,10 +487,22 @@
           "assetId": "capability_static_performer.building.north.intact",
           "assetSwapParamKey": "capability_static_performer.workshop.assetState",
           "assetSwapTable": [
-            { "paramValue": 0, "assetId": "capability_static_performer.building.north.intact" },
-            { "paramValue": 1, "assetId": "capability_static_performer.building.south.intact" },
-            { "paramValue": 2, "assetId": "capability_static_performer.building.damaged" },
-            { "paramValue": 3, "assetId": "capability_static_performer.building.ruined" }
+            {
+              "paramValue": 0,
+              "assetId": "capability_static_performer.building.north.intact"
+            },
+            {
+              "paramValue": 1,
+              "assetId": "capability_static_performer.building.south.intact"
+            },
+            {
+              "paramValue": 2,
+              "assetId": "capability_static_performer.building.damaged"
+            },
+            {
+              "paramValue": 3,
+              "assetId": "capability_static_performer.building.ruined"
+            }
           ],
           "materialId": "default_surface",
           "renderPath": "InstancedStaticMesh",
@@ -355,18 +518,46 @@
           "targetParamKey": "capability_static_performer.durability.ratio",
           "mode": "AttributeRatio",
           "thresholds": [
-            { "threshold": 0.0, "outputParamKey": "capability_static_performer.workshop.assetState", "outputValue": 3.0 },
-            { "threshold": 0.5, "outputParamKey": "capability_static_performer.workshop.assetState", "outputValue": 2.0 }
+            {
+              "threshold": 0,
+              "outputParamKey": "capability_static_performer.workshop.assetState",
+              "outputValue": 3
+            },
+            {
+              "threshold": 0.5,
+              "outputParamKey": "capability_static_performer.workshop.assetState",
+              "outputValue": 2
+            }
           ]
         }
       }
     ],
     "paramDefaults": [
-      { "paramKey": "capability_static_performer.durability.ratio", "lane": "Float", "floatValue": 1.0 },
-      { "paramKey": "capability_static_performer.workshop.assetState", "lane": "Int", "intValue": 0 },
-      { "paramKey": "capability_static_performer.durability.hud.ratio", "lane": "Float", "floatValue": 1.0 },
-      { "paramKey": "capability_static_performer.durability.current", "lane": "Float", "floatValue": 100.0 },
-      { "paramKey": "capability_static_performer.durability.base", "lane": "Float", "floatValue": 100.0 }
+      {
+        "paramKey": "capability_static_performer.durability.ratio",
+        "lane": "Float",
+        "floatValue": 1
+      },
+      {
+        "paramKey": "capability_static_performer.workshop.assetState",
+        "lane": "Int",
+        "intValue": 0
+      },
+      {
+        "paramKey": "capability_static_performer.durability.hud.ratio",
+        "lane": "Float",
+        "floatValue": 1
+      },
+      {
+        "paramKey": "capability_static_performer.durability.current",
+        "lane": "Float",
+        "floatValue": 100
+      },
+      {
+        "paramKey": "capability_static_performer.durability.base",
+        "lane": "Float",
+        "floatValue": 100
+      }
     ]
   },
   {
@@ -381,10 +572,22 @@
           "assetId": "capability_static_performer.building.north.intact",
           "assetSwapParamKey": "capability_static_performer.workshop.assetState",
           "assetSwapTable": [
-            { "paramValue": 0, "assetId": "capability_static_performer.building.north.intact" },
-            { "paramValue": 1, "assetId": "capability_static_performer.building.south.intact" },
-            { "paramValue": 2, "assetId": "capability_static_performer.building.damaged" },
-            { "paramValue": 3, "assetId": "capability_static_performer.building.ruined" }
+            {
+              "paramValue": 0,
+              "assetId": "capability_static_performer.building.north.intact"
+            },
+            {
+              "paramValue": 1,
+              "assetId": "capability_static_performer.building.south.intact"
+            },
+            {
+              "paramValue": 2,
+              "assetId": "capability_static_performer.building.damaged"
+            },
+            {
+              "paramValue": 3,
+              "assetId": "capability_static_performer.building.ruined"
+            }
           ],
           "materialId": "default_surface",
           "renderPath": "InstancedStaticMesh",
@@ -400,8 +603,16 @@
           "targetParamKey": "capability_static_performer.durability.ratio",
           "mode": "AttributeRatio",
           "thresholds": [
-            { "threshold": 0.0, "outputParamKey": "capability_static_performer.workshop.assetState", "outputValue": 3.0 },
-            { "threshold": 0.5, "outputParamKey": "capability_static_performer.workshop.assetState", "outputValue": 2.0 }
+            {
+              "threshold": 0,
+              "outputParamKey": "capability_static_performer.workshop.assetState",
+              "outputValue": 3
+            },
+            {
+              "threshold": 0.5,
+              "outputParamKey": "capability_static_performer.workshop.assetState",
+              "outputValue": 2
+            }
           ]
         }
       },
@@ -411,14 +622,22 @@
         "activeByDefault": true,
         "grounding": {
           "mode": "SnapToGround",
-          "offset": 0.0,
+          "offset": 0,
           "updatePolicy": "Once"
         }
       }
     ],
     "paramDefaults": [
-      { "paramKey": "capability_static_performer.durability.ratio", "lane": "Float", "floatValue": 1.0 },
-      { "paramKey": "capability_static_performer.workshop.assetState", "lane": "Int", "intValue": 0 }
+      {
+        "paramKey": "capability_static_performer.durability.ratio",
+        "lane": "Float",
+        "floatValue": 1
+      },
+      {
+        "paramKey": "capability_static_performer.workshop.assetState",
+        "lane": "Int",
+        "intValue": 0
+      }
     ]
   },
   {
@@ -434,10 +653,22 @@
           "assetId": "capability_static_performer.building.north.intact",
           "assetSwapParamKey": "capability_static_performer.workshop.assetState",
           "assetSwapTable": [
-            { "paramValue": 0, "assetId": "capability_static_performer.building.north.intact" },
-            { "paramValue": 1, "assetId": "capability_static_performer.building.south.intact" },
-            { "paramValue": 2, "assetId": "capability_static_performer.building.damaged" },
-            { "paramValue": 3, "assetId": "capability_static_performer.building.ruined" }
+            {
+              "paramValue": 0,
+              "assetId": "capability_static_performer.building.north.intact"
+            },
+            {
+              "paramValue": 1,
+              "assetId": "capability_static_performer.building.south.intact"
+            },
+            {
+              "paramValue": 2,
+              "assetId": "capability_static_performer.building.damaged"
+            },
+            {
+              "paramValue": 3,
+              "assetId": "capability_static_performer.building.ruined"
+            }
           ],
           "materialId": "default_surface",
           "renderPath": "InstancedStaticMesh",
@@ -450,8 +681,17 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [2.0, 0.0, 0.0],
-          "rotationOffset": [0.0, 0.0, 0.0, 1.0],
+          "offset": [
+            2,
+            0,
+            0
+          ],
+          "rotationOffset": [
+            0,
+            0,
+            0,
+            1
+          ],
           "inheritScale": false
         }
       }
@@ -461,7 +701,11 @@
     "id": "capability_static_performer_workshop_right_mesh",
     "extends": "capability_static_performer_workshop_base",
     "paramDefaults": [
-      { "paramKey": "capability_static_performer.workshop.assetState", "lane": "Int", "intValue": 1 }
+      {
+        "paramKey": "capability_static_performer.workshop.assetState",
+        "lane": "Int",
+        "intValue": 1
+      }
     ],
     "behaviors": [
       {
@@ -473,10 +717,22 @@
           "assetId": "capability_static_performer.building.north.intact",
           "assetSwapParamKey": "capability_static_performer.workshop.assetState",
           "assetSwapTable": [
-            { "paramValue": 0, "assetId": "capability_static_performer.building.north.intact" },
-            { "paramValue": 1, "assetId": "capability_static_performer.building.south.intact" },
-            { "paramValue": 2, "assetId": "capability_static_performer.building.damaged" },
-            { "paramValue": 3, "assetId": "capability_static_performer.building.ruined" }
+            {
+              "paramValue": 0,
+              "assetId": "capability_static_performer.building.north.intact"
+            },
+            {
+              "paramValue": 1,
+              "assetId": "capability_static_performer.building.south.intact"
+            },
+            {
+              "paramValue": 2,
+              "assetId": "capability_static_performer.building.damaged"
+            },
+            {
+              "paramValue": 3,
+              "assetId": "capability_static_performer.building.ruined"
+            }
           ],
           "materialId": "default_surface",
           "renderPath": "InstancedStaticMesh",
@@ -489,8 +745,17 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [-2.0, 0.0, 0.0],
-          "rotationOffset": [0.0, 0.0, 0.0, 1.0],
+          "offset": [
+            -2,
+            0,
+            0
+          ],
+          "rotationOffset": [
+            0,
+            0,
+            0,
+            1
+          ],
           "inheritScale": false
         }
       }
@@ -499,7 +764,10 @@
   {
     "id": "capability_static_performer_chimney_mesh",
     "children": [
-      { "definitionId": "capability_static_performer_chimney_smoke_vfx", "scopeTag": "working" }
+      {
+        "definitionId": "capability_static_performer_chimney_smoke_vfx",
+        "scopeTag": "working"
+      }
     ],
     "behaviors": [
       {
@@ -520,8 +788,17 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [0.0, 0.0, 3.0],
-          "rotationOffset": [0.0, 0.0, 0.0, 1.0],
+          "offset": [
+            0,
+            0,
+            3
+          ],
+          "rotationOffset": [
+            0,
+            0,
+            0,
+            1
+          ],
           "inheritScale": false
         }
       },
@@ -531,7 +808,7 @@
         "activeByDefault": true,
         "grounding": {
           "mode": "SnapToGround",
-          "offset": 0.0,
+          "offset": 0,
           "updatePolicy": "Once"
         }
       }
@@ -541,14 +818,30 @@
     "id": "capability_static_performer_chimney_smoke_vfx",
     "rules": [
       {
-        "event": { "kind": "TagEffectiveChanged", "key": "working" },
-        "condition": { "inline": "TagGained" },
-        "command": { "kind": "ActivateBehavior", "targetBehaviorSlot": "body" }
+        "event": {
+          "kind": "TagEffectiveChanged",
+          "key": "working"
+        },
+        "condition": {
+          "inline": "TagGained"
+        },
+        "command": {
+          "kind": "ActivateBehavior",
+          "targetBehaviorSlot": "body"
+        }
       },
       {
-        "event": { "kind": "TagEffectiveChanged", "key": "working" },
-        "condition": { "inline": "TagLost" },
-        "command": { "kind": "DeactivateBehavior", "targetBehaviorSlot": "body" }
+        "event": {
+          "kind": "TagEffectiveChanged",
+          "key": "working"
+        },
+        "condition": {
+          "inline": "TagLost"
+        },
+        "command": {
+          "kind": "DeactivateBehavior",
+          "targetBehaviorSlot": "body"
+        }
       }
     ],
     "behaviors": [
@@ -561,7 +854,11 @@
           "assetId": "capability_static_performer.smoke.billboard",
           "renderPath": "StaticMesh",
           "mobility": "Movable",
-          "localScale": [2.2, 2.2, 2.2]
+          "localScale": [
+            2.2,
+            2.2,
+            2.2
+          ]
         }
       },
       {
@@ -570,8 +867,17 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [0.0, 5.0, 0.0],
-          "rotationOffset": [0.0, 0.0, 0.0, 1.0],
+          "offset": [
+            0,
+            5,
+            0
+          ],
+          "rotationOffset": [
+            0,
+            0,
+            0,
+            1
+          ],
           "inheritScale": false
         }
       }
@@ -579,7 +885,6 @@
   },
   {
     "id": "capability_static_performer_worker_route_spline",
-    "defaultColor": [0.88, 0.69, 0.17, 0.75],
     "behaviors": [
       {
         "slot": "body",
@@ -590,7 +895,19 @@
           "assetId": "capability_static_performer.worker.patrol",
           "renderPath": "None",
           "mobility": "Movable",
-          "localScale": [3.6, 1.0, 1.0]
+          "localScale": [
+            3.6,
+            1,
+            1
+          ]
+        },
+        "style": {
+          "color": [
+            0.88,
+            0.69,
+            0.17,
+            0.75
+          ]
         }
       },
       {
@@ -599,8 +916,17 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [0.0, 0.05, -1.8],
-          "rotationOffset": [0.0, 0.0, 0.0, 1.0],
+          "offset": [
+            0,
+            0.05,
+            -1.8
+          ],
+          "rotationOffset": [
+            0,
+            0,
+            0,
+            1
+          ],
           "inheritScale": false
         }
       }
@@ -608,7 +934,6 @@
   },
   {
     "id": "capability_static_performer_forge_decal",
-    "defaultColor": [1.0, 0.55, 0.12, 0.32],
     "behaviors": [
       {
         "slot": "body",
@@ -619,7 +944,19 @@
           "assetId": "Ring",
           "renderPath": "None",
           "mobility": "Static",
-          "localScale": [2.3, 1.2, 0.08]
+          "localScale": [
+            2.3,
+            1.2,
+            0.08
+          ]
+        },
+        "style": {
+          "color": [
+            1,
+            0.55,
+            0.12,
+            0.32
+          ]
         }
       },
       {
@@ -628,8 +965,17 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [0.0, 0.0, 1.4],
-          "rotationOffset": [0.0, 0.0, 0.0, 1.0],
+          "offset": [
+            0,
+            0,
+            1.4
+          ],
+          "rotationOffset": [
+            0,
+            0,
+            0,
+            1
+          ],
           "inheritScale": false
         }
       },
@@ -649,64 +995,160 @@
     "id": "capability_static_performer_worker_actor",
     "rules": [
       {
-        "event": { "kind": "TagEffectiveChanged", "key": "working" },
-        "condition": { "inline": "TagGained" },
-        "command": { "kind": "ActivateBehavior", "targetBehaviorSlot": "body" }
+        "event": {
+          "kind": "TagEffectiveChanged",
+          "key": "working"
+        },
+        "condition": {
+          "inline": "TagGained"
+        },
+        "command": {
+          "kind": "ActivateBehavior",
+          "targetBehaviorSlot": "body"
+        }
       },
       {
-        "event": { "kind": "TagEffectiveChanged", "key": "working" },
-        "condition": { "inline": "TagLost" },
-        "command": { "kind": "DeactivateBehavior", "targetBehaviorSlot": "body" }
+        "event": {
+          "kind": "TagEffectiveChanged",
+          "key": "working"
+        },
+        "condition": {
+          "inline": "TagLost"
+        },
+        "command": {
+          "kind": "DeactivateBehavior",
+          "targetBehaviorSlot": "body"
+        }
       },
       {
-        "event": { "kind": "TagEffectiveChanged", "key": "working" },
-        "condition": { "inline": "TagGained" },
-        "command": { "kind": "ActivateBehavior", "targetBehaviorSlot": "animator" }
+        "event": {
+          "kind": "TagEffectiveChanged",
+          "key": "working"
+        },
+        "condition": {
+          "inline": "TagGained"
+        },
+        "command": {
+          "kind": "ActivateBehavior",
+          "targetBehaviorSlot": "animator"
+        }
       },
       {
-        "event": { "kind": "TagEffectiveChanged", "key": "working" },
-        "condition": { "inline": "TagLost" },
-        "command": { "kind": "DeactivateBehavior", "targetBehaviorSlot": "animator" }
+        "event": {
+          "kind": "TagEffectiveChanged",
+          "key": "working"
+        },
+        "condition": {
+          "inline": "TagLost"
+        },
+        "command": {
+          "kind": "DeactivateBehavior",
+          "targetBehaviorSlot": "animator"
+        }
       },
       {
-        "event": { "kind": "TagEffectiveChanged", "key": "working" },
-        "condition": { "inline": "TagGained" },
-        "command": { "kind": "ActivateBehavior", "targetBehaviorSlot": "sound" }
+        "event": {
+          "kind": "TagEffectiveChanged",
+          "key": "working"
+        },
+        "condition": {
+          "inline": "TagGained"
+        },
+        "command": {
+          "kind": "ActivateBehavior",
+          "targetBehaviorSlot": "sound"
+        }
       },
       {
-        "event": { "kind": "TagEffectiveChanged", "key": "working" },
-        "condition": { "inline": "TagLost" },
-        "command": { "kind": "DeactivateBehavior", "targetBehaviorSlot": "sound" }
+        "event": {
+          "kind": "TagEffectiveChanged",
+          "key": "working"
+        },
+        "condition": {
+          "inline": "TagLost"
+        },
+        "command": {
+          "kind": "DeactivateBehavior",
+          "targetBehaviorSlot": "sound"
+        }
       },
       {
-        "event": { "kind": "TagEffectiveChanged", "key": "working" },
-        "condition": { "inline": "TagGained" },
-        "command": { "kind": "ActivateBehavior", "targetBehaviorSlot": "spline" }
+        "event": {
+          "kind": "TagEffectiveChanged",
+          "key": "working"
+        },
+        "condition": {
+          "inline": "TagGained"
+        },
+        "command": {
+          "kind": "ActivateBehavior",
+          "targetBehaviorSlot": "spline"
+        }
       },
       {
-        "event": { "kind": "TagEffectiveChanged", "key": "working" },
-        "condition": { "inline": "TagLost" },
-        "command": { "kind": "DeactivateBehavior", "targetBehaviorSlot": "spline" }
+        "event": {
+          "kind": "TagEffectiveChanged",
+          "key": "working"
+        },
+        "condition": {
+          "inline": "TagLost"
+        },
+        "command": {
+          "kind": "DeactivateBehavior",
+          "targetBehaviorSlot": "spline"
+        }
       },
       {
-        "event": { "kind": "TagEffectiveChanged", "key": "working" },
-        "condition": { "inline": "TagGained" },
-        "command": { "kind": "ActivateBehavior", "targetBehaviorSlot": "grounding" }
+        "event": {
+          "kind": "TagEffectiveChanged",
+          "key": "working"
+        },
+        "condition": {
+          "inline": "TagGained"
+        },
+        "command": {
+          "kind": "ActivateBehavior",
+          "targetBehaviorSlot": "grounding"
+        }
       },
       {
-        "event": { "kind": "TagEffectiveChanged", "key": "working" },
-        "condition": { "inline": "TagLost" },
-        "command": { "kind": "DeactivateBehavior", "targetBehaviorSlot": "grounding" }
+        "event": {
+          "kind": "TagEffectiveChanged",
+          "key": "working"
+        },
+        "condition": {
+          "inline": "TagLost"
+        },
+        "command": {
+          "kind": "DeactivateBehavior",
+          "targetBehaviorSlot": "grounding"
+        }
       },
       {
-        "event": { "kind": "TagEffectiveChanged", "key": "working" },
-        "condition": { "inline": "TagGained" },
-        "command": { "kind": "ActivateBehavior", "targetBehaviorSlot": "attachment" }
+        "event": {
+          "kind": "TagEffectiveChanged",
+          "key": "working"
+        },
+        "condition": {
+          "inline": "TagGained"
+        },
+        "command": {
+          "kind": "ActivateBehavior",
+          "targetBehaviorSlot": "attachment"
+        }
       },
       {
-        "event": { "kind": "TagEffectiveChanged", "key": "working" },
-        "condition": { "inline": "TagLost" },
-        "command": { "kind": "DeactivateBehavior", "targetBehaviorSlot": "attachment" }
+        "event": {
+          "kind": "TagEffectiveChanged",
+          "key": "working"
+        },
+        "condition": {
+          "inline": "TagLost"
+        },
+        "command": {
+          "kind": "DeactivateBehavior",
+          "targetBehaviorSlot": "attachment"
+        }
       }
     ],
     "behaviors": [
@@ -761,7 +1203,7 @@
         "activeByDefault": false,
         "grounding": {
           "mode": "SnapToGround",
-          "offset": 0.0,
+          "offset": 0,
           "updatePolicy": "EveryFrame"
         }
       },
@@ -771,15 +1213,32 @@
         "activeByDefault": false,
         "attachment": {
           "target": "Parent",
-          "offset": [0.0, 0.0, -2.0],
-          "rotationOffset": [0.0, 0.0, 0.0, 1.0],
+          "offset": [
+            0,
+            0,
+            -2
+          ],
+          "rotationOffset": [
+            0,
+            0,
+            0,
+            1
+          ],
           "inheritScale": false
         }
       }
     ],
     "paramDefaults": [
-      { "paramKey": "capability_static_performer.worker.locomotion.speed", "lane": "Float", "floatValue": 0.35 },
-      { "paramKey": "capability_static_performer.worker.route.progress", "lane": "Float", "floatValue": 0.0 }
+      {
+        "paramKey": "capability_static_performer.worker.locomotion.speed",
+        "lane": "Float",
+        "floatValue": 0.35
+      },
+      {
+        "paramKey": "capability_static_performer.worker.route.progress",
+        "lane": "Float",
+        "floatValue": 0
+      }
     ]
   },
   {
@@ -794,7 +1253,19 @@
           "materialParamKey": "capability_static_performer.durability.hud.ratio",
           "renderPath": "None",
           "mobility": "Movable",
-          "localScale": [96.0, 10.0, 1.0]
+          "localScale": [
+            96,
+            10,
+            1
+          ]
+        },
+        "style": {
+          "color": [
+            0.15,
+            0.88,
+            0.32,
+            1
+          ]
         }
       },
       {
@@ -803,16 +1274,31 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [0.0, 1.55, 0.0],
-          "rotationOffset": [0.0, 0.0, 0.0, 1.0],
+          "offset": [
+            0,
+            1.55,
+            0
+          ],
+          "rotationOffset": [
+            0,
+            0,
+            0,
+            1
+          ],
           "inheritScale": false
         }
+      },
+      {
+        "slot": "attributeRatio",
+        "kind": "AttributeBinding",
+        "activeByDefault": true,
+        "attributeBinding": {
+          "attributeId": "Durability",
+          "targetParamKey": "capability_static_performer.durability.hud.ratio",
+          "mode": "AttributeRatio"
+        }
       }
-    ],
-    "bindings": [
-      { "paramKey": "capability_static_performer.durability.hud.ratio", "source": "attributeRatio", "attributeId": "Durability" }
-    ],
-    "defaultColor": [0.15, 0.88, 0.32, 1.0]
+    ]
   },
   {
     "id": "capability_static_performer_durability_hud_bar_benchmark",
@@ -826,7 +1312,19 @@
           "materialParamKey": "capability_static_performer.durability.hud.ratio",
           "renderPath": "None",
           "mobility": "Movable",
-          "localScale": [72.0, 8.0, 1.0]
+          "localScale": [
+            72,
+            8,
+            1
+          ]
+        },
+        "style": {
+          "color": [
+            0.1,
+            1,
+            0.15,
+            1
+          ]
         }
       },
       {
@@ -835,34 +1333,53 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [0.0, 1.55, 0.0],
-          "rotationOffset": [0.0, 0.0, 0.0, 1.0],
+          "offset": [
+            0,
+            1.55,
+            0
+          ],
+          "rotationOffset": [
+            0,
+            0,
+            0,
+            1
+          ],
           "inheritScale": false
         }
+      },
+      {
+        "slot": "attributeRatio",
+        "kind": "AttributeBinding",
+        "activeByDefault": true,
+        "attributeBinding": {
+          "attributeId": "Durability",
+          "targetParamKey": "capability_static_performer.durability.hud.ratio",
+          "mode": "AttributeRatio"
+        }
       }
-    ],
-    "bindings": [
-      { "paramKey": "capability_static_performer.durability.hud.ratio", "source": "attributeRatio", "attributeId": "Durability" }
-    ],
-    "defaultColor": [0.1, 1.0, 0.15, 1.0]
+    ]
   },
   {
     "id": "capability_static_performer_durability_hud_text",
-    "worldTextMode": "AttributeCurrentOverBase",
-    "defaultFontSize": 16,
     "behaviors": [
       {
         "slot": "body",
-        "kind": "AssetBinding",
+        "kind": "WorldText",
         "activeByDefault": true,
-        "assetBinding": {
-          "assetKind": "WorldText",
-          "assetId": "hud.attribute.current_over_base",
-          "scaleParamKey": "capability_static_performer.durability.current",
-          "materialParamKey": "capability_static_performer.durability.base",
-          "renderPath": "None",
-          "mobility": "Movable",
-          "localScale": [1.0, 1.0, 1.0]
+        "worldText": {
+          "textToken": "hud.attribute.current_over_base",
+          "mode": "AttributeCurrentOverBase",
+          "fontSize": 16,
+          "valueParamKey": "capability_static_performer.durability.current",
+          "secondaryValueParamKey": "capability_static_performer.durability.base"
+        },
+        "style": {
+          "color": [
+            1,
+            0.96,
+            0.86,
+            1
+          ]
         }
       },
       {
@@ -871,35 +1388,63 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [0.0, 1.85, 0.0],
-          "rotationOffset": [0.0, 0.0, 0.0, 1.0],
+          "offset": [
+            0,
+            1.85,
+            0
+          ],
+          "rotationOffset": [
+            0,
+            0,
+            0,
+            1
+          ],
           "inheritScale": false
         }
+      },
+      {
+        "slot": "attributeCurrent",
+        "kind": "AttributeBinding",
+        "activeByDefault": true,
+        "attributeBinding": {
+          "attributeId": "Durability",
+          "targetParamKey": "capability_static_performer.durability.current",
+          "mode": "Attribute"
+        }
+      },
+      {
+        "slot": "attributeBase",
+        "kind": "AttributeBinding",
+        "activeByDefault": true,
+        "attributeBinding": {
+          "attributeId": "Durability",
+          "targetParamKey": "capability_static_performer.durability.base",
+          "mode": "AttributeBase"
+        }
       }
-    ],
-    "bindings": [
-      { "paramKey": "capability_static_performer.durability.current", "source": "attribute", "attributeId": "Durability" },
-      { "paramKey": "capability_static_performer.durability.base", "source": "attributeBase", "attributeId": "Durability" }
-    ],
-    "defaultColor": [1.0, 0.96, 0.86, 1.0]
+    ]
   },
   {
     "id": "capability_static_performer_durability_hud_text_benchmark",
-    "worldTextMode": "AttributeCurrentOverBase",
-    "defaultFontSize": 11,
     "behaviors": [
       {
         "slot": "body",
-        "kind": "AssetBinding",
+        "kind": "WorldText",
         "activeByDefault": true,
-        "assetBinding": {
-          "assetKind": "WorldText",
-          "assetId": "hud.attribute.current_over_base",
-          "scaleParamKey": "capability_static_performer.durability.current",
-          "materialParamKey": "capability_static_performer.durability.base",
-          "renderPath": "None",
-          "mobility": "Movable",
-          "localScale": [1.0, 1.0, 1.0]
+        "worldText": {
+          "textToken": "hud.attribute.current_over_base",
+          "mode": "AttributeCurrentOverBase",
+          "fontSize": 11,
+          "valueParamKey": "capability_static_performer.durability.current",
+          "secondaryValueParamKey": "capability_static_performer.durability.base"
+        },
+        "style": {
+          "color": [
+            1,
+            0.98,
+            0.92,
+            1
+          ]
         }
       },
       {
@@ -908,52 +1453,156 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [0.0, 1.85, 0.0],
-          "rotationOffset": [0.0, 0.0, 0.0, 1.0],
+          "offset": [
+            0,
+            1.85,
+            0
+          ],
+          "rotationOffset": [
+            0,
+            0,
+            0,
+            1
+          ],
           "inheritScale": false
         }
+      },
+      {
+        "slot": "attributeCurrent",
+        "kind": "AttributeBinding",
+        "activeByDefault": true,
+        "attributeBinding": {
+          "attributeId": "Durability",
+          "targetParamKey": "capability_static_performer.durability.current",
+          "mode": "Attribute"
+        }
+      },
+      {
+        "slot": "attributeBase",
+        "kind": "AttributeBinding",
+        "activeByDefault": true,
+        "attributeBinding": {
+          "attributeId": "Durability",
+          "targetParamKey": "capability_static_performer.durability.base",
+          "mode": "AttributeBase"
+        }
       }
-    ],
-    "bindings": [
-      { "paramKey": "capability_static_performer.durability.current", "source": "attribute", "attributeId": "Durability" },
-      { "paramKey": "capability_static_performer.durability.base", "source": "attributeBase", "attributeId": "Durability" }
-    ],
-    "defaultColor": [1.0, 0.98, 0.92, 1.0]
+    ]
   },
   {
     "id": "capability_static_performer_root",
     "children": [
-      { "definitionId": "capability_static_performer_workshop_left_mesh", "scopeTag": "structure" },
-      { "definitionId": "capability_static_performer_workshop_right_mesh", "scopeTag": "structure" },
-      { "definitionId": "capability_static_performer_chimney_mesh", "scopeTag": "structure" },
-      { "definitionId": "capability_static_performer_worker_route_spline", "scopeTag": "structure" },
-      { "definitionId": "capability_static_performer_forge_decal", "scopeTag": "structure" },
-      { "definitionId": "capability_static_performer_worker_actor", "scopeTag": "structure" },
-      { "definitionId": "capability_static_performer_durability_hud_bar", "scopeTag": "structure" },
-      { "definitionId": "capability_static_performer_durability_hud_text", "scopeTag": "structure" }
+      {
+        "definitionId": "capability_static_performer_workshop_left_mesh",
+        "scopeTag": "structure"
+      },
+      {
+        "definitionId": "capability_static_performer_workshop_right_mesh",
+        "scopeTag": "structure"
+      },
+      {
+        "definitionId": "capability_static_performer_chimney_mesh",
+        "scopeTag": "structure"
+      },
+      {
+        "definitionId": "capability_static_performer_worker_route_spline",
+        "scopeTag": "structure"
+      },
+      {
+        "definitionId": "capability_static_performer_forge_decal",
+        "scopeTag": "structure"
+      },
+      {
+        "definitionId": "capability_static_performer_worker_actor",
+        "scopeTag": "structure"
+      },
+      {
+        "definitionId": "capability_static_performer_durability_hud_bar",
+        "scopeTag": "structure"
+      },
+      {
+        "definitionId": "capability_static_performer_durability_hud_text",
+        "scopeTag": "structure"
+      }
     ],
     "paramDefaults": [
-      { "paramKey": "capability_static_performer.region", "lane": "Float", "floatValue": 0.0 },
-      { "paramKey": "capability_static_performer.durability.ratio", "lane": "Float", "floatValue": 1.0 },
-      { "paramKey": "capability_static_performer.working.visible", "lane": "Int", "intValue": 0 },
-      { "paramKey": "capability_static_performer.dayNight", "lane": "Float", "floatValue": 0.0 },
-      { "paramKey": "capability_static_performer.workshop.assetState", "lane": "Int", "intValue": 0 },
-      { "paramKey": "capability_static_performer.durability.hud.ratio", "lane": "Float", "floatValue": 1.0 },
-      { "paramKey": "capability_static_performer.durability.current", "lane": "Float", "floatValue": 100.0 },
-      { "paramKey": "capability_static_performer.durability.base", "lane": "Float", "floatValue": 100.0 }
+      {
+        "paramKey": "capability_static_performer.region",
+        "lane": "Float",
+        "floatValue": 0
+      },
+      {
+        "paramKey": "capability_static_performer.durability.ratio",
+        "lane": "Float",
+        "floatValue": 1
+      },
+      {
+        "paramKey": "capability_static_performer.working.visible",
+        "lane": "Int",
+        "intValue": 0
+      },
+      {
+        "paramKey": "capability_static_performer.dayNight",
+        "lane": "Float",
+        "floatValue": 0
+      },
+      {
+        "paramKey": "capability_static_performer.workshop.assetState",
+        "lane": "Int",
+        "intValue": 0
+      },
+      {
+        "paramKey": "capability_static_performer.durability.hud.ratio",
+        "lane": "Float",
+        "floatValue": 1
+      },
+      {
+        "paramKey": "capability_static_performer.durability.current",
+        "lane": "Float",
+        "floatValue": 100
+      },
+      {
+        "paramKey": "capability_static_performer.durability.base",
+        "lane": "Float",
+        "floatValue": 100
+      }
     ],
     "rules": [
       {
-        "event": { "kind": "GlobalDayNight", "key": "*" },
-        "command": { "kind": "SetParam", "paramKey": "capability_static_performer.dayNight", "paramLane": "Float", "valueSource": "EventMagnitude" }
+        "event": {
+          "kind": "GlobalDayNight",
+          "key": "*"
+        },
+        "command": {
+          "kind": "SetParam",
+          "paramKey": "capability_static_performer.dayNight",
+          "paramLane": "Float",
+          "valueSource": "EventMagnitude"
+        }
       },
       {
-        "event": { "kind": "GlobalRegionChanged", "key": "*" },
-        "command": { "kind": "SetParam", "paramKey": "capability_static_performer.region", "paramLane": "Float", "valueSource": "EventKeyId" }
+        "event": {
+          "kind": "GlobalRegionChanged",
+          "key": "*"
+        },
+        "command": {
+          "kind": "SetParam",
+          "paramKey": "capability_static_performer.region",
+          "paramLane": "Float",
+          "valueSource": "EventKeyId"
+        }
       },
       {
-        "event": { "kind": "GlobalRegionChanged", "key": "*" },
-        "command": { "kind": "SetParam", "paramKey": "capability_static_performer.workshop.assetState", "paramLane": "Int", "valueSource": "EventKeyId" }
+        "event": {
+          "kind": "GlobalRegionChanged",
+          "key": "*"
+        },
+        "command": {
+          "kind": "SetParam",
+          "paramKey": "capability_static_performer.workshop.assetState",
+          "paramLane": "Int",
+          "valueSource": "EventKeyId"
+        }
       }
     ]
   }

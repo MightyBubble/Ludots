@@ -519,6 +519,34 @@ namespace Ludots.Tests.Presentation
             Assert.That(ex.Message, Does.Contain("requires an explicit"));
         }
 
+        [Test]
+        public void Load_RejectsAttributeSourcesInParamBindings()
+        {
+            WriteCatalog();
+            WritePerformers(
+                """
+                [
+                  {
+                    "id": "attribute_param_binding",
+                    "bindings": [
+                      { "paramKey": "legacy.health.ratio", "source": "attributeRatio", "attributeId": "Health" }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveAttributeName: key => key == "Health" ? 1 : 0);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("duplicates AttributeBinding behavior"));
+            Assert.That(ex.Message, Does.Contain("attributeBinding.targetParamKey"));
+        }
+
         [TestCase(
             """
             {
@@ -1677,6 +1705,149 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void Load_ExpandsExtendsChain_DeepMergesSameKindBehaviorBySlot()
+        {
+            WriteCatalog();
+            WritePerformers(
+                """
+                [
+                  {
+                    "id": "base_marker",
+                    "behaviors": [
+                      {
+                        "slot": "body",
+                        "kind": "AssetBinding",
+                        "activeByDefault": true,
+                        "assetBinding": {
+                          "assetKind": "Mesh",
+                          "assetId": "cube",
+                          "materialId": "base_mat",
+                          "renderPath": "StaticMesh",
+                          "mobility": "Static",
+                          "localScale": [1, 1, 1]
+                        },
+                        "style": {
+                          "color": [0.1, 0.2, 0.3, 1]
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "id": "child_marker",
+                    "extends": "base_marker",
+                    "behaviors": [
+                      {
+                        "slot": "body",
+                        "style": {
+                          "color": [0.9, 0.8, 0.7, 1]
+                        },
+                        "assetBinding": {
+                          "localScale": [2, 2, 2]
+                        }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveMaterialId: key => key == "base_mat" ? 100 : 0,
+                resolveBehaviorAssetId: (kind, key) =>
+                    kind == AssetKind.Mesh && key == "cube" ? 42 : 0);
+
+            loader.Load(catalog);
+
+            Assert.That(registry.TryGet(registry.GetId("child_marker"), out var child), Is.True);
+            Assert.That(child.Behaviors.Length, Is.EqualTo(1));
+            Assert.That(child.Behaviors[0].Kind, Is.EqualTo(BehaviorKind.AssetBinding));
+            Assert.That(child.Behaviors[0].AssetBinding.AssetId, Is.EqualTo(42));
+            Assert.That(child.Behaviors[0].AssetBinding.MaterialId, Is.EqualTo(100));
+            Assert.That(child.Behaviors[0].AssetBinding.RenderPath, Is.EqualTo(VisualRenderPath.StaticMesh));
+            Assert.That(child.Behaviors[0].AssetBinding.Mobility, Is.EqualTo(VisualMobility.Static));
+            Assert.That(child.Behaviors[0].AssetBinding.LocalScale, Is.EqualTo(new Vector3(2f, 2f, 2f)));
+            Assert.That(child.DefaultColor, Is.EqualTo(new Vector4(0.9f, 0.8f, 0.7f, 1f)));
+        }
+
+        [Test]
+        public void Load_ExpandsExtendsChain_ReplacesPayloadWhenChildRedeclaresBehaviorKind()
+        {
+            WriteCatalog();
+            WritePerformers(
+                """
+                [
+                  {
+                    "id": "base_marker",
+                    "behaviors": [
+                      {
+                        "slot": "body",
+                        "kind": "AssetBinding",
+                        "activeByDefault": true,
+                        "assetBinding": {
+                          "assetKind": "Mesh",
+                          "assetId": "cube",
+                          "materialId": "base_mat",
+                          "renderPath": "StaticMesh",
+                          "mobility": "Static",
+                          "scaleParamKey": "base.scale",
+                          "colorParamKey": "base.color",
+                          "localScale": [1, 1, 1]
+                        },
+                        "style": {
+                          "color": [0.1, 0.2, 0.3, 1]
+                        }
+                      }
+                    ]
+                  },
+                  {
+                    "id": "child_marker",
+                    "extends": "base_marker",
+                    "behaviors": [
+                      {
+                        "slot": "body",
+                        "kind": "AssetBinding",
+                        "activeByDefault": true,
+                        "assetBinding": {
+                          "assetKind": "Mesh",
+                          "assetId": "sphere",
+                          "renderPath": "StaticMesh",
+                          "mobility": "Movable",
+                          "localScale": [0.5, 0.5, 0.5]
+                        }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveMaterialId: key => key == "base_mat" ? 100 : 0,
+                resolveBehaviorAssetId: (kind, key) =>
+                    kind == AssetKind.Mesh && key == "cube" ? 42 :
+                    kind == AssetKind.Mesh && key == "sphere" ? 43 : 0);
+
+            loader.Load(catalog);
+
+            Assert.That(registry.TryGet(registry.GetId("child_marker"), out var child), Is.True);
+            Assert.That(child.Behaviors.Length, Is.EqualTo(1));
+            Assert.That(child.Behaviors[0].Kind, Is.EqualTo(BehaviorKind.AssetBinding));
+            Assert.That(child.Behaviors[0].AssetBinding.AssetId, Is.EqualTo(43));
+            Assert.That(child.Behaviors[0].AssetBinding.MaterialId, Is.EqualTo(0));
+            Assert.That(child.Behaviors[0].AssetBinding.Mobility, Is.EqualTo(VisualMobility.Movable));
+            Assert.That(child.Behaviors[0].AssetBinding.ScaleParamKey, Is.EqualTo(PerformerParamKeyRegistry.UnsetParamKey));
+            Assert.That(child.Behaviors[0].AssetBinding.ColorParamKey, Is.EqualTo(PerformerParamKeyRegistry.UnsetParamKey));
+            Assert.That(child.Behaviors[0].AssetBinding.LocalScale, Is.EqualTo(new Vector3(0.5f, 0.5f, 0.5f)));
+            Assert.That(child.DefaultColor, Is.EqualTo(new Vector4(0.1f, 0.2f, 0.3f, 1f)));
+        }
+
+        [Test]
         public void Load_RejectsLegacyInvalidFields()
         {
             WriteCatalog();
@@ -1743,17 +1914,27 @@ namespace Ludots.Tests.Presentation
                 [
                   {
                     "id": "floating_text",
-                    "worldTextMode": "AttributeCurrent",
+                    "lifecycle": { "durationSeconds": 1.2 },
+                    "anchor": { "offset": [0, 1, 0] },
+                    "visibility": { "inline": "SourceIsAlive" },
                     "behaviors": [
                       {
                         "slot": "body",
-                        "kind": "AssetBinding",
+                        "kind": "WorldText",
                         "activeByDefault": true,
-                        "assetBinding": {
-                          "assetKind": "WorldText",
-                          "assetId": "hud.combat.delta",
-                          "renderPath": "None",
-                          "mobility": "Movable"
+                        "worldText": {
+                          "textToken": "hud.combat.delta",
+                          "mode": "AttributeCurrent",
+                          "valueParamKey": "worldText.value0",
+                          "secondaryValueParamKey": "worldText.value1",
+                          "fontSize": 18
+                        },
+                        "style": {
+                          "color": [1, 0.2, 0.1, 1],
+                          "alphaPolicy": "FadeOverLifetime"
+                        },
+                        "motion": {
+                          "yDriftPerSecond": 0.8
                         }
                       }
                     ]
@@ -1771,9 +1952,229 @@ namespace Ludots.Tests.Presentation
             loader.Load(catalog);
 
             Assert.That(registry.TryGet(registry.GetId("floating_text"), out var definition), Is.True);
+            Assert.That(definition.DefaultLifetime, Is.EqualTo(1.2f).Within(0.001f));
+            Assert.That(definition.PositionOffset, Is.EqualTo(new Vector3(0f, 1f, 0f)));
+            Assert.That(definition.VisibilityCondition.Inline, Is.EqualTo(InlineConditionKind.SourceIsAlive));
+            Assert.That(definition.DefaultFontSize, Is.EqualTo(18));
             Assert.That(definition.WorldTextMode, Is.EqualTo(WorldHudValueMode.AttributeCurrent));
+            Assert.That(definition.DefaultColor, Is.EqualTo(new Vector4(1f, 0.2f, 0.1f, 1f)));
+            Assert.That(definition.AlphaFadeOverLifetime, Is.True);
+            Assert.That(definition.PositionYDriftPerSecond, Is.EqualTo(0.8f).Within(0.001f));
+            Assert.That(definition.Behaviors[0].Kind, Is.EqualTo(BehaviorKind.WorldText));
             Assert.That(definition.Behaviors[0].AssetBinding.AssetKind, Is.EqualTo(AssetKind.WorldText));
             Assert.That(definition.Behaviors[0].AssetBinding.AssetId, Is.EqualTo(777));
+            Assert.That(definition.Behaviors[0].AssetBinding.ScaleParamKey, Is.EqualTo(WellKnownPerformerParamKeys.TextValue0));
+            Assert.That(definition.Behaviors[0].AssetBinding.MaterialParamKey, Is.EqualTo(WellKnownPerformerParamKeys.TextValue1));
+        }
+
+        [Test]
+        public void Load_SurfaceSourceBehavior_ParsesIntoDefinitionSurface()
+        {
+            WriteCatalog();
+            WritePerformers(
+                """
+                [
+                  {
+                    "id": "road_surface",
+                    "lifecycle": { "persistence": "Scoped" },
+                    "behaviors": [
+                      {
+                        "slot": "surface",
+                        "kind": "SurfaceSource",
+                        "activeByDefault": true,
+                        "surfaceSource": {
+                          "kind": "SplineRibbon",
+                          "profileId": "road_surface_profile",
+                          "geometrySource": {
+                            "controlPointSource": { "kind": "Constant", "id": "road.points" },
+                            "widthSource": { "kind": "Constant", "id": "road.width" },
+                            "segmentationPolicy": "Bezier12"
+                          },
+                          "chunkBake": {
+                            "enabled": true,
+                            "ownership": "PerChunk",
+                            "chunkInfluencePolicy": "ExplicitPayloadChunks",
+                            "rebakePolicy": "DirtyPayload",
+                            "usageHint": "Static"
+                          },
+                          "materialSet": {
+                            "primaryMaterialId": "mat.road"
+                          },
+                          "lodProfileId": "default_surface_lod",
+                          "grounding": { "mode": "None" },
+                          "boundsPolicy": "Auto"
+                        }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(pipeline, registry);
+
+            loader.Load(catalog);
+
+            Assert.That(registry.TryGet(registry.GetId("road_surface"), out var definition), Is.True);
+            Assert.That(definition.Surface, Is.Not.Null);
+            Assert.That(definition.Behaviors[0].Kind, Is.EqualTo(BehaviorKind.SurfaceSource));
+            Assert.That(definition.Behaviors[0].SlotIndex, Is.EqualTo(12));
+            Assert.That(definition.Surface!.ProfileId, Is.EqualTo("road_surface_profile"));
+            Assert.That(definition.Surface.MaterialSet.PrimaryMaterialId, Is.EqualTo("mat.road"));
+        }
+
+        [Test]
+        public void Load_InstancedBatchBehavior_ParsesIntoDefinitionBinding()
+        {
+            WriteCatalog();
+            WritePerformers(
+                """
+                [
+                  {
+                    "id": "forest_patch",
+                    "lifecycle": { "persistence": "Scoped" },
+                    "behaviors": [
+                      {
+                        "slot": "body",
+                        "kind": "InstancedBatch",
+                        "activeByDefault": true,
+                        "instancedBatch": {
+                          "batchAssetId": "forest.tree.cluster"
+                        }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveInstancedBatchAssetId: key => key == "forest.tree.cluster" ? 42 : 0);
+
+            loader.Load(catalog);
+
+            Assert.That(registry.TryGet(registry.GetId("forest_patch"), out var definition), Is.True);
+            Assert.That(definition.Behaviors[0].Kind, Is.EqualTo(BehaviorKind.InstancedBatch));
+            Assert.That(definition.InstancedBatches.Length, Is.EqualTo(1));
+            Assert.That(definition.InstancedBatches[0].BatchAssetId, Is.EqualTo(42));
+            Assert.That(definition.InstancedBatches[0].SlotIndex, Is.EqualTo(0));
+        }
+
+        [TestCase("defaultFontSize", "18")]
+        [TestCase("worldTextMode", "\"AttributeCurrent\"")]
+        [TestCase("defaultLifetime", "1.2")]
+        [TestCase("positionOffset", "[0, 1, 0]")]
+        [TestCase("defaultColor", "[1, 1, 1, 1]")]
+        [TestCase("instancedBatches", "[]")]
+        [TestCase("surface", "{}")]
+        [TestCase("requiredAttributes", "[]")]
+        public void Load_RejectsRemovedTopLevelPerformerAuthoringFields(string fieldName, string valueJson)
+        {
+            WriteCatalog();
+            WritePerformers($$"""
+                [
+                  {
+                    "id": "legacy_performer",
+                    "{{fieldName}}": {{valueJson}}
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain(fieldName));
+            Assert.That(ex.Message, Does.Contain("removed field"));
+        }
+
+        [TestCase("{}", "durationSeconds or persistence")]
+        [TestCase(@"{ ""durationSeconds"": 0 }", "durationSeconds must be > 0")]
+        [TestCase(@"{ ""durationSeconds"": -0.1 }", "durationSeconds must be > 0")]
+        [TestCase(@"{ ""persistence"": ""Persistent"" }", "persistence must be 'Scoped'")]
+        public void Load_RejectsAmbiguousLifecycleAuthoring(string lifecycleJson, string expectedMessage)
+        {
+            WriteCatalog();
+            WritePerformers($$"""
+                [
+                  {
+                    "id": "bad_lifecycle",
+                    "lifecycle": {{lifecycleJson}}
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain(expectedMessage));
+        }
+
+        [Test]
+        public void Load_RejectsVisibilityGraphProgramId()
+        {
+            WriteCatalog();
+            WritePerformers(
+                """
+                [
+                  {
+                    "id": "graph_visibility",
+                    "visibility": { "graphProgramId": 12 }
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(pipeline, registry);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("visibility.graphProgramId"));
+            Assert.That(ex.Message, Does.Contain("not wired"));
+        }
+
+        [Test]
+        public void Load_RejectsBehaviorActivationConditionUntilRuntimeConsumesIt()
+        {
+            WriteCatalog();
+            WritePerformers(
+                """
+                [
+                  {
+                    "id": "activation_condition",
+                    "behaviors": [
+                      {
+                        "slot": "body",
+                        "kind": "WorldText",
+                        "activeByDefault": true,
+                        "activationCondition": { "inline": "SourceIsAlive" },
+                        "worldText": {
+                          "textToken": "hud.combat.delta",
+                          "mode": "AttributeCurrent"
+                        }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveTextTokenId: key => key == "hud.combat.delta" ? 777 : 0);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("activationCondition"));
+            Assert.That(ex.Message, Does.Contain("not wired"));
         }
 
         [Test]
@@ -1867,24 +2268,21 @@ namespace Ludots.Tests.Presentation
         [TestCase("\"   \"", "non-empty")]
         [TestCase("\"AttributeCurrent \"", "invalid value")]
         [TestCase("\"attributeCurrent\"", "invalid value")]
-        public void Load_RejectsNonCanonicalWorldTextModeWhenFieldExists(string modeJson, string expectedMessage)
+        public void Load_RejectsNonCanonicalWorldTextBehaviorModeWhenFieldExists(string modeJson, string expectedMessage)
         {
             WriteCatalog();
             WritePerformers($$"""
                 [
                   {
                     "id": "floating_text",
-                    "worldTextMode": {{modeJson}},
                     "behaviors": [
                       {
                         "slot": "body",
-                        "kind": "AssetBinding",
+                        "kind": "WorldText",
                         "activeByDefault": true,
-                        "assetBinding": {
-                          "assetKind": "WorldText",
-                          "assetId": "hud.combat.delta",
-                          "renderPath": "None",
-                          "mobility": "Movable"
+                        "worldText": {
+                          "textToken": "hud.combat.delta",
+                          "mode": {{modeJson}}
                         }
                       }
                     ]
@@ -1900,7 +2298,7 @@ namespace Ludots.Tests.Presentation
                 resolveTextTokenId: key => key == "hud.combat.delta" ? 777 : 0);
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
-            Assert.That(ex.Message, Does.Contain("worldTextMode"));
+            Assert.That(ex.Message, Does.Contain("worldText.mode"));
             Assert.That(ex.Message, Does.Contain(expectedMessage));
         }
 
@@ -2134,7 +2532,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void Load_RejectsAttributeNameBindingAlias()
+        public void Load_RejectsAttributeNameAliasInAttributeBindingBehavior()
         {
             WriteCatalog();
             WritePerformers(
@@ -2142,8 +2540,16 @@ namespace Ludots.Tests.Presentation
                 [
                   {
                     "id": "legacy_attribute_name",
-                    "bindings": [
-                      { "paramKey": "legacy.health.ratio", "source": "attributeRatio", "attributeName": "Health" }
+                    "behaviors": [
+                      {
+                        "slot": "attribute",
+                        "kind": "AttributeBinding",
+                        "attributeBinding": {
+                          "targetParamKey": "legacy.health.ratio",
+                          "mode": "AttributeRatio",
+                          "attributeName": "Health"
+                        }
+                      }
                     ]
                   }
                 ]
@@ -2159,6 +2565,42 @@ namespace Ludots.Tests.Presentation
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
             Assert.That(ex.Message, Does.Contain("attributeName"));
             Assert.That(ex.Message, Does.Contain("attributeId"));
+        }
+
+        [Test]
+        public void Load_RejectsNonAttributeModeInAttributeBindingBehavior()
+        {
+            WriteCatalog();
+            WritePerformers(
+                """
+                [
+                  {
+                    "id": "invalid_attribute_mode",
+                    "behaviors": [
+                      {
+                        "slot": "attribute",
+                        "kind": "AttributeBinding",
+                        "attributeBinding": {
+                          "attributeId": "Health",
+                          "targetParamKey": "legacy.health.ratio",
+                          "mode": "Constant"
+                        }
+                      }
+                    ]
+                  }
+                ]
+                """);
+
+            var (_, _, pipeline, catalog) = BuildPipeline();
+            var registry = new PerformerDefinitionRegistry();
+            var loader = new PerformerDefinitionConfigLoader(
+                pipeline,
+                registry,
+                resolveAttributeName: key => key == "Health" ? 1 : 0);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => loader.Load(catalog))!;
+            Assert.That(ex.Message, Does.Contain("AttributeBinding.mode"));
+            Assert.That(ex.Message, Does.Contain("AttributeRatio"));
         }
 
         [Test]

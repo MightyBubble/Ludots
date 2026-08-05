@@ -1154,8 +1154,13 @@ namespace Ludots.Tests.Presentation
                 [
                   {
                     "id": "performer.batch",
-                    "instancedBatches": [
-                      { "batchAssetId": "batch.runtime" }
+                    "behaviors": [
+                      {
+                        "slot": "body",
+                        "kind": "InstancedBatch",
+                        "activeByDefault": true,
+                        "instancedBatch": { "batchAssetId": "batch.runtime" }
+                      }
                     ]
                   }
                 ]
@@ -1177,6 +1182,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(definitions.TryGet(definitions.GetId("performer.batch"), out PerformerDefinition definition), Is.True);
             Assert.That(definition.InstancedBatches.Length, Is.EqualTo(1));
             Assert.That(definition.InstancedBatches[0].BatchAssetId, Is.EqualTo(42));
+            Assert.That(definition.InstancedBatches[0].SlotIndex, Is.EqualTo(0));
 
             string badRoot = CreateTempCoreRoot();
             WritePresentationFile(badRoot, "performers.json",
@@ -1184,8 +1190,13 @@ namespace Ludots.Tests.Presentation
                 [
                   {
                     "id": "performer.bad",
-                    "instancedBatches": [
-                      { "batchAssetId": "batch.missing" }
+                    "behaviors": [
+                      {
+                        "slot": "body",
+                        "kind": "InstancedBatch",
+                        "activeByDefault": true,
+                        "instancedBatch": { "batchAssetId": "batch.missing" }
+                      }
                     ]
                   }
                 ]

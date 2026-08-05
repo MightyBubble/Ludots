@@ -1,7 +1,6 @@
 [
   {
     "id": "control_plane.visual.unit.p1",
-    "defaultColor": [0.28, 0.62, 1.0, 1.0],
     "behaviors": [
       {
         "slot": "body",
@@ -13,7 +12,19 @@
           "materialId": "default_surface",
           "renderPath": "InstancedStaticMesh",
           "mobility": "Movable",
-          "localScale": [1.25, 1.25, 1.25]
+          "localScale": [
+            1.25,
+            1.25,
+            1.25
+          ]
+        },
+        "style": {
+          "color": [
+            0.28,
+            0.62,
+            1,
+            1
+          ]
         }
       },
       {
@@ -29,8 +40,13 @@
     ],
     "rules": [
       {
-        "event": { "kind": "EntitySpawned", "key": "control_plane_projection_p1_unit" },
-        "condition": { "inline": "SourceHasVisualTransform" },
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "control_plane_projection_p1_unit"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
         "command": {
           "kind": "CreatePerformer",
           "scopeSource": "EventPayloadA",
@@ -38,14 +54,19 @@
         }
       },
       {
-        "event": { "kind": "EntityDestroyed", "key": "control_plane_projection_p1_unit" },
-        "command": { "kind": "DestroyPerformerScope", "scopeSource": "EventPayloadA" }
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "control_plane_projection_p1_unit"
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
       }
     ]
   },
   {
     "id": "control_plane.visual.unit.p2",
-    "defaultColor": [1.0, 0.62, 0.2, 1.0],
     "behaviors": [
       {
         "slot": "body",
@@ -57,7 +78,19 @@
           "materialId": "default_surface",
           "renderPath": "InstancedStaticMesh",
           "mobility": "Movable",
-          "localScale": [1.15, 1.15, 1.15]
+          "localScale": [
+            1.15,
+            1.15,
+            1.15
+          ]
+        },
+        "style": {
+          "color": [
+            1,
+            0.62,
+            0.2,
+            1
+          ]
         }
       },
       {
@@ -73,8 +106,13 @@
     ],
     "rules": [
       {
-        "event": { "kind": "EntitySpawned", "key": "control_plane_projection_p2_unit" },
-        "condition": { "inline": "SourceHasVisualTransform" },
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "control_plane_projection_p2_unit"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
         "command": {
           "kind": "CreatePerformer",
           "scopeSource": "EventPayloadA",
@@ -82,14 +120,19 @@
         }
       },
       {
-        "event": { "kind": "EntityDestroyed", "key": "control_plane_projection_p2_unit" },
-        "command": { "kind": "DestroyPerformerScope", "scopeSource": "EventPayloadA" }
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "control_plane_projection_p2_unit"
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
       }
     ]
   },
   {
     "id": "control_plane.visual.owned_marker",
-    "defaultColor": [0.08, 0.52, 0.2, 0.95],
     "behaviors": [
       {
         "slot": "body",
@@ -100,7 +143,19 @@
           "assetId": "Ring",
           "renderPath": "None",
           "mobility": "Movable",
-          "localScale": [1.45, 1.45, 1.45]
+          "localScale": [
+            1.45,
+            1.45,
+            1.45
+          ]
+        },
+        "style": {
+          "color": [
+            0.08,
+            0.52,
+            0.2,
+            0.95
+          ]
         }
       },
       {
@@ -109,8 +164,17 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [0, 0.03, 0],
-          "rotationOffset": [0, 0, 0, 1],
+          "offset": [
+            0,
+            0.03,
+            0
+          ],
+          "rotationOffset": [
+            0,
+            0,
+            0,
+            1
+          ],
           "inheritScale": false
         }
       }
@@ -118,7 +182,6 @@
   },
   {
     "id": "control_plane.visual.proxied_marker",
-    "defaultColor": [0.52, 0.92, 0.6, 0.95],
     "behaviors": [
       {
         "slot": "body",
@@ -129,7 +192,19 @@
           "assetId": "Ring",
           "renderPath": "None",
           "mobility": "Movable",
-          "localScale": [1.45, 1.45, 1.45]
+          "localScale": [
+            1.45,
+            1.45,
+            1.45
+          ]
+        },
+        "style": {
+          "color": [
+            0.52,
+            0.92,
+            0.6,
+            0.95
+          ]
         }
       },
       {
@@ -138,8 +213,17 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [0, 0.03, 0],
-          "rotationOffset": [0, 0, 0, 1],
+          "offset": [
+            0,
+            0.03,
+            0
+          ],
+          "rotationOffset": [
+            0,
+            0,
+            0,
+            1
+          ],
           "inheritScale": false
         }
       }
@@ -147,7 +231,6 @@
   },
   {
     "id": "control_plane.visual.referee_phase0_marker",
-    "defaultColor": [0.95, 0.12, 0.14, 0.95],
     "behaviors": [
       {
         "slot": "body",
@@ -158,7 +241,19 @@
           "assetId": "Ring",
           "renderPath": "None",
           "mobility": "Movable",
-          "localScale": [1.72, 1.72, 1.72]
+          "localScale": [
+            1.72,
+            1.72,
+            1.72
+          ]
+        },
+        "style": {
+          "color": [
+            0.95,
+            0.12,
+            0.14,
+            0.95
+          ]
         }
       },
       {
@@ -167,8 +262,17 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [0, 0.05, 0],
-          "rotationOffset": [0, 0, 0, 1],
+          "offset": [
+            0,
+            0.05,
+            0
+          ],
+          "rotationOffset": [
+            0,
+            0,
+            0,
+            1
+          ],
           "inheritScale": false
         }
       }
@@ -176,7 +280,6 @@
   },
   {
     "id": "control_plane.visual.referee_phase1_marker",
-    "defaultColor": [1.0, 0.54, 0.08, 0.95],
     "behaviors": [
       {
         "slot": "body",
@@ -187,7 +290,19 @@
           "assetId": "Ring",
           "renderPath": "None",
           "mobility": "Movable",
-          "localScale": [1.72, 1.72, 1.72]
+          "localScale": [
+            1.72,
+            1.72,
+            1.72
+          ]
+        },
+        "style": {
+          "color": [
+            1,
+            0.54,
+            0.08,
+            0.95
+          ]
         }
       },
       {
@@ -196,8 +311,17 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [0, 0.05, 0],
-          "rotationOffset": [0, 0, 0, 1],
+          "offset": [
+            0,
+            0.05,
+            0
+          ],
+          "rotationOffset": [
+            0,
+            0,
+            0,
+            1
+          ],
           "inheritScale": false
         }
       }
@@ -207,7 +331,10 @@
     "id": "control_plane.visual.marker.rules",
     "rules": [
       {
-        "event": { "kind": "EntityCollectionMemberAdded", "key": "collection.ui.control_plane.owned" },
+        "event": {
+          "kind": "EntityCollectionMemberAdded",
+          "key": "collection.ui.control_plane.owned"
+        },
         "command": {
           "kind": "CreatePerformer",
           "definitionId": "control_plane.visual.owned_marker",
@@ -215,7 +342,10 @@
         }
       },
       {
-        "event": { "kind": "EntityCollectionMemberRemoved", "key": "collection.ui.control_plane.owned" },
+        "event": {
+          "kind": "EntityCollectionMemberRemoved",
+          "key": "collection.ui.control_plane.owned"
+        },
         "command": {
           "kind": "DestroyScopedPerformer",
           "definitionId": "control_plane.visual.owned_marker",
@@ -223,7 +353,10 @@
         }
       },
       {
-        "event": { "kind": "EntityCollectionMemberAdded", "key": "collection.ui.control_plane.proxied" },
+        "event": {
+          "kind": "EntityCollectionMemberAdded",
+          "key": "collection.ui.control_plane.proxied"
+        },
         "command": {
           "kind": "CreatePerformer",
           "definitionId": "control_plane.visual.proxied_marker",
@@ -231,7 +364,10 @@
         }
       },
       {
-        "event": { "kind": "EntityCollectionMemberRemoved", "key": "collection.ui.control_plane.proxied" },
+        "event": {
+          "kind": "EntityCollectionMemberRemoved",
+          "key": "collection.ui.control_plane.proxied"
+        },
         "command": {
           "kind": "DestroyScopedPerformer",
           "definitionId": "control_plane.visual.proxied_marker",
@@ -239,7 +375,10 @@
         }
       },
       {
-        "event": { "kind": "EntityCollectionMemberAdded", "key": "collection.ui.control_plane.referee.phase0" },
+        "event": {
+          "kind": "EntityCollectionMemberAdded",
+          "key": "collection.ui.control_plane.referee.phase0"
+        },
         "command": {
           "kind": "CreatePerformer",
           "definitionId": "control_plane.visual.referee_phase0_marker",
@@ -247,7 +386,10 @@
         }
       },
       {
-        "event": { "kind": "EntityCollectionMemberRemoved", "key": "collection.ui.control_plane.referee.phase0" },
+        "event": {
+          "kind": "EntityCollectionMemberRemoved",
+          "key": "collection.ui.control_plane.referee.phase0"
+        },
         "command": {
           "kind": "DestroyScopedPerformer",
           "definitionId": "control_plane.visual.referee_phase0_marker",
@@ -255,7 +397,10 @@
         }
       },
       {
-        "event": { "kind": "EntityCollectionMemberAdded", "key": "collection.ui.control_plane.referee.phase1" },
+        "event": {
+          "kind": "EntityCollectionMemberAdded",
+          "key": "collection.ui.control_plane.referee.phase1"
+        },
         "command": {
           "kind": "CreatePerformer",
           "definitionId": "control_plane.visual.referee_phase1_marker",
@@ -263,7 +408,10 @@
         }
       },
       {
-        "event": { "kind": "EntityCollectionMemberRemoved", "key": "collection.ui.control_plane.referee.phase1" },
+        "event": {
+          "kind": "EntityCollectionMemberRemoved",
+          "key": "collection.ui.control_plane.referee.phase1"
+        },
         "command": {
           "kind": "DestroyScopedPerformer",
           "definitionId": "control_plane.visual.referee_phase1_marker",

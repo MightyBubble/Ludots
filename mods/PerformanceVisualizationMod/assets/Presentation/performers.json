@@ -5,13 +5,7 @@
   },
   {
     "id": "performance_visualization.benchmark_cube",
-    "defaultLifetime": -1,
     "bindings": [
-      {
-        "paramKey": "worldBar.fillRatio",
-        "source": "attributeRatio",
-        "attributeId": "Health"
-      },
       {
         "paramKey": "worldBar.width",
         "source": "constant",
@@ -61,7 +55,20 @@
           ],
           "materialParamKey": "worldBar.fillRatio"
         }
+      },
+      {
+        "slot": "attributeRatio",
+        "kind": "AttributeBinding",
+        "activeByDefault": true,
+        "attributeBinding": {
+          "attributeId": "Health",
+          "targetParamKey": "worldBar.fillRatio",
+          "mode": "AttributeRatio"
+        }
       }
-    ]
+    ],
+    "lifecycle": {
+      "persistence": "Scoped"
+    }
   }
 ]

@@ -3,6 +3,7 @@
   "targetFps": 0,
   "gasRuntimeCapacity": {
     "effectLifetimeSnapshotCapacity": 32768,
+    "effectFanOutCommandCapacity": 32768,
     "deferredTriggerActiveEntityCapacity": 32768
   },
   "presentation": {

@@ -1,21 +1,6 @@
 [
   {
     "id": "ref_base_definition",
-    "defaultColor": [
-      1,
-      0.8,
-      0.2,
-      1
-    ],
-    "defaultLifetime": 5,
-    "defaultFontSize": 18,
-    "positionOffset": [
-      0,
-      1.5,
-      0
-    ],
-    "positionYDriftPerSecond": 0.3,
-    "alphaFadeOverLifetime": true,
     "visibility": {
       "inline": "None"
     },
@@ -24,10 +9,6 @@
         "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
-        "activationCondition": {
-          "inline": "None",
-          "graphProgramId": 0
-        },
         "assetBinding": {
           "assetKind": "Mesh",
           "assetId": "ref_mesh_cube",
@@ -64,6 +45,18 @@
             }
           ],
           "visibilityParamKey": "performer_schema_reference.asset.visibility"
+        },
+        "style": {
+          "color": [
+            1,
+            0.8,
+            0.2,
+            1
+          ],
+          "alphaPolicy": "FadeOverLifetime"
+        },
+        "motion": {
+          "yDriftPerSecond": 0.3
         }
       },
       {
@@ -205,11 +198,6 @@
     ],
     "bindings": [
       {
-        "paramKey": "performer_schema_reference.attribute.health.ratio",
-        "source": "attributeRatio",
-        "attributeId": "Health"
-      },
-      {
         "paramKey": "performer_schema_reference.tag.burning.active",
         "source": "constant",
         "constantValue": 0
@@ -244,7 +232,17 @@
           "paramValue": 0
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "durationSeconds": 5
+    },
+    "anchor": {
+      "offset": [
+        0,
+        1.5,
+        0
+      ]
+    }
   },
   {
     "id": "ref_child_inherited",
@@ -407,22 +405,14 @@
   },
   {
     "id": "ref_world_text",
-    "worldTextMode": "None",
     "behaviors": [
       {
         "slot": "body",
-        "kind": "AssetBinding",
+        "kind": "WorldText",
         "activeByDefault": true,
-        "assetBinding": {
-          "assetKind": "WorldText",
-          "assetId": "ref_text_damage",
-          "renderPath": "None",
-          "mobility": "Movable",
-          "localOffset": [
-            0,
-            2,
-            0
-          ]
+        "worldText": {
+          "textToken": "ref_text_damage",
+          "mode": "None"
         }
       }
     ]

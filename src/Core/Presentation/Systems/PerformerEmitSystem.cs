@@ -393,7 +393,7 @@ namespace Ludots.Core.Presentation.Systems
             }
 
             ref readonly BehaviorSlot slot = ref definition.Behaviors[behaviorIndex];
-            if (slot.Kind != BehaviorKind.AssetBinding ||
+            if ((slot.Kind != BehaviorKind.AssetBinding && slot.Kind != BehaviorKind.WorldText) ||
                 !IsBehaviorActive(state.BehaviorActiveMask, slot.SlotIndex))
             {
                 return false;
@@ -1336,6 +1336,17 @@ namespace Ludots.Core.Presentation.Systems
             if (surface == null)
             {
                 return;
+            }
+
+            int behaviorIndex = definition.SurfaceSourceBehaviorIndex;
+            if (behaviorIndex >= 0)
+            {
+                BehaviorSlot[] behaviors = definition.Behaviors;
+                if ((uint)behaviorIndex >= (uint)behaviors.Length ||
+                    !IsBehaviorActive(state.BehaviorActiveMask, behaviors[behaviorIndex].SlotIndex))
+                {
+                    return;
+                }
             }
 
             _requests.Add(PresentationRequest.FromSurfaceSource(state.OwnerEntity, new SurfaceSourceRequest

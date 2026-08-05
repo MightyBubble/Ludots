@@ -2,11 +2,6 @@
   {
     "_comment": "RTS unit cube marker renders all entities with VisualTransform",
     "id": "rts_unit_marker",
-    "positionOffset": [
-      0,
-      0.5,
-      0
-    ],
     "bindings": [
       {
         "paramKey": "marker3d.color.r",
@@ -72,6 +67,13 @@
           ]
         }
       }
-    ]
+    ],
+    "anchor": {
+      "offset": [
+        0,
+        0.5,
+        0
+      ]
+    }
   }
 ]

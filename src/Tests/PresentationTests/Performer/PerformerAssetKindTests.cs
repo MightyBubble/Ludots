@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Knowledge;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
@@ -12,6 +13,7 @@ using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Surfaces;
 using Ludots.Core.Presentation.Systems;
+using Ludots.Core.Scripting;
 using Arch.Core.Extensions;
 using NUnit.Framework;
 
@@ -304,7 +306,7 @@ namespace Ludots.Tests.Presentation
                 instances,
                 definitions,
                 requests,
-                new Dictionary<string, object>(),
+                CreateWorldHudProjectionGlobals(world, owner),
                 animatorStates: null!,
                 soundRequests: null!);
 
@@ -371,7 +373,7 @@ namespace Ludots.Tests.Presentation
                 instances,
                 definitions,
                 requests,
-                new Dictionary<string, object>(),
+                CreateWorldHudProjectionGlobals(world, owner),
                 animatorStates: null!,
                 soundRequests: null!);
 
@@ -504,7 +506,7 @@ namespace Ludots.Tests.Presentation
                 instances,
                 definitions,
                 requests,
-                new Dictionary<string, object>(),
+                CreateWorldHudProjectionGlobals(world, owner),
                 animatorStates: null!,
                 soundRequests: null!);
 
@@ -571,7 +573,7 @@ namespace Ludots.Tests.Presentation
                 instances,
                 definitions,
                 requests,
-                new Dictionary<string, object>(),
+                CreateWorldHudProjectionGlobals(world, owner),
                 animatorStates: null!,
                 soundRequests: null!);
 
@@ -746,7 +748,9 @@ namespace Ludots.Tests.Presentation
                 instances,
                 definitions,
                 requests,
-                new Dictionary<string, object>(),
+                RequiresWorldHudProjection(assetKind)
+                    ? CreateWorldHudProjectionGlobals(world, owner)
+                    : new Dictionary<string, object>(),
                 animatorStates: null!,
                 soundRequests: null!);
 
@@ -810,7 +814,9 @@ namespace Ludots.Tests.Presentation
                 instances,
                 definitions,
                 requests,
-                new Dictionary<string, object>(),
+                RequiresWorldHudProjection(assetKind)
+                    ? CreateWorldHudProjectionGlobals(world, owner)
+                    : new Dictionary<string, object>(),
                 animatorStates: null!,
                 soundRequests: null!);
 
@@ -874,7 +880,9 @@ namespace Ludots.Tests.Presentation
                 instances,
                 definitions,
                 requests,
-                new Dictionary<string, object>(),
+                RequiresWorldHudProjection(assetKind)
+                    ? CreateWorldHudProjectionGlobals(world, owner)
+                    : new Dictionary<string, object>(),
                 animatorStates: null!,
                 soundRequests: null!))
             {
@@ -1252,15 +1260,18 @@ namespace Ludots.Tests.Presentation
                     LodProfileId = "default_surface_lod",
                     MaterialSet = new PerformerSurfaceMaterialSet { PrimaryMaterialId = "default_surface" },
                 },
-                Bindings =
+                Behaviors =
                 [
-                    new PerformerParamBinding
+                    new BehaviorSlot
                     {
-                        ParamKey = paramKey,
-                        Value = new ValueRef
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AttributeBinding,
+                        ActiveByDefault = true,
+                        AttributeBinding = new AttributeBindingConfig
                         {
-                            Source = ValueSourceKind.AttributeRatio,
-                            SourceId = attributeId,
+                            AttributeId = attributeId,
+                            TargetParamKey = paramKey,
+                            Mode = ValueSourceKind.AttributeRatio,
                         },
                     },
                 ],
@@ -1703,6 +1714,37 @@ namespace Ludots.Tests.Presentation
         private static int ResolveRetainedAssetId(AssetKind assetKind)
         {
             return assetKind == AssetKind.GroundOverlay ? (int)GroundOverlayShape.Circle : 1;
+        }
+
+        private static bool RequiresWorldHudProjection(AssetKind assetKind)
+        {
+            return assetKind is AssetKind.WorldHud or AssetKind.WorldText;
+        }
+
+        private static Dictionary<string, object> CreateWorldHudProjectionGlobals(World world, Entity owner)
+        {
+            Entity viewer = world.Create();
+            var projectionStore = new KnowledgeProjectionStore(initialCapacity: 4);
+            projectionStore.Upsert(
+                viewer,
+                owner,
+                new KnowledgeDisclosureRecord(
+                    KnowledgePresence.LiveVisible,
+                    KnowledgePositionAccess.Live,
+                    KnowledgeIdMask256.Empty,
+                    KnowledgeIdMask256.Empty,
+                    KnowledgeIdMask256.Empty,
+                    viewer,
+                    observedTick: 1,
+                    expiryTick: 0,
+                    confidencePermille: 1000,
+                    revision: 1));
+
+            return new Dictionary<string, object>
+            {
+                [CoreServiceKeys.LocalPlayerEntity.Name] = viewer,
+                [CoreServiceKeys.KnowledgeProjectionResolver.Name] = new KnowledgeProjectionResolver(projectionStore),
+            };
         }
 
         private static PerformerDefinition CreateStaticStableDefinition(

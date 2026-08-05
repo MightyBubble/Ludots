@@ -115,7 +115,13 @@ namespace Ludots.Core.Presentation.Systems
                 InstancedBatchBinding[] bindings = definition.InstancedBatches;
                 for (int bindingIndex = 0; bindingIndex < bindings.Length; bindingIndex++)
                 {
-                    int batchAssetId = bindings[bindingIndex].BatchAssetId;
+                    ref readonly InstancedBatchBinding binding = ref bindings[bindingIndex];
+                    if (!IsBindingActive(in state, in binding))
+                    {
+                        continue;
+                    }
+
+                    int batchAssetId = binding.BatchAssetId;
                     if (!_batchAssets.TryGet(batchAssetId, out InstancedBatchAsset asset))
                     {
                         continue;
@@ -233,6 +239,13 @@ namespace Ludots.Core.Presentation.Systems
             return kind == InstancedBatchOperationKind.SetVisibility && mappedValue > 0f
                 ? (byte)1
                 : (byte)0;
+        }
+
+        private static bool IsBindingActive(in PerformerState state, in InstancedBatchBinding binding)
+        {
+            int slotIndex = binding.SlotIndex;
+            return slotIndex < 0 ||
+                   (slotIndex < 32 && (state.BehaviorActiveMask & (1u << slotIndex)) != 0);
         }
     }
 }

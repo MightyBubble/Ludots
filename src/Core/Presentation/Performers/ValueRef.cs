@@ -8,21 +8,21 @@ namespace Ludots.Core.Presentation.Performers
         /// <summary>Use <see cref="ValueRef.ConstantValue"/> directly.</summary>
         Constant = 0,
 
-        /// <summary>Read Attribute[<see cref="ValueRef.SourceId"/>] current value from the Owner entity.</summary>
+        /// <summary>Read owner attribute current value. Valid for AttributeBinding.mode, not PerformerParamBinding.</summary>
         Attribute = 1,
 
         /// <summary>Execute Graph program <see cref="ValueRef.SourceId"/>, read F[0] as the result.</summary>
         Graph = 2,
 
         /// <summary>
-        /// Read Attribute current / base ratio (clamped 0-1) from the Owner entity.
-        /// Typical use: health bar fill percentage. SourceId = attribute ID.
+        /// Read owner attribute current / base ratio (clamped 0-1).
+        /// Valid for AttributeBinding.mode, not PerformerParamBinding.
         /// </summary>
         AttributeRatio = 3,
 
         /// <summary>
-        /// Read Attribute base (max) value from the Owner entity.
-        /// Typical use: health text "current/max" display. SourceId = attribute ID.
+        /// Read owner attribute base value.
+        /// Valid for AttributeBinding.mode, not PerformerParamBinding.
         /// </summary>
         AttributeBase = 4,
 
@@ -80,28 +80,10 @@ namespace Ludots.Core.Presentation.Performers
             ConstantValue = value
         };
 
-        public static ValueRef FromAttribute(int attributeId) => new()
-        {
-            Source = ValueSourceKind.Attribute,
-            SourceId = attributeId
-        };
-
         public static ValueRef FromGraph(int graphProgramId) => new()
         {
             Source = ValueSourceKind.Graph,
             SourceId = graphProgramId
-        };
-
-        public static ValueRef FromAttributeRatio(int attributeId) => new()
-        {
-            Source = ValueSourceKind.AttributeRatio,
-            SourceId = attributeId
-        };
-
-        public static ValueRef FromAttributeBase(int attributeId) => new()
-        {
-            Source = ValueSourceKind.AttributeBase,
-            SourceId = attributeId
         };
 
         /// <param name="channelIndex">0=R, 1=G, 2=B, 3=A</param>

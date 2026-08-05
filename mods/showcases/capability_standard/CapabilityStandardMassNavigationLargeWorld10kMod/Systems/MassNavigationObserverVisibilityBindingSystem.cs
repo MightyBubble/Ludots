@@ -163,7 +163,8 @@ internal sealed class MassNavigationObserverVisibilityBindingSystem : BaseSystem
         BehaviorSlot[] behaviors = definition.Behaviors;
         for (int i = 0; i < behaviors.Length; i++)
         {
-            if (behaviors[i].Kind == BehaviorKind.AssetBinding &&
+            if ((behaviors[i].Kind == BehaviorKind.AssetBinding ||
+                 behaviors[i].Kind == BehaviorKind.WorldText) &&
                 behaviors[i].AssetBinding.AssetKind is AssetKind.WorldHud or AssetKind.WorldText)
             {
                 return true;
