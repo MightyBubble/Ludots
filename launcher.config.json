@@ -114,6 +114,14 @@
       }
     },
     {
+      "name": "capability_standard_crowd_physics_arena",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardCrowdPhysicsArenaMod",
+        "projectPath": "CapabilityStandardCrowdPhysicsArenaMod.csproj"
+      }
+    },
+    {
       "name": "formation_capability_showcase",
       "target": {
         "type": "path",

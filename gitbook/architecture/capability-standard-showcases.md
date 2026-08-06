@@ -15,6 +15,7 @@ This page is the SSOT for production-grade capability acceptance showcase roots 
 | Physics2D Stress | `capability_standard_physics2d_stress` | `mods/showcases/capability_standard/CapabilityStandardPhysics2DStressMod` | Large-N Physics2D throughput budget and pipeline-level steady-state allocation evidence |
 | Physics2D Tuning | `capability_standard_physics2d_showcase` | `mods/showcases/capability_standard/CapabilityStandardPhysics2DShowcaseMod` | 15Hz Physics2D, 30K dynamic entities, 100K static entities, broadphase strategy, static obstacle templates, polygon authoring |
 | TimeFlow | `capability_standard_time_flow_showcase` | `mods/showcases/capability_standard/CapabilityStandardTimeFlowShowcaseMod` | TimeFlow pause/scale token stacks: settings pause, menu pause, skill indicator pause, nested system guide pause, scale layering, with MassNavigation, Physics2D, and GAS clock probes and no Formation/action coupling |
+| Crowd Physics Arena | `capability_standard_crowd_physics_arena` | `mods/showcases/capability_standard/CapabilityStandardCrowdPhysicsArenaMod` | massnav→kinematic bridge acceptance: kinematic squads push dynamic crates, pressure plate contact events open a door, Q shockwave displacement windows with handback, E boulder spawn with initial velocity, HUD counters |
 
 Standard launch commands:
 
@@ -28,6 +29,7 @@ Standard launch commands:
 .\scripts\run-mod-launcher.cmd cli launch '$capability_standard_physics2d_stress' --adapter raylib
 .\scripts\run-mod-launcher.cmd cli launch '$capability_standard_physics2d_showcase' --adapter raylib
 .\scripts\run-mod-launcher.cmd cli launch '$capability_standard_time_flow_showcase' --adapter raylib
+.\scripts\run-mod-launcher.cmd cli launch '$capability_standard_crowd_physics_arena' --adapter raylib
 ```
 
 Preset launch commands:
@@ -42,6 +44,7 @@ Preset launch commands:
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_physics2d_stress_raylib'
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_physics2d_showcase_raylib'
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_time_flow_showcase_raylib'
+.\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_crowd_physics_arena_raylib'
 ```
 
 ## Dependency Path

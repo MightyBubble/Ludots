@@ -227,6 +227,30 @@
       "notes": "截图证据待 CI 验收产物补录"
     },
     {
+      "id": "capability_standard_crowd_physics_arena",
+      "path": "mods/showcases/capability_standard/CapabilityStandardCrowdPhysicsArenaMod",
+      "projectPath": "CapabilityStandardCrowdPhysicsArenaMod.csproj",
+      "title": "标准能力·人群物理竞技场",
+      "summary": "massnav→kinematic 桥标准验收：kinematic 小队推箱、压力板碰撞事件开门、Q 冲击波位移窗口与交还、E 巨石初速度释放、HUD 三计数。",
+      "tier": "T1",
+      "category": "capability",
+      "tags": [
+        "navigation",
+        "physics2d",
+        "kinematic",
+        "movement-participation"
+      ],
+      "binding": "capability_standard_crowd_physics_arena",
+      "preset": "capability_standard_crowd_physics_arena_raylib",
+      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "readmePath": "mods/showcases/capability_standard/CapabilityStandardCrowdPhysicsArenaMod/README.md",
+      "acceptanceTest": "CapabilityStandardCrowdPhysicsArenaProductionPathTests",
+      "artifactDir": null,
+      "screenshot": null,
+      "status": "active",
+      "notes": "截图证据待 CI 验收产物补录"
+    },
+    {
       "id": "capability_standard_virtual_camera_showcase",
       "path": "mods/showcases/capability_standard/CapabilityStandardVirtualCameraShowcaseMod",
       "projectPath": "CapabilityStandardVirtualCameraShowcaseMod.csproj",
