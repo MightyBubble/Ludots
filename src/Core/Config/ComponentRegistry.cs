@@ -109,10 +109,6 @@ namespace Ludots.Core.Config
             Register("MassNavigationAgent", SetMassNavigationAgent, null, Component<MassNavigationAgent>.ComponentType);
             Register("MassNavigationBlocker", SetMassNavigationBlocker, null, Component<MassNavigationBlocker>.ComponentType);
             Register<MassNavigationHotspotMarker>("MassNavigationHotspotMarker");
-            Register<SimulationAuthority>("SimulationAuthority");
-            Register("SimulationResidencyPolicy", SetSimulationResidencyPolicy, null, Component<SimulationResidencyPolicy>.ComponentType);
-            Register("CollisionParticipation", SetCollisionParticipation, null, Component<CollisionParticipation>.ComponentType);
-            Register("AvoidanceLane", SetAvoidanceLane, null, Component<AvoidanceLane>.ComponentType);
         }
 
         public static void Register<T>(string name, string modId = null)
@@ -1355,48 +1351,6 @@ namespace Ludots.Core.Config
             entity.Add(new MassNavigationBlocker { RadiusCm = radiusCm });
         }
 
-        private static void SetSimulationResidencyPolicy(Entity entity, JsonNode data)
-        {
-            if (data is not JsonObject obj)
-            {
-                throw new InvalidOperationException("SimulationResidencyPolicy requires an object payload.");
-            }
-
-            ValidateProperties(obj, "SimulationResidencyPolicy", "kind");
-            entity.Add(new SimulationResidencyPolicy
-            {
-                Kind = ParseSimulationResidencyKind(RequireStringProperty(obj, "kind", "SimulationResidencyPolicy")),
-            });
-        }
-
-        private static void SetCollisionParticipation(Entity entity, JsonNode data)
-        {
-            if (data is not JsonObject obj)
-            {
-                throw new InvalidOperationException("CollisionParticipation requires an object payload.");
-            }
-
-            ValidateProperties(obj, "CollisionParticipation", "kind");
-            entity.Add(new CollisionParticipation
-            {
-                Kind = ParseCollisionParticipationKind(RequireStringProperty(obj, "kind", "CollisionParticipation")),
-            });
-        }
-
-        private static void SetAvoidanceLane(Entity entity, JsonNode data)
-        {
-            if (data is not JsonObject obj)
-            {
-                throw new InvalidOperationException("AvoidanceLane requires an object payload.");
-            }
-
-            ValidateProperties(obj, "AvoidanceLane", "kind");
-            entity.Add(new AvoidanceLane
-            {
-                Kind = ParseAvoidanceLaneKind(RequireStringProperty(obj, "kind", "AvoidanceLane")),
-            });
-        }
-
         private static ManifestationObstacleShape2D ParseManifestationObstacleShape(string? raw)
         {
             return ParseManifestationObstacleShape(raw, "ManifestationObstacleIntent2D");
@@ -1431,52 +1385,6 @@ namespace Ludots.Core.Config
                 "SweepVelocity" => ManifestationFacingSource2D.SweepVelocity,
                 "ParentExecutionTarget" => ManifestationFacingSource2D.ParentExecutionTarget,
                 _ => throw new InvalidOperationException($"Unsupported ManifestationMotion2D facingSource '{raw}'.")
-            };
-        }
-
-        private static SimulationResidencyKind ParseSimulationResidencyKind(string? raw)
-        {
-            if (string.IsNullOrWhiteSpace(raw))
-            {
-                throw new InvalidOperationException("SimulationResidencyPolicy requires a non-empty kind.");
-            }
-
-            return raw switch
-            {
-                "AlwaysResident" => SimulationResidencyKind.AlwaysResident,
-                "BudgetedResident" => SimulationResidencyKind.BudgetedResident,
-                "Streamable" => SimulationResidencyKind.Streamable,
-                _ => throw new InvalidOperationException($"Unsupported SimulationResidencyPolicy kind '{raw}'.")
-            };
-        }
-
-        private static CollisionParticipationKind ParseCollisionParticipationKind(string? raw)
-        {
-            if (string.IsNullOrWhiteSpace(raw))
-            {
-                throw new InvalidOperationException("CollisionParticipation requires a non-empty kind.");
-            }
-
-            return raw switch
-            {
-                "CrowdOnly" => CollisionParticipationKind.CrowdOnly,
-                "Physics2D" => CollisionParticipationKind.Physics2D,
-                "Physics2DAndCrowd" => CollisionParticipationKind.Physics2DAndCrowd,
-                _ => throw new InvalidOperationException($"Unsupported CollisionParticipation kind '{raw}'.")
-            };
-        }
-
-        private static AvoidanceLaneKind ParseAvoidanceLaneKind(string? raw)
-        {
-            if (string.IsNullOrWhiteSpace(raw))
-            {
-                throw new InvalidOperationException("AvoidanceLane requires a non-empty kind.");
-            }
-
-            return raw switch
-            {
-                "MassNavigation" => AvoidanceLaneKind.MassNavigation,
-                _ => throw new InvalidOperationException($"Unsupported AvoidanceLane kind '{raw}'.")
             };
         }
 

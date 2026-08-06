@@ -39,9 +39,8 @@ namespace Ludots.Tests.Presentation
                 out Entity agent1,
                 out MassNavigationAgentLayer layer);
             Vector2 moveDestination = new(2000f, 2000f);
-            int movedCount = simulation.NavGroupRuntime.UpsertOrderMoveCommand(
-                simulation.MassNavigationFlow,
-                simulation.AgentState,
+            int movedCount = MassNavigationOrderChainTests.CommitPreparedOrderMove(
+                simulation,
                 orderToken: 1,
                 memberIndices: new[] { 0, 1 },
                 teamId: TeamId,
@@ -74,9 +73,8 @@ namespace Ludots.Tests.Presentation
             Assert.That(harness.Simulation.AgentState.TotalAgents, Is.EqualTo(2));
 
             Vector2 moveDestination = new(2000f, 2000f);
-            int movedCount = harness.Simulation.NavGroupRuntime.UpsertOrderMoveCommand(
-                harness.Simulation.MassNavigationFlow,
-                harness.Simulation.AgentState,
+            int movedCount = MassNavigationOrderChainTests.CommitPreparedOrderMove(
+                harness.Simulation,
                 orderToken: 1,
                 memberIndices: new[] { 0, 1 },
                 teamId: TeamId,
@@ -339,9 +337,8 @@ namespace Ludots.Tests.Presentation
             Assert.That(harness.Engine.World.TryGet(harness.Agent1, out MassNavigationAgentIndex agent1IndexBefore), Is.True);
 
             int orderToken = 191;
-            int movedCount = harness.Simulation.NavGroupRuntime.UpsertOrderMoveCommand(
-                harness.Simulation.MassNavigationFlow,
-                harness.Simulation.AgentState,
+            int movedCount = MassNavigationOrderChainTests.CommitPreparedOrderMove(
+                harness.Simulation,
                 orderToken,
                 new[] { agent0IndexBefore.Value, agent1IndexBefore.Value },
                 TeamId,
@@ -471,9 +468,8 @@ namespace Ludots.Tests.Presentation
                 out Entity agent1,
                 out MassNavigationAgentLayer layer);
             int orderToken = 333;
-            int movedCount = simulation.NavGroupRuntime.UpsertOrderMoveCommand(
-                simulation.MassNavigationFlow,
-                simulation.AgentState,
+            int movedCount = MassNavigationOrderChainTests.CommitPreparedOrderMove(
+                simulation,
                 orderToken,
                 new[] { 0, 1 },
                 TeamId,
@@ -528,9 +524,8 @@ namespace Ludots.Tests.Presentation
                 out MassNavigationAgentSeed[] seeds);
             int orderToken = 42;
             int[] members = { 0, 1, 2 };
-            int movedCount = simulation.NavGroupRuntime.UpsertOrderMoveCommand(
-                simulation.MassNavigationFlow,
-                simulation.AgentState,
+            int movedCount = MassNavigationOrderChainTests.CommitPreparedOrderMove(
+                simulation,
                 orderToken,
                 members,
                 TeamId,
@@ -578,9 +573,8 @@ namespace Ludots.Tests.Presentation
                 out MassNavigationAgentSeed[] seeds);
             int orderToken = 84;
             int[] members = { 0, 1, 2 };
-            int movedCount = simulation.NavGroupRuntime.UpsertOrderMoveCommand(
-                simulation.MassNavigationFlow,
-                simulation.AgentState,
+            int movedCount = MassNavigationOrderChainTests.CommitPreparedOrderMove(
+                simulation,
                 orderToken,
                 members,
                 TeamId,
@@ -613,9 +607,8 @@ namespace Ludots.Tests.Presentation
             harness.BindingSystem.Update(0f);
             int orderToken = 126;
             int[] members = { 0, 1 };
-            int movedCount = harness.Simulation.NavGroupRuntime.UpsertOrderMoveCommand(
-                harness.Simulation.MassNavigationFlow,
-                harness.Simulation.AgentState,
+            int movedCount = MassNavigationOrderChainTests.CommitPreparedOrderMove(
+                harness.Simulation,
                 orderToken,
                 members,
                 TeamId,

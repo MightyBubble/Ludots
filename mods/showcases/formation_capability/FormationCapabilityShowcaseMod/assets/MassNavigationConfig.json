@@ -62,5 +62,11 @@
   "streaming": {
     "retainSeconds": 12,
     "radiusCm": 24000
+  },
+  "semantics": {
+    "route": {
+      "waypointAdvanceStopThresholdScale": 2,
+      "waypointAdvanceBodyRadiusScale": 1.5
+    }
   }
 }
