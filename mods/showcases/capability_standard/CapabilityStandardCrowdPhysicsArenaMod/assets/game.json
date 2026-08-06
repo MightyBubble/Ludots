@@ -1,6 +1,7 @@
 {
   "startupMapId": "crowd_physics_arena",
   "startupLocalPlayerId": 1,
+  "startupInputContexts": [ "Default_Gameplay", "CrowdPhysicsArena.Controls" ],
   "windowTitle": "Ludots Engine - Capability Standard Crowd Physics Arena",
   "targetFps": 0,
   "worldWidthInMacroTiles": 250,

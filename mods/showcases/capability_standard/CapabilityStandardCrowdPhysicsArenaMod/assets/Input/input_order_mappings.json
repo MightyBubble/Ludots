@@ -2,6 +2,26 @@
   "interactionMode": "SmartCast",
   "mappings": [
     {
+      "actionId": "SkillQ",
+      "trigger": "PressedThisFrame",
+      "orderTypeKey": "castAbility",
+      "argsTemplate": { "i0": 0 },
+      "requireTarget": false,
+      "targetType": "Position",
+      "isSkillMapping": true,
+      "modifierBehavior": "QueueOnModifier"
+    },
+    {
+      "actionId": "SkillE",
+      "trigger": "PressedThisFrame",
+      "orderTypeKey": "castAbility",
+      "argsTemplate": { "i0": 1 },
+      "requireTarget": false,
+      "targetType": "Position",
+      "isSkillMapping": true,
+      "modifierBehavior": "QueueOnModifier"
+    },
+    {
       "actionId": "Command",
       "actorCollectionKey": "collection.command.source",
       "trigger": "PressedThisFrame",

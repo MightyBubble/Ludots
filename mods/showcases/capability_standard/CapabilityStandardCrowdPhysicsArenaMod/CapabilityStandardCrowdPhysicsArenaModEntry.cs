@@ -5,6 +5,7 @@ using CapabilityStandardCrowdPhysicsArenaMod.Systems;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Modding;
+using Ludots.Core.Movement.Physics2DBridge;
 using Ludots.Core.Presentation.Minimap;
 using Ludots.Core.Scripting;
 
@@ -16,7 +17,13 @@ public sealed class CapabilityStandardCrowdPhysicsArenaModEntry : IMod
         "CapabilityStandardCrowdPhysicsArena.ObserverVisibilitySystemInstalled";
     private const string LocalOrderSourceSystemInstalledKey =
         "CapabilityStandardCrowdPhysicsArena.LocalOrderSourceSystemInstalled";
+    private const string PressurePlateDoorSystemInstalledKey =
+        "CapabilityStandardCrowdPhysicsArena.PressurePlateDoorSystemInstalled";
     private IModContext? _context;
+
+    /// <summary>Queryable plate/door state for tests and HUD (installed once per engine).</summary>
+    public static readonly ServiceKey<CrowdPhysicsArenaPressurePlateDoorSystem> PressurePlateDoorSystemKey =
+        new("CapabilityStandardCrowdPhysicsArena.PressurePlateDoorSystem");
 
     public void OnLoad(IModContext context)
     {
@@ -44,6 +51,7 @@ public sealed class CapabilityStandardCrowdPhysicsArenaModEntry : IMod
             ?? throw new InvalidOperationException("CapabilityStandardCrowdPhysicsArenaMod requires IModContext.");
         EnsureObserverVisibilitySystem(engine);
         EnsureLocalOrderSourceSystem(engine, modContext);
+        EnsurePressurePlateDoorAndHudSystems(engine);
         bool mapFocused = CapabilityStandardCrowdPhysicsArenaMapFocus.IsStartupMapFocused(engine);
         engine.SetService(CoreServiceKeys.PresentationAudienceRevealHidden, mapFocused);
         if (!mapFocused)
@@ -72,6 +80,27 @@ public sealed class CapabilityStandardCrowdPhysicsArenaModEntry : IMod
             new CrowdPhysicsArenaObserverVisibilityBindingSystem(engine),
             SystemGroup.RuntimeEntityBinding);
         engine.GlobalContext[ObserverVisibilitySystemInstalledKey] = true;
+    }
+
+    private static void EnsurePressurePlateDoorAndHudSystems(GameEngine engine)
+    {
+        if (engine.GlobalContext.ContainsKey(PressurePlateDoorSystemInstalledKey))
+        {
+            return;
+        }
+
+        ContactEventRouter2D router = engine.GetService(MovementPhysics2DBridgeKeys.ContactEventRouter)
+            ?? throw new InvalidOperationException(
+                "CapabilityStandardCrowdPhysicsArenaMod requires the massnav→kinematic bridge contact event router; " +
+                "Physics2D + Ludots.Movement.Physics2DBridge must be installed.");
+
+        var plateSystem = new CrowdPhysicsArenaPressurePlateDoorSystem(engine.World);
+        router.RegisterConsumer(CrowdPhysicsArenaLayerNames.Plate, plateSystem);
+        engine.RegisterSystem(plateSystem, SystemGroup.InputCollection);
+        engine.SetService(PressurePlateDoorSystemKey, plateSystem);
+
+        engine.RegisterSystem(new CrowdPhysicsArenaHudSystem(engine, plateSystem), SystemGroup.EventDispatch);
+        engine.GlobalContext[PressurePlateDoorSystemInstalledKey] = true;
     }
 
     private static void EnsureLocalOrderSourceSystem(GameEngine engine, IModContext context)

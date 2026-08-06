@@ -28,7 +28,33 @@
       },
       "OrderBuffer": {},
       "GameplayTagContainer": {},
-      "TagCountContainer": {}
+      "TagCountContainer": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.CrowdArena.Shockwave",
+          "Ability.CrowdArena.BoulderRelease"
+        ]
+      }
+    }
+  },
+  {
+    "id": "crowd_arena_shockwave_epicenter",
+    "onSpawnEffect": "Effect.CrowdArena.Shockwave.Search",
+    "components": {
+      "Name": {
+        "Value": "CrowdPhysicsArena.ShockwaveEpicenter"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "GameplayTagContainer": {},
+      "DestroyWhenParentExecutionEnds": {}
     }
   },
   {
