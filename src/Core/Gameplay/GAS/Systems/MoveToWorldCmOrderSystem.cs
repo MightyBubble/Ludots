@@ -148,7 +148,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             if (!World.TryGet(entity, out Position2D physicsPosition) ||
                 !World.TryGet(entity, out Velocity2D velocity) ||
                 !World.TryGet(entity, out Mass2D mass) ||
-                mass.IsStatic)
+                !mass.IsDynamic)
             {
                 return false;
             }
