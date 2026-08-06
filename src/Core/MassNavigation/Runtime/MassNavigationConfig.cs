@@ -98,7 +98,8 @@ public sealed class MassNavigationConfig
             "routeMaxExpandedPerRequest",
             "routeWaypointCapacityPerAgent",
             "loadedChunkCapacity",
-            "relationshipDomainCapacity");
+            "relationshipDomainCapacity",
+            "displacedAgentCapacity");
 
         JsonElement world = RequireProperty(root, "world");
         RequireProperties(
@@ -470,6 +471,7 @@ public sealed class MassNavigationRuntimeCapacityConfig
     public int RouteWaypointCapacityPerAgent { get; set; }
     public int LoadedChunkCapacity { get; set; }
     public int RelationshipDomainCapacity { get; set; }
+    public int DisplacedAgentCapacity { get; set; }
 
     public void Validate()
     {
@@ -483,6 +485,7 @@ public sealed class MassNavigationRuntimeCapacityConfig
         RequirePositive(RouteWaypointCapacityPerAgent, "routeWaypointCapacityPerAgent");
         RequirePositive(LoadedChunkCapacity, "loadedChunkCapacity");
         RequirePositive(RelationshipDomainCapacity, "relationshipDomainCapacity");
+        RequirePositive(DisplacedAgentCapacity, "displacedAgentCapacity");
 
         if (MovePlanExecutionGroupCapacity < NavigationGroupCapacity)
         {

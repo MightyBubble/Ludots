@@ -109,6 +109,7 @@ namespace Ludots.Core.Config
             Register("MassNavigationAgent", SetMassNavigationAgent, null, Component<MassNavigationAgent>.ComponentType);
             Register("MassNavigationBlocker", SetMassNavigationBlocker, null, Component<MassNavigationBlocker>.ComponentType);
             Register<MassNavigationHotspotMarker>("MassNavigationHotspotMarker");
+            Register("MovementParticipation", SetMovementParticipation, null, Component<MovementParticipation>.ComponentType);
         }
 
         public static void Register<T>(string name, string modId = null)
@@ -1349,6 +1350,75 @@ namespace Ludots.Core.Config
             }
 
             entity.Add(new MassNavigationBlocker { RadiusCm = radiusCm });
+        }
+
+        private static void SetMovementParticipation(Entity entity, JsonNode data)
+        {
+            if (data is not JsonObject obj)
+            {
+                throw new InvalidOperationException("MovementParticipation requires an object payload.");
+            }
+
+            ValidateProperties(obj, "MovementParticipation", "physicsPresence", "displacement");
+            PhysicsPresenceKind physicsPresence = ParsePhysicsPresenceKind(
+                RequireStringProperty(obj, "physicsPresence", "MovementParticipation"));
+
+            if (RequireProperty(obj, "displacement", "MovementParticipation") is not JsonObject displacementObj)
+            {
+                throw new InvalidOperationException("MovementParticipation.displacement requires an object payload.");
+            }
+
+            ValidateProperties(
+                displacementObj,
+                "MovementParticipation.displacement",
+                "allowed",
+                "handbackSpeedThresholdCmPerSec",
+                "maxDurationMs");
+            bool displacementAllowed = ParseBooleanByte(
+                RequireProperty(displacementObj, "allowed", "MovementParticipation.displacement"),
+                "MovementParticipation.displacement.allowed") != 0;
+            float handbackSpeedThresholdCmPerSec = ReadFloatProperty(
+                displacementObj,
+                "handbackSpeedThresholdCmPerSec",
+                "MovementParticipation.displacement");
+            if (!(handbackSpeedThresholdCmPerSec > 0f))
+            {
+                throw new InvalidOperationException(
+                    "MovementParticipation.displacement.handbackSpeedThresholdCmPerSec must be > 0.");
+            }
+
+            int maxDurationMs = ReadIntProperty(displacementObj, "maxDurationMs", "MovementParticipation.displacement");
+            if (maxDurationMs <= 0)
+            {
+                throw new InvalidOperationException("MovementParticipation.displacement.maxDurationMs must be > 0.");
+            }
+
+            entity.Add(new MovementParticipation
+            {
+                PhysicsPresence = physicsPresence,
+                DisplacementAllowed = displacementAllowed,
+                DisplacementHandbackSpeedThresholdCmPerSec = handbackSpeedThresholdCmPerSec,
+                DisplacementMaxDurationMs = maxDurationMs,
+            });
+
+            // poseAuthority is runtime state, never authored: derive the initial owner from the
+            // declared physics presence so the entity enters the world with exactly one pose writer.
+            entity.Add(new PoseAuthority
+            {
+                Value = MovementParticipationRules.DeriveInitialPoseAuthority(physicsPresence),
+            });
+        }
+
+        private static PhysicsPresenceKind ParsePhysicsPresenceKind(string raw)
+        {
+            return raw switch
+            {
+                "none" => PhysicsPresenceKind.None,
+                "kinematic" => PhysicsPresenceKind.Kinematic,
+                "dynamic" => PhysicsPresenceKind.Dynamic,
+                _ => throw new InvalidOperationException(
+                    $"MovementParticipation.physicsPresence '{raw}' is not configured (expected 'none', 'kinematic' or 'dynamic').")
+            };
         }
 
         private static ManifestationObstacleShape2D ParseManifestationObstacleShape(string? raw)

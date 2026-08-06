@@ -4,8 +4,10 @@ using Arch.Core;
 using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.Movement;
 using Ludots.Core.Physics2D.Components;
 
 namespace Ludots.Core.Gameplay.GAS.Systems
@@ -15,15 +17,23 @@ namespace Ludots.Core.Gameplay.GAS.Systems
     /// Runs in <see cref="Engine.GameEngine.SystemGroup.EffectProcessing"/> alongside projectile/spawn systems.
     /// Uses deferred destruction to avoid structural changes inside query lambdas.
     /// All math uses Fix64/Fix64Vec2 for determinism.
+    /// Targets bound as MassNavigation agents (issue #643) go through the pose-authority
+    /// displacement window: the window is requested at effect start, committed at the next
+    /// fixed-step boundary, and handed back to Nav when the effect ends or its speed drops
+    /// below the authored handback threshold. Agents without an explicit
+    /// <see cref="MovementParticipation"/> opt-in fail fast instead of double-writing.
     /// </summary>
     public sealed class DisplacementRuntimeSystem : BaseSystem<World, float>
     {
         private static readonly QueryDescription _query = new QueryDescription().WithAll<DisplacementState>();
         private readonly List<Entity> _toDestroy = new();
         private readonly CommandBuffer _commandBuffer = new();
+        private readonly PoseAuthorityArbiter _poseAuthorityArbiter;
 
-        public DisplacementRuntimeSystem(World world) : base(world)
+        public DisplacementRuntimeSystem(World world, PoseAuthorityArbiter poseAuthorityArbiter) : base(world)
         {
+            _poseAuthorityArbiter = poseAuthorityArbiter
+                ?? throw new System.ArgumentNullException(nameof(poseAuthorityArbiter));
         }
 
         public override void Update(in float dt)
@@ -40,6 +50,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     ref DisplacementState disp = ref displacements[index];
                     if (!World.IsAlive(disp.TargetEntity) || !HasDisplacementPosition(disp.TargetEntity))
                     {
+                        if (disp.PoseWindowRequested)
+                        {
+                            throw new System.InvalidOperationException(
+                                $"Displacement target entity {disp.TargetEntity.Id} became invalid while a pose-authority displacement window was open.");
+                        }
+
                         ClearMovementSuppression(ref disp);
                         _toDestroy.Add(entity);
                         continue;
@@ -47,15 +63,62 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                     if (disp.RemainingTicks <= 0 || disp.RemainingDistanceCm <= Fix64.Zero)
                     {
+                        if (disp.PoseWindowRequested)
+                        {
+                            throw new System.InvalidOperationException(
+                                $"Displacement state for entity {disp.TargetEntity.Id} exhausted its budget outside the normal completion path while holding a pose-authority window.");
+                        }
+
                         ClearMovementSuppression(ref disp);
                         _toDestroy.Add(entity);
                         continue;
+                    }
+
+                    bool isNavAgent = World.Has<MassNavigationAgentIndex>(disp.TargetEntity);
+                    MovementParticipation participation = default;
+                    if (isNavAgent)
+                    {
+                        if (!World.Has<MovementParticipation>(disp.TargetEntity))
+                        {
+                            throw new System.InvalidOperationException(
+                                $"Displacement targets MassNavigation agent entity {disp.TargetEntity.Id} without a MovementParticipation declaration; silent double-writes of WorldPositionCm are forbidden (issue #643).");
+                        }
+
+                        participation = World.Get<MovementParticipation>(disp.TargetEntity);
+                        if (!participation.DisplacementAllowed)
+                        {
+                            throw new System.InvalidOperationException(
+                                $"Displacement targets MassNavigation agent entity {disp.TargetEntity.Id} whose MovementParticipation.displacement.allowed is false.");
+                        }
+
+                        if (!disp.PoseWindowRequested)
+                        {
+                            _poseAuthorityArbiter.RequestDisplacementAuthority(World, disp.TargetEntity);
+                            disp.PoseWindowRequested = true;
+                            // Motion starts once the window commits at the next fixed-step boundary;
+                            // writing WorldPositionCm now would double-write against SyncEntities.
+                            continue;
+                        }
+
+                        if (World.Get<PoseAuthority>(disp.TargetEntity).Value != PoseAuthorityKind.Displacement)
+                        {
+                            throw new System.InvalidOperationException(
+                                $"Displacement window for entity {disp.TargetEntity.Id} was requested but never committed; PoseAuthorityCommitSystem must run at the fixed-step boundary.");
+                        }
                     }
 
                     Fix64 stepCm = Fix64.FromInt(disp.TotalDistanceCm) / Fix64.FromInt(disp.TotalDurationTicks);
                     if (stepCm > disp.RemainingDistanceCm)
                     {
                         stepCm = disp.RemainingDistanceCm;
+                    }
+
+                    if (isNavAgent && dt > 0f &&
+                        stepCm.ToFloat() / dt < participation.DisplacementHandbackSpeedThresholdCmPerSec)
+                    {
+                        EndPoseWindow(ref disp);
+                        _toDestroy.Add(entity);
+                        continue;
                     }
 
                     Fix64Vec2 direction = ComputeDirection(in disp, World);
@@ -66,7 +129,15 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                     if (disp.RemainingTicks <= 0 || disp.RemainingDistanceCm <= Fix64.Zero)
                     {
-                        ClearMovementSuppression(ref disp);
+                        if (isNavAgent)
+                        {
+                            EndPoseWindow(ref disp);
+                        }
+                        else
+                        {
+                            ClearMovementSuppression(ref disp);
+                        }
+
                         _toDestroy.Add(entity);
                     }
                     else
@@ -93,6 +164,14 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private bool HasDisplacementPosition(Entity target)
         {
             return World.Has<Position2D>(target) || World.Has<WorldPositionCm>(target);
+        }
+
+        /// <summary>窗口正常结束：在固定步边界把写权交还 Nav，并撤销移动抑制。</summary>
+        private void EndPoseWindow(ref DisplacementState disp)
+        {
+            _poseAuthorityArbiter.RequestNavHandback(World, disp.TargetEntity);
+            disp.PoseWindowRequested = false;
+            ClearMovementSuppression(ref disp);
         }
 
         private void ApplyMovementSuppression(ref DisplacementState disp)

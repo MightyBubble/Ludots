@@ -33,7 +33,8 @@
       "movePlanExecutionGroupCapacity": 512,
       "movePlanExecutionMemberCapacity": 512,
       "loadedChunkCapacity": 512,
-      "relationshipDomainCapacity": 2
+      "relationshipDomainCapacity": 2,
+      "displacedAgentCapacity": 64
     }
   },
   "agentProfiles": {

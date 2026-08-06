@@ -2,6 +2,63 @@
 
 Current closeouts and prior issue reviews follow.
 
+## GAS Composition Gate - Issue #643 Stage 0+1 Movement Participation Increment - 2026-08-06
+
+- **Task / Issue**: Issue #643 stage 0+1 — introduce the `MovementParticipation`/`PoseAuthority` two-axis vocabulary, converge the three `WorldPositionCm` writers under a pose-authority contract, and wire the GAS displacement window into MassNavigation's displaced state.
+- **Date**: 2026-08-06
+- **Agent / Author**: Cursor cloud agent
+
+### 1. Core judgment
+
+新变体主要交付物是（A/B/C/D）: A
+
+结论: PASS
+
+一句话理由: 交付物是既有 `DisplacementRuntimeSystem` 步骤的写权接线（沿用 `DisplacementState` 运行时管线与既有 `ApplyExternalDisplacement`/arrival-recovery 挂点），外加两枚 authoring/runtime 组件；不新增 `BuiltinHandlerId`、`EffectPresetType`、profile enum、preset 开关或平行位移管线。
+
+### 2. Layer assignment
+
+| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
+|-----------|-----------------|----------|
+| MovementParticipation authoring 声明 | 0 | `Ludots.Core.Components` 组件 + `ComponentRegistry` 严格解析器 |
+| PoseAuthority 运行时状态与固定步边界切换 | 0/1 | `PoseAuthorityArbiter` 请求队列 + `PoseAuthorityCommitSystem`（SchemaUpdate，经 CommandBuffer 结算） |
+| 位移窗口触发/驱动/交还 | 1 | 既有 `DisplacementRuntimeSystem`（改造，不新建系统管线） |
+| displaced 态求解器行为 | 0 | `MassNavigationFlowSolverState` 预分配位标志 + 既有 `ApplyExternalDisplacement` |
+| 交还后恢复原目标 | 1 | 既有 `ResetUnitArrivalState`/`SetUnitTarget(resetRecovery)` wake 路径 |
+
+### 3. Reuse list
+
+- Handlers: `BuiltinHandlers.HandleApplyDisplacement`（不改，仍是 `DisplacementState` 唯一生产者）。
+- Queues / Systems: `DisplacementRuntimeSystem`（改造）、`MassNavigationSimulationStepSystem`（entity-sync 节拍挂 displaced 位姿回灌）、`Physics2DToWorldPositionSyncSystem`（只读参照，不改）。
+- Resolvers / Registries: `ComponentRegistry`（新增 MovementParticipation 严格解析）、`MassNavigationIds.TryGetCurrentNavigationRuntime`。
+- Existing presets / graphs: 位移仍由既有 displacement effect preset 触发，未新增 preset 类型。
+- 既有挂点: `MassNavigationFlowSolverState.ApplyExternalDisplacement`、arrival-recovery wake（`ResetUnitArrivalState` / `SetUnitTarget(resetRecovery:true)`）、`MassNavigationCadenceScheduler` entity-sync 节拍。
+
+### 4. New Layer 0 ops (if any)
+
+N/A — 无新增 graph op / builtin handler。新增的是组件词汇与求解器状态位，不是 effect 步骤。
+
+### 5. Transaction boundary
+
+写权切换请求在固定步内只入队，`PoseAuthorityCommitSystem` 在下一个固定步边界统一经 CommandBuffer 结算；同一实体的非法切换（当前写权与期望不符）、位移容量超限、`maxDurationMs` 超时一律抛异常，不做部分提交或静默回退。
+
+### 6. Config SSOT
+
+行为配置落在: 实体模板 `MovementParticipation` 组件（authoring 明文）+ `MassNavigationConfig.json` `scenarioRuntime.runtimeCapacity.displacedAgentCapacity`（容量）。
+
+是否新增 JSON schema: NO（组件字段挂现有 ComponentRegistry 模板体系；容量字段挂现有 runtimeCapacity 节，均非平行 schema/loader）。
+
+### 7. Red flag scan
+
+- [x] 未新增 profile inherit/placement enum
+- [x] 未新建与 spawn 平行的物化管线
+- [x] 未把 placement 校验塞进 lifecycle op
+- [x] 未添加「说不清的」默认 fallback（位移窗口异常结束抛异常，不静默交还写权）
+
+### 8. Next variant test
+
+「下一个 Mod 变体」将修改: effect 步骤 / 实体模板 `MovementParticipation` 声明（合法组合以 issue #643 合同表为准），不改 Core enum。
+
 ## GAS Composition Gate - Issue 722 Blacksmith Durability Control - 2026-08-03
 
 - **Task / Issue**: Keep the performer blacksmith showcase's manual durability presets authoritative after consolidating performer attribute param authoring under `BehaviorSlot.AttributeBinding`.

@@ -87,6 +87,7 @@ using Ludots.Core.Diagnostics;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Gameplay.Camera.FollowTargets;
 using Ludots.Core.MassNavigation.Runtime;
+using Ludots.Core.Movement;
 using Ludots.Core.Navigation.GraphCore;
 using Ludots.Core.Navigation.GraphSemantics.GAS;
 using Ludots.Core.Navigation.GraphWorld;
@@ -1770,7 +1771,12 @@ namespace Ludots.Core.Engine
                     throw new InvalidOperationException($"Failed to create runtime navmesh obstacle dirty system '{runtimeNavMeshObstacleSystemTypeName}'.");
                 }
             }
-            RegisterSystem(new DisplacementRuntimeSystem(World), SystemGroup.EffectProcessing);
+            // Pose-authority arbitration (issue #643): transitions queue during the tick and are
+            // committed at the next fixed-step boundary by PoseAuthorityCommitSystem (SchemaUpdate).
+            var poseAuthorityArbiter = new PoseAuthorityArbiter();
+            SetService(CoreServiceKeys.PoseAuthorityArbiter, poseAuthorityArbiter);
+            RegisterSystem(new PoseAuthorityCommitSystem(World, poseAuthorityArbiter), SystemGroup.SchemaUpdate);
+            RegisterSystem(new DisplacementRuntimeSystem(World, poseAuthorityArbiter), SystemGroup.EffectProcessing);
 
             // Phase 4: AttributeCalculation
             RegisterSystem(aggSystem, SystemGroup.AttributeCalculation);
