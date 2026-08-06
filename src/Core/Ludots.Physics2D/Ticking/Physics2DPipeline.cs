@@ -33,12 +33,14 @@ namespace Ludots.Core.Physics2D.Ticking
             World world,
             Physics2DSolverConfig solverConfig,
             Physics2DTickPolicy tickPolicy,
-            ShapeDataStorage2D shapeStorage)
+            ShapeDataStorage2D shapeStorage,
+            KinematicTargetPoseBuffer2D kinematicPoses)
         {
             ArgumentNullException.ThrowIfNull(world);
             ArgumentNullException.ThrowIfNull(solverConfig);
             ArgumentNullException.ThrowIfNull(tickPolicy);
             ArgumentNullException.ThrowIfNull(shapeStorage);
+            ArgumentNullException.ThrowIfNull(kinematicPoses);
 
             var build = new BuildPhysicsWorldSystem2D(world, shapeStorage);
             var spatial = new AdaptiveSpatialSystem2D(world, build, solverConfig);
@@ -46,6 +48,7 @@ namespace Ludots.Core.Physics2D.Ticking
             return new Physics2DPipelineDefinition(
                 new ISystem<float>[]
                 {
+                    new KinematicDriveSystem2D(world, kinematicPoses),
                     new ForceInputWakeSystem2D(world),
                     build,
                     spatial,
@@ -62,6 +65,7 @@ namespace Ludots.Core.Physics2D.Ticking
                 },
                 new[]
                 {
+                    "KinematicDrive",
                     "ForceInputWake",
                     "BuildPhysicsWorld",
                     "SpatialBroadphase",

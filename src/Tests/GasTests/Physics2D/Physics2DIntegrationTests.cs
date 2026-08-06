@@ -221,7 +221,8 @@ namespace GasTests
                 new DiscreteClock(),
                 new Physics2DTickPolicy(physicsHz, maxStepsPerFixedTick: 1),
                 _solverConfig,
-                _shapeStorage);
+                _shapeStorage,
+                new KinematicTargetPoseBuffer2D(kinematicBodyCapacity: 64));
             simulation.Initialize();
             return simulation;
         }

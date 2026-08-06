@@ -87,7 +87,8 @@ namespace GasTests.Physics2D
                 tickPolicy,
                 new Physics2DSolverConfig(),
                 shapeStorage,
-                broadphasePolicy);
+                broadphasePolicy,
+                new KinematicTargetPoseBuffer2D(kinematicBodyCapacity: 64));
             simulation.Initialize();
 
             float fixedDeltaTime = 1f / fixedHz;

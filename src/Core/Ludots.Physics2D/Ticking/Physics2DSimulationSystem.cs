@@ -45,14 +45,16 @@ namespace Ludots.Core.Physics2D.Ticking
             IClock clock,
             Physics2DTickPolicy tickPolicy,
             Physics2DSolverConfig solverConfig,
-            ShapeDataStorage2D shapeStorage)
+            ShapeDataStorage2D shapeStorage,
+            KinematicTargetPoseBuffer2D kinematicPoses)
             : this(
                 world,
                 clock,
                 tickPolicy,
                 solverConfig,
                 shapeStorage,
-                new Physics2DBroadphasePolicy(new Physics2DBroadphaseConfig()))
+                new Physics2DBroadphasePolicy(new Physics2DBroadphaseConfig()),
+                kinematicPoses)
         {
         }
 
@@ -62,7 +64,8 @@ namespace Ludots.Core.Physics2D.Ticking
             Physics2DTickPolicy tickPolicy,
             Physics2DSolverConfig solverConfig,
             ShapeDataStorage2D shapeStorage,
-            Physics2DBroadphasePolicy broadphasePolicy)
+            Physics2DBroadphasePolicy broadphasePolicy,
+            KinematicTargetPoseBuffer2D kinematicPoses)
         {
             _world = world;
             _clock = clock;
@@ -71,12 +74,19 @@ namespace Ludots.Core.Physics2D.Ticking
             ArgumentNullException.ThrowIfNull(solverConfig);
             ArgumentNullException.ThrowIfNull(shapeStorage);
             ArgumentNullException.ThrowIfNull(broadphasePolicy);
+            ArgumentNullException.ThrowIfNull(kinematicPoses);
 
             _broadphasePolicy = broadphasePolicy;
-            _pipeline = Physics2DPipelineFactory.CreateProduction(world, solverConfig, tickPolicy, shapeStorage);
+            KinematicPoses = kinematicPoses;
+            _pipeline = Physics2DPipelineFactory.CreateProduction(world, solverConfig, tickPolicy, shapeStorage, kinematicPoses);
             Build = _pipeline.Build;
             Spatial = _pipeline.Spatial;
         }
+
+        /// <summary>
+        /// Drive channel for kinematic bodies: submit one target pose per entity per fixed step.
+        /// </summary>
+        public KinematicTargetPoseBuffer2D KinematicPoses { get; }
 
         public ReadOnlySpan<string> PipelineStepNames => _pipeline.StepNames;
 

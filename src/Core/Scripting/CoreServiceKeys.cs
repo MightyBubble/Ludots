@@ -287,6 +287,8 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<Physics2DBroadphasePolicy> Physics2DBroadphasePolicy = new("Physics2DBroadphasePolicy");
         public static readonly ServiceKey<object> Physics2DShapeStorage = new("Physics2D.ShapeStorage");
         public static readonly ServiceKey<Physics2DController> Physics2DController = new("Physics2DController");
+        public static readonly ServiceKey<Physics2DKinematicConfig> Physics2DKinematicConfig = new("Physics2DKinematicConfig");
+        public static readonly ServiceKey<Ludots.Core.Physics2D.KinematicTargetPoseBuffer2D> Physics2DKinematicPoseBuffer = new("Physics2D.KinematicPoseBuffer");
 
         // --- Presentation ---
         public static readonly ServiceKey<PresentationEventStream> PresentationEventStream = new("PresentationEventStream");

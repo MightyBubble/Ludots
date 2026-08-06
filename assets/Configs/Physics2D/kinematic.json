@@ -1,0 +1,5 @@
+{
+  "kinematicBodyCapacity": 4096,
+  "contactEventQueueCapacity": 4096,
+  "contactEventEmitterLayers": []
+}
