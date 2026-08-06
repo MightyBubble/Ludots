@@ -6,9 +6,9 @@
     "status": "active"
   },
   "counts": {
-    "runnable": 23,
+    "runnable": 24,
     "testOnly": 0,
-    "total": 23
+    "total": 24
   },
   "runnable": [
     {
@@ -40,6 +40,14 @@
       "preset": "camera_acceptance_hotpath_raylib",
       "binding": "camera_acceptance_hotpath",
       "testFilter": "CameraAcceptanceModTests",
+      "artifactDir": null,
+      "hasScreenshotEvidence": false
+    },
+    {
+      "id": "capability_standard_crowd_physics_arena",
+      "preset": "capability_standard_crowd_physics_arena_raylib",
+      "binding": "capability_standard_crowd_physics_arena",
+      "testFilter": "CapabilityStandardCrowdPhysicsArenaProductionPathTests",
       "artifactDir": null,
       "hasScreenshotEvidence": false
     },

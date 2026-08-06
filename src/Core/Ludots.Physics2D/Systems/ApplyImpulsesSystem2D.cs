@@ -32,6 +32,7 @@ namespace Ludots.Core.Physics2D.Systems
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Update(ref CollisionPair pair)
             {
+                if (pair.SensorOnly != 0) return;
                 if (pair.ContactCount == 0) return;
 
                 if (!World.IsAlive(pair.EntityA) || !World.IsAlive(pair.EntityB))

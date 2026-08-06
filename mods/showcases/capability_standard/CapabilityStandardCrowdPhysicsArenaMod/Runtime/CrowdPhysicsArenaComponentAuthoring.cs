@@ -15,6 +15,5 @@ internal static class CrowdPhysicsArenaComponentAuthoring
         Physics2DTemplateAuthoring.RegisterRigidBody("CrowdPhysicsArena.RigidBody", modId);
         Physics2DTemplateAuthoring.RegisterContactEventEmitter("CrowdPhysicsArena.ContactEventEmitter", modId);
         ComponentRegistry.Register<CrowdPhysicsArenaDoor>("CrowdPhysicsArena.Door", modId);
-        ComponentRegistry.Register<CrowdPhysicsArenaPlateAnchor>("CrowdPhysicsArena.PlateAnchor", modId);
     }
 }

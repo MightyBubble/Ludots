@@ -17,10 +17,10 @@ namespace CapabilityStandardCrowdPhysicsArenaMod.Systems;
 ///
 /// Consumes ContactBegin/ContactEnd events routed for the <c>arena.plate</c> layer by the
 /// massnav→kinematic bridge's <see cref="ContactEventRouter2D"/> and counts distinct squad
-/// agents. The plate is a dynamic body seated in a static socket, so a single crossing agent
-/// produces flickering raw Begin/End pairs while position correction pushes the plate out of
-/// penetration each step; counting unique agents keeps "N units cross → exactly N Begins"
-/// exact. Begin/End are both exposed so "everyone who stepped on also stepped off" stays a
+/// agents. The plate is a static contact-event emitter: declaring emission is what makes the
+/// broadphase create the sensor-only kinematic×static pair, so the plate never moves and never
+/// enters the solver. Counting unique agents keeps "N units cross → exactly N Begins" exact
+/// even if an agent grazes the plate edge across steps. Begin/End are both exposed so "everyone who stepped on also stepped off" stays a
 /// queryable invariant, and every authored door opens once the configured Begin threshold is
 /// reached. Opening a door means zeroing its ManifestationObstacleIntent2D sink flags and
 /// marking it dirty so <c>ManifestationObstacleBridge2DSystem</c> removes the physics collider
@@ -31,9 +31,6 @@ public sealed class CrowdPhysicsArenaPressurePlateDoorSystem : BaseSystem<World,
     private static readonly QueryDescription ClosedDoorQuery = new QueryDescription()
         .WithAll<CrowdPhysicsArenaDoor, ManifestationObstacleIntent2D>()
         .WithNone<ManifestationObstacleBridge2DDirty>();
-
-    private static readonly QueryDescription PlateAnchorQuery = new QueryDescription()
-        .WithAll<CrowdPhysicsArenaPlateAnchor, Position2D, Velocity2D>();
 
     private const int AgentTrackingCapacity = 256;
 
@@ -120,8 +117,6 @@ public sealed class CrowdPhysicsArenaPressurePlateDoorSystem : BaseSystem<World,
 
     public override void Update(in float dt)
     {
-        ReseatAnchoredPlates();
-
         _doorsToOpen.Clear();
         long beginCount = AgentContactBeginCount;
         World.Query(in ClosedDoorQuery, (Entity entity, ref CrowdPhysicsArenaDoor door, ref ManifestationObstacleIntent2D intent) =>
@@ -154,31 +149,6 @@ public sealed class CrowdPhysicsArenaPressurePlateDoorSystem : BaseSystem<World,
         }
     }
 
-    /// <summary>
-    /// Re-seats every anchored plate on its authored position with zero velocity (see
-    /// <see cref="CrowdPhysicsArenaPlateAnchor"/>): the plate stays a bolted-down sensor while
-    /// remaining a Dynamic emitter that pairs with kinematic agents in the broadphase.
-    /// Per-step solver corrections still move it transiently within a physics step, but they
-    /// can no longer accumulate into socket tunneling and ejection under full-squad pressure.
-    /// </summary>
-    private void ReseatAnchoredPlates()
-    {
-        World.Query(in PlateAnchorQuery, (
-            ref CrowdPhysicsArenaPlateAnchor anchor,
-            ref Position2D position,
-            ref Velocity2D velocity) =>
-        {
-            if (anchor.Captured == 0)
-            {
-                anchor.AnchorCm = position.Value;
-                anchor.Captured = 1;
-                return;
-            }
-
-            position.Value = anchor.AnchorCm;
-            velocity = Velocity2D.Zero;
-        });
-    }
 
     private void ResolveLayerBitsOnce()
     {

@@ -38,11 +38,22 @@
       "Template": "crowd_arena_crate",
       "Overrides": {
         "CrowdPhysicsArena.RigidBody": {
-          "positionCm": { "x": 4250, "y": 4800 },
+          "positionCm": {
+            "x": 4250,
+            "y": 4800
+          },
           "bodyType": "Dynamic",
           "inverseMass": 0.01,
-          "shape": { "type": "Box", "halfWidthCm": 60, "halfHeightCm": 60 },
-          "material": { "friction": 0.6, "restitution": 0.05, "baseDamping": 0.9 }
+          "shape": {
+            "type": "Box",
+            "halfWidthCm": 60,
+            "halfHeightCm": 60
+          },
+          "material": {
+            "friction": 0.6,
+            "restitution": 0.05,
+            "baseDamping": 0.9
+          }
         }
       }
     },
@@ -51,11 +62,22 @@
       "Template": "crowd_arena_crate",
       "Overrides": {
         "CrowdPhysicsArena.RigidBody": {
-          "positionCm": { "x": 4250, "y": 5000 },
+          "positionCm": {
+            "x": 4250,
+            "y": 5000
+          },
           "bodyType": "Dynamic",
           "inverseMass": 0.01,
-          "shape": { "type": "Box", "halfWidthCm": 60, "halfHeightCm": 60 },
-          "material": { "friction": 0.6, "restitution": 0.05, "baseDamping": 0.9 }
+          "shape": {
+            "type": "Box",
+            "halfWidthCm": 60,
+            "halfHeightCm": 60
+          },
+          "material": {
+            "friction": 0.6,
+            "restitution": 0.05,
+            "baseDamping": 0.9
+          }
         }
       }
     },
@@ -64,11 +86,22 @@
       "Template": "crowd_arena_crate",
       "Overrides": {
         "CrowdPhysicsArena.RigidBody": {
-          "positionCm": { "x": 4250, "y": 5200 },
+          "positionCm": {
+            "x": 4250,
+            "y": 5200
+          },
           "bodyType": "Dynamic",
           "inverseMass": 0.01,
-          "shape": { "type": "Box", "halfWidthCm": 60, "halfHeightCm": 60 },
-          "material": { "friction": 0.6, "restitution": 0.05, "baseDamping": 0.9 }
+          "shape": {
+            "type": "Box",
+            "halfWidthCm": 60,
+            "halfHeightCm": 60
+          },
+          "material": {
+            "friction": 0.6,
+            "restitution": 0.05,
+            "baseDamping": 0.9
+          }
         }
       }
     },
@@ -77,11 +110,22 @@
       "Template": "crowd_arena_crate",
       "Overrides": {
         "CrowdPhysicsArena.RigidBody": {
-          "positionCm": { "x": 4380, "y": 4900 },
+          "positionCm": {
+            "x": 4380,
+            "y": 4900
+          },
           "bodyType": "Dynamic",
           "inverseMass": 0.01,
-          "shape": { "type": "Box", "halfWidthCm": 60, "halfHeightCm": 60 },
-          "material": { "friction": 0.6, "restitution": 0.05, "baseDamping": 0.9 }
+          "shape": {
+            "type": "Box",
+            "halfWidthCm": 60,
+            "halfHeightCm": 60
+          },
+          "material": {
+            "friction": 0.6,
+            "restitution": 0.05,
+            "baseDamping": 0.9
+          }
         }
       }
     },
@@ -90,11 +134,22 @@
       "Template": "crowd_arena_crate",
       "Overrides": {
         "CrowdPhysicsArena.RigidBody": {
-          "positionCm": { "x": 4380, "y": 5100 },
+          "positionCm": {
+            "x": 4380,
+            "y": 5100
+          },
           "bodyType": "Dynamic",
           "inverseMass": 0.01,
-          "shape": { "type": "Box", "halfWidthCm": 60, "halfHeightCm": 60 },
-          "material": { "friction": 0.6, "restitution": 0.05, "baseDamping": 0.9 }
+          "shape": {
+            "type": "Box",
+            "halfWidthCm": 60,
+            "halfHeightCm": 60
+          },
+          "material": {
+            "friction": 0.6,
+            "restitution": 0.05,
+            "baseDamping": 0.9
+          }
         }
       }
     },
@@ -103,11 +158,22 @@
       "Template": "crowd_arena_crate",
       "Overrides": {
         "CrowdPhysicsArena.RigidBody": {
-          "positionCm": { "x": 4510, "y": 5000 },
+          "positionCm": {
+            "x": 4510,
+            "y": 5000
+          },
           "bodyType": "Dynamic",
           "inverseMass": 0.01,
-          "shape": { "type": "Box", "halfWidthCm": 60, "halfHeightCm": 60 },
-          "material": { "friction": 0.6, "restitution": 0.05, "baseDamping": 0.9 }
+          "shape": {
+            "type": "Box",
+            "halfWidthCm": 60,
+            "halfHeightCm": 60
+          },
+          "material": {
+            "friction": 0.6,
+            "restitution": 0.05,
+            "baseDamping": 0.9
+          }
         }
       }
     },
@@ -116,55 +182,16 @@
       "Template": "crowd_arena_pressure_plate",
       "Overrides": {
         "CrowdPhysicsArena.RigidBody": {
-          "positionCm": { "x": 5600, "y": 5000 },
-          "bodyType": "Dynamic",
-          "inverseMass": 0.001,
-          "shape": { "type": "Box", "halfWidthCm": 40, "halfHeightCm": 420 },
-          "material": { "friction": 0.8, "restitution": 0.0, "baseDamping": 0.5 }
-        }
-      }
-    },
-    {
-      "InstanceId": "plate_socket_wall_north",
-      "Template": "crowd_arena_plate_socket_wall",
-      "Overrides": {
-        "CrowdPhysicsArena.RigidBody": {
-          "positionCm": { "x": 5600, "y": 5640 },
+          "positionCm": {
+            "x": 5600,
+            "y": 5000
+          },
           "bodyType": "Static",
-          "shape": { "type": "Box", "halfWidthCm": 400, "halfHeightCm": 200 }
-        }
-      }
-    },
-    {
-      "InstanceId": "plate_socket_wall_south",
-      "Template": "crowd_arena_plate_socket_wall",
-      "Overrides": {
-        "CrowdPhysicsArena.RigidBody": {
-          "positionCm": { "x": 5600, "y": 4360 },
-          "bodyType": "Static",
-          "shape": { "type": "Box", "halfWidthCm": 400, "halfHeightCm": 200 }
-        }
-      }
-    },
-    {
-      "InstanceId": "plate_socket_wall_east",
-      "Template": "crowd_arena_plate_socket_wall",
-      "Overrides": {
-        "CrowdPhysicsArena.RigidBody": {
-          "positionCm": { "x": 5860, "y": 5000 },
-          "bodyType": "Static",
-          "shape": { "type": "Box", "halfWidthCm": 200, "halfHeightCm": 640 }
-        }
-      }
-    },
-    {
-      "InstanceId": "plate_socket_wall_west",
-      "Template": "crowd_arena_plate_socket_wall",
-      "Overrides": {
-        "CrowdPhysicsArena.RigidBody": {
-          "positionCm": { "x": 5340, "y": 5000 },
-          "bodyType": "Static",
-          "shape": { "type": "Box", "halfWidthCm": 200, "halfHeightCm": 640 }
+          "shape": {
+            "type": "Box",
+            "halfWidthCm": 40,
+            "halfHeightCm": 420
+          }
         }
       }
     },

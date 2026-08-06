@@ -1709,7 +1709,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 "targetFilter.relationFilter",
                 path);
             if (cfg.LayerMask != null)
-                desc.LayerMask = ParseLayerMask(cfg.LayerMask);
+                desc.LayerMask = ParseLayerMask(cfg.LayerMask, effectId, path);
             return desc;
         }
 
@@ -1870,9 +1870,17 @@ namespace Ludots.Core.Gameplay.GAS.Config
             return desc;
         }
 
-        private static uint ParseLayerMask(List<string> layers)
+        private static uint ParseLayerMask(List<string> layers, string effectId, string path)
         {
-            throw new NotImplementedException("LayerMask parsing not yet implemented. Layer name to bit mapping requires a layer registry.");
+            try
+            {
+                return LayerRegistry.GetCombinedMask(layers);
+            }
+            catch (InvalidOperationException ex)
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{effectId}' in {path}: targetFilter.layerMask — {ex.Message}", ex);
+            }
         }
 
         private GasConditionHandle CompileExpireCondition(ExpireConditionConfig cfg, string effectId, string path)
