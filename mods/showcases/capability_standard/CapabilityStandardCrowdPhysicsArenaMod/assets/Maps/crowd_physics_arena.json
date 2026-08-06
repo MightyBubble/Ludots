@@ -1,0 +1,200 @@
+{
+  "Id": "crowd_physics_arena",
+  "VisualHeightmapAsset": "assets/terrain/mass_navigation_large_world_relief.vhtm",
+  "Tags": [
+    "crowd_physics_arena"
+  ],
+  "DefaultCamera": {
+    "VirtualCameraId": "MassNavigation.Camera.LargeWorldHeightmap",
+    "TargetXCm": 5000,
+    "TargetYCm": 5000,
+    "Yaw": 45,
+    "Pitch": 42,
+    "DistanceCm": 9000,
+    "FovYDeg": 55
+  },
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthInMacroTiles": 250,
+      "HeightInMacroTiles": 250,
+      "GridCellSizeCm": 100,
+      "ChunkSizeCells": 64,
+      "LoadedChunkCapacity": 256
+    }
+  ],
+  "Entities": [
+    {
+      "InstanceId": "player_team",
+      "Template": "crowd_arena_player_team"
+    },
+    {
+      "InstanceId": "local_player",
+      "Template": "crowd_arena_local_player"
+    },
+    {
+      "InstanceId": "crate_1",
+      "Template": "crowd_arena_crate",
+      "Overrides": {
+        "CrowdPhysicsArena.RigidBody": {
+          "positionCm": { "x": 4250, "y": 4800 },
+          "bodyType": "Dynamic",
+          "inverseMass": 0.01,
+          "shape": { "type": "Box", "halfWidthCm": 60, "halfHeightCm": 60 },
+          "material": { "friction": 0.6, "restitution": 0.05, "baseDamping": 1.2 }
+        }
+      }
+    },
+    {
+      "InstanceId": "crate_2",
+      "Template": "crowd_arena_crate",
+      "Overrides": {
+        "CrowdPhysicsArena.RigidBody": {
+          "positionCm": { "x": 4250, "y": 5000 },
+          "bodyType": "Dynamic",
+          "inverseMass": 0.01,
+          "shape": { "type": "Box", "halfWidthCm": 60, "halfHeightCm": 60 },
+          "material": { "friction": 0.6, "restitution": 0.05, "baseDamping": 1.2 }
+        }
+      }
+    },
+    {
+      "InstanceId": "crate_3",
+      "Template": "crowd_arena_crate",
+      "Overrides": {
+        "CrowdPhysicsArena.RigidBody": {
+          "positionCm": { "x": 4250, "y": 5200 },
+          "bodyType": "Dynamic",
+          "inverseMass": 0.01,
+          "shape": { "type": "Box", "halfWidthCm": 60, "halfHeightCm": 60 },
+          "material": { "friction": 0.6, "restitution": 0.05, "baseDamping": 1.2 }
+        }
+      }
+    },
+    {
+      "InstanceId": "crate_4",
+      "Template": "crowd_arena_crate",
+      "Overrides": {
+        "CrowdPhysicsArena.RigidBody": {
+          "positionCm": { "x": 4380, "y": 4900 },
+          "bodyType": "Dynamic",
+          "inverseMass": 0.01,
+          "shape": { "type": "Box", "halfWidthCm": 60, "halfHeightCm": 60 },
+          "material": { "friction": 0.6, "restitution": 0.05, "baseDamping": 1.2 }
+        }
+      }
+    },
+    {
+      "InstanceId": "crate_5",
+      "Template": "crowd_arena_crate",
+      "Overrides": {
+        "CrowdPhysicsArena.RigidBody": {
+          "positionCm": { "x": 4380, "y": 5100 },
+          "bodyType": "Dynamic",
+          "inverseMass": 0.01,
+          "shape": { "type": "Box", "halfWidthCm": 60, "halfHeightCm": 60 },
+          "material": { "friction": 0.6, "restitution": 0.05, "baseDamping": 1.2 }
+        }
+      }
+    },
+    {
+      "InstanceId": "crate_6",
+      "Template": "crowd_arena_crate",
+      "Overrides": {
+        "CrowdPhysicsArena.RigidBody": {
+          "positionCm": { "x": 4510, "y": 5000 },
+          "bodyType": "Dynamic",
+          "inverseMass": 0.01,
+          "shape": { "type": "Box", "halfWidthCm": 60, "halfHeightCm": 60 },
+          "material": { "friction": 0.6, "restitution": 0.05, "baseDamping": 1.2 }
+        }
+      }
+    },
+    {
+      "InstanceId": "pressure_plate",
+      "Template": "crowd_arena_pressure_plate",
+      "Overrides": {
+        "CrowdPhysicsArena.RigidBody": {
+          "positionCm": { "x": 5600, "y": 5000 },
+          "bodyType": "Dynamic",
+          "inverseMass": 0.001,
+          "shape": { "type": "Box", "halfWidthCm": 150, "halfHeightCm": 150 },
+          "material": { "friction": 0.8, "restitution": 0.0, "baseDamping": 4.0 }
+        }
+      }
+    },
+    {
+      "InstanceId": "plate_socket_wall_north",
+      "Template": "crowd_arena_plate_socket_wall",
+      "Overrides": {
+        "CrowdPhysicsArena.RigidBody": {
+          "positionCm": { "x": 5600, "y": 5210 },
+          "bodyType": "Static",
+          "shape": { "type": "Box", "halfWidthCm": 220, "halfHeightCm": 40 }
+        }
+      }
+    },
+    {
+      "InstanceId": "plate_socket_wall_south",
+      "Template": "crowd_arena_plate_socket_wall",
+      "Overrides": {
+        "CrowdPhysicsArena.RigidBody": {
+          "positionCm": { "x": 5600, "y": 4790 },
+          "bodyType": "Static",
+          "shape": { "type": "Box", "halfWidthCm": 220, "halfHeightCm": 40 }
+        }
+      }
+    },
+    {
+      "InstanceId": "plate_socket_wall_east",
+      "Template": "crowd_arena_plate_socket_wall",
+      "Overrides": {
+        "CrowdPhysicsArena.RigidBody": {
+          "positionCm": { "x": 5810, "y": 5000 },
+          "bodyType": "Static",
+          "shape": { "type": "Box", "halfWidthCm": 40, "halfHeightCm": 220 }
+        }
+      }
+    },
+    {
+      "InstanceId": "plate_socket_wall_west",
+      "Template": "crowd_arena_plate_socket_wall",
+      "Overrides": {
+        "CrowdPhysicsArena.RigidBody": {
+          "positionCm": { "x": 5390, "y": 5000 },
+          "bodyType": "Static",
+          "shape": { "type": "Box", "halfWidthCm": 40, "halfHeightCm": 220 }
+        }
+      }
+    },
+    {
+      "InstanceId": "arena_door",
+      "Template": "crowd_arena_door",
+      "Overrides": {
+        "WorldPositionCm": {
+          "Value": {
+            "X": 6400,
+            "Y": 5000
+          }
+        },
+        "CrowdPhysicsArena.Door": {
+          "OpenThresholdContacts": 20
+        }
+      }
+    }
+  ],
+  "Teams": [
+    {
+      "TeamId": 1,
+      "RepresentativeInstanceId": "player_team"
+    }
+  ],
+  "Players": [
+    {
+      "PlayerId": 1,
+      "TeamId": 1,
+      "RepresentativeInstanceId": "local_player"
+    }
+  ]
+}

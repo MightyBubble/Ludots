@@ -45,6 +45,7 @@
     <ProjectReference Include="..\..\..\mods\showcases\performer_blacksmith\PerformerBlacksmithShowcaseMod\PerformerBlacksmithShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\capabilities\navigation\MassNavigationMod\MassNavigationMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardMassNavigationLargeWorld10kMod\CapabilityStandardMassNavigationLargeWorld10kMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardCrowdPhysicsArenaMod\CapabilityStandardCrowdPhysicsArenaMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\formation_capability\FormationCapabilityShowcaseMod\FormationCapabilityShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\raylib_ism_benchmark\RaylibIsmBenchmarkShowcaseMod\RaylibIsmBenchmarkShowcaseMod.csproj" />
   </ItemGroup>
