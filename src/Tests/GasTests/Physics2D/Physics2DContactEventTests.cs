@@ -245,6 +245,55 @@ namespace GasTests.Physics2D
         }
 
         [Test]
+        public void EntityIdReusedForNewContactParty_EmitsEndForOldGenerationAndBeginForNew()
+        {
+            using var world = World.Create();
+            var poses = new KinematicTargetPoseBuffer2D(kinematicBodyCapacity: 8);
+            var queue = new ContactEventQueue2D(contactEventQueueCapacity: 64);
+            var box = CreateEmitterBox(world, _shapeStorage, 0, 0, halfCm: 40);
+            var kinematic = CreateKinematicCircle(world, _shapeStorage, -60, 0, radiusCm: 50);
+            world.Add(kinematic, new EntityLayer(_propBit, uint.MaxValue));
+            var simulation = CreateSimulation(world, _shapeStorage, poses, queue);
+
+            for (int step = 0; step < 3; step++)
+            {
+                simulation.Update(1f / 60f);
+            }
+
+            Assert.That(simulation.ContactEvents.DrainEvents().Length, Is.EqualTo(1), "setup: one Begin for the initial contact");
+
+            // 帧边界销毁 kinematic 一方并立即以同形状同位置重建：Arch 回收实体 id，
+            // 新实体与旧实体同 id 不同 version——追踪键相同但代际不同。
+            world.Destroy(kinematic);
+            var reused = CreateKinematicCircle(world, _shapeStorage, -60, 0, radiusCm: 50);
+            world.Add(reused, new EntityLayer(_propBit, uint.MaxValue));
+            if (reused.Id != kinematic.Id)
+            {
+                Assert.Ignore("Arch did not recycle the entity id in this runtime; the reuse scenario is not reachable here.");
+            }
+
+            Assert.That(reused, Is.Not.EqualTo(kinematic), "the recycled entity must differ by version");
+
+            simulation.Update(1f / 60f);
+
+            ReadOnlySpan<ContactEvent2D> drained = simulation.ContactEvents.DrainEvents();
+            Assert.That(drained.Length, Is.EqualTo(2),
+                "id reuse across generations must yield exactly one End (old generation) and one Begin (new generation)");
+            Assert.That(drained[0].Type, Is.EqualTo(ContactEventType2D.End));
+            Assert.That(drained[1].Type, Is.EqualTo(ContactEventType2D.Begin));
+            Entity oldParty = drained[0].EntityA.Id == kinematic.Id ? drained[0].EntityA : drained[0].EntityB;
+            Entity newParty = drained[1].EntityA.Id == reused.Id ? drained[1].EntityA : drained[1].EntityB;
+            Assert.That(oldParty, Is.EqualTo(kinematic), "the End belongs to the dead generation");
+            Assert.That(newParty, Is.EqualTo(reused), "the Begin belongs to the live generation");
+
+            for (int step = 0; step < 5; step++)
+            {
+                simulation.Update(1f / 60f);
+            }
+            Assert.That(simulation.ContactEvents.Count, Is.Zero, "steady contact must not re-emit after the generation swap");
+        }
+
+        [Test]
         public void EventQueueOverflow_ThrowsNamingCapacityItem()
         {
             using var world = World.Create();

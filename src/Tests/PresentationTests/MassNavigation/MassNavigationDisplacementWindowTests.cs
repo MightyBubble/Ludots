@@ -22,11 +22,12 @@ using NUnit.Framework;
 namespace Ludots.Tests.Presentation
 {
     /// <summary>
-    /// Issue #643 阶段 0+1：GAS 位移写权窗口与 displaced 态的合同测试。
+    /// GAS 位移写权窗口与 displaced 态的合同测试。
     /// 覆盖：窗口全生命周期（行军→位移→求解器镜像已提交位姿→交还→继续原目标）、
     /// 同一固定步内三个 WorldPositionCm 写入者实体集互斥（双写守护）、
     /// 速度低于交还阈值提前结束、maxDurationMs 超时 fail-fast、
-    /// displacedAgentCapacity 超限 fail-fast、缺 MovementParticipation / 不允许位移 fail-fast。
+    /// displacedAgentCapacity 超限 fail-fast、缺 MovementParticipation / 不允许位移 fail-fast、
+    /// 异常终止路径（窗口中死亡、生命周期批量取消）与叠加位移的替换合同。
     /// </summary>
     [TestFixture]
     public sealed class MassNavigationDisplacementWindowTests
@@ -250,6 +251,124 @@ namespace Ludots.Tests.Presentation
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
                 () => harness.RunFixedTick(TickDt))!;
             Assert.That(ex.Message, Does.Contain("displacement.allowed"));
+        }
+
+        [Test]
+        public void TargetDiesInsideWindow_ArbiterCancelsAndEffectTerminatesWithoutThrow()
+        {
+            using var harness = new DisplacementWindowHarness(
+                displacedAgentCapacity: 4,
+                new AgentSpec(1000f, 1000f, CreateParticipation()));
+            Entity agent = harness.Agents[0];
+            CreateFixedDirectionDisplacement(harness.World, agent, totalDistanceCm: 400, totalTicks: 8, directionDeg: 90f);
+
+            harness.RunFixedTick(TickDt); // 申请窗口
+            harness.RunFixedTick(TickDt); // 窗口生效并施加第一步位移
+            Assert.That(harness.Simulation.MassNavigationFlow.IsAgentDisplaced(0), Is.True);
+            Assert.That(harness.Arbiter.ActiveWindowCount, Is.EqualTo(1));
+
+            harness.World.Destroy(agent);
+
+            // 写权结算是死亡后第一个运行的相位：窗口被取消、求解器标记被幂等清除，全程无异常。
+            // （本 harness 不含 RuntimeEntityBinding 组，跳过 nav 相位——死实体从求解器摘除
+            // 属于 binding rebuild 的职责，这里只验证仲裁器与效果侧的取消合同。）
+            Assert.DoesNotThrow(() => harness.RunCommitPhase(TickDt));
+            Assert.That(harness.Arbiter.ActiveWindowCount, Is.Zero);
+            Assert.That(harness.Simulation.MassNavigationFlow.IsAgentDisplaced(0), Is.False);
+
+            // 位移效果看到目标死亡：取消（此时已是幂等 no-op）并合法自毁。
+            Assert.DoesNotThrow(() => harness.RunDisplacementPhase(TickDt));
+            Assert.That(harness.CountDisplacementStates(), Is.Zero);
+        }
+
+        [Test]
+        public void LifecycleCancelAllWindows_ReturnsAuthorityAndTerminatesEffectsLegally()
+        {
+            using var harness = new DisplacementWindowHarness(
+                displacedAgentCapacity: 4,
+                new AgentSpec(1000f, 1000f, CreateParticipation()));
+            Entity agent = harness.Agents[0];
+            harness.Simulation.SetAgentNavigationTargetWorldCm(0, 3000f, 1000f, resetRecovery: true);
+            CreateFixedDirectionDisplacement(harness.World, agent, totalDistanceCm: 400, totalTicks: 8, directionDeg: 90f);
+
+            harness.RunFixedTick(TickDt); // 申请窗口
+            harness.RunFixedTick(TickDt); // 窗口生效
+            Assert.That(harness.World.Get<PoseAuthority>(agent).Value, Is.EqualTo(PoseAuthorityKind.Displacement));
+
+            // 模拟地图卸载 / 结构重建入口的批量取消。
+            harness.Arbiter.CancelAllWindows(harness.World);
+
+            Assert.That(harness.Arbiter.ActiveWindowCount, Is.Zero);
+            Assert.That(harness.Arbiter.PendingTransitionCount, Is.Zero);
+            Assert.That(harness.World.Get<PoseAuthority>(agent).Value, Is.EqualTo(PoseAuthorityKind.Nav),
+                "cancellation returns authority immediately: the holder loses pose-write rights the moment its window is voided");
+            Assert.That(harness.Simulation.MassNavigationFlow.IsAgentDisplaced(0), Is.False);
+
+            // 效果侧下一相位识别"仲裁器已无窗口记录"并合法终止，不再驱动位姿。
+            Vector2 beforeEffectPhase = harness.GetWorldPositionCm(agent);
+            Assert.DoesNotThrow(() => harness.RunDisplacementPhase(TickDt));
+            Assert.That(harness.CountDisplacementStates(), Is.Zero);
+            Assert.That(harness.GetWorldPositionCm(agent), Is.EqualTo(beforeEffectPhase),
+                "a cancelled displacement must not write the pose");
+
+            // 完整固定步继续跑：agent 以 Nav 写权继续原目标。
+            for (int i = 0; i < 5; i++)
+            {
+                harness.RunFixedTick(TickDt);
+            }
+
+            Assert.That(harness.GetWorldPositionCm(agent).X, Is.GreaterThan(beforeEffectPhase.X));
+        }
+
+        [Test]
+        public void WindowRefresh_ResetsClockSoChainedSegmentsAreBoundedPerSegmentNotCumulatively()
+        {
+            using var harness = new DisplacementWindowHarness(
+                displacedAgentCapacity: 4,
+                new AgentSpec(1000f, 1000f, CreateParticipation(handbackThresholdCmPerSec: 1f, maxDurationMs: 150)));
+            Entity agent = harness.Agents[0];
+            // 每段 2 tick（100ms），单段 < 150ms 上限；两段累计 200ms 会超上限——
+            // 刷新合同要求时钟按段重置，因此不允许抛出。
+            CreateFixedDirectionDisplacement(harness.World, agent, totalDistanceCm: 100, totalTicks: 2, directionDeg: 90f);
+
+            harness.RunFixedTick(TickDt); // 申请窗口
+            harness.RunFixedTick(TickDt); // 窗口生效，位移 tick 1（时钟 50ms）
+
+            // 第二段位移就地替换（模拟叠加击退）：覆写预算并请求时钟刷新。
+            RefreshActiveDisplacement(harness.World, agent, totalDistanceCm: 100, totalTicks: 2);
+
+            Assert.DoesNotThrow(() =>
+            {
+                for (int i = 0; i < 3; i++)
+                {
+                    harness.RunFixedTick(TickDt);
+                }
+            });
+            Assert.That(harness.CountDisplacementStates(), Is.Zero, "the replaced segment must run to completion and terminate");
+            Assert.That(harness.Arbiter.ActiveWindowCount, Is.Zero);
+            Assert.That(harness.World.Get<PoseAuthority>(agent).Value, Is.EqualTo(PoseAuthorityKind.Nav));
+        }
+
+        private static void RefreshActiveDisplacement(World world, Entity target, int totalDistanceCm, int totalTicks)
+        {
+            var query = new QueryDescription().WithAll<DisplacementState>();
+            bool replaced = false;
+            world.Query(in query, (ref DisplacementState state) =>
+            {
+                if (replaced || state.TargetEntity != target)
+                {
+                    return;
+                }
+
+                state.TotalDistanceCm = totalDistanceCm;
+                state.RemainingDistanceCm = Fix64.FromInt(totalDistanceCm);
+                state.TotalDurationTicks = totalTicks;
+                state.RemainingTicks = totalTicks;
+                state.WindowRefreshRequested = state.PoseWindowRequested;
+                replaced = true;
+            });
+
+            Assert.That(replaced, Is.True, "test setup: an active displacement to refresh must exist");
         }
 
         private static MovementParticipation CreateParticipation(
