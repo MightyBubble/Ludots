@@ -18,6 +18,7 @@ using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.Particles;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Requests;
@@ -422,7 +423,9 @@ namespace Ludots.Tests.Presentation
 
                 var meshAssets = new MeshAssetRegistry();
                 var presentationPrefabs = new PrefabRegistry();
-                new MeshAssetConfigLoader(pipeline, meshAssets, presentationPrefabs).Load(catalog);
+                var particleEffects = new ParticleEffectRegistry();
+                new ParticleEffectConfigLoader(pipeline, particleEffects).Load(catalog);
+                new MeshAssetConfigLoader(pipeline, meshAssets, presentationPrefabs, particleEffects).Load(catalog);
                 var materialAssets = new PresentationMaterialRegistry();
                 RegisterFixtureAssets(meshAssets, materialAssets);
 
@@ -606,7 +609,7 @@ namespace Ludots.Tests.Presentation
                         !descriptor.VfxEffectData.IsValid)
                     {
                         throw new InvalidOperationException(
-                            $"Blacksmith performer UAT VFX fixture asset '{key}' must declare vfx emitter data.");
+                            $"Blacksmith performer UAT VFX fixture asset '{key}' must declare VFX particle data.");
                     }
 
                     return assetId;
@@ -656,23 +659,47 @@ namespace Ludots.Tests.Presentation
             {
                 MeshAssetDescriptor descriptor = MeshAssetDescriptor.Primitive(0, PrimitiveMeshKind.Sphere);
                 descriptor.VfxEffectData = new VfxEffectAssetData(
-                    new VfxEmitterDescriptor(
-                        VfxEmitterShape.PrimitiveSphere,
-                        particleCount: 24,
-                        ringSegments: 20,
-                        radiusScale: 1.15f,
-                        coreRadiusScale: 0.28f,
-                        particleRadiusScale: 0.085f,
-                        lifetimeSeconds: 0.75f,
-                        pulseSpeedRadPerSecond: 5.2f,
-                        orbitSpeedRadPerSecond: 1.7f,
-                        shellRingCount: 2,
-                        beamCount: 0),
                     PrefabVfxSpawnMode.Loop,
-                    new Vector4(0.42f, 0.43f, 0.39f, 0.48f),
-                    new Vector4(0.72f, 0.72f, 0.67f, 0.32f),
-                    new Vector4(0.86f, 0.83f, 0.74f, 0.42f));
+                    CreateSmokeParticleEffect(),
+                    particleEffectAssetId: 1);
                 meshAssets.Register(key, in descriptor);
+            }
+
+            private static ParticleEffectAssetData CreateSmokeParticleEffect()
+            {
+                return new ParticleEffectAssetData(
+                    PrefabVfxSpawnMode.Loop,
+                    ParticleEmitterShapeKind.Cone,
+                    ParticleRenderMode.Mesh,
+                    ParticlePrimitiveKind.Sphere,
+                    ParticleOverflowPolicy.DropNewest,
+                    maxParticles: 32,
+                    seed: 345678u,
+                    durationSeconds: 1.2f,
+                    emissionRatePerSecond: 16f,
+                    burstCount: 8,
+                    shapeRadius: 0.25f,
+                    shapeAngleRadians: 0.35f,
+                    shapeThickness: 0.8f,
+                    new ParticleValueRange(0.7f, 1.1f),
+                    new ParticleValueRange(0.3f, 0.8f),
+                    new ParticleValueRange(0.06f, 0.14f),
+                    new Vector4(0.72f, 0.72f, 0.67f, 0.45f),
+                    new ParticleScalarCurve(
+                        new[]
+                        {
+                            new ParticleCurveKey(0f, 0.5f),
+                            new ParticleCurveKey(1f, 1.2f),
+                        }),
+                    new ParticleColorGradient(
+                        new[]
+                        {
+                            new ParticleColorKey(0f, Vector4.One),
+                            new ParticleColorKey(1f, new Vector4(0.42f, 0.43f, 0.39f, 0f)),
+                        }),
+                    new Vector3(0f, 0.2f, 0f),
+                    drag: 0.08f,
+                    worldSpace: true);
             }
 
             public Entity SpawnBlacksmith()

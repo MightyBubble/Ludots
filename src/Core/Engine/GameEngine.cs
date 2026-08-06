@@ -62,6 +62,7 @@ using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Instancing;
 using Ludots.Core.Presentation.Minimap;
+using Ludots.Core.Presentation.Particles;
 using Ludots.Core.Gameplay.GAS.Presentation;
 using Ludots.Core.Presentation.Surfaces;
 using Ludots.Core.Vision.Config;
@@ -1032,6 +1033,7 @@ namespace Ludots.Core.Engine
             var performerCommandBuffer = new PerformerCommandBuffer(presentationConfig.PerformerCommandCapacity);
             var presentationPrefabs = new PrefabRegistry();
             var meshAssets = new MeshAssetRegistry();
+            var particleEffects = new ParticleEffectRegistry();
             var materialAssets = new PresentationMaterialRegistry();
             var instancedBatchAssets = new InstancedBatchAssetRegistry();
             var instancedBatchRequests = new InstancedBatchRequestBuffer(presentationConfig.PresentationRequestCapacity);
@@ -1096,7 +1098,8 @@ namespace Ludots.Core.Engine
                 };
             }
 
-            new MeshAssetConfigLoader(ConfigPipeline, meshAssets, presentationPrefabs).Load(ConfigCatalog, ConfigConflictReport);
+            new ParticleEffectConfigLoader(ConfigPipeline, particleEffects).Load(ConfigCatalog, ConfigConflictReport);
+            new MeshAssetConfigLoader(ConfigPipeline, meshAssets, presentationPrefabs, particleEffects).Load(ConfigCatalog, ConfigConflictReport);
             new PresentationMaterialConfigLoader(ConfigPipeline, materialAssets).Load(ConfigCatalog, ConfigConflictReport);
             new InstancedBatchAssetConfigLoader(
                 ConfigPipeline,
@@ -1227,7 +1230,7 @@ namespace Ludots.Core.Engine
                     !descriptor.VfxEffectData.IsValid)
                 {
                     throw new InvalidOperationException(
-                        $"Performer behavior VFX asset '{key}' must declare vfx emitter data.");
+                        $"Performer behavior VFX asset '{key}' must declare VFX particle data.");
                 }
 
                 return assetId;
@@ -1556,6 +1559,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.PerformerCommandBuffer, performerCommandBuffer);
             SetService(CoreServiceKeys.PresentationPrefabRegistry, presentationPrefabs);
             SetService(CoreServiceKeys.PresentationMeshAssetRegistry, meshAssets);
+            SetService(CoreServiceKeys.PresentationParticleEffectRegistry, particleEffects);
             SetService(CoreServiceKeys.PresentationMaterialRegistry, materialAssets);
             SetService(CoreServiceKeys.InstancedBatchAssetRegistry, instancedBatchAssets);
             SetService(CoreServiceKeys.InstancedBatchRequestBuffer, instancedBatchRequests);

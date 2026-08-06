@@ -1,0 +1,103 @@
+[
+  {
+    "id": "vfx_forge.spark_column",
+    "version": "quarks.ludots.v1",
+    "spawnMode": "Loop",
+    "shape": "Cone",
+    "renderMode": "Mesh",
+    "primitive": "Sphere",
+    "overflowPolicy": "DropNewest",
+    "maxParticles": 192,
+    "seed": 2026080601,
+    "durationSeconds": 1.8,
+    "emissionRatePerSecond": 58,
+    "burstCount": 36,
+    "shapeRadius": 0.42,
+    "shapeAngleRadians": 0.38,
+    "shapeThickness": 0.75,
+    "startLife": [0.55, 1.15],
+    "startSpeed": [1.4, 3.6],
+    "startSize": [0.055, 0.16],
+    "startColor": [1.0, 0.62, 0.18, 1.0],
+    "sizeOverLife": [
+      { "position": 0.0, "value": 0.25 },
+      { "position": 0.22, "value": 1.0 },
+      { "position": 1.0, "value": 0.0 }
+    ],
+    "colorOverLife": [
+      { "position": 0.0, "color": [1.0, 0.72, 0.18, 1.0] },
+      { "position": 0.55, "color": [1.0, 0.28, 0.12, 0.72] },
+      { "position": 1.0, "color": [0.1, 0.08, 0.04, 0.0] }
+    ],
+    "gravity": [0.0, 0.9, 0.0],
+    "drag": 0.18,
+    "worldSpace": true
+  },
+  {
+    "id": "vfx_forge.energy_orbit",
+    "version": "quarks.ludots.v1",
+    "spawnMode": "Loop",
+    "shape": "Sphere",
+    "renderMode": "Mesh",
+    "primitive": "Cube",
+    "overflowPolicy": "DropNewest",
+    "maxParticles": 128,
+    "seed": 2026080602,
+    "durationSeconds": 2.4,
+    "emissionRatePerSecond": 34,
+    "burstCount": 48,
+    "shapeRadius": 1.05,
+    "shapeAngleRadians": 0.0,
+    "shapeThickness": 0.35,
+    "startLife": [1.2, 2.0],
+    "startSpeed": [0.12, 0.38],
+    "startSize": [0.08, 0.14],
+    "startColor": [0.16, 0.78, 1.0, 0.92],
+    "sizeOverLife": [
+      { "position": 0.0, "value": 0.45 },
+      { "position": 0.35, "value": 1.0 },
+      { "position": 1.0, "value": 0.18 }
+    ],
+    "colorOverLife": [
+      { "position": 0.0, "color": [0.2, 0.9, 1.0, 0.95] },
+      { "position": 0.6, "color": [0.28, 1.0, 0.52, 0.62] },
+      { "position": 1.0, "color": [0.02, 0.12, 0.18, 0.0] }
+    ],
+    "gravity": [0.0, 0.0, 0.0],
+    "drag": 0.04,
+    "worldSpace": true
+  },
+  {
+    "id": "vfx_forge.trail_arc",
+    "version": "quarks.ludots.v1",
+    "spawnMode": "Loop",
+    "shape": "Circle",
+    "renderMode": "Trail",
+    "primitive": "Sphere",
+    "overflowPolicy": "DropNewest",
+    "maxParticles": 144,
+    "seed": 2026080603,
+    "durationSeconds": 1.6,
+    "emissionRatePerSecond": 42,
+    "burstCount": 28,
+    "shapeRadius": 1.0,
+    "shapeAngleRadians": 0.0,
+    "shapeThickness": 1.0,
+    "startLife": [0.8, 1.35],
+    "startSpeed": [1.1, 2.1],
+    "startSize": [0.04, 0.08],
+    "startColor": [0.92, 0.96, 1.0, 0.85],
+    "sizeOverLife": [
+      { "position": 0.0, "value": 1.0 },
+      { "position": 1.0, "value": 0.35 }
+    ],
+    "colorOverLife": [
+      { "position": 0.0, "color": [0.96, 1.0, 1.0, 0.85] },
+      { "position": 0.5, "color": [0.36, 0.66, 1.0, 0.55] },
+      { "position": 1.0, "color": [0.02, 0.08, 0.18, 0.0] }
+    ],
+    "gravity": [0.0, 0.35, 0.0],
+    "drag": 0.08,
+    "worldSpace": true
+  }
+]

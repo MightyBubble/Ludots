@@ -24,23 +24,8 @@
     "type": "Primitive",
     "primitiveKind": "Sphere",
     "vfx": {
-      "emitter": {
-        "shape": "PrimitiveSphere",
-        "particleCount": 24,
-        "ringSegments": 20,
-        "radiusScale": 1.15,
-        "coreRadiusScale": 0.28,
-        "particleRadiusScale": 0.085,
-        "lifetimeSeconds": 0.75,
-        "pulseSpeedRadPerSecond": 5.2,
-        "orbitSpeedRadPerSecond": 1.7,
-        "shellRingCount": 2,
-        "beamCount": 0
-      },
       "spawnMode": "Loop",
-      "coreColor": [0.42, 0.43, 0.39, 0.48],
-      "shellColor": [0.72, 0.72, 0.67, 0.32],
-      "particleColor": [0.86, 0.83, 0.74, 0.42]
+      "particleEffectId": "blacksmith.fixture.smoke"
     }
   },
   {

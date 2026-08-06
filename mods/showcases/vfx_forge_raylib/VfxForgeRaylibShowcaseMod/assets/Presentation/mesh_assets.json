@@ -1,0 +1,29 @@
+[
+  {
+    "id": "vfx_forge.spark_column.effect",
+    "type": "Primitive",
+    "primitiveKind": "Sphere",
+    "vfx": {
+      "spawnMode": "Loop",
+      "particleEffectId": "vfx_forge.spark_column"
+    }
+  },
+  {
+    "id": "vfx_forge.energy_orbit.effect",
+    "type": "Primitive",
+    "primitiveKind": "Cube",
+    "vfx": {
+      "spawnMode": "Loop",
+      "particleEffectId": "vfx_forge.energy_orbit"
+    }
+  },
+  {
+    "id": "vfx_forge.trail_arc.effect",
+    "type": "Primitive",
+    "primitiveKind": "Sphere",
+    "vfx": {
+      "spawnMode": "Loop",
+      "particleEffectId": "vfx_forge.trail_arc"
+    }
+  }
+]

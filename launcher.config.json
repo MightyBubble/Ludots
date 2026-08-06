@@ -186,6 +186,13 @@
       }
     },
     {
+      "name": "vfx_forge_raylib",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/vfx_forge_raylib/VfxForgeRaylibShowcaseMod"
+      }
+    },
+    {
       "name": "browser_ui_showcase",
       "target": {
         "type": "path",

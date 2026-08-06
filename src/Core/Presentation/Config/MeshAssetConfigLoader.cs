@@ -4,6 +4,7 @@ using System.Numerics;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
 using Ludots.Core.Presentation.Assets;
+using Ludots.Core.Presentation.Particles;
 
 namespace Ludots.Core.Presentation.Config
 {
@@ -11,23 +12,53 @@ namespace Ludots.Core.Presentation.Config
     {
         private readonly ConfigPipeline _configs;
         private readonly MeshAssetRegistry _meshRegistry;
+        private readonly ParticleEffectRegistry? _particleEffectRegistry;
         private readonly PrefabRegistry? _prefabRegistry;
         private readonly bool _loadPrefabs;
 
         public MeshAssetConfigLoader(ConfigPipeline configs, MeshAssetRegistry meshRegistry)
+            : this(configs, meshRegistry, prefabRegistry: null, particleEffectRegistry: null, loadPrefabs: false)
         {
-            _configs = configs ?? throw new ArgumentNullException(nameof(configs));
-            _meshRegistry = meshRegistry ?? throw new ArgumentNullException(nameof(meshRegistry));
-            _prefabRegistry = null;
-            _loadPrefabs = false;
+        }
+
+        public MeshAssetConfigLoader(
+            ConfigPipeline configs,
+            MeshAssetRegistry meshRegistry,
+            ParticleEffectRegistry particleEffectRegistry)
+            : this(configs, meshRegistry, prefabRegistry: null, particleEffectRegistry, loadPrefabs: false)
+        {
         }
 
         public MeshAssetConfigLoader(ConfigPipeline configs, MeshAssetRegistry meshRegistry, PrefabRegistry prefabRegistry)
+            : this(configs, meshRegistry, prefabRegistry, particleEffectRegistry: null, loadPrefabs: true)
+        {
+        }
+
+        public MeshAssetConfigLoader(
+            ConfigPipeline configs,
+            MeshAssetRegistry meshRegistry,
+            PrefabRegistry prefabRegistry,
+            ParticleEffectRegistry particleEffectRegistry)
+            : this(configs, meshRegistry, prefabRegistry, particleEffectRegistry, loadPrefabs: true)
+        {
+        }
+
+        private MeshAssetConfigLoader(
+            ConfigPipeline configs,
+            MeshAssetRegistry meshRegistry,
+            PrefabRegistry? prefabRegistry,
+            ParticleEffectRegistry? particleEffectRegistry,
+            bool loadPrefabs)
         {
             _configs = configs ?? throw new ArgumentNullException(nameof(configs));
             _meshRegistry = meshRegistry ?? throw new ArgumentNullException(nameof(meshRegistry));
-            _prefabRegistry = prefabRegistry ?? throw new ArgumentNullException(nameof(prefabRegistry));
-            _loadPrefabs = true;
+            _prefabRegistry = prefabRegistry;
+            _particleEffectRegistry = particleEffectRegistry;
+            _loadPrefabs = loadPrefabs;
+            if (_loadPrefabs && _prefabRegistry == null)
+            {
+                throw new ArgumentNullException(nameof(prefabRegistry));
+            }
         }
 
         public void Load(ConfigCatalog catalog = null, ConfigConflictReport report = null)
@@ -226,13 +257,13 @@ namespace Ludots.Core.Presentation.Config
             if (!descriptor.VfxEffectData.IsValid)
             {
                 throw new InvalidOperationException(
-                    $"{partLabel} references VFX effect asset '{effectKey}' without vfx emitter data.");
+                    $"{partLabel} references VFX effect asset '{effectKey}' without VFX particle data.");
             }
 
             return effectAssetId;
         }
 
-        private static VfxEffectAssetData ParseVfxEffectData(JsonNode? node, string key)
+        private VfxEffectAssetData ParseVfxEffectData(JsonNode? node, string key)
         {
             if (node == null)
             {
@@ -252,55 +283,71 @@ namespace Ludots.Core.Presentation.Config
                 "spawnMode",
                 "coreColor",
                 "shellColor",
-                "particleColor");
+                "particleColor",
+                "particleSystem",
+                "particleEffectId");
 
-            if (obj["emitter"] is not JsonObject emitter)
+            bool hasLegacyEmitter = obj.ContainsKey("emitter");
+            bool hasEmbeddedParticleSystem = obj.ContainsKey("particleSystem");
+            bool hasParticleEffectId = obj.ContainsKey("particleEffectId");
+            bool hasLegacyColors =
+                obj.ContainsKey("coreColor") ||
+                obj.ContainsKey("shellColor") ||
+                obj.ContainsKey("particleColor");
+            if (hasEmbeddedParticleSystem)
             {
                 throw new InvalidOperationException(
-                    $"Presentation/mesh_assets.json asset '{key}' vfx.emitter must be an object.");
-            }
-
-            ValidateObjectFields(
-                emitter,
-                $"Presentation/mesh_assets.json asset '{key}' vfx.emitter",
-                "shape",
-                "particleCount",
-                "ringSegments",
-                "radiusScale",
-                "coreRadiusScale",
-                "particleRadiusScale",
-                "lifetimeSeconds",
-                "pulseSpeedRadPerSecond",
-                "orbitSpeedRadPerSecond",
-                "shellRingCount",
-                "beamCount");
-
-            string shapeLabel = $"Presentation/mesh_assets.json asset '{key}' vfx.emitter.shape";
-            VfxEmitterShape shape = ReadRequiredEnum<VfxEmitterShape>(emitter["shape"], shapeLabel);
-            if (shape == VfxEmitterShape.None)
-            {
-                throw new InvalidOperationException($"{shapeLabel} must not be None.");
+                    $"Presentation/mesh_assets.json asset '{key}' vfx must reference particleEffectId. Author Quarks particle data in Presentation/particle_effects.json.");
             }
 
             string assetLabel = $"Presentation/mesh_assets.json asset '{key}' vfx";
+            if (hasLegacyEmitter || hasLegacyColors)
+            {
+                throw new InvalidOperationException(
+                    $"{assetLabel} legacy emitter/color fields are no longer supported. Author particleEffectId in mesh_assets.json and Quarks particle data in Presentation/particle_effects.json.");
+            }
+
+            if (!hasParticleEffectId)
+            {
+                throw new InvalidOperationException($"{assetLabel} must declare particleEffectId.");
+            }
+
             PrefabVfxSpawnMode spawnMode = ReadRequiredEnum<PrefabVfxSpawnMode>(obj["spawnMode"], $"{assetLabel}.spawnMode");
-            return new VfxEffectAssetData(
-                new VfxEmitterDescriptor(
-                    shape,
-                    ReadRequiredPositiveInt(emitter["particleCount"], $"Presentation/mesh_assets.json asset '{key}' vfx.emitter.particleCount"),
-                    ReadRequiredMinInt(emitter["ringSegments"], 3, $"Presentation/mesh_assets.json asset '{key}' vfx.emitter.ringSegments"),
-                    ReadRequiredPositiveFloat(emitter["radiusScale"], $"Presentation/mesh_assets.json asset '{key}' vfx.emitter.radiusScale"),
-                    ReadRequiredPositiveFloat(emitter["coreRadiusScale"], $"Presentation/mesh_assets.json asset '{key}' vfx.emitter.coreRadiusScale"),
-                    ReadRequiredPositiveFloat(emitter["particleRadiusScale"], $"Presentation/mesh_assets.json asset '{key}' vfx.emitter.particleRadiusScale"),
-                    ReadRequiredPositiveFloat(emitter["lifetimeSeconds"], $"Presentation/mesh_assets.json asset '{key}' vfx.emitter.lifetimeSeconds"),
-                    ReadRequiredNonNegativeFloat(emitter["pulseSpeedRadPerSecond"], $"Presentation/mesh_assets.json asset '{key}' vfx.emitter.pulseSpeedRadPerSecond"),
-                    ReadRequiredNonNegativeFloat(emitter["orbitSpeedRadPerSecond"], $"Presentation/mesh_assets.json asset '{key}' vfx.emitter.orbitSpeedRadPerSecond"),
-                    ReadRequiredMinInt(emitter["shellRingCount"], 0, $"Presentation/mesh_assets.json asset '{key}' vfx.emitter.shellRingCount"),
-                    ReadRequiredIntRange(emitter["beamCount"], 0, 3, $"Presentation/mesh_assets.json asset '{key}' vfx.emitter.beamCount")),
+            ParticleEffectAssetData particleSystem = ResolveParticleEffectAsset(
+                obj["particleEffectId"],
+                assetLabel,
                 spawnMode,
-                ReadRequiredColor(obj["coreColor"], $"{assetLabel}.coreColor"),
-                ReadRequiredColor(obj["shellColor"], $"{assetLabel}.shellColor"),
-                ReadRequiredColor(obj["particleColor"], $"{assetLabel}.particleColor"));
+                out int particleEffectAssetId);
+            return new VfxEffectAssetData(spawnMode, particleSystem, particleEffectAssetId);
+        }
+
+        private ParticleEffectAssetData ResolveParticleEffectAsset(
+            JsonNode? node,
+            string assetLabel,
+            PrefabVfxSpawnMode spawnMode,
+            out int particleEffectAssetId)
+        {
+            if (_particleEffectRegistry == null)
+            {
+                throw new InvalidOperationException(
+                    $"{assetLabel}.particleEffectId requires the Presentation particle effect registry. Load Presentation/particle_effects.json before mesh assets.");
+            }
+
+            string particleEffectKey = ReadRequiredString(node, $"{assetLabel}.particleEffectId");
+            particleEffectAssetId = _particleEffectRegistry.GetId(particleEffectKey);
+            if (particleEffectAssetId <= 0 || !_particleEffectRegistry.TryGet(particleEffectAssetId, out ParticleEffectAssetData effect))
+            {
+                throw new InvalidOperationException(
+                    $"{assetLabel} references unknown particle effect asset '{particleEffectKey}'.");
+            }
+
+            if (effect.SpawnMode != spawnMode)
+            {
+                throw new InvalidOperationException(
+                    $"{assetLabel}.spawnMode '{spawnMode}' must match particle effect '{particleEffectKey}' spawnMode '{effect.SpawnMode}'.");
+            }
+
+            return effect;
         }
 
         private static PrefabVfxSpawnMode ParseSpawnMode(string? spawnModeText)

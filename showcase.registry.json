@@ -2436,6 +2436,29 @@
       ]
     },
     {
+      "id": "vfx_forge_raylib",
+      "path": "mods/showcases/vfx_forge_raylib/VfxForgeRaylibShowcaseMod",
+      "projectPath": null,
+      "title": "Raylib VFX Forge",
+      "summary": "面向玩家的 raylib 粒子展示场景：三座锻造台分别展示火花、能量环和尾迹弧线，粒子定义来自统一 Quarks 资产源。",
+      "tier": "T2",
+      "category": "showcase",
+      "binding": "vfx_forge_raylib",
+      "preset": "vfx_forge_raylib",
+      "docsPath": null,
+      "readmePath": "mods/showcases/vfx_forge_raylib/VfxForgeRaylibShowcaseMod/README.md",
+      "acceptanceTest": "VfxForgeRaylibShowcaseAcceptanceTests",
+      "artifactDir": null,
+      "screenshot": null,
+      "status": "active",
+      "tags": [
+        "raylib",
+        "vfx",
+        "quarks",
+        "particles"
+      ]
+    },
+    {
       "id": "raylib_ism_benchmark",
       "path": "mods/showcases/raylib_ism_benchmark/RaylibIsmBenchmarkShowcaseMod",
       "projectPath": "RaylibIsmBenchmarkShowcaseMod.csproj",

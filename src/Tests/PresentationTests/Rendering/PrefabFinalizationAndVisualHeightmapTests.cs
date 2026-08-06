@@ -7,6 +7,7 @@ using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Presentation.Particles;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Presentation.Utils;
@@ -1158,23 +1159,47 @@ namespace Ludots.Tests.Presentation
         {
             MeshAssetDescriptor descriptor = MeshAssetDescriptor.Primitive(0, PrimitiveMeshKind.Sphere);
             descriptor.VfxEffectData = new VfxEffectAssetData(
-                new VfxEmitterDescriptor(
-                    VfxEmitterShape.PrimitiveSphere,
-                    particleCount: 6,
-                    ringSegments: 8,
-                    radiusScale: 1f,
-                    coreRadiusScale: 0.35f,
-                    particleRadiusScale: 0.18f,
-                    lifetimeSeconds: 1.2f,
-                    pulseSpeedRadPerSecond: 2f,
-                    orbitSpeedRadPerSecond: 1f,
-                    shellRingCount: 1,
-                    beamCount: 1),
                 spawnMode,
-                new Vector4(0.8f, 0.9f, 1f, 1f),
-                new Vector4(0.3f, 0.6f, 1f, 0.55f),
-                new Vector4(1f, 0.85f, 0.35f, 0.9f));
+                CreateTestParticleEffect(spawnMode),
+                particleEffectAssetId: 1);
             return meshes.Register(key, in descriptor);
+        }
+
+        private static ParticleEffectAssetData CreateTestParticleEffect(PrefabVfxSpawnMode spawnMode)
+        {
+            return new ParticleEffectAssetData(
+                spawnMode,
+                ParticleEmitterShapeKind.Cone,
+                ParticleRenderMode.Mesh,
+                ParticlePrimitiveKind.Sphere,
+                ParticleOverflowPolicy.DropNewest,
+                maxParticles: 16,
+                seed: 123456u,
+                durationSeconds: 1.2f,
+                emissionRatePerSecond: 12f,
+                burstCount: 4,
+                shapeRadius: 0.2f,
+                shapeAngleRadians: 0.35f,
+                shapeThickness: 0.8f,
+                new ParticleValueRange(0.5f, 0.8f),
+                new ParticleValueRange(0.6f, 1.4f),
+                new ParticleValueRange(0.08f, 0.12f),
+                new Vector4(0.8f, 0.9f, 1f, 1f),
+                new ParticleScalarCurve(
+                    new[]
+                    {
+                        new ParticleCurveKey(0f, 1f),
+                        new ParticleCurveKey(1f, 0.1f),
+                    }),
+                new ParticleColorGradient(
+                    new[]
+                    {
+                        new ParticleColorKey(0f, Vector4.One),
+                        new ParticleColorKey(1f, new Vector4(1f, 0.85f, 0.35f, 0f)),
+                    }),
+                new Vector3(0f, 0.2f, 0f),
+                drag: 0.05f,
+                worldSpace: true);
         }
 
         private sealed class CountingGroundProjector : IVisualGroundProjector

@@ -376,6 +376,15 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "vfx_forge_raylib",
+      "name": "Raylib VFX Forge",
+      "selectors": [
+        "$vfx_forge_raylib"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

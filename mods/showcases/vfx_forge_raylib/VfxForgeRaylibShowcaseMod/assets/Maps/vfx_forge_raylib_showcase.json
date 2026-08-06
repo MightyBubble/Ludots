@@ -1,0 +1,39 @@
+{
+  "Id": "vfx_forge_raylib_showcase",
+  "Tags": ["showcase", "raylib", "vfx", "quarks"],
+  "Metadata": {
+    "vfxForge": {
+      "effectCount": 3,
+      "entry": "raylib",
+      "assetSource": "Presentation/particle_effects.json"
+    }
+  },
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthInMacroTiles": 1,
+      "HeightInMacroTiles": 1,
+      "GridCellSizeCm": 100,
+      "LoadedChunkCapacity": 16
+    }
+  ],
+  "DefaultCamera": {
+    "VirtualCameraId": "Tactical",
+    "TargetXCm": 0,
+    "TargetYCm": 0,
+    "Yaw": 180,
+    "Pitch": 54,
+    "DistanceCm": 3600,
+    "FovYDeg": 55
+  },
+  "Entities": [
+    {
+      "Template": "vfx_forge_anchor",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+        "FacingDirection": { "AngleRad": 0.0 }
+      }
+    }
+  ]
+}

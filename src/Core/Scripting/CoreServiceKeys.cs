@@ -65,6 +65,7 @@ using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Instancing;
 using Ludots.Core.Presentation.Minimap;
+using Ludots.Core.Presentation.Particles;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Rendering;
@@ -294,6 +295,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<PerformerCommandBuffer> PerformerCommandBuffer = new("PerformerCommandBuffer");
         public static readonly ServiceKey<PrefabRegistry> PresentationPrefabRegistry = new("PresentationPrefabRegistry");
         public static readonly ServiceKey<MeshAssetRegistry> PresentationMeshAssetRegistry = new("PresentationMeshAssetRegistry");
+        public static readonly ServiceKey<ParticleEffectRegistry> PresentationParticleEffectRegistry = new("PresentationParticleEffectRegistry");
         public static readonly ServiceKey<PresentationMaterialRegistry> PresentationMaterialRegistry = new("PresentationMaterialRegistry");
         public static readonly ServiceKey<InstancedBatchAssetRegistry> InstancedBatchAssetRegistry = new("InstancedBatchAssetRegistry");
         public static readonly ServiceKey<InstancedBatchRequestBuffer> InstancedBatchRequestBuffer = new("InstancedBatchRequestBuffer");
