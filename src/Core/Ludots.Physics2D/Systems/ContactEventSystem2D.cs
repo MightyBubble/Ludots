@@ -11,7 +11,7 @@ using Ludots.Core.Physics2D.Components;
 namespace Ludots.Core.Physics2D.Systems
 {
     /// <summary>
-    /// Contact begin/end edge detection (issue #732). Consumes the broadphase pairing
+    /// Contact begin/end edge detection. Consumes the broadphase pairing
     /// results (CollisionPair.ContactCount 0↔>0 transitions) for entities that opted in
     /// via ContactEventEmitter2D and exports events into a preallocated queue.
     ///
@@ -242,7 +242,7 @@ namespace Ludots.Core.Physics2D.Systems
             if (!World.TryGet(entity, out EntityLayer layer))
             {
                 throw new InvalidOperationException(
-                    $"Contact event emission requires EntityLayer on both contact parties, but entity {entity.Id} has none (issue #732 payload contract).");
+                    $"Contact event emission requires EntityLayer on both contact parties, but entity {entity.Id} has none (payload contract).");
             }
 
             return layer.Value;
