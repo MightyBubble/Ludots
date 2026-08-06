@@ -32,6 +32,7 @@ namespace Ludots.Tests.GAS
                 templates.Register(1, new EffectTemplateData
                 {
                     TagId = 0,
+                    PresetType = EffectPresetType.InstantDamage,
                     LifetimeKind = EffectLifetimeKind.Instant,
                     ClockId = GasClockId.FixedFrame,
                     DurationTicks = 0,
@@ -42,14 +43,31 @@ namespace Ludots.Tests.GAS
                 });
 
                 var presetTypes = new PresetTypeRegistry();
+                var graphPrograms = new GraphProgramRegistry();
+                var instantDamagePreset = new PresetTypeDefinition
+                {
+                    Type = EffectPresetType.InstantDamage,
+                    Components = ComponentFlags.ModifierParams,
+                    ActivePhases = PhaseFlags.OnApply,
+                    AllowedLifetimes = LifetimeFlags.InstantOnly,
+                };
+                instantDamagePreset.DefaultPhaseHandlers[EffectPhaseId.OnApply] =
+                    GasTestGraphPrograms.BuiltinGraph(graphPrograms, 2_001, BuiltinHandlerId.ApplyModifiers);
+                presetTypes.Register(in instantDamagePreset);
                 var builtinHandlers = new BuiltinHandlerRegistry();
                 BuiltinHandlers.RegisterAll(builtinHandlers);
                 GasTestEffectExecutionPlanFinalizer.FinalizeAll(
                     templates,
                     presetTypes,
                     builtinHandlers,
-                    new GraphProgramRegistry(),
+                    graphPrograms,
                     "Test/AllocationTests.AbilityActivation.json");
+                var phaseExecutor = new EffectPhaseExecutor(
+                    graphPrograms,
+                    presetTypes,
+                    builtinHandlers,
+                    GasGraphOpHandlerTable.Instance,
+                    templates);
 
                 var execSpec = default(AbilityExecSpec);
                 execSpec.ClockId = GasClockId.FixedFrame;
@@ -82,10 +100,9 @@ namespace Ludots.Tests.GAS
                 orderTypes.Register(new OrderTypeConfig
                 {
                     OrderTypeId = castAbilityOrderTypeId,
-                    PayloadKind = OrderPayloadKind.CastAbility,
                     EntityBlackboardKey = OrderBlackboardKeys.Cast_TargetEntity,
                     SpatialBlackboardKey = -1,
-                });
+                }.UseCastAbilityPayload());
                 var abilityExecSystem = new AbilityExecSystem(
                     world,
                     new Ludots.Core.Engine.DiscreteClock(),
@@ -105,14 +122,17 @@ namespace Ludots.Tests.GAS
                     budget: null,
                     templates: templates,
                     responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                    phaseExecutor: phaseExecutor,
+                    graphApi: new GasGraphRuntimeApi(world, tagOps: tagOps),
                     tagOps: tagOps);
 
                 for (int i = 0; i < 16; i++)
                 {
-                    SubmitActiveCast(world, caster, target, castAbilityOrderTypeId, orderId: i + 1);
+                    int orderId = i + 1;
+                    SubmitActiveCast(world, caster, target, castAbilityOrderTypeId, orderId);
                     abilityExecSystem.Update(0.016f);
                     proposalSystem.Update(0.016f);
-                    terminalResults.Clear();
+                    ConsumeAndReleaseTerminalResult(terminalResults, orderId);
                 }
 
                 GC.Collect();
@@ -122,7 +142,7 @@ namespace Ludots.Tests.GAS
                 SubmitActiveCast(world, caster, target, castAbilityOrderTypeId, orderId: 100);
                 abilityExecSystem.Update(0.016f);
                 proposalSystem.Update(0.016f);
-                terminalResults.Clear();
+                ConsumeAndReleaseTerminalResult(terminalResults, 100);
 
                 GC.Collect();
                 GC.WaitForPendingFinalizers();
@@ -133,10 +153,11 @@ namespace Ludots.Tests.GAS
 
                 for (int i = 0; i < 10_000; i++)
                 {
-                    SubmitActiveCast(world, caster, target, castAbilityOrderTypeId, orderId: 1000 + i);
+                    int orderId = 1000 + i;
+                    SubmitActiveCast(world, caster, target, castAbilityOrderTypeId, orderId);
                     abilityExecSystem.Update(0.016f);
                     proposalSystem.Update(0.016f);
-                    terminalResults.Clear();
+                    ConsumeAndReleaseTerminalResult(terminalResults, orderId);
                 }
 
                 long after = GC.GetAllocatedBytesForCurrentThread();
@@ -170,6 +191,19 @@ namespace Ludots.Tests.GAS
             world.Get<BlackboardEntityBuffer>(caster).Set(OrderBlackboardKeys.Cast_TargetEntity, target);
         }
 
+        private static void ConsumeAndReleaseTerminalResult(
+            OrderTerminalResultBuffer terminalResults,
+            int orderId)
+        {
+            if (!terminalResults.TryConsume(orderId, out _))
+            {
+                throw new InvalidOperationException($"Test expected terminal result for orderId={orderId}.");
+            }
+
+            terminalResults.ReleaseConsumed(orderId);
+            terminalResults.Clear();
+        }
+
         [Test]
         public void ApplyForce_Preset_AndBinding_AllocatesZero()
         {
@@ -200,9 +234,10 @@ namespace Ludots.Tests.GAS
             });
 
             var presetTypes = new PresetTypeRegistry();
+            var graphPrograms = new GraphProgramRegistry();
             var applyForcePreset = new PresetTypeDefinition { Type = EffectPresetType.ApplyForce2D };
             applyForcePreset.DefaultPhaseHandlers[EffectPhaseId.OnApply] =
-                PhaseHandler.Builtin(BuiltinHandlerId.ApplyForce);
+                GasTestGraphPrograms.BuiltinGraph(graphPrograms, 2_002, BuiltinHandlerId.ApplyForce);
             presetTypes.Register(in applyForcePreset);
             var builtinHandlers = new BuiltinHandlerRegistry();
             BuiltinHandlers.RegisterAll(builtinHandlers);
@@ -210,8 +245,15 @@ namespace Ludots.Tests.GAS
                 templates,
                 presetTypes,
                 builtinHandlers,
-                new GraphProgramRegistry(),
+                graphPrograms,
                 "Test/AllocationTests.ApplyForce.json");
+            var phaseExecutor = new EffectPhaseExecutor(
+                graphPrograms,
+                presetTypes,
+                builtinHandlers,
+                GasGraphOpHandlerTable.Instance,
+                templates);
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
 
             var requests = new EffectRequestQueue();
             var admissionResults = new Ludots.Core.Gameplay.GAS.Orders.OrderAdmissionResultBuffer(4, 4);
@@ -228,7 +270,9 @@ namespace Ludots.Tests.GAS
                 inputRequests: null,
                 chainOrders: chainOrders,
                 responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
-                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
+                phaseExecutor: phaseExecutor,
+                graphApi: new GasGraphRuntimeApi(world, tagOps: tagOps),
+                tagOps: tagOps);
 
             var sinks = new Ludots.Core.Gameplay.GAS.Bindings.AttributeSinkRegistry();
             Ludots.Core.Gameplay.GAS.Bindings.GasAttributeSinks.RegisterBuiltins(sinks);

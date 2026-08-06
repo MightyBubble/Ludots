@@ -166,6 +166,12 @@ namespace Ludots.Core.Input.Orders
                         $"{path}.argsTemplate is a runtime order ABI field; authored input mappings must use orderPayload.");
                 }
 
+                if (!hasOrderPayload)
+                {
+                    throw new InvalidOperationException(
+                        $"{path}.orderPayload is required; authored input mappings must declare typed orderPayload even when kind is None.");
+                }
+
                 if (mapping.ContainsKey("isSkillMapping"))
                 {
                     throw new InvalidOperationException(
@@ -262,12 +268,6 @@ namespace Ludots.Core.Input.Orders
                         $"{path}.heldPolicy StartEnd requires trigger Held.");
                 }
 
-                if (mapping.ArgsTemplate == null)
-                {
-                    throw new InvalidOperationException(
-                        $"LUDOTS_INPUT_ORDER_ARGS_TEMPLATE_REQUIRED: {path}.argsTemplate must be an object.");
-                }
-
                 if (mapping.IsSkillMapping &&
                     (!mapping.TryResolveAbilitySlot(out int priority) || priority < 0))
                 {
@@ -353,13 +353,14 @@ namespace Ludots.Core.Input.Orders
         {
             if (catalog == null || !catalog.TryGet(relativePath, out ConfigCatalogEntry entry))
             {
-                return new List<TargetLayoutProfileDefinition>();
+                throw new InvalidOperationException(
+                    $"Missing required config '{relativePath}'. Author an empty targetLayoutProfiles array when no layout profiles are used.");
             }
 
             JsonObject mergedObject = _pipeline.MergeDeepObjectFromCatalog(in entry, report);
             if (mergedObject == null)
             {
-                return new List<TargetLayoutProfileDefinition>();
+                throw new InvalidOperationException($"Missing required config '{relativePath}'.");
             }
 
             var config = mergedObject.Deserialize<TargetLayoutProfileConfig>(JsonOptions);

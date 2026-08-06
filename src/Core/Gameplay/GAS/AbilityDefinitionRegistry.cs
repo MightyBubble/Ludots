@@ -74,6 +74,7 @@ namespace Ludots.Core.Gameplay.GAS
     {
         public float CastRangeCm;
         public int ImpactEffectTemplateId;
+        public bool AllowMoveChase;
     }
 
     /// <summary>
@@ -108,8 +109,6 @@ namespace Ludots.Core.Gameplay.GAS
         public AbilityExecCallerParamsPool ExecCallerParamsPool;
         public bool HasExecCallerParamsPool;
 
-        public AbilityOnActivateEffects OnActivateEffects;
-        public bool HasOnActivateEffects;
         public AbilityActivationBlockTags ActivationBlockTags;
         public bool HasActivationBlockTags;
         public AbilityActivationPrecondition ActivationPrecondition;
@@ -257,7 +256,6 @@ namespace Ludots.Core.Gameplay.GAS
 
             var def = new AbilityDefinition
             {
-                HasOnActivateEffects = world.Has<AbilityOnActivateEffects>(templateEntity),
                 HasActivationBlockTags = world.Has<AbilityActivationBlockTags>(templateEntity),
                 HasActivationPrecondition = world.Has<AbilityActivationPrecondition>(templateEntity),
                 ExecSpec = world.Get<AbilityExecSpec>(templateEntity)
@@ -269,10 +267,6 @@ namespace Ludots.Core.Gameplay.GAS
                 def.HasExecCallerParamsPool = true;
             }
 
-            if (def.HasOnActivateEffects)
-            {
-                def.OnActivateEffects = world.Get<AbilityOnActivateEffects>(templateEntity);
-            }
             if (def.HasActivationBlockTags)
             {
                 def.ActivationBlockTags = world.Get<AbilityActivationBlockTags>(templateEntity);

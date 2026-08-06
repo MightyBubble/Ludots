@@ -146,18 +146,15 @@ namespace ChampionSkillSandboxMod.Systems
                     continue;
                 }
 
-                var order = new Order
-                {
-                    OrderTypeId = _castAbilityOrderTypeId,
-                    PlayerId = playerId,
-                    Actor = actor.Entity,
-                    Target = target,
-                    SubmitMode = OrderSubmitMode.Immediate,
-                    Args = new OrderArgs
-                    {
-                        I0 = 0,
-                    }
-                };
+                Order order = OrderBuilder.CreateCastAbility(
+                    _castAbilityOrderTypeId,
+                    playerId,
+                    actor.Entity,
+                    target,
+                    Entity.Null,
+                    abilitySlotIndex: 0,
+                    OrderSubmitMode.Immediate,
+                    submitStep: 0);
 
                 OrderSubmitResult submitResult = _planner.Submit(in order);
                 if (OrderSubmitResultSemantics.IsAccepted(submitResult))

@@ -241,6 +241,98 @@ namespace Ludots.Tests.GAS
             Assert.That(waitingPlan.WaitingOrderId, Is.EqualTo(waitingOrder.OrderId));
         }
 
+        [Test]
+        public void PlanExecution_WaitingOrderWithoutRetainedReceiptFailsExplicitly()
+        {
+            using var world = World.Create();
+            var clock = new DiscreteClock();
+            var admissionResults = new OrderAdmissionResultBuffer(8, 8);
+            var terminalResults = new OrderTerminalResultBuffer(8);
+            var orders = new OrderQueue(8, admissionResults);
+            var orderTypes = CreateOrderTypes(terminalResults);
+            var library = CreateCastThenStopLibrary();
+            var system = new AIPlanExecutionSystem(world, clock, library, orders, orderTypes);
+
+            var plan = new AIPlan32();
+            plan.BeginWaitingForOrder(orderId: 777, orderTypeId: CastOrderTypeId);
+            Entity actor = world.Create(
+                new AIAgent(),
+                plan,
+                OrderBuffer.CreateEmpty(),
+                new GameplayTagContainer(),
+                new BlackboardIntBuffer(),
+                new BlackboardEntityBuffer());
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+                system.Update(1f / 60f))!;
+
+            Assert.That(ex.Message, Does.Contain("AI.PLAN.ERR.WaitingOrderReceiptUnavailable"));
+            Assert.That(ex.Message, Does.Contain("777"));
+            Assert.That(world.Get<AIPlan32>(actor).WaitingOrderId, Is.EqualTo(777));
+        }
+
+        [Test]
+        public void PlanExecution_InvalidActionIdFailsExplicitly()
+        {
+            using var world = World.Create();
+            var clock = new DiscreteClock();
+            var admissionResults = new OrderAdmissionResultBuffer(8, 8);
+            var terminalResults = new OrderTerminalResultBuffer(8);
+            var orders = new OrderQueue(8, admissionResults);
+            var orderTypes = CreateOrderTypes(terminalResults);
+            var library = CreateCastThenStopLibrary();
+            var system = new AIPlanExecutionSystem(world, clock, library, orders, orderTypes);
+
+            var plan = new AIPlan32();
+            Assert.That(plan.TryAdd(99), Is.True);
+            Entity actor = world.Create(
+                new AIAgent(),
+                plan,
+                OrderBuffer.CreateEmpty(),
+                new GameplayTagContainer(),
+                new BlackboardIntBuffer(),
+                new BlackboardEntityBuffer());
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+                system.Update(1f / 60f))!;
+
+            Assert.That(ex.Message, Does.Contain("AI.PLAN.ERR.InvalidActionId"));
+            Assert.That(ex.Message, Does.Contain("99"));
+            Assert.That(world.Get<AIPlan32>(actor).Cursor, Is.Zero);
+            Assert.That(orders.Count, Is.Zero);
+        }
+
+        [Test]
+        public void PlanExecution_UnsupportedActionExecutorFailsExplicitly()
+        {
+            using var world = World.Create();
+            var clock = new DiscreteClock();
+            var admissionResults = new OrderAdmissionResultBuffer(8, 8);
+            var terminalResults = new OrderTerminalResultBuffer(8);
+            var orders = new OrderQueue(8, admissionResults);
+            var orderTypes = CreateOrderTypes(terminalResults);
+            var library = CreateRunTaskLibrary();
+            var system = new AIPlanExecutionSystem(world, clock, library, orders, orderTypes);
+
+            var plan = new AIPlan32();
+            Assert.That(plan.TryAdd(0), Is.True);
+            Entity actor = world.Create(
+                new AIAgent(),
+                plan,
+                OrderBuffer.CreateEmpty(),
+                new GameplayTagContainer(),
+                new BlackboardIntBuffer(),
+                new BlackboardEntityBuffer());
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+                system.Update(1f / 60f))!;
+
+            Assert.That(ex.Message, Does.Contain("AI.PLAN.ERR.UnsupportedActionExecutorKind"));
+            Assert.That(ex.Message, Does.Contain("RunTaskNode"));
+            Assert.That(world.Get<AIPlan32>(actor).Cursor, Is.Zero);
+            Assert.That(orders.Count, Is.Zero);
+        }
+
         private const int AbilitySlotKey = 1;
         private const int CastOrderTypeId = 123;
         private const int StopOrderTypeId = 126;
@@ -267,10 +359,9 @@ namespace Ludots.Tests.GAS
             {
                 Key = "castAbility",
                 OrderTypeId = CastOrderTypeId,
-                PayloadKind = OrderPayloadKind.CastAbility,
                 SpatialBlackboardKey = -1,
                 EntityBlackboardKey = -1,
-            });
+            }.UseCastAbilityPayload());
             registry.Register(new OrderTypeConfig
             {
                 Key = "stop",
@@ -303,6 +394,22 @@ namespace Ludots.Tests.GAS
                     cost: 1,
                     executorKind: ActionExecutorKind.SubmitOrder,
                     orderSpec: new ActionOrderSpec(AiOrderPayloadKind.Stop, StopOrderTypeId, OrderSubmitMode.Immediate),
+                    bindings: Array.Empty<ActionBinding>())
+            });
+        }
+
+        private static ActionLibraryCompiled256 CreateRunTaskLibrary()
+        {
+            return ActionLibraryCompiled256.Compile(new[]
+            {
+                new ActionOpDefinition256(
+                    preMask: default,
+                    preValues: default,
+                    postMask: default,
+                    postValues: default,
+                    cost: 1,
+                    executorKind: ActionExecutorKind.RunTaskNode,
+                    orderSpec: default,
                     bindings: Array.Empty<ActionBinding>())
             });
         }

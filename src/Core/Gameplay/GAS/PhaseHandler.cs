@@ -1,35 +1,32 @@
 namespace Ludots.Core.Gameplay.GAS
 {
     /// <summary>
-    /// Handler type: C# builtin function or Graph program.
-    /// Builtin and Graph are interchangeable at the configuration level.
+    /// Handler type for preset phase defaults.
+    /// Preset types reference Graph programs; Graph ops own the lowest-level behavior.
     /// </summary>
     public enum PhaseHandlerKind : byte
     {
         None = 0,
-        Builtin = 1,
-        Graph = 2,
+        Graph = 1,
     }
 
     /// <summary>
-    /// Unified phase handler reference. Does not distinguish between C# and Graph —
-    /// both are just "a function that runs at a phase".
+    /// Preset phase handler reference.
     /// </summary>
     public struct PhaseHandler
     {
         public PhaseHandlerKind Kind;
-        /// <summary>BuiltinHandlerId (when Kind=Builtin) or GraphProgramId (when Kind=Graph).</summary>
+        /// <summary>GraphProgramId when Kind=Graph.</summary>
         public int HandlerId;
 
-        public static PhaseHandler Builtin(BuiltinHandlerId id) => new() { Kind = PhaseHandlerKind.Builtin, HandlerId = (int)id };
         public static PhaseHandler Graph(int graphId) => new() { Kind = PhaseHandlerKind.Graph, HandlerId = graphId };
         public static PhaseHandler None => default;
         public bool IsValid => Kind != PhaseHandlerKind.None;
     }
 
     /// <summary>
-    /// Fixed-size map from EffectPhaseId (0–7) to PhaseHandler.
-    /// Stored inline in PresetTypeDefinition — zero heap allocation.
+    /// Fixed-size map from EffectPhaseId (0..N) to PhaseHandler.
+    /// Stored inline in PresetTypeDefinition; zero heap allocation.
     /// </summary>
     public unsafe struct PhaseHandlerMap
     {

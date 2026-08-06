@@ -103,8 +103,11 @@
       "trigger": "PressedThisFrame",
       "orderTypeKey": "moveTo",
       "requireTarget": false,
-      "targetType": "None",
-      "modifierBehavior": "QueueOnModifier"
+      "targetType": "HoveredEntityOrPosition",
+      "modifierBehavior": "QueueOnModifier",
+      "orderPayload": {
+        "kind": "MoveToWorldCm"
+      }
     },
     {
       "actionId": "Stop",

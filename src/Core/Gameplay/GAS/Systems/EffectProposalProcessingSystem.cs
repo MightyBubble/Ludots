@@ -455,8 +455,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     _inputRequestTagId = 0;
                     _emitTelemetry = rootTpl.ParticipatesInResponse;
 
-                    var rootModifiers = rootTpl.Modifiers;
-                    ApplyPresetModifiers(ref rootModifiers, in rootTpl, in req);
                     var root = new EffectProposal
                     {
                         RootId = req.RootId,
@@ -464,12 +462,15 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         Target = req.Target,
                         TargetContext = req.TargetContext,
                         TemplateId = req.TemplateId,
+                        SourceAbilityId = req.SourceAbilityId,
                         TagId = rootTpl.TagId,
                         ClockId = req.ClockId,
                         HasClockId = req.HasClockId,
+                        SourceAbilityLockoutTags = req.SourceAbilityLockoutTags,
+                        HasSourceAbilityLockoutTags = req.HasSourceAbilityLockoutTags,
                         ParticipatesInResponse = rootTpl.ParticipatesInResponse,
                         Cancelled = false,
-                        Modifiers = rootModifiers,
+                        Modifiers = rootTpl.Modifiers,
                         CallerParams = req.CallerParams,
                         HasCallerParams = req.HasCallerParams,
                     };
@@ -548,8 +549,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                         }
                                         ref readonly var tpl = ref _templates.GetRef(tplIdx);
 
-                                        var chainedModifiers = tpl.Modifiers;
-                                        ApplyPresetModifiers(ref chainedModifiers, in tpl, in _activeReq);
                                         var chained = new EffectProposal
                                         {
                                             RootId = _activeReq.RootId,
@@ -557,10 +556,13 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                             Target = _activeReq.Target,
                                             TargetContext = _activeReq.TargetContext,
                                             TemplateId = response.EffectTemplateId,
+                                            SourceAbilityId = _activeReq.SourceAbilityId,
                                             TagId = tpl.TagId,
+                                            SourceAbilityLockoutTags = _activeReq.SourceAbilityLockoutTags,
+                                            HasSourceAbilityLockoutTags = _activeReq.HasSourceAbilityLockoutTags,
                                             ParticipatesInResponse = tpl.ParticipatesInResponse,
                                             Cancelled = false,
-                                            Modifiers = chainedModifiers
+                                            Modifiers = tpl.Modifiers
                                         };
 
                                         int newIndex = _window.Count;
@@ -713,10 +715,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             if (workUnits >= MaxWorkUnitsPerSlice) return false;
 
                             if (nextOrder.OrderTypeId == _responseChainOrderTypes.ChainActivateEffect &&
-                                nextOrder.Args.I0 > 0 &&
+                                ResponseChainOrderPayload.TryGetActivateEffectTemplateId(in nextOrder, out int activateTemplateId) &&
                                 _creates >= GasConstants.MAX_CREATES_PER_ROOT)
                             {
-                                ThrowCreateCapacityExceeded(_activeReq.RootId, nextOrder.Args.I0, "WaitInput");
+                                ThrowCreateCapacityExceeded(_activeReq.RootId, activateTemplateId, "WaitInput");
                             }
 
                             if (!TryBeginResponseChainOrderConsumption(
@@ -801,7 +803,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                     continue;
                                 }
 
-                                if (order.OrderTypeId == _responseChainOrderTypes.ChainActivateEffect && order.Args.I0 > 0)
+                                if (order.OrderTypeId == _responseChainOrderTypes.ChainActivateEffect &&
+                                    ResponseChainOrderPayload.TryGetActivateEffectTemplateId(in order, out int activateEffectTemplateId))
                                 {
                                     if (_telemetry != null && _emitTelemetry)
                                     {
@@ -809,7 +812,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                         {
                                             Kind = ResponseChainTelemetryKind.OrderConsumed,
                                             RootId = _activeReq.RootId,
-                                            TemplateId = order.Args.I0,
+                                            TemplateId = activateEffectTemplateId,
                                             TagId = _window[0].TagId,
                                             ProposalIndex = 0,
                                             OrderTypeId = order.OrderTypeId,
@@ -819,7 +822,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                         });
                                     }
 
-                                    if (_templates == null || !_templates.TryGetRef(order.Args.I0, out int tplIdx))
+                                    if (_templates == null || !_templates.TryGetRef(activateEffectTemplateId, out int tplIdx))
                                     {
                                         CompleteConsumedResponseChainOrder(
                                             in admissionReservation,
@@ -845,19 +848,20 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                         continue;
                                     }
 
-                                    var chainedModifiers = tpl.Modifiers;
-                                    ApplyPresetModifiers(ref chainedModifiers, in tpl, in _activeReq);
                                     var chained = new EffectProposal
                                     {
                                         RootId = _activeReq.RootId,
                                         Source = World.IsAlive(order.Actor) ? order.Actor : _activeReq.Source,
                                         Target = _activeReq.Target,
                                         TargetContext = _activeReq.TargetContext,
-                                        TemplateId = order.Args.I0,
+                                        TemplateId = activateEffectTemplateId,
+                                        SourceAbilityId = _activeReq.SourceAbilityId,
                                         TagId = tpl.TagId,
+                                        SourceAbilityLockoutTags = _activeReq.SourceAbilityLockoutTags,
+                                        HasSourceAbilityLockoutTags = _activeReq.HasSourceAbilityLockoutTags,
                                         ParticipatesInResponse = tpl.ParticipatesInResponse,
                                         Cancelled = false,
-                                        Modifiers = chainedModifiers
+                                        Modifiers = tpl.Modifiers
                                     };
 
                                     int newIndex = _window.Count;
@@ -1084,7 +1088,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         // Execute OnCalculate Phase Graphs (after ResponseChain resolves)
                         ExecuteOnCalculatePhase(in e, in tpl);
 
-                        if (CanExecuteInstantInline(in tpl))
+                        if (CanExecuteInstantInline(in tpl, in e))
                         {
                             ExecuteInstantInline(in e, in tpl);
 
@@ -1383,24 +1387,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 $"{CreateCapacityExceededError}: rootId={rootId}, templateId={templateId}, phase={phase}, capacity={GasConstants.MAX_CREATES_PER_ROOT}.");
         }
 
-        private static void ApplyPresetModifiers(ref EffectModifiers modifiers, in EffectTemplateData tpl, in EffectRequest req)
-        {
-            switch (tpl.PresetType)
-            {
-                case EffectPresetType.None:
-                    return;
-                case EffectPresetType.ApplyForce2D:
-                    {
-                        EffectConfigParams mergedParams = ConfigParamsMerger.BuildMergedConfig(in tpl.ConfigParams, in req);
-                        mergedParams.TryGetFloat(EffectParamKeys.ForceXAttribute, out float fx);
-                        mergedParams.TryGetFloat(EffectParamKeys.ForceYAttribute, out float fy);
-                        modifiers.Add(tpl.PresetAttribute0, ModifierOp.Add, fx);
-                        modifiers.Add(tpl.PresetAttribute1, ModifierOp.Add, fy);
-                        return;
-                    }
-            }
-        }
-
         private void ExecuteInstantInline(in EffectProposal proposal, in EffectTemplateData tpl)
         {
             bool hasPhaseRuntime = _phaseExecutor != null && _graphApi != null;
@@ -1428,6 +1414,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     $"GAS.EFFECT_PLAN.ERR.InvalidRuntimePlan: templateId={proposal.TemplateId}, plan={activationPlan.Kind}.");
             }
 
+            if (!hasPhaseRuntime)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.INSTANT.ERR.MissingPhaseRuntime: templateId={proposal.TemplateId}, preset={tpl.PresetType}.");
+            }
+
             _builtinRuntime.ResetPerEffect();
             _builtinRuntime.SetModifierOverride(in proposal.Modifiers);
             bool useGasTransaction = activationPlan.Kind == EffectExecutionPlanKind.GasTransactional;
@@ -1444,26 +1436,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 {
                     _graphApiHost.BeginEffectSideEffectTransaction(_instantPhaseTransaction);
                     graphTransactionBound = true;
-                }
-
-                if (!hasPhaseRuntime)
-                {
-                    if (tpl.PhaseGraphBindings.StepCount > 0 || tpl.HasTargetResolver ||
-                        (tpl.PresetType != EffectPresetType.None &&
-                         tpl.PresetType != EffectPresetType.InstantDamage &&
-                         tpl.PresetType != EffectPresetType.Heal &&
-                         tpl.PresetType != EffectPresetType.ApplyForce2D))
-                    {
-                        throw new InvalidOperationException(
-                            $"GAS.INSTANT.ERR.MissingPhaseRuntime: templateId={proposal.TemplateId}, preset={tpl.PresetType}.");
-                    }
-
-                    ApplyInstantModifiersAndPublish(in proposal);
-                    if (useGasTransaction)
-                    {
-                        _instantPhaseTransaction.Commit();
-                    }
-                    return;
                 }
 
                 EffectConfigParams mergedConfig = BuildMergedConfig(in tpl, in proposal);
@@ -1531,20 +1503,6 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
         }
 
-        private bool HasMatchingActivationListener(
-            in EffectProposal proposal,
-            in EffectTemplateData template,
-            EffectPhaseId phase)
-        {
-            return _phaseExecutor!.HasMatchingListener(
-                World,
-                proposal.Source,
-                proposal.Target,
-                phase,
-                template.TagId,
-                proposal.TemplateId);
-        }
-
         private void ApplyInstantModifiersAndPublish(in EffectProposal proposal)
         {
             if (!World.IsAlive(proposal.Target) || !World.Has<AttributeBuffer>(proposal.Target)) return;
@@ -1576,6 +1534,20 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 ? World.Get<AttributeBuffer>(proposal.Target).GetCurrent(primaryAttributeId)
                 : 0f;
             PublishInstantApplied(in proposal, primaryAttributeId, after - before);
+        }
+
+        private bool HasMatchingActivationListener(
+            in EffectProposal proposal,
+            in EffectTemplateData template,
+            EffectPhaseId phase)
+        {
+            return _phaseExecutor!.HasMatchingListener(
+                World,
+                proposal.Source,
+                proposal.Target,
+                phase,
+                template.TagId,
+                proposal.TemplateId);
         }
 
         private void PublishInstantApplied(in EffectProposal proposal, int attributeId, float delta)
@@ -1611,10 +1583,13 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             return hash == 0u ? 1u : hash;
         }
 
-        private static bool CanExecuteInstantInline(in EffectTemplateData tpl)
+        private bool CanExecuteInstantInline(in EffectTemplateData tpl, in EffectProposal proposal)
         {
             if (tpl.LifetimeKind != EffectLifetimeKind.Instant) return false;
-            if (tpl.PeriodTicks > 0) return false;
+            EffectConfigParams mergedConfig = BuildMergedConfig(in tpl, in proposal);
+            int durationTicks = ConfigParamsMerger.ResolveDurationTicks(in tpl, in mergedConfig);
+            int periodTicks = ConfigParamsMerger.ResolvePeriodTicks(in tpl, in mergedConfig);
+            if (durationTicks > 0 || periodTicks > 0) return false;
             if (tpl.ListenerSetup.Count > 0)
             {
                 throw new InvalidOperationException(
@@ -1628,9 +1603,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             EffectConfigParams mergedConfig = BuildMergedConfig(in tpl, in proposal);
             int durationTicks = ConfigParamsMerger.ResolveDurationTicks(in tpl, in mergedConfig);
             int periodTicks = ConfigParamsMerger.ResolvePeriodTicks(in tpl, in mergedConfig);
+            EffectLifetimeKind lifetimeKind = ResolveMaterializedLifetime(in tpl, durationTicks, periodTicks, proposal.TemplateId);
 
             // Stack merge: if template has stack policy and an existing effect exists on target, merge.
-            if (tpl.HasStackPolicy && tpl.LifetimeKind != EffectLifetimeKind.Instant
+            if (tpl.HasStackPolicy && lifetimeKind != EffectLifetimeKind.Instant
                 && World.IsAlive(proposal.Target) && World.Has<ActiveEffectContainer>(proposal.Target))
             {
                 ref var container = ref World.Get<ActiveEffectContainer>(proposal.Target);
@@ -1701,7 +1677,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
 
             GasClockId clockId = proposal.HasClockId ? proposal.ClockId : tpl.ClockId;
-            var newEffect = GameplayEffectFactory.CreateEffect(World, proposal.RootId, proposal.Source, proposal.Target, durationTicks, tpl.LifetimeKind, periodTicks, proposal.TargetContext, clockId, tpl.ExpireCondition);
+            var newEffect = GameplayEffectFactory.CreateEffect(World, proposal.RootId, proposal.Source, proposal.Target, durationTicks, lifetimeKind, periodTicks, proposal.TargetContext, clockId, tpl.ExpireCondition);
             World.Get<EffectModifiers>(newEffect) = proposal.Modifiers;
 
             ref var effectState = ref World.Get<GameplayEffect>(newEffect);
@@ -1724,10 +1700,16 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             if (tpl.GrantedTags.Count > 0)
             {
                 World.Add(newEffect, tpl.GrantedTags);
+                if (proposal.SourceAbilityId > 0 &&
+                    proposal.HasSourceAbilityLockoutTags &&
+                    GrantsAnyRequestedLockoutTag(in tpl.GrantedTags, in proposal.SourceAbilityLockoutTags))
+                {
+                    World.Add(newEffect, new EffectSourceAbilityLockout { AbilityId = proposal.SourceAbilityId });
+                }
             }
 
             // Attach EffectStack if template has stack policy (first application = count 1)
-            if (tpl.HasStackPolicy && tpl.LifetimeKind != EffectLifetimeKind.Instant)
+            if (tpl.HasStackPolicy && lifetimeKind != EffectLifetimeKind.Instant)
             {
                 World.Add(newEffect, new EffectStack
                 {
@@ -1737,6 +1719,48 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     OverflowPolicy = tpl.StackOverflowPolicy,
                 });
             }
+        }
+
+        private static bool GrantsAnyRequestedLockoutTag(
+            in EffectGrantedTags grantedTags,
+            in GameplayTagContainer requestedLockoutTags)
+        {
+            for (int i = 0; i < grantedTags.Count; i++)
+            {
+                int tagId = grantedTags.Get(i).TagId;
+                if (tagId > 0 && requestedLockoutTags.HasTag(tagId))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static EffectLifetimeKind ResolveMaterializedLifetime(
+            in EffectTemplateData tpl,
+            int durationTicks,
+            int periodTicks,
+            int templateId)
+        {
+            if (tpl.LifetimeKind != EffectLifetimeKind.Instant)
+            {
+                return tpl.LifetimeKind;
+            }
+
+            if (durationTicks > 0)
+            {
+                return EffectLifetimeKind.After;
+            }
+
+            if (periodTicks > 0)
+            {
+                throw new InvalidOperationException(
+                    $"GAS.CONFIG_PARAMS.ERR.PeriodRequiresDuration: templateId={templateId}, key=_ep.periodTicks, value={periodTicks}.");
+            }
+
+            throw new InvalidOperationException(
+                $"GAS.INSTANT.ERR.EntityMaterializationForbidden: templateId={templateId} has no resolved duration.");
         }
 
         /// <summary>

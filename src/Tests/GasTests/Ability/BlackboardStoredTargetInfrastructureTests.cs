@@ -500,7 +500,7 @@ namespace Ludots.Tests.GAS
             var terminalResults = new OrderTerminalResultBuffer(capacity: 8);
             var orderTypes = new OrderTypeRegistry(terminalResults);
             orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 101, PayloadKind = OrderPayloadKind.MoveToWorldCm, AllowQueuedMode = true });
-            orderTypes.Register(new OrderTypeConfig { Key = "castAbility", OrderTypeId = 100, PayloadKind = OrderPayloadKind.CastAbility, AllowQueuedMode = true });
+            orderTypes.Register(new OrderTypeConfig { Key = "castAbility", OrderTypeId = 100, AllowQueuedMode = true }.UseCastAbilityPayload());
             var admissionResults = new OrderAdmissionResultBuffer(capacity: 8, rejectionCapacity: 8);
             admissionResults.BeginLogicStep();
             var orderQueue = new OrderQueue(capacity: 8, admissionResults);
@@ -633,7 +633,7 @@ namespace Ludots.Tests.GAS
             BlackboardStoredTargetKeys keys = CreateTestKeys();
             var terminalResults = new OrderTerminalResultBuffer(capacity: 8);
             var orderTypes = new OrderTypeRegistry(terminalResults);
-            orderTypes.Register(new OrderTypeConfig { Key = "castAbility", OrderTypeId = 100, PayloadKind = OrderPayloadKind.CastAbility, AllowQueuedMode = true });
+            orderTypes.Register(new OrderTypeConfig { Key = "castAbility", OrderTypeId = 100, AllowQueuedMode = true }.UseCastAbilityPayload());
             var admissionResults = new OrderAdmissionResultBuffer(capacity: 8, rejectionCapacity: 8);
             admissionResults.BeginLogicStep();
             var orderQueue = new OrderQueue(capacity: 8, admissionResults);

@@ -8,6 +8,7 @@ using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
 
@@ -58,6 +59,13 @@ namespace Ludots.Tests.GAS
                     TemplateId = tplInstant
                 });
 
+                GasTestPhaseRuntime.Create(
+                    world,
+                    templates,
+                    queue,
+                    out EffectPhaseExecutor phaseExecutor,
+                    out GasGraphRuntimeApi graphApi,
+                    tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
                 var sys = new EffectProposalProcessingSystem(
                     world,
                     queue,
@@ -68,6 +76,8 @@ namespace Ludots.Tests.GAS
                     inputRequests: null,
                     chainOrders: null,
                     responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                    phaseExecutor: phaseExecutor,
+                    graphApi: graphApi,
                     tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()))
                 {
                     MaxWorkUnitsPerSlice = 2
@@ -420,16 +430,14 @@ namespace Ludots.Tests.GAS
 
                 while (!sys.UpdateSlice(dt: 1f, timeBudgetMs: int.MaxValue)) { }
 
-                var args = default(OrderArgs);
-                args.I0 = tplFollow;
                 var activate = new Order
                 {
                     OrderTypeId = TestResponseChainOrderTypeIds.ChainActivateEffect,
                     PlayerId = 1,
                     Actor = target,
-                    Target = target,
-                    Args = args
+                    Target = target
                 };
+                ResponseChainOrderPayload.ConfigureActivateEffect(ref activate, tplFollow);
                 That(chainOrders.SubmitAssigned(ref activate), Is.EqualTo(OrderSubmitResult.Queued));
                 That(chainOrders.Count, Is.EqualTo(1));
 
@@ -789,6 +797,13 @@ namespace Ludots.Tests.GAS
                 TemplateId = tplRoot
             });
 
+            GasTestPhaseRuntime.Create(
+                world,
+                templates,
+                queue,
+                out EffectPhaseExecutor phaseExecutor,
+                out GasGraphRuntimeApi graphApi,
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
             return new EffectProposalProcessingSystem(
                 world,
                 queue,
@@ -800,6 +815,8 @@ namespace Ludots.Tests.GAS
                 chainOrders: null,
                 orderRequests: orderRequests,
                 responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                phaseExecutor: phaseExecutor,
+                graphApi: graphApi,
                 tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
         }
     }

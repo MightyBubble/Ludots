@@ -137,10 +137,9 @@ namespace Ludots.Tests.GAS
                 AllowQueuedMode = false,
                 CanInterruptSelf = true,
                 ClearQueueOnActivate = true,
-                PayloadKind = OrderPayloadKind.CastAbility,
                 EntityBlackboardKey = OrderBlackboardKeys.Cast_TargetEntity,
                 SpatialBlackboardKey = -1,
-            });
+            }.UseCastAbilityPayload());
 
             var orderQueue = new OrderQueue(capacity: 16, admissionResults);
             var clock = new DiscreteClock();

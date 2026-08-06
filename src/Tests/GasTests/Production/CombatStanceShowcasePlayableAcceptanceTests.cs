@@ -224,9 +224,11 @@ public sealed class CombatStanceShowcasePlayableAcceptanceTests
             OrderTypeId = orderTypes.GetId(StanceOrderKeys.SetCombatStance),
             SubmitMode = OrderSubmitMode.Immediate
         };
-        order.Args.I0 = stance;
-        order.Args.I1 = leashRadiusCm;
-        order.Args.I2 = retaliationTtlSteps;
+        CombatStanceOrderPayload.ConfigureSetCombatStance(
+            ref order,
+            stance,
+            leashRadiusCm,
+            retaliationTtlSteps);
 
         if (!orders.TryEnqueue(in order))
         {

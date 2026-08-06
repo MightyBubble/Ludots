@@ -347,8 +347,10 @@ namespace Ludots.Tests.GAS
             Entity captive = world.Create();
 
             var presetTypes = new PresetTypeRegistry();
+            var programs = new GraphProgramRegistry();
             var relationPreset = new PresetTypeDefinition { Type = EffectPresetType.Relation };
-            relationPreset.DefaultPhaseHandlers[EffectPhaseId.OnApply] = PhaseHandler.Builtin(BuiltinHandlerId.ApplyRelation);
+            relationPreset.DefaultPhaseHandlers[EffectPhaseId.OnApply] =
+                GasTestGraphPrograms.BuiltinGraph(programs, 43_001, BuiltinHandlerId.ApplyRelation);
             presetTypes.Register(in relationPreset);
 
             var builtinHandlers = new BuiltinHandlerRegistry();
@@ -367,7 +369,7 @@ namespace Ludots.Tests.GAS
                 }
             });
             var executor = new EffectPhaseExecutor(
-                new GraphProgramRegistry(),
+                programs,
                 presetTypes,
                 builtinHandlers,
                 GasGraphOpHandlerTable.Instance,

@@ -117,7 +117,8 @@ namespace Ludots.Core.Gameplay.GAS.Config
 
             if (type == "builtin")
             {
-                return PhaseHandler.Builtin(GasEnumParser.ParseBuiltinHandlerId(id));
+                throw new InvalidOperationException(
+                    $"Preset type '{presetTypeId}' handler '{phaseName}' declares unsupported type 'builtin'. Preset phase handlers must reference Graph programs.");
             }
 
             if (type == "graph")
@@ -131,7 +132,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 throw new InvalidOperationException($"Preset type '{presetTypeId}' handler '{phaseName}' references unknown graph '{id}'.");
             }
 
-            throw new InvalidOperationException($"Preset type '{presetTypeId}' handler '{phaseName}' has unsupported type '{type}'. Supported: builtin, graph.");
+            throw new InvalidOperationException($"Preset type '{presetTypeId}' handler '{phaseName}' has unsupported type '{type}'. Supported: graph.");
         }
 
         private static JsonArray RequireArray(JsonObject obj, string propertyName, string presetTypeId)

@@ -56,7 +56,7 @@ namespace Ludots.Tests.GAS
             Assert.That(continuationCount, Is.EqualTo(1));
             Assert.That(extracted[0].OrderTypeId, Is.EqualTo(CastAbilityOrderTypeId));
             Assert.That(extracted[0].SubmitMode, Is.EqualTo(OrderSubmitMode.Queued));
-            Assert.That(extracted[0].Args.I0, Is.EqualTo(0));
+            Assert.That(OrderBuilder.GetCastAbilitySlotIndex(in extracted[0]), Is.EqualTo(0));
         }
 
         [Test]
@@ -81,7 +81,7 @@ namespace Ludots.Tests.GAS
                 OrderBuffer.CreateEmpty());
 
             Order castOrder = CreateCastOrder(actor, targetXcm: 900, submitMode: OrderSubmitMode.Immediate);
-            castOrder.Args.I0 = 4;
+            OrderBuilder.SetAbilitySlot(ref castOrder, 4);
 
             Assert.That(planner.Submit(in castOrder), Is.EqualTo(OrderSubmitResult.Queued));
             Assert.That(orderQueue.TryDequeue(out Order moveOrder), Is.True);
@@ -94,7 +94,7 @@ namespace Ludots.Tests.GAS
 
             Assert.That(continuationCount, Is.EqualTo(1));
             Assert.That(extracted[0].OrderTypeId, Is.EqualTo(CastAbilityOrderTypeId));
-            Assert.That(extracted[0].Args.I0, Is.EqualTo(4));
+            Assert.That(OrderBuilder.GetCastAbilitySlotIndex(in extracted[0]), Is.EqualTo(4));
         }
 
         [Test]
@@ -305,14 +305,7 @@ namespace Ludots.Tests.GAS
             orderTypes.PublishTerminalResult(in completed);
 
             ref var continuations = ref world.Get<OrderContinuationBuffer>(actor);
-            continuations.TryAdd(7, new Order
-            {
-                OrderId = 8,
-                OrderTypeId = CastAbilityOrderTypeId,
-                Actor = actor,
-                SubmitMode = OrderSubmitMode.Queued,
-                Args = new OrderArgs { I0 = 0 }
-            });
+            continuations.TryAdd(7, CreateFollowUpOrder(actor, 8));
 
             ref var buffer = ref world.Get<OrderBuffer>(actor);
             buffer.Enqueue(
@@ -374,14 +367,7 @@ namespace Ludots.Tests.GAS
                 actor);
             orderTypes.PublishTerminalResult(in completed);
             ref var continuations = ref world.Get<OrderContinuationBuffer>(actor);
-            Assert.That(continuations.TryAdd(7, new Order
-            {
-                OrderId = 8,
-                OrderTypeId = CastAbilityOrderTypeId,
-                Actor = actor,
-                SubmitMode = OrderSubmitMode.Queued,
-                Args = new OrderArgs { I0 = 0 }
-            }), Is.True);
+            Assert.That(continuations.TryAdd(7, CreateFollowUpOrder(actor, 8)), Is.True);
             var system = new OrderContinuationSystem(world, clock, orderTypes, rules, admissionResults);
 
             system.Update(0f);
@@ -421,14 +407,7 @@ namespace Ludots.Tests.GAS
             orderTypes.PublishTerminalResult(in completed);
             const int lateRegisteredOrderTypeId = 200;
             ref var continuations = ref world.Get<OrderContinuationBuffer>(actor);
-            Assert.That(continuations.TryAdd(7, new Order
-            {
-                OrderId = 8,
-                OrderTypeId = lateRegisteredOrderTypeId,
-                Actor = actor,
-                SubmitMode = OrderSubmitMode.Queued,
-                Args = new OrderArgs { I0 = 0 }
-            }), Is.True);
+            Assert.That(continuations.TryAdd(7, CreateFollowUpOrder(actor, 8, lateRegisteredOrderTypeId)), Is.True);
             var system = new OrderContinuationSystem(world, clock, orderTypes, rules, admissionResults);
 
             system.Update(0f);
@@ -584,14 +563,7 @@ namespace Ludots.Tests.GAS
                 OrderBuffer.CreateEmpty(),
                 new OrderContinuationBuffer());
             ref var continuations = ref world.Get<OrderContinuationBuffer>(actor);
-            Assert.That(continuations.TryAdd(7, new Order
-            {
-                OrderId = 8,
-                OrderTypeId = CastAbilityOrderTypeId,
-                Actor = actor,
-                SubmitMode = OrderSubmitMode.Queued,
-                Args = new OrderArgs { I0 = 0 }
-            }), Is.True);
+            Assert.That(continuations.TryAdd(7, CreateFollowUpOrder(actor, 8)), Is.True);
             _ = new OrderContinuationSystem(world, clock, orderTypes, rules, admissionResults);
 
             world.Destroy(actor);
@@ -814,7 +786,8 @@ namespace Ludots.Tests.GAS
                 HasTargeting = true,
                 Targeting = new AbilityTargetingConfig
                 {
-                    CastRangeCm = rangeCm
+                    CastRangeCm = rangeCm,
+                    AllowMoveChase = rangeCm > 0f
                 }
             };
 
@@ -825,23 +798,17 @@ namespace Ludots.Tests.GAS
 
         private static Order CreateCastOrder(Entity actor, float targetXcm, OrderSubmitMode submitMode)
         {
-            return new Order
-            {
-                OrderTypeId = CastAbilityOrderTypeId,
-                PlayerId = 1,
-                Actor = actor,
-                SubmitMode = submitMode,
-                Args = new OrderArgs
-                {
-                    I0 = 0,
-                    Spatial = new OrderSpatial
-                    {
-                        Kind = OrderSpatialKind.WorldCm,
-                        Mode = OrderCollectionMode.Single,
-                        WorldCm = new Vector3(targetXcm, 0f, 0f)
-                    }
-                }
-            };
+            var order = OrderBuilder.CreateCastAbility(
+                CastAbilityOrderTypeId,
+                playerId: 1,
+                actor,
+                Entity.Null,
+                Entity.Null,
+                abilitySlotIndex: 0,
+                submitMode,
+                submitStep: 0);
+            OrderBuilder.SetSingleWorldCm(ref order, new Vector3(targetXcm, 0f, 0f));
+            return order;
         }
 
         private static Order CreateMoveOrder(Entity actor, float targetXcm)
@@ -862,14 +829,17 @@ namespace Ludots.Tests.GAS
             int orderId,
             int orderTypeId = CastAbilityOrderTypeId)
         {
-            return new Order
-            {
-                OrderId = orderId,
-                OrderTypeId = orderTypeId,
-                Actor = actor,
-                SubmitMode = OrderSubmitMode.Queued,
-                Args = new OrderArgs { I0 = 0 }
-            };
+            Order order = OrderBuilder.CreateCastAbility(
+                orderTypeId,
+                playerId: 1,
+                actor,
+                Entity.Null,
+                Entity.Null,
+                abilitySlotIndex: 0,
+                OrderSubmitMode.Queued,
+                submitStep: 0);
+            order.OrderId = orderId;
+            return order;
         }
 
         private static OrderArgs CreateWorldTargetArgs(float targetXcm)

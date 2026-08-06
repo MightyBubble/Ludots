@@ -64,9 +64,13 @@ public sealed class OrderTerminalResultLedgerTests
             buffer.Consume(201))!;
         Assert.That(repeated.Message, Does.Contain("ORDER.TERMINAL.ERR.AlreadyConsumed"));
 
-        Assert.That(buffer.ReleaseConsumed(999), Is.False);
+        InvalidOperationException unknownRelease = Assert.Throws<InvalidOperationException>(() =>
+            buffer.ReleaseConsumed(999))!;
+        Assert.That(unknownRelease.Message, Does.Contain("ORDER.TERMINAL.ERR.UnknownOrderId"));
         Assert.That(buffer.ReleaseConsumed(201), Is.True);
-        Assert.That(buffer.ReleaseConsumed(201), Is.False);
+        InvalidOperationException repeatedRelease = Assert.Throws<InvalidOperationException>(() =>
+            buffer.ReleaseConsumed(201))!;
+        Assert.That(repeatedRelease.Message, Does.Contain("ORDER.TERMINAL.ERR.UnknownOrderId"));
     }
 
     [Test]
@@ -75,6 +79,7 @@ public sealed class OrderTerminalResultLedgerTests
         var buffer = new OrderTerminalResultBuffer(capacity: 1);
 
         buffer.Retain(251);
+        Assert.That(buffer.IsAwaitingRetainedOutcome(251), Is.True);
         Assert.That(buffer.Release(251), Is.True);
 
         buffer.Retain(252);
@@ -125,7 +130,7 @@ public sealed class OrderTerminalResultLedgerTests
     }
 
     [Test]
-    public void TerminalOutcome_WithoutRetainedConsumerReleasesOnFrameClear()
+    public void TerminalOutcome_WithoutRetainedConsumer_RemainsUntilExplicitRelease()
     {
         var buffer = new OrderTerminalResultBuffer(capacity: 2);
 
@@ -145,9 +150,16 @@ public sealed class OrderTerminalResultLedgerTests
         Assert.That(buffer.LedgerCount, Is.EqualTo(2));
 
         buffer.Clear();
+        buffer.Clear();
+        buffer.Clear();
 
-        Assert.That(buffer.LedgerCount, Is.Zero);
-        Assert.That(buffer.TryGet(401, out _), Is.False);
+        Assert.That(buffer.LedgerCount, Is.EqualTo(2));
+        Assert.That(buffer.TryGet(401, out OrderTerminalOutcome outcome), Is.True);
+        Assert.That(outcome.State, Is.EqualTo(OrderTerminalState.Completed));
+
+        Assert.That(buffer.TryConsume(401, out _), Is.True);
+        Assert.That(buffer.ReleaseConsumed(401), Is.True);
+        Assert.That(buffer.Release(402), Is.True);
 
         buffer.Write(new OrderTerminalOutcome(
             orderId: 403,

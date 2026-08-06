@@ -439,8 +439,7 @@ namespace Ludots.Tests.GAS
                 {
                     Key = "castAbility",
                     OrderTypeId = CastOrderTypeId,
-                    PayloadKind = OrderPayloadKind.CastAbility
-                });
+                }.UseCastAbilityPayload());
                 orderTypes.Register(new OrderTypeConfig
                 {
                     Key = "attackTarget",

@@ -13,6 +13,8 @@ using Ludots.Core.Gameplay.GAS.Input;
 using Ludots.Core.Gameplay.GAS.Presentation;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.NodeLibraries.GASGraph;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Tests.GAS;
 using NUnit.Framework;
 
@@ -135,6 +137,16 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(config.Validate)!;
             Assert.That(ex.Message, Does.Contain("commandIntentScratchCapacity"));
+        }
+
+        [Test]
+        public void GasRuntimeCapacity_RequiresPositiveInputContextScoredCandidateCapacity()
+        {
+            var config = CreateValidRuntimeCapacity();
+            config.InputContextScoredCandidateCapacity = 0;
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(config.Validate)!;
+            Assert.That(ex.Message, Does.Contain("inputContextScoredCandidateCapacity"));
         }
 
         [Test]
@@ -1008,6 +1020,7 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
                 TemplateId = respondingTemplateId,
             });
 
+            CreatePhaseRuntime(world, templates, requests, out EffectPhaseExecutor phaseExecutor, out GasGraphRuntimeApi graphApi);
             var loop = new EffectProcessingLoopSystem(
                 world,
                 requests,
@@ -1017,6 +1030,8 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
                 fanOutCommandCapacity: workBudget,
                 templates: templates,
                 responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                phaseExecutor: phaseExecutor,
+                graphApi: graphApi,
                 maxWorkUnitsPerSlice: workBudget);
 
             Assert.That(loop.UpdateSlice(0f, int.MaxValue), Is.False);
@@ -1040,6 +1055,16 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
                 builtinHandlers,
                 new GraphProgramRegistry(),
                 $"Test/GasExecutionBudgetTests.{caseName}.json");
+        }
+
+        private static void CreatePhaseRuntime(
+            World world,
+            EffectTemplateRegistry templates,
+            EffectRequestQueue requests,
+            out EffectPhaseExecutor phaseExecutor,
+            out GasGraphRuntimeApi graphApi)
+        {
+            GasTestPhaseRuntime.Create(world, templates, requests, out phaseExecutor, out graphApi);
         }
 
         private static AbilityDefinitionRegistry CreateImmediateAbilityDefinitions()
@@ -1073,6 +1098,7 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
                 EffectProcessingMaxWorkUnitsPerSlice = 32,
                 CommandIntentScratchCapacity = 64,
                 InputGraphScoreInstructionBudgetPerResolve = 64,
+                InputContextScoredCandidateCapacity = 64,
             };
         }
 

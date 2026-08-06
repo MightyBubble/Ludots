@@ -582,18 +582,16 @@ namespace Ludots.Tests.GAS.Production
             var orderQueue = engine.GetService(CoreServiceKeys.OrderQueue) as OrderQueue
                 ?? throw new InvalidOperationException("OrderQueue service is missing.");
 
-            bool enqueued = orderQueue.TryEnqueue(new Order
-            {
-                OrderTypeId = engine.MergedConfig.Constants.OrderTypeIds["castAbility"],
-                PlayerId = 1,
-                Actor = actor,
-                Target = target,
-                Args = new OrderArgs
-                {
-                    I0 = slot
-                },
-                SubmitMode = OrderSubmitMode.Immediate
-            });
+            Order order = OrderBuilder.CreateCastAbility(
+                engine.MergedConfig.Constants.OrderTypeIds["castAbility"],
+                playerId: 1,
+                actor,
+                target,
+                Entity.Null,
+                abilitySlotIndex: slot,
+                OrderSubmitMode.Immediate,
+                submitStep: 0);
+            bool enqueued = orderQueue.TryEnqueue(in order);
 
             Assert.That(enqueued, Is.True, "Ability order should enqueue.");
         }
@@ -613,18 +611,17 @@ namespace Ludots.Tests.GAS.Production
             spatial.AddInlinePointWorldCm((int)originWorldCm.X, 0, (int)originWorldCm.Y);
             spatial.AddInlinePointWorldCm((int)targetWorldCm.X, 0, (int)targetWorldCm.Y);
 
-            bool enqueued = orderQueue.TryEnqueue(new Order
-            {
-                OrderTypeId = engine.MergedConfig.Constants.OrderTypeIds["castAbility"],
-                PlayerId = 1,
-                Actor = actor,
-                Args = new OrderArgs
-                {
-                    I0 = slot,
-                    Spatial = spatial
-                },
-                SubmitMode = OrderSubmitMode.Immediate
-            });
+            Order order = OrderBuilder.CreateCastAbility(
+                engine.MergedConfig.Constants.OrderTypeIds["castAbility"],
+                playerId: 1,
+                actor,
+                Entity.Null,
+                Entity.Null,
+                abilitySlotIndex: slot,
+                OrderSubmitMode.Immediate,
+                submitStep: 0);
+            order.Args.Spatial = spatial;
+            bool enqueued = orderQueue.TryEnqueue(in order);
 
             Assert.That(enqueued, Is.True, "Point-targeted ability order should enqueue.");
         }
@@ -1189,7 +1186,7 @@ namespace Ludots.Tests.GAS.Production
                 {
                     ActionId = $"PreviewSlot{slotIndex}",
                     TargetType = OrderTargetType.Position,
-                    ArgsTemplate = new OrderArgsTemplate { I0 = slotIndex }
+                    OrderPayload = InputOrderPayloadTemplate.CastAbility(slotIndex)
                 },
                 new AbilityAimInputState(
                     AbilityAimInputSlot.Target,

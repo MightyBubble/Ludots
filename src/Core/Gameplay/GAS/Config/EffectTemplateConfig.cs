@@ -255,8 +255,15 @@ namespace Ludots.Core.Gameplay.GAS.Config
         public StoredTargetKeysConfig? StoredTarget { get; set; }
         public string? PointMoveOrderTypeKey { get; set; }
         public string? EntityOrderTypeKey { get; set; }
+        public SubmitOrderEntityPayloadConfig? EntityOrderPayload { get; set; }
         public int? EntityOrderIntArg0 { get; set; }
         public string? SubmitMode { get; set; }
+    }
+
+    public sealed class SubmitOrderEntityPayloadConfig
+    {
+        public string? Kind { get; set; }
+        public int? AbilitySlot { get; set; }
     }
 
     public sealed class ProgressionCompletionConfig

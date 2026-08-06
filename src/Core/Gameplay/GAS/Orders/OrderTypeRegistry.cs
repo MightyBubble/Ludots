@@ -56,7 +56,8 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 case OrderPayloadKind.CastAbility:
                     if (config.IntArg0BlackboardKey < 0)
                     {
-                        config.CompileRuntimePayload(OrderPayloadKind.CastAbility, OrderBlackboardKeys.Cast_SlotIndex);
+                        throw new InvalidOperationException(
+                            $"Order type '{config.Key}' payloadKind {config.PayloadKind} must define typed payloadFields.abilitySlot through OrderTypeConfig.UseCastAbilityPayload or OrderTypeConfigLoader.");
                     }
                     break;
                 case OrderPayloadKind.None:

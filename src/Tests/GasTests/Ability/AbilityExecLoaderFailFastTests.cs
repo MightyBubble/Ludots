@@ -116,6 +116,33 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void CompileAbility_UnknownTargetingField_IsRejected()
+        {
+            EffectTemplateIdRegistry.Register("Effect.Test.Impact");
+
+            var ex = Throws<InvalidOperationException>(() =>
+                Compile(
+                    """
+                    {
+                      "exec": {
+                        "clockId": "FixedFrame",
+                        "items": [
+                          { "kind": "End", "tick": 0 }
+                        ]
+                      },
+                      "targeting": {
+                        "castRangeCm": 500,
+                        "impactEffect": "Effect.Test.Impact",
+                        "allowMoveChaseTypo": true
+                      }
+                    }
+                    """));
+
+            That(ex!.Message, Does.Contain("targeting.allowMoveChaseTypo"));
+            That(ex.Message, Does.Contain("not supported"));
+        }
+
+        [Test]
         public void CompileAbility_MissingClockId_IsRejected()
         {
             var ex = Throws<InvalidOperationException>(() =>

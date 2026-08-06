@@ -55,14 +55,31 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         public OrderTypeConfig UseCastAbilityPayload(
             int abilitySlotBlackboardKey = OrderBlackboardKeys.Cast_SlotIndex)
         {
-            if (abilitySlotBlackboardKey < 0)
-            {
-                throw new System.InvalidOperationException(
-                    "OrderTypeConfig CastAbility payload requires a non-negative ability slot blackboard key.");
-            }
+            CompileRuntimePayload(OrderPayloadKind.CastAbility, abilitySlotBlackboardKey);
+            return this;
+        }
 
-            PayloadKind = OrderPayloadKind.CastAbility;
-            IntArg0BlackboardKey = abilitySlotBlackboardKey;
+        public OrderTypeConfig UseMoveToWorldCmPayload()
+        {
+            CompileRuntimePayload(OrderPayloadKind.MoveToWorldCm, -1);
+            return this;
+        }
+
+        public OrderTypeConfig UseStopPayload()
+        {
+            CompileRuntimePayload(OrderPayloadKind.Stop, -1);
+            return this;
+        }
+
+        public OrderTypeConfig UseTargetEntityPayload()
+        {
+            CompileRuntimePayload(OrderPayloadKind.TargetEntity, -1);
+            return this;
+        }
+
+        public OrderTypeConfig UseNoPayload()
+        {
+            CompileRuntimePayload(OrderPayloadKind.None, -1);
             return this;
         }
 

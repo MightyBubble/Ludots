@@ -1,31 +1,55 @@
 using Arch.Core;
 using Arch.Core.Extensions;
-using Arch.Buffer;
 using Ludots.Core.Gameplay.GAS.Components;
-using System.Collections.Generic;
+using Ludots.Core.Gameplay.GAS.Orders;
 using System.Runtime.CompilerServices;
 
 namespace Ludots.Core.Gameplay.GAS.Systems
 {
     public class ReactionSystem : BaseSystem<World, float>
     {
-        private AbilitySystem _abilitySystem;
-        private GameplayEventBus _eventBus;
-        
-        // Increased initial capacity for high-throughput scenarios (Benchmark: 1000 events/frame)
-        // If 1 event -> 1 reaction, we need capacity >= event count.
-        private readonly List<Activation> _activations = new(4096);
+        public const string ActivationCapacityExceededError = "GAS.REACTION.ERR.ActivationCapacityExceeded";
+        public const string OrderSubmitRejectedError = "GAS.REACTION.ERR.OrderSubmitRejected";
 
-        public ReactionSystem(World world, AbilitySystem abilitySystem, GameplayEventBus eventBus) : base(world) 
+        private readonly OrderQueue _orderQueue;
+        private readonly int _castAbilityOrderTypeId;
+        private readonly GameplayEventBus _eventBus;
+        private readonly Activation[] _activations;
+        private int _activationCount;
+
+        public ReactionSystem(
+            World world,
+            OrderQueue orderQueue,
+            int castAbilityOrderTypeId,
+            GameplayEventBus eventBus,
+            int activationCapacity = 4096) : base(world)
         {
-            _abilitySystem = abilitySystem;
-            _eventBus = eventBus;
+            _orderQueue = orderQueue ?? throw new System.ArgumentNullException(nameof(orderQueue));
+            if (castAbilityOrderTypeId <= 0)
+            {
+                throw new System.ArgumentOutOfRangeException(
+                    nameof(castAbilityOrderTypeId),
+                    castAbilityOrderTypeId,
+                    "castAbilityOrderTypeId must be positive.");
+            }
+
+            if (activationCapacity <= 0)
+            {
+                throw new System.ArgumentOutOfRangeException(
+                    nameof(activationCapacity),
+                    activationCapacity,
+                    "activationCapacity must be positive.");
+            }
+
+            _castAbilityOrderTypeId = castAbilityOrderTypeId;
+            _eventBus = eventBus ?? throw new System.ArgumentNullException(nameof(eventBus));
+            _activations = new Activation[activationCapacity];
         }
 
         public override unsafe void Update(in float dt)
         {
             var events = _eventBus.Events;
-            _activations.Clear();
+            _activationCount = 0;
 
             // Direct iteration is actually optimal for small N (N < 10000).
             // Complexity is O(Events). Inner loop is O(Reactions per Entity), usually very small (< 5).
@@ -47,16 +71,42 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     {
                         if (reactions.EventTagIds[j] == evt.TagId)
                         {
-                            _activations.Add(new Activation { Caster = evt.Target, SlotIndex = reactions.AbilitySlots[j], Source = evt.Source });
+                            if (_activationCount >= _activations.Length)
+                            {
+                                throw new System.InvalidOperationException(
+                                    $"{ActivationCapacityExceededError}: capacity={_activations.Length}, eventIndex={i}, reactionIndex={j}, actor={evt.Target.Id}, eventTagId={evt.TagId}.");
+                            }
+
+                            _activations[_activationCount++] = new Activation
+                            {
+                                Caster = evt.Target,
+                                SlotIndex = reactions.AbilitySlots[j],
+                                Source = evt.Source,
+                                EventTagId = evt.TagId,
+                            };
                         }
                     }
                 }
             }
 
-            for (int i = 0; i < _activations.Count; i++)
+            for (int i = 0; i < _activationCount; i++)
             {
                 var activation = _activations[i];
-                _abilitySystem.TryActivateAbility(activation.Caster, activation.SlotIndex, activation.Source);
+                Order order = OrderBuilder.CreateCastAbility(
+                    _castAbilityOrderTypeId,
+                    playerId: 0,
+                    actor: activation.Caster,
+                    target: activation.Source,
+                    targetContext: Entity.Null,
+                    abilitySlotIndex: activation.SlotIndex,
+                    submitMode: OrderSubmitMode.Immediate,
+                    submitStep: 0);
+                OrderSubmitResult result = _orderQueue.SubmitAssigned(ref order);
+                if (!OrderSubmitResultSemantics.IsAccepted(result))
+                {
+                    throw new System.InvalidOperationException(
+                        $"{OrderSubmitRejectedError}: result={result}, orderId={order.OrderId}, actor={activation.Caster.Id}, eventTagId={activation.EventTagId}, slot={activation.SlotIndex}.");
+                }
             }
         }
 
@@ -65,6 +115,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             public Entity Caster;
             public int SlotIndex;
             public Entity Source;
+            public int EventTagId;
         }
     }
 }

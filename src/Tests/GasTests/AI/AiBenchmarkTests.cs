@@ -364,10 +364,9 @@ namespace Ludots.Tests.GAS
             {
                 Key = "castAbility",
                 OrderTypeId = 123,
-                PayloadKind = OrderPayloadKind.CastAbility,
                 SpatialBlackboardKey = -1,
                 EntityBlackboardKey = -1,
-            });
+            }.UseCastAbilityPayload());
             orderTypes.Register(new OrderTypeConfig
             {
                 Key = "targetEntity",

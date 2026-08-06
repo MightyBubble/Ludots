@@ -247,18 +247,12 @@ public sealed class CombatStanceOrderSystem : BaseSystem<World, float>
 
     private void HandleSetCombatStance(Entity entity, in Order order)
     {
-        int stance = order.Args.I0;
-        if (!CombatStances.IsDefined(stance))
-        {
-            throw new InvalidOperationException($"Combat stance setCombatStance received unknown stance {stance}.");
-        }
-
-        int leashRadiusCm = order.Args.I1;
-        int retaliationTtlSteps = order.Args.I2 > 0 ? order.Args.I2 : _settings.DefaultRetaliationTtlSteps;
-        if (stance != CombatStances.HoldFire && leashRadiusCm <= 0)
-        {
-            throw new InvalidOperationException("Combat stance setCombatStance requires Args.I1 leash radius for non-HoldFire stances.");
-        }
+        CombatStanceOrderPayload.ReadSetCombatStance(
+            in order,
+            _settings.DefaultRetaliationTtlSteps,
+            out int stance,
+            out int leashRadiusCm,
+            out int retaliationTtlSteps);
 
         Upsert(entity, new CombatStanceState
         {
@@ -270,11 +264,7 @@ public sealed class CombatStanceOrderSystem : BaseSystem<World, float>
 
     private void HandleScatter(Entity entity, in WorldCmInt2 actorPosition, in Order order, int step)
     {
-        int radiusCm = order.Args.I0;
-        if (radiusCm <= 0)
-        {
-            throw new InvalidOperationException("Combat stance scatter requires Args.I0 positive scatter radius.");
-        }
+        int radiusCm = CombatStanceOrderPayload.RequireScatterRadiusCm(in order);
 
         DeterministicScatterOffset(entity, step, radiusCm, out int dx, out int dy);
         EnqueueMove(entity, actorPosition.X + dx, actorPosition.Y + dy, step);
@@ -283,11 +273,9 @@ public sealed class CombatStanceOrderSystem : BaseSystem<World, float>
     private void HandleAttackMoveOrder(Entity entity, in WorldCmInt2 actorPosition, in Order order, bool assault, int step)
     {
         WorldCmInt2 destination = RequireSingleWorldPoint(in order, "attackMove");
-        int leashRadiusCm = order.Args.I0;
-        if (leashRadiusCm <= 0)
-        {
-            throw new InvalidOperationException("Combat stance attackMove/assaultMove requires Args.I0 positive leash radius.");
-        }
+        int leashRadiusCm = CombatStanceOrderPayload.RequireAttackMoveLeashRadiusCm(
+            in order,
+            assault ? StanceOrderKeys.AssaultMove : StanceOrderKeys.AttackMove);
 
         var runtime = new AttackMoveRuntime
         {
@@ -322,12 +310,7 @@ public sealed class CombatStanceOrderSystem : BaseSystem<World, float>
             throw new InvalidOperationException("Combat stance guard requires a live target entity.");
         }
 
-        int radiusCm = order.Args.I0;
-        int leashRadiusCm = order.Args.I1;
-        if (radiusCm <= 0 || leashRadiusCm <= 0)
-        {
-            throw new InvalidOperationException("Combat stance guard requires Args.I0 radius and Args.I1 leash radius.");
-        }
+        CombatStanceOrderPayload.RequireGuardRadii(in order, out int radiusCm, out int leashRadiusCm);
 
         var runtime = new GuardRuntime
         {

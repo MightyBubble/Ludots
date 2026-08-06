@@ -431,7 +431,7 @@ namespace EntityCommandPanelMod.Runtime
                         flags |= EntityCommandSlotStateFlags.Active;
                     }
 
-                    lockoutPermille = ResolveLockoutPermille(target, in abilityDefinition);
+                    lockoutPermille = ResolveLockoutPermille(target, effective.AbilityId);
 
                     AbilityPresentationConfig? presentation = abilityDefinition.HasPresentation
                         ? abilityDefinition.Presentation
@@ -610,11 +610,10 @@ namespace EntityCommandPanelMod.Runtime
             return _progressionRequirements;
         }
 
-        private short ResolveLockoutPermille(Entity target, in AbilityDefinition abilityDefinition)
+        private short ResolveLockoutPermille(Entity target, int abilityId)
         {
             if (!_engine.World.IsAlive(target) ||
-                !abilityDefinition.HasActivationBlockTags ||
-                abilityDefinition.ActivationBlockTags.BlockedAny.IsEmpty ||
+                abilityId <= 0 ||
                 !_engine.World.Has<ActiveEffectContainer>(target))
             {
                 return 0;
@@ -627,13 +626,20 @@ namespace EntityCommandPanelMod.Runtime
                 Entity effectEntity = activeEffects.GetEntity(i);
                 if (!_engine.World.IsAlive(effectEntity) ||
                     !_engine.World.Has<GameplayEffect>(effectEntity) ||
-                    !_engine.World.Has<EffectGrantedTags>(effectEntity))
+                    !_engine.World.Has<EffectGrantedTags>(effectEntity) ||
+                    !_engine.World.Has<EffectSourceAbilityLockout>(effectEntity))
+                {
+                    continue;
+                }
+
+                ref readonly var sourceLockout = ref _engine.World.Get<EffectSourceAbilityLockout>(effectEntity);
+                if (sourceLockout.AbilityId != abilityId)
                 {
                     continue;
                 }
 
                 ref readonly var grantedTags = ref _engine.World.Get<EffectGrantedTags>(effectEntity);
-                if (!GrantsAnyBlockedTag(in grantedTags, in abilityDefinition.ActivationBlockTags.BlockedAny))
+                if (grantedTags.Count <= 0)
                 {
                     continue;
                 }
@@ -653,22 +659,6 @@ namespace EntityCommandPanelMod.Runtime
             }
 
             return (short)bestPermille;
-        }
-
-        private static bool GrantsAnyBlockedTag(
-            in EffectGrantedTags grantedTags,
-            in GameplayTagContainer blockedTags)
-        {
-            for (int i = 0; i < grantedTags.Count; i++)
-            {
-                int tagId = grantedTags.Get(i).TagId;
-                if (tagId > 0 && blockedTags.HasTag(tagId))
-                {
-                    return true;
-                }
-            }
-
-            return false;
         }
 
         public InputOrderActivationResult ActivateSlot(Entity target, int groupIndex, int slotIndex)
@@ -951,8 +941,7 @@ namespace EntityCommandPanelMod.Runtime
         {
             label = string.Empty;
             if (!_engine.World.IsAlive(order.Actor) ||
-                !_engine.World.Has<AbilityStateBuffer>(order.Actor) ||
-                order.Args.I0 < 0)
+                !_engine.World.Has<AbilityStateBuffer>(order.Actor))
             {
                 return false;
             }
@@ -964,13 +953,18 @@ namespace EntityCommandPanelMod.Runtime
                 return false;
             }
 
-            ref var slots = ref _engine.World.Get<AbilityStateBuffer>(order.Actor);
-            if ((uint)order.Args.I0 >= AbilityStateBuffer.CAPACITY)
+            if (!OrderBuilder.TryGetCastAbilitySlotIndex(in order, out int abilitySlotIndex))
             {
                 return false;
             }
 
-            AbilitySlotState slot = slots.Get(order.Args.I0);
+            ref var slots = ref _engine.World.Get<AbilityStateBuffer>(order.Actor);
+            if ((uint)abilitySlotIndex >= AbilityStateBuffer.CAPACITY)
+            {
+                return false;
+            }
+
+            AbilitySlotState slot = slots.Get(abilitySlotIndex);
             if (slot.AbilityId <= 0 ||
                 _abilityDefinitions == null ||
                 !_abilityDefinitions.TryGet(slot.AbilityId, out var definition))
@@ -1058,8 +1052,8 @@ namespace EntityCommandPanelMod.Runtime
             return _orderTypes != null &&
                    _orderTypes.TryGet(order.OrderTypeId, out var config) &&
                    string.Equals(config.Key, "castAbility", StringComparison.OrdinalIgnoreCase) &&
-                   order.Args.I0 >= 0
-                ? $"slot {order.Args.I0}"
+                   OrderBuilder.TryGetCastAbilitySlotIndex(in order, out int abilitySlotIndex)
+                ? $"slot {abilitySlotIndex}"
                 : string.Empty;
         }
 
@@ -1543,6 +1537,19 @@ namespace EntityCommandPanelMod.Runtime
                 if (_engine.World.Has<EffectTemplateRef>(effectEntity))
                 {
                     current = HashCombine(current, (uint)_engine.World.Get<EffectTemplateRef>(effectEntity).TemplateId);
+                }
+                if (_engine.World.Has<EffectSourceAbilityLockout>(effectEntity))
+                {
+                    current = HashCombine(current, (uint)_engine.World.Get<EffectSourceAbilityLockout>(effectEntity).AbilityId);
+                }
+                if (_engine.World.Has<EffectGrantedTags>(effectEntity))
+                {
+                    ref readonly var grantedTags = ref _engine.World.Get<EffectGrantedTags>(effectEntity);
+                    current = HashCombine(current, (uint)grantedTags.Count);
+                    for (int tagIndex = 0; tagIndex < grantedTags.Count; tagIndex++)
+                    {
+                        current = HashCombine(current, (uint)grantedTags.Get(tagIndex).TagId);
+                    }
                 }
             }
 

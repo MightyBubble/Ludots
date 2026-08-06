@@ -38,8 +38,10 @@ namespace Ludots.Tests.GAS
             var resolved = world.Create(WorldPositionCm.FromCm(100, 0));
 
             var preset = new PresetTypeDefinition { Type = EffectPresetType.Search };
-            preset.DefaultPhaseHandlers[EffectPhaseId.OnResolve] = PhaseHandler.Builtin(BuiltinHandlerId.SpatialQuery);
-            preset.DefaultPhaseHandlers[EffectPhaseId.OnApply] = PhaseHandler.Builtin(BuiltinHandlerId.DispatchPayload);
+            preset.DefaultPhaseHandlers[EffectPhaseId.OnResolve] =
+                GasTestGraphPrograms.BuiltinGraph(programs, 10_001, BuiltinHandlerId.SpatialQuery);
+            preset.DefaultPhaseHandlers[EffectPhaseId.OnApply] =
+                GasTestGraphPrograms.BuiltinGraph(programs, 10_002, BuiltinHandlerId.DispatchPayload);
             presetTypes.Register(in preset);
 
             const int templateId = 200;
@@ -115,7 +117,8 @@ namespace Ludots.Tests.GAS
             var resolved = world.Create(WorldPositionCm.FromCm(200, 0));
 
             var preset = new PresetTypeDefinition { Type = EffectPresetType.PeriodicSearch };
-            preset.DefaultPhaseHandlers[EffectPhaseId.OnPeriod] = PhaseHandler.Builtin(BuiltinHandlerId.ReResolveAndDispatch);
+            preset.DefaultPhaseHandlers[EffectPhaseId.OnPeriod] =
+                GasTestGraphPrograms.BuiltinGraph(programs, 10_003, BuiltinHandlerId.ReResolveAndDispatch);
             presetTypes.Register(in preset);
 
             const int templateId = 201;
@@ -191,7 +194,8 @@ namespace Ludots.Tests.GAS
             var firstTarget = world.Create(WorldPositionCm.FromCm(100, 0));
             var secondTarget = world.Create(WorldPositionCm.FromCm(200, 0));
             var preset = new PresetTypeDefinition { Type = EffectPresetType.PeriodicSearch };
-            preset.DefaultPhaseHandlers[EffectPhaseId.OnPeriod] = PhaseHandler.Builtin(BuiltinHandlerId.ReResolveAndDispatch);
+            preset.DefaultPhaseHandlers[EffectPhaseId.OnPeriod] =
+                GasTestGraphPrograms.BuiltinGraph(programs, 10_004, BuiltinHandlerId.ReResolveAndDispatch);
             presetTypes.Register(in preset);
 
             const int templateId = 202;
@@ -273,8 +277,10 @@ namespace Ludots.Tests.GAS
                 var hostile = world.Create(WorldPositionCm.FromCm(120, 0), new Team { Id = 2 });
 
                 var preset = new PresetTypeDefinition { Type = EffectPresetType.Search };
-                preset.DefaultPhaseHandlers[EffectPhaseId.OnResolve] = PhaseHandler.Builtin(BuiltinHandlerId.SpatialQuery);
-                preset.DefaultPhaseHandlers[EffectPhaseId.OnApply] = PhaseHandler.Builtin(BuiltinHandlerId.DispatchPayload);
+                preset.DefaultPhaseHandlers[EffectPhaseId.OnResolve] =
+                    GasTestGraphPrograms.BuiltinGraph(programs, 10_005, BuiltinHandlerId.SpatialQuery);
+                preset.DefaultPhaseHandlers[EffectPhaseId.OnApply] =
+                    GasTestGraphPrograms.BuiltinGraph(programs, 10_006, BuiltinHandlerId.DispatchPayload);
                 presetTypes.Register(in preset);
 
                 const int templateId = 202;
@@ -355,8 +361,10 @@ namespace Ludots.Tests.GAS
                 var hostile = world.Create(WorldPositionCm.FromCm(120, 0), new Team { Id = 2 });
 
                 var preset = new PresetTypeDefinition { Type = EffectPresetType.Search };
-                preset.DefaultPhaseHandlers[EffectPhaseId.OnResolve] = PhaseHandler.Builtin(BuiltinHandlerId.SpatialQuery);
-                preset.DefaultPhaseHandlers[EffectPhaseId.OnApply] = PhaseHandler.Builtin(BuiltinHandlerId.DispatchPayload);
+                preset.DefaultPhaseHandlers[EffectPhaseId.OnResolve] =
+                    GasTestGraphPrograms.BuiltinGraph(programs, 10_007, BuiltinHandlerId.SpatialQuery);
+                preset.DefaultPhaseHandlers[EffectPhaseId.OnApply] =
+                    GasTestGraphPrograms.BuiltinGraph(programs, 10_008, BuiltinHandlerId.DispatchPayload);
                 presetTypes.Register(in preset);
 
                 const int templateId = 203;

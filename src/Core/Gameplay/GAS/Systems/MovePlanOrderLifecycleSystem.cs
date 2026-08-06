@@ -43,8 +43,13 @@ public sealed class MovePlanOrderLifecycleSystem : BaseSystem<World, float>
                 ref MovePlanExecutionResult result = ref results[index];
                 if (!buffer.HasActive ||
                     buffer.ActiveOrder.Order.OrderTypeId != _moveOrderTypeId ||
-                    result.Kind == MovePlanExecutionResultKind.None ||
-                    result.CommandGroupToken != buffer.ActiveOrder.Order.OrderId)
+                    result.Kind == MovePlanExecutionResultKind.None)
+                {
+                    continue;
+                }
+
+                int commandGroupToken = MovePlanOrderCommandGroup.ResolveToken(in buffer.ActiveOrder.Order);
+                if (result.CommandGroupToken != commandGroupToken)
                 {
                     continue;
                 }

@@ -409,7 +409,8 @@ namespace MobaDemoMod.Systems
             string uri = $"{_ctx.ModId}:assets/Input/target_layout_profiles.json";
             if (!_ctx.VFS.TryResolveFullPath(uri, out var fullPath) || !File.Exists(fullPath))
             {
-                return Array.Empty<TargetLayoutProfileDefinition>();
+                throw new InvalidOperationException(
+                    $"[{_ctx.ModId}] input_order_mappings.json requires explicit Input/target_layout_profiles.json; author an empty targetLayoutProfiles array when no layout profiles are used.");
             }
 
             using var stream = File.OpenRead(fullPath);

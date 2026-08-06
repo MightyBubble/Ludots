@@ -250,11 +250,18 @@ namespace Ludots.Core.Gameplay.AI.Systems
                     return true;
                 }
 
+                if (!_terminalResults.IsAwaitingRetainedOutcome(orderId))
+                {
+                    throw new InvalidOperationException(
+                        $"UTILITY_AI.ERR.WaitingOrderReceiptUnavailable: orderId={orderId}, decisionId={state.CurrentDecisionId}.");
+                }
+
                 if (_admissionResults.TryGet(orderId, OrderAdmissionStage.EntityIntake, out OrderAdmissionOutcome entityAdmission) &&
                     !OrderSubmitResultSemantics.IsAccepted(entityAdmission.Result))
                 {
                     state.CurrentTaskStatus = (byte)UtilityAiTaskRunStatus.Blocked;
                     state.LastSubmittedOrderId = 0;
+                    ReleaseRetainedTerminalExpectation(orderId);
                     WriteTaskStatusTrace(entity, state.CurrentTaskStatus);
                     return true;
                 }
@@ -264,6 +271,7 @@ namespace Ludots.Core.Gameplay.AI.Systems
                 {
                     state.CurrentTaskStatus = (byte)UtilityAiTaskRunStatus.Blocked;
                     state.LastSubmittedOrderId = 0;
+                    ReleaseRetainedTerminalExpectation(orderId);
                     WriteTaskStatusTrace(entity, state.CurrentTaskStatus);
                     return true;
                 }
@@ -271,6 +279,15 @@ namespace Ludots.Core.Gameplay.AI.Systems
                 state.CurrentTaskStatus = (byte)UtilityAiTaskRunStatus.Running;
                 WriteTaskStatusTrace(entity, state.CurrentTaskStatus);
                 return true;
+            }
+
+            private void ReleaseRetainedTerminalExpectation(int orderId)
+            {
+                if (!_terminalResults.Release(orderId))
+                {
+                    throw new InvalidOperationException(
+                        $"ORDER.TERMINAL.ERR.ReleaseRetainedExpectationFailed: orderId={orderId}.");
+                }
             }
 
             private void WriteTaskStatusTrace(Entity entity, byte taskStatus)

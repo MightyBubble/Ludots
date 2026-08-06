@@ -154,7 +154,7 @@ namespace Ludots.Tests.GAS
             var map = new PhaseHandlerMap();
             for (int i = 0; i < EffectPhaseConstants.PhaseCount; i++)
             {
-                map[(EffectPhaseId)i] = PhaseHandler.Builtin((BuiltinHandlerId)(i + 1));
+                map[(EffectPhaseId)i] = PhaseHandler.Graph(i + 1);
             }
 
             // Warm up
@@ -262,6 +262,18 @@ namespace Ludots.Tests.GAS
             string json = System.IO.File.ReadAllText(
                 System.IO.Path.Combine(FindRepoRoot(), "assets", "Configs", "GAS", "preset_types.json"));
             GraphIdRegistry.Clear();
+            GraphIdRegistry.Register("Graph.GAS.ApplyModifiers");
+            GraphIdRegistry.Register("Graph.GAS.ApplyForce");
+            GraphIdRegistry.Register("Graph.GAS.SpatialQuery");
+            GraphIdRegistry.Register("Graph.GAS.DispatchPayload");
+            GraphIdRegistry.Register("Graph.GAS.ReResolveAndDispatch");
+            GraphIdRegistry.Register("Graph.GAS.CreateProjectile");
+            GraphIdRegistry.Register("Graph.GAS.CreateUnit");
+            GraphIdRegistry.Register("Graph.GAS.ApplyDisplacement");
+            GraphIdRegistry.Register("Graph.GAS.ApplyRelation");
+            GraphIdRegistry.Register("Graph.GAS.ExecuteExchange");
+            GraphIdRegistry.Register("Graph.GAS.CompleteProgression");
+            GraphIdRegistry.Register("Graph.GAS.SubmitOrderFromBlackboard");
             GraphIdRegistry.Register("Graph.Lifecycle.DeployConsumeSource");
 
             // Warm up

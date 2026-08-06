@@ -483,11 +483,7 @@ namespace Ludots.Core.Gameplay.GAS
                 PhaseHandler handler = preset.DefaultPhaseHandlers[phase];
                 if (handler.IsValid)
                 {
-                    if (handler.Kind == PhaseHandlerKind.Builtin)
-                    {
-                        AddBuiltin(templateId, effectName, assetPath, in template, phase, (BuiltinHandlerId)handler.HandlerId, builtinHandlers, ref accumulator);
-                    }
-                    else if (handler.Kind == PhaseHandlerKind.Graph)
+                    if (handler.Kind == PhaseHandlerKind.Graph)
                     {
                         AnalyzeGraph(templateId, effectName, assetPath, in template, phase, expectedGraphKind, handler.HandlerId, builtinHandlers, graphPrograms, graphHandlers, ref accumulator);
                     }

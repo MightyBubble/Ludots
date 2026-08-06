@@ -42,7 +42,7 @@ namespace Ludots.Core.Input.Orders
         private readonly ISpatialQueryService _spatialQueries;
         private readonly ContextScoredCandidateGate _candidateGate;
         private readonly int _graphInstructionBudget;
-        private readonly Entity[] _queryBuffer = new Entity[256];
+        private readonly Entity[] _queryBuffer;
 
         public ContextScoredOrderResolver(
             World world,
@@ -50,7 +50,8 @@ namespace Ludots.Core.Input.Orders
             IReadOnlyGraphScorer graphScorer,
             ISpatialQueryService spatialQueries,
             ContextScoredCandidateGate candidateGate,
-            int graphInstructionBudget)
+            int graphInstructionBudget,
+            int candidateCapacity)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _contextGroups = contextGroups ?? throw new ArgumentNullException(nameof(contextGroups));
@@ -58,6 +59,7 @@ namespace Ludots.Core.Input.Orders
             _spatialQueries = spatialQueries ?? throw new ArgumentNullException(nameof(spatialQueries));
             _candidateGate = candidateGate ?? throw new ArgumentNullException(nameof(candidateGate));
             _graphInstructionBudget = ValidateGraphInstructionBudget(graphInstructionBudget);
+            _queryBuffer = new Entity[ValidateCandidateCapacity(candidateCapacity)];
         }
 
         public bool TryResolve(Entity actor, InputOrderMapping mapping, Entity hoveredEntity, out ContextScoredOrderResolution resolution)
@@ -393,6 +395,19 @@ namespace Ludots.Core.Input.Orders
                     nameof(value),
                     value,
                     "Context-scored graph instruction budget must be positive and finite.");
+            }
+
+            return value;
+        }
+
+        private static int ValidateCandidateCapacity(int value)
+        {
+            if (value <= 0)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(value),
+                    value,
+                    "Context-scored candidate capacity must be positive.");
             }
 
             return value;

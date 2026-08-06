@@ -1,6 +1,62 @@
-﻿## GAS Composition Gate 鈥?Self Review
+﻿## GAS Composition Gate — Self Review
 
 Current closeouts and prior issue reviews follow.
+
+## GAS Composition Gate - Non-Performer Closeout ArgsTemplate / Instant Phase Runtime - 2026-08-06
+
+- **Task / Issue**: PR #721 non-Performer closeout — finish ArgsTemplate removal, typed order payload, ContextScored fail-closed, and preset/builtin inline bypass removal without silent Instant modifier loss.
+- **Date**: 2026-08-06
+- **Agent / Author**: Cursor Grok
+
+### 1. Core judgment
+
+新变体主要交付物是（A/B/C/D）: A
+
+结论: PASS
+
+一句话理由: 只收紧现有 Input→Order→AbilityExec/GAS 合同与 Instant 执行路径；preset 默认 handler 迁到 Graph.GAS.* + InvokeBuiltin，不新增 preset enum / profile DSL / 平行管线。
+
+### 2. Layer assignment
+
+| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
+|-----------|-----------------|----------|
+| authored typed orderPayload | 1 | InputOrderPayloadTemplate + loader reject argsTemplate |
+| ContextScored budget fail-closed | 1/2 | ContextScoredOrderResolver + InputOrderMappingSystem rejection |
+| Instant modifiers after phase | 1 | EffectProposalProcessingSystem ApplyInstantModifiersAndPublish after required phase runtime |
+| Preset default handlers as Graph | 2 | preset_types.json → Graph.GAS.* → InvokeBuiltin |
+
+### 3. Reuse list
+
+- Handlers: existing BuiltinHandlers via InvokeBuiltin graphs
+- Queues / Systems: InputOrderMappingSystem, AbilityExecSystem, EffectProposalProcessingSystem
+- Resolvers / Registries: OrderBuilder, OrderTypeRegistry, GraphProgramRegistry, PresetTypeRegistry
+- Existing presets / graphs: Graph.GAS.ApplyModifiers / ApplyForce / ... wrappers
+
+### 4. New Layer 0 ops (if any)
+
+N/A
+
+### 5. Transaction boundary
+
+Instant still requires phase runtime; proposal.Modifiers still apply inside GasTransactional commit when phases produce no attribute delta. No silent no-phase bypass.
+
+### 6. Config SSOT
+
+Authored input mappings: orderPayload only. Preset default handlers: graph ids only.
+
+### 7. Red flag scan
+
+- [x] 未新增 profile inherit/placement enum
+- [x] 未新建平行 runtime ABI authoring 入口
+- [x] 未保留 authored argsTemplate
+- [x] 未触碰 Performer #722
+- [x] Instant 无 phase runtime 时明确失败
+
+### 8. Next variant test
+
+下一个变体应改 typed payload / CommandIntent / Graph.GAS wiring，或补 AbilityExec Effect 事务回执等待；不应再暴露 I0..I3 authoring。
+
+---
 
 ## GAS Composition Gate - Issue 722 Blacksmith Durability Control - 2026-08-03
 
@@ -2213,3 +2269,61 @@ Feature: AI 只能提交类型化订单
     When 游戏加载 AI 配置
     Then 加载失败并提示使用正式的类型化字段
 ```
+## GAS Composition Gate - Non-Performer Architecture Closeout - 2026-08-06
+
+- **Task / Issue**: Finish the remaining non-Performer AI / GAS / AbilityExec / Order boundary issues on `codex/nonperformer-architecture-closeout-20260803`.
+- **Date**: 2026-08-06
+- **Agent / Author**: Codex
+- **Baseline**: `origin/main=0484f7ac14a9cea10083314c3847c6cc4a74f438`, local branch head before this slice `21677ad19f89697caf1cb377020eaa6ef25cf4d6`, merge-base `0484f7ac14a9cea10083314c3847c6cc4a74f438`, PR #721 head `279d9fe29bc81a54a50847a9de42ddb99a92a240` and state `OPEN/DIRTY`.
+- **Status**: PASS.
+
+### 1. Core judgment
+
+新变体主要交付物是（A/B/C/D）: A.
+
+结论: PASS.
+
+一句话理由: 本轮是在既有 AbilityExec -> EffectRequest -> EffectTemplate/GAS Graph -> Order 回执链路上删除旁路和收紧合同，玩法差异仍由 effect template、caller params、typed order 和 graph 组合表达，不新增 preset enum、profile 开关或平行管线。
+
+### 2. Layer assignment
+
+| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
+|-----------|-----------------|----------|
+| 删除 instant preset/builtin inline 旁路 | 1/2 | Existing `EffectExecutionPlan`, `EffectPhaseExecutor`, GAS graph wrappers |
+| UI 锁定投影只读运行时 Effect | 2 | Existing `ActiveEffectContainer`, `GameplayEffect`, `EffectGrantedTags` |
+| ContextScored 输入失败显式化 | 1 | Existing input mapping resolver, order submit result / rejection boundary |
+| 裸 OrderArgs 收敛为类型化订单 | 1 | Existing `OrderTypeRegistry`, typed `OrderArgs` constructors, mapping loader |
+| CallerParams 允许覆盖合同 | 2 | Existing preset/type config, effect template loader, `AbilityExecCallerParamsPool` |
+| AbilityExec 等待 Effect 回执 | 1 | Existing effect request/proposal transaction path plus explicit receipt ledger |
+
+### 3. Reuse list
+
+- Handlers: existing Graph wrappers that invoke registered GAS builtins through `InvokeBuiltin`.
+- Queues / Systems: `AbilityExecSystem`, `EffectRequestQueue`, `EffectProposalProcessingSystem`, `EffectPhaseExecutor`, `OrderQueue`, input mapping systems.
+- Resolvers / Registries: `EffectTemplateRegistry`, `AbilityDefinitionRegistry`, `OrderTypeRegistry`, `PresetTypeLoader`, `ConfigParamsMerger`, target point resolvers.
+- Existing presets / graphs: default preset graph bindings in `assets/Configs/GAS/preset_types.json` and `assets/Configs/GAS/graphs.json`.
+
+### 4. New Layer 0 ops (if any)
+
+N/A. No new atomic gameplay op is introduced by this closeout slice.
+
+### 5. Transaction boundary
+
+Instant effects must enter the compiled phase graph execution plan; missing graph/phase runtime is a hard configuration/runtime assembly error. AbilityExec may continue only from an explicit Effect transaction receipt, and Order consumers may only observe terminal facts through the keyed ledger until explicit consume/release.
+
+### 6. Config SSOT
+
+行为配置落在: ability execution timeline, caller params, effect templates, preset type parameter contracts, and graph assets.
+
+是否新增 JSON schema: NO for this first GAS bypass removal slice; any CallerParams permission tightening must extend the existing preset/template contract rather than create a parallel loader.
+
+### 7. Red flag scan
+
+- [x] 未新增 profile inherit/placement enum
+- [x] 未新建与 GAS graph / AbilityExec / Order 平行的运行时管线
+- [x] 未把 preset default builtin 当作运行时旁路
+- [x] 未添加隐式 fallback 或静默吞错
+
+### 8. Next variant test
+
+「下一个 Mod 变体」将修改: graph 连线 / effect 步骤 / typed Order data。若需要新的效果行为，应新增或复用 graph op 组合，不改 Core preset enum 或 inline handler 分支。

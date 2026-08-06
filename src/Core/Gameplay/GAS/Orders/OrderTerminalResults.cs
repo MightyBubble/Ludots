@@ -29,8 +29,8 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
     /// <summary>
     /// Fixed-capacity current-frame snapshot plus stable per-order terminal ledger.
-    /// Current-frame iteration remains frame-local. Cross-frame OrderId lookups require
-    /// Retain(orderId) before the terminal result is written and remain until consume/release.
+    /// Current-frame iteration remains frame-local. Per-order outcomes remain in
+    /// the ledger until a consumer explicitly consumes/releases them.
     /// </summary>
     public sealed class OrderTerminalResultBuffer
     {
@@ -202,6 +202,22 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             return true;
         }
 
+        public bool IsAwaitingRetainedOutcome(int orderId)
+        {
+            if (orderId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"ORDER.TERMINAL.ERR.InvalidOrderId: orderId={orderId}.");
+            }
+
+            if (TryFindExistingSlot(orderId, out int slot))
+            {
+                return _ledgerStates[slot] == LedgerAvailable && _ledgerRetains[slot] != 0;
+            }
+
+            return TryFindPendingRetainSlot(orderId, out _);
+        }
+
         public OrderTerminalOutcome Consume(int orderId)
         {
             if (!TryFindExistingSlot(orderId, out int slot))
@@ -232,13 +248,25 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         {
             if (!TryFindExistingSlot(orderId, out int slot))
             {
-                return ReleasePendingRetain(orderId);
+                if (ReleasePendingRetain(orderId))
+                {
+                    return true;
+                }
+
+                throw new InvalidOperationException(
+                    $"ORDER.TERMINAL.ERR.UnknownOrderId: orderId={orderId}.");
             }
 
             byte state = _ledgerStates[slot];
             if (state != LedgerAvailable && state != LedgerConsumed)
             {
-                return ReleasePendingRetain(orderId);
+                if (ReleasePendingRetain(orderId))
+                {
+                    return true;
+                }
+
+                throw new InvalidOperationException(
+                    $"ORDER.TERMINAL.ERR.UnknownOrderId: orderId={orderId}.");
             }
 
             _ledgerStates[slot] = LedgerReleased;
@@ -254,7 +282,6 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         public void Clear()
         {
             _count = 0;
-            ReleaseUnretainedAvailableOutcomes();
             Generation++;
         }
 
@@ -474,21 +501,5 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             return false;
         }
 
-        private void ReleaseUnretainedAvailableOutcomes()
-        {
-            for (int slot = 0; slot < _ledgerStates.Length; slot++)
-            {
-                if (_ledgerStates[slot] != LedgerAvailable ||
-                    _ledgerRetains[slot] != 0)
-                {
-                    continue;
-                }
-
-                _ledgerStates[slot] = LedgerReleased;
-                _ledgerOrderIds[slot] = 0;
-                _ledgerItems[slot] = default;
-                _ledgerCount--;
-            }
-        }
     }
 }

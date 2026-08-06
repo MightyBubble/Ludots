@@ -117,38 +117,6 @@ namespace Ludots.Core.Input.Orders
         Ground = Position
     }
     
-    /// <summary>
-    /// Template for order arguments.
-    /// Nullable fields are not applied to the order.
-    /// </summary>
-    public class OrderArgsTemplate
-    {
-        public int? I0 { get; set; }
-        public int? I1 { get; set; }
-        public int? I2 { get; set; }
-        public int? I3 { get; set; }
-        
-        public float? F0 { get; set; }
-        public float? F1 { get; set; }
-        public float? F2 { get; set; }
-        public float? F3 { get; set; }
-
-        public OrderArgsTemplate Clone()
-        {
-            return new OrderArgsTemplate
-            {
-                I0 = I0,
-                I1 = I1,
-                I2 = I2,
-                I3 = I3,
-                F0 = F0,
-                F1 = F1,
-                F2 = F2,
-                F3 = F3
-            };
-        }
-    }
-
     [JsonConverter(typeof(JsonStringEnumConverter))]
     public enum InputOrderPayloadKind
     {
@@ -303,12 +271,6 @@ namespace Ludots.Core.Input.Orders
         /// The order type key (must match a key in OrderTypeRegistry).
         /// </summary>
         public string OrderTypeKey { get; set; } = string.Empty;
-        
-        /// <summary>
-        /// Template for order arguments.
-        /// </summary>
-        [JsonIgnore]
-        public OrderArgsTemplate ArgsTemplate { get; set; } = new();
 
         /// <summary>
         /// Named payload compiled at load/construction time into compact runtime order args.
@@ -424,7 +386,6 @@ namespace Ludots.Core.Input.Orders
                 Trigger = Trigger,
                 DoubleTapWindowSeconds = DoubleTapWindowSeconds,
                 OrderTypeKey = OrderTypeKey,
-                ArgsTemplate = ArgsTemplate?.Clone() ?? new OrderArgsTemplate(),
                 OrderPayload = OrderPayload?.Clone() ?? new InputOrderPayloadTemplate(),
                 AbilityIdKey = AbilityIdKey,
                 AbilityId = AbilityId,

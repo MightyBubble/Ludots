@@ -339,6 +339,7 @@ namespace Ludots.Tests.GAS
         [Test]
         public void Scenario_PresetTypeLoader_LoadsViaPipeline()
         {
+            GraphIdRegistry.Register("Graph.GAS.ApplyModifiers");
             WriteFile("Core", "config_catalog.json",
                 @"[{ ""Path"": ""GAS/preset_types.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
             WriteFile("Core", "GAS/preset_types.json", @"[
@@ -348,7 +349,7 @@ namespace Ludots.Tests.GAS
                     ""activePhases"": [""OnApply""],
                     ""allowedLifetimes"": [""Instant""],
                     ""defaultPhaseHandlers"": {
-                      ""OnApply"": { ""type"": ""builtin"", ""id"": ""ApplyModifiers"" }
+                      ""OnApply"": { ""type"": ""graph"", ""id"": ""Graph.GAS.ApplyModifiers"" }
                     }
                 }
             ]");

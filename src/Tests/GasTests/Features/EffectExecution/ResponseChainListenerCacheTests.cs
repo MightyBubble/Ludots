@@ -4,6 +4,7 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Tests.GAS;
 using NUnit.Framework;
 
@@ -45,6 +46,15 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
             Entity target = world.Create(new AttributeBuffer(), new DirtyFlags());
             world.Get<AttributeBuffer>(target).SetBase(healthAttributeId, 100f);
             var queue = new EffectRequestQueue();
+            GasTestPhaseRuntime.Create(
+                world,
+                templates,
+                queue,
+                out EffectPhaseExecutor phaseExecutor,
+                out GasGraphRuntimeApi graphApi,
+                presetTypes: presetTypes,
+                builtinHandlers: builtinHandlers,
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
             var system = new EffectProposalProcessingSystem(
                 world,
                 queue,
@@ -52,6 +62,8 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
                 new Ludots.Core.Engine.DiscreteClock(),
                 templates: templates,
                 responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                phaseExecutor: phaseExecutor,
+                graphApi: graphApi,
                 tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 
             Publish(queue, target, effectTemplateId);

@@ -501,10 +501,9 @@ namespace Ludots.Tests.GAS
             orderTypes.Register(new OrderTypeConfig
             {
                 OrderTypeId = castAbilityOrderTypeId,
-                PayloadKind = OrderPayloadKind.CastAbility,
                 EntityBlackboardKey = OrderBlackboardKeys.Cast_TargetEntity,
                 SpatialBlackboardKey = -1,
-            });
+            }.UseCastAbilityPayload());
             return orderTypes;
         }
 

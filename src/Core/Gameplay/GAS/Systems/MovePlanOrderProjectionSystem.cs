@@ -58,6 +58,7 @@ public sealed class MovePlanOrderProjectionSystem : BaseSystem<World, float>
                 }
 
                 ref readonly Order order = ref buffer.ActiveOrder.Order;
+                int commandGroupToken = MovePlanOrderCommandGroup.ResolveToken(in order);
                 if (order.OrderId <= 0 ||
                     order.Args.Spatial.Kind != OrderSpatialKind.WorldCm ||
                     order.Args.Spatial.Mode != OrderCollectionMode.Single ||
@@ -67,7 +68,7 @@ public sealed class MovePlanOrderProjectionSystem : BaseSystem<World, float>
                     intent = default;
                     result = new MovePlanExecutionResult
                     {
-                        CommandGroupToken = order.OrderId,
+                        CommandGroupToken = commandGroupToken,
                         Kind = MovePlanExecutionResultKind.Failed,
                         FailureReason = MovePlanFailureReason.ExecutionUnavailable,
                     };
@@ -75,10 +76,10 @@ public sealed class MovePlanOrderProjectionSystem : BaseSystem<World, float>
                 }
 
                 if (intent.Mode != MovePlanExecutionMode.CommandGroup ||
-                    intent.CommandGroupToken != order.OrderId)
+                    intent.CommandGroupToken != commandGroupToken)
                 {
                     intent = default;
-                    intent.CommandGroupToken = order.OrderId;
+                    intent.CommandGroupToken = commandGroupToken;
                 }
 
                 intent.TargetWorldCm = new System.Numerics.Vector2(

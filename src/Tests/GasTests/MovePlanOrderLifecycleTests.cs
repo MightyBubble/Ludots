@@ -214,6 +214,124 @@ public sealed class MovePlanOrderLifecycleTests
     }
 
     [Test]
+    public void SharedAdmissionBatch_ProjectsOneCommandGroupToken_AndCompletesEachMember()
+    {
+        using var world = World.Create();
+        Entity source = world.Create();
+        Entity firstActor = world.Create(
+            OrderBuffer.CreateEmpty(),
+            new OrderContinuationBuffer(),
+            default(MovePlanExecutionIntent),
+            default(MovePlanExecutionResult));
+        Entity secondActor = world.Create(
+            OrderBuffer.CreateEmpty(),
+            new OrderContinuationBuffer(),
+            default(MovePlanExecutionIntent),
+            default(MovePlanExecutionResult));
+
+        var queue = CreateOrderQueue(capacity: 16);
+        Order[] batch =
+        {
+            CreateOrder(firstActor, source),
+            CreateOrder(secondActor, source),
+        };
+        Assert.That(queue.TryEnqueueClusteredBatch(batch), Is.EqualTo(OrderSubmitResult.Queued));
+
+        world.Get<OrderBuffer>(firstActor).SetActiveDirect(in batch[0], priority: 100);
+        world.Get<OrderBuffer>(secondActor).SetActiveDirect(in batch[1], priority: 100);
+        int expectedToken = batch[0].AdmissionBatchId;
+
+        new MovePlanOrderProjectionSystem(world, MoveOrderTypeId).Update(0f);
+
+        MovePlanExecutionIntent firstIntent = world.Get<MovePlanExecutionIntent>(firstActor);
+        MovePlanExecutionIntent secondIntent = world.Get<MovePlanExecutionIntent>(secondActor);
+        Assert.Multiple(() =>
+        {
+            Assert.That(expectedToken, Is.Positive);
+            Assert.That(batch[1].AdmissionBatchId, Is.EqualTo(expectedToken));
+            Assert.That(firstIntent.CommandGroupToken, Is.EqualTo(expectedToken));
+            Assert.That(secondIntent.CommandGroupToken, Is.EqualTo(expectedToken));
+            Assert.That(firstIntent.HasTarget, Is.EqualTo(1));
+            Assert.That(secondIntent.HasTarget, Is.EqualTo(1));
+        });
+
+        var orderTypes = CreateMoveOrderRegistry(SameTypePolicy.Replace);
+        world.Set(firstActor, new MovePlanExecutionResult
+        {
+            CommandGroupToken = expectedToken,
+            Kind = MovePlanExecutionResultKind.Arrived,
+        });
+        world.Set(secondActor, new MovePlanExecutionResult
+        {
+            CommandGroupToken = expectedToken,
+            Kind = MovePlanExecutionResultKind.Arrived,
+        });
+
+        new MovePlanOrderLifecycleSystem(world, orderTypes, MoveOrderTypeId).Update(0f);
+
+        Assert.Multiple(() =>
+        {
+            Assert.That(world.Get<OrderBuffer>(firstActor).HasActive, Is.False);
+            Assert.That(world.Get<OrderBuffer>(secondActor).HasActive, Is.False);
+            Assert.That(orderTypes.TerminalResults.Count, Is.EqualTo(2));
+            Assert.That(
+                new[] { orderTypes.TerminalResults[0].OrderId, orderTypes.TerminalResults[1].OrderId },
+                Is.EquivalentTo(new[] { batch[0].OrderId, batch[1].OrderId }));
+        });
+    }
+
+    [Test]
+    public void SharedAdmissionBatch_TokenDoesNotCollideWithPriorSingleOrder()
+    {
+        using var world = World.Create();
+        Entity source = world.Create();
+        Entity singleActor = world.Create(
+            OrderBuffer.CreateEmpty(),
+            new OrderContinuationBuffer(),
+            default(MovePlanExecutionIntent),
+            default(MovePlanExecutionResult));
+        Entity firstBatchActor = world.Create(
+            OrderBuffer.CreateEmpty(),
+            new OrderContinuationBuffer(),
+            default(MovePlanExecutionIntent),
+            default(MovePlanExecutionResult));
+        Entity secondBatchActor = world.Create(
+            OrderBuffer.CreateEmpty(),
+            new OrderContinuationBuffer(),
+            default(MovePlanExecutionIntent),
+            default(MovePlanExecutionResult));
+
+        var queue = CreateOrderQueue(capacity: 16);
+        Order single = CreateOrder(singleActor, source);
+        Assert.That(queue.TryEnqueue(in single), Is.True);
+        Assert.That(queue.TryDequeue(out single), Is.True);
+
+        Order[] batch =
+        {
+            CreateOrder(firstBatchActor, source),
+            CreateOrder(secondBatchActor, source),
+        };
+        Assert.That(queue.TryEnqueueClusteredBatch(batch), Is.EqualTo(OrderSubmitResult.Queued));
+
+        world.Get<OrderBuffer>(singleActor).SetActiveDirect(in single, priority: 100);
+        world.Get<OrderBuffer>(firstBatchActor).SetActiveDirect(in batch[0], priority: 100);
+        world.Get<OrderBuffer>(secondBatchActor).SetActiveDirect(in batch[1], priority: 100);
+
+        new MovePlanOrderProjectionSystem(world, MoveOrderTypeId).Update(0f);
+
+        int singleToken = world.Get<MovePlanExecutionIntent>(singleActor).CommandGroupToken;
+        int batchToken = world.Get<MovePlanExecutionIntent>(firstBatchActor).CommandGroupToken;
+        Assert.Multiple(() =>
+        {
+            Assert.That(singleToken, Is.EqualTo(single.OrderId));
+            Assert.That(batchToken, Is.EqualTo(batch[0].AdmissionBatchId));
+            Assert.That(batchToken, Is.EqualTo(batch[0].OrderId));
+            Assert.That(batchToken, Is.Not.EqualTo(singleToken));
+            Assert.That(world.Get<MovePlanExecutionIntent>(secondBatchActor).CommandGroupToken, Is.EqualTo(batchToken));
+        });
+    }
+
+    [Test]
     public void InvalidMovePayload_ProjectsTypedFailureAndCancelsMatchingOrder()
     {
         using var world = World.Create();

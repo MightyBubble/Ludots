@@ -18,18 +18,33 @@ namespace Ludots.Core.Gameplay.AI.Planning
             ref BlackboardEntityBuffer entities,
             int submitStep,
             OrderQueue queue,
-            OrderTypeRegistry? orderTypeRegistry = null)
+            OrderTypeRegistry orderTypeRegistry,
+            out int submittedOrderId)
         {
+            submittedOrderId = 0;
+            if (orderTypeRegistry == null)
+            {
+                throw new ArgumentNullException(nameof(orderTypeRegistry));
+            }
+
             if (spec.OrderTypeId <= 0)
             {
                 throw new InvalidOperationException(
                     $"AI plan attempted to submit invalid order type id {spec.OrderTypeId}.");
             }
 
-            if (orderTypeRegistry != null && !orderTypeRegistry.IsRegistered(spec.OrderTypeId))
+            if (!orderTypeRegistry.IsRegistered(spec.OrderTypeId))
             {
                 throw new InvalidOperationException(
                     $"AI plan attempted to submit unregistered order type id {spec.OrderTypeId}.");
+            }
+
+            OrderTypeConfig orderType = orderTypeRegistry.Get(spec.OrderTypeId);
+            OrderPayloadKind expectedPayloadKind = ToOrderPayloadKind(spec.PayloadKind);
+            if (orderType.PayloadKind != expectedPayloadKind)
+            {
+                throw new InvalidOperationException(
+                    $"ORDER.BUILDER.ERR.PayloadKindMismatch: orderTypeId={spec.OrderTypeId}, orderTypePayloadKind={orderType.PayloadKind}, requestedPayloadKind={spec.PayloadKind}.");
             }
 
             int abilitySlotIndex = -1;
@@ -125,7 +140,38 @@ namespace Ludots.Core.Gameplay.AI.Planning
                         $"ORDER.BUILDER.ERR.UnsupportedAiOrderPayloadKind: kind={spec.PayloadKind}, orderTypeId={spec.OrderTypeId}.");
             }
 
-            return queue.TryEnqueue(in order);
+            queue.EnsureOrderId(ref order);
+            submittedOrderId = order.OrderId;
+            orderTypeRegistry.TerminalResults.Retain(submittedOrderId);
+
+            bool accepted = false;
+            try
+            {
+                OrderSubmitResult result = queue.SubmitAssigned(ref order);
+                accepted = OrderSubmitResultSemantics.IsAccepted(result);
+                return accepted;
+            }
+            finally
+            {
+                if (!accepted)
+                {
+                    orderTypeRegistry.TerminalResults.Release(submittedOrderId);
+                    submittedOrderId = 0;
+                }
+            }
+        }
+
+        private static OrderPayloadKind ToOrderPayloadKind(AiOrderPayloadKind payloadKind)
+        {
+            return payloadKind switch
+            {
+                AiOrderPayloadKind.CastAbility => OrderPayloadKind.CastAbility,
+                AiOrderPayloadKind.TargetEntity => OrderPayloadKind.TargetEntity,
+                AiOrderPayloadKind.MoveToWorldCm => OrderPayloadKind.MoveToWorldCm,
+                AiOrderPayloadKind.Stop => OrderPayloadKind.Stop,
+                _ => throw new InvalidOperationException(
+                    $"ORDER.BUILDER.ERR.UnsupportedAiOrderPayloadKind: kind={payloadKind}.")
+            };
         }
     }
 }

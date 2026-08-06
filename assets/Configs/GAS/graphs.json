@@ -1,5 +1,101 @@
 [
   {
+    "id": "Graph.GAS.ApplyModifiers",
+    "kind": "Effect",
+    "entry": "main",
+    "nodes": [
+      { "id": "main", "op": "InvokeBuiltin", "builtinHandler": "ApplyModifiers" }
+    ]
+  },
+  {
+    "id": "Graph.GAS.ApplyForce",
+    "kind": "Effect",
+    "entry": "main",
+    "nodes": [
+      { "id": "main", "op": "InvokeBuiltin", "builtinHandler": "ApplyForce" }
+    ]
+  },
+  {
+    "id": "Graph.GAS.SpatialQuery",
+    "kind": "Effect",
+    "entry": "main",
+    "nodes": [
+      { "id": "main", "op": "InvokeBuiltin", "builtinHandler": "SpatialQuery" }
+    ]
+  },
+  {
+    "id": "Graph.GAS.DispatchPayload",
+    "kind": "Effect",
+    "entry": "main",
+    "nodes": [
+      { "id": "main", "op": "InvokeBuiltin", "builtinHandler": "DispatchPayload" }
+    ]
+  },
+  {
+    "id": "Graph.GAS.ReResolveAndDispatch",
+    "kind": "Effect",
+    "entry": "main",
+    "nodes": [
+      { "id": "main", "op": "InvokeBuiltin", "builtinHandler": "ReResolveAndDispatch" }
+    ]
+  },
+  {
+    "id": "Graph.GAS.CreateProjectile",
+    "kind": "Effect",
+    "entry": "main",
+    "nodes": [
+      { "id": "main", "op": "InvokeBuiltin", "builtinHandler": "CreateProjectile" }
+    ]
+  },
+  {
+    "id": "Graph.GAS.CreateUnit",
+    "kind": "Effect",
+    "entry": "main",
+    "nodes": [
+      { "id": "main", "op": "InvokeBuiltin", "builtinHandler": "CreateUnit" }
+    ]
+  },
+  {
+    "id": "Graph.GAS.ApplyDisplacement",
+    "kind": "Effect",
+    "entry": "main",
+    "nodes": [
+      { "id": "main", "op": "InvokeBuiltin", "builtinHandler": "ApplyDisplacement" }
+    ]
+  },
+  {
+    "id": "Graph.GAS.ApplyRelation",
+    "kind": "Effect",
+    "entry": "main",
+    "nodes": [
+      { "id": "main", "op": "InvokeBuiltin", "builtinHandler": "ApplyRelation" }
+    ]
+  },
+  {
+    "id": "Graph.GAS.ExecuteExchange",
+    "kind": "Effect",
+    "entry": "main",
+    "nodes": [
+      { "id": "main", "op": "InvokeBuiltin", "builtinHandler": "ExecuteExchange" }
+    ]
+  },
+  {
+    "id": "Graph.GAS.CompleteProgression",
+    "kind": "Effect",
+    "entry": "main",
+    "nodes": [
+      { "id": "main", "op": "InvokeBuiltin", "builtinHandler": "CompleteProgression" }
+    ]
+  },
+  {
+    "id": "Graph.GAS.SubmitOrderFromBlackboard",
+    "kind": "Effect",
+    "entry": "main",
+    "nodes": [
+      { "id": "main", "op": "InvokeBuiltin", "builtinHandler": "SubmitOrderFromBlackboard" }
+    ]
+  },
+  {
     "id": "Graph.Lifecycle.DeployConsumeSource",
     "kind": "Effect",
     "entry": "begin",

@@ -1,0 +1,8 @@
+{
+  "scenarioRuntime": {
+    "runtimeCapacity": {
+      "navigationGroupCapacity": 10000,
+      "movePlanExecutionGroupCapacity": 10000
+    }
+  }
+}

@@ -768,7 +768,20 @@ namespace Ludots.Core.Gameplay.GAS.Config
             string entityOrderTypeKey = RequireString(cfg.EntityOrderTypeKey, ownerId, relativePath, "submitOrderFromBlackboard.entityOrderTypeKey");
             int pointMoveOrderTypeId = ResolveOrderTypeId(pointMoveOrderTypeKey, ownerId, relativePath, "submitOrderFromBlackboard.pointMoveOrderTypeKey");
             int entityOrderTypeId = ResolveOrderTypeId(entityOrderTypeKey, ownerId, relativePath, "submitOrderFromBlackboard.entityOrderTypeKey");
-            int entityOrderIntArg0 = RequireInt(cfg.EntityOrderIntArg0, ownerId, relativePath, "submitOrderFromBlackboard.entityOrderIntArg0");
+            ValidateOrderTypePayloadKind(pointMoveOrderTypeId, OrderPayloadKind.MoveToWorldCm, ownerId, relativePath, "submitOrderFromBlackboard.pointMoveOrderTypeKey");
+            if (cfg.EntityOrderIntArg0.HasValue)
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{ownerId}' in {relativePath}: submitOrderFromBlackboard.entityOrderIntArg0 is retired; use submitOrderFromBlackboard.entityOrderPayload.abilitySlot.");
+            }
+
+            CompileSubmitOrderEntityPayload(
+                cfg.EntityOrderPayload,
+                entityOrderTypeId,
+                ownerId,
+                relativePath,
+                out OrderPayloadKind entityOrderPayloadKind,
+                out int entityOrderAbilitySlot);
             OrderSubmitMode submitMode = ParseOrderSubmitMode(
                 RequireString(cfg.SubmitMode, ownerId, relativePath, "submitOrderFromBlackboard.submitMode"),
                 ownerId,
@@ -787,9 +800,87 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 StoredTargetKeys = storedTargetKeys,
                 PointMoveOrderTypeId = pointMoveOrderTypeId,
                 EntityOrderTypeId = entityOrderTypeId,
-                EntityOrderIntArg0 = entityOrderIntArg0,
+                EntityOrderPayloadKind = entityOrderPayloadKind,
+                EntityOrderAbilitySlot = entityOrderAbilitySlot,
                 SubmitMode = submitMode,
             };
+        }
+
+        private void CompileSubmitOrderEntityPayload(
+            SubmitOrderEntityPayloadConfig? cfg,
+            int entityOrderTypeId,
+            string ownerId,
+            string relativePath,
+            out OrderPayloadKind payloadKind,
+            out int abilitySlot)
+        {
+            if (cfg == null)
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{ownerId}' in {relativePath}: submitOrderFromBlackboard.entityOrderPayload is required.");
+            }
+
+            payloadKind = ParseSubmitOrderPayloadKind(
+                RequireString(cfg.Kind, ownerId, relativePath, "submitOrderFromBlackboard.entityOrderPayload.kind"),
+                ownerId,
+                relativePath,
+                "submitOrderFromBlackboard.entityOrderPayload.kind");
+            ValidateOrderTypePayloadKind(entityOrderTypeId, payloadKind, ownerId, relativePath, "submitOrderFromBlackboard.entityOrderPayload.kind");
+
+            switch (payloadKind)
+            {
+                case OrderPayloadKind.CastAbility:
+                    abilitySlot = RequireInt(cfg.AbilitySlot, ownerId, relativePath, "submitOrderFromBlackboard.entityOrderPayload.abilitySlot");
+                    if (abilitySlot < 0)
+                    {
+                        throw new InvalidOperationException(
+                            $"Effect template '{ownerId}' in {relativePath}: submitOrderFromBlackboard.entityOrderPayload.abilitySlot must be non-negative.");
+                    }
+                    return;
+
+                case OrderPayloadKind.TargetEntity:
+                    if (cfg.AbilitySlot.HasValue)
+                    {
+                        throw new InvalidOperationException(
+                            $"Effect template '{ownerId}' in {relativePath}: submitOrderFromBlackboard.entityOrderPayload.abilitySlot is only valid when kind=CastAbility.");
+                    }
+
+                    abilitySlot = 0;
+                    return;
+
+                default:
+                    throw new InvalidOperationException(
+                        $"Effect template '{ownerId}' in {relativePath}: submitOrderFromBlackboard.entityOrderPayload.kind '{payloadKind}' is not supported for entity stored targets.");
+            }
+        }
+
+        private void ValidateOrderTypePayloadKind(
+            int orderTypeId,
+            OrderPayloadKind expected,
+            string ownerId,
+            string relativePath,
+            string fieldName)
+        {
+            if (_orderTypes == null || !_orderTypes.TryGet(orderTypeId, out var orderType))
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{ownerId}' in {relativePath}: {fieldName} requires a registered order type id {orderTypeId}.");
+            }
+
+            if (orderType.PayloadKind != expected)
+            {
+                throw new InvalidOperationException(
+                    $"Effect template '{ownerId}' in {relativePath}: {fieldName} references order type '{orderType.Key}' with payloadKind {orderType.PayloadKind}, expected {expected}.");
+            }
+        }
+
+        private static OrderPayloadKind ParseSubmitOrderPayloadKind(string value, string ownerId, string relativePath, string fieldName)
+        {
+            if (string.Equals(value, "CastAbility", StringComparison.Ordinal)) return OrderPayloadKind.CastAbility;
+            if (string.Equals(value, "TargetEntity", StringComparison.Ordinal)) return OrderPayloadKind.TargetEntity;
+
+            throw new InvalidOperationException(
+                $"Effect template '{ownerId}' in {relativePath}: {fieldName} '{value}' is not supported; expected CastAbility or TargetEntity.");
         }
 
         private int ResolveOrderTypeId(string key, string ownerId, string relativePath, string fieldName)

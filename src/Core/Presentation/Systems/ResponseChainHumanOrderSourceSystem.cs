@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System;
 using Arch.System;
 using Ludots.Core.Config;
+using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Input.Interaction;
@@ -77,17 +78,16 @@ namespace Ludots.Core.Presentation.Systems
 
             if (input.PressedThisFrame(bindings.ResponseChainActivateActionId))
             {
-                var args = default(OrderArgs);
-                args.I0 = _ui.PromptTagId;
-                Submit(new Order
+                var order = new Order
                 {
                     OrderTypeId = _responseChainOrderTypes.ChainActivateEffect,
                     PlayerId = _ui.PlayerId,
                     Actor = _ui.Actor,
                     Target = _ui.Target,
-                    TargetContext = _ui.TargetContext,
-                    Args = args
-                });
+                    TargetContext = _ui.TargetContext
+                };
+                ResponseChainOrderPayload.ConfigureActivateEffect(ref order, _ui.PromptTagId);
+                Submit(order);
             }
         }
 

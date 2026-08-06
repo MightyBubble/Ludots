@@ -95,11 +95,7 @@ namespace Ludots.Tests.GAS
                 chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
                 chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
 
-                var proposalSys = new Ludots.Core.Gameplay.GAS.Systems.EffectProposalProcessingSystem(
-                    world, requests, GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME, new Ludots.Core.Engine.DiscreteClock(), budget: new GasBudget(), templates: templates,
-                    inputRequests: new InputRequestQueue(), chainOrders: chainOrders,
-                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
-                    tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
+                var proposalSys = CreateProposalSystem(world, requests, templates, chainOrders, pipeline, catalog);
                 proposalSys.Update(0.016f);
 
                 ref var attr = ref world.Get<AttributeBuffer>(target);
@@ -147,17 +143,16 @@ namespace Ludots.Tests.GAS
                 req.CallerParams.TryAddFloat(EffectParamKeys.ForceXAttribute, 100.0f);
                 requests.Publish(req);
 
-                var proposalSys = new Ludots.Core.Gameplay.GAS.Systems.EffectProposalProcessingSystem(
+                var chainOrders = new OrderQueue(64, new OrderAdmissionResultBuffer(64, 64));
+                chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
+                chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
+                var proposalSys = CreateProposalSystem(
                     world,
                     requests,
-                    GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
-                    new Ludots.Core.Engine.DiscreteClock(),
-                    budget: new GasBudget(),
-                    templates: templates,
-                    inputRequests: new InputRequestQueue(),
-                    chainOrders: new OrderQueue(64, new OrderAdmissionResultBuffer(64, 64)),
-                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
-                    tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
+                    templates,
+                    chainOrders,
+                    pipeline,
+                    catalog);
                 proposalSys.Update(0.016f);
 
                 ref var attr = ref world.Get<AttributeBuffer>(target);
@@ -214,11 +209,7 @@ namespace Ludots.Tests.GAS
                 chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
                 chainOrders.TryEnqueue(new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass });
 
-                var proposalSys = new Ludots.Core.Gameplay.GAS.Systems.EffectProposalProcessingSystem(
-                    world, requests, GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME, new Ludots.Core.Engine.DiscreteClock(), budget: new GasBudget(), templates: templates,
-                    inputRequests: new InputRequestQueue(), chainOrders: chainOrders,
-                    responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
-                    tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
+                var proposalSys = CreateProposalSystem(world, requests, templates, chainOrders, pipeline, catalog);
                 proposalSys.Update(0.016f);
 
                 // Without CallerParams, force values should be 0 (template doesn't define them in configParams)
@@ -339,6 +330,61 @@ namespace Ludots.Tests.GAS
             That(TryFindEffect(world, templateId, out GameplayEffect effect), Is.True);
             That(effect.TotalTicks, Is.EqualTo(75));
             That(effect.RemainingTicks, Is.EqualTo(75));
+        }
+
+        [Test]
+        public void CallerParams_DurationTicks_MaterializesInstantTemplateForThisCall()
+        {
+            EffectParamKeys.Initialize();
+
+            using var world = World.Create();
+            var templates = new EffectTemplateRegistry();
+            const int templateId = 802;
+            templates.Register(templateId, new EffectTemplateData
+            {
+                PresetType = EffectPresetType.None,
+                LifetimeKind = EffectLifetimeKind.Instant,
+                ClockId = GasClockId.Step,
+                DurationTicks = 0,
+                PeriodTicks = 0,
+                ParticipatesInResponse = false,
+            });
+            FinalizeEffectTemplates(templates, "Test/CallerParams.InstantDurationOverride.json");
+
+            var source = world.Create();
+            var target = world.Create();
+            var requests = new EffectRequestQueue();
+            var req = new EffectRequest
+            {
+                RootId = 1,
+                Source = source,
+                Target = target,
+                TemplateId = templateId,
+                HasCallerParams = true,
+            };
+            req.CallerParams.TryAddInt(EffectParamKeys.DurationTicks, 5);
+            req.CallerParams.TryAddInt(EffectParamKeys.PeriodTicks, 1);
+            requests.Publish(req);
+
+            var proposalSys = new Ludots.Core.Gameplay.GAS.Systems.EffectProposalProcessingSystem(
+                world,
+                requests,
+                GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                new Ludots.Core.Engine.DiscreteClock(),
+                budget: new GasBudget(),
+                templates: templates,
+                inputRequests: new InputRequestQueue(),
+                chainOrders: new OrderQueue(64, new OrderAdmissionResultBuffer(64, 64)),
+                responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
+
+            proposalSys.Update(0.016f);
+
+            That(TryFindEffect(world, templateId, out GameplayEffect effect), Is.True);
+            That(effect.LifetimeKind, Is.EqualTo(EffectLifetimeKind.After));
+            That(effect.TotalTicks, Is.EqualTo(5));
+            That(effect.RemainingTicks, Is.EqualTo(5));
+            That(effect.PeriodTicks, Is.EqualTo(1));
         }
 
         [Test]
@@ -628,7 +674,7 @@ namespace Ludots.Tests.GAS
                     "activePhases": ["OnApply"],
                     "allowedLifetimes": ["Instant"],
                     "defaultPhaseHandlers": {
-                      "OnApply": { "type": "builtin", "id": "ApplyForce" }
+                      "OnApply": { "type": "graph", "id": "Graph.GAS.ApplyForce" }
                     }
                   }
                 ]
@@ -672,7 +718,7 @@ namespace Ludots.Tests.GAS
                     "activePhases": ["OnApply"],
                     "allowedLifetimes": ["Instant"],
                     "defaultPhaseHandlers": {
-                      "OnApply": { "type": "builtin", "id": "ApplyForce" }
+                      "OnApply": { "type": "graph", "id": "Graph.GAS.ApplyForce" }
                     }
                   }
                 ]
@@ -684,17 +730,67 @@ namespace Ludots.Tests.GAS
             ConfigCatalog catalog,
             EffectTemplateRegistry templates)
         {
-            var presetTypes = new PresetTypeRegistry();
-            new PresetTypeLoader(pipeline, presetTypes).Load(catalog);
-            var builtinHandlers = new BuiltinHandlerRegistry();
-            BuiltinHandlers.RegisterAll(builtinHandlers);
+            BuildApplyForceRuntime(pipeline, catalog, out PresetTypeRegistry presetTypes, out GraphProgramRegistry graphPrograms, out BuiltinHandlerRegistry builtinHandlers);
             EffectExecutionPlanCompiler.FinalizeAll(
                 templates,
                 presetTypes,
                 builtinHandlers,
-                new GraphProgramRegistry(),
+                graphPrograms,
                 GasGraphOpHandlerTable.Instance,
                 "GAS/effects.json");
+        }
+
+        private static EffectProposalProcessingSystem CreateProposalSystem(
+            World world,
+            EffectRequestQueue requests,
+            EffectTemplateRegistry templates,
+            OrderQueue chainOrders,
+            ConfigPipeline pipeline,
+            ConfigCatalog catalog,
+            TagOps? tagOps = null)
+        {
+            BuildApplyForceRuntime(pipeline, catalog, out PresetTypeRegistry presetTypes, out GraphProgramRegistry graphPrograms, out BuiltinHandlerRegistry builtinHandlers);
+            GasTestPhaseRuntime.Create(
+                world,
+                templates,
+                requests,
+                out EffectPhaseExecutor phaseExecutor,
+                out GasGraphRuntimeApi graphApi,
+                graphPrograms: graphPrograms,
+                presetTypes: presetTypes,
+                builtinHandlers: builtinHandlers,
+                tagOps: tagOps);
+            return new EffectProposalProcessingSystem(
+                world,
+                requests,
+                GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                new DiscreteClock(),
+                budget: new GasBudget(),
+                templates: templates,
+                inputRequests: new InputRequestQueue(),
+                chainOrders: chainOrders,
+                responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                phaseExecutor: phaseExecutor,
+                graphApi: graphApi,
+                tagOps: tagOps ?? new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
+        }
+
+        private static void BuildApplyForceRuntime(
+            ConfigPipeline pipeline,
+            ConfigCatalog catalog,
+            out PresetTypeRegistry presetTypes,
+            out GraphProgramRegistry graphPrograms,
+            out BuiltinHandlerRegistry builtinHandlers)
+        {
+            graphPrograms = new GraphProgramRegistry();
+            GasTestPhaseRuntime.EnsureBuiltinGraph(
+                graphPrograms,
+                "Graph.GAS.ApplyForce",
+                BuiltinHandlerId.ApplyForce);
+            presetTypes = new PresetTypeRegistry();
+            new PresetTypeLoader(pipeline, presetTypes).Load(catalog);
+            builtinHandlers = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(builtinHandlers);
         }
 
         private static void FinalizeEffectTemplates(EffectTemplateRegistry templates, string sourceName)

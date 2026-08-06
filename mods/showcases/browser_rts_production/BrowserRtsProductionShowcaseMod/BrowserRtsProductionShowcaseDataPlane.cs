@@ -900,7 +900,7 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
             return false;
         }
 
-        if (definition.HasOnActivateEffects || definition.HasToggleSpec)
+        if (definition.HasToggleSpec)
         {
             return true;
         }

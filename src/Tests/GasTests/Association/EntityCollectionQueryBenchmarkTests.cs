@@ -271,7 +271,7 @@ namespace Ludots.Tests.GAS
                 ActionId = actionId,
                 Trigger = InputTriggerType.PressedThisFrame,
                 OrderTypeKey = "castAbility",
-                ArgsTemplate = new OrderArgsTemplate { I0 = slotIndex },
+                OrderPayload = InputOrderPayloadTemplate.CastAbility(slotIndex),
                 RequireTarget = false,
                 TargetType = OrderTargetType.None,
                 IsSkillMapping = true

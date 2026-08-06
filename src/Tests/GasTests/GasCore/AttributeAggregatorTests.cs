@@ -487,9 +487,10 @@ namespace Ludots.Tests.GAS
             EffectPresetType presetType)
         {
             var presetTypes = new PresetTypeRegistry();
+            var graphPrograms = new GraphProgramRegistry();
             var definition = new PresetTypeDefinition { Type = presetType };
             definition.DefaultPhaseHandlers[EffectPhaseId.OnApply] =
-                PhaseHandler.Builtin(BuiltinHandlerId.ApplyModifiers);
+                GasTestGraphPrograms.BuiltinGraph(graphPrograms, 45_001, BuiltinHandlerId.ApplyModifiers);
             presetTypes.Register(in definition);
 
             var builtinHandlers = new BuiltinHandlerRegistry();
@@ -498,7 +499,7 @@ namespace Ludots.Tests.GAS
                 templates,
                 presetTypes,
                 builtinHandlers,
-                new GraphProgramRegistry(),
+                graphPrograms,
                 $"Test/AttributeAggregatorTests.{presetType}.json");
         }
 

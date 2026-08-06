@@ -673,8 +673,11 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 ClearQueueOnActivate = true,
                 SpatialBlackboardKey = missingComponent == 0 ? 3 : -1,
                 EntityBlackboardKey = missingComponent == 1 ? 4 : -1,
-                PayloadKind = missingComponent == 2 ? OrderPayloadKind.CastAbility : OrderPayloadKind.None,
             };
+            if (missingComponent == 2)
+            {
+                config.UseCastAbilityPayload();
+            }
             var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(config);
             Entity actor = world.Create(OrderBuffer.CreateEmpty());
@@ -1062,6 +1065,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             That(firstBuffer.HasActive, Is.True);
             That(firstBuffer.ActiveOrder.Order.OrderId, Is.EqualTo(active.OrderId));
 
+            terminalResults.Release(701);
             terminalResults.Clear();
             Assert.DoesNotThrow(() => intake.Update(0f));
 
@@ -1564,10 +1568,9 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             {
                 Key = "castAbility",
                 OrderTypeId = 42,
-                PayloadKind = OrderPayloadKind.CastAbility,
                 SpatialBlackboardKey = -1,
                 EntityBlackboardKey = -1,
-            });
+            }.UseCastAbilityPayload());
             var spec = new ActionOrderSpec(AiOrderPayloadKind.CastAbility, orderTypeId: 42, submitMode: OrderSubmitMode.Immediate);
             var ints = new BlackboardIntBuffer();
             var entities = new BlackboardEntityBuffer();
@@ -1936,8 +1939,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 ClearQueueOnActivate = false,
                 SpatialBlackboardKey = -1,
                 EntityBlackboardKey = OrderBlackboardKeys.Cast_TargetEntity,
-                PayloadKind = OrderPayloadKind.CastAbility,
-            });
+            }.UseCastAbilityPayload());
 
             var orderRules = new OrderRuleRegistry();
             var clock = new DiscreteClock();
@@ -2181,10 +2183,9 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             orderTypes.Register(new OrderTypeConfig
             {
                 OrderTypeId = castAbilityOrderTypeId,
-                PayloadKind = OrderPayloadKind.CastAbility,
                 EntityBlackboardKey = OrderBlackboardKeys.Cast_TargetEntity,
                 SpatialBlackboardKey = -1,
-            });
+            }.UseCastAbilityPayload());
             var effectRequests = new EffectRequestQueue();
             var presentationEvents = new GasPresentationEventBuffer(8);
             var system = new AbilityExecSystem(
@@ -2254,10 +2255,9 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             orderTypes.Register(new OrderTypeConfig
             {
                 OrderTypeId = castAbilityOrderTypeId,
-                PayloadKind = OrderPayloadKind.CastAbility,
                 EntityBlackboardKey = OrderBlackboardKeys.Cast_TargetEntity,
                 SpatialBlackboardKey = -1,
-            });
+            }.UseCastAbilityPayload());
             var presentationEvents = new GasPresentationEventBuffer(8);
             var system = new AbilityExecSystem(
                 world,
@@ -2376,10 +2376,9 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             orderTypes.Register(new OrderTypeConfig
             {
                 OrderTypeId = castAbilityOrderTypeId,
-                PayloadKind = OrderPayloadKind.CastAbility,
                 EntityBlackboardKey = -1,
                 SpatialBlackboardKey = -1,
-            });
+            }.UseCastAbilityPayload());
             var presentationEvents = new GasPresentationEventBuffer(8);
             var system = new AbilityExecSystem(
                 world,
@@ -2495,10 +2494,9 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             orderTypes.Register(new OrderTypeConfig
             {
                 OrderTypeId = castAbilityOrderTypeId,
-                PayloadKind = OrderPayloadKind.CastAbility,
                 EntityBlackboardKey = -1,
                 SpatialBlackboardKey = -1,
-            });
+            }.UseCastAbilityPayload());
 
             var system = new AbilityExecSystem(
                 world,
@@ -2573,10 +2571,9 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             orderTypes.Register(new OrderTypeConfig
             {
                 OrderTypeId = castAbilityOrderTypeId,
-                PayloadKind = OrderPayloadKind.CastAbility,
                 EntityBlackboardKey = -1,
                 SpatialBlackboardKey = -1,
-            });
+            }.UseCastAbilityPayload());
             var system = new AbilityExecSystem(
                 world,
                 new DiscreteClock(),
@@ -2649,10 +2646,9 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             orderTypes.Register(new OrderTypeConfig
             {
                 OrderTypeId = castAbilityOrderTypeId,
-                PayloadKind = OrderPayloadKind.CastAbility,
                 EntityBlackboardKey = -1,
                 SpatialBlackboardKey = -1,
-            });
+            }.UseCastAbilityPayload());
             var presentationEvents = new GasPresentationEventBuffer(capacity: 32);
             var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
             EffectRequestQueue missingEffectRequests = null!;
@@ -2738,10 +2734,9 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             orderTypes.Register(new OrderTypeConfig
             {
                 OrderTypeId = castAbilityOrderTypeId,
-                PayloadKind = OrderPayloadKind.CastAbility,
                 EntityBlackboardKey = -1,
                 SpatialBlackboardKey = -1,
-            });
+            }.UseCastAbilityPayload());
             var effectRequests = new EffectRequestQueue();
             while (effectRequests.AvailableCapacity > 0)
             {
@@ -2835,8 +2830,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 OrderTypeId = castAbilityOrderTypeId,
                 AllowQueuedMode = false,
                 ClearQueueOnActivate = true,
-                PayloadKind = OrderPayloadKind.CastAbility,
-            });
+            }.UseCastAbilityPayload());
             var presentationEvents = new GasPresentationEventBuffer(8);
             var system = new AbilityExecSystem(
                 world,
@@ -2921,8 +2915,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 OrderTypeId = castAbilityOrderTypeId,
                 AllowQueuedMode = false,
                 ClearQueueOnActivate = true,
-                PayloadKind = OrderPayloadKind.CastAbility,
-            });
+            }.UseCastAbilityPayload());
 
             var presentationEvents = new GasPresentationEventBuffer(8);
             var graphApi = new GasGraphRuntimeApi(world, spatialQueries: null, coords: null, eventBus: null);

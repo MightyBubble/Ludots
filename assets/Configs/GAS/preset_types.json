@@ -5,7 +5,7 @@
     "activePhases": ["OnApply"],
     "allowedLifetimes": ["Instant"],
     "defaultPhaseHandlers": {
-      "OnApply": { "type": "builtin", "id": "ApplyModifiers" }
+      "OnApply": { "type": "graph", "id": "Graph.GAS.ApplyModifiers" }
     }
   },
   {
@@ -14,7 +14,7 @@
     "activePhases": ["OnApply"],
     "allowedLifetimes": ["Instant"],
     "defaultPhaseHandlers": {
-      "OnApply": { "type": "builtin", "id": "ApplyModifiers" }
+      "OnApply": { "type": "graph", "id": "Graph.GAS.ApplyModifiers" }
     }
   },
   {
@@ -23,7 +23,7 @@
     "activePhases": ["OnApply"],
     "allowedLifetimes": ["After", "Infinite"],
     "defaultPhaseHandlers": {
-      "OnApply": { "type": "builtin", "id": "ApplyModifiers" }
+      "OnApply": { "type": "graph", "id": "Graph.GAS.ApplyModifiers" }
     }
   },
   {
@@ -32,8 +32,8 @@
     "activePhases": ["OnApply", "OnPeriod"],
     "allowedLifetimes": ["After"],
     "defaultPhaseHandlers": {
-      "OnApply": { "type": "builtin", "id": "ApplyModifiers" },
-      "OnPeriod": { "type": "builtin", "id": "ApplyModifiers" }
+      "OnApply": { "type": "graph", "id": "Graph.GAS.ApplyModifiers" },
+      "OnPeriod": { "type": "graph", "id": "Graph.GAS.ApplyModifiers" }
     }
   },
   {
@@ -42,8 +42,8 @@
     "activePhases": ["OnApply", "OnPeriod"],
     "allowedLifetimes": ["After"],
     "defaultPhaseHandlers": {
-      "OnApply": { "type": "builtin", "id": "ApplyModifiers" },
-      "OnPeriod": { "type": "builtin", "id": "ApplyModifiers" }
+      "OnApply": { "type": "graph", "id": "Graph.GAS.ApplyModifiers" },
+      "OnPeriod": { "type": "graph", "id": "Graph.GAS.ApplyModifiers" }
     }
   },
   {
@@ -52,7 +52,7 @@
     "activePhases": ["OnApply"],
     "allowedLifetimes": ["Instant"],
     "defaultPhaseHandlers": {
-      "OnApply": { "type": "builtin", "id": "ApplyForce" }
+      "OnApply": { "type": "graph", "id": "Graph.GAS.ApplyForce" }
     }
   },
   {
@@ -61,8 +61,8 @@
     "activePhases": ["OnResolve", "OnApply"],
     "allowedLifetimes": ["Instant"],
     "defaultPhaseHandlers": {
-      "OnResolve": { "type": "builtin", "id": "SpatialQuery" },
-      "OnApply": { "type": "builtin", "id": "DispatchPayload" }
+      "OnResolve": { "type": "graph", "id": "Graph.GAS.SpatialQuery" },
+      "OnApply": { "type": "graph", "id": "Graph.GAS.DispatchPayload" }
     }
   },
   {
@@ -71,7 +71,7 @@
     "activePhases": ["OnPeriod"],
     "allowedLifetimes": ["After"],
     "defaultPhaseHandlers": {
-      "OnPeriod": { "type": "builtin", "id": "ReResolveAndDispatch" }
+      "OnPeriod": { "type": "graph", "id": "Graph.GAS.ReResolveAndDispatch" }
     }
   },
   {
@@ -80,7 +80,7 @@
     "activePhases": ["OnApply"],
     "allowedLifetimes": ["Instant"],
     "defaultPhaseHandlers": {
-      "OnApply": { "type": "builtin", "id": "CreateProjectile" }
+      "OnApply": { "type": "graph", "id": "Graph.GAS.CreateProjectile" }
     }
   },
   {
@@ -89,7 +89,7 @@
     "activePhases": ["OnApply"],
     "allowedLifetimes": ["Instant"],
     "defaultPhaseHandlers": {
-      "OnApply": { "type": "builtin", "id": "CreateUnit" }
+      "OnApply": { "type": "graph", "id": "Graph.GAS.CreateUnit" }
     }
   },
   {
@@ -98,7 +98,7 @@
     "activePhases": ["OnApply"],
     "allowedLifetimes": ["Instant"],
     "defaultPhaseHandlers": {
-      "OnApply": { "type": "builtin", "id": "ApplyDisplacement" }
+      "OnApply": { "type": "graph", "id": "Graph.GAS.ApplyDisplacement" }
     }
   },
   {
@@ -107,7 +107,7 @@
     "activePhases": ["OnApply"],
     "allowedLifetimes": ["Instant"],
     "defaultPhaseHandlers": {
-      "OnApply": { "type": "builtin", "id": "ApplyRelation" }
+      "OnApply": { "type": "graph", "id": "Graph.GAS.ApplyRelation" }
     }
   },
   {
@@ -116,7 +116,7 @@
     "activePhases": ["OnApply"],
     "allowedLifetimes": ["Instant"],
     "defaultPhaseHandlers": {
-      "OnApply": { "type": "builtin", "id": "ExecuteExchange" }
+      "OnApply": { "type": "graph", "id": "Graph.GAS.ExecuteExchange" }
     }
   },
   {
@@ -125,7 +125,7 @@
     "activePhases": ["OnApply"],
     "allowedLifetimes": ["Instant"],
     "defaultPhaseHandlers": {
-      "OnApply": { "type": "builtin", "id": "CompleteProgression" }
+      "OnApply": { "type": "graph", "id": "Graph.GAS.CompleteProgression" }
     }
   },
   {
@@ -134,7 +134,7 @@
     "activePhases": ["OnApply"],
     "allowedLifetimes": ["Instant"],
     "defaultPhaseHandlers": {
-      "OnApply": { "type": "builtin", "id": "SubmitOrderFromBlackboard" }
+      "OnApply": { "type": "graph", "id": "Graph.GAS.SubmitOrderFromBlackboard" }
     }
   },
   {

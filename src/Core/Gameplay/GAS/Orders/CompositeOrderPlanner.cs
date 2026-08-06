@@ -245,13 +245,13 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         private MoveThenCastPlanResult ResolveCastRangeCm(in Order order, out float rangeCm)
         {
             rangeCm = 0f;
-            if (order.Args.I0 < 0 ||
+            if (!OrderBuilder.TryGetCastAbilitySlotIndex(in order, out int abilitySlotIndex) ||
                 !_world.Has<AbilityStateBuffer>(order.Actor))
             {
                 return MoveThenCastPlanResult.Rejected(OrderSubmitResult.RejectedInvalidActor);
             }
 
-            if (!AbilitySlotResolver.TryResolve(_world, order.Actor, order.Args.I0, out AbilitySlotState slot))
+            if (!AbilitySlotResolver.TryResolve(_world, order.Actor, abilitySlotIndex, out AbilitySlotState slot))
             {
                 return MoveThenCastPlanResult.Rejected(OrderSubmitResult.RejectedInvalidActor);
             }
@@ -263,6 +263,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             }
 
             if (!definition.HasTargeting ||
+                !definition.Targeting.AllowMoveChase ||
                 definition.Targeting.CastRangeCm <= 0f)
             {
                 return MoveThenCastPlanResult.NotApplicable();

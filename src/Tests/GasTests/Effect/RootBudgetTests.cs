@@ -20,6 +20,7 @@ namespace Ludots.Tests.GAS
     {
         private const int TestSnapshotCapacity = 64;
         private const int TestFanOutCommandCapacity = 64;
+        private const int ApplyModifiersGraphId = 3_001;
 
         private static TagOps CreateTagOps() =>
             new(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
@@ -172,7 +173,8 @@ namespace Ludots.Tests.GAS
                     PresetType = EffectPresetType.None,
                     LifetimeKind = EffectLifetimeKind.Instant,
                 });
-                _ = FinalizeTemplates(templates);
+                EffectPhaseExecutor phaseExecutor = FinalizeTemplates(templates);
+                TagOps tagOps = CreateTagOps();
                 var proposal = new EffectProposalProcessingSystem(
                     world,
                     requests,
@@ -181,7 +183,9 @@ namespace Ludots.Tests.GAS
                     budget: budget,
                     templates: templates,
                     responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
-                    tagOps: CreateTagOps());
+                    phaseExecutor: phaseExecutor,
+                    graphApi: new GasGraphRuntimeApi(world, tagOps: tagOps),
+                    tagOps: tagOps);
 
                 var source = world.Create();
                 var target = world.Create(new DirtyFlags());
@@ -235,12 +239,13 @@ namespace Ludots.Tests.GAS
                 ActivePhases = PhaseFlags.OnApply,
                 AllowedLifetimes = LifetimeFlags.InstantOnly,
             };
-            preset.DefaultPhaseHandlers[EffectPhaseId.OnApply] = PhaseHandler.Builtin(BuiltinHandlerId.ApplyModifiers);
+            preset.DefaultPhaseHandlers[EffectPhaseId.OnApply] = PhaseHandler.Graph(ApplyModifiersGraphId);
             presetTypes.Register(in preset);
 
             var builtinHandlers = new BuiltinHandlerRegistry();
             BuiltinHandlers.RegisterAll(builtinHandlers);
             var graphPrograms = new GraphProgramRegistry();
+            GasTestGraphPrograms.RegisterBuiltinGraph(graphPrograms, ApplyModifiersGraphId, BuiltinHandlerId.ApplyModifiers);
             var phaseExecutor = FinalizeTemplates(
                 templates,
                 presetTypes,
@@ -311,7 +316,8 @@ namespace Ludots.Tests.GAS
                 ComponentFlags.ModifierParams,
                 PhaseFlags.OnApply,
                 LifetimeFlags.InstantOnly);
-            _ = FinalizeTemplates(templates, in instantDamagePreset);
+            EffectPhaseExecutor phaseExecutor = FinalizeTemplates(templates, in instantDamagePreset);
+            TagOps tagOps = CreateTagOps();
 
             var proposal = new EffectProposalProcessingSystem(
                 world,
@@ -321,7 +327,9 @@ namespace Ludots.Tests.GAS
                 templates: templates,
                 responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
                 presentationEvents: presentationEvents,
-                tagOps: CreateTagOps());
+                phaseExecutor: phaseExecutor,
+                graphApi: new GasGraphRuntimeApi(world, tagOps: tagOps),
+                tagOps: tagOps);
 
             Entity source = world.Create();
             Entity target = world.Create(new AttributeBuffer(), new DirtyFlags());
@@ -373,7 +381,8 @@ namespace Ludots.Tests.GAS
                 ComponentFlags.ModifierParams,
                 PhaseFlags.OnApply,
                 LifetimeFlags.InstantOnly);
-            _ = FinalizeTemplates(templates, in instantDamagePreset);
+            EffectPhaseExecutor phaseExecutor = FinalizeTemplates(templates, in instantDamagePreset);
+            TagOps tagOps = CreateTagOps();
 
             var loop = new EffectProcessingLoopSystem(
                 world,
@@ -390,7 +399,9 @@ namespace Ludots.Tests.GAS
                 orderRequests: new OrderRequestQueue(),
                 responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
                 presentationEvents: presentationEvents,
-                tagOps: CreateTagOps());
+                phaseExecutor: phaseExecutor,
+                graphApi: new GasGraphRuntimeApi(world, tagOps: tagOps),
+                tagOps: tagOps);
 
             Entity source = world.Create();
             Entity target = world.Create(new AttributeBuffer(), new DirtyFlags());
@@ -725,7 +736,9 @@ namespace Ludots.Tests.GAS
         {
             var builtinHandlers = new BuiltinHandlerRegistry();
             BuiltinHandlers.RegisterAll(builtinHandlers);
-            return FinalizeTemplates(templates, presetTypes, builtinHandlers, new GraphProgramRegistry());
+            var graphPrograms = new GraphProgramRegistry();
+            GasTestGraphPrograms.RegisterBuiltinGraph(graphPrograms, ApplyModifiersGraphId, BuiltinHandlerId.ApplyModifiers);
+            return FinalizeTemplates(templates, presetTypes, builtinHandlers, graphPrograms);
         }
 
         private static EffectPhaseExecutor FinalizeTemplates(
@@ -764,11 +777,11 @@ namespace Ludots.Tests.GAS
             };
             if (activePhases.Has(EffectPhaseId.OnApply))
             {
-                preset.DefaultPhaseHandlers[EffectPhaseId.OnApply] = PhaseHandler.Builtin(BuiltinHandlerId.ApplyModifiers);
+                preset.DefaultPhaseHandlers[EffectPhaseId.OnApply] = PhaseHandler.Graph(ApplyModifiersGraphId);
             }
             if (activePhases.Has(EffectPhaseId.OnPeriod))
             {
-                preset.DefaultPhaseHandlers[EffectPhaseId.OnPeriod] = PhaseHandler.Builtin(BuiltinHandlerId.ApplyModifiers);
+                preset.DefaultPhaseHandlers[EffectPhaseId.OnPeriod] = PhaseHandler.Graph(ApplyModifiersGraphId);
             }
             return preset;
         }

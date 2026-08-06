@@ -24,15 +24,6 @@ namespace Ludots.Tests.GAS
         // ════════════════════════════════════════════════════════════════════
 
         [Test]
-        public void PhaseHandler_Builtin_CreatesCorrectKindAndId()
-        {
-            var h = PhaseHandler.Builtin(BuiltinHandlerId.ApplyModifiers);
-            That(h.Kind, Is.EqualTo(PhaseHandlerKind.Builtin));
-            That(h.HandlerId, Is.EqualTo((int)BuiltinHandlerId.ApplyModifiers));
-            That(h.IsValid, Is.True);
-        }
-
-        [Test]
         public void PhaseHandler_Graph_CreatesCorrectKindAndId()
         {
             var h = PhaseHandler.Graph(42);
@@ -53,21 +44,21 @@ namespace Ludots.Tests.GAS
         public unsafe void PhaseHandlerMap_SetAndGet_RoundTrips()
         {
             var map = new PhaseHandlerMap();
-            map[EffectPhaseId.OnApply] = PhaseHandler.Builtin(BuiltinHandlerId.ApplyModifiers);
+            map[EffectPhaseId.OnApply] = PhaseHandler.Graph(77);
             map[EffectPhaseId.OnPeriod] = PhaseHandler.Graph(99);
-            map[EffectPhaseId.OnResolve] = PhaseHandler.Builtin(BuiltinHandlerId.SpatialQuery);
+            map[EffectPhaseId.OnResolve] = PhaseHandler.Graph(101);
 
             var hApply = map[EffectPhaseId.OnApply];
-            That(hApply.Kind, Is.EqualTo(PhaseHandlerKind.Builtin));
-            That(hApply.HandlerId, Is.EqualTo((int)BuiltinHandlerId.ApplyModifiers));
+            That(hApply.Kind, Is.EqualTo(PhaseHandlerKind.Graph));
+            That(hApply.HandlerId, Is.EqualTo(77));
 
             var hPeriod = map[EffectPhaseId.OnPeriod];
             That(hPeriod.Kind, Is.EqualTo(PhaseHandlerKind.Graph));
             That(hPeriod.HandlerId, Is.EqualTo(99));
 
             var hResolve = map[EffectPhaseId.OnResolve];
-            That(hResolve.Kind, Is.EqualTo(PhaseHandlerKind.Builtin));
-            That(hResolve.HandlerId, Is.EqualTo((int)BuiltinHandlerId.SpatialQuery));
+            That(hResolve.Kind, Is.EqualTo(PhaseHandlerKind.Graph));
+            That(hResolve.HandlerId, Is.EqualTo(101));
         }
 
         [Test]
@@ -85,13 +76,13 @@ namespace Ludots.Tests.GAS
             var map = new PhaseHandlerMap();
             for (int i = 0; i < EffectPhaseConstants.PhaseCount; i++)
             {
-                map[(EffectPhaseId)i] = PhaseHandler.Builtin((BuiltinHandlerId)(i + 1));
+                map[(EffectPhaseId)i] = PhaseHandler.Graph(i + 1);
             }
 
             for (int i = 0; i < EffectPhaseConstants.PhaseCount; i++)
             {
                 var h = map[(EffectPhaseId)i];
-                That(h.Kind, Is.EqualTo(PhaseHandlerKind.Builtin), $"Phase {(EffectPhaseId)i}");
+                That(h.Kind, Is.EqualTo(PhaseHandlerKind.Graph), $"Phase {(EffectPhaseId)i}");
                 That(h.HandlerId, Is.EqualTo(i + 1), $"Phase {(EffectPhaseId)i}");
             }
         }
@@ -369,8 +360,12 @@ namespace Ludots.Tests.GAS
         // ════════════════════════════════════════════════════════════════════
 
         [Test]
-        public void PresetTypeLoader_LoadsSearch_WithCorrectHandlers()
+        public void PresetTypeLoader_LoadsSearch_WithGraphHandlers()
         {
+            GraphIdRegistry.Clear();
+            int resolveGraphId = GraphIdRegistry.Register("Graph.GAS.SpatialQuery");
+            int applyGraphId = GraphIdRegistry.Register("Graph.GAS.DispatchPayload");
+
             const string json = @"[
               {
                 ""id"": ""Search"",
@@ -378,8 +373,8 @@ namespace Ludots.Tests.GAS
                 ""activePhases"": [""OnPropose"", ""OnResolve"", ""OnHit"", ""OnApply""],
                 ""allowedLifetimes"": [""Instant""],
                 ""defaultPhaseHandlers"": {
-                  ""OnResolve"": { ""type"": ""builtin"", ""id"": ""SpatialQuery"" },
-                  ""OnApply"": { ""type"": ""builtin"", ""id"": ""DispatchPayload"" }
+                  ""OnResolve"": { ""type"": ""graph"", ""id"": ""Graph.GAS.SpatialQuery"" },
+                  ""OnApply"": { ""type"": ""graph"", ""id"": ""Graph.GAS.DispatchPayload"" }
                 }
               }
             ]";
@@ -403,12 +398,33 @@ namespace Ludots.Tests.GAS
             That(def.AllowsLifetime(EffectLifetimeKind.After), Is.False);
 
             var hResolve = def.DefaultPhaseHandlers[EffectPhaseId.OnResolve];
-            That(hResolve.Kind, Is.EqualTo(PhaseHandlerKind.Builtin));
-            That(hResolve.HandlerId, Is.EqualTo((int)BuiltinHandlerId.SpatialQuery));
+            That(hResolve.Kind, Is.EqualTo(PhaseHandlerKind.Graph));
+            That(hResolve.HandlerId, Is.EqualTo(resolveGraphId));
 
             var hApply = def.DefaultPhaseHandlers[EffectPhaseId.OnApply];
-            That(hApply.Kind, Is.EqualTo(PhaseHandlerKind.Builtin));
-            That(hApply.HandlerId, Is.EqualTo((int)BuiltinHandlerId.DispatchPayload));
+            That(hApply.Kind, Is.EqualTo(PhaseHandlerKind.Graph));
+            That(hApply.HandlerId, Is.EqualTo(applyGraphId));
+        }
+
+        [Test]
+        public void PresetTypeLoader_BuiltinHandler_IsRejectedAtLoadTime()
+        {
+            const string json = @"[
+              {
+                ""id"": ""InstantDamage"",
+                ""components"": [""ModifierParams""],
+                ""activePhases"": [""OnApply""],
+                ""allowedLifetimes"": [""Instant""],
+                ""defaultPhaseHandlers"": {
+                  ""OnApply"": { ""type"": ""builtin"", ""id"": ""ApplyModifiers"" }
+                }
+              }
+            ]";
+
+            var reg = new PresetTypeRegistry();
+            InvalidOperationException error = Throws<InvalidOperationException>(() => PresetTypeLoader.LoadFromJson(reg, json))!;
+            That(error.Message, Does.Contain("unsupported type 'builtin'"));
+            That(error.Message, Does.Contain("must reference Graph programs"));
         }
 
         [Test]
@@ -696,7 +712,12 @@ namespace Ludots.Tests.GAS
             string json = System.IO.File.ReadAllText(
                 System.IO.Path.Combine(FindRepoRoot(), "assets", "Configs", "GAS", "preset_types.json"));
             GraphIdRegistry.Clear();
-            int lifecycleGraphId = GraphIdRegistry.Register("Graph.Lifecycle.DeployConsumeSource");
+            RegisterCorePresetGraphs(
+                out int applyForceGraphId,
+                out int periodSearchGraphId,
+                out int relationGraphId,
+                out int exchangeGraphId,
+                out int lifecycleGraphId);
 
             var reg = new PresetTypeRegistry();
             PresetTypeLoader.LoadFromJson(reg, json);
@@ -720,26 +741,26 @@ namespace Ludots.Tests.GAS
             That(reg.IsRegistered(EffectPresetType.Exchange), Is.True);
             That(reg.IsRegistered(EffectPresetType.DeployConsumeSource), Is.True);
 
-            // Spot-check ApplyForce2D builtin handler
+            // Spot-check ApplyForce2D graph handler
             ref readonly var af = ref reg.Get(EffectPresetType.ApplyForce2D);
             var hApply = af.DefaultPhaseHandlers[EffectPhaseId.OnApply];
-            That(hApply.Kind, Is.EqualTo(PhaseHandlerKind.Builtin));
-            That(hApply.HandlerId, Is.EqualTo((int)BuiltinHandlerId.ApplyForce));
+            That(hApply.Kind, Is.EqualTo(PhaseHandlerKind.Graph));
+            That(hApply.HandlerId, Is.EqualTo(applyForceGraphId));
 
             // Spot-check PeriodicSearch — JSON only defines OnPeriod handler
             ref readonly var ps = ref reg.Get(EffectPresetType.PeriodicSearch);
             That(ps.DefaultPhaseHandlers[EffectPhaseId.OnPeriod].IsValid, Is.True);
             That(ps.DefaultPhaseHandlers[EffectPhaseId.OnPeriod].HandlerId,
-                Is.EqualTo((int)BuiltinHandlerId.ReResolveAndDispatch));
+                Is.EqualTo(periodSearchGraphId));
 
             ref readonly var relation = ref reg.Get(EffectPresetType.Relation);
             That(relation.HasComponent(ComponentFlags.RelationParams), Is.True);
             That(relation.DefaultPhaseHandlers[EffectPhaseId.OnApply].HandlerId,
-                Is.EqualTo((int)BuiltinHandlerId.ApplyRelation));
+                Is.EqualTo(relationGraphId));
 
             ref readonly var exchange = ref reg.Get(EffectPresetType.Exchange);
             That(exchange.DefaultPhaseHandlers[EffectPhaseId.OnApply].HandlerId,
-                Is.EqualTo((int)BuiltinHandlerId.ExecuteExchange));
+                Is.EqualTo(exchangeGraphId));
 
             ref readonly var deploy = ref reg.Get(EffectPresetType.DeployConsumeSource);
             That(deploy.DefaultPhaseHandlers[EffectPhaseId.OnApply].Kind, Is.EqualTo(PhaseHandlerKind.Graph));
@@ -761,6 +782,28 @@ namespace Ludots.Tests.GAS
                 dir = System.IO.Directory.GetParent(dir)?.FullName;
             }
             throw new InvalidOperationException("Cannot find repo root (looking for assets/Configs/GAS/preset_types.json).");
+        }
+
+        private static void RegisterCorePresetGraphs(
+            out int applyForceGraphId,
+            out int periodSearchGraphId,
+            out int relationGraphId,
+            out int exchangeGraphId,
+            out int lifecycleGraphId)
+        {
+            GraphIdRegistry.Register("Graph.GAS.ApplyModifiers");
+            applyForceGraphId = GraphIdRegistry.Register("Graph.GAS.ApplyForce");
+            GraphIdRegistry.Register("Graph.GAS.SpatialQuery");
+            GraphIdRegistry.Register("Graph.GAS.DispatchPayload");
+            periodSearchGraphId = GraphIdRegistry.Register("Graph.GAS.ReResolveAndDispatch");
+            GraphIdRegistry.Register("Graph.GAS.CreateProjectile");
+            GraphIdRegistry.Register("Graph.GAS.CreateUnit");
+            GraphIdRegistry.Register("Graph.GAS.ApplyDisplacement");
+            relationGraphId = GraphIdRegistry.Register("Graph.GAS.ApplyRelation");
+            exchangeGraphId = GraphIdRegistry.Register("Graph.GAS.ExecuteExchange");
+            GraphIdRegistry.Register("Graph.GAS.CompleteProgression");
+            GraphIdRegistry.Register("Graph.GAS.SubmitOrderFromBlackboard");
+            lifecycleGraphId = GraphIdRegistry.Register("Graph.Lifecycle.DeployConsumeSource");
         }
     }
 }

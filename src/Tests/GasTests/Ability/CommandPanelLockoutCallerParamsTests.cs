@@ -74,6 +74,7 @@ namespace Ludots.Tests.GAS
             FinalizeEffectTemplates(effectTemplates, "CommandPanelLockoutCallerParamsTests.LockoutEffect");
 
             const int abilityId = 1001;
+            const int unrelatedAbilityId = 1003;
             var execSpec = default(AbilityExecSpec);
             execSpec.SetItem(
                 0,
@@ -105,9 +106,22 @@ namespace Ludots.Tests.GAS
                 }
             };
             abilityDefinitions.Register(abilityId, in ability, "CommandPanelLockoutCallerParamsTests");
+            var unrelatedAbility = new AbilityDefinition
+            {
+                HasActivationBlockTags = true,
+                ActivationBlockTags = blockTags,
+                HasPresentation = true,
+                Presentation = new AbilityPresentationConfig
+                {
+                    DisplayName = "Other Lockout Test",
+                    HintText = "Shares block tags but did not create this effect"
+                }
+            };
+            abilityDefinitions.Register(unrelatedAbilityId, in unrelatedAbility, "CommandPanelLockoutCallerParamsTests");
 
             var abilityState = default(AbilityStateBuffer);
             abilityState.AddAbility(abilityId);
+            abilityState.AddAbility(unrelatedAbilityId);
             Entity actor = world.Create(
                 abilityState,
                 new GameplayTagContainer(),
@@ -163,19 +177,24 @@ namespace Ludots.Tests.GAS
             applicationSystem.Update(0f);
             Assert.That(world.Has<ActiveEffectContainer>(actor), Is.True);
             Assert.That(world.Get<GameplayTagContainer>(actor).HasTag(lockoutTagId), Is.True);
+            Entity activeLockoutEffect = world.Get<ActiveEffectContainer>(actor).GetEntity(0);
+            Assert.That(world.Has<EffectSourceAbilityLockout>(activeLockoutEffect), Is.True);
+            Assert.That(world.Get<EffectSourceAbilityLockout>(activeLockoutEffect).AbilityId, Is.EqualTo(abilityId));
 
             lifetimeSystem.Update(0f);
             clock.Advance(ClockDomainId.Step, 30);
             lifetimeSystem.Update(0f);
 
             var source = CreateGasAbilitySource(engine);
-            var slots = new EntityCommandPanelSlotView[1];
+            var slots = new EntityCommandPanelSlotView[2];
             var context = new EntityCommandPanelSourceContext(actor, "gas.ability-slots", string.Empty);
             int copied = EntityCommandPanelSourceDispatch.CopySlots(source, in context, groupIndex: 0, slots);
 
-            Assert.That(copied, Is.EqualTo(1));
+            Assert.That(copied, Is.EqualTo(2));
             Assert.That(slots[0].AbilityId, Is.EqualTo(abilityId));
             Assert.That(slots[0].LockoutPermille, Is.EqualTo(500));
+            Assert.That(slots[1].AbilityId, Is.EqualTo(unrelatedAbilityId));
+            Assert.That(slots[1].LockoutPermille, Is.EqualTo(0));
         }
 
         [Test]

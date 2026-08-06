@@ -195,6 +195,7 @@ namespace Ludots.Tests.GAS
         private static void FinalizeBuffTemplates(EffectTemplateRegistry templates)
         {
             var presetTypes = new PresetTypeRegistry();
+            var graphPrograms = new GraphProgramRegistry();
             var buff = new PresetTypeDefinition
             {
                 Type = EffectPresetType.Buff,
@@ -203,7 +204,7 @@ namespace Ludots.Tests.GAS
                 AllowedLifetimes = LifetimeFlags.Duration,
             };
             buff.DefaultPhaseHandlers[EffectPhaseId.OnApply] =
-                PhaseHandler.Builtin(BuiltinHandlerId.ApplyModifiers);
+                GasTestGraphPrograms.BuiltinGraph(graphPrograms, 44_001, BuiltinHandlerId.ApplyModifiers);
             presetTypes.Register(in buff);
 
             var builtinHandlers = new BuiltinHandlerRegistry();
@@ -212,7 +213,7 @@ namespace Ludots.Tests.GAS
                 templates,
                 presetTypes,
                 builtinHandlers,
-                new GraphProgramRegistry(),
+                graphPrograms,
                 "Test/QuestRuntimeTests.json");
         }
 

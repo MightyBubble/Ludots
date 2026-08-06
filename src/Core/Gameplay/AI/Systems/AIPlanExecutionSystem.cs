@@ -73,6 +73,12 @@ namespace Ludots.Core.Gameplay.AI.Systems
                 {
                     if (!_terminalResults.TryConsume(plan.WaitingOrderId, out OrderTerminalOutcome terminal))
                     {
+                        if (!_terminalResults.IsAwaitingRetainedOutcome(plan.WaitingOrderId))
+                        {
+                            throw new System.InvalidOperationException(
+                                $"AI.PLAN.ERR.WaitingOrderReceiptUnavailable: orderId={plan.WaitingOrderId}, orderTypeId={plan.WaitingOrderTypeId}.");
+                        }
+
                         return;
                     }
 
@@ -107,14 +113,14 @@ namespace Ludots.Core.Gameplay.AI.Systems
                 if (!plan.TryGetCurrent(out int actionId)) return;
                 if ((uint)actionId >= (uint)_library.Count)
                 {
-                    plan.Advance();
-                    return;
+                    throw new System.InvalidOperationException(
+                        $"AI.PLAN.ERR.InvalidActionId: actor={entity.Id}, actionId={actionId}, libraryCount={_library.Count}.");
                 }
 
                 if (_library.ExecutorKind[actionId] != ActionExecutorKind.SubmitOrder)
                 {
-                    plan.Advance();
-                    return;
+                    throw new System.InvalidOperationException(
+                        $"AI.PLAN.ERR.UnsupportedActionExecutorKind: actor={entity.Id}, actionId={actionId}, kind={_library.ExecutorKind[actionId]}.");
                 }
 
                 bool ok = PlanExecutor.TrySubmitOrder(

@@ -184,6 +184,35 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void UtilityAiDecisionSystem_AdmissionRejectionReleasesRetainedReceiptExpectation()
+        {
+            using var fixture = RuntimeFixture.Create();
+            _ = fixture.CreateHostile(300, 0);
+            var runtime = fixture.CreateSingleDecisionRuntime(orderTypeId: 102, inputKind: UtilityAiInputKind.Constant);
+            var actor = fixture.AddActor();
+            const int orderId = 777;
+            ref var state = ref fixture.World.Get<UtilityAiState>(actor);
+            state.LastSubmittedOrderId = orderId;
+            state.CurrentDecisionId = 12;
+            fixture.TerminalResults.Retain(orderId);
+            fixture.AdmissionResults.BeginLogicStep();
+            Assert.That(
+                fixture.AdmissionResults.TryWrite(new OrderAdmissionOutcome(
+                    orderId,
+                    102,
+                    OrderAdmissionStage.EntityIntake,
+                    OrderSubmitResult.RejectedInvalidActor)),
+                Is.True);
+
+            fixture.RunDecision(runtime);
+
+            Assert.That(state.LastSubmittedOrderId, Is.EqualTo(0));
+            Assert.That(state.CurrentTaskStatus, Is.EqualTo((byte)UtilityAiTaskRunStatus.Blocked));
+            Assert.DoesNotThrow(() => fixture.TerminalResults.Retain(orderId));
+            Assert.That(fixture.TerminalResults.Release(orderId), Is.True);
+        }
+
+        [Test]
         public void UtilityAiDecisionSystem_CandidateBudgetStopsThinkLoopWithoutSilentZeroScore()
         {
             using var fixture = RuntimeFixture.Create();
@@ -440,6 +469,25 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void UtilityAiDecisionSystem_WaitingOrderWithoutRetainedReceiptFailsExplicitly()
+        {
+            using var fixture = RuntimeFixture.Create();
+            _ = fixture.CreateHostile(300, 0);
+            var runtime = fixture.CreateSingleDecisionRuntime(orderTypeId: 102);
+            var actor = fixture.AddActor();
+            ref var state = ref fixture.World.Get<UtilityAiState>(actor);
+            state.LastSubmittedOrderId = 777;
+            state.CurrentDecisionId = 12;
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+                fixture.RunDecision(runtime))!;
+
+            Assert.That(ex.Message, Does.Contain("UTILITY_AI.ERR.WaitingOrderReceiptUnavailable"));
+            Assert.That(ex.Message, Does.Contain("777"));
+            Assert.That(fixture.World.Get<UtilityAiState>(actor).LastSubmittedOrderId, Is.EqualTo(777));
+        }
+
+        [Test]
         public void UtilityAiRuntime_TargetFiltering10kCandidates_IsAllocationFree()
         {
             using var fixture = RuntimeFixture.Create(orderCapacity: 20000);
@@ -551,6 +599,7 @@ namespace Ludots.Tests.GAS
                     },
                     new UtilityAiDecisionTrace(),
                     new UtilityAiCombatMemory(),
+                    new BlackboardIntBuffer(),
                     new Team { Id = 1 },
                     actorTags,
                     WorldPositionCm.FromCm(0, 0));
@@ -619,7 +668,7 @@ namespace Ludots.Tests.GAS
                     ClearQueueOnActivate = true,
                     EntityBlackboardKey = -1,
                     SpatialBlackboardKey = -1,
-                });
+                }.UseCastAbilityPayload());
                 return orderTypes;
             }
 

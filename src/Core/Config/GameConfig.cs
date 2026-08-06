@@ -93,6 +93,7 @@ namespace Ludots.Core.Config
         public int EffectProcessingMaxWorkUnitsPerSlice { get; set; }
         public int CommandIntentScratchCapacity { get; set; }
         public int InputGraphScoreInstructionBudgetPerResolve { get; set; }
+        public int InputContextScoredCandidateCapacity { get; set; }
 
         public void Validate()
         {
@@ -203,6 +204,12 @@ namespace Ludots.Core.Config
             {
                 throw new System.InvalidOperationException(
                     "GameConfig.gasRuntimeCapacity.commandIntentScratchCapacity must be positive.");
+            }
+
+            if (InputContextScoredCandidateCapacity <= 0)
+            {
+                throw new System.InvalidOperationException(
+                    "GameConfig.gasRuntimeCapacity.inputContextScoredCandidateCapacity must be positive.");
             }
         }
 

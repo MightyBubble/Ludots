@@ -46,6 +46,13 @@ namespace Ludots.Core.Gameplay.GAS.Config
             "performerId",
         };
 
+        private static readonly string[] TargetingPropertyNames =
+        {
+            "castRangeCm",
+            "impactEffect",
+            "allowMoveChase",
+        };
+
         public AbilityExecLoader(ConfigPipeline pipeline, AbilityDefinitionRegistry registry)
         {
             _pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
@@ -755,6 +762,8 @@ namespace Ludots.Core.Gameplay.GAS.Config
 
         private static AbilityTargetingConfig CompileTargeting(JsonObject targetingObj, string id, string path)
         {
+            RequireKnownTargetingProperties(targetingObj, id, path);
+
             if (targetingObj["range"] != null)
             {
                 throw new InvalidOperationException(
@@ -790,7 +799,8 @@ namespace Ludots.Core.Gameplay.GAS.Config
             var targeting = new AbilityTargetingConfig
             {
                 CastRangeCm = targetingObj["castRangeCm"]!.GetValue<float>(),
-                ImpactEffectTemplateId = impactEffectTemplateId
+                ImpactEffectTemplateId = impactEffectTemplateId,
+                AllowMoveChase = targetingObj["allowMoveChase"]?.GetValue<bool>() ?? false
             };
 
             if (targeting.CastRangeCm < 0f)
@@ -800,6 +810,28 @@ namespace Ludots.Core.Gameplay.GAS.Config
             }
 
             return targeting;
+        }
+
+        private static void RequireKnownTargetingProperties(JsonObject targetingObj, string id, string path)
+        {
+            foreach (KeyValuePair<string, JsonNode?> kvp in targetingObj)
+            {
+                bool allowed = false;
+                for (int i = 0; i < TargetingPropertyNames.Length; i++)
+                {
+                    if (string.Equals(kvp.Key, TargetingPropertyNames[i], StringComparison.Ordinal))
+                    {
+                        allowed = true;
+                        break;
+                    }
+                }
+
+                if (!allowed)
+                {
+                    throw new InvalidOperationException(
+                        $"Ability '{id}' in '{path}' field 'targeting.{kvp.Key}' is not supported. Use only: {string.Join(", ", TargetingPropertyNames)}.");
+                }
+            }
         }
 
         private static void RejectRemovedAimVisualFields(JsonNode? node, string id, string path, string currentPath)

@@ -231,7 +231,7 @@ namespace CoreInputMod.Systems
 
                 return result;
             });
-            if (TryCreateContextScoredResolver(out var contextResolver))
+            if (TryCreateContextScoredResolver(config, out var contextResolver))
             {
                 mapping.SetContextScoredProvider(contextResolver.TryResolve);
             }
@@ -250,7 +250,8 @@ namespace CoreInputMod.Systems
             string uri = $"{ctx.ModId}:assets/Input/target_layout_profiles.json";
             if (!ctx.VFS.TryResolveFullPath(uri, out var fullPath) || !File.Exists(fullPath))
             {
-                return Array.Empty<TargetLayoutProfileDefinition>();
+                throw new InvalidOperationException(
+                    $"[{ctx.ModId}] input_order_mappings.json requires explicit Input/target_layout_profiles.json; author an empty targetLayoutProfiles array when no layout profiles are used.");
             }
 
             using var stream = File.OpenRead(fullPath);
@@ -446,7 +447,7 @@ namespace CoreInputMod.Systems
             return entity.Id != 0 || entity.WorldId != 0 || entity.Version != 0;
         }
 
-        private bool TryCreateContextScoredResolver(out ContextScoredOrderResolver resolver)
+        private bool TryCreateContextScoredResolver(InputOrderMappingConfig config, out ContextScoredOrderResolver resolver)
         {
             resolver = default!;
             if (!_globals.TryGetValue(CoreServiceKeys.ContextGroupRegistry.Name, out var groupsObj) ||
@@ -454,6 +455,12 @@ namespace CoreInputMod.Systems
                 !_globals.TryGetValue(CoreServiceKeys.SpatialQueryService.Name, out var spatialObj) ||
                 spatialObj is not Ludots.Core.Spatial.ISpatialQueryService spatialQueries)
             {
+                if (RequiresContextScoredResolver(config))
+                {
+                    throw new InvalidOperationException(
+                        $"[{nameof(LocalOrderSourceHelper)}] ContextScored input mappings require {CoreServiceKeys.ContextGroupRegistry.Name} and {CoreServiceKeys.SpatialQueryService.Name}.");
+                }
+
                 return false;
             }
 
@@ -471,8 +478,33 @@ namespace CoreInputMod.Systems
                 graphScorer,
                 spatialQueries,
                 candidateGate.CanTarget,
-                RequireInputGraphScoreInstructionBudget());
+                RequireInputGraphScoreInstructionBudget(),
+                RequireInputContextScoredCandidateCapacity());
             return true;
+        }
+
+        private static bool RequiresContextScoredResolver(InputOrderMappingConfig config)
+        {
+            if (config.InteractionMode == InteractionModeType.ContextScored)
+            {
+                for (int i = 0; i < config.Mappings.Count; i++)
+                {
+                    if (config.Mappings[i].IsSkillMapping)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            for (int i = 0; i < config.Mappings.Count; i++)
+            {
+                if (config.Mappings[i].CastModeOverride == InteractionModeType.ContextScored)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private int RequireInputGraphScoreInstructionBudget()
@@ -493,6 +525,26 @@ namespace CoreInputMod.Systems
             }
 
             return budget;
+        }
+
+        private int RequireInputContextScoredCandidateCapacity()
+        {
+            if (!_globals.TryGetValue(CoreServiceKeys.GameConfig.Name, out var configObj) ||
+                configObj is not GameConfig config ||
+                config.GasRuntimeCapacity == null)
+            {
+                throw new InvalidOperationException(
+                    "Context-scored order resolution requires GameConfig.gasRuntimeCapacity.inputContextScoredCandidateCapacity.");
+            }
+
+            int capacity = config.GasRuntimeCapacity.InputContextScoredCandidateCapacity;
+            if (capacity <= 0)
+            {
+                throw new InvalidOperationException(
+                    "GameConfig.gasRuntimeCapacity.inputContextScoredCandidateCapacity must be positive.");
+            }
+
+            return capacity;
         }
 
         private bool TryCreateAutoTargetResolver(out AutoTargetResolver resolver)
@@ -572,7 +624,7 @@ namespace CoreInputMod.Systems
                 _ => $"list(count:{order.Args.Spatial.PointCount})"
             };
 
-            return $"type:{order.OrderTypeId},player:{order.PlayerId},actor:{order.Actor.Id}:{order.Actor.WorldId}:{order.Actor.Version},target:{target},slot:{order.Args.I0},spatial:{spatial},submit:{order.SubmitMode}";
+            return $"type:{order.OrderTypeId},player:{order.PlayerId},actor:{order.Actor.Id}:{order.Actor.WorldId}:{order.Actor.Version},target:{target},spatial:{spatial},submit:{order.SubmitMode}";
         }
 
         private sealed class AutoTargetResolver

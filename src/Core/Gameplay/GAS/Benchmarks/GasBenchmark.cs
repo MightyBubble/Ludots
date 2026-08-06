@@ -54,10 +54,9 @@ namespace Ludots.Core.Gameplay.GAS.Benchmarks
                 AllowQueuedMode = false,
                 CanInterruptSelf = true,
                 ClearQueueOnActivate = true,
-                PayloadKind = OrderPayloadKind.CastAbility,
                 EntityBlackboardKey = OrderBlackboardKeys.Cast_TargetEntity,
                 SpatialBlackboardKey = -1,
-            });
+            }.UseCastAbilityPayload());
 
             var mods = new EffectModifiers();
             mods.Add(healthId, ModifierOp.Add, 5.0f);

@@ -731,7 +731,7 @@ namespace Ludots.Tests.GAS
             {
                 ActionId = "Skill",
                 TargetType = TargetType,
-                ArgsTemplate = new OrderArgsTemplate { I0 = 0 }
+                OrderPayload = InputOrderPayloadTemplate.CastAbility(0)
             };
         }
 

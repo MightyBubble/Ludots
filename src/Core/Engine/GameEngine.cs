@@ -1254,8 +1254,6 @@ namespace Ludots.Core.Engine
                 static (GameEngine engine, out Entity viewer) =>
                     KnowledgeProjectionConsumer.TryResolveViewer(engine.World, engine.GlobalContext, Entity.Null, out viewer));
 
-            var abilitySystem = new AbilitySystem(World, effectRequestQueue, abilityDefinitions, tagOps, graphProgramRegistry, gasGraphApi, progressionEvaluator);
-            var reactionSystem = new ReactionSystem(World, abilitySystem, EventBus);
             var graphEdgeCostOverlay = new GraphEdgeCostOverlay();
             var cameraBehaviorInput = new CameraBehaviorInputState();
             var cameraImpulseRuntime = new CameraImpulseRuntime();
@@ -1303,6 +1301,7 @@ namespace Ludots.Core.Engine
             // Using -1 prevents accidental match with default OrderTagId == 0.
             // ── OrderBuffer pipeline ──
             int cfgCastAbility = RequireConfiguredOrderTypeId(orderTypeIds, orderTypeRegistry, "castAbility", "constants.orderTypeIds");
+            var reactionSystem = new ReactionSystem(World, orderQueue, cfgCastAbility, EventBus);
             int cfgMoveTo = RequireConfiguredOrderTypeId(orderTypeIds, orderTypeRegistry, "moveTo", "constants.orderTypeIds");
             int cfgAttackTarget = RequireConfiguredOrderTypeId(orderTypeIds, orderTypeRegistry, "attackTarget", "constants.orderTypeIds");
             int cfgStop = RequireConfiguredOrderTypeId(orderTypeIds, orderTypeRegistry, "stop", "constants.orderTypeIds");

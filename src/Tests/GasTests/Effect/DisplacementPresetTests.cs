@@ -297,17 +297,18 @@ namespace Ludots.Tests.GAS
             });
 
             var presetTypes = new PresetTypeRegistry();
+            var graphPrograms = new GraphProgramRegistry();
             var preset = new PresetTypeDefinition
             {
                 Type = EffectPresetType.Displacement,
                 ActivePhases = PhaseFlags.InstantCore,
                 AllowedLifetimes = LifetimeFlags.InstantOnly,
             };
-            preset.DefaultPhaseHandlers[EffectPhaseId.OnApply] = PhaseHandler.Builtin(BuiltinHandlerId.ApplyDisplacement);
+            preset.DefaultPhaseHandlers[EffectPhaseId.OnApply] =
+                GasTestGraphPrograms.BuiltinGraph(graphPrograms, 4_101, BuiltinHandlerId.ApplyDisplacement);
             presetTypes.Register(in preset);
             var builtinHandlers = new BuiltinHandlerRegistry();
             BuiltinHandlers.RegisterAll(builtinHandlers);
-            var graphPrograms = new GraphProgramRegistry();
             EffectExecutionPlanCompiler.FinalizeAll(
                 templates,
                 presetTypes,
@@ -386,6 +387,7 @@ namespace Ludots.Tests.GAS
             });
 
             var presetTypes = new PresetTypeRegistry();
+            var graphPrograms = new GraphProgramRegistry();
             var preset = new PresetTypeDefinition
             {
                 Type = EffectPresetType.Displacement,
@@ -393,12 +395,11 @@ namespace Ludots.Tests.GAS
                 AllowedLifetimes = LifetimeFlags.InstantOnly,
             };
             preset.DefaultPhaseHandlers[EffectPhaseId.OnApply] =
-                PhaseHandler.Builtin(BuiltinHandlerId.ApplyDisplacement);
+                GasTestGraphPrograms.BuiltinGraph(graphPrograms, 4_102, BuiltinHandlerId.ApplyDisplacement);
             presetTypes.Register(in preset);
 
             var builtinHandlers = new BuiltinHandlerRegistry();
             BuiltinHandlers.RegisterAll(builtinHandlers);
-            var graphPrograms = new GraphProgramRegistry();
             EffectExecutionPlanCompiler.FinalizeAll(
                 templates,
                 presetTypes,

@@ -6,6 +6,7 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
+using Ludots.Tests.GAS;
 using NUnit.Framework;
 
 namespace GasTests.Effect;
@@ -19,8 +20,8 @@ public sealed class EffectExecutionPlanTests
         const int templateId = 101;
         const int templateMainGraphId = 201;
         var templates = new EffectTemplateRegistry();
-        var presets = CreatePreset(EffectPresetType.Relation, PhaseHandler.Builtin(BuiltinHandlerId.ApplyRelation));
         var programs = new GraphProgramRegistry();
+        var presets = CreateBuiltinPreset(EffectPresetType.Relation, BuiltinHandlerId.ApplyRelation, 301, programs);
         programs.Register(templateMainGraphId, GasWriteProgram(), GraphKind.Effect);
         EffectPhaseGraphBindings bindings = default;
         Assert.That(bindings.TryAddStep(EffectPhaseId.OnApply, PhaseSlot.Main, templateMainGraphId), Is.True);
@@ -42,7 +43,8 @@ public sealed class EffectExecutionPlanTests
     {
         const int templateId = 102;
         var templates = new EffectTemplateRegistry();
-        var presets = CreatePreset(EffectPresetType.Relation, PhaseHandler.Builtin(BuiltinHandlerId.ApplyRelation));
+        var programs = new GraphProgramRegistry();
+        var presets = CreateBuiltinPreset(EffectPresetType.Relation, BuiltinHandlerId.ApplyRelation, 302, programs);
         EffectPhaseGraphBindings bindings = default;
         bindings.SetSkipMain(EffectPhaseId.OnApply);
         templates.Register(templateId, new EffectTemplateData
@@ -52,7 +54,7 @@ public sealed class EffectExecutionPlanTests
             PhaseGraphBindings = bindings,
         });
 
-        Finalize(templates, presets, new GraphProgramRegistry());
+        Finalize(templates, presets, programs);
 
         Assert.That(
             templates.RequireExecutionPlans(templateId).Activation.Kind,
@@ -64,14 +66,15 @@ public sealed class EffectExecutionPlanTests
     {
         const int templateId = 103;
         var templates = new EffectTemplateRegistry();
-        var presets = CreatePreset(EffectPresetType.Displacement, PhaseHandler.Builtin(BuiltinHandlerId.ApplyDisplacement));
+        var programs = new GraphProgramRegistry();
+        var presets = CreateBuiltinPreset(EffectPresetType.Displacement, BuiltinHandlerId.ApplyDisplacement, 303, programs);
         templates.Register(templateId, new EffectTemplateData
         {
             PresetType = EffectPresetType.Displacement,
             LifetimeKind = EffectLifetimeKind.Instant,
         });
 
-        Finalize(templates, presets, new GraphProgramRegistry());
+        Finalize(templates, presets, programs);
 
         EffectWindowExecutionPlan plan = templates.RequireExecutionPlans(templateId).Activation;
         Assert.That(plan.Kind, Is.EqualTo(EffectExecutionPlanKind.ExternalAtomicExclusive));
@@ -85,16 +88,19 @@ public sealed class EffectExecutionPlanTests
     {
         const int templateId = 114;
         var templates = new EffectTemplateRegistry();
-        var presets = CreatePreset(
+        var programs = new GraphProgramRegistry();
+        var presets = CreateBuiltinPreset(
             EffectPresetType.SubmitOrderFromBlackboard,
-            PhaseHandler.Builtin(BuiltinHandlerId.SubmitOrderFromBlackboard));
+            BuiltinHandlerId.SubmitOrderFromBlackboard,
+            314,
+            programs);
         templates.Register(templateId, new EffectTemplateData
         {
             PresetType = EffectPresetType.SubmitOrderFromBlackboard,
             LifetimeKind = EffectLifetimeKind.Instant,
         });
 
-        Finalize(templates, presets, new GraphProgramRegistry());
+        Finalize(templates, presets, programs);
 
         EffectWindowExecutionPlan plan = templates.RequireExecutionPlans(templateId).Activation;
         Assert.That(plan.Kind, Is.EqualTo(EffectExecutionPlanKind.ExternalAtomicExclusive));
@@ -108,9 +114,12 @@ public sealed class EffectExecutionPlanTests
     {
         const int templateId = 115;
         var templates = new EffectTemplateRegistry();
-        var presets = CreatePreset(
+        var programs = new GraphProgramRegistry();
+        var presets = CreateBuiltinPreset(
             EffectPresetType.Relation,
-            PhaseHandler.Builtin(BuiltinHandlerId.ApplyRelation));
+            BuiltinHandlerId.ApplyRelation,
+            315,
+            programs);
         templates.Register(templateId, new EffectTemplateData
         {
             PresetType = EffectPresetType.Relation,
@@ -123,7 +132,7 @@ public sealed class EffectExecutionPlanTests
             },
         });
 
-        Finalize(templates, presets, new GraphProgramRegistry());
+        Finalize(templates, presets, programs);
 
         Assert.That(
             templates.RequireExecutionPlans(templateId).Activation.Kind,
@@ -138,9 +147,12 @@ public sealed class EffectExecutionPlanTests
     {
         const int templateId = 116;
         var templates = new EffectTemplateRegistry();
-        var presets = CreatePreset(
+        var programs = new GraphProgramRegistry();
+        var presets = CreateBuiltinPreset(
             EffectPresetType.Relation,
-            PhaseHandler.Builtin(BuiltinHandlerId.ApplyRelation));
+            BuiltinHandlerId.ApplyRelation,
+            316,
+            programs);
         templates.Register(templateId, new EffectTemplateData
         {
             PresetType = EffectPresetType.Relation,
@@ -155,7 +167,7 @@ public sealed class EffectExecutionPlanTests
         });
 
         InvalidOperationException error = Assert.Throws<InvalidOperationException>(
-            () => Finalize(templates, presets, new GraphProgramRegistry()))!;
+            () => Finalize(templates, presets, programs))!;
 
         Assert.That(error.Message, Does.StartWith(EffectExecutionPlanCompiler.UnsupportedOperationError));
         Assert.That(error.Message, Does.Contain(operationName));
@@ -167,8 +179,8 @@ public sealed class EffectExecutionPlanTests
         const int templateId = 104;
         const int preGraphId = 204;
         var templates = new EffectTemplateRegistry();
-        var presets = CreatePreset(EffectPresetType.Displacement, PhaseHandler.Builtin(BuiltinHandlerId.ApplyDisplacement));
         var programs = new GraphProgramRegistry();
+        var presets = CreateBuiltinPreset(EffectPresetType.Displacement, BuiltinHandlerId.ApplyDisplacement, 304, programs);
         programs.Register(preGraphId, GasWriteProgram(), GraphKind.Effect);
         EffectPhaseGraphBindings bindings = default;
         Assert.That(bindings.TryAddStep(EffectPhaseId.OnApply, PhaseSlot.Pre, preGraphId), Is.True);
@@ -194,8 +206,8 @@ public sealed class EffectExecutionPlanTests
         const int templateId = 105;
         const int preGraphId = 205;
         var templates = new EffectTemplateRegistry();
-        var presets = CreatePreset(EffectPresetType.CompleteProgression, PhaseHandler.Builtin(BuiltinHandlerId.CompleteProgression));
         var programs = new GraphProgramRegistry();
+        var presets = CreateBuiltinPreset(EffectPresetType.CompleteProgression, BuiltinHandlerId.CompleteProgression, 305, programs);
         programs.Register(preGraphId,
         [
             new GraphInstruction { Op = (ushort)GraphNodeOp.InvokeBuiltin, Imm = (int)BuiltinHandlerId.ApplyDisplacement },
@@ -252,7 +264,8 @@ public sealed class EffectExecutionPlanTests
     {
         const int templateId = 107;
         var templates = new EffectTemplateRegistry();
-        var presets = CreatePreset(EffectPresetType.Displacement, PhaseHandler.Builtin(BuiltinHandlerId.ApplyDisplacement));
+        var programs = new GraphProgramRegistry();
+        var presets = CreateBuiltinPreset(EffectPresetType.Displacement, BuiltinHandlerId.ApplyDisplacement, 307, programs);
         templates.Register(templateId, new EffectTemplateData
         {
             PresetType = EffectPresetType.Displacement,
@@ -260,7 +273,7 @@ public sealed class EffectExecutionPlanTests
         });
 
         InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
-            Finalize(templates, presets, new GraphProgramRegistry()))!;
+            Finalize(templates, presets, programs))!;
 
         Assert.That(error.Message, Does.Contain("persistent effects"));
     }
@@ -822,6 +835,15 @@ public sealed class EffectExecutionPlanTests
         definition.DefaultPhaseHandlers[EffectPhaseId.OnApply] = onApply;
         presets.Register(in definition);
         return presets;
+    }
+
+    private static PresetTypeRegistry CreateBuiltinPreset(
+        EffectPresetType type,
+        BuiltinHandlerId handlerId,
+        int graphId,
+        GraphProgramRegistry programs)
+    {
+        return CreatePreset(type, GasTestGraphPrograms.BuiltinGraph(programs, graphId, handlerId));
     }
 
     private static GraphInstruction[] GasWriteProgram()

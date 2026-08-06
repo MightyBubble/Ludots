@@ -30,9 +30,11 @@ public sealed class CombatStanceBehaviorTests
         Entity actor = fixture.CreateActor(0, 0, CombatStances.HoldFire);
         fixture.Activate(actor, fixture.SetCombatStanceOrderTypeId, (ref Order order) =>
         {
-            order.Args.I0 = CombatStances.AttackAnything;
-            order.Args.I1 = 900;
-            order.Args.I2 = 30;
+            CombatStanceOrderPayload.ConfigureSetCombatStance(
+                ref order,
+                CombatStances.AttackAnything,
+                leashRadiusCm: 900,
+                retaliationTtlSteps: 30);
         });
 
         fixture.System.Update(1f / 60f);
@@ -135,8 +137,7 @@ public sealed class CombatStanceBehaviorTests
         Entity hostile = fixture.CreateHostile(300, 0);
         fixture.Activate(actor, fixture.AttackMoveOrderTypeId, (ref Order order) =>
         {
-            order.Args.I0 = 800;
-            WritePoint(ref order, 1000, 0);
+            CombatStanceOrderPayload.ConfigureAttackMove(ref order, leashRadiusCm: 800, destinationWorldCm: new Vector3(1000, 0f, 0));
         });
 
         fixture.System.Update(1f / 60f);
@@ -166,9 +167,7 @@ public sealed class CombatStanceBehaviorTests
         Entity hostile = fixture.CreateHostile(1050, 0);
         fixture.Activate(actor, fixture.GuardOrderTypeId, (ref Order order) =>
         {
-            order.Target = guarded;
-            order.Args.I0 = 150;
-            order.Args.I1 = 900;
+            CombatStanceOrderPayload.ConfigureGuard(ref order, guarded, radiusCm: 150, leashRadiusCm: 900);
         });
 
         fixture.System.Update(1f / 60f);
@@ -194,20 +193,14 @@ public sealed class CombatStanceBehaviorTests
         using var fixture = StanceFixture.Create();
         var effects = new EffectRequestQueue();
         Entity actor = fixture.CreateActor(0, 0, CombatStances.HoldFire);
-        fixture.Activate(actor, fixture.ScatterOrderTypeId, (ref Order order) => order.Args.I0 = 200);
+        fixture.Activate(actor, fixture.ScatterOrderTypeId, (ref Order order) =>
+            CombatStanceOrderPayload.ConfigureScatter(ref order, radiusCm: 200));
 
         fixture.System.Update(1f / 60f);
 
         Assert.That(fixture.Orders.TryDequeue(out var order), Is.True);
         Assert.That(order.OrderTypeId, Is.EqualTo(fixture.MoveToOrderTypeId));
         Assert.That(effects.Count, Is.EqualTo(0));
-    }
-
-    private static void WritePoint(ref Order order, int x, int y)
-    {
-        order.Args.Spatial.Kind = OrderSpatialKind.WorldCm;
-        order.Args.Spatial.Mode = OrderCollectionMode.Single;
-        order.Args.Spatial.WorldCm = new Vector3(x, 0f, y);
     }
 
     private sealed class StanceFixture : IDisposable

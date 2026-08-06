@@ -1051,7 +1051,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void Load_SubmitOrderFromBlackboard_RequiresEntityOrderIntArg0()
+        public void Load_SubmitOrderFromBlackboard_RequiresEntityOrderPayload()
         {
             string root = CreateTempRoot();
             try
@@ -1068,7 +1068,7 @@ namespace Ludots.Tests.GAS
                     """
                     [
                       {
-                        "id": "Effect.Test.SubmitOrderMissingIntArg0",
+                        "id": "Effect.Test.SubmitOrderMissingEntityOrderPayload",
                         "tags": ["Effect.Test.SubmitOrder"],
                         "presetType": "SubmitOrderFromBlackboard",
                         "lifetime": "Instant",
@@ -1094,7 +1094,7 @@ namespace Ludots.Tests.GAS
                 var loader = CreateLoader(root, out _, CreateOrderTypes());
                 var ex = Throws<InvalidOperationException>(() =>
                     loader.Load(CreateEffectsCatalog(), relativePath: "GAS/effects.json"));
-                That(ex!.Message, Does.Contain("submitOrderFromBlackboard.entityOrderIntArg0"));
+                That(ex!.Message, Does.Contain("submitOrderFromBlackboard.entityOrderPayload"));
             }
             finally
             {
@@ -1138,7 +1138,10 @@ namespace Ludots.Tests.GAS
                           },
                           "pointMoveOrderTypeKey": "moveTypo",
                           "entityOrderTypeKey": "castAbility",
-                          "entityOrderIntArg0": 1,
+                          "entityOrderPayload": {
+                            "kind": "CastAbility",
+                            "abilitySlot": 1
+                          },
                           "submitMode": "Immediate"
                         }
                       }
@@ -1262,8 +1265,8 @@ namespace Ludots.Tests.GAS
         private static OrderTypeRegistry CreateOrderTypes()
         {
             var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
-            orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 101 });
-            orderTypes.Register(new OrderTypeConfig { Key = "castAbility", OrderTypeId = 100 });
+            orderTypes.Register(new OrderTypeConfig { Key = "moveTo", OrderTypeId = 101, PayloadKind = OrderPayloadKind.MoveToWorldCm });
+            orderTypes.Register(new OrderTypeConfig { Key = "castAbility", OrderTypeId = 100 }.UseCastAbilityPayload());
             return orderTypes;
         }
 

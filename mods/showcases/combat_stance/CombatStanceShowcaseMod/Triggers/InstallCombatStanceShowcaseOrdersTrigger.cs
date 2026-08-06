@@ -78,22 +78,26 @@ public sealed class InstallCombatStanceShowcaseOrdersTrigger : Trigger
         if (config.OrderTypeKey == StanceOrderKeys.AttackMove ||
             config.OrderTypeKey == StanceOrderKeys.AssaultMove)
         {
-            order.Args.I0 = config.LeashRadiusCm!.Value;
-            order.Args.Spatial.Kind = OrderSpatialKind.WorldCm;
-            order.Args.Spatial.Mode = OrderCollectionMode.Single;
-            order.Args.Spatial.WorldCm = new Vector3(config.Destination!.XCm!.Value, 0f, config.Destination.YCm!.Value);
+            CombatStanceOrderPayload.ConfigureAttackMove(
+                ref order,
+                config.LeashRadiusCm!.Value,
+                new Vector3(config.Destination!.XCm!.Value, 0f, config.Destination.YCm!.Value));
         }
         else if (config.OrderTypeKey == StanceOrderKeys.Guard)
         {
-            order.Target = FindEntity(world, config.Target, $"initialOrders[{index}].target");
-            order.Args.I0 = config.RadiusCm!.Value;
-            order.Args.I1 = config.LeashRadiusCm!.Value;
+            CombatStanceOrderPayload.ConfigureGuard(
+                ref order,
+                FindEntity(world, config.Target, $"initialOrders[{index}].target"),
+                config.RadiusCm!.Value,
+                config.LeashRadiusCm!.Value);
         }
         else if (config.OrderTypeKey == StanceOrderKeys.SetCombatStance)
         {
-            order.Args.I0 = ParseStance(config.Stance, $"initialOrders[{index}].stance");
-            order.Args.I1 = config.LeashRadiusCm.GetValueOrDefault();
-            order.Args.I2 = config.RetaliationTtlSteps.GetValueOrDefault();
+            CombatStanceOrderPayload.ConfigureSetCombatStance(
+                ref order,
+                ParseStance(config.Stance, $"initialOrders[{index}].stance"),
+                config.LeashRadiusCm.GetValueOrDefault(),
+                config.RetaliationTtlSteps.GetValueOrDefault());
         }
         else
         {

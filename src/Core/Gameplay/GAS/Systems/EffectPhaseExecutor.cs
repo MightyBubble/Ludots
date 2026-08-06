@@ -358,26 +358,14 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
             switch (handler.Kind)
             {
-                case PhaseHandlerKind.Builtin:
-                {
-                    if (!_templates.TryGetRef(effectTemplateId, out int tplIdx))
-                    {
-                        throw new InvalidOperationException(
-                            $"EffectPhaseExecutor: Builtin handler for phase {phase} requires template {effectTemplateId}, but it is not registered.");
-                    }
-                    ref readonly var tplData = ref _templates.GetRef(tplIdx);
-                    var context = new EffectContext { RootId = rootId, Source = caster, Target = target, TargetContext = targetContext };
-                    var builtinParams = mergedParams.Count > 0 ? mergedParams : tplData.ConfigParams;
-                    _builtinHandlers.Invoke(
-                        (BuiltinHandlerId)handler.HandlerId,
-                        world, default, ref context, in builtinParams, in tplData, builtinRuntime);
-                    break;
-                }
                 case PhaseHandlerKind.Graph:
                 {
                     ExecuteGraph(world, api, caster, target, targetContext, targetPos, handler.HandlerId, effectTemplateId, phase, in mergedParams, builtinRuntime, randomSeed, rootId, trackValidationResult, ref validationResult);
                     break;
                 }
+                default:
+                    throw new InvalidOperationException(
+                        $"EffectPhaseExecutor: preset '{presetType}' phase '{phase}' has unsupported handler kind '{handler.Kind}'. Preset phase handlers must reference Graph programs.");
             }
         }
 

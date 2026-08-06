@@ -221,30 +221,62 @@ namespace Ludots.Core.Gameplay.GAS.Orders
 
         public static void SetAbilitySlot(ref Order order, int abilitySlotIndex)
         {
-            if (abilitySlotIndex < 0)
+            SetAbilitySlot(ref order.Args, abilitySlotIndex, order.OrderTypeId);
+        }
+
+        public static bool TryGetCastAbilitySlotIndex(in Order order, out int abilitySlotIndex)
+        {
+            return TryGetCastAbilitySlotIndex(in order.Args, out abilitySlotIndex);
+        }
+
+        public static bool TryGetCastAbilitySlotIndex(in OrderArgs args, out int abilitySlotIndex)
+        {
+            abilitySlotIndex = args.I0;
+            return abilitySlotIndex >= 0;
+        }
+
+        public static int GetCastAbilitySlotIndex(in Order order)
+        {
+            if (!TryGetCastAbilitySlotIndex(in order, out int abilitySlotIndex))
             {
                 throw new System.InvalidOperationException(
                     $"ORDER.BUILDER.ERR.InvalidAbilitySlot: orderTypeId={order.OrderTypeId}, slot={abilitySlotIndex}.");
             }
 
-            order.Args.I0 = abilitySlotIndex;
+            return abilitySlotIndex;
+        }
+
+        public static void SetAbilitySlot(ref OrderArgs args, int abilitySlotIndex, int orderTypeId = 0)
+        {
+            if (abilitySlotIndex < 0)
+            {
+                throw new System.InvalidOperationException(
+                    $"ORDER.BUILDER.ERR.InvalidAbilitySlot: orderTypeId={orderTypeId}, slot={abilitySlotIndex}.");
+            }
+
+            args.I0 = abilitySlotIndex;
         }
 
         public static void SetIntArg(ref Order order, OrderIntArgSlot slot, int value)
         {
+            SetIntArg(ref order.Args, slot, value);
+        }
+
+        public static void SetIntArg(ref OrderArgs args, OrderIntArgSlot slot, int value)
+        {
             switch (slot)
             {
                 case OrderIntArgSlot.I0:
-                    order.Args.I0 = value;
+                    args.I0 = value;
                     break;
                 case OrderIntArgSlot.I1:
-                    order.Args.I1 = value;
+                    args.I1 = value;
                     break;
                 case OrderIntArgSlot.I2:
-                    order.Args.I2 = value;
+                    args.I2 = value;
                     break;
                 case OrderIntArgSlot.I3:
-                    order.Args.I3 = value;
+                    args.I3 = value;
                     break;
                 default:
                     throw new System.ArgumentOutOfRangeException(nameof(slot), slot, "Unknown order integer argument slot.");

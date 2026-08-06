@@ -34,7 +34,6 @@ namespace Ludots.Core.Gameplay.GAS.Orders
         private int _head;
         private int _tail;
         private int _count;
-        private int _nextAdmissionBatchId = 1;
 
         public OrderQueue(int capacity, OrderAdmissionResultBuffer admissionResults)
         {
@@ -190,12 +189,15 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                     $"OrderQueue shared batch size {orders.Length} exceeds {ushort.MaxValue}.");
             }
 
-            int admissionBatchId = NextAdmissionBatchId();
             ushort batchSize = (ushort)orders.Length;
             _admissionResults.EnsureWritableForNewOrders(OrderAdmissionStage.GlobalIntake, orders.Length);
             for (int i = 0; i < orders.Length; i++)
             {
                 EnsureOrderId(ref orders[i]);
+            }
+            int admissionBatchId = orders[0].OrderId;
+            for (int i = 0; i < orders.Length; i++)
+            {
                 orders[i].AdmissionBatchId = admissionBatchId;
                 orders[i].AdmissionBatchSize = batchSize;
                 orders[i].AdmissionBatchIndex = (ushort)i;
@@ -263,9 +265,13 @@ namespace Ludots.Core.Gameplay.GAS.Orders
             }
 
             previousCluster = Entity.Null;
-            int admissionBatchId = NextAdmissionBatchId();
             ushort batchSize = (ushort)orders.Length;
             _admissionResults.EnsureWritableForNewOrders(OrderAdmissionStage.GlobalIntake, orders.Length);
+            for (int i = 0; i < orders.Length; i++)
+            {
+                EnsureOrderId(ref orders[i]);
+            }
+            int admissionBatchId = orders[0].OrderId;
             for (int i = 0; i < orders.Length; i++)
             {
                 if (orders[i].CommandSource != previousCluster)
@@ -273,7 +279,6 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                     previousCluster = orders[i].CommandSource;
                 }
 
-                EnsureOrderId(ref orders[i]);
                 orders[i].AdmissionBatchId = admissionBatchId;
                 orders[i].AdmissionBatchSize = batchSize;
                 orders[i].AdmissionBatchIndex = (ushort)i;
@@ -488,18 +493,6 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                     _admissionResults.Cancel(in reservation);
                 }
             }
-        }
-
-        private int NextAdmissionBatchId()
-        {
-            if (_nextAdmissionBatchId <= 0)
-            {
-                throw new InvalidOperationException("ORDER.ADMISSION.ERR.BatchIdCapacityExceeded");
-            }
-
-            int value = _nextAdmissionBatchId;
-            _nextAdmissionBatchId = value == int.MaxValue ? 0 : value + 1;
-            return value;
         }
 
         private void CommitAdmission(

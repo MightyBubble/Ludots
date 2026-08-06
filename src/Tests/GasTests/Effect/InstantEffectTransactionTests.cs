@@ -416,6 +416,7 @@ public sealed class InstantEffectTransactionTests
             },
         });
         var presets = new PresetTypeRegistry();
+        var programs = new GraphProgramRegistry();
         var relationPreset = new PresetTypeDefinition
         {
             Type = EffectPresetType.Relation,
@@ -423,11 +424,10 @@ public sealed class InstantEffectTransactionTests
             AllowedLifetimes = LifetimeFlags.InstantOnly,
         };
         relationPreset.DefaultPhaseHandlers[EffectPhaseId.OnApply] =
-            PhaseHandler.Builtin(BuiltinHandlerId.ApplyRelation);
+            GasTestGraphPrograms.BuiltinGraph(programs, 4_201, BuiltinHandlerId.ApplyRelation);
         presets.Register(in relationPreset);
         var builtins = new BuiltinHandlerRegistry();
         BuiltinHandlers.RegisterAll(builtins);
-        var programs = new GraphProgramRegistry();
         EffectExecutionPlanCompiler.FinalizeAll(
             templates,
             presets,

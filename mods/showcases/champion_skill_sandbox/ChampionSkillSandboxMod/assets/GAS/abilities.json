@@ -791,6 +791,7 @@
     },
     "targeting": {
       "castRangeCm": 180,
+      "allowMoveChase": true,
       "impactEffect": "Effect.ChampionStress.Warrior.Cleave"
     }
   },
@@ -828,6 +829,7 @@
     },
     "targeting": {
       "castRangeCm": 1200,
+      "allowMoveChase": true,
       "impactEffect": "Effect.ChampionStress.FireMage.Fireball"
     }
   },
@@ -865,6 +867,7 @@
     },
     "targeting": {
       "castRangeCm": 1400,
+      "allowMoveChase": true,
       "impactEffect": "Effect.ChampionStress.LaserMage.Laser"
     }
   },
@@ -902,6 +905,7 @@
     },
     "targeting": {
       "castRangeCm": 900,
+      "allowMoveChase": true,
       "impactEffect": "Effect.ChampionStress.Priest.Heal"
     }
   },

@@ -4,6 +4,7 @@ using System.Numerics;
 using Arch.Core;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.GraphRuntime;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
 
@@ -122,15 +123,6 @@ namespace Ludots.Core.Input.Orders
     public delegate OrderSubmitResult OrderClusterBatchSubmitHandler(Span<Order> orders);
 
     /// <summary>
-    /// Delegate for resolving a per-actor routing candidate from actorOrderRouting candidates.
-    /// </summary>
-    public delegate bool ActorOrderRoutingResolver(
-        Entity actor,
-        ActorOrderRoutingSettings routing,
-        out ActorOrderRoutingCandidate matchedCandidate);
-
-
-    /// <summary>
     /// Delegate for checking if a modifier key is held.
     /// </summary>
     public delegate bool ModifierKeyProvider();
@@ -176,7 +168,8 @@ namespace Ludots.Core.Input.Orders
         Entity actor,
         InputOrderMapping mapping,
         Entity hoveredEntity,
-        out ContextScoredOrderResolution resolution);
+        out ContextScoredOrderResolution resolution,
+        out GraphScoreFailureReason failureReason);
 
     /// <summary>
     /// Delegate for resolving the effective ability id in a CastAbility slot for an actor.
@@ -267,8 +260,6 @@ namespace Ludots.Core.Input.Orders
         private CursorTargetProvider? _cursorTargetProvider;
         private ContextScoredResolutionProvider? _contextScoredProvider;
         private SkillMappingAbilityProvider? _skillMappingAbilityProvider;
-        private ActorOrderRoutingResolver? _actorOrderRoutingResolver;
-
         // Pointer command intent routing. Production wiring injects these services; non-command
         // mappings continue through the direct order path.
         private World? _commandIntentWorld;
@@ -294,19 +285,6 @@ namespace Ludots.Core.Input.Orders
         private readonly int _commandIntentScratchCapacity;
         private readonly List<Entity> _collectionActorsScratch;
 
-        private readonly struct RoutedOrderSubmission
-        {
-            public RoutedOrderSubmission(in Order order, string orderTypeKey)
-            {
-                Order = order;
-                OrderTypeKey = orderTypeKey;
-            }
-
-            public Order Order { get; }
-            public string OrderTypeKey { get; }
-        }
-
-        private readonly List<RoutedOrderSubmission> _routedOrdersScratch;
         private Entity[] _commandIntentActorsScratch;
         private Entity[] _commandIntentExpandedActorsScratch;
         private Entity[] _commandIntentExpansionSourcesScratch;
@@ -396,7 +374,6 @@ namespace Ludots.Core.Input.Orders
             set
             {
                 string commandActionId = RequireConfiguredActionId(value, nameof(CommandActionId));
-                ValidateCommandActionRoutingContract(commandActionId);
                 _commandActionId = commandActionId;
             }
         }
@@ -421,7 +398,6 @@ namespace Ludots.Core.Input.Orders
 
             _commandIntentScratchCapacity = commandIntentScratchCapacity;
             _collectionActorsScratch = new List<Entity>(commandIntentScratchCapacity);
-            _routedOrdersScratch = new List<RoutedOrderSubmission>(commandIntentScratchCapacity);
             _commandIntentActorsScratch = new Entity[commandIntentScratchCapacity];
             _commandIntentExpandedActorsScratch = new Entity[commandIntentScratchCapacity];
             _commandIntentExpansionSourcesScratch = new Entity[commandIntentScratchCapacity];
@@ -580,8 +556,6 @@ namespace Ludots.Core.Input.Orders
         public void SetContextScoredProvider(ContextScoredResolutionProvider provider) => _contextScoredProvider = provider;
         public void SetSkillMappingAbilityProvider(SkillMappingAbilityProvider provider) =>
             _skillMappingAbilityProvider = provider ?? throw new ArgumentNullException(nameof(provider));
-        public void SetActorOrderRoutingResolver(ActorOrderRoutingResolver resolver) =>
-            _actorOrderRoutingResolver = resolver ?? throw new ArgumentNullException(nameof(resolver));
         public void SetCommandIntentRouting(
             World world,
             InteractionContextStack stack,
@@ -739,11 +713,7 @@ namespace Ludots.Core.Input.Orders
                 }
 
                 // TargetFirst or non-skill: immediate build and submit
-                if (effectiveMapping.ActorOrderRouting != null && effectiveMapping.ActorOrderRouting.Candidates.Count > 0)
-                {
-                    SubmitRoutedOrders(effectiveMapping);
-                }
-                else if (TryBuildOrder(effectiveMapping, out var order))
+                if (TryBuildOrder(effectiveMapping, out var order))
                 {
                     SubmitOrder(effectiveMapping, in order);
                 }
@@ -1199,7 +1169,6 @@ namespace Ludots.Core.Input.Orders
             if (!HasExplicitLocalPlayer()) return false;
             int orderTypeId = RequireOrderTypeId(mapping, orderTypeSuffix);
             var args = new OrderArgs();
-            ApplyArgsTemplate(ref args, mapping.ArgsTemplate);
             ApplyOrderPayload(ref args, mapping);
             RequireValidConfiguredTargetResolver(mapping, mapping.TargetType);
 
@@ -1379,34 +1348,59 @@ namespace Ludots.Core.Input.Orders
         {
             if (_contextScoredProvider == null)
             {
+                throw new InvalidOperationException(
+                    $"Input mapping '{mapping.ActionId}' uses ContextScored interaction mode, but no context-scored resolver is configured.");
+            }
+
+            Entity actor = ResolvePrimaryActor(mapping);
+            Entity hoveredEntity = default;
+            _hoveredEntityProvider?.Invoke(out hoveredEntity);
+            if (TryBuildContextScoredOrder(mapping, actor, hoveredEntity, out var order, out OrderSubmitResult rejection))
+            {
+                SubmitOrder(mapping, in order);
                 return;
             }
 
-            Entity hoveredEntity = default;
-            _hoveredEntityProvider?.Invoke(out hoveredEntity);
-            if (TryBuildContextScoredOrder(mapping, hoveredEntity, out var order))
-            {
-                SubmitOrder(mapping, in order);
-            }
+            RecordRejectedActivation(actor, rejection);
         }
 
-        private bool TryBuildContextScoredOrder(InputOrderMapping mapping, Entity hoveredEntity, out Order order)
+        private bool TryBuildContextScoredOrder(
+            InputOrderMapping mapping,
+            Entity actor,
+            Entity hoveredEntity,
+            out Order order,
+            out OrderSubmitResult rejection)
         {
             order = default;
-            if (!HasExplicitLocalPlayer()) return false;
+            rejection = OrderSubmitResult.RejectedValidation;
+            if (!HasExplicitLocalPlayer())
+            {
+                rejection = OrderSubmitResult.RejectedInvalidActor;
+                return false;
+            }
 
             int orderTypeId = RequireOrderTypeId(mapping);
 
-            Entity actor = ResolvePrimaryActor(mapping);
-            if (!_contextScoredProvider!(actor, mapping, hoveredEntity, out var resolution))
+            if (actor == default)
             {
+                rejection = OrderSubmitResult.RejectedInvalidActor;
+                return false;
+            }
+
+            if (!_contextScoredProvider!(
+                    actor,
+                    mapping,
+                    hoveredEntity,
+                    out var resolution,
+                    out GraphScoreFailureReason failureReason))
+            {
+                rejection = MapContextScoredFailure(failureReason);
                 return false;
             }
 
             var args = new OrderArgs();
-            ApplyArgsTemplate(ref args, mapping.ArgsTemplate);
             ApplyOrderPayload(ref args, mapping);
-            args.I0 = resolution.SlotIndex;
+            OrderBuilder.SetAbilitySlot(ref args, resolution.SlotIndex, orderTypeId);
 
             order.OrderTypeId = orderTypeId;
             order.PlayerId = CurrentActivationPlayerId;
@@ -1415,6 +1409,13 @@ namespace Ludots.Core.Input.Orders
             order.Args = args;
             order.SubmitMode = DetermineSubmitMode(mapping.ModifierBehavior);
             return true;
+        }
+
+        private static OrderSubmitResult MapContextScoredFailure(GraphScoreFailureReason failureReason)
+        {
+            return failureReason == GraphScoreFailureReason.BudgetExhausted
+                ? OrderSubmitResult.RejectedAdmissionCapacity
+                : OrderSubmitResult.RejectedValidation;
         }
 
         /// <summary>
@@ -1434,7 +1435,6 @@ namespace Ludots.Core.Input.Orders
             int orderTypeId = RequireOrderTypeId(mapping);
 
             var args = new OrderArgs();
-            ApplyArgsTemplate(ref args, mapping.ArgsTemplate);
             ApplyOrderPayload(ref args, mapping);
             RequireValidConfiguredTargetResolver(mapping, mapping.TargetType);
 
@@ -1537,7 +1537,6 @@ namespace Ludots.Core.Input.Orders
 
             Entity actor = ResolvePrimaryActor(mapping);
             var args = new OrderArgs();
-            ApplyArgsTemplate(ref args, mapping.ArgsTemplate);
             ApplyOrderPayload(ref args, mapping);
             RequireValidConfiguredTargetResolver(mapping, mapping.TargetType);
 
@@ -1581,7 +1580,6 @@ namespace Ludots.Core.Input.Orders
             int orderTypeId = RequireOrderTypeId(mapping.ActionId, orderTypeKey);
 
             var args = new OrderArgs();
-            ApplyArgsTemplate(ref args, mapping.ArgsTemplate);
             ApplyOrderPayload(ref args, mapping);
             OrderTargetType TargetType = TargetTypeOverride ?? mapping.TargetType;
             RequireValidConfiguredTargetResolver(mapping, TargetType);
@@ -1659,133 +1657,6 @@ namespace Ludots.Core.Input.Orders
             order.Args = args;
             order.SubmitMode = DetermineSubmitMode(mapping.ModifierBehavior);
             return true;
-        }
-
-        private void SubmitRoutedOrders(InputOrderMapping mapping)
-        {
-            if (_actorOrderRoutingResolver == null)
-            {
-                throw new InvalidOperationException(
-                    $"Input mapping '{mapping.ActionId}' defines actorOrderRouting but no resolver is configured.");
-            }
-
-            if (mapping.IsSkillMapping)
-            {
-                throw new InvalidOperationException(
-                    $"Input mapping '{mapping.ActionId}' actorOrderRouting is only valid when isSkillMapping is false.");
-            }
-
-            if (mapping.TargetType == OrderTargetType.Entities)
-            {
-                throw new InvalidOperationException(
-                    $"Input mapping '{mapping.ActionId}' actorOrderRouting does not support Entities target type.");
-            }
-
-            if (!TryCaptureCollectionEntities(mapping.ActorCollectionKey, _collectionActorsScratch, out OrderSubmitResult collectionRejection))
-            {
-                RejectInputActivation(mapping, collectionRejection);
-                return;
-            }
-
-            _routedOrdersScratch.Clear();
-            for (int i = 0; i < _collectionActorsScratch.Count; i++)
-            {
-                Entity actor = _collectionActorsScratch[i];
-                if (actor == default)
-                {
-                    continue;
-                }
-
-                if (!_actorOrderRoutingResolver(actor, mapping.ActorOrderRouting!, out ActorOrderRoutingCandidate matchedCandidate))
-                {
-                    continue;
-                }
-
-                if (!TryBuildOrderForActor(
-                        mapping,
-                        actor,
-                        matchedCandidate.OrderTypeKey,
-                        matchedCandidate.TargetType,
-                        out var order))
-                {
-                    continue;
-                }
-
-                if (_routedOrdersScratch.Count >= _commandIntentScratchCapacity)
-                {
-                    RejectInputActivation(mapping, OrderSubmitResult.RejectedAdmissionCapacity);
-                    return;
-                }
-
-                AddFixed(
-                    _routedOrdersScratch,
-                    new RoutedOrderSubmission(in order, matchedCandidate.OrderTypeKey),
-                    nameof(_routedOrdersScratch));
-            }
-
-            if (_routedOrdersScratch.Count == 0)
-            {
-                RejectInputActivation(mapping, OrderSubmitResult.RejectedByRule);
-                return;
-            }
-
-            for (int i = 0; i < _routedOrdersScratch.Count; i++)
-            {
-                Order order = _routedOrdersScratch[i].Order;
-                if (!TryAuthorizeActor(order.Actor, order.PlayerId))
-                {
-                    return;
-                }
-            }
-
-            int layoutEligibleCount = 0;
-            for (int i = 0; i < _routedOrdersScratch.Count; i++)
-            {
-                if (IsTargetLayoutOrderType(mapping, _routedOrdersScratch[i].OrderTypeKey))
-                {
-                    layoutEligibleCount++;
-                }
-            }
-
-            if (_routedOrdersScratch.Count > 1 && _orderBatchSubmitHandler == null)
-            {
-                throw new InvalidOperationException(
-                    $"Input mapping '{mapping.ActionId}' actorOrderRouting produced {_routedOrdersScratch.Count} orders, but no atomic batch submit handler is configured.");
-            }
-
-            EnsureOrderScratch(ref _commandIntentOrdersScratch, _routedOrdersScratch.Count);
-            int batchCount = 0;
-            int layoutIndex = 0;
-            for (int i = 0; i < _routedOrdersScratch.Count; i++)
-            {
-                Order order = _routedOrdersScratch[i].Order;
-                string orderTypeKey = _routedOrdersScratch[i].OrderTypeKey;
-                if (layoutEligibleCount > 1 &&
-                    !mapping.IsSkillMapping &&
-                    mapping.TargetType == OrderTargetType.Position &&
-                    IsTargetLayoutOrderType(mapping, orderTypeKey))
-                {
-                    ApplyGroupMoveTargetLayout(mapping, orderTypeKey, layoutEligibleCount, layoutIndex, ref order);
-                    layoutIndex++;
-                }
-
-                if (_routedOrdersScratch.Count == 1)
-                {
-                    SubmitAuthorizedToHandler(in order);
-                }
-                else
-                {
-                    _commandIntentOrdersScratch[batchCount++] = order;
-                }
-            }
-
-            if (batchCount > 0)
-            {
-                SubmitAtomicOrderBatch(
-                    mapping,
-                    _commandIntentOrdersScratch.AsSpan(0, batchCount),
-                    "actorOrderRouting");
-            }
         }
 
         private OrderSubmitResult SubmitCommandIntentOrder(InputOrderMapping mapping)
@@ -1953,7 +1824,6 @@ namespace Ludots.Core.Input.Orders
                 {
                     CommandIntentRoute route = dispatchRoutes[dispatchIndex];
                     var args = new OrderArgs();
-                    ApplyArgsTemplate(ref args, mapping.ArgsTemplate);
                     ApplyOrderPayload(ref args, mapping);
                     if (!TryApplyCommandIntentRoutePayload(dispatchActors[dispatchIndex], route, ref args))
                     {
@@ -2011,7 +1881,6 @@ namespace Ludots.Core.Input.Orders
                     CommandIntentRoute route = dispatchRoutes[dispatchIndex];
 
                     var args = new OrderArgs();
-                    ApplyArgsTemplate(ref args, mapping.ArgsTemplate);
                     ApplyOrderPayload(ref args, mapping);
                     if (!TryApplyCommandIntentRoutePayload(dispatchActor, route, ref args))
                     {
@@ -2045,7 +1914,6 @@ namespace Ludots.Core.Input.Orders
                 CommandIntentRoute route = dispatchRoutes[dispatchIndex];
 
                 var args = new OrderArgs();
-                ApplyArgsTemplate(ref args, mapping.ArgsTemplate);
                 ApplyOrderPayload(ref args, mapping);
                 if (!TryApplyCommandIntentRoutePayload(dispatchActor, route, ref args))
                 {
@@ -2134,7 +2002,7 @@ namespace Ludots.Core.Input.Orders
                         return false;
                     }
 
-                    args.I0 = slotIndex;
+                    OrderBuilder.SetAbilitySlot(ref args, slotIndex);
                     return true;
 
                 case CommandIntentRouteKinds.ContextGroup:
@@ -2625,12 +2493,6 @@ namespace Ludots.Core.Input.Orders
                 profile.SpacingCm);
         }
 
-        private bool IsTargetLayoutOrderType(InputOrderMapping mapping, string orderTypeKey)
-        {
-            return TryGetTargetLayoutProfile(mapping, out TargetLayoutProfileDefinition profile) &&
-                   IsTargetLayoutOrderType(profile, orderTypeKey);
-        }
-
         private bool TryGetTargetLayoutProfile(
             InputOrderMapping mapping,
             out TargetLayoutProfileDefinition profile)
@@ -2738,29 +2600,18 @@ namespace Ludots.Core.Input.Orders
             };
         }
 
-        private static void ApplyArgsTemplate(ref OrderArgs args, OrderArgsTemplate template)
-        {
-            if (template.I0.HasValue) args.I0 = template.I0.Value;
-            if (template.I1.HasValue) args.I1 = template.I1.Value;
-            if (template.I2.HasValue) args.I2 = template.I2.Value;
-            if (template.I3.HasValue) args.I3 = template.I3.Value;
-            if (template.F0.HasValue) args.F0 = template.F0.Value;
-            if (template.F1.HasValue) args.F1 = template.F1.Value;
-            if (template.F2.HasValue) args.F2 = template.F2.Value;
-            if (template.F3.HasValue) args.F3 = template.F3.Value;
-        }
-
         private static void ApplyOrderPayload(ref OrderArgs args, InputOrderMapping mapping)
         {
             if (mapping.OrderPayload == null)
             {
-                return;
+                throw new InvalidOperationException(
+                    $"Input mapping '{mapping.ActionId}' is missing orderPayload; typed orderPayload is required.");
             }
 
             if (mapping.OrderPayload.Kind == InputOrderPayloadKind.CastAbility &&
                 mapping.OrderPayload.AbilitySlot is int abilitySlot)
             {
-                args.I0 = abilitySlot;
+                OrderBuilder.SetAbilitySlot(ref args, abilitySlot);
             }
         }
 
@@ -2776,7 +2627,6 @@ namespace Ludots.Core.Input.Orders
             var newMapping = original.Clone();
             newMapping.ActionId = actionId;
             newMapping.OrderTypeKey = orderTypeKey;
-            newMapping.ArgsTemplate = new OrderArgsTemplate();
             newMapping.OrderPayload = orderPayload?.Clone() ?? original.OrderPayload.Clone();
 
             InputOrderMappingLoader.Validate(
@@ -3155,18 +3005,7 @@ namespace Ludots.Core.Input.Orders
                 return;
             }
 
-            if (mapping.ActorOrderRouting is { Candidates.Count: > 0 })
-            {
-                for (int i = 0; i < mapping.ActorOrderRouting.Candidates.Count; i++)
-                {
-                    ActorOrderRoutingCandidate candidate = mapping.ActorOrderRouting.Candidates[i];
-                    RequireOrderTypeId(mapping.ActionId, candidate.OrderTypeKey);
-                }
-            }
-            else
-            {
-                RequireOrderTypeId(mapping, validatePayloadContract: !IsConfiguredCommandAction(mapping.ActionId));
-            }
+            RequireOrderTypeId(mapping, validatePayloadContract: !IsConfiguredCommandAction(mapping.ActionId));
 
             if (!string.IsNullOrWhiteSpace(mapping.OrderTypeKey) &&
                 mapping.Trigger == InputTriggerType.Held &&
@@ -3241,19 +3080,6 @@ namespace Ludots.Core.Input.Orders
         private string RequireCancelActionId() => RequireConfiguredActionId(_cancelActionId, nameof(CancelActionId));
 
         private string RequireCommandActionId() => RequireConfiguredActionId(_commandActionId, nameof(CommandActionId));
-
-        private void ValidateCommandActionRoutingContract(string commandActionId)
-        {
-            if (!_mappingsByActionId.TryGetValue(commandActionId, out InputOrderMapping? mapping) ||
-                mapping.ActorOrderRouting == null ||
-                mapping.ActorOrderRouting.Candidates.Count == 0)
-            {
-                return;
-            }
-
-            throw new InvalidOperationException(
-                $"Input action '{commandActionId}' is the configured Command action and must route through CommandIntent only; remove actorOrderRouting from the mapping.");
-        }
 
     }
 }

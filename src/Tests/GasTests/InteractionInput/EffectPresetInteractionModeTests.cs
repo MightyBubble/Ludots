@@ -68,7 +68,7 @@ namespace Ludots.Tests.GAS
                         ActionId = "SkillQ",
                         Trigger = InputTriggerType.PressedThisFrame,
                         OrderTypeKey = "castAbility",
-                        ArgsTemplate = new OrderArgsTemplate { I0 = 0 },
+                        OrderPayload = InputOrderPayloadTemplate.CastAbility(0),
                         IsSkillMapping = true,
                         RequireTarget = false,
                         TargetType = OrderTargetType.Entity
@@ -159,7 +159,7 @@ namespace Ludots.Tests.GAS
                         ActionId = "SkillQ",
                         Trigger = InputTriggerType.PressedThisFrame,
                         OrderTypeKey = "castAbility",
-                        ArgsTemplate = new OrderArgsTemplate { I0 = 0 },
+                        OrderPayload = InputOrderPayloadTemplate.CastAbility(0),
                         IsSkillMapping = true,
                         RequireTarget = false,
                         TargetType = OrderTargetType.Entity
@@ -169,7 +169,7 @@ namespace Ludots.Tests.GAS
                         ActionId = "SkillW",
                         Trigger = InputTriggerType.PressedThisFrame,
                         OrderTypeKey = "castAbility",
-                        ArgsTemplate = new OrderArgsTemplate { I0 = 1 },
+                        OrderPayload = InputOrderPayloadTemplate.CastAbility(1),
                         IsSkillMapping = true,
                         RequireTarget = false,
                         TargetType = OrderTargetType.Entity,

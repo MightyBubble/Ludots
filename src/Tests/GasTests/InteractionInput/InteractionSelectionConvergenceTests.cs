@@ -197,10 +197,9 @@ namespace Ludots.Tests.GAS
                 OrderTypeId = castOrderTypeId,
                 Label = "Cast",
                 Priority = 100,
-                PayloadKind = OrderPayloadKind.CastAbility,
                 EntityBlackboardKey = -1,
                 SpatialBlackboardKey = -1,
-            });
+            }.UseCastAbilityPayload());
             var presentationEvents = new GasPresentationEventBuffer(capacity: 8);
 
             var system = new AbilityExecSystem(
@@ -1115,7 +1114,7 @@ namespace Ludots.Tests.GAS
                         ActionId = "SkillQ",
                         Trigger = InputTriggerType.PressedThisFrame,
                         OrderTypeKey = "castAbility",
-                        ArgsTemplate = new OrderArgsTemplate { I0 = 0 },
+                        OrderPayload = InputOrderPayloadTemplate.CastAbility(0),
                         RequireTarget = false,
                         TargetType = OrderTargetType.Entity,
                         IsSkillMapping = true,

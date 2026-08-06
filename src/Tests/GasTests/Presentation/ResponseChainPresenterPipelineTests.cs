@@ -10,6 +10,7 @@ using Ludots.Core.Gameplay.GAS.Input;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
@@ -60,6 +61,13 @@ namespace Ludots.Tests.GAS
                 var chainOrders = new OrderQueue(64, admissionResults);
                 var telemetry = new ResponseChainTelemetryBuffer();
                 var orderReq = new OrderRequestQueue();
+                GasTestPhaseRuntime.Create(
+                    world,
+                    templates,
+                    requests,
+                    out EffectPhaseExecutor phaseExecutor,
+                    out GasGraphRuntimeApi graphApi,
+                    tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
  
                 var processing = new EffectProcessingLoopSystem(
                     world,
@@ -75,6 +83,8 @@ namespace Ludots.Tests.GAS
                     telemetry,
                     orderReq,
                     responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                    phaseExecutor: phaseExecutor,
+                    graphApi: graphApi,
                     tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()))
                 {
                     MaxWorkUnitsPerSlice = int.MaxValue
@@ -102,9 +112,8 @@ namespace Ludots.Tests.GAS
                 That(req.PromptTagId, Is.EqualTo(tplRoot));
                 That(req.AllowedCount, Is.GreaterThanOrEqualTo(2));
  
-                var args = default(OrderArgs);
-                args.I0 = tplRoot;
-                var activate = new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainActivateEffect, PlayerId = 1, Actor = target, Target = target, Args = args };
+                var activate = new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainActivateEffect, PlayerId = 1, Actor = target, Target = target };
+                ResponseChainOrderPayload.ConfigureActivateEffect(ref activate, tplRoot);
                 var pass1 = new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass, PlayerId = 1, Actor = target, Target = target };
                 var pass2 = new Order { OrderTypeId = TestResponseChainOrderTypeIds.ChainPass, PlayerId = 1, Actor = target, Target = target };
                 That(chainOrders.SubmitAssigned(ref activate), Is.EqualTo(OrderSubmitResult.Queued));
@@ -163,6 +172,13 @@ namespace Ludots.Tests.GAS
             var chainOrders = new OrderQueue(8, admissionResults);
             var inputRequests = new InputRequestQueue(capacity: 8);
             var orderRequests = new OrderRequestQueue(capacity: 8);
+            GasTestPhaseRuntime.Create(
+                world,
+                templates,
+                requests,
+                out EffectPhaseExecutor phaseExecutor,
+                out GasGraphRuntimeApi graphApi,
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
             var processing = new EffectProcessingLoopSystem(
                 world,
                 requests,
@@ -177,6 +193,8 @@ namespace Ludots.Tests.GAS
                 new ResponseChainTelemetryBuffer(),
                 orderRequests,
                 responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                phaseExecutor: phaseExecutor,
+                graphApi: graphApi,
                 tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()))
             {
                 MaxWorkUnitsPerSlice = int.MaxValue

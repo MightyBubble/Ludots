@@ -32,7 +32,7 @@ namespace Ludots.Tests.GAS
         // ════════════════════════════════════════════════════════════════════
 
         [Test]
-        public void PhaseExecutor_BuiltinPath_ApplyModifiers_AppliesViaPresetType()
+        public void PhaseExecutor_PresetGraph_ApplyModifiers_AppliesViaPresetType()
         {
             using var world = World.Create();
 
@@ -45,7 +45,9 @@ namespace Ludots.Tests.GAS
                 ActivePhases = PhaseFlags.InstantCore,
                 AllowedLifetimes = LifetimeFlags.InstantOnly,
             };
-            def.DefaultPhaseHandlers[EffectPhaseId.OnApply] = PhaseHandler.Builtin(BuiltinHandlerId.ApplyModifiers);
+            var programs = new GraphProgramRegistry();
+            def.DefaultPhaseHandlers[EffectPhaseId.OnApply] =
+                GasTestGraphPrograms.BuiltinGraph(programs, 4_001, BuiltinHandlerId.ApplyModifiers);
             presetTypes.Register(in def);
 
             var builtinHandlers = new BuiltinHandlerRegistry();
@@ -62,7 +64,6 @@ namespace Ludots.Tests.GAS
                 Modifiers = mods,
             });
 
-            var programs = new GraphProgramRegistry();
             GasTestEffectExecutionPlanFinalizer.FinalizeAll(
                 templates,
                 presetTypes,
@@ -87,11 +88,11 @@ namespace Ludots.Tests.GAS
                 builtinRuntime: new BuiltinHandlerExecutionContext { TagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()) });
 
             float hp = world.Get<AttributeBuffer>(target).GetCurrent(hpAttrId);
-            That(hp, Is.EqualTo(75f), "ApplyModifiers via Builtin handler path should reduce HP by 25");
+            That(hp, Is.EqualTo(75f), "ApplyModifiers via preset Graph path should reduce HP by 25");
         }
 
         [Test]
-        public void PhaseExecutor_BuiltinPath_TemplateMissing_ThrowsInvalidOperation()
+        public void PhaseExecutor_PresetGraph_TemplateMissing_ThrowsInvalidOperation()
         {
             using var world = World.Create();
 
@@ -103,7 +104,9 @@ namespace Ludots.Tests.GAS
                 ActivePhases = PhaseFlags.InstantCore,
                 AllowedLifetimes = LifetimeFlags.InstantOnly,
             };
-            def.DefaultPhaseHandlers[EffectPhaseId.OnApply] = PhaseHandler.Builtin(BuiltinHandlerId.ApplyModifiers);
+            var programs = new GraphProgramRegistry();
+            def.DefaultPhaseHandlers[EffectPhaseId.OnApply] =
+                GasTestGraphPrograms.BuiltinGraph(programs, 4_002, BuiltinHandlerId.ApplyModifiers);
             presetTypes.Register(in def);
 
             var builtinHandlers = new BuiltinHandlerRegistry();
@@ -111,7 +114,6 @@ namespace Ludots.Tests.GAS
 
             // Empty template registry — template ID 999 does not exist
             var templates = new EffectTemplateRegistry();
-            var programs = new GraphProgramRegistry();
             GasTestEffectExecutionPlanFinalizer.FinalizeAll(
                 templates,
                 presetTypes,
@@ -349,7 +351,7 @@ namespace Ludots.Tests.GAS
         // ════════════════════════════════════════════════════════════════════
 
         [Test]
-        public void PhaseExecutor_BuiltinApplyForce_WritesAttributesViaPresetType()
+        public void PhaseExecutor_PresetGraphApplyForce_WritesAttributesViaPresetType()
         {
             using var world = World.Create();
 
@@ -363,7 +365,9 @@ namespace Ludots.Tests.GAS
                 ActivePhases = EffectPhaseId.OnApply.ToFlag(),
                 AllowedLifetimes = LifetimeFlags.InstantOnly,
             };
-            def.DefaultPhaseHandlers[EffectPhaseId.OnApply] = PhaseHandler.Builtin(BuiltinHandlerId.ApplyForce);
+            var programs = new GraphProgramRegistry();
+            def.DefaultPhaseHandlers[EffectPhaseId.OnApply] =
+                GasTestGraphPrograms.BuiltinGraph(programs, 4_003, BuiltinHandlerId.ApplyForce);
             presetTypes.Register(in def);
 
             var builtinHandlers = new BuiltinHandlerRegistry();
@@ -387,7 +391,6 @@ namespace Ludots.Tests.GAS
                 ConfigParams = configParams,
             });
 
-            var programs = new GraphProgramRegistry();
             GasTestEffectExecutionPlanFinalizer.FinalizeAll(
                 templates,
                 presetTypes,

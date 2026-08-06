@@ -206,6 +206,7 @@ namespace Ludots.Tests.GAS
             Assert.That(world.Get<OrderBuffer>(actor).ActiveOrder.Order.OrderId, Is.EqualTo(7));
             Assert.That(CountPresentationEvents(harness.PresentationEvents, GasPresentationEventKind.CastFinished), Is.Zero);
 
+            harness.OrderTypes.TerminalResults.Release(99);
             harness.OrderTypes.TerminalResults.Clear();
             harness.ExecSystem.ResetSlice();
             harness.ExecSystem.Update(0f);
@@ -259,6 +260,7 @@ namespace Ludots.Tests.GAS
             Assert.That(world.Get<OrderBuffer>(actor).ActiveOrder.Order.OrderId, Is.EqualTo(7));
             Assert.That(CountPresentationEvents(harness.PresentationEvents, GasPresentationEventKind.CastFinished), Is.Zero);
 
+            harness.OrderTypes.TerminalResults.Release(99);
             harness.OrderTypes.TerminalResults.Clear();
             harness.ExecSystem.ResetSlice();
             harness.ExecSystem.Update(0f);
@@ -478,10 +480,9 @@ namespace Ludots.Tests.GAS
                     AllowQueuedMode = false,
                     ClearQueueOnActivate = true,
                     CanInterruptSelf = true,
-                    PayloadKind = OrderPayloadKind.CastAbility,
                     EntityBlackboardKey = OrderBlackboardKeys.Cast_TargetEntity,
                     SpatialBlackboardKey = OrderBlackboardKeys.Cast_TargetPosition,
-                });
+                }.UseCastAbilityPayload());
 
                 var presentationEvents = new GasPresentationEventBuffer(32);
                 var execSystem = new AbilityExecSystem(
