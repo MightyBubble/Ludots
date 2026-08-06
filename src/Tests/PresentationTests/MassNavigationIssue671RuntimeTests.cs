@@ -247,6 +247,34 @@ public sealed class MassNavigationIssue671RuntimeTests
         return simulation;
     }
 
+    [Test]
+    public void SetUnitRuntimeProfile_UnregisteredTeamLayerCombination_RejectsHotPathAllocation()
+    {
+        MassNavigationAgentLayer registeredLayer = CreateAgentLayer();
+        MassNavigationAgentLayer unregisteredLayer = new(categoryMask: 1u << 3, interactionMask: 1u << 3);
+        MassNavigationFlowSolverState flow = CreateAvoidanceFlow(
+            workerCount: 1,
+            mode: "Orca",
+            seeds: new[]
+            {
+                CreateSeed(localX: 1_000f, localY: 1_000f, registeredLayer),
+            });
+
+        InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+            flow.SetUnitRuntimeProfile(
+                index: 0,
+                teamId: 1,
+                navMass: 1f,
+                visualScale: 1f,
+                bodyRadiusCm: 20f,
+                speedCmPerSecond: 800f,
+                layer: unregisteredLayer))!;
+
+        Assert.That(ex.Message, Does.Contain("SetUnitRuntimeProfile must not allocate"));
+        Assert.That(ex.Message, Does.Contain("ResetAuthoredAgents"));
+        Assert.That(ex.Message, Does.Contain("AppendAuthoredAgents"));
+    }
+
     private static MassNavigationFlowSolverState CreateAvoidanceFlow(
         int workerCount,
         string mode,

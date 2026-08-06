@@ -813,6 +813,11 @@ public sealed class MassNavigationSimulationRuntime
         return MassNavigationFlow.Semantics.Group;
     }
 
+    public MassNavigationRouteSemantics GetRuntimeRouteSemantics()
+    {
+        return MassNavigationFlow.Semantics.Route;
+    }
+
     public MassNavigationFlowSolverState GetFlowSolverForTests()
     {
         return MassNavigationFlow;
@@ -1545,18 +1550,6 @@ public sealed class MassNavigationSimulationRuntime
         maxY = MathF.Max(maxY, y);
     }
 
-    private static void UpsertComponent<T>(World world, Entity entity, T component)
-    {
-        if (world.Has<T>(entity))
-        {
-            world.Set(entity, component);
-        }
-        else
-        {
-            world.Add(entity, component);
-        }
-    }
-
     private WorldSizeSpec RequireBoardWorldSize()
     {
         if (!_boardWorldBound)
@@ -1585,19 +1578,6 @@ public sealed class MassNavigationSimulationRuntime
         {
             throw new InvalidOperationException(
                 $"MassNavigation agent index {agentIndex} exceeds current agent count {MassNavigationFlow.UnitCount}.");
-        }
-    }
-
-    private void RequireAgentRange(int firstAgentIndex, int agentCount, string fieldName)
-    {
-        int end = firstAgentIndex + agentCount;
-        if (firstAgentIndex < 0 ||
-            agentCount <= 0 ||
-            end < firstAgentIndex ||
-            end > MassNavigationFlow.UnitCount)
-        {
-            throw new InvalidOperationException(
-                $"MassNavigation agent range '{fieldName}' [{firstAgentIndex}, {end}) must be within current agent count {MassNavigationFlow.UnitCount}.");
         }
     }
 
