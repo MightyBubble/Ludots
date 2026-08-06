@@ -5,7 +5,7 @@ using Arch.System;
 namespace Ludots.Core.Movement
 {
     /// <summary>
-    /// 固定步边界的位姿写权结算系统（issue #643）。
+    /// 固定步边界的位姿写权结算系统。
     /// 运行在 <see cref="Engine.GameEngine.SystemGroup.SchemaUpdate"/>：
     /// 先把上一固定步排队的写权切换经 CommandBuffer 生效并通知监听者，
     /// 再推进已持有窗口的时钟并对超时窗口 fail-fast。

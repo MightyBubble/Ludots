@@ -90,6 +90,11 @@ public sealed class MassNavigationRuntime
 
         if (_simulation is MassNavigationSimulationRuntime simulation)
         {
+            // 地图挂起/卸载时批量取消全部位姿写权窗口：必须发生在 binding 清除之前，
+            // 桥此刻还能解析到运行时并做求解器侧的幂等清理；活跃位移效果会在下一 tick
+            // 识别到窗口消失并合法终止。
+            PoseAuthorityArbiter? poseAuthorityArbiter = engine.GetService(CoreServiceKeys.PoseAuthorityArbiter);
+            poseAuthorityArbiter?.CancelAllWindows(engine.World);
             RequireRuntimeBinding(engine).Clear(mapId, simulation);
         }
 
