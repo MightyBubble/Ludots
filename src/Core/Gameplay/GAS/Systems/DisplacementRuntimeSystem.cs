@@ -17,7 +17,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
     /// Runs in <see cref="Engine.GameEngine.SystemGroup.EffectProcessing"/> alongside projectile/spawn systems.
     /// Uses deferred destruction to avoid structural changes inside query lambdas.
     /// All math uses Fix64/Fix64Vec2 for determinism.
-    /// Targets bound as MassNavigation agents (issue #643) go through the pose-authority
+    /// Targets bound as MassNavigation agents go through the pose-authority
     /// displacement window: the window is requested at effect start, committed at the next
     /// fixed-step boundary, and handed back to Nav when the effect ends or its speed drops
     /// below the authored handback threshold. Agents without an explicit
@@ -81,7 +81,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         if (!World.Has<MovementParticipation>(disp.TargetEntity))
                         {
                             throw new System.InvalidOperationException(
-                                $"Displacement targets MassNavigation agent entity {disp.TargetEntity.Id} without a MovementParticipation declaration; silent double-writes of WorldPositionCm are forbidden (issue #643).");
+                                $"Displacement targets MassNavigation agent entity {disp.TargetEntity.Id} without a MovementParticipation declaration; silent double-writes of WorldPositionCm are forbidden.");
                         }
 
                         participation = World.Get<MovementParticipation>(disp.TargetEntity);
@@ -208,7 +208,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         private void ApplyPositionStep(Entity target, Fix64Vec2 step)
         {
-            // physicsPresence=Kinematic 的参与单位（issue #643 增量 2）：Position2D 由
+            // physicsPresence=Kinematic 的参与单位：Position2D 由
             // KinematicTargetPoseBuffer2D → KinematicDriveSystem2D 唯一驱动（massnav→kinematic
             // 桥喂送已提交 WorldPositionCm，物理步内应用并推导 Velocity2D）。位移窗口只写
             // WorldPositionCm；直写 Position2D 会绕过速度推导、在物理步之外瞬移刚体（双写违规）。

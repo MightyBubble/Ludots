@@ -296,10 +296,10 @@ namespace Ludots.Tests.Presentation
                 () => $"After knockback recovery only {CountAgentsWithin(engine, squad, target, knockbackArrivalToleranceCm)} of " +
                     $"{squad.Count} agents resumed and arrived near {target}. Stragglers: {DescribeStragglers(engine, squad, target, knockbackArrivalToleranceCm)}");
 
-            // Second cast: the arrival march far exceeds the 45-tick Q cooldown (issue #737 requires
+            // Second cast: the arrival march far exceeds the 45-tick Q cooldown (the stacking guard requires
             // cooldown 2250ms > displacement.maxDurationMs 2000ms), so no unit is still inside a window.
             Assert.That(arbiter.ActiveWindowCount, Is.Zero,
-                "No agent may still hold a displacement window before the second Q cast (issue #737 guard).");
+                "No agent may still hold a displacement window before the second Q cast (stacking guard).");
             Vector2 secondCentroid = ComputeCentroid(engine, squad);
             DriveAbilityCast(engine, backend, SkillQKeyPath, secondCentroid);
 

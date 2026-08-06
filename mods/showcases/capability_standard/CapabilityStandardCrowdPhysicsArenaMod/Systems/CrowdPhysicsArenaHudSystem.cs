@@ -12,7 +12,7 @@ using Ludots.Core.Scripting;
 namespace CapabilityStandardCrowdPhysicsArenaMod.Systems;
 
 /// <summary>
-/// Arena HUD (issue #734): three live numbers on the screen overlay —
+/// Arena HUD: three live numbers on the screen overlay —
 /// selected unit count (command source view), units currently displaced/recovering
 /// (pose authority windows), and total agent plate steps (ContactBegin count).
 /// Reuses the core screen overlay text pipeline.

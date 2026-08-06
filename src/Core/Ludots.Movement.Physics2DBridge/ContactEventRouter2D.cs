@@ -16,7 +16,7 @@ namespace Ludots.Core.Movement.Physics2DBridge
     }
 
     /// <summary>
-    /// massnav→kinematic 桥的事件路由半边（issue #643 增量 2 / #734）。
+    /// massnav→kinematic 桥的事件路由半边。
     ///
     /// 物理步后由 <see cref="ContactEventRoutingSystem2D"/> Drain <see cref="ContactEventQueue2D"/>，
     /// 按事件双方的 EntityLayer category 位分发给注册的消费者（每个命中 layer 的消费者各收到一次；

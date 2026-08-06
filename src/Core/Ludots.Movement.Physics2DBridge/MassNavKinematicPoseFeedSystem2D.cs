@@ -11,7 +11,7 @@ using Ludots.Core.Physics2D.Components;
 namespace Ludots.Core.Movement.Physics2DBridge
 {
     /// <summary>
-    /// massnav→kinematic 桥的位姿喂送半边（issue #643 增量 2 / #734）。
+    /// massnav→kinematic 桥的位姿喂送半边。
     ///
     /// 每个引擎固定步、在 Physics2D 步进之前，把 physicsPresence=Kinematic 且已绑定
     /// massnav agent 的实体的已提交 <see cref="WorldPositionCm"/>（Nav 写权由 entity-sync

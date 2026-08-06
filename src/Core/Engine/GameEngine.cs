@@ -1774,7 +1774,7 @@ namespace Ludots.Core.Engine
                     throw new InvalidOperationException($"Failed to create runtime navmesh obstacle dirty system '{runtimeNavMeshObstacleSystemTypeName}'.");
                 }
             }
-            // Pose-authority arbitration (issue #643): transitions queue during the tick and are
+            // Pose-authority arbitration: transitions queue during the tick and are
             // committed at the next fixed-step boundary by PoseAuthorityCommitSystem (SchemaUpdate).
             var poseAuthorityArbiter = new PoseAuthorityArbiter();
             SetService(CoreServiceKeys.PoseAuthorityArbiter, poseAuthorityArbiter);
@@ -1969,7 +1969,7 @@ namespace Ludots.Core.Engine
         }
 
         /// <summary>
-        /// massnav→kinematic 桥（issue #643 增量 2）：Physics2D 在场时为必装项。
+        /// massnav→kinematic 桥：Physics2D 在场时为必装项。
         /// 桥装配组合层的位姿喂送与碰撞事件路由；缺装即启动失败，不允许 kinematic
         /// 参与单位静默失去物理体喂送。
         /// </summary>
@@ -1982,7 +1982,7 @@ namespace Ludots.Core.Engine
             if (installerType == null)
             {
                 throw new InvalidOperationException(
-                    $"Physics2D startup requires '{bridgeInstallerTypeName}' from '{bridgeAssemblyName}' (massnav→kinematic bridge, issue #643 increment 2) when 'Ludots.Physics2D' is present.");
+                    $"Physics2D startup requires '{bridgeInstallerTypeName}' from '{bridgeAssemblyName}' (massnav→kinematic bridge) when 'Ludots.Physics2D' is present.");
             }
 
             MethodInfo installMethod = installerType.GetMethod("Install", BindingFlags.Public | BindingFlags.Static)

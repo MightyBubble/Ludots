@@ -13,7 +13,7 @@ using Ludots.Core.Physics2D.Components;
 namespace CapabilityStandardCrowdPhysicsArenaMod.Systems;
 
 /// <summary>
-/// Pressure plate → door gameplay bridge (issue #734).
+/// Pressure plate → door gameplay bridge.
 ///
 /// Consumes ContactBegin/ContactEnd events routed for the <c>arena.plate</c> layer by the
 /// massnav→kinematic bridge's <see cref="ContactEventRouter2D"/> and counts distinct squad
