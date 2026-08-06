@@ -208,7 +208,15 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         private void ApplyPositionStep(Entity target, Fix64Vec2 step)
         {
-            if (World.Has<Position2D>(target))
+            // physicsPresence=Kinematic 的参与单位（issue #643 增量 2）：Position2D 由
+            // KinematicTargetPoseBuffer2D → KinematicDriveSystem2D 唯一驱动（massnav→kinematic
+            // 桥喂送已提交 WorldPositionCm，物理步内应用并推导 Velocity2D）。位移窗口只写
+            // WorldPositionCm；直写 Position2D 会绕过速度推导、在物理步之外瞬移刚体（双写违规）。
+            bool kinematicPoseDriven =
+                World.TryGet(target, out MovementParticipation participation) &&
+                participation.PhysicsPresence == PhysicsPresenceKind.Kinematic;
+
+            if (!kinematicPoseDriven && World.Has<Position2D>(target))
             {
                 ref var physicsPosition = ref World.Get<Position2D>(target);
                 physicsPosition.Value = physicsPosition.Value + step;

@@ -1964,6 +1964,32 @@ namespace Ludots.Core.Engine
             RegisterSystem(worldSyncSystem, SystemGroup.PostMovement);
             GlobalContext["Ludots.Core.Physics2D.Ticking.Physics2DSimulationSystem"] = physics2dSystem;
             GlobalContext["Ludots.Core.Physics2D.Systems.Physics2DToWorldPositionSyncSystem"] = worldSyncSystem;
+
+            InstallMovementPhysics2DBridge();
+        }
+
+        /// <summary>
+        /// massnav→kinematic 桥（issue #643 增量 2）：Physics2D 在场时为必装项。
+        /// 桥装配组合层的位姿喂送与碰撞事件路由；缺装即启动失败，不允许 kinematic
+        /// 参与单位静默失去物理体喂送。
+        /// </summary>
+        private void InstallMovementPhysics2DBridge()
+        {
+            const string bridgeAssemblyName = "Ludots.Movement.Physics2DBridge";
+            const string bridgeInstallerTypeName = "Ludots.Core.Movement.Physics2DBridge.MovementPhysics2DBridgeInstaller";
+
+            Type? installerType = TryResolveOptionalAssemblyType(bridgeAssemblyName, bridgeInstallerTypeName);
+            if (installerType == null)
+            {
+                throw new InvalidOperationException(
+                    $"Physics2D startup requires '{bridgeInstallerTypeName}' from '{bridgeAssemblyName}' (massnav→kinematic bridge, issue #643 increment 2) when 'Ludots.Physics2D' is present.");
+            }
+
+            MethodInfo installMethod = installerType.GetMethod("Install", BindingFlags.Public | BindingFlags.Static)
+                ?? throw new InvalidOperationException(
+                    $"'{bridgeInstallerTypeName}' must expose a public static Install(GameEngine) method.");
+            var install = (Action<GameEngine>)Delegate.CreateDelegate(typeof(Action<GameEngine>), installMethod);
+            install(this);
         }
 
         private static Type? TryResolveOptionalAssemblyType(string assemblyName, string typeName)

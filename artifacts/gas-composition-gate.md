@@ -2,6 +2,63 @@
 
 Current closeouts and prior issue reviews follow.
 
+## GAS Composition Gate - Issue #734 Crowd Physics Arena (massnav→kinematic bridge + showcase) - 2026-08-06
+
+- **Task / Issue**: Issue #734 — deliver the #643 increment-2 massnav→kinematic bridge, then the `CapabilityStandardCrowdPhysicsArenaMod` showcase (Q shockwave knockback via GAS displacement, E boulder spawn with initial velocity, pressure plate → door via contact events, HUD counters).
+- **Date**: 2026-08-06
+- **Agent / Author**: Cursor cloud agent
+
+### 1. Core judgment
+
+新变体主要交付物是（A/B/C/D）: A
+
+结论: PASS
+
+一句话理由: 冲击波击退复用既有 `presetType=Displacement` effect preset（`DisplacementDirectionMode.AwayFromSource` 是既有 enum 值，非新增）；巨石释放复用既有 `unitCreation`(templateId) effect preset + `RuntimeEntitySpawnQueue` 物化管线，初速度走 Physics2D 模板 authoring 的既有 `velocityCmPerSec` 声明；不新增 `BuiltinHandlerId`、`EffectPresetType`、graph op、profile enum 或平行 spawn/位移管线。
+
+### 2. Layer assignment
+
+| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
+|-----------|-----------------|----------|
+| massnav→kinematic 位姿喂送 | 0/1 | 新组合层系统（消费既有 `KinematicTargetPoseBuffer2D.SetKinematicTargetPose` 与 `WorldPositionCm`，不是 GAS 步骤） |
+| 碰撞事件路由（压力板层→消费者） | 1 | 新组合层 drain/dispatch 服务（消费既有 `ContactEventQueue2D.DrainEvents`） |
+| Q 冲击波击退 | 2/3 | 既有 `Displacement` effect preset authoring（showcase effects.json，AwayFromSource） |
+| E 巨石 spawn + 初速度 | 2/3 | 既有 `unitCreation` effect preset + 既有物理模板 authoring（dynamic body + velocityCmPerSec） |
+| 压力板计数与开门 | 2 | showcase 内事件消费者（挂接组合层路由入口），阈值数据驱动 |
+| HUD 三数字 | 3 | 复用既有 HUD 文本管线（10k showcase 模式） |
+
+### 3. Reuse list
+
+- Handlers: `BuiltinHandlers.HandleApplyDisplacement`（不改）；`unitCreation` 编译路径 `CompileUnitCreation`（不改）。
+- Queues / Systems: `DisplacementRuntimeSystem`、`PoseAuthorityArbiter`/`PoseAuthorityCommitSystem`、`RuntimeEntitySpawnQueue`、`KinematicDriveSystem2D`、`ContactEventSystem2D`（全部不改，只消费）。
+- Resolvers / Registries: `ComponentRegistry`（MovementParticipation 既有解析）、`Physics2DTemplateAuthoring`（bodyType kinematic/dynamic 既有声明）、`LayerRegistry`、`MassNavigationProfileRegistry`。
+- Existing presets / graphs: `presetType=Displacement`（AwayFromSource）、`presetType` unit-creation 路径；order/target 管线沿用 10k showcase 的本地 order source 模式。
+
+### 4. New Layer 0 ops (if any)
+
+N/A — 无新增 graph op / builtin handler。新增的是组合层系统（位姿喂送 + 事件路由），属于 #643/#733 合同的接线，不是 effect 步骤。
+
+### 5. Transaction boundary
+
+位姿喂送每固定步恰一次（`SetKinematicTargetPose` 重复提交/超容量即抛）；碰撞事件当帧 Drain 后同步分发，消费者异常直接上抛不吞；位移窗口写权切换仍由 `PoseAuthorityCommitSystem` 在固定步边界经 CommandBuffer 结算；巨石 spawn 走 `RuntimeEntitySpawnQueue` 既有事务。
+
+### 6. Config SSOT
+
+行为配置落在: showcase 根 mod 的 effects/abilities/templates JSON + `Physics2D/kinematic.json`（kinematicBodyCapacity、contactEventQueueCapacity、contactEventEmitterLayers）+ `MassNavigationConfig.json`（agentProfiles.radiusCm = 半径 SSOT，displacedAgentCapacity）。压力板阈值、队伍规模、巨石初速全部 showcase 配置显式声明。
+
+是否新增 JSON schema: NO（全部挂既有 authoring/config 管线；无平行 loader）。
+
+### 7. Red flag scan
+
+- [x] 未新增 profile inherit/placement enum
+- [x] 未新建与 spawn 平行的物化管线（巨石走 RuntimeEntitySpawnQueue）
+- [x] 未把 placement 校验塞进 lifecycle op
+- [x] 未添加「说不清的」默认 fallback（半径漂移/容量不足/未注册 layer 全部显式抛错或计数暴露）
+
+### 8. Next variant test
+
+「下一个 Mod 变体」将修改: showcase effects.json（位移距离/方向/时长）、templates.json（队伍规模、板阈值、巨石参数）与 kinematic.json 容量，不改 Core enum、不加新 preset 开关。
+
 ## GAS Composition Gate - Issue #643 Stage 0+1 Movement Participation Increment - 2026-08-06
 
 - **Task / Issue**: Issue #643 stage 0+1 — introduce the `MovementParticipation`/`PoseAuthority` two-axis vocabulary, converge the three `WorldPositionCm` writers under a pose-authority contract, and wire the GAS displacement window into MassNavigation's displaced state.
