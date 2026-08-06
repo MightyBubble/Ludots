@@ -369,7 +369,8 @@
           "baseDamping": 0.5
         }
       },
-      "CrowdPhysicsArena.ContactEventEmitter": {}
+      "CrowdPhysicsArena.ContactEventEmitter": {},
+      "CrowdPhysicsArena.PlateAnchor": {}
     }
   },
   {
@@ -405,6 +406,14 @@
         "Value": "CrowdPhysicsArena.Door"
       },
       "SpatialPartitionExcluded": {},
+      "EntityLayer": {
+        "category": [
+          "arena.wall"
+        ],
+        "mask": [
+          "arena.wall"
+        ]
+      },
       "WorldPositionCm": {
         "Value": {
           "X": 0,

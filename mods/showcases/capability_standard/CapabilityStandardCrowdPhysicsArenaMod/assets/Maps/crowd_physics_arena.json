@@ -119,7 +119,7 @@
           "positionCm": { "x": 5600, "y": 5000 },
           "bodyType": "Dynamic",
           "inverseMass": 0.001,
-          "shape": { "type": "Box", "halfWidthCm": 150, "halfHeightCm": 150 },
+          "shape": { "type": "Box", "halfWidthCm": 40, "halfHeightCm": 420 },
           "material": { "friction": 0.8, "restitution": 0.0, "baseDamping": 0.5 }
         }
       }
@@ -129,9 +129,9 @@
       "Template": "crowd_arena_plate_socket_wall",
       "Overrides": {
         "CrowdPhysicsArena.RigidBody": {
-          "positionCm": { "x": 5600, "y": 5210 },
+          "positionCm": { "x": 5600, "y": 5640 },
           "bodyType": "Static",
-          "shape": { "type": "Box", "halfWidthCm": 220, "halfHeightCm": 40 }
+          "shape": { "type": "Box", "halfWidthCm": 400, "halfHeightCm": 200 }
         }
       }
     },
@@ -140,9 +140,9 @@
       "Template": "crowd_arena_plate_socket_wall",
       "Overrides": {
         "CrowdPhysicsArena.RigidBody": {
-          "positionCm": { "x": 5600, "y": 4790 },
+          "positionCm": { "x": 5600, "y": 4360 },
           "bodyType": "Static",
-          "shape": { "type": "Box", "halfWidthCm": 220, "halfHeightCm": 40 }
+          "shape": { "type": "Box", "halfWidthCm": 400, "halfHeightCm": 200 }
         }
       }
     },
@@ -151,9 +151,9 @@
       "Template": "crowd_arena_plate_socket_wall",
       "Overrides": {
         "CrowdPhysicsArena.RigidBody": {
-          "positionCm": { "x": 5810, "y": 5000 },
+          "positionCm": { "x": 5860, "y": 5000 },
           "bodyType": "Static",
-          "shape": { "type": "Box", "halfWidthCm": 40, "halfHeightCm": 220 }
+          "shape": { "type": "Box", "halfWidthCm": 200, "halfHeightCm": 640 }
         }
       }
     },
@@ -162,9 +162,9 @@
       "Template": "crowd_arena_plate_socket_wall",
       "Overrides": {
         "CrowdPhysicsArena.RigidBody": {
-          "positionCm": { "x": 5390, "y": 5000 },
+          "positionCm": { "x": 5340, "y": 5000 },
           "bodyType": "Static",
-          "shape": { "type": "Box", "halfWidthCm": 40, "halfHeightCm": 220 }
+          "shape": { "type": "Box", "halfWidthCm": 200, "halfHeightCm": 640 }
         }
       }
     },

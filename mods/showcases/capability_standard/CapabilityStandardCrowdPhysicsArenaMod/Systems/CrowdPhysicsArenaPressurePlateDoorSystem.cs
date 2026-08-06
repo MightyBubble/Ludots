@@ -8,6 +8,7 @@ using Ludots.Core.Layers;
 using Ludots.Core.MassNavigation;
 using Ludots.Core.Movement.Physics2DBridge;
 using Ludots.Core.Physics2D;
+using Ludots.Core.Physics2D.Components;
 
 namespace CapabilityStandardCrowdPhysicsArenaMod.Systems;
 
@@ -15,9 +16,12 @@ namespace CapabilityStandardCrowdPhysicsArenaMod.Systems;
 /// Pressure plate → door gameplay bridge (issue #734).
 ///
 /// Consumes ContactBegin/ContactEnd events routed for the <c>arena.plate</c> layer by the
-/// massnav→kinematic bridge's <see cref="ContactEventRouter2D"/>, counts squad-agent contacts
-/// (Begin/End are both exposed so "everyone who stepped on also stepped off" is a queryable
-/// invariant), and opens every authored door once the configured ContactBegin threshold is
+/// massnav→kinematic bridge's <see cref="ContactEventRouter2D"/> and counts distinct squad
+/// agents. The plate is a dynamic body seated in a static socket, so a single crossing agent
+/// produces flickering raw Begin/End pairs while position correction pushes the plate out of
+/// penetration each step; counting unique agents keeps "N units cross → exactly N Begins"
+/// exact. Begin/End are both exposed so "everyone who stepped on also stepped off" stays a
+/// queryable invariant, and every authored door opens once the configured Begin threshold is
 /// reached. Opening a door means zeroing its ManifestationObstacleIntent2D sink flags and
 /// marking it dirty so <c>ManifestationObstacleBridge2DSystem</c> removes the physics collider
 /// and the navigation obstacle projection.
@@ -28,7 +32,15 @@ public sealed class CrowdPhysicsArenaPressurePlateDoorSystem : BaseSystem<World,
         .WithAll<CrowdPhysicsArenaDoor, ManifestationObstacleIntent2D>()
         .WithNone<ManifestationObstacleBridge2DDirty>();
 
+    private static readonly QueryDescription PlateAnchorQuery = new QueryDescription()
+        .WithAll<CrowdPhysicsArenaPlateAnchor, Position2D, Velocity2D>();
+
+    private const int AgentTrackingCapacity = 256;
+
     private readonly List<Entity> _doorsToOpen = new(4);
+    private readonly HashSet<Entity> _agentsEverOnPlate = new(AgentTrackingCapacity);
+    private readonly Dictionary<Entity, int> _activePlatePairsByAgent = new(AgentTrackingCapacity);
+    private readonly HashSet<Entity> _agentsOffPlate = new(AgentTrackingCapacity);
     private uint _plateCategoryBit;
     private uint _agentCategoryBit;
     private bool _layerBitsResolved;
@@ -37,10 +49,10 @@ public sealed class CrowdPhysicsArenaPressurePlateDoorSystem : BaseSystem<World,
     {
     }
 
-    /// <summary>Total agent ContactBegin events on the plate.</summary>
+    /// <summary>Distinct squad agents that have begun contact with the plate (one Begin per agent).</summary>
     public long AgentContactBeginCount { get; private set; }
 
-    /// <summary>Total agent ContactEnd events on the plate.</summary>
+    /// <summary>Distinct counted agents that have since fully separated from the plate.</summary>
     public long AgentContactEndCount { get; private set; }
 
     /// <summary>Agents currently standing on the plate (Begin − End reconciliation).</summary>
@@ -69,18 +81,47 @@ public sealed class CrowdPhysicsArenaPressurePlateDoorSystem : BaseSystem<World,
             return;
         }
 
+        Entity agent = aIsPlate ? contactEvent.EntityB : contactEvent.EntityA;
         if (contactEvent.Type == ContactEventType2D.Begin)
         {
-            AgentContactBeginCount++;
+            if (_agentsEverOnPlate.Add(agent))
+            {
+                AgentContactBeginCount++;
+            }
+
+            _activePlatePairsByAgent.TryGetValue(agent, out int activePairs);
+            _activePlatePairsByAgent[agent] = activePairs + 1;
+            if (_agentsOffPlate.Remove(agent))
+            {
+                AgentContactEndCount--;
+            }
+
+            return;
+        }
+
+        if (!_activePlatePairsByAgent.TryGetValue(agent, out int pairs) || pairs <= 0)
+        {
+            throw new InvalidOperationException(
+                $"CrowdPhysicsArenaPressurePlateDoorSystem received ContactEnd for agent {agent.Id} without a matching Begin; " +
+                "the bridge Begin/End edge contract is broken.");
+        }
+
+        if (pairs == 1)
+        {
+            _activePlatePairsByAgent.Remove(agent);
+            _agentsOffPlate.Add(agent);
+            AgentContactEndCount++;
         }
         else
         {
-            AgentContactEndCount++;
+            _activePlatePairsByAgent[agent] = pairs - 1;
         }
     }
 
     public override void Update(in float dt)
     {
+        ReseatAnchoredPlates();
+
         _doorsToOpen.Clear();
         long beginCount = AgentContactBeginCount;
         World.Query(in ClosedDoorQuery, (Entity entity, ref CrowdPhysicsArenaDoor door, ref ManifestationObstacleIntent2D intent) =>
@@ -111,6 +152,32 @@ public sealed class CrowdPhysicsArenaPressurePlateDoorSystem : BaseSystem<World,
             World.Add(entity, new ManifestationObstacleBridge2DDirty());
             OpenedDoorCount++;
         }
+    }
+
+    /// <summary>
+    /// Re-seats every anchored plate on its authored position with zero velocity (see
+    /// <see cref="CrowdPhysicsArenaPlateAnchor"/>): the plate stays a bolted-down sensor while
+    /// remaining a Dynamic emitter that pairs with kinematic agents in the broadphase.
+    /// Per-step solver corrections still move it transiently within a physics step, but they
+    /// can no longer accumulate into socket tunneling and ejection under full-squad pressure.
+    /// </summary>
+    private void ReseatAnchoredPlates()
+    {
+        World.Query(in PlateAnchorQuery, (
+            ref CrowdPhysicsArenaPlateAnchor anchor,
+            ref Position2D position,
+            ref Velocity2D velocity) =>
+        {
+            if (anchor.Captured == 0)
+            {
+                anchor.AnchorCm = position.Value;
+                anchor.Captured = 1;
+                return;
+            }
+
+            position.Value = anchor.AnchorCm;
+            velocity = Velocity2D.Zero;
+        });
     }
 
     private void ResolveLayerBitsOnce()
