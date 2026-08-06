@@ -30,5 +30,10 @@ namespace Ludots.Core.Gameplay.GAS
         /// <summary>Whether to override navigation input during displacement.</summary>
         public bool OverrideNavigation;
         public bool MovementSuppressionApplied;
+        /// <summary>
+        /// 目标是 massnav agent 时置位：已向 PoseAuthorityArbiter 申请位移写权窗口
+        /// （issue #643）。窗口在下一个固定步边界生效，生效前不施加位移。
+        /// </summary>
+        public bool PoseWindowRequested;
     }
 }
