@@ -26,14 +26,20 @@ public sealed class VfxForgeRaylibShowcaseAcceptanceTests
     [
         "vfx_forge.spark_column",
         "vfx_forge.energy_orbit",
-        "vfx_forge.trail_arc"
+        "vfx_forge.trail_arc",
+        "vfx_forge.ember_rain",
+        "vfx_forge.shield_dome",
+        "vfx_forge.gravity_well"
     ];
 
     private static readonly string[] VfxAssetKeys =
     [
         "vfx_forge.spark_column.effect",
         "vfx_forge.energy_orbit.effect",
-        "vfx_forge.trail_arc.effect"
+        "vfx_forge.trail_arc.effect",
+        "vfx_forge.ember_rain.effect",
+        "vfx_forge.shield_dome.effect",
+        "vfx_forge.gravity_well.effect"
     ];
 
     private static readonly string[] PerformerDefinitionKeys =
@@ -41,16 +47,35 @@ public sealed class VfxForgeRaylibShowcaseAcceptanceTests
         "vfx_forge_root",
         "vfx_forge_spark_column",
         "vfx_forge_energy_orbit",
-        "vfx_forge_trail_arc"
+        "vfx_forge_trail_arc",
+        "vfx_forge_ember_pedestal",
+        "vfx_forge_shield_pedestal",
+        "vfx_forge_gravity_pedestal",
+        "vfx_forge_ember_rain",
+        "vfx_forge_shield_dome",
+        "vfx_forge_gravity_well"
     ];
 
     [Test]
     public void MapLoad_WiresQuarksParticleAssetsIntoRaylibVfxPerformerPath()
     {
         string repoRoot = FindRepoRoot();
+        JsonObject map = ReadJsonObject(Path.Combine(
+            repoRoot,
+            "mods",
+            "showcases",
+            "vfx_forge_raylib",
+            "VfxForgeRaylibShowcaseMod",
+            "assets",
+            "Maps",
+            "vfx_forge_raylib_showcase.json"));
         List<string> modPaths = RepoModPaths.ResolveExplicit(
             repoRoot,
             new[] { "LudotsCoreMod", "VfxForgeRaylibShowcaseMod" });
+
+        Assert.That(
+            map["Metadata"]?["vfxForge"]?["effectCount"]?.GetValue<int>(),
+            Is.EqualTo(ParticleEffectKeys.Length));
 
         using var engine = new GameEngine();
         engine.InitializeWithConfigPipeline(modPaths, Path.Combine(repoRoot, "assets"));
@@ -112,7 +137,7 @@ public sealed class VfxForgeRaylibShowcaseAcceptanceTests
             }
         }
 
-        Assert.That(visibleVfxCount, Is.GreaterThanOrEqualTo(3), "The player-facing scene should emit all three VFX performer visuals.");
+        Assert.That(visibleVfxCount, Is.GreaterThanOrEqualTo(ParticleEffectKeys.Length), "The player-facing scene should emit all six VFX performer visuals.");
     }
 
     [Test]

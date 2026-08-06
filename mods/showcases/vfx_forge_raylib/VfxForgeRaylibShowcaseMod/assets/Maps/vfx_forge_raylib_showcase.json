@@ -3,7 +3,7 @@
   "Tags": ["showcase", "raylib", "vfx", "quarks"],
   "Metadata": {
     "vfxForge": {
-      "effectCount": 3,
+      "effectCount": 6,
       "entry": "raylib",
       "assetSource": "Presentation/particle_effects.json"
     }
@@ -24,7 +24,7 @@
     "TargetYCm": 0,
     "Yaw": 180,
     "Pitch": 54,
-    "DistanceCm": 3600,
+    "DistanceCm": 4300,
     "FovYDeg": 55
   },
   "Entities": [

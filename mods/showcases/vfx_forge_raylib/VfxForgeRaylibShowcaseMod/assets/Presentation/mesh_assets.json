@@ -25,5 +25,32 @@
       "spawnMode": "Loop",
       "particleEffectId": "vfx_forge.trail_arc"
     }
+  },
+  {
+    "id": "vfx_forge.ember_rain.effect",
+    "type": "Primitive",
+    "primitiveKind": "Sphere",
+    "vfx": {
+      "spawnMode": "Loop",
+      "particleEffectId": "vfx_forge.ember_rain"
+    }
+  },
+  {
+    "id": "vfx_forge.shield_dome.effect",
+    "type": "Primitive",
+    "primitiveKind": "Sphere",
+    "vfx": {
+      "spawnMode": "Loop",
+      "particleEffectId": "vfx_forge.shield_dome"
+    }
+  },
+  {
+    "id": "vfx_forge.gravity_well.effect",
+    "type": "Primitive",
+    "primitiveKind": "Sphere",
+    "vfx": {
+      "spawnMode": "Loop",
+      "particleEffectId": "vfx_forge.gravity_well"
+    }
   }
 ]
