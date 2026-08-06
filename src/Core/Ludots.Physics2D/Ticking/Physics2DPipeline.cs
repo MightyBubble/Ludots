@@ -34,13 +34,17 @@ namespace Ludots.Core.Physics2D.Ticking
             Physics2DSolverConfig solverConfig,
             Physics2DTickPolicy tickPolicy,
             ShapeDataStorage2D shapeStorage,
-            KinematicTargetPoseBuffer2D kinematicPoses)
+            KinematicTargetPoseBuffer2D kinematicPoses,
+            ContactEventQueue2D contactEvents,
+            Physics2DKinematicConfig kinematicConfig)
         {
             ArgumentNullException.ThrowIfNull(world);
             ArgumentNullException.ThrowIfNull(solverConfig);
             ArgumentNullException.ThrowIfNull(tickPolicy);
             ArgumentNullException.ThrowIfNull(shapeStorage);
             ArgumentNullException.ThrowIfNull(kinematicPoses);
+            ArgumentNullException.ThrowIfNull(contactEvents);
+            ArgumentNullException.ThrowIfNull(kinematicConfig);
 
             var build = new BuildPhysicsWorldSystem2D(world, shapeStorage);
             var spatial = new AdaptiveSpatialSystem2D(world, build, solverConfig);
@@ -61,6 +65,11 @@ namespace Ludots.Core.Physics2D.Ticking
                     new UpdateMotionSystem(world, solverConfig),
                     new BuildIslandsSystem(world),
                     new SleepingSystem(world, solverConfig, tickPolicy),
+                    new ContactEventSystem2D(
+                        world,
+                        contactEvents,
+                        kinematicConfig.ContactEventEmitterLayers,
+                        Math.Max(1, solverConfig.MaxCollisionPairs)),
                     new CleanupSystem2D(world)
                 },
                 new[]
@@ -78,6 +87,7 @@ namespace Ludots.Core.Physics2D.Ticking
                     "UpdateMotion",
                     "BuildIslands",
                     "Sleeping",
+                    "ContactEvents",
                     "Cleanup"
                 })
             {

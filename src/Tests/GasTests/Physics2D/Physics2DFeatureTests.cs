@@ -190,7 +190,7 @@ namespace GasTests.Physics2D
                 MaxCollisionPairs = 4
             };
             var tickPolicy = new Physics2DTickPolicy(targetHz: 15, maxStepsPerFixedTick: 8);
-            var pipeline = Physics2DPipelineFactory.CreateProduction(world, solverConfig, tickPolicy, _shapeStorage, new KinematicTargetPoseBuffer2D(kinematicBodyCapacity: 64));
+            var pipeline = Physics2DPipelineFactory.CreateProduction(world, solverConfig, tickPolicy, _shapeStorage, new KinematicTargetPoseBuffer2D(kinematicBodyCapacity: 64), new ContactEventQueue2D(contactEventQueueCapacity: 256), new Physics2DKinematicConfig { KinematicBodyCapacity = 64, ContactEventQueueCapacity = 256, ContactEventEmitterLayers = new List<string>() });
 
             for (int i = 0; i < pipeline.Systems.Length; i++)
             {
@@ -244,7 +244,7 @@ namespace GasTests.Physics2D
                 MaxCollisionPairs = 4
             };
             var tickPolicy = new Physics2DTickPolicy(targetHz: 15, maxStepsPerFixedTick: 8);
-            var pipeline = Physics2DPipelineFactory.CreateProduction(world, solverConfig, tickPolicy, _shapeStorage, new KinematicTargetPoseBuffer2D(kinematicBodyCapacity: 64));
+            var pipeline = Physics2DPipelineFactory.CreateProduction(world, solverConfig, tickPolicy, _shapeStorage, new KinematicTargetPoseBuffer2D(kinematicBodyCapacity: 64), new ContactEventQueue2D(contactEventQueueCapacity: 256), new Physics2DKinematicConfig { KinematicBodyCapacity = 64, ContactEventQueueCapacity = 256, ContactEventEmitterLayers = new List<string>() });
 
             for (int i = 0; i < pipeline.Systems.Length; i++)
             {

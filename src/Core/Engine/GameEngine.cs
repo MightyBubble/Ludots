@@ -1926,8 +1926,11 @@ namespace Ludots.Core.Engine
 
             var physics2dKinematicPoses = new Ludots.Core.Physics2D.KinematicTargetPoseBuffer2D(
                 physics2dKinematicConfig.KinematicBodyCapacity);
+            var physics2dContactEvents = new Ludots.Core.Physics2D.ContactEventQueue2D(
+                physics2dKinematicConfig.ContactEventQueueCapacity);
             SetService(CoreServiceKeys.Physics2DKinematicConfig, physics2dKinematicConfig);
             SetService(CoreServiceKeys.Physics2DKinematicPoseBuffer, physics2dKinematicPoses);
+            SetService(CoreServiceKeys.Physics2DContactEvents, physics2dContactEvents);
 
             object? physics2dSystemObj = Activator.CreateInstance(
                 physics2dSystemType,
@@ -1937,7 +1940,9 @@ namespace Ludots.Core.Engine
                 physics2dSolverConfig,
                 shapeStorage,
                 physics2dBroadphasePolicy,
-                physics2dKinematicPoses);
+                physics2dKinematicPoses,
+                physics2dContactEvents,
+                physics2dKinematicConfig);
             if (physics2dSystemObj is not ISystem<float> physics2dSystem)
             {
                 throw new InvalidOperationException($"Failed to create Physics2D simulation system '{physics2dSystemTypeName}'.");

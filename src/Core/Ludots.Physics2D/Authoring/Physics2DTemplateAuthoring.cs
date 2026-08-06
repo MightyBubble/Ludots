@@ -33,6 +33,16 @@ public static class Physics2DTemplateAuthoring
         Ludots.Core.Config.ComponentRegistry.Register(componentName, (entity, data, context) => SetDampingField(entity, data, componentName), modId);
     }
 
+    public static void RegisterContactEventEmitter(string componentName, string modId)
+    {
+        if (string.IsNullOrWhiteSpace(componentName))
+        {
+            throw new InvalidOperationException("Physics2D contact event emitter authoring requires a component name.");
+        }
+
+        Ludots.Core.Config.ComponentRegistry.Register(componentName, (entity, data, context) => SetContactEventEmitter(entity, data, componentName), modId);
+    }
+
     private static void SetRigidBody(Entity entity, JsonNode data, ComponentAuthoringContext context, string componentName)
     {
         JsonObject obj = RequireObject(data, componentName);
@@ -165,6 +175,14 @@ public static class Physics2DTemplateAuthoring
             Radius = Fix64.FromFloat(ReadRequiredFloat(obj, "radiusCm", componentName)),
             DampingValue = Fix64.FromFloat(ReadRequiredFloat(obj, "dampingValue", componentName)),
         });
+    }
+
+    private static void SetContactEventEmitter(Entity entity, JsonNode data, string componentName)
+    {
+        JsonObject obj = RequireObject(data, componentName);
+        // Strict opt-in marker: an empty object payload, no properties allowed.
+        ValidateProperties(obj, componentName);
+        entity.Add(new ContactEventEmitter2D());
     }
 
     private static Collider2D BuildCollider(ShapeDataStorage2D shapeStorage, JsonObject shape, string componentName)

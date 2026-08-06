@@ -222,7 +222,14 @@ namespace GasTests
                 new Physics2DTickPolicy(physicsHz, maxStepsPerFixedTick: 1),
                 _solverConfig,
                 _shapeStorage,
-                new KinematicTargetPoseBuffer2D(kinematicBodyCapacity: 64));
+                new KinematicTargetPoseBuffer2D(kinematicBodyCapacity: 64),
+                new ContactEventQueue2D(contactEventQueueCapacity: 256),
+                new Physics2DKinematicConfig
+                {
+                    KinematicBodyCapacity = 64,
+                    ContactEventQueueCapacity = 256,
+                    ContactEventEmitterLayers = new List<string>()
+                });
             simulation.Initialize();
             return simulation;
         }

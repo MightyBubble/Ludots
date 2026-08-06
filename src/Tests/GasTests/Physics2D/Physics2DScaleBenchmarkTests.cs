@@ -88,7 +88,14 @@ namespace GasTests.Physics2D
                 new Physics2DSolverConfig(),
                 shapeStorage,
                 broadphasePolicy,
-                new KinematicTargetPoseBuffer2D(kinematicBodyCapacity: 64));
+                new KinematicTargetPoseBuffer2D(kinematicBodyCapacity: 64),
+                new ContactEventQueue2D(contactEventQueueCapacity: 256),
+                new Physics2DKinematicConfig
+                {
+                    KinematicBodyCapacity = 64,
+                    ContactEventQueueCapacity = 256,
+                    ContactEventEmitterLayers = new List<string>()
+                });
             simulation.Initialize();
 
             float fixedDeltaTime = 1f / fixedHz;
