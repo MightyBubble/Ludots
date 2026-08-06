@@ -44,6 +44,7 @@ public static class Physics2DTemplateAuthoring
             "rotationRad",
             "velocityCmPerSec",
             "angularVelocityRadPerSec",
+            "bodyType",
             "inverseMass",
             "inverseInertia",
             "shape",
@@ -57,8 +58,13 @@ public static class Physics2DTemplateAuthoring
         float rotationRad = ReadFloat(obj, "rotationRad", componentName, 0f);
         Fix64Vec2 linearVelocity = ReadVector2(obj, "velocityCmPerSec", componentName, Fix64Vec2.Zero);
         float angularVelocity = ReadFloat(obj, "angularVelocityRadPerSec", componentName, 0f);
-        float inverseMass = ReadRequiredFloat(obj, "inverseMass", componentName);
-        float inverseInertia = ReadFloat(obj, "inverseInertia", componentName, 0f);
+        Mass2D mass = ParseBodyMass(obj, componentName);
+        if (mass.IsKinematic &&
+            (obj.ContainsKey("velocityCmPerSec") || obj.ContainsKey("angularVelocityRadPerSec")))
+        {
+            throw new InvalidOperationException(
+                $"{componentName} bodyType 'Kinematic' forbids authored velocity: Velocity2D is derived by physics from submitted target poses.");
+        }
 
         var shapeStorage = context.Require<ShapeDataStorage2D>(ComponentAuthoringServiceKeys.Physics2DShapeStorage);
         Collider2D collider = BuildCollider(shapeStorage, GetRequiredObject(obj, "shape", componentName), componentName);
@@ -73,7 +79,7 @@ public static class Physics2DTemplateAuthoring
             Linear = linearVelocity,
             Angular = Fix64.FromFloat(angularVelocity)
         });
-        entity.Add(Mass2D.FromFloat(inverseMass, inverseInertia));
+        entity.Add(mass);
         entity.Add(collider);
 
         if (obj.TryGetPropertyValue("material", out JsonNode? materialNode) && materialNode != null)
@@ -83,7 +89,64 @@ public static class Physics2DTemplateAuthoring
 
         if (obj.TryGetPropertyValue("forceCmPerSec2", out JsonNode? forceNode) && forceNode != null)
         {
+            if (mass.IsKinematic)
+            {
+                throw new InvalidOperationException(
+                    $"{componentName}.forceCmPerSec2 is a contract error for bodyType 'Kinematic': kinematic bodies must be driven by target poses, never by forces.");
+            }
+
             entity.Add(new ForceInput2D { Force = ParseVector2(forceNode, $"{componentName}.forceCmPerSec2") });
+        }
+    }
+
+    private static Mass2D ParseBodyMass(JsonObject obj, string componentName)
+    {
+        float inverseInertia = ReadFloat(obj, "inverseInertia", componentName, 0f);
+        if (!obj.TryGetPropertyValue("bodyType", out JsonNode? bodyTypeNode) || bodyTypeNode == null)
+        {
+            // No explicit bodyType keeps the pre-#732 contract: inverseMass alone decides static (0) vs dynamic (>0).
+            return Mass2D.FromFloat(ReadRequiredFloat(obj, "inverseMass", componentName), inverseInertia);
+        }
+
+        string bodyType = bodyTypeNode.GetValueKind() == JsonValueKind.String
+            ? bodyTypeNode.GetValue<string>()
+            : throw new InvalidOperationException($"{componentName}.bodyType requires a string value.");
+        float inverseMass = ReadFloat(obj, "inverseMass", componentName, 0f);
+        switch (bodyType)
+        {
+            case "Static":
+                if (inverseMass != 0f)
+                {
+                    throw new InvalidOperationException(
+                        $"{componentName}.bodyType 'Static' requires inverseMass to be absent or 0, got {inverseMass}.");
+                }
+
+                return new Mass2D { InverseMass = Fix64.Zero, InverseInertia = Fix64.FromFloat(inverseInertia) };
+            case "Dynamic":
+                if (!(ReadRequiredFloat(obj, "inverseMass", componentName) > 0f))
+                {
+                    throw new InvalidOperationException(
+                        $"{componentName}.bodyType 'Dynamic' requires explicit inverseMass > 0.");
+                }
+
+                return Mass2D.FromFloat(ReadRequiredFloat(obj, "inverseMass", componentName), inverseInertia);
+            case "Kinematic":
+                if (inverseMass != 0f)
+                {
+                    throw new InvalidOperationException(
+                        $"{componentName}.bodyType 'Kinematic' requires inverseMass to be absent or 0, got {inverseMass}.");
+                }
+
+                if (inverseInertia != 0f)
+                {
+                    throw new InvalidOperationException(
+                        $"{componentName}.bodyType 'Kinematic' requires inverseInertia to be absent or 0, got {inverseInertia}.");
+                }
+
+                return Mass2D.Kinematic;
+            default:
+                throw new InvalidOperationException(
+                    $"{componentName}.bodyType has unsupported value '{bodyType}'. Allowed values: Static, Dynamic, Kinematic.");
         }
     }
 
