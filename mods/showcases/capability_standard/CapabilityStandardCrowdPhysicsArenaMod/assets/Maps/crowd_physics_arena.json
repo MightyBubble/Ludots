@@ -42,7 +42,7 @@
           "bodyType": "Dynamic",
           "inverseMass": 0.01,
           "shape": { "type": "Box", "halfWidthCm": 60, "halfHeightCm": 60 },
-          "material": { "friction": 0.6, "restitution": 0.05, "baseDamping": 1.2 }
+          "material": { "friction": 0.6, "restitution": 0.05, "baseDamping": 0.9 }
         }
       }
     },
@@ -55,7 +55,7 @@
           "bodyType": "Dynamic",
           "inverseMass": 0.01,
           "shape": { "type": "Box", "halfWidthCm": 60, "halfHeightCm": 60 },
-          "material": { "friction": 0.6, "restitution": 0.05, "baseDamping": 1.2 }
+          "material": { "friction": 0.6, "restitution": 0.05, "baseDamping": 0.9 }
         }
       }
     },
@@ -68,7 +68,7 @@
           "bodyType": "Dynamic",
           "inverseMass": 0.01,
           "shape": { "type": "Box", "halfWidthCm": 60, "halfHeightCm": 60 },
-          "material": { "friction": 0.6, "restitution": 0.05, "baseDamping": 1.2 }
+          "material": { "friction": 0.6, "restitution": 0.05, "baseDamping": 0.9 }
         }
       }
     },
@@ -81,7 +81,7 @@
           "bodyType": "Dynamic",
           "inverseMass": 0.01,
           "shape": { "type": "Box", "halfWidthCm": 60, "halfHeightCm": 60 },
-          "material": { "friction": 0.6, "restitution": 0.05, "baseDamping": 1.2 }
+          "material": { "friction": 0.6, "restitution": 0.05, "baseDamping": 0.9 }
         }
       }
     },
@@ -94,7 +94,7 @@
           "bodyType": "Dynamic",
           "inverseMass": 0.01,
           "shape": { "type": "Box", "halfWidthCm": 60, "halfHeightCm": 60 },
-          "material": { "friction": 0.6, "restitution": 0.05, "baseDamping": 1.2 }
+          "material": { "friction": 0.6, "restitution": 0.05, "baseDamping": 0.9 }
         }
       }
     },
@@ -107,7 +107,7 @@
           "bodyType": "Dynamic",
           "inverseMass": 0.01,
           "shape": { "type": "Box", "halfWidthCm": 60, "halfHeightCm": 60 },
-          "material": { "friction": 0.6, "restitution": 0.05, "baseDamping": 1.2 }
+          "material": { "friction": 0.6, "restitution": 0.05, "baseDamping": 0.9 }
         }
       }
     },
@@ -120,7 +120,7 @@
           "bodyType": "Dynamic",
           "inverseMass": 0.001,
           "shape": { "type": "Box", "halfWidthCm": 150, "halfHeightCm": 150 },
-          "material": { "friction": 0.8, "restitution": 0.0, "baseDamping": 4.0 }
+          "material": { "friction": 0.8, "restitution": 0.0, "baseDamping": 0.5 }
         }
       }
     },

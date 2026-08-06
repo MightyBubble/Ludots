@@ -29,6 +29,7 @@
       "OrderBuffer": {},
       "GameplayTagContainer": {},
       "TagCountContainer": {},
+      "SpatialPartitionExcluded": {},
       "AbilityStateBuffer": {
         "abilityIds": [
           "Ability.CrowdArena.Shockwave",
@@ -54,6 +55,7 @@
         "AngleRad": 0
       },
       "GameplayTagContainer": {},
+      "SpatialPartitionExcluded": {},
       "DestroyWhenParentExecutionEnds": {}
     }
   },
@@ -98,7 +100,7 @@
         "displacement": {
           "allowed": true,
           "handbackSpeedThresholdCmPerSec": 40,
-          "maxDurationMs": 5000
+          "maxDurationMs": 2000
         }
       },
       "CrowdPhysicsArena.RigidBody": {
@@ -152,7 +154,7 @@
         "displacement": {
           "allowed": true,
           "handbackSpeedThresholdCmPerSec": 40,
-          "maxDurationMs": 5000
+          "maxDurationMs": 2000
         }
       },
       "CrowdPhysicsArena.RigidBody": {
@@ -206,7 +208,7 @@
         "displacement": {
           "allowed": true,
           "handbackSpeedThresholdCmPerSec": 40,
-          "maxDurationMs": 5000
+          "maxDurationMs": 2000
         }
       },
       "CrowdPhysicsArena.RigidBody": {
@@ -260,7 +262,7 @@
         "displacement": {
           "allowed": true,
           "handbackSpeedThresholdCmPerSec": 40,
-          "maxDurationMs": 5000
+          "maxDurationMs": 2000
         }
       },
       "CrowdPhysicsArena.RigidBody": {
@@ -279,6 +281,7 @@
       "Name": {
         "Value": "CrowdPhysicsArena.Crate"
       },
+      "SpatialPartitionExcluded": {},
       "EntityLayer": {
         "category": [
           "arena.prop"
@@ -299,7 +302,7 @@
         "material": {
           "friction": 0.6,
           "restitution": 0.05,
-          "baseDamping": 1.2
+          "baseDamping": 0.9
         }
       }
     }
@@ -310,6 +313,7 @@
       "Name": {
         "Value": "CrowdPhysicsArena.Boulder"
       },
+      "SpatialPartitionExcluded": {},
       "EntityLayer": {
         "category": [
           "arena.prop"
@@ -330,7 +334,7 @@
         "material": {
           "friction": 0.3,
           "restitution": 0.45,
-          "baseDamping": 0.35
+          "baseDamping": 0.98
         }
       }
     }
@@ -341,6 +345,7 @@
       "Name": {
         "Value": "CrowdPhysicsArena.PressurePlate"
       },
+      "SpatialPartitionExcluded": {},
       "EntityLayer": {
         "category": [
           "arena.plate"
@@ -361,7 +366,7 @@
         "material": {
           "friction": 0.8,
           "restitution": 0.0,
-          "baseDamping": 4.0
+          "baseDamping": 0.5
         }
       },
       "CrowdPhysicsArena.ContactEventEmitter": {}
@@ -373,6 +378,7 @@
       "Name": {
         "Value": "CrowdPhysicsArena.PlateSocketWall"
       },
+      "SpatialPartitionExcluded": {},
       "EntityLayer": {
         "category": [
           "arena.wall"
@@ -398,6 +404,7 @@
       "Name": {
         "Value": "CrowdPhysicsArena.Door"
       },
+      "SpatialPartitionExcluded": {},
       "WorldPositionCm": {
         "Value": {
           "X": 0,

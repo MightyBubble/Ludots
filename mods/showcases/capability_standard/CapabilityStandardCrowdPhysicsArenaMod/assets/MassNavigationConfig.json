@@ -1,5 +1,17 @@
 {
   "mapId": "crowd_physics_arena",
+  "world": {
+    "hotZones": [
+      {
+        "id": "central",
+        "label": "Arena",
+        "centerXCm": 5000,
+        "centerYCm": 5000,
+        "widthCm": 10000,
+        "heightCm": 10000
+      }
+    ]
+  },
   "scenario": {
     "agentsPerTeam": 48,
     "teams": [

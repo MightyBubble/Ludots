@@ -31,10 +31,15 @@ Q 冲击波击退单位、用 E 释放带初速度的巨石。
 
 ## 场景机制
 
+- **世界窗口**：`assets/MassNavigationConfig.json` 覆盖 `world.hotZones`，把活跃热区（=仿真窗口
+  中心）定在 (5000, 5000)，与地图上箱堆 (4250–4510)、压力板 (5600)、门 (6400) 的世界坐标对齐；
+  两队沿 `OrbitOpposedTargets` 轨道（半径 2600cm）在窗口中心两侧对置生成。
 - **小队**：2 队 × 48（`assets/MassNavigationConfig.json` 的 `scenario` 全配置化），单位模板组合
   `MovementParticipation`（kinematic + displacement.allowed）+ kinematic 刚体（半径与 agent profile
   `bodyRadiusCm` 同源，桥启动时校验）+ massnav agent。
-- **木箱堆**：通路上的 dynamic 箱体，行军穿越时被推开。
+- **木箱堆**：通路上的 dynamic 箱体，行军穿越时被推开。物理材质 `baseDamping` 是每固定步的
+  速度保留系数（`IntegrationSystem2D` 中 `velocity *= baseDamping`），必须 < 1.0：
+  箱 0.9 / 压力板 0.5 / 巨石 0.98。
 - **压力板 → 门**：压力板是薄 dynamic 体（卡在四面 static 插槽墙内），携带 `ContactEventEmitter2D`，
   EntityLayer `arena.plate` 在 `assets/Configs/Physics2D/kinematic.json` 的 `contactEventEmitterLayers`
   允许清单里。桥的 `ContactEventRouter2D` 把 Begin/End 事件路由给
@@ -45,6 +50,24 @@ Q 冲击波击退单位、用 E 释放带初速度的巨石。
   （`linkSourceAsParent` + `DestroyWhenParentExecutionEnds`，随能力执行结束销毁）→ 震中
   `onSpawnEffect` 触发 `Search`（Circle，origin=Source）→ 对命中单位派发 `Displacement`
   （`AwayFromSource`）。位移期间单位仍被桥喂进 kinematic 物理体（物理视角单位永远在场）。
+  场景道具（箱/板/墙/门）、本地玩家标记与震中自身模板都带 `SpatialPartitionExcluded`，
+  不进空间索引，Search 只会命中 massnav agent。
+
+## Q 冷却硬约束（issue #737）
+
+当前 GAS 位移对同一目标**无去重**：对仍处于位移窗口中的 agent 再次施加位移会触发
+`PoseAuthorityArbiter` 双窗口异常。因此本 mod 的授权值必须满足
+**Q 冷却时长 严格大于 单位模板 `displacement.maxDurationMs`（留余量）**：
+
+| 配置项 | 位置 | 值 |
+|--------|------|----|
+| Q 冷却 `TagClip.duration` | `assets/GAS/abilities.json` | 45 tick @20Hz = 2250ms |
+| 位移窗口上限 `displacement.maxDurationMs` | `assets/Entities/templates.json`（4 个 agent 模板） | 2000ms |
+| 实际位移时长 `totalDurationTicks` | `assets/GAS/effects.json` | 24 tick = 1200ms |
+
+不变量：`冷却 2250ms > maxDurationMs 2000ms > 实际位移 1200ms`。调整任一值时必须保持
+该不等式链，否则连续施放 Q 会命中仍在窗口中的单位并按合同 fail-fast 抛异常
+（见 <https://github.com/MightyBubble/Ludots/issues/737>）。
 - **E 巨石**：`CreateUnit` 生成 `crowd_arena_boulder` 模板（dynamic 刚体 + 模板授权初速度），
   走正常物理积分路径。
 
