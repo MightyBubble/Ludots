@@ -164,6 +164,7 @@ namespace Ludots.Tests.GAS
             world.Get<OrderBuffer>(actor).SetActiveDirect(in order, priority: 100);
             world.Get<BlackboardIntBuffer>(actor).Set(OrderBlackboardKeys.Cast_SlotIndex, 0);
 
+            var effectReceipts = new EffectTransactionReceiptBuffer();
             var system = new AbilityExecSystem(
                 world,
                 new DiscreteClock(),
@@ -174,12 +175,24 @@ namespace Ludots.Tests.GAS
                 abilityDefinitions: defs,
                 castAbilityOrderTypeId: castAbilityOrderTypeId,
                 orderTypeRegistry: orderTypes,
-                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()),
+                effectReceipts: effectReceipts);
 
             system.Update(0f);
 
             Assert.That(requests.Count, Is.EqualTo(1));
             Assert.That(requests[0].TemplateId, Is.EqualTo(4001));
+            Assert.That(world.Has<AbilityExecInstance>(actor), Is.True);
+            ref readonly var waitingExec = ref world.Get<AbilityExecInstance>(actor);
+            effectReceipts.Write(new EffectTransactionReceipt
+            {
+                RequestId = waitingExec.WaitRequestId,
+                Outcome = EffectTransactionOutcome.Succeeded,
+                TemplateId = 4001,
+            });
+            system.Update(0f);
+            system.Update(0f);
+
             Assert.That(orderTypes.TerminalResults.Count, Is.EqualTo(1));
             Assert.That(orderTypes.TerminalResults[0].State, Is.EqualTo(OrderTerminalState.Completed));
         }

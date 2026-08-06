@@ -549,7 +549,7 @@ namespace Ludots.Tests.GAS
                 AllowedLifetimes = LifetimeFlags.InstantOnly
             };
             preset.DefaultPhaseHandlers[EffectPhaseId.OnApply] =
-                GasTestGraphPrograms.BuiltinGraph(graphPrograms, 46_001, BuiltinHandlerId.CompleteProgression);
+                GasTestGraphPrograms.BuiltinGraph(graphPrograms, 601, BuiltinHandlerId.CompleteProgression);
             presetTypes.Register(in preset);
 
             var builtinHandlers = new BuiltinHandlerRegistry();
@@ -717,8 +717,52 @@ namespace Ludots.Tests.GAS
             var inputRequests = new InputRequestQueue();
             var inputResponses = new InputResponseBuffer();
             var effectRequests = new EffectRequestQueue();
+            var effectReceipts = new EffectTransactionReceiptBuffer();
             var presentationEvents = new GasPresentationEventBuffer(16);
             var orderTypes = CreateCastOrderTypes(castAbilityOrderTypeId);
+            var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
+
+            var templates = new EffectTemplateRegistry();
+            var mods = default(EffectModifiers);
+            mods.Add(attrId: 0, ModifierOp.Add, -1f);
+            templates.Register(effectTemplateId, new EffectTemplateData
+            {
+                TagId = 0,
+                PresetType = EffectPresetType.InstantDamage,
+                LifetimeKind = EffectLifetimeKind.Instant,
+                ClockId = GasClockId.Step,
+                DurationTicks = 0,
+                PeriodTicks = 0,
+                ParticipatesInResponse = false,
+                Modifiers = mods,
+            });
+            var presetTypes = new PresetTypeRegistry();
+            var graphPrograms = new GraphProgramRegistry();
+            var instantDamagePreset = new PresetTypeDefinition
+            {
+                Type = EffectPresetType.InstantDamage,
+                Components = ComponentFlags.ModifierParams,
+                ActivePhases = PhaseFlags.OnApply,
+                AllowedLifetimes = LifetimeFlags.InstantOnly,
+            };
+            instantDamagePreset.DefaultPhaseHandlers[EffectPhaseId.OnApply] =
+                GasTestGraphPrograms.BuiltinGraph(graphPrograms, 501, BuiltinHandlerId.ApplyModifiers);
+            presetTypes.Register(in instantDamagePreset);
+            var builtinHandlers = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(builtinHandlers);
+            GasTestEffectExecutionPlanFinalizer.FinalizeAll(
+                templates,
+                presetTypes,
+                builtinHandlers,
+                graphPrograms,
+                "Test/ProgressionRequirementTests.ExplicitUseRequirementGate.json");
+            var phaseExecutor = new EffectPhaseExecutor(
+                graphPrograms,
+                presetTypes,
+                builtinHandlers,
+                GasGraphOpHandlerTable.Instance,
+                templates);
+
             var system = new AbilityExecSystem(
                 world,
                 new DiscreteClock(),
@@ -731,7 +775,20 @@ namespace Ludots.Tests.GAS
                 presentationEvents: presentationEvents,
                 orderTypeRegistry: orderTypes,
                 progressionRequirements: evaluator,
-                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
+                tagOps: tagOps,
+                effectReceipts: effectReceipts);
+            var proposal = new EffectProposalProcessingSystem(
+                world,
+                effectRequests,
+                GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
+                new DiscreteClock(),
+                budget: new GasBudget(),
+                templates: templates,
+                responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                phaseExecutor: phaseExecutor,
+                graphApi: new GasGraphRuntimeApi(world, tagOps: tagOps),
+                tagOps: tagOps,
+                effectReceipts: effectReceipts);
 
             system.Update(0f);
 
@@ -765,6 +822,12 @@ namespace Ludots.Tests.GAS
             Assert.That(effectRequests.Count, Is.EqualTo(1));
             Assert.That(effectRequests[0].Target, Is.EqualTo(target));
             Assert.That(effectRequests[0].TargetContext, Is.EqualTo(city));
+            Assert.That(world.Has<AbilityExecInstance>(actor), Is.True);
+
+            proposal.Update(0f);
+            system.Update(0f);
+            system.Update(0f);
+
             Assert.That(world.Has<AbilityExecInstance>(actor), Is.False);
         }
 

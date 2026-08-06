@@ -555,6 +555,7 @@ namespace Ludots.Tests.GAS
             attributes.SetCurrent(pulseAttributeId, 0f);
 
             var requests = new EffectRequestQueue();
+            var effectReceipts = new EffectTransactionReceiptBuffer();
             var abilityExec = new AbilityExecSystem(
                 world,
                 clock,
@@ -563,7 +564,8 @@ namespace Ludots.Tests.GAS
                 requests,
                 snapshotCapacity: 16,
                 abilityDefinitions: abilityDefinitions,
-                tagOps: tagOps);
+                tagOps: tagOps,
+                effectReceipts: effectReceipts);
             var proposal = new EffectProposalProcessingSystem(
                 world,
                 requests,
@@ -572,7 +574,8 @@ namespace Ludots.Tests.GAS
                 budget: new GasBudget(),
                 templates: templates,
                 responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
-                tagOps: tagOps);
+                tagOps: tagOps,
+                effectReceipts: effectReceipts);
             var graphApi = new GasGraphRuntimeApi(world, tagOps: tagOps);
             var phaseExecutor = new EffectPhaseExecutor(
                 programs,

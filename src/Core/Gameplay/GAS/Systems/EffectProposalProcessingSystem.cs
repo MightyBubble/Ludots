@@ -128,6 +128,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private int _inputRequestTagId;
         private int _nextWindowId = 1;
         private bool _emitTelemetry;
+        private readonly EffectTransactionReceiptBuffer? _effectReceipts;
+        private bool _rootReceiptDecided;
+        private EffectTransactionOutcome _rootReceiptOutcome;
+        private OrderFailureReason _rootReceiptFailureReason;
 
         private sealed class EntityStableComparer : IComparer<Entity>
         {
@@ -316,7 +320,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
         }
 
-        public EffectProposalProcessingSystem(World world, EffectRequestQueue queue, int fanOutCommandCapacity, Ludots.Core.Engine.IClock clock, GasBudget? budget = null, EffectTemplateRegistry? templates = null, InputRequestQueue? inputRequests = null, OrderQueue? chainOrders = null, ResponseChainTelemetryBuffer? telemetry = null, OrderRequestQueue? orderRequests = null, ResponseChainOrderTypes? responseChainOrderTypes = null, GasPresentationEventBuffer? presentationEvents = null, EffectPhaseExecutor? phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi? graphApi = null, TagOps? tagOps = null, ISpatialQueryService? spatialQueries = null, RuntimeEntitySpawnQueue? spawnRequests = null, RuntimeEntityLifecycleQueue? lifecycleRequests = null, EntityLifecycleRuntimeServices? lifecycleServices = null, ExchangeRuntime? exchangeRuntime = null, ProgressionRequirementEvaluator? progressionEvaluator = null, OrderTypeRegistry? orderTypeRegistry = null, OrderRuleRegistry? orderRuleRegistry = null, int stepRateHz = 30, RelationshipRuntime? relationshipRuntime = null, KnowledgeAreaRevealRuntime? knowledgeAreaRevealRuntime = null, OrderQueue? orderIntake = null, RootBudgetTable? fanOutBudget = null)
+        public EffectProposalProcessingSystem(World world, EffectRequestQueue queue, int fanOutCommandCapacity, Ludots.Core.Engine.IClock clock, GasBudget? budget = null, EffectTemplateRegistry? templates = null, InputRequestQueue? inputRequests = null, OrderQueue? chainOrders = null, ResponseChainTelemetryBuffer? telemetry = null, OrderRequestQueue? orderRequests = null, ResponseChainOrderTypes? responseChainOrderTypes = null, GasPresentationEventBuffer? presentationEvents = null, EffectPhaseExecutor? phaseExecutor = null, Ludots.Core.NodeLibraries.GASGraph.Host.GasGraphRuntimeApi? graphApi = null, TagOps? tagOps = null, ISpatialQueryService? spatialQueries = null, RuntimeEntitySpawnQueue? spawnRequests = null, RuntimeEntityLifecycleQueue? lifecycleRequests = null, EntityLifecycleRuntimeServices? lifecycleServices = null, ExchangeRuntime? exchangeRuntime = null, ProgressionRequirementEvaluator? progressionEvaluator = null, OrderTypeRegistry? orderTypeRegistry = null, OrderRuleRegistry? orderRuleRegistry = null, int stepRateHz = 30, RelationshipRuntime? relationshipRuntime = null, KnowledgeAreaRevealRuntime? knowledgeAreaRevealRuntime = null, OrderQueue? orderIntake = null, RootBudgetTable? fanOutBudget = null, EffectTransactionReceiptBuffer? effectReceipts = null)
             : base(world)
         {
             _queue = queue ?? throw new ArgumentNullException(nameof(queue));
@@ -339,6 +343,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _phaseExecutor = phaseExecutor;
             _graphApi = graphApi;
             _graphApiHost = graphApi;
+            _effectReceipts = effectReceipts;
             _instantPhaseTransaction = new EffectPhaseSideEffectTransaction(
                 world,
                 tagOps,
@@ -428,12 +433,20 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     var req = _queue[_rootCursor++];
                     if (!World.IsAlive(req.Target))
                     {
+                        WriteEffectReceipt(
+                            in req,
+                            EffectTransactionOutcome.Failed,
+                            OrderFailureReason.PreconditionFailed);
                         ConsumeWork(ref workUnits);
                         continue;
                     }
 
                     if (_templates == null || req.TemplateId <= 0 || !_templates.TryGetRef(req.TemplateId, out int rootTplIdx))
                     {
+                        WriteEffectReceipt(
+                            in req,
+                            EffectTransactionOutcome.Failed,
+                            OrderFailureReason.PreconditionFailed);
                         ConsumeWork(ref workUnits);
                         continue;
                     }
@@ -454,6 +467,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     _inputRequestSent = false;
                     _inputRequestTagId = 0;
                     _emitTelemetry = rootTpl.ParticipatesInResponse;
+                    ResetRootReceiptState();
 
                     var root = new EffectProposal
                     {
@@ -499,6 +513,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     {
                         root.Cancelled = true;
                         _window[_window.Count - 1] = root;
+                        RecordRootReceiptFailure(OrderFailureReason.PreconditionFailed);
                     }
 
                     if (rootTpl.ParticipatesInResponse)
@@ -1001,6 +1016,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         var e = _window[i];
                         if (e.Cancelled)
                         {
+                            if (i == 0)
+                            {
+                                RecordRootReceiptFailure(OrderFailureReason.PreconditionFailed);
+                            }
                             if (_telemetry != null && _emitTelemetry)
                             {
                                 _telemetry.TryAdd(new ResponseChainTelemetryEvent
@@ -1023,6 +1042,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         if (i > 0 && _resolveNegatesRemaining > 0)
                         {
                             _resolveNegatesRemaining--;
+                            if (i == 0)
+                            {
+                                RecordRootReceiptFailure(OrderFailureReason.PreconditionFailed);
+                            }
                             if (_telemetry != null && _emitTelemetry)
                             {
                                 _telemetry.TryAdd(new ResponseChainTelemetryEvent
@@ -1044,6 +1067,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                         if (!World.IsAlive(e.Target))
                         {
+                            if (i == 0)
+                            {
+                                RecordRootReceiptFailure(OrderFailureReason.PreconditionFailed);
+                            }
                             if (_telemetry != null && _emitTelemetry)
                             {
                                 _telemetry.TryAdd(new ResponseChainTelemetryEvent
@@ -1065,6 +1092,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                         if (_templates == null || e.TemplateId <= 0 || !_templates.TryGetRef(e.TemplateId, out int tplIdx))
                         {
+                            if (i == 0)
+                            {
+                                RecordRootReceiptFailure(OrderFailureReason.PreconditionFailed);
+                            }
                             if (_telemetry != null && _emitTelemetry)
                             {
                                 _telemetry.TryAdd(new ResponseChainTelemetryEvent
@@ -1091,6 +1122,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         if (CanExecuteInstantInline(in tpl, in e))
                         {
                             ExecuteInstantInline(in e, in tpl);
+                            if (i == 0)
+                            {
+                                RecordRootReceiptSuccess();
+                            }
 
                             if (_telemetry != null && _emitTelemetry)
                             {
@@ -1111,6 +1146,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         else
                         {
                             CreateEntityEffect(in e, in tpl);
+                            if (i == 0)
+                            {
+                                RecordRootReceiptSuccess();
+                            }
                             if (_telemetry != null && _emitTelemetry)
                             {
                                 _telemetry.TryAdd(new ResponseChainTelemetryEvent
@@ -1147,6 +1186,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             Context = _activeReq.TargetContext
                         });
                     }
+                    WriteActiveRootReceiptOrFailClosed();
                     _phase = WindowPhase.None;
                     _window.Clear();
                     _responseQueue.Clear();
@@ -1159,6 +1199,72 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     continue;
                 }
             }
+        }
+
+        private void ResetRootReceiptState()
+        {
+            _rootReceiptDecided = false;
+            _rootReceiptOutcome = EffectTransactionOutcome.Failed;
+            _rootReceiptFailureReason = OrderFailureReason.PreconditionFailed;
+        }
+
+        private void RecordRootReceiptSuccess()
+        {
+            if (_rootReceiptDecided && _rootReceiptOutcome == EffectTransactionOutcome.Failed)
+            {
+                return;
+            }
+
+            _rootReceiptDecided = true;
+            _rootReceiptOutcome = EffectTransactionOutcome.Succeeded;
+            _rootReceiptFailureReason = OrderFailureReason.None;
+        }
+
+        private void RecordRootReceiptFailure(OrderFailureReason failureReason)
+        {
+            _rootReceiptDecided = true;
+            _rootReceiptOutcome = EffectTransactionOutcome.Failed;
+            _rootReceiptFailureReason = failureReason == OrderFailureReason.None
+                ? OrderFailureReason.PreconditionFailed
+                : failureReason;
+        }
+
+        private void WriteActiveRootReceiptOrFailClosed()
+        {
+            if (!_rootReceiptDecided)
+            {
+                RecordRootReceiptFailure(OrderFailureReason.PreconditionFailed);
+            }
+
+            WriteEffectReceipt(
+                in _activeReq,
+                _rootReceiptOutcome,
+                _rootReceiptFailureReason);
+        }
+
+        private void WriteEffectReceipt(
+            in EffectRequest request,
+            EffectTransactionOutcome outcome,
+            OrderFailureReason failureReason)
+        {
+            if (_effectReceipts == null)
+            {
+                return;
+            }
+
+            _effectReceipts.Write(new EffectTransactionReceipt
+            {
+                RequestId = request.RootId,
+                Outcome = outcome,
+                FailureReason = outcome == EffectTransactionOutcome.Succeeded
+                    ? OrderFailureReason.None
+                    : (failureReason == OrderFailureReason.None
+                        ? OrderFailureReason.PreconditionFailed
+                        : failureReason),
+                Source = request.Source,
+                Target = request.Target,
+                TemplateId = request.TemplateId,
+            });
         }
 
         private void ConsumeWork(ref int workUnits)

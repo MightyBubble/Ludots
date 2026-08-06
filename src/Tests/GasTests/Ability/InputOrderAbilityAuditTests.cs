@@ -2119,6 +2119,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             });
 
             var effectRequests = new EffectRequestQueue();
+            var effectReceipts = new EffectTransactionReceiptBuffer();
             var system = new AbilityExecSystem(
                 world,
                 new DiscreteClock(),
@@ -2129,7 +2130,8 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 defs,
                 castAbilityOrderTypeId: castAbilityOrderTypeId,
                 orderTypeRegistry: orderTypes,
-                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()),
+                effectReceipts: effectReceipts);
 
             system.Update(0f);
 
@@ -2187,6 +2189,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 SpatialBlackboardKey = -1,
             }.UseCastAbilityPayload());
             var effectRequests = new EffectRequestQueue();
+            var effectReceipts = new EffectTransactionReceiptBuffer();
             var presentationEvents = new GasPresentationEventBuffer(8);
             var system = new AbilityExecSystem(
                 world,
@@ -2199,7 +2202,8 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 castAbilityOrderTypeId: castAbilityOrderTypeId,
                 presentationEvents: presentationEvents,
                 orderTypeRegistry: orderTypes,
-                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
+                tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()),
+                effectReceipts: effectReceipts);
 
             system.Update(0f);
 

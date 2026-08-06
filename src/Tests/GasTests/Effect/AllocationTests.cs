@@ -103,6 +103,7 @@ namespace Ludots.Tests.GAS
                     EntityBlackboardKey = OrderBlackboardKeys.Cast_TargetEntity,
                     SpatialBlackboardKey = -1,
                 }.UseCastAbilityPayload());
+                var effectReceipts = new EffectTransactionReceiptBuffer();
                 var abilityExecSystem = new AbilityExecSystem(
                     world,
                     new Ludots.Core.Engine.DiscreteClock(),
@@ -113,7 +114,8 @@ namespace Ludots.Tests.GAS
                     abilityDefinitions: abilityDefs,
                     castAbilityOrderTypeId: castAbilityOrderTypeId,
                     orderTypeRegistry: orderTypes,
-                    tagOps: tagOps);
+                    tagOps: tagOps,
+                    effectReceipts: effectReceipts);
                 var proposalSystem = new EffectProposalProcessingSystem(
                     world,
                     requests,
@@ -124,7 +126,8 @@ namespace Ludots.Tests.GAS
                     responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
                     phaseExecutor: phaseExecutor,
                     graphApi: new GasGraphRuntimeApi(world, tagOps: tagOps),
-                    tagOps: tagOps);
+                    tagOps: tagOps,
+                    effectReceipts: effectReceipts);
 
                 for (int i = 0; i < 16; i++)
                 {
@@ -132,6 +135,8 @@ namespace Ludots.Tests.GAS
                     SubmitActiveCast(world, caster, target, castAbilityOrderTypeId, orderId);
                     abilityExecSystem.Update(0.016f);
                     proposalSystem.Update(0.016f);
+                    abilityExecSystem.Update(0.016f);
+                    abilityExecSystem.Update(0.016f);
                     ConsumeAndReleaseTerminalResult(terminalResults, orderId);
                 }
 
@@ -142,6 +147,8 @@ namespace Ludots.Tests.GAS
                 SubmitActiveCast(world, caster, target, castAbilityOrderTypeId, orderId: 100);
                 abilityExecSystem.Update(0.016f);
                 proposalSystem.Update(0.016f);
+                abilityExecSystem.Update(0.016f);
+                abilityExecSystem.Update(0.016f);
                 ConsumeAndReleaseTerminalResult(terminalResults, 100);
 
                 GC.Collect();
@@ -157,6 +164,8 @@ namespace Ludots.Tests.GAS
                     SubmitActiveCast(world, caster, target, castAbilityOrderTypeId, orderId);
                     abilityExecSystem.Update(0.016f);
                     proposalSystem.Update(0.016f);
+                    abilityExecSystem.Update(0.016f);
+                    abilityExecSystem.Update(0.016f);
                     ConsumeAndReleaseTerminalResult(terminalResults, orderId);
                 }
 

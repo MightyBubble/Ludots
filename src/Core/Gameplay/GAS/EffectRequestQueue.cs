@@ -141,7 +141,7 @@ namespace Ludots.Core.Gameplay.GAS
             _overflowCount = take;
         }
 
-        public void Publish(in EffectRequest req)
+        public int Publish(in EffectRequest req)
         {
             var r = req;
             if (r.RootId == 0) r.RootId = _nextRootId++;
@@ -149,7 +149,7 @@ namespace Ludots.Core.Gameplay.GAS
             if (_count < _items.Length)
             {
                 _items[_count++] = r;
-                return;
+                return r.RootId;
             }
 
             if (!_budgetFused)
@@ -167,6 +167,7 @@ namespace Ludots.Core.Gameplay.GAS
             _overflowTail++;
             if (_overflowTail == _overflow.Length) _overflowTail = 0;
             _overflowCount++;
+            return r.RootId;
         }
 
         public void Clear()

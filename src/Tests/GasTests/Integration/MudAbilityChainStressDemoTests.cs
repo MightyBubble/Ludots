@@ -11,6 +11,8 @@ using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.NodeLibraries.GASGraph;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
 
@@ -52,6 +54,7 @@ namespace Ludots.Tests.GAS
                 templates.Register(tplFirebolt, new EffectTemplateData
                 {
                     TagId = tagFireboltHit,
+                    PresetType = EffectPresetType.InstantDamage,
                     LifetimeKind = EffectLifetimeKind.Instant,
                     ClockId = GasClockId.FixedFrame,
                     DurationTicks = 0,
@@ -79,6 +82,7 @@ namespace Ludots.Tests.GAS
                 templates.Register(tplBurnTick, new EffectTemplateData
                 {
                     TagId = tagBurnTick,
+                    PresetType = EffectPresetType.InstantDamage,
                     LifetimeKind = EffectLifetimeKind.Instant,
                     ClockId = GasClockId.FixedFrame,
                     DurationTicks = 0,
@@ -93,6 +97,7 @@ namespace Ludots.Tests.GAS
                 templates.Register(tplHeal, new EffectTemplateData
                 {
                     TagId = tagHeal,
+                    PresetType = EffectPresetType.InstantDamage,
                     LifetimeKind = EffectLifetimeKind.Instant,
                     ClockId = GasClockId.FixedFrame,
                     DurationTicks = 0,
@@ -101,7 +106,6 @@ namespace Ludots.Tests.GAS
                     ParticipatesInResponse = true,
                     Modifiers = healMods
                 });
-                FinalizeEffectTemplates(templates);
 
                 var listenerEntity = world.Create();
                 unsafe
@@ -141,9 +145,18 @@ namespace Ludots.Tests.GAS
                 world.Get<AttributeBuffer>(goblinB).SetBase(attrHealth, 100f);
 
                 var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
+                PreparePhaseRuntime(
+                    world,
+                    templates,
+                    requests,
+                    tagOps,
+                    "Test/MudAbilityChainStressDemoTests.Chain.json",
+                    out EffectPhaseExecutor phaseExecutor,
+                    out GasGraphRuntimeApi graphApi);
                 const int castAbilityOrderTypeId = 100;
                 var terminalResults = new OrderTerminalResultBuffer(capacity: 64);
                 var orderTypes = CreateCastOrderTypes(castAbilityOrderTypeId, terminalResults);
+                var effectReceipts = new EffectTransactionReceiptBuffer();
                 var abilityExecSystem = new AbilityExecSystem(
                     world,
                     clock,
@@ -154,7 +167,8 @@ namespace Ludots.Tests.GAS
                     abilityDefinitions: abilityDefs,
                     castAbilityOrderTypeId: castAbilityOrderTypeId,
                     orderTypeRegistry: orderTypes,
-                    tagOps: tagOps);
+                    tagOps: tagOps,
+                    effectReceipts: effectReceipts);
                 var processing = new EffectProcessingLoopSystem(
                     world,
                     requests,
@@ -169,7 +183,10 @@ namespace Ludots.Tests.GAS
                     new ResponseChainTelemetryBuffer(),
                     new OrderRequestQueue(),
                     responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
-                    tagOps: tagOps)
+                    phaseExecutor: phaseExecutor,
+                    graphApi: graphApi,
+                    tagOps: tagOps,
+                    effectReceipts: effectReceipts)
                 {
                     MaxWorkUnitsPerSlice = 2048
                 };
@@ -197,6 +214,7 @@ namespace Ludots.Tests.GAS
                         SubmitAndRunCast(
                             world,
                             abilityExecSystem,
+                            processing,
                             terminalResults,
                             player,
                             goblinA,
@@ -210,6 +228,7 @@ namespace Ludots.Tests.GAS
                         SubmitAndRunCast(
                             world,
                             abilityExecSystem,
+                            processing,
                             terminalResults,
                             player,
                             player,
@@ -223,6 +242,7 @@ namespace Ludots.Tests.GAS
                         SubmitAndRunCast(
                             world,
                             abilityExecSystem,
+                            processing,
                             terminalResults,
                             player,
                             goblinB,
@@ -283,6 +303,7 @@ namespace Ludots.Tests.GAS
                 templates.Register(tplVolleyHit, new EffectTemplateData
                 {
                     TagId = tagVolleyHit,
+                    PresetType = EffectPresetType.InstantDamage,
                     LifetimeKind = EffectLifetimeKind.Instant,
                     ClockId = GasClockId.FixedFrame,
                     DurationTicks = 0,
@@ -310,6 +331,7 @@ namespace Ludots.Tests.GAS
                 templates.Register(tplBurnTick, new EffectTemplateData
                 {
                     TagId = tagBurnTick,
+                    PresetType = EffectPresetType.InstantDamage,
                     LifetimeKind = EffectLifetimeKind.Instant,
                     ClockId = GasClockId.FixedFrame,
                     DurationTicks = 0,
@@ -318,7 +340,6 @@ namespace Ludots.Tests.GAS
                     ParticipatesInResponse = false,
                     Modifiers = burnTickMods
                 });
-                FinalizeEffectTemplates(templates);
 
                 var listenerEntity = world.Create();
                 unsafe
@@ -353,9 +374,18 @@ namespace Ludots.Tests.GAS
                 abilities.AddAbility(7001);
 
                 var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
+                PreparePhaseRuntime(
+                    world,
+                    templates,
+                    requests,
+                    tagOps,
+                    "Test/MudAbilityChainStressDemoTests.Stress.json",
+                    out EffectPhaseExecutor stressPhaseExecutor,
+                    out GasGraphRuntimeApi stressGraphApi);
                 const int castAbilityOrderTypeId = 100;
-                var terminalResults = new OrderTerminalResultBuffer(capacity: 64);
+                var terminalResults = new OrderTerminalResultBuffer(capacity: 8192);
                 var orderTypes = CreateCastOrderTypes(castAbilityOrderTypeId, terminalResults);
+                var effectReceipts = new EffectTransactionReceiptBuffer();
                 var abilityExecSystem = new AbilityExecSystem(
                     world,
                     clock,
@@ -366,7 +396,8 @@ namespace Ludots.Tests.GAS
                     abilityDefinitions: abilityDefs,
                     castAbilityOrderTypeId: castAbilityOrderTypeId,
                     orderTypeRegistry: orderTypes,
-                    tagOps: tagOps);
+                    tagOps: tagOps,
+                    effectReceipts: effectReceipts);
                 var processing = new EffectProcessingLoopSystem(
                     world,
                     requests,
@@ -381,7 +412,10 @@ namespace Ludots.Tests.GAS
                     new ResponseChainTelemetryBuffer(),
                     new OrderRequestQueue(),
                     responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
-                    tagOps: tagOps)
+                    phaseExecutor: stressPhaseExecutor,
+                    graphApi: stressGraphApi,
+                    tagOps: tagOps,
+                    effectReceipts: effectReceipts)
                 {
                     MaxWorkUnitsPerSlice = int.MaxValue
                 };
@@ -394,13 +428,13 @@ namespace Ludots.Tests.GAS
                     SubmitCastForTargets(
                         world,
                         abilityExecSystem,
+                        processing,
                         terminalResults,
                         player,
                         targets,
                         castAbilityOrderTypeId,
                         slotIndex: 0,
                         ref nextOrderId);
-                    processing.Update(dt);
                     clocks.AdvanceFixedFrame();
                     clocks.AdvanceStep();
                 }
@@ -435,6 +469,7 @@ namespace Ludots.Tests.GAS
                     SubmitCastForTargets(
                         world,
                         abilityExecSystem,
+                        processing,
                         terminalResults,
                         player,
                         targets,
@@ -444,7 +479,6 @@ namespace Ludots.Tests.GAS
                     ticksActivate += Stopwatch.GetTimestamp() - t0;
 
                     t0 = Stopwatch.GetTimestamp();
-                    processing.Update(dt);
                     ticksProcess += Stopwatch.GetTimestamp() - t0;
                     totalWindows += budget.ResponseWindows;
                     totalSteps += budget.ResponseSteps;
@@ -510,6 +544,7 @@ namespace Ludots.Tests.GAS
         private static void SubmitCastForTargets(
             World world,
             AbilityExecSystem abilityExecSystem,
+            EffectProcessingLoopSystem processing,
             OrderTerminalResultBuffer terminalResults,
             Entity actor,
             Entity[] targets,
@@ -522,6 +557,7 @@ namespace Ludots.Tests.GAS
                 SubmitAndRunCast(
                     world,
                     abilityExecSystem,
+                    processing,
                     terminalResults,
                     actor,
                     targets[i],
@@ -534,6 +570,7 @@ namespace Ludots.Tests.GAS
         private static void SubmitAndRunCast(
             World world,
             AbilityExecSystem abilityExecSystem,
+            EffectProcessingLoopSystem processing,
             OrderTerminalResultBuffer terminalResults,
             Entity actor,
             Entity target,
@@ -556,10 +593,14 @@ namespace Ludots.Tests.GAS
             world.Get<BlackboardIntBuffer>(actor).Set(OrderBlackboardKeys.Cast_SlotIndex, slotIndex);
             world.Get<BlackboardEntityBuffer>(actor).Set(OrderBlackboardKeys.Cast_TargetEntity, target);
             abilityExecSystem.Update(0f);
+            processing.Update(0f);
+            abilityExecSystem.Update(0f);
+            abilityExecSystem.Update(0f);
 
             That(terminalResults.Count, Is.EqualTo(1));
             That(terminalResults[0].OrderId, Is.EqualTo(orderId));
             That(terminalResults[0].State, Is.EqualTo(OrderTerminalState.Completed));
+            That(terminalResults.Release(orderId), Is.True);
         }
 
         private static int ResolveAttributeId(string name)
@@ -568,16 +609,46 @@ namespace Ludots.Tests.GAS
             return id != AttributeRegistry.InvalidId ? id : AttributeRegistry.Register(name);
         }
 
-        private static void FinalizeEffectTemplates(EffectTemplateRegistry templates)
+        private static void PreparePhaseRuntime(
+            World world,
+            EffectTemplateRegistry templates,
+            EffectRequestQueue requests,
+            TagOps tagOps,
+            string sourceName,
+            out EffectPhaseExecutor phaseExecutor,
+            out GasGraphRuntimeApi graphApi)
         {
+            var presetTypes = new PresetTypeRegistry();
+            var graphPrograms = new GraphProgramRegistry();
+            var instantDamagePreset = new PresetTypeDefinition
+            {
+                Type = EffectPresetType.InstantDamage,
+                Components = ComponentFlags.ModifierParams,
+                ActivePhases = PhaseFlags.OnApply,
+                AllowedLifetimes = LifetimeFlags.InstantOnly,
+            };
+            instantDamagePreset.DefaultPhaseHandlers[EffectPhaseId.OnApply] =
+                GasTestGraphPrograms.BuiltinGraph(graphPrograms, 8_001, BuiltinHandlerId.ApplyModifiers);
+            presetTypes.Register(in instantDamagePreset);
+
             var builtinHandlers = new BuiltinHandlerRegistry();
             BuiltinHandlers.RegisterAll(builtinHandlers);
             GasTestEffectExecutionPlanFinalizer.FinalizeAll(
                 templates,
-                new PresetTypeRegistry(),
+                presetTypes,
                 builtinHandlers,
-                new GraphProgramRegistry(),
-                "Test/MudAbilityChainStressDemoTests.json");
+                graphPrograms,
+                sourceName);
+            GasTestPhaseRuntime.Create(
+                world,
+                templates,
+                requests,
+                out phaseExecutor,
+                out graphApi,
+                graphPrograms,
+                presetTypes,
+                builtinHandlers,
+                tagOps);
         }
     }
 }

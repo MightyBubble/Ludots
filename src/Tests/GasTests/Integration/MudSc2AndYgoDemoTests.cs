@@ -9,6 +9,8 @@ using Ludots.Core.Gameplay.GAS.Input;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.NodeLibraries.GASGraph;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
 
@@ -63,6 +65,7 @@ namespace Ludots.Tests.GAS
                 templates.Register(tplStimSelfDamage, new EffectTemplateData
                 {
                     TagId = 100,
+                    PresetType = EffectPresetType.InstantDamage,
                     LifetimeKind = EffectLifetimeKind.Instant,
                     ClockId = GasClockId.Step,
                     DurationTicks = 0,
@@ -77,6 +80,7 @@ namespace Ludots.Tests.GAS
                 templates.Register(tplCloakDrain, new EffectTemplateData
                 {
                     TagId = 103,
+                    PresetType = EffectPresetType.InstantDamage,
                     LifetimeKind = EffectLifetimeKind.Instant,
                     ClockId = GasClockId.Step,
                     DurationTicks = 0,
@@ -92,6 +96,7 @@ namespace Ludots.Tests.GAS
                 templates.Register(tplEmp, new EffectTemplateData
                 {
                     TagId = 104,
+                    PresetType = EffectPresetType.InstantDamage,
                     LifetimeKind = EffectLifetimeKind.Instant,
                     ClockId = GasClockId.Step,
                     DurationTicks = 0,
@@ -106,6 +111,7 @@ namespace Ludots.Tests.GAS
                 templates.Register(tplHealTick, new EffectTemplateData
                 {
                     TagId = 105,
+                    PresetType = EffectPresetType.InstantDamage,
                     LifetimeKind = EffectLifetimeKind.Instant,
                     ClockId = GasClockId.Step,
                     DurationTicks = 0,
@@ -114,7 +120,6 @@ namespace Ludots.Tests.GAS
                     ParticipatesInResponse = false,
                     Modifiers = healTickMods
                 });
-                FinalizeEffectTemplates(templates);
 
                 var clock = new DiscreteClock();
                 var gasClocks = new GasClocks(clock);
@@ -138,8 +143,17 @@ namespace Ludots.Tests.GAS
                 var clockPolicy = new GasClockStepPolicy(1);
                 var clockSystem = new GasClockSystem(clock, clockPolicy);
                 var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
+                PreparePhaseRuntime(
+                    world,
+                    templates,
+                    effectRequests,
+                    tagOps,
+                    "Test/MudSc2AndYgoDemoTests.Classic.json",
+                    out EffectPhaseExecutor phaseExecutor,
+                    out GasGraphRuntimeApi graphApi);
                 var timedTags = new TimedTagExpirationSystem(world, clock, tagOps);
-                var abilityExec = new AbilityExecSystem(world, clock, inputReq, inputResp, effectRequests, 4096, abilityDefs, eventBus, orderCastAbility, orderTypeRegistry: orderTypeRegistry, tagOps: tagOps);
+                var effectReceipts = new EffectTransactionReceiptBuffer();
+                var abilityExec = new AbilityExecSystem(world, clock, inputReq, inputResp, effectRequests, 4096, abilityDefs, eventBus, orderCastAbility, orderTypeRegistry: orderTypeRegistry, tagOps: tagOps, effectReceipts: effectReceipts);
                 var effectLoop = new EffectProcessingLoopSystem(
                     world,
                     effectRequests,
@@ -154,7 +168,10 @@ namespace Ludots.Tests.GAS
                     new ResponseChainTelemetryBuffer(),
                     new OrderRequestQueue(),
                     responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
-                    tagOps: tagOps)
+                    phaseExecutor: phaseExecutor,
+                    graphApi: graphApi,
+                    tagOps: tagOps,
+                    effectReceipts: effectReceipts)
                 {
                     MaxWorkUnitsPerSlice = int.MaxValue
                 };
@@ -248,6 +265,8 @@ namespace Ludots.Tests.GAS
                     orderBufferSystem.Update(1f);
                     abilityExec.Update(1f);
                     effectLoop.Update(1f);
+                    abilityExec.Update(1f);
+                    abilityExec.Update(1f);
                     agg.Update(1f);
                     admissionResults.EndEntityIntake();
                     admissionEnd.Update(1f);
@@ -326,6 +345,7 @@ namespace Ludots.Tests.GAS
                 templates.Register(tplFireball, new EffectTemplateData
                 {
                     TagId = 200,
+                    PresetType = EffectPresetType.InstantDamage,
                     LifetimeKind = EffectLifetimeKind.Instant,
                     ClockId = GasClockId.Step,
                     ParticipatesInResponse = false,
@@ -342,7 +362,6 @@ namespace Ludots.Tests.GAS
                     ParticipatesInResponse = true,
                     Modifiers = default
                 });
-                FinalizeEffectTemplates(templates);
 
                 var clock = new DiscreteClock();
                 var gasClocks = new GasClocks(clock);
@@ -365,6 +384,14 @@ namespace Ludots.Tests.GAS
                 var (orderTypeRegistry2, orderRuleRegistry2) = CreateTestOrderRuntime(orderCastAbility);
                 var orderBufferSystem2 = new OrderBufferSystem(world, clock, orderTypeRegistry2, orderRuleRegistry2, admissionResults, incomingOrders, 30, closeEntityIntakeOnUpdate: false);
                 var tagOps2 = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
+                PreparePhaseRuntime(
+                    world,
+                    templates,
+                    effectRequests,
+                    tagOps2,
+                    "Test/MudSc2AndYgoDemoTests.Ygo.json",
+                    out EffectPhaseExecutor ygoPhaseExecutor,
+                    out GasGraphRuntimeApi ygoGraphApi);
                 var effectLoop = new EffectProcessingLoopSystem(
                     world,
                     effectRequests,
@@ -379,6 +406,8 @@ namespace Ludots.Tests.GAS
                     new ResponseChainTelemetryBuffer(),
                     new OrderRequestQueue(),
                     responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
+                    phaseExecutor: ygoPhaseExecutor,
+                    graphApi: ygoGraphApi,
                     tagOps: tagOps2);
                 var agg = new AttributeAggregatorSystem(world, tagOps: tagOps2);
                 var clockPolicy = new GasClockStepPolicy(1);
@@ -470,6 +499,7 @@ namespace Ludots.Tests.GAS
                 templates.Register(tplEmp, new EffectTemplateData
                 {
                     TagId = 104,
+                    PresetType = EffectPresetType.InstantDamage,
                     LifetimeKind = EffectLifetimeKind.Instant,
                     ClockId = GasClockId.Step,
                     DurationTicks = 0,
@@ -478,7 +508,6 @@ namespace Ludots.Tests.GAS
                     ParticipatesInResponse = true,
                     Modifiers = empMods
                 });
-                FinalizeEffectTemplates(templates);
 
                 var clock = new DiscreteClock();
                 var gasClocks = new GasClocks(clock);
@@ -501,7 +530,16 @@ namespace Ludots.Tests.GAS
                 var (orderTypeRegistry3, orderRuleRegistry3) = CreateTestOrderRuntime(orderCastAbility);
                 var orderBufferSystem3 = new OrderBufferSystem(world, clock, orderTypeRegistry3, orderRuleRegistry3, admissionResults, incomingOrders, 30, closeEntityIntakeOnUpdate: false);
                 var tagOps3 = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
-                var abilityExec = new AbilityExecSystem(world, clock, inputReq, inputResp, effectRequests, 4096, abilityDefs, eventBus, orderCastAbility, orderTypeRegistry: orderTypeRegistry3, tagOps: tagOps3);
+                PreparePhaseRuntime(
+                    world,
+                    templates,
+                    effectRequests,
+                    tagOps3,
+                    "Test/MudSc2AndYgoDemoTests.Stress.json",
+                    out EffectPhaseExecutor stressPhaseExecutor,
+                    out GasGraphRuntimeApi stressGraphApi);
+                var effectReceipts = new EffectTransactionReceiptBuffer();
+                var abilityExec = new AbilityExecSystem(world, clock, inputReq, inputResp, effectRequests, 4096, abilityDefs, eventBus, orderCastAbility, orderTypeRegistry: orderTypeRegistry3, tagOps: tagOps3, effectReceipts: effectReceipts);
                 var effectLoop = new EffectProcessingLoopSystem(
                     world,
                     effectRequests,
@@ -516,7 +554,10 @@ namespace Ludots.Tests.GAS
                     new ResponseChainTelemetryBuffer(),
                     new OrderRequestQueue(),
                     responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
-                    tagOps: tagOps3)
+                    phaseExecutor: stressPhaseExecutor,
+                    graphApi: stressGraphApi,
+                    tagOps: tagOps3,
+                    effectReceipts: effectReceipts)
                 {
                     MaxWorkUnitsPerSlice = int.MaxValue
                 };
@@ -553,6 +594,8 @@ namespace Ludots.Tests.GAS
                     orderBufferSystem3.Update(1f);
                     abilityExec.Update(1f);
                     effectLoop.Update(1f);
+                    abilityExec.Update(1f);
+                    abilityExec.Update(1f);
                     eventBus.Update();
                     admissionResults.EndEntityIntake();
                     admissionEnd.Update(1f);
@@ -668,16 +711,46 @@ namespace Ludots.Tests.GAS
             return (types, new OrderRuleRegistry());
         }
 
-        private static void FinalizeEffectTemplates(EffectTemplateRegistry templates)
+        private static void PreparePhaseRuntime(
+            World world,
+            EffectTemplateRegistry templates,
+            EffectRequestQueue requests,
+            TagOps tagOps,
+            string sourceName,
+            out EffectPhaseExecutor phaseExecutor,
+            out GasGraphRuntimeApi graphApi)
         {
+            var presetTypes = new PresetTypeRegistry();
+            var graphPrograms = new GraphProgramRegistry();
+            var instantDamagePreset = new PresetTypeDefinition
+            {
+                Type = EffectPresetType.InstantDamage,
+                Components = ComponentFlags.ModifierParams,
+                ActivePhases = PhaseFlags.OnApply,
+                AllowedLifetimes = LifetimeFlags.InstantOnly,
+            };
+            instantDamagePreset.DefaultPhaseHandlers[EffectPhaseId.OnApply] =
+                GasTestGraphPrograms.BuiltinGraph(graphPrograms, 8_001, BuiltinHandlerId.ApplyModifiers);
+            presetTypes.Register(in instantDamagePreset);
+
             var builtinHandlers = new BuiltinHandlerRegistry();
             BuiltinHandlers.RegisterAll(builtinHandlers);
             GasTestEffectExecutionPlanFinalizer.FinalizeAll(
                 templates,
-                new PresetTypeRegistry(),
+                presetTypes,
                 builtinHandlers,
-                new GraphProgramRegistry(),
-                "Test/MudSc2AndYgoDemoTests.json");
+                graphPrograms,
+                sourceName);
+            GasTestPhaseRuntime.Create(
+                world,
+                templates,
+                requests,
+                out phaseExecutor,
+                out graphApi,
+                graphPrograms,
+                presetTypes,
+                builtinHandlers,
+                tagOps);
         }
     }
 }

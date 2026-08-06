@@ -38,6 +38,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly InputRequestQueue _inputRequests;
         private readonly InputResponseBuffer _inputResponses;
         private readonly EffectRequestQueue _effectRequests;
+        private readonly EffectTransactionReceiptBuffer? _effectReceipts;
         private readonly GasPresentationEventBuffer? _presentationEvents;
         private readonly GraphProgramRegistry? _graphPrograms;
         private readonly IGraphRuntimeApi? _graphApi;
@@ -83,7 +84,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             TagOps? tagOps = null,
             OrderTypeRegistry? orderTypeRegistry = null,
             ProgressionRequirementEvaluator? progressionRequirements = null,
-            int maxWorkUnitsPerSlice = int.MaxValue)
+            int maxWorkUnitsPerSlice = int.MaxValue,
+            EffectTransactionReceiptBuffer? effectReceipts = null)
             : base(world)
         {
             if (snapshotCapacity <= 0)
@@ -96,6 +98,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             _inputRequests = inputRequests;
             _inputResponses = inputResponses;
             _effectRequests = effectRequests;
+            _effectReceipts = effectReceipts;
             _structuralCommands = new AbilityExecStructuralCommandBuffer(snapshotCapacity);
             _abilityDefinitions = abilityDefinitions;
             _eventBus = eventBus;
@@ -933,6 +936,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         {
                             return;
                         }
+                        if (inst.State == AbilityExecRunState.GateWaiting)
+                        {
+                            return;
+                        }
                         inst.NextItemIndex++;
                         continue;
 
@@ -957,6 +964,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     case ExecItemKind.EffectSignal:
                         EnsurePotentialTimelineTerminalCapacity(actor, in inst);
                         if (!FireEffectItem(actor, ref spec, idx, ref callerPool, hasCallerPool, ref inst))
+                        {
+                            return;
+                        }
+                        if (inst.State == AbilityExecRunState.GateWaiting)
                         {
                             return;
                         }
@@ -997,6 +1008,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         {
                             return;
                         }
+                        // fallthrough handled below — EnterGate sets GateWaiting
                         // Attempt immediate resolution if response already available
                         if (inst.State == AbilityExecRunState.GateWaiting)
                             ProcessGate(actor, ref spec, ref inst);
@@ -1064,6 +1076,11 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 failureReason = OrderFailureReason.SubmissionQueueFull;
                 return false;
             }
+            if (_effectReceipts == null || requiredCapacity > (_effectReceipts.Capacity - _effectReceipts.Count))
+            {
+                failureReason = OrderFailureReason.SubmissionQueueFull;
+                return false;
+            }
             return true;
         }
 
@@ -1076,6 +1093,18 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             if (_effectRequests == null)
             {
                 MarkActiveExecutionFailed(actor, ref inst, AbilityCastFailReason.PreconditionFailed, OrderFailureReason.PreconditionFailed);
+                return false;
+            }
+
+            if (_effectReceipts == null)
+            {
+                MarkActiveExecutionFailed(actor, ref inst, AbilityCastFailReason.PreconditionFailed, OrderFailureReason.PreconditionFailed);
+                return false;
+            }
+
+            if (_effectReceipts.Count >= _effectReceipts.Capacity)
+            {
+                MarkActiveExecutionFailed(actor, ref inst, AbilityCastFailReason.PreconditionFailed, OrderFailureReason.SubmissionQueueFull);
                 return false;
             }
 
@@ -1148,11 +1177,15 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     resolvedHasCallerParams,
                     requestClockId,
                     hasRequestClock,
-                    in inst))
+                    in inst,
+                    out int rootId))
             {
                 MarkActiveExecutionFailed(actor, ref inst, AbilityCastFailReason.PreconditionFailed, OrderFailureReason.PreconditionFailed);
                 return false;
             }
+
+            inst.State = AbilityExecRunState.GateWaiting;
+            inst.WaitRequestId = rootId;
             return true;
         }
 
@@ -1224,8 +1257,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             bool hasCallerParams,
             GasClockId clockId,
             bool hasClockId,
-            in AbilityExecInstance inst)
+            in AbilityExecInstance inst,
+            out int rootId)
         {
+            rootId = 0;
             var resolvedCallerParams = callerParams;
             bool resolvedHasCallerParams = hasCallerParams;
             if (!TryAppendSpatialCallerParams(ref resolvedCallerParams, in inst, out bool appendedSpatialParams))
@@ -1255,8 +1290,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 req.CallerParams = resolvedCallerParams;
             }
 
-            _effectRequests.Publish(req);
-            return true;
+            rootId = _effectRequests.Publish(req);
+            return rootId > 0;
         }
 
         private bool TryResolveSourceAbilityLockoutTags(int abilityId, out GameplayTagContainer lockoutTags)
@@ -1542,6 +1577,43 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             inst.NextItemIndex++;
                             inst.State = AbilityExecRunState.Running;
                         }
+                        break;
+                    }
+
+                case ExecItemKind.EffectClip:
+                case ExecItemKind.EffectSignal:
+                    {
+                        if (_effectReceipts == null)
+                        {
+                            MarkActiveExecutionFailed(
+                                actor,
+                                ref inst,
+                                AbilityCastFailReason.PreconditionFailed,
+                                OrderFailureReason.PreconditionFailed);
+                            return;
+                        }
+
+                        if (!_effectReceipts.TryConsume(inst.WaitRequestId, out var receipt))
+                        {
+                            break;
+                        }
+
+                        if (receipt.Outcome != EffectTransactionOutcome.Succeeded)
+                        {
+                            OrderFailureReason failureReason = receipt.FailureReason != OrderFailureReason.None
+                                ? receipt.FailureReason
+                                : OrderFailureReason.PreconditionFailed;
+                            MarkActiveExecutionFailed(
+                                actor,
+                                ref inst,
+                                AbilityCastFailReason.PreconditionFailed,
+                                failureReason);
+                            return;
+                        }
+
+                        inst.WaitRequestId = 0;
+                        inst.NextItemIndex++;
+                        inst.State = AbilityExecRunState.Running;
                         break;
                     }
 

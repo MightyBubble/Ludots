@@ -136,6 +136,7 @@ namespace Ludots.Tests.GAS
                 });
 
             var tagOps = new TagOps(new DirtyEntityQueue(capacity: 16), new TagRuleRegistry());
+            var effectReceipts = new EffectTransactionReceiptBuffer();
             var abilityExecSystem = new AbilityExecSystem(
                 world,
                 clock,
@@ -144,7 +145,8 @@ namespace Ludots.Tests.GAS
                 effectRequests,
                 snapshotCapacity: 16,
                 abilityDefinitions: abilityDefinitions,
-                tagOps: tagOps);
+                tagOps: tagOps,
+                effectReceipts: effectReceipts);
             var proposalSystem = new EffectProposalProcessingSystem(
                 world,
                 effectRequests,
@@ -153,7 +155,8 @@ namespace Ludots.Tests.GAS
                 budget: new GasBudget(),
                 templates: effectTemplates,
                 responseChainOrderTypes: TestResponseChainOrderTypeIds.Types,
-                tagOps: tagOps);
+                tagOps: tagOps,
+                effectReceipts: effectReceipts);
             var applicationSystem = new EffectApplicationSystem(
                 world,
                 GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME,
