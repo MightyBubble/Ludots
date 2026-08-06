@@ -32,7 +32,7 @@
 
 - 正式组件定义
 - 单写真相约束
-- `AvoidanceLane` / `CollisionParticipation` 正式枚举
+- `MovementParticipation` / `PoseAuthority` 正式组件（两轴参与声明 + 位姿写权，issue #643 阶段 0+1 已落地）
 - AOI 服务主语义只依赖 `ILoadedChunks`
 - 现有重复真相清单与禁止项
 

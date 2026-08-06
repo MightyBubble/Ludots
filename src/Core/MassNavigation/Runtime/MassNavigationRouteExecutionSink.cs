@@ -56,9 +56,6 @@ public readonly struct MassNavigationRouteSinkResult
 
 public sealed class MassNavigationRouteExecutionSink
 {
-    private const float WaypointAdvanceStopThresholdScale = 2f;
-    private const float WaypointAdvanceBodyRadiusScale = 1.5f;
-
     private readonly IPathService _pathService;
     private readonly PathStore _pathStore;
     private readonly PathingConfig _pathingConfig;
@@ -838,10 +835,19 @@ public sealed class MassNavigationRouteExecutionSink
         MassNavigationSimulationRuntime simulation,
         int agentIndex)
     {
-        float stopThreshold = simulation.GetRuntimeGroupSemantics().UnitTargetStopThresholdCm * WaypointAdvanceStopThresholdScale;
-        float bodyThreshold = simulation.GetAgentBodyRadiusCm(agentIndex) * WaypointAdvanceBodyRadiusScale;
+        MassNavigationRouteSemantics routeSemantics = simulation.GetRuntimeRouteSemantics();
+        float stopThreshold = simulation.GetRuntimeGroupSemantics().UnitTargetStopThresholdCm *
+            routeSemantics.WaypointAdvanceStopThresholdScale;
+        float bodyThreshold = simulation.GetAgentBodyRadiusCm(agentIndex) *
+            routeSemantics.WaypointAdvanceBodyRadiusScale;
         float threshold = MathF.Max(stopThreshold, bodyThreshold);
-        return threshold > 0f ? threshold : 1f;
+        if (!(threshold > 0f))
+        {
+            throw new InvalidOperationException(
+                "MassNavigation route waypoint advance threshold must be > 0 after applying configured scales.");
+        }
+
+        return threshold;
     }
 
     private static long PackKey(int orderToken, int agentIndex)

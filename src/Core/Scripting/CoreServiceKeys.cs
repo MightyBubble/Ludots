@@ -42,6 +42,7 @@ using Ludots.Core.Map;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Modding;
+using Ludots.Core.Movement;
 using Ludots.Core.Navigation.GraphCore;
 using Ludots.Core.Navigation.GraphWorld;
 using Ludots.Core.Navigation.AgentProfiles;
@@ -102,6 +103,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<TimeFlowService> TimeFlow = new("TimeFlow");
         public static readonly ServiceKey<TriggerDecoratorRegistry> TriggerDecoratorRegistry = new("TriggerDecoratorRegistry");
         public static readonly ServiceKey<SaveParticipantRegistry> SaveParticipants = new("SaveParticipants");
+        public static readonly ServiceKey<PoseAuthorityArbiter> PoseAuthorityArbiter = new("PoseAuthorityArbiter");
 
         // --- Map ---
         public static readonly ServiceKey<MapId> MapId = new("MapId");

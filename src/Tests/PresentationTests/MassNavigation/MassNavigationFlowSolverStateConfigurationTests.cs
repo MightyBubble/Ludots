@@ -528,6 +528,7 @@ namespace Ludots.Tests.Presentation
                 RouteWaypointCapacityPerAgent = 64,
                 LoadedChunkCapacity = 16,
                 RelationshipDomainCapacity = 4,
+                DisplacedAgentCapacity = 4,
             };
         }
 

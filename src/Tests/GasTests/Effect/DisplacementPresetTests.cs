@@ -8,6 +8,7 @@ using Ludots.Core.GraphRuntime;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
+using Ludots.Core.Movement;
 using Ludots.Core.Physics;
 using Ludots.Core.Physics2D.Components;
 using NUnit.Framework;
@@ -50,7 +51,7 @@ namespace Ludots.Tests.GAS
                 OverrideNavigation = true,
             });
 
-            var system = new DisplacementRuntimeSystem(world);
+            var system = new DisplacementRuntimeSystem(world, new PoseAuthorityArbiter());
             for (int i = 0; i < totalTicks; i++)
             {
                 system.Update(0f);
@@ -83,7 +84,7 @@ namespace Ludots.Tests.GAS
                 OverrideNavigation = true,
             });
 
-            var system = new DisplacementRuntimeSystem(world);
+            var system = new DisplacementRuntimeSystem(world, new PoseAuthorityArbiter());
             for (int i = 0; i < totalTicks; i++)
             {
                 system.Update(0f);
@@ -117,7 +118,7 @@ namespace Ludots.Tests.GAS
                 OverrideNavigation = true,
             });
 
-            var system = new DisplacementRuntimeSystem(world);
+            var system = new DisplacementRuntimeSystem(world, new PoseAuthorityArbiter());
             for (int i = 0; i < totalTicks; i++)
             {
                 system.Update(0f);
@@ -150,7 +151,7 @@ namespace Ludots.Tests.GAS
                 OverrideNavigation = false,
             });
 
-            var system = new DisplacementRuntimeSystem(world);
+            var system = new DisplacementRuntimeSystem(world, new PoseAuthorityArbiter());
             for (int i = 0; i < 10; i++)
             {
                 system.Update(0f);
@@ -184,7 +185,7 @@ namespace Ludots.Tests.GAS
                 OverrideNavigation = false,
             });
 
-            var system = new DisplacementRuntimeSystem(world);
+            var system = new DisplacementRuntimeSystem(world, new PoseAuthorityArbiter());
             for (int i = 0; i < 3; i++)
             {
                 system.Update(0f);
@@ -493,7 +494,7 @@ namespace Ludots.Tests.GAS
                 OverrideNavigation = true,
             });
 
-            var system = new DisplacementRuntimeSystem(world);
+            var system = new DisplacementRuntimeSystem(world, new PoseAuthorityArbiter());
             system.Update(0f);
 
             That(world.Has<MovementSuppressed2D>(target), Is.True);
@@ -523,7 +524,7 @@ namespace Ludots.Tests.GAS
                 OverrideNavigation = true,
             });
 
-            var system = new DisplacementRuntimeSystem(world);
+            var system = new DisplacementRuntimeSystem(world, new PoseAuthorityArbiter());
             for (int i = 0; i < 5; i++)
             {
                 system.Update(0f);
@@ -555,7 +556,7 @@ namespace Ludots.Tests.GAS
 
             world.Destroy(target);
 
-            var system = new DisplacementRuntimeSystem(world);
+            var system = new DisplacementRuntimeSystem(world, new PoseAuthorityArbiter());
             system.Update(0f);
 
             That(world.IsAlive(dispEntity), Is.False);
