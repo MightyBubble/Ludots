@@ -87,6 +87,7 @@ using Ludots.Core.Diagnostics;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Gameplay.Camera.FollowTargets;
 using Ludots.Core.MassNavigation.Runtime;
+using Ludots.Core.Movement;
 using Ludots.Core.Navigation.GraphCore;
 using Ludots.Core.Navigation.GraphSemantics.GAS;
 using Ludots.Core.Navigation.GraphWorld;
@@ -786,6 +787,8 @@ namespace Ludots.Core.Engine
             var physics2dClockConfig = physics2dClockConfigLoader.Load(ConfigCatalog, ConfigConflictReport);
             var physics2dSolverConfigLoader = new Physics2DSolverConfigLoader(ConfigPipeline);
             var physics2dSolverConfig = physics2dSolverConfigLoader.Load(ConfigCatalog, ConfigConflictReport);
+            var physics2dKinematicConfigLoader = new Physics2DKinematicConfigLoader(ConfigPipeline);
+            var physics2dKinematicConfig = physics2dKinematicConfigLoader.Load(ConfigCatalog, ConfigConflictReport);
             var componentAuthoringContext = new ComponentAuthoringContext();
             MapLoader.SetComponentAuthoringContext(componentAuthoringContext);
             new AttributeConstraintsLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
@@ -901,6 +904,12 @@ namespace Ludots.Core.Engine
                 tagOps.RegisterTagRuleSet(tagRules[i].TagId, tagRules[i].RuleSet);
             }
             graphConfigLoader.PatchAndRegister(graphPackages);
+            EffectExecutionPlanCompiler.FinalizeAll(
+                effectTemplateRegistry,
+                presetTypes,
+                builtinHandlers,
+                graphProgramRegistry,
+                GasGraphOpHandlerTable.Instance);
             new ContextGroupConfigLoader(ConfigPipeline, contextGroups).Load(ConfigCatalog, ConfigConflictReport);
             itemConfigLoader.Load(ConfigCatalog, ConfigConflictReport);
             exchangeLoader.Load(ConfigCatalog, ConfigConflictReport);
@@ -1393,7 +1402,7 @@ namespace Ludots.Core.Engine
                 orderQueue, stepRateHz,
                 graphProgramRegistry, gasGraphApi,
                 closeEntityIntakeOnUpdate: false);
-            var abilityExecSystem = new AbilityExecSystem(World, clock, abilityInputRequestQueue, inputResponseBuffer, effectRequestQueue, gasRuntimeCapacity.AbilityExecSnapshotCapacity, abilityDefinitions, EventBus, cfgCastAbility, cfgCastAbilityStart, gasPresentationEvents, phaseExecutor: phaseExecutor, graphPrograms: graphProgramRegistry, graphApi: gasGraphApi, tagOps: tagOps, orderTypeRegistry: orderTypeRegistry, progressionRequirements: progressionEvaluator, maxWorkUnitsPerSlice: gasRuntimeCapacity.AbilityExecMaxWorkUnitsPerSlice);
+            var abilityExecSystem = new AbilityExecSystem(World, clock, abilityInputRequestQueue, inputResponseBuffer, effectRequestQueue, gasRuntimeCapacity.AbilityExecSnapshotCapacity, abilityDefinitions, EventBus, cfgCastAbility, cfgCastAbilityStart, gasPresentationEvents, graphPrograms: graphProgramRegistry, graphApi: gasGraphApi, tagOps: tagOps, orderTypeRegistry: orderTypeRegistry, progressionRequirements: progressionEvaluator, maxWorkUnitsPerSlice: gasRuntimeCapacity.AbilityExecMaxWorkUnitsPerSlice);
             var abilityEndOrderSystem = new AbilityEndOrderSystem(World, orderTypeRegistry, cfgCastAbilityEnd);
             var stopOrderSystem = new StopOrderSystem(World, orderTypeRegistry, cfgStop);
             var instantCompleteOrderSystem = new InstantCompleteOrderSystem(World, orderTypeRegistry);
@@ -1667,6 +1676,7 @@ namespace Ludots.Core.Engine
                 clock,
                 physics2dTickPolicy,
                 physics2dSolverConfig,
+                physics2dKinematicConfig,
                 physics2dBroadphasePolicy,
                 componentAuthoringContext);
 
@@ -1676,7 +1686,6 @@ namespace Ludots.Core.Engine
             RegisterSystem(stopOrderSystem, SystemGroup.AbilityActivation);
             RegisterSystem(instantCompleteOrderSystem, SystemGroup.AbilityActivation);
             RegisterSystem(reactionSystem, SystemGroup.AbilityActivation);
-            RegisterSystem(abilitySystem, SystemGroup.AbilityActivation);
             RegisterSystem(abilityExecSystem, SystemGroup.AbilityActivation);
             // RFC-0065 CTX-6: exec lifecycle push/pop of interaction context frames.
             RegisterSystem(new AbilityExecInteractionContextSystem(World, interactionContextStack, interactionContextProfileRegistry, abilityDefinitions), SystemGroup.AbilityActivation);
@@ -1765,7 +1774,12 @@ namespace Ludots.Core.Engine
                     throw new InvalidOperationException($"Failed to create runtime navmesh obstacle dirty system '{runtimeNavMeshObstacleSystemTypeName}'.");
                 }
             }
-            RegisterSystem(new DisplacementRuntimeSystem(World), SystemGroup.EffectProcessing);
+            // Pose-authority arbitration (issue #643): transitions queue during the tick and are
+            // committed at the next fixed-step boundary by PoseAuthorityCommitSystem (SchemaUpdate).
+            var poseAuthorityArbiter = new PoseAuthorityArbiter();
+            SetService(CoreServiceKeys.PoseAuthorityArbiter, poseAuthorityArbiter);
+            RegisterSystem(new PoseAuthorityCommitSystem(World, poseAuthorityArbiter), SystemGroup.SchemaUpdate);
+            RegisterSystem(new DisplacementRuntimeSystem(World, poseAuthorityArbiter), SystemGroup.EffectProcessing);
 
             // Phase 4: AttributeCalculation
             RegisterSystem(aggSystem, SystemGroup.AttributeCalculation);
@@ -1788,11 +1802,11 @@ namespace Ludots.Core.Engine
 
             // Phase 7.1: Project gameplay-side presentation facts into the presentation stream
             // and owner-change index consumed by performer owner bindings.
-            // Changed-bit components must remain readable until presentation systems consume them,
-            // so the actual clear runs at the tail of the presentation pipeline.
+            // Changed-bit components are cleared only after projection for the completed fixed step.
             RegisterSystem(gameplayPresentationProjectionSystem, SystemGroup.ClearPresentationFlags);
             RegisterSystem(new ProgressionScopeTagRevisionSystem(World), SystemGroup.ClearPresentationFlags);
             RegisterSystem(new OrderAdmissionGenerationEndSystem(orderAdmissionResults), SystemGroup.ClearPresentationFlags);
+            RegisterSystem(clearPresentationFlagsSystem, SystemGroup.ClearPresentationFlags);
             _cooperativeSimulation = new PhaseOrderedCooperativeSimulation(
                 _systemGroups,
                 OnFixedStepCompleted,
@@ -1847,7 +1861,6 @@ namespace Ludots.Core.Engine
             RegisterPresentationSystem(new PerformerMinimapMarkerSystem(World, performerDefinitions, minimapMarkerBuffer, presentationTimingDiagnostics));
             // PerformerEmitSystem is the Wave 4 asset-binding emitter.
             RegisterPresentationSystem(performerEmitSystem);
-            RegisterPresentationSystem(clearPresentationFlagsSystem);
             RegisterPresentationSystem(surfaceSourceFlushSystem);
             RegisterPresentationSystem(surfaceSourceLifecycleSystem);
             RegisterPresentationSystem(chunkSurfaceBakeSystem);
@@ -1883,6 +1896,7 @@ namespace Ludots.Core.Engine
             IClock clock,
             Physics2DTickPolicy physics2dTickPolicy,
             Physics2DSolverConfig physics2dSolverConfig,
+            Physics2DKinematicConfig physics2dKinematicConfig,
             Physics2DBroadphasePolicy physics2dBroadphasePolicy,
             ComponentAuthoringContext componentAuthoringContext)
         {
@@ -1892,6 +1906,7 @@ namespace Ludots.Core.Engine
             const string worldSyncSystemTypeName = "Ludots.Core.Physics2D.Systems.Physics2DToWorldPositionSyncSystem";
 
             ArgumentNullException.ThrowIfNull(physics2dSolverConfig);
+            ArgumentNullException.ThrowIfNull(physics2dKinematicConfig);
             ArgumentNullException.ThrowIfNull(physics2dBroadphasePolicy);
             ArgumentNullException.ThrowIfNull(componentAuthoringContext);
 
@@ -1915,6 +1930,14 @@ namespace Ludots.Core.Engine
             componentAuthoringContext.Set(ComponentAuthoringServiceKeys.Physics2DShapeStorage, shapeStorage);
             SetService(CoreServiceKeys.Physics2DShapeStorage, shapeStorage);
 
+            var physics2dKinematicPoses = new Ludots.Core.Physics2D.KinematicTargetPoseBuffer2D(
+                physics2dKinematicConfig.KinematicBodyCapacity);
+            var physics2dContactEvents = new Ludots.Core.Physics2D.ContactEventQueue2D(
+                physics2dKinematicConfig.ContactEventQueueCapacity);
+            SetService(CoreServiceKeys.Physics2DKinematicConfig, physics2dKinematicConfig);
+            SetService(CoreServiceKeys.Physics2DKinematicPoseBuffer, physics2dKinematicPoses);
+            SetService(CoreServiceKeys.Physics2DContactEvents, physics2dContactEvents);
+
             object? physics2dSystemObj = Activator.CreateInstance(
                 physics2dSystemType,
                 World,
@@ -1922,7 +1945,10 @@ namespace Ludots.Core.Engine
                 physics2dTickPolicy,
                 physics2dSolverConfig,
                 shapeStorage,
-                physics2dBroadphasePolicy);
+                physics2dBroadphasePolicy,
+                physics2dKinematicPoses,
+                physics2dContactEvents,
+                physics2dKinematicConfig);
             if (physics2dSystemObj is not ISystem<float> physics2dSystem)
             {
                 throw new InvalidOperationException($"Failed to create Physics2D simulation system '{physics2dSystemTypeName}'.");
@@ -2180,10 +2206,10 @@ namespace Ludots.Core.Engine
         /// </summary>
         public void PushMap(string innerMapId, Dictionary<string, object> passthrough = null)
         {
-            EnsureMapSessionInfrastructure();
+            MapSessionManager mapSessions = EnsureMapSessionInfrastructure();
 
             var inner = new MapId(innerMapId);
-            var outerSession = MapSessions?.FocusedSession;
+            var outerSession = mapSessions.FocusedSession;
 
             var mapConfig = MapManager.LoadMap(innerMapId);
             if (mapConfig == null)
@@ -2197,7 +2223,7 @@ namespace Ludots.Core.Engine
 
             // Create inner session with parent context from outer
             MapContext parentCtx = outerSession?.Context;
-            var session = MapSessions.CreateSession(inner, mapConfig, parentCtx);
+            var session = mapSessions.CreateSession(inner, mapConfig, parentCtx);
             session.VisualHeightmap = visualHeightmap;
             BindStructureCollisionSession(session, visualHeightmap, structureCollision);
 
@@ -2215,7 +2241,7 @@ namespace Ludots.Core.Engine
             }
 
             // Push focus — outer becomes Suspended
-            MapSessions.PushFocused(inner);
+            mapSessions.PushFocused(inner);
             if (outerSession != null)
             {
                 SetMapEntitiesSuspended(outerSession.MapId, true);

@@ -49,7 +49,8 @@
       "groupMemberCapacity": 32,
       "movePlanExecutionGroupCapacity": 32,
       "movePlanExecutionMemberCapacity": 32,
-      "relationshipDomainCapacity": 3
+      "relationshipDomainCapacity": 3,
+      "displacedAgentCapacity": 16
     }
   },
   "cadence": {
@@ -78,5 +79,11 @@
   "streaming": {
     "retainSeconds": 12,
     "radiusCm": 32000
+  },
+  "semantics": {
+    "route": {
+      "waypointAdvanceStopThresholdScale": 2,
+      "waypointAdvanceBodyRadiusScale": 1.5
+    }
   }
 }

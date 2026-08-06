@@ -1,20 +1,8 @@
-﻿[
+[
   {
     "_comment": "RTS actor ground ring: always-on entity-scoped overlay so units/buildings remain readable on the grid.",
     "id": "rts_actor_ring",
-    "defaultColor": [
-      0.22,
-      0.54,
-      0.96,
-      0.18
-    ],
-    "defaultLifetime": -1,
     "maxVisibilityDistanceCm": 30000,
-    "positionOffset": [
-      0,
-      0.05,
-      0
-    ],
     "visibility": {
       "inline": "OwnerCullVisible"
     },
@@ -91,26 +79,32 @@
             1.5,
             1.5
           ]
+        },
+        "style": {
+          "color": [
+            0.22,
+            0.54,
+            0.96,
+            0.18
+          ]
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "persistence": "Scoped"
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.05,
+        0
+      ]
+    }
   },
   {
     "_comment": "RTS actor marker: simple readable body proxy for RtsDemoMod when no showcase-only performer pack is loaded.",
     "id": "rts_actor_marker",
-    "defaultColor": [
-      0.92,
-      0.96,
-      1,
-      0.98
-    ],
-    "defaultLifetime": -1,
     "maxVisibilityDistanceCm": 30000,
-    "positionOffset": [
-      0,
-      0.55,
-      0
-    ],
     "visibility": {
       "inline": "OwnerCullVisible"
     },
@@ -192,9 +186,27 @@
             1.05,
             1.05
           ]
+        },
+        "style": {
+          "color": [
+            0.92,
+            0.96,
+            1,
+            0.98
+          ]
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "persistence": "Scoped"
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.55,
+        0
+      ]
+    }
   },
   {
     "_comment": "RTS ability aim preview mapping: effect-tag semantic events choose build/warp/morph ghosts; abilities only name gameplay impact effects.",
@@ -349,30 +361,95 @@
   {
     "_comment": "RTS command-source actor primary ring. The system only publishes a semantic world fact; this performer owns the visual.",
     "id": "rts.command_source.primary_ring",
-    "defaultColor": [0.35, 0.72, 1.0, 1.0],
-    "defaultLifetime": -1,
-    "positionOffset": [0, 0, 0],
     "maxVisibilityDistanceCm": 30000,
     "paramDefaults": [
-      { "paramKey": "groundOverlay.radius", "lane": "Float", "floatValue": 1.42 },
-      { "paramKey": "groundOverlay.innerRadius", "lane": "Float", "floatValue": 1.1 },
-      { "paramKey": "groundOverlay.fill.r", "lane": "Float", "floatValue": 0.35 },
-      { "paramKey": "groundOverlay.fill.g", "lane": "Float", "floatValue": 0.72 },
-      { "paramKey": "groundOverlay.fill.b", "lane": "Float", "floatValue": 1.0 },
-      { "paramKey": "groundOverlay.fill.a", "lane": "Float", "floatValue": 0.088 },
-      { "paramKey": "groundOverlay.border.r", "lane": "Float", "floatValue": 0.35 },
-      { "paramKey": "groundOverlay.border.g", "lane": "Float", "floatValue": 0.72 },
-      { "paramKey": "groundOverlay.border.b", "lane": "Float", "floatValue": 1.0 },
-      { "paramKey": "groundOverlay.border.a", "lane": "Float", "floatValue": 0.22 },
-      { "paramKey": "groundOverlay.border.width", "lane": "Float", "floatValue": 0.05 }
+      {
+        "paramKey": "groundOverlay.radius",
+        "lane": "Float",
+        "floatValue": 1.42
+      },
+      {
+        "paramKey": "groundOverlay.innerRadius",
+        "lane": "Float",
+        "floatValue": 1.1
+      },
+      {
+        "paramKey": "groundOverlay.fill.r",
+        "lane": "Float",
+        "floatValue": 0.35
+      },
+      {
+        "paramKey": "groundOverlay.fill.g",
+        "lane": "Float",
+        "floatValue": 0.72
+      },
+      {
+        "paramKey": "groundOverlay.fill.b",
+        "lane": "Float",
+        "floatValue": 1
+      },
+      {
+        "paramKey": "groundOverlay.fill.a",
+        "lane": "Float",
+        "floatValue": 0.088
+      },
+      {
+        "paramKey": "groundOverlay.border.r",
+        "lane": "Float",
+        "floatValue": 0.35
+      },
+      {
+        "paramKey": "groundOverlay.border.g",
+        "lane": "Float",
+        "floatValue": 0.72
+      },
+      {
+        "paramKey": "groundOverlay.border.b",
+        "lane": "Float",
+        "floatValue": 1
+      },
+      {
+        "paramKey": "groundOverlay.border.a",
+        "lane": "Float",
+        "floatValue": 0.22
+      },
+      {
+        "paramKey": "groundOverlay.border.width",
+        "lane": "Float",
+        "floatValue": 0.05
+      }
     ],
     "bindings": [
-      { "paramKey": "groundOverlay.fill.r", "source": "entityColor", "sourceId": 0 },
-      { "paramKey": "groundOverlay.fill.g", "source": "entityColor", "sourceId": 1 },
-      { "paramKey": "groundOverlay.fill.b", "source": "entityColor", "sourceId": 2 },
-      { "paramKey": "groundOverlay.border.r", "source": "entityColor", "sourceId": 0 },
-      { "paramKey": "groundOverlay.border.g", "source": "entityColor", "sourceId": 1 },
-      { "paramKey": "groundOverlay.border.b", "source": "entityColor", "sourceId": 2 }
+      {
+        "paramKey": "groundOverlay.fill.r",
+        "source": "entityColor",
+        "sourceId": 0
+      },
+      {
+        "paramKey": "groundOverlay.fill.g",
+        "source": "entityColor",
+        "sourceId": 1
+      },
+      {
+        "paramKey": "groundOverlay.fill.b",
+        "source": "entityColor",
+        "sourceId": 2
+      },
+      {
+        "paramKey": "groundOverlay.border.r",
+        "source": "entityColor",
+        "sourceId": 0
+      },
+      {
+        "paramKey": "groundOverlay.border.g",
+        "source": "entityColor",
+        "sourceId": 1
+      },
+      {
+        "paramKey": "groundOverlay.border.b",
+        "source": "entityColor",
+        "sourceId": 2
+      }
     ],
     "behaviors": [
       {
@@ -384,33 +461,76 @@
           "assetId": "Ring",
           "renderPath": "None",
           "mobility": "Movable",
-          "localScale": [1.42, 1.1, 0.05]
+          "localScale": [
+            1.42,
+            1.1,
+            0.05
+          ]
+        },
+        "style": {
+          "color": [
+            0.35,
+            0.72,
+            1,
+            1
+          ]
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "persistence": "Scoped"
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0,
+        0
+      ]
+    }
   },
   {
     "_comment": "RTS command-source actor queued-order pulse ring.",
     "id": "rts.command_source.queue_ring",
     "extends": "rts.command_source.primary_ring",
     "paramDefaults": [
-      { "paramKey": "groundOverlay.fill.a", "lane": "Float", "floatValue": 0.04 },
-      { "paramKey": "groundOverlay.border.a", "lane": "Float", "floatValue": 0.10 }
+      {
+        "paramKey": "groundOverlay.fill.a",
+        "lane": "Float",
+        "floatValue": 0.04
+      },
+      {
+        "paramKey": "groundOverlay.border.a",
+        "lane": "Float",
+        "floatValue": 0.1
+      }
     ]
   },
   {
     "_comment": "RTS command-source actor execution/progress bar.",
     "id": "rts.command_source.progress_bar",
-    "defaultColor": [0.35, 0.72, 1.0, 0.95],
-    "defaultLifetime": -1,
-    "positionOffset": [0, 0, 0],
     "maxVisibilityDistanceCm": 30000,
     "paramDefaults": [
-      { "paramKey": "worldBar.fillRatio", "lane": "Float", "floatValue": 1 },
-      { "paramKey": "rts.command_source.progress.color", "lane": "Vector", "vectorValue": [0.35, 0.72, 1.0, 0.95] }
+      {
+        "paramKey": "worldBar.fillRatio",
+        "lane": "Float",
+        "floatValue": 1
+      },
+      {
+        "paramKey": "rts.command_source.progress.color",
+        "lane": "Vector",
+        "vectorValue": [
+          0.35,
+          0.72,
+          1,
+          0.95
+        ]
+      }
     ],
     "bindings": [
-      { "paramKey": "rts.command_source.progress.color", "source": "entityColorVector" }
+      {
+        "paramKey": "rts.command_source.progress.color",
+        "source": "entityColorVector"
+      }
     ],
     "behaviors": [
       {
@@ -423,17 +543,42 @@
           "colorParamKey": "rts.command_source.progress.color",
           "renderPath": "None",
           "mobility": "Movable",
-          "localScale": [102, 10, 1]
+          "localScale": [
+            102,
+            10,
+            1
+          ]
+        },
+        "style": {
+          "color": [
+            0.35,
+            0.72,
+            1,
+            0.95
+          ]
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "persistence": "Scoped"
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0,
+        0
+      ]
+    }
   },
   {
     "_comment": "Rules converting RTS command-source world facts into performer commands.",
     "id": "rts.command_source.feedback_rules",
     "rules": [
       {
-        "event": { "kind": "WorldOverlayUpdated", "key": "rts.command_source.primary_ring" },
+        "event": {
+          "kind": "WorldOverlayUpdated",
+          "key": "rts.command_source.primary_ring"
+        },
         "command": {
           "kind": "CreatePerformer",
           "definitionId": "rts.command_source.primary_ring",
@@ -445,7 +590,10 @@
         }
       },
       {
-        "event": { "kind": "WorldOverlayUpdated", "key": "rts.command_source.primary_ring" },
+        "event": {
+          "kind": "WorldOverlayUpdated",
+          "key": "rts.command_source.primary_ring"
+        },
         "command": {
           "kind": "SetParam",
           "definitionId": "rts.command_source.primary_ring",
@@ -457,7 +605,10 @@
         }
       },
       {
-        "event": { "kind": "WorldOverlayUpdated", "key": "rts.command_source.primary_ring" },
+        "event": {
+          "kind": "WorldOverlayUpdated",
+          "key": "rts.command_source.primary_ring"
+        },
         "command": {
           "kind": "SetParam",
           "definitionId": "rts.command_source.primary_ring",
@@ -469,7 +620,10 @@
         }
       },
       {
-        "event": { "kind": "WorldOverlayUpdated", "key": "rts.command_source.primary_ring" },
+        "event": {
+          "kind": "WorldOverlayUpdated",
+          "key": "rts.command_source.primary_ring"
+        },
         "command": {
           "kind": "SetParam",
           "definitionId": "rts.command_source.primary_ring",
@@ -481,7 +635,10 @@
         }
       },
       {
-        "event": { "kind": "WorldOverlayEnded", "key": "rts.command_source.primary_ring" },
+        "event": {
+          "kind": "WorldOverlayEnded",
+          "key": "rts.command_source.primary_ring"
+        },
         "command": {
           "kind": "DestroyScopedPerformer",
           "definitionId": "rts.command_source.primary_ring",
@@ -489,7 +646,10 @@
         }
       },
       {
-        "event": { "kind": "WorldOverlayUpdated", "key": "rts.command_source.queue_ring" },
+        "event": {
+          "kind": "WorldOverlayUpdated",
+          "key": "rts.command_source.queue_ring"
+        },
         "command": {
           "kind": "CreatePerformer",
           "definitionId": "rts.command_source.queue_ring",
@@ -501,7 +661,10 @@
         }
       },
       {
-        "event": { "kind": "WorldOverlayUpdated", "key": "rts.command_source.queue_ring" },
+        "event": {
+          "kind": "WorldOverlayUpdated",
+          "key": "rts.command_source.queue_ring"
+        },
         "command": {
           "kind": "SetParam",
           "definitionId": "rts.command_source.queue_ring",
@@ -513,7 +676,10 @@
         }
       },
       {
-        "event": { "kind": "WorldOverlayUpdated", "key": "rts.command_source.queue_ring" },
+        "event": {
+          "kind": "WorldOverlayUpdated",
+          "key": "rts.command_source.queue_ring"
+        },
         "command": {
           "kind": "SetParam",
           "definitionId": "rts.command_source.queue_ring",
@@ -525,7 +691,10 @@
         }
       },
       {
-        "event": { "kind": "WorldOverlayUpdated", "key": "rts.command_source.queue_ring" },
+        "event": {
+          "kind": "WorldOverlayUpdated",
+          "key": "rts.command_source.queue_ring"
+        },
         "command": {
           "kind": "SetParam",
           "definitionId": "rts.command_source.queue_ring",
@@ -537,7 +706,10 @@
         }
       },
       {
-        "event": { "kind": "WorldOverlayEnded", "key": "rts.command_source.queue_ring" },
+        "event": {
+          "kind": "WorldOverlayEnded",
+          "key": "rts.command_source.queue_ring"
+        },
         "command": {
           "kind": "DestroyScopedPerformer",
           "definitionId": "rts.command_source.queue_ring",
@@ -545,7 +717,10 @@
         }
       },
       {
-        "event": { "kind": "WorldHudUpdated", "key": "rts.command_source.progress_bar" },
+        "event": {
+          "kind": "WorldHudUpdated",
+          "key": "rts.command_source.progress_bar"
+        },
         "command": {
           "kind": "CreatePerformer",
           "definitionId": "rts.command_source.progress_bar",
@@ -557,7 +732,10 @@
         }
       },
       {
-        "event": { "kind": "WorldHudUpdated", "key": "rts.command_source.progress_bar" },
+        "event": {
+          "kind": "WorldHudUpdated",
+          "key": "rts.command_source.progress_bar"
+        },
         "command": {
           "kind": "SetParam",
           "definitionId": "rts.command_source.progress_bar",
@@ -569,7 +747,10 @@
         }
       },
       {
-        "event": { "kind": "WorldHudEnded", "key": "rts.command_source.progress_bar" },
+        "event": {
+          "kind": "WorldHudEnded",
+          "key": "rts.command_source.progress_bar"
+        },
         "command": {
           "kind": "DestroyScopedPerformer",
           "definitionId": "rts.command_source.progress_bar",

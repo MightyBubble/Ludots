@@ -10,6 +10,7 @@ namespace Ludots.Core.Gameplay.GAS
     public sealed class PresetTypeRegistry
     {
         public const int MaxPresetTypes = 256;
+        public const string DuplicateRegistrationError = "GAS.PRESET_TYPE.ERR.DuplicateRegistration";
 
         private readonly PresetTypeDefinition[] _definitions = new PresetTypeDefinition[MaxPresetTypes];
         private readonly bool[] _registered = new bool[MaxPresetTypes];
@@ -18,6 +19,12 @@ namespace Ludots.Core.Gameplay.GAS
         public void Register(in PresetTypeDefinition def)
         {
             int idx = (byte)def.Type;
+            if (_registered[idx])
+            {
+                throw new InvalidOperationException(
+                    $"{DuplicateRegistrationError}: presetType={def.Type}.");
+            }
+
             _definitions[idx] = def;
             _registered[idx] = true;
         }

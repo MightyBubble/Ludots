@@ -63,6 +63,12 @@ namespace Ludots.Tests.GAS
             });
 
             var programs = new GraphProgramRegistry();
+            GasTestEffectExecutionPlanFinalizer.FinalizeAll(
+                templates,
+                presetTypes,
+                builtinHandlers,
+                programs,
+                "Test/AuditCoverageTests.BuiltinPath.json");
             var handlers = GasGraphOpHandlerTable.Instance;
 
             // Use the NEW constructor that takes PresetTypeRegistry + BuiltinHandlerRegistry
@@ -106,6 +112,12 @@ namespace Ludots.Tests.GAS
             // Empty template registry — template ID 999 does not exist
             var templates = new EffectTemplateRegistry();
             var programs = new GraphProgramRegistry();
+            GasTestEffectExecutionPlanFinalizer.FinalizeAll(
+                templates,
+                presetTypes,
+                builtinHandlers,
+                programs,
+                "Test/AuditCoverageTests.MissingTemplate.json");
             var handlers = GasGraphOpHandlerTable.Instance;
 
             var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, handlers, templates);
@@ -150,6 +162,16 @@ namespace Ludots.Tests.GAS
                     ParticipatesInResponse = false,
                     Modifiers = default,
                 });
+
+                var presetTypes = new PresetTypeRegistry();
+                var builtinHandlers = new BuiltinHandlerRegistry();
+                BuiltinHandlers.RegisterAll(builtinHandlers);
+                GasTestEffectExecutionPlanFinalizer.FinalizeAll(
+                    templates,
+                    presetTypes,
+                    builtinHandlers,
+                    new GraphProgramRegistry(),
+                    "Test/AuditCoverageTests.ResetSlice.json");
 
                 var budget = new GasBudget();
                 var queue = new EffectRequestQueue();
@@ -366,6 +388,12 @@ namespace Ludots.Tests.GAS
             });
 
             var programs = new GraphProgramRegistry();
+            GasTestEffectExecutionPlanFinalizer.FinalizeAll(
+                templates,
+                presetTypes,
+                builtinHandlers,
+                programs,
+                "Test/AuditCoverageTests.ApplyForce.json");
             var handlers = GasGraphOpHandlerTable.Instance;
 
             var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, handlers, templates);

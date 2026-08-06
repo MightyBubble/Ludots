@@ -32,9 +32,6 @@ namespace Ludots.Core.Gameplay.GAS
         UnitCreationParams = 1 << 7,
         /// <summary>Entity relation parameters (JSON: "relation").</summary>
         RelationParams = 1 << 8,
-        /// <summary>Area reveal parameters (JSON: "revealArea").</summary>
-        RevealAreaParams = 1 << 9,
-
         // ── Capability components (declare structural abilities) ──
 
         /// <summary>Allows per-template Pre/Post Graph bindings, constrained by activePhases.</summary>

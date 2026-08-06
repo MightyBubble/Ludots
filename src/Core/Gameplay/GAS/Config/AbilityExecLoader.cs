@@ -120,24 +120,11 @@ namespace Ludots.Core.Gameplay.GAS.Config
             }
 
             // ── onActivateEffects ──
-            if (obj["onActivateEffects"] is JsonArray effectArr)
+            if (obj["onActivateEffects"] != null)
             {
-                var onActivate = default(AbilityOnActivateEffects);
-                for (int i = 0; i < effectArr.Count; i++)
-                {
-                    string effectName = RequireNonEmptyString(effectArr[i], $"onActivateEffects[{i}]", id, path);
-                    int tid = EffectTemplateIdRegistry.GetId(effectName);
-                    if (tid <= 0)
-                    {
-                        throw new InvalidOperationException(
-                            $"Ability '{id}' in '{path}' field 'onActivateEffects[{i}]' references unknown effect template '{effectName}'.");
-                    }
-
-                    onActivate.Add(tid);
-                }
-
-                def.HasOnActivateEffects = onActivate.Count > 0;
-                def.OnActivateEffects = onActivate;
+                throw new InvalidOperationException(
+                    $"Ability '{id}' in '{path}' field 'onActivateEffects' is removed. " +
+                    "Author effects once as exec.items EffectSignal or EffectClip entries.");
             }
 
             if (obj["cooldown"] is JsonObject cooldownObj)
@@ -428,18 +415,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
             {
                 string rawDispatchTarget = dispatchTargetNode.GetValue<string>();
                 payloadA = (int)ParseExecEffectDispatchTarget(rawDispatchTarget, id, idx, path);
-            }
-
-            // For GraphSignal, "graph" field maps to payloadA via GraphIdRegistry
-            if (kind == ExecItemKind.GraphSignal)
-            {
-                string graphName = RequireNonEmptyString(itemObj["graph"], $"exec.items[{idx}].graph", id, path);
-                payloadA = GraphIdRegistry.GetId(graphName);
-                if (payloadA <= 0)
-                {
-                    throw new InvalidOperationException(
-                        $"Ability '{id}' in '{path}' field 'exec.items[{idx}].graph' references unknown graph '{graphName}'.");
-                }
             }
 
             spec.SetItem(idx, kind, tick, durationTicks, clockId, tagId, templateId, callerParamsIdx, payloadA);
@@ -868,14 +843,13 @@ namespace Ludots.Core.Gameplay.GAS.Config
                 "TagClipTarget" => ExecItemKind.TagClipTarget,
                 "EffectSignal" => ExecItemKind.EffectSignal,
                 "EventSignal" => ExecItemKind.EventSignal,
-                "GraphSignal" => ExecItemKind.GraphSignal,
                 "TagSignal" => ExecItemKind.TagSignal,
                 "TagSignalTarget" => ExecItemKind.TagSignalTarget,
                 "InputGate" => ExecItemKind.InputGate,
                 "EventGate" => ExecItemKind.EventGate,
                 "TargetCollectionGate" => ExecItemKind.TargetCollectionGate,
                 "End" => ExecItemKind.End,
-                _ => throw new InvalidOperationException($"Unknown ExecItemKind '{str}'. Valid values: EffectClip, TagClip, TagClipTarget, EffectSignal, EventSignal, GraphSignal, TagSignal, TagSignalTarget, InputGate, EventGate, TargetCollectionGate, End."),
+                _ => throw new InvalidOperationException($"Unknown ExecItemKind '{str}'. Valid values: EffectClip, TagClip, TagClipTarget, EffectSignal, EventSignal, TagSignal, TagSignalTarget, InputGate, EventGate, TargetCollectionGate, End."),
             };
         }
     }

@@ -112,7 +112,7 @@ namespace Ludots.Tests.GAS
         {
             var reg = new BuiltinHandlerRegistry();
             _handlerCallCount = 0;
-            reg.Register(BuiltinHandlerId.ApplyModifiers, TestHandler);
+            reg.Register(BuiltinHandlerId.ApplyModifiers, TestHandler, EffectOperationMetadata.GasTransactional(nameof(BuiltinHandlerId.ApplyModifiers)));
 
             That(reg.IsRegistered(BuiltinHandlerId.ApplyModifiers), Is.True);
 
@@ -149,7 +149,10 @@ namespace Ludots.Tests.GAS
         {
             var reg = new BuiltinHandlerRegistry();
             Assert.Throws<ArgumentOutOfRangeException>(() =>
-                reg.Register((BuiltinHandlerId)999, NoOpHandler));
+                reg.Register(
+                    (BuiltinHandlerId)999,
+                    NoOpHandler,
+                    EffectOperationMetadata.GasTransactional("OverflowTest")));
         }
 
         // ════════════════════════════════════════════════════════════════════
@@ -335,6 +338,18 @@ namespace Ludots.Tests.GAS
             var reg = new PresetTypeRegistry();
             That(reg.IsRegistered(EffectPresetType.DoT), Is.False);
             That(reg.TryGet(EffectPresetType.DoT, out _), Is.False);
+        }
+
+        [Test]
+        public void PresetTypeRegistry_DuplicateRegistration_FailsFast()
+        {
+            var reg = new PresetTypeRegistry();
+            var first = new PresetTypeDefinition { Type = EffectPresetType.Buff };
+            var duplicate = new PresetTypeDefinition { Type = EffectPresetType.Buff };
+            reg.Register(in first);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => reg.Register(in duplicate))!;
+            That(ex.Message, Does.StartWith(PresetTypeRegistry.DuplicateRegistrationError));
         }
 
         [Test]
@@ -685,7 +700,6 @@ namespace Ludots.Tests.GAS
             That(reg.IsRegistered(EffectPresetType.Relation), Is.True);
             That(reg.IsRegistered(EffectPresetType.Exchange), Is.True);
             That(reg.IsRegistered(EffectPresetType.DeployConsumeSource), Is.True);
-            That(reg.IsRegistered(EffectPresetType.RevealArea), Is.True);
 
             // Spot-check ApplyForce2D builtin handler
             ref readonly var af = ref reg.Get(EffectPresetType.ApplyForce2D);
@@ -712,14 +726,6 @@ namespace Ludots.Tests.GAS
             That(deploy.DefaultPhaseHandlers[EffectPhaseId.OnApply].Kind, Is.EqualTo(PhaseHandlerKind.Graph));
             That(deploy.DefaultPhaseHandlers[EffectPhaseId.OnApply].HandlerId, Is.EqualTo(lifecycleGraphId));
 
-            ref readonly var reveal = ref reg.Get(EffectPresetType.RevealArea);
-            That(reveal.HasComponent(ComponentFlags.RevealAreaParams), Is.True);
-            That(reveal.DefaultPhaseHandlers[EffectPhaseId.OnApply].HandlerId,
-                Is.EqualTo((int)BuiltinHandlerId.RevealArea));
-            That(reveal.DefaultPhaseHandlers[EffectPhaseId.OnPeriod].HandlerId,
-                Is.EqualTo((int)BuiltinHandlerId.RevealArea));
-            That(reveal.DefaultPhaseHandlers[EffectPhaseId.OnRemove].HandlerId,
-                Is.EqualTo((int)BuiltinHandlerId.DecayRevealArea));
         }
 
         // ════════════════════════════════════════════════════════════════════

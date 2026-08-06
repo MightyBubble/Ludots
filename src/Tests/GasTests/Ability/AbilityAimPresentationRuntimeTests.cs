@@ -339,7 +339,7 @@ namespace Ludots.Tests.GAS
                         Imm = graphSetup.PriorityMetricId,
                         Flags = 1,
                     },
-                });
+                }, GraphKind.Query);
             _runtime = new AbilityAimPresentationRuntime(
                 _world,
                 _abilities,

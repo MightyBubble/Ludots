@@ -18,7 +18,8 @@
     "kind": "Effect",
     "entry": "target",
     "nodes": [
-      { "id": "target", "op": "LoadContextTarget", "next": "current" },
+      { "id": "target", "op": "LoadContextTarget", "next": "stopRandomDrift" },
+      { "id": "stopRandomDrift", "op": "RemoveEffectTemplate", "effectTemplate": "Effect.Showcase.Blacksmith.RandomDrift", "inputs": ["target"], "next": "current" },
       { "id": "current", "op": "LoadAttribute", "attribute": "Durability", "inputs": ["target"], "next": "desired" },
       { "id": "desired", "op": "ConstFloat", "floatValue": 100.0, "next": "delta" },
       { "id": "delta", "op": "SubFloat", "inputs": ["desired", "current"], "next": "modify" },
@@ -30,7 +31,8 @@
     "kind": "Effect",
     "entry": "target",
     "nodes": [
-      { "id": "target", "op": "LoadContextTarget", "next": "current" },
+      { "id": "target", "op": "LoadContextTarget", "next": "stopRandomDrift" },
+      { "id": "stopRandomDrift", "op": "RemoveEffectTemplate", "effectTemplate": "Effect.Showcase.Blacksmith.RandomDrift", "inputs": ["target"], "next": "current" },
       { "id": "current", "op": "LoadAttribute", "attribute": "Durability", "inputs": ["target"], "next": "desired" },
       { "id": "desired", "op": "ConstFloat", "floatValue": 50.0, "next": "delta" },
       { "id": "delta", "op": "SubFloat", "inputs": ["desired", "current"], "next": "modify" },
@@ -42,7 +44,8 @@
     "kind": "Effect",
     "entry": "target",
     "nodes": [
-      { "id": "target", "op": "LoadContextTarget", "next": "current" },
+      { "id": "target", "op": "LoadContextTarget", "next": "stopRandomDrift" },
+      { "id": "stopRandomDrift", "op": "RemoveEffectTemplate", "effectTemplate": "Effect.Showcase.Blacksmith.RandomDrift", "inputs": ["target"], "next": "current" },
       { "id": "current", "op": "LoadAttribute", "attribute": "Durability", "inputs": ["target"], "next": "desired" },
       { "id": "desired", "op": "ConstFloat", "floatValue": 0.0, "next": "delta" },
       { "id": "delta", "op": "SubFloat", "inputs": ["desired", "current"], "next": "modify" },

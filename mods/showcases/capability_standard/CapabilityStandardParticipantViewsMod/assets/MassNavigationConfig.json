@@ -39,7 +39,8 @@
       "groupMemberCapacity": 32,
       "movePlanExecutionGroupCapacity": 32,
       "movePlanExecutionMemberCapacity": 32,
-      "loadedChunkCapacity": 64
+      "loadedChunkCapacity": 64,
+      "displacedAgentCapacity": 16
     }
   },
   "agentProfiles": {
@@ -60,5 +61,11 @@
   "flow": {
     "iterationsPerStep": 16,
     "maxIterationsPerStep": 1024
+  },
+  "semantics": {
+    "route": {
+      "waypointAdvanceStopThresholdScale": 2,
+      "waypointAdvanceBodyRadiusScale": 1.5
+    }
   }
 }

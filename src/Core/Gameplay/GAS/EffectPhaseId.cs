@@ -32,7 +32,7 @@ namespace Ludots.Core.Gameplay.GAS
     {
         /// <summary>User Graph that runs before the Preset Main step (InsertBefore).</summary>
         Pre = 0,
-        /// <summary>Preset built-in step determined by PresetType (AnchorCommand).</summary>
+        /// <summary>Template Graph or, when omitted, the PresetType default (AnchorCommand).</summary>
         Main = 1,
         /// <summary>User Graph that runs after the Preset Main step (InsertAfter).</summary>
         Post = 2,

@@ -10,6 +10,8 @@ namespace Ludots.Core.Gameplay.GAS.Components
         public int TemplateEntityId;
         public int TemplateEntityWorldId;
         public int TemplateEntityVersion;
+
+        public readonly bool IsConfigured => AbilityId > 0 || TemplateEntityId > 0;
     }
 
     /// <summary>
@@ -246,9 +248,48 @@ namespace Ludots.Core.Gameplay.GAS.Components
     public static class AbilitySlotResolver
     {
         /// <summary>
-        /// Resolve the effective ability for a slot with layered overrides:
+        /// Try to resolve the effective ability for a slot with layered overrides:
         /// transient granted override &gt; item-granted override &gt; form override &gt; base slot.
         /// </summary>
+        public static bool TryResolve(
+            in AbilityStateBuffer baseSlots,
+            in AbilityFormSlotBuffer formSlots,
+            bool hasForm,
+            in ItemGrantedSlotBuffer itemGrantedSlots,
+            bool hasItemGranted,
+            in GrantedSlotBuffer grantedSlots,
+            bool hasGranted,
+            int slotIndex,
+            out AbilitySlotState slot)
+        {
+            if ((uint)slotIndex >= AbilityStateBuffer.CAPACITY)
+            {
+                slot = default;
+                return false;
+            }
+
+            if (hasGranted && grantedSlots.HasOverride(slotIndex))
+            {
+                slot = grantedSlots.GetOverride(slotIndex);
+                return slot.IsConfigured;
+            }
+
+            if (hasItemGranted && itemGrantedSlots.HasOverride(slotIndex))
+            {
+                slot = itemGrantedSlots.GetOverride(slotIndex);
+                return slot.IsConfigured;
+            }
+
+            if (hasForm && formSlots.HasOverride(slotIndex))
+            {
+                slot = formSlots.GetOverride(slotIndex);
+                return slot.IsConfigured;
+            }
+
+            slot = baseSlots.Get(slotIndex);
+            return slot.IsConfigured;
+        }
+
         public static AbilitySlotState Resolve(
             in AbilityStateBuffer baseSlots,
             in AbilityFormSlotBuffer formSlots,
@@ -259,27 +300,71 @@ namespace Ludots.Core.Gameplay.GAS.Components
             bool hasGranted,
             int slotIndex)
         {
-            if ((uint)slotIndex >= AbilityStateBuffer.CAPACITY)
+            if (!TryResolve(
+                    in baseSlots,
+                    in formSlots,
+                    hasForm,
+                    in itemGrantedSlots,
+                    hasItemGranted,
+                    in grantedSlots,
+                    hasGranted,
+                    slotIndex,
+                    out AbilitySlotState slot))
             {
-                throw new System.ArgumentOutOfRangeException(nameof(slotIndex));
+                throw new InvalidOperationException(
+                    $"Ability slot {slotIndex} is outside 0..{AbilityStateBuffer.CAPACITY - 1} or has no configured ability.");
             }
 
-            if (hasGranted && grantedSlots.HasOverride(slotIndex))
+            return slot;
+        }
+
+        public static bool TryResolve(World world, Entity actor, int slotIndex, out AbilitySlotState slot)
+        {
+            slot = default;
+            if (!world.IsAlive(actor) ||
+                !world.Has<AbilityStateBuffer>(actor) ||
+                (uint)slotIndex >= AbilityStateBuffer.CAPACITY)
             {
-                return grantedSlots.GetOverride(slotIndex);
+                return false;
             }
 
-            if (hasItemGranted && itemGrantedSlots.HasOverride(slotIndex))
+            ref AbilityStateBuffer baseSlots = ref world.Get<AbilityStateBuffer>(actor);
+            bool hasForm = world.Has<AbilityFormSlotBuffer>(actor);
+            AbilityFormSlotBuffer formSlots = hasForm ? world.Get<AbilityFormSlotBuffer>(actor) : default;
+            bool hasItemGranted = world.Has<ItemGrantedSlotBuffer>(actor);
+            ItemGrantedSlotBuffer itemGrantedSlots = hasItemGranted ? world.Get<ItemGrantedSlotBuffer>(actor) : default;
+            bool hasGranted = world.Has<GrantedSlotBuffer>(actor);
+            GrantedSlotBuffer grantedSlots = hasGranted ? world.Get<GrantedSlotBuffer>(actor) : default;
+            return TryResolve(
+                in baseSlots,
+                in formSlots,
+                hasForm,
+                in itemGrantedSlots,
+                hasItemGranted,
+                in grantedSlots,
+                hasGranted,
+                slotIndex,
+                out slot);
+        }
+
+        public static bool TryFindAbility(World world, Entity actor, int abilityId, out int slotIndex)
+        {
+            slotIndex = -1;
+            if (abilityId <= 0 || !world.IsAlive(actor) || !world.Has<AbilityStateBuffer>(actor))
             {
-                return itemGrantedSlots.GetOverride(slotIndex);
+                return false;
             }
 
-            if (hasForm && formSlots.HasOverride(slotIndex))
+            for (int i = 0; i < AbilityStateBuffer.CAPACITY; i++)
             {
-                return formSlots.GetOverride(slotIndex);
+                if (TryResolve(world, actor, i, out AbilitySlotState slot) && slot.AbilityId == abilityId)
+                {
+                    slotIndex = i;
+                    return true;
+                }
             }
 
-            return baseSlots.Get(slotIndex);
+            return false;
         }
     }
 }

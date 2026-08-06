@@ -12,6 +12,8 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Input;
 using Ludots.Core.Gameplay.GAS.Presentation;
 using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.GraphRuntime;
+using Ludots.Tests.GAS;
 using NUnit.Framework;
 
 namespace Ludots.Tests.GAS.Features.RuntimeBudget
@@ -885,6 +887,7 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
                 ParticipatesInResponse = false,
                 Modifiers = modifiers,
             });
+            FinalizeTemplates(templates, "AllStagesShareOneDeterministicWorkBudget");
 
             Entity source = world.Create();
             Entity target = world.Create(new AttributeBuffer(), new ActiveEffectContainer(), new DirtyFlags());
@@ -966,6 +969,7 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
                 LifetimeKind = EffectLifetimeKind.Instant,
                 ParticipatesInResponse = true,
             });
+            FinalizeTemplates(templates, "ExactProposalBudgetBoundary");
 
             var listener = default(ResponseChainListener);
             Assert.That(listener.Add(respondingTagId, ResponseType.Modify, priority: 2, modifyValue: 1f), Is.True);
@@ -1011,6 +1015,19 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
             Assert.That(loop.UpdateSlice(0f, int.MaxValue), Is.True);
             Assert.That(loop.ProcessedLastSlice, Is.LessThanOrEqualTo(workBudget));
             Assert.That(requests.Count, Is.Zero);
+        }
+
+        private static void FinalizeTemplates(EffectTemplateRegistry templates, string caseName)
+        {
+            var presetTypes = new PresetTypeRegistry();
+            var builtinHandlers = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(builtinHandlers);
+            GasTestEffectExecutionPlanFinalizer.FinalizeAll(
+                templates,
+                presetTypes,
+                builtinHandlers,
+                new GraphProgramRegistry(),
+                $"Test/GasExecutionBudgetTests.{caseName}.json");
         }
 
         private static AbilityDefinitionRegistry CreateImmediateAbilityDefinitions()

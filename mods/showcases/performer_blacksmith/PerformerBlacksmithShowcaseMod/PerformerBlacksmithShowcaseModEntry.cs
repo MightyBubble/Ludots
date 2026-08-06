@@ -27,6 +27,9 @@ namespace PerformerBlacksmithShowcaseMod
                     engine.RegisterSystem(
                         new MinimapMarkerBallMovementSystem(engine),
                         SystemGroup.PostMovement);
+                    engine.RegisterSystem(
+                        new PerformerBlacksmithShowcaseKnowledgeProjectionSystem(engine, runtime),
+                        SystemGroup.ClearPresentationFlags);
                     engine.RegisterPresentationSystem(
                         new PerformerBlacksmithShowcasePresentationSystem(engine, runtime));
                 }

@@ -31,7 +31,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
             { "CompleteProgression", EffectPresetType.CompleteProgression },
             { "SubmitOrderFromBlackboard", EffectPresetType.SubmitOrderFromBlackboard },
             { "DeployConsumeSource", EffectPresetType.DeployConsumeSource },
-            { "RevealArea", EffectPresetType.RevealArea },
         };
 
         /// <summary>
@@ -229,7 +228,6 @@ namespace Ludots.Core.Gameplay.GAS.Config
             { "ProjectileParams", ComponentFlags.ProjectileParams },
             { "UnitCreationParams", ComponentFlags.UnitCreationParams },
             { "RelationParams", ComponentFlags.RelationParams },
-            { "RevealAreaParams", ComponentFlags.RevealAreaParams },
             { "PhaseGraphBindings", ComponentFlags.PhaseGraphBindings },
             { "PhaseListenerSetup", ComponentFlags.PhaseListenerSetup },
         };

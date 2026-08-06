@@ -20,6 +20,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public const string UnreachableNode = "GASG0008";
         public const string BudgetExceeded = "GASG0009";
         public const string TypeMismatch = "GASG0010";
+        public const string UnsupportedGraphKind = "GASG0011";
     }
 }
 

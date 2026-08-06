@@ -267,6 +267,7 @@ public sealed class MassNavigationSimulationRuntime
         MassNavigationFlow = new MassNavigationFlowSolverState(config.Solver);
         MassNavigationFlow.PreallocateAgentCapacity(membershipCapacity);
         MassNavigationFlow.PreallocateDomainRelationshipCapacity(config.ScenarioRuntime.RuntimeCapacity.RelationshipDomainCapacity);
+        MassNavigationFlow.PreallocateDisplacedAgentCapacity(config.ScenarioRuntime.RuntimeCapacity.DisplacedAgentCapacity);
         WorldConfig = config.World ?? throw new InvalidOperationException("MassNavigationSimulationRuntime requires explicit world config.");
         MassNavigationHotZoneConfig activeHotZone = WorldConfig.GetRequiredHotZone(WorldConfig.ActiveHotZoneId);
         _activeHotZoneId = activeHotZone.Id;
@@ -812,6 +813,11 @@ public sealed class MassNavigationSimulationRuntime
         return MassNavigationFlow.Semantics.Group;
     }
 
+    public MassNavigationRouteSemantics GetRuntimeRouteSemantics()
+    {
+        return MassNavigationFlow.Semantics.Route;
+    }
+
     public MassNavigationFlowSolverState GetFlowSolverForTests()
     {
         return MassNavigationFlow;
@@ -1131,6 +1137,15 @@ public sealed class MassNavigationSimulationRuntime
         {
             throw new InvalidOperationException(
                 $"MassNavigation spawned agent entity {entity.Id} requires a resolved positive profileId.");
+        }
+
+        // Participation contract (issue #643): a Dynamic physics presence derives Physics pose
+        // authority, which cannot coexist with a nav-agent binding in this increment.
+        if (world.TryGet(entity, out Ludots.Core.Components.MovementParticipation participation) &&
+            participation.PhysicsPresence == Ludots.Core.Components.PhysicsPresenceKind.Dynamic)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation cannot bind entity {entity.Id} as a nav agent: MovementParticipation.physicsPresence 'dynamic' assigns pose authority to Physics.");
         }
 
         if (!allowExistingRuntimeBinding)
@@ -1535,18 +1550,6 @@ public sealed class MassNavigationSimulationRuntime
         maxY = MathF.Max(maxY, y);
     }
 
-    private static void UpsertComponent<T>(World world, Entity entity, T component)
-    {
-        if (world.Has<T>(entity))
-        {
-            world.Set(entity, component);
-        }
-        else
-        {
-            world.Add(entity, component);
-        }
-    }
-
     private WorldSizeSpec RequireBoardWorldSize()
     {
         if (!_boardWorldBound)
@@ -1575,19 +1578,6 @@ public sealed class MassNavigationSimulationRuntime
         {
             throw new InvalidOperationException(
                 $"MassNavigation agent index {agentIndex} exceeds current agent count {MassNavigationFlow.UnitCount}.");
-        }
-    }
-
-    private void RequireAgentRange(int firstAgentIndex, int agentCount, string fieldName)
-    {
-        int end = firstAgentIndex + agentCount;
-        if (firstAgentIndex < 0 ||
-            agentCount <= 0 ||
-            end < firstAgentIndex ||
-            end > MassNavigationFlow.UnitCount)
-        {
-            throw new InvalidOperationException(
-                $"MassNavigation agent range '{fieldName}' [{firstAgentIndex}, {end}) must be within current agent count {MassNavigationFlow.UnitCount}.");
         }
     }
 

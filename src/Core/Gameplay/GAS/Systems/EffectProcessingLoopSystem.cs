@@ -293,6 +293,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
         public override void Dispose()
         {
+            _proposal.Dispose();
             _application.Dispose();
             base.Dispose();
         }

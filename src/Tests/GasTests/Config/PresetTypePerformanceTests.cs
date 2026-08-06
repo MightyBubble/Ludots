@@ -116,7 +116,7 @@ namespace Ludots.Tests.GAS
         {
             var reg = new BuiltinHandlerRegistry();
             _perfCounter = 0;
-            reg.Register(BuiltinHandlerId.ApplyModifiers, CountingHandler);
+            reg.Register(BuiltinHandlerId.ApplyModifiers, CountingHandler, EffectOperationMetadata.GasTransactional(nameof(BuiltinHandlerId.ApplyModifiers)));
 
             using var world = World.Create();
             var entity = world.Create();

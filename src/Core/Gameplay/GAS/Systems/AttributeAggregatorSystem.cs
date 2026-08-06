@@ -103,13 +103,13 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             $"AttributeDerivedGraphBinding references missing graph program {programId}.");
                     }
 
-                    NodeLibraries.GASGraph.GraphExecutor.Execute(
+                    GraphKind kind = graphPrograms.RequireKind(programId, GraphKind.Derived);
+                    NodeLibraries.GASGraph.GraphExecutor.ExecuteDerived(
                         world,
-                        caster: entity,
-                        explicitTarget: entity,
-                        targetPosCm: default,
+                        entity,
                         program,
-                        graphApi);
+                        graphApi,
+                        kind);
                 }
 
                 commit = true;

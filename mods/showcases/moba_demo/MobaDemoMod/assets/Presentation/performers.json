@@ -2,11 +2,6 @@
   {
     "id": "moba_unit_marker",
     "maxVisibilityDistanceCm": 8000,
-    "positionOffset": [
-      0,
-      0.25,
-      0
-    ],
     "visibility": {
       "inline": "OwnerCullVisible"
     },
@@ -75,22 +70,17 @@
           ]
         }
       }
-    ]
+    ],
+    "anchor": {
+      "offset": [
+        0,
+        0.25,
+        0
+      ]
+    }
   },
   {
     "id": "moba_command_source_indicator",
-    "defaultColor": [
-      1,
-      1,
-      0,
-      1
-    ],
-    "defaultLifetime": -1,
-    "positionOffset": [
-      0,
-      0.85,
-      0
-    ],
     "behaviors": [
       {
         "slot": "body",
@@ -106,25 +96,30 @@
             0.18,
             0.18
           ]
+        },
+        "style": {
+          "color": [
+            1,
+            1,
+            0,
+            1
+          ]
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "persistence": "Scoped"
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.85,
+        0
+      ]
+    }
   },
   {
     "id": "moba_area_marker",
-    "defaultColor": [
-      0.8,
-      0.2,
-      1,
-      0.75
-    ],
-    "defaultLifetime": 0.35,
-    "alphaFadeOverLifetime": true,
-    "positionOffset": [
-      0,
-      0.1,
-      0
-    ],
     "bindings": [
       {
         "paramKey": "marker3d.scale.x",
@@ -157,19 +152,31 @@
             1,
             1
           ]
+        },
+        "style": {
+          "color": [
+            0.8,
+            0.2,
+            1,
+            0.75
+          ],
+          "alphaPolicy": "FadeOverLifetime"
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "durationSeconds": 0.35
+    },
+    "anchor": {
+      "offset": [
+        0,
+        0.1,
+        0
+      ]
+    }
   },
   {
     "id": "moba_ability_range",
-    "defaultColor": [
-      0.3,
-      0.7,
-      1,
-      0.2
-    ],
-    "defaultLifetime": -1,
     "visibility": {
       "inline": "OwnerCullVisible"
     },
@@ -188,8 +195,19 @@
             6,
             6
           ]
+        },
+        "style": {
+          "color": [
+            0.3,
+            0.7,
+            1,
+            0.2
+          ]
         }
       }
-    ]
+    ],
+    "lifecycle": {
+      "persistence": "Scoped"
+    }
   }
 ]

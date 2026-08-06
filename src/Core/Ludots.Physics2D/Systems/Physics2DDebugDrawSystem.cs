@@ -150,7 +150,9 @@ namespace Ludots.Core.Physics2D.Systems
             }
             else
             {
-                color = mass.IsStatic ? DebugDrawColor.Blue : DebugDrawColor.Green;
+                color = mass.IsStatic ? DebugDrawColor.Blue :
+                        mass.IsKinematic ? DebugDrawColor.Yellow :
+                        DebugDrawColor.Green;
             }
 
             switch (collider.Type)

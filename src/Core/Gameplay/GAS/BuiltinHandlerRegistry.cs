@@ -16,6 +16,9 @@ namespace Ludots.Core.Gameplay.GAS
         in EffectConfigParams mergedParams,
         in EffectTemplateData templateData);
 
+    public delegate EffectOperationMetadata BuiltinOperationMetadataResolver(
+        in EffectTemplateData templateData);
+
     /// <summary>
     /// Registry mapping <see cref="BuiltinHandlerId"/> to C# handler functions.
     /// Fixed-size array, zero GC. Registered once at startup via <see cref="GasController"/>.
@@ -25,14 +28,29 @@ namespace Ludots.Core.Gameplay.GAS
         public const int MaxHandlers = 96;
 
         private readonly BuiltinHandlerFn[] _handlers = new BuiltinHandlerFn[MaxHandlers];
+        private readonly EffectOperationMetadata[] _operationMetadata = new EffectOperationMetadata[MaxHandlers];
+        private readonly BuiltinOperationMetadataResolver?[] _operationMetadataResolvers =
+            new BuiltinOperationMetadataResolver?[MaxHandlers];
 
-        /// <summary>Register a builtin handler function for the given ID.</summary>
-        public void Register(BuiltinHandlerId id, BuiltinHandlerFn fn)
+        /// <summary>Register a builtin handler and its side-effect contract for the given ID.</summary>
+        public void Register(
+            BuiltinHandlerId id,
+            BuiltinHandlerFn fn,
+            in EffectOperationMetadata operationMetadata,
+            BuiltinOperationMetadataResolver? operationMetadataResolver = null)
         {
             int idx = (int)id;
             if ((uint)idx >= MaxHandlers)
                 throw new ArgumentOutOfRangeException(nameof(id), $"BuiltinHandlerId {id} ({idx}) exceeds MaxHandlers ({MaxHandlers}).");
+            if (fn == null)
+                throw new ArgumentNullException(nameof(fn));
+            if (operationMetadata.Kind == EffectOperationKind.None)
+                throw new ArgumentException($"BuiltinHandlerId {id} requires operation metadata.", nameof(operationMetadata));
+            if (_handlers[idx] != null)
+                throw new InvalidOperationException($"BuiltinHandlerId {id} ({idx}) is already registered.");
             _handlers[idx] = fn;
+            _operationMetadata[idx] = operationMetadata;
+            _operationMetadataResolvers[idx] = operationMetadataResolver;
         }
 
         /// <summary>Invoke the handler for the given ID. Throws if not registered.</summary>
@@ -58,6 +76,40 @@ namespace Ludots.Core.Gameplay.GAS
         {
             int idx = (int)id;
             return (uint)idx < MaxHandlers && _handlers[idx] != null;
+        }
+
+        public bool TryGetOperationMetadata(BuiltinHandlerId id, out EffectOperationMetadata operationMetadata)
+        {
+            int idx = (int)id;
+            if ((uint)idx < MaxHandlers &&
+                _handlers[idx] != null &&
+                _operationMetadata[idx].Kind != EffectOperationKind.None)
+            {
+                operationMetadata = _operationMetadata[idx];
+                return true;
+            }
+
+            operationMetadata = default;
+            return false;
+        }
+
+        public bool TryResolveOperationMetadata(
+            BuiltinHandlerId id,
+            in EffectTemplateData templateData,
+            out EffectOperationMetadata operationMetadata)
+        {
+            int idx = (int)id;
+            if ((uint)idx >= MaxHandlers || _handlers[idx] == null)
+            {
+                operationMetadata = default;
+                return false;
+            }
+
+            BuiltinOperationMetadataResolver? resolver = _operationMetadataResolvers[idx];
+            operationMetadata = resolver != null
+                ? resolver(in templateData)
+                : _operationMetadata[idx];
+            return operationMetadata.Kind != EffectOperationKind.None;
         }
     }
 }

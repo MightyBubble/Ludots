@@ -590,6 +590,7 @@ namespace Ludots.Tests.GAS.Production
 
             DateTime latest = DateTime.MinValue;
             foreach (string path in Directory.EnumerateFiles(modRoot, "*.cs", SearchOption.AllDirectories)
+                         .Where(path => IsAuthoredShowcaseSourcePath(modRoot, path))
                          .Concat(Directory.EnumerateFiles(modRoot, "*.csproj", SearchOption.TopDirectoryOnly)))
             {
                 DateTime writeTime = File.GetLastWriteTimeUtc(path);
@@ -600,6 +601,16 @@ namespace Ludots.Tests.GAS.Production
             }
 
             return latest;
+        }
+
+        private static bool IsAuthoredShowcaseSourcePath(string modRoot, string path)
+        {
+            string relativePath = Path.GetRelativePath(modRoot, path);
+            return !relativePath
+                .Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                .Any(segment =>
+                    string.Equals(segment, "bin", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(segment, "obj", StringComparison.OrdinalIgnoreCase));
         }
 
         private static string GetShowcaseAssemblyPath(string repoRoot)

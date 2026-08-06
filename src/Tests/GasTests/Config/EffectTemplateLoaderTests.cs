@@ -588,6 +588,134 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void Load_TargetDispatchInlineContextMapping_CompilesAllSlots()
+        {
+            string root = CreateTempRoot();
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
+                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                    """
+                    [
+                      {
+                        "id": "Effect_Dispatch",
+                        "tags": ["Event.Dispatch"],
+                        "presetType": "None",
+                        "lifetime": "Instant",
+                        "participatesInResponse": true,
+                        "targetDispatch": {
+                          "payloadEffect": "Effect_Payload",
+                          "contextMapping": {
+                            "payloadSource": "OriginalTarget",
+                            "payloadTarget": "ResolvedEntity",
+                            "payloadTargetContext": "OriginalTargetContext"
+                          }
+                        }
+                      },
+                      {
+                        "id": "Effect_Payload",
+                        "tags": ["Event.Payload"],
+                        "presetType": "None",
+                        "lifetime": "Instant",
+                        "participatesInResponse": true
+                      }
+                    ]
+                    """);
+
+                var loader = CreateLoader(root, out var registry);
+                loader.Load(CreateEffectsCatalog(), relativePath: "GAS/effects.json");
+
+                int templateId = EffectTemplateIdRegistry.GetId("Effect_Dispatch");
+                That(registry.TryGet(templateId, out var template), Is.True);
+                That(template.TargetDispatch.ContextMapping.PayloadSource, Is.EqualTo(ContextSlot.OriginalTarget));
+                That(template.TargetDispatch.ContextMapping.PayloadTarget, Is.EqualTo(ContextSlot.ResolvedEntity));
+                That(template.TargetDispatch.ContextMapping.PayloadTargetContext, Is.EqualTo(ContextSlot.OriginalTargetContext));
+            }
+            finally
+            {
+                TryDeleteDirectory(root);
+            }
+        }
+
+        [Test]
+        public void Load_TargetDispatchPresetAndInlineContextMapping_IsRejected()
+        {
+            string root = CreateTempRoot();
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
+                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                    """
+                    [
+                      {
+                        "id": "Effect_Dispatch",
+                        "tags": ["Event.Dispatch"],
+                        "presetType": "None",
+                        "lifetime": "Instant",
+                        "participatesInResponse": true,
+                        "targetDispatch": {
+                          "preset": "SourceToResolved",
+                          "contextMapping": {
+                            "payloadSource": "OriginalSource",
+                            "payloadTarget": "ResolvedEntity",
+                            "payloadTargetContext": "OriginalTarget"
+                          }
+                        }
+                      }
+                    ]
+                    """);
+
+                var loader = CreateLoader(root, out _);
+                var ex = Throws<InvalidOperationException>(() =>
+                    loader.Load(CreateEffectsCatalog(), relativePath: "GAS/effects.json"));
+
+                That(ex!.Message, Does.Contain("either preset or contextMapping, not both"));
+            }
+            finally
+            {
+                TryDeleteDirectory(root);
+            }
+        }
+
+        [Test]
+        public void Load_TargetDispatchInlineContextMappingMissingRequiredSlot_IsRejected()
+        {
+            string root = CreateTempRoot();
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
+                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                    """
+                    [
+                      {
+                        "id": "Effect_Dispatch",
+                        "tags": ["Event.Dispatch"],
+                        "presetType": "None",
+                        "lifetime": "Instant",
+                        "participatesInResponse": true,
+                        "targetDispatch": {
+                          "contextMapping": {
+                            "payloadSource": "OriginalSource",
+                            "payloadTarget": "ResolvedEntity"
+                          }
+                        }
+                      }
+                    ]
+                    """);
+
+                var loader = CreateLoader(root, out _);
+                var ex = Throws<InvalidOperationException>(() =>
+                    loader.Load(CreateEffectsCatalog(), relativePath: "GAS/effects.json"));
+
+                That(ex!.Message, Does.Contain("targetDispatch.contextMapping.payloadTargetContext is required"));
+            }
+            finally
+            {
+                TryDeleteDirectory(root);
+            }
+        }
+
+        [Test]
         public void Load_PhaseListenerOmittedPriority_DefaultsToZero()
         {
             GraphIdRegistry.Clear();

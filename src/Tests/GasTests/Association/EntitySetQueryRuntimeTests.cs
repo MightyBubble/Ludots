@@ -414,7 +414,7 @@ namespace Ludots.Tests.GAS
                 new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal),
                 initialCapacity: 16);
             int graphId = GraphIdRegistry.Register("tests.graph.missing-schema");
-            programs.Register(graphId, new[] { new GraphInstruction { Op = (ushort)GraphNodeOp.QueryAllMapEntities } });
+            programs.Register(graphId, new[] { new GraphInstruction { Op = (ushort)GraphNodeOp.QueryAllMapEntities } }, GraphKind.Query);
             var writer = new GraphReturnWriter(world, programs, schemas, GasGraphOpHandlerTable.Instance, collections, outputValues);
             var api = new GasGraphRuntimeApi(world, tagOps: setup.TagOps, relationshipRuntime: setup.Relationships, entityQueries: setup.EntityQueries);
             Entity owner = world.Create();
@@ -686,6 +686,7 @@ namespace Ludots.Tests.GAS
 [
   {
     "id": "tests.graph.4x.cityEconomy",
+    "kind": "Query",
     "entry": "minProduction",
     "nodes": [
       { "id": "minProduction", "op": "ConstFloat", "floatValue": 0, "next": "maxProduction" },
@@ -724,6 +725,7 @@ namespace Ludots.Tests.GAS
 [
   {
     "id": "tests.graph.collectionQuery",
+    "kind": "Query",
     "entry": "owner",
     "nodes": [
       { "id": "owner", "op": "LoadCaster", "next": "fromCollection" },

@@ -218,7 +218,7 @@ namespace Ludots.Core.Presentation.Config
 
                 if (propertyName.Equals("behaviors", StringComparison.Ordinal))
                 {
-                    merged[propertyName] = MergeByValueKey(parent[propertyName], childValue, "slot", "behaviors");
+                    merged[propertyName] = MergeBehaviors(parent[propertyName], childValue);
                     continue;
                 }
 
@@ -233,6 +233,128 @@ namespace Ludots.Core.Presentation.Config
             }
 
             return merged;
+        }
+
+        private static JsonArray MergeBehaviors(JsonNode? existingNode, JsonNode? incomingNode)
+        {
+            var byKey = new Dictionary<string, JsonNode>(StringComparer.Ordinal);
+            var order = new List<string>();
+            AppendByValueKey(existingNode, "slot", "behaviors", byKey, order);
+            if (incomingNode is not JsonArray incomingArray)
+            {
+                return BuildMergedArray(byKey, order);
+            }
+
+            for (int i = 0; i < incomingArray.Count; i++)
+            {
+                if (incomingArray[i] is not JsonObject incomingObj)
+                {
+                    continue;
+                }
+
+                string key = GetSemanticMergeKey(incomingObj["slot"], $"behaviors[{i}].slot");
+                if (!byKey.TryGetValue(key, out JsonNode? existing) ||
+                    existing is not JsonObject existingObj ||
+                    ShouldReplaceBehavior(existingObj, incomingObj))
+                {
+                    if (!byKey.ContainsKey(key))
+                    {
+                        order.Add(key);
+                    }
+
+                    byKey[key] = incomingObj;
+                    continue;
+                }
+
+                byKey[key] = MergeBehaviorObjects(existingObj, incomingObj);
+            }
+
+            return BuildMergedArray(byKey, order);
+        }
+
+        private static JsonArray BuildMergedArray(Dictionary<string, JsonNode> byKey, List<string> order)
+        {
+            var merged = new JsonArray();
+            for (int i = 0; i < order.Count; i++)
+            {
+                merged.Add(byKey[order[i]].DeepClone());
+            }
+
+            return merged;
+        }
+
+        private static bool ShouldReplaceBehavior(JsonObject existingObj, JsonObject incomingObj)
+        {
+            if (incomingObj["kind"] == null)
+            {
+                return false;
+            }
+
+            string existingKind = existingObj["kind"]?.GetValue<string>() ?? string.Empty;
+            string incomingKind = incomingObj["kind"]?.GetValue<string>() ?? string.Empty;
+            return existingKind.Length > 0 &&
+                   incomingKind.Length > 0 &&
+                   !string.Equals(existingKind, incomingKind, StringComparison.Ordinal);
+        }
+
+        private static JsonObject MergeJsonObjects(JsonObject existingObj, JsonObject incomingObj)
+        {
+            var merged = (JsonObject)existingObj.DeepClone();
+            foreach ((string propertyName, JsonNode? incomingValue) in incomingObj)
+            {
+                if (merged[propertyName] is JsonObject existingChild &&
+                    incomingValue is JsonObject incomingChild)
+                {
+                    merged[propertyName] = MergeJsonObjects(existingChild, incomingChild);
+                    continue;
+                }
+
+                merged[propertyName] = incomingValue?.DeepClone();
+            }
+
+            return merged;
+        }
+
+        private static JsonObject MergeBehaviorObjects(JsonObject existingObj, JsonObject incomingObj)
+        {
+            bool incomingDeclaresKind = incomingObj["kind"] != null;
+            var merged = (JsonObject)existingObj.DeepClone();
+            foreach ((string propertyName, JsonNode? incomingValue) in incomingObj)
+            {
+                if (incomingDeclaresKind && IsBehaviorPayloadProperty(propertyName))
+                {
+                    merged[propertyName] = incomingValue?.DeepClone();
+                    continue;
+                }
+
+                if (merged[propertyName] is JsonObject existingChild &&
+                    incomingValue is JsonObject incomingChild)
+                {
+                    merged[propertyName] = MergeJsonObjects(existingChild, incomingChild);
+                    continue;
+                }
+
+                merged[propertyName] = incomingValue?.DeepClone();
+            }
+
+            return merged;
+        }
+
+        private static bool IsBehaviorPayloadProperty(string propertyName)
+        {
+            return propertyName is "assetBinding" or
+                "attributeBinding" or
+                "tagBinding" or
+                "animator" or
+                "attachment" or
+                "sound" or
+                "material" or
+                "spline" or
+                "grounding" or
+                "minimapMarker" or
+                "worldText" or
+                "surfaceSource" or
+                "instancedBatch";
         }
 
         private static JsonArray AppendArrays(JsonNode? existingNode, JsonNode? incomingNode)
@@ -374,34 +496,30 @@ namespace Ludots.Core.Presentation.Config
             RejectRemovedFields(node, key);
 
             BehaviorSlot[] behaviors = ParseBehaviors(node["behaviors"], key);
-            WorldHudValueMode worldTextMode = ParseWorldTextMode(node, key, behaviors);
+            PerformerDefinitionAuthoringFacts behaviorFacts = BuildDefinitionAuthoringFacts(key, behaviors);
 
             var def = new PerformerDefinition
             {
                 Key = key,
                 Extends = ParseOptionalCanonicalString(node["extends"], $"Performer '{key}' extends"),
-                DefaultColor = ParseColor(node["defaultColor"]),
-                DefaultLifetime = node["defaultLifetime"]?.GetValue<float>() ?? 0f,
-                DefaultFontSize = node["defaultFontSize"]?.GetValue<int>() ?? 16,
-                WorldTextMode = worldTextMode,
-                PositionOffset = ParseVector3(node["positionOffset"]),
-                PositionYDriftPerSecond = node["positionYDriftPerSecond"]?.GetValue<float>() ?? 0f,
-                AlphaFadeOverLifetime = node["alphaFadeOverLifetime"]?.GetValue<bool>() ?? false,
-                VisibilityCondition = ParseConditionRef(node["visibility"]),
+                DefaultColor = behaviorFacts.DefaultColor,
+                DefaultLifetime = ParseLifecycle(node["lifecycle"], key),
+                DefaultFontSize = behaviorFacts.DefaultFontSize,
+                WorldTextMode = behaviorFacts.WorldTextMode,
+                PositionOffset = ParseAnchorOffset(node["anchor"], key),
+                PositionYDriftPerSecond = behaviorFacts.PositionYDriftPerSecond,
+                AlphaFadeOverLifetime = behaviorFacts.AlphaFadeOverLifetime,
+                VisibilityCondition = ParseDefinitionVisibility(node["visibility"], key),
                 Rules = ParseRules(node["rules"]),
                 Bindings = ParseBindings(node["bindings"]),
                 Children = ParseChildren(node["children"]),
                 Behaviors = behaviors,
-                InstancedBatches = ParseInstancedBatchBindings(node["instancedBatches"], key),
+                InstancedBatches = behaviorFacts.InstancedBatches,
                 ParamDefaults = ParseParamDefaults(node["paramDefaults"]),
+                Surface = behaviorFacts.Surface,
             };
 
             def.Id = _registry.GetId(key);
-
-            if (node["surface"] != null)
-            {
-                def.Surface = ParseSurface(node["surface"], key);
-            }
 
             StampRuleOwners(def.Id, def.Rules);
             return (key, def);
@@ -428,6 +546,17 @@ namespace Ludots.Core.Presentation.Config
                 "defaultScale",
                 "defaultTextId",
                 "legacyWorldTextMode",
+                "defaultColor",
+                "defaultLifetime",
+                "defaultFontSize",
+                "worldTextMode",
+                "positionOffset",
+                "positionYDriftPerSecond",
+                "alphaFadeOverLifetime",
+                "instancedBatches",
+                "surface",
+                "requiredAttributeIds",
+                "requiredAttributes",
             };
 
             for (int i = 0; i < removedVisualFields.Length; i++)
@@ -436,9 +565,218 @@ namespace Ludots.Core.Presentation.Config
                 if (node[field] != null)
                 {
                     throw new InvalidOperationException(
-                        $"Performer '{key}' still uses removed field '{field}'. Migrate visual output to behaviors[].assetBinding.");
+                        $"Performer '{key}' still uses removed field '{field}'. Migrate Performer authoring to lifecycle, anchor, visibility, and behaviors[].");
                 }
             }
+        }
+
+        private readonly struct PerformerDefinitionAuthoringFacts
+        {
+            public PerformerDefinitionAuthoringFacts(
+                Vector4 defaultColor,
+                int defaultFontSize,
+                WorldHudValueMode worldTextMode,
+                float positionYDriftPerSecond,
+                bool alphaFadeOverLifetime,
+                SurfaceAuthoringBlock? surface,
+                InstancedBatchBinding[] instancedBatches)
+            {
+                DefaultColor = defaultColor;
+                DefaultFontSize = defaultFontSize;
+                WorldTextMode = worldTextMode;
+                PositionYDriftPerSecond = positionYDriftPerSecond;
+                AlphaFadeOverLifetime = alphaFadeOverLifetime;
+                Surface = surface;
+                InstancedBatches = instancedBatches ?? Array.Empty<InstancedBatchBinding>();
+            }
+
+            public readonly Vector4 DefaultColor;
+            public readonly int DefaultFontSize;
+            public readonly WorldHudValueMode WorldTextMode;
+            public readonly float PositionYDriftPerSecond;
+            public readonly bool AlphaFadeOverLifetime;
+            public readonly SurfaceAuthoringBlock? Surface;
+            public readonly InstancedBatchBinding[] InstancedBatches;
+        }
+
+        private static PerformerDefinitionAuthoringFacts BuildDefinitionAuthoringFacts(string key, BehaviorSlot[] behaviors)
+        {
+            Vector4 defaultColor = new(1f, 1f, 1f, 1f);
+            int defaultFontSize = 16;
+            WorldHudValueMode worldTextMode = WorldHudValueMode.None;
+            float positionYDriftPerSecond = 0f;
+            bool alphaFadeOverLifetime = false;
+            bool hasWorldTextDefinitionFacts = false;
+            bool hasOutputStyleFacts = false;
+            SurfaceAuthoringBlock? surface = null;
+            List<InstancedBatchBinding>? instancedBatches = null;
+
+            if (behaviors != null)
+            {
+                for (int i = 0; i < behaviors.Length; i++)
+                {
+                    ref readonly BehaviorSlot slot = ref behaviors[i];
+                    switch (slot.Kind)
+                    {
+                        case BehaviorKind.AssetBinding:
+                            ApplyOutputBehaviorFacts(
+                                key,
+                                in slot,
+                                ref defaultColor,
+                                ref positionYDriftPerSecond,
+                                ref alphaFadeOverLifetime,
+                                ref hasOutputStyleFacts);
+                            break;
+
+                        case BehaviorKind.WorldText:
+                            if (hasWorldTextDefinitionFacts)
+                            {
+                                throw new InvalidOperationException(
+                                    $"Performer '{key}' declares multiple WorldText behaviors. Runtime WorldText style and value mode are definition-scoped; split them into child performers.");
+                            }
+
+                            hasWorldTextDefinitionFacts = true;
+                            defaultFontSize = slot.WorldText.FontSize > 0 ? slot.WorldText.FontSize : 16;
+                            worldTextMode = slot.WorldText.Mode;
+                            ApplyOutputBehaviorFacts(
+                                key,
+                                in slot,
+                                ref defaultColor,
+                                ref positionYDriftPerSecond,
+                                ref alphaFadeOverLifetime,
+                                ref hasOutputStyleFacts);
+                            break;
+
+                        case BehaviorKind.SurfaceSource:
+                            if (surface != null)
+                            {
+                                throw new InvalidOperationException(
+                                    $"Performer '{key}' declares multiple SurfaceSource behaviors. A performer instance may own only one surface source.");
+                            }
+
+                            surface = slot.SurfaceSource ?? throw new InvalidOperationException(
+                                $"Performer '{key}' SurfaceSource behavior is missing parsed authoring payload.");
+                            break;
+
+                        case BehaviorKind.InstancedBatch:
+                            instancedBatches ??= new List<InstancedBatchBinding>(2);
+                            instancedBatches.Add(new InstancedBatchBinding(slot.InstancedBatch.BatchAssetId, slot.SlotIndex));
+                            break;
+                    }
+                }
+            }
+
+            return new PerformerDefinitionAuthoringFacts(
+                defaultColor,
+                defaultFontSize,
+                worldTextMode,
+                positionYDriftPerSecond,
+                alphaFadeOverLifetime,
+                surface,
+                instancedBatches?.ToArray() ?? Array.Empty<InstancedBatchBinding>());
+        }
+
+        private static void ApplyOutputBehaviorFacts(
+            string key,
+            in BehaviorSlot slot,
+            ref Vector4 defaultColor,
+            ref float positionYDriftPerSecond,
+            ref bool alphaFadeOverLifetime,
+            ref bool hasOutputStyleFacts)
+        {
+            bool hasFacts = slot.Style.HasColor ||
+                            slot.Style.AlphaPolicy != BehaviorAlphaPolicy.None ||
+                            slot.Motion.YDriftPerSecond != 0f;
+            if (!hasFacts)
+            {
+                return;
+            }
+
+            if (hasOutputStyleFacts)
+            {
+                throw new InvalidOperationException(
+                    $"Performer '{key}' declares style or motion on multiple output behaviors. Current runtime stores these facts at definition scope; split the outputs into child performers.");
+            }
+
+            hasOutputStyleFacts = true;
+            if (slot.Style.HasColor)
+            {
+                defaultColor = slot.Style.Color;
+            }
+
+            if (slot.Style.AlphaPolicy == BehaviorAlphaPolicy.FadeOverLifetime)
+            {
+                alphaFadeOverLifetime = true;
+            }
+
+            positionYDriftPerSecond = slot.Motion.YDriftPerSecond;
+        }
+
+        private static float ParseLifecycle(JsonNode? node, string key)
+        {
+            if (node == null)
+            {
+                return 0f;
+            }
+
+            if (node is not JsonObject obj)
+            {
+                throw new InvalidOperationException($"Performer '{key}' lifecycle must be an object.");
+            }
+
+            bool hasDuration = obj["durationSeconds"] != null;
+            bool hasPersistence = obj["persistence"] != null;
+            if (hasDuration && hasPersistence)
+            {
+                throw new InvalidOperationException(
+                    $"Performer '{key}' lifecycle must declare only one of durationSeconds or persistence.");
+            }
+
+            if (hasDuration)
+            {
+                float duration = ParseRequiredFiniteFloat(obj["durationSeconds"], $"Performer '{key}' lifecycle.durationSeconds");
+                if (duration <= 0f)
+                {
+                    throw new InvalidOperationException($"Performer '{key}' lifecycle.durationSeconds must be > 0.");
+                }
+
+                return duration;
+            }
+
+            if (hasPersistence)
+            {
+                string persistence = ParseRequiredSemanticString(obj["persistence"], $"Performer '{key}' lifecycle.persistence");
+                if (!string.Equals(persistence, "Scoped", StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException(
+                        $"Performer '{key}' lifecycle.persistence must be 'Scoped'.");
+                }
+
+                return 0f;
+            }
+
+            throw new InvalidOperationException(
+                $"Performer '{key}' lifecycle must declare durationSeconds or persistence.");
+        }
+
+        private static Vector3 ParseAnchorOffset(JsonNode? node, string key)
+        {
+            if (node == null)
+            {
+                return Vector3.Zero;
+            }
+
+            if (node is not JsonObject obj)
+            {
+                throw new InvalidOperationException($"Performer '{key}' anchor must be an object.");
+            }
+
+            if (obj["offset"] == null)
+            {
+                throw new InvalidOperationException($"Performer '{key}' anchor requires field 'offset'.");
+            }
+
+            return ParseVector3(obj["offset"]);
         }
 
         private PerformerRule[] ParseRules(JsonNode? node)
@@ -963,9 +1301,8 @@ namespace Ludots.Core.Presentation.Config
             string source = node["source"]?.GetValue<string>();
             return source switch
             {
-                "attribute" => ValueRef.FromAttribute(ResolveAttributeId(node)),
-                "attributeRatio" => ValueRef.FromAttributeRatio(ResolveAttributeId(node)),
-                "attributeBase" => ValueRef.FromAttributeBase(ResolveAttributeId(node)),
+                "attribute" or "attributeRatio" or "attributeBase" => throw new InvalidOperationException(
+                    $"{context} source '{source}' duplicates AttributeBinding behavior. Use an AttributeBinding behavior with attributeBinding.targetParamKey instead."),
                 "graph" => ValueRef.FromGraph(ParseRequiredInt(node["sourceId"], "Performer binding graph.sourceId")),
                 "entityColor" => ValueRef.FromEntityColor(ParseRequiredInt(node["sourceId"], "Performer binding entityColor.sourceId")),
                 "entityColorVector" => ValueRef.FromEntityColorVector(),
@@ -987,52 +1324,14 @@ namespace Ludots.Core.Presentation.Config
             }
         }
 
-        private static WorldHudValueMode ParseWorldTextMode(JsonNode node, string key, BehaviorSlot[] behaviors)
-        {
-            bool hasWorldText = HasWorldTextAssetBinding(behaviors);
-            if (!hasWorldText)
-            {
-                if (node["worldTextMode"] != null)
-                {
-                    throw new InvalidOperationException(
-                        $"Performer '{key}' declares worldTextMode without a WorldText AssetBinding behavior.");
-                }
-
-                return WorldHudValueMode.None;
-            }
-
-            return ParseRequiredEnum<WorldHudValueMode>(
-                node["worldTextMode"],
-                $"Performer '{key}' worldTextMode");
-        }
-
-        private static bool HasWorldTextAssetBinding(BehaviorSlot[] behaviors)
-        {
-            if (behaviors == null)
-            {
-                return false;
-            }
-
-            for (int i = 0; i < behaviors.Length; i++)
-            {
-                if (behaviors[i].Kind == BehaviorKind.AssetBinding &&
-                    behaviors[i].AssetBinding.AssetKind == AssetKind.WorldText)
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
         private int ResolveTextTokenId(JsonNode node)
         {
-            string tokenKey = node["textToken"]?.GetValue<string>() ?? string.Empty;
-            if (string.IsNullOrWhiteSpace(tokenKey))
-            {
-                throw new InvalidOperationException("Performer WorldText textToken binding requires a non-empty 'textToken'.");
-            }
+            return ResolveTextTokenId(node["textToken"], "Performer WorldText textToken binding textToken");
+        }
 
+        private int ResolveTextTokenId(JsonNode? node, string context)
+        {
+            string tokenKey = ParseRequiredSemanticString(node, context);
             int tokenId = _resolveTextTokenId(tokenKey);
             if (tokenId <= 0)
             {
@@ -1288,45 +1587,77 @@ namespace Ludots.Core.Presentation.Config
                 }
 
                 seenSlots |= slotBit;
+                if (obj["activationCondition"] != null)
+                {
+                    throw new InvalidOperationException(
+                        $"Performer '{ownerKey}' behavior[{i}] declares activationCondition, but behavior activation conditions are not wired into runtime consumption.");
+                }
+
                 var slot = new BehaviorSlot
                 {
                     SlotIndex = slotIndex,
                     Kind = kind,
                     ActiveByDefault = obj["activeByDefault"]?.GetValue<bool>() ?? false,
-                    ActivationCondition = ParseConditionRef(obj["activationCondition"]),
                 };
 
                 switch (kind)
                 {
                     case BehaviorKind.AssetBinding:
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "surfaceSource", "instancedBatch");
                         slot.AssetBinding = ParseAssetBinding(obj["assetBinding"]);
+                        slot.Style = ParseBehaviorStyle(obj["style"], ownerKey, i);
+                        slot.Motion = ParseBehaviorMotion(obj["motion"], ownerKey, i);
                         break;
                     case BehaviorKind.AttributeBinding:
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch");
                         slot.AttributeBinding = ParseAttributeBinding(obj["attributeBinding"]);
                         break;
                     case BehaviorKind.TagBinding:
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch");
                         slot.TagBinding = ParseTagBinding(obj["tagBinding"]);
                         break;
                     case BehaviorKind.Animator:
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch");
                         slot.Animator = ParseAnimator(obj["animator"]);
                         break;
                     case BehaviorKind.Attachment:
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch");
                         slot.Attachment = ParseAttachment(obj["attachment"]);
                         break;
                     case BehaviorKind.Sound:
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch");
                         slot.Sound = ParseSound(obj["sound"]);
                         break;
                     case BehaviorKind.Material:
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch");
                         slot.Material = ParseMaterial(obj["material"]);
                         break;
                     case BehaviorKind.Spline:
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch");
                         slot.Spline = ParseSpline(obj["spline"]);
                         break;
                     case BehaviorKind.Grounding:
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch");
                         slot.Grounding = ParseGrounding(obj["grounding"]);
                         break;
                     case BehaviorKind.MinimapMarker:
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "worldText", "style", "motion", "surfaceSource", "instancedBatch");
                         slot.MinimapMarker = ParseMinimapMarker(obj["minimapMarker"]);
+                        break;
+                    case BehaviorKind.WorldText:
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "assetBinding", "surfaceSource", "instancedBatch");
+                        slot.WorldText = ParseWorldText(obj["worldText"], ownerKey, i);
+                        slot.Style = ParseBehaviorStyle(obj["style"], ownerKey, i);
+                        slot.Motion = ParseBehaviorMotion(obj["motion"], ownerKey, i);
+                        slot.AssetBinding = BuildWorldTextAssetBinding(slot.WorldText);
+                        break;
+                    case BehaviorKind.SurfaceSource:
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "assetBinding", "worldText", "style", "motion", "instancedBatch");
+                        slot.SurfaceSource = ParseSurface(obj["surfaceSource"], ownerKey, $"Performer '{ownerKey}' behavior[{i}].surfaceSource");
+                        break;
+                    case BehaviorKind.InstancedBatch:
+                        RejectBehaviorScopedFields(obj, ownerKey, i, "assetBinding", "worldText", "style", "motion", "surfaceSource");
+                        slot.InstancedBatch = ParseInstancedBatchBehavior(obj["instancedBatch"], ownerKey, i);
                         break;
                     default:
                         throw new InvalidOperationException($"Unsupported performer behavior kind '{kind}'.");
@@ -1338,35 +1669,141 @@ namespace Ludots.Core.Presentation.Config
             return slots;
         }
 
-        private InstancedBatchBinding[] ParseInstancedBatchBindings(JsonNode? node, string ownerKey)
+        private static void RejectBehaviorScopedFields(JsonObject obj, string ownerKey, int behaviorIndex, params string[] fieldNames)
         {
-            if (node is not JsonArray arr || arr.Count == 0)
+            for (int i = 0; i < fieldNames.Length; i++)
             {
-                return Array.Empty<InstancedBatchBinding>();
-            }
-
-            var bindings = new InstancedBatchBinding[arr.Count];
-            for (int i = 0; i < arr.Count; i++)
-            {
-                if (arr[i] is not JsonObject obj)
-                {
-                    throw new InvalidOperationException($"Performer '{ownerKey}' instancedBatches[{i}] must be an object.");
-                }
-
-                string batchKey = ParseRequiredSemanticString(
-                    obj["batchAssetId"],
-                    $"Performer '{ownerKey}' instancedBatches[{i}].batchAssetId");
-                int batchAssetId = _resolveInstancedBatchAssetId(batchKey);
-                if (batchAssetId <= 0)
+                string field = fieldNames[i];
+                if (obj[field] != null)
                 {
                     throw new InvalidOperationException(
-                        $"Performer '{ownerKey}' references unknown instanced batch asset '{batchKey}'.");
+                        $"Performer '{ownerKey}' behavior[{behaviorIndex}] field '{field}' is not valid for this behavior kind.");
                 }
+            }
+        }
 
-                bindings[i] = new InstancedBatchBinding(batchAssetId);
+        private WorldTextConfig ParseWorldText(JsonNode? node, string ownerKey, int behaviorIndex)
+        {
+            string context = $"Performer '{ownerKey}' behavior[{behaviorIndex}].worldText";
+            if (node is not JsonObject obj)
+            {
+                throw new InvalidOperationException($"{context} requires an object.");
             }
 
-            return bindings;
+            return new WorldTextConfig
+            {
+                TextTokenId = ResolveTextTokenId(obj["textToken"], $"{context}.textToken"),
+                Mode = ParseRequiredEnum<WorldHudValueMode>(obj["mode"], $"{context}.mode"),
+                ValueParamKey = ParseOptionalParamKey(obj["valueParamKey"], $"{context}.valueParamKey"),
+                SecondaryValueParamKey = ParseOptionalParamKey(obj["secondaryValueParamKey"], $"{context}.secondaryValueParamKey"),
+                FontSize = ParseWorldTextFontSize(obj["fontSize"], context),
+            };
+        }
+
+        private static int ParseWorldTextFontSize(JsonNode? node, string context)
+        {
+            if (node == null)
+            {
+                return 16;
+            }
+
+            int fontSize = ParseRequiredInt(node, $"{context}.fontSize");
+            if (fontSize <= 0)
+            {
+                throw new InvalidOperationException($"{context}.fontSize must be > 0.");
+            }
+
+            return fontSize;
+        }
+
+        private static AssetBindingConfig BuildWorldTextAssetBinding(in WorldTextConfig worldText)
+        {
+            return new AssetBindingConfig
+            {
+                AssetKind = AssetKind.WorldText,
+                AssetId = worldText.TextTokenId,
+                RenderPath = VisualRenderPath.None,
+                Mobility = VisualMobility.Movable,
+                LocalOffset = Vector3.Zero,
+                LocalRotation = Quaternion.Identity,
+                LocalScale = Vector3.One,
+                ScaleParamKey = worldText.ValueParamKey,
+                MaterialParamKey = worldText.SecondaryValueParamKey,
+                AssetIdParamKey = PerformerParamKeyRegistry.UnsetParamKey,
+                AssetSwapParamKey = PerformerParamKeyRegistry.UnsetParamKey,
+                AssetSwapTable = Array.Empty<AssetSwapEntry>(),
+                VisibilityParamKey = PerformerParamKeyRegistry.UnsetParamKey,
+                SurfaceLayerKey = string.Empty,
+                MaterialCustomData = MaterialCustomDataBinding.Empty,
+            };
+        }
+
+        private static BehaviorStyleConfig ParseBehaviorStyle(JsonNode? node, string ownerKey, int behaviorIndex)
+        {
+            if (node == null)
+            {
+                return default;
+            }
+
+            string context = $"Performer '{ownerKey}' behavior[{behaviorIndex}].style";
+            if (node is not JsonObject obj)
+            {
+                throw new InvalidOperationException($"{context} must be an object.");
+            }
+
+            var style = new BehaviorStyleConfig();
+            if (obj["color"] != null)
+            {
+                style.HasColor = true;
+                style.Color = ParseRequiredVector4(obj["color"], $"{context}.color");
+            }
+
+            if (obj["alphaPolicy"] != null)
+            {
+                style.AlphaPolicy = ParseRequiredEnum<BehaviorAlphaPolicy>(obj["alphaPolicy"], $"{context}.alphaPolicy");
+            }
+
+            return style;
+        }
+
+        private static BehaviorMotionConfig ParseBehaviorMotion(JsonNode? node, string ownerKey, int behaviorIndex)
+        {
+            if (node == null)
+            {
+                return default;
+            }
+
+            string context = $"Performer '{ownerKey}' behavior[{behaviorIndex}].motion";
+            if (node is not JsonObject obj)
+            {
+                throw new InvalidOperationException($"{context} must be an object.");
+            }
+
+            return new BehaviorMotionConfig
+            {
+                YDriftPerSecond = obj["yDriftPerSecond"] == null
+                    ? 0f
+                    : ParseRequiredFiniteFloat(obj["yDriftPerSecond"], $"{context}.yDriftPerSecond"),
+            };
+        }
+
+        private InstancedBatchConfig ParseInstancedBatchBehavior(JsonNode? node, string ownerKey, int behaviorIndex)
+        {
+            string context = $"Performer '{ownerKey}' behavior[{behaviorIndex}].instancedBatch";
+            if (node is not JsonObject obj)
+            {
+                throw new InvalidOperationException($"{context} requires an object.");
+            }
+
+            string batchKey = ParseRequiredSemanticString(obj["batchAssetId"], $"{context}.batchAssetId");
+            int batchAssetId = _resolveInstancedBatchAssetId(batchKey);
+            if (batchAssetId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Performer '{ownerKey}' references unknown instanced batch asset '{batchKey}'.");
+            }
+
+            return new InstancedBatchConfig { BatchAssetId = batchAssetId };
         }
 
         private static string ParseRequiredSemanticString(JsonNode? node, string context)
@@ -1558,9 +1995,21 @@ namespace Ludots.Core.Presentation.Config
             {
                 AttributeId = ResolveAttributeId(obj),
                 TargetParamKey = ParseRequiredParamKey(obj["targetParamKey"], "AttributeBinding.targetParamKey"),
-                Mode = ParseEnum(obj["mode"]?.GetValue<string>(), ValueSourceKind.Attribute),
+                Mode = ParseAttributeBindingMode(obj["mode"], "AttributeBinding.mode"),
                 Thresholds = ParseThresholds(obj["thresholds"]),
             };
+        }
+
+        private static ValueSourceKind ParseAttributeBindingMode(JsonNode? node, string context)
+        {
+            ValueSourceKind mode = ParseRequiredEnumOrDefault(node, ValueSourceKind.Attribute, context);
+            if (mode is ValueSourceKind.Attribute or ValueSourceKind.AttributeRatio or ValueSourceKind.AttributeBase)
+            {
+                return mode;
+            }
+
+            throw new InvalidOperationException(
+                $"{context} must be Attribute, AttributeRatio, or AttributeBase.");
         }
 
         private TagBindingConfig ParseTagBinding(JsonNode? node)
@@ -2103,6 +2552,10 @@ namespace Ludots.Core.Presentation.Config
                 ["tag"] = 9,
                 ["orientation"] = 10,
                 ["hud"] = 11,
+                ["surface"] = 12,
+                ["attributeRatio"] = 13,
+                ["attributeCurrent"] = 14,
+                ["attributeBase"] = 15,
             };
 
             public static int Register(string key)
@@ -2341,12 +2794,12 @@ namespace Ludots.Core.Presentation.Config
             return lane;
         }
 
-        private SurfaceAuthoringBlock ParseSurface(JsonNode? node, string key)
+        private SurfaceAuthoringBlock ParseSurface(JsonNode? node, string key, string context)
         {
             if (node is not JsonObject obj)
             {
                 throw new InvalidOperationException(
-                    $"Performer '{key}' declares 'surface' but is missing the required surface object.");
+                    $"{context} requires the surface authoring object.");
             }
 
             return new SurfaceAuthoringBlock
@@ -2441,7 +2894,23 @@ namespace Ludots.Core.Presentation.Config
             };
         }
 
+        private static ConditionRef ParseDefinitionVisibility(JsonNode? node, string key)
+        {
+            if (node != null && node["graphProgramId"] != null)
+            {
+                throw new InvalidOperationException(
+                    $"Performer '{key}' visibility.graphProgramId is not wired into runtime visibility evaluation and cannot be authored.");
+            }
+
+            return ParseConditionRef(node, $"Performer '{key}' visibility", allowGraphProgramId: false);
+        }
+
         private static ConditionRef ParseConditionRef(JsonNode? node)
+        {
+            return ParseConditionRef(node, "Performer condition", allowGraphProgramId: true);
+        }
+
+        private static ConditionRef ParseConditionRef(JsonNode? node, string context, bool allowGraphProgramId)
         {
             if (node == null)
             {
@@ -2451,10 +2920,19 @@ namespace Ludots.Core.Presentation.Config
             var cond = new ConditionRef();
             if (node["inline"] != null)
             {
-                cond.Inline = ParseRequiredEnumOrDefault(node["inline"], InlineConditionKind.None, "Performer visibility.inline");
+                cond.Inline = ParseRequiredEnumOrDefault(node["inline"], InlineConditionKind.None, $"{context}.inline");
             }
 
-            cond.GraphProgramId = node["graphProgramId"]?.GetValue<int>() ?? 0;
+            if (node["graphProgramId"] != null)
+            {
+                if (!allowGraphProgramId)
+                {
+                    throw new InvalidOperationException($"{context}.graphProgramId is not authorable here.");
+                }
+
+                cond.GraphProgramId = node["graphProgramId"]?.GetValue<int>() ?? 0;
+            }
+
             return cond;
         }
 

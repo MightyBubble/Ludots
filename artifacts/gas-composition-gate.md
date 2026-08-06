@@ -2,6 +2,263 @@
 
 Current closeouts and prior issue reviews follow.
 
+## GAS Composition Gate - Issue #643 Stage 0+1 Movement Participation Increment - 2026-08-06
+
+- **Task / Issue**: Issue #643 stage 0+1 — introduce the `MovementParticipation`/`PoseAuthority` two-axis vocabulary, converge the three `WorldPositionCm` writers under a pose-authority contract, and wire the GAS displacement window into MassNavigation's displaced state.
+- **Date**: 2026-08-06
+- **Agent / Author**: Cursor cloud agent
+
+### 1. Core judgment
+
+新变体主要交付物是（A/B/C/D）: A
+
+结论: PASS
+
+一句话理由: 交付物是既有 `DisplacementRuntimeSystem` 步骤的写权接线（沿用 `DisplacementState` 运行时管线与既有 `ApplyExternalDisplacement`/arrival-recovery 挂点），外加两枚 authoring/runtime 组件；不新增 `BuiltinHandlerId`、`EffectPresetType`、profile enum、preset 开关或平行位移管线。
+
+### 2. Layer assignment
+
+| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
+|-----------|-----------------|----------|
+| MovementParticipation authoring 声明 | 0 | `Ludots.Core.Components` 组件 + `ComponentRegistry` 严格解析器 |
+| PoseAuthority 运行时状态与固定步边界切换 | 0/1 | `PoseAuthorityArbiter` 请求队列 + `PoseAuthorityCommitSystem`（SchemaUpdate，经 CommandBuffer 结算） |
+| 位移窗口触发/驱动/交还 | 1 | 既有 `DisplacementRuntimeSystem`（改造，不新建系统管线） |
+| displaced 态求解器行为 | 0 | `MassNavigationFlowSolverState` 预分配位标志 + 既有 `ApplyExternalDisplacement` |
+| 交还后恢复原目标 | 1 | 既有 `ResetUnitArrivalState`/`SetUnitTarget(resetRecovery)` wake 路径 |
+
+### 3. Reuse list
+
+- Handlers: `BuiltinHandlers.HandleApplyDisplacement`（不改，仍是 `DisplacementState` 唯一生产者）。
+- Queues / Systems: `DisplacementRuntimeSystem`（改造）、`MassNavigationSimulationStepSystem`（entity-sync 节拍挂 displaced 位姿回灌）、`Physics2DToWorldPositionSyncSystem`（只读参照，不改）。
+- Resolvers / Registries: `ComponentRegistry`（新增 MovementParticipation 严格解析）、`MassNavigationIds.TryGetCurrentNavigationRuntime`。
+- Existing presets / graphs: 位移仍由既有 displacement effect preset 触发，未新增 preset 类型。
+- 既有挂点: `MassNavigationFlowSolverState.ApplyExternalDisplacement`、arrival-recovery wake（`ResetUnitArrivalState` / `SetUnitTarget(resetRecovery:true)`）、`MassNavigationCadenceScheduler` entity-sync 节拍。
+
+### 4. New Layer 0 ops (if any)
+
+N/A — 无新增 graph op / builtin handler。新增的是组件词汇与求解器状态位，不是 effect 步骤。
+
+### 5. Transaction boundary
+
+写权切换请求在固定步内只入队，`PoseAuthorityCommitSystem` 在下一个固定步边界统一经 CommandBuffer 结算；同一实体的非法切换（当前写权与期望不符）、位移容量超限、`maxDurationMs` 超时一律抛异常，不做部分提交或静默回退。
+
+### 6. Config SSOT
+
+行为配置落在: 实体模板 `MovementParticipation` 组件（authoring 明文）+ `MassNavigationConfig.json` `scenarioRuntime.runtimeCapacity.displacedAgentCapacity`（容量）。
+
+是否新增 JSON schema: NO（组件字段挂现有 ComponentRegistry 模板体系；容量字段挂现有 runtimeCapacity 节，均非平行 schema/loader）。
+
+### 7. Red flag scan
+
+- [x] 未新增 profile inherit/placement enum
+- [x] 未新建与 spawn 平行的物化管线
+- [x] 未把 placement 校验塞进 lifecycle op
+- [x] 未添加「说不清的」默认 fallback（位移窗口异常结束抛异常，不静默交还写权）
+
+### 8. Next variant test
+
+「下一个 Mod 变体」将修改: effect 步骤 / 实体模板 `MovementParticipation` 声明（合法组合以 issue #643 合同表为准），不改 Core enum。
+
+## GAS Composition Gate - Issue 722 Blacksmith Durability Control - 2026-08-03
+
+- **Task / Issue**: Keep the performer blacksmith showcase's manual durability presets authoritative after consolidating performer attribute param authoring under `BehaviorSlot.AttributeBinding`.
+- **Date**: 2026-08-03
+- **Agent / Author**: Codex
+
+### 1. Core judgment
+
+Primary delivery: A. Rewire existing effect Graph steps with an existing Graph operation.
+
+Result: PASS.
+
+Reason: The fix reuses the existing `RemoveEffectTemplate` Graph operation and the existing effect-template/Graph asset pipeline. It adds no preset enum, graph op, profile field, loader, fallback path, or parallel GAS runtime.
+
+### 2. Layer assignment
+
+| Capability | Layer | Implementation carrier |
+|---|---:|---|
+| Stop showcase random drift when a player selects a fixed durability preset | 2 | Existing `RemoveEffectTemplate` node in blacksmith effect Graph assets |
+| Apply the selected durability value | 2 | Existing `LoadAttribute`, `ConstFloat`, `SubFloat`, and `ModifyAttributeAdd` nodes |
+| Admit 30k showcase on-spawn drift effects without Core capacity changes | 2 | Blacksmith mod-owned `gasRuntimeCapacity.effectFanOutCommandCapacity` |
+
+### 3. Reuse list
+
+- Handlers: existing Graph op handler for `RemoveEffectTemplate`.
+- Queues / Systems: existing effect proposal, application, lifetime, and Graph execution systems.
+- Resolvers / Registries: existing `EffectTemplateRegistry` and Graph program registry.
+- Existing presets / graphs: existing blacksmith `SetDurabilityIntact`, `SetDurabilityDamaged`, and `SetDurabilityRuined` Graphs.
+- Existing config surface: mod-owned `assets/game.json` GAS runtime capacity merge.
+
+### 4. New Layer 0 ops
+
+N/A. No atomic op, handler, registry, loader, schema, or runtime pipeline is added.
+
+### 5. Transaction boundary
+
+No new rollback boundary is introduced. Each manual durability control remains one effect application; the Graph first requests cancellation of the random-drift template on the same target, then computes and applies the deterministic durability delta through the existing attribute write path.
+
+### 6. Config SSOT
+
+Behavior configuration stays in `mods/showcases/performer_blacksmith/PerformerBlacksmithShowcaseMod/assets/GAS/graphs.json` and existing effect templates. Showcase-scale capacity stays in `mods/showcases/performer_blacksmith/PerformerBlacksmithShowcaseMod/assets/game.json`. New JSON schema: NO.
+
+### 7. Red flag scan
+
+- [x] No profile inherit/placement enum added
+- [x] No parallel effect, attribute, or performer binding pipeline added
+- [x] No placement or lifecycle concern moved into the Graph
+- [x] No fallback, compatibility bypass, or silent drift masking added
+
+### 8. Next variant test
+
+A future showcase control variant should change Graph wiring or effect-template steps, not Core enums or a second durability-control runtime.
+
+---
+
+## Graph / PresetType / EffectTemplate SSOT - Final Closeout - 2026-07-30
+
+- **Task / Issue**: Close the audited Ability, GAS Effect, and Graph contract gaps on current `main`, converge gameplay composition on `Graph -> optional PresetType sugar -> EffectTemplate instance`, and make test execution reproducible from repository-declared SDK and dependencies.
+- **Date**: 2026-07-30
+- **Agent / Author**: Codex, with read-only Pi Opus review, isolated Cursor Graph implementation, and independent SDK/warning audit.
+- **Baseline**: `origin/main` at `9a6af246ccd30d534011960d3663a8be1afac52a`.
+- **Status**: COMPLETE on the reviewed PR head; final gate evidence is recorded below.
+
+### 1. Core judgment
+
+Primary delivery: A. Tighten existing Graph, Ability, and Effect contracts and remove parallel or implicit behavior.
+
+Result: PASS.
+
+Reason: The repair reuses the existing Graph compiler/runtime, `AbilityExecSystem`, effect proposal pipeline, `EffectTemplateRegistry`, and phase Graph references. It adds no gameplay enum, preset-specific loader branch, alternate ability producer, fallback path, compatibility reader, or second effect runtime.
+
+### 2. Layer assignment
+
+| Capability | Layer | Required carrier |
+|---|---:|---|
+| Atomic gameplay operation | 0 | Existing registered Graph/GAS op with explicit metadata |
+| Ordered commit and rollback | 1 | `EffectPhaseSideEffectTransaction` and frozen execution plan |
+| Listener batch certification | 1 | Existing `EffectPhaseExecutor`, listener buffer, and global listener registry |
+| Sequence, branch, phase, and reusable behavior | 2 | Graph compiled under an enforced graph kind |
+| Concrete duration, tags, parameters, and phase references | 2 | EffectTemplate content SSOT |
+| Stable authoring shorthand, when justified | 3 | Optional PresetType compiled to the same Graph/effect contract |
+| Hero, skill, map, or mode-specific variant | 2 | Mod-owned Graph and EffectTemplate assets; no Core enum |
+
+### 3. Reuse list
+
+- Graph: existing opcode registry, compiler, executor, program config loader, and execution budget.
+- Ability: existing `AbilityExecSystem` as the single production execution owner; legacy admission must delegate or be retired, never disagree.
+- Effect: existing proposal/apply buffers, transaction preflight patterns, effect registry, and phase Graph execution.
+- Configuration: existing Mod asset loading and repository JSON contracts.
+
+### 4. New Layer 0 ops
+
+None added. The implementation tightened metadata, execution planning, and transaction ownership around existing operations.
+
+### 5. Transaction boundary
+
+- An instant Effect preflights every authoritative write and observable publication for the whole template before its first mutation; any capacity or dependency failure leaves no partial gameplay result.
+- `SetParent` is resolved from EffectTemplate data as a GAS-transactional relation operation. Fixed-capacity staging covers both parent buffers, `ChildOf`, position snap, structural playback, stale-read checks, and rollback after a post-playback fault.
+- `RemoveParent` and `EnsureLink` remain uncertified and fail execution-plan finalization. Vision reveal operations were removed from the Effect Graph catalog until they have an equally explicit transaction contract.
+- Ability execution has one authoritative production path and one typed invalid-target result.
+- Graph loading and validation fail closed: invalid JSON, unsupported graph kind, empty validation output, unknown op metadata, and fixed-capacity overflow are explicit failures.
+- Template-owned listener Graphs are part of the same execution-plan certification as phase Graphs. `OnPropose` listeners require Validation kind; `OnCalculate` listeners require Effect kind; both phases permit pure operations only.
+- Dynamic target, source, and global listeners are collected and certified as one batch before Pre/Main/Post or listener execution. Missing Graphs, wrong kinds, unsupported operations, malformed IDs, invalid fixed-buffer counts, and a missing event bus fail before any phase write or event publication.
+- Every listener action in a non-pure phase, including a `PublishEvent`-only batch, requires the active GAS side-effect transaction. Event-bus capacity failure leaves neither an earlier entity listener event nor an earlier global listener event visible.
+- Listener `InvokeBuiltin` remains closed because collected actions do not carry the owner EffectTemplate/config context. The trigger template must not be substituted for the owner template.
+- Graph runtime does not resize or structurally mutate ECS state in the hot path.
+
+### 6. Config SSOT
+
+Graph assets describe behavior; EffectTemplate assets describe concrete effect instances, including listener setup. PresetType, if retained, is only stable authoring sugar compiled to those contracts. The effect registry rejects reserved template ID 0 and freezes only after all four execution windows for every registered template are complete. SDK version and test/analyzer dependencies are repository-declared; machine-global Roslyn state is not a dependency.
+
+New JSON schema: NO. Existing authored Graph kind and operation metadata are now consumed and enforced. No compatibility fallback is permitted.
+
+### 7. Red flag scan
+
+- [x] No new gameplay preset enum or preset-specific loader branch
+- [x] No parallel Ability execution producer or conflicting invalid-target behavior
+- [x] No Graph kind field without a consumer
+- [x] No validation default that turns missing output into success
+- [x] No permissive JSON or unknown-field acceptance where config is authoritative
+- [x] No silent capacity return, truncation, registry overwrite, or hot-path resize in touched paths
+- [x] No full-capacity result masks an invalid listener registration
+- [x] No listener batch can publish or write before every collected Graph is certified
+- [x] No warning suppression used as a substitute for a root-cause fix
+- [x] No test dependency on an accidentally installed SDK/analyzer
+
+### 8. Verification results
+
+- Repository-selected SDK: `dotnet --version` -> `9.0.312` from `global.json` (`9.0.100`, `latestFeature`).
+- A clean detached worktree at `dac90b21` completed forced restores and Release builds for both test projects using only repository-declared SDK and NuGet dependencies. The final delta adds no package, SDK, RID, or machine-local tool dependency.
+- Final focused listener/plan/transaction/allocation set: `93 passed`, `0 failed`.
+- Final expanded Graph/Effect/load/integration set: `176 passed`, `0 failed`.
+- Final full GasTests run: `2115 passed`, `0 failed`; the explicit scale benchmark was not executed and the final skipped count was `0`. TRX: `C:\Users\sietg\AppData\Local\Temp\LudotsGasSsotResults\ludots-gas-graph-effect-final.trx`.
+- Final full ArchitectureTests run: `192 passed`, `0 failed`; TRX: `C:\Users\sietg\AppData\Local\Temp\LudotsGasSsotResults\ludots-architecture-graph-effect-final.trx`.
+- Repository .NET toolchain guards: `4 passed`, `0 failed`.
+- The final Release no-incremental audit reports `0` errors and `0` warnings introduced by this delta. The repository still emits `2276` unique pre-existing warnings; `27` occur on unchanged lines in files touched elsewhere by this delta. They are not suppressed or claimed as cleared. This is a reproducible dotnet-only source build, not an offline-hermetic restore or a RID/self-contained deployment publish.
+- The 14 fixed `24 byte` allocation failures were NUnit/JIT measurement-window pollution. Strongly typed `NoInlining` measurement methods keep assertions outside the measured hot path; no tolerance, retry, minimum-of-runs, or warning suppression was added.
+- Listener collection, policy checks, register validation, and transaction certification retain exact `0` allocation after warmup across `10,000` dispatches.
+- `git diff --check`: PASS. Test-generated benchmark and acceptance artifacts were restored before review.
+
+### 8.1 Review evidence
+
+- Pi Opus 4.6 initial read-only review of the prior head reported `0` blocking findings; architecture `9.5/10`; new-developer comprehension `8.5/10`.
+- Final isolated Cursor read-only review of `d01d0be5` with `gpt-5.6-sol-xhigh`: PASS with no P0/P1 finding; architecture `9.5/10`; new-developer comprehension `9.0/10`. The review explicitly withdrew its initial persistent-effect tag concern after tracing the transaction, granted-tag snapshot, and attachment rollback paths.
+- Final Pi Opus 4.6 review of `d01d0be5`, with the exact production and test files attached directly: PASS with no P0/P1 finding; architecture `9.5/10`; new-developer comprehension `8.5/10`. Its residual observations are non-blocking boundaries: `RemoveParent` / `EnsureLink` remain fail-closed, listener capacity is checked during transaction commit preflight before structural writes, and graph-output lifecycle coverage is orthogonal to this listener/transaction delta.
+- Isolated Cursor Graph lane implemented the strict Graph contract; Codex independently reviewed and re-ran the merged tests.
+- Independent subagent reviews rejected static certification of the composite `ApplyRelation`, identified `SetParent` rollback gaps, kept `RemoveParent` / `EnsureLink` unsupported, isolated the 24-byte test-instrumentation root cause, and found the listener batch, fixed-buffer count, reserved ID 0, and four-window finalization gaps closed by the final pass.
+- Final independent Graph/Effect SSOT review: PASS, `102/102` focused tests. Final transaction/capacity/zero-allocation review: PASS, `7/7` focused tests. Final SDK/warning audit: PASS for repository-declared dotnet source builds and `0` warnings introduced by the delta, with the existing warning limitations recorded above.
+
+### 9. Player-facing UAT
+
+```gherkin
+Feature: Data-driven ability and effect composition
+
+  Scenario: A Mod author creates a new ability variant without changing Core code
+    Given an existing set of engine operations
+    And a new Mod Graph that combines those operations
+    And an EffectTemplate that references the Graph with concrete parameters
+    When a player uses the new ability on a valid target
+    Then the full effect is applied exactly once
+    And no new Core preset type is required
+
+  Scenario: An invalid ability target is rejected consistently
+    Given a player selects a target that the ability cannot affect
+    When the player confirms the ability
+    Then the ability does not start
+    And no partial effect is applied
+    And the player receives one consistent rejection result
+
+  Scenario: An invalid Graph asset cannot silently enter play
+    Given a Mod contains an invalid or unsupported Graph asset
+    When the Mod is loaded
+    Then loading fails with the exact asset and contract error
+    And gameplay does not continue with a default behavior
+
+  Scenario: A broken reaction leaves no partial combat result
+    Given a hit would trigger several target or global reactions
+    And one dynamic reaction references an invalid Graph
+    When the hit is resolved
+    Then no phase write or earlier reaction event remains visible
+    And the invalid listener is reported explicitly
+
+  Scenario: A full event queue leaves no half-published reaction batch
+    Given one hit would publish two target or global reaction events
+    And the event queue has room for only one more event
+    When the hit is resolved
+    Then neither reaction event becomes visible
+    And the capacity failure is reported explicitly
+
+  Scenario: Proposal and calculation listeners remain pure
+    Given a Mod configures an event or gameplay write in an OnPropose or OnCalculate listener
+    When the Mod is loaded
+    Then loading fails with the exact effect, phase, listener, and Graph context
+    And the invalid rules never enter a playable session
+```
+
+### 10. Next variant test
+
+A new reveal, area-control, lifecycle, or hero-specific effect must be expressible by Mod-owned Graph and EffectTemplate data. If it requires a new Core preset enum or loader branch, the composition design has failed this gate.
+
 ## PR #660 / #689 Final Closeout - Player Operation Lifecycle - 2026-07-26
 
 - **Task / Issue**: Finish PR #660 against the #689 player-operation acceptance gate after the stale audit loop: close admission retirement, continuation capacity transaction, input feedback, ability effect atomicity, fixed-capacity runtime behavior, and spawn transaction boundaries without scope expansion or fallback.
@@ -1580,3 +1837,56 @@ Behavior remains in the existing runtime spawn request contract. No JSON schema 
 ### 8. Next variant test
 
 A new runtime spawn variant can author `Team`, pass explicit `MembershipTarget`, or both. Explicit membership remains authoritative, and `Team` is only used for consistency validation when present.
+
+---
+
+## GAS Composition Gate - Effect Plan Registry Finalization - 2026-07-30
+
+- **Task / Issue**: Enforce the effect execution-plan SSOT at every production runtime entry.
+- **Date**: 2026-07-30
+- **Agent / Author**: Codex subagent
+
+### 1. Core judgment
+
+Primary delivery: A. Tighten the existing effect-template registration and runtime intake contract.
+
+Result: PASS.
+
+Reason: This change reuses the existing `EffectTemplateRegistry`, `EffectExecutionPlanCompiler`, and proposal/application/lifetime systems. It adds no graph op, preset enum, profile field, loader, fallback, or parallel runtime.
+
+### 2. Layer assignment
+
+| Capability | Layer | Implementation carrier |
+|---|---:|---|
+| Whole-registry plan verification and freeze | 1 | Existing `EffectTemplateRegistry` and `EffectExecutionPlanCompiler` |
+| Runtime plan admission | 1 | Existing proposal/application/lifetime update entries |
+
+### 3. Reuse list
+
+- Handlers: existing builtin and graph operation metadata registries.
+- Queues / Systems: existing proposal, application, and lifetime systems.
+- Resolvers / Registries: existing effect-template, preset-type, graph-program, builtin-handler, and graph-op registries.
+- Existing presets / graphs: unchanged.
+
+### 4. New Layer 0 ops
+
+N/A.
+
+### 5. Transaction boundary
+
+Runtime processing begins only after every registered template has a compiled execution plan. A failed compilation leaves the entire registry unfinalized; no runtime write may begin. A finalized registry is immutable until explicitly cleared and rebuilt.
+
+### 6. Config SSOT
+
+Behavior remains in existing effect templates, preset definitions, and graph assets. New JSON schema: NO.
+
+### 7. Red flag scan
+
+- [x] No profile inherit/placement enum added
+- [x] No parallel effect or graph pipeline added
+- [x] No placement validation moved into a lifecycle op
+- [x] No fallback, compatibility bypass, or silent unfinalized-template acceptance added
+
+### 8. Next variant test
+
+A new Mod variant changes graph wiring or effect-template steps, then passes through the same whole-registry compilation and freeze before runtime starts.

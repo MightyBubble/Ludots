@@ -251,19 +251,10 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 return MoveThenCastPlanResult.Rejected(OrderSubmitResult.RejectedInvalidActor);
             }
 
-            ref var abilities = ref _world.Get<AbilityStateBuffer>(order.Actor);
-            if ((uint)order.Args.I0 >= (uint)abilities.Count)
+            if (!AbilitySlotResolver.TryResolve(_world, order.Actor, order.Args.I0, out AbilitySlotState slot))
             {
                 return MoveThenCastPlanResult.Rejected(OrderSubmitResult.RejectedInvalidActor);
             }
-
-            bool hasForm = _world.Has<AbilityFormSlotBuffer>(order.Actor);
-            AbilityFormSlotBuffer formSlots = hasForm ? _world.Get<AbilityFormSlotBuffer>(order.Actor) : default;
-            bool hasItemGranted = _world.Has<ItemGrantedSlotBuffer>(order.Actor);
-            ItemGrantedSlotBuffer itemGrantedSlots = hasItemGranted ? _world.Get<ItemGrantedSlotBuffer>(order.Actor) : default;
-            bool hasGranted = _world.Has<GrantedSlotBuffer>(order.Actor);
-            GrantedSlotBuffer grantedSlots = hasGranted ? _world.Get<GrantedSlotBuffer>(order.Actor) : default;
-            AbilitySlotState slot = AbilitySlotResolver.Resolve(in abilities, in formSlots, hasForm, in itemGrantedSlots, hasItemGranted, in grantedSlots, hasGranted, order.Args.I0);
 
             if (slot.AbilityId <= 0 ||
                 !_abilities!.TryGet(slot.AbilityId, out var definition))

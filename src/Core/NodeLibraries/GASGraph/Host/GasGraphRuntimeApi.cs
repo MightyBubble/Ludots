@@ -349,10 +349,36 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         }
 
         internal bool HasActiveEffectSideEffectTransaction => _effectSideEffects?.IsActive == true;
+        internal bool HasGameplayEventBus => _eventBus != null;
 
         public void BindLoadedGraphRuntime(LoadedGraphRuntime? runtime)
         {
             _loadedGraphRuntime = runtime;
+            PreflightGraphProjectionCandidateScratch(runtime);
+        }
+
+        private void PreflightGraphProjectionCandidateScratch(LoadedGraphRuntime? runtime)
+        {
+            if (runtime == null || !runtime.HasLoadedGraph)
+            {
+                _graphProjectionCandidateScratch = Array.Empty<int>();
+                return;
+            }
+
+            int nodeCount = runtime.CurrentGraph.NodeCount;
+            if (nodeCount <= 0)
+            {
+                _graphProjectionCandidateScratch = Array.Empty<int>();
+                return;
+            }
+
+            if (_graphProjectionCandidateScratch.Length == nodeCount)
+            {
+                return;
+            }
+
+            // Allocate once when the loaded graph is bound — never grow on the snap hot path.
+            _graphProjectionCandidateScratch = new int[nodeCount];
         }
 
         /// <summary>
@@ -1228,7 +1254,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 return false;
             }
 
-            EnsureGraphProjectionCandidateCapacity(runtime.CurrentGraph.NodeCount);
+            int nodeCount = runtime.CurrentGraph.NodeCount;
+            if (_graphProjectionCandidateScratch.Length < nodeCount)
+            {
+                throw new InvalidOperationException(
+                    $"Graph edge snap candidate scratch capacity {_graphProjectionCandidateScratch.Length} is below loaded graph node count {nodeCount}. BindLoadedGraphRuntime must preflight capacity before execution.");
+            }
+
             Fix64Vec2 pointCm = Fix64Vec2.FromInt(targetPosCm.X, targetPosCm.Y);
             bool found = PlacementValidation.TrySnapToNearestGraphEdge(
                 runtime.CurrentGraph,
@@ -1244,22 +1276,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             }
 
             return found;
-        }
-
-        private void EnsureGraphProjectionCandidateCapacity(int required)
-        {
-            if (_graphProjectionCandidateScratch.Length >= required)
-            {
-                return;
-            }
-
-            int next = _graphProjectionCandidateScratch.Length == 0 ? 64 : _graphProjectionCandidateScratch.Length * 2;
-            while (next < required)
-            {
-                next *= 2;
-            }
-
-            Array.Resize(ref _graphProjectionCandidateScratch, next);
         }
     }
 }

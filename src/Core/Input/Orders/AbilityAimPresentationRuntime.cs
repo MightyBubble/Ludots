@@ -378,6 +378,14 @@ namespace Ludots.Core.Input.Orders
                 return 0;
             }
 
+            _graphPrograms.RequireKind(query.GraphProgramId, GraphKind.Query);
+            GraphKindOperationPolicy.RequireAllowed(
+                GraphKind.Query,
+                program,
+                GasGraphOpHandlerTable.Instance,
+                query.GraphProgramId,
+                nameof(AbilityAimPresentationRuntime));
+
             Span<float> floats = stackalloc float[GraphVmLimits.MaxFloatRegisters];
             Span<int> ints = stackalloc int[GraphVmLimits.MaxIntRegisters];
             Span<byte> bools = stackalloc byte[GraphVmLimits.MaxBoolRegisters];
@@ -863,29 +871,13 @@ namespace Ludots.Core.Input.Orders
                 return 0;
             }
 
-            int slotIndex = mapping.ArgsTemplate.I0.Value;
-            ref AbilityStateBuffer abilities = ref _world.Get<AbilityStateBuffer>(actor);
-            if ((uint)slotIndex >= (uint)abilities.Count)
-            {
-                return 0;
-            }
-
-            bool hasForm = _world.Has<AbilityFormSlotBuffer>(actor);
-            AbilityFormSlotBuffer formSlots = hasForm ? _world.Get<AbilityFormSlotBuffer>(actor) : default;
-            bool hasItemGranted = _world.Has<ItemGrantedSlotBuffer>(actor);
-            ItemGrantedSlotBuffer itemGranted = hasItemGranted ? _world.Get<ItemGrantedSlotBuffer>(actor) : default;
-            bool hasGranted = _world.Has<GrantedSlotBuffer>(actor);
-            GrantedSlotBuffer granted = hasGranted ? _world.Get<GrantedSlotBuffer>(actor) : default;
-            AbilitySlotState slot = AbilitySlotResolver.Resolve(
-                in abilities,
-                in formSlots,
-                hasForm,
-                in itemGranted,
-                hasItemGranted,
-                in granted,
-                hasGranted,
-                slotIndex);
-            return slot.AbilityId;
+            return AbilitySlotResolver.TryResolve(
+                _world,
+                actor,
+                mapping.ArgsTemplate.I0.Value,
+                out AbilitySlotState slot)
+                ? slot.AbilityId
+                : 0;
         }
 
         private static byte ResolveInputSlotIndex(AbilityAimInputSlot slot)
@@ -1181,29 +1173,13 @@ namespace Ludots.Core.Input.Orders
                 return false;
             }
 
-            int slotIndex = mapping.ArgsTemplate.I0.Value;
-            ref AbilityStateBuffer abilities = ref _world.Get<AbilityStateBuffer>(actor);
-            if ((uint)slotIndex >= (uint)abilities.Count)
-            {
-                return false;
-            }
-
-            bool hasForm = _world.Has<AbilityFormSlotBuffer>(actor);
-            AbilityFormSlotBuffer formSlots = hasForm ? _world.Get<AbilityFormSlotBuffer>(actor) : default;
-            bool hasItemGranted = _world.Has<ItemGrantedSlotBuffer>(actor);
-            ItemGrantedSlotBuffer itemGranted = hasItemGranted ? _world.Get<ItemGrantedSlotBuffer>(actor) : default;
-            bool hasGranted = _world.Has<GrantedSlotBuffer>(actor);
-            GrantedSlotBuffer granted = hasGranted ? _world.Get<GrantedSlotBuffer>(actor) : default;
-            AbilitySlotState slot = AbilitySlotResolver.Resolve(
-                in abilities,
-                in formSlots,
-                hasForm,
-                in itemGranted,
-                hasItemGranted,
-                in granted,
-                hasGranted,
-                slotIndex);
-            return slot.AbilityId > 0 && _abilities.TryGet(slot.AbilityId, out definition);
+            return AbilitySlotResolver.TryResolve(
+                       _world,
+                       actor,
+                       mapping.ArgsTemplate.I0.Value,
+                       out AbilitySlotState slot) &&
+                   slot.AbilityId > 0 &&
+                   _abilities.TryGet(slot.AbilityId, out definition);
         }
 
         private bool TryResolveActorWorld(Entity actor, out Vector3 worldCm)

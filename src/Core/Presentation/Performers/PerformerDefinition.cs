@@ -29,13 +29,11 @@ namespace Ludots.Core.Presentation.Performers
         internal readonly struct OwnerAttributeWorkItem
         {
             public readonly int AttributeId;
-            public readonly int[] ParamBindingIndices;
             public readonly int[] BehaviorIndices;
 
-            public OwnerAttributeWorkItem(int attributeId, int[] paramBindingIndices, int[] behaviorIndices)
+            public OwnerAttributeWorkItem(int attributeId, int[] behaviorIndices)
             {
                 AttributeId = attributeId;
-                ParamBindingIndices = paramBindingIndices ?? System.Array.Empty<int>();
                 BehaviorIndices = behaviorIndices ?? System.Array.Empty<int>();
             }
         }
@@ -98,6 +96,7 @@ namespace Ludots.Core.Presentation.Performers
         internal bool HasSoundBehavior;
         internal bool HasMinimapMarkerBehavior;
         internal bool HasSurfaceAuthoring;
+        internal int SurfaceSourceBehaviorIndex;
         internal bool RequiresBootstrapProcessing;
         internal bool UsesStableVisualCache;
         internal bool UsesEventDrivenStaticEmit;
@@ -139,6 +138,7 @@ namespace Ludots.Core.Presentation.Performers
 
         internal void BuildBindingIndex()
         {
+            ValidateParamBindings();
             if (Bindings == null || Bindings.Length == 0)
             {
                 BindingIndex = System.Array.Empty<int>();
@@ -192,6 +192,25 @@ namespace Ludots.Core.Presentation.Performers
             SparseBindingIndices = sparseIndices;
         }
 
+        private void ValidateParamBindings()
+        {
+            PerformerParamBinding[] bindings = Bindings;
+            if (bindings == null || bindings.Length == 0)
+            {
+                return;
+            }
+
+            for (int i = 0; i < bindings.Length; i++)
+            {
+                ValueSourceKind source = bindings[i].Value.Source;
+                if (source is ValueSourceKind.Attribute or ValueSourceKind.AttributeRatio or ValueSourceKind.AttributeBase)
+                {
+                    throw new System.InvalidOperationException(
+                        $"Performer '{Key}' bindings[{i}] uses attribute source '{source}'. Attribute-driven performer params must be authored as AttributeBinding behavior.");
+                }
+            }
+        }
+
         private static void SortSparseBindings(int[] keys, int[] indices)
         {
             for (int i = 1; i < keys.Length; i++)
@@ -240,18 +259,6 @@ namespace Ludots.Core.Presentation.Performers
             }
 
             var required = new System.Collections.Generic.HashSet<int>();
-            if (Bindings != null)
-            {
-                for (int i = 0; i < Bindings.Length; i++)
-                {
-                    int attributeId = ResolveAttributeId(Bindings[i].Value);
-                    if (attributeId >= 0)
-                    {
-                        required.Add(attributeId);
-                    }
-                }
-            }
-
             if (Behaviors != null)
             {
                 for (int i = 0; i < Behaviors.Length; i++)
@@ -286,6 +293,7 @@ namespace Ludots.Core.Presentation.Performers
             HasSoundBehavior = false;
             HasMinimapMarkerBehavior = false;
             HasSurfaceAuthoring = Surface != null;
+            SurfaceSourceBehaviorIndex = -1;
             RequiresBootstrapProcessing = (Bindings != null && Bindings.Length > 0) || HasSurfaceAuthoring || HasInstancedBatchBindings;
             UsesStableVisualCache = false;
             UsesEventDrivenStaticEmit = false;
@@ -319,7 +327,6 @@ namespace Ludots.Core.Presentation.Performers
             SingleVisualProxyFastBehaviorIndex = -1;
             SupportsSingleAnimatorFastUpdate = false;
             SingleAnimatorFastBehaviorIndex = -1;
-            System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<int>>? attributeParamBindingMap = null;
             System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<int>>? attributeBehaviorMap = null;
             System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<int>>? tagBehaviorMap = null;
             System.Collections.Generic.List<int>? ownerFacingParamBindingIndices = null;
@@ -338,13 +345,6 @@ namespace Ludots.Core.Presentation.Performers
                 {
                     switch (Bindings[i].Value.Source)
                     {
-                        case ValueSourceKind.Attribute:
-                        case ValueSourceKind.AttributeRatio:
-                        case ValueSourceKind.AttributeBase:
-                            HasOwnerAttributeBindingWork = true;
-                            attributeParamBindingMap ??= new System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<int>>();
-                            AddIndex(attributeParamBindingMap, Bindings[i].Value.SourceId, i);
-                            break;
                         case ValueSourceKind.FacingRadians:
                         case ValueSourceKind.FacingDegrees:
                             HasOwnerFacingBindingWork = true;
@@ -358,7 +358,7 @@ namespace Ludots.Core.Presentation.Performers
             OwnerFacingParamBindingIndices = ownerFacingParamBindingIndices?.ToArray() ?? System.Array.Empty<int>();
             if (Behaviors == null || Behaviors.Length == 0)
             {
-                OwnerAttributeWork = BuildOwnerAttributeWork(attributeParamBindingMap, attributeBehaviorMap);
+                OwnerAttributeWork = BuildOwnerAttributeWork(attributeBehaviorMap);
                 OwnerTagWork = BuildOwnerTagWork(tagBehaviorMap);
                 UsesRetainedPresentationRequest =
                     HasSurfaceAuthoring &&
@@ -388,6 +388,7 @@ namespace Ludots.Core.Presentation.Performers
                 switch (slot.Kind)
                 {
                     case BehaviorKind.AssetBinding:
+                    case BehaviorKind.WorldText:
                         AssetBindingSlotMask |= bit;
                         HasAssetBindingBehavior = true;
                         if (PrimaryAssetBehaviorIndex < 0)
@@ -442,6 +443,18 @@ namespace Ludots.Core.Presentation.Performers
                                 hasStaticOnlyVisuals = false;
                                 break;
                         }
+                        break;
+
+                    case BehaviorKind.SurfaceSource:
+                        HasSurfaceAuthoring = true;
+                        SurfaceSourceBehaviorIndex = i;
+                        RequiresBootstrapProcessing = true;
+                        blocksEventDrivenStaticEmit = true;
+                        break;
+
+                    case BehaviorKind.InstancedBatch:
+                        HasInstancedBatchBindings = true;
+                        RequiresBootstrapProcessing = true;
                         break;
 
                     case BehaviorKind.Animator:
@@ -544,7 +557,7 @@ namespace Ludots.Core.Presentation.Performers
             StaticVisualFloatParamKeys = staticFloatParams.Count == 0 ? System.Array.Empty<int>() : Sort(staticFloatParams);
             StaticVisualIntParamKeys = staticIntParams.Count == 0 ? System.Array.Empty<int>() : Sort(staticIntParams);
             StaticVisualVectorParamKeys = staticVectorParams.Count == 0 ? System.Array.Empty<int>() : Sort(staticVectorParams);
-            OwnerAttributeWork = BuildOwnerAttributeWork(attributeParamBindingMap, attributeBehaviorMap);
+            OwnerAttributeWork = BuildOwnerAttributeWork(attributeBehaviorMap);
             OwnerTagWork = BuildOwnerTagWork(tagBehaviorMap);
             UsesStableVisualCache =
                 hasCacheableVisual &&
@@ -711,17 +724,6 @@ namespace Ludots.Core.Presentation.Performers
             }
 
             return count;
-        }
-
-        private static int ResolveAttributeId(in ValueRef value)
-        {
-            return value.Source switch
-            {
-                ValueSourceKind.Attribute => value.SourceId,
-                ValueSourceKind.AttributeRatio => value.SourceId,
-                ValueSourceKind.AttributeBase => value.SourceId,
-                _ => -1,
-            };
         }
 
         private static bool AssetBindingNeedsBootstrapProcessing(in AssetBindingConfig asset)
@@ -962,30 +964,17 @@ namespace Ludots.Core.Presentation.Performers
         }
 
         private static OwnerAttributeWorkItem[] BuildOwnerAttributeWork(
-            System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<int>>? paramBindingMap,
             System.Collections.Generic.Dictionary<int, System.Collections.Generic.List<int>>? behaviorMap)
         {
-            if ((paramBindingMap == null || paramBindingMap.Count == 0) &&
-                (behaviorMap == null || behaviorMap.Count == 0))
+            if (behaviorMap == null || behaviorMap.Count == 0)
             {
                 return System.Array.Empty<OwnerAttributeWorkItem>();
             }
 
             var keys = new System.Collections.Generic.HashSet<int>();
-            if (paramBindingMap != null)
+            foreach (int key in behaviorMap.Keys)
             {
-                foreach (int key in paramBindingMap.Keys)
-                {
-                    keys.Add(key);
-                }
-            }
-
-            if (behaviorMap != null)
-            {
-                foreach (int key in behaviorMap.Keys)
-                {
-                    keys.Add(key);
-                }
+                keys.Add(key);
             }
 
             int[] sortedKeys = new int[keys.Count];
@@ -996,13 +985,10 @@ namespace Ludots.Core.Presentation.Performers
             for (int i = 0; i < sortedKeys.Length; i++)
             {
                 int key = sortedKeys[i];
-                int[] paramBindingIndices = paramBindingMap != null && paramBindingMap.TryGetValue(key, out System.Collections.Generic.List<int>? paramsForKey)
-                    ? paramsForKey.ToArray()
-                    : System.Array.Empty<int>();
-                int[] behaviorIndices = behaviorMap != null && behaviorMap.TryGetValue(key, out System.Collections.Generic.List<int>? behaviorsForKey)
+                int[] behaviorIndices = behaviorMap.TryGetValue(key, out System.Collections.Generic.List<int>? behaviorsForKey)
                     ? behaviorsForKey.ToArray()
                     : System.Array.Empty<int>();
-                items[i] = new OwnerAttributeWorkItem(key, paramBindingIndices, behaviorIndices);
+                items[i] = new OwnerAttributeWorkItem(key, behaviorIndices);
             }
 
             return items;

@@ -125,7 +125,9 @@ namespace Ludots.Core.Physics2D.Systems
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Update(Entity entity, ref Mass2D mass)
             {
-                if (mass.IsStatic) return;
+                // Kinematic bodies stay out of sleep islands (like static): a kinematic body
+                // touching two separate piles must not merge their sleep islands.
+                if (!mass.IsDynamic) return;
                 EntityToIndex[entity] = EntityCount;
                 IndexToEntity.Add(entity);
                 EntityCount++;

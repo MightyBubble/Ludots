@@ -334,6 +334,8 @@ namespace Ludots.Core.Scripting
 
         private async Task FireTriggerAsync(Trigger trigger, EventKey eventKey, ScriptContext context, bool propagateExceptions)
         {
+            ArgumentNullException.ThrowIfNull(trigger);
+
             try
             {
                 if (trigger.EventKey == GameEvents.MapLoaded)
@@ -351,7 +353,7 @@ namespace Ludots.Core.Scripting
             {
                 lock (_errorsLock)
                 {
-                    _errors.Add(new TriggerError(eventKey, trigger?.Name ?? string.Empty, ex));
+                    _errors.Add(new TriggerError(eventKey, trigger.Name, ex));
                 }
                 Log.Error(in LogChannels.Engine, $"Error executing trigger {trigger.Name}: {ex}");
                 if (propagateExceptions) throw;

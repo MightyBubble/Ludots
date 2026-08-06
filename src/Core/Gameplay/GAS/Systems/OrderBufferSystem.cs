@@ -523,6 +523,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     $"Order type {order.OrderTypeId} references missing validation graph {config.ValidationGraphId}.");
             }
 
+            GraphKind kind = _graphProgramRegistry.RequireKind(config.ValidationGraphId, GraphKind.Validation);
             var targetPos = new IntVector2((int)order.Args.Spatial.WorldCm.X, (int)order.Args.Spatial.WorldCm.Z);
             bool passed = GasGraphExecutor.ExecuteValidation(
                 World,
@@ -530,7 +531,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 order.Target,
                 targetPos,
                 validationProgram,
-                _graphApi);
+                _graphApi,
+                kind);
             return passed ? OrderSubmitResult.Activated : OrderSubmitResult.RejectedValidation;
         }
 

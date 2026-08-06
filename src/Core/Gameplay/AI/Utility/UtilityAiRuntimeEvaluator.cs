@@ -803,24 +803,7 @@ namespace Ludots.Core.Gameplay.AI.Utility
                 return false;
             }
 
-            ref var abilities = ref _world.Get<AbilityStateBuffer>(actor);
-            bool hasForm = _world.Has<AbilityFormSlotBuffer>(actor);
-            AbilityFormSlotBuffer formSlots = hasForm ? _world.Get<AbilityFormSlotBuffer>(actor) : default;
-            bool hasItemGranted = _world.Has<Ludots.Core.Gameplay.Items.ItemGrantedSlotBuffer>(actor);
-            var itemGranted = hasItemGranted ? _world.Get<Ludots.Core.Gameplay.Items.ItemGrantedSlotBuffer>(actor) : default;
-            bool hasGranted = _world.Has<GrantedSlotBuffer>(actor);
-            GrantedSlotBuffer granted = hasGranted ? _world.Get<GrantedSlotBuffer>(actor) : default;
-            for (int i = 0; i < abilities.Count; i++)
-            {
-                var slot = AbilitySlotResolver.Resolve(in abilities, in formSlots, hasForm, in itemGranted, hasItemGranted, in granted, hasGranted, i);
-                if (slot.AbilityId == abilityId)
-                {
-                    slotIndex = i;
-                    return true;
-                }
-            }
-
-            return false;
+            return AbilitySlotResolver.TryFindAbility(_world, actor, abilityId, out slotIndex);
         }
 
         private bool TryResolveAbilityAtSlot(Entity actor, int slotIndex, out int abilityId)
@@ -831,13 +814,12 @@ namespace Ludots.Core.Gameplay.AI.Utility
                 return false;
             }
 
-            ref var abilities = ref _world.Get<AbilityStateBuffer>(actor);
-            if ((uint)slotIndex >= (uint)abilities.Count)
+            if (!AbilitySlotResolver.TryResolve(_world, actor, slotIndex, out AbilitySlotState slot))
             {
                 return false;
             }
 
-            abilityId = abilities.Get(slotIndex).AbilityId;
+            abilityId = slot.AbilityId;
             return abilityId > 0;
         }
 
@@ -871,8 +853,9 @@ namespace Ludots.Core.Gameplay.AI.Utility
                 throw new InvalidOperationException($"AI score graph id {graphId} is not registered.");
             }
 
+            GraphKind kind = _graphs.RequireKind(graphId, GraphKind.Score);
             UtilityAiGraphSafety.ValidateScoreProgram(program, "AI runtime", graphId);
-            return GasGraphExecutor.ExecuteScore(_world, actor, target, default, program, _graphApi);
+            return GasGraphExecutor.ExecuteScore(_world, actor, target, default, program, _graphApi, kind);
         }
 
         private int ReadTargetPriorityBucket(Entity target, int defaultPriority)

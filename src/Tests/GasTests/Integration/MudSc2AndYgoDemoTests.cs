@@ -8,6 +8,7 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Input;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Systems;
+using Ludots.Core.GraphRuntime;
 using NUnit.Framework;
 using static NUnit.Framework.Assert;
 
@@ -113,6 +114,7 @@ namespace Ludots.Tests.GAS
                     ParticipatesInResponse = false,
                     Modifiers = healTickMods
                 });
+                FinalizeEffectTemplates(templates);
 
                 var clock = new DiscreteClock();
                 var gasClocks = new GasClocks(clock);
@@ -340,6 +342,7 @@ namespace Ludots.Tests.GAS
                     ParticipatesInResponse = true,
                     Modifiers = default
                 });
+                FinalizeEffectTemplates(templates);
 
                 var clock = new DiscreteClock();
                 var gasClocks = new GasClocks(clock);
@@ -475,6 +478,7 @@ namespace Ludots.Tests.GAS
                     ParticipatesInResponse = true,
                     Modifiers = empMods
                 });
+                FinalizeEffectTemplates(templates);
 
                 var clock = new DiscreteClock();
                 var gasClocks = new GasClocks(clock);
@@ -663,5 +667,18 @@ namespace Ludots.Tests.GAS
             });
 
             return (types, new OrderRuleRegistry());
-        }    }
+        }
+
+        private static void FinalizeEffectTemplates(EffectTemplateRegistry templates)
+        {
+            var builtinHandlers = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(builtinHandlers);
+            GasTestEffectExecutionPlanFinalizer.FinalizeAll(
+                templates,
+                new PresetTypeRegistry(),
+                builtinHandlers,
+                new GraphProgramRegistry(),
+                "Test/MudSc2AndYgoDemoTests.json");
+        }
+    }
 }

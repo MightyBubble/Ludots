@@ -5,6 +5,7 @@ using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Knowledge;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Commands;
@@ -15,6 +16,7 @@ using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Presentation;
+using Ludots.Core.Scripting;
 using Arch.Core.Extensions;
 using NUnit.Framework;
 
@@ -27,7 +29,7 @@ namespace Ludots.Tests.Presentation
         public void BehaviorKindContract_ArchitectureExposesCoreKinds()
         {
             BehaviorKind[] values = (BehaviorKind[])Enum.GetValues(typeof(BehaviorKind));
-            Assert.That(values.Length, Is.EqualTo(10), "BehaviorKind SSOT is the architecture enum.");
+            Assert.That(values.Length, Is.EqualTo(13), "BehaviorKind SSOT is the architecture enum.");
             Assert.That(values, Does.Contain(BehaviorKind.AssetBinding));
             Assert.That(values, Does.Contain(BehaviorKind.AttributeBinding));
             Assert.That(values, Does.Contain(BehaviorKind.TagBinding));
@@ -38,6 +40,9 @@ namespace Ludots.Tests.Presentation
             Assert.That(values, Does.Contain(BehaviorKind.Spline));
             Assert.That(values, Does.Contain(BehaviorKind.Grounding));
             Assert.That(values, Does.Contain(BehaviorKind.MinimapMarker));
+            Assert.That(values, Does.Contain(BehaviorKind.WorldText));
+            Assert.That(values, Does.Contain(BehaviorKind.SurfaceSource));
+            Assert.That(values, Does.Contain(BehaviorKind.InstancedBatch));
         }
 
         [Test]
@@ -53,6 +58,9 @@ namespace Ludots.Tests.Presentation
             Assert.That((byte)BehaviorKind.Spline, Is.EqualTo(8));
             Assert.That((byte)BehaviorKind.Grounding, Is.EqualTo(9));
             Assert.That((byte)BehaviorKind.MinimapMarker, Is.EqualTo(10));
+            Assert.That((byte)BehaviorKind.WorldText, Is.EqualTo(11));
+            Assert.That((byte)BehaviorKind.SurfaceSource, Is.EqualTo(12));
+            Assert.That((byte)BehaviorKind.InstancedBatch, Is.EqualTo(13));
         }
 
         [Test]
@@ -110,7 +118,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void OwnerAttributeChangeBuffer_OnlyUpdatesMatchingAttributeWork()
+        public void OwnerAttributeChangeBuffer_OnlyUpdatesMatchingAttributeBindingBehaviors()
         {
             using var world = World.Create();
             var attributes = default(AttributeBuffer);
@@ -124,16 +132,35 @@ namespace Ludots.Tests.Presentation
             var definitions = new PerformerDefinitionRegistry();
             int defId = definitions.Register("behavior.owner.attr.fastpath", new PerformerDefinition
             {
-                Bindings =
-                [
-                    new PerformerParamBinding { ParamKey = 200, Value = ValueRef.FromAttributeRatio(7) },
-                    new PerformerParamBinding { ParamKey = 201, Value = ValueRef.FromAttributeRatio(8) },
-                ],
                 Behaviors =
                 [
                     new BehaviorSlot
                     {
                         SlotIndex = 0,
+                        Kind = BehaviorKind.AttributeBinding,
+                        ActiveByDefault = true,
+                        AttributeBinding = new AttributeBindingConfig
+                        {
+                            AttributeId = 7,
+                            TargetParamKey = 200,
+                            Mode = ValueSourceKind.AttributeRatio,
+                        },
+                    },
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 1,
+                        Kind = BehaviorKind.AttributeBinding,
+                        ActiveByDefault = true,
+                        AttributeBinding = new AttributeBindingConfig
+                        {
+                            AttributeId = 8,
+                            TargetParamKey = 201,
+                            Mode = ValueSourceKind.AttributeRatio,
+                        },
+                    },
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 2,
                         Kind = BehaviorKind.AttributeBinding,
                         ActiveByDefault = true,
                         AttributeBinding = new AttributeBindingConfig
@@ -145,7 +172,7 @@ namespace Ludots.Tests.Presentation
                     },
                     new BehaviorSlot
                     {
-                        SlotIndex = 1,
+                        SlotIndex = 3,
                         Kind = BehaviorKind.AttributeBinding,
                         ActiveByDefault = true,
                         AttributeBinding = new AttributeBindingConfig
@@ -191,7 +218,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void PerformerBindings_ResolveAttributeRatioEntityColorAndFacingIntoBlackboard()
+        public void AttributeBindingAndParamBindings_ResolveAttributeEntityColorAndFacingIntoBlackboard()
         {
             using var world = World.Create();
             var attributes = default(AttributeBuffer);
@@ -208,11 +235,6 @@ namespace Ludots.Tests.Presentation
             {
                 Bindings =
                 [
-                    new PerformerParamBinding
-                    {
-                        ParamKey = 200,
-                        Value = ValueRef.FromAttributeRatio(7),
-                    },
                     new PerformerParamBinding
                     {
                         ParamKey = 201,
@@ -237,6 +259,21 @@ namespace Ludots.Tests.Presentation
                     {
                         ParamKey = 204,
                         Value = ValueRef.FromFacingDegrees(),
+                    },
+                ],
+                Behaviors =
+                [
+                    new BehaviorSlot
+                    {
+                        SlotIndex = 0,
+                        Kind = BehaviorKind.AttributeBinding,
+                        ActiveByDefault = true,
+                        AttributeBinding = new AttributeBindingConfig
+                        {
+                            AttributeId = 7,
+                            TargetParamKey = 200,
+                            Mode = ValueSourceKind.AttributeRatio,
+                        },
                     },
                 ],
             });
@@ -712,6 +749,15 @@ namespace Ludots.Tests.Presentation
             var requests = new PresentationRequestBuffer();
             var worldHud = new WorldHudBatchBuffer(8);
             Entity owner = world.Create(new CullState { IsVisible = true, LOD = LODLevel.High });
+            Entity viewer = world.Create();
+            var projectionStore = new KnowledgeProjectionStore(initialCapacity: 4);
+            var projectionResolver = new KnowledgeProjectionResolver(projectionStore);
+            UpsertPerformerKnowledge(projectionStore, viewer, owner);
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.LocalPlayerEntity.Name] = viewer,
+                [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
+            };
 
             int parentDefId = definitions.Register("behavior.attachment.hud.parent", new PerformerDefinition
             {
@@ -793,7 +839,7 @@ namespace Ludots.Tests.Presentation
                 instances,
                 definitions,
                 requests,
-                new Dictionary<string, object>(),
+                globals,
                 worldHudBuffer: worldHud);
 
             behavior.Update(0.016f);
@@ -1603,6 +1649,28 @@ namespace Ludots.Tests.Presentation
 
             proxy = default;
             return false;
+        }
+
+        private static void UpsertPerformerKnowledge(
+            KnowledgeProjectionStore store,
+            Entity viewer,
+            Entity target,
+            KnowledgeIdMask256 attributeMask = default)
+        {
+            store.Upsert(
+                viewer,
+                target,
+                new KnowledgeDisclosureRecord(
+                    KnowledgePresence.LiveVisible,
+                    KnowledgePositionAccess.Live,
+                    attributeMask,
+                    KnowledgeIdMask256.Empty,
+                    KnowledgeIdMask256.Empty,
+                    viewer,
+                    observedTick: 1,
+                    expiryTick: 0,
+                    confidencePermille: 1000,
+                    revision: 1));
         }
 
         private sealed class StubBoneTransformProvider : IBoneTransformProvider

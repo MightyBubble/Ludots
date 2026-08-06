@@ -1,7 +1,6 @@
 [
   {
     "id": "entity_command_panel.visual.template_projection_marker",
-    "defaultColor": [0.43, 0.78, 1.0, 0.92],
     "bindings": [
       {
         "paramKey": "groundOverlay.innerRadius",
@@ -21,12 +20,12 @@
       {
         "paramKey": "groundOverlay.border.b",
         "source": "constant",
-        "constantValue": 1.0
+        "constantValue": 1
       },
       {
         "paramKey": "groundOverlay.border.a",
         "source": "constant",
-        "constantValue": 1.0
+        "constantValue": 1
       },
       {
         "paramKey": "groundOverlay.border.width",
@@ -44,7 +43,19 @@
           "assetId": "Ring",
           "renderPath": "None",
           "mobility": "Movable",
-          "localScale": [1.85, 1.85, 1.85]
+          "localScale": [
+            1.85,
+            1.85,
+            1.85
+          ]
+        },
+        "style": {
+          "color": [
+            0.43,
+            0.78,
+            1,
+            0.92
+          ]
         }
       },
       {
@@ -53,8 +64,17 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [0, 0.08, 0],
-          "rotationOffset": [0, 0, 0, 1],
+          "offset": [
+            0,
+            0.08,
+            0
+          ],
+          "rotationOffset": [
+            0,
+            0,
+            0,
+            1
+          ],
           "inheritScale": false
         }
       }
@@ -62,7 +82,6 @@
   },
   {
     "id": "entity_command_panel.visual.family_projection_marker",
-    "defaultColor": [0.96, 0.83, 0.48, 0.92],
     "bindings": [
       {
         "paramKey": "groundOverlay.innerRadius",
@@ -87,7 +106,7 @@
       {
         "paramKey": "groundOverlay.border.a",
         "source": "constant",
-        "constantValue": 1.0
+        "constantValue": 1
       },
       {
         "paramKey": "groundOverlay.border.width",
@@ -105,7 +124,19 @@
           "assetId": "Ring",
           "renderPath": "None",
           "mobility": "Movable",
-          "localScale": [1.85, 1.85, 1.85]
+          "localScale": [
+            1.85,
+            1.85,
+            1.85
+          ]
+        },
+        "style": {
+          "color": [
+            0.96,
+            0.83,
+            0.48,
+            0.92
+          ]
         }
       },
       {
@@ -114,8 +145,17 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [0, 0.08, 0],
-          "rotationOffset": [0, 0, 0, 1],
+          "offset": [
+            0,
+            0.08,
+            0
+          ],
+          "rotationOffset": [
+            0,
+            0,
+            0,
+            1
+          ],
           "inheritScale": false
         }
       }
@@ -123,7 +163,6 @@
   },
   {
     "id": "entity_command_panel.visual.ability_projection_marker",
-    "defaultColor": [0.62, 0.89, 0.58, 0.92],
     "bindings": [
       {
         "paramKey": "groundOverlay.innerRadius",
@@ -148,7 +187,7 @@
       {
         "paramKey": "groundOverlay.border.a",
         "source": "constant",
-        "constantValue": 1.0
+        "constantValue": 1
       },
       {
         "paramKey": "groundOverlay.border.width",
@@ -166,7 +205,19 @@
           "assetId": "Ring",
           "renderPath": "None",
           "mobility": "Movable",
-          "localScale": [1.85, 1.85, 1.85]
+          "localScale": [
+            1.85,
+            1.85,
+            1.85
+          ]
+        },
+        "style": {
+          "color": [
+            0.62,
+            0.89,
+            0.58,
+            0.92
+          ]
         }
       },
       {
@@ -175,8 +226,17 @@
         "activeByDefault": true,
         "attachment": {
           "target": "Parent",
-          "offset": [0, 0.08, 0],
-          "rotationOffset": [0, 0, 0, 1],
+          "offset": [
+            0,
+            0.08,
+            0
+          ],
+          "rotationOffset": [
+            0,
+            0,
+            0,
+            1
+          ],
           "inheritScale": false
         }
       }

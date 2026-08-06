@@ -28,7 +28,7 @@ namespace Ludots.Tests.GAS
                 new() { Op = (ushort)GraphNodeOp.ModifyAttributeAdd, A = 2, B = 0, Imm = attributeId },
             };
             var programs = new GraphProgramRegistry();
-            programs.Register(1, program);
+            programs.Register(1, program, GraphKind.Derived);
             var binding = new AttributeDerivedGraphBinding();
             binding.Add(1);
             Entity entity = world.Create(
@@ -43,7 +43,7 @@ namespace Ludots.Tests.GAS
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => system.Update(0f))!;
 
-            Assert.That(ex.Message, Does.StartWith("GAS.GRAPH.ERR.DerivedAttributeSideEffectForbidden"));
+            Assert.That(ex.Message, Does.StartWith(GraphKindOperationPolicy.OperationNotAllowedError));
             Assert.That(world.Get<AttributeBuffer>(entity).GetCurrent(attributeId), Is.EqualTo(10f));
             Assert.That(world.Get<DirtyFlags>(entity).IsAnyAttributeDirty(), Is.False);
             Assert.That(tagOps.DirtyEntities.Count, Is.Zero);
@@ -62,7 +62,7 @@ namespace Ludots.Tests.GAS
                 new() { Op = (ushort)GraphNodeOp.ApplyEffectTemplate, A = 2, Imm = 123 },
             };
             var programs = new GraphProgramRegistry();
-            programs.Register(1, program);
+            programs.Register(1, program, GraphKind.Derived);
             var binding = new AttributeDerivedGraphBinding();
             binding.Add(1);
             Entity entity = world.Create(
@@ -78,7 +78,7 @@ namespace Ludots.Tests.GAS
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => system.Update(0f))!;
 
-            Assert.That(ex.Message, Does.StartWith("GAS.GRAPH.ERR.DerivedAttributeSideEffectForbidden"));
+            Assert.That(ex.Message, Does.StartWith(GraphKindOperationPolicy.OperationNotAllowedError));
             Assert.That(effectRequests.Count, Is.Zero);
             Assert.That(world.Get<AttributeBuffer>(entity).GetCurrent(attributeId), Is.EqualTo(10f));
             Assert.That(tagOps.DirtyEntities.Count, Is.Zero);
@@ -98,7 +98,7 @@ namespace Ludots.Tests.GAS
                 new() { Op = (ushort)GraphNodeOp.RemoveEffectTemplate, A = 2, Imm = effectTemplateId },
             };
             var programs = new GraphProgramRegistry();
-            programs.Register(1, program);
+            programs.Register(1, program, GraphKind.Derived);
             var binding = new AttributeDerivedGraphBinding();
             binding.Add(1);
             Entity entity = world.Create(
@@ -117,7 +117,7 @@ namespace Ludots.Tests.GAS
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => system.Update(0f))!;
 
-            Assert.That(ex.Message, Does.StartWith(IDerivedAttributeGraphRuntimeApi.SideEffectForbiddenError));
+            Assert.That(ex.Message, Does.StartWith(GraphKindOperationPolicy.OperationNotAllowedError));
             Assert.That(world.Get<GameplayEffect>(effect).CancelRequested, Is.False);
             Assert.That(world.Get<AttributeBuffer>(entity).GetCurrent(attributeId), Is.EqualTo(10f));
             Assert.That(tagOps.DirtyEntities.Count, Is.Zero);
@@ -136,7 +136,7 @@ namespace Ludots.Tests.GAS
                 new() { Op = (ushort)GraphNodeOp.SendEvent, A = 2, B = 0, Imm = 123 },
             };
             var programs = new GraphProgramRegistry();
-            programs.Register(1, program);
+            programs.Register(1, program, GraphKind.Derived);
             var binding = new AttributeDerivedGraphBinding();
             binding.Add(1);
             Entity entity = world.Create(
@@ -153,7 +153,7 @@ namespace Ludots.Tests.GAS
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => system.Update(0f))!;
 
             eventBus.Update();
-            Assert.That(ex.Message, Does.StartWith(IDerivedAttributeGraphRuntimeApi.SideEffectForbiddenError));
+            Assert.That(ex.Message, Does.StartWith(GraphKindOperationPolicy.OperationNotAllowedError));
             Assert.That(eventBus.Events.Count, Is.Zero);
             Assert.That(world.Get<AttributeBuffer>(entity).GetCurrent(attributeId), Is.EqualTo(10f));
             Assert.That(tagOps.DirtyEntities.Count, Is.Zero);
@@ -175,7 +175,7 @@ namespace Ludots.Tests.GAS
                 },
             };
             var programs = new GraphProgramRegistry();
-            programs.Register(1, program);
+            programs.Register(1, program, GraphKind.Derived);
             var binding = new AttributeDerivedGraphBinding();
             binding.Add(1);
             Entity entity = world.Create(
@@ -191,7 +191,7 @@ namespace Ludots.Tests.GAS
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => system.Update(0f))!;
 
-            Assert.That(ex.Message, Does.StartWith(IDerivedAttributeGraphRuntimeApi.SideEffectForbiddenError));
+            Assert.That(ex.Message, Does.StartWith(GraphKindOperationPolicy.OperationNotAllowedError));
             Assert.That(effectRequests.Count, Is.Zero);
             Assert.That(world.Get<AttributeBuffer>(entity).GetCurrent(attributeId), Is.EqualTo(10f));
             Assert.That(tagOps.DirtyEntities.Count, Is.Zero);
@@ -288,7 +288,7 @@ namespace Ludots.Tests.GAS
                 new() { Op = (ushort)operation, Imm = 1 },
             };
             var programs = new GraphProgramRegistry();
-            programs.Register(1, program);
+            programs.Register(1, program, GraphKind.Derived);
             var binding = new AttributeDerivedGraphBinding();
             binding.Add(1);
             Entity entity = world.Create(
@@ -303,7 +303,7 @@ namespace Ludots.Tests.GAS
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => system.Update(0f))!;
 
-            Assert.That(ex.Message, Does.StartWith(IDerivedAttributeGraphRuntimeApi.SideEffectForbiddenError));
+            Assert.That(ex.Message, Does.StartWith(GraphKindOperationPolicy.OperationNotAllowedError));
             Assert.That(world.Get<AttributeBuffer>(entity).GetCurrent(attributeId), Is.EqualTo(10f));
             Assert.That(tagOps.DirtyEntities.Count, Is.Zero);
             Assert.That(world.Has<AttributeAggregateDirty>(entity), Is.True);
@@ -323,7 +323,7 @@ namespace Ludots.Tests.GAS
                 new() { Op = (ushort)GraphNodeOp.ApplyEffectTemplate, A = 2, Imm = 123 },
             };
             var programs = new GraphProgramRegistry();
-            programs.Register(1, program);
+            programs.Register(1, program, GraphKind.Derived);
             var binding = new AttributeDerivedGraphBinding();
             binding.Add(1);
             Entity entity = world.Create(
@@ -339,7 +339,7 @@ namespace Ludots.Tests.GAS
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => system.Update(0f))!;
 
-            Assert.That(ex.Message, Does.StartWith("GAS.GRAPH.ERR.DerivedAttributeSideEffectForbidden"));
+            Assert.That(ex.Message, Does.StartWith(GraphKindOperationPolicy.OperationNotAllowedError));
             Assert.That(world.Get<AttributeBuffer>(entity).HasAttribute(derivedAttributeId), Is.False);
             Assert.That(world.Get<AttributeBuffer>(entity).GetCurrent(sourceAttributeId), Is.EqualTo(10f));
             Assert.That(effectRequests.Count, Is.Zero);
@@ -361,7 +361,7 @@ namespace Ludots.Tests.GAS
                 new() { Op = (ushort)GraphNodeOp.WriteBlackboardFloat, A = 2, B = 0, Imm = blackboardKeyId },
             };
             var programs = new GraphProgramRegistry();
-            programs.Register(1, program);
+            programs.Register(1, program, GraphKind.Derived);
             var binding = new AttributeDerivedGraphBinding();
             binding.Add(1);
             Entity entity = world.Create(
@@ -377,7 +377,7 @@ namespace Ludots.Tests.GAS
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => system.Update(0f))!;
 
-            Assert.That(ex.Message, Does.StartWith("GAS.GRAPH.ERR.DerivedAttributeSideEffectForbidden"));
+            Assert.That(ex.Message, Does.StartWith(GraphKindOperationPolicy.OperationNotAllowedError));
             Assert.That(world.Get<BlackboardFloatBuffer>(entity).TryGet(blackboardKeyId, out _), Is.False);
             Assert.That(world.Get<AttributeBuffer>(entity).GetCurrent(sourceAttributeId), Is.EqualTo(10f));
             Assert.That(tagOps.DirtyEntities.Count, Is.Zero);
@@ -399,14 +399,14 @@ namespace Ludots.Tests.GAS
                 new() { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 1, ImmF = 2f },
                 new() { Op = (ushort)GraphNodeOp.MulFloat, Dst = 2, A = 0, B = 1 },
                 new() { Op = (ushort)GraphNodeOp.WriteSelfAttribute, A = 2, Imm = intermediateAttributeId },
-            });
+            }, GraphKind.Derived);
             programs.Register(2, new GraphInstruction[]
             {
                 new() { Op = (ushort)GraphNodeOp.LoadSelfAttribute, Dst = 0, Imm = intermediateAttributeId },
                 new() { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 1, ImmF = 3f },
                 new() { Op = (ushort)GraphNodeOp.AddFloat, Dst = 2, A = 0, B = 1 },
                 new() { Op = (ushort)GraphNodeOp.WriteSelfAttribute, A = 2, Imm = resultAttributeId },
-            });
+            }, GraphKind.Derived);
             var binding = new AttributeDerivedGraphBinding();
             binding.Add(1);
             binding.Add(2);
@@ -478,7 +478,7 @@ namespace Ludots.Tests.GAS
             };
 
             var registry = new GraphProgramRegistry();
-            registry.Register(1, program);
+            registry.Register(1, program, GraphKind.Derived);
 
             var binding = new AttributeDerivedGraphBinding();
             binding.Add(1);
@@ -544,7 +544,7 @@ namespace Ludots.Tests.GAS
             };
 
             var registry = new GraphProgramRegistry();
-            registry.Register(1, program);
+            registry.Register(1, program, GraphKind.Derived);
 
             var binding = new AttributeDerivedGraphBinding();
             binding.Add(1);
@@ -623,7 +623,7 @@ namespace Ludots.Tests.GAS
             };
 
             var registry = new GraphProgramRegistry();
-            registry.Register(1, program);
+            registry.Register(1, program, GraphKind.Derived);
 
             var binding = new AttributeDerivedGraphBinding();
             binding.Add(1);

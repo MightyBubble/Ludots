@@ -42,6 +42,7 @@ using Ludots.Core.Map;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Modding;
+using Ludots.Core.Movement;
 using Ludots.Core.Navigation.GraphCore;
 using Ludots.Core.Navigation.GraphWorld;
 using Ludots.Core.Navigation.AgentProfiles;
@@ -102,6 +103,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<TimeFlowService> TimeFlow = new("TimeFlow");
         public static readonly ServiceKey<TriggerDecoratorRegistry> TriggerDecoratorRegistry = new("TriggerDecoratorRegistry");
         public static readonly ServiceKey<SaveParticipantRegistry> SaveParticipants = new("SaveParticipants");
+        public static readonly ServiceKey<PoseAuthorityArbiter> PoseAuthorityArbiter = new("PoseAuthorityArbiter");
 
         // --- Map ---
         public static readonly ServiceKey<MapId> MapId = new("MapId");
@@ -287,6 +289,9 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<Physics2DBroadphasePolicy> Physics2DBroadphasePolicy = new("Physics2DBroadphasePolicy");
         public static readonly ServiceKey<object> Physics2DShapeStorage = new("Physics2D.ShapeStorage");
         public static readonly ServiceKey<Physics2DController> Physics2DController = new("Physics2DController");
+        public static readonly ServiceKey<Physics2DKinematicConfig> Physics2DKinematicConfig = new("Physics2DKinematicConfig");
+        public static readonly ServiceKey<Ludots.Core.Physics2D.KinematicTargetPoseBuffer2D> Physics2DKinematicPoseBuffer = new("Physics2D.KinematicPoseBuffer");
+        public static readonly ServiceKey<Ludots.Core.Physics2D.ContactEventQueue2D> Physics2DContactEvents = new("Physics2D.ContactEvents");
 
         // --- Presentation ---
         public static readonly ServiceKey<PresentationEventStream> PresentationEventStream = new("PresentationEventStream");

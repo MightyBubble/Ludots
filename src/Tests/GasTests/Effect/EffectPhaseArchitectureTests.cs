@@ -166,27 +166,10 @@ namespace Ludots.Tests.GAS
                 var templates = new EffectTemplateRegistry();
                 var handlers = GasGraphOpHandlerTable.Instance;
 
-                // Graph programs that write to F[0], F[1], F[2] respectively
-                // to record execution order
+                // Graph programs that write BB floats to prove Pre → Main → Post ordering.
                 int preGraphId = 1;
                 int mainGraphId = 2;
                 int postGraphId = 3;
-
-                // Pre: F[0] = 1.0
-                programs.Register(preGraphId, new[]
-                {
-                    new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = 1.0f }
-                });
-                // Main: F[1] = 2.0
-                programs.Register(mainGraphId, new[]
-                {
-                    new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 1, ImmF = 2.0f }
-                });
-                // Post: F[2] = F[0] + F[1] (should be 3.0 only if Pre and Main ran before)
-                programs.Register(postGraphId, new[]
-                {
-                    new GraphInstruction { Op = (ushort)GraphNodeOp.AddFloat, Dst = 2, A = 0, B = 1 }
-                });
 
                 // Preset: Main graph for OnApply
                 var ptDef = new PresetTypeDefinition { Type = EffectPresetType.None };
@@ -202,37 +185,15 @@ namespace Ludots.Tests.GAS
                 var api = new GasGraphRuntimeApi(world, null, null, null);
                 var caster = world.Create();
                 var target = world.Create();
-
-                // We can't directly observe internal registers, but we CAN use a different approach:
-                // Execute and verify via Blackboard writes.
-                // For simplicity, we use a graph that writes BB values to prove ordering.
-
-                // Redesign: Each graph writes a BB float on the target entity to record order
                 world.Add(target, new BlackboardFloatBuffer());
 
-                int bbKeyOrder = 1;
-                // Pre: write BB float key=1 value=10
-                programs.Register(preGraphId, new[]
-                {
-                    new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = 10f },
-                    new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 0 },
-                    new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardFloat, A = 0, Imm = bbKeyOrder, B = 0 }
-                });
-                // Hmm, register collision — entity registers and float registers are separate.
-                // E[0] = LoadExplicitTarget → entity register 0
-                // F[0] = ConstFloat → float register 0
-                // WriteBlackboardFloat: E[A] = E[0], Imm = keyId, F[B] = F[0]
-                // But the above has issue: Dst=0 for ConstFloat writes F[0],
-                // then Dst=0 for LoadExplicitTarget writes E[0] — they are different register files. OK.
-
-                // Let me re-do this more carefully:
                 // Pre graph: F[0]=10.0, E[0]=target, BB.write(E[0], key=1, F[0])
                 programs.Register(preGraphId, new[]
                 {
                     new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = 10f },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 0 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardFloat, A = 0, Imm = 1, B = 0 },
-                });
+                }, GraphKind.Effect);
                 // Main graph: read BB key=1 into F[1], add 20, write back to BB key=1
                 programs.Register(mainGraphId, new[]
                 {
@@ -241,7 +202,7 @@ namespace Ludots.Tests.GAS
                     new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 2, ImmF = 20f },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.AddFloat, Dst = 3, A = 1, B = 2 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardFloat, A = 0, Imm = 1, B = 3 },
-                });
+                }, GraphKind.Effect);
                 // Post graph: read BB key=1 into F[1], add 30, write back to BB key=1
                 programs.Register(postGraphId, new[]
                 {
@@ -250,7 +211,7 @@ namespace Ludots.Tests.GAS
                     new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 2, ImmF = 30f },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.AddFloat, Dst = 3, A = 1, B = 2 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardFloat, A = 0, Imm = 1, B = 3 },
-                });
+                }, GraphKind.Effect);
 
                 executor.ExecutePhase(world, api, caster, target, default, default,
                     EffectPhaseId.OnApply, in behavior, EffectPresetType.None);
@@ -291,14 +252,14 @@ namespace Ludots.Tests.GAS
                     new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = 5f },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 0 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardFloat, A = 0, Imm = 1, B = 0 },
-                });
+                }, GraphKind.Effect);
                 // Main: would write BB key=1 = 999.0 (should NOT run)
                 programs.Register(mainGraphId, new[]
                 {
                     new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = 999f },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 0 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardFloat, A = 0, Imm = 1, B = 0 },
-                });
+                }, GraphKind.Effect);
                 // Post: read BB key=1 into F[1], add 100, write back
                 programs.Register(postGraphId, new[]
                 {
@@ -307,7 +268,7 @@ namespace Ludots.Tests.GAS
                     new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 2, ImmF = 100f },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.AddFloat, Dst = 3, A = 1, B = 2 },
                     new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardFloat, A = 0, Imm = 1, B = 3 },
-                });
+                }, GraphKind.Effect);
 
                 var ptDef = new PresetTypeDefinition { Type = EffectPresetType.None };
                 ptDef.DefaultPhaseHandlers[EffectPhaseId.OnApply] = PhaseHandler.Graph(mainGraphId);
@@ -415,7 +376,7 @@ namespace Ludots.Tests.GAS
             {
                 new GraphInstruction { Op = (ushort)GraphNodeOp.LoadConfigInt, Dst = 0, Imm = configKey },
                 new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardInt, A = 1, B = 0, Imm = blackboardKey },
-            });
+            }, GraphKind.Effect);
             var behavior = new EffectPhaseGraphBindings();
             behavior.TryAddStep(EffectPhaseId.OnApply, PhaseSlot.Pre, graphId);
             var mergedConfig = new EffectConfigParams();
@@ -474,7 +435,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void PhaseExecutor_ValidationResult_DefaultsToPassWhenGraphDoesNotWriteB0()
+        public void PhaseExecutor_ValidationResult_DefaultsToRejectWhenGraphDoesNotWriteB0()
         {
             using var world = World.Create();
             var programs = new GraphProgramRegistry();
@@ -489,7 +450,7 @@ namespace Ludots.Tests.GAS
             programs.Register(graphId, new[]
             {
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 2, ImmF = 7f },
-            });
+            }, GraphKind.Validation);
 
             var behavior = new EffectPhaseGraphBindings();
             behavior.TryAddStep(EffectPhaseId.OnPropose, PhaseSlot.Pre, graphId);
@@ -508,7 +469,38 @@ namespace Ludots.Tests.GAS
                 0,
                 default);
 
-            That(accepted, Is.True, "OnPropose validation should pass unless graph explicitly writes B[0]=0.");
+            That(accepted, Is.False, "OnPropose validation must fail closed unless graph explicitly writes B[0]=1.");
+        }
+
+        [Test]
+        public void PhaseExecutor_ValidationResult_VacantPhasePasses()
+        {
+            using var world = World.Create();
+            var programs = new GraphProgramRegistry();
+            var presetTypes = new PresetTypeRegistry();
+            var builtinHandlers = new BuiltinHandlerRegistry();
+            var templates = new EffectTemplateRegistry();
+            var executor = new EffectPhaseExecutor(programs, presetTypes, builtinHandlers, GasGraphOpHandlerTable.Instance, templates);
+            var api = new GasGraphRuntimeApi(world, null, null, null);
+            var caster = world.Create();
+            var target = world.Create();
+            var behavior = new EffectPhaseGraphBindings();
+
+            bool accepted = executor.ExecutePhaseWithValidationResult(
+                world,
+                api,
+                caster,
+                target,
+                target,
+                default,
+                EffectPhaseId.OnPropose,
+                in behavior,
+                EffectPresetType.None,
+                0,
+                0,
+                default);
+
+            That(accepted, Is.True, "Vacant OnPropose phases have no validating graph work and must pass.");
         }
 
         [Test]

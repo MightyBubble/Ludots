@@ -593,16 +593,34 @@ namespace Ludots.Tests.GAS
             GC.Collect();
             GC.WaitForPendingFinalizers();
             GC.Collect();
+            long allocated = MeasureAttributeCostExecutionAllocations(
+                fixture.Runtime,
+                operationId,
+                in context,
+                out int succeeded);
+            That(succeeded, Is.EqualTo(512));
+            That(allocated, Is.EqualTo(0), "Exchange AttributeCost hot path must allocate 0 bytes after warmup.");
+        }
+
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        private static long MeasureAttributeCostExecutionAllocations(
+            ExchangeRuntime runtime,
+            int operationId,
+            in ExchangeExecutionContext context,
+            out int succeeded)
+        {
             GC.GetAllocatedBytesForCurrentThread();
             long before = GC.GetAllocatedBytesForCurrentThread();
-
+            succeeded = 0;
             for (int i = 0; i < 512; i++)
             {
-                fixture.Runtime.TryExecute(operationId, in context);
+                if (runtime.TryExecute(operationId, in context).Succeeded)
+                {
+                    succeeded++;
+                }
             }
 
-            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
-            That(allocated, Is.EqualTo(0), "Exchange AttributeCost hot path must allocate 0 bytes after warmup.");
+            return GC.GetAllocatedBytesForCurrentThread() - before;
         }
 
         [Test]

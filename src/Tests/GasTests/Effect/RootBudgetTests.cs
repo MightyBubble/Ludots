@@ -63,6 +63,48 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void EffectPhaseTransaction_Rollback_RestoresRootBudgetConsumption()
+        {
+            using var world = World.Create();
+            var budget = new RootBudgetTable(capacity: 8);
+            using var transaction = new EffectPhaseSideEffectTransaction(
+                world,
+                tagOps: null,
+                effectRequests: null,
+                spawnRequests: null,
+                presentationEvents: null,
+                attributeEntityCapacity: 4,
+                rootBudget: budget);
+
+            transaction.Begin();
+            That(budget.TryConsume(rootId: 77, limit: 1), Is.True);
+            transaction.Rollback();
+
+            That(budget.TryConsume(rootId: 77, limit: 1), Is.True);
+        }
+
+        [Test]
+        public void EffectPhaseTransaction_Commit_PreservesRootBudgetConsumption()
+        {
+            using var world = World.Create();
+            var budget = new RootBudgetTable(capacity: 8);
+            using var transaction = new EffectPhaseSideEffectTransaction(
+                world,
+                tagOps: null,
+                effectRequests: null,
+                spawnRequests: null,
+                presentationEvents: null,
+                attributeEntityCapacity: 4,
+                rootBudget: budget);
+
+            transaction.Begin();
+            That(budget.TryConsume(rootId: 88, limit: 1), Is.True);
+            transaction.Commit();
+
+            That(budget.TryConsume(rootId: 88, limit: 1), Is.False);
+        }
+
+        [Test]
         public void TargetResolverFanOut_WhenRootBudgetExceeded_ThrowsBeforeDroppingTarget()
         {
             using var world = World.Create();
@@ -130,6 +172,7 @@ namespace Ludots.Tests.GAS
                     PresetType = EffectPresetType.None,
                     LifetimeKind = EffectLifetimeKind.Instant,
                 });
+                _ = FinalizeTemplates(templates);
                 var proposal = new EffectProposalProcessingSystem(
                     world,
                     requests,
@@ -189,7 +232,7 @@ namespace Ludots.Tests.GAS
             {
                 Type = EffectPresetType.InstantDamage,
                 Components = ComponentFlags.ModifierParams,
-                ActivePhases = PhaseFlags.InstantCore,
+                ActivePhases = PhaseFlags.OnApply,
                 AllowedLifetimes = LifetimeFlags.InstantOnly,
             };
             preset.DefaultPhaseHandlers[EffectPhaseId.OnApply] = PhaseHandler.Builtin(BuiltinHandlerId.ApplyModifiers);
@@ -197,12 +240,12 @@ namespace Ludots.Tests.GAS
 
             var builtinHandlers = new BuiltinHandlerRegistry();
             BuiltinHandlers.RegisterAll(builtinHandlers);
-            var phaseExecutor = new EffectPhaseExecutor(
-                new GraphProgramRegistry(),
+            var graphPrograms = new GraphProgramRegistry();
+            var phaseExecutor = FinalizeTemplates(
+                templates,
                 presetTypes,
                 builtinHandlers,
-                GasGraphOpHandlerTable.Instance,
-                templates);
+                graphPrograms);
             var tagOps = CreateTagOps();
             var graphApi = new GasGraphRuntimeApi(world, spatialQueries: null, coords: null, eventBus: null, tagOps: tagOps);
             var requests = new EffectRequestQueue();
@@ -263,6 +306,12 @@ namespace Ludots.Tests.GAS
                 LifetimeKind = EffectLifetimeKind.Instant,
                 Modifiers = modifiers,
             });
+            var instantDamagePreset = CreateModifierPreset(
+                EffectPresetType.InstantDamage,
+                ComponentFlags.ModifierParams,
+                PhaseFlags.OnApply,
+                LifetimeFlags.InstantOnly);
+            _ = FinalizeTemplates(templates, in instantDamagePreset);
 
             var proposal = new EffectProposalProcessingSystem(
                 world,
@@ -319,6 +368,12 @@ namespace Ludots.Tests.GAS
                 ParticipatesInResponse = true,
                 Modifiers = modifiers,
             });
+            var instantDamagePreset = CreateModifierPreset(
+                EffectPresetType.InstantDamage,
+                ComponentFlags.ModifierParams,
+                PhaseFlags.OnApply,
+                LifetimeFlags.InstantOnly);
+            _ = FinalizeTemplates(templates, in instantDamagePreset);
 
             var loop = new EffectProcessingLoopSystem(
                 world,
@@ -488,6 +543,12 @@ namespace Ludots.Tests.GAS
                 StackOverflowPolicy = StackOverflowPolicy.RejectNew,
                 StackLimit = 5,
             });
+            var dotPreset = CreateModifierPreset(
+                EffectPresetType.DoT,
+                ComponentFlags.ModifierParams | ComponentFlags.DurationParams,
+                PhaseFlags.OnApply | PhaseFlags.OnPeriod,
+                LifetimeFlags.After);
+            _ = FinalizeTemplates(templates, in dotPreset);
 
             requests.Publish(new EffectRequest
             {
@@ -592,9 +653,20 @@ namespace Ludots.Tests.GAS
                         priority: 0), Is.True);
                 }
 
+                var api = new GasGraphRuntimeApi(world, eventBus: eventBus);
+                using var transaction = new EffectPhaseSideEffectTransaction(
+                    world,
+                    tagOps: null,
+                    effectRequests: null,
+                    spawnRequests: null,
+                    presentationEvents: null,
+                    attributeEntityCapacity: 2);
+                transaction.Begin();
+                api.BeginEffectSideEffectTransaction(transaction);
+
                 executor.DispatchPhaseListeners(
                     world,
-                    api: null!,
+                    api,
                     caster: caster,
                     target: target,
                     targetContext: default,
@@ -602,6 +674,8 @@ namespace Ludots.Tests.GAS
                     phase: EffectPhaseId.OnApply,
                     effectTagId: 1,
                     effectTemplateId: 1);
+                transaction.Commit();
+                api.EndEffectSideEffectTransaction(transaction);
 
                 eventBus.Update();
 
@@ -629,6 +703,74 @@ namespace Ludots.Tests.GAS
                 bus.Publish(new GameplayEvent { TagId = GasConstants.MAX_GAMEPLAY_EVENTS_PER_FRAME + 1 }));
 
             That(error!.Message, Does.StartWith(GameplayEventBus.CapacityExceededError));
+        }
+
+        private static EffectPhaseExecutor FinalizeTemplates(EffectTemplateRegistry templates)
+        {
+            return FinalizeTemplates(templates, new PresetTypeRegistry());
+        }
+
+        private static EffectPhaseExecutor FinalizeTemplates(
+            EffectTemplateRegistry templates,
+            in PresetTypeDefinition preset)
+        {
+            var presetTypes = new PresetTypeRegistry();
+            presetTypes.Register(in preset);
+            return FinalizeTemplates(templates, presetTypes);
+        }
+
+        private static EffectPhaseExecutor FinalizeTemplates(
+            EffectTemplateRegistry templates,
+            PresetTypeRegistry presetTypes)
+        {
+            var builtinHandlers = new BuiltinHandlerRegistry();
+            BuiltinHandlers.RegisterAll(builtinHandlers);
+            return FinalizeTemplates(templates, presetTypes, builtinHandlers, new GraphProgramRegistry());
+        }
+
+        private static EffectPhaseExecutor FinalizeTemplates(
+            EffectTemplateRegistry templates,
+            PresetTypeRegistry presetTypes,
+            BuiltinHandlerRegistry builtinHandlers,
+            GraphProgramRegistry graphPrograms)
+        {
+            EffectExecutionPlanCompiler.FinalizeAll(
+                templates,
+                presetTypes,
+                builtinHandlers,
+                graphPrograms,
+                GasGraphOpHandlerTable.Instance,
+                "Test/RootBudgetTests.cs");
+            return new EffectPhaseExecutor(
+                graphPrograms,
+                presetTypes,
+                builtinHandlers,
+                GasGraphOpHandlerTable.Instance,
+                templates);
+        }
+
+        private static PresetTypeDefinition CreateModifierPreset(
+            EffectPresetType type,
+            ComponentFlags components,
+            PhaseFlags activePhases,
+            LifetimeFlags allowedLifetimes)
+        {
+            var preset = new PresetTypeDefinition
+            {
+                Type = type,
+                Components = components,
+                ActivePhases = activePhases,
+                AllowedLifetimes = allowedLifetimes,
+            };
+            if (activePhases.Has(EffectPhaseId.OnApply))
+            {
+                preset.DefaultPhaseHandlers[EffectPhaseId.OnApply] = PhaseHandler.Builtin(BuiltinHandlerId.ApplyModifiers);
+            }
+            if (activePhases.Has(EffectPhaseId.OnPeriod))
+            {
+                preset.DefaultPhaseHandlers[EffectPhaseId.OnPeriod] = PhaseHandler.Builtin(BuiltinHandlerId.ApplyModifiers);
+            }
+            return preset;
         }
     }
 }

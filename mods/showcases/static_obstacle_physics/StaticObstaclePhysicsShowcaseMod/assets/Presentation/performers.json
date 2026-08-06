@@ -3,8 +3,13 @@
     "id": "static_obstacle_physics_compound_blocker_bootstrap",
     "rules": [
       {
-        "event": { "kind": "EntitySpawned", "key": "static_obstacle_physics_compound_blocker" },
-        "condition": { "inline": "SourceHasVisualTransform" },
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "static_obstacle_physics_compound_blocker"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
         "command": {
           "kind": "CreatePerformer",
           "definitionId": "static_obstacle_physics_compound_blocker_visual",
@@ -12,7 +17,10 @@
         }
       },
       {
-        "event": { "kind": "EntityDestroyed", "key": "static_obstacle_physics_compound_blocker" },
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "static_obstacle_physics_compound_blocker"
+        },
         "command": {
           "kind": "DestroyPerformerScope",
           "scopeSource": "EventPayloadA"
@@ -22,7 +30,6 @@
   },
   {
     "id": "static_obstacle_physics_compound_blocker_visual",
-    "defaultColor": [0.33, 0.68, 0.78, 1.0],
     "behaviors": [
       {
         "slot": "body",
@@ -34,7 +41,19 @@
           "materialId": "default_surface",
           "renderPath": "InstancedStaticMesh",
           "mobility": "Static",
-          "localScale": [2.6, 0.65, 1.45]
+          "localScale": [
+            2.6,
+            0.65,
+            1.45
+          ]
+        },
+        "style": {
+          "color": [
+            0.33,
+            0.68,
+            0.78,
+            1
+          ]
         }
       },
       {
@@ -43,14 +62,19 @@
         "activeByDefault": true,
         "minimapMarker": {
           "shape": "Circle",
-          "color": [0.33, 0.68, 0.78, 1.0],
-          "sizePx": 2.0,
+          "color": [
+            0.33,
+            0.68,
+            0.78,
+            1
+          ],
+          "sizePx": 2,
           "colorParamKey": "none",
           "sizeParamKey": "none",
           "visibilityParamKey": "none",
           "orientationMode": "PerformerForward",
           "orientationParamKey": "none",
-          "orientationOffsetRad": 0.0,
+          "orientationOffsetRad": 0,
           "orientationLengthPx": 2.5
         }
       }

@@ -310,7 +310,7 @@ namespace EntityCommandPanelMod.Runtime
                 switch (kind)
                 {
                     case GasPanelGroupKind.Current:
-                        effective = AbilitySlotResolver.Resolve(
+                        AbilitySlotResolver.TryResolve(
                             in baseSlots,
                             in formSlots,
                             hasFormSlots,
@@ -318,7 +318,8 @@ namespace EntityCommandPanelMod.Runtime
                             hasItemGrantedSlots,
                             in grantedSlots,
                             hasGrantedSlots,
-                            slotIndex);
+                            slotIndex,
+                            out effective);
                         if (hasFormSlots && formSlots.HasOverride(slotIndex))
                         {
                             flags |= EntityCommandSlotStateFlags.FormOverride;
@@ -1501,15 +1502,9 @@ namespace EntityCommandPanelMod.Runtime
 
         private AbilitySlotState ResolveEffectiveSlot(Entity target, in AbilityStateBuffer baseSlots, int slotIndex)
         {
-            bool hasForm = _engine.World.Has<AbilityFormSlotBuffer>(target);
-            AbilityFormSlotBuffer formSlots = hasForm ? _engine.World.Get<AbilityFormSlotBuffer>(target) : default;
-            bool hasItemGranted = _engine.World.Has<Ludots.Core.Gameplay.Items.ItemGrantedSlotBuffer>(target);
-            Ludots.Core.Gameplay.Items.ItemGrantedSlotBuffer itemGrantedSlots = hasItemGranted
-                ? _engine.World.Get<Ludots.Core.Gameplay.Items.ItemGrantedSlotBuffer>(target)
+            return AbilitySlotResolver.TryResolve(_engine.World, target, slotIndex, out AbilitySlotState slot)
+                ? slot
                 : default;
-            bool hasGranted = _engine.World.Has<GrantedSlotBuffer>(target);
-            GrantedSlotBuffer grantedSlots = hasGranted ? _engine.World.Get<GrantedSlotBuffer>(target) : default;
-            return AbilitySlotResolver.Resolve(in baseSlots, in formSlots, hasForm, in itemGrantedSlots, hasItemGranted, in grantedSlots, hasGranted, slotIndex);
         }
 
         private Entity ResolveTemplateEntity(in AbilitySlotState slot)

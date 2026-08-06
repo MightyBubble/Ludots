@@ -389,7 +389,13 @@ namespace Ludots.Core.Input.Interaction
 
         internal static void SplitSlotKey(string key, string path, out string templateKey, out int slotIndex)
         {
-            int separator = key?.LastIndexOf('/') ?? -1;
+            if (string.IsNullOrEmpty(key))
+            {
+                throw new InvalidOperationException(
+                    $"{path} must use the '<templateKey>/<slotIndex>' slot key format; got '{key}'.");
+            }
+
+            int separator = key.LastIndexOf('/');
             if (separator <= 0 || separator >= key.Length - 1 ||
                 !int.TryParse(key[(separator + 1)..], NumberStyles.None, CultureInfo.InvariantCulture, out slotIndex))
             {

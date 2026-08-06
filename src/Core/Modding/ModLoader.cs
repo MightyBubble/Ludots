@@ -434,7 +434,11 @@ namespace Ludots.Core.Modding
                     var modType = allTypes.FirstOrDefault(t => typeof(IMod).IsAssignableFrom(t) && !t.IsInterface && !t.IsAbstract);
                     if (modType != null)
                     {
-                        var modInstance = (IMod)Activator.CreateInstance(modType);
+                        if (Activator.CreateInstance(modType) is not IMod modInstance)
+                        {
+                            throw new InvalidOperationException(
+                                $"Mod entry type '{modType.FullName}' for '{manifest.Name}' could not be instantiated.");
+                        }
                         Log.Info(in LogChannels.ModLoader, $"Instantiated entry for {manifest.Name}. Calling OnLoad...");
                         var context = new ModContext(manifest.Name, _vfs, _functionRegistry, _triggerManager, _systemFactoryRegistry, _triggerDecoratorRegistry);
                         modInstance.OnLoad(context);

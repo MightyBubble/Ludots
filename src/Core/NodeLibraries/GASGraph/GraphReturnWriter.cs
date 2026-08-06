@@ -46,6 +46,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 throw new InvalidOperationException($"Graph return writer references unknown graph program id {graphId}.");
             }
 
+            _programs.RequireKind(graphId, GraphKind.Query);
+            GraphKindOperationPolicy.RequireAllowed(
+                GraphKind.Query,
+                program,
+                _handlers,
+                graphId,
+                nameof(GraphReturnWriter));
+
             GraphOutputSchema schema = _schemas.Get(graphId);
             if (!schema.HasBindings)
             {

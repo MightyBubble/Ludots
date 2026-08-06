@@ -271,18 +271,14 @@ namespace Ludots.Tests.Presentation
                 @"[
   {
     ""id"": ""entity_world_text"",
-    ""worldTextMode"": ""AttributeCurrentOverBase"",
     ""behaviors"": [
       {
         ""slot"": ""body"",
-        ""kind"": ""AssetBinding"",
+        ""kind"": ""WorldText"",
         ""activeByDefault"": true,
-        ""assetBinding"": {
-          ""assetKind"": ""WorldText"",
-          ""assetId"": ""hud.current_over_base"",
-          ""renderPath"": ""None"",
-          ""mobility"": ""Movable"",
-          ""localScale"": [1, 1, 1]
+        ""worldText"": {
+          ""textToken"": ""hud.current_over_base"",
+          ""mode"": ""AttributeCurrentOverBase""
         }
       }
     ],
@@ -323,7 +319,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void PerformerDefinitionConfigLoader_ParsesAssetBindingAndSemanticParamBindings()
+        public void PerformerDefinitionConfigLoader_ParsesAssetAndAttributeBindingBehaviors()
         {
             WriteFile("Core", "config_catalog.json",
                 @"[{ ""Path"": ""Presentation/performers.json"", ""Policy"": ""ArrayById"", ""IdField"": ""id"" }]");
@@ -344,10 +340,17 @@ namespace Ludots.Tests.Presentation
           ""mobility"": ""Movable"",
           ""colorParamKey"": ""decal.tint""
         }
+      },
+      {
+        ""slot"": ""attribute"",
+        ""kind"": ""AttributeBinding"",
+        ""activeByDefault"": true,
+        ""attributeBinding"": {
+          ""attributeId"": ""burn"",
+          ""targetParamKey"": ""decal.intensity"",
+          ""mode"": ""Attribute""
+        }
       }
-    ],
-    ""bindings"": [
-      { ""paramKey"": ""decal.intensity"", ""source"": ""attribute"", ""attributeId"": ""burn"" }
     ]
   }
 ]");
@@ -366,7 +369,7 @@ namespace Ludots.Tests.Presentation
 
             int defId = registry.GetId("scorch_decal");
             Assert.That(registry.TryGet(defId, out var def), Is.True);
-            Assert.That(def.Behaviors, Has.Length.EqualTo(1));
+            Assert.That(def.Behaviors, Has.Length.EqualTo(2));
             Assert.That(def.Behaviors[0].SlotIndex, Is.EqualTo(0));
             Assert.That(def.Behaviors[0].Kind, Is.EqualTo(BehaviorKind.AssetBinding));
             Assert.That(def.Behaviors[0].ActiveByDefault, Is.True);
@@ -378,10 +381,11 @@ namespace Ludots.Tests.Presentation
             Assert.That(
                 def.Behaviors[0].AssetBinding.ColorParamKey,
                 Is.EqualTo(PerformerParamKeyRegistry.Register("decal.tint")));
-            Assert.That(def.Bindings, Has.Length.EqualTo(1));
-            Assert.That(def.Bindings[0].ParamKey, Is.EqualTo(PerformerParamKeyRegistry.Register("decal.intensity")));
-            Assert.That(def.Bindings[0].Value.Source, Is.EqualTo(ValueSourceKind.Attribute));
-            Assert.That(def.Bindings[0].Value.SourceId, Is.EqualTo(9));
+            Assert.That(def.Bindings, Is.Empty);
+            Assert.That(def.Behaviors[1].Kind, Is.EqualTo(BehaviorKind.AttributeBinding));
+            Assert.That(def.Behaviors[1].AttributeBinding.AttributeId, Is.EqualTo(9));
+            Assert.That(def.Behaviors[1].AttributeBinding.TargetParamKey, Is.EqualTo(PerformerParamKeyRegistry.Register("decal.intensity")));
+            Assert.That(def.Behaviors[1].AttributeBinding.Mode, Is.EqualTo(ValueSourceKind.Attribute));
         }
 
         [Test]
