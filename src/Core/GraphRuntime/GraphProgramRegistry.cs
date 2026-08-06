@@ -84,6 +84,7 @@ namespace Ludots.Core.GraphRuntime
         {
             if (graphId <= 0) throw new ArgumentOutOfRangeException(nameof(graphId));
             if (program == null) throw new ArgumentNullException(nameof(program));
+            ValidateProgramLength(program);
             if (kind == GraphKind.None || !Enum.IsDefined(typeof(GraphKind), kind))
             {
                 throw new ArgumentOutOfRangeException(nameof(kind), kind, "Graph registration requires an explicit supported kind.");
@@ -101,7 +102,6 @@ namespace Ludots.Core.GraphRuntime
             {
                 _sourceMaps[graphId] = sourceMap;
             }
-
             try
             {
                 EnsureProgramValid(graphId, program, kind);
@@ -138,6 +138,7 @@ namespace Ludots.Core.GraphRuntime
         {
             if (graphId <= 0) throw new ArgumentOutOfRangeException(nameof(graphId));
             if (program == null) throw new ArgumentNullException(nameof(program));
+            ValidateProgramLength(program);
             if (kind == GraphKind.None || !Enum.IsDefined(typeof(GraphKind), kind))
             {
                 throw new ArgumentOutOfRangeException(nameof(kind), kind, "Graph replace requires an explicit supported kind.");
@@ -412,6 +413,22 @@ namespace Ludots.Core.GraphRuntime
                     throw new InvalidOperationException(
                         $"InvokeScript target graph id {targetGraphId} must be Script, but is '{target.Kind}'.");
                 }
+            }
+        }
+
+        private static void ValidateProgramLength(GraphInstruction[] program)
+        {
+            if (program.Length == 0)
+            {
+                throw new ArgumentException("Graph program must contain at least one instruction.", nameof(program));
+            }
+
+            if (program.Length > GraphVmRuntimeLimits.MaxInstructions)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(program),
+                    program.Length,
+                    $"Graph program length {program.Length} exceeds max {GraphVmRuntimeLimits.MaxInstructions}.");
             }
         }
 
