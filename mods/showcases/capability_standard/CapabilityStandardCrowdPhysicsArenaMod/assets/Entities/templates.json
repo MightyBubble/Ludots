@@ -104,7 +104,10 @@
         }
       },
       "CrowdPhysicsArena.RigidBody": {
-        "positionCm": { "x": 0, "y": 0 },
+        "positionCm": {
+          "x": 0,
+          "y": 0
+        },
         "bodyType": "Kinematic",
         "shape": {
           "type": "Circle",
@@ -158,7 +161,10 @@
         }
       },
       "CrowdPhysicsArena.RigidBody": {
-        "positionCm": { "x": 0, "y": 0 },
+        "positionCm": {
+          "x": 0,
+          "y": 0
+        },
         "bodyType": "Kinematic",
         "shape": {
           "type": "Circle",
@@ -212,7 +218,10 @@
         }
       },
       "CrowdPhysicsArena.RigidBody": {
-        "positionCm": { "x": 0, "y": 0 },
+        "positionCm": {
+          "x": 0,
+          "y": 0
+        },
         "bodyType": "Kinematic",
         "shape": {
           "type": "Circle",
@@ -266,7 +275,10 @@
         }
       },
       "CrowdPhysicsArena.RigidBody": {
-        "positionCm": { "x": 0, "y": 0 },
+        "positionCm": {
+          "x": 0,
+          "y": 0
+        },
         "bodyType": "Kinematic",
         "shape": {
           "type": "Circle",
@@ -291,7 +303,10 @@
         ]
       },
       "CrowdPhysicsArena.RigidBody": {
-        "positionCm": { "x": 0, "y": 0 },
+        "positionCm": {
+          "x": 0,
+          "y": 0
+        },
         "bodyType": "Dynamic",
         "inverseMass": 0.01,
         "shape": {
@@ -323,10 +338,16 @@
         ]
       },
       "CrowdPhysicsArena.RigidBody": {
-        "positionCm": { "x": 0, "y": 0 },
+        "positionCm": {
+          "x": 0,
+          "y": 0
+        },
         "bodyType": "Dynamic",
         "inverseMass": 0.002,
-        "velocityCmPerSec": { "x": -900, "y": 0 },
+        "velocityCmPerSec": {
+          "x": -900,
+          "y": 0
+        },
         "shape": {
           "type": "Circle",
           "radiusCm": 120
@@ -355,48 +376,18 @@
         ]
       },
       "CrowdPhysicsArena.RigidBody": {
-        "positionCm": { "x": 0, "y": 0 },
-        "bodyType": "Dynamic",
-        "inverseMass": 0.001,
+        "positionCm": {
+          "x": 0,
+          "y": 0
+        },
+        "bodyType": "Static",
         "shape": {
           "type": "Box",
           "halfWidthCm": 150,
           "halfHeightCm": 150
-        },
-        "material": {
-          "friction": 0.8,
-          "restitution": 0.0,
-          "baseDamping": 0.5
         }
       },
-      "CrowdPhysicsArena.ContactEventEmitter": {},
-      "CrowdPhysicsArena.PlateAnchor": {}
-    }
-  },
-  {
-    "id": "crowd_arena_plate_socket_wall",
-    "components": {
-      "Name": {
-        "Value": "CrowdPhysicsArena.PlateSocketWall"
-      },
-      "SpatialPartitionExcluded": {},
-      "EntityLayer": {
-        "category": [
-          "arena.wall"
-        ],
-        "mask": [
-          "arena.wall"
-        ]
-      },
-      "CrowdPhysicsArena.RigidBody": {
-        "positionCm": { "x": 0, "y": 0 },
-        "bodyType": "Static",
-        "shape": {
-          "type": "Box",
-          "halfWidthCm": 40,
-          "halfHeightCm": 40
-        }
-      }
+      "CrowdPhysicsArena.ContactEventEmitter": {}
     }
   },
   {

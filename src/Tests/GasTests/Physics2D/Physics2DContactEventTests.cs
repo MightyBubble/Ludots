@@ -201,6 +201,64 @@ namespace GasTests.Physics2D
         }
 
         [Test]
+        public void StaticEmitterPlate_KinematicCrossing_EmitsBeginEndWithoutEverSolving()
+        {
+            using var world = World.Create();
+            var poses = new KinematicTargetPoseBuffer2D(kinematicBodyCapacity: 8);
+            var queue = new ContactEventQueue2D(contactEventQueueCapacity: 64);
+            var plate = CreateStaticBox(world, _shapeStorage, 0, 0, halfCm: 40, emitter: true);
+            var kinematic = CreateKinematicCircle(world, _shapeStorage, -200, 0, radiusCm: 50);
+            world.Add(kinematic, new EntityLayer(_propBit, uint.MaxValue));
+            var simulation = CreateSimulation(world, _shapeStorage, poses, queue);
+
+            var platePoseBefore = world.Get<Position2D>(plate).Value;
+            int beginCount = 0;
+            int endCount = 0;
+            for (int step = 1; step <= 120; step++)
+            {
+                poses.SetKinematicTargetPose(kinematic, Fix64Vec2.FromInt(-200 + step * 8, 0), Fix64.Zero);
+                simulation.Update(1f / 60f);
+                foreach (ContactEvent2D contactEvent in simulation.ContactEvents.DrainEvents())
+                {
+                    if (contactEvent.Type == ContactEventType2D.Begin) beginCount++;
+                    else endCount++;
+                }
+            }
+
+            Assert.That(beginCount, Is.EqualTo(1),
+                "A kinematic body crossing a static emitter must produce exactly one Begin.");
+            Assert.That(endCount, Is.EqualTo(1),
+                "Leaving the static emitter must produce exactly one End.");
+            Assert.That(world.Get<Position2D>(plate).Value, Is.EqualTo(platePoseBefore),
+                "A static sensor must never move.");
+            Assert.That(world.Get<Position2D>(kinematic).Value, Is.EqualTo(Fix64Vec2.FromInt(-200 + 120 * 8, 0)),
+                "Sensor-only pairs must never feed the solver: the kinematic body follows its commanded pose exactly.");
+        }
+
+        [Test]
+        public void StaticWithoutEmitter_KinematicOverlap_CreatesNoPairAndNoEvents()
+        {
+            using var world = World.Create();
+            var poses = new KinematicTargetPoseBuffer2D(kinematicBodyCapacity: 8);
+            var queue = new ContactEventQueue2D(contactEventQueueCapacity: 64);
+            CreateStaticBox(world, _shapeStorage, 0, 0, halfCm: 40, emitter: false);
+            var kinematic = CreateKinematicCircle(world, _shapeStorage, -60, 0, radiusCm: 50);
+            var simulation = CreateSimulation(world, _shapeStorage, poses, queue);
+
+            var activePairQuery = new QueryDescription().WithAll<CollisionPair, ActiveCollisionPairTag>();
+            for (int step = 0; step < 30; step++)
+            {
+                poses.SetKinematicTargetPose(kinematic, Fix64Vec2.FromInt(-60, 0), Fix64.Zero);
+                simulation.Update(1f / 60f);
+                Assert.That(world.CountEntities(in activePairQuery), Is.Zero,
+                    "kinematic×static without an emitter declaration must not even create a broadphase pair.");
+            }
+
+            Assert.That(simulation.ContactEvents.Count, Is.Zero,
+                "kinematic×static without an emitter declaration must never produce contact events.");
+        }
+
+        [Test]
         public void EntityDestroyedMidContact_SynthesizesEndWithoutLeak()
         {
             using var world = World.Create();
@@ -449,6 +507,25 @@ namespace GasTests.Physics2D
                 Velocity2D.Zero,
                 Mass2D.Kinematic,
                 new Collider2D { Type = ColliderType2D.Circle, ShapeDataIndex = shape });
+        }
+
+        private Entity CreateStaticBox(World world, ShapeDataStorage2D shapeStorage, int xCm, int yCm, float halfCm, bool emitter)
+        {
+            int shape = shapeStorage.RegisterBox(halfCm, halfCm);
+            var entity = world.Create(
+                Position2D.FromCm(xCm, yCm),
+                new PreviousPosition2D { Value = Fix64Vec2.FromInt(xCm, yCm) },
+                Rotation2D.Identity,
+                Velocity2D.Zero,
+                Mass2D.Static,
+                new Collider2D { Type = ColliderType2D.Box, ShapeDataIndex = shape });
+            if (emitter)
+            {
+                world.Add(entity, new ContactEventEmitter2D());
+                world.Add(entity, new EntityLayer(_sensorBit, uint.MaxValue));
+            }
+
+            return entity;
         }
 
         private static Entity CreateDynamicBox(World world, ShapeDataStorage2D shapeStorage, int xCm, int yCm, float halfCm)

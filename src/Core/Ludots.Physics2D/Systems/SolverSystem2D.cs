@@ -55,6 +55,8 @@ namespace Ludots.Core.Physics2D.Systems
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Update(ref CollisionPair pair)
             {
+                if (pair.SensorOnly != 0) return;
+
                 if (pair.ContactCount == 0)
                 {
                     pair.AccumulatedNormalImpulse0 = Fix64.Zero;
@@ -87,6 +89,8 @@ namespace Ludots.Core.Physics2D.Systems
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Update(ref CollisionPair pair)
             {
+                if (pair.SensorOnly != 0) return;
+
                 if (pair.ContactCount == 0) return;
 
                 SolveContact0(ref pair, Epsilon);

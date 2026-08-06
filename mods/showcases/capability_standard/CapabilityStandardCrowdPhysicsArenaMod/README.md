@@ -39,13 +39,12 @@ Q 冲击波击退单位、用 E 释放带初速度的巨石。
   `bodyRadiusCm` 同源，桥启动时校验）+ massnav agent。
 - **木箱堆**：通路上的 dynamic 箱体，行军穿越时被推开。物理材质 `baseDamping` 是每固定步的
   速度保留系数（`IntegrationSystem2D` 中 `velocity *= baseDamping`），必须 < 1.0：
-  箱 0.9 / 压力板 0.5 / 巨石 0.98。
-- **压力板 → 门**：压力板必须是 dynamic 体才能与 kinematic 单位配对（broadphase 跳过
-  kinematic×static 对），但 kinematic 体逆质量为 0，穿透修正 100% 落在板上——整队踩板时
-  修正逐对叠加会把板从插槽中挤飞。因此板模板带 `CrowdPhysicsArena.PlateAnchor`：
-  每固定步把板重新钉回授权位置并清零速度（锚点在首步从授权 `Position2D` 捕获，地图
-  `RigidBody.positionCm` 是唯一事实源），并且板体做成行军方向上的薄条（80×840cm，
-  封顶单对穿透深度）。板携带 `ContactEventEmitter2D`，EntityLayer `arena.plate` 在
+  箱 0.9 / 巨石 0.98。
+- **压力板 → 门**：压力板是 static 传感器。broadphase 对 kinematic×static 配对默认跳过
+  （无求解意义），但只要任一方声明 `ContactEventEmitter2D`，就会建立 sensor-only 配对：
+  窄相照常产出接触供事件边沿检测，求解器、位置修正、冲量与岛屿构建全部跳过。
+  所以板永远不动、不吃修正、不需要锚定或插槽墙。板携带 `ContactEventEmitter2D`，
+  EntityLayer `arena.plate` 在
   `assets/Configs/Physics2D/kinematic.json` 的 `contactEventEmitterLayers` 允许清单里。
   桥的 `ContactEventRouter2D` 把 Begin/End 事件路由给
   `CrowdPhysicsArenaPressurePlateDoorSystem`（按 agent 去重：N 单位过板恰好 N 次 Begin），

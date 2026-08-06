@@ -2,18 +2,18 @@
 
 ## Run Metadata
 - command: `dotnet test src/Tests/GasTests/GasTests.csproj --filter EntityQueryTactics_ProductionBenchmark_WritesReport --no-restore`
-- runtime: `.NET 8.0.25`
-- os: `Microsoft Windows 10.0.26220`
-- generated UTC: `2026-07-23T15:32:01.9410314Z`
+- runtime: `.NET 8.0.28`
+- os: `Ubuntu 24.04.4 LTS`
+- generated UTC: `2026-08-06T18:08:32.4638380Z`
 - preset: `entity_query_tactics_raylib`
-- plan fingerprint: `5ed11abac867f148eab5491142df859f3af6f74818f9209a5dc3f514de2406f5`
+- plan fingerprint: `bcdcf8f0ea47d04350fefafd31243a7e415ad79b2a06700b9e3d9392f3360508`
 - ordered mods: `LudotsCoreMod -> CoreInputMod -> CameraProfilesMod -> NarrativeFrontendMod -> EntityQueryTacticsShowcaseMod`
 - graph ids: `entityquery.tactics.graph.selectedFriendliesFromUiBox, entityquery.tactics.graph.hostileThreatBoard, entityquery.tactics.graph.formationCache`
 - graph node counts: selected `14`, hostile `15`, formation `13`
 - graph output bindings: `16`
 - asset hash `EntityQueryTacticsShowcaseConfig.json`: `71F37155C57CF6355FEB14700862BD6A2D640E098A923791B26B212E5A06EDE8`
 - asset hash `Frontend/entity_query_tactics_frontend.json`: `381869E404BF484BB161C92B2753D61D9D5882D1584AEE04D4E86E332BC1A7CE`
-- asset hash `Presentation/performers.json`: `5FEA9BDC5F5AB622939214001D46CF255A1725C206B242361C88FC73E6DC9775`
+- asset hash `Presentation/performers.json`: `0E29FE164ECC352B1D8E79C73DAD1B83FDB56DE847135778C136FDE19D7C493B`
 - asset hash `Configs/Camera/virtual_cameras.json`: `795894774C91588529A07134D7DBBFFD2C423D8D17D9BA369B4AAD90C617B55B`
 - asset hash `GAS/graphs.json`: `08B1287E2E3DD8E1CA004C48C4F28FDBC50602DD7264D18066A1BE9291EE51CF`
 - asset hash `GAS/attribute_constraints.json`: `6E162AAD0B8C570B022D38EAF992A2D0035FC248C47071DACB32C2A1BC193D48`
@@ -35,26 +35,26 @@
 ## Hot Path Measurements
 | path | iterations | total ms | per iteration us | allocated bytes |
 |---|---:|---:|---:|---:|
-| GraphReturnWriter execute x3 stable inputs | 20000 | 1501.820 | 75.091 | 0 |
-| GraphReturnWriter execute `entityquery.tactics.graph.selectedFriendliesFromUiBox` only | 20000 | 329.494 | 16.475 | 0 |
-| GraphReturnWriter execute `entityquery.tactics.graph.hostileThreatBoard` only | 20000 | 503.159 | 25.158 | 0 |
-| GraphReturnWriter execute `entityquery.tactics.graph.formationCache` only | 20000 | 339.058 | 16.953 | 0 |
-| Retained diff execute x3 stable inputs | 2000 | 128.446 | 64.223 | 0 |
-| Relationship AddMetric + graph execute x3 | 1000 | 84.498 | 84.498 | 0 |
+| GraphReturnWriter execute x3 stable inputs | 20000 | 506.539 | 25.327 | 0 |
+| GraphReturnWriter execute `entityquery.tactics.graph.selectedFriendliesFromUiBox` only | 20000 | 146.391 | 7.320 | 0 |
+| GraphReturnWriter execute `entityquery.tactics.graph.hostileThreatBoard` only | 20000 | 197.423 | 9.871 | 0 |
+| GraphReturnWriter execute `entityquery.tactics.graph.formationCache` only | 20000 | 135.385 | 6.769 | 0 |
+| Retained diff execute x3 stable inputs | 2000 | 50.937 | 25.468 | 0 |
+| Relationship AddMetric + graph execute x3 | 1000 | 28.082 | 28.082 | 0 |
 - stable allocation sample attempts: graph x3 `1`, single graphs `entityquery.tactics.graph.selectedFriendliesFromUiBox:1, entityquery.tactics.graph.hostileThreatBoard:1, entityquery.tactics.graph.formationCache:1`, retained diff `1`, pressure `1`
 
 ## Production Tick Loop
 | path | frames | action frames | total ms | median ms | p95 ms | max ms | allocated bytes |
 |---|---:|---:|---:|---:|---:|---:|---:|
-| PlayerInputHandler + GameEngine.Tick + showcase systems | 360 | 150 | 332.086 | 0.710 | 1.839 | 4.286 | 1364008 |
+| PlayerInputHandler + GameEngine.Tick + showcase systems | 360 | 150 | 225.901 | 0.234 | 1.484 | 3.533 | 119387048 |
 - production pressure summary: `entityquery.summary.threat.max` `95` -> `605` during the tick loop.
 
 ## Retained Diff
 - stable formation revisions: `2000/2000`
-- stable probe before: rev `2`, sig `0x8B7AA39F52460E01`, count `4`, names `Aegis Captain, Spear One, Spear Two, Field Medic`
-- stable probe after: rev `2`, sig `0x8B7AA39F52460E01`, count `4`, names `Aegis Captain, Spear One, Spear Two, Field Medic`
-- rotation input: `entityquery.collection.formation.primary` rev `3` -> `4`, sig `0xDAAC4A940B008FD6` -> `0x1F95664EC6767F9`
-- rotation output: `entityquery.collection.graph.formationCache` rev `2` -> `2`, sig `0x8B7AA39F52460E01` -> `0x8B7AA39F52460E01`
+- stable probe before: rev `2`, sig `0x83D56357F3694B62`, count `4`, names `Aegis Captain, Spear One, Spear Two, Field Medic`
+- stable probe after: rev `2`, sig `0x83D56357F3694B62`, count `4`, names `Aegis Captain, Spear One, Spear Two, Field Medic`
+- rotation input: `entityquery.collection.formation.primary` rev `3` -> `4`, sig `0xBB4538658D4581F` -> `0x8400E0F228958A1C`
+- rotation output: `entityquery.collection.graph.formationCache` rev `2` -> `2`, sig `0x83D56357F3694B62` -> `0x83D56357F3694B62`
 - expected: stable inputs keep `entityquery.collection.graph.formationCache` revision unchanged; order-only source rotation is normalized by graph sorting and retained output signature.
 
 ## Relationship Pressure Buffer

@@ -192,12 +192,27 @@ namespace Ludots.Core.Physics2D.Systems
                     continue;
                 }
 
-                // Kinematic bodies only ever solve against dynamic bodies (issue #732):
-                // kinematic×kinematic and kinematic×static pairs have no solver meaning.
+                // Kinematic bodies only ever solve against dynamic bodies. Pairs without a
+                // dynamic side have no solver meaning, with one sensor exception:
+                // kinematic×static where a party declares contact-event emission is paired
+                // as sensor-only (pressure plates / trigger zones) — narrowphase computes the
+                // contact for event edges, all solving stages skip it. kinematic×kinematic
+                // stays excluded even for emitters: crowd-vs-crowd pairing scales quadratically
+                // and crowd contact semantics belong to the navigation separation domain.
+                byte sensorOnly = 0;
                 if ((snapshotA.Mass.IsKinematic || snapshotB.Mass.IsKinematic) &&
                     !(snapshotA.Mass.IsDynamic || snapshotB.Mass.IsDynamic))
                 {
-                    continue;
+                    bool kinematicStaticSensor =
+                        (snapshotA.Mass.IsKinematic && snapshotB.Mass.IsStatic ||
+                         snapshotA.Mass.IsStatic && snapshotB.Mass.IsKinematic) &&
+                        (snapshotA.IsContactEventEmitter != 0 || snapshotB.IsContactEventEmitter != 0);
+                    if (!kinematicStaticSensor)
+                    {
+                        continue;
+                    }
+
+                    sensorOnly = 1;
                 }
 
                 if (entityB.Id < entityA.Id)
@@ -217,7 +232,7 @@ namespace Ludots.Core.Physics2D.Systems
                 if (_pairMap.TryGetValue(key, out var pairEntity) && World.IsAlive(pairEntity))
                 {
                     ref var collisionPair = ref pairEntity.Get<CollisionPair>();
-                    ResetActivePair(ref collisionPair, in snapshotA, in snapshotB);
+                    ResetActivePair(ref collisionPair, in snapshotA, in snapshotB, sensorOnly);
                     if (!World.Has<ActiveCollisionPairTag>(pairEntity))
                     {
                         World.Add<ActiveCollisionPairTag>(pairEntity);
@@ -242,7 +257,7 @@ namespace Ludots.Core.Physics2D.Systems
 
                     pairEntity = _pairPool.Pop();
                     ref var collisionPair = ref pairEntity.Get<CollisionPair>();
-                    ResetActivePair(ref collisionPair, in snapshotA, in snapshotB);
+                    ResetActivePair(ref collisionPair, in snapshotA, in snapshotB, sensorOnly);
                     collisionPair.AccumulatedNormalImpulse0 = Fix64.Zero;
                     collisionPair.AccumulatedTangentImpulse0 = Fix64.Zero;
                     World.Add<ActiveCollisionPairTag>(pairEntity);
@@ -284,7 +299,8 @@ namespace Ludots.Core.Physics2D.Systems
         private void ResetActivePair(
             ref CollisionPair pair,
             in BuildPhysicsWorldSystem2D.BodySnapshot snapshotA,
-            in BuildPhysicsWorldSystem2D.BodySnapshot snapshotB)
+            in BuildPhysicsWorldSystem2D.BodySnapshot snapshotB,
+            byte sensorOnly)
         {
             pair.IsActive = true;
             pair.EntityA = snapshotA.Entity;
@@ -311,6 +327,7 @@ namespace Ludots.Core.Physics2D.Systems
             pair.IslandB = snapshotB.IslandId;
             pair.ContactCount = 0;
             pair.Penetration = Fix64.Zero;
+            pair.SensorOnly = sensorOnly;
         }
 
         private void GrowCollisionPairPool(int requestedCount)
