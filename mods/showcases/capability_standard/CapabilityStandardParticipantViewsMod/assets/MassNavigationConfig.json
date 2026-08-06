@@ -39,7 +39,8 @@
       "groupMemberCapacity": 32,
       "movePlanExecutionGroupCapacity": 32,
       "movePlanExecutionMemberCapacity": 32,
-      "loadedChunkCapacity": 64
+      "loadedChunkCapacity": 64,
+      "displacedAgentCapacity": 16
     }
   },
   "agentProfiles": {

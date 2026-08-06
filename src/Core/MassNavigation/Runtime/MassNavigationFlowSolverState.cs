@@ -370,6 +370,7 @@ public sealed partial class MassNavigationFlowSolverState
         InitializeUnits(profileSet, layer, spawnLayout.RandomSeed);
         ForceFlowRebuild();
         MarkAllEntitiesDirty();
+        ResetDisplacedAgents();
         _frameCount = 0;
         SettledUnitCount = 0;
         _arrivalEventCount = 0;
@@ -384,6 +385,7 @@ public sealed partial class MassNavigationFlowSolverState
         InitializeUnits(agentSeeds);
         ForceFlowRebuild();
         MarkAllEntitiesDirty();
+        ResetDisplacedAgents();
         _frameCount = 0;
         SettledUnitCount = 0;
         _arrivalEventCount = 0;
@@ -792,24 +794,7 @@ public sealed partial class MassNavigationFlowSolverState
 
         for (int index = startIndex; index < endIndex; index++)
         {
-            int offset = index << 1;
-            _positionsCm[offset] += deltaXCm;
-            _positionsCm[offset + 1] += deltaYCm;
-            _readPositionsCm[offset] += deltaXCm;
-            _readPositionsCm[offset + 1] += deltaYCm;
-            _unitProgressAnchorCm[offset] += deltaXCm;
-            _unitProgressAnchorCm[offset + 1] += deltaYCm;
-            _unitSettledAnchorCm[offset] += deltaXCm;
-            _unitSettledAnchorCm[offset + 1] += deltaYCm;
-            if (_hasUnitTarget[index] != 0)
-            {
-                _unitTargetsCm[offset] += deltaXCm;
-                _unitTargetsCm[offset + 1] += deltaYCm;
-            }
-
-            ClampLocalToWorldBounds(ref _positionsCm[offset], ref _positionsCm[offset + 1], _bodyRadiiCm[index]);
-            ClampLocalToWorldBounds(ref _readPositionsCm[offset], ref _readPositionsCm[offset + 1], _bodyRadiiCm[index]);
-            MarkEntityDirty(index);
+            ApplyDisplacementDelta(index, deltaXCm, deltaYCm, shiftUnitTarget: true);
         }
     }
 
@@ -829,24 +814,7 @@ public sealed partial class MassNavigationFlowSolverState
                     $"MassNavigationFlow external displacement agent index {index} exceeds current unit count {UnitCount}.");
             }
 
-            int offset = index << 1;
-            _positionsCm[offset] += deltaXCm;
-            _positionsCm[offset + 1] += deltaYCm;
-            _readPositionsCm[offset] += deltaXCm;
-            _readPositionsCm[offset + 1] += deltaYCm;
-            _unitProgressAnchorCm[offset] += deltaXCm;
-            _unitProgressAnchorCm[offset + 1] += deltaYCm;
-            _unitSettledAnchorCm[offset] += deltaXCm;
-            _unitSettledAnchorCm[offset + 1] += deltaYCm;
-            if (_hasUnitTarget[index] != 0)
-            {
-                _unitTargetsCm[offset] += deltaXCm;
-                _unitTargetsCm[offset + 1] += deltaYCm;
-            }
-
-            ClampLocalToWorldBounds(ref _positionsCm[offset], ref _positionsCm[offset + 1], _bodyRadiiCm[index]);
-            ClampLocalToWorldBounds(ref _readPositionsCm[offset], ref _readPositionsCm[offset + 1], _bodyRadiiCm[index]);
-            MarkEntityDirty(index);
+            ApplyDisplacementDelta(index, deltaXCm, deltaYCm, shiftUnitTarget: true);
         }
     }
 
@@ -1179,6 +1147,7 @@ public sealed partial class MassNavigationFlowSolverState
             Array.Resize(ref _hasUnitTarget, unitCount);
             Array.Resize(ref _hardResolveCandidates, unitCount);
             Array.Resize(ref _heavyProfileFlags, unitCount);
+            Array.Resize(ref _displacedAgentFlags, unitCount);
             Array.Resize(ref _entitySyncDirtyFlags, unitCount);
             Array.Resize(ref _unitSettledFlags, unitCount);
             Array.Resize(ref _arrivalEventEmittedFlags, unitCount);
@@ -1740,6 +1709,19 @@ public sealed partial class MassNavigationFlowSolverState
             int i2 = i << 1;
             float px = _readPositionsCm[i2];
             float py = _readPositionsCm[i2 + 1];
+
+            // Displaced agents (issue #643): the external pose-authority holder drives their
+            // committed pose; the solver holds them in place here so neighbors keep avoiding
+            // them through the separation hash while their own integration is skipped.
+            if (_displacedAgentFlags[i] != 0)
+            {
+                _velocitiesCm[i2] = 0f;
+                _velocitiesCm[i2 + 1] = 0f;
+                _positionsCm[i2] = px;
+                _positionsCm[i2 + 1] = py;
+                continue;
+            }
+
             int teamStateIndex = _teamRuntimeIndices[i];
             TeamRuntimeState team = _teamStates[teamStateIndex];
             FlowRuntimeState flowState = _flowStates[_flowRuntimeIndices[i]];
@@ -2583,6 +2565,16 @@ public sealed partial class MassNavigationFlowSolverState
 
     private void SeparateAgents(int i, int j)
     {
+        // Displaced agents (issue #643) are pose-authority owned by an external writer:
+        // hard resolve must never move them, but their non-displaced neighbor still takes
+        // the full correction so bodies keep separating around the displaced agent.
+        bool displacedI = _displacedAgentFlags[i] != 0;
+        bool displacedJ = _displacedAgentFlags[j] != 0;
+        if (displacedI && displacedJ)
+        {
+            return;
+        }
+
         int i2 = i << 1;
         int j2 = j << 1;
         float dx = _positionsCm[i2] - _positionsCm[j2];
@@ -2615,8 +2607,21 @@ public sealed partial class MassNavigationFlowSolverState
             overlap = minDistance;
         }
 
-        MassNavigationFlowPairAvoidancePolicy policy = ResolveBidirectionalPolicy(_teamRuntimeIndices[i], _teamRuntimeIndices[j], i, j);
-        float shareI = ComputeCorrectionShare(policy, _navMasses[i], _navMasses[j]);
+        float shareI;
+        if (displacedI)
+        {
+            shareI = 0f;
+        }
+        else if (displacedJ)
+        {
+            shareI = 1f;
+        }
+        else
+        {
+            MassNavigationFlowPairAvoidancePolicy policy = ResolveBidirectionalPolicy(_teamRuntimeIndices[i], _teamRuntimeIndices[j], i, j);
+            shareI = ComputeCorrectionShare(policy, _navMasses[i], _navMasses[j]);
+        }
+
         float shareJ = 1f - shareI;
         float correctionI = overlap * shareI;
         float correctionJ = overlap * shareJ;
@@ -2642,6 +2647,13 @@ public sealed partial class MassNavigationFlowSolverState
     {
         for (int i = 0; i < UnitCount; i++)
         {
+            // Displaced agents (issue #643): obstacle push-out must not fight the external
+            // pose-authority holder writing this agent's pose.
+            if (_displacedAgentFlags[i] != 0)
+            {
+                continue;
+            }
+
             if (_useCandidateGating && _hardResolveCandidates[i] == 0)
             {
                 continue;

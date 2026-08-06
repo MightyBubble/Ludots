@@ -267,6 +267,7 @@ public sealed class MassNavigationSimulationRuntime
         MassNavigationFlow = new MassNavigationFlowSolverState(config.Solver);
         MassNavigationFlow.PreallocateAgentCapacity(membershipCapacity);
         MassNavigationFlow.PreallocateDomainRelationshipCapacity(config.ScenarioRuntime.RuntimeCapacity.RelationshipDomainCapacity);
+        MassNavigationFlow.PreallocateDisplacedAgentCapacity(config.ScenarioRuntime.RuntimeCapacity.DisplacedAgentCapacity);
         WorldConfig = config.World ?? throw new InvalidOperationException("MassNavigationSimulationRuntime requires explicit world config.");
         MassNavigationHotZoneConfig activeHotZone = WorldConfig.GetRequiredHotZone(WorldConfig.ActiveHotZoneId);
         _activeHotZoneId = activeHotZone.Id;
@@ -1131,6 +1132,15 @@ public sealed class MassNavigationSimulationRuntime
         {
             throw new InvalidOperationException(
                 $"MassNavigation spawned agent entity {entity.Id} requires a resolved positive profileId.");
+        }
+
+        // Participation contract (issue #643): a Dynamic physics presence derives Physics pose
+        // authority, which cannot coexist with a nav-agent binding in this increment.
+        if (world.TryGet(entity, out Ludots.Core.Components.MovementParticipation participation) &&
+            participation.PhysicsPresence == Ludots.Core.Components.PhysicsPresenceKind.Dynamic)
+        {
+            throw new InvalidOperationException(
+                $"MassNavigation cannot bind entity {entity.Id} as a nav agent: MovementParticipation.physicsPresence 'dynamic' assigns pose authority to Physics.");
         }
 
         if (!allowExistingRuntimeBinding)

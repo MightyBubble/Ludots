@@ -5,6 +5,7 @@ using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Map;
 using Ludots.Core.MassNavigation.Systems;
 using Ludots.Core.MovePlanning;
+using Ludots.Core.Movement;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.GraphWorld;
 using Ludots.Core.Presentation.Systems;
@@ -115,6 +116,9 @@ public sealed class MassNavigationRuntime
             engine.SetService(MassNavigationKeys.RuntimeBinding, new MassNavigationRuntimeBinding());
         }
 
+        PoseAuthorityArbiter poseAuthorityArbiter = engine.GetService(CoreServiceKeys.PoseAuthorityArbiter)
+            ?? throw new InvalidOperationException("MassNavigation runtime requires the PoseAuthorityArbiter service.");
+        poseAuthorityArbiter.AddListener(new MassNavigationPoseAuthorityBridge(engine));
         engine.RegisterSystem(new MassNavigationAgentMetadataSyncSystem(engine, config), SystemGroup.InputCollection);
         engine.RegisterSystem(new MassNavigationSimulationStepSystem(engine), SystemGroup.PostMovement);
         engine.RegisterSystem(

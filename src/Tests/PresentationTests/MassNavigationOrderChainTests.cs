@@ -175,6 +175,7 @@ public sealed class MassNavigationOrderChainTests
                     RouteWaypointCapacityPerAgent = 64,
                     LoadedChunkCapacity = 32,
                     RelationshipDomainCapacity = 2,
+                    DisplacedAgentCapacity = 4,
                 },
             },
             AgentProfiles = new MassNavigationAgentProfileSetConfig

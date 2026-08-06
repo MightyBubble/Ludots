@@ -49,7 +49,8 @@
       "groupMemberCapacity": 32,
       "movePlanExecutionGroupCapacity": 32,
       "movePlanExecutionMemberCapacity": 32,
-      "relationshipDomainCapacity": 3
+      "relationshipDomainCapacity": 3,
+      "displacedAgentCapacity": 16
     }
   },
   "cadence": {

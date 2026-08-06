@@ -143,7 +143,8 @@
       "routeMaxExpandedPerRequest": 2048,
       "routeWaypointCapacityPerAgent": 64,
       "loadedChunkCapacity": 256,
-      "relationshipDomainCapacity": 4
+      "relationshipDomainCapacity": 4,
+      "displacedAgentCapacity": 64
     }
   },
   "cadence": {
