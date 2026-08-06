@@ -192,6 +192,14 @@ namespace Ludots.Core.Physics2D.Systems
                     continue;
                 }
 
+                // Kinematic bodies only ever solve against dynamic bodies (issue #732):
+                // kinematic×kinematic and kinematic×static pairs have no solver meaning.
+                if ((snapshotA.Mass.IsKinematic || snapshotB.Mass.IsKinematic) &&
+                    !(snapshotA.Mass.IsDynamic || snapshotB.Mass.IsDynamic))
+                {
+                    continue;
+                }
+
                 if (entityB.Id < entityA.Id)
                 {
                     (entityA, entityB) = (entityB, entityA);

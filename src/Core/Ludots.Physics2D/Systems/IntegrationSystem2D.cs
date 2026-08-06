@@ -87,7 +87,9 @@ namespace Ludots.Core.Physics2D.Systems
                     ref Velocity2D velocity = ref velocities[index];
                     ref Mass2D mass = ref masses[index];
 
-                    if (mass.IsStatic) continue;
+                    // Only dynamic bodies integrate: static never moves, kinematic poses are
+                    // applied verbatim by KinematicDriveSystem2D (no forces, damping, or clamping).
+                    if (!mass.IsDynamic) continue;
 
                     if (hasForceInput)
                     {

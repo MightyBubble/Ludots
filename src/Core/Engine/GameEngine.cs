@@ -787,6 +787,8 @@ namespace Ludots.Core.Engine
             var physics2dClockConfig = physics2dClockConfigLoader.Load(ConfigCatalog, ConfigConflictReport);
             var physics2dSolverConfigLoader = new Physics2DSolverConfigLoader(ConfigPipeline);
             var physics2dSolverConfig = physics2dSolverConfigLoader.Load(ConfigCatalog, ConfigConflictReport);
+            var physics2dKinematicConfigLoader = new Physics2DKinematicConfigLoader(ConfigPipeline);
+            var physics2dKinematicConfig = physics2dKinematicConfigLoader.Load(ConfigCatalog, ConfigConflictReport);
             var componentAuthoringContext = new ComponentAuthoringContext();
             MapLoader.SetComponentAuthoringContext(componentAuthoringContext);
             new AttributeConstraintsLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
@@ -1674,6 +1676,7 @@ namespace Ludots.Core.Engine
                 clock,
                 physics2dTickPolicy,
                 physics2dSolverConfig,
+                physics2dKinematicConfig,
                 physics2dBroadphasePolicy,
                 componentAuthoringContext);
 
@@ -1893,6 +1896,7 @@ namespace Ludots.Core.Engine
             IClock clock,
             Physics2DTickPolicy physics2dTickPolicy,
             Physics2DSolverConfig physics2dSolverConfig,
+            Physics2DKinematicConfig physics2dKinematicConfig,
             Physics2DBroadphasePolicy physics2dBroadphasePolicy,
             ComponentAuthoringContext componentAuthoringContext)
         {
@@ -1902,6 +1906,7 @@ namespace Ludots.Core.Engine
             const string worldSyncSystemTypeName = "Ludots.Core.Physics2D.Systems.Physics2DToWorldPositionSyncSystem";
 
             ArgumentNullException.ThrowIfNull(physics2dSolverConfig);
+            ArgumentNullException.ThrowIfNull(physics2dKinematicConfig);
             ArgumentNullException.ThrowIfNull(physics2dBroadphasePolicy);
             ArgumentNullException.ThrowIfNull(componentAuthoringContext);
 
@@ -1925,6 +1930,14 @@ namespace Ludots.Core.Engine
             componentAuthoringContext.Set(ComponentAuthoringServiceKeys.Physics2DShapeStorage, shapeStorage);
             SetService(CoreServiceKeys.Physics2DShapeStorage, shapeStorage);
 
+            var physics2dKinematicPoses = new Ludots.Core.Physics2D.KinematicTargetPoseBuffer2D(
+                physics2dKinematicConfig.KinematicBodyCapacity);
+            var physics2dContactEvents = new Ludots.Core.Physics2D.ContactEventQueue2D(
+                physics2dKinematicConfig.ContactEventQueueCapacity);
+            SetService(CoreServiceKeys.Physics2DKinematicConfig, physics2dKinematicConfig);
+            SetService(CoreServiceKeys.Physics2DKinematicPoseBuffer, physics2dKinematicPoses);
+            SetService(CoreServiceKeys.Physics2DContactEvents, physics2dContactEvents);
+
             object? physics2dSystemObj = Activator.CreateInstance(
                 physics2dSystemType,
                 World,
@@ -1932,7 +1945,10 @@ namespace Ludots.Core.Engine
                 physics2dTickPolicy,
                 physics2dSolverConfig,
                 shapeStorage,
-                physics2dBroadphasePolicy);
+                physics2dBroadphasePolicy,
+                physics2dKinematicPoses,
+                physics2dContactEvents,
+                physics2dKinematicConfig);
             if (physics2dSystemObj is not ISystem<float> physics2dSystem)
             {
                 throw new InvalidOperationException($"Failed to create Physics2D simulation system '{physics2dSystemTypeName}'.");

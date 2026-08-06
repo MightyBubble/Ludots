@@ -58,7 +58,8 @@ namespace Ludots.Core.Physics2D.Systems
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Update(Entity entity, ref Velocity2D velocity, ref Mass2D mass)
             {
-                if (mass.IsStatic) return;
+                // Kinematic bodies never participate in sleeping, so they never get Motion state.
+                if (!mass.IsDynamic) return;
                 CommandBuffer.Add(entity, new Motion
                 {
                     LinearSpeed = velocity.Linear.Length(),
@@ -76,7 +77,7 @@ namespace Ludots.Core.Physics2D.Systems
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Update(ref Motion motion, ref Velocity2D velocity, ref Mass2D mass)
             {
-                if (mass.IsStatic) return;
+                if (!mass.IsDynamic) return;
 
                 motion.LinearSpeed = velocity.Linear.Length();
                 motion.AngularSpeed = Fix64.Abs(velocity.Angular);
