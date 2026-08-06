@@ -11,7 +11,7 @@ using Ludots.Core.Physics2D.Components;
 namespace Ludots.Core.Physics2D.Systems
 {
     /// <summary>
-    /// Contact begin/end edge detection (issue #732). Consumes the broadphase pairing
+    /// Contact begin/end edge detection. Consumes the broadphase pairing
     /// results (CollisionPair.ContactCount 0↔>0 transitions) for entities that opted in
     /// via ContactEventEmitter2D and exports events into a preallocated queue.
     ///
@@ -80,6 +80,7 @@ namespace Ludots.Core.Physics2D.Systems
         private readonly Dictionary<TrackedContactKey, TrackedContact> _tracked;
         private readonly List<TrackedContactKey> _staleKeys;
 
+        private readonly int _maxTrackedContacts;
         private uint _allowedEmitterCategoryMask;
         private bool _allowedLayersResolved;
         private int _stepIndex;
@@ -100,6 +101,7 @@ namespace Ludots.Core.Physics2D.Systems
             _activePairsQuery = new QueryDescription().WithAll<CollisionPair, ActiveCollisionPairTag>();
             _emittersQuery = new QueryDescription().WithAll<ContactEventEmitter2D>();
             _emitterEntityIds = new HashSet<int>(256);
+            _maxTrackedContacts = maxTrackedContacts;
             _tracked = new Dictionary<TrackedContactKey, TrackedContact>(maxTrackedContacts);
             _staleKeys = new List<TrackedContactKey>(256);
         }
@@ -160,6 +162,17 @@ namespace Ludots.Core.Physics2D.Systems
             {
                 if (_tracked.TryGetValue(key, out TrackedContact tracked))
                 {
+                    // 键只含实体 id 与 shape slot；实体 id 被回收复用后同一个键可能指向
+                    // 不同代际的实体。以完整实体身份（含 version）为准：代际不符说明旧接触
+                    // 的一方已死并被复用——旧接触补 End，新接触按 Begin 走完整边沿。
+                    if (tracked.EntityA != pair.EntityA || tracked.EntityB != pair.EntityB)
+                    {
+                        EnqueueEnd(in tracked);
+                        _tracked.Remove(key);
+                        BeginContact(ref pair, in key, emitterA, emitterB);
+                        return;
+                    }
+
                     tracked.LastNormal = pair.Normal;
                     tracked.LastSeenStep = _stepIndex;
                     _tracked[key] = tracked;
@@ -190,6 +203,12 @@ namespace Ludots.Core.Physics2D.Systems
             if (emitterB)
             {
                 RequireAllowedEmitterLayer(pair.EntityB, in layerB);
+            }
+
+            if (_tracked.Count >= _maxTrackedContacts)
+            {
+                throw new InvalidOperationException(
+                    $"Contact event tracking exceeded its configured capacity {_maxTrackedContacts} concurrent touching contacts; raise the contact tracking budget instead of dropping edges.");
             }
 
             _queue.Enqueue(new ContactEvent2D
@@ -223,7 +242,7 @@ namespace Ludots.Core.Physics2D.Systems
             if (!World.TryGet(entity, out EntityLayer layer))
             {
                 throw new InvalidOperationException(
-                    $"Contact event emission requires EntityLayer on both contact parties, but entity {entity.Id} has none (issue #732 payload contract).");
+                    $"Contact event emission requires EntityLayer on both contact parties, but entity {entity.Id} has none (payload contract).");
             }
 
             return layer.Value;

@@ -5,7 +5,7 @@ using Ludots.Core.Components;
 namespace Ludots.Core.MassNavigation.Runtime;
 
 /// <summary>
-/// displaced 态（issue #643 任务 3）：PoseAuthority != Nav 的 agent 由外部写权持有者
+/// displaced 态：PoseAuthority != Nav 的 agent 由外部写权持有者
 /// （当前增量为 GAS 位移窗口）驱动 WorldPositionCm。求解器跳过其积分与硬解析，
 /// 但保留其在分离哈希中的存在，使邻居持续避让；每个 entity-sync 节拍把已提交的
 /// WorldPositionCm 回灌进求解器内部 SoA（不平移单位目标，交还后继续原目标）。
@@ -78,6 +78,32 @@ public sealed partial class MassNavigationFlowSolverState
         int offset = index << 1;
         _velocitiesCm[offset] = 0f;
         _velocitiesCm[offset + 1] = 0f;
+    }
+
+    /// <summary>
+    /// 窗口取消路径的幂等最小清理：只摘除 displaced 标记与紧凑表项。
+    /// 不唤醒、不标脏——取消场景里实体要么已死（标脏会让实体同步撞上死实体），
+    /// 要么整个求解器即将被结构重建重置。未标记（已被重建清除）返回 false，
+    /// 这是并发生命周期事件的合法结果；正常交还请走 <see cref="ClearAgentDisplaced"/>。
+    /// </summary>
+    public bool ClearAgentDisplacedIfMarked(int index)
+    {
+        if ((uint)index >= (uint)UnitCount || _displacedAgentFlags[index] == 0)
+        {
+            return false;
+        }
+
+        _displacedAgentFlags[index] = 0;
+        for (int i = 0; i < _displacedAgentCount; i++)
+        {
+            if (_displacedAgents[i] == index)
+            {
+                _displacedAgents[i] = _displacedAgents[--_displacedAgentCount];
+                break;
+            }
+        }
+
+        return true;
     }
 
     /// <summary>

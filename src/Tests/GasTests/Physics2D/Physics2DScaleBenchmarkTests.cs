@@ -85,7 +85,9 @@ namespace GasTests.Physics2D
                 world,
                 new DiscreteClock(),
                 tickPolicy,
-                new Physics2DSolverConfig(),
+                // 30k dynamic + 100k static 的接触对远超默认碰撞对池；显式声明预算，
+                // 让基准测量吞吐而不是撞上池耗尽异常。
+                new Physics2DSolverConfig { MaxCollisionPairs = 262_144 },
                 shapeStorage,
                 broadphasePolicy,
                 new KinematicTargetPoseBuffer2D(kinematicBodyCapacity: 64),

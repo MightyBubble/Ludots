@@ -240,6 +240,58 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void BuiltinHandler_ApplyDisplacement_StackedOnSameTarget_ReplacesInsteadOfCreatingSecondState()
+        {
+            using var world = World.Create();
+
+            var target = world.Create(new WorldPositionCm { Value = Fix64Vec2.Zero });
+            var firstSource = world.Create(new WorldPositionCm { Value = Fix64Vec2.FromInt(-100, 0) });
+            var secondSource = world.Create(new WorldPositionCm { Value = Fix64Vec2.FromInt(0, -100) });
+            var mergedParams = default(EffectConfigParams);
+
+            var firstContext = new EffectContext { Source = firstSource, Target = target, TargetContext = default };
+            var firstTemplate = new EffectTemplateData
+            {
+                Displacement = new DisplacementDescriptor
+                {
+                    DirectionMode = DisplacementDirectionMode.AwayFromSource,
+                    TotalDistanceCm = 500,
+                    TotalDurationTicks = 10,
+                    OverrideNavigation = true,
+                }
+            };
+            BuiltinHandlers.HandleApplyDisplacement(world, default, ref firstContext, in mergedParams, in firstTemplate);
+
+            // 第二次施加命中同一目标：替换合同——覆写方向与预算，不得出现第二个驱动者。
+            var secondContext = new EffectContext { Source = secondSource, Target = target, TargetContext = default };
+            var secondTemplate = new EffectTemplateData
+            {
+                Displacement = new DisplacementDescriptor
+                {
+                    DirectionMode = DisplacementDirectionMode.AwayFromSource,
+                    TotalDistanceCm = 200,
+                    TotalDurationTicks = 4,
+                    OverrideNavigation = false,
+                }
+            };
+            BuiltinHandlers.HandleApplyDisplacement(world, default, ref secondContext, in mergedParams, in secondTemplate);
+
+            int count = 0;
+            world.Query(in DisplacementQuery, (Entity _, ref DisplacementState state) =>
+            {
+                count++;
+                That(state.SourceEntity, Is.EqualTo(secondSource), "the replacement segment owns the state");
+                That(state.TotalDistanceCm, Is.EqualTo(200));
+                That(state.RemainingDistanceCm.ToFloat(), Is.EqualTo(200f).Within(0.01f), "the budget restarts with the new segment");
+                That(state.TotalDurationTicks, Is.EqualTo(4));
+                That(state.RemainingTicks, Is.EqualTo(4));
+                That(state.OverrideNavigation, Is.False);
+            });
+
+            That(count, Is.EqualTo(1), "stacking a displacement on the same target must replace, never duplicate");
+        }
+
+        [Test]
         public void BuiltinHandler_ApplyDisplacement_UsesPreservedCallerTargetPoint_WhenExecIsMissing()
         {
             using var world = World.Create();

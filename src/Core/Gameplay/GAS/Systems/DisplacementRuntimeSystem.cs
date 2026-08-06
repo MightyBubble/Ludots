@@ -17,7 +17,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
     /// Runs in <see cref="Engine.GameEngine.SystemGroup.EffectProcessing"/> alongside projectile/spawn systems.
     /// Uses deferred destruction to avoid structural changes inside query lambdas.
     /// All math uses Fix64/Fix64Vec2 for determinism.
-    /// Targets bound as MassNavigation agents (issue #643) go through the pose-authority
+    /// Targets bound as MassNavigation agents go through the pose-authority
     /// displacement window: the window is requested at effect start, committed at the next
     /// fixed-step boundary, and handed back to Nav when the effect ends or its speed drops
     /// below the authored handback threshold. Agents without an explicit
@@ -50,10 +50,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     ref DisplacementState disp = ref displacements[index];
                     if (!World.IsAlive(disp.TargetEntity) || !HasDisplacementPosition(disp.TargetEntity))
                     {
+                        // 位移中死亡是常规玩法事件：取消窗口（幂等——仲裁器的死亡检测
+                        // 可能已先一步取消）并合法终止效果。
                         if (disp.PoseWindowRequested)
                         {
-                            throw new System.InvalidOperationException(
-                                $"Displacement target entity {disp.TargetEntity.Id} became invalid while a pose-authority displacement window was open.");
+                            _poseAuthorityArbiter.CancelWindow(World, disp.TargetEntity);
+                            disp.PoseWindowRequested = false;
                         }
 
                         ClearMovementSuppression(ref disp);
@@ -81,7 +83,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         if (!World.Has<MovementParticipation>(disp.TargetEntity))
                         {
                             throw new System.InvalidOperationException(
-                                $"Displacement targets MassNavigation agent entity {disp.TargetEntity.Id} without a MovementParticipation declaration; silent double-writes of WorldPositionCm are forbidden (issue #643).");
+                                $"Displacement targets MassNavigation agent entity {disp.TargetEntity.Id} without a MovementParticipation declaration; silent double-writes of WorldPositionCm are forbidden.");
                         }
 
                         participation = World.Get<MovementParticipation>(disp.TargetEntity);
@@ -95,6 +97,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         {
                             _poseAuthorityArbiter.RequestDisplacementAuthority(World, disp.TargetEntity);
                             disp.PoseWindowRequested = true;
+                            disp.WindowRefreshRequested = false;
                             // Motion starts once the window commits at the next fixed-step boundary;
                             // writing WorldPositionCm now would double-write against SyncEntities.
                             continue;
@@ -102,8 +105,27 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
                         if (World.Get<PoseAuthority>(disp.TargetEntity).Value != PoseAuthorityKind.Displacement)
                         {
-                            throw new System.InvalidOperationException(
-                                $"Displacement window for entity {disp.TargetEntity.Id} was requested but never committed; PoseAuthorityCommitSystem must run at the fixed-step boundary.");
+                            // 区分两种"写权不在位移方"：仲裁器仍持有窗口/待办 = 结算系统缺席，
+                            // 是装配错误必须抛；仲裁器已无记录 = 窗口被生命周期事件（卸载/重建）
+                            // 外部取消，效果随之合法终止。
+                            if (_poseAuthorityArbiter.HasWindowOrPending(disp.TargetEntity))
+                            {
+                                throw new System.InvalidOperationException(
+                                    $"Displacement window for entity {disp.TargetEntity.Id} was requested but never committed; PoseAuthorityCommitSystem must run at the fixed-step boundary.");
+                            }
+
+                            disp.PoseWindowRequested = false;
+                            ClearMovementSuppression(ref disp);
+                            _toDestroy.Add(entity);
+                            continue;
+                        }
+
+                        // 叠加位移的替换合同：新位移段重置窗口时钟，
+                        // maxDurationMs 约束单段位移而非连锁累计。
+                        if (disp.WindowRefreshRequested)
+                        {
+                            _poseAuthorityArbiter.RefreshWindow(World, disp.TargetEntity);
+                            disp.WindowRefreshRequested = false;
                         }
                     }
 
@@ -113,8 +135,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                         stepCm = disp.RemainingDistanceCm;
                     }
 
+                    // 交还阈值比较必须留在定点域：把每秒阈值折算成本 tick 的定点步长下限，
+                    // 避免 float 除法的平台舍入差异翻转结构性分支。
                     if (isNavAgent && dt > 0f &&
-                        stepCm.ToFloat() / dt < participation.DisplacementHandbackSpeedThresholdCmPerSec)
+                        stepCm < Fix64.FromFloat(participation.DisplacementHandbackSpeedThresholdCmPerSec) * Fix64.FromFloat(dt))
                     {
                         EndPoseWindow(ref disp);
                         _toDestroy.Add(entity);

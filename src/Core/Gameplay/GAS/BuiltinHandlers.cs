@@ -16,6 +16,7 @@ using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.Physics2D.Components;
 using Ludots.Core.Vision;
 
 namespace Ludots.Core.Gameplay.GAS
@@ -408,22 +409,66 @@ namespace Ludots.Core.Gameplay.GAS
                 }
             }
 
-            EntityCreationHelper.CreateDisplacement(world,
-                new DisplacementState
+            var replacement = new DisplacementState
+            {
+                TargetEntity = context.Target,
+                SourceEntity = context.Source,
+                DirectionTargetEntity = directionTargetEntity,
+                DirectionMode = disp.DirectionMode,
+                FixedDirectionRad = Fix64.FromInt(disp.FixedDirectionDeg) * Fix64.Deg2Rad,
+                TargetPointCm = targetPointCm,
+                HasTargetPoint = hasTargetPoint,
+                TotalDistanceCm = disp.TotalDistanceCm,
+                RemainingDistanceCm = Fix64.FromInt(disp.TotalDistanceCm),
+                TotalDurationTicks = disp.TotalDurationTicks,
+                RemainingTicks = disp.TotalDurationTicks,
+                OverrideNavigation = disp.OverrideNavigation,
+            };
+
+            // 叠加位移合同 = 替换：同一目标已有活跃位移时，用新位移段就地覆写预算与方向，
+            // 不新建第二个状态（两个驱动者写同一实体位姿从根上被禁止）。写权窗口保持打开，
+            // 时钟由位移系统在写权确认后刷新——上限约束单段位移而非连锁累计。
+            if (TryReplaceActiveDisplacement(world, in replacement)) return;
+
+            EntityCreationHelper.CreateDisplacement(world, replacement);
+        }
+
+        private static readonly QueryDescription _activeDisplacementQuery =
+            new QueryDescription().WithAll<DisplacementState>();
+
+        private static bool TryReplaceActiveDisplacement(World world, in DisplacementState replacement)
+        {
+            Entity target = replacement.TargetEntity;
+            DisplacementState next = replacement;
+            bool replaced = false;
+            bool clearSuppression = false;
+            var query = _activeDisplacementQuery;
+            world.Query(in query, (ref DisplacementState state) =>
+            {
+                if (replaced || state.TargetEntity != target)
                 {
-                    TargetEntity = context.Target,
-                    SourceEntity = context.Source,
-                    DirectionTargetEntity = directionTargetEntity,
-                    DirectionMode = disp.DirectionMode,
-                    FixedDirectionRad = Fix64.FromInt(disp.FixedDirectionDeg) * Fix64.Deg2Rad,
-                    TargetPointCm = targetPointCm,
-                    HasTargetPoint = hasTargetPoint,
-                    TotalDistanceCm = disp.TotalDistanceCm,
-                    RemainingDistanceCm = Fix64.FromInt(disp.TotalDistanceCm),
-                    TotalDurationTicks = disp.TotalDurationTicks,
-                    RemainingTicks = disp.TotalDurationTicks,
-                    OverrideNavigation = disp.OverrideNavigation,
-                });
+                    return;
+                }
+
+                // 旧位移段可能压制了移动输入而新段不再压制：标记撤销，
+                // 结构变更留到查询之外执行。
+                bool oldSuppressionApplied = state.MovementSuppressionApplied;
+                bool poseWindowRequested = state.PoseWindowRequested;
+                clearSuppression = oldSuppressionApplied && !next.OverrideNavigation;
+
+                state = next;
+                state.PoseWindowRequested = poseWindowRequested;
+                state.WindowRefreshRequested = poseWindowRequested;
+                state.MovementSuppressionApplied = oldSuppressionApplied && !clearSuppression;
+                replaced = true;
+            });
+
+            if (clearSuppression && world.IsAlive(target) && world.Has<MovementSuppressed2D>(target))
+            {
+                world.Remove<MovementSuppressed2D>(target);
+            }
+
+            return replaced;
         }
 
         public static void HandleApplyRelation(

@@ -147,12 +147,11 @@ Formation 是 Mod 业务聚合，不是 Core 仿真车道。`FormationCapability
 - 可降频
 - 手感与表演优先于完整物理精度
 
-正式口径：
+正式口径（已落地词汇）：
 
-- `AvoidanceLane = MassNavigation`
-- `NavPhysicsMode = NavCrowdResolve`
-- `NavSolverMode = CrowdFlow`
-- 不把全量 crowd 强塞进 `FullPhysics2D`
+- `MovementParticipation.physicsPresence = none | kinematic`
+- `PoseAuthority = Nav`（求解器写位姿；物理经 kinematic 存在看见 crowd）
+- 不把全量 crowd 强塞进完整动态刚体模拟
 - 热路径优先用 SoA crowd sim
 - 上层业务可以持续提交明确逐成员目标，但 MassNavigation 不理解 formation、slot 或 follower 语义
 

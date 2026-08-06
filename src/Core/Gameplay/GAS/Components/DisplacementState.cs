@@ -32,8 +32,12 @@ namespace Ludots.Core.Gameplay.GAS
         public bool MovementSuppressionApplied;
         /// <summary>
         /// 目标是 massnav agent 时置位：已向 PoseAuthorityArbiter 申请位移写权窗口
-        /// （issue #643）。窗口在下一个固定步边界生效，生效前不施加位移。
+        /// 。窗口在下一个固定步边界生效，生效前不施加位移。
         /// </summary>
         public bool PoseWindowRequested;
+        /// <summary>
+        /// 叠加位移触发的替换：新位移段已就位，待位移系统在写权确认后刷新窗口时钟。
+        /// </summary>
+        public bool WindowRefreshRequested;
     }
 }

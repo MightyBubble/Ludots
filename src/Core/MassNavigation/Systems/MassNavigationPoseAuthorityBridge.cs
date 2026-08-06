@@ -6,11 +6,12 @@ using Ludots.Core.Movement;
 namespace Ludots.Core.MassNavigation.Systems;
 
 /// <summary>
-/// MassNavigation 对位姿写权切换（issue #643）的消费端。
+/// MassNavigation 对位姿写权切换的消费端。
 /// 在固定步边界的写权结算后，把 nav agent 的 displaced 态同步进求解器：
 /// Nav→Displacement 标记 displaced（求解器跳过其积分/硬解析，邻居持续避让）；
 /// Displacement→Nav 先回灌最终已提交位姿，再清除 displaced 并执行带 resetRecovery 的
-/// 到达恢复，使 agent 继续原目标。非 nav-agent 实体不归本桥处理。
+/// 到达恢复，使 agent 继续原目标。窗口取消（死亡/卸载/重建）做幂等清理，
+/// 不依赖实体存活。非 nav-agent 实体不归本桥处理。
 /// </summary>
 internal sealed class MassNavigationPoseAuthorityBridge : IPoseAuthorityTransitionListener
 {
@@ -55,5 +56,56 @@ internal sealed class MassNavigationPoseAuthorityBridge : IPoseAuthorityTransiti
 
         throw new System.InvalidOperationException(
             $"MassNavigation pose-authority bridge does not support the {from}->{to} transition for agent entity {entity.Id}.");
+    }
+
+    public void OnPoseAuthorityWindowCancelled(World world, Entity entity, PoseAuthorityKind holder)
+    {
+        // 取消路径不保证实体存活（死亡取消）也不保证运行时仍在（地图卸载后半程）。
+        // 清理是幂等的：求解器标记可能已被结构重建清除，运行时可能已释放——都合法。
+        MassNavigationSimulationRuntime? simulation = _runtimeProvider();
+        if (simulation == null)
+        {
+            return;
+        }
+
+        if (!TryResolveAgentIndex(world, simulation, entity, out int agentIndex))
+        {
+            return;
+        }
+
+        simulation.MassNavigationFlow.ClearAgentDisplacedIfMarked(agentIndex);
+    }
+
+    private static bool TryResolveAgentIndex(
+        World world,
+        MassNavigationSimulationRuntime simulation,
+        Entity entity,
+        out int agentIndex)
+    {
+        // 存活实体走组件（权威真相）；死亡实体组件已不可读，退回绑定表按实体身份解析。
+        if (world.IsAlive(entity))
+        {
+            if (world.TryGet(entity, out MassNavigationAgentIndex index))
+            {
+                agentIndex = index.Value;
+                return true;
+            }
+
+            agentIndex = -1;
+            return false;
+        }
+
+        System.Collections.Generic.IReadOnlyList<Entity> agents = simulation.AgentState.AllAgents;
+        for (int i = 0; i < agents.Count; i++)
+        {
+            if (agents[i] == entity)
+            {
+                agentIndex = i;
+                return true;
+            }
+        }
+
+        agentIndex = -1;
+        return false;
     }
 }
