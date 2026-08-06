@@ -1,6 +1,5 @@
 using Arch.Core;
 using Ludots.Core.Components;
-using Ludots.Core.Engine;
 using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.Movement;
 
@@ -15,11 +14,11 @@ namespace Ludots.Core.MassNavigation.Systems;
 /// </summary>
 internal sealed class MassNavigationPoseAuthorityBridge : IPoseAuthorityTransitionListener
 {
-    private readonly GameEngine _engine;
+    private readonly System.Func<MassNavigationSimulationRuntime?> _runtimeProvider;
 
-    public MassNavigationPoseAuthorityBridge(GameEngine engine)
+    public MassNavigationPoseAuthorityBridge(System.Func<MassNavigationSimulationRuntime?> runtimeProvider)
     {
-        _engine = engine ?? throw new System.ArgumentNullException(nameof(engine));
+        _runtimeProvider = runtimeProvider ?? throw new System.ArgumentNullException(nameof(runtimeProvider));
     }
 
     public void OnPoseAuthorityCommitted(World world, Entity entity, PoseAuthorityKind from, PoseAuthorityKind to)
@@ -29,11 +28,9 @@ internal sealed class MassNavigationPoseAuthorityBridge : IPoseAuthorityTransiti
             return;
         }
 
-        if (!MassNavigationIds.TryGetCurrentNavigationRuntime(_engine, out MassNavigationSimulationRuntime simulation))
-        {
-            throw new System.InvalidOperationException(
+        MassNavigationSimulationRuntime simulation = _runtimeProvider()
+            ?? throw new System.InvalidOperationException(
                 $"MassNavigation pose-authority bridge received a {from}->{to} transition for agent entity {entity.Id} without an active navigation runtime.");
-        }
 
         int agentIndex = world.Get<MassNavigationAgentIndex>(entity).Value;
         if (from == PoseAuthorityKind.Nav && to == PoseAuthorityKind.Displacement)

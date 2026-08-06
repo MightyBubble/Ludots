@@ -118,7 +118,10 @@ public sealed class MassNavigationRuntime
 
         PoseAuthorityArbiter poseAuthorityArbiter = engine.GetService(CoreServiceKeys.PoseAuthorityArbiter)
             ?? throw new InvalidOperationException("MassNavigation runtime requires the PoseAuthorityArbiter service.");
-        poseAuthorityArbiter.AddListener(new MassNavigationPoseAuthorityBridge(engine));
+        poseAuthorityArbiter.AddListener(new MassNavigationPoseAuthorityBridge(
+            () => MassNavigationIds.TryGetCurrentNavigationRuntime(engine, out MassNavigationSimulationRuntime simulation)
+                ? simulation
+                : null));
         engine.RegisterSystem(new MassNavigationAgentMetadataSyncSystem(engine, config), SystemGroup.InputCollection);
         engine.RegisterSystem(new MassNavigationSimulationStepSystem(engine), SystemGroup.PostMovement);
         engine.RegisterSystem(
