@@ -1,0 +1,443 @@
+[
+  {
+    "id": "crowd_arena_player_team",
+    "components": {
+      "Name": {
+        "Value": "CrowdPhysicsArena.PlayerTeam"
+      }
+    }
+  },
+  {
+    "id": "crowd_arena_local_player",
+    "components": {
+      "Name": {
+        "Value": "CrowdPhysicsArena.LocalPlayer"
+      },
+      "PlayerOwner": {
+        "PlayerId": 1
+      },
+      "CommandSourceDragState": {},
+      "WorldPositionCm": {
+        "Value": {
+          "X": 5000,
+          "Y": 5000
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "OrderBuffer": {},
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "SpatialPartitionExcluded": {},
+      "AbilityStateBuffer": {
+        "abilityIds": [
+          "Ability.CrowdArena.Shockwave",
+          "Ability.CrowdArena.BoulderRelease"
+        ]
+      }
+    }
+  },
+  {
+    "id": "crowd_arena_shockwave_epicenter",
+    "onSpawnEffect": "Effect.CrowdArena.Shockwave.Search",
+    "components": {
+      "Name": {
+        "Value": "CrowdPhysicsArena.ShockwaveEpicenter"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "GameplayTagContainer": {},
+      "SpatialPartitionExcluded": {},
+      "DestroyWhenParentExecutionEnds": {}
+    }
+  },
+  {
+    "id": "crowd_arena_agent_azure_light",
+    "components": {
+      "Name": {
+        "Value": "CrowdPhysicsArena.Agent.Azure.Light"
+      },
+      "VisualHeightmapSampleState": {},
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "OrderBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 100
+        },
+        "current": {
+          "Health": 100
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "EntityLayer": {
+        "category": [
+          "massNavigation.agent"
+        ],
+        "mask": [
+          "massNavigation.agent"
+        ]
+      },
+      "MassNavigationAgent": {
+        "profileId": "light"
+      },
+      "MovementParticipation": {
+        "physicsPresence": "kinematic",
+        "displacement": {
+          "allowed": true,
+          "handbackSpeedThresholdCmPerSec": 40,
+          "maxDurationMs": 2000
+        }
+      },
+      "CrowdPhysicsArena.RigidBody": {
+        "positionCm": { "x": 0, "y": 0 },
+        "bodyType": "Kinematic",
+        "shape": {
+          "type": "Circle",
+          "radiusCm": 20
+        }
+      }
+    }
+  },
+  {
+    "id": "crowd_arena_agent_azure_heavy",
+    "components": {
+      "Name": {
+        "Value": "CrowdPhysicsArena.Agent.Azure.Heavy"
+      },
+      "VisualHeightmapSampleState": {},
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "OrderBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 260
+        },
+        "current": {
+          "Health": 260
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "EntityLayer": {
+        "category": [
+          "massNavigation.agent"
+        ],
+        "mask": [
+          "massNavigation.agent"
+        ]
+      },
+      "MassNavigationAgent": {
+        "profileId": "heavy"
+      },
+      "MovementParticipation": {
+        "physicsPresence": "kinematic",
+        "displacement": {
+          "allowed": true,
+          "handbackSpeedThresholdCmPerSec": 40,
+          "maxDurationMs": 2000
+        }
+      },
+      "CrowdPhysicsArena.RigidBody": {
+        "positionCm": { "x": 0, "y": 0 },
+        "bodyType": "Kinematic",
+        "shape": {
+          "type": "Circle",
+          "radiusCm": 28
+        }
+      }
+    }
+  },
+  {
+    "id": "crowd_arena_agent_crimson_light",
+    "components": {
+      "Name": {
+        "Value": "CrowdPhysicsArena.Agent.Crimson.Light"
+      },
+      "VisualHeightmapSampleState": {},
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "OrderBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 100
+        },
+        "current": {
+          "Health": 100
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "EntityLayer": {
+        "category": [
+          "massNavigation.agent"
+        ],
+        "mask": [
+          "massNavigation.agent"
+        ]
+      },
+      "MassNavigationAgent": {
+        "profileId": "light"
+      },
+      "MovementParticipation": {
+        "physicsPresence": "kinematic",
+        "displacement": {
+          "allowed": true,
+          "handbackSpeedThresholdCmPerSec": 40,
+          "maxDurationMs": 2000
+        }
+      },
+      "CrowdPhysicsArena.RigidBody": {
+        "positionCm": { "x": 0, "y": 0 },
+        "bodyType": "Kinematic",
+        "shape": {
+          "type": "Circle",
+          "radiusCm": 20
+        }
+      }
+    }
+  },
+  {
+    "id": "crowd_arena_agent_crimson_heavy",
+    "components": {
+      "Name": {
+        "Value": "CrowdPhysicsArena.Agent.Crimson.Heavy"
+      },
+      "VisualHeightmapSampleState": {},
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "OrderBuffer": {},
+      "CommandSourceSelectableTag": {},
+      "CommandSourceSelectableState": {
+        "IsEnabled": true
+      },
+      "AttributeBuffer": {
+        "base": {
+          "Health": 260
+        },
+        "current": {
+          "Health": 260
+        }
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "EntityLayer": {
+        "category": [
+          "massNavigation.agent"
+        ],
+        "mask": [
+          "massNavigation.agent"
+        ]
+      },
+      "MassNavigationAgent": {
+        "profileId": "heavy"
+      },
+      "MovementParticipation": {
+        "physicsPresence": "kinematic",
+        "displacement": {
+          "allowed": true,
+          "handbackSpeedThresholdCmPerSec": 40,
+          "maxDurationMs": 2000
+        }
+      },
+      "CrowdPhysicsArena.RigidBody": {
+        "positionCm": { "x": 0, "y": 0 },
+        "bodyType": "Kinematic",
+        "shape": {
+          "type": "Circle",
+          "radiusCm": 28
+        }
+      }
+    }
+  },
+  {
+    "id": "crowd_arena_crate",
+    "components": {
+      "Name": {
+        "Value": "CrowdPhysicsArena.Crate"
+      },
+      "SpatialPartitionExcluded": {},
+      "EntityLayer": {
+        "category": [
+          "arena.prop"
+        ],
+        "mask": [
+          "arena.prop"
+        ]
+      },
+      "CrowdPhysicsArena.RigidBody": {
+        "positionCm": { "x": 0, "y": 0 },
+        "bodyType": "Dynamic",
+        "inverseMass": 0.01,
+        "shape": {
+          "type": "Box",
+          "halfWidthCm": 60,
+          "halfHeightCm": 60
+        },
+        "material": {
+          "friction": 0.6,
+          "restitution": 0.05,
+          "baseDamping": 0.9
+        }
+      }
+    }
+  },
+  {
+    "id": "crowd_arena_boulder",
+    "components": {
+      "Name": {
+        "Value": "CrowdPhysicsArena.Boulder"
+      },
+      "SpatialPartitionExcluded": {},
+      "EntityLayer": {
+        "category": [
+          "arena.prop"
+        ],
+        "mask": [
+          "arena.prop"
+        ]
+      },
+      "CrowdPhysicsArena.RigidBody": {
+        "positionCm": { "x": 0, "y": 0 },
+        "bodyType": "Dynamic",
+        "inverseMass": 0.002,
+        "velocityCmPerSec": { "x": -900, "y": 0 },
+        "shape": {
+          "type": "Circle",
+          "radiusCm": 120
+        },
+        "material": {
+          "friction": 0.3,
+          "restitution": 0.45,
+          "baseDamping": 0.98
+        }
+      }
+    }
+  },
+  {
+    "id": "crowd_arena_pressure_plate",
+    "components": {
+      "Name": {
+        "Value": "CrowdPhysicsArena.PressurePlate"
+      },
+      "SpatialPartitionExcluded": {},
+      "EntityLayer": {
+        "category": [
+          "arena.plate"
+        ],
+        "mask": [
+          "arena.plate"
+        ]
+      },
+      "CrowdPhysicsArena.RigidBody": {
+        "positionCm": { "x": 0, "y": 0 },
+        "bodyType": "Dynamic",
+        "inverseMass": 0.001,
+        "shape": {
+          "type": "Box",
+          "halfWidthCm": 150,
+          "halfHeightCm": 150
+        },
+        "material": {
+          "friction": 0.8,
+          "restitution": 0.0,
+          "baseDamping": 0.5
+        }
+      },
+      "CrowdPhysicsArena.ContactEventEmitter": {},
+      "CrowdPhysicsArena.PlateAnchor": {}
+    }
+  },
+  {
+    "id": "crowd_arena_plate_socket_wall",
+    "components": {
+      "Name": {
+        "Value": "CrowdPhysicsArena.PlateSocketWall"
+      },
+      "SpatialPartitionExcluded": {},
+      "EntityLayer": {
+        "category": [
+          "arena.wall"
+        ],
+        "mask": [
+          "arena.wall"
+        ]
+      },
+      "CrowdPhysicsArena.RigidBody": {
+        "positionCm": { "x": 0, "y": 0 },
+        "bodyType": "Static",
+        "shape": {
+          "type": "Box",
+          "halfWidthCm": 40,
+          "halfHeightCm": 40
+        }
+      }
+    }
+  },
+  {
+    "id": "crowd_arena_door",
+    "components": {
+      "Name": {
+        "Value": "CrowdPhysicsArena.Door"
+      },
+      "SpatialPartitionExcluded": {},
+      "EntityLayer": {
+        "category": [
+          "arena.wall"
+        ],
+        "mask": [
+          "arena.wall"
+        ]
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "VisualHeightmapSampleState": {},
+      "FacingDirection": {
+        "AngleRad": 0
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "ManifestationObstacleIntent2D": {
+        "shape": "Circle",
+        "sinkPhysicsCollider": true,
+        "sinkNavigationObstacle": true,
+        "navRadiusCm": 260,
+        "radiusCm": 260,
+        "localOffsetXCm": 0,
+        "localOffsetYCm": 0
+      },
+      "CrowdPhysicsArena.Door": {
+        "OpenThresholdContacts": 20
+      }
+    }
+  }
+]

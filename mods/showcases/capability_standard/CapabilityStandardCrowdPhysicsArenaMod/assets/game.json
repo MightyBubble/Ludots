@@ -1,0 +1,56 @@
+{
+  "startupMapId": "crowd_physics_arena",
+  "startupLocalPlayerId": 1,
+  "startupInputContexts": [ "Default_Gameplay", "CrowdPhysicsArena.Controls" ],
+  "windowTitle": "Ludots Engine - Capability Standard Crowd Physics Arena",
+  "targetFps": 0,
+  "worldWidthInMacroTiles": 250,
+  "worldHeightInMacroTiles": 250,
+  "gasRuntimeCapacity": {
+    "orderQueueCapacity": 16384,
+    "orderAdmissionResultCapacity": 32768,
+    "orderAdmissionRejectionCapacity": 16384,
+    "orderTerminalResultCapacity": 16384
+  },
+  "commandSource": {
+    "targetFilter": { "relationFilter": "Friendly" },
+    "movePathPreviewOrderTypeKeys": [ "massNavigationMove" ]
+  },
+  "presentation": {
+    "performerInstanceCapacity": 16384,
+    "gasPresentationEventCapacity": 16384,
+    "presentationEventStreamCapacity": 16384,
+    "presentationOwnerChangeCapacity": 16384,
+    "performerCommandCapacity": 32768,
+    "primitiveDrawBufferCapacity": 16384,
+    "visualSnapshotBufferCapacity": 16384,
+    "visualProxyBufferCapacity": 16384,
+    "presentationRequestCapacity": 32768,
+    "groundOverlayCapacity": 8192,
+    "roadSplineCapacity": 8192,
+    "worldHudCapacity": 16384,
+    "screenHudCapacity": 16384,
+    "skinnedVisualBatchCapacity": 16384,
+    "minimapMarkerCapacity": 16384,
+    "runtimeEntitySpawnQueueCapacity": 16384,
+    "runtimeEntitySpawnReceiptQueueCapacity": 16384,
+    "cameraCulling": {
+      "highLodDistanceCm": 4000.0,
+      "mediumLodDistanceCm": 10000.0,
+      "lowLodDistanceCm": 20000.0
+    },
+    "minimap": {
+      "initialZoomNormalized": 0.12,
+      "wheelZoomNormalizedStep": 0.08,
+      "buttonZoomNormalizedStep": 0.18,
+      "zoomSliderEnabled": true,
+      "modeToggleEnabled": true,
+      "rotateToggleEnabled": true,
+      "debugMarkerSampleCapacity": 128,
+      "minZoomExtentMode": "OneChunk",
+      "maxZoomExtentMode": "FullMap",
+      "minZoomExplicitHalfExtentCm": 750.0,
+      "maxZoomExplicitHalfExtentCm": 0.0
+    }
+  }
+}

@@ -1,0 +1,74 @@
+[
+  {
+    "id": "Ability.CrowdArena.Shockwave",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 45,
+          "tag": "Cooldown.CrowdArena.Q"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.CrowdArena.Shockwave.SpawnEpicenter"
+        },
+        {
+          "kind": "End",
+          "tick": 45
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [ "Cooldown.CrowdArena.Q" ]
+    },
+    "presentation": {
+      "displayName": "Shockwave",
+      "iconGlyph": "Q",
+      "accentColor": "#7FD4FF",
+      "hintText": "Knock nearby squads away from the impact point"
+    },
+    "targeting": {
+      "castRangeCm": 0,
+      "impactEffect": "Effect.CrowdArena.Shockwave.SpawnEpicenter"
+    }
+  },
+  {
+    "id": "Ability.CrowdArena.BoulderRelease",
+    "exec": {
+      "clockId": "FixedFrame",
+      "items": [
+        {
+          "kind": "TagClip",
+          "tick": 0,
+          "duration": 30,
+          "tag": "Cooldown.CrowdArena.E"
+        },
+        {
+          "kind": "EffectSignal",
+          "tick": 0,
+          "template": "Effect.CrowdArena.Boulder.Spawn"
+        },
+        {
+          "kind": "End",
+          "tick": 0
+        }
+      ]
+    },
+    "blockTags": {
+      "blockedAny": [ "Cooldown.CrowdArena.E" ]
+    },
+    "presentation": {
+      "displayName": "Boulder Release",
+      "iconGlyph": "E",
+      "accentColor": "#E0A96B",
+      "hintText": "Release a rolling boulder with authored initial velocity"
+    },
+    "targeting": {
+      "castRangeCm": 0,
+      "impactEffect": "Effect.CrowdArena.Boulder.Spawn"
+    }
+  }
+]

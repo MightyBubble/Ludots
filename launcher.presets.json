@@ -110,6 +110,15 @@
       "buildMode": "auto"
     },
     {
+      "id": "capability_standard_crowd_physics_arena_raylib",
+      "name": "Capability Standard Crowd Physics Arena Raylib",
+      "selectors": [
+        "$capability_standard_crowd_physics_arena"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "formation_capability_showcase_raylib",
       "name": "Formation Capability Showcase Raylib",
       "selectors": [
