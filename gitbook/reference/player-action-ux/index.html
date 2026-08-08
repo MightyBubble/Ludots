@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>玩家动作 UX 分镜图鉴 · Ludots</title>
+  <meta name="description" content="从玩家视角穷举交互动作：分镜 SVG + 标准 Mermaid 时序图。" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,600;0,9..40,700;1,9..40,400&family=Fraunces:opsz,wght@9..144,500;9..144,650&family=IBM+Plex+Mono:wght@500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="catalog.css" />
+</head>
+<body>
+  <div class="page">
+    <header class="hero">
+      <div>
+        <div class="kicker">Ludots · Player Action UX</div>
+        <h1>玩家动作 UX 分镜图鉴</h1>
+        <p class="lead">
+          不是技术清单，是分镜台本：每个动作用标准 Mermaid 时序图讲清「玩家 → 输入 → 画面 → 手感」，
+          再用分镜 SVG 一格格看画面。左侧按类翻页。
+        </p>
+      </div>
+      <div class="hero-meta" id="stats" aria-live="polite"></div>
+    </header>
+
+    <div class="layout">
+      <aside class="nav" id="nav" aria-label="分类目录"></aside>
+      <div>
+        <section class="toolbar" aria-label="搜索">
+          <input id="search" type="search" placeholder="搜索动作、玩法、输入…" autocomplete="off" />
+        </section>
+        <main id="list" class="list" aria-live="polite"></main>
+      </div>
+    </div>
+
+    <p class="footer-note">
+      数据源：<code>scripts/generate-player-action-ux-catalog.py</code> →
+      <code>catalog-data.js</code>（SSOT，勿手改）。
+      重新生成：<code>python3 scripts/generate-player-action-ux-catalog.py</code>。
+      · <a href="../../index.html">返回门户</a>
+    </p>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <script src="catalog-data.js"></script>
+  <script src="catalog-app.js"></script>
+</body>
+</html>
