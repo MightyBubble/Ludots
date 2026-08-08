@@ -26,6 +26,7 @@ This section collects current runbooks and reference pages.
 - [Map Scale Authoring Starter](map-scale-authoring-starter.html)
 - [Spatial Scale Configuration](spatial-scale-configuration.md)
 - [Spatial Scale Interactive Explorer](spatial-scale-explorer.html)
+- [玩家动作 UX 分镜图鉴](player-action-ux/index.html)
 - [Project Map](project-map.md)
 - [Publishing and Access](publishing-and-access.md)
 
