@@ -8,9 +8,15 @@ No technical layering. Storyboard visuals are comic-panel descriptors for the HT
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from player_action_ux_impl_notes import enrich_all  # noqa: E402
+
 OUT = Path(__file__).resolve().parent.parent / "gitbook/reference/player-action-ux/catalog-data.js"
+CHECKPOINT_MD = Path(__file__).resolve().parent.parent / "gitbook/reference/player-action-ux/CHECKPOINT.md"
 
 
 def beat(input_text, screen, feel, view, cast, title=None):
@@ -24,8 +30,8 @@ def beat(input_text, screen, feel, view, cast, title=None):
     }
 
 
-def case(cid, category, title, summary, beats, genres=None):
-    return {
+def case(cid, category, title, summary, beats, genres=None, ludots=None, todos=None):
+    row = {
         "id": cid,
         "category": category,
         "title": title,
@@ -33,6 +39,11 @@ def case(cid, category, title, summary, beats, genres=None):
         "genres": genres or [],
         "beats": beats,
     }
+    if ludots:
+        row["ludots"] = ludots
+    if todos:
+        row["todos"] = list(todos)
+    return row
 
 
 # ---- visual helpers (normalized 0..100 stage coords) ----
@@ -88,6 +99,14 @@ def hero(x, y, face=0):
     return {"t": "hero", "x": x, "y": y, "face": face}
 
 
+def card(x, y, label="卡", cost=None, dragging=False):
+    return {"t": "card", "x": x, "y": y, "label": label, "cost": cost, "dragging": dragging}
+
+
+def menu_box(x, y, lines):
+    return {"t": "menu", "x": x, "y": y, "lines": list(lines)}
+
+
 CATEGORIES = [
     ("select", "一、谁听我的"),
     ("basic-order", "二、常规指令（走/停/打）"),
@@ -113,7 +132,10 @@ CATEGORIES = [
     ("design-ui", "二十二、设计向界面手势"),
     ("dynamic-context", "二十三、身边有什么，同一键变什么"),
     ("auto-cast", "二十四、自动施法"),
-    ("blocked", "二十五、放不了时的反馈"),
+    ("locomotion", "二十五、走路：WASD / 摇杆 / 点地"),
+    ("touch-tablet", "二十六、平板触控 / 卡牌拖放"),
+    ("menu-cmd", "二十七、选单式指令（三国志式）"),
+    ("blocked", "二十八、放不了时的反馈"),
 ]
 
 
@@ -1096,9 +1118,11 @@ def build_cases():
         "稀有掉落弹窗，限时选择需求、贪婪或放弃；结果出来再进某人的包。",
         [
             beat("稀有物品弹出掷骰窗", "倒计时与三个按钮", "快选", "moba",
-                 [badge("需求/贪婪/放弃")], title="弹窗"),
+                 [hero(40, 55), card(62, 48, "紫装", 0), menu_box(72, 60, ["需求", "贪婪", "放弃"]),
+                  badge("掷骰窗")], title="弹窗"),
             beat("点需求或贪婪", "等待其他人；出结果后归属提示", "看谁赢", "moba",
-                 [badge("掷骰结果")], title="结果"),
+                 [hero(40, 55), unit(65, 45, team="ally"), card(55, 40, "紫装", 0),
+                  badge("归属结果")], title="结果"),
         ], ["魔兽世界", "MMO"],
     ))
     c.append(case(
@@ -1144,7 +1168,8 @@ def build_cases():
         "从背包拖到快捷栏格子，之后可用数字键使用；拖走或替换会改键位映射。",
         [
             beat("从背包拖到快捷栏空位", "栏位出现物品图标与数量", "键位绑好了", "moba",
-                 [badge("拖到快捷栏")], title="拖上栏"),
+                 [card(35, 40, "药", 0, True), cursor(55, 70, "drag"), menu_box(48, 68, ["1", "2", "3", "4"]),
+                  badge("拖到快捷栏")], title="拖上栏"),
             beat("按对应数字键", "等同于使用该物品", "键上就能用", "moba",
                  [hero(48, 55), badge("快捷使用")], title="快捷用"),
         ], ["魔兽世界", "MMO", "ARPG"],
@@ -1154,9 +1179,10 @@ def build_cases():
         "按住修饰键拖动堆叠，输入数量拆成两堆；拖到同类上合并。",
         [
             beat("Shift+拖动堆叠，输入数量", "拆成两堆", "分开装", "moba",
-                 [badge("拆堆")], title="拆"),
+                 [card(40, 50, "×20", 0), card(62, 50, "×5", 0, True), cursor(62, 50, "drag"),
+                  badge("拆堆")], title="拆"),
             beat("拖到同类物品上", "数量合并（不超过上限）", "摞一起", "moba",
-                 [badge("合堆")], title="合"),
+                 [card(50, 50, "×25", 0), cursor(50, 50, "up"), badge("合堆")], title="合"),
         ], ["魔兽世界", "MMO"],
     ))
     c.append(case(
@@ -1172,7 +1198,8 @@ def build_cases():
         "拖到摧毁或卖店确认；贵重物品要二次确认，防止手滑。",
         [
             beat("拖到出售/摧毁区", "标价或警告；确认后物品离开背包", "卖掉/毁掉", "moba",
-                 [badge("出售确认")], title="卖或毁"),
+                 [card(40, 50, "破装", 0, True), cursor(65, 55, "drag"),
+                  menu_box(62, 48, ["出售 12G", "摧毁", "取消"]), badge("出售确认")], title="卖或毁"),
         ], ["MMO", "ARPG"],
     ))
     c.append(case(
@@ -1214,9 +1241,11 @@ def build_cases():
         "对话里点选项推进分支；可跳过旁白，但关键选择不能被静默跳过。",
         [
             beat("对话播放中点跳过", "旁白快进到下一句或选项", "说快点", "moba",
-                 [badge("跳过旁白")], title="跳过"),
+                 [unit(60, 45, team="neutral"), menu_box(30, 65, ["……旁白……", "[跳过]"]),
+                  badge("跳过旁白")], title="跳过"),
             beat("点一个对话选项", "分支推进，面板换下一页", "选这条", "moba",
-                 [cursor(50, 60), badge("选项")], title="选项"),
+                 [unit(60, 45, team="neutral"), cursor(40, 70),
+                  menu_box(28, 60, ["接受任务", "再看看", "再见"]), badge("选项")], title="选项"),
         ], ["MMO", "动作RPG", "AVG"],
     ))
     c.append(case(
@@ -1226,9 +1255,10 @@ def build_cases():
             beat("对玩家发组队邀请", "对方屏幕弹出邀请", "邀了", "moba",
                  [hero(35, 55), unit(65, 45, team="ally"), badge("邀请")], title="邀请"),
             beat("点接受", "进队，队伍框出现", "组上了", "moba",
-                 [badge("已入队")], title="接受"),
+                 [hero(35, 55), unit(55, 45, team="ally"), unit(70, 50, team="ally"),
+                  menu_box(40, 70, ["队伍 2/5"]), badge("已入队")], title="接受"),
             beat("点离队或被移出", "队伍框更新", "散了", "moba",
-                 [badge("离队")], title="离队"),
+                 [hero(48, 55), menu_box(40, 70, ["队伍 1/5"]), badge("离队")], title="离队"),
         ], ["魔兽世界", "MMO"],
     ))
     c.append(case(
@@ -1250,7 +1280,8 @@ def build_cases():
             beat("对玩家发起交易", "双方弹出交易窗", "来交易", "moba",
                  [hero(35, 55), unit(65, 45, team="ally"), badge("交易窗")], title="打开"),
             beat("拖入物品，双方确认", "物品交换完成，窗关", "成交", "moba",
-                 [badge("双方确认")], title="确认"),
+                 [hero(30, 55), unit(70, 45, team="ally"), card(42, 50, "矿", 0), card(58, 50, "币", 0),
+                  menu_box(40, 68, ["确认", "取消"]), badge("双方确认")], title="确认"),
         ], ["魔兽世界", "MMO"],
     ))
     c.append(case(
@@ -1258,7 +1289,7 @@ def build_cases():
         "对玩家密语；在目标上打标记（骷髅/月亮），团队可见以便集火。",
         [
             beat("对玩家发密语", "聊天频道切到密语", "私聊", "moba",
-                 [badge("密语")], title="密聊"),
+                 [hero(35, 55), unit(65, 45, team="ally"), menu_box(30, 70, ["密语: 你好"]), badge("密语")], title="密聊"),
             beat("给当前目标打团队标记", "头顶出现标记图标，队友看见", "集火这个", "tps",
                  [unit(60, 45, team="enemy"), badge("标记")], title="标记"),
         ], ["魔兽世界", "MMO"],
@@ -1294,9 +1325,10 @@ def build_cases():
             beat("与商人交互", "商店列表打开", "逛店", "moba",
                  [hero(40, 55), unit(65, 45, team="neutral"), badge("商店")], title="开店"),
             beat("右键购买或拖出售", "金币与物品变化", "买到/卖掉", "moba",
-                 [badge("买卖")], title="买卖"),
+                 [hero(35, 55), unit(65, 45, team="neutral"), card(50, 50, "货", 0, True),
+                  cursor(50, 50, "drag"), badge("买卖")], title="买卖"),
             beat("打开回购", "刚卖掉的东西可买回", "我手滑了", "moba",
-                 [badge("回购")], title="回购"),
+                 [hero(40, 55), menu_box(55, 45, ["回购页", "破剑 6G"]), badge("回购")], title="回购"),
         ], ["魔兽世界", "MMO"],
     ))
     c.append(case(
@@ -1306,7 +1338,8 @@ def build_cases():
             beat("按召唤坐骑", "上马，移动变快，陆地战技能受限或切换", "骑上", "tps",
                  [hero(48, 55), badge("坐骑")], title="上坐骑"),
             beat("在飞行管理员选目的地", "进入飞行路线镜头", "飞过去", "tps",
-                 [badge("飞行点")], title="飞行点"),
+                 [hero(40, 55), unit(62, 45, team="neutral"),
+                  menu_box(55, 60, ["暴风城", "铁炉堡", "取消"]), badge("飞行点")], title="飞行点"),
         ], ["魔兽世界", "MMO"],
     ))
     c.append(case(
@@ -1345,7 +1378,8 @@ def build_cases():
         "点任务追踪条目，地图/箭头标出目标；超远时给装等提示。",
         [
             beat("点击任务追踪里的目标", "地图标记或地面箭头更新", "知道去哪", "moba",
-                 [badge("追踪→地图")], title="点追踪"),
+                 [hero(35, 60), cursor(40, 30), arrow(38, 55, 70, 40, "move"),
+                  circle_ind(70, 40, 10, True), badge("追踪→地图")], title="点追踪"),
         ], ["魔兽世界", "MMO", "ARPG"],
     ))
     c.append(case(
@@ -1353,9 +1387,11 @@ def build_cases():
         "邮箱取附件；拍卖行上架要填价与时限，成功后物品离包。",
         [
             beat("打开邮箱点附件", "物品进包，邮件更新", "取件", "moba",
-                 [badge("邮箱")], title="取邮"),
+                 [hero(40, 55), building(65, 45), card(55, 50, "附件", 0),
+                  menu_box(30, 70, ["收件箱", "取附件"]), badge("邮箱")], title="取邮"),
             beat("拍卖行填价上架", "物品进入拍卖，包里消失", "挂上了", "moba",
-                 [badge("上架")], title="拍卖"),
+                 [hero(40, 55), card(50, 50, "货", 0, True),
+                  menu_box(58, 42, ["一口价", "上架"]), badge("上架")], title="拍卖"),
         ], ["魔兽世界", "MMO"],
     ))
 
@@ -1379,7 +1415,8 @@ def build_cases():
             beat("对对象右键/长按", "弹出上下文菜单", "还能干这些", "moba",
                  [unit(55, 45, team="ally"), cursor(55, 45), badge("上下文菜单")], title="打开菜单"),
             beat("点菜单项", "执行该项，菜单关闭", "选这项", "moba",
-                 [badge("执行菜单项")], title="选中"),
+                 [unit(55, 45, team="ally"), menu_box(62, 40, ["交易", "检查", "跟随"]),
+                  cursor(70, 52), badge("执行菜单项")], title="选中"),
         ], ["MMO", "RTS", "ARPG"],
     ))
     c.append(case(
@@ -1397,9 +1434,9 @@ def build_cases():
         "分解粉装、删角色、放弃任务等：先警告，确认后才执行；取消原样返回。",
         [
             beat("点危险操作", "弹出确认框，写清后果", "真的吗", "moba",
-                 [badge("确认框")], title="警告"),
+                 [hero(40, 55), menu_box(55, 45, ["删除角色？", "不可恢复"]), badge("确认框")], title="警告"),
             beat("点确认", "执行；点取消则什么都不改", "定了/算了", "moba",
-                 [badge("确认或取消")], title="抉择"),
+                 [hero(40, 55), menu_box(55, 45, ["确认", "取消"]), cursor(62, 58), badge("确认或取消")], title="抉择"),
         ], ["MMO", "全品类"],
     ))
     c.append(case(
@@ -1427,7 +1464,7 @@ def build_cases():
             beat("打开地图点目标位置", "导航点与路线出现", "往那走", "moba",
                  [cursor(60, 45), badge("地图钉点")], title="钉点"),
             beat("清除导航", "箭头/路线消失", "取消导航", "moba",
-                 [badge("清除钉点")], title="清除"),
+                 [hero(40, 55), cursor(60, 45), badge("清除钉点")], title="清除"),
         ], ["MMO", "ARPG", "开放世界"],
     ))
     c.append(case(
@@ -1447,7 +1484,7 @@ def build_cases():
             beat("屏幕提示“按 F 交互”", "其他干扰输入可被挡或无效", "只好按它", "tps",
                  [hero(45, 55), badge("按 F")], title="逼迫提示"),
             beat("按对键", "提示关闭，教程前进一步", "过了", "tps",
-                 [badge("完成步骤")], title="按对"),
+                 [hero(45, 55), building(62, 48), ring(62, 48, kind="buff"), badge("完成步骤")], title="按对"),
         ], ["全品类", "设计选项"],
     ))
     c.append(case(
@@ -1457,7 +1494,8 @@ def build_cases():
             beat("打开建造/科技面板点一项", "资源扣除，队列出现肖像", "开造", "topdown",
                  [building(40, 50), badge("入队")], title="点造"),
             beat("取消队列中的项", "资源按规则退回，队列缩短", "不造了", "topdown",
-                 [badge("取消建造")], title="取消"),
+                 [building(40, 50), menu_box(58, 45, ["步兵 x2", "取消一项"]), cursor(70, 60),
+                  badge("取消建造")], title="取消"),
         ], ["RTS", "4X", "MMO生活系"],
     ))
     c.append(case(
@@ -1687,7 +1725,240 @@ def build_cases():
         ], ["魔兽世界", "MMO", "RTS"],
     ))
 
-    # ===== 二十五、放不了 =====
+    # ===== 二十五、走路：WASD / 摇杆 / 点地 =====
+    c.append(case(
+        "loco-wasd-camera", "locomotion", "WASD：相对镜头方向走",
+        "W 朝镜头前方，A/D 平移，S 后退。转镜头时「前方」跟着变。"
+        "魔兽、多数第三人称开放世界的默认走法。",
+        [
+            beat("按住 W", "角色朝镜头前方移动", "往前走", "tps",
+                 [hero(45, 60, face=-90), stick("L", 0, -1), arrow(45, 55, 45, 35, "move"),
+                  badge("W·镜头前")], title="前进"),
+            beat("转动镜头再按 W", "前进方向随新镜头改变", "前方换了", "tps",
+                 [hero(45, 55, face=20), stick("L", 0, -1), arrow(48, 52, 68, 40, "move"),
+                  badge("镜头变→前方变")], title="转镜后"),
+            beat("按 A 或 D", "相对镜头左右平移（侧移）", "横着走", "tps",
+                 [hero(45, 55, face=-90), stick("L", -1, 0), arrow(40, 55, 25, 55, "move"),
+                  badge("A/D 侧移")], title="侧移"),
+        ], ["魔兽世界", "MMO", "TPS", "开放世界"],
+    ))
+    c.append(case(
+        "loco-wasd-tank", "locomotion", "WASD：车式转向（W 朝角色面朝）",
+        "W 始终朝角色自己面对的方向；A/D 转身，不是平移。"
+        "老式坦克手感/部分载具；和「相对镜头」是两种设计。",
+        [
+            beat("按住 W", "沿角色面朝前进", "朝鼻子走", "tps",
+                 [hero(45, 55, face=20), stick("L", 0, -1), arrow(48, 52, 65, 42, "move"),
+                  badge("W·面朝")], title="前进"),
+            beat("按 A/D", "角色原地转向，不侧移", "拧身子", "tps",
+                 [hero(45, 55, face=-40), stick("L", -1, 0), badge("A/D 转向")], title="转向"),
+        ], ["载具", "设计选项", "TPS"],
+    ))
+    c.append(case(
+        "loco-stick-walk", "locomotion", "左摇杆走：推多少走多快",
+        "摇杆轻推慢走、推满跑步；方向相对镜头或面朝，由设定决定。"
+        "和 WASD 数字键不同，有速度曲线。",
+        [
+            beat("左摇杆轻推", "角色慢走", "踱步", "tps",
+                 [hero(45, 55, face=-90), stick("L", 0, -0.35), arrow(45, 52, 45, 42, "move"),
+                  badge("轻推慢走")], title="慢走"),
+            beat("左摇杆推满", "角色跑起来", "跑", "tps",
+                 [hero(45, 55, face=-90), stick("L", 0, -1), arrow(45, 50, 45, 30, "move"),
+                  badge("推满跑")], title="快跑"),
+            beat("摇杆回中", "停下（或依惯性滑一小步）", "停", "tps",
+                 [hero(45, 55), stick("L", 0, 0), badge("回中")], title="停"),
+        ], ["手柄", "TPS", "动作RPG", "双摇杆"],
+    ))
+    c.append(case(
+        "loco-click-move-avatar", "locomotion", "点地走路：只指挥自己（ARPG）",
+        "鼠标点地板，自己的角色跑过去；不是 RTS 给一群单位下命令。"
+        "可与 WASD 并存，但同时开时要定谁覆盖谁。",
+        [
+            beat("左键/右键点地面", "角色朝落点跑，脚下出现目标点", "去那儿", "topdown",
+                 [hero(30, 60, face=20), arrow(32, 58, 70, 40, "move"), cursor(70, 40, "up"),
+                  badge("点地走")], title="点地"),
+            beat("跑动中再点新落点", "改道去新点，旧点取消", "改主意了", "topdown",
+                 [hero(45, 50, face=10), arrow(48, 48, 75, 55, "move"), cursor(75, 55, "up"),
+                  badge("改落点")], title="改道"),
+        ], ["暗黑", "ARPG", "MOBA补刀走位"],
+    ))
+    c.append(case(
+        "loco-sprint", "locomotion", "冲刺 / 跑步：叠在 WASD 上",
+        "WASD 走的同时按冲刺：变快跑，常耗耐力；可按住或切换。"
+        "松 WASD 通常停，只按冲刺不给方向则无效或原地踏步。",
+        [
+            beat("WASD + 按住冲刺", "速度加快，耐力下降", "跑起来", "tps",
+                 [hero(40, 55, face=-90), stick("L", 0, -1), arrow(40, 48, 40, 25, "move"),
+                  badge("冲刺中")], title="冲刺"),
+            beat("耐力耗尽", "被迫降回走路，冲刺键暂不可用", "喘不上来", "tps",
+                 [hero(45, 55, face=-90), stick("L", 0, -1), badge("耐力空")], title="耗尽"),
+        ], ["MMO", "动作RPG", "TPS", "开放世界"],
+    ))
+    c.append(case(
+        "loco-strafe-backpedal", "locomotion", "侧移与后撤：速度可以不一样",
+        "A/D 侧移常与前进同速或略慢；S 后撤往往更慢且不能暴击/射击惩罚（看品类）。"
+        "这是 WASD 手感的重要调参，不是「四个方向等价」。",
+        [
+            beat("按住 S 后撤", "背对移动方向慢退，可边退边打", "往后蹭", "tps",
+                 [hero(50, 45, face=-90), stick("L", 0, 1), arrow(50, 48, 50, 65, "move"),
+                  badge("后撤慢")], title="后撤"),
+            beat("按住 A/D 边走边瞄", "侧移保持面朝/准星方向", "拉枪线", "tps",
+                 [hero(45, 55, face=0), stick("L", 1, 0), crosshair(70, 40),
+                  arrow(50, 55, 65, 55, "move"), badge("侧移瞄准")], title="侧移"),
+        ], ["FPS", "TPS", "MMO", "MOBA"],
+    ))
+    c.append(case(
+        "loco-release-stop", "locomotion", "松键就停 vs 有一点惯性",
+        "多数 MMO 松 WASD 立刻停；少数动作/载具会滑行。"
+        "手感选择要一眼能懂，不要有时停有时滑却不说明。",
+        [
+            beat("松开所有方向键（立刻停设定）", "角色马上站住", "站定", "tps",
+                 [hero(48, 55), badge("即停")], title="即停"),
+            beat("松键但带惯性", "再滑一小段才停", "滑一下", "tps",
+                 [hero(48, 55, face=-90), path([(48, 55), (48, 40)], "move"), badge("惯性")], title="惯性"),
+        ], ["MMO", "动作RPG", "设计选项"],
+    ))
+    c.append(case(
+        "loco-wasd-vs-click", "locomotion", "WASD 与点地同时存在时谁说了算",
+        "ARPG/部分 MMO 两套都开：按 WASD 应打断点地跑位；点地应打断当前 WASD 路径意图。"
+        "冲突规则要写进手感，不能两人各走各的。",
+        [
+            beat("点地跑动中按下 WASD", "取消点地目标，改由键盘方向走", "键盘接手", "topdown",
+                 [hero(45, 50, face=-90), stick("L", 0, -1), arrow(45, 45, 45, 28, "move"),
+                  badge("WASD 覆盖点地")], title="键优先"),
+            beat("WASD 走着时再点地", "改去鼠标落点（或忽略点地，看设定）", "点地接手", "topdown",
+                 [hero(40, 55), cursor(72, 40, "up"), arrow(42, 53, 70, 42, "move"),
+                  badge("点地覆盖键")], title="点地优先设定"),
+        ], ["ARPG", "MMO", "设计选项"],
+    ))
+    c.append(case(
+        "loco-autorun", "locomotion", "自动前进：锁 W",
+        "按自动前进后，不按 W 也持续朝前走，再按一次或用后退取消。"
+        "长途跑图用，和跟随队友不同。",
+        [
+            beat("按下自动前进", "角色自己往前走，W 呈锁定态", "甩手跑图", "tps",
+                 [hero(45, 55, face=-90), arrow(45, 50, 45, 30, "move"), badge("自动前进ON")], title="锁前进"),
+            beat("再按取消或按 S", "自动前进关闭，停下或改手动", "解锁", "tps",
+                 [hero(45, 55), badge("自动前进OFF")], title="取消"),
+        ], ["魔兽世界", "MMO"],
+    ))
+
+    # ===== 二十六、平板触控 / 卡牌拖放 =====
+    c.append(case(
+        "touch-drag-deploy-card", "touch-tablet", "拖拽手牌部署到战场（皇室战争式）",
+        "按住手牌卡片拖到可部署区域松手；未进合法区松手则弹回。"
+        "费用不够时卡片不可拖出或落点拒绝。",
+        [
+            beat("手指按住手牌一张卡", "卡提起、原槽位空、费用高亮", "捏住了", "topdown",
+                 [card(28, 78, "兵", 3, True), card(48, 82, "法", 2), card(68, 82, "建筑", 5),
+                  building(70, 30), unit(30, 40, team="enemy"), badge("按住手牌")], title="按住"),
+            beat("拖到己方半场合法格", "落点范围高亮，卡随手指移动", "找落点", "topdown",
+                 [card(55, 48, "兵", 3, True), circle_ind(55, 48, 16, True),
+                  path([(28, 78), (55, 48)], "move"), badge("拖向战场")], title="拖拽"),
+            beat("在合法区松手", "卡消失，单位/建筑在落点生成，费用扣除", "放下！", "topdown",
+                 [unit(55, 48, sel=True), ring(55, 48), badge("部署成功")], title="松手部署"),
+            beat("拖出界或费用不足松手", "卡弹回手牌，不扣费", "放不成", "topdown",
+                 [card(28, 78, "兵", 3), circle_ind(80, 20, 12, False), badge("弹回/拒绝")], title="非法"),
+        ], ["皇室战争", "平板", "卡牌RTS"],
+    ))
+    c.append(case(
+        "touch-drag-aim-skill", "touch-tablet", "按住技能键拖出方向/落点再松手",
+        "触控上常见：按住技能图标，拖出箭头或圈，松手放出；滑回图标取消。",
+        [
+            beat("按住技能图标", "出现方向/范围指示器", "还没放", "topdown",
+                 [hero(40, 55), cone(40, 55, angle=-20, spread=40, length=30), badge("按住技能")], title="按住"),
+            beat("拖向目标方向或落点", "指示器跟随手指", "瞄准中", "topdown",
+                 [hero(40, 55), cone(40, 55, angle=10, spread=40, length=34),
+                  cursor(70, 40, "drag"), badge("拖瞄")], title="拖瞄"),
+            beat("松手", "技能放出；滑回取消则不放", "放/取消", "topdown",
+                 [hero(40, 55), arrow(42, 52, 70, 40, "attack"), badge("松手确认")], title="确认"),
+        ], ["平板", "MOBA触控", "皇室战争"],
+    ))
+    c.append(case(
+        "touch-tap-select-unit", "touch-tablet", "点触选中单位 / 再点地下令",
+        "点自己单位选中，再点地面移动或点敌人攻击；无悬停，靠高亮与二次点选。",
+        [
+            beat("点触己方单位", "选中圈出现", "选中了", "topdown",
+                 [unit(40, 55, sel=True), ring(40, 55), cursor(40, 55, "down"), badge("点选")], title="点选"),
+            beat("再点地面或敌人", "下达走/打", "下令", "topdown",
+                 [unit(40, 55, sel=True), ring(40, 55), unit(72, 40, team="enemy"),
+                  arrow(42, 54, 68, 42, "attack"), cursor(72, 40, "up"), badge("点目标")], title="点目标"),
+        ], ["平板", "RTS触控", "COC式"],
+    ))
+    c.append(case(
+        "touch-pinch-pan", "touch-tablet", "双指缩放地图 / 单指拖地图",
+        "双指捏合拉远推近；单指拖平移镜头。与拖卡片手势要分区，避免误触。",
+        [
+            beat("双指捏合", "地图缩放，单位图标大小变化", "拉远/推近", "topdown",
+                 [unit(30, 40), unit(55, 50), unit(70, 35), badge("捏合缩放")], title="缩放"),
+            beat("单指拖空白地", "镜头平移", "挪地图", "topdown",
+                 [unit(40, 50), path([(20, 50), (60, 50)], "move"), badge("拖地图")], title="平移"),
+        ], ["平板", "RTS", "策略"],
+    ))
+    c.append(case(
+        "touch-longpress-info", "touch-tablet", "长按看详情 / 短按执行",
+        "短按是主操作；长按弹出属性卡或次级菜单，避免误开。",
+        [
+            beat("短按单位/卡", "执行默认动作（选中/使用）", "点一下", "topdown",
+                 [unit(50, 50, sel=True), badge("短按")], title="短按"),
+            beat("长按同一对象", "弹出详情/环形次级菜单", "按久一点", "topdown",
+                 [unit(50, 50), menu_box(62, 40, ["详情", "锁定", "取消"]), badge("长按")], title="长按"),
+        ], ["平板", "设计选项"],
+    ))
+    c.append(case(
+        "touch-card-cycle", "touch-tablet", "滑动切换手牌 / 下一张",
+        "手牌区左右滑换焦点卡；或出牌后自动抽到下一张顶牌。",
+        [
+            beat("在手牌区左右滑", "焦点卡切换，中间放大", "换一张", "topdown",
+                 [card(25, 78, "A", 2), card(50, 70, "B", 4, True), card(75, 78, "C", 3),
+                  badge("滑动手牌")], title="滑动"),
+        ], ["卡牌", "平板", "皇室战争"],
+    ))
+
+    # ===== 二十七、选单式指令 =====
+    c.append(case(
+        "menu-rotk-layered", "menu-cmd", "分层选单：先选武将，再选指令，再选目标（三国志式）",
+        "不是实时 WASD，而是回合/半即时里点人物 → 菜单出「移动/攻击/计策」→ 再点格子或对象。"
+        "每层可取消返回上一层。",
+        [
+            beat("点选己方武将", "脚下光标；弹出指令菜单", "叫他做事", "topdown",
+                 [unit(40, 55, sel=True), ring(40, 55),
+                  menu_box(58, 42, ["移动", "攻击", "计策", "待命"]), badge("指令菜单")], title="点武将"),
+            beat("点「攻击」", "菜单收起，可攻击格/对象高亮", "选怎么打", "topdown",
+                 [unit(40, 55, sel=True), unit(70, 40, team="enemy"),
+                  circle_ind(70, 40, 14, True), badge("攻击范围")], title="选指令"),
+            beat("点敌方或格子确认", "指令提交，进入演出/结算", "打他", "topdown",
+                 [unit(40, 55, sel=True), unit(70, 40, team="enemy"),
+                  arrow(44, 52, 66, 42, "attack"), badge("确认目标")], title="选目标"),
+            beat("按取消或点空白", "回到上一层菜单或待机", "算了", "topdown",
+                 [unit(40, 55, sel=True), menu_box(58, 42, ["移动", "攻击", "计策"]), badge("返回上层")], title="取消"),
+        ], ["三国志", "战棋", "回合策略"],
+    ))
+    c.append(case(
+        "menu-grid-command-panel", "menu-cmd", "底部/侧栏技能格点选",
+        "点命令面板上一格技能，再按该技能的目标规则点地/点人。"
+        "适合主机键位少或平板，和键位热键并行。",
+        [
+            beat("点面板上的技能格", "进入该技能瞄准或立即释放", "点了技能", "moba",
+                 [hero(40, 55), menu_box(70, 70, ["Q", "W", "E", "R"]), badge("点技能格")], title="点格"),
+            beat("再点目标/地面（若需要）", "技能放出", "放完", "moba",
+                 [hero(40, 55), circle_ind(68, 40, 14, True), cursor(68, 40), badge("补目标")], title="补目标"),
+        ], ["MOBA", "平板", "RTS面板"],
+    ))
+    c.append(case(
+        "menu-confirm-queue", "menu-cmd", "菜单确认后才入队（防误触）",
+        "选完指令与目标后，还要按「执行」才提交；或弹出确认条。"
+        "战棋/经营常见，和 RTS 右键即下令相反。",
+        [
+            beat("选好指令与目标", "出现确认条：执行 / 取消", "再问一次", "topdown",
+                 [unit(40, 55, sel=True), unit(70, 40, team="enemy"),
+                  menu_box(55, 70, ["执行", "取消"]), badge("确认条")], title="确认"),
+            beat("点执行", "指令入队并播放", "定了", "topdown",
+                 [unit(40, 55, sel=True), arrow(44, 52, 66, 42, "attack"), badge("执行")], title="执行"),
+        ], ["三国志", "战棋", "经营"],
+    ))
+
+    # ===== 二十八、放不了 =====
     c.append(case(
         "block-resource", "blocked", "蓝 / 怒气 / 弹药不足",
         "按下后明确拒绝，并提示缺什么。",
@@ -1727,7 +1998,8 @@ def build_cases():
             beat("超距或没视线时确认", "拒绝并提示原因", "够不着", "moba",
                  [hero(30, 60), unit(80, 30, team="enemy"), badge("超距/视线")], title="超距"),
             beat("交易中走太远", "交易窗关闭，物品回各方", "交易取消", "moba",
-                 [badge("交易取消")], title="交易断"),
+                 [hero(20, 60), unit(80, 30, team="ally"), menu_box(40, 45, ["交易已取消"]),
+                  badge("交易取消")], title="交易断"),
         ], ["MMO", "MOBA", "RTS"],
     ))
     c.append(case(
@@ -1739,14 +2011,94 @@ def build_cases():
         ], ["MMO", "MOBA"],
     ))
 
-    return c
+    return enrich_all(c)
+
+
+def _git_head() -> str:
+    try:
+        return subprocess.check_output(
+            ["git", "rev-parse", "--short", "HEAD"],
+            cwd=str(OUT.parents[2]),
+            text=True,
+        ).strip()
+    except Exception:
+        return "unknown"
+
+
+def _audit_casts(cases: list) -> list[str]:
+    """Warn beats whose cast is badge-only (weak storyboard)."""
+    weak = []
+    for c in cases:
+        for i, b in enumerate(c["beats"]):
+            cast = b.get("cast") or []
+            kinds = {el.get("t") for el in cast}
+            if not cast or kinds <= {"badge"}:
+                weak.append(f"{c['id']}#T{i+1}")
+    return weak
+
+
+def _write_checkpoint(cases: list, weak: list[str], head: str) -> None:
+    todos = sorted({t for c in cases for t in c.get("todos") or []})
+    lines = [
+        "# 玩家动作 UX 图鉴 · Agent Checkpoint",
+        "",
+        "后续 Agent 读此页再改，避免和旧口头结论打架。",
+        "",
+        "## 生成时身份",
+        "",
+        f"- 生成脚本：`scripts/generate-player-action-ux-catalog.py`",
+        f"- 实现标注：`scripts/player_action_ux_impl_notes.py`",
+        f"- 生成时 HEAD：`{head}`（以你拉取后的 `git rev-parse` 为准；合并后会变）",
+        f"- 分支语境：`cursor/wasd-locomotion-ux-4211`（含 WASD 类、三栏布局、本轮同步分栏与触控/选单）",
+        f"- 已合 main 的底座：PR #743 玩家动作图鉴初版",
+        "",
+        "## 页面交互约定（改 UI 前先读）",
+        "",
+        "- 三栏：分类 | 动作列表 | 详情",
+        "- 详情内：**左时序（Mermaid）/ 右分镜**，用拍号芯片同步高亮，不是上下堆叠长滚",
+        "- 每个 case 必有 `ludots`（现状怎么接）与 `todos`（缺口）；标注来自 impl_notes，勿手改 `catalog-data.js`",
+        "",
+        "## 分类是否合理（本轮结论）",
+        "",
+        "- 战斗/RTS/技能瞄准：较完整",
+        "- 走路 WASD、动态 context、自动施法、物品/MMO、设计手势：已有专类",
+        "- 本轮新加：`touch-tablet`（皇室战争式拖卡等）、`menu-cmd`（三国志式选单）",
+        "- 仍可后续单列：战棋格子移动、塔防造塔、MOBA 出装页、观战裁判工具（见 todos）",
+        "",
+        f"## 规模",
+        "",
+        f"- cases = {len(cases)}",
+        f"- beats = {sum(len(c['beats']) for c in cases)}",
+        f"- categories = {len(CATEGORIES)}",
+        "",
+        "## 分镜画面审计",
+        "",
+        f"- 仅 badge / 空 cast 的弱分镜拍数：{len(weak)}",
+        "- 弱分镜不阻断生成，但改数据时应补单位/光标/指示器，禁止「只有字没有画面」",
+        "",
+        "## 高频 TODO（去重）",
+        "",
+    ]
+    for t in todos:
+        lines.append(f"- {t}")
+    lines.append("")
+    CHECKPOINT_MD.write_text("\n".join(lines), encoding="utf-8")
 
 
 def main():
+    head = _git_head()
     cases = build_cases()
+    weak = _audit_casts(cases)
     payload = {
         "title": "玩家动作体验图鉴",
-        "subtitle": "只谈手怎么动、画面怎么变、爽点在哪——分镜式报菜名。不含技术分层。",
+        "subtitle": "只谈手怎么动、画面怎么变、爽点在哪——分镜式报菜名。附 Ludots 现状与缺口。",
+        "checkpoint": {
+            "head": head,
+            "branch_hint": "cursor/wasd-locomotion-ux-4211",
+            "impl_notes": "scripts/player_action_ux_impl_notes.py",
+            "note": "ludots/todos 以生成时审计为准；合并后请重新 generate 并更新 CHECKPOINT.md",
+            "weak_storyboard_beats": weak,
+        },
         "categories": [{"id": cid, "title": title} for cid, title in CATEGORIES],
         "cases": cases,
     }
@@ -1758,8 +2110,13 @@ def main():
         + ";\n",
         encoding="utf-8",
     )
-    print(f"Wrote {OUT.relative_to(OUT.parents[2])}  cases={len(cases)}  beats={sum(len(x['beats']) for x in cases)}")
+    _write_checkpoint(cases, weak, head)
+    print(
+        f"Wrote {OUT.relative_to(OUT.parents[2])}  cases={len(cases)}  "
+        f"beats={sum(len(x['beats']) for x in cases)}  weak_casts={len(weak)}  head={head}"
+    )
 
 
 if __name__ == "__main__":
     main()
+

@@ -5,14 +5,18 @@
   const $ = (sel, root = document) => root.querySelector(sel);
   const navEl = $("#nav");
   const listEl = $("#list");
+  const detailEl = $("#detail");
   const searchEl = $("#search");
   const statsEl = $("#stats");
 
-  if (!navEl || !listEl || !searchEl || !statsEl) {
-    throw new Error("catalog page shell missing required nodes (#nav/#list/#search/#stats)");
+  if (!navEl || !listEl || !detailEl || !searchEl || !statsEl) {
+    throw new Error("catalog page shell missing required nodes (#nav/#list/#detail/#search/#stats)");
   }
 
-  let activeCategory = "all";
+  /** Default to first real category so the page is not a 150-card dump. */
+  let activeCategory = (data.categories[0] && data.categories[0].id) || "all";
+  let selectedId = null;
+  let activeBeat = 0;
   let query = "";
   let uid = 0;
 
@@ -171,6 +175,28 @@
           <rect x="${SX + 8}" y="${SY + 8}" width="${w}" height="22" rx="4" fill="#0b0e13" stroke="#f0a35e" stroke-width="1.3"/>
           <text x="${SX + 16}" y="${SY + 23}" fill="#f0a35e" font-size="11" font-family="DM Sans, sans-serif" font-weight="700">${esc(el.text)}</text>`;
       }
+      if (el.t === "card") {
+        const x = px(el.x), y = py(el.y);
+        const drag = !!el.dragging;
+        const w = drag ? 36 : 30, h = drag ? 44 : 38;
+        return `
+          <rect x="${x - w / 2}" y="${y - h / 2}" width="${w}" height="${h}" rx="5"
+            fill="${drag ? "#2a3a4e" : "#1a2430"}" stroke="${drag ? "#f0a35e" : "#6ec8ff"}" stroke-width="${drag ? 2 : 1.4}"/>
+          <text x="${x}" y="${y - 2}" text-anchor="middle" fill="#e8eef6" font-size="11" font-family="DM Sans, sans-serif" font-weight="700">${esc(el.label || "卡")}</text>
+          ${el.cost != null ? `<text x="${x}" y="${y + 14}" text-anchor="middle" fill="#f0a35e" font-size="10" font-family="IBM Plex Mono, monospace">${esc(el.cost)}</text>` : ""}`;
+      }
+      if (el.t === "menu") {
+        const x = px(el.x), y = py(el.y);
+        const lines = el.lines || [];
+        const h = 16 + lines.length * 16;
+        const w = 72;
+        const items = lines.map((ln, i) =>
+          `<text x="${x + 8}" y="${y + 18 + i * 16}" fill="#e8eef6" font-size="11" font-family="DM Sans, sans-serif">${esc(ln)}</text>`
+        ).join("");
+        return `
+          <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="4" fill="#0b0e13" stroke="#6ec8ff" stroke-width="1.4"/>
+          ${items}`;
+      }
       return "";
     }).join("\n");
   }
@@ -267,7 +293,6 @@
 
   let mermaidReady = false;
   let mermaidSeq = 0;
-  let mermaidIO = null;
 
   function ensureMermaid() {
     if (!window.mermaid) {
@@ -291,8 +316,10 @@
     }
   }
 
-  async function renderOneMermaid(pre) {
-    if (!pre || !pre.isConnected || !pre.hasAttribute("data-pending")) return;
+  async function paintDetailMermaid() {
+    const pre = detailEl.querySelector("pre.mermaid[data-pending]");
+    if (!pre) return;
+    ensureMermaid();
     const src = pre.textContent;
     const id = `ux-seq-${++mermaidSeq}`;
     pre.removeAttribute("data-pending");
@@ -314,59 +341,6 @@
     }
   }
 
-  function paintMermaid() {
-    ensureMermaid();
-    if (mermaidIO) {
-      mermaidIO.disconnect();
-      mermaidIO = null;
-    }
-    const boxes = [...listEl.querySelectorAll(".mmd-box")];
-    if (!boxes.length) return;
-
-    mermaidIO = new IntersectionObserver((entries) => {
-      for (const entry of entries) {
-        if (!entry.isIntersecting) continue;
-        const pre = entry.target.querySelector("pre.mermaid[data-pending]");
-        mermaidIO.unobserve(entry.target);
-        if (!pre) continue;
-        renderOneMermaid(pre).catch((err) => {
-          console.error(err);
-        });
-      }
-    }, { rootMargin: "240px 0px", threshold: 0.01 });
-
-    boxes.forEach((box) => mermaidIO.observe(box));
-  }
-
-  function renderCase(c) {
-    const tags = (c.genres || []).map((g) => `<span class="tag">${esc(g)}</span>`).join("");
-    const panels = c.beats.map((b, i) => `
-      <article class="panel">
-        ${storyboardSvg(b, i)}
-        <div class="panel-cap">
-          <div class="cap-row"><span class="k">输入</span><span class="v">${esc(b.input)}</span></div>
-          <div class="cap-row"><span class="k">画面</span><span class="v">${esc(b.screen)}</span></div>
-          <div class="cap-row"><span class="k">手感</span><span class="v">${esc(b.feel)}</span></div>
-        </div>
-      </article>`).join("");
-    const mmd = sequenceMermaid(c.beats);
-    return `
-      <article class="case-card" id="${esc(c.id)}" data-category="${esc(c.category)}">
-        <div class="case-head">
-          <h3>${esc(c.title)}</h3>
-          <span class="case-id">${esc(c.id)}</span>
-        </div>
-        <p class="summary">${esc(c.summary)}</p>
-        <div class="tags">${tags}</div>
-        <p class="section-label">Mermaid 时序图 · 玩家 → 输入 → 画面 → 手感</p>
-        <div class="mmd-box">
-          <pre class="mermaid" data-pending="1">${esc(mmd)}</pre>
-        </div>
-        <p class="section-label">分镜胶片</p>
-        <div class="storyboard" aria-label="分镜条">${panels}</div>
-      </article>`;
-  }
-
   function filtered() {
     const q = query.trim().toLowerCase();
     return data.cases.filter((c) => {
@@ -379,29 +353,137 @@
 
   function renderNav() {
     const items = [{ id: "all", title: "全部" }, ...data.categories];
-    navEl.innerHTML = `<h2>目录</h2>` + items.map((cat) => {
-      const count = cat.id === "all" ? data.cases.length : data.cases.filter((c) => c.category === cat.id).length;
-      return `<button type="button" data-cat="${esc(cat.id)}" class="${activeCategory === cat.id ? "active" : ""}">${esc(cat.title)} <span style="color:#66758a">(${count})</span></button>`;
+    navEl.innerHTML = items.map((cat) => {
+      const count = cat.id === "all"
+        ? data.cases.length
+        : data.cases.filter((c) => c.category === cat.id).length;
+      return `<button type="button" class="nav-btn ${activeCategory === cat.id ? "active" : ""}" data-cat="${esc(cat.id)}">${esc(cat.title)} <span class="count">(${count})</span></button>`;
     }).join("");
     navEl.querySelectorAll("button").forEach((btn) => {
       btn.addEventListener("click", () => {
         activeCategory = btn.dataset.cat;
+        selectedId = null;
+        activeBeat = 0;
         render();
       });
     });
   }
 
-  async function render() {
+  function renderList(cases) {
+    if (!cases.length) {
+      listEl.innerHTML = `<div class="empty">没有匹配的动作。</div>`;
+      return;
+    }
+    listEl.innerHTML = cases.map((c) => `
+      <button type="button" class="case-row ${selectedId === c.id ? "active" : ""}" data-id="${esc(c.id)}">
+        <span class="title">${esc(c.title)}</span>
+        <span class="beats">${c.beats.length} 镜</span>
+        <p class="sub">${esc(c.summary)}</p>
+        <span class="meta">${esc(c.id)}</span>
+      </button>`).join("");
+    listEl.querySelectorAll(".case-row").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        selectedId = btn.dataset.id;
+        activeBeat = 0;
+        renderList(filtered());
+        renderDetail();
+        const active = listEl.querySelector(".case-row.active");
+        if (active) active.scrollIntoView({ block: "nearest" });
+      });
+    });
+  }
+
+  function bindBeatSync(beatCount) {
+    const setBeat = (i) => {
+      activeBeat = Math.max(0, Math.min(beatCount - 1, i));
+      detailEl.querySelectorAll("[data-beat]").forEach((el) => {
+        el.classList.toggle("active", Number(el.dataset.beat) === activeBeat);
+      });
+      const panel = detailEl.querySelector(`.panel[data-beat="${activeBeat}"]`);
+      if (panel) panel.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
+    };
+    detailEl.querySelectorAll("[data-beat]").forEach((el) => {
+      el.addEventListener("click", () => setBeat(Number(el.dataset.beat)));
+    });
+    setBeat(activeBeat);
+  }
+
+  function renderDetail() {
+    const c = data.cases.find((x) => x.id === selectedId);
+    if (!c) {
+      detailEl.innerHTML = `<div class="empty-detail">从中间列表点一个动作，这里展开时序图和分镜。</div>`;
+      return;
+    }
+    if (activeBeat >= c.beats.length) activeBeat = 0;
+    const tags = (c.genres || []).map((g) => `<span class="tag">${esc(g)}</span>`).join("");
+    const todos = (c.todos || []).map((t) => `<li>${esc(t)}</li>`).join("");
+    const chips = c.beats.map((b, i) =>
+      `<button type="button" class="beat-chip" data-beat="${i}">T${i + 1} ${esc(b.title || "")}</button>`
+    ).join("");
+    const panels = c.beats.map((b, i) => `
+      <article class="panel" data-beat="${i}">
+        ${storyboardSvg(b, i)}
+        <div class="panel-cap">
+          <div class="cap-row"><span class="k">输入</span><span class="v">${esc(b.input)}</span></div>
+          <div class="cap-row"><span class="k">画面</span><span class="v">${esc(b.screen)}</span></div>
+          <div class="cap-row"><span class="k">手感</span><span class="v">${esc(b.feel)}</span></div>
+        </div>
+      </article>`).join("");
+    const mmd = sequenceMermaid(c.beats);
+    const cp = data.checkpoint || {};
+    detailEl.innerHTML = `
+      <div class="detail-inner">
+        <div class="detail-head">
+          <h2>${esc(c.title)}</h2>
+          <span class="case-id">${esc(c.id)}</span>
+        </div>
+        <p class="summary">${esc(c.summary)}</p>
+        <div class="tags">${tags}</div>
+
+        <div class="impl-grid">
+          <div class="impl-card">
+            <div class="section-label">Ludots 现状</div>
+            <p>${esc(c.ludots || "未标注")}</p>
+          </div>
+          <div class="impl-card impl-todo">
+            <div class="section-label">缺口 TODO</div>
+            ${todos ? `<ul>${todos}</ul>` : `<p class="ok">本条暂无额外 TODO</p>`}
+          </div>
+        </div>
+
+        <div class="beat-rail" aria-label="分镜拍号">${chips}</div>
+        <p class="sync-hint">左时序 · 右分镜 — 点拍号两侧同步高亮（checkpoint ${esc(cp.head || "?")}）</p>
+
+        <div class="sync-split">
+          <div class="sync-col">
+            <p class="section-label">Mermaid 时序</p>
+            <div class="mmd-box">
+              <pre class="mermaid" data-pending="1">${esc(mmd)}</pre>
+            </div>
+          </div>
+          <div class="sync-col">
+            <p class="section-label">分镜（与左拍同步）</p>
+            <div class="storyboard storyboard-stack" aria-label="分镜条">${panels}</div>
+          </div>
+        </div>
+      </div>`;
+    detailEl.scrollTop = 0;
+    bindBeatSync(c.beats.length);
+    paintDetailMermaid().catch((err) => console.error(err));
+  }
+
+  function render() {
     renderNav();
     const cases = filtered();
+    if (!selectedId || !cases.some((c) => c.id === selectedId)) {
+      selectedId = cases[0] ? cases[0].id : null;
+    }
     statsEl.innerHTML = `
       <span class="chip">动作 <strong>${data.cases.length}</strong></span>
-      <span class="chip">分镜格 <strong>${data.cases.reduce((n, c) => n + c.beats.length, 0)}</strong></span>
-      <span class="chip">当前显示 <strong>${cases.length}</strong></span>`;
-    listEl.innerHTML = cases.length
-      ? cases.map(renderCase).join("")
-      : `<div class="empty">没有匹配的动作。试试别的关键词。</div>`;
-    paintMermaid();
+      <span class="chip">分镜 <strong>${data.cases.reduce((n, c) => n + c.beats.length, 0)}</strong></span>
+      <span class="chip">本栏 <strong>${cases.length}</strong></span>`;
+    renderList(cases);
+    renderDetail();
   }
 
   let searchTimer = 0;
@@ -411,6 +493,26 @@
     searchTimer = window.setTimeout(() => { render(); }, 120);
   });
 
+  // Keyboard: j/k or arrows move selection within list
+  document.addEventListener("keydown", (e) => {
+    if (e.target === searchEl) return;
+    if (e.key !== "ArrowDown" && e.key !== "ArrowUp" && e.key !== "j" && e.key !== "k") return;
+    const cases = filtered();
+    if (!cases.length) return;
+    e.preventDefault();
+    const idx = Math.max(0, cases.findIndex((c) => c.id === selectedId));
+    const next = (e.key === "ArrowDown" || e.key === "j")
+      ? Math.min(cases.length - 1, idx + 1)
+      : Math.max(0, idx - 1);
+    selectedId = cases[next].id;
+    activeBeat = 0;
+    renderList(cases);
+    renderDetail();
+    const active = listEl.querySelector(".case-row.active");
+    if (active) active.scrollIntoView({ block: "nearest" });
+  });
+
   render();
 })();
+
 
