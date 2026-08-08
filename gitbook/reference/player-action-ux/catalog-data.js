@@ -76,8 +76,24 @@ window.PLAYER_ACTION_UX_CATALOG = {
       "title": "十八、临时多出来的技能"
     },
     {
+      "id": "item",
+      "title": "十九、物品：捡 / 用 / 装 / 拖"
+    },
+    {
+      "id": "mmo-social",
+      "title": "二十、MMO：人、对话、队伍"
+    },
+    {
+      "id": "mmo-world",
+      "title": "二十一、MMO：采集、买卖、坐骑、复活"
+    },
+    {
+      "id": "design-ui",
+      "title": "二十二、设计向界面手势"
+    },
+    {
       "id": "blocked",
-      "title": "十九、放不了时的反馈"
+      "title": "二十三、放不了时的反馈"
     }
   ],
   "cases": [
@@ -6323,6 +6339,2483 @@ window.PLAYER_ACTION_UX_CATALOG = {
       ]
     },
     {
+      "id": "temp-kit-item-trinket",
+      "category": "temp-kit",
+      "title": "饰品/道具按下才冒出来的主动技",
+      "summary": "装备某件饰品或任务道具后，技能栏多一颗主动键；卸下或任务结束键消失。像魔兽饰品 on-use、大秘境钥匙类道具技能。",
+      "genres": [
+        "魔兽世界",
+        "MMO",
+        "ARPG"
+      ],
+      "beats": [
+        {
+          "title": "装上出现",
+          "input": "装备带主动的饰品",
+          "screen": "技能栏多出饰品键，显示层数/CD",
+          "feel": "多了一招装备技",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 45,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "badge",
+              "text": "+饰品主动"
+            }
+          ]
+        },
+        {
+          "title": "使用",
+          "input": "按下饰品主动",
+          "screen": "打出饰品效果，进入饰品 CD",
+          "feel": "用装备技",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 45,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "ring",
+              "x": 45,
+              "y": 55,
+              "r": 14,
+              "kind": "buff"
+            },
+            {
+              "t": "badge",
+              "text": "饰品放出"
+            }
+          ]
+        },
+        {
+          "title": "卸下收回",
+          "input": "卸下饰品或任务收回",
+          "screen": "该键从栏位消失",
+          "feel": "招没了",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 45,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "badge",
+              "text": "键收回"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "temp-kit-steal-copy",
+      "category": "temp-kit",
+      "title": "偷来 / 复制来的技能",
+      "summary": "从敌人或环境得到对方技能的临时拷贝，用一次或限时后消失。像英雄联盟劫/塞拉斯偷大、部分动作游戏吸收招式。",
+      "genres": [
+        "MOBA",
+        "动作RPG"
+      ],
+      "beats": [
+        {
+          "title": "获得拷贝",
+          "input": "成功偷取/复制",
+          "screen": "栏位出现对方技能图标，标“临时”",
+          "feel": "这招是借的",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 70,
+              "y": 40,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "badge",
+              "text": "偷到技能"
+            }
+          ]
+        },
+        {
+          "title": "释放",
+          "input": "按该临时键",
+          "screen": "打出被偷技能的效果",
+          "feel": "用他的招",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "circle",
+              "x": 70,
+              "y": 40,
+              "r": 14,
+              "ok": true
+            },
+            {
+              "t": "badge",
+              "text": "释放拷贝"
+            }
+          ]
+        },
+        {
+          "title": "消失",
+          "input": "次数用尽或计时结束",
+          "screen": "拷贝图标消失",
+          "feel": "还回去了",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "badge",
+              "text": "拷贝消失"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "temp-kit-empower-next",
+      "category": "temp-kit",
+      "title": "强化下一击：先充能，再打出去",
+      "summary": "按键进入“下一击强化”状态，普攻或下一次技能吃到加成后状态消耗。不是永久多一招，是窗口内改写下一次出手。",
+      "genres": [
+        "动作RPG",
+        "MOBA",
+        "ARPG"
+      ],
+      "beats": [
+        {
+          "title": "充能",
+          "input": "按下强化键",
+          "screen": "武器/拳头发光，提示“下一击强化”",
+          "feel": "蓄着劲",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 45,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "ring",
+              "x": 45,
+              "y": 55,
+              "r": 12,
+              "kind": "buff"
+            },
+            {
+              "t": "badge",
+              "text": "下一击"
+            }
+          ]
+        },
+        {
+          "title": "消耗",
+          "input": "下一次攻击命中",
+          "screen": "打出强化效果，发光消失",
+          "feel": "这下够疼",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 42,
+              "y": 55,
+              "face": 20
+            },
+            {
+              "t": "unit",
+              "x": 68,
+              "y": 42,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "arrow",
+              "x1": 48,
+              "y1": 52,
+              "x2": 64,
+              "y2": 44,
+              "kind": "attack"
+            },
+            {
+              "t": "badge",
+              "text": "强化打出"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "temp-kit-vehicle-gunner",
+      "category": "temp-kit",
+      "title": "载具 / 炮台座位：整套操作临时替换",
+      "summary": "上车或上炮位后，移动与射击键语义全换成载具武器；下车立刻恢复步行那套。和变身类似，但是“座位授予”而不是角色变身。",
+      "genres": [
+        "TPS",
+        "FPS",
+        "MMO"
+      ],
+      "beats": [
+        {
+          "title": "上车",
+          "input": "进入炮位/驾驶位",
+          "screen": "准星变车炮；技能栏变载具武器",
+          "feel": "换成开车手感",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "building",
+              "x": 48,
+              "y": 55,
+              "ghost": false
+            },
+            {
+              "t": "crosshair",
+              "x": 62,
+              "y": 40,
+              "locked": false
+            },
+            {
+              "t": "badge",
+              "text": "进入座位"
+            }
+          ]
+        },
+        {
+          "title": "下车",
+          "input": "下车 / 被炸下车",
+          "screen": "操作与技能栏瞬间回到步行",
+          "feel": "又变回人",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 48,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "badge",
+              "text": "离开座位"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "temp-kit-shrine-zone",
+      "category": "temp-kit",
+      "title": "神龛 / 区域buff：站进去才有的临时技",
+      "summary": "踩进光环或交互神龛后短时获得技能或弹药；离开区域或超时收回。像命运2 公共事件球、部分 MMO 祭坛。",
+      "genres": [
+        "MMO",
+        "TPS",
+        "ARPG"
+      ],
+      "beats": [
+        {
+          "title": "获得",
+          "input": "走进神龛范围或交互启动",
+          "screen": "获得临时技能/弹药提示",
+          "feel": "这片地给力",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 45,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "circle",
+              "x": 45,
+              "y": 55,
+              "r": 28,
+              "ok": true
+            },
+            {
+              "t": "badge",
+              "text": "神龛授予"
+            }
+          ]
+        },
+        {
+          "title": "收回",
+          "input": "离开范围或超时",
+          "screen": "临时技/弹药加成消失",
+          "feel": "出圈就没",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 70,
+              "y": 40,
+              "face": 0
+            },
+            {
+              "t": "circle",
+              "x": 40,
+              "y": 55,
+              "r": 28,
+              "ok": false
+            },
+            {
+              "t": "badge",
+              "text": "离开收回"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "temp-kit-mount-combat",
+      "category": "temp-kit",
+      "title": "骑乘战斗：马上多出来的键",
+      "summary": "上马后出现冲撞、加速、马上射击等骑乘技；下马这些键消失，陆地技回来。",
+      "genres": [
+        "魔兽世界",
+        "MMO",
+        "动作RPG"
+      ],
+      "beats": [
+        {
+          "title": "上马",
+          "input": "上马成功",
+          "screen": "技能栏出现骑乘技，移动变坐骑手感",
+          "feel": "马上能按新键",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 48,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "badge",
+              "text": "骑乘技"
+            }
+          ]
+        },
+        {
+          "title": "下马",
+          "input": "下马",
+          "screen": "骑乘技消失，恢复陆地技能栏",
+          "feel": "下地",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 48,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "badge",
+              "text": "陆地技"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "item-pickup-world",
+      "category": "item",
+      "title": "地上捡东西",
+      "summary": "走近可拾取物，按交互键或右键拾取进包；包满要明确拒绝。",
+      "genres": [
+        "MMO",
+        "ARPG",
+        "动作RPG"
+      ],
+      "beats": [
+        {
+          "title": "靠近",
+          "input": "走近掉落物，出现拾取提示",
+          "screen": "名称/品质飘在地上",
+          "feel": "能捡",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "building",
+              "x": 62,
+              "y": 48,
+              "ghost": false
+            },
+            {
+              "t": "badge",
+              "text": "可拾取"
+            }
+          ]
+        },
+        {
+          "title": "捡起",
+          "input": "按交互键 / 右键拾取",
+          "screen": "物品进背包，地上消失",
+          "feel": "到手了",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 45,
+              "y": 52,
+              "face": 0
+            },
+            {
+              "t": "badge",
+              "text": "已入包"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "item-loot-window",
+      "category": "item",
+      "title": "开箱子 / 尸体掉落窗",
+      "summary": "对箱子或尸体交互弹出战利品窗，逐格拾取或全部拾取；需掷骰时先看见分配。",
+      "genres": [
+        "魔兽世界",
+        "MMO",
+        "ARPG"
+      ],
+      "beats": [
+        {
+          "title": "打开",
+          "input": "对箱子/尸体按交互",
+          "screen": "弹出掉落列表",
+          "feel": "看看有啥",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "building",
+              "x": 65,
+              "y": 45,
+              "ghost": false
+            },
+            {
+              "t": "badge",
+              "text": "掉落窗"
+            }
+          ]
+        },
+        {
+          "title": "拾取",
+          "input": "点一项或点全部拾取",
+          "screen": "进包；窗内该项消失",
+          "feel": "拿走",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "badge",
+              "text": "拾取"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "item-need-greed",
+      "category": "item",
+      "title": "团队掷骰：需求 / 贪婪 / 放弃",
+      "summary": "稀有掉落弹窗，限时选择需求、贪婪或放弃；结果出来再进某人的包。",
+      "genres": [
+        "魔兽世界",
+        "MMO"
+      ],
+      "beats": [
+        {
+          "title": "弹窗",
+          "input": "稀有物品弹出掷骰窗",
+          "screen": "倒计时与三个按钮",
+          "feel": "快选",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "badge",
+              "text": "需求/贪婪/放弃"
+            }
+          ]
+        },
+        {
+          "title": "结果",
+          "input": "点需求或贪婪",
+          "screen": "等待其他人；出结果后归属提示",
+          "feel": "看谁赢",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "badge",
+              "text": "掷骰结果"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "item-use-self",
+      "category": "item",
+      "title": "对自己用消耗品",
+      "summary": "快捷栏点药水/食物：读条或瞬发，叠 CD，数量 -1。",
+      "genres": [
+        "魔兽世界",
+        "MMO",
+        "ARPG"
+      ],
+      "beats": [
+        {
+          "title": "自用",
+          "input": "按药水快捷键",
+          "screen": "自己吃增益/回血，图标进入物品 CD",
+          "feel": "补一口",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 48,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "ring",
+              "x": 48,
+              "y": 55,
+              "r": 12,
+              "kind": "buff"
+            },
+            {
+              "t": "badge",
+              "text": "用药"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "item-use-on-target",
+      "category": "item",
+      "title": "对目标用物品",
+      "summary": "先选中友方/敌方，再点物品；或点物品再点目标。像复活石点队友、减速陷阱点地面/敌人。",
+      "genres": [
+        "魔兽世界",
+        "MMO",
+        "ARPG"
+      ],
+      "beats": [
+        {
+          "title": "对目标",
+          "input": "选中目标后按物品键",
+          "screen": "物品效果打在目标上，消耗数量",
+          "feel": "用在他身上",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 35,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 65,
+              "y": 45,
+              "sel": false,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "ring",
+              "x": 65,
+              "y": 45,
+              "r": 10,
+              "kind": "buff"
+            },
+            {
+              "t": "badge",
+              "text": "物品→目标"
+            }
+          ]
+        },
+        {
+          "title": "先物品后点",
+          "input": "先点物品再点目标",
+          "screen": "进入“物品瞄准”，点合法目标才消耗",
+          "feel": "指哪用哪",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 35,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "cursor",
+              "x": 65,
+              "y": 45,
+              "mode": "idle"
+            },
+            {
+              "t": "unit",
+              "x": 65,
+              "y": 45,
+              "sel": false,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "badge",
+              "text": "物品瞄准"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "item-use-on-ground",
+      "category": "item",
+      "title": "对地面用物品",
+      "summary": "炸弹、旗帜、营帐：点物品后点地板落下。和技能点地同一手感，消耗的是物品次数。",
+      "genres": [
+        "MMO",
+        "MOBA",
+        "ARPG"
+      ],
+      "beats": [
+        {
+          "title": "点地使用",
+          "input": "点物品再点地面",
+          "screen": "落点预览；确认后物品 -1，效果出现在地上",
+          "feel": "丢那儿",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 35,
+              "y": 60,
+              "face": 0
+            },
+            {
+              "t": "circle",
+              "x": 70,
+              "y": 40,
+              "r": 14,
+              "ok": true
+            },
+            {
+              "t": "cursor",
+              "x": 70,
+              "y": 40,
+              "mode": "idle"
+            },
+            {
+              "t": "badge",
+              "text": "物品点地"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "item-equip-swap",
+      "category": "item",
+      "title": "穿上 / 脱下 / 替换装备",
+      "summary": "从背包双击或拖到装备槽；槽位已有装备则替换进包，属性立刻变。",
+      "genres": [
+        "MMO",
+        "ARPG"
+      ],
+      "beats": [
+        {
+          "title": "穿上",
+          "input": "双击背包里的武器",
+          "screen": "进入装备槽；旧武器回包（若有）",
+          "feel": "换好了",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 48,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "badge",
+              "text": "装备"
+            }
+          ]
+        },
+        {
+          "title": "卸下",
+          "input": "从装备槽拖回背包或点卸下",
+          "screen": "槽空了，属性去掉",
+          "feel": "脱下",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 48,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "badge",
+              "text": "卸下"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "item-hotbar-drag",
+      "category": "item",
+      "title": "拖到快捷栏",
+      "summary": "从背包拖到快捷栏格子，之后可用数字键使用；拖走或替换会改键位映射。",
+      "genres": [
+        "魔兽世界",
+        "MMO",
+        "ARPG"
+      ],
+      "beats": [
+        {
+          "title": "拖上栏",
+          "input": "从背包拖到快捷栏空位",
+          "screen": "栏位出现物品图标与数量",
+          "feel": "键位绑好了",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "badge",
+              "text": "拖到快捷栏"
+            }
+          ]
+        },
+        {
+          "title": "快捷用",
+          "input": "按对应数字键",
+          "screen": "等同于使用该物品",
+          "feel": "键上就能用",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 48,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "badge",
+              "text": "快捷使用"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "item-split-stack",
+      "category": "item",
+      "title": "拆堆 / 合堆",
+      "summary": "按住修饰键拖动堆叠，输入数量拆成两堆；拖到同类上合并。",
+      "genres": [
+        "魔兽世界",
+        "MMO"
+      ],
+      "beats": [
+        {
+          "title": "拆",
+          "input": "Shift+拖动堆叠，输入数量",
+          "screen": "拆成两堆",
+          "feel": "分开装",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "badge",
+              "text": "拆堆"
+            }
+          ]
+        },
+        {
+          "title": "合",
+          "input": "拖到同类物品上",
+          "screen": "数量合并（不超过上限）",
+          "feel": "摞一起",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "badge",
+              "text": "合堆"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "item-compare-tooltip",
+      "category": "item",
+      "title": "悬停对比：身上 vs 包里",
+      "summary": "鼠标悬停背包装备时，并排显示当前已穿装备的数值差。",
+      "genres": [
+        "魔兽世界",
+        "MMO",
+        "ARPG"
+      ],
+      "beats": [
+        {
+          "title": "对比",
+          "input": "鼠标悬停背包中的装备",
+          "screen": "双提示框：新装备 + 已穿对照",
+          "feel": "看看谁更好",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "cursor",
+              "x": 55,
+              "y": 45,
+              "mode": "idle"
+            },
+            {
+              "t": "badge",
+              "text": "对比提示"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "item-destroy-sell",
+      "category": "item",
+      "title": "摧毁 / 卖店",
+      "summary": "拖到摧毁或卖店确认；贵重物品要二次确认，防止手滑。",
+      "genres": [
+        "MMO",
+        "ARPG"
+      ],
+      "beats": [
+        {
+          "title": "卖或毁",
+          "input": "拖到出售/摧毁区",
+          "screen": "标价或警告；确认后物品离开背包",
+          "feel": "卖掉/毁掉",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "badge",
+              "text": "出售确认"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "item-charges-durability",
+      "category": "item",
+      "title": "次数道具与耐久",
+      "summary": "魔杖/爆炸物显示剩余次数；装备掉耐久到 0 失效或强制修理提示。",
+      "genres": [
+        "魔兽世界",
+        "MMO",
+        "ARPG"
+      ],
+      "beats": [
+        {
+          "title": "扣次数",
+          "input": "使用带次数的物品",
+          "screen": "次数 -1，到 0 物品消失或变灰",
+          "feel": "还能用几次",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 48,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "badge",
+              "text": "次数-1"
+            }
+          ]
+        },
+        {
+          "title": "耐久",
+          "input": "装备耐久耗尽",
+          "screen": "属性失效或红字提示去修",
+          "feel": "该修了",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 48,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "badge",
+              "text": "耐久耗尽"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mmo-tab-target",
+      "category": "mmo-social",
+      "title": "Tab 循环选敌 / 点框选友",
+      "summary": "Tab 在前方敌人间切换当前目标；点队伍/团队框选中队友以便治疗或菜单。",
+      "genres": [
+        "魔兽世界",
+        "MMO"
+      ],
+      "beats": [
+        {
+          "title": "Tab 选敌",
+          "input": "按 Tab",
+          "screen": "当前目标描边换到下一个敌人",
+          "feel": "换锁定",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 35,
+              "y": 60,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 55,
+              "y": 40,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "unit",
+              "x": 72,
+              "y": 48,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "ring",
+              "x": 55,
+              "y": 40,
+              "r": 8,
+              "kind": "lock"
+            },
+            {
+              "t": "badge",
+              "text": "Tab选敌"
+            }
+          ]
+        },
+        {
+          "title": "点框选友",
+          "input": "点击队伍框上头像",
+          "screen": "该队友成为友好目标/治疗目标",
+          "feel": "点框选人",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 65,
+              "y": 45,
+              "sel": false,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "ring",
+              "x": 65,
+              "y": 45,
+              "r": 8,
+              "kind": "buff"
+            },
+            {
+              "t": "badge",
+              "text": "点框"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mmo-interact-npc",
+      "category": "mmo-social",
+      "title": "对 NPC 按交互：任务 / 商店 / 对话",
+      "summary": "面向可交互 NPC 按键，打开任务、商店或对话——同一键，NPC 类型决定面板。",
+      "genres": [
+        "魔兽世界",
+        "MMO"
+      ],
+      "beats": [
+        {
+          "title": "靠近",
+          "input": "靠近 NPC，出现交互提示",
+          "screen": "名称与类型（任务感叹号等）",
+          "feel": "能说话",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 38,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 62,
+              "y": 48,
+              "sel": false,
+              "team": "neutral",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "badge",
+              "text": "可交互"
+            }
+          ]
+        },
+        {
+          "title": "交互",
+          "input": "按交互键",
+          "screen": "打开任务/对话/商店面板",
+          "feel": "开始谈",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 42,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "badge",
+              "text": "打开面板"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mmo-dialogue-choice",
+      "category": "mmo-social",
+      "title": "对话选项与跳过",
+      "summary": "对话里点选项推进分支；可跳过旁白，但关键选择不能被静默跳过。",
+      "genres": [
+        "MMO",
+        "动作RPG",
+        "AVG"
+      ],
+      "beats": [
+        {
+          "title": "跳过",
+          "input": "对话播放中点跳过",
+          "screen": "旁白快进到下一句或选项",
+          "feel": "说快点",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "badge",
+              "text": "跳过旁白"
+            }
+          ]
+        },
+        {
+          "title": "选项",
+          "input": "点一个对话选项",
+          "screen": "分支推进，面板换下一页",
+          "feel": "选这条",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "cursor",
+              "x": 50,
+              "y": 60,
+              "mode": "idle"
+            },
+            {
+              "t": "badge",
+              "text": "选项"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mmo-party-invite",
+      "category": "mmo-social",
+      "title": "组队邀请 / 接受 / 离队",
+      "summary": "右键玩家或用命令邀请；对方弹窗接受；队长有额外权限提示。",
+      "genres": [
+        "魔兽世界",
+        "MMO"
+      ],
+      "beats": [
+        {
+          "title": "邀请",
+          "input": "对玩家发组队邀请",
+          "screen": "对方屏幕弹出邀请",
+          "feel": "邀了",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 35,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 65,
+              "y": 45,
+              "sel": false,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "badge",
+              "text": "邀请"
+            }
+          ]
+        },
+        {
+          "title": "接受",
+          "input": "点接受",
+          "screen": "进队，队伍框出现",
+          "feel": "组上了",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "badge",
+              "text": "已入队"
+            }
+          ]
+        },
+        {
+          "title": "离队",
+          "input": "点离队或被移出",
+          "screen": "队伍框更新",
+          "feel": "散了",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "badge",
+              "text": "离队"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mmo-follow-assist",
+      "category": "mmo-social",
+      "title": "跟随 / 协助",
+      "summary": "跟随队友自动走；协助把你的目标设成队友的目标，方便治疗或集火。",
+      "genres": [
+        "魔兽世界",
+        "MMO"
+      ],
+      "beats": [
+        {
+          "title": "跟随",
+          "input": "对队友选跟随",
+          "screen": "自动朝队友移动",
+          "feel": "跟着走",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 35,
+              "y": 60,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 60,
+              "y": 45,
+              "sel": false,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "arrow",
+              "x1": 38,
+              "y1": 58,
+              "x2": 56,
+              "y2": 48,
+              "kind": "move"
+            },
+            {
+              "t": "badge",
+              "text": "跟随"
+            }
+          ]
+        },
+        {
+          "title": "协助",
+          "input": "按协助",
+          "screen": "当前目标变成队友的目标",
+          "feel": "打他打的",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 35,
+              "y": 60,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 55,
+              "y": 40,
+              "sel": false,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "unit",
+              "x": 75,
+              "y": 42,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "ring",
+              "x": 75,
+              "y": 42,
+              "r": 8,
+              "kind": "lock"
+            },
+            {
+              "t": "badge",
+              "text": "协助"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mmo-trade",
+      "category": "mmo-social",
+      "title": "交易窗：两边放东西再确认",
+      "summary": "对玩家交易，双方拖入物品与钱，双方点确认才成交；一人取消全黄。",
+      "genres": [
+        "魔兽世界",
+        "MMO"
+      ],
+      "beats": [
+        {
+          "title": "打开",
+          "input": "对玩家发起交易",
+          "screen": "双方弹出交易窗",
+          "feel": "来交易",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 35,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 65,
+              "y": 45,
+              "sel": false,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "badge",
+              "text": "交易窗"
+            }
+          ]
+        },
+        {
+          "title": "确认",
+          "input": "拖入物品，双方确认",
+          "screen": "物品交换完成，窗关",
+          "feel": "成交",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "badge",
+              "text": "双方确认"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mmo-whisper-mark",
+      "category": "mmo-social",
+      "title": "密聊 / 标记目标给队友",
+      "summary": "对玩家密语；在目标上打标记（骷髅/月亮），团队可见以便集火。",
+      "genres": [
+        "魔兽世界",
+        "MMO"
+      ],
+      "beats": [
+        {
+          "title": "密聊",
+          "input": "对玩家发密语",
+          "screen": "聊天频道切到密语",
+          "feel": "私聊",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "badge",
+              "text": "密语"
+            }
+          ]
+        },
+        {
+          "title": "标记",
+          "input": "给当前目标打团队标记",
+          "screen": "头顶出现标记图标，队友看见",
+          "feel": "集火这个",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "unit",
+              "x": 60,
+              "y": 45,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "badge",
+              "text": "标记"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mmo-emote-sit",
+      "category": "mmo-social",
+      "title": "表情 / 坐下 / 检查",
+      "summary": "表情轮盘或命令让角色做动作；坐下回蓝；检查看对方装备。",
+      "genres": [
+        "魔兽世界",
+        "MMO"
+      ],
+      "beats": [
+        {
+          "title": "表情",
+          "input": "选表情或输入命令",
+          "screen": "角色播放表情动画",
+          "feel": "比个心",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 48,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "badge",
+              "text": "表情"
+            }
+          ]
+        },
+        {
+          "title": "检查",
+          "input": "检查其他玩家",
+          "screen": "打开其角色/装备预览",
+          "feel": "看看装",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "unit",
+              "x": 60,
+              "y": 45,
+              "sel": false,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "badge",
+              "text": "检查"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mmo-gather-channel",
+      "category": "mmo-world",
+      "title": "采集：对着矿/草读条",
+      "summary": "对节点按交互，进入读条；被打或移动打断；成功进包。",
+      "genres": [
+        "魔兽世界",
+        "MMO"
+      ],
+      "beats": [
+        {
+          "title": "开始",
+          "input": "对矿脉按交互",
+          "screen": "开始读条，角色做采集动作",
+          "feel": "挖着",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "building",
+              "x": 65,
+              "y": 45,
+              "ghost": false
+            },
+            {
+              "t": "badge",
+              "text": "采集读条"
+            }
+          ]
+        },
+        {
+          "title": "完成",
+          "input": "读条完成",
+          "screen": "节点枯竭或刷新，物品进包",
+          "feel": "挖到了",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "badge",
+              "text": "采集成功"
+            }
+          ]
+        },
+        {
+          "title": "打断",
+          "input": "读条中被攻击或移动",
+          "screen": "读条取消，节点仍在",
+          "feel": "打断了",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "badge",
+              "text": "采集打断"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mmo-vendor",
+      "category": "mmo-world",
+      "title": "商人：买 / 卖 / 回购",
+      "summary": "打开商人，右键买，拖背包物品卖；误卖可用回购页拿回。",
+      "genres": [
+        "魔兽世界",
+        "MMO"
+      ],
+      "beats": [
+        {
+          "title": "开店",
+          "input": "与商人交互",
+          "screen": "商店列表打开",
+          "feel": "逛店",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 65,
+              "y": 45,
+              "sel": false,
+              "team": "neutral",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "badge",
+              "text": "商店"
+            }
+          ]
+        },
+        {
+          "title": "买卖",
+          "input": "右键购买或拖出售",
+          "screen": "金币与物品变化",
+          "feel": "买到/卖掉",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "badge",
+              "text": "买卖"
+            }
+          ]
+        },
+        {
+          "title": "回购",
+          "input": "打开回购",
+          "screen": "刚卖掉的东西可买回",
+          "feel": "我手滑了",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "badge",
+              "text": "回购"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mmo-mount-taxi",
+      "category": "mmo-world",
+      "title": "坐骑 / 飞行点",
+      "summary": "召唤坐骑改变移动；飞行点选目的地后进入航线，途中可跳下（若规则允许）。",
+      "genres": [
+        "魔兽世界",
+        "MMO"
+      ],
+      "beats": [
+        {
+          "title": "上坐骑",
+          "input": "按召唤坐骑",
+          "screen": "上马，移动变快，陆地战技能受限或切换",
+          "feel": "骑上",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 48,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "badge",
+              "text": "坐骑"
+            }
+          ]
+        },
+        {
+          "title": "飞行点",
+          "input": "在飞行管理员选目的地",
+          "screen": "进入飞行路线镜头",
+          "feel": "飞过去",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "badge",
+              "text": "飞行点"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mmo-release-resurrect",
+      "category": "mmo-world",
+      "title": "释放灵魂 / 复活",
+      "summary": "死后选释放灵魂跑尸；或点魂匠/队友复活接受复活。",
+      "genres": [
+        "魔兽世界",
+        "MMO"
+      ],
+      "beats": [
+        {
+          "title": "释放",
+          "input": "死亡后点释放灵魂",
+          "screen": "变成灵魂形态，看到魂匠方向",
+          "feel": "去找尸体",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 48,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "badge",
+              "text": "灵魂"
+            }
+          ]
+        },
+        {
+          "title": "复活",
+          "input": "接受复活或跑尸复活",
+          "screen": "回到尸体或魂匠处活过来",
+          "feel": "活了",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 48,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "ring",
+              "x": 48,
+              "y": 55,
+              "r": 12,
+              "kind": "buff"
+            },
+            {
+              "t": "badge",
+              "text": "复活"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mmo-auto-attack",
+      "category": "mmo-world",
+      "title": "自动攻击开关",
+      "summary": "有目标时开启自动挥砍/射击；再按或失去目标停止。和 MOBA 右键追击不同，是开关态。",
+      "genres": [
+        "魔兽世界",
+        "MMO"
+      ],
+      "beats": [
+        {
+          "title": "开启",
+          "input": "有目标时按下自动攻击",
+          "screen": "角色自动对目标普攻",
+          "feel": "自己打着",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 55,
+              "face": 20
+            },
+            {
+              "t": "unit",
+              "x": 68,
+              "y": 42,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "ring",
+              "x": 68,
+              "y": 42,
+              "r": 8,
+              "kind": "lock"
+            },
+            {
+              "t": "badge",
+              "text": "自动攻击开"
+            }
+          ]
+        },
+        {
+          "title": "关闭",
+          "input": "再按关闭或目标死亡",
+          "screen": "停手",
+          "feel": "停",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "badge",
+              "text": "自动攻击关"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mmo-interrupt-cast",
+      "category": "mmo-world",
+      "title": "打断对方读条 / 自己取消读条",
+      "summary": "敌方读条时按打断技能；自己读条时可走或按取消打断自己。",
+      "genres": [
+        "魔兽世界",
+        "MMO",
+        "MOBA"
+      ],
+      "beats": [
+        {
+          "title": "打断别人",
+          "input": "敌方读条时按打断",
+          "screen": "对方读条失败，常带锁定类惩罚",
+          "feel": "掐掉",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 35,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 68,
+              "y": 42,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "badge",
+              "text": "打断"
+            }
+          ]
+        },
+        {
+          "title": "取消自己",
+          "input": "自己读条中按取消或移动（若规则允许）",
+          "screen": "自己读条中断，技能进 CD 或退回",
+          "feel": "不放了",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 48,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "badge",
+              "text": "取消读条"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mmo-quest-tracker",
+      "category": "mmo-world",
+      "title": "任务追踪：点目标去地图",
+      "summary": "点任务追踪条目，地图/箭头标出目标；超远时给装等提示。",
+      "genres": [
+        "魔兽世界",
+        "MMO",
+        "ARPG"
+      ],
+      "beats": [
+        {
+          "title": "点追踪",
+          "input": "点击任务追踪里的目标",
+          "screen": "地图标记或地面箭头更新",
+          "feel": "知道去哪",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "badge",
+              "text": "追踪→地图"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mmo-mailbox-ah",
+      "category": "mmo-world",
+      "title": "邮箱 / 拍卖行投递",
+      "summary": "邮箱取附件；拍卖行上架要填价与时限，成功后物品离包。",
+      "genres": [
+        "魔兽世界",
+        "MMO"
+      ],
+      "beats": [
+        {
+          "title": "取邮",
+          "input": "打开邮箱点附件",
+          "screen": "物品进包，邮件更新",
+          "feel": "取件",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "badge",
+              "text": "邮箱"
+            }
+          ]
+        },
+        {
+          "title": "拍卖",
+          "input": "拍卖行填价上架",
+          "screen": "物品进入拍卖，包里消失",
+          "feel": "挂上了",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "badge",
+              "text": "上架"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ui-radial-wheel",
+      "category": "design-ui",
+      "title": "按住出轮盘，指向松手选定",
+      "summary": "按住键弹出径向轮盘（表情、武器、标记、消耗品），指向一格松手确认；松开太早或回中取消。",
+      "genres": [
+        "动作RPG",
+        "TPS",
+        "MMO"
+      ],
+      "beats": [
+        {
+          "title": "按住",
+          "input": "按住轮盘键",
+          "screen": "轮盘在角色旁展开",
+          "feel": "选项铺开",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 48,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "badge",
+              "text": "轮盘展开"
+            }
+          ]
+        },
+        {
+          "title": "松手选定",
+          "input": "指向某一格松手",
+          "screen": "执行该格动作，轮盘收起",
+          "feel": "就是这个",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 48,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "cursor",
+              "x": 70,
+              "y": 40,
+              "mode": "idle"
+            },
+            {
+              "t": "badge",
+              "text": "选定"
+            }
+          ]
+        },
+        {
+          "title": "取消",
+          "input": "指回中心松手",
+          "screen": "取消，无动作",
+          "feel": "算了",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 48,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "badge",
+              "text": "取消"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ui-hold-context-menu",
+      "category": "design-ui",
+      "title": "长按出上下文菜单",
+      "summary": "对单位/物品长按或右键，弹出与对象类型相关的菜单（交易、检查、跟随、使用）。",
+      "genres": [
+        "MMO",
+        "RTS",
+        "ARPG"
+      ],
+      "beats": [
+        {
+          "title": "打开菜单",
+          "input": "对对象右键/长按",
+          "screen": "弹出上下文菜单",
+          "feel": "还能干这些",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "unit",
+              "x": 55,
+              "y": 45,
+              "sel": false,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "cursor",
+              "x": 55,
+              "y": 45,
+              "mode": "idle"
+            },
+            {
+              "t": "badge",
+              "text": "上下文菜单"
+            }
+          ]
+        },
+        {
+          "title": "选中",
+          "input": "点菜单项",
+          "screen": "执行该项，菜单关闭",
+          "feel": "选这项",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "badge",
+              "text": "执行菜单项"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ui-drag-drop-slot",
+      "category": "design-ui",
+      "title": "槽位拖放（技能/物品/天赋）",
+      "summary": "从库拖到槽；非法槽要红叉拒绝；替换要看得见谁被挤走。",
+      "genres": [
+        "MMO",
+        "MOBA",
+        "ARPG"
+      ],
+      "beats": [
+        {
+          "title": "合法",
+          "input": "拖到合法槽松手",
+          "screen": "槽位更新图标",
+          "feel": "放进去了",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "cursor",
+              "x": 60,
+              "y": 50,
+              "mode": "drag"
+            },
+            {
+              "t": "badge",
+              "text": "合法放下"
+            }
+          ]
+        },
+        {
+          "title": "非法",
+          "input": "拖到非法槽",
+          "screen": "红叉，松手弹回原处",
+          "feel": "不能放这",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "cursor",
+              "x": 60,
+              "y": 50,
+              "mode": "drag"
+            },
+            {
+              "t": "badge",
+              "text": "非法拒绝"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ui-confirm-destructive",
+      "category": "design-ui",
+      "title": "危险操作二次确认",
+      "summary": "分解粉装、删角色、放弃任务等：先警告，确认后才执行；取消原样返回。",
+      "genres": [
+        "MMO",
+        "全品类"
+      ],
+      "beats": [
+        {
+          "title": "警告",
+          "input": "点危险操作",
+          "screen": "弹出确认框，写清后果",
+          "feel": "真的吗",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "badge",
+              "text": "确认框"
+            }
+          ]
+        },
+        {
+          "title": "抉择",
+          "input": "点确认",
+          "screen": "执行；点取消则什么都不改",
+          "feel": "定了/算了",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "badge",
+              "text": "确认或取消"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ui-ping-comm-wheel",
+      "category": "design-ui",
+      "title": "信号 / 沟通轮：点地告知队友",
+      "summary": "按信号键点地板或用轮盘选“来这里/小心/进攻”，地图与世界出现短时标记。",
+      "genres": [
+        "MOBA",
+        "MMO",
+        "TPS"
+      ],
+      "beats": [
+        {
+          "title": "打信号",
+          "input": "按信号点地面或选轮盘项",
+          "screen": "世界与小地图出现标记与短语音/文字",
+          "feel": "喊了一嗓子",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 35,
+              "y": 60,
+              "face": 0
+            },
+            {
+              "t": "cursor",
+              "x": 70,
+              "y": 40,
+              "mode": "idle"
+            },
+            {
+              "t": "circle",
+              "x": 70,
+              "y": 40,
+              "r": 10,
+              "ok": true
+            },
+            {
+              "t": "badge",
+              "text": "信号"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ui-camera-modes",
+      "category": "design-ui",
+      "title": "镜头：锁定跟随 / 自由转 / 拉远",
+      "summary": "切换镜头模式改变操作手感：锁定贴背、自由转观察、滚轮拉距离；模式切换要可见。",
+      "genres": [
+        "MMO",
+        "动作RPG",
+        "TPS"
+      ],
+      "beats": [
+        {
+          "title": "自由",
+          "input": "切换到自由镜头并拖动",
+          "screen": "相机离角色旋转，角色不立刻转身",
+          "feel": "四处看",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 45,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "badge",
+              "text": "自由镜头"
+            }
+          ]
+        },
+        {
+          "title": "锁定",
+          "input": "切回锁定跟随",
+          "screen": "相机回贴角色朝向",
+          "feel": "跟身",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 45,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "badge",
+              "text": "锁定跟随"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ui-map-waypoint",
+      "category": "design-ui",
+      "title": "大地图钉点 / 导航",
+      "summary": "打开地图点一下设导航点，世界出现路径或箭头；再点可改或清除。",
+      "genres": [
+        "MMO",
+        "ARPG",
+        "开放世界"
+      ],
+      "beats": [
+        {
+          "title": "钉点",
+          "input": "打开地图点目标位置",
+          "screen": "导航点与路线出现",
+          "feel": "往那走",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "cursor",
+              "x": 60,
+              "y": 45,
+              "mode": "idle"
+            },
+            {
+              "t": "badge",
+              "text": "地图钉点"
+            }
+          ]
+        },
+        {
+          "title": "清除",
+          "input": "清除导航",
+          "screen": "箭头/路线消失",
+          "feel": "取消导航",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "badge",
+              "text": "清除钉点"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ui-hold-vs-toggle",
+      "category": "design-ui",
+      "title": "按住 vs 切换：同一功能两种手感",
+      "summary": "冲刺、开镜、蹲下可设为按住有效或按一下切换；设置改变手感，UI 要显示当前模式。",
+      "genres": [
+        "MMO",
+        "FPS",
+        "TPS",
+        "设计选项"
+      ],
+      "beats": [
+        {
+          "title": "按住",
+          "input": "按住模式：按住才冲刺",
+          "screen": "松手立刻停",
+          "feel": "按多久走多久",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "stickL",
+              "nx": 0,
+              "ny": -1
+            },
+            {
+              "t": "badge",
+              "text": "按住"
+            }
+          ]
+        },
+        {
+          "title": "切换",
+          "input": "切换模式：按一下开始，再按停止",
+          "screen": "状态图标保持",
+          "feel": "开关态",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "badge",
+              "text": "切换"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ui-tutorial-prompt",
+      "category": "design-ui",
+      "title": "教学逼迫输入：提示键才继续",
+      "summary": "教程高亮某个键或对象，玩家按对了才放行；按错给清晰反馈，不静默吞。",
+      "genres": [
+        "全品类",
+        "设计选项"
+      ],
+      "beats": [
+        {
+          "title": "逼迫提示",
+          "input": "屏幕提示“按 F 交互”",
+          "screen": "其他干扰输入可被挡或无效",
+          "feel": "只好按它",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 45,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "badge",
+              "text": "按 F"
+            }
+          ]
+        },
+        {
+          "title": "按对",
+          "input": "按对键",
+          "screen": "提示关闭，教程前进一步",
+          "feel": "过了",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "badge",
+              "text": "完成步骤"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ui-build-tech-click",
+      "category": "design-ui",
+      "title": "建造 / 科技树点击",
+      "summary": "在建造菜单点单位或科技：扣资源排队；点已在造的可取消（常需确认）。",
+      "genres": [
+        "RTS",
+        "4X",
+        "MMO生活系"
+      ],
+      "beats": [
+        {
+          "title": "点造",
+          "input": "打开建造/科技面板点一项",
+          "screen": "资源扣除，队列出现肖像",
+          "feel": "开造",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "building",
+              "x": 40,
+              "y": 50,
+              "ghost": false
+            },
+            {
+              "t": "badge",
+              "text": "入队"
+            }
+          ]
+        },
+        {
+          "title": "取消",
+          "input": "取消队列中的项",
+          "screen": "资源按规则退回，队列缩短",
+          "feel": "不造了",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "badge",
+              "text": "取消建造"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ui-inventory-tetris",
+      "category": "design-ui",
+      "title": "背包格斗：异形体积摆放",
+      "summary": "物品占多格，要旋转并找到空位才能放进；放不下明确提示，不自动“随便塞”。",
+      "genres": [
+        "逃离塔科夫",
+        "ARPG",
+        "设计选项"
+      ],
+      "beats": [
+        {
+          "title": "摆放",
+          "input": "拖异形物品进包",
+          "screen": "合法格高亮，非法格拒绝",
+          "feel": "转一下才塞得进",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "cursor",
+              "x": 55,
+              "y": 45,
+              "mode": "drag"
+            },
+            {
+              "t": "badge",
+              "text": "异形背包"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ui-spectate-replay",
+      "category": "design-ui",
+      "title": "观战 / 回放：切视角",
+      "summary": "观战点队友切换相机；回放可暂停、打点、看别人视角。只读，不改对局。",
+      "genres": [
+        "MOBA",
+        "FPS",
+        "MMO"
+      ],
+      "beats": [
+        {
+          "title": "切视角",
+          "input": "观战中点队友或按键切换",
+          "screen": "相机跟到该玩家",
+          "feel": "换人看",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 48,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "badge",
+              "text": "观战切换"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "id": "block-resource",
       "category": "blocked",
       "title": "蓝 / 怒气 / 弹药不足",
@@ -6414,6 +8907,122 @@ window.PLAYER_ACTION_UX_CATALOG = {
             {
               "t": "badge",
               "text": "禁止"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "block-bag-full",
+      "category": "blocked",
+      "title": "背包满 / 负担不够",
+      "summary": "拾取或购买时包满：明确说满了，东西留在地上或交易取消，不静默吞。",
+      "genres": [
+        "MMO",
+        "ARPG"
+      ],
+      "beats": [
+        {
+          "title": "包满",
+          "input": "包满时拾取或购买",
+          "screen": "拒绝提示，物品不进包",
+          "feel": "拿不下",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 48,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "badge",
+              "text": "背包已满"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "block-range-los-trade",
+      "category": "blocked",
+      "title": "超距 / 遮挡 / 交易条件不满足",
+      "summary": "技能超距、没视线、交易一方移动过远：取消并说明原因。",
+      "genres": [
+        "MMO",
+        "MOBA",
+        "RTS"
+      ],
+      "beats": [
+        {
+          "title": "超距",
+          "input": "超距或没视线时确认",
+          "screen": "拒绝并提示原因",
+          "feel": "够不着",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 30,
+              "y": 60,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 80,
+              "y": 30,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "badge",
+              "text": "超距/视线"
+            }
+          ]
+        },
+        {
+          "title": "交易断",
+          "input": "交易中走太远",
+          "screen": "交易窗关闭，物品回各方",
+          "feel": "交易取消",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "badge",
+              "text": "交易取消"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "block-crowd-control",
+      "category": "blocked",
+      "title": "被控：沉默 / 晕眩 / 变形",
+      "summary": "被控时按键明确无效，状态图标说清是哪种控制，控结束才恢复。",
+      "genres": [
+        "MMO",
+        "MOBA"
+      ],
+      "beats": [
+        {
+          "title": "被控",
+          "input": "被晕/沉默时按技能",
+          "screen": "拒绝，状态图标闪烁",
+          "feel": "动不了",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 48,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "badge",
+              "text": "被控"
             }
           ]
         }

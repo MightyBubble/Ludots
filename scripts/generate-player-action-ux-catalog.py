@@ -107,7 +107,11 @@ CATEGORIES = [
     ("multi-cast", "十六、一群人放同一个技能"),
     ("context-order", "十七、选中谁×点到谁"),
     ("temp-kit", "十八、临时多出来的技能"),
-    ("blocked", "十九、放不了时的反馈"),
+    ("item", "十九、物品：捡 / 用 / 装 / 拖"),
+    ("mmo-social", "二十、MMO：人、对话、队伍"),
+    ("mmo-world", "二十一、MMO：采集、买卖、坐骑、复活"),
+    ("design-ui", "二十二、设计向界面手势"),
+    ("blocked", "二十三、放不了时的反馈"),
 ]
 
 
@@ -993,8 +997,485 @@ def build_cases():
                  [unit(45, 55, sel=True), ring(45, 55), badge("恢复原卡")], title="形态结束"),
         ], ["SC2", "RTS"],
     ))
+    c.append(case(
+        "temp-kit-item-trinket", "temp-kit", "饰品/道具按下才冒出来的主动技",
+        "装备某件饰品或任务道具后，技能栏多一颗主动键；卸下或任务结束键消失。"
+        "像魔兽饰品 on-use、大秘境钥匙类道具技能。",
+        [
+            beat("装备带主动的饰品", "技能栏多出饰品键，显示层数/CD", "多了一招装备技", "moba",
+                 [hero(45, 55), badge("+饰品主动")], title="装上出现"),
+            beat("按下饰品主动", "打出饰品效果，进入饰品 CD", "用装备技", "moba",
+                 [hero(45, 55), ring(45, 55, r=14, kind="buff"), badge("饰品放出")], title="使用"),
+            beat("卸下饰品或任务收回", "该键从栏位消失", "招没了", "moba",
+                 [hero(45, 55), badge("键收回")], title="卸下收回"),
+        ], ["魔兽世界", "MMO", "ARPG"],
+    ))
+    c.append(case(
+        "temp-kit-steal-copy", "temp-kit", "偷来 / 复制来的技能",
+        "从敌人或环境得到对方技能的临时拷贝，用一次或限时后消失。"
+        "像英雄联盟劫/塞拉斯偷大、部分动作游戏吸收招式。",
+        [
+            beat("成功偷取/复制", "栏位出现对方技能图标，标“临时”", "这招是借的", "moba",
+                 [hero(40, 55), unit(70, 40, team="enemy"), badge("偷到技能")], title="获得拷贝"),
+            beat("按该临时键", "打出被偷技能的效果", "用他的招", "moba",
+                 [hero(40, 55), circle_ind(70, 40, 14, True), badge("释放拷贝")], title="释放"),
+            beat("次数用尽或计时结束", "拷贝图标消失", "还回去了", "moba",
+                 [hero(40, 55), badge("拷贝消失")], title="消失"),
+        ], ["MOBA", "动作RPG"],
+    ))
+    c.append(case(
+        "temp-kit-empower-next", "temp-kit", "强化下一击：先充能，再打出去",
+        "按键进入“下一击强化”状态，普攻或下一次技能吃到加成后状态消耗。"
+        "不是永久多一招，是窗口内改写下一次出手。",
+        [
+            beat("按下强化键", "武器/拳头发光，提示“下一击强化”", "蓄着劲", "tps",
+                 [hero(45, 55), ring(45, 55, r=12, kind="buff"), badge("下一击")], title="充能"),
+            beat("下一次攻击命中", "打出强化效果，发光消失", "这下够疼", "tps",
+                 [hero(42, 55, face=20), unit(68, 42, team="enemy"),
+                  arrow(48, 52, 64, 44, "attack"), badge("强化打出")], title="消耗"),
+        ], ["动作RPG", "MOBA", "ARPG"],
+    ))
+    c.append(case(
+        "temp-kit-vehicle-gunner", "temp-kit", "载具 / 炮台座位：整套操作临时替换",
+        "上车或上炮位后，移动与射击键语义全换成载具武器；下车立刻恢复步行那套。"
+        "和变身类似，但是“座位授予”而不是角色变身。",
+        [
+            beat("进入炮位/驾驶位", "准星变车炮；技能栏变载具武器", "换成开车手感", "tps",
+                 [building(48, 55), crosshair(62, 40), badge("进入座位")], title="上车"),
+            beat("下车 / 被炸下车", "操作与技能栏瞬间回到步行", "又变回人", "tps",
+                 [hero(48, 55), badge("离开座位")], title="下车"),
+        ], ["TPS", "FPS", "MMO"],
+    ))
+    c.append(case(
+        "temp-kit-shrine-zone", "temp-kit", "神龛 / 区域buff：站进去才有的临时技",
+        "踩进光环或交互神龛后短时获得技能或弹药；离开区域或超时收回。"
+        "像命运2 公共事件球、部分 MMO 祭坛。",
+        [
+            beat("走进神龛范围或交互启动", "获得临时技能/弹药提示", "这片地给力", "tps",
+                 [hero(45, 55), circle_ind(45, 55, 28, True), badge("神龛授予")], title="获得"),
+            beat("离开范围或超时", "临时技/弹药加成消失", "出圈就没", "tps",
+                 [hero(70, 40), circle_ind(40, 55, 28, False), badge("离开收回")], title="收回"),
+        ], ["MMO", "TPS", "ARPG"],
+    ))
+    c.append(case(
+        "temp-kit-mount-combat", "temp-kit", "骑乘战斗：马上多出来的键",
+        "上马后出现冲撞、加速、马上射击等骑乘技；下马这些键消失，陆地技回来。",
+        [
+            beat("上马成功", "技能栏出现骑乘技，移动变坐骑手感", "马上能按新键", "tps",
+                 [hero(48, 55), badge("骑乘技")], title="上马"),
+            beat("下马", "骑乘技消失，恢复陆地技能栏", "下地", "tps",
+                 [hero(48, 55), badge("陆地技")], title="下马"),
+        ], ["魔兽世界", "MMO", "动作RPG"],
+    ))
 
-    # ===== 十九、放不了 =====
+    # ===== 十九、物品 =====
+    c.append(case(
+        "item-pickup-world", "item", "地上捡东西",
+        "走近可拾取物，按交互键或右键拾取进包；包满要明确拒绝。",
+        [
+            beat("走近掉落物，出现拾取提示", "名称/品质飘在地上", "能捡", "tps",
+                 [hero(40, 55), building(62, 48), badge("可拾取")], title="靠近"),
+            beat("按交互键 / 右键拾取", "物品进背包，地上消失", "到手了", "tps",
+                 [hero(45, 52), badge("已入包")], title="捡起"),
+        ], ["MMO", "ARPG", "动作RPG"],
+    ))
+    c.append(case(
+        "item-loot-window", "item", "开箱子 / 尸体掉落窗",
+        "对箱子或尸体交互弹出战利品窗，逐格拾取或全部拾取；需掷骰时先看见分配。",
+        [
+            beat("对箱子/尸体按交互", "弹出掉落列表", "看看有啥", "moba",
+                 [hero(40, 55), building(65, 45), badge("掉落窗")], title="打开"),
+            beat("点一项或点全部拾取", "进包；窗内该项消失", "拿走", "moba",
+                 [hero(40, 55), badge("拾取")], title="拾取"),
+        ], ["魔兽世界", "MMO", "ARPG"],
+    ))
+    c.append(case(
+        "item-need-greed", "item", "团队掷骰：需求 / 贪婪 / 放弃",
+        "稀有掉落弹窗，限时选择需求、贪婪或放弃；结果出来再进某人的包。",
+        [
+            beat("稀有物品弹出掷骰窗", "倒计时与三个按钮", "快选", "moba",
+                 [badge("需求/贪婪/放弃")], title="弹窗"),
+            beat("点需求或贪婪", "等待其他人；出结果后归属提示", "看谁赢", "moba",
+                 [badge("掷骰结果")], title="结果"),
+        ], ["魔兽世界", "MMO"],
+    ))
+    c.append(case(
+        "item-use-self", "item", "对自己用消耗品",
+        "快捷栏点药水/食物：读条或瞬发，叠 CD，数量 -1。",
+        [
+            beat("按药水快捷键", "自己吃增益/回血，图标进入物品 CD", "补一口", "moba",
+                 [hero(48, 55), ring(48, 55, r=12, kind="buff"), badge("用药")], title="自用"),
+        ], ["魔兽世界", "MMO", "ARPG"],
+    ))
+    c.append(case(
+        "item-use-on-target", "item", "对目标用物品",
+        "先选中友方/敌方，再点物品；或点物品再点目标。"
+        "像复活石点队友、减速陷阱点地面/敌人。",
+        [
+            beat("选中目标后按物品键", "物品效果打在目标上，消耗数量", "用在他身上", "moba",
+                 [hero(35, 58), unit(65, 45, team="ally"), ring(65, 45, r=10, kind="buff"),
+                  badge("物品→目标")], title="对目标"),
+            beat("先点物品再点目标", "进入“物品瞄准”，点合法目标才消耗", "指哪用哪", "moba",
+                 [hero(35, 58), cursor(65, 45), unit(65, 45, team="ally"), badge("物品瞄准")], title="先物品后点"),
+        ], ["魔兽世界", "MMO", "ARPG"],
+    ))
+    c.append(case(
+        "item-use-on-ground", "item", "对地面用物品",
+        "炸弹、旗帜、营帐：点物品后点地板落下。和技能点地同一手感，消耗的是物品次数。",
+        [
+            beat("点物品再点地面", "落点预览；确认后物品 -1，效果出现在地上", "丢那儿", "topdown",
+                 [hero(35, 60), circle_ind(70, 40, 14, True), cursor(70, 40), badge("物品点地")], title="点地使用"),
+        ], ["MMO", "MOBA", "ARPG"],
+    ))
+    c.append(case(
+        "item-equip-swap", "item", "穿上 / 脱下 / 替换装备",
+        "从背包双击或拖到装备槽；槽位已有装备则替换进包，属性立刻变。",
+        [
+            beat("双击背包里的武器", "进入装备槽；旧武器回包（若有）", "换好了", "moba",
+                 [hero(48, 55), badge("装备")], title="穿上"),
+            beat("从装备槽拖回背包或点卸下", "槽空了，属性去掉", "脱下", "moba",
+                 [hero(48, 55), badge("卸下")], title="卸下"),
+        ], ["MMO", "ARPG"],
+    ))
+    c.append(case(
+        "item-hotbar-drag", "item", "拖到快捷栏",
+        "从背包拖到快捷栏格子，之后可用数字键使用；拖走或替换会改键位映射。",
+        [
+            beat("从背包拖到快捷栏空位", "栏位出现物品图标与数量", "键位绑好了", "moba",
+                 [badge("拖到快捷栏")], title="拖上栏"),
+            beat("按对应数字键", "等同于使用该物品", "键上就能用", "moba",
+                 [hero(48, 55), badge("快捷使用")], title="快捷用"),
+        ], ["魔兽世界", "MMO", "ARPG"],
+    ))
+    c.append(case(
+        "item-split-stack", "item", "拆堆 / 合堆",
+        "按住修饰键拖动堆叠，输入数量拆成两堆；拖到同类上合并。",
+        [
+            beat("Shift+拖动堆叠，输入数量", "拆成两堆", "分开装", "moba",
+                 [badge("拆堆")], title="拆"),
+            beat("拖到同类物品上", "数量合并（不超过上限）", "摞一起", "moba",
+                 [badge("合堆")], title="合"),
+        ], ["魔兽世界", "MMO"],
+    ))
+    c.append(case(
+        "item-compare-tooltip", "item", "悬停对比：身上 vs 包里",
+        "鼠标悬停背包装备时，并排显示当前已穿装备的数值差。",
+        [
+            beat("鼠标悬停背包中的装备", "双提示框：新装备 + 已穿对照", "看看谁更好", "moba",
+                 [cursor(55, 45), badge("对比提示")], title="对比"),
+        ], ["魔兽世界", "MMO", "ARPG"],
+    ))
+    c.append(case(
+        "item-destroy-sell", "item", "摧毁 / 卖店",
+        "拖到摧毁或卖店确认；贵重物品要二次确认，防止手滑。",
+        [
+            beat("拖到出售/摧毁区", "标价或警告；确认后物品离开背包", "卖掉/毁掉", "moba",
+                 [badge("出售确认")], title="卖或毁"),
+        ], ["MMO", "ARPG"],
+    ))
+    c.append(case(
+        "item-charges-durability", "item", "次数道具与耐久",
+        "魔杖/爆炸物显示剩余次数；装备掉耐久到 0 失效或强制修理提示。",
+        [
+            beat("使用带次数的物品", "次数 -1，到 0 物品消失或变灰", "还能用几次", "moba",
+                 [hero(48, 55), badge("次数-1")], title="扣次数"),
+            beat("装备耐久耗尽", "属性失效或红字提示去修", "该修了", "moba",
+                 [hero(48, 55), badge("耐久耗尽")], title="耐久"),
+        ], ["魔兽世界", "MMO", "ARPG"],
+    ))
+
+    # ===== 二十、MMO 社交 =====
+    c.append(case(
+        "mmo-tab-target", "mmo-social", "Tab 循环选敌 / 点框选友",
+        "Tab 在前方敌人间切换当前目标；点队伍/团队框选中队友以便治疗或菜单。",
+        [
+            beat("按 Tab", "当前目标描边换到下一个敌人", "换锁定", "tps",
+                 [hero(35, 60), unit(55, 40, team="enemy"), unit(72, 48, team="enemy"),
+                  ring(55, 40, kind="lock"), badge("Tab选敌")], title="Tab 选敌"),
+            beat("点击队伍框上头像", "该队友成为友好目标/治疗目标", "点框选人", "moba",
+                 [hero(40, 55), unit(65, 45, team="ally"), ring(65, 45, kind="buff"),
+                  badge("点框")], title="点框选友"),
+        ], ["魔兽世界", "MMO"],
+    ))
+    c.append(case(
+        "mmo-interact-npc", "mmo-social", "对 NPC 按交互：任务 / 商店 / 对话",
+        "面向可交互 NPC 按键，打开任务、商店或对话——同一键，NPC 类型决定面板。",
+        [
+            beat("靠近 NPC，出现交互提示", "名称与类型（任务感叹号等）", "能说话", "tps",
+                 [hero(38, 58), unit(62, 48, team="neutral"), badge("可交互")], title="靠近"),
+            beat("按交互键", "打开任务/对话/商店面板", "开始谈", "tps",
+                 [hero(42, 55), badge("打开面板")], title="交互"),
+        ], ["魔兽世界", "MMO"],
+    ))
+    c.append(case(
+        "mmo-dialogue-choice", "mmo-social", "对话选项与跳过",
+        "对话里点选项推进分支；可跳过旁白，但关键选择不能被静默跳过。",
+        [
+            beat("对话播放中点跳过", "旁白快进到下一句或选项", "说快点", "moba",
+                 [badge("跳过旁白")], title="跳过"),
+            beat("点一个对话选项", "分支推进，面板换下一页", "选这条", "moba",
+                 [cursor(50, 60), badge("选项")], title="选项"),
+        ], ["MMO", "动作RPG", "AVG"],
+    ))
+    c.append(case(
+        "mmo-party-invite", "mmo-social", "组队邀请 / 接受 / 离队",
+        "右键玩家或用命令邀请；对方弹窗接受；队长有额外权限提示。",
+        [
+            beat("对玩家发组队邀请", "对方屏幕弹出邀请", "邀了", "moba",
+                 [hero(35, 55), unit(65, 45, team="ally"), badge("邀请")], title="邀请"),
+            beat("点接受", "进队，队伍框出现", "组上了", "moba",
+                 [badge("已入队")], title="接受"),
+            beat("点离队或被移出", "队伍框更新", "散了", "moba",
+                 [badge("离队")], title="离队"),
+        ], ["魔兽世界", "MMO"],
+    ))
+    c.append(case(
+        "mmo-follow-assist", "mmo-social", "跟随 / 协助",
+        "跟随队友自动走；协助把你的目标设成队友的目标，方便治疗或集火。",
+        [
+            beat("对队友选跟随", "自动朝队友移动", "跟着走", "tps",
+                 [hero(35, 60), unit(60, 45, team="ally"), arrow(38, 58, 56, 48, "move"),
+                  badge("跟随")], title="跟随"),
+            beat("按协助", "当前目标变成队友的目标", "打他打的", "tps",
+                 [hero(35, 60), unit(55, 40, team="ally"), unit(75, 42, team="enemy"),
+                  ring(75, 42, kind="lock"), badge("协助")], title="协助"),
+        ], ["魔兽世界", "MMO"],
+    ))
+    c.append(case(
+        "mmo-trade", "mmo-social", "交易窗：两边放东西再确认",
+        "对玩家交易，双方拖入物品与钱，双方点确认才成交；一人取消全黄。",
+        [
+            beat("对玩家发起交易", "双方弹出交易窗", "来交易", "moba",
+                 [hero(35, 55), unit(65, 45, team="ally"), badge("交易窗")], title="打开"),
+            beat("拖入物品，双方确认", "物品交换完成，窗关", "成交", "moba",
+                 [badge("双方确认")], title="确认"),
+        ], ["魔兽世界", "MMO"],
+    ))
+    c.append(case(
+        "mmo-whisper-mark", "mmo-social", "密聊 / 标记目标给队友",
+        "对玩家密语；在目标上打标记（骷髅/月亮），团队可见以便集火。",
+        [
+            beat("对玩家发密语", "聊天频道切到密语", "私聊", "moba",
+                 [badge("密语")], title="密聊"),
+            beat("给当前目标打团队标记", "头顶出现标记图标，队友看见", "集火这个", "tps",
+                 [unit(60, 45, team="enemy"), badge("标记")], title="标记"),
+        ], ["魔兽世界", "MMO"],
+    ))
+    c.append(case(
+        "mmo-emote-sit", "mmo-social", "表情 / 坐下 / 检查",
+        "表情轮盘或命令让角色做动作；坐下回蓝；检查看对方装备。",
+        [
+            beat("选表情或输入命令", "角色播放表情动画", "比个心", "tps",
+                 [hero(48, 55), badge("表情")], title="表情"),
+            beat("检查其他玩家", "打开其角色/装备预览", "看看装", "moba",
+                 [unit(60, 45, team="ally"), badge("检查")], title="检查"),
+        ], ["魔兽世界", "MMO"],
+    ))
+
+    # ===== 二十一、MMO 世界 =====
+    c.append(case(
+        "mmo-gather-channel", "mmo-world", "采集：对着矿/草读条",
+        "对节点按交互，进入读条；被打或移动打断；成功进包。",
+        [
+            beat("对矿脉按交互", "开始读条，角色做采集动作", "挖着", "tps",
+                 [hero(40, 55), building(65, 45), badge("采集读条")], title="开始"),
+            beat("读条完成", "节点枯竭或刷新，物品进包", "挖到了", "tps",
+                 [hero(40, 55), badge("采集成功")], title="完成"),
+            beat("读条中被攻击或移动", "读条取消，节点仍在", "打断了", "tps",
+                 [hero(40, 55), badge("采集打断")], title="打断"),
+        ], ["魔兽世界", "MMO"],
+    ))
+    c.append(case(
+        "mmo-vendor", "mmo-world", "商人：买 / 卖 / 回购",
+        "打开商人，右键买，拖背包物品卖；误卖可用回购页拿回。",
+        [
+            beat("与商人交互", "商店列表打开", "逛店", "moba",
+                 [hero(40, 55), unit(65, 45, team="neutral"), badge("商店")], title="开店"),
+            beat("右键购买或拖出售", "金币与物品变化", "买到/卖掉", "moba",
+                 [badge("买卖")], title="买卖"),
+            beat("打开回购", "刚卖掉的东西可买回", "我手滑了", "moba",
+                 [badge("回购")], title="回购"),
+        ], ["魔兽世界", "MMO"],
+    ))
+    c.append(case(
+        "mmo-mount-taxi", "mmo-world", "坐骑 / 飞行点",
+        "召唤坐骑改变移动；飞行点选目的地后进入航线，途中可跳下（若规则允许）。",
+        [
+            beat("按召唤坐骑", "上马，移动变快，陆地战技能受限或切换", "骑上", "tps",
+                 [hero(48, 55), badge("坐骑")], title="上坐骑"),
+            beat("在飞行管理员选目的地", "进入飞行路线镜头", "飞过去", "tps",
+                 [badge("飞行点")], title="飞行点"),
+        ], ["魔兽世界", "MMO"],
+    ))
+    c.append(case(
+        "mmo-release-resurrect", "mmo-world", "释放灵魂 / 复活",
+        "死后选释放灵魂跑尸；或点魂匠/队友复活接受复活。",
+        [
+            beat("死亡后点释放灵魂", "变成灵魂形态，看到魂匠方向", "去找尸体", "tps",
+                 [hero(48, 55), badge("灵魂")], title="释放"),
+            beat("接受复活或跑尸复活", "回到尸体或魂匠处活过来", "活了", "tps",
+                 [hero(48, 55), ring(48, 55, r=12, kind="buff"), badge("复活")], title="复活"),
+        ], ["魔兽世界", "MMO"],
+    ))
+    c.append(case(
+        "mmo-auto-attack", "mmo-world", "自动攻击开关",
+        "有目标时开启自动挥砍/射击；再按或失去目标停止。和 MOBA 右键追击不同，是开关态。",
+        [
+            beat("有目标时按下自动攻击", "角色自动对目标普攻", "自己打着", "tps",
+                 [hero(40, 55, face=20), unit(68, 42, team="enemy"), ring(68, 42, kind="lock"),
+                  badge("自动攻击开")], title="开启"),
+            beat("再按关闭或目标死亡", "停手", "停", "tps",
+                 [hero(40, 55), badge("自动攻击关")], title="关闭"),
+        ], ["魔兽世界", "MMO"],
+    ))
+    c.append(case(
+        "mmo-interrupt-cast", "mmo-world", "打断对方读条 / 自己取消读条",
+        "敌方读条时按打断技能；自己读条时可走或按取消打断自己。",
+        [
+            beat("敌方读条时按打断", "对方读条失败，常带锁定类惩罚", "掐掉", "tps",
+                 [hero(35, 58), unit(68, 42, team="enemy"), badge("打断")], title="打断别人"),
+            beat("自己读条中按取消或移动（若规则允许）", "自己读条中断，技能进 CD 或退回", "不放了", "tps",
+                 [hero(48, 55), badge("取消读条")], title="取消自己"),
+        ], ["魔兽世界", "MMO", "MOBA"],
+    ))
+    c.append(case(
+        "mmo-quest-tracker", "mmo-world", "任务追踪：点目标去地图",
+        "点任务追踪条目，地图/箭头标出目标；超远时给装等提示。",
+        [
+            beat("点击任务追踪里的目标", "地图标记或地面箭头更新", "知道去哪", "moba",
+                 [badge("追踪→地图")], title="点追踪"),
+        ], ["魔兽世界", "MMO", "ARPG"],
+    ))
+    c.append(case(
+        "mmo-mailbox-ah", "mmo-world", "邮箱 / 拍卖行投递",
+        "邮箱取附件；拍卖行上架要填价与时限，成功后物品离包。",
+        [
+            beat("打开邮箱点附件", "物品进包，邮件更新", "取件", "moba",
+                 [badge("邮箱")], title="取邮"),
+            beat("拍卖行填价上架", "物品进入拍卖，包里消失", "挂上了", "moba",
+                 [badge("上架")], title="拍卖"),
+        ], ["魔兽世界", "MMO"],
+    ))
+
+    # ===== 二十二、设计向界面手势 =====
+    c.append(case(
+        "ui-radial-wheel", "design-ui", "按住出轮盘，指向松手选定",
+        "按住键弹出径向轮盘（表情、武器、标记、消耗品），指向一格松手确认；松开太早或回中取消。",
+        [
+            beat("按住轮盘键", "轮盘在角色旁展开", "选项铺开", "tps",
+                 [hero(48, 55), badge("轮盘展开")], title="按住"),
+            beat("指向某一格松手", "执行该格动作，轮盘收起", "就是这个", "tps",
+                 [hero(48, 55), cursor(70, 40), badge("选定")], title="松手选定"),
+            beat("指回中心松手", "取消，无动作", "算了", "tps",
+                 [hero(48, 55), badge("取消")], title="取消"),
+        ], ["动作RPG", "TPS", "MMO"],
+    ))
+    c.append(case(
+        "ui-hold-context-menu", "design-ui", "长按出上下文菜单",
+        "对单位/物品长按或右键，弹出与对象类型相关的菜单（交易、检查、跟随、使用）。",
+        [
+            beat("对对象右键/长按", "弹出上下文菜单", "还能干这些", "moba",
+                 [unit(55, 45, team="ally"), cursor(55, 45), badge("上下文菜单")], title="打开菜单"),
+            beat("点菜单项", "执行该项，菜单关闭", "选这项", "moba",
+                 [badge("执行菜单项")], title="选中"),
+        ], ["MMO", "RTS", "ARPG"],
+    ))
+    c.append(case(
+        "ui-drag-drop-slot", "design-ui", "槽位拖放（技能/物品/天赋）",
+        "从库拖到槽；非法槽要红叉拒绝；替换要看得见谁被挤走。",
+        [
+            beat("拖到合法槽松手", "槽位更新图标", "放进去了", "moba",
+                 [cursor(60, 50, "drag"), badge("合法放下")], title="合法"),
+            beat("拖到非法槽", "红叉，松手弹回原处", "不能放这", "moba",
+                 [cursor(60, 50, "drag"), badge("非法拒绝")], title="非法"),
+        ], ["MMO", "MOBA", "ARPG"],
+    ))
+    c.append(case(
+        "ui-confirm-destructive", "design-ui", "危险操作二次确认",
+        "分解粉装、删角色、放弃任务等：先警告，确认后才执行；取消原样返回。",
+        [
+            beat("点危险操作", "弹出确认框，写清后果", "真的吗", "moba",
+                 [badge("确认框")], title="警告"),
+            beat("点确认", "执行；点取消则什么都不改", "定了/算了", "moba",
+                 [badge("确认或取消")], title="抉择"),
+        ], ["MMO", "全品类"],
+    ))
+    c.append(case(
+        "ui-ping-comm-wheel", "design-ui", "信号 / 沟通轮：点地告知队友",
+        "按信号键点地板或用轮盘选“来这里/小心/进攻”，地图与世界出现短时标记。",
+        [
+            beat("按信号点地面或选轮盘项", "世界与小地图出现标记与短语音/文字", "喊了一嗓子", "moba",
+                 [hero(35, 60), cursor(70, 40), circle_ind(70, 40, 10, True), badge("信号")], title="打信号"),
+        ], ["MOBA", "MMO", "TPS"],
+    ))
+    c.append(case(
+        "ui-camera-modes", "design-ui", "镜头：锁定跟随 / 自由转 / 拉远",
+        "切换镜头模式改变操作手感：锁定贴背、自由转观察、滚轮拉距离；模式切换要可见。",
+        [
+            beat("切换到自由镜头并拖动", "相机离角色旋转，角色不立刻转身", "四处看", "tps",
+                 [hero(45, 55), badge("自由镜头")], title="自由"),
+            beat("切回锁定跟随", "相机回贴角色朝向", "跟身", "tps",
+                 [hero(45, 55), badge("锁定跟随")], title="锁定"),
+        ], ["MMO", "动作RPG", "TPS"],
+    ))
+    c.append(case(
+        "ui-map-waypoint", "design-ui", "大地图钉点 / 导航",
+        "打开地图点一下设导航点，世界出现路径或箭头；再点可改或清除。",
+        [
+            beat("打开地图点目标位置", "导航点与路线出现", "往那走", "moba",
+                 [cursor(60, 45), badge("地图钉点")], title="钉点"),
+            beat("清除导航", "箭头/路线消失", "取消导航", "moba",
+                 [badge("清除钉点")], title="清除"),
+        ], ["MMO", "ARPG", "开放世界"],
+    ))
+    c.append(case(
+        "ui-hold-vs-toggle", "design-ui", "按住 vs 切换：同一功能两种手感",
+        "冲刺、开镜、蹲下可设为按住有效或按一下切换；设置改变手感，UI 要显示当前模式。",
+        [
+            beat("按住模式：按住才冲刺", "松手立刻停", "按多久走多久", "tps",
+                 [hero(40, 55), stick("L", 0, -1), badge("按住")], title="按住"),
+            beat("切换模式：按一下开始，再按停止", "状态图标保持", "开关态", "tps",
+                 [hero(40, 55), badge("切换")], title="切换"),
+        ], ["MMO", "FPS", "TPS", "设计选项"],
+    ))
+    c.append(case(
+        "ui-tutorial-prompt", "design-ui", "教学逼迫输入：提示键才继续",
+        "教程高亮某个键或对象，玩家按对了才放行；按错给清晰反馈，不静默吞。",
+        [
+            beat("屏幕提示“按 F 交互”", "其他干扰输入可被挡或无效", "只好按它", "tps",
+                 [hero(45, 55), badge("按 F")], title="逼迫提示"),
+            beat("按对键", "提示关闭，教程前进一步", "过了", "tps",
+                 [badge("完成步骤")], title="按对"),
+        ], ["全品类", "设计选项"],
+    ))
+    c.append(case(
+        "ui-build-tech-click", "design-ui", "建造 / 科技树点击",
+        "在建造菜单点单位或科技：扣资源排队；点已在造的可取消（常需确认）。",
+        [
+            beat("打开建造/科技面板点一项", "资源扣除，队列出现肖像", "开造", "topdown",
+                 [building(40, 50), badge("入队")], title="点造"),
+            beat("取消队列中的项", "资源按规则退回，队列缩短", "不造了", "topdown",
+                 [badge("取消建造")], title="取消"),
+        ], ["RTS", "4X", "MMO生活系"],
+    ))
+    c.append(case(
+        "ui-inventory-tetris", "design-ui", "背包格斗：异形体积摆放",
+        "物品占多格，要旋转并找到空位才能放进；放不下明确提示，不自动“随便塞”。",
+        [
+            beat("拖异形物品进包", "合法格高亮，非法格拒绝", "转一下才塞得进", "moba",
+                 [cursor(55, 45, "drag"), badge("异形背包")], title="摆放"),
+        ], ["逃离塔科夫", "ARPG", "设计选项"],
+    ))
+    c.append(case(
+        "ui-spectate-replay", "design-ui", "观战 / 回放：切视角",
+        "观战点队友切换相机；回放可暂停、打点、看别人视角。只读，不改对局。",
+        [
+            beat("观战中点队友或按键切换", "相机跟到该玩家", "换人看", "tps",
+                 [hero(48, 55), badge("观战切换")], title="切视角"),
+        ], ["MOBA", "FPS", "MMO"],
+    ))
+
+    # ===== 二十三、放不了 =====
     c.append(case(
         "block-resource", "blocked", "蓝 / 怒气 / 弹药不足",
         "按下后明确拒绝，并提示缺什么。",
@@ -1018,6 +1499,32 @@ def build_cases():
             beat("对不可见或非法目标确认", "禁止图标，技能不出去", "不行", "moba",
                  [hero(35, 60), cursor(70, 40), badge("禁止")], title="禁止"),
         ], ["RTS", "MOBA"],
+    ))
+    c.append(case(
+        "block-bag-full", "blocked", "背包满 / 负担不够",
+        "拾取或购买时包满：明确说满了，东西留在地上或交易取消，不静默吞。",
+        [
+            beat("包满时拾取或购买", "拒绝提示，物品不进包", "拿不下", "moba",
+                 [hero(48, 55), badge("背包已满")], title="包满"),
+        ], ["MMO", "ARPG"],
+    ))
+    c.append(case(
+        "block-range-los-trade", "blocked", "超距 / 遮挡 / 交易条件不满足",
+        "技能超距、没视线、交易一方移动过远：取消并说明原因。",
+        [
+            beat("超距或没视线时确认", "拒绝并提示原因", "够不着", "moba",
+                 [hero(30, 60), unit(80, 30, team="enemy"), badge("超距/视线")], title="超距"),
+            beat("交易中走太远", "交易窗关闭，物品回各方", "交易取消", "moba",
+                 [badge("交易取消")], title="交易断"),
+        ], ["MMO", "MOBA", "RTS"],
+    ))
+    c.append(case(
+        "block-crowd-control", "blocked", "被控：沉默 / 晕眩 / 变形",
+        "被控时按键明确无效，状态图标说清是哪种控制，控结束才恢复。",
+        [
+            beat("被晕/沉默时按技能", "拒绝，状态图标闪烁", "动不了", "moba",
+                 [hero(48, 55), badge("被控")], title="被控"),
+        ], ["MMO", "MOBA"],
     ))
 
     return c
