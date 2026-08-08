@@ -64,8 +64,20 @@ window.PLAYER_ACTION_UX_CATALOG = {
       "title": "十五、同技能不同手感"
     },
     {
+      "id": "multi-cast",
+      "title": "十六、一群人放同一个技能"
+    },
+    {
+      "id": "context-order",
+      "title": "十七、选中谁×点到谁"
+    },
+    {
+      "id": "temp-kit",
+      "title": "十八、临时多出来的技能"
+    },
+    {
       "id": "blocked",
-      "title": "十六、放不了时的反馈"
+      "title": "十九、放不了时的反馈"
     }
   ],
   "cases": [
@@ -1155,8 +1167,8 @@ window.PLAYER_ACTION_UX_CATALOG = {
     {
       "id": "order-smart-right",
       "category": "basic-order",
-      "title": "右键智能指令",
-      "summary": "点矿去采、点敌去打、点建筑去进——同一右键，目标不同结果不同。",
+      "title": "右键智能指令（总览）",
+      "summary": "同一右键，点到不同东西结果不同。更细的「选中谁×点到谁」见第十七类（SC2/RA2 对照）。",
       "genres": [
         "SC2/War3",
         "RTS"
@@ -4478,6 +4490,1833 @@ window.PLAYER_ACTION_UX_CATALOG = {
             {
               "t": "badge",
               "text": "双击"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "multi-cast-together",
+      "category": "multi-cast",
+      "title": "齐放：能放的人同时出手",
+      "summary": "多选后点一次技能，所有满足条件的单位一起放。像 SC2 多选高圣堂武士对同一点砸心灵风暴；RA2 多选光棱坦克强制攻击同一落点齐射。",
+      "genres": [
+        "SC2",
+        "RA2",
+        "RTS"
+      ],
+      "beats": [
+        {
+          "title": "同点齐放",
+          "input": "多选施法单位，点技能落点一次",
+          "screen": "多个风暴/齐射同时砸在同一点",
+          "feel": "一起轰",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "unit",
+              "x": 22,
+              "y": 62,
+              "sel": true,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "unit",
+              "x": 32,
+              "y": 58,
+              "sel": true,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "unit",
+              "x": 28,
+              "y": 70,
+              "sel": true,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "ring",
+              "x": 22,
+              "y": 62,
+              "r": 8,
+              "kind": "select"
+            },
+            {
+              "t": "ring",
+              "x": 32,
+              "y": 58,
+              "r": 8,
+              "kind": "select"
+            },
+            {
+              "t": "ring",
+              "x": 28,
+              "y": 70,
+              "r": 8,
+              "kind": "select"
+            },
+            {
+              "t": "circle",
+              "x": 72,
+              "y": 38,
+              "r": 18,
+              "ok": true
+            },
+            {
+              "t": "cursor",
+              "x": 72,
+              "y": 38,
+              "mode": "up"
+            },
+            {
+              "t": "arrow",
+              "x1": 28,
+              "y1": 58,
+              "x2": 68,
+              "y2": 40,
+              "kind": "attack"
+            },
+            {
+              "t": "arrow",
+              "x1": 32,
+              "y1": 56,
+              "x2": 70,
+              "y2": 42,
+              "kind": "attack"
+            },
+            {
+              "t": "badge",
+              "text": "齐放·SC2风暴"
+            }
+          ]
+        },
+        {
+          "title": "光棱齐射",
+          "input": "RA2：多选光棱，强制攻击地面一点",
+          "screen": "数道光柱同时打向落点",
+          "feel": "齐射",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "unit",
+              "x": 20,
+              "y": 55,
+              "sel": true,
+              "team": "ally",
+              "face": 0,
+              "size": 1.1
+            },
+            {
+              "t": "unit",
+              "x": 32,
+              "y": 62,
+              "sel": true,
+              "team": "ally",
+              "face": 0,
+              "size": 1.1
+            },
+            {
+              "t": "unit",
+              "x": 26,
+              "y": 70,
+              "sel": true,
+              "team": "ally",
+              "face": 0,
+              "size": 1.1
+            },
+            {
+              "t": "circle",
+              "x": 75,
+              "y": 40,
+              "r": 10,
+              "ok": true
+            },
+            {
+              "t": "arrow",
+              "x1": 24,
+              "y1": 56,
+              "x2": 72,
+              "y2": 42,
+              "kind": "attack"
+            },
+            {
+              "t": "arrow",
+              "x1": 34,
+              "y1": 60,
+              "x2": 74,
+              "y2": 40,
+              "kind": "attack"
+            },
+            {
+              "t": "badge",
+              "text": "齐放·RA2光棱"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "multi-cast-sequence",
+      "category": "multi-cast",
+      "title": "按顺序放：一个接一个",
+      "summary": "多选后点技能，单位按队列依次出手，不叠在同一帧。像 SC2 多选幽灵对同一目标排队狙击/核武引导；RA2 多选工程师依次进占同一建筑。",
+      "genres": [
+        "SC2",
+        "RA2",
+        "RTS"
+      ],
+      "beats": [
+        {
+          "title": "第一个出手",
+          "input": "多选后点技能目标一次",
+          "screen": "第一个出手，其余排队等待图标",
+          "feel": "等他放完",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "unit",
+              "x": 20,
+              "y": 55,
+              "sel": true,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "unit",
+              "x": 32,
+              "y": 58,
+              "sel": true,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "unit",
+              "x": 44,
+              "y": 62,
+              "sel": true,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "ring",
+              "x": 20,
+              "y": 55,
+              "r": 8,
+              "kind": "select"
+            },
+            {
+              "t": "unit",
+              "x": 75,
+              "y": 40,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "arrow",
+              "x1": 22,
+              "y1": 54,
+              "x2": 70,
+              "y2": 42,
+              "kind": "attack"
+            },
+            {
+              "t": "badge",
+              "text": "1号在放"
+            },
+            {
+              "t": "path",
+              "points": [
+                [
+                  32,
+                  58
+                ],
+                [
+                  40,
+                  50
+                ]
+              ],
+              "kind": "move"
+            }
+          ]
+        },
+        {
+          "title": "顺序接力",
+          "input": "第一人完成",
+          "screen": "第二人自动接着放同一技能/目标",
+          "feel": "接下一个",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "unit",
+              "x": 20,
+              "y": 55,
+              "sel": true,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "unit",
+              "x": 32,
+              "y": 58,
+              "sel": true,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "unit",
+              "x": 44,
+              "y": 62,
+              "sel": true,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "ring",
+              "x": 32,
+              "y": 58,
+              "r": 8,
+              "kind": "select"
+            },
+            {
+              "t": "unit",
+              "x": 75,
+              "y": 40,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "arrow",
+              "x1": 34,
+              "y1": 56,
+              "x2": 72,
+              "y2": 42,
+              "kind": "attack"
+            },
+            {
+              "t": "badge",
+              "text": "2号接上"
+            }
+          ]
+        },
+        {
+          "title": "占建筑排队",
+          "input": "RA2：多选工程师点敌建筑",
+          "screen": "一人进占，其余在旁排队",
+          "feel": "一个个进",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "unit",
+              "x": 30,
+              "y": 60,
+              "sel": true,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "unit",
+              "x": 38,
+              "y": 66,
+              "sel": true,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "unit",
+              "x": 46,
+              "y": 58,
+              "sel": true,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "building",
+              "x": 72,
+              "y": 42,
+              "ghost": false
+            },
+            {
+              "t": "arrow",
+              "x1": 32,
+              "y1": 58,
+              "x2": 66,
+              "y2": 44,
+              "kind": "move"
+            },
+            {
+              "t": "badge",
+              "text": "工程师排队"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "multi-cast-priority",
+      "category": "multi-cast",
+      "title": "按优先级放：只让最合适的出手",
+      "summary": "混编选中时按技能，系统只挑能放、且最合适的单位出手，其余不动。像 SC2 陆战队员+高圣堂混选按风暴，只有高圣堂放；RA2 混选坦克与防空单位点飞机，只有能打空的开火。",
+      "genres": [
+        "SC2",
+        "RA2",
+        "RTS"
+      ],
+      "beats": [
+        {
+          "title": "过滤不会的",
+          "input": "混选军队，按只有部分人会的技能",
+          "screen": "不会的单位无反应；会的那几个出手",
+          "feel": "对的人在放",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "unit",
+              "x": 22,
+              "y": 60,
+              "sel": true,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "unit",
+              "x": 34,
+              "y": 55,
+              "sel": true,
+              "team": "ally",
+              "face": 0,
+              "size": 1.15
+            },
+            {
+              "t": "unit",
+              "x": 46,
+              "y": 62,
+              "sel": true,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "ring",
+              "x": 34,
+              "y": 55,
+              "r": 8,
+              "kind": "select"
+            },
+            {
+              "t": "circle",
+              "x": 72,
+              "y": 38,
+              "r": 16,
+              "ok": true
+            },
+            {
+              "t": "cursor",
+              "x": 72,
+              "y": 38,
+              "mode": "idle"
+            },
+            {
+              "t": "arrow",
+              "x1": 36,
+              "y1": 54,
+              "x2": 68,
+              "y2": 40,
+              "kind": "attack"
+            },
+            {
+              "t": "badge",
+              "text": "仅施法者"
+            }
+          ]
+        },
+        {
+          "title": "挑人出手",
+          "input": "多人都会时按优先级（能量高/离得近）",
+          "screen": "只有优先级最高的一人或数人出手",
+          "feel": "挑最好的",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "unit",
+              "x": 24,
+              "y": 58,
+              "sel": true,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "unit",
+              "x": 36,
+              "y": 52,
+              "sel": true,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "unit",
+              "x": 48,
+              "y": 60,
+              "sel": true,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "ring",
+              "x": 36,
+              "y": 52,
+              "r": 8,
+              "kind": "select"
+            },
+            {
+              "t": "unit",
+              "x": 74,
+              "y": 40,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "arrow",
+              "x1": 38,
+              "y1": 52,
+              "x2": 70,
+              "y2": 42,
+              "kind": "attack"
+            },
+            {
+              "t": "badge",
+              "text": "优先最近/满能量"
+            }
+          ]
+        },
+        {
+          "title": "防空优先",
+          "input": "RA2：混选点空中目标",
+          "screen": "防空单位开火，纯对地坦克不抬枪",
+          "feel": "该打的打",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "unit",
+              "x": 25,
+              "y": 62,
+              "sel": true,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "unit",
+              "x": 40,
+              "y": 55,
+              "sel": true,
+              "team": "ally",
+              "face": 0,
+              "size": 1.1
+            },
+            {
+              "t": "unit",
+              "x": 70,
+              "y": 30,
+              "sel": false,
+              "team": "enemy",
+              "face": 180,
+              "size": 1
+            },
+            {
+              "t": "ring",
+              "x": 40,
+              "y": 55,
+              "r": 8,
+              "kind": "select"
+            },
+            {
+              "t": "arrow",
+              "x1": 42,
+              "y1": 52,
+              "x2": 68,
+              "y2": 34,
+              "kind": "attack"
+            },
+            {
+              "t": "badge",
+              "text": "仅防空"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "multi-cast-split-targets",
+      "category": "multi-cast",
+      "title": "多人多目标：一人打一个",
+      "summary": "多选施法单位后，依次点多个目标，每人认领一个。像 SC2 多选高圣堂依次反馈不同敌方；RA2 多选疯狂伊文对多建筑埋弹。",
+      "genres": [
+        "SC2",
+        "RA2",
+        "RTS"
+      ],
+      "beats": [
+        {
+          "title": "拆目标",
+          "input": "选多人，点技能后依次点目标 A/B/C",
+          "screen": "每人头顶认领一条线指向各自目标",
+          "feel": "分开点名",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "unit",
+              "x": 20,
+              "y": 60,
+              "sel": true,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "unit",
+              "x": 32,
+              "y": 55,
+              "sel": true,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "unit",
+              "x": 44,
+              "y": 62,
+              "sel": true,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "unit",
+              "x": 68,
+              "y": 30,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "unit",
+              "x": 78,
+              "y": 48,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "unit",
+              "x": 70,
+              "y": 68,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "arrow",
+              "x1": 22,
+              "y1": 58,
+              "x2": 66,
+              "y2": 34,
+              "kind": "attack"
+            },
+            {
+              "t": "arrow",
+              "x1": 34,
+              "y1": 54,
+              "x2": 76,
+              "y2": 48,
+              "kind": "attack"
+            },
+            {
+              "t": "arrow",
+              "x1": 46,
+              "y1": 60,
+              "x2": 68,
+              "y2": 66,
+              "kind": "attack"
+            },
+            {
+              "t": "badge",
+              "text": "一人一目标"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "context-sc2-rightclick",
+      "category": "context-order",
+      "title": "SC2：同一右键，选中×目标不同结果不同",
+      "summary": "右键没有固定含义——看你手里抓着谁、点到了什么。工人点矿去采、点气矿去采气、点地面去走；战斗单位点敌去打、点地面去走；治疗者点伤员去治。",
+      "genres": [
+        "SC2",
+        "RTS"
+      ],
+      "beats": [
+        {
+          "title": "工人点矿",
+          "input": "选 SCV，右键矿物",
+          "screen": "工人去采矿，不攻击",
+          "feel": "去挖矿",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "unit",
+              "x": 30,
+              "y": 55,
+              "sel": true,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "ring",
+              "x": 30,
+              "y": 55,
+              "r": 8,
+              "kind": "select"
+            },
+            {
+              "t": "building",
+              "x": 70,
+              "y": 42,
+              "ghost": false
+            },
+            {
+              "t": "arrow",
+              "x1": 32,
+              "y1": 54,
+              "x2": 66,
+              "y2": 44,
+              "kind": "move"
+            },
+            {
+              "t": "cursor",
+              "x": 70,
+              "y": 42,
+              "mode": "up"
+            },
+            {
+              "t": "badge",
+              "text": "工人×矿"
+            }
+          ]
+        },
+        {
+          "title": "士兵点矿",
+          "input": "选陆战队员，右键同一矿物",
+          "screen": "当普通地面走过去（或无效采集）",
+          "feel": "不会去挖",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "unit",
+              "x": 30,
+              "y": 55,
+              "sel": true,
+              "team": "ally",
+              "face": 20,
+              "size": 1
+            },
+            {
+              "t": "ring",
+              "x": 30,
+              "y": 55,
+              "r": 8,
+              "kind": "select"
+            },
+            {
+              "t": "building",
+              "x": 70,
+              "y": 42,
+              "ghost": false
+            },
+            {
+              "t": "arrow",
+              "x1": 32,
+              "y1": 54,
+              "x2": 66,
+              "y2": 44,
+              "kind": "move"
+            },
+            {
+              "t": "badge",
+              "text": "士兵×矿"
+            }
+          ]
+        },
+        {
+          "title": "兵点敌人",
+          "input": "选战斗单位，右键敌人",
+          "screen": "攻击该敌人",
+          "feel": "去干他",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "unit",
+              "x": 30,
+              "y": 58,
+              "sel": true,
+              "team": "ally",
+              "face": 25,
+              "size": 1
+            },
+            {
+              "t": "ring",
+              "x": 30,
+              "y": 58,
+              "r": 8,
+              "kind": "select"
+            },
+            {
+              "t": "unit",
+              "x": 72,
+              "y": 40,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "arrow",
+              "x1": 34,
+              "y1": 56,
+              "x2": 68,
+              "y2": 42,
+              "kind": "attack"
+            },
+            {
+              "t": "cursor",
+              "x": 72,
+              "y": 40,
+              "mode": "up"
+            },
+            {
+              "t": "badge",
+              "text": "兵×敌人"
+            }
+          ]
+        },
+        {
+          "title": "医兵救人",
+          "input": "选医疗兵，右键受伤友军",
+          "screen": "跑去治疗，不是攻击",
+          "feel": "去救人",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "unit",
+              "x": 28,
+              "y": 58,
+              "sel": true,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "ring",
+              "x": 28,
+              "y": 58,
+              "r": 8,
+              "kind": "select"
+            },
+            {
+              "t": "unit",
+              "x": 70,
+              "y": 45,
+              "sel": false,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "arrow",
+              "x1": 32,
+              "y1": 56,
+              "x2": 66,
+              "y2": 46,
+              "kind": "move"
+            },
+            {
+              "t": "ring",
+              "x": 70,
+              "y": 45,
+              "r": 10,
+              "kind": "buff"
+            },
+            {
+              "t": "badge",
+              "text": "医×伤员"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "context-ra2-rightclick",
+      "category": "context-order",
+      "title": "RA2：兵种决定右键在对象上干什么",
+      "summary": "同样右键点建筑/单位，工程师是占领或修理，间谍是潜入，普通坦克是攻击或移动，消融步兵是抹除。",
+      "genres": [
+        "RA2",
+        "RTS"
+      ],
+      "beats": [
+        {
+          "title": "占领",
+          "input": "选工程师，右键敌方建筑",
+          "screen": "冲去占领，不是炮击",
+          "feel": "去抢房子",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "unit",
+              "x": 28,
+              "y": 58,
+              "sel": true,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "ring",
+              "x": 28,
+              "y": 58,
+              "r": 8,
+              "kind": "select"
+            },
+            {
+              "t": "building",
+              "x": 70,
+              "y": 42,
+              "ghost": false
+            },
+            {
+              "t": "arrow",
+              "x1": 32,
+              "y1": 56,
+              "x2": 66,
+              "y2": 44,
+              "kind": "move"
+            },
+            {
+              "t": "cursor",
+              "x": 70,
+              "y": 42,
+              "mode": "up"
+            },
+            {
+              "t": "badge",
+              "text": "工兵×敌建筑"
+            }
+          ]
+        },
+        {
+          "title": "修理",
+          "input": "选工程师，右键己方损伤建筑",
+          "screen": "过去修理",
+          "feel": "去修",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "unit",
+              "x": 28,
+              "y": 58,
+              "sel": true,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "ring",
+              "x": 28,
+              "y": 58,
+              "r": 8,
+              "kind": "select"
+            },
+            {
+              "t": "building",
+              "x": 70,
+              "y": 42,
+              "ghost": false
+            },
+            {
+              "t": "arrow",
+              "x1": 32,
+              "y1": 56,
+              "x2": 66,
+              "y2": 44,
+              "kind": "move"
+            },
+            {
+              "t": "ring",
+              "x": 70,
+              "y": 42,
+              "r": 12,
+              "kind": "buff"
+            },
+            {
+              "t": "badge",
+              "text": "工兵×己建筑"
+            }
+          ]
+        },
+        {
+          "title": "炮击",
+          "input": "选坦克，右键同一敌建筑",
+          "screen": "开炮攻击建筑",
+          "feel": "轰平它",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "unit",
+              "x": 28,
+              "y": 58,
+              "sel": true,
+              "team": "ally",
+              "face": 0,
+              "size": 1.15
+            },
+            {
+              "t": "ring",
+              "x": 28,
+              "y": 58,
+              "r": 8,
+              "kind": "select"
+            },
+            {
+              "t": "building",
+              "x": 70,
+              "y": 42,
+              "ghost": false
+            },
+            {
+              "t": "arrow",
+              "x1": 34,
+              "y1": 56,
+              "x2": 66,
+              "y2": 44,
+              "kind": "attack"
+            },
+            {
+              "t": "badge",
+              "text": "坦克×敌建筑"
+            }
+          ]
+        },
+        {
+          "title": "消融",
+          "input": "选消融步兵，右键敌单位",
+          "screen": "擦除目标，不是普通射击",
+          "feel": "抹掉",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "unit",
+              "x": 30,
+              "y": 58,
+              "sel": true,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "ring",
+              "x": 30,
+              "y": 58,
+              "r": 8,
+              "kind": "select"
+            },
+            {
+              "t": "unit",
+              "x": 72,
+              "y": 42,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "arrow",
+              "x1": 34,
+              "y1": 56,
+              "x2": 68,
+              "y2": 44,
+              "kind": "attack"
+            },
+            {
+              "t": "badge",
+              "text": "消融×单位"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "context-ground-vs-object",
+      "category": "context-order",
+      "title": "右键地面 vs 右键对象",
+      "summary": "同一批选中：点空地通常是走/攻击移动；点对象才触发采集、攻击、占领、治疗、装载等“对物技能”。",
+      "genres": [
+        "SC2",
+        "RA2",
+        "RTS"
+      ],
+      "beats": [
+        {
+          "title": "点地面",
+          "input": "选中部队，右键空地",
+          "screen": "出现移动旗/路点，全员开拔",
+          "feel": "去那儿",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "unit",
+              "x": 25,
+              "y": 55,
+              "sel": true,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "unit",
+              "x": 35,
+              "y": 62,
+              "sel": true,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "ring",
+              "x": 25,
+              "y": 55,
+              "r": 8,
+              "kind": "select"
+            },
+            {
+              "t": "ring",
+              "x": 35,
+              "y": 62,
+              "r": 8,
+              "kind": "select"
+            },
+            {
+              "t": "cursor",
+              "x": 72,
+              "y": 40,
+              "mode": "up"
+            },
+            {
+              "t": "arrow",
+              "x1": 30,
+              "y1": 56,
+              "x2": 70,
+              "y2": 42,
+              "kind": "move"
+            },
+            {
+              "t": "badge",
+              "text": "右键地面"
+            }
+          ]
+        },
+        {
+          "title": "点对象",
+          "input": "同一选中，右键敌单位",
+          "screen": "攻击线指向该对象",
+          "feel": "锁定他打",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "unit",
+              "x": 25,
+              "y": 55,
+              "sel": true,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "unit",
+              "x": 35,
+              "y": 62,
+              "sel": true,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "ring",
+              "x": 25,
+              "y": 55,
+              "r": 8,
+              "kind": "select"
+            },
+            {
+              "t": "ring",
+              "x": 35,
+              "y": 62,
+              "r": 8,
+              "kind": "select"
+            },
+            {
+              "t": "unit",
+              "x": 72,
+              "y": 40,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "cursor",
+              "x": 72,
+              "y": 40,
+              "mode": "up"
+            },
+            {
+              "t": "arrow",
+              "x1": 28,
+              "y1": 54,
+              "x2": 68,
+              "y2": 42,
+              "kind": "attack"
+            },
+            {
+              "t": "badge",
+              "text": "右键对象"
+            }
+          ]
+        },
+        {
+          "title": "工人对照",
+          "input": "选工人，右键地面 vs 右键矿",
+          "screen": "地面=走；矿=采集指令图标不同",
+          "feel": "点啥干啥",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "unit",
+              "x": 30,
+              "y": 58,
+              "sel": true,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "ring",
+              "x": 30,
+              "y": 58,
+              "r": 8,
+              "kind": "select"
+            },
+            {
+              "t": "building",
+              "x": 68,
+              "y": 38,
+              "ghost": false
+            },
+            {
+              "t": "cursor",
+              "x": 50,
+              "y": 70,
+              "mode": "up"
+            },
+            {
+              "t": "badge",
+              "text": "地面走 / 矿采集"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "context-mixed-selection",
+      "category": "context-order",
+      "title": "混选时右键：各干各的智能活",
+      "summary": "一框里既有工人又有兵：右键矿→工人去采、兵走开或待机；右键敌人→兵去打、工人逃跑/不管。SC2 混编智能指令是典型；RA2 混选工程师与坦克点建筑时也应各走各的语义。",
+      "genres": [
+        "SC2",
+        "RA2",
+        "RTS"
+      ],
+      "beats": [
+        {
+          "title": "混选点矿",
+          "input": "混选工人+士兵，右键矿物",
+          "screen": "工人去采；士兵不采，通常走开或停",
+          "feel": "人各有活",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "unit",
+              "x": 24,
+              "y": 58,
+              "sel": true,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "unit",
+              "x": 36,
+              "y": 52,
+              "sel": true,
+              "team": "ally",
+              "face": 20,
+              "size": 1
+            },
+            {
+              "t": "ring",
+              "x": 24,
+              "y": 58,
+              "r": 8,
+              "kind": "select"
+            },
+            {
+              "t": "ring",
+              "x": 36,
+              "y": 52,
+              "r": 8,
+              "kind": "select"
+            },
+            {
+              "t": "building",
+              "x": 72,
+              "y": 40,
+              "ghost": false
+            },
+            {
+              "t": "arrow",
+              "x1": 26,
+              "y1": 56,
+              "x2": 68,
+              "y2": 42,
+              "kind": "move"
+            },
+            {
+              "t": "badge",
+              "text": "混选×矿"
+            }
+          ]
+        },
+        {
+          "title": "混选点敌",
+          "input": "混选工人+士兵，右键敌人",
+          "screen": "士兵进攻；工人不冲锋（或逃跑）",
+          "feel": "兵打仗",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "unit",
+              "x": 24,
+              "y": 58,
+              "sel": true,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "unit",
+              "x": 36,
+              "y": 52,
+              "sel": true,
+              "team": "ally",
+              "face": 25,
+              "size": 1
+            },
+            {
+              "t": "ring",
+              "x": 24,
+              "y": 58,
+              "r": 8,
+              "kind": "select"
+            },
+            {
+              "t": "ring",
+              "x": 36,
+              "y": 52,
+              "r": 8,
+              "kind": "select"
+            },
+            {
+              "t": "unit",
+              "x": 74,
+              "y": 40,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "arrow",
+              "x1": 38,
+              "y1": 52,
+              "x2": 70,
+              "y2": 42,
+              "kind": "attack"
+            },
+            {
+              "t": "badge",
+              "text": "混选×敌人"
+            }
+          ]
+        },
+        {
+          "title": "占+轰",
+          "input": "混选工程师+坦克，右键敌建筑（RA2）",
+          "screen": "工程师去占；坦克去轰",
+          "feel": "占的占打的打",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "unit",
+              "x": 24,
+              "y": 60,
+              "sel": true,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "unit",
+              "x": 38,
+              "y": 54,
+              "sel": true,
+              "team": "ally",
+              "face": 0,
+              "size": 1.15
+            },
+            {
+              "t": "ring",
+              "x": 24,
+              "y": 60,
+              "r": 8,
+              "kind": "select"
+            },
+            {
+              "t": "ring",
+              "x": 38,
+              "y": 54,
+              "r": 8,
+              "kind": "select"
+            },
+            {
+              "t": "building",
+              "x": 72,
+              "y": 42,
+              "ghost": false
+            },
+            {
+              "t": "arrow",
+              "x1": 26,
+              "y1": 58,
+              "x2": 66,
+              "y2": 44,
+              "kind": "move"
+            },
+            {
+              "t": "arrow",
+              "x1": 40,
+              "y1": 54,
+              "x2": 68,
+              "y2": 44,
+              "kind": "attack"
+            },
+            {
+              "t": "badge",
+              "text": "混选×建筑"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "context-stance-changes-verb",
+      "category": "context-order",
+      "title": "同一单位形态变了，右键含义也变",
+      "summary": "还是那辆车，形态一变右键语义跟着变。SC2 攻城坦克：坦克形态右键敌=直射推进，攻城形态右键敌=原地炮击；变形后技能栏与默认右键都换一套。",
+      "genres": [
+        "SC2",
+        "RTS"
+      ],
+      "beats": [
+        {
+          "title": "车形态",
+          "input": "坦克形态，右键敌人",
+          "screen": "开过去边走边打",
+          "feel": "追着打",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "unit",
+              "x": 30,
+              "y": 58,
+              "sel": true,
+              "team": "ally",
+              "face": 0,
+              "size": 1.2
+            },
+            {
+              "t": "ring",
+              "x": 30,
+              "y": 58,
+              "r": 8,
+              "kind": "select"
+            },
+            {
+              "t": "unit",
+              "x": 72,
+              "y": 40,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "arrow",
+              "x1": 34,
+              "y1": 56,
+              "x2": 68,
+              "y2": 42,
+              "kind": "attack"
+            },
+            {
+              "t": "badge",
+              "text": "坦克形态"
+            }
+          ]
+        },
+        {
+          "title": "炮形态",
+          "input": "切到攻城形态后，右键同一敌人",
+          "screen": "就地架炮，不再追身",
+          "feel": "站桩轰",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "unit",
+              "x": 30,
+              "y": 58,
+              "sel": true,
+              "team": "ally",
+              "face": 0,
+              "size": 1.3
+            },
+            {
+              "t": "ring",
+              "x": 30,
+              "y": 58,
+              "r": 8,
+              "kind": "select"
+            },
+            {
+              "t": "unit",
+              "x": 72,
+              "y": 40,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "arrow",
+              "x1": 40,
+              "y1": 56,
+              "x2": 68,
+              "y2": 42,
+              "kind": "attack"
+            },
+            {
+              "t": "circle",
+              "x": 30,
+              "y": 58,
+              "r": 22,
+              "ok": true
+            },
+            {
+              "t": "badge",
+              "text": "攻城形态"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "temp-kit-gow-transform",
+      "category": "temp-kit",
+      "title": "变身：整栏技能临时换成另一套",
+      "summary": "像战神4进入斯巴达之怒/瓦尔基里一类变身：平时那栏技能收起，换成变身专属攻击与技能；变身计时结束或主动解除后，旧技能栏回来，临时技全部撤走。",
+      "genres": [
+        "战神4",
+        "动作RPG"
+      ],
+      "beats": [
+        {
+          "title": "进入变身",
+          "input": "触发变身（集满槽/按变身键）",
+          "screen": "角色换形；技能栏整页替换为变身技",
+          "feel": "换了一套身子",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 48,
+              "y": 55,
+              "face": 20
+            },
+            {
+              "t": "ring",
+              "x": 48,
+              "y": 55,
+              "r": 16,
+              "kind": "buff"
+            },
+            {
+              "t": "badge",
+              "text": "变身开始"
+            }
+          ]
+        },
+        {
+          "title": "用临时技",
+          "input": "变身期间按攻击/技能",
+          "screen": "打出的是变身专属连段与技能，不是原武器",
+          "feel": "这套只能现在用",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 45,
+              "y": 55,
+              "face": 30
+            },
+            {
+              "t": "cone",
+              "x": 45,
+              "y": 55,
+              "angle": -20,
+              "spread": 50,
+              "length": 32
+            },
+            {
+              "t": "unit",
+              "x": 72,
+              "y": 40,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "badge",
+              "text": "变身技"
+            }
+          ]
+        },
+        {
+          "title": "解除",
+          "input": "变身结束",
+          "screen": "外形复原；临时技能栏消失，原技能回到原位",
+          "feel": "变回来了",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 48,
+              "y": 55,
+              "face": 10
+            },
+            {
+              "t": "badge",
+              "text": "变身结束"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "temp-kit-timed-overlay",
+      "category": "temp-kit",
+      "title": "限时叠加：原技能还在，多挂几颗临时键",
+      "summary": "不变身换整栏，而是一段时间多出 1～N 个键（拾取武器、英雄时刻、召唤物附体）。倒计时结束临时键灰掉消失，原技能布局不动。",
+      "genres": [
+        "动作RPG",
+        "MOBA",
+        "ARPG"
+      ],
+      "beats": [
+        {
+          "title": "授予",
+          "input": "获得临时技能（拾取/触发）",
+          "screen": "技能栏多出高亮新键，带倒计时",
+          "feel": "多了几招",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "badge",
+              "text": "+临时技"
+            }
+          ]
+        },
+        {
+          "title": "使用",
+          "input": "按临时键释放",
+          "screen": "打出仅此期间可用的效果",
+          "feel": "趁现在",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "circle",
+              "x": 70,
+              "y": 40,
+              "r": 14,
+              "ok": true
+            },
+            {
+              "t": "cursor",
+              "x": 70,
+              "y": 40,
+              "mode": "idle"
+            },
+            {
+              "t": "badge",
+              "text": "临时技放出"
+            }
+          ]
+        },
+        {
+          "title": "收回",
+          "input": "倒计时走完",
+          "screen": "临时键消失，栏位复原",
+          "feel": "没了",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "badge",
+              "text": "临时技收回"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "temp-kit-rts-morph-ability",
+      "category": "temp-kit",
+      "title": "RTS 限时形态：面板技能临时换掉",
+      "summary": "单位进入临时形态时，命令卡换成形态技能；结束回到原卡。像 SC2 某些增益/形态窗，或英雄单位短暂开启的额外指令；不是永久升级。",
+      "genres": [
+        "SC2",
+        "RTS"
+      ],
+      "beats": [
+        {
+          "title": "形态开始",
+          "input": "单位进入限时形态",
+          "screen": "选中他时命令卡换成形态技",
+          "feel": "这会儿能按新键",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "unit",
+              "x": 45,
+              "y": 55,
+              "sel": true,
+              "team": "ally",
+              "face": 0,
+              "size": 1.25
+            },
+            {
+              "t": "ring",
+              "x": 45,
+              "y": 55,
+              "r": 8,
+              "kind": "select"
+            },
+            {
+              "t": "badge",
+              "text": "形态命令卡"
+            }
+          ]
+        },
+        {
+          "title": "形态结束",
+          "input": "形态计时结束",
+          "screen": "命令卡切回原技能，临时键不可用",
+          "feel": "面板变回去",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "unit",
+              "x": 45,
+              "y": 55,
+              "sel": true,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "ring",
+              "x": 45,
+              "y": 55,
+              "r": 8,
+              "kind": "select"
+            },
+            {
+              "t": "badge",
+              "text": "恢复原卡"
             }
           ]
         }

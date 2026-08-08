@@ -104,7 +104,10 @@ CATEGORIES = [
     ("environment", "十三、和环境互动"),
     ("army", "十四、部队 / 宝宝 / 载具"),
     ("cast-habit", "十五、同技能不同手感"),
-    ("blocked", "十六、放不了时的反馈"),
+    ("multi-cast", "十六、一群人放同一个技能"),
+    ("context-order", "十七、选中谁×点到谁"),
+    ("temp-kit", "十八、临时多出来的技能"),
+    ("blocked", "十九、放不了时的反馈"),
 ]
 
 
@@ -234,8 +237,8 @@ def build_cases():
         ], ["RTS"],
     ))
     c.append(case(
-        "order-smart-right", "basic-order", "右键智能指令",
-        "点矿去采、点敌去打、点建筑去进——同一右键，目标不同结果不同。",
+        "order-smart-right", "basic-order", "右键智能指令（总览）",
+        "同一右键，点到不同东西结果不同。更细的「选中谁×点到谁」见第十七类（SC2/RA2 对照）。",
         [
             beat("右键敌人", "进入攻击该目标", "去干他", "topdown",
                  [unit(35, 55, sel=True, face=25), ring(35, 55), unit(70, 40, team="enemy"),
@@ -793,7 +796,205 @@ def build_cases():
         ], ["MOBA"],
     ))
 
-    # ===== 十六、放不了 =====
+    # ===== 十六、一群人放同一个技能 =====
+    c.append(case(
+        "multi-cast-together", "multi-cast", "齐放：能放的人同时出手",
+        "多选后点一次技能，所有满足条件的单位一起放。像 SC2 多选高圣堂武士对同一点砸心灵风暴；"
+        "RA2 多选光棱坦克强制攻击同一落点齐射。",
+        [
+            beat("多选施法单位，点技能落点一次", "多个风暴/齐射同时砸在同一点", "一起轰", "topdown",
+                 [unit(22, 62, sel=True), unit(32, 58, sel=True), unit(28, 70, sel=True),
+                  ring(22, 62), ring(32, 58), ring(28, 70),
+                  circle_ind(72, 38, 18, True), cursor(72, 38, "up"),
+                  arrow(28, 58, 68, 40, "attack"), arrow(32, 56, 70, 42, "attack"),
+                  badge("齐放·SC2风暴")], title="同点齐放"),
+            beat("RA2：多选光棱，强制攻击地面一点", "数道光柱同时打向落点", "齐射", "topdown",
+                 [unit(20, 55, sel=True, size=1.1), unit(32, 62, sel=True, size=1.1),
+                  unit(26, 70, sel=True, size=1.1), circle_ind(75, 40, 10, True),
+                  arrow(24, 56, 72, 42, "attack"), arrow(34, 60, 74, 40, "attack"),
+                  badge("齐放·RA2光棱")], title="光棱齐射"),
+        ], ["SC2", "RA2", "RTS"],
+    ))
+    c.append(case(
+        "multi-cast-sequence", "multi-cast", "按顺序放：一个接一个",
+        "多选后点技能，单位按队列依次出手，不叠在同一帧。"
+        "像 SC2 多选幽灵对同一目标排队狙击/核武引导；RA2 多选工程师依次进占同一建筑。",
+        [
+            beat("多选后点技能目标一次", "第一个出手，其余排队等待图标", "等他放完", "topdown",
+                 [unit(20, 55, sel=True), unit(32, 58, sel=True), unit(44, 62, sel=True),
+                  ring(20, 55), unit(75, 40, team="enemy"),
+                  arrow(22, 54, 70, 42, "attack"), badge("1号在放"), path([(32, 58), (40, 50)], "move")],
+                 title="第一个出手"),
+            beat("第一人完成", "第二人自动接着放同一技能/目标", "接下一个", "topdown",
+                 [unit(20, 55, sel=True), unit(32, 58, sel=True), unit(44, 62, sel=True),
+                  ring(32, 58), unit(75, 40, team="enemy"),
+                  arrow(34, 56, 72, 42, "attack"), badge("2号接上")], title="顺序接力"),
+            beat("RA2：多选工程师点敌建筑", "一人进占，其余在旁排队", "一个个进", "topdown",
+                 [unit(30, 60, sel=True), unit(38, 66, sel=True), unit(46, 58, sel=True),
+                  building(72, 42), arrow(32, 58, 66, 44, "move"), badge("工程师排队")], title="占建筑排队"),
+        ], ["SC2", "RA2", "RTS"],
+    ))
+    c.append(case(
+        "multi-cast-priority", "multi-cast", "按优先级放：只让最合适的出手",
+        "混编选中时按技能，系统只挑能放、且最合适的单位出手，其余不动。"
+        "像 SC2 陆战队员+高圣堂混选按风暴，只有高圣堂放；RA2 混选坦克与防空单位点飞机，只有能打空的开火。",
+        [
+            beat("混选军队，按只有部分人会的技能", "不会的单位无反应；会的那几个出手", "对的人在放", "topdown",
+                 [unit(22, 60, sel=True), unit(34, 55, sel=True, size=1.15), unit(46, 62, sel=True),
+                  ring(34, 55), circle_ind(72, 38, 16, True), cursor(72, 38),
+                  arrow(36, 54, 68, 40, "attack"), badge("仅施法者")], title="过滤不会的"),
+            beat("多人都会时按优先级（能量高/离得近）", "只有优先级最高的一人或数人出手", "挑最好的", "topdown",
+                 [unit(24, 58, sel=True), unit(36, 52, sel=True), unit(48, 60, sel=True),
+                  ring(36, 52), unit(74, 40, team="enemy"),
+                  arrow(38, 52, 70, 42, "attack"), badge("优先最近/满能量")], title="挑人出手"),
+            beat("RA2：混选点空中目标", "防空单位开火，纯对地坦克不抬枪", "该打的打", "topdown",
+                 [unit(25, 62, sel=True), unit(40, 55, sel=True, size=1.1), unit(70, 30, team="enemy", face=180),
+                  ring(40, 55), arrow(42, 52, 68, 34, "attack"), badge("仅防空")], title="防空优先"),
+        ], ["SC2", "RA2", "RTS"],
+    ))
+    c.append(case(
+        "multi-cast-split-targets", "multi-cast", "多人多目标：一人打一个",
+        "多选施法单位后，依次点多个目标，每人认领一个。"
+        "像 SC2 多选高圣堂依次反馈不同敌方；RA2 多选疯狂伊文对多建筑埋弹。",
+        [
+            beat("选多人，点技能后依次点目标 A/B/C", "每人头顶认领一条线指向各自目标", "分开点名", "topdown",
+                 [unit(20, 60, sel=True), unit(32, 55, sel=True), unit(44, 62, sel=True),
+                  unit(68, 30, team="enemy"), unit(78, 48, team="enemy"), unit(70, 68, team="enemy"),
+                  arrow(22, 58, 66, 34, "attack"), arrow(34, 54, 76, 48, "attack"),
+                  arrow(46, 60, 68, 66, "attack"), badge("一人一目标")], title="拆目标"),
+        ], ["SC2", "RA2", "RTS"],
+    ))
+
+    # ===== 十七、选中谁 × 点到谁 =====
+    c.append(case(
+        "context-sc2-rightclick", "context-order", "SC2：同一右键，选中×目标不同结果不同",
+        "右键没有固定含义——看你手里抓着谁、点到了什么。"
+        "工人点矿去采、点气矿去采气、点地面去走；战斗单位点敌去打、点地面去走；治疗者点伤员去治。",
+        [
+            beat("选 SCV，右键矿物", "工人去采矿，不攻击", "去挖矿", "topdown",
+                 [unit(30, 55, sel=True), ring(30, 55), building(70, 42),
+                  arrow(32, 54, 66, 44, "move"), cursor(70, 42, "up"), badge("工人×矿")], title="工人点矿"),
+            beat("选陆战队员，右键同一矿物", "当普通地面走过去（或无效采集）", "不会去挖", "topdown",
+                 [unit(30, 55, sel=True, face=20), ring(30, 55), building(70, 42),
+                  arrow(32, 54, 66, 44, "move"), badge("士兵×矿")], title="士兵点矿"),
+            beat("选战斗单位，右键敌人", "攻击该敌人", "去干他", "topdown",
+                 [unit(30, 58, sel=True, face=25), ring(30, 58), unit(72, 40, team="enemy"),
+                  arrow(34, 56, 68, 42, "attack"), cursor(72, 40, "up"), badge("兵×敌人")], title="兵点敌人"),
+            beat("选医疗兵，右键受伤友军", "跑去治疗，不是攻击", "去救人", "topdown",
+                 [unit(28, 58, sel=True), ring(28, 58), unit(70, 45, team="ally"),
+                  arrow(32, 56, 66, 46, "move"), ring(70, 45, r=10, kind="buff"),
+                  badge("医×伤员")], title="医兵救人"),
+        ], ["SC2", "RTS"],
+    ))
+    c.append(case(
+        "context-ra2-rightclick", "context-order", "RA2：兵种决定右键在对象上干什么",
+        "同样右键点建筑/单位，工程师是占领或修理，间谍是潜入，普通坦克是攻击或移动，消融步兵是抹除。",
+        [
+            beat("选工程师，右键敌方建筑", "冲去占领，不是炮击", "去抢房子", "topdown",
+                 [unit(28, 58, sel=True), ring(28, 58), building(70, 42),
+                  arrow(32, 56, 66, 44, "move"), cursor(70, 42, "up"), badge("工兵×敌建筑")], title="占领"),
+            beat("选工程师，右键己方损伤建筑", "过去修理", "去修", "topdown",
+                 [unit(28, 58, sel=True), ring(28, 58), building(70, 42),
+                  arrow(32, 56, 66, 44, "move"), ring(70, 42, r=12, kind="buff"),
+                  badge("工兵×己建筑")], title="修理"),
+            beat("选坦克，右键同一敌建筑", "开炮攻击建筑", "轰平它", "topdown",
+                 [unit(28, 58, sel=True, size=1.15), ring(28, 58), building(70, 42),
+                  arrow(34, 56, 66, 44, "attack"), badge("坦克×敌建筑")], title="炮击"),
+            beat("选消融步兵，右键敌单位", "擦除目标，不是普通射击", "抹掉", "topdown",
+                 [unit(30, 58, sel=True), ring(30, 58), unit(72, 42, team="enemy"),
+                  arrow(34, 56, 68, 44, "attack"), badge("消融×单位")], title="消融"),
+        ], ["RA2", "RTS"],
+    ))
+    c.append(case(
+        "context-ground-vs-object", "context-order", "右键地面 vs 右键对象",
+        "同一批选中：点空地通常是走/攻击移动；点对象才触发采集、攻击、占领、治疗、装载等“对物技能”。",
+        [
+            beat("选中部队，右键空地", "出现移动旗/路点，全员开拔", "去那儿", "topdown",
+                 [unit(25, 55, sel=True), unit(35, 62, sel=True), ring(25, 55), ring(35, 62),
+                  cursor(72, 40, "up"), arrow(30, 56, 70, 42, "move"), badge("右键地面")], title="点地面"),
+            beat("同一选中，右键敌单位", "攻击线指向该对象", "锁定他打", "topdown",
+                 [unit(25, 55, sel=True), unit(35, 62, sel=True), ring(25, 55), ring(35, 62),
+                  unit(72, 40, team="enemy"), cursor(72, 40, "up"),
+                  arrow(28, 54, 68, 42, "attack"), badge("右键对象")], title="点对象"),
+            beat("选工人，右键地面 vs 右键矿", "地面=走；矿=采集指令图标不同", "点啥干啥", "topdown",
+                 [unit(30, 58, sel=True), ring(30, 58), building(68, 38),
+                  cursor(50, 70, "up"), badge("地面走 / 矿采集")], title="工人对照"),
+        ], ["SC2", "RA2", "RTS"],
+    ))
+    c.append(case(
+        "context-mixed-selection", "context-order", "混选时右键：各干各的智能活",
+        "一框里既有工人又有兵：右键矿→工人去采、兵走开或待机；右键敌人→兵去打、工人逃跑/不管。"
+        "SC2 混编智能指令是典型；RA2 混选工程师与坦克点建筑时也应各走各的语义。",
+        [
+            beat("混选工人+士兵，右键矿物", "工人去采；士兵不采，通常走开或停", "人各有活", "topdown",
+                 [unit(24, 58, sel=True), unit(36, 52, sel=True, face=20), ring(24, 58), ring(36, 52),
+                  building(72, 40), arrow(26, 56, 68, 42, "move"), badge("混选×矿")], title="混选点矿"),
+            beat("混选工人+士兵，右键敌人", "士兵进攻；工人不冲锋（或逃跑）", "兵打仗", "topdown",
+                 [unit(24, 58, sel=True), unit(36, 52, sel=True, face=25), ring(24, 58), ring(36, 52),
+                  unit(74, 40, team="enemy"), arrow(38, 52, 70, 42, "attack"),
+                  badge("混选×敌人")], title="混选点敌"),
+            beat("混选工程师+坦克，右键敌建筑（RA2）", "工程师去占；坦克去轰", "占的占打的打", "topdown",
+                 [unit(24, 60, sel=True), unit(38, 54, sel=True, size=1.15), ring(24, 60), ring(38, 54),
+                  building(72, 42), arrow(26, 58, 66, 44, "move"), arrow(40, 54, 68, 44, "attack"),
+                  badge("混选×建筑")], title="占+轰"),
+        ], ["SC2", "RA2", "RTS"],
+    ))
+    c.append(case(
+        "context-stance-changes-verb", "context-order", "同一单位形态变了，右键含义也变",
+        "还是那辆车，形态一变右键语义跟着变。SC2 攻城坦克：坦克形态右键敌=直射推进，攻城形态右键敌=原地炮击；"
+        "变形后技能栏与默认右键都换一套。",
+        [
+            beat("坦克形态，右键敌人", "开过去边走边打", "追着打", "topdown",
+                 [unit(30, 58, sel=True, size=1.2), ring(30, 58), unit(72, 40, team="enemy"),
+                  arrow(34, 56, 68, 42, "attack"), badge("坦克形态")], title="车形态"),
+            beat("切到攻城形态后，右键同一敌人", "就地架炮，不再追身", "站桩轰", "topdown",
+                 [unit(30, 58, sel=True, size=1.3), ring(30, 58), unit(72, 40, team="enemy"),
+                  arrow(40, 56, 68, 42, "attack"), circle_ind(30, 58, 22, True),
+                  badge("攻城形态")], title="炮形态"),
+        ], ["SC2", "RTS"],
+    ))
+
+    # ===== 十八、临时多出来的技能 =====
+    c.append(case(
+        "temp-kit-gow-transform", "temp-kit", "变身：整栏技能临时换成另一套",
+        "像战神4进入斯巴达之怒/瓦尔基里一类变身：平时那栏技能收起，换成变身专属攻击与技能；"
+        "变身计时结束或主动解除后，旧技能栏回来，临时技全部撤走。",
+        [
+            beat("触发变身（集满槽/按变身键）", "角色换形；技能栏整页替换为变身技", "换了一套身子", "tps",
+                 [hero(48, 55, face=20), ring(48, 55, r=16, kind="buff"), badge("变身开始")], title="进入变身"),
+            beat("变身期间按攻击/技能", "打出的是变身专属连段与技能，不是原武器", "这套只能现在用", "tps",
+                 [hero(45, 55, face=30), cone(45, 55, angle=-20, spread=50, length=32),
+                  unit(72, 40, team="enemy"), badge("变身技")], title="用临时技"),
+            beat("变身结束", "外形复原；临时技能栏消失，原技能回到原位", "变回来了", "tps",
+                 [hero(48, 55, face=10), badge("变身结束")], title="解除"),
+        ], ["战神4", "动作RPG"],
+    ))
+    c.append(case(
+        "temp-kit-timed-overlay", "temp-kit", "限时叠加：原技能还在，多挂几颗临时键",
+        "不变身换整栏，而是一段时间多出 1～N 个键（拾取武器、英雄时刻、召唤物附体）。"
+        "倒计时结束临时键灰掉消失，原技能布局不动。",
+        [
+            beat("获得临时技能（拾取/触发）", "技能栏多出高亮新键，带倒计时", "多了几招", "moba",
+                 [hero(40, 55), badge("+临时技")], title="授予"),
+            beat("按临时键释放", "打出仅此期间可用的效果", "趁现在", "moba",
+                 [hero(40, 55), circle_ind(70, 40, 14, True), cursor(70, 40), badge("临时技放出")], title="使用"),
+            beat("倒计时走完", "临时键消失，栏位复原", "没了", "moba",
+                 [hero(40, 55), badge("临时技收回")], title="收回"),
+        ], ["动作RPG", "MOBA", "ARPG"],
+    ))
+    c.append(case(
+        "temp-kit-rts-morph-ability", "temp-kit", "RTS 限时形态：面板技能临时换掉",
+        "单位进入临时形态时，命令卡换成形态技能；结束回到原卡。"
+        "像 SC2 某些增益/形态窗，或英雄单位短暂开启的额外指令；不是永久升级。",
+        [
+            beat("单位进入限时形态", "选中他时命令卡换成形态技", "这会儿能按新键", "topdown",
+                 [unit(45, 55, sel=True, size=1.25), ring(45, 55), badge("形态命令卡")], title="形态开始"),
+            beat("形态计时结束", "命令卡切回原技能，临时键不可用", "面板变回去", "topdown",
+                 [unit(45, 55, sel=True), ring(45, 55), badge("恢复原卡")], title="形态结束"),
+        ], ["SC2", "RTS"],
+    ))
+
+    # ===== 十九、放不了 =====
     c.append(case(
         "block-resource", "blocked", "蓝 / 怒气 / 弹药不足",
         "按下后明确拒绝，并提示缺什么。",
