@@ -271,7 +271,7 @@
    * Standard Mermaid sequenceDiagram:
    * 玩家 → 输入 → 画面 → 手感, one rect block per storyboard beat.
    */
-  function sequenceMermaid(beats) {
+  function sequenceMermaid(beats, onlyIndex = null) {
     const lines = [
       "sequenceDiagram",
       "  actor P as 玩家",
@@ -279,7 +279,9 @@
       "  participant S as 画面",
       "  participant F as 手感",
     ];
-    (beats || []).forEach((b, i) => {
+    const list = beats || [];
+    list.forEach((b, i) => {
+      if (onlyIndex != null && i !== onlyIndex) return;
       const title = mmdText(b.title || `步骤 ${i + 1}`);
       lines.push("  rect rgba(240, 163, 94, 0.08)");
       lines.push(`    Note over P,F: T${i + 1} ${title}`);
@@ -375,11 +377,10 @@
       return;
     }
     listEl.innerHTML = cases.map((c) => `
-      <button type="button" class="case-row ${selectedId === c.id ? "active" : ""}" data-id="${esc(c.id)}">
+      <button type="button" class="case-row ${selectedId === c.id ? "active" : ""}" data-id="${esc(c.id)}" title="${esc(c.id)}">
         <span class="title">${esc(c.title)}</span>
         <span class="beats">${c.beats.length} 镜</span>
         <p class="sub">${esc(c.summary)}</p>
-        <span class="meta">${esc(c.id)}</span>
       </button>`).join("");
     listEl.querySelectorAll(".case-row").forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -393,19 +394,28 @@
     });
   }
 
-  function bindBeatSync(beatCount) {
-    const setBeat = (i) => {
-      activeBeat = Math.max(0, Math.min(beatCount - 1, i));
-      detailEl.querySelectorAll("[data-beat]").forEach((el) => {
-        el.classList.toggle("active", Number(el.dataset.beat) === activeBeat);
-      });
-      const panel = detailEl.querySelector(`.panel[data-beat="${activeBeat}"]`);
-      if (panel) panel.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
-    };
-    detailEl.querySelectorAll("[data-beat]").forEach((el) => {
-      el.addEventListener("click", () => setBeat(Number(el.dataset.beat)));
+  function renderBeatStage(c) {
+    const beat = c.beats[activeBeat];
+    if (!beat) return;
+    const mmd = sequenceMermaid(c.beats, activeBeat);
+    const shot = `
+      <article class="panel">
+        ${storyboardSvg(beat, activeBeat)}
+        <div class="panel-cap">
+          <div class="cap-row"><span class="k">输入</span><span class="v">${esc(beat.input)}</span></div>
+          <div class="cap-row"><span class="k">画面</span><span class="v">${esc(beat.screen)}</span></div>
+          <div class="cap-row"><span class="k">手感</span><span class="v">${esc(beat.feel)}</span></div>
+        </div>
+      </article>`;
+    const mmdHost = detailEl.querySelector("#mmd-host");
+    const shotHost = detailEl.querySelector("#shot-host");
+    if (!mmdHost || !shotHost) return;
+    mmdHost.innerHTML = `<pre class="mermaid" data-pending="1">${esc(mmd)}</pre>`;
+    shotHost.innerHTML = shot;
+    detailEl.querySelectorAll(".beat-chip").forEach((el) => {
+      el.classList.toggle("active", Number(el.dataset.beat) === activeBeat);
     });
-    setBeat(activeBeat);
+    paintDetailMermaid().catch((err) => console.error(err));
   }
 
   function renderDetail() {
@@ -418,58 +428,50 @@
     const tags = (c.genres || []).map((g) => `<span class="tag">${esc(g)}</span>`).join("");
     const todos = (c.todos || []).map((t) => `<li>${esc(t)}</li>`).join("");
     const chips = c.beats.map((b, i) =>
-      `<button type="button" class="beat-chip" data-beat="${i}">T${i + 1} ${esc(b.title || "")}</button>`
+      `<button type="button" class="beat-chip ${i === activeBeat ? "active" : ""}" data-beat="${i}">T${i + 1} ${esc(b.title || "")}</button>`
     ).join("");
-    const panels = c.beats.map((b, i) => `
-      <article class="panel" data-beat="${i}">
-        ${storyboardSvg(b, i)}
-        <div class="panel-cap">
-          <div class="cap-row"><span class="k">输入</span><span class="v">${esc(b.input)}</span></div>
-          <div class="cap-row"><span class="k">画面</span><span class="v">${esc(b.screen)}</span></div>
-          <div class="cap-row"><span class="k">手感</span><span class="v">${esc(b.feel)}</span></div>
-        </div>
-      </article>`).join("");
-    const mmd = sequenceMermaid(c.beats);
-    const cp = data.checkpoint || {};
     detailEl.innerHTML = `
       <div class="detail-inner">
-        <div class="detail-head">
-          <h2>${esc(c.title)}</h2>
-          <span class="case-id">${esc(c.id)}</span>
-        </div>
-        <p class="summary">${esc(c.summary)}</p>
-        <div class="tags">${tags}</div>
-
-        <div class="impl-grid">
-          <div class="impl-card">
-            <div class="section-label">Ludots 现状</div>
-            <p>${esc(c.ludots || "未标注")}</p>
+        <div class="detail-top">
+          <div class="detail-head">
+            <h2>${esc(c.title)}</h2>
+            <span class="case-id">${esc(c.id)}</span>
           </div>
-          <div class="impl-card impl-todo">
-            <div class="section-label">缺口 TODO</div>
-            ${todos ? `<ul>${todos}</ul>` : `<p class="ok">本条暂无额外 TODO</p>`}
-          </div>
+          <p class="summary">${esc(c.summary)}</p>
+          <div class="tags">${tags}</div>
+          <div class="beat-rail" aria-label="分镜拍号">${chips}</div>
+          <details class="impl-details">
+            <summary>Ludots 现状 / 缺口 TODO</summary>
+            <div class="impl-line">
+              <div class="impl-card">
+                <div class="section-label">Ludots 现状</div>
+                <p>${esc(c.ludots || "未标注")}</p>
+              </div>
+              <div class="impl-card impl-todo">
+                <div class="section-label">缺口 TODO</div>
+                ${todos ? `<ul>${todos}</ul>` : `<p class="ok">本条暂无额外 TODO</p>`}
+              </div>
+            </div>
+          </details>
         </div>
-
-        <div class="beat-rail" aria-label="分镜拍号">${chips}</div>
-        <p class="sync-hint">左时序 · 右分镜 — 点拍号两侧同步高亮（checkpoint ${esc(cp.head || "?")}）</p>
-
         <div class="sync-split">
           <div class="sync-col">
-            <p class="section-label">Mermaid 时序</p>
-            <div class="mmd-box">
-              <pre class="mermaid" data-pending="1">${esc(mmd)}</pre>
-            </div>
+            <div class="section-label">时序 · 当前拍</div>
+            <div class="mmd-box" id="mmd-host"></div>
           </div>
           <div class="sync-col">
-            <p class="section-label">分镜（与左拍同步）</p>
-            <div class="storyboard storyboard-stack" aria-label="分镜条">${panels}</div>
+            <div class="section-label">分镜 · 当前拍</div>
+            <div class="storyboard storyboard-stack" id="shot-host" aria-label="当前分镜"></div>
           </div>
         </div>
       </div>`;
-    detailEl.scrollTop = 0;
-    bindBeatSync(c.beats.length);
-    paintDetailMermaid().catch((err) => console.error(err));
+    detailEl.querySelectorAll(".beat-chip").forEach((el) => {
+      el.addEventListener("click", () => {
+        activeBeat = Number(el.dataset.beat);
+        renderBeatStage(c);
+      });
+    });
+    renderBeatStage(c);
   }
 
   function render() {
