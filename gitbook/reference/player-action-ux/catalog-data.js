@@ -100,8 +100,12 @@ window.PLAYER_ACTION_UX_CATALOG = {
       "title": "二十四、自动施法"
     },
     {
+      "id": "locomotion",
+      "title": "二十五、走路：WASD / 摇杆 / 点地"
+    },
+    {
       "id": "blocked",
-      "title": "二十五、放不了时的反馈"
+      "title": "二十六、放不了时的反馈"
     }
   ],
   "cases": [
@@ -10264,6 +10268,721 @@ window.PLAYER_ACTION_UX_CATALOG = {
             {
               "t": "badge",
               "text": "普攻+技能自动"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "loco-wasd-camera",
+      "category": "locomotion",
+      "title": "WASD：相对镜头方向走",
+      "summary": "W 朝镜头前方，A/D 平移，S 后退。转镜头时「前方」跟着变。魔兽、多数第三人称开放世界的默认走法。",
+      "genres": [
+        "魔兽世界",
+        "MMO",
+        "TPS",
+        "开放世界"
+      ],
+      "beats": [
+        {
+          "title": "前进",
+          "input": "按住 W",
+          "screen": "角色朝镜头前方移动",
+          "feel": "往前走",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 45,
+              "y": 60,
+              "face": -90
+            },
+            {
+              "t": "stickL",
+              "nx": 0,
+              "ny": -1
+            },
+            {
+              "t": "arrow",
+              "x1": 45,
+              "y1": 55,
+              "x2": 45,
+              "y2": 35,
+              "kind": "move"
+            },
+            {
+              "t": "badge",
+              "text": "W·镜头前"
+            }
+          ]
+        },
+        {
+          "title": "转镜后",
+          "input": "转动镜头再按 W",
+          "screen": "前进方向随新镜头改变",
+          "feel": "前方换了",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 45,
+              "y": 55,
+              "face": 20
+            },
+            {
+              "t": "stickL",
+              "nx": 0,
+              "ny": -1
+            },
+            {
+              "t": "arrow",
+              "x1": 48,
+              "y1": 52,
+              "x2": 68,
+              "y2": 40,
+              "kind": "move"
+            },
+            {
+              "t": "badge",
+              "text": "镜头变→前方变"
+            }
+          ]
+        },
+        {
+          "title": "侧移",
+          "input": "按 A 或 D",
+          "screen": "相对镜头左右平移（侧移）",
+          "feel": "横着走",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 45,
+              "y": 55,
+              "face": -90
+            },
+            {
+              "t": "stickL",
+              "nx": -1,
+              "ny": 0
+            },
+            {
+              "t": "arrow",
+              "x1": 40,
+              "y1": 55,
+              "x2": 25,
+              "y2": 55,
+              "kind": "move"
+            },
+            {
+              "t": "badge",
+              "text": "A/D 侧移"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "loco-wasd-tank",
+      "category": "locomotion",
+      "title": "WASD：车式转向（W 朝角色面朝）",
+      "summary": "W 始终朝角色自己面对的方向；A/D 转身，不是平移。老式坦克手感/部分载具；和「相对镜头」是两种设计。",
+      "genres": [
+        "载具",
+        "设计选项",
+        "TPS"
+      ],
+      "beats": [
+        {
+          "title": "前进",
+          "input": "按住 W",
+          "screen": "沿角色面朝前进",
+          "feel": "朝鼻子走",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 45,
+              "y": 55,
+              "face": 20
+            },
+            {
+              "t": "stickL",
+              "nx": 0,
+              "ny": -1
+            },
+            {
+              "t": "arrow",
+              "x1": 48,
+              "y1": 52,
+              "x2": 65,
+              "y2": 42,
+              "kind": "move"
+            },
+            {
+              "t": "badge",
+              "text": "W·面朝"
+            }
+          ]
+        },
+        {
+          "title": "转向",
+          "input": "按 A/D",
+          "screen": "角色原地转向，不侧移",
+          "feel": "拧身子",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 45,
+              "y": 55,
+              "face": -40
+            },
+            {
+              "t": "stickL",
+              "nx": -1,
+              "ny": 0
+            },
+            {
+              "t": "badge",
+              "text": "A/D 转向"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "loco-stick-walk",
+      "category": "locomotion",
+      "title": "左摇杆走：推多少走多快",
+      "summary": "摇杆轻推慢走、推满跑步；方向相对镜头或面朝，由设定决定。和 WASD 数字键不同，有速度曲线。",
+      "genres": [
+        "手柄",
+        "TPS",
+        "动作RPG",
+        "双摇杆"
+      ],
+      "beats": [
+        {
+          "title": "慢走",
+          "input": "左摇杆轻推",
+          "screen": "角色慢走",
+          "feel": "踱步",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 45,
+              "y": 55,
+              "face": -90
+            },
+            {
+              "t": "stickL",
+              "nx": 0,
+              "ny": -0.35
+            },
+            {
+              "t": "arrow",
+              "x1": 45,
+              "y1": 52,
+              "x2": 45,
+              "y2": 42,
+              "kind": "move"
+            },
+            {
+              "t": "badge",
+              "text": "轻推慢走"
+            }
+          ]
+        },
+        {
+          "title": "快跑",
+          "input": "左摇杆推满",
+          "screen": "角色跑起来",
+          "feel": "跑",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 45,
+              "y": 55,
+              "face": -90
+            },
+            {
+              "t": "stickL",
+              "nx": 0,
+              "ny": -1
+            },
+            {
+              "t": "arrow",
+              "x1": 45,
+              "y1": 50,
+              "x2": 45,
+              "y2": 30,
+              "kind": "move"
+            },
+            {
+              "t": "badge",
+              "text": "推满跑"
+            }
+          ]
+        },
+        {
+          "title": "停",
+          "input": "摇杆回中",
+          "screen": "停下（或依惯性滑一小步）",
+          "feel": "停",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 45,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "stickL",
+              "nx": 0,
+              "ny": 0
+            },
+            {
+              "t": "badge",
+              "text": "回中"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "loco-click-move-avatar",
+      "category": "locomotion",
+      "title": "点地走路：只指挥自己（ARPG）",
+      "summary": "鼠标点地板，自己的角色跑过去；不是 RTS 给一群单位下命令。可与 WASD 并存，但同时开时要定谁覆盖谁。",
+      "genres": [
+        "暗黑",
+        "ARPG",
+        "MOBA补刀走位"
+      ],
+      "beats": [
+        {
+          "title": "点地",
+          "input": "左键/右键点地面",
+          "screen": "角色朝落点跑，脚下出现目标点",
+          "feel": "去那儿",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 30,
+              "y": 60,
+              "face": 20
+            },
+            {
+              "t": "arrow",
+              "x1": 32,
+              "y1": 58,
+              "x2": 70,
+              "y2": 40,
+              "kind": "move"
+            },
+            {
+              "t": "cursor",
+              "x": 70,
+              "y": 40,
+              "mode": "up"
+            },
+            {
+              "t": "badge",
+              "text": "点地走"
+            }
+          ]
+        },
+        {
+          "title": "改道",
+          "input": "跑动中再点新落点",
+          "screen": "改道去新点，旧点取消",
+          "feel": "改主意了",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 45,
+              "y": 50,
+              "face": 10
+            },
+            {
+              "t": "arrow",
+              "x1": 48,
+              "y1": 48,
+              "x2": 75,
+              "y2": 55,
+              "kind": "move"
+            },
+            {
+              "t": "cursor",
+              "x": 75,
+              "y": 55,
+              "mode": "up"
+            },
+            {
+              "t": "badge",
+              "text": "改落点"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "loco-sprint",
+      "category": "locomotion",
+      "title": "冲刺 / 跑步：叠在 WASD 上",
+      "summary": "WASD 走的同时按冲刺：变快跑，常耗耐力；可按住或切换。松 WASD 通常停，只按冲刺不给方向则无效或原地踏步。",
+      "genres": [
+        "MMO",
+        "动作RPG",
+        "TPS",
+        "开放世界"
+      ],
+      "beats": [
+        {
+          "title": "冲刺",
+          "input": "WASD + 按住冲刺",
+          "screen": "速度加快，耐力下降",
+          "feel": "跑起来",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 55,
+              "face": -90
+            },
+            {
+              "t": "stickL",
+              "nx": 0,
+              "ny": -1
+            },
+            {
+              "t": "arrow",
+              "x1": 40,
+              "y1": 48,
+              "x2": 40,
+              "y2": 25,
+              "kind": "move"
+            },
+            {
+              "t": "badge",
+              "text": "冲刺中"
+            }
+          ]
+        },
+        {
+          "title": "耗尽",
+          "input": "耐力耗尽",
+          "screen": "被迫降回走路，冲刺键暂不可用",
+          "feel": "喘不上来",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 45,
+              "y": 55,
+              "face": -90
+            },
+            {
+              "t": "stickL",
+              "nx": 0,
+              "ny": -1
+            },
+            {
+              "t": "badge",
+              "text": "耐力空"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "loco-strafe-backpedal",
+      "category": "locomotion",
+      "title": "侧移与后撤：速度可以不一样",
+      "summary": "A/D 侧移常与前进同速或略慢；S 后撤往往更慢且不能暴击/射击惩罚（看品类）。这是 WASD 手感的重要调参，不是「四个方向等价」。",
+      "genres": [
+        "FPS",
+        "TPS",
+        "MMO",
+        "MOBA"
+      ],
+      "beats": [
+        {
+          "title": "后撤",
+          "input": "按住 S 后撤",
+          "screen": "背对移动方向慢退，可边退边打",
+          "feel": "往后蹭",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 50,
+              "y": 45,
+              "face": -90
+            },
+            {
+              "t": "stickL",
+              "nx": 0,
+              "ny": 1
+            },
+            {
+              "t": "arrow",
+              "x1": 50,
+              "y1": 48,
+              "x2": 50,
+              "y2": 65,
+              "kind": "move"
+            },
+            {
+              "t": "badge",
+              "text": "后撤慢"
+            }
+          ]
+        },
+        {
+          "title": "侧移",
+          "input": "按住 A/D 边走边瞄",
+          "screen": "侧移保持面朝/准星方向",
+          "feel": "拉枪线",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 45,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "stickL",
+              "nx": 1,
+              "ny": 0
+            },
+            {
+              "t": "crosshair",
+              "x": 70,
+              "y": 40,
+              "locked": false
+            },
+            {
+              "t": "arrow",
+              "x1": 50,
+              "y1": 55,
+              "x2": 65,
+              "y2": 55,
+              "kind": "move"
+            },
+            {
+              "t": "badge",
+              "text": "侧移瞄准"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "loco-release-stop",
+      "category": "locomotion",
+      "title": "松键就停 vs 有一点惯性",
+      "summary": "多数 MMO 松 WASD 立刻停；少数动作/载具会滑行。手感选择要一眼能懂，不要有时停有时滑却不说明。",
+      "genres": [
+        "MMO",
+        "动作RPG",
+        "设计选项"
+      ],
+      "beats": [
+        {
+          "title": "即停",
+          "input": "松开所有方向键（立刻停设定）",
+          "screen": "角色马上站住",
+          "feel": "站定",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 48,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "badge",
+              "text": "即停"
+            }
+          ]
+        },
+        {
+          "title": "惯性",
+          "input": "松键但带惯性",
+          "screen": "再滑一小段才停",
+          "feel": "滑一下",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 48,
+              "y": 55,
+              "face": -90
+            },
+            {
+              "t": "path",
+              "points": [
+                [
+                  48,
+                  55
+                ],
+                [
+                  48,
+                  40
+                ]
+              ],
+              "kind": "move"
+            },
+            {
+              "t": "badge",
+              "text": "惯性"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "loco-wasd-vs-click",
+      "category": "locomotion",
+      "title": "WASD 与点地同时存在时谁说了算",
+      "summary": "ARPG/部分 MMO 两套都开：按 WASD 应打断点地跑位；点地应打断当前 WASD 路径意图。冲突规则要写进手感，不能两人各走各的。",
+      "genres": [
+        "ARPG",
+        "MMO",
+        "设计选项"
+      ],
+      "beats": [
+        {
+          "title": "键优先",
+          "input": "点地跑动中按下 WASD",
+          "screen": "取消点地目标，改由键盘方向走",
+          "feel": "键盘接手",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 45,
+              "y": 50,
+              "face": -90
+            },
+            {
+              "t": "stickL",
+              "nx": 0,
+              "ny": -1
+            },
+            {
+              "t": "arrow",
+              "x1": 45,
+              "y1": 45,
+              "x2": 45,
+              "y2": 28,
+              "kind": "move"
+            },
+            {
+              "t": "badge",
+              "text": "WASD 覆盖点地"
+            }
+          ]
+        },
+        {
+          "title": "点地优先设定",
+          "input": "WASD 走着时再点地",
+          "screen": "改去鼠标落点（或忽略点地，看设定）",
+          "feel": "点地接手",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "cursor",
+              "x": 72,
+              "y": 40,
+              "mode": "up"
+            },
+            {
+              "t": "arrow",
+              "x1": 42,
+              "y1": 53,
+              "x2": 70,
+              "y2": 42,
+              "kind": "move"
+            },
+            {
+              "t": "badge",
+              "text": "点地覆盖键"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "loco-autorun",
+      "category": "locomotion",
+      "title": "自动前进：锁 W",
+      "summary": "按自动前进后，不按 W 也持续朝前走，再按一次或用后退取消。长途跑图用，和跟随队友不同。",
+      "genres": [
+        "魔兽世界",
+        "MMO"
+      ],
+      "beats": [
+        {
+          "title": "锁前进",
+          "input": "按下自动前进",
+          "screen": "角色自己往前走，W 呈锁定态",
+          "feel": "甩手跑图",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 45,
+              "y": 55,
+              "face": -90
+            },
+            {
+              "t": "arrow",
+              "x1": 45,
+              "y1": 50,
+              "x2": 45,
+              "y2": 30,
+              "kind": "move"
+            },
+            {
+              "t": "badge",
+              "text": "自动前进ON"
+            }
+          ]
+        },
+        {
+          "title": "取消",
+          "input": "再按取消或按 S",
+          "screen": "自动前进关闭，停下或改手动",
+          "feel": "解锁",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 45,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "badge",
+              "text": "自动前进OFF"
             }
           ]
         }

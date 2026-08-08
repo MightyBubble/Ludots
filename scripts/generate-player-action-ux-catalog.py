@@ -113,7 +113,8 @@ CATEGORIES = [
     ("design-ui", "二十二、设计向界面手势"),
     ("dynamic-context", "二十三、身边有什么，同一键变什么"),
     ("auto-cast", "二十四、自动施法"),
-    ("blocked", "二十五、放不了时的反馈"),
+    ("locomotion", "二十五、走路：WASD / 摇杆 / 点地"),
+    ("blocked", "二十六、放不了时的反馈"),
 ]
 
 
@@ -1687,7 +1688,125 @@ def build_cases():
         ], ["魔兽世界", "MMO", "RTS"],
     ))
 
-    # ===== 二十五、放不了 =====
+    # ===== 二十五、走路：WASD / 摇杆 / 点地 =====
+    c.append(case(
+        "loco-wasd-camera", "locomotion", "WASD：相对镜头方向走",
+        "W 朝镜头前方，A/D 平移，S 后退。转镜头时「前方」跟着变。"
+        "魔兽、多数第三人称开放世界的默认走法。",
+        [
+            beat("按住 W", "角色朝镜头前方移动", "往前走", "tps",
+                 [hero(45, 60, face=-90), stick("L", 0, -1), arrow(45, 55, 45, 35, "move"),
+                  badge("W·镜头前")], title="前进"),
+            beat("转动镜头再按 W", "前进方向随新镜头改变", "前方换了", "tps",
+                 [hero(45, 55, face=20), stick("L", 0, -1), arrow(48, 52, 68, 40, "move"),
+                  badge("镜头变→前方变")], title="转镜后"),
+            beat("按 A 或 D", "相对镜头左右平移（侧移）", "横着走", "tps",
+                 [hero(45, 55, face=-90), stick("L", -1, 0), arrow(40, 55, 25, 55, "move"),
+                  badge("A/D 侧移")], title="侧移"),
+        ], ["魔兽世界", "MMO", "TPS", "开放世界"],
+    ))
+    c.append(case(
+        "loco-wasd-tank", "locomotion", "WASD：车式转向（W 朝角色面朝）",
+        "W 始终朝角色自己面对的方向；A/D 转身，不是平移。"
+        "老式坦克手感/部分载具；和「相对镜头」是两种设计。",
+        [
+            beat("按住 W", "沿角色面朝前进", "朝鼻子走", "tps",
+                 [hero(45, 55, face=20), stick("L", 0, -1), arrow(48, 52, 65, 42, "move"),
+                  badge("W·面朝")], title="前进"),
+            beat("按 A/D", "角色原地转向，不侧移", "拧身子", "tps",
+                 [hero(45, 55, face=-40), stick("L", -1, 0), badge("A/D 转向")], title="转向"),
+        ], ["载具", "设计选项", "TPS"],
+    ))
+    c.append(case(
+        "loco-stick-walk", "locomotion", "左摇杆走：推多少走多快",
+        "摇杆轻推慢走、推满跑步；方向相对镜头或面朝，由设定决定。"
+        "和 WASD 数字键不同，有速度曲线。",
+        [
+            beat("左摇杆轻推", "角色慢走", "踱步", "tps",
+                 [hero(45, 55, face=-90), stick("L", 0, -0.35), arrow(45, 52, 45, 42, "move"),
+                  badge("轻推慢走")], title="慢走"),
+            beat("左摇杆推满", "角色跑起来", "跑", "tps",
+                 [hero(45, 55, face=-90), stick("L", 0, -1), arrow(45, 50, 45, 30, "move"),
+                  badge("推满跑")], title="快跑"),
+            beat("摇杆回中", "停下（或依惯性滑一小步）", "停", "tps",
+                 [hero(45, 55), stick("L", 0, 0), badge("回中")], title="停"),
+        ], ["手柄", "TPS", "动作RPG", "双摇杆"],
+    ))
+    c.append(case(
+        "loco-click-move-avatar", "locomotion", "点地走路：只指挥自己（ARPG）",
+        "鼠标点地板，自己的角色跑过去；不是 RTS 给一群单位下命令。"
+        "可与 WASD 并存，但同时开时要定谁覆盖谁。",
+        [
+            beat("左键/右键点地面", "角色朝落点跑，脚下出现目标点", "去那儿", "topdown",
+                 [hero(30, 60, face=20), arrow(32, 58, 70, 40, "move"), cursor(70, 40, "up"),
+                  badge("点地走")], title="点地"),
+            beat("跑动中再点新落点", "改道去新点，旧点取消", "改主意了", "topdown",
+                 [hero(45, 50, face=10), arrow(48, 48, 75, 55, "move"), cursor(75, 55, "up"),
+                  badge("改落点")], title="改道"),
+        ], ["暗黑", "ARPG", "MOBA补刀走位"],
+    ))
+    c.append(case(
+        "loco-sprint", "locomotion", "冲刺 / 跑步：叠在 WASD 上",
+        "WASD 走的同时按冲刺：变快跑，常耗耐力；可按住或切换。"
+        "松 WASD 通常停，只按冲刺不给方向则无效或原地踏步。",
+        [
+            beat("WASD + 按住冲刺", "速度加快，耐力下降", "跑起来", "tps",
+                 [hero(40, 55, face=-90), stick("L", 0, -1), arrow(40, 48, 40, 25, "move"),
+                  badge("冲刺中")], title="冲刺"),
+            beat("耐力耗尽", "被迫降回走路，冲刺键暂不可用", "喘不上来", "tps",
+                 [hero(45, 55, face=-90), stick("L", 0, -1), badge("耐力空")], title="耗尽"),
+        ], ["MMO", "动作RPG", "TPS", "开放世界"],
+    ))
+    c.append(case(
+        "loco-strafe-backpedal", "locomotion", "侧移与后撤：速度可以不一样",
+        "A/D 侧移常与前进同速或略慢；S 后撤往往更慢且不能暴击/射击惩罚（看品类）。"
+        "这是 WASD 手感的重要调参，不是「四个方向等价」。",
+        [
+            beat("按住 S 后撤", "背对移动方向慢退，可边退边打", "往后蹭", "tps",
+                 [hero(50, 45, face=-90), stick("L", 0, 1), arrow(50, 48, 50, 65, "move"),
+                  badge("后撤慢")], title="后撤"),
+            beat("按住 A/D 边走边瞄", "侧移保持面朝/准星方向", "拉枪线", "tps",
+                 [hero(45, 55, face=0), stick("L", 1, 0), crosshair(70, 40),
+                  arrow(50, 55, 65, 55, "move"), badge("侧移瞄准")], title="侧移"),
+        ], ["FPS", "TPS", "MMO", "MOBA"],
+    ))
+    c.append(case(
+        "loco-release-stop", "locomotion", "松键就停 vs 有一点惯性",
+        "多数 MMO 松 WASD 立刻停；少数动作/载具会滑行。"
+        "手感选择要一眼能懂，不要有时停有时滑却不说明。",
+        [
+            beat("松开所有方向键（立刻停设定）", "角色马上站住", "站定", "tps",
+                 [hero(48, 55), badge("即停")], title="即停"),
+            beat("松键但带惯性", "再滑一小段才停", "滑一下", "tps",
+                 [hero(48, 55, face=-90), path([(48, 55), (48, 40)], "move"), badge("惯性")], title="惯性"),
+        ], ["MMO", "动作RPG", "设计选项"],
+    ))
+    c.append(case(
+        "loco-wasd-vs-click", "locomotion", "WASD 与点地同时存在时谁说了算",
+        "ARPG/部分 MMO 两套都开：按 WASD 应打断点地跑位；点地应打断当前 WASD 路径意图。"
+        "冲突规则要写进手感，不能两人各走各的。",
+        [
+            beat("点地跑动中按下 WASD", "取消点地目标，改由键盘方向走", "键盘接手", "topdown",
+                 [hero(45, 50, face=-90), stick("L", 0, -1), arrow(45, 45, 45, 28, "move"),
+                  badge("WASD 覆盖点地")], title="键优先"),
+            beat("WASD 走着时再点地", "改去鼠标落点（或忽略点地，看设定）", "点地接手", "topdown",
+                 [hero(40, 55), cursor(72, 40, "up"), arrow(42, 53, 70, 42, "move"),
+                  badge("点地覆盖键")], title="点地优先设定"),
+        ], ["ARPG", "MMO", "设计选项"],
+    ))
+    c.append(case(
+        "loco-autorun", "locomotion", "自动前进：锁 W",
+        "按自动前进后，不按 W 也持续朝前走，再按一次或用后退取消。"
+        "长途跑图用，和跟随队友不同。",
+        [
+            beat("按下自动前进", "角色自己往前走，W 呈锁定态", "甩手跑图", "tps",
+                 [hero(45, 55, face=-90), arrow(45, 50, 45, 30, "move"), badge("自动前进ON")], title="锁前进"),
+            beat("再按取消或按 S", "自动前进关闭，停下或改手动", "解锁", "tps",
+                 [hero(45, 55), badge("自动前进OFF")], title="取消"),
+        ], ["魔兽世界", "MMO"],
+    ))
+
+    # ===== 二十六、放不了 =====
     c.append(case(
         "block-resource", "blocked", "蓝 / 怒气 / 弹药不足",
         "按下后明确拒绝，并提示缺什么。",
