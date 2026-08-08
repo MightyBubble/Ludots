@@ -230,47 +230,112 @@
       </svg>`;
   }
 
-  function sequenceSvg(beats) {
-    const lanes = ["输入", "画面", "手感"];
-    const n = Math.max(beats.length, 1);
-    const colW = 150;
-    const width = 120 + n * colW;
-    const height = 168;
-    const yFor = [36, 84, 132];
-    const heads = beats.map((b, i) => {
-      const x = 100 + i * colW + colW / 2;
-      return `<text x="${x}" y="18" text-anchor="middle" fill="#f0a35e" font-size="11" font-family="IBM Plex Mono, monospace">T${i + 1}</text>`;
-    }).join("");
-    const laneRows = lanes.map((name, li) => {
-      const y = yFor[li];
-      const label = `<text x="12" y="${y + 4}" fill="#93a0b4" font-size="12" font-family="DM Sans, sans-serif">${name}</text>`;
-      const line = `<line x1="70" y1="${y}" x2="${width - 12}" y2="${y}" stroke="#2c3645" stroke-width="1"/>`;
-      const nodes = beats.map((b, i) => {
-        const x = 100 + i * colW + colW / 2;
-        const text = li === 0 ? b.input : li === 1 ? b.screen : b.feel;
-        const short = text.length > 18 ? `${text.slice(0, 17)}…` : text;
-        return `
-          <circle cx="${x}" cy="${y}" r="5" fill="${li === 0 ? "#f0a35e" : li === 1 ? "#6ec8ff" : "#5dce8f"}"/>
-          <foreignObject x="${x - 66}" y="${y + 8}" width="132" height="36">
-            <div xmlns="http://www.w3.org/1999/xhtml" style="color:#93a0b4;font:11px/1.35 DM Sans,sans-serif;text-align:center">${esc(short)}</div>
-          </foreignObject>`;
-      }).join("");
-      const links = beats.slice(0, -1).map((_, i) => {
-        const x1 = 100 + i * colW + colW / 2 + 6;
-        const x2 = 100 + (i + 1) * colW + colW / 2 - 6;
-        return `<line x1="${x1}" y1="${y}" x2="${x2}" y2="${y}" stroke="#3a4658" stroke-width="1.4" stroke-dasharray="3 3"/>`;
-      }).join("");
-      return label + line + links + nodes;
-    }).join("");
-    const sync = beats.map((_, i) => {
-      const x = 100 + i * colW + colW / 2;
-      return `<line x1="${x}" y1="36" x2="${x}" y2="132" stroke="rgba(240,163,94,0.18)" stroke-width="1"/>`;
-    }).join("");
-    return `
-      <svg class="sequence" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="时序图">
-        <rect width="${width}" height="${height}" fill="#161b22"/>
-        ${heads}${sync}${laneRows}
-      </svg>`;
+  /** Sanitize message/note text for Mermaid sequenceDiagram labels. */
+  function mmdText(s) {
+    return String(s ?? "")
+      .replace(/[\r\n]+/g, " ")
+      .replace(/[;#]/g, " ")
+      .replace(/"/g, "'")
+      .replace(/</g, "‹")
+      .replace(/>/g, "›")
+      .trim();
+  }
+
+  /**
+   * Standard Mermaid sequenceDiagram:
+   * 玩家 → 输入 → 画面 → 手感, one rect block per storyboard beat.
+   */
+  function sequenceMermaid(beats) {
+    const lines = [
+      "sequenceDiagram",
+      "  actor P as 玩家",
+      "  participant I as 输入",
+      "  participant S as 画面",
+      "  participant F as 手感",
+    ];
+    (beats || []).forEach((b, i) => {
+      const title = mmdText(b.title || `步骤 ${i + 1}`);
+      lines.push("  rect rgba(240, 163, 94, 0.08)");
+      lines.push(`    Note over P,F: T${i + 1} ${title}`);
+      lines.push(`    P->>I: ${mmdText(b.input)}`);
+      lines.push(`    I->>S: ${mmdText(b.screen)}`);
+      lines.push(`    S->>F: ${mmdText(b.feel)}`);
+      lines.push("  end");
+    });
+    return lines.join("\n");
+  }
+
+  let mermaidReady = false;
+  let mermaidSeq = 0;
+  let mermaidIO = null;
+
+  function ensureMermaid() {
+    if (!window.mermaid) {
+      throw new Error("mermaid 未加载：无法渲染标准时序图（检查 CDN / 网络）");
+    }
+    if (!mermaidReady) {
+      window.mermaid.initialize({
+        startOnLoad: false,
+        securityLevel: "strict",
+        theme: "dark",
+        fontFamily: "DM Sans, PingFang SC, Noto Sans SC, sans-serif",
+        sequence: {
+          actorMargin: 48,
+          messageMargin: 28,
+          mirrorActors: false,
+          bottomMarginAdj: 8,
+          useMaxWidth: true,
+        },
+      });
+      mermaidReady = true;
+    }
+  }
+
+  async function renderOneMermaid(pre) {
+    if (!pre || !pre.isConnected || !pre.hasAttribute("data-pending")) return;
+    const src = pre.textContent;
+    const id = `ux-seq-${++mermaidSeq}`;
+    pre.removeAttribute("data-pending");
+    try {
+      const out = await window.mermaid.render(id, src);
+      const wrap = document.createElement("div");
+      wrap.className = "mermaid";
+      wrap.setAttribute("role", "img");
+      wrap.setAttribute("aria-label", "Mermaid 时序图");
+      wrap.innerHTML = out.svg;
+      pre.replaceWith(wrap);
+    } catch (err) {
+      const msg = err && err.message ? err.message : String(err);
+      const fail = document.createElement("pre");
+      fail.className = "mmd-error";
+      fail.textContent = `Mermaid 时序图渲染失败 (${id}): ${msg}\n---\n${src}`;
+      pre.replaceWith(fail);
+      throw new Error(`Mermaid 时序图渲染失败 (${id}): ${msg}`);
+    }
+  }
+
+  function paintMermaid() {
+    ensureMermaid();
+    if (mermaidIO) {
+      mermaidIO.disconnect();
+      mermaidIO = null;
+    }
+    const boxes = [...listEl.querySelectorAll(".mmd-box")];
+    if (!boxes.length) return;
+
+    mermaidIO = new IntersectionObserver((entries) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        const pre = entry.target.querySelector("pre.mermaid[data-pending]");
+        mermaidIO.unobserve(entry.target);
+        if (!pre) continue;
+        renderOneMermaid(pre).catch((err) => {
+          console.error(err);
+        });
+      }
+    }, { rootMargin: "240px 0px", threshold: 0.01 });
+
+    boxes.forEach((box) => mermaidIO.observe(box));
   }
 
   function renderCase(c) {
@@ -284,6 +349,7 @@
           <div class="cap-row"><span class="k">手感</span><span class="v">${esc(b.feel)}</span></div>
         </div>
       </article>`).join("");
+    const mmd = sequenceMermaid(c.beats);
     return `
       <article class="case-card" id="${esc(c.id)}" data-category="${esc(c.category)}">
         <div class="case-head">
@@ -292,8 +358,10 @@
         </div>
         <p class="summary">${esc(c.summary)}</p>
         <div class="tags">${tags}</div>
-        <p class="section-label">输入 · 画面 · 手感 时序</p>
-        ${sequenceSvg(c.beats)}
+        <p class="section-label">Mermaid 时序图 · 玩家 → 输入 → 画面 → 手感</p>
+        <div class="mmd-box">
+          <pre class="mermaid" data-pending="1">${esc(mmd)}</pre>
+        </div>
         <p class="section-label">分镜胶片</p>
         <div class="storyboard" aria-label="分镜条">${panels}</div>
       </article>`;
@@ -323,7 +391,7 @@
     });
   }
 
-  function render() {
+  async function render() {
     renderNav();
     const cases = filtered();
     statsEl.innerHTML = `
@@ -333,12 +401,16 @@
     listEl.innerHTML = cases.length
       ? cases.map(renderCase).join("")
       : `<div class="empty">没有匹配的动作。试试别的关键词。</div>`;
+    paintMermaid();
   }
 
+  let searchTimer = 0;
   searchEl.addEventListener("input", (e) => {
     query = e.target.value;
-    render();
+    window.clearTimeout(searchTimer);
+    searchTimer = window.setTimeout(() => { render(); }, 120);
   });
 
   render();
 })();
+

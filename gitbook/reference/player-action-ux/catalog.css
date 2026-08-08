@@ -234,13 +234,40 @@ a:hover { text-decoration: underline; }
   font-weight: 700;
 }
 
-.sequence {
+.mmd-box {
   width: 100%;
   border: 1px solid var(--line);
   border-radius: 12px;
   background: var(--bg1);
-  overflow: hidden;
+  overflow: auto;
   margin-bottom: 16px;
+  padding: 12px 10px 4px;
+}
+
+.mmd-box pre.mermaid {
+  margin: 0;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 12px;
+  white-space: pre-wrap;
+}
+
+.mmd-box svg {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto 8px;
+}
+
+.mmd-box .mmd-error {
+  margin: 0;
+  padding: 12px;
+  color: #ef6b6b;
+  font-family: var(--mono);
+  font-size: 12px;
+  white-space: pre-wrap;
+  background: rgba(239, 107, 107, 0.08);
+  border-radius: 8px;
 }
 
 .storyboard {
