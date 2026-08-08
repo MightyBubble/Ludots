@@ -5,14 +5,17 @@
   const $ = (sel, root = document) => root.querySelector(sel);
   const navEl = $("#nav");
   const listEl = $("#list");
+  const detailEl = $("#detail");
   const searchEl = $("#search");
   const statsEl = $("#stats");
 
-  if (!navEl || !listEl || !searchEl || !statsEl) {
-    throw new Error("catalog page shell missing required nodes (#nav/#list/#search/#stats)");
+  if (!navEl || !listEl || !detailEl || !searchEl || !statsEl) {
+    throw new Error("catalog page shell missing required nodes (#nav/#list/#detail/#search/#stats)");
   }
 
-  let activeCategory = "all";
+  /** Default to first real category so the page is not a 150-card dump. */
+  let activeCategory = (data.categories[0] && data.categories[0].id) || "all";
+  let selectedId = null;
   let query = "";
   let uid = 0;
 
@@ -267,7 +270,6 @@
 
   let mermaidReady = false;
   let mermaidSeq = 0;
-  let mermaidIO = null;
 
   function ensureMermaid() {
     if (!window.mermaid) {
@@ -291,8 +293,10 @@
     }
   }
 
-  async function renderOneMermaid(pre) {
-    if (!pre || !pre.isConnected || !pre.hasAttribute("data-pending")) return;
+  async function paintDetailMermaid() {
+    const pre = detailEl.querySelector("pre.mermaid[data-pending]");
+    if (!pre) return;
+    ensureMermaid();
     const src = pre.textContent;
     const id = `ux-seq-${++mermaidSeq}`;
     pre.removeAttribute("data-pending");
@@ -314,59 +318,6 @@
     }
   }
 
-  function paintMermaid() {
-    ensureMermaid();
-    if (mermaidIO) {
-      mermaidIO.disconnect();
-      mermaidIO = null;
-    }
-    const boxes = [...listEl.querySelectorAll(".mmd-box")];
-    if (!boxes.length) return;
-
-    mermaidIO = new IntersectionObserver((entries) => {
-      for (const entry of entries) {
-        if (!entry.isIntersecting) continue;
-        const pre = entry.target.querySelector("pre.mermaid[data-pending]");
-        mermaidIO.unobserve(entry.target);
-        if (!pre) continue;
-        renderOneMermaid(pre).catch((err) => {
-          console.error(err);
-        });
-      }
-    }, { rootMargin: "240px 0px", threshold: 0.01 });
-
-    boxes.forEach((box) => mermaidIO.observe(box));
-  }
-
-  function renderCase(c) {
-    const tags = (c.genres || []).map((g) => `<span class="tag">${esc(g)}</span>`).join("");
-    const panels = c.beats.map((b, i) => `
-      <article class="panel">
-        ${storyboardSvg(b, i)}
-        <div class="panel-cap">
-          <div class="cap-row"><span class="k">输入</span><span class="v">${esc(b.input)}</span></div>
-          <div class="cap-row"><span class="k">画面</span><span class="v">${esc(b.screen)}</span></div>
-          <div class="cap-row"><span class="k">手感</span><span class="v">${esc(b.feel)}</span></div>
-        </div>
-      </article>`).join("");
-    const mmd = sequenceMermaid(c.beats);
-    return `
-      <article class="case-card" id="${esc(c.id)}" data-category="${esc(c.category)}">
-        <div class="case-head">
-          <h3>${esc(c.title)}</h3>
-          <span class="case-id">${esc(c.id)}</span>
-        </div>
-        <p class="summary">${esc(c.summary)}</p>
-        <div class="tags">${tags}</div>
-        <p class="section-label">Mermaid 时序图 · 玩家 → 输入 → 画面 → 手感</p>
-        <div class="mmd-box">
-          <pre class="mermaid" data-pending="1">${esc(mmd)}</pre>
-        </div>
-        <p class="section-label">分镜胶片</p>
-        <div class="storyboard" aria-label="分镜条">${panels}</div>
-      </article>`;
-  }
-
   function filtered() {
     const q = query.trim().toLowerCase();
     return data.cases.filter((c) => {
@@ -379,29 +330,92 @@
 
   function renderNav() {
     const items = [{ id: "all", title: "全部" }, ...data.categories];
-    navEl.innerHTML = `<h2>目录</h2>` + items.map((cat) => {
-      const count = cat.id === "all" ? data.cases.length : data.cases.filter((c) => c.category === cat.id).length;
-      return `<button type="button" data-cat="${esc(cat.id)}" class="${activeCategory === cat.id ? "active" : ""}">${esc(cat.title)} <span style="color:#66758a">(${count})</span></button>`;
+    navEl.innerHTML = items.map((cat) => {
+      const count = cat.id === "all"
+        ? data.cases.length
+        : data.cases.filter((c) => c.category === cat.id).length;
+      return `<button type="button" class="nav-btn ${activeCategory === cat.id ? "active" : ""}" data-cat="${esc(cat.id)}">${esc(cat.title)} <span class="count">(${count})</span></button>`;
     }).join("");
     navEl.querySelectorAll("button").forEach((btn) => {
       btn.addEventListener("click", () => {
         activeCategory = btn.dataset.cat;
+        selectedId = null;
         render();
       });
     });
   }
 
-  async function render() {
+  function renderList(cases) {
+    if (!cases.length) {
+      listEl.innerHTML = `<div class="empty">没有匹配的动作。</div>`;
+      return;
+    }
+    listEl.innerHTML = cases.map((c) => `
+      <button type="button" class="case-row ${selectedId === c.id ? "active" : ""}" data-id="${esc(c.id)}">
+        <span class="title">${esc(c.title)}</span>
+        <span class="beats">${c.beats.length} 镜</span>
+        <p class="sub">${esc(c.summary)}</p>
+        <span class="meta">${esc(c.id)}</span>
+      </button>`).join("");
+    listEl.querySelectorAll(".case-row").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        selectedId = btn.dataset.id;
+        renderList(filtered());
+        renderDetail();
+        const active = listEl.querySelector(".case-row.active");
+        if (active) active.scrollIntoView({ block: "nearest" });
+      });
+    });
+  }
+
+  function renderDetail() {
+    const c = data.cases.find((x) => x.id === selectedId);
+    if (!c) {
+      detailEl.innerHTML = `<div class="empty-detail">从中间列表点一个动作，这里展开时序图和分镜。</div>`;
+      return;
+    }
+    const tags = (c.genres || []).map((g) => `<span class="tag">${esc(g)}</span>`).join("");
+    const panels = c.beats.map((b, i) => `
+      <article class="panel">
+        ${storyboardSvg(b, i)}
+        <div class="panel-cap">
+          <div class="cap-row"><span class="k">输入</span><span class="v">${esc(b.input)}</span></div>
+          <div class="cap-row"><span class="k">画面</span><span class="v">${esc(b.screen)}</span></div>
+          <div class="cap-row"><span class="k">手感</span><span class="v">${esc(b.feel)}</span></div>
+        </div>
+      </article>`).join("");
+    const mmd = sequenceMermaid(c.beats);
+    detailEl.innerHTML = `
+      <div class="detail-inner">
+        <div class="detail-head">
+          <h2>${esc(c.title)}</h2>
+          <span class="case-id">${esc(c.id)}</span>
+        </div>
+        <p class="summary">${esc(c.summary)}</p>
+        <div class="tags">${tags}</div>
+        <p class="section-label">Mermaid 时序图 · 玩家 → 输入 → 画面 → 手感</p>
+        <div class="mmd-box">
+          <pre class="mermaid" data-pending="1">${esc(mmd)}</pre>
+        </div>
+        <p class="section-label">分镜胶片 · 左右滑动</p>
+        <div class="storyboard" aria-label="分镜条">${panels}</div>
+      </div>`;
+    detailEl.scrollTop = 0;
+    paintDetailMermaid().catch((err) => console.error(err));
+  }
+
+  function render() {
     renderNav();
     const cases = filtered();
+    if (!selectedId || !cases.some((c) => c.id === selectedId)) {
+      selectedId = cases[0] ? cases[0].id : null;
+    }
     statsEl.innerHTML = `
       <span class="chip">动作 <strong>${data.cases.length}</strong></span>
-      <span class="chip">分镜格 <strong>${data.cases.reduce((n, c) => n + c.beats.length, 0)}</strong></span>
-      <span class="chip">当前显示 <strong>${cases.length}</strong></span>`;
-    listEl.innerHTML = cases.length
-      ? cases.map(renderCase).join("")
-      : `<div class="empty">没有匹配的动作。试试别的关键词。</div>`;
-    paintMermaid();
+      <span class="chip">分镜 <strong>${data.cases.reduce((n, c) => n + c.beats.length, 0)}</strong></span>
+      <span class="chip">本栏 <strong>${cases.length}</strong></span>`;
+    renderList(cases);
+    renderDetail();
   }
 
   let searchTimer = 0;
@@ -411,6 +425,25 @@
     searchTimer = window.setTimeout(() => { render(); }, 120);
   });
 
+  // Keyboard: j/k or arrows move selection within list
+  document.addEventListener("keydown", (e) => {
+    if (e.target === searchEl) return;
+    if (e.key !== "ArrowDown" && e.key !== "ArrowUp" && e.key !== "j" && e.key !== "k") return;
+    const cases = filtered();
+    if (!cases.length) return;
+    e.preventDefault();
+    const idx = Math.max(0, cases.findIndex((c) => c.id === selectedId));
+    const next = (e.key === "ArrowDown" || e.key === "j")
+      ? Math.min(cases.length - 1, idx + 1)
+      : Math.max(0, idx - 1);
+    selectedId = cases[next].id;
+    renderList(cases);
+    renderDetail();
+    const active = listEl.querySelector(".case-row.active");
+    if (active) active.scrollIntoView({ block: "nearest" });
+  });
+
   render();
 })();
+
 
