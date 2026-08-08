@@ -16,6 +16,7 @@
   /** Default to first real category so the page is not a 150-card dump. */
   let activeCategory = (data.categories[0] && data.categories[0].id) || "all";
   let selectedId = null;
+  let activeBeat = 0;
   let query = "";
   let uid = 0;
 
@@ -173,6 +174,28 @@
         return `
           <rect x="${SX + 8}" y="${SY + 8}" width="${w}" height="22" rx="4" fill="#0b0e13" stroke="#f0a35e" stroke-width="1.3"/>
           <text x="${SX + 16}" y="${SY + 23}" fill="#f0a35e" font-size="11" font-family="DM Sans, sans-serif" font-weight="700">${esc(el.text)}</text>`;
+      }
+      if (el.t === "card") {
+        const x = px(el.x), y = py(el.y);
+        const drag = !!el.dragging;
+        const w = drag ? 36 : 30, h = drag ? 44 : 38;
+        return `
+          <rect x="${x - w / 2}" y="${y - h / 2}" width="${w}" height="${h}" rx="5"
+            fill="${drag ? "#2a3a4e" : "#1a2430"}" stroke="${drag ? "#f0a35e" : "#6ec8ff"}" stroke-width="${drag ? 2 : 1.4}"/>
+          <text x="${x}" y="${y - 2}" text-anchor="middle" fill="#e8eef6" font-size="11" font-family="DM Sans, sans-serif" font-weight="700">${esc(el.label || "卡")}</text>
+          ${el.cost != null ? `<text x="${x}" y="${y + 14}" text-anchor="middle" fill="#f0a35e" font-size="10" font-family="IBM Plex Mono, monospace">${esc(el.cost)}</text>` : ""}`;
+      }
+      if (el.t === "menu") {
+        const x = px(el.x), y = py(el.y);
+        const lines = el.lines || [];
+        const h = 16 + lines.length * 16;
+        const w = 72;
+        const items = lines.map((ln, i) =>
+          `<text x="${x + 8}" y="${y + 18 + i * 16}" fill="#e8eef6" font-size="11" font-family="DM Sans, sans-serif">${esc(ln)}</text>`
+        ).join("");
+        return `
+          <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="4" fill="#0b0e13" stroke="#6ec8ff" stroke-width="1.4"/>
+          ${items}`;
       }
       return "";
     }).join("\n");
@@ -340,6 +363,7 @@
       btn.addEventListener("click", () => {
         activeCategory = btn.dataset.cat;
         selectedId = null;
+        activeBeat = 0;
         render();
       });
     });
@@ -360,6 +384,7 @@
     listEl.querySelectorAll(".case-row").forEach((btn) => {
       btn.addEventListener("click", () => {
         selectedId = btn.dataset.id;
+        activeBeat = 0;
         renderList(filtered());
         renderDetail();
         const active = listEl.querySelector(".case-row.active");
@@ -368,15 +393,35 @@
     });
   }
 
+  function bindBeatSync(beatCount) {
+    const setBeat = (i) => {
+      activeBeat = Math.max(0, Math.min(beatCount - 1, i));
+      detailEl.querySelectorAll("[data-beat]").forEach((el) => {
+        el.classList.toggle("active", Number(el.dataset.beat) === activeBeat);
+      });
+      const panel = detailEl.querySelector(`.panel[data-beat="${activeBeat}"]`);
+      if (panel) panel.scrollIntoView({ block: "nearest", inline: "nearest", behavior: "smooth" });
+    };
+    detailEl.querySelectorAll("[data-beat]").forEach((el) => {
+      el.addEventListener("click", () => setBeat(Number(el.dataset.beat)));
+    });
+    setBeat(activeBeat);
+  }
+
   function renderDetail() {
     const c = data.cases.find((x) => x.id === selectedId);
     if (!c) {
       detailEl.innerHTML = `<div class="empty-detail">从中间列表点一个动作，这里展开时序图和分镜。</div>`;
       return;
     }
+    if (activeBeat >= c.beats.length) activeBeat = 0;
     const tags = (c.genres || []).map((g) => `<span class="tag">${esc(g)}</span>`).join("");
+    const todos = (c.todos || []).map((t) => `<li>${esc(t)}</li>`).join("");
+    const chips = c.beats.map((b, i) =>
+      `<button type="button" class="beat-chip" data-beat="${i}">T${i + 1} ${esc(b.title || "")}</button>`
+    ).join("");
     const panels = c.beats.map((b, i) => `
-      <article class="panel">
+      <article class="panel" data-beat="${i}">
         ${storyboardSvg(b, i)}
         <div class="panel-cap">
           <div class="cap-row"><span class="k">输入</span><span class="v">${esc(b.input)}</span></div>
@@ -385,6 +430,7 @@
         </div>
       </article>`).join("");
     const mmd = sequenceMermaid(c.beats);
+    const cp = data.checkpoint || {};
     detailEl.innerHTML = `
       <div class="detail-inner">
         <div class="detail-head">
@@ -393,14 +439,36 @@
         </div>
         <p class="summary">${esc(c.summary)}</p>
         <div class="tags">${tags}</div>
-        <p class="section-label">Mermaid 时序图 · 玩家 → 输入 → 画面 → 手感</p>
-        <div class="mmd-box">
-          <pre class="mermaid" data-pending="1">${esc(mmd)}</pre>
+
+        <div class="impl-grid">
+          <div class="impl-card">
+            <div class="section-label">Ludots 现状</div>
+            <p>${esc(c.ludots || "未标注")}</p>
+          </div>
+          <div class="impl-card impl-todo">
+            <div class="section-label">缺口 TODO</div>
+            ${todos ? `<ul>${todos}</ul>` : `<p class="ok">本条暂无额外 TODO</p>`}
+          </div>
         </div>
-        <p class="section-label">分镜胶片 · 左右滑动</p>
-        <div class="storyboard" aria-label="分镜条">${panels}</div>
+
+        <div class="beat-rail" aria-label="分镜拍号">${chips}</div>
+        <p class="sync-hint">左时序 · 右分镜 — 点拍号两侧同步高亮（checkpoint ${esc(cp.head || "?")}）</p>
+
+        <div class="sync-split">
+          <div class="sync-col">
+            <p class="section-label">Mermaid 时序</p>
+            <div class="mmd-box">
+              <pre class="mermaid" data-pending="1">${esc(mmd)}</pre>
+            </div>
+          </div>
+          <div class="sync-col">
+            <p class="section-label">分镜（与左拍同步）</p>
+            <div class="storyboard storyboard-stack" aria-label="分镜条">${panels}</div>
+          </div>
+        </div>
       </div>`;
     detailEl.scrollTop = 0;
+    bindBeatSync(c.beats.length);
     paintDetailMermaid().catch((err) => console.error(err));
   }
 
@@ -437,6 +505,7 @@
       ? Math.min(cases.length - 1, idx + 1)
       : Math.max(0, idx - 1);
     selectedId = cases[next].id;
+    activeBeat = 0;
     renderList(cases);
     renderDetail();
     const active = listEl.querySelector(".case-row.active");
