@@ -3,7 +3,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
   "title": "玩家动作体验图鉴",
   "subtitle": "只谈手怎么动、画面怎么变、爽点在哪——分镜式报菜名。附 Ludots 现状与缺口。",
   "checkpoint": {
-    "head": "781943e35",
+    "head": "4c81a42c8",
     "branch_hint": "cursor/wasd-locomotion-ux-4211",
     "impl_notes": "scripts/player_action_ux_impl_notes.py",
     "note": "ludots/todos 以生成时审计为准；合并后请重新 generate 并更新 CHECKPOINT.md",

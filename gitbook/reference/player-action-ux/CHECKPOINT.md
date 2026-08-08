@@ -6,7 +6,7 @@
 
 - 生成脚本：`scripts/generate-player-action-ux-catalog.py`
 - 实现标注：`scripts/player_action_ux_impl_notes.py`
-- 生成时 HEAD：`781943e35`（以你拉取后的 `git rev-parse` 为准；合并后会变）
+- 生成时 HEAD：`4c81a42c8`（以你拉取后的 `git rev-parse` 为准；合并后会变）
 - 分支语境：`cursor/wasd-locomotion-ux-4211`（含 WASD 类、三栏布局、本轮同步分栏与触控/选单）
 - 已合 main 的底座：PR #743 玩家动作图鉴初版
 
