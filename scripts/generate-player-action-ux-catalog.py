@@ -111,7 +111,9 @@ CATEGORIES = [
     ("mmo-social", "二十、MMO：人、对话、队伍"),
     ("mmo-world", "二十一、MMO：采集、买卖、坐骑、复活"),
     ("design-ui", "二十二、设计向界面手势"),
-    ("blocked", "二十三、放不了时的反馈"),
+    ("dynamic-context", "二十三、身边有什么，同一键变什么"),
+    ("auto-cast", "二十四、自动施法"),
+    ("blocked", "二十五、放不了时的反馈"),
 ]
 
 
@@ -1475,7 +1477,217 @@ def build_cases():
         ], ["MOBA", "FPS", "MMO"],
     ))
 
-    # ===== 二十三、放不了 =====
+    # ===== 二十三、动态 context 解锁 =====
+    c.append(case(
+        "dyn-ctx-same-key-swap", "dynamic-context", "同一交互键：旁边是敌人就处决，是果子就拾取吃掉",
+        "不换键，只换提示与结果。靠近可处决敌人时，交互提示变成“处决”；"
+        "靠近果子/草药时变成“拾取/食用”。松手或按键执行当前高亮那一项。",
+        [
+            beat("走进可处决敌人背后/虚弱圈", "键位提示从无→「处决」，敌人描边", "能补刀了", "tps",
+                 [hero(40, 55, face=20), unit(62, 45, team="enemy"), ring(62, 45, kind="lock"),
+                  badge("提示:处决")], title="解锁处决"),
+            beat("按同一交互键", "播放处决，敌人倒下", "处决！", "tps",
+                 [hero(50, 50, face=20), unit(60, 45, team="enemy"), arrow(52, 50, 58, 46, "attack"),
+                  badge("处决")], title="执行处决"),
+            beat("走开敌人，靠近果子", "同一键提示改成「拾取/食用」", "现在能摘", "tps",
+                 [hero(40, 55), building(65, 48), badge("提示:拾取")], title="换成拾取"),
+            beat("再按同一键", "果子进包或当场吃掉回血", "吃了/捡了", "tps",
+                 [hero(48, 52), ring(48, 52, r=10, kind="buff"), badge("拾取消耗")], title="执行拾取"),
+        ], ["动作RPG", "刺客信条", "塞尔达", "MMO"],
+    ))
+    c.append(case(
+        "dyn-ctx-priority-overlap", "dynamic-context", "身边同时好几个可交互：谁抢提示",
+        "敌人、尸体、门、果子叠在一起时，屏幕只亮一个主提示。"
+        "要有明确优先级（例如处决 > 救人 > 开门 > 拾取），或滚轮/键切换次选。",
+        [
+            beat("同时进入多个交互圈", "主提示显示最高优先级那项，旁边可有次选", "先干最要紧的", "tps",
+                 [hero(42, 55), unit(58, 42, team="enemy"), building(68, 55),
+                  unit(55, 68, team="ally"), badge("优先:处决")], title="多目标重叠"),
+            beat("拨切换次选 / 看向另一目标", "主提示换成门/拾取/救人", "换一个", "tps",
+                 [hero(42, 55), building(68, 55), cursor(68, 55), badge("次选:开门")], title="切换次选"),
+        ], ["动作RPG", "MMO", "设计选项"],
+    ))
+    c.append(case(
+        "dyn-ctx-angle-stealth", "dynamic-context", "角度 / 潜行才解锁的交互",
+        "正面对着敌人只有攻击；绕到背后或潜行条满了，才冒出暗杀/背刺提示。"
+        "离开角度提示立刻收回——这是动态解锁，不是常驻技能。",
+        [
+            beat("正面靠近敌人", "无处决提示，仍是普通攻击", "还不能暗杀掉", "tps",
+                 [hero(40, 55, face=20), unit(65, 45, team="enemy", face=200), badge("无暗杀")], title="正面"),
+            beat("绕到背后或进入潜行有效区", "出现「暗杀/背刺」提示", "机会来了", "tps",
+                 [hero(70, 48, face=200), unit(58, 45, team="enemy", face=20),
+                  ring(58, 45, kind="lock"), badge("暗杀解锁")], title="背后解锁"),
+            beat("离开背后角度", "暗杀提示消失", "窗口没了", "tps",
+                 [hero(40, 60, face=10), unit(65, 45, team="enemy"), badge("提示收回")], title="收回"),
+        ], ["刺客信条", "动作RPG", "潜行游戏"],
+    ))
+    c.append(case(
+        "dyn-ctx-state-threshold", "dynamic-context", "状态到线才解锁：残血处决 / 破防惩罚",
+        "敌人血量或破防条到阈值，交互或专属键才亮；打满之前同一位置只是普通攻击。"
+        "像战神/鬼泣处决窗、魂系背刺窗、破刃一闪。",
+        [
+            beat("敌人满血时靠近", "无处决，只能普通攻击", "还早", "tps",
+                 [hero(40, 55), unit(65, 45, team="enemy"), badge("无处决窗")], title="未达标"),
+            beat("敌人残血/破防", "处决键或提示亮起", "可以收了", "tps",
+                 [hero(40, 55), unit(65, 45, team="enemy"), ring(65, 45, kind="lock"),
+                  badge("处决解锁")], title="达线解锁"),
+            beat("窗口内按处决", "播专属处决，否则窗口关闭后恢复普攻", "收掉", "tps",
+                 [hero(50, 50), arrow(50, 50, 62, 45, "attack"), badge("处决打出")], title="打出"),
+        ], ["战神", "动作RPG", "魂like"],
+    ))
+    c.append(case(
+        "dyn-ctx-held-item-verb", "dynamic-context", "手里拿着什么，交互动词跟着变",
+        "空手靠近水桶是「提起」；拿着火把靠近火堆是「点燃」；拿着钥匙靠近门是「开锁」。"
+        "同一对象，因持有物不同，context 解锁不同动词。",
+        [
+            beat("空手靠近可搬物", "提示「提起/搬运」", "能搬", "tps",
+                 [hero(40, 55), building(62, 48), badge("提起")], title="空手"),
+            beat("手持火把靠近火盆/墙缝", "提示改成「点燃/烧开」", "能烧", "tps",
+                 [hero(40, 55), building(62, 48), badge("点燃")], title="持火"),
+            beat("手持钥匙靠近上锁门", "提示「开锁」；无钥匙则「上锁/需要钥匙」", "对上了", "tps",
+                 [hero(40, 55), building(65, 45), badge("开锁")], title="持钥匙"),
+        ], ["塞尔达", "浸入式模拟", "动作RPG"],
+    ))
+    c.append(case(
+        "dyn-ctx-env-ledge-cover", "dynamic-context", "环境位姿解锁：翻墙 / 掩体 / 抓檐",
+        "贴墙才出「掩体」；到檐下才出「抓举」；到崖边才出「攀爬/跳下」。"
+        "离开碰撞体积提示收回，键位可与战斗键复用。",
+        [
+            beat("走到可翻越矮墙前", "提示「翻越」", "能翻", "tps",
+                 [hero(40, 55), building(58, 50), badge("翻越")], title="翻墙"),
+            beat("贴入掩体体积", "提示「掩体/探头」；射击改成探头射", "躲好了", "tps",
+                 [hero(45, 55), building(55, 50), badge("掩体")], title="掩体"),
+            beat("离开有效体积", "环境交互提示消失，键回战斗默认", "没了", "tps",
+                 [hero(30, 60), badge("提示收回")], title="离开"),
+        ], ["TPS", "刺客信条", "动作RPG"],
+    ))
+    c.append(case(
+        "dyn-ctx-downed-ally", "dynamic-context", "倒地队友解锁救援，否则同键是别的事",
+        "平时 F 可能是拾取；队友倒地进圈后 F 变成「救援」读条；救完提示再变回拾取。",
+        [
+            beat("无倒地者时靠近掉落物", "F=拾取", "捡东西", "tps",
+                 [hero(40, 55), building(62, 48), badge("F:拾取")], title="默认拾取"),
+            beat("队友倒地进入救援圈", "F 改「救援」，掉落提示降为次选", "先救人", "tps",
+                 [hero(40, 55), unit(60, 48, team="ally"), ring(60, 48, kind="buff"),
+                  badge("F:救援")], title="解锁救援"),
+            beat("按住救完", "队友起身；若仍在掉落旁，提示回到拾取", "救起来了", "tps",
+                 [hero(42, 55), unit(58, 48, team="ally"), badge("救起→提示复原")], title="救完复原"),
+        ], ["TPS", "MMO", "合作动作"],
+    ))
+    c.append(case(
+        "dyn-ctx-vehicle-board", "dynamic-context", "靠近载具解锁「上车」，离开就收回",
+        "走到载具交互点才出现上车/上炮位；开车门朝向或满员时提示换成「不可上」原因。",
+        [
+            beat("进入上车点", "提示「驾驶/炮位/乘客」", "能上车", "tps",
+                 [hero(38, 58), building(60, 50), badge("上车")], title="解锁上车"),
+            beat("载具远离或满员", "提示消失或变灰并说明原因", "上不了", "tps",
+                 [hero(38, 58), building(75, 35), badge("不可上")], title="收回/拒绝"),
+        ], ["TPS", "MMO", "开放世界"],
+    ))
+
+    # ===== 二十四、自动施法 =====
+    c.append(case(
+        "auto-cast-toggle-ability", "auto-cast", "技能右键亮绿点：交给自动施法",
+        "像魔兽争霸：对技能图标右键打开自动施法（绿点）。"
+        "条件满足时系统自己放，再右键关掉。玩家随时可手动抢按。",
+        [
+            beat("在技能图标上右键", "出现自动施法标记（绿点）", "交给它看着放", "topdown",
+                 [unit(45, 55, sel=True), ring(45, 55), badge("自动施法ON")], title="打开"),
+            beat("敌人进入范围且 CD/耗蓝满足", "不按键也放出该技能", "自己放了", "topdown",
+                 [unit(40, 55, sel=True), unit(70, 40, team="enemy"),
+                  arrow(42, 54, 66, 42, "attack"), badge("自动放出")], title="自动触发"),
+            beat("再右键图标", "绿点灭，恢复纯手动", "我自己来", "topdown",
+                 [unit(45, 55, sel=True), badge("自动施法OFF")], title="关闭"),
+        ], ["魔兽争霸3", "RTS", "MMO"],
+    ))
+    c.append(case(
+        "auto-cast-when-in-range", "auto-cast", "进距才放：自动施法也要够得着",
+        "开了自动仍要满足距离、视线、面向、资源；不够时不偷放，满条件瞬间补放。"
+        "和「一开局就乱放」要区分开。",
+        [
+            beat("自动开着但敌人在射程外", "单位追击或等待，技能不浪费", "先靠近", "topdown",
+                 [unit(30, 60, sel=True), unit(80, 30, team="enemy"), badge("射程外不放")], title="等待"),
+            beat("进入射程且面向合法", "自动施法立刻出手", "够着了就放", "topdown",
+                 [unit(50, 50, sel=True, face=20), unit(68, 42, team="enemy"),
+                  arrow(52, 50, 64, 44, "attack"), badge("进距放出")], title="进距"),
+        ], ["魔兽争霸3", "RTS", "MMO"],
+    ))
+    c.append(case(
+        "auto-cast-priority-multi", "auto-cast", "多个自动技能：谁先放",
+        "治疗光环、减速、爆发都开了自动时，要有优先级或互斥："
+        "例如保命治疗 > 控制 > 填充伤害，避免同一帧抢蓝互殴。",
+        [
+            beat("多颗技能都开自动，遇战", "按优先级只放当前最该放的", "先救再打", "topdown",
+                 [unit(40, 55, sel=True), unit(55, 50, team="ally"), unit(72, 40, team="enemy"),
+                  ring(55, 50, kind="buff"), badge("优先治疗")], title="优先级"),
+            beat("高优先在 CD", "轮到下一优先自动技", "补位放", "topdown",
+                 [unit(40, 55, sel=True), unit(72, 40, team="enemy"),
+                  arrow(42, 54, 68, 42, "attack"), badge("次优先")], title="降级"),
+        ], ["RTS", "MMO", "设计选项"],
+    ))
+    c.append(case(
+        "auto-cast-pet-ability", "auto-cast", "宝宝 / 召唤物自动技能",
+        "宠物技能可单独开自动：自爆、嘲讽、治疗图腾在条件满足时自己放；"
+        "关掉则宝宝只普攻或跟随。",
+        [
+            beat("给宠物技能开自动", "宠物面板现自动标记", "宝宝看着放", "topdown",
+                 [hero(35, 60), unit(48, 55, sel=True), badge("宠技自动ON")], title="开"),
+            beat("条件满足（主人残血/敌人进圈）", "宠物自行放该技", "它放了", "topdown",
+                 [hero(35, 60), unit(48, 55), unit(72, 40, team="enemy"),
+                  arrow(50, 54, 68, 42, "attack"), badge("宠技自动放出")], title="触发"),
+        ], ["魔兽世界", "魔兽争霸3", "ARPG"],
+    ))
+    c.append(case(
+        "auto-cast-assist-repeat", "auto-cast", "按住重复尝试 / 辅助连放",
+        "按住技能键时，CD 一好转且目标合法就再放（辅助连发）；"
+        "松开停止。不同于永久绿点自动，是「按住期间的自动」。",
+        [
+            beat("按住技能键不放", "第一次放出后进入等待 CD", "按住蓄着", "moba",
+                 [hero(40, 55), circle_ind(70, 40, 12, True), badge("按住")], title="按住"),
+            beat("CD 好转且目标仍合法", "不松手自动再放一次", "又放了一发", "moba",
+                 [hero(40, 55), arrow(45, 52, 68, 42, "attack"), badge("连放")], title="自动再放"),
+            beat("松手", "不再自动尝试", "停", "moba",
+                 [hero(40, 55), badge("松手停止")], title="停止"),
+        ], ["MMO", "ARPG", "MOBA"],
+    ))
+    c.append(case(
+        "auto-cast-condition-script", "auto-cast", "条件自动：残血才喝药 / 见硬控才开减伤",
+        "不是无脑 CD 好了就放，而是挂条件：生命低于 30% 自动用药；"
+        "自己被点名点名技能时自动开护盾。要在设置里看得懂条件，误触能关。",
+        [
+            beat("设置「生命低于三成自动喝药」", "条件显示在自动规则里", "定好规矩", "moba",
+                 [hero(48, 55), badge("条件:残血用药")], title="设条件"),
+            beat("战斗中掉血过线", "不按键也喝药，物品 CD 走起", "自动一口", "moba",
+                 [hero(48, 55), ring(48, 55, r=12, kind="buff"), badge("自动用药")], title="触发"),
+            beat("关闭该自动规则", "掉血不再自动喝", "改回手动", "moba",
+                 [hero(48, 55), badge("规则OFF")], title="关闭"),
+        ], ["MMO", "ARPG", "设计选项"],
+    ))
+    c.append(case(
+        "auto-cast-vs-manual-preempt", "auto-cast", "手动抢按：打断即将自动的那一下",
+        "自动马上要放时，玩家手动点了另一技能或强制移动：自动应让路，不双放抢资源。"
+        "手感上「我按的算数」。",
+        [
+            beat("自动即将放出时，玩家按了别的技能", "自动取消或延后，先执行手动", "听我的", "topdown",
+                 [unit(40, 55, sel=True), cursor(55, 40), badge("手动优先")], title="抢占"),
+            beat("手动完成且自动条件仍在", "按规则决定是否补一次自动", "再交给自动", "topdown",
+                 [unit(40, 55, sel=True), unit(70, 40, team="enemy"), badge("自动恢复")], title="恢复"),
+        ], ["RTS", "MMO", "设计选项"],
+    ))
+    c.append(case(
+        "auto-cast-attack-assist", "auto-cast", "自动普攻 vs 技能自动：别混成一种",
+        "自动攻击是开关态普攻；技能自动是条件施法。两者可同时开，但 UI 要分开标记，"
+        "停手时要分清停的是普攻还是某颗技能。",
+        [
+            beat("只开自动攻击", "靠近敌人只普攻，不大招", "平A着", "tps",
+                 [hero(40, 55), unit(68, 42, team="enemy"), badge("仅自动普攻")], title="仅普攻"),
+            beat("普攻自动 + 某技能自动都开", "普攻填充，技能见缝插入", "两套都在跑", "tps",
+                 [hero(40, 55), unit(68, 42, team="enemy"),
+                  arrow(45, 52, 64, 44, "attack"), badge("普攻+技能自动")], title="并行"),
+        ], ["魔兽世界", "MMO", "RTS"],
+    ))
+
+    # ===== 二十五、放不了 =====
     c.append(case(
         "block-resource", "blocked", "蓝 / 怒气 / 弹药不足",
         "按下后明确拒绝，并提示缺什么。",
