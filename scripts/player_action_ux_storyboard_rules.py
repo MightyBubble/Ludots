@@ -52,6 +52,7 @@ ELEMENT_ENUMS: dict[tuple[str, str], frozenset] = {
     ("hero", "state"): frozenset({"alive", "ghost", None}),
     ("npc", "role"): frozenset({"vendor", "quest", "healer", "auction", "trainer", None}),
     ("crosshair", "spread"): frozenset({"tight", "wide", None}),
+    ("queue", "state"): frozenset({"waiting", "active", "done"}),
 }
 
 # 一拍里最多出现一次的元件（多了就是画重了）
@@ -61,7 +62,7 @@ SINGLETON_ELEMENTS = ("hotbar", "badge", "stickL", "stickR", "bar")
 SUBJECT_ELEMENTS = (
     "unit", "hero", "card", "building", "crosshair", "menu", "stickL", "stickR",
     "key", "hotbar", "wasd", "wheel", "anchor", "touchpt", "prop",
-    "vehicle", "corpse", "npc", "deny", "impact", "held",
+    "vehicle", "corpse", "npc", "deny", "impact", "held", "queue",
 )
 
 
@@ -196,6 +197,12 @@ PROMISE_RULES: tuple[tuple[str, str, object, str], ...] = (
         lambda cast: any(e.get("t") == "arrow" and e.get("kind") == "move" for e in cast)
         and any(e.get("t") == "arrow" and e.get("kind") == "attack" for e in cast),
         "补一根 arrow(kind='move') 表示走的方向，和 attack 那根并排",
+    ),
+    (
+        "说排队/依次出手，画面要有队列序号",
+        r"排队|依次点|依次出手|一个接一个",
+        lambda cast: _has(cast, "queue"),
+        "补 queue_no(x, y, n, state) 头顶序号，别拿 keyhint 当序号",
     ),
     (
         "说被拒绝/禁止，画面要有禁止图标",

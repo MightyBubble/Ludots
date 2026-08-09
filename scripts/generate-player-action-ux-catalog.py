@@ -232,12 +232,21 @@ def menu_box(x, y, lines, active=None):
     return {"t": "menu", "x": x, "y": y, "lines": list(lines), "active": active}
 
 
-def hotbar(active=None, cd=None, extra=None, off=None, dot=None, deny=None, slots=4):
+def queue_no(x, y, n, state="waiting"):
+    """单位头顶的排队序号。state=waiting 排队 / active 正在放 / done 放完了。
+    别拿键帽当序号，玩家会以为要去按那个键。"""
+    return {"t": "queue", "x": x, "y": y, "n": n, "state": state}
+
+
+def hotbar(active=None, cd=None, extra=None, off=None, dot=None, deny=None, slots=4, page=None):
     """Bottom-center skill row. active=pressed slot, cd=cooldown sweep,
     extra=temp-granted slot (green), off=removed/disabled slots, dot=autocast
     green dot, deny=rejected press (red flash)."""
-    return {"t": "hotbar", "slots": slots, "active": active, "cd": cd,
-            "extra": extra, "off": list(off or []), "dot": dot, "deny": deny}
+    row = {"t": "hotbar", "slots": slots, "active": active, "cd": cd,
+           "extra": extra, "off": list(off or []), "dot": dot, "deny": deny}
+    if page:
+        row["page"] = page
+    return row
 
 
 def bar(x=50, y=30, ratio=0.6, kind="cast", label=None, broken=False):
@@ -1267,10 +1276,14 @@ def build_cases():
         [
             beat("正在走 A 段时 Shift+技能点落点", "路点后追加技能标记，当前动作不打断", "排后面", "moba",
                  [hero(30, 60), path([(30, 60), (50, 50)], "move"), circle_ind(70, 40, 12, True),
+                  queue_no(50, 42, 1, "active"), queue_no(70, 26, 2),
+                  keyhint(24, 80, "Shift", "active", "排到后面"),
                   badge("Shift排队")], title="排队"),
             beat("走完 A 段", "自动开始对排队落点施法", "到点自动放", "moba",
                  [hero(50, 50, face=20), circle_ind(70, 40, 12, True),
-                  arrow(52, 49, 68, 42, "attack"), badge("自动施放")], title="自动放"),
+                  arrow(52, 49, 68, 42, "attack"),
+                  queue_no(50, 38, 1, "done"), queue_no(70, 24, 2, "active"),
+                  badge("自动施放")], title="自动放"),
         ], ["SC2", "MOBA"],
     ))
     c.append(case(
@@ -1312,15 +1325,20 @@ def build_cases():
                  [unit(20, 55, sel=True), unit(32, 58, sel=True), unit(44, 62, sel=True),
                   ring(20, 55), unit(75, 40, team="enemy"),
                   arrow(22, 54, 70, 42, "attack"), badge("1号在放"),
-                  keyhint(32, 45, "2", "idle", "等待"), keyhint(44, 49, "3", "idle", "等待")],
+                  queue_no(20, 44, 1, "active"), queue_no(32, 47, 2), queue_no(44, 51, 3)],
                  title="第一个出手"),
             beat("第一人完成", "第二人自动接着放同一技能/目标", "接下一个", "topdown",
                  [unit(20, 55, sel=True), unit(32, 58, sel=True), unit(44, 62, sel=True),
                   ring(32, 58), unit(75, 40, team="enemy"),
-                  arrow(34, 56, 72, 42, "attack"), badge("2号接上")], title="顺序接力"),
+                  arrow(34, 56, 72, 42, "attack"), badge("2号接上"),
+                  queue_no(20, 44, 1, "done"), queue_no(32, 47, 2, "active"),
+                  queue_no(44, 51, 3)], title="顺序接力"),
             beat("RA2：多选工程师点敌建筑", "一人进占，其余在旁排队", "一个个进", "topdown",
-                 [unit(30, 60, sel=True), unit(38, 66, sel=True), unit(46, 58, sel=True),
-                  building(72, 42), arrow(32, 58, 66, 44, "move"), badge("工程师排队")], title="占建筑排队"),
+                 [unit(30, 60, sel=True, role="工"), unit(38, 66, sel=True, role="工"),
+                  unit(46, 58, sel=True, role="工"), building(72, 42, team="enemy"),
+                  arrow(32, 58, 66, 44, "move"), badge("工程师排队"),
+                  queue_no(30, 49, 1, "active"), queue_no(38, 55, 2), queue_no(46, 47, 3)],
+                 title="占建筑排队"),
         ], ["SC2", "RA2", "RTS"],
     ))
     c.append(case(
@@ -1351,7 +1369,9 @@ def build_cases():
                  [unit(20, 60, sel=True), unit(32, 55, sel=True), unit(44, 62, sel=True),
                   unit(68, 30, team="enemy"), unit(78, 48, team="enemy"), unit(70, 68, team="enemy"),
                   arrow(22, 58, 66, 34, "attack"), arrow(34, 54, 76, 48, "attack"),
-                  arrow(46, 60, 68, 66, "attack"), badge("一人一目标")], title="拆目标"),
+                  arrow(46, 60, 68, 66, "attack"),
+                  queue_no(20, 49, 1, "active"), queue_no(32, 44, 2, "active"),
+                  queue_no(44, 51, 3, "active"), badge("一人一目标")], title="拆目标"),
             beat("全部认领完毕", "各自同时出手，三个目标同拍挨打", "一波带走", "topdown",
                  [unit(20, 60, sel=True), unit(32, 55, sel=True), unit(44, 62, sel=True),
                   unit(68, 30, team="enemy"), ring(68, 30, kind="lock"),
@@ -1473,15 +1493,16 @@ def build_cases():
         [
             beat("触发变身（集满槽/按变身键）", "角色换形；技能栏整页替换为变身技", "换了一套身子", "tps",
                  [hero(48, 55, face=20), ring(48, 55, r=16, kind="buff"),
-                  menu_box(16, 68, ["怒劈", "冲锋", "震地", "处决"]), hotbar(),
-                  badge("变身栏")], title="进入变身"),
+                  bar(48, 30, 0.9, "charge", "变身剩余"), hotbar(page="变身套"),
+                  badge("整栏换成变身技")], title="进入变身"),
             beat("变身期间按攻击/技能", "打出的是变身专属连段与技能，不是原武器", "这套只能现在用", "tps",
                  [hero(45, 55, face=30), cone(45, 55, angle=-20, spread=50, length=32),
-                  unit(72, 40, team="enemy"),
-                  menu_box(16, 68, ["怒劈", "冲锋", "震地", "处决"]), hotbar(active=0),
-                  badge("变身技")], title="用临时技"),
-            beat("变身结束", "外形复原；临时技能栏消失，原技能回到原位", "变回来了", "tps",
-                 [hero(48, 55, face=10), hotbar(), badge("原栏")], title="解除"),
+                  unit(72, 40, team="enemy"), impact(72, 40, 15, heavy=True),
+                  bar(45, 30, 0.5, "charge", "变身剩余"), hotbar(active=0, page="变身套"),
+                  badge("放的是变身技")], title="用临时技"),
+            beat("变身结束", "外形复原；变身那套收走，原技能回到原位", "变回来了", "tps",
+                 [hero(48, 55, face=10), bar(48, 30, 0.0, "charge", "变身结束"),
+                  hotbar(), badge("换回原栏")], title="解除"),
         ], ["战神4", "动作RPG"],
     ))
     c.append(case(

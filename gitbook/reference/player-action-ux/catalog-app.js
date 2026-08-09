@@ -173,6 +173,15 @@
           <rect x="${x}" y="${y}" width="${w}" height="${h}" fill="rgba(8,10,14,0.82)"/>
           <text x="${x + w / 2}" y="${y + h / 2}" text-anchor="middle" fill="#66758a" font-size="11" font-family="DM Sans, sans-serif" font-weight="600">战争迷雾</text>`;
       }
+      if (el.t === "queue") {
+        const x = px(el.x), y = py(el.y);
+        const state = el.state || "waiting";
+        const c = state === "active" ? "#f0a35e" : state === "done" ? "#5dce8f" : "#66758a";
+        return `
+          <circle cx="${x}" cy="${y}" r="8" fill="#0b0e13" stroke="${c}" stroke-width="1.8"/>
+          <text x="${x}" y="${y + 3.5}" text-anchor="middle" fill="${c}" font-size="10" font-family="DM Sans, sans-serif" font-weight="700">${state === "done" ? "✓" : esc(el.n)}</text>
+          <text x="${x}" y="${y - 12}" text-anchor="middle" fill="${c}" font-size="8.5" font-family="DM Sans, sans-serif">${state === "active" ? "在放" : state === "done" ? "放完" : "排队"}</text>`;
+      }
       if (el.t === "held") {
         // 固定摆在画面左上（让开左上角文字标签）：手里拿着什么，永远在同一个位置看
         const x = SX + 10;
@@ -454,11 +463,15 @@
           throw new Error("技能栏缺 labels（按平台的键位标签）— 重跑 catalog 生成脚本");
         }
         const labels = el.labels;
-        let out = "";
+        // page = 整栏换了一套技能：所有格子换色 + 左侧标出这是哪一套
+        let out = el.page
+          ? `<rect x="${x0 - 46}" y="${y0 + 3}" width="40" height="18" rx="3" fill="#0b0e13" stroke="#5dce8f" stroke-width="1.3"/>
+             <text x="${x0 - 26}" y="${y0 + 16}" text-anchor="middle" fill="#5dce8f" font-size="9.5" font-family="DM Sans, sans-serif" font-weight="700">${esc(el.page)}</text>`
+          : "";
         for (let i = 0; i < slots; i++) {
           const x = x0 + i * (w + gap);
           const isActive = el.active === i;
-          const isNew = el.extra === i;
+          const isNew = el.extra === i || !!el.page;
           const isOff = off.includes(i);
           const stroke = isActive ? "#f0a35e" : isNew ? "#5dce8f" : "#3a4658";
           out += `<rect x="${x}" y="${y0}" width="${w}" height="${h}" rx="4" fill="${isOff ? "#10141a" : "#1a2430"}" stroke="${stroke}" stroke-width="${isActive || isNew ? 2 : 1.2}"/>`;

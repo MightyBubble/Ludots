@@ -48,7 +48,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
     "aim"
   ],
   "checkpoint": {
-    "head": "6e0fc2569",
+    "head": "43e9a1672",
     "branch_hint": "cursor/ux-action-id-platform-tabs-4211",
     "impl_notes": "scripts/player_action_ux_impl_notes.py",
     "beat_logic": "scripts/player_action_ux_beat_logic.py",
@@ -13158,6 +13158,28 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "ok": true
             },
             {
+              "t": "queue",
+              "x": 50,
+              "y": 42,
+              "n": 1,
+              "state": "active"
+            },
+            {
+              "t": "queue",
+              "x": 70,
+              "y": 26,
+              "n": 2,
+              "state": "waiting"
+            },
+            {
+              "t": "key",
+              "x": 24,
+              "y": 80,
+              "label": "Shift",
+              "state": "active",
+              "hint": "排到后面"
+            },
+            {
               "t": "badge",
               "text": "Shift排队"
             }
@@ -13190,6 +13212,20 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "x2": 68,
               "y2": 42,
               "kind": "attack"
+            },
+            {
+              "t": "queue",
+              "x": 50,
+              "y": 38,
+              "n": 1,
+              "state": "done"
+            },
+            {
+              "t": "queue",
+              "x": 70,
+              "y": 24,
+              "n": 2,
+              "state": "active"
             },
             {
               "t": "badge",
@@ -13582,20 +13618,25 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "text": "1号在放"
             },
             {
-              "t": "key",
-              "x": 32,
-              "y": 45,
-              "label": "2",
-              "state": "idle",
-              "hint": "等待"
+              "t": "queue",
+              "x": 20,
+              "y": 44,
+              "n": 1,
+              "state": "active"
             },
             {
-              "t": "key",
+              "t": "queue",
+              "x": 32,
+              "y": 47,
+              "n": 2,
+              "state": "waiting"
+            },
+            {
+              "t": "queue",
               "x": 44,
-              "y": 49,
-              "label": "3",
-              "state": "idle",
-              "hint": "等待"
+              "y": 51,
+              "n": 3,
+              "state": "waiting"
             }
           ],
           "logic": "只让队首出手，其余记入排队"
@@ -13660,6 +13701,27 @@ window.PLAYER_ACTION_UX_CATALOG = {
             {
               "t": "badge",
               "text": "2号接上"
+            },
+            {
+              "t": "queue",
+              "x": 20,
+              "y": 44,
+              "n": 1,
+              "state": "done"
+            },
+            {
+              "t": "queue",
+              "x": 32,
+              "y": 47,
+              "n": 2,
+              "state": "active"
+            },
+            {
+              "t": "queue",
+              "x": 44,
+              "y": 51,
+              "n": 3,
+              "state": "waiting"
             }
           ],
           "logic": "队首完成后下一人自动接力同技能"
@@ -13677,7 +13739,8 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "sel": true,
               "team": "ally",
               "face": 0,
-              "size": 1
+              "size": 1,
+              "role": "工"
             },
             {
               "t": "unit",
@@ -13686,7 +13749,8 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "sel": true,
               "team": "ally",
               "face": 0,
-              "size": 1
+              "size": 1,
+              "role": "工"
             },
             {
               "t": "unit",
@@ -13695,14 +13759,15 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "sel": true,
               "team": "ally",
               "face": 0,
-              "size": 1
+              "size": 1,
+              "role": "工"
             },
             {
               "t": "building",
               "x": 72,
               "y": 42,
               "ghost": false,
-              "team": null
+              "team": "enemy"
             },
             {
               "t": "arrow",
@@ -13715,6 +13780,27 @@ window.PLAYER_ACTION_UX_CATALOG = {
             {
               "t": "badge",
               "text": "工程师排队"
+            },
+            {
+              "t": "queue",
+              "x": 30,
+              "y": 49,
+              "n": 1,
+              "state": "active"
+            },
+            {
+              "t": "queue",
+              "x": 38,
+              "y": 55,
+              "n": 2,
+              "state": "waiting"
+            },
+            {
+              "t": "queue",
+              "x": 46,
+              "y": 47,
+              "n": 3,
+              "state": "waiting"
             }
           ],
           "logic": "一人进占，其余在旁排队等待"
@@ -14064,6 +14150,27 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "x2": 68,
               "y2": 66,
               "kind": "attack"
+            },
+            {
+              "t": "queue",
+              "x": 20,
+              "y": 49,
+              "n": 1,
+              "state": "active"
+            },
+            {
+              "t": "queue",
+              "x": 32,
+              "y": 44,
+              "n": 2,
+              "state": "active"
+            },
+            {
+              "t": "queue",
+              "x": 44,
+              "y": 51,
+              "n": 3,
+              "state": "active"
             },
             {
               "t": "badge",
@@ -15445,16 +15552,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "kind": "buff"
             },
             {
-              "t": "menu",
-              "x": 16,
-              "y": 68,
-              "lines": [
-                "怒劈",
-                "冲锋",
-                "震地",
-                "处决"
-              ],
-              "active": null
+              "t": "bar",
+              "x": 48,
+              "y": 30,
+              "ratio": 0.9,
+              "kind": "charge",
+              "label": "变身剩余",
+              "broken": false
             },
             {
               "t": "hotbar",
@@ -15465,6 +15569,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "off": [],
               "dot": null,
               "deny": null,
+              "page": "变身套",
               "labels": [
                 "Q",
                 "W",
@@ -15474,7 +15579,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
             },
             {
               "t": "badge",
-              "text": "变身栏"
+              "text": "整栏换成变身技"
             }
           ],
           "logic": "进入变身并整页替换技能栏"
@@ -15509,16 +15614,20 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "size": 1
             },
             {
-              "t": "menu",
-              "x": 16,
-              "y": 68,
-              "lines": [
-                "怒劈",
-                "冲锋",
-                "震地",
-                "处决"
-              ],
-              "active": null
+              "t": "impact",
+              "x": 72,
+              "y": 40,
+              "r": 15,
+              "heavy": true
+            },
+            {
+              "t": "bar",
+              "x": 45,
+              "y": 30,
+              "ratio": 0.5,
+              "kind": "charge",
+              "label": "变身剩余",
+              "broken": false
             },
             {
               "t": "hotbar",
@@ -15529,6 +15638,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "off": [],
               "dot": null,
               "deny": null,
+              "page": "变身套",
               "labels": [
                 "Q",
                 "W",
@@ -15538,7 +15648,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
             },
             {
               "t": "badge",
-              "text": "变身技"
+              "text": "放的是变身技"
             }
           ],
           "logic": "变身期间攻击/技能走临时招式表"
@@ -15546,7 +15656,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
         {
           "title": "解除",
           "input": "变身结束",
-          "screen": "外形复原；临时技能栏消失，原技能回到原位",
+          "screen": "外形复原；变身那套收走，原技能回到原位",
           "view": "tps",
           "cast": [
             {
@@ -15554,6 +15664,15 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "x": 48,
               "y": 55,
               "face": 10
+            },
+            {
+              "t": "bar",
+              "x": 48,
+              "y": 30,
+              "ratio": 0.0,
+              "kind": "charge",
+              "label": "变身结束",
+              "broken": false
             },
             {
               "t": "hotbar",
@@ -15573,7 +15692,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
             },
             {
               "t": "badge",
-              "text": "原栏"
+              "text": "换回原栏"
             }
           ],
           "logic": "变身结束还原外形与原技能栏"
