@@ -186,8 +186,8 @@
             fill="${lock ? "rgba(240,163,94,0.14)" : "rgba(110,200,255,0.12)"}" stroke="${c}"
             stroke-width="1.2" stroke-dasharray="${lock ? "0" : "4 3"}"/>
           <rect x="${x - 7}" y="${y - 5}" width="14" height="10" rx="2" fill="#1a2430" stroke="${c}" stroke-width="1.5"/>
-          <rect x="${x + 6}" y="${y - 3}" width="4" height="6" rx="1" fill="${c}"/>
-          <text x="${x}" y="${y + 16}" text-anchor="middle" fill="${c}" font-size="8.5" font-family="DM Sans, sans-serif">${lock ? "镜头·跟身" : "镜头·自由"}</text>`;
+          <circle cx="${x + Math.cos(a) * 8}" cy="${y + Math.sin(a) * 8}" r="2.6" fill="${c}"/>
+          <text x="${x}" y="${y + 18}" text-anchor="middle" fill="${c}" font-size="8.5" font-family="DM Sans, sans-serif">${lock ? "镜头·跟身" : "镜头·自由"}</text>`;
       }
       if (el.t === "queue") {
         const x = px(el.x), y = py(el.y);
