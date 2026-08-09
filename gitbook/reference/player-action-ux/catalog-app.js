@@ -109,17 +109,94 @@
         const face = ((el.face || 0) * Math.PI) / 180;
         const fx = x + Math.cos(face) * (s + 3);
         const fy = y + Math.sin(face) * (s + 3);
-        return `${sel}
-          <polygon points="${x},${y - s} ${x + s * 0.9},${y + s * 0.7} ${x - s * 0.9},${y + s * 0.7}" fill="${fill}" stroke="#0b0e13" stroke-width="1.2"/>
-          <line x1="${x}" y1="${y}" x2="${fx}" y2="${fy}" stroke="#e8eef6" stroke-width="1.5" opacity="0.7"/>`;
+        // 倒地：躺平的椭圆，一眼和站着的三角分开
+        if (el.state === "downed") {
+          return `${sel}
+            <ellipse cx="${x}" cy="${y + s * 0.5}" rx="${s * 1.15}" ry="${s * 0.5}" fill="${fill}" stroke="#0b0e13" stroke-width="1.2" opacity="0.75"/>
+            <text x="${x}" y="${y - s * 0.4}" text-anchor="middle" fill="#ef6b6b" font-size="9" font-family="DM Sans, sans-serif" font-weight="700">倒地</text>`;
+        }
+        // 空中：抬高本体，地面留投影，看得出「他在天上」
+        const air = el.layer === "air";
+        const cy = air ? y - 12 : y;
+        const shadow = air
+          ? `<ellipse cx="${x}" cy="${y + 8}" rx="${s * 0.8}" ry="${s * 0.32}" fill="#000" opacity="0.4"/>
+             <line x1="${x}" y1="${cy + s * 0.8}" x2="${x}" y2="${y + 6}" stroke="#66758a" stroke-width="1" stroke-dasharray="2 2"/>`
+          : "";
+        const badgeAir = air
+          ? `<text x="${x}" y="${cy - s - 4}" text-anchor="middle" fill="#6ec8ff" font-size="9" font-family="DM Sans, sans-serif" font-weight="700">空中</text>`
+          : "";
+        const outline = el.highlight
+          ? `<polygon points="${x},${cy - s - 3} ${x + s * 1.2},${cy + s * 0.95} ${x - s * 1.2},${cy + s * 0.95}" fill="none" stroke="#e8eef6" stroke-width="1.6" stroke-dasharray="3 2"/>`
+          : "";
+        const role = el.role
+          ? `<text x="${x}" y="${cy + s * 0.55}" text-anchor="middle" fill="#0b0e13" font-size="8.5" font-family="IBM Plex Mono, monospace" font-weight="700">${esc(el.role)}</text>`
+          : "";
+        return `${sel}${shadow}
+          <polygon points="${x},${cy - s} ${x + s * 0.9},${cy + s * 0.7} ${x - s * 0.9},${cy + s * 0.7}" fill="${fill}" stroke="#0b0e13" stroke-width="1.2"/>
+          ${role}${outline}
+          <line x1="${x}" y1="${cy}" x2="${fx}" y2="${air ? fy - 12 : fy}" stroke="#e8eef6" stroke-width="1.5" opacity="0.7"/>
+          ${badgeAir}`;
       }
       if (el.t === "hero") {
         const x = px(el.x), y = py(el.y);
         const face = ((el.face || 0) * Math.PI) / 180;
+        const ghost = el.state === "ghost";
         return `
-          <ellipse cx="${x}" cy="${y + 10}" rx="10" ry="4" fill="#000" opacity="0.35"/>
-          <circle cx="${x}" cy="${y}" r="9" fill="#6ec8ff" stroke="#0b0e13" stroke-width="1.4"/>
-          <line x1="${x}" y1="${y}" x2="${x + Math.cos(face) * 16}" y2="${y + Math.sin(face) * 16}" stroke="#f0a35e" stroke-width="2.2"/>`;
+          <ellipse cx="${x}" cy="${y + 10}" rx="10" ry="4" fill="#000" opacity="${ghost ? 0.12 : 0.35}"/>
+          <circle cx="${x}" cy="${y}" r="9" fill="${ghost ? "rgba(110,200,255,0.28)" : "#6ec8ff"}"
+            stroke="${ghost ? "#6ec8ff" : "#0b0e13"}" stroke-width="1.4" stroke-dasharray="${ghost ? "3 2" : "0"}"/>
+          <line x1="${x}" y1="${y}" x2="${x + Math.cos(face) * 16}" y2="${y + Math.sin(face) * 16}" stroke="#f0a35e" stroke-width="2.2" opacity="${ghost ? 0.5 : 1}"/>`;
+      }
+      if (el.t === "vehicle") {
+        const x = px(el.x), y = py(el.y);
+        const kind = el.kind || "car";
+        const body = kind === "turret"
+          ? `<rect x="${x - 13}" y="${y - 9}" width="26" height="18" rx="4" fill="#7e8fa6" stroke="#0b0e13" stroke-width="1.4"/>
+             <circle cx="${x}" cy="${y}" r="6.5" fill="#5a6b80" stroke="#0b0e13" stroke-width="1.2"/>
+             <line x1="${x}" y1="${y}" x2="${x + 20}" y2="${y}" stroke="#5a6b80" stroke-width="4.5"/>`
+          : `<rect x="${x - 17}" y="${y - 8}" width="34" height="16" rx="4" fill="#7e8fa6" stroke="#0b0e13" stroke-width="1.4"/>
+             <rect x="${x - 7}" y="${y - 13}" width="15" height="8" rx="2" fill="#9fb0c6" stroke="#0b0e13" stroke-width="1.1"/>
+             <circle cx="${x - 10}" cy="${y + 9}" r="4" fill="#222b36" stroke="#0b0e13" stroke-width="1"/>
+             <circle cx="${x + 10}" cy="${y + 9}" r="4" fill="#222b36" stroke="#0b0e13" stroke-width="1"/>
+             ${kind === "tank" ? `<line x1="${x + 4}" y1="${y - 9}" x2="${x + 26}" y2="${y - 9}" stroke="#5a6b80" stroke-width="4"/>` : ""}`;
+        const seat = el.occupied
+          ? `<circle cx="${x}" cy="${y - 16}" r="5" fill="#6ec8ff" stroke="#0b0e13" stroke-width="1.2"/>`
+          : "";
+        return `<ellipse cx="${x}" cy="${y + 12}" rx="19" ry="5" fill="#000" opacity="0.35"/>${body}${seat}`;
+      }
+      if (el.t === "fog") {
+        const w = ((el.w == null ? 40 : el.w) / 100) * SW;
+        const h = ((el.h == null ? 100 : el.h) / 100) * SH;
+        const x = px(el.x == null ? 60 : el.x);
+        const y = py(el.y == null ? 0 : el.y);
+        return `
+          <rect x="${x}" y="${y}" width="${w}" height="${h}" fill="rgba(8,10,14,0.82)"/>
+          <text x="${x + w / 2}" y="${y + h / 2}" text-anchor="middle" fill="#66758a" font-size="11" font-family="DM Sans, sans-serif" font-weight="600">战争迷雾</text>`;
+      }
+      if (el.t === "deny") {
+        const x = px(el.x), y = py(el.y);
+        const r = el.r || 11;
+        const d = r * 0.62;
+        return `
+          <circle cx="${x}" cy="${y}" r="${r}" fill="rgba(239,107,107,0.16)" stroke="#ef6b6b" stroke-width="2.4"/>
+          <line x1="${x - d}" y1="${y + d}" x2="${x + d}" y2="${y - d}" stroke="#ef6b6b" stroke-width="2.4"/>
+          ${el.label ? `<text x="${x}" y="${y + r + 11}" text-anchor="middle" fill="#ef6b6b" font-size="9.5" font-family="DM Sans, sans-serif" font-weight="700">${esc(el.label)}</text>` : ""}`;
+      }
+      if (el.t === "npc") {
+        const x = px(el.x), y = py(el.y);
+        const mark = { vendor: "商", quest: "?", healer: "魂", auction: "拍", trainer: "训" }[el.role] || "";
+        return `
+          <ellipse cx="${x}" cy="${y + 11}" rx="9" ry="3.5" fill="#000" opacity="0.35"/>
+          <circle cx="${x}" cy="${y - 6}" r="4.5" fill="#e0c35a" stroke="#0b0e13" stroke-width="1.2"/>
+          <path d="M${x - 6} ${y + 9} L${x - 4} ${y - 1} L${x + 4} ${y - 1} L${x + 6} ${y + 9} Z" fill="#e0c35a" stroke="#0b0e13" stroke-width="1.2"/>
+          ${mark ? `<text x="${x}" y="${y - 13}" text-anchor="middle" fill="#e0c35a" font-size="10" font-family="DM Sans, sans-serif" font-weight="700">${esc(mark)}</text>` : ""}`;
+      }
+      if (el.t === "corpse") {
+        const x = px(el.x), y = py(el.y);
+        return `
+          <ellipse cx="${x}" cy="${y}" rx="12" ry="5" fill="#3d4654" stroke="#0b0e13" stroke-width="1.2"/>
+          <line x1="${x - 5}" y1="${y - 4}" x2="${x + 5}" y2="${y - 4}" stroke="#93a0b4" stroke-width="1.4"/>
+          <text x="${x}" y="${y - 9}" text-anchor="middle" fill="#93a0b4" font-size="9" font-family="DM Sans, sans-serif">尸体</text>`;
       }
       if (el.t === "cursor") {
         const x = px(el.x), y = py(el.y);

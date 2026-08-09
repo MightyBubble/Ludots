@@ -28,6 +28,25 @@ PLATFORM_FORBIDDEN_WORDS = {
     "touch": r"鼠标|右键|左键|摇杆|扳机",
 }
 
+# 元件参数的合法取值。渲染器只认这些；写别的会静默退化成默认样子，玩家看到的就是错的画。
+ELEMENT_ENUMS: dict[tuple[str, str], frozenset] = {
+    ("unit", "team"): frozenset({"ally", "enemy", "neutral"}),
+    ("unit", "layer"): frozenset({"ground", "air", None}),
+    ("unit", "state"): frozenset({"normal", "downed", None}),
+    ("building", "team"): frozenset({"ally", "enemy", "neutral", None}),
+    ("cursor", "mode"): frozenset({"idle", "down", "drag", "up", "aim"}),
+    ("ring", "kind"): frozenset({"select", "lock", "buff"}),
+    ("arrow", "kind"): frozenset({"move", "attack"}),
+    ("path", "kind"): frozenset({"lasso", "arc", "move"}),
+    ("bar", "kind"): frozenset({"cast", "charge", "hp"}),
+    ("key", "state"): frozenset({"idle", "active", "off"}),
+    ("touchpt", "kind"): frozenset({"tap", "hold", "drag", "pinch"}),
+    ("prop", "kind"): frozenset({"item", "ore", "herb", "chest", "door", "corpse", None}),
+    ("vehicle", "kind"): frozenset({"car", "tank", "turret", "mount"}),
+    ("hero", "state"): frozenset({"alive", "ghost", None}),
+    ("npc", "role"): frozenset({"vendor", "quest", "healer", "auction", "trainer", None}),
+}
+
 # 一拍里最多出现一次的元件（多了就是画重了）
 SINGLETON_ELEMENTS = ("hotbar", "badge", "stickL", "stickR", "bar")
 
@@ -35,6 +54,7 @@ SINGLETON_ELEMENTS = ("hotbar", "badge", "stickL", "stickR", "bar")
 SUBJECT_ELEMENTS = (
     "unit", "hero", "card", "building", "crosshair", "menu", "stickL", "stickR",
     "key", "hotbar", "wasd", "wheel", "anchor", "touchpt", "prop",
+    "vehicle", "corpse", "npc", "deny",
 )
 
 
@@ -164,6 +184,18 @@ PROMISE_RULES: tuple[tuple[str, str, object, str], ...] = (
         "补 path([[x, y], ...], kind='lasso')",
     ),
     (
+        "说被拒绝/禁止，画面要有禁止图标",
+        r"拒绝|禁止图标|放不出|不可用|无效|挡下",
+        lambda cast: _has(cast, "deny"),
+        "补 deny(x, y, label='原因')",
+    ),
+    (
+        "说商人/NPC/魂匠，画面要有 NPC 小人",
+        r"商人|NPC|魂匠|拍卖师|任务给予者|飞行管理员",
+        lambda cast: _has(cast, "npc"),
+        "补 npc(x, y, role=...)",
+    ),
+    (
         "说触控手指动作，画面要有触点",
         r"手指|点触|轻点|双指|捏合|滑动",
         lambda cast: _has(cast, "touchpt"),
@@ -212,6 +244,13 @@ def check_structure(beat: dict) -> list[str]:
         n = sum(1 for e in cast if e.get("t") == t)
         if n > 1:
             problems.append(f"{t} 画了 {n} 个（一拍最多一个）")
+    for e in cast:
+        for (et, key), allowed in ELEMENT_ENUMS.items():
+            if e.get("t") == et and key in e and e[key] not in allowed:
+                problems.append(
+                    f"{et} 的 {key}={e[key]!r} 渲染器不认（只能是 "
+                    f"{sorted(x for x in allowed if x is not None)}），会静默画错"
+                )
     return problems
 
 
