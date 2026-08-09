@@ -15,6 +15,11 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from player_action_ux_action_index import (  # noqa: E402
+    ACTION_GROUPS,
+    PLATFORM_LABEL,
+    PLATFORM_ORDER,
+)
 from player_action_ux_beat_logic import apply_beat_logic  # noqa: E402
 from player_action_ux_impl_notes import enrich_all  # noqa: E402
 
@@ -2567,7 +2572,72 @@ def _audit_casts(cases: list) -> list[str]:
     return weak
 
 
-def _write_checkpoint(cases: list, weak: list[str], head: str) -> None:
+def apply_action_index(cases: list) -> list[dict]:
+    """Attach UX-NNN / platform on each case; return unique action rows for the UI list."""
+    by_id = {c["id"]: c for c in cases}
+    seen: set[str] = set()
+    actions: list[dict] = []
+    for action_no, key, title, members in ACTION_GROUPS:
+        variants = []
+        target_union: set[str] = set()
+        genre_union: set[str] = set()
+        summaries: list[str] = []
+        beat_total = 0
+        for case_id, platform in members:
+            if case_id in seen:
+                raise SystemExit(f"action index duplicate case: {case_id}")
+            if case_id not in by_id:
+                raise SystemExit(f"action index unknown case: {case_id}")
+            if platform not in PLATFORM_LABEL:
+                raise SystemExit(f"action index bad platform {platform} on {case_id}")
+            seen.add(case_id)
+            c = by_id[case_id]
+            label = PLATFORM_LABEL[platform]
+            c["actionNo"] = action_no
+            c["actionKey"] = key
+            c["actionTitle"] = title
+            c["platform"] = platform
+            c["platformLabel"] = label
+            target_union.update(c.get("targets") or [])
+            genre_union.update(c.get("genres") or [])
+            summaries.append(c.get("summary") or "")
+            beat_total += len(c.get("beats") or [])
+            variants.append(
+                {
+                    "platform": platform,
+                    "platformLabel": label,
+                    "caseId": case_id,
+                }
+            )
+        variants.sort(key=lambda v: PLATFORM_ORDER.index(v["platform"]))
+        for v in variants:
+            by_id[v["caseId"]]["variants"] = [
+                {"platform": x["platform"], "platformLabel": x["platformLabel"], "caseId": x["caseId"]}
+                for x in variants
+            ]
+        primary = by_id[variants[0]["caseId"]]
+        actions.append(
+            {
+                "actionNo": action_no,
+                "key": key,
+                "title": title,
+                "summary": primary.get("summary") or title,
+                "platforms": [v["platform"] for v in variants],
+                "platformLabels": [v["platformLabel"] for v in variants],
+                "variants": variants,
+                "targets": sorted(target_union),
+                "genres": sorted(genre_union),
+                "beatCount": beat_total,
+                "caseCount": len(variants),
+            }
+        )
+    missing = sorted(set(by_id) - seen)
+    if missing:
+        raise SystemExit(f"cases missing from action index: {missing[:20]}")
+    return actions
+
+
+def _write_checkpoint(cases: list, weak: list[str], head: str, actions: list[dict] | None = None) -> None:
     todos = sorted({t for c in cases for t in c.get("todos") or []})
     from collections import Counter
 
@@ -2585,20 +2655,23 @@ def _write_checkpoint(cases: list, weak: list[str], head: str) -> None:
         f"- 生成脚本：`scripts/generate-player-action-ux-catalog.py`",
         f"- 逻辑文案：`scripts/player_action_ux_beat_logic.py`",
         f"- 实现标注：`scripts/player_action_ux_impl_notes.py`",
+        f"- 动作编号/平台变体：`scripts/player_action_ux_action_index.py`",
         f"- 生成时 HEAD：`{head}`（以你拉取后的 `git rev-parse` 为准；合并后会变）",
-        f"- 分支语境：`cursor/ux-catalog-dual-audit-4211`（全量双人交叉审核 + 画面/步骤修复）",
-        f"- 已合 main：图鉴 #743–#752（含按游戏分类、时序三参与者、一镜一对）",
+        f"- 分支语境：`cursor/ux-action-id-platform-tabs-4211`（unique 动作编号 + 主机/键鼠/触控 tab）",
+        f"- 已合 main：图鉴 #743–#755（含按游戏分类、时序三参与者、一镜一对、双人审核）",
         "",
         "## 页面交互约定（改 UI 前先读）",
         "",
-        "- 三栏：**复刻目标游戏** | 动作列表 | 详情",
-        "- 左栏 id 来自 `TARGET_GAMES`；筛选看 `case.targets.includes(id)`，允许重复",
+        "- 三栏：**复刻目标游戏** | **唯一动作列表（UX-NNN）** | 详情",
+        "- 左栏 id 来自 `TARGET_GAMES`；筛选看动作任一平台变体的 `targets`，允许重复",
+        "- 中间列表按 `actions[]`（查重后的 unique 交互），不是原始 case 堆叠",
+        "- 同一交互在主机 / 键鼠 / 触控上的不同实现 → 详情顶部分 tab 切换 `variants[]`",
         "- `case.category` / `family` = 功能族，只给 impl_notes 与详情副标",
         "- 详情内：**一镜一对**——每拍一行，左 Mermaid / 右分镜，共用一条滚动轴（禁止左右各自滚）",
         "- 拍号芯片 / ←→ / h·l 跳到对应那一对；每拍单独一张时序图",
         "- **时序图参与者只有三个：设备输入 → 逻辑处理 → 画面输出**；禁止再把手感/爽点做成泳道",
         "- 每拍必有 `input` / `logic` / `screen`；`logic` 来自 `BEAT_LOGIC`，缺键直接 fail 生成",
-        "- 每个 case 必有 `ludots` 与 `todos`；勿手改 `catalog-data.js`",
+        "- 每个 case 必有 `ludots` / `todos` / `actionNo` / `platform`；勿手改 `catalog-data.js`",
         "",
         "## 双人交叉审核（本轮）",
         "",
@@ -2619,7 +2692,9 @@ def _write_checkpoint(cases: list, weak: list[str], head: str) -> None:
         "",
         "## 规模",
         "",
-        f"- cases = {len(cases)}",
+        f"- unique_actions = {len(actions or [])}",
+        f"- multi_platform_actions = {sum(1 for a in (actions or []) if a.get('caseCount', 0) > 1)}",
+        f"- cases = {len(cases)}（含平台变体实现）",
         f"- beats = {sum(len(c['beats']) for c in cases)}",
         f"- target_games = {len(TARGET_GAMES)}",
         f"- target_memberships = {sum(len(c.get('targets') or []) for c in cases)}（含跨游戏重复）",
@@ -2643,6 +2718,7 @@ def main():
     cases = build_cases()  # already enrich_all inside
     assign_game_targets(cases)
     apply_beat_logic(cases)
+    actions = apply_action_index(cases)
     augmented = augment_ui_glyphs(cases)
     weak = _audit_casts(cases)
     empty = [c["id"] for c in cases if not c.get("targets")]
@@ -2656,23 +2732,33 @@ def main():
     ]
     if no_logic:
         raise SystemExit(f"beats missing logic after apply: {no_logic[:20]}")
+    no_action = [c["id"] for c in cases if not c.get("actionNo") or not c.get("platform")]
+    if no_action:
+        raise SystemExit(f"cases missing action index fields: {no_action[:20]}")
     payload = {
         "title": "玩家动作体验图鉴",
-        "subtitle": "按复刻目标浏览。每一拍时序：设备输入 → 逻辑处理 → 画面输出。",
+        "subtitle": "按复刻目标浏览。唯一动作编号 UX-NNN；跨平台同一交互用主机/键鼠/触控分 tab。",
         "taxonomy": "game-targets",
         "sequenceModel": ["device-input", "logic", "screen-output"],
+        "platforms": [
+            {"id": pid, "label": PLATFORM_LABEL[pid]} for pid in PLATFORM_ORDER
+        ],
         "checkpoint": {
             "head": head,
-            "branch_hint": "cursor/ux-sequence-io-4211",
+            "branch_hint": "cursor/ux-action-id-platform-tabs-4211",
             "impl_notes": "scripts/player_action_ux_impl_notes.py",
             "beat_logic": "scripts/player_action_ux_beat_logic.py",
-            "note": "时序三参与者=设备/逻辑/画面；左栏=复刻目标；勿手改 catalog-data.js",
+            "action_index": "scripts/player_action_ux_action_index.py",
+            "note": "列表=unique actions；详情平台 tab；时序=设备/逻辑/画面；勿手改 catalog-data.js",
             "weak_storyboard_beats": weak,
+            "unique_actions": len(actions),
+            "multi_platform_actions": sum(1 for a in actions if a["caseCount"] > 1),
         },
         "categories": [
             {"id": gid, "title": title, "blurb": blurb}
             for gid, title, blurb in TARGET_GAMES
         ],
+        "actions": actions,
         "cases": cases,
     }
     OUT.parent.mkdir(parents=True, exist_ok=True)
@@ -2683,11 +2769,12 @@ def main():
         + ";\n",
         encoding="utf-8",
     )
-    _write_checkpoint(cases, weak, head)
+    _write_checkpoint(cases, weak, head, actions)
     print(
-        f"Wrote {OUT.relative_to(OUT.parents[2])}  cases={len(cases)}  "
-        f"beats={sum(len(x['beats']) for x in cases)}  weak_casts={len(weak)}  "
-        f"ui_augmented={augmented}  head={head}"
+        f"Wrote {OUT.relative_to(OUT.parents[2])}  actions={len(actions)}  "
+        f"cases={len(cases)}  beats={sum(len(x['beats']) for x in cases)}  "
+        f"multi_platform={sum(1 for a in actions if a['caseCount'] > 1)}  "
+        f"weak_casts={len(weak)}  ui_augmented={augmented}  head={head}"
     )
 
 

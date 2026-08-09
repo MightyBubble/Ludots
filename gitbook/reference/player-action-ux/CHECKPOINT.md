@@ -7,20 +7,23 @@
 - 生成脚本：`scripts/generate-player-action-ux-catalog.py`
 - 逻辑文案：`scripts/player_action_ux_beat_logic.py`
 - 实现标注：`scripts/player_action_ux_impl_notes.py`
-- 生成时 HEAD：`38672088b`（以你拉取后的 `git rev-parse` 为准；合并后会变）
-- 分支语境：`cursor/ux-catalog-dual-audit-4211`（全量双人交叉审核 + 画面/步骤修复）
-- 已合 main：图鉴 #743–#752（含按游戏分类、时序三参与者、一镜一对）
+- 动作编号/平台变体：`scripts/player_action_ux_action_index.py`
+- 生成时 HEAD：`4a5716505`（以你拉取后的 `git rev-parse` 为准；合并后会变）
+- 分支语境：`cursor/ux-action-id-platform-tabs-4211`（unique 动作编号 + 主机/键鼠/触控 tab）
+- 已合 main：图鉴 #743–#755（含按游戏分类、时序三参与者、一镜一对、双人审核）
 
 ## 页面交互约定（改 UI 前先读）
 
-- 三栏：**复刻目标游戏** | 动作列表 | 详情
-- 左栏 id 来自 `TARGET_GAMES`；筛选看 `case.targets.includes(id)`，允许重复
+- 三栏：**复刻目标游戏** | **唯一动作列表（UX-NNN）** | 详情
+- 左栏 id 来自 `TARGET_GAMES`；筛选看动作任一平台变体的 `targets`，允许重复
+- 中间列表按 `actions[]`（查重后的 unique 交互），不是原始 case 堆叠
+- 同一交互在主机 / 键鼠 / 触控上的不同实现 → 详情顶部分 tab 切换 `variants[]`
 - `case.category` / `family` = 功能族，只给 impl_notes 与详情副标
 - 详情内：**一镜一对**——每拍一行，左 Mermaid / 右分镜，共用一条滚动轴（禁止左右各自滚）
 - 拍号芯片 / ←→ / h·l 跳到对应那一对；每拍单独一张时序图
 - **时序图参与者只有三个：设备输入 → 逻辑处理 → 画面输出**；禁止再把手感/爽点做成泳道
 - 每拍必有 `input` / `logic` / `screen`；`logic` 来自 `BEAT_LOGIC`，缺键直接 fail 生成
-- 每个 case 必有 `ludots` 与 `todos`；勿手改 `catalog-data.js`
+- 每个 case 必有 `ludots` / `todos` / `actionNo` / `platform`；勿手改 `catalog-data.js`
 
 ## 双人交叉审核（本轮）
 
@@ -50,7 +53,9 @@
 
 ## 规模
 
-- cases = 168
+- unique_actions = 163
+- multi_platform_actions = 5
+- cases = 168（含平台变体实现）
 - beats = 357
 - target_games = 13
 - target_memberships = 480（含跨游戏重复）

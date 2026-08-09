@@ -249,6 +249,74 @@ code { font-family: var(--mono); font-size: 0.9em; }
   font-weight: 700;
   white-space: nowrap;
 }
+.case-row .action-no,
+.detail-head .action-no {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent2);
+  letter-spacing: 0.02em;
+  margin-right: 4px;
+}
+.case-row .plat-row {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.plat-pill {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 2px 6px;
+  border: 1px solid rgba(125, 158, 198, 0.35);
+  color: var(--muted);
+  background: rgba(36, 48, 65, 0.55);
+}
+.plat-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 10px;
+}
+.plat-tab {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  border: 1px solid rgba(125, 158, 198, 0.35);
+  background: rgba(20, 28, 38, 0.85);
+  color: var(--ink);
+  padding: 6px 10px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 650;
+}
+.plat-tab:hover { border-color: var(--accent); }
+.plat-tab.active {
+  border-color: var(--accent2);
+  box-shadow: inset 0 -2px 0 var(--accent2);
+  background: rgba(36, 48, 65, 0.95);
+}
+.plat-tab-id,
+.plat-single-id {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--faint);
+}
+.plat-single {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 10px;
+}
+.tag-platform {
+  border-color: rgba(125, 198, 170, 0.45);
+  color: #9ed9c0;
+}
 .case-row .sub {
   grid-column: 1 / -1;
   margin: 0;
