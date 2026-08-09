@@ -197,6 +197,74 @@
           <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="4" fill="#0b0e13" stroke="#6ec8ff" stroke-width="1.4"/>
           ${items}`;
       }
+      if (el.t === "hotbar") {
+        const slots = el.slots || 4;
+        const w = 24, h = 24, gap = 4;
+        const total = slots * w + (slots - 1) * gap;
+        const x0 = SX + SW / 2 - total / 2;
+        const y0 = SY + SH - h - 5;
+        const off = Array.isArray(el.off) ? el.off : [];
+        const labels = ["Q", "W", "E", "R", "T"];
+        let out = "";
+        for (let i = 0; i < slots; i++) {
+          const x = x0 + i * (w + gap);
+          const isActive = el.active === i;
+          const isNew = el.extra === i;
+          const isOff = off.includes(i);
+          const stroke = isActive ? "#f0a35e" : isNew ? "#5dce8f" : "#3a4658";
+          out += `<rect x="${x}" y="${y0}" width="${w}" height="${h}" rx="4" fill="${isOff ? "#10141a" : "#1a2430"}" stroke="${stroke}" stroke-width="${isActive || isNew ? 2 : 1.2}"/>`;
+          out += `<text x="${x + w / 2}" y="${y0 + h / 2 + 4}" text-anchor="middle" fill="${isOff ? "#3a4658" : isActive ? "#f0a35e" : isNew ? "#5dce8f" : "#66758a"}" font-size="10" font-family="IBM Plex Mono, monospace" font-weight="700">${labels[i] || i + 1}</text>`;
+          if (el.cd === i) {
+            out += `<path d="M${x + w / 2} ${y0 + h / 2} L${x + w / 2} ${y0 + 2.5} A${w / 2 - 2.5} ${h / 2 - 2.5} 0 1 1 ${x + 2.5} ${y0 + h / 2} Z" fill="rgba(11,14,19,0.72)"/>`;
+          }
+          if (isOff) {
+            out += `<line x1="${x + 4}" y1="${y0 + 4}" x2="${x + w - 4}" y2="${y0 + h - 4}" stroke="#ef6b6b" stroke-width="1.6"/>`;
+          }
+          if (el.dot === i) {
+            out += `<circle cx="${x + w - 4.5}" cy="${y0 + 4.5}" r="3.2" fill="#5dce8f" stroke="#0b0e13" stroke-width="1"/>`;
+          }
+          if (el.deny === i) {
+            out += `<rect x="${x}" y="${y0}" width="${w}" height="${h}" rx="4" fill="rgba(239,107,107,0.22)" stroke="#ef6b6b" stroke-width="1.6"/>`;
+          }
+        }
+        return out;
+      }
+      if (el.t === "bar") {
+        const x = px(el.x == null ? 50 : el.x), y = py(el.y == null ? 30 : el.y);
+        const w = 56, h = 7;
+        const ratio = Math.max(0, Math.min(1, el.ratio == null ? 0.6 : el.ratio));
+        const color = el.kind === "hp" ? "#5dce8f" : el.kind === "charge" ? "#f0a35e" : "#6ec8ff";
+        let out = `
+          <rect x="${x - w / 2}" y="${y}" width="${w}" height="${h}" rx="3" fill="#0b0e13" stroke="#3a4658" stroke-width="1"/>
+          <rect x="${x - w / 2 + 1}" y="${y + 1}" width="${(w - 2) * ratio}" height="${h - 2}" rx="2" fill="${color}"/>`;
+        if (el.broken) {
+          out += `<line x1="${x - w / 2 - 3}" y1="${y + h + 3}" x2="${x + w / 2 + 3}" y2="${y - 3}" stroke="#ef6b6b" stroke-width="2"/>`;
+        }
+        if (el.label) {
+          out += `<text x="${x}" y="${y - 3}" text-anchor="middle" fill="#93a0b4" font-size="9" font-family="DM Sans, sans-serif">${esc(el.label)}</text>`;
+        }
+        return out;
+      }
+      if (el.t === "key") {
+        const x = px(el.x), y = py(el.y);
+        const label = String(el.label || "F");
+        const w = Math.max(20, 12 + label.length * 8), h = 20;
+        const state = el.state || "idle";
+        const stroke = state === "active" ? "#f0a35e" : state === "off" ? "#3a4658" : "#6ec8ff";
+        const fill = state === "active" ? "rgba(240,163,94,0.18)" : "#0b0e13";
+        const ink = state === "off" ? "#3a4658" : "#e8eef6";
+        let out = `
+          <rect x="${x - w / 2}" y="${y - h / 2}" width="${w}" height="${h}" rx="4" fill="${fill}" stroke="${stroke}" stroke-width="1.6"/>
+          <rect x="${x - w / 2}" y="${y + h / 2 - 3}" width="${w}" height="3" rx="1.5" fill="${stroke}" opacity="0.5"/>
+          <text x="${x}" y="${y + 4}" text-anchor="middle" fill="${ink}" font-size="11" font-family="IBM Plex Mono, monospace" font-weight="700">${esc(label)}</text>`;
+        if (state === "off") {
+          out += `<line x1="${x - w / 2 - 2}" y1="${y + h / 2 + 2}" x2="${x + w / 2 + 2}" y2="${y - h / 2 - 2}" stroke="#ef6b6b" stroke-width="1.6"/>`;
+        }
+        if (el.hint) {
+          out += `<text x="${x}" y="${y - h / 2 - 5}" text-anchor="middle" fill="#f0a35e" font-size="10" font-family="DM Sans, sans-serif" font-weight="700">${esc(el.hint)}</text>`;
+        }
+        return out;
+      }
       return "";
     }).join("\n");
   }
@@ -344,8 +412,8 @@
   function filtered() {
     const q = query.trim().toLowerCase();
     return data.cases.filter((c) => {
-      if (activeCategory !== "all" && c.category !== activeCategory) return false;
-      if (!q) return true;
+      // With a query, search the whole catalog; category scopes only when browsing.
+      if (!q) return activeCategory === "all" || c.category === activeCategory;
       const blob = [c.title, c.summary, c.id, ...(c.genres || []), ...c.beats.flatMap((b) => [b.input, b.screen, b.feel])].join(" ").toLowerCase();
       return blob.includes(q);
     });
