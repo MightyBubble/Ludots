@@ -314,7 +314,8 @@ def build_cases():
         "鼠标点到某个单位，它成为当前指挥对象。",
         [
             beat("把指针移到单位上", "单位可被高亮/描边提示", "准备选中", "topdown",
-                 [unit(40, 50), unit(62, 42), unit(55, 68), cursor(62, 42), badge("悬停")], title="悬停"),
+                 [unit(40, 50), unit(62, 42), unit(55, 68), ring(62, 42, r=9, kind="select"),
+                  cursor(62, 42), badge("悬停")], title="悬停"),
             beat("按下并松开左键", "该单位脚下出现选中圈，他人无圈", "它现在听你的", "topdown",
                  [unit(40, 50), unit(62, 42, sel=True), unit(55, 68), ring(62, 42), cursor(62, 42, "up"), badge("单击")], title="点选"),
         ], ["RTS", "MOBA", "SC2/War3"],
@@ -324,9 +325,12 @@ def build_cases():
         "按住拖出矩形，框内单位一起被选中。",
         [
             beat("在空地按下左键", "出现选框起点", "开始框选", "topdown",
-                 [unit(35, 40), unit(48, 45), unit(58, 52), unit(70, 38), cursor(30, 30, "down"), badge("按下")], title="按下"),
+                 [unit(35, 40), unit(48, 45), unit(58, 52), unit(70, 38),
+                  box(28, 28, 12, 12), cursor(30, 30, "down"), badge("选框起点")], title="按下"),
             beat("拖动鼠标", "半透明选框扩大，框内单位闪一下", "还在框", "topdown",
-                 [unit(35, 40), unit(48, 45), unit(58, 52), unit(70, 38), box(30, 30, 40, 30), cursor(70, 60, "drag"), badge("拖动")], title="拖框"),
+                 [unit(35, 40, sel=True), unit(48, 45, sel=True), unit(58, 52, sel=True), unit(70, 38),
+                  ring(35, 40), ring(48, 45), ring(58, 52), box(30, 30, 40, 30),
+                  cursor(70, 60, "drag"), badge("拖动")], title="拖框"),
             beat("松开左键", "选框消失；框内单位全部带选中圈", "一队人听你的", "topdown",
                  [unit(35, 40, sel=True), unit(48, 45, sel=True), unit(58, 52, sel=True), unit(70, 38),
                   ring(35, 40), ring(48, 45), ring(58, 52), cursor(70, 60, "up"), badge("松开")], title="放开"),
@@ -353,6 +357,9 @@ def build_cases():
                   cursor(65, 48, "up"), badge("Shift+点")], title="加选"),
             beat("按住 Ctrl 再点已选中的单位", "该单位选中圈消失，其余仍在", "踢出一人", "topdown",
                  [unit(40, 50), unit(65, 48, sel=True), ring(65, 48), cursor(40, 50, "up"), badge("Ctrl+点")], title="减选"),
+            beat("按住 Ctrl 再点：已选去掉、未选加入", "选中状态按点选翻转", "反着选", "topdown",
+                 [unit(30, 50), unit(50, 52, sel=True), ring(50, 52), unit(70, 48, sel=True), ring(70, 48),
+                  cursor(50, 52, "up"), keyhint(42, 28, "Ctrl", "active", "反选"), badge("反选")], title="反选"),
         ], ["RTS", "SC2/War3"],
     ))
     c.append(case(
@@ -360,8 +367,9 @@ def build_cases():
         "双击一个单位，同屏（或全局规则下）同类型一并选中。",
         [
             beat("双击士兵", "所有同造型士兵出现选中圈", "一键同型", "topdown",
-                 [unit(30, 50, sel=True), unit(45, 55, sel=True), unit(60, 48, sel=True), unit(70, 70),
-                  ring(30, 50), ring(45, 55), ring(60, 48), cursor(45, 55, "up"), badge("双击")], title="双击"),
+                 [unit(30, 50, sel=True), unit(45, 55, sel=True), unit(60, 48, sel=True),
+                  unit(70, 70, size=1.35, face=180),
+                  ring(30, 50), ring(45, 55), ring(60, 48), cursor(45, 55, "up"), badge("双击·异类除外")], title="双击"),
         ], ["RTS", "SC2/War3"],
     ))
     c.append(case(
@@ -369,9 +377,12 @@ def build_cases():
         "Ctrl+数字记住当前选中；之后按数字召回。",
         [
             beat("选中一队后按 Ctrl+1", "界面出现编队 1 的肖像/计数", "记住了", "topdown",
-                 [unit(40, 50, sel=True), unit(55, 52, sel=True), ring(40, 50), ring(55, 52), badge("Ctrl+1")], title="记住"),
+                 [unit(40, 50, sel=True), unit(55, 52, sel=True), ring(40, 50), ring(55, 52),
+                  keyhint(78, 28, "1", "active", "编队×2"), hotbar(active=0, slots=5),
+                  badge("Ctrl+1")], title="记住"),
             beat("稍后按 1", "镜头可跳转；那队重新被选中", "召回编队", "topdown",
-                 [unit(40, 50, sel=True), unit(55, 52, sel=True), ring(40, 50), ring(55, 52), badge("按 1")], title="召回"),
+                 [unit(40, 50, sel=True), unit(55, 52, sel=True), ring(40, 50), ring(55, 52),
+                  keyhint(78, 28, "1", "active", "召回"), badge("按 1")], title="召回"),
         ], ["SC2/War3", "RTS"],
     ))
     c.append(case(
@@ -384,18 +395,26 @@ def build_cases():
     ))
     c.append(case(
         "select-possess", "select", "切换操控对象",
-        "附身、上车、切英雄、观战跟随时，手感跟到新主体。",
+        "附身、上车、切英雄、观战跟随时，操控跟到新主体。",
         [
-            beat("对载具按下交互", "镜头切到载具视角/操控", "你变成车", "tps",
-                 [hero(40, 60), building(65, 55), badge("上车")], title="切换前"),
-            beat("完成切换", "准星/摇杆控制载具", "手感已换皮", "tps",
-                 [building(50, 55), badge("载具中")], title="切换后"),
+            beat("靠近载具，按交互键", "载具高亮，出现上车提示", "能上车", "tps",
+                 [hero(40, 60), unit(65, 55, size=1.5), keyhint(65, 38, "F", "active", "上车"),
+                  badge("可交互")], title="靠近"),
+            beat("按下确认上车", "镜头切到载具视角/操控", "你变成车", "tps",
+                 [unit(55, 55, size=1.5, sel=True), ring(55, 55), keyhint(55, 38, "F", "active", "上车"),
+                  badge("切入")], title="切换"),
+            beat("完成切换", "准星/摇杆控制载具", "载具手感", "tps",
+                 [unit(50, 55, size=1.5), crosshair(62, 40), stick("L", 0, -0.7), stick("R", 0.5, -0.2),
+                  badge("载具中")], title="操控中"),
         ], ["TPS", "RTS", "MOBA"],
     ))
     c.append(case(
         "select-clear", "select", "取消全部选中",
         "点空地或按专用键，选中圈全部消失。",
         [
+            beat("已多选部队", "两单位带选中圈", "听令中", "topdown",
+                 [unit(40, 50, sel=True), unit(55, 52, sel=True), ring(40, 50), ring(55, 52),
+                  badge("已多选")], title="已选"),
             beat("点空地", "所有选中圈消失", "没人听令", "topdown",
                  [unit(40, 50), unit(55, 52), cursor(70, 70, "up"), badge("点空地")], title="清空"),
         ], ["RTS"],
@@ -428,10 +447,14 @@ def build_cases():
         "order-stop-hold", "basic-order", "停止 / 原地坚守",
         "立刻打断当前行动；或站桩反击不追击。",
         [
+            beat("单位正沿路点移动", "地上有移动线，单位行进中", "在走", "topdown",
+                 [unit(40, 50, sel=True, face=20), ring(40, 50), path([(40, 50), (70, 40)], "move"),
+                  arrow(40, 50, 70, 40, "move"), badge("行进中")], title="行进"),
             beat("按停止", "单位停下，移动线消失", "站住", "topdown",
                  [unit(50, 50, sel=True), ring(50, 50), badge("Stop")], title="停止"),
             beat("按坚守", "单位站桩，有敌人靠近才打", "不追", "topdown",
-                 [unit(50, 50, sel=True), ring(50, 50), badge("Hold")], title="坚守"),
+                 [unit(50, 50, sel=True), ring(50, 50), circle_ind(50, 50, 26, True),
+                  unit(78, 42, team="enemy"), badge("Hold")], title="坚守"),
         ], ["RTS"],
     ))
     c.append(case(
@@ -474,10 +497,10 @@ def build_cases():
         "选中单位进运输工具，再到别处倒出。",
         [
             beat("右键己方运输单位", "士兵走进载具，肖像进舱单", "上车", "topdown",
-                 [unit(35, 55, sel=True), ring(35, 55), building(60, 50), arrow(35, 55, 60, 50, "move"),
-                  badge("装载")], title="装"),
+                 [unit(35, 55, sel=True), ring(35, 55), unit(60, 50, size=1.5),
+                  arrow(35, 55, 60, 50, "move"), badge("装载")], title="装"),
             beat("在别处下令卸载", "士兵在载具旁出现", "下车", "topdown",
-                 [building(40, 50), unit(55, 48), unit(58, 58), badge("卸载")], title="卸"),
+                 [unit(40, 50, size=1.5), unit(55, 48), unit(58, 58), badge("卸载")], title="卸"),
         ], ["SC2/War3", "RTS"],
     ))
 
@@ -487,7 +510,7 @@ def build_cases():
         "鼠标或右摇杆转动视野，准星落在世界某处。",
         [
             beat("移动鼠标/右摇杆", "画面旋转或准星移动", "我在看那儿", "fps",
-                 [crosshair(55, 45), badge("瞄准")], title="转视角"),
+                 [crosshair(55, 45), stick("R", 0.55, -0.25), badge("瞄准")], title="转视角"),
         ], ["FPS", "TPS"],
     ))
     c.append(case(
@@ -495,8 +518,8 @@ def build_cases():
         "系统把攻击倾向吸向近处敌人，仍可挣脱。",
         [
             beat("靠近敌人进入锁定辅助", "目标描边；攻击朝向他", "咬住了", "tps",
-                 [hero(40, 60, face=25), unit(65, 45, team="enemy"), ring(65, 45, kind="lock"),
-                  badge("软锁")], title="软锁"),
+                 [hero(40, 60, face=-31), unit(65, 45, team="enemy"), ring(65, 45, kind="lock"),
+                  arrow(45, 56, 60, 48, "attack"), badge("软锁")], title="软锁"),
         ], ["动作RPG", "蝙蝠侠/蜘蛛侠"],
     ))
     c.append(case(
@@ -506,7 +529,9 @@ def build_cases():
             beat("按下锁定", "镜头与准星钉死目标", "死死咬住", "tps",
                  [hero(40, 60), unit(70, 40, team="enemy"), crosshair(70, 40, locked=True), badge("硬锁")], title="锁定"),
             beat("按切换", "锁跳到下一个敌人", "换人咬", "tps",
-                 [hero(40, 60), unit(55, 35, team="enemy"), crosshair(55, 35, locked=True), badge("切换")], title="切换"),
+                 [hero(40, 60), unit(70, 40, team="enemy"), crosshair(70, 40, locked=False),
+                  unit(55, 35, team="enemy"), crosshair(55, 35, locked=True),
+                  arrow(70, 40, 55, 35, "move"), badge("切换")], title="切换"),
         ], ["动作RPG", "TPS"],
     ))
     c.append(case(
@@ -514,9 +539,11 @@ def build_cases():
         "按技能后地上出现范围/方向预览，确认前可移动预览。",
         [
             beat("按下技能键", "进入瞄准；出现圈/扇形指示器", "先瞄再放", "moba",
-                 [hero(40, 60), circle_ind(65, 40, 18, True), cursor(65, 40), badge("技能瞄准")], title="出指示器"),
+                 [hero(40, 60), circle_ind(65, 40, 16, True), cone(40, 60, angle=-35, spread=46, length=32),
+                  cursor(65, 40), hotbar(active=0), badge("技能瞄准")], title="出指示器"),
             beat("移动鼠标", "指示器跟随；非法区变红", "找落点", "moba",
-                 [hero(40, 60), circle_ind(75, 55, 18, False), cursor(75, 55), badge("调整")], title="调整"),
+                 [hero(40, 60), circle_ind(75, 55, 16, False), cone(40, 60, angle=10, spread=46, length=34),
+                  cursor(75, 55), badge("调整")], title="调整"),
         ], ["MOBA", "ARPG"],
     ))
     c.append(case(
@@ -524,7 +551,7 @@ def build_cases():
         "右键或取消键退出瞄准，不放出技能。",
         [
             beat("按技能进入瞄准", "指示器亮起，跟着准星走", "正在瞄", "moba",
-                 [hero(45, 55), circle_ind(62, 45, 14, True), cursor(62, 45),
+                 [hero(45, 55), circle_ind(62, 45, 14, True), crosshair(62, 45),
                   hotbar(active=0), badge("瞄准中")], title="瞄准中"),
             beat("按右键 / Esc 取消", "指示器消失，技能不消耗、不进 CD", "当没按过", "moba",
                  [hero(45, 55), cursor(60, 50), hotbar(), badge("已取消")], title="取消"),
@@ -545,7 +572,9 @@ def build_cases():
         "连续输入打出轻攻击链。",
         [
             beat("连点攻击", "招式一段接一段", "连起来了", "tps",
-                 [hero(45, 55, face=15), unit(68, 48, team="enemy"), badge("连击中")], title="连段"),
+                 [hero(45, 55, face=15), unit(68, 48, team="enemy"),
+                  arrow(48, 54, 56, 51, "attack"), arrow(50, 52, 62, 49, "attack"),
+                  arrow(52, 51, 66, 48, "attack"), badge("连击×3")], title="连段"),
         ], ["蝙蝠侠/蜘蛛侠", "动作RPG"],
     ))
     c.append(case(
@@ -553,9 +582,11 @@ def build_cases():
         "点一下一发；按住连续开火。",
         [
             beat("点射击键", "射出一发，准星微扬", "点射", "fps",
-                 [crosshair(50, 48), badge("点射")], title="点射"),
+                 [crosshair(50, 48), arrow(50, 50, 62, 42, "attack"), badge("点射")], title="点射"),
             beat("按住射击键", "连续出弹，准星扩散", "压枪扫", "fps",
-                 [crosshair(52, 46), badge("扫射")], title="扫射"),
+                 [crosshair(54, 44), ring(54, 44, r=16, kind="lock"),
+                  arrow(50, 50, 72, 38, "attack"), arrow(50, 50, 78, 50, "attack"),
+                  arrow(50, 50, 68, 58, "attack"), badge("扫射")], title="扫射"),
         ], ["FPS", "TPS"],
     ))
     c.append(case(
@@ -563,11 +594,13 @@ def build_cases():
         "肩键开镜稳定准星；换弹读条；切枪换手感。",
         [
             beat("按开镜", "视野拉近，准星变精准", "瞄稳", "fps",
-                 [crosshair(50, 50, locked=True), badge("开镜")], title="开镜"),
+                 [box(32, 32, 36, 36), crosshair(50, 50, locked=False), badge("ADS开镜")], title="开镜"),
             beat("按换弹", "弹药数刷新，短暂不能射", "换弹中", "fps",
-                 [crosshair(50, 50), badge("换弹")], title="换弹"),
+                 [crosshair(50, 50), bar(50, 68, 0.4, "cast", "换弹"),
+                  badge("0/30 · 禁射")], title="换弹"),
             beat("按切枪", "武器模型与弹种切换", "换一把", "fps",
-                 [crosshair(50, 50), badge("切枪")], title="切枪"),
+                 [crosshair(50, 50), hotbar(active=1), keyhint(78, 78, "2", "active", "切枪"),
+                  badge("步枪→霰弹")], title="切枪"),
         ], ["FPS", "TPS"],
     ))
     c.append(case(
@@ -577,7 +610,9 @@ def build_cases():
             beat("按住手雷键瞄准", "地面落点圈 + 抛物预览", "看落点", "tps",
                  [hero(35, 60), circle_ind(70, 40, 12, True), path([(38, 55), (55, 30), (70, 40)], "arc"), badge("手雷")], title="预览"),
             beat("松开/再按确认", "手雷飞出，落点爆炸", "炸那儿", "tps",
-                 [hero(35, 60), circle_ind(70, 40, 14, True), badge("投出")], title="投出"),
+                 [hero(35, 60), path([(38, 55), (55, 30), (70, 40)], "arc"),
+                  circle_ind(70, 40, 20, True), ring(70, 40, r=16, kind="lock"),
+                  badge("投出")], title="投出"),
         ], ["FPS", "TPS"],
     ))
     c.append(case(
@@ -596,7 +631,7 @@ def build_cases():
         "左摇杆走路，右摇杆独自决定射击朝向，可边退边打。",
         [
             beat("左摇杆向前，右摇杆向右", "角色往上走，枪口朝右，子弹向右", "螃蟹步开火", "topdown",
-                 [hero(45, 55, face=90), stick("L", 0, -0.8), stick("R", 0.9, 0),
+                 [hero(45, 55, face=0), stick("L", 0, -0.8), stick("R", 0.9, 0),
                   arrow(50, 55, 78, 55, "attack"), unit(80, 52, team="enemy"), badge("双摇杆")], title="分离"),
         ], ["双摇杆射击"],
     ))
@@ -618,7 +653,7 @@ def build_cases():
             beat("只推左摇杆（跟移动朝向）", "面朝行走方向", "看向去处", "topdown",
                  [hero(50, 55, face=-90), stick("L", 0, -1), stick("R", 0, 0), badge("面朝移动")], title="跟走"),
             beat("只推左摇杆（吸最近敌）", "边走边转向附近敌人", "自动咬敌", "topdown",
-                 [hero(45, 55, face=40), unit(70, 40, team="enemy"), stick("L", 0.5, -0.5), stick("R", 0, 0),
+                 [hero(45, 55, face=-31), unit(70, 40, team="enemy"), stick("L", 0.5, -0.5), stick("R", 0, 0),
                   badge("自动朝敌")], title="吸敌"),
         ], ["双摇杆射击"],
     ))
@@ -639,7 +674,7 @@ def build_cases():
                  [hero(40, 55, face=25), unit(70, 40, team="enemy"),
                   stick("R", 0.6, -0.4), badge("粗瞄")], title="粗瞄"),
             beat("进入磁吸角度", "准星/朝向被吸到敌人身上，出现锁定圈", "帮你咬准", "topdown",
-                 [hero(40, 55, face=35), unit(70, 40, team="enemy"), ring(70, 40, kind="lock"),
+                 [hero(40, 55, face=-27), unit(70, 40, team="enemy"), ring(70, 40, kind="lock"),
                   stick("R", 0.6, -0.4), badge("磁吸咬住")], title="吸附"),
             beat("摇杆回中", "锁定圈消失，回到自由朝向", "松口", "topdown",
                  [hero(40, 55, face=35), unit(70, 40, team="enemy"),
@@ -651,7 +686,7 @@ def build_cases():
         "同一套移瞄分离，只是输入皮肤不同。",
         [
             beat("WASD 走，鼠标定朝向", "顶视角角色移瞄分离，鼠标方向开火", "键鼠双摇杆", "topdown",
-                 [hero(45, 55, face=50), cursor(75, 40), arrow(50, 52, 72, 42, "attack"),
+                 [hero(45, 55, face=-27), cursor(75, 40), arrow(50, 52, 72, 42, "attack"),
                   badge("WASD+鼠标")], title="键鼠"),
         ], ["双摇杆射击", "ARPG"],
     ))
@@ -678,7 +713,8 @@ def build_cases():
         "瞬移一小段，方向跟面向或移动键。",
         [
             beat("按闪现", "残影到新位置", "闪过去", "topdown",
-                 [hero(40, 55), arrow(40, 55, 65, 45, "move"), hero(65, 45), badge("闪现")], title="闪"),
+                 [hero(40, 55, face=0), arrow(40, 55, 65, 55, "move"), hero(65, 55, face=0),
+                  badge("闪现")], title="闪"),
         ], ["MOBA", "ARPG"],
     ))
     c.append(case(
@@ -719,7 +755,8 @@ def build_cases():
         "治疗只能点友军；不合规目标禁止态。",
         [
             beat("技能瞄准移到敌人上", "准星禁止，点不出去", "对象不对", "moba",
-                 [hero(35, 60), unit(65, 40, team="enemy"), cursor(65, 40), badge("禁止")], title="非法"),
+                 [hero(35, 60), unit(65, 40, team="enemy"), circle_ind(65, 40, 12, False),
+                  crosshair(65, 40, locked=True), hotbar(deny=0), badge("禁止")], title="非法"),
             beat("移到友军上再确认", "治疗特效打出", "对了", "moba",
                  [hero(35, 60), unit(65, 45, team="ally", sel=True), arrow(40, 55, 62, 46, "move"), badge("友军")], title="合法"),
         ], ["MOBA", "RTS"],
@@ -742,8 +779,12 @@ def build_cases():
         "skill-ground-click", "ground-skill", "技能后点地板",
         "落雷/圈地：点一下地面放出。",
         [
-            beat("按技能后点地", "落点圈亮起并结算", "砸这儿", "moba",
-                 [hero(30, 60), circle_ind(65, 40, 16, True), cursor(65, 40, "up"), badge("点地")], title="落点"),
+            beat("按下技能键", "进入瞄准，落点圈跟着光标", "先瞄", "moba",
+                 [hero(30, 60), circle_ind(55, 45, 16, True), cursor(55, 45),
+                  hotbar(active=0), badge("瞄准")], title="进瞄准"),
+            beat("再点地面确认", "落点圈亮起并结算", "砸这儿", "moba",
+                 [hero(30, 60), circle_ind(65, 40, 16, True), cursor(65, 40, "up"),
+                  hotbar(cd=0), badge("点地")], title="确认"),
         ], ["MOBA", "ARPG", "RTS"],
     ))
     c.append(case(
@@ -761,9 +802,11 @@ def build_cases():
         "拖着建筑影在网格上找合法格，确认放下。",
         [
             beat("选建筑后移动影", "合法格绿色，非法红色", "找地儿", "topdown",
-                 [building(55, 45, ghost=True), cursor(55, 45), badge("建造预览")], title="预览"),
+                 [building(48, 42, ghost=True), circle_ind(48, 42, 16, True),
+                  building(72, 58, ghost=True), circle_ind(72, 58, 16, False),
+                  cursor(48, 42), badge("建造预览")], title="预览"),
             beat("确认放置", "建筑开工/落地", "定了", "topdown",
-                 [building(55, 45, ghost=False), badge("建造")], title="放下"),
+                 [building(48, 42, ghost=False), badge("建造")], title="放下"),
         ], ["C&C", "RTS"],
     ))
     c.append(case(
@@ -771,7 +814,9 @@ def build_cases():
         "大招/支援可在小地图点一下当世界落点。",
         [
             beat("技能瞄准时点小地图", "大地图对应位置落下技能", "远程点射地图", "moba",
-                 [hero(25, 70), circle_ind(70, 30, 14, True), badge("小地图施法")], title="小地图"),
+                 [hero(25, 70), circle_ind(70, 30, 14, True),
+                  box(74, 72, 22, 22), circle_ind(85, 83, 5, True), cursor(85, 83, "up"),
+                  badge("小地图施法")], title="小地图"),
         ], ["MOBA", "RTS"],
     ))
 
@@ -791,15 +836,24 @@ def build_cases():
         "预览随鼠标转，确认后扇形结算。",
         [
             beat("拖动改变扇形朝向", "地面扇形跟着转", "扫哪片", "topdown",
-                 [hero(40, 55), cone(40, 55, angle=20, spread=55, length=32), badge("扇形")], title="扇形"),
+                 [hero(40, 55), cone(40, 55, angle=20, spread=55, length=32), cursor(70, 40),
+                  badge("扇形")], title="预览"),
+            beat("确认放出", "扇形内结算命中", "扫到了", "topdown",
+                 [hero(40, 55), cone(40, 55, angle=20, spread=55, length=32),
+                  unit(62, 42, team="enemy"), unit(68, 55, team="enemy"),
+                  arrow(48, 52, 62, 44, "attack"), badge("结算")], title="确认"),
         ], ["MOBA", "ARPG", "TPS"],
     ))
     c.append(case(
         "skill-dash-dir", "direction-skill", "指定方向冲刺",
         "朝选定方向突进一段距离。",
         [
-            beat("选定方向确认", "角色沿箭头冲出", "冲！", "topdown",
-                 [hero(35, 55), arrow(35, 55, 70, 40, "move"), path([(35, 55), (70, 40)], "move"), badge("冲刺")], title="冲刺"),
+            beat("选定冲刺方向", "方向箭头/锥预览", "瞄方向", "topdown",
+                 [hero(35, 55), cone(35, 55, angle=-25, spread=16, length=30),
+                  cursor(70, 40), badge("方向")], title="瞄准"),
+            beat("确认冲刺", "角色沿箭头冲出", "冲！", "topdown",
+                 [hero(65, 42), arrow(35, 55, 70, 40, "move"), path([(35, 55), (70, 40)], "move"),
+                  badge("冲刺")], title="冲出"),
         ], ["MOBA", "ARPG", "动作RPG"],
     ))
     c.append(case(
@@ -816,8 +870,15 @@ def build_cases():
         "skill-vector", "direction-skill", "拉一条矢量再放",
         "拖出起点到终点的矢量技能。",
         [
-            beat("按下定起点，拖到终点松开", "地面出现矢量箭头", "从这到那", "moba",
-                 [hero(30, 60), arrow(40, 50, 75, 35, "move"), cursor(75, 35, "up"), badge("矢量")], title="矢量"),
+            beat("按下定起点", "起点钉在地上", "从这儿", "moba",
+                 [hero(30, 60), circle_ind(40, 50, 8, True), cursor(40, 50, "down"),
+                  badge("起点")], title="按下"),
+            beat("拖到终点", "矢量箭头跟着拉长", "拉到那", "moba",
+                 [hero(30, 60), arrow(40, 50, 70, 38, "move"), cursor(70, 38, "drag"),
+                  badge("拖拽")], title="拖拽"),
+            beat("松开确认", "沿矢量放出技能", "放！", "moba",
+                 [hero(30, 60), arrow(40, 50, 75, 35, "attack"), cursor(75, 35, "up"),
+                  badge("确认")], title="松开"),
         ], ["MOBA"],
     ))
 
@@ -845,7 +906,8 @@ def build_cases():
         "按住格挡；或读条引导（可慢走/不能动）。",
         [
             beat("按住格挡", "举盾姿态，减伤/弹反窗准备", "防住", "tps",
-                 [hero(50, 55), badge("举盾")], title="盾"),
+                 [hero(50, 55), box(56, 46, 10, 16), ring(50, 55, r=14, kind="buff"),
+                  bar(50, 34, 0.65, "charge", "弹反窗"), badge("举盾")], title="盾"),
             beat("引导读条", "读条 UI，可规定能否移动", "读着", "moba",
                  [hero(50, 55), circle_ind(50, 55, 20, True), badge("引导")], title="引导"),
         ], ["动作RPG", "MOBA"],
@@ -856,9 +918,17 @@ def build_cases():
         "combo-light-chain", "combo", "轻攻击连段",
         "连点走出 1-2-3 段。",
         [
-            beat("第一下", "第一段动画", "1", "tps", [hero(45, 55, face=10), badge("一段")], title="1"),
-            beat("衔接窗内再按", "第二段", "2", "tps", [hero(48, 52, face=20), badge("二段")], title="2"),
-            beat("再按", "第三段收招", "3", "tps", [hero(52, 50, face=30), badge("三段")], title="3"),
+            beat("第一下", "第一段动画", "1", "tps",
+                 [hero(45, 55, face=-25), unit(68, 45, team="enemy"),
+                  cone(45, 55, angle=-25, spread=32, length=20), badge("一段")], title="1"),
+            beat("衔接窗内再按", "第二段", "2", "tps",
+                 [hero(48, 52, face=-20), unit(68, 45, team="enemy"),
+                  arrow(52, 50, 64, 46, "attack"), cone(48, 52, angle=-15, spread=40, length=24),
+                  badge("二段")], title="2"),
+            beat("再按", "第三段收招", "3", "tps",
+                 [hero(52, 50, face=-10), unit(68, 45, team="enemy"),
+                  cone(52, 50, angle=-10, spread=55, length=30), path([(45, 55), (52, 50)], "move"),
+                  badge("三段")], title="3"),
         ], ["蝙蝠侠/蜘蛛侠", "动作RPG"],
     ))
     c.append(case(
@@ -866,7 +936,9 @@ def build_cases():
         "在链中插入重击走出另一条分支。",
         [
             beat("轻→重", "派生重击动画", "分支了", "tps",
-                 [hero(48, 52, face=25), unit(70, 45, team="enemy"), badge("轻→重")], title="分支"),
+                 [hero(48, 52, face=25), unit(70, 45, team="enemy"),
+                  cone(48, 52, angle=-15, spread=55, length=30),
+                  arrow(52, 50, 66, 46, "attack"), badge("轻→重")], title="分支"),
         ], ["动作RPG"],
     ))
     c.append(case(
@@ -874,7 +946,8 @@ def build_cases():
         "第一次放前半段，再按放后半段。",
         [
             beat("第一次按大招", "前半段演出/位移", "上半段", "moba",
-                 [hero(40, 55), badge("一段大招")], title="一段"),
+                 [hero(40, 55, face=-20), path([(40, 55), (55, 45)], "move"),
+                  arrow(40, 55, 55, 45, "move"), hotbar(active=3), badge("一段大招")], title="一段"),
             beat("提示窗内再按", "后半段爆发", "下半段", "moba",
                  [hero(55, 45), circle_ind(55, 45, 18, True), badge("二段")], title="二段"),
         ], ["MOBA"],
@@ -906,7 +979,10 @@ def build_cases():
         "在敌招判定前极短窗闪避，触发额外反馈。",
         [
             beat("红光提示时闪避", "慢镜/反击提示", "完美！", "tps",
-                 [hero(45, 55), unit(70, 45, team="enemy"), badge("完美闪避")], title="完美"),
+                 [hero(40, 55), path([(40, 55), (55, 48)], "move"),
+                  unit(70, 45, team="enemy"), ring(70, 45, kind="lock"),
+                  arrow(58, 50, 66, 46, "attack"), ring(55, 48, r=10, kind="buff"),
+                  badge("完美闪避")], title="完美"),
         ], ["蝙蝠侠", "动作RPG"],
     ))
     c.append(case(
@@ -914,7 +990,9 @@ def build_cases():
         "敌招到来时按格挡；成功后可处刑/反击。",
         [
             beat("提示出现时按格挡", "弹反火花", "弹开！", "tps",
-                 [hero(45, 55), unit(65, 48, team="enemy"), badge("弹反")], title="弹反"),
+                 [hero(45, 55, face=15), unit(65, 48, team="enemy"),
+                  ring(55, 51, r=7, kind="lock"), arrow(50, 53, 60, 50, "attack"),
+                  badge("弹反")], title="弹反"),
             beat("出现处刑提示再按", "处刑演出", "收掉", "tps",
                  [hero(50, 50), unit(60, 48, team="enemy"), badge("处刑")], title="处刑"),
         ], ["蝙蝠侠", "动作RPG"],
@@ -926,9 +1004,14 @@ def build_cases():
         "交互拾取，再瞄准扔出。",
         [
             beat("对可抓物按交互", "举在手上", "抓到了", "tps",
-                 [hero(40, 55), badge("拾取")], title="抓"),
-            beat("瞄准后扔出", "物体飞出砸中", "砸！", "tps",
-                 [hero(40, 55), arrow(45, 50, 75, 40, "attack"), badge("投掷")], title="扔"),
+                 [hero(40, 55), card(48, 42, "箱", 0), keyhint(56, 38, "F", "active", "拾取"),
+                  badge("举起")], title="抓"),
+            beat("瞄准落点", "抛物预览与落点圈出现", "找砸点", "tps",
+                 [hero(40, 55), card(46, 48, "箱", 0), path([(46, 48), (58, 35), (75, 42)], "move"),
+                  circle_ind(75, 42, 12, True), cursor(75, 42), badge("预览")], title="瞄准"),
+            beat("松手扔出", "物体飞出砸中目标", "砸！", "tps",
+                 [hero(40, 55), unit(78, 42, team="enemy"), path([(48, 50), (62, 36), (75, 42)], "attack"),
+                  ring(75, 42, r=10, kind="lock"), arrow(60, 40, 74, 42, "attack"), badge("命中")], title="扔出"),
         ], ["蝙蝠侠/蜘蛛侠", "动作RPG"],
     ))
     c.append(case(
@@ -962,9 +1045,12 @@ def build_cases():
         "army-merge", "army", "两单位合体",
         "选中符合条件的单位下令合体。",
         [
-            beat("对两名高阶单位下令合体", "融合成新单位", "合体！", "topdown",
-                 [unit(40, 50, sel=True), unit(55, 50, sel=True), arrow(48, 50, 70, 45, "move"),
-                  unit(70, 45, size=1.4), badge("合体")], title="合体"),
+            beat("对两名高阶单位下令合体", "两单位相向，准备融合", "合体！", "topdown",
+                 [unit(40, 50, sel=True), unit(55, 50, sel=True), ring(40, 50), ring(55, 50),
+                  arrow(42, 50, 52, 50, "move"), arrow(53, 50, 43, 50, "move"),
+                  badge("下令合体")], title="下令"),
+            beat("融合完成", "只剩体型更大的合体单位", "成了", "topdown",
+                 [unit(48, 50, size=1.4, sel=True), ring(48, 50), badge("合体完成")], title="合体"),
         ], ["SC2"],
     ))
     c.append(case(
@@ -972,10 +1058,11 @@ def build_cases():
         "交互上车后，摇杆/射击变成载具武器。",
         [
             beat("走近载具按交互", "出现上车提示", "能上车", "tps",
-                 [hero(35, 58), building(55, 52), keyhint(48, 40, "F", "active", "上车"),
+                 [hero(35, 58), unit(55, 52, size=1.5), keyhint(48, 40, "F", "active", "上车"),
                   badge("靠近载具")], title="靠近"),
             beat("上车完成", "准星变车炮，移动手感变车辆，技能栏换载具武器", "开炮车", "tps",
-                 [building(50, 55), crosshair(62, 40), hotbar(extra=0), badge("载具操作")], title="载具"),
+                 [unit(50, 55, size=1.5), crosshair(62, 40), stick("L", 0, -0.6), stick("R", 0.4, -0.2),
+                  hotbar(extra=0), badge("载具操作")], title="载具"),
         ], ["TPS", "FPS"],
     ))
 
@@ -985,9 +1072,14 @@ def build_cases():
         "同一技能：按下即打，或先出指示器再确认。",
         [
             beat("智能施法开启时按键", "立刻对向准星处出手", "快", "moba",
-                 [hero(35, 60), circle_ind(70, 40, 14, True), badge("智能")], title="智能"),
+                 [hero(35, 60), unit(70, 40, team="enemy"), crosshair(70, 40),
+                  arrow(40, 55, 68, 42, "attack"), hotbar(active=0), badge("智能")], title="智能"),
             beat("普通模式按键", "先出指示器等确认", "稳", "moba",
-                 [hero(35, 60), circle_ind(60, 45, 14, True), cursor(60, 45), badge("普通")], title="普通"),
+                 [hero(35, 60), circle_ind(60, 45, 14, True), cursor(60, 45),
+                  hotbar(active=0), badge("普通")], title="普通"),
+            beat("再点击确认出手", "指示器落地，技能放出", "确认打出", "moba",
+                 [hero(35, 60), circle_ind(60, 45, 14, True), cursor(60, 45, "up"),
+                  arrow(40, 55, 58, 46, "attack"), badge("确认出手")], title="确认"),
         ], ["MOBA"],
     ))
     c.append(case(
@@ -1019,7 +1111,9 @@ def build_cases():
         "双击触发与单击不同的变体（如闪回自己方向）。",
         [
             beat("双击技能键", "走出双击变体", "双击版", "moba",
-                 [hero(50, 55), badge("双击")], title="双击"),
+                 [hero(50, 55), path([(50, 55), (35, 45)], "move"), arrow(50, 55, 35, 45, "move"),
+                  hotbar(active=0), keyhint(50, 30, "Q", "active", "双击"),
+                  badge("双击")], title="双击"),
         ], ["MOBA"],
     ))
 
@@ -1050,7 +1144,8 @@ def build_cases():
             beat("多选后点技能目标一次", "第一个出手，其余排队等待图标", "等他放完", "topdown",
                  [unit(20, 55, sel=True), unit(32, 58, sel=True), unit(44, 62, sel=True),
                   ring(20, 55), unit(75, 40, team="enemy"),
-                  arrow(22, 54, 70, 42, "attack"), badge("1号在放"), path([(32, 58), (40, 50)], "move")],
+                  arrow(22, 54, 70, 42, "attack"), badge("1号在放"),
+                  keyhint(32, 45, "2", "idle", "等待"), keyhint(44, 49, "3", "idle", "等待")],
                  title="第一个出手"),
             beat("第一人完成", "第二人自动接着放同一技能/目标", "接下一个", "topdown",
                  [unit(20, 55, sel=True), unit(32, 58, sel=True), unit(44, 62, sel=True),
@@ -1094,7 +1189,8 @@ def build_cases():
                   unit(68, 30, team="enemy"), ring(68, 30, kind="lock"),
                   unit(78, 48, team="enemy"), ring(78, 48, kind="lock"),
                   unit(70, 68, team="enemy"), ring(70, 68, kind="lock"),
-                  badge("齐发")], title="齐发"),
+                  arrow(22, 58, 66, 34, "attack"), arrow(34, 54, 76, 48, "attack"),
+                  arrow(46, 60, 68, 66, "attack"), badge("齐发")], title="齐发"),
         ], ["SC2", "RA2", "RTS"],
     ))
 
@@ -1106,10 +1202,12 @@ def build_cases():
         [
             beat("选 SCV，右键矿物", "工人去采矿，不攻击", "去挖矿", "topdown",
                  [unit(30, 55, sel=True), ring(30, 55), building(70, 42),
-                  arrow(32, 54, 66, 44, "move"), cursor(70, 42, "up"), badge("工人×矿")], title="工人点矿"),
+                  ring(70, 42, r=11, kind="buff"), arrow(32, 54, 66, 44, "move"),
+                  cursor(70, 42, "up"), badge("工人×矿·采")], title="工人点矿"),
             beat("选陆战队员，右键同一矿物", "当普通地面走过去（或无效采集）", "不会去挖", "topdown",
                  [unit(30, 55, sel=True, face=20), ring(30, 55), building(70, 42),
-                  arrow(32, 54, 66, 44, "move"), badge("士兵×矿")], title="士兵点矿"),
+                  circle_ind(58, 58, 7, True), arrow(32, 54, 58, 58, "move"),
+                  cursor(58, 58, "up"), badge("士兵×矿·走")], title="士兵点矿"),
             beat("选战斗单位，右键敌人", "攻击该敌人", "去干他", "topdown",
                  [unit(30, 58, sel=True, face=25), ring(30, 58), unit(72, 40, team="enemy"),
                   arrow(34, 56, 68, 42, "attack"), cursor(72, 40, "up"), badge("兵×敌人")], title="兵点敌人"),
@@ -1135,7 +1233,8 @@ def build_cases():
                   arrow(34, 56, 66, 44, "attack"), badge("坦克×敌建筑")], title="炮击"),
             beat("选消融步兵，右键敌单位", "擦除目标，不是普通射击", "抹掉", "topdown",
                  [unit(30, 58, sel=True), ring(30, 58), unit(72, 42, team="enemy"),
-                  arrow(34, 56, 68, 44, "attack"), badge("消融×单位")], title="消融"),
+                  ring(72, 42, r=14, kind="lock"), circle_ind(72, 42, 18, False),
+                  path([(34, 56), (68, 44)], "arc"), badge("消融中")], title="消融"),
         ], ["RA2", "RTS"],
     ))
     c.append(case(
@@ -1149,9 +1248,14 @@ def build_cases():
                  [unit(25, 55, sel=True), unit(35, 62, sel=True), ring(25, 55), ring(35, 62),
                   unit(72, 40, team="enemy"), cursor(72, 40, "up"),
                   arrow(28, 54, 68, 42, "attack"), badge("右键对象")], title="点对象"),
-            beat("选工人，右键地面 vs 右键矿", "地面=走；矿=采集指令图标不同", "点啥干啥", "topdown",
+            beat("选工人，右键空地", "出现移动旗，工人走开", "去那儿", "topdown",
                  [unit(30, 58, sel=True), ring(30, 58), building(68, 38),
-                  cursor(50, 70, "up"), badge("地面走 / 矿采集")], title="工人对照"),
+                  arrow(32, 56, 50, 70, "move"), circle_ind(50, 70, 8, True),
+                  cursor(50, 70, "up"), badge("右键地面=走")], title="工人点地"),
+            beat("选工人，右键矿", "下达采集，工人奔向矿点", "去挖", "topdown",
+                 [unit(30, 58, sel=True), ring(30, 58), building(68, 38),
+                  arrow(34, 56, 64, 40, "move"), ring(68, 38, r=10, kind="buff"),
+                  cursor(68, 38, "up"), badge("右键矿=采")], title="工人点矿"),
         ], ["SC2", "RA2", "RTS"],
     ))
     c.append(case(
@@ -1160,8 +1264,10 @@ def build_cases():
         "SC2 混编智能指令是典型；RA2 混选工程师与坦克点建筑时也应各走各的语义。",
         [
             beat("混选工人+士兵，右键矿物", "工人去采；士兵不采，通常走开或停", "人各有活", "topdown",
-                 [unit(24, 58, sel=True), unit(36, 52, sel=True, face=20), ring(24, 58), ring(36, 52),
-                  building(72, 40), arrow(26, 56, 68, 42, "move"), badge("混选×矿")], title="混选点矿"),
+                 [unit(24, 58, sel=True, size=0.85), unit(36, 52, sel=True, face=-20, size=1.2),
+                  ring(24, 58), ring(36, 52), building(72, 40),
+                  arrow(26, 56, 68, 42, "move"), arrow(36, 52, 36, 38, "move"),
+                  badge("工人采·士兵走开")], title="混选点矿"),
             beat("混选工人+士兵，右键敌人", "士兵进攻；工人不冲锋（或逃跑）", "兵打仗", "topdown",
                  [unit(24, 58, sel=True), unit(36, 52, sel=True, face=25), ring(24, 58), ring(36, 52),
                   unit(74, 40, team="enemy"), arrow(38, 52, 70, 42, "attack"),
@@ -1194,12 +1300,16 @@ def build_cases():
         "变身计时结束或主动解除后，旧技能栏回来，临时技全部撤走。",
         [
             beat("触发变身（集满槽/按变身键）", "角色换形；技能栏整页替换为变身技", "换了一套身子", "tps",
-                 [hero(48, 55, face=20), ring(48, 55, r=16, kind="buff"), badge("变身开始")], title="进入变身"),
+                 [hero(48, 55, face=20), ring(48, 55, r=16, kind="buff"),
+                  menu_box(16, 68, ["怒劈", "冲锋", "震地", "处决"]), hotbar(),
+                  badge("变身栏")], title="进入变身"),
             beat("变身期间按攻击/技能", "打出的是变身专属连段与技能，不是原武器", "这套只能现在用", "tps",
                  [hero(45, 55, face=30), cone(45, 55, angle=-20, spread=50, length=32),
-                  unit(72, 40, team="enemy"), badge("变身技")], title="用临时技"),
+                  unit(72, 40, team="enemy"),
+                  menu_box(16, 68, ["怒劈", "冲锋", "震地", "处决"]), hotbar(active=0),
+                  badge("变身技")], title="用临时技"),
             beat("变身结束", "外形复原；临时技能栏消失，原技能回到原位", "变回来了", "tps",
-                 [hero(48, 55, face=10), badge("变身结束")], title="解除"),
+                 [hero(48, 55, face=10), hotbar(), badge("原栏")], title="解除"),
         ], ["战神4", "动作RPG"],
     ))
     c.append(case(
@@ -1212,7 +1322,8 @@ def build_cases():
             beat("按临时键释放", "打出仅此期间可用的效果", "趁现在", "moba",
                  [hero(40, 55), circle_ind(70, 40, 14, True), cursor(70, 40), badge("临时技放出")], title="使用"),
             beat("倒计时走完", "临时键消失，栏位复原", "没了", "moba",
-                 [hero(40, 55), badge("临时技收回")], title="收回"),
+                 [hero(40, 55), hotbar(), bar(40, 33, 0, "cast", "倒计时"),
+                  badge("临时技收回")], title="收回"),
         ], ["动作RPG", "MOBA", "ARPG"],
     ))
     c.append(case(
@@ -1221,9 +1332,13 @@ def build_cases():
         "像 SC2 某些增益/形态窗，或英雄单位短暂开启的额外指令；不是永久升级。",
         [
             beat("单位进入限时形态", "选中他时命令卡换成形态技", "这会儿能按新键", "topdown",
-                 [unit(45, 55, sel=True, size=1.25), ring(45, 55), badge("形态命令卡")], title="形态开始"),
+                 [unit(45, 55, sel=True, size=1.25), ring(45, 55),
+                  menu_box(60, 34, ["形态卡", "冲击波", "护盾", "冲锋"]),
+                  hotbar(active=0), badge("形态命令卡")], title="形态开始"),
             beat("形态计时结束", "命令卡切回原技能，临时键不可用", "面板变回去", "topdown",
-                 [unit(45, 55, sel=True), ring(45, 55), badge("恢复原卡")], title="形态结束"),
+                 [unit(45, 55, sel=True), ring(45, 55),
+                  menu_box(60, 34, ["原卡", "移动", "攻击", "技能"]),
+                  hotbar(), badge("原卡")], title="形态结束"),
         ], ["SC2", "RTS"],
     ))
     c.append(case(
@@ -1232,11 +1347,12 @@ def build_cases():
         "像魔兽饰品 on-use、大秘境钥匙类道具技能。",
         [
             beat("装备带主动的饰品", "技能栏多出饰品键，显示层数/CD", "多了一招装备技", "moba",
-                 [hero(45, 55), badge("+饰品主动")], title="装上出现"),
+                 [hero(45, 55), hotbar(extra=3), badge("+饰品主动")], title="装上出现"),
             beat("按下饰品主动", "打出饰品效果，进入饰品 CD", "用装备技", "moba",
-                 [hero(45, 55), ring(45, 55, r=14, kind="buff"), badge("饰品放出")], title="使用"),
+                 [hero(45, 55), ring(45, 55, r=14, kind="buff"), hotbar(cd=3),
+                  badge("饰品放出")], title="使用"),
             beat("卸下饰品或任务收回", "该键从栏位消失", "招没了", "moba",
-                 [hero(45, 55), badge("键收回")], title="卸下收回"),
+                 [hero(45, 55), hotbar(off=[3]), badge("键收回")], title="卸下收回"),
         ], ["魔兽世界", "MMO", "ARPG"],
     ))
     c.append(case(
@@ -1245,11 +1361,11 @@ def build_cases():
         "像英雄联盟劫/塞拉斯偷大、部分动作游戏吸收招式。",
         [
             beat("成功偷取/复制", "栏位出现对方技能图标，标“临时”", "这招是借的", "moba",
-                 [hero(40, 55), unit(70, 40, team="enemy"), badge("偷到技能")], title="获得拷贝"),
+                 [hero(40, 55), unit(70, 40, team="enemy"), hotbar(extra=3), badge("偷到技能")], title="获得拷贝"),
             beat("按该临时键", "打出被偷技能的效果", "用他的招", "moba",
-                 [hero(40, 55), circle_ind(70, 40, 14, True), badge("释放拷贝")], title="释放"),
+                 [hero(40, 55), circle_ind(70, 40, 14, True), hotbar(extra=3, active=3), badge("释放拷贝")], title="释放"),
             beat("次数用尽或计时结束", "拷贝图标消失", "还回去了", "moba",
-                 [hero(40, 55), badge("拷贝消失")], title="消失"),
+                 [hero(40, 55), hotbar(), badge("拷贝消失")], title="消失"),
         ], ["MOBA", "动作RPG"],
     ))
     c.append(case(
@@ -1270,9 +1386,10 @@ def build_cases():
         "和变身类似，但是“座位授予”而不是角色变身。",
         [
             beat("进入炮位/驾驶位", "准星变车炮；技能栏变载具武器", "换成开车手感", "tps",
-                 [building(48, 55), crosshair(62, 40), badge("进入座位")], title="上车"),
+                 [unit(48, 55, size=1.5), crosshair(62, 40), stick("R", 0.5, -0.2),
+                  hotbar(extra=0, slots=3), badge("进入座位")], title="上车"),
             beat("下车 / 被炸下车", "操作与技能栏瞬间回到步行", "又变回人", "tps",
-                 [hero(48, 55), badge("离开座位")], title="下车"),
+                 [hero(48, 55), hotbar(slots=4), badge("离开座位")], title="下车"),
         ], ["TPS", "FPS", "MMO"],
     ))
     c.append(case(
@@ -1291,9 +1408,9 @@ def build_cases():
         "上马后出现冲撞、加速、马上射击等骑乘技；下马这些键消失，陆地技回来。",
         [
             beat("上马成功", "技能栏出现骑乘技，移动变坐骑手感", "马上能按新键", "tps",
-                 [hero(48, 55), badge("骑乘技")], title="上马"),
+                 [hero(48, 55), hotbar(extra=3), badge("骑乘技")], title="上马"),
             beat("下马", "骑乘技消失，恢复陆地技能栏", "下地", "tps",
-                 [hero(48, 55), badge("陆地技")], title="下马"),
+                 [hero(48, 55), hotbar(), badge("陆地技")], title="下马"),
         ], ["魔兽世界", "MMO", "动作RPG"],
     ))
 
@@ -1303,9 +1420,16 @@ def build_cases():
         "走近可拾取物，按交互键或右键拾取进包；包满要明确拒绝。",
         [
             beat("走近掉落物，出现拾取提示", "名称/品质飘在地上", "能捡", "tps",
-                 [hero(40, 55), building(62, 48), badge("可拾取")], title="靠近"),
+                 [hero(40, 55), card(62, 48, "绿装", 0), circle_ind(62, 48, 14, True),
+                  menu_box(70, 58, ["精良 护腕"]), keyhint(52, 40, "F", "active", "拾取"),
+                  badge("可拾取")], title="靠近"),
             beat("按交互键 / 右键拾取", "物品进背包，地上消失", "到手了", "tps",
-                 [hero(45, 52), badge("已入包")], title="捡起"),
+                 [hero(45, 52), card(55, 38, "绿装", 0), menu_box(30, 68, ["背包 +1"]),
+                  badge("已入包")], title="捡起"),
+            beat("背包已满时再按拾取", "红字拒绝，掉落物仍留在地上", "拿不下", "tps",
+                 [hero(40, 55), card(62, 48, "绿装", 0), circle_ind(62, 48, 14, True),
+                  hotbar(deny=0), menu_box(28, 62, ["背包已满！"]),
+                  keyhint(52, 40, "F", "off", "拾取"), badge("包满拒绝")], title="包满"),
         ], ["MMO", "ARPG", "动作RPG"],
     ))
     c.append(case(
@@ -1313,9 +1437,13 @@ def build_cases():
         "对箱子或尸体交互弹出战利品窗，逐格拾取或全部拾取；需掷骰时先看见分配。",
         [
             beat("对箱子/尸体按交互", "弹出掉落列表", "看看有啥", "moba",
-                 [hero(40, 55), building(65, 45), badge("掉落窗")], title="打开"),
+                 [hero(40, 55), unit(72, 40, team="neutral", size=1.2),
+                  keyhint(60, 32, "F", "active", "搜索"),
+                  menu_box(52, 52, ["铁矿×3", "破剑", "布料"]), badge("掉落窗")], title="打开"),
             beat("点一项或点全部拾取", "进包；窗内该项消失", "拿走", "moba",
-                 [hero(40, 55), badge("拾取")], title="拾取"),
+                 [hero(40, 55), unit(72, 40, team="neutral", size=1.2),
+                  menu_box(52, 52, ["铁矿×3", "布料"]), card(28, 70, "破剑", 0),
+                  badge("进包 -1")], title="拾取"),
         ], ["魔兽世界", "MMO", "ARPG"],
     ))
     c.append(case(
@@ -1344,8 +1472,8 @@ def build_cases():
         "像复活石点队友、减速陷阱点地面/敌人。",
         [
             beat("选中目标后按物品键", "物品效果打在目标上，消耗数量", "用在他身上", "moba",
-                 [hero(35, 58), unit(65, 45, team="ally"), ring(65, 45, r=10, kind="buff"),
-                  badge("物品→目标")], title="对目标"),
+                 [hero(35, 58), unit(65, 45, team="ally", sel=True), ring(65, 45, r=10, kind="buff"),
+                  hotbar(active=1), badge("物品→目标")], title="对目标"),
             beat("先点物品再点目标", "进入“物品瞄准”，点合法目标才消耗", "指哪用哪", "moba",
                  [hero(35, 58), cursor(65, 45), unit(65, 45, team="ally"), badge("物品瞄准")], title="先物品后点"),
         ], ["魔兽世界", "MMO", "ARPG"],
@@ -1367,9 +1495,11 @@ def build_cases():
         "从背包双击或拖到装备槽；槽位已有装备则替换进包，属性立刻变。",
         [
             beat("双击背包里的武器", "进入装备槽；旧武器回包（若有）", "换好了", "moba",
-                 [hero(48, 55), badge("装备")], title="穿上"),
+                 [hero(28, 55), card(48, 40, "新剑", 0, True), card(70, 42, "旧斧"),
+                  menu_box(48, 62, ["武器槽←剑", "旧斧→包"]), badge("装备")], title="穿上"),
             beat("从装备槽拖回背包或点卸下", "槽空了，属性去掉", "脱下", "moba",
-                 [hero(48, 55), badge("卸下")], title="卸下"),
+                 [hero(28, 55), box(58, 38, 18, 18),
+                  menu_box(48, 58, ["武器槽：（空）", "ATK -12"]), badge("卸下")], title="卸下"),
         ], ["MMO", "ARPG"],
     ))
     c.append(case(
@@ -1377,10 +1507,11 @@ def build_cases():
         "从背包拖到快捷栏格子，之后可用数字键使用；拖走或替换会改键位映射。",
         [
             beat("从背包拖到快捷栏空位", "栏位出现物品图标与数量", "键位绑好了", "moba",
-                 [card(35, 40, "药", 0, True), cursor(55, 70, "drag"), menu_box(48, 68, ["1", "2", "3", "4"]),
+                 [card(35, 40, "药", None, True), cursor(42, 88, "drag"), hotbar(active=0, extra=0),
                   badge("拖到快捷栏")], title="拖上栏"),
             beat("按对应数字键", "等同于使用该物品", "键上就能用", "moba",
-                 [hero(48, 55), badge("快捷使用")], title="快捷用"),
+                 [hero(48, 55), hotbar(active=0), keyhint(28, 72, "1", "active", "用药"),
+                  ring(48, 55, r=12, kind="buff"), badge("快捷使用")], title="快捷用"),
         ], ["魔兽世界", "MMO", "ARPG"],
     ))
     c.append(case(
@@ -1399,7 +1530,10 @@ def build_cases():
         "鼠标悬停背包装备时，并排显示当前已穿装备的数值差。",
         [
             beat("鼠标悬停背包中的装备", "双提示框：新装备 + 已穿对照", "看看谁更好", "moba",
-                 [cursor(55, 45), badge("对比提示")], title="对比"),
+                 [card(40, 58, "剑", 0, True), cursor(40, 58),
+                  menu_box(18, 28, ["包里 剑 +12", "暴击 +5"]),
+                  menu_box(58, 28, ["已穿 剑 +8", "暴击 +2"]),
+                  badge("对比提示")], title="对比"),
         ], ["魔兽世界", "MMO", "ARPG"],
     ))
     c.append(case(
@@ -1418,9 +1552,11 @@ def build_cases():
         "魔杖/爆炸物显示剩余次数；装备掉耐久到 0 失效或强制修理提示。",
         [
             beat("使用带次数的物品", "次数 -1，到 0 物品消失或变灰", "还能用几次", "moba",
-                 [hero(48, 55), badge("次数-1")], title="扣次数"),
+                 [hero(48, 55), card(62, 48, "魔杖×2", 0), hotbar(dot=0),
+                  menu_box(28, 68, ["次数 3→2"]), badge("次数-1")], title="扣次数"),
             beat("装备耐久耗尽", "属性失效或红字提示去修", "该修了", "moba",
-                 [hero(48, 55), badge("耐久耗尽")], title="耐久"),
+                 [hero(48, 55), card(62, 48, "破甲", 0),
+                  menu_box(28, 62, ["耐久 0", "属性失效", "去修理"]), badge("耐久耗尽")], title="耐久"),
         ], ["魔兽世界", "MMO", "ARPG"],
     ))
 
@@ -1433,7 +1569,8 @@ def build_cases():
                  [hero(35, 60), unit(55, 40, team="enemy"), unit(72, 48, team="enemy"),
                   ring(55, 40, kind="lock"), badge("Tab选敌")], title="Tab 选敌"),
             beat("点击队伍框上头像", "该队友成为友好目标/治疗目标", "点框选人", "moba",
-                 [hero(40, 55), unit(65, 45, team="ally"), ring(65, 45, kind="buff"),
+                 [hero(40, 55), unit(65, 45, team="ally", sel=True), ring(65, 45, kind="buff"),
+                  menu_box(16, 28, ["[我]", "[友A]←", "[友B]"]), cursor(28, 40, "up"),
                   badge("点框")], title="点框选友"),
         ], ["魔兽世界", "MMO"],
     ))
@@ -1444,7 +1581,9 @@ def build_cases():
             beat("靠近 NPC，出现交互提示", "名称与类型（任务感叹号等）", "能说话", "tps",
                  [hero(38, 58), unit(62, 48, team="neutral"), badge("可交互")], title="靠近"),
             beat("按交互键", "打开任务/对话/商店面板", "开始谈", "tps",
-                 [hero(42, 55), badge("打开面板")], title="交互"),
+                 [hero(42, 55), unit(62, 48, team="neutral"),
+                  menu_box(26, 36, ["接受任务", "商店", "再见"]),
+                  keyhint(48, 72, "F", "idle", "交互"), badge("对话面板")], title="交互"),
         ], ["魔兽世界", "MMO"],
     ))
     c.append(case(
@@ -1464,7 +1603,8 @@ def build_cases():
         "右键玩家或用命令邀请；对方弹窗接受；队长有额外权限提示。",
         [
             beat("对玩家发组队邀请", "对方屏幕弹出邀请", "邀了", "moba",
-                 [hero(35, 55), unit(65, 45, team="ally"), badge("邀请")], title="邀请"),
+                 [hero(35, 55), unit(65, 45, team="ally"),
+                  menu_box(58, 36, ["组队邀请", "接受", "拒绝"]), badge("邀请")], title="邀请"),
             beat("点接受", "进队，队伍框出现", "组上了", "moba",
                  [hero(35, 55), unit(55, 45, team="ally"), unit(70, 50, team="ally"),
                   menu_box(40, 70, ["队伍 2/5"]), badge("已入队")], title="接受"),
@@ -1489,10 +1629,18 @@ def build_cases():
         "对玩家交易，双方拖入物品与钱，双方点确认才成交；一人取消全黄。",
         [
             beat("对玩家发起交易", "双方弹出交易窗", "来交易", "moba",
-                 [hero(35, 55), unit(65, 45, team="ally"), badge("交易窗")], title="打开"),
-            beat("拖入物品，双方确认", "物品交换完成，窗关", "成交", "moba",
+                 [hero(35, 55), unit(65, 45, team="ally"),
+                  menu_box(16, 38, ["你的报价", "(空)", "金币 0"]),
+                  menu_box(58, 38, ["对方报价", "(空)", "金币 0"]),
+                  badge("交易窗")], title="打开"),
+            beat("双方拖入物品", "窗内出现报价物，待确认", "先放齐", "moba",
+                 [hero(30, 55), unit(70, 45, team="ally"),
+                  menu_box(16, 38, ["你的报价", "矿石", "金币 20"]),
+                  menu_box(58, 38, ["对方报价", "币袋", "金币 0"]),
+                  card(42, 62, "矿", 0), card(58, 62, "币", 0), badge("已报价")], title="报价"),
+            beat("双方点确认", "物品交换完成，交易窗关闭", "成交", "moba",
                  [hero(30, 55), unit(70, 45, team="ally"), card(42, 50, "矿", 0), card(58, 50, "币", 0),
-                  menu_box(40, 68, ["确认", "取消"]), badge("双方确认")], title="确认"),
+                  badge("成交·窗关")], title="成交"),
         ], ["魔兽世界", "MMO"],
     ))
     c.append(case(
@@ -1502,7 +1650,8 @@ def build_cases():
             beat("对玩家发密语", "聊天频道切到密语", "私聊", "moba",
                  [hero(35, 55), unit(65, 45, team="ally"), menu_box(30, 70, ["密语: 你好"]), badge("密语")], title="密聊"),
             beat("给当前目标打团队标记", "头顶出现标记图标，队友看见", "集火这个", "tps",
-                 [unit(60, 45, team="enemy"), badge("标记")], title="标记"),
+                 [unit(60, 45, team="enemy"), keyhint(60, 28, "骷", "active", "标记"),
+                  badge("标记")], title="标记"),
         ], ["魔兽世界", "MMO"],
     ))
     c.append(case(
@@ -1510,9 +1659,14 @@ def build_cases():
         "表情轮盘或命令让角色做动作；坐下回蓝；检查看对方装备。",
         [
             beat("选表情或输入命令", "角色播放表情动画", "比个心", "tps",
-                 [hero(48, 55), badge("表情")], title="表情"),
+                 [hero(48, 55), menu_box(66, 36, ["挥手", "跳舞", "比心"]),
+                  badge("表情轮盘")], title="表情"),
+            beat("坐下", "进入坐姿，开始回蓝", "坐着回", "tps",
+                 [hero(48, 55), bar(48, 36, 0.45, "cast", "回蓝"), badge("坐下回蓝")], title="坐下"),
             beat("检查其他玩家", "打开其角色/装备预览", "看看装", "moba",
-                 [unit(60, 45, team="ally"), badge("检查")], title="检查"),
+                 [unit(60, 45, team="ally"),
+                  menu_box(22, 32, ["头", "胸甲", "武器 +12", "饰品"]),
+                  card(78, 40, "剑"), card(78, 58, "甲"), badge("装备预览")], title="检查"),
         ], ["魔兽世界", "MMO"],
     ))
 
@@ -1524,9 +1678,11 @@ def build_cases():
             beat("对矿脉按交互", "开始读条，角色做采集动作", "挖着", "tps",
                  [hero(40, 55), building(65, 45), badge("采集读条")], title="开始"),
             beat("读条完成", "节点枯竭或刷新，物品进包", "挖到了", "tps",
-                 [hero(40, 55), badge("采集成功")], title="完成"),
+                 [hero(40, 55), building(65, 45, ghost=True), card(28, 70, "矿", 0),
+                  badge("采集成功")], title="完成"),
             beat("读条中被攻击或移动", "读条取消，节点仍在", "打断了", "tps",
-                 [hero(40, 55), badge("采集打断")], title="打断"),
+                 [hero(40, 55), building(65, 45), bar(40, 33, 0.45, "cast", broken=True),
+                  badge("采集打断")], title="打断"),
         ], ["魔兽世界", "MMO"],
     ))
     c.append(case(
@@ -1534,7 +1690,8 @@ def build_cases():
         "打开商人，右键买，拖背包物品卖；误卖可用回购页拿回。",
         [
             beat("与商人交互", "商店列表打开", "逛店", "moba",
-                 [hero(40, 55), unit(65, 45, team="neutral"), badge("商店")], title="开店"),
+                 [hero(40, 55), unit(65, 45, team="neutral"),
+                  menu_box(28, 58, ["药水 5G", "面包 1G", "箭袋 3G"]), badge("商店")], title="开店"),
             beat("右键购买或拖出售", "金币与物品变化", "买到/卖掉", "moba",
                  [hero(35, 55), unit(65, 45, team="neutral"), card(50, 50, "货", 0, True),
                   cursor(50, 50, "drag"), badge("买卖")], title="买卖"),
@@ -1547,7 +1704,8 @@ def build_cases():
         "召唤坐骑改变移动；飞行点选目的地后进入航线，途中可跳下（若规则允许）。",
         [
             beat("按召唤坐骑", "上马，移动变快，陆地战技能受限或切换", "骑上", "tps",
-                 [hero(48, 55), badge("坐骑")], title="上坐骑"),
+                 [hero(48, 52), unit(48, 58, size=1.4, team="ally"),
+                  arrow(52, 52, 78, 38, "move"), hotbar(off=[1, 2, 3]), badge("坐骑")], title="上坐骑"),
             beat("在飞行管理员选目的地", "进入飞行路线镜头", "飞过去", "tps",
                  [hero(40, 55), unit(62, 45, team="neutral"),
                   menu_box(55, 60, ["暴风城", "铁炉堡", "取消"]), badge("飞行点")], title="飞行点"),
@@ -1558,7 +1716,8 @@ def build_cases():
         "死后选释放灵魂跑尸；或点魂匠/队友复活接受复活。",
         [
             beat("死亡后点释放灵魂", "变成灵魂形态，看到魂匠方向", "去找尸体", "tps",
-                 [hero(48, 55), badge("灵魂")], title="释放"),
+                 [hero(35, 55), building(70, 40), arrow(40, 52, 66, 42, "move"),
+                  badge("灵魂形态")], title="释放"),
             beat("接受复活或跑尸复活", "回到尸体或魂匠处活过来", "活了", "tps",
                  [hero(48, 55), ring(48, 55, r=12, kind="buff"), badge("复活")], title="复活"),
         ], ["魔兽世界", "MMO"],
@@ -1579,7 +1738,9 @@ def build_cases():
         "敌方读条时按打断技能；自己读条时可走或按取消打断自己。",
         [
             beat("敌方读条时按打断", "对方读条失败，常带锁定类惩罚", "掐掉", "tps",
-                 [hero(35, 58), unit(68, 42, team="enemy"), badge("打断")], title="打断别人"),
+                 [hero(35, 58, face=20), unit(68, 42, team="enemy"),
+                  bar(68, 28, 0.55, "cast", "读条", broken=True),
+                  arrow(40, 56, 64, 44, "attack"), badge("打断")], title="打断别人"),
             beat("自己读条中按取消或移动（若规则允许）", "自己读条中断，技能进 CD 或退回", "不放了", "tps",
                  [hero(48, 55), badge("取消读条")], title="取消自己"),
         ], ["魔兽世界", "MMO", "MOBA"],
@@ -1615,11 +1776,20 @@ def build_cases():
         "按住键弹出径向轮盘（表情、武器、标记、消耗品），指向一格松手确认；松开太早或回中取消。",
         [
             beat("按住轮盘键", "轮盘在角色旁展开", "选项铺开", "tps",
-                 [hero(48, 55), badge("轮盘展开")], title="按住"),
+                 [hero(48, 55), ring(48, 55, r=24),
+                  card(48, 28, "表情", 0), card(72, 55, "武器", 0),
+                  card(48, 78, "药", 0), card(24, 55, "标记", 0),
+                  badge("轮盘展开")], title="按住"),
             beat("指向某一格松手", "执行该格动作，轮盘收起", "就是这个", "tps",
-                 [hero(48, 55), cursor(70, 40), badge("选定")], title="松手选定"),
+                 [hero(48, 55), ring(48, 55, r=24),
+                  card(48, 28, "表情", 0), card(72, 55, "武器", 0, True),
+                  card(48, 78, "药", 0), card(24, 55, "标记", 0),
+                  cursor(72, 55), badge("选定")], title="松手选定"),
             beat("指回中心松手", "取消，无动作", "算了", "tps",
-                 [hero(48, 55), badge("取消")], title="取消"),
+                 [hero(48, 55), ring(48, 55, r=24),
+                  card(48, 28, "表情", 0), card(72, 55, "武器", 0),
+                  card(48, 78, "药", 0), card(24, 55, "标记", 0),
+                  cursor(48, 55), badge("回中取消")], title="取消"),
         ], ["动作RPG", "TPS", "MMO"],
     ))
     c.append(case(
@@ -1627,10 +1797,11 @@ def build_cases():
         "对单位/物品长按或右键，弹出与对象类型相关的菜单（交易、检查、跟随、使用）。",
         [
             beat("对对象右键/长按", "弹出上下文菜单", "还能干这些", "moba",
-                 [unit(55, 45, team="ally"), cursor(55, 45), badge("上下文菜单")], title="打开菜单"),
+                 [unit(55, 45, team="ally"), cursor(55, 45),
+                  menu_box(62, 40, ["交易", "检查", "跟随"]), badge("上下文菜单")], title="打开菜单"),
             beat("点菜单项", "执行该项，菜单关闭", "选这项", "moba",
-                 [unit(55, 45, team="ally"), menu_box(62, 40, ["交易", "检查", "跟随"]),
-                  cursor(70, 52), badge("执行菜单项")], title="选中"),
+                 [unit(55, 45, team="ally"), arrow(58, 45, 78, 45, "move"),
+                  cursor(70, 52), badge("执行·跟随")], title="选中"),
         ], ["MMO", "RTS", "ARPG"],
     ))
     c.append(case(
@@ -1638,9 +1809,15 @@ def build_cases():
         "从库拖到槽；非法槽要红叉拒绝；替换要看得见谁被挤走。",
         [
             beat("拖到合法槽松手", "槽位更新图标", "放进去了", "moba",
-                 [cursor(60, 50, "drag"), badge("合法放下")], title="合法"),
+                 [menu_box(14, 36, ["技能库", "火球", "闪现"]),
+                  card(52, 48, "火球", 0, True), cursor(62, 70, "drag"),
+                  hotbar(active=2), circle_ind(62, 78, 10, True),
+                  badge("合法放下")], title="合法"),
             beat("拖到非法槽", "红叉，松手弹回原处", "不能放这", "moba",
-                 [cursor(60, 50, "drag"), badge("非法拒绝")], title="非法"),
+                 [menu_box(14, 36, ["技能库", "火球", "闪现"]),
+                  card(52, 48, "火球", 0, True), cursor(62, 50, "drag"),
+                  hotbar(deny=1), circle_ind(62, 70, 12, False),
+                  path([(62, 50), (28, 48)], "move"), badge("非法拒绝")], title="非法"),
         ], ["MMO", "MOBA", "ARPG"],
     ))
     c.append(case(
@@ -1657,8 +1834,13 @@ def build_cases():
         "ui-ping-comm-wheel", "design-ui", "信号 / 沟通轮：点地告知队友",
         "按信号键点地板或用轮盘选“来这里/小心/进攻”，地图与世界出现短时标记。",
         [
-            beat("按信号点地面或选轮盘项", "世界与小地图出现标记与短语音/文字", "喊了一嗓子", "moba",
-                 [hero(35, 60), cursor(70, 40), circle_ind(70, 40, 10, True), badge("信号")], title="打信号"),
+            beat("按住信号键", "沟通轮展开", "要喊人", "moba",
+                 [hero(35, 60), menu_box(48, 32, ["来这里", "小心", "进攻"]),
+                  badge("打开轮盘")], title="开轮盘"),
+            beat("指向一项或点地确认", "世界与小地图出现标记", "喊了一嗓子", "moba",
+                 [hero(35, 60), cursor(70, 40), circle_ind(70, 40, 10, True),
+                  menu_box(48, 32, ["来这里", "小心", "进攻"]),
+                  box(82, 12, 16, 16), circle_ind(90, 20, 3, True), badge("信号落下")], title="确认"),
         ], ["MOBA", "MMO", "TPS"],
     ))
     c.append(case(
@@ -1666,9 +1848,11 @@ def build_cases():
         "切换镜头模式改变操作手感：锁定贴背、自由转观察、滚轮拉距离；模式切换要可见。",
         [
             beat("切换到自由镜头并拖动", "相机离角色旋转，角色不立刻转身", "四处看", "tps",
-                 [hero(45, 55), badge("自由镜头")], title="自由"),
+                 [hero(38, 62, face=-90), path([(58, 38), (72, 55), (58, 72)], "arc"),
+                  arrow(55, 48, 70, 40, "move"), badge("自由镜头")], title="自由"),
             beat("切回锁定跟随", "相机回贴角色朝向", "跟身", "tps",
-                 [hero(45, 55), badge("锁定跟随")], title="锁定"),
+                 [hero(50, 55, face=-90), arrow(50, 42, 50, 28, "move"),
+                  badge("锁定跟随")], title="锁定"),
         ], ["MMO", "动作RPG", "TPS"],
     ))
     c.append(case(
@@ -1676,9 +1860,12 @@ def build_cases():
         "打开地图点一下设导航点，世界出现路径或箭头；再点可改或清除。",
         [
             beat("打开地图点目标位置", "导航点与路线出现", "往那走", "moba",
-                 [cursor(60, 45), badge("地图钉点")], title="钉点"),
+                 [box(18, 18, 64, 52), hero(30, 60), circle_ind(65, 35, 8, True),
+                  ring(65, 35, r=6), path([(30, 60), (45, 50), (65, 35)], "move"),
+                  arrow(50, 48, 62, 38, "move"), cursor(65, 35, "up"),
+                  badge("地图钉点")], title="钉点"),
             beat("清除导航", "箭头/路线消失", "取消导航", "moba",
-                 [hero(40, 55), cursor(60, 45), badge("清除钉点")], title="清除"),
+                 [hero(40, 55), badge("清除钉点")], title="清除"),
         ], ["MMO", "ARPG", "开放世界"],
     ))
     c.append(case(
@@ -1688,7 +1875,8 @@ def build_cases():
             beat("按住模式：按住才冲刺", "松手立刻停", "按多久走多久", "tps",
                  [hero(40, 55), stick("L", 0, -1), badge("按住")], title="按住"),
             beat("切换模式：按一下开始，再按停止", "状态图标保持", "开关态", "tps",
-                 [hero(40, 55), badge("切换")], title="切换"),
+                 [hero(40, 55), stick("L", 0, -1), hotbar(dot=0),
+                  keyhint(72, 40, "冲", "active", "冲刺ON"), badge("切换")], title="切换"),
         ], ["MMO", "FPS", "TPS", "设计选项"],
     ))
     c.append(case(
@@ -1706,7 +1894,9 @@ def build_cases():
         "在建造菜单点单位或科技：扣资源排队；点已在造的可取消（常需确认）。",
         [
             beat("打开建造/科技面板点一项", "资源扣除，队列出现肖像", "开造", "topdown",
-                 [building(40, 50), badge("入队")], title="点造"),
+                 [building(28, 50), menu_box(48, 28, ["步兵 50矿", "坦克 150"]),
+                  card(72, 48, "步兵", 50), bar(72, 72, 0.35, "cast", "矿物-50"),
+                  cursor(58, 36, "up"), badge("入队")], title="点造"),
             beat("取消队列中的项", "资源按规则退回，队列缩短", "不造了", "topdown",
                  [building(40, 50), menu_box(58, 45, ["步兵 x2", "取消一项"]), cursor(70, 60),
                   badge("取消建造")], title="取消"),
@@ -1789,9 +1979,10 @@ def build_cases():
                  [hero(40, 55), unit(65, 45, team="enemy"), badge("无处决窗")], title="未达标"),
             beat("敌人残血/破防", "处决键或提示亮起", "可以收了", "tps",
                  [hero(40, 55), unit(65, 45, team="enemy"), ring(65, 45, kind="lock"),
-                  badge("处决解锁")], title="达线解锁"),
+                  keyhint(52, 36, "F", "active", "处决"), badge("处决解锁")], title="达线解锁"),
             beat("窗口内按处决", "播专属处决，否则窗口关闭后恢复普攻", "收掉", "tps",
-                 [hero(50, 50), arrow(50, 50, 62, 45, "attack"), badge("处决打出")], title="打出"),
+                 [hero(50, 50), unit(65, 45, team="enemy", size=0.85), ring(65, 45, kind="lock"),
+                  arrow(50, 50, 62, 45, "attack"), badge("处决打出")], title="打出"),
         ], ["战神", "动作RPG", "魂like"],
     ))
     c.append(case(
@@ -1800,11 +1991,14 @@ def build_cases():
         "同一对象，因持有物不同，context 解锁不同动词。",
         [
             beat("空手靠近可搬物", "提示「提起/搬运」", "能搬", "tps",
-                 [hero(40, 55), building(62, 48), badge("提起")], title="空手"),
+                 [hero(40, 55), building(62, 48),
+                  keyhint(50, 38, "F", "active", "提起"), badge("提起")], title="空手"),
             beat("手持火把靠近火盆/墙缝", "提示改成「点燃/烧开」", "能烧", "tps",
-                 [hero(40, 55), building(62, 48), badge("点燃")], title="持火"),
+                 [hero(40, 55), ring(40, 55, r=11, kind="buff"), building(62, 48, ghost=True),
+                  keyhint(50, 38, "F", "active", "点燃"), badge("点燃")], title="持火"),
             beat("手持钥匙靠近上锁门", "提示「开锁」；无钥匙则「上锁/需要钥匙」", "对上了", "tps",
-                 [hero(40, 55), building(65, 45), badge("开锁")], title="持钥匙"),
+                 [hero(40, 55), card(48, 48, "钥", 0), building(65, 45),
+                  keyhint(52, 36, "F", "active", "开锁"), badge("开锁")], title="持钥匙"),
         ], ["塞尔达", "浸入式模拟", "动作RPG"],
     ))
     c.append(case(
@@ -1830,7 +2024,8 @@ def build_cases():
                  [hero(40, 55), unit(60, 48, team="ally"), ring(60, 48, kind="buff"),
                   badge("F:救援")], title="解锁救援"),
             beat("按住救完", "队友起身；若仍在掉落旁，提示回到拾取", "救起来了", "tps",
-                 [hero(42, 55), unit(58, 48, team="ally"), badge("救起→提示复原")], title="救完复原"),
+                 [hero(42, 55), unit(58, 48, team="ally"), building(66, 46),
+                  keyhint(50, 38, "F", "active", "拾取"), badge("救起→可拾取")], title="救完复原"),
         ], ["TPS", "MMO", "合作动作"],
     ))
     c.append(case(
@@ -1838,9 +2033,11 @@ def build_cases():
         "走到载具交互点才出现上车/上炮位；开车门朝向或满员时提示换成「不可上」原因。",
         [
             beat("进入上车点", "提示「驾驶/炮位/乘客」", "能上车", "tps",
-                 [hero(38, 58), building(60, 50), badge("上车")], title="解锁上车"),
+                 [hero(38, 58), unit(60, 50, size=1.5),
+                  keyhint(48, 40, "F", "active", "驾驶"), badge("上车")], title="解锁上车"),
             beat("载具远离或满员", "提示消失或变灰并说明原因", "上不了", "tps",
-                 [hero(38, 58), building(75, 35), badge("不可上")], title="收回/拒绝"),
+                 [hero(38, 58), unit(75, 35, size=1.5),
+                  keyhint(48, 40, "F", "off", "满员"), badge("不可上")], title="收回/拒绝"),
         ], ["TPS", "MMO", "开放世界"],
     ))
 
@@ -1851,12 +2048,12 @@ def build_cases():
         "条件满足时系统自己放，再右键关掉。玩家随时可手动抢按。",
         [
             beat("在技能图标上右键", "出现自动施法标记（绿点）", "交给它看着放", "topdown",
-                 [unit(45, 55, sel=True), ring(45, 55), badge("自动施法ON")], title="打开"),
+                 [unit(45, 55, sel=True), ring(45, 55), hotbar(dot=0), badge("自动施法ON")], title="打开"),
             beat("敌人进入范围且 CD/耗蓝满足", "不按键也放出该技能", "自己放了", "topdown",
                  [unit(40, 55, sel=True), unit(70, 40, team="enemy"),
-                  arrow(42, 54, 66, 42, "attack"), badge("自动放出")], title="自动触发"),
+                  arrow(42, 54, 66, 42, "attack"), hotbar(dot=0, cd=0), badge("自动放出")], title="自动触发"),
             beat("再右键图标", "绿点灭，恢复纯手动", "我自己来", "topdown",
-                 [unit(45, 55, sel=True), badge("自动施法OFF")], title="关闭"),
+                 [unit(45, 55, sel=True), hotbar(), badge("自动施法OFF")], title="关闭"),
         ], ["魔兽争霸3", "RTS", "MMO"],
     ))
     c.append(case(
@@ -1890,10 +2087,13 @@ def build_cases():
         "关掉则宝宝只普攻或跟随。",
         [
             beat("给宠物技能开自动", "宠物面板现自动标记", "宝宝看着放", "topdown",
-                 [hero(35, 60), unit(48, 55, sel=True), badge("宠技自动ON")], title="开"),
+                 [hero(35, 60), unit(48, 55, sel=True),
+                  hotbar(dot=0), menu_box(62, 40, ["宠技", "自动 ON"]),
+                  badge("宠技自动ON")], title="开"),
             beat("条件满足（主人残血/敌人进圈）", "宠物自行放该技", "它放了", "topdown",
                  [hero(35, 60), unit(48, 55), unit(72, 40, team="enemy"),
-                  arrow(50, 54, 68, 42, "attack"), badge("宠技自动放出")], title="触发"),
+                  arrow(50, 54, 68, 42, "attack"), hotbar(dot=0, cd=0),
+                  badge("宠技自动放出")], title="触发"),
         ], ["魔兽世界", "魔兽争霸3", "ARPG"],
     ))
     c.append(case(
@@ -1915,7 +2115,8 @@ def build_cases():
         "自己被点名点名技能时自动开护盾。要在设置里看得懂条件，误触能关。",
         [
             beat("设置「生命低于三成自动喝药」", "条件显示在自动规则里", "定好规矩", "moba",
-                 [hero(48, 55), badge("条件:残血用药")], title="设条件"),
+                 [hero(48, 55), menu_box(24, 36, ["生命<30% → 用药", "见硬控 → 减伤"]),
+                  badge("自动规则")], title="设条件"),
             beat("战斗中掉血过线", "不按键也喝药，物品 CD 走起", "自动一口", "moba",
                  [hero(48, 55), ring(48, 55, r=12, kind="buff"), badge("自动用药")], title="触发"),
             beat("关闭该自动规则", "掉血不再自动喝", "改回手动", "moba",
@@ -1928,7 +2129,10 @@ def build_cases():
         "手感上「我按的算数」。",
         [
             beat("自动即将放出时，玩家按了别的技能", "自动取消或延后，先执行手动", "听我的", "topdown",
-                 [unit(40, 55, sel=True), cursor(55, 40), badge("手动优先")], title="抢占"),
+                 [unit(40, 55, sel=True), unit(70, 40, team="enemy"),
+                  cursor(55, 40, "down"), circle_ind(70, 40, 12, True),
+                  arrow(45, 52, 66, 42, "attack"), hotbar(active=0, deny=1),
+                  badge("手动优先")], title="抢占"),
             beat("手动完成且自动条件仍在", "按规则决定是否补一次自动", "再交给自动", "topdown",
                  [unit(40, 55, sel=True), unit(70, 40, team="enemy"), badge("自动恢复")], title="恢复"),
         ], ["RTS", "MMO", "设计选项"],
@@ -1939,7 +2143,8 @@ def build_cases():
         "停手时要分清停的是普攻还是某颗技能。",
         [
             beat("只开自动攻击", "靠近敌人只普攻，不大招", "平A着", "tps",
-                 [hero(40, 55), unit(68, 42, team="enemy"), badge("仅自动普攻")], title="仅普攻"),
+                 [hero(40, 55, face=20), unit(68, 42, team="enemy"),
+                  arrow(45, 52, 64, 44, "attack"), badge("仅自动普攻")], title="仅普攻"),
             beat("普攻自动 + 某技能自动都开", "普攻填充，技能见缝插入", "两套都在跑", "tps",
                  [hero(40, 55), unit(68, 42, team="enemy"),
                   arrow(45, 52, 64, 44, "attack"), badge("普攻+技能自动")], title="并行"),
@@ -1996,10 +2201,12 @@ def build_cases():
         "可与 WASD 并存，但同时开时要定谁覆盖谁。",
         [
             beat("左键/右键点地面", "角色朝落点跑，脚下出现目标点", "去那儿", "topdown",
-                 [hero(30, 60, face=20), arrow(32, 58, 70, 40, "move"), cursor(70, 40, "up"),
+                 [hero(30, 60, face=20), arrow(32, 58, 70, 40, "move"),
+                  circle_ind(70, 40, 10, True), cursor(70, 40, "up"),
                   badge("点地走")], title="点地"),
             beat("跑动中再点新落点", "改道去新点，旧点取消", "改主意了", "topdown",
-                 [hero(45, 50, face=10), arrow(48, 48, 75, 55, "move"), cursor(75, 55, "up"),
+                 [hero(45, 50, face=10), arrow(48, 48, 75, 55, "move"),
+                  circle_ind(75, 55, 10, True), cursor(75, 55, "up"),
                   badge("改落点")], title="改道"),
         ], ["暗黑", "ARPG", "MOBA补刀走位"],
     ))
@@ -2010,9 +2217,12 @@ def build_cases():
         [
             beat("WASD + 按住冲刺", "速度加快，耐力下降", "跑起来", "tps",
                  [hero(40, 55, face=-90), stick("L", 0, -1), arrow(40, 48, 40, 25, "move"),
+                  bar(50, 28, 0.35, "charge", "耐力"), keyhint(72, 72, "Shift", "active"),
                   badge("冲刺中")], title="冲刺"),
             beat("耐力耗尽", "被迫降回走路，冲刺键暂不可用", "喘不上来", "tps",
-                 [hero(45, 55, face=-90), stick("L", 0, -1), badge("耐力空")], title="耗尽"),
+                 [hero(45, 55, face=-90), stick("L", 0, -0.5), arrow(45, 52, 45, 40, "move"),
+                  bar(50, 28, 0.0, "charge", "耐力"), keyhint(72, 72, "Shift", "off"),
+                  badge("耐力空")], title="耗尽"),
         ], ["MMO", "动作RPG", "TPS", "开放世界"],
     ))
     c.append(case(
@@ -2071,7 +2281,9 @@ def build_cases():
         "费用不够时卡片不可拖出或落点拒绝。",
         [
             beat("手指按住手牌一张卡", "卡提起、原槽位空、费用高亮", "捏住了", "topdown",
-                 [card(28, 78, "兵", 3, True), card(48, 82, "法", 2), card(68, 82, "建筑", 5),
+                 [card(28, 52, "兵", 3, True), box(22, 72, 12, 14),
+                  card(48, 82, "法", 2), card(68, 82, "建筑", 5),
+                  bar(50, 90, 0.8, "charge", "圣水"),
                   building(70, 30), unit(30, 40, team="enemy"), badge("按住手牌")], title="按住"),
             beat("拖到己方半场合法格", "落点范围高亮，卡随手指移动", "找落点", "topdown",
                  [card(55, 48, "兵", 3, True), circle_ind(55, 48, 16, True),
@@ -2086,13 +2298,18 @@ def build_cases():
         "touch-drag-aim-skill", "touch-tablet", "按住技能键拖出方向/落点再松手",
         "触控上常见：按住技能图标，拖出箭头或圈，松手放出；滑回图标取消。",
         [
-            beat("按住技能图标", "出现方向/范围指示器", "还没放", "topdown",
-                 [hero(40, 55), cone(40, 55, angle=-20, spread=40, length=30), badge("按住技能")], title="按住"),
+            beat("按住触控技能钮", "出现方向/范围指示器", "还没放", "topdown",
+                 [hero(40, 55), cone(40, 55, angle=-20, spread=40, length=30),
+                  card(22, 78, "技", 0), cursor(22, 78, "down"), badge("按住技能")], title="按住"),
             beat("拖向目标方向或落点", "指示器跟随手指", "瞄准中", "topdown",
                  [hero(40, 55), cone(40, 55, angle=10, spread=40, length=34),
-                  cursor(70, 40, "drag"), badge("拖瞄")], title="拖瞄"),
-            beat("松手", "技能放出；滑回取消则不放", "放/取消", "topdown",
-                 [hero(40, 55), arrow(42, 52, 70, 40, "attack"), badge("松手确认")], title="确认"),
+                  card(22, 78, "技", 0), cursor(70, 40, "drag"), badge("拖瞄")], title="拖瞄"),
+            beat("松手确认", "技能放出", "放！", "topdown",
+                 [hero(40, 55), arrow(42, 52, 70, 40, "attack"),
+                  card(22, 78, "技", 0), badge("松手确认")], title="确认"),
+            beat("滑回图标松手", "指示器收回，技能不放", "取消", "topdown",
+                 [hero(40, 55), card(22, 78, "技", 0), cursor(22, 78, "up"),
+                  badge("取消")], title="取消"),
         ], ["平板", "MOBA触控", "皇室战争"],
     ))
     c.append(case(
@@ -2111,9 +2328,11 @@ def build_cases():
         "双指捏合拉远推近；单指拖平移镜头。与拖卡片手势要分区，避免误触。",
         [
             beat("双指捏合", "地图缩放，单位图标大小变化", "拉远/推近", "topdown",
-                 [unit(30, 40), unit(55, 50), unit(70, 35), badge("捏合缩放")], title="缩放"),
+                 [unit(30, 40, size=1.5), unit(55, 50, size=1.5), unit(70, 35, size=1.5),
+                  cursor(42, 48, "down"), cursor(58, 52, "down"), badge("捏合缩放")], title="缩放"),
             beat("单指拖空白地", "镜头平移", "挪地图", "topdown",
-                 [unit(40, 50), path([(20, 50), (60, 50)], "move"), badge("拖地图")], title="平移"),
+                 [unit(55, 48), unit(70, 42), unit(78, 55), cursor(35, 70, "drag"),
+                  badge("拖地图")], title="平移"),
         ], ["平板", "RTS", "策略"],
     ))
     c.append(case(
@@ -2123,7 +2342,9 @@ def build_cases():
             beat("短按单位/卡", "执行默认动作（选中/使用）", "点一下", "topdown",
                  [unit(50, 50, sel=True), badge("短按")], title="短按"),
             beat("长按同一对象", "弹出详情/环形次级菜单", "按久一点", "topdown",
-                 [unit(50, 50), menu_box(62, 40, ["详情", "锁定", "取消"]), badge("长按")], title="长按"),
+                 [unit(50, 50, sel=True), ring(50, 50, r=18, kind="buff"),
+                  card(50, 28, "详情"), card(72, 50, "锁定"), card(50, 72, "取消"),
+                  card(28, 50, "标记"), badge("环形菜单")], title="长按"),
         ], ["平板", "设计选项"],
     ))
     c.append(case(
@@ -2131,7 +2352,8 @@ def build_cases():
         "手牌区左右滑换焦点卡；或出牌后自动抽到下一张顶牌。",
         [
             beat("在手牌区左右滑", "焦点卡切换，中间放大", "换一张", "topdown",
-                 [card(25, 78, "A", 2), card(50, 70, "B", 4, True), card(75, 78, "C", 3),
+                 [card(25, 78, "A", 2), card(50, 66, "B", 4), card(75, 78, "C", 3),
+                  path([(28, 72), (72, 72)], "move"), cursor(62, 72, "drag"),
                   badge("滑动手牌")], title="滑动"),
             beat("打出焦点卡", "空位从牌库自动补进下一张", "又摸一张", "topdown",
                  [unit(55, 45, sel=True), ring(55, 45),
@@ -2150,8 +2372,9 @@ def build_cases():
                  [unit(40, 55, sel=True), ring(40, 55),
                   menu_box(58, 42, ["移动", "攻击", "计策", "待命"]), badge("指令菜单")], title="点武将"),
             beat("点「攻击」", "菜单收起，可攻击格/对象高亮", "选怎么打", "topdown",
-                 [unit(40, 55, sel=True), unit(70, 40, team="enemy"),
-                  circle_ind(70, 40, 14, True), badge("攻击范围")], title="选指令"),
+                 [unit(40, 55, sel=True), ring(40, 55), unit(70, 40, team="enemy"),
+                  circle_ind(55, 48, 10, True), circle_ind(62, 44, 10, True),
+                  circle_ind(70, 40, 14, True), cursor(58, 48), badge("攻击范围")], title="选指令"),
             beat("点敌方或格子确认", "指令提交，进入演出/结算", "打他", "topdown",
                  [unit(40, 55, sel=True), unit(70, 40, team="enemy"),
                   arrow(44, 52, 66, 42, "attack"), badge("确认目标")], title="选目标"),
@@ -2165,9 +2388,10 @@ def build_cases():
         "适合主机键位少或平板，和键位热键并行。",
         [
             beat("点面板上的技能格", "进入该技能瞄准或立即释放", "点了技能", "moba",
-                 [hero(40, 55), menu_box(70, 70, ["Q", "W", "E", "R"]), badge("点技能格")], title="点格"),
+                 [hero(40, 55), hotbar(active=0), badge("点技能格")], title="点格"),
             beat("再点目标/地面（若需要）", "技能放出", "放完", "moba",
-                 [hero(40, 55), circle_ind(68, 40, 14, True), cursor(68, 40), badge("补目标")], title="补目标"),
+                 [hero(40, 55), circle_ind(68, 40, 14, True), cursor(68, 40),
+                  hotbar(cd=0), badge("补目标")], title="补目标"),
         ], ["MOBA", "平板", "RTS面板"],
     ))
     c.append(case(
@@ -2179,7 +2403,8 @@ def build_cases():
                  [unit(40, 55, sel=True), unit(70, 40, team="enemy"),
                   menu_box(55, 70, ["执行", "取消"]), badge("确认条")], title="确认"),
             beat("点执行", "指令入队并播放", "定了", "topdown",
-                 [unit(40, 55, sel=True), arrow(44, 52, 66, 42, "attack"), badge("执行")], title="执行"),
+                 [unit(40, 55, sel=True), unit(70, 40, team="enemy"),
+                  arrow(44, 52, 66, 42, "attack"), badge("执行")], title="执行"),
         ], ["三国志", "战棋", "经营"],
     ))
 
@@ -2211,7 +2436,8 @@ def build_cases():
         "看不见或对象非法时准星禁止态。",
         [
             beat("对不可见或非法目标确认", "禁止图标，技能不出去", "不行", "moba",
-                 [hero(35, 60), cursor(70, 40), badge("禁止")], title="禁止"),
+                 [hero(35, 60), unit(72, 38, team="enemy"), circle_ind(70, 40, 14, False),
+                  crosshair(70, 40, locked=True), badge("禁止")], title="禁止"),
         ], ["RTS", "MOBA"],
     ))
     c.append(case(
@@ -2230,7 +2456,9 @@ def build_cases():
         "技能超距、没视线、交易一方移动过远：取消并说明原因。",
         [
             beat("超距或没视线时确认", "拒绝并提示原因", "够不着", "moba",
-                 [hero(30, 60), unit(80, 30, team="enemy"), badge("超距/视线")], title="超距"),
+                 [hero(30, 60), unit(80, 30, team="enemy"), circle_ind(30, 60, 26, False),
+                  building(52, 42), path([(34, 56), (50, 46)], "attack"),
+                  crosshair(80, 30), badge("超距/视线")], title="超距"),
             beat("交易中走太远", "交易窗关闭，物品回各方", "交易取消", "moba",
                  [hero(20, 60), unit(80, 30, team="ally"), menu_box(40, 45, ["交易已取消"]),
                   badge("交易取消")], title="交易断"),
@@ -2358,8 +2586,8 @@ def _write_checkpoint(cases: list, weak: list[str], head: str) -> None:
         f"- 逻辑文案：`scripts/player_action_ux_beat_logic.py`",
         f"- 实现标注：`scripts/player_action_ux_impl_notes.py`",
         f"- 生成时 HEAD：`{head}`（以你拉取后的 `git rev-parse` 为准；合并后会变）",
-        f"- 分支语境：`cursor/ux-sequence-io-4211`（时序=设备→逻辑→画面；左栏仍为复刻目标）",
-        f"- 已合 main：图鉴 #743–#750（含按游戏分类）",
+        f"- 分支语境：`cursor/ux-catalog-dual-audit-4211`（全量双人交叉审核 + 画面/步骤修复）",
+        f"- 已合 main：图鉴 #743–#752（含按游戏分类、时序三参与者、一镜一对）",
         "",
         "## 页面交互约定（改 UI 前先读）",
         "",
@@ -2371,6 +2599,13 @@ def _write_checkpoint(cases: list, weak: list[str], head: str) -> None:
         "- **时序图参与者只有三个：设备输入 → 逻辑处理 → 画面输出**；禁止再把手感/爽点做成泳道",
         "- 每拍必有 `input` / `logic` / `screen`；`logic` 来自 `BEAT_LOGIC`，缺键直接 fail 生成",
         "- 每个 case 必有 `ludots` 与 `todos`；勿手改 `catalog-data.js`",
+        "",
+        "## 双人交叉审核（本轮）",
+        "",
+        "- 10 路审核：5 批 × 双人独立，覆盖全部 168 case",
+        "- 双方一致 225 条（high 96 / med 95 / low 34）；单人 high 19 作参考",
+        "- F0–F4 修复合并后，R1×R2 再审原 high 案；双方仍共指 5 案已补修",
+        "- 重点：缺 cast（框/圈/锥/菜单/卡/键/条）、该拆未拆拍、文案与画面不一致",
         "",
         "## 复刻目标分类",
         "",
