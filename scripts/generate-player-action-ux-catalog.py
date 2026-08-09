@@ -325,7 +325,8 @@ def build_cases():
         "按住拖出矩形，框内单位一起被选中。",
         [
             beat("在空地按下左键", "出现选框起点", "开始框选", "topdown",
-                 [unit(35, 40), unit(48, 45), unit(58, 52), unit(70, 38), cursor(30, 30, "down"), badge("按下")], title="按下"),
+                 [unit(35, 40), unit(48, 45), unit(58, 52), unit(70, 38),
+                  box(30, 30, 6, 6), cursor(30, 30, "down"), badge("按下")], title="按下"),
             beat("拖动鼠标", "半透明选框扩大，框内单位闪一下", "还在框", "topdown",
                  [unit(35, 40, sel=True), unit(48, 45, sel=True), unit(58, 52, sel=True), unit(70, 38),
                   ring(35, 40), ring(48, 45), ring(58, 52), box(30, 30, 40, 30),
@@ -534,9 +535,11 @@ def build_cases():
         "按技能后地上出现范围/方向预览，确认前可移动预览。",
         [
             beat("按下技能键", "进入瞄准；出现圈/扇形指示器", "先瞄再放", "moba",
-                 [hero(40, 60), circle_ind(65, 40, 18, True), cursor(65, 40), badge("技能瞄准")], title="出指示器"),
+                 [hero(40, 60), circle_ind(65, 40, 16, True), cone(40, 60, angle=-35, spread=46, length=32),
+                  cursor(65, 40), hotbar(active=0), badge("技能瞄准")], title="出指示器"),
             beat("移动鼠标", "指示器跟随；非法区变红", "找落点", "moba",
-                 [hero(40, 60), circle_ind(75, 55, 18, False), cursor(75, 55), badge("调整")], title="调整"),
+                 [hero(40, 60), circle_ind(75, 55, 16, False), cone(40, 60, angle=10, spread=46, length=34),
+                  cursor(75, 55), badge("调整")], title="调整"),
         ], ["MOBA", "ARPG"],
     ))
     c.append(case(
@@ -2323,8 +2326,9 @@ def build_cases():
                  [unit(40, 55, sel=True), ring(40, 55),
                   menu_box(58, 42, ["移动", "攻击", "计策", "待命"]), badge("指令菜单")], title="点武将"),
             beat("点「攻击」", "菜单收起，可攻击格/对象高亮", "选怎么打", "topdown",
-                 [unit(40, 55, sel=True), unit(70, 40, team="enemy"),
-                  circle_ind(70, 40, 14, True), badge("攻击范围")], title="选指令"),
+                 [unit(40, 55, sel=True), ring(40, 55), unit(70, 40, team="enemy"),
+                  circle_ind(55, 48, 10, True), circle_ind(62, 44, 10, True),
+                  circle_ind(70, 40, 14, True), cursor(58, 48), badge("攻击范围")], title="选指令"),
             beat("点敌方或格子确认", "指令提交，进入演出/结算", "打他", "topdown",
                  [unit(40, 55, sel=True), unit(70, 40, team="enemy"),
                   arrow(44, 52, 66, 42, "attack"), badge("确认目标")], title="选目标"),

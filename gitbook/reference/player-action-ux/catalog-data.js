@@ -9,7 +9,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
     "screen-output"
   ],
   "checkpoint": {
-    "head": "995e84a05",
+    "head": "809e9790a",
     "branch_hint": "cursor/ux-sequence-io-4211",
     "impl_notes": "scripts/player_action_ux_impl_notes.py",
     "beat_logic": "scripts/player_action_ux_beat_logic.py",
@@ -134,6 +134,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "team": "ally",
               "face": 0,
               "size": 1
+            },
+            {
+              "t": "ring",
+              "x": 62,
+              "y": 42,
+              "r": 9,
+              "kind": "select"
             },
             {
               "t": "cursor",
@@ -266,6 +273,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "team": "ally",
               "face": 0,
               "size": 1
+            },
+            {
+              "t": "box",
+              "x": 30,
+              "y": 30,
+              "w": 6,
+              "h": 6
             },
             {
               "t": "cursor",
@@ -713,6 +727,74 @@ window.PLAYER_ACTION_UX_CATALOG = {
             }
           ],
           "logic": "从选中集合中移除该单位"
+        },
+        {
+          "title": "反选",
+          "input": "按住 Ctrl 再点：已选去掉、未选加入",
+          "screen": "选中状态按点选翻转",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "unit",
+              "x": 30,
+              "y": 50,
+              "sel": false,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "unit",
+              "x": 50,
+              "y": 52,
+              "sel": true,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "ring",
+              "x": 50,
+              "y": 52,
+              "r": 8,
+              "kind": "select"
+            },
+            {
+              "t": "unit",
+              "x": 70,
+              "y": 48,
+              "sel": true,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "ring",
+              "x": 70,
+              "y": 48,
+              "r": 8,
+              "kind": "select"
+            },
+            {
+              "t": "cursor",
+              "x": 50,
+              "y": 52,
+              "mode": "up"
+            },
+            {
+              "t": "key",
+              "x": 42,
+              "y": 28,
+              "label": "Ctrl",
+              "state": "active",
+              "hint": "反选"
+            },
+            {
+              "t": "badge",
+              "text": "反选"
+            }
+          ],
+          "logic": "按修饰键翻转该单位的选中状态"
         }
       ],
       "ludots": "点选/框选：CommandSourceAcquisitionSystem 写入 EntityCollectionStore（collection.command.source / hover）；加选模式走 Replace/Additive/Toggle。",
@@ -776,8 +858,8 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "y": 70,
               "sel": false,
               "team": "ally",
-              "face": 0,
-              "size": 1
+              "face": 180,
+              "size": 1.35
             },
             {
               "t": "ring",
@@ -808,7 +890,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
             },
             {
               "t": "badge",
-              "text": "双击"
+              "text": "双击·异类除外"
             }
           ],
           "logic": "按同类型筛出可见单位并整批选中"
@@ -1109,6 +1191,51 @@ window.PLAYER_ACTION_UX_CATALOG = {
       ],
       "beats": [
         {
+          "title": "已选",
+          "input": "已多选部队",
+          "screen": "两单位带选中圈",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "unit",
+              "x": 40,
+              "y": 50,
+              "sel": true,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "unit",
+              "x": 55,
+              "y": 52,
+              "sel": true,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "ring",
+              "x": 40,
+              "y": 50,
+              "r": 8,
+              "kind": "select"
+            },
+            {
+              "t": "ring",
+              "x": 55,
+              "y": 52,
+              "r": 8,
+              "kind": "select"
+            },
+            {
+              "t": "badge",
+              "text": "已多选"
+            }
+          ],
+          "logic": "展示多单位已选中带圈的前态"
+        },
+        {
           "title": "清空",
           "input": "点空地",
           "screen": "所有选中圈消失",
@@ -1143,7 +1270,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "text": "点空地"
             }
           ],
-          "logic": "清空当前全部选中"
+          "logic": "点空地后清空当前全部选中"
         }
       ],
       "ludots": "点选/框选：CommandSourceAcquisitionSystem 写入 EntityCollectionStore（collection.command.source / hover）；加选模式走 Replace/Additive/Toggle。",
@@ -2111,6 +2238,21 @@ window.PLAYER_ACTION_UX_CATALOG = {
             },
             {
               "t": "unit",
+              "x": 70,
+              "y": 40,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "crosshair",
+              "x": 70,
+              "y": 40,
+              "locked": false
+            },
+            {
+              "t": "unit",
               "x": 55,
               "y": 35,
               "sel": false,
@@ -2123,6 +2265,14 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "x": 55,
               "y": 35,
               "locked": true
+            },
+            {
+              "t": "arrow",
+              "x1": 70,
+              "y1": 40,
+              "x2": 55,
+              "y2": 35,
+              "kind": "move"
             },
             {
               "t": "badge",
@@ -2170,18 +2320,22 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "t": "circle",
               "x": 65,
               "y": 40,
-              "r": 18,
+              "r": 16,
               "ok": true
+            },
+            {
+              "t": "cone",
+              "x": 40,
+              "y": 60,
+              "angle": -35,
+              "spread": 46,
+              "length": 32
             },
             {
               "t": "cursor",
               "x": 65,
               "y": 40,
               "mode": "idle"
-            },
-            {
-              "t": "badge",
-              "text": "技能瞄准"
             },
             {
               "t": "hotbar",
@@ -2192,6 +2346,10 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "off": [],
               "dot": null,
               "deny": null
+            },
+            {
+              "t": "badge",
+              "text": "技能瞄准"
             }
           ],
           "logic": "进入技能瞄准态并挂上指示器"
@@ -2212,8 +2370,16 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "t": "circle",
               "x": 75,
               "y": 55,
-              "r": 18,
+              "r": 16,
               "ok": false
+            },
+            {
+              "t": "cone",
+              "x": 40,
+              "y": 60,
+              "angle": 10,
+              "spread": 46,
+              "length": 34
             },
             {
               "t": "cursor",
@@ -2495,6 +2661,14 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "locked": false
             },
             {
+              "t": "arrow",
+              "x1": 50,
+              "y1": 50,
+              "x2": 62,
+              "y2": 42,
+              "kind": "attack"
+            },
+            {
               "t": "badge",
               "text": "点射"
             }
@@ -2509,9 +2683,40 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "cast": [
             {
               "t": "crosshair",
-              "x": 52,
-              "y": 46,
+              "x": 54,
+              "y": 44,
               "locked": false
+            },
+            {
+              "t": "ring",
+              "x": 54,
+              "y": 44,
+              "r": 16,
+              "kind": "lock"
+            },
+            {
+              "t": "arrow",
+              "x1": 50,
+              "y1": 50,
+              "x2": 72,
+              "y2": 38,
+              "kind": "attack"
+            },
+            {
+              "t": "arrow",
+              "x1": 50,
+              "y1": 50,
+              "x2": 78,
+              "y2": 50,
+              "kind": "attack"
+            },
+            {
+              "t": "arrow",
+              "x1": 50,
+              "y1": 50,
+              "x2": 68,
+              "y2": 58,
+              "kind": "attack"
             },
             {
               "t": "badge",
@@ -2548,14 +2753,21 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "view": "fps",
           "cast": [
             {
+              "t": "box",
+              "x": 32,
+              "y": 32,
+              "w": 36,
+              "h": 36
+            },
+            {
               "t": "crosshair",
               "x": 50,
               "y": 50,
-              "locked": true
+              "locked": false
             },
             {
               "t": "badge",
-              "text": "开镜"
+              "text": "ADS开镜"
             }
           ],
           "logic": "切换到开镜瞄准精度档"
@@ -2573,8 +2785,17 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "locked": false
             },
             {
+              "t": "bar",
+              "x": 50,
+              "y": 68,
+              "ratio": 0.4,
+              "kind": "cast",
+              "label": "换弹",
+              "broken": false
+            },
+            {
               "t": "badge",
-              "text": "换弹"
+              "text": "0/30 · 禁射"
             }
           ],
           "logic": "开始换弹并暂时禁止射击"
@@ -2592,8 +2813,26 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "locked": false
             },
             {
+              "t": "hotbar",
+              "slots": 4,
+              "active": 1,
+              "cd": null,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": null
+            },
+            {
+              "t": "key",
+              "x": 78,
+              "y": 78,
+              "label": "2",
+              "state": "active",
+              "hint": "切枪"
+            },
+            {
               "t": "badge",
-              "text": "切枪"
+              "text": "步枪→霰弹"
             }
           ],
           "logic": "切换当前武器与弹药配置"
@@ -2836,7 +3075,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "t": "hero",
               "x": 45,
               "y": 55,
-              "face": 90
+              "face": 0
             },
             {
               "t": "stickL",
@@ -3017,7 +3256,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "t": "hero",
               "x": 45,
               "y": 55,
-              "face": 40
+              "face": -31
             },
             {
               "t": "unit",
@@ -3466,13 +3705,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "x1": 40,
               "y1": 55,
               "x2": 65,
-              "y2": 45,
+              "y2": 55,
               "kind": "move"
             },
             {
               "t": "hero",
               "x": 65,
-              "y": 45,
+              "y": 55,
               "face": 0
             },
             {
@@ -3790,10 +4029,27 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "size": 1
             },
             {
-              "t": "cursor",
+              "t": "circle",
               "x": 65,
               "y": 40,
-              "mode": "idle"
+              "r": 12,
+              "ok": false
+            },
+            {
+              "t": "crosshair",
+              "x": 65,
+              "y": 40,
+              "locked": true
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": null,
+              "cd": null,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": 0
             },
             {
               "t": "badge",
@@ -4228,6 +4484,26 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "y": 30,
               "r": 14,
               "ok": true
+            },
+            {
+              "t": "box",
+              "x": 74,
+              "y": 72,
+              "w": 22,
+              "h": 22
+            },
+            {
+              "t": "circle",
+              "x": 85,
+              "y": 83,
+              "r": 5,
+              "ok": true
+            },
+            {
+              "t": "cursor",
+              "x": 85,
+              "y": 83,
+              "mode": "up"
             },
             {
               "t": "badge",
@@ -4835,7 +5111,24 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "t": "hero",
               "x": 45,
               "y": 55,
-              "face": 10
+              "face": -25
+            },
+            {
+              "t": "unit",
+              "x": 68,
+              "y": 45,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "cone",
+              "x": 45,
+              "y": 55,
+              "angle": -25,
+              "spread": 32,
+              "length": 20
             },
             {
               "t": "badge",
@@ -4854,7 +5147,32 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "t": "hero",
               "x": 48,
               "y": 52,
-              "face": 20
+              "face": -20
+            },
+            {
+              "t": "unit",
+              "x": 68,
+              "y": 45,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "arrow",
+              "x1": 52,
+              "y1": 50,
+              "x2": 64,
+              "y2": 46,
+              "kind": "attack"
+            },
+            {
+              "t": "cone",
+              "x": 48,
+              "y": 52,
+              "angle": -15,
+              "spread": 40,
+              "length": 24
             },
             {
               "t": "badge",
@@ -4873,7 +5191,38 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "t": "hero",
               "x": 52,
               "y": 50,
-              "face": 30
+              "face": -10
+            },
+            {
+              "t": "unit",
+              "x": 68,
+              "y": 45,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "cone",
+              "x": 52,
+              "y": 50,
+              "angle": -10,
+              "spread": 55,
+              "length": 30
+            },
+            {
+              "t": "path",
+              "points": [
+                [
+                  45,
+                  55
+                ],
+                [
+                  52,
+                  50
+                ]
+              ],
+              "kind": "move"
             },
             {
               "t": "badge",
@@ -5230,9 +5579,23 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "cast": [
             {
               "t": "hero",
-              "x": 45,
+              "x": 40,
               "y": 55,
               "face": 0
+            },
+            {
+              "t": "path",
+              "points": [
+                [
+                  40,
+                  55
+                ],
+                [
+                  55,
+                  48
+                ]
+              ],
+              "kind": "move"
             },
             {
               "t": "unit",
@@ -5242,6 +5605,28 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "team": "enemy",
               "face": 0,
               "size": 1
+            },
+            {
+              "t": "ring",
+              "x": 70,
+              "y": 45,
+              "r": 8,
+              "kind": "lock"
+            },
+            {
+              "t": "arrow",
+              "x1": 58,
+              "y1": 50,
+              "x2": 66,
+              "y2": 46,
+              "kind": "attack"
+            },
+            {
+              "t": "ring",
+              "x": 55,
+              "y": 48,
+              "r": 10,
+              "kind": "buff"
             },
             {
               "t": "badge",
@@ -5641,9 +6026,9 @@ window.PLAYER_ACTION_UX_CATALOG = {
       ],
       "beats": [
         {
-          "title": "合体",
+          "title": "下令",
           "input": "对两名高阶单位下令合体",
-          "screen": "融合成新单位",
+          "screen": "两单位相向，准备融合",
           "view": "topdown",
           "cast": [
             {
@@ -5665,28 +6050,70 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "size": 1
             },
             {
+              "t": "ring",
+              "x": 40,
+              "y": 50,
+              "r": 8,
+              "kind": "select"
+            },
+            {
+              "t": "ring",
+              "x": 55,
+              "y": 50,
+              "r": 8,
+              "kind": "select"
+            },
+            {
               "t": "arrow",
-              "x1": 48,
+              "x1": 42,
               "y1": 50,
-              "x2": 70,
-              "y2": 45,
+              "x2": 52,
+              "y2": 50,
               "kind": "move"
             },
             {
+              "t": "arrow",
+              "x1": 53,
+              "y1": 50,
+              "x2": 43,
+              "y2": 50,
+              "kind": "move"
+            },
+            {
+              "t": "badge",
+              "text": "下令合体"
+            }
+          ],
+          "logic": "对两名已选单位下达合体指令"
+        },
+        {
+          "title": "合体",
+          "input": "融合完成",
+          "screen": "只剩体型更大的合体单位",
+          "view": "topdown",
+          "cast": [
+            {
               "t": "unit",
-              "x": 70,
-              "y": 45,
-              "sel": false,
+              "x": 48,
+              "y": 50,
+              "sel": true,
               "team": "ally",
               "face": 0,
               "size": 1.4
             },
             {
+              "t": "ring",
+              "x": 48,
+              "y": 50,
+              "r": 8,
+              "kind": "select"
+            },
+            {
               "t": "badge",
-              "text": "合体"
+              "text": "合体完成"
             }
           ],
-          "logic": "两单位合体并生成新单位"
+          "logic": "融合完成，只保留体型更大的合体单位"
         }
       ],
       "ludots": "部队/随从：指挥源 collection + Order；载具座位偏模组替换 ControlScheme/能力。",
@@ -5817,6 +6244,30 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "ok": true
             },
             {
+              "t": "crosshair",
+              "x": 70,
+              "y": 40,
+              "locked": false
+            },
+            {
+              "t": "arrow",
+              "x1": 40,
+              "y1": 55,
+              "x2": 68,
+              "y2": 42,
+              "kind": "attack"
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": 0,
+              "cd": null,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": null
+            },
+            {
               "t": "badge",
               "text": "智能"
             }
@@ -5849,11 +6300,61 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "mode": "idle"
             },
             {
+              "t": "hotbar",
+              "slots": 4,
+              "active": 0,
+              "cd": null,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": null
+            },
+            {
               "t": "badge",
               "text": "普通"
             }
           ],
           "logic": "普通模式先进入指示器待确认"
+        },
+        {
+          "title": "确认",
+          "input": "再点击确认出手",
+          "screen": "指示器落地，技能放出",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 35,
+              "y": 60,
+              "face": 0
+            },
+            {
+              "t": "circle",
+              "x": 60,
+              "y": 45,
+              "r": 14,
+              "ok": true
+            },
+            {
+              "t": "cursor",
+              "x": 60,
+              "y": 45,
+              "mode": "up"
+            },
+            {
+              "t": "arrow",
+              "x1": 40,
+              "y1": 55,
+              "x2": 58,
+              "y2": 46,
+              "kind": "attack"
+            },
+            {
+              "t": "badge",
+              "text": "确认出手"
+            }
+          ],
+          "logic": "确认点击后在指示器落点出手"
         }
       ],
       "ludots": "同技能不同手感：ClientCastPreferenceStore（slot/form/template/global）；Alt 自施/双击/Shift 队列在 special_input 能力与 Order 队列。",
@@ -6082,8 +6583,26 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "face": 0
             },
             {
-              "t": "badge",
-              "text": "双击"
+              "t": "path",
+              "points": [
+                [
+                  50,
+                  55
+                ],
+                [
+                  35,
+                  45
+                ]
+              ],
+              "kind": "move"
+            },
+            {
+              "t": "arrow",
+              "x1": 50,
+              "y1": 55,
+              "x2": 35,
+              "y2": 45,
+              "kind": "move"
             },
             {
               "t": "hotbar",
@@ -6094,6 +6613,18 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "off": [],
               "dot": null,
               "deny": null
+            },
+            {
+              "t": "key",
+              "x": 50,
+              "y": 30,
+              "label": "Q",
+              "state": "active",
+              "hint": "双击"
+            },
+            {
+              "t": "badge",
+              "text": "双击"
             }
           ],
           "logic": "双击判定成立则走双击技能变体"
@@ -6361,18 +6892,20 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "text": "1号在放"
             },
             {
-              "t": "path",
-              "points": [
-                [
-                  32,
-                  58
-                ],
-                [
-                  40,
-                  50
-                ]
-              ],
-              "kind": "move"
+              "t": "key",
+              "x": 32,
+              "y": 45,
+              "label": "2",
+              "state": "idle",
+              "hint": "等待"
+            },
+            {
+              "t": "key",
+              "x": 44,
+              "y": 49,
+              "label": "3",
+              "state": "idle",
+              "hint": "等待"
             }
           ],
           "logic": "只让队首出手，其余记入排队"
@@ -6903,6 +7436,30 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "kind": "lock"
             },
             {
+              "t": "arrow",
+              "x1": 22,
+              "y1": 58,
+              "x2": 66,
+              "y2": 34,
+              "kind": "attack"
+            },
+            {
+              "t": "arrow",
+              "x1": 34,
+              "y1": 54,
+              "x2": 76,
+              "y2": 48,
+              "kind": "attack"
+            },
+            {
+              "t": "arrow",
+              "x1": 46,
+              "y1": 60,
+              "x2": 68,
+              "y2": 66,
+              "kind": "attack"
+            },
+            {
               "t": "badge",
               "text": "齐发"
             }
@@ -6961,6 +7518,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "ghost": false
             },
             {
+              "t": "ring",
+              "x": 70,
+              "y": 42,
+              "r": 11,
+              "kind": "buff"
+            },
+            {
               "t": "arrow",
               "x1": 32,
               "y1": 54,
@@ -6976,7 +7540,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
             },
             {
               "t": "badge",
-              "text": "工人×矿"
+              "text": "工人×矿·采"
             }
           ],
           "logic": "工人右键矿点判定为采集指令"
@@ -7010,16 +7574,29 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "ghost": false
             },
             {
+              "t": "circle",
+              "x": 58,
+              "y": 58,
+              "r": 7,
+              "ok": true
+            },
+            {
               "t": "arrow",
               "x1": 32,
               "y1": 54,
-              "x2": 66,
-              "y2": 44,
+              "x2": 58,
+              "y2": 58,
               "kind": "move"
             },
             {
+              "t": "cursor",
+              "x": 58,
+              "y": 58,
+              "mode": "up"
+            },
+            {
               "t": "badge",
-              "text": "士兵×矿"
+              "text": "士兵×矿·走"
             }
           ],
           "logic": "士兵右键矿点不走采集，按移动或无效"
@@ -7540,6 +8117,36 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "ghost": false
             },
             {
+              "t": "arrow",
+              "x1": 32,
+              "y1": 56,
+              "x2": 50,
+              "y2": 70,
+              "kind": "move"
+            },
+            {
+              "t": "circle",
+              "x": 50,
+              "y": 70,
+              "r": 8,
+              "ok": true
+            },
+            {
+              "t": "arrow",
+              "x1": 34,
+              "y1": 56,
+              "x2": 64,
+              "y2": 40,
+              "kind": "move"
+            },
+            {
+              "t": "ring",
+              "x": 68,
+              "y": 38,
+              "r": 10,
+              "kind": "buff"
+            },
+            {
               "t": "cursor",
               "x": 50,
               "y": 70,
@@ -7589,7 +8196,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "sel": true,
               "team": "ally",
               "face": 0,
-              "size": 1
+              "size": 0.85
             },
             {
               "t": "unit",
@@ -7597,8 +8204,8 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "y": 52,
               "sel": true,
               "team": "ally",
-              "face": 20,
-              "size": 1
+              "face": -20,
+              "size": 1.2
             },
             {
               "t": "ring",
@@ -7629,8 +8236,16 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "kind": "move"
             },
             {
+              "t": "arrow",
+              "x1": 36,
+              "y1": 52,
+              "x2": 36,
+              "y2": 38,
+              "kind": "move"
+            },
+            {
               "t": "badge",
-              "text": "混选×矿"
+              "text": "工人采·士兵走开"
             }
           ],
           "logic": "混选右键矿：工人采、士兵不采"
@@ -8333,10 +8948,6 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "face": 0
             },
             {
-              "t": "badge",
-              "text": "+饰品主动"
-            },
-            {
               "t": "hotbar",
               "slots": 4,
               "active": null,
@@ -8345,6 +8956,10 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "off": [],
               "dot": null,
               "deny": null
+            },
+            {
+              "t": "badge",
+              "text": "+饰品主动"
             }
           ],
           "logic": "装备后登记饰品主动技能槽"
@@ -8369,18 +8984,18 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "kind": "buff"
             },
             {
-              "t": "badge",
-              "text": "饰品放出"
-            },
-            {
               "t": "hotbar",
               "slots": 4,
               "active": null,
-              "cd": 0,
+              "cd": 3,
               "extra": null,
               "off": [],
               "dot": null,
               "deny": null
+            },
+            {
+              "t": "badge",
+              "text": "饰品放出"
             }
           ],
           "logic": "释放饰品主动并写入饰品冷却"
@@ -8398,10 +9013,6 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "face": 0
             },
             {
-              "t": "badge",
-              "text": "键收回"
-            },
-            {
               "t": "hotbar",
               "slots": 4,
               "active": null,
@@ -8412,6 +9023,10 @@ window.PLAYER_ACTION_UX_CATALOG = {
               ],
               "dot": null,
               "deny": null
+            },
+            {
+              "t": "badge",
+              "text": "键收回"
             }
           ],
           "logic": "卸下或收回时移除该技能槽"
@@ -8461,10 +9076,6 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "size": 1
             },
             {
-              "t": "badge",
-              "text": "偷到技能"
-            },
-            {
               "t": "hotbar",
               "slots": 4,
               "active": null,
@@ -8473,6 +9084,10 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "off": [],
               "dot": null,
               "deny": null
+            },
+            {
+              "t": "badge",
+              "text": "偷到技能"
             }
           ],
           "logic": "登记偷来的临时技能拷贝"
@@ -8497,6 +9112,16 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "ok": true
             },
             {
+              "t": "hotbar",
+              "slots": 4,
+              "active": 3,
+              "cd": null,
+              "extra": 3,
+              "off": [],
+              "dot": null,
+              "deny": null
+            },
+            {
               "t": "badge",
               "text": "释放拷贝"
             }
@@ -8514,6 +9139,16 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "x": 40,
               "y": 55,
               "face": 0
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": null,
+              "cd": null,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": null
             },
             {
               "t": "badge",
@@ -8650,18 +9285,18 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "locked": false
             },
             {
-              "t": "badge",
-              "text": "进入座位"
-            },
-            {
               "t": "hotbar",
-              "slots": 4,
-              "active": 0,
+              "slots": 3,
+              "active": null,
               "cd": null,
-              "extra": null,
+              "extra": 0,
               "off": [],
               "dot": null,
               "deny": null
+            },
+            {
+              "t": "badge",
+              "text": "进入座位"
             }
           ],
           "logic": "上车后切换到载具武器与操控"
@@ -8679,18 +9314,18 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "face": 0
             },
             {
-              "t": "badge",
-              "text": "离开座位"
-            },
-            {
               "t": "hotbar",
               "slots": 4,
-              "active": 0,
+              "active": null,
               "cd": null,
               "extra": null,
               "off": [],
               "dot": null,
               "deny": null
+            },
+            {
+              "t": "badge",
+              "text": "离开座位"
             }
           ],
           "logic": "下车后立刻恢复步行操控与技能栏"
@@ -8809,18 +9444,18 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "face": 0
             },
             {
-              "t": "badge",
-              "text": "骑乘技"
-            },
-            {
               "t": "hotbar",
               "slots": 4,
-              "active": 0,
+              "active": null,
               "cd": null,
-              "extra": null,
+              "extra": 3,
               "off": [],
               "dot": null,
               "deny": null
+            },
+            {
+              "t": "badge",
+              "text": "骑乘技"
             }
           ],
           "logic": "上马后启用骑乘技能与移动档"
@@ -8838,20 +9473,18 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "face": 0
             },
             {
-              "t": "badge",
-              "text": "陆地技"
-            },
-            {
               "t": "hotbar",
               "slots": 4,
               "active": null,
               "cd": null,
               "extra": null,
-              "off": [
-                3
-              ],
+              "off": [],
               "dot": null,
               "deny": null
+            },
+            {
+              "t": "badge",
+              "text": "陆地技"
             }
           ],
           "logic": "下马后移除骑乘技并恢复陆地栏"
@@ -8893,10 +9526,35 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "face": 0
             },
             {
-              "t": "building",
+              "t": "card",
               "x": 62,
               "y": 48,
-              "ghost": false
+              "label": "绿装",
+              "cost": 0,
+              "dragging": false
+            },
+            {
+              "t": "circle",
+              "x": 62,
+              "y": 48,
+              "r": 14,
+              "ok": true
+            },
+            {
+              "t": "menu",
+              "x": 70,
+              "y": 58,
+              "lines": [
+                "精良 护腕"
+              ]
+            },
+            {
+              "t": "key",
+              "x": 52,
+              "y": 40,
+              "label": "F",
+              "state": "active",
+              "hint": "拾取"
             },
             {
               "t": "badge",
@@ -8918,6 +9576,22 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "face": 0
             },
             {
+              "t": "card",
+              "x": 55,
+              "y": 38,
+              "label": "绿装",
+              "cost": 0,
+              "dragging": false
+            },
+            {
+              "t": "menu",
+              "x": 30,
+              "y": 68,
+              "lines": [
+                "背包 +1"
+              ]
+            },
+            {
               "t": "badge",
               "text": "已入包"
             },
@@ -8931,6 +9605,66 @@ window.PLAYER_ACTION_UX_CATALOG = {
             }
           ],
           "logic": "把地上物品移入背包并清除掉落"
+        },
+        {
+          "title": "包满",
+          "input": "背包已满时再按拾取",
+          "screen": "红字拒绝，掉落物仍留在地上",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "card",
+              "x": 62,
+              "y": 48,
+              "label": "绿装",
+              "cost": 0,
+              "dragging": false
+            },
+            {
+              "t": "circle",
+              "x": 62,
+              "y": 48,
+              "r": 14,
+              "ok": true
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": null,
+              "cd": null,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": 0
+            },
+            {
+              "t": "menu",
+              "x": 28,
+              "y": 62,
+              "lines": [
+                "背包已满！"
+              ]
+            },
+            {
+              "t": "key",
+              "x": 52,
+              "y": 40,
+              "label": "F",
+              "state": "off",
+              "hint": "拾取"
+            },
+            {
+              "t": "badge",
+              "text": "包满拒绝"
+            }
+          ],
+          "logic": "背包满时拒绝拾取并保留地上掉落"
         }
       ],
       "ludots": "物品：InventoryRuntimeService / ItemAbilityGrant / 交换 showcase 有库存与装备；「对目标用物品」无独立 Order UX 主链。",
@@ -9440,9 +10174,34 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "cast": [
             {
               "t": "hero",
-              "x": 48,
+              "x": 28,
               "y": 55,
               "face": 0
+            },
+            {
+              "t": "card",
+              "x": 48,
+              "y": 40,
+              "label": "新剑",
+              "cost": 0,
+              "dragging": true
+            },
+            {
+              "t": "card",
+              "x": 70,
+              "y": 42,
+              "label": "旧斧",
+              "cost": null,
+              "dragging": false
+            },
+            {
+              "t": "menu",
+              "x": 48,
+              "y": 62,
+              "lines": [
+                "武器槽←剑",
+                "旧斧→包"
+              ]
             },
             {
               "t": "badge",
@@ -9459,9 +10218,25 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "cast": [
             {
               "t": "hero",
-              "x": 48,
+              "x": 28,
               "y": 55,
               "face": 0
+            },
+            {
+              "t": "box",
+              "x": 58,
+              "y": 38,
+              "w": 18,
+              "h": 18
+            },
+            {
+              "t": "menu",
+              "x": 48,
+              "y": 58,
+              "lines": [
+                "武器槽：（空）",
+                "ATK -12"
+              ]
             },
             {
               "t": "badge",
@@ -9505,39 +10280,28 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "x": 35,
               "y": 40,
               "label": "药",
-              "cost": 0,
+              "cost": null,
               "dragging": true
             },
             {
               "t": "cursor",
-              "x": 55,
-              "y": 70,
+              "x": 42,
+              "y": 88,
               "mode": "drag"
-            },
-            {
-              "t": "menu",
-              "x": 48,
-              "y": 68,
-              "lines": [
-                "1",
-                "2",
-                "3",
-                "4"
-              ]
-            },
-            {
-              "t": "badge",
-              "text": "拖到快捷栏"
             },
             {
               "t": "hotbar",
               "slots": 4,
               "active": 0,
               "cd": null,
-              "extra": null,
+              "extra": 0,
               "off": [],
               "dot": null,
               "deny": null
+            },
+            {
+              "t": "badge",
+              "text": "拖到快捷栏"
             }
           ],
           "logic": "把物品绑定到快捷栏位"
@@ -9553,6 +10317,31 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "x": 48,
               "y": 55,
               "face": 0
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": 0,
+              "cd": null,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": null
+            },
+            {
+              "t": "key",
+              "x": 28,
+              "y": 72,
+              "label": "1",
+              "state": "active",
+              "hint": "用药"
+            },
+            {
+              "t": "ring",
+              "x": 48,
+              "y": 55,
+              "r": 12,
+              "kind": "buff"
             },
             {
               "t": "badge",
@@ -9832,6 +10621,32 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "face": 0
             },
             {
+              "t": "card",
+              "x": 62,
+              "y": 48,
+              "label": "魔杖×2",
+              "cost": 0,
+              "dragging": false
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": null,
+              "cd": null,
+              "extra": null,
+              "off": [],
+              "dot": 0,
+              "deny": null
+            },
+            {
+              "t": "menu",
+              "x": 28,
+              "y": 68,
+              "lines": [
+                "次数 3→2"
+              ]
+            },
+            {
               "t": "badge",
               "text": "次数-1"
             }
@@ -9849,6 +10664,24 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "x": 48,
               "y": 55,
               "face": 0
+            },
+            {
+              "t": "card",
+              "x": 62,
+              "y": 48,
+              "label": "破甲",
+              "cost": 0,
+              "dragging": false
+            },
+            {
+              "t": "menu",
+              "x": 28,
+              "y": 62,
+              "lines": [
+                "耐久 0",
+                "属性失效",
+                "去修理"
+              ]
             },
             {
               "t": "badge",
@@ -9938,7 +10771,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "t": "unit",
               "x": 65,
               "y": 45,
-              "sel": false,
+              "sel": true,
               "team": "ally",
               "face": 0,
               "size": 1
@@ -9949,6 +10782,22 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "y": 45,
               "r": 8,
               "kind": "buff"
+            },
+            {
+              "t": "menu",
+              "x": 16,
+              "y": 28,
+              "lines": [
+                "[我]",
+                "[友A]←",
+                "[友B]"
+              ]
+            },
+            {
+              "t": "cursor",
+              "x": 28,
+              "y": 40,
+              "mode": "up"
             },
             {
               "t": "badge",
@@ -10027,16 +10876,35 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "face": 0
             },
             {
-              "t": "badge",
-              "text": "打开面板"
+              "t": "unit",
+              "x": 62,
+              "y": 48,
+              "sel": false,
+              "team": "neutral",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "menu",
+              "x": 26,
+              "y": 36,
+              "lines": [
+                "接受任务",
+                "商店",
+                "再见"
+              ]
             },
             {
               "t": "key",
-              "x": 56,
-              "y": 39,
+              "x": 48,
+              "y": 72,
               "label": "F",
-              "state": "active",
-              "hint": null
+              "state": "idle",
+              "hint": "交互"
+            },
+            {
+              "t": "badge",
+              "text": "对话面板"
             }
           ],
           "logic": "打开该 NPC 的对话或商店面板"
@@ -10807,17 +11675,23 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "face": 0
             },
             {
-              "t": "badge",
-              "text": "采集打断"
+              "t": "building",
+              "x": 65,
+              "y": 45,
+              "ghost": false
             },
             {
               "t": "bar",
               "x": 40,
               "y": 33,
-              "ratio": 0.55,
+              "ratio": 0.45,
               "kind": "cast",
               "label": null,
               "broken": true
+            },
+            {
+              "t": "badge",
+              "text": "采集打断"
             }
           ],
           "logic": "打断读条且节点保持可采"
@@ -10863,6 +11737,16 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "team": "neutral",
               "face": 0,
               "size": 1
+            },
+            {
+              "t": "menu",
+              "x": 28,
+              "y": 58,
+              "lines": [
+                "药水 5G",
+                "面包 1G",
+                "箭袋 3G"
+              ]
             },
             {
               "t": "badge",
@@ -10971,8 +11855,39 @@ window.PLAYER_ACTION_UX_CATALOG = {
             {
               "t": "hero",
               "x": 48,
-              "y": 55,
+              "y": 52,
               "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 48,
+              "y": 58,
+              "sel": false,
+              "team": "ally",
+              "face": 0,
+              "size": 1.4
+            },
+            {
+              "t": "arrow",
+              "x1": 52,
+              "y1": 52,
+              "x2": 78,
+              "y2": 38,
+              "kind": "move"
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": null,
+              "cd": null,
+              "extra": null,
+              "off": [
+                1,
+                2,
+                3
+              ],
+              "dot": null,
+              "deny": null
             },
             {
               "t": "badge",
@@ -11048,13 +11963,27 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "cast": [
             {
               "t": "hero",
-              "x": 48,
+              "x": 35,
               "y": 55,
               "face": 0
             },
             {
+              "t": "building",
+              "x": 70,
+              "y": 40,
+              "ghost": false
+            },
+            {
+              "t": "arrow",
+              "x1": 40,
+              "y1": 52,
+              "x2": 66,
+              "y2": 42,
+              "kind": "move"
+            },
+            {
               "t": "badge",
-              "text": "灵魂"
+              "text": "灵魂形态"
             }
           ],
           "logic": "死亡后进入灵魂形态并标魂匠方向"
@@ -11725,6 +12654,16 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "mode": "idle"
             },
             {
+              "t": "menu",
+              "x": 62,
+              "y": 40,
+              "lines": [
+                "交易",
+                "检查",
+                "跟随"
+              ]
+            },
+            {
               "t": "badge",
               "text": "上下文菜单"
             }
@@ -11747,14 +12686,12 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "size": 1
             },
             {
-              "t": "menu",
-              "x": 62,
-              "y": 40,
-              "lines": [
-                "交易",
-                "检查",
-                "跟随"
-              ]
+              "t": "arrow",
+              "x1": 58,
+              "y1": 45,
+              "x2": 78,
+              "y2": 45,
+              "kind": "move"
             },
             {
               "t": "cursor",
@@ -11764,7 +12701,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
             },
             {
               "t": "badge",
-              "text": "执行菜单项"
+              "text": "执行·跟随"
             }
           ],
           "logic": "执行所选菜单项并关闭菜单"
@@ -12052,6 +12989,30 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "ok": true
             },
             {
+              "t": "menu",
+              "x": 48,
+              "y": 32,
+              "lines": [
+                "来这里",
+                "小心",
+                "进攻"
+              ]
+            },
+            {
+              "t": "box",
+              "x": 82,
+              "y": 12,
+              "w": 16,
+              "h": 16
+            },
+            {
+              "t": "circle",
+              "x": 90,
+              "y": 20,
+              "r": 3,
+              "ok": true
+            },
+            {
               "t": "badge",
               "text": "信号"
             }
@@ -12092,9 +13053,35 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "cast": [
             {
               "t": "hero",
-              "x": 45,
-              "y": 55,
-              "face": 0
+              "x": 38,
+              "y": 62,
+              "face": -90
+            },
+            {
+              "t": "path",
+              "points": [
+                [
+                  58,
+                  38
+                ],
+                [
+                  72,
+                  55
+                ],
+                [
+                  58,
+                  72
+                ]
+              ],
+              "kind": "arc"
+            },
+            {
+              "t": "arrow",
+              "x1": 55,
+              "y1": 48,
+              "x2": 70,
+              "y2": 40,
+              "kind": "move"
             },
             {
               "t": "badge",
@@ -12111,9 +13098,17 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "cast": [
             {
               "t": "hero",
-              "x": 45,
+              "x": 50,
               "y": 55,
-              "face": 0
+              "face": -90
+            },
+            {
+              "t": "arrow",
+              "x1": 50,
+              "y1": 42,
+              "x2": 50,
+              "y2": 28,
+              "kind": "move"
             },
             {
               "t": "badge",
@@ -12155,10 +13150,63 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "view": "moba",
           "cast": [
             {
+              "t": "box",
+              "x": 18,
+              "y": 18,
+              "w": 64,
+              "h": 52
+            },
+            {
+              "t": "hero",
+              "x": 30,
+              "y": 60,
+              "face": 0
+            },
+            {
+              "t": "circle",
+              "x": 65,
+              "y": 35,
+              "r": 8,
+              "ok": true
+            },
+            {
+              "t": "ring",
+              "x": 65,
+              "y": 35,
+              "r": 6,
+              "kind": "select"
+            },
+            {
+              "t": "path",
+              "points": [
+                [
+                  30,
+                  60
+                ],
+                [
+                  45,
+                  50
+                ],
+                [
+                  65,
+                  35
+                ]
+              ],
+              "kind": "move"
+            },
+            {
+              "t": "arrow",
+              "x1": 50,
+              "y1": 48,
+              "x2": 62,
+              "y2": 38,
+              "kind": "move"
+            },
+            {
               "t": "cursor",
-              "x": 60,
-              "y": 45,
-              "mode": "idle"
+              "x": 65,
+              "y": 35,
+              "mode": "up"
             },
             {
               "t": "badge",
@@ -12178,12 +13226,6 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "x": 40,
               "y": 55,
               "face": 0
-            },
-            {
-              "t": "cursor",
-              "x": 60,
-              "y": 45,
-              "mode": "idle"
             },
             {
               "t": "badge",
@@ -12398,9 +13440,41 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "cast": [
             {
               "t": "building",
-              "x": 40,
+              "x": 28,
               "y": 50,
               "ghost": false
+            },
+            {
+              "t": "menu",
+              "x": 48,
+              "y": 28,
+              "lines": [
+                "步兵 50矿",
+                "坦克 150"
+              ]
+            },
+            {
+              "t": "card",
+              "x": 72,
+              "y": 48,
+              "label": "步兵",
+              "cost": 50,
+              "dragging": false
+            },
+            {
+              "t": "bar",
+              "x": 72,
+              "y": 72,
+              "ratio": 0.35,
+              "kind": "cast",
+              "label": "矿物-50",
+              "broken": false
+            },
+            {
+              "t": "cursor",
+              "x": 58,
+              "y": 36,
+              "mode": "up"
             },
             {
               "t": "badge",
@@ -13114,6 +14188,22 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "face": 0
             },
             {
+              "t": "unit",
+              "x": 65,
+              "y": 45,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 0.85
+            },
+            {
+              "t": "ring",
+              "x": 65,
+              "y": 45,
+              "r": 8,
+              "kind": "lock"
+            },
+            {
               "t": "arrow",
               "x1": 50,
               "y1": 50,
@@ -13474,8 +14564,22 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "size": 1
             },
             {
+              "t": "building",
+              "x": 66,
+              "y": 46,
+              "ghost": false
+            },
+            {
+              "t": "key",
+              "x": 50,
+              "y": 38,
+              "label": "F",
+              "state": "active",
+              "hint": "拾取"
+            },
+            {
               "t": "badge",
-              "text": "救起→提示复原"
+              "text": "救起→可拾取"
             }
           ],
           "logic": "救完后若仍在掉落旁则交互回拾取"
@@ -13602,10 +14706,6 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "kind": "select"
             },
             {
-              "t": "badge",
-              "text": "自动施法ON"
-            },
-            {
               "t": "hotbar",
               "slots": 4,
               "active": null,
@@ -13614,6 +14714,10 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "off": [],
               "dot": 0,
               "deny": null
+            },
+            {
+              "t": "badge",
+              "text": "自动施法ON"
             }
           ],
           "logic": "给该技能打开自动施法开关"
@@ -13651,18 +14755,18 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "kind": "attack"
             },
             {
-              "t": "badge",
-              "text": "自动放出"
-            },
-            {
               "t": "hotbar",
               "slots": 4,
               "active": null,
               "cd": 0,
               "extra": null,
               "off": [],
-              "dot": null,
+              "dot": 0,
               "deny": null
+            },
+            {
+              "t": "badge",
+              "text": "自动放出"
             }
           ],
           "logic": "条件满足时不按键也自动释放"
@@ -13681,6 +14785,16 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "team": "ally",
               "face": 0,
               "size": 1
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": null,
+              "cd": null,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": null
             },
             {
               "t": "badge",
@@ -14188,8 +15302,17 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "face": 0
             },
             {
+              "t": "menu",
+              "x": 24,
+              "y": 36,
+              "lines": [
+                "生命<30% → 用药",
+                "见硬控 → 减伤"
+              ]
+            },
+            {
               "t": "badge",
-              "text": "条件:残血用药"
+              "text": "自动规则"
             }
           ],
           "logic": "写入生命阈值等自动喝药条件"
@@ -14403,7 +15526,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "t": "hero",
               "x": 40,
               "y": 55,
-              "face": 0
+              "face": 20
             },
             {
               "t": "unit",
@@ -14413,6 +15536,14 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "team": "enemy",
               "face": 0,
               "size": 1
+            },
+            {
+              "t": "arrow",
+              "x1": 45,
+              "y1": 52,
+              "x2": 64,
+              "y2": 44,
+              "kind": "attack"
             },
             {
               "t": "badge",
@@ -14817,6 +15948,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "kind": "move"
             },
             {
+              "t": "circle",
+              "x": 70,
+              "y": 40,
+              "r": 10,
+              "ok": true
+            },
+            {
               "t": "cursor",
               "x": 70,
               "y": 40,
@@ -14848,6 +15986,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "x2": 75,
               "y2": 55,
               "kind": "move"
+            },
+            {
+              "t": "circle",
+              "x": 75,
+              "y": 55,
+              "r": 10,
+              "ok": true
             },
             {
               "t": "cursor",
@@ -14913,6 +16058,23 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "x2": 40,
               "y2": 25,
               "kind": "move"
+            },
+            {
+              "t": "bar",
+              "x": 50,
+              "y": 28,
+              "ratio": 0.35,
+              "kind": "charge",
+              "label": "耐力",
+              "broken": false
+            },
+            {
+              "t": "key",
+              "x": 72,
+              "y": 72,
+              "label": "Shift",
+              "state": "active",
+              "hint": null
             },
             {
               "t": "badge",
@@ -15305,10 +16467,17 @@ window.PLAYER_ACTION_UX_CATALOG = {
             {
               "t": "card",
               "x": 28,
-              "y": 78,
+              "y": 52,
               "label": "兵",
               "cost": 3,
               "dragging": true
+            },
+            {
+              "t": "box",
+              "x": 22,
+              "y": 72,
+              "w": 12,
+              "h": 14
             },
             {
               "t": "card",
@@ -15325,6 +16494,15 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "label": "建筑",
               "cost": 5,
               "dragging": false
+            },
+            {
+              "t": "bar",
+              "x": 50,
+              "y": 90,
+              "ratio": 0.8,
+              "kind": "charge",
+              "label": "圣水",
+              "broken": false
             },
             {
               "t": "building",
@@ -15770,7 +16948,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "sel": false,
               "team": "ally",
               "face": 0,
-              "size": 1
+              "size": 1.5
             },
             {
               "t": "unit",
@@ -15779,7 +16957,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "sel": false,
               "team": "ally",
               "face": 0,
-              "size": 1
+              "size": 1.5
             },
             {
               "t": "unit",
@@ -15788,7 +16966,19 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "sel": false,
               "team": "ally",
               "face": 0,
-              "size": 1
+              "size": 1.5
+            },
+            {
+              "t": "cursor",
+              "x": 42,
+              "y": 48,
+              "mode": "down"
+            },
+            {
+              "t": "cursor",
+              "x": 58,
+              "y": 52,
+              "mode": "down"
             },
             {
               "t": "badge",
@@ -15805,26 +16995,36 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "cast": [
             {
               "t": "unit",
-              "x": 40,
-              "y": 50,
+              "x": 55,
+              "y": 48,
               "sel": false,
               "team": "ally",
               "face": 0,
               "size": 1
             },
             {
-              "t": "path",
-              "points": [
-                [
-                  20,
-                  50
-                ],
-                [
-                  60,
-                  50
-                ]
-              ],
-              "kind": "move"
+              "t": "unit",
+              "x": 70,
+              "y": 42,
+              "sel": false,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "unit",
+              "x": 78,
+              "y": 55,
+              "sel": false,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "cursor",
+              "x": 35,
+              "y": 70,
+              "mode": "drag"
             },
             {
               "t": "badge",
@@ -15977,10 +17177,10 @@ window.PLAYER_ACTION_UX_CATALOG = {
             {
               "t": "card",
               "x": 50,
-              "y": 70,
+              "y": 66,
               "label": "B",
               "cost": 4,
-              "dragging": true
+              "dragging": false
             },
             {
               "t": "card",
@@ -15989,6 +17189,26 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "label": "C",
               "cost": 3,
               "dragging": false
+            },
+            {
+              "t": "path",
+              "points": [
+                [
+                  28,
+                  72
+                ],
+                [
+                  72,
+                  72
+                ]
+              ],
+              "kind": "move"
+            },
+            {
+              "t": "cursor",
+              "x": 62,
+              "y": 72,
+              "mode": "drag"
             },
             {
               "t": "badge",
@@ -16261,21 +17481,6 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "face": 0
             },
             {
-              "t": "menu",
-              "x": 70,
-              "y": 70,
-              "lines": [
-                "Q",
-                "W",
-                "E",
-                "R"
-              ]
-            },
-            {
-              "t": "badge",
-              "text": "点技能格"
-            },
-            {
               "t": "hotbar",
               "slots": 4,
               "active": 0,
@@ -16284,6 +17489,10 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "off": [],
               "dot": null,
               "deny": null
+            },
+            {
+              "t": "badge",
+              "text": "点技能格"
             }
           ],
           "logic": "点技能格进入瞄准或立即释放"
@@ -16312,6 +17521,16 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "x": 68,
               "y": 40,
               "mode": "idle"
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": null,
+              "cd": 0,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": null
             },
             {
               "t": "badge",
@@ -16633,10 +17852,26 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "face": 0
             },
             {
-              "t": "cursor",
+              "t": "unit",
+              "x": 72,
+              "y": 38,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "circle",
               "x": 70,
               "y": 40,
-              "mode": "idle"
+              "r": 14,
+              "ok": false
+            },
+            {
+              "t": "crosshair",
+              "x": 70,
+              "y": 40,
+              "locked": true
             },
             {
               "t": "badge",
@@ -16774,6 +18009,39 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "team": "enemy",
               "face": 0,
               "size": 1
+            },
+            {
+              "t": "circle",
+              "x": 30,
+              "y": 60,
+              "r": 26,
+              "ok": false
+            },
+            {
+              "t": "building",
+              "x": 52,
+              "y": 42,
+              "ghost": false
+            },
+            {
+              "t": "path",
+              "points": [
+                [
+                  34,
+                  56
+                ],
+                [
+                  50,
+                  46
+                ]
+              ],
+              "kind": "attack"
+            },
+            {
+              "t": "crosshair",
+              "x": 80,
+              "y": 30,
+              "locked": false
             },
             {
               "t": "badge",
