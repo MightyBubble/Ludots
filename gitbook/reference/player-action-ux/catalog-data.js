@@ -48,7 +48,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
     "aim"
   ],
   "checkpoint": {
-    "head": "388b8f70d",
+    "head": "61919e039",
     "branch_hint": "cursor/ux-action-id-platform-tabs-4211",
     "impl_notes": "scripts/player_action_ux_impl_notes.py",
     "beat_logic": "scripts/player_action_ux_beat_logic.py",
@@ -2250,7 +2250,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
       "actionNo": "UX-069",
       "key": "atk-ads-reload-swap",
       "title": "开镜换弹切枪",
-      "summary": "肩键开镜稳定准星；换弹读条；切枪换手感。",
+      "summary": "右键开镜稳定准星；R 换弹读条；数字键或滚轮切枪换手感。",
       "platforms": [
         "kbm"
       ],
@@ -8749,7 +8749,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
       "category": "attack",
       "family": "attack",
       "title": "开镜 / 换弹 / 切枪",
-      "summary": "肩键开镜稳定准星；换弹读条；切枪换手感。",
+      "summary": "右键开镜稳定准星；R 换弹读条；数字键或滚轮切枪换手感。",
       "genres": [
         "FPS",
         "TPS"
@@ -9957,31 +9957,26 @@ window.PLAYER_ACTION_UX_CATALOG = {
         {
           "title": "切换",
           "input": "按切换键",
-          "screen": "造型变化，技能栏整组换成新形态的招",
+          "screen": "外形换了，技能栏整组换成新形态的招",
           "view": "moba",
           "cast": [
             {
               "t": "hero",
               "x": 50,
               "y": 55,
-              "face": 20
-            },
-            {
-              "t": "ring",
-              "x": 50,
-              "y": 55,
-              "r": 13,
-              "kind": "buff"
+              "face": 20,
+              "form": "alt"
             },
             {
               "t": "hotbar",
               "slots": 4,
               "active": null,
               "cd": null,
-              "extra": 0,
+              "extra": null,
               "off": [],
               "dot": null,
               "deny": null,
+              "page": "形态B",
               "labels": [
                 "Q",
                 "W",
@@ -9999,14 +9994,14 @@ window.PLAYER_ACTION_UX_CATALOG = {
         {
           "title": "切回",
           "input": "再按一次",
-          "screen": "变回原形态，技能栏还原",
+          "screen": "外形变回来，技能栏也还原",
           "view": "moba",
           "cast": [
             {
               "t": "hero",
               "x": 50,
               "y": 55,
-              "face": 0
+              "face": 20
             },
             {
               "t": "hotbar",
@@ -19677,16 +19672,31 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "size": 1
             },
             {
-              "t": "key",
+              "t": "marker",
               "x": 60,
-              "y": 28,
-              "label": "骷",
-              "state": "active",
-              "hint": "标记"
+              "y": 26,
+              "icon": "skull",
+              "label": "集火"
+            },
+            {
+              "t": "unit",
+              "x": 30,
+              "y": 58,
+              "sel": false,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "marker",
+              "x": 30,
+              "y": 40,
+              "icon": "moon",
+              "label": "队友看到"
             },
             {
               "t": "badge",
-              "text": "标记"
+              "text": "团队标记"
             }
           ],
           "logic": "给当前目标写入团队标记"
@@ -24736,8 +24746,9 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "cd": null,
               "extra": null,
               "off": [],
-              "dot": null,
-              "deny": 1,
+              "dot": 1,
+              "deny": null,
+              "defer": 1,
               "labels": [
                 "Q",
                 "W",
@@ -24747,7 +24758,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
             },
             {
               "t": "badge",
-              "text": "手动优先"
+              "text": "手动优先·自动让路"
             }
           ],
           "logic": "手动技能抢占，自动取消或延后"
@@ -24777,8 +24788,39 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "size": 1
             },
             {
+              "t": "arrow",
+              "x1": 42,
+              "y1": 54,
+              "x2": 66,
+              "y2": 42,
+              "kind": "attack"
+            },
+            {
+              "t": "impact",
+              "x": 70,
+              "y": 40,
+              "r": 12,
+              "heavy": false
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": 1,
+              "cd": 1,
+              "extra": null,
+              "off": [],
+              "dot": 1,
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
+            },
+            {
               "t": "badge",
-              "text": "自动恢复"
+              "text": "自动补上了"
             }
           ],
           "logic": "手动结束后按规则决定是否补自动"

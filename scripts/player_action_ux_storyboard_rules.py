@@ -29,7 +29,7 @@ KEYBOARD_ONLY_KEYCAPS = frozenset({
 # 平台 → 该平台文案里不该出现的设备词
 PLATFORM_FORBIDDEN_WORDS = {
     # 键位缩写要独立成词才算手柄键，"RTS" 里的 RT 不是扳机
-    "kbm": r"摇杆|扳机|手柄|十字键|(?<![A-Za-z])(?:LB|RB|LT|RT)(?![A-Za-z])",
+    "kbm": r"摇杆|扳机|手柄|十字键|肩键|(?<![A-Za-z])(?:LB|RB|LT|RT)(?![A-Za-z])",
     "gamepad": r"鼠标|右键|左键|键盘|Shift\+|Ctrl\+|Alt\+",
     "touch": r"鼠标|右键|左键|摇杆|扳机",
 }
@@ -51,6 +51,8 @@ ELEMENT_ENUMS: dict[tuple[str, str], frozenset] = {
                                 "wall", "cover", "shrine", None}),
     ("vehicle", "kind"): frozenset({"car", "tank", "turret", "mount"}),
     ("hero", "state"): frozenset({"alive", "ghost", None}),
+    ("hero", "form"): frozenset({"alt", None}),
+    ("marker", "icon"): frozenset({"skull", "moon", "star", "cross", "square"}),
     ("npc", "role"): frozenset({"vendor", "quest", "healer", "auction", "trainer", None}),
     ("crosshair", "spread"): frozenset({"tight", "wide", None}),
     ("queue", "state"): frozenset({"waiting", "active", "done"}),
@@ -68,7 +70,7 @@ SUBJECT_ELEMENTS = (
     "unit", "hero", "card", "building", "crosshair", "menu", "stickL", "stickR",
     "key", "hotbar", "wasd", "wheel", "anchor", "touchpt", "prop",
     "vehicle", "corpse", "npc", "deny", "impact", "held", "queue", "camera",
-    "playertag", "splitscreen", "padslot", "roster", "netstat", "voice", "vote",
+    "playertag", "splitscreen", "padslot", "roster", "netstat", "voice", "vote", "marker",
 )
 
 
@@ -203,6 +205,12 @@ PROMISE_RULES: tuple[tuple[str, str, object, str], ...] = (
         lambda cast: any(e.get("t") == "arrow" and e.get("kind") == "move" for e in cast)
         and any(e.get("t") == "arrow" and e.get("kind") == "attack" for e in cast),
         "补一根 arrow(kind='move') 表示走的方向，和 attack 那根并排",
+    ),
+    (
+        "说团队标记，要用标记图标而不是键帽",
+        r"团队标记|打标记|骷髅|月亮标",
+        lambda cast: _has(cast, "marker"),
+        "补 marker(x, y, icon='skull')；键帽会被读成「去按这个键」",
     ),
     (
         "说打中/挨打/砸中，画面要有命中爆点",

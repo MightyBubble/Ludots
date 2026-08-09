@@ -183,12 +183,19 @@ def path(points, kind="move"):
     return {"t": "path", "points": points, "kind": kind}
 
 
-def hero(x, y, face=0, state=None):
-    """玩家角色。state='ghost' 画成半透明灵魂（死亡后跑尸那一段）。"""
+def hero(x, y, face=0, state=None, form=None):
+    """玩家角色。state='ghost' 半透明灵魂；form='alt' 换了形态（轮廓变尖角紫色）。"""
     row = {"t": "hero", "x": x, "y": y, "face": face}
     if state:
         row["state"] = state
+    if form:
+        row["form"] = form
     return row
+
+
+def marker(x, y, icon="skull", label="团队标记"):
+    """挂在目标头上的团队标记（骷髅/月亮…）。别用键帽画标记，玩家会去按那个键。"""
+    return {"t": "marker", "x": x, "y": y, "icon": icon, "label": label}
 
 
 def vehicle(x, y, kind="car", occupied=False):
@@ -283,7 +290,8 @@ def queue_no(x, y, n, state="waiting"):
     return {"t": "queue", "x": x, "y": y, "n": n, "state": state}
 
 
-def hotbar(active=None, cd=None, extra=None, off=None, dot=None, deny=None, slots=4, page=None):
+def hotbar(active=None, cd=None, extra=None, off=None, dot=None, deny=None, slots=4,
+           page=None, defer=None):
     """Bottom-center skill row. active=pressed slot, cd=cooldown sweep,
     extra=temp-granted slot (green), off=removed/disabled slots, dot=autocast
     green dot, deny=rejected press (red flash)."""
@@ -291,6 +299,9 @@ def hotbar(active=None, cd=None, extra=None, off=None, dot=None, deny=None, slot
            "extra": extra, "off": list(off or []), "dot": dot, "deny": deny}
     if page:
         row["page"] = page
+    if defer is not None:
+        # 让路：这一颗本来要自动放，被手动抢占后延后，不是「不可用」
+        row["defer"] = defer
     return row
 
 
@@ -812,7 +823,7 @@ def build_cases():
     ))
     c.append(case(
         "atk-ads-reload-swap", "attack", "开镜 / 换弹 / 切枪",
-        "肩键开镜稳定准星；换弹读条；切枪换手感。",
+        "右键开镜稳定准星；R 换弹读条；数字键或滚轮切枪换手感。",
         [
             beat("按开镜", "视野拉近，准星变精准", "瞄稳", "fps",
                  [box(32, 32, 36, 36), crosshair(50, 50, spread="tight"), badge("ADS开镜")], title="开镜"),
@@ -943,11 +954,11 @@ def build_cases():
         "skill-toggle-form", "instant-skill", "开关姿态 / 切形态",
         "再按关掉；或锤炮切换导致技能栏变化。",
         [
-            beat("按切换键", "造型变化，技能栏整组换成新形态的招", "换一套招", "moba",
-                 [hero(50, 55, face=20), ring(50, 55, r=13, kind="buff"),
-                  hotbar(extra=0), badge("切到形态B")], title="切换"),
-            beat("再按一次", "变回原形态，技能栏还原", "换回来", "moba",
-                 [hero(50, 55), hotbar(active=0), badge("切回形态A")], title="切回"),
+            beat("按切换键", "外形换了，技能栏整组换成新形态的招", "换一套招", "moba",
+                 [hero(50, 55, face=20, form="alt"), hotbar(page="形态B"),
+                  badge("切到形态B")], title="切换"),
+            beat("再按一次", "外形变回来，技能栏也还原", "换回来", "moba",
+                 [hero(50, 55, face=20), hotbar(active=0), badge("切回形态A")], title="切回"),
         ], ["MOBA", "RTS英雄"],
     ))
 
@@ -1913,8 +1924,9 @@ def build_cases():
             beat("对玩家发密语", "聊天频道切到密语", "私聊", "moba",
                  [hero(35, 55), unit(65, 45, team="ally"), menu_box(30, 70, ["密语: 你好"]), badge("密语")], title="密聊"),
             beat("给当前目标打团队标记", "头顶出现标记图标，队友看见", "集火这个", "tps",
-                 [unit(60, 45, team="enemy"), keyhint(60, 28, "骷", "active", "标记"),
-                  badge("标记")], title="标记"),
+                 [unit(60, 45, team="enemy"), marker(60, 26, "skull", "集火"),
+                  unit(30, 58, team="ally"), marker(30, 40, "moon", "队友看到"),
+                  badge("团队标记")], title="标记"),
         ], ["魔兽世界", "MMO"],
     ))
     c.append(case(
@@ -2430,10 +2442,12 @@ def build_cases():
             beat("自动即将放出时，玩家按了别的技能", "自动取消或延后，先执行手动", "听我的", "topdown",
                  [unit(40, 55, sel=True), unit(70, 40, team="enemy"),
                   cursor(55, 40, "down"), circle_ind(70, 40, 12, True),
-                  arrow(45, 52, 66, 42, "attack"), hotbar(active=0, deny=1),
-                  badge("手动优先")], title="抢占"),
+                  arrow(45, 52, 66, 42, "attack"), hotbar(active=0, defer=1, dot=1),
+                  badge("手动优先·自动让路")], title="抢占"),
             beat("手动完成且自动条件仍在", "按规则决定是否补一次自动", "再交给自动", "topdown",
-                 [unit(40, 55, sel=True), unit(70, 40, team="enemy"), badge("自动恢复")], title="恢复"),
+                 [unit(40, 55, sel=True), unit(70, 40, team="enemy"),
+                  arrow(42, 54, 66, 42, "attack"), impact(70, 40, 12),
+                  hotbar(active=1, cd=1, dot=1), badge("自动补上了")], title="恢复"),
         ], ["RTS", "MMO", "设计选项"],
     ))
     c.append(case(

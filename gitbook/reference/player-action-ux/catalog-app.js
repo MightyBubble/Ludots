@@ -141,10 +141,18 @@
         const x = px(el.x), y = py(el.y);
         const face = ((el.face || 0) * Math.PI) / 180;
         const ghost = el.state === "ghost";
+        // form=alt 换了形态：轮廓从圆变成带尖角，光看剪影就知道换了个身子
+        const body = el.form === "alt"
+          ? `<polygon points="${Array.from({ length: 8 }, (_, i) => {
+              const a2 = (i / 8) * Math.PI * 2 - Math.PI / 2;
+              const rr = i % 2 ? 6 : 12;
+              return `${x + Math.cos(a2) * rr},${y + Math.sin(a2) * rr}`;
+            }).join(" ")}" fill="#c78bff" stroke="#0b0e13" stroke-width="1.4"/>`
+          : `<circle cx="${x}" cy="${y}" r="9" fill="${ghost ? "rgba(110,200,255,0.28)" : "#6ec8ff"}"
+              stroke="${ghost ? "#6ec8ff" : "#0b0e13"}" stroke-width="1.4" stroke-dasharray="${ghost ? "3 2" : "0"}"/>`;
         return `
           <ellipse cx="${x}" cy="${y + 10}" rx="10" ry="4" fill="#000" opacity="${ghost ? 0.12 : 0.35}"/>
-          <circle cx="${x}" cy="${y}" r="9" fill="${ghost ? "rgba(110,200,255,0.28)" : "#6ec8ff"}"
-            stroke="${ghost ? "#6ec8ff" : "#0b0e13"}" stroke-width="1.4" stroke-dasharray="${ghost ? "3 2" : "0"}"/>
+          ${body}
           <line x1="${x}" y1="${y}" x2="${x + Math.cos(face) * 16}" y2="${y + Math.sin(face) * 16}" stroke="#f0a35e" stroke-width="2.2" opacity="${ghost ? 0.5 : 1}"/>`;
       }
       if (el.t === "vehicle") {
@@ -172,6 +180,14 @@
         return `
           <rect x="${x}" y="${y}" width="${w}" height="${h}" fill="rgba(8,10,14,0.82)"/>
           <text x="${x + w / 2}" y="${y + h / 2}" text-anchor="middle" fill="#66758a" font-size="11" font-family="DM Sans, sans-serif" font-weight="600">战争迷雾</text>`;
+      }
+      if (el.t === "marker") {
+        const x = px(el.x), y = py(el.y);
+        const glyph = { skull: "☠", moon: "☾", star: "★", cross: "✚", square: "◆" }[el.icon] || "★";
+        return `
+          <circle cx="${x}" cy="${y}" r="9" fill="#0b0e13" stroke="#e0c35a" stroke-width="1.6"/>
+          <text x="${x}" y="${y + 4}" text-anchor="middle" fill="#e0c35a" font-size="11" font-family="DM Sans, sans-serif" font-weight="700">${glyph}</text>
+          <text x="${x}" y="${y - 13}" text-anchor="middle" fill="#e0c35a" font-size="8.5" font-family="DM Sans, sans-serif">${esc(el.label || "团队标记")}</text>`;
       }
       if (el.t === "playertag") {
         const x = px(el.x), y = py(el.y);
@@ -615,6 +631,11 @@
           }
           if (el.deny === i) {
             out += `<rect x="${x}" y="${y0}" width="${w}" height="${h}" rx="4" fill="rgba(239,107,107,0.22)" stroke="#ef6b6b" stroke-width="1.6"/>`;
+          }
+          if (el.defer === i) {
+            // 让路 ≠ 不可用：黄框加「让」，别用红叉否则意思正好相反
+            out += `<rect x="${x}" y="${y0}" width="${w}" height="${h}" rx="4" fill="rgba(224,195,90,0.18)" stroke="#e0c35a" stroke-width="1.6"/>`;
+            out += `<text x="${x + w / 2}" y="${y0 - 4}" text-anchor="middle" fill="#e0c35a" font-size="8.5" font-family="DM Sans, sans-serif" font-weight="700">让路</text>`;
           }
         }
         return out;
