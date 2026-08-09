@@ -9,7 +9,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
     "screen-output"
   ],
   "checkpoint": {
-    "head": "9e50238b6",
+    "head": "38672088b",
     "branch_hint": "cursor/ux-sequence-io-4211",
     "impl_notes": "scripts/player_action_ux_impl_notes.py",
     "beat_logic": "scripts/player_action_ux_beat_logic.py",
@@ -276,10 +276,10 @@ window.PLAYER_ACTION_UX_CATALOG = {
             },
             {
               "t": "box",
-              "x": 30,
-              "y": 30,
-              "w": 6,
-              "h": 6
+              "x": 28,
+              "y": 28,
+              "w": 12,
+              "h": 12
             },
             {
               "t": "cursor",
@@ -289,7 +289,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
             },
             {
               "t": "badge",
-              "text": "按下"
+              "text": "选框起点"
             }
           ],
           "logic": "记下框选起点并进入框选态"

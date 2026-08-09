@@ -326,7 +326,7 @@ def build_cases():
         [
             beat("在空地按下左键", "出现选框起点", "开始框选", "topdown",
                  [unit(35, 40), unit(48, 45), unit(58, 52), unit(70, 38),
-                  box(30, 30, 6, 6), cursor(30, 30, "down"), badge("按下")], title="按下"),
+                  box(28, 28, 12, 12), cursor(30, 30, "down"), badge("选框起点")], title="按下"),
             beat("拖动鼠标", "半透明选框扩大，框内单位闪一下", "还在框", "topdown",
                  [unit(35, 40, sel=True), unit(48, 45, sel=True), unit(58, 52, sel=True), unit(70, 38),
                   ring(35, 40), ring(48, 45), ring(58, 52), box(30, 30, 40, 30),
