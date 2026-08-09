@@ -13,9 +13,17 @@
     throw new Error("catalog page shell missing required nodes (#nav/#list/#detail/#search/#stats)");
   }
 
+  if (!Array.isArray(data.actions) || !data.actions.length) {
+    throw new Error("PLAYER_ACTION_UX_CATALOG.actions missing — regenerate catalog-data.js");
+  }
+
+  const casesById = Object.fromEntries(data.cases.map((c) => [c.id, c]));
+  const actionsByKey = Object.fromEntries(data.actions.map((a) => [a.key, a]));
+
   /** Default to first real category so the page is not a 150-card dump. */
   let activeCategory = (data.categories[0] && data.categories[0].id) || "all";
-  let selectedId = null;
+  let selectedActionKey = null;
+  let selectedPlatform = null;
   let activeBeat = 0;
   let query = "";
   let uid = 0;
@@ -418,24 +426,54 @@
     return c.targets;
   }
 
-  function inActiveTarget(c) {
-    if (activeCategory === "all") return true;
-    return caseTargets(c).includes(activeCategory);
+  function actionTargets(a) {
+    if (!Array.isArray(a.targets) || !a.targets.length) {
+      throw new Error(`action ${a.key || "?"} missing targets[] — regenerate catalog-data.js`);
+    }
+    return a.targets;
   }
 
-  function filtered() {
+  function resolveCase(action, platform) {
+    const variant = (action.variants || []).find((v) => v.platform === platform)
+      || (action.variants || [])[0];
+    if (!variant) throw new Error(`action ${action.key} has no variants`);
+    const c = casesById[variant.caseId];
+    if (!c) throw new Error(`case ${variant.caseId} missing for action ${action.key}`);
+    return { case: c, platform: variant.platform, platformLabel: variant.platformLabel };
+  }
+
+  function pickPlatform(action, preferred) {
+    const plats = (action.variants || []).map((v) => v.platform);
+    if (preferred && plats.includes(preferred)) return preferred;
+    return plats[0] || null;
+  }
+
+  function inActiveTargetAction(a) {
+    if (activeCategory === "all") return true;
+    return actionTargets(a).includes(activeCategory);
+  }
+
+  function filteredActions() {
     const q = query.trim().toLowerCase();
-    return data.cases.filter((c) => {
-      // With a query, search the whole catalog; target game scopes only when browsing.
-      if (!q) return inActiveTarget(c);
-      const targetTitles = caseTargets(c).map((id) => {
+    return data.actions.filter((a) => {
+      if (!q) return inActiveTargetAction(a);
+      const targetTitles = actionTargets(a).map((id) => {
         const cat = data.categories.find((x) => x.id === id);
         return cat ? cat.title : id;
       });
+      const variantBits = (a.variants || []).flatMap((v) => {
+        const c = casesById[v.caseId];
+        if (!c) return [v.caseId, v.platformLabel || v.platform];
+        return [
+          c.id, c.title, c.summary, c.platformLabel || "",
+          ...c.beats.flatMap((b) => [b.input, b.logic, b.screen]),
+        ];
+      });
       const blob = [
-        c.title, c.summary, c.id, c.familyTitle || "",
-        ...(c.genres || []), ...caseTargets(c), ...targetTitles,
-        ...c.beats.flatMap((b) => [b.input, b.logic, b.screen]),
+        a.actionNo, a.key, a.title, a.summary,
+        ...(a.genres || []), ...actionTargets(a), ...targetTitles,
+        ...(a.platformLabels || []),
+        ...variantBits,
       ].join(" ").toLowerCase();
       return blob.includes(q);
     });
@@ -445,37 +483,44 @@
     const items = [{ id: "all", title: "全部游戏", blurb: "不按复刻目标过滤" }, ...data.categories];
     navEl.innerHTML = items.map((cat) => {
       const count = cat.id === "all"
-        ? data.cases.length
-        : data.cases.filter((c) => caseTargets(c).includes(cat.id)).length;
+        ? data.actions.length
+        : data.actions.filter((a) => actionTargets(a).includes(cat.id)).length;
       const blurb = cat.blurb ? `<span class="nav-blurb">${esc(cat.blurb)}</span>` : "";
       return `<button type="button" class="nav-btn ${activeCategory === cat.id ? "active" : ""}" data-cat="${esc(cat.id)}"><span class="nav-title">${esc(cat.title)} <span class="count">(${count})</span></span>${blurb}</button>`;
     }).join("");
     navEl.querySelectorAll("button").forEach((btn) => {
       btn.addEventListener("click", () => {
         activeCategory = btn.dataset.cat;
-        selectedId = null;
+        selectedActionKey = null;
+        selectedPlatform = null;
         activeBeat = 0;
         render();
       });
     });
   }
 
-  function renderList(cases) {
-    if (!cases.length) {
+  function renderList(actions) {
+    if (!actions.length) {
       listEl.innerHTML = `<div class="empty">没有匹配的动作。</div>`;
       return;
     }
-    listEl.innerHTML = cases.map((c) => `
-      <button type="button" class="case-row ${selectedId === c.id ? "active" : ""}" data-id="${esc(c.id)}" title="${esc(c.id)}">
-        <span class="title">${esc(c.title)}</span>
-        <span class="beats">${c.beats.length} 镜</span>
-        <p class="sub">${esc(c.summary)}</p>
-      </button>`).join("");
+    listEl.innerHTML = actions.map((a) => {
+      const plats = (a.platformLabels || []).map((p) => `<span class="plat-pill">${esc(p)}</span>`).join("");
+      return `
+      <button type="button" class="case-row ${selectedActionKey === a.key ? "active" : ""}" data-key="${esc(a.key)}" title="${esc(a.actionNo)} · ${esc(a.key)}">
+        <span class="title"><span class="action-no">${esc(a.actionNo)}</span> ${esc(a.title)}</span>
+        <span class="beats">${a.caseCount > 1 ? `${a.caseCount} 端` : `${a.beatCount} 镜`}</span>
+        <p class="sub">${esc(a.summary)}</p>
+        <span class="plat-row">${plats}</span>
+      </button>`;
+    }).join("");
     listEl.querySelectorAll(".case-row").forEach((btn) => {
       btn.addEventListener("click", () => {
-        selectedId = btn.dataset.id;
+        selectedActionKey = btn.dataset.key;
+        const action = actionsByKey[selectedActionKey];
+        selectedPlatform = pickPlatform(action, selectedPlatform);
         activeBeat = 0;
-        renderList(filtered());
+        renderList(filteredActions());
         renderDetail();
         const active = listEl.querySelector(".case-row.active");
         if (active) active.scrollIntoView({ block: "nearest" });
@@ -498,11 +543,15 @@
   }
 
   function renderDetail() {
-    const c = data.cases.find((x) => x.id === selectedId);
-    if (!c) {
-      detailEl.innerHTML = `<div class="empty-detail">从中间列表点一个动作，这里按「一镜一对」展开时序与分镜。</div>`;
+    const action = selectedActionKey ? actionsByKey[selectedActionKey] : null;
+    if (!action) {
+      detailEl.innerHTML = `<div class="empty-detail">从中间列表点一个动作，这里按「一镜一对」展开时序与分镜；跨平台同一交互可切主机 / 键鼠 / 触控。</div>`;
       return;
     }
+    selectedPlatform = pickPlatform(action, selectedPlatform);
+    const resolved = resolveCase(action, selectedPlatform);
+    const c = resolved.case;
+    selectedPlatform = resolved.platform;
     if (activeBeat >= c.beats.length) activeBeat = 0;
     const missingLogic = c.beats.findIndex((b) => !b.logic);
     if (missingLogic >= 0) {
@@ -540,14 +589,24 @@
         </div>
       </section>`;
     }).join("");
+    const multi = (action.variants || []).length > 1;
+    const platformTabs = (action.variants || []).map((v) => `
+      <button type="button" class="plat-tab ${v.platform === selectedPlatform ? "active" : ""}" data-platform="${esc(v.platform)}" aria-pressed="${v.platform === selectedPlatform ? "true" : "false"}">
+        ${esc(v.platformLabel)}
+        <span class="plat-tab-id">${esc(v.caseId)}</span>
+      </button>`).join("");
+    const platformBar = multi
+      ? `<div class="plat-tabs" role="tablist" aria-label="平台实现">${platformTabs}</div>`
+      : `<div class="plat-single"><span class="plat-pill">${esc(resolved.platformLabel)}</span><span class="plat-single-id">${esc(c.id)}</span></div>`;
     detailEl.innerHTML = `
       <div class="detail-inner">
         <div class="detail-top">
           <div class="detail-head">
-            <h2>${esc(c.title)}</h2>
-            <div class="tags">${targetTags}${family ? `<span class="tag tag-family">${esc(family)}</span>` : ""}</div>
+            <h2><span class="action-no">${esc(action.actionNo)}</span> ${esc(action.title)}</h2>
+            <div class="tags">${targetTags}${family ? `<span class="tag tag-family">${esc(family)}</span>` : ""}<span class="tag tag-platform">${esc(resolved.platformLabel)}</span></div>
             <span class="case-id">${esc(c.id)}</span>
           </div>
+          ${platformBar}
           <div class="summary-row">
             <p class="summary">${esc(c.summary)}</p>
             <details class="impl-details">
@@ -567,12 +626,19 @@
         </div>
         <div class="beat-stage">
           <div class="beat-stage-head">
-            <span>一镜一对 · 共 ${c.beats.length} 拍（左时序 / 右分镜，一起滚）</span>
+            <span>一镜一对 · ${esc(resolved.platformLabel)} · 共 ${c.beats.length} 拍（左时序 / 右分镜，一起滚）</span>
             <span class="beat-rail" aria-label="拍号">${chips}</span>
           </div>
           <div class="beat-pairs" id="beat-pairs" aria-label="时序与分镜对照">${pairs}</div>
         </div>
       </div>`;
+    detailEl.querySelectorAll(".plat-tab").forEach((el) => {
+      el.addEventListener("click", () => {
+        selectedPlatform = el.dataset.platform;
+        activeBeat = 0;
+        renderDetail();
+      });
+    });
     detailEl.querySelectorAll(".beat-chip").forEach((el) => {
       el.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -587,15 +653,22 @@
 
   function render() {
     renderNav();
-    const cases = filtered();
-    if (!selectedId || !cases.some((c) => c.id === selectedId)) {
-      selectedId = cases[0] ? cases[0].id : null;
+    const actions = filteredActions();
+    if (!selectedActionKey || !actions.some((a) => a.key === selectedActionKey)) {
+      selectedActionKey = actions[0] ? actions[0].key : null;
+      selectedPlatform = selectedActionKey
+        ? pickPlatform(actionsByKey[selectedActionKey], selectedPlatform)
+        : null;
+      activeBeat = 0;
     }
+    const multi = data.actions.filter((a) => a.caseCount > 1).length;
     statsEl.innerHTML = `
-      <span class="chip">动作 <strong>${data.cases.length}</strong></span>
+      <span class="chip">唯一动作 <strong>${data.actions.length}</strong></span>
+      <span class="chip">跨平台 <strong>${multi}</strong></span>
+      <span class="chip">实现 <strong>${data.cases.length}</strong></span>
       <span class="chip">分镜 <strong>${data.cases.reduce((n, c) => n + c.beats.length, 0)}</strong></span>
-      <span class="chip">本栏 <strong>${cases.length}</strong></span>`;
-    renderList(cases);
+      <span class="chip">本栏 <strong>${actions.length}</strong></span>`;
+    renderList(actions);
     renderDetail();
   }
 
@@ -606,10 +679,24 @@
     searchTimer = window.setTimeout(() => { render(); }, 120);
   });
 
-  // Keyboard: j/k or ↑↓ 换动作；h/l 或 ←→ 换拍（一镜一对）
+  // Keyboard: j/k or ↑↓ 换动作；[ / ] 换平台；h/l 或 ←→ 换拍（一镜一对）
   document.addEventListener("keydown", (e) => {
     if (e.target === searchEl) return;
-    const c = data.cases.find((x) => x.id === selectedId);
+    const action = selectedActionKey ? actionsByKey[selectedActionKey] : null;
+    const resolved = action ? resolveCase(action, selectedPlatform) : null;
+    const c = resolved ? resolved.case : null;
+    if ((e.key === "[" || e.key === "]") && action && (action.variants || []).length > 1) {
+      e.preventDefault();
+      const plats = action.variants.map((v) => v.platform);
+      const idx = Math.max(0, plats.indexOf(selectedPlatform));
+      const next = e.key === "]"
+        ? Math.min(plats.length - 1, idx + 1)
+        : Math.max(0, idx - 1);
+      selectedPlatform = plats[next];
+      activeBeat = 0;
+      renderDetail();
+      return;
+    }
     if ((e.key === "ArrowLeft" || e.key === "h" || e.key === "ArrowRight" || e.key === "l") && c) {
       e.preventDefault();
       const delta = (e.key === "ArrowRight" || e.key === "l") ? 1 : -1;
@@ -618,16 +705,17 @@
       return;
     }
     if (e.key !== "ArrowDown" && e.key !== "ArrowUp" && e.key !== "j" && e.key !== "k") return;
-    const cases = filtered();
-    if (!cases.length) return;
+    const actions = filteredActions();
+    if (!actions.length) return;
     e.preventDefault();
-    const idx = Math.max(0, cases.findIndex((x) => x.id === selectedId));
+    const idx = Math.max(0, actions.findIndex((x) => x.key === selectedActionKey));
     const next = (e.key === "ArrowDown" || e.key === "j")
-      ? Math.min(cases.length - 1, idx + 1)
+      ? Math.min(actions.length - 1, idx + 1)
       : Math.max(0, idx - 1);
-    selectedId = cases[next].id;
+    selectedActionKey = actions[next].key;
+    selectedPlatform = pickPlatform(actions[next], selectedPlatform);
     activeBeat = 0;
-    renderList(cases);
+    renderList(actions);
     renderDetail();
     const active = listEl.querySelector(".case-row.active");
     if (active) active.scrollIntoView({ block: "nearest" });
