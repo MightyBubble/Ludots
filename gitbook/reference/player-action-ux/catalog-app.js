@@ -336,24 +336,27 @@
   }
 
   /**
-   * Standard Mermaid sequenceDiagram:
-   * 玩家 → 输入 → 画面 → 手感, one rect block per storyboard beat.
+   * Mermaid sequenceDiagram per beat:
+   * 设备输入 → 逻辑处理 → 画面输出（手感不是时序参与者）。
    */
   function sequenceMermaid(beats) {
     const lines = [
       "sequenceDiagram",
-      "  actor P as 玩家",
-      "  participant I as 输入",
-      "  participant S as 画面",
-      "  participant F as 手感",
+      "  participant I as 设备输入",
+      "  participant L as 逻辑处理",
+      "  participant O as 画面输出",
     ];
     (beats || []).forEach((b, i) => {
       const title = mmdText(b.title || `步骤 ${i + 1}`);
+      const logic = b.logic;
+      if (!logic) {
+        throw new Error(`beat T${i + 1} missing logic — regenerate catalog-data.js`);
+      }
       lines.push("  rect rgba(240, 163, 94, 0.08)");
-      lines.push(`    Note over P,F: T${i + 1} ${title}`);
-      lines.push(`    P->>I: ${mmdText(b.input)}`);
-      lines.push(`    I->>S: ${mmdText(b.screen)}`);
-      lines.push(`    S->>F: ${mmdText(b.feel)}`);
+      lines.push(`    Note over I,O: T${i + 1} ${title}`);
+      lines.push(`    I->>L: ${mmdText(b.input)}`);
+      lines.push(`    L->>L: ${mmdText(logic)}`);
+      lines.push(`    L->>O: ${mmdText(b.screen)}`);
       lines.push("  end");
     });
     return lines.join("\n");
@@ -433,7 +436,7 @@
       const blob = [
         c.title, c.summary, c.id, c.familyTitle || "",
         ...(c.genres || []), ...caseTargets(c), ...targetTitles,
-        ...c.beats.flatMap((b) => [b.input, b.screen, b.feel]),
+        ...c.beats.flatMap((b) => [b.input, b.logic, b.screen]),
       ].join(" ").toLowerCase();
       return blob.includes(q);
     });
@@ -502,6 +505,10 @@
       return;
     }
     if (activeBeat >= c.beats.length) activeBeat = 0;
+    const missingLogic = c.beats.findIndex((b) => !b.logic);
+    if (missingLogic >= 0) {
+      throw new Error(`${c.id} beat T${missingLogic + 1} missing logic — regenerate catalog-data.js`);
+    }
     const targetTags = caseTargets(c).map((id) => {
       const cat = data.categories.find((x) => x.id === id);
       return `<span class="tag tag-target">${esc(cat ? cat.title : id)}</span>`;
@@ -515,9 +522,9 @@
       <article class="panel ${i === activeBeat ? "active" : ""}" data-beat="${i}">
         ${storyboardSvg(b, i)}
         <div class="panel-cap">
-          <div class="cap-row"><span class="k">输入</span><span class="v">${esc(b.input)}</span></div>
+          <div class="cap-row"><span class="k">设备</span><span class="v">${esc(b.input)}</span></div>
+          <div class="cap-row"><span class="k">逻辑</span><span class="v">${esc(b.logic)}</span></div>
           <div class="cap-row"><span class="k">画面</span><span class="v">${esc(b.screen)}</span></div>
-          <div class="cap-row"><span class="k">手感</span><span class="v">${esc(b.feel)}</span></div>
         </div>
       </article>`).join("");
     const mmd = sequenceMermaid(c.beats);
