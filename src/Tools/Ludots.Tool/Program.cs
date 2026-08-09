@@ -13,6 +13,7 @@ using Ludots.Core.Map.Hex;
 using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.NavMesh.Bake;
 using Ludots.Core.Navigation.NavMesh.Config;
+using Ludots.Core.Navigation.NavMesh.Surface;
 using Ludots.Core.Navigation.Terrain;
 using Ludots.Core.Physics2D.Navigation;
 using Ludots.Core.Spatial;
@@ -647,12 +648,12 @@ namespace {modId}
                     out string repoRoot,
                     out LogicTerrainField terrain);
 
-                Console.WriteLine($"BakeNavRecastReact: mapId={mapId} modId={modId ?? "(auto)"} topology={terrain.Topology} chunks={terrain.WidthChunks}x{terrain.HeightChunks} obstacles={context.Obstacles.Obstacles.Count}");
+                Console.WriteLine($"BakeNavRecastReact: mapId={mapId} modId={modId ?? "(auto)"} topology={terrain.Topology} chunks={terrain.WidthChunks}x{terrain.HeightChunks} obstacles={context.Obstacles.ObstacleCount}");
                 NavBakeEstimateReport estimate = NavBakeEstimator.Estimate(context);
                 Console.WriteLine($"BakeNavRecastReact estimate: status={estimate.BudgetStatusText} hash={estimate.EstimateHash} terrainHash={estimate.TerrainContentHash} targets={estimate.TargetTileCount} operations={estimate.BakeOperationCount} workUnits={estimate.BudgetWorkUnitCount} seconds={estimate.EstimatedSecondsLow:F1}-{estimate.EstimatedSecondsHigh:F1}");
                 NavBakeEstimator.EnsureBakeAllowed(estimate, largeBakeApproved, acceptedEstimateHash);
 
-                var result = new NavBakeService(new RecastNavBakeAlgorithm(), new CdtNavBakeAlgorithm()).Bake(context);
+                var result = new NavBakeService(new RecastNavBakeAlgorithm(), new ExactCdtNavBakeAlgorithm()).Bake(context);
                 if (result.FailureCount > 0)
                 {
                     PrintNavBakeFailures(result, "BakeNavRecastReact");
@@ -763,6 +764,11 @@ namespace {modId}
             }
 
             terrain = CreateReactEditorLogicTerrain(inputReactBinPath, boardConfig);
+            var build = new NavBuildConfig(heightScale, minUpDot, cliffThreshold);
+            NavTriangleSurfaceTileIndex surface = LogicTerrainTriangleSurfaceCompiler.Compile(
+                terrain,
+                build,
+                bakeConfigContext.Config.TriangleSurface?.HaloPaddingCm ?? 0);
 
             IReadOnlyList<NavBakeTileCoord> targets;
             if (!string.IsNullOrWhiteSpace(dirtyChunksPath))
@@ -786,12 +792,12 @@ namespace {modId}
                 MapId = mapId,
                 ModId = modId ?? string.Empty,
                 SourceUri = ToCoreSourceUri(repoRoot, inputReactBinPath),
-                Terrain = terrain,
+                TriangleSurface = surface,
                 Obstacles = obstacles,
                 Config = bakeConfig,
                 AgentProfiles = bakeConfigContext.AgentProfiles,
                 Targets = targets,
-                BuildConfig = new NavBuildConfig(heightScale, minUpDot, cliffThreshold),
+                BuildConfig = build,
                 TileVersion = (uint)tileVersion,
                 Mode = bakeConfig.ParsedMode,
                 Algorithm = bakeConfig.ParsedAlgorithm,

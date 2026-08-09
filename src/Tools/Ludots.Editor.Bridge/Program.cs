@@ -5,6 +5,7 @@ using Ludots.Launcher.Backend;
 using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.NavMesh.Bake;
 using Ludots.Core.Navigation.NavMesh.Config;
+using Ludots.Core.Navigation.NavMesh.Surface;
 using Ludots.Core.Navigation.Terrain;
 using Ludots.Core.Physics2D.Navigation;
 using Ludots.Core.Mathematics.FixedPoint;
@@ -856,7 +857,7 @@ app.MapPost("/api/nav/bake-recast-react", async (HttpRequest req) =>
                 });
             }
 
-            var navBakeResult = new NavBakeService(new RecastNavBakeAlgorithm(), new CdtNavBakeAlgorithm()).Bake(navBakeContext);
+            var navBakeResult = new NavBakeService(new RecastNavBakeAlgorithm(), new ExactCdtNavBakeAlgorithm()).Bake(navBakeContext);
             var artifacts = new List<object>(navBakeResult.Entries.Count);
             for (int i = 0; i < navBakeResult.Entries.Count; i++)
             {
@@ -1715,17 +1716,22 @@ static bool TryBuildEditorUploadRecastContext(
         var terrain = CreateReactEditorLogicTerrain(inputReactBinPath, boardConfig);
         targets = NavBakeTileSelection.Resolve(terrain, dirtyJson, includeNeighbors, dirtyOnly);
         NavMeshBakeConfig bakeConfig = bakeConfigContext.Config;
+        var build = new NavBuildConfig(heightScale, minUpDot, cliffThreshold);
+        NavTriangleSurfaceTileIndex surface = LogicTerrainTriangleSurfaceCompiler.Compile(
+            terrain,
+            build,
+            bakeConfig.TriangleSurface?.HaloPaddingCm ?? 0);
         navBakeContext = new NavBakeContext
         {
             MapId = mapId,
             ModId = modId ?? string.Empty,
             SourceUri = ToEditorUploadSourceUri(fileName),
-            Terrain = terrain,
+            TriangleSurface = surface,
             Obstacles = obstacles,
             Config = bakeConfig,
             AgentProfiles = bakeConfigContext.AgentProfiles,
             Targets = targets,
-            BuildConfig = new NavBuildConfig(heightScale, minUpDot, cliffThreshold),
+            BuildConfig = build,
             TileVersion = (uint)tileVersion,
             Mode = bakeConfig.ParsedMode,
             Algorithm = bakeConfig.ParsedAlgorithm,

@@ -22,6 +22,7 @@ using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.DebugDraw;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Minimap;
+using Ludots.Core.Presentation.Navigation;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Presentation.Performers;
@@ -279,6 +280,10 @@ namespace Ludots.Adapter.Raylib
                 GlobalFieldVisualBuffer? globalFieldVisualBuffer = engine.GetService(CoreServiceKeys.GlobalFieldVisualBuffer);
                 var fogFieldProjector = new FogGlobalFieldVisualProjector();
                 using var fieldRenderPerformer = new RaylibFieldRenderPerformer();
+                NavMeshPresentationBuffer navMeshPresentationBuffer = engine.GetService(CoreServiceKeys.NavMeshPresentationBuffer)
+                    ?? throw new InvalidOperationException("Raylib host requires the Core NavMeshPresentationBuffer service.");
+                using var navMeshPresentationRenderer = new RaylibNavMeshPresentationRenderer(
+                    navMeshPresentationBuffer.TileCapacity);
                 PresentationMaterialRegistry? materials = engine.GetService(CoreServiceKeys.PresentationMaterialRegistry);
                 using var primitiveRenderer = new RaylibPrimitiveRenderer(RaylibPrimitiveRenderMode.Instanced, engine.VFS, materials);
                 RaylibBenchmarkRenderService? benchmarkRenderer = null;
@@ -443,6 +448,20 @@ namespace Ludots.Adapter.Raylib
                             }
                         }
 
+                        if (renderDebug.DrawNavMesh &&
+                            screenOverlayBuffer != null &&
+                            navMeshPresentationBuffer.TileCount > 0 &&
+                            engine.TryGetService(CoreServiceKeys.NavMeshPresentationState, out NavMeshPresentationState navMeshMetadataState) &&
+                            navMeshMetadataState.Enabled)
+                        {
+                            screenOverlayBuffer.AddText(
+                                10,
+                                40,
+                                navMeshPresentationBuffer.FormatMetadataLine(),
+                                14,
+                                new Vector4(1f, 0.92f, 0.5f, 1f));
+                        }
+
                         if (overlaySceneBuilder != null && overlayScene != null)
                         {
                             long overlayBuildStart = Stopwatch.GetTimestamp();
@@ -510,6 +529,14 @@ namespace Ludots.Adapter.Raylib
                         else
                         {
                             presentationTiming?.ObserveTerrain(0d, 0d, 0, 0);
+                        }
+
+                        if (renderDebug.DrawNavMesh &&
+                            navMeshPresentationBuffer.TileCount > 0 &&
+                            engine.TryGetService(CoreServiceKeys.NavMeshPresentationState, out NavMeshPresentationState navMeshState) &&
+                            navMeshState.Enabled)
+                        {
+                            navMeshPresentationRenderer.Draw(navMeshPresentationBuffer);
                         }
 
                         if (drawFieldOverlays && globalFieldVisualBuffer != null)

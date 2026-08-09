@@ -338,8 +338,9 @@ namespace Ludots.Core.Navigation.NavMesh
         {
             var filtered = new List<NavTile>(tiles.Length);
             int maxPolys = 0;
-            int minOriginXcm = int.MaxValue;
-            int minOriginZcm = int.MaxValue;
+            int gridOriginXcm = 0;
+            int gridOriginZcm = 0;
+            bool hasGridOrigin = false;
             for (int i = 0; i < tiles.Length; i++)
             {
                 NavTile tile = tiles[i];
@@ -348,10 +349,23 @@ namespace Ludots.Core.Navigation.NavMesh
                     continue;
                 }
 
+                int derivedOriginXcm = checked(tile.OriginXcm - (tile.TileId.ChunkX * tileWidthCm));
+                int derivedOriginZcm = checked(tile.OriginZcm - (tile.TileId.ChunkY * tileHeightCm));
+                if (!hasGridOrigin)
+                {
+                    gridOriginXcm = derivedOriginXcm;
+                    gridOriginZcm = derivedOriginZcm;
+                    hasGridOrigin = true;
+                }
+                else if (derivedOriginXcm != gridOriginXcm || derivedOriginZcm != gridOriginZcm)
+                {
+                    throw new InvalidOperationException(
+                        $"DetourNavQueryEngine.BuildNavMesh requires a single tile-space origin across loaded tiles. " +
+                        $"Tile {tile.TileId} derives origin ({derivedOriginXcm},{derivedOriginZcm}) but batch origin is ({gridOriginXcm},{gridOriginZcm}).");
+                }
+
                 filtered.Add(tile);
                 maxPolys = Math.Max(maxPolys, tile.TriangleCount);
-                minOriginXcm = Math.Min(minOriginXcm, tile.OriginXcm);
-                minOriginZcm = Math.Min(minOriginZcm, tile.OriginZcm);
             }
 
             if (filtered.Count == 0 || maxPolys == 0)
@@ -361,7 +375,7 @@ namespace Ludots.Core.Navigation.NavMesh
 
             var navMeshParams = new DtNavMeshParams
             {
-                orig = new RcVec3f(minOriginXcm / 100f, 0f, minOriginZcm / 100f),
+                orig = new RcVec3f(gridOriginXcm / 100f, 0f, gridOriginZcm / 100f),
                 tileWidth = tileWidthCm / 100f,
                 tileHeight = tileHeightCm / 100f,
                 maxTiles = Math.Max(1, filtered.Count),

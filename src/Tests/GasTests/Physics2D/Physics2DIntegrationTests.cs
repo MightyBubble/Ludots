@@ -716,7 +716,7 @@ namespace GasTests
             return new NavMeshBakeConfig
             {
                 Mode = NavBakeNames.ModeRuntimeIncremental,
-                Algorithm = NavBakeNames.AlgorithmCdt,
+                Algorithm = NavBakeNames.AlgorithmExactCdt,
                 Profiles = new List<NavMeshAgentProfileConfig>
                 {
                     new NavMeshAgentProfileConfig { Id = "Small", MaxClimbCm = 40, MaxSlopeDeg = 45 }
@@ -776,7 +776,7 @@ namespace GasTests
                 [new NavQueryServiceKey(0, 0)] = store
             });
             queue = new RuntimeIncrementalNavMeshRebuildQueue(
-                new NavBakeService(new CdtNavBakeAlgorithm()),
+                new NavBakeService(new ExactCdtNavBakeAlgorithm()),
                 new NavBakeContext
                 {
                     MapId = "physics_runtime_navmesh_dirty_contract",
@@ -789,7 +789,7 @@ namespace GasTests
                     BuildConfig = new NavBuildConfig(1f, 0.6f, 1),
                     TileVersion = 3,
                     Mode = NavBakeMode.RuntimeIncremental,
-                    Algorithm = NavBakeAlgorithmKind.Cdt,
+                    Algorithm = NavBakeAlgorithmKind.ExactCdt,
                     Execution = new NavBakeExecutionOptions { Parallel = false, MaxDegreeOfParallelism = 1 }
                 },
                 registry,

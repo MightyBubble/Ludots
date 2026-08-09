@@ -6,6 +6,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh.Config;
+using Ludots.Core.Navigation.NavMesh.Surface;
 using Ludots.Core.Navigation.Terrain;
 using Ludots.Core.Spatial;
 
@@ -131,7 +132,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
         private const int BytesPerKiB = 1024;
         public const int EstimatedBytesPerOperationLow = 48 * BytesPerKiB;
         public const int EstimatedBytesPerOperationHigh = SpatialScaleDefaults.MacroTileCells * BytesPerKiB;
-        public const long CdtReferenceWorkUnitsPerOperation =
+        public const long ExactCdtReferenceWorkUnitsPerOperation =
             (long)SpatialScaleDefaults.TerrainChunkCells * SpatialScaleDefaults.TerrainChunkCells;
         public const long RecastReferenceWorkUnitsPerOperation = 160_000L;
 
@@ -140,15 +141,70 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             if (context == null) throw new ArgumentNullException(nameof(context));
             context.Validate();
 
-            int cellCm = context.Terrain.HorizontalStepCm;
-            int verticalCellCm = context.Terrain.VerticalStepCm;
-            if (cellCm <= 0 || verticalCellCm <= 0)
+            if (context.Algorithm == NavBakeAlgorithmKind.LayeredSpan)
             {
-                throw new InvalidOperationException("NavBakeContext.terrain cell size must be > 0.");
+                throw new InvalidOperationException(
+                    "NavBakeEstimator does not support algorithm 'layered-span'; estimation metrics are not implemented.");
             }
 
-            int fullTileCountX = context.Terrain.WidthChunks;
-            int fullTileCountY = context.Terrain.HeightChunks;
+            int cellCm;
+            int verticalCellCm;
+            int fullTileCountX;
+            int fullTileCountY;
+            int tileWidthCm;
+            int tileHeightCm;
+            int terrainWidthCells;
+            int terrainHeightCells;
+            int terrainChunkCells;
+            long terrainCellSampleCount;
+            string terrainContentHash;
+            LogicTerrainField? terrainForHash = null;
+
+            switch (context.InputKind)
+            {
+                case NavBakeInputKind.LogicTerrain:
+                {
+                    LogicTerrainField terrain = context.RequireTerrain();
+                    terrainForHash = terrain;
+                    cellCm = terrain.HorizontalStepCm;
+                    verticalCellCm = terrain.VerticalStepCm;
+                    if (cellCm <= 0 || verticalCellCm <= 0)
+                    {
+                        throw new InvalidOperationException("NavBakeContext.terrain cell size must be > 0.");
+                    }
+
+                    fullTileCountX = terrain.WidthChunks;
+                    fullTileCountY = terrain.HeightChunks;
+                    tileWidthCm = checked(terrain.ChunkSizeCells * cellCm);
+                    tileHeightCm = checked(terrain.ChunkSizeCells * verticalCellCm);
+                    terrainWidthCells = terrain.WidthCells;
+                    terrainHeightCells = terrain.HeightCells;
+                    terrainChunkCells = terrain.ChunkSizeCells;
+                    terrainCellSampleCount = CountTargetTerrainCells(context, terrain);
+                    terrainContentHash = ComputeTargetTerrainHash(context, terrain);
+                    break;
+                }
+                case NavBakeInputKind.TriangleSurface:
+                {
+                    NavTriangleSurfaceTileIndex surfaceIndex = context.RequireTriangleSurface();
+                    NavTriangleSurfaceTileGrid grid = surfaceIndex.Grid;
+                    cellCm = SpatialScaleDefaults.CellCm;
+                    verticalCellCm = SpatialScaleDefaults.CellCm;
+                    fullTileCountX = grid.TileCountX;
+                    fullTileCountY = grid.TileCountZ;
+                    tileWidthCm = grid.TileWidthCm;
+                    tileHeightCm = grid.TileHeightCm;
+                    terrainWidthCells = checked(fullTileCountX * (tileWidthCm / cellCm));
+                    terrainHeightCells = checked(fullTileCountY * (tileHeightCm / verticalCellCm));
+                    terrainChunkCells = tileWidthCm / cellCm;
+                    terrainCellSampleCount = CountTargetSurfaceCells(grid, context.Targets, cellCm, verticalCellCm);
+                    terrainContentHash = ComputeTargetTriangleSurfaceHash(surfaceIndex, context.Targets);
+                    break;
+                }
+                default:
+                    throw new InvalidOperationException($"Unknown NavBakeInputKind '{context.InputKind}'.");
+            }
+
             int fullTileCount = checked(fullTileCountX * fullTileCountY);
             int targetTileCount = context.Targets.Count;
             int layerCount = context.Config.Layers.Count;
@@ -159,9 +215,6 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 : 1;
 
             var profiles = new List<NavBakeProfileEstimate>(profileCount);
-            int tileWidthCm = checked(context.Terrain.ChunkSizeCells * cellCm);
-            int tileHeightCm = checked(context.Terrain.ChunkSizeCells * verticalCellCm);
-            long terrainCellSampleCount = CountTargetTerrainCells(context);
             long recastColumnBudgetTotal = 0;
 
             for (int i = 0; i < context.Config.Profiles.Count; i++)
@@ -174,9 +227,18 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 recastColumnBudgetTotal = checked(recastColumnBudgetTotal + (long)targetTileCount * layerCount * profile.RecastColumnBudgetPerTile);
             }
 
-            long budgetWorkUnitCount = context.Algorithm == NavBakeAlgorithmKind.Recast
-                ? recastColumnBudgetTotal
-                : checked(terrainCellSampleCount * layerCount * profileCount);
+            long budgetWorkUnitCount;
+            switch (context.Algorithm)
+            {
+                case NavBakeAlgorithmKind.Recast:
+                    budgetWorkUnitCount = recastColumnBudgetTotal;
+                    break;
+                case NavBakeAlgorithmKind.ExactCdt:
+                    budgetWorkUnitCount = checked(terrainCellSampleCount * layerCount * profileCount);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(context.Algorithm), context.Algorithm, $"Unknown nav bake algorithm kind '{context.Algorithm}'.");
+            }
             NavBakeBudgetStatus budgetStatus = GetBudgetStatus(budgetWorkUnitCount);
             long estimatedBytesLow = checked((long)operationCount * EstimatedBytesPerOperationLow);
             long estimatedBytesHigh = checked((long)operationCount * EstimatedBytesPerOperationHigh);
@@ -186,8 +248,14 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             double serialHigh = normalizedOperationCount * highMs / 1000d;
             double estimatedLow = serialLow / workers;
             double estimatedHigh = serialHigh / workers;
-            string terrainContentHash = ComputeTargetTerrainHash(context);
-            string estimateHash = ComputeEstimateHash(context, cellCm, verticalCellCm, operationCount, budgetWorkUnitCount, terrainContentHash);
+            string estimateHash = ComputeEstimateHash(
+                context,
+                terrainForHash,
+                cellCm,
+                verticalCellCm,
+                operationCount,
+                budgetWorkUnitCount,
+                terrainContentHash);
 
             return new NavBakeEstimateReport
             {
@@ -197,9 +265,9 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 Algorithm = NavBakeNames.FormatAlgorithm(context.Algorithm),
                 EstimateHash = estimateHash,
                 TerrainContentHash = terrainContentHash,
-                TerrainWidthCells = context.Terrain.WidthCells,
-                TerrainHeightCells = context.Terrain.HeightCells,
-                TerrainChunkCells = context.Terrain.ChunkSizeCells,
+                TerrainWidthCells = terrainWidthCells,
+                TerrainHeightCells = terrainHeightCells,
+                TerrainChunkCells = terrainChunkCells,
                 CellCm = cellCm,
                 TileWorldWidthCm = tileWidthCm,
                 TileWorldHeightCm = tileHeightCm,
@@ -210,7 +278,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 LayerCount = layerCount,
                 ProfileCount = profileCount,
                 BakeOperationCount = operationCount,
-                ObstacleCount = context.Obstacles.Obstacles.Count,
+                ObstacleCount = context.Obstacles.ObstacleCount,
                 TerrainCellSampleCount = terrainCellSampleCount,
                 RecastColumnBudgetTotal = recastColumnBudgetTotal,
                 BudgetWorkUnitCount = budgetWorkUnitCount,
@@ -300,21 +368,30 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
 
         private static void GetMsBand(NavBakeAlgorithmKind algorithm, out float lowMs, out float highMs)
         {
-            if (algorithm == NavBakeAlgorithmKind.Cdt)
+            switch (algorithm)
             {
-                lowMs = SimpleMsPerOperationLow;
-                highMs = SimpleMsPerOperationHigh;
-                return;
+                case NavBakeAlgorithmKind.ExactCdt:
+                    lowMs = SimpleMsPerOperationLow;
+                    highMs = SimpleMsPerOperationHigh;
+                    return;
+                case NavBakeAlgorithmKind.Recast:
+                    lowMs = RecastMsPerOperationLow;
+                    highMs = RecastMsPerOperationHigh;
+                    return;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(algorithm), algorithm, $"Unknown nav bake algorithm kind '{algorithm}'.");
             }
-
-            lowMs = RecastMsPerOperationLow;
-            highMs = RecastMsPerOperationHigh;
         }
 
         private static long GetReferenceWorkUnitsPerOperation(NavBakeAlgorithmKind algorithm)
-            => algorithm == NavBakeAlgorithmKind.Cdt
-                ? CdtReferenceWorkUnitsPerOperation
-                : RecastReferenceWorkUnitsPerOperation;
+        {
+            return algorithm switch
+            {
+                NavBakeAlgorithmKind.ExactCdt => ExactCdtReferenceWorkUnitsPerOperation,
+                NavBakeAlgorithmKind.Recast => RecastReferenceWorkUnitsPerOperation,
+                _ => throw new ArgumentOutOfRangeException(nameof(algorithm), algorithm, $"Unknown nav bake algorithm kind '{algorithm}'.")
+            };
+        }
 
         private static NavBakeBudgetStatus GetBudgetStatus(long budgetWorkUnitCount)
         {
@@ -345,19 +422,19 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             };
         }
 
-        private static long CountTargetTerrainCells(NavBakeContext context)
+        private static long CountTargetTerrainCells(NavBakeContext context, LogicTerrainField terrain)
         {
             long count = 0;
             for (int i = 0; i < context.Targets.Count; i++)
             {
                 NavBakeTileCoord target = context.Targets[i];
-                count = checked(count + (long)context.Terrain.TileWidthCells(target.ChunkX) * context.Terrain.TileHeightCells(target.ChunkY));
+                count = checked(count + (long)terrain.TileWidthCells(target.ChunkX) * terrain.TileHeightCells(target.ChunkY));
             }
 
             return count;
         }
 
-        private static string ComputeTargetTerrainHash(NavBakeContext context)
+        private static string ComputeTargetTerrainHash(NavBakeContext context, LogicTerrainField terrain)
         {
             using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
             Span<byte> buffer = stackalloc byte[SpatialScaleDefaults.BitsPerFlagWord];
@@ -367,17 +444,17 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 AppendInt32(hash, buffer, target.ChunkX);
                 AppendInt32(hash, buffer, target.ChunkY);
 
-                int startCol = target.ChunkX * context.Terrain.ChunkSizeCells;
-                int startRow = target.ChunkY * context.Terrain.ChunkSizeCells;
-                int width = context.Terrain.TileWidthCells(target.ChunkX);
-                int height = context.Terrain.TileHeightCells(target.ChunkY);
+                int startCol = target.ChunkX * terrain.ChunkSizeCells;
+                int startRow = target.ChunkY * terrain.ChunkSizeCells;
+                int width = terrain.TileWidthCells(target.ChunkX);
+                int height = terrain.TileHeightCells(target.ChunkY);
                 for (int row = 0; row < height; row++)
                 {
                     for (int col = 0; col < width; col++)
                     {
                         int globalCol = startCol + col;
                         int globalRow = startRow + row;
-                        LogicTerrainCell cell = context.Terrain.GetCell(globalCol, globalRow);
+                        LogicTerrainCell cell = terrain.GetCell(globalCol, globalRow);
                         buffer[0] = cell.HeightLevel;
                         buffer[1] = cell.WaterHeightLevel;
                         buffer[2] = (byte)cell.SurfaceFlags;
@@ -385,7 +462,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                         BinaryPrimitives.WriteInt32LittleEndian(buffer.Slice(4, 4), BitConverter.SingleToInt32Bits(cell.Cost));
                         for (int edge = 0; edge < 3; edge++)
                         {
-                            buffer[8 + edge] = context.Terrain.TryGetCliffStraightenEdge(globalCol, globalRow, edge, out bool value) && value
+                            buffer[8 + edge] = terrain.TryGetCliffStraightenEdge(globalCol, globalRow, edge, out bool value) && value
                                 ? (byte)1
                                 : (byte)0;
                         }
@@ -404,8 +481,52 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             hash.AppendData(buffer.Slice(0, 4));
         }
 
+        private static long CountTargetSurfaceCells(
+            NavTriangleSurfaceTileGrid grid,
+            IReadOnlyList<NavBakeTileCoord> targets,
+            int cellCm,
+            int verticalCellCm)
+        {
+            int cellsPerTileX = grid.TileWidthCm / cellCm;
+            int cellsPerTileY = grid.TileHeightCm / verticalCellCm;
+            if (cellsPerTileX <= 0 || cellsPerTileY <= 0)
+            {
+                throw new InvalidOperationException("NavBakeContext.triangleSurface.grid tile size must be >= one cell.");
+            }
+
+            long cellsPerTile = checked((long)cellsPerTileX * cellsPerTileY);
+            return checked(cellsPerTile * targets.Count);
+        }
+
+        private static string ComputeTargetTriangleSurfaceHash(
+            NavTriangleSurfaceTileIndex surfaceIndex,
+            IReadOnlyList<NavBakeTileCoord> targets)
+        {
+            using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
+            Span<byte> buffer = stackalloc byte[16];
+            NavTriangleSurfaceSnapshot surface = surfaceIndex.Surface;
+            ReadOnlySpan<int> stableIds = surface.TriStableIds;
+            AppendInt32(hash, buffer, surfaceIndex.Grid.HaloPaddingCm);
+            AppendInt32(hash, buffer, surface.TriangleCount);
+            for (int i = 0; i < targets.Count; i++)
+            {
+                NavBakeTileCoord target = targets[i];
+                AppendInt32(hash, buffer, target.ChunkX);
+                AppendInt32(hash, buffer, target.ChunkY);
+                ReadOnlySpan<int> indices = surfaceIndex.GetTriangleIndices(target);
+                AppendInt32(hash, buffer, indices.Length);
+                for (int t = 0; t < indices.Length; t++)
+                {
+                    AppendInt32(hash, buffer, stableIds[indices[t]]);
+                }
+            }
+
+            return Convert.ToHexString(hash.GetHashAndReset()).ToLowerInvariant();
+        }
+
         private static string ComputeEstimateHash(
             NavBakeContext context,
+            LogicTerrainField? terrain,
             int cellCm,
             int verticalCellCm,
             int operationCount,
@@ -414,17 +535,31 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
         {
             using var sha = SHA256.Create();
             var sb = new StringBuilder(1024);
-            sb.Append("v2|")
+            sb.Append("v3|")
                 .Append(context.MapId).Append('|')
                 .Append(context.ModId).Append('|')
                 .Append(context.SourceUri).Append('|')
                 .Append(terrainContentHash).Append('|')
                 .Append(NavBakeNames.FormatMode(context.Mode)).Append('|')
                 .Append(NavBakeNames.FormatAlgorithm(context.Algorithm)).Append('|')
-                .Append(context.Terrain.Topology).Append('|')
-                .Append(context.Terrain.WidthCells).Append('x').Append(context.Terrain.HeightCells).Append('|')
-                .Append(context.Terrain.ChunkSizeCells).Append('|')
-                .Append(cellCm).Append('x').Append(verticalCellCm).Append('|')
+                .Append(NavBakeAdapterCapability.FormatInputKind(context.InputKind)).Append('|');
+
+            if (terrain != null)
+            {
+                sb.Append(terrain.Topology).Append('|')
+                    .Append(terrain.WidthCells).Append('x').Append(terrain.HeightCells).Append('|')
+                    .Append(terrain.ChunkSizeCells).Append('|');
+            }
+            else
+            {
+                NavTriangleSurfaceTileGrid grid = context.RequireTriangleSurface().Grid;
+                sb.Append("triangle-surface|")
+                    .Append(grid.TileCountX).Append('x').Append(grid.TileCountZ).Append('|')
+                    .Append(grid.TileWidthCm).Append('x').Append(grid.TileHeightCm).Append('|')
+                    .Append(grid.HaloPaddingCm).Append('|');
+            }
+
+            sb.Append(cellCm).Append('x').Append(verticalCellCm).Append('|')
                 .Append(context.TileVersion).Append('|')
                 .Append(context.BuildConfig.HeightScaleMeters.ToString("R", CultureInfo.InvariantCulture)).Append('|')
                 .Append(context.BuildConfig.MinWalkableUpDot.ToString("R", CultureInfo.InvariantCulture)).Append('|')
@@ -437,7 +572,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             AppendTargets(sb, context.Targets);
             AppendLayers(sb, context.Config.Layers);
             AppendProfiles(sb, context.Config.Profiles, context.AgentProfiles);
-            AppendObstacles(sb, context.Obstacles.Obstacles);
+            AppendObstacles(sb, context.Obstacles);
 
             byte[] hash = sha.ComputeHash(Encoding.UTF8.GetBytes(sb.ToString()));
             return Convert.ToHexString(hash).ToLowerInvariant();
@@ -485,31 +620,12 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             sb.Append('|');
         }
 
-        private static void AppendObstacles(StringBuilder sb, IReadOnlyList<NavObstacle> obstacles)
+        private static void AppendObstacles(StringBuilder sb, INavObstacleSource obstacles)
         {
             sb.Append("obstacles=");
-            for (int i = 0; i < obstacles.Count; i++)
+            for (int i = 0; i < obstacles.ObstacleCount; i++)
             {
-                NavObstacle obstacle = obstacles[i];
-                sb.Append(obstacle.Id).Append(':')
-                    .Append(obstacle.Enabled).Append(':')
-                    .Append(obstacle.Kind).Append(':')
-                    .Append(obstacle.LayerId).Append(':')
-                    .Append(obstacle.AreaId?.ToString(CultureInfo.InvariantCulture) ?? "").Append(':')
-                    .Append(obstacle.Center.Xcm).Append(',').Append(obstacle.Center.Zcm).Append(':')
-                    .Append(obstacle.RadiusCm).Append(':')
-                    .Append(obstacle.A.Xcm).Append(',').Append(obstacle.A.Zcm).Append(':')
-                    .Append(obstacle.B.Xcm).Append(',').Append(obstacle.B.Zcm).Append(':');
-                if (obstacle.Points != null)
-                {
-                    for (int p = 0; p < obstacle.Points.Count; p++)
-                    {
-                        NavPointCm point = obstacle.Points[p];
-                        sb.Append(point.Xcm).Append(',').Append(point.Zcm).Append(',');
-                    }
-                }
-
-                sb.Append(';');
+                obstacles.AppendHash(i, sb);
             }
         }
     }
