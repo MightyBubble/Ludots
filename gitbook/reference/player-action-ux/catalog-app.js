@@ -20,6 +20,21 @@
   const casesById = Object.fromEntries(data.cases.map((c) => [c.id, c]));
   const actionsByKey = Object.fromEntries(data.actions.map((a) => [a.key, a]));
 
+  if (!Array.isArray(data.views) || !data.views.length) {
+    throw new Error("PLAYER_ACTION_UX_CATALOG.views missing — regenerate catalog-data.js");
+  }
+  if (!Array.isArray(data.cursorModes) || !data.cursorModes.length) {
+    throw new Error("PLAYER_ACTION_UX_CATALOG.cursorModes missing — regenerate catalog-data.js");
+  }
+  const VIEW_LABEL = Object.fromEntries(data.views.map((v) => [v.id, v.label]));
+  const CURSOR_MODES = data.cursorModes.slice();
+
+  function viewLabel(view) {
+    const label = VIEW_LABEL[view];
+    if (!label) throw new Error(`分镜视角未知：${view} — 修 catalog 生成脚本`);
+    return label;
+  }
+
   /** Default to first real category so the page is not a 150-card dump. */
   let activeCategory = (data.categories[0] && data.categories[0].id) || "all";
   let selectedActionKey = null;
@@ -108,11 +123,33 @@
       }
       if (el.t === "cursor") {
         const x = px(el.x), y = py(el.y);
-        const down = el.mode === "down" || el.mode === "drag";
+        const mode = el.mode || "idle";
+        if (!CURSOR_MODES.includes(mode)) {
+          throw new Error(`分镜光标状态未知：${mode}（只允许 ${CURSOR_MODES.join(" / ")}）— 修 catalog 生成脚本`);
+        }
+        if (mode === "aim") {
+          // 施法专属光标：鼠标已变成技能准星，和 FPS 大准星区分开
+          return `
+            <g transform="translate(${x},${y})">
+              <circle r="7.5" fill="none" stroke="#f0a35e" stroke-width="1.8"/>
+              <line x1="-13" y1="0" x2="-9" y2="0" stroke="#f0a35e" stroke-width="1.8"/>
+              <line x1="9" y1="0" x2="13" y2="0" stroke="#f0a35e" stroke-width="1.8"/>
+              <line x1="0" y1="-13" x2="0" y2="-9" stroke="#f0a35e" stroke-width="1.8"/>
+              <line x1="0" y1="9" x2="0" y2="13" stroke="#f0a35e" stroke-width="1.8"/>
+              <circle r="1.8" fill="#f0a35e"/>
+            </g>`;
+        }
+        const down = mode === "down" || mode === "drag";
+        // 松手那一拍要看得出「刚点下去」：在落点画外扩的确认波纹
+        const release = mode === "up"
+          ? `<circle r="8" fill="none" stroke="#f0a35e" stroke-width="1.8" opacity="0.95"/>
+             <circle r="13.5" fill="none" stroke="#f0a35e" stroke-width="1.1" opacity="0.45"/>`
+          : "";
         return `
           <g transform="translate(${x},${y})">
+            ${release}
             <path d="M0 0 L0 16 L4.5 13 L8 20 L11 18.5 L7.5 11.5 L13 11 Z" fill="${down ? "#f0a35e" : "#e8eef6"}" stroke="#0b0e13" stroke-width="1"/>
-            ${el.mode === "drag" ? `<circle cx="2" cy="2" r="10" fill="none" stroke="#f0a35e" stroke-dasharray="2 2" opacity="0.7"/>` : ""}
+            ${mode === "drag" ? `<circle cx="2" cy="2" r="10" fill="none" stroke="#f0a35e" stroke-dasharray="2 2" opacity="0.7"/>` : ""}
           </g>`;
       }
       if (el.t === "box") {
@@ -163,8 +200,9 @@
       if (el.t === "building") {
         const x = px(el.x), y = py(el.y);
         const fill = el.ghost ? "rgba(110,200,255,0.2)" : "#8aa0b8";
-        const stroke = el.ghost ? "#6ec8ff" : "#0b0e13";
-        return `<rect x="${x - 12}" y="${y - 12}" width="24" height="24" rx="3" fill="${fill}" stroke="${stroke}" stroke-width="1.5" stroke-dasharray="${el.ghost ? "3 2" : "0"}"/>`;
+        const stroke = el.ghost ? "#6ec8ff" : el.team ? teamColor(el.team) : "#0b0e13";
+        const width = el.ghost || el.team ? 2 : 1.5;
+        return `<rect x="${x - 12}" y="${y - 12}" width="24" height="24" rx="3" fill="${fill}" stroke="${stroke}" stroke-width="${width}" stroke-dasharray="${el.ghost ? "3 2" : "0"}"/>`;
       }
       if (el.t === "stickL" || el.t === "stickR") {
         const left = el.t === "stickL";
@@ -200,9 +238,13 @@
         const lines = el.lines || [];
         const h = 16 + lines.length * 16;
         const w = 72;
-        const items = lines.map((ln, i) =>
-          `<text x="${x + 8}" y="${y + 18 + i * 16}" fill="#e8eef6" font-size="11" font-family="DM Sans, sans-serif">${esc(ln)}</text>`
-        ).join("");
+        const items = lines.map((ln, i) => {
+          const on = el.active === i;
+          const hit = on
+            ? `<rect x="${x + 3}" y="${y + 6 + i * 16}" width="${w - 6}" height="15" rx="2" fill="rgba(240,163,94,0.22)" stroke="#f0a35e" stroke-width="1.2"/>`
+            : "";
+          return `${hit}<text x="${x + 8}" y="${y + 18 + i * 16}" fill="${on ? "#f0a35e" : "#e8eef6"}" font-size="11" font-family="DM Sans, sans-serif" font-weight="${on ? 700 : 400}">${esc(ln)}</text>`;
+        }).join("");
         return `
           <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="4" fill="#0b0e13" stroke="#6ec8ff" stroke-width="1.4"/>
           ${items}`;
@@ -291,6 +333,8 @@
     const id = `sb${++uid}`;
     const shot = String(index + 1).padStart(2, "0");
     const title = beat.title || `步骤 ${index + 1}`;
+    if (!beat.view) throw new Error(`分镜缺 view（第 ${index + 1} 拍）— 修 catalog 生成脚本`);
+    const stageLabel = viewLabel(beat.view);
     const cap = `${beat.input} → ${beat.screen}`;
     const shortCap = cap.length > 42 ? `${cap.slice(0, 41)}…` : cap;
     return `
@@ -316,14 +360,14 @@
         <rect x="14" y="8" width="292" height="22" fill="#0d1117"/>
         <text x="22" y="23" fill="#f0a35e" font-size="12" font-family="IBM Plex Mono, monospace" font-weight="700">SHOT ${shot}</text>
         <text x="88" y="23" fill="#e8eef6" font-size="12" font-family="DM Sans, sans-serif" font-weight="600">${esc(title)}</text>
-        <text x="298" y="23" text-anchor="end" fill="#66758a" font-size="10" font-family="IBM Plex Mono, monospace">${esc(beat.view || "topdown")}</text>
+        <text x="298" y="23" text-anchor="end" fill="#93a0b4" font-size="10" font-family="DM Sans, sans-serif">${esc(stageLabel)}</text>
 
         <!-- comic outer / inner frame -->
         <rect x="14" y="32" width="292" height="158" fill="none" stroke="#0b0e13" stroke-width="4"/>
         <rect x="16" y="34" width="288" height="154" fill="none" stroke="#c9a27a" stroke-width="1.2" opacity="0.55"/>
 
         <g clip-path="url(#clip-${id})">
-          ${drawStage(beat.view || "topdown", `gnd-${id}`)}
+          ${drawStage(beat.view, `gnd-${id}`)}
           ${renderCast(beat.cast || [], id)}
         </g>
 
