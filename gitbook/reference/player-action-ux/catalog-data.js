@@ -48,7 +48,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
     "aim"
   ],
   "checkpoint": {
-    "head": "06963e09b",
+    "head": "fbf04fd1c",
     "branch_hint": "cursor/ux-action-id-platform-tabs-4211",
     "impl_notes": "scripts/player_action_ux_impl_notes.py",
     "beat_logic": "scripts/player_action_ux_beat_logic.py",
@@ -9407,8 +9407,8 @@ window.PLAYER_ACTION_UX_CATALOG = {
             },
             {
               "t": "unit",
-              "x": 70,
-              "y": 38,
+              "x": 68,
+              "y": 36,
               "sel": false,
               "team": "enemy",
               "face": 0,
@@ -9416,8 +9416,8 @@ window.PLAYER_ACTION_UX_CATALOG = {
             },
             {
               "t": "unit",
-              "x": 80,
-              "y": 55,
+              "x": 84,
+              "y": 60,
               "sel": false,
               "team": "enemy",
               "face": 0,
@@ -9425,8 +9425,8 @@ window.PLAYER_ACTION_UX_CATALOG = {
             },
             {
               "t": "cursor",
-              "x": 56,
-              "y": 44,
+              "x": 54,
+              "y": 46,
               "mode": "aim"
             },
             {
@@ -9460,8 +9460,8 @@ window.PLAYER_ACTION_UX_CATALOG = {
             },
             {
               "t": "unit",
-              "x": 70,
-              "y": 38,
+              "x": 68,
+              "y": 36,
               "sel": false,
               "team": "enemy",
               "face": 0,
@@ -9469,15 +9469,15 @@ window.PLAYER_ACTION_UX_CATALOG = {
             },
             {
               "t": "ring",
-              "x": 70,
-              "y": 38,
+              "x": 68,
+              "y": 36,
               "r": 12,
               "kind": "lock"
             },
             {
               "t": "unit",
-              "x": 80,
-              "y": 55,
+              "x": 84,
+              "y": 60,
               "sel": false,
               "team": "enemy",
               "face": 0,
@@ -9487,14 +9487,14 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "t": "arrow",
               "x1": 40,
               "y1": 55,
-              "x2": 66,
-              "y2": 40,
+              "x2": 64,
+              "y2": 39,
               "kind": "attack"
             },
             {
               "t": "cursor",
-              "x": 66.48,
-              "y": 44.67,
+              "x": 74,
+              "y": 44,
               "mode": "up"
             },
             {

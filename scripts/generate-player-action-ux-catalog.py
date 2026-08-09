@@ -782,12 +782,12 @@ def build_cases():
         "先按技能，再点合法敌方目标放出。",
         [
             beat("按技能", "鼠标变专属准星，场上敌人可点", "选目标", "moba",
-                 [hero(35, 60), unit(70, 38, team="enemy"), unit(80, 55, team="enemy"),
-                  cursor(56, 44, "aim"), hotbar(active=0), badge("选敌")], title="进入"),
+                 [hero(35, 60), unit(68, 36, team="enemy"), unit(84, 60, team="enemy"),
+                  cursor(54, 46, "aim"), hotbar(active=0), badge("选敌")], title="进入"),
             beat("点敌人", "被点的那个敌人套上锁定圈，技能飞向它", "点到了", "moba",
-                 [hero(35, 60), unit(70, 38, team="enemy"), ring(70, 38, r=12, kind="lock"),
-                  unit(80, 55, team="enemy"), arrow(40, 55, 66, 40, "attack"),
-                  cursor(70, 38, "up"), hotbar(active=0), badge("确认")], title="点中"),
+                 [hero(35, 60), unit(68, 36, team="enemy"), ring(68, 36, r=12, kind="lock"),
+                  unit(84, 60, team="enemy"), arrow(40, 55, 64, 39, "attack"),
+                  cursor(74, 44, "up"), hotbar(active=0), badge("确认")], title="点中"),
         ], ["MOBA", "RTS", "War3"],
     ))
     c.append(case(
