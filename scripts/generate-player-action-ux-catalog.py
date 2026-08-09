@@ -26,6 +26,46 @@ from player_action_ux_impl_notes import enrich_all  # noqa: E402
 OUT = Path(__file__).resolve().parent.parent / "gitbook/reference/player-action-ux/catalog-data.js"
 CHECKPOINT_MD = Path(__file__).resolve().parent.parent / "gitbook/reference/player-action-ux/CHECKPOINT.md"
 
+# 分镜镜位（角标用人话，不给玩家看英文代号）
+VIEW_LABELS = {
+    "topdown": "俯视战场",
+    "moba": "斜俯视",
+    "tps": "越肩视角",
+    "fps": "第一人称",
+}
+
+# 光标状态：渲染器逐个都画得出来，未列出的状态直接 fail
+CURSOR_MODES = ("idle", "down", "drag", "up", "aim")
+
+# 光标是箭头时会压住脚下的东西，这些状态要让位；aim 是准星、drag 是抓着，压着才对
+CURSOR_MODES_OFFSET = ("idle", "down", "up")
+CURSOR_OCCLUDERS = ("unit", "hero", "building")
+
+# 舞台像素尺寸必须和 catalog-app.js 的 SW / SH 一致
+STAGE_W_PX = 284.0
+STAGE_H_PX = 150.0
+# 箭头图形从箭尖（0,0）往右下伸展出的包围盒
+CURSOR_BODY_PX = (13.0, 20.0)
+
+
+def _entity_radius_px(e: dict) -> float:
+    t = e.get("t")
+    if t == "unit":
+        return 8.0 * (e.get("size") or 1)
+    if t == "hero":
+        return 9.0
+    if t == "building":
+        return 12.0
+    raise SystemExit(f"未登记的遮挡体半径: {t}")
+
+
+def _cursor_covers(cur: dict, ent: dict) -> bool:
+    """箭头光标是否把这个实体压住（按箭头真实包围盒 + 实体半径算）。"""
+    dx = (ent["x"] - cur["x"]) / 100.0 * STAGE_W_PX
+    dy = (ent["y"] - cur["y"]) / 100.0 * STAGE_H_PX
+    r = _entity_radius_px(ent)
+    return -r <= dx <= CURSOR_BODY_PX[0] + r and -r <= dy <= CURSOR_BODY_PX[1] + r
+
 
 def beat(input_text, screen, _author_note, view, cast, title=None):
     """Build one storyboard beat.
@@ -98,8 +138,9 @@ def circle_ind(x, y, r=16, ok=True):
     return {"t": "circle", "x": x, "y": y, "r": r, "ok": ok}
 
 
-def building(x, y, ghost=False):
-    return {"t": "building", "x": x, "y": y, "ghost": ghost}
+def building(x, y, ghost=False, team=None):
+    """team 标出阵营描边（敌方红 / 己方绿），不给就是中立灰。"""
+    return {"t": "building", "x": x, "y": y, "ghost": ghost, "team": team}
 
 
 def badge(text):
@@ -118,8 +159,9 @@ def card(x, y, label="卡", cost=None, dragging=False):
     return {"t": "card", "x": x, "y": y, "label": label, "cost": cost, "dragging": dragging}
 
 
-def menu_box(x, y, lines):
-    return {"t": "menu", "x": x, "y": y, "lines": list(lines)}
+def menu_box(x, y, lines, active=None):
+    """active = 被点中的那一项（0 起），用于「点了哪一项」看得见。"""
+    return {"t": "menu", "x": x, "y": y, "lines": list(lines), "active": active}
 
 
 def hotbar(active=None, cd=None, extra=None, off=None, dot=None, deny=None, slots=4):
@@ -403,8 +445,8 @@ def build_cases():
         "附身、上车、切英雄、观战跟随时，操控跟到新主体。",
         [
             beat("靠近载具，按交互键", "载具高亮，出现上车提示", "能上车", "tps",
-                 [hero(40, 60), unit(65, 55, size=1.5), keyhint(65, 38, "F", "active", "上车"),
-                  badge("可交互")], title="靠近"),
+                 [hero(40, 60), unit(65, 55, size=1.5), ring(65, 55, r=16, kind="buff"),
+                  keyhint(65, 38, "F", "active", "上车"), badge("可交互")], title="靠近"),
             beat("按下确认上车", "镜头切到载具视角/操控", "你变成车", "tps",
                  [unit(55, 55, size=1.5, sel=True), ring(55, 55), keyhint(55, 38, "F", "active", "上车"),
                   badge("切入")], title="切换"),
@@ -739,11 +781,13 @@ def build_cases():
         "skill-pick-enemy", "unit-skill", "技能后点敌人",
         "先按技能，再点合法敌方目标放出。",
         [
-            beat("按技能", "鼠标变专属准星", "选目标", "moba",
-                 [hero(35, 60), cursor(60, 40), badge("选敌")], title="进入"),
-            beat("点敌人", "技能飞向该单位", "点到了", "moba",
-                 [hero(35, 60), unit(65, 40, team="enemy"), arrow(40, 55, 62, 42, "attack"),
-                  cursor(65, 40, "up"), badge("确认")], title="点中"),
+            beat("按技能", "鼠标变专属准星，场上敌人可点", "选目标", "moba",
+                 [hero(35, 60), unit(70, 38, team="enemy"), unit(80, 55, team="enemy"),
+                  cursor(56, 44, "aim"), hotbar(active=0), badge("选敌")], title="进入"),
+            beat("点敌人", "被点的那个敌人套上锁定圈，技能飞向它", "点到了", "moba",
+                 [hero(35, 60), unit(70, 38, team="enemy"), ring(70, 38, r=12, kind="lock"),
+                  unit(80, 55, team="enemy"), arrow(40, 55, 66, 40, "attack"),
+                  cursor(70, 38, "up"), hotbar(active=0), badge("确认")], title="点中"),
         ], ["MOBA", "RTS", "War3"],
     ))
     c.append(case(
@@ -751,8 +795,8 @@ def build_cases():
         "按键当下自动对准星下单位施放，不进瞄准态。",
         [
             beat("准星已在敌人上时按技能", "立刻出手，无指示器阶段", "又快又险", "moba",
-                 [hero(35, 60), unit(65, 42, team="enemy"), cursor(65, 42), arrow(40, 55, 62, 44, "attack"),
-                  badge("智能施法")], title="瞬放"),
+                 [hero(35, 60), unit(65, 42, team="enemy"), cursor(65, 42, "aim"),
+                  arrow(40, 55, 62, 44, "attack"), badge("智能施法")], title="瞬放"),
         ], ["MOBA"],
     ))
     c.append(case(
@@ -1227,14 +1271,14 @@ def build_cases():
         "同样右键点建筑/单位，工程师是占领或修理，间谍是潜入，普通坦克是攻击或移动，消融步兵是抹除。",
         [
             beat("选工程师，右键敌方建筑", "冲去占领，不是炮击", "去抢房子", "topdown",
-                 [unit(28, 58, sel=True), ring(28, 58), building(70, 42),
+                 [unit(28, 58, sel=True), ring(28, 58), building(70, 42, team="enemy"),
                   arrow(32, 56, 66, 44, "move"), cursor(70, 42, "up"), badge("工兵×敌建筑")], title="占领"),
             beat("选工程师，右键己方损伤建筑", "过去修理", "去修", "topdown",
-                 [unit(28, 58, sel=True), ring(28, 58), building(70, 42),
+                 [unit(28, 58, sel=True), ring(28, 58), building(70, 42, team="ally"),
                   arrow(32, 56, 66, 44, "move"), ring(70, 42, r=12, kind="buff"),
                   badge("工兵×己建筑")], title="修理"),
             beat("选坦克，右键同一敌建筑", "开炮攻击建筑", "轰平它", "topdown",
-                 [unit(28, 58, sel=True, size=1.15), ring(28, 58), building(70, 42),
+                 [unit(28, 58, sel=True, size=1.15), ring(28, 58), building(70, 42, team="enemy"),
                   arrow(34, 56, 66, 44, "attack"), badge("坦克×敌建筑")], title="炮击"),
             beat("选消融步兵，右键敌单位", "擦除目标，不是普通射击", "抹掉", "topdown",
                  [unit(30, 58, sel=True), ring(30, 58), unit(72, 42, team="enemy"),
@@ -1804,9 +1848,10 @@ def build_cases():
             beat("对对象右键/长按", "弹出上下文菜单", "还能干这些", "moba",
                  [unit(55, 45, team="ally"), cursor(55, 45),
                   menu_box(62, 40, ["交易", "检查", "跟随"]), badge("上下文菜单")], title="打开菜单"),
-            beat("点菜单项", "执行该项，菜单关闭", "选这项", "moba",
-                 [unit(55, 45, team="ally"), arrow(58, 45, 78, 45, "move"),
-                  cursor(70, 52), badge("执行·跟随")], title="选中"),
+            beat("点菜单项", "点中的那项亮一下，随即收起菜单并执行", "选这项", "moba",
+                 [unit(55, 45, team="ally"), arrow(58, 45, 88, 45, "move"),
+                  menu_box(62, 40, ["交易", "检查", "跟随"], active=2),
+                  cursor(66, 72, "up"), badge("执行·跟随")], title="选中"),
         ], ["MMO", "RTS", "ARPG"],
     ))
     c.append(case(
@@ -2637,6 +2682,106 @@ def apply_action_index(cases: list) -> list[dict]:
     return actions
 
 
+def _cursor_candidates(hit: dict) -> list[tuple[float, float]]:
+    """按「箭尖贴着目标、箭身朝空处」给出候选落点，从最自然的右下开始试。"""
+    r = _entity_radius_px(hit)
+    ux = lambda p: p / STAGE_W_PX * 100.0  # noqa: E731
+    uy = lambda p: p / STAGE_H_PX * 100.0  # noqa: E731
+    bw, bh = CURSOR_BODY_PX
+    return [
+        (hit["x"] + ux(r + 2), hit["y"] + uy(r + 2)),          # 右下：目标在左上
+        (hit["x"] - ux(r + 2), hit["y"] + uy(r + 2)),          # 左下：目标在正上
+        (hit["x"] + ux(r + 2), hit["y"]),                       # 正右：目标在正左
+        (hit["x"] - ux(bw + r + 3), hit["y"]),                  # 左侧：箭身在目标前收住
+        (hit["x"], hit["y"] - uy(bh + r + 3)),                  # 上方：箭身在目标前收住
+    ]
+
+
+def deocclude_cursors(cases: list) -> int:
+    """箭头光标压在单位/建筑身上时，把箭尖挪到目标的右下边缘外。
+
+    箭头图形从箭尖往右下伸展，压在正中就把目标盖掉（玩家看不见自己点的是谁）。
+    箭尖落在目标右下角外侧时，箭尖依旧贴着目标，箭身朝空地伸展。
+    """
+    moved = 0
+    for c in cases:
+        for b in c["beats"]:
+            cast = b.get("cast") or []
+            bodies = [e for e in cast if e.get("t") in CURSOR_OCCLUDERS]
+            for cur in cast:
+                if cur.get("t") != "cursor":
+                    continue
+                if cur.get("mode") not in CURSOR_MODES_OFFSET:
+                    continue
+                hit = next((e for e in bodies if _cursor_covers(cur, e)), None)
+                if hit is None:
+                    continue
+                spot = next(
+                    (
+                        (x, y)
+                        for x, y in _cursor_candidates(hit)
+                        if 3.0 <= x <= 94.0 and 4.0 <= y <= 88.0
+                        and not any(_cursor_covers({"x": x, "y": y}, e) for e in bodies)
+                    ),
+                    None,
+                )
+                if spot is None:
+                    raise SystemExit(
+                        f"{c['id']} 这一拍摆不下光标：目标太挤，手工调 cast 坐标 "
+                        f"(光标 {cur['x']},{cur['y']})"
+                    )
+                cur["x"], cur["y"] = round(spot[0], 2), round(spot[1], 2)
+                moved += 1
+    return moved
+
+
+def _audit_storyboard(cases: list) -> None:
+    """画面必须画出文案承诺的东西；对不上就 fail，不许悄悄糊过去。"""
+    bad_view: list[str] = []
+    bad_cursor: list[str] = []
+    occluded: list[str] = []
+    missing_reticle: list[str] = []
+    missing_menu: list[str] = []
+    for c in cases:
+        for i, b in enumerate(c["beats"]):
+            tag = f"{c.get('actionNo') or c['id']} {c['id']}#T{i+1}"
+            cast = b.get("cast") or []
+            kinds = {e.get("t") for e in cast}
+            if b.get("view") not in VIEW_LABELS:
+                bad_view.append(f"{tag} view={b.get('view')}")
+            cursors = [e for e in cast if e.get("t") == "cursor"]
+            for cur in cursors:
+                if cur.get("mode") not in CURSOR_MODES:
+                    bad_cursor.append(f"{tag} mode={cur.get('mode')}")
+            bodies = [e for e in cast if e.get("t") in CURSOR_OCCLUDERS]
+            for cur in cursors:
+                if cur.get("mode") not in CURSOR_MODES_OFFSET:
+                    continue
+                if any(_cursor_covers(cur, e) for e in bodies):
+                    occluded.append(tag)
+                    break
+            blob = f"{b['input']} {b.get('logic') or ''} {b['screen']}"
+            if ("专属准星" in blob or "变准星" in blob) and not (
+                "crosshair" in kinds or any(e.get("mode") == "aim" for e in cursors)
+            ):
+                missing_reticle.append(tag)
+            if "菜单项" in blob and "menu" not in kinds:
+                missing_menu.append(tag)
+    problems = []
+    if bad_view:
+        problems.append(f"未知镜位（VIEW_LABELS 未登记）: {bad_view}")
+    if bad_cursor:
+        problems.append(f"未知光标状态（渲染器画不出）: {bad_cursor}")
+    if occluded:
+        problems.append(f"箭头光标压住单位: {occluded}")
+    if missing_reticle:
+        problems.append(f"文案说变准星但画面没准星: {missing_reticle}")
+    if missing_menu:
+        problems.append(f"文案说点菜单项但画面没菜单: {missing_menu}")
+    if problems:
+        raise SystemExit("分镜画面与文案对不上：\n- " + "\n- ".join(problems))
+
+
 def _write_checkpoint(cases: list, weak: list[str], head: str, actions: list[dict] | None = None) -> None:
     todos = sorted({t for c in cases for t in c.get("todos") or []})
     from collections import Counter
@@ -2703,6 +2848,10 @@ def _write_checkpoint(cases: list, weak: list[str], head: str, actions: list[dic
         "",
         f"- 仅 badge / 空 cast 的弱分镜拍数：{len(weak)}",
         "- 弱分镜不阻断生成，但改数据时应补单位/光标/指示器，禁止「只有字没有画面」",
+        "- `_audit_storyboard()` 是硬闸：镜位未登记、光标状态渲染器画不出、箭头压住单位、"
+        "说「变准星」却没准星、说「点菜单项」却没菜单 —— 任一命中直接 fail 生成",
+        f"- 光标状态白名单：{' / '.join(CURSOR_MODES)}；`aim`=施法准星，`up`=松手波纹",
+        f"- 镜位角标只出人话：{'、'.join(VIEW_LABELS.values())}",
         "",
         "## 高频 TODO（去重）",
         "",
@@ -2720,6 +2869,8 @@ def main():
     apply_beat_logic(cases)
     actions = apply_action_index(cases)
     augmented = augment_ui_glyphs(cases)
+    nudged = deocclude_cursors(cases)
+    _audit_storyboard(cases)
     weak = _audit_casts(cases)
     empty = [c["id"] for c in cases if not c.get("targets")]
     if empty:
@@ -2743,6 +2894,8 @@ def main():
         "platforms": [
             {"id": pid, "label": PLATFORM_LABEL[pid]} for pid in PLATFORM_ORDER
         ],
+        "views": [{"id": vid, "label": label} for vid, label in VIEW_LABELS.items()],
+        "cursorModes": list(CURSOR_MODES),
         "checkpoint": {
             "head": head,
             "branch_hint": "cursor/ux-action-id-platform-tabs-4211",
@@ -2774,7 +2927,8 @@ def main():
         f"Wrote {OUT.relative_to(OUT.parents[2])}  actions={len(actions)}  "
         f"cases={len(cases)}  beats={sum(len(x['beats']) for x in cases)}  "
         f"multi_platform={sum(1 for a in actions if a['caseCount'] > 1)}  "
-        f"weak_casts={len(weak)}  ui_augmented={augmented}  head={head}"
+        f"weak_casts={len(weak)}  ui_augmented={augmented}  "
+        f"cursor_nudged={nudged}  head={head}"
     )
 
 

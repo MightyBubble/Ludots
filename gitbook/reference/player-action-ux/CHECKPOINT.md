@@ -8,7 +8,7 @@
 - 逻辑文案：`scripts/player_action_ux_beat_logic.py`
 - 实现标注：`scripts/player_action_ux_impl_notes.py`
 - 动作编号/平台变体：`scripts/player_action_ux_action_index.py`
-- 生成时 HEAD：`4a5716505`（以你拉取后的 `git rev-parse` 为准；合并后会变）
+- 生成时 HEAD：`06963e09b`（以你拉取后的 `git rev-parse` 为准；合并后会变）
 - 分支语境：`cursor/ux-action-id-platform-tabs-4211`（unique 动作编号 + 主机/键鼠/触控 tab）
 - 已合 main：图鉴 #743–#755（含按游戏分类、时序三参与者、一镜一对、双人审核）
 
@@ -64,6 +64,9 @@
 
 - 仅 badge / 空 cast 的弱分镜拍数：0
 - 弱分镜不阻断生成，但改数据时应补单位/光标/指示器，禁止「只有字没有画面」
+- `_audit_storyboard()` 是硬闸：镜位未登记、光标状态渲染器画不出、箭头压住单位、说「变准星」却没准星、说「点菜单项」却没菜单 —— 任一命中直接 fail 生成
+- 光标状态白名单：idle / down / drag / up / aim；`aim`=施法准星，`up`=松手波纹
+- 镜位角标只出人话：俯视战场、斜俯视、越肩视角、第一人称
 
 ## 高频 TODO（去重）
 
