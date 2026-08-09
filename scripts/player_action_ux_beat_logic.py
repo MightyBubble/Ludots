@@ -90,7 +90,7 @@ BEAT_LOGIC: dict[str, str] = {
     "skill-cone-sweep#1": "确认后对扇形覆盖区结算命中",
     "skill-dash-dir#0": "进入方向瞄准并预览冲刺线",
     "skill-dash-dir#1": "沿选定方向执行冲刺位移",
-    "skill-grapple#0": "发射钩索并做命中/锚定判定",
+    "skill-grapple#0": "发射钩索并判定是否钩到锚点",
     "skill-grapple#1": "钩中后把角色拉向锚点",
     "skill-vector#0": "按下记下矢量起点",
     "skill-vector#1": "拖拽更新矢量终点预览",

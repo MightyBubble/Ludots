@@ -382,6 +382,14 @@
         return `<rect x="${px(el.x)}" y="${py(el.y)}" width="${(Number(el.w) / 100) * SW}" height="${(Number(el.h) / 100) * SH}" fill="rgba(110,200,255,0.12)" stroke="#6ec8ff" stroke-width="1.6" stroke-dasharray="4 3"/>`;
       }
       if (el.t === "ring") {
+        // finisher = 这个目标现在可以被终结，和「锁定了谁」要能分开
+        if (el.kind === "finisher") {
+          const r0 = el.r || 8;
+          return `<ellipse cx="${px(el.x)}" cy="${py(el.y) + 14}" rx="${r0}" ry="${r0 * 0.42}"
+            fill="none" stroke="#e0c35a" stroke-width="2.4" stroke-dasharray="5 3"/>
+            <text x="${px(el.x)}" y="${py(el.y) + 14 + r0 * 0.42 + 11}" text-anchor="middle"
+              fill="#e0c35a" font-size="8.5" font-family="DM Sans, sans-serif" font-weight="700">可终结</text>`;
+        }
         const color = el.kind === "lock" ? "#ef6b6b" : el.kind === "buff" ? "#6ec8ff" : "#f0a35e";
         // Ground ring under the unit tip (top-down “脚下”), not around the torso.
         const r = el.r || 8;
@@ -516,6 +524,14 @@
       if (el.t === "prop") {
         const x = px(el.x), y = py(el.y);
         const s = 8;
+        if (el.kind === "wall" || el.kind === "cover") {
+          const w = 34, h = 14;
+          return `
+            <rect x="${x - w / 2}" y="${y - h / 2}" width="${w}" height="${h}" rx="2"
+              fill="#5a6b80" stroke="#0b0e13" stroke-width="1.4"/>
+            <line x1="${x - w / 2}" y1="${y}" x2="${x + w / 2}" y2="${y}" stroke="#0b0e13" stroke-width="1" opacity="0.5"/>
+            ${el.label ? `<text x="${x}" y="${y - h / 2 - 5}" text-anchor="middle" fill="#e0c35a" font-size="9.5" font-family="DM Sans, sans-serif" font-weight="600">${esc(el.label)}</text>` : ""}`;
+        }
         const glow = el.highlight
           ? `<circle cx="${x}" cy="${y}" r="${s + 5}" fill="none" stroke="#e0c35a" stroke-width="1.6" opacity="0.85"/>`
           : "";

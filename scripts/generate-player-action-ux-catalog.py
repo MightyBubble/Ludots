@@ -649,8 +649,8 @@ def build_cases():
                   cursor(75, 35, "up"), badge("A+点地")], title="下令"),
             beat("途中撞见敌人", "自动停下转火，打完继续沿线走", "见谁打谁", "topdown",
                  [unit(48, 48, sel=True, face=10), ring(48, 48), unit(60, 40, team="enemy"),
-                  arrow(50, 47, 58, 42, "attack"), path([(48, 48), (75, 35)], "move"),
-                  badge("遇敌接战")], title="遇敌"),
+                  arrow(50, 47, 58, 42, "attack"), impact(60, 40, 12),
+                  path([(48, 48), (75, 35)], "move"), badge("遇敌接战")], title="遇敌"),
         ], ["RTS", "SC2/War3", "MOBA"],
     ))
     c.append(case(
@@ -675,8 +675,9 @@ def build_cases():
                  [unit(35, 55, sel=True, face=25), ring(35, 55), unit(70, 40, team="enemy"),
                   arrow(35, 55, 70, 40, "attack"), cursor(70, 40, "up"), badge("右键敌人")], title="打"),
             beat("右键矿点/资源", "工人去采集", "去挖", "topdown",
-                 [unit(35, 55, sel=True), ring(35, 55), building(70, 45), arrow(35, 55, 70, 45, "move"),
-                  cursor(70, 45, "up"), badge("右键资源")], title="采"),
+                 [unit(35, 55, sel=True, role="工"), ring(35, 55), prop(70, 45, "矿", kind="ore"),
+                  arrow(35, 55, 70, 45, "move"), cursor(70, 45, "up"),
+                  badge("右键资源")], title="采"),
         ], ["SC2/War3", "RTS"],
     ))
     c.append(case(
@@ -783,7 +784,8 @@ def build_cases():
         "轻按攻击键挥砍一下。",
         [
             beat("点攻击键", "角色挥砍，命中有反馈", "砍一下", "tps",
-                 [hero(45, 55, face=20), unit(65, 45, team="enemy"), arrow(50, 52, 62, 47, "attack"), badge("轻击")], title="挥砍"),
+                 [hero(45, 55, face=20), unit(65, 45, team="enemy"),
+                  arrow(50, 52, 62, 47, "attack"), impact(65, 45, 13), badge("轻击")], title="挥砍"),
         ], ["动作RPG", "ARPG"],
     ))
     c.append(case(
@@ -803,9 +805,9 @@ def build_cases():
             beat("点射击键", "射出一发，准星微扬", "点射", "fps",
                  [crosshair(50, 48), arrow(50, 50, 62, 42, "attack"), badge("点射")], title="点射"),
             beat("按住射击键", "连续出弹，准星扩散", "压枪扫", "fps",
-                 [crosshair(54, 44), ring(54, 44, r=16, kind="lock"),
+                 [crosshair(54, 44, spread="wide"),
                   arrow(50, 50, 72, 38, "attack"), arrow(50, 50, 78, 50, "attack"),
-                  arrow(50, 50, 68, 58, "attack"), badge("扫射")], title="扫射"),
+                  arrow(50, 50, 68, 58, "attack"), impact(74, 44, 13), badge("扫射")], title="扫射"),
         ], ["FPS", "TPS"],
     ))
     c.append(case(
@@ -1083,7 +1085,7 @@ def build_cases():
         "skill-grapple", "direction-skill", "钩索荡出去",
         "朝方向甩钩，钩到锚点才位移。",
         [
-            beat("甩出钩索", "线连向可挂的锚点", "钩住了吗", "tps",
+            beat("甩出钩索", "钩索沿弧线飞向可挂的锚点", "钩得上吗", "tps",
                  [hero(35, 65), path([(38, 60), (70, 35)], "arc"), anchor(72, 32), badge("钩索")], title="甩钩"),
             beat("钩中后荡移", "角色被拉向锚点", "荡过去", "tps",
                  [hero(62, 42), anchor(72, 32), path([(40, 62), (62, 44)], "arc"), badge("荡")], title="荡"),
@@ -1204,11 +1206,11 @@ def build_cases():
         "def-perfect-dodge", "defense", "完美闪避",
         "在敌招判定前极短窗闪避，触发额外反馈。",
         [
-            beat("红光提示时闪避", "慢镜/反击提示", "完美！", "tps",
-                 [hero(40, 55), path([(40, 55), (55, 48)], "move"),
-                  unit(70, 45, team="enemy"), ring(70, 45, kind="lock"),
+            beat("红光提示时闪避", "慢镜，并亮起可反击的窗口", "完美！", "tps",
+                 [hero(55, 48), path([(40, 55), (55, 48)], "move"),
+                  unit(70, 45, team="enemy"), ring(70, 45, kind="finisher", r=11),
                   arrow(58, 50, 66, 46, "attack"), ring(55, 48, r=10, kind="buff"),
-                  badge("完美闪避")], title="完美"),
+                  keyhint(70, 24, "F", "active", "反击"), badge("完美闪避")], title="完美"),
         ], ["蝙蝠侠", "动作RPG"],
     ))
     c.append(case(
@@ -1240,7 +1242,8 @@ def build_cases():
                   circle_ind(75, 42, 12, True), cursor(75, 42), badge("预览")], title="瞄准"),
             beat("松手扔出", "物体飞出砸中目标", "砸！", "tps",
                  [hero(40, 55), unit(78, 42, team="enemy"), path([(48, 50), (62, 34), (75, 42)], "arc"),
-                  ring(75, 42, r=10, kind="lock"), arrow(60, 38, 74, 42, "attack"), badge("命中")], title="扔出"),
+                  impact(76, 42, 15, heavy=True), arrow(60, 38, 74, 42, "attack"),
+                  badge("命中")], title="扔出"),
         ], ["蝙蝠侠/蜘蛛侠", "动作RPG"],
     ))
     c.append(case(
@@ -1248,7 +1251,7 @@ def build_cases():
         "把敌人往环境特征上打。",
         [
             beat("朝墙方向攻击敌人", "敌人撞墙演出", "糊墙上", "tps",
-                 [hero(36, 58), unit(60, 48, team="enemy"), building(76, 46),
+                 [hero(36, 58), unit(60, 48, team="enemy"), prop(78, 46, "墙", kind="wall"),
                   arrow(40, 56, 55, 50, "attack"), path([(58, 50), (68, 48), (72, 47)], "move"),
                   impact(72, 47, 15, heavy=True), badge("砸墙")], title="砸墙"),
         ], ["蝙蝠侠", "动作RPG"],
@@ -1431,11 +1434,11 @@ def build_cases():
                   queue_no(44, 51, 3, "active"), badge("一人一目标")], title="拆目标"),
             beat("全部认领完毕", "各自同时出手，三个目标同拍挨打", "一波带走", "topdown",
                  [unit(20, 60, sel=True), unit(32, 55, sel=True), unit(44, 62, sel=True),
-                  unit(68, 30, team="enemy"), ring(68, 30, kind="lock"),
-                  unit(78, 48, team="enemy"), ring(78, 48, kind="lock"),
-                  unit(70, 68, team="enemy"), ring(70, 68, kind="lock"),
+                  unit(68, 30, team="enemy"), impact(68, 30, 12),
+                  unit(78, 48, team="enemy"), impact(78, 48, 12),
+                  unit(70, 68, team="enemy"), impact(70, 68, 12),
                   arrow(22, 58, 66, 34, "attack"), arrow(34, 54, 76, 48, "attack"),
-                  arrow(46, 60, 68, 66, "attack"), badge("齐发")], title="齐发"),
+                  arrow(46, 60, 68, 66, "attack"), badge("齐发·三个同拍挨打")], title="齐发"),
         ], ["SC2", "RA2", "RTS"],
     ))
 
@@ -1479,8 +1482,8 @@ def build_cases():
                   building(70, 42, team="enemy"), arrow(34, 56, 66, 44, "attack"),
                   cursor(70, 42, "up"), badge("坦克×敌建筑")], title="炮击"),
             beat("选消融步兵，右键敌单位", "擦除目标，不是普通射击", "抹掉", "topdown",
-                 [unit(30, 58, sel=True), ring(30, 58), unit(72, 42, team="enemy"),
-                  ring(72, 42, r=14, kind="lock"), circle_ind(72, 42, 18, False),
+                 [unit(30, 58, sel=True, role="融"), ring(30, 58), unit(72, 42, team="enemy"),
+                  impact(72, 42, 15, heavy=True), circle_ind(72, 42, 20, False),
                   path([(34, 56), (68, 44)], "arc"), badge("消融中")], title="消融"),
         ], ["RA2", "RTS"],
     ))
@@ -1512,7 +1515,7 @@ def build_cases():
         [
             beat("混选工人+士兵，右键矿物", "工人去采；士兵不采，通常走开或停", "人各有活", "topdown",
                  [unit(24, 58, sel=True, size=0.85), unit(36, 52, sel=True, face=-20, size=1.2),
-                  ring(24, 58), ring(36, 52), building(72, 40),
+                  ring(24, 58), ring(36, 52), prop(72, 40, "矿", kind="ore"),
                   arrow(26, 56, 68, 42, "move"), arrow(36, 52, 36, 38, "move"),
                   badge("工人采·士兵走开")], title="混选点矿"),
             beat("混选工人+士兵，右键敌人", "士兵进攻；工人不冲锋（或逃跑）", "兵打仗", "topdown",
@@ -1627,7 +1630,8 @@ def build_cases():
                  [hero(45, 55), ring(45, 55, r=12, kind="buff"), badge("下一击")], title="充能"),
             beat("下一次攻击命中", "打出强化效果，发光消失", "这下够疼", "tps",
                  [hero(42, 55, face=20), unit(68, 42, team="enemy"),
-                  arrow(48, 52, 64, 44, "attack"), badge("强化打出")], title="消耗"),
+                  arrow(48, 52, 64, 44, "attack"), impact(68, 42, 18, heavy=True),
+                  badge("强化打出")], title="消耗"),
         ], ["动作RPG", "MOBA", "ARPG"],
     ))
     c.append(case(
@@ -1650,9 +1654,12 @@ def build_cases():
         "像命运2 公共事件球、部分 MMO 祭坛。",
         [
             beat("走进神龛范围或交互启动", "获得临时技能/弹药提示", "这片地给力", "tps",
-                 [hero(45, 55), circle_ind(45, 55, 28, True), badge("神龛授予")], title="获得"),
+                 [hero(45, 58), prop(45, 40, "神龛", kind="shrine", highlight=True),
+                  ring(45, 58, r=26, kind="buff"), hotbar(extra=3),
+                  badge("神龛授予")], title="获得"),
             beat("离开范围或超时", "临时技/弹药加成消失", "出圈就没", "tps",
-                 [hero(70, 40), circle_ind(40, 55, 28, False), badge("离开收回")], title="收回"),
+                 [hero(78, 40), prop(45, 40, "神龛", kind="shrine"), ring(45, 58, r=26, kind="select"),
+                  hotbar(), deny(78, 58, "出圈失效"), badge("离开收回")], title="收回"),
         ], ["MMO", "TPS", "ARPG"],
     ))
     c.append(case(
@@ -2200,8 +2207,8 @@ def build_cases():
         "不换键，只换提示与结果。靠近可处决敌人时，交互提示变成“处决”；"
         "靠近果子/草药时变成“拾取/食用”。松手或按键执行当前高亮那一项。",
         [
-            beat("走进可处决敌人背后/虚弱圈", "键位提示从无→「处决」，敌人描边", "能补刀了", "tps",
-                 [hero(40, 55, face=20), unit(62, 45, team="enemy"), ring(62, 45, kind="lock"),
+            beat("走进可处决敌人背后/虚弱圈", "键位提示从无→「处决」，敌人亮起可终结圈", "能补刀了", "tps",
+                 [hero(40, 55, face=20), unit(62, 45, team="enemy"), ring(62, 45, kind="finisher", r=11),
                   badge("提示:处决")], title="解锁处决"),
             beat("按同一交互键", "播放处决，敌人倒下", "处决！", "tps",
                  [hero(50, 50, face=20), unit(60, 45, team="enemy"), arrow(52, 50, 58, 46, "attack"),
@@ -2220,10 +2227,14 @@ def build_cases():
         "要有明确优先级（例如处决 > 救人 > 开门 > 拾取），或滚轮/键切换次选。",
         [
             beat("同时进入多个交互圈", "主提示显示最高优先级那项，旁边可有次选", "先干最要紧的", "tps",
-                 [hero(42, 55), unit(58, 42, team="enemy"), building(68, 55),
-                  unit(55, 68, team="ally"), badge("优先:处决")], title="多目标重叠"),
+                 [hero(38, 58), unit(56, 40, team="enemy"), ring(56, 40, kind="finisher", r=11),
+                  prop(74, 52, "门", kind="door"), unit(52, 72, team="ally", state="downed"),
+                  prop(30, 42, "果子", kind="item"),
+                  keyhint(56, 22, "F", "active", "处决"), badge("优先:处决")], title="多目标重叠"),
             beat("拨切换次选 / 看向另一目标", "主提示换成门/拾取/救人", "换一个", "tps",
-                 [hero(42, 55), building(68, 55), cursor(68, 55), badge("次选:开门")], title="切换次选"),
+                 [hero(38, 58), unit(56, 40, team="enemy"), prop(74, 52, "门", kind="door", highlight=True),
+                  unit(52, 72, team="ally", state="downed"), prop(30, 42, "果子", kind="item"),
+                  keyhint(74, 26, "F", "active", "开门"), badge("次选:开门")], title="切换次选"),
         ], ["动作RPG", "MMO", "设计选项"],
     ))
     c.append(case(
@@ -2233,10 +2244,11 @@ def build_cases():
         [
             beat("正面靠近敌人", "无处决提示，仍是普通攻击", "还不能暗杀掉", "tps",
                  [hero(40, 55, face=20), unit(65, 45, team="enemy", face=200),
-                  deny(65, 28, "正面不可暗杀"), badge("无暗杀")], title="正面"),
+                  keyhint(52, 34, "F", "off", "暗杀未解锁"), deny(65, 24, "正面不可暗杀"),
+                  badge("无暗杀")], title="正面"),
             beat("绕到背后或进入潜行有效区", "出现「暗杀/背刺」提示", "机会来了", "tps",
                  [hero(70, 48, face=200), unit(58, 45, team="enemy", face=20, highlight=True),
-                  ring(58, 45, kind="lock"), keyhint(58, 26, "F", "active", "暗杀/背刺"),
+                  ring(58, 45, kind="finisher", r=12), keyhint(58, 26, "F", "active", "暗杀/背刺"),
                   badge("暗杀解锁")], title="背后解锁"),
             beat("离开背后角度", "暗杀提示消失", "窗口没了", "tps",
                  [hero(40, 60, face=10), unit(65, 45, team="enemy"), badge("提示收回")], title="收回"),
@@ -2249,14 +2261,15 @@ def build_cases():
         [
             beat("敌人满血时靠近", "无处决，只能普通攻击", "还早", "tps",
                  [hero(40, 55), unit(65, 45, team="enemy"), bar(65, 30, 1.0, "hp", "满血"),
-                  badge("无处决窗")], title="未达标"),
+                  keyhint(52, 36, "F", "off", "处决未解锁"), badge("无处决窗")], title="未达标"),
             beat("敌人残血/破防", "处决键或提示亮起", "可以收了", "tps",
                  [hero(40, 55), unit(65, 45, team="enemy"), bar(65, 30, 0.18, "hp", "残血 18%"),
-                  ring(65, 45, kind="lock"), keyhint(52, 36, "F", "active", "处决"),
+                  ring(65, 45, kind="finisher", r=12), keyhint(52, 36, "F", "active", "处决"),
                   badge("处决解锁")], title="达线解锁"),
             beat("窗口内按处决", "播专属处决，否则窗口关闭后恢复普攻", "收掉", "tps",
-                 [hero(50, 50), unit(65, 45, team="enemy", size=0.85), ring(65, 45, kind="lock"),
-                  arrow(50, 50, 62, 45, "attack"), badge("处决打出")], title="打出"),
+                 [hero(50, 50), unit(65, 45, team="enemy", size=0.85),
+                  ring(65, 45, kind="finisher", r=12), arrow(50, 50, 62, 45, "attack"),
+                  impact(65, 45, 16, heavy=True), badge("处决打出")], title="打出"),
         ], ["战神", "动作RPG", "魂like"],
     ))
     c.append(case(
@@ -2281,13 +2294,14 @@ def build_cases():
         "离开碰撞体积提示收回，键位可与战斗键复用。",
         [
             beat("走到可翻越矮墙前", "提示「翻越」", "能翻", "tps",
-                 [hero(40, 55), building(58, 50), keyhint(58, 30, "空格", "active", "翻越"),
-                  badge("翻越")], title="翻墙"),
+                 [hero(38, 60), prop(62, 48, "矮墙", kind="wall", highlight=True),
+                  keyhint(62, 26, "空格", "active", "翻越"), badge("翻越")], title="翻墙"),
             beat("贴入掩体体积", "提示「掩体/探头」；射击改成探头射", "躲好了", "tps",
-                 [hero(45, 55), building(55, 50), keyhint(55, 30, "空格", "active", "掩体/探头"),
-                  crosshair(72, 42), badge("掩体")], title="掩体"),
+                 [hero(50, 56), prop(56, 46, "掩体", kind="cover", highlight=True),
+                  keyhint(56, 24, "空格", "active", "掩体/探头"),
+                  crosshair(78, 40), badge("掩体")], title="掩体"),
             beat("离开有效体积", "环境交互提示消失，键回战斗默认", "没了", "tps",
-                 [hero(30, 60), building(58, 50), keyhint(58, 30, "空格", "off"),
+                 [hero(26, 64), prop(62, 48, "矮墙", kind="wall"), keyhint(62, 26, "空格", "off"),
                   badge("提示收回")], title="离开"),
         ], ["TPS", "刺客信条", "动作RPG"],
     ))
