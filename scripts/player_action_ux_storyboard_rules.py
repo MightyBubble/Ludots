@@ -60,6 +60,8 @@ ELEMENT_ENUMS: dict[tuple[str, str], frozenset] = {
     ("splitscreen", "mode"): frozenset({"v", "h", "shared"}),
     ("netstat", "state"): frozenset({"ok", "lag", "lost"}),
     ("toast", "kind"): frozenset({"info", "error", "gain", "loss"}),
+    ("region", "owner"): frozenset({"mine", "rival", "neutral"}),
+    ("relation", "state"): frozenset({"ally", "enemy", "marriage", "none"}),
     ("voice", "state"): frozenset({"off", "on", "talking"}),
 }
 
@@ -72,7 +74,8 @@ SUBJECT_ELEMENTS = (
     "key", "hotbar", "wasd", "wheel", "anchor", "touchpt", "prop",
     "vehicle", "corpse", "npc", "deny", "impact", "held", "queue", "camera",
     "playertag", "splitscreen", "padslot", "roster", "netstat", "voice", "vote", "marker",
-    "partyframe", "toast",
+    "partyframe", "toast", "gridmap", "timeline", "region", "relation",
+    "faction", "pool", "lawslot", "delaymark",
 )
 
 
@@ -119,14 +122,17 @@ PROMISE_RULES: tuple[tuple[str, str, object, str], ...] = (
     (
         "说出现选中圈/被选中，画面要有选中圈",
         r"选中圈|被选中|变成当前选中|设为选中",
-        lambda cast: _ring(cast, "select", "lock") or _selected_unit(cast),
-        "给 unit 加 sel=True 或补 ring(x, y, kind='select')",
+        lambda cast: _ring(cast, "select", "lock") or _selected_unit(cast)
+        or any(e.get("t") in ("region", "relation", "faction", "partyframe") and e.get("selected")
+               for e in cast)
+        or any(e.get("t") == "partyframe" and e.get("target") is not None for e in cast),
+        "给 unit 加 sel=True / ring(kind='select')，抽象目标用 selected=True",
     ),
     (
         "说读条/倒计时/蓄力，画面要有进度条",
         r"读条|进度条|倒计时|蓄力条|充能条|条走满",
-        lambda cast: _has(cast, "bar"),
-        "补 bar(x, y, ratio=..., kind='cast'/'charge')",
+        lambda cast: _has(cast, "bar", "delaymark"),
+        "补 bar(x, y, ratio=..., kind='cast'/'charge')；按回合数的倒计时用 delaymark",
     ),
     (
         "说落点圈/范围预览，画面要有落点圈",
@@ -209,6 +215,54 @@ PROMISE_RULES: tuple[tuple[str, str, object, str], ...] = (
         "补一根 arrow(kind='move') 表示走的方向，和 attack 那根并排",
     ),
     (
+        "说格子/移动范围，画面要有格盘",
+        r"格子|移动范围|可站的格|占格|棋盘",
+        lambda cast: _has(cast, "gridmap"),
+        "补 gridmap(x, y, cols, rows, cells={...})",
+    ),
+    (
+        "说出手顺序/行动条，画面要有行动条",
+        r"出手顺序|行动条|谁先动|插队|延后行动",
+        lambda cast: _has(cast, "timeline"),
+        "补 timeline([...], current=...)",
+    ),
+    (
+        "说省份/领地/地块，画面要有区域块",
+        r"省份|领地|地块|行政|公国|王国",
+        lambda cast: _has(cast, "region"),
+        "补 region(x, y, '名字', owner=...)",
+    ),
+    (
+        "说关系/同盟/联姻，画面要把关系画成一条边",
+        r"关系|同盟|联姻|宣战|条约",
+        lambda cast: _has(cast, "relation"),
+        "补 relation(x1, y1, x2, y2, '关系名', state=...)；关系是边不是点",
+    ),
+    (
+        "说派系/议会，画面要有派系卡",
+        r"派系|议会|党派|家族势力",
+        lambda cast: _has(cast, "faction"),
+        "补 faction(x, y, '派系名', influence=...)",
+    ),
+    (
+        "说法令/政策，画面要有法令槽",
+        r"法令|政策|国策|条例",
+        lambda cast: _has(cast, "lawslot"),
+        "补 lawslot(x, y, rows, active=...)",
+    ),
+    (
+        "说威望/影响力当代价，画面要有抽象资源池",
+        r"威望|影响力|统治力|外交点",
+        lambda cast: _has(cast, "pool"),
+        "补 pool(x, y, '影响力', have=..., cost=...)；这不是蓝条",
+    ),
+    (
+        "说几回合后生效，画面要标出延迟",
+        r"回合后|下回合生效|延迟生效",
+        lambda cast: _has(cast, "delaymark"),
+        "补 delaymark(x, y, turns=N)",
+    ),
+    (
         "说目标失效/脱离/回滚，要说清原因而不是静默",
         r"目标失效|目标脱离|脱离范围|丢失目标|回滚|退还",
         lambda cast: _has(cast, "toast", "deny"),
@@ -228,7 +282,7 @@ PROMISE_RULES: tuple[tuple[str, str, object, str], ...] = (
     ),
     (
         "说打中/挨打/砸中，画面要有命中爆点",
-        r"砸中|挨打|命中|打中|炸开|擦除",
+        r"砸中|挨打|打中|炸开|擦除|命中(?!率)",
         lambda cast: _has(cast, "impact"),
         "补 impact(x, y, r)；别拿 ring(kind='lock') 当命中，那是锁定目标的意思",
     ),

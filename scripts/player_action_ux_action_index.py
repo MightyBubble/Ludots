@@ -209,6 +209,25 @@ ACTION_GROUPS: list[tuple[str, str, str, tuple[tuple[str, str], ...]]] = [
      (("target-lost-out-of-range", "kbm"),)),
     ("UX-183", "target-lost-invalid-mid-cast", "读条中目标失效并回滚",
      (("target-lost-invalid-mid-cast", "kbm"),)),
+    # ---- 回合制：轮到我之前和之后 ----
+    ("UX-184", "turn-order-timeline", "看行动条谁下一个", (("turn-order-timeline", "kbm"),)),
+    ("UX-185", "turn-undo-before-confirm", "确认前都能退回来", (("turn-undo-before-confirm", "kbm"),)),
+    ("UX-186", "turn-delay-action", "延后行动等时机", (("turn-delay-action", "kbm"),)),
+    ("UX-187", "turn-enemy-intent", "敌人预告下一步", (("turn-enemy-intent", "kbm"),)),
+    ("UX-188", "turn-insert-cutin", "插队改出手顺序", (("turn-insert-cutin", "kbm"),)),
+    # ---- 战棋：格子、朝向、控制区 ----
+    ("UX-189", "srpg-move-range-path", "移动范围与路径花费", (("srpg-move-range-path", "kbm"),)),
+    ("UX-190", "srpg-facing-backstab", "朝向决定伤害", (("srpg-facing-backstab", "kbm"),)),
+    ("UX-191", "srpg-zone-of-control", "踩进控制区被迫停下", (("srpg-zone-of-control", "kbm"),)),
+    ("UX-192", "srpg-tile-occupied", "目标格被占怎么办", (("srpg-tile-occupied", "kbm"),)),
+    ("UX-193", "srpg-height-cover", "格子的高低与掩体", (("srpg-height-cover", "kbm"),)),
+    # ---- 大战略：对抽象东西下手 ----
+    ("UX-194", "gs-cast-on-region", "把一件事派到某个省", (("gs-cast-on-region", "kbm"),)),
+    ("UX-195", "gs-cast-on-relation", "对两方之间的关系下手", (("gs-cast-on-relation", "kbm"),)),
+    ("UX-196", "gs-cast-on-faction", "对派系游说", (("gs-cast-on-faction", "kbm"),)),
+    ("UX-197", "gs-enact-law", "颁布法令改规则", (("gs-enact-law", "kbm"),)),
+    ("UX-198", "gs-abstract-cost", "代价是威望与影响力", (("gs-abstract-cost", "kbm"),)),
+    ("UX-199", "gs-tiered-scope", "生效范围是行政层级", (("gs-tiered-scope", "kbm"),)),
 ]
 
 

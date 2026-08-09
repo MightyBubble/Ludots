@@ -258,6 +258,53 @@ def padslot(states):
     return {"t": "padslot", "states": list(states)}
 
 
+def gridmap(x, y, cols, rows, cells=None, cw=22, ch=14):
+    """战棋格盘。cells = {"列,行": "move|attack|blocked|occupied|self"}。
+    目标是「哪几格」，不是连续坐标。"""
+    return {"t": "gridmap", "x": x, "y": y, "cols": cols, "rows": rows,
+            "cells": dict(cells or {}), "cw": cw, "ch": ch}
+
+
+def timeline(entries, current=None):
+    """行动条：谁下一个出手。entries = [{"name": ..., "me": True/False}]。
+    目标可以是「顺序里的位置」——插队、延后都是对它下手。"""
+    return {"t": "timeline", "entries": list(entries), "current": current}
+
+
+def region(x, y, label, owner="neutral", selected=False, w=46, h=30):
+    """区域 / 省份：目标是一个行政单元。owner=mine / rival / neutral。"""
+    return {"t": "region", "x": x, "y": y, "label": label, "owner": owner,
+            "selected": selected, "w": w, "h": h}
+
+
+def relation(x1, y1, x2, y2, label, state="none", selected=False):
+    """关系：目标是两方之间的一条边，不是任何一个点。
+    state=ally 同盟 / enemy 敌对 / marriage 联姻 / none 无关系。"""
+    return {"t": "relation", "x1": x1, "y1": y1, "x2": x2, "y2": y2,
+            "label": label, "state": state, "selected": selected}
+
+
+def faction(x, y, label, influence=0.4, selected=False):
+    """派系 / 议会派别：抽象集合，没有位置。influence=我能推动的占比。"""
+    return {"t": "faction", "x": x, "y": y, "label": label,
+            "influence": influence, "selected": selected}
+
+
+def pool(x, y, label="影响力", have=0.7, cost=0.0):
+    """抽象代价池（威望 / 影响力 / 统治力），不是蓝条。cost=这一下要花掉的那段。"""
+    return {"t": "pool", "x": x, "y": y, "label": label, "have": have, "cost": cost}
+
+
+def lawslot(x, y, rows, active=None):
+    """法令槽位：目标是规则本身。rows = [{"name": ..., "locked": True/False}]。"""
+    return {"t": "lawslot", "x": x, "y": y, "rows": list(rows), "active": active}
+
+
+def delaymark(x, y, turns=3, label=None):
+    """延迟生效：这一下不是现在结算，是 N 回合之后。"""
+    return {"t": "delaymark", "x": x, "y": y, "turns": turns, "label": label}
+
+
 def toast(x, y, text, kind="info"):
     """系统通知条：飘一行字告诉玩家发生了什么。
     kind=info 中性 / error 出错 / gain 到手 / loss 扣掉。
@@ -372,6 +419,8 @@ TARGET_GAMES = [
     ("twin", "双摇杆射击", "左走右瞄 · 弹幕清屏"),
     ("fps", "FPS / TPS", "准星 · 开镜 · 射击换弹"),
     ("zelda", "塞尔达 / 开放世界", "情境按键 · 攀爬采集互动"),
+    ("srpg", "战棋 / 回合制战斗", "格子走位 · 行动条 · 朝向背击"),
+    ("grand", "大战略", "省份 · 关系 · 派系 · 法令"),
     ("netmatch", "联机对局", "建房匹配 · 准备开局 · 掉线重连"),
     ("couch", "同屏 / 分屏双人", "手柄加入 · 镜头拉扯 · 抢拾取"),
     ("shared", "跨品类通用", "拒绝反馈 · 设计手势 · 共通走位"),
@@ -409,6 +458,9 @@ FAMILY_TITLES = {
     "menu-cmd": "选单式指令",
     "blocked": "放不了时的反馈",
     "target-lost": "打到一半目标没了",
+    "turnbased": "回合制：轮到我之前和之后",
+    "tactics": "战棋：格子、朝向、控制区",
+    "grand-abstract": "大战略：对抽象东西下手",
     "netplay": "联机：进一局并待在里面",
     "couch-play": "同屏多人：加入、分屏、抢东西",
 }
@@ -471,6 +523,12 @@ _GENRE_TO_TARGETS: dict[str, tuple[str, ...]] = {
     "设计选项": ("shared",),
     "全品类": ("shared",),
     "联机对局": ("netmatch",),
+    "战棋": ("srpg", "rotk"),
+    "回合制战斗": ("srpg", "rotk"),
+    "SRPG": ("srpg",),
+    "大战略": ("grand",),
+    "外交": ("grand", "rotk"),
+    "内政": ("grand", "rotk"),
     "竞技匹配": ("netmatch", "lol"),
     "开黑组队": ("netmatch", "wow"),
     "同屏双人": ("couch",),
@@ -491,6 +549,9 @@ _FAMILY_TO_TARGETS: dict[str, tuple[str, ...]] = {
     "auto-cast": ("wow", "sc2", "war3"),
     "blocked": ("shared",),
     "target-lost": ("wow", "lol", "sc2"),
+    "turnbased": ("srpg", "rotk"),
+    "tactics": ("srpg",),
+    "grand-abstract": ("grand", "rotk"),
     "netplay": ("netmatch",),
     "couch-play": ("couch",),
     "select": ("sc2", "ra2", "war3", "lol"),
@@ -2242,12 +2303,15 @@ def build_cases():
         "物品占多格，要旋转并找到空位才能放进；放不下明确提示，不自动“随便塞”。",
         [
             beat("拖 L 形物品进包", "当前姿态放不下，非法格标红", "塞不进", "moba",
-                 [card(45, 40, "L形", 0, True), cursor(45, 40, "drag"),
-                  circle_ind(62, 52, 12, False), deny(62, 52, "姿态放不下"),
-                  badge("放不下")], title="非法"),
+                 [gridmap(52, 30, 4, 4, {"1,1": "occupied", "2,1": "occupied", "1,2": "occupied",
+                                          "3,3": "blocked"}, cw=13, ch=13),
+                  card(28, 44, "L形", 0, True), cursor(28, 44, "drag"),
+                  deny(72, 44, "姿态放不下"), badge("放不下")], title="非法"),
             beat("按 R 旋转再放", "旋转后合法格高亮，松手放入", "转一下就行", "moba",
-                 [card(60, 50, "L形", 0, True), cursor(60, 50, "drag"),
-                  circle_ind(60, 52, 12, True), keyhint(40, 30, "R", "active", "旋转"),
+                 [gridmap(52, 30, 4, 4, {"1,1": "occupied", "1,2": "occupied", "1,3": "occupied",
+                                          "2,3": "move"}, cw=13, ch=13),
+                  card(28, 44, "L形", 0, True), cursor(28, 44, "drag"),
+                  keyhint(30, 76, "R", "active", "旋转"), toast(24, 22, "转过来就放得下", "gain"),
                   badge("旋转放入")], title="旋转放入"),
         ], ["逃离塔科夫", "ARPG", "设计选项"],
     ))
@@ -2743,13 +2807,16 @@ def build_cases():
             beat("点选己方武将", "脚下光标；弹出指令菜单", "叫他做事", "topdown",
                  [unit(40, 55, sel=True), ring(40, 55),
                   menu_box(58, 42, ["移动", "攻击", "计策", "待命"]), badge("指令菜单")], title="点武将"),
-            beat("点「攻击」", "菜单收起，可攻击格/对象高亮", "选怎么打", "topdown",
-                 [unit(40, 55, sel=True), ring(40, 55), unit(70, 40, team="enemy"),
-                  circle_ind(55, 48, 10, True), circle_ind(62, 44, 10, True),
-                  circle_ind(70, 40, 14, True), cursor(58, 48), badge("攻击范围")], title="选指令"),
-            beat("点敌方或格子确认", "指令提交，进入演出/结算", "打他", "topdown",
-                 [unit(40, 55, sel=True), unit(70, 40, team="enemy"),
-                  arrow(44, 52, 66, 42, "attack"), badge("确认目标")], title="选目标"),
+            beat("点「攻击」", "菜单收起，可攻击的格子整片高亮", "选怎么打", "topdown",
+                 [gridmap(18, 34, 6, 3, {"1,1": "self", "2,1": "attack", "3,1": "attack",
+                                         "3,0": "attack", "4,1": "attack"}),
+                  unit(38, 48, sel=True), unit(74, 48, team="enemy"),
+                  cursor(60, 48, "aim"), badge("攻击范围")], title="选指令"),
+            beat("点某一格确认", "指令提交，进入演出与结算", "打他", "topdown",
+                 [gridmap(18, 34, 6, 3, {"1,1": "self", "4,1": "attack"}),
+                  unit(38, 48, sel=True), unit(74, 48, team="enemy"),
+                  arrow(44, 48, 68, 48, "attack"), impact(74, 48, 14),
+                  cursor(74, 48, "up"), badge("确认目标")], title="选目标"),
             beat("按取消或点空白", "回到上一层菜单或待机", "算了", "topdown",
                  [unit(40, 55, sel=True), menu_box(58, 42, ["移动", "攻击", "计策"]), badge("返回上层")], title="取消"),
         ], ["三国志", "战棋", "回合策略"],
@@ -2822,8 +2889,11 @@ def build_cases():
                  [hero(40, 58), prop(66, 48, "掉落物", kind="item"),
                   menu_box(22, 62, ["背包已满！"]), deny(66, 66, "包满"),
                   badge("拒绝拾取")], title="包满"),
-            beat("清出格子再捡", "物品正常进包，地上消失", "腾出手了", "moba",
-                 [hero(52, 50), card(62, 38, "拾得", 0), menu_box(22, 62, ["背包 +1"]),
+            beat("清出格子再捡", "背包空出一格，物品正常进包，地上消失", "腾出手了", "moba",
+                 [hero(30, 62), gridmap(56, 26, 4, 3, {"0,0": "occupied", "1,0": "occupied",
+                                                       "2,0": "move", "0,1": "occupied"},
+                                        cw=13, ch=13),
+                  card(30, 34, "拾得", 0), toast(18, 84, "背包 +1", "gain"),
                   badge("拾取成功")], title="再捡"),
         ], ["MMO", "ARPG"],
     ))
@@ -2851,6 +2921,324 @@ def build_cases():
             beat("控制时间结束", "技能栏恢复亮起，立刻能反打", "缓过来了", "moba",
                  [hero(48, 55), hotbar(active=0), badge("控制解除")], title="解控"),
         ], ["MMO", "MOBA"],
+    ))
+
+    # ===== 三十一、回合制：轮到我之前和之后 =====
+    c.append(case(
+        "turn-order-timeline", "turnbased", "看行动条：谁下一个出手",
+        "回合制最先要回答的是「现在轮到谁、我之后是谁」。行动条把未来几步摊开，"
+        "我才能算清这一手值不值。",
+        [
+            beat("回合开始，看行动条", "顺序摊开，当前是我，后面几个是谁一目了然", "先看顺序", "topdown",
+                 [timeline([{"name": "我", "me": True}, {"name": "敌A"}, {"name": "队友"},
+                            {"name": "敌B"}], current=0),
+                  hero(34, 62), unit(66, 48, team="enemy"),
+                  badge("轮到我")], title="看顺序"),
+            beat("我出完手", "我这格移到队尾，行动条整体往前推一格", "换人", "topdown",
+                 [timeline([{"name": "敌A"}, {"name": "队友"}, {"name": "敌B"},
+                            {"name": "我", "me": True}], current=0),
+                  hero(34, 62), unit(66, 48, team="enemy"), impact(66, 48, 13),
+                  badge("我打完了")], title="推进一格"),
+        ], ["回合制战斗", "战棋"],
+    ))
+    c.append(case(
+        "turn-undo-before-confirm", "turnbased", "按确认之前，所有选择都能退回来",
+        "回合制的手感靠「敢点」：只要还没按确认，选了目标、选了技能都能一步步退回去。"
+        "这是实时制给不了的，也是回合制最该保证的。",
+        [
+            beat("选了技能又选了目标", "两步都记在待确认里，还没真的打出去", "先摆一下", "topdown",
+                 [hero(34, 62), unit(66, 48, team="enemy"), ring(66, 48, kind="lock"),
+                  hotbar(active=1), toast(24, 26, "待确认：法术→敌A", "info"),
+                  queue_no(34, 44, 1, "waiting"), badge("还没确认")], title="摆两步"),
+            beat("按取消退一步", "目标先退回去，技能还留着，可以重新选人", "退一步", "topdown",
+                 [hero(34, 62), unit(66, 48, team="enemy"), hotbar(active=1),
+                  toast(24, 26, "已退回：只剩法术", "info"),
+                  keyhint(24, 80, "Esc", "active", "退一步"), badge("退回目标")], title="退一步"),
+            beat("按确认才真打出去", "确认之后不能再退，明确告诉我这一步已成定局", "定了", "topdown",
+                 [hero(34, 62), unit(66, 48, team="enemy"), arrow(40, 58, 62, 50, "attack"),
+                  impact(66, 48, 15), hotbar(cd=1),
+                  toast(24, 26, "已确认·不能再退", "loss"), badge("落子无悔")], title="确认落子"),
+        ], ["回合制战斗", "战棋"],
+    ))
+    c.append(case(
+        "turn-delay-action", "turnbased", "延后行动：把我这一手推到最后",
+        "这一手先不打，等队友先动或等敌人露出破绽。延后不是跳过，"
+        "行动条上要看得出我被挪到了哪。",
+        [
+            beat("按延后行动", "我这格从当前位置挪到本轮队尾", "我等等", "topdown",
+                 [timeline([{"name": "敌A"}, {"name": "队友"}, {"name": "我", "me": True}], current=0),
+                  hero(34, 62), toast(24, 30, "已延后到本轮最后", "info"),
+                  keyhint(24, 80, "W", "active", "延后"), badge("延后")], title="延后"),
+            beat("轮到我时局面已经变了", "队友先开了口子，我这一手打得更值", "现在好打了", "topdown",
+                 [timeline([{"name": "我", "me": True}, {"name": "敌A"}, {"name": "队友"}], current=0),
+                  hero(46, 56), unit(66, 44, team="enemy"), bar(66, 28, 0.3, "hp", "被队友打残"),
+                  ring(66, 44, kind="finisher", r=11), arrow(50, 54, 62, 46, "attack"),
+                  badge("等到了")], title="等到时机"),
+        ], ["回合制战斗", "战棋"],
+    ))
+    c.append(case(
+        "turn-enemy-intent", "turnbased", "敌人头上预告他下一步要干什么",
+        "回合制可以把敌人的意图提前摊开：他下一步打谁、打多少。"
+        "玩家据此决定是躲、是挡、还是抢先打断——不预告就只能靠背板。",
+        [
+            beat("敌人回合结束，头上挂出意图", "图标写明他下一步要攻击我，还标出大概伤害", "他要打我", "topdown",
+                 [hero(34, 62), unit(66, 46, team="enemy"),
+                  marker(66, 26, "cross", "下一步:攻击你 12"),
+                  arrow(62, 48, 40, 60, "attack"), badge("意图预告")], title="预告"),
+            beat("我据此选择应对", "挡住或抢先打断，都是看着预告做的决定", "有得选了", "topdown",
+                 [hero(34, 62), ring(34, 62, r=12, kind="buff"), unit(66, 46, team="enemy"),
+                  marker(66, 26, "cross", "下一步:攻击你 12"),
+                  hotbar(active=2), toast(20, 30, "已挡·伤害减半", "gain"),
+                  badge("先挡住")], title="据此应对"),
+        ], ["回合制战斗", "战棋"],
+    ))
+    c.append(case(
+        "turn-insert-cutin", "turnbased", "插队：抢在别人之前动一手",
+        "有的技能能把我插到行动条更前面，或者把敌人往后压。"
+        "目标不是场上的谁，而是「顺序里的位置」——这类技能必须让顺序的变化看得见。",
+        [
+            beat("对行动条使用加速/延缓", "我这格往前跳，敌人那格往后退", "抢先手", "topdown",
+                 [timeline([{"name": "我", "me": True}, {"name": "敌A"}, {"name": "队友"}], current=0),
+                  hero(34, 62), unit(66, 46, team="enemy"),
+                  toast(22, 30, "我插到最前 · 敌A 退后", "gain"),
+                  hotbar(active=3, cd=3), badge("改顺序")], title="插到前面"),
+            beat("顺序改完立刻按新顺序走", "我先动，敌人被压到后面才动", "先打他一顿", "topdown",
+                 [timeline([{"name": "我", "me": True}, {"name": "队友"}, {"name": "敌A"}], current=0),
+                  hero(40, 58), unit(66, 46, team="enemy"), arrow(46, 56, 62, 48, "attack"),
+                  impact(66, 46, 14), badge("先手打出")], title="按新顺序"),
+        ], ["回合制战斗", "战棋"],
+    ))
+
+    # ===== 三十二、战棋：格子、朝向、控制区 =====
+    c.append(case(
+        "srpg-move-range-path", "tactics", "移动范围高亮，走哪条路花几点",
+        "点自己的棋子，能走的格子亮起来；把指针移到目标格，路径和花费一起预览。"
+        "走完还剩多少行动力，决定我这回合还能不能打。",
+        [
+            beat("点选自己的棋子", "可走的格子整片亮起，脚下那格标出是我", "我能去哪", "topdown",
+                 [gridmap(14, 30, 7, 4, {"1,2": "self", "0,1": "move", "1,1": "move", "2,1": "move",
+                                         "2,2": "move", "3,2": "move", "1,3": "move", "2,3": "move"}),
+                  bar(70, 30, 1.0, "charge", "行动力 3/3"), badge("移动范围")], title="亮出范围"),
+            beat("指到某一格", "路径画出来，同时告诉我要花几点行动力", "走这条", "topdown",
+                 [gridmap(14, 30, 7, 4, {"1,2": "self", "2,2": "move", "3,2": "move", "3,1": "move"}),
+                  path([(30, 58), (44, 58), (58, 44)], "move"), cursor(58, 44, "aim"),
+                  bar(70, 30, 0.34, "charge", "走完剩 1/3"), badge("路径预览")], title="预览路径"),
+            beat("确认走过去", "棋子落到那一格，行动力扣掉，剩下的还能干别的", "到位", "topdown",
+                 [gridmap(14, 30, 7, 4, {"3,1": "self", "4,1": "attack", "4,2": "attack"}),
+                  bar(70, 30, 0.34, "charge", "行动力 1/3"), hotbar(active=0),
+                  badge("走完还能打")], title="落格"),
+        ], ["战棋", "SRPG"],
+    ))
+    c.append(case(
+        "srpg-facing-backstab", "tactics", "从哪个方向打，伤害不一样",
+        "战棋里朝向是资源：正面打有格挡，绕到侧面或背后才吃满伤害。"
+        "所以「站哪一格」和「打哪个面」是同一个决定的两半。",
+        [
+            beat("从正面打", "命中但被格挡，伤害打折并标出是正面", "硬碰硬", "topdown",
+                 [gridmap(16, 32, 6, 3, {"1,1": "self", "2,1": "attack"}),
+                  unit(48, 48, team="enemy", face=180), hero(30, 48, face=0),
+                  arrow(36, 48, 44, 48, "attack"), impact(48, 48, 11),
+                  toast(18, 24, "正面 · 伤害 -40%", "loss"), badge("正面吃亏")], title="正面打"),
+            beat("先绕到他背后那一格", "路径绕过去，落在他背面，朝向标出来", "绕后", "topdown",
+                 [gridmap(16, 32, 6, 3, {"1,1": "move", "2,0": "move", "3,1": "self"}),
+                  unit(48, 48, team="enemy", face=180), hero(66, 48, face=180),
+                  path([(30, 48), (40, 34), (62, 48)], "move"),
+                  ring(48, 48, kind="finisher", r=11), badge("站到背面")], title="绕后"),
+            beat("从背后打", "不吃格挡，伤害拉满并标出是背击", "痛快", "topdown",
+                 [gridmap(16, 32, 6, 3, {"3,1": "self", "2,1": "attack"}),
+                  unit(48, 48, team="enemy", face=180), hero(66, 48, face=180),
+                  arrow(60, 48, 52, 48, "attack"), impact(48, 48, 16, heavy=True),
+                  toast(18, 24, "背击 · 伤害 +50%", "gain"), badge("背击")], title="背击"),
+        ], ["战棋", "SRPG"],
+    ))
+    c.append(case(
+        "srpg-zone-of-control", "tactics", "踩进敌人控制区就得停下",
+        "敌人身边那一圈格子会拽住我：一进去，剩下的行动力就走不动了。"
+        "所以路线要绕开，或者故意进去卡住对方。这条规则不画出来，玩家只会觉得走一半卡住了。",
+        [
+            beat("规划一条穿过敌人旁边的路", "敌人周围那圈格子标成控制区，路线穿过它", "看着能过", "topdown",
+                 [gridmap(14, 32, 7, 3, {"1,1": "self", "2,1": "move", "3,1": "occupied",
+                                         "3,0": "occupied", "3,2": "occupied", "4,1": "move"}),
+                  unit(62, 48, team="enemy"), path([(28, 48), (56, 48), (80, 48)], "move"),
+                  toast(16, 24, "灰格=敌人控制区", "info"), badge("控制区")], title="看清控制区"),
+            beat("走进控制区", "被迫停在这一格，剩下的行动力用不掉", "走不动了", "topdown",
+                 [gridmap(14, 32, 7, 3, {"2,1": "self", "3,1": "occupied", "3,0": "occupied",
+                                         "3,2": "occupied"}),
+                  unit(62, 48, team="enemy"), deny(48, 66, "被控制区拽停"),
+                  bar(70, 26, 0.6, "charge", "行动力没花完"), badge("强制停下")], title="被拽停"),
+            beat("换一条绕开的路", "绕远一点但走得完，代价是这回合到不了原来的位置", "绕开走", "topdown",
+                 [gridmap(14, 32, 7, 3, {"1,1": "self", "1,0": "move", "2,0": "move",
+                                         "4,0": "move", "4,1": "move"}),
+                  unit(62, 48, team="enemy"), path([(28, 48), (28, 36), (72, 36), (72, 48)], "move"),
+                  bar(70, 26, 0.0, "charge", "行动力刚好用完"), badge("绕开")], title="绕开"),
+        ], ["战棋", "SRPG"],
+    ))
+    c.append(case(
+        "srpg-tile-occupied", "tactics", "想去的那一格已经有人了",
+        "一格一人时，目标格被占就得给出说法：能和队友换位、能把敌人推开、"
+        "还是直接不许去。三种规则手感完全不同，不能含混。",
+        [
+            beat("指到被队友占着的格", "该格标成有人，并给出「换位」这个选项", "他站着", "topdown",
+                 [gridmap(16, 32, 6, 3, {"1,1": "self", "3,1": "occupied"}),
+                  hero(30, 48), unit(60, 48, team="ally"), cursor(60, 48, "aim"),
+                  menu_box(20, 66, ["和队友换位", "取消"], active=0), badge("格子有人")], title="队友占着"),
+            beat("确认换位", "两个人对调位置，行动力照常扣", "换过来", "topdown",
+                 [gridmap(16, 32, 6, 3, {"3,1": "self", "1,1": "occupied"}),
+                  hero(60, 48), unit(30, 48, team="ally"),
+                  path([(30, 48), (60, 48)], "move"), toast(18, 24, "已换位", "gain"),
+                  badge("换位完成")], title="换位"),
+            beat("指到被敌人占着的格", "明确不许去，并说明是被敌人占着，不是我点错", "去不了", "topdown",
+                 [gridmap(16, 32, 6, 3, {"1,1": "self", "3,1": "blocked"}),
+                  hero(30, 48), unit(60, 48, team="enemy"), cursor(60, 48, "aim"),
+                  deny(60, 66, "敌人占着"), badge("不许去")], title="敌人占着"),
+        ], ["战棋", "SRPG"],
+    ))
+    c.append(case(
+        "srpg-height-cover", "tactics", "格子本身有高低和掩体",
+        "同一个目标，站高处打命中更高，站掩体后面被打更少。"
+        "格子不只是位置，它自带属性，选格就是选属性。",
+        [
+            beat("站平地打", "命中率一般，掩体和高度都没吃到", "凑合打", "topdown",
+                 [gridmap(16, 34, 6, 3, {"1,1": "self", "4,1": "attack"}),
+                  hero(30, 50), unit(74, 50, team="enemy"),
+                  arrow(36, 50, 68, 50, "attack"), impact(74, 50, 11),
+                  toast(18, 26, "命中率 65%", "info"), badge("平地")], title="平地"),
+            beat("挪到高地那一格", "该格标出是高地，命中率提上去", "站高点", "topdown",
+                 [gridmap(16, 34, 6, 3, {"1,2": "move", "2,0": "self", "4,1": "attack"}),
+                  hero(42, 36), unit(74, 50, team="enemy"),
+                  path([(30, 50), (42, 36)], "move"), arrow(46, 38, 68, 48, "attack"),
+                  impact(74, 50, 15), toast(18, 26, "高地 · 命中率 85%", "gain"),
+                  badge("高地加成")], title="上高地"),
+            beat("敌人躲到掩体后", "他吃到掩体减伤，我的命中掉下来", "他躲了", "topdown",
+                 [gridmap(16, 34, 6, 3, {"2,0": "self", "4,1": "blocked", "5,1": "attack"}),
+                  hero(42, 36), prop(66, 50, "掩体", kind="cover"), unit(84, 50, team="enemy"),
+                  arrow(46, 38, 62, 48, "attack"), impact(84, 50, 9),
+                  toast(18, 26, "隔掩体 · 命中率 45%", "loss"),
+                  badge("掩体减伤")], title="被掩体挡"),
+        ], ["战棋", "SRPG"],
+    ))
+
+    # ===== 三十三、大战略：对抽象东西下手 =====
+    c.append(case(
+        "gs-cast-on-region", "grand-abstract", "把一件事派到某个省去做",
+        "大战略里很多「技能」不是打在人身上，而是落在一块地上：修个工程、派个间谍、"
+        "推一项开发。目标是行政单元本身，得能点中它、看清归谁、看清要几回合。",
+        [
+            beat("在地图上点一个省", "该省高亮成当前目标，旁边列出能对它做什么", "就这块地", "topdown",
+                 [region(28, 40, "河东", "mine"), region(58, 38, "上党", "rival", selected=True),
+                  region(44, 66, "太原", "mine"), cursor(58, 38, "up"),
+                  menu_box(74, 58, ["派间谍", "修工程", "开发"], active=0),
+                  badge("选中一省")], title="点省"),
+            beat("选一项派下去", "花掉抽象代价，省上挂出「正在进行」的标记", "派出去了", "topdown",
+                 [region(28, 40, "河东", "mine"), region(58, 38, "上党", "rival", selected=True),
+                  region(44, 66, "太原", "mine"),
+                  pool(16, 78, "外交点", 0.7, 0.3), delaymark(58, 20, 3),
+                  toast(16, 24, "间谍已派出", "info"), badge("已派出")], title="派下去"),
+            beat("时间到了", "到期才出结果，成败都落在这块地上", "有结果了", "topdown",
+                 [region(28, 40, "河东", "mine"), region(58, 38, "上党", "mine", selected=True),
+                  region(44, 66, "太原", "mine"), impact(58, 38, 16),
+                  toast(16, 24, "颠覆成功 · 上党易主", "gain"), badge("到期结算")], title="到期"),
+        ], ["大战略", "内政"],
+    ))
+    c.append(case(
+        "gs-cast-on-relation", "grand-abstract", "对「两方之间的关系」下手",
+        "结盟、宣战、联姻，目标既不是我也不是他，而是我们之间那条关系。"
+        "所以要能点中那条边、看清它现在什么状态、看清动它要付什么代价。",
+        [
+            beat("点两方之间那条关系线", "线被选中并加粗，标出现在是什么关系", "点这条边", "topdown",
+                 [region(24, 40, "我方", "mine"), region(76, 40, "赵国", "rival"),
+                  relation(24, 40, 76, 40, "互不侵犯", "none", selected=True),
+                  cursor(50, 40, "up"), badge("选中关系")], title="点关系"),
+            beat("选择要把它变成什么", "列出可选的关系变更，各自要花多少外交点", "想结盟", "topdown",
+                 [region(24, 40, "我方", "mine"), region(76, 40, "赵国", "rival"),
+                  relation(24, 40, 76, 40, "互不侵犯", "none", selected=True),
+                  menu_box(30, 62, ["结盟", "联姻", "宣战"], active=0),
+                  pool(16, 20, "外交点", 0.8, 0.35), badge("挑一种")], title="选变更"),
+            beat("成了：那条线换了颜色和名字", "关系本身变了，双方的位置一动没动", "关系变了", "topdown",
+                 [region(24, 40, "我方", "mine"), region(76, 40, "赵国", "mine"),
+                  relation(24, 40, 76, 40, "同盟", "ally", selected=True),
+                  pool(16, 20, "外交点", 0.45, 0.0),
+                  toast(30, 70, "已结盟", "gain"), badge("同盟达成")], title="关系变更"),
+        ], ["大战略", "外交"],
+    ))
+    c.append(case(
+        "gs-cast-on-faction", "grand-abstract", "对一个派系游说，目标没有位置",
+        "议会里的派别、朝中的势力，它们在地图上没有位置，但可以被施加影响。"
+        "玩家要看清自己在这个派系里有多少话语权，以及这一手能推动多少。",
+        [
+            beat("打开派系一览", "每个派系一条，横条显示我的话语权占多少", "谁能推动", "moba",
+                 [faction(12, 26, "主战派", 0.55), faction(12, 50, "主和派", 0.2),
+                  faction(12, 74, "世家", 0.35), badge("派系一览")], title="看派系"),
+            beat("选一个派系游说", "该派系卡被选中，标出这一手要花多少影响力", "拉这一派", "moba",
+                 [faction(12, 26, "主战派", 0.55), faction(12, 50, "主和派", 0.2, selected=True),
+                  faction(12, 74, "世家", 0.35), cursor(30, 62, "up"),
+                  pool(58, 30, "影响力", 0.6, 0.25), badge("选中派系")], title="选派系"),
+            beat("游说生效", "这个派系里我的话语权涨上去，别的派系不受影响", "话语权涨了", "moba",
+                 [faction(12, 26, "主战派", 0.55), faction(12, 50, "主和派", 0.5, selected=True),
+                  faction(12, 74, "世家", 0.35), pool(58, 30, "影响力", 0.35, 0.0),
+                  toast(52, 62, "主和派 +30% 话语权", "gain"), badge("游说成功")], title="生效"),
+        ], ["大战略", "内政"],
+    ))
+    c.append(case(
+        "gs-enact-law", "grand-abstract", "颁布一条法令：目标是规则本身",
+        "法令改的不是某个人某块地，而是往后所有事的算法。"
+        "所以它有前置条件、有冷却、改一次要等很久——这些都必须在按之前看清楚。",
+        [
+            beat("打开法令栏", "能颁的和还没解锁的分开画，不给的要说为什么", "有哪些能颁", "moba",
+                 [lawslot(14, 24, [{"name": "征兵制"}, {"name": "科举取士"},
+                                   {"name": "海贸开放", "locked": True}]),
+                  toast(14, 82, "海贸开放：需先控两个港口", "info"), badge("法令栏")], title="看法令"),
+            beat("选一条并确认颁布", "花掉统治力，标出这条要几回合才落地", "就这条", "moba",
+                 [lawslot(14, 24, [{"name": "征兵制"}, {"name": "科举取士"},
+                                   {"name": "海贸开放", "locked": True}], active=1),
+                  pool(58, 30, "统治力", 0.75, 0.4), delaymark(72, 62, 5),
+                  cursor(30, 44, "up"), badge("颁布中")], title="颁布"),
+            beat("落地后进入长冷却", "规则从此改变，同时明确说多久之后才能再改", "改完得等", "moba",
+                 [lawslot(14, 24, [{"name": "征兵制"}, {"name": "科举取士"},
+                                   {"name": "海贸开放", "locked": True}], active=1),
+                  pool(58, 30, "统治力", 0.35, 0.0),
+                  toast(52, 62, "已生效 · 20 回合内不能再改", "loss"),
+                  deny(76, 82, "改法令冷却中"), badge("已生效")], title="生效与冷却"),
+        ], ["大战略", "内政"],
+    ))
+    c.append(case(
+        "gs-abstract-cost", "grand-abstract", "代价不是蓝条，是威望和影响力",
+        "大战略里按一下的代价常常是抽象资源：威望、影响力、外交点。"
+        "它们不会自动回满，花出去要很久才攒回来，所以「够不够」和「值不值」得同时看得见。",
+        [
+            beat("选一个要花威望的动作", "把当前有多少、这一手要花掉哪一段一起画出来", "够花吗", "moba",
+                 [pool(16, 30, "威望", 0.7, 0.45), pool(16, 58, "影响力", 0.5, 0.0),
+                  menu_box(58, 26, ["宣称头衔", "花 45 威望"], active=0), badge("看代价")], title="看代价"),
+            beat("威望不够时按下去", "明确拒绝并说差多少，不允许透支", "差一点", "moba",
+                 [pool(16, 30, "威望", 0.25, 0.45), pool(16, 58, "影响力", 0.5, 0.0),
+                  deny(64, 60, "威望差 20"), badge("不够·拒绝")], title="不够被拒"),
+            beat("攒够再按", "扣掉那一段，剩下多少一眼看得出，回满要很久", "攒够了", "moba",
+                 [pool(16, 30, "威望", 0.3, 0.0), pool(16, 58, "影响力", 0.5, 0.0),
+                  toast(52, 30, "已花 45 威望", "loss"),
+                  toast(52, 58, "每回合回 2", "info"), badge("已扣除")], title="扣除"),
+        ], ["大战略", "内政"],
+    ))
+    c.append(case(
+        "gs-tiered-scope", "grand-abstract", "生效范围是行政层级，不是一个圆",
+        "大战略的「范围」不是画个圈框住多少格，而是「这个省」「整个公国」「全国」。"
+        "选层级就是选代价和影响面，必须让玩家看清这一手会波及到哪些地方。",
+        [
+            beat("只对一个省生效", "只有那一块高亮，代价最小", "小范围", "topdown",
+                 [region(26, 34, "河东", "mine", selected=True), region(58, 32, "上党", "mine"),
+                  region(40, 64, "太原", "mine"), region(72, 62, "雁门", "mine"),
+                  pool(14, 84, "统治力", 0.8, 0.15),
+                  toast(52, 84, "只影响河东", "info"), badge("省级")], title="省级"),
+            beat("改成对整个公国生效", "同属这个公国的省全部高亮，代价跟着涨", "一整片", "topdown",
+                 [region(26, 34, "河东", "mine", selected=True), region(58, 32, "上党", "mine", selected=True),
+                  region(40, 64, "太原", "mine", selected=True), region(72, 62, "雁门", "mine"),
+                  pool(14, 84, "统治力", 0.8, 0.5),
+                  toast(46, 84, "影响并州三郡", "loss"), badge("公国级")], title="公国级"),
+            beat("代价超出承受时", "明确拒绝并指出是层级选太大，建议降一级", "太贵了", "topdown",
+                 [region(26, 34, "河东", "mine", selected=True), region(58, 32, "上党", "mine", selected=True),
+                  region(40, 64, "太原", "mine", selected=True), region(72, 62, "雁门", "mine", selected=True),
+                  pool(14, 84, "统治力", 0.3, 0.85), deny(54, 50, "统治力不够·降一级"),
+                  badge("层级太大")], title="超出承受"),
+        ], ["大战略", "内政"],
     ))
 
     # ===== 三十、打到一半目标没了 =====

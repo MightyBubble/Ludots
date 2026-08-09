@@ -48,14 +48,14 @@ window.PLAYER_ACTION_UX_CATALOG = {
     "aim"
   ],
   "checkpoint": {
-    "head": "6f3c0f191",
+    "head": "730b17616",
     "branch_hint": "cursor/ux-action-id-platform-tabs-4211",
     "impl_notes": "scripts/player_action_ux_impl_notes.py",
     "beat_logic": "scripts/player_action_ux_beat_logic.py",
     "action_index": "scripts/player_action_ux_action_index.py",
     "note": "列表=unique actions；详情平台 tab；时序=设备/逻辑/画面；勿手改 catalog-data.js",
     "weak_storyboard_beats": [],
-    "unique_actions": 183,
+    "unique_actions": 199,
     "multi_platform_actions": 8
   },
   "categories": [
@@ -118,6 +118,16 @@ window.PLAYER_ACTION_UX_CATALOG = {
       "id": "zelda",
       "title": "塞尔达 / 开放世界",
       "blurb": "情境按键 · 攀爬采集互动"
+    },
+    {
+      "id": "srpg",
+      "title": "战棋 / 回合制战斗",
+      "blurb": "格子走位 · 行动条 · 朝向背击"
+    },
+    {
+      "id": "grand",
+      "title": "大战略",
+      "blurb": "省份 · 关系 · 派系 · 法令"
     },
     {
       "id": "netmatch",
@@ -955,7 +965,8 @@ window.PLAYER_ACTION_UX_CATALOG = {
         }
       ],
       "targets": [
-        "rotk"
+        "rotk",
+        "srpg"
       ],
       "genres": [
         "三国志",
@@ -4094,7 +4105,8 @@ window.PLAYER_ACTION_UX_CATALOG = {
       ],
       "targets": [
         "ra2",
-        "rotk"
+        "rotk",
+        "srpg"
       ],
       "genres": [
         "三国志",
@@ -5724,6 +5736,470 @@ window.PLAYER_ACTION_UX_CATALOG = {
         "MMO",
         "MOBA",
         "RTS"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-184",
+      "key": "turn-order-timeline",
+      "title": "看行动条谁下一个",
+      "summary": "回合制最先要回答的是「现在轮到谁、我之后是谁」。行动条把未来几步摊开，我才能算清这一手值不值。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "turn-order-timeline"
+        }
+      ],
+      "targets": [
+        "rotk",
+        "srpg"
+      ],
+      "genres": [
+        "回合制战斗",
+        "战棋"
+      ],
+      "beatCount": 2,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-185",
+      "key": "turn-undo-before-confirm",
+      "title": "确认前都能退回来",
+      "summary": "回合制的手感靠「敢点」：只要还没按确认，选了目标、选了技能都能一步步退回去。这是实时制给不了的，也是回合制最该保证的。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "turn-undo-before-confirm"
+        }
+      ],
+      "targets": [
+        "rotk",
+        "srpg"
+      ],
+      "genres": [
+        "回合制战斗",
+        "战棋"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-186",
+      "key": "turn-delay-action",
+      "title": "延后行动等时机",
+      "summary": "这一手先不打，等队友先动或等敌人露出破绽。延后不是跳过，行动条上要看得出我被挪到了哪。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "turn-delay-action"
+        }
+      ],
+      "targets": [
+        "rotk",
+        "srpg"
+      ],
+      "genres": [
+        "回合制战斗",
+        "战棋"
+      ],
+      "beatCount": 2,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-187",
+      "key": "turn-enemy-intent",
+      "title": "敌人预告下一步",
+      "summary": "回合制可以把敌人的意图提前摊开：他下一步打谁、打多少。玩家据此决定是躲、是挡、还是抢先打断——不预告就只能靠背板。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "turn-enemy-intent"
+        }
+      ],
+      "targets": [
+        "rotk",
+        "srpg"
+      ],
+      "genres": [
+        "回合制战斗",
+        "战棋"
+      ],
+      "beatCount": 2,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-188",
+      "key": "turn-insert-cutin",
+      "title": "插队改出手顺序",
+      "summary": "有的技能能把我插到行动条更前面，或者把敌人往后压。目标不是场上的谁，而是「顺序里的位置」——这类技能必须让顺序的变化看得见。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "turn-insert-cutin"
+        }
+      ],
+      "targets": [
+        "rotk",
+        "srpg"
+      ],
+      "genres": [
+        "回合制战斗",
+        "战棋"
+      ],
+      "beatCount": 2,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-189",
+      "key": "srpg-move-range-path",
+      "title": "移动范围与路径花费",
+      "summary": "点自己的棋子，能走的格子亮起来；把指针移到目标格，路径和花费一起预览。走完还剩多少行动力，决定我这回合还能不能打。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "srpg-move-range-path"
+        }
+      ],
+      "targets": [
+        "rotk",
+        "srpg"
+      ],
+      "genres": [
+        "SRPG",
+        "战棋"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-190",
+      "key": "srpg-facing-backstab",
+      "title": "朝向决定伤害",
+      "summary": "战棋里朝向是资源：正面打有格挡，绕到侧面或背后才吃满伤害。所以「站哪一格」和「打哪个面」是同一个决定的两半。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "srpg-facing-backstab"
+        }
+      ],
+      "targets": [
+        "rotk",
+        "srpg"
+      ],
+      "genres": [
+        "SRPG",
+        "战棋"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-191",
+      "key": "srpg-zone-of-control",
+      "title": "踩进控制区被迫停下",
+      "summary": "敌人身边那一圈格子会拽住我：一进去，剩下的行动力就走不动了。所以路线要绕开，或者故意进去卡住对方。这条规则不画出来，玩家只会觉得走一半卡住了。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "srpg-zone-of-control"
+        }
+      ],
+      "targets": [
+        "rotk",
+        "srpg"
+      ],
+      "genres": [
+        "SRPG",
+        "战棋"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-192",
+      "key": "srpg-tile-occupied",
+      "title": "目标格被占怎么办",
+      "summary": "一格一人时，目标格被占就得给出说法：能和队友换位、能把敌人推开、还是直接不许去。三种规则手感完全不同，不能含混。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "srpg-tile-occupied"
+        }
+      ],
+      "targets": [
+        "rotk",
+        "srpg"
+      ],
+      "genres": [
+        "SRPG",
+        "战棋"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-193",
+      "key": "srpg-height-cover",
+      "title": "格子的高低与掩体",
+      "summary": "同一个目标，站高处打命中更高，站掩体后面被打更少。格子不只是位置，它自带属性，选格就是选属性。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "srpg-height-cover"
+        }
+      ],
+      "targets": [
+        "rotk",
+        "srpg"
+      ],
+      "genres": [
+        "SRPG",
+        "战棋"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-194",
+      "key": "gs-cast-on-region",
+      "title": "把一件事派到某个省",
+      "summary": "大战略里很多「技能」不是打在人身上，而是落在一块地上：修个工程、派个间谍、推一项开发。目标是行政单元本身，得能点中它、看清归谁、看清要几回合。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "gs-cast-on-region"
+        }
+      ],
+      "targets": [
+        "grand",
+        "rotk"
+      ],
+      "genres": [
+        "内政",
+        "大战略"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-195",
+      "key": "gs-cast-on-relation",
+      "title": "对两方之间的关系下手",
+      "summary": "结盟、宣战、联姻，目标既不是我也不是他，而是我们之间那条关系。所以要能点中那条边、看清它现在什么状态、看清动它要付什么代价。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "gs-cast-on-relation"
+        }
+      ],
+      "targets": [
+        "grand",
+        "rotk"
+      ],
+      "genres": [
+        "外交",
+        "大战略"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-196",
+      "key": "gs-cast-on-faction",
+      "title": "对派系游说",
+      "summary": "议会里的派别、朝中的势力，它们在地图上没有位置，但可以被施加影响。玩家要看清自己在这个派系里有多少话语权，以及这一手能推动多少。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "gs-cast-on-faction"
+        }
+      ],
+      "targets": [
+        "grand",
+        "rotk"
+      ],
+      "genres": [
+        "内政",
+        "大战略"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-197",
+      "key": "gs-enact-law",
+      "title": "颁布法令改规则",
+      "summary": "法令改的不是某个人某块地，而是往后所有事的算法。所以它有前置条件、有冷却、改一次要等很久——这些都必须在按之前看清楚。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "gs-enact-law"
+        }
+      ],
+      "targets": [
+        "grand",
+        "rotk"
+      ],
+      "genres": [
+        "内政",
+        "大战略"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-198",
+      "key": "gs-abstract-cost",
+      "title": "代价是威望与影响力",
+      "summary": "大战略里按一下的代价常常是抽象资源：威望、影响力、外交点。它们不会自动回满，花出去要很久才攒回来，所以「够不够」和「值不值」得同时看得见。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "gs-abstract-cost"
+        }
+      ],
+      "targets": [
+        "grand",
+        "rotk"
+      ],
+      "genres": [
+        "内政",
+        "大战略"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-199",
+      "key": "gs-tiered-scope",
+      "title": "生效范围是行政层级",
+      "summary": "大战略的「范围」不是画个圈框住多少格，而是「这个省」「整个公国」「全国」。选层级就是选代价和影响面，必须让玩家看清这一手会波及到哪些地方。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "gs-tiered-scope"
+        }
+      ],
+      "targets": [
+        "grand",
+        "rotk"
+      ],
+      "genres": [
+        "内政",
+        "大战略"
       ],
       "beatCount": 3,
       "caseCount": 1
@@ -22619,30 +23095,38 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "view": "moba",
           "cast": [
             {
+              "t": "gridmap",
+              "x": 52,
+              "y": 30,
+              "cols": 4,
+              "rows": 4,
+              "cells": {
+                "1,1": "occupied",
+                "2,1": "occupied",
+                "1,2": "occupied",
+                "3,3": "blocked"
+              },
+              "cw": 13,
+              "ch": 13
+            },
+            {
               "t": "card",
-              "x": 45,
-              "y": 40,
+              "x": 28,
+              "y": 44,
               "label": "L形",
               "cost": 0,
               "dragging": true
             },
             {
               "t": "cursor",
-              "x": 45,
-              "y": 40,
+              "x": 28,
+              "y": 44,
               "mode": "drag"
             },
             {
-              "t": "circle",
-              "x": 62,
-              "y": 52,
-              "r": 12,
-              "ok": false
-            },
-            {
               "t": "deny",
-              "x": 62,
-              "y": 52,
+              "x": 72,
+              "y": 44,
               "label": "姿态放不下",
               "r": 11
             },
@@ -22660,33 +23144,48 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "view": "moba",
           "cast": [
             {
+              "t": "gridmap",
+              "x": 52,
+              "y": 30,
+              "cols": 4,
+              "rows": 4,
+              "cells": {
+                "1,1": "occupied",
+                "1,2": "occupied",
+                "1,3": "occupied",
+                "2,3": "move"
+              },
+              "cw": 13,
+              "ch": 13
+            },
+            {
               "t": "card",
-              "x": 60,
-              "y": 50,
+              "x": 28,
+              "y": 44,
               "label": "L形",
               "cost": 0,
               "dragging": true
             },
             {
               "t": "cursor",
-              "x": 60,
-              "y": 50,
+              "x": 28,
+              "y": 44,
               "mode": "drag"
             },
             {
-              "t": "circle",
-              "x": 60,
-              "y": 52,
-              "r": 12,
-              "ok": true
-            },
-            {
               "t": "key",
-              "x": 40,
-              "y": 30,
+              "x": 30,
+              "y": 76,
               "label": "R",
               "state": "active",
               "hint": "旋转"
+            },
+            {
+              "t": "toast",
+              "x": 24,
+              "y": 22,
+              "text": "转过来就放得下",
+              "kind": "gain"
             },
             {
               "t": "badge",
@@ -27443,7 +27942,8 @@ window.PLAYER_ACTION_UX_CATALOG = {
         "回合策略"
       ],
       "targets": [
-        "rotk"
+        "rotk",
+        "srpg"
       ],
       "beats": [
         {
@@ -27490,60 +27990,48 @@ window.PLAYER_ACTION_UX_CATALOG = {
         {
           "title": "选指令",
           "input": "点「攻击」",
-          "screen": "菜单收起，可攻击格/对象高亮",
+          "screen": "菜单收起，可攻击的格子整片高亮",
           "view": "topdown",
           "cast": [
             {
+              "t": "gridmap",
+              "x": 18,
+              "y": 34,
+              "cols": 6,
+              "rows": 3,
+              "cells": {
+                "1,1": "self",
+                "2,1": "attack",
+                "3,1": "attack",
+                "3,0": "attack",
+                "4,1": "attack"
+              },
+              "cw": 22,
+              "ch": 14
+            },
+            {
               "t": "unit",
-              "x": 40,
-              "y": 55,
+              "x": 38,
+              "y": 48,
               "sel": true,
               "team": "ally",
               "face": 0,
               "size": 1
             },
             {
-              "t": "ring",
-              "x": 40,
-              "y": 55,
-              "r": 8,
-              "kind": "select"
-            },
-            {
               "t": "unit",
-              "x": 70,
-              "y": 40,
+              "x": 74,
+              "y": 48,
               "sel": false,
               "team": "enemy",
               "face": 0,
               "size": 1
             },
             {
-              "t": "circle",
-              "x": 55,
-              "y": 48,
-              "r": 10,
-              "ok": true
-            },
-            {
-              "t": "circle",
-              "x": 62,
-              "y": 44,
-              "r": 10,
-              "ok": true
-            },
-            {
-              "t": "circle",
-              "x": 70,
-              "y": 40,
-              "r": 14,
-              "ok": true
-            },
-            {
               "t": "cursor",
-              "x": 58,
+              "x": 60,
               "y": 48,
-              "mode": "idle"
+              "mode": "aim"
             },
             {
               "t": "badge",
@@ -27554,14 +28042,27 @@ window.PLAYER_ACTION_UX_CATALOG = {
         },
         {
           "title": "选目标",
-          "input": "点敌方或格子确认",
-          "screen": "指令提交，进入演出/结算",
+          "input": "点某一格确认",
+          "screen": "指令提交，进入演出与结算",
           "view": "topdown",
           "cast": [
             {
+              "t": "gridmap",
+              "x": 18,
+              "y": 34,
+              "cols": 6,
+              "rows": 3,
+              "cells": {
+                "1,1": "self",
+                "4,1": "attack"
+              },
+              "cw": 22,
+              "ch": 14
+            },
+            {
               "t": "unit",
-              "x": 40,
-              "y": 55,
+              "x": 38,
+              "y": 48,
               "sel": true,
               "team": "ally",
               "face": 0,
@@ -27569,8 +28070,8 @@ window.PLAYER_ACTION_UX_CATALOG = {
             },
             {
               "t": "unit",
-              "x": 70,
-              "y": 40,
+              "x": 74,
+              "y": 48,
               "sel": false,
               "team": "enemy",
               "face": 0,
@@ -27579,10 +28080,23 @@ window.PLAYER_ACTION_UX_CATALOG = {
             {
               "t": "arrow",
               "x1": 44,
-              "y1": 52,
-              "x2": 66,
-              "y2": 42,
+              "y1": 48,
+              "x2": 68,
+              "y2": 48,
               "kind": "attack"
+            },
+            {
+              "t": "impact",
+              "x": 74,
+              "y": 48,
+              "r": 14,
+              "heavy": false
+            },
+            {
+              "t": "cursor",
+              "x": 77.52,
+              "y": 54.67,
+              "mode": "up"
             },
             {
               "t": "badge",
@@ -27778,7 +28292,8 @@ window.PLAYER_ACTION_UX_CATALOG = {
       ],
       "targets": [
         "ra2",
-        "rotk"
+        "rotk",
+        "srpg"
       ],
       "beats": [
         {
@@ -28285,31 +28800,44 @@ window.PLAYER_ACTION_UX_CATALOG = {
         {
           "title": "再捡",
           "input": "清出格子再捡",
-          "screen": "物品正常进包，地上消失",
+          "screen": "背包空出一格，物品正常进包，地上消失",
           "view": "moba",
           "cast": [
             {
               "t": "hero",
-              "x": 52,
-              "y": 50,
+              "x": 30,
+              "y": 62,
               "face": 0
             },
             {
+              "t": "gridmap",
+              "x": 56,
+              "y": 26,
+              "cols": 4,
+              "rows": 3,
+              "cells": {
+                "0,0": "occupied",
+                "1,0": "occupied",
+                "2,0": "move",
+                "0,1": "occupied"
+              },
+              "cw": 13,
+              "ch": 13
+            },
+            {
               "t": "card",
-              "x": 62,
-              "y": 38,
+              "x": 30,
+              "y": 34,
               "label": "拾得",
               "cost": 0,
               "dragging": false
             },
             {
-              "t": "menu",
-              "x": 22,
-              "y": 62,
-              "lines": [
-                "背包 +1"
-              ],
-              "active": null
+              "t": "toast",
+              "x": 18,
+              "y": 84,
+              "text": "背包 +1",
+              "kind": "gain"
             },
             {
               "t": "badge",
@@ -28634,6 +29162,3127 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "platform": "kbm",
           "platformLabel": "键鼠",
           "caseId": "block-crowd-control"
+        }
+      ]
+    },
+    {
+      "id": "turn-order-timeline",
+      "category": "turnbased",
+      "family": "turnbased",
+      "title": "看行动条：谁下一个出手",
+      "summary": "回合制最先要回答的是「现在轮到谁、我之后是谁」。行动条把未来几步摊开，我才能算清这一手值不值。",
+      "genres": [
+        "回合制战斗",
+        "战棋"
+      ],
+      "targets": [
+        "rotk",
+        "srpg"
+      ],
+      "beats": [
+        {
+          "title": "看顺序",
+          "input": "回合开始，看行动条",
+          "screen": "顺序摊开，当前是我，后面几个是谁一目了然",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "timeline",
+              "entries": [
+                {
+                  "name": "我",
+                  "me": true
+                },
+                {
+                  "name": "敌A"
+                },
+                {
+                  "name": "队友"
+                },
+                {
+                  "name": "敌B"
+                }
+              ],
+              "current": 0
+            },
+            {
+              "t": "hero",
+              "x": 34,
+              "y": 62,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 66,
+              "y": 48,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "badge",
+              "text": "轮到我"
+            }
+          ],
+          "logic": "按速度或先制值排出本轮出手顺序"
+        },
+        {
+          "title": "推进一格",
+          "input": "我出完手",
+          "screen": "我这格移到队尾，行动条整体往前推一格",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "timeline",
+              "entries": [
+                {
+                  "name": "敌A"
+                },
+                {
+                  "name": "队友"
+                },
+                {
+                  "name": "敌B"
+                },
+                {
+                  "name": "我",
+                  "me": true
+                }
+              ],
+              "current": 0
+            },
+            {
+              "t": "hero",
+              "x": 34,
+              "y": 62,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 66,
+              "y": 48,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "impact",
+              "x": 66,
+              "y": 48,
+              "r": 13,
+              "heavy": false
+            },
+            {
+              "t": "badge",
+              "text": "我打完了"
+            }
+          ],
+          "logic": "结束我的行动并把我重排到队尾"
+        }
+      ],
+      "ludots": "回合制：Ludots 是实时 ECS 主链，没有回合与行动条概念——出手顺序、待确认后可撤销、延后行动、插队改序都不存在，整族是缺口。",
+      "todos": [
+        "TODO: 回合与行动顺序模型（先制值 / 重排 / 延后）",
+        "TODO: 待确认指令栈与回合内撤销重做",
+        "TODO: 敌方意图公开与据此结算的修正链"
+      ],
+      "familyTitle": "回合制：轮到我之前和之后",
+      "actionNo": "UX-184",
+      "actionKey": "turn-order-timeline",
+      "actionTitle": "看行动条谁下一个",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "turn-order-timeline"
+        }
+      ]
+    },
+    {
+      "id": "turn-undo-before-confirm",
+      "category": "turnbased",
+      "family": "turnbased",
+      "title": "按确认之前，所有选择都能退回来",
+      "summary": "回合制的手感靠「敢点」：只要还没按确认，选了目标、选了技能都能一步步退回去。这是实时制给不了的，也是回合制最该保证的。",
+      "genres": [
+        "回合制战斗",
+        "战棋"
+      ],
+      "targets": [
+        "rotk",
+        "srpg"
+      ],
+      "beats": [
+        {
+          "title": "摆两步",
+          "input": "选了技能又选了目标",
+          "screen": "两步都记在待确认里，还没真的打出去",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 34,
+              "y": 62,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 66,
+              "y": 48,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "ring",
+              "x": 66,
+              "y": 48,
+              "r": 8,
+              "kind": "lock"
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": 1,
+              "cd": null,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
+            },
+            {
+              "t": "toast",
+              "x": 24,
+              "y": 26,
+              "text": "待确认：法术→敌A",
+              "kind": "info"
+            },
+            {
+              "t": "queue",
+              "x": 34,
+              "y": 44,
+              "n": 1,
+              "state": "waiting"
+            },
+            {
+              "t": "badge",
+              "text": "还没确认"
+            }
+          ],
+          "logic": "把选中的技能与目标记为待确认，不产生效果"
+        },
+        {
+          "title": "退一步",
+          "input": "按取消退一步",
+          "screen": "目标先退回去，技能还留着，可以重新选人",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 34,
+              "y": 62,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 66,
+              "y": 48,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": 1,
+              "cd": null,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
+            },
+            {
+              "t": "toast",
+              "x": 24,
+              "y": 26,
+              "text": "已退回：只剩法术",
+              "kind": "info"
+            },
+            {
+              "t": "key",
+              "x": 24,
+              "y": 80,
+              "label": "Esc",
+              "state": "active",
+              "hint": "退一步"
+            },
+            {
+              "t": "badge",
+              "text": "退回目标"
+            }
+          ],
+          "logic": "回退最近一步选择，保留其余待确认内容"
+        },
+        {
+          "title": "确认落子",
+          "input": "按确认才真打出去",
+          "screen": "确认之后不能再退，明确告诉我这一步已成定局",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 34,
+              "y": 62,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 66,
+              "y": 48,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "arrow",
+              "x1": 40,
+              "y1": 58,
+              "x2": 62,
+              "y2": 50,
+              "kind": "attack"
+            },
+            {
+              "t": "impact",
+              "x": 66,
+              "y": 48,
+              "r": 15,
+              "heavy": false
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": null,
+              "cd": 1,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
+            },
+            {
+              "t": "toast",
+              "x": 24,
+              "y": 26,
+              "text": "已确认·不能再退",
+              "kind": "loss"
+            },
+            {
+              "t": "badge",
+              "text": "落子无悔"
+            }
+          ],
+          "logic": "提交待确认内容并结算，之后不可回退"
+        }
+      ],
+      "ludots": "回合制：Ludots 是实时 ECS 主链，没有回合与行动条概念——出手顺序、待确认后可撤销、延后行动、插队改序都不存在，整族是缺口。",
+      "todos": [
+        "TODO: 回合与行动顺序模型（先制值 / 重排 / 延后）",
+        "TODO: 待确认指令栈与回合内撤销重做",
+        "TODO: 敌方意图公开与据此结算的修正链"
+      ],
+      "familyTitle": "回合制：轮到我之前和之后",
+      "actionNo": "UX-185",
+      "actionKey": "turn-undo-before-confirm",
+      "actionTitle": "确认前都能退回来",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "turn-undo-before-confirm"
+        }
+      ]
+    },
+    {
+      "id": "turn-delay-action",
+      "category": "turnbased",
+      "family": "turnbased",
+      "title": "延后行动：把我这一手推到最后",
+      "summary": "这一手先不打，等队友先动或等敌人露出破绽。延后不是跳过，行动条上要看得出我被挪到了哪。",
+      "genres": [
+        "回合制战斗",
+        "战棋"
+      ],
+      "targets": [
+        "rotk",
+        "srpg"
+      ],
+      "beats": [
+        {
+          "title": "延后",
+          "input": "按延后行动",
+          "screen": "我这格从当前位置挪到本轮队尾",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "timeline",
+              "entries": [
+                {
+                  "name": "敌A"
+                },
+                {
+                  "name": "队友"
+                },
+                {
+                  "name": "我",
+                  "me": true
+                }
+              ],
+              "current": 0
+            },
+            {
+              "t": "hero",
+              "x": 34,
+              "y": 62,
+              "face": 0
+            },
+            {
+              "t": "toast",
+              "x": 24,
+              "y": 30,
+              "text": "已延后到本轮最后",
+              "kind": "info"
+            },
+            {
+              "t": "key",
+              "x": 24,
+              "y": 80,
+              "label": "W",
+              "state": "active",
+              "hint": "延后"
+            },
+            {
+              "t": "badge",
+              "text": "延后"
+            }
+          ],
+          "logic": "把我的行动重排到本轮队尾且不消耗行动机会"
+        },
+        {
+          "title": "等到时机",
+          "input": "轮到我时局面已经变了",
+          "screen": "队友先开了口子，我这一手打得更值",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "timeline",
+              "entries": [
+                {
+                  "name": "我",
+                  "me": true
+                },
+                {
+                  "name": "敌A"
+                },
+                {
+                  "name": "队友"
+                }
+              ],
+              "current": 0
+            },
+            {
+              "t": "hero",
+              "x": 46,
+              "y": 56,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 66,
+              "y": 44,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "bar",
+              "x": 66,
+              "y": 28,
+              "ratio": 0.3,
+              "kind": "hp",
+              "label": "被队友打残",
+              "broken": false
+            },
+            {
+              "t": "ring",
+              "x": 66,
+              "y": 44,
+              "r": 11,
+              "kind": "finisher"
+            },
+            {
+              "t": "arrow",
+              "x1": 50,
+              "y1": 54,
+              "x2": 62,
+              "y2": 46,
+              "kind": "attack"
+            },
+            {
+              "t": "badge",
+              "text": "等到了"
+            }
+          ],
+          "logic": "按新顺序轮到我时按当前局面结算"
+        }
+      ],
+      "ludots": "回合制：Ludots 是实时 ECS 主链，没有回合与行动条概念——出手顺序、待确认后可撤销、延后行动、插队改序都不存在，整族是缺口。",
+      "todos": [
+        "TODO: 回合与行动顺序模型（先制值 / 重排 / 延后）",
+        "TODO: 待确认指令栈与回合内撤销重做",
+        "TODO: 敌方意图公开与据此结算的修正链"
+      ],
+      "familyTitle": "回合制：轮到我之前和之后",
+      "actionNo": "UX-186",
+      "actionKey": "turn-delay-action",
+      "actionTitle": "延后行动等时机",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "turn-delay-action"
+        }
+      ]
+    },
+    {
+      "id": "turn-enemy-intent",
+      "category": "turnbased",
+      "family": "turnbased",
+      "title": "敌人头上预告他下一步要干什么",
+      "summary": "回合制可以把敌人的意图提前摊开：他下一步打谁、打多少。玩家据此决定是躲、是挡、还是抢先打断——不预告就只能靠背板。",
+      "genres": [
+        "回合制战斗",
+        "战棋"
+      ],
+      "targets": [
+        "rotk",
+        "srpg"
+      ],
+      "beats": [
+        {
+          "title": "预告",
+          "input": "敌人回合结束，头上挂出意图",
+          "screen": "图标写明他下一步要攻击我，还标出大概伤害",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 34,
+              "y": 62,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 66,
+              "y": 46,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "marker",
+              "x": 66,
+              "y": 26,
+              "icon": "cross",
+              "label": "下一步:攻击你 12"
+            },
+            {
+              "t": "arrow",
+              "x1": 62,
+              "y1": 48,
+              "x2": 40,
+              "y2": 60,
+              "kind": "attack"
+            },
+            {
+              "t": "badge",
+              "text": "意图预告"
+            }
+          ],
+          "logic": "公开该敌人下一次行动的目标与预估强度"
+        },
+        {
+          "title": "据此应对",
+          "input": "我据此选择应对",
+          "screen": "挡住或抢先打断，都是看着预告做的决定",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 34,
+              "y": 62,
+              "face": 0
+            },
+            {
+              "t": "ring",
+              "x": 34,
+              "y": 62,
+              "r": 12,
+              "kind": "buff"
+            },
+            {
+              "t": "unit",
+              "x": 66,
+              "y": 46,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "marker",
+              "x": 66,
+              "y": 26,
+              "icon": "cross",
+              "label": "下一步:攻击你 12"
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": 2,
+              "cd": null,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
+            },
+            {
+              "t": "toast",
+              "x": 20,
+              "y": 30,
+              "text": "已挡·伤害减半",
+              "kind": "gain"
+            },
+            {
+              "t": "badge",
+              "text": "先挡住"
+            }
+          ],
+          "logic": "按玩家选择的应对修正即将到来的结算"
+        }
+      ],
+      "ludots": "回合制：Ludots 是实时 ECS 主链，没有回合与行动条概念——出手顺序、待确认后可撤销、延后行动、插队改序都不存在，整族是缺口。",
+      "todos": [
+        "TODO: 回合与行动顺序模型（先制值 / 重排 / 延后）",
+        "TODO: 待确认指令栈与回合内撤销重做",
+        "TODO: 敌方意图公开与据此结算的修正链"
+      ],
+      "familyTitle": "回合制：轮到我之前和之后",
+      "actionNo": "UX-187",
+      "actionKey": "turn-enemy-intent",
+      "actionTitle": "敌人预告下一步",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "turn-enemy-intent"
+        }
+      ]
+    },
+    {
+      "id": "turn-insert-cutin",
+      "category": "turnbased",
+      "family": "turnbased",
+      "title": "插队：抢在别人之前动一手",
+      "summary": "有的技能能把我插到行动条更前面，或者把敌人往后压。目标不是场上的谁，而是「顺序里的位置」——这类技能必须让顺序的变化看得见。",
+      "genres": [
+        "回合制战斗",
+        "战棋"
+      ],
+      "targets": [
+        "rotk",
+        "srpg"
+      ],
+      "beats": [
+        {
+          "title": "插到前面",
+          "input": "对行动条使用加速/延缓",
+          "screen": "我这格往前跳，敌人那格往后退",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "timeline",
+              "entries": [
+                {
+                  "name": "我",
+                  "me": true
+                },
+                {
+                  "name": "敌A"
+                },
+                {
+                  "name": "队友"
+                }
+              ],
+              "current": 0
+            },
+            {
+              "t": "hero",
+              "x": 34,
+              "y": 62,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 66,
+              "y": 46,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "toast",
+              "x": 22,
+              "y": 30,
+              "text": "我插到最前 · 敌A 退后",
+              "kind": "gain"
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": 3,
+              "cd": 3,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
+            },
+            {
+              "t": "badge",
+              "text": "改顺序"
+            }
+          ],
+          "logic": "改写行动顺序：提前我的位次并延后目标位次"
+        },
+        {
+          "title": "按新顺序",
+          "input": "顺序改完立刻按新顺序走",
+          "screen": "我先动，敌人被压到后面才动",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "timeline",
+              "entries": [
+                {
+                  "name": "我",
+                  "me": true
+                },
+                {
+                  "name": "队友"
+                },
+                {
+                  "name": "敌A"
+                }
+              ],
+              "current": 0
+            },
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 66,
+              "y": 46,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "arrow",
+              "x1": 46,
+              "y1": 56,
+              "x2": 62,
+              "y2": 48,
+              "kind": "attack"
+            },
+            {
+              "t": "impact",
+              "x": 66,
+              "y": 46,
+              "r": 14,
+              "heavy": false
+            },
+            {
+              "t": "badge",
+              "text": "先手打出"
+            }
+          ],
+          "logic": "按改写后的顺序继续推进本轮"
+        }
+      ],
+      "ludots": "回合制：Ludots 是实时 ECS 主链，没有回合与行动条概念——出手顺序、待确认后可撤销、延后行动、插队改序都不存在，整族是缺口。",
+      "todos": [
+        "TODO: 回合与行动顺序模型（先制值 / 重排 / 延后）",
+        "TODO: 待确认指令栈与回合内撤销重做",
+        "TODO: 敌方意图公开与据此结算的修正链"
+      ],
+      "familyTitle": "回合制：轮到我之前和之后",
+      "actionNo": "UX-188",
+      "actionKey": "turn-insert-cutin",
+      "actionTitle": "插队改出手顺序",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "turn-insert-cutin"
+        }
+      ]
+    },
+    {
+      "id": "srpg-move-range-path",
+      "category": "tactics",
+      "family": "tactics",
+      "title": "移动范围高亮，走哪条路花几点",
+      "summary": "点自己的棋子，能走的格子亮起来；把指针移到目标格，路径和花费一起预览。走完还剩多少行动力，决定我这回合还能不能打。",
+      "genres": [
+        "战棋",
+        "SRPG"
+      ],
+      "targets": [
+        "rotk",
+        "srpg"
+      ],
+      "beats": [
+        {
+          "title": "亮出范围",
+          "input": "点选自己的棋子",
+          "screen": "可走的格子整片亮起，脚下那格标出是我",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "gridmap",
+              "x": 14,
+              "y": 30,
+              "cols": 7,
+              "rows": 4,
+              "cells": {
+                "1,2": "self",
+                "0,1": "move",
+                "1,1": "move",
+                "2,1": "move",
+                "2,2": "move",
+                "3,2": "move",
+                "1,3": "move",
+                "2,3": "move"
+              },
+              "cw": 22,
+              "ch": 14
+            },
+            {
+              "t": "bar",
+              "x": 70,
+              "y": 30,
+              "ratio": 1.0,
+              "kind": "charge",
+              "label": "行动力 3/3",
+              "broken": false
+            },
+            {
+              "t": "badge",
+              "text": "移动范围"
+            }
+          ],
+          "logic": "按行动力与地形算出可达格集合"
+        },
+        {
+          "title": "预览路径",
+          "input": "指到某一格",
+          "screen": "路径画出来，同时告诉我要花几点行动力",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "gridmap",
+              "x": 14,
+              "y": 30,
+              "cols": 7,
+              "rows": 4,
+              "cells": {
+                "1,2": "self",
+                "2,2": "move",
+                "3,2": "move",
+                "3,1": "move"
+              },
+              "cw": 22,
+              "ch": 14
+            },
+            {
+              "t": "path",
+              "points": [
+                [
+                  30,
+                  58
+                ],
+                [
+                  44,
+                  58
+                ],
+                [
+                  58,
+                  44
+                ]
+              ],
+              "kind": "move"
+            },
+            {
+              "t": "cursor",
+              "x": 58,
+              "y": 44,
+              "mode": "aim"
+            },
+            {
+              "t": "bar",
+              "x": 70,
+              "y": 30,
+              "ratio": 0.34,
+              "kind": "charge",
+              "label": "走完剩 1/3",
+              "broken": false
+            },
+            {
+              "t": "badge",
+              "text": "路径预览"
+            }
+          ],
+          "logic": "对指向格求最短路并算出行动力花费"
+        },
+        {
+          "title": "落格",
+          "input": "确认走过去",
+          "screen": "棋子落到那一格，行动力扣掉，剩下的还能干别的",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "gridmap",
+              "x": 14,
+              "y": 30,
+              "cols": 7,
+              "rows": 4,
+              "cells": {
+                "3,1": "self",
+                "4,1": "attack",
+                "4,2": "attack"
+              },
+              "cw": 22,
+              "ch": 14
+            },
+            {
+              "t": "bar",
+              "x": 70,
+              "y": 30,
+              "ratio": 0.34,
+              "kind": "charge",
+              "label": "行动力 1/3",
+              "broken": false
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": 0,
+              "cd": null,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
+            },
+            {
+              "t": "badge",
+              "text": "走完还能打"
+            }
+          ],
+          "logic": "落位到目标格并扣除对应行动力"
+        }
+      ],
+      "ludots": "战棋：现有寻路与移动是连续空间，没有离散格盘概念——可达格集合、行动力花费、朝向面判定、控制区、格地形属性都缺。",
+      "todos": [
+        "TODO: 离散格盘与可达格求解（含行动力预算）",
+        "TODO: 朝向面判定（正面 / 侧面 / 背面）与伤害修正",
+        "TODO: 控制区强制停止与占位冲突仲裁（换位 / 推挤 / 拒绝）",
+        "TODO: 格地形属性（高度 / 掩体）参与命中与减伤"
+      ],
+      "familyTitle": "战棋：格子、朝向、控制区",
+      "actionNo": "UX-189",
+      "actionKey": "srpg-move-range-path",
+      "actionTitle": "移动范围与路径花费",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "srpg-move-range-path"
+        }
+      ]
+    },
+    {
+      "id": "srpg-facing-backstab",
+      "category": "tactics",
+      "family": "tactics",
+      "title": "从哪个方向打，伤害不一样",
+      "summary": "战棋里朝向是资源：正面打有格挡，绕到侧面或背后才吃满伤害。所以「站哪一格」和「打哪个面」是同一个决定的两半。",
+      "genres": [
+        "战棋",
+        "SRPG"
+      ],
+      "targets": [
+        "rotk",
+        "srpg"
+      ],
+      "beats": [
+        {
+          "title": "正面打",
+          "input": "从正面打",
+          "screen": "命中但被格挡，伤害打折并标出是正面",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "gridmap",
+              "x": 16,
+              "y": 32,
+              "cols": 6,
+              "rows": 3,
+              "cells": {
+                "1,1": "self",
+                "2,1": "attack"
+              },
+              "cw": 22,
+              "ch": 14
+            },
+            {
+              "t": "unit",
+              "x": 48,
+              "y": 48,
+              "sel": false,
+              "team": "enemy",
+              "face": 180,
+              "size": 1
+            },
+            {
+              "t": "hero",
+              "x": 30,
+              "y": 48,
+              "face": 0
+            },
+            {
+              "t": "arrow",
+              "x1": 36,
+              "y1": 48,
+              "x2": 44,
+              "y2": 48,
+              "kind": "attack"
+            },
+            {
+              "t": "impact",
+              "x": 48,
+              "y": 48,
+              "r": 11,
+              "heavy": false
+            },
+            {
+              "t": "toast",
+              "x": 18,
+              "y": 24,
+              "text": "正面 · 伤害 -40%",
+              "kind": "loss"
+            },
+            {
+              "t": "badge",
+              "text": "正面吃亏"
+            }
+          ],
+          "logic": "按攻防双方朝向判定为正面并套用减免"
+        },
+        {
+          "title": "绕后",
+          "input": "先绕到他背后那一格",
+          "screen": "路径绕过去，落在他背面，朝向标出来",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "gridmap",
+              "x": 16,
+              "y": 32,
+              "cols": 6,
+              "rows": 3,
+              "cells": {
+                "1,1": "move",
+                "2,0": "move",
+                "3,1": "self"
+              },
+              "cw": 22,
+              "ch": 14
+            },
+            {
+              "t": "unit",
+              "x": 48,
+              "y": 48,
+              "sel": false,
+              "team": "enemy",
+              "face": 180,
+              "size": 1
+            },
+            {
+              "t": "hero",
+              "x": 66,
+              "y": 48,
+              "face": 180
+            },
+            {
+              "t": "path",
+              "points": [
+                [
+                  30,
+                  48
+                ],
+                [
+                  40,
+                  34
+                ],
+                [
+                  62,
+                  48
+                ]
+              ],
+              "kind": "move"
+            },
+            {
+              "t": "ring",
+              "x": 48,
+              "y": 48,
+              "r": 11,
+              "kind": "finisher"
+            },
+            {
+              "t": "badge",
+              "text": "站到背面"
+            }
+          ],
+          "logic": "绕行到目标背面格并更新双方朝向"
+        },
+        {
+          "title": "背击",
+          "input": "从背后打",
+          "screen": "不吃格挡，伤害拉满并标出是背击",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "gridmap",
+              "x": 16,
+              "y": 32,
+              "cols": 6,
+              "rows": 3,
+              "cells": {
+                "3,1": "self",
+                "2,1": "attack"
+              },
+              "cw": 22,
+              "ch": 14
+            },
+            {
+              "t": "unit",
+              "x": 48,
+              "y": 48,
+              "sel": false,
+              "team": "enemy",
+              "face": 180,
+              "size": 1
+            },
+            {
+              "t": "hero",
+              "x": 66,
+              "y": 48,
+              "face": 180
+            },
+            {
+              "t": "arrow",
+              "x1": 60,
+              "y1": 48,
+              "x2": 52,
+              "y2": 48,
+              "kind": "attack"
+            },
+            {
+              "t": "impact",
+              "x": 48,
+              "y": 48,
+              "r": 16,
+              "heavy": true
+            },
+            {
+              "t": "toast",
+              "x": 18,
+              "y": 24,
+              "text": "背击 · 伤害 +50%",
+              "kind": "gain"
+            },
+            {
+              "t": "badge",
+              "text": "背击"
+            }
+          ],
+          "logic": "按背面判定跳过格挡并套用背击加成"
+        }
+      ],
+      "ludots": "战棋：现有寻路与移动是连续空间，没有离散格盘概念——可达格集合、行动力花费、朝向面判定、控制区、格地形属性都缺。",
+      "todos": [
+        "TODO: 离散格盘与可达格求解（含行动力预算）",
+        "TODO: 朝向面判定（正面 / 侧面 / 背面）与伤害修正",
+        "TODO: 控制区强制停止与占位冲突仲裁（换位 / 推挤 / 拒绝）",
+        "TODO: 格地形属性（高度 / 掩体）参与命中与减伤"
+      ],
+      "familyTitle": "战棋：格子、朝向、控制区",
+      "actionNo": "UX-190",
+      "actionKey": "srpg-facing-backstab",
+      "actionTitle": "朝向决定伤害",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "srpg-facing-backstab"
+        }
+      ]
+    },
+    {
+      "id": "srpg-zone-of-control",
+      "category": "tactics",
+      "family": "tactics",
+      "title": "踩进敌人控制区就得停下",
+      "summary": "敌人身边那一圈格子会拽住我：一进去，剩下的行动力就走不动了。所以路线要绕开，或者故意进去卡住对方。这条规则不画出来，玩家只会觉得走一半卡住了。",
+      "genres": [
+        "战棋",
+        "SRPG"
+      ],
+      "targets": [
+        "rotk",
+        "srpg"
+      ],
+      "beats": [
+        {
+          "title": "看清控制区",
+          "input": "规划一条穿过敌人旁边的路",
+          "screen": "敌人周围那圈格子标成控制区，路线穿过它",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "gridmap",
+              "x": 14,
+              "y": 32,
+              "cols": 7,
+              "rows": 3,
+              "cells": {
+                "1,1": "self",
+                "2,1": "move",
+                "3,1": "occupied",
+                "3,0": "occupied",
+                "3,2": "occupied",
+                "4,1": "move"
+              },
+              "cw": 22,
+              "ch": 14
+            },
+            {
+              "t": "unit",
+              "x": 62,
+              "y": 48,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "path",
+              "points": [
+                [
+                  28,
+                  48
+                ],
+                [
+                  56,
+                  48
+                ],
+                [
+                  80,
+                  48
+                ]
+              ],
+              "kind": "move"
+            },
+            {
+              "t": "toast",
+              "x": 16,
+              "y": 24,
+              "text": "灰格=敌人控制区",
+              "kind": "info"
+            },
+            {
+              "t": "badge",
+              "text": "控制区"
+            }
+          ],
+          "logic": "标出敌方控制区格并把它计入路径代价"
+        },
+        {
+          "title": "被拽停",
+          "input": "走进控制区",
+          "screen": "被迫停在这一格，剩下的行动力用不掉",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "gridmap",
+              "x": 14,
+              "y": 32,
+              "cols": 7,
+              "rows": 3,
+              "cells": {
+                "2,1": "self",
+                "3,1": "occupied",
+                "3,0": "occupied",
+                "3,2": "occupied"
+              },
+              "cw": 22,
+              "ch": 14
+            },
+            {
+              "t": "unit",
+              "x": 62,
+              "y": 48,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "deny",
+              "x": 48,
+              "y": 66,
+              "label": "被控制区拽停",
+              "r": 11
+            },
+            {
+              "t": "bar",
+              "x": 70,
+              "y": 26,
+              "ratio": 0.6,
+              "kind": "charge",
+              "label": "行动力没花完",
+              "broken": false
+            },
+            {
+              "t": "badge",
+              "text": "强制停下"
+            }
+          ],
+          "logic": "进入控制区后强制结束本次移动"
+        },
+        {
+          "title": "绕开",
+          "input": "换一条绕开的路",
+          "screen": "绕远一点但走得完，代价是这回合到不了原来的位置",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "gridmap",
+              "x": 14,
+              "y": 32,
+              "cols": 7,
+              "rows": 3,
+              "cells": {
+                "1,1": "self",
+                "1,0": "move",
+                "2,0": "move",
+                "4,0": "move",
+                "4,1": "move"
+              },
+              "cw": 22,
+              "ch": 14
+            },
+            {
+              "t": "unit",
+              "x": 62,
+              "y": 48,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "path",
+              "points": [
+                [
+                  28,
+                  48
+                ],
+                [
+                  28,
+                  36
+                ],
+                [
+                  72,
+                  36
+                ],
+                [
+                  72,
+                  48
+                ]
+              ],
+              "kind": "move"
+            },
+            {
+              "t": "bar",
+              "x": 70,
+              "y": 26,
+              "ratio": 0.0,
+              "kind": "charge",
+              "label": "行动力刚好用完",
+              "broken": false
+            },
+            {
+              "t": "badge",
+              "text": "绕开"
+            }
+          ],
+          "logic": "改用绕开控制区的路径重算花费"
+        }
+      ],
+      "ludots": "战棋：现有寻路与移动是连续空间，没有离散格盘概念——可达格集合、行动力花费、朝向面判定、控制区、格地形属性都缺。",
+      "todos": [
+        "TODO: 离散格盘与可达格求解（含行动力预算）",
+        "TODO: 朝向面判定（正面 / 侧面 / 背面）与伤害修正",
+        "TODO: 控制区强制停止与占位冲突仲裁（换位 / 推挤 / 拒绝）",
+        "TODO: 格地形属性（高度 / 掩体）参与命中与减伤"
+      ],
+      "familyTitle": "战棋：格子、朝向、控制区",
+      "actionNo": "UX-191",
+      "actionKey": "srpg-zone-of-control",
+      "actionTitle": "踩进控制区被迫停下",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "srpg-zone-of-control"
+        }
+      ]
+    },
+    {
+      "id": "srpg-tile-occupied",
+      "category": "tactics",
+      "family": "tactics",
+      "title": "想去的那一格已经有人了",
+      "summary": "一格一人时，目标格被占就得给出说法：能和队友换位、能把敌人推开、还是直接不许去。三种规则手感完全不同，不能含混。",
+      "genres": [
+        "战棋",
+        "SRPG"
+      ],
+      "targets": [
+        "rotk",
+        "srpg"
+      ],
+      "beats": [
+        {
+          "title": "队友占着",
+          "input": "指到被队友占着的格",
+          "screen": "该格标成有人，并给出「换位」这个选项",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "gridmap",
+              "x": 16,
+              "y": 32,
+              "cols": 6,
+              "rows": 3,
+              "cells": {
+                "1,1": "self",
+                "3,1": "occupied"
+              },
+              "cw": 22,
+              "ch": 14
+            },
+            {
+              "t": "hero",
+              "x": 30,
+              "y": 48,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 60,
+              "y": 48,
+              "sel": false,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "cursor",
+              "x": 60,
+              "y": 48,
+              "mode": "aim"
+            },
+            {
+              "t": "menu",
+              "x": 20,
+              "y": 66,
+              "lines": [
+                "和队友换位",
+                "取消"
+              ],
+              "active": 0
+            },
+            {
+              "t": "badge",
+              "text": "格子有人"
+            }
+          ],
+          "logic": "目标格被友军占据，给出换位选项"
+        },
+        {
+          "title": "换位",
+          "input": "确认换位",
+          "screen": "两个人对调位置，行动力照常扣",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "gridmap",
+              "x": 16,
+              "y": 32,
+              "cols": 6,
+              "rows": 3,
+              "cells": {
+                "3,1": "self",
+                "1,1": "occupied"
+              },
+              "cw": 22,
+              "ch": 14
+            },
+            {
+              "t": "hero",
+              "x": 60,
+              "y": 48,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 30,
+              "y": 48,
+              "sel": false,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "path",
+              "points": [
+                [
+                  30,
+                  48
+                ],
+                [
+                  60,
+                  48
+                ]
+              ],
+              "kind": "move"
+            },
+            {
+              "t": "toast",
+              "x": 18,
+              "y": 24,
+              "text": "已换位",
+              "kind": "gain"
+            },
+            {
+              "t": "badge",
+              "text": "换位完成"
+            }
+          ],
+          "logic": "执行换位并交换两者格位"
+        },
+        {
+          "title": "敌人占着",
+          "input": "指到被敌人占着的格",
+          "screen": "明确不许去，并说明是被敌人占着，不是我点错",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "gridmap",
+              "x": 16,
+              "y": 32,
+              "cols": 6,
+              "rows": 3,
+              "cells": {
+                "1,1": "self",
+                "3,1": "blocked"
+              },
+              "cw": 22,
+              "ch": 14
+            },
+            {
+              "t": "hero",
+              "x": 30,
+              "y": 48,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 60,
+              "y": 48,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "cursor",
+              "x": 60,
+              "y": 48,
+              "mode": "aim"
+            },
+            {
+              "t": "deny",
+              "x": 60,
+              "y": 66,
+              "label": "敌人占着",
+              "r": 11
+            },
+            {
+              "t": "badge",
+              "text": "不许去"
+            }
+          ],
+          "logic": "目标格被敌军占据，拒绝移动并回报原因"
+        }
+      ],
+      "ludots": "战棋：现有寻路与移动是连续空间，没有离散格盘概念——可达格集合、行动力花费、朝向面判定、控制区、格地形属性都缺。",
+      "todos": [
+        "TODO: 离散格盘与可达格求解（含行动力预算）",
+        "TODO: 朝向面判定（正面 / 侧面 / 背面）与伤害修正",
+        "TODO: 控制区强制停止与占位冲突仲裁（换位 / 推挤 / 拒绝）",
+        "TODO: 格地形属性（高度 / 掩体）参与命中与减伤"
+      ],
+      "familyTitle": "战棋：格子、朝向、控制区",
+      "actionNo": "UX-192",
+      "actionKey": "srpg-tile-occupied",
+      "actionTitle": "目标格被占怎么办",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "srpg-tile-occupied"
+        }
+      ]
+    },
+    {
+      "id": "srpg-height-cover",
+      "category": "tactics",
+      "family": "tactics",
+      "title": "格子本身有高低和掩体",
+      "summary": "同一个目标，站高处打命中更高，站掩体后面被打更少。格子不只是位置，它自带属性，选格就是选属性。",
+      "genres": [
+        "战棋",
+        "SRPG"
+      ],
+      "targets": [
+        "rotk",
+        "srpg"
+      ],
+      "beats": [
+        {
+          "title": "平地",
+          "input": "站平地打",
+          "screen": "命中率一般，掩体和高度都没吃到",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "gridmap",
+              "x": 16,
+              "y": 34,
+              "cols": 6,
+              "rows": 3,
+              "cells": {
+                "1,1": "self",
+                "4,1": "attack"
+              },
+              "cw": 22,
+              "ch": 14
+            },
+            {
+              "t": "hero",
+              "x": 30,
+              "y": 50,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 74,
+              "y": 50,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "arrow",
+              "x1": 36,
+              "y1": 50,
+              "x2": 68,
+              "y2": 50,
+              "kind": "attack"
+            },
+            {
+              "t": "impact",
+              "x": 74,
+              "y": 50,
+              "r": 11,
+              "heavy": false
+            },
+            {
+              "t": "toast",
+              "x": 18,
+              "y": 26,
+              "text": "命中率 65%",
+              "kind": "info"
+            },
+            {
+              "t": "badge",
+              "text": "平地"
+            }
+          ],
+          "logic": "按同高度无遮挡算出基础命中率"
+        },
+        {
+          "title": "上高地",
+          "input": "挪到高地那一格",
+          "screen": "该格标出是高地，命中率提上去",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "gridmap",
+              "x": 16,
+              "y": 34,
+              "cols": 6,
+              "rows": 3,
+              "cells": {
+                "1,2": "move",
+                "2,0": "self",
+                "4,1": "attack"
+              },
+              "cw": 22,
+              "ch": 14
+            },
+            {
+              "t": "hero",
+              "x": 42,
+              "y": 36,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 74,
+              "y": 50,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "path",
+              "points": [
+                [
+                  30,
+                  50
+                ],
+                [
+                  42,
+                  36
+                ]
+              ],
+              "kind": "move"
+            },
+            {
+              "t": "arrow",
+              "x1": 46,
+              "y1": 38,
+              "x2": 68,
+              "y2": 48,
+              "kind": "attack"
+            },
+            {
+              "t": "impact",
+              "x": 74,
+              "y": 50,
+              "r": 15,
+              "heavy": false
+            },
+            {
+              "t": "toast",
+              "x": 18,
+              "y": 26,
+              "text": "高地 · 命中率 85%",
+              "kind": "gain"
+            },
+            {
+              "t": "badge",
+              "text": "高地加成"
+            }
+          ],
+          "logic": "占据高地格后按高度差上调命中率"
+        },
+        {
+          "title": "被掩体挡",
+          "input": "敌人躲到掩体后",
+          "screen": "他吃到掩体减伤，我的命中掉下来",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "gridmap",
+              "x": 16,
+              "y": 34,
+              "cols": 6,
+              "rows": 3,
+              "cells": {
+                "2,0": "self",
+                "4,1": "blocked",
+                "5,1": "attack"
+              },
+              "cw": 22,
+              "ch": 14
+            },
+            {
+              "t": "hero",
+              "x": 42,
+              "y": 36,
+              "face": 0
+            },
+            {
+              "t": "prop",
+              "x": 66,
+              "y": 50,
+              "label": "掩体",
+              "highlight": false,
+              "kind": "cover"
+            },
+            {
+              "t": "unit",
+              "x": 84,
+              "y": 50,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "arrow",
+              "x1": 46,
+              "y1": 38,
+              "x2": 62,
+              "y2": 48,
+              "kind": "attack"
+            },
+            {
+              "t": "impact",
+              "x": 84,
+              "y": 50,
+              "r": 9,
+              "heavy": false
+            },
+            {
+              "t": "toast",
+              "x": 18,
+              "y": 26,
+              "text": "隔掩体 · 命中率 45%",
+              "kind": "loss"
+            },
+            {
+              "t": "badge",
+              "text": "掩体减伤"
+            }
+          ],
+          "logic": "目标进入掩体格后按遮挡程度降低命中率"
+        }
+      ],
+      "ludots": "战棋：现有寻路与移动是连续空间，没有离散格盘概念——可达格集合、行动力花费、朝向面判定、控制区、格地形属性都缺。",
+      "todos": [
+        "TODO: 离散格盘与可达格求解（含行动力预算）",
+        "TODO: 朝向面判定（正面 / 侧面 / 背面）与伤害修正",
+        "TODO: 控制区强制停止与占位冲突仲裁（换位 / 推挤 / 拒绝）",
+        "TODO: 格地形属性（高度 / 掩体）参与命中与减伤"
+      ],
+      "familyTitle": "战棋：格子、朝向、控制区",
+      "actionNo": "UX-193",
+      "actionKey": "srpg-height-cover",
+      "actionTitle": "格子的高低与掩体",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "srpg-height-cover"
+        }
+      ]
+    },
+    {
+      "id": "gs-cast-on-region",
+      "category": "grand-abstract",
+      "family": "grand-abstract",
+      "title": "把一件事派到某个省去做",
+      "summary": "大战略里很多「技能」不是打在人身上，而是落在一块地上：修个工程、派个间谍、推一项开发。目标是行政单元本身，得能点中它、看清归谁、看清要几回合。",
+      "genres": [
+        "大战略",
+        "内政"
+      ],
+      "targets": [
+        "rotk",
+        "grand"
+      ],
+      "beats": [
+        {
+          "title": "点省",
+          "input": "在地图上点一个省",
+          "screen": "该省高亮成当前目标，旁边列出能对它做什么",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "region",
+              "x": 28,
+              "y": 40,
+              "label": "河东",
+              "owner": "mine",
+              "selected": false,
+              "w": 46,
+              "h": 30
+            },
+            {
+              "t": "region",
+              "x": 58,
+              "y": 38,
+              "label": "上党",
+              "owner": "rival",
+              "selected": true,
+              "w": 46,
+              "h": 30
+            },
+            {
+              "t": "region",
+              "x": 44,
+              "y": 66,
+              "label": "太原",
+              "owner": "mine",
+              "selected": false,
+              "w": 46,
+              "h": 30
+            },
+            {
+              "t": "cursor",
+              "x": 58,
+              "y": 38,
+              "mode": "up"
+            },
+            {
+              "t": "menu",
+              "x": 74,
+              "y": 58,
+              "lines": [
+                "派间谍",
+                "修工程",
+                "开发"
+              ],
+              "active": 0
+            },
+            {
+              "t": "badge",
+              "text": "选中一省"
+            }
+          ],
+          "logic": "把该行政区设为当前目标并取出可执行项"
+        },
+        {
+          "title": "派下去",
+          "input": "选一项派下去",
+          "screen": "花掉抽象代价，省上挂出「正在进行」的标记",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "region",
+              "x": 28,
+              "y": 40,
+              "label": "河东",
+              "owner": "mine",
+              "selected": false,
+              "w": 46,
+              "h": 30
+            },
+            {
+              "t": "region",
+              "x": 58,
+              "y": 38,
+              "label": "上党",
+              "owner": "rival",
+              "selected": true,
+              "w": 46,
+              "h": 30
+            },
+            {
+              "t": "region",
+              "x": 44,
+              "y": 66,
+              "label": "太原",
+              "owner": "mine",
+              "selected": false,
+              "w": 46,
+              "h": 30
+            },
+            {
+              "t": "pool",
+              "x": 16,
+              "y": 78,
+              "label": "外交点",
+              "have": 0.7,
+              "cost": 0.3
+            },
+            {
+              "t": "delaymark",
+              "x": 58,
+              "y": 20,
+              "turns": 3,
+              "label": null
+            },
+            {
+              "t": "toast",
+              "x": 16,
+              "y": 24,
+              "text": "间谍已派出",
+              "kind": "info"
+            },
+            {
+              "t": "badge",
+              "text": "已派出"
+            }
+          ],
+          "logic": "扣除抽象代价并在该区挂上待结算任务"
+        },
+        {
+          "title": "到期",
+          "input": "时间到了",
+          "screen": "到期才出结果，成败都落在这块地上",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "region",
+              "x": 28,
+              "y": 40,
+              "label": "河东",
+              "owner": "mine",
+              "selected": false,
+              "w": 46,
+              "h": 30
+            },
+            {
+              "t": "region",
+              "x": 58,
+              "y": 38,
+              "label": "上党",
+              "owner": "mine",
+              "selected": true,
+              "w": 46,
+              "h": 30
+            },
+            {
+              "t": "region",
+              "x": 44,
+              "y": 66,
+              "label": "太原",
+              "owner": "mine",
+              "selected": false,
+              "w": 46,
+              "h": 30
+            },
+            {
+              "t": "impact",
+              "x": 58,
+              "y": 38,
+              "r": 16,
+              "heavy": false
+            },
+            {
+              "t": "toast",
+              "x": 16,
+              "y": 24,
+              "text": "颠覆成功 · 上党易主",
+              "kind": "gain"
+            },
+            {
+              "t": "badge",
+              "text": "到期结算"
+            }
+          ],
+          "logic": "到期结算任务并把结果写回该区归属"
+        }
+      ],
+      "ludots": "大战略抽象目标：这是图鉴里唯一「目标不在具体空间」的一族。Ludots 现有目标类型只有位置 / 实体 / 方向 / 自身 / 界面槽位，没有区域、关系边、派系集合、规则槽这几类目标，也没有抽象资源池与延迟结算。",
+      "todos": [
+        "TODO: 目标类型扩展到区域 / 关系边 / 抽象集合 / 规则槽",
+        "TODO: 抽象资源池（威望 / 影响力 / 统治力）作为施放代价",
+        "TODO: 延迟结算（N 回合后生效）与到期回报",
+        "TODO: 按行政层级展开的影响面与代价缩放"
+      ],
+      "familyTitle": "大战略：对抽象东西下手",
+      "actionNo": "UX-194",
+      "actionKey": "gs-cast-on-region",
+      "actionTitle": "把一件事派到某个省",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "gs-cast-on-region"
+        }
+      ]
+    },
+    {
+      "id": "gs-cast-on-relation",
+      "category": "grand-abstract",
+      "family": "grand-abstract",
+      "title": "对「两方之间的关系」下手",
+      "summary": "结盟、宣战、联姻，目标既不是我也不是他，而是我们之间那条关系。所以要能点中那条边、看清它现在什么状态、看清动它要付什么代价。",
+      "genres": [
+        "大战略",
+        "外交"
+      ],
+      "targets": [
+        "rotk",
+        "grand"
+      ],
+      "beats": [
+        {
+          "title": "点关系",
+          "input": "点两方之间那条关系线",
+          "screen": "线被选中并加粗，标出现在是什么关系",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "region",
+              "x": 24,
+              "y": 40,
+              "label": "我方",
+              "owner": "mine",
+              "selected": false,
+              "w": 46,
+              "h": 30
+            },
+            {
+              "t": "region",
+              "x": 76,
+              "y": 40,
+              "label": "赵国",
+              "owner": "rival",
+              "selected": false,
+              "w": 46,
+              "h": 30
+            },
+            {
+              "t": "relation",
+              "x1": 24,
+              "y1": 40,
+              "x2": 76,
+              "y2": 40,
+              "label": "互不侵犯",
+              "state": "none",
+              "selected": true
+            },
+            {
+              "t": "cursor",
+              "x": 50,
+              "y": 40,
+              "mode": "up"
+            },
+            {
+              "t": "badge",
+              "text": "选中关系"
+            }
+          ],
+          "logic": "把双方之间的关系边设为当前目标"
+        },
+        {
+          "title": "选变更",
+          "input": "选择要把它变成什么",
+          "screen": "列出可选的关系变更，各自要花多少外交点",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "region",
+              "x": 24,
+              "y": 40,
+              "label": "我方",
+              "owner": "mine",
+              "selected": false,
+              "w": 46,
+              "h": 30
+            },
+            {
+              "t": "region",
+              "x": 76,
+              "y": 40,
+              "label": "赵国",
+              "owner": "rival",
+              "selected": false,
+              "w": 46,
+              "h": 30
+            },
+            {
+              "t": "relation",
+              "x1": 24,
+              "y1": 40,
+              "x2": 76,
+              "y2": 40,
+              "label": "互不侵犯",
+              "state": "none",
+              "selected": true
+            },
+            {
+              "t": "menu",
+              "x": 30,
+              "y": 62,
+              "lines": [
+                "结盟",
+                "联姻",
+                "宣战"
+              ],
+              "active": 0
+            },
+            {
+              "t": "pool",
+              "x": 16,
+              "y": 20,
+              "label": "外交点",
+              "have": 0.8,
+              "cost": 0.35
+            },
+            {
+              "t": "badge",
+              "text": "挑一种"
+            }
+          ],
+          "logic": "取出该关系可变更的目标状态与各自代价"
+        },
+        {
+          "title": "关系变更",
+          "input": "成了：那条线换了颜色和名字",
+          "screen": "关系本身变了，双方的位置一动没动",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "region",
+              "x": 24,
+              "y": 40,
+              "label": "我方",
+              "owner": "mine",
+              "selected": false,
+              "w": 46,
+              "h": 30
+            },
+            {
+              "t": "region",
+              "x": 76,
+              "y": 40,
+              "label": "赵国",
+              "owner": "mine",
+              "selected": false,
+              "w": 46,
+              "h": 30
+            },
+            {
+              "t": "relation",
+              "x1": 24,
+              "y1": 40,
+              "x2": 76,
+              "y2": 40,
+              "label": "同盟",
+              "state": "ally",
+              "selected": true
+            },
+            {
+              "t": "pool",
+              "x": 16,
+              "y": 20,
+              "label": "外交点",
+              "have": 0.45,
+              "cost": 0.0
+            },
+            {
+              "t": "toast",
+              "x": 30,
+              "y": 70,
+              "text": "已结盟",
+              "kind": "gain"
+            },
+            {
+              "t": "badge",
+              "text": "同盟达成"
+            }
+          ],
+          "logic": "提交关系变更并刷新双方关系状态"
+        }
+      ],
+      "ludots": "大战略抽象目标：这是图鉴里唯一「目标不在具体空间」的一族。Ludots 现有目标类型只有位置 / 实体 / 方向 / 自身 / 界面槽位，没有区域、关系边、派系集合、规则槽这几类目标，也没有抽象资源池与延迟结算。",
+      "todos": [
+        "TODO: 目标类型扩展到区域 / 关系边 / 抽象集合 / 规则槽",
+        "TODO: 抽象资源池（威望 / 影响力 / 统治力）作为施放代价",
+        "TODO: 延迟结算（N 回合后生效）与到期回报",
+        "TODO: 按行政层级展开的影响面与代价缩放"
+      ],
+      "familyTitle": "大战略：对抽象东西下手",
+      "actionNo": "UX-195",
+      "actionKey": "gs-cast-on-relation",
+      "actionTitle": "对两方之间的关系下手",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "gs-cast-on-relation"
+        }
+      ]
+    },
+    {
+      "id": "gs-cast-on-faction",
+      "category": "grand-abstract",
+      "family": "grand-abstract",
+      "title": "对一个派系游说，目标没有位置",
+      "summary": "议会里的派别、朝中的势力，它们在地图上没有位置，但可以被施加影响。玩家要看清自己在这个派系里有多少话语权，以及这一手能推动多少。",
+      "genres": [
+        "大战略",
+        "内政"
+      ],
+      "targets": [
+        "rotk",
+        "grand"
+      ],
+      "beats": [
+        {
+          "title": "看派系",
+          "input": "打开派系一览",
+          "screen": "每个派系一条，横条显示我的话语权占多少",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "faction",
+              "x": 12,
+              "y": 26,
+              "label": "主战派",
+              "influence": 0.55,
+              "selected": false
+            },
+            {
+              "t": "faction",
+              "x": 12,
+              "y": 50,
+              "label": "主和派",
+              "influence": 0.2,
+              "selected": false
+            },
+            {
+              "t": "faction",
+              "x": 12,
+              "y": 74,
+              "label": "世家",
+              "influence": 0.35,
+              "selected": false
+            },
+            {
+              "t": "badge",
+              "text": "派系一览"
+            }
+          ],
+          "logic": "列出各派系及我在其中的话语权占比"
+        },
+        {
+          "title": "选派系",
+          "input": "选一个派系游说",
+          "screen": "该派系卡被选中，标出这一手要花多少影响力",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "faction",
+              "x": 12,
+              "y": 26,
+              "label": "主战派",
+              "influence": 0.55,
+              "selected": false
+            },
+            {
+              "t": "faction",
+              "x": 12,
+              "y": 50,
+              "label": "主和派",
+              "influence": 0.2,
+              "selected": true
+            },
+            {
+              "t": "faction",
+              "x": 12,
+              "y": 74,
+              "label": "世家",
+              "influence": 0.35,
+              "selected": false
+            },
+            {
+              "t": "cursor",
+              "x": 30,
+              "y": 62,
+              "mode": "up"
+            },
+            {
+              "t": "pool",
+              "x": 58,
+              "y": 30,
+              "label": "影响力",
+              "have": 0.6,
+              "cost": 0.25
+            },
+            {
+              "t": "badge",
+              "text": "选中派系"
+            }
+          ],
+          "logic": "把该派系设为当前目标并算出本次推动量"
+        },
+        {
+          "title": "生效",
+          "input": "游说生效",
+          "screen": "这个派系里我的话语权涨上去，别的派系不受影响",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "faction",
+              "x": 12,
+              "y": 26,
+              "label": "主战派",
+              "influence": 0.55,
+              "selected": false
+            },
+            {
+              "t": "faction",
+              "x": 12,
+              "y": 50,
+              "label": "主和派",
+              "influence": 0.5,
+              "selected": true
+            },
+            {
+              "t": "faction",
+              "x": 12,
+              "y": 74,
+              "label": "世家",
+              "influence": 0.35,
+              "selected": false
+            },
+            {
+              "t": "pool",
+              "x": 58,
+              "y": 30,
+              "label": "影响力",
+              "have": 0.35,
+              "cost": 0.0
+            },
+            {
+              "t": "toast",
+              "x": 52,
+              "y": 62,
+              "text": "主和派 +30% 话语权",
+              "kind": "gain"
+            },
+            {
+              "t": "badge",
+              "text": "游说成功"
+            }
+          ],
+          "logic": "结算游说，只改动该派系的话语权"
+        }
+      ],
+      "ludots": "大战略抽象目标：这是图鉴里唯一「目标不在具体空间」的一族。Ludots 现有目标类型只有位置 / 实体 / 方向 / 自身 / 界面槽位，没有区域、关系边、派系集合、规则槽这几类目标，也没有抽象资源池与延迟结算。",
+      "todos": [
+        "TODO: 目标类型扩展到区域 / 关系边 / 抽象集合 / 规则槽",
+        "TODO: 抽象资源池（威望 / 影响力 / 统治力）作为施放代价",
+        "TODO: 延迟结算（N 回合后生效）与到期回报",
+        "TODO: 按行政层级展开的影响面与代价缩放"
+      ],
+      "familyTitle": "大战略：对抽象东西下手",
+      "actionNo": "UX-196",
+      "actionKey": "gs-cast-on-faction",
+      "actionTitle": "对派系游说",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "gs-cast-on-faction"
+        }
+      ]
+    },
+    {
+      "id": "gs-enact-law",
+      "category": "grand-abstract",
+      "family": "grand-abstract",
+      "title": "颁布一条法令：目标是规则本身",
+      "summary": "法令改的不是某个人某块地，而是往后所有事的算法。所以它有前置条件、有冷却、改一次要等很久——这些都必须在按之前看清楚。",
+      "genres": [
+        "大战略",
+        "内政"
+      ],
+      "targets": [
+        "rotk",
+        "grand"
+      ],
+      "beats": [
+        {
+          "title": "看法令",
+          "input": "打开法令栏",
+          "screen": "能颁的和还没解锁的分开画，不给的要说为什么",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "lawslot",
+              "x": 14,
+              "y": 24,
+              "rows": [
+                {
+                  "name": "征兵制"
+                },
+                {
+                  "name": "科举取士"
+                },
+                {
+                  "name": "海贸开放",
+                  "locked": true
+                }
+              ],
+              "active": null
+            },
+            {
+              "t": "toast",
+              "x": 14,
+              "y": 82,
+              "text": "海贸开放：需先控两个港口",
+              "kind": "info"
+            },
+            {
+              "t": "badge",
+              "text": "法令栏"
+            }
+          ],
+          "logic": "按前置条件区分可颁布与未解锁的法令"
+        },
+        {
+          "title": "颁布",
+          "input": "选一条并确认颁布",
+          "screen": "花掉统治力，标出这条要几回合才落地",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "lawslot",
+              "x": 14,
+              "y": 24,
+              "rows": [
+                {
+                  "name": "征兵制"
+                },
+                {
+                  "name": "科举取士"
+                },
+                {
+                  "name": "海贸开放",
+                  "locked": true
+                }
+              ],
+              "active": 1
+            },
+            {
+              "t": "pool",
+              "x": 58,
+              "y": 30,
+              "label": "统治力",
+              "have": 0.75,
+              "cost": 0.4
+            },
+            {
+              "t": "delaymark",
+              "x": 72,
+              "y": 62,
+              "turns": 5,
+              "label": null
+            },
+            {
+              "t": "cursor",
+              "x": 30,
+              "y": 44,
+              "mode": "up"
+            },
+            {
+              "t": "badge",
+              "text": "颁布中"
+            }
+          ],
+          "logic": "扣除统治力并把该法令挂入生效倒计时"
+        },
+        {
+          "title": "生效与冷却",
+          "input": "落地后进入长冷却",
+          "screen": "规则从此改变，同时明确说多久之后才能再改",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "lawslot",
+              "x": 14,
+              "y": 24,
+              "rows": [
+                {
+                  "name": "征兵制"
+                },
+                {
+                  "name": "科举取士"
+                },
+                {
+                  "name": "海贸开放",
+                  "locked": true
+                }
+              ],
+              "active": 1
+            },
+            {
+              "t": "pool",
+              "x": 58,
+              "y": 30,
+              "label": "统治力",
+              "have": 0.35,
+              "cost": 0.0
+            },
+            {
+              "t": "toast",
+              "x": 52,
+              "y": 62,
+              "text": "已生效 · 20 回合内不能再改",
+              "kind": "loss"
+            },
+            {
+              "t": "deny",
+              "x": 76,
+              "y": 82,
+              "label": "改法令冷却中",
+              "r": 11
+            },
+            {
+              "t": "badge",
+              "text": "已生效"
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": null,
+              "cd": 0,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
+            }
+          ],
+          "logic": "法令生效并进入下一次改法的长冷却"
+        }
+      ],
+      "ludots": "大战略抽象目标：这是图鉴里唯一「目标不在具体空间」的一族。Ludots 现有目标类型只有位置 / 实体 / 方向 / 自身 / 界面槽位，没有区域、关系边、派系集合、规则槽这几类目标，也没有抽象资源池与延迟结算。",
+      "todos": [
+        "TODO: 目标类型扩展到区域 / 关系边 / 抽象集合 / 规则槽",
+        "TODO: 抽象资源池（威望 / 影响力 / 统治力）作为施放代价",
+        "TODO: 延迟结算（N 回合后生效）与到期回报",
+        "TODO: 按行政层级展开的影响面与代价缩放"
+      ],
+      "familyTitle": "大战略：对抽象东西下手",
+      "actionNo": "UX-197",
+      "actionKey": "gs-enact-law",
+      "actionTitle": "颁布法令改规则",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "gs-enact-law"
+        }
+      ]
+    },
+    {
+      "id": "gs-abstract-cost",
+      "category": "grand-abstract",
+      "family": "grand-abstract",
+      "title": "代价不是蓝条，是威望和影响力",
+      "summary": "大战略里按一下的代价常常是抽象资源：威望、影响力、外交点。它们不会自动回满，花出去要很久才攒回来，所以「够不够」和「值不值」得同时看得见。",
+      "genres": [
+        "大战略",
+        "内政"
+      ],
+      "targets": [
+        "rotk",
+        "grand"
+      ],
+      "beats": [
+        {
+          "title": "看代价",
+          "input": "选一个要花威望的动作",
+          "screen": "把当前有多少、这一手要花掉哪一段一起画出来",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "pool",
+              "x": 16,
+              "y": 30,
+              "label": "威望",
+              "have": 0.7,
+              "cost": 0.45
+            },
+            {
+              "t": "pool",
+              "x": 16,
+              "y": 58,
+              "label": "影响力",
+              "have": 0.5,
+              "cost": 0.0
+            },
+            {
+              "t": "menu",
+              "x": 58,
+              "y": 26,
+              "lines": [
+                "宣称头衔",
+                "花 45 威望"
+              ],
+              "active": 0
+            },
+            {
+              "t": "badge",
+              "text": "看代价"
+            }
+          ],
+          "logic": "取出该动作的抽象资源代价并与当前存量比对"
+        },
+        {
+          "title": "不够被拒",
+          "input": "威望不够时按下去",
+          "screen": "明确拒绝并说差多少，不允许透支",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "pool",
+              "x": 16,
+              "y": 30,
+              "label": "威望",
+              "have": 0.25,
+              "cost": 0.45
+            },
+            {
+              "t": "pool",
+              "x": 16,
+              "y": 58,
+              "label": "影响力",
+              "have": 0.5,
+              "cost": 0.0
+            },
+            {
+              "t": "deny",
+              "x": 64,
+              "y": 60,
+              "label": "威望差 20",
+              "r": 11
+            },
+            {
+              "t": "badge",
+              "text": "不够·拒绝"
+            }
+          ],
+          "logic": "存量不足时拒绝执行且不允许透支"
+        },
+        {
+          "title": "扣除",
+          "input": "攒够再按",
+          "screen": "扣掉那一段，剩下多少一眼看得出，回满要很久",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "pool",
+              "x": 16,
+              "y": 30,
+              "label": "威望",
+              "have": 0.3,
+              "cost": 0.0
+            },
+            {
+              "t": "pool",
+              "x": 16,
+              "y": 58,
+              "label": "影响力",
+              "have": 0.5,
+              "cost": 0.0
+            },
+            {
+              "t": "toast",
+              "x": 52,
+              "y": 30,
+              "text": "已花 45 威望",
+              "kind": "loss"
+            },
+            {
+              "t": "toast",
+              "x": 52,
+              "y": 58,
+              "text": "每回合回 2",
+              "kind": "info"
+            },
+            {
+              "t": "badge",
+              "text": "已扣除"
+            }
+          ],
+          "logic": "扣除代价并给出回复速率"
+        }
+      ],
+      "ludots": "大战略抽象目标：这是图鉴里唯一「目标不在具体空间」的一族。Ludots 现有目标类型只有位置 / 实体 / 方向 / 自身 / 界面槽位，没有区域、关系边、派系集合、规则槽这几类目标，也没有抽象资源池与延迟结算。",
+      "todos": [
+        "TODO: 目标类型扩展到区域 / 关系边 / 抽象集合 / 规则槽",
+        "TODO: 抽象资源池（威望 / 影响力 / 统治力）作为施放代价",
+        "TODO: 延迟结算（N 回合后生效）与到期回报",
+        "TODO: 按行政层级展开的影响面与代价缩放"
+      ],
+      "familyTitle": "大战略：对抽象东西下手",
+      "actionNo": "UX-198",
+      "actionKey": "gs-abstract-cost",
+      "actionTitle": "代价是威望与影响力",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "gs-abstract-cost"
+        }
+      ]
+    },
+    {
+      "id": "gs-tiered-scope",
+      "category": "grand-abstract",
+      "family": "grand-abstract",
+      "title": "生效范围是行政层级，不是一个圆",
+      "summary": "大战略的「范围」不是画个圈框住多少格，而是「这个省」「整个公国」「全国」。选层级就是选代价和影响面，必须让玩家看清这一手会波及到哪些地方。",
+      "genres": [
+        "大战略",
+        "内政"
+      ],
+      "targets": [
+        "rotk",
+        "grand"
+      ],
+      "beats": [
+        {
+          "title": "省级",
+          "input": "只对一个省生效",
+          "screen": "只有那一块高亮，代价最小",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "region",
+              "x": 26,
+              "y": 34,
+              "label": "河东",
+              "owner": "mine",
+              "selected": true,
+              "w": 46,
+              "h": 30
+            },
+            {
+              "t": "region",
+              "x": 58,
+              "y": 32,
+              "label": "上党",
+              "owner": "mine",
+              "selected": false,
+              "w": 46,
+              "h": 30
+            },
+            {
+              "t": "region",
+              "x": 40,
+              "y": 64,
+              "label": "太原",
+              "owner": "mine",
+              "selected": false,
+              "w": 46,
+              "h": 30
+            },
+            {
+              "t": "region",
+              "x": 72,
+              "y": 62,
+              "label": "雁门",
+              "owner": "mine",
+              "selected": false,
+              "w": 46,
+              "h": 30
+            },
+            {
+              "t": "pool",
+              "x": 14,
+              "y": 84,
+              "label": "统治力",
+              "have": 0.8,
+              "cost": 0.15
+            },
+            {
+              "t": "toast",
+              "x": 52,
+              "y": 84,
+              "text": "只影响河东",
+              "kind": "info"
+            },
+            {
+              "t": "badge",
+              "text": "省级"
+            }
+          ],
+          "logic": "按省级范围求受影响集合与对应代价"
+        },
+        {
+          "title": "公国级",
+          "input": "改成对整个公国生效",
+          "screen": "同属这个公国的省全部高亮，代价跟着涨",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "region",
+              "x": 26,
+              "y": 34,
+              "label": "河东",
+              "owner": "mine",
+              "selected": true,
+              "w": 46,
+              "h": 30
+            },
+            {
+              "t": "region",
+              "x": 58,
+              "y": 32,
+              "label": "上党",
+              "owner": "mine",
+              "selected": true,
+              "w": 46,
+              "h": 30
+            },
+            {
+              "t": "region",
+              "x": 40,
+              "y": 64,
+              "label": "太原",
+              "owner": "mine",
+              "selected": true,
+              "w": 46,
+              "h": 30
+            },
+            {
+              "t": "region",
+              "x": 72,
+              "y": 62,
+              "label": "雁门",
+              "owner": "mine",
+              "selected": false,
+              "w": 46,
+              "h": 30
+            },
+            {
+              "t": "pool",
+              "x": 14,
+              "y": 84,
+              "label": "统治力",
+              "have": 0.8,
+              "cost": 0.5
+            },
+            {
+              "t": "toast",
+              "x": 46,
+              "y": 84,
+              "text": "影响并州三郡",
+              "kind": "loss"
+            },
+            {
+              "t": "badge",
+              "text": "公国级"
+            }
+          ],
+          "logic": "按公国级范围扩大受影响集合并上调代价"
+        },
+        {
+          "title": "超出承受",
+          "input": "代价超出承受时",
+          "screen": "明确拒绝并指出是层级选太大，建议降一级",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "region",
+              "x": 26,
+              "y": 34,
+              "label": "河东",
+              "owner": "mine",
+              "selected": true,
+              "w": 46,
+              "h": 30
+            },
+            {
+              "t": "region",
+              "x": 58,
+              "y": 32,
+              "label": "上党",
+              "owner": "mine",
+              "selected": true,
+              "w": 46,
+              "h": 30
+            },
+            {
+              "t": "region",
+              "x": 40,
+              "y": 64,
+              "label": "太原",
+              "owner": "mine",
+              "selected": true,
+              "w": 46,
+              "h": 30
+            },
+            {
+              "t": "region",
+              "x": 72,
+              "y": 62,
+              "label": "雁门",
+              "owner": "mine",
+              "selected": true,
+              "w": 46,
+              "h": 30
+            },
+            {
+              "t": "pool",
+              "x": 14,
+              "y": 84,
+              "label": "统治力",
+              "have": 0.3,
+              "cost": 0.85
+            },
+            {
+              "t": "deny",
+              "x": 54,
+              "y": 50,
+              "label": "统治力不够·降一级",
+              "r": 11
+            },
+            {
+              "t": "badge",
+              "text": "层级太大"
+            }
+          ],
+          "logic": "代价超出存量时拒绝并建议降低层级"
+        }
+      ],
+      "ludots": "大战略抽象目标：这是图鉴里唯一「目标不在具体空间」的一族。Ludots 现有目标类型只有位置 / 实体 / 方向 / 自身 / 界面槽位，没有区域、关系边、派系集合、规则槽这几类目标，也没有抽象资源池与延迟结算。",
+      "todos": [
+        "TODO: 目标类型扩展到区域 / 关系边 / 抽象集合 / 规则槽",
+        "TODO: 抽象资源池（威望 / 影响力 / 统治力）作为施放代价",
+        "TODO: 延迟结算（N 回合后生效）与到期回报",
+        "TODO: 按行政层级展开的影响面与代价缩放"
+      ],
+      "familyTitle": "大战略：对抽象东西下手",
+      "actionNo": "UX-199",
+      "actionKey": "gs-tiered-scope",
+      "actionTitle": "生效范围是行政层级",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "gs-tiered-scope"
         }
       ]
     },
