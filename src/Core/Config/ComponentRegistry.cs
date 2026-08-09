@@ -1359,7 +1359,9 @@ namespace Ludots.Core.Config
                 throw new InvalidOperationException("MovementParticipation requires an object payload.");
             }
 
-            ValidateProperties(obj, "MovementParticipation", "physicsPresence", "displacement");
+            ValidateProperties(obj, "MovementParticipation", "execution", "physicsPresence", "displacement");
+            MovementExecutionKind execution = ParseMovementExecutionKind(
+                RequireStringProperty(obj, "execution", "MovementParticipation"));
             PhysicsPresenceKind physicsPresence = ParsePhysicsPresenceKind(
                 RequireStringProperty(obj, "physicsPresence", "MovementParticipation"));
 
@@ -1393,20 +1395,35 @@ namespace Ludots.Core.Config
                 throw new InvalidOperationException("MovementParticipation.displacement.maxDurationMs must be > 0.");
             }
 
-            entity.Add(new MovementParticipation
+            var participation = new MovementParticipation
             {
+                Execution = execution,
                 PhysicsPresence = physicsPresence,
                 DisplacementAllowed = displacementAllowed,
                 DisplacementHandbackSpeedThresholdCmPerSec = handbackSpeedThresholdCmPerSec,
                 DisplacementMaxDurationMs = maxDurationMs,
-            });
+            };
+
+            entity.Add(participation);
 
             // poseAuthority is runtime state, never authored: derive the initial owner from the
-            // declared physics presence so the entity enters the world with exactly one pose writer.
+            // declared execution + physics presence so the entity enters with exactly one pose writer.
             entity.Add(new PoseAuthority
             {
-                Value = MovementParticipationRules.DeriveInitialPoseAuthority(physicsPresence),
+                Value = MovementParticipationRules.DeriveInitialPoseAuthority(participation),
             });
+        }
+
+        private static MovementExecutionKind ParseMovementExecutionKind(string raw)
+        {
+            return raw switch
+            {
+                "nav" => MovementExecutionKind.Nav,
+                "motor" => MovementExecutionKind.Motor,
+                "physics" => MovementExecutionKind.Physics,
+                _ => throw new InvalidOperationException(
+                    $"MovementParticipation.execution '{raw}' is not configured (expected 'nav', 'motor' or 'physics').")
+            };
         }
 
         private static PhysicsPresenceKind ParsePhysicsPresenceKind(string raw)

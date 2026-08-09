@@ -23,6 +23,7 @@
   - [通用存档系统](architecture/save-system.md)
   - [AI Utility Autocast 契约](architecture/ai-utility-autocast-contract.md)
   - [实体仿真分层与车道](architecture/entity-simulation-layering.md)
+  - [移动意图与 per-entity 执行车道](architecture/movement-intent-and-execution-lanes.md)
   - [实体仿真工作流拆分](architecture/entity-simulation-workstreams.md)
   - [实体仿真阶段验收](architecture/entity-simulation-uat.md)
   - [能力标准 Showcase](architecture/capability-standard-showcases.md)

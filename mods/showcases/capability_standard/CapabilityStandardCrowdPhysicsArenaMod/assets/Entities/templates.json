@@ -96,6 +96,7 @@
         "profileId": "light"
       },
       "MovementParticipation": {
+        "execution": "nav",
         "physicsPresence": "kinematic",
         "displacement": {
           "allowed": true,
@@ -153,6 +154,7 @@
         "profileId": "heavy"
       },
       "MovementParticipation": {
+        "execution": "nav",
         "physicsPresence": "kinematic",
         "displacement": {
           "allowed": true,
@@ -210,6 +212,7 @@
         "profileId": "light"
       },
       "MovementParticipation": {
+        "execution": "nav",
         "physicsPresence": "kinematic",
         "displacement": {
           "allowed": true,
@@ -267,6 +270,7 @@
         "profileId": "heavy"
       },
       "MovementParticipation": {
+        "execution": "nav",
         "physicsPresence": "kinematic",
         "displacement": {
           "allowed": true,
