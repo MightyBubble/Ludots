@@ -48,14 +48,14 @@ window.PLAYER_ACTION_UX_CATALOG = {
     "aim"
   ],
   "checkpoint": {
-    "head": "6fd27d063",
+    "head": "11a3625f2",
     "branch_hint": "cursor/ux-action-id-platform-tabs-4211",
     "impl_notes": "scripts/player_action_ux_impl_notes.py",
     "beat_logic": "scripts/player_action_ux_beat_logic.py",
     "action_index": "scripts/player_action_ux_action_index.py",
     "note": "列表=unique actions；详情平台 tab；时序=设备/逻辑/画面；勿手改 catalog-data.js",
     "weak_storyboard_beats": [],
-    "unique_actions": 199,
+    "unique_actions": 219,
     "multi_platform_actions": 8
   },
   "categories": [
@@ -6200,6 +6200,631 @@ window.PLAYER_ACTION_UX_CATALOG = {
       "genres": [
         "内政",
         "大战略"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-200",
+      "key": "ab-input-buffer",
+      "title": "后摆里提前按会被记住",
+      "summary": "上一招还在收招，我已经按了下一招。好的手感是把这次按键记下来，一能动就立刻放出去；差的手感是直接吞掉，玩家只觉得「我明明按了」。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ab-input-buffer"
+        }
+      ],
+      "targets": [
+        "diablo",
+        "fps",
+        "gow"
+      ],
+      "genres": [
+        "FPS",
+        "动作RPG",
+        "战神"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-201",
+      "key": "ab-cancel-recovery",
+      "title": "用闪避砍掉自己的后摆",
+      "summary": "招放完还有一段收不回来的后摆。允许用闪避或格挡把它砍掉，手感立刻变利索；不允许就必须让玩家看清这段硬直有多长。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ab-cancel-recovery"
+        }
+      ],
+      "targets": [
+        "diablo",
+        "gow"
+      ],
+      "genres": [
+        "动作RPG",
+        "战神",
+        "魂like"
+      ],
+      "beatCount": 2,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-202",
+      "key": "ab-delayed-aoe",
+      "title": "先标地面过一会才炸",
+      "summary": "技能不是按下就结算：地上先亮出落点和倒数，双方都有时间反应——我可以趁机赶人，对方可以走开。倒数看不见就变成偷袭，不是设计。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ab-delayed-aoe"
+        }
+      ],
+      "targets": [
+        "diablo",
+        "gow",
+        "lol",
+        "wow"
+      ],
+      "genres": [
+        "ARPG",
+        "MMO",
+        "MOBA"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-203",
+      "key": "ab-reactive-trigger",
+      "title": "被打那一下自动触发",
+      "summary": "有些技能不是我主动放，而是挂着条件等触发：被打到就反伤、掉到某个血线就自动挡。既然不是我按的，就必须让我看清「它已经挂上了」和「它刚刚生效了」。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ab-reactive-trigger"
+        }
+      ],
+      "targets": [
+        "diablo",
+        "gow",
+        "lol",
+        "wow"
+      ],
+      "genres": [
+        "ARPG",
+        "MMO",
+        "MOBA"
+      ],
+      "beatCount": 2,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-204",
+      "key": "ab-charges-stack",
+      "title": "攒层数能连按几次",
+      "summary": "不是一颗一个冷却，而是攒到几层就能连按几次。玩家要能一眼看出「还剩几发」和「下一发多久回来」，否则连按到第三下才发现没了。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ab-charges-stack"
+        }
+      ],
+      "targets": [
+        "diablo",
+        "gow",
+        "lol",
+        "wow"
+      ],
+      "genres": [
+        "ARPG",
+        "MMO",
+        "MOBA"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-205",
+      "key": "ab-global-cooldown",
+      "title": "全局冷却压住整栏",
+      "summary": "MMO 里按下任何一个技能，整栏都会压一小段公共冷却。它和单技能的转圈是两件事，必须画得能分开——不然玩家以为所有技能都进了长 CD。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ab-global-cooldown"
+        }
+      ],
+      "targets": [
+        "wow"
+      ],
+      "genres": [
+        "MMO",
+        "魔兽世界"
+      ],
+      "beatCount": 2,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-206",
+      "key": "ab-hp-cost",
+      "title": "拿血当代价",
+      "summary": "有些技能不花蓝花血。那就必须回答两个问题：血不够时是禁止还是允许自杀，以及扣的血能不能被治疗抢救回来。含糊的话玩家会莫名其妙死掉。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ab-hp-cost"
+        }
+      ],
+      "targets": [
+        "diablo",
+        "gow",
+        "lol"
+      ],
+      "genres": [
+        "ARPG",
+        "MOBA",
+        "暗黑"
+      ],
+      "beatCount": 2,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-207",
+      "key": "ab-cost-on-resolve",
+      "title": "按下就扣还是打中才扣",
+      "summary": "按下立刻扣，被打断就白花；打中才扣，落空不亏。两种规则手感差很远，而且直接影响玩家敢不敢在混战里按。规则必须写在画面上。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ab-cost-on-resolve"
+        }
+      ],
+      "targets": [
+        "lol",
+        "ra2",
+        "sc2",
+        "war3",
+        "wow"
+      ],
+      "genres": [
+        "MMO",
+        "MOBA",
+        "RTS"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-208",
+      "key": "ab-miss-vs-immune",
+      "title": "没打中和被免疫是两回事",
+      "summary": "同样是「没生效」，闪避掉是我没命中，免疫是他吃不到。两种要给不同的反馈，否则玩家不知道该换目标还是换技能。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ab-miss-vs-immune"
+        }
+      ],
+      "targets": [
+        "lol",
+        "war3",
+        "wow"
+      ],
+      "genres": [
+        "MMO",
+        "MOBA",
+        "魔兽争霸3"
+      ],
+      "beatCount": 2,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-209",
+      "key": "ab-shield-absorb",
+      "title": "护盾吃掉了多少伤害",
+      "summary": "打上去掉的不是血而是盾，玩家要看清吃掉了多少、还剩多少盾、什么时候破。只显示「伤害 100」而不显示盾，玩家会以为技能没生效。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ab-shield-absorb"
+        }
+      ],
+      "targets": [
+        "diablo",
+        "gow",
+        "lol",
+        "wow"
+      ],
+      "genres": [
+        "ARPG",
+        "MMO",
+        "MOBA"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-210",
+      "key": "ab-stack-detonate",
+      "title": "叠层再引爆",
+      "summary": "先靠普攻或小技能叠层，叠够了用另一颗一次性引爆。玩家必须能读出「现在几层」和「够不够引爆」，否则只能瞎按。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ab-stack-detonate"
+        }
+      ],
+      "targets": [
+        "diablo",
+        "gow",
+        "lol"
+      ],
+      "genres": [
+        "ARPG",
+        "MOBA",
+        "暗黑"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-211",
+      "key": "ab-reflect-back",
+      "title": "我的技能被弹回来",
+      "summary": "对方开了反射，我扔出去的东西原路打回自己。这一下必须让我看懂是「被弹回」而不是「我打空了」，否则同样的亏会吃第二次。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ab-reflect-back"
+        }
+      ],
+      "targets": [
+        "lol",
+        "war3",
+        "wow"
+      ],
+      "genres": [
+        "MMO",
+        "MOBA",
+        "魔兽争霸3"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-212",
+      "key": "ab-target-existing-effect",
+      "title": "目标是身上那条状态",
+      "summary": "驱散、偷取、延长——点的是人，动的是他身上那一条状态。所以那条状态本身要能被看见、被指认，玩家才知道自己动的是哪一条。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ab-target-existing-effect"
+        }
+      ],
+      "targets": [
+        "lol",
+        "war3",
+        "wow"
+      ],
+      "genres": [
+        "MOBA",
+        "魔兽世界",
+        "魔兽争霸3"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-213",
+      "key": "ab-target-own-ability",
+      "title": "目标是我自己的另一个技能",
+      "summary": "重置某颗技能的冷却、把一颗技能吞掉换资源、复制刚用过的那一招——目标是技能栏上的一颗，不是场上任何人。所以要能在技能栏上指认。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ab-target-own-ability"
+        }
+      ],
+      "targets": [
+        "lol",
+        "sc2",
+        "wow"
+      ],
+      "genres": [
+        "MOBA",
+        "SC2",
+        "魔兽世界"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-214",
+      "key": "ab-target-projectile",
+      "title": "目标是飞在空中那颗",
+      "summary": "对方的火球正在飞过来，我可以打掉它、也可以把它弹回去。目标不是人也不是地，而是那个还在飞的投射物——它必须画得能被瞄上。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ab-target-projectile"
+        }
+      ],
+      "targets": [
+        "diablo",
+        "fps",
+        "gow",
+        "lol"
+      ],
+      "genres": [
+        "FPS",
+        "MOBA",
+        "动作RPG"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-215",
+      "key": "ab-target-own-summon",
+      "title": "目标是我自己放下的东西",
+      "summary": "图腾、守卫、地雷放下之后还能被我自己当目标：引爆它、挪走它、给它加状态。所以它得是场上一个能被指认的东西，不是特效。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ab-target-own-summon"
+        }
+      ],
+      "targets": [
+        "diablo",
+        "gow",
+        "sc2",
+        "wow"
+      ],
+      "genres": [
+        "ARPG",
+        "SC2",
+        "魔兽世界"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-216",
+      "key": "ab-talent-variant",
+      "title": "同一键因天赋结果不同",
+      "summary": "两个玩家按同一颗技能，一个是单体爆发、一个是范围减速——因为天赋选得不一样。图标必须能看出「我这颗是哪一种」，不然玩家照着别人的攻略按就错了。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ab-talent-variant"
+        }
+      ],
+      "targets": [
+        "diablo",
+        "lol",
+        "wow"
+      ],
+      "genres": [
+        "MOBA",
+        "暗黑",
+        "魔兽世界"
+      ],
+      "beatCount": 2,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-217",
+      "key": "ab-element-reaction",
+      "title": "两种元素凑出额外反应",
+      "summary": "先给目标附上水，再打火，就不是两次普通伤害，而是触发一次额外反应。玩家要能看出「他身上现在挂着什么」，否则永远凑不出反应。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ab-element-reaction"
+        }
+      ],
+      "targets": [
+        "diablo",
+        "gow",
+        "zelda"
+      ],
+      "genres": [
+        "ARPG",
+        "塞尔达",
+        "开放世界"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-218",
+      "key": "ab-terrain-shape",
+      "title": "技能改的是地形本身",
+      "summary": "造一道墙、把地面结成冰、挖个坑——技能改完之后地图和刚才不一样了，双方的走法都得跟着变。所以造出来的东西必须留在画面上，而不是一闪而过。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ab-terrain-shape"
+        }
+      ],
+      "targets": [
+        "diablo",
+        "gow",
+        "lol",
+        "zelda"
+      ],
+      "genres": [
+        "ARPG",
+        "MOBA",
+        "塞尔达"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-219",
+      "key": "ab-conditional-target",
+      "title": "目标是所有满足条件的",
+      "summary": "「对所有中毒的敌人生效」这种技能，玩家点的不是某个人，而是一个条件。所以画面要先标出谁满足条件，再让玩家看清这一下打到了哪几个。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ab-conditional-target"
+        }
+      ],
+      "targets": [
+        "diablo",
+        "lol",
+        "wow"
+      ],
+      "genres": [
+        "MMO",
+        "MOBA",
+        "暗黑"
       ],
       "beatCount": 3,
       "caseCount": 1
@@ -17178,6 +17803,14 @@ window.PLAYER_ACTION_UX_CATALOG = {
                 "E",
                 "R"
               ]
+            },
+            {
+              "t": "buffchip",
+              "x": 45,
+              "y": 30,
+              "label": "饰品充能",
+              "stacks": 2,
+              "kind": "buff"
             },
             {
               "t": "badge",
@@ -29162,6 +29795,3964 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "platform": "kbm",
           "platformLabel": "键鼠",
           "caseId": "block-crowd-control"
+        }
+      ]
+    },
+    {
+      "id": "ab-input-buffer",
+      "category": "ab-timing",
+      "family": "ab-timing",
+      "title": "在后摆里提前按，系统记着到点替我放",
+      "summary": "上一招还在收招，我已经按了下一招。好的手感是把这次按键记下来，一能动就立刻放出去；差的手感是直接吞掉，玩家只觉得「我明明按了」。",
+      "genres": [
+        "战神",
+        "动作RPG",
+        "FPS"
+      ],
+      "targets": [
+        "gow",
+        "diablo",
+        "fps"
+      ],
+      "beats": [
+        {
+          "title": "提前按",
+          "input": "上一招还在后摆时按下一招",
+          "screen": "按键落在缓存窗里，被记下来而不是吞掉",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "inputwindow",
+              "x": 12,
+              "y": 26,
+              "phases": [
+                {
+                  "name": "前摇",
+                  "kind": "startup",
+                  "w": 1
+                },
+                {
+                  "name": "判定",
+                  "kind": "active",
+                  "w": 1
+                },
+                {
+                  "name": "后摆（可缓存）",
+                  "kind": "buffer",
+                  "w": 2
+                }
+              ],
+              "pressAt": 0.72,
+              "fireAt": null
+            },
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 62,
+              "face": 20
+            },
+            {
+              "t": "toast",
+              "x": 16,
+              "y": 82,
+              "text": "已记下这次按键",
+              "kind": "gain"
+            },
+            {
+              "t": "badge",
+              "text": "落在缓存窗"
+            }
+          ],
+          "logic": "在后摆的缓存窗内收到按键并暂存这次意图"
+        },
+        {
+          "title": "到点放出",
+          "input": "后摆一结束立刻放出",
+          "screen": "不用我再按一次，接得上连贯",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "inputwindow",
+              "x": 12,
+              "y": 26,
+              "phases": [
+                {
+                  "name": "前摇",
+                  "kind": "startup",
+                  "w": 1
+                },
+                {
+                  "name": "判定",
+                  "kind": "active",
+                  "w": 1
+                },
+                {
+                  "name": "后摆（可缓存）",
+                  "kind": "buffer",
+                  "w": 2
+                }
+              ],
+              "pressAt": 0.72,
+              "fireAt": 1.0
+            },
+            {
+              "t": "hero",
+              "x": 46,
+              "y": 60,
+              "face": 20
+            },
+            {
+              "t": "unit",
+              "x": 72,
+              "y": 48,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "arrow",
+              "x1": 52,
+              "y1": 58,
+              "x2": 68,
+              "y2": 50,
+              "kind": "attack"
+            },
+            {
+              "t": "impact",
+              "x": 72,
+              "y": 48,
+              "r": 14,
+              "heavy": false
+            },
+            {
+              "t": "badge",
+              "text": "到点自动放"
+            }
+          ],
+          "logic": "后摆结束的第一帧取出暂存意图并施放"
+        },
+        {
+          "title": "按太早",
+          "input": "按得太早，落在缓存窗之前",
+          "screen": "这次按键不算，明确提示太早而不是悄悄吞掉",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "inputwindow",
+              "x": 12,
+              "y": 26,
+              "phases": [
+                {
+                  "name": "前摇",
+                  "kind": "startup",
+                  "w": 1
+                },
+                {
+                  "name": "判定",
+                  "kind": "active",
+                  "w": 1
+                },
+                {
+                  "name": "后摆（可缓存）",
+                  "kind": "buffer",
+                  "w": 2
+                }
+              ],
+              "pressAt": 0.18,
+              "fireAt": null
+            },
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 62,
+              "face": 20
+            },
+            {
+              "t": "deny",
+              "x": 70,
+              "y": 62,
+              "label": "太早·不进缓存",
+              "r": 11
+            },
+            {
+              "t": "badge",
+              "text": "早于缓存窗"
+            }
+          ],
+          "logic": "按键早于缓存窗，丢弃并回报太早"
+        }
+      ],
+      "ludots": "技能时机：GAS 有前摇/判定/后摆的时间片概念，但没有输入缓存窗、没有取消后摆的正式规则、没有延迟结算的落点标记，也没有受击触发的被动挂载。",
+      "todos": [
+        "TODO: 输入缓存窗（在后摆内暂存意图并在可动首帧释放）",
+        "TODO: 取消规则表（哪些动作可以砍掉哪些后摆）",
+        "TODO: 延迟结算（落点标记 + 到期只结算圈内）",
+        "TODO: 受击触发型被动的挂载与来源标注"
+      ],
+      "familyTitle": "技能的时机：早按、断招、延迟、自动触发",
+      "actionNo": "UX-200",
+      "actionKey": "ab-input-buffer",
+      "actionTitle": "后摆里提前按会被记住",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ab-input-buffer"
+        }
+      ]
+    },
+    {
+      "id": "ab-cancel-recovery",
+      "category": "ab-timing",
+      "family": "ab-timing",
+      "title": "用位移或格挡砍掉自己的收招",
+      "summary": "招放完还有一段收不回来的后摆。允许用闪避或格挡把它砍掉，手感立刻变利索；不允许就必须让玩家看清这段硬直有多长。",
+      "genres": [
+        "战神",
+        "动作RPG",
+        "魂like"
+      ],
+      "targets": [
+        "gow",
+        "diablo"
+      ],
+      "beats": [
+        {
+          "title": "后摆硬直",
+          "input": "招放完进入后摆",
+          "screen": "后摆这段动不了，时间轴上标出来有多长",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "inputwindow",
+              "x": 12,
+              "y": 26,
+              "phases": [
+                {
+                  "name": "判定",
+                  "kind": "active",
+                  "w": 1
+                },
+                {
+                  "name": "后摆·硬直",
+                  "kind": "recovery",
+                  "w": 2
+                }
+              ],
+              "pressAt": null,
+              "fireAt": null
+            },
+            {
+              "t": "hero",
+              "x": 44,
+              "y": 62,
+              "face": 20
+            },
+            {
+              "t": "unit",
+              "x": 72,
+              "y": 48,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "deny",
+              "x": 44,
+              "y": 84,
+              "label": "这段动不了",
+              "r": 11
+            },
+            {
+              "t": "badge",
+              "text": "硬直中"
+            }
+          ],
+          "logic": "招式进入后摆硬直，期间不接受移动输入"
+        },
+        {
+          "title": "取消后摆",
+          "input": "在后摆里按闪避",
+          "screen": "后摆被砍掉，直接进入闪避",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "inputwindow",
+              "x": 12,
+              "y": 26,
+              "phases": [
+                {
+                  "name": "判定",
+                  "kind": "active",
+                  "w": 1
+                },
+                {
+                  "name": "后摆·被砍掉",
+                  "kind": "buffer",
+                  "w": 2
+                }
+              ],
+              "pressAt": 0.55,
+              "fireAt": 0.55
+            },
+            {
+              "t": "hero",
+              "x": 62,
+              "y": 56,
+              "face": 20
+            },
+            {
+              "t": "path",
+              "points": [
+                [
+                  44,
+                  62
+                ],
+                [
+                  62,
+                  56
+                ]
+              ],
+              "kind": "move"
+            },
+            {
+              "t": "ring",
+              "x": 62,
+              "y": 56,
+              "r": 11,
+              "kind": "buff"
+            },
+            {
+              "t": "toast",
+              "x": 14,
+              "y": 82,
+              "text": "后摆已取消",
+              "kind": "gain"
+            },
+            {
+              "t": "badge",
+              "text": "闪避取消"
+            }
+          ],
+          "logic": "后摆内收到闪避输入，取消剩余硬直并转入闪避"
+        }
+      ],
+      "ludots": "技能时机：GAS 有前摇/判定/后摆的时间片概念，但没有输入缓存窗、没有取消后摆的正式规则、没有延迟结算的落点标记，也没有受击触发的被动挂载。",
+      "todos": [
+        "TODO: 输入缓存窗（在后摆内暂存意图并在可动首帧释放）",
+        "TODO: 取消规则表（哪些动作可以砍掉哪些后摆）",
+        "TODO: 延迟结算（落点标记 + 到期只结算圈内）",
+        "TODO: 受击触发型被动的挂载与来源标注"
+      ],
+      "familyTitle": "技能的时机：早按、断招、延迟、自动触发",
+      "actionNo": "UX-201",
+      "actionKey": "ab-cancel-recovery",
+      "actionTitle": "用闪避砍掉自己的后摆",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ab-cancel-recovery"
+        }
+      ]
+    },
+    {
+      "id": "ab-delayed-aoe",
+      "category": "ab-timing",
+      "family": "ab-timing",
+      "title": "先在地上标一块，过一会儿才炸",
+      "summary": "技能不是按下就结算：地上先亮出落点和倒数，双方都有时间反应——我可以趁机赶人，对方可以走开。倒数看不见就变成偷袭，不是设计。",
+      "genres": [
+        "MOBA",
+        "ARPG",
+        "MMO"
+      ],
+      "targets": [
+        "lol",
+        "wow",
+        "gow",
+        "diablo"
+      ],
+      "beats": [
+        {
+          "title": "标记落点",
+          "input": "放出后地面亮起落点与倒数",
+          "screen": "范围圈亮着，读条走着，还没结算",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 30,
+              "y": 62,
+              "face": 0
+            },
+            {
+              "t": "circle",
+              "x": 68,
+              "y": 42,
+              "r": 20,
+              "ok": true
+            },
+            {
+              "t": "bar",
+              "x": 68,
+              "y": 24,
+              "ratio": 0.6,
+              "kind": "cast",
+              "label": "1.5 秒后炸",
+              "broken": false
+            },
+            {
+              "t": "unit",
+              "x": 68,
+              "y": 42,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": null,
+              "cd": 0,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
+            },
+            {
+              "t": "badge",
+              "text": "已标记"
+            }
+          ],
+          "logic": "在落点挂上延迟结算标记并开始倒数"
+        },
+        {
+          "title": "被躲开",
+          "input": "对方走出去了",
+          "screen": "圈里空了，到点只炸个空地",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 30,
+              "y": 62,
+              "face": 0
+            },
+            {
+              "t": "circle",
+              "x": 68,
+              "y": 42,
+              "r": 20,
+              "ok": true
+            },
+            {
+              "t": "bar",
+              "x": 68,
+              "y": 24,
+              "ratio": 0.95,
+              "kind": "cast",
+              "label": "就要炸",
+              "broken": false
+            },
+            {
+              "t": "unit",
+              "x": 90,
+              "y": 60,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "arrow",
+              "x1": 72,
+              "y1": 46,
+              "x2": 86,
+              "y2": 58,
+              "kind": "move"
+            },
+            {
+              "t": "toast",
+              "x": 18,
+              "y": 26,
+              "text": "目标已离开圈内",
+              "kind": "loss"
+            },
+            {
+              "t": "badge",
+              "text": "躲开了"
+            }
+          ],
+          "logic": "倒数期间持续判定圈内目标集合"
+        },
+        {
+          "title": "到点结算",
+          "input": "到点结算",
+          "screen": "圈内的才吃到，圈外的没事",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 30,
+              "y": 62,
+              "face": 0
+            },
+            {
+              "t": "impact",
+              "x": 68,
+              "y": 42,
+              "r": 24,
+              "heavy": true
+            },
+            {
+              "t": "unit",
+              "x": 90,
+              "y": 60,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "toast",
+              "x": 18,
+              "y": 26,
+              "text": "只结算圈内",
+              "kind": "info"
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": null,
+              "cd": 0,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
+            },
+            {
+              "t": "badge",
+              "text": "到点炸开"
+            }
+          ],
+          "logic": "倒数结束只对圈内目标结算"
+        }
+      ],
+      "ludots": "技能时机：GAS 有前摇/判定/后摆的时间片概念，但没有输入缓存窗、没有取消后摆的正式规则、没有延迟结算的落点标记，也没有受击触发的被动挂载。",
+      "todos": [
+        "TODO: 输入缓存窗（在后摆内暂存意图并在可动首帧释放）",
+        "TODO: 取消规则表（哪些动作可以砍掉哪些后摆）",
+        "TODO: 延迟结算（落点标记 + 到期只结算圈内）",
+        "TODO: 受击触发型被动的挂载与来源标注"
+      ],
+      "familyTitle": "技能的时机：早按、断招、延迟、自动触发",
+      "actionNo": "UX-202",
+      "actionKey": "ab-delayed-aoe",
+      "actionTitle": "先标地面过一会才炸",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ab-delayed-aoe"
+        }
+      ]
+    },
+    {
+      "id": "ab-reactive-trigger",
+      "category": "ab-timing",
+      "family": "ab-timing",
+      "title": "不用按：被打的那一下自己触发",
+      "summary": "有些技能不是我主动放，而是挂着条件等触发：被打到就反伤、掉到某个血线就自动挡。既然不是我按的，就必须让我看清「它已经挂上了」和「它刚刚生效了」。",
+      "genres": [
+        "MOBA",
+        "MMO",
+        "ARPG"
+      ],
+      "targets": [
+        "lol",
+        "wow",
+        "gow",
+        "diablo"
+      ],
+      "beats": [
+        {
+          "title": "挂上条件",
+          "input": "先挂上这个被动/预备技",
+          "screen": "技能栏那颗标成待触发，不占我的出手",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 46,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "buffchip",
+              "x": 46,
+              "y": 32,
+              "label": "受击反伤 待触发",
+              "stacks": null,
+              "kind": "buff"
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": null,
+              "cd": null,
+              "extra": null,
+              "off": [],
+              "dot": 2,
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
+            },
+            {
+              "t": "badge",
+              "text": "已挂上"
+            }
+          ],
+          "logic": "挂上受击触发条件，不占用主动出手"
+        },
+        {
+          "title": "被打触发",
+          "input": "被打的那一下自动触发",
+          "screen": "反伤打回去，明确标出这不是我按的",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 46,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 74,
+              "y": 46,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "arrow",
+              "x1": 70,
+              "y1": 48,
+              "x2": 52,
+              "y2": 56,
+              "kind": "attack"
+            },
+            {
+              "t": "impact",
+              "x": 46,
+              "y": 58,
+              "r": 12,
+              "heavy": false
+            },
+            {
+              "t": "arrow",
+              "x1": 50,
+              "y1": 54,
+              "x2": 70,
+              "y2": 48,
+              "kind": "attack"
+            },
+            {
+              "t": "impact",
+              "x": 74,
+              "y": 46,
+              "r": 14,
+              "heavy": false
+            },
+            {
+              "t": "toast",
+              "x": 14,
+              "y": 26,
+              "text": "受击自动触发",
+              "kind": "gain"
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": null,
+              "cd": 2,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
+            },
+            {
+              "t": "badge",
+              "text": "自动反伤"
+            }
+          ],
+          "logic": "受击满足条件时自动施放并标明非玩家输入"
+        }
+      ],
+      "ludots": "技能时机：GAS 有前摇/判定/后摆的时间片概念，但没有输入缓存窗、没有取消后摆的正式规则、没有延迟结算的落点标记，也没有受击触发的被动挂载。",
+      "todos": [
+        "TODO: 输入缓存窗（在后摆内暂存意图并在可动首帧释放）",
+        "TODO: 取消规则表（哪些动作可以砍掉哪些后摆）",
+        "TODO: 延迟结算（落点标记 + 到期只结算圈内）",
+        "TODO: 受击触发型被动的挂载与来源标注"
+      ],
+      "familyTitle": "技能的时机：早按、断招、延迟、自动触发",
+      "actionNo": "UX-203",
+      "actionKey": "ab-reactive-trigger",
+      "actionTitle": "被打那一下自动触发",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ab-reactive-trigger"
+        }
+      ]
+    },
+    {
+      "id": "ab-charges-stack",
+      "category": "ab-cost",
+      "family": "ab-cost",
+      "title": "攒层数：这一颗能连按几次",
+      "summary": "不是一颗一个冷却，而是攒到几层就能连按几次。玩家要能一眼看出「还剩几发」和「下一发多久回来」，否则连按到第三下才发现没了。",
+      "genres": [
+        "MOBA",
+        "MMO",
+        "ARPG"
+      ],
+      "targets": [
+        "lol",
+        "wow",
+        "gow",
+        "diablo"
+      ],
+      "beats": [
+        {
+          "title": "攒满",
+          "input": "攒满三层",
+          "screen": "图标上标着 3，可以连按三次",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 46,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": 1,
+              "cd": null,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
+            },
+            {
+              "t": "buffchip",
+              "x": 46,
+              "y": 30,
+              "label": "闪现",
+              "stacks": 3,
+              "kind": "buff"
+            },
+            {
+              "t": "badge",
+              "text": "3 层可用"
+            }
+          ],
+          "logic": "该技能充能层数已满，可连续施放"
+        },
+        {
+          "title": "连按两次",
+          "input": "连按两次",
+          "screen": "层数掉到 1，同时开始回充下一层",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 70,
+              "y": 50,
+              "face": 0
+            },
+            {
+              "t": "path",
+              "points": [
+                [
+                  46,
+                  58
+                ],
+                [
+                  58,
+                  54
+                ],
+                [
+                  70,
+                  50
+                ]
+              ],
+              "kind": "move"
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": 1,
+              "cd": null,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
+            },
+            {
+              "t": "buffchip",
+              "x": 70,
+              "y": 26,
+              "label": "闪现",
+              "stacks": 1,
+              "kind": "buff"
+            },
+            {
+              "t": "bar",
+              "x": 70,
+              "y": 40,
+              "ratio": 0.4,
+              "kind": "charge",
+              "label": "回充中",
+              "broken": false
+            },
+            {
+              "t": "badge",
+              "text": "剩 1 层"
+            }
+          ],
+          "logic": "每次施放扣一层并启动下一层回充"
+        },
+        {
+          "title": "用光",
+          "input": "层数用光再按",
+          "screen": "明确说层数用完了、还差多久回一层，不是「冷却中」",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 70,
+              "y": 50,
+              "face": 0
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": null,
+              "cd": null,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": 1,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
+            },
+            {
+              "t": "buffchip",
+              "x": 70,
+              "y": 26,
+              "label": "闪现",
+              "stacks": 0,
+              "kind": "debuff"
+            },
+            {
+              "t": "bar",
+              "x": 70,
+              "y": 40,
+              "ratio": 0.65,
+              "kind": "charge",
+              "label": "回充中",
+              "broken": false
+            },
+            {
+              "t": "deny",
+              "x": 46,
+              "y": 62,
+              "label": "层数用光",
+              "r": 11
+            },
+            {
+              "t": "badge",
+              "text": "0 层"
+            }
+          ],
+          "logic": "层数为零时拒绝施放并回报回充剩余"
+        }
+      ],
+      "ludots": "技能代价：现有代价只有单一资源与单技能冷却。充能层数、全局冷却、以生命为代价、以及「按下预扣 / 命中才扣 / 落空退还」这套结算时机都没有。",
+      "todos": [
+        "TODO: 充能层数（层上限 + 逐层回充 + 层数用尽的区分性拒绝）",
+        "TODO: 全局冷却与共享冷却组，且与单技能冷却在表现上分开",
+        "TODO: 生命作为代价及其阈值保护",
+        "TODO: 代价结算时机策略（预扣 / 命中扣 / 打断退还）"
+      ],
+      "familyTitle": "技能的代价：层数、全局冷却、拿血换",
+      "actionNo": "UX-204",
+      "actionKey": "ab-charges-stack",
+      "actionTitle": "攒层数能连按几次",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ab-charges-stack"
+        }
+      ]
+    },
+    {
+      "id": "ab-global-cooldown",
+      "category": "ab-cost",
+      "family": "ab-cost",
+      "title": "全局冷却：按了一个，别的短暂都不能按",
+      "summary": "MMO 里按下任何一个技能，整栏都会压一小段公共冷却。它和单技能的转圈是两件事，必须画得能分开——不然玩家以为所有技能都进了长 CD。",
+      "genres": [
+        "魔兽世界",
+        "MMO"
+      ],
+      "targets": [
+        "wow"
+      ],
+      "beats": [
+        {
+          "title": "压全局",
+          "input": "按下一个技能",
+          "screen": "这一颗进自己的冷却，整栏同时压一层薄的全局冷却",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 46,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 74,
+              "y": 44,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "arrow",
+              "x1": 52,
+              "y1": 56,
+              "x2": 70,
+              "y2": 46,
+              "kind": "attack"
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": 0,
+              "cd": 0,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": null,
+              "gcd": true,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
+            },
+            {
+              "t": "toast",
+              "x": 14,
+              "y": 26,
+              "text": "全局冷却 1.5 秒",
+              "kind": "info"
+            },
+            {
+              "t": "badge",
+              "text": "全局CD中"
+            }
+          ],
+          "logic": "施放后同时进入该技能冷却与全局冷却"
+        },
+        {
+          "title": "恢复",
+          "input": "全局冷却过去",
+          "screen": "别的技能恢复可按，刚放那颗还在自己的长冷却里",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 46,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 74,
+              "y": 44,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": null,
+              "cd": 0,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
+            },
+            {
+              "t": "toast",
+              "x": 14,
+              "y": 26,
+              "text": "全局已恢复 · 那颗仍在冷却",
+              "kind": "gain"
+            },
+            {
+              "t": "badge",
+              "text": "区分两种CD"
+            }
+          ],
+          "logic": "全局冷却结束，其余技能恢复可用"
+        }
+      ],
+      "ludots": "技能代价：现有代价只有单一资源与单技能冷却。充能层数、全局冷却、以生命为代价、以及「按下预扣 / 命中才扣 / 落空退还」这套结算时机都没有。",
+      "todos": [
+        "TODO: 充能层数（层上限 + 逐层回充 + 层数用尽的区分性拒绝）",
+        "TODO: 全局冷却与共享冷却组，且与单技能冷却在表现上分开",
+        "TODO: 生命作为代价及其阈值保护",
+        "TODO: 代价结算时机策略（预扣 / 命中扣 / 打断退还）"
+      ],
+      "familyTitle": "技能的代价：层数、全局冷却、拿血换",
+      "actionNo": "UX-205",
+      "actionKey": "ab-global-cooldown",
+      "actionTitle": "全局冷却压住整栏",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ab-global-cooldown"
+        }
+      ]
+    },
+    {
+      "id": "ab-hp-cost",
+      "category": "ab-cost",
+      "family": "ab-cost",
+      "title": "拿血换：代价是自己的命",
+      "summary": "有些技能不花蓝花血。那就必须回答两个问题：血不够时是禁止还是允许自杀，以及扣的血能不能被治疗抢救回来。含糊的话玩家会莫名其妙死掉。",
+      "genres": [
+        "MOBA",
+        "暗黑",
+        "ARPG"
+      ],
+      "targets": [
+        "lol",
+        "gow",
+        "diablo"
+      ],
+      "beats": [
+        {
+          "title": "扣血放出",
+          "input": "血够时按下",
+          "screen": "血条掉一截，技能放出，扣血和伤害分开显示",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 46,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "bar",
+              "x": 46,
+              "y": 30,
+              "ratio": 0.55,
+              "kind": "hp",
+              "label": "生命 -20%",
+              "broken": false
+            },
+            {
+              "t": "unit",
+              "x": 74,
+              "y": 44,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "arrow",
+              "x1": 52,
+              "y1": 56,
+              "x2": 70,
+              "y2": 46,
+              "kind": "attack"
+            },
+            {
+              "t": "impact",
+              "x": 74,
+              "y": 44,
+              "r": 15,
+              "heavy": false
+            },
+            {
+              "t": "toast",
+              "x": 14,
+              "y": 78,
+              "text": "自伤 20% 生命",
+              "kind": "loss"
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": null,
+              "cd": 0,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
+            },
+            {
+              "t": "badge",
+              "text": "血换伤害"
+            }
+          ],
+          "logic": "以生命为代价扣除并施放，自伤与伤害分开计"
+        },
+        {
+          "title": "血不够",
+          "input": "血不够时按下",
+          "screen": "按设定禁止施放并说清差多少，而不是让我按死自己",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 46,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "bar",
+              "x": 46,
+              "y": 30,
+              "ratio": 0.12,
+              "kind": "hp",
+              "label": "生命 12%",
+              "broken": false
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": null,
+              "cd": null,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": 0,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
+            },
+            {
+              "t": "deny",
+              "x": 70,
+              "y": 58,
+              "label": "血不够·禁止自杀",
+              "r": 11
+            },
+            {
+              "t": "badge",
+              "text": "被挡住"
+            }
+          ],
+          "logic": "生命不足阈值时按设定拒绝施放"
+        }
+      ],
+      "ludots": "技能代价：现有代价只有单一资源与单技能冷却。充能层数、全局冷却、以生命为代价、以及「按下预扣 / 命中才扣 / 落空退还」这套结算时机都没有。",
+      "todos": [
+        "TODO: 充能层数（层上限 + 逐层回充 + 层数用尽的区分性拒绝）",
+        "TODO: 全局冷却与共享冷却组，且与单技能冷却在表现上分开",
+        "TODO: 生命作为代价及其阈值保护",
+        "TODO: 代价结算时机策略（预扣 / 命中扣 / 打断退还）"
+      ],
+      "familyTitle": "技能的代价：层数、全局冷却、拿血换",
+      "actionNo": "UX-206",
+      "actionKey": "ab-hp-cost",
+      "actionTitle": "拿血当代价",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ab-hp-cost"
+        }
+      ]
+    },
+    {
+      "id": "ab-cost-on-resolve",
+      "category": "ab-cost",
+      "family": "ab-cost",
+      "title": "代价什么时候扣：按下就扣，还是打到才扣",
+      "summary": "按下立刻扣，被打断就白花；打中才扣，落空不亏。两种规则手感差很远，而且直接影响玩家敢不敢在混战里按。规则必须写在画面上。",
+      "genres": [
+        "MOBA",
+        "MMO",
+        "RTS"
+      ],
+      "targets": [
+        "sc2",
+        "ra2",
+        "war3",
+        "lol",
+        "wow"
+      ],
+      "beats": [
+        {
+          "title": "预扣",
+          "input": "按下时先预扣，标成待结算",
+          "screen": "资源先冻结一段，还没真正花掉",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 60,
+              "face": 0
+            },
+            {
+              "t": "bar",
+              "x": 40,
+              "y": 32,
+              "ratio": 0.6,
+              "kind": "cast",
+              "label": "蓝 已冻结 30",
+              "broken": false
+            },
+            {
+              "t": "unit",
+              "x": 74,
+              "y": 44,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "circle",
+              "x": 74,
+              "y": 44,
+              "r": 16,
+              "ok": true
+            },
+            {
+              "t": "toast",
+              "x": 14,
+              "y": 24,
+              "text": "预扣 30 · 待结算",
+              "kind": "info"
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": 0,
+              "cd": null,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
+            },
+            {
+              "t": "badge",
+              "text": "预扣"
+            }
+          ],
+          "logic": "按下时冻结资源并标记为待结算"
+        },
+        {
+          "title": "命中扣除",
+          "input": "命中结算，正式扣掉",
+          "screen": "冻结的那段真正花掉，进入冷却",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 60,
+              "face": 0
+            },
+            {
+              "t": "bar",
+              "x": 40,
+              "y": 32,
+              "ratio": 0.6,
+              "kind": "cast",
+              "label": "蓝 -30",
+              "broken": false
+            },
+            {
+              "t": "unit",
+              "x": 74,
+              "y": 44,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "impact",
+              "x": 74,
+              "y": 44,
+              "r": 16,
+              "heavy": false
+            },
+            {
+              "t": "toast",
+              "x": 14,
+              "y": 24,
+              "text": "已正式扣除",
+              "kind": "loss"
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": null,
+              "cd": 0,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
+            },
+            {
+              "t": "badge",
+              "text": "命中才扣"
+            }
+          ],
+          "logic": "命中结算后正式扣除并进入冷却"
+        },
+        {
+          "title": "落空退还",
+          "input": "落空或被打断，退回来",
+          "screen": "冻结的那段退还，技能也不进冷却",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 60,
+              "face": 0
+            },
+            {
+              "t": "bar",
+              "x": 40,
+              "y": 32,
+              "ratio": 0.9,
+              "kind": "cast",
+              "label": "蓝 已退还",
+              "broken": false
+            },
+            {
+              "t": "toast",
+              "x": 14,
+              "y": 24,
+              "text": "落空 · 已退还",
+              "kind": "gain"
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": 0,
+              "cd": null,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
+            },
+            {
+              "t": "deny",
+              "x": 66,
+              "y": 56,
+              "label": "本次落空",
+              "r": 11
+            },
+            {
+              "t": "badge",
+              "text": "退还"
+            }
+          ],
+          "logic": "落空或被打断则解冻资源且不计冷却"
+        }
+      ],
+      "ludots": "技能代价：现有代价只有单一资源与单技能冷却。充能层数、全局冷却、以生命为代价、以及「按下预扣 / 命中才扣 / 落空退还」这套结算时机都没有。",
+      "todos": [
+        "TODO: 充能层数（层上限 + 逐层回充 + 层数用尽的区分性拒绝）",
+        "TODO: 全局冷却与共享冷却组，且与单技能冷却在表现上分开",
+        "TODO: 生命作为代价及其阈值保护",
+        "TODO: 代价结算时机策略（预扣 / 命中扣 / 打断退还）"
+      ],
+      "familyTitle": "技能的代价：层数、全局冷却、拿血换",
+      "actionNo": "UX-207",
+      "actionKey": "ab-cost-on-resolve",
+      "actionTitle": "按下就扣还是打中才扣",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ab-cost-on-resolve"
+        }
+      ]
+    },
+    {
+      "id": "ab-miss-vs-immune",
+      "category": "ab-resolve",
+      "family": "ab-resolve",
+      "title": "没打中 和 被免疫，是两回事",
+      "summary": "同样是「没生效」，闪避掉是我没命中，免疫是他吃不到。两种要给不同的反馈，否则玩家不知道该换目标还是换技能。",
+      "genres": [
+        "MOBA",
+        "魔兽争霸3",
+        "MMO"
+      ],
+      "targets": [
+        "war3",
+        "lol",
+        "wow"
+      ],
+      "beats": [
+        {
+          "title": "未命中",
+          "input": "被闪避：判定没过",
+          "screen": "飘「未命中」，技能算用掉了",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 60,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 74,
+              "y": 44,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "arrow",
+              "x1": 46,
+              "y1": 58,
+              "x2": 68,
+              "y2": 46,
+              "kind": "attack"
+            },
+            {
+              "t": "toast",
+              "x": 16,
+              "y": 26,
+              "text": "未命中",
+              "kind": "loss"
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": null,
+              "cd": 0,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
+            },
+            {
+              "t": "badge",
+              "text": "MISS"
+            }
+          ],
+          "logic": "这次判定没过，记为未命中并照样消耗本次施放"
+        },
+        {
+          "title": "被免疫",
+          "input": "被免疫：判定过了但吃不到",
+          "screen": "飘「免疫」并标出是哪种免疫，提示换手段",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 60,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 74,
+              "y": 44,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "buffchip",
+              "x": 74,
+              "y": 24,
+              "label": "魔法免疫",
+              "stacks": null,
+              "kind": "shield"
+            },
+            {
+              "t": "arrow",
+              "x1": 46,
+              "y1": 58,
+              "x2": 68,
+              "y2": 46,
+              "kind": "attack"
+            },
+            {
+              "t": "deny",
+              "x": 74,
+              "y": 60,
+              "label": "被免疫·换物理",
+              "r": 11
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": null,
+              "cd": 0,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
+            },
+            {
+              "t": "badge",
+              "text": "免疫"
+            }
+          ],
+          "logic": "判定过了但目标免疫该类型，效果被无效化"
+        }
+      ],
+      "ludots": "技能结算：命中未命中、被免疫、护盾吸收与溢出、叠层与引爆、反射，这些结果类型目前既没有统一的判定阶段，也没有对应的玩家可见回报。",
+      "todos": [
+        "TODO: 结算阶段划分（命中判定 / 免疫判定 / 吸收 / 溢出）",
+        "TODO: 叠层容器与引爆消耗（层数上限、来源、过期）",
+        "TODO: 反射与归属反转（含反射后作用于原施放者）",
+        "TODO: 结果原因码 → 玩家可见回报（未命中 / 免疫 / 被吸收）"
+      ],
+      "familyTitle": "技能打出去之后：没中、被吃、叠层、弹回",
+      "actionNo": "UX-208",
+      "actionKey": "ab-miss-vs-immune",
+      "actionTitle": "没打中和被免疫是两回事",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ab-miss-vs-immune"
+        }
+      ]
+    },
+    {
+      "id": "ab-shield-absorb",
+      "category": "ab-resolve",
+      "family": "ab-resolve",
+      "title": "护盾把伤害吃掉了多少",
+      "summary": "打上去掉的不是血而是盾，玩家要看清吃掉了多少、还剩多少盾、什么时候破。只显示「伤害 100」而不显示盾，玩家会以为技能没生效。",
+      "genres": [
+        "MOBA",
+        "MMO",
+        "ARPG"
+      ],
+      "targets": [
+        "lol",
+        "wow",
+        "gow",
+        "diablo"
+      ],
+      "beats": [
+        {
+          "title": "有盾",
+          "input": "目标身上有盾",
+          "screen": "盾条画在血条上面，标出还剩多少",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 60,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 74,
+              "y": 44,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "bar",
+              "x": 74,
+              "y": 22,
+              "ratio": 0.7,
+              "kind": "shield",
+              "label": "护盾 70",
+              "broken": false
+            },
+            {
+              "t": "bar",
+              "x": 74,
+              "y": 30,
+              "ratio": 1.0,
+              "kind": "hp",
+              "label": "生命 100",
+              "broken": false
+            },
+            {
+              "t": "badge",
+              "text": "有护盾"
+            }
+          ],
+          "logic": "目标存在护盾层，伤害优先扣护盾"
+        },
+        {
+          "title": "吸收",
+          "input": "打上去先吃盾",
+          "screen": "盾条掉，血条一点没动，明确标出被吸收多少",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 60,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 74,
+              "y": 44,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "arrow",
+              "x1": 46,
+              "y1": 58,
+              "x2": 68,
+              "y2": 46,
+              "kind": "attack"
+            },
+            {
+              "t": "impact",
+              "x": 74,
+              "y": 44,
+              "r": 14,
+              "heavy": false
+            },
+            {
+              "t": "bar",
+              "x": 74,
+              "y": 22,
+              "ratio": 0.2,
+              "kind": "shield",
+              "label": "护盾 20",
+              "broken": false
+            },
+            {
+              "t": "bar",
+              "x": 74,
+              "y": 30,
+              "ratio": 1.0,
+              "kind": "hp",
+              "label": "生命 100",
+              "broken": false
+            },
+            {
+              "t": "toast",
+              "x": 14,
+              "y": 74,
+              "text": "吸收 50 · 血未掉",
+              "kind": "info"
+            },
+            {
+              "t": "badge",
+              "text": "盾吃掉了"
+            }
+          ],
+          "logic": "伤害在护盾内被完全吸收，生命不变"
+        },
+        {
+          "title": "破盾",
+          "input": "盾破之后才掉血",
+          "screen": "盾条消失，溢出的那部分才打到血上",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 60,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 74,
+              "y": 44,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "arrow",
+              "x1": 46,
+              "y1": 58,
+              "x2": 68,
+              "y2": 46,
+              "kind": "attack"
+            },
+            {
+              "t": "impact",
+              "x": 74,
+              "y": 44,
+              "r": 18,
+              "heavy": true
+            },
+            {
+              "t": "bar",
+              "x": 74,
+              "y": 30,
+              "ratio": 0.7,
+              "kind": "hp",
+              "label": "生命 70",
+              "broken": false
+            },
+            {
+              "t": "toast",
+              "x": 14,
+              "y": 74,
+              "text": "盾已破 · 溢出 30 打到血",
+              "kind": "loss"
+            },
+            {
+              "t": "badge",
+              "text": "破盾溢出"
+            }
+          ],
+          "logic": "护盾耗尽后溢出部分才作用于生命"
+        }
+      ],
+      "ludots": "技能结算：命中未命中、被免疫、护盾吸收与溢出、叠层与引爆、反射，这些结果类型目前既没有统一的判定阶段，也没有对应的玩家可见回报。",
+      "todos": [
+        "TODO: 结算阶段划分（命中判定 / 免疫判定 / 吸收 / 溢出）",
+        "TODO: 叠层容器与引爆消耗（层数上限、来源、过期）",
+        "TODO: 反射与归属反转（含反射后作用于原施放者）",
+        "TODO: 结果原因码 → 玩家可见回报（未命中 / 免疫 / 被吸收）"
+      ],
+      "familyTitle": "技能打出去之后：没中、被吃、叠层、弹回",
+      "actionNo": "UX-209",
+      "actionKey": "ab-shield-absorb",
+      "actionTitle": "护盾吃掉了多少伤害",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ab-shield-absorb"
+        }
+      ]
+    },
+    {
+      "id": "ab-stack-detonate",
+      "category": "ab-resolve",
+      "family": "ab-resolve",
+      "title": "叠层数，再用另一个技能引爆",
+      "summary": "先靠普攻或小技能叠层，叠够了用另一颗一次性引爆。玩家必须能读出「现在几层」和「够不够引爆」，否则只能瞎按。",
+      "genres": [
+        "MOBA",
+        "暗黑",
+        "ARPG"
+      ],
+      "targets": [
+        "lol",
+        "gow",
+        "diablo"
+      ],
+      "beats": [
+        {
+          "title": "叠层",
+          "input": "打几下叠层",
+          "screen": "目标头上层数往上走，标出叠满是几层",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 60,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 74,
+              "y": 44,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "buffchip",
+              "x": 74,
+              "y": 24,
+              "label": "标记",
+              "stacks": 2,
+              "kind": "debuff"
+            },
+            {
+              "t": "arrow",
+              "x1": 46,
+              "y1": 58,
+              "x2": 68,
+              "y2": 46,
+              "kind": "attack"
+            },
+            {
+              "t": "impact",
+              "x": 74,
+              "y": 44,
+              "r": 11,
+              "heavy": false
+            },
+            {
+              "t": "toast",
+              "x": 14,
+              "y": 74,
+              "text": "叠满 4 层可引爆",
+              "kind": "info"
+            },
+            {
+              "t": "badge",
+              "text": "2/4 层"
+            }
+          ],
+          "logic": "每次命中为目标叠加一层标记"
+        },
+        {
+          "title": "叠满",
+          "input": "叠满了",
+          "screen": "层数到顶，引爆那颗技能亮起来提示可用",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 60,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 74,
+              "y": 44,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "buffchip",
+              "x": 74,
+              "y": 24,
+              "label": "标记",
+              "stacks": 4,
+              "kind": "debuff"
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": 3,
+              "cd": null,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
+            },
+            {
+              "t": "toast",
+              "x": 14,
+              "y": 74,
+              "text": "已满 4 层 · R 可引爆",
+              "kind": "gain"
+            },
+            {
+              "t": "badge",
+              "text": "4/4 层"
+            }
+          ],
+          "logic": "层数达到阈值，解锁引爆技能"
+        },
+        {
+          "title": "引爆",
+          "input": "按引爆",
+          "screen": "层数被吃掉，一次性打出总伤害",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 60,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 74,
+              "y": 44,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "impact",
+              "x": 74,
+              "y": 44,
+              "r": 24,
+              "heavy": true
+            },
+            {
+              "t": "buffchip",
+              "x": 74,
+              "y": 24,
+              "label": "标记",
+              "stacks": 0,
+              "kind": "debuff"
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": null,
+              "cd": 3,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
+            },
+            {
+              "t": "toast",
+              "x": 14,
+              "y": 74,
+              "text": "消耗 4 层 · 引爆",
+              "kind": "loss"
+            },
+            {
+              "t": "badge",
+              "text": "引爆"
+            }
+          ],
+          "logic": "引爆消耗全部层数并一次性结算"
+        }
+      ],
+      "ludots": "技能结算：命中未命中、被免疫、护盾吸收与溢出、叠层与引爆、反射，这些结果类型目前既没有统一的判定阶段，也没有对应的玩家可见回报。",
+      "todos": [
+        "TODO: 结算阶段划分（命中判定 / 免疫判定 / 吸收 / 溢出）",
+        "TODO: 叠层容器与引爆消耗（层数上限、来源、过期）",
+        "TODO: 反射与归属反转（含反射后作用于原施放者）",
+        "TODO: 结果原因码 → 玩家可见回报（未命中 / 免疫 / 被吸收）"
+      ],
+      "familyTitle": "技能打出去之后：没中、被吃、叠层、弹回",
+      "actionNo": "UX-210",
+      "actionKey": "ab-stack-detonate",
+      "actionTitle": "叠层再引爆",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ab-stack-detonate"
+        }
+      ]
+    },
+    {
+      "id": "ab-reflect-back",
+      "category": "ab-resolve",
+      "family": "ab-resolve",
+      "title": "我的技能被弹回来了",
+      "summary": "对方开了反射，我扔出去的东西原路打回自己。这一下必须让我看懂是「被弹回」而不是「我打空了」，否则同样的亏会吃第二次。",
+      "genres": [
+        "魔兽争霸3",
+        "MOBA",
+        "MMO"
+      ],
+      "targets": [
+        "war3",
+        "lol",
+        "wow"
+      ],
+      "beats": [
+        {
+          "title": "看清反射",
+          "input": "对方开着反射盾",
+          "screen": "盾的图标明确写着反射，不是普通护盾",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 34,
+              "y": 60,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 76,
+              "y": 44,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "buffchip",
+              "x": 76,
+              "y": 24,
+              "label": "法术反射",
+              "stacks": null,
+              "kind": "shield"
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": 1,
+              "cd": null,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
+            },
+            {
+              "t": "badge",
+              "text": "看清了"
+            }
+          ],
+          "logic": "目标持有反射状态，标出其类型"
+        },
+        {
+          "title": "被弹回",
+          "input": "照样扔过去",
+          "screen": "飞行物在半路被弹头，方向反过来",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 34,
+              "y": 60,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 76,
+              "y": 44,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "buffchip",
+              "x": 76,
+              "y": 24,
+              "label": "法术反射",
+              "stacks": null,
+              "kind": "shield"
+            },
+            {
+              "t": "projectile",
+              "x": 56,
+              "y": 52,
+              "angle": 155,
+              "label": "被弹回"
+            },
+            {
+              "t": "toast",
+              "x": 14,
+              "y": 26,
+              "text": "已被反射",
+              "kind": "error"
+            },
+            {
+              "t": "badge",
+              "text": "原路返回"
+            }
+          ],
+          "logic": "投射物进入反射判定，行进方向反转"
+        },
+        {
+          "title": "打到自己",
+          "input": "打到自己身上",
+          "screen": "伤害落在我头上，并说清是我自己的技能",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 34,
+              "y": 60,
+              "face": 0
+            },
+            {
+              "t": "impact",
+              "x": 34,
+              "y": 60,
+              "r": 16,
+              "heavy": true
+            },
+            {
+              "t": "unit",
+              "x": 76,
+              "y": 44,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "bar",
+              "x": 34,
+              "y": 34,
+              "ratio": 0.6,
+              "kind": "hp",
+              "label": "我掉血",
+              "broken": false
+            },
+            {
+              "t": "toast",
+              "x": 14,
+              "y": 26,
+              "text": "被自己的技能打中",
+              "kind": "error"
+            },
+            {
+              "t": "badge",
+              "text": "自己吃"
+            }
+          ],
+          "logic": "反射后的效果按原参数作用于施放者"
+        }
+      ],
+      "ludots": "技能结算：命中未命中、被免疫、护盾吸收与溢出、叠层与引爆、反射，这些结果类型目前既没有统一的判定阶段，也没有对应的玩家可见回报。",
+      "todos": [
+        "TODO: 结算阶段划分（命中判定 / 免疫判定 / 吸收 / 溢出）",
+        "TODO: 叠层容器与引爆消耗（层数上限、来源、过期）",
+        "TODO: 反射与归属反转（含反射后作用于原施放者）",
+        "TODO: 结果原因码 → 玩家可见回报（未命中 / 免疫 / 被吸收）"
+      ],
+      "familyTitle": "技能打出去之后：没中、被吃、叠层、弹回",
+      "actionNo": "UX-211",
+      "actionKey": "ab-reflect-back",
+      "actionTitle": "我的技能被弹回来",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ab-reflect-back"
+        }
+      ]
+    },
+    {
+      "id": "ab-target-existing-effect",
+      "category": "ab-meta",
+      "family": "ab-meta",
+      "title": "目标是身上那个状态，不是人",
+      "summary": "驱散、偷取、延长——点的是人，动的是他身上那一条状态。所以那条状态本身要能被看见、被指认，玩家才知道自己动的是哪一条。",
+      "genres": [
+        "魔兽世界",
+        "MOBA",
+        "魔兽争霸3"
+      ],
+      "targets": [
+        "war3",
+        "lol",
+        "wow"
+      ],
+      "beats": [
+        {
+          "title": "看状态",
+          "input": "看清他身上有哪几条状态",
+          "screen": "状态一条条列出来，可驱散的和不可驱散的分开",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 34,
+              "y": 60,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 74,
+              "y": 46,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "buffchip",
+              "x": 74,
+              "y": 20,
+              "label": "加速",
+              "stacks": null,
+              "kind": "buff"
+            },
+            {
+              "t": "buffchip",
+              "x": 74,
+              "y": 32,
+              "label": "护盾",
+              "stacks": null,
+              "kind": "shield"
+            },
+            {
+              "t": "badge",
+              "text": "两条增益"
+            }
+          ],
+          "logic": "列出目标身上的状态并区分可否被移除"
+        },
+        {
+          "title": "驱散",
+          "input": "驱散掉其中一条",
+          "screen": "被驱散那条从列表里消失，其余不动",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 34,
+              "y": 60,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 74,
+              "y": 46,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "buffchip",
+              "x": 74,
+              "y": 32,
+              "label": "护盾",
+              "stacks": null,
+              "kind": "shield"
+            },
+            {
+              "t": "arrow",
+              "x1": 40,
+              "y1": 58,
+              "x2": 68,
+              "y2": 48,
+              "kind": "attack"
+            },
+            {
+              "t": "toast",
+              "x": 12,
+              "y": 24,
+              "text": "已驱散：加速",
+              "kind": "gain"
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": null,
+              "cd": 1,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
+            },
+            {
+              "t": "badge",
+              "text": "驱散一条"
+            }
+          ],
+          "logic": "移除所选那一条状态，其余保留"
+        },
+        {
+          "title": "偷取",
+          "input": "换成偷取",
+          "screen": "那条状态转到我身上，他失去我获得",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 34,
+              "y": 60,
+              "face": 0
+            },
+            {
+              "t": "buffchip",
+              "x": 34,
+              "y": 34,
+              "label": "加速（偷来）",
+              "stacks": null,
+              "kind": "buff"
+            },
+            {
+              "t": "unit",
+              "x": 74,
+              "y": 46,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "buffchip",
+              "x": 74,
+              "y": 32,
+              "label": "护盾",
+              "stacks": null,
+              "kind": "shield"
+            },
+            {
+              "t": "arrow",
+              "x1": 68,
+              "y1": 48,
+              "x2": 40,
+              "y2": 58,
+              "kind": "move"
+            },
+            {
+              "t": "toast",
+              "x": 12,
+              "y": 24,
+              "text": "已偷取：加速",
+              "kind": "gain"
+            },
+            {
+              "t": "badge",
+              "text": "偷到手"
+            }
+          ],
+          "logic": "把所选状态从目标转移到施放者身上"
+        }
+      ],
+      "ludots": "以效果或技能为目标：这是目标类型的另一大缺口。现有目标类型里没有「身上那条状态」「技能栏上那一颗」「飞行中的投射物」「我自己放下的召唤物」，也没有状态转移与技能冷却改写的正式链路。",
+      "todos": [
+        "TODO: 目标类型扩展到状态实例 / 技能实例 / 投射物 / 己方召唤物",
+        "TODO: 状态的可移除性与转移（驱散 / 偷取 / 延长）",
+        "TODO: 对技能实例施放（重置冷却 / 消耗换资源 / 复制）",
+        "TODO: 投射物成为可选目标（拦截 / 反弹归属反转）"
+      ],
+      "familyTitle": "技能打在效果和技能身上",
+      "actionNo": "UX-212",
+      "actionKey": "ab-target-existing-effect",
+      "actionTitle": "目标是身上那条状态",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ab-target-existing-effect"
+        }
+      ]
+    },
+    {
+      "id": "ab-target-own-ability",
+      "category": "ab-meta",
+      "family": "ab-meta",
+      "title": "目标是我自己的另一个技能",
+      "summary": "重置某颗技能的冷却、把一颗技能吞掉换资源、复制刚用过的那一招——目标是技能栏上的一颗，不是场上任何人。所以要能在技能栏上指认。",
+      "genres": [
+        "MOBA",
+        "魔兽世界",
+        "SC2"
+      ],
+      "targets": [
+        "sc2",
+        "lol",
+        "wow"
+      ],
+      "beats": [
+        {
+          "title": "选一颗",
+          "input": "进入「选一颗技能」的状态",
+          "screen": "技能栏上可选的那几颗亮起，等我点一颗",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 46,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": null,
+              "cd": 1,
+              "extra": 3,
+              "off": [],
+              "dot": null,
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
+            },
+            {
+              "t": "toast",
+              "x": 12,
+              "y": 24,
+              "text": "选一颗技能来重置",
+              "kind": "info"
+            },
+            {
+              "t": "cursor",
+              "x": 46,
+              "y": 78,
+              "mode": "aim"
+            },
+            {
+              "t": "badge",
+              "text": "选技能"
+            }
+          ],
+          "logic": "进入以己方技能为目标的选择态"
+        },
+        {
+          "title": "重置它",
+          "input": "点中冷却中的那颗",
+          "screen": "它的冷却被清掉，立刻可用",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 46,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": 1,
+              "cd": null,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
+            },
+            {
+              "t": "toast",
+              "x": 12,
+              "y": 24,
+              "text": "已重置：那颗冷却清空",
+              "kind": "gain"
+            },
+            {
+              "t": "badge",
+              "text": "冷却清空"
+            }
+          ],
+          "logic": "清除所选技能的剩余冷却"
+        },
+        {
+          "title": "吞掉换资源",
+          "input": "换成吞掉它换资源",
+          "screen": "那一格变空，换来一段资源，明确说这一颗没了",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 46,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": null,
+              "cd": null,
+              "extra": null,
+              "off": [
+                1
+              ],
+              "dot": null,
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
+            },
+            {
+              "t": "bar",
+              "x": 46,
+              "y": 32,
+              "ratio": 0.9,
+              "kind": "cast",
+              "label": "蓝量 +40",
+              "broken": false
+            },
+            {
+              "t": "toast",
+              "x": 12,
+              "y": 24,
+              "text": "已吞掉那颗 · 换 40 蓝",
+              "kind": "loss"
+            },
+            {
+              "t": "badge",
+              "text": "这颗没了"
+            }
+          ],
+          "logic": "移除所选技能并按换算返还资源"
+        }
+      ],
+      "ludots": "以效果或技能为目标：这是目标类型的另一大缺口。现有目标类型里没有「身上那条状态」「技能栏上那一颗」「飞行中的投射物」「我自己放下的召唤物」，也没有状态转移与技能冷却改写的正式链路。",
+      "todos": [
+        "TODO: 目标类型扩展到状态实例 / 技能实例 / 投射物 / 己方召唤物",
+        "TODO: 状态的可移除性与转移（驱散 / 偷取 / 延长）",
+        "TODO: 对技能实例施放（重置冷却 / 消耗换资源 / 复制）",
+        "TODO: 投射物成为可选目标（拦截 / 反弹归属反转）"
+      ],
+      "familyTitle": "技能打在效果和技能身上",
+      "actionNo": "UX-213",
+      "actionKey": "ab-target-own-ability",
+      "actionTitle": "目标是我自己的另一个技能",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ab-target-own-ability"
+        }
+      ]
+    },
+    {
+      "id": "ab-target-projectile",
+      "category": "ab-meta",
+      "family": "ab-meta",
+      "title": "目标是飞在空中的那颗东西",
+      "summary": "对方的火球正在飞过来，我可以打掉它、也可以把它弹回去。目标不是人也不是地，而是那个还在飞的投射物——它必须画得能被瞄上。",
+      "genres": [
+        "FPS",
+        "动作RPG",
+        "MOBA"
+      ],
+      "targets": [
+        "lol",
+        "gow",
+        "diablo",
+        "fps"
+      ],
+      "beats": [
+        {
+          "title": "它在飞",
+          "input": "对方的投射物正在飞来",
+          "screen": "飞行物本体和轨迹都画出来，能看出还剩多远",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 28,
+              "y": 60,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 84,
+              "y": 44,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "projectile",
+              "x": 62,
+              "y": 50,
+              "angle": 160,
+              "label": "火球"
+            },
+            {
+              "t": "crosshair",
+              "x": 62,
+              "y": 50,
+              "locked": false,
+              "spread": "tight"
+            },
+            {
+              "t": "badge",
+              "text": "可以瞄它"
+            }
+          ],
+          "logic": "把飞行中的投射物加入可选目标集合"
+        },
+        {
+          "title": "打掉它",
+          "input": "瞄它并打掉",
+          "screen": "投射物在半空炸掉，没打到我",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 28,
+              "y": 60,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 84,
+              "y": 44,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "projectile",
+              "x": 62,
+              "y": 50,
+              "angle": 160,
+              "label": "被打掉"
+            },
+            {
+              "t": "impact",
+              "x": 62,
+              "y": 50,
+              "r": 15,
+              "heavy": false
+            },
+            {
+              "t": "toast",
+              "x": 12,
+              "y": 26,
+              "text": "已拦截",
+              "kind": "gain"
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": null,
+              "cd": 0,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
+            },
+            {
+              "t": "badge",
+              "text": "拦截成功"
+            }
+          ],
+          "logic": "命中投射物使其提前销毁"
+        },
+        {
+          "title": "弹回去",
+          "input": "换成弹回去",
+          "screen": "同一颗东西换个方向飞回他脸上",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 28,
+              "y": 60,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 84,
+              "y": 44,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "projectile",
+              "x": 66,
+              "y": 48,
+              "angle": -15,
+              "label": "弹回去"
+            },
+            {
+              "t": "impact",
+              "x": 84,
+              "y": 44,
+              "r": 15,
+              "heavy": false
+            },
+            {
+              "t": "toast",
+              "x": 12,
+              "y": 26,
+              "text": "已反弹",
+              "kind": "gain"
+            },
+            {
+              "t": "badge",
+              "text": "反弹"
+            }
+          ],
+          "logic": "反转投射物归属与朝向使其飞回来源"
+        }
+      ],
+      "ludots": "以效果或技能为目标：这是目标类型的另一大缺口。现有目标类型里没有「身上那条状态」「技能栏上那一颗」「飞行中的投射物」「我自己放下的召唤物」，也没有状态转移与技能冷却改写的正式链路。",
+      "todos": [
+        "TODO: 目标类型扩展到状态实例 / 技能实例 / 投射物 / 己方召唤物",
+        "TODO: 状态的可移除性与转移（驱散 / 偷取 / 延长）",
+        "TODO: 对技能实例施放（重置冷却 / 消耗换资源 / 复制）",
+        "TODO: 投射物成为可选目标（拦截 / 反弹归属反转）"
+      ],
+      "familyTitle": "技能打在效果和技能身上",
+      "actionNo": "UX-214",
+      "actionKey": "ab-target-projectile",
+      "actionTitle": "目标是飞在空中那颗",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ab-target-projectile"
+        }
+      ]
+    },
+    {
+      "id": "ab-target-own-summon",
+      "category": "ab-meta",
+      "family": "ab-meta",
+      "title": "目标是我自己放下的那个东西",
+      "summary": "图腾、守卫、地雷放下之后还能被我自己当目标：引爆它、挪走它、给它加状态。所以它得是场上一个能被指认的东西，不是特效。",
+      "genres": [
+        "魔兽世界",
+        "SC2",
+        "ARPG"
+      ],
+      "targets": [
+        "sc2",
+        "wow",
+        "gow",
+        "diablo"
+      ],
+      "beats": [
+        {
+          "title": "放下",
+          "input": "先放下一个图腾",
+          "screen": "图腾立在地上，看得出是我方的，不是对方的",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 34,
+              "y": 62,
+              "face": 0
+            },
+            {
+              "t": "summon",
+              "x": 62,
+              "y": 46,
+              "label": "雷图腾"
+            },
+            {
+              "t": "ring",
+              "x": 62,
+              "y": 46,
+              "r": 18,
+              "kind": "buff"
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": null,
+              "cd": 0,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
+            },
+            {
+              "t": "badge",
+              "text": "我的图腾"
+            }
+          ],
+          "logic": "在落点生成归属自己的召唤物"
+        },
+        {
+          "title": "引爆它",
+          "input": "再对它施法：引爆",
+          "screen": "图腾被我自己引爆，范围内结算",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 34,
+              "y": 62,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 76,
+              "y": 40,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "impact",
+              "x": 62,
+              "y": 46,
+              "r": 24,
+              "heavy": true
+            },
+            {
+              "t": "cursor",
+              "x": 62,
+              "y": 46,
+              "mode": "up"
+            },
+            {
+              "t": "toast",
+              "x": 12,
+              "y": 26,
+              "text": "引爆我的图腾",
+              "kind": "loss"
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": null,
+              "cd": 1,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
+            },
+            {
+              "t": "badge",
+              "text": "引爆自己的"
+            }
+          ],
+          "logic": "以自己的召唤物为目标施放并结算其范围效果"
+        },
+        {
+          "title": "消耗掉",
+          "input": "图腾没了，格子空出来",
+          "screen": "明确说它已经用掉了，名额空出来可以再放",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 34,
+              "y": 62,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 76,
+              "y": 40,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": 0,
+              "cd": null,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
+            },
+            {
+              "t": "toast",
+              "x": 12,
+              "y": 26,
+              "text": "图腾已消耗 · 可再放",
+              "kind": "info"
+            },
+            {
+              "t": "badge",
+              "text": "可再放"
+            }
+          ],
+          "logic": "召唤物被消耗后释放其占用名额"
+        }
+      ],
+      "ludots": "以效果或技能为目标：这是目标类型的另一大缺口。现有目标类型里没有「身上那条状态」「技能栏上那一颗」「飞行中的投射物」「我自己放下的召唤物」，也没有状态转移与技能冷却改写的正式链路。",
+      "todos": [
+        "TODO: 目标类型扩展到状态实例 / 技能实例 / 投射物 / 己方召唤物",
+        "TODO: 状态的可移除性与转移（驱散 / 偷取 / 延长）",
+        "TODO: 对技能实例施放（重置冷却 / 消耗换资源 / 复制）",
+        "TODO: 投射物成为可选目标（拦截 / 反弹归属反转）"
+      ],
+      "familyTitle": "技能打在效果和技能身上",
+      "actionNo": "UX-215",
+      "actionKey": "ab-target-own-summon",
+      "actionTitle": "目标是我自己放下的东西",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ab-target-own-summon"
+        }
+      ]
+    },
+    {
+      "id": "ab-talent-variant",
+      "category": "ab-modifier",
+      "family": "ab-modifier",
+      "title": "同一个键，因为天赋不同结果不同",
+      "summary": "两个玩家按同一颗技能，一个是单体爆发、一个是范围减速——因为天赋选得不一样。图标必须能看出「我这颗是哪一种」，不然玩家照着别人的攻略按就错了。",
+      "genres": [
+        "MOBA",
+        "魔兽世界",
+        "暗黑"
+      ],
+      "targets": [
+        "lol",
+        "wow",
+        "diablo"
+      ],
+      "beats": [
+        {
+          "title": "天赋A",
+          "input": "天赋 A：单体高伤",
+          "screen": "图标带 A 标，打出去是单点重击",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 38,
+              "y": 60,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 74,
+              "y": 44,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "buffchip",
+              "x": 24,
+              "y": 26,
+              "label": "天赋A 单体",
+              "stacks": null,
+              "kind": "buff"
+            },
+            {
+              "t": "arrow",
+              "x1": 44,
+              "y1": 58,
+              "x2": 68,
+              "y2": 46,
+              "kind": "attack"
+            },
+            {
+              "t": "impact",
+              "x": 74,
+              "y": 44,
+              "r": 20,
+              "heavy": true
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": 2,
+              "cd": null,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
+            },
+            {
+              "t": "badge",
+              "text": "单体爆发"
+            }
+          ],
+          "logic": "按已选天赋把该技能解析为单体高伤变体"
+        },
+        {
+          "title": "天赋B",
+          "input": "天赋 B：范围减速",
+          "screen": "同一颗键，图标带 B 标，打出去是一片减速",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 38,
+              "y": 60,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 70,
+              "y": 40,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "unit",
+              "x": 82,
+              "y": 54,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "buffchip",
+              "x": 24,
+              "y": 26,
+              "label": "天赋B 范围",
+              "stacks": null,
+              "kind": "buff"
+            },
+            {
+              "t": "circle",
+              "x": 76,
+              "y": 46,
+              "r": 22,
+              "ok": true
+            },
+            {
+              "t": "impact",
+              "x": 76,
+              "y": 46,
+              "r": 14,
+              "heavy": false
+            },
+            {
+              "t": "buffchip",
+              "x": 70,
+              "y": 22,
+              "label": "减速",
+              "stacks": null,
+              "kind": "debuff"
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": 2,
+              "cd": null,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
+            },
+            {
+              "t": "badge",
+              "text": "范围减速"
+            }
+          ],
+          "logic": "按已选天赋把同一技能解析为范围减速变体"
+        }
+      ],
+      "ludots": "技能被改写：天赋改写同一技能的解析结果、元素附着与组合反应、技能改变地形并回写寻路、以条件筛选代替点选目标——四条都没有。",
+      "todos": [
+        "TODO: 技能变体解析（同一输入按已选天赋走不同 spec）",
+        "TODO: 元素附着容器与组合反应表",
+        "TODO: 技能生成地形并回写寻路与移动参数",
+        "TODO: 条件筛选作为目标选择方式（含空集时的拒绝）"
+      ],
+      "familyTitle": "技能被改写：天赋、元素、地形、条件",
+      "actionNo": "UX-216",
+      "actionKey": "ab-talent-variant",
+      "actionTitle": "同一键因天赋结果不同",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ab-talent-variant"
+        }
+      ]
+    },
+    {
+      "id": "ab-element-reaction",
+      "category": "ab-modifier",
+      "family": "ab-modifier",
+      "title": "两种元素凑一起才有的额外反应",
+      "summary": "先给目标附上水，再打火，就不是两次普通伤害，而是触发一次额外反应。玩家要能看出「他身上现在挂着什么」，否则永远凑不出反应。",
+      "genres": [
+        "塞尔达",
+        "ARPG",
+        "开放世界"
+      ],
+      "targets": [
+        "gow",
+        "diablo",
+        "zelda"
+      ],
+      "beats": [
+        {
+          "title": "附着水",
+          "input": "先附上一种元素",
+          "screen": "目标身上挂出水的标记，能看出还在",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 34,
+              "y": 62,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 72,
+              "y": 44,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "elementmark",
+              "x": 72,
+              "y": 26,
+              "kind": "water"
+            },
+            {
+              "t": "arrow",
+              "x1": 40,
+              "y1": 60,
+              "x2": 66,
+              "y2": 46,
+              "kind": "attack"
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": 0,
+              "cd": null,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
+            },
+            {
+              "t": "badge",
+              "text": "已附水"
+            }
+          ],
+          "logic": "为目标附着一种元素并保留一段时间"
+        },
+        {
+          "title": "触发反应",
+          "input": "再打另一种元素",
+          "screen": "两种凑在一起，触发额外反应而不是两次普通伤害",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 34,
+              "y": 62,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 72,
+              "y": 44,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "elementmark",
+              "x": 64,
+              "y": 26,
+              "kind": "water"
+            },
+            {
+              "t": "elementmark",
+              "x": 80,
+              "y": 26,
+              "kind": "fire"
+            },
+            {
+              "t": "impact",
+              "x": 72,
+              "y": 44,
+              "r": 24,
+              "heavy": true
+            },
+            {
+              "t": "toast",
+              "x": 12,
+              "y": 74,
+              "text": "蒸发 · 额外伤害",
+              "kind": "gain"
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": null,
+              "cd": 1,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
+            },
+            {
+              "t": "badge",
+              "text": "元素反应"
+            }
+          ],
+          "logic": "第二种元素与现有附着组合，触发额外反应"
+        },
+        {
+          "title": "附着没了",
+          "input": "附着消失后再打",
+          "screen": "只剩普通伤害，明确说附着已经没了",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 34,
+              "y": 62,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 72,
+              "y": 44,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "arrow",
+              "x1": 40,
+              "y1": 60,
+              "x2": 66,
+              "y2": 46,
+              "kind": "attack"
+            },
+            {
+              "t": "impact",
+              "x": 72,
+              "y": 44,
+              "r": 12,
+              "heavy": false
+            },
+            {
+              "t": "toast",
+              "x": 12,
+              "y": 74,
+              "text": "附着已消失 · 无反应",
+              "kind": "info"
+            },
+            {
+              "t": "badge",
+              "text": "没反应"
+            }
+          ],
+          "logic": "附着已过期，只按基础伤害结算"
+        }
+      ],
+      "ludots": "技能被改写：天赋改写同一技能的解析结果、元素附着与组合反应、技能改变地形并回写寻路、以条件筛选代替点选目标——四条都没有。",
+      "todos": [
+        "TODO: 技能变体解析（同一输入按已选天赋走不同 spec）",
+        "TODO: 元素附着容器与组合反应表",
+        "TODO: 技能生成地形并回写寻路与移动参数",
+        "TODO: 条件筛选作为目标选择方式（含空集时的拒绝）"
+      ],
+      "familyTitle": "技能被改写：天赋、元素、地形、条件",
+      "actionNo": "UX-217",
+      "actionKey": "ab-element-reaction",
+      "actionTitle": "两种元素凑出额外反应",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ab-element-reaction"
+        }
+      ]
+    },
+    {
+      "id": "ab-terrain-shape",
+      "category": "ab-modifier",
+      "family": "ab-modifier",
+      "title": "技能改的是地形本身",
+      "summary": "造一道墙、把地面结成冰、挖个坑——技能改完之后地图和刚才不一样了，双方的走法都得跟着变。所以造出来的东西必须留在画面上，而不是一闪而过。",
+      "genres": [
+        "塞尔达",
+        "ARPG",
+        "MOBA"
+      ],
+      "targets": [
+        "lol",
+        "gow",
+        "diablo",
+        "zelda"
+      ],
+      "beats": [
+        {
+          "title": "造墙",
+          "input": "对着地面造一道墙",
+          "screen": "墙立在那儿，把路截断",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 28,
+              "y": 62,
+              "face": 0
+            },
+            {
+              "t": "terrain",
+              "x": 56,
+              "y": 48,
+              "kind": "wall",
+              "label": "冰墙"
+            },
+            {
+              "t": "unit",
+              "x": 82,
+              "y": 48,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "cursor",
+              "x": 56,
+              "y": 48,
+              "mode": "up"
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": null,
+              "cd": 0,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
+            },
+            {
+              "t": "badge",
+              "text": "造墙"
+            }
+          ],
+          "logic": "在指定位置生成阻挡地形并写入寻路"
+        },
+        {
+          "title": "被迫绕路",
+          "input": "敌人只能绕",
+          "screen": "他的路线被迫绕开这道墙",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 28,
+              "y": 62,
+              "face": 0
+            },
+            {
+              "t": "terrain",
+              "x": 56,
+              "y": 48,
+              "kind": "wall",
+              "label": "冰墙"
+            },
+            {
+              "t": "unit",
+              "x": 82,
+              "y": 48,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "path",
+              "points": [
+                [
+                  82,
+                  48
+                ],
+                [
+                  78,
+                  24
+                ],
+                [
+                  40,
+                  24
+                ],
+                [
+                  34,
+                  56
+                ]
+              ],
+              "kind": "move"
+            },
+            {
+              "t": "toast",
+              "x": 12,
+              "y": 80,
+              "text": "路被截断",
+              "kind": "info"
+            },
+            {
+              "t": "badge",
+              "text": "被迫绕路"
+            }
+          ],
+          "logic": "寻路重算，敌方路线绕开该地形"
+        },
+        {
+          "title": "结冰",
+          "input": "换成把地面结冰",
+          "screen": "地上留下一片冰面，谁走上去都打滑",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 28,
+              "y": 62,
+              "face": 0
+            },
+            {
+              "t": "terrain",
+              "x": 58,
+              "y": 52,
+              "kind": "ice",
+              "label": "冰面"
+            },
+            {
+              "t": "unit",
+              "x": 82,
+              "y": 48,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "path",
+              "points": [
+                [
+                  82,
+                  48
+                ],
+                [
+                  60,
+                  54
+                ]
+              ],
+              "kind": "move"
+            },
+            {
+              "t": "toast",
+              "x": 12,
+              "y": 80,
+              "text": "冰面 · 移动打滑",
+              "kind": "loss"
+            },
+            {
+              "t": "badge",
+              "text": "结冰"
+            }
+          ],
+          "logic": "生成冰面地形并修改其上单位的移动参数"
+        }
+      ],
+      "ludots": "技能被改写：天赋改写同一技能的解析结果、元素附着与组合反应、技能改变地形并回写寻路、以条件筛选代替点选目标——四条都没有。",
+      "todos": [
+        "TODO: 技能变体解析（同一输入按已选天赋走不同 spec）",
+        "TODO: 元素附着容器与组合反应表",
+        "TODO: 技能生成地形并回写寻路与移动参数",
+        "TODO: 条件筛选作为目标选择方式（含空集时的拒绝）"
+      ],
+      "familyTitle": "技能被改写：天赋、元素、地形、条件",
+      "actionNo": "UX-218",
+      "actionKey": "ab-terrain-shape",
+      "actionTitle": "技能改的是地形本身",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ab-terrain-shape"
+        }
+      ]
+    },
+    {
+      "id": "ab-conditional-target",
+      "category": "ab-modifier",
+      "family": "ab-modifier",
+      "title": "目标是「所有满足条件的」，不是我点谁",
+      "summary": "「对所有中毒的敌人生效」这种技能，玩家点的不是某个人，而是一个条件。所以画面要先标出谁满足条件，再让玩家看清这一下打到了哪几个。",
+      "genres": [
+        "暗黑",
+        "MOBA",
+        "MMO"
+      ],
+      "targets": [
+        "lol",
+        "wow",
+        "diablo"
+      ],
+      "beats": [
+        {
+          "title": "标出条件",
+          "input": "场上部分敌人带着条件状态",
+          "screen": "满足条件的被标出来，不满足的不标",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 28,
+              "y": 62,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 60,
+              "y": 38,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "buffchip",
+              "x": 60,
+              "y": 20,
+              "label": "中毒",
+              "stacks": 2,
+              "kind": "debuff"
+            },
+            {
+              "t": "unit",
+              "x": 80,
+              "y": 56,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "buffchip",
+              "x": 80,
+              "y": 38,
+              "label": "中毒",
+              "stacks": 1,
+              "kind": "debuff"
+            },
+            {
+              "t": "unit",
+              "x": 66,
+              "y": 66,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "badge",
+              "text": "两个中毒"
+            }
+          ],
+          "logic": "按条件筛出满足状态的目标集合并标出"
+        },
+        {
+          "title": "只打满足的",
+          "input": "按下技能",
+          "screen": "只打中毒的那两个，第三个一点没事",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 28,
+              "y": 62,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 60,
+              "y": 38,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "impact",
+              "x": 60,
+              "y": 38,
+              "r": 16,
+              "heavy": false
+            },
+            {
+              "t": "unit",
+              "x": 80,
+              "y": 56,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "impact",
+              "x": 80,
+              "y": 56,
+              "r": 16,
+              "heavy": false
+            },
+            {
+              "t": "unit",
+              "x": 66,
+              "y": 66,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "deny",
+              "x": 66,
+              "y": 80,
+              "label": "未中毒·不生效",
+              "r": 11
+            },
+            {
+              "t": "toast",
+              "x": 12,
+              "y": 24,
+              "text": "命中 2 个中毒目标",
+              "kind": "gain"
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": null,
+              "cd": 2,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
+            },
+            {
+              "t": "badge",
+              "text": "只打中毒的"
+            }
+          ],
+          "logic": "只对筛中的目标结算，其余不受影响"
+        },
+        {
+          "title": "没人满足",
+          "input": "场上没人满足条件时按下",
+          "screen": "明确说没有合法目标，不空放也不乱打",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 28,
+              "y": 62,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 60,
+              "y": 38,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "unit",
+              "x": 80,
+              "y": 56,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": null,
+              "cd": null,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": 2,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
+            },
+            {
+              "t": "deny",
+              "x": 66,
+              "y": 60,
+              "label": "没有中毒目标",
+              "r": 11
+            },
+            {
+              "t": "badge",
+              "text": "无合法目标"
+            }
+          ],
+          "logic": "筛选结果为空时拒绝施放并回报无合法目标"
+        }
+      ],
+      "ludots": "技能被改写：天赋改写同一技能的解析结果、元素附着与组合反应、技能改变地形并回写寻路、以条件筛选代替点选目标——四条都没有。",
+      "todos": [
+        "TODO: 技能变体解析（同一输入按已选天赋走不同 spec）",
+        "TODO: 元素附着容器与组合反应表",
+        "TODO: 技能生成地形并回写寻路与移动参数",
+        "TODO: 条件筛选作为目标选择方式（含空集时的拒绝）"
+      ],
+      "familyTitle": "技能被改写：天赋、元素、地形、条件",
+      "actionNo": "UX-219",
+      "actionKey": "ab-conditional-target",
+      "actionTitle": "目标是所有满足条件的",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ab-conditional-target"
         }
       ]
     },

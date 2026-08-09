@@ -228,6 +228,31 @@ ACTION_GROUPS: list[tuple[str, str, str, tuple[tuple[str, str], ...]]] = [
     ("UX-197", "gs-enact-law", "颁布法令改规则", (("gs-enact-law", "kbm"),)),
     ("UX-198", "gs-abstract-cost", "代价是威望与影响力", (("gs-abstract-cost", "kbm"),)),
     ("UX-199", "gs-tiered-scope", "生效范围是行政层级", (("gs-tiered-scope", "kbm"),)),
+    # ---- 技能的时机 ----
+    ("UX-200", "ab-input-buffer", "后摆里提前按会被记住", (("ab-input-buffer", "kbm"),)),
+    ("UX-201", "ab-cancel-recovery", "用闪避砍掉自己的后摆", (("ab-cancel-recovery", "kbm"),)),
+    ("UX-202", "ab-delayed-aoe", "先标地面过一会才炸", (("ab-delayed-aoe", "kbm"),)),
+    ("UX-203", "ab-reactive-trigger", "被打那一下自动触发", (("ab-reactive-trigger", "kbm"),)),
+    # ---- 技能的代价 ----
+    ("UX-204", "ab-charges-stack", "攒层数能连按几次", (("ab-charges-stack", "kbm"),)),
+    ("UX-205", "ab-global-cooldown", "全局冷却压住整栏", (("ab-global-cooldown", "kbm"),)),
+    ("UX-206", "ab-hp-cost", "拿血当代价", (("ab-hp-cost", "kbm"),)),
+    ("UX-207", "ab-cost-on-resolve", "按下就扣还是打中才扣", (("ab-cost-on-resolve", "kbm"),)),
+    # ---- 技能打出去之后 ----
+    ("UX-208", "ab-miss-vs-immune", "没打中和被免疫是两回事", (("ab-miss-vs-immune", "kbm"),)),
+    ("UX-209", "ab-shield-absorb", "护盾吃掉了多少伤害", (("ab-shield-absorb", "kbm"),)),
+    ("UX-210", "ab-stack-detonate", "叠层再引爆", (("ab-stack-detonate", "kbm"),)),
+    ("UX-211", "ab-reflect-back", "我的技能被弹回来", (("ab-reflect-back", "kbm"),)),
+    # ---- 技能打在效果和技能身上 ----
+    ("UX-212", "ab-target-existing-effect", "目标是身上那条状态", (("ab-target-existing-effect", "kbm"),)),
+    ("UX-213", "ab-target-own-ability", "目标是我自己的另一个技能", (("ab-target-own-ability", "kbm"),)),
+    ("UX-214", "ab-target-projectile", "目标是飞在空中那颗", (("ab-target-projectile", "kbm"),)),
+    ("UX-215", "ab-target-own-summon", "目标是我自己放下的东西", (("ab-target-own-summon", "kbm"),)),
+    # ---- 技能被改写 ----
+    ("UX-216", "ab-talent-variant", "同一键因天赋结果不同", (("ab-talent-variant", "kbm"),)),
+    ("UX-217", "ab-element-reaction", "两种元素凑出额外反应", (("ab-element-reaction", "kbm"),)),
+    ("UX-218", "ab-terrain-shape", "技能改的是地形本身", (("ab-terrain-shape", "kbm"),)),
+    ("UX-219", "ab-conditional-target", "目标是所有满足条件的", (("ab-conditional-target", "kbm"),)),
 ]
 
 

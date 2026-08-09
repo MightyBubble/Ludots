@@ -258,6 +258,41 @@ def padslot(states):
     return {"t": "padslot", "states": list(states)}
 
 
+def buffchip(x, y, label, stacks=None, kind="debuff"):
+    """状态图标 + 层数角标。叠层、引爆、驱散的目标就是它本身。
+    kind=buff 有益 / debuff 有害 / shield 护盾。"""
+    return {"t": "buffchip", "x": x, "y": y, "label": label, "stacks": stacks, "kind": kind}
+
+
+def projectile(x, y, angle=0, label=None):
+    """飞在空中的投射物。它自己也能当目标（打掉 / 反弹）。"""
+    return {"t": "projectile", "x": x, "y": y, "angle": angle, "label": label}
+
+
+def elementmark(x, y, kind="fire"):
+    """元素附着标记。kind=fire 火 / water 水 / ice 冰 / lightning 雷。
+    两种附着凑在一起才起反应。"""
+    return {"t": "elementmark", "x": x, "y": y, "kind": kind}
+
+
+def terrain(x, y, kind="wall", label=None):
+    """技能造出来的地形，目标是环境本身。kind=wall 墙 / ice 冰面 / pit 坑。"""
+    return {"t": "terrain", "x": x, "y": y, "kind": kind, "label": label}
+
+
+def summon(x, y, label=None):
+    """我自己造出来的东西（图腾 / 守卫），能成为我另一个技能的目标。"""
+    return {"t": "summon", "x": x, "y": y, "label": label}
+
+
+def inputwindow(x, y, phases, press_at=None, fire_at=None):
+    """动作时间轴：前摇 / 判定 / 后摆，以及能提前按的缓存窗。
+    phases = [{"name": ..., "kind": "startup|active|recovery|buffer", "w": 权重}]
+    press_at / fire_at = 0..1，标出我按下的时刻与真正放出的时刻。"""
+    return {"t": "inputwindow", "x": x, "y": y, "phases": list(phases),
+            "pressAt": press_at, "fireAt": fire_at}
+
+
 def gridmap(x, y, cols, rows, cells=None, cw=22, ch=14):
     """战棋格盘。cells = {"列,行": "move|attack|blocked|occupied|self"}。
     目标是「哪几格」，不是连续坐标。"""
@@ -351,7 +386,7 @@ def queue_no(x, y, n, state="waiting"):
 
 
 def hotbar(active=None, cd=None, extra=None, off=None, dot=None, deny=None, slots=4,
-           page=None, defer=None):
+           page=None, defer=None, gcd=False):
     """Bottom-center skill row. active=pressed slot, cd=cooldown sweep,
     extra=temp-granted slot (green), off=removed/disabled slots, dot=autocast
     green dot, deny=rejected press (red flash)."""
@@ -362,6 +397,9 @@ def hotbar(active=None, cd=None, extra=None, off=None, dot=None, deny=None, slot
     if defer is not None:
         # 让路：这一颗本来要自动放，被手动抢占后延后，不是「不可用」
         row["defer"] = defer
+    if gcd:
+        # 全局冷却：所有格子一起压一层薄的，和单技能转圈遮罩区分开
+        row["gcd"] = True
     return row
 
 
@@ -461,6 +499,11 @@ FAMILY_TITLES = {
     "turnbased": "回合制：轮到我之前和之后",
     "tactics": "战棋：格子、朝向、控制区",
     "grand-abstract": "大战略：对抽象东西下手",
+    "ab-timing": "技能的时机：早按、断招、延迟、自动触发",
+    "ab-cost": "技能的代价：层数、全局冷却、拿血换",
+    "ab-resolve": "技能打出去之后：没中、被吃、叠层、弹回",
+    "ab-meta": "技能打在效果和技能身上",
+    "ab-modifier": "技能被改写：天赋、元素、地形、条件",
     "netplay": "联机：进一局并待在里面",
     "couch-play": "同屏多人：加入、分屏、抢东西",
 }
@@ -552,6 +595,11 @@ _FAMILY_TO_TARGETS: dict[str, tuple[str, ...]] = {
     "turnbased": ("srpg", "rotk"),
     "tactics": ("srpg",),
     "grand-abstract": ("grand", "rotk"),
+    "ab-timing": ("gow", "fps", "lol"),
+    "ab-cost": ("wow", "lol", "diablo"),
+    "ab-resolve": ("wow", "lol", "diablo"),
+    "ab-meta": ("wow", "lol", "sc2"),
+    "ab-modifier": ("zelda", "diablo", "lol"),
     "netplay": ("netmatch",),
     "couch-play": ("couch",),
     "select": ("sc2", "ra2", "war3", "lol"),
@@ -1687,7 +1735,8 @@ def build_cases():
         "像魔兽饰品 on-use、大秘境钥匙类道具技能。",
         [
             beat("装备带主动的饰品", "技能栏多出饰品键，显示层数/CD", "多了一招装备技", "moba",
-                 [hero(45, 55), hotbar(extra=3), badge("+饰品主动")], title="装上出现"),
+                 [hero(45, 55), hotbar(extra=3), buffchip(45, 30, "饰品充能", stacks=2, kind="buff"),
+                  badge("+饰品主动")], title="装上出现"),
             beat("按下饰品主动", "打出饰品效果，进入饰品 CD", "用装备技", "moba",
                  [hero(45, 55), ring(45, 55, r=14, kind="buff"), hotbar(cd=3),
                   badge("饰品放出")], title="使用"),
@@ -2921,6 +2970,391 @@ def build_cases():
             beat("控制时间结束", "技能栏恢复亮起，立刻能反打", "缓过来了", "moba",
                  [hero(48, 55), hotbar(active=0), badge("控制解除")], title="解控"),
         ], ["MMO", "MOBA"],
+    ))
+
+    # ===== 三十四、技能的时机 =====
+    c.append(case(
+        "ab-input-buffer", "ab-timing", "在后摆里提前按，系统记着到点替我放",
+        "上一招还在收招，我已经按了下一招。好的手感是把这次按键记下来，"
+        "一能动就立刻放出去；差的手感是直接吞掉，玩家只觉得「我明明按了」。",
+        [
+            beat("上一招还在后摆时按下一招", "按键落在缓存窗里，被记下来而不是吞掉", "我先按了", "tps",
+                 [inputwindow(12, 26, [{"name": "前摇", "kind": "startup", "w": 1},
+                                       {"name": "判定", "kind": "active", "w": 1},
+                                       {"name": "后摆（可缓存）", "kind": "buffer", "w": 2}],
+                              press_at=0.72),
+                  hero(40, 62, face=20), toast(16, 82, "已记下这次按键", "gain"),
+                  badge("落在缓存窗")], title="提前按"),
+            beat("后摆一结束立刻放出", "不用我再按一次，接得上连贯", "接上了", "tps",
+                 [inputwindow(12, 26, [{"name": "前摇", "kind": "startup", "w": 1},
+                                       {"name": "判定", "kind": "active", "w": 1},
+                                       {"name": "后摆（可缓存）", "kind": "buffer", "w": 2}],
+                              press_at=0.72, fire_at=1.0),
+                  hero(46, 60, face=20), unit(72, 48, team="enemy"),
+                  arrow(52, 58, 68, 50, "attack"), impact(72, 48, 14),
+                  badge("到点自动放")], title="到点放出"),
+            beat("按得太早，落在缓存窗之前", "这次按键不算，明确提示太早而不是悄悄吞掉", "白按了", "tps",
+                 [inputwindow(12, 26, [{"name": "前摇", "kind": "startup", "w": 1},
+                                       {"name": "判定", "kind": "active", "w": 1},
+                                       {"name": "后摆（可缓存）", "kind": "buffer", "w": 2}],
+                              press_at=0.18),
+                  hero(40, 62, face=20), deny(70, 62, "太早·不进缓存"),
+                  badge("早于缓存窗")], title="按太早"),
+        ], ["战神", "动作RPG", "FPS"],
+    ))
+    c.append(case(
+        "ab-cancel-recovery", "ab-timing", "用位移或格挡砍掉自己的收招",
+        "招放完还有一段收不回来的后摆。允许用闪避或格挡把它砍掉，"
+        "手感立刻变利索；不允许就必须让玩家看清这段硬直有多长。",
+        [
+            beat("招放完进入后摆", "后摆这段动不了，时间轴上标出来有多长", "收不回来", "tps",
+                 [inputwindow(12, 26, [{"name": "判定", "kind": "active", "w": 1},
+                                       {"name": "后摆·硬直", "kind": "recovery", "w": 2}]),
+                  hero(44, 62, face=20), unit(72, 48, team="enemy"),
+                  deny(44, 84, "这段动不了"), badge("硬直中")], title="后摆硬直"),
+            beat("在后摆里按闪避", "后摆被砍掉，直接进入闪避", "断得掉", "tps",
+                 [inputwindow(12, 26, [{"name": "判定", "kind": "active", "w": 1},
+                                       {"name": "后摆·被砍掉", "kind": "buffer", "w": 2}],
+                              press_at=0.55, fire_at=0.55),
+                  hero(62, 56, face=20), path([(44, 62), (62, 56)], "move"),
+                  ring(62, 56, r=11, kind="buff"), toast(14, 82, "后摆已取消", "gain"),
+                  badge("闪避取消")], title="取消后摆"),
+        ], ["战神", "动作RPG", "魂like"],
+    ))
+    c.append(case(
+        "ab-delayed-aoe", "ab-timing", "先在地上标一块，过一会儿才炸",
+        "技能不是按下就结算：地上先亮出落点和倒数，双方都有时间反应——"
+        "我可以趁机赶人，对方可以走开。倒数看不见就变成偷袭，不是设计。",
+        [
+            beat("放出后地面亮起落点与倒数", "范围圈亮着，读条走着，还没结算", "等着炸", "moba",
+                 [hero(30, 62), circle_ind(68, 42, 20, True), bar(68, 24, 0.6, "cast", "1.5 秒后炸"),
+                  unit(68, 42, team="enemy"), hotbar(cd=0), badge("已标记")], title="标记落点"),
+            beat("对方走出去了", "圈里空了，到点只炸个空地", "他跑了", "moba",
+                 [hero(30, 62), circle_ind(68, 42, 20, True), bar(68, 24, 0.95, "cast", "就要炸"),
+                  unit(90, 60, team="enemy"), arrow(72, 46, 86, 58, "move"),
+                  toast(18, 26, "目标已离开圈内", "loss"), badge("躲开了")], title="被躲开"),
+            beat("到点结算", "圈内的才吃到，圈外的没事", "炸了", "moba",
+                 [hero(30, 62), impact(68, 42, 24, heavy=True), unit(90, 60, team="enemy"),
+                  toast(18, 26, "只结算圈内", "info"), hotbar(cd=0), badge("到点炸开")], title="到点结算"),
+        ], ["MOBA", "ARPG", "MMO"],
+    ))
+    c.append(case(
+        "ab-reactive-trigger", "ab-timing", "不用按：被打的那一下自己触发",
+        "有些技能不是我主动放，而是挂着条件等触发：被打到就反伤、掉到某个血线就自动挡。"
+        "既然不是我按的，就必须让我看清「它已经挂上了」和「它刚刚生效了」。",
+        [
+            beat("先挂上这个被动/预备技", "技能栏那颗标成待触发，不占我的出手", "先挂着", "moba",
+                 [hero(46, 58), buffchip(46, 32, "受击反伤 待触发", kind="buff"),
+                  hotbar(dot=2), badge("已挂上")], title="挂上条件"),
+            beat("被打的那一下自动触发", "反伤打回去，明确标出这不是我按的", "自己出手了", "moba",
+                 [hero(46, 58), unit(74, 46, team="enemy"),
+                  arrow(70, 48, 52, 56, "attack"), impact(46, 58, 12),
+                  arrow(50, 54, 70, 48, "attack"), impact(74, 46, 14),
+                  toast(14, 26, "受击自动触发", "gain"), hotbar(cd=2), badge("自动反伤")], title="被打触发"),
+        ], ["MOBA", "MMO", "ARPG"],
+    ))
+
+    # ===== 三十五、技能的代价 =====
+    c.append(case(
+        "ab-charges-stack", "ab-cost", "攒层数：这一颗能连按几次",
+        "不是一颗一个冷却，而是攒到几层就能连按几次。玩家要能一眼看出「还剩几发」"
+        "和「下一发多久回来」，否则连按到第三下才发现没了。",
+        [
+            beat("攒满三层", "图标上标着 3，可以连按三次", "攒满了", "moba",
+                 [hero(46, 58), hotbar(active=1), buffchip(46, 30, "闪现", stacks=3, kind="buff"),
+                  badge("3 层可用")], title="攒满"),
+            beat("连按两次", "层数掉到 1，同时开始回充下一层", "连着用", "moba",
+                 [hero(70, 50), path([(46, 58), (58, 54), (70, 50)], "move"),
+                  hotbar(active=1), buffchip(70, 26, "闪现", stacks=1, kind="buff"),
+                  bar(70, 40, 0.4, "charge", "回充中"), badge("剩 1 层")], title="连按两次"),
+            beat("层数用光再按", "明确说层数用完了、还差多久回一层，不是「冷却中」", "没了", "moba",
+                 [hero(70, 50), hotbar(deny=1), buffchip(70, 26, "闪现", stacks=0, kind="debuff"),
+                  bar(70, 40, 0.65, "charge", "回充中"), deny(46, 62, "层数用光"),
+                  badge("0 层")], title="用光"),
+        ], ["MOBA", "MMO", "ARPG"],
+    ))
+    c.append(case(
+        "ab-global-cooldown", "ab-cost", "全局冷却：按了一个，别的短暂都不能按",
+        "MMO 里按下任何一个技能，整栏都会压一小段公共冷却。"
+        "它和单技能的转圈是两件事，必须画得能分开——不然玩家以为所有技能都进了长 CD。",
+        [
+            beat("按下一个技能", "这一颗进自己的冷却，整栏同时压一层薄的全局冷却", "都按不了", "moba",
+                 [hero(46, 58), unit(74, 44, team="enemy"), arrow(52, 56, 70, 46, "attack"),
+                  hotbar(active=0, cd=0, gcd=True),
+                  toast(14, 26, "全局冷却 1.5 秒", "info"), badge("全局CD中")], title="压全局"),
+            beat("全局冷却过去", "别的技能恢复可按，刚放那颗还在自己的长冷却里", "别的能按了", "moba",
+                 [hero(46, 58), unit(74, 44, team="enemy"), hotbar(cd=0),
+                  toast(14, 26, "全局已恢复 · 那颗仍在冷却", "gain"), badge("区分两种CD")], title="恢复"),
+        ], ["魔兽世界", "MMO"],
+    ))
+    c.append(case(
+        "ab-hp-cost", "ab-cost", "拿血换：代价是自己的命",
+        "有些技能不花蓝花血。那就必须回答两个问题：血不够时是禁止还是允许自杀，"
+        "以及扣的血能不能被治疗抢救回来。含糊的话玩家会莫名其妙死掉。",
+        [
+            beat("血够时按下", "血条掉一截，技能放出，扣血和伤害分开显示", "拿血换", "moba",
+                 [hero(46, 58), bar(46, 30, 0.55, "hp", "生命 -20%"),
+                  unit(74, 44, team="enemy"), arrow(52, 56, 70, 46, "attack"),
+                  impact(74, 44, 15), toast(14, 78, "自伤 20% 生命", "loss"),
+                  hotbar(cd=0), badge("血换伤害")], title="扣血放出"),
+            beat("血不够时按下", "按设定禁止施放并说清差多少，而不是让我按死自己", "按不了", "moba",
+                 [hero(46, 58), bar(46, 30, 0.12, "hp", "生命 12%"),
+                  hotbar(deny=0), deny(70, 58, "血不够·禁止自杀"),
+                  badge("被挡住")], title="血不够"),
+        ], ["MOBA", "暗黑", "ARPG"],
+    ))
+    c.append(case(
+        "ab-cost-on-resolve", "ab-cost", "代价什么时候扣：按下就扣，还是打到才扣",
+        "按下立刻扣，被打断就白花；打中才扣，落空不亏。两种规则手感差很远，"
+        "而且直接影响玩家敢不敢在混战里按。规则必须写在画面上。",
+        [
+            beat("按下时先预扣，标成待结算", "资源先冻结一段，还没真正花掉", "先冻着", "moba",
+                 [hero(40, 60), bar(40, 32, 0.6, "cast", "蓝 已冻结 30"),
+                  unit(74, 44, team="enemy"), circle_ind(74, 44, 16, True),
+                  toast(14, 24, "预扣 30 · 待结算", "info"), hotbar(active=0),
+                  badge("预扣")], title="预扣"),
+            beat("命中结算，正式扣掉", "冻结的那段真正花掉，进入冷却", "花得值", "moba",
+                 [hero(40, 60), bar(40, 32, 0.6, "cast", "蓝 -30"),
+                  unit(74, 44, team="enemy"), impact(74, 44, 16),
+                  toast(14, 24, "已正式扣除", "loss"), hotbar(cd=0), badge("命中才扣")], title="命中扣除"),
+            beat("落空或被打断，退回来", "冻结的那段退还，技能也不进冷却", "没白花", "moba",
+                 [hero(40, 60), bar(40, 32, 0.9, "cast", "蓝 已退还"),
+                  toast(14, 24, "落空 · 已退还", "gain"), hotbar(active=0),
+                  deny(66, 56, "本次落空"), badge("退还")], title="落空退还"),
+        ], ["MOBA", "MMO", "RTS"],
+    ))
+
+    # ===== 三十六、技能打出去之后 =====
+    c.append(case(
+        "ab-miss-vs-immune", "ab-resolve", "没打中 和 被免疫，是两回事",
+        "同样是「没生效」，闪避掉是我没命中，免疫是他吃不到。"
+        "两种要给不同的反馈，否则玩家不知道该换目标还是换技能。",
+        [
+            beat("被闪避：判定没过", "飘「未命中」，技能算用掉了", "手滑了", "moba",
+                 [hero(40, 60), unit(74, 44, team="enemy"),
+                  arrow(46, 58, 68, 46, "attack"), toast(16, 26, "未命中", "loss"),
+                  hotbar(cd=0), badge("MISS")], title="未命中"),
+            beat("被免疫：判定过了但吃不到", "飘「免疫」并标出是哪种免疫，提示换手段", "打不动他", "moba",
+                 [hero(40, 60), unit(74, 44, team="enemy"),
+                  buffchip(74, 24, "魔法免疫", kind="shield"),
+                  arrow(46, 58, 68, 46, "attack"), deny(74, 60, "被免疫·换物理"),
+                  hotbar(cd=0), badge("免疫")], title="被免疫"),
+        ], ["MOBA", "魔兽争霸3", "MMO"],
+    ))
+    c.append(case(
+        "ab-shield-absorb", "ab-resolve", "护盾把伤害吃掉了多少",
+        "打上去掉的不是血而是盾，玩家要看清吃掉了多少、还剩多少盾、什么时候破。"
+        "只显示「伤害 100」而不显示盾，玩家会以为技能没生效。",
+        [
+            beat("目标身上有盾", "盾条画在血条上面，标出还剩多少", "他有盾", "moba",
+                 [hero(40, 60), unit(74, 44, team="enemy"),
+                  bar(74, 22, 0.7, "shield", "护盾 70"), bar(74, 30, 1.0, "hp", "生命 100"),
+                  badge("有护盾")], title="有盾"),
+            beat("打上去先吃盾", "盾条掉，血条一点没动，明确标出被吸收多少", "先破盾", "moba",
+                 [hero(40, 60), unit(74, 44, team="enemy"), arrow(46, 58, 68, 46, "attack"),
+                  impact(74, 44, 14), bar(74, 22, 0.2, "shield", "护盾 20"),
+                  bar(74, 30, 1.0, "hp", "生命 100"),
+                  toast(14, 74, "吸收 50 · 血未掉", "info"), badge("盾吃掉了")], title="吸收"),
+            beat("盾破之后才掉血", "盾条消失，溢出的那部分才打到血上", "破了", "moba",
+                 [hero(40, 60), unit(74, 44, team="enemy"), arrow(46, 58, 68, 46, "attack"),
+                  impact(74, 44, 18, heavy=True), bar(74, 30, 0.7, "hp", "生命 70"),
+                  toast(14, 74, "盾已破 · 溢出 30 打到血", "loss"), badge("破盾溢出")], title="破盾"),
+        ], ["MOBA", "MMO", "ARPG"],
+    ))
+    c.append(case(
+        "ab-stack-detonate", "ab-resolve", "叠层数，再用另一个技能引爆",
+        "先靠普攻或小技能叠层，叠够了用另一颗一次性引爆。"
+        "玩家必须能读出「现在几层」和「够不够引爆」，否则只能瞎按。",
+        [
+            beat("打几下叠层", "目标头上层数往上走，标出叠满是几层", "先叠着", "moba",
+                 [hero(40, 60), unit(74, 44, team="enemy"),
+                  buffchip(74, 24, "标记", stacks=2, kind="debuff"),
+                  arrow(46, 58, 68, 46, "attack"), impact(74, 44, 11),
+                  toast(14, 74, "叠满 4 层可引爆", "info"), badge("2/4 层")], title="叠层"),
+            beat("叠满了", "层数到顶，引爆那颗技能亮起来提示可用", "可以引了", "moba",
+                 [hero(40, 60), unit(74, 44, team="enemy"),
+                  buffchip(74, 24, "标记", stacks=4, kind="debuff"),
+                  hotbar(active=3), toast(14, 74, "已满 4 层 · R 可引爆", "gain"),
+                  badge("4/4 层")], title="叠满"),
+            beat("按引爆", "层数被吃掉，一次性打出总伤害", "炸了", "moba",
+                 [hero(40, 60), unit(74, 44, team="enemy"),
+                  impact(74, 44, 24, heavy=True), buffchip(74, 24, "标记", stacks=0, kind="debuff"),
+                  hotbar(cd=3), toast(14, 74, "消耗 4 层 · 引爆", "loss"), badge("引爆")], title="引爆"),
+        ], ["MOBA", "暗黑", "ARPG"],
+    ))
+    c.append(case(
+        "ab-reflect-back", "ab-resolve", "我的技能被弹回来了",
+        "对方开了反射，我扔出去的东西原路打回自己。这一下必须让我看懂是「被弹回」"
+        "而不是「我打空了」，否则同样的亏会吃第二次。",
+        [
+            beat("对方开着反射盾", "盾的图标明确写着反射，不是普通护盾", "他有反射", "moba",
+                 [hero(34, 60), unit(76, 44, team="enemy"),
+                  buffchip(76, 24, "法术反射", kind="shield"), hotbar(active=1),
+                  badge("看清了")], title="看清反射"),
+            beat("照样扔过去", "飞行物在半路被弹头，方向反过来", "弹回来了", "moba",
+                 [hero(34, 60), unit(76, 44, team="enemy"),
+                  buffchip(76, 24, "法术反射", kind="shield"),
+                  projectile(56, 52, angle=155, label="被弹回"),
+                  toast(14, 26, "已被反射", "error"), badge("原路返回")], title="被弹回"),
+            beat("打到自己身上", "伤害落在我头上，并说清是我自己的技能", "自作自受", "moba",
+                 [hero(34, 60), impact(34, 60, 16, heavy=True), unit(76, 44, team="enemy"),
+                  bar(34, 34, 0.6, "hp", "我掉血"),
+                  toast(14, 26, "被自己的技能打中", "error"), badge("自己吃")], title="打到自己"),
+        ], ["魔兽争霸3", "MOBA", "MMO"],
+    ))
+
+    # ===== 三十七、技能打在效果和技能身上 =====
+    c.append(case(
+        "ab-target-existing-effect", "ab-meta", "目标是身上那个状态，不是人",
+        "驱散、偷取、延长——点的是人，动的是他身上那一条状态。"
+        "所以那条状态本身要能被看见、被指认，玩家才知道自己动的是哪一条。",
+        [
+            beat("看清他身上有哪几条状态", "状态一条条列出来，可驱散的和不可驱散的分开", "有几条", "moba",
+                 [hero(34, 60), unit(74, 46, team="enemy"),
+                  buffchip(74, 20, "加速", kind="buff"), buffchip(74, 32, "护盾", kind="shield"),
+                  badge("两条增益")], title="看状态"),
+            beat("驱散掉其中一条", "被驱散那条从列表里消失，其余不动", "去掉一条", "moba",
+                 [hero(34, 60), unit(74, 46, team="enemy"),
+                  buffchip(74, 32, "护盾", kind="shield"),
+                  arrow(40, 58, 68, 48, "attack"),
+                  toast(12, 24, "已驱散：加速", "gain"), hotbar(cd=1), badge("驱散一条")], title="驱散"),
+            beat("换成偷取", "那条状态转到我身上，他失去我获得", "抢过来", "moba",
+                 [hero(34, 60), buffchip(34, 34, "加速（偷来）", kind="buff"),
+                  unit(74, 46, team="enemy"), buffchip(74, 32, "护盾", kind="shield"),
+                  arrow(68, 48, 40, 58, "move"),
+                  toast(12, 24, "已偷取：加速", "gain"), badge("偷到手")], title="偷取"),
+        ], ["魔兽世界", "MOBA", "魔兽争霸3"],
+    ))
+    c.append(case(
+        "ab-target-own-ability", "ab-meta", "目标是我自己的另一个技能",
+        "重置某颗技能的冷却、把一颗技能吞掉换资源、复制刚用过的那一招——"
+        "目标是技能栏上的一颗，不是场上任何人。所以要能在技能栏上指认。",
+        [
+            beat("进入「选一颗技能」的状态", "技能栏上可选的那几颗亮起，等我点一颗", "选哪颗", "moba",
+                 [hero(46, 58), hotbar(cd=1, extra=3),
+                  toast(12, 24, "选一颗技能来重置", "info"), cursor(46, 78, "aim"),
+                  badge("选技能")], title="选一颗"),
+            beat("点中冷却中的那颗", "它的冷却被清掉，立刻可用", "又能按了", "moba",
+                 [hero(46, 58), hotbar(active=1),
+                  toast(12, 24, "已重置：那颗冷却清空", "gain"),
+                  badge("冷却清空")], title="重置它"),
+            beat("换成吞掉它换资源", "那一格变空，换来一段资源，明确说这一颗没了", "换了资源", "moba",
+                 [hero(46, 58), hotbar(off=[1]), bar(46, 32, 0.9, "cast", "蓝量 +40"),
+                  toast(12, 24, "已吞掉那颗 · 换 40 蓝", "loss"), badge("这颗没了")], title="吞掉换资源"),
+        ], ["MOBA", "魔兽世界", "SC2"],
+    ))
+    c.append(case(
+        "ab-target-projectile", "ab-meta", "目标是飞在空中的那颗东西",
+        "对方的火球正在飞过来，我可以打掉它、也可以把它弹回去。"
+        "目标不是人也不是地，而是那个还在飞的投射物——它必须画得能被瞄上。",
+        [
+            beat("对方的投射物正在飞来", "飞行物本体和轨迹都画出来，能看出还剩多远", "有东西来了", "tps",
+                 [hero(28, 60), unit(84, 44, team="enemy"),
+                  projectile(62, 50, angle=160, label="火球"),
+                  crosshair(62, 50, spread="tight"), badge("可以瞄它")], title="它在飞"),
+            beat("瞄它并打掉", "投射物在半空炸掉，没打到我", "拦下来了", "tps",
+                 [hero(28, 60), unit(84, 44, team="enemy"),
+                  projectile(62, 50, angle=160, label="被打掉"), impact(62, 50, 15),
+                  toast(12, 26, "已拦截", "gain"), hotbar(cd=0),
+                  badge("拦截成功")], title="打掉它"),
+            beat("换成弹回去", "同一颗东西换个方向飞回他脸上", "还给你", "tps",
+                 [hero(28, 60), unit(84, 44, team="enemy"),
+                  projectile(66, 48, angle=-15, label="弹回去"),
+                  impact(84, 44, 15), toast(12, 26, "已反弹", "gain"), badge("反弹")], title="弹回去"),
+        ], ["FPS", "动作RPG", "MOBA"],
+    ))
+    c.append(case(
+        "ab-target-own-summon", "ab-meta", "目标是我自己放下的那个东西",
+        "图腾、守卫、地雷放下之后还能被我自己当目标：引爆它、挪走它、给它加状态。"
+        "所以它得是场上一个能被指认的东西，不是特效。",
+        [
+            beat("先放下一个图腾", "图腾立在地上，看得出是我方的，不是对方的", "放好了", "topdown",
+                 [hero(34, 62), summon(62, 46, "雷图腾"), ring(62, 46, r=18, kind="buff"),
+                  hotbar(cd=0), badge("我的图腾")], title="放下"),
+            beat("再对它施法：引爆", "图腾被我自己引爆，范围内结算", "自己引爆", "topdown",
+                 [hero(34, 62), unit(76, 40, team="enemy"),
+                  impact(62, 46, 24, heavy=True), cursor(62, 46, "up"),
+                  toast(12, 26, "引爆我的图腾", "loss"), hotbar(cd=1), badge("引爆自己的")], title="引爆它"),
+            beat("图腾没了，格子空出来", "明确说它已经用掉了，名额空出来可以再放", "可以再放", "topdown",
+                 [hero(34, 62), unit(76, 40, team="enemy"), hotbar(active=0),
+                  toast(12, 26, "图腾已消耗 · 可再放", "info"), badge("可再放")], title="消耗掉"),
+        ], ["魔兽世界", "SC2", "ARPG"],
+    ))
+
+    # ===== 三十八、技能被改写 =====
+    c.append(case(
+        "ab-talent-variant", "ab-modifier", "同一个键，因为天赋不同结果不同",
+        "两个玩家按同一颗技能，一个是单体爆发、一个是范围减速——因为天赋选得不一样。"
+        "图标必须能看出「我这颗是哪一种」，不然玩家照着别人的攻略按就错了。",
+        [
+            beat("天赋 A：单体高伤", "图标带 A 标，打出去是单点重击", "A 路线", "moba",
+                 [hero(38, 60), unit(74, 44, team="enemy"),
+                  buffchip(24, 26, "天赋A 单体", kind="buff"),
+                  arrow(44, 58, 68, 46, "attack"), impact(74, 44, 20, heavy=True),
+                  hotbar(active=2), badge("单体爆发")], title="天赋A"),
+            beat("天赋 B：范围减速", "同一颗键，图标带 B 标，打出去是一片减速", "B 路线", "moba",
+                 [hero(38, 60), unit(70, 40, team="enemy"), unit(82, 54, team="enemy"),
+                  buffchip(24, 26, "天赋B 范围", kind="buff"),
+                  circle_ind(76, 46, 22, True), impact(76, 46, 14),
+                  buffchip(70, 22, "减速", kind="debuff"),
+                  hotbar(active=2), badge("范围减速")], title="天赋B"),
+        ], ["MOBA", "魔兽世界", "暗黑"],
+    ))
+    c.append(case(
+        "ab-element-reaction", "ab-modifier", "两种元素凑一起才有的额外反应",
+        "先给目标附上水，再打火，就不是两次普通伤害，而是触发一次额外反应。"
+        "玩家要能看出「他身上现在挂着什么」，否则永远凑不出反应。",
+        [
+            beat("先附上一种元素", "目标身上挂出水的标记，能看出还在", "先挂水", "topdown",
+                 [hero(34, 62), unit(72, 44, team="enemy"), elementmark(72, 26, "water"),
+                  arrow(40, 60, 66, 46, "attack"), hotbar(active=0), badge("已附水")], title="附着水"),
+            beat("再打另一种元素", "两种凑在一起，触发额外反应而不是两次普通伤害", "反应了", "topdown",
+                 [hero(34, 62), unit(72, 44, team="enemy"), elementmark(64, 26, "water"),
+                  elementmark(80, 26, "fire"), impact(72, 44, 24, heavy=True),
+                  toast(12, 74, "蒸发 · 额外伤害", "gain"), hotbar(cd=1), badge("元素反应")], title="触发反应"),
+            beat("附着消失后再打", "只剩普通伤害，明确说附着已经没了", "白打", "topdown",
+                 [hero(34, 62), unit(72, 44, team="enemy"),
+                  arrow(40, 60, 66, 46, "attack"), impact(72, 44, 12),
+                  toast(12, 74, "附着已消失 · 无反应", "info"), badge("没反应")], title="附着没了"),
+        ], ["塞尔达", "ARPG", "开放世界"],
+    ))
+    c.append(case(
+        "ab-terrain-shape", "ab-modifier", "技能改的是地形本身",
+        "造一道墙、把地面结成冰、挖个坑——技能改完之后地图和刚才不一样了，"
+        "双方的走法都得跟着变。所以造出来的东西必须留在画面上，而不是一闪而过。",
+        [
+            beat("对着地面造一道墙", "墙立在那儿，把路截断", "挡住", "topdown",
+                 [hero(28, 62), terrain(56, 48, "wall", "冰墙"), unit(82, 48, team="enemy"),
+                  cursor(56, 48, "up"), hotbar(cd=0), badge("造墙")], title="造墙"),
+            beat("敌人只能绕", "他的路线被迫绕开这道墙", "他得绕", "topdown",
+                 [hero(28, 62), terrain(56, 48, "wall", "冰墙"), unit(82, 48, team="enemy"),
+                  path([(82, 48), (78, 24), (40, 24), (34, 56)], "move"),
+                  toast(12, 80, "路被截断", "info"), badge("被迫绕路")], title="被迫绕路"),
+            beat("换成把地面结冰", "地上留下一片冰面，谁走上去都打滑", "滑一片", "topdown",
+                 [hero(28, 62), terrain(58, 52, "ice", "冰面"), unit(82, 48, team="enemy"),
+                  path([(82, 48), (60, 54)], "move"), toast(12, 80, "冰面 · 移动打滑", "loss"),
+                  badge("结冰")], title="结冰"),
+        ], ["塞尔达", "ARPG", "MOBA"],
+    ))
+    c.append(case(
+        "ab-conditional-target", "ab-modifier", "目标是「所有满足条件的」，不是我点谁",
+        "「对所有中毒的敌人生效」这种技能，玩家点的不是某个人，而是一个条件。"
+        "所以画面要先标出谁满足条件，再让玩家看清这一下打到了哪几个。",
+        [
+            beat("场上部分敌人带着条件状态", "满足条件的被标出来，不满足的不标", "谁中毒了", "topdown",
+                 [hero(28, 62), unit(60, 38, team="enemy"), buffchip(60, 20, "中毒", stacks=2, kind="debuff"),
+                  unit(80, 56, team="enemy"), buffchip(80, 38, "中毒", stacks=1, kind="debuff"),
+                  unit(66, 66, team="enemy"), badge("两个中毒")], title="标出条件"),
+            beat("按下技能", "只打中毒的那两个，第三个一点没事", "按条件打", "topdown",
+                 [hero(28, 62), unit(60, 38, team="enemy"), impact(60, 38, 16),
+                  unit(80, 56, team="enemy"), impact(80, 56, 16),
+                  unit(66, 66, team="enemy"), deny(66, 80, "未中毒·不生效"),
+                  toast(12, 24, "命中 2 个中毒目标", "gain"), hotbar(cd=2),
+                  badge("只打中毒的")], title="只打满足的"),
+            beat("场上没人满足条件时按下", "明确说没有合法目标，不空放也不乱打", "没得打", "topdown",
+                 [hero(28, 62), unit(60, 38, team="enemy"), unit(80, 56, team="enemy"),
+                  hotbar(deny=2), deny(66, 60, "没有中毒目标"), badge("无合法目标")], title="没人满足"),
+        ], ["暗黑", "MOBA", "MMO"],
     ))
 
     # ===== 三十一、回合制：轮到我之前和之后 =====

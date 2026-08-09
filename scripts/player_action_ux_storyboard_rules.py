@@ -11,7 +11,8 @@ from __future__ import annotations
 import re
 
 # 出现这些词说明该元素正在消失/被拒绝，不要求画出来
-NEGATIONS = ("消失", "收起", "关闭", "取消", "灭", "不出", "没有", "移除", "解除", "退出", "结束")
+NEGATIONS = ("消失", "收起", "关闭", "取消", "灭", "不出", "没有", "没了", "移除", "解除",
+             "退出", "结束", "过期")
 
 # 平台 → 该平台不该出现的元件（画错设备等于骗玩家）
 PLATFORM_FORBIDDEN_ELEMENTS = {
@@ -44,7 +45,7 @@ ELEMENT_ENUMS: dict[tuple[str, str], frozenset] = {
     ("ring", "kind"): frozenset({"select", "lock", "buff", "finisher"}),
     ("arrow", "kind"): frozenset({"move", "attack"}),
     ("path", "kind"): frozenset({"lasso", "arc", "move"}),
-    ("bar", "kind"): frozenset({"cast", "charge", "hp"}),
+    ("bar", "kind"): frozenset({"cast", "charge", "hp", "shield"}),
     ("key", "state"): frozenset({"idle", "active", "off"}),
     ("touchpt", "kind"): frozenset({"tap", "hold", "drag", "pinch"}),
     ("prop", "kind"): frozenset({"item", "ore", "herb", "chest", "door", "corpse",
@@ -62,6 +63,9 @@ ELEMENT_ENUMS: dict[tuple[str, str], frozenset] = {
     ("toast", "kind"): frozenset({"info", "error", "gain", "loss"}),
     ("region", "owner"): frozenset({"mine", "rival", "neutral"}),
     ("relation", "state"): frozenset({"ally", "enemy", "marriage", "none"}),
+    ("buffchip", "kind"): frozenset({"buff", "debuff", "shield"}),
+    ("elementmark", "kind"): frozenset({"fire", "water", "ice", "lightning"}),
+    ("terrain", "kind"): frozenset({"wall", "ice", "pit"}),
     ("voice", "state"): frozenset({"off", "on", "talking"}),
 }
 
@@ -75,7 +79,8 @@ SUBJECT_ELEMENTS = (
     "vehicle", "corpse", "npc", "deny", "impact", "held", "queue", "camera",
     "playertag", "splitscreen", "padslot", "roster", "netstat", "voice", "vote", "marker",
     "partyframe", "toast", "gridmap", "timeline", "region", "relation",
-    "faction", "pool", "lawslot", "delaymark",
+    "faction", "pool", "lawslot", "delaymark", "buffchip", "projectile",
+    "elementmark", "terrain", "summon", "inputwindow",
 )
 
 
@@ -204,7 +209,7 @@ PROMISE_RULES: tuple[tuple[str, str, object, str], ...] = (
     (
         "说轨迹/套索，画面要有轨迹线",
         r"轨迹|套索",
-        lambda cast: _has(cast, "path"),
+        lambda cast: _has(cast, "path", "projectile"),
         "补 path([[x, y], ...], kind='lasso')",
     ),
     (
@@ -213,6 +218,61 @@ PROMISE_RULES: tuple[tuple[str, str, object, str], ...] = (
         lambda cast: any(e.get("t") == "arrow" and e.get("kind") == "move" for e in cast)
         and any(e.get("t") == "arrow" and e.get("kind") == "attack" for e in cast),
         "补一根 arrow(kind='move') 表示走的方向，和 attack 那根并排",
+    ),
+    (
+        "说叠层/引爆，画面要有带层数的状态图标",
+        r"叠层|叠到|层数|消耗层",
+        lambda cast: _has(cast, "buffchip"),
+        "补 buffchip(x, y, '状态名', stacks=N)",
+    ),
+    (
+        "说驱散/偷取状态，目标是那个状态本身",
+        r"驱散|偷取状态|延长状态",
+        lambda cast: _has(cast, "buffchip"),
+        "补 buffchip(...)，把被驱散/被偷的那个状态画出来",
+    ),
+    (
+        "说打掉/反弹投射物，画面要有飞行物",
+        r"投射物|飞行物|打掉子弹|反弹回去|拦截",
+        lambda cast: _has(cast, "projectile"),
+        "补 projectile(x, y, angle, label)",
+    ),
+    (
+        "说元素反应/附着，画面要有元素标记",
+        r"元素反应|附着|蒸发|冻结反应",
+        lambda cast: _has(cast, "elementmark"),
+        "补 elementmark(x, y, kind='fire'/'water'/...)",
+    ),
+    (
+        "说造墙/结冰/挖坑，画面要有造出来的地形",
+        r"造墙|结冰|挖坑|变成冰面|地形改变",
+        lambda cast: _has(cast, "terrain"),
+        "补 terrain(x, y, kind='wall'/'ice'/'pit')",
+    ),
+    (
+        "说图腾/守卫/召唤物，画面要有召唤物",
+        r"图腾|守卫|召唤物",
+        lambda cast: _has(cast, "summon", "unit"),
+        "补 summon(x, y, label)",
+    ),
+    (
+        "说预输入/缓存窗/后摆，画面要有动作时间轴",
+        r"预输入|缓存窗|后摆|前摇",
+        lambda cast: _has(cast, "inputwindow"),
+        "补 inputwindow(x, y, phases, press_at=..., fire_at=...)",
+    ),
+    (
+        "说护盾吸收，画面要有护盾条",
+        r"护盾吸收|盾吃掉|吸收伤害",
+        lambda cast: any(e.get("t") == "bar" and e.get("kind") == "shield" for e in cast)
+        or _has(cast, "buffchip"),
+        "补 bar(..., kind='shield') 或 buffchip(kind='shield')",
+    ),
+    (
+        "说全局冷却，技能栏要压一层全局的",
+        r"全局冷却|公共冷却",
+        lambda cast: any(e.get("t") == "hotbar" and e.get("gcd") for e in cast),
+        "用 hotbar(..., gcd=True)，别和单技能转圈遮罩混为一谈",
     ),
     (
         "说格子/移动范围，画面要有格盘",
@@ -282,7 +342,7 @@ PROMISE_RULES: tuple[tuple[str, str, object, str], ...] = (
     ),
     (
         "说打中/挨打/砸中，画面要有命中爆点",
-        r"砸中|挨打|打中|炸开|擦除|命中(?!率)",
+        r"砸中|挨打|(?<!没)打中|炸开|擦除|(?<!未)命中(?!率)",
         lambda cast: _has(cast, "impact"),
         "补 impact(x, y, r)；别拿 ring(kind='lock') 当命中，那是锁定目标的意思",
     ),
@@ -312,7 +372,7 @@ PROMISE_RULES: tuple[tuple[str, str, object, str], ...] = (
     ),
     (
         "说延迟/卡/掉线，画面要有网络状况",
-        r"延迟|掉线|断线|网络中断|重连计时|重连态",
+        r"网络延迟|高延迟|掉线|断线|网络中断|重连计时|重连态",
         lambda cast: _has(cast, "netstat"),
         "补 netstat(x, y, ping, state='ok'/'lag'/'lost')",
     ),
@@ -410,9 +470,11 @@ def check_structure(beat: dict) -> list[str]:
             if key in e and e[key] is not None and not 0 <= float(e[key]) <= 100:
                 problems.append(f"{e['t']} 的 {key}={e[key]} 跑出画面（要在 0..100）")
     for t in SINGLETON_ELEMENTS:
-        n = sum(1 for e in cast if e.get("t") == t)
-        if n > 1:
-            problems.append(f"{t} 画了 {n} 个（一拍最多一个）")
+        same = [e for e in cast if e.get("t") == t]
+        # bar 允许并存但必须是不同语义（护盾条压在血条上是对的，两条血条就是画重了）
+        kinds = {e.get("kind") for e in same}
+        if len(same) > 1 and len(kinds) != len(same):
+            problems.append(f"{t} 画了 {len(same)} 个且语义重复（一种语义最多一个）")
     for e in cast:
         for (et, key), allowed in ELEMENT_ENUMS.items():
             if e.get("t") == et and key in e and e[key] not in allowed:

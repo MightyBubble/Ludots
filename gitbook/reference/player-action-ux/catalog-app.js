@@ -232,6 +232,97 @@
             <text x="${x + w / 2}" y="${y0 + h / 2 + 3.5}" text-anchor="middle" fill="${c}" font-size="${text.length > 2 ? 8 : 10}" font-family="DM Sans, sans-serif" font-weight="700">${text}</text>`;
         }).join("");
       }
+      if (el.t === "buffchip") {
+        // 状态图标 + 层数：叠层、引爆、驱散的目标就是它
+        const x = px(el.x), y = py(el.y);
+        const dot = el.kind === "buff" ? "#5dce8f" : el.kind === "shield" ? "#6ec8ff" : "#c78bff";
+        const w = 14 + String(el.label || "").length * 8.5;
+        return `
+          <rect x="${x - w / 2}" y="${y - 9}" width="${w}" height="18" rx="4"
+            fill="rgba(11,14,19,0.92)" stroke="${dot}" stroke-width="1.5"/>
+          <circle cx="${x - w / 2 + 8}" cy="${y}" r="3.4" fill="${dot}"/>
+          <text x="${x - w / 2 + 15}" y="${y + 3.5}" fill="${dot}" font-size="9.5" font-family="DM Sans, sans-serif">${esc(el.label || "")}</text>
+          ${el.stacks != null ? `<circle cx="${x + w / 2 - 1}" cy="${y - 8}" r="7.5" fill="#0b0e13" stroke="${dot}" stroke-width="1.4"/>
+            <text x="${x + w / 2 - 1}" y="${y - 4.5}" text-anchor="middle" fill="${dot}" font-size="9" font-family="IBM Plex Mono, monospace" font-weight="700">${esc(el.stacks)}</text>` : ""}`;
+      }
+      if (el.t === "projectile") {
+        // 飞在空中的投射物：它本身可以成为目标（打掉 / 反弹）
+        const x = px(el.x), y = py(el.y);
+        const a2 = ((el.angle || 0) * Math.PI) / 180;
+        const tx = x + Math.cos(a2) * 13, ty = y + Math.sin(a2) * 13;
+        const bx = x - Math.cos(a2) * 9, by = y - Math.sin(a2) * 9;
+        return `
+          <line x1="${bx - Math.cos(a2) * 9}" y1="${by - Math.sin(a2) * 9}" x2="${bx}" y2="${by}"
+            stroke="#f0a35e" stroke-width="1.4" stroke-dasharray="3 3" opacity="0.7"/>
+          <polygon points="${tx},${ty} ${bx + Math.cos(a2 + 2.4) * 7},${by + Math.sin(a2 + 2.4) * 7} ${bx + Math.cos(a2 - 2.4) * 7},${by + Math.sin(a2 - 2.4) * 7}"
+            fill="#f0a35e" stroke="#0b0e13" stroke-width="1"/>
+          ${el.label ? `<text x="${x}" y="${y - 13}" text-anchor="middle" fill="#f0a35e" font-size="8.5" font-family="DM Sans, sans-serif">${esc(el.label)}</text>` : ""}`;
+      }
+      if (el.t === "elementmark") {
+        // 元素附着：两种附着凑在一起才会起反应
+        const x = px(el.x), y = py(el.y);
+        const map = { fire: ["#ef6b6b", "火"], water: ["#6ec8ff", "水"], ice: ["#a9dcff", "冰"], lightning: ["#e0c35a", "雷"] };
+        const [col, ch] = map[el.kind] || map.fire;
+        return `
+          <circle cx="${x}" cy="${y}" r="8" fill="rgba(11,14,19,0.9)" stroke="${col}" stroke-width="1.8"/>
+          <text x="${x}" y="${y + 3.5}" text-anchor="middle" fill="${col}" font-size="9.5" font-family="DM Sans, sans-serif" font-weight="700">${ch}</text>`;
+      }
+      if (el.t === "terrain") {
+        // 技能造出来的地形：目标是环境本身
+        const x = px(el.x), y = py(el.y);
+        if (el.kind === "wall") {
+          return `
+            <rect x="${x - 4}" y="${y - 20}" width="8" height="40" rx="2" fill="#7e8fa6" stroke="#0b0e13" stroke-width="1.4"/>
+            <text x="${x}" y="${y - 25}" text-anchor="middle" fill="#e0c35a" font-size="9" font-family="DM Sans, sans-serif">${esc(el.label || "墙")}</text>`;
+        }
+        if (el.kind === "pit") {
+          return `
+            <ellipse cx="${x}" cy="${y}" rx="20" ry="9" fill="#080a0e" stroke="#3a4658" stroke-width="1.6"/>
+            <text x="${x}" y="${y + 20}" text-anchor="middle" fill="#93a0b4" font-size="9" font-family="DM Sans, sans-serif">${esc(el.label || "坑")}</text>`;
+        }
+        return `
+          <ellipse cx="${x}" cy="${y}" rx="22" ry="10" fill="rgba(169,220,255,0.28)" stroke="#a9dcff" stroke-width="1.6" stroke-dasharray="4 3"/>
+          <text x="${x}" y="${y + 21}" text-anchor="middle" fill="#a9dcff" font-size="9" font-family="DM Sans, sans-serif">${esc(el.label || "冰面")}</text>`;
+      }
+      if (el.t === "summon") {
+        // 自己造出来的东西：图腾 / 守卫，可以成为自己技能的目标
+        const x = px(el.x), y = py(el.y);
+        return `
+          <ellipse cx="${x}" cy="${y + 10}" rx="9" ry="3.5" fill="#000" opacity="0.35"/>
+          <polygon points="${x},${y - 11} ${x + 8},${y + 6} ${x - 8},${y + 6}" fill="none" stroke="#5dce8f" stroke-width="2" stroke-dasharray="4 2"/>
+          <circle cx="${x}" cy="${y - 1}" r="3" fill="#5dce8f"/>
+          ${el.label ? `<text x="${x}" y="${y - 16}" text-anchor="middle" fill="#5dce8f" font-size="9" font-family="DM Sans, sans-serif" font-weight="600">${esc(el.label)}</text>` : ""}`;
+      }
+      if (el.t === "inputwindow") {
+        // 动作时间轴：前摇 / 判定 / 后摆，以及能提前按的那一段缓存窗
+        const x = px(el.x), y = py(el.y);
+        const phases = el.phases || [];
+        const total = phases.reduce((s, p) => s + (p.w || 1), 0);
+        const W = 150, H = 14;
+        let cx = x, out = "";
+        const col = { startup: "#66758a", active: "#f0a35e", recovery: "#3a4658", buffer: "#5dce8f" };
+        phases.forEach((p) => {
+          const pw = (W * (p.w || 1)) / total;
+          out += `
+            <rect x="${cx}" y="${y}" width="${pw}" height="${H}" fill="${p.kind === "buffer" ? "rgba(93,206,143,0.22)" : "rgba(18,24,32,0.8)"}"
+              stroke="${col[p.kind] || "#3a4658"}" stroke-width="1.3" stroke-dasharray="${p.kind === "buffer" ? "3 2" : "0"}"/>
+            <text x="${cx + pw / 2}" y="${y + 10}" text-anchor="middle" fill="${col[p.kind] || "#93a0b4"}" font-size="8" font-family="DM Sans, sans-serif">${esc(p.name)}</text>`;
+          cx += pw;
+        });
+        if (el.pressAt != null) {
+          const mx = x + W * el.pressAt;
+          out += `
+            <line x1="${mx}" y1="${y - 7}" x2="${mx}" y2="${y + H + 5}" stroke="#6ec8ff" stroke-width="2"/>
+            <text x="${mx}" y="${y - 10}" text-anchor="middle" fill="#6ec8ff" font-size="8.5" font-family="DM Sans, sans-serif" font-weight="700">我按了</text>`;
+        }
+        if (el.fireAt != null) {
+          const fx = x + W * el.fireAt;
+          out += `
+            <line x1="${fx}" y1="${y - 7}" x2="${fx}" y2="${y + H + 5}" stroke="#f0a35e" stroke-width="2" stroke-dasharray="2 2"/>
+            <text x="${fx}" y="${y + H + 15}" text-anchor="middle" fill="#f0a35e" font-size="8.5" font-family="DM Sans, sans-serif" font-weight="700">这里才放出</text>`;
+        }
+        return out;
+      }
       if (el.t === "gridmap") {
         // 战棋格盘：目标是「哪几格」，不是连续坐标
         const x0 = px(el.x), y0 = py(el.y);
@@ -787,6 +878,10 @@
           if (el.cd === i) {
             out += `<path d="M${x + w / 2} ${y0 + h / 2} L${x + w / 2} ${y0 + 2.5} A${w / 2 - 2.5} ${h / 2 - 2.5} 0 1 1 ${x + 2.5} ${y0 + h / 2} Z" fill="rgba(11,14,19,0.72)"/>`;
           }
+          if (el.gcd) {
+            // 全局冷却：所有格子压一层薄的，和单技能的转圈遮罩区分开
+            out += `<rect x="${x}" y="${y0 + h * 0.62}" width="${w}" height="${h * 0.38}" fill="rgba(110,200,255,0.3)"/>`;
+          }
           if (isOff) {
             out += `<line x1="${x + 4}" y1="${y0 + 4}" x2="${x + w - 4}" y2="${y0 + h - 4}" stroke="#ef6b6b" stroke-width="1.6"/>`;
           }
@@ -802,13 +897,17 @@
             out += `<text x="${x + w / 2}" y="${y0 - 4}" text-anchor="middle" fill="#e0c35a" font-size="8.5" font-family="DM Sans, sans-serif" font-weight="700">让路</text>`;
           }
         }
+        if (el.gcd) {
+          out += `<text x="${x0 - 8}" y="${y0 + h / 2 + 4}" text-anchor="end" fill="#6ec8ff" font-size="8.5" font-family="DM Sans, sans-serif" font-weight="700">全局CD</text>`;
+        }
         return out;
       }
       if (el.t === "bar") {
         const x = px(el.x == null ? 50 : el.x), y = py(el.y == null ? 30 : el.y);
         const w = 56, h = 7;
         const ratio = Math.max(0, Math.min(1, el.ratio == null ? 0.6 : el.ratio));
-        const color = el.kind === "hp" ? "#5dce8f" : el.kind === "charge" ? "#f0a35e" : "#6ec8ff";
+        const color = el.kind === "hp" ? "#5dce8f" : el.kind === "charge" ? "#f0a35e"
+          : el.kind === "shield" ? "#a9dcff" : "#6ec8ff";
         let out = `
           <rect x="${x - w / 2}" y="${y}" width="${w}" height="${h}" rx="3" fill="#0b0e13" stroke="#3a4658" stroke-width="1"/>
           <rect x="${x - w / 2 + 1}" y="${y + 1}" width="${(w - 2) * ratio}" height="${h - 2}" rx="2" fill="${color}"/>`;
