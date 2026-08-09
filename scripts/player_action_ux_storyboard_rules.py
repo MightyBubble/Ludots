@@ -54,6 +54,9 @@ ELEMENT_ENUMS: dict[tuple[str, str], frozenset] = {
     ("crosshair", "spread"): frozenset({"tight", "wide", None}),
     ("queue", "state"): frozenset({"waiting", "active", "done"}),
     ("camera", "mode"): frozenset({"lock", "free"}),
+    ("splitscreen", "mode"): frozenset({"v", "h", "shared"}),
+    ("netstat", "state"): frozenset({"ok", "lag", "lost"}),
+    ("voice", "state"): frozenset({"off", "on", "talking"}),
 }
 
 # 一拍里最多出现一次的元件（多了就是画重了）
@@ -64,6 +67,7 @@ SUBJECT_ELEMENTS = (
     "unit", "hero", "card", "building", "crosshair", "menu", "stickL", "stickR",
     "key", "hotbar", "wasd", "wheel", "anchor", "touchpt", "prop",
     "vehicle", "corpse", "npc", "deny", "impact", "held", "queue", "camera",
+    "playertag", "splitscreen", "padslot", "roster", "netstat", "voice", "vote",
 )
 
 
@@ -200,6 +204,48 @@ PROMISE_RULES: tuple[tuple[str, str, object, str], ...] = (
         "补一根 arrow(kind='move') 表示走的方向，和 attack 那根并排",
     ),
     (
+        "说分屏，画面要有分屏框",
+        r"分屏|上下分|左右分|各占半屏",
+        lambda cast: _has(cast, "splitscreen"),
+        "补 splitscreen(mode='v'/'h'/'shared')",
+    ),
+    (
+        "说第几号玩家，画面要标出是谁",
+        r"P1|P2|P3|一号玩家|二号玩家|哪个是我",
+        lambda cast: _has(cast, "playertag", "padslot", "splitscreen", "roster"),
+        "补 playertag(x, y, 'P1'/'P2') 或 padslot/roster",
+    ),
+    (
+        "说延迟/卡/掉线，画面要有网络状况",
+        r"延迟|掉线|断线|网络中断|重连计时|重连态",
+        lambda cast: _has(cast, "netstat"),
+        "补 netstat(x, y, ping, state='ok'/'lag'/'lost')",
+    ),
+    (
+        "说麦克风/语音，画面要有麦克风",
+        r"麦克风|语音|按住说话|说话",
+        lambda cast: _has(cast, "voice"),
+        "补 voice(x, y, state='off'/'on'/'talking')",
+    ),
+    (
+        "说表决/投票，画面要有票数进度",
+        r"表决|投票|几票|同意",
+        lambda cast: _has(cast, "vote"),
+        "补 vote(x, y, yes, need)",
+    ),
+    (
+        "说准备就绪/房间名单，画面要有名单",
+        r"全员就绪|房间名单|全绿|点准备|已准备|未准备|还没准备",
+        lambda cast: _has(cast, "roster"),
+        "补 roster(x, y, rows)",
+    ),
+    (
+        "说手柄加入/断开，画面要有手柄槽位",
+        r"手柄加入|按键加入|插上手柄|拔了手柄|手柄断",
+        lambda cast: _has(cast, "padslot"),
+        "补 padslot([...]) 手柄槽位条",
+    ),
+    (
         "说相机/镜头本体在动，画面要有相机",
         r"相机",
         lambda cast: _has(cast, "camera"),
@@ -301,6 +347,10 @@ def check_platform(case: dict) -> list[str]:
                 problems.append(
                     f"T{i+1} 画了键盘键帽「{e['label']}」，platform={platform} 上没有这个键"
                 )
+    if case.get("crossDevice"):
+        # 这条 case 本身讲的就是「两种设备同时在场」，文案必须提到对方设备。
+        # 只豁免文案检查，画面元件仍不许画错设备。
+        return problems
     blob = " ".join(
         [case.get("title") or "", case.get("summary") or ""]
         + [f"{b.get('input')} {b.get('logic')} {b.get('screen')}" for b in case.get("beats") or []]

@@ -8,7 +8,7 @@
 - 逻辑文案：`scripts/player_action_ux_beat_logic.py`
 - 实现标注：`scripts/player_action_ux_impl_notes.py`
 - 动作编号/平台变体：`scripts/player_action_ux_action_index.py`
-- 生成时 HEAD：`437219983`（以你拉取后的 `git rev-parse` 为准；合并后会变）
+- 生成时 HEAD：`b5953179a`（以你拉取后的 `git rev-parse` 为准；合并后会变）
 - 分支语境：`cursor/ux-action-id-platform-tabs-4211`（unique 动作编号 + 主机/键鼠/触控 tab）
 - 已合 main：图鉴 #743–#755（含按游戏分类、时序三参与者、一镜一对、双人审核）
 
@@ -37,15 +37,17 @@
 - `sc2` **星际争霸2**（49）— 框选 · 指令队列 · 控制组 · 热键栏
 - `ra2` **红色警戒2**（47）— 生产建造 · 电力 · 右键语境指令
 - `war3` **魔兽争霸3**（47）— 英雄技 · 物品栏 · RTS 混战
-- `lol` **英雄联盟**（46）— QWER · 技能瞄准 · 补刀走位
-- `wow` **魔兽世界**（63）— 技能栏 · 读条 · 任务与社交循环
+- `lol` **英雄联盟**（51）— QWER · 技能瞄准 · 补刀走位
+- `wow` **魔兽世界**（69）— 技能栏 · 读条 · 任务与社交循环
 - `clash` **皇室战争**（7）— 拖卡部署 · 圣水 · 触控车道
 - `rotk` **三国志式选单**（6）— 武将 → 指令 → 目标分层菜单
 - `gow` **战神式动作**（70）— 近战连段 · 临时武器栏 · 闪避窗
 - `diablo` **暗黑式 ARPG**（68）— 点地走打 · 技能落点 · 刷宝
 - `twin` **双摇杆射击**（8）— 左走右瞄 · 弹幕清屏
-- `fps` **FPS / TPS**（32）— 准星 · 开镜 · 射击换弹
+- `fps` **FPS / TPS**（36）— 准星 · 开镜 · 射击换弹
 - `zelda` **塞尔达 / 开放世界**（16）— 情境按键 · 攀爬采集互动
+- `netmatch` **联机对局**（11）— 建房匹配 · 准备开局 · 掉线重连
+- `couch` **同屏 / 分屏双人**（8）— 手柄加入 · 镜头拉扯 · 抢拾取
 - `shared` **跨品类通用**（22）— 拒绝反馈 · 设计手势 · 共通走位
 
 - 同一动作出现在多个游戏下是预期
@@ -53,13 +55,13 @@
 
 ## 规模
 
-- unique_actions = 163
-- multi_platform_actions = 6
-- 平台覆盖（唯一动作计）：主机 12、键鼠 151、触控 6 —— 图鉴目前以键鼠为主，主机/触控实现是内容缺口，不是渲染 bug
-- cases = 169（含平台变体实现）
-- beats = 359
-- target_games = 13
-- target_memberships = 481（含跨游戏重复）
+- unique_actions = 180
+- multi_platform_actions = 8
+- 平台覆盖（唯一动作计）：主机 20、键鼠 162、触控 6 —— 图鉴目前以键鼠为主，主机/触控实现是内容缺口，不是渲染 bug
+- cases = 188（含平台变体实现）
+- beats = 405
+- target_games = 15
+- target_memberships = 515（含跨游戏重复）
 
 ## 分镜画面审计
 
@@ -84,6 +86,7 @@
 - RA2/SC2 级完整矩阵靠数据填满，不是代码写死兵种表
 - RFC-0065 欲退役专用 aim 事件，CastCommit 配置当前多为空 profiles
 - Settings UI 未把偏好链完整接到玩家可点选项
+- TODO: LocalPlayerSlot（手柄按键加入 / 掉出 / 重新接管）
 - TODO: MenuCommandStack（推入/弹出/目标阶段）
 - TODO: ProximityContextProbe + 交互动词优先级表
 - TODO: TempAbilityKit（授予/计时/收回）运行时 + 命令卡绑定
@@ -92,12 +95,20 @@
 - TODO: party / trade / dialogue 产品基建
 - TODO: 临时授予/收回的 UX 主链（变身整栏、饰品主动、偷技拷贝）
 - TODO: 分层选单（武将→指令→目标）的正式导航栈与取消链
+- TODO: 分屏相机与每玩家视口
+- TODO: 匹配队列与接受对局流程
+- TODO: 同屏抢同一个可交互物的仲裁与失败反馈
 - TODO: 情境交互探测 + 优先级 + 同一键路由（处决/拾取/开门）
+- TODO: 断线重连与队友托管（含玩家可见的状态回显）
 - TODO: 每技能 Autocast 开关写入偏好并参与 CastCommit
 - TODO: 玩家 Autocast 开关、进距门闩、多技能优先级、手动抢占规则
 - TODO: 统一拒绝原因码 → 提示/音效/图标闪烁
+- TODO: 联机会话（建房/加入/大厅准备/开局）产品基建
 - TODO: 触控拖拽卡牌、部署落点、双指缩放/平移的 InputCast / pointer 扩展
+- TODO: 语音 / 表决 / 举报屏蔽等对局内社交治理
+- TODO: 输入归属按玩家分路（谁的手柄控谁）
 - TODO: 采集读条、商人、复活、任务追踪等世界循环
+- TODO: 预测与回滚的玩家可感知表现（被拉回时怎么提示）
 - 双目标连续点选要靠能力配置与多次 commit，缺统一 UX 向导
 - 完美闪避窗口若要用引擎级 Prompt，需接 GasInputResponse，产品层未铺全
 - 宝宝 AI 自动技见 Utility Autocast，与玩家开关不是一条链

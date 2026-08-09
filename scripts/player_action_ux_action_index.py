@@ -179,6 +179,28 @@ ACTION_GROUPS: list[tuple[str, str, str, tuple[tuple[str, str], ...]]] = [
     ("UX-161", "dyn-ctx-vehicle-board", "靠近载具解锁上车", (("dyn-ctx-vehicle-board", "kbm"),)),
     ("UX-162", "temp-kit-item-trinket", "饰品道具主动技", (("temp-kit-item-trinket", "kbm"),)),
     ("UX-163", "temp-kit-mount-combat", "骑乘战斗临时键", (("temp-kit-mount-combat", "kbm"),)),
+    # ---- 联机多人 ----
+    ("UX-164", "net-create-join-room", "建房或输房号加入", (("net-create-join-room", "kbm"),)),
+    ("UX-165", "net-lobby-ready", "大厅准备全绿才开局", (("net-lobby-ready", "kbm"),)),
+    ("UX-166", "net-matchmaking-queue", "匹配排队与限时接受", (("net-matchmaking-queue", "kbm"),)),
+    ("UX-167", "net-disconnect-reconnect", "我掉线后的重连", (("net-disconnect-reconnect", "kbm"),)),
+    ("UX-168", "net-teammate-drop-ai", "队友掉线与AI托管", (("net-teammate-drop-ai", "kbm"),)),
+    ("UX-169", "net-lag-rollback", "延迟把我拉回原位", (("net-lag-rollback", "kbm"),)),
+    ("UX-170", "net-push-to-talk", "按住说话与麦克风开关", (("net-push-to-talk", "kbm"),)),
+    ("UX-171", "net-surrender-vote", "发起投降与队伍表决", (("net-surrender-vote", "kbm"),)),
+    ("UX-172", "net-report-mute", "屏蔽或举报某个玩家", (("net-report-mute", "kbm"),)),
+    ("UX-173", "net-crossplay-prompt", "跨平台同队各按各的键",
+     (("net-crossplay-prompt-pad", "gamepad"), ("net-crossplay-prompt-kbm", "kbm"))),
+    # ---- 同屏多人 ----
+    ("UX-174", "couch-pad-join", "第二个手柄按键加入", (("couch-pad-join", "gamepad"),)),
+    ("UX-175", "couch-pad-drop", "手柄断开与接回原角色", (("couch-pad-drop", "gamepad"),)),
+    ("UX-176", "couch-split-mode", "分屏方式切换", (("couch-split-mode", "gamepad"),)),
+    ("UX-177", "couch-shared-camera-tether", "共享单屏被镜头拉住",
+     (("couch-shared-camera-tether", "gamepad"),)),
+    ("UX-178", "couch-loot-race", "同屏抢同一个东西", (("couch-loot-race", "gamepad"),)),
+    ("UX-179", "couch-menu-owner", "同屏共用菜单归谁操作", (("couch-menu-owner", "gamepad"),)),
+    ("UX-180", "couch-mixed-devices", "一台机器两种设备各控一角",
+     (("couch-mixed-devices-pad", "gamepad"), ("couch-mixed-devices-kbm", "kbm"))),
 ]
 
 

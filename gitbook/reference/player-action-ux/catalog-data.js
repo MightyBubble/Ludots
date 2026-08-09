@@ -48,15 +48,15 @@ window.PLAYER_ACTION_UX_CATALOG = {
     "aim"
   ],
   "checkpoint": {
-    "head": "437219983",
+    "head": "b5953179a",
     "branch_hint": "cursor/ux-action-id-platform-tabs-4211",
     "impl_notes": "scripts/player_action_ux_impl_notes.py",
     "beat_logic": "scripts/player_action_ux_beat_logic.py",
     "action_index": "scripts/player_action_ux_action_index.py",
     "note": "列表=unique actions；详情平台 tab；时序=设备/逻辑/画面；勿手改 catalog-data.js",
     "weak_storyboard_beats": [],
-    "unique_actions": 163,
-    "multi_platform_actions": 6
+    "unique_actions": 180,
+    "multi_platform_actions": 8
   },
   "categories": [
     {
@@ -118,6 +118,16 @@ window.PLAYER_ACTION_UX_CATALOG = {
       "id": "zelda",
       "title": "塞尔达 / 开放世界",
       "blurb": "情境按键 · 攀爬采集互动"
+    },
+    {
+      "id": "netmatch",
+      "title": "联机对局",
+      "blurb": "建房匹配 · 准备开局 · 掉线重连"
+    },
+    {
+      "id": "couch",
+      "title": "同屏 / 分屏双人",
+      "blurb": "手柄加入 · 镜头拉扯 · 抢拾取"
     },
     {
       "id": "shared",
@@ -5120,6 +5130,509 @@ window.PLAYER_ACTION_UX_CATALOG = {
       ],
       "beatCount": 2,
       "caseCount": 1
+    },
+    {
+      "actionNo": "UX-164",
+      "key": "net-create-join-room",
+      "title": "建房或输房号加入",
+      "summary": "自己开一间房等人，或者拿到房号点进别人的房。进错房号要明确说进不去，不能卡在转圈里让人猜。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "net-create-join-room"
+        }
+      ],
+      "targets": [
+        "netmatch",
+        "wow"
+      ],
+      "genres": [
+        "开黑组队",
+        "联机对局"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-165",
+      "key": "net-lobby-ready",
+      "title": "大厅准备全绿才开局",
+      "summary": "每个人自己点准备，名单上变成勾；有人还没准备，开始按钮点不动。这是开局前最后一道「大家都跟上了吗」。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "net-lobby-ready"
+        }
+      ],
+      "targets": [
+        "lol",
+        "netmatch"
+      ],
+      "genres": [
+        "竞技匹配",
+        "联机对局"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-166",
+      "key": "net-matchmaking-queue",
+      "title": "匹配排队与限时接受",
+      "summary": "点开始匹配就进队列，能看到自己等了多久、排在什么位置；配到人要在限时内点接受，有人不点就散伙重新排。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "net-matchmaking-queue"
+        }
+      ],
+      "targets": [
+        "lol",
+        "netmatch"
+      ],
+      "genres": [
+        "竞技匹配",
+        "联机对局"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-167",
+      "key": "net-disconnect-reconnect",
+      "title": "我掉线后的重连",
+      "summary": "网断了先明确告诉我「在重连」和还剩多久，别让我以为游戏卡死；重连成功回到原来的位置，超时才算退出。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "net-disconnect-reconnect"
+        }
+      ],
+      "targets": [
+        "lol",
+        "netmatch"
+      ],
+      "genres": [
+        "竞技匹配",
+        "联机对局"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-168",
+      "key": "net-teammate-drop-ai",
+      "title": "队友掉线与AI托管",
+      "summary": "队友断线时我得一眼看出「他不是在挂机，是掉了」；他的角色是留在原地、被 AI 托管、还是直接消失，规则要写清楚。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "net-teammate-drop-ai"
+        }
+      ],
+      "targets": [
+        "netmatch",
+        "wow"
+      ],
+      "genres": [
+        "开黑组队",
+        "联机对局"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-169",
+      "key": "net-lag-rollback",
+      "title": "延迟把我拉回原位",
+      "summary": "网络卡的时候我按了技能、走了两步，然后被服务器拉回原地。这件事必须让玩家看懂是网络问题，而不是「游戏吞了我的操作」。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "net-lag-rollback"
+        }
+      ],
+      "targets": [
+        "lol",
+        "netmatch"
+      ],
+      "genres": [
+        "竞技匹配",
+        "联机对局"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-170",
+      "key": "net-push-to-talk",
+      "title": "按住说话与麦克风开关",
+      "summary": "按住一个键才说话，松开就闭麦；也可以切成常开。关键是我随时知道自己是不是在外放，以及现在谁在说。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "net-push-to-talk"
+        }
+      ],
+      "targets": [
+        "netmatch",
+        "wow"
+      ],
+      "genres": [
+        "开黑组队",
+        "联机对局"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-171",
+      "key": "net-surrender-vote",
+      "title": "发起投降与队伍表决",
+      "summary": "一个人想投降不算，要凑够票数。发起后大家看到票数进度，没凑够就继续打，并且要说明多久之后才能再发起。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "net-surrender-vote"
+        }
+      ],
+      "targets": [
+        "lol",
+        "netmatch"
+      ],
+      "genres": [
+        "竞技匹配",
+        "联机对局"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-172",
+      "key": "net-report-mute",
+      "title": "屏蔽或举报某个玩家",
+      "summary": "对着某个人做处理：先能立刻屏蔽让他不再打扰我（当场生效），再决定要不要举报。两件事要分开，别把「静音」藏进举报流程里。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "net-report-mute"
+        }
+      ],
+      "targets": [
+        "netmatch",
+        "wow"
+      ],
+      "genres": [
+        "开黑组队",
+        "联机对局"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-173",
+      "key": "net-crossplay-prompt",
+      "title": "跨平台同队各按各的键",
+      "summary": "同一件事在手柄那边显示的是面键，不是键盘字母。同一句「救他」，两边看到的按钮不一样才算做对。",
+      "platforms": [
+        "gamepad",
+        "kbm"
+      ],
+      "platformLabels": [
+        "主机",
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "gamepad",
+          "platformLabel": "主机",
+          "caseId": "net-crossplay-prompt-pad"
+        },
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "net-crossplay-prompt-kbm"
+        }
+      ],
+      "targets": [
+        "netmatch",
+        "wow"
+      ],
+      "genres": [
+        "开黑组队",
+        "联机对局"
+      ],
+      "beatCount": 2,
+      "caseCount": 2
+    },
+    {
+      "actionNo": "UX-174",
+      "key": "couch-pad-join",
+      "title": "第二个手柄按键加入",
+      "summary": "不用回主菜单：拿起另一个手柄按确认键，P2 当场出现在场上。空槽位要一直提示「按键加入」，让人知道还能再来人。",
+      "platforms": [
+        "gamepad"
+      ],
+      "platformLabels": [
+        "主机"
+      ],
+      "variants": [
+        {
+          "platform": "gamepad",
+          "platformLabel": "主机",
+          "caseId": "couch-pad-join"
+        }
+      ],
+      "targets": [
+        "couch"
+      ],
+      "genres": [
+        "同屏双人",
+        "派对游戏"
+      ],
+      "beatCount": 2,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-175",
+      "key": "couch-pad-drop",
+      "title": "手柄断开与接回原角色",
+      "summary": "手柄断开要立刻暂停并说清是谁的手柄掉了，别让另一个人在那儿硬撑；重新连上应该接回原来那个角色，而不是变成新玩家。",
+      "platforms": [
+        "gamepad"
+      ],
+      "platformLabels": [
+        "主机"
+      ],
+      "variants": [
+        {
+          "platform": "gamepad",
+          "platformLabel": "主机",
+          "caseId": "couch-pad-drop"
+        }
+      ],
+      "targets": [
+        "couch"
+      ],
+      "genres": [
+        "同屏双人",
+        "派对游戏"
+      ],
+      "beatCount": 2,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-176",
+      "key": "couch-split-mode",
+      "title": "分屏方式切换",
+      "summary": "两个人一台机器，画面怎么分是手感问题：左右分适合看远，上下分适合看宽，共享一块屏最省但会互相拉扯。切换要当场看到效果。",
+      "platforms": [
+        "gamepad"
+      ],
+      "platformLabels": [
+        "主机"
+      ],
+      "variants": [
+        {
+          "platform": "gamepad",
+          "platformLabel": "主机",
+          "caseId": "couch-split-mode"
+        }
+      ],
+      "targets": [
+        "couch",
+        "fps"
+      ],
+      "genres": [
+        "分屏",
+        "同屏双人"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-177",
+      "key": "couch-shared-camera-tether",
+      "title": "共享单屏被镜头拉住",
+      "summary": "两个人挤一个镜头时，谁想跑远都会被拽住：先是镜头拉远，再是走到屏幕边推不动。这个限制必须让玩家看懂，不然只会觉得卡住了。",
+      "platforms": [
+        "gamepad"
+      ],
+      "platformLabels": [
+        "主机"
+      ],
+      "variants": [
+        {
+          "platform": "gamepad",
+          "platformLabel": "主机",
+          "caseId": "couch-shared-camera-tether"
+        }
+      ],
+      "targets": [
+        "couch",
+        "fps"
+      ],
+      "genres": [
+        "分屏",
+        "同屏双人"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-178",
+      "key": "couch-loot-race",
+      "title": "同屏抢同一个东西",
+      "summary": "两个人同时按同一个箱子，只能有一个人拿到。没拿到的那个必须收到明确反馈「被 P1 拿走了」，而不是按了没反应。",
+      "platforms": [
+        "gamepad"
+      ],
+      "platformLabels": [
+        "主机"
+      ],
+      "variants": [
+        {
+          "platform": "gamepad",
+          "platformLabel": "主机",
+          "caseId": "couch-loot-race"
+        }
+      ],
+      "targets": [
+        "couch"
+      ],
+      "genres": [
+        "同屏双人",
+        "派对游戏"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-179",
+      "key": "couch-menu-owner",
+      "title": "同屏共用菜单归谁操作",
+      "summary": "两人一台机器时最容易吵架的地方：背包只有一个，谁的手柄在动它？要么各自一个光标，要么明确标出「现在是 P2 在操作」，不能默认听 P1。",
+      "platforms": [
+        "gamepad"
+      ],
+      "platformLabels": [
+        "主机"
+      ],
+      "variants": [
+        {
+          "platform": "gamepad",
+          "platformLabel": "主机",
+          "caseId": "couch-menu-owner"
+        }
+      ],
+      "targets": [
+        "couch"
+      ],
+      "genres": [
+        "同屏双人",
+        "派对游戏"
+      ],
+      "beatCount": 2,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-180",
+      "key": "couch-mixed-devices",
+      "title": "一台机器两种设备各控一角",
+      "summary": "同一台机器上 P1 用键鼠、P2 用手柄，各自的提示要按自己的设备显示，而且键盘的输入不能串到手柄玩家身上。",
+      "platforms": [
+        "gamepad",
+        "kbm"
+      ],
+      "platformLabels": [
+        "主机",
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "gamepad",
+          "platformLabel": "主机",
+          "caseId": "couch-mixed-devices-pad"
+        },
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "couch-mixed-devices-kbm"
+        }
+      ],
+      "targets": [
+        "couch",
+        "fps"
+      ],
+      "genres": [
+        "分屏",
+        "同屏双人"
+      ],
+      "beatCount": 2,
+      "caseCount": 2
     }
   ],
   "cases": [
@@ -27483,6 +27996,2918 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "platform": "kbm",
           "platformLabel": "键鼠",
           "caseId": "block-crowd-control"
+        }
+      ]
+    },
+    {
+      "id": "net-create-join-room",
+      "category": "netplay",
+      "family": "netplay",
+      "title": "建房 / 输房号加入",
+      "summary": "自己开一间房等人，或者拿到房号点进别人的房。进错房号要明确说进不去，不能卡在转圈里让人猜。",
+      "genres": [
+        "联机对局",
+        "开黑组队"
+      ],
+      "targets": [
+        "wow",
+        "netmatch"
+      ],
+      "beats": [
+        {
+          "title": "建房",
+          "input": "点「创建房间」",
+          "screen": "房间开出来，我是房主，名单只有我",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "roster",
+              "x": 18,
+              "y": 24,
+              "rows": [
+                {
+                  "name": "我（房主）",
+                  "state": "waiting"
+                }
+              ],
+              "title": "房间 4821"
+            },
+            {
+              "t": "cursor",
+              "x": 30,
+              "y": 60,
+              "mode": "up"
+            },
+            {
+              "t": "badge",
+              "text": "建好房了"
+            }
+          ],
+          "logic": "开出房间并把自己登记为房主"
+        },
+        {
+          "title": "有人进来",
+          "input": "朋友输房号点加入",
+          "screen": "名单多出一行，房主看得到谁进来了",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "roster",
+              "x": 18,
+              "y": 24,
+              "rows": [
+                {
+                  "name": "我（房主）",
+                  "state": "waiting"
+                },
+                {
+                  "name": "阿强",
+                  "state": "waiting"
+                }
+              ],
+              "title": "房间 4821"
+            },
+            {
+              "t": "netstat",
+              "x": 72,
+              "y": 30,
+              "ping": 38,
+              "state": "ok"
+            },
+            {
+              "t": "badge",
+              "text": "2/4 人"
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": null,
+              "cd": null,
+              "extra": 3,
+              "off": [],
+              "dot": null,
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
+            }
+          ],
+          "logic": "校验房号后把加入者写进房间名单"
+        },
+        {
+          "title": "加入失败",
+          "input": "输错房号或房间已满",
+          "screen": "明确告诉你进不去和为什么，退回房号输入",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "menu",
+              "x": 20,
+              "y": 30,
+              "lines": [
+                "房号 9999",
+                "查无此房"
+              ],
+              "active": null
+            },
+            {
+              "t": "deny",
+              "x": 64,
+              "y": 45,
+              "label": "进不去",
+              "r": 11
+            },
+            {
+              "t": "cursor",
+              "x": 34,
+              "y": 62,
+              "mode": "up"
+            },
+            {
+              "t": "badge",
+              "text": "加入失败"
+            }
+          ],
+          "logic": "房号无效或人满时拒绝加入并回报原因"
+        }
+      ],
+      "ludots": "联机：Ludots 当前是单机 ECS 框架，没有联机主链——房间、匹配、状态同步、回滚与重连都不存在，这一族整体是缺口，不要当成已有能力引用。",
+      "todos": [
+        "TODO: 联机会话（建房/加入/大厅准备/开局）产品基建",
+        "TODO: 匹配队列与接受对局流程",
+        "TODO: 断线重连与队友托管（含玩家可见的状态回显）",
+        "TODO: 预测与回滚的玩家可感知表现（被拉回时怎么提示）",
+        "TODO: 语音 / 表决 / 举报屏蔽等对局内社交治理"
+      ],
+      "familyTitle": "联机：进一局并待在里面",
+      "actionNo": "UX-164",
+      "actionKey": "net-create-join-room",
+      "actionTitle": "建房或输房号加入",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "net-create-join-room"
+        }
+      ]
+    },
+    {
+      "id": "net-lobby-ready",
+      "category": "netplay",
+      "family": "netplay",
+      "title": "大厅准备：全绿房主才能开",
+      "summary": "每个人自己点准备，名单上变成勾；有人还没准备，开始按钮点不动。这是开局前最后一道「大家都跟上了吗」。",
+      "genres": [
+        "联机对局",
+        "竞技匹配"
+      ],
+      "targets": [
+        "lol",
+        "netmatch"
+      ],
+      "beats": [
+        {
+          "title": "我准备",
+          "input": "我点准备",
+          "screen": "我这行变成勾，其他人还是等待",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "roster",
+              "x": 16,
+              "y": 20,
+              "rows": [
+                {
+                  "name": "我",
+                  "state": "ready"
+                },
+                {
+                  "name": "阿强",
+                  "state": "waiting"
+                },
+                {
+                  "name": "小美",
+                  "state": "waiting"
+                }
+              ],
+              "title": "准备中"
+            },
+            {
+              "t": "cursor",
+              "x": 30,
+              "y": 70,
+              "mode": "up"
+            },
+            {
+              "t": "badge",
+              "text": "我已准备"
+            }
+          ],
+          "logic": "把我的准备状态置为就绪并广播给房间"
+        },
+        {
+          "title": "还差人",
+          "input": "有人没准备就点开始",
+          "screen": "开始按钮按不动，并指出还差谁",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "roster",
+              "x": 16,
+              "y": 20,
+              "rows": [
+                {
+                  "name": "我",
+                  "state": "ready"
+                },
+                {
+                  "name": "阿强",
+                  "state": "ready"
+                },
+                {
+                  "name": "小美",
+                  "state": "waiting"
+                }
+              ],
+              "title": "准备中"
+            },
+            {
+              "t": "deny",
+              "x": 68,
+              "y": 52,
+              "label": "小美还没准备",
+              "r": 11
+            },
+            {
+              "t": "badge",
+              "text": "开始被挡住"
+            }
+          ],
+          "logic": "有人未就绪时挡下开局并指出还差谁"
+        },
+        {
+          "title": "全绿开局",
+          "input": "最后一人也准备了",
+          "screen": "名单全绿，开始按钮亮起，进开局倒计时",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "roster",
+              "x": 16,
+              "y": 20,
+              "rows": [
+                {
+                  "name": "我",
+                  "state": "ready"
+                },
+                {
+                  "name": "阿强",
+                  "state": "ready"
+                },
+                {
+                  "name": "小美",
+                  "state": "ready"
+                }
+              ],
+              "title": "全员就绪"
+            },
+            {
+              "t": "bar",
+              "x": 70,
+              "y": 40,
+              "ratio": 0.6,
+              "kind": "cast",
+              "label": "开局 3s",
+              "broken": false
+            },
+            {
+              "t": "badge",
+              "text": "全绿·可开"
+            }
+          ],
+          "logic": "全员就绪后解锁开局并进入开局倒计时"
+        }
+      ],
+      "ludots": "联机：Ludots 当前是单机 ECS 框架，没有联机主链——房间、匹配、状态同步、回滚与重连都不存在，这一族整体是缺口，不要当成已有能力引用。",
+      "todos": [
+        "TODO: 联机会话（建房/加入/大厅准备/开局）产品基建",
+        "TODO: 匹配队列与接受对局流程",
+        "TODO: 断线重连与队友托管（含玩家可见的状态回显）",
+        "TODO: 预测与回滚的玩家可感知表现（被拉回时怎么提示）",
+        "TODO: 语音 / 表决 / 举报屏蔽等对局内社交治理"
+      ],
+      "familyTitle": "联机：进一局并待在里面",
+      "actionNo": "UX-165",
+      "actionKey": "net-lobby-ready",
+      "actionTitle": "大厅准备全绿才开局",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "net-lobby-ready"
+        }
+      ]
+    },
+    {
+      "id": "net-matchmaking-queue",
+      "category": "netplay",
+      "family": "netplay",
+      "title": "匹配排队：等人、接受、有人跑了",
+      "summary": "点开始匹配就进队列，能看到自己等了多久、排在什么位置；配到人要在限时内点接受，有人不点就散伙重新排。",
+      "genres": [
+        "联机对局",
+        "竞技匹配"
+      ],
+      "targets": [
+        "lol",
+        "netmatch"
+      ],
+      "beats": [
+        {
+          "title": "进队列",
+          "input": "点开始匹配",
+          "screen": "进入队列，显示已等时间和队列位置",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "menu",
+              "x": 18,
+              "y": 22,
+              "lines": [
+                "匹配中…",
+                "已等 0:42"
+              ],
+              "active": null
+            },
+            {
+              "t": "queue",
+              "x": 52,
+              "y": 40,
+              "n": 3,
+              "state": "waiting"
+            },
+            {
+              "t": "netstat",
+              "x": 74,
+              "y": 30,
+              "ping": 42,
+              "state": "ok"
+            },
+            {
+              "t": "badge",
+              "text": "排队中"
+            }
+          ],
+          "logic": "进入匹配队列并开始计时与排位"
+        },
+        {
+          "title": "限时接受",
+          "input": "配到人了，限时接受",
+          "screen": "弹出接受窗与倒计时，谁接了谁亮",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "roster",
+              "x": 16,
+              "y": 20,
+              "rows": [
+                {
+                  "name": "我",
+                  "state": "ready"
+                },
+                {
+                  "name": "阿强",
+                  "state": "ready"
+                },
+                {
+                  "name": "路人",
+                  "state": "waiting"
+                }
+              ],
+              "title": "等待接受"
+            },
+            {
+              "t": "bar",
+              "x": 70,
+              "y": 40,
+              "ratio": 0.35,
+              "kind": "cast",
+              "label": "接受 7s",
+              "broken": false
+            },
+            {
+              "t": "cursor",
+              "x": 34,
+              "y": 72,
+              "mode": "up"
+            },
+            {
+              "t": "badge",
+              "text": "接受对局"
+            }
+          ],
+          "logic": "凑齐人数后发出限时接受请求"
+        },
+        {
+          "title": "有人跑了",
+          "input": "有人没点接受",
+          "screen": "这局散掉，明确说是谁没接，重新回队列",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "roster",
+              "x": 16,
+              "y": 20,
+              "rows": [
+                {
+                  "name": "我",
+                  "state": "ready"
+                },
+                {
+                  "name": "阿强",
+                  "state": "ready"
+                },
+                {
+                  "name": "路人",
+                  "state": "offline"
+                }
+              ],
+              "title": "有人未接受"
+            },
+            {
+              "t": "deny",
+              "x": 70,
+              "y": 50,
+              "label": "路人未接受",
+              "r": 11
+            },
+            {
+              "t": "queue",
+              "x": 52,
+              "y": 74,
+              "n": 3,
+              "state": "waiting"
+            },
+            {
+              "t": "badge",
+              "text": "回到队列"
+            }
+          ],
+          "logic": "有人超时未接受则解散本次匹配并退回队列"
+        }
+      ],
+      "ludots": "联机：Ludots 当前是单机 ECS 框架，没有联机主链——房间、匹配、状态同步、回滚与重连都不存在，这一族整体是缺口，不要当成已有能力引用。",
+      "todos": [
+        "TODO: 联机会话（建房/加入/大厅准备/开局）产品基建",
+        "TODO: 匹配队列与接受对局流程",
+        "TODO: 断线重连与队友托管（含玩家可见的状态回显）",
+        "TODO: 预测与回滚的玩家可感知表现（被拉回时怎么提示）",
+        "TODO: 语音 / 表决 / 举报屏蔽等对局内社交治理"
+      ],
+      "familyTitle": "联机：进一局并待在里面",
+      "actionNo": "UX-166",
+      "actionKey": "net-matchmaking-queue",
+      "actionTitle": "匹配排队与限时接受",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "net-matchmaking-queue"
+        }
+      ]
+    },
+    {
+      "id": "net-disconnect-reconnect",
+      "category": "netplay",
+      "family": "netplay",
+      "title": "我掉线了：还能回来吗",
+      "summary": "网断了先明确告诉我「在重连」和还剩多久，别让我以为游戏卡死；重连成功回到原来的位置，超时才算退出。",
+      "genres": [
+        "联机对局",
+        "竞技匹配"
+      ],
+      "targets": [
+        "lol",
+        "netmatch"
+      ],
+      "beats": [
+        {
+          "title": "断了",
+          "input": "网络中断",
+          "screen": "画面明确进入重连态，显示剩余重连时间",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 48,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "netstat",
+              "x": 72,
+              "y": 28,
+              "ping": 999,
+              "state": "lost"
+            },
+            {
+              "t": "bar",
+              "x": 48,
+              "y": 34,
+              "ratio": 0.8,
+              "kind": "cast",
+              "label": "重连 24s",
+              "broken": false
+            },
+            {
+              "t": "badge",
+              "text": "正在重连"
+            }
+          ],
+          "logic": "连接中断，进入重连态并启动重连计时"
+        },
+        {
+          "title": "接回来",
+          "input": "重连成功",
+          "screen": "回到原来位置继续打，延迟恢复正常",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 48,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "ring",
+              "x": 48,
+              "y": 55,
+              "r": 12,
+              "kind": "buff"
+            },
+            {
+              "t": "netstat",
+              "x": 72,
+              "y": 28,
+              "ping": 45,
+              "state": "ok"
+            },
+            {
+              "t": "badge",
+              "text": "已回到对局"
+            }
+          ],
+          "logic": "重连成功，恢复我的对局状态与位置"
+        },
+        {
+          "title": "超时退出",
+          "input": "重连超时",
+          "screen": "明确判定退出这局，并说明后果（惩罚/可再进）",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "netstat",
+              "x": 72,
+              "y": 28,
+              "ping": 999,
+              "state": "lost"
+            },
+            {
+              "t": "menu",
+              "x": 24,
+              "y": 34,
+              "lines": [
+                "重连超时",
+                "已退出本局"
+              ],
+              "active": null
+            },
+            {
+              "t": "deny",
+              "x": 52,
+              "y": 62,
+              "label": "本局结束",
+              "r": 11
+            },
+            {
+              "t": "badge",
+              "text": "掉出对局"
+            }
+          ],
+          "logic": "重连计时耗尽，判定退出本局并结算后果"
+        }
+      ],
+      "ludots": "联机：Ludots 当前是单机 ECS 框架，没有联机主链——房间、匹配、状态同步、回滚与重连都不存在，这一族整体是缺口，不要当成已有能力引用。",
+      "todos": [
+        "TODO: 联机会话（建房/加入/大厅准备/开局）产品基建",
+        "TODO: 匹配队列与接受对局流程",
+        "TODO: 断线重连与队友托管（含玩家可见的状态回显）",
+        "TODO: 预测与回滚的玩家可感知表现（被拉回时怎么提示）",
+        "TODO: 语音 / 表决 / 举报屏蔽等对局内社交治理"
+      ],
+      "familyTitle": "联机：进一局并待在里面",
+      "actionNo": "UX-167",
+      "actionKey": "net-disconnect-reconnect",
+      "actionTitle": "我掉线后的重连",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "net-disconnect-reconnect"
+        }
+      ]
+    },
+    {
+      "id": "net-teammate-drop-ai",
+      "category": "netplay",
+      "family": "netplay",
+      "title": "队友掉线：交给托管还是空着",
+      "summary": "队友断线时我得一眼看出「他不是在挂机，是掉了」；他的角色是留在原地、被 AI 托管、还是直接消失，规则要写清楚。",
+      "genres": [
+        "联机对局",
+        "开黑组队"
+      ],
+      "targets": [
+        "wow",
+        "netmatch"
+      ],
+      "beats": [
+        {
+          "title": "队友掉了",
+          "input": "队友断线",
+          "screen": "他的名字变灰并标掉线，角色留在原地不动",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "unit",
+              "x": 35,
+              "y": 55,
+              "sel": true,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "ring",
+              "x": 35,
+              "y": 55,
+              "r": 8,
+              "kind": "select"
+            },
+            {
+              "t": "unit",
+              "x": 60,
+              "y": 48,
+              "sel": false,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "playertag",
+              "x": 60,
+              "y": 34,
+              "label": "阿强",
+              "color": "p2"
+            },
+            {
+              "t": "netstat",
+              "x": 74,
+              "y": 26,
+              "ping": 999,
+              "state": "lost"
+            },
+            {
+              "t": "roster",
+              "x": 14,
+              "y": 60,
+              "rows": [
+                {
+                  "name": "阿强",
+                  "state": "offline"
+                }
+              ],
+              "title": "队伍"
+            },
+            {
+              "t": "badge",
+              "text": "队友掉线"
+            }
+          ],
+          "logic": "标记该玩家为掉线，其角色停在原地"
+        },
+        {
+          "title": "AI 托管",
+          "input": "交给 AI 托管",
+          "screen": "他的角色开始自动跟着打，标记写明这是托管",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "unit",
+              "x": 35,
+              "y": 55,
+              "sel": true,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "ring",
+              "x": 35,
+              "y": 55,
+              "r": 8,
+              "kind": "select"
+            },
+            {
+              "t": "unit",
+              "x": 58,
+              "y": 46,
+              "sel": false,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "playertag",
+              "x": 58,
+              "y": 32,
+              "label": "AI托管",
+              "color": "p3"
+            },
+            {
+              "t": "unit",
+              "x": 78,
+              "y": 38,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "arrow",
+              "x1": 60,
+              "y1": 45,
+              "x2": 74,
+              "y2": 40,
+              "kind": "attack"
+            },
+            {
+              "t": "badge",
+              "text": "AI 接手"
+            }
+          ],
+          "logic": "按托管策略把该角色交给 AI 接管"
+        },
+        {
+          "title": "交还",
+          "input": "他重连回来",
+          "screen": "托管标记撤掉，控制权交还给他本人",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "unit",
+              "x": 35,
+              "y": 55,
+              "sel": true,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "ring",
+              "x": 35,
+              "y": 55,
+              "r": 8,
+              "kind": "select"
+            },
+            {
+              "t": "unit",
+              "x": 58,
+              "y": 46,
+              "sel": false,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "playertag",
+              "x": 58,
+              "y": 32,
+              "label": "阿强",
+              "color": "p2"
+            },
+            {
+              "t": "netstat",
+              "x": 74,
+              "y": 26,
+              "ping": 48,
+              "state": "ok"
+            },
+            {
+              "t": "badge",
+              "text": "交还控制"
+            }
+          ],
+          "logic": "本人重连后撤销托管并交还控制权"
+        }
+      ],
+      "ludots": "联机：Ludots 当前是单机 ECS 框架，没有联机主链——房间、匹配、状态同步、回滚与重连都不存在，这一族整体是缺口，不要当成已有能力引用。",
+      "todos": [
+        "TODO: 联机会话（建房/加入/大厅准备/开局）产品基建",
+        "TODO: 匹配队列与接受对局流程",
+        "TODO: 断线重连与队友托管（含玩家可见的状态回显）",
+        "TODO: 预测与回滚的玩家可感知表现（被拉回时怎么提示）",
+        "TODO: 语音 / 表决 / 举报屏蔽等对局内社交治理"
+      ],
+      "familyTitle": "联机：进一局并待在里面",
+      "actionNo": "UX-168",
+      "actionKey": "net-teammate-drop-ai",
+      "actionTitle": "队友掉线与AI托管",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "net-teammate-drop-ai"
+        }
+      ]
+    },
+    {
+      "id": "net-lag-rollback",
+      "category": "netplay",
+      "family": "netplay",
+      "title": "延迟卡了：我按的那一下被拉回去",
+      "summary": "网络卡的时候我按了技能、走了两步，然后被服务器拉回原地。这件事必须让玩家看懂是网络问题，而不是「游戏吞了我的操作」。",
+      "genres": [
+        "联机对局",
+        "竞技匹配"
+      ],
+      "targets": [
+        "lol",
+        "netmatch"
+      ],
+      "beats": [
+        {
+          "title": "本地先动",
+          "input": "延迟升高时按技能",
+          "screen": "本地先演出来，服务器还没确认",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "netstat",
+              "x": 72,
+              "y": 26,
+              "ping": 260,
+              "state": "lag"
+            },
+            {
+              "t": "circle",
+              "x": 64,
+              "y": 44,
+              "r": 14,
+              "ok": true
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": 0,
+              "cd": null,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
+            },
+            {
+              "t": "badge",
+              "text": "本地先放"
+            }
+          ],
+          "logic": "本地先行预测演出，等待服务器确认"
+        },
+        {
+          "title": "被拉回",
+          "input": "服务器不认，拉回原位",
+          "screen": "角色被拉回按之前的位置，技能退回可用",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 30,
+              "y": 62,
+              "face": 0
+            },
+            {
+              "t": "path",
+              "points": [
+                [
+                  40,
+                  58
+                ],
+                [
+                  30,
+                  62
+                ]
+              ],
+              "kind": "move"
+            },
+            {
+              "t": "netstat",
+              "x": 72,
+              "y": 26,
+              "ping": 260,
+              "state": "lag"
+            },
+            {
+              "t": "deny",
+              "x": 52,
+              "y": 44,
+              "label": "服务器未确认",
+              "r": 11
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": 0,
+              "cd": null,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
+            },
+            {
+              "t": "badge",
+              "text": "回滚"
+            }
+          ],
+          "logic": "服务器未确认，回滚到权威状态并退还资源"
+        },
+        {
+          "title": "恢复",
+          "input": "延迟恢复",
+          "screen": "动作正常生效，不再拉扯",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 44,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "netstat",
+              "x": 72,
+              "y": 26,
+              "ping": 46,
+              "state": "ok"
+            },
+            {
+              "t": "unit",
+              "x": 70,
+              "y": 42,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "arrow",
+              "x1": 48,
+              "y1": 54,
+              "x2": 66,
+              "y2": 44,
+              "kind": "attack"
+            },
+            {
+              "t": "impact",
+              "x": 70,
+              "y": 42,
+              "r": 13,
+              "heavy": false
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": null,
+              "cd": 0,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
+            },
+            {
+              "t": "badge",
+              "text": "恢复正常"
+            }
+          ],
+          "logic": "延迟恢复，本地预测与服务器确认重新一致"
+        }
+      ],
+      "ludots": "联机：Ludots 当前是单机 ECS 框架，没有联机主链——房间、匹配、状态同步、回滚与重连都不存在，这一族整体是缺口，不要当成已有能力引用。",
+      "todos": [
+        "TODO: 联机会话（建房/加入/大厅准备/开局）产品基建",
+        "TODO: 匹配队列与接受对局流程",
+        "TODO: 断线重连与队友托管（含玩家可见的状态回显）",
+        "TODO: 预测与回滚的玩家可感知表现（被拉回时怎么提示）",
+        "TODO: 语音 / 表决 / 举报屏蔽等对局内社交治理"
+      ],
+      "familyTitle": "联机：进一局并待在里面",
+      "actionNo": "UX-169",
+      "actionKey": "net-lag-rollback",
+      "actionTitle": "延迟把我拉回原位",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "net-lag-rollback"
+        }
+      ]
+    },
+    {
+      "id": "net-push-to-talk",
+      "category": "netplay",
+      "family": "netplay",
+      "title": "按住说话 / 麦克风开关",
+      "summary": "按住一个键才说话，松开就闭麦；也可以切成常开。关键是我随时知道自己是不是在外放，以及现在谁在说。",
+      "genres": [
+        "联机对局",
+        "开黑组队"
+      ],
+      "targets": [
+        "wow",
+        "netmatch"
+      ],
+      "beats": [
+        {
+          "title": "闭麦",
+          "input": "默认闭麦",
+          "screen": "麦克风图标是关着的，我说话别人听不到",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "voice",
+              "x": 74,
+              "y": 30,
+              "state": "off"
+            },
+            {
+              "t": "key",
+              "x": 24,
+              "y": 80,
+              "label": "V",
+              "state": "idle",
+              "hint": "按住说话"
+            },
+            {
+              "t": "badge",
+              "text": "闭麦"
+            }
+          ],
+          "logic": "语音默认关闭，不上传我的音频"
+        },
+        {
+          "title": "按住说",
+          "input": "按住说话键",
+          "screen": "图标变成正在说话，队友那边看到是我在说",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "voice",
+              "x": 74,
+              "y": 30,
+              "state": "talking"
+            },
+            {
+              "t": "key",
+              "x": 24,
+              "y": 80,
+              "label": "V",
+              "state": "active",
+              "hint": "按住说话"
+            },
+            {
+              "t": "roster",
+              "x": 14,
+              "y": 58,
+              "rows": [
+                {
+                  "name": "我（说话中）",
+                  "state": "ready"
+                }
+              ],
+              "title": "语音"
+            },
+            {
+              "t": "badge",
+              "text": "正在说话"
+            }
+          ],
+          "logic": "按住说话键期间开启上行并广播说话人"
+        },
+        {
+          "title": "常开",
+          "input": "切成常开",
+          "screen": "松手也一直开着，图标保持开启提醒我别乱说",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "voice",
+              "x": 74,
+              "y": 30,
+              "state": "on"
+            },
+            {
+              "t": "key",
+              "x": 24,
+              "y": 80,
+              "label": "V",
+              "state": "active",
+              "hint": "常开"
+            },
+            {
+              "t": "badge",
+              "text": "麦克风常开"
+            }
+          ],
+          "logic": "切换为常开模式，松手仍保持上行"
+        }
+      ],
+      "ludots": "联机：Ludots 当前是单机 ECS 框架，没有联机主链——房间、匹配、状态同步、回滚与重连都不存在，这一族整体是缺口，不要当成已有能力引用。",
+      "todos": [
+        "TODO: 联机会话（建房/加入/大厅准备/开局）产品基建",
+        "TODO: 匹配队列与接受对局流程",
+        "TODO: 断线重连与队友托管（含玩家可见的状态回显）",
+        "TODO: 预测与回滚的玩家可感知表现（被拉回时怎么提示）",
+        "TODO: 语音 / 表决 / 举报屏蔽等对局内社交治理"
+      ],
+      "familyTitle": "联机：进一局并待在里面",
+      "actionNo": "UX-170",
+      "actionKey": "net-push-to-talk",
+      "actionTitle": "按住说话与麦克风开关",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "net-push-to-talk"
+        }
+      ]
+    },
+    {
+      "id": "net-surrender-vote",
+      "category": "netplay",
+      "family": "netplay",
+      "title": "发起投降，队伍表决",
+      "summary": "一个人想投降不算，要凑够票数。发起后大家看到票数进度，没凑够就继续打，并且要说明多久之后才能再发起。",
+      "genres": [
+        "联机对局",
+        "竞技匹配"
+      ],
+      "targets": [
+        "lol",
+        "netmatch"
+      ],
+      "beats": [
+        {
+          "title": "发起",
+          "input": "我发起投降",
+          "screen": "弹出表决，票数从我这一票开始",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "vote",
+              "x": 20,
+              "y": 34,
+              "yes": 1,
+              "need": 4,
+              "label": "投降表决"
+            },
+            {
+              "t": "cursor",
+              "x": 30,
+              "y": 70,
+              "mode": "up"
+            },
+            {
+              "t": "badge",
+              "text": "已发起"
+            }
+          ],
+          "logic": "发起投降表决并记入我这一票"
+        },
+        {
+          "title": "投票中",
+          "input": "队友陆续投票",
+          "screen": "票数进度往前走，谁投了谁亮",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "vote",
+              "x": 20,
+              "y": 34,
+              "yes": 3,
+              "need": 4,
+              "label": "投降表决"
+            },
+            {
+              "t": "roster",
+              "x": 14,
+              "y": 58,
+              "rows": [
+                {
+                  "name": "阿强",
+                  "state": "ready"
+                },
+                {
+                  "name": "小美",
+                  "state": "waiting"
+                }
+              ],
+              "title": "投票"
+            },
+            {
+              "t": "badge",
+              "text": "3/4 票"
+            }
+          ],
+          "logic": "收集队友投票并刷新票数进度"
+        },
+        {
+          "title": "表决失败",
+          "input": "票数不够，表决失败",
+          "screen": "继续打，并明确说多久后才能再发起",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "vote",
+              "x": 20,
+              "y": 34,
+              "yes": 3,
+              "need": 4,
+              "label": "表决失败"
+            },
+            {
+              "t": "deny",
+              "x": 66,
+              "y": 52,
+              "label": "3分钟后可再发起",
+              "r": 11
+            },
+            {
+              "t": "badge",
+              "text": "没凑够"
+            }
+          ],
+          "logic": "票数未达阈值，表决失败并进入再发起的等待期"
+        }
+      ],
+      "ludots": "联机：Ludots 当前是单机 ECS 框架，没有联机主链——房间、匹配、状态同步、回滚与重连都不存在，这一族整体是缺口，不要当成已有能力引用。",
+      "todos": [
+        "TODO: 联机会话（建房/加入/大厅准备/开局）产品基建",
+        "TODO: 匹配队列与接受对局流程",
+        "TODO: 断线重连与队友托管（含玩家可见的状态回显）",
+        "TODO: 预测与回滚的玩家可感知表现（被拉回时怎么提示）",
+        "TODO: 语音 / 表决 / 举报屏蔽等对局内社交治理"
+      ],
+      "familyTitle": "联机：进一局并待在里面",
+      "actionNo": "UX-171",
+      "actionKey": "net-surrender-vote",
+      "actionTitle": "发起投降与队伍表决",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "net-surrender-vote"
+        }
+      ]
+    },
+    {
+      "id": "net-report-mute",
+      "category": "netplay",
+      "family": "netplay",
+      "title": "屏蔽某个玩家 / 举报",
+      "summary": "对着某个人做处理：先能立刻屏蔽让他不再打扰我（当场生效），再决定要不要举报。两件事要分开，别把「静音」藏进举报流程里。",
+      "genres": [
+        "联机对局",
+        "开黑组队"
+      ],
+      "targets": [
+        "wow",
+        "netmatch"
+      ],
+      "beats": [
+        {
+          "title": "选人",
+          "input": "在名单上选那个人",
+          "screen": "弹出对他的处理项：屏蔽、举报、看资料",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "roster",
+              "x": 14,
+              "y": 20,
+              "rows": [
+                {
+                  "name": "路人甲",
+                  "state": "ready"
+                }
+              ],
+              "title": "队伍"
+            },
+            {
+              "t": "menu",
+              "x": 52,
+              "y": 30,
+              "lines": [
+                "屏蔽",
+                "举报",
+                "看资料"
+              ],
+              "active": 0
+            },
+            {
+              "t": "cursor",
+              "x": 58,
+              "y": 55,
+              "mode": "up"
+            },
+            {
+              "t": "badge",
+              "text": "选人处理"
+            }
+          ],
+          "logic": "取出对该玩家可做的处理项"
+        },
+        {
+          "title": "屏蔽",
+          "input": "点屏蔽",
+          "screen": "他的语音与文字当场消失，图标标明已屏蔽",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "roster",
+              "x": 14,
+              "y": 20,
+              "rows": [
+                {
+                  "name": "路人甲（已屏蔽）",
+                  "state": "offline"
+                }
+              ],
+              "title": "队伍"
+            },
+            {
+              "t": "voice",
+              "x": 70,
+              "y": 34,
+              "state": "off"
+            },
+            {
+              "t": "badge",
+              "text": "已屏蔽·立刻生效"
+            }
+          ],
+          "logic": "本地立即屏蔽该玩家的语音与文字"
+        },
+        {
+          "title": "举报",
+          "input": "点举报并选原因",
+          "screen": "提交后给回执，明确说不会当场处理",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "menu",
+              "x": 20,
+              "y": 26,
+              "lines": [
+                "消极比赛",
+                "言语辱骂",
+                "作弊"
+              ],
+              "active": 1
+            },
+            {
+              "t": "menu",
+              "x": 58,
+              "y": 44,
+              "lines": [
+                "举报已提交",
+                "会另行处理"
+              ],
+              "active": null
+            },
+            {
+              "t": "cursor",
+              "x": 30,
+              "y": 58,
+              "mode": "up"
+            },
+            {
+              "t": "badge",
+              "text": "举报回执"
+            }
+          ],
+          "logic": "提交举报并回执，处理走离线流程"
+        }
+      ],
+      "ludots": "联机：Ludots 当前是单机 ECS 框架，没有联机主链——房间、匹配、状态同步、回滚与重连都不存在，这一族整体是缺口，不要当成已有能力引用。",
+      "todos": [
+        "TODO: 联机会话（建房/加入/大厅准备/开局）产品基建",
+        "TODO: 匹配队列与接受对局流程",
+        "TODO: 断线重连与队友托管（含玩家可见的状态回显）",
+        "TODO: 预测与回滚的玩家可感知表现（被拉回时怎么提示）",
+        "TODO: 语音 / 表决 / 举报屏蔽等对局内社交治理"
+      ],
+      "familyTitle": "联机：进一局并待在里面",
+      "actionNo": "UX-172",
+      "actionKey": "net-report-mute",
+      "actionTitle": "屏蔽或举报某个玩家",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "net-report-mute"
+        }
+      ]
+    },
+    {
+      "id": "net-crossplay-prompt-kbm",
+      "category": "netplay",
+      "family": "netplay",
+      "title": "跨平台同队：我这边按键盘提示",
+      "summary": "同一局里我用键鼠、队友用手柄。提示必须按各自设备显示，不能让手柄玩家看到「按 F」，也不能让我看到「按 A 键」。",
+      "genres": [
+        "联机对局",
+        "开黑组队"
+      ],
+      "targets": [
+        "wow",
+        "netmatch"
+      ],
+      "beats": [
+        {
+          "title": "我这边",
+          "input": "队友用手柄，我用键鼠",
+          "screen": "名单上标出各自设备，我这边提示键盘键",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 38,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 62,
+              "y": 50,
+              "sel": false,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "playertag",
+              "x": 62,
+              "y": 34,
+              "label": "手柄队友",
+              "color": "p2"
+            },
+            {
+              "t": "key",
+              "x": 38,
+              "y": 34,
+              "label": "F",
+              "state": "active",
+              "hint": "复活队友"
+            },
+            {
+              "t": "roster",
+              "x": 12,
+              "y": 62,
+              "rows": [
+                {
+                  "name": "我（键鼠）",
+                  "state": "ready"
+                },
+                {
+                  "name": "阿强（手柄）",
+                  "state": "ready"
+                }
+              ],
+              "title": "跨平台"
+            },
+            {
+              "t": "badge",
+              "text": "键鼠提示"
+            }
+          ],
+          "logic": "按我的当前设备解析键位并渲染键盘提示"
+        }
+      ],
+      "crossDevice": true,
+      "ludots": "联机：Ludots 当前是单机 ECS 框架，没有联机主链——房间、匹配、状态同步、回滚与重连都不存在，这一族整体是缺口，不要当成已有能力引用。",
+      "todos": [
+        "TODO: 联机会话（建房/加入/大厅准备/开局）产品基建",
+        "TODO: 匹配队列与接受对局流程",
+        "TODO: 断线重连与队友托管（含玩家可见的状态回显）",
+        "TODO: 预测与回滚的玩家可感知表现（被拉回时怎么提示）",
+        "TODO: 语音 / 表决 / 举报屏蔽等对局内社交治理"
+      ],
+      "familyTitle": "联机：进一局并待在里面",
+      "actionNo": "UX-173",
+      "actionKey": "net-crossplay-prompt",
+      "actionTitle": "跨平台同队各按各的键",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "gamepad",
+          "platformLabel": "主机",
+          "caseId": "net-crossplay-prompt-pad"
+        },
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "net-crossplay-prompt-kbm"
+        }
+      ]
+    },
+    {
+      "id": "net-crossplay-prompt-pad",
+      "category": "netplay",
+      "family": "netplay",
+      "title": "跨平台同队：我这边按手柄提示",
+      "summary": "同一件事在手柄那边显示的是面键，不是键盘字母。同一句「救他」，两边看到的按钮不一样才算做对。",
+      "genres": [
+        "联机对局",
+        "开黑组队"
+      ],
+      "targets": [
+        "wow",
+        "netmatch"
+      ],
+      "beats": [
+        {
+          "title": "我这边",
+          "input": "我用手柄，队友用键鼠",
+          "screen": "名单上标出各自设备，我这边提示手柄面键",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 38,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 62,
+              "y": 50,
+              "sel": false,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "playertag",
+              "x": 62,
+              "y": 34,
+              "label": "键鼠队友",
+              "color": "p2"
+            },
+            {
+              "t": "key",
+              "x": 38,
+              "y": 34,
+              "label": "A键",
+              "state": "active",
+              "hint": "复活队友"
+            },
+            {
+              "t": "roster",
+              "x": 12,
+              "y": 62,
+              "rows": [
+                {
+                  "name": "我（手柄）",
+                  "state": "ready"
+                },
+                {
+                  "name": "小美（键鼠）",
+                  "state": "ready"
+                }
+              ],
+              "title": "跨平台"
+            },
+            {
+              "t": "badge",
+              "text": "手柄提示"
+            }
+          ],
+          "logic": "按我的当前设备解析键位并渲染手柄面键提示"
+        }
+      ],
+      "crossDevice": true,
+      "ludots": "联机：Ludots 当前是单机 ECS 框架，没有联机主链——房间、匹配、状态同步、回滚与重连都不存在，这一族整体是缺口，不要当成已有能力引用。",
+      "todos": [
+        "TODO: 联机会话（建房/加入/大厅准备/开局）产品基建",
+        "TODO: 匹配队列与接受对局流程",
+        "TODO: 断线重连与队友托管（含玩家可见的状态回显）",
+        "TODO: 预测与回滚的玩家可感知表现（被拉回时怎么提示）",
+        "TODO: 语音 / 表决 / 举报屏蔽等对局内社交治理"
+      ],
+      "familyTitle": "联机：进一局并待在里面",
+      "actionNo": "UX-173",
+      "actionKey": "net-crossplay-prompt",
+      "actionTitle": "跨平台同队各按各的键",
+      "platform": "gamepad",
+      "platformLabel": "主机",
+      "variants": [
+        {
+          "platform": "gamepad",
+          "platformLabel": "主机",
+          "caseId": "net-crossplay-prompt-pad"
+        },
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "net-crossplay-prompt-kbm"
+        }
+      ]
+    },
+    {
+      "id": "couch-pad-join",
+      "category": "couch-play",
+      "family": "couch-play",
+      "title": "第二个手柄按一下就进来",
+      "summary": "不用回主菜单：拿起另一个手柄按确认键，P2 当场出现在场上。空槽位要一直提示「按键加入」，让人知道还能再来人。",
+      "genres": [
+        "同屏双人",
+        "派对游戏"
+      ],
+      "targets": [
+        "couch"
+      ],
+      "beats": [
+        {
+          "title": "等人",
+          "input": "只有我在玩，旁边有空槽",
+          "screen": "空槽位提示按键加入",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "playertag",
+              "x": 40,
+              "y": 36,
+              "label": "P1",
+              "color": "p1"
+            },
+            {
+              "t": "padslot",
+              "states": [
+                "joined",
+                "waiting"
+              ]
+            },
+            {
+              "t": "badge",
+              "text": "等人加入"
+            }
+          ],
+          "logic": "空出的本地玩家位保持监听加入键"
+        },
+        {
+          "title": "加入",
+          "input": "旁边的人拿起手柄按确认",
+          "screen": "P2 当场出现，槽位变成已加入",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 34,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "playertag",
+              "x": 34,
+              "y": 36,
+              "label": "P1",
+              "color": "p1"
+            },
+            {
+              "t": "unit",
+              "x": 58,
+              "y": 55,
+              "sel": false,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "playertag",
+              "x": 58,
+              "y": 34,
+              "label": "P2",
+              "color": "p2"
+            },
+            {
+              "t": "padslot",
+              "states": [
+                "joined",
+                "joined"
+              ]
+            },
+            {
+              "t": "badge",
+              "text": "P2 加入"
+            }
+          ],
+          "logic": "把该手柄绑定为新的本地玩家并生成其角色"
+        }
+      ],
+      "ludots": "同屏多人：Ludots 有多设备输入的雏形（ControlScheme 可绑不同设备），但没有本地多玩家会话概念——分屏相机、按玩家分路的输入归属、同屏抢交互的仲裁都缺。",
+      "todos": [
+        "TODO: LocalPlayerSlot（手柄按键加入 / 掉出 / 重新接管）",
+        "TODO: 分屏相机与每玩家视口",
+        "TODO: 输入归属按玩家分路（谁的手柄控谁）",
+        "TODO: 同屏抢同一个可交互物的仲裁与失败反馈"
+      ],
+      "familyTitle": "同屏多人：加入、分屏、抢东西",
+      "actionNo": "UX-174",
+      "actionKey": "couch-pad-join",
+      "actionTitle": "第二个手柄按键加入",
+      "platform": "gamepad",
+      "platformLabel": "主机",
+      "variants": [
+        {
+          "platform": "gamepad",
+          "platformLabel": "主机",
+          "caseId": "couch-pad-join"
+        }
+      ]
+    },
+    {
+      "id": "couch-pad-drop",
+      "category": "couch-play",
+      "family": "couch-play",
+      "title": "手柄没电掉出去了",
+      "summary": "手柄断开要立刻暂停并说清是谁的手柄掉了，别让另一个人在那儿硬撑；重新连上应该接回原来那个角色，而不是变成新玩家。",
+      "genres": [
+        "同屏双人",
+        "派对游戏"
+      ],
+      "targets": [
+        "couch"
+      ],
+      "beats": [
+        {
+          "title": "断开暂停",
+          "input": "P2 手柄断开",
+          "screen": "游戏暂停，明确说是 P2 的手柄断了",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 34,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "playertag",
+              "x": 34,
+              "y": 36,
+              "label": "P1",
+              "color": "p1"
+            },
+            {
+              "t": "unit",
+              "x": 58,
+              "y": 55,
+              "sel": false,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "playertag",
+              "x": 58,
+              "y": 34,
+              "label": "P2 断开",
+              "color": "p2"
+            },
+            {
+              "t": "padslot",
+              "states": [
+                "joined",
+                "lost"
+              ]
+            },
+            {
+              "t": "deny",
+              "x": 58,
+              "y": 74,
+              "label": "P2 手柄断开",
+              "r": 11
+            },
+            {
+              "t": "badge",
+              "text": "已暂停"
+            }
+          ],
+          "logic": "检测到手柄断开，暂停本局并标出是哪一位"
+        },
+        {
+          "title": "接回来",
+          "input": "重新连上并按键",
+          "screen": "接回原来那个角色，不是新开一个玩家",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 34,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "playertag",
+              "x": 34,
+              "y": 36,
+              "label": "P1",
+              "color": "p1"
+            },
+            {
+              "t": "unit",
+              "x": 58,
+              "y": 55,
+              "sel": false,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "playertag",
+              "x": 58,
+              "y": 34,
+              "label": "P2",
+              "color": "p2"
+            },
+            {
+              "t": "padslot",
+              "states": [
+                "joined",
+                "joined"
+              ]
+            },
+            {
+              "t": "badge",
+              "text": "接回原角色"
+            }
+          ],
+          "logic": "重连手柄按原绑定接回同一个角色"
+        }
+      ],
+      "ludots": "同屏多人：Ludots 有多设备输入的雏形（ControlScheme 可绑不同设备），但没有本地多玩家会话概念——分屏相机、按玩家分路的输入归属、同屏抢交互的仲裁都缺。",
+      "todos": [
+        "TODO: LocalPlayerSlot（手柄按键加入 / 掉出 / 重新接管）",
+        "TODO: 分屏相机与每玩家视口",
+        "TODO: 输入归属按玩家分路（谁的手柄控谁）",
+        "TODO: 同屏抢同一个可交互物的仲裁与失败反馈"
+      ],
+      "familyTitle": "同屏多人：加入、分屏、抢东西",
+      "actionNo": "UX-175",
+      "actionKey": "couch-pad-drop",
+      "actionTitle": "手柄断开与接回原角色",
+      "platform": "gamepad",
+      "platformLabel": "主机",
+      "variants": [
+        {
+          "platform": "gamepad",
+          "platformLabel": "主机",
+          "caseId": "couch-pad-drop"
+        }
+      ]
+    },
+    {
+      "id": "couch-split-mode",
+      "category": "couch-play",
+      "family": "couch-play",
+      "title": "分屏怎么切：左右分、上下分、还是共享一块屏",
+      "summary": "两个人一台机器，画面怎么分是手感问题：左右分适合看远，上下分适合看宽，共享一块屏最省但会互相拉扯。切换要当场看到效果。",
+      "genres": [
+        "同屏双人",
+        "分屏"
+      ],
+      "targets": [
+        "fps",
+        "couch"
+      ],
+      "beats": [
+        {
+          "title": "左右分",
+          "input": "默认左右分屏",
+          "screen": "屏幕竖着切两半，各自占一边",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "splitscreen",
+              "mode": "v"
+            },
+            {
+              "t": "hero",
+              "x": 24,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "playertag",
+              "x": 24,
+              "y": 34,
+              "label": "P1",
+              "color": "p1"
+            },
+            {
+              "t": "unit",
+              "x": 74,
+              "y": 55,
+              "sel": false,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "playertag",
+              "x": 74,
+              "y": 34,
+              "label": "P2",
+              "color": "p2"
+            },
+            {
+              "t": "badge",
+              "text": "左右分"
+            }
+          ],
+          "logic": "按左右分屏切分视口，两人各自一个视角"
+        },
+        {
+          "title": "上下分",
+          "input": "切成上下分屏",
+          "screen": "屏幕横着切两半，视野变宽变矮",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "splitscreen",
+              "mode": "h"
+            },
+            {
+              "t": "hero",
+              "x": 30,
+              "y": 30,
+              "face": 0
+            },
+            {
+              "t": "playertag",
+              "x": 30,
+              "y": 16,
+              "label": "P1",
+              "color": "p1"
+            },
+            {
+              "t": "unit",
+              "x": 30,
+              "y": 78,
+              "sel": false,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "playertag",
+              "x": 30,
+              "y": 64,
+              "label": "P2",
+              "color": "p2"
+            },
+            {
+              "t": "badge",
+              "text": "上下分"
+            }
+          ],
+          "logic": "按上下分屏切分视口并调整视野比例"
+        },
+        {
+          "title": "共享",
+          "input": "切成共享一块屏",
+          "screen": "不再分屏，两人挤同一个镜头，离太远会被拉住",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "splitscreen",
+              "mode": "shared"
+            },
+            {
+              "t": "hero",
+              "x": 38,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "playertag",
+              "x": 38,
+              "y": 38,
+              "label": "P1",
+              "color": "p1"
+            },
+            {
+              "t": "unit",
+              "x": 62,
+              "y": 52,
+              "sel": false,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "playertag",
+              "x": 62,
+              "y": 34,
+              "label": "P2",
+              "color": "p2"
+            },
+            {
+              "t": "camera",
+              "x": 50,
+              "y": 78,
+              "angle": -90,
+              "mode": "lock"
+            },
+            {
+              "t": "badge",
+              "text": "共享单屏"
+            }
+          ],
+          "logic": "合为单一镜头，改用共享取景约束"
+        }
+      ],
+      "ludots": "同屏多人：Ludots 有多设备输入的雏形（ControlScheme 可绑不同设备），但没有本地多玩家会话概念——分屏相机、按玩家分路的输入归属、同屏抢交互的仲裁都缺。",
+      "todos": [
+        "TODO: LocalPlayerSlot（手柄按键加入 / 掉出 / 重新接管）",
+        "TODO: 分屏相机与每玩家视口",
+        "TODO: 输入归属按玩家分路（谁的手柄控谁）",
+        "TODO: 同屏抢同一个可交互物的仲裁与失败反馈"
+      ],
+      "familyTitle": "同屏多人：加入、分屏、抢东西",
+      "actionNo": "UX-176",
+      "actionKey": "couch-split-mode",
+      "actionTitle": "分屏方式切换",
+      "platform": "gamepad",
+      "platformLabel": "主机",
+      "variants": [
+        {
+          "platform": "gamepad",
+          "platformLabel": "主机",
+          "caseId": "couch-split-mode"
+        }
+      ]
+    },
+    {
+      "id": "couch-shared-camera-tether",
+      "category": "couch-play",
+      "family": "couch-play",
+      "title": "共享一块屏：走太远会被镜头拉住",
+      "summary": "两个人挤一个镜头时，谁想跑远都会被拽住：先是镜头拉远，再是走到屏幕边推不动。这个限制必须让玩家看懂，不然只会觉得卡住了。",
+      "genres": [
+        "同屏双人",
+        "分屏"
+      ],
+      "targets": [
+        "fps",
+        "couch"
+      ],
+      "beats": [
+        {
+          "title": "挨着",
+          "input": "两人靠在一起",
+          "screen": "镜头贴得近，画面细节看得清",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "camera",
+              "x": 50,
+              "y": 80,
+              "angle": -90,
+              "mode": "lock"
+            },
+            {
+              "t": "hero",
+              "x": 44,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "playertag",
+              "x": 44,
+              "y": 36,
+              "label": "P1",
+              "color": "p1"
+            },
+            {
+              "t": "unit",
+              "x": 56,
+              "y": 55,
+              "sel": false,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "playertag",
+              "x": 56,
+              "y": 36,
+              "label": "P2",
+              "color": "p2"
+            },
+            {
+              "t": "badge",
+              "text": "镜头贴近"
+            }
+          ],
+          "logic": "单一镜头按两人所在范围取景"
+        },
+        {
+          "title": "拉远",
+          "input": "一个人往外跑",
+          "screen": "镜头自动拉远，把两人都收进画面",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "camera",
+              "x": 50,
+              "y": 84,
+              "angle": -90,
+              "mode": "lock"
+            },
+            {
+              "t": "hero",
+              "x": 24,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "playertag",
+              "x": 24,
+              "y": 40,
+              "label": "P1",
+              "color": "p1"
+            },
+            {
+              "t": "unit",
+              "x": 76,
+              "y": 50,
+              "sel": false,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "playertag",
+              "x": 76,
+              "y": 32,
+              "label": "P2",
+              "color": "p2"
+            },
+            {
+              "t": "arrow",
+              "x1": 72,
+              "y1": 52,
+              "x2": 84,
+              "y2": 48,
+              "kind": "move"
+            },
+            {
+              "t": "badge",
+              "text": "镜头拉远"
+            }
+          ],
+          "logic": "两人距离变大时拉远取景，把两人都收进画面"
+        },
+        {
+          "title": "到边界",
+          "input": "再往外就到屏幕边了",
+          "screen": "人贴住画面边缘走不动，明确提示是被同屏拉住",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "camera",
+              "x": 50,
+              "y": 84,
+              "angle": -90,
+              "mode": "lock"
+            },
+            {
+              "t": "hero",
+              "x": 20,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "playertag",
+              "x": 20,
+              "y": 40,
+              "label": "P1",
+              "color": "p1"
+            },
+            {
+              "t": "unit",
+              "x": 90,
+              "y": 50,
+              "sel": false,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "playertag",
+              "x": 90,
+              "y": 30,
+              "label": "P2",
+              "color": "p2"
+            },
+            {
+              "t": "deny",
+              "x": 90,
+              "y": 70,
+              "label": "同屏边界",
+              "r": 11
+            },
+            {
+              "t": "badge",
+              "text": "被拉住"
+            }
+          ],
+          "logic": "到达取景边界后限制该玩家继续外移"
+        }
+      ],
+      "ludots": "同屏多人：Ludots 有多设备输入的雏形（ControlScheme 可绑不同设备），但没有本地多玩家会话概念——分屏相机、按玩家分路的输入归属、同屏抢交互的仲裁都缺。",
+      "todos": [
+        "TODO: LocalPlayerSlot（手柄按键加入 / 掉出 / 重新接管）",
+        "TODO: 分屏相机与每玩家视口",
+        "TODO: 输入归属按玩家分路（谁的手柄控谁）",
+        "TODO: 同屏抢同一个可交互物的仲裁与失败反馈"
+      ],
+      "familyTitle": "同屏多人：加入、分屏、抢东西",
+      "actionNo": "UX-177",
+      "actionKey": "couch-shared-camera-tether",
+      "actionTitle": "共享单屏被镜头拉住",
+      "platform": "gamepad",
+      "platformLabel": "主机",
+      "variants": [
+        {
+          "platform": "gamepad",
+          "platformLabel": "主机",
+          "caseId": "couch-shared-camera-tether"
+        }
+      ]
+    },
+    {
+      "id": "couch-loot-race",
+      "category": "couch-play",
+      "family": "couch-play",
+      "title": "同屏抢同一个东西：谁先按谁拿",
+      "summary": "两个人同时按同一个箱子，只能有一个人拿到。没拿到的那个必须收到明确反馈「被 P1 拿走了」，而不是按了没反应。",
+      "genres": [
+        "同屏双人",
+        "派对游戏"
+      ],
+      "targets": [
+        "couch"
+      ],
+      "beats": [
+        {
+          "title": "都能按",
+          "input": "两人同时靠近同一个箱子",
+          "screen": "两边都亮起拾取提示",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "prop",
+              "x": 50,
+              "y": 46,
+              "label": "宝箱",
+              "highlight": true,
+              "kind": "chest"
+            },
+            {
+              "t": "hero",
+              "x": 30,
+              "y": 60,
+              "face": 0
+            },
+            {
+              "t": "playertag",
+              "x": 30,
+              "y": 40,
+              "label": "P1",
+              "color": "p1"
+            },
+            {
+              "t": "unit",
+              "x": 70,
+              "y": 58,
+              "sel": false,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "playertag",
+              "x": 70,
+              "y": 38,
+              "label": "P2",
+              "color": "p2"
+            },
+            {
+              "t": "key",
+              "x": 50,
+              "y": 26,
+              "label": "A键",
+              "state": "active",
+              "hint": "拾取"
+            },
+            {
+              "t": "badge",
+              "text": "两边都能按"
+            }
+          ],
+          "logic": "同一可交互物对多个本地玩家同时开放提示"
+        },
+        {
+          "title": "P1 拿到",
+          "input": "P1 先按到",
+          "screen": "箱子归 P1，他这边入包",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 38,
+              "y": 56,
+              "face": 0
+            },
+            {
+              "t": "playertag",
+              "x": 38,
+              "y": 36,
+              "label": "P1",
+              "color": "p1"
+            },
+            {
+              "t": "card",
+              "x": 24,
+              "y": 76,
+              "label": "战利品",
+              "cost": 0,
+              "dragging": false
+            },
+            {
+              "t": "unit",
+              "x": 70,
+              "y": 58,
+              "sel": false,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "playertag",
+              "x": 70,
+              "y": 38,
+              "label": "P2",
+              "color": "p2"
+            },
+            {
+              "t": "queue",
+              "x": 38,
+              "y": 72,
+              "n": 1,
+              "state": "done"
+            },
+            {
+              "t": "badge",
+              "text": "P1 拿到"
+            }
+          ],
+          "logic": "按先到先得判定归属并发放给胜者"
+        },
+        {
+          "title": "P2 落空",
+          "input": "P2 慢了一步",
+          "screen": "他这边明确说被 P1 拿走了，提示收回",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 38,
+              "y": 56,
+              "face": 0
+            },
+            {
+              "t": "playertag",
+              "x": 38,
+              "y": 36,
+              "label": "P1",
+              "color": "p1"
+            },
+            {
+              "t": "unit",
+              "x": 70,
+              "y": 58,
+              "sel": false,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "playertag",
+              "x": 70,
+              "y": 38,
+              "label": "P2",
+              "color": "p2"
+            },
+            {
+              "t": "deny",
+              "x": 70,
+              "y": 74,
+              "label": "被 P1 拿走",
+              "r": 11
+            },
+            {
+              "t": "key",
+              "x": 70,
+              "y": 24,
+              "label": "A键",
+              "state": "off",
+              "hint": null
+            },
+            {
+              "t": "badge",
+              "text": "P2 没拿到"
+            }
+          ],
+          "logic": "落败者收到抢夺失败原因并撤回提示"
+        }
+      ],
+      "ludots": "同屏多人：Ludots 有多设备输入的雏形（ControlScheme 可绑不同设备），但没有本地多玩家会话概念——分屏相机、按玩家分路的输入归属、同屏抢交互的仲裁都缺。",
+      "todos": [
+        "TODO: LocalPlayerSlot（手柄按键加入 / 掉出 / 重新接管）",
+        "TODO: 分屏相机与每玩家视口",
+        "TODO: 输入归属按玩家分路（谁的手柄控谁）",
+        "TODO: 同屏抢同一个可交互物的仲裁与失败反馈"
+      ],
+      "familyTitle": "同屏多人：加入、分屏、抢东西",
+      "actionNo": "UX-178",
+      "actionKey": "couch-loot-race",
+      "actionTitle": "同屏抢同一个东西",
+      "platform": "gamepad",
+      "platformLabel": "主机",
+      "variants": [
+        {
+          "platform": "gamepad",
+          "platformLabel": "主机",
+          "caseId": "couch-loot-race"
+        }
+      ]
+    },
+    {
+      "id": "couch-menu-owner",
+      "category": "couch-play",
+      "family": "couch-play",
+      "title": "同屏开一个菜单：谁在操作它",
+      "summary": "两人一台机器时最容易吵架的地方：背包只有一个，谁的手柄在动它？要么各自一个光标，要么明确标出「现在是 P2 在操作」，不能默认听 P1。",
+      "genres": [
+        "同屏双人",
+        "派对游戏"
+      ],
+      "targets": [
+        "couch"
+      ],
+      "beats": [
+        {
+          "title": "P2 操作",
+          "input": "P2 打开共用菜单",
+          "screen": "菜单标出当前操作者是 P2，P1 的输入不动它",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "menu",
+              "x": 30,
+              "y": 26,
+              "lines": [
+                "装备",
+                "道具",
+                "退出"
+              ],
+              "active": 1
+            },
+            {
+              "t": "playertag",
+              "x": 30,
+              "y": 18,
+              "label": "P2 操作中",
+              "color": "p2"
+            },
+            {
+              "t": "hero",
+              "x": 20,
+              "y": 70,
+              "face": 0
+            },
+            {
+              "t": "playertag",
+              "x": 20,
+              "y": 56,
+              "label": "P1",
+              "color": "p1"
+            },
+            {
+              "t": "padslot",
+              "states": [
+                "joined",
+                "joined"
+              ]
+            },
+            {
+              "t": "badge",
+              "text": "P2 在操作"
+            }
+          ],
+          "logic": "把共用界面的操作权授予打开它的玩家"
+        },
+        {
+          "title": "谁说了算",
+          "input": "P1 也想动这个菜单",
+          "screen": "要么各给一个光标，要么明确挡下并说清归谁",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "menu",
+              "x": 30,
+              "y": 26,
+              "lines": [
+                "装备",
+                "道具",
+                "退出"
+              ],
+              "active": 1
+            },
+            {
+              "t": "playertag",
+              "x": 30,
+              "y": 18,
+              "label": "P2 操作中",
+              "color": "p2"
+            },
+            {
+              "t": "deny",
+              "x": 70,
+              "y": 44,
+              "label": "菜单归 P2",
+              "r": 11
+            },
+            {
+              "t": "hero",
+              "x": 20,
+              "y": 70,
+              "face": 0
+            },
+            {
+              "t": "playertag",
+              "x": 20,
+              "y": 56,
+              "label": "P1",
+              "color": "p1"
+            },
+            {
+              "t": "badge",
+              "text": "P1 被挡下"
+            }
+          ],
+          "logic": "非持有者的输入被挡下并回报归属"
+        }
+      ],
+      "ludots": "同屏多人：Ludots 有多设备输入的雏形（ControlScheme 可绑不同设备），但没有本地多玩家会话概念——分屏相机、按玩家分路的输入归属、同屏抢交互的仲裁都缺。",
+      "todos": [
+        "TODO: LocalPlayerSlot（手柄按键加入 / 掉出 / 重新接管）",
+        "TODO: 分屏相机与每玩家视口",
+        "TODO: 输入归属按玩家分路（谁的手柄控谁）",
+        "TODO: 同屏抢同一个可交互物的仲裁与失败反馈"
+      ],
+      "familyTitle": "同屏多人：加入、分屏、抢东西",
+      "actionNo": "UX-179",
+      "actionKey": "couch-menu-owner",
+      "actionTitle": "同屏共用菜单归谁操作",
+      "platform": "gamepad",
+      "platformLabel": "主机",
+      "variants": [
+        {
+          "platform": "gamepad",
+          "platformLabel": "主机",
+          "caseId": "couch-menu-owner"
+        }
+      ]
+    },
+    {
+      "id": "couch-mixed-devices-pad",
+      "category": "couch-play",
+      "family": "couch-play",
+      "title": "一台机器两种设备：我用手柄",
+      "summary": "同一台机器上 P1 用键鼠、P2 用手柄，各自的提示要按自己的设备显示，而且键盘的输入不能串到手柄玩家身上。",
+      "genres": [
+        "同屏双人",
+        "分屏"
+      ],
+      "targets": [
+        "fps",
+        "couch"
+      ],
+      "beats": [
+        {
+          "title": "手柄侧",
+          "input": "我用手柄操作我的角色",
+          "screen": "我这边提示手柄面键，键鼠的输入不动我",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 60,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "playertag",
+              "x": 60,
+              "y": 34,
+              "label": "P2 手柄",
+              "color": "p2"
+            },
+            {
+              "t": "unit",
+              "x": 26,
+              "y": 58,
+              "sel": false,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "playertag",
+              "x": 26,
+              "y": 38,
+              "label": "P1 键鼠",
+              "color": "p1"
+            },
+            {
+              "t": "stickL",
+              "nx": 0,
+              "ny": -0.7
+            },
+            {
+              "t": "key",
+              "x": 60,
+              "y": 20,
+              "label": "A键",
+              "state": "active",
+              "hint": "交互"
+            },
+            {
+              "t": "padslot",
+              "states": [
+                "joined",
+                "joined"
+              ]
+            },
+            {
+              "t": "badge",
+              "text": "手柄侧"
+            }
+          ],
+          "logic": "按玩家位分路输入，手柄只驱动其绑定角色"
+        }
+      ],
+      "crossDevice": true,
+      "ludots": "同屏多人：Ludots 有多设备输入的雏形（ControlScheme 可绑不同设备），但没有本地多玩家会话概念——分屏相机、按玩家分路的输入归属、同屏抢交互的仲裁都缺。",
+      "todos": [
+        "TODO: LocalPlayerSlot（手柄按键加入 / 掉出 / 重新接管）",
+        "TODO: 分屏相机与每玩家视口",
+        "TODO: 输入归属按玩家分路（谁的手柄控谁）",
+        "TODO: 同屏抢同一个可交互物的仲裁与失败反馈"
+      ],
+      "familyTitle": "同屏多人：加入、分屏、抢东西",
+      "actionNo": "UX-180",
+      "actionKey": "couch-mixed-devices",
+      "actionTitle": "一台机器两种设备各控一角",
+      "platform": "gamepad",
+      "platformLabel": "主机",
+      "variants": [
+        {
+          "platform": "gamepad",
+          "platformLabel": "主机",
+          "caseId": "couch-mixed-devices-pad"
+        },
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "couch-mixed-devices-kbm"
+        }
+      ]
+    },
+    {
+      "id": "couch-mixed-devices-kbm",
+      "category": "couch-play",
+      "family": "couch-play",
+      "title": "一台机器两种设备：我用键鼠",
+      "summary": "同一台机器上的另一半：我用键鼠，提示是键盘键；手柄玩家的摇杆输入不会把我的角色带跑。",
+      "genres": [
+        "同屏双人",
+        "分屏"
+      ],
+      "targets": [
+        "fps",
+        "couch"
+      ],
+      "beats": [
+        {
+          "title": "键鼠侧",
+          "input": "我用键鼠操作我的角色",
+          "screen": "我这边提示键盘键，手柄的输入不动我",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 26,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "playertag",
+              "x": 26,
+              "y": 38,
+              "label": "P1 键鼠",
+              "color": "p1"
+            },
+            {
+              "t": "unit",
+              "x": 60,
+              "y": 55,
+              "sel": false,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "playertag",
+              "x": 60,
+              "y": 34,
+              "label": "P2 手柄",
+              "color": "p2"
+            },
+            {
+              "t": "wasd",
+              "active": [
+                "W"
+              ]
+            },
+            {
+              "t": "key",
+              "x": 26,
+              "y": 20,
+              "label": "F",
+              "state": "active",
+              "hint": "交互"
+            },
+            {
+              "t": "padslot",
+              "states": [
+                "joined",
+                "joined"
+              ]
+            },
+            {
+              "t": "badge",
+              "text": "键鼠侧"
+            }
+          ],
+          "logic": "按玩家位分路输入，键鼠只驱动其绑定角色"
+        }
+      ],
+      "crossDevice": true,
+      "ludots": "同屏多人：Ludots 有多设备输入的雏形（ControlScheme 可绑不同设备），但没有本地多玩家会话概念——分屏相机、按玩家分路的输入归属、同屏抢交互的仲裁都缺。",
+      "todos": [
+        "TODO: LocalPlayerSlot（手柄按键加入 / 掉出 / 重新接管）",
+        "TODO: 分屏相机与每玩家视口",
+        "TODO: 输入归属按玩家分路（谁的手柄控谁）",
+        "TODO: 同屏抢同一个可交互物的仲裁与失败反馈"
+      ],
+      "familyTitle": "同屏多人：加入、分屏、抢东西",
+      "actionNo": "UX-180",
+      "actionKey": "couch-mixed-devices",
+      "actionTitle": "一台机器两种设备各控一角",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "gamepad",
+          "platformLabel": "主机",
+          "caseId": "couch-mixed-devices-pad"
+        },
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "couch-mixed-devices-kbm"
         }
       ]
     }

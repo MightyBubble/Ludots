@@ -173,6 +173,102 @@
           <rect x="${x}" y="${y}" width="${w}" height="${h}" fill="rgba(8,10,14,0.82)"/>
           <text x="${x + w / 2}" y="${y + h / 2}" text-anchor="middle" fill="#66758a" font-size="11" font-family="DM Sans, sans-serif" font-weight="600">战争迷雾</text>`;
       }
+      if (el.t === "playertag") {
+        const x = px(el.x), y = py(el.y);
+        const palette = { p1: "#6ec8ff", p2: "#f0a35e", p3: "#5dce8f", p4: "#c78bff" };
+        const c = palette[el.color] || palette.p1;
+        const w = 8 + String(el.label || "P1").length * 7;
+        return `
+          <rect x="${x - w / 2}" y="${y - 9}" width="${w}" height="14" rx="3" fill="#0b0e13" stroke="${c}" stroke-width="1.6"/>
+          <text x="${x}" y="${y + 1.5}" text-anchor="middle" fill="${c}" font-size="9.5" font-family="IBM Plex Mono, monospace" font-weight="700">${esc(el.label || "P1")}</text>`;
+      }
+      if (el.t === "splitscreen") {
+        const mode = el.mode || "v";
+        const label = (t, x, y) => `<text x="${x}" y="${y}" fill="#93a0b4" font-size="10" font-family="IBM Plex Mono, monospace" font-weight="700">${t}</text>`;
+        if (mode === "shared") {
+          return `
+            <rect x="${SX + 4}" y="${SY + 4}" width="${SW - 8}" height="${SH - 8}" fill="none" stroke="#93a0b4" stroke-width="1.4" stroke-dasharray="6 4"/>
+            ${label("共享一块屏", SX + 10, SY + 18)}`;
+        }
+        if (mode === "h") {
+          const my = SY + SH / 2;
+          return `
+            <line x1="${SX}" y1="${my}" x2="${SX + SW}" y2="${my}" stroke="#0b0e13" stroke-width="4"/>
+            ${label("P1", SX + 8, SY + 16)}${label("P2", SX + 8, my + 16)}`;
+        }
+        const mx = SX + SW / 2;
+        return `
+          <line x1="${mx}" y1="${SY}" x2="${mx}" y2="${SY + SH}" stroke="#0b0e13" stroke-width="4"/>
+          ${label("P1", SX + 8, SY + 16)}${label("P2", mx + 8, SY + 16)}`;
+      }
+      if (el.t === "padslot") {
+        const states = Array.isArray(el.states) ? el.states : [];
+        const w = 40, h = 24, gap = 6;
+        const total = states.length * w + (states.length - 1) * gap;
+        const x0 = SX + SW / 2 - total / 2;
+        const y0 = SY + SH - h - 6;
+        return states.map((st, i) => {
+          const x = x0 + i * (w + gap);
+          const c = st === "joined" ? "#5dce8f" : st === "lost" ? "#ef6b6b" : "#66758a";
+          const text = st === "joined" ? `P${i + 1}` : st === "lost" ? "断开" : "按键加入";
+          return `
+            <rect x="${x}" y="${y0}" width="${w}" height="${h}" rx="4" fill="#0b0e13" stroke="${c}" stroke-width="${st === "waiting" ? 1.2 : 1.8}" stroke-dasharray="${st === "waiting" ? "3 2" : "0"}"/>
+            <text x="${x + w / 2}" y="${y0 + h / 2 + 3.5}" text-anchor="middle" fill="${c}" font-size="${text.length > 2 ? 8 : 10}" font-family="DM Sans, sans-serif" font-weight="700">${text}</text>`;
+        }).join("");
+      }
+      if (el.t === "roster") {
+        const x = px(el.x), y = py(el.y);
+        const rows = el.rows || [];
+        const w = 96, rh = 16, h = 18 + rows.length * rh;
+        const mark = { ready: ["✓", "#5dce8f"], waiting: ["…", "#e0c35a"], offline: ["×", "#ef6b6b"] };
+        const items = rows.map((r, i) => {
+          const [sym, col] = mark[r.state] || mark.waiting;
+          const ry = y + 20 + i * rh;
+          return `
+            <text x="${x + 8}" y="${ry}" fill="#e8eef6" font-size="10" font-family="DM Sans, sans-serif">${esc(r.name)}</text>
+            <text x="${x + w - 10}" y="${ry}" text-anchor="end" fill="${col}" font-size="11" font-family="DM Sans, sans-serif" font-weight="700">${sym}</text>`;
+        }).join("");
+        return `
+          <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="4" fill="#0b0e13" stroke="#6ec8ff" stroke-width="1.4"/>
+          <text x="${x + 8}" y="${y + 13}" fill="#66758a" font-size="8.5" font-family="IBM Plex Mono, monospace">${esc(el.title || "房间")}</text>
+          ${items}`;
+      }
+      if (el.t === "netstat") {
+        const x = px(el.x), y = py(el.y);
+        const c = el.state === "lag" ? "#e0c35a" : el.state === "lost" ? "#ef6b6b" : "#5dce8f";
+        const bars = [5, 8, 11, 14].map((bh, i) => {
+          const lit = el.state === "lost" ? i < 1 : el.state === "lag" ? i < 2 : i < 4;
+          return `<rect x="${x + i * 5}" y="${y - bh}" width="3.4" height="${bh}" fill="${lit ? c : "#2c3645"}"/>`;
+        }).join("");
+        return `${bars}
+          <text x="${x + 24}" y="${y}" fill="${c}" font-size="9.5" font-family="IBM Plex Mono, monospace" font-weight="700">${esc(el.ping)}ms</text>`;
+      }
+      if (el.t === "voice") {
+        const x = px(el.x), y = py(el.y);
+        const on = el.state === "talking" || el.state === "on";
+        const c = el.state === "talking" ? "#5dce8f" : el.state === "on" ? "#6ec8ff" : "#66758a";
+        const waves = el.state === "talking"
+          ? `<path d="M${x + 9} ${y - 5} q4 5 0 10" fill="none" stroke="${c}" stroke-width="1.4"/>
+             <path d="M${x + 13} ${y - 8} q6 8 0 16" fill="none" stroke="${c}" stroke-width="1.1" opacity="0.7"/>`
+          : "";
+        return `
+          <rect x="${x - 3.5}" y="${y - 10}" width="7" height="12" rx="3.5" fill="${on ? c : "#1a2430"}" stroke="${c}" stroke-width="1.4"/>
+          <path d="M${x - 6} ${y + 1} q6 7 12 0" fill="none" stroke="${c}" stroke-width="1.4"/>
+          <line x1="${x}" y1="${y + 4}" x2="${x}" y2="${y + 8}" stroke="${c}" stroke-width="1.4"/>
+          ${el.state === "off" ? `<line x1="${x - 9}" y1="${y + 8}" x2="${x + 9}" y2="${y - 11}" stroke="#ef6b6b" stroke-width="1.8"/>` : ""}
+          ${waves}`;
+      }
+      if (el.t === "vote") {
+        const x = px(el.x), y = py(el.y);
+        const need = el.need || 5;
+        const yes = el.yes || 0;
+        const w = 90, h = 8;
+        return `
+          <text x="${x}" y="${y - 6}" fill="#93a0b4" font-size="9.5" font-family="DM Sans, sans-serif">${esc(el.label || "表决")} ${yes}/${need}</text>
+          <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="3" fill="#0b0e13" stroke="#3a4658" stroke-width="1"/>
+          <rect x="${x + 1}" y="${y + 1}" width="${(w - 2) * Math.min(1, yes / need)}" height="${h - 2}" rx="2" fill="${yes >= need ? "#5dce8f" : "#e0c35a"}"/>
+          ${Array.from({ length: need - 1 }, (_, i) => `<line x1="${x + ((i + 1) * w) / need}" y1="${y}" x2="${x + ((i + 1) * w) / need}" y2="${y + h}" stroke="#0b0e13" stroke-width="1.4"/>`).join("")}`;
+      }
       if (el.t === "camera") {
         const x = px(el.x), y = py(el.y);
         const a = ((el.angle || 0) * Math.PI) / 180;

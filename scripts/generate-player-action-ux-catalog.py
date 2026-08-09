@@ -94,7 +94,8 @@ def beat(input_text, screen, _author_note, view, cast, title=None):
     }
 
 
-def case(cid, category, title, summary, beats, genres=None, ludots=None, todos=None):
+def case(cid, category, title, summary, beats, genres=None, ludots=None, todos=None,
+         cross_device=False):
     """category = functional family (for impl_notes). Nav taxonomy is targets[] (game recreations)."""
     row = {
         "id": cid,
@@ -110,6 +111,9 @@ def case(cid, category, title, summary, beats, genres=None, ludots=None, todos=N
         row["ludots"] = ludots
     if todos:
         row["todos"] = list(todos)
+    if cross_device:
+        # 这条动作本身讲「两种设备同时在场」，文案必然提到对方设备
+        row["crossDevice"] = True
     return row
 
 
@@ -232,6 +236,41 @@ def menu_box(x, y, lines, active=None):
     return {"t": "menu", "x": x, "y": y, "lines": list(lines), "active": active}
 
 
+def playertag(x, y, label="P1", color="p1"):
+    """玩家标识牌，挂在角色头上。同屏多人时玩家最先要认出「哪个是我」。"""
+    return {"t": "playertag", "x": x, "y": y, "label": label, "color": color}
+
+
+def splitscreen(mode="v"):
+    """分屏框。mode=v 左右分 / h 上下分 / shared 共享一块屏。"""
+    return {"t": "splitscreen", "mode": mode}
+
+
+def padslot(states):
+    """手柄槽位条。每格 joined 已加入 / waiting 等着按键加入 / lost 断开了。"""
+    return {"t": "padslot", "states": list(states)}
+
+
+def roster(x, y, rows, title="房间"):
+    """房间玩家名单。rows = [{"name": ..., "state": "ready|waiting|offline"}]。"""
+    return {"t": "roster", "x": x, "y": y, "rows": list(rows), "title": title}
+
+
+def netstat(x, y, ping=40, state="ok"):
+    """网络状况：信号格 + 延迟数字。state=ok 顺 / lag 卡 / lost 断了。"""
+    return {"t": "netstat", "x": x, "y": y, "ping": ping, "state": state}
+
+
+def voice(x, y, state="off"):
+    """麦克风。state=off 关 / on 开着 / talking 正在说话。"""
+    return {"t": "voice", "x": x, "y": y, "state": state}
+
+
+def vote(x, y, yes=0, need=5, label="表决"):
+    """表决进度条，画出「还差几票」。"""
+    return {"t": "vote", "x": x, "y": y, "yes": yes, "need": need, "label": label}
+
+
 def camera(x, y, angle=0, mode="free"):
     """镜头本体（带视锥）。mode=lock 贴背跟随 / free 自由转。
     镜头是主角时必须画出来，不能拿「角色移动箭头」代替。"""
@@ -309,6 +348,8 @@ TARGET_GAMES = [
     ("twin", "双摇杆射击", "左走右瞄 · 弹幕清屏"),
     ("fps", "FPS / TPS", "准星 · 开镜 · 射击换弹"),
     ("zelda", "塞尔达 / 开放世界", "情境按键 · 攀爬采集互动"),
+    ("netmatch", "联机对局", "建房匹配 · 准备开局 · 掉线重连"),
+    ("couch", "同屏 / 分屏双人", "手柄加入 · 镜头拉扯 · 抢拾取"),
     ("shared", "跨品类通用", "拒绝反馈 · 设计手势 · 共通走位"),
 ]
 
@@ -343,6 +384,8 @@ FAMILY_TITLES = {
     "touch-tablet": "平板触控 / 卡牌拖放",
     "menu-cmd": "选单式指令",
     "blocked": "放不了时的反馈",
+    "netplay": "联机：进一局并待在里面",
+    "couch-play": "同屏多人：加入、分屏、抢东西",
 }
 
 # genre 标签 → 复刻目标（可一对多）
@@ -402,6 +445,12 @@ _GENRE_TO_TARGETS: dict[str, tuple[str, ...]] = {
     "载具": ("fps", "gow"),
     "设计选项": ("shared",),
     "全品类": ("shared",),
+    "联机对局": ("netmatch",),
+    "竞技匹配": ("netmatch", "lol"),
+    "开黑组队": ("netmatch", "wow"),
+    "同屏双人": ("couch",),
+    "分屏": ("couch", "fps"),
+    "派对游戏": ("couch",),
 }
 
 # 功能族默认挂到哪些复刻目标（genres 为空或偏抽象时兜底；可与 genres 叠加）
@@ -416,6 +465,8 @@ _FAMILY_TO_TARGETS: dict[str, tuple[str, ...]] = {
     "dynamic-context": ("zelda", "wow"),
     "auto-cast": ("wow", "sc2", "war3"),
     "blocked": ("shared",),
+    "netplay": ("netmatch",),
+    "couch-play": ("couch",),
     "select": ("sc2", "ra2", "war3", "lol"),
     "basic-order": ("sc2", "ra2", "war3"),
     "context-order": ("sc2", "ra2", "war3"),
@@ -2719,6 +2770,335 @@ def build_cases():
             beat("控制时间结束", "技能栏恢复亮起，立刻能反打", "缓过来了", "moba",
                  [hero(48, 55), hotbar(active=0), badge("控制解除")], title="解控"),
         ], ["MMO", "MOBA"],
+    ))
+
+    # ===== 二十八、联机：进一局并待在里面 =====
+    c.append(case(
+        "net-create-join-room", "netplay", "建房 / 输房号加入",
+        "自己开一间房等人，或者拿到房号点进别人的房。进错房号要明确说进不去，"
+        "不能卡在转圈里让人猜。",
+        [
+            beat("点「创建房间」", "房间开出来，我是房主，名单只有我", "先占个坑", "moba",
+                 [roster(18, 24, [{"name": "我（房主）", "state": "waiting"}], "房间 4821"),
+                  cursor(30, 60, "up"), badge("建好房了")], title="建房"),
+            beat("朋友输房号点加入", "名单多出一行，房主看得到谁进来了", "有人来了", "moba",
+                 [roster(18, 24, [{"name": "我（房主）", "state": "waiting"},
+                                  {"name": "阿强", "state": "waiting"}], "房间 4821"),
+                  netstat(72, 30, 38, "ok"), badge("2/4 人")], title="有人进来"),
+            beat("输错房号或房间已满", "明确告诉你进不去和为什么，退回房号输入", "白输了", "moba",
+                 [menu_box(20, 30, ["房号 9999", "查无此房"]), deny(64, 45, "进不去"),
+                  cursor(34, 62, "up"), badge("加入失败")], title="加入失败"),
+        ], ["联机对局", "开黑组队"],
+    ))
+    c.append(case(
+        "net-lobby-ready", "netplay", "大厅准备：全绿房主才能开",
+        "每个人自己点准备，名单上变成勾；有人还没准备，开始按钮点不动。"
+        "这是开局前最后一道「大家都跟上了吗」。",
+        [
+            beat("我点准备", "我这行变成勾，其他人还是等待", "我好了", "moba",
+                 [roster(16, 20, [{"name": "我", "state": "ready"},
+                                  {"name": "阿强", "state": "waiting"},
+                                  {"name": "小美", "state": "waiting"}], "准备中"),
+                  cursor(30, 70, "up"), badge("我已准备")], title="我准备"),
+            beat("有人没准备就点开始", "开始按钮按不动，并指出还差谁", "开不了", "moba",
+                 [roster(16, 20, [{"name": "我", "state": "ready"},
+                                  {"name": "阿强", "state": "ready"},
+                                  {"name": "小美", "state": "waiting"}], "准备中"),
+                  deny(68, 52, "小美还没准备"), badge("开始被挡住")], title="还差人"),
+            beat("最后一人也准备了", "名单全绿，开始按钮亮起，进开局倒计时", "走起", "moba",
+                 [roster(16, 20, [{"name": "我", "state": "ready"},
+                                  {"name": "阿强", "state": "ready"},
+                                  {"name": "小美", "state": "ready"}], "全员就绪"),
+                  bar(70, 40, 0.6, "cast", "开局 3s"), badge("全绿·可开")], title="全绿开局"),
+        ], ["联机对局", "竞技匹配"],
+    ))
+    c.append(case(
+        "net-matchmaking-queue", "netplay", "匹配排队：等人、接受、有人跑了",
+        "点开始匹配就进队列，能看到自己等了多久、排在什么位置；"
+        "配到人要在限时内点接受，有人不点就散伙重新排。",
+        [
+            beat("点开始匹配", "进入队列，显示已等时间和队列位置", "开始等", "moba",
+                 [menu_box(18, 22, ["匹配中…", "已等 0:42"]), queue_no(52, 40, 3, "waiting"),
+                  netstat(74, 30, 42, "ok"), badge("排队中")], title="进队列"),
+            beat("配到人了，限时接受", "弹出接受窗与倒计时，谁接了谁亮", "赶紧点", "moba",
+                 [roster(16, 20, [{"name": "我", "state": "ready"},
+                                  {"name": "阿强", "state": "ready"},
+                                  {"name": "路人", "state": "waiting"}], "等待接受"),
+                  bar(70, 40, 0.35, "cast", "接受 7s"), cursor(34, 72, "up"),
+                  badge("接受对局")], title="限时接受"),
+            beat("有人没点接受", "这局散掉，明确说是谁没接，重新回队列", "又得等", "moba",
+                 [roster(16, 20, [{"name": "我", "state": "ready"},
+                                  {"name": "阿强", "state": "ready"},
+                                  {"name": "路人", "state": "offline"}], "有人未接受"),
+                  deny(70, 50, "路人未接受"), queue_no(52, 74, 3, "waiting"),
+                  badge("回到队列")], title="有人跑了"),
+        ], ["联机对局", "竞技匹配"],
+    ))
+    c.append(case(
+        "net-disconnect-reconnect", "netplay", "我掉线了：还能回来吗",
+        "网断了先明确告诉我「在重连」和还剩多久，别让我以为游戏卡死；"
+        "重连成功回到原来的位置，超时才算退出。",
+        [
+            beat("网络中断", "画面明确进入重连态，显示剩余重连时间", "别慌", "moba",
+                 [hero(48, 55), netstat(72, 28, 999, "lost"),
+                  bar(48, 34, 0.8, "cast", "重连 24s"), badge("正在重连")], title="断了"),
+            beat("重连成功", "回到原来位置继续打，延迟恢复正常", "接上了", "moba",
+                 [hero(48, 55), ring(48, 55, r=12, kind="buff"), netstat(72, 28, 45, "ok"),
+                  badge("已回到对局")], title="接回来"),
+            beat("重连超时", "明确判定退出这局，并说明后果（惩罚/可再进）", "回不去了", "moba",
+                 [netstat(72, 28, 999, "lost"), menu_box(24, 34, ["重连超时", "已退出本局"]),
+                  deny(52, 62, "本局结束"), badge("掉出对局")], title="超时退出"),
+        ], ["联机对局", "竞技匹配"],
+    ))
+    c.append(case(
+        "net-teammate-drop-ai", "netplay", "队友掉线：交给托管还是空着",
+        "队友断线时我得一眼看出「他不是在挂机，是掉了」；他的角色是留在原地、"
+        "被 AI 托管、还是直接消失，规则要写清楚。",
+        [
+            beat("队友断线", "他的名字变灰并标掉线，角色留在原地不动", "他掉了", "topdown",
+                 [unit(35, 55, sel=True), ring(35, 55), unit(60, 48, team="ally"),
+                  playertag(60, 34, "阿强", "p2"), netstat(74, 26, 999, "lost"),
+                  roster(14, 60, [{"name": "阿强", "state": "offline"}], "队伍"),
+                  badge("队友掉线")], title="队友掉了"),
+            beat("交给 AI 托管", "他的角色开始自动跟着打，标记写明这是托管", "先顶着", "topdown",
+                 [unit(35, 55, sel=True), ring(35, 55), unit(58, 46, team="ally"),
+                  playertag(58, 32, "AI托管", "p3"), unit(78, 38, team="enemy"),
+                  arrow(60, 45, 74, 40, "attack"), badge("AI 接手")], title="AI 托管"),
+            beat("他重连回来", "托管标记撤掉，控制权交还给他本人", "人回来了", "topdown",
+                 [unit(35, 55, sel=True), ring(35, 55), unit(58, 46, team="ally"),
+                  playertag(58, 32, "阿强", "p2"), netstat(74, 26, 48, "ok"),
+                  badge("交还控制")], title="交还"),
+        ], ["联机对局", "开黑组队"],
+    ))
+    c.append(case(
+        "net-lag-rollback", "netplay", "延迟卡了：我按的那一下被拉回去",
+        "网络卡的时候我按了技能、走了两步，然后被服务器拉回原地。"
+        "这件事必须让玩家看懂是网络问题，而不是「游戏吞了我的操作」。",
+        [
+            beat("延迟升高时按技能", "本地先演出来，服务器还没确认", "先动起来", "moba",
+                 [hero(40, 58), netstat(72, 26, 260, "lag"), circle_ind(64, 44, 14, True),
+                  hotbar(active=0), badge("本地先放")], title="本地先动"),
+            beat("服务器不认，拉回原位", "角色被拉回按之前的位置，技能退回可用", "被拽回来了", "moba",
+                 [hero(30, 62), path([(40, 58), (30, 62)], "move"), netstat(72, 26, 260, "lag"),
+                  deny(52, 44, "服务器未确认"), hotbar(active=0), badge("回滚")], title="被拉回"),
+            beat("延迟恢复", "动作正常生效，不再拉扯", "顺了", "moba",
+                 [hero(44, 55), netstat(72, 26, 46, "ok"), unit(70, 42, team="enemy"),
+                  arrow(48, 54, 66, 44, "attack"), impact(70, 42, 13), hotbar(cd=0),
+                  badge("恢复正常")], title="恢复"),
+        ], ["联机对局", "竞技匹配"],
+    ))
+    c.append(case(
+        "net-push-to-talk", "netplay", "按住说话 / 麦克风开关",
+        "按住一个键才说话，松开就闭麦；也可以切成常开。"
+        "关键是我随时知道自己是不是在外放，以及现在谁在说。",
+        [
+            beat("默认闭麦", "麦克风图标是关着的，我说话别人听不到", "先静音", "moba",
+                 [hero(40, 58), voice(74, 30, "off"), keyhint(24, 80, "V", "idle", "按住说话"),
+                  badge("闭麦")], title="闭麦"),
+            beat("按住说话键", "图标变成正在说话，队友那边看到是我在说", "我说两句", "moba",
+                 [hero(40, 58), voice(74, 30, "talking"), keyhint(24, 80, "V", "active", "按住说话"),
+                  roster(14, 58, [{"name": "我（说话中）", "state": "ready"}], "语音"),
+                  badge("正在说话")], title="按住说"),
+            beat("切成常开", "松手也一直开着，图标保持开启提醒我别乱说", "一直开着", "moba",
+                 [hero(40, 58), voice(74, 30, "on"), keyhint(24, 80, "V", "active", "常开"),
+                  badge("麦克风常开")], title="常开"),
+        ], ["联机对局", "开黑组队"],
+    ))
+    c.append(case(
+        "net-surrender-vote", "netplay", "发起投降，队伍表决",
+        "一个人想投降不算，要凑够票数。发起后大家看到票数进度，"
+        "没凑够就继续打，并且要说明多久之后才能再发起。",
+        [
+            beat("我发起投降", "弹出表决，票数从我这一票开始", "打不过了", "moba",
+                 [hero(40, 58), vote(20, 34, 1, 4, "投降表决"),
+                  cursor(30, 70, "up"), badge("已发起")], title="发起"),
+            beat("队友陆续投票", "票数进度往前走，谁投了谁亮", "看队友", "moba",
+                 [hero(40, 58), vote(20, 34, 3, 4, "投降表决"),
+                  roster(14, 58, [{"name": "阿强", "state": "ready"},
+                                  {"name": "小美", "state": "waiting"}], "投票"),
+                  badge("3/4 票")], title="投票中"),
+            beat("票数不够，表决失败", "继续打，并明确说多久后才能再发起", "接着打", "moba",
+                 [hero(40, 58), vote(20, 34, 3, 4, "表决失败"),
+                  deny(66, 52, "3分钟后可再发起"), badge("没凑够")], title="表决失败"),
+        ], ["联机对局", "竞技匹配"],
+    ))
+    c.append(case(
+        "net-report-mute", "netplay", "屏蔽某个玩家 / 举报",
+        "对着某个人做处理：先能立刻屏蔽让他不再打扰我（当场生效），"
+        "再决定要不要举报。两件事要分开，别把「静音」藏进举报流程里。",
+        [
+            beat("在名单上选那个人", "弹出对他的处理项：屏蔽、举报、看资料", "就是他", "moba",
+                 [roster(14, 20, [{"name": "路人甲", "state": "ready"}], "队伍"),
+                  menu_box(52, 30, ["屏蔽", "举报", "看资料"], active=0),
+                  cursor(58, 55, "up"), badge("选人处理")], title="选人"),
+            beat("点屏蔽", "他的语音与文字当场消失，图标标明已屏蔽", "清静了", "moba",
+                 [roster(14, 20, [{"name": "路人甲（已屏蔽）", "state": "offline"}], "队伍"),
+                  voice(70, 34, "off"), badge("已屏蔽·立刻生效")], title="屏蔽"),
+            beat("点举报并选原因", "提交后给回执，明确说不会当场处理", "交上去了", "moba",
+                 [menu_box(20, 26, ["消极比赛", "言语辱骂", "作弊"], active=1),
+                  menu_box(58, 44, ["举报已提交", "会另行处理"]), cursor(30, 58, "up"),
+                  badge("举报回执")], title="举报"),
+        ], ["联机对局", "开黑组队"],
+    ))
+    c.append(case(
+        "net-crossplay-prompt-kbm", "netplay", "跨平台同队：我这边按键盘提示",
+        "同一局里我用键鼠、队友用手柄。提示必须按各自设备显示，"
+        "不能让手柄玩家看到「按 F」，也不能让我看到「按 A 键」。",
+        [
+            beat("队友用手柄，我用键鼠", "名单上标出各自设备，我这边提示键盘键", "各按各的", "tps",
+                 [hero(38, 58), unit(62, 50, team="ally"), playertag(62, 34, "手柄队友", "p2"),
+                  keyhint(38, 34, "F", "active", "复活队友"),
+                  roster(12, 62, [{"name": "我（键鼠）", "state": "ready"},
+                                  {"name": "阿强（手柄）", "state": "ready"}], "跨平台"),
+                  badge("键鼠提示")], title="我这边"),
+        ], ["联机对局", "开黑组队"], cross_device=True,
+    ))
+    c.append(case(
+        "net-crossplay-prompt-pad", "netplay", "跨平台同队：我这边按手柄提示",
+        "同一件事在手柄那边显示的是面键，不是键盘字母。"
+        "同一句「救他」，两边看到的按钮不一样才算做对。",
+        [
+            beat("我用手柄，队友用键鼠", "名单上标出各自设备，我这边提示手柄面键", "各按各的", "tps",
+                 [hero(38, 58), unit(62, 50, team="ally"), playertag(62, 34, "键鼠队友", "p2"),
+                  keyhint(38, 34, "A键", "active", "复活队友"),
+                  roster(12, 62, [{"name": "我（手柄）", "state": "ready"},
+                                  {"name": "小美（键鼠）", "state": "ready"}], "跨平台"),
+                  badge("手柄提示")], title="我这边"),
+        ], ["联机对局", "开黑组队"], cross_device=True,
+    ))
+
+    # ===== 二十九、同屏多人：加入、分屏、抢东西 =====
+    c.append(case(
+        "couch-pad-join", "couch-play", "第二个手柄按一下就进来",
+        "不用回主菜单：拿起另一个手柄按确认键，P2 当场出现在场上。"
+        "空槽位要一直提示「按键加入」，让人知道还能再来人。",
+        [
+            beat("只有我在玩，旁边有空槽", "空槽位提示按键加入", "还能再来人", "tps",
+                 [hero(40, 58), playertag(40, 36, "P1", "p1"),
+                  padslot(["joined", "waiting"]), badge("等人加入")], title="等人"),
+            beat("旁边的人拿起手柄按确认", "P2 当场出现，槽位变成已加入", "他进来了", "tps",
+                 [hero(34, 58), playertag(34, 36, "P1", "p1"),
+                  unit(58, 55, team="ally"), playertag(58, 34, "P2", "p2"),
+                  padslot(["joined", "joined"]), badge("P2 加入")], title="加入"),
+        ], ["同屏双人", "派对游戏"],
+    ))
+    c.append(case(
+        "couch-pad-drop", "couch-play", "手柄没电掉出去了",
+        "手柄断开要立刻暂停并说清是谁的手柄掉了，别让另一个人在那儿硬撑；"
+        "重新连上应该接回原来那个角色，而不是变成新玩家。",
+        [
+            beat("P2 手柄断开", "游戏暂停，明确说是 P2 的手柄断了", "先停一下", "tps",
+                 [hero(34, 58), playertag(34, 36, "P1", "p1"),
+                  unit(58, 55, team="ally"), playertag(58, 34, "P2 断开", "p2"),
+                  padslot(["joined", "lost"]), deny(58, 74, "P2 手柄断开"),
+                  badge("已暂停")], title="断开暂停"),
+            beat("重新连上并按键", "接回原来那个角色，不是新开一个玩家", "还是他", "tps",
+                 [hero(34, 58), playertag(34, 36, "P1", "p1"),
+                  unit(58, 55, team="ally"), playertag(58, 34, "P2", "p2"),
+                  padslot(["joined", "joined"]), badge("接回原角色")], title="接回来"),
+        ], ["同屏双人", "派对游戏"],
+    ))
+    c.append(case(
+        "couch-split-mode", "couch-play", "分屏怎么切：左右分、上下分、还是共享一块屏",
+        "两个人一台机器，画面怎么分是手感问题：左右分适合看远，"
+        "上下分适合看宽，共享一块屏最省但会互相拉扯。切换要当场看到效果。",
+        [
+            beat("默认左右分屏", "屏幕竖着切两半，各自占一边", "各看各的", "tps",
+                 [splitscreen("v"), hero(24, 55), playertag(24, 34, "P1", "p1"),
+                  unit(74, 55, team="ally"), playertag(74, 34, "P2", "p2"),
+                  badge("左右分")], title="左右分"),
+            beat("切成上下分屏", "屏幕横着切两半，视野变宽变矮", "换个分法", "tps",
+                 [splitscreen("h"), hero(30, 30), playertag(30, 16, "P1", "p1"),
+                  unit(30, 78, team="ally"), playertag(30, 64, "P2", "p2"),
+                  badge("上下分")], title="上下分"),
+            beat("切成共享一块屏", "不再分屏，两人挤同一个镜头，离太远会被拉住", "凑一起", "tps",
+                 [splitscreen("shared"), hero(38, 58), playertag(38, 38, "P1", "p1"),
+                  unit(62, 52, team="ally"), playertag(62, 34, "P2", "p2"),
+                  camera(50, 78, angle=-90, mode="lock"), badge("共享单屏")], title="共享"),
+        ], ["同屏双人", "分屏"],
+    ))
+    c.append(case(
+        "couch-shared-camera-tether", "couch-play", "共享一块屏：走太远会被镜头拉住",
+        "两个人挤一个镜头时，谁想跑远都会被拽住：先是镜头拉远，"
+        "再是走到屏幕边推不动。这个限制必须让玩家看懂，不然只会觉得卡住了。",
+        [
+            beat("两人靠在一起", "镜头贴得近，画面细节看得清", "挨着走", "tps",
+                 [camera(50, 80, angle=-90, mode="lock"), hero(44, 55),
+                  playertag(44, 36, "P1", "p1"), unit(56, 55, team="ally"),
+                  playertag(56, 36, "P2", "p2"), badge("镜头贴近")], title="挨着"),
+            beat("一个人往外跑", "镜头自动拉远，把两人都收进画面", "拉远了", "tps",
+                 [camera(50, 84, angle=-90, mode="lock"), hero(24, 58),
+                  playertag(24, 40, "P1", "p1"), unit(76, 50, team="ally"),
+                  playertag(76, 32, "P2", "p2"), arrow(72, 52, 84, 48, "move"),
+                  badge("镜头拉远")], title="拉远"),
+            beat("再往外就到屏幕边了", "人贴住画面边缘走不动，明确提示是被同屏拉住", "推不动", "tps",
+                 [camera(50, 84, angle=-90, mode="lock"), hero(20, 58),
+                  playertag(20, 40, "P1", "p1"), unit(90, 50, team="ally"),
+                  playertag(90, 30, "P2", "p2"), deny(90, 70, "同屏边界"),
+                  badge("被拉住")], title="到边界"),
+        ], ["同屏双人", "分屏"],
+    ))
+    c.append(case(
+        "couch-loot-race", "couch-play", "同屏抢同一个东西：谁先按谁拿",
+        "两个人同时按同一个箱子，只能有一个人拿到。"
+        "没拿到的那个必须收到明确反馈「被 P1 拿走了」，而不是按了没反应。",
+        [
+            beat("两人同时靠近同一个箱子", "两边都亮起拾取提示", "都想要", "tps",
+                 [prop(50, 46, "宝箱", kind="chest", highlight=True),
+                  hero(30, 60), playertag(30, 40, "P1", "p1"),
+                  unit(70, 58, team="ally"), playertag(70, 38, "P2", "p2"),
+                  keyhint(50, 26, "A键", "active", "拾取"), badge("两边都能按")], title="都能按"),
+            beat("P1 先按到", "箱子归 P1，他这边入包", "我抢到了", "tps",
+                 [hero(38, 56), playertag(38, 36, "P1", "p1"), card(24, 76, "战利品", 0),
+                  unit(70, 58, team="ally"), playertag(70, 38, "P2", "p2"),
+                  queue_no(38, 72, 1, "done"), badge("P1 拿到")], title="P1 拿到"),
+            beat("P2 慢了一步", "他这边明确说被 P1 拿走了，提示收回", "手慢了", "tps",
+                 [hero(38, 56), playertag(38, 36, "P1", "p1"),
+                  unit(70, 58, team="ally"), playertag(70, 38, "P2", "p2"),
+                  deny(70, 74, "被 P1 拿走"), keyhint(70, 24, "A键", "off"),
+                  badge("P2 没拿到")], title="P2 落空"),
+        ], ["同屏双人", "派对游戏"],
+    ))
+    c.append(case(
+        "couch-menu-owner", "couch-play", "同屏开一个菜单：谁在操作它",
+        "两人一台机器时最容易吵架的地方：背包只有一个，谁的手柄在动它？"
+        "要么各自一个光标，要么明确标出「现在是 P2 在操作」，不能默认听 P1。",
+        [
+            beat("P2 打开共用菜单", "菜单标出当前操作者是 P2，P1 的输入不动它", "他在翻", "moba",
+                 [menu_box(30, 26, ["装备", "道具", "退出"], active=1),
+                  playertag(30, 18, "P2 操作中", "p2"),
+                  hero(20, 70), playertag(20, 56, "P1", "p1"),
+                  padslot(["joined", "joined"]), badge("P2 在操作")], title="P2 操作"),
+            beat("P1 也想动这个菜单", "要么各给一个光标，要么明确挡下并说清归谁", "别抢", "moba",
+                 [menu_box(30, 26, ["装备", "道具", "退出"], active=1),
+                  playertag(30, 18, "P2 操作中", "p2"),
+                  deny(70, 44, "菜单归 P2"), hero(20, 70),
+                  playertag(20, 56, "P1", "p1"), badge("P1 被挡下")], title="谁说了算"),
+        ], ["同屏双人", "派对游戏"],
+    ))
+    c.append(case(
+        "couch-mixed-devices-pad", "couch-play", "一台机器两种设备：我用手柄",
+        "同一台机器上 P1 用键鼠、P2 用手柄，各自的提示要按自己的设备显示，"
+        "而且键盘的输入不能串到手柄玩家身上。",
+        [
+            beat("我用手柄操作我的角色", "我这边提示手柄面键，键鼠的输入不动我", "各归各", "tps",
+                 [hero(60, 55), playertag(60, 34, "P2 手柄", "p2"),
+                  unit(26, 58, team="ally"), playertag(26, 38, "P1 键鼠", "p1"),
+                  stick("L", 0, -0.7), keyhint(60, 20, "A键", "active", "交互"),
+                  padslot(["joined", "joined"]), badge("手柄侧")], title="手柄侧"),
+        ], ["同屏双人", "分屏"], cross_device=True,
+    ))
+    c.append(case(
+        "couch-mixed-devices-kbm", "couch-play", "一台机器两种设备：我用键鼠",
+        "同一台机器上的另一半：我用键鼠，提示是键盘键；"
+        "手柄玩家的摇杆输入不会把我的角色带跑。",
+        [
+            beat("我用键鼠操作我的角色", "我这边提示键盘键，手柄的输入不动我", "各归各", "tps",
+                 [hero(26, 58), playertag(26, 38, "P1 键鼠", "p1"),
+                  unit(60, 55, team="ally"), playertag(60, 34, "P2 手柄", "p2"),
+                  wasd(["W"]), keyhint(26, 20, "F", "active", "交互"),
+                  padslot(["joined", "joined"]), badge("键鼠侧")], title="键鼠侧"),
+        ], ["同屏双人", "分屏"], cross_device=True,
     ))
 
     return enrich_all(c)
