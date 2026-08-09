@@ -31,12 +31,15 @@ def beat(input_text, screen, feel, view, cast, title=None):
 
 
 def case(cid, category, title, summary, beats, genres=None, ludots=None, todos=None):
+    """category = functional family (for impl_notes). Nav taxonomy is targets[] (game recreations)."""
     row = {
         "id": cid,
-        "category": category,
+        "category": category,  # functional family, e.g. select / twin-stick
+        "family": category,
         "title": title,
         "summary": summary,
         "genres": genres or [],
+        "targets": [],  # filled by assign_game_targets()
         "beats": beats,
     }
     if ludots:
@@ -126,36 +129,173 @@ def keyhint(x, y, label="F", state="idle", hint=None):
     return {"t": "key", "x": x, "y": y, "label": label, "state": state, "hint": hint}
 
 
-CATEGORIES = [
-    ("select", "一、谁听我的"),
-    ("basic-order", "二、常规指令（走/停/打）"),
-    ("aim", "三、对准世界"),
-    ("attack", "四、基本攻击与射击"),
-    ("twin-stick", "五、双摇杆射击"),
-    ("instant-skill", "六、不用瞄的技能"),
-    ("unit-skill", "七、要选单位的技能"),
-    ("ground-skill", "八、要点地面的技能"),
-    ("direction-skill", "九、要选方向的技能"),
-    ("hold", "十、按住不放"),
-    ("combo", "十一、一段接一段"),
-    ("defense", "十二、防 / 躲 / 反击窗"),
-    ("environment", "十三、和环境互动"),
-    ("army", "十四、部队 / 宝宝 / 载具"),
-    ("cast-habit", "十五、同技能不同手感"),
-    ("multi-cast", "十六、一群人放同一个技能"),
-    ("context-order", "十七、选中谁×点到谁"),
-    ("temp-kit", "十八、临时多出来的技能"),
-    ("item", "十九、物品：捡 / 用 / 装 / 拖"),
-    ("mmo-social", "二十、MMO：人、对话、队伍"),
-    ("mmo-world", "二十一、MMO：采集、买卖、坐骑、复活"),
-    ("design-ui", "二十二、设计向界面手势"),
-    ("dynamic-context", "二十三、身边有什么，同一键变什么"),
-    ("auto-cast", "二十四、自动施法"),
-    ("locomotion", "二十五、走路：WASD / 摇杆 / 点地"),
-    ("touch-tablet", "二十六、平板触控 / 卡牌拖放"),
-    ("menu-cmd", "二十七、选单式指令（三国志式）"),
-    ("blocked", "二十八、放不了时的反馈"),
+# Left-nav taxonomy = recreation targets (同一 case 可挂多个游戏，重复出现是预期)。
+# Functional family 仍写在 case.category / case.family，供 impl_notes 与详情副标。
+TARGET_GAMES = [
+    ("sc2", "星际争霸2", "框选 · 指令队列 · 控制组 · 热键栏"),
+    ("ra2", "红色警戒2", "生产建造 · 电力 · 右键语境指令"),
+    ("war3", "魔兽争霸3", "英雄技 · 物品栏 · RTS 混战"),
+    ("lol", "英雄联盟", "QWER · 技能瞄准 · 补刀走位"),
+    ("wow", "魔兽世界", "技能栏 · 读条 · 任务与社交循环"),
+    ("clash", "皇室战争", "拖卡部署 · 圣水 · 触控车道"),
+    ("rotk", "三国志式选单", "武将 → 指令 → 目标分层菜单"),
+    ("gow", "战神式动作", "近战连段 · 临时武器栏 · 闪避窗"),
+    ("diablo", "暗黑式 ARPG", "点地走打 · 技能落点 · 刷宝"),
+    ("twin", "双摇杆射击", "左走右瞄 · 弹幕清屏"),
+    ("fps", "FPS / TPS", "准星 · 开镜 · 射击换弹"),
+    ("zelda", "塞尔达 / 开放世界", "情境按键 · 攀爬采集互动"),
+    ("shared", "跨品类通用", "拒绝反馈 · 设计手势 · 共通走位"),
 ]
+
+# Back-compat alias: generator / checkpoint still say CATEGORIES
+CATEGORIES = [(gid, title) for gid, title, _blurb in TARGET_GAMES]
+FAMILY_TITLES = {
+    "select": "谁听我的",
+    "basic-order": "常规指令",
+    "aim": "对准世界",
+    "attack": "基本攻击与射击",
+    "twin-stick": "双摇杆射击",
+    "instant-skill": "不用瞄的技能",
+    "unit-skill": "要选单位的技能",
+    "ground-skill": "要点地面的技能",
+    "direction-skill": "要选方向的技能",
+    "hold": "按住不放",
+    "combo": "一段接一段",
+    "defense": "防 / 躲 / 反击窗",
+    "environment": "和环境互动",
+    "army": "部队 / 宝宝 / 载具",
+    "cast-habit": "同技能不同手感",
+    "multi-cast": "一群人放同一个技能",
+    "context-order": "选中谁×点到谁",
+    "temp-kit": "临时多出来的技能",
+    "item": "物品：捡 / 用 / 装 / 拖",
+    "mmo-social": "MMO：人、对话、队伍",
+    "mmo-world": "MMO：采集、买卖、坐骑、复活",
+    "design-ui": "设计向界面手势",
+    "dynamic-context": "身边有什么，同一键变什么",
+    "auto-cast": "自动施法",
+    "locomotion": "走路：WASD / 摇杆 / 点地",
+    "touch-tablet": "平板触控 / 卡牌拖放",
+    "menu-cmd": "选单式指令",
+    "blocked": "放不了时的反馈",
+}
+
+# genre 标签 → 复刻目标（可一对多）
+_GENRE_TO_TARGETS: dict[str, tuple[str, ...]] = {
+    "SC2": ("sc2",),
+    "SC2/War3": ("sc2", "war3"),
+    "War3": ("war3",),
+    "魔兽争霸3": ("war3",),
+    "RTS英雄": ("war3", "sc2"),
+    "RTS超武": ("sc2", "ra2"),
+    "RA2": ("ra2",),
+    "C&C": ("ra2",),
+    "RTS": ("sc2", "ra2", "war3"),
+    "RTS触控": ("sc2", "ra2", "clash"),
+    "RTS面板": ("sc2", "ra2", "war3"),
+    "LoL": ("lol",),
+    "LoL/Dota": ("lol",),
+    "MOBA": ("lol",),
+    "MOBA补刀走位": ("lol",),
+    "MOBA触控": ("lol", "clash"),
+    "魔兽世界": ("wow",),
+    "MMO": ("wow",),
+    "MMO生活系": ("wow",),
+    "皇室战争": ("clash",),
+    "卡牌RTS": ("clash",),
+    "卡牌": ("clash",),
+    "COC式": ("clash",),
+    "平板": ("clash",),
+    "三国志": ("rotk",),
+    "回合策略": ("rotk",),
+    "战棋": ("rotk",),
+    "策略": ("rotk", "ra2"),
+    "4X": ("rotk",),
+    "战神": ("gow",),
+    "战神4": ("gow",),
+    "魂like": ("gow",),
+    "合作动作": ("gow",),
+    "暗黑": ("diablo",),
+    "ARPG": ("diablo", "gow"),
+    "动作RPG": ("diablo", "gow"),
+    "双摇杆射击": ("twin",),
+    "双摇杆": ("twin",),
+    "手柄": ("twin", "gow"),
+    "FPS": ("fps",),
+    "TPS": ("fps",),
+    "逃离塔科夫": ("fps",),
+    "塞尔达": ("zelda",),
+    "开放世界": ("zelda",),
+    "刺客信条": ("zelda",),
+    "蝙蝠侠": ("zelda", "gow"),
+    "蝙蝠侠/蜘蛛侠": ("zelda", "gow"),
+    "蜘蛛侠": ("zelda",),
+    "浸入式模拟": ("zelda",),
+    "潜行游戏": ("zelda", "fps"),
+    "AVG": ("rotk",),
+    "经营": ("ra2", "rotk"),
+    "载具": ("fps", "gow"),
+    "设计选项": ("shared",),
+    "全品类": ("shared",),
+}
+
+# 功能族默认挂到哪些复刻目标（genres 为空或偏抽象时兜底；可与 genres 叠加）
+_FAMILY_TO_TARGETS: dict[str, tuple[str, ...]] = {
+    "twin-stick": ("twin",),
+    "touch-tablet": ("clash",),
+    "menu-cmd": ("rotk",),
+    "mmo-social": ("wow",),
+    "mmo-world": ("wow",),
+    "design-ui": ("shared",),
+    "temp-kit": ("gow", "war3"),
+    "dynamic-context": ("zelda", "wow"),
+    "auto-cast": ("wow", "sc2", "war3"),
+    "blocked": ("shared",),
+    "select": ("sc2", "ra2", "war3", "lol"),
+    "basic-order": ("sc2", "ra2", "war3"),
+    "context-order": ("sc2", "ra2", "war3"),
+    "army": ("sc2", "ra2", "war3", "wow"),
+    "multi-cast": ("sc2", "ra2", "war3"),
+    "cast-habit": ("sc2", "lol", "wow"),
+}
+
+
+def assign_game_targets(cases: list) -> None:
+    """Fill case['targets'] from genres + family + id hints. Duplicates across games are intentional."""
+    valid = {gid for gid, _t, _b in TARGET_GAMES}
+    for c in cases:
+        hit: set[str] = set()
+        for g in c.get("genres") or []:
+            for t in _GENRE_TO_TARGETS.get(g, ()):
+                hit.add(t)
+        fam = c.get("family") or c.get("category") or ""
+        if not hit:
+            for t in _FAMILY_TO_TARGETS.get(fam, ()):
+                hit.add(t)
+        else:
+            # 家族补充：触控/选单/双摇杆等强品类信号，即使已有 genres 也并上
+            if fam in ("twin-stick", "touch-tablet", "menu-cmd", "design-ui", "mmo-social", "mmo-world"):
+                for t in _FAMILY_TO_TARGETS.get(fam, ()):
+                    hit.add(t)
+        cid = c.get("id") or ""
+        if cid.startswith("touch-") or "card" in cid or "elixir" in cid:
+            hit.add("clash")
+        if cid.startswith("menu-") or "rotk" in cid:
+            hit.add("rotk")
+        if "control-group" in cid or cid.startswith("select-box") or "hotkey" in cid:
+            hit.update(("sc2", "war3"))
+        if "wasd" in cid or cid.startswith("loco-wasd"):
+            if not hit:
+                hit.update(("diablo", "gow", "fps", "zelda"))
+        if not hit:
+            hit.add("shared")
+        unknown = hit - valid
+        if unknown:
+            raise SystemExit(f"case {cid}: unknown targets {sorted(unknown)}")
+        # stable order = TARGET_GAMES order
+        order = {gid: i for i, (gid, _, _) in enumerate(TARGET_GAMES)}
+        c["targets"] = sorted(hit, key=lambda t: order[t])
+        c["familyTitle"] = FAMILY_TITLES.get(fam, fam)
 
 
 def build_cases():
@@ -2194,6 +2334,12 @@ def _audit_casts(cases: list) -> list[str]:
 
 def _write_checkpoint(cases: list, weak: list[str], head: str) -> None:
     todos = sorted({t for c in cases for t in c.get("todos") or []})
+    from collections import Counter
+
+    target_counts = Counter()
+    for c in cases:
+        for t in c.get("targets") or []:
+            target_counts[t] += 1
     lines = [
         "# 玩家动作 UX 图鉴 · Agent Checkpoint",
         "",
@@ -2204,27 +2350,34 @@ def _write_checkpoint(cases: list, weak: list[str], head: str) -> None:
         f"- 生成脚本：`scripts/generate-player-action-ux-catalog.py`",
         f"- 实现标注：`scripts/player_action_ux_impl_notes.py`",
         f"- 生成时 HEAD：`{head}`（以你拉取后的 `git rev-parse` 为准；合并后会变）",
-        f"- 分支语境：`cursor/wasd-locomotion-ux-4211`（含 WASD 类、三栏布局、本轮同步分栏与触控/选单）",
-        f"- 已合 main 的底座：PR #743 玩家动作图鉴初版",
+        f"- 分支语境：`cursor/ux-catalog-by-game-4211`（左栏按复刻目标游戏分类；同一动作可挂多个游戏）",
+        f"- 已合 main 的底座：PR #743 起图鉴；#744–#749 布局/WASD/SVG 审计",
         "",
         "## 页面交互约定（改 UI 前先读）",
         "",
-        "- 三栏：分类 | 动作列表 | 详情",
-        "- 详情内：**左时序（Mermaid）/ 右分镜**，用拍号芯片同步高亮，不是上下堆叠长滚",
-        "- 每个 case 必有 `ludots`（现状怎么接）与 `todos`（缺口）；标注来自 impl_notes，勿手改 `catalog-data.js`",
+        "- 三栏：**复刻目标游戏** | 动作列表 | 详情",
+        "- 左栏 id 来自 `TARGET_GAMES`（sc2/ra2/war3/…）；筛选看 `case.targets.includes(id)`，允许重复",
+        "- `case.category` / `family` = 功能族（谁听我的、物品…），只给 impl_notes 与详情副标，不当左栏主键",
+        "- 详情内：**左时序（Mermaid）/ 右分镜**，用拍号芯片同步高亮",
+        "- 每个 case 必有 `ludots` 与 `todos`；标注来自 impl_notes，勿手改 `catalog-data.js`",
         "",
-        "## 分类是否合理（本轮结论）",
+        "## 复刻目标分类（本轮）",
         "",
-        "- 战斗/RTS/技能瞄准：较完整",
-        "- 走路 WASD、动态 context、自动施法、物品/MMO、设计手势：已有专类",
-        "- 本轮新加：`touch-tablet`（皇室战争式拖卡等）、`menu-cmd`（三国志式选单）",
-        "- 仍可后续单列：战棋格子移动、塔防造塔、MOBA 出装页、观战裁判工具（见 todos）",
+    ]
+    for gid, title, blurb in TARGET_GAMES:
+        lines.append(f"- `{gid}` **{title}**（{target_counts.get(gid, 0)}）— {blurb}")
+    lines.extend([
         "",
-        f"## 规模",
+        "- 同一动作出现在多个游戏下是预期（例如框选既挂星际也挂红警）",
+        "- 功能族仍完整保留在数据里；若要按手感横切，用搜索或以后加第二维筛选",
+        "- 仍可后续补目标：战棋格子、塔防造塔、炉石对战、观战裁判（见 todos）",
+        "",
+        "## 规模",
         "",
         f"- cases = {len(cases)}",
         f"- beats = {sum(len(c['beats']) for c in cases)}",
-        f"- categories = {len(CATEGORIES)}",
+        f"- target_games = {len(TARGET_GAMES)}",
+        f"- target_memberships = {sum(len(c.get('targets') or []) for c in cases)}（含跨游戏重复）",
         "",
         "## 分镜画面审计",
         "",
@@ -2233,7 +2386,7 @@ def _write_checkpoint(cases: list, weak: list[str], head: str) -> None:
         "",
         "## 高频 TODO（去重）",
         "",
-    ]
+    ])
     for t in todos:
         lines.append(f"- {t}")
     lines.append("")
@@ -2242,20 +2395,28 @@ def _write_checkpoint(cases: list, weak: list[str], head: str) -> None:
 
 def main():
     head = _git_head()
-    cases = build_cases()
+    cases = build_cases()  # already enrich_all inside
+    assign_game_targets(cases)
     augmented = augment_ui_glyphs(cases)
     weak = _audit_casts(cases)
+    empty = [c["id"] for c in cases if not c.get("targets")]
+    if empty:
+        raise SystemExit(f"cases missing targets: {empty}")
     payload = {
         "title": "玩家动作体验图鉴",
-        "subtitle": "只谈手怎么动、画面怎么变、爽点在哪——分镜式报菜名。附 Ludots 现状与缺口。",
+        "subtitle": "按想复刻的游戏浏览：手怎么动、画面怎么变、爽点在哪。同一动作可出现在多个游戏下。",
+        "taxonomy": "game-targets",
         "checkpoint": {
             "head": head,
-            "branch_hint": "cursor/wasd-locomotion-ux-4211",
+            "branch_hint": "cursor/ux-catalog-by-game-4211",
             "impl_notes": "scripts/player_action_ux_impl_notes.py",
-            "note": "ludots/todos 以生成时审计为准；合并后请重新 generate 并更新 CHECKPOINT.md",
+            "note": "左栏=复刻目标；ludots/todos 以生成时审计为准；勿手改 catalog-data.js",
             "weak_storyboard_beats": weak,
         },
-        "categories": [{"id": cid, "title": title} for cid, title in CATEGORIES],
+        "categories": [
+            {"id": gid, "title": title, "blurb": blurb}
+            for gid, title, blurb in TARGET_GAMES
+        ],
         "cases": cases,
     }
     OUT.parent.mkdir(parents=True, exist_ok=True)
