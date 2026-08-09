@@ -8,7 +8,7 @@
 - 逻辑文案：`scripts/player_action_ux_beat_logic.py`
 - 实现标注：`scripts/player_action_ux_impl_notes.py`
 - 动作编号/平台变体：`scripts/player_action_ux_action_index.py`
-- 生成时 HEAD：`fbf04fd1c`（以你拉取后的 `git rev-parse` 为准；合并后会变）
+- 生成时 HEAD：`692904ea1`（以你拉取后的 `git rev-parse` 为准；合并后会变）
 - 分支语境：`cursor/ux-action-id-platform-tabs-4211`（unique 动作编号 + 主机/键鼠/触控 tab）
 - 已合 main：图鉴 #743–#755（含按游戏分类、时序三参与者、一镜一对、双人审核）
 
@@ -44,7 +44,7 @@
 - `gow` **战神式动作**（70）— 近战连段 · 临时武器栏 · 闪避窗
 - `diablo` **暗黑式 ARPG**（68）— 点地走打 · 技能落点 · 刷宝
 - `twin` **双摇杆射击**（8）— 左走右瞄 · 弹幕清屏
-- `fps` **FPS / TPS**（31）— 准星 · 开镜 · 射击换弹
+- `fps` **FPS / TPS**（32）— 准星 · 开镜 · 射击换弹
 - `zelda` **塞尔达 / 开放世界**（16）— 情境按键 · 攀爬采集互动
 - `shared` **跨品类通用**（22）— 拒绝反馈 · 设计手势 · 共通走位
 
@@ -54,11 +54,11 @@
 ## 规模
 
 - unique_actions = 163
-- multi_platform_actions = 5
-- cases = 168（含平台变体实现）
-- beats = 357
+- multi_platform_actions = 6
+- cases = 169（含平台变体实现）
+- beats = 358
 - target_games = 13
-- target_memberships = 480（含跨游戏重复）
+- target_memberships = 481（含跨游戏重复）
 
 ## 分镜画面审计
 

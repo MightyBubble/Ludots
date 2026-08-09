@@ -48,7 +48,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
     "aim"
   ],
   "checkpoint": {
-    "head": "fbf04fd1c",
+    "head": "692904ea1",
     "branch_hint": "cursor/ux-action-id-platform-tabs-4211",
     "impl_notes": "scripts/player_action_ux_impl_notes.py",
     "beat_logic": "scripts/player_action_ux_beat_logic.py",
@@ -56,7 +56,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
     "note": "列表=unique actions；详情平台 tab；时序=设备/逻辑/画面；勿手改 catalog-data.js",
     "weak_storyboard_beats": [],
     "unique_actions": 163,
-    "multi_platform_actions": 5
+    "multi_platform_actions": 6
   },
   "categories": [
     {
@@ -2612,15 +2612,15 @@ window.PLAYER_ACTION_UX_CATALOG = {
       "title": "技能格面板点选",
       "summary": "点命令面板上一格技能，再按该技能的目标规则点地/点人。适合主机键位少或平板，和键位热键并行。",
       "platforms": [
-        "touch"
+        "kbm"
       ],
       "platformLabels": [
-        "触控"
+        "键鼠"
       ],
       "variants": [
         {
-          "platform": "touch",
-          "platformLabel": "触控",
+          "platform": "kbm",
+          "platformLabel": "键鼠",
           "caseId": "menu-grid-command-panel"
         }
       ],
@@ -4463,14 +4463,21 @@ window.PLAYER_ACTION_UX_CATALOG = {
       "actionNo": "UX-142",
       "key": "aim-look",
       "title": "转动视角准星",
-      "summary": "鼠标或右摇杆转动视野，准星落在世界某处。",
+      "summary": "推右摇杆转视野，推得越满转得越快，准星跟着落在世界某处。",
       "platforms": [
+        "gamepad",
         "kbm"
       ],
       "platformLabels": [
+        "主机",
         "键鼠"
       ],
       "variants": [
+        {
+          "platform": "gamepad",
+          "platformLabel": "主机",
+          "caseId": "aim-look-stick"
+        },
         {
           "platform": "kbm",
           "platformLabel": "键鼠",
@@ -4484,8 +4491,8 @@ window.PLAYER_ACTION_UX_CATALOG = {
         "FPS",
         "TPS"
       ],
-      "beatCount": 1,
-      "caseCount": 1
+      "beatCount": 2,
+      "caseCount": 2
     },
     {
       "actionNo": "UX-143",
@@ -6309,7 +6316,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
         {
           "title": "操控中",
           "input": "完成切换",
-          "screen": "准星/摇杆控制载具",
+          "screen": "准星与 WASD 改成开车用",
           "view": "tps",
           "cast": [
             {
@@ -6328,14 +6335,10 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "locked": false
             },
             {
-              "t": "stickL",
-              "nx": 0,
-              "ny": -0.7
-            },
-            {
-              "t": "stickR",
-              "nx": 0.5,
-              "ny": -0.2
+              "t": "wasd",
+              "active": [
+                "W"
+              ]
             },
             {
               "t": "badge",
@@ -7364,8 +7367,8 @@ window.PLAYER_ACTION_UX_CATALOG = {
       "id": "aim-look",
       "category": "aim",
       "family": "aim",
-      "title": "转动视角 / 准星",
-      "summary": "鼠标或右摇杆转动视野，准星落在世界某处。",
+      "title": "移动鼠标转视角",
+      "summary": "鼠标往哪动，视野就往哪转，准星跟着落在世界某处。",
       "genres": [
         "FPS",
         "TPS"
@@ -7376,8 +7379,71 @@ window.PLAYER_ACTION_UX_CATALOG = {
       "beats": [
         {
           "title": "转视角",
-          "input": "移动鼠标/右摇杆",
-          "screen": "画面旋转或准星移动",
+          "input": "移动鼠标",
+          "screen": "画面旋转，准星指向新位置",
+          "view": "fps",
+          "cast": [
+            {
+              "t": "crosshair",
+              "x": 55,
+              "y": 45,
+              "locked": false
+            },
+            {
+              "t": "cursor",
+              "x": 30,
+              "y": 74,
+              "mode": "drag"
+            },
+            {
+              "t": "badge",
+              "text": "鼠标转视角"
+            }
+          ],
+          "logic": "按鼠标位移增量更新视角或准星朝向"
+        }
+      ],
+      "ludots": "瞄准：InputOrderMappingSystem + InteractionModeType（AimCast 等）；瞄准表现 AbilityAimPresentationRuntime；指针地面点 AuthoritativeGroundPointerHelper。",
+      "todos": [
+        "RFC-0065 欲退役专用 aim 事件，CastCommit 配置当前多为空 profiles"
+      ],
+      "familyTitle": "对准世界",
+      "actionNo": "UX-142",
+      "actionKey": "aim-look",
+      "actionTitle": "转动视角准星",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "gamepad",
+          "platformLabel": "主机",
+          "caseId": "aim-look-stick"
+        },
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "aim-look"
+        }
+      ]
+    },
+    {
+      "id": "aim-look-stick",
+      "category": "aim",
+      "family": "aim",
+      "title": "右摇杆转视角",
+      "summary": "推右摇杆转视野，推得越满转得越快，准星跟着落在世界某处。",
+      "genres": [
+        "FPS",
+        "TPS"
+      ],
+      "targets": [
+        "fps"
+      ],
+      "beats": [
+        {
+          "title": "转视角",
+          "input": "推右摇杆",
+          "screen": "画面旋转，准星指向新位置",
           "view": "fps",
           "cast": [
             {
@@ -7393,10 +7459,10 @@ window.PLAYER_ACTION_UX_CATALOG = {
             },
             {
               "t": "badge",
-              "text": "瞄准"
+              "text": "摇杆转视角"
             }
           ],
-          "logic": "按输入增量更新视角或准星朝向"
+          "logic": "按右摇杆偏移量持续更新视角或准星朝向"
         }
       ],
       "ludots": "瞄准：InputOrderMappingSystem + InteractionModeType（AimCast 等）；瞄准表现 AbilityAimPresentationRuntime；指针地面点 AuthoritativeGroundPointerHelper。",
@@ -7407,9 +7473,14 @@ window.PLAYER_ACTION_UX_CATALOG = {
       "actionNo": "UX-142",
       "actionKey": "aim-look",
       "actionTitle": "转动视角准星",
-      "platform": "kbm",
-      "platformLabel": "键鼠",
+      "platform": "gamepad",
+      "platformLabel": "主机",
       "variants": [
+        {
+          "platform": "gamepad",
+          "platformLabel": "主机",
+          "caseId": "aim-look-stick"
+        },
         {
           "platform": "kbm",
           "platformLabel": "键鼠",
@@ -9006,6 +9077,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "x": 45,
               "y": 55,
               "face": -27
+            },
+            {
+              "t": "wasd",
+              "active": [
+                "W",
+                "D"
+              ]
             },
             {
               "t": "cursor",
@@ -10615,7 +10693,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
         {
           "title": "甩钩",
           "input": "甩出钩索",
-          "screen": "线连向锚点/敌人",
+          "screen": "线连向可挂的锚点",
           "view": "tps",
           "cast": [
             {
@@ -10639,11 +10717,9 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "kind": "arc"
             },
             {
-              "t": "building",
+              "t": "anchor",
               "x": 72,
-              "y": 32,
-              "ghost": false,
-              "team": null
+              "y": 32
             },
             {
               "t": "badge",
@@ -10660,16 +10736,28 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "cast": [
             {
               "t": "hero",
-              "x": 65,
-              "y": 40,
+              "x": 62,
+              "y": 42,
               "face": 0
             },
             {
-              "t": "building",
+              "t": "anchor",
               "x": 72,
-              "y": 32,
-              "ghost": false,
-              "team": null
+              "y": 32
+            },
+            {
+              "t": "path",
+              "points": [
+                [
+                  40,
+                  62
+                ],
+                [
+                  62,
+                  44
+                ]
+              ],
+              "kind": "arc"
             },
             {
               "t": "badge",
@@ -10947,9 +11035,18 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "kind": "attack"
             },
             {
-              "t": "stickR",
-              "nx": 0.7,
-              "ny": -0.3
+              "t": "crosshair",
+              "x": 80,
+              "y": 38,
+              "locked": false
+            },
+            {
+              "t": "key",
+              "x": 24,
+              "y": 82,
+              "label": "左键",
+              "state": "active",
+              "hint": "按住不放"
             },
             {
               "t": "badge",
@@ -19478,48 +19575,27 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "cast": [
             {
               "t": "hero",
-              "x": 48,
-              "y": 55,
+              "x": 24,
+              "y": 60,
               "face": 0
             },
             {
-              "t": "ring",
-              "x": 48,
-              "y": 55,
-              "r": 24,
-              "kind": "select"
+              "t": "wheel",
+              "x": 58,
+              "y": 48,
+              "labels": [
+                "表情",
+                "武器",
+                "药",
+                "标记"
+              ],
+              "active": null,
+              "r": 30
             },
             {
-              "t": "card",
-              "x": 48,
-              "y": 28,
-              "label": "表情",
-              "cost": 0,
-              "dragging": false
-            },
-            {
-              "t": "card",
-              "x": 72,
-              "y": 55,
-              "label": "武器",
-              "cost": 0,
-              "dragging": false
-            },
-            {
-              "t": "card",
-              "x": 48,
-              "y": 78,
-              "label": "药",
-              "cost": 0,
-              "dragging": false
-            },
-            {
-              "t": "card",
-              "x": 24,
-              "y": 55,
-              "label": "标记",
-              "cost": 0,
-              "dragging": false
+              "t": "stickR",
+              "nx": 0,
+              "ny": 0
             },
             {
               "t": "badge",
@@ -19536,54 +19612,27 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "cast": [
             {
               "t": "hero",
-              "x": 48,
-              "y": 55,
+              "x": 24,
+              "y": 60,
               "face": 0
             },
             {
-              "t": "ring",
-              "x": 48,
-              "y": 55,
-              "r": 24,
-              "kind": "select"
+              "t": "wheel",
+              "x": 58,
+              "y": 48,
+              "labels": [
+                "表情",
+                "武器",
+                "药",
+                "标记"
+              ],
+              "active": 1,
+              "r": 30
             },
             {
-              "t": "card",
-              "x": 48,
-              "y": 28,
-              "label": "表情",
-              "cost": 0,
-              "dragging": false
-            },
-            {
-              "t": "card",
-              "x": 72,
-              "y": 55,
-              "label": "武器",
-              "cost": 0,
-              "dragging": true
-            },
-            {
-              "t": "card",
-              "x": 48,
-              "y": 78,
-              "label": "药",
-              "cost": 0,
-              "dragging": false
-            },
-            {
-              "t": "card",
-              "x": 24,
-              "y": 55,
-              "label": "标记",
-              "cost": 0,
-              "dragging": false
-            },
-            {
-              "t": "cursor",
-              "x": 72,
-              "y": 55,
-              "mode": "idle"
+              "t": "stickR",
+              "nx": 0.8,
+              "ny": 0.1
             },
             {
               "t": "badge",
@@ -19600,54 +19649,27 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "cast": [
             {
               "t": "hero",
-              "x": 48,
-              "y": 55,
+              "x": 24,
+              "y": 60,
               "face": 0
             },
             {
-              "t": "ring",
-              "x": 48,
-              "y": 55,
-              "r": 24,
-              "kind": "select"
+              "t": "wheel",
+              "x": 58,
+              "y": 48,
+              "labels": [
+                "表情",
+                "武器",
+                "药",
+                "标记"
+              ],
+              "active": null,
+              "r": 30
             },
             {
-              "t": "card",
-              "x": 48,
-              "y": 28,
-              "label": "表情",
-              "cost": 0,
-              "dragging": false
-            },
-            {
-              "t": "card",
-              "x": 72,
-              "y": 55,
-              "label": "武器",
-              "cost": 0,
-              "dragging": false
-            },
-            {
-              "t": "card",
-              "x": 48,
-              "y": 78,
-              "label": "药",
-              "cost": 0,
-              "dragging": false
-            },
-            {
-              "t": "card",
-              "x": 24,
-              "y": 55,
-              "label": "标记",
-              "cost": 0,
-              "dragging": false
-            },
-            {
-              "t": "cursor",
-              "x": 51.87,
-              "y": 62.33,
-              "mode": "idle"
+              "t": "stickR",
+              "nx": 0,
+              "ny": 0
             },
             {
               "t": "badge",
@@ -20460,9 +20482,18 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "face": 0
             },
             {
-              "t": "stickL",
-              "nx": 0,
-              "ny": -1
+              "t": "wasd",
+              "active": [
+                "W"
+              ]
+            },
+            {
+              "t": "key",
+              "x": 72,
+              "y": 40,
+              "label": "Shift",
+              "state": "active",
+              "hint": "按住才跑"
             },
             {
               "t": "badge",
@@ -20484,9 +20515,10 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "face": 0
             },
             {
-              "t": "stickL",
-              "nx": 0,
-              "ny": -1
+              "t": "wasd",
+              "active": [
+                "W"
+              ]
             },
             {
               "t": "hotbar",
@@ -21079,7 +21111,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
         },
         {
           "title": "换成拾取",
-          "input": "走开敌人，靠近果子",
+          "input": "离开处决圈，走到果子旁",
           "screen": "同一键提示改成「拾取/食用」",
           "view": "tps",
           "cast": [
@@ -21090,11 +21122,19 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "face": 0
             },
             {
-              "t": "building",
+              "t": "prop",
               "x": 65,
               "y": 48,
-              "ghost": false,
-              "team": null
+              "label": "果子",
+              "highlight": true
+            },
+            {
+              "t": "key",
+              "x": 65,
+              "y": 32,
+              "label": "F",
+              "state": "active",
+              "hint": "拾取/食用"
             },
             {
               "t": "badge",
@@ -21111,16 +21151,31 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "cast": [
             {
               "t": "hero",
-              "x": 48,
-              "y": 52,
+              "x": 52,
+              "y": 50,
               "face": 0
             },
             {
+              "t": "prop",
+              "x": 65,
+              "y": 48,
+              "label": "果子",
+              "highlight": false
+            },
+            {
               "t": "ring",
-              "x": 48,
-              "y": 52,
+              "x": 52,
+              "y": 50,
               "r": 10,
               "kind": "buff"
+            },
+            {
+              "t": "key",
+              "x": 65,
+              "y": 32,
+              "label": "F",
+              "state": "active",
+              "hint": "拾取/食用"
             },
             {
               "t": "badge",
@@ -21729,6 +21784,14 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "team": null
             },
             {
+              "t": "key",
+              "x": 58,
+              "y": 30,
+              "label": "空格",
+              "state": "active",
+              "hint": "翻越"
+            },
+            {
               "t": "badge",
               "text": "翻越"
             }
@@ -21755,6 +21818,20 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "team": null
             },
             {
+              "t": "key",
+              "x": 55,
+              "y": 30,
+              "label": "空格",
+              "state": "active",
+              "hint": "掩体/探头"
+            },
+            {
+              "t": "crosshair",
+              "x": 72,
+              "y": 42,
+              "locked": false
+            },
+            {
               "t": "badge",
               "text": "掩体"
             }
@@ -21774,16 +21851,23 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "face": 0
             },
             {
-              "t": "badge",
-              "text": "提示收回"
+              "t": "building",
+              "x": 58,
+              "y": 50,
+              "ghost": false,
+              "team": null
             },
             {
               "t": "key",
-              "x": 44,
-              "y": 44,
-              "label": "F",
+              "x": 58,
+              "y": 30,
+              "label": "空格",
               "state": "off",
               "hint": null
+            },
+            {
+              "t": "badge",
+              "text": "提示收回"
             }
           ],
           "logic": "离开有效体积后收回环境交互键"
@@ -23114,9 +23198,10 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "face": -90
             },
             {
-              "t": "stickL",
-              "nx": 0,
-              "ny": -1
+              "t": "wasd",
+              "active": [
+                "W"
+              ]
             },
             {
               "t": "arrow",
@@ -23146,9 +23231,10 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "face": 20
             },
             {
-              "t": "stickL",
-              "nx": 0,
-              "ny": -1
+              "t": "wasd",
+              "active": [
+                "W"
+              ]
             },
             {
               "t": "arrow",
@@ -23178,9 +23264,10 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "face": -90
             },
             {
-              "t": "stickL",
-              "nx": -1,
-              "ny": 0
+              "t": "wasd",
+              "active": [
+                "A"
+              ]
             },
             {
               "t": "arrow",
@@ -23251,9 +23338,10 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "face": 20
             },
             {
-              "t": "stickL",
-              "nx": 0,
-              "ny": -1
+              "t": "wasd",
+              "active": [
+                "W"
+              ]
             },
             {
               "t": "arrow",
@@ -23283,9 +23371,10 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "face": -40
             },
             {
-              "t": "stickL",
-              "nx": -1,
-              "ny": 0
+              "t": "wasd",
+              "active": [
+                "A"
+              ]
             },
             {
               "t": "badge",
@@ -23593,9 +23682,10 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "face": -90
             },
             {
-              "t": "stickL",
-              "nx": 0,
-              "ny": -1
+              "t": "wasd",
+              "active": [
+                "W"
+              ]
             },
             {
               "t": "arrow",
@@ -23642,9 +23732,10 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "face": -90
             },
             {
-              "t": "stickL",
-              "nx": 0,
-              "ny": -0.5
+              "t": "wasd",
+              "active": [
+                "W"
+              ]
             },
             {
               "t": "arrow",
@@ -23728,9 +23819,10 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "face": -90
             },
             {
-              "t": "stickL",
-              "nx": 0,
-              "ny": 1
+              "t": "wasd",
+              "active": [
+                "S"
+              ]
             },
             {
               "t": "arrow",
@@ -23760,9 +23852,10 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "face": 0
             },
             {
-              "t": "stickL",
-              "nx": 1,
-              "ny": 0
+              "t": "wasd",
+              "active": [
+                "D"
+              ]
             },
             {
               "t": "crosshair",
@@ -23924,9 +24017,10 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "face": -90
             },
             {
-              "t": "stickL",
-              "nx": 0,
-              "ny": -1
+              "t": "wasd",
+              "active": [
+                "W"
+              ]
             },
             {
               "t": "arrow",
@@ -23954,6 +24048,12 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "x": 40,
               "y": 55,
               "face": 0
+            },
+            {
+              "t": "wasd",
+              "active": [
+                "W"
+              ]
             },
             {
               "t": "cursor",
@@ -24136,6 +24236,14 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "broken": false
             },
             {
+              "t": "touchpt",
+              "x": 28,
+              "y": 52,
+              "kind": "hold",
+              "x2": null,
+              "y2": null
+            },
+            {
               "t": "building",
               "x": 70,
               "y": 30,
@@ -24192,6 +24300,14 @@ window.PLAYER_ACTION_UX_CATALOG = {
                 ]
               ],
               "kind": "move"
+            },
+            {
+              "t": "touchpt",
+              "x": 55,
+              "y": 48,
+              "kind": "drag",
+              "x2": null,
+              "y2": null
             },
             {
               "t": "badge",
@@ -24321,10 +24437,12 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "dragging": false
             },
             {
-              "t": "cursor",
+              "t": "touchpt",
               "x": 22,
               "y": 78,
-              "mode": "down"
+              "kind": "hold",
+              "x2": null,
+              "y2": null
             },
             {
               "t": "badge",
@@ -24362,10 +24480,12 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "dragging": false
             },
             {
-              "t": "cursor",
+              "t": "touchpt",
               "x": 70,
               "y": 40,
-              "mode": "drag"
+              "kind": "drag",
+              "x2": null,
+              "y2": null
             },
             {
               "t": "badge",
@@ -24430,10 +24550,12 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "dragging": false
             },
             {
-              "t": "cursor",
+              "t": "touchpt",
               "x": 22,
               "y": 78,
-              "mode": "up"
+              "kind": "tap",
+              "x2": null,
+              "y2": null
             },
             {
               "t": "badge",
@@ -24506,10 +24628,12 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "kind": "select"
             },
             {
-              "t": "cursor",
-              "x": 43.52,
-              "y": 61.67,
-              "mode": "down"
+              "t": "touchpt",
+              "x": 40,
+              "y": 55,
+              "kind": "tap",
+              "x2": null,
+              "y2": null
             },
             {
               "t": "badge",
@@ -24558,10 +24682,12 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "kind": "attack"
             },
             {
-              "t": "cursor",
-              "x": 75.52,
-              "y": 46.67,
-              "mode": "up"
+              "t": "touchpt",
+              "x": 72,
+              "y": 40,
+              "kind": "tap",
+              "x2": null,
+              "y2": null
             },
             {
               "t": "badge",
@@ -24647,16 +24773,12 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "size": 1.5
             },
             {
-              "t": "cursor",
-              "x": 42,
-              "y": 48,
-              "mode": "down"
-            },
-            {
-              "t": "cursor",
-              "x": 59.93,
-              "y": 59.33,
-              "mode": "down"
+              "t": "touchpt",
+              "x": 38,
+              "y": 66,
+              "kind": "pinch",
+              "x2": 62,
+              "y2": 78
             },
             {
               "t": "badge",
@@ -24699,10 +24821,12 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "size": 1
             },
             {
-              "t": "cursor",
+              "t": "touchpt",
               "x": 35,
               "y": 70,
-              "mode": "drag"
+              "kind": "drag",
+              "x2": null,
+              "y2": null
             },
             {
               "t": "badge",
@@ -24761,6 +24885,14 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "size": 1
             },
             {
+              "t": "touchpt",
+              "x": 50,
+              "y": 50,
+              "kind": "tap",
+              "x2": null,
+              "y2": null
+            },
+            {
               "t": "badge",
               "text": "短按"
             }
@@ -24775,51 +24907,33 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "cast": [
             {
               "t": "unit",
-              "x": 50,
-              "y": 50,
+              "x": 30,
+              "y": 55,
               "sel": true,
               "team": "ally",
               "face": 0,
               "size": 1
             },
             {
-              "t": "ring",
-              "x": 50,
-              "y": 50,
-              "r": 18,
-              "kind": "buff"
+              "t": "wheel",
+              "x": 62,
+              "y": 48,
+              "labels": [
+                "详情",
+                "锁定",
+                "取消",
+                "标记"
+              ],
+              "active": 0,
+              "r": 30
             },
             {
-              "t": "card",
-              "x": 50,
-              "y": 28,
-              "label": "详情",
-              "cost": null,
-              "dragging": false
-            },
-            {
-              "t": "card",
-              "x": 72,
-              "y": 50,
-              "label": "锁定",
-              "cost": null,
-              "dragging": false
-            },
-            {
-              "t": "card",
-              "x": 50,
-              "y": 72,
-              "label": "取消",
-              "cost": null,
-              "dragging": false
-            },
-            {
-              "t": "card",
-              "x": 28,
-              "y": 50,
-              "label": "标记",
-              "cost": null,
-              "dragging": false
+              "t": "touchpt",
+              "x": 30,
+              "y": 55,
+              "kind": "hold",
+              "x2": null,
+              "y2": null
             },
             {
               "t": "badge",
@@ -24912,10 +25026,12 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "kind": "move"
             },
             {
-              "t": "cursor",
+              "t": "touchpt",
               "x": 62,
               "y": 72,
-              "mode": "drag"
+              "kind": "drag",
+              "x2": null,
+              "y2": null
             },
             {
               "t": "badge",
@@ -25308,12 +25424,12 @@ window.PLAYER_ACTION_UX_CATALOG = {
       "actionNo": "UX-081",
       "actionKey": "menu-grid-command-panel",
       "actionTitle": "技能格面板点选",
-      "platform": "touch",
-      "platformLabel": "触控",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
       "variants": [
         {
-          "platform": "touch",
-          "platformLabel": "触控",
+          "platform": "kbm",
+          "platformLabel": "键鼠",
           "caseId": "menu-grid-command-panel"
         }
       ]

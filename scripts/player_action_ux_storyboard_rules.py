@@ -1,0 +1,236 @@
+# -*- coding: utf-8 -*-
+"""分镜「文案承诺 vs 画面元件」对照规则（SSOT）。
+
+图鉴的承诺是：每一拍的「画面输出」文案说了什么，右边分镜就要画出来。
+这里把可机器判定的部分列成表，生成时逐拍核对，不符直接 fail。
+
+规则只在「肯定语气」下生效：文案说「选框消失」「菜单关闭」时不要求画出来。
+"""
+from __future__ import annotations
+
+import re
+
+# 出现这些词说明该元素正在消失/被拒绝，不要求画出来
+NEGATIONS = ("消失", "收起", "关闭", "取消", "灭", "不出", "没有", "移除", "解除", "退出", "结束")
+
+# 平台 → 该平台不该出现的元件（画错设备等于骗玩家）
+PLATFORM_FORBIDDEN_ELEMENTS = {
+    "kbm": ("stickL", "stickR", "touchpt"),
+    "gamepad": ("cursor", "touchpt"),
+    "touch": ("cursor", "stickL", "stickR"),
+}
+
+# 平台 → 该平台文案里不该出现的设备词
+PLATFORM_FORBIDDEN_WORDS = {
+    # 键位缩写要独立成词才算手柄键，"RTS" 里的 RT 不是扳机
+    "kbm": r"摇杆|扳机|手柄|十字键|(?<![A-Za-z])(?:LB|RB|LT|RT)(?![A-Za-z])",
+    "gamepad": r"鼠标|右键|左键|键盘|Shift\+|Ctrl\+|Alt\+",
+    "touch": r"鼠标|右键|左键|摇杆|扳机",
+}
+
+# 一拍里最多出现一次的元件（多了就是画重了）
+SINGLETON_ELEMENTS = ("hotbar", "badge", "stickL", "stickR", "bar")
+
+# 必须有「看得见的主体」，只有文字标签不算画面
+SUBJECT_ELEMENTS = (
+    "unit", "hero", "card", "building", "crosshair", "menu", "stickL", "stickR",
+    "key", "hotbar", "wasd", "wheel", "anchor", "touchpt", "prop",
+)
+
+
+def _has(cast: list, *types: str) -> bool:
+    return any(e.get("t") in types for e in cast)
+
+
+def _selected_unit(cast: list) -> bool:
+    return any(e.get("t") == "unit" and e.get("sel") for e in cast)
+
+
+def _ring(cast: list, *kinds: str) -> bool:
+    return any(e.get("t") == "ring" and (not kinds or e.get("kind") in kinds) for e in cast)
+
+
+def _cursor_mode(cast: list, *modes: str) -> bool:
+    return any(e.get("t") == "cursor" and e.get("mode") in modes for e in cast)
+
+
+def _team_unit(cast: list, team: str) -> bool:
+    return any(e.get("t") in ("unit", "building") and e.get("team") == team for e in cast)
+
+
+# (说明, 触发正则, 画面判定, 缺了要怎么补)
+PROMISE_RULES: tuple[tuple[str, str, object, str], ...] = (
+    (
+        "说变专属准星/开镜，画面要有准星",
+        r"专属准星|变准星|开镜|瞄准镜",
+        lambda cast: _has(cast, "crosshair") or _cursor_mode(cast, "aim"),
+        "补 crosshair(...) 或把 cursor 改成 mode='aim'",
+    ),
+    (
+        "说点菜单项，画面要有菜单",
+        r"菜单项",
+        lambda cast: _has(cast, "menu"),
+        "补 menu_box(..., active=被点中那项)",
+    ),
+    (
+        "说弹出/展开菜单或选单，画面要有菜单或轮盘",
+        r"弹出菜单|展开菜单|出现菜单|上下文菜单|次级菜单|分层选单",
+        lambda cast: _has(cast, "menu", "wheel", "card"),
+        "补 menu_box(...) 或 wheel(...) 轮盘",
+    ),
+    (
+        "说出现选中圈/被选中，画面要有选中圈",
+        r"选中圈|被选中|变成当前选中|设为选中",
+        lambda cast: _ring(cast, "select", "lock") or _selected_unit(cast),
+        "给 unit 加 sel=True 或补 ring(x, y, kind='select')",
+    ),
+    (
+        "说读条/倒计时/蓄力，画面要有进度条",
+        r"读条|进度条|倒计时|蓄力条|充能条|条走满",
+        lambda cast: _has(cast, "bar"),
+        "补 bar(x, y, ratio=..., kind='cast'/'charge')",
+    ),
+    (
+        "说落点圈/范围预览，画面要有落点圈",
+        r"落点圈|范围圈|落点预览|范围预览|作用范围",
+        lambda cast: _has(cast, "circle", "cone"),
+        "补 circle_ind(x, y, r, ok=True/False)",
+    ),
+    (
+        "说扇形/锥形，画面要有扇形指示器",
+        r"扇形|锥形|锥形区|矩形扫射",
+        lambda cast: _has(cast, "cone"),
+        "补 cone(x, y, angle, spread, length)",
+    ),
+    (
+        "说推摇杆，画面要有摇杆图示",
+        r"摇杆",
+        lambda cast: _has(cast, "stickL", "stickR"),
+        "补 stick('L'/'R', nx, ny)",
+    ),
+    (
+        "说拖出选框，画面要有选框",
+        r"选框|框住|矩形框",
+        lambda cast: _has(cast, "box"),
+        "补 box(x, y, w, h)",
+    ),
+    (
+        "说技能栏/图标/冷却，画面要有技能栏",
+        r"技能栏|技能图标|快捷栏|冷却|CD|绿点|亮起可再次",
+        lambda cast: _has(cast, "hotbar"),
+        "补 hotbar(active=..., cd=..., dot=..., deny=...)",
+    ),
+    (
+        "说键位提示，画面要有键帽",
+        r"按键提示|交互提示|提示键|提示「|键提示|键位提示",
+        lambda cast: _has(cast, "key", "hotbar", "wasd"),
+        "补 keyhint(x, y, label, state, hint)",
+    ),
+    (
+        # 键位字母要独立成词，"按住 Shift" 里的 S 不是方向键
+        "说 WASD 方向键，画面要有键组",
+        r"WASD|按住?\s?[WASD](?![A-Za-z])",
+        lambda cast: _has(cast, "wasd", "key"),
+        "补 wasd(active=[...]) 方向键组",
+    ),
+    (
+        "说轮盘，画面要有轮盘",
+        r"轮盘",
+        lambda cast: _has(cast, "wheel"),
+        "补 wheel(x, y, labels, active)",
+    ),
+    (
+        "说锚点，画面要有锚点",
+        r"锚点",
+        lambda cast: _has(cast, "anchor"),
+        "补 anchor(x, y)",
+    ),
+    (
+        "说敌人/敌方，画面要有敌方目标",
+        r"敌人|敌方|敵",
+        lambda cast: _team_unit(cast, "enemy"),
+        "补 unit(x, y, team='enemy') 或 building(x, y, team='enemy')",
+    ),
+    (
+        "说手牌/卡，画面要有卡牌",
+        r"手牌|卡牌|一张卡|卡片",
+        lambda cast: _has(cast, "card"),
+        "补 card(x, y, label, cost)",
+    ),
+    (
+        "说轨迹/套索，画面要有轨迹线",
+        r"轨迹|套索",
+        lambda cast: _has(cast, "path"),
+        "补 path([[x, y], ...], kind='lasso')",
+    ),
+    (
+        "说触控手指动作，画面要有触点",
+        r"手指|点触|轻点|双指|捏合|滑动",
+        lambda cast: _has(cast, "touchpt"),
+        "补 touch_point(x, y, kind=...) 触点元件",
+    ),
+)
+
+
+def _negated(text: str, keyword_span: tuple[int, int]) -> bool:
+    """关键词附近出现「消失/关闭」等词就不强制画出来。"""
+    start = max(0, keyword_span[0] - 12)
+    end = min(len(text), keyword_span[1] + 12)
+    window = text[start:end]
+    return any(n in window for n in NEGATIONS)
+
+
+def check_beat(beat: dict) -> list[tuple[str, str]]:
+    """返回 [(规则说明, 补法)]，空表示这一拍画面兑现了文案。"""
+    cast = beat.get("cast") or []
+    text = f"{beat.get('input') or ''} {beat.get('logic') or ''} {beat.get('screen') or ''}"
+    out: list[tuple[str, str]] = []
+    for why, pattern, ok, howto in PROMISE_RULES:
+        hit = None
+        for m in re.finditer(pattern, text):
+            if not _negated(text, m.span()):
+                hit = m
+                break
+        if hit is None:
+            continue
+        if not ok(cast):
+            out.append((why, howto))
+    return out
+
+
+def check_structure(beat: dict) -> list[str]:
+    """画面本身的合法性：主体存在、坐标在台上、元件不画重。"""
+    cast = beat.get("cast") or []
+    problems: list[str] = []
+    if not any(e.get("t") in SUBJECT_ELEMENTS for e in cast):
+        problems.append("这一拍没有看得见的主体（只有文字标签不算画面）")
+    for e in cast:
+        for key in ("x", "y", "x1", "y1", "x2", "y2"):
+            if key in e and e[key] is not None and not 0 <= float(e[key]) <= 100:
+                problems.append(f"{e['t']} 的 {key}={e[key]} 跑出画面（要在 0..100）")
+    for t in SINGLETON_ELEMENTS:
+        n = sum(1 for e in cast if e.get("t") == t)
+        if n > 1:
+            problems.append(f"{t} 画了 {n} 个（一拍最多一个）")
+    return problems
+
+
+def check_platform(case: dict) -> list[str]:
+    """平台标注 vs 画面元件 / 文案设备词是否自相矛盾。"""
+    platform = case.get("platform")
+    if platform not in PLATFORM_FORBIDDEN_ELEMENTS:
+        return [f"platform={platform} 不在 gamepad/kbm/touch 之内"]
+    problems: list[str] = []
+    forbidden = PLATFORM_FORBIDDEN_ELEMENTS[platform]
+    for i, b in enumerate(case.get("beats") or []):
+        for e in b.get("cast") or []:
+            if e.get("t") in forbidden:
+                problems.append(f"T{i+1} 画了 {e['t']}，和 platform={platform} 矛盾")
+    blob = " ".join(
+        [case.get("title") or "", case.get("summary") or ""]
+        + [f"{b.get('input')} {b.get('logic')} {b.get('screen')}" for b in case.get("beats") or []]
+    )
+    words = sorted(set(re.findall(PLATFORM_FORBIDDEN_WORDS[platform], blob)))
+    if words:
+        problems.append(f"文案出现别的平台设备词 {words}，和 platform={platform} 矛盾")
+    return problems

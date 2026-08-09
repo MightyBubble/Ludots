@@ -217,6 +217,90 @@
           <circle cx="${kx}" cy="${ky}" r="9" fill="${left ? "#6ec8ff" : "#f0a35e"}" stroke="#e8eef6" stroke-width="1"/>
           <text x="${cx}" y="${cy + 30}" text-anchor="middle" fill="#93a0b4" font-size="10" font-family="IBM Plex Mono, monospace">${left ? "L" : "R"}</text>`;
       }
+      if (el.t === "touchpt") {
+        const x = px(el.x), y = py(el.y);
+        const kind = el.kind || "tap";
+        const dot = (cx, cy) => `<circle cx="${cx}" cy="${cy}" r="6.5" fill="rgba(110,200,255,0.35)" stroke="#6ec8ff" stroke-width="2"/>`;
+        if (kind === "pinch") {
+          const x2 = px(el.x2), y2 = py(el.y2);
+          return `
+            <line x1="${x}" y1="${y}" x2="${x2}" y2="${y2}" stroke="#6ec8ff" stroke-width="1.4" stroke-dasharray="4 3"/>
+            ${dot(x, y)}${dot(x2, y2)}
+            <path d="M${(x + x2) / 2 - 9} ${(y + y2) / 2} L${(x + x2) / 2 - 3} ${(y + y2) / 2}" stroke="#f0a35e" stroke-width="2" marker-end="url(#${markerPrefix}-move)"/>
+            <path d="M${(x + x2) / 2 + 9} ${(y + y2) / 2} L${(x + x2) / 2 + 3} ${(y + y2) / 2}" stroke="#f0a35e" stroke-width="2" marker-end="url(#${markerPrefix}-move)"/>`;
+        }
+        const hold = kind === "hold"
+          ? `<circle cx="${x}" cy="${y}" r="12" fill="none" stroke="#f0a35e" stroke-width="1.6"/>
+             <circle cx="${x}" cy="${y}" r="16.5" fill="none" stroke="#f0a35e" stroke-width="1" opacity="0.5"/>`
+          : "";
+        const tap = kind === "tap"
+          ? `<circle cx="${x}" cy="${y}" r="12" fill="none" stroke="#6ec8ff" stroke-width="1.4" opacity="0.75"/>`
+          : "";
+        const drag = kind === "drag"
+          ? `<circle cx="${x}" cy="${y}" r="12" fill="none" stroke="#6ec8ff" stroke-width="1.3" stroke-dasharray="3 3"/>`
+          : "";
+        return `${hold}${tap}${drag}${dot(x, y)}`;
+      }
+      if (el.t === "wasd") {
+        const on = Array.isArray(el.active) ? el.active : [];
+        const cx = SX + 40;
+        const cy = SY + SH - 34;
+        const s = 17, gap = 2.5;
+        const cap = (label, gx, gy) => {
+          const lit = on.includes(label);
+          const x = cx + gx * (s + gap) - s / 2;
+          const y = cy + gy * (s + gap) - s / 2;
+          return `
+            <rect x="${x}" y="${y}" width="${s}" height="${s}" rx="3"
+              fill="${lit ? "rgba(240,163,94,0.22)" : "#0b0e13"}" stroke="${lit ? "#f0a35e" : "#3a4658"}" stroke-width="${lit ? 2 : 1.2}"/>
+            <text x="${x + s / 2}" y="${y + s / 2 + 4}" text-anchor="middle" fill="${lit ? "#f0a35e" : "#66758a"}" font-size="10" font-family="IBM Plex Mono, monospace" font-weight="700">${label}</text>`;
+        };
+        return `${cap("W", 0, -1)}${cap("A", -1, 0)}${cap("S", 0, 0)}${cap("D", 1, 0)}`;
+      }
+      if (el.t === "wheel") {
+        const x = px(el.x), y = py(el.y);
+        const r = el.r || 30;
+        const labels = el.labels || [];
+        const n = Math.max(2, labels.length);
+        const step = (Math.PI * 2) / n;
+        let out = `<circle cx="${x}" cy="${y}" r="${r}" fill="rgba(11,14,19,0.78)" stroke="#6ec8ff" stroke-width="1.6"/>`;
+        for (let i = 0; i < n; i++) {
+          const a0 = -Math.PI / 2 + i * step;
+          const a1 = a0 + step;
+          const on = el.active === i;
+          if (on) {
+            const x0 = x + Math.cos(a0) * r, y0 = y + Math.sin(a0) * r;
+            const x1 = x + Math.cos(a1) * r, y1 = y + Math.sin(a1) * r;
+            out += `<path d="M${x} ${y} L${x0} ${y0} A${r} ${r} 0 0 1 ${x1} ${y1} Z" fill="rgba(240,163,94,0.28)" stroke="#f0a35e" stroke-width="1.6"/>`;
+          } else {
+            const xe = x + Math.cos(a0) * r, ye = y + Math.sin(a0) * r;
+            out += `<line x1="${x}" y1="${y}" x2="${xe}" y2="${ye}" stroke="#2c3645" stroke-width="1"/>`;
+          }
+          const am = a0 + step / 2;
+          const lx = x + Math.cos(am) * r * 0.62;
+          const ly = y + Math.sin(am) * r * 0.62;
+          out += `<text x="${lx}" y="${ly + 3.5}" text-anchor="middle" fill="${on ? "#f0a35e" : "#93a0b4"}" font-size="9.5" font-family="DM Sans, sans-serif" font-weight="${on ? 700 : 400}">${esc(labels[i] || "")}</text>`;
+        }
+        return out;
+      }
+      if (el.t === "prop") {
+        const x = px(el.x), y = py(el.y);
+        const s = 8;
+        const glow = el.highlight
+          ? `<circle cx="${x}" cy="${y}" r="${s + 5}" fill="none" stroke="#e0c35a" stroke-width="1.6" opacity="0.85"/>`
+          : "";
+        return `${glow}
+          <polygon points="${x},${y - s} ${x + s},${y} ${x},${y + s} ${x - s},${y}" fill="#c9a27a" stroke="#0b0e13" stroke-width="1.3"/>
+          ${el.label ? `<text x="${x}" y="${y - s - 5}" text-anchor="middle" fill="#e0c35a" font-size="9.5" font-family="DM Sans, sans-serif" font-weight="600">${esc(el.label)}</text>` : ""}`;
+      }
+      if (el.t === "anchor") {
+        const x = px(el.x), y = py(el.y);
+        return `
+          <circle cx="${x}" cy="${y}" r="7" fill="none" stroke="#e0c35a" stroke-width="2.2"/>
+          <line x1="${x - 10}" y1="${y}" x2="${x + 10}" y2="${y}" stroke="#e0c35a" stroke-width="1.4"/>
+          <line x1="${x}" y1="${y - 10}" x2="${x}" y2="${y + 10}" stroke="#e0c35a" stroke-width="1.4"/>
+          <circle cx="${x}" cy="${y}" r="2" fill="#e0c35a"/>`;
+      }
       if (el.t === "badge") {
         const w = Math.min(150, 20 + String(el.text).length * 9);
         return `
