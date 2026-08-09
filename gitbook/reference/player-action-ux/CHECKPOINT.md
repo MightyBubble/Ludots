@@ -5,20 +5,23 @@
 ## 生成时身份
 
 - 生成脚本：`scripts/generate-player-action-ux-catalog.py`
+- 逻辑文案：`scripts/player_action_ux_beat_logic.py`
 - 实现标注：`scripts/player_action_ux_impl_notes.py`
-- 生成时 HEAD：`c91a9090d`（以你拉取后的 `git rev-parse` 为准；合并后会变）
-- 分支语境：`cursor/ux-catalog-by-game-4211`（左栏按复刻目标游戏分类；同一动作可挂多个游戏）
-- 已合 main 的底座：PR #743 起图鉴；#744–#749 布局/WASD/SVG 审计
+- 生成时 HEAD：`2a276a9a9`（以你拉取后的 `git rev-parse` 为准；合并后会变）
+- 分支语境：`cursor/ux-sequence-io-4211`（时序=设备→逻辑→画面；左栏仍为复刻目标）
+- 已合 main：图鉴 #743–#750（含按游戏分类）
 
 ## 页面交互约定（改 UI 前先读）
 
 - 三栏：**复刻目标游戏** | 动作列表 | 详情
-- 左栏 id 来自 `TARGET_GAMES`（sc2/ra2/war3/…）；筛选看 `case.targets.includes(id)`，允许重复
-- `case.category` / `family` = 功能族（谁听我的、物品…），只给 impl_notes 与详情副标，不当左栏主键
-- 详情内：**左时序（Mermaid）/ 右分镜**，用拍号芯片同步高亮
-- 每个 case 必有 `ludots` 与 `todos`；标注来自 impl_notes，勿手改 `catalog-data.js`
+- 左栏 id 来自 `TARGET_GAMES`；筛选看 `case.targets.includes(id)`，允许重复
+- `case.category` / `family` = 功能族，只给 impl_notes 与详情副标
+- 详情内：**左时序（Mermaid）/ 右分镜**，拍号芯片同步高亮
+- **时序图参与者只有三个：设备输入 → 逻辑处理 → 画面输出**；禁止再把手感/爽点做成泳道
+- 每拍必有 `input` / `logic` / `screen`；`logic` 来自 `BEAT_LOGIC`，缺键直接 fail 生成
+- 每个 case 必有 `ludots` 与 `todos`；勿手改 `catalog-data.js`
 
-## 复刻目标分类（本轮）
+## 复刻目标分类
 
 - `sc2` **星际争霸2**（49）— 框选 · 指令队列 · 控制组 · 热键栏
 - `ra2` **红色警戒2**（47）— 生产建造 · 电力 · 右键语境指令
@@ -34,8 +37,7 @@
 - `zelda` **塞尔达 / 开放世界**（16）— 情境按键 · 攀爬采集互动
 - `shared` **跨品类通用**（22）— 拒绝反馈 · 设计手势 · 共通走位
 
-- 同一动作出现在多个游戏下是预期（例如框选既挂星际也挂红警）
-- 功能族仍完整保留在数据里；若要按手感横切，用搜索或以后加第二维筛选
+- 同一动作出现在多个游戏下是预期
 - 仍可后续补目标：战棋格子、塔防造塔、炉石对战、观战裁判（见 todos）
 
 ## 规模

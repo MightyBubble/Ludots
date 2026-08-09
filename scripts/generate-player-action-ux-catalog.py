@@ -2,8 +2,10 @@
 # -*- coding: utf-8 -*-
 """Generate player-action UX catalog data (SSOT → catalog-data.js).
 
-Cases are player/PM language only: what hands do, what the screen shows, what it feels like.
-No technical layering. Storyboard visuals are comic-panel descriptors for the HTML renderer.
+Player/PM language only. Each beat is a closed loop:
+  设备输入 → 逻辑处理 → 画面输出
+Logic copy SSOT: player_action_ux_beat_logic.py (not a 'feel' swimlane).
+Storyboard visuals are comic-panel descriptors for the HTML renderer.
 """
 from __future__ import annotations
 
@@ -13,18 +15,23 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+from player_action_ux_beat_logic import apply_beat_logic  # noqa: E402
 from player_action_ux_impl_notes import enrich_all  # noqa: E402
 
 OUT = Path(__file__).resolve().parent.parent / "gitbook/reference/player-action-ux/catalog-data.js"
 CHECKPOINT_MD = Path(__file__).resolve().parent.parent / "gitbook/reference/player-action-ux/CHECKPOINT.md"
 
 
-def beat(input_text, screen, feel, view, cast, title=None):
+def beat(input_text, screen, _author_note, view, cast, title=None):
+    """Build one storyboard beat.
+
+    Positional 3rd arg is a discarded authoring stub (old 'feel' slogans).
+    Final ``logic`` text is applied from ``BEAT_LOGIC`` — required, no silent default.
+    """
     return {
         "title": title,
         "input": input_text,
         "screen": screen,
-        "feel": feel,
         "view": view,
         "cast": cast,
     }
@@ -2348,28 +2355,30 @@ def _write_checkpoint(cases: list, weak: list[str], head: str) -> None:
         "## 生成时身份",
         "",
         f"- 生成脚本：`scripts/generate-player-action-ux-catalog.py`",
+        f"- 逻辑文案：`scripts/player_action_ux_beat_logic.py`",
         f"- 实现标注：`scripts/player_action_ux_impl_notes.py`",
         f"- 生成时 HEAD：`{head}`（以你拉取后的 `git rev-parse` 为准；合并后会变）",
-        f"- 分支语境：`cursor/ux-catalog-by-game-4211`（左栏按复刻目标游戏分类；同一动作可挂多个游戏）",
-        f"- 已合 main 的底座：PR #743 起图鉴；#744–#749 布局/WASD/SVG 审计",
+        f"- 分支语境：`cursor/ux-sequence-io-4211`（时序=设备→逻辑→画面；左栏仍为复刻目标）",
+        f"- 已合 main：图鉴 #743–#750（含按游戏分类）",
         "",
         "## 页面交互约定（改 UI 前先读）",
         "",
         "- 三栏：**复刻目标游戏** | 动作列表 | 详情",
-        "- 左栏 id 来自 `TARGET_GAMES`（sc2/ra2/war3/…）；筛选看 `case.targets.includes(id)`，允许重复",
-        "- `case.category` / `family` = 功能族（谁听我的、物品…），只给 impl_notes 与详情副标，不当左栏主键",
-        "- 详情内：**左时序（Mermaid）/ 右分镜**，用拍号芯片同步高亮",
-        "- 每个 case 必有 `ludots` 与 `todos`；标注来自 impl_notes，勿手改 `catalog-data.js`",
+        "- 左栏 id 来自 `TARGET_GAMES`；筛选看 `case.targets.includes(id)`，允许重复",
+        "- `case.category` / `family` = 功能族，只给 impl_notes 与详情副标",
+        "- 详情内：**左时序（Mermaid）/ 右分镜**，拍号芯片同步高亮",
+        "- **时序图参与者只有三个：设备输入 → 逻辑处理 → 画面输出**；禁止再把手感/爽点做成泳道",
+        "- 每拍必有 `input` / `logic` / `screen`；`logic` 来自 `BEAT_LOGIC`，缺键直接 fail 生成",
+        "- 每个 case 必有 `ludots` 与 `todos`；勿手改 `catalog-data.js`",
         "",
-        "## 复刻目标分类（本轮）",
+        "## 复刻目标分类",
         "",
     ]
     for gid, title, blurb in TARGET_GAMES:
         lines.append(f"- `{gid}` **{title}**（{target_counts.get(gid, 0)}）— {blurb}")
     lines.extend([
         "",
-        "- 同一动作出现在多个游戏下是预期（例如框选既挂星际也挂红警）",
-        "- 功能族仍完整保留在数据里；若要按手感横切，用搜索或以后加第二维筛选",
+        "- 同一动作出现在多个游戏下是预期",
         "- 仍可后续补目标：战棋格子、塔防造塔、炉石对战、观战裁判（见 todos）",
         "",
         "## 规模",
@@ -2397,20 +2406,31 @@ def main():
     head = _git_head()
     cases = build_cases()  # already enrich_all inside
     assign_game_targets(cases)
+    apply_beat_logic(cases)
     augmented = augment_ui_glyphs(cases)
     weak = _audit_casts(cases)
     empty = [c["id"] for c in cases if not c.get("targets")]
     if empty:
         raise SystemExit(f"cases missing targets: {empty}")
+    no_logic = [
+        f"{c['id']}#T{i+1}"
+        for c in cases
+        for i, b in enumerate(c["beats"])
+        if not b.get("logic")
+    ]
+    if no_logic:
+        raise SystemExit(f"beats missing logic after apply: {no_logic[:20]}")
     payload = {
         "title": "玩家动作体验图鉴",
-        "subtitle": "按想复刻的游戏浏览：手怎么动、画面怎么变、爽点在哪。同一动作可出现在多个游戏下。",
+        "subtitle": "按复刻目标浏览。每一拍时序：设备输入 → 逻辑处理 → 画面输出。",
         "taxonomy": "game-targets",
+        "sequenceModel": ["device-input", "logic", "screen-output"],
         "checkpoint": {
             "head": head,
-            "branch_hint": "cursor/ux-catalog-by-game-4211",
+            "branch_hint": "cursor/ux-sequence-io-4211",
             "impl_notes": "scripts/player_action_ux_impl_notes.py",
-            "note": "左栏=复刻目标；ludots/todos 以生成时审计为准；勿手改 catalog-data.js",
+            "beat_logic": "scripts/player_action_ux_beat_logic.py",
+            "note": "时序三参与者=设备/逻辑/画面；左栏=复刻目标；勿手改 catalog-data.js",
             "weak_storyboard_beats": weak,
         },
         "categories": [
