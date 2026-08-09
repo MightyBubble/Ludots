@@ -219,11 +219,11 @@
       if (el.t === "roster") {
         const x = px(el.x), y = py(el.y);
         const rows = el.rows || [];
-        const w = 96, rh = 16, h = 18 + rows.length * rh;
+        const w = 96, rh = 16, h = 24 + rows.length * rh;
         const mark = { ready: ["✓", "#5dce8f"], waiting: ["…", "#e0c35a"], offline: ["×", "#ef6b6b"] };
         const items = rows.map((r, i) => {
           const [sym, col] = mark[r.state] || mark.waiting;
-          const ry = y + 20 + i * rh;
+          const ry = y + 30 + i * rh;
           return `
             <text x="${x + 8}" y="${ry}" fill="#e8eef6" font-size="10" font-family="DM Sans, sans-serif">${esc(r.name)}</text>
             <text x="${x + w - 10}" y="${ry}" text-anchor="end" fill="${col}" font-size="11" font-family="DM Sans, sans-serif" font-weight="700">${sym}</text>`;
