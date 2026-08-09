@@ -112,7 +112,9 @@
       }
       if (el.t === "ring") {
         const color = el.kind === "lock" ? "#ef6b6b" : el.kind === "buff" ? "#6ec8ff" : "#f0a35e";
-        return `<ellipse cx="${px(el.x)}" cy="${py(el.y) + 6}" rx="${el.r || 8}" ry="${(el.r || 8) * 0.45}" fill="none" stroke="${color}" stroke-width="2.2"/>`;
+        // Ground ring under the unit tip (top-down “脚下”), not around the torso.
+        const r = el.r || 8;
+        return `<ellipse cx="${px(el.x)}" cy="${py(el.y) + 14}" rx="${r}" ry="${r * 0.42}" fill="none" stroke="${color}" stroke-width="2.2"/>`;
       }
       if (el.t === "crosshair") {
         const x = px(el.x), y = py(el.y);
