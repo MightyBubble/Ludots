@@ -16,9 +16,15 @@ NEGATIONS = ("消失", "收起", "关闭", "取消", "灭", "不出", "没有", 
 # 平台 → 该平台不该出现的元件（画错设备等于骗玩家）
 PLATFORM_FORBIDDEN_ELEMENTS = {
     "kbm": ("stickL", "stickR", "touchpt"),
-    "gamepad": ("cursor", "touchpt"),
-    "touch": ("cursor", "stickL", "stickR"),
+    "gamepad": ("cursor", "touchpt", "wasd"),
+    "touch": ("cursor", "stickL", "stickR", "wasd"),
 }
+
+# 只可能出现在键盘上的键帽文字。手柄 / 触控 case 画这些键就是让玩家去按不存在的键。
+KEYBOARD_ONLY_KEYCAPS = frozenset({
+    "W", "S", "D", "E", "Q", "R", "F", "G", "T", "V", "C", "Z", "X",
+    "Shift", "Ctrl", "Alt", "Esc", "Tab", "空格", "左键", "右键", "中键", "滚轮",
+})
 
 # 平台 → 该平台文案里不该出现的设备词
 PLATFORM_FORBIDDEN_WORDS = {
@@ -185,6 +191,13 @@ PROMISE_RULES: tuple[tuple[str, str, object, str], ...] = (
         "补 path([[x, y], ...], kind='lasso')",
     ),
     (
+        "说移瞄分离/边走边打，移动和攻击两个方向都要画出来",
+        r"移瞄分离|边走边打|边退边打|走的方向.*打|往上走.*朝右",
+        lambda cast: any(e.get("t") == "arrow" and e.get("kind") == "move" for e in cast)
+        and any(e.get("t") == "arrow" and e.get("kind") == "attack" for e in cast),
+        "补一根 arrow(kind='move') 表示走的方向，和 attack 那根并排",
+    ),
+    (
         "说被拒绝/禁止，画面要有禁止图标",
         r"拒绝|禁止图标|放不出|不可用|无效|挡下",
         lambda cast: _has(cast, "deny"),
@@ -266,6 +279,14 @@ def check_platform(case: dict) -> list[str]:
         for e in b.get("cast") or []:
             if e.get("t") in forbidden:
                 problems.append(f"T{i+1} 画了 {e['t']}，和 platform={platform} 矛盾")
+            if (
+                platform != "kbm"
+                and e.get("t") == "key"
+                and str(e.get("label")) in KEYBOARD_ONLY_KEYCAPS
+            ):
+                problems.append(
+                    f"T{i+1} 画了键盘键帽「{e['label']}」，platform={platform} 上没有这个键"
+                )
     blob = " ".join(
         [case.get("title") or "", case.get("summary") or ""]
         + [f"{b.get('input')} {b.get('logic')} {b.get('screen')}" for b in case.get("beats") or []]

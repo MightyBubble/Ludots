@@ -777,7 +777,8 @@ def build_cases():
         [
             beat("左摇杆向前，右摇杆向右", "角色往上走，枪口朝右，子弹向右", "螃蟹步开火", "topdown",
                  [hero(45, 55, face=0), stick("L", 0, -0.8), stick("R", 0.9, 0),
-                  arrow(50, 55, 78, 55, "attack"), unit(80, 52, team="enemy"), badge("双摇杆")], title="分离"),
+                  arrow(45, 50, 45, 26, "move"), arrow(50, 55, 76, 55, "attack"),
+                  unit(80, 52, team="enemy"), badge("走上·打右")], title="分离"),
         ], ["双摇杆射击"],
     ))
     c.append(case(
@@ -832,7 +833,8 @@ def build_cases():
         [
             beat("WASD 走，鼠标定朝向", "顶视角角色移瞄分离，鼠标方向开火", "键鼠双摇杆", "topdown",
                  [hero(45, 55, face=-27), wasd(["W", "D"]), cursor(75, 40),
-                  arrow(50, 52, 72, 42, "attack"), badge("WASD+鼠标")], title="键鼠"),
+                  arrow(45, 50, 45, 26, "move"), arrow(50, 52, 72, 42, "attack"),
+                  unit(78, 38, team="enemy"), badge("走上·打右上")], title="键鼠"),
         ], ["双摇杆射击", "ARPG"],
     ))
 
@@ -1215,10 +1217,11 @@ def build_cases():
         "交互上车后，摇杆/射击变成载具武器。",
         [
             beat("走近载具按交互", "出现上车提示", "能上车", "tps",
-                 [hero(32, 60), vehicle(58, 50, "tank"), keyhint(58, 30, "F", "active", "上车"),
+                 [hero(32, 60), vehicle(58, 50, "tank"), keyhint(58, 30, "A键", "active", "上车"),
                   badge("靠近载具")], title="靠近"),
             beat("上车完成", "准星变车炮，移动手感变车辆，技能栏换载具武器", "开炮车", "tps",
-                 [vehicle(46, 55, "tank", occupied=True), crosshair(74, 38), wasd(["W"]),
+                 [vehicle(46, 55, "tank", occupied=True), crosshair(74, 38),
+                  stick("L", 0, -0.7), stick("R", 0.5, -0.2),
                   hotbar(extra=0), badge("载具操作")], title="载具"),
         ], ["TPS", "FPS"],
     ))
@@ -1444,12 +1447,14 @@ def build_cases():
         "变形后技能栏与默认右键都换一套。",
         [
             beat("坦克形态，右键敌人", "开过去边走边打", "追着打", "topdown",
-                 [unit(30, 58, sel=True, size=1.2), ring(30, 58), unit(72, 40, team="enemy"),
-                  arrow(34, 56, 68, 42, "attack"), badge("坦克形态")], title="车形态"),
+                 [unit(30, 58, sel=True, size=1.2, role="车"), ring(30, 58), unit(72, 40, team="enemy"),
+                  arrow(34, 56, 56, 48, "move"), arrow(56, 48, 68, 42, "attack"),
+                  badge("坦克形态·边开边打")], title="车形态"),
             beat("切到攻城形态后，右键同一敌人", "就地架炮，不再追身", "站桩轰", "topdown",
-                 [unit(30, 58, sel=True, size=1.3), ring(30, 58), unit(72, 40, team="enemy"),
-                  arrow(40, 56, 68, 42, "attack"), circle_ind(30, 58, 22, True),
-                  badge("攻城形态")], title="炮形态"),
+                 [unit(30, 58, sel=True, size=1.3, role="炮"), ring(30, 58), unit(72, 40, team="enemy"),
+                  arrow(36, 56, 68, 42, "attack"), circle_ind(30, 58, 26, True),
+                  impact(72, 40, 14), deny(30, 78, "不再移动"),
+                  badge("攻城形态·钉在原地")], title="炮形态"),
         ], ["SC2", "RTS"],
     ))
 
@@ -1546,7 +1551,8 @@ def build_cases():
         "和变身类似，但是“座位授予”而不是角色变身。",
         [
             beat("进入炮位/驾驶位", "准星变车炮；技能栏变载具武器", "换成开车手感", "tps",
-                 [vehicle(42, 55, "turret", occupied=True), crosshair(76, 38), wasd(["W"]),
+                 [vehicle(42, 55, "turret", occupied=True), crosshair(76, 38),
+                  stick("L", 0, -0.6), stick("R", 0.6, -0.2),
                   hotbar(extra=0, slots=3), badge("进入座位")], title="上车"),
             beat("下车 / 被炸下车", "操作与技能栏瞬间回到步行", "又变回人", "tps",
                  [hero(36, 58), vehicle(66, 50, "turret"), hotbar(slots=4),
@@ -1801,9 +1807,11 @@ def build_cases():
                   menu_box(16, 38, ["你的报价", "矿石", "金币 20"]),
                   menu_box(58, 38, ["对方报价", "币袋", "金币 0"]),
                   card(42, 62, "矿", 0), card(58, 62, "币", 0), badge("已报价")], title="报价"),
-            beat("双方点确认", "物品交换完成，交易窗关闭", "成交", "moba",
-                 [hero(30, 55), unit(70, 45, team="ally"), card(42, 50, "矿", 0), card(58, 50, "币", 0),
-                  badge("成交·窗关")], title="成交"),
+            beat("双方点确认", "物品交换完成：矿石到了对方手上，币袋到了我手上", "成交", "moba",
+                 [hero(24, 60), unit(76, 42, team="ally"),
+                  card(30, 74, "币", 0), card(72, 66, "矿", 0),
+                  arrow(44, 62, 68, 66, "move"), arrow(62, 56, 36, 70, "move"),
+                  menu_box(40, 20, ["交易完成"]), badge("成交·各自到手")], title="成交"),
         ], ["魔兽世界", "MMO"],
     ))
     c.append(case(
@@ -1918,8 +1926,9 @@ def build_cases():
         "点任务追踪条目，地图/箭头标出目标；超远时给装等提示。",
         [
             beat("点击任务追踪里的目标", "地图标记或地面箭头更新", "知道去哪", "moba",
-                 [hero(35, 60), cursor(40, 30), arrow(38, 55, 70, 40, "move"),
-                  circle_ind(70, 40, 10, True), badge("追踪→地图")], title="点追踪"),
+                 [hero(34, 62), menu_box(14, 18, ["主线：清理狼群", "支线：送信"], active=0),
+                  cursor(22, 38, "up"), arrow(38, 60, 68, 44, "move"),
+                  circle_ind(72, 40, 10, True), badge("追踪→地图")], title="点追踪"),
             beat("走进目标区域", "追踪条目打钩或换下一步指引", "到了", "moba",
                  [hero(68, 42), circle_ind(70, 40, 12, True),
                   menu_box(28, 65, ["任务：√ 已到达"]), badge("阶段完成")], title="到达"),
@@ -2422,8 +2431,9 @@ def build_cases():
         "这是 WASD 手感的重要调参，不是「四个方向等价」。",
         [
             beat("按住 S 后撤", "背对移动方向慢退，可边退边打", "往后蹭", "tps",
-                 [hero(50, 45, face=-90), wasd(["S"]), arrow(50, 48, 50, 65, "move"),
-                  badge("后撤慢")], title="后撤"),
+                 [hero(50, 52, face=-90), wasd(["S"]), arrow(50, 56, 50, 74, "move"),
+                  unit(50, 22, team="enemy"), arrow(50, 46, 50, 28, "attack"),
+                  badge("后撤慢·仍可还击")], title="后撤"),
             beat("按住 A/D 边走边瞄", "侧移保持面朝/准星方向", "拉枪线", "tps",
                  [hero(45, 55, face=0), wasd(["D"]), crosshair(70, 40),
                   arrow(50, 55, 65, 55, "move"), badge("侧移瞄准")], title="侧移"),
