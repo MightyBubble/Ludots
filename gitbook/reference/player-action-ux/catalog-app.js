@@ -269,12 +269,16 @@
       if (el.t === "crosshair") {
         const x = px(el.x), y = py(el.y);
         const c = el.locked ? "#ef6b6b" : "#e8eef6";
+        // spread=tight 开镜收拢 / wide 扫射扩散：准星张开度本身就是信息
+        const k = el.spread === "tight" ? 0.55 : el.spread === "wide" ? 1.7 : 1;
+        const r = 10 * k, inner = 6 * k, outer = 16 * k;
         return `
-          <circle cx="${x}" cy="${y}" r="10" fill="none" stroke="${c}" stroke-width="1.6"/>
-          <line x1="${x - 16}" y1="${y}" x2="${x - 6}" y2="${y}" stroke="${c}" stroke-width="1.6"/>
-          <line x1="${x + 6}" y1="${y}" x2="${x + 16}" y2="${y}" stroke="${c}" stroke-width="1.6"/>
-          <line x1="${x}" y1="${y - 16}" x2="${x}" y2="${y - 6}" stroke="${c}" stroke-width="1.6"/>
-          <line x1="${x}" y1="${y + 6}" x2="${x}" y2="${y + 16}" stroke="${c}" stroke-width="1.6"/>`;
+          <circle cx="${x}" cy="${y}" r="${r}" fill="none" stroke="${c}" stroke-width="1.6" stroke-dasharray="${el.spread === "wide" ? "4 3" : "0"}"/>
+          <line x1="${x - outer}" y1="${y}" x2="${x - inner}" y2="${y}" stroke="${c}" stroke-width="1.6"/>
+          <line x1="${x + inner}" y1="${y}" x2="${x + outer}" y2="${y}" stroke="${c}" stroke-width="1.6"/>
+          <line x1="${x}" y1="${y - outer}" x2="${x}" y2="${y - inner}" stroke="${c}" stroke-width="1.6"/>
+          <line x1="${x}" y1="${y + inner}" x2="${x}" y2="${y + outer}" stroke="${c}" stroke-width="1.6"/>
+          ${el.spread ? `<text x="${x}" y="${y + outer + 12}" text-anchor="middle" fill="${c}" font-size="9" font-family="DM Sans, sans-serif">${el.spread === "tight" ? "收拢" : "扩散"}</text>` : ""}`;
       }
       if (el.t === "cone") {
         const x = px(el.x), y = py(el.y);

@@ -48,7 +48,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
     "aim"
   ],
   "checkpoint": {
-    "head": "07f1052e9",
+    "head": "8cedd2a77",
     "branch_hint": "cursor/ux-action-id-platform-tabs-4211",
     "impl_notes": "scripts/player_action_ux_impl_notes.py",
     "beat_logic": "scripts/player_action_ux_beat_logic.py",
@@ -8220,7 +8220,8 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "t": "crosshair",
               "x": 50,
               "y": 50,
-              "locked": false
+              "locked": false,
+              "spread": "tight"
             },
             {
               "t": "badge",
@@ -8402,18 +8403,11 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "kind": "arc"
             },
             {
-              "t": "circle",
+              "t": "impact",
               "x": 70,
               "y": 40,
-              "r": 20,
-              "ok": true
-            },
-            {
-              "t": "ring",
-              "x": 70,
-              "y": 40,
-              "r": 16,
-              "kind": "lock"
+              "r": 22,
+              "heavy": true
             },
             {
               "t": "badge",
@@ -10007,16 +10001,32 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "face": 0
             },
             {
+              "t": "unit",
+              "x": 65,
+              "y": 40,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
               "t": "circle",
               "x": 65,
               "y": 40,
-              "r": 16,
+              "r": 18,
               "ok": true
             },
             {
-              "t": "cursor",
+              "t": "impact",
               "x": 65,
               "y": 40,
+              "r": 14,
+              "heavy": false
+            },
+            {
+              "t": "cursor",
+              "x": 68.52,
+              "y": 46.67,
               "mode": "up"
             },
             {
@@ -10469,19 +10479,19 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "t": "cone",
               "x": 40,
               "y": 55,
-              "angle": 20,
+              "angle": -28,
               "spread": 55,
               "length": 32
             },
             {
               "t": "cursor",
-              "x": 70,
-              "y": 40,
+              "x": 66,
+              "y": 30,
               "mode": "idle"
             },
             {
               "t": "badge",
-              "text": "扇形"
+              "text": "扇形·跟着鼠标转"
             }
           ],
           "logic": "按拖动更新扇形朝向与覆盖区"
@@ -10507,6 +10517,12 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "length": 32
             },
             {
+              "t": "cursor",
+              "x": 71.52,
+              "y": 61.67,
+              "mode": "up"
+            },
+            {
               "t": "unit",
               "x": 62,
               "y": 42,
@@ -10525,12 +10541,11 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "size": 1
             },
             {
-              "t": "arrow",
-              "x1": 48,
-              "y1": 52,
-              "x2": 62,
-              "y2": 44,
-              "kind": "attack"
+              "t": "impact",
+              "x": 64,
+              "y": 48,
+              "r": 18,
+              "heavy": false
             },
             {
               "t": "badge",
@@ -11871,19 +11886,27 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "size": 1
             },
             {
-              "t": "ring",
-              "x": 55,
+              "t": "impact",
+              "x": 56,
               "y": 51,
-              "r": 7,
-              "kind": "lock"
+              "r": 11,
+              "heavy": false
             },
             {
               "t": "arrow",
-              "x1": 50,
-              "y1": 53,
-              "x2": 60,
-              "y2": 50,
+              "x1": 62,
+              "y1": 49,
+              "x2": 57,
+              "y2": 51,
               "kind": "attack"
+            },
+            {
+              "t": "key",
+              "x": 45,
+              "y": 34,
+              "label": "格挡",
+              "state": "active",
+              "hint": "弹反成功"
             },
             {
               "t": "badge",
@@ -11900,18 +11923,42 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "cast": [
             {
               "t": "hero",
-              "x": 50,
-              "y": 50,
-              "face": 0
+              "x": 48,
+              "y": 52,
+              "face": 10
             },
             {
               "t": "unit",
-              "x": 60,
+              "x": 64,
               "y": 48,
               "sel": false,
               "team": "enemy",
               "face": 0,
-              "size": 1
+              "size": 1,
+              "highlight": true
+            },
+            {
+              "t": "arrow",
+              "x1": 52,
+              "y1": 51,
+              "x2": 61,
+              "y2": 49,
+              "kind": "attack"
+            },
+            {
+              "t": "impact",
+              "x": 64,
+              "y": 48,
+              "r": 15,
+              "heavy": true
+            },
+            {
+              "t": "key",
+              "x": 64,
+              "y": 28,
+              "label": "F",
+              "state": "active",
+              "hint": "处刑"
             },
             {
               "t": "badge",
@@ -12262,9 +12309,9 @@ window.PLAYER_ACTION_UX_CATALOG = {
             },
             {
               "t": "building",
-              "x": 60,
+              "x": 64,
               "y": 50,
-              "ghost": false,
+              "ghost": true,
               "team": null
             },
             {
@@ -12274,6 +12321,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "x2": 58,
               "y2": 50,
               "kind": "attack"
+            },
+            {
+              "t": "impact",
+              "x": 64,
+              "y": 50,
+              "r": 17,
+              "heavy": true
             },
             {
               "t": "badge",
@@ -16515,31 +16569,30 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "cast": [
             {
               "t": "hero",
-              "x": 40,
-              "y": 55,
+              "x": 32,
+              "y": 62,
               "face": 0
             },
             {
-              "t": "unit",
-              "x": 72,
+              "t": "prop",
+              "x": 78,
               "y": 40,
-              "sel": false,
-              "team": "neutral",
-              "face": 0,
-              "size": 1.2
+              "label": "宝箱",
+              "highlight": true,
+              "kind": "chest"
             },
             {
               "t": "key",
-              "x": 60,
-              "y": 32,
+              "x": 78,
+              "y": 22,
               "label": "F",
               "state": "active",
               "hint": "搜索"
             },
             {
               "t": "menu",
-              "x": 52,
-              "y": 52,
+              "x": 48,
+              "y": 48,
               "lines": [
                 "铁矿×3",
                 "破剑",
@@ -16562,33 +16615,32 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "cast": [
             {
               "t": "hero",
-              "x": 40,
-              "y": 55,
+              "x": 32,
+              "y": 62,
               "face": 0
             },
             {
-              "t": "unit",
-              "x": 72,
+              "t": "prop",
+              "x": 78,
               "y": 40,
-              "sel": false,
-              "team": "neutral",
-              "face": 0,
-              "size": 1.2
+              "label": "宝箱",
+              "highlight": false,
+              "kind": "chest"
             },
             {
               "t": "menu",
-              "x": 52,
-              "y": 52,
+              "x": 48,
+              "y": 48,
               "lines": [
                 "铁矿×3",
                 "布料"
               ],
-              "active": null
+              "active": 1
             },
             {
               "t": "card",
-              "x": 28,
-              "y": 70,
+              "x": 24,
+              "y": 78,
               "label": "破剑",
               "cost": 0,
               "dragging": false
@@ -16772,18 +16824,27 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "kind": "buff"
             },
             {
-              "t": "badge",
-              "text": "用药"
+              "t": "bar",
+              "x": 48,
+              "y": 32,
+              "ratio": 0.7,
+              "kind": "hp",
+              "label": "回血",
+              "broken": false
             },
             {
               "t": "hotbar",
               "slots": 4,
               "active": null,
-              "cd": 0,
+              "cd": 2,
               "extra": null,
               "off": [],
               "dot": null,
               "deny": null
+            },
+            {
+              "t": "badge",
+              "text": "用药"
             }
           ],
           "logic": "对自身使用物品并进入物品冷却"
@@ -16963,7 +17024,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "t": "cursor",
               "x": 70,
               "y": 40,
-              "mode": "idle"
+              "mode": "aim"
             },
             {
               "t": "hotbar",
@@ -22921,7 +22982,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "cd": null,
               "extra": null,
               "off": [],
-              "dot": 0,
+              "dot": 2,
               "deny": null
             },
             {
@@ -22932,7 +22993,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
                 "宠技",
                 "自动 ON"
               ],
-              "active": null
+              "active": 1
             },
             {
               "t": "badge",

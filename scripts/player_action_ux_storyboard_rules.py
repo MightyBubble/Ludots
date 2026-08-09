@@ -45,6 +45,7 @@ ELEMENT_ENUMS: dict[tuple[str, str], frozenset] = {
     ("vehicle", "kind"): frozenset({"car", "tank", "turret", "mount"}),
     ("hero", "state"): frozenset({"alive", "ghost", None}),
     ("npc", "role"): frozenset({"vendor", "quest", "healer", "auction", "trainer", None}),
+    ("crosshair", "spread"): frozenset({"tight", "wide", None}),
 }
 
 # 一拍里最多出现一次的元件（多了就是画重了）

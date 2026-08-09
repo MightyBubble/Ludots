@@ -8,7 +8,7 @@
 - 逻辑文案：`scripts/player_action_ux_beat_logic.py`
 - 实现标注：`scripts/player_action_ux_impl_notes.py`
 - 动作编号/平台变体：`scripts/player_action_ux_action_index.py`
-- 生成时 HEAD：`07f1052e9`（以你拉取后的 `git rev-parse` 为准；合并后会变）
+- 生成时 HEAD：`8cedd2a77`（以你拉取后的 `git rev-parse` 为准；合并后会变）
 - 分支语境：`cursor/ux-action-id-platform-tabs-4211`（unique 动作编号 + 主机/键鼠/触控 tab）
 - 已合 main：图鉴 #743–#755（含按游戏分类、时序三参与者、一镜一对、双人审核）
 
