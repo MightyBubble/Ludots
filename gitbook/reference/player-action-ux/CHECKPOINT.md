@@ -7,7 +7,7 @@
 - 生成脚本：`scripts/generate-player-action-ux-catalog.py`
 - 逻辑文案：`scripts/player_action_ux_beat_logic.py`
 - 实现标注：`scripts/player_action_ux_impl_notes.py`
-- 生成时 HEAD：`821618ee3`（以你拉取后的 `git rev-parse` 为准；合并后会变）
+- 生成时 HEAD：`4853914b4`（以你拉取后的 `git rev-parse` 为准；合并后会变）
 - 分支语境：`cursor/ux-catalog-dual-audit-4211`（全量双人交叉审核 + 画面/步骤修复）
 - 已合 main：图鉴 #743–#752（含按游戏分类、时序三参与者、一镜一对）
 
@@ -51,7 +51,7 @@
 ## 规模
 
 - cases = 168
-- beats = 350
+- beats = 356
 - target_games = 13
 - target_memberships = 480（含跨游戏重复）
 

@@ -9,7 +9,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
     "screen-output"
   ],
   "checkpoint": {
-    "head": "821618ee3",
+    "head": "4853914b4",
     "branch_hint": "cursor/ux-sequence-io-4211",
     "impl_notes": "scripts/player_action_ux_impl_notes.py",
     "beat_logic": "scripts/player_action_ux_beat_logic.py",
@@ -2052,10 +2052,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "kind": "select"
             },
             {
-              "t": "building",
+              "t": "unit",
               "x": 60,
               "y": 50,
-              "ghost": false
+              "sel": false,
+              "team": "ally",
+              "face": 0,
+              "size": 1.5
             },
             {
               "t": "arrow",
@@ -2079,10 +2082,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "view": "topdown",
           "cast": [
             {
-              "t": "building",
+              "t": "unit",
               "x": 40,
               "y": 50,
-              "ghost": false
+              "sel": false,
+              "team": "ally",
+              "face": 0,
+              "size": 1.5
             },
             {
               "t": "unit",
@@ -2141,6 +2147,11 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "x": 55,
               "y": 45,
               "locked": false
+            },
+            {
+              "t": "stickR",
+              "nx": 0.55,
+              "ny": -0.25
             },
             {
               "t": "badge",
@@ -2485,10 +2496,10 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "ok": true
             },
             {
-              "t": "cursor",
+              "t": "crosshair",
               "x": 62,
               "y": 45,
-              "mode": "idle"
+              "locked": false
             },
             {
               "t": "hotbar",
@@ -4278,8 +4289,50 @@ window.PLAYER_ACTION_UX_CATALOG = {
       ],
       "beats": [
         {
-          "title": "落点",
-          "input": "按技能后点地",
+          "title": "进瞄准",
+          "input": "按下技能键",
+          "screen": "进入瞄准，落点圈跟着光标",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 30,
+              "y": 60,
+              "face": 0
+            },
+            {
+              "t": "circle",
+              "x": 55,
+              "y": 45,
+              "r": 16,
+              "ok": true
+            },
+            {
+              "t": "cursor",
+              "x": 55,
+              "y": 45,
+              "mode": "idle"
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": 0,
+              "cd": null,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": null
+            },
+            {
+              "t": "badge",
+              "text": "瞄准"
+            }
+          ],
+          "logic": "进入点地技能瞄准并挂落点预览"
+        },
+        {
+          "title": "确认",
+          "input": "再点地面确认",
           "screen": "落点圈亮起并结算",
           "view": "moba",
           "cast": [
@@ -4303,18 +4356,18 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "mode": "up"
             },
             {
-              "t": "badge",
-              "text": "点地"
-            },
-            {
               "t": "hotbar",
               "slots": 4,
-              "active": 0,
-              "cd": null,
+              "active": null,
+              "cd": 0,
               "extra": null,
               "off": [],
               "dot": null,
               "deny": null
+            },
+            {
+              "t": "badge",
+              "text": "点地"
             }
           ],
           "logic": "把点击地面记为落点并结算技能"
@@ -4669,7 +4722,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
       ],
       "beats": [
         {
-          "title": "扇形",
+          "title": "预览",
           "input": "拖动改变扇形朝向",
           "screen": "地面扇形跟着转",
           "view": "topdown",
@@ -4689,11 +4742,70 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "length": 32
             },
             {
+              "t": "cursor",
+              "x": 70,
+              "y": 40,
+              "mode": "idle"
+            },
+            {
               "t": "badge",
               "text": "扇形"
             }
           ],
           "logic": "按拖动更新扇形朝向与覆盖区"
+        },
+        {
+          "title": "确认",
+          "input": "确认放出",
+          "screen": "扇形内结算命中",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "cone",
+              "x": 40,
+              "y": 55,
+              "angle": 20,
+              "spread": 55,
+              "length": 32
+            },
+            {
+              "t": "unit",
+              "x": 62,
+              "y": 42,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "unit",
+              "x": 68,
+              "y": 55,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "arrow",
+              "x1": 48,
+              "y1": 52,
+              "x2": 62,
+              "y2": 44,
+              "kind": "attack"
+            },
+            {
+              "t": "badge",
+              "text": "结算"
+            }
+          ],
+          "logic": "确认后对扇形覆盖区结算命中"
         }
       ],
       "ludots": "方向/矢量：OrderTargetType.Direction / Vector + VectorAim 状态。",
@@ -4720,15 +4832,48 @@ window.PLAYER_ACTION_UX_CATALOG = {
       ],
       "beats": [
         {
-          "title": "冲刺",
-          "input": "选定方向确认",
-          "screen": "角色沿箭头冲出",
+          "title": "瞄准",
+          "input": "选定冲刺方向",
+          "screen": "方向箭头/锥预览",
           "view": "topdown",
           "cast": [
             {
               "t": "hero",
               "x": 35,
               "y": 55,
+              "face": 0
+            },
+            {
+              "t": "cone",
+              "x": 35,
+              "y": 55,
+              "angle": -25,
+              "spread": 16,
+              "length": 30
+            },
+            {
+              "t": "cursor",
+              "x": 70,
+              "y": 40,
+              "mode": "idle"
+            },
+            {
+              "t": "badge",
+              "text": "方向"
+            }
+          ],
+          "logic": "进入方向瞄准并预览冲刺线"
+        },
+        {
+          "title": "冲出",
+          "input": "确认冲刺",
+          "screen": "角色沿箭头冲出",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 65,
+              "y": 42,
               "face": 0
             },
             {
@@ -4868,9 +5013,74 @@ window.PLAYER_ACTION_UX_CATALOG = {
       ],
       "beats": [
         {
-          "title": "矢量",
-          "input": "按下定起点，拖到终点松开",
-          "screen": "地面出现矢量箭头",
+          "title": "按下",
+          "input": "按下定起点",
+          "screen": "起点钉在地上",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 30,
+              "y": 60,
+              "face": 0
+            },
+            {
+              "t": "circle",
+              "x": 40,
+              "y": 50,
+              "r": 8,
+              "ok": true
+            },
+            {
+              "t": "cursor",
+              "x": 40,
+              "y": 50,
+              "mode": "down"
+            },
+            {
+              "t": "badge",
+              "text": "起点"
+            }
+          ],
+          "logic": "按下记下矢量起点"
+        },
+        {
+          "title": "拖拽",
+          "input": "拖到终点",
+          "screen": "矢量箭头跟着拉长",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 30,
+              "y": 60,
+              "face": 0
+            },
+            {
+              "t": "arrow",
+              "x1": 40,
+              "y1": 50,
+              "x2": 70,
+              "y2": 38,
+              "kind": "move"
+            },
+            {
+              "t": "cursor",
+              "x": 70,
+              "y": 38,
+              "mode": "drag"
+            },
+            {
+              "t": "badge",
+              "text": "拖拽"
+            }
+          ],
+          "logic": "拖拽更新矢量终点预览"
+        },
+        {
+          "title": "松开",
+          "input": "松开确认",
+          "screen": "沿矢量放出技能",
           "view": "moba",
           "cast": [
             {
@@ -4885,7 +5095,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "y1": 50,
               "x2": 75,
               "y2": 35,
-              "kind": "move"
+              "kind": "attack"
             },
             {
               "t": "cursor",
@@ -4895,10 +5105,10 @@ window.PLAYER_ACTION_UX_CATALOG = {
             },
             {
               "t": "badge",
-              "text": "矢量"
+              "text": "确认"
             }
           ],
-          "logic": "用拖拽起终点生成矢量指令"
+          "logic": "松开后按矢量结算技能"
         }
       ],
       "ludots": "方向/矢量：OrderTargetType.Direction / Vector + VectorAim 状态。",
@@ -6291,10 +6501,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "face": 0
             },
             {
-              "t": "building",
+              "t": "unit",
               "x": 55,
               "y": 52,
-              "ghost": false
+              "sel": false,
+              "team": "ally",
+              "face": 0,
+              "size": 1.5
             },
             {
               "t": "key",
@@ -6318,16 +6531,29 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "view": "tps",
           "cast": [
             {
-              "t": "building",
+              "t": "unit",
               "x": 50,
               "y": 55,
-              "ghost": false
+              "sel": false,
+              "team": "ally",
+              "face": 0,
+              "size": 1.5
             },
             {
               "t": "crosshair",
               "x": 62,
               "y": 40,
               "locked": false
+            },
+            {
+              "t": "stickL",
+              "nx": 0,
+              "ny": -0.6
+            },
+            {
+              "t": "stickR",
+              "nx": 0.4,
+              "ny": -0.2
             },
             {
               "t": "hotbar",
@@ -9415,16 +9641,24 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "view": "tps",
           "cast": [
             {
-              "t": "building",
+              "t": "unit",
               "x": 48,
               "y": 55,
-              "ghost": false
+              "sel": false,
+              "team": "ally",
+              "face": 0,
+              "size": 1.5
             },
             {
               "t": "crosshair",
               "x": 62,
               "y": 40,
               "locked": false
+            },
+            {
+              "t": "stickR",
+              "nx": 0.5,
+              "ny": -0.2
             },
             {
               "t": "hotbar",
@@ -9845,10 +10079,21 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "face": 0
             },
             {
-              "t": "building",
+              "t": "unit",
               "x": 72,
               "y": 40,
-              "ghost": false
+              "sel": false,
+              "team": "neutral",
+              "face": 0,
+              "size": 1.2
+            },
+            {
+              "t": "key",
+              "x": 60,
+              "y": 32,
+              "label": "F",
+              "state": "active",
+              "hint": "搜索"
             },
             {
               "t": "menu",
@@ -9863,14 +10108,6 @@ window.PLAYER_ACTION_UX_CATALOG = {
             {
               "t": "badge",
               "text": "掉落窗"
-            },
-            {
-              "t": "key",
-              "x": 54,
-              "y": 39,
-              "label": "F",
-              "state": "active",
-              "hint": null
             }
           ],
           "logic": "打开容器掉落列表供拾取"
@@ -9888,10 +10125,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "face": 0
             },
             {
-              "t": "building",
+              "t": "unit",
               "x": 72,
               "y": 40,
-              "ghost": false
+              "sel": false,
+              "team": "neutral",
+              "face": 0,
+              "size": 1.2
             },
             {
               "t": "menu",
@@ -11844,6 +12084,20 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "face": 0
             },
             {
+              "t": "building",
+              "x": 65,
+              "y": 45,
+              "ghost": true
+            },
+            {
+              "t": "card",
+              "x": 28,
+              "y": 70,
+              "label": "矿",
+              "cost": 0,
+              "dragging": false
+            },
+            {
               "t": "badge",
               "text": "采集成功"
             },
@@ -13161,9 +13415,38 @@ window.PLAYER_ACTION_UX_CATALOG = {
       ],
       "beats": [
         {
-          "title": "打信号",
-          "input": "按信号点地面或选轮盘项",
-          "screen": "世界与小地图出现标记与短语音/文字",
+          "title": "开轮盘",
+          "input": "按住信号键",
+          "screen": "沟通轮展开",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 35,
+              "y": 60,
+              "face": 0
+            },
+            {
+              "t": "menu",
+              "x": 48,
+              "y": 32,
+              "lines": [
+                "来这里",
+                "小心",
+                "进攻"
+              ]
+            },
+            {
+              "t": "badge",
+              "text": "打开轮盘"
+            }
+          ],
+          "logic": "打开沟通轮并列出信号选项"
+        },
+        {
+          "title": "确认",
+          "input": "指向一项或点地确认",
+          "screen": "世界与小地图出现标记",
           "view": "moba",
           "cast": [
             {
@@ -13211,7 +13494,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
             },
             {
               "t": "badge",
-              "text": "信号"
+              "text": "信号落下"
             }
           ],
           "logic": "在点选位置写入队伍信号标记"
@@ -14826,10 +15109,21 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "face": 0
             },
             {
-              "t": "building",
+              "t": "unit",
               "x": 60,
               "y": 50,
-              "ghost": false
+              "sel": false,
+              "team": "ally",
+              "face": 0,
+              "size": 1.5
+            },
+            {
+              "t": "key",
+              "x": 48,
+              "y": 40,
+              "label": "F",
+              "state": "active",
+              "hint": "驾驶"
             },
             {
               "t": "badge",
@@ -14851,10 +15145,21 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "face": 0
             },
             {
-              "t": "building",
+              "t": "unit",
               "x": 75,
               "y": 35,
-              "ghost": false
+              "sel": false,
+              "team": "ally",
+              "face": 0,
+              "size": 1.5
+            },
+            {
+              "t": "key",
+              "x": 48,
+              "y": 40,
+              "label": "F",
+              "state": "off",
+              "hint": "满员"
             },
             {
               "t": "badge",

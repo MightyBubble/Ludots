@@ -497,10 +497,10 @@ def build_cases():
         "选中单位进运输工具，再到别处倒出。",
         [
             beat("右键己方运输单位", "士兵走进载具，肖像进舱单", "上车", "topdown",
-                 [unit(35, 55, sel=True), ring(35, 55), building(60, 50), arrow(35, 55, 60, 50, "move"),
-                  badge("装载")], title="装"),
+                 [unit(35, 55, sel=True), ring(35, 55), unit(60, 50, size=1.5),
+                  arrow(35, 55, 60, 50, "move"), badge("装载")], title="装"),
             beat("在别处下令卸载", "士兵在载具旁出现", "下车", "topdown",
-                 [building(40, 50), unit(55, 48), unit(58, 58), badge("卸载")], title="卸"),
+                 [unit(40, 50, size=1.5), unit(55, 48), unit(58, 58), badge("卸载")], title="卸"),
         ], ["SC2/War3", "RTS"],
     ))
 
@@ -510,7 +510,7 @@ def build_cases():
         "鼠标或右摇杆转动视野，准星落在世界某处。",
         [
             beat("移动鼠标/右摇杆", "画面旋转或准星移动", "我在看那儿", "fps",
-                 [crosshair(55, 45), badge("瞄准")], title="转视角"),
+                 [crosshair(55, 45), stick("R", 0.55, -0.25), badge("瞄准")], title="转视角"),
         ], ["FPS", "TPS"],
     ))
     c.append(case(
@@ -551,7 +551,7 @@ def build_cases():
         "右键或取消键退出瞄准，不放出技能。",
         [
             beat("按技能进入瞄准", "指示器亮起，跟着准星走", "正在瞄", "moba",
-                 [hero(45, 55), circle_ind(62, 45, 14, True), cursor(62, 45),
+                 [hero(45, 55), circle_ind(62, 45, 14, True), crosshair(62, 45),
                   hotbar(active=0), badge("瞄准中")], title="瞄准中"),
             beat("按右键 / Esc 取消", "指示器消失，技能不消耗、不进 CD", "当没按过", "moba",
                  [hero(45, 55), cursor(60, 50), hotbar(), badge("已取消")], title="取消"),
@@ -779,8 +779,12 @@ def build_cases():
         "skill-ground-click", "ground-skill", "技能后点地板",
         "落雷/圈地：点一下地面放出。",
         [
-            beat("按技能后点地", "落点圈亮起并结算", "砸这儿", "moba",
-                 [hero(30, 60), circle_ind(65, 40, 16, True), cursor(65, 40, "up"), badge("点地")], title="落点"),
+            beat("按下技能键", "进入瞄准，落点圈跟着光标", "先瞄", "moba",
+                 [hero(30, 60), circle_ind(55, 45, 16, True), cursor(55, 45),
+                  hotbar(active=0), badge("瞄准")], title="进瞄准"),
+            beat("再点地面确认", "落点圈亮起并结算", "砸这儿", "moba",
+                 [hero(30, 60), circle_ind(65, 40, 16, True), cursor(65, 40, "up"),
+                  hotbar(cd=0), badge("点地")], title="确认"),
         ], ["MOBA", "ARPG", "RTS"],
     ))
     c.append(case(
@@ -832,15 +836,24 @@ def build_cases():
         "预览随鼠标转，确认后扇形结算。",
         [
             beat("拖动改变扇形朝向", "地面扇形跟着转", "扫哪片", "topdown",
-                 [hero(40, 55), cone(40, 55, angle=20, spread=55, length=32), badge("扇形")], title="扇形"),
+                 [hero(40, 55), cone(40, 55, angle=20, spread=55, length=32), cursor(70, 40),
+                  badge("扇形")], title="预览"),
+            beat("确认放出", "扇形内结算命中", "扫到了", "topdown",
+                 [hero(40, 55), cone(40, 55, angle=20, spread=55, length=32),
+                  unit(62, 42, team="enemy"), unit(68, 55, team="enemy"),
+                  arrow(48, 52, 62, 44, "attack"), badge("结算")], title="确认"),
         ], ["MOBA", "ARPG", "TPS"],
     ))
     c.append(case(
         "skill-dash-dir", "direction-skill", "指定方向冲刺",
         "朝选定方向突进一段距离。",
         [
-            beat("选定方向确认", "角色沿箭头冲出", "冲！", "topdown",
-                 [hero(35, 55), arrow(35, 55, 70, 40, "move"), path([(35, 55), (70, 40)], "move"), badge("冲刺")], title="冲刺"),
+            beat("选定冲刺方向", "方向箭头/锥预览", "瞄方向", "topdown",
+                 [hero(35, 55), cone(35, 55, angle=-25, spread=16, length=30),
+                  cursor(70, 40), badge("方向")], title="瞄准"),
+            beat("确认冲刺", "角色沿箭头冲出", "冲！", "topdown",
+                 [hero(65, 42), arrow(35, 55, 70, 40, "move"), path([(35, 55), (70, 40)], "move"),
+                  badge("冲刺")], title="冲出"),
         ], ["MOBA", "ARPG", "动作RPG"],
     ))
     c.append(case(
@@ -857,8 +870,15 @@ def build_cases():
         "skill-vector", "direction-skill", "拉一条矢量再放",
         "拖出起点到终点的矢量技能。",
         [
-            beat("按下定起点，拖到终点松开", "地面出现矢量箭头", "从这到那", "moba",
-                 [hero(30, 60), arrow(40, 50, 75, 35, "move"), cursor(75, 35, "up"), badge("矢量")], title="矢量"),
+            beat("按下定起点", "起点钉在地上", "从这儿", "moba",
+                 [hero(30, 60), circle_ind(40, 50, 8, True), cursor(40, 50, "down"),
+                  badge("起点")], title="按下"),
+            beat("拖到终点", "矢量箭头跟着拉长", "拉到那", "moba",
+                 [hero(30, 60), arrow(40, 50, 70, 38, "move"), cursor(70, 38, "drag"),
+                  badge("拖拽")], title="拖拽"),
+            beat("松开确认", "沿矢量放出技能", "放！", "moba",
+                 [hero(30, 60), arrow(40, 50, 75, 35, "attack"), cursor(75, 35, "up"),
+                  badge("确认")], title="松开"),
         ], ["MOBA"],
     ))
 
@@ -1038,10 +1058,11 @@ def build_cases():
         "交互上车后，摇杆/射击变成载具武器。",
         [
             beat("走近载具按交互", "出现上车提示", "能上车", "tps",
-                 [hero(35, 58), building(55, 52), keyhint(48, 40, "F", "active", "上车"),
+                 [hero(35, 58), unit(55, 52, size=1.5), keyhint(48, 40, "F", "active", "上车"),
                   badge("靠近载具")], title="靠近"),
             beat("上车完成", "准星变车炮，移动手感变车辆，技能栏换载具武器", "开炮车", "tps",
-                 [building(50, 55), crosshair(62, 40), hotbar(extra=0), badge("载具操作")], title="载具"),
+                 [unit(50, 55, size=1.5), crosshair(62, 40), stick("L", 0, -0.6), stick("R", 0.4, -0.2),
+                  hotbar(extra=0), badge("载具操作")], title="载具"),
         ], ["TPS", "FPS"],
     ))
 
@@ -1362,8 +1383,8 @@ def build_cases():
         "和变身类似，但是“座位授予”而不是角色变身。",
         [
             beat("进入炮位/驾驶位", "准星变车炮；技能栏变载具武器", "换成开车手感", "tps",
-                 [building(48, 55), crosshair(62, 40), hotbar(extra=0, slots=3),
-                  badge("进入座位")], title="上车"),
+                 [unit(48, 55, size=1.5), crosshair(62, 40), stick("R", 0.5, -0.2),
+                  hotbar(extra=0, slots=3), badge("进入座位")], title="上车"),
             beat("下车 / 被炸下车", "操作与技能栏瞬间回到步行", "又变回人", "tps",
                  [hero(48, 55), hotbar(slots=4), badge("离开座位")], title="下车"),
         ], ["TPS", "FPS", "MMO"],
@@ -1413,10 +1434,11 @@ def build_cases():
         "对箱子或尸体交互弹出战利品窗，逐格拾取或全部拾取；需掷骰时先看见分配。",
         [
             beat("对箱子/尸体按交互", "弹出掉落列表", "看看有啥", "moba",
-                 [hero(40, 55), building(72, 40),
+                 [hero(40, 55), unit(72, 40, team="neutral", size=1.2),
+                  keyhint(60, 32, "F", "active", "搜索"),
                   menu_box(52, 52, ["铁矿×3", "破剑", "布料"]), badge("掉落窗")], title="打开"),
             beat("点一项或点全部拾取", "进包；窗内该项消失", "拿走", "moba",
-                 [hero(40, 55), building(72, 40),
+                 [hero(40, 55), unit(72, 40, team="neutral", size=1.2),
                   menu_box(52, 52, ["铁矿×3", "布料"]), card(28, 70, "破剑", 0),
                   badge("进包 -1")], title="拾取"),
         ], ["魔兽世界", "MMO", "ARPG"],
@@ -1653,7 +1675,8 @@ def build_cases():
             beat("对矿脉按交互", "开始读条，角色做采集动作", "挖着", "tps",
                  [hero(40, 55), building(65, 45), badge("采集读条")], title="开始"),
             beat("读条完成", "节点枯竭或刷新，物品进包", "挖到了", "tps",
-                 [hero(40, 55), badge("采集成功")], title="完成"),
+                 [hero(40, 55), building(65, 45, ghost=True), card(28, 70, "矿", 0),
+                  badge("采集成功")], title="完成"),
             beat("读条中被攻击或移动", "读条取消，节点仍在", "打断了", "tps",
                  [hero(40, 55), building(65, 45), bar(40, 33, 0.45, "cast", broken=True),
                   badge("采集打断")], title="打断"),
@@ -1808,10 +1831,13 @@ def build_cases():
         "ui-ping-comm-wheel", "design-ui", "信号 / 沟通轮：点地告知队友",
         "按信号键点地板或用轮盘选“来这里/小心/进攻”，地图与世界出现短时标记。",
         [
-            beat("按信号点地面或选轮盘项", "世界与小地图出现标记与短语音/文字", "喊了一嗓子", "moba",
+            beat("按住信号键", "沟通轮展开", "要喊人", "moba",
+                 [hero(35, 60), menu_box(48, 32, ["来这里", "小心", "进攻"]),
+                  badge("打开轮盘")], title="开轮盘"),
+            beat("指向一项或点地确认", "世界与小地图出现标记", "喊了一嗓子", "moba",
                  [hero(35, 60), cursor(70, 40), circle_ind(70, 40, 10, True),
                   menu_box(48, 32, ["来这里", "小心", "进攻"]),
-                  box(82, 12, 16, 16), circle_ind(90, 20, 3, True), badge("信号")], title="打信号"),
+                  box(82, 12, 16, 16), circle_ind(90, 20, 3, True), badge("信号落下")], title="确认"),
         ], ["MOBA", "MMO", "TPS"],
     ))
     c.append(case(
@@ -2004,9 +2030,11 @@ def build_cases():
         "走到载具交互点才出现上车/上炮位；开车门朝向或满员时提示换成「不可上」原因。",
         [
             beat("进入上车点", "提示「驾驶/炮位/乘客」", "能上车", "tps",
-                 [hero(38, 58), building(60, 50), badge("上车")], title="解锁上车"),
+                 [hero(38, 58), unit(60, 50, size=1.5),
+                  keyhint(48, 40, "F", "active", "驾驶"), badge("上车")], title="解锁上车"),
             beat("载具远离或满员", "提示消失或变灰并说明原因", "上不了", "tps",
-                 [hero(38, 58), building(75, 35), badge("不可上")], title="收回/拒绝"),
+                 [hero(38, 58), unit(75, 35, size=1.5),
+                  keyhint(48, 40, "F", "off", "满员"), badge("不可上")], title="收回/拒绝"),
         ], ["TPS", "MMO", "开放世界"],
     ))
 
