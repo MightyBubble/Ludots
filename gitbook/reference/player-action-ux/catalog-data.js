@@ -48,7 +48,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
     "aim"
   ],
   "checkpoint": {
-    "head": "01b6efe7b",
+    "head": "07f1052e9",
     "branch_hint": "cursor/ux-action-id-platform-tabs-4211",
     "impl_notes": "scripts/player_action_ux_impl_notes.py",
     "beat_logic": "scripts/player_action_ux_beat_logic.py",
@@ -21866,21 +21866,26 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "cast": [
             {
               "t": "hero",
-              "x": 40,
-              "y": 55,
+              "x": 34,
+              "y": 62,
               "face": 0
             },
             {
-              "t": "building",
-              "x": 62,
-              "y": 48,
-              "ghost": false,
-              "team": null
+              "t": "held",
+              "label": null
+            },
+            {
+              "t": "prop",
+              "x": 72,
+              "y": 54,
+              "label": "水桶",
+              "highlight": true,
+              "kind": "item"
             },
             {
               "t": "key",
-              "x": 50,
-              "y": 38,
+              "x": 48,
+              "y": 28,
               "label": "F",
               "state": "active",
               "hint": "提起"
@@ -21900,28 +21905,26 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "cast": [
             {
               "t": "hero",
-              "x": 40,
-              "y": 55,
+              "x": 34,
+              "y": 62,
               "face": 0
             },
             {
-              "t": "ring",
-              "x": 40,
-              "y": 55,
-              "r": 11,
-              "kind": "buff"
+              "t": "held",
+              "label": "火把"
             },
             {
-              "t": "building",
-              "x": 62,
-              "y": 48,
-              "ghost": true,
-              "team": null
+              "t": "prop",
+              "x": 72,
+              "y": 54,
+              "label": "火盆",
+              "highlight": true,
+              "kind": "item"
             },
             {
               "t": "key",
-              "x": 50,
-              "y": 38,
+              "x": 48,
+              "y": 28,
               "label": "F",
               "state": "active",
               "hint": "点燃"
@@ -21941,29 +21944,26 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "cast": [
             {
               "t": "hero",
-              "x": 40,
-              "y": 55,
+              "x": 34,
+              "y": 62,
               "face": 0
             },
             {
-              "t": "card",
-              "x": 48,
-              "y": 48,
-              "label": "钥",
-              "cost": 0,
-              "dragging": false
+              "t": "held",
+              "label": "钥匙"
             },
             {
-              "t": "building",
-              "x": 65,
-              "y": 45,
-              "ghost": false,
-              "team": null
+              "t": "prop",
+              "x": 72,
+              "y": 54,
+              "label": "上锁的门",
+              "highlight": true,
+              "kind": "door"
             },
             {
               "t": "key",
-              "x": 52,
-              "y": 36,
+              "x": 48,
+              "y": 28,
               "label": "F",
               "state": "active",
               "hint": "开锁"

@@ -186,6 +186,12 @@ def corpse(x, y):
     return {"t": "corpse", "x": x, "y": y}
 
 
+def held(label=None):
+    """手持物槽，固定画在画面左上；不给 label 就是空手。
+    「手里拿着什么决定了交互动词」这类动作必须每拍都画它，位置不能变。"""
+    return {"t": "held", "label": label}
+
+
 def impact(x, y, r=16, heavy=False):
     """命中 / 已经炸开：放射线 + 实心圈。和表示「这里可以放」的绿色落点圈区分开。"""
     return {"t": "impact", "x": x, "y": y, "r": r, "heavy": heavy}
@@ -2155,14 +2161,14 @@ def build_cases():
         "同一对象，因持有物不同，context 解锁不同动词。",
         [
             beat("空手靠近可搬物", "提示「提起/搬运」", "能搬", "tps",
-                 [hero(40, 55), building(62, 48),
-                  keyhint(50, 38, "F", "active", "提起"), badge("提起")], title="空手"),
+                 [hero(34, 62), held(), prop(72, 54, "水桶", kind="item", highlight=True),
+                  keyhint(48, 28, "F", "active", "提起"), badge("提起")], title="空手"),
             beat("手持火把靠近火盆/墙缝", "提示改成「点燃/烧开」", "能烧", "tps",
-                 [hero(40, 55), ring(40, 55, r=11, kind="buff"), building(62, 48, ghost=True),
-                  keyhint(50, 38, "F", "active", "点燃"), badge("点燃")], title="持火"),
+                 [hero(34, 62), held("火把"), prop(72, 54, "火盆", kind="item", highlight=True),
+                  keyhint(48, 28, "F", "active", "点燃"), badge("点燃")], title="持火"),
             beat("手持钥匙靠近上锁门", "提示「开锁」；无钥匙则「上锁/需要钥匙」", "对上了", "tps",
-                 [hero(40, 55), card(48, 48, "钥", 0), building(65, 45),
-                  keyhint(52, 36, "F", "active", "开锁"), badge("开锁")], title="持钥匙"),
+                 [hero(34, 62), held("钥匙"), prop(72, 54, "上锁的门", kind="door", highlight=True),
+                  keyhint(48, 28, "F", "active", "开锁"), badge("开锁")], title="持钥匙"),
         ], ["塞尔达", "浸入式模拟", "动作RPG"],
     ))
     c.append(case(

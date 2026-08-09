@@ -173,6 +173,21 @@
           <rect x="${x}" y="${y}" width="${w}" height="${h}" fill="rgba(8,10,14,0.82)"/>
           <text x="${x + w / 2}" y="${y + h / 2}" text-anchor="middle" fill="#66758a" font-size="11" font-family="DM Sans, sans-serif" font-weight="600">战争迷雾</text>`;
       }
+      if (el.t === "held") {
+        // 固定摆在画面左上（让开左上角文字标签）：手里拿着什么，永远在同一个位置看
+        const x = SX + 10;
+        const y = SY + 50;
+        const w = 46, h = 26;
+        const empty = !el.label;
+        return `
+          <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="4"
+            fill="${empty ? "rgba(11,14,19,0.7)" : "#1a2430"}"
+            stroke="${empty ? "#3a4658" : "#6ec8ff"}" stroke-width="1.4"
+            stroke-dasharray="${empty ? "3 2" : "0"}"/>
+          <text x="${x + 5}" y="${y - 4}" fill="#66758a" font-size="8.5" font-family="IBM Plex Mono, monospace" letter-spacing="0.5">手持</text>
+          <text x="${x + w / 2}" y="${y + h / 2 + 4}" text-anchor="middle"
+            fill="${empty ? "#66758a" : "#e8eef6"}" font-size="10.5" font-family="DM Sans, sans-serif" font-weight="${empty ? 400 : 700}">${esc(el.label || "空手")}</text>`;
+      }
       if (el.t === "impact") {
         const x = px(el.x), y = py(el.y);
         const r = el.r || 16;
