@@ -12,7 +12,7 @@ namespace Ludots.Core.Physics2D
     }
 
     /// <summary>
-    /// The only sanctioned drive channel for kinematic bodies (issue #732).
+    /// The only sanctioned drive channel for kinematic bodies.
     /// External systems submit at most one target pose per entity per physics fixed step;
     /// KinematicDriveSystem2D consumes the buffer at the start of the step, applies the pose
     /// verbatim, and derives Velocity2D = Δpose/dt so restitution/friction/relative-velocity

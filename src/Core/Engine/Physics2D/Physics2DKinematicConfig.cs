@@ -6,7 +6,7 @@ using Ludots.Core.Config;
 namespace Ludots.Core.Engine.Physics2D
 {
     /// <summary>
-    /// Explicit budgets for the kinematic body and contact event pipeline (issue #732).
+    /// Explicit budgets for the kinematic body and contact event pipeline.
     /// Strict data contract: the config file must exist and every field must be explicit;
     /// missing, unknown, or illegal values fail startup. No default injection.
     /// </summary>

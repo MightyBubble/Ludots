@@ -21,7 +21,7 @@ namespace Ludots.Core.Physics2D.Components
     }
 
     /// <summary>
-    /// Three-state body model (issue #732):
+    /// Three-state body model:
     /// Static    — InverseMass == 0, no kinematic flag; never moves, cached by the static broadphase layer.
     /// Dynamic   — InverseMass > 0; integrated, receives forces and impulses.
     /// Kinematic — InverseMass == 0 with the kinematic flag; pose driven externally each fixed step,

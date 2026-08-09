@@ -1689,7 +1689,7 @@ public sealed partial class MassNavigationFlowSolverState
             float px = _readPositionsCm[i2];
             float py = _readPositionsCm[i2 + 1];
 
-            // Displaced agents (issue #643): the external pose-authority holder drives their
+            // Displaced agents: the external pose-authority holder drives their
             // committed pose; the solver holds them in place here so neighbors keep avoiding
             // them through the separation hash while their own integration is skipped.
             if (_displacedAgentFlags[i] != 0)
@@ -2544,7 +2544,7 @@ public sealed partial class MassNavigationFlowSolverState
 
     private void SeparateAgents(int i, int j)
     {
-        // Displaced agents (issue #643) are pose-authority owned by an external writer:
+        // Displaced agents are pose-authority owned by an external writer:
         // hard resolve must never move them, but their non-displaced neighbor still takes
         // the full correction so bodies keep separating around the displaced agent.
         bool displacedI = _displacedAgentFlags[i] != 0;
@@ -2626,7 +2626,7 @@ public sealed partial class MassNavigationFlowSolverState
     {
         for (int i = 0; i < UnitCount; i++)
         {
-            // Displaced agents (issue #643): obstacle push-out must not fight the external
+            // Displaced agents: obstacle push-out must not fight the external
             // pose-authority holder writing this agent's pose.
             if (_displacedAgentFlags[i] != 0)
             {

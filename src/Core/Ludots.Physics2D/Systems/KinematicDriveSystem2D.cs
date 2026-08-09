@@ -8,12 +8,12 @@ using Ludots.Core.Physics2D.Components;
 namespace Ludots.Core.Physics2D.Systems
 {
     /// <summary>
-    /// Applies externally submitted kinematic target poses at the start of every physics step
-    /// (issue #732). For each kinematic body:
+    /// Applies externally submitted kinematic target poses at the start of every physics step.
+    /// For each kinematic body:
     /// - with a pending target: PreviousPosition2D ← current, Position2D ← target (verbatim,
     ///   no fixed-point drift), Rotation2D ← target, Velocity2D.Linear ← Δpose/dt;
     /// - without a pending target: the body holds its pose and Velocity2D is zeroed.
-    /// Angular velocity is never derived (out of scope for #732).
+    /// Angular velocity is never derived.
     /// Also enforces the explicit kinematicBodyCapacity budget and rejects pending targets
     /// that do not resolve to a live kinematic body.
     /// </summary>

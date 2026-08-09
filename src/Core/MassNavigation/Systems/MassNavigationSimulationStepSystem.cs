@@ -79,7 +79,7 @@ internal sealed class MassNavigationSimulationStepSystem : ISystem<float>
             if (step.SyncEntities)
             {
                 start = Stopwatch.GetTimestamp();
-                // Displaced agents (issue #643): re-ingest the externally committed WorldPositionCm
+                // Displaced agents: re-ingest the externally committed WorldPositionCm
                 // before syncing, so neighbors keep avoiding the displaced agent at its real pose
                 // while SyncEntities skips writing it.
                 simulation.MassNavigationFlow.SyncDisplacedAgentPoses(_engine.World, simulation.AgentState);

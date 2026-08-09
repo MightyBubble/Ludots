@@ -25,7 +25,7 @@ public sealed partial class MassNavigationFlowSolverState
             }
 
             _entitySyncDirtyFlags[i] = 0;
-            // Displaced agents (issue #643): pose authority belongs to an external writer for
+            // Displaced agents: pose authority belongs to an external writer for
             // the duration of the window, so the solver must not write WorldPositionCm back.
             // The committed pose is re-ingested via SyncDisplacedAgentPoses instead.
             if (_displacedAgentFlags[i] != 0)

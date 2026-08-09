@@ -12,7 +12,7 @@ namespace Ludots.Core.Physics2D
     }
 
     /// <summary>
-    /// Contact event payload (issue #732). EntityA/EntityB follow the collision pair's
+    /// Contact event payload. EntityA/EntityB follow the collision pair's
     /// canonical order (lower entity id first); Normal points from A to B as produced by
     /// the narrow phase. Begin carries the first-frame penetration; End carries the last
     /// known normal and zero penetration. Layers are captured at Begin time so End events

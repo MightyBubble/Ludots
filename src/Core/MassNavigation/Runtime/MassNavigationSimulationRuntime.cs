@@ -1139,7 +1139,7 @@ public sealed class MassNavigationSimulationRuntime
                 $"MassNavigation spawned agent entity {entity.Id} requires a resolved positive profileId.");
         }
 
-        // Participation contract (issue #643): a Dynamic physics presence derives Physics pose
+        // Participation contract: a Dynamic physics presence derives Physics pose
         // authority, which cannot coexist with a nav-agent binding in this increment.
         if (world.TryGet(entity, out Ludots.Core.Components.MovementParticipation participation) &&
             participation.PhysicsPresence == Ludots.Core.Components.PhysicsPresenceKind.Dynamic)
