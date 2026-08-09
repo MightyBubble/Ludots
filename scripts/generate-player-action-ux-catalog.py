@@ -1072,7 +1072,7 @@ def build_cases():
         "同一技能：按下即打，或先出指示器再确认。",
         [
             beat("智能施法开启时按键", "立刻对向准星处出手", "快", "moba",
-                 [hero(35, 60), circle_ind(70, 40, 14, True), crosshair(70, 40),
+                 [hero(35, 60), unit(70, 40, team="enemy"), crosshair(70, 40),
                   arrow(40, 55, 68, 42, "attack"), hotbar(active=0), badge("智能")], title="智能"),
             beat("普通模式按键", "先出指示器等确认", "稳", "moba",
                  [hero(35, 60), circle_ind(60, 45, 14, True), cursor(60, 45),
@@ -1248,11 +1248,14 @@ def build_cases():
                  [unit(25, 55, sel=True), unit(35, 62, sel=True), ring(25, 55), ring(35, 62),
                   unit(72, 40, team="enemy"), cursor(72, 40, "up"),
                   arrow(28, 54, 68, 42, "attack"), badge("右键对象")], title="点对象"),
-            beat("选工人，右键地面 vs 右键矿", "地面=走；矿=采集指令图标不同", "点啥干啥", "topdown",
+            beat("选工人，右键空地", "出现移动旗，工人走开", "去那儿", "topdown",
                  [unit(30, 58, sel=True), ring(30, 58), building(68, 38),
                   arrow(32, 56, 50, 70, "move"), circle_ind(50, 70, 8, True),
+                  cursor(50, 70, "up"), badge("右键地面=走")], title="工人点地"),
+            beat("选工人，右键矿", "下达采集，工人奔向矿点", "去挖", "topdown",
+                 [unit(30, 58, sel=True), ring(30, 58), building(68, 38),
                   arrow(34, 56, 64, 40, "move"), ring(68, 38, r=10, kind="buff"),
-                  cursor(50, 70, "up"), badge("地面走 / 矿采集")], title="工人对照"),
+                  cursor(68, 38, "up"), badge("右键矿=采")], title="工人点矿"),
         ], ["SC2", "RA2", "RTS"],
     ))
     c.append(case(

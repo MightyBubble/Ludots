@@ -9,7 +9,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
     "screen-output"
   ],
   "checkpoint": {
-    "head": "4853914b4",
+    "head": "9e50238b6",
     "branch_hint": "cursor/ux-sequence-io-4211",
     "impl_notes": "scripts/player_action_ux_impl_notes.py",
     "beat_logic": "scripts/player_action_ux_beat_logic.py",
@@ -6605,11 +6605,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "face": 0
             },
             {
-              "t": "circle",
+              "t": "unit",
               "x": 70,
               "y": 40,
-              "r": 14,
-              "ok": true
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
             },
             {
               "t": "crosshair",
@@ -8457,9 +8459,9 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "右键敌单位下达攻击该对象"
         },
         {
-          "title": "工人对照",
-          "input": "选工人，右键地面 vs 右键矿",
-          "screen": "地面=走；矿=采集指令图标不同",
+          "title": "工人点地",
+          "input": "选工人，右键空地",
+          "screen": "出现移动旗，工人走开",
           "view": "topdown",
           "cast": [
             {
@@ -8500,6 +8502,47 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "ok": true
             },
             {
+              "t": "cursor",
+              "x": 50,
+              "y": 70,
+              "mode": "up"
+            },
+            {
+              "t": "badge",
+              "text": "右键地面=走"
+            }
+          ],
+          "logic": "工人右键空地记为移动"
+        },
+        {
+          "title": "工人点矿",
+          "input": "选工人，右键矿",
+          "screen": "下达采集，工人奔向矿点",
+          "view": "topdown",
+          "cast": [
+            {
+              "t": "unit",
+              "x": 30,
+              "y": 58,
+              "sel": true,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "ring",
+              "x": 30,
+              "y": 58,
+              "r": 8,
+              "kind": "select"
+            },
+            {
+              "t": "building",
+              "x": 68,
+              "y": 38,
+              "ghost": false
+            },
+            {
               "t": "arrow",
               "x1": 34,
               "y1": 56,
@@ -8516,16 +8559,16 @@ window.PLAYER_ACTION_UX_CATALOG = {
             },
             {
               "t": "cursor",
-              "x": 50,
-              "y": 70,
+              "x": 68,
+              "y": 38,
               "mode": "up"
             },
             {
               "t": "badge",
-              "text": "地面走 / 矿采集"
+              "text": "右键矿=采"
             }
           ],
-          "logic": "按点中地面或矿分别记移动/采集"
+          "logic": "工人右键矿点记为采集"
         }
       ],
       "ludots": "选中×目标：CommandIntentProfile 谓词路由（点敌/点矿/点建筑不同 Order）。",
