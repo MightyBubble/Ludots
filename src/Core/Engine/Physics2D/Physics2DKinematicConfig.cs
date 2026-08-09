@@ -38,7 +38,7 @@ namespace Ludots.Core.Engine.Physics2D
             {
                 throw new InvalidOperationException(
                     $"Physics2D kinematic config '{relativePath}' is required and no source provided it. " +
-                    "kinematicBodyCapacity, contactEventQueueCapacity, and contactEventEmitterLayers must be explicit (issue #732; no default injection).");
+                    "kinematicBodyCapacity, contactEventQueueCapacity, and contactEventEmitterLayers must be explicit (no default injection).");
             }
 
             var options = StrictJsonOptions.CreateCamelCase();
