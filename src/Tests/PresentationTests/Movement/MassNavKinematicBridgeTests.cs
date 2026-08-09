@@ -245,6 +245,7 @@ namespace Ludots.Tests.Presentation.Movement
         {
             return new MovementParticipation
             {
+                Execution = MovementExecutionKind.Nav,
                 PhysicsPresence = PhysicsPresenceKind.Kinematic,
                 DisplacementAllowed = true,
                 DisplacementHandbackSpeedThresholdCmPerSec = 1f,
@@ -371,7 +372,7 @@ namespace Ludots.Tests.Presentation.Movement
                         World.Add(entity, spec.Participation.Value);
                         World.Add(entity, new PoseAuthority
                         {
-                            Value = MovementParticipationRules.DeriveInitialPoseAuthority(spec.Participation.Value.PhysicsPresence),
+                            Value = MovementParticipationRules.DeriveInitialPoseAuthority(spec.Participation.Value),
                         });
                     }
 

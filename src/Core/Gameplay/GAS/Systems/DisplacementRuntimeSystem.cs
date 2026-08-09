@@ -193,7 +193,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         /// <summary>窗口正常结束：在固定步边界把写权交还 Nav，并撤销移动抑制。</summary>
         private void EndPoseWindow(ref DisplacementState disp)
         {
-            _poseAuthorityArbiter.RequestNavHandback(World, disp.TargetEntity);
+            _poseAuthorityArbiter.RequestDisplacementHandback(World, disp.TargetEntity);
             disp.PoseWindowRequested = false;
             ClearMovementSuppression(ref disp);
         }

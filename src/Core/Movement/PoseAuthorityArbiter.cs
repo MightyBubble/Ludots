@@ -35,6 +35,8 @@ namespace Ludots.Core.Movement
         {
             public Entity Entity;
             public PoseAuthorityKind Holder;
+            /// <summary>位移窗口结束后交还的执行写权（开启窗口时的 Nav/Motor）。</summary>
+            public PoseAuthorityKind ResumeAuthority;
             public float HeldSeconds;
             public int MaxDurationMs;
         }
@@ -44,6 +46,7 @@ namespace Ludots.Core.Movement
             public Entity Entity;
             public PoseAuthorityKind From;
             public PoseAuthorityKind To;
+            public PoseAuthorityKind ResumeAuthority;
             public int MaxDurationMs;
         }
 
@@ -67,8 +70,9 @@ namespace Ludots.Core.Movement
         }
 
         /// <summary>
-        /// 申请把实体写权从 Nav 切到 Displacement（GAS 位移窗口开启）。
+        /// 申请把实体写权从 Nav/Motor 切到 Displacement（GAS 位移窗口开启）。
         /// 切换在下一个固定步边界生效；窗口上限取自实体的 MovementParticipation 声明。
+        /// 交还目标记为开启时的执行写权（ResumeAuthority）。
         /// </summary>
         public void RequestDisplacementAuthority(World world, Entity entity)
         {
@@ -94,10 +98,10 @@ namespace Ludots.Core.Movement
             }
 
             PoseAuthority authority = world.Get<PoseAuthority>(entity);
-            if (authority.Value != PoseAuthorityKind.Nav)
+            if (!MovementParticipationRules.CanOpenDisplacementWindow(authority.Value))
             {
                 throw new InvalidOperationException(
-                    $"PoseAuthorityArbiter cannot open a displacement window for entity {entity.Id}: current pose authority is {authority.Value}, expected Nav.");
+                    $"PoseAuthorityArbiter cannot open a displacement window for entity {entity.Id}: current pose authority is {authority.Value}, expected Nav or Motor.");
             }
 
             if (TryFindWindowIndex(entity, out _) || HasPendingTransition(entity))
@@ -109,17 +113,18 @@ namespace Ludots.Core.Movement
             _pending.Add(new PendingTransition
             {
                 Entity = entity,
-                From = PoseAuthorityKind.Nav,
+                From = authority.Value,
                 To = PoseAuthorityKind.Displacement,
+                ResumeAuthority = authority.Value,
                 MaxDurationMs = participation.DisplacementMaxDurationMs,
             });
         }
 
         /// <summary>
-        /// 申请把实体写权从 Displacement 交还 Nav（位移窗口正常结束）。
+        /// 申请把实体写权从 Displacement 交还开启窗口前的执行写权（Nav 或 Motor）。
         /// 切换在下一个固定步边界生效。
         /// </summary>
-        public void RequestNavHandback(World world, Entity entity)
+        public void RequestDisplacementHandback(World world, Entity entity)
         {
             ArgumentNullException.ThrowIfNull(world);
             ThrowIfCommitting();
@@ -149,11 +154,19 @@ namespace Ludots.Core.Movement
                     $"PoseAuthorityArbiter cannot hand back entity {entity.Id}: current pose authority is {authority.Value}, expected Displacement.");
             }
 
+            PoseAuthorityKind resume = _activeWindows[windowIndex].ResumeAuthority;
+            if (!MovementParticipationRules.CanOpenDisplacementWindow(resume))
+            {
+                throw new InvalidOperationException(
+                    $"PoseAuthorityArbiter cannot hand back entity {entity.Id}: stored resume authority is {resume}, expected Nav or Motor.");
+            }
+
             _pending.Add(new PendingTransition
             {
                 Entity = entity,
                 From = PoseAuthorityKind.Displacement,
-                To = PoseAuthorityKind.Nav,
+                To = resume,
+                ResumeAuthority = resume,
                 MaxDurationMs = 0,
             });
         }
@@ -183,11 +196,18 @@ namespace Ludots.Core.Movement
             }
 
             PoseAuthorityKind holder = _activeWindows[windowIndex].Holder;
+            PoseAuthorityKind resume = _activeWindows[windowIndex].ResumeAuthority;
             _activeWindows.RemoveAt(windowIndex);
+
+            if (!MovementParticipationRules.CanOpenDisplacementWindow(resume))
+            {
+                throw new InvalidOperationException(
+                    $"PoseAuthorityArbiter cannot cancel window for entity {entity.Id}: stored resume authority is {resume}, expected Nav or Motor.");
+            }
 
             if (world.IsAlive(entity) && world.Has<PoseAuthority>(entity))
             {
-                world.Set(entity, new PoseAuthority { Value = PoseAuthorityKind.Nav });
+                world.Set(entity, new PoseAuthority { Value = resume });
             }
 
             for (int listenerIndex = 0; listenerIndex < _listeners.Count; listenerIndex++)
@@ -208,11 +228,18 @@ namespace Ludots.Core.Movement
             {
                 Entity entity = _activeWindows[_activeWindows.Count - 1].Entity;
                 PoseAuthorityKind holder = _activeWindows[_activeWindows.Count - 1].Holder;
+                PoseAuthorityKind resume = _activeWindows[_activeWindows.Count - 1].ResumeAuthority;
                 _activeWindows.RemoveAt(_activeWindows.Count - 1);
+
+                if (!MovementParticipationRules.CanOpenDisplacementWindow(resume))
+                {
+                    throw new InvalidOperationException(
+                        $"PoseAuthorityArbiter cannot cancel window for entity {entity.Id}: stored resume authority is {resume}, expected Nav or Motor.");
+                }
 
                 if (world.IsAlive(entity) && world.Has<PoseAuthority>(entity))
                 {
-                    world.Set(entity, new PoseAuthority { Value = PoseAuthorityKind.Nav });
+                    world.Set(entity, new PoseAuthority { Value = resume });
                 }
 
                 for (int listenerIndex = 0; listenerIndex < _listeners.Count; listenerIndex++)
@@ -321,10 +348,17 @@ namespace Ludots.Core.Movement
                     PendingTransition transition = _pending[i];
                     if (transition.To == PoseAuthorityKind.Displacement)
                     {
+                        if (!MovementParticipationRules.CanOpenDisplacementWindow(transition.ResumeAuthority))
+                        {
+                            throw new InvalidOperationException(
+                                $"PoseAuthorityArbiter cannot open displacement window for entity {transition.Entity.Id}: resume authority is {transition.ResumeAuthority}, expected Nav or Motor.");
+                        }
+
                         _activeWindows.Add(new WindowState
                         {
                             Entity = transition.Entity,
                             Holder = PoseAuthorityKind.Displacement,
+                            ResumeAuthority = transition.ResumeAuthority,
                             HeldSeconds = 0f,
                             MaxDurationMs = transition.MaxDurationMs,
                         });

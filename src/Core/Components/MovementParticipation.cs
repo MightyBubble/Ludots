@@ -17,12 +17,30 @@ namespace Ludots.Core.Components
     }
 
     /// <summary>
+    /// 移动执行档（参与模型轴三，authoring 声明）。
+    /// 中性执行器名，不含玩法角色语义。决定初始 <see cref="PoseAuthority"/>。
+    /// </summary>
+    public enum MovementExecutionKind : byte
+    {
+        /// <summary>MassNavigation 消费移动意图并写客观位姿。</summary>
+        Nav = 1,
+
+        /// <summary>运动电机消费意图矢量并写客观位姿。</summary>
+        Motor = 2,
+
+        /// <summary>Physics2D 积分写客观位姿；意图经力/速度桥进入物理。</summary>
+        Physics = 3,
+    }
+
+    /// <summary>
     /// 移动参与 authoring 明文（参与模型）。模板级声明，缺字段 fail-fast。
-    /// 初始位姿写权由 <see cref="PhysicsPresence"/> 推导（None/Kinematic → Nav；Dynamic → Physics），
+    /// 初始位姿写权由 <see cref="Execution"/> + <see cref="PhysicsPresence"/> 推导，
     /// 见 <see cref="MovementParticipationRules.DeriveInitialPoseAuthority"/>。
     /// </summary>
     public struct MovementParticipation
     {
+        public MovementExecutionKind Execution;
+
         public PhysicsPresenceKind PhysicsPresence;
 
         /// <summary>该实体是否允许进入 GAS 位移写权窗口。</summary>
@@ -49,6 +67,9 @@ namespace Ludots.Core.Components
 
         /// <summary>Physics2D 积分产出位姿结果。</summary>
         Physics = 3,
+
+        /// <summary>运动电机产出位姿结果。</summary>
+        Motor = 4,
     }
 
     /// <summary>
@@ -65,16 +86,51 @@ namespace Ludots.Core.Components
     /// </summary>
     public static class MovementParticipationRules
     {
-        public static PoseAuthorityKind DeriveInitialPoseAuthority(PhysicsPresenceKind presence)
+        public static PoseAuthorityKind DeriveInitialPoseAuthority(
+            MovementExecutionKind execution,
+            PhysicsPresenceKind presence)
         {
-            return presence switch
+            return execution switch
             {
-                PhysicsPresenceKind.None => PoseAuthorityKind.Nav,
-                PhysicsPresenceKind.Kinematic => PoseAuthorityKind.Nav,
-                PhysicsPresenceKind.Dynamic => PoseAuthorityKind.Physics,
+                MovementExecutionKind.Nav => presence switch
+                {
+                    PhysicsPresenceKind.None => PoseAuthorityKind.Nav,
+                    PhysicsPresenceKind.Kinematic => PoseAuthorityKind.Nav,
+                    PhysicsPresenceKind.Dynamic => throw new System.InvalidOperationException(
+                        "MovementParticipation execution 'nav' cannot pair with physicsPresence 'dynamic'; use execution 'physics'."),
+                    _ => throw new System.InvalidOperationException(
+                        $"MovementParticipation physicsPresence value {(byte)presence} has no configured initial pose authority for execution nav."),
+                },
+                MovementExecutionKind.Motor => presence switch
+                {
+                    PhysicsPresenceKind.None => PoseAuthorityKind.Motor,
+                    PhysicsPresenceKind.Kinematic => PoseAuthorityKind.Motor,
+                    PhysicsPresenceKind.Dynamic => throw new System.InvalidOperationException(
+                        "MovementParticipation execution 'motor' cannot pair with physicsPresence 'dynamic'; use execution 'physics'."),
+                    _ => throw new System.InvalidOperationException(
+                        $"MovementParticipation physicsPresence value {(byte)presence} has no configured initial pose authority for execution motor."),
+                },
+                MovementExecutionKind.Physics => presence switch
+                {
+                    PhysicsPresenceKind.Dynamic => PoseAuthorityKind.Physics,
+                    PhysicsPresenceKind.None or PhysicsPresenceKind.Kinematic => throw new System.InvalidOperationException(
+                        "MovementParticipation execution 'physics' requires physicsPresence 'dynamic'."),
+                    _ => throw new System.InvalidOperationException(
+                        $"MovementParticipation physicsPresence value {(byte)presence} has no configured initial pose authority for execution physics."),
+                },
                 _ => throw new System.InvalidOperationException(
-                    $"MovementParticipation physicsPresence value {(byte)presence} has no configured initial pose authority."),
+                    $"MovementParticipation execution value {(byte)execution} has no configured initial pose authority."),
             };
+        }
+
+        public static PoseAuthorityKind DeriveInitialPoseAuthority(in MovementParticipation participation)
+        {
+            return DeriveInitialPoseAuthority(participation.Execution, participation.PhysicsPresence);
+        }
+
+        public static bool CanOpenDisplacementWindow(PoseAuthorityKind current)
+        {
+            return current == PoseAuthorityKind.Nav || current == PoseAuthorityKind.Motor;
         }
     }
 }

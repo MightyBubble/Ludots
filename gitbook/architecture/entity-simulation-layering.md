@@ -54,19 +54,23 @@
 
 ### 3.2 移动参与与位姿写权
 
-已落地以下正式组件（issue #643 阶段 0+1）：
+已落地以下正式组件（issue #643 阶段 0+1；意图/执行档扩展见 [#769](https://github.com/MightyBubble/Ludots/issues/769) 与 [`movement-intent-and-execution-lanes.md`](movement-intent-and-execution-lanes.md)）：
 
-- `MovementParticipation`（authoring，两轴参与声明）
+- `MovementParticipation`（authoring，参与声明）
+  - `Execution`：`Nav` / `Motor` / `Physics`，声明谁消费移动意图并写客观位姿
   - `PhysicsPresence`：`None` / `Kinematic` / `Dynamic`，声明物理如何感知该 entity
   - `Displacement`：`Allowed` / `HandbackSpeedThresholdCmPerSec` / `MaxDurationMs`，声明 GAS 位移窗口策略
 - `PoseAuthority`（runtime，位姿单写真相）
-  - `Nav` / `Displacement` / `Physics`，初始值由 `PhysicsPresence` 推导：`None`/`Kinematic` → `Nav`，`Dynamic` → `Physics`
+  - `Nav` / `Motor` / `Displacement` / `Physics`，初始值由 `Execution` + `PhysicsPresence` 推导
+- `MoveIntent` / `FacingIntent`（意图层；不是位置真相）
 
 解释如下：
 
 - 同一固定步内 `WorldPositionCm` 只允许当前 `PoseAuthority` 持有者写入；写权切换只在固定步边界经 `PoseAuthorityArbiter` + CommandBuffer 结算
+- 位移窗口可从 `Nav`/`Motor` 开启，结束后交还开启前的执行写权
 - 没有 `MovementParticipation` 的实体不挂 `PoseAuthority`，行为与存量路径完全一致
 - `EntityLayer + LayerMask` 继续作为统一层级过滤真相，不再新造一套 collision matrix 类型
+- 意图/客观身体/执行车道细则以 [`movement-intent-and-execution-lanes.md`](movement-intent-and-execution-lanes.md) 为准
 
 ### 3.3 Showcase-owned Formation 集群转发
 
@@ -149,11 +153,12 @@ Formation 是 Mod 业务聚合，不是 Core 仿真车道。`FormationCapability
 
 正式口径（已落地词汇）：
 
-- `MovementParticipation.physicsPresence = none | kinematic`
+- `MovementParticipation.execution = nav` 且 `physicsPresence = none | kinematic`
 - `PoseAuthority = Nav`（求解器写位姿；物理经 kinematic 存在看见 crowd）
 - 不把全量 crowd 强塞进完整动态刚体模拟
 - 热路径优先用 SoA crowd sim
 - 上层业务可以持续提交明确逐成员目标，但 MassNavigation 不理解 formation、slot 或 follower 语义
+- `execution = motor` / `physics` 不属于本车道；见 [`movement-intent-and-execution-lanes.md`](movement-intent-and-execution-lanes.md)
 
 目标：
 

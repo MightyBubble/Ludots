@@ -1139,13 +1139,21 @@ public sealed class MassNavigationSimulationRuntime
                 $"MassNavigation spawned agent entity {entity.Id} requires a resolved positive profileId.");
         }
 
-        // Participation contract: a Dynamic physics presence derives Physics pose
-        // authority, which cannot coexist with a nav-agent binding in this increment.
-        if (world.TryGet(entity, out Ludots.Core.Components.MovementParticipation participation) &&
-            participation.PhysicsPresence == Ludots.Core.Components.PhysicsPresenceKind.Dynamic)
+        // Participation contract: only execution=nav may bind as a nav agent.
+        // Motor/Physics pose writers cannot coexist with MassNavigation integration.
+        if (world.TryGet(entity, out Ludots.Core.Components.MovementParticipation participation))
         {
-            throw new InvalidOperationException(
-                $"MassNavigation cannot bind entity {entity.Id} as a nav agent: MovementParticipation.physicsPresence 'dynamic' assigns pose authority to Physics.");
+            if (participation.Execution != Ludots.Core.Components.MovementExecutionKind.Nav)
+            {
+                throw new InvalidOperationException(
+                    $"MassNavigation cannot bind entity {entity.Id} as a nav agent: MovementParticipation.execution is '{participation.Execution}', expected Nav.");
+            }
+
+            if (participation.PhysicsPresence == Ludots.Core.Components.PhysicsPresenceKind.Dynamic)
+            {
+                throw new InvalidOperationException(
+                    $"MassNavigation cannot bind entity {entity.Id} as a nav agent: MovementParticipation.physicsPresence 'dynamic' assigns pose authority to Physics.");
+            }
         }
 
         if (!allowExistingRuntimeBinding)
