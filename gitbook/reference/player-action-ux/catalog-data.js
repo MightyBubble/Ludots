@@ -48,7 +48,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
     "aim"
   ],
   "checkpoint": {
-    "head": "ac78ebfaa",
+    "head": "6e0fc2569",
     "branch_hint": "cursor/ux-action-id-platform-tabs-4211",
     "impl_notes": "scripts/player_action_ux_impl_notes.py",
     "beat_logic": "scripts/player_action_ux_beat_logic.py",
@@ -6069,7 +6069,14 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R",
+                "T"
+              ]
             },
             {
               "t": "badge",
@@ -7732,7 +7739,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "badge",
@@ -7849,7 +7862,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "badge",
@@ -7884,7 +7903,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "menu",
@@ -8278,7 +8303,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "key",
@@ -9193,7 +9224,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             }
           ],
           "logic": "对自身施加该技能增益并进冷却"
@@ -9273,7 +9310,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             }
           ],
           "logic": "以自身为圆心结算范围伤害"
@@ -9408,7 +9451,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": 0,
               "off": [],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "badge",
@@ -9437,7 +9486,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "badge",
@@ -9527,7 +9582,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "badge",
@@ -9595,7 +9656,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "badge",
@@ -9680,7 +9747,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "badge",
@@ -9767,7 +9840,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": null,
-              "deny": 0
+              "deny": 0,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "badge",
@@ -10004,7 +10083,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "badge",
@@ -10062,7 +10147,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "badge",
@@ -11517,7 +11608,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "badge",
@@ -12678,7 +12775,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": 0,
               "off": [],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Y",
+                "B",
+                "X",
+                "A"
+              ]
             },
             {
               "t": "badge",
@@ -12762,7 +12865,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "badge",
@@ -12804,7 +12913,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "badge",
@@ -12918,7 +13033,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "badge",
@@ -12954,7 +13075,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "badge",
@@ -13145,7 +13272,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "key",
@@ -15331,7 +15464,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "badge",
@@ -15389,7 +15528,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "badge",
@@ -15418,7 +15563,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "badge",
@@ -15487,7 +15638,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": 3,
               "off": [],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "bar",
@@ -15553,7 +15710,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "bar",
@@ -15648,7 +15811,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "badge",
@@ -15699,7 +15868,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "deny",
@@ -15771,7 +15946,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": 3,
               "off": [],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "badge",
@@ -15807,7 +15988,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "badge",
@@ -15838,7 +16025,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
                 3
               ],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "badge",
@@ -15911,7 +16104,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": 3,
               "off": [],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "badge",
@@ -15947,7 +16146,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": 3,
               "off": [],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "badge",
@@ -15976,7 +16181,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "badge",
@@ -16155,7 +16366,12 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": 0,
               "off": [],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Y",
+                "B",
+                "X"
+              ]
             },
             {
               "t": "badge",
@@ -16191,7 +16407,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Y",
+                "B",
+                "X",
+                "A"
+              ]
             },
             {
               "t": "badge",
@@ -16345,7 +16567,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": 3,
               "off": [],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "badge",
@@ -16374,7 +16602,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "badge",
@@ -16549,7 +16783,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": null,
-              "deny": 0
+              "deny": 0,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "menu",
@@ -16897,7 +17137,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "badge",
@@ -16978,7 +17224,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "badge",
@@ -17091,7 +17343,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "badge",
@@ -17127,7 +17385,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "badge",
@@ -17316,7 +17580,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": 0,
               "off": [],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "badge",
@@ -17345,7 +17615,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "key",
@@ -17707,7 +17983,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": 0,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "menu",
@@ -19210,7 +19492,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
                 3
               ],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "badge",
@@ -19559,7 +19847,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "bar",
@@ -20173,7 +20467,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "circle",
@@ -20228,7 +20528,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": null,
-              "deny": 1
+              "deny": 1,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "circle",
@@ -20820,7 +21126,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": 0,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "key",
@@ -21419,7 +21731,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "key",
@@ -22620,7 +22938,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": 0,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "badge",
@@ -22669,7 +22993,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": 0,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "badge",
@@ -22701,7 +23031,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "badge",
@@ -22793,7 +23129,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": 0,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "badge",
@@ -22856,7 +23198,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": 0,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "badge",
@@ -22951,7 +23299,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": 0,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "badge",
@@ -23000,7 +23354,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": 1,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "badge",
@@ -23075,7 +23435,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": 2,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "menu",
@@ -23140,7 +23506,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": 0,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "badge",
@@ -23217,7 +23589,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             }
           ],
           "logic": "按住技能先放第一发并等冷却"
@@ -23254,7 +23632,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             }
           ],
           "logic": "冷却好转且目标仍合法则自动再放"
@@ -23380,7 +23764,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": 0,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "badge",
@@ -23418,7 +23808,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "menu",
@@ -23527,7 +23923,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": null,
-              "deny": 1
+              "deny": 1,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "badge",
@@ -23641,7 +24043,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "deny",
@@ -23701,7 +24109,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": 1,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "badge",
@@ -25966,7 +26380,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "badge",
@@ -26008,7 +26428,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "badge",
@@ -26184,7 +26610,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": null,
-              "deny": 0
+              "deny": 0,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "bar",
@@ -26229,7 +26661,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "bar",
@@ -26299,7 +26737,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": null,
-              "deny": 0
+              "deny": 0,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "deny",
@@ -26335,7 +26779,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "badge",
@@ -26429,7 +26879,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": null,
-              "deny": 0
+              "deny": 0,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "deny",
@@ -26660,7 +27116,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": null,
-              "deny": 0
+              "deny": 0,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "deny",
@@ -26788,7 +27250,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
                 3
               ],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "deny",
@@ -26832,7 +27300,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "extra": null,
               "off": [],
               "dot": null,
-              "deny": null
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             },
             {
               "t": "badge",

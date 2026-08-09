@@ -42,6 +42,13 @@ VIEW_LABELS = {
 # 光标状态：渲染器逐个都画得出来，未列出的状态直接 fail
 CURSOR_MODES = ("idle", "down", "drag", "up", "aim")
 
+# 技能栏格子上印什么，取决于玩家手里是什么设备
+HOTBAR_KEYCAPS = {
+    "kbm": ("Q", "W", "E", "R", "T"),
+    "gamepad": ("Y", "B", "X", "A", "LB"),
+    "touch": ("①", "②", "③", "④", "⑤"),
+}
+
 # 光标是箭头时会压住脚下的东西，这些状态要让位；aim 是准星、drag 是抓着，压着才对
 CURSOR_MODES_OFFSET = ("idle", "down", "up")
 CURSOR_OCCLUDERS = ("unit", "hero", "building")
@@ -2839,6 +2846,28 @@ def apply_action_index(cases: list) -> list[dict]:
     return actions
 
 
+def apply_hotbar_keycaps(cases: list) -> int:
+    """按 case 的平台给技能栏格子印上对应键位：键盘 Q/W/E/R、手柄面键、触控序号。
+
+    渲染器不再兜底猜键位；标签缺了直接报错，免得手柄玩家看到一排键盘字母。
+    """
+    filled = 0
+    for c in cases:
+        caps = HOTBAR_KEYCAPS.get(c.get("platform"))
+        if caps is None:
+            raise SystemExit(f"{c['id']} platform={c.get('platform')} 没登记技能栏键位")
+        for b in c["beats"]:
+            for e in b.get("cast") or []:
+                if e.get("t") != "hotbar":
+                    continue
+                slots = e.get("slots") or 4
+                if slots > len(caps):
+                    raise SystemExit(f"{c['id']} 技能栏 {slots} 格超出 {c['platform']} 键位表")
+                e["labels"] = list(caps[:slots])
+                filled += 1
+    return filled
+
+
 def _cursor_candidates(hit: dict) -> list[tuple[float, float]]:
     """按「箭尖贴着目标、箭身朝空处」给出候选落点，从最自然的右下开始试。"""
     r = _entity_radius_px(hit)
@@ -3059,6 +3088,7 @@ def main():
     apply_beat_logic(cases)
     actions = apply_action_index(cases)
     augmented = augment_ui_glyphs(cases)
+    keycaps = apply_hotbar_keycaps(cases)
     nudged = deocclude_cursors(cases)
     _audit_storyboard(cases)
     weak = _audit_casts(cases)
@@ -3118,7 +3148,7 @@ def main():
         f"cases={len(cases)}  beats={sum(len(x['beats']) for x in cases)}  "
         f"multi_platform={sum(1 for a in actions if a['caseCount'] > 1)}  "
         f"weak_casts={len(weak)}  ui_augmented={augmented}  "
-        f"cursor_nudged={nudged}  head={head}"
+        f"hotbar_keycaps={keycaps}  cursor_nudged={nudged}  head={head}"
     )
 
 

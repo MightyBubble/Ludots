@@ -449,7 +449,11 @@
         const x0 = SX + SW / 2 - total / 2;
         const y0 = SY + SH - h - 5;
         const off = Array.isArray(el.off) ? el.off : [];
-        const labels = ["Q", "W", "E", "R", "T"];
+        // 键位标签由生成器按平台填好：键盘是 Q/W/E/R，手柄是面键，触控是序号
+        if (!Array.isArray(el.labels) || el.labels.length < slots) {
+          throw new Error("技能栏缺 labels（按平台的键位标签）— 重跑 catalog 生成脚本");
+        }
+        const labels = el.labels;
         let out = "";
         for (let i = 0; i < slots; i++) {
           const x = x0 + i * (w + gap);
