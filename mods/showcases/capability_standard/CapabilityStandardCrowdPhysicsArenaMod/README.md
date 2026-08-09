@@ -34,6 +34,9 @@ Q 冲击波击退单位、用 E 释放带初速度的巨石。
 - **世界窗口**：`assets/MassNavigationConfig.json` 覆盖 `world.hotZones`，把活跃热区（=仿真窗口
   中心）定在 (5000, 5000)，与地图上箱堆 (4250–4510)、压力板 (5600)、门 (6400) 的世界坐标对齐；
   两队沿 `OrbitOpposedTargets` 轨道（半径 2600cm）在窗口中心两侧对置生成。
+- **地形**：竞技场使用自有平地高度图 `assets/terrain/crowd_physics_arena_flat.vhtm`
+  （65×65 网格、全域 0cm），不复用 MassNavigationMod 的 10k 大世界 relief（该地形在竞技场
+  区域是 287 米高山，会导致单位悬于山顶不可见）。
 - **小队**：2 队 × 48（`assets/MassNavigationConfig.json` 的 `scenario` 全配置化），单位模板组合
   `MovementParticipation`（kinematic + displacement.allowed）+ kinematic 刚体（半径与 agent profile
   `bodyRadiusCm` 同源，桥启动时校验）+ massnav agent。

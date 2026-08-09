@@ -49,9 +49,12 @@ public sealed class CapabilityStandardCrowdPhysicsArenaModEntry : IMod
 
         IModContext modContext = _context
             ?? throw new InvalidOperationException("CapabilityStandardCrowdPhysicsArenaMod requires IModContext.");
+        // 竞技场 Q/E 技能通过按键施放（input mapping），技能栏 overlay 是纯显示且无点击交互，
+        // 在竞技场里没有信息增益——显式关闭（CoreInputMod.SkillBarEnabled）。
+        engine.GlobalContext["CoreInputMod.SkillBarEnabled"] = false;
         EnsureObserverVisibilitySystem(engine);
         EnsureLocalOrderSourceSystem(engine, modContext);
-        EnsurePressurePlateDoorAndHudSystems(engine);
+        EnsurePressurePlateDoorSystem(engine);
         bool mapFocused = CapabilityStandardCrowdPhysicsArenaMapFocus.IsStartupMapFocused(engine);
         engine.SetService(CoreServiceKeys.PresentationAudienceRevealHidden, mapFocused);
         if (!mapFocused)
@@ -61,9 +64,9 @@ public sealed class CapabilityStandardCrowdPhysicsArenaModEntry : IMod
 
         if (engine.GetService(CoreServiceKeys.MinimapRuntime) is MinimapRuntime minimap)
         {
-            minimap.Visible = true;
-            minimap.SetRotateWithCamera(false);
-            minimap.UseRtsFullMapPreset();
+            // 竞技场是 96 单位的小范围场地（约 2400-7600cm），一屏即可看全，
+            // minimap 没有信息增益（它是 10k 大世界 showcase 的标配）。
+            minimap.Visible = false;
         }
 
         return Task.CompletedTask;
@@ -82,7 +85,10 @@ public sealed class CapabilityStandardCrowdPhysicsArenaModEntry : IMod
         engine.GlobalContext[ObserverVisibilitySystemInstalledKey] = true;
     }
 
-    private static void EnsurePressurePlateDoorAndHudSystems(GameEngine engine)
+
+
+
+    private static void EnsurePressurePlateDoorSystem(GameEngine engine)
     {
         if (engine.GlobalContext.ContainsKey(PressurePlateDoorSystemInstalledKey))
         {
@@ -99,7 +105,6 @@ public sealed class CapabilityStandardCrowdPhysicsArenaModEntry : IMod
         engine.RegisterSystem(plateSystem, SystemGroup.InputCollection);
         engine.SetService(PressurePlateDoorSystemKey, plateSystem);
 
-        engine.RegisterSystem(new CrowdPhysicsArenaHudSystem(engine, plateSystem), SystemGroup.EventDispatch);
         engine.GlobalContext[PressurePlateDoorSystemInstalledKey] = true;
     }
 

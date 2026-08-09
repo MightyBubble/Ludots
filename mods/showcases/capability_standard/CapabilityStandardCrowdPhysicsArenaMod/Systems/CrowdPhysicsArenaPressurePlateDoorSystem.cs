@@ -34,6 +34,7 @@ public sealed class CrowdPhysicsArenaPressurePlateDoorSystem : BaseSystem<World,
 
     private const int AgentTrackingCapacity = 256;
 
+
     private readonly List<Entity> _doorsToOpen = new(4);
     private readonly HashSet<Entity> _agentsEverOnPlate = new(AgentTrackingCapacity);
     private readonly Dictionary<Entity, int> _activePlatePairsByAgent = new(AgentTrackingCapacity);
@@ -118,8 +119,35 @@ public sealed class CrowdPhysicsArenaPressurePlateDoorSystem : BaseSystem<World,
     public override void Update(in float dt)
     {
         _doorsToOpen.Clear();
-        long beginCount = AgentContactBeginCount;
-        World.Query(in ClosedDoorQuery, (Entity entity, ref CrowdPhysicsArenaDoor door, ref ManifestationObstacleIntent2D intent) =>
+        var closedDoorJob = new ClosedDoorJob
+        {
+            BeginCount = AgentContactBeginCount,
+            DoorsToOpen = _doorsToOpen
+        };
+        World.InlineEntityQuery<ClosedDoorJob, CrowdPhysicsArenaDoor, ManifestationObstacleIntent2D>(
+            in ClosedDoorQuery,
+            ref closedDoorJob);
+
+        for (int i = 0; i < _doorsToOpen.Count; i++)
+        {
+            Entity entity = _doorsToOpen[i];
+            ref ManifestationObstacleIntent2D intent = ref World.Get<ManifestationObstacleIntent2D>(entity);
+            intent.SinkPhysicsCollider = 0;
+            intent.SinkNavigationObstacle = 0;
+            // 开门 = 视觉门消失：销毁 door 实体（物理/导航由 ManifestationObstacleBridge 清理，
+            // performer 随 EntityDestroyed 销毁），玩家看到门消失。
+            World.Destroy(entity);
+            OpenedDoorCount++;
+        }
+    }
+
+
+    private struct ClosedDoorJob : IForEachWithEntity<CrowdPhysicsArenaDoor, ManifestationObstacleIntent2D>
+    {
+        public long BeginCount;
+        public List<Entity> DoorsToOpen;
+
+        public void Update(Entity entity, ref CrowdPhysicsArenaDoor door, ref ManifestationObstacleIntent2D intent)
         {
             if (intent.SinkPhysicsCollider == 0 && intent.SinkNavigationObstacle == 0)
             {
@@ -132,23 +160,12 @@ public sealed class CrowdPhysicsArenaPressurePlateDoorSystem : BaseSystem<World,
                     $"CrowdPhysicsArena.Door on entity {entity.Id} requires openThresholdContacts > 0 (data-driven, no default).");
             }
 
-            if (beginCount >= door.OpenThresholdContacts)
+            if (BeginCount >= door.OpenThresholdContacts)
             {
-                _doorsToOpen.Add(entity);
+                DoorsToOpen.Add(entity);
             }
-        });
-
-        for (int i = 0; i < _doorsToOpen.Count; i++)
-        {
-            Entity entity = _doorsToOpen[i];
-            ref ManifestationObstacleIntent2D intent = ref World.Get<ManifestationObstacleIntent2D>(entity);
-            intent.SinkPhysicsCollider = 0;
-            intent.SinkNavigationObstacle = 0;
-            World.Add(entity, new ManifestationObstacleBridge2DDirty());
-            OpenedDoorCount++;
         }
     }
-
 
     private void ResolveLayerBitsOnce()
     {
