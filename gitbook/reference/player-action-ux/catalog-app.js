@@ -173,6 +173,22 @@
           <rect x="${x}" y="${y}" width="${w}" height="${h}" fill="rgba(8,10,14,0.82)"/>
           <text x="${x + w / 2}" y="${y + h / 2}" text-anchor="middle" fill="#66758a" font-size="11" font-family="DM Sans, sans-serif" font-weight="600">战争迷雾</text>`;
       }
+      if (el.t === "camera") {
+        const x = px(el.x), y = py(el.y);
+        const a = ((el.angle || 0) * Math.PI) / 180;
+        const lock = el.mode === "lock";
+        const c = lock ? "#f0a35e" : "#6ec8ff";
+        const len = 30, half = (26 * Math.PI) / 180;
+        const x1 = x + Math.cos(a - half) * len, y1 = y + Math.sin(a - half) * len;
+        const x2 = x + Math.cos(a + half) * len, y2 = y + Math.sin(a + half) * len;
+        return `
+          <path d="M${x} ${y} L${x1} ${y1} A${len} ${len} 0 0 1 ${x2} ${y2} Z"
+            fill="${lock ? "rgba(240,163,94,0.14)" : "rgba(110,200,255,0.12)"}" stroke="${c}"
+            stroke-width="1.2" stroke-dasharray="${lock ? "0" : "4 3"}"/>
+          <rect x="${x - 7}" y="${y - 5}" width="14" height="10" rx="2" fill="#1a2430" stroke="${c}" stroke-width="1.5"/>
+          <rect x="${x + 6}" y="${y - 3}" width="4" height="6" rx="1" fill="${c}"/>
+          <text x="${x}" y="${y + 16}" text-anchor="middle" fill="${c}" font-size="8.5" font-family="DM Sans, sans-serif">${lock ? "镜头·跟身" : "镜头·自由"}</text>`;
+      }
       if (el.t === "queue") {
         const x = px(el.x), y = py(el.y);
         const state = el.state || "waiting";

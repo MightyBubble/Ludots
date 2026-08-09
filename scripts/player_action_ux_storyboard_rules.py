@@ -53,6 +53,7 @@ ELEMENT_ENUMS: dict[tuple[str, str], frozenset] = {
     ("npc", "role"): frozenset({"vendor", "quest", "healer", "auction", "trainer", None}),
     ("crosshair", "spread"): frozenset({"tight", "wide", None}),
     ("queue", "state"): frozenset({"waiting", "active", "done"}),
+    ("camera", "mode"): frozenset({"lock", "free"}),
 }
 
 # 一拍里最多出现一次的元件（多了就是画重了）
@@ -62,7 +63,7 @@ SINGLETON_ELEMENTS = ("hotbar", "badge", "stickL", "stickR", "bar")
 SUBJECT_ELEMENTS = (
     "unit", "hero", "card", "building", "crosshair", "menu", "stickL", "stickR",
     "key", "hotbar", "wasd", "wheel", "anchor", "touchpt", "prop",
-    "vehicle", "corpse", "npc", "deny", "impact", "held", "queue",
+    "vehicle", "corpse", "npc", "deny", "impact", "held", "queue", "camera",
 )
 
 
@@ -197,6 +198,12 @@ PROMISE_RULES: tuple[tuple[str, str, object, str], ...] = (
         lambda cast: any(e.get("t") == "arrow" and e.get("kind") == "move" for e in cast)
         and any(e.get("t") == "arrow" and e.get("kind") == "attack" for e in cast),
         "补一根 arrow(kind='move') 表示走的方向，和 attack 那根并排",
+    ),
+    (
+        "说相机/镜头本体在动，画面要有相机",
+        r"相机",
+        lambda cast: _has(cast, "camera"),
+        "补 camera(x, y, angle, mode)；别拿 arrow(kind='move') 代替镜头，那是角色在走",
     ),
     (
         "说排队/依次出手，画面要有队列序号",

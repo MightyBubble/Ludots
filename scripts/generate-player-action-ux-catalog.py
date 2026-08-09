@@ -232,6 +232,12 @@ def menu_box(x, y, lines, active=None):
     return {"t": "menu", "x": x, "y": y, "lines": list(lines), "active": active}
 
 
+def camera(x, y, angle=0, mode="free"):
+    """镜头本体（带视锥）。mode=lock 贴背跟随 / free 自由转。
+    镜头是主角时必须画出来，不能拿「角色移动箭头」代替。"""
+    return {"t": "camera", "x": x, "y": y, "angle": angle, "mode": mode}
+
+
 def queue_no(x, y, n, state="waiting"):
     """单位头顶的排队序号。state=waiting 排队 / active 正在放 / done 放完了。
     别拿键帽当序号，玩家会以为要去按那个键。"""
@@ -2048,11 +2054,12 @@ def build_cases():
         "切换镜头模式改变操作手感：锁定贴背、自由转观察、滚轮拉距离；模式切换要可见。",
         [
             beat("切换到自由镜头并拖动", "相机离角色旋转，角色不立刻转身", "四处看", "tps",
-                 [hero(38, 62, face=-90), path([(58, 38), (72, 55), (58, 72)], "arc"),
-                  arrow(55, 48, 70, 40, "move"), badge("自由镜头")], title="自由"),
+                 [hero(38, 62, face=-90), path([(58, 34), (74, 55), (58, 76)], "arc"),
+                  camera(74, 55, angle=180, mode="free"), cursor(70, 70, "drag"),
+                  badge("自由镜头·角色不转身")], title="自由"),
             beat("切回锁定跟随", "相机回贴角色朝向", "跟身", "tps",
-                 [hero(50, 55, face=-90), arrow(50, 42, 50, 28, "move"),
-                  badge("锁定跟随")], title="锁定"),
+                 [hero(50, 48, face=-90), camera(50, 76, angle=-90, mode="lock"),
+                  badge("锁定跟随·贴回背后")], title="锁定"),
         ], ["MMO", "动作RPG", "TPS"],
     ))
     c.append(case(
@@ -2128,8 +2135,9 @@ def build_cases():
         "观战点队友切换相机；回放可暂停、打点、看别人视角。只读，不改对局。",
         [
             beat("观战中点队友头像或数字键", "相机切到该玩家视角", "换人看", "tps",
-                 [hero(70, 46), unit(30, 60, team="ally"),
-                  menu_box(22, 20, ["1P", "2P", "3P"], active=1), badge("观战切换·跟 2P")], title="切视角"),
+                 [hero(70, 46), unit(30, 60, team="ally"), camera(70, 74, angle=-90, mode="lock"),
+                  menu_box(20, 18, ["1P", "2P", "3P"], active=1),
+                  badge("观战切换·跟 2P")], title="切视角"),
             beat("回放中拖时间轴 / 暂停打点", "画面跳到该时刻，可加书签", "倒回去看", "tps",
                  [hero(48, 55), bar(50, 78, 0.4, "cast", "时间轴"), badge("回放打点")], title="回放"),
         ], ["MOBA", "FPS", "MMO"],
@@ -2472,10 +2480,12 @@ def build_cases():
         "多数 MMO 松 WASD 立刻停；少数动作/载具会滑行。"
         "手感选择要一眼能懂，不要有时停有时滑却不说明。",
         [
-            beat("松开所有方向键（立刻停设定）", "角色马上站住", "站定", "tps",
-                 [hero(48, 55), badge("即停")], title="即停"),
-            beat("松键但带惯性", "再滑一小段才停", "滑一下", "tps",
-                 [hero(48, 55, face=-90), path([(48, 55), (48, 40)], "move"), badge("惯性")], title="惯性"),
+            beat("松开所有方向键（立刻停设定）", "角色马上站住，脚下没有余量", "站定", "tps",
+                 [hero(48, 55, face=-90), wasd(), ring(48, 55, r=10, kind="select"),
+                  badge("松键·即停")], title="即停"),
+            beat("松键但带惯性", "键已松开，角色再滑一小段才停", "滑一下", "tps",
+                 [hero(48, 42, face=-90), wasd(), path([(48, 58), (48, 44)], "move"),
+                  ring(48, 42, r=10, kind="select"), badge("松键·仍在滑")], title="惯性"),
         ], ["MMO", "动作RPG", "设计选项"],
     ))
     c.append(case(

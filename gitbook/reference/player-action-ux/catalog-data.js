@@ -48,7 +48,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
     "aim"
   ],
   "checkpoint": {
-    "head": "43e9a1672",
+    "head": "127381f40",
     "branch_hint": "cursor/ux-action-id-platform-tabs-4211",
     "impl_notes": "scripts/player_action_ux_impl_notes.py",
     "beat_logic": "scripts/player_action_ux_beat_logic.py",
@@ -20965,30 +20965,35 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "points": [
                 [
                   58,
-                  38
+                  34
                 ],
                 [
-                  72,
+                  74,
                   55
                 ],
                 [
                   58,
-                  72
+                  76
                 ]
               ],
               "kind": "arc"
             },
             {
-              "t": "arrow",
-              "x1": 55,
-              "y1": 48,
-              "x2": 70,
-              "y2": 40,
-              "kind": "move"
+              "t": "camera",
+              "x": 74,
+              "y": 55,
+              "angle": 180,
+              "mode": "free"
+            },
+            {
+              "t": "cursor",
+              "x": 70,
+              "y": 70,
+              "mode": "drag"
             },
             {
               "t": "badge",
-              "text": "自由镜头"
+              "text": "自由镜头·角色不转身"
             }
           ],
           "logic": "切到自由镜头，转动不强制转身"
@@ -21002,20 +21007,19 @@ window.PLAYER_ACTION_UX_CATALOG = {
             {
               "t": "hero",
               "x": 50,
-              "y": 55,
+              "y": 48,
               "face": -90
             },
             {
-              "t": "arrow",
-              "x1": 50,
-              "y1": 42,
-              "x2": 50,
-              "y2": 28,
-              "kind": "move"
+              "t": "camera",
+              "x": 50,
+              "y": 76,
+              "angle": -90,
+              "mode": "lock"
             },
             {
               "t": "badge",
-              "text": "锁定跟随"
+              "text": "锁定跟随·贴回背后"
             }
           ],
           "logic": "切回锁定跟随并贴回角色朝向"
@@ -21727,9 +21731,16 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "size": 1
             },
             {
+              "t": "camera",
+              "x": 70,
+              "y": 74,
+              "angle": -90,
+              "mode": "lock"
+            },
+            {
               "t": "menu",
-              "x": 22,
-              "y": 20,
+              "x": 20,
+              "y": 18,
               "lines": [
                 "1P",
                 "2P",
@@ -25037,26 +25048,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
         {
           "title": "即停",
           "input": "松开所有方向键（立刻停设定）",
-          "screen": "角色马上站住",
-          "view": "tps",
-          "cast": [
-            {
-              "t": "hero",
-              "x": 48,
-              "y": 55,
-              "face": 0
-            },
-            {
-              "t": "badge",
-              "text": "即停"
-            }
-          ],
-          "logic": "松方向键立刻清零移动速度"
-        },
-        {
-          "title": "惯性",
-          "input": "松键但带惯性",
-          "screen": "再滑一小段才停",
+          "screen": "角色马上站住，脚下没有余量",
           "view": "tps",
           "cast": [
             {
@@ -25066,22 +25058,63 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "face": -90
             },
             {
+              "t": "wasd",
+              "active": []
+            },
+            {
+              "t": "ring",
+              "x": 48,
+              "y": 55,
+              "r": 10,
+              "kind": "select"
+            },
+            {
+              "t": "badge",
+              "text": "松键·即停"
+            }
+          ],
+          "logic": "松方向键立刻清零移动速度"
+        },
+        {
+          "title": "惯性",
+          "input": "松键但带惯性",
+          "screen": "键已松开，角色再滑一小段才停",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 48,
+              "y": 42,
+              "face": -90
+            },
+            {
+              "t": "wasd",
+              "active": []
+            },
+            {
               "t": "path",
               "points": [
                 [
                   48,
-                  55
+                  58
                 ],
                 [
                   48,
-                  40
+                  44
                 ]
               ],
               "kind": "move"
             },
             {
+              "t": "ring",
+              "x": 48,
+              "y": 42,
+              "r": 10,
+              "kind": "select"
+            },
+            {
               "t": "badge",
-              "text": "惯性"
+              "text": "松键·仍在滑"
             }
           ],
           "logic": "松键后按惯性再滑一段再停"
