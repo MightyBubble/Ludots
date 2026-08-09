@@ -351,7 +351,7 @@ def apply_beat_logic(cases: list[dict]) -> None:
         cid = c["id"]
         for i, b in enumerate(c.get("beats") or []):
             key = f"{cid}#{i}"
-            logic = BEAT_LOGIC.get(key)
+            logic = (BEAT_LOGIC.get(key) or "").strip()
             if not logic:
                 missing.append(key)
                 continue
