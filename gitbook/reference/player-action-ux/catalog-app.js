@@ -336,30 +336,25 @@
   }
 
   /**
-   * Mermaid sequenceDiagram per beat:
-   * 设备输入 → 逻辑处理 → 画面输出（手感不是时序参与者）。
+   * One Mermaid sequenceDiagram for ONE beat:
+   * 设备输入 → 逻辑处理 → 画面输出（与右侧分镜一一对应）。
    */
-  function sequenceMermaid(beats) {
-    const lines = [
+  function sequenceMermaidBeat(b, i) {
+    const logic = b.logic;
+    if (!logic) {
+      throw new Error(`beat T${i + 1} missing logic — regenerate catalog-data.js`);
+    }
+    const title = mmdText(b.title || `步骤 ${i + 1}`);
+    return [
       "sequenceDiagram",
       "  participant I as 设备输入",
       "  participant L as 逻辑处理",
       "  participant O as 画面输出",
-    ];
-    (beats || []).forEach((b, i) => {
-      const title = mmdText(b.title || `步骤 ${i + 1}`);
-      const logic = b.logic;
-      if (!logic) {
-        throw new Error(`beat T${i + 1} missing logic — regenerate catalog-data.js`);
-      }
-      lines.push("  rect rgba(240, 163, 94, 0.08)");
-      lines.push(`    Note over I,O: T${i + 1} ${title}`);
-      lines.push(`    I->>L: ${mmdText(b.input)}`);
-      lines.push(`    L->>L: ${mmdText(logic)}`);
-      lines.push(`    L->>O: ${mmdText(b.screen)}`);
-      lines.push("  end");
-    });
-    return lines.join("\n");
+      `  Note over I,O: T${i + 1} ${title}`,
+      `  I->>L: ${mmdText(b.input)}`,
+      `  L->>L: ${mmdText(logic)}`,
+      `  L->>O: ${mmdText(b.screen)}`,
+    ].join("\n");
   }
 
   let mermaidReady = false;
@@ -388,27 +383,29 @@
   }
 
   async function paintDetailMermaid() {
-    const pre = detailEl.querySelector("pre.mermaid[data-pending]");
-    if (!pre) return;
+    const nodes = [...detailEl.querySelectorAll("pre.mermaid[data-pending]")];
+    if (!nodes.length) return;
     ensureMermaid();
-    const src = pre.textContent;
-    const id = `ux-seq-${++mermaidSeq}`;
-    pre.removeAttribute("data-pending");
-    try {
-      const out = await window.mermaid.render(id, src);
-      const wrap = document.createElement("div");
-      wrap.className = "mermaid";
-      wrap.setAttribute("role", "img");
-      wrap.setAttribute("aria-label", "Mermaid 时序图");
-      wrap.innerHTML = out.svg;
-      pre.replaceWith(wrap);
-    } catch (err) {
-      const msg = err && err.message ? err.message : String(err);
-      const fail = document.createElement("pre");
-      fail.className = "mmd-error";
-      fail.textContent = `Mermaid 时序图渲染失败 (${id}): ${msg}\n---\n${src}`;
-      pre.replaceWith(fail);
-      throw new Error(`Mermaid 时序图渲染失败 (${id}): ${msg}`);
+    for (const pre of nodes) {
+      const src = pre.textContent;
+      const id = `ux-seq-${++mermaidSeq}`;
+      pre.removeAttribute("data-pending");
+      try {
+        const out = await window.mermaid.render(id, src);
+        const wrap = document.createElement("div");
+        wrap.className = "mermaid";
+        wrap.setAttribute("role", "img");
+        wrap.setAttribute("aria-label", "Mermaid 时序图");
+        wrap.innerHTML = out.svg;
+        pre.replaceWith(wrap);
+      } catch (err) {
+        const msg = err && err.message ? err.message : String(err);
+        const fail = document.createElement("pre");
+        fail.className = "mmd-error";
+        fail.textContent = `Mermaid 时序图渲染失败 (${id}): ${msg}\n---\n${src}`;
+        pre.replaceWith(fail);
+        throw new Error(`Mermaid 时序图渲染失败 (${id}): ${msg}`);
+      }
     }
   }
 
@@ -489,19 +486,19 @@
     detailEl.querySelectorAll(".beat-chip").forEach((el) => {
       el.classList.toggle("active", Number(el.dataset.beat) === activeBeat);
     });
-    detailEl.querySelectorAll(".panel[data-beat]").forEach((el) => {
+    detailEl.querySelectorAll(".beat-pair[data-beat]").forEach((el) => {
       el.classList.toggle("active", Number(el.dataset.beat) === activeBeat);
     });
     if (scroll) {
-      const panel = detailEl.querySelector(`.panel[data-beat="${activeBeat}"]`);
-      if (panel) panel.scrollIntoView({ block: "nearest", behavior: "smooth" });
+      const pair = detailEl.querySelector(`.beat-pair[data-beat="${activeBeat}"]`);
+      if (pair) pair.scrollIntoView({ block: "nearest", behavior: "smooth" });
     }
   }
 
   function renderDetail() {
     const c = data.cases.find((x) => x.id === selectedId);
     if (!c) {
-      detailEl.innerHTML = `<div class="empty-detail">从中间列表点一个动作，这里展开时序图和分镜。</div>`;
+      detailEl.innerHTML = `<div class="empty-detail">从中间列表点一个动作，这里按「一镜一对」展开时序与分镜。</div>`;
       return;
     }
     if (activeBeat >= c.beats.length) activeBeat = 0;
@@ -518,16 +515,29 @@
     const chips = c.beats.map((b, i) =>
       `<button type="button" class="beat-chip ${i === activeBeat ? "active" : ""}" data-beat="${i}">T${i + 1} ${esc(b.title || "")}</button>`
     ).join("");
-    const panels = c.beats.map((b, i) => `
-      <article class="panel ${i === activeBeat ? "active" : ""}" data-beat="${i}">
-        ${storyboardSvg(b, i)}
-        <div class="panel-cap">
-          <div class="cap-row"><span class="k">设备</span><span class="v">${esc(b.input)}</span></div>
-          <div class="cap-row"><span class="k">逻辑</span><span class="v">${esc(b.logic)}</span></div>
-          <div class="cap-row"><span class="k">画面</span><span class="v">${esc(b.screen)}</span></div>
+    const pairs = c.beats.map((b, i) => {
+      const mmd = sequenceMermaidBeat(b, i);
+      return `
+      <section class="beat-pair ${i === activeBeat ? "active" : ""}" data-beat="${i}">
+        <header class="beat-pair-head">
+          <span class="beat-pair-title">T${i + 1} ${esc(b.title || "")}</span>
+          <span class="beat-pair-hint">时序 · 分镜</span>
+        </header>
+        <div class="beat-pair-body">
+          <div class="beat-seq" aria-label="第 ${i + 1} 拍时序">
+            <pre class="mermaid" data-pending="1">${esc(mmd)}</pre>
+          </div>
+          <article class="panel" aria-label="第 ${i + 1} 拍分镜">
+            ${storyboardSvg(b, i)}
+            <div class="panel-cap">
+              <div class="cap-row"><span class="k">设备</span><span class="v">${esc(b.input)}</span></div>
+              <div class="cap-row"><span class="k">逻辑</span><span class="v">${esc(b.logic)}</span></div>
+              <div class="cap-row"><span class="k">画面</span><span class="v">${esc(b.screen)}</span></div>
+            </div>
+          </article>
         </div>
-      </article>`).join("");
-    const mmd = sequenceMermaid(c.beats);
+      </section>`;
+    }).join("");
     detailEl.innerHTML = `
       <div class="detail-inner">
         <div class="detail-top">
@@ -553,20 +563,12 @@
             </details>
           </div>
         </div>
-        <div class="sync-split">
-          <div class="sync-col">
-            <div class="section-label">时序 · 全部 ${c.beats.length} 拍</div>
-            <div class="mmd-box" id="mmd-host">
-              <pre class="mermaid" data-pending="1">${esc(mmd)}</pre>
-            </div>
+        <div class="beat-stage">
+          <div class="beat-stage-head">
+            <span>一镜一对 · 共 ${c.beats.length} 拍（左时序 / 右分镜，一起滚）</span>
+            <span class="beat-rail" aria-label="拍号">${chips}</span>
           </div>
-          <div class="sync-col">
-            <div class="section-label">
-              <span>分镜 · ${c.beats.length} 镜</span>
-              <span class="beat-rail" aria-label="分镜拍号">${chips}</span>
-            </div>
-            <div class="storyboard storyboard-stack" id="shot-host" aria-label="分镜条">${panels}</div>
-          </div>
+          <div class="beat-pairs" id="beat-pairs" aria-label="时序与分镜对照">${pairs}</div>
         </div>
       </div>`;
     detailEl.querySelectorAll(".beat-chip").forEach((el) => {
@@ -575,7 +577,7 @@
         setActiveBeat(Number(el.dataset.beat));
       });
     });
-    detailEl.querySelectorAll(".panel[data-beat]").forEach((el) => {
+    detailEl.querySelectorAll(".beat-pair[data-beat]").forEach((el) => {
       el.addEventListener("click", () => setActiveBeat(Number(el.dataset.beat), false));
     });
     paintDetailMermaid().catch((err) => console.error(err));
@@ -602,14 +604,22 @@
     searchTimer = window.setTimeout(() => { render(); }, 120);
   });
 
-  // Keyboard: j/k or arrows move selection within list
+  // Keyboard: j/k or ↑↓ 换动作；h/l 或 ←→ 换拍（一镜一对）
   document.addEventListener("keydown", (e) => {
     if (e.target === searchEl) return;
+    const c = data.cases.find((x) => x.id === selectedId);
+    if ((e.key === "ArrowLeft" || e.key === "h" || e.key === "ArrowRight" || e.key === "l") && c) {
+      e.preventDefault();
+      const delta = (e.key === "ArrowRight" || e.key === "l") ? 1 : -1;
+      const next = Math.max(0, Math.min(c.beats.length - 1, activeBeat + delta));
+      setActiveBeat(next);
+      return;
+    }
     if (e.key !== "ArrowDown" && e.key !== "ArrowUp" && e.key !== "j" && e.key !== "k") return;
     const cases = filtered();
     if (!cases.length) return;
     e.preventDefault();
-    const idx = Math.max(0, cases.findIndex((c) => c.id === selectedId));
+    const idx = Math.max(0, cases.findIndex((x) => x.id === selectedId));
     const next = (e.key === "ArrowDown" || e.key === "j")
       ? Math.min(cases.length - 1, idx + 1)
       : Math.max(0, idx - 1);

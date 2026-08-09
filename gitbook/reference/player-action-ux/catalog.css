@@ -455,16 +455,8 @@ code { font-family: var(--mono); font-size: 0.9em; }
   font-weight: 700;
 }
 
-/* sync stage: equal columns, fill leftover height, ONE scrollbar each at most */
-.sync-split {
-  min-height: 0;
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 10px;
-  overflow: hidden;
-}
-.sync-col {
-  min-width: 0;
+/* beat stage: ONE scrollbar; each row = sequence | storyboard */
+.beat-stage {
   min-height: 0;
   display: flex;
   flex-direction: column;
@@ -473,51 +465,94 @@ code { font-family: var(--mono); font-size: 0.9em; }
   border-radius: 10px;
   background: var(--bg1);
 }
-.sync-col .section-label {
+.beat-stage-head {
   flex: 0 0 auto;
-  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  min-height: 34px;
   padding: 6px 10px;
   border-bottom: 1px solid var(--line);
   font-size: 10px;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--faint);
   font-weight: 700;
   background: rgba(0, 0, 0, 0.2);
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-height: 34px;
-  flex-wrap: wrap;
 }
-.sync-col .section-label .beat-rail {
+.beat-stage-head .beat-rail {
   margin-left: auto;
   letter-spacing: 0;
   text-transform: none;
 }
-
-.mmd-box,
-.storyboard {
+.beat-pairs {
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
   overscroll-behavior: contain;
   padding: 10px;
-  max-height: none;
-  margin: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
-
-.mmd-box .mermaid,
-.mmd-box svg {
+.beat-pair {
+  flex: 0 0 auto;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.18);
+  opacity: 0.72;
+  cursor: pointer;
+  transition: opacity 0.15s, border-color 0.15s, background 0.15s;
+}
+.beat-pair:hover { opacity: 0.9; }
+.beat-pair.active {
+  opacity: 1;
+  border-color: rgba(240, 163, 94, 0.55);
+  background: rgba(240, 163, 94, 0.06);
+  cursor: default;
+}
+.beat-pair-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 7px 10px;
+  border-bottom: 1px solid rgba(44, 54, 69, 0.7);
+}
+.beat-pair-title {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.beat-pair-hint {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--faint);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+.beat-pair-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 10px;
+  padding: 10px;
+  align-items: start;
+}
+.beat-seq {
+  min-width: 0;
+  padding: 4px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.2);
+}
+.beat-seq .mermaid,
+.beat-seq svg {
   display: block;
   width: 100% !important;
   max-width: 100% !important;
   height: auto !important;
 }
-.mmd-box .mmd-error {
+.beat-seq .mmd-error {
   margin: 0;
   padding: 10px;
   color: #ef6b6b;
@@ -525,27 +560,12 @@ code { font-family: var(--mono); font-size: 0.9em; }
   font-size: 11px;
   white-space: pre-wrap;
 }
-
-.storyboard-stack {
-  display: block;
-}
-.storyboard-stack .panel {
-  margin: 0 0 12px;
-  padding: 6px;
-  border: 1px solid transparent;
-  border-radius: 10px;
-  opacity: 0.6;
+.beat-pair .panel {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
   background: transparent;
-  cursor: pointer;
-  transition: opacity 0.15s, border-color 0.15s;
-}
-.storyboard-stack .panel:last-child { margin-bottom: 0; }
-.storyboard-stack .panel:hover { opacity: 0.9; }
-.storyboard-stack .panel.active {
-  opacity: 1;
-  border-color: rgba(240, 163, 94, 0.5);
-  background: rgba(240, 163, 94, 0.05);
-  cursor: default;
 }
 .panel .story-svg {
   display: block;
@@ -619,9 +639,5 @@ code { font-family: var(--mono); font-size: 0.9em; }
   .pane { border-right: 0; border-bottom: 1px solid var(--line); }
   .pane-detail { min-height: 70vh; }
   .detail-inner { overflow: auto; }
-  .sync-split {
-    grid-template-columns: 1fr;
-    min-height: 520px;
-  }
-  .sync-col { min-height: 240px; }
+  .beat-pair-body { grid-template-columns: 1fr; }
 }
