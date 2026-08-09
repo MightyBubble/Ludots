@@ -8,7 +8,7 @@
 - 逻辑文案：`scripts/player_action_ux_beat_logic.py`
 - 实现标注：`scripts/player_action_ux_impl_notes.py`
 - 动作编号/平台变体：`scripts/player_action_ux_action_index.py`
-- 生成时 HEAD：`692904ea1`（以你拉取后的 `git rev-parse` 为准；合并后会变）
+- 生成时 HEAD：`fe5438ac5`（以你拉取后的 `git rev-parse` 为准；合并后会变）
 - 分支语境：`cursor/ux-action-id-platform-tabs-4211`（unique 动作编号 + 主机/键鼠/触控 tab）
 - 已合 main：图鉴 #743–#755（含按游戏分类、时序三参与者、一镜一对、双人审核）
 
@@ -55,6 +55,7 @@
 
 - unique_actions = 163
 - multi_platform_actions = 6
+- 平台覆盖（唯一动作计）：主机 12、键鼠 151、触控 6 —— 图鉴目前以键鼠为主，主机/触控实现是内容缺口，不是渲染 bug
 - cases = 169（含平台变体实现）
 - beats = 358
 - target_games = 13
@@ -64,7 +65,13 @@
 
 - 仅 badge / 空 cast 的弱分镜拍数：0
 - 弱分镜不阻断生成，但改数据时应补单位/光标/指示器，禁止「只有字没有画面」
-- `_audit_storyboard()` 是硬闸：镜位未登记、光标状态渲染器画不出、箭头压住单位、说「变准星」却没准星、说「点菜单项」却没菜单 —— 任一命中直接 fail 生成
+- `_audit_storyboard()` 是硬闸，规则表在 `scripts/player_action_ux_storyboard_rules.py`：
+  1. 平台标注 vs 画面元件（键鼠不许画摇杆、触控不许画鼠标、主机不许画鼠标）
+  2. 平台标注 vs 文案设备词（键鼠文案不许出现摇杆/扳机，反之同理）
+  3. 文案承诺的元素必须画出（准星/菜单/选中圈/读条/落点圈/扇形/摇杆/选框/技能栏/键帽/敌人/卡牌/轨迹/触点/WASD/轮盘/锚点）
+  4. 画面本身合法（有看得见的主体、坐标不出界、同类元件不画重）
+  5. 镜位未登记、光标状态渲染器画不出、箭头压住单位
+- 任一命中直接 fail 生成；要放宽先改规则表，不许在数据里绕开
 - 光标状态白名单：idle / down / drag / up / aim；`aim`=施法准星，`up`=松手波纹
 - 镜位角标只出人话：俯视战场、斜俯视、越肩视角、第一人称
 

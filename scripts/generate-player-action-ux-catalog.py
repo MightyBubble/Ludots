@@ -2896,6 +2896,12 @@ def _write_checkpoint(cases: list, weak: list[str], head: str, actions: list[dic
         "",
         f"- unique_actions = {len(actions or [])}",
         f"- multi_platform_actions = {sum(1 for a in (actions or []) if a.get('caseCount', 0) > 1)}",
+        "- 平台覆盖（唯一动作计）："
+        + "、".join(
+            f"{label} {sum(1 for a in (actions or []) if label in (a.get('platformLabels') or []))}"
+            for label in PLATFORM_LABEL.values()
+        )
+        + " —— 图鉴目前以键鼠为主，主机/触控实现是内容缺口，不是渲染 bug",
         f"- cases = {len(cases)}（含平台变体实现）",
         f"- beats = {sum(len(c['beats']) for c in cases)}",
         f"- target_games = {len(TARGET_GAMES)}",
@@ -2905,8 +2911,14 @@ def _write_checkpoint(cases: list, weak: list[str], head: str, actions: list[dic
         "",
         f"- 仅 badge / 空 cast 的弱分镜拍数：{len(weak)}",
         "- 弱分镜不阻断生成，但改数据时应补单位/光标/指示器，禁止「只有字没有画面」",
-        "- `_audit_storyboard()` 是硬闸：镜位未登记、光标状态渲染器画不出、箭头压住单位、"
-        "说「变准星」却没准星、说「点菜单项」却没菜单 —— 任一命中直接 fail 生成",
+        "- `_audit_storyboard()` 是硬闸，规则表在 `scripts/player_action_ux_storyboard_rules.py`：",
+        "  1. 平台标注 vs 画面元件（键鼠不许画摇杆、触控不许画鼠标、主机不许画鼠标）",
+        "  2. 平台标注 vs 文案设备词（键鼠文案不许出现摇杆/扳机，反之同理）",
+        "  3. 文案承诺的元素必须画出（准星/菜单/选中圈/读条/落点圈/扇形/摇杆/选框/技能栏/"
+        "键帽/敌人/卡牌/轨迹/触点/WASD/轮盘/锚点）",
+        "  4. 画面本身合法（有看得见的主体、坐标不出界、同类元件不画重）",
+        "  5. 镜位未登记、光标状态渲染器画不出、箭头压住单位",
+        "- 任一命中直接 fail 生成；要放宽先改规则表，不许在数据里绕开",
         f"- 光标状态白名单：{' / '.join(CURSOR_MODES)}；`aim`=施法准星，`up`=松手波纹",
         f"- 镜位角标只出人话：{'、'.join(VIEW_LABELS.values())}",
         "",

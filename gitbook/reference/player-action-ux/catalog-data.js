@@ -48,7 +48,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
     "aim"
   ],
   "checkpoint": {
-    "head": "692904ea1",
+    "head": "fe5438ac5",
     "branch_hint": "cursor/ux-action-id-platform-tabs-4211",
     "impl_notes": "scripts/player_action_ux_impl_notes.py",
     "beat_logic": "scripts/player_action_ux_beat_logic.py",
