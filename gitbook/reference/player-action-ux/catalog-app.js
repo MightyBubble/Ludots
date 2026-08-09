@@ -232,6 +232,19 @@
             <text x="${x + w / 2}" y="${y0 + h / 2 + 3.5}" text-anchor="middle" fill="${c}" font-size="${text.length > 2 ? 8 : 10}" font-family="DM Sans, sans-serif" font-weight="700">${text}</text>`;
         }).join("");
       }
+      if (el.t === "toast") {
+        // 系统通知：飘一行字，和可点的菜单区分开（玩家不该想去点它）
+        const x = px(el.x), y = py(el.y);
+        const palette = { info: "#93a0b4", error: "#ef6b6b", gain: "#5dce8f", loss: "#e0c35a" };
+        const col = palette[el.kind] || palette.info;
+        const text = String(el.text || "");
+        const w = 16 + text.length * 9;
+        return `
+          <rect x="${x}" y="${y - 11}" width="${w}" height="19" rx="9.5"
+            fill="rgba(11,14,19,0.9)" stroke="${col}" stroke-width="1.2" stroke-dasharray="0"/>
+          <circle cx="${x + 10}" cy="${y - 1.5}" r="3" fill="${col}"/>
+          <text x="${x + 18}" y="${y + 2.5}" fill="${col}" font-size="10" font-family="DM Sans, sans-serif">${esc(text)}</text>`;
+      }
       if (el.t === "partyframe") {
         // 队伍头像框：竖排头像 + 血条，当前友好目标高亮。不是菜单，别用 menu 凑
         const x = px(el.x), y = py(el.y);

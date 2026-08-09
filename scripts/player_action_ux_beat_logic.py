@@ -366,6 +366,13 @@ BEAT_LOGIC: dict[str, str] = {
     "block-range-los-trade#1": "交易距离超限则取消并退回物品",
     "block-crowd-control#0": "受控期间拒绝技能输入",
     "block-crowd-control#1": "控制结束恢复技能可用",
+    # ---- 打到一半目标没了 ----
+    "target-lost-out-of-range#0": "把该敌人设为当前目标并持续校验距离与视线",
+    "target-lost-out-of-range#1": "目标越出有效范围，清除当前目标并回报脱离原因",
+    "target-lost-out-of-range#2": "无当前目标时拒绝施放，不做无目标发射",
+    "target-lost-invalid-mid-cast#0": "开始引导施法并锁定该目标",
+    "target-lost-invalid-mid-cast#1": "目标死亡或阵营变更导致目标非法，中止本次引导",
+    "target-lost-invalid-mid-cast#2": "回滚本次施法：退还资源、不计冷却、回报失效原因",
     # ---- 联机：进一局并待在里面 ----
     "net-create-join-room#0": "开出房间并把自己登记为房主",
     "net-create-join-room#1": "校验房号后把加入者写进房间名单",

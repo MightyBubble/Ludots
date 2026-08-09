@@ -59,6 +59,7 @@ ELEMENT_ENUMS: dict[tuple[str, str], frozenset] = {
     ("camera", "mode"): frozenset({"lock", "free"}),
     ("splitscreen", "mode"): frozenset({"v", "h", "shared"}),
     ("netstat", "state"): frozenset({"ok", "lag", "lost"}),
+    ("toast", "kind"): frozenset({"info", "error", "gain", "loss"}),
     ("voice", "state"): frozenset({"off", "on", "talking"}),
 }
 
@@ -71,7 +72,7 @@ SUBJECT_ELEMENTS = (
     "key", "hotbar", "wasd", "wheel", "anchor", "touchpt", "prop",
     "vehicle", "corpse", "npc", "deny", "impact", "held", "queue", "camera",
     "playertag", "splitscreen", "padslot", "roster", "netstat", "voice", "vote", "marker",
-    "partyframe",
+    "partyframe", "toast",
 )
 
 
@@ -206,6 +207,12 @@ PROMISE_RULES: tuple[tuple[str, str, object, str], ...] = (
         lambda cast: any(e.get("t") == "arrow" and e.get("kind") == "move" for e in cast)
         and any(e.get("t") == "arrow" and e.get("kind") == "attack" for e in cast),
         "补一根 arrow(kind='move') 表示走的方向，和 attack 那根并排",
+    ),
+    (
+        "说目标失效/脱离/回滚，要说清原因而不是静默",
+        r"目标失效|目标脱离|脱离范围|丢失目标|回滚|退还",
+        lambda cast: _has(cast, "toast", "deny"),
+        "补 toast(x, y, '原因', kind='error') 或 deny(...)，别静默丢目标",
     ),
     (
         "说队伍框/队友头像，要用队伍框而不是菜单",

@@ -258,6 +258,13 @@ def padslot(states):
     return {"t": "padslot", "states": list(states)}
 
 
+def toast(x, y, text, kind="info"):
+    """系统通知条：飘一行字告诉玩家发生了什么。
+    kind=info 中性 / error 出错 / gain 到手 / loss 扣掉。
+    和 menu_box 区分：菜单是可点的，通知不是。"""
+    return {"t": "toast", "x": x, "y": y, "text": text, "kind": kind}
+
+
 def partyframe(x, y, rows, target=None):
     """队伍头像框：竖排头像 + 血条。rows = [{"name": ..., "hp": 0..1}]，
     target = 当前友好目标那一行（高亮）。这是界面上的队伍框，不是菜单。"""
@@ -401,6 +408,7 @@ FAMILY_TITLES = {
     "touch-tablet": "平板触控 / 卡牌拖放",
     "menu-cmd": "选单式指令",
     "blocked": "放不了时的反馈",
+    "target-lost": "打到一半目标没了",
     "netplay": "联机：进一局并待在里面",
     "couch-play": "同屏多人：加入、分屏、抢东西",
 }
@@ -482,6 +490,7 @@ _FAMILY_TO_TARGETS: dict[str, tuple[str, ...]] = {
     "dynamic-context": ("zelda", "wow"),
     "auto-cast": ("wow", "sc2", "war3"),
     "blocked": ("shared",),
+    "target-lost": ("wow", "lol", "sc2"),
     "netplay": ("netmatch",),
     "couch-play": ("couch",),
     "select": ("sc2", "ra2", "war3", "lol"),
@@ -2842,6 +2851,45 @@ def build_cases():
             beat("控制时间结束", "技能栏恢复亮起，立刻能反打", "缓过来了", "moba",
                  [hero(48, 55), hotbar(active=0), badge("控制解除")], title="解控"),
         ], ["MMO", "MOBA"],
+    ))
+
+    # ===== 三十、打到一半目标没了 =====
+    c.append(case(
+        "target-lost-out-of-range", "target-lost", "目标跑出范围，锁定自动松开",
+        "我锁着一个敌人，他跑远或钻进看不见的地方，锁定就该自己松开并告诉我一声。"
+        "最怕的是锁定还挂着、我一直按技能却打不出去，还以为是自己手滑。",
+        [
+            beat("锁住射程内的敌人", "他套上锁定圈，射程圈把他圈在里面", "咬住了", "moba",
+                 [hero(30, 60), circle_ind(30, 60, 26, True), unit(58, 45, team="enemy"),
+                  ring(58, 45, kind="lock"), hotbar(active=0), badge("已锁定")], title="锁住"),
+            beat("他跑出射程", "锁定圈撤掉，目标框清空，明确说是脱离而不是悄悄没了", "跑了", "moba",
+                 [hero(30, 60), circle_ind(30, 60, 26, True), unit(86, 26, team="enemy"),
+                  arrow(62, 42, 82, 28, "move"), toast(34, 30, "目标脱离范围", "error"),
+                  hotbar(), badge("锁定松开")], title="脱离"),
+            beat("这时再按技能", "没有目标就不放，回报「没有目标」而不是对空发射", "打谁啊", "moba",
+                 [hero(30, 60), circle_ind(30, 60, 26, False), unit(86, 26, team="enemy"),
+                  deny(52, 48, "没有目标"), hotbar(deny=0), badge("无目标·不放")], title="按了也不放"),
+        ], ["MMO", "MOBA", "RTS"],
+    ))
+    c.append(case(
+        "target-lost-invalid-mid-cast", "target-lost", "读条读到一半，目标不算数了",
+        "我正对着一个敌人读条，他中途死了、或者被招降变成友军——这个目标已经不成立。"
+        "系统要把这一次出手整个退回去：读条断掉、蓝退还、技能不进冷却，"
+        "并且说清是「目标没了」，不是我操作错。",
+        [
+            beat("对敌人开始读条", "读条走起来，目标锁定圈亮着", "正在放", "moba",
+                 [hero(32, 60), unit(66, 44, team="enemy"), ring(66, 44, kind="lock"),
+                  bar(32, 36, 0.55, "cast", "施法中"), hotbar(active=0),
+                  badge("读条中")], title="开始读条"),
+            beat("目标中途死了 / 变成友军", "这个目标不再合法，本次出手失去对象", "咦？", "moba",
+                 [hero(32, 60), corpse(66, 46), unit(80, 60, team="ally"),
+                  bar(32, 36, 0.7, "cast", "被打断", broken=True),
+                  toast(30, 24, "目标已失效", "error"), badge("目标没了")], title="目标失效"),
+            beat("系统把这一次退回去", "蓝退还、技能不进冷却，图标还亮着可以重来", "没白亏", "moba",
+                 [hero(32, 60), corpse(66, 46), bar(32, 36, 0.9, "cast", "蓝量已退还"),
+                  toast(30, 24, "已回滚·未消耗", "gain"), hotbar(active=0),
+                  deny(58, 52, "本次作废"), badge("回滚完成")], title="回滚"),
+        ], ["MMO", "MOBA", "RTS"],
     ))
 
     # ===== 二十八、联机：进一局并待在里面 =====

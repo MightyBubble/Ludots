@@ -204,6 +204,11 @@ ACTION_GROUPS: list[tuple[str, str, str, tuple[tuple[str, str], ...]]] = [
     # ---- 从 UX-011 拆出来：用界面选人和用键盘轮换敌人是两条路 ----
     ("UX-181", "mmo-party-frame-target", "点队友头像选中他",
      (("mmo-party-frame-target", "kbm"),)),
+    # ---- 打到一半目标没了 ----
+    ("UX-182", "target-lost-out-of-range", "目标跑远锁定自动松开",
+     (("target-lost-out-of-range", "kbm"),)),
+    ("UX-183", "target-lost-invalid-mid-cast", "读条中目标失效并回滚",
+     (("target-lost-invalid-mid-cast", "kbm"),)),
 ]
 
 

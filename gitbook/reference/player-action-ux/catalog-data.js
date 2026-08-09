@@ -48,14 +48,14 @@ window.PLAYER_ACTION_UX_CATALOG = {
     "aim"
   ],
   "checkpoint": {
-    "head": "2f71d57f6",
+    "head": "0a8a4b2cb",
     "branch_hint": "cursor/ux-action-id-platform-tabs-4211",
     "impl_notes": "scripts/player_action_ux_impl_notes.py",
     "beat_logic": "scripts/player_action_ux_beat_logic.py",
     "action_index": "scripts/player_action_ux_action_index.py",
     "note": "列表=unique actions；详情平台 tab；时序=设备/逻辑/画面；勿手改 catalog-data.js",
     "weak_storyboard_beats": [],
-    "unique_actions": 181,
+    "unique_actions": 183,
     "multi_platform_actions": 8
   },
   "categories": [
@@ -5658,6 +5658,72 @@ window.PLAYER_ACTION_UX_CATALOG = {
       "genres": [
         "MMO",
         "魔兽世界"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-182",
+      "key": "target-lost-out-of-range",
+      "title": "目标跑远锁定自动松开",
+      "summary": "我锁着一个敌人，他跑远或钻进看不见的地方，锁定就该自己松开并告诉我一声。最怕的是锁定还挂着、我一直按技能却打不出去，还以为是自己手滑。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "target-lost-out-of-range"
+        }
+      ],
+      "targets": [
+        "lol",
+        "ra2",
+        "sc2",
+        "war3",
+        "wow"
+      ],
+      "genres": [
+        "MMO",
+        "MOBA",
+        "RTS"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-183",
+      "key": "target-lost-invalid-mid-cast",
+      "title": "读条中目标失效并回滚",
+      "summary": "我正对着一个敌人读条，他中途死了、或者被招降变成友军——这个目标已经不成立。系统要把这一次出手整个退回去：读条断掉、蓝退还、技能不进冷却，并且说清是「目标没了」，不是我操作错。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "target-lost-invalid-mid-cast"
+        }
+      ],
+      "targets": [
+        "lol",
+        "ra2",
+        "sc2",
+        "war3",
+        "wow"
+      ],
+      "genres": [
+        "MMO",
+        "MOBA",
+        "RTS"
       ],
       "beatCount": 3,
       "caseCount": 1
@@ -28568,6 +28634,440 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "platform": "kbm",
           "platformLabel": "键鼠",
           "caseId": "block-crowd-control"
+        }
+      ]
+    },
+    {
+      "id": "target-lost-out-of-range",
+      "category": "target-lost",
+      "family": "target-lost",
+      "title": "目标跑出范围，锁定自动松开",
+      "summary": "我锁着一个敌人，他跑远或钻进看不见的地方，锁定就该自己松开并告诉我一声。最怕的是锁定还挂着、我一直按技能却打不出去，还以为是自己手滑。",
+      "genres": [
+        "MMO",
+        "MOBA",
+        "RTS"
+      ],
+      "targets": [
+        "sc2",
+        "ra2",
+        "war3",
+        "lol",
+        "wow"
+      ],
+      "beats": [
+        {
+          "title": "锁住",
+          "input": "锁住射程内的敌人",
+          "screen": "他套上锁定圈，射程圈把他圈在里面",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 30,
+              "y": 60,
+              "face": 0
+            },
+            {
+              "t": "circle",
+              "x": 30,
+              "y": 60,
+              "r": 26,
+              "ok": true
+            },
+            {
+              "t": "unit",
+              "x": 58,
+              "y": 45,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "ring",
+              "x": 58,
+              "y": 45,
+              "r": 8,
+              "kind": "lock"
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": 0,
+              "cd": null,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
+            },
+            {
+              "t": "badge",
+              "text": "已锁定"
+            }
+          ],
+          "logic": "把该敌人设为当前目标并持续校验距离与视线"
+        },
+        {
+          "title": "脱离",
+          "input": "他跑出射程",
+          "screen": "锁定圈撤掉，目标框清空，明确说是脱离而不是悄悄没了",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 30,
+              "y": 60,
+              "face": 0
+            },
+            {
+              "t": "circle",
+              "x": 30,
+              "y": 60,
+              "r": 26,
+              "ok": true
+            },
+            {
+              "t": "unit",
+              "x": 86,
+              "y": 26,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "arrow",
+              "x1": 62,
+              "y1": 42,
+              "x2": 82,
+              "y2": 28,
+              "kind": "move"
+            },
+            {
+              "t": "toast",
+              "x": 34,
+              "y": 30,
+              "text": "目标脱离范围",
+              "kind": "error"
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": null,
+              "cd": null,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
+            },
+            {
+              "t": "badge",
+              "text": "锁定松开"
+            }
+          ],
+          "logic": "目标越出有效范围，清除当前目标并回报脱离原因"
+        },
+        {
+          "title": "按了也不放",
+          "input": "这时再按技能",
+          "screen": "没有目标就不放，回报「没有目标」而不是对空发射",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 30,
+              "y": 60,
+              "face": 0
+            },
+            {
+              "t": "circle",
+              "x": 30,
+              "y": 60,
+              "r": 26,
+              "ok": false
+            },
+            {
+              "t": "unit",
+              "x": 86,
+              "y": 26,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "deny",
+              "x": 52,
+              "y": 48,
+              "label": "没有目标",
+              "r": 11
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": null,
+              "cd": null,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": 0,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
+            },
+            {
+              "t": "badge",
+              "text": "无目标·不放"
+            }
+          ],
+          "logic": "无当前目标时拒绝施放，不做无目标发射"
+        }
+      ],
+      "ludots": "目标中途失效：牵动实体生命周期与实体关联（计划见 Entity Association Core），当前没有统一的「目标失效原因 → 中止 + 资源回退 + 玩家可见回报」链路，order 与 cast 各自的失败路径也没归并到同一套原因码。",
+      "todos": [
+        "TODO: 目标有效性持续校验（距离 / 视线 / 存活 / 阵营）与失效事件",
+        "TODO: 引导中止后的资源回退与冷却豁免规则",
+        "TODO: 失效原因码 → 玩家可见回报（脱离 / 死亡 / 转阵营 / 不可见）"
+      ],
+      "familyTitle": "打到一半目标没了",
+      "actionNo": "UX-182",
+      "actionKey": "target-lost-out-of-range",
+      "actionTitle": "目标跑远锁定自动松开",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "target-lost-out-of-range"
+        }
+      ]
+    },
+    {
+      "id": "target-lost-invalid-mid-cast",
+      "category": "target-lost",
+      "family": "target-lost",
+      "title": "读条读到一半，目标不算数了",
+      "summary": "我正对着一个敌人读条，他中途死了、或者被招降变成友军——这个目标已经不成立。系统要把这一次出手整个退回去：读条断掉、蓝退还、技能不进冷却，并且说清是「目标没了」，不是我操作错。",
+      "genres": [
+        "MMO",
+        "MOBA",
+        "RTS"
+      ],
+      "targets": [
+        "sc2",
+        "ra2",
+        "war3",
+        "lol",
+        "wow"
+      ],
+      "beats": [
+        {
+          "title": "开始读条",
+          "input": "对敌人开始读条",
+          "screen": "读条走起来，目标锁定圈亮着",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 32,
+              "y": 60,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 66,
+              "y": 44,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "ring",
+              "x": 66,
+              "y": 44,
+              "r": 8,
+              "kind": "lock"
+            },
+            {
+              "t": "bar",
+              "x": 32,
+              "y": 36,
+              "ratio": 0.55,
+              "kind": "cast",
+              "label": "施法中",
+              "broken": false
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": 0,
+              "cd": null,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
+            },
+            {
+              "t": "badge",
+              "text": "读条中"
+            }
+          ],
+          "logic": "开始引导施法并锁定该目标"
+        },
+        {
+          "title": "目标失效",
+          "input": "目标中途死了 / 变成友军",
+          "screen": "这个目标不再合法，本次出手失去对象",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 32,
+              "y": 60,
+              "face": 0
+            },
+            {
+              "t": "corpse",
+              "x": 66,
+              "y": 46
+            },
+            {
+              "t": "unit",
+              "x": 80,
+              "y": 60,
+              "sel": false,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "bar",
+              "x": 32,
+              "y": 36,
+              "ratio": 0.7,
+              "kind": "cast",
+              "label": "被打断",
+              "broken": true
+            },
+            {
+              "t": "toast",
+              "x": 30,
+              "y": 24,
+              "text": "目标已失效",
+              "kind": "error"
+            },
+            {
+              "t": "badge",
+              "text": "目标没了"
+            }
+          ],
+          "logic": "目标死亡或阵营变更导致目标非法，中止本次引导"
+        },
+        {
+          "title": "回滚",
+          "input": "系统把这一次退回去",
+          "screen": "蓝退还、技能不进冷却，图标还亮着可以重来",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 32,
+              "y": 60,
+              "face": 0
+            },
+            {
+              "t": "corpse",
+              "x": 66,
+              "y": 46
+            },
+            {
+              "t": "bar",
+              "x": 32,
+              "y": 36,
+              "ratio": 0.9,
+              "kind": "cast",
+              "label": "蓝量已退还",
+              "broken": false
+            },
+            {
+              "t": "toast",
+              "x": 30,
+              "y": 24,
+              "text": "已回滚·未消耗",
+              "kind": "gain"
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": 0,
+              "cd": null,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
+            },
+            {
+              "t": "deny",
+              "x": 58,
+              "y": 52,
+              "label": "本次作废",
+              "r": 11
+            },
+            {
+              "t": "badge",
+              "text": "回滚完成"
+            }
+          ],
+          "logic": "回滚本次施法：退还资源、不计冷却、回报失效原因"
+        }
+      ],
+      "ludots": "目标中途失效：牵动实体生命周期与实体关联（计划见 Entity Association Core），当前没有统一的「目标失效原因 → 中止 + 资源回退 + 玩家可见回报」链路，order 与 cast 各自的失败路径也没归并到同一套原因码。",
+      "todos": [
+        "TODO: 目标有效性持续校验（距离 / 视线 / 存活 / 阵营）与失效事件",
+        "TODO: 引导中止后的资源回退与冷却豁免规则",
+        "TODO: 失效原因码 → 玩家可见回报（脱离 / 死亡 / 转阵营 / 不可见）"
+      ],
+      "familyTitle": "打到一半目标没了",
+      "actionNo": "UX-183",
+      "actionKey": "target-lost-invalid-mid-cast",
+      "actionTitle": "读条中目标失效并回滚",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "target-lost-invalid-mid-cast"
         }
       ]
     },
