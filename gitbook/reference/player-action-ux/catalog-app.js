@@ -409,23 +409,44 @@
     }
   }
 
+  function caseTargets(c) {
+    if (!Array.isArray(c.targets) || !c.targets.length) {
+      throw new Error(`case ${c.id || "?"} missing targets[] — regenerate catalog-data.js`);
+    }
+    return c.targets;
+  }
+
+  function inActiveTarget(c) {
+    if (activeCategory === "all") return true;
+    return caseTargets(c).includes(activeCategory);
+  }
+
   function filtered() {
     const q = query.trim().toLowerCase();
     return data.cases.filter((c) => {
-      // With a query, search the whole catalog; category scopes only when browsing.
-      if (!q) return activeCategory === "all" || c.category === activeCategory;
-      const blob = [c.title, c.summary, c.id, ...(c.genres || []), ...c.beats.flatMap((b) => [b.input, b.screen, b.feel])].join(" ").toLowerCase();
+      // With a query, search the whole catalog; target game scopes only when browsing.
+      if (!q) return inActiveTarget(c);
+      const targetTitles = caseTargets(c).map((id) => {
+        const cat = data.categories.find((x) => x.id === id);
+        return cat ? cat.title : id;
+      });
+      const blob = [
+        c.title, c.summary, c.id, c.familyTitle || "",
+        ...(c.genres || []), ...caseTargets(c), ...targetTitles,
+        ...c.beats.flatMap((b) => [b.input, b.screen, b.feel]),
+      ].join(" ").toLowerCase();
       return blob.includes(q);
     });
   }
 
   function renderNav() {
-    const items = [{ id: "all", title: "全部" }, ...data.categories];
+    const items = [{ id: "all", title: "全部游戏", blurb: "不按复刻目标过滤" }, ...data.categories];
     navEl.innerHTML = items.map((cat) => {
       const count = cat.id === "all"
         ? data.cases.length
-        : data.cases.filter((c) => c.category === cat.id).length;
-      return `<button type="button" class="nav-btn ${activeCategory === cat.id ? "active" : ""}" data-cat="${esc(cat.id)}">${esc(cat.title)} <span class="count">(${count})</span></button>`;
+        : data.cases.filter((c) => caseTargets(c).includes(cat.id)).length;
+      const blurb = cat.blurb ? `<span class="nav-blurb">${esc(cat.blurb)}</span>` : "";
+      return `<button type="button" class="nav-btn ${activeCategory === cat.id ? "active" : ""}" data-cat="${esc(cat.id)}"><span class="nav-title">${esc(cat.title)} <span class="count">(${count})</span></span>${blurb}</button>`;
     }).join("");
     navEl.querySelectorAll("button").forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -481,7 +502,11 @@
       return;
     }
     if (activeBeat >= c.beats.length) activeBeat = 0;
-    const tags = (c.genres || []).map((g) => `<span class="tag">${esc(g)}</span>`).join("");
+    const targetTags = caseTargets(c).map((id) => {
+      const cat = data.categories.find((x) => x.id === id);
+      return `<span class="tag tag-target">${esc(cat ? cat.title : id)}</span>`;
+    }).join("");
+    const family = c.familyTitle || c.family || c.category || "";
     const todos = (c.todos || []).map((t) => `<li>${esc(t)}</li>`).join("");
     const chips = c.beats.map((b, i) =>
       `<button type="button" class="beat-chip ${i === activeBeat ? "active" : ""}" data-beat="${i}">T${i + 1} ${esc(b.title || "")}</button>`
@@ -501,7 +526,7 @@
         <div class="detail-top">
           <div class="detail-head">
             <h2>${esc(c.title)}</h2>
-            <div class="tags">${tags}</div>
+            <div class="tags">${targetTags}${family ? `<span class="tag tag-family">${esc(family)}</span>` : ""}</div>
             <span class="case-id">${esc(c.id)}</span>
           </div>
           <div class="summary-row">
