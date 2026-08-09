@@ -173,6 +173,19 @@
           <rect x="${x}" y="${y}" width="${w}" height="${h}" fill="rgba(8,10,14,0.82)"/>
           <text x="${x + w / 2}" y="${y + h / 2}" text-anchor="middle" fill="#66758a" font-size="11" font-family="DM Sans, sans-serif" font-weight="600">战争迷雾</text>`;
       }
+      if (el.t === "impact") {
+        const x = px(el.x), y = py(el.y);
+        const r = el.r || 16;
+        const spikes = Array.from({ length: 10 }, (_, i) => {
+          const a = (i / 10) * Math.PI * 2;
+          return `<line x1="${x + Math.cos(a) * r * 0.72}" y1="${y + Math.sin(a) * r * 0.72}"
+            x2="${x + Math.cos(a) * r * 1.28}" y2="${y + Math.sin(a) * r * 1.28}"
+            stroke="#f0a35e" stroke-width="${el.heavy ? 2.6 : 1.7}"/>`;
+        }).join("");
+        return `
+          <circle cx="${x}" cy="${y}" r="${r * 0.72}" fill="rgba(240,163,94,0.4)" stroke="#f0a35e" stroke-width="${el.heavy ? 2.6 : 1.8}"/>
+          ${spikes}`;
+      }
       if (el.t === "deny") {
         const x = px(el.x), y = py(el.y);
         const r = el.r || 11;

@@ -54,7 +54,7 @@ SINGLETON_ELEMENTS = ("hotbar", "badge", "stickL", "stickR", "bar")
 SUBJECT_ELEMENTS = (
     "unit", "hero", "card", "building", "crosshair", "menu", "stickL", "stickR",
     "key", "hotbar", "wasd", "wheel", "anchor", "touchpt", "prop",
-    "vehicle", "corpse", "npc", "deny",
+    "vehicle", "corpse", "npc", "deny", "impact",
 )
 
 

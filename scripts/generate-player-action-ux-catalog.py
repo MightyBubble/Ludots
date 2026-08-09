@@ -186,6 +186,11 @@ def corpse(x, y):
     return {"t": "corpse", "x": x, "y": y}
 
 
+def impact(x, y, r=16, heavy=False):
+    """命中 / 已经炸开：放射线 + 实心圈。和表示「这里可以放」的绿色落点圈区分开。"""
+    return {"t": "impact", "x": x, "y": y, "r": r, "heavy": heavy}
+
+
 def deny(x, y, label=None, r=11):
     """红圈斜杠禁止图标：这一下被系统挡住了，不能只靠文字说。"""
     return {"t": "deny", "x": x, "y": y, "label": label, "r": r}
@@ -659,9 +664,9 @@ def build_cases():
             beat("按下锁定", "镜头与准星钉死目标", "死死咬住", "tps",
                  [hero(40, 60), unit(70, 40, team="enemy"), crosshair(70, 40, locked=True), badge("硬锁")], title="锁定"),
             beat("按切换", "锁跳到下一个敌人", "换人咬", "tps",
-                 [hero(40, 60), unit(70, 40, team="enemy"), crosshair(70, 40, locked=False),
-                  unit(55, 35, team="enemy"), crosshair(55, 35, locked=True),
-                  arrow(70, 40, 55, 35, "move"), badge("切换")], title="切换"),
+                 [hero(40, 60), unit(70, 40, team="enemy"), unit(55, 35, team="enemy"),
+                  crosshair(55, 35, locked=True), arrow(70, 40, 55, 35, "move"),
+                  badge("切换")], title="切换"),
         ], ["动作RPG", "TPS"],
     ))
     c.append(case(
@@ -681,10 +686,11 @@ def build_cases():
         "右键或取消键退出瞄准，不放出技能。",
         [
             beat("按技能进入瞄准", "指示器亮起，跟着准星走", "正在瞄", "moba",
-                 [hero(45, 55), circle_ind(62, 45, 14, True), crosshair(62, 45),
+                 [hero(45, 55), circle_ind(62, 45, 14, True), cursor(62, 45, "aim"),
                   hotbar(active=0), badge("瞄准中")], title="瞄准中"),
-            beat("按右键 / Esc 取消", "指示器消失，技能不消耗、不进 CD", "当没按过", "moba",
-                 [hero(45, 55), cursor(60, 50), hotbar(), badge("已取消")], title="取消"),
+            beat("按右键 / Esc 取消", "指示器消失，技能没消耗、也没进冷却", "当没按过", "moba",
+                 [hero(45, 55), cursor(60, 50), hotbar(active=0),
+                  menu_box(22, 28, ["技能仍可用", "无冷却"]), badge("已取消")], title="取消"),
         ], ["MOBA", "RTS超武"],
     ))
 
@@ -835,7 +841,7 @@ def build_cases():
         "无瞄准，以自己为圆心立刻结算。",
         [
             beat("按技能键", "脚下出现爆炸圈，周围敌人受击", "震开", "topdown",
-                 [hero(50, 55), circle_ind(50, 55, 22, True), unit(65, 50, team="enemy"), badge("自身AOE")], title="炸圈"),
+                 [hero(50, 55), impact(50, 55, 24, True), unit(65, 50, team="enemy"), badge("自身AOE")], title="炸圈"),
         ], ["MOBA", "ARPG"],
     ))
     c.append(case(
@@ -1104,7 +1110,9 @@ def build_cases():
         "按闪避键出无敌帧位移。",
         [
             beat("按闪避", "残影滚开", "躲过", "tps",
-                 [hero(40, 55), path([(40, 55), (58, 48)], "move"), badge("闪避")], title="闪"),
+                 [hero(58, 48), unit(24, 62, team="enemy", face=-30),
+                  arrow(28, 60, 42, 55, "attack"), path([(40, 55), (58, 48)], "move"),
+                  ring(58, 48, r=12, kind="buff"), badge("闪避·无敌帧")], title="闪"),
         ], ["动作RPG", "TPS"],
     ))
     c.append(case(
@@ -1153,7 +1161,9 @@ def build_cases():
         "把敌人往环境特征上打。",
         [
             beat("朝墙方向攻击敌人", "敌人撞墙演出", "糊墙上", "tps",
-                 [hero(40, 55), unit(55, 50, team="enemy"), building(70, 48), badge("砸墙")], title="砸墙"),
+                 [hero(36, 58), unit(60, 48, team="enemy"), building(76, 46),
+                  arrow(40, 56, 55, 50, "attack"), path([(58, 50), (68, 48), (72, 47)], "move"),
+                  impact(72, 47, 15, heavy=True), badge("砸墙")], title="砸墙"),
         ], ["蝙蝠侠", "动作RPG"],
     ))
     c.append(case(
@@ -1386,11 +1396,11 @@ def build_cases():
                   unit(72, 40, team="enemy"), cursor(72, 40, "up"),
                   arrow(28, 54, 68, 42, "attack"), badge("右键对象")], title="点对象"),
             beat("选工人，右键空地", "出现移动旗，工人走开", "去那儿", "topdown",
-                 [unit(30, 58, sel=True), ring(30, 58), building(68, 38),
+                 [unit(30, 58, sel=True, role="工"), ring(30, 58), prop(68, 38, "矿", kind="ore"),
                   arrow(32, 56, 50, 70, "move"), circle_ind(50, 70, 8, True),
                   cursor(50, 70, "up"), badge("右键地面=走")], title="工人点地"),
             beat("选工人，右键矿", "下达采集，工人奔向矿点", "去挖", "topdown",
-                 [unit(30, 58, sel=True), ring(30, 58), building(68, 38),
+                 [unit(30, 58, sel=True, role="工"), ring(30, 58), prop(68, 38, "矿", kind="ore"),
                   arrow(34, 56, 64, 40, "move"), ring(68, 38, r=10, kind="buff"),
                   cursor(68, 38, "up"), badge("右键矿=采")], title="工人点矿"),
         ], ["SC2", "RA2", "RTS"],
@@ -1871,6 +1881,7 @@ def build_cases():
         [
             beat("有目标时按下自动攻击", "角色自动对目标普攻", "自己打着", "tps",
                  [hero(40, 55, face=20), unit(68, 42, team="enemy"), ring(68, 42, kind="lock"),
+                  arrow(44, 54, 64, 44, "attack"), impact(68, 42, 13),
                   badge("自动攻击开")], title="开启"),
             beat("再按关闭或目标死亡", "停手", "停", "tps",
                  [hero(40, 55), badge("自动攻击关")], title="关闭"),
@@ -2066,7 +2077,8 @@ def build_cases():
         "观战点队友切换相机；回放可暂停、打点、看别人视角。只读，不改对局。",
         [
             beat("观战中点队友头像或数字键", "相机切到该玩家视角", "换人看", "tps",
-                 [hero(48, 55), menu_box(26, 68, ["1P", "2P", "3P"]), badge("观战切换")], title="切视角"),
+                 [hero(70, 46), unit(30, 60, team="ally"),
+                  menu_box(22, 20, ["1P", "2P", "3P"], active=1), badge("观战切换·跟 2P")], title="切视角"),
             beat("回放中拖时间轴 / 暂停打点", "画面跳到该时刻，可加书签", "倒回去看", "tps",
                  [hero(48, 55), bar(50, 78, 0.4, "cast", "时间轴"), badge("回放打点")], title="回放"),
         ], ["MOBA", "FPS", "MMO"],
@@ -2110,10 +2122,12 @@ def build_cases():
         "离开角度提示立刻收回——这是动态解锁，不是常驻技能。",
         [
             beat("正面靠近敌人", "无处决提示，仍是普通攻击", "还不能暗杀掉", "tps",
-                 [hero(40, 55, face=20), unit(65, 45, team="enemy", face=200), badge("无暗杀")], title="正面"),
+                 [hero(40, 55, face=20), unit(65, 45, team="enemy", face=200),
+                  deny(65, 28, "正面不可暗杀"), badge("无暗杀")], title="正面"),
             beat("绕到背后或进入潜行有效区", "出现「暗杀/背刺」提示", "机会来了", "tps",
-                 [hero(70, 48, face=200), unit(58, 45, team="enemy", face=20),
-                  ring(58, 45, kind="lock"), badge("暗杀解锁")], title="背后解锁"),
+                 [hero(70, 48, face=200), unit(58, 45, team="enemy", face=20, highlight=True),
+                  ring(58, 45, kind="lock"), keyhint(58, 26, "F", "active", "暗杀/背刺"),
+                  badge("暗杀解锁")], title="背后解锁"),
             beat("离开背后角度", "暗杀提示消失", "窗口没了", "tps",
                  [hero(40, 60, face=10), unit(65, 45, team="enemy"), badge("提示收回")], title="收回"),
         ], ["刺客信条", "动作RPG", "潜行游戏"],
@@ -2124,10 +2138,12 @@ def build_cases():
         "像战神/鬼泣处决窗、魂系背刺窗、破刃一闪。",
         [
             beat("敌人满血时靠近", "无处决，只能普通攻击", "还早", "tps",
-                 [hero(40, 55), unit(65, 45, team="enemy"), badge("无处决窗")], title="未达标"),
+                 [hero(40, 55), unit(65, 45, team="enemy"), bar(65, 30, 1.0, "hp", "满血"),
+                  badge("无处决窗")], title="未达标"),
             beat("敌人残血/破防", "处决键或提示亮起", "可以收了", "tps",
-                 [hero(40, 55), unit(65, 45, team="enemy"), ring(65, 45, kind="lock"),
-                  keyhint(52, 36, "F", "active", "处决"), badge("处决解锁")], title="达线解锁"),
+                 [hero(40, 55), unit(65, 45, team="enemy"), bar(65, 30, 0.18, "hp", "残血 18%"),
+                  ring(65, 45, kind="lock"), keyhint(52, 36, "F", "active", "处决"),
+                  badge("处决解锁")], title="达线解锁"),
             beat("窗口内按处决", "播专属处决，否则窗口关闭后恢复普攻", "收掉", "tps",
                  [hero(50, 50), unit(65, 45, team="enemy", size=0.85), ring(65, 45, kind="lock"),
                   arrow(50, 50, 62, 45, "attack"), badge("处决打出")], title="打出"),
@@ -2303,10 +2319,12 @@ def build_cases():
         [
             beat("只开自动攻击", "靠近敌人只普攻，不大招", "平A着", "tps",
                  [hero(40, 55, face=20), unit(68, 42, team="enemy"),
-                  arrow(45, 52, 64, 44, "attack"), badge("仅自动普攻")], title="仅普攻"),
+                  arrow(45, 52, 64, 44, "attack"), hotbar(),
+                  deny(26, 34, "技能不自动"), badge("仅自动普攻")], title="仅普攻"),
             beat("普攻自动 + 某技能自动都开", "普攻填充，技能见缝插入", "两套都在跑", "tps",
-                 [hero(40, 55), unit(68, 42, team="enemy"),
-                  arrow(45, 52, 64, 44, "attack"), badge("普攻+技能自动")], title="并行"),
+                 [hero(40, 55, face=20), unit(68, 42, team="enemy"),
+                  arrow(45, 52, 64, 44, "attack"), circle_ind(68, 42, 15, True),
+                  hotbar(dot=1, cd=1), badge("普攻+技能自动")], title="并行"),
         ], ["魔兽世界", "MMO", "RTS"],
     ))
 
@@ -2427,9 +2445,10 @@ def build_cases():
         "长途跑图用，和跟随队友不同。",
         [
             beat("按下自动前进", "角色自己往前走，W 呈锁定态", "甩手跑图", "tps",
-                 [hero(45, 55, face=-90), arrow(45, 50, 45, 30, "move"), badge("自动前进ON")], title="锁前进"),
+                 [hero(45, 55, face=-90), arrow(45, 50, 45, 30, "move"),
+                  keyhint(76, 76, "W", "active", "锁定前进"), badge("自动前进ON")], title="锁前进"),
             beat("再按取消或按 S", "自动前进关闭，停下或改手动", "解锁", "tps",
-                 [hero(45, 55), badge("自动前进OFF")], title="取消"),
+                 [hero(45, 55), keyhint(76, 76, "W", "off"), badge("自动前进OFF")], title="取消"),
         ], ["魔兽世界", "MMO"],
     ))
 
@@ -2633,8 +2652,8 @@ def build_cases():
         "被控时按键明确无效，状态图标说清是哪种控制，控结束才恢复。",
         [
             beat("被晕/沉默时按技能", "整栏变灰拒绝，头顶控制图标闪烁说明控制类型", "动不了", "moba",
-                 [hero(48, 55), ring(48, 55, r=13, kind="lock"), hotbar(off=[0, 1, 2, 3]),
-                  deny(48, 34, "沉默"), badge("沉默中")], title="被控"),
+                 [hero(48, 55), hotbar(off=[0, 1, 2, 3]), deny(48, 32, "沉默·技能全封"),
+                  arrow(44, 58, 28, 64, "move"), badge("沉默中·还能走")], title="被控"),
             beat("控制时间结束", "技能栏恢复亮起，立刻能反打", "缓过来了", "moba",
                  [hero(48, 55), hotbar(active=0), badge("控制解除")], title="解控"),
         ], ["MMO", "MOBA"],
