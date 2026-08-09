@@ -209,84 +209,39 @@ ACTION_GROUPS: list[tuple[str, str, str, tuple[tuple[str, str], ...]]] = [
      (("target-lost-out-of-range", "kbm"),)),
     ("UX-183", "target-lost-invalid-mid-cast", "读条中目标失效并回滚",
      (("target-lost-invalid-mid-cast", "kbm"),)),
-    # ---- 回合制：轮到我之前和之后 ----
-    ("UX-184", "turn-order-timeline", "看行动条谁下一个", (("turn-order-timeline", "kbm"),)),
+    # ---- 回合制：确认与改序（Order 提交形态）----
     ("UX-185", "turn-undo-before-confirm", "确认前都能退回来", (("turn-undo-before-confirm", "kbm"),)),
     ("UX-186", "turn-delay-action", "延后行动等时机", (("turn-delay-action", "kbm"),)),
-    ("UX-187", "turn-enemy-intent", "敌人预告下一步", (("turn-enemy-intent", "kbm"),)),
     ("UX-188", "turn-insert-cutin", "插队改出手顺序", (("turn-insert-cutin", "kbm"),)),
-    # ---- 战棋：格子、朝向、控制区 ----
+    # ---- 战棋：格子合法性与路径规则 ----
     ("UX-189", "srpg-move-range-path", "移动范围与路径花费", (("srpg-move-range-path", "kbm"),)),
-    ("UX-190", "srpg-facing-backstab", "朝向决定伤害", (("srpg-facing-backstab", "kbm"),)),
     ("UX-191", "srpg-zone-of-control", "踩进控制区被迫停下", (("srpg-zone-of-control", "kbm"),)),
     ("UX-192", "srpg-tile-occupied", "目标格被占怎么办", (("srpg-tile-occupied", "kbm"),)),
-    ("UX-193", "srpg-height-cover", "格子的高低与掩体", (("srpg-height-cover", "kbm"),)),
-    # ---- 大战略：对抽象东西下手 ----
+    # ---- 大战略：抽象目标类型 ----
     ("UX-194", "gs-cast-on-region", "把一件事派到某个省", (("gs-cast-on-region", "kbm"),)),
     ("UX-195", "gs-cast-on-relation", "对两方之间的关系下手", (("gs-cast-on-relation", "kbm"),)),
     ("UX-196", "gs-cast-on-faction", "对派系游说", (("gs-cast-on-faction", "kbm"),)),
     ("UX-197", "gs-enact-law", "颁布法令改规则", (("gs-enact-law", "kbm"),)),
-    ("UX-198", "gs-abstract-cost", "代价是威望与影响力", (("gs-abstract-cost", "kbm"),)),
     ("UX-199", "gs-tiered-scope", "生效范围是行政层级", (("gs-tiered-scope", "kbm"),)),
-    # ---- 技能的时机 ----
+    # ---- 技能 Order：时机 / 代价闸 / 非常规目标 ----
     ("UX-200", "ab-input-buffer", "后摆里提前按会被记住", (("ab-input-buffer", "kbm"),)),
     ("UX-201", "ab-cancel-recovery", "用闪避砍掉自己的后摆", (("ab-cancel-recovery", "kbm"),)),
     ("UX-202", "ab-delayed-aoe", "先标地面过一会才炸", (("ab-delayed-aoe", "kbm"),)),
-    ("UX-203", "ab-reactive-trigger", "被打那一下自动触发", (("ab-reactive-trigger", "kbm"),)),
-    # ---- 技能的代价 ----
     ("UX-204", "ab-charges-stack", "攒层数能连按几次", (("ab-charges-stack", "kbm"),)),
     ("UX-205", "ab-global-cooldown", "全局冷却压住整栏", (("ab-global-cooldown", "kbm"),)),
-    ("UX-206", "ab-hp-cost", "拿血当代价", (("ab-hp-cost", "kbm"),)),
     ("UX-207", "ab-cost-on-resolve", "按下就扣还是打中才扣", (("ab-cost-on-resolve", "kbm"),)),
-    # ---- 技能打出去之后 ----
-    ("UX-208", "ab-miss-vs-immune", "没打中和被免疫是两回事", (("ab-miss-vs-immune", "kbm"),)),
-    ("UX-209", "ab-shield-absorb", "护盾吃掉了多少伤害", (("ab-shield-absorb", "kbm"),)),
-    ("UX-210", "ab-stack-detonate", "叠层再引爆", (("ab-stack-detonate", "kbm"),)),
-    ("UX-211", "ab-reflect-back", "我的技能被弹回来", (("ab-reflect-back", "kbm"),)),
-    # ---- 技能打在效果和技能身上 ----
     ("UX-212", "ab-target-existing-effect", "目标是身上那条状态", (("ab-target-existing-effect", "kbm"),)),
     ("UX-213", "ab-target-own-ability", "目标是我自己的另一个技能", (("ab-target-own-ability", "kbm"),)),
     ("UX-214", "ab-target-projectile", "目标是飞在空中那颗", (("ab-target-projectile", "kbm"),)),
     ("UX-215", "ab-target-own-summon", "目标是我自己放下的东西", (("ab-target-own-summon", "kbm"),)),
-    # ---- 技能被改写 ----
-    ("UX-216", "ab-talent-variant", "同一键因天赋结果不同", (("ab-talent-variant", "kbm"),)),
-    ("UX-217", "ab-element-reaction", "两种元素凑出额外反应", (("ab-element-reaction", "kbm"),)),
-    ("UX-218", "ab-terrain-shape", "技能改的是地形本身", (("ab-terrain-shape", "kbm"),)),
     ("UX-219", "ab-conditional-target", "目标是所有满足条件的", (("ab-conditional-target", "kbm"),)),
-    # ---- 搜打撤 ----
-    ("UX-220", "ex-loadout-bring-in", "进局前选带什么进去", (("ex-loadout-bring-in", "kbm"),)),
-    ("UX-221", "ex-loot-under-threat", "有人靠近时还要不要继续翻", (("ex-loot-under-threat", "kbm"),)),
-    ("UX-222", "ex-extract-zone", "撤离点开了快关了关了", (("ex-extract-zone", "kbm"),)),
-    ("UX-223", "ex-death-insurance", "死了投保的还在没投保的掉光", (("ex-death-insurance", "kbm"),)),
-    ("UX-224", "ex-extract-channel", "撤离读条中被打断", (("ex-extract-channel", "kbm"),)),
-    # ---- 潜行道具（MGSV）----
-    ("UX-225", "sk-binocular-mark", "望远镜标记敌人", (("sk-binocular-mark", "kbm"),)),
-    ("UX-226", "sk-tranq-carry", "麻醉放倒再扛走", (("sk-tranq-carry", "kbm"),)),
-    ("UX-227", "sk-gadget-wheel", "道具轮盘切换手里那一件", (("sk-gadget-wheel", "kbm"),)),
-    ("UX-228", "sk-fulton", "气球回收敌人或物资", (("sk-fulton", "kbm"),)),
-    ("UX-229", "sk-gadget-combo", "先诱饵再摸过去", (("sk-gadget-combo", "kbm"),)),
-    # ---- 连杀奖励（COD）----
-    ("UX-230", "ks-earn-streak", "连杀攒满奖励图标亮起", (("ks-earn-streak", "kbm"),)),
-    ("UX-231", "ks-airstrike-mark", "叫空袭先标落点再确认", (("ks-airstrike-mark", "kbm"),)),
-    ("UX-232", "ks-drone-takeover", "无人机轰炸接管视角", (("ks-drone-takeover", "kbm"),)),
-    ("UX-233", "ks-care-package", "空投补给砸下来大家抢", (("ks-care-package", "kbm"),)),
-    # ---- 魂类 ----
-    ("UX-234", "soul-stamina-budget", "精力条砍闪跑共用一管", (("soul-stamina-budget", "gamepad"),)),
-    ("UX-235", "soul-flask-interrupt", "喝药瓶站桩可被打断", (("soul-flask-interrupt", "gamepad"),)),
-    ("UX-236", "soul-runback", "死了掉魂跑回去捡", (("soul-runback", "gamepad"),)),
-    ("UX-237", "soul-bonfire-rest", "篝火休息回满敌人刷新", (("soul-bonfire-rest", "gamepad"),)),
-    ("UX-238", "soul-boss-phase", "Boss转阶段血条分段换招", (("soul-boss-phase", "gamepad"),)),
-    # ---- 高达 VS ----
-    ("UX-239", "vs-boost-overheat", "推进器冲刺与推进过热", (("vs-boost-overheat", "gamepad"),)),
-    ("UX-240", "vs-awaken", "觉醒限时整机强化", (("vs-awaken", "gamepad"),)),
-    ("UX-241", "vs-range-melee-swap", "射格切换远射和近打", (("vs-range-melee-swap", "gamepad"),)),
-    ("UX-242", "vs-down-value", "击坠值攒满强制倒地", (("vs-down-value", "gamepad"),)),
-    # ---- 格斗 ----
+    # ---- 品类手感：只留 Order 层真差异 ----
+    ("UX-222", "ex-extract-zone", "撤离点状态决定能不能下撤离令", (("ex-extract-zone", "kbm"),)),
+    ("UX-226", "sk-downed-interact", "对倒地目标交互扛走或回收", (("sk-downed-interact", "kbm"),)),
+    ("UX-234", "soul-stamina-budget", "多动作共用资源见底拒令", (("soul-stamina-budget", "gamepad"),)),
     ("UX-243", "ft-motion-input", "搓招指令序列对了才出招", (("ft-motion-input", "gamepad"),)),
-    ("UX-244", "ft-cancel-into-special", "取消链普攻中途切必杀", (("ft-cancel-into-special", "gamepad"),)),
     ("UX-245", "ft-throw-tech", "投技与受身拆投", (("ft-throw-tech", "gamepad"),)),
-    ("UX-246", "ft-frame-advantage", "帧优势打完谁先能动", (("ft-frame-advantage", "gamepad"),)),
-    ("UX-247", "ft-guard-break", "防守破了才能硬直追打", (("ft-guard-break", "gamepad"),)),
+
 ]
 
 
