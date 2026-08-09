@@ -7,7 +7,7 @@
 - 生成脚本：`scripts/generate-player-action-ux-catalog.py`
 - 逻辑文案：`scripts/player_action_ux_beat_logic.py`
 - 实现标注：`scripts/player_action_ux_impl_notes.py`
-- 生成时 HEAD：`2a276a9a9`（以你拉取后的 `git rev-parse` 为准；合并后会变）
+- 生成时 HEAD：`995e84a05`（以你拉取后的 `git rev-parse` 为准；合并后会变）
 - 分支语境：`cursor/ux-sequence-io-4211`（时序=设备→逻辑→画面；左栏仍为复刻目标）
 - 已合 main：图鉴 #743–#750（含按游戏分类）
 
@@ -16,9 +16,9 @@
 - 三栏：**复刻目标游戏** | 动作列表 | 详情
 - 左栏 id 来自 `TARGET_GAMES`；筛选看 `case.targets.includes(id)`，允许重复
 - `case.category` / `family` = 功能族，只给 impl_notes 与详情副标
-- 详情内：**一镜一对**——每一拍一行，左 Mermaid 时序 / 右分镜，共用一条滚动轴（禁止左右各自滚）
-- 拍号芯片 / ←→ / h·l 只负责跳到对应那一对并高亮
-- **时序图参与者只有三个：设备输入 → 逻辑处理 → 画面输出**；禁止再把手感/爽点做成泳道；每拍单独一张时序图
+- 详情内：**一镜一对**——每拍一行，左 Mermaid / 右分镜，共用一条滚动轴（禁止左右各自滚）
+- 拍号芯片 / ←→ / h·l 跳到对应那一对；每拍单独一张时序图
+- **时序图参与者只有三个：设备输入 → 逻辑处理 → 画面输出**；禁止再把手感/爽点做成泳道
 - 每拍必有 `input` / `logic` / `screen`；`logic` 来自 `BEAT_LOGIC`，缺键直接 fail 生成
 - 每个 case 必有 `ludots` 与 `todos`；勿手改 `catalog-data.js`
 
@@ -44,7 +44,7 @@
 ## 规模
 
 - cases = 168
-- beats = 339
+- beats = 340
 - target_games = 13
 - target_memberships = 480（含跨游戏重复）
 
