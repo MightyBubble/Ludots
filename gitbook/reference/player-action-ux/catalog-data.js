@@ -48,14 +48,14 @@ window.PLAYER_ACTION_UX_CATALOG = {
     "aim"
   ],
   "checkpoint": {
-    "head": "61919e039",
+    "head": "2f71d57f6",
     "branch_hint": "cursor/ux-action-id-platform-tabs-4211",
     "impl_notes": "scripts/player_action_ux_impl_notes.py",
     "beat_logic": "scripts/player_action_ux_beat_logic.py",
     "action_index": "scripts/player_action_ux_action_index.py",
     "note": "列表=unique actions；详情平台 tab；时序=设备/逻辑/画面；勿手改 catalog-data.js",
     "weak_storyboard_beats": [],
-    "unique_actions": 180,
+    "unique_actions": 181,
     "multi_platform_actions": 8
   },
   "categories": [
@@ -493,8 +493,8 @@ window.PLAYER_ACTION_UX_CATALOG = {
     {
       "actionNo": "UX-011",
       "key": "mmo-tab-target",
-      "title": "Tab选敌点框选友",
-      "summary": "Tab 在前方敌人间切换当前目标；点队伍/团队框选中队友以便治疗或菜单。",
+      "title": "按Tab轮换敌方目标",
+      "summary": "键盘按一下 Tab 就把当前目标换到前方下一个敌人，不用把鼠标移过去。前方没有可选敌人时要明确没反应，而不是悄悄选到背后或很远的东西。",
       "platforms": [
         "kbm"
       ],
@@ -515,7 +515,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
         "MMO",
         "魔兽世界"
       ],
-      "beatCount": 2,
+      "beatCount": 3,
       "caseCount": 1
     },
     {
@@ -5633,6 +5633,34 @@ window.PLAYER_ACTION_UX_CATALOG = {
       ],
       "beatCount": 2,
       "caseCount": 2
+    },
+    {
+      "actionNo": "UX-181",
+      "key": "mmo-party-frame-target",
+      "title": "点队友头像选中他",
+      "summary": "把鼠标移到队伍框里某个队友的头像上点一下，他就成了我的当前目标，接着放治疗就落在他身上。这是用界面选人，和在世界里点角色是两条路。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "mmo-party-frame-target"
+        }
+      ],
+      "targets": [
+        "wow"
+      ],
+      "genres": [
+        "MMO",
+        "魔兽世界"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
     }
   ],
   "cases": [
@@ -18785,8 +18813,8 @@ window.PLAYER_ACTION_UX_CATALOG = {
       "id": "mmo-tab-target",
       "category": "mmo-social",
       "family": "mmo-social",
-      "title": "Tab 循环选敌 / 点框选友",
-      "summary": "Tab 在前方敌人间切换当前目标；点队伍/团队框选中队友以便治疗或菜单。",
+      "title": "按 Tab 在敌人之间轮换目标",
+      "summary": "键盘按一下 Tab 就把当前目标换到前方下一个敌人，不用把鼠标移过去。前方没有可选敌人时要明确没反应，而不是悄悄选到背后或很远的东西。",
       "genres": [
         "魔兽世界",
         "MMO"
@@ -18796,30 +18824,21 @@ window.PLAYER_ACTION_UX_CATALOG = {
       ],
       "beats": [
         {
-          "title": "Tab 选敌",
-          "input": "按 Tab",
-          "screen": "当前目标描边换到下一个敌人",
+          "title": "选中最近的",
+          "input": "按一下 Tab",
+          "screen": "最近那个敌人成为当前目标，套上锁定圈",
           "view": "tps",
           "cast": [
             {
               "t": "hero",
-              "x": 35,
-              "y": 60,
+              "x": 30,
+              "y": 62,
               "face": 0
             },
             {
               "t": "unit",
               "x": 55,
-              "y": 40,
-              "sel": false,
-              "team": "enemy",
-              "face": 0,
-              "size": 1
-            },
-            {
-              "t": "unit",
-              "x": 72,
-              "y": 48,
+              "y": 42,
               "sel": false,
               "team": "enemy",
               "face": 0,
@@ -18828,68 +18847,149 @@ window.PLAYER_ACTION_UX_CATALOG = {
             {
               "t": "ring",
               "x": 55,
-              "y": 40,
+              "y": 42,
               "r": 8,
               "kind": "lock"
             },
             {
+              "t": "unit",
+              "x": 76,
+              "y": 50,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "key",
+              "x": 24,
+              "y": 82,
+              "label": "Tab",
+              "state": "active",
+              "hint": "换目标"
+            },
+            {
               "t": "badge",
-              "text": "Tab选敌"
+              "text": "目标=近的那个"
             }
           ],
-          "logic": "把敌方目标切到循环列表中下一个"
+          "logic": "在前方敌人里取最近的一个设为当前目标"
         },
         {
-          "title": "点框选友",
-          "input": "点击队伍框上头像",
-          "screen": "该队友成为友好目标/治疗目标",
-          "view": "moba",
+          "title": "换到下一个",
+          "input": "再按一下 Tab",
+          "screen": "目标换到下一个敌人，上一个的锁定圈撤掉",
+          "view": "tps",
           "cast": [
             {
               "t": "hero",
-              "x": 40,
-              "y": 55,
+              "x": 30,
+              "y": 62,
               "face": 0
             },
             {
               "t": "unit",
-              "x": 65,
-              "y": 45,
-              "sel": true,
-              "team": "ally",
+              "x": 55,
+              "y": 42,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "unit",
+              "x": 76,
+              "y": 50,
+              "sel": false,
+              "team": "enemy",
               "face": 0,
               "size": 1
             },
             {
               "t": "ring",
-              "x": 65,
-              "y": 45,
+              "x": 76,
+              "y": 50,
               "r": 8,
-              "kind": "buff"
+              "kind": "lock"
             },
             {
-              "t": "menu",
-              "x": 16,
-              "y": 28,
-              "lines": [
-                "[我]",
-                "[友A]←",
-                "[友B]"
-              ],
-              "active": null
+              "t": "key",
+              "x": 24,
+              "y": 82,
+              "label": "Tab",
+              "state": "active",
+              "hint": "换目标"
             },
             {
-              "t": "cursor",
-              "x": 28,
-              "y": 40,
-              "mode": "up"
+              "t": "queue",
+              "x": 55,
+              "y": 30,
+              "n": 1,
+              "state": "done"
+            },
+            {
+              "t": "queue",
+              "x": 76,
+              "y": 36,
+              "n": 2,
+              "state": "active"
             },
             {
               "t": "badge",
-              "text": "点框"
+              "text": "轮到第二个"
             }
           ],
-          "logic": "把点击的队友设为友好目标"
+          "logic": "把当前目标切到循环列表里的下一个敌人"
+        },
+        {
+          "title": "没得选",
+          "input": "前方没有可选敌人时按 Tab",
+          "screen": "明确没反应，不乱选背后或超远的目标",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 30,
+              "y": 62,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 92,
+              "y": 20,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "circle",
+              "x": 30,
+              "y": 62,
+              "r": 26,
+              "ok": false
+            },
+            {
+              "t": "key",
+              "x": 24,
+              "y": 82,
+              "label": "Tab",
+              "state": "off",
+              "hint": null
+            },
+            {
+              "t": "deny",
+              "x": 58,
+              "y": 50,
+              "label": "前方无可选目标",
+              "r": 11
+            },
+            {
+              "t": "badge",
+              "text": "Tab 无效"
+            }
+          ],
+          "logic": "前方无合法目标时不改变当前目标并回报无效"
         }
       ],
       "ludots": "MMO 社交：Core 无队伍/密聊/交易窗/对话树主链。",
@@ -18899,7 +18999,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
       "familyTitle": "MMO：人、对话、队伍",
       "actionNo": "UX-011",
       "actionKey": "mmo-tab-target",
-      "actionTitle": "Tab选敌点框选友",
+      "actionTitle": "按Tab轮换敌方目标",
       "platform": "kbm",
       "platformLabel": "键鼠",
       "variants": [
@@ -18907,6 +19007,227 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "platform": "kbm",
           "platformLabel": "键鼠",
           "caseId": "mmo-tab-target"
+        }
+      ]
+    },
+    {
+      "id": "mmo-party-frame-target",
+      "category": "mmo-social",
+      "family": "mmo-social",
+      "title": "点界面上的队友头像选中他",
+      "summary": "把鼠标移到队伍框里某个队友的头像上点一下，他就成了我的当前目标，接着放治疗就落在他身上。这是用界面选人，和在世界里点角色是两条路。",
+      "genres": [
+        "魔兽世界",
+        "MMO"
+      ],
+      "targets": [
+        "wow"
+      ],
+      "beats": [
+        {
+          "title": "看见掉血",
+          "input": "队伍框里有人掉血",
+          "screen": "那一行的血条变短变色，提醒我该看他",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 46,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 66,
+              "y": 48,
+              "sel": false,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "partyframe",
+              "x": 6,
+              "y": 24,
+              "rows": [
+                {
+                  "name": "我",
+                  "hp": 1.0
+                },
+                {
+                  "name": "友A",
+                  "hp": 0.28
+                },
+                {
+                  "name": "友B",
+                  "hp": 0.9
+                }
+              ],
+              "target": null
+            },
+            {
+              "t": "badge",
+              "text": "友A 残血"
+            }
+          ],
+          "logic": "队友血量变化实时刷新队伍框那一行"
+        },
+        {
+          "title": "点头像",
+          "input": "点他的头像",
+          "screen": "该行高亮，他成为我的当前友好目标",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 46,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 66,
+              "y": 48,
+              "sel": false,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "ring",
+              "x": 66,
+              "y": 48,
+              "r": 8,
+              "kind": "lock"
+            },
+            {
+              "t": "partyframe",
+              "x": 6,
+              "y": 24,
+              "rows": [
+                {
+                  "name": "我",
+                  "hp": 1.0
+                },
+                {
+                  "name": "友A",
+                  "hp": 0.28
+                },
+                {
+                  "name": "友B",
+                  "hp": 0.9
+                }
+              ],
+              "target": 1
+            },
+            {
+              "t": "cursor",
+              "x": 16,
+              "y": 44,
+              "mode": "up"
+            },
+            {
+              "t": "badge",
+              "text": "友好目标=友A"
+            }
+          ],
+          "logic": "把界面上被点的那名队友设为当前友好目标"
+        },
+        {
+          "title": "对他放治疗",
+          "input": "按治疗键",
+          "screen": "治疗落在被选中的队友身上，不用把鼠标移到他角色上",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 46,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 66,
+              "y": 48,
+              "sel": true,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "ring",
+              "x": 66,
+              "y": 48,
+              "r": 8,
+              "kind": "buff"
+            },
+            {
+              "t": "partyframe",
+              "x": 6,
+              "y": 24,
+              "rows": [
+                {
+                  "name": "我",
+                  "hp": 1.0
+                },
+                {
+                  "name": "友A",
+                  "hp": 0.72
+                },
+                {
+                  "name": "友B",
+                  "hp": 0.9
+                }
+              ],
+              "target": 1
+            },
+            {
+              "t": "arrow",
+              "x1": 50,
+              "y1": 56,
+              "x2": 62,
+              "y2": 50,
+              "kind": "move"
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": 0,
+              "cd": 0,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
+            },
+            {
+              "t": "badge",
+              "text": "治疗到位"
+            }
+          ],
+          "logic": "对当前友好目标结算治疗，无需世界内拾取目标"
+        }
+      ],
+      "ludots": "MMO 社交：Core 无队伍/密聊/交易窗/对话树主链。",
+      "todos": [
+        "TODO: party / trade / dialogue 产品基建"
+      ],
+      "familyTitle": "MMO：人、对话、队伍",
+      "actionNo": "UX-181",
+      "actionKey": "mmo-party-frame-target",
+      "actionTitle": "点队友头像选中他",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "mmo-party-frame-target"
         }
       ]
     },
@@ -19184,45 +19505,59 @@ window.PLAYER_ACTION_UX_CATALOG = {
         {
           "title": "接受",
           "input": "点接受",
-          "screen": "进队，队伍框出现",
+          "screen": "进队，队伍框多出他那一行",
           "view": "moba",
           "cast": [
             {
               "t": "hero",
-              "x": 35,
-              "y": 55,
+              "x": 40,
+              "y": 58,
               "face": 0
             },
             {
               "t": "unit",
-              "x": 55,
-              "y": 45,
+              "x": 66,
+              "y": 48,
               "sel": false,
               "team": "ally",
               "face": 0,
               "size": 1
             },
             {
-              "t": "unit",
-              "x": 70,
-              "y": 50,
-              "sel": false,
-              "team": "ally",
-              "face": 0,
-              "size": 1
-            },
-            {
-              "t": "menu",
-              "x": 40,
-              "y": 70,
-              "lines": [
-                "队伍 2/5"
+              "t": "partyframe",
+              "x": 6,
+              "y": 26,
+              "rows": [
+                {
+                  "name": "我",
+                  "hp": 1.0
+                },
+                {
+                  "name": "阿强",
+                  "hp": 0.95
+                }
               ],
-              "active": null
+              "target": null
             },
             {
               "t": "badge",
-              "text": "已入队"
+              "text": "队伍 2/5"
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": null,
+              "cd": null,
+              "extra": 3,
+              "off": [],
+              "dot": null,
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
             }
           ],
           "logic": "接受邀请后把双方写入同一队伍"
@@ -19230,27 +19565,36 @@ window.PLAYER_ACTION_UX_CATALOG = {
         {
           "title": "离队",
           "input": "点离队或被移出",
-          "screen": "队伍框更新",
+          "screen": "队伍框只剩我一行",
           "view": "moba",
           "cast": [
             {
               "t": "hero",
               "x": 48,
-              "y": 55,
+              "y": 58,
               "face": 0
             },
             {
-              "t": "menu",
-              "x": 40,
-              "y": 70,
-              "lines": [
-                "队伍 1/5"
+              "t": "partyframe",
+              "x": 6,
+              "y": 26,
+              "rows": [
+                {
+                  "name": "我",
+                  "hp": 1.0
+                }
               ],
-              "active": null
+              "target": null
+            },
+            {
+              "t": "cursor",
+              "x": 28,
+              "y": 44,
+              "mode": "up"
             },
             {
               "t": "badge",
-              "text": "离队"
+              "text": "队伍 1/5"
             }
           ],
           "logic": "离队或被移出后更新队伍名单"
@@ -22351,15 +22695,30 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "mode": "lock"
             },
             {
-              "t": "menu",
-              "x": 20,
-              "y": 18,
-              "lines": [
-                "1P",
-                "2P",
-                "3P"
+              "t": "partyframe",
+              "x": 4,
+              "y": 20,
+              "rows": [
+                {
+                  "name": "1P",
+                  "hp": 0.8
+                },
+                {
+                  "name": "2P",
+                  "hp": 0.55
+                },
+                {
+                  "name": "3P",
+                  "hp": 1.0
+                }
               ],
-              "active": 1
+              "target": 1
+            },
+            {
+              "t": "cursor",
+              "x": 14,
+              "y": 40,
+              "mode": "up"
             },
             {
               "t": "badge",

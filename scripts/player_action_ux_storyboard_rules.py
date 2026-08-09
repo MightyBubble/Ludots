@@ -71,6 +71,7 @@ SUBJECT_ELEMENTS = (
     "key", "hotbar", "wasd", "wheel", "anchor", "touchpt", "prop",
     "vehicle", "corpse", "npc", "deny", "impact", "held", "queue", "camera",
     "playertag", "splitscreen", "padslot", "roster", "netstat", "voice", "vote", "marker",
+    "partyframe",
 )
 
 
@@ -205,6 +206,12 @@ PROMISE_RULES: tuple[tuple[str, str, object, str], ...] = (
         lambda cast: any(e.get("t") == "arrow" and e.get("kind") == "move" for e in cast)
         and any(e.get("t") == "arrow" and e.get("kind") == "attack" for e in cast),
         "补一根 arrow(kind='move') 表示走的方向，和 attack 那根并排",
+    ),
+    (
+        "说队伍框/队友头像，要用队伍框而不是菜单",
+        r"队伍框|团队框|队友头像|点框选",
+        lambda cast: _has(cast, "partyframe"),
+        "补 partyframe(x, y, rows, target=...)；菜单框不是队伍框",
     ),
     (
         "说团队标记，要用标记图标而不是键帽",

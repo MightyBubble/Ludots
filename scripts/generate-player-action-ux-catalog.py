@@ -258,6 +258,12 @@ def padslot(states):
     return {"t": "padslot", "states": list(states)}
 
 
+def partyframe(x, y, rows, target=None):
+    """队伍头像框：竖排头像 + 血条。rows = [{"name": ..., "hp": 0..1}]，
+    target = 当前友好目标那一行（高亮）。这是界面上的队伍框，不是菜单。"""
+    return {"t": "partyframe", "x": x, "y": y, "rows": list(rows), "target": target}
+
+
 def roster(x, y, rows, title="房间"):
     """房间玩家名单。rows = [{"name": ..., "state": "ready|waiting|offline"}]。"""
     return {"t": "roster", "x": x, "y": y, "rows": list(rows), "title": title}
@@ -1833,16 +1839,49 @@ def build_cases():
 
     # ===== 二十、MMO 社交 =====
     c.append(case(
-        "mmo-tab-target", "mmo-social", "Tab 循环选敌 / 点框选友",
-        "Tab 在前方敌人间切换当前目标；点队伍/团队框选中队友以便治疗或菜单。",
+        "mmo-tab-target", "mmo-social", "按 Tab 在敌人之间轮换目标",
+        "键盘按一下 Tab 就把当前目标换到前方下一个敌人，不用把鼠标移过去。"
+        "前方没有可选敌人时要明确没反应，而不是悄悄选到背后或很远的东西。",
         [
-            beat("按 Tab", "当前目标描边换到下一个敌人", "换锁定", "tps",
-                 [hero(35, 60), unit(55, 40, team="enemy"), unit(72, 48, team="enemy"),
-                  ring(55, 40, kind="lock"), badge("Tab选敌")], title="Tab 选敌"),
-            beat("点击队伍框上头像", "该队友成为友好目标/治疗目标", "点框选人", "moba",
-                 [hero(40, 55), unit(65, 45, team="ally", sel=True), ring(65, 45, kind="buff"),
-                  menu_box(16, 28, ["[我]", "[友A]←", "[友B]"]), cursor(28, 40, "up"),
-                  badge("点框")], title="点框选友"),
+            beat("按一下 Tab", "最近那个敌人成为当前目标，套上锁定圈", "先咬住近的", "tps",
+                 [hero(30, 62), unit(55, 42, team="enemy"), ring(55, 42, kind="lock"),
+                  unit(76, 50, team="enemy"), keyhint(24, 82, "Tab", "active", "换目标"),
+                  badge("目标=近的那个")], title="选中最近的"),
+            beat("再按一下 Tab", "目标换到下一个敌人，上一个的锁定圈撤掉", "换下一个", "tps",
+                 [hero(30, 62), unit(55, 42, team="enemy"), unit(76, 50, team="enemy"),
+                  ring(76, 50, kind="lock"), keyhint(24, 82, "Tab", "active", "换目标"),
+                  queue_no(55, 30, 1, "done"), queue_no(76, 36, 2, "active"),
+                  badge("轮到第二个")], title="换到下一个"),
+            beat("前方没有可选敌人时按 Tab", "明确没反应，不乱选背后或超远的目标", "按不动", "tps",
+                 [hero(30, 62), unit(92, 20, team="enemy"), circle_ind(30, 62, 26, False),
+                  keyhint(24, 82, "Tab", "off"), deny(58, 50, "前方无可选目标"),
+                  badge("Tab 无效")], title="没得选"),
+        ], ["魔兽世界", "MMO"],
+    ))
+    c.append(case(
+        "mmo-party-frame-target", "mmo-social", "点界面上的队友头像选中他",
+        "把鼠标移到队伍框里某个队友的头像上点一下，他就成了我的当前目标，"
+        "接着放治疗就落在他身上。这是用界面选人，和在世界里点角色是两条路。",
+        [
+            beat("队伍框里有人掉血", "那一行的血条变短变色，提醒我该看他", "谁在掉血", "moba",
+                 [hero(46, 58), unit(66, 48, team="ally"),
+                  partyframe(6, 24, [{"name": "我", "hp": 1.0},
+                                     {"name": "友A", "hp": 0.28},
+                                     {"name": "友B", "hp": 0.9}]),
+                  badge("友A 残血")], title="看见掉血"),
+            beat("点他的头像", "该行高亮，他成为我的当前友好目标", "选他", "moba",
+                 [hero(46, 58), unit(66, 48, team="ally"), ring(66, 48, kind="lock"),
+                  partyframe(6, 24, [{"name": "我", "hp": 1.0},
+                                     {"name": "友A", "hp": 0.28},
+                                     {"name": "友B", "hp": 0.9}], target=1),
+                  cursor(16, 44, "up"), badge("友好目标=友A")], title="点头像"),
+            beat("按治疗键", "治疗落在被选中的队友身上，不用把鼠标移到他角色上", "奶上去", "moba",
+                 [hero(46, 58), unit(66, 48, team="ally", sel=True), ring(66, 48, kind="buff"),
+                  partyframe(6, 24, [{"name": "我", "hp": 1.0},
+                                     {"name": "友A", "hp": 0.72},
+                                     {"name": "友B", "hp": 0.9}], target=1),
+                  arrow(50, 56, 62, 50, "move"), hotbar(active=0, cd=0),
+                  badge("治疗到位")], title="对他放治疗"),
         ], ["魔兽世界", "MMO"],
     ))
     c.append(case(
@@ -1877,11 +1916,14 @@ def build_cases():
             beat("对玩家发组队邀请", "对方屏幕弹出邀请", "邀了", "moba",
                  [hero(35, 55), unit(65, 45, team="ally"),
                   menu_box(58, 36, ["组队邀请", "接受", "拒绝"]), badge("邀请")], title="邀请"),
-            beat("点接受", "进队，队伍框出现", "组上了", "moba",
-                 [hero(35, 55), unit(55, 45, team="ally"), unit(70, 50, team="ally"),
-                  menu_box(40, 70, ["队伍 2/5"]), badge("已入队")], title="接受"),
-            beat("点离队或被移出", "队伍框更新", "散了", "moba",
-                 [hero(48, 55), menu_box(40, 70, ["队伍 1/5"]), badge("离队")], title="离队"),
+            beat("点接受", "进队，队伍框多出他那一行", "组上了", "moba",
+                 [hero(40, 58), unit(66, 48, team="ally"),
+                  partyframe(6, 26, [{"name": "我", "hp": 1.0},
+                                     {"name": "阿强", "hp": 0.95}]),
+                  badge("队伍 2/5")], title="接受"),
+            beat("点离队或被移出", "队伍框只剩我一行", "散了", "moba",
+                 [hero(48, 58), partyframe(6, 26, [{"name": "我", "hp": 1.0}]),
+                  cursor(28, 44, "up"), badge("队伍 1/5")], title="离队"),
         ], ["魔兽世界", "MMO"],
     ))
     c.append(case(
@@ -2206,8 +2248,10 @@ def build_cases():
         [
             beat("观战中点队友头像或数字键", "相机切到该玩家视角", "换人看", "tps",
                  [hero(70, 46), unit(30, 60, team="ally"), camera(70, 74, angle=-90, mode="lock"),
-                  menu_box(20, 18, ["1P", "2P", "3P"], active=1),
-                  badge("观战切换·跟 2P")], title="切视角"),
+                  partyframe(4, 20, [{"name": "1P", "hp": 0.8},
+                                     {"name": "2P", "hp": 0.55},
+                                     {"name": "3P", "hp": 1.0}], target=1),
+                  cursor(14, 40, "up"), badge("观战切换·跟 2P")], title="切视角"),
             beat("回放中拖时间轴 / 暂停打点", "画面跳到该时刻，可加书签", "倒回去看", "tps",
                  [hero(48, 55), bar(50, 78, 0.4, "cast", "时间轴"), badge("回放打点")], title="回放"),
         ], ["MOBA", "FPS", "MMO"],

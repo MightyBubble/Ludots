@@ -8,7 +8,7 @@
 - 逻辑文案：`scripts/player_action_ux_beat_logic.py`
 - 实现标注：`scripts/player_action_ux_impl_notes.py`
 - 动作编号/平台变体：`scripts/player_action_ux_action_index.py`
-- 生成时 HEAD：`61919e039`（以你拉取后的 `git rev-parse` 为准；合并后会变）
+- 生成时 HEAD：`2f71d57f6`（以你拉取后的 `git rev-parse` 为准；合并后会变）
 - 分支语境：`cursor/ux-action-id-platform-tabs-4211`（unique 动作编号 + 主机/键鼠/触控 tab）
 - 已合 main：图鉴 #743–#755（含按游戏分类、时序三参与者、一镜一对、双人审核）
 
@@ -38,7 +38,7 @@
 - `ra2` **红色警戒2**（47）— 生产建造 · 电力 · 右键语境指令
 - `war3` **魔兽争霸3**（47）— 英雄技 · 物品栏 · RTS 混战
 - `lol` **英雄联盟**（51）— QWER · 技能瞄准 · 补刀走位
-- `wow` **魔兽世界**（69）— 技能栏 · 读条 · 任务与社交循环
+- `wow` **魔兽世界**（70）— 技能栏 · 读条 · 任务与社交循环
 - `clash` **皇室战争**（7）— 拖卡部署 · 圣水 · 触控车道
 - `rotk` **三国志式选单**（6）— 武将 → 指令 → 目标分层菜单
 - `gow` **战神式动作**（70）— 近战连段 · 临时武器栏 · 闪避窗
@@ -55,13 +55,13 @@
 
 ## 规模
 
-- unique_actions = 180
+- unique_actions = 181
 - multi_platform_actions = 8
-- 平台覆盖（唯一动作计）：主机 20、键鼠 162、触控 6 —— 图鉴目前以键鼠为主，主机/触控实现是内容缺口，不是渲染 bug
-- cases = 188（含平台变体实现）
-- beats = 405
+- 平台覆盖（唯一动作计）：主机 20、键鼠 163、触控 6 —— 图鉴目前以键鼠为主，主机/触控实现是内容缺口，不是渲染 bug
+- cases = 189（含平台变体实现）
+- beats = 409
 - target_games = 15
-- target_memberships = 515（含跨游戏重复）
+- target_memberships = 516（含跨游戏重复）
 
 ## 分镜画面审计
 

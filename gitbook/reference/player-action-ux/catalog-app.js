@@ -232,6 +232,28 @@
             <text x="${x + w / 2}" y="${y0 + h / 2 + 3.5}" text-anchor="middle" fill="${c}" font-size="${text.length > 2 ? 8 : 10}" font-family="DM Sans, sans-serif" font-weight="700">${text}</text>`;
         }).join("");
       }
+      if (el.t === "partyframe") {
+        // 队伍头像框：竖排头像 + 血条，当前友好目标高亮。不是菜单，别用 menu 凑
+        const x = px(el.x), y = py(el.y);
+        const rows = el.rows || [];
+        const w = 74, rh = 22;
+        let out = `<text x="${x + 2}" y="${y - 4}" fill="#66758a" font-size="8.5" font-family="IBM Plex Mono, monospace">队伍</text>`;
+        rows.forEach((r, i) => {
+          const ry = y + i * rh;
+          const on = el.target === i;
+          const hp = Math.max(0, Math.min(1, r.hp == null ? 1 : r.hp));
+          const hpColor = hp < 0.35 ? "#ef6b6b" : hp < 0.7 ? "#e0c35a" : "#5dce8f";
+          out += `
+            <rect x="${x}" y="${ry}" width="${w}" height="${rh - 4}" rx="3"
+              fill="${on ? "rgba(240,163,94,0.16)" : "#0b0e13"}"
+              stroke="${on ? "#f0a35e" : "#3a4658"}" stroke-width="${on ? 2 : 1.2}"/>
+            <circle cx="${x + 10}" cy="${ry + 9}" r="6" fill="#5a6b80" stroke="#0b0e13" stroke-width="1"/>
+            <text x="${x + 21}" y="${ry + 8}" fill="${on ? "#f0a35e" : "#e8eef6"}" font-size="9" font-family="DM Sans, sans-serif" font-weight="${on ? 700 : 400}">${esc(r.name)}</text>
+            <rect x="${x + 21}" y="${ry + 11}" width="${w - 27}" height="4" rx="2" fill="#1a2430" stroke="#2c3645" stroke-width="0.8"/>
+            <rect x="${x + 22}" y="${ry + 12}" width="${(w - 29) * hp}" height="2" rx="1" fill="${hpColor}"/>`;
+        });
+        return out;
+      }
       if (el.t === "roster") {
         const x = px(el.x), y = py(el.y);
         const rows = el.rows || [];

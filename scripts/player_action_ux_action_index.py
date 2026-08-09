@@ -26,7 +26,7 @@ ACTION_GROUPS: list[tuple[str, str, str, tuple[tuple[str, str], ...]]] = [
     ("UX-008", "temp-kit-rts-morph-ability", "RTS限时形态换面板", (("temp-kit-rts-morph-ability", "kbm"),)),
     ("UX-009", "context-sc2-rightclick", "SC2右键随选中变化", (("context-sc2-rightclick", "kbm"),)),
     ("UX-010", "habit-shift-queue-cast", "Shift排队施法", (("habit-shift-queue-cast", "kbm"),)),
-    ("UX-011", "mmo-tab-target", "Tab选敌点框选友", (("mmo-tab-target", "kbm"),)),
+    ("UX-011", "mmo-tab-target", "按Tab轮换敌方目标", (("mmo-tab-target", "kbm"),)),
     ("UX-012", "loco-wasd-vs-click", "WASD与点地谁优先", (("loco-wasd-vs-click", "kbm"),)),
     ("UX-013", "army-vehicle", "上车变载具手感", (("army-vehicle", "gamepad"),)),
     ("UX-014", "army-merge", "两单位合体", (("army-merge", "kbm"),)),
@@ -201,6 +201,9 @@ ACTION_GROUPS: list[tuple[str, str, str, tuple[tuple[str, str], ...]]] = [
     ("UX-179", "couch-menu-owner", "同屏共用菜单归谁操作", (("couch-menu-owner", "gamepad"),)),
     ("UX-180", "couch-mixed-devices", "一台机器两种设备各控一角",
      (("couch-mixed-devices-pad", "gamepad"), ("couch-mixed-devices-kbm", "kbm"))),
+    # ---- 从 UX-011 拆出来：用界面选人和用键盘轮换敌人是两条路 ----
+    ("UX-181", "mmo-party-frame-target", "点队友头像选中他",
+     (("mmo-party-frame-target", "kbm"),)),
 ]
 
 
