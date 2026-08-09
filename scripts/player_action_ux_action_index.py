@@ -253,6 +253,40 @@ ACTION_GROUPS: list[tuple[str, str, str, tuple[tuple[str, str], ...]]] = [
     ("UX-217", "ab-element-reaction", "两种元素凑出额外反应", (("ab-element-reaction", "kbm"),)),
     ("UX-218", "ab-terrain-shape", "技能改的是地形本身", (("ab-terrain-shape", "kbm"),)),
     ("UX-219", "ab-conditional-target", "目标是所有满足条件的", (("ab-conditional-target", "kbm"),)),
+    # ---- 搜打撤 ----
+    ("UX-220", "ex-loadout-bring-in", "进局前选带什么进去", (("ex-loadout-bring-in", "kbm"),)),
+    ("UX-221", "ex-loot-under-threat", "有人靠近时还要不要继续翻", (("ex-loot-under-threat", "kbm"),)),
+    ("UX-222", "ex-extract-zone", "撤离点开了快关了关了", (("ex-extract-zone", "kbm"),)),
+    ("UX-223", "ex-death-insurance", "死了投保的还在没投保的掉光", (("ex-death-insurance", "kbm"),)),
+    ("UX-224", "ex-extract-channel", "撤离读条中被打断", (("ex-extract-channel", "kbm"),)),
+    # ---- 潜行道具（MGSV）----
+    ("UX-225", "sk-binocular-mark", "望远镜标记敌人", (("sk-binocular-mark", "kbm"),)),
+    ("UX-226", "sk-tranq-carry", "麻醉放倒再扛走", (("sk-tranq-carry", "kbm"),)),
+    ("UX-227", "sk-gadget-wheel", "道具轮盘切换手里那一件", (("sk-gadget-wheel", "kbm"),)),
+    ("UX-228", "sk-fulton", "气球回收敌人或物资", (("sk-fulton", "kbm"),)),
+    ("UX-229", "sk-gadget-combo", "先诱饵再摸过去", (("sk-gadget-combo", "kbm"),)),
+    # ---- 连杀奖励（COD）----
+    ("UX-230", "ks-earn-streak", "连杀攒满奖励图标亮起", (("ks-earn-streak", "kbm"),)),
+    ("UX-231", "ks-airstrike-mark", "叫空袭先标落点再确认", (("ks-airstrike-mark", "kbm"),)),
+    ("UX-232", "ks-drone-takeover", "无人机轰炸接管视角", (("ks-drone-takeover", "kbm"),)),
+    ("UX-233", "ks-care-package", "空投补给砸下来大家抢", (("ks-care-package", "kbm"),)),
+    # ---- 魂类 ----
+    ("UX-234", "soul-stamina-budget", "精力条砍闪跑共用一管", (("soul-stamina-budget", "gamepad"),)),
+    ("UX-235", "soul-flask-interrupt", "喝药瓶站桩可被打断", (("soul-flask-interrupt", "gamepad"),)),
+    ("UX-236", "soul-runback", "死了掉魂跑回去捡", (("soul-runback", "gamepad"),)),
+    ("UX-237", "soul-bonfire-rest", "篝火休息回满敌人刷新", (("soul-bonfire-rest", "gamepad"),)),
+    ("UX-238", "soul-boss-phase", "Boss转阶段血条分段换招", (("soul-boss-phase", "gamepad"),)),
+    # ---- 高达 VS ----
+    ("UX-239", "vs-boost-overheat", "推进器冲刺与推进过热", (("vs-boost-overheat", "gamepad"),)),
+    ("UX-240", "vs-awaken", "觉醒限时整机强化", (("vs-awaken", "gamepad"),)),
+    ("UX-241", "vs-range-melee-swap", "射格切换远射和近打", (("vs-range-melee-swap", "gamepad"),)),
+    ("UX-242", "vs-down-value", "击坠值攒满强制倒地", (("vs-down-value", "gamepad"),)),
+    # ---- 格斗 ----
+    ("UX-243", "ft-motion-input", "搓招指令序列对了才出招", (("ft-motion-input", "gamepad"),)),
+    ("UX-244", "ft-cancel-into-special", "取消链普攻中途切必杀", (("ft-cancel-into-special", "gamepad"),)),
+    ("UX-245", "ft-throw-tech", "投技与受身拆投", (("ft-throw-tech", "gamepad"),)),
+    ("UX-246", "ft-frame-advantage", "帧优势打完谁先能动", (("ft-frame-advantage", "gamepad"),)),
+    ("UX-247", "ft-guard-break", "防守破了才能硬直追打", (("ft-guard-break", "gamepad"),)),
 ]
 
 

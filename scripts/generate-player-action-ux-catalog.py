@@ -199,7 +199,8 @@ def marker(x, y, icon="skull", label="团队标记"):
 
 
 def vehicle(x, y, kind="car", occupied=False):
-    """载具 / 炮位。kind=car 车 / tank 坦克 / turret 炮台 / mount 坐骑；occupied=有人坐进去了。"""
+    """载具 / 炮位。kind=car 车 / tank 坦克 / turret 炮台 / mount 坐骑 / drone 无人机；
+    occupied=有人坐进去了（无人机接管时也算）。"""
     return {"t": "vehicle", "x": x, "y": y, "kind": kind, "occupied": occupied}
 
 
@@ -256,6 +257,27 @@ def splitscreen(mode="v"):
 def padslot(states):
     """手柄槽位条。每格 joined 已加入 / waiting 等着按键加入 / lost 断开了。"""
     return {"t": "padslot", "states": list(states)}
+
+
+def extractzone(x, y, label="撤离点", state="open", note=None):
+    """撤离点：位置 + 开没开 + 还剩多久。state=open / closing / closed。"""
+    return {"t": "extractzone", "x": x, "y": y, "label": label, "state": state, "note": note}
+
+
+def cmdinput(x, y, seq, ok=True, fail_at=None, label=None):
+    """格斗指令输入：方向序列 + 按键。fail_at=在第几步断了。"""
+    return {"t": "cmdinput", "x": x, "y": y, "seq": list(seq), "ok": ok,
+            "failAt": fail_at, "label": label}
+
+
+def framebar(x, y, mine=0.4, theirs=0.7):
+    """帧优势：这一下打完谁先能动。两条硬直长短并排比。"""
+    return {"t": "framebar", "x": x, "y": y, "mine": mine, "theirs": theirs}
+
+
+def takeover(label="你在操控别的东西"):
+    """整屏加一圈边框：现在操控的不是我自己（无人机 / 炮台 / 僚机视角）。"""
+    return {"t": "takeover", "label": label}
 
 
 def buffchip(x, y, label, stacks=None, kind="debuff"):
@@ -456,6 +478,8 @@ TARGET_GAMES = [
     ("diablo", "暗黑式 ARPG", "点地走打 · 技能落点 · 刷宝"),
     ("twin", "双摇杆射击", "左走右瞄 · 弹幕清屏"),
     ("fps", "FPS / TPS", "准星 · 开镜 · 射击换弹"),
+    ("extract", "搜打撤", "带货进局 · 撤离点 · 死了掉光"),
+    ("fight", "格斗 / VS 对战", "搓招 · 取消链 · 帧优势"),
     ("zelda", "塞尔达 / 开放世界", "情境按键 · 攀爬采集互动"),
     ("srpg", "战棋 / 回合制战斗", "格子走位 · 行动条 · 朝向背击"),
     ("grand", "大战略", "省份 · 关系 · 派系 · 法令"),
@@ -504,6 +528,12 @@ FAMILY_TITLES = {
     "ab-resolve": "技能打出去之后：没中、被吃、叠层、弹回",
     "ab-meta": "技能打在效果和技能身上",
     "ab-modifier": "技能被改写：天赋、元素、地形、条件",
+    "extract-run": "搜打撤：带进去、活着带出来",
+    "stealth-kit": "潜行道具：标记、放倒、回收、组合",
+    "killstreak": "连杀奖励与临时接管",
+    "souls-like": "魂类：精力、药瓶、掉魂、阶段",
+    "vs-boost": "VS 对战：推进器、觉醒、射格切换",
+    "fighting": "格斗：搓招、取消链、投技、帧",
     "netplay": "联机：进一局并待在里面",
     "couch-play": "同屏多人：加入、分屏、抢东西",
 }
@@ -566,6 +596,15 @@ _GENRE_TO_TARGETS: dict[str, tuple[str, ...]] = {
     "设计选项": ("shared",),
     "全品类": ("shared",),
     "联机对局": ("netmatch",),
+    "搜打撤": ("extract", "fps"),
+    "塔科夫": ("extract", "fps"),
+    "潜行道具": ("zelda", "fps"),
+    "MGSV": ("zelda", "fps"),
+    "连杀奖励": ("fps",),
+    "COD": ("fps",),
+    "魂类": ("gow",),
+    "格斗": ("fight",),
+    "高达VS": ("fight", "fps"),
     "战棋": ("srpg", "rotk"),
     "回合制战斗": ("srpg", "rotk"),
     "SRPG": ("srpg",),
@@ -600,6 +639,12 @@ _FAMILY_TO_TARGETS: dict[str, tuple[str, ...]] = {
     "ab-resolve": ("wow", "lol", "diablo"),
     "ab-meta": ("wow", "lol", "sc2"),
     "ab-modifier": ("zelda", "diablo", "lol"),
+    "extract-run": ("extract", "fps"),
+    "stealth-kit": ("zelda", "fps"),
+    "killstreak": ("fps",),
+    "souls-like": ("gow",),
+    "vs-boost": ("fight", "fps"),
+    "fighting": ("fight", "gow"),
     "netplay": ("netmatch",),
     "couch-play": ("couch",),
     "select": ("sc2", "ra2", "war3", "lol"),
@@ -4041,6 +4086,554 @@ def build_cases():
                   wasd(["W"]), keyhint(26, 20, "F", "active", "交互"),
                   padslot(["joined", "joined"]), badge("键鼠侧")], title="键鼠侧"),
         ], ["同屏双人", "分屏"], cross_device=True,
+    ))
+
+    # ===== 三十一、搜打撤：带进去、活着带出来 =====
+    c.append(case(
+        "ex-loadout-bring-in", "extract-run", "进局前选带什么进去",
+        "出门前先把背包填满：带贵的装备打得过，但死了亏得也大；带便宜货稳，可又打不过人。"
+        "这一步不是战斗，是拿负重和风险做选择，必须让玩家看清每一格值不值。",
+        [
+            beat("打开出发前的背包", "格盘上已放好武器与弹匣，空位还能塞东西", "先装货", "moba",
+                 [gridmap(40, 28, 5, 4, {"0,0": "occupied", "1,0": "occupied", "0,1": "occupied",
+                                          "3,2": "move", "4,2": "move"}, cw=14, ch=14),
+                  prop(18, 70, "步枪", kind="item"), prop(34, 70, "护甲", kind="item"),
+                  cursor(48, 40, "idle"), badge("出发前背包")], title="打开背包"),
+            beat("把一件贵重物拖进去", "负重涨一截，并标出这件投保要花多少", "更沉了", "moba",
+                 [gridmap(40, 28, 5, 4, {"0,0": "occupied", "1,0": "occupied", "0,1": "occupied",
+                                          "3,2": "occupied", "4,2": "move"}, cw=14, ch=14),
+                  card(18, 60, "金表", 0, True), cursor(18, 60, "drag"),
+                  toast(22, 20, "负重 18→24 · 投保 ¢4万", "loss"), badge("塞进贵货")], title="塞贵货"),
+            beat("负重超上限还想再塞", "明确拒绝并指出是负重，不是格子不够", "背不动", "moba",
+                 [gridmap(40, 28, 5, 4, {"0,0": "occupied", "1,0": "occupied", "0,1": "occupied",
+                                          "3,2": "occupied", "2,3": "blocked"}, cw=14, ch=14),
+                  card(18, 60, "弹药箱", 0, True), cursor(18, 60, "drag"),
+                  deny(72, 48, "负重超了"), badge("装不下")], title="超重拒绝"),
+        ], ["搜打撤", "塔科夫"],
+    ))
+    c.append(case(
+        "ex-loot-under-threat", "extract-run", "有人靠近时还要不要继续翻",
+        "尸体上有好货，但耳机里已经有脚步。继续翻就暴露，收手就亏这一票。"
+        "玩家得同时看见「还在翻」和「威胁在靠近」，不能只顾着翻包动画。",
+        [
+            beat("开始翻一具尸体", "翻包进度走起来，地上列出几件可拿的", "先翻", "tps",
+                 [hero(36, 58), corpse(58, 48), bar(58, 30, 0.35, "cast", "翻找中"),
+                  prop(72, 58, "弹匣", kind="item"), badge("翻找中")], title="开始翻"),
+            beat("耳机里有脚步靠近", "威胁方向被标出来，翻找还在继续", "有人来了", "tps",
+                 [hero(36, 58), corpse(58, 48), bar(58, 30, 0.7, "cast", "翻找中"),
+                  unit(86, 30, team="enemy"), arrow(78, 34, 66, 42, "move"),
+                  toast(20, 22, "附近有脚步", "error"), badge("威胁靠近")], title="脚步"),
+            beat("中途收手离开", "翻包中断，已掏出的进包，没掏完的留在尸体上", "先跑", "tps",
+                 [hero(24, 70), path([(36, 58), (24, 70)], "move"), corpse(58, 48),
+                  prop(72, 58, "弹匣", kind="item"), held("弹匣"),
+                  toast(22, 24, "翻找中断·带走已掏出的", "info"), badge("中断撤离")], title="收手"),
+        ], ["搜打撤", "塔科夫"],
+    ))
+    c.append(case(
+        "ex-extract-zone", "extract-run", "撤离点开了、快关了、关了",
+        "不是任何时候都能跑路：有的撤离点要条件才开，开了还有倒计时，关了就彻底没了。"
+        "玩家必须一眼分清「现在能进」「马上没了」「已经没了」。",
+        [
+            beat("撤离点亮起可进", "撤离点标成可撤离，走进去就能开始读条", "可以撤了", "tps",
+                 [hero(30, 60), extractzone(68, 48, "南门", "open", "可撤离"),
+                  arrow(36, 58, 56, 50, "move"), badge("点开了")], title="点开了"),
+            beat("倒计时进入即将关闭", "同一点变成警告色，还剩多久写清楚", "赶紧", "tps",
+                 [hero(52, 52), extractzone(68, 48, "南门", "closing", "还剩 0:18"),
+                  bar(68, 22, 0.25, "cast", "关闭倒计时"), badge("快关了")], title="快关了"),
+            beat("已经关闭再往里冲", "点标成已关闭，明确拒绝进点，提示去找别的点", "晚了", "tps",
+                 [hero(52, 52), extractzone(68, 48, "南门", "closed", "已关闭"),
+                  deny(40, 36, "这个点关了"), toast(20, 78, "去找别的撤离点", "error"),
+                  badge("关了")], title="关了"),
+        ], ["搜打撤", "塔科夫"],
+    ))
+    c.append(case(
+        "ex-death-insurance", "extract-run", "死了：投保的还在，没投保的掉光",
+        "搜打撤死了不是「回城」，是这一票的货怎么分——投过保的回仓库，没投保的留在尸体上给人捡。"
+        "结算屏必须把两份清单分开，别混成一句「你死了」。",
+        [
+            beat("我被打倒", "角色倒下，这票结算开始算", "完了", "tps",
+                 [hero(40, 58), unit(70, 42, team="enemy"), impact(40, 58, 14, heavy=True),
+                  toast(22, 24, "你被击倒了", "error"), badge("阵亡")], title="被打倒"),
+            beat("结算列出两份清单", "投保的进「带回」栏，没投保的进「掉落」栏", "分清楚", "moba",
+                 [menu_box(16, 22, ["带回 · 步枪（已投保）", "带回 · 护甲（已投保）",
+                                    "掉落 · 金表", "掉落 · 子弹"]),
+                  gridmap(62, 30, 3, 3, {"0,0": "insured", "1,0": "insured",
+                                          "0,2": "blocked", "1,2": "blocked"}, cw=16, ch=16),
+                  badge("投保 vs 掉落")], title="两份清单"),
+            beat("回仓库只看到投保件", "掉落那几件不在仓库里，清单对得上", "只剩投保的", "moba",
+                 [gridmap(40, 30, 4, 3, {"0,0": "insured", "1,0": "insured",
+                                          "2,1": "move"}, cw=16, ch=16),
+                  toast(22, 78, "未投保物品已丢失", "loss"), badge("回仓库")], title="回仓库"),
+        ], ["搜打撤", "塔科夫"],
+    ))
+    c.append(case(
+        "ex-extract-channel", "extract-run", "撤离读条中被打断",
+        "踩进撤离点要站着读完才能走。读到一半挨打或走出点，这次撤离就作废，"
+        "得重新踩进去再读——玩家要看得懂是「被打断了」不是「游戏吞了」。",
+        [
+            beat("踩进撤离点开始读条", "读条走起来，人还在点里", "撑住", "tps",
+                 [hero(60, 52), extractzone(60, 52, "直升机", "open", "撤离中"),
+                  bar(60, 28, 0.4, "cast", "撤离 4s"), badge("读条中")], title="开始撤"),
+            beat("读条中挨了一枪", "读条断掉并标红，人还活着但这次不算", "断了", "tps",
+                 [hero(60, 52), extractzone(60, 52, "直升机", "open"),
+                  bar(60, 28, 0.55, "cast", "被打断", broken=True),
+                  impact(60, 52, 12), toast(20, 78, "撤离中断", "error"),
+                  badge("被打断")], title="挨打中断"),
+            beat("重新踩稳再读", "读条从零开始，上次进度不继承", "再来", "tps",
+                 [hero(60, 52), extractzone(60, 52, "直升机", "open", "撤离中"),
+                  bar(60, 28, 0.15, "cast", "撤离 7s"), badge("重头读")], title="重读"),
+        ], ["搜打撤", "塔科夫"],
+    ))
+
+    # ===== 三十二、潜行道具（MGSV 路）=====
+    c.append(case(
+        "sk-binocular-mark", "stealth-kit", "望远镜标记敌人",
+        "先远远看清楚再动手：举起望远镜对准敌人，给他挂上「已标记」。"
+        "标过的人墙后也能感到方位，这是潜行开局的第一件事。",
+        [
+            beat("举起望远镜对准敌人", "视野收成望远镜圈，准星压在敌人身上", "看清楚", "fps",
+                 [crosshair(55, 42, spread="tight"), unit(55, 42, team="enemy"),
+                  held("望远镜"), badge("望远镜")], title="举起"),
+            beat("按标记键", "敌人头上挂上眼睛标记，即使他走进掩体也留着", "盯上了", "fps",
+                 [unit(62, 44, team="enemy"), marker(62, 28, "eye", "已标记"),
+                  prop(78, 52, "掩体", kind="cover"), held("望远镜"),
+                  toast(18, 78, "标记 1 人", "gain"), badge("挂上标记")], title="标记"),
+            beat("放下望远镜继续摸", "标记还在，我恢复正常视角往前蹭", "摸过去", "tps",
+                 [hero(30, 60), unit(70, 40, team="enemy"), marker(70, 26, "eye", "已标记"),
+                  arrow(34, 58, 52, 48, "move"), held(), badge("带着标记摸")], title="摸过去"),
+        ], ["潜行道具", "MGSV"],
+    ))
+    c.append(case(
+        "sk-tranq-carry", "stealth-kit", "麻醉放倒再扛走",
+        "不是打死，是放倒：一发麻醉让他睡着，再扛到没人看见的地方藏起来。"
+        "睡着和死了在画面上必须分得清，队友也得看得出「这人还能醒」。",
+        [
+            beat("对着敌人打一发麻醉", "他软倒在地，状态是睡着不是死", "睡着了", "tps",
+                 [hero(28, 60), unit(62, 48, team="enemy", state="downed"),
+                  projectile(44, 54, 20, "麻醉针"), impact(62, 48, 10),
+                  toast(20, 24, "昏睡中", "info"), held("麻醉枪"), badge("放倒")], title="放倒"),
+            beat("走近按交互扛起来", "他贴到我背上，我走路变慢", "抗上了", "tps",
+                 [hero(50, 55), unit(50, 48, team="enemy", state="downed", size=0.7),
+                  keyhint(50, 30, "F", "active", "扛起"), held("睡着的人"),
+                  badge("扛着走")], title="扛起"),
+            beat("丢到躲藏点", "人被放下，标记成已藏匿，巡逻不容易发现", "藏好了", "tps",
+                 [hero(36, 60), unit(70, 50, team="enemy", state="downed"),
+                  prop(70, 50, "草丛", kind="cover"), toast(20, 24, "已藏匿", "gain"),
+                  badge("藏好")], title="藏匿"),
+        ], ["潜行道具", "MGSV"],
+    ))
+    c.append(case(
+        "sk-gadget-wheel", "stealth-kit", "道具轮盘切换手里那一件",
+        "烟雾弹、诱饵、炸药各干各的，不能全绑在同一个键上。"
+        "打开轮盘选一件，手里那件马上换成它，提示也跟着变。",
+        [
+            beat("按住道具键弹出轮盘", "轮盘列出烟雾 / 诱饵 / 炸药，当前件高亮", "选一个", "tps",
+                 [hero(40, 60), wheel(68, 42, ["烟雾", "诱饵", "炸药", "空"], active=0),
+                  held("烟雾弹"), keyhint(24, 80, "滚轮键", "active", "按住选道具"),
+                  badge("轮盘打开")], title="打开轮盘"),
+            beat("拨到诱饵松手", "轮盘收起，手里换成诱饵，提示变成「投诱饵」", "换好了", "tps",
+                 [hero(40, 60), held("诱饵"), keyhint(40, 30, "G", "idle", "投诱饵"),
+                  toast(22, 78, "已装备：诱饵", "info"), badge("换成诱饵")], title="选定"),
+            beat("扔出去生效", "诱饵落在地上发出声响，附近敌人朝那儿走", "引开了", "tps",
+                 [hero(28, 62), prop(70, 48, "诱饵", highlight=True, kind="item"),
+                  impact(70, 48, 12), unit(86, 36, team="enemy"),
+                  arrow(84, 38, 74, 46, "move"), held(), badge("敌人被引开")], title="引开"),
+        ], ["潜行道具", "MGSV"],
+    ))
+    c.append(case(
+        "sk-fulton", "stealth-kit", "气球回收敌人或物资",
+        "给睡着的敌人或箱子挂上气球，看它飞上天——东西就进自己的库存了。"
+        "有干扰时挂不上，必须说清是「这里不能回收」而不是按了没反应。",
+        [
+            beat("对睡着的人按回收", "他身上冒出气球，开始升空", "挂上了", "tps",
+                 [hero(30, 62), unit(60, 52, team="enemy", state="downed"),
+                  prop(60, 34, "气球", highlight=True, kind="item"),
+                  keyhint(60, 20, "F", "active", "气球回收"), badge("挂气球")], title="挂上"),
+            beat("气球飞上天", "人和气球离开画面，库存多出这条回收", "收回家了", "tps",
+                 [hero(30, 62), prop(62, 18, "气球", kind="item"),
+                  arrow(60, 40, 62, 20, "move"), toast(18, 78, "回收 +1 士兵", "gain"),
+                  badge("飞走了")], title="飞走"),
+            beat("在干扰区按回收", "明确拒绝并指出是区域干扰，气球不出现", "挂不上", "tps",
+                 [hero(30, 62), unit(60, 52, team="enemy", state="downed"),
+                  deny(60, 36, "此区域无法回收"), badge("被干扰")], title="被拒"),
+        ], ["潜行道具", "MGSV"],
+    ))
+    c.append(case(
+        "sk-gadget-combo", "stealth-kit", "先诱饵再摸过去：道具联用",
+        "一件道具很少单独通关：先用诱饵把巡逻引开，再借空档摸到目标背后。"
+        "图鉴要把「两步凑成一次潜行」讲清楚，别拆成互不相关的两个动作。",
+        [
+            beat("先扔诱饵引开巡逻", "敌人离开原位朝诱饵走", "引走", "tps",
+                 [hero(24, 68), prop(70, 30, "诱饵", highlight=True, kind="item"),
+                  unit(78, 48, team="enemy"), arrow(76, 46, 72, 34, "move"),
+                  held(), badge("诱饵引走")], title="诱饵"),
+            beat("趁空档摸到目标背后", "目标背上亮起可暗杀提示", "到了", "tps",
+                 [hero(48, 52, face=20), unit(62, 44, team="enemy"),
+                  ring(62, 44, kind="finisher", r=11),
+                  keyhint(62, 26, "F", "active", "暗杀"), badge("背后空了")], title="摸到背后"),
+            beat("按下完成暗杀", "目标倒下，这一串道具+潜行收工", "得手", "tps",
+                 [hero(56, 48, face=20), unit(62, 44, team="enemy", state="downed"),
+                  arrow(56, 48, 60, 45, "attack"), impact(62, 44, 11),
+                  toast(18, 78, "无人察觉", "gain"), badge("收工")], title="得手"),
+        ], ["潜行道具", "MGSV"],
+    ))
+
+    # ===== 三十三、连杀奖励（COD 路）=====
+    c.append(case(
+        "ks-earn-streak", "killstreak", "连杀攒满，奖励图标亮起",
+        "不停击倒敌人才会攒连杀分；攒到档位，对应的连杀奖励图标从灰变亮。"
+        "死一次清零——玩家得随时看得见「现在攒到哪一档」。",
+        [
+            beat("连续击倒两人", "连杀计数往上走，下一档还灰着", "2 连", "fps",
+                 [crosshair(55, 42), unit(55, 42, team="enemy"), impact(55, 42, 13),
+                  hotbar(slots=2, off=[0, 1]),
+                  toast(20, 78, "连杀 ×2 · 还差 1", "info"), badge("攒分中")], title="攒分"),
+            beat("再下一档够了", "空袭那一格亮起可按，无人机还灰着", "可叫空袭", "fps",
+                 [crosshair(55, 42), hotbar(slots=2, off=[1], extra=0),
+                  toast(20, 78, "空袭已就绪", "gain"), badge("亮了一档")], title="亮起"),
+            beat("我死了", "连杀计数归零，两档图标都灭掉", "清零了", "fps",
+                 [hero(40, 58), impact(40, 58, 14, heavy=True),
+                  hotbar(slots=2, off=[0, 1]),
+                  toast(20, 78, "连杀已中断", "loss"), badge("清零")], title="清零"),
+        ], ["连杀奖励", "COD"],
+    ))
+    c.append(case(
+        "ks-airstrike-mark", "killstreak", "叫空袭：先标落点再确认",
+        "连杀奖励不是按一下就炸：要先进落点选择，把圈放到想炸的地方再确认。"
+        "标错地方取消得干净，别把次数白白扣掉。",
+        [
+            beat("按已亮起的空袭", "进入落点预览，地上出现可移动的轰炸圈", "选哪儿", "fps",
+                 [crosshair(50, 50), circle_ind(50, 50, 18, True),
+                  hotbar(slots=2, active=0, extra=0),
+                  badge("选落点")], title="进落点"),
+            beat("确认落点", "圈固定，几秒后轰炸落下，空袭那一格进冷却", "炸那儿", "fps",
+                 [circle_ind(62, 44, 18, True), impact(62, 44, 20, heavy=True),
+                  unit(62, 44, team="enemy"), delaymark(62, 28, 2, "轰炸"),
+                  hotbar(slots=2, cd=0), badge("落地")], title="确认"),
+            beat("标到一半取消", "预览圈消失，空袭次数还在，可以重来", "不算", "fps",
+                 [crosshair(50, 50), hotbar(slots=2, extra=0),
+                  toast(20, 78, "已取消·未消耗", "info"), badge("取消")], title="取消"),
+        ], ["连杀奖励", "COD"],
+    ))
+    c.append(case(
+        "ks-drone-takeover", "killstreak", "无人机轰炸：接管别的视角",
+        "按下去之后你暂时不是本人了——画面切到无人机俯视，边框提醒「你在操控无人机」。"
+        "时间到或炸完，控制权交还给地面上的自己。",
+        [
+            beat("激活无人机连杀", "整屏加边框，视角切到无人机，本人留在原地", "接管视角", "fps",
+                 [takeover("你在操控无人机"), vehicle(50, 40, "drone", occupied=True),
+                  crosshair(50, 55), hero(20, 78),
+                  hotbar(slots=2, active=1, extra=1), badge("切到无人机")], title="接管"),
+            beat("飞到目标上方投弹", "准星下的地面被炸开，击倒显示出来", "炸中了", "fps",
+                 [takeover("你在操控无人机"), vehicle(58, 30, "drone", occupied=True),
+                  crosshair(58, 55), circle_ind(58, 55, 14, True),
+                  impact(58, 55, 18, heavy=True), unit(58, 55, team="enemy"),
+                  badge("投弹")], title="投弹"),
+            beat("时间到交还控制", "边框撤掉，视角回到本人，无人机那一格进冷却", "回来了", "fps",
+                 [hero(40, 58), crosshair(60, 42),
+                  hotbar(slots=2, cd=1),
+                  toast(20, 78, "已交还控制", "info"), badge("交还")], title="交还"),
+        ], ["连杀奖励", "COD"],
+    ))
+    c.append(case(
+        "ks-care-package", "killstreak", "空投补给：砸下来大家抢",
+        "空投箱落地那一刻不属于任何人，谁先摸到谁拿走。"
+        "落地位置、下降过程、被谁捡走都要看得见，别让箱子凭空出现在脚边。",
+        [
+            beat("呼叫空投", "天空标出即将落下的位置，箱子还在半空", "在来的路上", "tps",
+                 [hero(30, 62), prop(70, 28, "空投", kind="chest"),
+                  circle_ind(70, 55, 12, True), delaymark(70, 42, 3, "落地"),
+                  badge("呼叫中")], title="呼叫"),
+            beat("箱子落地", "箱子砸在标点上，提示「可拾取」", "落地了", "tps",
+                 [hero(30, 62), prop(70, 55, "空投", highlight=True, kind="chest"),
+                  impact(70, 55, 14), keyhint(70, 36, "F", "active", "打开空投"),
+                  badge("可捡")], title="落地"),
+            beat("别人抢先打开", "箱子消失，明确说是被谁拿走了", "被截胡", "tps",
+                 [hero(30, 62), unit(70, 55, team="enemy"),
+                  toast(20, 78, "空投被对方拿走", "loss"),
+                  deny(52, 40, "晚了一步"), badge("被抢走")], title="被抢"),
+        ], ["连杀奖励", "COD"],
+    ))
+
+    # ===== 三十四、魂类 =====
+    c.append(case(
+        "soul-stamina-budget", "souls-like", "精力条：砍、闪、跑共用一管",
+        "砍一下、翻一下、冲一段，都从同一管精力里扣。见底那一下动作会卡死，"
+        "这是魂类最核心的「我想打但身子不听话」。",
+        [
+            beat("连续挥刀", "精力条跟着一刀一截往下掉", "还砍得动", "tps",
+                 [hero(36, 58), unit(64, 46, team="enemy"), arrow(40, 56, 58, 48, "attack"),
+                  bar(36, 30, 0.55, "stamina", "精力"), badge("挥刀耗精")], title="挥刀"),
+            beat("精力见底还想翻滚", "翻滚放不出，人僵在原地一小会", "动不了", "tps",
+                 [hero(36, 58), unit(64, 46, team="enemy"),
+                  bar(36, 30, 0.05, "stamina", "精力见底"),
+                  deny(54, 40, "精力不足"), badge("卡死")], title="见底"),
+            beat("站着缓几秒", "精力条自己回上来，又能动了", "缓过来", "tps",
+                 [hero(36, 58), bar(36, 30, 0.7, "stamina", "精力"),
+                  toast(20, 78, "精力恢复中", "info"), badge("回升")], title="回升"),
+        ], ["魂类"],
+    ))
+    c.append(case(
+        "soul-flask-interrupt", "souls-like", "喝药瓶：站桩读条可被打断",
+        "喝一口要端瓶子站一会，这段时间挨打会打断，药也不扣。"
+        "玩家得权衡「现在能不能腾出手」，不是按一下就满血。",
+        [
+            beat("按喝药", "端起瓶子开始喝，血还没涨", "喝", "tps",
+                 [hero(40, 58), bar(40, 28, 0.35, "cast", "喝药中"),
+                  bar(40, 78, 0.35, "hp", "生命"), held("药瓶"),
+                  keyhint(24, 80, "R1", "active", "喝药"), badge("开始喝")], title="开始喝"),
+            beat("喝到一半挨打", "喝药中断，血没回，瓶子次数也不少", "被打断", "tps",
+                 [hero(40, 58), unit(68, 44, team="enemy"), impact(40, 58, 12),
+                  bar(40, 28, 0.5, "cast", "被打断", broken=True),
+                  bar(40, 78, 0.35, "hp", "生命"), held("药瓶"),
+                  toast(20, 22, "喝药被打断", "error"), badge("打断")], title="打断"),
+            beat("安全时喝完", "读条走满，血涨一截，瓶子次数 -1", "回了口血", "tps",
+                 [hero(40, 58), bar(40, 78, 0.75, "hp", "生命"),
+                  held("药瓶"), toast(20, 22, "药瓶剩余 2", "info"),
+                  badge("喝完")], title="喝完"),
+        ], ["魂类"],
+    ))
+    c.append(case(
+        "soul-runback", "souls-like", "死了掉魂，跑回去捡；再死就没了",
+        "倒下那一刻魂留在死的地方。跑回去碰一下就能拿回；"
+        "还没捡到又死一次，上一份魂就永久消失——这是魂类最狠的惩罚。",
+        [
+            beat("被打倒，魂掉在原地", "自己变成灵魂态，死点留下可捡的魂", "掉了", "tps",
+                 [hero(30, 60, state="ghost"), prop(70, 44, "魂", highlight=True, kind="shrine"),
+                  toast(18, 22, "魂遗留在死点", "loss"), badge("掉魂")], title="掉魂"),
+            beat("跑回死点捡起来", "碰一下魂消失，数量回背包", "拿回来了", "tps",
+                 [hero(66, 46), impact(70, 44, 12),
+                  toast(18, 22, "已回收魂", "gain"), badge("捡回")], title="捡回"),
+            beat("还没捡到又死一次", "上一份魂消失，新死点留下新的一份", "没了", "tps",
+                 [hero(28, 68, state="ghost"), prop(50, 40, "魂", highlight=True, kind="shrine"),
+                  deny(70, 44, "上一份魂已消失"),
+                  toast(16, 22, "未回收的魂已消散", "error"), badge("消散")], title="消散"),
+        ], ["魂类"],
+    ))
+    c.append(case(
+        "soul-bonfire-rest", "souls-like", "篝火休息：回满，但敌人刷新",
+        "坐篝火血和药都回满，可是附近打死的杂兵也会重新站起来。"
+        "这是「要不要现在休息」的权衡，不是单纯的存档点。",
+        [
+            beat("走近未点燃的篝火", "提示可以坐下休息", "看到火了", "tps",
+                 [hero(36, 58), prop(64, 48, "篝火", highlight=True, kind="shrine"),
+                  keyhint(64, 30, "A键", "active", "休息"), badge("可休息")], title="靠近"),
+            beat("坐下休息", "血和药回满，并提示周围敌人已刷新", "回满了", "tps",
+                 [hero(56, 50), prop(64, 48, "篝火", kind="shrine"),
+                  bar(56, 28, 1.0, "hp", "生命"), unit(78, 36, team="enemy"),
+                  toast(16, 78, "药瓶回满 · 敌人已刷新", "info"), badge("休息完毕")], title="休息"),
+            beat("转身看见刷新的敌人", "刚才打死的人又站在原位", "又来了", "tps",
+                 [hero(40, 58), unit(70, 42, team="enemy"),
+                  prop(64, 62, "篝火", kind="shrine"), badge("敌人刷新")], title="刷新"),
+        ], ["魂类"],
+    ))
+    c.append(case(
+        "soul-boss-phase", "souls-like", "Boss 转阶段：血条分段，招式换套",
+        "打掉第一管血不是赢了，是他进入下一阶段——血条多一段，招式全换。"
+        "转阶段那一下必须让玩家看懂「规则变了」，不是同一管血慢慢磨。",
+        [
+            beat("Boss 第一管血见底", "第一段血条清空，他进入转阶段演出", "阶段切换", "tps",
+                 [hero(28, 62), unit(64, 44, team="enemy", size=1.4),
+                  bar(64, 22, 0.05, "hp", "一阶段"),
+                  toast(16, 78, "阶段转换…", "info"), badge("一阶段完")], title="一阶段完"),
+            beat("第二段血条亮起", "血条重新出现并标成二阶段，他换了姿态", "还没完", "tps",
+                 [hero(28, 62), unit(64, 44, team="enemy", size=1.4),
+                  bar(64, 22, 1.0, "hp", "二阶段"),
+                  ring(64, 44, kind="buff", r=14), badge("二阶段")], title="二阶段"),
+            beat("新招式砸下来", "他使出一阶段没有的大范围砸地", "换招了", "tps",
+                 [hero(24, 70), unit(64, 44, team="enemy", size=1.4),
+                  impact(40, 60, 22, heavy=True), circle_ind(40, 60, 20, False),
+                  bar(64, 22, 0.85, "hp", "二阶段"), badge("新招")], title="新招"),
+        ], ["魂类"],
+    ))
+
+    # ===== 三十五、高达 VS：推进、觉醒、射格 =====
+    c.append(case(
+        "vs-boost-overheat", "vs-boost", "推进器冲刺与推进过热",
+        "按推进可以突然加速变向，但推进条会烫——烫满就过热，一段时间不能再推。"
+        "玩家要在「现在逃」和「留一点应急」之间做选择。",
+        [
+            beat("按推进冲出去", "机体突然加速，推进条往下掉", "推一把", "tps",
+                 [hero(40, 55, form="alt"), path([(22, 60), (50, 50)], "move"),
+                  bar(40, 28, 0.55, "boost", "推进"),
+                  keyhint(24, 80, "B键", "active", "推进"), badge("推进中")], title="推进"),
+            beat("推到过热", "推进条见底并标过热，暂时按不动", "烫了", "tps",
+                 [hero(55, 50, form="alt"), bar(55, 28, 0.0, "boost", "推进过热"),
+                  deny(72, 44, "推进过热"), badge("过热")], title="过热"),
+            beat("冷却回来", "推进条回升，又能推了", "好了", "tps",
+                 [hero(55, 50, form="alt"), bar(55, 28, 0.6, "boost", "推进"),
+                  toast(20, 78, "推进可用", "gain"), badge("冷却好")], title="冷却"),
+        ], ["高达VS"],
+    ))
+    c.append(case(
+        "vs-awaken", "vs-boost", "觉醒：限时整机强化",
+        "觉醒槽满了才能开。开了之后一段时间攻防都变强，时间到自动结束。"
+        "这是整场对局的节奏点，开早开晚差别很大。",
+        [
+            beat("觉醒槽攒满", "觉醒图标亮起可按", "能开了", "tps",
+                 [hero(40, 55, form="alt"), bar(40, 28, 1.0, "charge", "觉醒"),
+                  keyhint(24, 80, "R3", "active", "觉醒"), badge("槽满")], title="槽满"),
+            beat("按下进入觉醒", "机体换姿态，限时强化边框亮起", "觉醒！", "tps",
+                 [hero(40, 55, form="alt"), ring(40, 55, kind="buff", r=16),
+                  bar(40, 28, 0.8, "charge", "觉醒剩余"),
+                  toast(20, 78, "觉醒中", "gain"), badge("觉醒中")], title="觉醒中"),
+            beat("时间到自动结束", "强化边框撤掉，槽清空要重新攒", "结束了", "tps",
+                 [hero(40, 55, form="alt"), bar(40, 28, 0.0, "charge", "觉醒"),
+                  toast(20, 78, "觉醒结束", "info"), badge("结束")], title="结束"),
+        ], ["高达VS"],
+    ))
+    c.append(case(
+        "vs-range-melee-swap", "vs-boost", "射格切换：远射和近打不是同一套",
+        "远距离用射击武装，贴脸自动或手动切到格斗武装。"
+        "两套招式、两套提示，玩家得随时知道「我现在手里是哪一套」。",
+        [
+            beat("远距离锁定射击", "手里是射击武装，准星可用", "远打", "tps",
+                 [hero(28, 60, form="alt"), unit(72, 40, team="enemy"),
+                  ring(72, 40, kind="lock"), crosshair(72, 40),
+                  held("光束步枪"), badge("射击武装")], title="远射"),
+            beat("冲进近身距离", "武装提示切成格斗，准星收起换成近战判定", "切近战", "tps",
+                 [hero(50, 52, form="alt"), unit(64, 46, team="enemy"),
+                  ring(64, 46, kind="lock"), held("光束剑"),
+                  toast(18, 78, "切换：格斗武装", "info"), badge("格斗武装")], title="切近战"),
+            beat("近身挥砍", "用格斗武装打出近战伤害", "砍上去", "tps",
+                 [hero(54, 50, form="alt"), unit(64, 46, team="enemy"),
+                  arrow(56, 50, 62, 47, "attack"), impact(64, 46, 13),
+                  held("光束剑"), badge("近战命中")], title="近战"),
+        ], ["高达VS"],
+    ))
+    c.append(case(
+        "vs-down-value", "vs-boost", "击坠值攒满，对方强制倒地",
+        "每一击都给对方叠击坠值，叠满他就强制进入倒地，这段时间任你输出。"
+        "这是 VS 对战的节奏核，玩家得看见双方的击坠压力。",
+        [
+            beat("连续命中叠击坠值", "对方头上的击坠条往上涨", "在叠", "tps",
+                 [hero(30, 58, form="alt"), unit(66, 46, team="enemy"),
+                  arrow(34, 56, 60, 48, "attack"), impact(66, 46, 11),
+                  bar(66, 28, 0.65, "charge", "击坠值"), badge("叠值")], title="叠值"),
+            beat("击坠值满强制倒地", "对方倒下，击坠条清空，进入可追打窗", "打倒了", "tps",
+                 [hero(40, 55, form="alt"), unit(66, 52, team="enemy", state="downed"),
+                  bar(66, 28, 0.0, "charge", "击坠值"),
+                  toast(18, 78, "强制倒地", "gain"), badge("倒地")], title="倒地"),
+            beat("倒地窗内继续输出", "他还起不来，我的攻击稳定打中", "追打", "tps",
+                 [hero(50, 50, form="alt"), unit(66, 52, team="enemy", state="downed"),
+                  arrow(52, 50, 62, 52, "attack"), impact(66, 52, 14),
+                  badge("追打中")], title="追打"),
+        ], ["高达VS"],
+    ))
+
+    # ===== 三十六、格斗：搓招、取消、投技、帧 =====
+    c.append(case(
+        "ft-motion-input", "fighting", "搓招：指令序列对了才出招",
+        "下、下前、前、拳——按对了出必杀，中途断了就变成普通拳或什么都不出。"
+        "玩家得看见自己搓到哪一步、哪一步断的。",
+        [
+            beat("按完整指令", "方向序列逐步亮起，最后一拳令成立", "搓出来了", "tps",
+                 [hero(30, 58), unit(70, 48, team="enemy"),
+                  cmdinput(18, 28, ["↓", "↘", "→", "拳"], ok=True, label="指令成立"),
+                  badge("搓成")], title="搓成"),
+            beat("必杀打出去", "必杀命中对方", "中了", "tps",
+                 [hero(40, 55), unit(66, 48, team="enemy"),
+                  arrow(44, 54, 62, 48, "attack"), impact(66, 48, 16, heavy=True),
+                  cmdinput(18, 28, ["↓", "↘", "→", "拳"], ok=True, label="已放出"),
+                  badge("必杀命中")], title="命中"),
+            beat("中途断招", "序列在某一步标红，变成普通拳或没出招", "没搓出来", "tps",
+                 [hero(30, 58), unit(70, 48, team="enemy"),
+                  cmdinput(18, 28, ["↓", "↘", "→", "拳"], ok=False, fail_at=2,
+                           label="没搓出来"),
+                  toast(20, 78, "指令中断", "error"), badge("断了")], title="断招"),
+        ], ["格斗"],
+    ))
+    c.append(case(
+        "ft-cancel-into-special", "fighting", "取消链：普攻中途切进必杀",
+        "普攻还没打完就能取消后摇进必杀，这是连段的核心手感。"
+        "取消窗只有那几帧，窗过去再按就变成下一拍的普攻。",
+        [
+            beat("普攻出手", "前摇过去，进入可以取消的那一段", "能取消", "tps",
+                 [hero(34, 58), unit(66, 48, team="enemy"),
+                  inputwindow(12, 24, [{"name": "前摇", "kind": "startup", "w": 1},
+                                       {"name": "取消窗", "kind": "buffer", "w": 1},
+                                       {"name": "后摆", "kind": "recovery", "w": 2}],
+                              press_at=None, fire_at=0.35),
+                  badge("取消窗")], title="取消窗"),
+            beat("窗内拨出必杀指令", "普攻后摆被砍掉，直接接上必杀", "接上了", "tps",
+                 [hero(42, 55), unit(66, 48, team="enemy"),
+                  cmdinput(16, 78, ["↓", "↘", "→", "拳"], ok=True, label="取消进必杀"),
+                  arrow(46, 54, 62, 48, "attack"),
+                  inputwindow(12, 24, [{"name": "前摇", "kind": "startup", "w": 1},
+                                       {"name": "取消窗", "kind": "buffer", "w": 1},
+                                       {"name": "后摆", "kind": "recovery", "w": 2}],
+                              press_at=0.4, fire_at=0.4),
+                  badge("取消成功")], title="取消成功"),
+            beat("窗过了再搓", "必杀没接上，只打出普通的下一拳", "没接上", "tps",
+                 [hero(38, 58), unit(66, 48, team="enemy"),
+                  arrow(42, 56, 58, 50, "attack"), impact(66, 48, 10),
+                  inputwindow(12, 24, [{"name": "前摇", "kind": "startup", "w": 1},
+                                       {"name": "取消窗", "kind": "buffer", "w": 1},
+                                       {"name": "后摆", "kind": "recovery", "w": 2}],
+                              press_at=0.85, fire_at=None),
+                  toast(20, 78, "取消窗已过", "error"), badge("窗过了")], title="窗过了"),
+        ], ["格斗"],
+    ))
+    c.append(case(
+        "ft-throw-tech", "fighting", "投技与受身拆投",
+        "双方贴身时按投，投中了就播投技动画；被投的那边在受身窗里按对键能拆开。"
+        "投中、拆掉、没拆开——三种结果画面要分得清。",
+        [
+            beat("贴身按投", "双方进入投技判定，我这边先出手", "投！", "tps",
+                 [hero(44, 55), unit(56, 52, team="enemy"),
+                  keyhint(44, 30, "LB+A", "active", "投技"),
+                  ring(50, 52, kind="lock", r=12), badge("投技判定")], title="按投"),
+            beat("对方在窗内拆投", "投被拆开，两人弹开，谁都没吃投", "拆掉了", "tps",
+                 [hero(36, 58), unit(64, 48, team="enemy"),
+                  impact(50, 52, 12), toast(20, 24, "投技被拆", "info"),
+                  inputwindow(14, 78, [{"name": "受身窗", "kind": "buffer", "w": 2},
+                                       {"name": "投中", "kind": "active", "w": 1}],
+                              press_at=0.3, fire_at=None),
+                  badge("拆投成功")], title="拆投"),
+            beat("对方没拆开", "投技打满，对方被摔在地上", "投中了", "tps",
+                 [hero(48, 50), unit(62, 60, team="enemy", state="downed"),
+                  impact(62, 60, 14, heavy=True),
+                  toast(20, 24, "投技命中", "gain"), badge("投中")], title="投中"),
+        ], ["格斗"],
+    ))
+    c.append(case(
+        "ft-frame-advantage", "fighting", "帧优势：打完谁先能动",
+        "这一下打完，我的硬直短、他的硬直长，我就有几帧可以先动手。"
+        "这是格斗里「为什么我总是被连」的根，必须让双方硬直看得见。",
+        [
+            beat("我的招打在他防守上", "双方进入硬直，并排显示谁的更长", "比硬直", "tps",
+                 [hero(34, 58), unit(66, 48, team="enemy"),
+                  impact(50, 52, 11), framebar(18, 28, mine=0.35, theirs=0.7),
+                  badge("我有利帧")], title="有利"),
+            beat("趁他硬直未消按下一招", "他还动不了，我的下一招稳定打中", "还能压", "tps",
+                 [hero(40, 55), unit(66, 48, team="enemy"),
+                  arrow(44, 54, 62, 48, "attack"), impact(66, 48, 12),
+                  framebar(18, 28, mine=0.2, theirs=0.55), badge("追压")], title="追压"),
+            beat("我用了硬直更长的招", "变成他先能动，他反手打我", "被反了", "tps",
+                 [hero(34, 58), unit(60, 48, team="enemy"),
+                  impact(40, 55, 12), framebar(18, 28, mine=0.75, theirs=0.3),
+                  toast(20, 78, "对方有利帧", "error"), badge("不利帧")], title="不利"),
+        ], ["格斗"],
+    ))
+    c.append(case(
+        "ft-guard-break", "fighting", "防守破了：护盾碎了才能硬直",
+        "一直挡会磨掉防御值；防值见底就破防，人会强制硬直一大段。"
+        "破防前要有压力提示，破的那一下必须特别明显。",
+        [
+            beat("对方一直压我的防守", "防御条往下掉，还没破", "顶着", "tps",
+                 [hero(36, 58), unit(64, 46, team="enemy"),
+                  arrow(60, 48, 42, 56, "attack"), impact(40, 55, 10),
+                  bar(36, 28, 0.35, "shield", "防御"), badge("防值在掉")], title="磨防"),
+            beat("防御值见底破防", "护盾碎掉，我进入强制硬直", "破了", "tps",
+                 [hero(36, 58), unit(64, 46, team="enemy"),
+                  bar(36, 28, 0.0, "shield", "破防", broken=True),
+                  deny(54, 40, "破防硬直"), toast(20, 78, "防御破碎", "error"),
+                  badge("破防")], title="破防"),
+            beat("破防窗里被追打", "我还硬直着，对方连段打满", "挨连段", "tps",
+                 [hero(36, 58), unit(56, 48, team="enemy"),
+                  arrow(54, 48, 40, 56, "attack"), impact(36, 58, 14, heavy=True),
+                  bar(36, 78, 0.25, "hp", "生命"), badge("被追打")], title="追打"),
+        ], ["格斗"],
     ))
 
     return enrich_all(c)

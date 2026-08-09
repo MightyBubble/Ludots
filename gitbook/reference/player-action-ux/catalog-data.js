@@ -48,14 +48,14 @@ window.PLAYER_ACTION_UX_CATALOG = {
     "aim"
   ],
   "checkpoint": {
-    "head": "79a6d7dd8",
+    "head": "fb27e566f",
     "branch_hint": "cursor/ux-action-id-platform-tabs-4211",
     "impl_notes": "scripts/player_action_ux_impl_notes.py",
     "beat_logic": "scripts/player_action_ux_beat_logic.py",
     "action_index": "scripts/player_action_ux_action_index.py",
     "note": "列表=unique actions；详情平台 tab；时序=设备/逻辑/画面；勿手改 catalog-data.js",
     "weak_storyboard_beats": [],
-    "unique_actions": 219,
+    "unique_actions": 247,
     "multi_platform_actions": 8
   },
   "categories": [
@@ -113,6 +113,16 @@ window.PLAYER_ACTION_UX_CATALOG = {
       "id": "fps",
       "title": "FPS / TPS",
       "blurb": "准星 · 开镜 · 射击换弹"
+    },
+    {
+      "id": "extract",
+      "title": "搜打撤",
+      "blurb": "带货进局 · 撤离点 · 死了掉光"
+    },
+    {
+      "id": "fight",
+      "title": "格斗 / VS 对战",
+      "blurb": "搓招 · 取消链 · 帧优势"
     },
     {
       "id": "zelda",
@@ -6825,6 +6835,790 @@ window.PLAYER_ACTION_UX_CATALOG = {
         "MMO",
         "MOBA",
         "暗黑"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-220",
+      "key": "ex-loadout-bring-in",
+      "title": "进局前选带什么进去",
+      "summary": "出门前先把背包填满：带贵的装备打得过，但死了亏得也大；带便宜货稳，可又打不过人。这一步不是战斗，是拿负重和风险做选择，必须让玩家看清每一格值不值。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ex-loadout-bring-in"
+        }
+      ],
+      "targets": [
+        "extract",
+        "fps"
+      ],
+      "genres": [
+        "塔科夫",
+        "搜打撤"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-221",
+      "key": "ex-loot-under-threat",
+      "title": "有人靠近时还要不要继续翻",
+      "summary": "尸体上有好货，但耳机里已经有脚步。继续翻就暴露，收手就亏这一票。玩家得同时看见「还在翻」和「威胁在靠近」，不能只顾着翻包动画。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ex-loot-under-threat"
+        }
+      ],
+      "targets": [
+        "extract",
+        "fps"
+      ],
+      "genres": [
+        "塔科夫",
+        "搜打撤"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-222",
+      "key": "ex-extract-zone",
+      "title": "撤离点开了快关了关了",
+      "summary": "不是任何时候都能跑路：有的撤离点要条件才开，开了还有倒计时，关了就彻底没了。玩家必须一眼分清「现在能进」「马上没了」「已经没了」。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ex-extract-zone"
+        }
+      ],
+      "targets": [
+        "extract",
+        "fps"
+      ],
+      "genres": [
+        "塔科夫",
+        "搜打撤"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-223",
+      "key": "ex-death-insurance",
+      "title": "死了投保的还在没投保的掉光",
+      "summary": "搜打撤死了不是「回城」，是这一票的货怎么分——投过保的回仓库，没投保的留在尸体上给人捡。结算屏必须把两份清单分开，别混成一句「你死了」。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ex-death-insurance"
+        }
+      ],
+      "targets": [
+        "extract",
+        "fps"
+      ],
+      "genres": [
+        "塔科夫",
+        "搜打撤"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-224",
+      "key": "ex-extract-channel",
+      "title": "撤离读条中被打断",
+      "summary": "踩进撤离点要站着读完才能走。读到一半挨打或走出点，这次撤离就作废，得重新踩进去再读——玩家要看得懂是「被打断了」不是「游戏吞了」。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ex-extract-channel"
+        }
+      ],
+      "targets": [
+        "extract",
+        "fps"
+      ],
+      "genres": [
+        "塔科夫",
+        "搜打撤"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-225",
+      "key": "sk-binocular-mark",
+      "title": "望远镜标记敌人",
+      "summary": "先远远看清楚再动手：举起望远镜对准敌人，给他挂上「已标记」。标过的人墙后也能感到方位，这是潜行开局的第一件事。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "sk-binocular-mark"
+        }
+      ],
+      "targets": [
+        "fps",
+        "zelda"
+      ],
+      "genres": [
+        "MGSV",
+        "潜行道具"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-226",
+      "key": "sk-tranq-carry",
+      "title": "麻醉放倒再扛走",
+      "summary": "不是打死，是放倒：一发麻醉让他睡着，再扛到没人看见的地方藏起来。睡着和死了在画面上必须分得清，队友也得看得出「这人还能醒」。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "sk-tranq-carry"
+        }
+      ],
+      "targets": [
+        "fps",
+        "zelda"
+      ],
+      "genres": [
+        "MGSV",
+        "潜行道具"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-227",
+      "key": "sk-gadget-wheel",
+      "title": "道具轮盘切换手里那一件",
+      "summary": "烟雾弹、诱饵、炸药各干各的，不能全绑在同一个键上。打开轮盘选一件，手里那件马上换成它，提示也跟着变。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "sk-gadget-wheel"
+        }
+      ],
+      "targets": [
+        "fps",
+        "zelda"
+      ],
+      "genres": [
+        "MGSV",
+        "潜行道具"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-228",
+      "key": "sk-fulton",
+      "title": "气球回收敌人或物资",
+      "summary": "给睡着的敌人或箱子挂上气球，看它飞上天——东西就进自己的库存了。有干扰时挂不上，必须说清是「这里不能回收」而不是按了没反应。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "sk-fulton"
+        }
+      ],
+      "targets": [
+        "fps",
+        "zelda"
+      ],
+      "genres": [
+        "MGSV",
+        "潜行道具"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-229",
+      "key": "sk-gadget-combo",
+      "title": "先诱饵再摸过去",
+      "summary": "一件道具很少单独通关：先用诱饵把巡逻引开，再借空档摸到目标背后。图鉴要把「两步凑成一次潜行」讲清楚，别拆成互不相关的两个动作。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "sk-gadget-combo"
+        }
+      ],
+      "targets": [
+        "fps",
+        "zelda"
+      ],
+      "genres": [
+        "MGSV",
+        "潜行道具"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-230",
+      "key": "ks-earn-streak",
+      "title": "连杀攒满奖励图标亮起",
+      "summary": "不停击倒敌人才会攒连杀分；攒到档位，对应的连杀奖励图标从灰变亮。死一次清零——玩家得随时看得见「现在攒到哪一档」。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ks-earn-streak"
+        }
+      ],
+      "targets": [
+        "fps"
+      ],
+      "genres": [
+        "COD",
+        "连杀奖励"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-231",
+      "key": "ks-airstrike-mark",
+      "title": "叫空袭先标落点再确认",
+      "summary": "连杀奖励不是按一下就炸：要先进落点选择，把圈放到想炸的地方再确认。标错地方取消得干净，别把次数白白扣掉。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ks-airstrike-mark"
+        }
+      ],
+      "targets": [
+        "fps"
+      ],
+      "genres": [
+        "COD",
+        "连杀奖励"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-232",
+      "key": "ks-drone-takeover",
+      "title": "无人机轰炸接管视角",
+      "summary": "按下去之后你暂时不是本人了——画面切到无人机俯视，边框提醒「你在操控无人机」。时间到或炸完，控制权交还给地面上的自己。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ks-drone-takeover"
+        }
+      ],
+      "targets": [
+        "fps"
+      ],
+      "genres": [
+        "COD",
+        "连杀奖励"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-233",
+      "key": "ks-care-package",
+      "title": "空投补给砸下来大家抢",
+      "summary": "空投箱落地那一刻不属于任何人，谁先摸到谁拿走。落地位置、下降过程、被谁捡走都要看得见，别让箱子凭空出现在脚边。",
+      "platforms": [
+        "kbm"
+      ],
+      "platformLabels": [
+        "键鼠"
+      ],
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ks-care-package"
+        }
+      ],
+      "targets": [
+        "fps"
+      ],
+      "genres": [
+        "COD",
+        "连杀奖励"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-234",
+      "key": "soul-stamina-budget",
+      "title": "精力条砍闪跑共用一管",
+      "summary": "砍一下、翻一下、冲一段，都从同一管精力里扣。见底那一下动作会卡死，这是魂类最核心的「我想打但身子不听话」。",
+      "platforms": [
+        "gamepad"
+      ],
+      "platformLabels": [
+        "主机"
+      ],
+      "variants": [
+        {
+          "platform": "gamepad",
+          "platformLabel": "主机",
+          "caseId": "soul-stamina-budget"
+        }
+      ],
+      "targets": [
+        "gow"
+      ],
+      "genres": [
+        "魂类"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-235",
+      "key": "soul-flask-interrupt",
+      "title": "喝药瓶站桩可被打断",
+      "summary": "喝一口要端瓶子站一会，这段时间挨打会打断，药也不扣。玩家得权衡「现在能不能腾出手」，不是按一下就满血。",
+      "platforms": [
+        "gamepad"
+      ],
+      "platformLabels": [
+        "主机"
+      ],
+      "variants": [
+        {
+          "platform": "gamepad",
+          "platformLabel": "主机",
+          "caseId": "soul-flask-interrupt"
+        }
+      ],
+      "targets": [
+        "gow"
+      ],
+      "genres": [
+        "魂类"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-236",
+      "key": "soul-runback",
+      "title": "死了掉魂跑回去捡",
+      "summary": "倒下那一刻魂留在死的地方。跑回去碰一下就能拿回；还没捡到又死一次，上一份魂就永久消失——这是魂类最狠的惩罚。",
+      "platforms": [
+        "gamepad"
+      ],
+      "platformLabels": [
+        "主机"
+      ],
+      "variants": [
+        {
+          "platform": "gamepad",
+          "platformLabel": "主机",
+          "caseId": "soul-runback"
+        }
+      ],
+      "targets": [
+        "gow"
+      ],
+      "genres": [
+        "魂类"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-237",
+      "key": "soul-bonfire-rest",
+      "title": "篝火休息回满敌人刷新",
+      "summary": "坐篝火血和药都回满，可是附近打死的杂兵也会重新站起来。这是「要不要现在休息」的权衡，不是单纯的存档点。",
+      "platforms": [
+        "gamepad"
+      ],
+      "platformLabels": [
+        "主机"
+      ],
+      "variants": [
+        {
+          "platform": "gamepad",
+          "platformLabel": "主机",
+          "caseId": "soul-bonfire-rest"
+        }
+      ],
+      "targets": [
+        "gow"
+      ],
+      "genres": [
+        "魂类"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-238",
+      "key": "soul-boss-phase",
+      "title": "Boss转阶段血条分段换招",
+      "summary": "打掉第一管血不是赢了，是他进入下一阶段——血条多一段，招式全换。转阶段那一下必须让玩家看懂「规则变了」，不是同一管血慢慢磨。",
+      "platforms": [
+        "gamepad"
+      ],
+      "platformLabels": [
+        "主机"
+      ],
+      "variants": [
+        {
+          "platform": "gamepad",
+          "platformLabel": "主机",
+          "caseId": "soul-boss-phase"
+        }
+      ],
+      "targets": [
+        "gow"
+      ],
+      "genres": [
+        "魂类"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-239",
+      "key": "vs-boost-overheat",
+      "title": "推进器冲刺与推进过热",
+      "summary": "按推进可以突然加速变向，但推进条会烫——烫满就过热，一段时间不能再推。玩家要在「现在逃」和「留一点应急」之间做选择。",
+      "platforms": [
+        "gamepad"
+      ],
+      "platformLabels": [
+        "主机"
+      ],
+      "variants": [
+        {
+          "platform": "gamepad",
+          "platformLabel": "主机",
+          "caseId": "vs-boost-overheat"
+        }
+      ],
+      "targets": [
+        "fight",
+        "fps"
+      ],
+      "genres": [
+        "高达VS"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-240",
+      "key": "vs-awaken",
+      "title": "觉醒限时整机强化",
+      "summary": "觉醒槽满了才能开。开了之后一段时间攻防都变强，时间到自动结束。这是整场对局的节奏点，开早开晚差别很大。",
+      "platforms": [
+        "gamepad"
+      ],
+      "platformLabels": [
+        "主机"
+      ],
+      "variants": [
+        {
+          "platform": "gamepad",
+          "platformLabel": "主机",
+          "caseId": "vs-awaken"
+        }
+      ],
+      "targets": [
+        "fight",
+        "fps"
+      ],
+      "genres": [
+        "高达VS"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-241",
+      "key": "vs-range-melee-swap",
+      "title": "射格切换远射和近打",
+      "summary": "远距离用射击武装，贴脸自动或手动切到格斗武装。两套招式、两套提示，玩家得随时知道「我现在手里是哪一套」。",
+      "platforms": [
+        "gamepad"
+      ],
+      "platformLabels": [
+        "主机"
+      ],
+      "variants": [
+        {
+          "platform": "gamepad",
+          "platformLabel": "主机",
+          "caseId": "vs-range-melee-swap"
+        }
+      ],
+      "targets": [
+        "fight",
+        "fps"
+      ],
+      "genres": [
+        "高达VS"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-242",
+      "key": "vs-down-value",
+      "title": "击坠值攒满强制倒地",
+      "summary": "每一击都给对方叠击坠值，叠满他就强制进入倒地，这段时间任你输出。这是 VS 对战的节奏核，玩家得看见双方的击坠压力。",
+      "platforms": [
+        "gamepad"
+      ],
+      "platformLabels": [
+        "主机"
+      ],
+      "variants": [
+        {
+          "platform": "gamepad",
+          "platformLabel": "主机",
+          "caseId": "vs-down-value"
+        }
+      ],
+      "targets": [
+        "fight",
+        "fps"
+      ],
+      "genres": [
+        "高达VS"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-243",
+      "key": "ft-motion-input",
+      "title": "搓招指令序列对了才出招",
+      "summary": "下、下前、前、拳——按对了出必杀，中途断了就变成普通拳或什么都不出。玩家得看见自己搓到哪一步、哪一步断的。",
+      "platforms": [
+        "gamepad"
+      ],
+      "platformLabels": [
+        "主机"
+      ],
+      "variants": [
+        {
+          "platform": "gamepad",
+          "platformLabel": "主机",
+          "caseId": "ft-motion-input"
+        }
+      ],
+      "targets": [
+        "fight"
+      ],
+      "genres": [
+        "格斗"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-244",
+      "key": "ft-cancel-into-special",
+      "title": "取消链普攻中途切必杀",
+      "summary": "普攻还没打完就能取消后摇进必杀，这是连段的核心手感。取消窗只有那几帧，窗过去再按就变成下一拍的普攻。",
+      "platforms": [
+        "gamepad"
+      ],
+      "platformLabels": [
+        "主机"
+      ],
+      "variants": [
+        {
+          "platform": "gamepad",
+          "platformLabel": "主机",
+          "caseId": "ft-cancel-into-special"
+        }
+      ],
+      "targets": [
+        "fight"
+      ],
+      "genres": [
+        "格斗"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-245",
+      "key": "ft-throw-tech",
+      "title": "投技与受身拆投",
+      "summary": "双方贴身时按投，投中了就播投技动画；被投的那边在受身窗里按对键能拆开。投中、拆掉、没拆开——三种结果画面要分得清。",
+      "platforms": [
+        "gamepad"
+      ],
+      "platformLabels": [
+        "主机"
+      ],
+      "variants": [
+        {
+          "platform": "gamepad",
+          "platformLabel": "主机",
+          "caseId": "ft-throw-tech"
+        }
+      ],
+      "targets": [
+        "fight"
+      ],
+      "genres": [
+        "格斗"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-246",
+      "key": "ft-frame-advantage",
+      "title": "帧优势打完谁先能动",
+      "summary": "这一下打完，我的硬直短、他的硬直长，我就有几帧可以先动手。这是格斗里「为什么我总是被连」的根，必须让双方硬直看得见。",
+      "platforms": [
+        "gamepad"
+      ],
+      "platformLabels": [
+        "主机"
+      ],
+      "variants": [
+        {
+          "platform": "gamepad",
+          "platformLabel": "主机",
+          "caseId": "ft-frame-advantage"
+        }
+      ],
+      "targets": [
+        "fight"
+      ],
+      "genres": [
+        "格斗"
+      ],
+      "beatCount": 3,
+      "caseCount": 1
+    },
+    {
+      "actionNo": "UX-247",
+      "key": "ft-guard-break",
+      "title": "防守破了才能硬直追打",
+      "summary": "一直挡会磨掉防御值；防值见底就破防，人会强制硬直一大段。破防前要有压力提示，破的那一下必须特别明显。",
+      "platforms": [
+        "gamepad"
+      ],
+      "platformLabels": [
+        "主机"
+      ],
+      "variants": [
+        {
+          "platform": "gamepad",
+          "platformLabel": "主机",
+          "caseId": "ft-guard-break"
+        }
+      ],
+      "targets": [
+        "fight"
+      ],
+      "genres": [
+        "格斗"
       ],
       "beatCount": 3,
       "caseCount": 1
@@ -40220,6 +41014,4945 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "platform": "kbm",
           "platformLabel": "键鼠",
           "caseId": "couch-mixed-devices-kbm"
+        }
+      ]
+    },
+    {
+      "id": "ex-loadout-bring-in",
+      "category": "extract-run",
+      "family": "extract-run",
+      "title": "进局前选带什么进去",
+      "summary": "出门前先把背包填满：带贵的装备打得过，但死了亏得也大；带便宜货稳，可又打不过人。这一步不是战斗，是拿负重和风险做选择，必须让玩家看清每一格值不值。",
+      "genres": [
+        "搜打撤",
+        "塔科夫"
+      ],
+      "targets": [
+        "fps",
+        "extract"
+      ],
+      "beats": [
+        {
+          "title": "打开背包",
+          "input": "打开出发前的背包",
+          "screen": "格盘上已放好武器与弹匣，空位还能塞东西",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "gridmap",
+              "x": 40,
+              "y": 28,
+              "cols": 5,
+              "rows": 4,
+              "cells": {
+                "0,0": "occupied",
+                "1,0": "occupied",
+                "0,1": "occupied",
+                "3,2": "move",
+                "4,2": "move"
+              },
+              "cw": 14,
+              "ch": 14
+            },
+            {
+              "t": "prop",
+              "x": 18,
+              "y": 70,
+              "label": "步枪",
+              "highlight": false,
+              "kind": "item"
+            },
+            {
+              "t": "prop",
+              "x": 34,
+              "y": 70,
+              "label": "护甲",
+              "highlight": false,
+              "kind": "item"
+            },
+            {
+              "t": "cursor",
+              "x": 48,
+              "y": 40,
+              "mode": "idle"
+            },
+            {
+              "t": "badge",
+              "text": "出发前背包"
+            }
+          ],
+          "logic": "打开出发前背包并展示已装与空位"
+        },
+        {
+          "title": "塞贵货",
+          "input": "把一件贵重物拖进去",
+          "screen": "负重涨一截，并标出这件投保要花多少",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "gridmap",
+              "x": 40,
+              "y": 28,
+              "cols": 5,
+              "rows": 4,
+              "cells": {
+                "0,0": "occupied",
+                "1,0": "occupied",
+                "0,1": "occupied",
+                "3,2": "occupied",
+                "4,2": "move"
+              },
+              "cw": 14,
+              "ch": 14
+            },
+            {
+              "t": "card",
+              "x": 18,
+              "y": 60,
+              "label": "金表",
+              "cost": 0,
+              "dragging": true
+            },
+            {
+              "t": "cursor",
+              "x": 18,
+              "y": 60,
+              "mode": "drag"
+            },
+            {
+              "t": "toast",
+              "x": 22,
+              "y": 20,
+              "text": "负重 18→24 · 投保 ¢4万",
+              "kind": "loss"
+            },
+            {
+              "t": "badge",
+              "text": "塞进贵货"
+            }
+          ],
+          "logic": "放入贵重物并提高负重与投保报价"
+        },
+        {
+          "title": "超重拒绝",
+          "input": "负重超上限还想再塞",
+          "screen": "明确拒绝并指出是负重，不是格子不够",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "gridmap",
+              "x": 40,
+              "y": 28,
+              "cols": 5,
+              "rows": 4,
+              "cells": {
+                "0,0": "occupied",
+                "1,0": "occupied",
+                "0,1": "occupied",
+                "3,2": "occupied",
+                "2,3": "blocked"
+              },
+              "cw": 14,
+              "ch": 14
+            },
+            {
+              "t": "card",
+              "x": 18,
+              "y": 60,
+              "label": "弹药箱",
+              "cost": 0,
+              "dragging": true
+            },
+            {
+              "t": "cursor",
+              "x": 18,
+              "y": 60,
+              "mode": "drag"
+            },
+            {
+              "t": "deny",
+              "x": 72,
+              "y": 48,
+              "label": "负重超了",
+              "r": 11
+            },
+            {
+              "t": "badge",
+              "text": "装不下"
+            }
+          ],
+          "logic": "负重超上限时拒绝放入并标明原因"
+        }
+      ],
+      "ludots": "搜打撤：现有 Inventory 只能做格盘摆放，没有「带进局 / 带出局 / 死了怎么分」这条主链——负重上限、投保与掉落分账、撤离点时限、撤离读条打断都不存在。",
+      "todos": [
+        "TODO: 出发负重与投保报价（进局前 loadout）",
+        "TODO: 局内翻找可中断，已掏/未掏分账",
+        "TODO: 撤离点状态机（开 / 将关 / 关）与条件开启",
+        "TODO: 阵亡结算：投保件回库 / 未投保掉落",
+        "TODO: 撤离读条受击中断与进度作废"
+      ],
+      "familyTitle": "搜打撤：带进去、活着带出来",
+      "actionNo": "UX-220",
+      "actionKey": "ex-loadout-bring-in",
+      "actionTitle": "进局前选带什么进去",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ex-loadout-bring-in"
+        }
+      ]
+    },
+    {
+      "id": "ex-loot-under-threat",
+      "category": "extract-run",
+      "family": "extract-run",
+      "title": "有人靠近时还要不要继续翻",
+      "summary": "尸体上有好货，但耳机里已经有脚步。继续翻就暴露，收手就亏这一票。玩家得同时看见「还在翻」和「威胁在靠近」，不能只顾着翻包动画。",
+      "genres": [
+        "搜打撤",
+        "塔科夫"
+      ],
+      "targets": [
+        "fps",
+        "extract"
+      ],
+      "beats": [
+        {
+          "title": "开始翻",
+          "input": "开始翻一具尸体",
+          "screen": "翻包进度走起来，地上列出几件可拿的",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 36,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "corpse",
+              "x": 58,
+              "y": 48
+            },
+            {
+              "t": "bar",
+              "x": 58,
+              "y": 30,
+              "ratio": 0.35,
+              "kind": "cast",
+              "label": "翻找中",
+              "broken": false
+            },
+            {
+              "t": "prop",
+              "x": 72,
+              "y": 58,
+              "label": "弹匣",
+              "highlight": false,
+              "kind": "item"
+            },
+            {
+              "t": "badge",
+              "text": "翻找中"
+            }
+          ],
+          "logic": "开始翻找尸体并显示进度与可掏物品"
+        },
+        {
+          "title": "脚步",
+          "input": "耳机里有脚步靠近",
+          "screen": "威胁方向被标出来，翻找还在继续",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 36,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "corpse",
+              "x": 58,
+              "y": 48
+            },
+            {
+              "t": "bar",
+              "x": 58,
+              "y": 30,
+              "ratio": 0.7,
+              "kind": "cast",
+              "label": "翻找中",
+              "broken": false
+            },
+            {
+              "t": "unit",
+              "x": 86,
+              "y": 30,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "arrow",
+              "x1": 78,
+              "y1": 34,
+              "x2": 66,
+              "y2": 42,
+              "kind": "move"
+            },
+            {
+              "t": "toast",
+              "x": 20,
+              "y": 22,
+              "text": "附近有脚步",
+              "kind": "error"
+            },
+            {
+              "t": "badge",
+              "text": "威胁靠近"
+            }
+          ],
+          "logic": "在翻找中标出靠近的威胁方向"
+        },
+        {
+          "title": "收手",
+          "input": "中途收手离开",
+          "screen": "翻包中断，已掏出的进包，没掏完的留在尸体上",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 24,
+              "y": 70,
+              "face": 0
+            },
+            {
+              "t": "path",
+              "points": [
+                [
+                  36,
+                  58
+                ],
+                [
+                  24,
+                  70
+                ]
+              ],
+              "kind": "move"
+            },
+            {
+              "t": "corpse",
+              "x": 58,
+              "y": 48
+            },
+            {
+              "t": "prop",
+              "x": 72,
+              "y": 58,
+              "label": "弹匣",
+              "highlight": false,
+              "kind": "item"
+            },
+            {
+              "t": "held",
+              "label": "弹匣"
+            },
+            {
+              "t": "toast",
+              "x": 22,
+              "y": 24,
+              "text": "翻找中断·带走已掏出的",
+              "kind": "info"
+            },
+            {
+              "t": "badge",
+              "text": "中断撤离"
+            }
+          ],
+          "logic": "中断翻找，已掏出的进包，未掏完的留在原地"
+        }
+      ],
+      "ludots": "搜打撤：现有 Inventory 只能做格盘摆放，没有「带进局 / 带出局 / 死了怎么分」这条主链——负重上限、投保与掉落分账、撤离点时限、撤离读条打断都不存在。",
+      "todos": [
+        "TODO: 出发负重与投保报价（进局前 loadout）",
+        "TODO: 局内翻找可中断，已掏/未掏分账",
+        "TODO: 撤离点状态机（开 / 将关 / 关）与条件开启",
+        "TODO: 阵亡结算：投保件回库 / 未投保掉落",
+        "TODO: 撤离读条受击中断与进度作废"
+      ],
+      "familyTitle": "搜打撤：带进去、活着带出来",
+      "actionNo": "UX-221",
+      "actionKey": "ex-loot-under-threat",
+      "actionTitle": "有人靠近时还要不要继续翻",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ex-loot-under-threat"
+        }
+      ]
+    },
+    {
+      "id": "ex-extract-zone",
+      "category": "extract-run",
+      "family": "extract-run",
+      "title": "撤离点开了、快关了、关了",
+      "summary": "不是任何时候都能跑路：有的撤离点要条件才开，开了还有倒计时，关了就彻底没了。玩家必须一眼分清「现在能进」「马上没了」「已经没了」。",
+      "genres": [
+        "搜打撤",
+        "塔科夫"
+      ],
+      "targets": [
+        "fps",
+        "extract"
+      ],
+      "beats": [
+        {
+          "title": "点开了",
+          "input": "撤离点亮起可进",
+          "screen": "撤离点标成可撤离，走进去就能开始读条",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 30,
+              "y": 60,
+              "face": 0
+            },
+            {
+              "t": "extractzone",
+              "x": 68,
+              "y": 48,
+              "label": "南门",
+              "state": "open",
+              "note": "可撤离"
+            },
+            {
+              "t": "arrow",
+              "x1": 36,
+              "y1": 58,
+              "x2": 56,
+              "y2": 50,
+              "kind": "move"
+            },
+            {
+              "t": "badge",
+              "text": "点开了"
+            },
+            {
+              "t": "bar",
+              "x": 30,
+              "y": 38,
+              "ratio": 0.55,
+              "kind": "cast",
+              "label": null,
+              "broken": false
+            }
+          ],
+          "logic": "撤离点进入可进状态并允许开始撤离"
+        },
+        {
+          "title": "快关了",
+          "input": "倒计时进入即将关闭",
+          "screen": "同一点变成警告色，还剩多久写清楚",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 52,
+              "y": 52,
+              "face": 0
+            },
+            {
+              "t": "extractzone",
+              "x": 68,
+              "y": 48,
+              "label": "南门",
+              "state": "closing",
+              "note": "还剩 0:18"
+            },
+            {
+              "t": "bar",
+              "x": 68,
+              "y": 22,
+              "ratio": 0.25,
+              "kind": "cast",
+              "label": "关闭倒计时",
+              "broken": false
+            },
+            {
+              "t": "badge",
+              "text": "快关了"
+            }
+          ],
+          "logic": "撤离点进入即将关闭并显示剩余时间"
+        },
+        {
+          "title": "关了",
+          "input": "已经关闭再往里冲",
+          "screen": "点标成已关闭，明确拒绝进点，提示去找别的点",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 52,
+              "y": 52,
+              "face": 0
+            },
+            {
+              "t": "extractzone",
+              "x": 68,
+              "y": 48,
+              "label": "南门",
+              "state": "closed",
+              "note": "已关闭"
+            },
+            {
+              "t": "deny",
+              "x": 40,
+              "y": 36,
+              "label": "这个点关了",
+              "r": 11
+            },
+            {
+              "t": "toast",
+              "x": 20,
+              "y": 78,
+              "text": "去找别的撤离点",
+              "kind": "error"
+            },
+            {
+              "t": "badge",
+              "text": "关了"
+            }
+          ],
+          "logic": "撤离点关闭后拒绝进入并提示寻找其他点"
+        }
+      ],
+      "ludots": "搜打撤：现有 Inventory 只能做格盘摆放，没有「带进局 / 带出局 / 死了怎么分」这条主链——负重上限、投保与掉落分账、撤离点时限、撤离读条打断都不存在。",
+      "todos": [
+        "TODO: 出发负重与投保报价（进局前 loadout）",
+        "TODO: 局内翻找可中断，已掏/未掏分账",
+        "TODO: 撤离点状态机（开 / 将关 / 关）与条件开启",
+        "TODO: 阵亡结算：投保件回库 / 未投保掉落",
+        "TODO: 撤离读条受击中断与进度作废"
+      ],
+      "familyTitle": "搜打撤：带进去、活着带出来",
+      "actionNo": "UX-222",
+      "actionKey": "ex-extract-zone",
+      "actionTitle": "撤离点开了快关了关了",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ex-extract-zone"
+        }
+      ]
+    },
+    {
+      "id": "ex-death-insurance",
+      "category": "extract-run",
+      "family": "extract-run",
+      "title": "死了：投保的还在，没投保的掉光",
+      "summary": "搜打撤死了不是「回城」，是这一票的货怎么分——投过保的回仓库，没投保的留在尸体上给人捡。结算屏必须把两份清单分开，别混成一句「你死了」。",
+      "genres": [
+        "搜打撤",
+        "塔科夫"
+      ],
+      "targets": [
+        "fps",
+        "extract"
+      ],
+      "beats": [
+        {
+          "title": "被打倒",
+          "input": "我被打倒",
+          "screen": "角色倒下，这票结算开始算",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 70,
+              "y": 42,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "impact",
+              "x": 40,
+              "y": 58,
+              "r": 14,
+              "heavy": true
+            },
+            {
+              "t": "toast",
+              "x": 22,
+              "y": 24,
+              "text": "你被击倒了",
+              "kind": "error"
+            },
+            {
+              "t": "badge",
+              "text": "阵亡"
+            }
+          ],
+          "logic": "玩家被击倒并进入本票结算"
+        },
+        {
+          "title": "两份清单",
+          "input": "结算列出两份清单",
+          "screen": "投保的进「带回」栏，没投保的进「掉落」栏",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "menu",
+              "x": 16,
+              "y": 22,
+              "lines": [
+                "带回 · 步枪（已投保）",
+                "带回 · 护甲（已投保）",
+                "掉落 · 金表",
+                "掉落 · 子弹"
+              ],
+              "active": null
+            },
+            {
+              "t": "gridmap",
+              "x": 62,
+              "y": 30,
+              "cols": 3,
+              "rows": 3,
+              "cells": {
+                "0,0": "insured",
+                "1,0": "insured",
+                "0,2": "blocked",
+                "1,2": "blocked"
+              },
+              "cw": 16,
+              "ch": 16
+            },
+            {
+              "t": "badge",
+              "text": "投保 vs 掉落"
+            }
+          ],
+          "logic": "结算把投保件与掉落件分成两份清单"
+        },
+        {
+          "title": "回仓库",
+          "input": "回仓库只看到投保件",
+          "screen": "掉落那几件不在仓库里，清单对得上",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "gridmap",
+              "x": 40,
+              "y": 30,
+              "cols": 4,
+              "rows": 3,
+              "cells": {
+                "0,0": "insured",
+                "1,0": "insured",
+                "2,1": "move"
+              },
+              "cw": 16,
+              "ch": 16
+            },
+            {
+              "t": "toast",
+              "x": 22,
+              "y": 78,
+              "text": "未投保物品已丢失",
+              "kind": "loss"
+            },
+            {
+              "t": "badge",
+              "text": "回仓库"
+            }
+          ],
+          "logic": "回仓库只保留投保件，掉落件不在库中"
+        }
+      ],
+      "ludots": "搜打撤：现有 Inventory 只能做格盘摆放，没有「带进局 / 带出局 / 死了怎么分」这条主链——负重上限、投保与掉落分账、撤离点时限、撤离读条打断都不存在。",
+      "todos": [
+        "TODO: 出发负重与投保报价（进局前 loadout）",
+        "TODO: 局内翻找可中断，已掏/未掏分账",
+        "TODO: 撤离点状态机（开 / 将关 / 关）与条件开启",
+        "TODO: 阵亡结算：投保件回库 / 未投保掉落",
+        "TODO: 撤离读条受击中断与进度作废"
+      ],
+      "familyTitle": "搜打撤：带进去、活着带出来",
+      "actionNo": "UX-223",
+      "actionKey": "ex-death-insurance",
+      "actionTitle": "死了投保的还在没投保的掉光",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ex-death-insurance"
+        }
+      ]
+    },
+    {
+      "id": "ex-extract-channel",
+      "category": "extract-run",
+      "family": "extract-run",
+      "title": "撤离读条中被打断",
+      "summary": "踩进撤离点要站着读完才能走。读到一半挨打或走出点，这次撤离就作废，得重新踩进去再读——玩家要看得懂是「被打断了」不是「游戏吞了」。",
+      "genres": [
+        "搜打撤",
+        "塔科夫"
+      ],
+      "targets": [
+        "fps",
+        "extract"
+      ],
+      "beats": [
+        {
+          "title": "开始撤",
+          "input": "踩进撤离点开始读条",
+          "screen": "读条走起来，人还在点里",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 60,
+              "y": 52,
+              "face": 0
+            },
+            {
+              "t": "extractzone",
+              "x": 60,
+              "y": 52,
+              "label": "直升机",
+              "state": "open",
+              "note": "撤离中"
+            },
+            {
+              "t": "bar",
+              "x": 60,
+              "y": 28,
+              "ratio": 0.4,
+              "kind": "cast",
+              "label": "撤离 4s",
+              "broken": false
+            },
+            {
+              "t": "badge",
+              "text": "读条中"
+            }
+          ],
+          "logic": "踩进撤离点开始撤离读条"
+        },
+        {
+          "title": "挨打中断",
+          "input": "读条中挨了一枪",
+          "screen": "读条断掉并标红，人还活着但这次不算",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 60,
+              "y": 52,
+              "face": 0
+            },
+            {
+              "t": "extractzone",
+              "x": 60,
+              "y": 52,
+              "label": "直升机",
+              "state": "open",
+              "note": null
+            },
+            {
+              "t": "bar",
+              "x": 60,
+              "y": 28,
+              "ratio": 0.55,
+              "kind": "cast",
+              "label": "被打断",
+              "broken": true
+            },
+            {
+              "t": "impact",
+              "x": 60,
+              "y": 52,
+              "r": 12,
+              "heavy": false
+            },
+            {
+              "t": "toast",
+              "x": 20,
+              "y": 78,
+              "text": "撤离中断",
+              "kind": "error"
+            },
+            {
+              "t": "badge",
+              "text": "被打断"
+            }
+          ],
+          "logic": "读条中受击导致撤离中断且进度作废"
+        },
+        {
+          "title": "重读",
+          "input": "重新踩稳再读",
+          "screen": "读条从零开始，上次进度不继承",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 60,
+              "y": 52,
+              "face": 0
+            },
+            {
+              "t": "extractzone",
+              "x": 60,
+              "y": 52,
+              "label": "直升机",
+              "state": "open",
+              "note": "撤离中"
+            },
+            {
+              "t": "bar",
+              "x": 60,
+              "y": 28,
+              "ratio": 0.15,
+              "kind": "cast",
+              "label": "撤离 7s",
+              "broken": false
+            },
+            {
+              "t": "badge",
+              "text": "重头读"
+            }
+          ],
+          "logic": "重新踩稳后读条从零开始"
+        }
+      ],
+      "ludots": "搜打撤：现有 Inventory 只能做格盘摆放，没有「带进局 / 带出局 / 死了怎么分」这条主链——负重上限、投保与掉落分账、撤离点时限、撤离读条打断都不存在。",
+      "todos": [
+        "TODO: 出发负重与投保报价（进局前 loadout）",
+        "TODO: 局内翻找可中断，已掏/未掏分账",
+        "TODO: 撤离点状态机（开 / 将关 / 关）与条件开启",
+        "TODO: 阵亡结算：投保件回库 / 未投保掉落",
+        "TODO: 撤离读条受击中断与进度作废"
+      ],
+      "familyTitle": "搜打撤：带进去、活着带出来",
+      "actionNo": "UX-224",
+      "actionKey": "ex-extract-channel",
+      "actionTitle": "撤离读条中被打断",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ex-extract-channel"
+        }
+      ]
+    },
+    {
+      "id": "sk-binocular-mark",
+      "category": "stealth-kit",
+      "family": "stealth-kit",
+      "title": "望远镜标记敌人",
+      "summary": "先远远看清楚再动手：举起望远镜对准敌人，给他挂上「已标记」。标过的人墙后也能感到方位，这是潜行开局的第一件事。",
+      "genres": [
+        "潜行道具",
+        "MGSV"
+      ],
+      "targets": [
+        "fps",
+        "zelda"
+      ],
+      "beats": [
+        {
+          "title": "举起",
+          "input": "举起望远镜对准敌人",
+          "screen": "视野收成望远镜圈，准星压在敌人身上",
+          "view": "fps",
+          "cast": [
+            {
+              "t": "crosshair",
+              "x": 55,
+              "y": 42,
+              "locked": false,
+              "spread": "tight"
+            },
+            {
+              "t": "unit",
+              "x": 55,
+              "y": 42,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "held",
+              "label": "望远镜"
+            },
+            {
+              "t": "badge",
+              "text": "望远镜"
+            }
+          ],
+          "logic": "举起望远镜并进入窄视野瞄准"
+        },
+        {
+          "title": "标记",
+          "input": "按标记键",
+          "screen": "敌人头上挂上眼睛标记，即使他走进掩体也留着",
+          "view": "fps",
+          "cast": [
+            {
+              "t": "unit",
+              "x": 62,
+              "y": 44,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "marker",
+              "x": 62,
+              "y": 28,
+              "icon": "eye",
+              "label": "已标记"
+            },
+            {
+              "t": "prop",
+              "x": 78,
+              "y": 52,
+              "label": "掩体",
+              "highlight": false,
+              "kind": "cover"
+            },
+            {
+              "t": "held",
+              "label": "望远镜"
+            },
+            {
+              "t": "toast",
+              "x": 18,
+              "y": 78,
+              "text": "标记 1 人",
+              "kind": "gain"
+            },
+            {
+              "t": "badge",
+              "text": "挂上标记"
+            }
+          ],
+          "logic": "给瞄准中的敌人挂上持久标记"
+        },
+        {
+          "title": "摸过去",
+          "input": "放下望远镜继续摸",
+          "screen": "标记还在，我恢复正常视角往前蹭",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 30,
+              "y": 60,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 70,
+              "y": 40,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "marker",
+              "x": 70,
+              "y": 26,
+              "icon": "eye",
+              "label": "已标记"
+            },
+            {
+              "t": "arrow",
+              "x1": 34,
+              "y1": 58,
+              "x2": 52,
+              "y2": 48,
+              "kind": "move"
+            },
+            {
+              "t": "held",
+              "label": null
+            },
+            {
+              "t": "badge",
+              "text": "带着标记摸"
+            }
+          ],
+          "logic": "放下望远镜后标记仍保留供潜行参考"
+        }
+      ],
+      "ludots": "潜行道具：没有标记持久化、昏睡非死亡、扛运、气球回收、道具轮盘这些产品链——现有 context 交互只能做「靠近按 F」，区分不了麻醉/回收/藏匿。",
+      "todos": [
+        "TODO: 视野工具标记（望远镜）与标记持久化",
+        "TODO: 非致死倒地（昏睡）与扛运移动修正",
+        "TODO: 道具轮盘切换手持主动件",
+        "TODO: 回收（气球）与干扰区拒绝",
+        "TODO: 道具联用编排（诱饵 → 空档 → 暗杀）可验收路径"
+      ],
+      "familyTitle": "潜行道具：标记、放倒、回收、组合",
+      "actionNo": "UX-225",
+      "actionKey": "sk-binocular-mark",
+      "actionTitle": "望远镜标记敌人",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "sk-binocular-mark"
+        }
+      ]
+    },
+    {
+      "id": "sk-tranq-carry",
+      "category": "stealth-kit",
+      "family": "stealth-kit",
+      "title": "麻醉放倒再扛走",
+      "summary": "不是打死，是放倒：一发麻醉让他睡着，再扛到没人看见的地方藏起来。睡着和死了在画面上必须分得清，队友也得看得出「这人还能醒」。",
+      "genres": [
+        "潜行道具",
+        "MGSV"
+      ],
+      "targets": [
+        "fps",
+        "zelda"
+      ],
+      "beats": [
+        {
+          "title": "放倒",
+          "input": "对着敌人打一发麻醉",
+          "screen": "他软倒在地，状态是睡着不是死",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 28,
+              "y": 60,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 62,
+              "y": 48,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1,
+              "state": "downed"
+            },
+            {
+              "t": "projectile",
+              "x": 44,
+              "y": 54,
+              "angle": 20,
+              "label": "麻醉针"
+            },
+            {
+              "t": "impact",
+              "x": 62,
+              "y": 48,
+              "r": 10,
+              "heavy": false
+            },
+            {
+              "t": "toast",
+              "x": 20,
+              "y": 24,
+              "text": "昏睡中",
+              "kind": "info"
+            },
+            {
+              "t": "held",
+              "label": "麻醉枪"
+            },
+            {
+              "t": "badge",
+              "text": "放倒"
+            }
+          ],
+          "logic": "麻醉命中使目标进入昏睡倒地而非死亡"
+        },
+        {
+          "title": "扛起",
+          "input": "走近按交互扛起来",
+          "screen": "他贴到我背上，我走路变慢",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 50,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 50,
+              "y": 48,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 0.7,
+              "state": "downed"
+            },
+            {
+              "t": "key",
+              "x": 50,
+              "y": 30,
+              "label": "F",
+              "state": "active",
+              "hint": "扛起"
+            },
+            {
+              "t": "held",
+              "label": "睡着的人"
+            },
+            {
+              "t": "badge",
+              "text": "扛着走"
+            }
+          ],
+          "logic": "交互扛起昏睡目标并降低移动速度"
+        },
+        {
+          "title": "藏匿",
+          "input": "丢到躲藏点",
+          "screen": "人被放下，标记成已藏匿，巡逻不容易发现",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 36,
+              "y": 60,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 70,
+              "y": 50,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1,
+              "state": "downed"
+            },
+            {
+              "t": "prop",
+              "x": 70,
+              "y": 50,
+              "label": "草丛",
+              "highlight": false,
+              "kind": "cover"
+            },
+            {
+              "t": "toast",
+              "x": 20,
+              "y": 24,
+              "text": "已藏匿",
+              "kind": "gain"
+            },
+            {
+              "t": "badge",
+              "text": "藏好"
+            }
+          ],
+          "logic": "把目标放到藏匿点并标记为已藏匿"
+        }
+      ],
+      "ludots": "潜行道具：没有标记持久化、昏睡非死亡、扛运、气球回收、道具轮盘这些产品链——现有 context 交互只能做「靠近按 F」，区分不了麻醉/回收/藏匿。",
+      "todos": [
+        "TODO: 视野工具标记（望远镜）与标记持久化",
+        "TODO: 非致死倒地（昏睡）与扛运移动修正",
+        "TODO: 道具轮盘切换手持主动件",
+        "TODO: 回收（气球）与干扰区拒绝",
+        "TODO: 道具联用编排（诱饵 → 空档 → 暗杀）可验收路径"
+      ],
+      "familyTitle": "潜行道具：标记、放倒、回收、组合",
+      "actionNo": "UX-226",
+      "actionKey": "sk-tranq-carry",
+      "actionTitle": "麻醉放倒再扛走",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "sk-tranq-carry"
+        }
+      ]
+    },
+    {
+      "id": "sk-gadget-wheel",
+      "category": "stealth-kit",
+      "family": "stealth-kit",
+      "title": "道具轮盘切换手里那一件",
+      "summary": "烟雾弹、诱饵、炸药各干各的，不能全绑在同一个键上。打开轮盘选一件，手里那件马上换成它，提示也跟着变。",
+      "genres": [
+        "潜行道具",
+        "MGSV"
+      ],
+      "targets": [
+        "fps",
+        "zelda"
+      ],
+      "beats": [
+        {
+          "title": "打开轮盘",
+          "input": "按住道具键弹出轮盘",
+          "screen": "轮盘列出烟雾 / 诱饵 / 炸药，当前件高亮",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 60,
+              "face": 0
+            },
+            {
+              "t": "wheel",
+              "x": 68,
+              "y": 42,
+              "labels": [
+                "烟雾",
+                "诱饵",
+                "炸药",
+                "空"
+              ],
+              "active": 0,
+              "r": 30
+            },
+            {
+              "t": "held",
+              "label": "烟雾弹"
+            },
+            {
+              "t": "key",
+              "x": 24,
+              "y": 80,
+              "label": "滚轮键",
+              "state": "active",
+              "hint": "按住选道具"
+            },
+            {
+              "t": "badge",
+              "text": "轮盘打开"
+            }
+          ],
+          "logic": "按住打开道具轮盘并高亮当前件"
+        },
+        {
+          "title": "选定",
+          "input": "拨到诱饵松手",
+          "screen": "轮盘收起，手里换成诱饵，提示变成「投诱饵」",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 60,
+              "face": 0
+            },
+            {
+              "t": "held",
+              "label": "诱饵"
+            },
+            {
+              "t": "key",
+              "x": 40,
+              "y": 30,
+              "label": "G",
+              "state": "idle",
+              "hint": "投诱饵"
+            },
+            {
+              "t": "toast",
+              "x": 22,
+              "y": 78,
+              "text": "已装备：诱饵",
+              "kind": "info"
+            },
+            {
+              "t": "badge",
+              "text": "换成诱饵"
+            }
+          ],
+          "logic": "选定诱饵后更新手持物与投掷提示"
+        },
+        {
+          "title": "引开",
+          "input": "扔出去生效",
+          "screen": "诱饵落在地上发出声响，附近敌人朝那儿走",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 28,
+              "y": 62,
+              "face": 0
+            },
+            {
+              "t": "prop",
+              "x": 70,
+              "y": 48,
+              "label": "诱饵",
+              "highlight": true,
+              "kind": "item"
+            },
+            {
+              "t": "impact",
+              "x": 70,
+              "y": 48,
+              "r": 12,
+              "heavy": false
+            },
+            {
+              "t": "unit",
+              "x": 86,
+              "y": 36,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "arrow",
+              "x1": 84,
+              "y1": 38,
+              "x2": 74,
+              "y2": 46,
+              "kind": "move"
+            },
+            {
+              "t": "held",
+              "label": null
+            },
+            {
+              "t": "badge",
+              "text": "敌人被引开"
+            }
+          ],
+          "logic": "投出诱饵吸引附近敌人朝落点移动"
+        }
+      ],
+      "ludots": "潜行道具：没有标记持久化、昏睡非死亡、扛运、气球回收、道具轮盘这些产品链——现有 context 交互只能做「靠近按 F」，区分不了麻醉/回收/藏匿。",
+      "todos": [
+        "TODO: 视野工具标记（望远镜）与标记持久化",
+        "TODO: 非致死倒地（昏睡）与扛运移动修正",
+        "TODO: 道具轮盘切换手持主动件",
+        "TODO: 回收（气球）与干扰区拒绝",
+        "TODO: 道具联用编排（诱饵 → 空档 → 暗杀）可验收路径"
+      ],
+      "familyTitle": "潜行道具：标记、放倒、回收、组合",
+      "actionNo": "UX-227",
+      "actionKey": "sk-gadget-wheel",
+      "actionTitle": "道具轮盘切换手里那一件",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "sk-gadget-wheel"
+        }
+      ]
+    },
+    {
+      "id": "sk-fulton",
+      "category": "stealth-kit",
+      "family": "stealth-kit",
+      "title": "气球回收敌人或物资",
+      "summary": "给睡着的敌人或箱子挂上气球，看它飞上天——东西就进自己的库存了。有干扰时挂不上，必须说清是「这里不能回收」而不是按了没反应。",
+      "genres": [
+        "潜行道具",
+        "MGSV"
+      ],
+      "targets": [
+        "fps",
+        "zelda"
+      ],
+      "beats": [
+        {
+          "title": "挂上",
+          "input": "对睡着的人按回收",
+          "screen": "他身上冒出气球，开始升空",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 30,
+              "y": 62,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 60,
+              "y": 52,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1,
+              "state": "downed"
+            },
+            {
+              "t": "prop",
+              "x": 60,
+              "y": 34,
+              "label": "气球",
+              "highlight": true,
+              "kind": "item"
+            },
+            {
+              "t": "key",
+              "x": 60,
+              "y": 20,
+              "label": "F",
+              "state": "active",
+              "hint": "气球回收"
+            },
+            {
+              "t": "badge",
+              "text": "挂气球"
+            }
+          ],
+          "logic": "对昏睡目标挂上回收气球并开始升空"
+        },
+        {
+          "title": "飞走",
+          "input": "气球飞上天",
+          "screen": "人和气球离开画面，库存多出这条回收",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 30,
+              "y": 62,
+              "face": 0
+            },
+            {
+              "t": "prop",
+              "x": 62,
+              "y": 18,
+              "label": "气球",
+              "highlight": false,
+              "kind": "item"
+            },
+            {
+              "t": "arrow",
+              "x1": 60,
+              "y1": 40,
+              "x2": 62,
+              "y2": 20,
+              "kind": "move"
+            },
+            {
+              "t": "toast",
+              "x": 18,
+              "y": 78,
+              "text": "回收 +1 士兵",
+              "kind": "gain"
+            },
+            {
+              "t": "badge",
+              "text": "飞走了"
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": null,
+              "cd": null,
+              "extra": 3,
+              "off": [],
+              "dot": null,
+              "deny": null,
+              "labels": [
+                "Q",
+                "W",
+                "E",
+                "R"
+              ]
+            }
+          ],
+          "logic": "气球离场后把回收结果写入库存"
+        },
+        {
+          "title": "被拒",
+          "input": "在干扰区按回收",
+          "screen": "明确拒绝并指出是区域干扰，气球不出现",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 30,
+              "y": 62,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 60,
+              "y": 52,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1,
+              "state": "downed"
+            },
+            {
+              "t": "deny",
+              "x": 60,
+              "y": 36,
+              "label": "此区域无法回收",
+              "r": 11
+            },
+            {
+              "t": "badge",
+              "text": "被干扰"
+            }
+          ],
+          "logic": "干扰区拒绝回收并回报原因"
+        }
+      ],
+      "ludots": "潜行道具：没有标记持久化、昏睡非死亡、扛运、气球回收、道具轮盘这些产品链——现有 context 交互只能做「靠近按 F」，区分不了麻醉/回收/藏匿。",
+      "todos": [
+        "TODO: 视野工具标记（望远镜）与标记持久化",
+        "TODO: 非致死倒地（昏睡）与扛运移动修正",
+        "TODO: 道具轮盘切换手持主动件",
+        "TODO: 回收（气球）与干扰区拒绝",
+        "TODO: 道具联用编排（诱饵 → 空档 → 暗杀）可验收路径"
+      ],
+      "familyTitle": "潜行道具：标记、放倒、回收、组合",
+      "actionNo": "UX-228",
+      "actionKey": "sk-fulton",
+      "actionTitle": "气球回收敌人或物资",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "sk-fulton"
+        }
+      ]
+    },
+    {
+      "id": "sk-gadget-combo",
+      "category": "stealth-kit",
+      "family": "stealth-kit",
+      "title": "先诱饵再摸过去：道具联用",
+      "summary": "一件道具很少单独通关：先用诱饵把巡逻引开，再借空档摸到目标背后。图鉴要把「两步凑成一次潜行」讲清楚，别拆成互不相关的两个动作。",
+      "genres": [
+        "潜行道具",
+        "MGSV"
+      ],
+      "targets": [
+        "fps",
+        "zelda"
+      ],
+      "beats": [
+        {
+          "title": "诱饵",
+          "input": "先扔诱饵引开巡逻",
+          "screen": "敌人离开原位朝诱饵走",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 24,
+              "y": 68,
+              "face": 0
+            },
+            {
+              "t": "prop",
+              "x": 70,
+              "y": 30,
+              "label": "诱饵",
+              "highlight": true,
+              "kind": "item"
+            },
+            {
+              "t": "unit",
+              "x": 78,
+              "y": 48,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "arrow",
+              "x1": 76,
+              "y1": 46,
+              "x2": 72,
+              "y2": 34,
+              "kind": "move"
+            },
+            {
+              "t": "held",
+              "label": null
+            },
+            {
+              "t": "badge",
+              "text": "诱饵引走"
+            }
+          ],
+          "logic": "投诱饵把巡逻引离原位"
+        },
+        {
+          "title": "摸到背后",
+          "input": "趁空档摸到目标背后",
+          "screen": "目标背上亮起可暗杀提示",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 48,
+              "y": 52,
+              "face": 20
+            },
+            {
+              "t": "unit",
+              "x": 62,
+              "y": 44,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "ring",
+              "x": 62,
+              "y": 44,
+              "r": 11,
+              "kind": "finisher"
+            },
+            {
+              "t": "key",
+              "x": 62,
+              "y": 26,
+              "label": "F",
+              "state": "active",
+              "hint": "暗杀"
+            },
+            {
+              "t": "badge",
+              "text": "背后空了"
+            }
+          ],
+          "logic": "借空档绕到目标背后解锁暗杀"
+        },
+        {
+          "title": "得手",
+          "input": "按下完成暗杀",
+          "screen": "目标倒下，这一串道具+潜行收工",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 56,
+              "y": 48,
+              "face": 20
+            },
+            {
+              "t": "unit",
+              "x": 62,
+              "y": 44,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1,
+              "state": "downed"
+            },
+            {
+              "t": "arrow",
+              "x1": 56,
+              "y1": 48,
+              "x2": 60,
+              "y2": 45,
+              "kind": "attack"
+            },
+            {
+              "t": "impact",
+              "x": 62,
+              "y": 44,
+              "r": 11,
+              "heavy": false
+            },
+            {
+              "t": "toast",
+              "x": 18,
+              "y": 78,
+              "text": "无人察觉",
+              "kind": "gain"
+            },
+            {
+              "t": "badge",
+              "text": "收工"
+            }
+          ],
+          "logic": "执行暗杀结束这串道具联用"
+        }
+      ],
+      "ludots": "潜行道具：没有标记持久化、昏睡非死亡、扛运、气球回收、道具轮盘这些产品链——现有 context 交互只能做「靠近按 F」，区分不了麻醉/回收/藏匿。",
+      "todos": [
+        "TODO: 视野工具标记（望远镜）与标记持久化",
+        "TODO: 非致死倒地（昏睡）与扛运移动修正",
+        "TODO: 道具轮盘切换手持主动件",
+        "TODO: 回收（气球）与干扰区拒绝",
+        "TODO: 道具联用编排（诱饵 → 空档 → 暗杀）可验收路径"
+      ],
+      "familyTitle": "潜行道具：标记、放倒、回收、组合",
+      "actionNo": "UX-229",
+      "actionKey": "sk-gadget-combo",
+      "actionTitle": "先诱饵再摸过去",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "sk-gadget-combo"
+        }
+      ]
+    },
+    {
+      "id": "ks-earn-streak",
+      "category": "killstreak",
+      "family": "killstreak",
+      "title": "连杀攒满，奖励图标亮起",
+      "summary": "不停击倒敌人才会攒连杀分；攒到档位，对应的连杀奖励图标从灰变亮。死一次清零——玩家得随时看得见「现在攒到哪一档」。",
+      "genres": [
+        "连杀奖励",
+        "COD"
+      ],
+      "targets": [
+        "fps"
+      ],
+      "beats": [
+        {
+          "title": "攒分",
+          "input": "连续击倒两人",
+          "screen": "连杀计数往上走，下一档还灰着",
+          "view": "fps",
+          "cast": [
+            {
+              "t": "crosshair",
+              "x": 55,
+              "y": 42,
+              "locked": false
+            },
+            {
+              "t": "unit",
+              "x": 55,
+              "y": 42,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "impact",
+              "x": 55,
+              "y": 42,
+              "r": 13,
+              "heavy": false
+            },
+            {
+              "t": "hotbar",
+              "slots": 2,
+              "active": null,
+              "cd": null,
+              "extra": null,
+              "off": [
+                0,
+                1
+              ],
+              "dot": null,
+              "deny": null,
+              "labels": [
+                "Q",
+                "W"
+              ]
+            },
+            {
+              "t": "toast",
+              "x": 20,
+              "y": 78,
+              "text": "连杀 ×2 · 还差 1",
+              "kind": "info"
+            },
+            {
+              "t": "badge",
+              "text": "攒分中"
+            }
+          ],
+          "logic": "连杀计数增加但奖励档仍未点亮"
+        },
+        {
+          "title": "亮起",
+          "input": "再下一档够了",
+          "screen": "空袭那一格亮起可按，无人机还灰着",
+          "view": "fps",
+          "cast": [
+            {
+              "t": "crosshair",
+              "x": 55,
+              "y": 42,
+              "locked": false
+            },
+            {
+              "t": "hotbar",
+              "slots": 2,
+              "active": null,
+              "cd": null,
+              "extra": 0,
+              "off": [
+                1
+              ],
+              "dot": null,
+              "deny": null,
+              "labels": [
+                "Q",
+                "W"
+              ]
+            },
+            {
+              "t": "toast",
+              "x": 20,
+              "y": 78,
+              "text": "空袭已就绪",
+              "kind": "gain"
+            },
+            {
+              "t": "badge",
+              "text": "亮了一档"
+            }
+          ],
+          "logic": "达到档位后点亮对应连杀奖励"
+        },
+        {
+          "title": "清零",
+          "input": "我死了",
+          "screen": "连杀计数归零，两档图标都灭掉",
+          "view": "fps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "impact",
+              "x": 40,
+              "y": 58,
+              "r": 14,
+              "heavy": true
+            },
+            {
+              "t": "hotbar",
+              "slots": 2,
+              "active": null,
+              "cd": null,
+              "extra": null,
+              "off": [
+                0,
+                1
+              ],
+              "dot": null,
+              "deny": null,
+              "labels": [
+                "Q",
+                "W"
+              ]
+            },
+            {
+              "t": "toast",
+              "x": 20,
+              "y": 78,
+              "text": "连杀已中断",
+              "kind": "loss"
+            },
+            {
+              "t": "badge",
+              "text": "清零"
+            }
+          ],
+          "logic": "死亡清零连杀计数并熄灭已亮奖励"
+        }
+      ],
+      "ludots": "连杀奖励：没有连杀计数、档位点亮、空袭落点、无人机接管视角、空投争夺——临时技（temp-kit）只覆盖「整栏替换」，盖不住「攒分点亮再选落点/接管」。",
+      "todos": [
+        "TODO: 连杀计数与死亡清零",
+        "TODO: 档位奖励点亮 / 消耗 / 冷却",
+        "TODO: 空袭落点预览与取消不消耗",
+        "TODO: 临时接管非本体视角（无人机）与交还",
+        "TODO: 空投归属未定时的抢拾仲裁"
+      ],
+      "familyTitle": "连杀奖励与临时接管",
+      "actionNo": "UX-230",
+      "actionKey": "ks-earn-streak",
+      "actionTitle": "连杀攒满奖励图标亮起",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ks-earn-streak"
+        }
+      ]
+    },
+    {
+      "id": "ks-airstrike-mark",
+      "category": "killstreak",
+      "family": "killstreak",
+      "title": "叫空袭：先标落点再确认",
+      "summary": "连杀奖励不是按一下就炸：要先进落点选择，把圈放到想炸的地方再确认。标错地方取消得干净，别把次数白白扣掉。",
+      "genres": [
+        "连杀奖励",
+        "COD"
+      ],
+      "targets": [
+        "fps"
+      ],
+      "beats": [
+        {
+          "title": "进落点",
+          "input": "按已亮起的空袭",
+          "screen": "进入落点预览，地上出现可移动的轰炸圈",
+          "view": "fps",
+          "cast": [
+            {
+              "t": "crosshair",
+              "x": 50,
+              "y": 50,
+              "locked": false
+            },
+            {
+              "t": "circle",
+              "x": 50,
+              "y": 50,
+              "r": 18,
+              "ok": true
+            },
+            {
+              "t": "hotbar",
+              "slots": 2,
+              "active": 0,
+              "cd": null,
+              "extra": 0,
+              "off": [],
+              "dot": null,
+              "deny": null,
+              "labels": [
+                "Q",
+                "W"
+              ]
+            },
+            {
+              "t": "badge",
+              "text": "选落点"
+            }
+          ],
+          "logic": "激活空袭进入可移动落点预览"
+        },
+        {
+          "title": "确认",
+          "input": "确认落点",
+          "screen": "圈固定，几秒后轰炸落下，空袭那一格进冷却",
+          "view": "fps",
+          "cast": [
+            {
+              "t": "circle",
+              "x": 62,
+              "y": 44,
+              "r": 18,
+              "ok": true
+            },
+            {
+              "t": "impact",
+              "x": 62,
+              "y": 44,
+              "r": 20,
+              "heavy": true
+            },
+            {
+              "t": "unit",
+              "x": 62,
+              "y": 44,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "delaymark",
+              "x": 62,
+              "y": 28,
+              "turns": 2,
+              "label": "轰炸"
+            },
+            {
+              "t": "hotbar",
+              "slots": 2,
+              "active": null,
+              "cd": 0,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": null,
+              "labels": [
+                "Q",
+                "W"
+              ]
+            },
+            {
+              "t": "badge",
+              "text": "落地"
+            }
+          ],
+          "logic": "确认落点后延迟轰炸并消耗该奖励"
+        },
+        {
+          "title": "取消",
+          "input": "标到一半取消",
+          "screen": "预览圈消失，空袭次数还在，可以重来",
+          "view": "fps",
+          "cast": [
+            {
+              "t": "crosshair",
+              "x": 50,
+              "y": 50,
+              "locked": false
+            },
+            {
+              "t": "hotbar",
+              "slots": 2,
+              "active": null,
+              "cd": null,
+              "extra": 0,
+              "off": [],
+              "dot": null,
+              "deny": null,
+              "labels": [
+                "Q",
+                "W"
+              ]
+            },
+            {
+              "t": "toast",
+              "x": 20,
+              "y": 78,
+              "text": "已取消·未消耗",
+              "kind": "info"
+            },
+            {
+              "t": "badge",
+              "text": "取消"
+            }
+          ],
+          "logic": "取消预览不消耗空袭次数"
+        }
+      ],
+      "ludots": "连杀奖励：没有连杀计数、档位点亮、空袭落点、无人机接管视角、空投争夺——临时技（temp-kit）只覆盖「整栏替换」，盖不住「攒分点亮再选落点/接管」。",
+      "todos": [
+        "TODO: 连杀计数与死亡清零",
+        "TODO: 档位奖励点亮 / 消耗 / 冷却",
+        "TODO: 空袭落点预览与取消不消耗",
+        "TODO: 临时接管非本体视角（无人机）与交还",
+        "TODO: 空投归属未定时的抢拾仲裁"
+      ],
+      "familyTitle": "连杀奖励与临时接管",
+      "actionNo": "UX-231",
+      "actionKey": "ks-airstrike-mark",
+      "actionTitle": "叫空袭先标落点再确认",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ks-airstrike-mark"
+        }
+      ]
+    },
+    {
+      "id": "ks-drone-takeover",
+      "category": "killstreak",
+      "family": "killstreak",
+      "title": "无人机轰炸：接管别的视角",
+      "summary": "按下去之后你暂时不是本人了——画面切到无人机俯视，边框提醒「你在操控无人机」。时间到或炸完，控制权交还给地面上的自己。",
+      "genres": [
+        "连杀奖励",
+        "COD"
+      ],
+      "targets": [
+        "fps"
+      ],
+      "beats": [
+        {
+          "title": "接管",
+          "input": "激活无人机连杀",
+          "screen": "整屏加边框，视角切到无人机，本人留在原地",
+          "view": "fps",
+          "cast": [
+            {
+              "t": "takeover",
+              "label": "你在操控无人机"
+            },
+            {
+              "t": "vehicle",
+              "x": 50,
+              "y": 40,
+              "kind": "drone",
+              "occupied": true
+            },
+            {
+              "t": "crosshair",
+              "x": 50,
+              "y": 55,
+              "locked": false
+            },
+            {
+              "t": "hero",
+              "x": 20,
+              "y": 78,
+              "face": 0
+            },
+            {
+              "t": "hotbar",
+              "slots": 2,
+              "active": 1,
+              "cd": null,
+              "extra": 1,
+              "off": [],
+              "dot": null,
+              "deny": null,
+              "labels": [
+                "Q",
+                "W"
+              ]
+            },
+            {
+              "t": "badge",
+              "text": "切到无人机"
+            }
+          ],
+          "logic": "切到无人机视角并标明当前在操控无人机"
+        },
+        {
+          "title": "投弹",
+          "input": "飞到目标上方投弹",
+          "screen": "准星下的地面被炸开，击倒显示出来",
+          "view": "fps",
+          "cast": [
+            {
+              "t": "takeover",
+              "label": "你在操控无人机"
+            },
+            {
+              "t": "vehicle",
+              "x": 58,
+              "y": 30,
+              "kind": "drone",
+              "occupied": true
+            },
+            {
+              "t": "crosshair",
+              "x": 58,
+              "y": 55,
+              "locked": false
+            },
+            {
+              "t": "circle",
+              "x": 58,
+              "y": 55,
+              "r": 14,
+              "ok": true
+            },
+            {
+              "t": "impact",
+              "x": 58,
+              "y": 55,
+              "r": 18,
+              "heavy": true
+            },
+            {
+              "t": "unit",
+              "x": 58,
+              "y": 55,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "badge",
+              "text": "投弹"
+            }
+          ],
+          "logic": "在无人机视角下对落点投弹结算伤害"
+        },
+        {
+          "title": "交还",
+          "input": "时间到交还控制",
+          "screen": "边框撤掉，视角回到本人，无人机那一格进冷却",
+          "view": "fps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "crosshair",
+              "x": 60,
+              "y": 42,
+              "locked": false
+            },
+            {
+              "t": "hotbar",
+              "slots": 2,
+              "active": null,
+              "cd": 1,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": null,
+              "labels": [
+                "Q",
+                "W"
+              ]
+            },
+            {
+              "t": "toast",
+              "x": 20,
+              "y": 78,
+              "text": "已交还控制",
+              "kind": "info"
+            },
+            {
+              "t": "badge",
+              "text": "交还"
+            }
+          ],
+          "logic": "接管结束交还本人控制并使该奖励进入冷却"
+        }
+      ],
+      "ludots": "连杀奖励：没有连杀计数、档位点亮、空袭落点、无人机接管视角、空投争夺——临时技（temp-kit）只覆盖「整栏替换」，盖不住「攒分点亮再选落点/接管」。",
+      "todos": [
+        "TODO: 连杀计数与死亡清零",
+        "TODO: 档位奖励点亮 / 消耗 / 冷却",
+        "TODO: 空袭落点预览与取消不消耗",
+        "TODO: 临时接管非本体视角（无人机）与交还",
+        "TODO: 空投归属未定时的抢拾仲裁"
+      ],
+      "familyTitle": "连杀奖励与临时接管",
+      "actionNo": "UX-232",
+      "actionKey": "ks-drone-takeover",
+      "actionTitle": "无人机轰炸接管视角",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ks-drone-takeover"
+        }
+      ]
+    },
+    {
+      "id": "ks-care-package",
+      "category": "killstreak",
+      "family": "killstreak",
+      "title": "空投补给：砸下来大家抢",
+      "summary": "空投箱落地那一刻不属于任何人，谁先摸到谁拿走。落地位置、下降过程、被谁捡走都要看得见，别让箱子凭空出现在脚边。",
+      "genres": [
+        "连杀奖励",
+        "COD"
+      ],
+      "targets": [
+        "fps"
+      ],
+      "beats": [
+        {
+          "title": "呼叫",
+          "input": "呼叫空投",
+          "screen": "天空标出即将落下的位置，箱子还在半空",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 30,
+              "y": 62,
+              "face": 0
+            },
+            {
+              "t": "prop",
+              "x": 70,
+              "y": 28,
+              "label": "空投",
+              "highlight": false,
+              "kind": "chest"
+            },
+            {
+              "t": "circle",
+              "x": 70,
+              "y": 55,
+              "r": 12,
+              "ok": true
+            },
+            {
+              "t": "delaymark",
+              "x": 70,
+              "y": 42,
+              "turns": 3,
+              "label": "落地"
+            },
+            {
+              "t": "badge",
+              "text": "呼叫中"
+            }
+          ],
+          "logic": "呼叫空投并标出即将落地位置"
+        },
+        {
+          "title": "落地",
+          "input": "箱子落地",
+          "screen": "箱子砸在标点上，提示「可拾取」",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 30,
+              "y": 62,
+              "face": 0
+            },
+            {
+              "t": "prop",
+              "x": 70,
+              "y": 55,
+              "label": "空投",
+              "highlight": true,
+              "kind": "chest"
+            },
+            {
+              "t": "impact",
+              "x": 70,
+              "y": 55,
+              "r": 14,
+              "heavy": false
+            },
+            {
+              "t": "key",
+              "x": 70,
+              "y": 36,
+              "label": "F",
+              "state": "active",
+              "hint": "打开空投"
+            },
+            {
+              "t": "badge",
+              "text": "可捡"
+            }
+          ],
+          "logic": "空投箱落地变为可拾取"
+        },
+        {
+          "title": "被抢",
+          "input": "别人抢先打开",
+          "screen": "箱子消失，明确说是被谁拿走了",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 30,
+              "y": 62,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 70,
+              "y": 55,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "toast",
+              "x": 20,
+              "y": 78,
+              "text": "空投被对方拿走",
+              "kind": "loss"
+            },
+            {
+              "t": "deny",
+              "x": 52,
+              "y": 40,
+              "label": "晚了一步",
+              "r": 11
+            },
+            {
+              "t": "badge",
+              "text": "被抢走"
+            }
+          ],
+          "logic": "被他人先拾取后回报截胡结果"
+        }
+      ],
+      "ludots": "连杀奖励：没有连杀计数、档位点亮、空袭落点、无人机接管视角、空投争夺——临时技（temp-kit）只覆盖「整栏替换」，盖不住「攒分点亮再选落点/接管」。",
+      "todos": [
+        "TODO: 连杀计数与死亡清零",
+        "TODO: 档位奖励点亮 / 消耗 / 冷却",
+        "TODO: 空袭落点预览与取消不消耗",
+        "TODO: 临时接管非本体视角（无人机）与交还",
+        "TODO: 空投归属未定时的抢拾仲裁"
+      ],
+      "familyTitle": "连杀奖励与临时接管",
+      "actionNo": "UX-233",
+      "actionKey": "ks-care-package",
+      "actionTitle": "空投补给砸下来大家抢",
+      "platform": "kbm",
+      "platformLabel": "键鼠",
+      "variants": [
+        {
+          "platform": "kbm",
+          "platformLabel": "键鼠",
+          "caseId": "ks-care-package"
+        }
+      ]
+    },
+    {
+      "id": "soul-stamina-budget",
+      "category": "souls-like",
+      "family": "souls-like",
+      "title": "精力条：砍、闪、跑共用一管",
+      "summary": "砍一下、翻一下、冲一段，都从同一管精力里扣。见底那一下动作会卡死，这是魂类最核心的「我想打但身子不听话」。",
+      "genres": [
+        "魂类"
+      ],
+      "targets": [
+        "gow"
+      ],
+      "beats": [
+        {
+          "title": "挥刀",
+          "input": "连续挥刀",
+          "screen": "精力条跟着一刀一截往下掉",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 36,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 64,
+              "y": 46,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "arrow",
+              "x1": 40,
+              "y1": 56,
+              "x2": 58,
+              "y2": 48,
+              "kind": "attack"
+            },
+            {
+              "t": "bar",
+              "x": 36,
+              "y": 30,
+              "ratio": 0.55,
+              "kind": "stamina",
+              "label": "精力",
+              "broken": false
+            },
+            {
+              "t": "badge",
+              "text": "挥刀耗精"
+            }
+          ],
+          "logic": "攻击消耗共用精力条"
+        },
+        {
+          "title": "见底",
+          "input": "精力见底还想翻滚",
+          "screen": "翻滚放不出，人僵在原地一小会",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 36,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 64,
+              "y": 46,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "bar",
+              "x": 36,
+              "y": 30,
+              "ratio": 0.05,
+              "kind": "stamina",
+              "label": "精力见底",
+              "broken": false
+            },
+            {
+              "t": "deny",
+              "x": 54,
+              "y": 40,
+              "label": "精力不足",
+              "r": 11
+            },
+            {
+              "t": "badge",
+              "text": "卡死"
+            }
+          ],
+          "logic": "精力见底时拒绝闪避并进入短暂硬直"
+        },
+        {
+          "title": "回升",
+          "input": "站着缓几秒",
+          "screen": "精力条自己回上来，又能动了",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 36,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "bar",
+              "x": 36,
+              "y": 30,
+              "ratio": 0.7,
+              "kind": "stamina",
+              "label": "精力",
+              "broken": false
+            },
+            {
+              "t": "toast",
+              "x": 20,
+              "y": 78,
+              "text": "精力恢复中",
+              "kind": "info"
+            },
+            {
+              "t": "badge",
+              "text": "回升"
+            }
+          ],
+          "logic": "站立恢复精力条至可再行动"
+        }
+      ],
+      "ludots": "魂类：精力共用池、药瓶可打断读条、掉魂跑尸、篝火刷新、Boss 阶段——现有 defense/combo 只覆盖闪避弹反，没有这套资源与死亡惩罚结构。",
+      "todos": [
+        "TODO: 共用精力池（攻击/闪避/冲刺同一管）与见底硬直",
+        "TODO: 药瓶读条可被打断且失败不扣次数",
+        "TODO: 死亡掉魂、回收与二次死亡消散",
+        "TODO: 休息点回满并触发区域敌人刷新",
+        "TODO: Boss 多阶段血条与阶段换招"
+      ],
+      "familyTitle": "魂类：精力、药瓶、掉魂、阶段",
+      "actionNo": "UX-234",
+      "actionKey": "soul-stamina-budget",
+      "actionTitle": "精力条砍闪跑共用一管",
+      "platform": "gamepad",
+      "platformLabel": "主机",
+      "variants": [
+        {
+          "platform": "gamepad",
+          "platformLabel": "主机",
+          "caseId": "soul-stamina-budget"
+        }
+      ]
+    },
+    {
+      "id": "soul-flask-interrupt",
+      "category": "souls-like",
+      "family": "souls-like",
+      "title": "喝药瓶：站桩读条可被打断",
+      "summary": "喝一口要端瓶子站一会，这段时间挨打会打断，药也不扣。玩家得权衡「现在能不能腾出手」，不是按一下就满血。",
+      "genres": [
+        "魂类"
+      ],
+      "targets": [
+        "gow"
+      ],
+      "beats": [
+        {
+          "title": "开始喝",
+          "input": "按喝药",
+          "screen": "端起瓶子开始喝，血还没涨",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "bar",
+              "x": 40,
+              "y": 28,
+              "ratio": 0.35,
+              "kind": "cast",
+              "label": "喝药中",
+              "broken": false
+            },
+            {
+              "t": "bar",
+              "x": 40,
+              "y": 78,
+              "ratio": 0.35,
+              "kind": "hp",
+              "label": "生命",
+              "broken": false
+            },
+            {
+              "t": "held",
+              "label": "药瓶"
+            },
+            {
+              "t": "key",
+              "x": 24,
+              "y": 80,
+              "label": "R1",
+              "state": "active",
+              "hint": "喝药"
+            },
+            {
+              "t": "badge",
+              "text": "开始喝"
+            }
+          ],
+          "logic": "开始喝药并进入可被打断的读条"
+        },
+        {
+          "title": "打断",
+          "input": "喝到一半挨打",
+          "screen": "喝药中断，血没回，瓶子次数也不少",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 68,
+              "y": 44,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "impact",
+              "x": 40,
+              "y": 58,
+              "r": 12,
+              "heavy": false
+            },
+            {
+              "t": "bar",
+              "x": 40,
+              "y": 28,
+              "ratio": 0.5,
+              "kind": "cast",
+              "label": "被打断",
+              "broken": true
+            },
+            {
+              "t": "bar",
+              "x": 40,
+              "y": 78,
+              "ratio": 0.35,
+              "kind": "hp",
+              "label": "生命",
+              "broken": false
+            },
+            {
+              "t": "held",
+              "label": "药瓶"
+            },
+            {
+              "t": "toast",
+              "x": 20,
+              "y": 22,
+              "text": "喝药被打断",
+              "kind": "error"
+            },
+            {
+              "t": "badge",
+              "text": "打断"
+            }
+          ],
+          "logic": "读条中受击中断且不消耗药瓶次数"
+        },
+        {
+          "title": "喝完",
+          "input": "安全时喝完",
+          "screen": "读条走满，血涨一截，瓶子次数 -1",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "bar",
+              "x": 40,
+              "y": 78,
+              "ratio": 0.75,
+              "kind": "hp",
+              "label": "生命",
+              "broken": false
+            },
+            {
+              "t": "held",
+              "label": "药瓶"
+            },
+            {
+              "t": "toast",
+              "x": 20,
+              "y": 22,
+              "text": "药瓶剩余 2",
+              "kind": "info"
+            },
+            {
+              "t": "badge",
+              "text": "喝完"
+            }
+          ],
+          "logic": "完整喝完后回血并扣减药瓶次数"
+        }
+      ],
+      "ludots": "魂类：精力共用池、药瓶可打断读条、掉魂跑尸、篝火刷新、Boss 阶段——现有 defense/combo 只覆盖闪避弹反，没有这套资源与死亡惩罚结构。",
+      "todos": [
+        "TODO: 共用精力池（攻击/闪避/冲刺同一管）与见底硬直",
+        "TODO: 药瓶读条可被打断且失败不扣次数",
+        "TODO: 死亡掉魂、回收与二次死亡消散",
+        "TODO: 休息点回满并触发区域敌人刷新",
+        "TODO: Boss 多阶段血条与阶段换招"
+      ],
+      "familyTitle": "魂类：精力、药瓶、掉魂、阶段",
+      "actionNo": "UX-235",
+      "actionKey": "soul-flask-interrupt",
+      "actionTitle": "喝药瓶站桩可被打断",
+      "platform": "gamepad",
+      "platformLabel": "主机",
+      "variants": [
+        {
+          "platform": "gamepad",
+          "platformLabel": "主机",
+          "caseId": "soul-flask-interrupt"
+        }
+      ]
+    },
+    {
+      "id": "soul-runback",
+      "category": "souls-like",
+      "family": "souls-like",
+      "title": "死了掉魂，跑回去捡；再死就没了",
+      "summary": "倒下那一刻魂留在死的地方。跑回去碰一下就能拿回；还没捡到又死一次，上一份魂就永久消失——这是魂类最狠的惩罚。",
+      "genres": [
+        "魂类"
+      ],
+      "targets": [
+        "gow"
+      ],
+      "beats": [
+        {
+          "title": "掉魂",
+          "input": "被打倒，魂掉在原地",
+          "screen": "自己变成灵魂态，死点留下可捡的魂",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 30,
+              "y": 60,
+              "face": 0,
+              "state": "ghost"
+            },
+            {
+              "t": "prop",
+              "x": 70,
+              "y": 44,
+              "label": "魂",
+              "highlight": true,
+              "kind": "shrine"
+            },
+            {
+              "t": "toast",
+              "x": 18,
+              "y": 22,
+              "text": "魂遗留在死点",
+              "kind": "loss"
+            },
+            {
+              "t": "badge",
+              "text": "掉魂"
+            }
+          ],
+          "logic": "死亡后以灵魂态留下可回收的魂"
+        },
+        {
+          "title": "捡回",
+          "input": "跑回死点捡起来",
+          "screen": "碰一下魂消失，数量回背包",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 66,
+              "y": 46,
+              "face": 0
+            },
+            {
+              "t": "impact",
+              "x": 70,
+              "y": 44,
+              "r": 12,
+              "heavy": false
+            },
+            {
+              "t": "toast",
+              "x": 18,
+              "y": 22,
+              "text": "已回收魂",
+              "kind": "gain"
+            },
+            {
+              "t": "badge",
+              "text": "捡回"
+            }
+          ],
+          "logic": "回到死点回收魂"
+        },
+        {
+          "title": "消散",
+          "input": "还没捡到又死一次",
+          "screen": "上一份魂消失，新死点留下新的一份",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 28,
+              "y": 68,
+              "face": 0,
+              "state": "ghost"
+            },
+            {
+              "t": "prop",
+              "x": 50,
+              "y": 40,
+              "label": "魂",
+              "highlight": true,
+              "kind": "shrine"
+            },
+            {
+              "t": "deny",
+              "x": 70,
+              "y": 44,
+              "label": "上一份魂已消失",
+              "r": 11
+            },
+            {
+              "t": "toast",
+              "x": 16,
+              "y": 22,
+              "text": "未回收的魂已消散",
+              "kind": "error"
+            },
+            {
+              "t": "badge",
+              "text": "消散"
+            }
+          ],
+          "logic": "未回收前再次死亡使上一份魂永久消失"
+        }
+      ],
+      "ludots": "魂类：精力共用池、药瓶可打断读条、掉魂跑尸、篝火刷新、Boss 阶段——现有 defense/combo 只覆盖闪避弹反，没有这套资源与死亡惩罚结构。",
+      "todos": [
+        "TODO: 共用精力池（攻击/闪避/冲刺同一管）与见底硬直",
+        "TODO: 药瓶读条可被打断且失败不扣次数",
+        "TODO: 死亡掉魂、回收与二次死亡消散",
+        "TODO: 休息点回满并触发区域敌人刷新",
+        "TODO: Boss 多阶段血条与阶段换招"
+      ],
+      "familyTitle": "魂类：精力、药瓶、掉魂、阶段",
+      "actionNo": "UX-236",
+      "actionKey": "soul-runback",
+      "actionTitle": "死了掉魂跑回去捡",
+      "platform": "gamepad",
+      "platformLabel": "主机",
+      "variants": [
+        {
+          "platform": "gamepad",
+          "platformLabel": "主机",
+          "caseId": "soul-runback"
+        }
+      ]
+    },
+    {
+      "id": "soul-bonfire-rest",
+      "category": "souls-like",
+      "family": "souls-like",
+      "title": "篝火休息：回满，但敌人刷新",
+      "summary": "坐篝火血和药都回满，可是附近打死的杂兵也会重新站起来。这是「要不要现在休息」的权衡，不是单纯的存档点。",
+      "genres": [
+        "魂类"
+      ],
+      "targets": [
+        "gow"
+      ],
+      "beats": [
+        {
+          "title": "靠近",
+          "input": "走近未点燃的篝火",
+          "screen": "提示可以坐下休息",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 36,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "prop",
+              "x": 64,
+              "y": 48,
+              "label": "篝火",
+              "highlight": true,
+              "kind": "shrine"
+            },
+            {
+              "t": "key",
+              "x": 64,
+              "y": 30,
+              "label": "A键",
+              "state": "active",
+              "hint": "休息"
+            },
+            {
+              "t": "badge",
+              "text": "可休息"
+            }
+          ],
+          "logic": "靠近篝火显示可休息提示"
+        },
+        {
+          "title": "休息",
+          "input": "坐下休息",
+          "screen": "血和药回满，并提示周围敌人已刷新",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 56,
+              "y": 50,
+              "face": 0
+            },
+            {
+              "t": "prop",
+              "x": 64,
+              "y": 48,
+              "label": "篝火",
+              "highlight": false,
+              "kind": "shrine"
+            },
+            {
+              "t": "bar",
+              "x": 56,
+              "y": 28,
+              "ratio": 1.0,
+              "kind": "hp",
+              "label": "生命",
+              "broken": false
+            },
+            {
+              "t": "unit",
+              "x": 78,
+              "y": 36,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "toast",
+              "x": 16,
+              "y": 78,
+              "text": "药瓶回满 · 敌人已刷新",
+              "kind": "info"
+            },
+            {
+              "t": "badge",
+              "text": "休息完毕"
+            }
+          ],
+          "logic": "休息回满资源并触发周围敌人刷新"
+        },
+        {
+          "title": "刷新",
+          "input": "转身看见刷新的敌人",
+          "screen": "刚才打死的人又站在原位",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 70,
+              "y": 42,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "prop",
+              "x": 64,
+              "y": 62,
+              "label": "篝火",
+              "highlight": false,
+              "kind": "shrine"
+            },
+            {
+              "t": "badge",
+              "text": "敌人刷新"
+            }
+          ],
+          "logic": "刷新后的敌人重新出现在原巡逻位"
+        }
+      ],
+      "ludots": "魂类：精力共用池、药瓶可打断读条、掉魂跑尸、篝火刷新、Boss 阶段——现有 defense/combo 只覆盖闪避弹反，没有这套资源与死亡惩罚结构。",
+      "todos": [
+        "TODO: 共用精力池（攻击/闪避/冲刺同一管）与见底硬直",
+        "TODO: 药瓶读条可被打断且失败不扣次数",
+        "TODO: 死亡掉魂、回收与二次死亡消散",
+        "TODO: 休息点回满并触发区域敌人刷新",
+        "TODO: Boss 多阶段血条与阶段换招"
+      ],
+      "familyTitle": "魂类：精力、药瓶、掉魂、阶段",
+      "actionNo": "UX-237",
+      "actionKey": "soul-bonfire-rest",
+      "actionTitle": "篝火休息回满敌人刷新",
+      "platform": "gamepad",
+      "platformLabel": "主机",
+      "variants": [
+        {
+          "platform": "gamepad",
+          "platformLabel": "主机",
+          "caseId": "soul-bonfire-rest"
+        }
+      ]
+    },
+    {
+      "id": "soul-boss-phase",
+      "category": "souls-like",
+      "family": "souls-like",
+      "title": "Boss 转阶段：血条分段，招式换套",
+      "summary": "打掉第一管血不是赢了，是他进入下一阶段——血条多一段，招式全换。转阶段那一下必须让玩家看懂「规则变了」，不是同一管血慢慢磨。",
+      "genres": [
+        "魂类"
+      ],
+      "targets": [
+        "gow"
+      ],
+      "beats": [
+        {
+          "title": "一阶段完",
+          "input": "Boss 第一管血见底",
+          "screen": "第一段血条清空，他进入转阶段演出",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 28,
+              "y": 62,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 64,
+              "y": 44,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1.4
+            },
+            {
+              "t": "bar",
+              "x": 64,
+              "y": 22,
+              "ratio": 0.05,
+              "kind": "hp",
+              "label": "一阶段",
+              "broken": false
+            },
+            {
+              "t": "toast",
+              "x": 16,
+              "y": 78,
+              "text": "阶段转换…",
+              "kind": "info"
+            },
+            {
+              "t": "badge",
+              "text": "一阶段完"
+            }
+          ],
+          "logic": "一阶段血量耗尽进入转阶段"
+        },
+        {
+          "title": "二阶段",
+          "input": "第二段血条亮起",
+          "screen": "血条重新出现并标成二阶段，他换了姿态",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 28,
+              "y": 62,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 64,
+              "y": 44,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1.4
+            },
+            {
+              "t": "bar",
+              "x": 64,
+              "y": 22,
+              "ratio": 1.0,
+              "kind": "hp",
+              "label": "二阶段",
+              "broken": false
+            },
+            {
+              "t": "ring",
+              "x": 64,
+              "y": 44,
+              "r": 14,
+              "kind": "buff"
+            },
+            {
+              "t": "badge",
+              "text": "二阶段"
+            }
+          ],
+          "logic": "二阶段血条亮起并切换 Boss 姿态"
+        },
+        {
+          "title": "新招",
+          "input": "新招式砸下来",
+          "screen": "他使出一阶段没有的大范围砸地",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 24,
+              "y": 70,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 64,
+              "y": 44,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1.4
+            },
+            {
+              "t": "impact",
+              "x": 40,
+              "y": 60,
+              "r": 22,
+              "heavy": true
+            },
+            {
+              "t": "circle",
+              "x": 40,
+              "y": 60,
+              "r": 20,
+              "ok": false
+            },
+            {
+              "t": "bar",
+              "x": 64,
+              "y": 22,
+              "ratio": 0.85,
+              "kind": "hp",
+              "label": "二阶段",
+              "broken": false
+            },
+            {
+              "t": "badge",
+              "text": "新招"
+            }
+          ],
+          "logic": "放出一阶段没有的新范围招式"
+        }
+      ],
+      "ludots": "魂类：精力共用池、药瓶可打断读条、掉魂跑尸、篝火刷新、Boss 阶段——现有 defense/combo 只覆盖闪避弹反，没有这套资源与死亡惩罚结构。",
+      "todos": [
+        "TODO: 共用精力池（攻击/闪避/冲刺同一管）与见底硬直",
+        "TODO: 药瓶读条可被打断且失败不扣次数",
+        "TODO: 死亡掉魂、回收与二次死亡消散",
+        "TODO: 休息点回满并触发区域敌人刷新",
+        "TODO: Boss 多阶段血条与阶段换招"
+      ],
+      "familyTitle": "魂类：精力、药瓶、掉魂、阶段",
+      "actionNo": "UX-238",
+      "actionKey": "soul-boss-phase",
+      "actionTitle": "Boss转阶段血条分段换招",
+      "platform": "gamepad",
+      "platformLabel": "主机",
+      "variants": [
+        {
+          "platform": "gamepad",
+          "platformLabel": "主机",
+          "caseId": "soul-boss-phase"
+        }
+      ]
+    },
+    {
+      "id": "vs-boost-overheat",
+      "category": "vs-boost",
+      "family": "vs-boost",
+      "title": "推进器冲刺与推进过热",
+      "summary": "按推进可以突然加速变向，但推进条会烫——烫满就过热，一段时间不能再推。玩家要在「现在逃」和「留一点应急」之间做选择。",
+      "genres": [
+        "高达VS"
+      ],
+      "targets": [
+        "fps",
+        "fight"
+      ],
+      "beats": [
+        {
+          "title": "推进",
+          "input": "按推进冲出去",
+          "screen": "机体突然加速，推进条往下掉",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 55,
+              "face": 0,
+              "form": "alt"
+            },
+            {
+              "t": "path",
+              "points": [
+                [
+                  22,
+                  60
+                ],
+                [
+                  50,
+                  50
+                ]
+              ],
+              "kind": "move"
+            },
+            {
+              "t": "bar",
+              "x": 40,
+              "y": 28,
+              "ratio": 0.55,
+              "kind": "boost",
+              "label": "推进",
+              "broken": false
+            },
+            {
+              "t": "key",
+              "x": 24,
+              "y": 80,
+              "label": "B键",
+              "state": "active",
+              "hint": "推进"
+            },
+            {
+              "t": "badge",
+              "text": "推进中"
+            }
+          ],
+          "logic": "推进加速并消耗推进条"
+        },
+        {
+          "title": "过热",
+          "input": "推到过热",
+          "screen": "推进条见底并标过热，暂时按不动",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 55,
+              "y": 50,
+              "face": 0,
+              "form": "alt"
+            },
+            {
+              "t": "bar",
+              "x": 55,
+              "y": 28,
+              "ratio": 0.0,
+              "kind": "boost",
+              "label": "推进过热",
+              "broken": false
+            },
+            {
+              "t": "deny",
+              "x": 72,
+              "y": 44,
+              "label": "推进过热",
+              "r": 11
+            },
+            {
+              "t": "badge",
+              "text": "过热"
+            }
+          ],
+          "logic": "推进条耗尽进入推进过热不可再推"
+        },
+        {
+          "title": "冷却",
+          "input": "冷却回来",
+          "screen": "推进条回升，又能推了",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 55,
+              "y": 50,
+              "face": 0,
+              "form": "alt"
+            },
+            {
+              "t": "bar",
+              "x": 55,
+              "y": 28,
+              "ratio": 0.6,
+              "kind": "boost",
+              "label": "推进",
+              "broken": false
+            },
+            {
+              "t": "toast",
+              "x": 20,
+              "y": 78,
+              "text": "推进可用",
+              "kind": "gain"
+            },
+            {
+              "t": "badge",
+              "text": "冷却好"
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": null,
+              "cd": 0,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": null,
+              "labels": [
+                "Y",
+                "B",
+                "X",
+                "A"
+              ]
+            }
+          ],
+          "logic": "过热结束后推进条恢复可用"
+        }
+      ],
+      "ludots": "VS 对战：推进过热、觉醒限时强化、射格武装切换、击坠值强制倒地——与动作连段不是同一套；现有 temp-kit / form 切换不够表达过热与击坠压力。",
+      "todos": [
+        "TODO: 推进资源与过热锁定",
+        "TODO: 觉醒槽限时整机修正并到期撤销",
+        "TODO: 距离驱动的武装切换（射击 ↔ 格斗）",
+        "TODO: 击坠值叠加、满值强制倒地与追打窗"
+      ],
+      "familyTitle": "VS 对战：推进器、觉醒、射格切换",
+      "actionNo": "UX-239",
+      "actionKey": "vs-boost-overheat",
+      "actionTitle": "推进器冲刺与推进过热",
+      "platform": "gamepad",
+      "platformLabel": "主机",
+      "variants": [
+        {
+          "platform": "gamepad",
+          "platformLabel": "主机",
+          "caseId": "vs-boost-overheat"
+        }
+      ]
+    },
+    {
+      "id": "vs-awaken",
+      "category": "vs-boost",
+      "family": "vs-boost",
+      "title": "觉醒：限时整机强化",
+      "summary": "觉醒槽满了才能开。开了之后一段时间攻防都变强，时间到自动结束。这是整场对局的节奏点，开早开晚差别很大。",
+      "genres": [
+        "高达VS"
+      ],
+      "targets": [
+        "fps",
+        "fight"
+      ],
+      "beats": [
+        {
+          "title": "槽满",
+          "input": "觉醒槽攒满",
+          "screen": "觉醒图标亮起可按",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 55,
+              "face": 0,
+              "form": "alt"
+            },
+            {
+              "t": "bar",
+              "x": 40,
+              "y": 28,
+              "ratio": 1.0,
+              "kind": "charge",
+              "label": "觉醒",
+              "broken": false
+            },
+            {
+              "t": "key",
+              "x": 24,
+              "y": 80,
+              "label": "R3",
+              "state": "active",
+              "hint": "觉醒"
+            },
+            {
+              "t": "badge",
+              "text": "槽满"
+            },
+            {
+              "t": "hotbar",
+              "slots": 4,
+              "active": 0,
+              "cd": null,
+              "extra": null,
+              "off": [],
+              "dot": null,
+              "deny": null,
+              "labels": [
+                "Y",
+                "B",
+                "X",
+                "A"
+              ]
+            }
+          ],
+          "logic": "觉醒槽满后允许激活"
+        },
+        {
+          "title": "觉醒中",
+          "input": "按下进入觉醒",
+          "screen": "机体换姿态，限时强化边框亮起",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 55,
+              "face": 0,
+              "form": "alt"
+            },
+            {
+              "t": "ring",
+              "x": 40,
+              "y": 55,
+              "r": 16,
+              "kind": "buff"
+            },
+            {
+              "t": "bar",
+              "x": 40,
+              "y": 28,
+              "ratio": 0.8,
+              "kind": "charge",
+              "label": "觉醒剩余",
+              "broken": false
+            },
+            {
+              "t": "toast",
+              "x": 20,
+              "y": 78,
+              "text": "觉醒中",
+              "kind": "gain"
+            },
+            {
+              "t": "badge",
+              "text": "觉醒中"
+            }
+          ],
+          "logic": "激活觉醒进入限时整机强化"
+        },
+        {
+          "title": "结束",
+          "input": "时间到自动结束",
+          "screen": "强化边框撤掉，槽清空要重新攒",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 55,
+              "face": 0,
+              "form": "alt"
+            },
+            {
+              "t": "bar",
+              "x": 40,
+              "y": 28,
+              "ratio": 0.0,
+              "kind": "charge",
+              "label": "觉醒",
+              "broken": false
+            },
+            {
+              "t": "toast",
+              "x": 20,
+              "y": 78,
+              "text": "觉醒结束",
+              "kind": "info"
+            },
+            {
+              "t": "badge",
+              "text": "结束"
+            }
+          ],
+          "logic": "时限结束撤销强化并清空觉醒槽"
+        }
+      ],
+      "ludots": "VS 对战：推进过热、觉醒限时强化、射格武装切换、击坠值强制倒地——与动作连段不是同一套；现有 temp-kit / form 切换不够表达过热与击坠压力。",
+      "todos": [
+        "TODO: 推进资源与过热锁定",
+        "TODO: 觉醒槽限时整机修正并到期撤销",
+        "TODO: 距离驱动的武装切换（射击 ↔ 格斗）",
+        "TODO: 击坠值叠加、满值强制倒地与追打窗"
+      ],
+      "familyTitle": "VS 对战：推进器、觉醒、射格切换",
+      "actionNo": "UX-240",
+      "actionKey": "vs-awaken",
+      "actionTitle": "觉醒限时整机强化",
+      "platform": "gamepad",
+      "platformLabel": "主机",
+      "variants": [
+        {
+          "platform": "gamepad",
+          "platformLabel": "主机",
+          "caseId": "vs-awaken"
+        }
+      ]
+    },
+    {
+      "id": "vs-range-melee-swap",
+      "category": "vs-boost",
+      "family": "vs-boost",
+      "title": "射格切换：远射和近打不是同一套",
+      "summary": "远距离用射击武装，贴脸自动或手动切到格斗武装。两套招式、两套提示，玩家得随时知道「我现在手里是哪一套」。",
+      "genres": [
+        "高达VS"
+      ],
+      "targets": [
+        "fps",
+        "fight"
+      ],
+      "beats": [
+        {
+          "title": "远射",
+          "input": "远距离锁定射击",
+          "screen": "手里是射击武装，准星可用",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 28,
+              "y": 60,
+              "face": 0,
+              "form": "alt"
+            },
+            {
+              "t": "unit",
+              "x": 72,
+              "y": 40,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "ring",
+              "x": 72,
+              "y": 40,
+              "r": 8,
+              "kind": "lock"
+            },
+            {
+              "t": "crosshair",
+              "x": 72,
+              "y": 40,
+              "locked": false
+            },
+            {
+              "t": "held",
+              "label": "光束步枪"
+            },
+            {
+              "t": "badge",
+              "text": "射击武装"
+            }
+          ],
+          "logic": "远距离使用射击武装与准星"
+        },
+        {
+          "title": "切近战",
+          "input": "冲进近身距离",
+          "screen": "武装提示切成格斗，准星收起换成近战判定",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 50,
+              "y": 52,
+              "face": 0,
+              "form": "alt"
+            },
+            {
+              "t": "unit",
+              "x": 64,
+              "y": 46,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "ring",
+              "x": 64,
+              "y": 46,
+              "r": 8,
+              "kind": "lock"
+            },
+            {
+              "t": "held",
+              "label": "光束剑"
+            },
+            {
+              "t": "toast",
+              "x": 18,
+              "y": 78,
+              "text": "切换：格斗武装",
+              "kind": "info"
+            },
+            {
+              "t": "badge",
+              "text": "格斗武装"
+            }
+          ],
+          "logic": "进入近身距离切换到格斗武装"
+        },
+        {
+          "title": "近战",
+          "input": "近身挥砍",
+          "screen": "用格斗武装打出近战伤害",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 54,
+              "y": 50,
+              "face": 0,
+              "form": "alt"
+            },
+            {
+              "t": "unit",
+              "x": 64,
+              "y": 46,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "arrow",
+              "x1": 56,
+              "y1": 50,
+              "x2": 62,
+              "y2": 47,
+              "kind": "attack"
+            },
+            {
+              "t": "impact",
+              "x": 64,
+              "y": 46,
+              "r": 13,
+              "heavy": false
+            },
+            {
+              "t": "held",
+              "label": "光束剑"
+            },
+            {
+              "t": "badge",
+              "text": "近战命中"
+            }
+          ],
+          "logic": "用格斗武装结算近战伤害"
+        }
+      ],
+      "ludots": "VS 对战：推进过热、觉醒限时强化、射格武装切换、击坠值强制倒地——与动作连段不是同一套；现有 temp-kit / form 切换不够表达过热与击坠压力。",
+      "todos": [
+        "TODO: 推进资源与过热锁定",
+        "TODO: 觉醒槽限时整机修正并到期撤销",
+        "TODO: 距离驱动的武装切换（射击 ↔ 格斗）",
+        "TODO: 击坠值叠加、满值强制倒地与追打窗"
+      ],
+      "familyTitle": "VS 对战：推进器、觉醒、射格切换",
+      "actionNo": "UX-241",
+      "actionKey": "vs-range-melee-swap",
+      "actionTitle": "射格切换远射和近打",
+      "platform": "gamepad",
+      "platformLabel": "主机",
+      "variants": [
+        {
+          "platform": "gamepad",
+          "platformLabel": "主机",
+          "caseId": "vs-range-melee-swap"
+        }
+      ]
+    },
+    {
+      "id": "vs-down-value",
+      "category": "vs-boost",
+      "family": "vs-boost",
+      "title": "击坠值攒满，对方强制倒地",
+      "summary": "每一击都给对方叠击坠值，叠满他就强制进入倒地，这段时间任你输出。这是 VS 对战的节奏核，玩家得看见双方的击坠压力。",
+      "genres": [
+        "高达VS"
+      ],
+      "targets": [
+        "fps",
+        "fight"
+      ],
+      "beats": [
+        {
+          "title": "叠值",
+          "input": "连续命中叠击坠值",
+          "screen": "对方头上的击坠条往上涨",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 30,
+              "y": 58,
+              "face": 0,
+              "form": "alt"
+            },
+            {
+              "t": "unit",
+              "x": 66,
+              "y": 46,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "arrow",
+              "x1": 34,
+              "y1": 56,
+              "x2": 60,
+              "y2": 48,
+              "kind": "attack"
+            },
+            {
+              "t": "impact",
+              "x": 66,
+              "y": 46,
+              "r": 11,
+              "heavy": false
+            },
+            {
+              "t": "bar",
+              "x": 66,
+              "y": 28,
+              "ratio": 0.65,
+              "kind": "charge",
+              "label": "击坠值",
+              "broken": false
+            },
+            {
+              "t": "badge",
+              "text": "叠值"
+            }
+          ],
+          "logic": "命中叠加对方击坠值"
+        },
+        {
+          "title": "倒地",
+          "input": "击坠值满强制倒地",
+          "screen": "对方倒下，击坠条清空，进入可追打窗",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 55,
+              "face": 0,
+              "form": "alt"
+            },
+            {
+              "t": "unit",
+              "x": 66,
+              "y": 52,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1,
+              "state": "downed"
+            },
+            {
+              "t": "bar",
+              "x": 66,
+              "y": 28,
+              "ratio": 0.0,
+              "kind": "charge",
+              "label": "击坠值",
+              "broken": false
+            },
+            {
+              "t": "toast",
+              "x": 18,
+              "y": 78,
+              "text": "强制倒地",
+              "kind": "gain"
+            },
+            {
+              "t": "badge",
+              "text": "倒地"
+            }
+          ],
+          "logic": "击坠值满强制对方倒地"
+        },
+        {
+          "title": "追打",
+          "input": "倒地窗内继续输出",
+          "screen": "他还起不来，我的攻击稳定打中",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 50,
+              "y": 50,
+              "face": 0,
+              "form": "alt"
+            },
+            {
+              "t": "unit",
+              "x": 66,
+              "y": 52,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1,
+              "state": "downed"
+            },
+            {
+              "t": "arrow",
+              "x1": 52,
+              "y1": 50,
+              "x2": 62,
+              "y2": 52,
+              "kind": "attack"
+            },
+            {
+              "t": "impact",
+              "x": 66,
+              "y": 52,
+              "r": 14,
+              "heavy": false
+            },
+            {
+              "t": "badge",
+              "text": "追打中"
+            }
+          ],
+          "logic": "倒地窗内继续输出稳定命中"
+        }
+      ],
+      "ludots": "VS 对战：推进过热、觉醒限时强化、射格武装切换、击坠值强制倒地——与动作连段不是同一套；现有 temp-kit / form 切换不够表达过热与击坠压力。",
+      "todos": [
+        "TODO: 推进资源与过热锁定",
+        "TODO: 觉醒槽限时整机修正并到期撤销",
+        "TODO: 距离驱动的武装切换（射击 ↔ 格斗）",
+        "TODO: 击坠值叠加、满值强制倒地与追打窗"
+      ],
+      "familyTitle": "VS 对战：推进器、觉醒、射格切换",
+      "actionNo": "UX-242",
+      "actionKey": "vs-down-value",
+      "actionTitle": "击坠值攒满强制倒地",
+      "platform": "gamepad",
+      "platformLabel": "主机",
+      "variants": [
+        {
+          "platform": "gamepad",
+          "platformLabel": "主机",
+          "caseId": "vs-down-value"
+        }
+      ]
+    },
+    {
+      "id": "ft-motion-input",
+      "category": "fighting",
+      "family": "fighting",
+      "title": "搓招：指令序列对了才出招",
+      "summary": "下、下前、前、拳——按对了出必杀，中途断了就变成普通拳或什么都不出。玩家得看见自己搓到哪一步、哪一步断的。",
+      "genres": [
+        "格斗"
+      ],
+      "targets": [
+        "fight"
+      ],
+      "beats": [
+        {
+          "title": "搓成",
+          "input": "按完整指令",
+          "screen": "方向序列逐步亮起，最后一拳令成立",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 30,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 70,
+              "y": 48,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "cmdinput",
+              "x": 18,
+              "y": 28,
+              "seq": [
+                "↓",
+                "↘",
+                "→",
+                "拳"
+              ],
+              "ok": true,
+              "failAt": null,
+              "label": "指令成立"
+            },
+            {
+              "t": "badge",
+              "text": "搓成"
+            }
+          ],
+          "logic": "完整指令序列点亮并成立"
+        },
+        {
+          "title": "命中",
+          "input": "必杀打出去",
+          "screen": "必杀命中对方",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 66,
+              "y": 48,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "arrow",
+              "x1": 44,
+              "y1": 54,
+              "x2": 62,
+              "y2": 48,
+              "kind": "attack"
+            },
+            {
+              "t": "impact",
+              "x": 66,
+              "y": 48,
+              "r": 16,
+              "heavy": true
+            },
+            {
+              "t": "cmdinput",
+              "x": 18,
+              "y": 28,
+              "seq": [
+                "↓",
+                "↘",
+                "→",
+                "拳"
+              ],
+              "ok": true,
+              "failAt": null,
+              "label": "已放出"
+            },
+            {
+              "t": "badge",
+              "text": "必杀命中"
+            }
+          ],
+          "logic": "放出对应必杀并结算命中"
+        },
+        {
+          "title": "断招",
+          "input": "中途断招",
+          "screen": "序列在某一步标红，变成普通拳或没出招",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 30,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 70,
+              "y": 48,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "cmdinput",
+              "x": 18,
+              "y": 28,
+              "seq": [
+                "↓",
+                "↘",
+                "→",
+                "拳"
+              ],
+              "ok": false,
+              "failAt": 2,
+              "label": "没搓出来"
+            },
+            {
+              "t": "toast",
+              "x": 20,
+              "y": 78,
+              "text": "指令中断",
+              "kind": "error"
+            },
+            {
+              "t": "badge",
+              "text": "断了"
+            }
+          ],
+          "logic": "序列中断导致指令失败"
+        }
+      ],
+      "ludots": "格斗：指令序列、取消窗、投技受身、帧优势、破防——现有 combo 只是「轻攻击连段」，没有帧数据与指令缓冲产品层。",
+      "todos": [
+        "TODO: 指令序列识别与中断回报",
+        "TODO: 取消窗（从普攻后摆切进必杀）",
+        "TODO: 投技判定与受身拆投",
+        "TODO: 双方硬直比较（帧优势）的玩家可见反馈",
+        "TODO: 防御值消耗与破防强制硬直"
+      ],
+      "familyTitle": "格斗：搓招、取消链、投技、帧",
+      "actionNo": "UX-243",
+      "actionKey": "ft-motion-input",
+      "actionTitle": "搓招指令序列对了才出招",
+      "platform": "gamepad",
+      "platformLabel": "主机",
+      "variants": [
+        {
+          "platform": "gamepad",
+          "platformLabel": "主机",
+          "caseId": "ft-motion-input"
+        }
+      ]
+    },
+    {
+      "id": "ft-cancel-into-special",
+      "category": "fighting",
+      "family": "fighting",
+      "title": "取消链：普攻中途切进必杀",
+      "summary": "普攻还没打完就能取消后摇进必杀，这是连段的核心手感。取消窗只有那几帧，窗过去再按就变成下一拍的普攻。",
+      "genres": [
+        "格斗"
+      ],
+      "targets": [
+        "fight"
+      ],
+      "beats": [
+        {
+          "title": "取消窗",
+          "input": "普攻出手",
+          "screen": "前摇过去，进入可以取消的那一段",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 34,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 66,
+              "y": 48,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "inputwindow",
+              "x": 12,
+              "y": 24,
+              "phases": [
+                {
+                  "name": "前摇",
+                  "kind": "startup",
+                  "w": 1
+                },
+                {
+                  "name": "取消窗",
+                  "kind": "buffer",
+                  "w": 1
+                },
+                {
+                  "name": "后摆",
+                  "kind": "recovery",
+                  "w": 2
+                }
+              ],
+              "pressAt": null,
+              "fireAt": 0.35
+            },
+            {
+              "t": "badge",
+              "text": "取消窗"
+            }
+          ],
+          "logic": "普攻进入可取消窗"
+        },
+        {
+          "title": "取消成功",
+          "input": "窗内拨出必杀指令",
+          "screen": "普攻后摆被砍掉，直接接上必杀",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 42,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 66,
+              "y": 48,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "cmdinput",
+              "x": 16,
+              "y": 78,
+              "seq": [
+                "↓",
+                "↘",
+                "→",
+                "拳"
+              ],
+              "ok": true,
+              "failAt": null,
+              "label": "取消进必杀"
+            },
+            {
+              "t": "arrow",
+              "x1": 46,
+              "y1": 54,
+              "x2": 62,
+              "y2": 48,
+              "kind": "attack"
+            },
+            {
+              "t": "inputwindow",
+              "x": 12,
+              "y": 24,
+              "phases": [
+                {
+                  "name": "前摇",
+                  "kind": "startup",
+                  "w": 1
+                },
+                {
+                  "name": "取消窗",
+                  "kind": "buffer",
+                  "w": 1
+                },
+                {
+                  "name": "后摆",
+                  "kind": "recovery",
+                  "w": 2
+                }
+              ],
+              "pressAt": 0.4,
+              "fireAt": 0.4
+            },
+            {
+              "t": "badge",
+              "text": "取消成功"
+            }
+          ],
+          "logic": "窗内输入必杀砍掉后摆并接上必杀"
+        },
+        {
+          "title": "窗过了",
+          "input": "窗过了再搓",
+          "screen": "必杀没接上，只打出普通的下一拳",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 38,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 66,
+              "y": 48,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "arrow",
+              "x1": 42,
+              "y1": 56,
+              "x2": 58,
+              "y2": 50,
+              "kind": "attack"
+            },
+            {
+              "t": "impact",
+              "x": 66,
+              "y": 48,
+              "r": 10,
+              "heavy": false
+            },
+            {
+              "t": "inputwindow",
+              "x": 12,
+              "y": 24,
+              "phases": [
+                {
+                  "name": "前摇",
+                  "kind": "startup",
+                  "w": 1
+                },
+                {
+                  "name": "取消窗",
+                  "kind": "buffer",
+                  "w": 1
+                },
+                {
+                  "name": "后摆",
+                  "kind": "recovery",
+                  "w": 2
+                }
+              ],
+              "pressAt": 0.85,
+              "fireAt": null
+            },
+            {
+              "t": "toast",
+              "x": 20,
+              "y": 78,
+              "text": "取消窗已过",
+              "kind": "error"
+            },
+            {
+              "t": "badge",
+              "text": "窗过了"
+            }
+          ],
+          "logic": "窗过后输入无法取消只打出普通下一击"
+        }
+      ],
+      "ludots": "格斗：指令序列、取消窗、投技受身、帧优势、破防——现有 combo 只是「轻攻击连段」，没有帧数据与指令缓冲产品层。",
+      "todos": [
+        "TODO: 指令序列识别与中断回报",
+        "TODO: 取消窗（从普攻后摆切进必杀）",
+        "TODO: 投技判定与受身拆投",
+        "TODO: 双方硬直比较（帧优势）的玩家可见反馈",
+        "TODO: 防御值消耗与破防强制硬直"
+      ],
+      "familyTitle": "格斗：搓招、取消链、投技、帧",
+      "actionNo": "UX-244",
+      "actionKey": "ft-cancel-into-special",
+      "actionTitle": "取消链普攻中途切必杀",
+      "platform": "gamepad",
+      "platformLabel": "主机",
+      "variants": [
+        {
+          "platform": "gamepad",
+          "platformLabel": "主机",
+          "caseId": "ft-cancel-into-special"
+        }
+      ]
+    },
+    {
+      "id": "ft-throw-tech",
+      "category": "fighting",
+      "family": "fighting",
+      "title": "投技与受身拆投",
+      "summary": "双方贴身时按投，投中了就播投技动画；被投的那边在受身窗里按对键能拆开。投中、拆掉、没拆开——三种结果画面要分得清。",
+      "genres": [
+        "格斗"
+      ],
+      "targets": [
+        "fight"
+      ],
+      "beats": [
+        {
+          "title": "按投",
+          "input": "贴身按投",
+          "screen": "双方进入投技判定，我这边先出手",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 44,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 56,
+              "y": 52,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "key",
+              "x": 44,
+              "y": 30,
+              "label": "LB+A",
+              "state": "active",
+              "hint": "投技"
+            },
+            {
+              "t": "ring",
+              "x": 50,
+              "y": 52,
+              "r": 12,
+              "kind": "lock"
+            },
+            {
+              "t": "badge",
+              "text": "投技判定"
+            }
+          ],
+          "logic": "贴身发起投技判定"
+        },
+        {
+          "title": "拆投",
+          "input": "对方在窗内拆投",
+          "screen": "投被拆开，两人弹开，谁都没吃投",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 36,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 64,
+              "y": 48,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "impact",
+              "x": 50,
+              "y": 52,
+              "r": 12,
+              "heavy": false
+            },
+            {
+              "t": "toast",
+              "x": 20,
+              "y": 24,
+              "text": "投技被拆",
+              "kind": "info"
+            },
+            {
+              "t": "inputwindow",
+              "x": 14,
+              "y": 78,
+              "phases": [
+                {
+                  "name": "受身窗",
+                  "kind": "buffer",
+                  "w": 2
+                },
+                {
+                  "name": "投中",
+                  "kind": "active",
+                  "w": 1
+                }
+              ],
+              "pressAt": 0.3,
+              "fireAt": null
+            },
+            {
+              "t": "badge",
+              "text": "拆投成功"
+            }
+          ],
+          "logic": "受身窗内拆投使双方弹开"
+        },
+        {
+          "title": "投中",
+          "input": "对方没拆开",
+          "screen": "投技打满，对方被摔在地上",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 48,
+              "y": 50,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 62,
+              "y": 60,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1,
+              "state": "downed"
+            },
+            {
+              "t": "impact",
+              "x": 62,
+              "y": 60,
+              "r": 14,
+              "heavy": true
+            },
+            {
+              "t": "toast",
+              "x": 20,
+              "y": 24,
+              "text": "投技命中",
+              "kind": "gain"
+            },
+            {
+              "t": "badge",
+              "text": "投中"
+            }
+          ],
+          "logic": "未拆开则投技打满并击倒对方"
+        }
+      ],
+      "ludots": "格斗：指令序列、取消窗、投技受身、帧优势、破防——现有 combo 只是「轻攻击连段」，没有帧数据与指令缓冲产品层。",
+      "todos": [
+        "TODO: 指令序列识别与中断回报",
+        "TODO: 取消窗（从普攻后摆切进必杀）",
+        "TODO: 投技判定与受身拆投",
+        "TODO: 双方硬直比较（帧优势）的玩家可见反馈",
+        "TODO: 防御值消耗与破防强制硬直"
+      ],
+      "familyTitle": "格斗：搓招、取消链、投技、帧",
+      "actionNo": "UX-245",
+      "actionKey": "ft-throw-tech",
+      "actionTitle": "投技与受身拆投",
+      "platform": "gamepad",
+      "platformLabel": "主机",
+      "variants": [
+        {
+          "platform": "gamepad",
+          "platformLabel": "主机",
+          "caseId": "ft-throw-tech"
+        }
+      ]
+    },
+    {
+      "id": "ft-frame-advantage",
+      "category": "fighting",
+      "family": "fighting",
+      "title": "帧优势：打完谁先能动",
+      "summary": "这一下打完，我的硬直短、他的硬直长，我就有几帧可以先动手。这是格斗里「为什么我总是被连」的根，必须让双方硬直看得见。",
+      "genres": [
+        "格斗"
+      ],
+      "targets": [
+        "fight"
+      ],
+      "beats": [
+        {
+          "title": "有利",
+          "input": "我的招打在他防守上",
+          "screen": "双方进入硬直，并排显示谁的更长",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 34,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 66,
+              "y": 48,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "impact",
+              "x": 50,
+              "y": 52,
+              "r": 11,
+              "heavy": false
+            },
+            {
+              "t": "framebar",
+              "x": 18,
+              "y": 28,
+              "mine": 0.35,
+              "theirs": 0.7
+            },
+            {
+              "t": "badge",
+              "text": "我有利帧"
+            }
+          ],
+          "logic": "招式打在防守上并比较双方硬直长短"
+        },
+        {
+          "title": "追压",
+          "input": "趁他硬直未消按下一招",
+          "screen": "他还动不了，我的下一招稳定打中",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 66,
+              "y": 48,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "arrow",
+              "x1": 44,
+              "y1": 54,
+              "x2": 62,
+              "y2": 48,
+              "kind": "attack"
+            },
+            {
+              "t": "impact",
+              "x": 66,
+              "y": 48,
+              "r": 12,
+              "heavy": false
+            },
+            {
+              "t": "framebar",
+              "x": 18,
+              "y": 28,
+              "mine": 0.2,
+              "theirs": 0.55
+            },
+            {
+              "t": "badge",
+              "text": "追压"
+            }
+          ],
+          "logic": "利用有利帧在对方硬直中继续出击"
+        },
+        {
+          "title": "不利",
+          "input": "我用了硬直更长的招",
+          "screen": "变成他先能动，他反手打我",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 34,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 60,
+              "y": 48,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "impact",
+              "x": 40,
+              "y": 55,
+              "r": 12,
+              "heavy": false
+            },
+            {
+              "t": "framebar",
+              "x": 18,
+              "y": 28,
+              "mine": 0.75,
+              "theirs": 0.3
+            },
+            {
+              "t": "toast",
+              "x": 20,
+              "y": 78,
+              "text": "对方有利帧",
+              "kind": "error"
+            },
+            {
+              "t": "badge",
+              "text": "不利帧"
+            }
+          ],
+          "logic": "自己硬直更长时被对方反打"
+        }
+      ],
+      "ludots": "格斗：指令序列、取消窗、投技受身、帧优势、破防——现有 combo 只是「轻攻击连段」，没有帧数据与指令缓冲产品层。",
+      "todos": [
+        "TODO: 指令序列识别与中断回报",
+        "TODO: 取消窗（从普攻后摆切进必杀）",
+        "TODO: 投技判定与受身拆投",
+        "TODO: 双方硬直比较（帧优势）的玩家可见反馈",
+        "TODO: 防御值消耗与破防强制硬直"
+      ],
+      "familyTitle": "格斗：搓招、取消链、投技、帧",
+      "actionNo": "UX-246",
+      "actionKey": "ft-frame-advantage",
+      "actionTitle": "帧优势打完谁先能动",
+      "platform": "gamepad",
+      "platformLabel": "主机",
+      "variants": [
+        {
+          "platform": "gamepad",
+          "platformLabel": "主机",
+          "caseId": "ft-frame-advantage"
+        }
+      ]
+    },
+    {
+      "id": "ft-guard-break",
+      "category": "fighting",
+      "family": "fighting",
+      "title": "防守破了：护盾碎了才能硬直",
+      "summary": "一直挡会磨掉防御值；防值见底就破防，人会强制硬直一大段。破防前要有压力提示，破的那一下必须特别明显。",
+      "genres": [
+        "格斗"
+      ],
+      "targets": [
+        "fight"
+      ],
+      "beats": [
+        {
+          "title": "磨防",
+          "input": "对方一直压我的防守",
+          "screen": "防御条往下掉，还没破",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 36,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 64,
+              "y": 46,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "arrow",
+              "x1": 60,
+              "y1": 48,
+              "x2": 42,
+              "y2": 56,
+              "kind": "attack"
+            },
+            {
+              "t": "impact",
+              "x": 40,
+              "y": 55,
+              "r": 10,
+              "heavy": false
+            },
+            {
+              "t": "bar",
+              "x": 36,
+              "y": 28,
+              "ratio": 0.35,
+              "kind": "shield",
+              "label": "防御",
+              "broken": false
+            },
+            {
+              "t": "badge",
+              "text": "防值在掉"
+            }
+          ],
+          "logic": "持续压防消耗防御值"
+        },
+        {
+          "title": "破防",
+          "input": "防御值见底破防",
+          "screen": "护盾碎掉，我进入强制硬直",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 36,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 64,
+              "y": 46,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "bar",
+              "x": 36,
+              "y": 28,
+              "ratio": 0.0,
+              "kind": "shield",
+              "label": "破防",
+              "broken": true
+            },
+            {
+              "t": "deny",
+              "x": 54,
+              "y": 40,
+              "label": "破防硬直",
+              "r": 11
+            },
+            {
+              "t": "toast",
+              "x": 20,
+              "y": 78,
+              "text": "防御破碎",
+              "kind": "error"
+            },
+            {
+              "t": "badge",
+              "text": "破防"
+            }
+          ],
+          "logic": "防御值见底触发破防强制硬直"
+        },
+        {
+          "title": "追打",
+          "input": "破防窗里被追打",
+          "screen": "我还硬直着，对方连段打满",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 36,
+              "y": 58,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 56,
+              "y": 48,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "arrow",
+              "x1": 54,
+              "y1": 48,
+              "x2": 40,
+              "y2": 56,
+              "kind": "attack"
+            },
+            {
+              "t": "impact",
+              "x": 36,
+              "y": 58,
+              "r": 14,
+              "heavy": true
+            },
+            {
+              "t": "bar",
+              "x": 36,
+              "y": 78,
+              "ratio": 0.25,
+              "kind": "hp",
+              "label": "生命",
+              "broken": false
+            },
+            {
+              "t": "badge",
+              "text": "被追打"
+            }
+          ],
+          "logic": "破防窗内被连段追打"
+        }
+      ],
+      "ludots": "格斗：指令序列、取消窗、投技受身、帧优势、破防——现有 combo 只是「轻攻击连段」，没有帧数据与指令缓冲产品层。",
+      "todos": [
+        "TODO: 指令序列识别与中断回报",
+        "TODO: 取消窗（从普攻后摆切进必杀）",
+        "TODO: 投技判定与受身拆投",
+        "TODO: 双方硬直比较（帧优势）的玩家可见反馈",
+        "TODO: 防御值消耗与破防强制硬直"
+      ],
+      "familyTitle": "格斗：搓招、取消链、投技、帧",
+      "actionNo": "UX-247",
+      "actionKey": "ft-guard-break",
+      "actionTitle": "防守破了才能硬直追打",
+      "platform": "gamepad",
+      "platformLabel": "主机",
+      "variants": [
+        {
+          "platform": "gamepad",
+          "platformLabel": "主机",
+          "caseId": "ft-guard-break"
         }
       ]
     }

@@ -158,15 +158,28 @@
       if (el.t === "vehicle") {
         const x = px(el.x), y = py(el.y);
         const kind = el.kind || "car";
-        const body = kind === "turret"
-          ? `<rect x="${x - 13}" y="${y - 9}" width="26" height="18" rx="4" fill="#7e8fa6" stroke="#0b0e13" stroke-width="1.4"/>
+        let body;
+        if (kind === "drone") {
+          // 四轴无人机：接管轰炸时用，别画成地上的车
+          body = `
+            <line x1="${x - 16}" y1="${y - 10}" x2="${x + 16}" y2="${y + 10}" stroke="#9fb0c6" stroke-width="2"/>
+            <line x1="${x + 16}" y1="${y - 10}" x2="${x - 16}" y2="${y + 10}" stroke="#9fb0c6" stroke-width="2"/>
+            <rect x="${x - 8}" y="${y - 5}" width="16" height="10" rx="3" fill="#7e8fa6" stroke="#0b0e13" stroke-width="1.3"/>
+            <circle cx="${x - 14}" cy="${y - 9}" r="4" fill="none" stroke="#6ec8ff" stroke-width="1.4"/>
+            <circle cx="${x + 14}" cy="${y - 9}" r="4" fill="none" stroke="#6ec8ff" stroke-width="1.4"/>
+            <circle cx="${x - 14}" cy="${y + 9}" r="4" fill="none" stroke="#6ec8ff" stroke-width="1.4"/>
+            <circle cx="${x + 14}" cy="${y + 9}" r="4" fill="none" stroke="#6ec8ff" stroke-width="1.4"/>`;
+        } else if (kind === "turret") {
+          body = `<rect x="${x - 13}" y="${y - 9}" width="26" height="18" rx="4" fill="#7e8fa6" stroke="#0b0e13" stroke-width="1.4"/>
              <circle cx="${x}" cy="${y}" r="6.5" fill="#5a6b80" stroke="#0b0e13" stroke-width="1.2"/>
-             <line x1="${x}" y1="${y}" x2="${x + 20}" y2="${y}" stroke="#5a6b80" stroke-width="4.5"/>`
-          : `<rect x="${x - 17}" y="${y - 8}" width="34" height="16" rx="4" fill="#7e8fa6" stroke="#0b0e13" stroke-width="1.4"/>
+             <line x1="${x}" y1="${y}" x2="${x + 20}" y2="${y}" stroke="#5a6b80" stroke-width="4.5"/>`;
+        } else {
+          body = `<rect x="${x - 17}" y="${y - 8}" width="34" height="16" rx="4" fill="#7e8fa6" stroke="#0b0e13" stroke-width="1.4"/>
              <rect x="${x - 7}" y="${y - 13}" width="15" height="8" rx="2" fill="#9fb0c6" stroke="#0b0e13" stroke-width="1.1"/>
              <circle cx="${x - 10}" cy="${y + 9}" r="4" fill="#222b36" stroke="#0b0e13" stroke-width="1"/>
              <circle cx="${x + 10}" cy="${y + 9}" r="4" fill="#222b36" stroke="#0b0e13" stroke-width="1"/>
              ${kind === "tank" ? `<line x1="${x + 4}" y1="${y - 9}" x2="${x + 26}" y2="${y - 9}" stroke="#5a6b80" stroke-width="4"/>` : ""}`;
+        }
         const seat = el.occupied
           ? `<circle cx="${x}" cy="${y - 16}" r="5" fill="#6ec8ff" stroke="#0b0e13" stroke-width="1.2"/>`
           : "";
@@ -183,7 +196,7 @@
       }
       if (el.t === "marker") {
         const x = px(el.x), y = py(el.y);
-        const glyph = { skull: "☠", moon: "☾", star: "★", cross: "✚", square: "◆" }[el.icon] || "★";
+        const glyph = { skull: "☠", moon: "☾", star: "★", cross: "✚", square: "◆", eye: "◉" }[el.icon] || "★";
         return `
           <circle cx="${x}" cy="${y}" r="9" fill="#0b0e13" stroke="#e0c35a" stroke-width="1.6"/>
           <text x="${x}" y="${y + 4}" text-anchor="middle" fill="#e0c35a" font-size="11" font-family="DM Sans, sans-serif" font-weight="700">${glyph}</text>
@@ -231,6 +244,64 @@
             <rect x="${x}" y="${y0}" width="${w}" height="${h}" rx="4" fill="#0b0e13" stroke="${c}" stroke-width="${st === "waiting" ? 1.2 : 1.8}" stroke-dasharray="${st === "waiting" ? "3 2" : "0"}"/>
             <text x="${x + w / 2}" y="${y0 + h / 2 + 3.5}" text-anchor="middle" fill="${c}" font-size="${text.length > 2 ? 8 : 10}" font-family="DM Sans, sans-serif" font-weight="700">${text}</text>`;
         }).join("");
+      }
+      if (el.t === "extractzone") {
+        // 撤离点：位置 + 开没开 + 还剩多久
+        const x = px(el.x), y = py(el.y);
+        const st = { open: ["#5dce8f", "可撤离"], closing: ["#e0c35a", "即将关闭"], closed: ["#ef6b6b", "已关闭"] };
+        const [col, word] = st[el.state] || st.open;
+        return `
+          <path d="M${x - 20} ${y + 12} L${x - 20} ${y - 10} L${x + 20} ${y - 10} L${x + 20} ${y + 12} Z"
+            fill="rgba(11,14,19,0.5)" stroke="${col}" stroke-width="2" stroke-dasharray="6 4"/>
+          <path d="M${x - 8} ${y + 4} L${x} ${y - 5} L${x + 8} ${y + 4}" fill="none" stroke="${col}" stroke-width="2.2"/>
+          <text x="${x}" y="${y - 15}" text-anchor="middle" fill="${col}" font-size="9" font-family="DM Sans, sans-serif" font-weight="700">${esc(el.label || "撤离点")}</text>
+          <text x="${x}" y="${y + 24}" text-anchor="middle" fill="${col}" font-size="8.5" font-family="DM Sans, sans-serif">${esc(el.note || word)}</text>`;
+      }
+      if (el.t === "cmdinput") {
+        // 格斗指令输入：方向序列 + 按键，以及这次搓成没搓成
+        const x = px(el.x), y = py(el.y);
+        const seq = el.seq || [];
+        const okCol = el.ok === false ? "#ef6b6b" : "#5dce8f";
+        let out = "", cx = x;
+        seq.forEach((s, i) => {
+          const w = 20;
+          out += `
+            <rect x="${cx}" y="${y - 9}" width="${w}" height="18" rx="3" fill="#0b0e13"
+              stroke="${el.failAt === i ? "#ef6b6b" : "#6ec8ff"}" stroke-width="${el.failAt === i ? 2 : 1.2}"/>
+            <text x="${cx + w / 2}" y="${y + 4}" text-anchor="middle"
+              fill="${el.failAt === i ? "#ef6b6b" : "#6ec8ff"}" font-size="10" font-family="DM Sans, sans-serif" font-weight="700">${esc(s)}</text>`;
+          if (i < seq.length - 1) {
+            out += `<text x="${cx + w + 3}" y="${y + 4}" fill="#3a4658" font-size="9" font-family="DM Sans, sans-serif">›</text>`;
+          }
+          cx += w + 10;
+        });
+        out += `<text x="${x}" y="${y - 14}" fill="${okCol}" font-size="8.5" font-family="DM Sans, sans-serif" font-weight="700">${esc(el.label || (el.ok === false ? "没搓出来" : "指令成立"))}</text>`;
+        return out;
+      }
+      if (el.t === "framebar") {
+        // 帧优势：这一下打完，谁先能动
+        const x = px(el.x), y = py(el.y);
+        const W = 130, H = 10;
+        const mine = Math.max(0, Math.min(1, el.mine == null ? 0.4 : el.mine));
+        const theirs = Math.max(0, Math.min(1, el.theirs == null ? 0.7 : el.theirs));
+        const better = mine < theirs;
+        return `
+          <text x="${x}" y="${y - 16}" fill="#93a0b4" font-size="8.5" font-family="IBM Plex Mono, monospace">硬直长短</text>
+          <text x="${x - 4}" y="${y + 8}" text-anchor="end" fill="#6ec8ff" font-size="8.5" font-family="DM Sans, sans-serif">我</text>
+          <rect x="${x}" y="${y}" width="${W}" height="${H}" rx="3" fill="#0b0e13" stroke="#2c3645" stroke-width="1"/>
+          <rect x="${x + 1}" y="${y + 1}" width="${(W - 2) * mine}" height="${H - 2}" rx="2" fill="#6ec8ff"/>
+          <text x="${x - 4}" y="${y + H + 12}" text-anchor="end" fill="#ef6b6b" font-size="8.5" font-family="DM Sans, sans-serif">他</text>
+          <rect x="${x}" y="${y + H + 4}" width="${W}" height="${H}" rx="3" fill="#0b0e13" stroke="#2c3645" stroke-width="1"/>
+          <rect x="${x + 1}" y="${y + H + 5}" width="${(W - 2) * theirs}" height="${H - 2}" rx="2" fill="#ef6b6b"/>
+          <text x="${x + W + 6}" y="${y + H + 2}" fill="${better ? "#5dce8f" : "#e0c35a"}" font-size="9" font-family="DM Sans, sans-serif" font-weight="700">${better ? "我先能动" : "他先能动"}</text>`;
+      }
+      if (el.t === "takeover") {
+        // 我现在操控的不是自己：整屏加一圈边框点明
+        return `
+          <rect x="${SX + 2}" y="${SY + 2}" width="${SW - 4}" height="${SH - 4}" fill="none"
+            stroke="#e0c35a" stroke-width="2.4" stroke-dasharray="10 5"/>
+          <rect x="${SX + SW / 2 - 52}" y="${SY + 3}" width="104" height="17" rx="3" fill="#0b0e13" stroke="#e0c35a" stroke-width="1.3"/>
+          <text x="${SX + SW / 2}" y="${SY + 15}" text-anchor="middle" fill="#e0c35a" font-size="9.5" font-family="DM Sans, sans-serif" font-weight="700">${esc(el.label || "你在操控别的东西")}</text>`;
       }
       if (el.t === "buffchip") {
         // 状态图标 + 层数：叠层、引爆、驱散的目标就是它
@@ -332,6 +403,7 @@
           attack: ["rgba(239,107,107,0.20)", "#ef6b6b"],
           blocked: ["rgba(60,70,84,0.55)", "#3a4658"],
           occupied: ["rgba(224,195,90,0.18)", "#e0c35a"],
+          insured: ["rgba(93,206,143,0.22)", "#5dce8f"],
           self: ["rgba(240,163,94,0.28)", "#f0a35e"],
         };
         let out = "";
@@ -907,7 +979,8 @@
         const w = 56, h = 7;
         const ratio = Math.max(0, Math.min(1, el.ratio == null ? 0.6 : el.ratio));
         const color = el.kind === "hp" ? "#5dce8f" : el.kind === "charge" ? "#f0a35e"
-          : el.kind === "shield" ? "#a9dcff" : "#6ec8ff";
+          : el.kind === "shield" ? "#a9dcff" : el.kind === "stamina" ? "#e0c35a"
+          : el.kind === "boost" ? "#c78bff" : "#6ec8ff";
         let out = `
           <rect x="${x - w / 2}" y="${y}" width="${w}" height="${h}" rx="3" fill="#0b0e13" stroke="#3a4658" stroke-width="1"/>
           <rect x="${x - w / 2 + 1}" y="${y + 1}" width="${(w - 2) * ratio}" height="${h - 2}" rx="2" fill="${color}"/>`;

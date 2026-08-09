@@ -45,15 +45,15 @@ ELEMENT_ENUMS: dict[tuple[str, str], frozenset] = {
     ("ring", "kind"): frozenset({"select", "lock", "buff", "finisher"}),
     ("arrow", "kind"): frozenset({"move", "attack"}),
     ("path", "kind"): frozenset({"lasso", "arc", "move"}),
-    ("bar", "kind"): frozenset({"cast", "charge", "hp", "shield"}),
+    ("bar", "kind"): frozenset({"cast", "charge", "hp", "shield", "stamina", "boost"}),
     ("key", "state"): frozenset({"idle", "active", "off"}),
     ("touchpt", "kind"): frozenset({"tap", "hold", "drag", "pinch"}),
     ("prop", "kind"): frozenset({"item", "ore", "herb", "chest", "door", "corpse",
                                 "wall", "cover", "shrine", None}),
-    ("vehicle", "kind"): frozenset({"car", "tank", "turret", "mount"}),
+    ("vehicle", "kind"): frozenset({"car", "tank", "turret", "mount", "drone"}),
     ("hero", "state"): frozenset({"alive", "ghost", None}),
     ("hero", "form"): frozenset({"alt", None}),
-    ("marker", "icon"): frozenset({"skull", "moon", "star", "cross", "square"}),
+    ("marker", "icon"): frozenset({"skull", "moon", "star", "cross", "square", "eye"}),
     ("npc", "role"): frozenset({"vendor", "quest", "healer", "auction", "trainer", None}),
     ("crosshair", "spread"): frozenset({"tight", "wide", None}),
     ("queue", "state"): frozenset({"waiting", "active", "done"}),
@@ -66,6 +66,7 @@ ELEMENT_ENUMS: dict[tuple[str, str], frozenset] = {
     ("buffchip", "kind"): frozenset({"buff", "debuff", "shield"}),
     ("elementmark", "kind"): frozenset({"fire", "water", "ice", "lightning"}),
     ("terrain", "kind"): frozenset({"wall", "ice", "pit"}),
+    ("extractzone", "state"): frozenset({"open", "closing", "closed"}),
     ("voice", "state"): frozenset({"off", "on", "talking"}),
 }
 
@@ -81,6 +82,7 @@ SUBJECT_ELEMENTS = (
     "partyframe", "toast", "gridmap", "timeline", "region", "relation",
     "faction", "pool", "lawslot", "delaymark", "buffchip", "projectile",
     "elementmark", "terrain", "summon", "inputwindow",
+    "extractzone", "cmdinput", "framebar", "takeover",
 )
 
 
@@ -218,6 +220,42 @@ PROMISE_RULES: tuple[tuple[str, str, object, str], ...] = (
         lambda cast: any(e.get("t") == "arrow" and e.get("kind") == "move" for e in cast)
         and any(e.get("t") == "arrow" and e.get("kind") == "attack" for e in cast),
         "补一根 arrow(kind='move') 表示走的方向，和 attack 那根并排",
+    ),
+    (
+        "说撤离点，画面要有撤离点",
+        r"撤离点|撤离区|可以撤了",
+        lambda cast: _has(cast, "extractzone"),
+        "补 extractzone(x, y, state='open'/'closing'/'closed')",
+    ),
+    (
+        "说搓招/指令输入，画面要把序列画出来",
+        r"指令输入|搓|方向序列|输入序列",
+        lambda cast: _has(cast, "cmdinput"),
+        "补 cmdinput(x, y, ['↓','↘','→','拳'], ok=..., fail_at=...)",
+    ),
+    (
+        "说帧优势/谁先能动，画面要有硬直对比",
+        r"帧优势|有利帧|谁先能动|硬直长短",
+        lambda cast: _has(cast, "framebar"),
+        "补 framebar(x, y, mine=..., theirs=...)",
+    ),
+    (
+        "说接管别的视角，画面要标出我不在自己身上",
+        r"接管视角|操控无人机|切到.*视角操控",
+        lambda cast: _has(cast, "takeover"),
+        "补 takeover('你在操控无人机')",
+    ),
+    (
+        "说精力/体力见底，画面要有精力条",
+        r"精力|体力条|耐力见底",
+        lambda cast: any(e.get("t") == "bar" and e.get("kind") in ("stamina", "charge") for e in cast),
+        "补 bar(..., kind='stamina')",
+    ),
+    (
+        "说推进器/过热，画面要有推进条",
+        r"推进器|推进条|推进过热",
+        lambda cast: any(e.get("t") == "bar" and e.get("kind") == "boost" for e in cast),
+        "补 bar(..., kind='boost')",
     ),
     (
         "说叠层/引爆，画面要有带层数的状态图标",
