@@ -271,7 +271,7 @@
    * Standard Mermaid sequenceDiagram:
    * 玩家 → 输入 → 画面 → 手感, one rect block per storyboard beat.
    */
-  function sequenceMermaid(beats, onlyIndex = null) {
+  function sequenceMermaid(beats) {
     const lines = [
       "sequenceDiagram",
       "  actor P as 玩家",
@@ -279,9 +279,7 @@
       "  participant S as 画面",
       "  participant F as 手感",
     ];
-    const list = beats || [];
-    list.forEach((b, i) => {
-      if (onlyIndex != null && i !== onlyIndex) return;
+    (beats || []).forEach((b, i) => {
       const title = mmdText(b.title || `步骤 ${i + 1}`);
       lines.push("  rect rgba(240, 163, 94, 0.08)");
       lines.push(`    Note over P,F: T${i + 1} ${title}`);
@@ -394,28 +392,18 @@
     });
   }
 
-  function renderBeatStage(c) {
-    const beat = c.beats[activeBeat];
-    if (!beat) return;
-    const mmd = sequenceMermaid(c.beats, activeBeat);
-    const shot = `
-      <article class="panel">
-        ${storyboardSvg(beat, activeBeat)}
-        <div class="panel-cap">
-          <div class="cap-row"><span class="k">输入</span><span class="v">${esc(beat.input)}</span></div>
-          <div class="cap-row"><span class="k">画面</span><span class="v">${esc(beat.screen)}</span></div>
-          <div class="cap-row"><span class="k">手感</span><span class="v">${esc(beat.feel)}</span></div>
-        </div>
-      </article>`;
-    const mmdHost = detailEl.querySelector("#mmd-host");
-    const shotHost = detailEl.querySelector("#shot-host");
-    if (!mmdHost || !shotHost) return;
-    mmdHost.innerHTML = `<pre class="mermaid" data-pending="1">${esc(mmd)}</pre>`;
-    shotHost.innerHTML = shot;
+  function setActiveBeat(i, scroll = true) {
+    activeBeat = i;
     detailEl.querySelectorAll(".beat-chip").forEach((el) => {
       el.classList.toggle("active", Number(el.dataset.beat) === activeBeat);
     });
-    paintDetailMermaid().catch((err) => console.error(err));
+    detailEl.querySelectorAll(".panel[data-beat]").forEach((el) => {
+      el.classList.toggle("active", Number(el.dataset.beat) === activeBeat);
+    });
+    if (scroll) {
+      const panel = detailEl.querySelector(`.panel[data-beat="${activeBeat}"]`);
+      if (panel) panel.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
   }
 
   function renderDetail() {
@@ -430,48 +418,67 @@
     const chips = c.beats.map((b, i) =>
       `<button type="button" class="beat-chip ${i === activeBeat ? "active" : ""}" data-beat="${i}">T${i + 1} ${esc(b.title || "")}</button>`
     ).join("");
+    const panels = c.beats.map((b, i) => `
+      <article class="panel ${i === activeBeat ? "active" : ""}" data-beat="${i}">
+        ${storyboardSvg(b, i)}
+        <div class="panel-cap">
+          <div class="cap-row"><span class="k">输入</span><span class="v">${esc(b.input)}</span></div>
+          <div class="cap-row"><span class="k">画面</span><span class="v">${esc(b.screen)}</span></div>
+          <div class="cap-row"><span class="k">手感</span><span class="v">${esc(b.feel)}</span></div>
+        </div>
+      </article>`).join("");
+    const mmd = sequenceMermaid(c.beats);
     detailEl.innerHTML = `
       <div class="detail-inner">
         <div class="detail-top">
           <div class="detail-head">
             <h2>${esc(c.title)}</h2>
+            <div class="tags">${tags}</div>
             <span class="case-id">${esc(c.id)}</span>
           </div>
-          <p class="summary">${esc(c.summary)}</p>
-          <div class="tags">${tags}</div>
-          <div class="beat-rail" aria-label="分镜拍号">${chips}</div>
-          <details class="impl-details">
-            <summary>Ludots 现状 / 缺口 TODO</summary>
-            <div class="impl-line">
-              <div class="impl-card">
-                <div class="section-label">Ludots 现状</div>
-                <p>${esc(c.ludots || "未标注")}</p>
+          <div class="summary-row">
+            <p class="summary">${esc(c.summary)}</p>
+            <details class="impl-details">
+              <summary>Ludots 现状 / TODO</summary>
+              <div class="impl-line">
+                <div class="impl-card">
+                  <div class="section-label">Ludots 现状</div>
+                  <p>${esc(c.ludots || "未标注")}</p>
+                </div>
+                <div class="impl-card impl-todo">
+                  <div class="section-label">缺口 TODO</div>
+                  ${todos ? `<ul>${todos}</ul>` : `<p class="ok">本条暂无额外 TODO</p>`}
+                </div>
               </div>
-              <div class="impl-card impl-todo">
-                <div class="section-label">缺口 TODO</div>
-                ${todos ? `<ul>${todos}</ul>` : `<p class="ok">本条暂无额外 TODO</p>`}
-              </div>
-            </div>
-          </details>
+            </details>
+          </div>
         </div>
         <div class="sync-split">
           <div class="sync-col">
-            <div class="section-label">时序 · 当前拍</div>
-            <div class="mmd-box" id="mmd-host"></div>
+            <div class="section-label">时序 · 全部 ${c.beats.length} 拍</div>
+            <div class="mmd-box" id="mmd-host">
+              <pre class="mermaid" data-pending="1">${esc(mmd)}</pre>
+            </div>
           </div>
           <div class="sync-col">
-            <div class="section-label">分镜 · 当前拍</div>
-            <div class="storyboard storyboard-stack" id="shot-host" aria-label="当前分镜"></div>
+            <div class="section-label">
+              <span>分镜 · ${c.beats.length} 镜</span>
+              <span class="beat-rail" aria-label="分镜拍号">${chips}</span>
+            </div>
+            <div class="storyboard storyboard-stack" id="shot-host" aria-label="分镜条">${panels}</div>
           </div>
         </div>
       </div>`;
     detailEl.querySelectorAll(".beat-chip").forEach((el) => {
-      el.addEventListener("click", () => {
-        activeBeat = Number(el.dataset.beat);
-        renderBeatStage(c);
+      el.addEventListener("click", (e) => {
+        e.stopPropagation();
+        setActiveBeat(Number(el.dataset.beat));
       });
     });
-    renderBeatStage(c);
+    detailEl.querySelectorAll(".panel[data-beat]").forEach((el) => {
+      el.addEventListener("click", () => setActiveBeat(Number(el.dataset.beat), false));
+    });
+    paintDetailMermaid().catch((err) => console.error(err));
   }
 
   function render() {
