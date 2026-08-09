@@ -395,13 +395,17 @@ def build_cases():
     ))
     c.append(case(
         "select-possess", "select", "切换操控对象",
-        "附身、上车、切英雄、观战跟随时，手感跟到新主体。",
+        "附身、上车、切英雄、观战跟随时，操控跟到新主体。",
         [
-            beat("对载具按下交互", "镜头切到载具视角/操控", "你变成车", "tps",
-                 [hero(40, 60), building(65, 55), badge("上车")], title="切换前"),
-            beat("完成切换", "准星/摇杆控制载具", "手感已换皮", "tps",
+            beat("靠近载具，按交互键", "载具高亮，出现上车提示", "能上车", "tps",
+                 [hero(40, 60), unit(65, 55, size=1.5), keyhint(65, 38, "F", "active", "上车"),
+                  badge("可交互")], title="靠近"),
+            beat("按下确认上车", "镜头切到载具视角/操控", "你变成车", "tps",
+                 [unit(55, 55, size=1.5, sel=True), ring(55, 55), keyhint(55, 38, "F", "active", "上车"),
+                  badge("切入")], title="切换"),
+            beat("完成切换", "准星/摇杆控制载具", "载具手感", "tps",
                  [unit(50, 55, size=1.5), crosshair(62, 40), stick("L", 0, -0.7), stick("R", 0.5, -0.2),
-                  badge("载具中")], title="切换后"),
+                  badge("载具中")], title="操控中"),
         ], ["TPS", "RTS", "MOBA"],
     ))
     c.append(case(
@@ -980,10 +984,14 @@ def build_cases():
         "交互拾取，再瞄准扔出。",
         [
             beat("对可抓物按交互", "举在手上", "抓到了", "tps",
-                 [hero(40, 55), building(48, 42), keyhint(56, 38, "F", "active", "拾取"),
+                 [hero(40, 55), card(48, 42, "箱", 0), keyhint(56, 38, "F", "active", "拾取"),
                   badge("举起")], title="抓"),
-            beat("瞄准后扔出", "物体飞出砸中", "砸！", "tps",
-                 [hero(40, 55), arrow(45, 50, 75, 40, "attack"), badge("投掷")], title="扔"),
+            beat("瞄准落点", "抛物预览与落点圈出现", "找砸点", "tps",
+                 [hero(40, 55), card(46, 48, "箱", 0), path([(46, 48), (58, 35), (75, 42)], "move"),
+                  circle_ind(75, 42, 12, True), cursor(75, 42), badge("预览")], title="瞄准"),
+            beat("松手扔出", "物体飞出砸中目标", "砸！", "tps",
+                 [hero(40, 55), unit(78, 42, team="enemy"), path([(48, 50), (62, 36), (75, 42)], "attack"),
+                  ring(75, 42, r=10, kind="lock"), arrow(60, 40, 74, 42, "attack"), badge("命中")], title="扔出"),
         ], ["蝙蝠侠/蜘蛛侠", "动作RPG"],
     ))
     c.append(case(
@@ -1600,9 +1608,14 @@ def build_cases():
                   menu_box(16, 38, ["你的报价", "(空)", "金币 0"]),
                   menu_box(58, 38, ["对方报价", "(空)", "金币 0"]),
                   badge("交易窗")], title="打开"),
-            beat("拖入物品，双方确认", "物品交换完成，窗关", "成交", "moba",
+            beat("双方拖入物品", "窗内出现报价物，待确认", "先放齐", "moba",
+                 [hero(30, 55), unit(70, 45, team="ally"),
+                  menu_box(16, 38, ["你的报价", "矿石", "金币 20"]),
+                  menu_box(58, 38, ["对方报价", "币袋", "金币 0"]),
+                  card(42, 62, "矿", 0), card(58, 62, "币", 0), badge("已报价")], title="报价"),
+            beat("双方点确认", "物品交换完成，交易窗关闭", "成交", "moba",
                  [hero(30, 55), unit(70, 45, team="ally"), card(42, 50, "矿", 0), card(58, 50, "币", 0),
-                  menu_box(40, 68, ["确认", "取消"]), badge("双方确认")], title="确认"),
+                  badge("成交·窗关")], title="成交"),
         ], ["魔兽世界", "MMO"],
     ))
     c.append(case(
@@ -1937,7 +1950,7 @@ def build_cases():
                  [hero(40, 55), unit(65, 45, team="enemy"), badge("无处决窗")], title="未达标"),
             beat("敌人残血/破防", "处决键或提示亮起", "可以收了", "tps",
                  [hero(40, 55), unit(65, 45, team="enemy"), ring(65, 45, kind="lock"),
-                  badge("处决解锁")], title="达线解锁"),
+                  keyhint(52, 36, "F", "active", "处决"), badge("处决解锁")], title="达线解锁"),
             beat("窗口内按处决", "播专属处决，否则窗口关闭后恢复普攻", "收掉", "tps",
                  [hero(50, 50), unit(65, 45, team="enemy", size=0.85), ring(65, 45, kind="lock"),
                   arrow(50, 50, 62, 45, "attack"), badge("处决打出")], title="打出"),
@@ -2176,7 +2189,9 @@ def build_cases():
                   bar(50, 28, 0.35, "charge", "耐力"), keyhint(72, 72, "Shift", "active"),
                   badge("冲刺中")], title="冲刺"),
             beat("耐力耗尽", "被迫降回走路，冲刺键暂不可用", "喘不上来", "tps",
-                 [hero(45, 55, face=-90), stick("L", 0, -1), badge("耐力空")], title="耗尽"),
+                 [hero(45, 55, face=-90), stick("L", 0, -0.5), arrow(45, 52, 45, 40, "move"),
+                  bar(50, 28, 0.0, "charge", "耐力"), keyhint(72, 72, "Shift", "off"),
+                  badge("耐力空")], title="耗尽"),
         ], ["MMO", "动作RPG", "TPS", "开放世界"],
     ))
     c.append(case(

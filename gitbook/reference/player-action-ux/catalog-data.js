@@ -9,7 +9,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
     "screen-output"
   ],
   "checkpoint": {
-    "head": "809e9790a",
+    "head": "1c47882f4",
     "branch_hint": "cursor/ux-sequence-io-4211",
     "impl_notes": "scripts/player_action_ux_impl_notes.py",
     "beat_logic": "scripts/player_action_ux_beat_logic.py",
@@ -1091,7 +1091,7 @@ window.PLAYER_ACTION_UX_CATALOG = {
       "category": "select",
       "family": "select",
       "title": "切换操控对象",
-      "summary": "附身、上车、切英雄、观战跟随时，手感跟到新主体。",
+      "summary": "附身、上车、切英雄、观战跟随时，操控跟到新主体。",
       "genres": [
         "TPS",
         "RTS",
@@ -1106,9 +1106,9 @@ window.PLAYER_ACTION_UX_CATALOG = {
       ],
       "beats": [
         {
-          "title": "切换前",
-          "input": "对载具按下交互",
-          "screen": "镜头切到载具视角/操控",
+          "title": "靠近",
+          "input": "靠近载具，按交互键",
+          "screen": "载具高亮，出现上车提示",
           "view": "tps",
           "cast": [
             {
@@ -1118,20 +1118,68 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "face": 0
             },
             {
-              "t": "building",
+              "t": "unit",
               "x": 65,
               "y": 55,
-              "ghost": false
+              "sel": false,
+              "team": "ally",
+              "face": 0,
+              "size": 1.5
+            },
+            {
+              "t": "key",
+              "x": 65,
+              "y": 38,
+              "label": "F",
+              "state": "active",
+              "hint": "上车"
             },
             {
               "t": "badge",
-              "text": "上车"
+              "text": "可交互"
             }
           ],
-          "logic": "把操控对象切换到该载具"
+          "logic": "探测可上车并亮起交互提示"
         },
         {
-          "title": "切换后",
+          "title": "切换",
+          "input": "按下确认上车",
+          "screen": "镜头切到载具视角/操控",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "unit",
+              "x": 55,
+              "y": 55,
+              "sel": true,
+              "team": "ally",
+              "face": 0,
+              "size": 1.5
+            },
+            {
+              "t": "ring",
+              "x": 55,
+              "y": 55,
+              "r": 8,
+              "kind": "select"
+            },
+            {
+              "t": "key",
+              "x": 55,
+              "y": 38,
+              "label": "F",
+              "state": "active",
+              "hint": "上车"
+            },
+            {
+              "t": "badge",
+              "text": "切入"
+            }
+          ],
+          "logic": "确认上车并把操控对象切到载具"
+        },
+        {
+          "title": "操控中",
           "input": "完成切换",
           "screen": "准星/摇杆控制载具",
           "view": "tps",
@@ -5765,10 +5813,12 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "face": 0
             },
             {
-              "t": "building",
+              "t": "card",
               "x": 48,
               "y": 42,
-              "ghost": false
+              "label": "箱",
+              "cost": 0,
+              "dragging": false
             },
             {
               "t": "key",
@@ -5786,9 +5836,9 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "把可抓物设为手持物"
         },
         {
-          "title": "扔",
-          "input": "瞄准后扔出",
-          "screen": "物体飞出砸中",
+          "title": "瞄准",
+          "input": "瞄准落点",
+          "screen": "抛物预览与落点圈出现",
           "view": "tps",
           "cast": [
             {
@@ -5798,16 +5848,108 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "face": 0
             },
             {
+              "t": "card",
+              "x": 46,
+              "y": 48,
+              "label": "箱",
+              "cost": 0,
+              "dragging": false
+            },
+            {
+              "t": "path",
+              "points": [
+                [
+                  46,
+                  48
+                ],
+                [
+                  58,
+                  35
+                ],
+                [
+                  75,
+                  42
+                ]
+              ],
+              "kind": "move"
+            },
+            {
+              "t": "circle",
+              "x": 75,
+              "y": 42,
+              "r": 12,
+              "ok": true
+            },
+            {
+              "t": "cursor",
+              "x": 75,
+              "y": 42,
+              "mode": "idle"
+            },
+            {
+              "t": "badge",
+              "text": "预览"
+            }
+          ],
+          "logic": "进入投掷瞄准并预览落点"
+        },
+        {
+          "title": "扔出",
+          "input": "松手扔出",
+          "screen": "物体飞出砸中目标",
+          "view": "tps",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 40,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 78,
+              "y": 42,
+              "sel": false,
+              "team": "enemy",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "path",
+              "points": [
+                [
+                  48,
+                  50
+                ],
+                [
+                  62,
+                  36
+                ],
+                [
+                  75,
+                  42
+                ]
+              ],
+              "kind": "attack"
+            },
+            {
+              "t": "ring",
+              "x": 75,
+              "y": 42,
+              "r": 10,
+              "kind": "lock"
+            },
+            {
               "t": "arrow",
-              "x1": 45,
-              "y1": 50,
-              "x2": 75,
-              "y2": 40,
+              "x1": 60,
+              "y1": 40,
+              "x2": 74,
+              "y2": 42,
               "kind": "attack"
             },
             {
               "t": "badge",
-              "text": "投掷"
+              "text": "命中"
             }
           ],
           "logic": "投出手持物并做碰撞结算"
@@ -11305,9 +11447,73 @@ window.PLAYER_ACTION_UX_CATALOG = {
           "logic": "双方进入交易会话并打开交易窗"
         },
         {
-          "title": "确认",
-          "input": "拖入物品，双方确认",
-          "screen": "物品交换完成，窗关",
+          "title": "报价",
+          "input": "双方拖入物品",
+          "screen": "窗内出现报价物，待确认",
+          "view": "moba",
+          "cast": [
+            {
+              "t": "hero",
+              "x": 30,
+              "y": 55,
+              "face": 0
+            },
+            {
+              "t": "unit",
+              "x": 70,
+              "y": 45,
+              "sel": false,
+              "team": "ally",
+              "face": 0,
+              "size": 1
+            },
+            {
+              "t": "menu",
+              "x": 16,
+              "y": 38,
+              "lines": [
+                "你的报价",
+                "矿石",
+                "金币 20"
+              ]
+            },
+            {
+              "t": "menu",
+              "x": 58,
+              "y": 38,
+              "lines": [
+                "对方报价",
+                "币袋",
+                "金币 0"
+              ]
+            },
+            {
+              "t": "card",
+              "x": 42,
+              "y": 62,
+              "label": "矿",
+              "cost": 0,
+              "dragging": false
+            },
+            {
+              "t": "card",
+              "x": 58,
+              "y": 62,
+              "label": "币",
+              "cost": 0,
+              "dragging": false
+            },
+            {
+              "t": "badge",
+              "text": "已报价"
+            }
+          ],
+          "logic": "双方拖入报价物进入待确认"
+        },
+        {
+          "title": "成交",
+          "input": "双方点确认",
+          "screen": "物品交换完成，交易窗关闭",
           "view": "moba",
           "cast": [
             {
@@ -11342,17 +11548,8 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "dragging": false
             },
             {
-              "t": "menu",
-              "x": 40,
-              "y": 68,
-              "lines": [
-                "确认",
-                "取消"
-              ]
-            },
-            {
               "t": "badge",
-              "text": "双方确认"
+              "text": "成交·窗关"
             }
           ],
           "logic": "双方确认后交换物品并关闭交易"
@@ -14169,6 +14366,14 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "kind": "lock"
             },
             {
+              "t": "key",
+              "x": 52,
+              "y": 36,
+              "label": "F",
+              "state": "active",
+              "hint": "处决"
+            },
+            {
               "t": "badge",
               "text": "处决解锁"
             }
@@ -16098,7 +16303,32 @@ window.PLAYER_ACTION_UX_CATALOG = {
             {
               "t": "stickL",
               "nx": 0,
-              "ny": -1
+              "ny": -0.5
+            },
+            {
+              "t": "arrow",
+              "x1": 45,
+              "y1": 52,
+              "x2": 45,
+              "y2": 40,
+              "kind": "move"
+            },
+            {
+              "t": "bar",
+              "x": 50,
+              "y": 28,
+              "ratio": 0.0,
+              "kind": "charge",
+              "label": "耐力",
+              "broken": false
+            },
+            {
+              "t": "key",
+              "x": 72,
+              "y": 72,
+              "label": "Shift",
+              "state": "off",
+              "hint": null
             },
             {
               "t": "badge",
@@ -17348,6 +17578,13 @@ window.PLAYER_ACTION_UX_CATALOG = {
               "size": 1
             },
             {
+              "t": "ring",
+              "x": 40,
+              "y": 55,
+              "r": 8,
+              "kind": "select"
+            },
+            {
               "t": "unit",
               "x": 70,
               "y": 40,
@@ -17358,10 +17595,30 @@ window.PLAYER_ACTION_UX_CATALOG = {
             },
             {
               "t": "circle",
+              "x": 55,
+              "y": 48,
+              "r": 10,
+              "ok": true
+            },
+            {
+              "t": "circle",
+              "x": 62,
+              "y": 44,
+              "r": 10,
+              "ok": true
+            },
+            {
+              "t": "circle",
               "x": 70,
               "y": 40,
               "r": 14,
               "ok": true
+            },
+            {
+              "t": "cursor",
+              "x": 58,
+              "y": 48,
+              "mode": "idle"
             },
             {
               "t": "badge",

@@ -7,7 +7,7 @@
 - 生成脚本：`scripts/generate-player-action-ux-catalog.py`
 - 逻辑文案：`scripts/player_action_ux_beat_logic.py`
 - 实现标注：`scripts/player_action_ux_impl_notes.py`
-- 生成时 HEAD：`809e9790a`（以你拉取后的 `git rev-parse` 为准；合并后会变）
+- 生成时 HEAD：`1c47882f4`（以你拉取后的 `git rev-parse` 为准；合并后会变）
 - 分支语境：`cursor/ux-sequence-io-4211`（时序=设备→逻辑→画面；左栏仍为复刻目标）
 - 已合 main：图鉴 #743–#750（含按游戏分类）
 
@@ -21,15 +21,6 @@
 - **时序图参与者只有三个：设备输入 → 逻辑处理 → 画面输出**；禁止再把手感/爽点做成泳道
 - 每拍必有 `input` / `logic` / `screen`；`logic` 来自 `BEAT_LOGIC`，缺键直接 fail 生成
 - 每个 case 必有 `ludots` 与 `todos`；勿手改 `catalog-data.js`
-
-
-## 双人交叉审核（2026-08-09）
-
-- 10 路审核代理覆盖全部 168 case（5 批 × 双人独立）
-- 双方一致发现：225（high 96 / med 95 / low 34）；另有单人 high 19 供参考
-- 已合并 F0–F4 修复分支并再生：`beats` 升至 347；弱分镜仍为 0
-- 修复重点：缺 cast 元素（框/圈/锥/菜单/卡/热键栏）、该拆未拆拍（合体/拾取/拖卡等）、文案与画面不一致
-- 原始合并报告：`/tmp/ux_audit_reports/MERGED.json`（本机审计产物，不入库）
 
 ## 复刻目标分类
 
@@ -53,7 +44,7 @@
 ## 规模
 
 - cases = 168
-- beats = 347
+- beats = 350
 - target_games = 13
 - target_memberships = 480（含跨游戏重复）
 
