@@ -109,17 +109,259 @@
         const face = ((el.face || 0) * Math.PI) / 180;
         const fx = x + Math.cos(face) * (s + 3);
         const fy = y + Math.sin(face) * (s + 3);
-        return `${sel}
-          <polygon points="${x},${y - s} ${x + s * 0.9},${y + s * 0.7} ${x - s * 0.9},${y + s * 0.7}" fill="${fill}" stroke="#0b0e13" stroke-width="1.2"/>
-          <line x1="${x}" y1="${y}" x2="${fx}" y2="${fy}" stroke="#e8eef6" stroke-width="1.5" opacity="0.7"/>`;
+        // 倒地：躺平的椭圆，一眼和站着的三角分开
+        if (el.state === "downed") {
+          return `${sel}
+            <ellipse cx="${x}" cy="${y + s * 0.5}" rx="${s * 1.15}" ry="${s * 0.5}" fill="${fill}" stroke="#0b0e13" stroke-width="1.2" opacity="0.75"/>
+            <text x="${x}" y="${y - s * 0.4}" text-anchor="middle" fill="#ef6b6b" font-size="9" font-family="DM Sans, sans-serif" font-weight="700">倒地</text>`;
+        }
+        // 空中：抬高本体，地面留投影，看得出「他在天上」
+        const air = el.layer === "air";
+        const cy = air ? y - 12 : y;
+        const shadow = air
+          ? `<ellipse cx="${x}" cy="${y + 8}" rx="${s * 0.8}" ry="${s * 0.32}" fill="#000" opacity="0.4"/>
+             <line x1="${x}" y1="${cy + s * 0.8}" x2="${x}" y2="${y + 6}" stroke="#66758a" stroke-width="1" stroke-dasharray="2 2"/>`
+          : "";
+        const badgeAir = air
+          ? `<text x="${x}" y="${cy - s - 4}" text-anchor="middle" fill="#6ec8ff" font-size="9" font-family="DM Sans, sans-serif" font-weight="700">空中</text>`
+          : "";
+        const outline = el.highlight
+          ? `<polygon points="${x},${cy - s - 3} ${x + s * 1.2},${cy + s * 0.95} ${x - s * 1.2},${cy + s * 0.95}" fill="none" stroke="#e8eef6" stroke-width="1.6" stroke-dasharray="3 2"/>`
+          : "";
+        const role = el.role
+          ? `<text x="${x}" y="${cy + s * 0.55}" text-anchor="middle" fill="#0b0e13" font-size="8.5" font-family="IBM Plex Mono, monospace" font-weight="700">${esc(el.role)}</text>`
+          : "";
+        return `${sel}${shadow}
+          <polygon points="${x},${cy - s} ${x + s * 0.9},${cy + s * 0.7} ${x - s * 0.9},${cy + s * 0.7}" fill="${fill}" stroke="#0b0e13" stroke-width="1.2"/>
+          ${role}${outline}
+          <line x1="${x}" y1="${cy}" x2="${fx}" y2="${air ? fy - 12 : fy}" stroke="#e8eef6" stroke-width="1.5" opacity="0.7"/>
+          ${badgeAir}`;
       }
       if (el.t === "hero") {
         const x = px(el.x), y = py(el.y);
         const face = ((el.face || 0) * Math.PI) / 180;
+        const ghost = el.state === "ghost";
+        // form=alt 换了形态：轮廓从圆变成带尖角，光看剪影就知道换了个身子
+        const body = el.form === "alt"
+          ? `<polygon points="${Array.from({ length: 8 }, (_, i) => {
+              const a2 = (i / 8) * Math.PI * 2 - Math.PI / 2;
+              const rr = i % 2 ? 6 : 12;
+              return `${x + Math.cos(a2) * rr},${y + Math.sin(a2) * rr}`;
+            }).join(" ")}" fill="#c78bff" stroke="#0b0e13" stroke-width="1.4"/>`
+          : `<circle cx="${x}" cy="${y}" r="9" fill="${ghost ? "rgba(110,200,255,0.28)" : "#6ec8ff"}"
+              stroke="${ghost ? "#6ec8ff" : "#0b0e13"}" stroke-width="1.4" stroke-dasharray="${ghost ? "3 2" : "0"}"/>`;
         return `
-          <ellipse cx="${x}" cy="${y + 10}" rx="10" ry="4" fill="#000" opacity="0.35"/>
-          <circle cx="${x}" cy="${y}" r="9" fill="#6ec8ff" stroke="#0b0e13" stroke-width="1.4"/>
-          <line x1="${x}" y1="${y}" x2="${x + Math.cos(face) * 16}" y2="${y + Math.sin(face) * 16}" stroke="#f0a35e" stroke-width="2.2"/>`;
+          <ellipse cx="${x}" cy="${y + 10}" rx="10" ry="4" fill="#000" opacity="${ghost ? 0.12 : 0.35}"/>
+          ${body}
+          <line x1="${x}" y1="${y}" x2="${x + Math.cos(face) * 16}" y2="${y + Math.sin(face) * 16}" stroke="#f0a35e" stroke-width="2.2" opacity="${ghost ? 0.5 : 1}"/>`;
+      }
+      if (el.t === "vehicle") {
+        const x = px(el.x), y = py(el.y);
+        const kind = el.kind || "car";
+        const body = kind === "turret"
+          ? `<rect x="${x - 13}" y="${y - 9}" width="26" height="18" rx="4" fill="#7e8fa6" stroke="#0b0e13" stroke-width="1.4"/>
+             <circle cx="${x}" cy="${y}" r="6.5" fill="#5a6b80" stroke="#0b0e13" stroke-width="1.2"/>
+             <line x1="${x}" y1="${y}" x2="${x + 20}" y2="${y}" stroke="#5a6b80" stroke-width="4.5"/>`
+          : `<rect x="${x - 17}" y="${y - 8}" width="34" height="16" rx="4" fill="#7e8fa6" stroke="#0b0e13" stroke-width="1.4"/>
+             <rect x="${x - 7}" y="${y - 13}" width="15" height="8" rx="2" fill="#9fb0c6" stroke="#0b0e13" stroke-width="1.1"/>
+             <circle cx="${x - 10}" cy="${y + 9}" r="4" fill="#222b36" stroke="#0b0e13" stroke-width="1"/>
+             <circle cx="${x + 10}" cy="${y + 9}" r="4" fill="#222b36" stroke="#0b0e13" stroke-width="1"/>
+             ${kind === "tank" ? `<line x1="${x + 4}" y1="${y - 9}" x2="${x + 26}" y2="${y - 9}" stroke="#5a6b80" stroke-width="4"/>` : ""}`;
+        const seat = el.occupied
+          ? `<circle cx="${x}" cy="${y - 16}" r="5" fill="#6ec8ff" stroke="#0b0e13" stroke-width="1.2"/>`
+          : "";
+        return `<ellipse cx="${x}" cy="${y + 12}" rx="19" ry="5" fill="#000" opacity="0.35"/>${body}${seat}`;
+      }
+      if (el.t === "fog") {
+        const w = ((el.w == null ? 40 : el.w) / 100) * SW;
+        const h = ((el.h == null ? 100 : el.h) / 100) * SH;
+        const x = px(el.x == null ? 60 : el.x);
+        const y = py(el.y == null ? 0 : el.y);
+        return `
+          <rect x="${x}" y="${y}" width="${w}" height="${h}" fill="rgba(8,10,14,0.82)"/>
+          <text x="${x + w / 2}" y="${y + h / 2}" text-anchor="middle" fill="#66758a" font-size="11" font-family="DM Sans, sans-serif" font-weight="600">战争迷雾</text>`;
+      }
+      if (el.t === "marker") {
+        const x = px(el.x), y = py(el.y);
+        const glyph = { skull: "☠", moon: "☾", star: "★", cross: "✚", square: "◆" }[el.icon] || "★";
+        return `
+          <circle cx="${x}" cy="${y}" r="9" fill="#0b0e13" stroke="#e0c35a" stroke-width="1.6"/>
+          <text x="${x}" y="${y + 4}" text-anchor="middle" fill="#e0c35a" font-size="11" font-family="DM Sans, sans-serif" font-weight="700">${glyph}</text>
+          <text x="${x}" y="${y - 13}" text-anchor="middle" fill="#e0c35a" font-size="8.5" font-family="DM Sans, sans-serif">${esc(el.label || "团队标记")}</text>`;
+      }
+      if (el.t === "playertag") {
+        const x = px(el.x), y = py(el.y);
+        const palette = { p1: "#6ec8ff", p2: "#f0a35e", p3: "#5dce8f", p4: "#c78bff" };
+        const c = palette[el.color] || palette.p1;
+        const w = 8 + String(el.label || "P1").length * 7;
+        return `
+          <rect x="${x - w / 2}" y="${y - 9}" width="${w}" height="14" rx="3" fill="#0b0e13" stroke="${c}" stroke-width="1.6"/>
+          <text x="${x}" y="${y + 1.5}" text-anchor="middle" fill="${c}" font-size="9.5" font-family="IBM Plex Mono, monospace" font-weight="700">${esc(el.label || "P1")}</text>`;
+      }
+      if (el.t === "splitscreen") {
+        const mode = el.mode || "v";
+        const label = (t, x, y) => `<text x="${x}" y="${y}" fill="#93a0b4" font-size="10" font-family="IBM Plex Mono, monospace" font-weight="700">${t}</text>`;
+        if (mode === "shared") {
+          return `
+            <rect x="${SX + 4}" y="${SY + 4}" width="${SW - 8}" height="${SH - 8}" fill="none" stroke="#93a0b4" stroke-width="1.4" stroke-dasharray="6 4"/>
+            ${label("共享一块屏", SX + 10, SY + 18)}`;
+        }
+        if (mode === "h") {
+          const my = SY + SH / 2;
+          return `
+            <line x1="${SX}" y1="${my}" x2="${SX + SW}" y2="${my}" stroke="#0b0e13" stroke-width="4"/>
+            ${label("P1", SX + 8, SY + 16)}${label("P2", SX + 8, my + 16)}`;
+        }
+        const mx = SX + SW / 2;
+        return `
+          <line x1="${mx}" y1="${SY}" x2="${mx}" y2="${SY + SH}" stroke="#0b0e13" stroke-width="4"/>
+          ${label("P1", SX + 8, SY + 16)}${label("P2", mx + 8, SY + 16)}`;
+      }
+      if (el.t === "padslot") {
+        const states = Array.isArray(el.states) ? el.states : [];
+        const w = 40, h = 24, gap = 6;
+        const total = states.length * w + (states.length - 1) * gap;
+        const x0 = SX + SW / 2 - total / 2;
+        const y0 = SY + SH - h - 6;
+        return states.map((st, i) => {
+          const x = x0 + i * (w + gap);
+          const c = st === "joined" ? "#5dce8f" : st === "lost" ? "#ef6b6b" : "#66758a";
+          const text = st === "joined" ? `P${i + 1}` : st === "lost" ? "断开" : "按键加入";
+          return `
+            <rect x="${x}" y="${y0}" width="${w}" height="${h}" rx="4" fill="#0b0e13" stroke="${c}" stroke-width="${st === "waiting" ? 1.2 : 1.8}" stroke-dasharray="${st === "waiting" ? "3 2" : "0"}"/>
+            <text x="${x + w / 2}" y="${y0 + h / 2 + 3.5}" text-anchor="middle" fill="${c}" font-size="${text.length > 2 ? 8 : 10}" font-family="DM Sans, sans-serif" font-weight="700">${text}</text>`;
+        }).join("");
+      }
+      if (el.t === "roster") {
+        const x = px(el.x), y = py(el.y);
+        const rows = el.rows || [];
+        const w = 96, rh = 16, h = 24 + rows.length * rh;
+        const mark = { ready: ["✓", "#5dce8f"], waiting: ["…", "#e0c35a"], offline: ["×", "#ef6b6b"] };
+        const items = rows.map((r, i) => {
+          const [sym, col] = mark[r.state] || mark.waiting;
+          const ry = y + 30 + i * rh;
+          return `
+            <text x="${x + 8}" y="${ry}" fill="#e8eef6" font-size="10" font-family="DM Sans, sans-serif">${esc(r.name)}</text>
+            <text x="${x + w - 10}" y="${ry}" text-anchor="end" fill="${col}" font-size="11" font-family="DM Sans, sans-serif" font-weight="700">${sym}</text>`;
+        }).join("");
+        return `
+          <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="4" fill="#0b0e13" stroke="#6ec8ff" stroke-width="1.4"/>
+          <text x="${x + 8}" y="${y + 13}" fill="#66758a" font-size="8.5" font-family="IBM Plex Mono, monospace">${esc(el.title || "房间")}</text>
+          ${items}`;
+      }
+      if (el.t === "netstat") {
+        const x = px(el.x), y = py(el.y);
+        const c = el.state === "lag" ? "#e0c35a" : el.state === "lost" ? "#ef6b6b" : "#5dce8f";
+        const bars = [5, 8, 11, 14].map((bh, i) => {
+          const lit = el.state === "lost" ? i < 1 : el.state === "lag" ? i < 2 : i < 4;
+          return `<rect x="${x + i * 5}" y="${y - bh}" width="3.4" height="${bh}" fill="${lit ? c : "#2c3645"}"/>`;
+        }).join("");
+        return `${bars}
+          <text x="${x + 24}" y="${y}" fill="${c}" font-size="9.5" font-family="IBM Plex Mono, monospace" font-weight="700">${esc(el.ping)}ms</text>`;
+      }
+      if (el.t === "voice") {
+        const x = px(el.x), y = py(el.y);
+        const on = el.state === "talking" || el.state === "on";
+        const c = el.state === "talking" ? "#5dce8f" : el.state === "on" ? "#6ec8ff" : "#66758a";
+        const waves = el.state === "talking"
+          ? `<path d="M${x + 9} ${y - 5} q4 5 0 10" fill="none" stroke="${c}" stroke-width="1.4"/>
+             <path d="M${x + 13} ${y - 8} q6 8 0 16" fill="none" stroke="${c}" stroke-width="1.1" opacity="0.7"/>`
+          : "";
+        return `
+          <rect x="${x - 3.5}" y="${y - 10}" width="7" height="12" rx="3.5" fill="${on ? c : "#1a2430"}" stroke="${c}" stroke-width="1.4"/>
+          <path d="M${x - 6} ${y + 1} q6 7 12 0" fill="none" stroke="${c}" stroke-width="1.4"/>
+          <line x1="${x}" y1="${y + 4}" x2="${x}" y2="${y + 8}" stroke="${c}" stroke-width="1.4"/>
+          ${el.state === "off" ? `<line x1="${x - 9}" y1="${y + 8}" x2="${x + 9}" y2="${y - 11}" stroke="#ef6b6b" stroke-width="1.8"/>` : ""}
+          ${waves}`;
+      }
+      if (el.t === "vote") {
+        const x = px(el.x), y = py(el.y);
+        const need = el.need || 5;
+        const yes = el.yes || 0;
+        const w = 90, h = 8;
+        return `
+          <text x="${x}" y="${y - 6}" fill="#93a0b4" font-size="9.5" font-family="DM Sans, sans-serif">${esc(el.label || "表决")} ${yes}/${need}</text>
+          <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="3" fill="#0b0e13" stroke="#3a4658" stroke-width="1"/>
+          <rect x="${x + 1}" y="${y + 1}" width="${(w - 2) * Math.min(1, yes / need)}" height="${h - 2}" rx="2" fill="${yes >= need ? "#5dce8f" : "#e0c35a"}"/>
+          ${Array.from({ length: need - 1 }, (_, i) => `<line x1="${x + ((i + 1) * w) / need}" y1="${y}" x2="${x + ((i + 1) * w) / need}" y2="${y + h}" stroke="#0b0e13" stroke-width="1.4"/>`).join("")}`;
+      }
+      if (el.t === "camera") {
+        const x = px(el.x), y = py(el.y);
+        const a = ((el.angle || 0) * Math.PI) / 180;
+        const lock = el.mode === "lock";
+        const c = lock ? "#f0a35e" : "#6ec8ff";
+        const len = 30, half = (26 * Math.PI) / 180;
+        const x1 = x + Math.cos(a - half) * len, y1 = y + Math.sin(a - half) * len;
+        const x2 = x + Math.cos(a + half) * len, y2 = y + Math.sin(a + half) * len;
+        return `
+          <path d="M${x} ${y} L${x1} ${y1} A${len} ${len} 0 0 1 ${x2} ${y2} Z"
+            fill="${lock ? "rgba(240,163,94,0.14)" : "rgba(110,200,255,0.12)"}" stroke="${c}"
+            stroke-width="1.2" stroke-dasharray="${lock ? "0" : "4 3"}"/>
+          <rect x="${x - 7}" y="${y - 5}" width="14" height="10" rx="2" fill="#1a2430" stroke="${c}" stroke-width="1.5"/>
+          <circle cx="${x + Math.cos(a) * 8}" cy="${y + Math.sin(a) * 8}" r="2.6" fill="${c}"/>
+          <text x="${x}" y="${y + 18}" text-anchor="middle" fill="${c}" font-size="8.5" font-family="DM Sans, sans-serif">${lock ? "镜头·跟身" : "镜头·自由"}</text>`;
+      }
+      if (el.t === "queue") {
+        const x = px(el.x), y = py(el.y);
+        const state = el.state || "waiting";
+        const c = state === "active" ? "#f0a35e" : state === "done" ? "#5dce8f" : "#66758a";
+        return `
+          <circle cx="${x}" cy="${y}" r="8" fill="#0b0e13" stroke="${c}" stroke-width="1.8"/>
+          <text x="${x}" y="${y + 3.5}" text-anchor="middle" fill="${c}" font-size="10" font-family="DM Sans, sans-serif" font-weight="700">${state === "done" ? "✓" : esc(el.n)}</text>
+          <text x="${x}" y="${y - 12}" text-anchor="middle" fill="${c}" font-size="8.5" font-family="DM Sans, sans-serif">${state === "active" ? "在放" : state === "done" ? "放完" : "排队"}</text>`;
+      }
+      if (el.t === "held") {
+        // 固定摆在画面左上（让开左上角文字标签）：手里拿着什么，永远在同一个位置看
+        const x = SX + 10;
+        const y = SY + 50;
+        const w = 46, h = 26;
+        const empty = !el.label;
+        return `
+          <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="4"
+            fill="${empty ? "rgba(11,14,19,0.7)" : "#1a2430"}"
+            stroke="${empty ? "#3a4658" : "#6ec8ff"}" stroke-width="1.4"
+            stroke-dasharray="${empty ? "3 2" : "0"}"/>
+          <text x="${x + 5}" y="${y - 4}" fill="#66758a" font-size="8.5" font-family="IBM Plex Mono, monospace" letter-spacing="0.5">手持</text>
+          <text x="${x + w / 2}" y="${y + h / 2 + 4}" text-anchor="middle"
+            fill="${empty ? "#66758a" : "#e8eef6"}" font-size="10.5" font-family="DM Sans, sans-serif" font-weight="${empty ? 400 : 700}">${esc(el.label || "空手")}</text>`;
+      }
+      if (el.t === "impact") {
+        const x = px(el.x), y = py(el.y);
+        const r = el.r || 16;
+        const spikes = Array.from({ length: 10 }, (_, i) => {
+          const a = (i / 10) * Math.PI * 2;
+          return `<line x1="${x + Math.cos(a) * r * 0.72}" y1="${y + Math.sin(a) * r * 0.72}"
+            x2="${x + Math.cos(a) * r * 1.28}" y2="${y + Math.sin(a) * r * 1.28}"
+            stroke="#f0a35e" stroke-width="${el.heavy ? 2.6 : 1.7}"/>`;
+        }).join("");
+        return `
+          <circle cx="${x}" cy="${y}" r="${r * 0.72}" fill="rgba(240,163,94,0.4)" stroke="#f0a35e" stroke-width="${el.heavy ? 2.6 : 1.8}"/>
+          ${spikes}`;
+      }
+      if (el.t === "deny") {
+        const x = px(el.x), y = py(el.y);
+        const r = el.r || 11;
+        const d = r * 0.62;
+        return `
+          <circle cx="${x}" cy="${y}" r="${r}" fill="rgba(239,107,107,0.16)" stroke="#ef6b6b" stroke-width="2.4"/>
+          <line x1="${x - d}" y1="${y + d}" x2="${x + d}" y2="${y - d}" stroke="#ef6b6b" stroke-width="2.4"/>
+          ${el.label ? `<text x="${x}" y="${y + r + 11}" text-anchor="middle" fill="#ef6b6b" font-size="9.5" font-family="DM Sans, sans-serif" font-weight="700">${esc(el.label)}</text>` : ""}`;
+      }
+      if (el.t === "npc") {
+        const x = px(el.x), y = py(el.y);
+        const mark = { vendor: "商", quest: "?", healer: "魂", auction: "拍", trainer: "训" }[el.role] || "";
+        return `
+          <ellipse cx="${x}" cy="${y + 11}" rx="9" ry="3.5" fill="#000" opacity="0.35"/>
+          <circle cx="${x}" cy="${y - 6}" r="4.5" fill="#e0c35a" stroke="#0b0e13" stroke-width="1.2"/>
+          <path d="M${x - 6} ${y + 9} L${x - 4} ${y - 1} L${x + 4} ${y - 1} L${x + 6} ${y + 9} Z" fill="#e0c35a" stroke="#0b0e13" stroke-width="1.2"/>
+          ${mark ? `<text x="${x}" y="${y - 13}" text-anchor="middle" fill="#e0c35a" font-size="10" font-family="DM Sans, sans-serif" font-weight="700">${esc(mark)}</text>` : ""}`;
+      }
+      if (el.t === "corpse") {
+        const x = px(el.x), y = py(el.y);
+        return `
+          <ellipse cx="${x}" cy="${y}" rx="12" ry="5" fill="#3d4654" stroke="#0b0e13" stroke-width="1.2"/>
+          <line x1="${x - 5}" y1="${y - 4}" x2="${x + 5}" y2="${y - 4}" stroke="#93a0b4" stroke-width="1.4"/>
+          <text x="${x}" y="${y - 9}" text-anchor="middle" fill="#93a0b4" font-size="9" font-family="DM Sans, sans-serif">尸体</text>`;
       }
       if (el.t === "cursor") {
         const x = px(el.x), y = py(el.y);
@@ -156,6 +398,14 @@
         return `<rect x="${px(el.x)}" y="${py(el.y)}" width="${(Number(el.w) / 100) * SW}" height="${(Number(el.h) / 100) * SH}" fill="rgba(110,200,255,0.12)" stroke="#6ec8ff" stroke-width="1.6" stroke-dasharray="4 3"/>`;
       }
       if (el.t === "ring") {
+        // finisher = 这个目标现在可以被终结，和「锁定了谁」要能分开
+        if (el.kind === "finisher") {
+          const r0 = el.r || 8;
+          return `<ellipse cx="${px(el.x)}" cy="${py(el.y) + 14}" rx="${r0}" ry="${r0 * 0.42}"
+            fill="none" stroke="#e0c35a" stroke-width="2.4" stroke-dasharray="5 3"/>
+            <text x="${px(el.x)}" y="${py(el.y) + 14 + r0 * 0.42 + 11}" text-anchor="middle"
+              fill="#e0c35a" font-size="8.5" font-family="DM Sans, sans-serif" font-weight="700">可终结</text>`;
+        }
         const color = el.kind === "lock" ? "#ef6b6b" : el.kind === "buff" ? "#6ec8ff" : "#f0a35e";
         // Ground ring under the unit tip (top-down “脚下”), not around the torso.
         const r = el.r || 8;
@@ -164,12 +414,16 @@
       if (el.t === "crosshair") {
         const x = px(el.x), y = py(el.y);
         const c = el.locked ? "#ef6b6b" : "#e8eef6";
+        // spread=tight 开镜收拢 / wide 扫射扩散：准星张开度本身就是信息
+        const k = el.spread === "tight" ? 0.55 : el.spread === "wide" ? 1.7 : 1;
+        const r = 10 * k, inner = 6 * k, outer = 16 * k;
         return `
-          <circle cx="${x}" cy="${y}" r="10" fill="none" stroke="${c}" stroke-width="1.6"/>
-          <line x1="${x - 16}" y1="${y}" x2="${x - 6}" y2="${y}" stroke="${c}" stroke-width="1.6"/>
-          <line x1="${x + 6}" y1="${y}" x2="${x + 16}" y2="${y}" stroke="${c}" stroke-width="1.6"/>
-          <line x1="${x}" y1="${y - 16}" x2="${x}" y2="${y - 6}" stroke="${c}" stroke-width="1.6"/>
-          <line x1="${x}" y1="${y + 6}" x2="${x}" y2="${y + 16}" stroke="${c}" stroke-width="1.6"/>`;
+          <circle cx="${x}" cy="${y}" r="${r}" fill="none" stroke="${c}" stroke-width="1.6" stroke-dasharray="${el.spread === "wide" ? "4 3" : "0"}"/>
+          <line x1="${x - outer}" y1="${y}" x2="${x - inner}" y2="${y}" stroke="${c}" stroke-width="1.6"/>
+          <line x1="${x + inner}" y1="${y}" x2="${x + outer}" y2="${y}" stroke="${c}" stroke-width="1.6"/>
+          <line x1="${x}" y1="${y - outer}" x2="${x}" y2="${y - inner}" stroke="${c}" stroke-width="1.6"/>
+          <line x1="${x}" y1="${y + inner}" x2="${x}" y2="${y + outer}" stroke="${c}" stroke-width="1.6"/>
+          ${el.spread ? `<text x="${x}" y="${y + outer + 12}" text-anchor="middle" fill="${c}" font-size="9" font-family="DM Sans, sans-serif">${el.spread === "tight" ? "收拢" : "扩散"}</text>` : ""}`;
       }
       if (el.t === "cone") {
         const x = px(el.x), y = py(el.y);
@@ -217,6 +471,98 @@
           <circle cx="${kx}" cy="${ky}" r="9" fill="${left ? "#6ec8ff" : "#f0a35e"}" stroke="#e8eef6" stroke-width="1"/>
           <text x="${cx}" y="${cy + 30}" text-anchor="middle" fill="#93a0b4" font-size="10" font-family="IBM Plex Mono, monospace">${left ? "L" : "R"}</text>`;
       }
+      if (el.t === "touchpt") {
+        const x = px(el.x), y = py(el.y);
+        const kind = el.kind || "tap";
+        const dot = (cx, cy) => `<circle cx="${cx}" cy="${cy}" r="6.5" fill="rgba(110,200,255,0.35)" stroke="#6ec8ff" stroke-width="2"/>`;
+        if (kind === "pinch") {
+          const x2 = px(el.x2), y2 = py(el.y2);
+          return `
+            <line x1="${x}" y1="${y}" x2="${x2}" y2="${y2}" stroke="#6ec8ff" stroke-width="1.4" stroke-dasharray="4 3"/>
+            ${dot(x, y)}${dot(x2, y2)}
+            <path d="M${(x + x2) / 2 - 9} ${(y + y2) / 2} L${(x + x2) / 2 - 3} ${(y + y2) / 2}" stroke="#f0a35e" stroke-width="2" marker-end="url(#${markerPrefix}-move)"/>
+            <path d="M${(x + x2) / 2 + 9} ${(y + y2) / 2} L${(x + x2) / 2 + 3} ${(y + y2) / 2}" stroke="#f0a35e" stroke-width="2" marker-end="url(#${markerPrefix}-move)"/>`;
+        }
+        const hold = kind === "hold"
+          ? `<circle cx="${x}" cy="${y}" r="12" fill="none" stroke="#f0a35e" stroke-width="1.6"/>
+             <circle cx="${x}" cy="${y}" r="16.5" fill="none" stroke="#f0a35e" stroke-width="1" opacity="0.5"/>`
+          : "";
+        const tap = kind === "tap"
+          ? `<circle cx="${x}" cy="${y}" r="12" fill="none" stroke="#6ec8ff" stroke-width="1.4" opacity="0.75"/>`
+          : "";
+        const drag = kind === "drag"
+          ? `<circle cx="${x}" cy="${y}" r="12" fill="none" stroke="#6ec8ff" stroke-width="1.3" stroke-dasharray="3 3"/>`
+          : "";
+        return `${hold}${tap}${drag}${dot(x, y)}`;
+      }
+      if (el.t === "wasd") {
+        const on = Array.isArray(el.active) ? el.active : [];
+        const cx = SX + 40;
+        const cy = SY + SH - 34;
+        const s = 17, gap = 2.5;
+        const cap = (label, gx, gy) => {
+          const lit = on.includes(label);
+          const x = cx + gx * (s + gap) - s / 2;
+          const y = cy + gy * (s + gap) - s / 2;
+          return `
+            <rect x="${x}" y="${y}" width="${s}" height="${s}" rx="3"
+              fill="${lit ? "rgba(240,163,94,0.22)" : "#0b0e13"}" stroke="${lit ? "#f0a35e" : "#3a4658"}" stroke-width="${lit ? 2 : 1.2}"/>
+            <text x="${x + s / 2}" y="${y + s / 2 + 4}" text-anchor="middle" fill="${lit ? "#f0a35e" : "#66758a"}" font-size="10" font-family="IBM Plex Mono, monospace" font-weight="700">${label}</text>`;
+        };
+        return `${cap("W", 0, -1)}${cap("A", -1, 0)}${cap("S", 0, 0)}${cap("D", 1, 0)}`;
+      }
+      if (el.t === "wheel") {
+        const x = px(el.x), y = py(el.y);
+        const r = el.r || 30;
+        const labels = el.labels || [];
+        const n = Math.max(2, labels.length);
+        const step = (Math.PI * 2) / n;
+        let out = `<circle cx="${x}" cy="${y}" r="${r}" fill="rgba(11,14,19,0.78)" stroke="#6ec8ff" stroke-width="1.6"/>`;
+        for (let i = 0; i < n; i++) {
+          const a0 = -Math.PI / 2 + i * step;
+          const a1 = a0 + step;
+          const on = el.active === i;
+          if (on) {
+            const x0 = x + Math.cos(a0) * r, y0 = y + Math.sin(a0) * r;
+            const x1 = x + Math.cos(a1) * r, y1 = y + Math.sin(a1) * r;
+            out += `<path d="M${x} ${y} L${x0} ${y0} A${r} ${r} 0 0 1 ${x1} ${y1} Z" fill="rgba(240,163,94,0.28)" stroke="#f0a35e" stroke-width="1.6"/>`;
+          } else {
+            const xe = x + Math.cos(a0) * r, ye = y + Math.sin(a0) * r;
+            out += `<line x1="${x}" y1="${y}" x2="${xe}" y2="${ye}" stroke="#2c3645" stroke-width="1"/>`;
+          }
+          const am = a0 + step / 2;
+          const lx = x + Math.cos(am) * r * 0.62;
+          const ly = y + Math.sin(am) * r * 0.62;
+          out += `<text x="${lx}" y="${ly + 3.5}" text-anchor="middle" fill="${on ? "#f0a35e" : "#93a0b4"}" font-size="9.5" font-family="DM Sans, sans-serif" font-weight="${on ? 700 : 400}">${esc(labels[i] || "")}</text>`;
+        }
+        return out;
+      }
+      if (el.t === "prop") {
+        const x = px(el.x), y = py(el.y);
+        const s = 8;
+        if (el.kind === "wall" || el.kind === "cover") {
+          const w = 34, h = 14;
+          return `
+            <rect x="${x - w / 2}" y="${y - h / 2}" width="${w}" height="${h}" rx="2"
+              fill="#5a6b80" stroke="#0b0e13" stroke-width="1.4"/>
+            <line x1="${x - w / 2}" y1="${y}" x2="${x + w / 2}" y2="${y}" stroke="#0b0e13" stroke-width="1" opacity="0.5"/>
+            ${el.label ? `<text x="${x}" y="${y - h / 2 - 5}" text-anchor="middle" fill="#e0c35a" font-size="9.5" font-family="DM Sans, sans-serif" font-weight="600">${esc(el.label)}</text>` : ""}`;
+        }
+        const glow = el.highlight
+          ? `<circle cx="${x}" cy="${y}" r="${s + 5}" fill="none" stroke="#e0c35a" stroke-width="1.6" opacity="0.85"/>`
+          : "";
+        return `${glow}
+          <polygon points="${x},${y - s} ${x + s},${y} ${x},${y + s} ${x - s},${y}" fill="#c9a27a" stroke="#0b0e13" stroke-width="1.3"/>
+          ${el.label ? `<text x="${x}" y="${y - s - 5}" text-anchor="middle" fill="#e0c35a" font-size="9.5" font-family="DM Sans, sans-serif" font-weight="600">${esc(el.label)}</text>` : ""}`;
+      }
+      if (el.t === "anchor") {
+        const x = px(el.x), y = py(el.y);
+        return `
+          <circle cx="${x}" cy="${y}" r="7" fill="none" stroke="#e0c35a" stroke-width="2.2"/>
+          <line x1="${x - 10}" y1="${y}" x2="${x + 10}" y2="${y}" stroke="#e0c35a" stroke-width="1.4"/>
+          <line x1="${x}" y1="${y - 10}" x2="${x}" y2="${y + 10}" stroke="#e0c35a" stroke-width="1.4"/>
+          <circle cx="${x}" cy="${y}" r="2" fill="#e0c35a"/>`;
+      }
       if (el.t === "badge") {
         const w = Math.min(150, 20 + String(el.text).length * 9);
         return `
@@ -256,12 +602,20 @@
         const x0 = SX + SW / 2 - total / 2;
         const y0 = SY + SH - h - 5;
         const off = Array.isArray(el.off) ? el.off : [];
-        const labels = ["Q", "W", "E", "R", "T"];
-        let out = "";
+        // 键位标签由生成器按平台填好：键盘是 Q/W/E/R，手柄是面键，触控是序号
+        if (!Array.isArray(el.labels) || el.labels.length < slots) {
+          throw new Error("技能栏缺 labels（按平台的键位标签）— 重跑 catalog 生成脚本");
+        }
+        const labels = el.labels;
+        // page = 整栏换了一套技能：所有格子换色 + 左侧标出这是哪一套
+        let out = el.page
+          ? `<rect x="${x0 - 46}" y="${y0 + 3}" width="40" height="18" rx="3" fill="#0b0e13" stroke="#5dce8f" stroke-width="1.3"/>
+             <text x="${x0 - 26}" y="${y0 + 16}" text-anchor="middle" fill="#5dce8f" font-size="9.5" font-family="DM Sans, sans-serif" font-weight="700">${esc(el.page)}</text>`
+          : "";
         for (let i = 0; i < slots; i++) {
           const x = x0 + i * (w + gap);
           const isActive = el.active === i;
-          const isNew = el.extra === i;
+          const isNew = el.extra === i || !!el.page;
           const isOff = off.includes(i);
           const stroke = isActive ? "#f0a35e" : isNew ? "#5dce8f" : "#3a4658";
           out += `<rect x="${x}" y="${y0}" width="${w}" height="${h}" rx="4" fill="${isOff ? "#10141a" : "#1a2430"}" stroke="${stroke}" stroke-width="${isActive || isNew ? 2 : 1.2}"/>`;
@@ -277,6 +631,11 @@
           }
           if (el.deny === i) {
             out += `<rect x="${x}" y="${y0}" width="${w}" height="${h}" rx="4" fill="rgba(239,107,107,0.22)" stroke="#ef6b6b" stroke-width="1.6"/>`;
+          }
+          if (el.defer === i) {
+            // 让路 ≠ 不可用：黄框加「让」，别用红叉否则意思正好相反
+            out += `<rect x="${x}" y="${y0}" width="${w}" height="${h}" rx="4" fill="rgba(224,195,90,0.18)" stroke="#e0c35a" stroke-width="1.6"/>`;
+            out += `<text x="${x + w / 2}" y="${y0 - 4}" text-anchor="middle" fill="#e0c35a" font-size="8.5" font-family="DM Sans, sans-serif" font-weight="700">让路</text>`;
           }
         }
         return out;
