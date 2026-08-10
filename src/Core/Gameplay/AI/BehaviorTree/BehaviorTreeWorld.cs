@@ -61,17 +61,23 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
 
         public void ResetAgent(int agent)
         {
-            ValidateAgent(agent);
-            _stackCount[agent] = 1;
-            _stack[agent * BehaviorTreeLimits.MaxStackDepth] = _tree.RootIndex;
-            _childCursor[agent * BehaviorTreeLimits.MaxStackDepth] = 0;
-            _status[agent] = BehaviorTreeStatus.Running;
+            RestartThinking(agent);
             _scriptCursors[agent].Reset();
             int intBase = agent * GraphVmLimits.MaxIntRegisters;
             int boolBase = agent * GraphVmLimits.MaxBoolRegisters;
             Array.Clear(_scriptIntRegs, intBase, GraphVmLimits.MaxIntRegisters);
             Array.Clear(_scriptBoolRegs, boolBase, GraphVmLimits.MaxBoolRegisters);
             Array.Clear(_scriptCallStacks, agent * GraphVmLimits.MaxCallStackDepth, GraphVmLimits.MaxCallStackDepth);
+        }
+
+        /// <summary>Cheap topology restart for a new think wave (no Script register wipes).</summary>
+        public void RestartThinking(int agent)
+        {
+            ValidateAgent(agent);
+            _stackCount[agent] = 1;
+            _stack[agent * BehaviorTreeLimits.MaxStackDepth] = _tree.RootIndex;
+            _childCursor[agent * BehaviorTreeLimits.MaxStackDepth] = 0;
+            _status[agent] = BehaviorTreeStatus.Running;
         }
 
         /// <summary>

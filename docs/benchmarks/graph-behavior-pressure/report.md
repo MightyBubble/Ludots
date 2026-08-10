@@ -15,12 +15,14 @@
 | BT AlwaysSuccess sequence | 10_000 | N_topo=16 | **2.134** | PASS &lt;5ms |
 | FSM sentry (half stimulated) | 10_000 | 4 states | **0.057** | PASS &lt;5ms |
 | Level director stress | 128 armed triggers (peakUnits marker 10k) | — | **0.202** | PASS &lt;5ms |
+| Combined BT+FSM+Level (25 waves) | 10_000 | N_topo=8 | avg **1.043** / p95 **1.089** | PASS |
 
 ## Interpretation
 
-- Cheap SoA BT/FSM walks clear the 5ms gate for 10k.
-- Full Script-per-agent every think still ~9ms — Showcase leaves must stay sparse Script / small budgets.
-- Next: wire Script leaves + showcases; fill M2/M3/M6 CSVs.
+- Cheap SoA BT/FSM walks clear the 5ms gate for 10k **without** graph-layer stagger/sleep.
+- Showcase default combined topology N=8; N=16 remains BT-only stress row.
+- Full Script-per-agent every think still ~9ms — leaves must stay sparse Script / small budgets.
+- Next: Script leaves + four Raylib showcases + recordings; fill M2/M3/M6.
 
 ## Files
 
