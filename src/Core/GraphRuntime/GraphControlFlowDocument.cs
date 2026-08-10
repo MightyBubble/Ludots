@@ -22,6 +22,11 @@ namespace Ludots.Core.GraphRuntime
         public int IntValue { get; set; }
         /// <summary>Optional target Script graph id for InvokeScript (patched or literal).</summary>
         public int GraphId { get; set; }
+        /// <summary>
+        /// When &gt;= 0, forces this node's int output (or MoveInt source via Imm) onto a fixed int register.
+        /// Used for loop-carried values without inventing a second memory space.
+        /// </summary>
+        public int PinRegister { get; set; } = -1;
     }
 
     public sealed class GraphControlFlowEdge

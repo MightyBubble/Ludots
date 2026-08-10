@@ -56,5 +56,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public int CallStackCount;
         public int ReturnInt;
         public GraphExecutionStatus Status;
+        /// <summary>Set by the executor for the active program; used by Call absolute-target checks.</summary>
+        public int ProgramLength;
     }
 }

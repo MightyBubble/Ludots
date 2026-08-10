@@ -161,6 +161,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         Yield = 432,           // pause; resume at next instruction
         HaltReturnInt = 433,   // halt with ReturnInt = I[A]
         InvokeScript = 434,    // run Script graph Imm to halt (callee must not Yield)
+        MoveInt = 435,         // I[Dst] = I[A]
     }
 
     public static class GraphNodeOpParser
