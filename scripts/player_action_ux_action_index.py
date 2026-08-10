@@ -26,7 +26,7 @@ ACTION_GROUPS: list[tuple[str, str, str, tuple[tuple[str, str], ...]]] = [
     ("UX-008", "temp-kit-rts-morph-ability", "RTS限时形态换面板", (("temp-kit-rts-morph-ability", "kbm"),)),
     ("UX-009", "context-sc2-rightclick", "SC2右键随选中变化", (("context-sc2-rightclick", "kbm"),)),
     ("UX-010", "habit-shift-queue-cast", "Shift排队施法", (("habit-shift-queue-cast", "kbm"),)),
-    ("UX-011", "mmo-tab-target", "Tab选敌点框选友", (("mmo-tab-target", "kbm"),)),
+    ("UX-011", "mmo-tab-target", "按Tab轮换敌方目标", (("mmo-tab-target", "kbm"),)),
     ("UX-012", "loco-wasd-vs-click", "WASD与点地谁优先", (("loco-wasd-vs-click", "kbm"),)),
     ("UX-013", "army-vehicle", "上车变载具手感", (("army-vehicle", "gamepad"),)),
     ("UX-014", "army-merge", "两单位合体", (("army-merge", "kbm"),)),
@@ -201,6 +201,47 @@ ACTION_GROUPS: list[tuple[str, str, str, tuple[tuple[str, str], ...]]] = [
     ("UX-179", "couch-menu-owner", "同屏共用菜单归谁操作", (("couch-menu-owner", "gamepad"),)),
     ("UX-180", "couch-mixed-devices", "一台机器两种设备各控一角",
      (("couch-mixed-devices-pad", "gamepad"), ("couch-mixed-devices-kbm", "kbm"))),
+    # ---- 从 UX-011 拆出来：用界面选人和用键盘轮换敌人是两条路 ----
+    ("UX-181", "mmo-party-frame-target", "点队友头像选中他",
+     (("mmo-party-frame-target", "kbm"),)),
+    # ---- 打到一半目标没了 ----
+    ("UX-182", "target-lost-out-of-range", "目标跑远锁定自动松开",
+     (("target-lost-out-of-range", "kbm"),)),
+    ("UX-183", "target-lost-invalid-mid-cast", "读条中目标失效并回滚",
+     (("target-lost-invalid-mid-cast", "kbm"),)),
+    # ---- 回合制：确认与改序（Order 提交形态）----
+    ("UX-185", "turn-undo-before-confirm", "确认前都能退回来", (("turn-undo-before-confirm", "kbm"),)),
+    ("UX-186", "turn-delay-action", "延后行动等时机", (("turn-delay-action", "kbm"),)),
+    ("UX-188", "turn-insert-cutin", "插队改出手顺序", (("turn-insert-cutin", "kbm"),)),
+    # ---- 战棋：格子合法性与路径规则 ----
+    ("UX-189", "srpg-move-range-path", "移动范围与路径花费", (("srpg-move-range-path", "kbm"),)),
+    ("UX-191", "srpg-zone-of-control", "踩进控制区被迫停下", (("srpg-zone-of-control", "kbm"),)),
+    ("UX-192", "srpg-tile-occupied", "目标格被占怎么办", (("srpg-tile-occupied", "kbm"),)),
+    # ---- 大战略：抽象目标类型 ----
+    ("UX-194", "gs-cast-on-region", "把一件事派到某个省", (("gs-cast-on-region", "kbm"),)),
+    ("UX-195", "gs-cast-on-relation", "对两方之间的关系下手", (("gs-cast-on-relation", "kbm"),)),
+    ("UX-196", "gs-cast-on-faction", "对派系游说", (("gs-cast-on-faction", "kbm"),)),
+    ("UX-197", "gs-enact-law", "颁布法令改规则", (("gs-enact-law", "kbm"),)),
+    ("UX-199", "gs-tiered-scope", "生效范围是行政层级", (("gs-tiered-scope", "kbm"),)),
+    # ---- 技能 Order：时机 / 代价闸 / 非常规目标 ----
+    ("UX-200", "ab-input-buffer", "后摆里提前按会被记住", (("ab-input-buffer", "kbm"),)),
+    ("UX-201", "ab-cancel-recovery", "用闪避砍掉自己的后摆", (("ab-cancel-recovery", "kbm"),)),
+    ("UX-202", "ab-delayed-aoe", "先标地面过一会才炸", (("ab-delayed-aoe", "kbm"),)),
+    ("UX-204", "ab-charges-stack", "攒层数能连按几次", (("ab-charges-stack", "kbm"),)),
+    ("UX-205", "ab-global-cooldown", "全局冷却压住整栏", (("ab-global-cooldown", "kbm"),)),
+    ("UX-207", "ab-cost-on-resolve", "按下就扣还是打中才扣", (("ab-cost-on-resolve", "kbm"),)),
+    ("UX-212", "ab-target-existing-effect", "目标是身上那条状态", (("ab-target-existing-effect", "kbm"),)),
+    ("UX-213", "ab-target-own-ability", "目标是我自己的另一个技能", (("ab-target-own-ability", "kbm"),)),
+    ("UX-214", "ab-target-projectile", "目标是飞在空中那颗", (("ab-target-projectile", "kbm"),)),
+    ("UX-215", "ab-target-own-summon", "目标是我自己放下的东西", (("ab-target-own-summon", "kbm"),)),
+    ("UX-219", "ab-conditional-target", "目标是所有满足条件的", (("ab-conditional-target", "kbm"),)),
+    # ---- 品类手感：只留 Order 层真差异 ----
+    ("UX-222", "ex-extract-zone", "撤离点状态决定能不能下撤离令", (("ex-extract-zone", "kbm"),)),
+    ("UX-226", "sk-downed-interact", "对倒地目标交互扛走或回收", (("sk-downed-interact", "kbm"),)),
+    ("UX-234", "soul-stamina-budget", "多动作共用资源见底拒令", (("soul-stamina-budget", "gamepad"),)),
+    ("UX-243", "ft-motion-input", "搓招指令序列对了才出招", (("ft-motion-input", "gamepad"),)),
+    ("UX-245", "ft-throw-tech", "投技与受身拆投", (("ft-throw-tech", "gamepad"),)),
+
 ]
 
 

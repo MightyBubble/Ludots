@@ -158,15 +158,28 @@
       if (el.t === "vehicle") {
         const x = px(el.x), y = py(el.y);
         const kind = el.kind || "car";
-        const body = kind === "turret"
-          ? `<rect x="${x - 13}" y="${y - 9}" width="26" height="18" rx="4" fill="#7e8fa6" stroke="#0b0e13" stroke-width="1.4"/>
+        let body;
+        if (kind === "drone") {
+          // 四轴无人机：接管轰炸时用，别画成地上的车
+          body = `
+            <line x1="${x - 16}" y1="${y - 10}" x2="${x + 16}" y2="${y + 10}" stroke="#9fb0c6" stroke-width="2"/>
+            <line x1="${x + 16}" y1="${y - 10}" x2="${x - 16}" y2="${y + 10}" stroke="#9fb0c6" stroke-width="2"/>
+            <rect x="${x - 8}" y="${y - 5}" width="16" height="10" rx="3" fill="#7e8fa6" stroke="#0b0e13" stroke-width="1.3"/>
+            <circle cx="${x - 14}" cy="${y - 9}" r="4" fill="none" stroke="#6ec8ff" stroke-width="1.4"/>
+            <circle cx="${x + 14}" cy="${y - 9}" r="4" fill="none" stroke="#6ec8ff" stroke-width="1.4"/>
+            <circle cx="${x - 14}" cy="${y + 9}" r="4" fill="none" stroke="#6ec8ff" stroke-width="1.4"/>
+            <circle cx="${x + 14}" cy="${y + 9}" r="4" fill="none" stroke="#6ec8ff" stroke-width="1.4"/>`;
+        } else if (kind === "turret") {
+          body = `<rect x="${x - 13}" y="${y - 9}" width="26" height="18" rx="4" fill="#7e8fa6" stroke="#0b0e13" stroke-width="1.4"/>
              <circle cx="${x}" cy="${y}" r="6.5" fill="#5a6b80" stroke="#0b0e13" stroke-width="1.2"/>
-             <line x1="${x}" y1="${y}" x2="${x + 20}" y2="${y}" stroke="#5a6b80" stroke-width="4.5"/>`
-          : `<rect x="${x - 17}" y="${y - 8}" width="34" height="16" rx="4" fill="#7e8fa6" stroke="#0b0e13" stroke-width="1.4"/>
+             <line x1="${x}" y1="${y}" x2="${x + 20}" y2="${y}" stroke="#5a6b80" stroke-width="4.5"/>`;
+        } else {
+          body = `<rect x="${x - 17}" y="${y - 8}" width="34" height="16" rx="4" fill="#7e8fa6" stroke="#0b0e13" stroke-width="1.4"/>
              <rect x="${x - 7}" y="${y - 13}" width="15" height="8" rx="2" fill="#9fb0c6" stroke="#0b0e13" stroke-width="1.1"/>
              <circle cx="${x - 10}" cy="${y + 9}" r="4" fill="#222b36" stroke="#0b0e13" stroke-width="1"/>
              <circle cx="${x + 10}" cy="${y + 9}" r="4" fill="#222b36" stroke="#0b0e13" stroke-width="1"/>
              ${kind === "tank" ? `<line x1="${x + 4}" y1="${y - 9}" x2="${x + 26}" y2="${y - 9}" stroke="#5a6b80" stroke-width="4"/>` : ""}`;
+        }
         const seat = el.occupied
           ? `<circle cx="${x}" cy="${y - 16}" r="5" fill="#6ec8ff" stroke="#0b0e13" stroke-width="1.2"/>`
           : "";
@@ -183,7 +196,7 @@
       }
       if (el.t === "marker") {
         const x = px(el.x), y = py(el.y);
-        const glyph = { skull: "☠", moon: "☾", star: "★", cross: "✚", square: "◆" }[el.icon] || "★";
+        const glyph = { skull: "☠", moon: "☾", star: "★", cross: "✚", square: "◆", eye: "◉" }[el.icon] || "★";
         return `
           <circle cx="${x}" cy="${y}" r="9" fill="#0b0e13" stroke="#e0c35a" stroke-width="1.6"/>
           <text x="${x}" y="${y + 4}" text-anchor="middle" fill="#e0c35a" font-size="11" font-family="DM Sans, sans-serif" font-weight="700">${glyph}</text>
@@ -231,6 +244,320 @@
             <rect x="${x}" y="${y0}" width="${w}" height="${h}" rx="4" fill="#0b0e13" stroke="${c}" stroke-width="${st === "waiting" ? 1.2 : 1.8}" stroke-dasharray="${st === "waiting" ? "3 2" : "0"}"/>
             <text x="${x + w / 2}" y="${y0 + h / 2 + 3.5}" text-anchor="middle" fill="${c}" font-size="${text.length > 2 ? 8 : 10}" font-family="DM Sans, sans-serif" font-weight="700">${text}</text>`;
         }).join("");
+      }
+      if (el.t === "extractzone") {
+        // 撤离点：位置 + 开没开 + 还剩多久
+        const x = px(el.x), y = py(el.y);
+        const st = { open: ["#5dce8f", "可撤离"], closing: ["#e0c35a", "即将关闭"], closed: ["#ef6b6b", "已关闭"] };
+        const [col, word] = st[el.state] || st.open;
+        return `
+          <path d="M${x - 20} ${y + 12} L${x - 20} ${y - 10} L${x + 20} ${y - 10} L${x + 20} ${y + 12} Z"
+            fill="rgba(11,14,19,0.5)" stroke="${col}" stroke-width="2" stroke-dasharray="6 4"/>
+          <path d="M${x - 8} ${y + 4} L${x} ${y - 5} L${x + 8} ${y + 4}" fill="none" stroke="${col}" stroke-width="2.2"/>
+          <text x="${x}" y="${y - 15}" text-anchor="middle" fill="${col}" font-size="9" font-family="DM Sans, sans-serif" font-weight="700">${esc(el.label || "撤离点")}</text>
+          <text x="${x}" y="${y + 24}" text-anchor="middle" fill="${col}" font-size="8.5" font-family="DM Sans, sans-serif">${esc(el.note || word)}</text>`;
+      }
+      if (el.t === "cmdinput") {
+        // 格斗指令输入：方向序列 + 按键，以及这次搓成没搓成
+        const x = px(el.x), y = py(el.y);
+        const seq = el.seq || [];
+        const okCol = el.ok === false ? "#ef6b6b" : "#5dce8f";
+        let out = "", cx = x;
+        seq.forEach((s, i) => {
+          const w = 20;
+          out += `
+            <rect x="${cx}" y="${y - 9}" width="${w}" height="18" rx="3" fill="#0b0e13"
+              stroke="${el.failAt === i ? "#ef6b6b" : "#6ec8ff"}" stroke-width="${el.failAt === i ? 2 : 1.2}"/>
+            <text x="${cx + w / 2}" y="${y + 4}" text-anchor="middle"
+              fill="${el.failAt === i ? "#ef6b6b" : "#6ec8ff"}" font-size="10" font-family="DM Sans, sans-serif" font-weight="700">${esc(s)}</text>`;
+          if (i < seq.length - 1) {
+            out += `<text x="${cx + w + 3}" y="${y + 4}" fill="#3a4658" font-size="9" font-family="DM Sans, sans-serif">›</text>`;
+          }
+          cx += w + 10;
+        });
+        out += `<text x="${x}" y="${y - 14}" fill="${okCol}" font-size="8.5" font-family="DM Sans, sans-serif" font-weight="700">${esc(el.label || (el.ok === false ? "没搓出来" : "指令成立"))}</text>`;
+        return out;
+      }
+      if (el.t === "framebar") {
+        // 帧优势：这一下打完，谁先能动
+        const x = px(el.x), y = py(el.y);
+        const W = 130, H = 10;
+        const mine = Math.max(0, Math.min(1, el.mine == null ? 0.4 : el.mine));
+        const theirs = Math.max(0, Math.min(1, el.theirs == null ? 0.7 : el.theirs));
+        const better = mine < theirs;
+        return `
+          <text x="${x}" y="${y - 16}" fill="#93a0b4" font-size="8.5" font-family="IBM Plex Mono, monospace">硬直长短</text>
+          <text x="${x - 4}" y="${y + 8}" text-anchor="end" fill="#6ec8ff" font-size="8.5" font-family="DM Sans, sans-serif">我</text>
+          <rect x="${x}" y="${y}" width="${W}" height="${H}" rx="3" fill="#0b0e13" stroke="#2c3645" stroke-width="1"/>
+          <rect x="${x + 1}" y="${y + 1}" width="${(W - 2) * mine}" height="${H - 2}" rx="2" fill="#6ec8ff"/>
+          <text x="${x - 4}" y="${y + H + 12}" text-anchor="end" fill="#ef6b6b" font-size="8.5" font-family="DM Sans, sans-serif">他</text>
+          <rect x="${x}" y="${y + H + 4}" width="${W}" height="${H}" rx="3" fill="#0b0e13" stroke="#2c3645" stroke-width="1"/>
+          <rect x="${x + 1}" y="${y + H + 5}" width="${(W - 2) * theirs}" height="${H - 2}" rx="2" fill="#ef6b6b"/>
+          <text x="${x + W + 6}" y="${y + H + 2}" fill="${better ? "#5dce8f" : "#e0c35a"}" font-size="9" font-family="DM Sans, sans-serif" font-weight="700">${better ? "我先能动" : "他先能动"}</text>`;
+      }
+      if (el.t === "takeover") {
+        // 我现在操控的不是自己：整屏加一圈边框点明
+        return `
+          <rect x="${SX + 2}" y="${SY + 2}" width="${SW - 4}" height="${SH - 4}" fill="none"
+            stroke="#e0c35a" stroke-width="2.4" stroke-dasharray="10 5"/>
+          <rect x="${SX + SW / 2 - 52}" y="${SY + 3}" width="104" height="17" rx="3" fill="#0b0e13" stroke="#e0c35a" stroke-width="1.3"/>
+          <text x="${SX + SW / 2}" y="${SY + 15}" text-anchor="middle" fill="#e0c35a" font-size="9.5" font-family="DM Sans, sans-serif" font-weight="700">${esc(el.label || "你在操控别的东西")}</text>`;
+      }
+      if (el.t === "buffchip") {
+        // 状态图标 + 层数：叠层、引爆、驱散的目标就是它
+        const x = px(el.x), y = py(el.y);
+        const dot = el.kind === "buff" ? "#5dce8f" : el.kind === "shield" ? "#6ec8ff" : "#c78bff";
+        const w = 14 + String(el.label || "").length * 8.5;
+        return `
+          <rect x="${x - w / 2}" y="${y - 9}" width="${w}" height="18" rx="4"
+            fill="rgba(11,14,19,0.92)" stroke="${dot}" stroke-width="1.5"/>
+          <circle cx="${x - w / 2 + 8}" cy="${y}" r="3.4" fill="${dot}"/>
+          <text x="${x - w / 2 + 15}" y="${y + 3.5}" fill="${dot}" font-size="9.5" font-family="DM Sans, sans-serif">${esc(el.label || "")}</text>
+          ${el.stacks != null ? `<circle cx="${x + w / 2 - 1}" cy="${y - 8}" r="7.5" fill="#0b0e13" stroke="${dot}" stroke-width="1.4"/>
+            <text x="${x + w / 2 - 1}" y="${y - 4.5}" text-anchor="middle" fill="${dot}" font-size="9" font-family="IBM Plex Mono, monospace" font-weight="700">${esc(el.stacks)}</text>` : ""}`;
+      }
+      if (el.t === "projectile") {
+        // 飞在空中的投射物：它本身可以成为目标（打掉 / 反弹）
+        const x = px(el.x), y = py(el.y);
+        const a2 = ((el.angle || 0) * Math.PI) / 180;
+        const tx = x + Math.cos(a2) * 13, ty = y + Math.sin(a2) * 13;
+        const bx = x - Math.cos(a2) * 9, by = y - Math.sin(a2) * 9;
+        return `
+          <line x1="${bx - Math.cos(a2) * 9}" y1="${by - Math.sin(a2) * 9}" x2="${bx}" y2="${by}"
+            stroke="#f0a35e" stroke-width="1.4" stroke-dasharray="3 3" opacity="0.7"/>
+          <polygon points="${tx},${ty} ${bx + Math.cos(a2 + 2.4) * 7},${by + Math.sin(a2 + 2.4) * 7} ${bx + Math.cos(a2 - 2.4) * 7},${by + Math.sin(a2 - 2.4) * 7}"
+            fill="#f0a35e" stroke="#0b0e13" stroke-width="1"/>
+          ${el.label ? `<text x="${x}" y="${y - 13}" text-anchor="middle" fill="#f0a35e" font-size="8.5" font-family="DM Sans, sans-serif">${esc(el.label)}</text>` : ""}`;
+      }
+      if (el.t === "elementmark") {
+        // 元素附着：两种附着凑在一起才会起反应
+        const x = px(el.x), y = py(el.y);
+        const map = { fire: ["#ef6b6b", "火"], water: ["#6ec8ff", "水"], ice: ["#a9dcff", "冰"], lightning: ["#e0c35a", "雷"] };
+        const [col, ch] = map[el.kind] || map.fire;
+        return `
+          <circle cx="${x}" cy="${y}" r="8" fill="rgba(11,14,19,0.9)" stroke="${col}" stroke-width="1.8"/>
+          <text x="${x}" y="${y + 3.5}" text-anchor="middle" fill="${col}" font-size="9.5" font-family="DM Sans, sans-serif" font-weight="700">${ch}</text>`;
+      }
+      if (el.t === "terrain") {
+        // 技能造出来的地形：目标是环境本身
+        const x = px(el.x), y = py(el.y);
+        if (el.kind === "wall") {
+          return `
+            <rect x="${x - 4}" y="${y - 20}" width="8" height="40" rx="2" fill="#7e8fa6" stroke="#0b0e13" stroke-width="1.4"/>
+            <text x="${x}" y="${y - 25}" text-anchor="middle" fill="#e0c35a" font-size="9" font-family="DM Sans, sans-serif">${esc(el.label || "墙")}</text>`;
+        }
+        if (el.kind === "pit") {
+          return `
+            <ellipse cx="${x}" cy="${y}" rx="20" ry="9" fill="#080a0e" stroke="#3a4658" stroke-width="1.6"/>
+            <text x="${x}" y="${y + 20}" text-anchor="middle" fill="#93a0b4" font-size="9" font-family="DM Sans, sans-serif">${esc(el.label || "坑")}</text>`;
+        }
+        return `
+          <ellipse cx="${x}" cy="${y}" rx="22" ry="10" fill="rgba(169,220,255,0.28)" stroke="#a9dcff" stroke-width="1.6" stroke-dasharray="4 3"/>
+          <text x="${x}" y="${y + 21}" text-anchor="middle" fill="#a9dcff" font-size="9" font-family="DM Sans, sans-serif">${esc(el.label || "冰面")}</text>`;
+      }
+      if (el.t === "summon") {
+        // 自己造出来的东西：图腾 / 守卫，可以成为自己技能的目标
+        const x = px(el.x), y = py(el.y);
+        return `
+          <ellipse cx="${x}" cy="${y + 10}" rx="9" ry="3.5" fill="#000" opacity="0.35"/>
+          <polygon points="${x},${y - 11} ${x + 8},${y + 6} ${x - 8},${y + 6}" fill="none" stroke="#5dce8f" stroke-width="2" stroke-dasharray="4 2"/>
+          <circle cx="${x}" cy="${y - 1}" r="3" fill="#5dce8f"/>
+          ${el.label ? `<text x="${x}" y="${y - 16}" text-anchor="middle" fill="#5dce8f" font-size="9" font-family="DM Sans, sans-serif" font-weight="600">${esc(el.label)}</text>` : ""}`;
+      }
+      if (el.t === "inputwindow") {
+        // 动作时间轴：前摇 / 判定 / 后摆，以及能提前按的那一段缓存窗
+        const x = px(el.x), y = py(el.y);
+        const phases = el.phases || [];
+        const total = phases.reduce((s, p) => s + (p.w || 1), 0);
+        const W = 150, H = 14;
+        let cx = x, out = "";
+        const col = { startup: "#66758a", active: "#f0a35e", recovery: "#3a4658", buffer: "#5dce8f" };
+        phases.forEach((p) => {
+          const pw = (W * (p.w || 1)) / total;
+          out += `
+            <rect x="${cx}" y="${y}" width="${pw}" height="${H}" fill="${p.kind === "buffer" ? "rgba(93,206,143,0.22)" : "rgba(18,24,32,0.8)"}"
+              stroke="${col[p.kind] || "#3a4658"}" stroke-width="1.3" stroke-dasharray="${p.kind === "buffer" ? "3 2" : "0"}"/>
+            <text x="${cx + pw / 2}" y="${y + 10}" text-anchor="middle" fill="${col[p.kind] || "#93a0b4"}" font-size="8" font-family="DM Sans, sans-serif">${esc(p.name)}</text>`;
+          cx += pw;
+        });
+        if (el.pressAt != null) {
+          const mx = x + W * el.pressAt;
+          out += `
+            <line x1="${mx}" y1="${y - 7}" x2="${mx}" y2="${y + H + 5}" stroke="#6ec8ff" stroke-width="2"/>
+            <text x="${mx}" y="${y - 10}" text-anchor="middle" fill="#6ec8ff" font-size="8.5" font-family="DM Sans, sans-serif" font-weight="700">我按了</text>`;
+        }
+        if (el.fireAt != null) {
+          const fx = x + W * el.fireAt;
+          out += `
+            <line x1="${fx}" y1="${y - 7}" x2="${fx}" y2="${y + H + 5}" stroke="#f0a35e" stroke-width="2" stroke-dasharray="2 2"/>
+            <text x="${fx}" y="${y + H + 15}" text-anchor="middle" fill="#f0a35e" font-size="8.5" font-family="DM Sans, sans-serif" font-weight="700">这里才放出</text>`;
+        }
+        return out;
+      }
+      if (el.t === "gridmap") {
+        // 战棋格盘：目标是「哪几格」，不是连续坐标
+        const x0 = px(el.x), y0 = py(el.y);
+        const cw = el.cw || 22, ch = el.ch || 14;
+        const kinds = {
+          move: ["rgba(110,200,255,0.20)", "#6ec8ff"],
+          attack: ["rgba(239,107,107,0.20)", "#ef6b6b"],
+          blocked: ["rgba(60,70,84,0.55)", "#3a4658"],
+          occupied: ["rgba(224,195,90,0.18)", "#e0c35a"],
+          insured: ["rgba(93,206,143,0.22)", "#5dce8f"],
+          self: ["rgba(240,163,94,0.28)", "#f0a35e"],
+        };
+        let out = "";
+        for (let r = 0; r < el.rows; r++) {
+          for (let q = 0; q < el.cols; q++) {
+            const k = (el.cells || {})[`${q},${r}`];
+            const [fill, stroke] = kinds[k] || ["rgba(18,24,32,0.5)", "#2c3645"];
+            out += `<rect x="${x0 + q * cw}" y="${y0 + r * ch}" width="${cw - 2}" height="${ch - 2}"
+              fill="${fill}" stroke="${stroke}" stroke-width="${k ? 1.4 : 0.9}"/>`;
+          }
+        }
+        return out;
+      }
+      if (el.t === "timeline") {
+        // 行动条：谁下一个出手。目标可以是「顺序里的位置」
+        const entries = el.entries || [];
+        const bw = 34, gap = 4;
+        const total = entries.length * bw + (entries.length - 1) * gap;
+        const sx = SX + SW / 2 - total / 2;
+        const sy = SY + 8;
+        let out = `<text x="${SX + 8}" y="${sy + 12}" fill="#66758a" font-size="8.5" font-family="IBM Plex Mono, monospace">出手顺序</text>`;
+        entries.forEach((e, i) => {
+          const bx = sx + i * (bw + gap);
+          const now = el.current === i;
+          const col = e.me ? "#6ec8ff" : "#ef6b6b";
+          out += `
+            <rect x="${bx}" y="${sy}" width="${bw}" height="18" rx="3"
+              fill="${now ? "rgba(240,163,94,0.22)" : "#0b0e13"}"
+              stroke="${now ? "#f0a35e" : col}" stroke-width="${now ? 2 : 1.2}"/>
+            <text x="${bx + bw / 2}" y="${sy + 13}" text-anchor="middle" fill="${now ? "#f0a35e" : col}"
+              font-size="9" font-family="DM Sans, sans-serif" font-weight="${now ? 700 : 400}">${esc(e.name)}</text>`;
+        });
+        return out;
+      }
+      if (el.t === "region") {
+        // 区域 / 省份：目标是一个行政单元，有归属
+        const x = px(el.x), y = py(el.y);
+        const w = el.w || 46, h = el.h || 30;
+        const owner = { mine: "#6ec8ff", rival: "#ef6b6b", neutral: "#93a0b4" }[el.owner] || "#93a0b4";
+        return `
+          <path d="M${x - w / 2} ${y} L${x - w / 3} ${y - h / 2} L${x + w / 3} ${y - h / 2}
+            L${x + w / 2} ${y} L${x + w / 3} ${y + h / 2} L${x - w / 3} ${y + h / 2} Z"
+            fill="${el.selected ? "rgba(240,163,94,0.22)" : "rgba(30,40,52,0.75)"}"
+            stroke="${el.selected ? "#f0a35e" : owner}" stroke-width="${el.selected ? 2.4 : 1.4}"
+            stroke-dasharray="${el.selected ? "0" : "4 3"}"/>
+          <text x="${x}" y="${y + 3.5}" text-anchor="middle" fill="${el.selected ? "#f0a35e" : "#d7deea"}"
+            font-size="9.5" font-family="DM Sans, sans-serif" font-weight="${el.selected ? 700 : 400}">${esc(el.label || "")}</text>`;
+      }
+      if (el.t === "relation") {
+        // 关系：目标是两方之间的一条「边」，不是任何一个点
+        const x1 = px(el.x1), y1 = py(el.y1), x2 = px(el.x2), y2 = py(el.y2);
+        const st = { ally: ["#5dce8f", "0"], enemy: ["#ef6b6b", "0"], marriage: ["#c78bff", "0"], none: ["#66758a", "5 4"] };
+        const [col, dash] = st[el.state] || st.none;
+        const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+        const text = String(el.label || "");
+        const w = 14 + text.length * 9;
+        return `
+          <line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${col}" stroke-width="${el.selected ? 3.2 : 2}" stroke-dasharray="${dash}"/>
+          <rect x="${mx - w / 2}" y="${my - 9}" width="${w}" height="18" rx="9"
+            fill="#0b0e13" stroke="${el.selected ? "#f0a35e" : col}" stroke-width="${el.selected ? 2.2 : 1.3}"/>
+          <text x="${mx}" y="${my + 4}" text-anchor="middle" fill="${el.selected ? "#f0a35e" : col}"
+            font-size="9.5" font-family="DM Sans, sans-serif" font-weight="600">${esc(text)}</text>`;
+      }
+      if (el.t === "faction") {
+        // 派系：抽象集合，没有位置。用影响力占比表示我能推动多少
+        const x = px(el.x), y = py(el.y);
+        const w = 78, h = 26;
+        const share = Math.max(0, Math.min(1, el.influence == null ? 0.4 : el.influence));
+        return `
+          <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="4"
+            fill="${el.selected ? "rgba(240,163,94,0.16)" : "#0b0e13"}"
+            stroke="${el.selected ? "#f0a35e" : "#6ec8ff"}" stroke-width="${el.selected ? 2 : 1.2}"/>
+          <text x="${x + 6}" y="${y + 12}" fill="${el.selected ? "#f0a35e" : "#e8eef6"}" font-size="9.5" font-family="DM Sans, sans-serif" font-weight="600">${esc(el.label || "派系")}</text>
+          <rect x="${x + 6}" y="${y + 17}" width="${w - 12}" height="5" rx="2.5" fill="#1a2430" stroke="#2c3645" stroke-width="0.8"/>
+          <rect x="${x + 7}" y="${y + 18}" width="${(w - 14) * share}" height="3" rx="1.5" fill="#5dce8f"/>`;
+      }
+      if (el.t === "pool") {
+        // 抽象代价：威望 / 影响力 / 统治力，不是蓝条
+        const x = px(el.x), y = py(el.y);
+        const w = 72, h = 9;
+        const have = Math.max(0, Math.min(1, el.have == null ? 0.7 : el.have));
+        const cost = Math.max(0, Math.min(1, el.cost == null ? 0 : el.cost));
+        const enough = have >= cost;
+        return `
+          <text x="${x}" y="${y - 5}" fill="#93a0b4" font-size="9" font-family="DM Sans, sans-serif">${esc(el.label || "影响力")}</text>
+          <rect x="${x}" y="${y}" width="${w}" height="${h}" rx="4" fill="#0b0e13" stroke="#3a4658" stroke-width="1"/>
+          <rect x="${x + 1}" y="${y + 1}" width="${(w - 2) * have}" height="${h - 2}" rx="3" fill="${enough ? "#c78bff" : "#ef6b6b"}"/>
+          ${cost > 0 ? `<rect x="${x + 1}" y="${y + 1}" width="${(w - 2) * cost}" height="${h - 2}" rx="3"
+              fill="none" stroke="${enough ? "#e0c35a" : "#ef6b6b"}" stroke-width="1.6" stroke-dasharray="3 2"/>
+            <text x="${x + w + 5}" y="${y + h}" fill="${enough ? "#e0c35a" : "#ef6b6b"}" font-size="8.5" font-family="DM Sans, sans-serif">要花这段</text>` : ""}`;
+      }
+      if (el.t === "lawslot") {
+        // 法令槽位：目标是规则本身
+        const x = px(el.x), y = py(el.y);
+        const rows = el.rows || [];
+        const w = 92, rh = 17;
+        let out = `<text x="${x + 2}" y="${y - 4}" fill="#66758a" font-size="8.5" font-family="IBM Plex Mono, monospace">法令</text>`;
+        rows.forEach((r, i) => {
+          const ry = y + i * rh;
+          const on = el.active === i;
+          const locked = r.locked;
+          const col = locked ? "#66758a" : on ? "#f0a35e" : "#6ec8ff";
+          out += `
+            <rect x="${x}" y="${ry}" width="${w}" height="${rh - 3}" rx="3"
+              fill="${on ? "rgba(240,163,94,0.16)" : "#0b0e13"}" stroke="${col}" stroke-width="${on ? 2 : 1.1}"
+              stroke-dasharray="${locked ? "3 2" : "0"}"/>
+            <text x="${x + 6}" y="${ry + 10}" fill="${col}" font-size="9" font-family="DM Sans, sans-serif" font-weight="${on ? 700 : 400}">${esc(r.name)}</text>
+            ${locked ? `<text x="${x + w - 6}" y="${ry + 10}" text-anchor="end" fill="#66758a" font-size="8.5" font-family="DM Sans, sans-serif">未解锁</text>` : ""}`;
+        });
+        return out;
+      }
+      if (el.t === "delaymark") {
+        // 延迟生效：这一下不是现在结算，是 N 回合后
+        const x = px(el.x), y = py(el.y);
+        return `
+          <circle cx="${x}" cy="${y}" r="11" fill="#0b0e13" stroke="#e0c35a" stroke-width="1.8"/>
+          <line x1="${x}" y1="${y}" x2="${x}" y2="${y - 6}" stroke="#e0c35a" stroke-width="1.6"/>
+          <line x1="${x}" y1="${y}" x2="${x + 5}" y2="${y + 2}" stroke="#e0c35a" stroke-width="1.6"/>
+          <text x="${x}" y="${y + 22}" text-anchor="middle" fill="#e0c35a" font-size="9" font-family="DM Sans, sans-serif" font-weight="700">${esc(el.label || `${el.turns} 回合后`)}</text>`;
+      }
+      if (el.t === "toast") {
+        // 系统通知：飘一行字，和可点的菜单区分开（玩家不该想去点它）
+        const x = px(el.x), y = py(el.y);
+        const palette = { info: "#93a0b4", error: "#ef6b6b", gain: "#5dce8f", loss: "#e0c35a" };
+        const col = palette[el.kind] || palette.info;
+        const text = String(el.text || "");
+        const w = 16 + text.length * 9;
+        return `
+          <rect x="${x}" y="${y - 11}" width="${w}" height="19" rx="9.5"
+            fill="rgba(11,14,19,0.9)" stroke="${col}" stroke-width="1.2" stroke-dasharray="0"/>
+          <circle cx="${x + 10}" cy="${y - 1.5}" r="3" fill="${col}"/>
+          <text x="${x + 18}" y="${y + 2.5}" fill="${col}" font-size="10" font-family="DM Sans, sans-serif">${esc(text)}</text>`;
+      }
+      if (el.t === "partyframe") {
+        // 队伍头像框：竖排头像 + 血条，当前友好目标高亮。不是菜单，别用 menu 凑
+        const x = px(el.x), y = py(el.y);
+        const rows = el.rows || [];
+        const w = 74, rh = 22;
+        let out = `<text x="${x + 2}" y="${y - 4}" fill="#66758a" font-size="8.5" font-family="IBM Plex Mono, monospace">队伍</text>`;
+        rows.forEach((r, i) => {
+          const ry = y + i * rh;
+          const on = el.target === i;
+          const hp = Math.max(0, Math.min(1, r.hp == null ? 1 : r.hp));
+          const hpColor = hp < 0.35 ? "#ef6b6b" : hp < 0.7 ? "#e0c35a" : "#5dce8f";
+          out += `
+            <rect x="${x}" y="${ry}" width="${w}" height="${rh - 4}" rx="3"
+              fill="${on ? "rgba(240,163,94,0.16)" : "#0b0e13"}"
+              stroke="${on ? "#f0a35e" : "#3a4658"}" stroke-width="${on ? 2 : 1.2}"/>
+            <circle cx="${x + 10}" cy="${ry + 9}" r="6" fill="#5a6b80" stroke="#0b0e13" stroke-width="1"/>
+            <text x="${x + 21}" y="${ry + 8}" fill="${on ? "#f0a35e" : "#e8eef6"}" font-size="9" font-family="DM Sans, sans-serif" font-weight="${on ? 700 : 400}">${esc(r.name)}</text>
+            <rect x="${x + 21}" y="${ry + 11}" width="${w - 27}" height="4" rx="2" fill="#1a2430" stroke="#2c3645" stroke-width="0.8"/>
+            <rect x="${x + 22}" y="${ry + 12}" width="${(w - 29) * hp}" height="2" rx="1" fill="${hpColor}"/>`;
+        });
+        return out;
       }
       if (el.t === "roster") {
         const x = px(el.x), y = py(el.y);
@@ -623,6 +950,10 @@
           if (el.cd === i) {
             out += `<path d="M${x + w / 2} ${y0 + h / 2} L${x + w / 2} ${y0 + 2.5} A${w / 2 - 2.5} ${h / 2 - 2.5} 0 1 1 ${x + 2.5} ${y0 + h / 2} Z" fill="rgba(11,14,19,0.72)"/>`;
           }
+          if (el.gcd) {
+            // 全局冷却：所有格子压一层薄的，和单技能的转圈遮罩区分开
+            out += `<rect x="${x}" y="${y0 + h * 0.62}" width="${w}" height="${h * 0.38}" fill="rgba(110,200,255,0.3)"/>`;
+          }
           if (isOff) {
             out += `<line x1="${x + 4}" y1="${y0 + 4}" x2="${x + w - 4}" y2="${y0 + h - 4}" stroke="#ef6b6b" stroke-width="1.6"/>`;
           }
@@ -638,13 +969,18 @@
             out += `<text x="${x + w / 2}" y="${y0 - 4}" text-anchor="middle" fill="#e0c35a" font-size="8.5" font-family="DM Sans, sans-serif" font-weight="700">让路</text>`;
           }
         }
+        if (el.gcd) {
+          out += `<text x="${x0 - 8}" y="${y0 + h / 2 + 4}" text-anchor="end" fill="#6ec8ff" font-size="8.5" font-family="DM Sans, sans-serif" font-weight="700">全局CD</text>`;
+        }
         return out;
       }
       if (el.t === "bar") {
         const x = px(el.x == null ? 50 : el.x), y = py(el.y == null ? 30 : el.y);
         const w = 56, h = 7;
         const ratio = Math.max(0, Math.min(1, el.ratio == null ? 0.6 : el.ratio));
-        const color = el.kind === "hp" ? "#5dce8f" : el.kind === "charge" ? "#f0a35e" : "#6ec8ff";
+        const color = el.kind === "hp" ? "#5dce8f" : el.kind === "charge" ? "#f0a35e"
+          : el.kind === "shield" ? "#a9dcff" : el.kind === "stamina" ? "#e0c35a"
+          : el.kind === "boost" ? "#c78bff" : "#6ec8ff";
         let out = `
           <rect x="${x - w / 2}" y="${y}" width="${w}" height="${h}" rx="3" fill="#0b0e13" stroke="#3a4658" stroke-width="1"/>
           <rect x="${x - w / 2 + 1}" y="${y + 1}" width="${(w - 2) * ratio}" height="${h - 2}" rx="2" fill="${color}"/>`;

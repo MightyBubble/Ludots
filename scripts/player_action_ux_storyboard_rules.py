@@ -11,7 +11,8 @@ from __future__ import annotations
 import re
 
 # 出现这些词说明该元素正在消失/被拒绝，不要求画出来
-NEGATIONS = ("消失", "收起", "关闭", "取消", "灭", "不出", "没有", "移除", "解除", "退出", "结束")
+NEGATIONS = ("消失", "收起", "关闭", "取消", "灭", "不出", "没有", "没了", "移除", "解除",
+             "退出", "结束", "过期")
 
 # 平台 → 该平台不该出现的元件（画错设备等于骗玩家）
 PLATFORM_FORBIDDEN_ELEMENTS = {
@@ -44,21 +45,28 @@ ELEMENT_ENUMS: dict[tuple[str, str], frozenset] = {
     ("ring", "kind"): frozenset({"select", "lock", "buff", "finisher"}),
     ("arrow", "kind"): frozenset({"move", "attack"}),
     ("path", "kind"): frozenset({"lasso", "arc", "move"}),
-    ("bar", "kind"): frozenset({"cast", "charge", "hp"}),
+    ("bar", "kind"): frozenset({"cast", "charge", "hp", "shield", "stamina", "boost"}),
     ("key", "state"): frozenset({"idle", "active", "off"}),
     ("touchpt", "kind"): frozenset({"tap", "hold", "drag", "pinch"}),
     ("prop", "kind"): frozenset({"item", "ore", "herb", "chest", "door", "corpse",
                                 "wall", "cover", "shrine", None}),
-    ("vehicle", "kind"): frozenset({"car", "tank", "turret", "mount"}),
+    ("vehicle", "kind"): frozenset({"car", "tank", "turret", "mount", "drone"}),
     ("hero", "state"): frozenset({"alive", "ghost", None}),
     ("hero", "form"): frozenset({"alt", None}),
-    ("marker", "icon"): frozenset({"skull", "moon", "star", "cross", "square"}),
+    ("marker", "icon"): frozenset({"skull", "moon", "star", "cross", "square", "eye"}),
     ("npc", "role"): frozenset({"vendor", "quest", "healer", "auction", "trainer", None}),
     ("crosshair", "spread"): frozenset({"tight", "wide", None}),
     ("queue", "state"): frozenset({"waiting", "active", "done"}),
     ("camera", "mode"): frozenset({"lock", "free"}),
     ("splitscreen", "mode"): frozenset({"v", "h", "shared"}),
     ("netstat", "state"): frozenset({"ok", "lag", "lost"}),
+    ("toast", "kind"): frozenset({"info", "error", "gain", "loss"}),
+    ("region", "owner"): frozenset({"mine", "rival", "neutral"}),
+    ("relation", "state"): frozenset({"ally", "enemy", "marriage", "none"}),
+    ("buffchip", "kind"): frozenset({"buff", "debuff", "shield"}),
+    ("elementmark", "kind"): frozenset({"fire", "water", "ice", "lightning"}),
+    ("terrain", "kind"): frozenset({"wall", "ice", "pit"}),
+    ("extractzone", "state"): frozenset({"open", "closing", "closed"}),
     ("voice", "state"): frozenset({"off", "on", "talking"}),
 }
 
@@ -71,6 +79,10 @@ SUBJECT_ELEMENTS = (
     "key", "hotbar", "wasd", "wheel", "anchor", "touchpt", "prop",
     "vehicle", "corpse", "npc", "deny", "impact", "held", "queue", "camera",
     "playertag", "splitscreen", "padslot", "roster", "netstat", "voice", "vote", "marker",
+    "partyframe", "toast", "gridmap", "timeline", "region", "relation",
+    "faction", "pool", "lawslot", "delaymark", "buffchip", "projectile",
+    "elementmark", "terrain", "summon", "inputwindow",
+    "extractzone", "cmdinput", "framebar", "takeover",
 )
 
 
@@ -117,14 +129,17 @@ PROMISE_RULES: tuple[tuple[str, str, object, str], ...] = (
     (
         "说出现选中圈/被选中，画面要有选中圈",
         r"选中圈|被选中|变成当前选中|设为选中",
-        lambda cast: _ring(cast, "select", "lock") or _selected_unit(cast),
-        "给 unit 加 sel=True 或补 ring(x, y, kind='select')",
+        lambda cast: _ring(cast, "select", "lock") or _selected_unit(cast)
+        or any(e.get("t") in ("region", "relation", "faction", "partyframe") and e.get("selected")
+               for e in cast)
+        or any(e.get("t") == "partyframe" and e.get("target") is not None for e in cast),
+        "给 unit 加 sel=True / ring(kind='select')，抽象目标用 selected=True",
     ),
     (
         "说读条/倒计时/蓄力，画面要有进度条",
         r"读条|进度条|倒计时|蓄力条|充能条|条走满",
-        lambda cast: _has(cast, "bar"),
-        "补 bar(x, y, ratio=..., kind='cast'/'charge')",
+        lambda cast: _has(cast, "bar", "delaymark"),
+        "补 bar(x, y, ratio=..., kind='cast'/'charge')；按回合数的倒计时用 delaymark",
     ),
     (
         "说落点圈/范围预览，画面要有落点圈",
@@ -196,7 +211,7 @@ PROMISE_RULES: tuple[tuple[str, str, object, str], ...] = (
     (
         "说轨迹/套索，画面要有轨迹线",
         r"轨迹|套索",
-        lambda cast: _has(cast, "path"),
+        lambda cast: _has(cast, "path", "projectile"),
         "补 path([[x, y], ...], kind='lasso')",
     ),
     (
@@ -207,6 +222,157 @@ PROMISE_RULES: tuple[tuple[str, str, object, str], ...] = (
         "补一根 arrow(kind='move') 表示走的方向，和 attack 那根并排",
     ),
     (
+        "说撤离点，画面要有撤离点",
+        r"撤离点|撤离区|可以撤了",
+        lambda cast: _has(cast, "extractzone"),
+        "补 extractzone(x, y, state='open'/'closing'/'closed')",
+    ),
+    (
+        "说搓招/指令输入，画面要把序列画出来",
+        r"指令输入|搓|方向序列|输入序列",
+        lambda cast: _has(cast, "cmdinput"),
+        "补 cmdinput(x, y, ['↓','↘','→','拳'], ok=..., fail_at=...)",
+    ),
+    (
+        "说帧优势/谁先能动，画面要有硬直对比",
+        r"帧优势|有利帧|谁先能动|硬直长短",
+        lambda cast: _has(cast, "framebar"),
+        "补 framebar(x, y, mine=..., theirs=...)",
+    ),
+    (
+        "说接管别的视角，画面要标出我不在自己身上",
+        r"接管视角|操控无人机|切到.*视角操控",
+        lambda cast: _has(cast, "takeover"),
+        "补 takeover('你在操控无人机')",
+    ),
+    (
+        "说精力/体力见底，画面要有精力条",
+        r"精力|体力条|耐力见底",
+        lambda cast: any(e.get("t") == "bar" and e.get("kind") in ("stamina", "charge") for e in cast),
+        "补 bar(..., kind='stamina')",
+    ),
+    (
+        "说推进器/过热，画面要有推进条",
+        r"推进器|推进条|推进过热",
+        lambda cast: any(e.get("t") == "bar" and e.get("kind") == "boost" for e in cast),
+        "补 bar(..., kind='boost')",
+    ),
+    (
+        "说叠层/引爆，画面要有带层数的状态图标",
+        r"叠层|叠到|层数|消耗层",
+        lambda cast: _has(cast, "buffchip"),
+        "补 buffchip(x, y, '状态名', stacks=N)",
+    ),
+    (
+        "说驱散/偷取状态，目标是那个状态本身",
+        r"驱散|偷取状态|延长状态",
+        lambda cast: _has(cast, "buffchip"),
+        "补 buffchip(...)，把被驱散/被偷的那个状态画出来",
+    ),
+    (
+        "说打掉/反弹投射物，画面要有飞行物",
+        r"投射物|飞行物|打掉子弹|反弹回去|拦截",
+        lambda cast: _has(cast, "projectile"),
+        "补 projectile(x, y, angle, label)",
+    ),
+    (
+        "说元素反应/附着，画面要有元素标记",
+        r"元素反应|附着|蒸发|冻结反应",
+        lambda cast: _has(cast, "elementmark"),
+        "补 elementmark(x, y, kind='fire'/'water'/...)",
+    ),
+    (
+        "说造墙/结冰/挖坑，画面要有造出来的地形",
+        r"造墙|结冰|挖坑|变成冰面|地形改变",
+        lambda cast: _has(cast, "terrain"),
+        "补 terrain(x, y, kind='wall'/'ice'/'pit')",
+    ),
+    (
+        "说图腾/守卫/召唤物，画面要有召唤物",
+        r"图腾|守卫|召唤物",
+        lambda cast: _has(cast, "summon", "unit"),
+        "补 summon(x, y, label)",
+    ),
+    (
+        "说预输入/缓存窗/后摆，画面要有动作时间轴",
+        r"预输入|缓存窗|后摆|前摇",
+        lambda cast: _has(cast, "inputwindow"),
+        "补 inputwindow(x, y, phases, press_at=..., fire_at=...)",
+    ),
+    (
+        "说护盾吸收，画面要有护盾条",
+        r"护盾吸收|盾吃掉|吸收伤害",
+        lambda cast: any(e.get("t") == "bar" and e.get("kind") == "shield" for e in cast)
+        or _has(cast, "buffchip"),
+        "补 bar(..., kind='shield') 或 buffchip(kind='shield')",
+    ),
+    (
+        "说全局冷却，技能栏要压一层全局的",
+        r"全局冷却|公共冷却",
+        lambda cast: any(e.get("t") == "hotbar" and e.get("gcd") for e in cast),
+        "用 hotbar(..., gcd=True)，别和单技能转圈遮罩混为一谈",
+    ),
+    (
+        "说格子/移动范围，画面要有格盘",
+        r"格子|移动范围|可站的格|占格|棋盘",
+        lambda cast: _has(cast, "gridmap"),
+        "补 gridmap(x, y, cols, rows, cells={...})",
+    ),
+    (
+        "说出手顺序/行动条，画面要有行动条",
+        r"出手顺序|行动条|谁先动|插队|延后行动",
+        lambda cast: _has(cast, "timeline"),
+        "补 timeline([...], current=...)",
+    ),
+    (
+        "说省份/领地/地块，画面要有区域块",
+        r"省份|领地|地块|行政|公国|王国",
+        lambda cast: _has(cast, "region"),
+        "补 region(x, y, '名字', owner=...)",
+    ),
+    (
+        "说关系/同盟/联姻，画面要把关系画成一条边",
+        r"关系|同盟|联姻|宣战|条约",
+        lambda cast: _has(cast, "relation"),
+        "补 relation(x1, y1, x2, y2, '关系名', state=...)；关系是边不是点",
+    ),
+    (
+        "说派系/议会，画面要有派系卡",
+        r"派系|议会|党派|家族势力",
+        lambda cast: _has(cast, "faction"),
+        "补 faction(x, y, '派系名', influence=...)",
+    ),
+    (
+        "说法令/政策，画面要有法令槽",
+        r"法令|政策|国策|条例",
+        lambda cast: _has(cast, "lawslot"),
+        "补 lawslot(x, y, rows, active=...)",
+    ),
+    (
+        "说威望/影响力当代价，画面要有抽象资源池",
+        r"威望|影响力|统治力|外交点",
+        lambda cast: _has(cast, "pool"),
+        "补 pool(x, y, '影响力', have=..., cost=...)；这不是蓝条",
+    ),
+    (
+        "说几回合后生效，画面要标出延迟",
+        r"回合后|下回合生效|延迟生效",
+        lambda cast: _has(cast, "delaymark"),
+        "补 delaymark(x, y, turns=N)",
+    ),
+    (
+        "说目标失效/脱离/回滚，要说清原因而不是静默",
+        r"目标失效|目标脱离|脱离范围|丢失目标|回滚|退还",
+        lambda cast: _has(cast, "toast", "deny"),
+        "补 toast(x, y, '原因', kind='error') 或 deny(...)，别静默丢目标",
+    ),
+    (
+        "说队伍框/队友头像，要用队伍框而不是菜单",
+        r"队伍框|团队框|队友头像|点框选",
+        lambda cast: _has(cast, "partyframe"),
+        "补 partyframe(x, y, rows, target=...)；菜单框不是队伍框",
+    ),
+    (
         "说团队标记，要用标记图标而不是键帽",
         r"团队标记|打标记|骷髅|月亮标",
         lambda cast: _has(cast, "marker"),
@@ -214,7 +380,7 @@ PROMISE_RULES: tuple[tuple[str, str, object, str], ...] = (
     ),
     (
         "说打中/挨打/砸中，画面要有命中爆点",
-        r"砸中|挨打|命中|打中|炸开|擦除",
+        r"砸中|挨打|(?<!没)打中|炸开|擦除|(?<!未)命中(?!率)",
         lambda cast: _has(cast, "impact"),
         "补 impact(x, y, r)；别拿 ring(kind='lock') 当命中，那是锁定目标的意思",
     ),
@@ -244,7 +410,7 @@ PROMISE_RULES: tuple[tuple[str, str, object, str], ...] = (
     ),
     (
         "说延迟/卡/掉线，画面要有网络状况",
-        r"延迟|掉线|断线|网络中断|重连计时|重连态",
+        r"网络延迟|高延迟|掉线|断线|网络中断|重连计时|重连态",
         lambda cast: _has(cast, "netstat"),
         "补 netstat(x, y, ping, state='ok'/'lag'/'lost')",
     ),
@@ -342,9 +508,11 @@ def check_structure(beat: dict) -> list[str]:
             if key in e and e[key] is not None and not 0 <= float(e[key]) <= 100:
                 problems.append(f"{e['t']} 的 {key}={e[key]} 跑出画面（要在 0..100）")
     for t in SINGLETON_ELEMENTS:
-        n = sum(1 for e in cast if e.get("t") == t)
-        if n > 1:
-            problems.append(f"{t} 画了 {n} 个（一拍最多一个）")
+        same = [e for e in cast if e.get("t") == t]
+        # bar 允许并存但必须是不同语义（护盾条压在血条上是对的，两条血条就是画重了）
+        kinds = {e.get("kind") for e in same}
+        if len(same) > 1 and len(kinds) != len(same):
+            problems.append(f"{t} 画了 {len(same)} 个且语义重复（一种语义最多一个）")
     for e in cast:
         for (et, key), allowed in ELEMENT_ENUMS.items():
             if e.get("t") == et and key in e and e[key] not in allowed:
