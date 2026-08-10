@@ -23,6 +23,8 @@ public sealed class UiNode
 
 	public UiNodeKind Kind { get; }
 
+	public UiPseudoElement PseudoElement { get; private set; }
+
 	public UiNode? Parent { get; private set; }
 
 	public string TagName { get; private set; }
@@ -69,7 +71,7 @@ public sealed class UiNode
 
 	public bool CanScrollVertically => Style.Overflow == UiOverflow.Scroll && MaxScrollY > 0.01f;
 
-	public UiNode(UiNodeId id, UiNodeKind kind, UiStyle? style = null, string? textContent = null, IEnumerable<UiNode>? children = null, IEnumerable<UiActionHandle>? actionHandles = null, string? tagName = null, string? elementId = null, IEnumerable<string>? classNames = null, UiAttributeBag? attributes = null, UiStyleDeclaration? inlineStyle = null, IUiCanvasContent? canvasContent = null)
+	public UiNode(UiNodeId id, UiNodeKind kind, UiStyle? style = null, string? textContent = null, IEnumerable<UiNode>? children = null, IEnumerable<UiActionHandle>? actionHandles = null, string? tagName = null, string? elementId = null, IEnumerable<string>? classNames = null, UiAttributeBag? attributes = null, UiStyleDeclaration? inlineStyle = null, IUiCanvasContent? canvasContent = null, UiPseudoElement pseudoElement = UiPseudoElement.None)
 	{
 		if (!id.IsValid)
 		{
@@ -77,6 +79,7 @@ public sealed class UiNode
 		}
 		Id = id;
 		Kind = kind;
+		PseudoElement = pseudoElement;
 		LocalStyle = style ?? UiStyle.Default;
 		Style = LocalStyle;
 		RenderStyle = LocalStyle;
@@ -114,6 +117,7 @@ public sealed class UiNode
 		LocalStyle = template.LocalStyle;
 		TextContent = template.TextContent;
 		CanvasContent = template.CanvasContent;
+		PseudoElement = template.PseudoElement;
 		_classNames = template._classNames;
 		_actionHandles = template._actionHandles;
 		return changed;
@@ -258,6 +262,7 @@ public sealed class UiNode
 	{
 		return string.Equals(TagName, other.TagName, StringComparison.Ordinal) &&
 			string.Equals(ElementId, other.ElementId, StringComparison.Ordinal) &&
+			PseudoElement == other.PseudoElement &&
 			object.Equals(LocalStyle, other.LocalStyle) &&
 			string.Equals(TextContent, other.TextContent, StringComparison.Ordinal) &&
 			object.ReferenceEquals(CanvasContent, other.CanvasContent) &&

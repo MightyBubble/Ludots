@@ -36,6 +36,10 @@
     <None Remove="UiShowcaseCoreMod.Assets.Showcase.tile4_ornament.png" />
     <None Remove="UiShowcaseCoreMod.Assets.Showcase.ink_seal.svg" />
     <None Remove="UiShowcaseCoreMod.Assets.Showcase.ink_brush.svg" />
+    <None Remove="UiShowcaseCoreMod.Assets.Showcase.parity_menu.html" />
+    <None Remove="UiShowcaseCoreMod.Assets.Showcase.parity_menu.css" />
+    <None Remove="UiShowcaseCoreMod.Assets.Showcase.web_parity_showcase.html" />
+    <None Remove="UiShowcaseCoreMod.Assets.Showcase.web_parity_showcase.css" />
     <EmbeddedResource Include="UiShowcaseCoreMod.Assets.Showcase.markup_showcase.css" LogicalName="UiShowcaseCoreMod.Assets.Showcase.markup_showcase.css" />
     <EmbeddedResource Include="UiShowcaseCoreMod.Assets.Showcase.showcase_authoring.css" LogicalName="UiShowcaseCoreMod.Assets.Showcase.showcase_authoring.css" />
     <EmbeddedResource Include="UiShowcaseCoreMod.Assets.Showcase.markup_showcase.html" LogicalName="UiShowcaseCoreMod.Assets.Showcase.markup_showcase.html" />
@@ -50,5 +54,9 @@
     <EmbeddedResource Include="UiShowcaseCoreMod.Assets.Showcase.tile4_ornament.png" LogicalName="UiShowcaseCoreMod.Assets.Showcase.tile4_ornament.png" />
     <EmbeddedResource Include="UiShowcaseCoreMod.Assets.Showcase.ink_seal.svg" LogicalName="UiShowcaseCoreMod.Assets.Showcase.ink_seal.svg" />
     <EmbeddedResource Include="UiShowcaseCoreMod.Assets.Showcase.ink_brush.svg" LogicalName="UiShowcaseCoreMod.Assets.Showcase.ink_brush.svg" />
+    <EmbeddedResource Include="UiShowcaseCoreMod.Assets.Showcase.parity_menu.html" LogicalName="UiShowcaseCoreMod.Assets.Showcase.parity_menu.html" />
+    <EmbeddedResource Include="UiShowcaseCoreMod.Assets.Showcase.parity_menu.css" LogicalName="UiShowcaseCoreMod.Assets.Showcase.parity_menu.css" />
+    <EmbeddedResource Include="UiShowcaseCoreMod.Assets.Showcase.web_parity_showcase.html" LogicalName="UiShowcaseCoreMod.Assets.Showcase.web_parity_showcase.html" />
+    <EmbeddedResource Include="UiShowcaseCoreMod.Assets.Showcase.web_parity_showcase.css" LogicalName="UiShowcaseCoreMod.Assets.Showcase.web_parity_showcase.css" />
   </ItemGroup>
 </Project>

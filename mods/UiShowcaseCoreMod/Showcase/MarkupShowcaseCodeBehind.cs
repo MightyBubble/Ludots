@@ -105,18 +105,9 @@ internal sealed class MarkupShowcaseCodeBehind
 
 	private IEnumerable<string> ScanPrototypeDiagnostics()
 	{
-		if ("grid-template-columns:repeat(3,1fr); animation:fade-in 180ms ease; calc(100% - 24px); position:fixed;".Contains("grid-template-columns", StringComparison.OrdinalIgnoreCase))
-		{
-			yield return "Unsupported: CSS Grid layout";
-		}
-		if ("grid-template-columns:repeat(3,1fr); animation:fade-in 180ms ease; calc(100% - 24px); position:fixed;".Contains("calc(", StringComparison.OrdinalIgnoreCase))
-		{
-			yield return "Unsupported: calc() expressions";
-		}
-		if ("grid-template-columns:repeat(3,1fr); animation:fade-in 180ms ease; calc(100% - 24px); position:fixed;".Contains("position:fixed", StringComparison.OrdinalIgnoreCase))
-		{
-			yield return "Unsupported: browser fixed positioning";
-		}
+		yield return "Unsupported: position:fixed / sticky";
+		yield return "Unsupported: float / minmax() / content:url()";
+		yield return "Unsupported: JS / full CSSOM / @media";
 	}
 
 	private void Rebuild(UiActionContext context)

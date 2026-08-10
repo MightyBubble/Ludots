@@ -20,6 +20,10 @@ public sealed class UiScene
 
 	private readonly List<UiStyleSheet> _styleSheets = new List<UiStyleSheet>();
 
+	private readonly List<UiStyleSheet> _effectiveStyleSheets = new List<UiStyleSheet>();
+
+	private bool _effectiveStyleSheetsDirty = true;
+
 	private readonly Dictionary<string, UiVirtualWindow> _virtualWindows = new Dictionary<string, UiVirtualWindow>(StringComparer.Ordinal);
 
 	private Func<bool>? _reactiveRuntimeRefresh;
@@ -90,6 +94,7 @@ public sealed class UiScene
 		Theme = theme;
 		_styleSheets.Clear();
 		_styleSheets.AddRange(document.StyleSheets);
+		_effectiveStyleSheetsDirty = true;
 		_nextNodeId = 1;
 		Root = BuildNode(document.Root);
 		TrackNextNodeId(Root);
@@ -102,6 +107,7 @@ public sealed class UiScene
 	public void SetTheme(UiThemePack? theme)
 	{
 		Theme = theme;
+		_effectiveStyleSheetsDirty = true;
 		Version++;
 		IsDirty = true;
 	}
@@ -113,20 +119,30 @@ public sealed class UiScene
 		{
 			_styleSheets.AddRange(styleSheets);
 		}
+		_effectiveStyleSheetsDirty = true;
 		Version++;
 		IsDirty = true;
 	}
 
 	public void Layout(float width, float height)
 	{
-		if (Root != null && (IsDirty || !(Math.Abs(_layoutWidth - width) < 0.01f) || !(Math.Abs(_layoutHeight - height) < 0.01f)))
+		if (Root == null)
 		{
-			_layoutWidth = width;
-			_layoutHeight = height;
-			_styleResolver.ResolveTree(Root, GetEffectiveStyleSheets());
-			_layoutEngine.Layout(Root, width, height);
-			IsDirty = false;
+			return;
 		}
+		bool sizeChanged = Math.Abs(_layoutWidth - width) >= 0.01f || Math.Abs(_layoutHeight - height) >= 0.01f;
+		if (!IsDirty && !sizeChanged)
+		{
+			return;
+		}
+		_layoutWidth = width;
+		_layoutHeight = height;
+		if (IsDirty)
+		{
+			_styleResolver.ResolveTree(Root, GetEffectiveStyleSheets());
+		}
+		_layoutEngine.Layout(Root, width, height);
+		IsDirty = false;
 	}
 
 	public bool AdvanceTime(float deltaSeconds)
@@ -271,8 +287,38 @@ public sealed class UiScene
 		}
 		string elementId = uiAttributeBag["id"];
 		IReadOnlyList<string> classList = uiAttributeBag.GetClassList();
-		UiNode[] children = element.Children.Select(BuildNode).ToArray();
-		return new UiNode(new UiNodeId(_nextNodeId++), element.Kind, null, element.TextContent, children, null, element.TagName, elementId, classList, uiAttributeBag, element.InlineStyle);
+		IReadOnlyList<UiStyleSheet> styleSheets = GetEffectiveStyleSheets();
+		UiNode? beforeNode = TryBuildPseudoElementNode(element, UiPseudoElement.Before, styleSheets);
+		UiNode? afterNode = TryBuildPseudoElementNode(element, UiPseudoElement.After, styleSheets);
+		List<UiNode> children = new List<UiNode>(element.Children.Count + 2);
+		if (beforeNode != null)
+		{
+			children.Add(beforeNode);
+		}
+		string? textContent = element.TextContent;
+		if ((beforeNode != null || afterNode != null) && textContent != null)
+		{
+			children.Add(new UiNode(new UiNodeId(_nextNodeId++), UiNodeKind.Text, null, textContent, null, null, "span"));
+			textContent = null;
+		}
+		for (int i = 0; i < element.Children.Count; i++)
+		{
+			children.Add(BuildNode(element.Children[i]));
+		}
+		if (afterNode != null)
+		{
+			children.Add(afterNode);
+		}
+		return new UiNode(new UiNodeId(_nextNodeId++), element.Kind, null, textContent, children, null, element.TagName, elementId, classList, uiAttributeBag, element.InlineStyle);
+	}
+
+	private UiNode? TryBuildPseudoElementNode(UiElement element, UiPseudoElement pseudoElement, IReadOnlyList<UiStyleSheet> styleSheets)
+	{
+		if (!UiStyleResolver.TryResolveGeneratedContent(element, pseudoElement, styleSheets, out string text))
+		{
+			return null;
+		}
+		return new UiNode(new UiNodeId(_nextNodeId++), UiNodeKind.Text, null, text, null, null, "span", null, null, null, null, null, pseudoElement);
 	}
 
 	internal int GetNextReactiveNodeIdSeed()
@@ -457,13 +503,18 @@ public sealed class UiScene
 
 	private IReadOnlyList<UiStyleSheet> GetEffectiveStyleSheets()
 	{
-		List<UiStyleSheet> list = new List<UiStyleSheet>(_styleSheets.Count + (Theme?.StyleSheets.Count ?? 0));
-		list.AddRange(_styleSheets);
+		if (!_effectiveStyleSheetsDirty)
+		{
+			return _effectiveStyleSheets;
+		}
+		_effectiveStyleSheets.Clear();
+		_effectiveStyleSheets.AddRange(_styleSheets);
 		if (Theme != null)
 		{
-			list.AddRange(Theme.StyleSheets);
+			_effectiveStyleSheets.AddRange(Theme.StyleSheets);
 		}
-		return list;
+		_effectiveStyleSheetsDirty = false;
+		return _effectiveStyleSheets;
 	}
 
 	private UiNode? ResolveTarget(UiEvent evt)
