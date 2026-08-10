@@ -271,8 +271,38 @@ public sealed class UiScene
 		}
 		string elementId = uiAttributeBag["id"];
 		IReadOnlyList<string> classList = uiAttributeBag.GetClassList();
-		UiNode[] children = element.Children.Select(BuildNode).ToArray();
-		return new UiNode(new UiNodeId(_nextNodeId++), element.Kind, null, element.TextContent, children, null, element.TagName, elementId, classList, uiAttributeBag, element.InlineStyle);
+		IReadOnlyList<UiStyleSheet> styleSheets = GetEffectiveStyleSheets();
+		UiNode? beforeNode = TryBuildPseudoElementNode(element, UiPseudoElement.Before, styleSheets);
+		UiNode? afterNode = TryBuildPseudoElementNode(element, UiPseudoElement.After, styleSheets);
+		List<UiNode> children = new List<UiNode>(element.Children.Count + 2);
+		if (beforeNode != null)
+		{
+			children.Add(beforeNode);
+		}
+		string? textContent = element.TextContent;
+		if ((beforeNode != null || afterNode != null) && textContent != null)
+		{
+			children.Add(new UiNode(new UiNodeId(_nextNodeId++), UiNodeKind.Text, null, textContent, null, null, "span"));
+			textContent = null;
+		}
+		for (int i = 0; i < element.Children.Count; i++)
+		{
+			children.Add(BuildNode(element.Children[i]));
+		}
+		if (afterNode != null)
+		{
+			children.Add(afterNode);
+		}
+		return new UiNode(new UiNodeId(_nextNodeId++), element.Kind, null, textContent, children, null, element.TagName, elementId, classList, uiAttributeBag, element.InlineStyle);
+	}
+
+	private UiNode? TryBuildPseudoElementNode(UiElement element, UiPseudoElement pseudoElement, IReadOnlyList<UiStyleSheet> styleSheets)
+	{
+		if (!UiStyleResolver.TryResolveGeneratedContent(element, pseudoElement, styleSheets, out string text))
+		{
+			return null;
+		}
+		return new UiNode(new UiNodeId(_nextNodeId++), UiNodeKind.Text, null, text, null, null, "span", null, null, null, null, null, pseudoElement);
 	}
 
 	internal int GetNextReactiveNodeIdSeed()

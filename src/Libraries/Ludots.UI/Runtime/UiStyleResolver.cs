@@ -15,6 +15,93 @@ public sealed class UiStyleResolver
 		ResolveNode(root, styleSheets2, keyframes, null, null, isRoot: true);
 	}
 
+	internal static bool TryResolveGeneratedContent(UiElement host, UiPseudoElement pseudoElement, IReadOnlyList<UiStyleSheet> styleSheets, out string text)
+	{
+		ArgumentNullException.ThrowIfNull(host, "host");
+		text = string.Empty;
+		if (pseudoElement != UiPseudoElement.Before && pseudoElement != UiPseudoElement.After)
+		{
+			return false;
+		}
+		IReadOnlyList<UiStyleSheet> sheets = styleSheets ?? Array.Empty<UiStyleSheet>();
+		List<(int Specificity, int Order, string Value)> matches = new List<(int, int, string)>();
+		int sequence = 0;
+		for (int i = 0; i < sheets.Count; i++)
+		{
+			foreach (UiStyleRule rule in sheets[i].Rules)
+			{
+				if (rule.Selector.PseudoElement != pseudoElement)
+				{
+					continue;
+				}
+				if (!UiElementSelectorMatcher.MatchesOriginatingElement(host, rule.Selector))
+				{
+					continue;
+				}
+				string? contentValue = rule.Declaration["content"];
+				if (contentValue == null)
+				{
+					continue;
+				}
+				matches.Add((rule.Selector.Specificity, i * 10000 + rule.Order + sequence++, contentValue));
+			}
+		}
+		if (matches.Count == 0)
+		{
+			return false;
+		}
+		matches.Sort(static (left, right) =>
+		{
+			int bySpecificity = left.Specificity.CompareTo(right.Specificity);
+			return bySpecificity != 0 ? bySpecificity : left.Order.CompareTo(right.Order);
+		});
+		string winning = matches[^1].Value;
+		return TryEvaluateContent(winning, host, out text);
+	}
+
+	internal static bool TryEvaluateContent(string rawValue, UiElement host, out string text)
+	{
+		text = string.Empty;
+		if (string.IsNullOrWhiteSpace(rawValue))
+		{
+			return false;
+		}
+		string value = rawValue.Trim();
+		if (value.Equals("none", StringComparison.OrdinalIgnoreCase) ||
+			value.Equals("normal", StringComparison.OrdinalIgnoreCase))
+		{
+			return false;
+		}
+		if (value.StartsWith("url(", StringComparison.OrdinalIgnoreCase))
+		{
+			return false;
+		}
+		if (value.StartsWith("attr(", StringComparison.OrdinalIgnoreCase) && value.EndsWith(')'))
+		{
+			string attributeName = value.Substring(5, value.Length - 6).Trim().Trim('"', '\'');
+			if (string.IsNullOrWhiteSpace(attributeName))
+			{
+				return false;
+			}
+			text = host.Attributes[attributeName] ?? string.Empty;
+			return true;
+		}
+		if ((value.StartsWith('"') && value.EndsWith('"')) || (value.StartsWith('\'') && value.EndsWith('\'')))
+		{
+			text = UnescapeContentString(value.Substring(1, value.Length - 2));
+			return true;
+		}
+		return false;
+	}
+
+	private static string UnescapeContentString(string value)
+	{
+		return value
+			.Replace("\\\"", "\"", StringComparison.Ordinal)
+			.Replace("\\'", "'", StringComparison.Ordinal)
+			.Replace("\\\\", "\\", StringComparison.Ordinal);
+	}
+
 	private void ResolveNode(UiNode node, IReadOnlyList<UiStyleSheet> styleSheets, IReadOnlyDictionary<string, UiKeyframeDefinition> keyframes, UiStyle? parentStyle, IReadOnlyDictionary<string, string>? inheritedVariables, bool isRoot)
 	{
 		if (isRoot)
