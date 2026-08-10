@@ -10,6 +10,7 @@ public sealed class BehaviorTreeArenaRuntime
     private readonly GraphShowcaseConfig _config = new();
     private BehaviorTreeWorld? _world;
     private float _accum;
+    public BehaviorTreeWorld? World => _world;
     public GraphShowcaseMetrics Metrics { get; } = new() { ShowcaseId = "capability_standard_behavior_tree_arena" };
 
     public void EnsureWorld()
