@@ -15,6 +15,7 @@ using Ludots.Core.Gameplay.AI.Config;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Exchange;
 using Ludots.Core.Gameplay.Narrative;
+using Ludots.Core.Gameplay.Activities;
 using Ludots.Core.Gameplay.Providers;
 using Ludots.Core.Gameplay.Quests;
 using Ludots.Core.Gameplay.GAS;
@@ -168,6 +169,9 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<ConditionProviderRegistry> ConditionProviderRegistry = new("ConditionProviderRegistry");
         public static readonly ServiceKey<EffectHandlerRegistry> EffectHandlerRegistry = new("EffectHandlerRegistry");
         public static readonly ServiceKey<ProviderDefinitionValidator> ProviderDefinitionValidator = new("ProviderDefinitionValidator");
+        public static readonly ServiceKey<ActivityDefinitionRegistry> ActivityDefinitionRegistry = new("ActivityDefinitionRegistry");
+        public static readonly ServiceKey<ActivityRuntimeService> ActivityRuntimeService = new("ActivityRuntimeService");
+        public static readonly ServiceKey<ActivityPresentationBuffer> ActivityPresentationBuffer = new("ActivityPresentationBuffer");
         public static readonly ServiceKey<NarrativeDefinitionRegistry> NarrativeDefinitions = new("NarrativeDefinitions");
         public static readonly ServiceKey<NarrativeDirector> NarrativeDirector = new("NarrativeDirector");
 
