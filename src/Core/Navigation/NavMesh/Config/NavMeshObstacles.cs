@@ -228,6 +228,12 @@ namespace Ludots.Core.Navigation.NavMesh.Config
 
     public sealed class NavObstacle
     {
+        /// <summary>
+        /// Default vertical extent for Physics2D-derived obstacles (10m coverage in world-cm).
+        /// Physics2D is planar with no Y/height information; this span covers typical gameplay scenarios.
+        /// </summary>
+        public const int DefaultPhysics2DVerticalExtentCm = 1000;
+
         public string Id { get; set; } = string.Empty;
         public bool Enabled { get; set; } = true;
         public NavObstacleKind Kind { get; set; } = NavObstacleKind.Polygon;

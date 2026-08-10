@@ -165,6 +165,8 @@ public static class NavObstacleAuthoringAdapter
             LayerId = layerId,
             Center = new NavPointCm(center.X.RoundToInt(), center.Y.RoundToInt()),
             RadiusCm = circle.Radius.RoundToInt(),
+            MinYcm = 0,
+            MaxYcm = NavObstacle.DefaultPhysics2DVerticalExtentCm,
         };
     }
 
@@ -195,6 +197,8 @@ public static class NavObstacleAuthoringAdapter
             Enabled = true,
             Kind = NavObstacleKind.Polygon,
             LayerId = layerId,
+            MinYcm = 0,
+            MaxYcm = NavObstacle.DefaultPhysics2DVerticalExtentCm,
         };
         for (int i = 0; i < corners.Length; i++)
         {
@@ -224,6 +228,8 @@ public static class NavObstacleAuthoringAdapter
             Enabled = true,
             Kind = NavObstacleKind.Polygon,
             LayerId = layerId,
+            MinYcm = 0,
+            MaxYcm = NavObstacle.DefaultPhysics2DVerticalExtentCm,
         };
         for (int i = 0; i < polygon.VertexCount; i++)
         {

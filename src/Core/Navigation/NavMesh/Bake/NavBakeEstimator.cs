@@ -222,7 +222,7 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 NavMeshAgentProfileConfig navProfile = context.Config.Profiles[i]
                     ?? throw new InvalidOperationException($"NavBakeContext.config.profiles[{i}] is null.");
                 AgentProfileConfig agentProfile = context.AgentProfiles.Require(navProfile.Id, $"{NavMeshConfigPaths.BakeConfigPath}.profiles[{i}]");
-                NavBakeProfileEstimate profile = EstimateProfile(agentProfile, navProfile, tileWidthCm);
+                NavBakeProfileEstimate profile = EstimateProfile(agentProfile, navProfile, tileWidthCm, context.Config.Recast);
                 profiles.Add(profile);
                 recastColumnBudgetTotal = checked(recastColumnBudgetTotal + (long)targetTileCount * layerCount * profile.RecastColumnBudgetPerTile);
             }
@@ -329,7 +329,8 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
         private static NavBakeProfileEstimate EstimateProfile(
             AgentProfileConfig agentProfile,
             NavMeshAgentProfileConfig navProfile,
-            int tileWidthCm)
+            int tileWidthCm,
+            NavRecastConfig recast)
         {
             if (navProfile.MaxClimbCm < 0)
             {
@@ -341,8 +342,8 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 throw new InvalidOperationException($"NavMeshBakeConfig.profile '{navProfile.Id}' requires maxSlopeDeg >= 0 and < 90.");
             }
 
-            float recastCellSizeCm = MathF.Max(5f, MathF.Min(50f, agentProfile.RadiusCm / 3f));
-            float recastCellHeightCm = recastCellSizeCm * 0.5f;
+            float recastCellSizeCm = recast.RasterCellSizeCm;
+            float recastCellHeightCm = recast.RasterCellHeightCm;
             int columnsPerAxis = (int)MathF.Ceiling(tileWidthCm / recastCellSizeCm);
             int columnBudget = checked(columnsPerAxis * columnsPerAxis);
             int walkableHeightVoxels = (int)MathF.Ceiling(agentProfile.HeightCm / recastCellHeightCm);
@@ -572,6 +573,11 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
             AppendTargets(sb, context.Targets);
             AppendLayers(sb, context.Config.Layers);
             AppendProfiles(sb, context.Config.Profiles, context.AgentProfiles);
+            if (context.Algorithm == NavBakeAlgorithmKind.Recast)
+            {
+                NavRecastConfig recast = context.Config.Recast;
+                sb.Append("recast:").Append(recast.RasterCellSizeCm).Append('x').Append(recast.RasterCellHeightCm).Append('|');
+            }
             AppendObstacles(sb, context.Obstacles);
 
             byte[] hash = sha.ComputeHash(Encoding.UTF8.GetBytes(sb.ToString()));

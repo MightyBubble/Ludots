@@ -14,8 +14,10 @@ export type NavBorderPortal = {
     u1: number;
     v1: number;
     leftXcm: number;
+    leftYcm: number;
     leftZcm: number;
     rightXcm: number;
+    rightYcm: number;
     rightZcm: number;
     clearanceCm: number;
 };
@@ -41,7 +43,7 @@ export type NavTile = {
 };
 
 const MAGIC = 0x4c49544e;
-const FORMAT_VERSION = 2;
+const FORMAT_VERSION = 3;
 
 export function readNavTile(buffer: ArrayBuffer): NavTile {
     const view = new DataView(buffer);
@@ -111,11 +113,13 @@ export function readNavTile(buffer: ArrayBuffer): NavTile {
         const u1 = view.getInt16(o, true); o += 2;
         const v1 = view.getInt16(o, true); o += 2;
         const leftXcm = view.getInt32(o, true); o += 4;
+        const leftYcm = view.getInt32(o, true); o += 4;
         const leftZcm = view.getInt32(o, true); o += 4;
         const rightXcm = view.getInt32(o, true); o += 4;
+        const rightYcm = view.getInt32(o, true); o += 4;
         const rightZcm = view.getInt32(o, true); o += 4;
         const clearanceCm = view.getInt32(o, true); o += 4;
-        portals.push({ side: side as NavPortalSide, u0, v0, u1, v1, leftXcm, leftZcm, rightXcm, rightZcm, clearanceCm });
+        portals.push({ side: side as NavPortalSide, u0, v0, u1, v1, leftXcm, leftYcm, leftZcm, rightXcm, rightYcm, rightZcm, clearanceCm });
     }
 
     return {

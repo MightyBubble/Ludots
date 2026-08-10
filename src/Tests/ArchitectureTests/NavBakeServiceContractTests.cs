@@ -726,8 +726,11 @@ namespace Ludots.Tests.Architecture
             Assert.That(estimate.TileWorldWidthCm, Is.EqualTo(400));
             Assert.That(estimate.TileWorldHeightCm, Is.EqualTo(400));
             Assert.That(estimate.TerrainCellSampleCount, Is.EqualTo(32));
-            Assert.That(estimate.RecastColumnBudgetTotal, Is.EqualTo(7184));
-            Assert.That(estimate.BudgetWorkUnitCount, Is.EqualTo(7184));
+            // Raster resolution is data-driven from NavMeshBakeConfig.recast, so every profile shares the
+            // configured 10cm/5cm cells instead of deriving them from agent radius. Both profiles therefore
+            // rasterize 40 columns per axis: 2 tiles * 2 layers * (1600 + 1600).
+            Assert.That(estimate.RecastColumnBudgetTotal, Is.EqualTo(12800));
+            Assert.That(estimate.BudgetWorkUnitCount, Is.EqualTo(12800));
             Assert.That(estimate.EstimatedTileBytesLow, Is.EqualTo(8L * NavBakeEstimator.EstimatedBytesPerOperationLow));
             Assert.That(estimate.EstimatedTileBytesHigh, Is.EqualTo(8L * NavBakeEstimator.EstimatedBytesPerOperationHigh));
             Assert.That(estimate.EstimatedSerialSecondsLow, Is.EqualTo(0.64d).Within(0.0001d));
@@ -744,6 +747,14 @@ namespace Ludots.Tests.Architecture
             Assert.That(small.WalkableHeightVoxels, Is.EqualTo(36));
             Assert.That(small.WalkableClimbVoxels, Is.EqualTo(8));
             Assert.That(small.MinWalkableUpDot, Is.EqualTo(MathF.Cos(45f * MathF.PI / 180f)).Within(0.0001f));
+
+            NavBakeProfileEstimate large = estimate.Profiles[1];
+            Assert.That(large.ProfileId, Is.EqualTo("Large"));
+            Assert.That(large.RecastCellSizeCm, Is.EqualTo(10f).Within(0.0001f));
+            Assert.That(large.RecastCellHeightCm, Is.EqualTo(5f).Within(0.0001f));
+            Assert.That(large.RecastColumnsPerAxis, Is.EqualTo(40));
+            Assert.That(large.WalkableHeightVoxels, Is.EqualTo(48));
+            Assert.That(large.WalkableClimbVoxels, Is.EqualTo(15));
         }
 
         [Test]

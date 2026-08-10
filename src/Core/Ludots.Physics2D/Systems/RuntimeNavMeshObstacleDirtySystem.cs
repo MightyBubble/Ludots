@@ -278,7 +278,9 @@ namespace Ludots.Core.Physics2D.Systems
                 Kind = NavObstacleKind.Circle,
                 LayerId = layerId,
                 Center = new NavPointCm(center.X.RoundToInt(), center.Y.RoundToInt()),
-                RadiusCm = circle.Radius.RoundToInt()
+                RadiusCm = circle.Radius.RoundToInt(),
+                MinYcm = 0,
+                MaxYcm = NavObstacle.DefaultPhysics2DVerticalExtentCm,
             };
         }
 
@@ -303,6 +305,8 @@ namespace Ludots.Core.Physics2D.Systems
                 Enabled = true,
                 Kind = NavObstacleKind.Polygon,
                 LayerId = layerId,
+                MinYcm = 0,
+                MaxYcm = NavObstacle.DefaultPhysics2DVerticalExtentCm,
             };
             for (int i = 0; i < corners.Length; i++)
             {
@@ -326,6 +330,8 @@ namespace Ludots.Core.Physics2D.Systems
                 Enabled = true,
                 Kind = NavObstacleKind.Polygon,
                 LayerId = layerId,
+                MinYcm = 0,
+                MaxYcm = NavObstacle.DefaultPhysics2DVerticalExtentCm,
             };
             for (int i = 0; i < polygon.VertexCount; i++)
             {
