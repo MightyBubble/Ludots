@@ -212,22 +212,24 @@ void RunSkinSwapSuite()
 void RunNineSlicePanelSuite()
 {
     string root = Path.Combine(acceptanceRoot, "ui-nineslice-panel");
-    CaptureSuite suite = new("UI Nine-Slice Ornate Panel", root, renderer);
+    CaptureSuite suite = new("UI Frame Lab", root, renderer);
     UiScene scene = UiShowcaseFactory.CreateNineSlicePanelScene(textMeasurer, imageSizeProvider);
-    suite.Capture("nineslice-compact", scene, "Player-facing ornate sheet: compact wood frame with nine-slice corners.");
-    suite.Click(scene, "size-wide", "Stretch sheet to wide desk size.");
-    suite.Capture("nineslice-wide", scene, "Wide size keeps gold corners crisp while parchment fills the middle.");
-    suite.Click(scene, "size-tall", "Stretch sheet to tall cabinet size.");
-    suite.Capture("nineslice-tall", scene, "Tall size proves vertical nine-slice stretch without crushing corners.");
+    suite.Capture("frame-nine", scene, "Nine-slice ornate sheet and symmetric button frames.");
+    suite.Click(scene, "mode-three", "Switch to three-slice ribbons.");
+    suite.Capture("frame-three", scene, "Short vs long ribbon: end caps fixed, middle wood stretches.");
+    suite.Click(scene, "mode-two", "Switch to two-way continuous strips.");
+    suite.Capture("frame-two", scene, "Horizontal repeat-x and vertical repeat-y ornament strips.");
+    suite.Click(scene, "mode-four", "Switch to four-way continuous floor.");
+    suite.Capture("frame-four", scene, "Seamless tile fill across the stage.");
     suite.WriteReport(
         new[]
         {
-            "- PASS: compact / wide / tall captures prove nine-slice ornate frames.",
-            "- PASS: gold corners stay fixed-slice while wood edges and parchment stretch.",
-            "- PASS: button frames reuse the same image-slice contract."
+            "- PASS: nine-slice panel/buttons, three-slice ribbons, two-way and four-way tiles.",
+            "- PASS: mode chips switch visible demos without rebuilding unrelated assets.",
+            "- PASS: chip labels stay centered via explicit label nodes."
         },
-        "flowchart TD\n    A[Compact] --> B[Click size-wide]\n    B --> C[Wide]\n    C --> D[Click size-tall]\n    D --> E[Tall]\n");
-    string hero = Path.Combine(root, "screens", "nineslice-compact.png");
+        "flowchart TD\n    A[Nine] --> B[Click mode-three]\n    B --> C[Three]\n    C --> D[Click mode-two]\n    D --> E[Two]\n    E --> F[Click mode-four]\n    F --> G[Four]\n");
+    string hero = Path.Combine(root, "screens", "frame-nine.png");
     string gallery = Path.Combine(root, "nineslice-compact.png");
     File.Copy(hero, gallery, overwrite: true);
 }

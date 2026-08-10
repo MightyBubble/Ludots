@@ -1,4 +1,4 @@
-/* Ornate nine-slice character sheet — Native CSS Profile. */
+/* Frame lab: nine-slice / three-slice / 2-way / 4-way tile — Native CSS Profile. */
 
 * {
   margin: 0;
@@ -56,7 +56,7 @@
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  width: 128px;
+  width: 140px;
   height: 42px;
   background: rgba(40, 28, 18, 0.95);
   border-width: 1px;
@@ -103,27 +103,28 @@
   border-color: #5a3c1e;
   border-radius: 16px;
   overflow: hidden;
+  padding: 18px;
+}
+
+.mode-panel {
+  display: none;
+  width: 100%;
+  height: 100%;
+}
+
+.mode-panel.visible {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
 }
 
 .sheet {
   position: relative;
   overflow: hidden;
   background: #2a1c12;
-}
-
-.sheet.size-compact {
-  width: 340px;
-  height: 460px;
-}
-
-.sheet.size-wide {
-  width: 560px;
-  height: 380px;
-}
-
-.sheet.size-tall {
-  width: 360px;
-  height: 520px;
+  width: 520px;
+  height: 420px;
 }
 
 .sheet-frame {
@@ -144,7 +145,7 @@
   width: 100%;
   height: 100%;
   padding: 58px 52px 48px 52px;
-  gap: 10px;
+  gap: 12px;
   overflow: hidden;
 }
 
@@ -169,42 +170,12 @@
   overflow: hidden;
 }
 
-.sheet-stats {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  width: 100%;
-  flex-shrink: 0;
-}
-
-.stat-line {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
-  height: 26px;
-  padding: 0 8px;
-  background: rgba(90, 60, 30, 0.12);
-  border-radius: 6px;
-}
-
-.stat-key {
-  font-size: 13px;
-  color: #5a3c1e;
-}
-
-.stat-val {
-  font-size: 16px;
-  font-weight: bold;
-  color: #3a2412;
-}
-
 .sheet-actions {
   display: flex;
   flex-direction: row;
-  gap: 12px;
+  gap: 16px;
   width: 100%;
-  height: 56px;
+  height: 64px;
   flex-shrink: 0;
 }
 
@@ -227,7 +198,7 @@
   width: 100%;
   height: 100%;
   object-fit: fill;
-  image-slice: 36 36 36 36;
+  image-slice: 36 48 36 48;
   pointer-events: none;
 }
 
@@ -236,6 +207,138 @@
   font-size: 15px;
   font-weight: bold;
   color: #f3e6c8;
+}
+
+.three-stack {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 22px;
+  width: 100%;
+  height: 100%;
+  padding: 24px;
+}
+
+.ribbon {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  height: 78px;
+  overflow: hidden;
+}
+
+.ribbon-short {
+  width: 360px;
+}
+
+.ribbon-long {
+  width: 860px;
+}
+
+.ribbon-frame {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  image-slice: 0 110 0 110;
+  pointer-events: none;
+}
+
+.ribbon-label {
+  position: relative;
+  font-size: 16px;
+  font-weight: bold;
+  color: #f3e6c8;
+}
+
+.mode-caption {
+  font-size: 14px;
+  color: #e8d5a8;
+  min-height: 40px;
+}
+
+.two-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  width: 100%;
+  height: 100%;
+  padding: 20px;
+}
+
+.strip-h {
+  width: 100%;
+  height: 72px;
+  background-image: url('{{tile2_h_data_uri}}');
+  background-repeat: repeat-x;
+  background-size: 160px 72px;
+  background-position: left center;
+  border-radius: 8px;
+  border-width: 1px;
+  border-style: solid;
+  border-color: #8a6230;
+}
+
+.strip-v-host {
+  display: flex;
+  flex-direction: row;
+  gap: 18px;
+  flex-grow: 1;
+  height: 0;
+  align-items: stretch;
+}
+
+.strip-v {
+  width: 72px;
+  height: 100%;
+  background-image: url('{{tile2_v_data_uri}}');
+  background-repeat: repeat-y;
+  background-size: 72px 160px;
+  background-position: center top;
+  border-radius: 8px;
+  border-width: 1px;
+  border-style: solid;
+  border-color: #8a6230;
+  flex-shrink: 0;
+}
+
+.tile-floor {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background-image: url('{{tile4_data_uri}}');
+  background-repeat: repeat;
+  background-size: 96px 96px;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.tile-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 360px;
+  padding: 22px;
+  background: rgba(18, 12, 8, 0.82);
+  border-width: 1px;
+  border-style: solid;
+  border-color: #d4a24a;
+  border-radius: 12px;
+}
+
+.tile-card .sheet-kicker {
+  color: #d4a24a;
+}
+
+.tile-card .sheet-name {
+  color: #fff4d8;
 }
 
 .ns-aside {

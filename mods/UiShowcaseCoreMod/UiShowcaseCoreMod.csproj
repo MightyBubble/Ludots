@@ -30,6 +30,10 @@
     <None Remove="UiShowcaseCoreMod.Assets.Showcase.nineslice_panel.css" />
     <None Remove="UiShowcaseCoreMod.Assets.Showcase.nineslice_panel_frame.png" />
     <None Remove="UiShowcaseCoreMod.Assets.Showcase.nineslice_button_frame.png" />
+    <None Remove="UiShowcaseCoreMod.Assets.Showcase.slice3_ribbon.png" />
+    <None Remove="UiShowcaseCoreMod.Assets.Showcase.tile2_hstrip.png" />
+    <None Remove="UiShowcaseCoreMod.Assets.Showcase.tile2_vstrip.png" />
+    <None Remove="UiShowcaseCoreMod.Assets.Showcase.tile4_ornament.png" />
     <EmbeddedResource Include="UiShowcaseCoreMod.Assets.Showcase.markup_showcase.css" LogicalName="UiShowcaseCoreMod.Assets.Showcase.markup_showcase.css" />
     <EmbeddedResource Include="UiShowcaseCoreMod.Assets.Showcase.showcase_authoring.css" LogicalName="UiShowcaseCoreMod.Assets.Showcase.showcase_authoring.css" />
     <EmbeddedResource Include="UiShowcaseCoreMod.Assets.Showcase.markup_showcase.html" LogicalName="UiShowcaseCoreMod.Assets.Showcase.markup_showcase.html" />
@@ -38,5 +42,9 @@
     <EmbeddedResource Include="UiShowcaseCoreMod.Assets.Showcase.nineslice_panel.css" LogicalName="UiShowcaseCoreMod.Assets.Showcase.nineslice_panel.css" />
     <EmbeddedResource Include="UiShowcaseCoreMod.Assets.Showcase.nineslice_panel_frame.png" LogicalName="UiShowcaseCoreMod.Assets.Showcase.nineslice_panel_frame.png" />
     <EmbeddedResource Include="UiShowcaseCoreMod.Assets.Showcase.nineslice_button_frame.png" LogicalName="UiShowcaseCoreMod.Assets.Showcase.nineslice_button_frame.png" />
+    <EmbeddedResource Include="UiShowcaseCoreMod.Assets.Showcase.slice3_ribbon.png" LogicalName="UiShowcaseCoreMod.Assets.Showcase.slice3_ribbon.png" />
+    <EmbeddedResource Include="UiShowcaseCoreMod.Assets.Showcase.tile2_hstrip.png" LogicalName="UiShowcaseCoreMod.Assets.Showcase.tile2_hstrip.png" />
+    <EmbeddedResource Include="UiShowcaseCoreMod.Assets.Showcase.tile2_vstrip.png" LogicalName="UiShowcaseCoreMod.Assets.Showcase.tile2_vstrip.png" />
+    <EmbeddedResource Include="UiShowcaseCoreMod.Assets.Showcase.tile4_ornament.png" LogicalName="UiShowcaseCoreMod.Assets.Showcase.tile4_ornament.png" />
   </ItemGroup>
 </Project>

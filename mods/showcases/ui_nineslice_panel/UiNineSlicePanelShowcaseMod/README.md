@@ -1,15 +1,25 @@
-# 打开雕花木匣
+# 框体怎么切、怎么铺
 
-玩家向 Showcase：用九宫格切图做博德之门风格拟物面板。
+玩家向 Showcase：对比拟物框的四种铺法。
 
 ## 玩法
 
-1. 默认看「窄匣」里的旅人卷宗。
-2. 点「宽案」「高柜」，观察金角纹样是否保持清晰。
-3. 木边与羊皮纸应跟着盒子变大变小；按钮框同理。
+1. **九宫格**：卷宗与按钮四角钉死，中间拉开。
+2. **三宫格**：短/长绶带同一张图，只拉中间。
+3. **二方连续**：横条 `repeat-x`、竖条 `repeat-y` 一节节接。
+4. **四方连续**：整面墙 `repeat` 铺满。
 
-## 技术挂靠
+## 能力边界
 
-- 场景 / HTML / CSS / 贴图：`UiShowcaseCoreMod`
-- CSS：`image-slice` 挂在 `<img>` 上（不是 `background-image`）
-- 验收：`UiNineSlicePanelTests`
+| 铺法 | 支持 | 挂靠 |
+| --- | --- | --- |
+| 九宫格 | 有 | `<img>` + `image-slice` |
+| 三宫格（横向） | 有 | `image-slice` 左右有值、上下为 0 |
+| 二方连续 | 有 | `background-repeat: repeat-x` / `repeat-y` |
+| 四方连续 | 有 | `background-repeat: repeat` |
+
+注意：九/三宫格走 `<img>`；二方/四方走 `background-image`，不是同一条绘制路径。
+
+## 验收
+
+`UiNineSlicePanelTests`

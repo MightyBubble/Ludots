@@ -10,62 +10,68 @@ namespace Ludots.Tests.UiShowcase;
 public sealed class UiNineSlicePanelTests
 {
 	[Test]
-	public void Showcase_LoadsOrnateSheet_WithNineSliceFrames()
+	public void Showcase_DefaultMode_IsNineSliceSheet()
 	{
 		UiScene scene = UiShowcaseFactory.CreateNineSlicePanelScene(
 			new ConstantTextMeasurer(),
 			new ConstantImageSizeProvider());
 		scene.Layout(1280f, 720f);
 
-		UiNode sheet = scene.FindByElementId("sheet")!;
+		UiNode ninePanel = scene.FindByElementId("panel-nine")!;
 		UiNode frame = scene.FindByElementId("sheet-frame")!;
-		UiNode name = scene.FindByElementId("sheet-name")!;
 		UiNode btnRest = scene.FindByElementId("btn-rest")!;
 
-		Assert.That(sheet.HasClass("size-compact"), Is.True);
+		Assert.That(ninePanel.HasClass("visible"), Is.True);
+		Assert.That(scene.FindByElementId("panel-three")!.HasClass("visible"), Is.False);
 		Assert.That(frame.Style.ImageSlice.Left, Is.EqualTo(56f));
-		Assert.That(frame.Style.ImageSlice.Top, Is.EqualTo(56f));
 		Assert.That(frame.Attributes["src"], Does.StartWith("data:image/png;base64,"));
-		Assert.That(name.LayoutRect.Width, Is.GreaterThan(80f));
-		Assert.That(name.LayoutRect.Bottom, Is.LessThanOrEqualTo(sheet.LayoutRect.Bottom));
 		Assert.That(btnRest.Children.Count, Is.GreaterThan(0));
+		AssertChipLabelCentered(scene, "mode-nine", "mode-nine-label");
 	}
 
 	[Test]
-	public void Showcase_SizeChips_ResizeSheet_WithoutCrushingCornersContract()
+	public void Showcase_ModeChips_SwitchThreeTwoFourPanels()
 	{
 		UiScene scene = UiShowcaseFactory.CreateNineSlicePanelScene(
 			new ConstantTextMeasurer(),
 			new ConstantImageSizeProvider());
 		scene.Layout(1280f, 720f);
 
-		UiRect compact = scene.FindByElementId("sheet")!.LayoutRect;
-		Assert.That(Click(scene, "size-wide"), Is.True);
+		Assert.That(Click(scene, "mode-three"), Is.True);
 		scene.Layout(1280f, 720f);
-		UiNode wideSheet = scene.FindByElementId("sheet")!;
-		Assert.That(wideSheet.HasClass("size-wide"), Is.True);
-		Assert.That(wideSheet.LayoutRect.Width, Is.GreaterThan(compact.Width + 40f));
-		Assert.That(scene.FindByElementId("sheet-frame")!.Style.ImageSlice.Left, Is.EqualTo(56f));
+		Assert.That(scene.FindByElementId("panel-three")!.HasClass("visible"), Is.True);
+		UiNode ribbon = scene.FindByElementId("ribbon-long-frame")!;
+		Assert.That(ribbon.Style.ImageSlice.Left, Is.EqualTo(110f));
+		Assert.That(ribbon.Style.ImageSlice.Top, Is.EqualTo(0f));
+		Assert.That(ribbon.Style.ImageSlice.Right, Is.EqualTo(110f));
+		Assert.That(ribbon.Style.ImageSlice.Bottom, Is.EqualTo(0f));
+		Assert.That(scene.FindByElementId("ribbon-long")!.LayoutRect.Width,
+			Is.GreaterThan(scene.FindByElementId("ribbon-short")!.LayoutRect.Width + 100f));
 
-		Assert.That(Click(scene, "size-tall"), Is.True);
+		Assert.That(Click(scene, "mode-two"), Is.True);
 		scene.Layout(1280f, 720f);
-		UiNode tallSheet = scene.FindByElementId("sheet")!;
-		Assert.That(tallSheet.HasClass("size-tall"), Is.True);
-		Assert.That(tallSheet.LayoutRect.Height, Is.GreaterThan(compact.Height + 20f));
-		Assert.That(scene.FindByElementId("sheet-name")!.LayoutRect.Bottom, Is.LessThanOrEqualTo(tallSheet.LayoutRect.Bottom));
+		Assert.That(scene.FindByElementId("panel-two")!.HasClass("visible"), Is.True);
+		Assert.That(scene.FindByElementId("strip-h")!.Style.BackgroundRepeats[0], Is.EqualTo(UiBackgroundRepeat.RepeatX));
+		Assert.That(scene.FindByElementId("strip-v")!.Style.BackgroundRepeats[0], Is.EqualTo(UiBackgroundRepeat.RepeatY));
+
+		Assert.That(Click(scene, "mode-four"), Is.True);
+		scene.Layout(1280f, 720f);
+		Assert.That(scene.FindByElementId("panel-four")!.HasClass("visible"), Is.True);
+		Assert.That(scene.FindByElementId("tile-floor")!.Style.BackgroundRepeats[0], Is.EqualTo(UiBackgroundRepeat.Repeat));
 	}
 
 	[Test]
-	public void Showcase_SizeChips_LabelTextIsCenteredInChip()
+	public void Showcase_ModeChips_LabelTextIsCenteredInChip()
 	{
 		UiScene scene = UiShowcaseFactory.CreateNineSlicePanelScene(
 			new ConstantTextMeasurer(),
 			new ConstantImageSizeProvider());
 		scene.Layout(1280f, 720f);
 
-		AssertChipLabelCentered(scene, "size-compact", "size-compact-label");
-		AssertChipLabelCentered(scene, "size-wide", "size-wide-label");
-		AssertChipLabelCentered(scene, "size-tall", "size-tall-label");
+		AssertChipLabelCentered(scene, "mode-nine", "mode-nine-label");
+		AssertChipLabelCentered(scene, "mode-three", "mode-three-label");
+		AssertChipLabelCentered(scene, "mode-two", "mode-two-label");
+		AssertChipLabelCentered(scene, "mode-four", "mode-four-label");
 	}
 
 	private static void AssertChipLabelCentered(UiScene scene, string chipId, string labelId)
