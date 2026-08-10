@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json;
 
 namespace Ludots.Core.Gameplay.Providers
 {
@@ -100,6 +101,22 @@ namespace Ludots.Core.Gameplay.Providers
 
         private static bool IsCompatible(ProviderParameterKind kind, object value)
         {
+            if (value is JsonElement json)
+            {
+                return kind switch
+                {
+                    ProviderParameterKind.String => json.ValueKind == JsonValueKind.String,
+                    ProviderParameterKind.Int => json.ValueKind == JsonValueKind.Number && json.TryGetInt64(out _),
+                    ProviderParameterKind.Float => json.ValueKind == JsonValueKind.Number,
+                    ProviderParameterKind.Bool => json.ValueKind is JsonValueKind.True or JsonValueKind.False,
+                    ProviderParameterKind.EntityRef =>
+                        json.ValueKind == JsonValueKind.String ||
+                        (json.ValueKind == JsonValueKind.Number && json.TryGetInt64(out _)),
+                    ProviderParameterKind.StringList => json.ValueKind == JsonValueKind.Array,
+                    _ => false,
+                };
+            }
+
             return kind switch
             {
                 ProviderParameterKind.String => value is string,

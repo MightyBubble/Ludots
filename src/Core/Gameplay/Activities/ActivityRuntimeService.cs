@@ -355,11 +355,12 @@ namespace Ludots.Core.Gameplay.Activities
             {
                 ActivityEffectRef effect = ordered[i];
                 IEffectHandler handler = _providers.Effects.MustGet(effect.EffectKey, out ProviderParameterSchema schema);
-                schema.Validate(effect.Parameters, $"activity.effect.{effect.EffectKey}");
+                Dictionary<string, object?> parameters = ProviderParameterValues.NormalizeMap(effect.Parameters);
+                schema.Validate(parameters, $"activity.effect.{effect.EffectKey}");
                 var call = new ProviderEffectCall(
                     effect.EffectKey,
                     effect.TargetReference,
-                    effect.Parameters,
+                    parameters,
                     effect.ExecutionOrder);
                 handler.Execute(in call, context);
             }
@@ -375,8 +376,9 @@ namespace Ludots.Core.Gameplay.Activities
             IConditionProvider provider = _providers.Conditions.MustGet(
                 condition.ConditionKey,
                 out ProviderParameterSchema schema);
-            schema.Validate(condition.Parameters, $"activity.condition.{condition.ConditionKey}");
-            return ConditionWriteGuard.EvaluateReadOnly(provider, context, condition.Parameters);
+            Dictionary<string, object?> parameters = ProviderParameterValues.NormalizeMap(condition.Parameters);
+            schema.Validate(parameters, $"activity.condition.{condition.ConditionKey}");
+            return ConditionWriteGuard.EvaluateReadOnly(provider, context, parameters);
         }
 
         private static int ScopeKey(Entity scopeHost) =>

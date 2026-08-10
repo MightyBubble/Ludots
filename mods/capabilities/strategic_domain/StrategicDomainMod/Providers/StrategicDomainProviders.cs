@@ -9,48 +9,20 @@ namespace StrategicDomainMod.Providers
 {
     internal static class StrategicDomainParameterReader
     {
-        public static int ReadInt(IReadOnlyDictionary<string, object?> parameters, string key)
-        {
-            if (!parameters.TryGetValue(key, out object? value) || value == null)
-            {
-                throw new InvalidOperationException($"Missing int parameter '{key}'.");
-            }
+        public static int ReadInt(IReadOnlyDictionary<string, object?> parameters, string key) =>
+            ProviderParameterValues.ReadInt(parameters, key);
 
-            return Convert.ToInt32(value);
-        }
-
-        public static float ReadFloat(IReadOnlyDictionary<string, object?> parameters, string key)
-        {
-            if (!parameters.TryGetValue(key, out object? value) || value == null)
-            {
-                throw new InvalidOperationException($"Missing float parameter '{key}'.");
-            }
-
-            return Convert.ToSingle(value);
-        }
+        public static float ReadFloat(IReadOnlyDictionary<string, object?> parameters, string key) =>
+            ProviderParameterValues.ReadFloat(parameters, key);
 
         public static bool ReadBool(
             IReadOnlyDictionary<string, object?> parameters,
             string key,
-            bool defaultValue)
-        {
-            if (!parameters.TryGetValue(key, out object? value) || value == null)
-            {
-                return defaultValue;
-            }
+            bool defaultValue) =>
+            ProviderParameterValues.ReadBool(parameters, key, defaultValue);
 
-            return Convert.ToBoolean(value);
-        }
-
-        public static string ReadString(IReadOnlyDictionary<string, object?> parameters, string key)
-        {
-            if (!parameters.TryGetValue(key, out object? value) || value is not string text || string.IsNullOrWhiteSpace(text))
-            {
-                throw new InvalidOperationException($"Missing string parameter '{key}'.");
-            }
-
-            return text;
-        }
+        public static string ReadString(IReadOnlyDictionary<string, object?> parameters, string key) =>
+            ProviderParameterValues.ReadString(parameters, key);
     }
 
     public sealed class SupplyNetworkChangedSource : ISourceProvider
