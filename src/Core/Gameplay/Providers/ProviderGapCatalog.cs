@@ -71,6 +71,18 @@ namespace Ludots.Core.Gameplay.Providers
             return _entries.TryGetValue(key, out entry!);
         }
 
+        public bool TryResolve(string key, out ProviderGapEntry resolved)
+        {
+            if (string.IsNullOrWhiteSpace(key) || !_entries.TryGetValue(key, out resolved!))
+            {
+                resolved = null!;
+                return false;
+            }
+
+            _entries.Remove(key);
+            return true;
+        }
+
         public void RegisterDefaultY5kProgramGaps()
         {
             RegisterGap(new ProviderGapEntry(

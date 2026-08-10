@@ -23,6 +23,7 @@ using Ludots.Core.Gameplay.Narrative;
 using Ludots.Core.Gameplay.Activities;
 using Ludots.Core.Gameplay.Providers;
 using Ludots.Core.Gameplay.Quests;
+using Ludots.Core.Gameplay.Tasks;
 using Arch.System;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Gameplay.GAS.Bindings;
@@ -1634,6 +1635,21 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.ActivityDefinitionRegistry, activityDefinitions);
             SetService(CoreServiceKeys.ActivityPresentationBuffer, activityPresentation);
             SetService(CoreServiceKeys.ActivityRuntimeService, activityRuntime);
+            var taskDefinitions = new TaskDefinitionRegistry();
+            new TaskConfigLoader(ConfigPipeline, taskDefinitions, providerServices.Validator)
+                .Load(ConfigCatalog, ConfigConflictReport);
+            var taskPresentation = new TaskPresentationBuffer();
+            var taskRuntime = new TaskRuntimeService(
+                World,
+                taskDefinitions,
+                providerServices,
+                taskPresentation);
+            TaskBridgeProviderInstaller.Install(providerServices, taskRuntime);
+            var taskQuestAdapter = new TaskQuestAdapter(taskRuntime);
+            SetService(CoreServiceKeys.TaskDefinitionRegistry, taskDefinitions);
+            SetService(CoreServiceKeys.TaskPresentationBuffer, taskPresentation);
+            SetService(CoreServiceKeys.TaskRuntimeService, taskRuntime);
+            SetService(CoreServiceKeys.TaskQuestAdapter, taskQuestAdapter);
             var narrativeDefinitions = new NarrativeDefinitionRegistry();
             new NarrativeConfigLoader(ConfigPipeline, narrativeDefinitions).Load(ConfigCatalog, ConfigConflictReport);
             var narrativeDirector = new NarrativeDirector(this, narrativeDefinitions, questRuntime);

@@ -18,6 +18,7 @@ using Ludots.Core.Gameplay.Narrative;
 using Ludots.Core.Gameplay.Activities;
 using Ludots.Core.Gameplay.Providers;
 using Ludots.Core.Gameplay.Quests;
+using Ludots.Core.Gameplay.Tasks;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Bindings;
 using Ludots.Core.Gameplay.GAS.Input;
@@ -172,6 +173,10 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<ActivityDefinitionRegistry> ActivityDefinitionRegistry = new("ActivityDefinitionRegistry");
         public static readonly ServiceKey<ActivityRuntimeService> ActivityRuntimeService = new("ActivityRuntimeService");
         public static readonly ServiceKey<ActivityPresentationBuffer> ActivityPresentationBuffer = new("ActivityPresentationBuffer");
+        public static readonly ServiceKey<TaskDefinitionRegistry> TaskDefinitionRegistry = new("TaskDefinitionRegistry");
+        public static readonly ServiceKey<TaskRuntimeService> TaskRuntimeService = new("TaskRuntimeService");
+        public static readonly ServiceKey<TaskPresentationBuffer> TaskPresentationBuffer = new("TaskPresentationBuffer");
+        public static readonly ServiceKey<TaskQuestAdapter> TaskQuestAdapter = new("TaskQuestAdapter");
         public static readonly ServiceKey<NarrativeDefinitionRegistry> NarrativeDefinitions = new("NarrativeDefinitions");
         public static readonly ServiceKey<NarrativeDirector> NarrativeDirector = new("NarrativeDirector");
 
