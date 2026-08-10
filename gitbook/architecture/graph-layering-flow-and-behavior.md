@@ -38,10 +38,12 @@ L0 GraphInstruction + handler table + Execute / ExecuteSlice
 
 跨图复用：`InvokeScript`（本切片只允许目标 Script **不含 Yield**）。
 
-### L2（合同，本切片不实现）
-- 行为树 Sequence/Selector、状态机 State/Transition、关卡触发器 **不**编进 `GraphNodeOp`
-- 叶子：动作 → Script（或技能模板）；条件 → Validation/Script；效用 → Score
-- 禁止再造第二套指令虚拟机，禁止把 L2 程序伪装成 `Effect` 登记
+### L2 HFSM 绑定合同
+- **转移上配条件**：`ConditionGraphId`（Script/Validation）+ 可选快速 builtin（如 Stimulus）
+- **状态节点上配动作**：`OnEnterGraphId` / `OnTickGraphId` / `OnExitGraphId`（Script）
+- **Func lib**：`GraphFunctionCatalog` 名字 → 已登记 L1 图 id（Script/Validation/Score）
+- **Macro**：不支持编译期文本宏；复用走 Func lib + `InvokeScript` / Script 内 `Call`
+- 拓扑仍不编进 `GraphNodeOp`；禁止平行 VM
 
 ## 4. 场景
 

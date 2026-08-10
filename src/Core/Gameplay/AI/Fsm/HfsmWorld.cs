@@ -4,6 +4,7 @@ namespace Ludots.Core.Gameplay.AI.Fsm
 {
     /// <summary>
     /// Dense SoA hierarchical FSM. Active configuration is a root→leaf stack per agent.
+    /// Transition conditions and state OnEnter/OnTick/OnExit are host-bound graph ids.
     /// </summary>
     public sealed class HfsmWorld
     {
@@ -27,11 +28,11 @@ namespace Ludots.Core.Gameplay.AI.Fsm
         public int Capacity { get; }
         public int Count => _count;
 
-        public int AddAgent()
+        public int AddAgent(IHfsmGraphHost? host = null)
         {
             if (_count >= Capacity) throw new InvalidOperationException("HfsmWorld at capacity.");
             int agent = _count++;
-            EnterDefaultPath(agent, _hfsm.RootIndex);
+            EnterDefaultPath(agent, _hfsm.RootIndex, host);
             _stimulus[agent] = 0;
             return agent;
         }
@@ -50,49 +51,76 @@ namespace Ludots.Core.Gameplay.AI.Fsm
             return _stack[agent * HfsmLimits.MaxStackDepth + d - 1];
         }
 
-        public HfsmThinkStats TickAll()
+        public HfsmThinkStats TickAll(IHfsmGraphHost? host = null)
         {
             int predicates = 0;
             int taken = 0;
+            int lifecycleRuns = 0;
             for (int agent = 0; agent < _count; agent++)
             {
-                if (TryTransition(agent, ref predicates))
+                if (TryTransition(agent, host, ref predicates))
                 {
                     taken++;
                 }
+
+                lifecycleRuns += RunTickCallbacks(agent, host);
             }
 
-            return new HfsmThinkStats(_count, predicates, taken);
+            return new HfsmThinkStats(_count, predicates, taken, lifecycleRuns);
         }
 
-        private bool TryTransition(int agent, ref int predicates)
+        private int RunTickCallbacks(int agent, IHfsmGraphHost? host)
         {
-            int leaf = GetLeafState(agent);
-            if (!TryPickTransition(agent, leaf, ref predicates, out HfsmTransition chosen))
+            if (host == null)
             {
-                // Also allow transitions authored on ancestors (outer HFSM edges).
-                int parent = _hfsm.States[leaf].ParentIndex;
-                while (parent >= 0)
-                {
-                    if (TryPickTransition(agent, parent, ref predicates, out chosen))
-                    {
-                        ApplyTransition(agent, chosen);
-                        return true;
-                    }
-
-                    parent = _hfsm.States[parent].ParentIndex;
-                }
-
-                return false;
+                return 0;
             }
 
-            ApplyTransition(agent, chosen);
-            return true;
+            int runs = 0;
+            int baseIndex = agent * HfsmLimits.MaxStackDepth;
+            int depth = _depth[agent];
+            for (int i = 0; i < depth; i++)
+            {
+                int stateIndex = _stack[baseIndex + i];
+                int tickGraph = _hfsm.States[stateIndex].OnTickGraphId;
+                if (tickGraph > 0)
+                {
+                    host.RunAction(agent, tickGraph);
+                    runs++;
+                }
+            }
+
+            return runs;
+        }
+
+        private bool TryTransition(int agent, IHfsmGraphHost? host, ref int predicates)
+        {
+            int leaf = GetLeafState(agent);
+            if (TryPickTransition(agent, leaf, host, ref predicates, out HfsmTransition chosen))
+            {
+                ApplyTransition(agent, chosen, host);
+                return true;
+            }
+
+            int parent = _hfsm.States[leaf].ParentIndex;
+            while (parent >= 0)
+            {
+                if (TryPickTransition(agent, parent, host, ref predicates, out chosen))
+                {
+                    ApplyTransition(agent, chosen, host);
+                    return true;
+                }
+
+                parent = _hfsm.States[parent].ParentIndex;
+            }
+
+            return false;
         }
 
         private bool TryPickTransition(
             int agent,
             int fromState,
+            IHfsmGraphHost? host,
             ref int predicates,
             out HfsmTransition chosen)
         {
@@ -103,9 +131,23 @@ namespace Ludots.Core.Gameplay.AI.Fsm
             {
                 predicates++;
                 HfsmTransition tr = span[i];
-                if (!Eval(agent, tr.Predicate))
+                if (!EvalBuiltin(agent, tr.Predicate))
                 {
                     continue;
+                }
+
+                if (tr.ConditionGraphId > 0)
+                {
+                    if (host == null)
+                    {
+                        throw new InvalidOperationException(
+                            $"HFSM transition {tr.FromState}->{tr.ToState} requires IHfsmGraphHost for ConditionGraphId={tr.ConditionGraphId}.");
+                    }
+
+                    if (!host.EvalCondition(agent, tr.ConditionGraphId))
+                    {
+                        continue;
+                    }
                 }
 
                 if (bestIndex < 0 || tr.Priority >= bestPriority)
@@ -125,7 +167,7 @@ namespace Ludots.Core.Gameplay.AI.Fsm
             return true;
         }
 
-        private void ApplyTransition(int agent, in HfsmTransition transition)
+        private void ApplyTransition(int agent, in HfsmTransition transition, IHfsmGraphHost? host)
         {
             if (transition.Predicate == HfsmTransitionPredicate.StimulusLatched)
             {
@@ -133,15 +175,15 @@ namespace Ludots.Core.Gameplay.AI.Fsm
             }
 
             int targetLeaf = _hfsm.ResolveDefaultLeaf(transition.ToState);
-            int lca = FindLca(GetLeafState(agent), targetLeaf);
-            ExitUpTo(agent, lca);
-            EnterDownFrom(agent, lca, targetLeaf);
+            int fromLeaf = GetLeafState(agent);
+            int lca = FindLca(fromLeaf, targetLeaf);
+            ExitUpTo(agent, lca, host);
+            EnterDownFrom(agent, lca, targetLeaf, host);
         }
 
-        private void EnterDefaultPath(int agent, int stateIndex)
+        private void EnterDefaultPath(int agent, int stateIndex, IHfsmGraphHost? host)
         {
             int leaf = _hfsm.ResolveDefaultLeaf(stateIndex);
-            // Build stack root→leaf
             Span<int> path = stackalloc int[HfsmLimits.MaxStackDepth];
             int n = 0;
             int cur = leaf;
@@ -156,28 +198,40 @@ namespace Ludots.Core.Gameplay.AI.Fsm
             }
 
             int baseIndex = agent * HfsmLimits.MaxStackDepth;
-            _depth[agent] = (byte)n;
-            for (int i = 0; i < n; i++)
+            _depth[agent] = 0;
+            for (int i = n - 1; i >= 0; i--)
             {
-                _stack[baseIndex + i] = path[n - 1 - i];
+                PushEnter(agent, path[i], host);
             }
         }
 
-        private void ExitUpTo(int agent, int lca)
+        private void ExitUpTo(int agent, int lca, IHfsmGraphHost? host)
         {
             int baseIndex = agent * HfsmLimits.MaxStackDepth;
             int depth = _depth[agent];
             while (depth > 0 && _stack[baseIndex + depth - 1] != lca)
             {
+                int exiting = _stack[baseIndex + depth - 1];
                 depth--;
+                _depth[agent] = (byte)depth;
+                int exitGraph = _hfsm.States[exiting].OnExitGraphId;
+                if (exitGraph > 0)
+                {
+                    if (host == null)
+                    {
+                        throw new InvalidOperationException(
+                            $"HFSM state[{exiting}] OnExitGraphId={exitGraph} requires IHfsmGraphHost.");
+                    }
+
+                    host.RunAction(agent, exitGraph);
+                }
             }
 
             _depth[agent] = (byte)depth;
         }
 
-        private void EnterDownFrom(int agent, int lca, int targetLeaf)
+        private void EnterDownFrom(int agent, int lca, int targetLeaf, IHfsmGraphHost? host)
         {
-            // path from targetLeaf up to but not including lca, then push reversed
             Span<int> path = stackalloc int[HfsmLimits.MaxStackDepth];
             int n = 0;
             int cur = targetLeaf;
@@ -187,20 +241,34 @@ namespace Ludots.Core.Gameplay.AI.Fsm
                 cur = _hfsm.States[cur].ParentIndex;
             }
 
-            int baseIndex = agent * HfsmLimits.MaxStackDepth;
-            int depth = _depth[agent];
             for (int i = n - 1; i >= 0; i--)
             {
-                if (depth >= HfsmLimits.MaxStackDepth)
-                {
-                    throw new InvalidOperationException("HFSM stack overflow on enter.");
-                }
+                PushEnter(agent, path[i], host);
+            }
+        }
 
-                _stack[baseIndex + depth] = path[i];
-                depth++;
+        private void PushEnter(int agent, int stateIndex, IHfsmGraphHost? host)
+        {
+            int baseIndex = agent * HfsmLimits.MaxStackDepth;
+            int depth = _depth[agent];
+            if (depth >= HfsmLimits.MaxStackDepth)
+            {
+                throw new InvalidOperationException("HFSM stack overflow on enter.");
             }
 
-            _depth[agent] = (byte)depth;
+            _stack[baseIndex + depth] = stateIndex;
+            _depth[agent] = (byte)(depth + 1);
+            int enterGraph = _hfsm.States[stateIndex].OnEnterGraphId;
+            if (enterGraph > 0)
+            {
+                if (host == null)
+                {
+                    throw new InvalidOperationException(
+                        $"HFSM state[{stateIndex}] OnEnterGraphId={enterGraph} requires IHfsmGraphHost.");
+                }
+
+                host.RunAction(agent, enterGraph);
+            }
         }
 
         private int FindLca(int a, int b)
@@ -228,7 +296,7 @@ namespace Ludots.Core.Gameplay.AI.Fsm
             return _hfsm.RootIndex;
         }
 
-        private bool Eval(int agent, HfsmTransitionPredicate predicate)
+        private bool EvalBuiltin(int agent, HfsmTransitionPredicate predicate)
             => predicate switch
             {
                 HfsmTransitionPredicate.Never => false,
@@ -240,15 +308,17 @@ namespace Ludots.Core.Gameplay.AI.Fsm
 
     public readonly struct HfsmThinkStats
     {
-        public HfsmThinkStats(int agents, int predicatesChecked, int transitionsTaken)
+        public HfsmThinkStats(int agents, int predicatesChecked, int transitionsTaken, int lifecycleRuns)
         {
             Agents = agents;
             PredicatesChecked = predicatesChecked;
             TransitionsTaken = transitionsTaken;
+            LifecycleRuns = lifecycleRuns;
         }
 
         public int Agents { get; }
         public int PredicatesChecked { get; }
         public int TransitionsTaken { get; }
+        public int LifecycleRuns { get; }
     }
 }
