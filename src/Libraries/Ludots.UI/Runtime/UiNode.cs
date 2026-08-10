@@ -424,6 +424,7 @@ public sealed class UiNode
 		QueueFloatTransition(uiTransitionSpec, "opacity", RenderStyle.Opacity, targetStyle.Opacity, ref renderStyle, list);
 		QueueFloatTransition(uiTransitionSpec, "filter", RenderStyle.FilterBlurRadius, targetStyle.FilterBlurRadius, ref renderStyle, list);
 		QueueFloatTransition(uiTransitionSpec, "backdrop-filter", RenderStyle.BackdropBlurRadius, targetStyle.BackdropBlurRadius, ref renderStyle, list);
+		QueueTransformTransition(uiTransitionSpec, RenderStyle.Transform ?? UiTransform.Identity, targetStyle.Transform ?? UiTransform.Identity, ref renderStyle, list);
 		_transitionChannels.Clear();
 		_transitionChannels.AddRange(list);
 	}
@@ -444,5 +445,19 @@ public sealed class UiNode
 			channels.Add(new UiTransitionChannelState(propertyName, entry.DurationSeconds, entry.DelaySeconds, entry.Easing, startValue, endValue));
 			renderStyle = UiTransitionMath.ApplyColor(renderStyle, propertyName, startValue);
 		}
+	}
+
+	private static void QueueTransformTransition(UiTransitionSpec transition, UiTransform startValue, UiTransform endValue, ref UiStyle renderStyle, ICollection<UiTransitionChannelState> channels)
+	{
+		if (startValue.Equals(endValue)
+			|| !UiTransitionMath.AreCompatible(startValue, endValue)
+			|| !transition.TryGet("transform", out UiTransitionEntry? entry)
+			|| entry == null
+			|| entry.DurationSeconds <= 0f)
+		{
+			return;
+		}
+		channels.Add(new UiTransitionChannelState("transform", entry.DurationSeconds, entry.DelaySeconds, entry.Easing, startValue, endValue));
+		renderStyle = UiTransitionMath.ApplyTransform(renderStyle, startValue);
 	}
 }

@@ -467,9 +467,11 @@
 @keyframes ink-breathe {
   0% {
     opacity: 0.42;
+    transform: translateY(6px) rotate(-8deg) scale(0.94);
   }
   100% {
     opacity: 1;
+    transform: translateY(-4px) rotate(8deg) scale(1.06);
   }
 }
 
@@ -477,9 +479,11 @@
   0% {
     border-color: #3a3a3a;
     opacity: 0.92;
+    transform: scale(0.985);
   }
   100% {
     border-color: #b33a2b;
     opacity: 1;
+    transform: scale(1.015);
   }
 }

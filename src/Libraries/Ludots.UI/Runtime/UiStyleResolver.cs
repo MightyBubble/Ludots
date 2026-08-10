@@ -1806,7 +1806,7 @@ public sealed class UiStyleResolver
 		return true;
 	}
 
-	private static bool TryParseTransform(string value, out UiTransform? transform)
+	internal static bool TryParseTransform(string value, out UiTransform? transform)
 	{
 		transform = null;
 		string text = value.Trim();

@@ -77,10 +77,26 @@ public sealed class UiNineSlicePanelTests
 		scene.Layout(1280f, 720f);
 
 		UiNode seal = scene.FindByElementId("sheet-seal")!;
-		float before = seal.RenderStyle.Opacity;
+		float opacityBefore = seal.RenderStyle.Opacity;
+		float angleBefore = ReadRotateDegrees(seal.RenderStyle.Transform);
 		Assert.That(scene.AdvanceTime(0.45f), Is.True, "ink breathe animation should dirty render style");
-		float after = seal.RenderStyle.Opacity;
-		Assert.That(Math.Abs(after - before), Is.GreaterThan(0.01f));
+		float opacityAfter = seal.RenderStyle.Opacity;
+		float angleAfter = ReadRotateDegrees(seal.RenderStyle.Transform);
+		Assert.That(Math.Abs(opacityAfter - opacityBefore), Is.GreaterThan(0.01f));
+		Assert.That(Math.Abs(angleAfter - angleBefore), Is.GreaterThan(1f));
+	}
+
+	private static float ReadRotateDegrees(UiTransform transform)
+	{
+		foreach (UiTransformOperation operation in transform.Operations)
+		{
+			if (operation.Kind == UiTransformOperationKind.Rotate)
+			{
+				return operation.AngleDegrees;
+			}
+		}
+		Assert.Fail("expected rotate transform on animated seal");
+		return 0f;
 	}
 
 	[Test]
