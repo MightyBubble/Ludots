@@ -250,11 +250,13 @@ public sealed class UiNode
 
 	private void RecalculateStickyOffsets(UiNode? scrollAncestor)
 	{
-		if (Style.PositionType == UiPositionType.Sticky && scrollAncestor != null)
+		if (Style.PositionType == UiPositionType.Sticky
+			&& scrollAncestor != null
+			&& Style.Top.Unit == UiLengthUnit.Pixel)
 		{
 			float contentOriginY = scrollAncestor.LayoutRect.Y + scrollAncestor.Style.BorderWidth + scrollAncestor.Style.Padding.Top;
 			float naturalLocalY = LayoutRect.Y - contentOriginY;
-			float topInset = Style.Top.Unit == UiLengthUnit.Pixel ? Style.Top.Value : 0f;
+			float topInset = Style.Top.Value;
 			float desired = scrollAncestor.ScrollOffsetY - naturalLocalY + topInset;
 			float maxUnstick = Math.Max(0f, scrollAncestor.ScrollContentHeight - naturalLocalY - LayoutRect.Height);
 			StickyOffsetX = 0f;

@@ -46,4 +46,37 @@ public sealed class UiStickyPositionTests
 		Assert.That(header.StickyOffsetY, Is.GreaterThan(0f));
 		Assert.That(scene.HitTest(scroller.LayoutRect.X + 10f, scroller.LayoutRect.Y + 10f)?.Id, Is.EqualTo(header.Id));
 	}
+
+	[Test]
+	public void StickyWithoutPixelTop_DoesNotStick()
+	{
+		const string html = """
+			<div id="scroller">
+			  <div id="header">Header</div>
+			  <div id="body">Body</div>
+			</div>
+			""";
+		const string css = """
+			#scroller { display: flex; flex-direction: column; overflow: scroll; width: 200px; height: 100px; }
+			#header { position: sticky; width: 200px; height: 30px; }
+			#body { width: 200px; height: 300px; }
+			""";
+
+		UiScene scene = new UiMarkupLoader().LoadScene(new SkiaTextMeasurer(), new SkiaImageSizeProvider(), html, css);
+		scene.Layout(300f, 200f);
+		UiNode scroller = scene.FindByElementId("scroller")!;
+		UiNode header = scene.FindByElementId("header")!;
+
+		scene.Dispatch(new UiPointerEvent(
+			UiPointerEventType.Scroll,
+			0,
+			scroller.LayoutRect.X + 10f,
+			scroller.LayoutRect.Y + 10f,
+			scroller.Id,
+			0f,
+			50f));
+
+		Assert.That(header.Style.PositionType, Is.EqualTo(UiPositionType.Sticky));
+		Assert.That(header.StickyOffsetY, Is.EqualTo(0f).Within(0.01f));
+	}
 }

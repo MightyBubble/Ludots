@@ -14,12 +14,12 @@
 
 | 能力 | 挂靠 |
 | --- | --- |
-| 九/三宫格 | `<img>` + `image-slice`（位图） |
+| 九/三宫格 | `<img>` + `image-slice`（位图或 SVG） |
 | 二方/四方连续 | `background-repeat` |
-| SVG | `data:image/svg+xml` → `UiImageSourceCache` / Svg.Skia |
+| SVG 装饰 / 切格 | `data:image/svg+xml` → `UiImageSourceCache` / Svg.Skia |
 | 动效 | CSS `@keyframes` + `UiScene.AdvanceTime`（opacity / border-color / transform） |
 
-注意：九宫格切边只走位图路径；矢量图做装饰与动效，不替代切格框。  
+注意：本页演示框体以位图切格为主；运行时也支持 SVG `image-slice`（无效切片不整图硬拉）。  
 完整 UI 能力清单见 `gitbook/reference/ui-native-capability-checklist.md`。
 
 ## 验收

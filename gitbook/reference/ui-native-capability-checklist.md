@@ -32,11 +32,11 @@
 | `vw` / `vh` / `vmin` / `vmax` | ✅ | 随布局视口解析 |
 | CSS Grid MVP | ✅ | 支持 `minmax()` 简单轨道与 dense auto-flow 子集 |
 | `position: relative` / `absolute` | ✅ | |
-| `position: sticky` | ✅ | 垂直滚动容器内 `top` 像素 inset |
+| `position: sticky` | ✅ | 仅垂直；必须写像素 `top`，否则不吸顶 |
 | 静态 `transform`（translate / rotate / scale） | ✅ | 绘制与命中同步；布局盒不因 transform 改变 |
 | Inline Formatting Context | ✅ | 与伪元素栈一并落地 |
-| `position: fixed` | ❌ | 无 viewport 脱离层；fail-closed 为相对定位 |
-| `float` | ❌ | 浏览器文本绕图能力；游戏 HUD 不需要 |
+| `position: fixed` | ❌ | 浏览器用来钉在视口（导航/弹层）；此处解析为 relative，不装假视口层 |
+| `float` | ❌ | 浏览器正文绕图；属性会被丢弃，不进布局 |
 
 ### 视觉与皮肤
 
@@ -79,7 +79,7 @@
 | 多语 / RTL / ellipsis / text-decoration | ✅ | Phase 3 |
 | `:hover` `:focus` `:nth-*` `:not` `:is` `:where` | ✅ | |
 | 表单校验表面 | ✅ | Compose / Reactive / Markup |
-| JS / 完整 CSSOM | ❌ | 不需要也不做 |
+| JS / 完整 CSSOM | ❌ | CSSOM 是浏览器给 JS 改样式的对象模型；本运行时用 C# 合同驱动，不做脚本样式 API |
 | `@media` | ❌ | 用视口单位 + 布局自适应代替 |
 
 ## 4. 场景

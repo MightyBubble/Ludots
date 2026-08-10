@@ -107,6 +107,31 @@ public sealed class UiNineSlicePanelTests
 		Assert.DoesNotThrow(() => new SkiaUiRenderer().RenderToCanvas(scene, surface.Canvas, 200f, 120f));
 	}
 
+	[Test]
+	public void SvgImageSlice_InvalidSlice_DoesNotFullStretch()
+	{
+		const string svg = "data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='32'%20height='32'%20viewBox='0%200%2032%2032'%3E%3Crect%20width='32'%20height='32'%20fill='%23f4e2aa'/%3E%3C/svg%3E";
+		const string html = "<img id=\"frame\" src=\"" + svg + "\" />";
+		const string css = "#frame { image-slice: 20px; width: 96px; height: 64px; }";
+
+		UiScene scene = new UiMarkupLoader().LoadScene(new SkiaTextMeasurer(), new SkiaImageSizeProvider(), html, css);
+		scene.Layout(200f, 120f);
+		UiNode frame = scene.FindByElementId("frame")!;
+		Assert.That(frame.Style.ImageSlice.Left, Is.EqualTo(20f), "invalid slice values are still parsed onto style");
+
+		using SKSurface surface = SKSurface.Create(new SKImageInfo(200, 120));
+		surface.Canvas.Clear(new SKColor(0, 0, 255));
+		new SkiaUiRenderer().RenderToCanvas(scene, surface.Canvas, 200f, 120f);
+		using SKImage snapshot = surface.Snapshot();
+		using SKBitmap bitmap = SKBitmap.FromImage(snapshot);
+		int sampleX = (int)(frame.LayoutRect.X + frame.LayoutRect.Width * 0.5f);
+		int sampleY = (int)(frame.LayoutRect.Y + frame.LayoutRect.Height * 0.5f);
+		SKColor center = bitmap.GetPixel(sampleX, sampleY);
+		Assert.That(center.Blue, Is.EqualTo((byte)255), "oversized slice must fail-closed and not stretch-fill the frame");
+		Assert.That(center.Red, Is.EqualTo((byte)0));
+		Assert.That(center.Green, Is.EqualTo((byte)0));
+	}
+
 	private static float ReadRotateDegrees(UiTransform transform)
 	{
 		foreach (UiTransformOperation operation in transform.Operations)

@@ -174,7 +174,7 @@ public sealed class UiPseudoElementTests
 		Assert.That(before.TagName, Is.EqualTo("img"));
 		Assert.That(before.PseudoElement, Is.EqualTo(UiPseudoElement.Before));
 		Assert.That(before.Attributes["src"], Is.EqualTo(icon));
-		Assert.That(scene.QuerySelector(".icon::after"), Is.Not.Null, "sibling string content still synthesizes, proving url ignore is explicit not a total pseudo failure");
+		Assert.That(scene.QuerySelector(".icon::after"), Is.Not.Null, "sibling string content still synthesizes alongside url() image before");
 		Assert.That(host.Style.Color.R, Is.EqualTo((byte)0), "url() before rule color must not leak onto the host");
 		Assert.That(host.Style.Color.G, Is.EqualTo((byte)128));
 	}
