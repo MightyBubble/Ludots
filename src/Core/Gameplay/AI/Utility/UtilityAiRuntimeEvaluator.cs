@@ -1,7 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Components;
+using Ludots.Core.Fields.Influence;
 using Ludots.Core.Gameplay.AI.Components;
 using Ludots.Core.Gameplay.AI.Planning;
 using Ludots.Core.Gameplay.Components;
@@ -23,6 +25,8 @@ namespace Ludots.Core.Gameplay.AI.Utility
         private readonly ISpatialQueryService _spatialQueries;
         private readonly GraphProgramRegistry? _graphs;
         private readonly IGraphRuntimeApi? _graphApi;
+        private readonly InfluenceFieldRegistry? _influenceFields;
+        private readonly IReadOnlyList<string>? _influenceFieldKeys;
         private readonly Entity[] _targets;
 
         public UtilityAiRuntimeEvaluator(
@@ -30,12 +34,16 @@ namespace Ludots.Core.Gameplay.AI.Utility
             ISpatialQueryService spatialQueries,
             GraphProgramRegistry? graphs,
             IGraphRuntimeApi? graphApi,
+            InfluenceFieldRegistry? influenceFields = null,
+            IReadOnlyList<string>? influenceFieldKeys = null,
             int targetCapacity = 256)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _spatialQueries = spatialQueries ?? throw new ArgumentNullException(nameof(spatialQueries));
             _graphs = graphs;
             _graphApi = graphApi;
+            _influenceFields = influenceFields;
+            _influenceFieldKeys = influenceFieldKeys;
             _targets = new Entity[targetCapacity < 16 ? 16 : targetCapacity];
         }
 
@@ -659,9 +667,38 @@ namespace Ludots.Core.Gameplay.AI.Utility
                     return true;
                 case UtilityAiInputKind.GraphScore:
                     return TryExecuteScoreGraph(actor, target, input.GraphId, ref scoreBudget, out value);
+                case UtilityAiInputKind.InfluenceSample01:
+                    value = SampleInfluenceAtTarget(target, input.Arg0);
+                    return true;
                 default:
                     return true;
             }
+        }
+
+        private float SampleInfluenceAtTarget(Entity target, int fieldKeyIndex)
+        {
+            if (_influenceFields == null || _influenceFieldKeys == null)
+            {
+                return 0f; // influence system not wired
+            }
+
+            if ((uint)fieldKeyIndex >= (uint)_influenceFieldKeys.Count)
+            {
+                return 0f;
+            }
+
+            string fieldKey = _influenceFieldKeys[fieldKeyIndex];
+            if (!_influenceFields.TryGet(fieldKey, out var field))
+            {
+                return 0f;
+            }
+
+            if (!_world.TryGet(target, out WorldPositionCm pos))
+            {
+                return 0f;
+            }
+
+            return field.Sample(pos.ToWorldCmInt2());
         }
 
         private bool CanSwitchToDecision(
