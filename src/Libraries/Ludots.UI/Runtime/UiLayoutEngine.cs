@@ -86,6 +86,7 @@ public sealed class UiLayoutEngine
 		NormalizeTableLayouts(root);
 		UiGridLayoutEngine.LayoutSubtree(root, this, _scratch);
 		UiInlineFlowEngine.LayoutSubtree(root, _textMeasurer, _imageSizeProvider, _scratch);
+		root.RecalculateStickyOffsetsForSubtree();
 		_flexPool.ReleaseAll();
 	}
 

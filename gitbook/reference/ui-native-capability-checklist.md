@@ -30,13 +30,13 @@
 | `width` / `height` px / % / auto | ✅ | |
 | `calc()` | ✅ | 长度表达式 |
 | `vw` / `vh` / `vmin` / `vmax` | ✅ | 随布局视口解析 |
-| CSS Grid MVP | ✅ | 见伪元素/Grid PR 边界；非完整 auto-placement |
+| CSS Grid MVP | ✅ | 支持 `minmax()` 简单轨道与 dense auto-flow 子集 |
 | `position: relative` / `absolute` | ✅ | |
+| `position: sticky` | ✅ | 垂直滚动容器内 `top` 像素 inset |
 | 静态 `transform`（translate / rotate / scale） | ✅ | 绘制与命中同步；布局盒不因 transform 改变 |
 | Inline Formatting Context | ✅ | 与伪元素栈一并落地 |
-| `position: fixed` / `sticky` | ❌ | |
-| `float` | ❌ | |
-| `minmax()` 等完整 Grid 高级语法 | ❌ | fail-closed |
+| `position: fixed` | ❌ | 无 viewport 脱离层；fail-closed 为相对定位 |
+| `float` | ❌ | 浏览器文本绕图能力；游戏 HUD 不需要 |
 
 ### 视觉与皮肤
 
@@ -46,7 +46,7 @@
 | 多背景 / 多阴影 / dashed border | ✅ | Phase 2 |
 | `mask-image` / `clip-path`（子集） | ✅ | Phase 2 |
 | `filter: blur` / `backdrop-filter` | ✅ | 可动画 |
-| `::before` / `::after` + `content` 文本 | ✅ | `content:url(...)` 忽略（fail-closed） |
+| `::before` / `::after` + `content` 文本 / `url(...)` | ✅ | `url(...)` 生成伪元素 `<img>` |
 | 主题皮肤包（Classic / Paper / SciFi） | ✅ | Skin Showcase |
 
 ### 图与切铺
@@ -55,9 +55,9 @@
 | --- | --- | --- |
 | `<img>` 位图 | ✅ | |
 | SVG（`<img>` / data URI / 内联导入） | ✅ | Svg.Skia 静态绘制 |
-| `image-slice` 九宫格 / 三宫格 | ◐ | **仅位图**；SVG 不可作切格框 |
+| `image-slice` 九宫格 / 三宫格 | ✅ | 位图与 SVG 均支持；无效切片 fail-closed |
 | `background-repeat` 二方 / 四方连续 | ✅ | `repeat` / `repeat-x` / `repeat-y` |
-| 矢量九宫格框 | ❌ | 装饰用 SVG，切边仍走位图 |
+| 矢量九宫格框 | ✅ | SVG 可直接作为切格框 |
 | `border-image-*` 全套 | ❌ | 目前只有 slice 别名路径 |
 
 ### 动效
@@ -94,7 +94,7 @@
 
 - 无效或不受支持的 `transform` 函数（如 `matrix`）出现在关键帧里：**整条 transform 轨道不建立**。
 - 关键帧之间 transform 操作列表不兼容：**不插值**。
-- Grid / 伪元素是 MVP：高级语法 fail-closed，不静默降级成 Flex。
+- Grid / 伪元素是 MVP：未声明支持的高级语法 fail-closed，不静默降级成 Flex。
 - Showcase 文案与本清单冲突时，以本清单与验收测试为准。
 
 ## 6. UAT

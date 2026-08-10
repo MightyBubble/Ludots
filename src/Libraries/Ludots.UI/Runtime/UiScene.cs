@@ -314,11 +314,19 @@ public sealed class UiScene
 
 	private UiNode? TryBuildPseudoElementNode(UiElement element, UiPseudoElement pseudoElement, IReadOnlyList<UiStyleSheet> styleSheets)
 	{
-		if (!UiStyleResolver.TryResolveGeneratedContent(element, pseudoElement, styleSheets, out string text))
+		if (!UiStyleResolver.TryResolveGeneratedContent(element, pseudoElement, styleSheets, out UiGeneratedContent content))
 		{
 			return null;
 		}
-		return new UiNode(new UiNodeId(_nextNodeId++), UiNodeKind.Text, null, text, null, null, "span", null, null, null, null, null, pseudoElement);
+		if (content.Kind == UiGeneratedContentKind.Url)
+		{
+			UiAttributeBag attributes = new UiAttributeBag();
+			attributes["src"] = content.Value;
+			return new UiNode(new UiNodeId(_nextNodeId++), UiNodeKind.Image, null, null, null, null, "img", null, null, attributes, null, null, pseudoElement);
+		}
+		return content.Kind == UiGeneratedContentKind.Text
+			? new UiNode(new UiNodeId(_nextNodeId++), UiNodeKind.Text, null, content.Value, null, null, "span", null, null, null, null, null, pseudoElement)
+			: null;
 	}
 
 	internal int GetNextReactiveNodeIdSeed()
@@ -1249,6 +1257,10 @@ public sealed class UiScene
 		Matrix3x2 current = renderStyle.Transform.HasOperations
 			? accumulatedTransform * UiTransformMath.CreateMatrix(renderStyle, node.LayoutRect)
 			: accumulatedTransform;
+		if (Math.Abs(node.StickyOffsetX) > 0.01f || Math.Abs(node.StickyOffsetY) > 0.01f)
+		{
+			current *= Matrix3x2.CreateTranslation(node.StickyOffsetX, node.StickyOffsetY);
+		}
 		if (!Matrix3x2.Invert(current, out var inverse))
 		{
 			return null;

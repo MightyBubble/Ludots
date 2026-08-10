@@ -105,8 +105,8 @@ internal sealed class MarkupShowcaseCodeBehind
 
 	private IEnumerable<string> ScanPrototypeDiagnostics()
 	{
-		yield return "Unsupported: position:fixed / sticky";
-		yield return "Unsupported: float / minmax() / content:url()";
+		yield return "Unsupported: position:fixed";
+		yield return "Unsupported: float";
 		yield return "Unsupported: JS / full CSSOM / @media";
 	}
 

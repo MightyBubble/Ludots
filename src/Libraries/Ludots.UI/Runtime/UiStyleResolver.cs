@@ -37,10 +37,10 @@ public sealed class UiStyleResolver
 		}
 	}
 
-	internal static bool TryResolveGeneratedContent(UiElement host, UiPseudoElement pseudoElement, IReadOnlyList<UiStyleSheet> styleSheets, out string text)
+	internal static bool TryResolveGeneratedContent(UiElement host, UiPseudoElement pseudoElement, IReadOnlyList<UiStyleSheet> styleSheets, out UiGeneratedContent content)
 	{
 		ArgumentNullException.ThrowIfNull(host, "host");
-		text = string.Empty;
+		content = UiGeneratedContent.None;
 		if (pseudoElement != UiPseudoElement.Before && pseudoElement != UiPseudoElement.After)
 		{
 			return false;
@@ -78,12 +78,12 @@ public sealed class UiStyleResolver
 			return bySpecificity != 0 ? bySpecificity : left.Order.CompareTo(right.Order);
 		});
 		string winning = matches[^1].Value;
-		return TryEvaluateContent(winning, host, out text);
+		return TryEvaluateContent(winning, host, out content);
 	}
 
-	internal static bool TryEvaluateContent(string rawValue, UiElement host, out string text)
+	internal static bool TryEvaluateContent(string rawValue, UiElement host, out UiGeneratedContent content)
 	{
-		text = string.Empty;
+		content = UiGeneratedContent.None;
 		if (string.IsNullOrWhiteSpace(rawValue))
 		{
 			return false;
@@ -96,7 +96,12 @@ public sealed class UiStyleResolver
 		}
 		if (value.StartsWith("url(", StringComparison.OrdinalIgnoreCase))
 		{
-			return false;
+			if (!TryParseCssUrl(value, out string? imageSource) || string.IsNullOrWhiteSpace(imageSource))
+			{
+				return false;
+			}
+			content = UiGeneratedContent.Url(imageSource);
+			return true;
 		}
 		if (value.StartsWith("attr(", StringComparison.OrdinalIgnoreCase) && value.EndsWith(')'))
 		{
@@ -105,12 +110,12 @@ public sealed class UiStyleResolver
 			{
 				return false;
 			}
-			text = host.Attributes[attributeName] ?? string.Empty;
+			content = UiGeneratedContent.Text(host.Attributes[attributeName] ?? string.Empty);
 			return true;
 		}
 		if ((value.StartsWith('"') && value.EndsWith('"')) || (value.StartsWith('\'') && value.EndsWith('\'')))
 		{
-			text = UnescapeContentString(value.Substring(1, value.Length - 2));
+			content = UiGeneratedContent.Text(UnescapeContentString(value.Substring(1, value.Length - 2)));
 			return true;
 		}
 		return false;
@@ -1186,11 +1191,15 @@ public sealed class UiStyleResolver
 	private static UiGridAutoFlow ParseGridAutoFlow(string value)
 	{
 		string text = value.Trim().ToLowerInvariant();
-		if (text.Contains("column", StringComparison.Ordinal))
+		List<string> tokens = SplitWhitespacePreservingFunctions(text);
+		bool hasColumn = tokens.Contains("column", StringComparer.Ordinal);
+		bool hasRow = tokens.Contains("row", StringComparer.Ordinal);
+		bool hasDense = tokens.Contains("dense", StringComparer.Ordinal);
+		if (hasColumn && !hasRow)
 		{
-			return UiGridAutoFlow.Column;
+			return hasDense ? UiGridAutoFlow.ColumnDense : UiGridAutoFlow.Column;
 		}
-		return UiGridAutoFlow.Row;
+		return hasDense ? UiGridAutoFlow.RowDense : UiGridAutoFlow.Row;
 	}
 
 	public static bool TryParseGridTemplate(string value, out IReadOnlyList<UiGridTrack> tracks)
@@ -1199,10 +1208,6 @@ public sealed class UiStyleResolver
 		if (string.IsNullOrWhiteSpace(value) || value.Equals("none", StringComparison.OrdinalIgnoreCase))
 		{
 			return true;
-		}
-		if (value.Contains("minmax(", StringComparison.OrdinalIgnoreCase))
-		{
-			return false;
 		}
 		List<UiGridTrack> list = new List<UiGridTrack>();
 		List<string> tokens = ExpandGridTemplateTokens(value);
@@ -1247,7 +1252,7 @@ public sealed class UiStyleResolver
 			return false;
 		}
 		string inner = token.Substring(open + 1, token.Length - open - 2).Trim();
-		int comma = inner.IndexOf(',');
+		int comma = FindTopLevelComma(inner);
 		if (comma < 0)
 		{
 			return false;
@@ -1257,10 +1262,6 @@ public sealed class UiStyleResolver
 			return false;
 		}
 		string trackList = inner.Substring(comma + 1).Trim();
-		if (trackList.Contains("minmax(", StringComparison.OrdinalIgnoreCase))
-		{
-			return false;
-		}
 		List<string> parts = SplitWhitespacePreservingFunctions(trackList);
 		for (int i = 0; i < count; i++)
 		{
@@ -1270,6 +1271,28 @@ public sealed class UiStyleResolver
 	}
 
 	private static bool TryParseGridTrack(string token, out UiGridTrack track)
+	{
+		track = UiGridTrack.Auto;
+		string text = token.Trim();
+		if (text.StartsWith("minmax(", StringComparison.OrdinalIgnoreCase) && text.EndsWith(')'))
+		{
+			int length = "minmax(".Length;
+			string inner = text.Substring(length, text.Length - 1 - length);
+			List<string> parts = SplitTopLevel(inner, ',');
+			if (parts.Count != 2 ||
+				!TryParseSimpleGridTrack(parts[0], out UiGridTrack min) ||
+				!TryParseSimpleGridTrack(parts[1], out UiGridTrack max) ||
+				min.MaxSizing == UiGridTrackSizing.Fr)
+			{
+				return false;
+			}
+			track = UiGridTrack.MinMax(min, max);
+			return true;
+		}
+		return TryParseSimpleGridTrack(text, out track);
+	}
+
+	private static bool TryParseSimpleGridTrack(string token, out UiGridTrack track)
 	{
 		track = UiGridTrack.Auto;
 		string text = token.Trim();
@@ -1498,14 +1521,15 @@ public sealed class UiStyleResolver
 	private static UiPositionType ParsePositionType(string value)
 	{
 		string text = value.ToLowerInvariant();
-		if (1 == 0)
+		if (text == "absolute")
 		{
+			return UiPositionType.Absolute;
 		}
-		UiPositionType result = ((text == "absolute") ? UiPositionType.Absolute : UiPositionType.Relative);
-		if (1 == 0)
+		if (text == "sticky")
 		{
+			return UiPositionType.Sticky;
 		}
-		return result;
+		return UiPositionType.Relative;
 	}
 
 	private static UiOverflow ParseOverflow(string value)
@@ -1895,7 +1919,7 @@ public sealed class UiStyleResolver
 		List<UiBackgroundLayer> list = new List<UiBackgroundLayer>();
 		foreach (string item in SplitTopLevel(value, ','))
 		{
-			if (TryParseBackgroundImageSource(item, out string imageSource) && imageSource != null)
+			if (TryParseCssUrl(item, out string imageSource) && imageSource != null)
 			{
 				list.Add(UiBackgroundLayer.FromImage(imageSource));
 				continue;
@@ -1917,7 +1941,7 @@ public sealed class UiStyleResolver
 		return list.Count > 0;
 	}
 
-	private static bool TryParseBackgroundImageSource(string value, out string? imageSource)
+	internal static bool TryParseCssUrl(string value, out string? imageSource)
 	{
 		imageSource = null;
 		string text = value.Trim();

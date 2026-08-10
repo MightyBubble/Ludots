@@ -58,6 +58,22 @@ public static class UiGridLayoutEngine
 		List<UiGridTrack> expandedColumns = ExpandTracks(columnTracks, columnCount, scratch.BeginColumnTracks());
 		Span<float> columnSizes = scratch.BeginColumnSizes(columnCount);
 		ResolveTracks(expandedColumns, contentWidth, columnGap, columnSizes);
+		for (int c = 0; c < columnCount; c++)
+		{
+			if (IsContentSizedTrack(expandedColumns[c], contentWidth))
+			{
+				float maxContent = 0f;
+				for (int i = 0; i < placements.Count; i++)
+				{
+					UiGridPlacementSlot placement = placements[i];
+					if (placement.ColumnStart <= c + 1 && placement.ColumnStart + placement.ColumnSpan - 1 >= c + 1)
+					{
+						maxContent = Math.Max(maxContent, EstimateContentWidth(placement.Node));
+					}
+				}
+				columnSizes[c] = Math.Max(columnSizes[c], maxContent);
+			}
+		}
 
 		List<UiGridTrack> expandedRows = ExpandTracks(style.GridTemplateRows, rowCount, scratch.BeginRowTracks());
 		Span<float> rowSizes = scratch.BeginRowSizes(rowCount);
@@ -65,8 +81,7 @@ public static class UiGridLayoutEngine
 
 		for (int r = 0; r < rowCount; r++)
 		{
-			if (expandedRows[r].Sizing == UiGridTrackSizing.Auto ||
-				(expandedRows[r].Sizing == UiGridTrackSizing.Fr && contentHeight <= 0.01f))
+			if (IsContentSizedTrack(expandedRows[r], contentHeight))
 			{
 				float maxContent = 0f;
 				for (int i = 0; i < placements.Count; i++)
@@ -116,6 +131,8 @@ public static class UiGridLayoutEngine
 		HashSet<long> occupied = scratch.BeginOccupied();
 		int cursorRow = 1;
 		int cursorColumn = 1;
+		bool columnFlow = autoFlow is UiGridAutoFlow.Column or UiGridAutoFlow.ColumnDense;
+		bool dense = autoFlow is UiGridAutoFlow.RowDense or UiGridAutoFlow.ColumnDense;
 
 		for (int i = 0; i < items.Count; i++)
 		{
@@ -124,6 +141,7 @@ public static class UiGridLayoutEngine
 			UiGridPlacement row = item.Style.GridRow;
 			int columnSpan = column.Span;
 			int rowSpan = row.Span;
+			columns = Math.Max(columns, columnSpan);
 			int columnStart;
 			int rowStart;
 
@@ -131,20 +149,32 @@ public static class UiGridLayoutEngine
 			{
 				columnStart = column.Start;
 				rowStart = row.Start;
+				if (!IsFree(occupied, columnStart, rowStart, columnSpan, rowSpan))
+				{
+					(columnStart, rowStart) = FindNextAutoCell(occupied, dense ? 1 : cursorRow, dense ? 1 : cursorColumn, columnSpan, rowSpan, columns, autoFlow);
+				}
 			}
 			else if (!column.IsAuto)
 			{
 				columnStart = column.Start;
 				rowStart = FindNextFree(occupied, cursorRow, columnStart, columnSpan, rowSpan, columns, preferColumn: false);
+				if (rowStart < 1)
+				{
+					(columnStart, rowStart) = FindNextAutoCell(occupied, dense ? 1 : cursorRow, dense ? 1 : cursorColumn, columnSpan, rowSpan, columns, autoFlow);
+				}
 			}
 			else if (!row.IsAuto)
 			{
 				rowStart = row.Start;
 				columnStart = FindNextFree(occupied, rowStart, cursorColumn, columnSpan, rowSpan, columns, preferColumn: true);
+				if (columnStart < 1)
+				{
+					(columnStart, rowStart) = FindNextAutoCell(occupied, dense ? 1 : cursorRow, dense ? 1 : cursorColumn, columnSpan, rowSpan, columns, autoFlow);
+				}
 			}
 			else
 			{
-				(columnStart, rowStart) = FindNextAutoCell(occupied, cursorRow, cursorColumn, columnSpan, rowSpan, columns, autoFlow);
+				(columnStart, rowStart) = FindNextAutoCell(occupied, dense ? 1 : cursorRow, dense ? 1 : cursorColumn, columnSpan, rowSpan, columns, autoFlow);
 			}
 
 			MarkOccupied(occupied, columnStart, rowStart, columnSpan, rowSpan);
@@ -156,7 +186,7 @@ public static class UiGridLayoutEngine
 				RowStart = rowStart,
 				RowSpan = rowSpan
 			});
-			if (autoFlow == UiGridAutoFlow.Column)
+			if (columnFlow)
 			{
 				cursorColumn = columnStart;
 				cursorRow = rowStart + rowSpan;
@@ -180,20 +210,16 @@ public static class UiGridLayoutEngine
 	{
 		int row = Math.Max(1, startRow);
 		int column = Math.Max(1, startColumn);
-		for (int guard = 0; guard < 10000; guard++)
+		bool columnFlow = autoFlow is UiGridAutoFlow.Column or UiGridAutoFlow.ColumnDense;
+		for (int guard = 0; guard < 100000; guard++)
 		{
 			if (column + columnSpan - 1 <= columns && IsFree(occupied, column, row, columnSpan, rowSpan))
 			{
 				return (column, row);
 			}
-			if (autoFlow == UiGridAutoFlow.Column)
+			if (columnFlow)
 			{
 				row++;
-				if (row > 256)
-				{
-					row = 1;
-					column++;
-				}
 			}
 			else
 			{
@@ -205,7 +231,7 @@ public static class UiGridLayoutEngine
 				}
 			}
 		}
-		return (1, 1);
+		throw new InvalidOperationException("Unable to find a non-overlapping grid placement.");
 	}
 
 	private static int FindNextFree(HashSet<long> occupied, int fixedAxis, int startOther, int columnSpan, int rowSpan, int columns, bool preferColumn)
@@ -219,7 +245,7 @@ public static class UiGridLayoutEngine
 					return column;
 				}
 			}
-			return 1;
+			return -1;
 		}
 		for (int row = Math.Max(1, fixedAxis); row < 10000; row++)
 		{
@@ -228,7 +254,7 @@ public static class UiGridLayoutEngine
 				return row;
 			}
 		}
-		return 1;
+		return -1;
 	}
 
 	private static bool IsFree(HashSet<long> occupied, int columnStart, int rowStart, int columnSpan, int rowSpan)
@@ -292,26 +318,34 @@ public static class UiGridLayoutEngine
 			return;
 		}
 		float gapTotal = gap * Math.Max(0, tracks.Count - 1);
-		float remaining = Math.Max(0f, available - gapTotal);
+		float availableWithoutGaps = Math.Max(0f, available - gapTotal);
+		float remaining = availableWithoutGaps;
 		float frTotal = 0f;
 		for (int i = 0; i < tracks.Count; i++)
 		{
 			UiGridTrack track = tracks[i];
-			switch (track.Sizing)
+			float min = ResolveTrackBase(track.MinSizing, track.MinValue, available);
+			sizes[i] = min;
+			remaining -= min;
+		}
+		for (int i = 0; i < tracks.Count; i++)
+		{
+			UiGridTrack track = tracks[i];
+			switch (track.MaxSizing)
 			{
 			case UiGridTrackSizing.Pixel:
-				sizes[i] = Math.Max(0f, track.Value);
-				remaining -= sizes[i];
-				break;
 			case UiGridTrackSizing.Percent:
-				sizes[i] = Math.Max(0f, available * (track.Value / 100f));
-				remaining -= sizes[i];
+			{
+				float max = ResolveTrackBase(track.MaxSizing, track.MaxValue, available);
+				if (max > sizes[i])
+				{
+					remaining -= max - sizes[i];
+					sizes[i] = max;
+				}
 				break;
+			}
 			case UiGridTrackSizing.Fr:
-				frTotal += Math.Max(0f, track.Value);
-				break;
-			default:
-				sizes[i] = 0f;
+				frTotal += Math.Max(0f, track.MaxValue);
 				break;
 			}
 		}
@@ -320,12 +354,22 @@ public static class UiGridLayoutEngine
 		{
 			for (int i = 0; i < tracks.Count; i++)
 			{
-				if (tracks[i].Sizing == UiGridTrackSizing.Fr)
+				if (tracks[i].MaxSizing == UiGridTrackSizing.Fr)
 				{
-					sizes[i] = remaining * (tracks[i].Value / frTotal);
+					sizes[i] += remaining * (tracks[i].MaxValue / frTotal);
 				}
 			}
 		}
+	}
+
+	private static float ResolveTrackBase(UiGridTrackSizing sizing, float value, float available)
+	{
+		return sizing switch
+		{
+			UiGridTrackSizing.Pixel => Math.Max(0f, value),
+			UiGridTrackSizing.Percent => Math.Max(0f, available * (value / 100f)),
+			_ => 0f,
+		};
 	}
 
 	private static void BuildOffsets(ReadOnlySpan<float> sizes, float gap, Span<float> offsets)
@@ -355,6 +399,25 @@ public static class UiGridLayoutEngine
 			}
 		}
 		return total;
+	}
+
+	private static bool IsContentSizedTrack(UiGridTrack track, float available)
+	{
+		return track.MaxSizing == UiGridTrackSizing.Auto ||
+			(track.MaxSizing == UiGridTrackSizing.Fr && available <= 0.01f);
+	}
+
+	private static float EstimateContentWidth(UiNode node)
+	{
+		if (!string.IsNullOrWhiteSpace(node.TextContent))
+		{
+			return Math.Max(node.TextContent.Length * node.Style.FontSize * 0.5f, node.LayoutRect.Width);
+		}
+		if (node.Style.Width.Unit == UiLengthUnit.Pixel)
+		{
+			return node.Style.Width.Value;
+		}
+		return Math.Max(0f, node.LayoutRect.Width);
 	}
 
 	private static float EstimateContentHeight(UiNode node)

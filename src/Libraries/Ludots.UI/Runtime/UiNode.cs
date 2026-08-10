@@ -49,6 +49,10 @@ public sealed class UiNode
 
 	public float ScrollOffsetY { get; private set; }
 
+	public float StickyOffsetX { get; private set; }
+
+	public float StickyOffsetY { get; private set; }
+
 	public float ScrollContentWidth { get; private set; }
 
 	public float ScrollContentHeight { get; private set; }
@@ -222,12 +226,51 @@ public sealed class UiNode
 		}
 		ScrollOffsetX = num;
 		ScrollOffsetY = num2;
+		RecalculateStickyOffsetsForDescendants();
 		return true;
 	}
 
 	internal bool ScrollBy(float deltaX, float deltaY)
 	{
 		return SetScrollOffset(ScrollOffsetX + deltaX, ScrollOffsetY + deltaY);
+	}
+
+	internal void RecalculateStickyOffsetsForSubtree()
+	{
+		RecalculateStickyOffsets(null);
+	}
+
+	private void RecalculateStickyOffsetsForDescendants()
+	{
+		for (int i = 0; i < _children.Length; i++)
+		{
+			_children[i].RecalculateStickyOffsets(this);
+		}
+	}
+
+	private void RecalculateStickyOffsets(UiNode? scrollAncestor)
+	{
+		if (Style.PositionType == UiPositionType.Sticky && scrollAncestor != null)
+		{
+			float contentOriginY = scrollAncestor.LayoutRect.Y + scrollAncestor.Style.BorderWidth + scrollAncestor.Style.Padding.Top;
+			float naturalLocalY = LayoutRect.Y - contentOriginY;
+			float topInset = Style.Top.Unit == UiLengthUnit.Pixel ? Style.Top.Value : 0f;
+			float desired = scrollAncestor.ScrollOffsetY - naturalLocalY + topInset;
+			float maxUnstick = Math.Max(0f, scrollAncestor.ScrollContentHeight - naturalLocalY - LayoutRect.Height);
+			StickyOffsetX = 0f;
+			StickyOffsetY = Math.Clamp(desired, 0f, maxUnstick);
+		}
+		else
+		{
+			StickyOffsetX = 0f;
+			StickyOffsetY = 0f;
+		}
+
+		UiNode? descendantScrollAncestor = Style.Overflow == UiOverflow.Scroll ? this : scrollAncestor;
+		for (int i = 0; i < _children.Length; i++)
+		{
+			_children[i].RecalculateStickyOffsets(descendantScrollAncestor);
+		}
 	}
 
 	internal void SetPseudoState(UiPseudoState state)

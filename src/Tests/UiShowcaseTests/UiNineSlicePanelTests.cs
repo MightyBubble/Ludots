@@ -1,7 +1,10 @@
 using System;
+using Ludots.UI.HtmlEngine.Markup;
 using Ludots.UI.Runtime;
 using Ludots.UI.Runtime.Events;
+using Ludots.UI.Skia;
 using NUnit.Framework;
+using SkiaSharp;
 using UiShowcaseCoreMod.Showcase;
 
 namespace Ludots.Tests.UiShowcase;
@@ -84,6 +87,24 @@ public sealed class UiNineSlicePanelTests
 		float angleAfter = ReadRotateDegrees(seal.RenderStyle.Transform);
 		Assert.That(Math.Abs(opacityAfter - opacityBefore), Is.GreaterThan(0.01f));
 		Assert.That(Math.Abs(angleAfter - angleBefore), Is.GreaterThan(1f));
+	}
+
+	[Test]
+	public void SvgImageSlice_AppliesStyleAndRendersNineSlice()
+	{
+		const string svg = "data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='32'%20height='32'%20viewBox='0%200%2032%2032'%3E%3Crect%20width='32'%20height='32'%20fill='%23f4e2aa'/%3E%3Cpath%20d='M0%200H32V32H0Z'%20fill='none'%20stroke='%23935f1f'%20stroke-width='4'/%3E%3C/svg%3E";
+		const string html = "<img id=\"frame\" src=\"" + svg + "\" />";
+		const string css = "#frame { image-slice: 8px; width: 96px; height: 64px; }";
+
+		UiScene scene = new UiMarkupLoader().LoadScene(new SkiaTextMeasurer(), new SkiaImageSizeProvider(), html, css);
+		scene.Layout(200f, 120f);
+		UiNode frame = scene.FindByElementId("frame")!;
+
+		Assert.That(frame.Style.ImageSlice.Left, Is.EqualTo(8f));
+		Assert.That(frame.LayoutRect.Width, Is.EqualTo(96f).Within(0.5f));
+		Assert.That(frame.LayoutRect.Height, Is.EqualTo(64f).Within(0.5f));
+		using SKSurface surface = SKSurface.Create(new SKImageInfo(200, 120));
+		Assert.DoesNotThrow(() => new SkiaUiRenderer().RenderToCanvas(scene, surface.Canvas, 200f, 120f));
 	}
 
 	private static float ReadRotateDegrees(UiTransform transform)

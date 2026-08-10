@@ -37,9 +37,20 @@ public sealed class UiGridLayoutTests
 	}
 
 	[Test]
-	public void UiStyleResolver_ParseGridTemplate_MinMax_IsIgnored()
+	public void UiStyleResolver_ParseGridTemplate_MinMax_Succeeds()
 	{
-		Assert.That(UiStyleResolver.TryParseGridTemplate("minmax(100px, 1fr) 1fr", out _), Is.False, "minmax() is unsupported in MVP and must fail closed");
+		Assert.That(UiStyleResolver.TryParseGridTemplate("minmax(100px, 1fr) 1fr", out IReadOnlyList<UiGridTrack> tracks), Is.True);
+		Assert.That(tracks.Count, Is.EqualTo(2));
+		Assert.That(tracks[0].IsMinMax, Is.True);
+		Assert.That(tracks[0].MinSizing, Is.EqualTo(UiGridTrackSizing.Pixel));
+		Assert.That(tracks[0].MinValue, Is.EqualTo(100f).Within(0.01f));
+		Assert.That(tracks[0].MaxSizing, Is.EqualTo(UiGridTrackSizing.Fr));
+	}
+
+	[Test]
+	public void UiStyleResolver_ParseGridTemplate_MinMaxFrMin_Fails()
+	{
+		Assert.That(UiStyleResolver.TryParseGridTemplate("minmax(1fr, 2fr)", out _), Is.False);
 	}
 
 	[Test]
@@ -107,6 +118,28 @@ public sealed class UiGridLayoutTests
 		Assert.That(scene.FindByElementId("a")!.LayoutRect.Width, Is.EqualTo(100f).Within(0.5f));
 		Assert.That(scene.FindByElementId("b")!.LayoutRect.Width, Is.EqualTo(100f).Within(0.5f));
 		Assert.That(scene.FindByElementId("c")!.LayoutRect.Width, Is.EqualTo(200f).Within(0.5f));
+	}
+
+	[Test]
+	public void UiGrid_MinMaxFr_UsesMinimumFloorAndSharesRemaining()
+	{
+		const string html = """
+			<div id="grid">
+			  <div id="a">A</div>
+			  <div id="b">B</div>
+			</div>
+			""";
+		const string css = """
+			#grid { display: grid; grid-template-columns: minmax(100px, 1fr) 1fr; width: 300px; height: 40px; }
+			""";
+
+		UiScene scene = BuildScene(html, css);
+		scene.Layout(800f, 600f);
+		UiNode a = scene.FindByElementId("a")!;
+		UiNode b = scene.FindByElementId("b")!;
+
+		Assert.That(a.LayoutRect.Width, Is.EqualTo(200f).Within(0.5f));
+		Assert.That(b.LayoutRect.Width, Is.EqualTo(100f).Within(0.5f));
 	}
 
 	[Test]
@@ -185,6 +218,59 @@ public sealed class UiGridLayoutTests
 	}
 
 	[Test]
+	public void UiGrid_ExplicitCollision_ReAutoPlacesWithoutOverlap()
+	{
+		const string html = """
+			<div id="grid">
+			  <div id="a">A</div>
+			  <div id="b">B</div>
+			  <div id="c">C</div>
+			</div>
+			""";
+		const string css = """
+			#grid { display: grid; grid-template-columns: 50px 50px; width: 100px; height: 100px; }
+			#a { grid-column: 1; grid-row: 1; }
+			#b { grid-column: 1; grid-row: 1; }
+			""";
+
+		UiScene scene = BuildScene(html, css);
+		scene.Layout(800f, 600f);
+		UiNode a = scene.FindByElementId("a")!;
+		UiNode b = scene.FindByElementId("b")!;
+		UiNode c = scene.FindByElementId("c")!;
+
+		Assert.That(Overlaps(a.LayoutRect, b.LayoutRect), Is.False);
+		Assert.That(Overlaps(a.LayoutRect, c.LayoutRect), Is.False);
+		Assert.That(Overlaps(b.LayoutRect, c.LayoutRect), Is.False);
+		Assert.That(b.LayoutRect.X, Is.EqualTo(a.LayoutRect.Right).Within(1f));
+	}
+
+	[Test]
+	public void UiGrid_AutoFlowDense_BackfillsFromFirstCell()
+	{
+		const string html = """
+			<div id="grid">
+			  <div id="wide">A</div>
+			  <div id="placed">B</div>
+			  <div id="dense">C</div>
+			</div>
+			""";
+		const string css = """
+			#grid { display: grid; grid-template-columns: 50px 50px; grid-auto-flow: dense; width: 100px; height: 100px; }
+			#wide { grid-column: span 2; }
+			#placed { grid-column: 2; grid-row: 2; }
+			""";
+
+		UiScene scene = BuildScene(html, css);
+		scene.Layout(800f, 600f);
+		UiNode dense = scene.FindByElementId("dense")!;
+		UiNode placed = scene.FindByElementId("placed")!;
+
+		Assert.That(dense.LayoutRect.Y, Is.EqualTo(placed.LayoutRect.Y).Within(1f));
+		Assert.That(dense.LayoutRect.X, Is.LessThan(placed.LayoutRect.X));
+	}
+
+	[Test]
 	public void UiGrid_LayoutHundredNodes_CompletesUnderFiveMilliseconds()
 	{
 		UiGridTrack[] columns = new UiGridTrack[10];
@@ -241,6 +327,14 @@ public sealed class UiGridLayoutTests
 		}
 
 		public float MeasureWidth(string? text, UiStyle style) => (text?.Length ?? 0) * style.FontSize * 0.5f;
+	}
+
+	private static bool Overlaps(UiRect left, UiRect right)
+	{
+		return left.X < right.Right &&
+			left.Right > right.X &&
+			left.Y < right.Bottom &&
+			left.Bottom > right.Y;
 	}
 
 	private sealed class ConstantImageSizeProvider : IUiImageSizeProvider
