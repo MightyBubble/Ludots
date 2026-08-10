@@ -433,12 +433,38 @@ namespace Ludots.Core.Navigation.NavMesh
             for (int i = 0; i < tile.TriangleCount; i++)
             {
                 int src = i * Nvp * 2;
-                polys[src + 0] = tile.TriA[i];
-                polys[src + 1] = tile.TriB[i];
-                polys[src + 2] = tile.TriC[i];
-                polys[src + Nvp + 0] = ToDetourNeighbor(tile, i, edge: 0, tileWidthCm, tileHeightCm);
-                polys[src + Nvp + 1] = ToDetourNeighbor(tile, i, edge: 1, tileWidthCm, tileHeightCm);
-                polys[src + Nvp + 2] = ToDetourNeighbor(tile, i, edge: 2, tileWidthCm, tileHeightCm);
+                int a = tile.TriA[i];
+                int b = tile.TriB[i];
+                int c = tile.TriC[i];
+                
+                int ax = tile.VertexXcm[a];
+                int az = tile.VertexZcm[a];
+                int bx = tile.VertexXcm[b];
+                int bz = tile.VertexZcm[b];
+                int cx = tile.VertexXcm[c];
+                int cz = tile.VertexZcm[c];
+                
+                long signedArea2 = (long)(bx - ax) * (cz - az) - (long)(cx - ax) * (bz - az);
+                bool needsReversal = signedArea2 > 0;
+                
+                if (needsReversal)
+                {
+                    polys[src + 0] = a;
+                    polys[src + 1] = c;
+                    polys[src + 2] = b;
+                    polys[src + Nvp + 0] = ToDetourNeighbor(tile, i, edge: 2, tileWidthCm, tileHeightCm);
+                    polys[src + Nvp + 1] = ToDetourNeighbor(tile, i, edge: 1, tileWidthCm, tileHeightCm);
+                    polys[src + Nvp + 2] = ToDetourNeighbor(tile, i, edge: 0, tileWidthCm, tileHeightCm);
+                }
+                else
+                {
+                    polys[src + 0] = a;
+                    polys[src + 1] = b;
+                    polys[src + 2] = c;
+                    polys[src + Nvp + 0] = ToDetourNeighbor(tile, i, edge: 0, tileWidthCm, tileHeightCm);
+                    polys[src + Nvp + 1] = ToDetourNeighbor(tile, i, edge: 1, tileWidthCm, tileHeightCm);
+                    polys[src + Nvp + 2] = ToDetourNeighbor(tile, i, edge: 2, tileWidthCm, tileHeightCm);
+                }
 
                 int area = tile.TriAreaIds[i];
                 if (area >= DtDetour.DT_MAX_AREAS)

@@ -221,75 +221,65 @@ namespace Ludots.Tests.Architecture
             AssertPathEndpoints(exactCdtPath, NavBakeNames.AlgorithmExactCdt);
             AssertPathEndpoints(layeredSpanPath, NavBakeNames.AlgorithmLayeredSpan);
 
-            TestContext.WriteLine($"DIAG exact-cdt path: {string.Join(" -> ", FormatPoints(exactCdtPath))} len={exactCdtPath.TravelCost.ToDouble():0.##}");
-            TestContext.WriteLine($"DIAG recast path: {string.Join(" -> ", FormatPoints(recastPath))} len={recastPath.TravelCost.ToDouble():0.##}");
-            TestContext.WriteLine($"DIAG layered-span path: {string.Join(" -> ", FormatPoints(layeredSpanPath))} len={layeredSpanPath.TravelCost.ToDouble():0.##}");
-            TestContext.WriteLine($"DIAG layered-span tile0: tris={layeredSpanBake.Entries[0].Tile.TriangleCount} verts={layeredSpanBake.Entries[0].Tile.VertexCount}");
-
-            // P0-1 auditor theory: vertex coordinate mismatch at tile borders prevents Detour from establishing external links.
-            // Check if adjacent tiles have matching boundary vertices (in local coords, which align at tile.Origin offsets).
-            TestContext.WriteLine("\n=== ExactCdt tile boundary vertex diagnostic ===");
-            for (int t = 0; t < exactCdtBake.Entries.Count; t++)
-            {
-                NavTile tile = exactCdtBake.Entries[t].Tile;
-                TestContext.WriteLine($"Tile {t}: origin=({tile.OriginXcm},{tile.OriginZcm})");
-                var eastVerts = new List<(int x, int z)>();
-                var westVerts = new List<(int x, int z)>();
-                for (int v = 0; v < tile.VertexCount; v++)
-                {
-                    int x = tile.VertexXcm[v];
-                    int z = tile.VertexZcm[v];
-                    if (Math.Abs(x - tileSizeCm) <= 2) eastVerts.Add((x, z));
-                    if (Math.Abs(x - 0) <= 2) westVerts.Add((x, z));
-                }
-                if (eastVerts.Count > 0) TestContext.WriteLine($"  East boundary verts (x~{tileSizeCm}): {string.Join(", ", eastVerts)}");
-                if (westVerts.Count > 0) TestContext.WriteLine($"  West boundary verts (x~0): {string.Join(", ", westVerts)}");
-            }
-            TestContext.WriteLine("\n=== Recast tile0 East boundary z-heights (for comparison) ===");
-            NavTile recastTile0 = recastBake.Entries[0].Tile;
-            var recastEastZ = new HashSet<int>();
-            for (int v = 0; v < recastTile0.VertexCount; v++)
-            {
-                if (Math.Abs(recastTile0.VertexXcm[v] - tileSizeCm) <= 2)
-                {
-                    recastEastZ.Add(recastTile0.VertexZcm[v]);
-                }
-            }
-            TestContext.WriteLine($"Recast tile0 East z-heights: {string.Join(", ", recastEastZ.OrderBy(z => z))}");
-            TestContext.WriteLine($"Query z=150 has Recast portal: {recastEastZ.Any(z => Math.Abs(z - 150) <= 10)}");
-            TestContext.WriteLine($"Query z=150 has ExactCdt portal: false (only z=0 and z=400)");
-            TestContext.WriteLine($"DIAG exact-cdt tile0: tris={exactCdtBake.Entries[0].Tile.TriangleCount} verts={exactCdtBake.Entries[0].Tile.VertexCount} portals={exactCdtBake.Entries[0].Tile.Portals.Length}");
-            TestContext.WriteLine($"DIAG exact-cdt tile0 tris: {DumpTriangles(exactCdtBake.Entries[0].Tile)}");
-            for (int ti = 0; ti < exactCdtBake.Entries.Count; ti++)
-            {
-                NavTile dt = exactCdtBake.Entries[ti].Tile;
-                TestContext.WriteLine($"DIAG exact-cdt tile{ti} origin=({dt.OriginXcm},{dt.OriginZcm}) portals={dt.Portals.Length}");
-                for (int t = 0; t < dt.TriangleCount; t++)
-                {
-                    TestContext.WriteLine($"  tri{t} n0={dt.N0[t]} n1={dt.N1[t]} n2={dt.N2[t]}");
-                }
-            }
-            TestContext.WriteLine($"DIAG exact-cdt tile1 tris: {DumpTriangles(exactCdtBake.Entries[1].Tile)}");
-            TestContext.WriteLine($"DIAG exact-cdt tile2 tris: {DumpTriangles(exactCdtBake.Entries[2].Tile)}");
-
             double recastLengthCm = recastPath.TravelCost.ToDouble();
             double exactCdtLengthCm = exactCdtPath.TravelCost.ToDouble();
             double layeredSpanLengthCm = layeredSpanPath.TravelCost.ToDouble();
             Assert.That(recastLengthCm, Is.GreaterThan(0d), "Backend 'recast' returned an empty path length.");
             Assert.That(exactCdtLengthCm, Is.GreaterThan(0d), "Backend 'exact-cdt' returned an empty path length.");
             Assert.That(layeredSpanLengthCm, Is.GreaterThan(0d), "Backend 'layered-span' returned an empty path length.");
-            
-            // Recast's path is straight (1000cm) via TryFindDirectRaycastPath shortcut. ExactCdt/LayeredSpan's
-            // coarse 2-triangle mesh causes Detour raycast to fail (reason TBD), forcing full pathfinding through
-            // corner vertices → 1917cm detour. Boundary vertices align correctly (verified), and neither backend
-            // has portal vertices at query z-height. Root cause: Detour raycast interaction with minimal-triangulation
-            // mesh density. Only compare path length within same mesh-density class.
-            TestContext.WriteLine($"Path lengths: recast={recastLengthCm:0.##}cm, exact-cdt={exactCdtLengthCm:0.##}cm, layered-span={layeredSpanLengthCm:0.##}cm");
-            double coarseMeshTolerance = 0.01d * Math.Max(exactCdtLengthCm, layeredSpanLengthCm);
+
+            const double maxToleranceCm = 10.0d;
             Assert.That(
                 Math.Abs(exactCdtLengthCm - layeredSpanLengthCm),
-                Is.LessThanOrEqualTo(coarseMeshTolerance),
-                $"Coarse-mesh backends (ExactCdt vs LayeredSpan) path length mismatch: exact-cdt={exactCdtLengthCm:0.##}cm, layered-span={layeredSpanLengthCm:0.##}cm, tolerance={coarseMeshTolerance:0.##}cm.");
+                Is.LessThanOrEqualTo(maxToleranceCm),
+                $"Coarse-mesh backends path length mismatch: exact-cdt={exactCdtLengthCm:0.##}cm, layered-span={layeredSpanLengthCm:0.##}cm.");
+            Assert.That(
+                Math.Abs(recastLengthCm - exactCdtLengthCm),
+                Is.LessThanOrEqualTo(maxToleranceCm),
+                $"Cross-algorithm path length mismatch: recast={recastLengthCm:0.##}cm, exact-cdt={exactCdtLengthCm:0.##}cm.");
+        }
+
+        [Test]
+        public void AllBackends_DetourPolygonWindingIsClockwise()
+        {
+            const int chunkSizeCells = 4;
+            const int tileSizeCm = chunkSizeCells * SpatialScaleDefaults.CellCm;
+            var terrain = new FlatGridLogicTerrainField(4, 4, chunkSizeCells: chunkSizeCells);
+            var targets = new[] { new NavBakeTileCoord(0, 0) };
+
+            NavBakeResult recastBake = BakeTiles(CreateContext(terrain, NavBakeAlgorithmKind.Recast, new NavObstacleSet(), targets, NavBakeMode.Offline, 1));
+            NavBakeResult exactCdtBake = BakeTiles(CreateContext(terrain, NavBakeAlgorithmKind.ExactCdt, new NavObstacleSet(), targets, NavBakeMode.Offline, 1));
+            NavBakeResult layeredSpanBake = BakeTiles(CreateContext(terrain, NavBakeAlgorithmKind.LayeredSpan, new NavObstacleSet(), targets, NavBakeMode.Offline, 1));
+
+            IReadOnlyList<byte[]> recastDetour = CollectDetourTileBytes(recastBake);
+            IReadOnlyList<byte[]> exactCdtDetour = BuildDetourTileBytesFromEntries(exactCdtBake, tileSizeCm);
+            IReadOnlyList<byte[]> layeredSpanDetour = BuildDetourTileBytesFromEntries(layeredSpanBake, tileSizeCm);
+
+            foreach ((string label, byte[] payload) in new (string, byte[])[]
+            {
+                ("recast", recastDetour[0]),
+                ("exact-cdt", exactCdtDetour[0]),
+                ("layered-span", layeredSpanDetour[0])
+            })
+            {
+                using var ms = new MemoryStream(payload);
+                using var br = new BinaryReader(ms);
+                var reader = new DotRecast.Detour.Io.DtMeshDataReader();
+                var data = reader.Read(br, DotRecast.Detour.DtDetour.DT_VERTS_PER_POLYGON);
+
+                for (int pi = 0; pi < data.header.polyCount; pi++)
+                {
+                    var poly = data.polys[pi];
+                    double signedArea2 = 0;
+                    for (int vi = 0; vi < poly.vertCount; vi++)
+                    {
+                        int cur = poly.verts[vi] * 3;
+                        int nxt = poly.verts[(vi + 1) % poly.vertCount] * 3;
+                        signedArea2 += (double)data.verts[cur] * data.verts[nxt + 2] - (double)data.verts[nxt] * data.verts[cur + 2];
+                    }
+                    Assert.That(signedArea2, Is.LessThan(0), $"Backend '{label}' poly {pi} has counterclockwise winding (signedArea2={signedArea2}); Detour requires clockwise (negative area).");
+                }
+            }
         }
 
         [Test]
