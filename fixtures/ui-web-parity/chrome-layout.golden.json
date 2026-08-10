@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-10T06:53:45.196Z",
+  "generatedAt": "2026-08-10T07:58:32.035Z",
   "chrome": "Chrome/148.0.7778.96",
   "fixture": "fixtures/ui-web-parity/parity_menu.html",
   "coordinateSpace": "stage-local",
@@ -40,165 +40,165 @@
           "height": 260
         },
         "menu-shell": {
-          "x": 76.8,
-          "y": 64.8,
-          "width": 1126.39,
-          "height": 590.39
+          "x": 64,
+          "y": 43.2,
+          "width": 1152,
+          "height": 633.59
         },
         "menu-card": {
-          "x": 76.8,
-          "y": 64.8,
-          "width": 844.3,
-          "height": 590.39
+          "x": 64,
+          "y": 43.2,
+          "width": 785,
+          "height": 633.59
         },
         "hero-strip": {
-          "x": 96.8,
-          "y": 84.8,
-          "width": 804.3,
+          "x": 80,
+          "y": 59.2,
+          "width": 753,
           "height": 88
         },
         "hero-crest": {
-          "x": 109.8,
-          "y": 99.8,
+          "x": 93,
+          "y": 74.2,
           "width": 58,
           "height": 58
         },
         "hero-copy": {
-          "x": 179.8,
-          "y": 95.8,
-          "width": 604.3,
+          "x": 161,
+          "y": 70.2,
+          "width": 561,
           "height": 66
         },
         "menu-kicker": {
-          "x": 179.8,
-          "y": 95.8,
-          "width": 604.3,
-          "height": 15
+          "x": 161,
+          "y": 70.2,
+          "width": 561,
+          "height": 16
         },
         "menu-title": {
-          "x": 179.8,
-          "y": 112.8,
-          "width": 604.3,
-          "height": 30
+          "x": 161,
+          "y": 88.2,
+          "width": 561,
+          "height": 28
         },
         "menu-subtitle": {
-          "x": 179.8,
-          "y": 144.8,
-          "width": 604.3,
-          "height": 17
+          "x": 161,
+          "y": 118.2,
+          "width": 561,
+          "height": 18
         },
         "hero-badge": {
-          "x": 796.09,
-          "y": 99.8,
-          "width": 92,
-          "height": 58
+          "x": 732,
+          "y": 77.2,
+          "width": 88,
+          "height": 52
         },
         "menu-grid": {
-          "x": 96.8,
-          "y": 184.8,
-          "width": 804.3,
-          "height": 360.39
+          "x": 80,
+          "y": 157.2,
+          "width": 753,
+          "height": 415.59
         },
         "btn-resume": {
-          "x": 96.8,
-          "y": 184.8,
-          "width": 396.14,
-          "height": 174.19
+          "x": 80,
+          "y": 157.2,
+          "width": 370.5,
+          "height": 201.8
         },
         "btn-map": {
-          "x": 504.94,
-          "y": 184.8,
-          "width": 396.16,
-          "height": 174.19
+          "x": 462.5,
+          "y": 157.2,
+          "width": 370.5,
+          "height": 201.8
         },
         "btn-settings": {
-          "x": 96.8,
-          "y": 370.98,
-          "width": 396.14,
-          "height": 174.2
+          "x": 80,
+          "y": 371,
+          "width": 370.5,
+          "height": 201.8
         },
         "btn-quit": {
-          "x": 504.94,
-          "y": 370.98,
-          "width": 396.16,
-          "height": 174.2
+          "x": 462.5,
+          "y": 371,
+          "width": 370.5,
+          "height": 201.8
         },
         "stat-row": {
-          "x": 96.8,
-          "y": 557.19,
-          "width": 804.3,
+          "x": 80,
+          "y": 582.8,
+          "width": 753,
           "height": 78
         },
         "stat-hp": {
-          "x": 96.8,
-          "y": 557.19,
-          "width": 261.42,
+          "x": 80,
+          "y": 582.8,
+          "width": 244.33,
           "height": 78
         },
         "stat-mp": {
-          "x": 368.22,
-          "y": 557.19,
-          "width": 261.44,
+          "x": 334.33,
+          "y": 582.8,
+          "width": 244.34,
           "height": 78
         },
         "stat-gold": {
-          "x": 639.66,
-          "y": 557.19,
-          "width": 261.44,
+          "x": 588.67,
+          "y": 582.8,
+          "width": 244.33,
           "height": 78
         },
         "side-rail": {
-          "x": 935.09,
-          "y": 64.8,
-          "width": 268.09,
-          "height": 590.39
+          "x": 861,
+          "y": 43.2,
+          "width": 355,
+          "height": 633.59
         },
         "rail-card": {
-          "x": 935.09,
-          "y": 64.8,
-          "width": 268.09,
-          "height": 472.39
+          "x": 861,
+          "y": 43.2,
+          "width": 355,
+          "height": 515.59
         },
         "rail-kicker": {
-          "x": 951.09,
-          "y": 80.8,
-          "width": 236.09,
+          "x": 875,
+          "y": 57.2,
+          "width": 327,
           "height": 14
         },
         "rail-title": {
-          "x": 951.09,
-          "y": 102.8,
-          "width": 236.09,
+          "x": 875,
+          "y": 77.2,
+          "width": 327,
           "height": 24
         },
         "rail-body": {
-          "x": 951.09,
-          "y": 134.8,
-          "width": 236.09,
-          "height": 324.39
+          "x": 875,
+          "y": 107.2,
+          "width": 327,
+          "height": 377.59
         },
         "rail-progress": {
-          "x": 951.09,
-          "y": 467.19,
-          "width": 236.09,
+          "x": 875,
+          "y": 490.8,
+          "width": 327,
           "height": 54
         },
         "tip-card": {
-          "x": 935.09,
-          "y": 547.19,
-          "width": 268.09,
+          "x": 861,
+          "y": 568.8,
+          "width": 355,
           "height": 108
         },
         "tip-kicker": {
-          "x": 948.09,
-          "y": 560.19,
-          "width": 242.09,
+          "x": 874,
+          "y": 581.8,
+          "width": 329,
           "height": 14
         },
         "tip-body": {
-          "x": 948.09,
-          "y": 580.19,
-          "width": 242.09,
+          "x": 874,
+          "y": 601.8,
+          "width": 329,
           "height": 62
         }
       }
@@ -239,165 +239,165 @@
           "height": 260
         },
         "menu-shell": {
-          "x": 54,
-          "y": 63,
-          "width": 792,
-          "height": 574
+          "x": 45,
+          "y": 42,
+          "width": 810,
+          "height": 616
         },
         "menu-card": {
-          "x": 54,
-          "y": 63,
-          "width": 593.5,
-          "height": 574
+          "x": 45,
+          "y": 42,
+          "width": 528.5,
+          "height": 616
         },
         "hero-strip": {
-          "x": 74,
-          "y": 83,
-          "width": 553.5,
+          "x": 61,
+          "y": 58,
+          "width": 496.5,
           "height": 88
         },
         "hero-crest": {
-          "x": 87,
-          "y": 98,
+          "x": 74,
+          "y": 73,
           "width": 58,
           "height": 58
         },
         "hero-copy": {
-          "x": 157,
-          "y": 94,
-          "width": 353.5,
+          "x": 142,
+          "y": 69,
+          "width": 304.5,
           "height": 66
         },
         "menu-kicker": {
-          "x": 157,
-          "y": 94,
-          "width": 353.5,
-          "height": 15
+          "x": 142,
+          "y": 69,
+          "width": 304.5,
+          "height": 16
         },
         "menu-title": {
-          "x": 157,
-          "y": 111,
-          "width": 353.5,
-          "height": 30
+          "x": 142,
+          "y": 87,
+          "width": 304.5,
+          "height": 28
         },
         "menu-subtitle": {
-          "x": 157,
-          "y": 143,
-          "width": 353.5,
-          "height": 17
+          "x": 142,
+          "y": 117,
+          "width": 304.5,
+          "height": 18
         },
         "hero-badge": {
-          "x": 522.5,
-          "y": 98,
-          "width": 92,
-          "height": 58
+          "x": 456.5,
+          "y": 76,
+          "width": 88,
+          "height": 52
         },
         "menu-grid": {
-          "x": 74,
-          "y": 183,
-          "width": 553.5,
-          "height": 344
+          "x": 61,
+          "y": 156,
+          "width": 496.5,
+          "height": 398
         },
         "btn-resume": {
-          "x": 74,
-          "y": 183,
-          "width": 270.75,
-          "height": 166
+          "x": 61,
+          "y": 156,
+          "width": 242.25,
+          "height": 193
         },
         "btn-map": {
-          "x": 356.75,
-          "y": 183,
-          "width": 270.75,
-          "height": 166
+          "x": 315.25,
+          "y": 156,
+          "width": 242.25,
+          "height": 193
         },
         "btn-settings": {
-          "x": 74,
+          "x": 61,
           "y": 361,
-          "width": 270.75,
-          "height": 166
+          "width": 242.25,
+          "height": 193
         },
         "btn-quit": {
-          "x": 356.75,
+          "x": 315.25,
           "y": 361,
-          "width": 270.75,
-          "height": 166
+          "width": 242.25,
+          "height": 193
         },
         "stat-row": {
-          "x": 74,
-          "y": 539,
-          "width": 553.5,
+          "x": 61,
+          "y": 564,
+          "width": 496.5,
           "height": 78
         },
         "stat-hp": {
-          "x": 74,
-          "y": 539,
-          "width": 177.83,
+          "x": 61,
+          "y": 564,
+          "width": 158.83,
           "height": 78
         },
         "stat-mp": {
-          "x": 261.83,
-          "y": 539,
-          "width": 177.84,
+          "x": 229.83,
+          "y": 564,
+          "width": 158.84,
           "height": 78
         },
         "stat-gold": {
-          "x": 449.67,
-          "y": 539,
-          "width": 177.83,
+          "x": 398.67,
+          "y": 564,
+          "width": 158.83,
           "height": 78
         },
         "side-rail": {
-          "x": 661.5,
-          "y": 63,
-          "width": 184.5,
-          "height": 574
+          "x": 585.5,
+          "y": 42,
+          "width": 269.5,
+          "height": 616
         },
         "rail-card": {
-          "x": 661.5,
-          "y": 63,
-          "width": 184.5,
-          "height": 456
+          "x": 585.5,
+          "y": 42,
+          "width": 269.5,
+          "height": 498
         },
         "rail-kicker": {
-          "x": 677.5,
-          "y": 79,
-          "width": 152.5,
+          "x": 599.5,
+          "y": 56,
+          "width": 241.5,
           "height": 14
         },
         "rail-title": {
-          "x": 677.5,
-          "y": 101,
-          "width": 152.5,
+          "x": 599.5,
+          "y": 76,
+          "width": 241.5,
           "height": 24
         },
         "rail-body": {
-          "x": 677.5,
-          "y": 133,
-          "width": 152.5,
-          "height": 308
+          "x": 599.5,
+          "y": 106,
+          "width": 241.5,
+          "height": 360
         },
         "rail-progress": {
-          "x": 677.5,
-          "y": 449,
-          "width": 152.5,
+          "x": 599.5,
+          "y": 472,
+          "width": 241.5,
           "height": 54
         },
         "tip-card": {
-          "x": 661.5,
-          "y": 529,
-          "width": 184.5,
+          "x": 585.5,
+          "y": 550,
+          "width": 269.5,
           "height": 108
         },
         "tip-kicker": {
-          "x": 674.5,
-          "y": 542,
-          "width": 158.5,
+          "x": 598.5,
+          "y": 563,
+          "width": 243.5,
           "height": 14
         },
         "tip-body": {
-          "x": 674.5,
-          "y": 562,
-          "width": 158.5,
+          "x": 598.5,
+          "y": 583,
+          "width": 243.5,
           "height": 62
         }
       }
@@ -438,166 +438,166 @@
           "height": 260
         },
         "menu-shell": {
-          "x": 23.41,
-          "y": 75.95,
-          "width": 343.19,
-          "height": 692.08
+          "x": 19.5,
+          "y": 50.64,
+          "width": 351,
+          "height": 742.72
         },
         "menu-card": {
-          "x": 23.41,
-          "y": 75.95,
-          "width": 256.89,
-          "height": 692.08
+          "x": 19.5,
+          "y": 50.64,
+          "width": 351,
+          "height": 492.36
         },
         "hero-strip": {
-          "x": 43.41,
-          "y": 95.95,
-          "width": 216.89,
-          "height": 88
+          "x": 35.5,
+          "y": 66.64,
+          "width": 319,
+          "height": 150
         },
         "hero-crest": {
-          "x": 56.41,
-          "y": 110.95,
+          "x": 48.5,
+          "y": 81.64,
           "width": 58,
           "height": 58
         },
         "hero-copy": {
-          "x": 126.41,
-          "y": 106.95,
-          "width": 16.89,
+          "x": 116.5,
+          "y": 77.64,
+          "width": 225,
           "height": 66
         },
         "menu-kicker": {
-          "x": 126.41,
-          "y": 104.95,
-          "width": 16.89,
+          "x": 116.5,
+          "y": 77.64,
+          "width": 225,
           "height": 16
         },
         "menu-title": {
-          "x": 126.41,
-          "y": 122.95,
-          "width": 16.89,
-          "height": 30
+          "x": 116.5,
+          "y": 95.64,
+          "width": 225,
+          "height": 28
         },
         "menu-subtitle": {
-          "x": 126.41,
-          "y": 154.95,
-          "width": 16.89,
-          "height": 20
+          "x": 116.5,
+          "y": 125.64,
+          "width": 225,
+          "height": 18
         },
         "hero-badge": {
-          "x": 155.3,
-          "y": 110.95,
-          "width": 92,
-          "height": 58
+          "x": 48.5,
+          "y": 153.64,
+          "width": 88,
+          "height": 52
         },
         "menu-grid": {
-          "x": 43.41,
-          "y": 195.95,
-          "width": 216.89,
-          "height": 462.08
+          "x": 35.5,
+          "y": 226.64,
+          "width": 319,
+          "height": 212.36
         },
         "btn-resume": {
-          "x": 43.41,
-          "y": 195.95,
-          "width": 102.44,
-          "height": 225.03
+          "x": 35.5,
+          "y": 226.64,
+          "width": 153.5,
+          "height": 100.17
         },
         "btn-map": {
-          "x": 157.84,
-          "y": 195.95,
-          "width": 102.45,
-          "height": 225.03
+          "x": 201,
+          "y": 226.64,
+          "width": 153.5,
+          "height": 100.17
         },
         "btn-settings": {
-          "x": 43.41,
-          "y": 432.98,
-          "width": 102.44,
-          "height": 225.05
+          "x": 35.5,
+          "y": 338.81,
+          "width": 153.5,
+          "height": 100.19
         },
         "btn-quit": {
-          "x": 157.84,
-          "y": 432.98,
-          "width": 102.45,
-          "height": 225.05
+          "x": 201,
+          "y": 338.81,
+          "width": 153.5,
+          "height": 100.19
         },
         "stat-row": {
-          "x": 43.41,
-          "y": 670.03,
-          "width": 216.89,
+          "x": 35.5,
+          "y": 449,
+          "width": 319,
           "height": 78
         },
         "stat-hp": {
-          "x": 43.41,
-          "y": 670.03,
-          "width": 65.63,
+          "x": 35.5,
+          "y": 449,
+          "width": 99.66,
           "height": 78
         },
         "stat-mp": {
-          "x": 119.03,
-          "y": 670.03,
-          "width": 65.64,
+          "x": 145.16,
+          "y": 449,
+          "width": 99.67,
           "height": 78
         },
         "stat-gold": {
-          "x": 194.67,
-          "y": 670.03,
-          "width": 65.63,
+          "x": 254.83,
+          "y": 449,
+          "width": 99.67,
           "height": 78
         },
         "side-rail": {
-          "x": 294.3,
-          "y": 75.95,
-          "width": 72.3,
-          "height": 692.08
+          "x": 19.5,
+          "y": 555,
+          "width": 351,
+          "height": 238.36
         },
         "rail-card": {
-          "x": 294.3,
-          "y": 75.95,
-          "width": 72.3,
-          "height": 574.08
+          "x": 19.5,
+          "y": 555,
+          "width": 351,
+          "height": 120.36
         },
         "rail-kicker": {
-          "x": 310.3,
-          "y": 91.95,
-          "width": 40.3,
+          "x": 33.5,
+          "y": 569,
+          "width": 323,
           "height": 14
         },
         "rail-title": {
-          "x": 310.3,
-          "y": 113.95,
-          "width": 40.3,
-          "height": 48
+          "x": 33.5,
+          "y": 589,
+          "width": 323,
+          "height": 24
         },
         "rail-body": {
-          "x": 310.3,
-          "y": 169.95,
-          "width": 40.3,
-          "height": 402.08
+          "x": 33.5,
+          "y": 619,
+          "width": 323,
+          "height": 0
         },
         "rail-progress": {
-          "x": 310.3,
-          "y": 580.03,
-          "width": 40.3,
+          "x": 33.5,
+          "y": 625,
+          "width": 323,
           "height": 54
         },
         "tip-card": {
-          "x": 294.3,
-          "y": 660.03,
-          "width": 72.3,
+          "x": 19.5,
+          "y": 685.36,
+          "width": 351,
           "height": 108
         },
         "tip-kicker": {
-          "x": 307.3,
-          "y": 673.03,
-          "width": 46.3,
+          "x": 32.5,
+          "y": 698.36,
+          "width": 325,
           "height": 14
         },
         "tip-body": {
-          "x": 307.3,
-          "y": 693.03,
-          "width": 46.3,
-          "height": 170
+          "x": 32.5,
+          "y": 718.36,
+          "width": 325,
+          "height": 62
         }
       }
     }

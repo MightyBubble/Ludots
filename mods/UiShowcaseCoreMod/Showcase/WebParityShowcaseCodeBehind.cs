@@ -137,8 +137,8 @@ internal sealed class WebParityShowcaseCodeBehind
 				["stage_class"] = "vp-" + _viewport,
 				["viewport_label"] = desktop ? "桌面 1280×720" : tablet ? "平板 900×700" : "手机 390×844",
 				["parity_badge"] = "舱门样式与浏览器参考同一份稿",
-				["point_1"] = "霓虹舱门、四宫格入口、右侧任务板位置对得上",
-				["point_2"] = "切观景窗/舷窗/通讯屏后，结构跟着变形但不塌",
+				["point_1"] = "霓虹舱门、四宫格入口、宽屏右侧任务板位置对得上",
+				["point_2"] = "切到手机通讯屏时，任务板落到下方，标题不再竖着糊住按钮",
 				["point_3"] = "按钮字在正中，护盾条与航程条来自同一份 HTML/CSS"
 			});
 	}

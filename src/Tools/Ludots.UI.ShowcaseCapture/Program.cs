@@ -239,7 +239,7 @@ void RunWebParitySuite()
             "- PASS: desktop / tablet / phone fixture captures prove resolution tracking.",
             "- PASS: showcase viewport chips rebuild the same menu shell without collapsing structure.",
             "- PASS: ambient CSS animations advance via UiScene.AdvanceTime.",
-            "- PASS: UiWebParityTests assert Chrome box model parity within 2.5px."
+            "- PASS: UiWebParityTests assert desktop/tablet Chrome boxes within 2.5px; phone asserts stacked rail + readable hero."
         },
         "flowchart TD\n    A[Fixture Desktop] --> B[Fixture Tablet]\n    B --> C[Fixture Phone]\n    C --> D[Showcase Desktop]\n    D --> E[Click vp-tablet]\n    E --> F[Showcase Tablet]\n    F --> G[Click vp-phone]\n    G --> H[Showcase Phone]\n");
 

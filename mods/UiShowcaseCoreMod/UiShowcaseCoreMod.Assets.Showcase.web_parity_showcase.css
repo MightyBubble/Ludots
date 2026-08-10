@@ -143,8 +143,46 @@
 }
 
 #stage.vp-phone {
-  width: 320px;
-  height: 500px;
+  width: 360px;
+  height: 520px;
+}
+
+#stage.vp-phone #menu-shell {
+  flex-direction: column;
+  flex-wrap: nowrap;
+  align-content: stretch;
+}
+
+#stage.vp-phone #menu-card {
+  flex-basis: auto;
+  min-width: 0;
+  width: 100%;
+  flex-grow: 3;
+  height: 0;
+}
+
+#stage.vp-phone #side-rail {
+  flex-direction: row;
+  flex-basis: auto;
+  min-width: 0;
+  width: 100%;
+  flex-grow: 2;
+  height: 0;
+  gap: 10px;
+}
+
+#stage.vp-phone .rail-card {
+  flex-grow: 2;
+  flex-shrink: 1;
+  width: 0;
+  height: 100%;
+}
+
+#stage.vp-phone .tip-card {
+  flex-grow: 1;
+  flex-shrink: 1;
+  width: 0;
+  height: 100%;
 }
 
 .parity-aside {
