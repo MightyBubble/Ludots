@@ -214,15 +214,23 @@ void RunWebParitySuite()
     string root = Path.Combine(acceptanceRoot, "ui-web-parity");
     CaptureSuite suite = new("UI Web Parity", root, renderer);
     UiScene fixture = UiShowcaseFactory.CreateWebParityFixtureScene(textMeasurer, imageSizeProvider);
+    fixture.Layout(1280f, 720f);
+    suite.Advance(fixture, 0.9f, "Let nebula orbs and primary glow breathe before desktop capture.");
     suite.CaptureAt("fixture-desktop", fixture, 1280f, 720f, "Same HTML menu at desktop 1280×720 matches Chrome layout golden.");
     suite.CaptureAt("fixture-tablet", fixture, 900f, 700f, "Same HTML menu at tablet 900×700 tracks resolution.");
     suite.CaptureAt("fixture-phone", fixture, 390f, 844f, "Same HTML menu at phone 390×844 tracks resolution.");
 
     UiScene showcase = UiShowcaseFactory.CreateWebParityShowcaseScene(textMeasurer, imageSizeProvider);
+    showcase.Layout(1280f, 720f);
+    suite.Advance(showcase, 0.9f, "Let SYNCED badge and active chip pulse before showcase capture.");
     suite.Capture("web-parity-desktop", showcase, "Player-facing showcase: desktop preview with parity checklist.");
     suite.Click(showcase, "vp-tablet", "Switch preview to tablet.");
+    showcase.Layout(1280f, 720f);
+    suite.Advance(showcase, 0.45f, "Keep ambient motion alive after tablet rebuild.");
     suite.Capture("web-parity-tablet", showcase, "Player-facing showcase: tablet preview.");
     suite.Click(showcase, "vp-phone", "Switch preview to phone.");
+    showcase.Layout(1280f, 720f);
+    suite.Advance(showcase, 0.45f, "Keep ambient motion alive after phone rebuild.");
     suite.Capture("web-parity-phone", showcase, "Player-facing showcase: phone preview.");
     suite.WriteReport(
         new[]
@@ -230,6 +238,7 @@ void RunWebParitySuite()
             "- PASS: fixture HTML/CSS is shared with Chrome golden dump.",
             "- PASS: desktop / tablet / phone fixture captures prove resolution tracking.",
             "- PASS: showcase viewport chips rebuild the same menu shell without collapsing structure.",
+            "- PASS: ambient CSS animations advance via UiScene.AdvanceTime.",
             "- PASS: UiWebParityTests assert Chrome box model parity within 2.5px."
         },
         "flowchart TD\n    A[Fixture Desktop] --> B[Fixture Tablet]\n    B --> C[Fixture Phone]\n    C --> D[Showcase Desktop]\n    D --> E[Click vp-tablet]\n    E --> F[Showcase Tablet]\n    F --> G[Click vp-phone]\n    G --> H[Showcase Phone]\n");

@@ -73,6 +73,7 @@
   color: #062018;
   font-weight: bold;
   box-shadow: 0 0 18px rgba(47, 224, 200, 0.35);
+  animation: chip-glow 1.6s ease-in-out 0s infinite alternate;
 }
 
 .parity-body {
@@ -118,6 +119,7 @@
   font-size: 11px;
   font-weight: bold;
   color: #ffe2a0;
+  animation: sync-blink 1.2s ease-in-out 0s infinite alternate;
 }
 
 #stage {
@@ -183,4 +185,26 @@
   flex-grow: 1;
   font-size: 12px;
   color: #9ec4d2;
+}
+
+@keyframes sync-blink {
+  0% {
+    opacity: 0.45;
+    color: #c9b07a;
+  }
+  100% {
+    opacity: 1;
+    color: #ffe2a0;
+  }
+}
+
+@keyframes chip-glow {
+  0% {
+    opacity: 0.86;
+    border-color: #1aa89a;
+  }
+  100% {
+    opacity: 1;
+    border-color: #d4fff6;
+  }
 }

@@ -157,6 +157,21 @@ public sealed class UiWebParityTests
 	}
 
 	[Test]
+	public void SameHtml_AmbientMotion_AdvancesOrbOpacity()
+	{
+		string html = File.ReadAllText(Path.Combine(FixtureDir, "parity_menu.html"));
+		string css = File.ReadAllText(Path.Combine(FixtureDir, "parity_menu.css"));
+		UiScene scene = new UiMarkupLoader().LoadScene(new ConstantTextMeasurer(), new ConstantImageSizeProvider(), html, css);
+		scene.Layout(1280f, 720f);
+
+		UiNode orb = scene.FindByElementId("orb-a")!;
+		float before = orb.RenderStyle.Opacity;
+		Assert.That(scene.AdvanceTime(0.9f), Is.True, "ambient orb animation should dirty render style");
+		float after = orb.RenderStyle.Opacity;
+		Assert.That(Math.Abs(after - before), Is.GreaterThan(0.01f));
+	}
+
+	[Test]
 	public void Showcase_ViewportChips_SwitchStageClass()
 	{
 		UiScene scene = UiShowcaseCoreMod.Showcase.UiShowcaseFactory.CreateWebParityShowcaseScene(
