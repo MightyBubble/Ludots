@@ -1,7 +1,7 @@
 {
   "name": "UiWebParityShowcaseMod",
   "version": "1.0.0",
-  "description": "Same HTML/CSS menu rendered in Ludots UI with browser layout parity proof across resolutions.",
+  "description": "星港休整舱：同一份花哨暂停菜单 HTML/CSS，在 Ludots 与浏览器间跨分辨率对照。",
   "main": "bin/net8.0/UiWebParityShowcaseMod.dll",
   "priority": 0,
   "dependencies": {}

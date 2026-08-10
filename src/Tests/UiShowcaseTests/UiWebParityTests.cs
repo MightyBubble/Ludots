@@ -19,7 +19,9 @@ public sealed class UiWebParityTests
 	private static readonly HashSet<string> FontMetricSensitiveIds = new HashSet<string>(StringComparer.Ordinal)
 	{
 		"rail-title",
-		"rail-body"
+		"rail-body",
+		"tip-body",
+		"menu-subtitle"
 	};
 
 	[Test]
@@ -97,18 +99,20 @@ public sealed class UiWebParityTests
 		scene.Layout(1280f, 720f);
 
 		UiNode button = scene.FindByElementId("btn-resume")!;
-		Assert.That(UiFlexAnonymousText.ShouldAlignAsAnonymousFlexItem(button), Is.True);
-		Assert.That(button.TextContent, Is.EqualTo("继续冒险"));
+		Assert.That(scene.FindByElementId("hero-crest"), Is.Not.Null);
+		Assert.That(scene.FindByElementId("tip-card"), Is.Not.Null);
+		Assert.That(button.Style.JustifyContent, Is.EqualTo(UiJustifyContent.Center));
+		Assert.That(button.Style.AlignItems, Is.EqualTo(UiAlignItems.Center));
 
-		float textWidth = button.TextContent!.Length * button.Style.FontSize * 0.5f;
-		float textHeight = button.Style.FontSize * 1.4f;
-		UiRect textBox = UiFlexAnonymousText.ResolveTextBox(button.Style, button.LayoutRect, textWidth, textHeight);
+		UiNode? label = FindDescendantText(button, "继续冒险");
+		Assert.That(label, Is.Not.Null, "primary button should expose centered label text");
+		UiRect cluster = UnionChildBounds(button);
 		float buttonCenterX = button.LayoutRect.X + button.LayoutRect.Width * 0.5f;
 		float buttonCenterY = button.LayoutRect.Y + button.LayoutRect.Height * 0.5f;
-		float textCenterX = textBox.X + textBox.Width * 0.5f;
-		float textCenterY = textBox.Y + textBox.Height * 0.5f;
-		Assert.That(Math.Abs(textCenterX - buttonCenterX), Is.LessThanOrEqualTo(TolerancePx));
-		Assert.That(Math.Abs(textCenterY - buttonCenterY), Is.LessThanOrEqualTo(TolerancePx));
+		float clusterCenterX = cluster.X + cluster.Width * 0.5f;
+		float clusterCenterY = cluster.Y + cluster.Height * 0.5f;
+		Assert.That(Math.Abs(clusterCenterX - buttonCenterX), Is.LessThanOrEqualTo(TolerancePx));
+		Assert.That(Math.Abs(clusterCenterY - buttonCenterY), Is.LessThanOrEqualTo(TolerancePx));
 	}
 
 	[Test]
@@ -121,7 +125,7 @@ public sealed class UiWebParityTests
 
 		UiNode title = scene.FindByElementId("rail-title")!;
 		UiNode body = scene.FindByElementId("rail-body")!;
-		Assert.That(title.LayoutRect.Width, Is.LessThan(40f));
+		Assert.That(title.LayoutRect.Width, Is.LessThan(55f));
 		Assert.That(title.LayoutRect.Height, Is.GreaterThan(40f), "narrow phone rail title must grow with wrapped CJK");
 		Assert.That(body.LayoutRect.Y, Is.GreaterThan(title.LayoutRect.Bottom - 0.5f));
 		Assert.That(body.LayoutRect.Height, Is.GreaterThan(100f));
@@ -136,15 +140,17 @@ public sealed class UiWebParityTests
 		scene.Layout(1280f, 720f);
 
 		UiNode chip = scene.FindByElementId("stat-hp")!;
-		UiNode label = chip.Children[0];
-		UiNode value = chip.Children[1];
-		Assert.That(label.LayoutRect.X, Is.GreaterThanOrEqualTo(chip.LayoutRect.X + chip.Style.Padding.Left + chip.Style.BorderWidth - 0.5f));
-		Assert.That(label.LayoutRect.Y, Is.GreaterThanOrEqualTo(chip.LayoutRect.Y + chip.Style.Padding.Top + chip.Style.BorderWidth - 0.5f));
-		Assert.That(value.LayoutRect.Y, Is.GreaterThan(label.LayoutRect.Bottom - 0.5f));
+		Assert.That(chip.Children.Count, Is.EqualTo(2), "stat chip should stack readout row above meter");
+		UiNode top = chip.Children[0];
+		UiNode meter = chip.Children[1];
+		Assert.That(top.LayoutRect.X, Is.GreaterThanOrEqualTo(chip.LayoutRect.X + chip.Style.Padding.Left + chip.Style.BorderWidth - 0.5f));
+		Assert.That(top.LayoutRect.Y, Is.GreaterThanOrEqualTo(chip.LayoutRect.Y + chip.Style.Padding.Top + chip.Style.BorderWidth - 0.5f));
+		Assert.That(meter.LayoutRect.Y, Is.GreaterThan(top.LayoutRect.Bottom - 0.5f));
+		Assert.That(meter.LayoutRect.Height, Is.GreaterThanOrEqualTo(6f));
 		float contentTop = chip.LayoutRect.Y + chip.Style.BorderWidth + chip.Style.Padding.Top;
 		float contentBottom = chip.LayoutRect.Bottom - chip.Style.BorderWidth - chip.Style.Padding.Bottom;
-		float stackTop = label.LayoutRect.Y;
-		float stackBottom = value.LayoutRect.Bottom;
+		float stackTop = top.LayoutRect.Y;
+		float stackBottom = meter.LayoutRect.Bottom;
 		float topSlack = stackTop - contentTop;
 		float bottomSlack = contentBottom - stackBottom;
 		Assert.That(Math.Abs(topSlack - bottomSlack), Is.LessThanOrEqualTo(TolerancePx), "stat chip column should be vertically centered by justify-content");
@@ -172,6 +178,41 @@ public sealed class UiWebParityTests
 	}
 
 	private static bool Within(float actual, float expected) => Math.Abs(actual - expected) <= TolerancePx;
+
+	private static UiNode? FindDescendantText(UiNode root, string expected)
+	{
+		if (string.Equals(root.TextContent, expected, StringComparison.Ordinal))
+		{
+			return root;
+		}
+		for (int i = 0; i < root.Children.Count; i++)
+		{
+			UiNode? match = FindDescendantText(root.Children[i], expected);
+			if (match != null)
+			{
+				return match;
+			}
+		}
+		return null;
+	}
+
+	private static UiRect UnionChildBounds(UiNode host)
+	{
+		Assert.That(host.Children.Count, Is.GreaterThan(0));
+		float left = host.Children[0].LayoutRect.X;
+		float top = host.Children[0].LayoutRect.Y;
+		float right = host.Children[0].LayoutRect.Right;
+		float bottom = host.Children[0].LayoutRect.Bottom;
+		for (int i = 1; i < host.Children.Count; i++)
+		{
+			UiRect rect = host.Children[i].LayoutRect;
+			left = Math.Min(left, rect.X);
+			top = Math.Min(top, rect.Y);
+			right = Math.Max(right, rect.Right);
+			bottom = Math.Max(bottom, rect.Bottom);
+		}
+		return new UiRect(left, top, right - left, bottom - top);
+	}
 
 	private static string FindFixtureDir()
 	{

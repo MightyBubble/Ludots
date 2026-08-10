@@ -25,7 +25,7 @@ internal sealed class WebParityShowcaseCodeBehind
 
 	internal UiScene BuildScene()
 	{
-		UiDocument document = _loader.LoadDocument(BuildHtml(), UiShowcaseAssets.GetWebParityShowcaseCss());
+		UiDocument document = _loader.LoadDocument(BuildHtml(), ComposeShowcaseCss());
 		UiScene scene = new UiScene(_textMeasurer, _imageSizeProvider);
 		scene.MountDocument(document);
 		MarkupBinder.Bind(scene, this);
@@ -35,8 +35,13 @@ internal sealed class WebParityShowcaseCodeBehind
 	internal UiSurfaceContribution CreateContribution(Action requestRebuild)
 	{
 		_requestRebuild = requestRebuild ?? throw new ArgumentNullException(nameof(requestRebuild));
-		UiStyleSheet sheet = UiCssParser.ParseStyleSheet(UiShowcaseAssets.GetWebParityShowcaseCss());
+		UiStyleSheet sheet = UiCssParser.ParseStyleSheet(ComposeShowcaseCss());
 		return UiSurfaceContribution.FromBuilder(BuildRoot, styleSheets: new[] { sheet });
+	}
+
+	private static string ComposeShowcaseCss()
+	{
+		return UiShowcaseAssets.GetWebParityShowcaseCss() + "\n" + UiShowcaseAssets.GetParityMenuCss();
 	}
 
 	internal void ViewportDesktop(UiActionContext context) => ApplyViewport("desktop", context);
@@ -63,14 +68,14 @@ internal sealed class WebParityShowcaseCodeBehind
 	private void Rebuild(UiActionContext context)
 	{
 		context.Scene.Dispatcher.Reset();
-		UiDocument document = _loader.LoadDocument(BuildHtml(), UiShowcaseAssets.GetWebParityShowcaseCss());
+		UiDocument document = _loader.LoadDocument(BuildHtml(), ComposeShowcaseCss());
 		context.Scene.MountDocument(document);
 		MarkupBinder.Bind(context.Scene, this);
 	}
 
 	private UiElementBuilder BuildRoot()
 	{
-		UiDocument document = _loader.LoadDocument(BuildHtml(), UiShowcaseAssets.GetWebParityShowcaseCss());
+		UiDocument document = _loader.LoadDocument(BuildHtml(), ComposeShowcaseCss());
 		return BindActionsRecursive(document.Root);
 	}
 
@@ -131,10 +136,10 @@ internal sealed class WebParityShowcaseCodeBehind
 				["phone_class"] = phone ? "active" : string.Empty,
 				["stage_class"] = "vp-" + _viewport,
 				["viewport_label"] = desktop ? "桌面 1280×720" : tablet ? "平板 900×700" : "手机 390×844",
-				["parity_badge"] = "布局已与浏览器参考对齐",
-				["point_1"] = "菜单卡片、四宫格按钮、右侧任务栏相对位置一致",
-				["point_2"] = "换分辨率后宽度高度跟着变，结构不塌",
-				["point_3"] = "静态颜色、边框、间距来自同一份 HTML/CSS"
+				["parity_badge"] = "舱门样式与浏览器参考同一份稿",
+				["point_1"] = "霓虹舱门、四宫格入口、右侧任务板位置对得上",
+				["point_2"] = "切观景窗/舷窗/通讯屏后，结构跟着变形但不塌",
+				["point_3"] = "按钮字在正中，护盾条与航程条来自同一份 HTML/CSS"
 			});
 	}
 }
