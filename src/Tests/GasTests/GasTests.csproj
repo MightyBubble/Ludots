@@ -51,6 +51,7 @@
     <ProjectReference Include="..\..\..\mods\capabilities\navigation\MassNavigationMod\MassNavigationMod.csproj" />
     <ProjectReference Include="..\..\..\mods\capabilities\strategic_domain\StrategicDomainMod\StrategicDomainMod.csproj" />
     <ProjectReference Include="..\..\..\mods\capabilities\ui_regions\UiRegionsMod\UiRegionsMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\y5k_grand_strategy\Y5kGrandStrategyMod\Y5kGrandStrategyMod.csproj" />
     <ProjectReference Include="..\..\Libraries\Ludots.WebUI.PanelKit\Ludots.WebUI.PanelKit.csproj" />
     <ProjectReference Include="..\..\..\mods\fixtures\version_mismatch\VersionMismatchMod\VersionMismatchMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\fourx_demo\FourXDemoMod\FourXDemoMod.csproj" />

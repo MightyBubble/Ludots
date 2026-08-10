@@ -51,7 +51,8 @@ public sealed class UiRegionsHudInstallation : IDisposable
 			?? throw new InvalidOperationException("TaskRuntimeService missing.");
 		ActivityRuntimeService activities = _engine.GetService(CoreServiceKeys.ActivityRuntimeService)
 			?? throw new InvalidOperationException("ActivityRuntimeService missing.");
-		HudLiveSnapshot snapshot = HudLiveSnapshot.Capture(tasks, activities);
+		IReadOnlyList<string> bulletin = ResolveBulletin();
+		HudLiveSnapshot snapshot = HudLiveSnapshot.Capture(tasks, activities, bulletin);
 
 		foreach (WebUiPanelDeclaration panel in _binder.Manifest.Panels)
 		{
@@ -68,6 +69,17 @@ public sealed class UiRegionsHudInstallation : IDisposable
 					_viewportHeight,
 					snapshot));
 		}
+	}
+
+	private IReadOnlyList<string> ResolveBulletin()
+	{
+		if (_engine.TryGetService(UiRegionsServiceKeys.Runtime, out UiRegionsRuntime runtime) &&
+		    runtime.BulletinProvider != null)
+		{
+			return runtime.BulletinProvider() ?? Array.Empty<string>();
+		}
+
+		return Array.Empty<string>();
 	}
 
 	public void Dispose()
@@ -87,11 +99,15 @@ public sealed class UiRegionsHudInstallation : IDisposable
 public readonly record struct HudLiveSnapshot(
 	IReadOnlyList<string> TaskLines,
 	IReadOnlyList<string> ActivityOptionLines,
+	IReadOnlyList<string> BulletinLines,
 	string? ForcedActivityTitle,
 	string? ForcedActivitySummary,
 	bool HasForcedActivity)
 {
-	public static HudLiveSnapshot Capture(TaskRuntimeService tasks, ActivityRuntimeService activities)
+	public static HudLiveSnapshot Capture(
+		TaskRuntimeService tasks,
+		ActivityRuntimeService activities,
+		IReadOnlyList<string>? bulletinLines = null)
 	{
 		ArgumentNullException.ThrowIfNull(tasks);
 		ArgumentNullException.ThrowIfNull(activities);
@@ -137,7 +153,13 @@ public readonly record struct HudLiveSnapshot(
 			break;
 		}
 
-		return new HudLiveSnapshot(taskLines, optionLines, forcedTitle, forcedSummary, forcedTitle != null);
+		return new HudLiveSnapshot(
+			taskLines,
+			optionLines,
+			bulletinLines ?? Array.Empty<string>(),
+			forcedTitle,
+			forcedSummary,
+			forcedTitle != null);
 	}
 }
 
@@ -332,6 +354,15 @@ public static class UiRegionsHudInstaller
 			for (int i = 0; i < limit; i++)
 			{
 				lines.Add(Ui.Text(snapshot.TaskLines[i]).Id($"uir-{panel.PanelId}-task-{i}"));
+			}
+		}
+		else if (string.Equals(panel.PanelType, "notification", StringComparison.Ordinal) &&
+		         snapshot.BulletinLines.Count > 0)
+		{
+			int limit = Math.Min(3, snapshot.BulletinLines.Count);
+			for (int i = 0; i < limit; i++)
+			{
+				lines.Add(Ui.Text(snapshot.BulletinLines[i]).Id($"uir-{panel.PanelId}-bulletin-{i}"));
 			}
 		}
 		else

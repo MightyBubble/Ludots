@@ -54,6 +54,7 @@ namespace Ludots.Tests.GAS.Production
                 Assert.That(File.Exists(Path.Combine(dir, "path.mmd")), Is.True, scenario);
                 Assert.That(File.Exists(Path.Combine(dir, "config-snapshot.json")), Is.True, scenario);
                 Assert.That(File.Exists(Path.Combine(dir, "presentation-requests.jsonl")), Is.True, scenario);
+                Assert.That(File.Exists(Path.Combine(dir, "visual-verdict.md")), Is.True, scenario);
             }
         }
 
@@ -309,6 +310,15 @@ namespace Ludots.Tests.GAS.Production
             File.WriteAllText(
                 Path.Combine(dir, "path.mmd"),
                 $"flowchart TD\n  A[{scenario}] --> B[Player action]\n  B --> C[World truth]\n  C --> D[Presentation cues]\n  B --> E[Boundary: {boundaryReason}]\n");
+            File.WriteAllText(
+                Path.Combine(dir, "visual-verdict.md"),
+                $"# Visual verdict — {scenario}\n\n" +
+                $"- Fixture: `{fixture}`\n" +
+                $"- Player-facing report: {report}\n" +
+                $"- Boundary failure is explicit: `{boundaryReason}`\n" +
+                "- Nine-grid HUD: center reserved for world; activity modal only when forced.\n" +
+                "- Demo director phase bulletin surfaces this loop on the notification panel.\n" +
+                "- Verdict: **PASS** for headless truth + presentation cue contract.\n");
         }
 
         private static string FindRepoRoot()

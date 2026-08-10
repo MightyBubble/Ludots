@@ -14,6 +14,7 @@ namespace Ludots.Core.Gameplay.Tasks
         int Target);
 
     public readonly record struct TaskView(
+        Entity Entity,
         string TaskId,
         string DisplayName,
         TaskInstanceState State,
@@ -254,6 +255,7 @@ namespace Ludots.Core.Gameplay.Tasks
             }
 
             view = new TaskView(
+                taskEntity,
                 definition.Id,
                 definition.DisplayName,
                 task.State,
