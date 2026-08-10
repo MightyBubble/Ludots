@@ -173,6 +173,19 @@ public static class UiRegionsHudInstaller
 		float y = ReferenceViewportHeight * yPct / 100f;
 		float w = ReferenceViewportWidth * wPct / 100f;
 		float h = ReferenceViewportHeight * hPct / 100f;
+
+		// Keep the 3D world readable: activity-modal only reserves a lease until content forces it open.
+		bool dormantCenterModal =
+			string.Equals(panel.PanelType, WebUiRegionPanelDescriptors.ActivityModalPanelType, StringComparison.Ordinal) ||
+			string.Equals(panel.SurfaceRegionId, WebUiNineGridRegions.Center, StringComparison.Ordinal);
+		if (dormantCenterModal)
+		{
+			x = ReferenceViewportWidth * 0.5f;
+			y = ReferenceViewportHeight * 0.5f;
+			w = 1f;
+			h = 1f;
+		}
+
 		string title = string.Create(CultureInfo.InvariantCulture, $"{panel.PanelType} · {panel.PanelId}");
 		return UiSurfaceContribution.FromBuilder(() =>
 			Ui.Panel(
