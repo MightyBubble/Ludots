@@ -15,6 +15,7 @@ using Ludots.Core.Gameplay.AI.Config;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Exchange;
 using Ludots.Core.Gameplay.Narrative;
+using Ludots.Core.Gameplay.Providers;
 using Ludots.Core.Gameplay.Quests;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Bindings;
@@ -160,6 +161,13 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<IPlatformManagedCameraHostService> PlatformManagedCameraHostService = new("PlatformManagedCameraHostService");
         public static readonly ServiceKey<QuestDefinitionRegistry> QuestDefinitionRegistry = new("QuestDefinitionRegistry");
         public static readonly ServiceKey<QuestRuntimeService> QuestRuntimeService = new("QuestRuntimeService");
+        public static readonly ServiceKey<ProviderServices> ProviderServices = new("ProviderServices");
+        public static readonly ServiceKey<ProviderGapCatalog> ProviderGapCatalog = new("ProviderGapCatalog");
+        public static readonly ServiceKey<SourceProviderRegistry> SourceProviderRegistry = new("SourceProviderRegistry");
+        public static readonly ServiceKey<SelectorProviderRegistry> SelectorProviderRegistry = new("SelectorProviderRegistry");
+        public static readonly ServiceKey<ConditionProviderRegistry> ConditionProviderRegistry = new("ConditionProviderRegistry");
+        public static readonly ServiceKey<EffectHandlerRegistry> EffectHandlerRegistry = new("EffectHandlerRegistry");
+        public static readonly ServiceKey<ProviderDefinitionValidator> ProviderDefinitionValidator = new("ProviderDefinitionValidator");
         public static readonly ServiceKey<NarrativeDefinitionRegistry> NarrativeDefinitions = new("NarrativeDefinitions");
         public static readonly ServiceKey<NarrativeDirector> NarrativeDirector = new("NarrativeDirector");
 

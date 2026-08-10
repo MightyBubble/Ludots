@@ -8,6 +8,7 @@
 *   [ADR-0002 统一 UI Runtime 与三前端写法](ADR-0002-unified-ui-runtime-and-authoring-models.md)
 *   [ADR-0003 Exchange Operation 与 Scope Key 身份模型](ADR-0003-exchange-operation-scope-key.md)
 *   [ADR-0004 时间体系：Entity-local 时间域与回合语义收敛](ADR-0004-time-system-entity-local-and-turn-semantics.md)
+*   [ADR-0005 Task 进度唯一真相与 Quest 适配](ADR-0005-task-ssot-quest-adapter.md)
 
 ## 2 编写规则
 
