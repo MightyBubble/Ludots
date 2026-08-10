@@ -270,10 +270,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// </summary>
         public static void Execute(ref GraphExecutionState state, ReadOnlySpan<GraphInstruction> program, GasGraphOpHandlerTable handlers)
         {
-            Span<int> ownedCallStack = stackalloc int[GraphVmLimits.MaxCallStackDepth];
+            // Legacy Effect callers omit CallStack. Provide a heap fallback so stackalloc
+            // does not escape through the by-ref state parameter (CS8352). Script hot paths
+            // should pass a caller-owned stackalloc into ExecuteSlice instead.
             if (state.CallStack.Length < GraphVmLimits.MaxCallStackDepth)
             {
-                state.CallStack = ownedCallStack;
+                state.CallStack = new int[GraphVmLimits.MaxCallStackDepth];
                 state.CallStackCount = 0;
             }
 

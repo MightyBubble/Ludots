@@ -138,7 +138,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             var outputRegisters = new byte[nodes.Count];
             AllocateOutputs(nodes, ops, outputTypes, outputRegisters, graphId, diagnostics);
             ValidateRequiredEdges(nodes, ops, controlEdges, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
-            DetectUnreachable(document.Entry, nodes, controlEdges, ops, graphId, diagnostics);
+            DetectUnreachable(document.Entry, nodes, document.ControlEdges, graphId, diagnostics);
 
             NodeLayout[] layouts = BuildLayouts(nodes, ops, diagnostics);
             if (HasErrors(diagnostics))
@@ -525,8 +525,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         private static void DetectUnreachable(
             string entry,
             List<GraphControlFlowNode> nodes,
-            Dictionary<ControlKey, string> controlEdges,
-            AuthoredOp[] ops,
+            List<GraphControlFlowEdge>? controlEdges,
             string graphId,
             List<GraphDiagnostic> diagnostics)
         {
@@ -535,23 +534,46 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 return;
             }
 
-            var reachable = new HashSet<string>(StringComparer.Ordinal);
-            var stack = new Stack<string>();
-            stack.Push(entry);
-            while (stack.Count > 0)
+            var adjacency = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+            List<GraphControlFlowEdge> edges = controlEdges ?? new List<GraphControlFlowEdge>();
+            for (int i = 0; i < edges.Count; i++)
             {
-                string current = stack.Pop();
-                if (!reachable.Add(current))
+                GraphControlFlowEdge edge = edges[i];
+                if (string.IsNullOrWhiteSpace(edge.From) || string.IsNullOrWhiteSpace(edge.To))
                 {
                     continue;
                 }
 
-                foreach (KeyValuePair<ControlKey, string> pair in controlEdges)
+                if (!adjacency.TryGetValue(edge.From, out List<string>? tos))
                 {
-                    if (string.Equals(pair.Key.NodeId, current, StringComparison.Ordinal) &&
-                        reachable.Add(pair.Value))
+                    tos = new List<string>();
+                    adjacency[edge.From] = tos;
+                }
+
+                tos.Add(edge.To);
+            }
+
+            var reachable = new HashSet<string>(StringComparer.Ordinal);
+            var stack = new Stack<string>();
+            if (!reachable.Add(entry))
+            {
+                return;
+            }
+
+            stack.Push(entry);
+            while (stack.Count > 0)
+            {
+                string current = stack.Pop();
+                if (!adjacency.TryGetValue(current, out List<string>? tos))
+                {
+                    continue;
+                }
+
+                for (int t = 0; t < tos.Count; t++)
+                {
+                    if (reachable.Add(tos[t]))
                     {
-                        stack.Push(pair.Value);
+                        stack.Push(tos[t]);
                     }
                 }
             }
