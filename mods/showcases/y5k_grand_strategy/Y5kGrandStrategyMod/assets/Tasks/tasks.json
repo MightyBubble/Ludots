@@ -1,0 +1,60 @@
+[
+  {
+    "id": "task.stabilize_supply",
+    "display_name": "Stabilize supply network",
+    "summary": "Recover capacity or retake the hub.",
+    "start_policy": "automatic",
+    "completion_rule": "any",
+    "objectives": [
+      {
+        "id": "recover",
+        "kind": "signal",
+        "title": "Demand falls under capacity",
+        "signal_key": "supply.recovered"
+      },
+      {
+        "id": "retake",
+        "kind": "signal",
+        "title": "Hub reclaimed",
+        "signal_key": "supply.hub_reclaimed"
+      }
+    ]
+  },
+  {
+    "id": "task.take_mountain",
+    "display_name": "Take the mountain settlement",
+    "summary": "Breach then transfer ownership.",
+    "start_policy": "automatic",
+    "completion_rule": "all",
+    "objectives": [
+      {
+        "id": "breach",
+        "kind": "signal",
+        "title": "Defense breached",
+        "signal_key": "siege.breached"
+      },
+      {
+        "id": "transfer",
+        "kind": "signal",
+        "title": "Owner transferred",
+        "signal_key": "siege.owner_transferred"
+      }
+    ],
+    "next_task_id": "task.dispose_captive"
+  },
+  {
+    "id": "task.dispose_captive",
+    "display_name": "Dispose captive hero",
+    "summary": "Accept and resolve the captive.",
+    "start_policy": "playerAccept",
+    "completion_rule": "all",
+    "objectives": [
+      {
+        "id": "resolved",
+        "kind": "signal",
+        "title": "Captive resolved",
+        "signal_key": "captive.resolved"
+      }
+    ]
+  }
+]

@@ -17,6 +17,24 @@ namespace Ludots.Core.Gameplay.Providers
             Conditions = new ConditionProviderRegistry(Gaps, allowTestDomainOverride);
             Effects = new EffectHandlerRegistry(Gaps, allowTestDomainOverride);
             Validator = new ProviderDefinitionValidator(Sources, Selectors, Conditions, Effects, Gaps);
+            RegisterCoreSourceStubs();
+        }
+
+        private void RegisterCoreSourceStubs()
+        {
+            // Domain mods may emit through these keys after GameStart; stubs make load-time
+            // Activity/Task validation possible before capability mods install.
+            Sources.Register("supply.network_changed", new NullSourceProvider(), ProviderParameterSchema.Empty);
+            Sources.Register("city_control.defense_breached", new NullSourceProvider(), ProviderParameterSchema.Empty);
+            Sources.Register("time.day_started", new NullSourceProvider(), ProviderParameterSchema.Empty);
+            Sources.Register("time.season_started", new NullSourceProvider(), ProviderParameterSchema.Empty);
+        }
+
+        private sealed class NullSourceProvider : ISourceProvider
+        {
+            public void Emit(in ProviderSignal signal, ProviderExecutionContext context)
+            {
+            }
         }
 
         public ProviderGapCatalog Gaps { get; }

@@ -1,0 +1,30 @@
+{
+  "Id": "y5k_strategy",
+  "Tags": ["y5k", "grand_strategy"],
+  "Entities": [
+    {
+      "Template": "y5k_marker_estuary",
+      "InstanceId": "y5k-estuary",
+      "Overrides": { "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } } }
+    },
+    {
+      "Template": "y5k_marker_pass",
+      "InstanceId": "y5k-pass",
+      "Overrides": { "WorldPositionCm": { "Value": { "X": 2400, "Y": 0 } } }
+    },
+    {
+      "Template": "y5k_marker_mountain",
+      "InstanceId": "y5k-mountain",
+      "Overrides": { "WorldPositionCm": { "Value": { "X": 4800, "Y": 800 } } }
+    },
+    {
+      "Template": "y5k_hero_a",
+      "InstanceId": "y5k-hero-a",
+      "Overrides": { "WorldPositionCm": { "Value": { "X": 200, "Y": 200 } } }
+    }
+  ],
+  "Teams": [
+    { "TeamId": 1, "RepresentativeInstanceId": "y5k-hero-a" },
+    { "TeamId": 2, "RepresentativeInstanceId": "y5k-mountain" }
+  ]
+}

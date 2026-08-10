@@ -1,0 +1,61 @@
+[
+  {
+    "id": "activity.supply_strain",
+    "display_name": "Supply Strain",
+    "summary": "Hub changed hands; frontline supply subnet is overrun.",
+    "source_key": "supply.network_changed",
+    "dispatch_policy": "forced",
+    "options": [
+      {
+        "id": "withdraw",
+        "title": "Withdraw frontline forces",
+        "body": "Pull forces into the rear subnet.",
+        "effects": []
+      },
+      {
+        "id": "retake_hub",
+        "title": "Retake the hub",
+        "body": "Organize a strike to reclaim the pass.",
+        "effects": []
+      },
+      {
+        "id": "hold",
+        "title": "Hold the line",
+        "body": "Do nothing and ride out the grace window.",
+        "is_baseline": true,
+        "effects": []
+      }
+    ]
+  },
+  {
+    "id": "activity.captive_disposal",
+    "display_name": "Captive Disposal",
+    "summary": "A captive hero awaits judgment.",
+    "source_key": "city_control.defense_breached",
+    "dispatch_policy": "forced",
+    "options": [
+      {
+        "id": "recruit",
+        "title": "Recruit",
+        "effects": [
+          { "effect_key": "prisoner.recruit", "parameters": { "settlement_key": 3 } }
+        ]
+      },
+      {
+        "id": "release",
+        "title": "Release",
+        "is_baseline": true,
+        "effects": [
+          { "effect_key": "prisoner.release", "parameters": { "settlement_key": 3 } }
+        ]
+      },
+      {
+        "id": "execute",
+        "title": "Execute",
+        "effects": [
+          { "effect_key": "prisoner.execute", "parameters": { "settlement_key": 3 } }
+        ]
+      }
+    ]
+  }
+]

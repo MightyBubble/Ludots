@@ -1,0 +1,30 @@
+[
+  {
+    "id": "y5k_marker_estuary",
+    "components": {
+      "Name": { "Value": "Settlement.Estuary" },
+      "Team": { "Value": 1 }
+    }
+  },
+  {
+    "id": "y5k_marker_pass",
+    "components": {
+      "Name": { "Value": "Settlement.Pass" },
+      "Team": { "Value": 1 }
+    }
+  },
+  {
+    "id": "y5k_marker_mountain",
+    "components": {
+      "Name": { "Value": "Settlement.Mountain" },
+      "Team": { "Value": 2 }
+    }
+  },
+  {
+    "id": "y5k_hero_a",
+    "components": {
+      "Name": { "Value": "Hero.A" },
+      "Team": { "Value": 1 }
+    }
+  }
+]

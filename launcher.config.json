@@ -335,6 +335,14 @@
         "value": "mods/showcases/item_system/WeaponBenchShowcaseMod",
         "projectPath": "WeaponBenchShowcaseMod.csproj"
       }
+    },
+    {
+      "name": "y5k_grand_strategy",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/y5k_grand_strategy/Y5kGrandStrategyMod",
+        "projectPath": "Y5kGrandStrategyMod.csproj"
+      }
     }
   ],
   "adapters": {
@@ -348,7 +356,9 @@
       "assemblyPath": "BrowserRuntime/cef/Ludots.UI.Browser.Cef.dll",
       "hostTypeName": "Ludots.UI.Browser.Cef.CefBrowserRuntimeHost",
       "useCollectibleLoadContext": false,
-      "processSharedAssemblyNamePrefixes": ["CefSharp"]
+      "processSharedAssemblyNamePrefixes": [
+        "CefSharp"
+      ]
     }
   ],
   "projectHints": []

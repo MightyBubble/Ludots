@@ -1,0 +1,18 @@
+{
+  "name": "Y5kGrandStrategyMod",
+  "version": "1.0.0",
+  "description": "一张小地图，五条玩家环：补给 / 攻防 / 接管 / 治理 / 谋略与技能。",
+  "main": "bin/net8.0/Y5kGrandStrategyMod.dll",
+  "priority": 200,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0",
+    "StrategicDomainMod": "^1.0.0",
+    "UiRegionsMod": "^1.0.0",
+    "EntityCommandPanelMod": "^1.0.0",
+    "EntityInfoPanelsMod": "^1.0.0",
+    "MinimapControlMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["showcase", "y5k", "grand-strategy", "panel-kit"]
+}

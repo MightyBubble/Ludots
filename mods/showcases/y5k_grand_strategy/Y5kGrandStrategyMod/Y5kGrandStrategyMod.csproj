@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Y5kGrandStrategyMod</RootNamespace>
+    <AssemblyName>Y5kGrandStrategyMod</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\..\src\Core\Ludots.Core.csproj" />
+    <ProjectReference Include="..\..\..\capabilities\strategic_domain\StrategicDomainMod\StrategicDomainMod.csproj" />
+    <ProjectReference Include="..\..\..\capabilities\ui_regions\UiRegionsMod\UiRegionsMod.csproj" />
+    <ProjectReference Include="..\..\..\..\src\Libraries\Ludots.WebUI.PanelKit\Ludots.WebUI.PanelKit.csproj">
+      <Private>false</Private>
+    </ProjectReference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="assets\**\*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>
