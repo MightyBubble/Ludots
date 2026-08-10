@@ -7,12 +7,34 @@ namespace Ludots.UI.Runtime;
 
 public sealed class UiStyleResolver
 {
+	private static readonly Comparison<(int Specificity, int Order, UiStyleDeclaration Declaration)> MatchComparison =
+		static (left, right) =>
+		{
+			int bySpecificity = left.Specificity.CompareTo(right.Specificity);
+			return bySpecificity != 0 ? bySpecificity : left.Order.CompareTo(right.Order);
+		};
+
+	private readonly List<(int Specificity, int Order, UiStyleDeclaration Declaration)> _matchBuffer = new List<(int, int, UiStyleDeclaration)>(64);
+	private readonly UiStyleDeclaration _cascadeBuffer = new UiStyleDeclaration();
+	private readonly UiStyleBuilder _styleBuilder = new UiStyleBuilder();
+	private readonly Dictionary<string, string> _rootVariables = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+	private readonly List<Dictionary<string, string>> _variableFramePool = new List<Dictionary<string, string>>();
+	private readonly List<Dictionary<string, string>> _variableFramesRented = new List<Dictionary<string, string>>();
+
 	public void ResolveTree(UiNode root, IReadOnlyList<UiStyleSheet>? styleSheets)
 	{
 		ArgumentNullException.ThrowIfNull(root, "root");
 		IReadOnlyList<UiStyleSheet> styleSheets2 = styleSheets ?? Array.Empty<UiStyleSheet>();
 		IReadOnlyDictionary<string, UiKeyframeDefinition> keyframes = BuildKeyframeIndex(styleSheets2);
-		ResolveNode(root, styleSheets2, keyframes, null, null, isRoot: true);
+		_rootVariables.Clear();
+		try
+		{
+			ResolveNode(root, styleSheets2, keyframes, null, _rootVariables, isRoot: true);
+		}
+		finally
+		{
+			ReleaseVariableFrames();
+		}
 	}
 
 	internal static bool TryResolveGeneratedContent(UiElement host, UiPseudoElement pseudoElement, IReadOnlyList<UiStyleSheet> styleSheets, out string text)
@@ -102,7 +124,7 @@ public sealed class UiStyleResolver
 			.Replace("\\\\", "\\", StringComparison.Ordinal);
 	}
 
-	private void ResolveNode(UiNode node, IReadOnlyList<UiStyleSheet> styleSheets, IReadOnlyDictionary<string, UiKeyframeDefinition> keyframes, UiStyle? parentStyle, IReadOnlyDictionary<string, string>? inheritedVariables, bool isRoot)
+	private void ResolveNode(UiNode node, IReadOnlyList<UiStyleSheet> styleSheets, IReadOnlyDictionary<string, UiKeyframeDefinition> keyframes, UiStyle? parentStyle, Dictionary<string, string> inheritedVariables, bool isRoot)
 	{
 		if (isRoot)
 		{
@@ -112,48 +134,90 @@ public sealed class UiStyleResolver
 		{
 			node.RemovePseudoState(UiPseudoState.Root);
 		}
-		List<(int, int, UiStyleDeclaration)> list = new List<(int, int, UiStyleDeclaration)>();
-		int num = 0;
+		_matchBuffer.Clear();
+		int sequence = 0;
 		for (int i = 0; i < styleSheets.Count; i++)
 		{
-			foreach (UiStyleRule rule in styleSheets[i].Rules)
+			IReadOnlyList<UiStyleRule> rules = styleSheets[i].Rules;
+			for (int r = 0; r < rules.Count; r++)
 			{
+				UiStyleRule rule = rules[r];
 				if (UiSelectorMatcher.Matches(node, rule.Selector))
 				{
-					list.Add((rule.Selector.Specificity, i * 10000 + rule.Order + num++, rule.Declaration));
+					_matchBuffer.Add((rule.Selector.Specificity, i * 10000 + rule.Order + sequence++, rule.Declaration));
 				}
 			}
 		}
-		list.Sort(delegate((int Specificity, int Order, UiStyleDeclaration Declaration) left, (int Specificity, int Order, UiStyleDeclaration Declaration) right)
+		_matchBuffer.Sort(MatchComparison);
+		_cascadeBuffer.Clear();
+		for (int i = 0; i < _matchBuffer.Count; i++)
 		{
-			int num3 = left.Specificity.CompareTo(right.Specificity);
-			return (num3 != 0) ? num3 : left.Order.CompareTo(right.Order);
-		});
-		UiStyleDeclaration uiStyleDeclaration = new UiStyleDeclaration();
-		for (int num2 = 0; num2 < list.Count; num2++)
-		{
-			uiStyleDeclaration.Merge(list[num2].Item3);
+			_cascadeBuffer.Merge(_matchBuffer[i].Declaration);
 		}
-		uiStyleDeclaration.Merge(node.InlineStyle);
-		Dictionary<string, string> dictionary = ((inheritedVariables != null) ? new Dictionary<string, string>(inheritedVariables, StringComparer.OrdinalIgnoreCase) : new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase));
-		ApplyCustomProperties(uiStyleDeclaration, dictionary);
-		UiStyle localStyle = node.LocalStyle;
-		localStyle = ApplyDeclaration(localStyle, uiStyleDeclaration, dictionary);
-		localStyle = ApplyUserAgentTagDefaults(node, localStyle, uiStyleDeclaration);
-		localStyle = ApplyInheritance(node, localStyle, parentStyle, uiStyleDeclaration);
-		if (node.Kind == UiNodeKind.Text && localStyle.Display == UiDisplay.Flex)
+		_cascadeBuffer.Merge(node.InlineStyle);
+		Dictionary<string, string> variables = inheritedVariables;
+		if (HasCustomProperties(_cascadeBuffer))
 		{
-			localStyle = localStyle with
-			{
-				Display = UiDisplay.Text
-			};
+			variables = RentVariableFrame(inheritedVariables);
+			ApplyCustomProperties(_cascadeBuffer, variables);
 		}
-		UiAnimationSpec animation = ResolveAnimationSpec(localStyle.Animation, keyframes, dictionary);
+		_styleBuilder.CopyFrom(node.LocalStyle);
+		ApplyDeclaration(_styleBuilder, _cascadeBuffer, variables);
+		ApplyUserAgentTagDefaults(node, _styleBuilder, _cascadeBuffer);
+		ApplyInheritance(node, _styleBuilder, parentStyle, _cascadeBuffer);
+		if (node.Kind == UiNodeKind.Text && _styleBuilder.Display == UiDisplay.Flex)
+		{
+			_styleBuilder.Display = UiDisplay.Text;
+		}
+		UiStyle localStyle = _styleBuilder.ToStyle();
+		UiAnimationSpec animation = ResolveAnimationSpec(localStyle.Animation, keyframes, variables);
 		node.SetComputedStyle(localStyle, animation);
-		foreach (UiNode child in node.Children)
+		for (int i = 0; i < node.Children.Count; i++)
 		{
-			ResolveNode(child, styleSheets, keyframes, localStyle, dictionary, isRoot: false);
+			ResolveNode(node.Children[i], styleSheets, keyframes, localStyle, variables, isRoot: false);
 		}
+	}
+
+	private Dictionary<string, string> RentVariableFrame(Dictionary<string, string> parent)
+	{
+		Dictionary<string, string> frame = _variableFramePool.Count > 0
+			? _variableFramePool[_variableFramePool.Count - 1]
+			: new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+		if (_variableFramePool.Count > 0)
+		{
+			_variableFramePool.RemoveAt(_variableFramePool.Count - 1);
+		}
+		frame.Clear();
+		foreach (KeyValuePair<string, string> item in parent)
+		{
+			frame[item.Key] = item.Value;
+		}
+		_variableFramesRented.Add(frame);
+		return frame;
+	}
+
+	private void ReleaseVariableFrames()
+	{
+		for (int i = 0; i < _variableFramesRented.Count; i++)
+		{
+			Dictionary<string, string> frame = _variableFramesRented[i];
+			frame.Clear();
+			_variableFramePool.Add(frame);
+		}
+		_variableFramesRented.Clear();
+	}
+
+	private static bool HasCustomProperties(UiStyleDeclaration declaration)
+	{
+		Dictionary<string, string>.Enumerator enumerator = declaration.EnumerateValues();
+		while (enumerator.MoveNext())
+		{
+			if (enumerator.Current.Key.StartsWith("--", StringComparison.Ordinal))
+			{
+				return true;
+			}
+		}
+		return false;
 	}
 
 	private static IReadOnlyDictionary<string, UiKeyframeDefinition> BuildKeyframeIndex(IReadOnlyList<UiStyleSheet> styleSheets)
@@ -208,8 +272,10 @@ public sealed class UiStyleResolver
 
 	private static void ApplyCustomProperties(UiStyleDeclaration declaration, IDictionary<string, string> variables)
 	{
-		foreach (KeyValuePair<string, string> item in declaration)
+		Dictionary<string, string>.Enumerator enumerator = declaration.EnumerateValues();
+		while (enumerator.MoveNext())
 		{
+			KeyValuePair<string, string> item = enumerator.Current;
 			if (item.Key.StartsWith("--", StringComparison.Ordinal))
 			{
 				variables[item.Key] = ResolveValue(item.Value, (IReadOnlyDictionary<string, string>)variables);
@@ -217,18 +283,18 @@ public sealed class UiStyleResolver
 		}
 	}
 
-	private static UiStyle ApplyUserAgentTagDefaults(UiNode node, UiStyle style, UiStyleDeclaration declaration)
+	private static void ApplyUserAgentTagDefaults(UiNode node, UiStyleBuilder style, UiStyleDeclaration declaration)
 	{
 		string tag = node.TagName ?? string.Empty;
 		if (tag.Equals("strong", StringComparison.OrdinalIgnoreCase) || tag.Equals("b", StringComparison.OrdinalIgnoreCase))
 		{
 			if (!HasExplicitValue(declaration, "display"))
 			{
-				style = style with { Display = UiDisplay.Inline };
+				style.Display = UiDisplay.Inline;
 			}
 			if (!HasExplicitValue(declaration, "font-weight"))
 			{
-				style = style with { Bold = true };
+				style.Bold = true;
 			}
 		}
 		else if (tag.Equals("em", StringComparison.OrdinalIgnoreCase) ||
@@ -238,7 +304,7 @@ public sealed class UiStyleResolver
 		{
 			if (!HasExplicitValue(declaration, "display"))
 			{
-				style = style with { Display = UiDisplay.Inline };
+				style.Display = UiDisplay.Inline;
 			}
 		}
 		else if (tag.Equals("p", StringComparison.OrdinalIgnoreCase) ||
@@ -251,76 +317,53 @@ public sealed class UiStyleResolver
 		{
 			if (!HasExplicitValue(declaration, "display"))
 			{
-				style = style with { Display = UiDisplay.Block };
+				style.Display = UiDisplay.Block;
 			}
 		}
 		else if (tag.Equals("img", StringComparison.OrdinalIgnoreCase))
 		{
 			if (!HasExplicitValue(declaration, "display"))
 			{
-				style = style with { Display = UiDisplay.Inline };
+				style.Display = UiDisplay.Inline;
 			}
 		}
-		return style;
 	}
 
-	private static UiStyle ApplyInheritance(UiNode node, UiStyle style, UiStyle? parentStyle, UiStyleDeclaration declaration)
+	private static void ApplyInheritance(UiNode node, UiStyleBuilder style, UiStyle? parentStyle, UiStyleDeclaration declaration)
 	{
 		if (parentStyle == null)
 		{
-			return style;
+			return;
 		}
 		UiStyle implicitStyle = GetImplicitStyle(node.Kind);
 		if (!HasExplicitValue(declaration, "color") && style.Color == implicitStyle.Color)
 		{
-			style = style with
-			{
-				Color = parentStyle.Color
-			};
+			style.Color = parentStyle.Color;
 		}
 		if (!HasExplicitValue(declaration, "font-size") && Math.Abs(style.FontSize - implicitStyle.FontSize) < 0.01f)
 		{
-			style = style with
-			{
-				FontSize = parentStyle.FontSize
-			};
+			style.FontSize = parentStyle.FontSize;
 		}
 		if (!HasExplicitValue(declaration, "font-weight") && style.Bold == implicitStyle.Bold)
 		{
-			style = style with
-			{
-				Bold = parentStyle.Bold
-			};
+			style.Bold = parentStyle.Bold;
 		}
 		if (!HasExplicitValue(declaration, "font-family") && string.Equals(style.FontFamily, implicitStyle.FontFamily, StringComparison.Ordinal))
 		{
-			style = style with
-			{
-				FontFamily = parentStyle.FontFamily
-			};
+			style.FontFamily = parentStyle.FontFamily;
 		}
 		if (!HasExplicitValue(declaration, "white-space") && style.WhiteSpace == implicitStyle.WhiteSpace)
 		{
-			style = style with
-			{
-				WhiteSpace = parentStyle.WhiteSpace
-			};
+			style.WhiteSpace = parentStyle.WhiteSpace;
 		}
 		if (!HasExplicitValue(declaration, "direction") && style.Direction == implicitStyle.Direction)
 		{
-			style = style with
-			{
-				Direction = parentStyle.Direction
-			};
+			style.Direction = parentStyle.Direction;
 		}
 		if (!HasExplicitValue(declaration, "text-align") && style.TextAlign == implicitStyle.TextAlign)
 		{
-			style = style with
-			{
-				TextAlign = parentStyle.TextAlign
-			};
+			style.TextAlign = parentStyle.TextAlign;
 		}
-		return style;
 	}
 
 	private static bool HasExplicitValue(UiStyleDeclaration declaration, string propertyName)
@@ -328,11 +371,31 @@ public sealed class UiStyleResolver
 		return declaration[propertyName] != null;
 	}
 
+	private static readonly UiStyle[] ImplicitStylesByKind = CreateImplicitStylesByKind();
+
+	private static UiStyle[] CreateImplicitStylesByKind()
+	{
+		int count = Enum.GetValues<UiNodeKind>().Length;
+		UiStyle[] styles = new UiStyle[count];
+		for (int i = 0; i < count; i++)
+		{
+			styles[i] = CreateImplicitStyle((UiNodeKind)i);
+		}
+		return styles;
+	}
+
 	private static UiStyle GetImplicitStyle(UiNodeKind kind)
 	{
-		if (1 == 0)
+		int index = (int)kind;
+		if ((uint)index < (uint)ImplicitStylesByKind.Length)
 		{
+			return ImplicitStylesByKind[index];
 		}
+		return UiStyle.Default;
+	}
+
+	private static UiStyle CreateImplicitStyle(UiNodeKind kind)
+	{
 		UiStyle result;
 		switch (kind)
 		{
@@ -442,23 +505,21 @@ public sealed class UiStyleResolver
 			result = UiStyle.Default;
 			break;
 		}
-		if (1 == 0)
-		{
-		}
 		return result;
 	}
 
-	private static UiStyle ApplyDeclaration(UiStyle style, UiStyleDeclaration declaration, IReadOnlyDictionary<string, string> variables)
+	private static void ApplyDeclaration(UiStyleBuilder style, UiStyleDeclaration declaration, IReadOnlyDictionary<string, string> variables)
 	{
-		foreach (KeyValuePair<string, string> item in declaration)
+		Dictionary<string, string>.Enumerator enumerator = declaration.EnumerateValues();
+		while (enumerator.MoveNext())
 		{
+			KeyValuePair<string, string> item = enumerator.Current;
 			if (!item.Key.StartsWith("--", StringComparison.Ordinal))
 			{
 				string rawValue = ResolveValue(item.Value, variables);
-				style = ApplyProperty(style, item.Key, rawValue);
+				ApplyProperty(style, item.Key, rawValue);
 			}
 		}
-		return style;
 	}
 
 	private static string ResolveValue(string rawValue, IReadOnlyDictionary<string, string> variables, int depth = 0)
@@ -551,526 +612,542 @@ public sealed class UiStyleResolver
 
 	internal static UiStyle ApplyProperty(UiStyle style, string propertyName, string rawValue)
 	{
+		UiStyleBuilder builder = new UiStyleBuilder();
+		builder.CopyFrom(style);
+		ApplyProperty(builder, propertyName, rawValue);
+		return builder.ToStyle();
+	}
+
+	internal static void ApplyProperty(UiStyleBuilder builder, string propertyName, string rawValue)
+	{
 		string text = rawValue.Trim();
 		switch (propertyName.Trim().ToLowerInvariant())
 		{
 		case "display":
-			return style with
-			{
-				Display = ParseDisplay(text)
-			};
+			builder.Display = ParseDisplay(text);
+			return;
 		case "flex-direction":
-			return style with
-			{
-				FlexDirection = ParseFlexDirection(text)
-			};
+			builder.FlexDirection = ParseFlexDirection(text);
+			return;
 		case "justify-content":
-			return style with
-			{
-				JustifyContent = ParseJustifyContent(text)
-			};
+			builder.JustifyContent = ParseJustifyContent(text);
+			return;
 		case "align-items":
-			return style with
-			{
-				AlignItems = ParseAlignItems(text)
-			};
+			builder.AlignItems = ParseAlignItems(text);
+			return;
 		case "align-content":
-			return style with
-			{
-				AlignContent = ParseAlignContent(text)
-			};
+			builder.AlignContent = ParseAlignContent(text);
+			return;
 		case "flex-wrap":
-			return style with
-			{
-				FlexWrap = ParseFlexWrap(text)
-			};
+			builder.FlexWrap = ParseFlexWrap(text);
+			return;
 		case "position":
-			return style with
-			{
-				PositionType = ParsePositionType(text)
-			};
+			builder.PositionType = ParsePositionType(text);
+			return;
 		case "left":
 		{
 			UiLength length;
-			return TryParseLength(text, out length) ? style with
+			if (TryParseLength(text, out length))
 			{
-				Left = length
-			} : style;
+				builder.Left = length;
+			}
+			return;
 		}
 		case "top":
 		{
 			UiLength length2;
-			return TryParseLength(text, out length2) ? style with
+			if (TryParseLength(text, out length2))
 			{
-				Top = length2
-			} : style;
+				builder.Top = length2;
+			}
+			return;
 		}
 		case "right":
 		{
 			UiLength length4;
-			return TryParseLength(text, out length4) ? style with
+			if (TryParseLength(text, out length4))
 			{
-				Right = length4
-			} : style;
+				builder.Right = length4;
+			}
+			return;
 		}
 		case "bottom":
 		{
 			UiLength length10;
-			return TryParseLength(text, out length10) ? style with
+			if (TryParseLength(text, out length10))
 			{
-				Bottom = length10
-			} : style;
+				builder.Bottom = length10;
+			}
+			return;
 		}
 		case "width":
 		{
 			UiLength length9;
-			return TryParseLength(text, out length9) ? style with
+			if (TryParseLength(text, out length9))
 			{
-				Width = length9
-			} : style;
+				builder.Width = length9;
+			}
+			return;
 		}
 		case "height":
 		{
 			UiLength length6;
-			return TryParseLength(text, out length6) ? style with
+			if (TryParseLength(text, out length6))
 			{
-				Height = length6
-			} : style;
+				builder.Height = length6;
+			}
+			return;
 		}
 		case "min-width":
 		{
 			UiLength length3;
-			return TryParseLength(text, out length3) ? style with
+			if (TryParseLength(text, out length3))
 			{
-				MinWidth = length3
-			} : style;
+				builder.MinWidth = length3;
+			}
+			return;
 		}
 		case "min-height":
 		{
 			UiLength length11;
-			return TryParseLength(text, out length11) ? style with
+			if (TryParseLength(text, out length11))
 			{
-				MinHeight = length11
-			} : style;
+				builder.MinHeight = length11;
+			}
+			return;
 		}
 		case "max-width":
 		{
 			UiLength length8;
-			return TryParseLength(text, out length8) ? style with
+			if (TryParseLength(text, out length8))
 			{
-				MaxWidth = length8
-			} : style;
+				builder.MaxWidth = length8;
+			}
+			return;
 		}
 		case "max-height":
 		{
 			UiLength length7;
-			return TryParseLength(text, out length7) ? style with
+			if (TryParseLength(text, out length7))
 			{
-				MaxHeight = length7
-			} : style;
+				builder.MaxHeight = length7;
+			}
+			return;
 		}
 		case "flex-basis":
 		{
 			UiLength length5;
-			return TryParseLength(text, out length5) ? style with
+			if (TryParseLength(text, out length5))
 			{
-				FlexBasis = length5
-			} : style;
+				builder.FlexBasis = length5;
+			}
+			return;
 		}
 		case "flex-grow":
 		{
 			float parsed;
-			return TryParseFloat(text, out parsed) ? style with
+			if (TryParseFloat(text, out parsed))
 			{
-				FlexGrow = parsed
-			} : style;
+				builder.FlexGrow = parsed;
+			}
+			return;
 		}
 		case "flex-shrink":
 		{
 			float parsed2;
-			return TryParseFloat(text, out parsed2) ? style with
+			if (TryParseFloat(text, out parsed2))
 			{
-				FlexShrink = parsed2
-			} : style;
+				builder.FlexShrink = parsed2;
+			}
+			return;
 		}
 		case "gap":
 		{
 			float gap;
 			float rowGap;
 			float columnGap;
-			return TryParseGap(text, out gap, out rowGap, out columnGap) ? style with
+			if (TryParseGap(text, out gap, out rowGap, out columnGap))
 			{
-				Gap = gap,
-				RowGap = rowGap,
-				ColumnGap = columnGap
-			} : style;
+				builder.Gap = gap;
+				builder.RowGap = rowGap;
+				builder.ColumnGap = columnGap;
+			}
+			return;
 		}
 		case "row-gap":
 		{
 			float parsed6;
-			return TryParseFloat(text, out parsed6) ? style with
+			if (TryParseFloat(text, out parsed6))
 			{
-				RowGap = parsed6
-			} : style;
+				builder.RowGap = parsed6;
+			}
+			return;
 		}
 		case "column-gap":
 		{
 			float parsed4;
-			return TryParseFloat(text, out parsed4) ? style with
+			if (TryParseFloat(text, out parsed4))
 			{
-				ColumnGap = parsed4
-			} : style;
+				builder.ColumnGap = parsed4;
+			}
+			return;
 		}
 		case "margin":
 		{
 			UiThickness thickness3;
-			return TryParseThickness(text, out thickness3) ? style with
+			if (TryParseThickness(text, out thickness3))
 			{
-				Margin = thickness3
-			} : style;
+				builder.Margin = thickness3;
+			}
+			return;
 		}
 		case "padding":
 		{
 			UiThickness thickness;
-			return TryParseThickness(text, out thickness) ? style with
+			if (TryParseThickness(text, out thickness))
 			{
-				Padding = thickness
-			} : style;
+				builder.Padding = thickness;
+			}
+			return;
 		}
 		case "border-width":
 		{
 			float parsed9;
-			return TryParseFloat(text, out parsed9) ? style with
+			if (TryParseFloat(text, out parsed9))
 			{
-				BorderWidth = parsed9
-			} : style;
+				builder.BorderWidth = parsed9;
+			}
+			return;
 		}
 		case "border-radius":
 		{
 			float parsed8;
-			return TryParseFloat(text, out parsed8) ? style with
+			if (TryParseFloat(text, out parsed8))
 			{
-				BorderRadius = parsed8
-			} : style;
+				builder.BorderRadius = parsed8;
+			}
+			return;
 		}
 		case "border-style":
-			return style with
-			{
-				BorderStyle = ParseBorderStyle(text)
-			};
+			builder.BorderStyle = ParseBorderStyle(text);
+			return;
 		case "z-index":
 		{
 			int result;
-			return int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out result) ? style with
+			if (int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out result))
 			{
-				ZIndex = result
-			} : style;
+				builder.ZIndex = result;
+			}
+			return;
 		}
 		case "background":
 		{
 			if (TryParseBackgroundLayers(text, out IReadOnlyList<UiBackgroundLayer> layers))
 			{
-				return style with
-				{
-					BackgroundLayers = layers,
-					BackgroundGradient = layers.Select((UiBackgroundLayer layer) => layer.Gradient).FirstOrDefault((UiLinearGradient uiLinearGradient) => uiLinearGradient != null),
-					BackgroundColor = ((layers.Count == 1 && layers[0].Gradient == null) ? layers[0].Color : style.BackgroundColor)
-				};
+				builder.BackgroundLayers = layers;
+			builder.BackgroundGradient = layers.Select((UiBackgroundLayer layer) => layer.Gradient).FirstOrDefault((UiLinearGradient uiLinearGradient) => uiLinearGradient != null);
+			builder.BackgroundColor = ((layers.Count == 1 && layers[0].Gradient == null) ? layers[0].Color : builder.BackgroundColor);
+			return;
 			}
 			UiColor color3;
-			return TryParseColor(text, out color3) ? style with
+			if (TryParseColor(text, out color3))
 			{
-				BackgroundColor = color3,
-				BackgroundLayers = Array.Empty<UiBackgroundLayer>(),
-				BackgroundGradient = null
-			} : style;
+				builder.BackgroundColor = color3;
+				builder.BackgroundLayers = Array.Empty<UiBackgroundLayer>();
+				builder.BackgroundGradient = null;
+			}
+			return;
 		}
 		case "background-color":
 		{
 			UiColor color;
-			return TryParseColor(text, out color) ? style with
+			if (TryParseColor(text, out color))
 			{
-				BackgroundColor = color
-			} : style;
+				builder.BackgroundColor = color;
+			}
+			return;
 		}
 		case "background-image":
 		{
 			IReadOnlyList<UiBackgroundLayer> layers2;
-			return TryParseBackgroundLayers(text, out layers2) ? style with
+			if (TryParseBackgroundLayers(text, out layers2))
 			{
-				BackgroundLayers = layers2,
-				BackgroundGradient = layers2.Select((UiBackgroundLayer layer) => layer.Gradient).FirstOrDefault((UiLinearGradient uiLinearGradient) => uiLinearGradient != null)
-			} : style;
+				builder.BackgroundLayers = layers2;
+				builder.BackgroundGradient = layers2.Select((UiBackgroundLayer layer) => layer.Gradient).FirstOrDefault((UiLinearGradient uiLinearGradient) => uiLinearGradient != null);
+			}
+			return;
 		}
 		case "background-size":
 		{
 			IReadOnlyList<UiBackgroundSize> sizes;
-			return TryParseBackgroundSizeList(text, out sizes) ? style with
+			if (TryParseBackgroundSizeList(text, out sizes))
 			{
-				BackgroundSizes = sizes
-			} : style;
+				builder.BackgroundSizes = sizes;
+			}
+			return;
 		}
 		case "background-position":
 		{
 			IReadOnlyList<UiBackgroundPosition> positions;
-			return TryParseBackgroundPositionList(text, out positions) ? style with
+			if (TryParseBackgroundPositionList(text, out positions))
 			{
-				BackgroundPositions = positions
-			} : style;
+				builder.BackgroundPositions = positions;
+			}
+			return;
 		}
 		case "background-repeat":
 		{
 			IReadOnlyList<UiBackgroundRepeat> repeats;
-			return TryParseBackgroundRepeatList(text, out repeats) ? style with
+			if (TryParseBackgroundRepeatList(text, out repeats))
 			{
-				BackgroundRepeats = repeats
-			} : style;
+				builder.BackgroundRepeats = repeats;
+			}
+			return;
 		}
 		case "border-color":
 		{
 			UiColor color4;
-			return TryParseColor(text, out color4) ? style with
+			if (TryParseColor(text, out color4))
 			{
-				BorderColor = color4
-			} : style;
+				builder.BorderColor = color4;
+			}
+			return;
 		}
 		case "outline":
 		{
 			float outlineWidth;
 			UiColor outlineColor;
-			return TryParseOutline(text, style.Color, out outlineWidth, out outlineColor) ? style with
+			if (TryParseOutline(text, builder.Color, out outlineWidth, out outlineColor))
 			{
-				OutlineWidth = outlineWidth,
-				OutlineColor = outlineColor
-			} : style;
+				builder.OutlineWidth = outlineWidth;
+				builder.OutlineColor = outlineColor;
+			}
+			return;
 		}
 		case "outline-width":
 		{
 			float parsed5;
-			return TryParseFloat(text, out parsed5) ? style with
+			if (TryParseFloat(text, out parsed5))
 			{
-				OutlineWidth = parsed5
-			} : style;
+				builder.OutlineWidth = parsed5;
+			}
+			return;
 		}
 		case "outline-color":
 		{
 			UiColor color2;
-			return TryParseColor(text, out color2) ? style with
+			if (TryParseColor(text, out color2))
 			{
-				OutlineColor = color2
-			} : style;
+				builder.OutlineColor = color2;
+			}
+			return;
 		}
 		case "box-shadow":
 		{
 			IReadOnlyList<UiShadow> shadows;
-			return TryParseShadowList(text, out shadows) ? style with
+			if (TryParseShadowList(text, out shadows))
 			{
-				BoxShadow = shadows[0],
-				BoxShadows = shadows
-			} : style;
+				builder.BoxShadow = shadows[0];
+				builder.BoxShadows = shadows;
+			}
+			return;
 		}
 		case "filter":
 		{
 			float blurRadius;
-			return TryParseBlurFunction(text, out blurRadius) ? style with
+			if (TryParseBlurFunction(text, out blurRadius))
 			{
-				FilterBlurRadius = blurRadius
-			} : style;
+				builder.FilterBlurRadius = blurRadius;
+			}
+			return;
 		}
 		case "backdrop-filter":
 		{
 			float blurRadius2;
-			return TryParseBlurFunction(text, out blurRadius2) ? style with
+			if (TryParseBlurFunction(text, out blurRadius2))
 			{
-				BackdropBlurRadius = blurRadius2
-			} : style;
+				builder.BackdropBlurRadius = blurRadius2;
+			}
+			return;
 		}
 		case "mask":
 		case "mask-image":
 		{
 			UiLinearGradient gradient;
-			return TryParseMaskGradient(text, out gradient) ? style with
+			if (TryParseMaskGradient(text, out gradient))
 			{
-				MaskGradient = gradient
-			} : style;
+				builder.MaskGradient = gradient;
+			}
+			return;
 		}
 		case "clip-path":
 		{
 			UiClipPath clipPath;
-			return TryParseClipPath(text, out clipPath) ? style with
+			if (TryParseClipPath(text, out clipPath))
 			{
-				ClipPath = clipPath
-			} : style;
+				builder.ClipPath = clipPath;
+			}
+			return;
 		}
 		case "text-shadow":
 		{
 			UiShadow shadow;
-			return TryParseShadow(text, out shadow) ? style with
+			if (TryParseShadow(text, out shadow))
 			{
-				TextShadow = shadow
-			} : style;
+				builder.TextShadow = shadow;
+			}
+			return;
 		}
 		case "color":
 		{
 			UiColor color5;
-			return TryParseColor(text, out color5) ? style with
+			if (TryParseColor(text, out color5))
 			{
-				Color = color5
-			} : style;
+				builder.Color = color5;
+			}
+			return;
 		}
 		case "font-size":
 		{
 			float parsed7;
-			return TryParseFloat(text, out parsed7) ? style with
+			if (TryParseFloat(text, out parsed7))
 			{
-				FontSize = parsed7
-			} : style;
+				builder.FontSize = parsed7;
+			}
+			return;
 		}
 		case "font-family":
-			return style with
-			{
-				FontFamily = ParseFontFamily(text)
-			};
+			builder.FontFamily = ParseFontFamily(text);
+			return;
 		case "font-weight":
-			return style with
-			{
-				Bold = IsBold(text)
-			};
+			builder.Bold = IsBold(text);
+			return;
 		case "white-space":
-			return style with
-			{
-				WhiteSpace = ParseWhiteSpace(text)
-			};
+			builder.WhiteSpace = ParseWhiteSpace(text);
+			return;
 		case "direction":
-			return style with
-			{
-				Direction = ParseTextDirection(text)
-			};
+			builder.Direction = ParseTextDirection(text);
+			return;
 		case "text-align":
-			return style with
-			{
-				TextAlign = ParseTextAlign(text)
-			};
+			builder.TextAlign = ParseTextAlign(text);
+			return;
 		case "text-decoration":
 		case "text-decoration-line":
-			return style with
-			{
-				TextDecorationLine = ParseTextDecorationLine(text)
-			};
+			builder.TextDecorationLine = ParseTextDecorationLine(text);
+			return;
 		case "text-overflow":
-			return style with
-			{
-				TextOverflow = ParseTextOverflow(text)
-			};
+			builder.TextOverflow = ParseTextOverflow(text);
+			return;
 		case "object-fit":
-			return style with
-			{
-				ObjectFit = ParseObjectFit(text)
-			};
+			builder.ObjectFit = ParseObjectFit(text);
+			return;
 		case "image-slice":
 		case "nine-slice":
 		case "border-image-slice":
 		{
 			UiThickness thickness2;
-			return TryParseThickness(text, out thickness2) ? style with
+			if (TryParseThickness(text, out thickness2))
 			{
-				ImageSlice = thickness2
-			} : style;
+				builder.ImageSlice = thickness2;
+			}
+			return;
 		}
 		case "transform":
 		{
 			UiTransform transform;
-			return TryParseTransform(text, out transform) ? style with
+			if (TryParseTransform(text, out transform))
 			{
-				Transform = (transform ?? UiTransform.Identity)
-			} : style;
+				builder.Transform = (transform ?? UiTransform.Identity);
+			}
+			return;
 		}
 		case "animation":
 		{
 			UiAnimationSpec animation;
-			return TryParseAnimationSpec(text, out animation) ? style with
+			if (TryParseAnimationSpec(text, out animation))
 			{
-				Animation = animation
-			} : style;
+				builder.Animation = animation;
+			}
+			return;
 		}
 		case "transition":
 		{
 			UiTransitionSpec transition;
-			return TryParseTransitionSpec(text, out transition) ? style with
+			if (TryParseTransitionSpec(text, out transition))
 			{
-				Transition = transition
-			} : style;
+				builder.Transition = transition;
+			}
+			return;
 		}
 		case "opacity":
 		{
 			float parsed3;
-			return TryParseFloat(text, out parsed3) ? style with
+			if (TryParseFloat(text, out parsed3))
 			{
-				Opacity = Math.Clamp(parsed3, 0f, 1f)
-			} : style;
+				builder.Opacity = Math.Clamp(parsed3, 0f, 1f);
+			}
+			return;
 		}
 		case "visibility":
-			return style with
-			{
-				Visible = !string.Equals(text, "hidden", StringComparison.OrdinalIgnoreCase)
-			};
+			builder.Visible = !string.Equals(text, "hidden", StringComparison.OrdinalIgnoreCase);
+			return;
 		case "pointer-events":
-			return style with
-			{
-				PointerEvents = ParsePointerEvents(text)
-			};
+			builder.PointerEvents = ParsePointerEvents(text);
+			return;
 		case "overflow":
 		{
 			UiOverflow uiOverflow = ParseOverflow(text);
-			UiStyle uiStyle = style with
-			{
-				Overflow = uiOverflow
-			};
-			UiStyle uiStyle2 = uiStyle;
-			bool clipContent = ((uiOverflow == UiOverflow.Hidden || uiOverflow == UiOverflow.Clip) ? true : false);
-			uiStyle2.ClipContent = clipContent;
-			return uiStyle;
+			builder.Overflow = uiOverflow;
+			builder.ClipContent = uiOverflow == UiOverflow.Hidden || uiOverflow == UiOverflow.Clip;
+			return;
 		}
 		case "clip-content":
 		case "overflow-clip":
 		{
 			bool flag = ParseBoolean(text);
-			return style with
-			{
-				ClipContent = flag,
-				Overflow = (flag ? UiOverflow.Clip : style.Overflow)
-			};
+			builder.ClipContent = flag;
+			builder.Overflow = (flag ? UiOverflow.Clip : builder.Overflow);
+			return;
 		}
 		case "grid-template-columns":
 		{
-			return TryParseGridTemplate(text, out IReadOnlyList<UiGridTrack> columns)
-				? style with { GridTemplateColumns = columns }
-				: style;
+			if (TryParseGridTemplate(text, out IReadOnlyList<UiGridTrack> columns))
+			{
+				builder.GridTemplateColumns = columns;
+			}
+			return;
 		}
 		case "grid-template-rows":
 		{
-			return TryParseGridTemplate(text, out IReadOnlyList<UiGridTrack> rows)
-				? style with { GridTemplateRows = rows }
-				: style;
+			if (TryParseGridTemplate(text, out IReadOnlyList<UiGridTrack> rows))
+			{
+				builder.GridTemplateRows = rows;
+			}
+			return;
 		}
 		case "grid-auto-flow":
-			return style with { GridAutoFlow = ParseGridAutoFlow(text) };
+			builder.GridAutoFlow = ParseGridAutoFlow(text);
+			return;
 		case "grid-column":
 		{
-			return TryParseGridPlacement(text, out UiGridPlacement placement)
-				? style with { GridColumn = placement }
-				: style;
+			if (TryParseGridPlacement(text, out UiGridPlacement placement))
+			{
+				builder.GridColumn = placement;
+			}
+			return;
 		}
 		case "grid-row":
 		{
-			return TryParseGridPlacement(text, out UiGridPlacement placement)
-				? style with { GridRow = placement }
-				: style;
+			if (TryParseGridPlacement(text, out UiGridPlacement placement))
+			{
+				builder.GridRow = placement;
+			}
+			return;
 		}
 		case "float":
-			return style;
+			return;
 		default:
-			return style;
+			return;
 		}
 	}
 

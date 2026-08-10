@@ -62,10 +62,12 @@ public static class UiInlineFlowEngine
 		return node.Style.Display is UiDisplay.Block or UiDisplay.Flex or UiDisplay.Grid;
 	}
 
-	public static Size Measure(UiNode node, IUiTextMeasurer textMeasurer, IUiImageSizeProvider imageSizeProvider, float width, MeasureMode widthMode, float height, MeasureMode heightMode)
+	internal static Size Measure(UiNode node, IUiTextMeasurer textMeasurer, IUiImageSizeProvider imageSizeProvider, float width, MeasureMode widthMode, float height, MeasureMode heightMode, UiLayoutScratch scratch)
 	{
 		float available = widthMode == MeasureMode.Undefined ? float.PositiveInfinity : Math.Max(0f, width - node.Style.Padding.Horizontal);
-		List<LineBox> lines = BuildLines(node, textMeasurer, imageSizeProvider, available);
+		List<UiInlineItem> items = scratch.BeginLineItems();
+		List<UiInlineLineBox> lines = scratch.BeginLines();
+		BuildLines(node, textMeasurer, imageSizeProvider, available, items, lines);
 		float contentWidth = 0f;
 		float contentHeight = 0f;
 		for (int i = 0; i < lines.Count; i++)
@@ -94,38 +96,41 @@ public static class UiInlineFlowEngine
 		return new Size(measuredWidth, measuredHeight);
 	}
 
-	public static void LayoutSubtree(UiNode root, IUiTextMeasurer textMeasurer, IUiImageSizeProvider imageSizeProvider)
+	internal static void LayoutSubtree(UiNode root, IUiTextMeasurer textMeasurer, IUiImageSizeProvider imageSizeProvider, UiLayoutScratch scratch)
 	{
 		ArgumentNullException.ThrowIfNull(root, nameof(root));
-		LayoutNode(root, textMeasurer, imageSizeProvider);
+		LayoutNode(root, textMeasurer, imageSizeProvider, scratch);
 	}
 
-	private static void LayoutNode(UiNode node, IUiTextMeasurer textMeasurer, IUiImageSizeProvider imageSizeProvider)
+	private static void LayoutNode(UiNode node, IUiTextMeasurer textMeasurer, IUiImageSizeProvider imageSizeProvider, UiLayoutScratch scratch)
 	{
 		if (IsInlineFormattingContext(node))
 		{
-			LayoutInlineContext(node, textMeasurer, imageSizeProvider);
+			LayoutInlineContext(node, textMeasurer, imageSizeProvider, scratch);
 		}
 		for (int i = 0; i < node.Children.Count; i++)
 		{
-			LayoutNode(node.Children[i], textMeasurer, imageSizeProvider);
+			LayoutNode(node.Children[i], textMeasurer, imageSizeProvider, scratch);
 		}
 	}
 
-	private static void LayoutInlineContext(UiNode node, IUiTextMeasurer textMeasurer, IUiImageSizeProvider imageSizeProvider)
+	private static void LayoutInlineContext(UiNode node, IUiTextMeasurer textMeasurer, IUiImageSizeProvider imageSizeProvider, UiLayoutScratch scratch)
 	{
 		float available = Math.Max(0f, node.LayoutRect.Width - node.Style.Padding.Horizontal);
-		List<LineBox> lines = BuildLines(node, textMeasurer, imageSizeProvider, available);
+		List<UiInlineItem> items = scratch.BeginLineItems();
+		List<UiInlineLineBox> lines = scratch.BeginLines();
+		BuildLines(node, textMeasurer, imageSizeProvider, available, items, lines);
 		float x0 = node.LayoutRect.X + node.Style.Padding.Left;
 		float y = node.LayoutRect.Y + node.Style.Padding.Top;
 		for (int lineIndex = 0; lineIndex < lines.Count; lineIndex++)
 		{
-			LineBox line = lines[lineIndex];
+			UiInlineLineBox line = lines[lineIndex];
 			float x = x0;
 			float baseline = y + line.MaxAscent;
-			for (int i = 0; i < line.Items.Count; i++)
+			int end = line.ItemStart + line.ItemCount;
+			for (int i = line.ItemStart; i < end; i++)
 			{
-				InlineItem item = line.Items[i];
+				UiInlineItem item = items[i];
 				float itemY = baseline - item.Ascent;
 				item.Node.SetLayout(new UiRect(x, itemY, item.Width, item.Height));
 				item.Node.SetScrollMetrics(item.Width, item.Height);
@@ -136,11 +141,11 @@ public static class UiInlineFlowEngine
 		node.SetScrollMetrics(node.LayoutRect.Width, Math.Max(node.LayoutRect.Height, y - node.LayoutRect.Y + node.Style.Padding.Bottom));
 	}
 
-	private static List<LineBox> BuildLines(UiNode node, IUiTextMeasurer textMeasurer, IUiImageSizeProvider imageSizeProvider, float availableWidth)
+	private static void BuildLines(UiNode node, IUiTextMeasurer textMeasurer, IUiImageSizeProvider imageSizeProvider, float availableWidth, List<UiInlineItem> items, List<UiInlineLineBox> lines)
 	{
-		List<LineBox> lines = new List<LineBox>();
-		LineBox current = new LineBox();
 		float maxWidth = float.IsInfinity(availableWidth) ? float.MaxValue : Math.Max(0f, availableWidth);
+		UiInlineLineBox current = default;
+		bool hasCurrent = false;
 
 		for (int i = 0; i < node.Children.Count; i++)
 		{
@@ -150,31 +155,47 @@ public static class UiInlineFlowEngine
 				continue;
 			}
 
-			InlineItem item = MeasureInlineItem(child, textMeasurer, imageSizeProvider, maxWidth);
-			bool fits = current.Items.Count == 0 || current.Width + item.Width <= maxWidth + 0.01f || maxWidth >= float.MaxValue - 1f;
+			UiInlineItem item = MeasureInlineItem(child, textMeasurer, imageSizeProvider, maxWidth);
+			bool fits = !hasCurrent || current.Width + item.Width <= maxWidth + 0.01f || maxWidth >= float.MaxValue - 1f;
 			if (!fits)
 			{
 				lines.Add(current);
-				current = new LineBox();
+				current = default;
+				hasCurrent = false;
 				item = MeasureInlineItem(child, textMeasurer, imageSizeProvider, maxWidth);
 			}
-			current.Add(item);
+			if (!hasCurrent)
+			{
+				current.ItemStart = items.Count;
+				hasCurrent = true;
+			}
+			items.Add(item);
+			current.ItemCount++;
+			current.Width += item.Width;
+			current.MaxAscent = Math.Max(current.MaxAscent, item.Ascent);
+			current.MaxDescent = Math.Max(current.MaxDescent, item.Descent);
 		}
 
-		if (current.Items.Count > 0 || lines.Count == 0)
+		if (hasCurrent || lines.Count == 0)
 		{
 			lines.Add(current);
 		}
-		return lines;
 	}
 
-	private static InlineItem MeasureInlineItem(UiNode node, IUiTextMeasurer textMeasurer, IUiImageSizeProvider imageSizeProvider, float maxWidth)
+	private static UiInlineItem MeasureInlineItem(UiNode node, IUiTextMeasurer textMeasurer, IUiImageSizeProvider imageSizeProvider, float maxWidth)
 	{
 		if (node.Kind == UiNodeKind.Image)
 		{
 			(float width, float height) = ResolveImageSize(node, imageSizeProvider);
 			float ascent = height * 0.8f;
-			return new InlineItem(node, width, height, ascent, height - ascent);
+			return new UiInlineItem
+			{
+				Node = node,
+				Width = width,
+				Height = height,
+				Ascent = ascent,
+				Descent = height - ascent
+			};
 		}
 
 		if (node.Children.Count > 0)
@@ -188,7 +209,7 @@ public static class UiInlineFlowEngine
 				{
 					continue;
 				}
-				InlineItem nested = MeasureInlineItem(node.Children[i], textMeasurer, imageSizeProvider, maxWidth);
+				UiInlineItem nested = MeasureInlineItem(node.Children[i], textMeasurer, imageSizeProvider, maxWidth);
 				width += nested.Width;
 				ascent = Math.Max(ascent, nested.Ascent);
 				descent = Math.Max(descent, nested.Descent);
@@ -197,10 +218,16 @@ public static class UiInlineFlowEngine
 			{
 				if (!string.IsNullOrEmpty(node.TextContent))
 				{
-					float textWidth = textMeasurer.MeasureWidth(node.TextContent, node.Style);
-					width += textWidth;
+					width += textMeasurer.MeasureWidth(node.TextContent, node.Style);
 				}
-				return new InlineItem(node, width, ascent + descent, ascent, descent);
+				return new UiInlineItem
+				{
+					Node = node,
+					Width = width,
+					Height = ascent + descent,
+					Ascent = ascent,
+					Descent = descent
+				};
 			}
 		}
 
@@ -209,7 +236,14 @@ public static class UiInlineFlowEngine
 		{
 			float emptyHeight = Math.Max(node.Style.FontSize * 1.4f, 1f);
 			float emptyAscent = node.Style.FontSize;
-			return new InlineItem(node, 0f, emptyHeight, emptyAscent, emptyHeight - emptyAscent);
+			return new UiInlineItem
+			{
+				Node = node,
+				Width = 0f,
+				Height = emptyHeight,
+				Ascent = emptyAscent,
+				Descent = emptyHeight - emptyAscent
+			};
 		}
 
 		bool constrain = node.Style.WhiteSpace != UiWhiteSpace.NoWrap && maxWidth < float.MaxValue - 1f;
@@ -217,12 +251,14 @@ public static class UiInlineFlowEngine
 		float measureWidth = constrain ? Math.Min(preferred, maxWidth) : preferred;
 		UiTextLayoutResult measured = textMeasurer.Measure(text, node.Style, measureWidth, constrain);
 		float ascentMetric = measured.Ascent > 0f ? measured.Ascent : node.Style.FontSize;
-		float descentMetric = measured.Descent > 0f ? measured.Descent : Math.Max(0f, measured.LineHeight - ascentMetric);
-		if (measured.Lines.Count > 1)
+		return new UiInlineItem
 		{
-			descentMetric = Math.Max(descentMetric, measured.Height - ascentMetric);
-		}
-		return new InlineItem(node, measured.Width, measured.Height, ascentMetric, Math.Max(0f, measured.Height - ascentMetric));
+			Node = node,
+			Width = measured.Width,
+			Height = measured.Height,
+			Ascent = ascentMetric,
+			Descent = Math.Max(0f, measured.Height - ascentMetric)
+		};
 	}
 
 	private static (float Width, float Height) ResolveImageSize(UiNode node, IUiImageSizeProvider imageSizeProvider)
@@ -249,40 +285,5 @@ public static class UiInlineFlowEngine
 		float fallbackWidth = node.Style.Width.Unit == UiLengthUnit.Pixel ? node.Style.Width.Value : 16f;
 		float fallbackHeight = node.Style.Height.Unit == UiLengthUnit.Pixel ? node.Style.Height.Value : 16f;
 		return (fallbackWidth, fallbackHeight);
-	}
-
-	private sealed class LineBox
-	{
-		public List<InlineItem> Items { get; } = new List<InlineItem>();
-		public float Width { get; private set; }
-		public float MaxAscent { get; private set; }
-		public float MaxDescent { get; private set; }
-		public float Height => Math.Max(MaxAscent + MaxDescent, 0f);
-
-		public void Add(InlineItem item)
-		{
-			Items.Add(item);
-			Width += item.Width;
-			MaxAscent = Math.Max(MaxAscent, item.Ascent);
-			MaxDescent = Math.Max(MaxDescent, item.Descent);
-		}
-	}
-
-	private sealed class InlineItem
-	{
-		public UiNode Node { get; }
-		public float Width { get; }
-		public float Height { get; }
-		public float Ascent { get; }
-		public float Descent { get; }
-
-		public InlineItem(UiNode node, float width, float height, float ascent, float descent)
-		{
-			Node = node;
-			Width = width;
-			Height = height;
-			Ascent = ascent;
-			Descent = descent;
-		}
 	}
 }

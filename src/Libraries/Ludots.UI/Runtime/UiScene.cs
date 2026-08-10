@@ -20,6 +20,10 @@ public sealed class UiScene
 
 	private readonly List<UiStyleSheet> _styleSheets = new List<UiStyleSheet>();
 
+	private readonly List<UiStyleSheet> _effectiveStyleSheets = new List<UiStyleSheet>();
+
+	private bool _effectiveStyleSheetsDirty = true;
+
 	private readonly Dictionary<string, UiVirtualWindow> _virtualWindows = new Dictionary<string, UiVirtualWindow>(StringComparer.Ordinal);
 
 	private Func<bool>? _reactiveRuntimeRefresh;
@@ -90,6 +94,7 @@ public sealed class UiScene
 		Theme = theme;
 		_styleSheets.Clear();
 		_styleSheets.AddRange(document.StyleSheets);
+		_effectiveStyleSheetsDirty = true;
 		_nextNodeId = 1;
 		Root = BuildNode(document.Root);
 		TrackNextNodeId(Root);
@@ -102,6 +107,7 @@ public sealed class UiScene
 	public void SetTheme(UiThemePack? theme)
 	{
 		Theme = theme;
+		_effectiveStyleSheetsDirty = true;
 		Version++;
 		IsDirty = true;
 	}
@@ -113,6 +119,7 @@ public sealed class UiScene
 		{
 			_styleSheets.AddRange(styleSheets);
 		}
+		_effectiveStyleSheetsDirty = true;
 		Version++;
 		IsDirty = true;
 	}
@@ -496,13 +503,18 @@ public sealed class UiScene
 
 	private IReadOnlyList<UiStyleSheet> GetEffectiveStyleSheets()
 	{
-		List<UiStyleSheet> list = new List<UiStyleSheet>(_styleSheets.Count + (Theme?.StyleSheets.Count ?? 0));
-		list.AddRange(_styleSheets);
+		if (!_effectiveStyleSheetsDirty)
+		{
+			return _effectiveStyleSheets;
+		}
+		_effectiveStyleSheets.Clear();
+		_effectiveStyleSheets.AddRange(_styleSheets);
 		if (Theme != null)
 		{
-			list.AddRange(Theme.StyleSheets);
+			_effectiveStyleSheets.AddRange(Theme.StyleSheets);
 		}
-		return list;
+		_effectiveStyleSheetsDirty = false;
+		return _effectiveStyleSheets;
 	}
 
 	private UiNode? ResolveTarget(UiEvent evt)

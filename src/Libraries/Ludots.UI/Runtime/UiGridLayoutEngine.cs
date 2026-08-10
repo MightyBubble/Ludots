@@ -5,26 +5,27 @@ namespace Ludots.UI.Runtime;
 
 public static class UiGridLayoutEngine
 {
-	public static void LayoutSubtree(UiNode root, Action<UiNode> layoutNested)
+	internal static void LayoutSubtree(UiNode root, UiLayoutEngine layoutEngine, UiLayoutScratch scratch)
 	{
 		ArgumentNullException.ThrowIfNull(root, nameof(root));
-		ArgumentNullException.ThrowIfNull(layoutNested, nameof(layoutNested));
-		LayoutNode(root, layoutNested);
+		ArgumentNullException.ThrowIfNull(layoutEngine, nameof(layoutEngine));
+		ArgumentNullException.ThrowIfNull(scratch, nameof(scratch));
+		LayoutNode(root, layoutEngine, scratch);
 	}
 
-	private static void LayoutNode(UiNode node, Action<UiNode> layoutNested)
+	private static void LayoutNode(UiNode node, UiLayoutEngine layoutEngine, UiLayoutScratch scratch)
 	{
 		if (node.Style.Display == UiDisplay.Grid && node.Style.Visible)
 		{
-			LayoutGrid(node, layoutNested);
+			LayoutGrid(node, layoutEngine, scratch);
 		}
 		for (int i = 0; i < node.Children.Count; i++)
 		{
-			LayoutNode(node.Children[i], layoutNested);
+			LayoutNode(node.Children[i], layoutEngine, scratch);
 		}
 	}
 
-	private static void LayoutGrid(UiNode grid, Action<UiNode> layoutNested)
+	private static void LayoutGrid(UiNode grid, UiLayoutEngine layoutEngine, UiLayoutScratch scratch)
 	{
 		UiStyle style = grid.Style;
 		float contentWidth = Math.Max(0f, grid.LayoutRect.Width - style.Padding.Horizontal - style.BorderWidth * 2f);
@@ -32,7 +33,7 @@ public static class UiGridLayoutEngine
 		float columnGap = style.ColumnGap > 0f ? style.ColumnGap : style.Gap;
 		float rowGap = style.RowGap > 0f ? style.RowGap : style.Gap;
 
-		List<UiNode> items = new List<UiNode>();
+		List<UiNode> items = scratch.BeginGridItems();
 		for (int i = 0; i < grid.Children.Count; i++)
 		{
 			UiNode child = grid.Children[i];
@@ -44,30 +45,33 @@ public static class UiGridLayoutEngine
 
 		IReadOnlyList<UiGridTrack> columnTracks = style.GridTemplateColumns.Count > 0
 			? style.GridTemplateColumns
-			: new[] { UiGridTrack.Fr(1f) };
-		IReadOnlyList<UiGridTrack> rowTracksTemplate = style.GridTemplateRows;
+			: UiLayoutScratch.SharedDefaultSingleFr;
 
-		List<ItemPlacement> placements = PlaceItems(items, columnTracks.Count, style.GridAutoFlow);
+		List<UiGridPlacementSlot> placements = PlaceItems(items, columnTracks.Count, style.GridAutoFlow, scratch);
 		int columnCount = Math.Max(columnTracks.Count, MaxEnd(placements, column: true));
-		int rowCount = Math.Max(rowTracksTemplate.Count, MaxEnd(placements, column: false));
+		int rowCount = Math.Max(style.GridTemplateRows.Count, MaxEnd(placements, column: false));
 		if (rowCount < 1)
 		{
 			rowCount = 1;
 		}
 
-		float[] columnSizes = ResolveTracks(ExpandTracks(columnTracks, columnCount), contentWidth, columnGap);
-		List<UiGridTrack> resolvedRowTracks = ExpandTracks(rowTracksTemplate, rowCount);
-		float[] rowSizes = ResolveTracks(resolvedRowTracks, contentHeight, rowGap);
+		List<UiGridTrack> expandedColumns = ExpandTracks(columnTracks, columnCount, scratch.BeginColumnTracks());
+		Span<float> columnSizes = scratch.BeginColumnSizes(columnCount);
+		ResolveTracks(expandedColumns, contentWidth, columnGap, columnSizes);
+
+		List<UiGridTrack> expandedRows = ExpandTracks(style.GridTemplateRows, rowCount, scratch.BeginRowTracks());
+		Span<float> rowSizes = scratch.BeginRowSizes(rowCount);
+		ResolveTracks(expandedRows, contentHeight, rowGap, rowSizes);
 
 		for (int r = 0; r < rowCount; r++)
 		{
-			if (resolvedRowTracks[r].Sizing == UiGridTrackSizing.Auto ||
-				(resolvedRowTracks[r].Sizing == UiGridTrackSizing.Fr && contentHeight <= 0.01f))
+			if (expandedRows[r].Sizing == UiGridTrackSizing.Auto ||
+				(expandedRows[r].Sizing == UiGridTrackSizing.Fr && contentHeight <= 0.01f))
 			{
 				float maxContent = 0f;
 				for (int i = 0; i < placements.Count; i++)
 				{
-					ItemPlacement placement = placements[i];
+					UiGridPlacementSlot placement = placements[i];
 					if (placement.RowStart <= r + 1 && placement.RowStart + placement.RowSpan - 1 >= r + 1)
 					{
 						maxContent = Math.Max(maxContent, EstimateContentHeight(placement.Node));
@@ -77,14 +81,16 @@ public static class UiGridLayoutEngine
 			}
 		}
 
+		Span<float> columnOffsets = scratch.BeginColumnOffsets(columnCount);
+		BuildOffsets(columnSizes, columnGap, columnOffsets);
+		Span<float> rowOffsets = scratch.BeginRowOffsets(rowCount);
+		BuildOffsets(rowSizes, rowGap, rowOffsets);
+
 		float originX = grid.LayoutRect.X + style.Padding.Left + style.BorderWidth;
 		float originY = grid.LayoutRect.Y + style.Padding.Top + style.BorderWidth;
-		float[] columnOffsets = BuildOffsets(columnSizes, columnGap);
-		float[] rowOffsets = BuildOffsets(rowSizes, rowGap);
-
 		for (int i = 0; i < placements.Count; i++)
 		{
-			ItemPlacement placement = placements[i];
+			UiGridPlacementSlot placement = placements[i];
 			int colIndex = placement.ColumnStart - 1;
 			int rowIndex = placement.RowStart - 1;
 			float x = originX + columnOffsets[colIndex];
@@ -93,21 +99,21 @@ public static class UiGridLayoutEngine
 			float height = SumRange(rowSizes, rowIndex, placement.RowSpan, rowGap);
 			placement.Node.SetLayout(new UiRect(x, y, width, height));
 			placement.Node.SetScrollMetrics(width, height);
-			layoutNested(placement.Node);
+			layoutEngine.LayoutNestedContent(placement.Node);
 		}
 
-		float usedWidth = columnOffsets.Length == 0 ? 0f : columnOffsets[^1] + (columnSizes.Length == 0 ? 0f : columnSizes[^1]);
-		float usedHeight = rowOffsets.Length == 0 ? 0f : rowOffsets[^1] + (rowSizes.Length == 0 ? 0f : rowSizes[^1]);
+		float usedWidth = columnCount == 0 ? 0f : columnOffsets[columnCount - 1] + columnSizes[columnCount - 1];
+		float usedHeight = rowCount == 0 ? 0f : rowOffsets[rowCount - 1] + rowSizes[rowCount - 1];
 		grid.SetScrollMetrics(
 			style.Padding.Horizontal + style.BorderWidth * 2f + usedWidth,
 			style.Padding.Vertical + style.BorderWidth * 2f + usedHeight);
 	}
 
-	private static List<ItemPlacement> PlaceItems(List<UiNode> items, int explicitColumnCount, UiGridAutoFlow autoFlow)
+	private static List<UiGridPlacementSlot> PlaceItems(List<UiNode> items, int explicitColumnCount, UiGridAutoFlow autoFlow, UiLayoutScratch scratch)
 	{
 		int columns = Math.Max(1, explicitColumnCount);
-		List<ItemPlacement> result = new List<ItemPlacement>(items.Count);
-		HashSet<long> occupied = new HashSet<long>();
+		List<UiGridPlacementSlot> result = scratch.BeginGridPlacements();
+		HashSet<long> occupied = scratch.BeginOccupied();
 		int cursorRow = 1;
 		int cursorColumn = 1;
 
@@ -142,7 +148,14 @@ public static class UiGridLayoutEngine
 			}
 
 			MarkOccupied(occupied, columnStart, rowStart, columnSpan, rowSpan);
-			result.Add(new ItemPlacement(item, columnStart, columnSpan, rowStart, rowSpan));
+			result.Add(new UiGridPlacementSlot
+			{
+				Node = item,
+				ColumnStart = columnStart,
+				ColumnSpan = columnSpan,
+				RowStart = rowStart,
+				RowSpan = rowSpan
+			});
 			if (autoFlow == UiGridAutoFlow.Column)
 			{
 				cursorColumn = columnStart;
@@ -246,12 +259,12 @@ public static class UiGridLayoutEngine
 
 	private static long Pack(int column, int row) => ((long)column << 32) | (uint)row;
 
-	private static int MaxEnd(List<ItemPlacement> placements, bool column)
+	private static int MaxEnd(List<UiGridPlacementSlot> placements, bool column)
 	{
 		int max = 0;
 		for (int i = 0; i < placements.Count; i++)
 		{
-			ItemPlacement placement = placements[i];
+			UiGridPlacementSlot placement = placements[i];
 			int end = column
 				? placement.ColumnStart + placement.ColumnSpan - 1
 				: placement.RowStart + placement.RowSpan - 1;
@@ -263,9 +276,8 @@ public static class UiGridLayoutEngine
 		return max;
 	}
 
-	private static List<UiGridTrack> ExpandTracks(IReadOnlyList<UiGridTrack> template, int count)
+	private static List<UiGridTrack> ExpandTracks(IReadOnlyList<UiGridTrack> template, int count, List<UiGridTrack> tracks)
 	{
-		List<UiGridTrack> tracks = new List<UiGridTrack>(count);
 		for (int i = 0; i < count; i++)
 		{
 			tracks.Add(i < template.Count ? template[i] : UiGridTrack.Auto);
@@ -273,12 +285,11 @@ public static class UiGridLayoutEngine
 		return tracks;
 	}
 
-	private static float[] ResolveTracks(IReadOnlyList<UiGridTrack> tracks, float available, float gap)
+	private static void ResolveTracks(IReadOnlyList<UiGridTrack> tracks, float available, float gap, Span<float> sizes)
 	{
-		float[] sizes = new float[tracks.Count];
 		if (tracks.Count == 0)
 		{
-			return sizes;
+			return;
 		}
 		float gapTotal = gap * Math.Max(0, tracks.Count - 1);
 		float remaining = Math.Max(0f, available - gapTotal);
@@ -315,12 +326,10 @@ public static class UiGridLayoutEngine
 				}
 			}
 		}
-		return sizes;
 	}
 
-	private static float[] BuildOffsets(float[] sizes, float gap)
+	private static void BuildOffsets(ReadOnlySpan<float> sizes, float gap, Span<float> offsets)
 	{
-		float[] offsets = new float[sizes.Length];
 		float cursor = 0f;
 		for (int i = 0; i < sizes.Length; i++)
 		{
@@ -331,10 +340,9 @@ public static class UiGridLayoutEngine
 				cursor += gap;
 			}
 		}
-		return offsets;
 	}
 
-	private static float SumRange(float[] sizes, int start, int span, float gap)
+	private static float SumRange(ReadOnlySpan<float> sizes, int start, int span, float gap)
 	{
 		float total = 0f;
 		int end = Math.Min(sizes.Length, start + span);
@@ -360,23 +368,5 @@ public static class UiGridLayoutEngine
 			return node.Style.Height.Value;
 		}
 		return Math.Max(0f, node.LayoutRect.Height);
-	}
-
-	private readonly struct ItemPlacement
-	{
-		public UiNode Node { get; }
-		public int ColumnStart { get; }
-		public int ColumnSpan { get; }
-		public int RowStart { get; }
-		public int RowSpan { get; }
-
-		public ItemPlacement(UiNode node, int columnStart, int columnSpan, int rowStart, int rowSpan)
-		{
-			Node = node;
-			ColumnStart = columnStart;
-			ColumnSpan = columnSpan;
-			RowStart = rowStart;
-			RowSpan = rowSpan;
-		}
 	}
 }
