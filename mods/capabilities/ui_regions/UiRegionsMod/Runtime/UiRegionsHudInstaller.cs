@@ -1,4 +1,3 @@
-using System.Globalization;
 using Arch.System;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Activities;
@@ -73,8 +72,10 @@ public static class UiRegionsHudInstaller
 
 		WebUiPanelKitReferenceCatalog catalog = UiRegionsCatalogFactory.Create(dataPlane.IsTopicRegistered);
 		WebUiPanelKitManifest manifest = WebUiPanelKitManifestLoader.LoadFromFile(manifestPath, catalog);
+		float viewportWidth = ResolveViewportWidth(engine);
+		float viewportHeight = ResolveViewportHeight(engine);
 		var binder = new WebUiPanelKitSurfaceBinder(host, manifest);
-		binder.Bind(panel => CreateRegionContribution(panel));
+		binder.Bind(panel => CreateRegionContribution(panel, viewportWidth, viewportHeight));
 
 		var pump = new WebUiDataPlaneTickPump(dataPlane);
 		foreach (string topic in binder.BrowserSubscriptionTopics)
@@ -163,35 +164,69 @@ public static class UiRegionsHudInstaller
 		}
 	}
 
-	private const float ReferenceViewportWidth = 1600f;
-	private const float ReferenceViewportHeight = 900f;
+	private static float ResolveViewportWidth(GameEngine engine)
+	{
+		if (engine.MergedConfig.WindowWidth > 0)
+		{
+			return engine.MergedConfig.WindowWidth;
+		}
 
-	private static UiSurfaceContribution CreateRegionContribution(WebUiPanelDeclaration panel)
+		if (engine.GetService(CoreServiceKeys.UIRoot) is Ludots.UI.UIRoot root && root.Width > 0f)
+		{
+			return root.Width;
+		}
+
+		return 1280f;
+	}
+
+	private static float ResolveViewportHeight(GameEngine engine)
+	{
+		if (engine.MergedConfig.WindowHeight > 0)
+		{
+			return engine.MergedConfig.WindowHeight;
+		}
+
+		if (engine.GetService(CoreServiceKeys.UIRoot) is Ludots.UI.UIRoot root && root.Height > 0f)
+		{
+			return root.Height;
+		}
+
+		return 720f;
+	}
+
+	private static UiSurfaceContribution CreateRegionContribution(
+		WebUiPanelDeclaration panel,
+		float viewportWidth,
+		float viewportHeight)
 	{
 		(float xPct, float yPct, float wPct, float hPct) = ResolveNineGridPercent(panel.SurfaceRegionId);
-		float x = ReferenceViewportWidth * xPct / 100f;
-		float y = ReferenceViewportHeight * yPct / 100f;
-		float w = ReferenceViewportWidth * wPct / 100f;
-		float h = ReferenceViewportHeight * hPct / 100f;
+		float x = viewportWidth * xPct / 100f;
+		float y = viewportHeight * yPct / 100f;
+		float w = viewportWidth * wPct / 100f;
+		float h = viewportHeight * hPct / 100f;
 
-		// Keep the 3D world readable: activity-modal only reserves a lease until content forces it open.
+		// Keep the 3D world readable: activity-modal only reserves an empty lease until forced open.
 		bool dormantCenterModal =
 			string.Equals(panel.PanelType, WebUiRegionPanelDescriptors.ActivityModalPanelType, StringComparison.Ordinal) ||
 			string.Equals(panel.SurfaceRegionId, WebUiNineGridRegions.Center, StringComparison.Ordinal);
 		if (dormantCenterModal)
 		{
-			x = ReferenceViewportWidth * 0.5f;
-			y = ReferenceViewportHeight * 0.5f;
-			w = 1f;
-			h = 1f;
+			return UiSurfaceContribution.FromBuilder(() =>
+				Ui.Panel()
+					.Id($"panel-kit-{panel.PanelId}")
+					.Absolute(viewportWidth * 0.5f, viewportHeight * 0.5f)
+					.Width(1f)
+					.Height(1f)
+					.ZIndex(panel.SurfacePriority));
 		}
 
-		string title = string.Create(CultureInfo.InvariantCulture, $"{panel.PanelType} · {panel.PanelId}");
+		string title = ResolvePlayerFacingTitle(panel.PanelType);
+		string subtitle = ResolvePlayerFacingSubtitle(panel.PanelType);
 		return UiSurfaceContribution.FromBuilder(() =>
 			Ui.Panel(
 					Ui.Column(
 						Ui.Text(title).Id($"uir-{panel.PanelId}-title"),
-						Ui.Text(panel.Topic).Id($"uir-{panel.PanelId}-topic")))
+						Ui.Text(subtitle).Id($"uir-{panel.PanelId}-subtitle")))
 				.Id($"panel-kit-{panel.PanelId}")
 				.Absolute(x, y)
 				.Width(w)
@@ -199,21 +234,54 @@ public static class UiRegionsHudInstaller
 				.ZIndex(panel.SurfacePriority));
 	}
 
+	private static string ResolvePlayerFacingTitle(string panelType) =>
+		panelType switch
+		{
+			"objective" => "任务追踪",
+			"time-control" => "时间控制",
+			"view-filter" => "视图过滤",
+			"notification" => "通报",
+			"minimap.web-shell" => "小地图",
+			"entity-insight" => "实体详情",
+			"production-overview" => "全局生产",
+			"entity-list" => "实体列表",
+			"command-deck" => "命令栏",
+			"activity-modal" => "活动抉择",
+			"event-log" => "事件日志",
+			_ => panelType,
+		};
+
+	private static string ResolvePlayerFacingSubtitle(string panelType) =>
+		panelType switch
+		{
+			"objective" => "进行中 / 可领取",
+			"time-control" => "推进 · 暂停",
+			"view-filter" => "收窄地图关注",
+			"notification" => "结算与告警",
+			"minimap.web-shell" => "跳转视野",
+			"entity-insight" => "选中城 / 英雄",
+			"production-overview" => "队列摘要",
+			"entity-list" => "Tab 切换浏览",
+			"command-deck" => "下令 / 技能位",
+			"activity-modal" => "当面拍板",
+			"event-log" => "最近条目",
+			_ => string.Empty,
+		};
+
 	private static (float X, float Y, float W, float H) ResolveNineGridPercent(string regionId)
 	{
-		// Percent-based 3x3 grid. Center remains mostly clear for the 3D world;
-		// activity-modal may still bind to region.center as a temporary overlay.
+		// Fit inside common 1280x720 capture without right-edge clipping.
 		return regionId switch
 		{
-			WebUiNineGridRegions.TopLeft => (0f, 0f, 28f, 18f),
-			WebUiNineGridRegions.TopCenter => (28f, 0f, 44f, 14f),
-			WebUiNineGridRegions.TopRight => (72f, 0f, 28f, 22f),
-			WebUiNineGridRegions.MiddleLeft => (0f, 18f, 24f, 56f),
-			WebUiNineGridRegions.Center => (24f, 22f, 52f, 48f),
-			WebUiNineGridRegions.MiddleRight => (76f, 18f, 24f, 56f),
-			WebUiNineGridRegions.BottomLeft => (0f, 74f, 24f, 26f),
-			WebUiNineGridRegions.BottomCenter => (24f, 70f, 52f, 30f),
-			WebUiNineGridRegions.BottomRight => (76f, 74f, 24f, 26f),
+			WebUiNineGridRegions.TopLeft => (1f, 1f, 26f, 16f),
+			WebUiNineGridRegions.TopCenter => (28f, 1f, 42f, 12f),
+			WebUiNineGridRegions.TopRight => (71f, 1f, 28f, 18f),
+			WebUiNineGridRegions.MiddleLeft => (1f, 18f, 22f, 52f),
+			WebUiNineGridRegions.Center => (24f, 20f, 52f, 48f),
+			WebUiNineGridRegions.MiddleRight => (77f, 18f, 22f, 52f),
+			WebUiNineGridRegions.BottomLeft => (1f, 72f, 22f, 26f),
+			WebUiNineGridRegions.BottomCenter => (24f, 70f, 52f, 28f),
+			WebUiNineGridRegions.BottomRight => (77f, 72f, 22f, 26f),
 			_ => throw new InvalidOperationException(
 				$"Unknown nine-grid surface region '{regionId}'."),
 		};

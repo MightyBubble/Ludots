@@ -1,4 +1,6 @@
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.Activities;
+using Ludots.Core.Gameplay.Tasks;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
 using StrategicDomainMod;
@@ -46,10 +48,18 @@ public sealed class InstallY5kWorldOnGameStartTrigger
 			?? throw new InvalidOperationException(
 				"UiRegionsRuntime missing. Ensure UiRegionsMod is loaded before Y5kGrandStrategyMod.");
 
+		TaskRuntimeService tasks = context.Get(CoreServiceKeys.TaskRuntimeService)
+			?? engine.GetService(CoreServiceKeys.TaskRuntimeService)
+			?? throw new InvalidOperationException("TaskRuntimeService missing.");
+		ActivityRuntimeService activities = context.Get(CoreServiceKeys.ActivityRuntimeService)
+			?? engine.GetService(CoreServiceKeys.ActivityRuntimeService)
+			?? throw new InvalidOperationException("ActivityRuntimeService missing.");
+
 		_ = uiRegions.Catalog;
 		SeedMinimalWorld(runtime);
+		SeedOpeningObjectives(tasks, activities, engine);
 		_worldSeeded = true;
-		_context.Log("[Y5kGrandStrategyMod] Seeded estuary/hub/mountain supply topology.");
+		_context.Log("[Y5kGrandStrategyMod] Seeded estuary/hub/mountain supply topology and opening objectives.");
 		return Task.CompletedTask;
 	}
 
@@ -71,5 +81,21 @@ public sealed class InstallY5kWorldOnGameStartTrigger
 		runtime.Connect(102, 103);
 		runtime.Connect(103, 104);
 		runtime.RegisterForce(forceKey: 1, factionOwner: 1, nodeKey: 104, strength: 40, hasSiegeCapability: true, isLogistics: false);
+	}
+
+	private static void SeedOpeningObjectives(
+		TaskRuntimeService tasks,
+		ActivityRuntimeService activities,
+		GameEngine engine)
+	{
+		// Offer the opening loop tasks so the tracker is immediately readable.
+		tasks.OfferOrStart("task.stabilize_supply");
+		tasks.OfferOrStart("task.take_mountain");
+		tasks.OfferOrStart("task.hold_estuary");
+		tasks.OfferOrStart("task.hero_field_cast");
+
+		// Present a forced supply-strain activity for the first player decision.
+		Arch.Core.Entity scope = engine.World.Create();
+		activities.OfferOrActivate("activity.supply_strain", scope);
 	}
 }

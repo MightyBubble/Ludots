@@ -1624,7 +1624,8 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.EffectHandlerRegistry, providerServices.Effects);
             SetService(CoreServiceKeys.ProviderDefinitionValidator, providerServices.Validator);
             var activityDefinitions = new ActivityDefinitionRegistry();
-            new ActivityConfigLoader(ConfigPipeline, activityDefinitions, providerServices.Validator)
+            // Domain providers are installed by capability mods on GameStart; validate keys at resolve-time.
+            new ActivityConfigLoader(ConfigPipeline, activityDefinitions, validator: null)
                 .Load(ConfigCatalog, ConfigConflictReport);
             var activityPresentation = new ActivityPresentationBuffer();
             var activityRuntime = new ActivityRuntimeService(
@@ -1636,7 +1637,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.ActivityPresentationBuffer, activityPresentation);
             SetService(CoreServiceKeys.ActivityRuntimeService, activityRuntime);
             var taskDefinitions = new TaskDefinitionRegistry();
-            new TaskConfigLoader(ConfigPipeline, taskDefinitions, providerServices.Validator)
+            new TaskConfigLoader(ConfigPipeline, taskDefinitions, validator: null)
                 .Load(ConfigCatalog, ConfigConflictReport);
             var taskPresentation = new TaskPresentationBuffer();
             var taskRuntime = new TaskRuntimeService(
