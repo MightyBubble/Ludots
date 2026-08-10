@@ -1,0 +1,6 @@
+{
+  "AgentCount": 10000,
+  "ThinkPeriodSeconds": 0.2,
+  "BtLeafCount": 7,
+  "ThinkBudgetMs": 5.0
+}

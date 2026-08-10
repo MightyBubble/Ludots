@@ -1,0 +1,19 @@
+{
+  "Id": "capability_standard_graph_behavior_integration",
+  "Tags": [
+    "showcase",
+    "capability-standard",
+    "graph",
+    "integration"
+  ],
+  "DefaultCamera": {
+    "VirtualCameraId": "Camera.Profile.Tactical",
+    "TargetXCm": 1800,
+    "TargetYCm": 1000,
+    "DistanceCm": 9500,
+    "Pitch": 62,
+    "Yaw": 180,
+    "FovYDeg": 50
+  },
+  "Entities": []
+}

@@ -385,6 +385,41 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_behavior_tree_arena_raylib",
+      "adapter": "raylib",
+      "mods": [
+        "$capability_standard_behavior_tree_arena"
+      ]
+    },
+    {
+      "id": "capability_standard_hfsm_sentry_arena_raylib",
+      "adapter": "raylib",
+      "mods": [
+        "$capability_standard_hfsm_sentry_arena"
+      ]
+    },
+    {
+      "id": "capability_standard_level_blueprint_trial_raylib",
+      "adapter": "raylib",
+      "mods": [
+        "$capability_standard_level_blueprint_trial"
+      ]
+    },
+    {
+      "id": "capability_standard_skill_graph_sandbox_raylib",
+      "adapter": "raylib",
+      "mods": [
+        "$capability_standard_skill_graph_sandbox"
+      ]
+    },
+    {
+      "id": "capability_standard_graph_behavior_integration_raylib",
+      "adapter": "raylib",
+      "mods": [
+        "$capability_standard_graph_behavior_integration"
+      ]
     }
   ]
 }

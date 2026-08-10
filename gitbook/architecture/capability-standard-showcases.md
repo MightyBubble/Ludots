@@ -16,6 +16,11 @@ This page is the SSOT for production-grade capability acceptance showcase roots 
 | Physics2D Tuning | `capability_standard_physics2d_showcase` | `mods/showcases/capability_standard/CapabilityStandardPhysics2DShowcaseMod` | 15Hz Physics2D, 30K dynamic entities, 100K static entities, broadphase strategy, static obstacle templates, polygon authoring |
 | TimeFlow | `capability_standard_time_flow_showcase` | `mods/showcases/capability_standard/CapabilityStandardTimeFlowShowcaseMod` | TimeFlow pause/scale token stacks: settings pause, menu pause, skill indicator pause, nested system guide pause, scale layering, with MassNavigation, Physics2D, and GAS clock probes and no Formation/action coupling |
 | Crowd Physics Arena | `capability_standard_crowd_physics_arena` | `mods/showcases/capability_standard/CapabilityStandardCrowdPhysicsArenaMod` | massnav→kinematic bridge acceptance: kinematic squads push dynamic crates, pressure plate contact events open a door, Q shockwave displacement windows with handback, E boulder spawn with initial velocity, HUD counters |
+| Behavior Tree Arena | `capability_standard_behavior_tree_arena` | `mods/showcases/capability_standard/CapabilityStandardBehaviorTreeArenaMod` | **BT-only** 10k think waves (0.2s / &lt;5ms); no HFSM/Level/Skill mash-up |
+| HFSM Sentry Arena | `capability_standard_hfsm_sentry_arena` | `mods/showcases/capability_standard/CapabilityStandardHfsmSentryArenaMod` | **HFSM-only** hierarchical sentry 10k think waves |
+| Level Blueprint Trial | `capability_standard_level_blueprint_trial` | `mods/showcases/capability_standard/CapabilityStandardLevelBlueprintTrialMod` | **Level-only** director/trigger phase trial |
+| Skill Graph Sandbox | `capability_standard_skill_graph_sandbox` | `mods/showcases/capability_standard/CapabilityStandardSkillGraphSandboxMod` | **Skill/Script-only** FuncLib casts |
+| Graph Behavior Integration | `capability_standard_graph_behavior_integration` | `mods/showcases/capability_standard/CapabilityStandardGraphBehaviorIntegrationMod` | **Separate** integration demo (BT+HFSM+Level); not a kitchen-sink merge of the four solos |
 
 Standard launch commands:
 
@@ -30,6 +35,11 @@ Standard launch commands:
 .\scripts\run-mod-launcher.cmd cli launch '$capability_standard_physics2d_showcase' --adapter raylib
 .\scripts\run-mod-launcher.cmd cli launch '$capability_standard_time_flow_showcase' --adapter raylib
 .\scripts\run-mod-launcher.cmd cli launch '$capability_standard_crowd_physics_arena' --adapter raylib
+.\scripts\run-mod-launcher.cmd cli launch '$capability_standard_behavior_tree_arena' --adapter raylib
+.\scripts\run-mod-launcher.cmd cli launch '$capability_standard_hfsm_sentry_arena' --adapter raylib
+.\scripts\run-mod-launcher.cmd cli launch '$capability_standard_level_blueprint_trial' --adapter raylib
+.\scripts\run-mod-launcher.cmd cli launch '$capability_standard_skill_graph_sandbox' --adapter raylib
+.\scripts\run-mod-launcher.cmd cli launch '$capability_standard_graph_behavior_integration' --adapter raylib
 ```
 
 Preset launch commands:
@@ -45,6 +55,11 @@ Preset launch commands:
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_physics2d_showcase_raylib'
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_time_flow_showcase_raylib'
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_crowd_physics_arena_raylib'
+.\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_behavior_tree_arena_raylib'
+.\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_hfsm_sentry_arena_raylib'
+.\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_level_blueprint_trial_raylib'
+.\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_skill_graph_sandbox_raylib'
+.\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_graph_behavior_integration_raylib'
 ```
 
 ## Dependency Path
