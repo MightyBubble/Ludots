@@ -1,0 +1,10 @@
+{
+  "measuredAt": "2026-08-10",
+  "configuration": "Release",
+  "scenario": "ExecuteScriptSlice drink-until-full once per agent",
+  "authoredNodes": 15,
+  "instructionCount": 29,
+  "agents": 10000,
+  "oneSliceTotalMs": 9.398,
+  "usPerAgent": 0.94
+}
