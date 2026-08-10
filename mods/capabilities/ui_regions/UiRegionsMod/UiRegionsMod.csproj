@@ -10,15 +10,9 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\..\src\Core\Ludots.Core.csproj" />
-    <ProjectReference Include="..\..\..\..\src\Libraries\Ludots.UI\Ludots.UI.csproj">
-      <Private>false</Private>
-    </ProjectReference>
-    <ProjectReference Include="..\..\..\..\src\Libraries\Ludots.WebUI.PanelKit\Ludots.WebUI.PanelKit.csproj">
-      <Private>false</Private>
-    </ProjectReference>
-    <ProjectReference Include="..\..\..\..\src\Libraries\Ludots.WebUI.DataPlane\Ludots.WebUI.DataPlane.csproj">
-      <Private>false</Private>
-    </ProjectReference>
+    <ProjectReference Include="..\..\..\..\src\Libraries\Ludots.UI\Ludots.UI.csproj" />
+    <ProjectReference Include="..\..\..\..\src\Libraries\Ludots.WebUI.PanelKit\Ludots.WebUI.PanelKit.csproj" />
+    <ProjectReference Include="..\..\..\..\src\Libraries\Ludots.WebUI.DataPlane\Ludots.WebUI.DataPlane.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "generatedAtUtc": "2026-08-10T00:00:00.0000000Z",
+  "orderedModIds": [
+    "LudotsCoreMod",
+    "CoreInputMod",
+    "CameraProfilesMod",
+    "EntityInfoPanelsMod",
+    "MinimapControlMod",
+    "EntityCommandPanelMod",
+    "StrategicDomainMod",
+    "UiRegionsMod",
+    "Y5kGrandStrategyMod"
+  ],
+  "plannedMods": [
+    {
+      "id": "LudotsCoreMod",
+      "rootPath": "../../../../../../../mods/LudotsCoreMod"
+    },
+    {
+      "id": "CoreInputMod",
+      "rootPath": "../../../../../../../mods/CoreInputMod"
+    },
+    {
+      "id": "CameraProfilesMod",
+      "rootPath": "../../../../../../../mods/capabilities/camera/CameraProfilesMod"
+    },
+    {
+      "id": "EntityInfoPanelsMod",
+      "rootPath": "../../../../../../../mods/capabilities/entityinfo/EntityInfoPanelsMod"
+    },
+    {
+      "id": "MinimapControlMod",
+      "rootPath": "../../../../../../../mods/capabilities/minimap/MinimapControlMod"
+    },
+    {
+      "id": "EntityCommandPanelMod",
+      "rootPath": "../../../../../../../mods/EntityCommandPanelMod"
+    },
+    {
+      "id": "StrategicDomainMod",
+      "rootPath": "../../../../../../../mods/capabilities/strategic_domain/StrategicDomainMod"
+    },
+    {
+      "id": "UiRegionsMod",
+      "rootPath": "../../../../../../../mods/capabilities/ui_regions/UiRegionsMod"
+    },
+    {
+      "id": "Y5kGrandStrategyMod",
+      "rootPath": "../../../../../../../mods/showcases/y5k_grand_strategy/Y5kGrandStrategyMod"
+    }
+  ]
+}

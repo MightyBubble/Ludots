@@ -22,7 +22,7 @@
     "id": "Effect.Y5k.Unit.GuardResolve",
     "tags": ["Effect.Y5k.Unit.GuardResolve"],
     "presetType": "Buff",
-    "lifetime": "Permanent",
+    "lifetime": "Infinite",
     "participatesInResponse": false,
     "modifiers": [
       {
