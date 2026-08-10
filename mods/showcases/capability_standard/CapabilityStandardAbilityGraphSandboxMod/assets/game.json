@@ -1,6 +1,6 @@
 {
-  "startupMapId": "capability_standard_skill_graph_sandbox",
-  "windowTitle": "Ludots - Skill Graph Sandbox",
+  "startupMapId": "capability_standard_ability_graph_sandbox",
+  "windowTitle": "Ludots - Ability Graph Sandbox",
   "targetFps": 60,
   "windowWidth": 1600,
   "windowHeight": 900,

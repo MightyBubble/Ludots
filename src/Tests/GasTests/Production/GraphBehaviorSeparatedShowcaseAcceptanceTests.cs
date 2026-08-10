@@ -3,7 +3,7 @@ using CapabilityStandardGraphBehaviorCommon;
 using CapabilityStandardGraphBehaviorIntegrationMod.Runtime;
 using CapabilityStandardHfsmSentryArenaMod.Runtime;
 using CapabilityStandardLevelBlueprintTrialMod.Runtime;
-using CapabilityStandardSkillGraphSandboxMod.Runtime;
+using CapabilityStandardAbilityGraphSandboxMod.Runtime;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Gas.Production
@@ -53,14 +53,14 @@ namespace Ludots.Tests.Gas.Production
         }
 
         [Test]
-        public void SkillGraphSandbox_Only_CastsFuncLibUnderBudget()
+        public void AbilityGraphSandbox_Only_CastsFuncLibUnderBudget()
         {
-            var runtime = new SkillGraphSandboxRuntime();
+            var runtime = new AbilityGraphSandboxRuntime();
             runtime.EnsureWorld();
             Warm(runtime.Tick);
             Drive(runtime.Tick, runtime.Metrics);
-            Assert.That(runtime.Metrics.ShowcaseId, Is.EqualTo("capability_standard_skill_graph_sandbox"));
-            Assert.That(runtime.Metrics.Detail, Does.Contain("Skill-only"));
+            Assert.That(runtime.Metrics.ShowcaseId, Is.EqualTo("capability_standard_ability_graph_sandbox"));
+            Assert.That(runtime.Metrics.Detail, Does.Contain("Ability/Effect-only"));
             Assert.That(runtime.Metrics.MaxThinkMs, Is.LessThan(5.0));
         }
 

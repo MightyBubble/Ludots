@@ -19,7 +19,7 @@ This page is the SSOT for production-grade capability acceptance showcase roots 
 | Behavior Tree Arena | `capability_standard_behavior_tree_arena` | `mods/showcases/capability_standard/CapabilityStandardBehaviorTreeArenaMod` | **BT-only** 10k think waves (0.2s / &lt;5ms); no HFSM/Level/Skill mash-up |
 | HFSM Sentry Arena | `capability_standard_hfsm_sentry_arena` | `mods/showcases/capability_standard/CapabilityStandardHfsmSentryArenaMod` | **HFSM-only** hierarchical sentry 10k think waves |
 | Level Blueprint Trial | `capability_standard_level_blueprint_trial` | `mods/showcases/capability_standard/CapabilityStandardLevelBlueprintTrialMod` | **Level-only** director/trigger phase trial |
-| Skill Graph Sandbox | `capability_standard_skill_graph_sandbox` | `mods/showcases/capability_standard/CapabilityStandardSkillGraphSandboxMod` | **Skill/Script-only** FuncLib casts |
+| Ability Graph Sandbox | `capability_standard_ability_graph_sandbox` | `mods/showcases/capability_standard/CapabilityStandardAbilityGraphSandboxMod` | **GAS Ability/Effect-only** FuncLib casts |
 | Graph Behavior Integration | `capability_standard_graph_behavior_integration` | `mods/showcases/capability_standard/CapabilityStandardGraphBehaviorIntegrationMod` | **Separate** integration demo (BT+HFSM+Level); not a kitchen-sink merge of the four solos |
 
 Standard launch commands:
@@ -38,7 +38,7 @@ Standard launch commands:
 .\scripts\run-mod-launcher.cmd cli launch '$capability_standard_behavior_tree_arena' --adapter raylib
 .\scripts\run-mod-launcher.cmd cli launch '$capability_standard_hfsm_sentry_arena' --adapter raylib
 .\scripts\run-mod-launcher.cmd cli launch '$capability_standard_level_blueprint_trial' --adapter raylib
-.\scripts\run-mod-launcher.cmd cli launch '$capability_standard_skill_graph_sandbox' --adapter raylib
+.\scripts\run-mod-launcher.cmd cli launch '$capability_standard_ability_graph_sandbox' --adapter raylib
 .\scripts\run-mod-launcher.cmd cli launch '$capability_standard_graph_behavior_integration' --adapter raylib
 ```
 
@@ -58,7 +58,7 @@ Preset launch commands:
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_behavior_tree_arena_raylib'
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_hfsm_sentry_arena_raylib'
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_level_blueprint_trial_raylib'
-.\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_skill_graph_sandbox_raylib'
+.\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_ability_graph_sandbox_raylib'
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_graph_behavior_integration_raylib'
 ```
 

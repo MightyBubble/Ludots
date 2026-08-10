@@ -2902,23 +2902,26 @@
       "notes": "Headless think-wave acceptance first; visual captures follow."
     },
     {
-      "id": "capability_standard_skill_graph_sandbox",
-      "path": "mods/showcases/capability_standard/CapabilityStandardSkillGraphSandboxMod",
-      "projectPath": "CapabilityStandardSkillGraphSandboxMod.csproj",
-      "title": "\u6280\u80fd\u56fe\u6c99\u76d8",
-      "summary": "\u72ec\u7acb\u6280\u80fd Script/FuncLib \u6f14\u793a\uff08\u4e0d\u542b BT/HFSM/\u5173\u5361\uff09\u3002",
+      "id": "capability_standard_ability_graph_sandbox",
+      "path": "mods/showcases/capability_standard/CapabilityStandardAbilityGraphSandboxMod",
+      "projectPath": "CapabilityStandardAbilityGraphSandboxMod.csproj",
+      "title": "\u80fd\u529b/\u6548\u679c\u56fe\u6c99\u76d8",
+      "summary": "\u72ec\u7acb GAS Ability/Effect \u56fe\u4e0e FuncLib \u6f14\u793a\uff08\u4e0d\u542b BT/HFSM/\u5173\u5361\uff09\u3002",
       "tier": "T2",
       "category": "capability-standard",
       "tags": [
         "graph",
-        "capability-standard"
+        "capability-standard",
+        "gas",
+        "ability",
+        "effect"
       ],
-      "binding": "capability_standard_skill_graph_sandbox",
-      "preset": "capability_standard_skill_graph_sandbox_raylib",
+      "binding": "capability_standard_ability_graph_sandbox",
+      "preset": "capability_standard_ability_graph_sandbox_raylib",
       "docsPath": "gitbook/architecture/graph-layering-flow-and-behavior.md",
       "readmePath": null,
-      "acceptanceTest": "SkillGraphSandboxShowcaseAcceptanceTests",
-      "artifactDir": "artifacts/evidence/capability_standard_skill_graph_sandbox",
+      "acceptanceTest": "AbilityGraphSandboxShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_ability_graph_sandbox",
       "screenshot": null,
       "status": "active",
       "notes": "Headless think-wave acceptance first; visual captures follow."

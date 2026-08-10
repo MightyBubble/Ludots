@@ -1,10 +1,10 @@
 {
-  "Id": "capability_standard_skill_graph_sandbox",
+  "Id": "capability_standard_ability_graph_sandbox",
   "Tags": [
     "showcase",
     "capability-standard",
     "gas",
-    "skill-graph"
+    "ability-graph"
   ],
   "DefaultCamera": {
     "VirtualCameraId": "Camera.Profile.Tactical",

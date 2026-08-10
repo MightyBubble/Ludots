@@ -3,10 +3,10 @@ using CapabilityStandardGraphBehaviorCommon;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
 
-namespace CapabilityStandardSkillGraphSandboxMod.Runtime;
+namespace CapabilityStandardAbilityGraphSandboxMod.Runtime;
 
-/// <summary>Skill-graph-only sandbox: func-lib Scripts + halt slices (no BT/HFSM/Level).</summary>
-public sealed class SkillGraphSandboxRuntime
+/// <summary>Ability/Effect-graph-only sandbox: func-lib Scripts + halt slices (no BT/HFSM/Level).</summary>
+public sealed class AbilityGraphSandboxRuntime
 {
     private readonly GraphShowcaseConfig _config = new();
     private readonly GraphFunctionCatalog _catalog = new();
@@ -14,18 +14,18 @@ public sealed class SkillGraphSandboxRuntime
     private GraphInstruction[]? _bashProgram;
     private float _accum;
     private int _castWave;
-    public GraphShowcaseMetrics Metrics { get; } = new() { ShowcaseId = "capability_standard_skill_graph_sandbox" };
+    public GraphShowcaseMetrics Metrics { get; } = new() { ShowcaseId = "capability_standard_ability_graph_sandbox" };
 
     public void EnsureWorld()
     {
         if (_slashProgram != null) return;
 
-        _slashProgram = CompileConstHalt("skill.slash", 11);
-        _bashProgram = CompileConstHalt("skill.bash", 22);
-        _catalog.Register("skill.slash", graphId: 101, GraphKind.Script);
-        _catalog.Register("skill.bash", graphId: 102, GraphKind.Script);
+        _slashProgram = CompileConstHalt("ability.slash", 11);
+        _bashProgram = CompileConstHalt("ability.bash", 22);
+        _catalog.Register("ability.slash", graphId: 101, GraphKind.Script);
+        _catalog.Register("ability.bash", graphId: 102, GraphKind.Script);
         Metrics.AgentCount = _config.AgentCount; // concurrent settle targets marker
-        Metrics.Detail = $"Skill-only funcLib={_catalog.Count}";
+        Metrics.Detail = $"Ability/Effect-only funcLib={_catalog.Count}";
     }
 
     public void Tick(float dt)
@@ -65,7 +65,7 @@ public sealed class SkillGraphSandboxRuntime
             steps += result.Steps;
             if (!result.Halted)
             {
-                throw new InvalidOperationException("Skill sandbox scripts must halt in one slice.");
+                throw new InvalidOperationException("Ability graph sandbox scripts must halt in one slice.");
             }
         }
 
@@ -73,9 +73,9 @@ public sealed class SkillGraphSandboxRuntime
         Metrics.LastThinkMs = sw.Elapsed.TotalMilliseconds;
         if (Metrics.LastThinkMs > Metrics.MaxThinkMs) Metrics.MaxThinkMs = Metrics.LastThinkMs;
         Metrics.ThinkWaves++;
-        string fn = (_castWave & 1) == 0 ? "skill.slash" : "skill.bash";
+        string fn = (_castWave & 1) == 0 ? "ability.slash" : "ability.bash";
         Metrics.Detail =
-            $"Skill-only cast={fn} targets={targets} steps={steps} last={Metrics.LastThinkMs:F3}ms max={Metrics.MaxThinkMs:F3}ms";
+            $"Ability/Effect-only cast={fn} targets={targets} steps={steps} last={Metrics.LastThinkMs:F3}ms max={Metrics.MaxThinkMs:F3}ms";
     }
 
     private static GraphInstruction[] CompileConstHalt(string id, int value)
@@ -95,7 +95,7 @@ public sealed class SkillGraphSandboxRuntime
         GraphControlFlowCompileResult compiled = GraphControlFlowCompiler.Compile(doc);
         if (!compiled.Succeeded)
         {
-            throw new InvalidOperationException($"Skill script '{id}' failed to compile.");
+            throw new InvalidOperationException($"Ability Script '{id}' failed to compile.");
         }
 
         return compiled.Program;

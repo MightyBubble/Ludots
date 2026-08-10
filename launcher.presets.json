@@ -408,10 +408,10 @@
       ]
     },
     {
-      "id": "capability_standard_skill_graph_sandbox_raylib",
+      "id": "capability_standard_ability_graph_sandbox_raylib",
       "adapter": "raylib",
       "mods": [
-        "$capability_standard_skill_graph_sandbox"
+        "$capability_standard_ability_graph_sandbox"
       ]
     },
     {
