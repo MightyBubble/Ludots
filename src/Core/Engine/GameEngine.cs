@@ -1646,6 +1646,27 @@ namespace Ludots.Core.Engine
                 taskPresentation);
             TaskBridgeProviderInstaller.Install(providerServices, taskRuntime);
             var taskQuestAdapter = new TaskQuestAdapter(taskRuntime);
+            // Fail fast if content simultaneously owns progress in Quest and Task stores.
+            var questActiveIds = new List<string>();
+            foreach (QuestDefinition questDefinition in questDefinitions.Definitions)
+            {
+                if (questRuntime.TryGetQuestState(questDefinition.Id, out QuestState questState, out _) &&
+                    questState == QuestState.Active)
+                {
+                    questActiveIds.Add(questDefinition.Id);
+                }
+            }
+
+            var taskActiveIds = new List<string>();
+            foreach (TaskView taskView in taskRuntime.CaptureViews())
+            {
+                if (taskView.State is TaskInstanceState.Offered or TaskInstanceState.Active)
+                {
+                    taskActiveIds.Add(taskView.TaskId);
+                }
+            }
+
+            TaskQuestAdapter.GuardAgainstDualProgressStore(questActiveIds, taskActiveIds);
             SetService(CoreServiceKeys.TaskDefinitionRegistry, taskDefinitions);
             SetService(CoreServiceKeys.TaskPresentationBuffer, taskPresentation);
             SetService(CoreServiceKeys.TaskRuntimeService, taskRuntime);

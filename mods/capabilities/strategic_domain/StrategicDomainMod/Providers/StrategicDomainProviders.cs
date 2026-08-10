@@ -192,10 +192,15 @@ namespace StrategicDomainMod.Providers
 
     public sealed class SiegeLiftEffect : IEffectHandler
     {
+        private readonly StrategicDomainRuntime _runtime;
+
+        public SiegeLiftEffect(StrategicDomainRuntime runtime) =>
+            _runtime = runtime ?? throw new ArgumentNullException(nameof(runtime));
+
         public void Execute(in ProviderEffectCall call, ProviderExecutionContext context)
         {
-            // Explicit dedicated key — presence alone satisfies contract; parameters reserved.
-            _ = StrategicDomainParameterReader.ReadInt(call.Parameters, "settlement_key");
+            int settlementKey = StrategicDomainParameterReader.ReadInt(call.Parameters, "settlement_key");
+            _runtime.LiftSiege(settlementKey);
         }
     }
 
@@ -286,7 +291,7 @@ namespace StrategicDomainMod.Providers
                 }));
             providers.Effects.Register(
                 "combat.siege_lift",
-                new SiegeLiftEffect(),
+                new SiegeLiftEffect(runtime),
                 IntParams("settlement_key"));
             providers.Effects.Register(
                 "combat.siege_accept_surrender",

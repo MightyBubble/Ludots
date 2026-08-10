@@ -216,6 +216,29 @@ namespace StrategicDomainMod.Runtime
             RecalculateSubnets();
         }
 
+        public void LiftSiege(int settlementKey)
+        {
+            Entity settlement = RequireSettlement(settlementKey);
+            ref SettlementDefenseCm defense = ref _world.Get<SettlementDefenseCm>(settlement);
+            if (defense.ControlState == SettlementControlState.Intact)
+            {
+                throw new InvalidOperationException(
+                    $"Settlement '{settlementKey}' is not under breach; siege lift rejected.");
+            }
+
+            // Lifting siege restores intact control without ownership transfer.
+            defense.ControlState = SettlementControlState.Intact;
+            if (defense.GarrisonPool <= 0f)
+            {
+                defense.GarrisonPool = Math.Max(1f, defense.GarrisonPoolMax * 0.25f);
+            }
+
+            if (defense.WallDurability <= 0f)
+            {
+                defense.WallDurability = Math.Max(1f, defense.WallDurabilityMax * 0.25f);
+            }
+        }
+
         public void AppointGovernor(int settlementKey, int heroKey)
         {
             if (heroKey == 0)
