@@ -154,6 +154,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         ControlDomainResolve  = 420, // E[Dst] = control domain rep of E[A], Entity.Null when none
         ControlDomainControls = 421, // B[Dst] = IsControllableBy(controllerRep=E[A], target=E[B])
         KnowledgeHasProjection = 422, // B[Dst] = viewer E[A] has knowledge projection of target E[B]
+
+        // ── Shared control-flow / Script coroutine (430-434) ──
+        Call = 430,            // push return PC; pc = Imm (absolute)
+        Return = 431,          // pop return PC
+        Yield = 432,           // pause; resume at next instruction
+        HaltReturnInt = 433,   // halt with ReturnInt = I[A]
+        InvokeScript = 434,    // run Script graph Imm to halt (callee must not Yield)
     }
 
     public static class GraphNodeOpParser
@@ -163,13 +170,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             parsed = GraphNodeOp.None;
             if (string.IsNullOrWhiteSpace(op)) return false;
 
-            if (Enum.TryParse(op, ignoreCase: true, out GraphNodeOp v))
+            string trimmed = op.Trim();
+            if (!Enum.TryParse(trimmed, ignoreCase: false, out GraphNodeOp v) ||
+                v == GraphNodeOp.None ||
+                !Enum.IsDefined(typeof(GraphNodeOp), v) ||
+                !string.Equals(v.ToString(), trimmed, StringComparison.Ordinal))
             {
-                parsed = v;
-                return true;
+                return false;
             }
 
-            return false;
+            parsed = v;
+            return true;
         }
     }
 }
