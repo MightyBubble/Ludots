@@ -1,0 +1,9 @@
+{
+  "fixture_id": "y5k_governor_appoint_v1",
+  "scenario_id": "y5k_governor_appoint",
+  "fields": {
+    "settlement_key": { "semantics": "任命目标聚落", "unit": "settlement_key", "owner": "content" },
+    "hero_key": { "semantics": "任命英雄", "unit": "hero_key", "owner": "content" },
+    "expected_production_gt_baseline": { "semantics": "产出高于基线", "unit": "bool", "owner": "test" }
+  }
+}

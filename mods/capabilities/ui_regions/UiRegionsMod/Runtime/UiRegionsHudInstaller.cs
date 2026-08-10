@@ -1,3 +1,4 @@
+using Arch.Core;
 using Arch.System;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Activities;
@@ -12,24 +13,62 @@ namespace UiRegionsMod.Runtime;
 
 public sealed class UiRegionsHudInstallation : IDisposable
 {
+	private readonly GameEngine _engine;
+	private readonly IUiSurfaceHost _host;
 	private readonly WebUiDataPlaneRuntime _dataPlane;
 	private readonly WebUiPanelKitSurfaceBinder _binder;
 	private readonly UiRegionsHudPumpSystem _pumpSystem;
+	private readonly float _viewportWidth;
+	private readonly float _viewportHeight;
 	private bool _disposed;
 
 	internal UiRegionsHudInstallation(
+		GameEngine engine,
+		IUiSurfaceHost host,
 		WebUiDataPlaneRuntime dataPlane,
 		WebUiPanelKitSurfaceBinder binder,
-		UiRegionsHudPumpSystem pumpSystem)
+		UiRegionsHudPumpSystem pumpSystem,
+		float viewportWidth,
+		float viewportHeight)
 	{
+		_engine = engine;
+		_host = host;
 		_dataPlane = dataPlane;
 		_binder = binder;
 		_pumpSystem = pumpSystem;
+		_viewportWidth = viewportWidth;
+		_viewportHeight = viewportHeight;
 	}
 
 	public WebUiPanelKitSurfaceBinder Binder => _binder;
 	public IReadOnlyList<string> BoundPanelIds => _binder.BoundPanelIds;
 	public IReadOnlyList<string> Topics => _binder.BrowserSubscriptionTopics;
+
+	public void RefreshLivePanels()
+	{
+		ObjectDisposedException.ThrowIf(_disposed, this);
+		TaskRuntimeService tasks = _engine.GetService(CoreServiceKeys.TaskRuntimeService)
+			?? throw new InvalidOperationException("TaskRuntimeService missing.");
+		ActivityRuntimeService activities = _engine.GetService(CoreServiceKeys.ActivityRuntimeService)
+			?? throw new InvalidOperationException("ActivityRuntimeService missing.");
+		HudLiveSnapshot snapshot = HudLiveSnapshot.Capture(tasks, activities);
+
+		foreach (WebUiPanelDeclaration panel in _binder.Manifest.Panels)
+		{
+			if (!_binder.TryGetLease(panel.PanelId, out UiSurfaceLeaseHandle handle))
+			{
+				continue;
+			}
+
+			_host.Publish(
+				handle,
+				UiRegionsHudInstaller.CreateRegionContribution(
+					panel,
+					_viewportWidth,
+					_viewportHeight,
+					snapshot));
+		}
+	}
 
 	public void Dispose()
 	{
@@ -42,6 +81,63 @@ public sealed class UiRegionsHudInstallation : IDisposable
 		_binder.Dispose();
 		_dataPlane.DisposeAsync().AsTask().GetAwaiter().GetResult();
 		_disposed = true;
+	}
+}
+
+public readonly record struct HudLiveSnapshot(
+	IReadOnlyList<string> TaskLines,
+	IReadOnlyList<string> ActivityOptionLines,
+	string? ForcedActivityTitle,
+	string? ForcedActivitySummary,
+	bool HasForcedActivity)
+{
+	public static HudLiveSnapshot Capture(TaskRuntimeService tasks, ActivityRuntimeService activities)
+	{
+		ArgumentNullException.ThrowIfNull(tasks);
+		ArgumentNullException.ThrowIfNull(activities);
+
+		List<TaskView> taskViews = tasks.CaptureViews();
+		var taskLines = new List<string>(taskViews.Count);
+		for (int i = 0; i < taskViews.Count; i++)
+		{
+			TaskView view = taskViews[i];
+			if (view.State is TaskInstanceState.Offered or TaskInstanceState.Active)
+			{
+				string stateLabel = view.State == TaskInstanceState.Offered ? "可领取" : "进行中";
+				taskLines.Add($"{stateLabel} · {view.DisplayName}");
+			}
+		}
+
+		List<ActivityView> activityViews = activities.CaptureViews();
+		string? forcedTitle = null;
+		string? forcedSummary = null;
+		var optionLines = new List<string>();
+		for (int i = 0; i < activityViews.Count; i++)
+		{
+			ActivityView activity = activityViews[i];
+			if (activity.State != ActivityInstanceState.Active ||
+			    activity.DispatchPolicy != ActivityDispatchPolicy.Forced)
+			{
+				continue;
+			}
+
+			forcedTitle = activity.DisplayName;
+			forcedSummary = activity.Summary;
+			var options = new List<ActivityOptionView>();
+			if (activities.TryGetActiveOptions(activity.Entity, null, options))
+			{
+				for (int o = 0; o < options.Count; o++)
+				{
+					ActivityOptionView option = options[o];
+					string suffix = option.Executable ? string.Empty : $"（不可执行：{option.BlockReason}）";
+					optionLines.Add($"○ {option.Title}{suffix}");
+				}
+			}
+
+			break;
+		}
+
+		return new HudLiveSnapshot(taskLines, optionLines, forcedTitle, forcedSummary, forcedTitle != null);
 	}
 }
 
@@ -74,8 +170,9 @@ public static class UiRegionsHudInstaller
 		WebUiPanelKitManifest manifest = WebUiPanelKitManifestLoader.LoadFromFile(manifestPath, catalog);
 		float viewportWidth = ResolveViewportWidth(engine);
 		float viewportHeight = ResolveViewportHeight(engine);
+		HudLiveSnapshot snapshot = HudLiveSnapshot.Capture(tasks, activities);
 		var binder = new WebUiPanelKitSurfaceBinder(host, manifest);
-		binder.Bind(panel => CreateRegionContribution(panel, viewportWidth, viewportHeight));
+		binder.Bind(panel => CreateRegionContribution(panel, viewportWidth, viewportHeight, snapshot));
 
 		var pump = new WebUiDataPlaneTickPump(dataPlane);
 		foreach (string topic in binder.BrowserSubscriptionTopics)
@@ -96,7 +193,14 @@ public static class UiRegionsHudInstaller
 		uiRuntime.Install(dataPlane.IsTopicRegistered);
 		engine.SetService(UiRegionsServiceKeys.Runtime, uiRuntime);
 
-		return new UiRegionsHudInstallation(dataPlane, binder, pumpSystem);
+		return new UiRegionsHudInstallation(
+			engine,
+			host,
+			dataPlane,
+			binder,
+			pumpSystem,
+			viewportWidth,
+			viewportHeight);
 	}
 
 	private static void RegisterDefaultTopics(
@@ -116,42 +220,16 @@ public static class UiRegionsHudInstaller
 			}
 		}
 
-		// Common generic topic names used by region manifests.
 		Register(new TaskObjectiveTopicProducer("y5k.topic.objective", tasks));
 		Register(new ActivityModalTopicProducer("y5k.topic.activity", activities, activityPresentation));
-		Register(new StaticHudTopicProducer("y5k.topic.time", "time-control", () => new
-		{
-			paused = false,
-			label = "cycle",
-		}));
-		Register(new StaticHudTopicProducer("y5k.topic.filter", "view-filter", () => new
-		{
-			filters = Array.Empty<string>(),
-		}));
-		Register(new StaticHudTopicProducer("y5k.topic.notification", "notification", () => new
-		{
-			items = Array.Empty<object>(),
-		}));
-		Register(new StaticHudTopicProducer("y5k.topic.minimap", "minimap.web-shell", () => new
-		{
-			ready = true,
-		}));
-		Register(new StaticHudTopicProducer("y5k.topic.entity-insight", "entity-insight", () => new
-		{
-			selection = Array.Empty<object>(),
-		}));
-		Register(new StaticHudTopicProducer("y5k.topic.production", "production-overview", () => new
-		{
-			queues = Array.Empty<object>(),
-		}));
-		Register(new StaticHudTopicProducer("y5k.topic.entity-list", "entity-list", () => new
-		{
-			entities = Array.Empty<object>(),
-		}));
-		Register(new StaticHudTopicProducer("y5k.topic.command", "command-deck", () => new
-		{
-			slots = Array.Empty<object>(),
-		}));
+		Register(new StaticHudTopicProducer("y5k.topic.time", "time-control", () => new { paused = false, label = "cycle" }));
+		Register(new StaticHudTopicProducer("y5k.topic.filter", "view-filter", () => new { filters = Array.Empty<string>() }));
+		Register(new StaticHudTopicProducer("y5k.topic.notification", "notification", () => new { items = Array.Empty<object>() }));
+		Register(new StaticHudTopicProducer("y5k.topic.minimap", "minimap.web-shell", () => new { ready = true }));
+		Register(new StaticHudTopicProducer("y5k.topic.entity-insight", "entity-insight", () => new { selection = Array.Empty<object>() }));
+		Register(new StaticHudTopicProducer("y5k.topic.production", "production-overview", () => new { queues = Array.Empty<object>() }));
+		Register(new StaticHudTopicProducer("y5k.topic.entity-list", "entity-list", () => new { entities = Array.Empty<object>() }));
+		Register(new StaticHudTopicProducer("y5k.topic.command", "command-deck", () => new { slots = Array.Empty<object>() }));
 
 		if (staticTopicFactories == null)
 		{
@@ -194,10 +272,11 @@ public static class UiRegionsHudInstaller
 		return 720f;
 	}
 
-	private static UiSurfaceContribution CreateRegionContribution(
+	internal static UiSurfaceContribution CreateRegionContribution(
 		WebUiPanelDeclaration panel,
 		float viewportWidth,
-		float viewportHeight)
+		float viewportHeight,
+		HudLiveSnapshot snapshot)
 	{
 		(float xPct, float yPct, float wPct, float hPct) = ResolveNineGridPercent(panel.SurfaceRegionId);
 		float x = viewportWidth * xPct / 100f;
@@ -205,11 +284,10 @@ public static class UiRegionsHudInstaller
 		float w = viewportWidth * wPct / 100f;
 		float h = viewportHeight * hPct / 100f;
 
-		// Keep the 3D world readable: activity-modal only reserves an empty lease until forced open.
-		bool dormantCenterModal =
-			string.Equals(panel.PanelType, WebUiRegionPanelDescriptors.ActivityModalPanelType, StringComparison.Ordinal) ||
-			string.Equals(panel.SurfaceRegionId, WebUiNineGridRegions.Center, StringComparison.Ordinal);
-		if (dormantCenterModal)
+		bool isActivityModal =
+			string.Equals(panel.PanelType, WebUiRegionPanelDescriptors.ActivityModalPanelType, StringComparison.Ordinal);
+
+		if (isActivityModal && !snapshot.HasForcedActivity)
 		{
 			return UiSurfaceContribution.FromBuilder(() =>
 				Ui.Panel()
@@ -220,13 +298,49 @@ public static class UiRegionsHudInstaller
 					.ZIndex(panel.SurfacePriority));
 		}
 
+		if (isActivityModal && snapshot.HasForcedActivity)
+		{
+			var children = new List<UiElementBuilder>
+			{
+				Ui.Text("活动抉择").Id($"uir-{panel.PanelId}-title"),
+				Ui.Text(snapshot.ForcedActivityTitle ?? string.Empty).Id($"uir-{panel.PanelId}-name"),
+				Ui.Text(snapshot.ForcedActivitySummary ?? string.Empty).Id($"uir-{panel.PanelId}-summary"),
+			};
+			for (int i = 0; i < snapshot.ActivityOptionLines.Count; i++)
+			{
+				children.Add(Ui.Text(snapshot.ActivityOptionLines[i]).Id($"uir-{panel.PanelId}-opt-{i}"));
+			}
+
+			return UiSurfaceContribution.FromBuilder(() =>
+				Ui.Panel(Ui.Column(children.ToArray()))
+					.Id($"panel-kit-{panel.PanelId}")
+					.Absolute(x, y)
+					.Width(w)
+					.Height(h)
+					.ZIndex(panel.SurfacePriority));
+		}
+
 		string title = ResolvePlayerFacingTitle(panel.PanelType);
-		string subtitle = ResolvePlayerFacingSubtitle(panel.PanelType);
+		var lines = new List<UiElementBuilder>
+		{
+			Ui.Text(title).Id($"uir-{panel.PanelId}-title"),
+		};
+
+		if (string.Equals(panel.PanelType, "objective", StringComparison.Ordinal) && snapshot.TaskLines.Count > 0)
+		{
+			int limit = Math.Min(4, snapshot.TaskLines.Count);
+			for (int i = 0; i < limit; i++)
+			{
+				lines.Add(Ui.Text(snapshot.TaskLines[i]).Id($"uir-{panel.PanelId}-task-{i}"));
+			}
+		}
+		else
+		{
+			lines.Add(Ui.Text(ResolvePlayerFacingSubtitle(panel.PanelType)).Id($"uir-{panel.PanelId}-subtitle"));
+		}
+
 		return UiSurfaceContribution.FromBuilder(() =>
-			Ui.Panel(
-					Ui.Column(
-						Ui.Text(title).Id($"uir-{panel.PanelId}-title"),
-						Ui.Text(subtitle).Id($"uir-{panel.PanelId}-subtitle")))
+			Ui.Panel(Ui.Column(lines.ToArray()))
 				.Id($"panel-kit-{panel.PanelId}")
 				.Absolute(x, y)
 				.Width(w)
@@ -268,10 +382,8 @@ public static class UiRegionsHudInstaller
 			_ => string.Empty,
 		};
 
-	private static (float X, float Y, float W, float H) ResolveNineGridPercent(string regionId)
-	{
-		// Fit inside common 1280x720 capture without right-edge clipping.
-		return regionId switch
+	private static (float X, float Y, float W, float H) ResolveNineGridPercent(string regionId) =>
+		regionId switch
 		{
 			WebUiNineGridRegions.TopLeft => (1f, 1f, 26f, 16f),
 			WebUiNineGridRegions.TopCenter => (28f, 1f, 42f, 12f),
@@ -282,10 +394,8 @@ public static class UiRegionsHudInstaller
 			WebUiNineGridRegions.BottomLeft => (1f, 72f, 22f, 26f),
 			WebUiNineGridRegions.BottomCenter => (24f, 70f, 52f, 28f),
 			WebUiNineGridRegions.BottomRight => (77f, 72f, 22f, 26f),
-			_ => throw new InvalidOperationException(
-				$"Unknown nine-grid surface region '{regionId}'."),
+			_ => throw new InvalidOperationException($"Unknown nine-grid surface region '{regionId}'."),
 		};
-	}
 }
 
 internal sealed class UiRegionsHudPumpSystem : ISystem<float>

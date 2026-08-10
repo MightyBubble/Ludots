@@ -1,0 +1,10 @@
+{
+  "fixture_id": "y5k_supply_strain_v1",
+  "scenario_id": "y5k_supply_strain",
+  "fields": {
+    "hub_settlement_key": { "semantics": "唯一枢纽聚落键", "unit": "settlement_key", "owner": "content" },
+    "viewer_faction": { "semantics": "玩家势力", "unit": "faction_id", "owner": "content" },
+    "expected_network_split": { "semantics": "枢纽易主后是否分裂", "unit": "bool", "owner": "test" },
+    "expected_attrition_after_grace": { "semantics": "宽限结束后减员量", "unit": "strength", "owner": "balance" }
+  }
+}

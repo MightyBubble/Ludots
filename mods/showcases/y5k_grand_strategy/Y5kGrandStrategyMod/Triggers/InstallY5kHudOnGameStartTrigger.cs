@@ -17,6 +17,8 @@ public sealed class InstallY5kHudOnGameStartTrigger
 		_context = context ?? throw new ArgumentNullException(nameof(context));
 	}
 
+	public UiRegionsHudInstallation? Installation => _installation;
+
 	public Task ExecuteAsync(ScriptContext context)
 	{
 		ArgumentNullException.ThrowIfNull(context);
@@ -25,6 +27,8 @@ public sealed class InstallY5kHudOnGameStartTrigger
 
 		if (_installation != null)
 		{
+			_installation.RefreshLivePanels();
+			_context.Log("[Y5kGrandStrategyMod] HUD refreshed with live task/activity snapshot.");
 			return Task.CompletedTask;
 		}
 

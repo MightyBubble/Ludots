@@ -14,6 +14,15 @@ namespace Ludots.Core.Gameplay.Activities
         bool Executable,
         string BlockReason);
 
+    public readonly record struct ActivityView(
+        Entity Entity,
+        string ActivityId,
+        string DisplayName,
+        string Summary,
+        ActivityInstanceState State,
+        ActivityDispatchPolicy DispatchPolicy,
+        int InstanceId);
+
     public sealed class ActivityRuntimeService
     {
         private static readonly QueryDescription ActivityQuery = new QueryDescription()
@@ -283,6 +292,28 @@ namespace Ludots.Core.Gameplay.Activities
             }
 
             return true;
+        }
+
+        public List<ActivityView> CaptureViews()
+        {
+            var views = new List<ActivityView>();
+            _world.Query(in ActivityQuery, (Entity entity, ref ActivityInstanceCm instance) =>
+            {
+                if (!_definitions.TryGet(instance.DefinitionId, out ActivityDefinition definition))
+                {
+                    return;
+                }
+
+                views.Add(new ActivityView(
+                    entity,
+                    definition.Id,
+                    definition.DisplayName,
+                    definition.Summary,
+                    instance.State,
+                    definition.DispatchPolicy,
+                    instance.InstanceId));
+            });
+            return views;
         }
 
         private void ActivateForPresentation(Entity entity, ActivityDefinition definition)

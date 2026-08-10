@@ -1,0 +1,9 @@
+{
+  "fixture_id": "y5k_captive_disposal_v1",
+  "scenario_id": "y5k_captive_disposal",
+  "fields": {
+    "settlement_key": { "semantics": "羁押所在聚落", "unit": "settlement_key", "owner": "content" },
+    "actions": { "semantics": "转化/释放/处决", "unit": "enum_set", "owner": "content" },
+    "expected_captive_cleared": { "semantics": "处置后羁押位清空", "unit": "bool", "owner": "test" }
+  }
+}

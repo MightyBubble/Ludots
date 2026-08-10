@@ -1,0 +1,10 @@
+{
+  "fixture_id": "y5k_takeover_transfer_v1",
+  "scenario_id": "y5k_takeover_transfer",
+  "fields": {
+    "settlement_key": { "semantics": "接管标的", "unit": "settlement_key", "owner": "content" },
+    "new_owner_faction": { "semantics": "接管后归属", "unit": "faction_id", "owner": "content" },
+    "expected_captive_hero_key": { "semantics": "被俘英雄键", "unit": "hero_key", "owner": "content" },
+    "troop_commitment": { "semantics": "投入兵力", "unit": "strength", "owner": "balance" }
+  }
+}

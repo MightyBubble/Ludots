@@ -7,21 +7,28 @@ namespace Y5kGrandStrategyMod;
 public sealed class Y5kGrandStrategyModEntry : IMod
 {
 	private InstallY5kHudOnGameStartTrigger? _hudTrigger;
+	private InstallY5kWorldOnGameStartTrigger? _worldTrigger;
 
 	public void OnLoad(IModContext context)
 	{
 		ArgumentNullException.ThrowIfNull(context);
 		context.Log("[Y5kGrandStrategyMod] Loaded — content + HUD assembly only.");
-		var worldTrigger = new InstallY5kWorldOnGameStartTrigger(context);
+		_worldTrigger = new InstallY5kWorldOnGameStartTrigger(context);
 		_hudTrigger = new InstallY5kHudOnGameStartTrigger(context);
-		context.OnEvent(GameEvents.GameStart, _hudTrigger.ExecuteAsync);
-		context.OnEvent(GameEvents.GameStart, worldTrigger.ExecuteAsync);
-		context.OnEvent(GameEvents.MapLoaded, worldTrigger.HandleMapLoadedAsync);
+
+		// Seed world/objectives first on MapLoaded, then bind/refresh HUD so panels show live data.
+		context.OnEvent(GameEvents.GameStart, _worldTrigger.ExecuteAsync);
+		context.OnEvent(GameEvents.MapLoaded, async ctx =>
+		{
+			await _worldTrigger.HandleMapLoadedAsync(ctx).ConfigureAwait(false);
+			await _hudTrigger.ExecuteAsync(ctx).ConfigureAwait(false);
+		});
 	}
 
 	public void OnUnload()
 	{
 		_hudTrigger?.DisposeInstallation();
 		_hudTrigger = null;
+		_worldTrigger = null;
 	}
 }
