@@ -1,4 +1,4 @@
-# Graph behavior pressure report (WIP)
+# Graph behavior pressure report
 
 ## Contract
 
@@ -7,23 +7,68 @@
 - Hard gate: one think wave for A=10_000 → **T_ai &lt; 5ms**
 - Graph layer: no stagger/sleep/LOD
 
-## Measured (Release, this workspace)
+## Headless gates (Release, GasTests ci-gate)
 
-| Suite | A / scale | Topology | T_ai_ms | Gate |
-|-------|-----------|----------|---------|------|
-| L1 Script slice (drink) | 10_000 | 15 nodes → 29 instr | 9.398 (per-agent full slice) | L1-only bound; not BT think |
-| BT AlwaysSuccess sequence | 10_000 | N_topo=16 | **2.134** | PASS &lt;5ms |
-| HFSM sentry (half stimulated) | 10_000 | hierarchical 6 states (Idle + Alerting subtree) | **0.227** | PASS &lt;5ms |
-| Level director stress | 128 armed triggers (peakUnits marker 10k) | — | **0.202** | PASS &lt;5ms |
-| Combined BT+FSM+Level (25 waves) | 10_000 | N_topo=8 | avg **1.043** / p95 **1.089** | PASS |
+| Suite | Scale | Topology | T_ai_ms | Gate |
+|-------|-------|----------|--------|------|
+| BT AlwaysSuccess | 10_000 | N_topo=16 | &lt;5 (ci-gate) | PASS |
+| HFSM sentry | 10_000 | 6 states hierarchical | &lt;5 | PASS |
+| HFSM sentry + Script lifecycle | 10_000 | + condition/OnEnter/OnTick/OnExit Scripts | &lt;5 | PASS |
+| Level director | 128 armed / peakUnits 10k marker | — | &lt;5 | PASS |
+| Combined BT+HFSM+Level | 10_000 | N_topo=8 | avg ~1ms | PASS |
 
-## Interpretation
+## Matrices
 
-- Cheap SoA BT/FSM walks clear the 5ms gate for 10k **without** graph-layer stagger/sleep.
-- Showcase default combined topology N=8; N=16 remains BT-only stress row.
-- Full Script-per-agent every think still ~9ms — leaves must stay sparse Script / small budgets.
-- Next: Script leaves + four Raylib showcases + recordings; fill M2/M3/M6.
+### M1 — agents × BT topology (`matrix-m1.csv`)
+
+AlwaysSuccess sequence. At A=10_000, N_topo 8→64 stays well under 5ms (≈0.02ms in matrix probe after warmup).
+
+### M2 — agents × registered graph count G (`matrix-m2.csv`)
+
+Fixed N_topo=16, A=10_000 split across G worlds. Sum of think waves stays flat-ish as G grows (≈0.02–0.12ms) — no linear scan by graph id.
+
+### M3 — L1 ExecuteSlice instruction length (`matrix-m3.csv`)
+
+| A | I | T_ms | Note |
+|---|---|------|------|
+| 10_000 | 32 | 6.2 | Full Script every agent — over 5ms |
+| 10_000 | 128 | 21.8 | Leaves must stay sparse |
+| 10_000 | 256 | 42.0 | |
+| 10_000 | 1024 | 145.7 | Budget pressure |
+
+**Interpretation:** cheap BT/HFSM topology walks clear the 5ms gate; dense Script-per-agent does not. Showcase leaves use HoldRunning / tiny ConstHalt Scripts, not long chains.
+
+### M4 — HFSM (`matrix-m4.csv`)
+
+Sentry hierarchy 10k half-stimulated ≈0.23ms (topology-only row).
+
+### M5 — Level (`matrix-m5.csv`)
+
+Armed-trigger stress ≈0.20ms.
+
+### M6 — Ability cast waves (`matrix-m6.csv`)
+
+| targets | I | T_ms |
+|---------|---|------|
+| 250 | 8–128 | ≪1ms |
+| 1_000 | 32 | 0.11ms |
+| 10_000 | 32 | 1.15ms |
+| 10_000 | 128 | 4.10ms (still under 5ms) |
+
+## Showcases (Raylib evidence)
+
+| Showcase | Preset | Screenshot / video |
+|----------|--------|--------------------|
+| BT arena | `capability_standard_behavior_tree_arena_raylib` | bt-arena.png / bt-arena.mp4 |
+| HFSM sentry | `capability_standard_hfsm_sentry_arena_raylib` | hfsm-sentry.png / hfsm-sentry.mp4 |
+| Level trial | `capability_standard_level_blueprint_trial_raylib` | level-trial.png / level-trial.mp4 |
+| Ability sandbox | `capability_standard_ability_graph_sandbox_raylib` | ability-sandbox.png / ability-sandbox.mp4 |
+| Integration | `capability_standard_graph_behavior_integration_raylib` | graph-integration.png / graph-integration.mp4 |
+
+Budget bar (debug draw under the field) turns green when last think wave &lt; 5ms.
 
 ## Files
 
-- `matrix-m1.csv`, `matrix-m4.csv`, `baseline-l1-script.json`
+- `matrix-m1.csv` … `matrix-m6.csv`
+- `baseline-l1-script.json`
+- Generator: `GasTests` → `GraphBehaviorPressureMatrixTests`

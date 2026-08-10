@@ -98,6 +98,44 @@ namespace Ludots.Tests.Gas.AI
             Assert.That(ms, Is.LessThan(5.0), $"HFSM think wave exceeded 5ms: {ms:F3}ms");
         }
 
+        [Test]
+        public void SentryHfsm_WithRealScriptHost_RunsConditionAndLifecycle()
+        {
+            HfsmDefinition hfsm = HfsmFactory.CreateSentryHierarchyWithScripts("hfsm.scripted");
+            var host = new GraphProgramHfsmHost(HfsmFactory.CreateSentryScriptPrograms());
+            var world = new HfsmWorld(hfsm, capacity: 1);
+            world.AddAgent(host);
+            world.LatchStimulus(0);
+            world.TickAll(host); // Idle -> Alert
+            Assert.That(world.GetLeafState(0), Is.EqualTo(3));
+            world.TickAll(host); // Alert -> Combat (condition Script true) + OnEnter
+            Assert.That(world.GetLeafState(0), Is.EqualTo(4));
+            world.TickAll(host); // Combat OnTick then -> Retreat + OnExit
+            Assert.That(world.GetLeafState(0), Is.EqualTo(5));
+        }
+
+        [Test]
+        public void ThinkWave_10k_SentryHfsmWithScripts_UnderFiveMilliseconds()
+        {
+            HfsmDefinition hfsm = HfsmFactory.CreateSentryHierarchyWithScripts("hfsm.perf.scripted");
+            var host = new GraphProgramHfsmHost(HfsmFactory.CreateSentryScriptPrograms());
+            const int agents = 10_000;
+            var world = new HfsmWorld(hfsm, capacity: agents);
+            for (int i = 0; i < agents; i++)
+            {
+                world.AddAgent(host);
+                if ((i & 1) == 0) world.LatchStimulus(i);
+            }
+
+            world.TickAll(host);
+            var sw = Stopwatch.StartNew();
+            HfsmThinkStats stats = world.TickAll(host);
+            sw.Stop();
+            double ms = sw.Elapsed.TotalMilliseconds;
+            TestContext.WriteLine($"scripted A={stats.Agents} taken={stats.TransitionsTaken} T_ai_ms={ms:F3}");
+            Assert.That(ms, Is.LessThan(5.0), $"Scripted HFSM think wave exceeded 5ms: {ms:F3}ms");
+        }
+
         private sealed class RecordingHost : IHfsmGraphHost
         {
             public Dictionary<int, bool> ConditionResults { get; } = new();

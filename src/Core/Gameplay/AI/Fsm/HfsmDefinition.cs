@@ -1,4 +1,7 @@
 using System;
+using System.Collections.Generic;
+using Ludots.Core.GraphRuntime;
+using Ludots.Core.NodeLibraries.GASGraph;
 
 namespace Ludots.Core.Gameplay.AI.Fsm
 {
@@ -143,6 +146,11 @@ namespace Ludots.Core.Gameplay.AI.Fsm
 
     public static class HfsmFactory
     {
+        public const int CondAlwaysTrueGraphId = 9101;
+        public const int CombatOnEnterGraphId = 9201;
+        public const int CombatOnTickGraphId = 9202;
+        public const int CombatOnExitGraphId = 9203;
+
         /// <summary>
         /// Root(Compound) → Idle | Alerting(Compound → Alert/Combat/Retreat).
         /// Idle --stimulus--> Alert; Alert→Combat→Retreat→Idle.
@@ -172,6 +180,81 @@ namespace Ludots.Core.Gameplay.AI.Fsm
                 new HfsmTransition(fromState: 5, toState: 1, HfsmTransitionPredicate.Always, priority: 0),
             };
             return new HfsmDefinition(id, states, rootIndex: 0, transitions);
+        }
+
+        /// <summary>
+        /// Same topology as <see cref="CreateSentryHierarchy"/> with Combat lifecycle Scripts and
+        /// Alert→Combat gated by a condition Script on the transition.
+        /// </summary>
+        public static HfsmDefinition CreateSentryHierarchyWithScripts(string id)
+        {
+            var states = new[]
+            {
+                new HfsmState(HfsmStateKind.Compound, parentIndex: -1, childStart: 1, childCount: 2, defaultChildIndex: 1),
+                new HfsmState(HfsmStateKind.Leaf, parentIndex: 0, childStart: 0, childCount: 0, defaultChildIndex: 0),
+                new HfsmState(HfsmStateKind.Compound, parentIndex: 0, childStart: 3, childCount: 3, defaultChildIndex: 3),
+                new HfsmState(HfsmStateKind.Leaf, parentIndex: 2, childStart: 0, childCount: 0, defaultChildIndex: 0),
+                new HfsmState(
+                    HfsmStateKind.Leaf,
+                    parentIndex: 2,
+                    childStart: 0,
+                    childCount: 0,
+                    defaultChildIndex: 0,
+                    onEnterGraphId: CombatOnEnterGraphId,
+                    onTickGraphId: CombatOnTickGraphId,
+                    onExitGraphId: CombatOnExitGraphId),
+                new HfsmState(HfsmStateKind.Leaf, parentIndex: 2, childStart: 0, childCount: 0, defaultChildIndex: 0),
+            };
+            var transitions = new[]
+            {
+                new HfsmTransition(fromState: 1, toState: 3, HfsmTransitionPredicate.StimulusLatched, priority: 0),
+                new HfsmTransition(
+                    fromState: 3,
+                    toState: 4,
+                    HfsmTransitionPredicate.Always,
+                    priority: 0,
+                    conditionGraphId: CondAlwaysTrueGraphId),
+                new HfsmTransition(fromState: 4, toState: 5, HfsmTransitionPredicate.Always, priority: 0),
+                new HfsmTransition(fromState: 5, toState: 1, HfsmTransitionPredicate.Always, priority: 0),
+            };
+            return new HfsmDefinition(id, states, rootIndex: 0, transitions);
+        }
+
+        public static Dictionary<int, GraphInstruction[]> CreateSentryScriptPrograms()
+        {
+            return new Dictionary<int, GraphInstruction[]>
+            {
+                [CondAlwaysTrueGraphId] = CompileConstHalt("hfsm.cond.true", 1),
+                [CombatOnEnterGraphId] = CompileConstHalt("hfsm.combat.enter", 1),
+                [CombatOnTickGraphId] = CompileConstHalt("hfsm.combat.tick", 2),
+                [CombatOnExitGraphId] = CompileConstHalt("hfsm.combat.exit", 3),
+            };
+        }
+
+        private static GraphInstruction[] CompileConstHalt(string id, int value)
+        {
+            var doc = new GraphControlFlowDocument
+            {
+                Id = id,
+                Entry = "c",
+                Nodes =
+                {
+                    new GraphControlFlowNode { Id = "c", Op = nameof(GraphNodeOp.ConstInt), IntValue = value },
+                    new GraphControlFlowNode { Id = "h", Op = nameof(GraphNodeOp.HaltReturnInt) }
+                },
+                ControlEdges = { new GraphControlFlowEdge("c", GraphControlFlowPorts.Next, "h") },
+                ValueEdges =
+                {
+                    new GraphControlFlowValueEdge("c", GraphControlFlowPorts.Value, "h", GraphControlFlowPorts.Value)
+                }
+            };
+            GraphControlFlowCompileResult compiled = GraphControlFlowCompiler.Compile(doc);
+            if (!compiled.Succeeded)
+            {
+                throw new InvalidOperationException($"Failed to compile HFSM Script '{id}'.");
+            }
+
+            return compiled.Program;
         }
     }
 }

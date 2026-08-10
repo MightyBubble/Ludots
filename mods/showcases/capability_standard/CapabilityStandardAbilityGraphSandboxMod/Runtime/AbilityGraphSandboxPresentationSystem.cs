@@ -1,16 +1,15 @@
 using Arch.System;
 using CapabilityStandardGraphBehaviorCommon;
-using Ludots.Core.Gameplay.AI.BehaviorTree;
 using Ludots.Core.Presentation.DebugDraw;
 
-namespace CapabilityStandardBehaviorTreeArenaMod.Runtime;
+namespace CapabilityStandardAbilityGraphSandboxMod.Runtime;
 
-internal sealed class BehaviorTreeArenaPresentationSystem : ISystem<float>
+internal sealed class AbilityGraphSandboxPresentationSystem : ISystem<float>
 {
-    private readonly BehaviorTreeArenaRuntime _runtime;
+    private readonly AbilityGraphSandboxRuntime _runtime;
     private readonly DebugDrawCommandBuffer _debugDraw;
 
-    public BehaviorTreeArenaPresentationSystem(BehaviorTreeArenaRuntime runtime, DebugDrawCommandBuffer debugDraw)
+    public AbilityGraphSandboxPresentationSystem(AbilityGraphSandboxRuntime runtime, DebugDrawCommandBuffer debugDraw)
     {
         _runtime = runtime;
         _debugDraw = debugDraw;
@@ -24,10 +23,13 @@ internal sealed class BehaviorTreeArenaPresentationSystem : ISystem<float>
     public void Update(in float dt)
     {
         _debugDraw.Clear();
-        BehaviorTreeWorld? world = _runtime.World;
-        if (world == null || _runtime.PosX.Length == 0) return;
+        if (_runtime.TargetCount == 0) return;
         GraphShowcaseDebugPresenter.DrawAgentDotsAtPositions(
-            _debugDraw, world.Count, _runtime.PosX, _runtime.PosY, i => (byte)world.Statuses[i]);
+            _debugDraw,
+            _runtime.TargetCount,
+            _runtime.PosX,
+            _runtime.PosY,
+            i => _runtime.Flash[i] > 0 ? (byte)2 : (byte)4);
         GraphShowcaseDebugPresenter.DrawBudgetBar(_debugDraw, _runtime.Metrics.LastThinkMs);
     }
 }
