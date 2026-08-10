@@ -33,6 +33,16 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
             return new BehaviorTreeDefinition(id, nodes, rootIndex: 0);
         }
 
+        /// <summary>Single Running leaf — keeps agents active for motion demos while still tickable.</summary>
+        public static BehaviorTreeDefinition CreateHoldRunningRoot(string id)
+        {
+            var nodes = new BehaviorTreeNode[]
+            {
+                new(BehaviorTreeNodeKind.Action, 0, 0, BehaviorTreeLeafBinding.HoldRunning, 0),
+            };
+            return new BehaviorTreeDefinition(id, nodes, rootIndex: 0);
+        }
+
         /// <summary>
         /// Patrol-shaped: Selector( Sequence(cond fail?, action hold), action success ).
         /// Minimal gameplay-shaped topology for showcases before Script wiring.

@@ -6,21 +6,17 @@ namespace CapabilityStandardGraphBehaviorCommon;
 public static class GraphShowcaseDebugPresenter
 {
     /// <summary>World units are meters (cm * 0.01) to match Raylib debug draw.</summary>
-    public static void DrawAgentDots(
+    public static void DrawAgentDotsAtPositions(
         DebugDrawCommandBuffer buffer,
         int agentCount,
+        float[] posX,
+        float[] posY,
         System.Func<int, byte> statusOf,
-        int maxDots = 400)
+        int maxDots = 800)
     {
         int n = agentCount < maxDots ? agentCount : maxDots;
-        const int cols = 20;
-        const float spacingM = 1.8f;
-        float originX = -cols * spacingM * 0.5f;
-        float originY = -cols * spacingM * 0.5f;
         for (int i = 0; i < n; i++)
         {
-            int row = i / cols;
-            int col = i % cols;
             byte st = statusOf(i);
             DebugDrawColor color = st switch
             {
@@ -31,21 +27,11 @@ public static class GraphShowcaseDebugPresenter
             };
             buffer.Circles.Add(new DebugDrawCircle2D
             {
-                Center = new Vector2(originX + col * spacingM, originY + row * spacingM),
-                Radius = 0.55f,
+                Center = new Vector2(posX[i], posY[i]),
+                Radius = 0.45f,
                 Thickness = 0.08f,
                 Color = color
             });
         }
-
-        // Budget pulse box above the field.
-        buffer.Boxes.Add(new DebugDrawBox2D
-        {
-            Center = new Vector2(0f, originY - 3f),
-            HalfWidth = 8f,
-            HalfHeight = 0.6f,
-            Thickness = 0.12f,
-            Color = DebugDrawColor.White
-        });
     }
 }

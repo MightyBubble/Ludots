@@ -1,9 +1,7 @@
 using Arch.System;
 using CapabilityStandardGraphBehaviorCommon;
-using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.AI.BehaviorTree;
 using Ludots.Core.Presentation.DebugDraw;
-using Ludots.Core.Scripting;
 
 namespace CapabilityStandardBehaviorTreeArenaMod.Runtime;
 
@@ -27,10 +25,16 @@ internal sealed class BehaviorTreeArenaPresentationSystem : ISystem<float>
     {
         _debugDraw.Clear();
         BehaviorTreeWorld? world = _runtime.World;
-        if (world == null) return;
-        GraphShowcaseDebugPresenter.DrawAgentDots(
+        if (world == null || _runtime.PosX.Length == 0)
+        {
+            return;
+        }
+
+        GraphShowcaseDebugPresenter.DrawAgentDotsAtPositions(
             _debugDraw,
             world.Count,
+            _runtime.PosX,
+            _runtime.PosY,
             i => (byte)world.Statuses[i]);
     }
 }
