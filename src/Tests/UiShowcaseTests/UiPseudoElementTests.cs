@@ -158,16 +158,19 @@ public sealed class UiPseudoElementTests
 	{
 		const string html = "<div id=\"host\" class=\"icon\">X</div>";
 		const string css = """
-			.icon::before { content: url(icon.png); color: red; }
+			.icon { color: rgb(0, 128, 0); }
+			.icon::before { content: url(icon.png); color: rgb(255, 0, 0); }
 			.icon::after { content: "ok"; }
 			""";
 
 		UiScene scene = BuildScene(html, css);
 		scene.Layout(800f, 600f);
+		UiNode host = scene.FindByElementId("host")!;
 
 		Assert.That(scene.QuerySelector(".icon::before"), Is.Null, "content:url(...) is unsupported in v1 and must not synthesize a node");
 		Assert.That(scene.QuerySelector(".icon::after"), Is.Not.Null, "sibling string content still synthesizes, proving url ignore is explicit not a total pseudo failure");
-		Assert.That(scene.FindByElementId("host")!.Style.Color.R, Is.Not.EqualTo((byte)255), "url() before rule color must not leak onto the host");
+		Assert.That(host.Style.Color.R, Is.EqualTo((byte)0), "url() before rule color must not leak onto the host");
+		Assert.That(host.Style.Color.G, Is.EqualTo((byte)128));
 	}
 
 	[Test]
@@ -201,8 +204,10 @@ public sealed class UiPseudoElementTests
 			""";
 
 		UiScene scene = BuildScene(html.ToString(), css);
-		var sw = Stopwatch.StartNew();
 		scene.Layout(1280f, 720f);
+		scene.Layout(1280f, 720f);
+		var sw = Stopwatch.StartNew();
+		scene.Layout(1281f, 721f);
 		sw.Stop();
 
 		Assert.That(scene.QuerySelectorAll(".cell::before").Count, Is.EqualTo(100));
