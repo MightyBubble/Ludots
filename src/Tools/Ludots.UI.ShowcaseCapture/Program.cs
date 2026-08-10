@@ -212,19 +212,19 @@ void RunSkinSwapSuite()
 void RunNineSlicePanelSuite()
 {
     string root = Path.Combine(acceptanceRoot, "ui-nineslice-panel");
-    CaptureSuite suite = new("UI Frame Lab", root, renderer);
+    CaptureSuite suite = new("UI Ink Frame Lab", root, renderer);
     UiScene scene = UiShowcaseFactory.CreateNineSlicePanelScene(textMeasurer, imageSizeProvider);
-    suite.Capture("frame-nine", scene, "Nine-slice ornate sheet and symmetric button frames.");
-    suite.Click(scene, "mode-three", "Switch to three-slice ribbons.");
-    suite.Capture("frame-three", scene, "Short vs long ribbon: end caps fixed, middle wood stretches.");
-    suite.Click(scene, "mode-two", "Switch to two-way continuous strips.");
-    suite.Capture("frame-two", scene, "Horizontal repeat-x and vertical repeat-y ornament strips.");
-    suite.Click(scene, "mode-four", "Switch to four-way continuous floor.");
-    suite.Capture("frame-four", scene, "Seamless tile fill across the stage.");
+    suite.Capture("frame-nine", scene, "Ink-wash nine-slice scroll and seal-corner buttons.");
+    suite.Click(scene, "mode-three", "Switch to three-slice ink ribbons.");
+    suite.Capture("frame-three", scene, "Short vs long ink tags: brush tips fixed, middle paper stretches.");
+    suite.Click(scene, "mode-two", "Switch to two-way continuous cloud strips.");
+    suite.Capture("frame-two", scene, "Horizontal and vertical ink ornament strips.");
+    suite.Click(scene, "mode-four", "Switch to four-way bamboo mist tile.");
+    suite.Capture("frame-four", scene, "Seamless ink tile fill across the stage.");
     suite.WriteReport(
         new[]
         {
-            "- PASS: nine-slice panel/buttons, three-slice ribbons, two-way and four-way tiles.",
+            "- PASS: ink-wash nine/three-slice and two/four-way tiles share the same contracts.",
             "- PASS: mode chips switch visible demos without rebuilding unrelated assets.",
             "- PASS: chip labels stay centered via explicit label nodes."
         },

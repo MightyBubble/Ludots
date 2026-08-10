@@ -1,4 +1,4 @@
-/* Frame lab: nine-slice / three-slice / 2-way / 4-way tile — Native CSS Profile. */
+/* Ink-wash frame lab — Native CSS Profile. */
 
 * {
   margin: 0;
@@ -12,8 +12,8 @@
   height: 720px;
   padding: 18px;
   gap: 12px;
-  background: linear-gradient(160deg, #1a120c 0%, #2a1c14 55%, #120c08 100%);
-  color: #f3e6c8;
+  background: linear-gradient(165deg, #1c1c1c 0%, #2a2a2a 45%, #141414 100%);
+  color: #ebe4d4;
   font-family: "Segoe UI", "Noto Sans SC", "WenQuanYi Micro Hei", "Droid Sans Fallback", sans-serif;
 }
 
@@ -28,20 +28,20 @@
   height: 16px;
   font-size: 11px;
   font-weight: bold;
-  color: #d4a24a;
+  color: #b33a2b;
 }
 
 .ns-title {
   height: 34px;
   font-size: 30px;
   font-weight: bold;
-  color: #fff4d8;
+  color: #f4efe4;
 }
 
 .ns-lead {
   height: 22px;
   font-size: 14px;
-  color: #c9b07a;
+  color: #a8a090;
 }
 
 .ns-toolbar {
@@ -58,12 +58,12 @@
   justify-content: center;
   width: 140px;
   height: 42px;
-  background: rgba(40, 28, 18, 0.95);
+  background: rgba(36, 36, 36, 0.95);
   border-width: 1px;
   border-style: solid;
-  border-color: #8a6230;
+  border-color: #6a6558;
   border-radius: 999px;
-  color: #e8d5a8;
+  color: #d8d0c0;
   font-size: 13px;
 }
 
@@ -75,9 +75,9 @@
 }
 
 .ns-chip.active {
-  background: linear-gradient(90deg, #c9a227 0%, #8a6230 100%);
-  border-color: #ffe2a0;
-  color: #1a120c;
+  background: linear-gradient(90deg, #3a3a3a 0%, #1e1e1e 100%);
+  border-color: #b33a2b;
+  color: #f4efe4;
   font-weight: bold;
 }
 
@@ -97,10 +97,10 @@
   flex-grow: 1;
   width: 0;
   height: 100%;
-  background: linear-gradient(165deg, #3a2416 0%, #18100c 55%, #0c0806 100%);
+  background: linear-gradient(165deg, #3a3834 0%, #242420 55%, #121210 100%);
   border-width: 1px;
   border-style: solid;
-  border-color: #5a3c1e;
+  border-color: #5a564c;
   border-radius: 16px;
   overflow: hidden;
   padding: 18px;
@@ -122,7 +122,7 @@
 .sheet {
   position: relative;
   overflow: hidden;
-  background: #2a1c12;
+  background: #efe6d4;
   width: 520px;
   height: 420px;
 }
@@ -153,20 +153,20 @@
   height: 16px;
   font-size: 11px;
   font-weight: bold;
-  color: #8a6230;
+  color: #b33a2b;
 }
 
 .sheet-name {
   height: 36px;
   font-size: 28px;
   font-weight: bold;
-  color: #3a2412;
+  color: #1a1a1a;
 }
 
 .sheet-blurb {
   flex-grow: 1;
   font-size: 14px;
-  color: #4a3420;
+  color: #3a3834;
   overflow: hidden;
 }
 
@@ -206,7 +206,7 @@
   position: relative;
   font-size: 15px;
   font-weight: bold;
-  color: #f3e6c8;
+  color: #f4efe4;
 }
 
 .three-stack {
@@ -252,12 +252,12 @@
   position: relative;
   font-size: 16px;
   font-weight: bold;
-  color: #f3e6c8;
+  color: #1a1a1a;
 }
 
 .mode-caption {
   font-size: 14px;
-  color: #e8d5a8;
+  color: #d8d0c0;
   min-height: 40px;
 }
 
@@ -280,7 +280,7 @@
   border-radius: 8px;
   border-width: 1px;
   border-style: solid;
-  border-color: #8a6230;
+  border-color: #6a6558;
 }
 
 .strip-v-host {
@@ -302,7 +302,7 @@
   border-radius: 8px;
   border-width: 1px;
   border-style: solid;
-  border-color: #8a6230;
+  border-color: #6a6558;
   flex-shrink: 0;
 }
 
@@ -326,19 +326,19 @@
   gap: 10px;
   width: 360px;
   padding: 22px;
-  background: rgba(18, 12, 8, 0.82);
+  background: rgba(20, 20, 18, 0.86);
   border-width: 1px;
   border-style: solid;
-  border-color: #d4a24a;
+  border-color: #b33a2b;
   border-radius: 12px;
 }
 
 .tile-card .sheet-kicker {
-  color: #d4a24a;
+  color: #b33a2b;
 }
 
 .tile-card .sheet-name {
-  color: #fff4d8;
+  color: #f4efe4;
 }
 
 .ns-aside {
@@ -346,10 +346,10 @@
   flex-direction: column;
   width: 276px;
   height: 100%;
-  background: linear-gradient(180deg, rgba(42, 28, 18, 0.98) 0%, rgba(22, 14, 10, 0.98) 100%);
+  background: linear-gradient(180deg, rgba(36, 36, 34, 0.98) 0%, rgba(18, 18, 16, 0.98) 100%);
   border-width: 1px;
   border-style: solid;
-  border-color: #d4a24a;
+  border-color: #b33a2b;
   border-radius: 16px;
   padding: 16px;
   gap: 12px;
@@ -359,23 +359,23 @@
   min-height: 40px;
   font-size: 17px;
   font-weight: bold;
-  color: #ffe2a0;
+  color: #f0e6d2;
 }
 
 .ns-point {
   min-height: 56px;
   font-size: 13px;
-  color: #e8d5a8;
+  color: #d8d0c0;
   padding: 10px;
-  background: rgba(0, 0, 0, 0.22);
+  background: rgba(0, 0, 0, 0.28);
   border-radius: 10px;
   border-width: 1px;
   border-style: solid;
-  border-color: rgba(212, 162, 74, 0.35);
+  border-color: rgba(179, 58, 43, 0.45);
 }
 
 .ns-footnote {
   flex-grow: 1;
   font-size: 12px;
-  color: #c9b07a;
+  color: #a8a090;
 }

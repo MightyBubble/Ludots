@@ -1,7 +1,7 @@
 {
   "name": "UiNineSlicePanelShowcaseMod",
   "version": "1.0.0",
-  "description": "框体切铺对照：九宫格、三宫格、二方连续、四方连续。",
+  "description": "水墨匣切铺对照：九宫格、三宫格、二方连续、四方连续。",
   "main": "bin/net8.0/UiNineSlicePanelShowcaseMod.dll",
   "priority": 0,
   "dependencies": {}
