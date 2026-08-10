@@ -2,23 +2,25 @@
   <div id="ns-header" class="ns-header">
     <div id="ns-brand" class="ns-brand">LUDOTS · 水墨匣</div>
     <div id="ns-title" class="ns-title">墨痕怎么裁、怎么铺</div>
-    <div id="ns-lead" class="ns-lead">宣纸卷轴可拉开，墨边角钉住；云纹可一节节接，墙面可四向铺满。</div>
+    <div id="ns-lead" class="ns-lead">切格铺纹之外，还有矢量朱印与墨迹呼吸——同一套时钟驱动。</div>
   </div>
   <div id="ns-toolbar" class="ns-toolbar">
     <button id="mode-nine" class="ns-chip {{nine_class}}" ui-click="ModeNine"><div id="mode-nine-label" class="ns-chip-label">九宫格</div></button>
     <button id="mode-three" class="ns-chip {{three_class}}" ui-click="ModeThree"><div id="mode-three-label" class="ns-chip-label">三宫格</div></button>
     <button id="mode-two" class="ns-chip {{two_class}}" ui-click="ModeTwo"><div id="mode-two-label" class="ns-chip-label">二方连续</div></button>
     <button id="mode-four" class="ns-chip {{four_class}}" ui-click="ModeFour"><div id="mode-four-label" class="ns-chip-label">四方连续</div></button>
+    <button id="mode-motion" class="ns-chip {{motion_class}}" ui-click="ModeMotion"><div id="mode-motion-label" class="ns-chip-label">SVG·动效</div></button>
   </div>
   <div id="ns-body" class="ns-body">
     <div id="ns-stage" class="ns-stage">
       <div id="panel-nine" class="mode-panel {{nine_panel_class}}">
         <div id="sheet" class="sheet size-wide">
           <img id="sheet-frame" class="sheet-frame" src="{{panel_frame_data_uri}}" />
+          <img id="sheet-seal" class="sheet-seal ink-breathe" src="{{seal_svg_data_uri}}" />
           <div id="sheet-body" class="sheet-body">
             <div class="sheet-kicker">水墨 · 九宫格</div>
             <div class="sheet-name">青岚行卷</div>
-            <div class="sheet-blurb">朱印钉在四角，墨边与宣纸被拉开。下面两枚墨钮也是九宫格，角应对称。</div>
+            <div class="sheet-blurb">朱印钉在四角，墨边与宣纸被拉开。角上那枚是矢量朱印，会轻轻呼吸。</div>
             <div class="sheet-actions">
               <div id="btn-rest" class="ornate-btn">
                 <img class="ornate-btn-frame" src="{{button_frame_data_uri}}" />
@@ -63,6 +65,20 @@
             <div class="sheet-kicker">水墨 · 四方连续</div>
             <div class="sheet-name">竹影墙纸</div>
             <div class="mode-caption">同一幅竹雾花纹，左右上下接缝铺满整面墙。</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="panel-motion" class="mode-panel {{motion_panel_class}}">
+        <div class="motion-stack">
+          <div id="motion-card" class="motion-card ink-pulse">
+            <img id="motion-brush" class="motion-brush ink-breathe" src="{{brush_svg_data_uri}}" />
+            <img id="motion-seal" class="motion-seal ink-breathe-late" src="{{seal_svg_data_uri}}" />
+            <div class="motion-copy">
+              <div class="sheet-kicker">矢量 · 动效</div>
+              <div class="sheet-name">朱印与笔锋</div>
+              <div class="mode-caption">笔锋与朱印都是 SVG；透明度在呼吸，边框颜色也在变。</div>
+            </div>
           </div>
         </div>
       </div>

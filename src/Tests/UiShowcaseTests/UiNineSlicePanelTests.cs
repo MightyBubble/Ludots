@@ -10,7 +10,7 @@ namespace Ludots.Tests.UiShowcase;
 public sealed class UiNineSlicePanelTests
 {
 	[Test]
-	public void Showcase_DefaultMode_IsNineSliceSheet()
+	public void Showcase_DefaultMode_IsNineSliceSheet_WithSvgSeal()
 	{
 		UiScene scene = UiShowcaseFactory.CreateNineSlicePanelScene(
 			new ConstantTextMeasurer(),
@@ -19,18 +19,20 @@ public sealed class UiNineSlicePanelTests
 
 		UiNode ninePanel = scene.FindByElementId("panel-nine")!;
 		UiNode frame = scene.FindByElementId("sheet-frame")!;
+		UiNode seal = scene.FindByElementId("sheet-seal")!;
 		UiNode btnRest = scene.FindByElementId("btn-rest")!;
 
 		Assert.That(ninePanel.HasClass("visible"), Is.True);
 		Assert.That(scene.FindByElementId("panel-three")!.HasClass("visible"), Is.False);
 		Assert.That(frame.Style.ImageSlice.Left, Is.EqualTo(56f));
 		Assert.That(frame.Attributes["src"], Does.StartWith("data:image/png;base64,"));
+		Assert.That(seal.Attributes["src"], Does.StartWith("data:image/svg+xml"));
 		Assert.That(btnRest.Children.Count, Is.GreaterThan(0));
 		AssertChipLabelCentered(scene, "mode-nine", "mode-nine-label");
 	}
 
 	[Test]
-	public void Showcase_ModeChips_SwitchThreeTwoFourPanels()
+	public void Showcase_ModeChips_SwitchThreeTwoFourAndMotionPanels()
 	{
 		UiScene scene = UiShowcaseFactory.CreateNineSlicePanelScene(
 			new ConstantTextMeasurer(),
@@ -58,6 +60,27 @@ public sealed class UiNineSlicePanelTests
 		scene.Layout(1280f, 720f);
 		Assert.That(scene.FindByElementId("panel-four")!.HasClass("visible"), Is.True);
 		Assert.That(scene.FindByElementId("tile-floor")!.Style.BackgroundRepeats[0], Is.EqualTo(UiBackgroundRepeat.Repeat));
+
+		Assert.That(Click(scene, "mode-motion"), Is.True);
+		scene.Layout(1280f, 720f);
+		Assert.That(scene.FindByElementId("panel-motion")!.HasClass("visible"), Is.True);
+		Assert.That(scene.FindByElementId("motion-seal")!.Attributes["src"], Does.StartWith("data:image/svg+xml"));
+		Assert.That(scene.FindByElementId("motion-brush")!.Attributes["src"], Does.StartWith("data:image/svg+xml"));
+	}
+
+	[Test]
+	public void Showcase_SvgSeal_BreathesWhenTimeAdvances()
+	{
+		UiScene scene = UiShowcaseFactory.CreateNineSlicePanelScene(
+			new ConstantTextMeasurer(),
+			new ConstantImageSizeProvider());
+		scene.Layout(1280f, 720f);
+
+		UiNode seal = scene.FindByElementId("sheet-seal")!;
+		float before = seal.RenderStyle.Opacity;
+		Assert.That(scene.AdvanceTime(0.45f), Is.True, "ink breathe animation should dirty render style");
+		float after = seal.RenderStyle.Opacity;
+		Assert.That(Math.Abs(after - before), Is.GreaterThan(0.01f));
 	}
 
 	[Test]
@@ -72,6 +95,7 @@ public sealed class UiNineSlicePanelTests
 		AssertChipLabelCentered(scene, "mode-three", "mode-three-label");
 		AssertChipLabelCentered(scene, "mode-two", "mode-two-label");
 		AssertChipLabelCentered(scene, "mode-four", "mode-four-label");
+		AssertChipLabelCentered(scene, "mode-motion", "mode-motion-label");
 	}
 
 	private static void AssertChipLabelCentered(UiScene scene, string chipId, string labelId)

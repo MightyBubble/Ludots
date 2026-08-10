@@ -47,6 +47,8 @@ internal sealed class NineSlicePanelShowcaseCodeBehind
 
 	internal void ModeFour(UiActionContext context) => ApplyMode("four", context);
 
+	internal void ModeMotion(UiActionContext context) => ApplyMode("motion", context);
+
 	private void ApplyMode(string mode, UiActionContext context)
 	{
 		if (string.Equals(_mode, mode, StringComparison.Ordinal))
@@ -137,6 +139,7 @@ internal sealed class NineSlicePanelShowcaseCodeBehind
 		bool three = _mode == "three";
 		bool two = _mode == "two";
 		bool four = _mode == "four";
+		bool motion = _mode == "motion";
 		(string badge, string p1, string p2, string p3, string footnote) = DescribeMode(_mode);
 		return UiShowcaseAssets.RenderTemplate(
 			UiShowcaseAssets.GetNineSlicePanelHtmlTemplate(),
@@ -146,13 +149,17 @@ internal sealed class NineSlicePanelShowcaseCodeBehind
 				["three_class"] = three ? "active" : string.Empty,
 				["two_class"] = two ? "active" : string.Empty,
 				["four_class"] = four ? "active" : string.Empty,
+				["motion_class"] = motion ? "active" : string.Empty,
 				["nine_panel_class"] = nine ? "visible" : string.Empty,
 				["three_panel_class"] = three ? "visible" : string.Empty,
 				["two_panel_class"] = two ? "visible" : string.Empty,
 				["four_panel_class"] = four ? "visible" : string.Empty,
+				["motion_panel_class"] = motion ? "visible" : string.Empty,
 				["panel_frame_data_uri"] = UiShowcaseImageAssets.NineSlicePanelFrameDataUri,
 				["button_frame_data_uri"] = UiShowcaseImageAssets.NineSliceButtonFrameDataUri,
 				["ribbon_frame_data_uri"] = UiShowcaseImageAssets.Slice3RibbonDataUri,
+				["seal_svg_data_uri"] = UiShowcaseImageAssets.InkSealSvgDataUri,
+				["brush_svg_data_uri"] = UiShowcaseImageAssets.InkBrushSvgDataUri,
 				["aside_badge"] = badge,
 				["point_1"] = p1,
 				["point_2"] = p2,
@@ -181,11 +188,17 @@ internal sealed class NineSlicePanelShowcaseCodeBehind
 			"左右上下四个方向都接缝。",
 			"适合墙纸、屏风底纹、锦地。",
 			"玩法：扫一眼接缝，四边应对得上。"),
+		"motion" => (
+			"当前：SVG·动效",
+			"朱印与笔锋都是矢量图，不是位图切格。",
+			"透明度在呼吸，卡片边框颜色也在变。",
+			"和切格铺纹共用同一套时间推进。",
+			"玩法：盯着朱印看一会，明暗应来回变。"),
 		_ => (
 			"当前：九宫格",
-			"卷轴四角朱印钉死不变形。",
+			"卷轴四角切格钉死；角上还有矢量朱印。",
 			"墨边与宣纸被拉开填满中间。",
-			"墨钮也是九宫格，四角应对称。",
-			"玩法：看角是否匀称；再切其他模式对比铺法。")
+			"朱印会轻轻呼吸，证明动效在走。",
+			"玩法：看角是否匀称，再切 SVG·动效看大图。")
 	};
 }

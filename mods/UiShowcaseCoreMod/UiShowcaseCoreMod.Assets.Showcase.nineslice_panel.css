@@ -56,7 +56,7 @@
   flex-direction: row;
   align-items: center;
   justify-content: center;
-  width: 140px;
+  width: 124px;
   height: 42px;
   background: rgba(36, 36, 36, 0.95);
   border-width: 1px;
@@ -378,4 +378,108 @@
   flex-grow: 1;
   font-size: 12px;
   color: #a8a090;
+}
+
+.sheet-seal {
+  position: absolute;
+  right: 28px;
+  top: 28px;
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.motion-stack {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 20px;
+}
+
+.motion-card {
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 24px;
+  width: 820px;
+  height: 280px;
+  padding: 28px;
+  background: #efe6d4;
+  border-width: 2px;
+  border-style: solid;
+  border-color: #3a3a3a;
+  border-radius: 16px;
+  overflow: hidden;
+}
+
+.motion-brush {
+  width: 240px;
+  height: 120px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.motion-seal {
+  width: 112px;
+  height: 112px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.motion-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex-grow: 1;
+  flex-shrink: 1;
+  min-width: 0;
+  height: auto;
+}
+
+.motion-copy .sheet-name {
+  color: #1a1a1a;
+}
+
+.motion-copy .mode-caption {
+  color: #3a3834;
+  white-space: normal;
+  min-height: 0;
+}
+
+.ink-breathe {
+  animation: ink-breathe 1.6s ease-in-out 0s infinite alternate both;
+}
+
+.ink-breathe-late {
+  animation: ink-breathe 1.6s ease-in-out 0.35s infinite alternate both;
+}
+
+.ink-pulse {
+  animation: ink-pulse 2s ease-in-out 0s infinite alternate both;
+}
+
+@keyframes ink-breathe {
+  0% {
+    opacity: 0.42;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes ink-pulse {
+  0% {
+    border-color: #3a3a3a;
+    opacity: 0.92;
+  }
+  100% {
+    border-color: #b33a2b;
+    opacity: 1;
+  }
 }

@@ -34,6 +34,8 @@
     <None Remove="UiShowcaseCoreMod.Assets.Showcase.tile2_hstrip.png" />
     <None Remove="UiShowcaseCoreMod.Assets.Showcase.tile2_vstrip.png" />
     <None Remove="UiShowcaseCoreMod.Assets.Showcase.tile4_ornament.png" />
+    <None Remove="UiShowcaseCoreMod.Assets.Showcase.ink_seal.svg" />
+    <None Remove="UiShowcaseCoreMod.Assets.Showcase.ink_brush.svg" />
     <EmbeddedResource Include="UiShowcaseCoreMod.Assets.Showcase.markup_showcase.css" LogicalName="UiShowcaseCoreMod.Assets.Showcase.markup_showcase.css" />
     <EmbeddedResource Include="UiShowcaseCoreMod.Assets.Showcase.showcase_authoring.css" LogicalName="UiShowcaseCoreMod.Assets.Showcase.showcase_authoring.css" />
     <EmbeddedResource Include="UiShowcaseCoreMod.Assets.Showcase.markup_showcase.html" LogicalName="UiShowcaseCoreMod.Assets.Showcase.markup_showcase.html" />
@@ -46,5 +48,7 @@
     <EmbeddedResource Include="UiShowcaseCoreMod.Assets.Showcase.tile2_hstrip.png" LogicalName="UiShowcaseCoreMod.Assets.Showcase.tile2_hstrip.png" />
     <EmbeddedResource Include="UiShowcaseCoreMod.Assets.Showcase.tile2_vstrip.png" LogicalName="UiShowcaseCoreMod.Assets.Showcase.tile2_vstrip.png" />
     <EmbeddedResource Include="UiShowcaseCoreMod.Assets.Showcase.tile4_ornament.png" LogicalName="UiShowcaseCoreMod.Assets.Showcase.tile4_ornament.png" />
+    <EmbeddedResource Include="UiShowcaseCoreMod.Assets.Showcase.ink_seal.svg" LogicalName="UiShowcaseCoreMod.Assets.Showcase.ink_seal.svg" />
+    <EmbeddedResource Include="UiShowcaseCoreMod.Assets.Showcase.ink_brush.svg" LogicalName="UiShowcaseCoreMod.Assets.Showcase.ink_brush.svg" />
   </ItemGroup>
 </Project>

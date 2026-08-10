@@ -11,6 +11,12 @@ internal static class UiShowcaseImageAssets
 
 	private static readonly Lazy<string> BadgeSvgLazy = new Lazy<string>(CreateBadgeSvgDataUri);
 
+	private static readonly Lazy<string> InkSealSvgLazy = new Lazy<string>(
+		() => "data:image/svg+xml;utf8," + Uri.EscapeDataString(UiShowcaseAssets.GetInkSealSvg()));
+
+	private static readonly Lazy<string> InkBrushSvgLazy = new Lazy<string>(
+		() => "data:image/svg+xml;utf8," + Uri.EscapeDataString(UiShowcaseAssets.GetInkBrushSvg()));
+
 	private static readonly Lazy<string> NineSlicePanelFrameLazy = new Lazy<string>(
 		() => ToPngDataUri(UiShowcaseAssets.ReadRequiredBytes("nineslice_panel_frame.png")));
 
@@ -34,6 +40,10 @@ internal static class UiShowcaseImageAssets
 	internal static string FrameArtDataUri => FrameArtLazy.Value;
 
 	internal static string BadgeSvgDataUri => BadgeSvgLazy.Value;
+
+	internal static string InkSealSvgDataUri => InkSealSvgLazy.Value;
+
+	internal static string InkBrushSvgDataUri => InkBrushSvgLazy.Value;
 
 	internal static string NineSlicePanelFrameDataUri => NineSlicePanelFrameLazy.Value;
 

@@ -214,21 +214,27 @@ void RunNineSlicePanelSuite()
     string root = Path.Combine(acceptanceRoot, "ui-nineslice-panel");
     CaptureSuite suite = new("UI Ink Frame Lab", root, renderer);
     UiScene scene = UiShowcaseFactory.CreateNineSlicePanelScene(textMeasurer, imageSizeProvider);
-    suite.Capture("frame-nine", scene, "Ink-wash nine-slice scroll and seal-corner buttons.");
+    suite.Capture("frame-nine", scene, "Ink-wash nine-slice scroll with SVG seal overlay.");
+    suite.Advance(scene, 0.45f, "Let the SVG seal breathe once.");
+    suite.Capture("frame-nine-breathe", scene, "Seal opacity mid-breath proves CSS animation clock.");
     suite.Click(scene, "mode-three", "Switch to three-slice ink ribbons.");
     suite.Capture("frame-three", scene, "Short vs long ink tags: brush tips fixed, middle paper stretches.");
     suite.Click(scene, "mode-two", "Switch to two-way continuous cloud strips.");
     suite.Capture("frame-two", scene, "Horizontal and vertical ink ornament strips.");
     suite.Click(scene, "mode-four", "Switch to four-way bamboo mist tile.");
     suite.Capture("frame-four", scene, "Seamless ink tile fill across the stage.");
+    suite.Click(scene, "mode-motion", "Switch to SVG motion lab.");
+    suite.Capture("frame-motion", scene, "SVG brush and seal with breathing opacity and border pulse.");
+    suite.Advance(scene, 0.5f, "Advance motion lab animations.");
+    suite.Capture("frame-motion-breathe", scene, "Motion lab mid-breath state.");
     suite.WriteReport(
         new[]
         {
             "- PASS: ink-wash nine/three-slice and two/four-way tiles share the same contracts.",
-            "- PASS: mode chips switch visible demos without rebuilding unrelated assets.",
-            "- PASS: chip labels stay centered via explicit label nodes."
+            "- PASS: SVG seal/brush load via data URI and breathe through UiScene.AdvanceTime.",
+            "- PASS: mode chips switch visible demos; chip labels stay centered."
         },
-        "flowchart TD\n    A[Nine] --> B[Click mode-three]\n    B --> C[Three]\n    C --> D[Click mode-two]\n    D --> E[Two]\n    E --> F[Click mode-four]\n    F --> G[Four]\n");
+        "flowchart TD\n    A[Nine] --> B[Advance breathe]\n    B --> C[Three]\n    C --> D[Two]\n    D --> E[Four]\n    E --> F[SVG Motion]\n    F --> G[Advance breathe]\n");
     string hero = Path.Combine(root, "screens", "frame-nine.png");
     string gallery = Path.Combine(root, "nineslice-compact.png");
     File.Copy(hero, gallery, overwrite: true);
