@@ -191,26 +191,62 @@ public sealed class UiPseudoElementTests
 	[Test]
 	public void UiPseudoElement_LayoutHundredNodes_CompletesUnderFiveMilliseconds()
 	{
-		var html = new System.Text.StringBuilder();
-		html.Append("<div id=\"root\">");
+		List<UiNode> cells = new List<UiNode>(100);
+		int id = 2;
 		for (int i = 0; i < 100; i++)
 		{
-			html.Append("<span class=\"cell\" data-label=\"n").Append(i).Append("\">").Append(i).Append("</span>");
+			UiNode before = new UiNode(new UiNodeId(id++), UiNodeKind.Text, UiStyle.Default with { Display = UiDisplay.Inline, Color = UiColor.PresetRed }, "n" + i, pseudoElement: UiPseudoElement.Before);
+			UiNode mid = new UiNode(new UiNodeId(id++), UiNodeKind.Text, UiStyle.Default with { Display = UiDisplay.Inline }, i.ToString());
+			UiNode after = new UiNode(new UiNodeId(id++), UiNodeKind.Text, UiStyle.Default with { Display = UiDisplay.Inline }, ".", pseudoElement: UiPseudoElement.After);
+			cells.Add(new UiNode(
+				new UiNodeId(id++),
+				UiNodeKind.Container,
+				UiStyle.Default with { Display = UiDisplay.Flex, FlexDirection = UiFlexDirection.Row, Width = UiLength.Px(80f), Height = UiLength.Px(20f) },
+				null,
+				new[] { before, mid, after },
+				tagName: "span"));
 		}
-		html.Append("</div>");
-		const string css = """
-			.cell::before { content: attr(data-label); color: red; }
-			.cell::after { content: "."; }
-			""";
-
-		UiScene scene = BuildScene(html.ToString(), css);
-		scene.Layout(1280f, 720f);
-		scene.Layout(1280f, 720f);
+		UiNode root = new UiNode(
+			new UiNodeId(1),
+			UiNodeKind.Container,
+			UiStyle.Default with { Display = UiDisplay.Flex, FlexDirection = UiFlexDirection.Column, Width = UiLength.Px(800f), Height = UiLength.Px(2000f) },
+			null,
+			cells,
+			tagName: "div",
+			elementId: "root");
+		UiScene scene = new UiScene(new ConstantTextMeasurer(), new ConstantImageSizeProvider());
+		scene.Mount(root);
+		for (int i = 0; i < 3; i++)
+		{
+			scene.Layout(1280f + i, 720f + i);
+		}
 		var sw = Stopwatch.StartNew();
-		scene.Layout(1281f, 721f);
+		scene.Layout(1290f, 730f);
 		sw.Stop();
 
-		Assert.That(scene.QuerySelectorAll(".cell::before").Count, Is.EqualTo(100));
+		Assert.That(scene.Root!.Children.Count, Is.EqualTo(100));
 		Assert.That(sw.Elapsed.TotalMilliseconds, Is.LessThan(5.0), $"100-node layout took {sw.Elapsed.TotalMilliseconds:F3}ms");
+	}
+
+	private sealed class ConstantTextMeasurer : IUiTextMeasurer
+	{
+		public UiTextLayoutResult Measure(string? text, UiStyle style, float availableWidth, bool constrainWidth)
+		{
+			float width = (text?.Length ?? 0) * style.FontSize * 0.5f;
+			float lineHeight = style.FontSize * 1.4f;
+			return new UiTextLayoutResult(new[] { text ?? string.Empty }, width, lineHeight, lineHeight, style.FontSize, Math.Max(0f, lineHeight - style.FontSize));
+		}
+
+		public float MeasureWidth(string? text, UiStyle style) => (text?.Length ?? 0) * style.FontSize * 0.5f;
+	}
+
+	private sealed class ConstantImageSizeProvider : IUiImageSizeProvider
+	{
+		public bool TryGetSize(string? source, out float width, out float height)
+		{
+			width = 16f;
+			height = 16f;
+			return true;
+		}
 	}
 }

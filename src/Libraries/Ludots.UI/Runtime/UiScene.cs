@@ -119,14 +119,23 @@ public sealed class UiScene
 
 	public void Layout(float width, float height)
 	{
-		if (Root != null && (IsDirty || !(Math.Abs(_layoutWidth - width) < 0.01f) || !(Math.Abs(_layoutHeight - height) < 0.01f)))
+		if (Root == null)
 		{
-			_layoutWidth = width;
-			_layoutHeight = height;
-			_styleResolver.ResolveTree(Root, GetEffectiveStyleSheets());
-			_layoutEngine.Layout(Root, width, height);
-			IsDirty = false;
+			return;
 		}
+		bool sizeChanged = Math.Abs(_layoutWidth - width) >= 0.01f || Math.Abs(_layoutHeight - height) >= 0.01f;
+		if (!IsDirty && !sizeChanged)
+		{
+			return;
+		}
+		_layoutWidth = width;
+		_layoutHeight = height;
+		if (IsDirty)
+		{
+			_styleResolver.ResolveTree(Root, GetEffectiveStyleSheets());
+		}
+		_layoutEngine.Layout(Root, width, height);
+		IsDirty = false;
 	}
 
 	public bool AdvanceTime(float deltaSeconds)

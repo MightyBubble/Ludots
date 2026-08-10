@@ -22,7 +22,8 @@ public static class UiTextLayout
 	{
 		if (string.IsNullOrEmpty(text))
 		{
-			return new UiTextLayoutResult(Array.Empty<string>(), 0f, 0f, ResolveLineHeight(style));
+			float emptyLine = ResolveLineHeight(style);
+			return new UiTextLayoutResult(Array.Empty<string>(), 0f, 0f, emptyLine, style.FontSize, Math.Max(0f, emptyLine - style.FontSize));
 		}
 		using SKPaint paint = CreatePaint(style);
 		List<string> list = BreakLines(text, style, paint, availableWidth, constrainWidth);
@@ -36,7 +37,9 @@ public static class UiTextLayout
 				num2 = num3;
 			}
 		}
-		return new UiTextLayoutResult(list, num2, num * (float)list.Count, num);
+		float ascent = ResolveAscent(style);
+		float descent = Math.Max(0f, num - ascent);
+		return new UiTextLayoutResult(list, num2, num * (float)list.Count, num, ascent, descent);
 	}
 
 	public static float MeasureWidth(string? text, UiStyle style)
@@ -232,6 +235,11 @@ public static class UiTextLayout
 	private static float ResolveLineHeight(UiStyle style)
 	{
 		return style.FontSize * 1.4f;
+	}
+
+	private static float ResolveAscent(UiStyle style)
+	{
+		return style.FontSize * 0.8f;
 	}
 
 	private static float MeasureLineWidth(SKFont font, SKPaint paint, string text)

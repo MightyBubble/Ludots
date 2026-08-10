@@ -73,6 +73,40 @@ public sealed class UiLayoutEngine
 		}
 		ApplyLayout(root, node, 0f, 0f);
 		NormalizeTableLayouts(root);
+		UiGridLayoutEngine.LayoutSubtree(root, LayoutNestedContent);
+		UiInlineFlowEngine.LayoutSubtree(root, _textMeasurer, _imageSizeProvider);
+	}
+
+	internal void LayoutNestedContent(UiNode node)
+	{
+		if (node.Children.Count == 0)
+		{
+			return;
+		}
+		if (node.Style.Display == UiDisplay.Grid)
+		{
+			return;
+		}
+		if (UiInlineFlowEngine.IsInlineFormattingContext(node))
+		{
+			return;
+		}
+		List<Node> deferredCalcNodes = new List<Node>();
+		Node flexRoot = new Node { Context = node };
+		ConfigureNodeStyle(flexRoot, node, isRoot: true, node.LayoutRect.Width, node.LayoutRect.Height, deferredCalcNodes);
+		flexRoot.StyleSetWidth(node.LayoutRect.Width);
+		flexRoot.StyleSetHeight(node.LayoutRect.Height);
+		for (int i = 0; i < node.Children.Count; i++)
+		{
+			Node child = BuildFlexTree(node.Children[i], isRoot: false, node.LayoutRect.Width, node.LayoutRect.Height, deferredCalcNodes);
+			ApplyGapOffset(child, node.Style, i);
+			flexRoot.AddChild(child);
+		}
+		flexRoot.CalculateLayout(node.LayoutRect.Width, node.LayoutRect.Height, Direction.LTR);
+		for (int i = 0; i < Math.Min(node.Children.Count, flexRoot.ChildrenCount); i++)
+		{
+			ApplyLayout(node.Children[i], flexRoot.GetChild(i), node.LayoutRect.X, node.LayoutRect.Y);
+		}
 	}
 
 	private Node BuildFlexTree(UiNode node, bool isRoot, float rootWidth, float rootHeight, List<Node> deferredCalcNodes)
@@ -82,6 +116,16 @@ public sealed class UiLayoutEngine
 			Context = node
 		};
 		ConfigureNodeStyle(node2, node, isRoot, rootWidth, rootHeight, deferredCalcNodes);
+		if (node.Style.Display == UiDisplay.Grid)
+		{
+			return node2;
+		}
+		if (UiInlineFlowEngine.IsInlineFormattingContext(node))
+		{
+			node2.SetMeasureFunc((Node _, float width, MeasureMode widthMode, float height, MeasureMode heightMode) =>
+				UiInlineFlowEngine.Measure(node, _textMeasurer, _imageSizeProvider, width, widthMode, height, heightMode));
+			return node2;
+		}
 		if (ShouldMeasureAsLeaf(node))
 		{
 			node2.SetMeasureFunc((Node _, float width, MeasureMode widthMode, float height, MeasureMode heightMode) => MeasureNode(node, width, widthMode, height, heightMode));
@@ -101,7 +145,10 @@ public sealed class UiLayoutEngine
 		UiStyle style = node.Style;
 		bool flag = style.Visible && style.Display != UiDisplay.None;
 		flexNode.StyleSetDisplay((!flag) ? Display.None : Display.Flex);
-		flexNode.StyleSetFlexDirection((style.FlexDirection == UiFlexDirection.Row) ? FlexDirection.Row : FlexDirection.Column);
+		UiFlexDirection flexDirection = style.Display == UiDisplay.Block
+			? UiFlexDirection.Column
+			: style.FlexDirection;
+		flexNode.StyleSetFlexDirection((flexDirection == UiFlexDirection.Row) ? FlexDirection.Row : FlexDirection.Column);
 		flexNode.StyleSetJustifyContent(MapJustify(style.JustifyContent));
 		flexNode.StyleSetAlignItems(MapAlign(style.AlignItems));
 		flexNode.StyleSetAlignContent(MapAlignContent(style.AlignContent));
@@ -435,13 +482,13 @@ public sealed class UiLayoutEngine
 
 	private static bool ShouldMeasureAsLeaf(UiNode node)
 	{
-		if (node.Kind == UiNodeKind.Text)
-		{
-			return true;
-		}
 		if (node.Children.Count > 0)
 		{
 			return false;
+		}
+		if (node.Kind == UiNodeKind.Text)
+		{
+			return true;
 		}
 		if (!string.IsNullOrWhiteSpace(node.TextContent))
 		{

@@ -139,6 +139,7 @@ public sealed class UiStyleResolver
 		ApplyCustomProperties(uiStyleDeclaration, dictionary);
 		UiStyle localStyle = node.LocalStyle;
 		localStyle = ApplyDeclaration(localStyle, uiStyleDeclaration, dictionary);
+		localStyle = ApplyUserAgentTagDefaults(node, localStyle, uiStyleDeclaration);
 		localStyle = ApplyInheritance(node, localStyle, parentStyle, uiStyleDeclaration);
 		if (node.Kind == UiNodeKind.Text && localStyle.Display == UiDisplay.Flex)
 		{
@@ -214,6 +215,53 @@ public sealed class UiStyleResolver
 				variables[item.Key] = ResolveValue(item.Value, (IReadOnlyDictionary<string, string>)variables);
 			}
 		}
+	}
+
+	private static UiStyle ApplyUserAgentTagDefaults(UiNode node, UiStyle style, UiStyleDeclaration declaration)
+	{
+		string tag = node.TagName ?? string.Empty;
+		if (tag.Equals("strong", StringComparison.OrdinalIgnoreCase) || tag.Equals("b", StringComparison.OrdinalIgnoreCase))
+		{
+			if (!HasExplicitValue(declaration, "display"))
+			{
+				style = style with { Display = UiDisplay.Inline };
+			}
+			if (!HasExplicitValue(declaration, "font-weight"))
+			{
+				style = style with { Bold = true };
+			}
+		}
+		else if (tag.Equals("em", StringComparison.OrdinalIgnoreCase) ||
+			tag.Equals("i", StringComparison.OrdinalIgnoreCase) ||
+			tag.Equals("span", StringComparison.OrdinalIgnoreCase) ||
+			tag.Equals("a", StringComparison.OrdinalIgnoreCase))
+		{
+			if (!HasExplicitValue(declaration, "display"))
+			{
+				style = style with { Display = UiDisplay.Inline };
+			}
+		}
+		else if (tag.Equals("p", StringComparison.OrdinalIgnoreCase) ||
+			tag.Equals("h1", StringComparison.OrdinalIgnoreCase) ||
+			tag.Equals("h2", StringComparison.OrdinalIgnoreCase) ||
+			tag.Equals("h3", StringComparison.OrdinalIgnoreCase) ||
+			tag.Equals("h4", StringComparison.OrdinalIgnoreCase) ||
+			tag.Equals("h5", StringComparison.OrdinalIgnoreCase) ||
+			tag.Equals("h6", StringComparison.OrdinalIgnoreCase))
+		{
+			if (!HasExplicitValue(declaration, "display"))
+			{
+				style = style with { Display = UiDisplay.Block };
+			}
+		}
+		else if (tag.Equals("img", StringComparison.OrdinalIgnoreCase))
+		{
+			if (!HasExplicitValue(declaration, "display"))
+			{
+				style = style with { Display = UiDisplay.Inline };
+			}
+		}
+		return style;
 	}
 
 	private static UiStyle ApplyInheritance(UiNode node, UiStyle style, UiStyle? parentStyle, UiStyleDeclaration declaration)
@@ -993,6 +1041,34 @@ public sealed class UiStyleResolver
 				Overflow = (flag ? UiOverflow.Clip : style.Overflow)
 			};
 		}
+		case "grid-template-columns":
+		{
+			return TryParseGridTemplate(text, out IReadOnlyList<UiGridTrack> columns)
+				? style with { GridTemplateColumns = columns }
+				: style;
+		}
+		case "grid-template-rows":
+		{
+			return TryParseGridTemplate(text, out IReadOnlyList<UiGridTrack> rows)
+				? style with { GridTemplateRows = rows }
+				: style;
+		}
+		case "grid-auto-flow":
+			return style with { GridAutoFlow = ParseGridAutoFlow(text) };
+		case "grid-column":
+		{
+			return TryParseGridPlacement(text, out UiGridPlacement placement)
+				? style with { GridColumn = placement }
+				: style;
+		}
+		case "grid-row":
+		{
+			return TryParseGridPlacement(text, out UiGridPlacement placement)
+				? style with { GridRow = placement }
+				: style;
+		}
+		case "float":
+			return style;
 		default:
 			return style;
 		}
@@ -1008,14 +1084,191 @@ public sealed class UiStyleResolver
 		{
 			"none" => UiDisplay.None, 
 			"block" => UiDisplay.Block, 
+			"flex" => UiDisplay.Flex,
 			"inline" => UiDisplay.Inline, 
-			"text" => UiDisplay.Text, 
+			"text" => UiDisplay.Text,
+			"grid" => UiDisplay.Grid,
 			_ => UiDisplay.Flex, 
 		};
 		if (1 == 0)
 		{
 		}
 		return result;
+	}
+
+	private static UiGridAutoFlow ParseGridAutoFlow(string value)
+	{
+		string text = value.Trim().ToLowerInvariant();
+		if (text.Contains("column", StringComparison.Ordinal))
+		{
+			return UiGridAutoFlow.Column;
+		}
+		return UiGridAutoFlow.Row;
+	}
+
+	public static bool TryParseGridTemplate(string value, out IReadOnlyList<UiGridTrack> tracks)
+	{
+		tracks = Array.Empty<UiGridTrack>();
+		if (string.IsNullOrWhiteSpace(value) || value.Equals("none", StringComparison.OrdinalIgnoreCase))
+		{
+			return true;
+		}
+		if (value.Contains("minmax(", StringComparison.OrdinalIgnoreCase))
+		{
+			return false;
+		}
+		List<UiGridTrack> list = new List<UiGridTrack>();
+		List<string> tokens = ExpandGridTemplateTokens(value);
+		for (int i = 0; i < tokens.Count; i++)
+		{
+			if (!TryParseGridTrack(tokens[i], out UiGridTrack track))
+			{
+				return false;
+			}
+			list.Add(track);
+		}
+		tracks = list;
+		return true;
+	}
+
+	private static List<string> ExpandGridTemplateTokens(string value)
+	{
+		List<string> raw = SplitWhitespacePreservingFunctions(value);
+		List<string> expanded = new List<string>();
+		for (int i = 0; i < raw.Count; i++)
+		{
+			string token = raw[i];
+			if (token.StartsWith("repeat(", StringComparison.OrdinalIgnoreCase) && token.EndsWith(')'))
+			{
+				if (TryExpandRepeat(token, out List<string> repeated))
+				{
+					expanded.AddRange(repeated);
+				}
+				continue;
+			}
+			expanded.Add(token);
+		}
+		return expanded;
+	}
+
+	private static bool TryExpandRepeat(string token, out List<string> tracks)
+	{
+		tracks = new List<string>();
+		int open = token.IndexOf('(');
+		if (open < 0 || !token.EndsWith(')'))
+		{
+			return false;
+		}
+		string inner = token.Substring(open + 1, token.Length - open - 2).Trim();
+		int comma = inner.IndexOf(',');
+		if (comma < 0)
+		{
+			return false;
+		}
+		if (!int.TryParse(inner.Substring(0, comma).Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int count) || count < 1)
+		{
+			return false;
+		}
+		string trackList = inner.Substring(comma + 1).Trim();
+		if (trackList.Contains("minmax(", StringComparison.OrdinalIgnoreCase))
+		{
+			return false;
+		}
+		List<string> parts = SplitWhitespacePreservingFunctions(trackList);
+		for (int i = 0; i < count; i++)
+		{
+			tracks.AddRange(parts);
+		}
+		return tracks.Count > 0;
+	}
+
+	private static bool TryParseGridTrack(string token, out UiGridTrack track)
+	{
+		track = UiGridTrack.Auto;
+		string text = token.Trim();
+		if (text.Equals("auto", StringComparison.OrdinalIgnoreCase))
+		{
+			track = UiGridTrack.Auto;
+			return true;
+		}
+		if (text.EndsWith("fr", StringComparison.OrdinalIgnoreCase))
+		{
+			string number = text.Substring(0, text.Length - 2).Trim();
+			if (float.TryParse(number, NumberStyles.Float, CultureInfo.InvariantCulture, out float fr))
+			{
+				track = UiGridTrack.Fr(fr);
+				return true;
+			}
+			return false;
+		}
+		if (TryParseLength(text, out UiLength length))
+		{
+			if (length.Unit == UiLengthUnit.Pixel)
+			{
+				track = UiGridTrack.Px(length.Value);
+				return true;
+			}
+			if (length.Unit == UiLengthUnit.Percent)
+			{
+				track = UiGridTrack.Percent(length.Value);
+				return true;
+			}
+		}
+		return false;
+	}
+
+	public static bool TryParseGridPlacement(string value, out UiGridPlacement placement)
+	{
+		placement = UiGridPlacement.Auto;
+		if (string.IsNullOrWhiteSpace(value) || value.Equals("auto", StringComparison.OrdinalIgnoreCase))
+		{
+			return true;
+		}
+		string[] parts = value.Split('/', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+		if (parts.Length == 1)
+		{
+			if (parts[0].StartsWith("span", StringComparison.OrdinalIgnoreCase))
+			{
+				string spanText = parts[0].Substring(4).Trim();
+				if (int.TryParse(spanText, NumberStyles.Integer, CultureInfo.InvariantCulture, out int spanOnly))
+				{
+					placement = new UiGridPlacement(0, spanOnly);
+					return true;
+				}
+				return false;
+			}
+			if (int.TryParse(parts[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out int startOnly))
+			{
+				placement = new UiGridPlacement(startOnly, 1);
+				return true;
+			}
+			return false;
+		}
+		if (parts.Length != 2)
+		{
+			return false;
+		}
+		if (!int.TryParse(parts[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out int start))
+		{
+			return false;
+		}
+		string endPart = parts[1];
+		if (endPart.StartsWith("span", StringComparison.OrdinalIgnoreCase))
+		{
+			string spanText = endPart.Substring(4).Trim();
+			if (!int.TryParse(spanText, NumberStyles.Integer, CultureInfo.InvariantCulture, out int span))
+			{
+				return false;
+			}
+			placement = new UiGridPlacement(start, span);
+			return true;
+		}
+		if (!int.TryParse(endPart, NumberStyles.Integer, CultureInfo.InvariantCulture, out int end))
+		{
+			return false;
+		}
+		placement = new UiGridPlacement(start, Math.Max(1, end - start));
+		return true;
 	}
 
 	private static UiPointerEvents ParsePointerEvents(string value)
