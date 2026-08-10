@@ -68,7 +68,7 @@ public static class UiGridLayoutEngine
 					UiGridPlacementSlot placement = placements[i];
 					if (placement.ColumnStart <= c + 1 && placement.ColumnStart + placement.ColumnSpan - 1 >= c + 1)
 					{
-						maxContent = Math.Max(maxContent, EstimateContentWidth(placement.Node));
+						maxContent = Math.Max(maxContent, layoutEngine.MeasureContentWidth(placement.Node));
 					}
 				}
 				columnSizes[c] = Math.Max(columnSizes[c], maxContent);
@@ -89,7 +89,7 @@ public static class UiGridLayoutEngine
 					UiGridPlacementSlot placement = placements[i];
 					if (placement.RowStart <= r + 1 && placement.RowStart + placement.RowSpan - 1 >= r + 1)
 					{
-						maxContent = Math.Max(maxContent, EstimateContentHeight(placement.Node));
+						maxContent = Math.Max(maxContent, layoutEngine.MeasureContentHeight(placement.Node));
 					}
 				}
 				rowSizes[r] = Math.Max(rowSizes[r], maxContent);
@@ -405,31 +405,5 @@ public static class UiGridLayoutEngine
 	{
 		return track.MaxSizing == UiGridTrackSizing.Auto ||
 			(track.MaxSizing == UiGridTrackSizing.Fr && available <= 0.01f);
-	}
-
-	private static float EstimateContentWidth(UiNode node)
-	{
-		if (!string.IsNullOrWhiteSpace(node.TextContent))
-		{
-			return Math.Max(node.TextContent.Length * node.Style.FontSize * 0.5f, node.LayoutRect.Width);
-		}
-		if (node.Style.Width.Unit == UiLengthUnit.Pixel)
-		{
-			return node.Style.Width.Value;
-		}
-		return Math.Max(0f, node.LayoutRect.Width);
-	}
-
-	private static float EstimateContentHeight(UiNode node)
-	{
-		if (!string.IsNullOrWhiteSpace(node.TextContent))
-		{
-			return Math.Max(node.Style.FontSize * 1.4f, node.LayoutRect.Height);
-		}
-		if (node.Style.Height.Unit == UiLengthUnit.Pixel)
-		{
-			return node.Style.Height.Value;
-		}
-		return Math.Max(0f, node.LayoutRect.Height);
 	}
 }

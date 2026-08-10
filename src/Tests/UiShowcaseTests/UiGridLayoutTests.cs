@@ -317,6 +317,32 @@ public sealed class UiGridLayoutTests
 		Assert.That(sw.Elapsed.TotalMilliseconds, Is.LessThan(5.0), $"100-node grid layout took {sw.Elapsed.TotalMilliseconds:F3}ms");
 	}
 
+	[Test]
+	public void UiGrid_AutoColumns_UseRealTextMeasurement()
+	{
+		const string html = """
+			<div id="grid">
+			  <div id="short">短</div>
+			  <div id="long">很长很长的任务标题需要更宽</div>
+			</div>
+			""";
+		const string css = """
+			#grid { display: grid; grid-template-columns: auto auto; width: 480px; height: 48px; column-gap: 8px; }
+			#short, #long { font-size: 16px; padding: 4px; }
+			""";
+
+		UiScene scene = BuildScene(html, css);
+		scene.Layout(640f, 200f);
+		UiNode shortCell = scene.FindByElementId("short")!;
+		UiNode longCell = scene.FindByElementId("long")!;
+
+		Assert.That(longCell.LayoutRect.Width, Is.GreaterThan(shortCell.LayoutRect.Width + 40f),
+			"auto tracks must size from real text measurement, not a fixed heuristic");
+		float expectedShort = TextMeasurer.Measure("短", shortCell.Style, float.PositiveInfinity, constrainWidth: false).Width
+			+ shortCell.Style.Padding.Horizontal;
+		Assert.That(shortCell.LayoutRect.Width, Is.EqualTo(expectedShort).Within(8f));
+	}
+
 	private sealed class ConstantTextMeasurer : IUiTextMeasurer
 	{
 		public UiTextLayoutResult Measure(string? text, UiStyle style, float availableWidth, bool constrainWidth)

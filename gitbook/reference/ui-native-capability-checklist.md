@@ -7,7 +7,18 @@
 
 ## 1. 概述
 
-这份清单是 UI 作者合同的 SSOT 摘要。Showcase「墨痕怎么裁、怎么铺」覆盖切铺与 SVG·动效；「同一张暂停菜单」覆盖同稿多分辨率布局；Compose / Markup Phase 1–5 覆盖选择器、静态变换、遮罩、文本、SVG 静态绘制、颜色/透明度关键帧。
+这份清单是 UI 作者合同的 SSOT 摘要。
+
+三种官方写法（同属 `UiShowcaseCoreMod`，不是三套平行运行时）：
+
+| 写法 | 类比 | 入口 |
+| --- | --- | --- |
+| Compose Fluent | Flutter 式 | FeatureHub `I` / Hub 卡片 |
+| Reactive Fluent | React 式状态驱动 | FeatureHub `O` |
+| Markup + CodeBehind | HTML/CSS 原型导入 | FeatureHub `P` |
+
+Appearance Phase 1–6 三套写法共用：选择器、视觉、文本、图像、关键帧、**Grid auto / sticky / 伪元素图标**。  
+另有独立 Showcase：换肤、水墨匣切铺动效、星港同稿布局。
 
 ## 2. 结构
 
@@ -30,7 +41,7 @@
 | `width` / `height` px / % / auto | ✅ | |
 | `calc()` | ✅ | 长度表达式 |
 | `vw` / `vh` / `vmin` / `vmax` | ✅ | 随布局视口解析 |
-| CSS Grid MVP | ✅ | 支持 `minmax()` 简单轨道与 dense auto-flow 子集 |
+| CSS Grid MVP | ✅ | `minmax()`、dense auto-flow；`auto` 轨走真实文字/图片测量 |
 | `position: relative` / `absolute` | ✅ | |
 | `position: sticky` | ✅ | 仅垂直；必须写像素 `top`，否则不吸顶 |
 | 静态 `transform`（translate / rotate / scale） | ✅ | 绘制与命中同步；布局盒不因 transform 改变 |
@@ -46,7 +57,7 @@
 | 多背景 / 多阴影 / dashed border | ✅ | Phase 2 |
 | `mask-image` / `clip-path`（子集） | ✅ | Phase 2 |
 | `filter: blur` / `backdrop-filter` | ✅ | 可动画 |
-| `::before` / `::after` + `content` 文本 / `url(...)` | ✅ | `url(...)` 生成伪元素 `<img>` |
+| `::before` / `::after` + `content` 文本 / `url(...)` | ✅ | Markup 文档路径会合成伪节点；Compose/Reactive 用显式 Image 等价表达 |
 | 主题皮肤包（Classic / Paper / SciFi） | ✅ | Skin Showcase |
 
 ### 图与切铺

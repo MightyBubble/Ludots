@@ -36,6 +36,7 @@ void RunComposeSuite()
     suite.CaptureFocus("compose-phase5-mid", scene, "compose-phase5-pulse", "Compose Phase 5 keyframe lab shows mid-animation color, blur, and opacity interpolation.", 24f, 1040, 280);
     suite.Advance(scene, 0.32f, "Compose keyframe lab reaches the deterministic end frame.");
     suite.CaptureFocus("compose-phase5-end", scene, "compose-phase5-pulse", "Compose Phase 5 keyframe lab shows the finite animation end state and alternate fill behavior.", 24f, 1040, 280);
+    suite.CaptureFocus("compose-phase6", scene, "compose-phase6-panel", "Compose Phase 6 layout lab shows Grid auto columns, sticky header, and pseudo content:url icon.", 24f, 1040, 320);
     suite.Click(scene, "compose-transition-probe", "Compose transition probe enters focus state on the same DOM node.");
     suite.Advance(scene, 0.16f, "Compose transition runtime advances native tween interpolation.");
     suite.CaptureFocus("compose-transition", scene, "compose-appearance-row", "Compose transition probe shows mid-animation color and opacity interpolation.", 16f, 760, 240);
@@ -83,6 +84,7 @@ void RunReactiveSuite()
     suite.CaptureFocus("reactive-phase5-mid", scene, "reactive-phase5-pulse", "Reactive Phase 5 keyframe lab shows mid-animation color, blur, and opacity interpolation.", 24f, 1040, 280);
     suite.Advance(scene, 0.32f, "Reactive keyframe lab reaches the deterministic end frame.");
     suite.CaptureFocus("reactive-phase5-end", scene, "reactive-phase5-pulse", "Reactive Phase 5 keyframe lab shows the finite animation end state and alternate fill behavior.", 24f, 1040, 280);
+    suite.CaptureFocus("reactive-phase6", scene, "reactive-phase6-panel", "Reactive Phase 6 layout lab shows Grid auto columns, sticky header, and pseudo content:url icon.", 24f, 1040, 320);
     suite.Click(scene, "reactive-transition-probe", "Reactive transition probe enters focus state on the same DOM node.");
     suite.Advance(scene, 0.16f, "Reactive transition runtime advances native tween interpolation.");
     suite.CaptureFocus("reactive-transition", scene, "reactive-appearance-row", "Reactive transition probe shows mid-animation color and opacity interpolation.", 16f, 760, 240);
@@ -130,6 +132,7 @@ void RunMarkupSuite()
     suite.CaptureFocus("markup-phase5-mid", scene, "markup-phase5-pulse", "Markup Phase 5 keyframe lab shows mid-animation color, blur, and opacity interpolation.", 24f, 1040, 280);
     suite.Advance(scene, 0.32f, "Markup keyframe lab reaches the deterministic end frame.");
     suite.CaptureFocus("markup-phase5-end", scene, "markup-phase5-pulse", "Markup Phase 5 keyframe lab shows the finite animation end state and alternate fill behavior.", 24f, 1040, 280);
+    suite.CaptureFocus("markup-phase6", scene, "markup-phase6-panel", "Markup Phase 6 layout lab shows Grid auto columns, sticky header, and pseudo content:url icon.", 24f, 1040, 320);
     suite.Click(scene, "markup-transition-probe", "Markup transition probe enters focus state without JS.");
     suite.Advance(scene, 0.16f, "Markup transition runtime advances native tween interpolation.");
     suite.CaptureFocus("markup-transition", scene, "markup-appearance-row", "Markup transition probe shows mid-animation color and opacity interpolation.", 16f, 760, 240);

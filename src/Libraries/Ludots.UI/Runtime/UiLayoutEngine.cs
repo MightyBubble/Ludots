@@ -90,6 +90,46 @@ public sealed class UiLayoutEngine
 		_flexPool.ReleaseAll();
 	}
 
+	internal float MeasureContentWidth(UiNode node)
+	{
+		ArgumentNullException.ThrowIfNull(node, nameof(node));
+		if (node.Children.Count > 0
+			&& string.IsNullOrWhiteSpace(node.TextContent)
+			&& node.Kind != UiNodeKind.Image
+			&& !string.Equals(node.TagName, "img", StringComparison.OrdinalIgnoreCase))
+		{
+			float maxChild = 0f;
+			for (int i = 0; i < node.Children.Count; i++)
+			{
+				maxChild = Math.Max(maxChild, MeasureContentWidth(node.Children[i]));
+			}
+			UiStyle style = node.Style;
+			return maxChild + style.Padding.Horizontal + style.BorderWidth * 2f;
+		}
+		Size size = MeasureNode(node, 0f, MeasureMode.Undefined, 0f, MeasureMode.Undefined);
+		return size.Width + node.Style.BorderWidth * 2f;
+	}
+
+	internal float MeasureContentHeight(UiNode node)
+	{
+		ArgumentNullException.ThrowIfNull(node, nameof(node));
+		if (node.Children.Count > 0
+			&& string.IsNullOrWhiteSpace(node.TextContent)
+			&& node.Kind != UiNodeKind.Image
+			&& !string.Equals(node.TagName, "img", StringComparison.OrdinalIgnoreCase))
+		{
+			float total = 0f;
+			for (int i = 0; i < node.Children.Count; i++)
+			{
+				total = Math.Max(total, MeasureContentHeight(node.Children[i]));
+			}
+			UiStyle style = node.Style;
+			return total + style.Padding.Vertical + style.BorderWidth * 2f;
+		}
+		Size size = MeasureNode(node, 0f, MeasureMode.Undefined, 0f, MeasureMode.Undefined);
+		return size.Height + node.Style.BorderWidth * 2f;
+	}
+
 	internal void LayoutNestedContent(UiNode node)
 	{
 		if (node.Children.Count == 0 || node.Style.Display == UiDisplay.Grid || UiInlineFlowEngine.IsInlineFormattingContext(node))
