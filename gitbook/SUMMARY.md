@@ -48,6 +48,7 @@
   - [Retained Static Incremental Projection](architecture/retained-static-incremental-projection.md)
   - [Core Minimap Authoring](architecture/core-minimap-authoring.md)
 - [参考资料](reference/README.md)
+  - [UI 原生能力 Checklist](reference/ui-native-capability-checklist.md)
   - [Launcher CLI Runbook](reference/cli-runbook.md)
   - [MassNavigation 用户教学书](reference/mass-navigation-user-book.md)
   - [MassNavigation 正式链路手册](reference/mass-navigation-formal-chain.md)
