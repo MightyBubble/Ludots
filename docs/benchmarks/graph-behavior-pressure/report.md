@@ -57,15 +57,17 @@ Armed-trigger stress ≈0.20ms.
 
 ## Showcases (Raylib evidence)
 
-| Showcase | Preset | Screenshot / video |
-|----------|--------|--------------------|
-| BT arena | `capability_standard_behavior_tree_arena_raylib` | bt-arena.png / bt-arena.mp4 |
-| HFSM sentry | `capability_standard_hfsm_sentry_arena_raylib` | hfsm-sentry.png / hfsm-sentry.mp4 |
-| Level trial | `capability_standard_level_blueprint_trial_raylib` | level-trial.png / level-trial.mp4 |
-| Ability sandbox | `capability_standard_ability_graph_sandbox_raylib` | ability-sandbox.png / ability-sandbox.mp4 |
-| Integration | `capability_standard_graph_behavior_integration_raylib` | graph-integration.png / graph-integration.mp4 |
+主镜头是**可读剧本**（约 12 个特色角色 + 路径/触发圈），不是螺旋点阵。万人压力在无头门禁与可选灰点带。
 
-Budget bar (debug draw under the field) turns green when last think wave &lt; 5ms.
+| Showcase | Preset | 剧本 | Evidence |
+|----------|--------|------|----------|
+| BT | `…behavior_tree_arena_raylib` | 黄线巡逻→见红敌追打 | `*-vignette.png/mp4` |
+| HFSM | `…hfsm_sentry_arena_raylib` | 门岗 Idle/警戒/交战/撤退 | same |
+| Level | `…level_blueprint_trial_raylib` | 踩圈刷怪→开门 | same |
+| Ability | `…ability_graph_sandbox_raylib` | 施法线打弧形靶 | same |
+| Integration | `…graph_behavior_integration_raylib` | 左巡逻/右门岗/上触发短剧 | same |
+
+Budget bar turns green when last think wave &lt; 5ms.
 
 ## Files
 

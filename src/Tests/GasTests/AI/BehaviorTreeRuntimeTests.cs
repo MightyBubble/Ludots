@@ -80,5 +80,64 @@ namespace Ludots.Tests.Gas.AI
             sw.Stop();
             Assert.That(sw.Elapsed.TotalMilliseconds, Is.LessThan(1.5));
         }
+
+        [Test]
+        public void PatrolChaseAttack_HostMissing_Throws()
+        {
+            BehaviorTreeDefinition tree = BehaviorTreeFactory.CreatePatrolChaseAttackTree("bt.host.missing");
+            var world = new BehaviorTreeWorld(tree, 1);
+            world.AddAgent();
+            Assert.Throws<InvalidOperationException>(() =>
+                world.TickAll(ReadOnlySpan<GraphInstruction>.Empty, 32, leafHost: null));
+        }
+
+        [Test]
+        public void PatrolChaseAttack_SelectsPatrol_ThenChase_ThenAttack()
+        {
+            BehaviorTreeDefinition tree = BehaviorTreeFactory.CreatePatrolChaseAttackTree("bt.pca");
+            var host = new ScriptedLeafHost();
+            var world = new BehaviorTreeWorld(tree, 1);
+            world.AddAgent();
+
+            host.SeeEnemy = false;
+            world.RestartThinking(0);
+            world.TickAll(ReadOnlySpan<GraphInstruction>.Empty, 32, host);
+            Assert.That(host.LastAction, Is.EqualTo(BehaviorTreeHostBindings.Patrol));
+            Assert.That(world.Statuses[0], Is.EqualTo(BehaviorTreeStatus.Running));
+
+            host.SeeEnemy = true;
+            host.InRange = false;
+            world.RestartThinking(0);
+            world.TickAll(ReadOnlySpan<GraphInstruction>.Empty, 32, host);
+            Assert.That(host.LastAction, Is.EqualTo(BehaviorTreeHostBindings.Chase));
+
+            host.InRange = true;
+            world.RestartThinking(0);
+            world.TickAll(ReadOnlySpan<GraphInstruction>.Empty, 32, host);
+            Assert.That(host.LastAction, Is.EqualTo(BehaviorTreeHostBindings.Attack));
+        }
+
+        private sealed class ScriptedLeafHost : IBehaviorTreeLeafHost
+        {
+            public bool SeeEnemy;
+            public bool InRange;
+            public int LastAction;
+
+            public BehaviorTreeStatus EvalCondition(int agentIndex, int bindingId)
+            {
+                return bindingId switch
+                {
+                    BehaviorTreeHostBindings.SeeEnemy => SeeEnemy ? BehaviorTreeStatus.Success : BehaviorTreeStatus.Failure,
+                    BehaviorTreeHostBindings.InAttackRange => InRange ? BehaviorTreeStatus.Success : BehaviorTreeStatus.Failure,
+                    _ => throw new InvalidOperationException($"Unexpected condition {bindingId}")
+                };
+            }
+
+            public BehaviorTreeStatus TickAction(int agentIndex, int bindingId)
+            {
+                LastAction = bindingId;
+                return BehaviorTreeStatus.Running;
+            }
+        }
     }
 }

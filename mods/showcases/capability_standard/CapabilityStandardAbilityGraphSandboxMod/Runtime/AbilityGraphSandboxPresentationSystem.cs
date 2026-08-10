@@ -8,6 +8,7 @@ internal sealed class AbilityGraphSandboxPresentationSystem : ISystem<float>
 {
     private readonly AbilityGraphSandboxRuntime _runtime;
     private readonly DebugDrawCommandBuffer _debugDraw;
+    private readonly GraphShowcaseConfig _config = new();
 
     public AbilityGraphSandboxPresentationSystem(AbilityGraphSandboxRuntime runtime, DebugDrawCommandBuffer debugDraw)
     {
@@ -22,14 +23,32 @@ internal sealed class AbilityGraphSandboxPresentationSystem : ISystem<float>
 
     public void Update(in float dt)
     {
-        _debugDraw.Clear();
-        if (_runtime.TargetCount == 0) return;
-        GraphShowcaseDebugPresenter.DrawAgentDotsAtPositions(
-            _debugDraw,
-            _runtime.TargetCount,
-            _runtime.PosX,
-            _runtime.PosY,
-            i => _runtime.Flash[i] > 0 ? (byte)2 : (byte)4);
-        GraphShowcaseDebugPresenter.DrawBudgetBar(_debugDraw, _runtime.Metrics.LastThinkMs);
+        GraphShowcaseStagePresenter.Clear(_debugDraw);
+        GraphShowcaseStagePresenter.DrawActor(
+            _debugDraw, _runtime.CasterX, _runtime.CasterY, 0.7f, GraphShowcaseStagePresenter.CasterColor, 0.2f);
+
+        for (int i = 0; i < _runtime.TargetCount; i++)
+        {
+            var color = _runtime.Flash[i] > 0 ? DebugDrawColor.White : GraphShowcaseStagePresenter.EnemyColor;
+            GraphShowcaseStagePresenter.DrawActor(_debugDraw, _runtime.TargetX[i], _runtime.TargetY[i], 0.45f, color);
+        }
+
+        int hit = _runtime.LastHit;
+        if (hit >= 0 && hit < _runtime.TargetCount)
+        {
+            GraphShowcaseStagePresenter.DrawAggroLine(
+                _debugDraw,
+                _runtime.CasterX,
+                _runtime.CasterY,
+                _runtime.TargetX[hit],
+                _runtime.TargetY[hit]);
+        }
+
+        if (_config.ShowCrowdBand)
+        {
+            GraphShowcaseStagePresenter.DrawCrowdBand(_debugDraw, _config.CrowdBandCount);
+        }
+
+        GraphShowcaseStagePresenter.DrawBudgetBar(_debugDraw, _runtime.Metrics.LastThinkMs, _config.ThinkBudgetMs);
     }
 }

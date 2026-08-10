@@ -10,63 +10,109 @@ public sealed class LevelBlueprintTrialRuntime
     private readonly GraphShowcaseConfig _config = new();
     private LevelDirector? _director;
     private float _accum;
-    private int _wave;
-    private float[] _posX = Array.Empty<float>();
-    private float[] _posY = Array.Empty<float>();
-    private float[] _phase = Array.Empty<float>();
+    private float _time;
+    private float _markerX;
+    private float _markerY;
+    private float[] _mx = Array.Empty<float>();
+    private float[] _my = Array.Empty<float>();
+    private bool[] _mAlive = Array.Empty<bool>();
+    private int _aliveCount;
+    private bool _spawned;
+    private bool _clearedReported;
 
     public LevelDirector? Director => _director;
-    public float[] PosX => _posX;
-    public float[] PosY => _posY;
-    public int VisibleUnits => _posX.Length;
+    public float MarkerX => _markerX;
+    public float MarkerY => _markerY;
+    public float[] MobX => _mx;
+    public float[] MobY => _my;
+    public bool[] MobAlive => _mAlive;
+    public int MobSlotCount => _mx.Length;
+    public int AliveMobs => _aliveCount;
+    public bool GateOpen => _director != null && _director.Phase >= 2;
     public GraphShowcaseMetrics Metrics { get; } = new() { ShowcaseId = "capability_standard_level_blueprint_trial" };
 
     public void EnsureWorld()
     {
         if (_director != null) return;
         _director = LevelBlueprintFactory.CreateTwoPhaseTrial("showcase.level.trial");
-        // Visual cohort representing peak units (not 10k dots for clarity; marker stays in metrics).
-        int visual = Math.Min(_config.AgentCount, 600);
-        _posX = new float[visual];
-        _posY = new float[visual];
-        _phase = new float[visual];
-        for (int i = 0; i < visual; i++)
-        {
-            _phase[i] = i * 0.02f;
-            _posX[i] = MathF.Cos(_phase[i]) * (3f + (i % 20) * 0.2f);
-            _posY[i] = MathF.Sin(_phase[i]) * (3f + (i % 20) * 0.2f);
-        }
-
-        Metrics.AgentCount = _config.AgentCount;
-        Metrics.Detail = "Level-only director trial (moving cohort)";
+        _markerX = 0f;
+        _markerY = -10f;
+        _mx = new float[6];
+        _my = new float[6];
+        _mAlive = new bool[6];
+        Metrics.AgentCount = _config.CrowdBandCount;
+        Metrics.Detail = "Level: walk in → spawn → clear → open gate";
     }
 
     public void Tick(float dt)
     {
         EnsureWorld();
-        float speed = 0.4f + _director!.Phase * 0.5f;
-        for (int i = 0; i < _posX.Length; i++)
-        {
-            float r = 3f + (i % 20) * 0.2f + _director.Phase * 0.8f;
-            _phase[i] += speed * dt / r;
-            _posX[i] = MathF.Cos(_phase[i]) * r;
-            _posY[i] = MathF.Sin(_phase[i]) * r;
-        }
+        _time += dt;
+        MoveMarker(dt);
 
         _accum += dt;
-        if (_accum < _config.ThinkPeriodSeconds) return;
-        _accum = 0f;
-        _wave++;
-        if (_wave == 6) _director.AddCounter(10);
-        if (_wave == 10) _director.PulseManual(2);
+        if (_accum >= _config.ThinkPeriodSeconds)
+        {
+            _accum = 0f;
+            if (_spawned && _aliveCount == 0 && !_clearedReported)
+            {
+                _director!.AddCounter(10);
+                _clearedReported = true;
+            }
 
-        var sw = Stopwatch.StartNew();
-        LevelThinkStats stats = _director.TickThinkWave();
-        sw.Stop();
-        Metrics.LastThinkMs = sw.Elapsed.TotalMilliseconds;
-        if (Metrics.LastThinkMs > Metrics.MaxThinkMs) Metrics.MaxThinkMs = Metrics.LastThinkMs;
-        Metrics.ThinkWaves++;
-        Metrics.Detail =
-            $"Level-only phase={_director.Phase} signal={_director.LastSignal} fired={stats.Fired} last={Metrics.LastThinkMs:F3}ms";
+            var sw = Stopwatch.StartNew();
+            LevelThinkStats stats = _director!.TickThinkWave();
+            sw.Stop();
+            Metrics.LastThinkMs = sw.Elapsed.TotalMilliseconds;
+            if (Metrics.LastThinkMs > Metrics.MaxThinkMs) Metrics.MaxThinkMs = Metrics.LastThinkMs;
+            Metrics.ThinkWaves++;
+            Metrics.Detail =
+                $"Level vignette phase={_director.Phase} fired={stats.Fired} last={Metrics.LastThinkMs:F3}ms";
+
+            if (_director.Phase >= 1 && !_spawned)
+            {
+                SpawnWave();
+            }
+        }
+
+        SimulateCombat();
+    }
+
+    private void MoveMarker(float dt)
+    {
+        if (_director!.Phase < 2)
+        {
+            // Walk into the trigger circle and wait out the fight
+            if (_markerY < -8f) _markerY += 2.4f * dt;
+            else _markerY = -7.8f;
+        }
+        else if (_markerY < 7f)
+        {
+            _markerY += 3f * dt;
+        }
+    }
+
+    private void SpawnWave()
+    {
+        _spawned = true;
+        for (int i = 0; i < _mx.Length; i++)
+        {
+            _mAlive[i] = true;
+            _mx[i] = (i % 2 == 0 ? -4f : 4f);
+            _my[i] = (i / 2) * 1.4f;
+        }
+
+        _aliveCount = _mx.Length;
+    }
+
+    private void SimulateCombat()
+    {
+        if (!_spawned || _aliveCount == 0) return;
+        int idx = (int)(_time / 0.85f);
+        if (idx < _mx.Length && _mAlive[idx])
+        {
+            _mAlive[idx] = false;
+            _aliveCount--;
+        }
     }
 }

@@ -85,14 +85,15 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
         /// </summary>
         public BehaviorTreeThinkStats TickAll(
             ReadOnlySpan<GraphInstruction> scriptProgram,
-            int scriptBudgetSteps)
+            int scriptBudgetSteps,
+            IBehaviorTreeLeafHost? leafHost = null)
         {
             int visited = 0;
             int scriptSlices = 0;
             int scriptSteps = 0;
             for (int agent = 0; agent < _count; agent++)
             {
-                TickAgent(agent, scriptProgram, scriptBudgetSteps, ref visited, ref scriptSlices, ref scriptSteps);
+                TickAgent(agent, scriptProgram, scriptBudgetSteps, leafHost, ref visited, ref scriptSlices, ref scriptSteps);
             }
 
             return new BehaviorTreeThinkStats(_count, visited, scriptSlices, scriptSteps);
@@ -102,6 +103,7 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
             int agent,
             ReadOnlySpan<GraphInstruction> scriptProgram,
             int scriptBudgetSteps,
+            IBehaviorTreeLeafHost? leafHost,
             ref int visited,
             ref int scriptSlices,
             ref int scriptSteps)
@@ -133,6 +135,7 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
                         node,
                         scriptProgram,
                         scriptBudgetSteps,
+                        leafHost,
                         ref scriptSlices,
                         ref scriptSteps);
                     if (leaf == BehaviorTreeStatus.Running)
@@ -216,6 +219,7 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
             in BehaviorTreeNode node,
             ReadOnlySpan<GraphInstruction> scriptProgram,
             int scriptBudgetSteps,
+            IBehaviorTreeLeafHost? leafHost,
             ref int scriptSlices,
             ref int scriptSteps)
         {
@@ -227,6 +231,22 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
                     return BehaviorTreeStatus.Failure;
                 case BehaviorTreeLeafBinding.HoldRunning:
                     return BehaviorTreeStatus.Running;
+                case BehaviorTreeLeafBinding.HostCondition:
+                    if (leafHost == null)
+                    {
+                        throw new InvalidOperationException(
+                            $"BT HostCondition binding {node.GraphId} requires IBehaviorTreeLeafHost.");
+                    }
+
+                    return leafHost.EvalCondition(agent, node.GraphId);
+                case BehaviorTreeLeafBinding.HostAction:
+                    if (leafHost == null)
+                    {
+                        throw new InvalidOperationException(
+                            $"BT HostAction binding {node.GraphId} requires IBehaviorTreeLeafHost.");
+                    }
+
+                    return leafHost.TickAction(agent, node.GraphId);
                 case BehaviorTreeLeafBinding.ScriptSlice:
                 {
                     if (scriptProgram.Length == 0)

@@ -1,114 +1,287 @@
 using System;
 using System.Diagnostics;
+using System.Numerics;
 using CapabilityStandardGraphBehaviorCommon;
 using Ludots.Core.Gameplay.AI.BehaviorTree;
 using Ludots.Core.GraphRuntime;
 
 namespace CapabilityStandardBehaviorTreeArenaMod.Runtime;
 
-public sealed class BehaviorTreeArenaRuntime
+public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeLeafHost
 {
     private readonly GraphShowcaseConfig _config = new();
     private BehaviorTreeWorld? _world;
+    private BehaviorTreeWorld? _crowd;
     private float _accum;
     private float _time;
-    private float[] _posX = Array.Empty<float>();
-    private float[] _posY = Array.Empty<float>();
-    private float[] _heading = Array.Empty<float>();
-    private float[] _orbitRadius = Array.Empty<float>();
-    private float[] _orbitPhase = Array.Empty<float>();
+
+    private float[] _gx = Array.Empty<float>();
+    private float[] _gy = Array.Empty<float>();
+    private int[] _wp = Array.Empty<int>();
+    private byte[] _intent = Array.Empty<byte>(); // 0 patrol 1 chase 2 attack
+    private byte[] _flash = Array.Empty<byte>();
+    private int[] _target = Array.Empty<int>();
+
+    private float[] _ex = Array.Empty<float>();
+    private float[] _ey = Array.Empty<float>();
+    private bool[] _eAlive = Array.Empty<bool>();
+
+    public static readonly Vector2[] PatrolPath =
+    {
+        new(-8f, -6f), new(8f, -6f), new(8f, 6f), new(-8f, 6f)
+    };
 
     public BehaviorTreeWorld? World => _world;
-    public float[] PosX => _posX;
-    public float[] PosY => _posY;
+    public float[] GuardX => _gx;
+    public float[] GuardY => _gy;
+    public int GuardCount => _gx.Length;
+    public byte[] Intent => _intent;
+    public byte[] Flash => _flash;
+    public int[] TargetIndex => _target;
+    public float[] EnemyX => _ex;
+    public float[] EnemyY => _ey;
+    public bool[] EnemyAlive => _eAlive;
+    public int EnemyCount => _ex.Length;
     public GraphShowcaseMetrics Metrics { get; } = new() { ShowcaseId = "capability_standard_behavior_tree_arena" };
 
     public void EnsureWorld()
     {
         if (_world != null) return;
 
-        // HoldRunning keeps agents in Running so they patrol every frame; think waves still tick the tree.
-        BehaviorTreeDefinition tree = BehaviorTreeFactory.CreateHoldRunningRoot("showcase.bt.arena");
-        _world = new BehaviorTreeWorld(tree, _config.AgentCount);
-        _posX = new float[_config.AgentCount];
-        _posY = new float[_config.AgentCount];
-        _heading = new float[_config.AgentCount];
-        _orbitRadius = new float[_config.AgentCount];
-        _orbitPhase = new float[_config.AgentCount];
+        BehaviorTreeDefinition tree = BehaviorTreeFactory.CreatePatrolChaseAttackTree("showcase.bt.patrol_chase_attack");
+        int n = _config.FeaturedAgentCount;
+        _world = new BehaviorTreeWorld(tree, n);
+        _gx = new float[n];
+        _gy = new float[n];
+        _wp = new int[n];
+        _intent = new byte[n];
+        _flash = new byte[n];
+        _target = new int[n];
 
-        var rng = new Random(20260810);
-        for (int i = 0; i < _config.AgentCount; i++)
+        for (int i = 0; i < n; i++)
         {
             _world.AddAgent();
-            float ring = 8f + (i % 40) * 0.35f;
-            float phase = (float)(i * 0.017 + rng.NextDouble() * 0.2);
-            _orbitRadius[i] = ring;
-            _orbitPhase[i] = phase;
-            _heading[i] = phase;
-            _posX[i] = MathF.Cos(phase) * ring;
-            _posY[i] = MathF.Sin(phase) * ring;
+            float t = i / (float)n;
+            int seg = (int)(t * PatrolPath.Length) % PatrolPath.Length;
+            Vector2 a = PatrolPath[seg];
+            Vector2 b = PatrolPath[(seg + 1) % PatrolPath.Length];
+            float u = (t * PatrolPath.Length) - seg;
+            _gx[i] = a.X + (b.X - a.X) * u;
+            _gy[i] = a.Y + (b.Y - a.Y) * u;
+            _wp[i] = (seg + 1) % PatrolPath.Length;
+            _target[i] = -1;
         }
 
-        Metrics.AgentCount = _config.AgentCount;
-        Metrics.Detail = $"BT-only patrol motion N_topo={tree.NodeCount}";
+        _ex = new float[2];
+        _ey = new float[2];
+        _eAlive = new bool[2];
+
+        if (_config.ShowCrowdBand && _config.CrowdBandCount > 0)
+        {
+            BehaviorTreeDefinition crowdTree = BehaviorTreeFactory.CreateAlwaysSuccessSequence("showcase.bt.crowd", 7);
+            _crowd = new BehaviorTreeWorld(crowdTree, _config.CrowdBandCount);
+            for (int i = 0; i < _config.CrowdBandCount; i++) _crowd.AddAgent();
+        }
+
+        Metrics.AgentCount = n;
+        Metrics.Detail = "BT patrol→see→chase→attack vignette";
     }
 
     public void Tick(float dt)
     {
         EnsureWorld();
         _time += dt;
-        IntegrateMotion(dt);
+        UpdateEnemies();
+        DecayFlash();
 
-        _accum += dt;
-        if (_accum < _config.ThinkPeriodSeconds)
+        for (int i = 0; i < _gx.Length; i++)
         {
-            return;
+            _target[i] = FindNearestEnemy(i);
         }
 
-        _accum = 0f;
-        var world = _world!;
-
-        // Periodically re-root finished agents so think waves keep exercising the tree.
-        for (int i = 0; i < world.Count; i++)
+        _accum += dt;
+        if (_accum >= _config.ThinkPeriodSeconds)
         {
-            if (world.Statuses[i] is BehaviorTreeStatus.Success or BehaviorTreeStatus.Failure)
+            _accum = 0f;
+            ThinkWave();
+        }
+
+        IntegrateMotion(dt);
+    }
+
+    private void ThinkWave()
+    {
+        var world = _world!;
+        for (int i = 0; i < world.Count; i++) world.RestartThinking(i);
+
+        var sw = Stopwatch.StartNew();
+        BehaviorTreeThinkStats stats = world.TickAll(ReadOnlySpan<GraphInstruction>.Empty, 32, this);
+        if (_crowd != null)
+        {
+            for (int i = 0; i < _crowd.Count; i++)
             {
-                world.RestartThinking(i);
+                if (_crowd.Statuses[i] is BehaviorTreeStatus.Success or BehaviorTreeStatus.Failure)
+                {
+                    _crowd.RestartThinking(i);
+                }
+            }
+
+            _crowd.TickAll(ReadOnlySpan<GraphInstruction>.Empty, 8);
+        }
+
+        sw.Stop();
+        Metrics.LastThinkMs = sw.Elapsed.TotalMilliseconds;
+        if (Metrics.LastThinkMs > Metrics.MaxThinkMs) Metrics.MaxThinkMs = Metrics.LastThinkMs;
+        Metrics.ThinkWaves++;
+        Metrics.Detail =
+            $"BT vignette guards={_gx.Length} visited={stats.NodesVisited} last={Metrics.LastThinkMs:F3}ms";
+    }
+
+    private void UpdateEnemies()
+    {
+        // Enemy 0: enter from right every 8s, cross, despawn
+        float cycle = _time % 8f;
+        if (cycle < 6f)
+        {
+            _eAlive[0] = true;
+            _ex[0] = 12f - cycle * 3.5f;
+            _ey[0] = MathF.Sin(cycle * 1.2f) * 2f;
+        }
+        else
+        {
+            _eAlive[0] = false;
+        }
+
+        // Enemy 1: delayed opposite path
+        float c2 = (_time + 4f) % 10f;
+        if (c2 < 5f)
+        {
+            _eAlive[1] = true;
+            _ex[1] = -12f + c2 * 4f;
+            _ey[1] = 3f;
+        }
+        else
+        {
+            _eAlive[1] = false;
+        }
+    }
+
+    private void DecayFlash()
+    {
+        for (int i = 0; i < _flash.Length; i++)
+        {
+            if (_flash[i] > 0) _flash[i]--;
+        }
+    }
+
+    private int FindNearestEnemy(int guard)
+    {
+        int best = -1;
+        float bestD = _config.SightRadius;
+        for (int e = 0; e < _eAlive.Length; e++)
+        {
+            if (!_eAlive[e]) continue;
+            float dx = _ex[e] - _gx[guard];
+            float dy = _ey[e] - _gy[guard];
+            float d = MathF.Sqrt(dx * dx + dy * dy);
+            if (d <= bestD)
+            {
+                bestD = d;
+                best = e;
             }
         }
 
-        var sw = Stopwatch.StartNew();
-        BehaviorTreeThinkStats stats = world.TickAll(ReadOnlySpan<GraphInstruction>.Empty, 32);
-        sw.Stop();
-        Metrics.LastThinkMs = sw.Elapsed.TotalMilliseconds;
-        if (Metrics.LastThinkMs > Metrics.MaxThinkMs)
-        {
-            Metrics.MaxThinkMs = Metrics.LastThinkMs;
-        }
-
-        Metrics.ThinkWaves++;
-        Metrics.Detail =
-            $"BT-only moving agents visited={stats.NodesVisited} last={Metrics.LastThinkMs:F3}ms max={Metrics.MaxThinkMs:F3}ms";
+        return best;
     }
 
     private void IntegrateMotion(float dt)
     {
-        // Status-driven speeds: Running patrols faster; latched Success drifts slower.
-        BehaviorTreeWorld world = _world!;
-        for (int i = 0; i < world.Count; i++)
+        for (int i = 0; i < _gx.Length; i++)
         {
-            float speed = world.Statuses[i] switch
+            if (_intent[i] == 2)
             {
-                BehaviorTreeStatus.Running => 1.6f,
-                BehaviorTreeStatus.Success => 0.35f,
-                BehaviorTreeStatus.Failure => 0.2f,
-                _ => 0.8f
-            };
+                // attack: hold position
+                continue;
+            }
 
-            _orbitPhase[i] += speed * dt / MathF.Max(0.5f, _orbitRadius[i]);
-            _heading[i] = _orbitPhase[i] + MathF.PI * 0.5f;
-            _posX[i] = MathF.Cos(_orbitPhase[i]) * _orbitRadius[i];
-            _posY[i] = MathF.Sin(_orbitPhase[i]) * _orbitRadius[i];
+            if (_intent[i] == 1 && _target[i] >= 0 && _eAlive[_target[i]])
+            {
+                int e = _target[i];
+                float dx = _ex[e] - _gx[i];
+                float dy = _ey[e] - _gy[i];
+                float len = MathF.Sqrt(dx * dx + dy * dy);
+                if (len > 0.001f)
+                {
+                    float step = _config.ChaseSpeed * dt;
+                    if (step > len) step = len;
+                    _gx[i] += dx / len * step;
+                    _gy[i] += dy / len * step;
+                }
+
+                continue;
+            }
+
+            // patrol toward waypoint
+            Vector2 dest = PatrolPath[_wp[i]];
+            float pdx = dest.X - _gx[i];
+            float pdy = dest.Y - _gy[i];
+            float plen = MathF.Sqrt(pdx * pdx + pdy * pdy);
+            if (plen < 0.35f)
+            {
+                _wp[i] = (_wp[i] + 1) % PatrolPath.Length;
+                dest = PatrolPath[_wp[i]];
+                pdx = dest.X - _gx[i];
+                pdy = dest.Y - _gy[i];
+                plen = MathF.Sqrt(pdx * pdx + pdy * pdy);
+            }
+
+            if (plen > 0.001f)
+            {
+                float step = _config.PatrolSpeed * dt;
+                if (step > plen) step = plen;
+                _gx[i] += pdx / plen * step;
+                _gy[i] += pdy / plen * step;
+            }
         }
+    }
+
+    public BehaviorTreeStatus EvalCondition(int agentIndex, int bindingId)
+    {
+        return bindingId switch
+        {
+            BehaviorTreeHostBindings.SeeEnemy =>
+                _target[agentIndex] >= 0 ? BehaviorTreeStatus.Success : BehaviorTreeStatus.Failure,
+            BehaviorTreeHostBindings.InAttackRange =>
+                InAttackRange(agentIndex) ? BehaviorTreeStatus.Success : BehaviorTreeStatus.Failure,
+            _ => throw new InvalidOperationException($"Unknown BT condition binding {bindingId}")
+        };
+    }
+
+    public BehaviorTreeStatus TickAction(int agentIndex, int bindingId)
+    {
+        switch (bindingId)
+        {
+            case BehaviorTreeHostBindings.Patrol:
+                _intent[agentIndex] = 0;
+                return BehaviorTreeStatus.Running;
+            case BehaviorTreeHostBindings.Chase:
+                _intent[agentIndex] = 1;
+                return BehaviorTreeStatus.Running;
+            case BehaviorTreeHostBindings.Attack:
+                _intent[agentIndex] = 2;
+                _flash[agentIndex] = 10;
+                return BehaviorTreeStatus.Running;
+            default:
+                throw new InvalidOperationException($"Unknown BT action binding {bindingId}");
+        }
+    }
+
+    private bool InAttackRange(int agentIndex)
+    {
+        int e = _target[agentIndex];
+        if (e < 0 || !_eAlive[e]) return false;
+        float dx = _ex[e] - _gx[agentIndex];
+        float dy = _ey[e] - _gy[agentIndex];
+        return dx * dx + dy * dy <= _config.AttackRadius * _config.AttackRadius;
     }
 }

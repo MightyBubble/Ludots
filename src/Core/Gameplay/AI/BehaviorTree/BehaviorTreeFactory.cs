@@ -64,5 +64,30 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
             };
             return new BehaviorTreeDefinition(id, nodes, rootIndex: 0);
         }
+
+        /// <summary>
+        /// Classic AI: Selector( Sequence(SeeEnemy, Selector(AttackIfInRange, Chase)), Patrol ).
+        /// Leaves require <see cref="IBehaviorTreeLeafHost"/> with <see cref="BehaviorTreeHostBindings"/>.
+        /// </summary>
+        public static BehaviorTreeDefinition CreatePatrolChaseAttackTree(string id)
+        {
+            // 0 Selector → [1 EngageSeq, 2 Patrol]
+            // 1 Sequence → [3 SeeEnemy, 4 FightSel]
+            // 4 Selector → [5 AttackSeq, 6 Chase]
+            // 5 Sequence → [7 InRange, 8 Attack]
+            var nodes = new BehaviorTreeNode[]
+            {
+                new(BehaviorTreeNodeKind.Selector, childStart: 1, childCount: 2, BehaviorTreeLeafBinding.None, 0),
+                new(BehaviorTreeNodeKind.Sequence, childStart: 3, childCount: 2, BehaviorTreeLeafBinding.None, 0),
+                new(BehaviorTreeNodeKind.Action, 0, 0, BehaviorTreeLeafBinding.HostAction, BehaviorTreeHostBindings.Patrol),
+                new(BehaviorTreeNodeKind.Condition, 0, 0, BehaviorTreeLeafBinding.HostCondition, BehaviorTreeHostBindings.SeeEnemy),
+                new(BehaviorTreeNodeKind.Selector, childStart: 5, childCount: 2, BehaviorTreeLeafBinding.None, 0),
+                new(BehaviorTreeNodeKind.Sequence, childStart: 7, childCount: 2, BehaviorTreeLeafBinding.None, 0),
+                new(BehaviorTreeNodeKind.Action, 0, 0, BehaviorTreeLeafBinding.HostAction, BehaviorTreeHostBindings.Chase),
+                new(BehaviorTreeNodeKind.Condition, 0, 0, BehaviorTreeLeafBinding.HostCondition, BehaviorTreeHostBindings.InAttackRange),
+                new(BehaviorTreeNodeKind.Action, 0, 0, BehaviorTreeLeafBinding.HostAction, BehaviorTreeHostBindings.Attack),
+            };
+            return new BehaviorTreeDefinition(id, nodes, rootIndex: 0);
+        }
     }
 }

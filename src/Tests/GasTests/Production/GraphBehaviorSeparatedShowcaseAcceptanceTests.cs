@@ -1,9 +1,9 @@
+using CapabilityStandardAbilityGraphSandboxMod.Runtime;
 using CapabilityStandardBehaviorTreeArenaMod.Runtime;
 using CapabilityStandardGraphBehaviorCommon;
 using CapabilityStandardGraphBehaviorIntegrationMod.Runtime;
 using CapabilityStandardHfsmSentryArenaMod.Runtime;
 using CapabilityStandardLevelBlueprintTrialMod.Runtime;
-using CapabilityStandardAbilityGraphSandboxMod.Runtime;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Gas.Production
@@ -17,55 +17,59 @@ namespace Ludots.Tests.Gas.Production
     public sealed class GraphBehaviorSeparatedShowcaseAcceptanceTests
     {
         [Test]
-        public void BehaviorTreeArena_Only_ThinkWavesUnderBudget()
+        public void BehaviorTreeArena_PatrolVignette_ThinkWavesUnderBudget()
         {
             var runtime = new BehaviorTreeArenaRuntime();
             runtime.EnsureWorld();
             Warm(runtime.Tick);
             Drive(runtime.Tick, runtime.Metrics);
             Assert.That(runtime.Metrics.ShowcaseId, Is.EqualTo("capability_standard_behavior_tree_arena"));
-            Assert.That(runtime.Metrics.Detail, Does.Contain("BT-only"));
+            Assert.That(runtime.Metrics.Detail, Does.Contain("BT vignette"));
+            Assert.That(runtime.GuardCount, Is.GreaterThanOrEqualTo(8));
             Assert.That(runtime.Metrics.MaxThinkMs, Is.LessThan(5.0));
         }
 
         [Test]
-        public void HfsmSentryArena_Only_ThinkWavesUnderBudget()
+        public void HfsmSentryArena_GateVignette_ThinkWavesUnderBudget()
         {
             var runtime = new HfsmSentryArenaRuntime();
             runtime.EnsureWorld();
             Warm(runtime.Tick);
             Drive(runtime.Tick, runtime.Metrics);
             Assert.That(runtime.Metrics.ShowcaseId, Is.EqualTo("capability_standard_hfsm_sentry_arena"));
-            Assert.That(runtime.Metrics.Detail, Does.Contain("HFSM-only"));
+            Assert.That(runtime.Metrics.Detail, Does.Contain("HFSM vignette"));
+            Assert.That(runtime.SentryCount, Is.GreaterThanOrEqualTo(8));
             Assert.That(runtime.Metrics.MaxThinkMs, Is.LessThan(5.0));
         }
 
         [Test]
-        public void LevelBlueprintTrial_Only_AdvancesPhaseUnderBudget()
+        public void LevelBlueprintTrial_SpawnClearGate_AdvancesPhaseUnderBudget()
         {
             var runtime = new LevelBlueprintTrialRuntime();
             runtime.EnsureWorld();
-            Warm(runtime.Tick, waves: 12);
+            Warm(runtime.Tick, waves: 40);
             Assert.That(runtime.Metrics.ShowcaseId, Is.EqualTo("capability_standard_level_blueprint_trial"));
-            Assert.That(runtime.Metrics.Detail, Does.Contain("Level-only"));
-            Assert.That(runtime.Metrics.Detail, Does.Contain("phase=2"));
+            Assert.That(runtime.Metrics.Detail, Does.Contain("Level vignette"));
+            Assert.That(runtime.Director!.Phase, Is.GreaterThanOrEqualTo(2));
+            Assert.That(runtime.GateOpen, Is.True);
             Assert.That(runtime.Metrics.MaxThinkMs, Is.LessThan(5.0));
         }
 
         [Test]
-        public void AbilityGraphSandbox_Only_CastsFuncLibUnderBudget()
+        public void AbilityGraphSandbox_CastArc_UnderBudget()
         {
             var runtime = new AbilityGraphSandboxRuntime();
             runtime.EnsureWorld();
             Warm(runtime.Tick);
             Drive(runtime.Tick, runtime.Metrics);
             Assert.That(runtime.Metrics.ShowcaseId, Is.EqualTo("capability_standard_ability_graph_sandbox"));
-            Assert.That(runtime.Metrics.Detail, Does.Contain("Ability/Effect-only"));
+            Assert.That(runtime.Metrics.Detail, Does.Contain("Ability vignette"));
+            Assert.That(runtime.TargetCount, Is.EqualTo(8));
             Assert.That(runtime.Metrics.MaxThinkMs, Is.LessThan(5.0));
         }
 
         [Test]
-        public void GraphBehaviorIntegration_SeparateDemo_UnderBudget()
+        public void GraphBehaviorIntegration_ShortPlay_UnderBudget()
         {
             var runtime = new GraphBehaviorIntegrationRuntime();
             runtime.EnsureWorld();
@@ -73,6 +77,8 @@ namespace Ludots.Tests.Gas.Production
             Drive(runtime.Tick, runtime.Metrics);
             Assert.That(runtime.Metrics.ShowcaseId, Is.EqualTo("capability_standard_graph_behavior_integration"));
             Assert.That(runtime.Metrics.Detail, Does.Contain("Integration"));
+            Assert.That(runtime.GuardCount, Is.EqualTo(6));
+            Assert.That(runtime.SentryCount, Is.EqualTo(6));
             Assert.That(runtime.Metrics.MaxThinkMs, Is.LessThan(5.0));
         }
 
@@ -83,7 +89,6 @@ namespace Ludots.Tests.Gas.Production
 
         private static void Drive(System.Action<float> tick, GraphShowcaseMetrics metrics, int waves = 20)
         {
-            // Discard JIT/cache spikes inside the measured window.
             for (int i = 0; i < 3; i++) tick(0.2f);
             metrics.MaxThinkMs = 0;
             metrics.LastThinkMs = 0;

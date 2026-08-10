@@ -9,17 +9,23 @@ public sealed class HfsmSentryArenaRuntime
 {
     private readonly GraphShowcaseConfig _config = new();
     private HfsmWorld? _world;
+    private HfsmWorld? _crowd;
     private GraphProgramHfsmHost? _host;
     private float _accum;
-    private int _wave;
-    private float[] _posX = Array.Empty<float>();
-    private float[] _posY = Array.Empty<float>();
-    private float[] _phase = Array.Empty<float>();
-    private float[] _radius = Array.Empty<float>();
+    private float _time;
+    private float[] _sx = Array.Empty<float>();
+    private float[] _sy = Array.Empty<float>();
+    private float _ix;
+    private float _iy;
+    private bool _intruderAlive;
 
     public HfsmWorld? World => _world;
-    public float[] PosX => _posX;
-    public float[] PosY => _posY;
+    public float[] SentryX => _sx;
+    public float[] SentryY => _sy;
+    public int SentryCount => _sx.Length;
+    public float IntruderX => _ix;
+    public float IntruderY => _iy;
+    public bool IntruderAlive => _intruderAlive;
     public GraphShowcaseMetrics Metrics { get; } = new() { ShowcaseId = "capability_standard_hfsm_sentry_arena" };
 
     public void EnsureWorld()
@@ -27,67 +33,88 @@ public sealed class HfsmSentryArenaRuntime
         if (_world != null) return;
         HfsmDefinition def = HfsmFactory.CreateSentryHierarchyWithScripts("showcase.hfsm.sentry");
         _host = new GraphProgramHfsmHost(HfsmFactory.CreateSentryScriptPrograms());
-        _world = new HfsmWorld(def, _config.AgentCount);
-        _posX = new float[_config.AgentCount];
-        _posY = new float[_config.AgentCount];
-        _phase = new float[_config.AgentCount];
-        _radius = new float[_config.AgentCount];
-        for (int i = 0; i < _config.AgentCount; i++)
+        int n = _config.FeaturedAgentCount;
+        _world = new HfsmWorld(def, n);
+        _sx = new float[n];
+        _sy = new float[n];
+        for (int i = 0; i < n; i++)
         {
             _world.AddAgent(_host);
-            _radius[i] = 6f + (i % 50) * 0.28f;
-            _phase[i] = i * 0.013f;
-            _posX[i] = MathF.Cos(_phase[i]) * _radius[i];
-            _posY[i] = MathF.Sin(_phase[i]) * _radius[i];
+            _sx[i] = -6f;
+            _sy[i] = -5.5f + i * (11f / Math.Max(1, n - 1));
         }
 
-        Metrics.AgentCount = _config.AgentCount;
-        Metrics.Detail = "HFSM-only sentry + Script lifecycle (moving)";
+        if (_config.ShowCrowdBand && _config.CrowdBandCount > 0)
+        {
+            HfsmDefinition crowdDef = HfsmFactory.CreateSentryHierarchy("showcase.hfsm.crowd");
+            _crowd = new HfsmWorld(crowdDef, _config.CrowdBandCount);
+            for (int i = 0; i < _config.CrowdBandCount; i++) _crowd.AddAgent();
+        }
+
+        Metrics.AgentCount = n;
+        Metrics.Detail = "HFSM gate: idle→alert→combat→retreat";
     }
 
     public void Tick(float dt)
     {
         EnsureWorld();
-        Integrate(dt);
+        _time += dt;
+        UpdateIntruder();
+
+        var world = _world!;
+        for (int i = 0; i < world.Count; i++)
+        {
+            float dx = _ix - _sx[i];
+            float dy = _iy - _sy[i];
+            float d2 = dx * dx + dy * dy;
+            if (_intruderAlive && d2 <= _config.AlertRadius * _config.AlertRadius)
+            {
+                world.LatchStimulus(i);
+            }
+        }
+
         _accum += dt;
         if (_accum < _config.ThinkPeriodSeconds) return;
         _accum = 0f;
-        _wave++;
-
-        var world = _world!;
-        int pulse = _wave * 97;
-        for (int i = 0; i < 800; i++)
-        {
-            world.LatchStimulus((pulse + i) % world.Count);
-        }
 
         var sw = Stopwatch.StartNew();
         HfsmThinkStats stats = world.TickAll(_host);
+        if (_crowd != null)
+        {
+            if ((Metrics.ThinkWaves % 5) == 0)
+            {
+                for (int i = 0; i < 200 && i < _crowd.Count; i++)
+                {
+                    _crowd.LatchStimulus((Metrics.ThinkWaves * 17 + i) % _crowd.Count);
+                }
+            }
+
+            _crowd.TickAll();
+        }
+
         sw.Stop();
         Metrics.LastThinkMs = sw.Elapsed.TotalMilliseconds;
         if (Metrics.LastThinkMs > Metrics.MaxThinkMs) Metrics.MaxThinkMs = Metrics.LastThinkMs;
         Metrics.ThinkWaves++;
         Metrics.Detail =
-            $"HFSM+Script taken={stats.TransitionsTaken} last={Metrics.LastThinkMs:F3}ms max={Metrics.MaxThinkMs:F3}ms leaf0={world.GetLeafState(0)}";
+            $"HFSM vignette sentries={world.Count} taken={stats.TransitionsTaken} last={Metrics.LastThinkMs:F3}ms leaf0={world.GetLeafState(0)}";
     }
 
-    private void Integrate(float dt)
+    private void UpdateIntruder()
     {
-        var world = _world!;
-        for (int i = 0; i < world.Count; i++)
+        float cycle = _time % 12f;
+        if (cycle < 9f)
         {
-            int leaf = world.GetLeafState(i);
-            float speed = leaf switch
-            {
-                1 => 0.9f,  // Idle
-                3 => 1.4f,  // Alert
-                4 => 2.2f,  // Combat
-                5 => 1.1f,  // Retreat
-                _ => 1.0f
-            };
-            _phase[i] += speed * dt / MathF.Max(0.5f, _radius[i]);
-            _posX[i] = MathF.Cos(_phase[i]) * _radius[i];
-            _posY[i] = MathF.Sin(_phase[i]) * _radius[i];
+            _intruderAlive = true;
+            // Approach from +x, pass the gate line, then leave
+            _ix = 10f - cycle * 2.2f;
+            _iy = MathF.Sin(cycle * 0.7f) * 1.5f;
+        }
+        else
+        {
+            _intruderAlive = false;
+            _ix = 20f;
+            _iy = 0f;
         }
     }
 }

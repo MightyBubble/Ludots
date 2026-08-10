@@ -27,7 +27,32 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
         /// <summary>Stay Running until cleared by host (simulates long action without Script).</summary>
         HoldRunning = 3,
         /// <summary>Run Script program via ExecuteSlice; Yield => Running.</summary>
-        ScriptSlice = 4
+        ScriptSlice = 4,
+        /// <summary>Ask <see cref="IBehaviorTreeLeafHost"/>; GraphId is the binding key.</summary>
+        HostCondition = 5,
+        /// <summary>Ask <see cref="IBehaviorTreeLeafHost"/>; GraphId is the binding key.</summary>
+        HostAction = 6
+    }
+
+    /// <summary>
+    /// Host evaluates gameplay-facing BT leaves (see enemy, chase, attack, patrol).
+    /// Keeps the BT scheduler free of world queries and free of a second VM.
+    /// </summary>
+    public interface IBehaviorTreeLeafHost
+    {
+        BehaviorTreeStatus EvalCondition(int agentIndex, int bindingId);
+
+        BehaviorTreeStatus TickAction(int agentIndex, int bindingId);
+    }
+
+    /// <summary>Well-known binding ids for <see cref="BehaviorTreeFactory.CreatePatrolChaseAttackTree"/>.</summary>
+    public static class BehaviorTreeHostBindings
+    {
+        public const int SeeEnemy = 1;
+        public const int InAttackRange = 2;
+        public const int Chase = 3;
+        public const int Attack = 4;
+        public const int Patrol = 5;
     }
 
     /// <summary>Compiled flat node. Children are a contiguous range [ChildStart, ChildStart+ChildCount).</summary>

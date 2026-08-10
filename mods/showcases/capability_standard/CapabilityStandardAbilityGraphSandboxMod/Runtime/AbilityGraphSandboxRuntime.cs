@@ -14,14 +14,20 @@ public sealed class AbilityGraphSandboxRuntime
     private GraphInstruction[]? _bashProgram;
     private float _accum;
     private int _castWave;
-    private float[] _posX = Array.Empty<float>();
-    private float[] _posY = Array.Empty<float>();
+    private float[] _tx = Array.Empty<float>();
+    private float[] _ty = Array.Empty<float>();
     private byte[] _flash = Array.Empty<byte>();
+    private int _lastHit = -1;
+    private string _lastSpell = string.Empty;
 
-    public float[] PosX => _posX;
-    public float[] PosY => _posY;
+    public float CasterX => 0f;
+    public float CasterY => 0f;
+    public float[] TargetX => _tx;
+    public float[] TargetY => _ty;
     public byte[] Flash => _flash;
-    public int TargetCount => _posX.Length;
+    public int TargetCount => _tx.Length;
+    public int LastHit => _lastHit;
+    public string LastSpell => _lastSpell;
     public GraphShowcaseMetrics Metrics { get; } = new() { ShowcaseId = "capability_standard_ability_graph_sandbox" };
 
     public void EnsureWorld()
@@ -32,20 +38,20 @@ public sealed class AbilityGraphSandboxRuntime
         _catalog.Register("ability.slash", 101, GraphKind.Script);
         _catalog.Register("ability.bash", 102, GraphKind.Script);
 
-        int targets = Math.Min(_config.AgentCount, 1000);
-        _posX = new float[targets];
-        _posY = new float[targets];
+        int targets = Math.Min(_config.FeaturedAgentCount, 8);
+        _tx = new float[targets];
+        _ty = new float[targets];
         _flash = new byte[targets];
         for (int i = 0; i < targets; i++)
         {
-            float a = i * 0.05f;
-            float r = 2f + (i % 30) * 0.15f;
-            _posX[i] = MathF.Cos(a) * r;
-            _posY[i] = MathF.Sin(a) * r;
+            float t = targets <= 1 ? 0.5f : i / (float)(targets - 1);
+            float ang = -0.7f + t * 1.4f;
+            _tx[i] = MathF.Sin(ang) * 6f;
+            _ty[i] = 4.5f + MathF.Cos(ang) * 0.8f;
         }
 
         Metrics.AgentCount = targets;
-        Metrics.Detail = $"Ability/Effect-only funcLib={_catalog.Count}";
+        Metrics.Detail = $"Ability vignette funcLib={_catalog.Count}";
     }
 
     public void Tick(float dt)
@@ -62,36 +68,43 @@ public sealed class AbilityGraphSandboxRuntime
         _castWave++;
 
         GraphInstruction[] program = (_castWave & 1) == 0 ? _slashProgram! : _bashProgram!;
+        _lastSpell = (_castWave & 1) == 0 ? "slash" : "bash";
+        _lastHit = _castWave % _tx.Length;
+
         Span<int> ints = stackalloc int[GraphVmLimits.MaxIntRegisters];
         Span<byte> bools = stackalloc byte[GraphVmLimits.MaxBoolRegisters];
         Span<int> callStack = stackalloc int[GraphVmLimits.MaxCallStackDepth];
 
         var sw = Stopwatch.StartNew();
-        int steps = 0;
-        for (int t = 0; t < _posX.Length; t++)
+        // Featured cast on one target; also run a cheap crowd of halt scripts for pressure band budget.
+        var cursor = new GraphExecutionCursor();
+        var state = new GraphExecutionState
         {
-            var cursor = new GraphExecutionCursor();
-            var state = new GraphExecutionState
-            {
-                I = ints,
-                B = bools,
-                CallStack = callStack,
-                Status = GraphExecutionStatus.Running
-            };
-            GraphSliceResult result = GasGraphOpHandlerTable.ExecuteSlice(
-                ref state, program, GasGraphOpHandlerTable.Instance, ref cursor, 32);
-            steps += result.Steps;
-            if (!result.Halted) throw new InvalidOperationException("Ability scripts must halt.");
-            _flash[t] = 8;
+            I = ints,
+            B = bools,
+            CallStack = callStack,
+            Status = GraphExecutionStatus.Running
+        };
+        GraphSliceResult result = GasGraphOpHandlerTable.ExecuteSlice(
+            ref state, program, GasGraphOpHandlerTable.Instance, ref cursor, 32);
+        if (!result.Halted) throw new InvalidOperationException("Ability scripts must halt.");
+        _flash[_lastHit] = 12;
+
+        int crowd = Math.Min(_config.CrowdBandCount, 2000);
+        for (int i = 0; i < crowd; i++)
+        {
+            cursor.Reset();
+            state.Status = GraphExecutionStatus.Running;
+            GasGraphOpHandlerTable.ExecuteSlice(
+                ref state, program, GasGraphOpHandlerTable.Instance, ref cursor, 16);
         }
 
         sw.Stop();
         Metrics.LastThinkMs = sw.Elapsed.TotalMilliseconds;
         if (Metrics.LastThinkMs > Metrics.MaxThinkMs) Metrics.MaxThinkMs = Metrics.LastThinkMs;
         Metrics.ThinkWaves++;
-        string fn = (_castWave & 1) == 0 ? "ability.slash" : "ability.bash";
         Metrics.Detail =
-            $"Ability/Effect-only cast={fn} targets={_posX.Length} steps={steps} last={Metrics.LastThinkMs:F3}ms";
+            $"Ability vignette cast={_lastSpell} hit={_lastHit} last={Metrics.LastThinkMs:F3}ms";
     }
 
     private static GraphInstruction[] CompileConstHalt(string id, int value)
