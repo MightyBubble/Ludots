@@ -67,6 +67,13 @@
   font-size: 13px;
 }
 
+.ns-chip-label {
+  height: 18px;
+  font-size: 13px;
+  color: inherit;
+  font-weight: inherit;
+}
+
 .ns-chip.active {
   background: linear-gradient(90deg, #c9a227 0%, #8a6230 100%);
   border-color: #ffe2a0;

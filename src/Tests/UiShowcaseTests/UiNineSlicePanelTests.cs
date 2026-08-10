@@ -55,6 +55,31 @@ public sealed class UiNineSlicePanelTests
 		Assert.That(scene.FindByElementId("sheet-name")!.LayoutRect.Bottom, Is.LessThanOrEqualTo(tallSheet.LayoutRect.Bottom));
 	}
 
+	[Test]
+	public void Showcase_SizeChips_LabelTextIsCenteredInChip()
+	{
+		UiScene scene = UiShowcaseFactory.CreateNineSlicePanelScene(
+			new ConstantTextMeasurer(),
+			new ConstantImageSizeProvider());
+		scene.Layout(1280f, 720f);
+
+		AssertChipLabelCentered(scene, "size-compact", "size-compact-label");
+		AssertChipLabelCentered(scene, "size-wide", "size-wide-label");
+		AssertChipLabelCentered(scene, "size-tall", "size-tall-label");
+	}
+
+	private static void AssertChipLabelCentered(UiScene scene, string chipId, string labelId)
+	{
+		UiNode chip = scene.FindByElementId(chipId)!;
+		UiNode label = scene.FindByElementId(labelId)!;
+		float chipCenterX = chip.LayoutRect.X + chip.LayoutRect.Width * 0.5f;
+		float chipCenterY = chip.LayoutRect.Y + chip.LayoutRect.Height * 0.5f;
+		float labelCenterX = label.LayoutRect.X + label.LayoutRect.Width * 0.5f;
+		float labelCenterY = label.LayoutRect.Y + label.LayoutRect.Height * 0.5f;
+		Assert.That(Math.Abs(labelCenterX - chipCenterX), Is.LessThanOrEqualTo(2.5f), chipId + " label X");
+		Assert.That(Math.Abs(labelCenterY - chipCenterY), Is.LessThanOrEqualTo(2.5f), chipId + " label Y");
+	}
+
 	private static bool Click(UiScene scene, string elementId)
 	{
 		UiNode node = scene.FindByElementId(elementId)!;
