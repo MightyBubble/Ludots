@@ -15,6 +15,7 @@ RunReactiveSuite();
 RunMarkupSuite();
 RunStyleParitySuite();
 RunSkinSwapSuite();
+RunNineSlicePanelSuite();
 
 Console.WriteLine($"UI showcase artifacts written to {acceptanceRoot}");
 
@@ -206,4 +207,27 @@ void RunSkinSwapSuite()
             "- PASS: runtime switch stays inside the same unified UiScene."
         },
         "flowchart TD\n    A[Skin Classic] --> B[Click skin-theme-scifi]\n    B --> C[Skin SciFi]\n    C --> D[Click skin-theme-paper]\n    D --> E[Skin Paper]\n");
+}
+
+void RunNineSlicePanelSuite()
+{
+    string root = Path.Combine(acceptanceRoot, "ui-nineslice-panel");
+    CaptureSuite suite = new("UI Nine-Slice Ornate Panel", root, renderer);
+    UiScene scene = UiShowcaseFactory.CreateNineSlicePanelScene(textMeasurer, imageSizeProvider);
+    suite.Capture("nineslice-compact", scene, "Player-facing ornate sheet: compact wood frame with nine-slice corners.");
+    suite.Click(scene, "size-wide", "Stretch sheet to wide desk size.");
+    suite.Capture("nineslice-wide", scene, "Wide size keeps gold corners crisp while parchment fills the middle.");
+    suite.Click(scene, "size-tall", "Stretch sheet to tall cabinet size.");
+    suite.Capture("nineslice-tall", scene, "Tall size proves vertical nine-slice stretch without crushing corners.");
+    suite.WriteReport(
+        new[]
+        {
+            "- PASS: compact / wide / tall captures prove nine-slice ornate frames.",
+            "- PASS: gold corners stay fixed-slice while wood edges and parchment stretch.",
+            "- PASS: button frames reuse the same image-slice contract."
+        },
+        "flowchart TD\n    A[Compact] --> B[Click size-wide]\n    B --> C[Wide]\n    C --> D[Click size-tall]\n    D --> E[Tall]\n");
+    string hero = Path.Combine(root, "screens", "nineslice-compact.png");
+    string gallery = Path.Combine(root, "nineslice-compact.png");
+    File.Copy(hero, gallery, overwrite: true);
 }

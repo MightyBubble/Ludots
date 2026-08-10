@@ -11,11 +11,24 @@ internal static class UiShowcaseImageAssets
 
 	private static readonly Lazy<string> BadgeSvgLazy = new Lazy<string>(CreateBadgeSvgDataUri);
 
+	private static readonly Lazy<string> NineSlicePanelFrameLazy = new Lazy<string>(
+		() => ToPngDataUri(UiShowcaseAssets.ReadRequiredBytes("nineslice_panel_frame.png")));
+
+	private static readonly Lazy<string> NineSliceButtonFrameLazy = new Lazy<string>(
+		() => ToPngDataUri(UiShowcaseAssets.ReadRequiredBytes("nineslice_button_frame.png")));
+
 	internal static string CoverArtDataUri => CoverArtLazy.Value;
 
 	internal static string FrameArtDataUri => FrameArtLazy.Value;
 
 	internal static string BadgeSvgDataUri => BadgeSvgLazy.Value;
+
+	internal static string NineSlicePanelFrameDataUri => NineSlicePanelFrameLazy.Value;
+
+	internal static string NineSliceButtonFrameDataUri => NineSliceButtonFrameLazy.Value;
+
+	private static string ToPngDataUri(byte[] pngBytes) =>
+		"data:image/png;base64," + Convert.ToBase64String(pngBytes);
 
 	private static string CreateCoverArtDataUri()
 	{

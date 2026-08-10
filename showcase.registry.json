@@ -2523,6 +2523,29 @@
       ]
     },
     {
+      "id": "ui_nineslice_panel",
+      "path": "mods/showcases/ui_nineslice_panel/UiNineSlicePanelShowcaseMod",
+      "projectPath": "UiNineSlicePanelShowcaseMod.csproj",
+      "title": "打开雕花木匣",
+      "summary": "九宫格拟物角色卷宗：切窄匣/宽案/高柜时金角不糊，木边与羊皮纸跟着拉伸。",
+      "tier": "T2",
+      "category": "panel",
+      "binding": "ui_nineslice_panel_showcase",
+      "preset": "ui_nineslice_panel_raylib",
+      "docsPath": null,
+      "readmePath": "mods/showcases/ui_nineslice_panel/UiNineSlicePanelShowcaseMod/README.md",
+      "acceptanceTest": "UiNineSlicePanelTests",
+      "artifactDir": "artifacts/acceptance/ui-nineslice-panel",
+      "screenshot": "artifacts/acceptance/ui-nineslice-panel/nineslice-compact.png",
+      "status": "active",
+      "tags": [
+        "ui",
+        "markup",
+        "nine-slice",
+        "skeuomorphic"
+      ]
+    },
+    {
       "id": "ui_skin_classic",
       "path": "mods/UiSkinClassicMod",
       "projectPath": "UiSkinClassicMod.csproj",

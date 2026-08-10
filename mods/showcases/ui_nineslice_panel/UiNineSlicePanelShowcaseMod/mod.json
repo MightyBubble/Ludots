@@ -1,0 +1,8 @@
+{
+  "name": "UiNineSlicePanelShowcaseMod",
+  "version": "1.0.0",
+  "description": "雕花木匣角色卷宗：九宫格拟物框随尺寸拉伸，金角纹样保持清晰。",
+  "main": "bin/net8.0/UiNineSlicePanelShowcaseMod.dll",
+  "priority": 0,
+  "dependencies": {}
+}

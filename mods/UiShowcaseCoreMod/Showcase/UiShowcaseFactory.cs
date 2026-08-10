@@ -71,6 +71,19 @@ public static class UiShowcaseFactory
         return new MarkupShowcaseCodeBehind(textMeasurer, imageSizeProvider).BuildScene();
     }
 
+    public static UiScene CreateNineSlicePanelScene(IUiTextMeasurer textMeasurer, IUiImageSizeProvider imageSizeProvider)
+    {
+        return new NineSlicePanelShowcaseCodeBehind(textMeasurer, imageSizeProvider).BuildScene();
+    }
+
+    public static UiSurfaceContribution CreateNineSlicePanelContribution(
+        IUiTextMeasurer textMeasurer,
+        IUiImageSizeProvider imageSizeProvider,
+        Action requestRebuild)
+    {
+        return new NineSlicePanelShowcaseCodeBehind(textMeasurer, imageSizeProvider).CreateContribution(requestRebuild);
+    }
+
     public static UiScene CreateSkinShowcaseScene(IUiTextMeasurer textMeasurer, IUiImageSizeProvider imageSizeProvider)
     {
         return UiSkinShowcaseSceneFactory.CreateScene(textMeasurer, imageSizeProvider);

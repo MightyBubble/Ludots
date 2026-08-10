@@ -26,9 +26,17 @@
     <None Remove="UiShowcaseCoreMod.Assets.Showcase.showcase_authoring.css" />
     <None Remove="UiShowcaseCoreMod.Assets.Showcase.markup_showcase.html" />
     <None Remove="UiShowcaseCoreMod.Assets.Showcase.showcase_badge.svg" />
+    <None Remove="UiShowcaseCoreMod.Assets.Showcase.nineslice_panel.html" />
+    <None Remove="UiShowcaseCoreMod.Assets.Showcase.nineslice_panel.css" />
+    <None Remove="UiShowcaseCoreMod.Assets.Showcase.nineslice_panel_frame.png" />
+    <None Remove="UiShowcaseCoreMod.Assets.Showcase.nineslice_button_frame.png" />
     <EmbeddedResource Include="UiShowcaseCoreMod.Assets.Showcase.markup_showcase.css" LogicalName="UiShowcaseCoreMod.Assets.Showcase.markup_showcase.css" />
     <EmbeddedResource Include="UiShowcaseCoreMod.Assets.Showcase.showcase_authoring.css" LogicalName="UiShowcaseCoreMod.Assets.Showcase.showcase_authoring.css" />
     <EmbeddedResource Include="UiShowcaseCoreMod.Assets.Showcase.markup_showcase.html" LogicalName="UiShowcaseCoreMod.Assets.Showcase.markup_showcase.html" />
     <EmbeddedResource Include="UiShowcaseCoreMod.Assets.Showcase.showcase_badge.svg" LogicalName="UiShowcaseCoreMod.Assets.Showcase.showcase_badge.svg" />
+    <EmbeddedResource Include="UiShowcaseCoreMod.Assets.Showcase.nineslice_panel.html" LogicalName="UiShowcaseCoreMod.Assets.Showcase.nineslice_panel.html" />
+    <EmbeddedResource Include="UiShowcaseCoreMod.Assets.Showcase.nineslice_panel.css" LogicalName="UiShowcaseCoreMod.Assets.Showcase.nineslice_panel.css" />
+    <EmbeddedResource Include="UiShowcaseCoreMod.Assets.Showcase.nineslice_panel_frame.png" LogicalName="UiShowcaseCoreMod.Assets.Showcase.nineslice_panel_frame.png" />
+    <EmbeddedResource Include="UiShowcaseCoreMod.Assets.Showcase.nineslice_button_frame.png" LogicalName="UiShowcaseCoreMod.Assets.Showcase.nineslice_button_frame.png" />
   </ItemGroup>
 </Project>
