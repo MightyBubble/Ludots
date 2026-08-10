@@ -462,51 +462,51 @@ namespace Ludots.Core.Engine
 
             try
             {
-            // 2. Load Mods first (so ConfigPipeline can access their game.json)
-            if (modPlan != null && modPlan.OrderedMods.Count > 0)
-            {
-                if (!string.IsNullOrWhiteSpace(modPlan.PlanFingerprint))
+                // 2. Load Mods first (so ConfigPipeline can access their game.json)
+                if (modPlan != null && modPlan.OrderedMods.Count > 0)
                 {
-                    Diagnostics.Log.Info(
-                        in LogChannels.Engine,
-                        $"Applying launcher-resolved mod plan: fingerprint={modPlan.PlanFingerprint}, schema={modPlan.SchemaVersion?.ToString() ?? "explicit"}, mods={modPlan.OrderedMods.Count}");
+                    if (!string.IsNullOrWhiteSpace(modPlan.PlanFingerprint))
+                    {
+                        Diagnostics.Log.Info(
+                            in LogChannels.Engine,
+                            $"Applying launcher-resolved mod plan: fingerprint={modPlan.PlanFingerprint}, schema={modPlan.SchemaVersion?.ToString() ?? "explicit"}, mods={modPlan.OrderedMods.Count}");
+                    }
+                    else
+                    {
+                        Diagnostics.Log.Info(in LogChannels.Engine, $"Applying explicit mod plan: mods={modPlan.OrderedMods.Count}");
+                    }
+
+                    ModLoader.LoadResolvedPlan(modPlan.OrderedMods);
                 }
-                else
+                else if (modPaths != null && modPaths.Count > 0)
                 {
-                    Diagnostics.Log.Info(in LogChannels.Engine, $"Applying explicit mod plan: mods={modPlan.OrderedMods.Count}");
+                    Diagnostics.Log.Info(in LogChannels.Engine, $"Resolving mod dependencies from explicit mod paths: mods={modPaths.Count}");
+                    ModLoader.LoadMods(modPaths);
                 }
 
-                ModLoader.LoadResolvedPlan(modPlan.OrderedMods);
-            }
-            else if (modPaths != null && modPaths.Count > 0)
-            {
-                Diagnostics.Log.Info(in LogChannels.Engine, $"Resolving mod dependencies from explicit mod paths: mods={modPaths.Count}");
-                ModLoader.LoadMods(modPaths);
-            }
+                // 3. Create ConfigPipeline and merge all game.json files
+                ConfigPipeline = new ConfigPipeline((VirtualFileSystem)VFS, ModLoader);
+                ((MapManager)MapManager).SetConfigPipeline(ConfigPipeline);
+                MergedConfig = ConfigPipeline.MergeGameConfig();
+                (MergedConfig.Presentation
+                    ?? throw new InvalidOperationException("game.json presentation must be explicitly configured.")).Validate();
 
-            // 3. Create ConfigPipeline and merge all game.json files
-            ConfigPipeline = new ConfigPipeline((VirtualFileSystem)VFS, ModLoader);
-            ((MapManager)MapManager).SetConfigPipeline(ConfigPipeline);
-            MergedConfig = ConfigPipeline.MergeGameConfig();
-            (MergedConfig.Presentation
-                ?? throw new InvalidOperationException("game.json presentation must be explicitly configured.")).Validate();
+                ConfigCatalog = Ludots.Core.Config.ConfigCatalogLoader.Load(ConfigPipeline);
+                ConfigConflictReport = new Ludots.Core.Config.ConfigConflictReport();
+                LoadAgentProfiles();
+                AiRuntime = default;
+                Ludots.Core.Config.ComponentRegistry.SetUtilityAiAuthoringCatalog(null!);
 
-            ConfigCatalog = Ludots.Core.Config.ConfigCatalogLoader.Load(ConfigPipeline);
-            ConfigConflictReport = new Ludots.Core.Config.ConfigConflictReport();
-            LoadAgentProfiles();
-            AiRuntime = default;
-            Ludots.Core.Config.ComponentRegistry.SetUtilityAiAuthoringCatalog(null);
+                // Apply log config from merged game.json
+                LogConfigApplier.Apply(MergedConfig.Logging);
 
-            // Apply log config from merged game.json
-            LogConfigApplier.Apply(MergedConfig.Logging);
+                Diagnostics.Log.Info(in LogChannels.Engine, $"Merged GameConfig: StartupMapId={MergedConfig.StartupMapId}, DefaultCoreMod={MergedConfig.DefaultCoreMod}");
+                Diagnostics.Log.Info(in LogChannels.Engine, $"Constants loaded: OrderTypeIds={MergedConfig.Constants.OrderTypeIds.Count}, ResponseChainOrderTypeIds={MergedConfig.Constants.ResponseChainOrderTypeIds.Count}");
 
-            Diagnostics.Log.Info(in LogChannels.Engine, $"Merged GameConfig: StartupMapId={MergedConfig.StartupMapId}, DefaultCoreMod={MergedConfig.DefaultCoreMod}");
-            Diagnostics.Log.Info(in LogChannels.Engine, $"Constants loaded: OrderTypeIds={MergedConfig.Constants.OrderTypeIds.Count}, ResponseChainOrderTypeIds={MergedConfig.Constants.ResponseChainOrderTypeIds.Count}");
-
-            // Store merged config in GlobalContext for access throughout the engine
-            SetService(CoreServiceKeys.GameConfig, MergedConfig);
-            SetService(CoreServiceKeys.ConfigCatalog, ConfigCatalog);
-            SetService(CoreServiceKeys.ConfigConflictReport, ConfigConflictReport);
+                // Store merged config in GlobalContext for access throughout the engine
+                SetService(CoreServiceKeys.GameConfig, MergedConfig);
+                SetService(CoreServiceKeys.ConfigCatalog, ConfigCatalog);
+                SetService(CoreServiceKeys.ConfigConflictReport, ConfigConflictReport);
             }
             catch
             {
@@ -568,7 +568,7 @@ namespace Ludots.Core.Engine
             if (ConfigPipeline == null)
             {
                 AiRuntime = default;
-                Ludots.Core.Config.ComponentRegistry.SetUtilityAiAuthoringCatalog(null);
+                Ludots.Core.Config.ComponentRegistry.SetUtilityAiAuthoringCatalog(null!);
                 return;
             }
 
@@ -578,7 +578,6 @@ namespace Ludots.Core.Engine
             {
                 validation = new Ludots.Core.Gameplay.AI.Config.AiConfigValidationContext(
                     orderTypes,
-                    GetService(CoreServiceKeys.AbilityDefinitionRegistry),
                     GetService(CoreServiceKeys.GraphProgramRegistry));
             }
 
@@ -704,6 +703,7 @@ namespace Ludots.Core.Engine
             _timeFlow = new TimeFlowService();
             Time.TimeScale = _timeFlow.GetEffectiveScalePermille(TimeFlowDomainIds.Simulation) / 1000f;
 
+            TagRegistry.Clear();
             var extensionAttributeRegistry = new ExtensionAttributeRegistry();
             var attributeSchemaUpdateQueue = new AttributeSchemaUpdateQueue();
             var schemaUpdateSystem = new AttributeSchemaUpdateSystem(World, extensionAttributeRegistry, attributeSchemaUpdateQueue);
@@ -1667,10 +1667,10 @@ namespace Ludots.Core.Engine
                     clock,
                     AiRuntime.UtilityRuntime,
                     SpatialQueries,
-                    abilityDefinitions,
                     graphProgramRegistry,
                     gasGraphApi,
-                    orderQueue),
+                    orderQueue,
+                    orderTerminalResults),
                 SystemGroup.PostMovement);
             RegisterPhysics2DSystems(
                 clock,

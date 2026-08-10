@@ -76,7 +76,7 @@ namespace AIInspectorMod.Triggers
                 {
                     ref readonly var trace = ref traces[index];
                     _modContext.Log(
-                        $"[AIInspectorMod] Utility.Trace[{count}]: candidates={trace.CandidateCount} bestDecision={trace.BestDecisionId} bestScore={trace.BestScore} bestPriorityBucket={trace.BestPriorityBucket} bestDistanceSq={trace.BestDistanceSq} filterReject={trace.LastFilterRejectReason} readinessBlock={trace.LastReadinessBlockReason} submittedOrderType={trace.LastSubmittedOrderTypeId} submittedAbility={trace.LastSubmittedAbilityId} taskKind={trace.LastTaskKind} taskStatus={trace.LastTaskStatus}");
+                        $"[AIInspectorMod] Utility.Trace[{count}]: candidates={trace.CandidateCount} bestDecision={trace.BestDecisionId} bestScore={trace.BestScore} bestPriorityBucket={trace.BestPriorityBucket} bestDistanceSq={trace.BestDistanceSq} filterReject={trace.LastFilterRejectReason} submittedOrderType={trace.LastSubmittedOrderTypeId} submittedOrder={trace.LastSubmittedOrderId} taskKind={trace.LastTaskKind} taskStatus={trace.LastTaskStatus}");
                     count++;
                 }
             }

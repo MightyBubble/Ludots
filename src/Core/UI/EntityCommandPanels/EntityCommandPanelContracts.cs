@@ -196,7 +196,7 @@ namespace Ludots.Core.UI.EntityCommandPanels
             int abilityId,
             int templateEntityId,
             EntityCommandSlotStateFlags stateFlags,
-            short cooldownPermille,
+            short lockoutPermille,
             short chargesCurrent,
             short chargesMax,
             string displayLabel = "",
@@ -207,7 +207,7 @@ namespace Ludots.Core.UI.EntityCommandPanels
             AbilityId = abilityId;
             TemplateEntityId = templateEntityId;
             StateFlags = stateFlags;
-            CooldownPermille = cooldownPermille;
+            LockoutPermille = lockoutPermille;
             ChargesCurrent = chargesCurrent;
             ChargesMax = chargesMax;
             DisplayLabel = displayLabel ?? string.Empty;
@@ -219,7 +219,7 @@ namespace Ludots.Core.UI.EntityCommandPanels
         public int AbilityId { get; }
         public int TemplateEntityId { get; }
         public EntityCommandSlotStateFlags StateFlags { get; }
-        public short CooldownPermille { get; }
+        public short LockoutPermille { get; }
         public short ChargesCurrent { get; }
         public short ChargesMax { get; }
         public string DisplayLabel { get; }

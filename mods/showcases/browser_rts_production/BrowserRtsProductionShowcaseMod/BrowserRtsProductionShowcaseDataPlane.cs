@@ -283,7 +283,7 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
                     string.IsNullOrWhiteSpace(slot.DisplayLabel) ? $"Slot {slot.SlotIndex + 1}" : slot.DisplayLabel,
                     slot.DetailLabel,
                     slot.ActionId,
-                    slot.CooldownPermille,
+                    slot.LockoutPermille,
                     slot.StateFlags.ToString(),
                     IsActionableCommandSlot(slot));
             }
@@ -1163,7 +1163,7 @@ internal sealed record BrowserRtsProductionCommandSlotView(
     string Label,
     string Detail,
     string ActionId,
-    short CooldownPermille,
+    short LockoutPermille,
     string StateFlags,
     bool Enabled);
 

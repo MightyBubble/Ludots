@@ -158,5 +158,68 @@
       { "attribute": "Shield", "op": "Add", "value": 14.0 },
       { "attribute": "Armor", "op": "Add", "value": 2.0 }
     ]
+  },
+  {
+    "id": "Effect.ItemShowcase.Lockout.MythicPulse",
+    "tags": [
+      "Effect.ItemShowcase.Lockout"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 36,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.ItemShowcase.MythicPulse",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.ItemShowcase.Lockout.RifleFire",
+    "tags": [
+      "Effect.ItemShowcase.Lockout"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 8,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.ItemShowcase.RifleFire",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.ItemShowcase.Lockout.SecondWind",
+    "tags": [
+      "Effect.ItemShowcase.Lockout"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 54,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.ItemShowcase.SecondWind",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
   }
 ]

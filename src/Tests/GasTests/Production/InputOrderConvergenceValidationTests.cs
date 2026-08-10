@@ -180,7 +180,7 @@ namespace Ludots.Tests.GAS.Production
             string responseChainSource = File.ReadAllText(Path.Combine(repoRoot, "src", "Core", "Presentation", "Systems", "ResponseChainHumanOrderSourceSystem.cs"));
             string commandPanelSource = File.ReadAllText(Path.Combine(repoRoot, "mods", "EntityCommandPanelMod", "Runtime", "GasEntityCommandPanelSource.cs"));
 
-            Assert.That(aiConfigLoader, Does.Contain("OrderTagId is not a supported AI order contract field"));
+            Assert.That(aiConfigLoader, Does.Contain("OrderTagId is outside the active AI order contract"));
             Assert.That(aiConfigLoader, Does.Contain("Order blackboard key must be a semantic string"));
             Assert.That(aiConfigLoader, Does.Not.Contain("? ot : 0"));
             Assert.That(aiConfigLoader, Does.Not.Contain("TryGetValue(\"OrderTypeId\""));
