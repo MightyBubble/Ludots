@@ -134,7 +134,7 @@ public sealed class SkiaUiRenderer : IUiRenderer
 		string text = ResolveRenderableText(node);
 		if (!string.IsNullOrWhiteSpace(text))
 		{
-			DrawText(text, sKRect, renderStyle, canvas);
+			DrawText(text, node, sKRect, renderStyle, canvas);
 		}
 		if (node.Kind == UiNodeKind.Image || string.Equals(node.TagName, "img", StringComparison.OrdinalIgnoreCase))
 		{
@@ -449,21 +449,32 @@ public sealed class SkiaUiRenderer : IUiRenderer
 		return null;
 	}
 
-	private static void DrawText(string text, SKRect rect, UiStyle style, SKCanvas canvas)
+	private static void DrawText(string text, UiNode node, SKRect borderBox, UiStyle style, SKCanvas canvas)
 	{
-		float availableWidth = Math.Max(0f, rect.Width - style.Padding.Horizontal);
+		SKRect content = ContentBox(borderBox, style);
+		float availableWidth = Math.Max(0f, content.Width);
 		UiTextLayoutResult uiTextLayoutResult = UiTextLayout.Measure(text, style, availableWidth, constrainWidth: true);
+		SKRect textBox = content;
+		if (UiFlexAnonymousText.ShouldAlignAsAnonymousFlexItem(node))
+		{
+			UiRect aligned = UiFlexAnonymousText.ResolveTextBox(
+				style,
+				new UiRect(borderBox.Left, borderBox.Top, borderBox.Width, borderBox.Height),
+				uiTextLayoutResult.Width,
+				uiTextLayoutResult.Height);
+			textBox = new SKRect(aligned.X, aligned.Y, aligned.Right, aligned.Bottom);
+		}
 		using SKPaint paint = UiTextLayout.CreatePaint(style);
 		using SKPaint sKPaint = CreateShadowPaint(style.TextShadow, style);
-		float num = rect.Top + style.Padding.Top + style.FontSize;
+		float num = textBox.Top + style.FontSize;
 		for (int i = 0; i < uiTextLayoutResult.Lines.Count; i++)
 		{
 			string text2 = uiTextLayoutResult.Lines[i];
 			UiTextDirection direction = UiTextLayout.ResolveDirection(text2, style.Direction);
 			string text3 = UiTextLayout.PrepareForRendering(text2, direction);
 			SKTextAlign align = ResolveTextAlign(style, direction);
-			float anchorX = ResolveTextAnchor(rect, style, align);
-			float num2 = ResolveTextStartX(text3, rect, style, align);
+			float anchorX = ResolveTextAnchor(textBox, style, align);
+			float num2 = ResolveTextStartX(text3, textBox, style, align);
 			IReadOnlyList<UiTextRun> runs = UiTextLayout.CreateRuns(text3, style);
 			if (sKPaint != null)
 			{
@@ -471,16 +482,23 @@ public sealed class SkiaUiRenderer : IUiRenderer
 				if (textShadow.HasValue)
 				{
 					UiShadow valueOrDefault = textShadow.GetValueOrDefault();
-					if (true)
-					{
-						DrawTextRuns(canvas, runs, num2 + valueOrDefault.OffsetX, num + valueOrDefault.OffsetY, style, sKPaint);
-					}
+					DrawTextRuns(canvas, runs, num2 + valueOrDefault.OffsetX, num + valueOrDefault.OffsetY, style, sKPaint);
 				}
 			}
 			DrawTextRuns(canvas, runs, num2, num, style, paint);
 			DrawTextDecorations(canvas, text3, anchorX, num, align, style);
 			num += uiTextLayoutResult.LineHeight;
 		}
+	}
+
+	private static SKRect ContentBox(SKRect borderBox, UiStyle style)
+	{
+		float inset = Math.Max(0f, style.BorderWidth);
+		return new SKRect(
+			borderBox.Left + inset + style.Padding.Left,
+			borderBox.Top + inset + style.Padding.Top,
+			borderBox.Right - inset - style.Padding.Right,
+			borderBox.Bottom - inset - style.Padding.Bottom);
 	}
 
 	private static void DrawImage(UiNode node, SKRect rect, UiStyle style, SKCanvas canvas)
@@ -844,40 +862,26 @@ public sealed class SkiaUiRenderer : IUiRenderer
 		return result;
 	}
 
-	private static float ResolveTextAnchor(SKRect rect, UiStyle style, SKTextAlign align)
+	private static float ResolveTextAnchor(SKRect contentRect, UiStyle style, SKTextAlign align)
 	{
-		if (1 == 0)
+		return align switch
 		{
-		}
-		float result = align switch
-		{
-			SKTextAlign.Right => rect.Right - style.Padding.Right, 
-			SKTextAlign.Center => rect.Left + style.Padding.Left + (rect.Width - style.Padding.Horizontal) * 0.5f, 
-			_ => rect.Left + style.Padding.Left, 
+			SKTextAlign.Right => contentRect.Right,
+			SKTextAlign.Center => contentRect.MidX,
+			_ => contentRect.Left,
 		};
-		if (1 == 0)
-		{
-		}
-		return result;
 	}
 
-	private static float ResolveTextStartX(string line, SKRect rect, UiStyle style, SKTextAlign align)
+	private static float ResolveTextStartX(string line, SKRect contentRect, UiStyle style, SKTextAlign align)
 	{
-		float num = ResolveTextAnchor(rect, style, align);
+		float num = ResolveTextAnchor(contentRect, style, align);
 		float num2 = UiTextLayout.MeasureWidth(line, style);
-		if (1 == 0)
+		return align switch
 		{
-		}
-		float result = align switch
-		{
-			SKTextAlign.Right => num - num2, 
-			SKTextAlign.Center => num - num2 * 0.5f, 
-			_ => num, 
+			SKTextAlign.Right => num - num2,
+			SKTextAlign.Center => num - num2 * 0.5f,
+			_ => num,
 		};
-		if (1 == 0)
-		{
-		}
-		return result;
 	}
 
 	private static void DrawTextRuns(SKCanvas canvas, IReadOnlyList<UiTextRun> runs, float startX, float baselineY, UiStyle style, SKPaint paint)

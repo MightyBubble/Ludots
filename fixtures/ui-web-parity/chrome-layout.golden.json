@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-08-10T04:43:30.100Z",
+  "generatedAt": "2026-08-10T06:13:41.170Z",
   "chrome": "Chrome/148.0.7778.96",
   "fixture": "fixtures/ui-web-parity/parity_menu.html",
   "coordinateSpace": "stage-local",
@@ -375,13 +375,13 @@
           "x": 311.84,
           "y": 110.84,
           "width": 32.84,
-          "height": 24
+          "height": 96
         },
         "rail-body": {
           "x": 311.84,
-          "y": 144.84,
+          "y": 216.84,
           "width": 32.84,
-          "height": 588.31
+          "height": 516.31
         }
       }
     }

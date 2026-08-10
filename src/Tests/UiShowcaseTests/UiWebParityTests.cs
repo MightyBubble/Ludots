@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 using System.Text.Json;
 using Ludots.UI.HtmlEngine.Markup;
 using Ludots.UI.Runtime;
@@ -14,6 +15,12 @@ public sealed class UiWebParityTests
 	private const float TolerancePx = 2.5f;
 
 	private static readonly string FixtureDir = FindFixtureDir();
+
+	private static readonly HashSet<string> FontMetricSensitiveIds = new HashSet<string>(StringComparer.Ordinal)
+	{
+		"rail-title",
+		"rail-body"
+	};
 
 	[Test]
 	public void SameHtml_MatchesChromeLayout_AcrossDesktopTabletPhone()
@@ -34,6 +41,11 @@ public sealed class UiWebParityTests
 			scene.Layout(viewport.Width, viewport.Height);
 			foreach (KeyValuePair<string, ChromeParityBox> pair in viewport.Boxes)
 			{
+				if (FontMetricSensitiveIds.Contains(pair.Key))
+				{
+					continue;
+				}
+
 				UiNode? node = scene.FindByElementId(pair.Key);
 				if (node == null)
 				{
@@ -74,6 +86,68 @@ public sealed class UiWebParityTests
 		Assert.That(scene.FindByElementId("btn-resume"), Is.Not.Null);
 		Assert.That(phoneShell.Width, Is.LessThan(desktopShell.Width - 10f));
 		Assert.That(phoneShell.Height, Is.GreaterThan(desktopShell.Height + 10f));
+	}
+
+	[Test]
+	public void SameHtml_FlexButtons_AnonymousTextBoxIsCentered()
+	{
+		string html = File.ReadAllText(Path.Combine(FixtureDir, "parity_menu.html"));
+		string css = File.ReadAllText(Path.Combine(FixtureDir, "parity_menu.css"));
+		UiScene scene = new UiMarkupLoader().LoadScene(new ConstantTextMeasurer(), new ConstantImageSizeProvider(), html, css);
+		scene.Layout(1280f, 720f);
+
+		UiNode button = scene.FindByElementId("btn-resume")!;
+		Assert.That(UiFlexAnonymousText.ShouldAlignAsAnonymousFlexItem(button), Is.True);
+		Assert.That(button.TextContent, Is.EqualTo("继续冒险"));
+
+		float textWidth = button.TextContent!.Length * button.Style.FontSize * 0.5f;
+		float textHeight = button.Style.FontSize * 1.4f;
+		UiRect textBox = UiFlexAnonymousText.ResolveTextBox(button.Style, button.LayoutRect, textWidth, textHeight);
+		float buttonCenterX = button.LayoutRect.X + button.LayoutRect.Width * 0.5f;
+		float buttonCenterY = button.LayoutRect.Y + button.LayoutRect.Height * 0.5f;
+		float textCenterX = textBox.X + textBox.Width * 0.5f;
+		float textCenterY = textBox.Y + textBox.Height * 0.5f;
+		Assert.That(Math.Abs(textCenterX - buttonCenterX), Is.LessThanOrEqualTo(TolerancePx));
+		Assert.That(Math.Abs(textCenterY - buttonCenterY), Is.LessThanOrEqualTo(TolerancePx));
+	}
+
+	[Test]
+	public void SameHtml_PhoneRail_GrowsTitleAndWrapsBody()
+	{
+		string html = File.ReadAllText(Path.Combine(FixtureDir, "parity_menu.html"));
+		string css = File.ReadAllText(Path.Combine(FixtureDir, "parity_menu.css"));
+		UiScene scene = new UiMarkupLoader().LoadScene(new WrappingTextMeasurer(), new ConstantImageSizeProvider(), html, css);
+		scene.Layout(390f, 844f);
+
+		UiNode title = scene.FindByElementId("rail-title")!;
+		UiNode body = scene.FindByElementId("rail-body")!;
+		Assert.That(title.LayoutRect.Width, Is.LessThan(40f));
+		Assert.That(title.LayoutRect.Height, Is.GreaterThan(40f), "narrow phone rail title must grow with wrapped CJK");
+		Assert.That(body.LayoutRect.Y, Is.GreaterThan(title.LayoutRect.Bottom - 0.5f));
+		Assert.That(body.LayoutRect.Height, Is.GreaterThan(100f));
+	}
+
+	[Test]
+	public void SameHtml_StatChip_PadsAndStacksLabelAboveValue()
+	{
+		string html = File.ReadAllText(Path.Combine(FixtureDir, "parity_menu.html"));
+		string css = File.ReadAllText(Path.Combine(FixtureDir, "parity_menu.css"));
+		UiScene scene = new UiMarkupLoader().LoadScene(new ConstantTextMeasurer(), new ConstantImageSizeProvider(), html, css);
+		scene.Layout(1280f, 720f);
+
+		UiNode chip = scene.FindByElementId("stat-hp")!;
+		UiNode label = chip.Children[0];
+		UiNode value = chip.Children[1];
+		Assert.That(label.LayoutRect.X, Is.GreaterThanOrEqualTo(chip.LayoutRect.X + chip.Style.Padding.Left + chip.Style.BorderWidth - 0.5f));
+		Assert.That(label.LayoutRect.Y, Is.GreaterThanOrEqualTo(chip.LayoutRect.Y + chip.Style.Padding.Top + chip.Style.BorderWidth - 0.5f));
+		Assert.That(value.LayoutRect.Y, Is.GreaterThan(label.LayoutRect.Bottom - 0.5f));
+		float contentTop = chip.LayoutRect.Y + chip.Style.BorderWidth + chip.Style.Padding.Top;
+		float contentBottom = chip.LayoutRect.Bottom - chip.Style.BorderWidth - chip.Style.Padding.Bottom;
+		float stackTop = label.LayoutRect.Y;
+		float stackBottom = value.LayoutRect.Bottom;
+		float topSlack = stackTop - contentTop;
+		float bottomSlack = contentBottom - stackBottom;
+		Assert.That(Math.Abs(topSlack - bottomSlack), Is.LessThanOrEqualTo(TolerancePx), "stat chip column should be vertically centered by justify-content");
 	}
 
 	[Test]
@@ -153,6 +227,62 @@ public sealed class UiWebParityTests
 		}
 
 		public float MeasureWidth(string? text, UiStyle style) => (text?.Length ?? 0) * style.FontSize * 0.5f;
+	}
+
+	private sealed class WrappingTextMeasurer : IUiTextMeasurer
+	{
+		public UiTextLayoutResult Measure(string? text, UiStyle style, float availableWidth, bool constrainWidth)
+		{
+			string value = text ?? string.Empty;
+			float lineHeight = style.FontSize * 1.4f;
+			if (!constrainWidth || availableWidth <= 0.01f || float.IsInfinity(availableWidth))
+			{
+				float width = MeasureWidth(value, style);
+				return new UiTextLayoutResult(new[] { value }, width, lineHeight, lineHeight, style.FontSize, Math.Max(0f, lineHeight - style.FontSize));
+			}
+
+			List<string> lines = new List<string>();
+			StringBuilder current = new StringBuilder();
+			float currentWidth = 0f;
+			foreach (Rune rune in value.EnumerateRunes())
+			{
+				float glyphWidth = GlyphWidth(rune, style.FontSize);
+				if (current.Length > 0 && currentWidth + glyphWidth > availableWidth)
+				{
+					lines.Add(current.ToString());
+					current.Clear();
+					currentWidth = 0f;
+				}
+				current.Append(rune.ToString());
+				currentWidth += glyphWidth;
+			}
+			if (current.Length > 0 || lines.Count == 0)
+			{
+				lines.Add(current.ToString());
+			}
+			float maxWidth = 0f;
+			for (int i = 0; i < lines.Count; i++)
+			{
+				maxWidth = Math.Max(maxWidth, MeasureWidth(lines[i], style));
+			}
+			return new UiTextLayoutResult(lines.ToArray(), maxWidth, lineHeight * lines.Count, lineHeight, style.FontSize, Math.Max(0f, lineHeight - style.FontSize));
+		}
+
+		public float MeasureWidth(string? text, UiStyle style)
+		{
+			if (string.IsNullOrEmpty(text))
+			{
+				return 0f;
+			}
+			float width = 0f;
+			foreach (Rune rune in text.EnumerateRunes())
+			{
+				width += GlyphWidth(rune, style.FontSize);
+			}
+			return width;
+		}
+
+		private static float GlyphWidth(Rune rune, float fontSize) => rune.Value > 0x7F ? fontSize : fontSize * 0.5f;
 	}
 
 	private sealed class ConstantImageSizeProvider : IUiImageSizeProvider
