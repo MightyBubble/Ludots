@@ -64,19 +64,20 @@ public sealed class Y5kLoopDemoDirectorSystem : ISystem<float>
 		}
 
 		_frame++;
+		// ~1s per beat at 60fps presentation — compact enough for capture, still readable on HUD.
 		switch (_frame)
 		{
-			case 90:
+			case 60:
 				SetPhase("supply", "补给环", "枢纽易主，补给网断裂；断补活动待抉择。");
 				_domain.TransferSettlementOwner(2, newOwner: 2);
 				EnsureSupplyActivity();
 				break;
-			case 180:
+			case 120:
 				ResolveForcedActivity("hold");
 				_tasks.EmitSignal("supply.recovered");
 				SetPhase("supply_resolved", "补给环·已抉择", "选择硬扛宽限期；补给任务推进。");
 				break;
-			case 270:
+			case 180:
 				ExecuteEffect(
 					"combat.siege_invest",
 					new Dictionary<string, object?>
@@ -88,7 +89,7 @@ public sealed class Y5kLoopDemoDirectorSystem : ISystem<float>
 				_tasks.EmitSignal("siege.breached");
 				SetPhase("siege_garrison", "攻防环·完好路径", "打空兵力储备池，归属未变，进入可接管。");
 				break;
-			case 360:
+			case 240:
 				if (_domain.GetDefense(2).ControlState == SettlementControlState.Intact)
 				{
 					ExecuteEffect(
@@ -104,7 +105,7 @@ public sealed class Y5kLoopDemoDirectorSystem : ISystem<float>
 
 				SetPhase("siege_wall", "攻防环·损毁路径", "对平行标的打空城防耐久，进入损毁。");
 				break;
-			case 450:
+			case 300:
 				ExecuteEffect(
 					"city_control.commit_troops_takeover",
 					new Dictionary<string, object?>
@@ -119,12 +120,12 @@ public sealed class Y5kLoopDemoDirectorSystem : ISystem<float>
 				_activities.OfferOrActivate("activity.captive_disposal", _activityScope);
 				SetPhase("takeover", "接管环", "投入兵力易主，英雄进入羁押；俘虏活动已弹出。");
 				break;
-			case 540:
+			case 360:
 				ResolveForcedActivity("release");
 				_tasks.EmitSignal("captive.resolved");
 				SetPhase("captive", "俘虏处置", "选择释放；羁押位清空。");
 				break;
-			case 630:
+			case 420:
 				ExecuteEffect(
 					"population.appoint_governor",
 					new Dictionary<string, object?>
@@ -139,13 +140,13 @@ public sealed class Y5kLoopDemoDirectorSystem : ISystem<float>
 				_activities.OfferOrActivate("activity.covert_exposure", _activityScope);
 				SetPhase("governor", "治理环", "任命主官，产出可归因；隐秘暴露活动待确认。");
 				break;
-			case 720:
+			case 480:
 				ResolveForcedActivity("acknowledge");
 				_tasks.EmitSignal("covert.exposed");
 				_tasks.EmitSignal("skill.cast_committed");
 				SetPhase("covert_skill", "谋略与技能", "隐秘失败必暴露；英雄主动技施放信号已发出。");
 				break;
-			case 810:
+			case 540:
 				SetPhase("complete", "五环演示完成", "补给→攻防→接管→治理→谋略技能 已串完。");
 				break;
 		}
