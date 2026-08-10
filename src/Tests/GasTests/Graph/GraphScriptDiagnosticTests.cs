@@ -112,6 +112,35 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
+        public void Compile_UninitializedRegisterRead_FailsFast()
+        {
+            // Compile order follows Nodes list; HaltReturnInt is authored before its ConstInt producer.
+            var graph = new GraphControlFlowDocument
+            {
+                Id = "tests.script.uninit-reg",
+                Entry = "const",
+                Nodes = new List<GraphControlFlowNode>
+                {
+                    new() { Id = "done", Op = nameof(GraphNodeOp.HaltReturnInt) },
+                    new() { Id = "const", Op = nameof(GraphNodeOp.ConstInt), IntValue = 4 }
+                },
+                ControlEdges = new List<GraphControlFlowEdge>
+                {
+                    new("const", GraphControlFlowPorts.Next, "done")
+                },
+                ValueEdges = new List<GraphControlFlowValueEdge>
+                {
+                    new("const", GraphControlFlowPorts.Value, "done", GraphControlFlowPorts.Value)
+                }
+            };
+
+            GraphControlFlowCompileResult compiled = GraphControlFlowCompiler.Compile(graph);
+            Assert.That(compiled.Succeeded, Is.False);
+            Assert.That(compiled.Diagnostics, Has.Some.Matches<GraphDiagnostic>(d =>
+                d.Code == GraphDiagnosticCodes.UninitializedRegisterRead && d.NodeId == "done"));
+        }
+
+        [Test]
         public void Compile_ValuePinTypeMismatch_FailsFast()
         {
             var graph = new GraphControlFlowDocument
