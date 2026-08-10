@@ -388,38 +388,48 @@
     },
     {
       "id": "capability_standard_behavior_tree_arena_raylib",
-      "adapter": "raylib",
-      "mods": [
+      "name": "Capability Standard Behavior Tree Arena Raylib",
+      "selectors": [
         "$capability_standard_behavior_tree_arena"
-      ]
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     },
     {
       "id": "capability_standard_hfsm_sentry_arena_raylib",
-      "adapter": "raylib",
-      "mods": [
+      "name": "Capability Standard HFSM Sentry Arena Raylib",
+      "selectors": [
         "$capability_standard_hfsm_sentry_arena"
-      ]
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     },
     {
       "id": "capability_standard_level_blueprint_trial_raylib",
-      "adapter": "raylib",
-      "mods": [
+      "name": "Capability Standard Level Blueprint Trial Raylib",
+      "selectors": [
         "$capability_standard_level_blueprint_trial"
-      ]
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     },
     {
       "id": "capability_standard_ability_graph_sandbox_raylib",
-      "adapter": "raylib",
-      "mods": [
+      "name": "Capability Standard Ability Graph Sandbox Raylib",
+      "selectors": [
         "$capability_standard_ability_graph_sandbox"
-      ]
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     },
     {
       "id": "capability_standard_graph_behavior_integration_raylib",
-      "adapter": "raylib",
-      "mods": [
+      "name": "Capability Standard Graph Behavior Integration Raylib",
+      "selectors": [
         "$capability_standard_graph_behavior_integration"
-      ]
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }
