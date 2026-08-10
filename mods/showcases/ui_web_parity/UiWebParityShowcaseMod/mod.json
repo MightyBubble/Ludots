@@ -1,0 +1,8 @@
+{
+  "name": "UiWebParityShowcaseMod",
+  "version": "1.0.0",
+  "description": "Same HTML/CSS menu rendered in Ludots UI with browser layout parity proof across resolutions.",
+  "main": "bin/net8.0/UiWebParityShowcaseMod.dll",
+  "priority": 0,
+  "dependencies": {}
+}

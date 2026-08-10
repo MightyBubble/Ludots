@@ -2523,6 +2523,29 @@
       ]
     },
     {
+      "id": "ui_web_parity",
+      "path": "mods/showcases/ui_web_parity/UiWebParityShowcaseMod",
+      "projectPath": "UiWebParityShowcaseMod.csproj",
+      "title": "同一张暂停菜单",
+      "summary": "同一份 HTML/CSS 暂停菜单：静态样式与 Chrome 参考一致，桌面/平板/手机分辨率下布局跟着变且不塌。",
+      "tier": "T2",
+      "category": "panel",
+      "binding": "ui_web_parity_showcase",
+      "preset": "ui_web_parity_raylib",
+      "docsPath": null,
+      "readmePath": "mods/showcases/ui_web_parity/UiWebParityShowcaseMod/README.md",
+      "acceptanceTest": "UiWebParityTests",
+      "artifactDir": "artifacts/acceptance/ui-web-parity",
+      "screenshot": "artifacts/acceptance/ui-web-parity/web-parity-desktop.png",
+      "status": "active",
+      "tags": [
+        "ui",
+        "markup",
+        "parity",
+        "layout"
+      ]
+    },
+    {
       "id": "ui_skin_classic",
       "path": "mods/UiSkinClassicMod",
       "projectPath": "UiSkinClassicMod.csproj",

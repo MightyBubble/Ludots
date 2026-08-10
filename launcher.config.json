@@ -202,6 +202,14 @@
       }
     },
     {
+      "name": "ui_web_parity_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/ui_web_parity/UiWebParityShowcaseMod",
+        "projectPath": "UiWebParityShowcaseMod.csproj"
+      }
+    },
+    {
       "name": "browser_react_flow_showcase",
       "target": {
         "type": "path",

@@ -1144,6 +1144,16 @@ public sealed class UiStyleResolver
 			}
 			return;
 		}
+		case "box-sizing":
+			if (text.Equals("border-box", StringComparison.OrdinalIgnoreCase))
+			{
+				return;
+			}
+			if (text.Equals("content-box", StringComparison.OrdinalIgnoreCase))
+			{
+				throw new InvalidOperationException("box-sizing: content-box is unsupported; Ludots layout is border-box only.");
+			}
+			throw new InvalidOperationException("Unsupported box-sizing value '" + text + "'.");
 		case "float":
 			return;
 		default:

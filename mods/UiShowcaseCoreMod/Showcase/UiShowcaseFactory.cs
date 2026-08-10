@@ -1,4 +1,6 @@
-﻿using Ludots.UI.Compose;
+﻿using System;
+using Ludots.UI.Compose;
+using Ludots.UI.HtmlEngine.Markup;
 using Ludots.UI.Reactive;
 using Ludots.UI.Runtime;
 using Ludots.UI.Surface;
@@ -43,8 +45,8 @@ public static class UiShowcaseFactory
                         .FlexGrow(1),
                     Ui.Card(
                         Ui.Text("CSS Profile positioning").Class("page-card-title"),
-                        Ui.Text("应用级 Native CSS Profile：selector / cascade / inheritance / variables / theme token。").Class("page-copy"),
-                        Ui.Text("不承诺浏览器级 CSSOM / JS / Grid / Animation / 浏览器怪癖兼容。").Class("muted"))
+                        Ui.Text("应用级 Native CSS Profile：selector / cascade / flex / grid MVP / calc / viewport units。").Class("page-copy"),
+                        Ui.Text("同一份 HTML 的浏览器盒模型对照见「同一张暂停菜单」Showcase；不承诺 JS / 全量 CSSOM / 浏览器怪癖。").Class("muted"))
                         .Class("skin-card")
                         .FlexGrow(1))
                     .Class("page-grid-row")
@@ -69,6 +71,28 @@ public static class UiShowcaseFactory
     public static UiScene CreateMarkupScene(IUiTextMeasurer textMeasurer, IUiImageSizeProvider imageSizeProvider)
     {
         return new MarkupShowcaseCodeBehind(textMeasurer, imageSizeProvider).BuildScene();
+    }
+
+    public static UiScene CreateWebParityFixtureScene(IUiTextMeasurer textMeasurer, IUiImageSizeProvider imageSizeProvider)
+    {
+        return new UiMarkupLoader().LoadScene(
+            textMeasurer,
+            imageSizeProvider,
+            UiShowcaseAssets.GetParityMenuHtml(),
+            UiShowcaseAssets.GetParityMenuCss());
+    }
+
+    public static UiScene CreateWebParityShowcaseScene(IUiTextMeasurer textMeasurer, IUiImageSizeProvider imageSizeProvider)
+    {
+        return new WebParityShowcaseCodeBehind(textMeasurer, imageSizeProvider).BuildScene();
+    }
+
+    public static UiSurfaceContribution CreateWebParityContribution(
+        IUiTextMeasurer textMeasurer,
+        IUiImageSizeProvider imageSizeProvider,
+        Action requestRebuild)
+    {
+        return new WebParityShowcaseCodeBehind(textMeasurer, imageSizeProvider).CreateContribution(requestRebuild);
     }
 
     public static UiScene CreateSkinShowcaseScene(IUiTextMeasurer textMeasurer, IUiImageSizeProvider imageSizeProvider)

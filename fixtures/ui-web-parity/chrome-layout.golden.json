@@ -1,0 +1,389 @@
+{
+  "generatedAt": "2026-08-10T04:43:30.100Z",
+  "chrome": "Chrome/148.0.7778.96",
+  "fixture": "fixtures/ui-web-parity/parity_menu.html",
+  "coordinateSpace": "stage-local",
+  "viewports": [
+    {
+      "name": "desktop",
+      "width": 1280,
+      "height": 720,
+      "boxes": {
+        "stage": {
+          "x": 0,
+          "y": 0,
+          "width": 1280,
+          "height": 720
+        },
+        "backdrop": {
+          "x": 0,
+          "y": 0,
+          "width": 1280,
+          "height": 720
+        },
+        "menu-shell": {
+          "x": 89.59,
+          "y": 79.2,
+          "width": 1100.8,
+          "height": 561.59
+        },
+        "menu-card": {
+          "x": 89.59,
+          "y": 79.2,
+          "width": 824.59,
+          "height": 561.59
+        },
+        "menu-kicker": {
+          "x": 111.59,
+          "y": 101.2,
+          "width": 780.59,
+          "height": 18
+        },
+        "menu-title": {
+          "x": 111.59,
+          "y": 131.2,
+          "width": 780.59,
+          "height": 36
+        },
+        "menu-subtitle": {
+          "x": 111.59,
+          "y": 179.2,
+          "width": 780.59,
+          "height": 40
+        },
+        "menu-grid": {
+          "x": 111.59,
+          "y": 231.2,
+          "width": 780.59,
+          "height": 303.59
+        },
+        "btn-resume": {
+          "x": 111.59,
+          "y": 231.2,
+          "width": 384.3,
+          "height": 145.8
+        },
+        "btn-map": {
+          "x": 507.89,
+          "y": 231.2,
+          "width": 384.3,
+          "height": 145.8
+        },
+        "btn-settings": {
+          "x": 111.59,
+          "y": 389,
+          "width": 384.3,
+          "height": 145.8
+        },
+        "btn-quit": {
+          "x": 507.89,
+          "y": 389,
+          "width": 384.3,
+          "height": 145.8
+        },
+        "stat-row": {
+          "x": 111.59,
+          "y": 546.8,
+          "width": 780.59,
+          "height": 72
+        },
+        "stat-hp": {
+          "x": 111.59,
+          "y": 546.8,
+          "width": 253.53,
+          "height": 72
+        },
+        "stat-mp": {
+          "x": 375.13,
+          "y": 546.8,
+          "width": 253.53,
+          "height": 72
+        },
+        "stat-gold": {
+          "x": 638.66,
+          "y": 546.8,
+          "width": 253.53,
+          "height": 72
+        },
+        "side-rail": {
+          "x": 930.19,
+          "y": 79.2,
+          "width": 260.2,
+          "height": 561.59
+        },
+        "rail-card": {
+          "x": 930.19,
+          "y": 79.2,
+          "width": 260.2,
+          "height": 561.59
+        },
+        "rail-title": {
+          "x": 948.19,
+          "y": 97.2,
+          "width": 224.2,
+          "height": 24
+        },
+        "rail-body": {
+          "x": 948.19,
+          "y": 131.2,
+          "width": 224.2,
+          "height": 491.59
+        }
+      }
+    },
+    {
+      "name": "tablet",
+      "width": 900,
+      "height": 700,
+      "boxes": {
+        "stage": {
+          "x": 0,
+          "y": 0,
+          "width": 900,
+          "height": 700
+        },
+        "backdrop": {
+          "x": 0,
+          "y": 0,
+          "width": 900,
+          "height": 700
+        },
+        "menu-shell": {
+          "x": 63,
+          "y": 77,
+          "width": 774,
+          "height": 546
+        },
+        "menu-card": {
+          "x": 63,
+          "y": 77,
+          "width": 579.5,
+          "height": 546
+        },
+        "menu-kicker": {
+          "x": 85,
+          "y": 99,
+          "width": 535.5,
+          "height": 18
+        },
+        "menu-title": {
+          "x": 85,
+          "y": 129,
+          "width": 535.5,
+          "height": 36
+        },
+        "menu-subtitle": {
+          "x": 85,
+          "y": 177,
+          "width": 535.5,
+          "height": 40
+        },
+        "menu-grid": {
+          "x": 85,
+          "y": 229,
+          "width": 535.5,
+          "height": 288
+        },
+        "btn-resume": {
+          "x": 85,
+          "y": 229,
+          "width": 261.75,
+          "height": 138
+        },
+        "btn-map": {
+          "x": 358.75,
+          "y": 229,
+          "width": 261.75,
+          "height": 138
+        },
+        "btn-settings": {
+          "x": 85,
+          "y": 379,
+          "width": 261.75,
+          "height": 138
+        },
+        "btn-quit": {
+          "x": 358.75,
+          "y": 379,
+          "width": 261.75,
+          "height": 138
+        },
+        "stat-row": {
+          "x": 85,
+          "y": 529,
+          "width": 535.5,
+          "height": 72
+        },
+        "stat-hp": {
+          "x": 85,
+          "y": 529,
+          "width": 171.83,
+          "height": 72
+        },
+        "stat-mp": {
+          "x": 266.83,
+          "y": 529,
+          "width": 171.84,
+          "height": 72
+        },
+        "stat-gold": {
+          "x": 448.67,
+          "y": 529,
+          "width": 171.83,
+          "height": 72
+        },
+        "side-rail": {
+          "x": 658.5,
+          "y": 77,
+          "width": 178.5,
+          "height": 546
+        },
+        "rail-card": {
+          "x": 658.5,
+          "y": 77,
+          "width": 178.5,
+          "height": 546
+        },
+        "rail-title": {
+          "x": 676.5,
+          "y": 95,
+          "width": 142.5,
+          "height": 24
+        },
+        "rail-body": {
+          "x": 676.5,
+          "y": 129,
+          "width": 142.5,
+          "height": 476
+        }
+      }
+    },
+    {
+      "name": "phone",
+      "width": 390,
+      "height": 844,
+      "boxes": {
+        "stage": {
+          "x": 0,
+          "y": 0,
+          "width": 390,
+          "height": 844
+        },
+        "backdrop": {
+          "x": 0,
+          "y": 0,
+          "width": 390,
+          "height": 844
+        },
+        "menu-shell": {
+          "x": 27.3,
+          "y": 92.84,
+          "width": 335.39,
+          "height": 658.31
+        },
+        "menu-card": {
+          "x": 27.3,
+          "y": 92.84,
+          "width": 250.55,
+          "height": 658.31
+        },
+        "menu-kicker": {
+          "x": 49.3,
+          "y": 114.84,
+          "width": 206.55,
+          "height": 18
+        },
+        "menu-title": {
+          "x": 49.3,
+          "y": 144.84,
+          "width": 206.55,
+          "height": 36
+        },
+        "menu-subtitle": {
+          "x": 49.3,
+          "y": 192.84,
+          "width": 206.55,
+          "height": 40
+        },
+        "menu-grid": {
+          "x": 49.3,
+          "y": 244.84,
+          "width": 206.55,
+          "height": 400.31
+        },
+        "btn-resume": {
+          "x": 49.3,
+          "y": 244.84,
+          "width": 97.27,
+          "height": 194.16
+        },
+        "btn-map": {
+          "x": 158.56,
+          "y": 244.84,
+          "width": 97.28,
+          "height": 194.16
+        },
+        "btn-settings": {
+          "x": 49.3,
+          "y": 451,
+          "width": 97.27,
+          "height": 194.16
+        },
+        "btn-quit": {
+          "x": 158.56,
+          "y": 451,
+          "width": 97.28,
+          "height": 194.16
+        },
+        "stat-row": {
+          "x": 49.3,
+          "y": 657.16,
+          "width": 206.55,
+          "height": 72
+        },
+        "stat-hp": {
+          "x": 49.3,
+          "y": 657.16,
+          "width": 62.17,
+          "height": 72
+        },
+        "stat-mp": {
+          "x": 121.47,
+          "y": 657.16,
+          "width": 62.19,
+          "height": 72
+        },
+        "stat-gold": {
+          "x": 193.66,
+          "y": 657.16,
+          "width": 62.19,
+          "height": 72
+        },
+        "side-rail": {
+          "x": 293.84,
+          "y": 92.84,
+          "width": 68.84,
+          "height": 658.31
+        },
+        "rail-card": {
+          "x": 293.84,
+          "y": 92.84,
+          "width": 68.84,
+          "height": 658.31
+        },
+        "rail-title": {
+          "x": 311.84,
+          "y": 110.84,
+          "width": 32.84,
+          "height": 24
+        },
+        "rail-body": {
+          "x": 311.84,
+          "y": 144.84,
+          "width": 32.84,
+          "height": 588.31
+        }
+      }
+    }
+  ]
+}
