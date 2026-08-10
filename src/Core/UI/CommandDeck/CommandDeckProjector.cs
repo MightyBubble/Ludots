@@ -129,7 +129,7 @@ namespace Ludots.Core.UI.CommandDeck
                     route.Owner.Id,
                     route.Owner.Version,
                     route.SlotIndex,
-                    slot.CooldownPermille,
+                    slot.LockoutPermille,
                     slot.ChargesCurrent,
                     slot.ChargesMax));
             }

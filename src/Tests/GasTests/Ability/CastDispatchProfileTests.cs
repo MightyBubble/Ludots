@@ -28,7 +28,7 @@ namespace Ludots.Tests.GAS
         private const long GroupKeyA = 42L;
 
         [Test]
-        public void SelectDispatchTargets_AllTogether_SelectsEveryActorWithSharedOrderId()
+        public void SelectDispatchTargets_AllTogether_SelectsEveryActorWithAtomicFanOut()
         {
             using var world = World.Create();
             Harness harness = Harness.Create();
@@ -51,7 +51,7 @@ namespace Ludots.Tests.GAS
                 Assert.That(selected[i], Is.EqualTo(actors[i]));
             }
 
-            Assert.That(routing.SharedOrderId, Is.True, "all_together fans out under one shared order id.");
+            Assert.That(routing.SharedOrderId, Is.True, "all_together fans out as one atomic batch.");
             Assert.That(routing.Sequential, Is.False);
         }
 
@@ -286,7 +286,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void Install_SequentialRouterWithSharedOrderId_Throws()
+        public void Install_SequentialRouterWithAtomicFanOutFlag_Throws()
         {
             Harness harness = Harness.Create();
             Assert.Throws<InvalidOperationException>(() => harness.Dispatch.Install(Harness.Config(new CastDispatchProfileDefinition

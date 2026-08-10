@@ -129,5 +129,26 @@
       "policy": "KeepDuration",
       "overflowPolicy": "RejectNew"
     }
+  },
+  {
+    "id": "Effect.4X.Lockout.GCD",
+    "tags": [
+      "Effect.4X.Lockout"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 10,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "grantedTags": [
+      {
+        "tag": "Cooldown.GCD",
+        "formula": "Fixed",
+        "amount": 1
+      }
+    ]
   }
 ]

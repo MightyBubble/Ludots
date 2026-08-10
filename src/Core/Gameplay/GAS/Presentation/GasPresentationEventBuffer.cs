@@ -28,7 +28,7 @@ namespace Ludots.Core.Gameplay.GAS.Presentation
     public enum AbilityCastFailReason : byte
     {
         None = 0,
-        OnCooldown = 1,
+        TimedLockout = 1,
         BlockedByTag = 2,
         NoTarget = 3,
         InvalidSlot = 4,

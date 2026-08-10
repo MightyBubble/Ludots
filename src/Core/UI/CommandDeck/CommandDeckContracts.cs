@@ -168,7 +168,7 @@ namespace Ludots.Core.UI.CommandDeck
             int routedOwnerEntityId,
             int routedOwnerVersion,
             int routedSlotIndex,
-            short cooldownPermille,
+            short lockoutPermille,
             short chargesCurrent,
             short chargesMax)
         {
@@ -184,7 +184,7 @@ namespace Ludots.Core.UI.CommandDeck
             RoutedOwnerEntityId = routedOwnerEntityId;
             RoutedOwnerVersion = routedOwnerVersion;
             RoutedSlotIndex = routedSlotIndex;
-            CooldownPermille = cooldownPermille;
+            LockoutPermille = lockoutPermille;
             ChargesCurrent = chargesCurrent;
             ChargesMax = chargesMax;
         }
@@ -201,7 +201,7 @@ namespace Ludots.Core.UI.CommandDeck
         public int RoutedOwnerEntityId { get; }
         public int RoutedOwnerVersion { get; }
         public int RoutedSlotIndex { get; }
-        public short CooldownPermille { get; }
+        public short LockoutPermille { get; }
         public short ChargesCurrent { get; }
         public short ChargesMax { get; }
     }

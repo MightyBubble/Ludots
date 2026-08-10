@@ -174,7 +174,7 @@ namespace MobaDemoMod.Systems
             });
             
             // Order submit handler
-            // Visual feedback (markers, cooldown text) is handled by Core PresenterRuleSystem
+            // Visual feedback (markers, lockout text) is handled by Core PresenterRuleSystem
             // via GAS -> PresentationEvent bridge; no mod-level marker logic needed.
             _inputOrderMapping.SetOrderSubmitHandler((in Order order) =>
             {
