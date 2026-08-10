@@ -1,0 +1,73 @@
+[
+  {
+    "id": "Effect.Y5k.Hero.FieldCommand",
+    "tags": ["Effect.Y5k.Hero.FieldCommand"],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 90,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "modifiers": [
+      {
+        "attribute": "Attack",
+        "op": "Add",
+        "value": -2
+      }
+    ]
+  },
+  {
+    "id": "Effect.Y5k.Unit.GuardResolve",
+    "tags": ["Effect.Y5k.Unit.GuardResolve"],
+    "presetType": "Buff",
+    "lifetime": "Permanent",
+    "participatesInResponse": false,
+    "modifiers": [
+      {
+        "attribute": "Armor",
+        "op": "Add",
+        "value": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.Y5k.Unit.NeighborAura",
+    "tags": ["Effect.Y5k.Unit.NeighborAura"],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 30,
+      "periodTicks": 30,
+      "clockId": "FixedFrame"
+    },
+    "modifiers": [
+      {
+        "attribute": "Morale",
+        "op": "Add",
+        "value": 1
+      }
+    ]
+  },
+  {
+    "id": "Effect.Y5k.Unit.OnHitMitigation",
+    "tags": ["Effect.Y5k.Unit.OnHitMitigation"],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 1,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    },
+    "modifiers": [
+      {
+        "attribute": "IncomingDamage",
+        "op": "Add",
+        "value": -1
+      }
+    ]
+  }
+]

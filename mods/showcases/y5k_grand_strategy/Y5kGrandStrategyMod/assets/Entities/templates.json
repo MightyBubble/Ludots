@@ -24,7 +24,20 @@
     "id": "y5k_hero_a",
     "components": {
       "Name": { "Value": "Hero.A" },
-      "Team": { "Value": 1 }
+      "Team": { "Value": 1 },
+      "Abilities": {
+        "Value": ["Ability.Y5k.Hero.FieldCommand"]
+      }
+    }
+  },
+  {
+    "id": "y5k_unit_guard",
+    "components": {
+      "Name": { "Value": "Unit.Guard" },
+      "Team": { "Value": 2 },
+      "Abilities": {
+        "Value": ["Ability.Y5k.Unit.GuardResolve"]
+      }
     }
   }
 ]
