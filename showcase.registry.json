@@ -2842,7 +2842,7 @@
       "title": "y5k 大战略示例",
       "summary": "小地图五环：补给、攻防、接管、治理、谋略与技能。界面九宫格装配通用面板，正中为 3D 世界。",
       "tier": "T2",
-      "category": "showcase",
+      "category": "genre",
       "tags": [
         "y5k",
         "grand-strategy",
@@ -2854,9 +2854,9 @@
       "preset": "y5k_grand_strategy_raylib",
       "docsPath": "mods/showcases/y5k_grand_strategy/Y5kGrandStrategyMod/README.md",
       "readmePath": "mods/showcases/y5k_grand_strategy/Y5kGrandStrategyMod/README.md",
-      "acceptanceTest": "Y5kStrategicDomainTests",
+      "acceptanceTest": "Y5kScenarioAcceptanceTests",
       "artifactDir": "artifacts/acceptance/y5k",
-      "screenshot": null,
+      "screenshot": "mods/showcases/y5k_grand_strategy/Y5kGrandStrategyMod/docs/screens/hud_supply_strain.png",
       "status": "active"
     }
   ]
