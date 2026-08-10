@@ -1175,6 +1175,17 @@ public sealed class UiStyleResolver
 			length = UiLength.Auto;
 			return true;
 		}
+		if (text.StartsWith("calc(", StringComparison.OrdinalIgnoreCase) && text.EndsWith(")", StringComparison.Ordinal))
+		{
+			string inner = text.Substring("calc(".Length, text.Length - "calc(".Length - 1);
+			if (UiCalcParser.TryParse(inner, out UiCalcExpression? expression))
+			{
+				length = UiLength.CalcExpression(expression);
+				return true;
+			}
+			length = UiLength.Auto;
+			return false;
+		}
 		if (text.EndsWith("%", StringComparison.Ordinal))
 		{
 			string text2 = text;
@@ -1183,6 +1194,10 @@ public sealed class UiStyleResolver
 				length = UiLength.Percent(result);
 				return true;
 			}
+		}
+		if (TryParseViewportUnit(text, out length))
+		{
+			return true;
 		}
 		if (text.EndsWith("px", StringComparison.OrdinalIgnoreCase))
 		{
@@ -1196,6 +1211,38 @@ public sealed class UiStyleResolver
 		}
 		length = UiLength.Auto;
 		return false;
+	}
+
+	private static bool TryParseViewportUnit(string text, out UiLength length)
+	{
+		length = UiLength.Auto;
+		if (text.EndsWith("vmin", StringComparison.OrdinalIgnoreCase) && TryParseUnitValue(text, "vmin", out float vmin))
+		{
+			length = new UiLength(vmin, UiLengthUnit.Vmin);
+			return true;
+		}
+		if (text.EndsWith("vmax", StringComparison.OrdinalIgnoreCase) && TryParseUnitValue(text, "vmax", out float vmax))
+		{
+			length = new UiLength(vmax, UiLengthUnit.Vmax);
+			return true;
+		}
+		if (text.EndsWith("vw", StringComparison.OrdinalIgnoreCase) && TryParseUnitValue(text, "vw", out float vw))
+		{
+			length = new UiLength(vw, UiLengthUnit.Vw);
+			return true;
+		}
+		if (text.EndsWith("vh", StringComparison.OrdinalIgnoreCase) && TryParseUnitValue(text, "vh", out float vh))
+		{
+			length = new UiLength(vh, UiLengthUnit.Vh);
+			return true;
+		}
+		return false;
+	}
+
+	private static bool TryParseUnitValue(string text, string suffix, out float value)
+	{
+		value = 0f;
+		return float.TryParse(text.Substring(0, text.Length - suffix.Length), NumberStyles.Float, CultureInfo.InvariantCulture, out value);
 	}
 
 	private static bool TryParseFloat(string value, out float parsed)

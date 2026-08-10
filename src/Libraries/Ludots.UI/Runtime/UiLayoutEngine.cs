@@ -60,19 +60,28 @@ public sealed class UiLayoutEngine
 	public void Layout(UiNode root, float width, float height)
 	{
 		ArgumentNullException.ThrowIfNull(root, "root");
-		Node node = BuildFlexTree(root, isRoot: true, width, height);
+		List<Node> deferredCalcNodes = new List<Node>();
+		Node node = BuildFlexTree(root, isRoot: true, width, height, deferredCalcNodes);
 		node.CalculateLayout(width, height, Direction.LTR);
+		if (deferredCalcNodes.Count > 0)
+		{
+			foreach (Node deferredNode in deferredCalcNodes)
+			{
+				ResolveDeferredCalcLengths(deferredNode, width, height);
+			}
+			node.CalculateLayout(width, height, Direction.LTR);
+		}
 		ApplyLayout(root, node, 0f, 0f);
 		NormalizeTableLayouts(root);
 	}
 
-	private Node BuildFlexTree(UiNode node, bool isRoot, float rootWidth, float rootHeight)
+	private Node BuildFlexTree(UiNode node, bool isRoot, float rootWidth, float rootHeight, List<Node> deferredCalcNodes)
 	{
 		Node node2 = new Node
 		{
 			Context = node
 		};
-		ConfigureNodeStyle(node2, node, isRoot, rootWidth, rootHeight);
+		ConfigureNodeStyle(node2, node, isRoot, rootWidth, rootHeight, deferredCalcNodes);
 		if (ShouldMeasureAsLeaf(node))
 		{
 			node2.SetMeasureFunc((Node _, float width, MeasureMode widthMode, float height, MeasureMode heightMode) => MeasureNode(node, width, widthMode, height, heightMode));
@@ -80,14 +89,14 @@ public sealed class UiLayoutEngine
 		}
 		for (int num = 0; num < node.Children.Count; num++)
 		{
-			Node node3 = BuildFlexTree(node.Children[num], isRoot: false, rootWidth, rootHeight);
+			Node node3 = BuildFlexTree(node.Children[num], isRoot: false, rootWidth, rootHeight, deferredCalcNodes);
 			ApplyGapOffset(node3, node.Style, num);
 			node2.AddChild(node3);
 		}
 		return node2;
 	}
 
-	private void ConfigureNodeStyle(Node flexNode, UiNode node, bool isRoot, float rootWidth, float rootHeight)
+	private void ConfigureNodeStyle(Node flexNode, UiNode node, bool isRoot, float rootWidth, float rootHeight, List<Node> deferredCalcNodes)
 	{
 		UiStyle style = node.Style;
 		bool flag = style.Visible && style.Display != UiDisplay.None;
@@ -101,41 +110,43 @@ public sealed class UiLayoutEngine
 		flexNode.StyleSetPositionType((style.PositionType == UiPositionType.Absolute) ? PositionType.Absolute : PositionType.Relative);
 		flexNode.StyleSetFlexGrow(style.FlexGrow);
 		flexNode.StyleSetFlexShrink(style.FlexShrink);
-		ApplyLength(style.Width, flexNode.StyleSetWidth, flexNode.StyleSetWidthPercent, flexNode.StyleSetWidthAuto);
-		ApplyLength(style.Height, flexNode.StyleSetHeight, flexNode.StyleSetHeightPercent, flexNode.StyleSetHeightAuto);
-		ApplyLength(style.MinWidth, flexNode.StyleSetMinWidth, flexNode.StyleSetMinWidthPercent, null);
-		ApplyLength(style.MinHeight, flexNode.StyleSetMinHeight, flexNode.StyleSetMinHeightPercent, null);
-		ApplyLength(style.MaxWidth, flexNode.StyleSetMaxWidth, flexNode.StyleSetMaxWidthPercent, null);
-		ApplyLength(style.MaxHeight, flexNode.StyleSetMaxHeight, flexNode.StyleSetMaxHeightPercent, null);
-		ApplyLength(style.FlexBasis, flexNode.StyleSetFlexBasis, flexNode.StyleSetFlexBasisPercent, flexNode.NodeStyleSetFlexBasisAuto);
-		ApplyLength(style.Left, delegate(float value)
+		UiLengthContext horizontalContext = new UiLengthContext(isRoot ? rootWidth : 0f, rootWidth, rootHeight);
+		UiLengthContext verticalContext = new UiLengthContext(isRoot ? rootHeight : 0f, rootWidth, rootHeight);
+		ApplyNodeLength(style.Width, horizontalContext, isRoot, flexNode.StyleSetWidth, flexNode.StyleSetWidthPercent, flexNode.StyleSetWidthAuto, flexNode, deferredCalcNodes);
+		ApplyNodeLength(style.Height, verticalContext, isRoot, flexNode.StyleSetHeight, flexNode.StyleSetHeightPercent, flexNode.StyleSetHeightAuto, flexNode, deferredCalcNodes);
+		ApplyNodeLength(style.MinWidth, horizontalContext, isRoot, flexNode.StyleSetMinWidth, flexNode.StyleSetMinWidthPercent, null, flexNode, deferredCalcNodes);
+		ApplyNodeLength(style.MinHeight, verticalContext, isRoot, flexNode.StyleSetMinHeight, flexNode.StyleSetMinHeightPercent, null, flexNode, deferredCalcNodes);
+		ApplyNodeLength(style.MaxWidth, horizontalContext, isRoot, flexNode.StyleSetMaxWidth, flexNode.StyleSetMaxWidthPercent, null, flexNode, deferredCalcNodes);
+		ApplyNodeLength(style.MaxHeight, verticalContext, isRoot, flexNode.StyleSetMaxHeight, flexNode.StyleSetMaxHeightPercent, null, flexNode, deferredCalcNodes);
+		ApplyNodeLength(style.FlexBasis, horizontalContext, isRoot, flexNode.StyleSetFlexBasis, flexNode.StyleSetFlexBasisPercent, flexNode.NodeStyleSetFlexBasisAuto, flexNode, deferredCalcNodes);
+		ApplyNodeLength(style.Left, horizontalContext, isRoot, delegate(float value)
 		{
 			flexNode.StyleSetPosition(Edge.Left, value);
 		}, delegate(float value)
 		{
 			flexNode.StyleSetPositionPercent(Edge.Left, value);
-		}, null);
-		ApplyLength(style.Top, delegate(float value)
+		}, null, flexNode, deferredCalcNodes);
+		ApplyNodeLength(style.Top, verticalContext, isRoot, delegate(float value)
 		{
 			flexNode.StyleSetPosition(Edge.Top, value);
 		}, delegate(float value)
 		{
 			flexNode.StyleSetPositionPercent(Edge.Top, value);
-		}, null);
-		ApplyLength(style.Right, delegate(float value)
+		}, null, flexNode, deferredCalcNodes);
+		ApplyNodeLength(style.Right, horizontalContext, isRoot, delegate(float value)
 		{
 			flexNode.StyleSetPosition(Edge.Right, value);
 		}, delegate(float value)
 		{
 			flexNode.StyleSetPositionPercent(Edge.Right, value);
-		}, null);
-		ApplyLength(style.Bottom, delegate(float value)
+		}, null, flexNode, deferredCalcNodes);
+		ApplyNodeLength(style.Bottom, verticalContext, isRoot, delegate(float value)
 		{
 			flexNode.StyleSetPosition(Edge.Bottom, value);
 		}, delegate(float value)
 		{
 			flexNode.StyleSetPositionPercent(Edge.Bottom, value);
-		}, null);
+		}, null, flexNode, deferredCalcNodes);
 		ApplyThickness(style.Margin, delegate(Edge edge, float value)
 		{
 			flexNode.StyleSetMargin(edge, value);
@@ -185,7 +196,16 @@ public sealed class UiLayoutEngine
 		node.StyleSetBorder(Edge.Bottom, borderWidth);
 	}
 
-	private static void ApplyLength(UiLength length, Action<float> pointSetter, Action<float> percentSetter, Action? autoSetter)
+	private static void ApplyNodeLength(UiLength length, UiLengthContext context, bool isRoot, Action<float> pointSetter, Action<float> percentSetter, Action? autoSetter, Node flexNode, List<Node> deferredCalcNodes)
+	{
+		if (ApplyLength(length, context, isRoot, pointSetter, percentSetter, autoSetter))
+		{
+			deferredCalcNodes.Add(flexNode);
+		}
+	}
+
+	/// <summary>Applies a length to the flex node. Returns true when the length was deferred (calc with a percent term on a non-root node).</summary>
+	private static bool ApplyLength(UiLength length, UiLengthContext context, bool isRoot, Action<float> pointSetter, Action<float> percentSetter, Action? autoSetter)
 	{
 		switch (length.Unit)
 		{
@@ -195,10 +215,103 @@ public sealed class UiLayoutEngine
 		case UiLengthUnit.Percent:
 			percentSetter(length.Value);
 			break;
+		case UiLengthUnit.Vw:
+		case UiLengthUnit.Vh:
+		case UiLengthUnit.Vmin:
+		case UiLengthUnit.Vmax:
+			pointSetter(length.Resolve(context));
+			break;
+		case UiLengthUnit.Calc:
+			if (length.Calc == null)
+			{
+				autoSetter?.Invoke();
+				break;
+			}
+			if (length.Calc.HasPercentTerm && !isRoot)
+			{
+				return true;
+			}
+			float resolved = length.Calc.Evaluate(context);
+			if (float.IsNaN(resolved))
+			{
+				autoSetter?.Invoke();
+				break;
+			}
+			pointSetter(resolved);
+			break;
 		default:
 			autoSetter?.Invoke();
 			break;
 		}
+		return false;
+	}
+
+	/// <summary>
+	/// Second layout pass: resolves deferred calc lengths (percent terms) against the parent's
+	/// laid-out content size. Only runs when at least one node deferred a calc length.
+	/// </summary>
+	private static void ResolveDeferredCalcLengths(Node flexNode, float rootWidth, float rootHeight)
+	{
+		if (flexNode.Context is not UiNode node)
+		{
+			return;
+		}
+		UiStyle style = node.Style;
+		Node? parent = flexNode.GetParent();
+		float parentContentWidth = ((parent == null) ? rootWidth : Math.Max(0f, parent.LayoutGetWidth() - parent.LayoutGetPadding(Edge.Left) - parent.LayoutGetPadding(Edge.Right)));
+		float parentContentHeight = ((parent == null) ? rootHeight : Math.Max(0f, parent.LayoutGetHeight() - parent.LayoutGetPadding(Edge.Top) - parent.LayoutGetPadding(Edge.Bottom)));
+		UiLengthContext horizontalContext = new UiLengthContext(parentContentWidth, rootWidth, rootHeight);
+		UiLengthContext verticalContext = new UiLengthContext(parentContentHeight, rootWidth, rootHeight);
+		ApplyDeferredCalc(style.Width, horizontalContext, flexNode.StyleSetWidth, flexNode.StyleSetWidthPercent, flexNode.StyleSetWidthAuto);
+		ApplyDeferredCalc(style.Height, verticalContext, flexNode.StyleSetHeight, flexNode.StyleSetHeightPercent, flexNode.StyleSetHeightAuto);
+		ApplyDeferredCalc(style.MinWidth, horizontalContext, flexNode.StyleSetMinWidth, flexNode.StyleSetMinWidthPercent, null);
+		ApplyDeferredCalc(style.MinHeight, verticalContext, flexNode.StyleSetMinHeight, flexNode.StyleSetMinHeightPercent, null);
+		ApplyDeferredCalc(style.MaxWidth, horizontalContext, flexNode.StyleSetMaxWidth, flexNode.StyleSetMaxWidthPercent, null);
+		ApplyDeferredCalc(style.MaxHeight, verticalContext, flexNode.StyleSetMaxHeight, flexNode.StyleSetMaxHeightPercent, null);
+		ApplyDeferredCalc(style.FlexBasis, horizontalContext, flexNode.StyleSetFlexBasis, flexNode.StyleSetFlexBasisPercent, flexNode.NodeStyleSetFlexBasisAuto);
+		ApplyDeferredCalc(style.Left, horizontalContext, delegate(float value)
+		{
+			flexNode.StyleSetPosition(Edge.Left, value);
+		}, delegate(float value)
+		{
+			flexNode.StyleSetPositionPercent(Edge.Left, value);
+		}, null);
+		ApplyDeferredCalc(style.Top, verticalContext, delegate(float value)
+		{
+			flexNode.StyleSetPosition(Edge.Top, value);
+		}, delegate(float value)
+		{
+			flexNode.StyleSetPositionPercent(Edge.Top, value);
+		}, null);
+		ApplyDeferredCalc(style.Right, horizontalContext, delegate(float value)
+		{
+			flexNode.StyleSetPosition(Edge.Right, value);
+		}, delegate(float value)
+		{
+			flexNode.StyleSetPositionPercent(Edge.Right, value);
+		}, null);
+		ApplyDeferredCalc(style.Bottom, verticalContext, delegate(float value)
+		{
+			flexNode.StyleSetPosition(Edge.Bottom, value);
+		}, delegate(float value)
+		{
+			flexNode.StyleSetPositionPercent(Edge.Bottom, value);
+		}, null);
+	}
+
+	private static void ApplyDeferredCalc(UiLength length, UiLengthContext context, Action<float> pointSetter, Action<float> percentSetter, Action? autoSetter)
+	{
+		if (length.Unit != UiLengthUnit.Calc || length.Calc == null)
+		{
+			return;
+		}
+		float resolved = length.Calc.Evaluate(context);
+		if (float.IsNaN(resolved))
+		{
+			autoSetter?.Invoke();
+			return;
+		}
+		pointSetter(resolved);
 	}
 
 	private static Overflow MapOverflow(UiStyle style)
