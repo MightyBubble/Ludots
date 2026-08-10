@@ -9,28 +9,31 @@ namespace Ludots.Tests.Gas.AI
     public sealed class FsmRuntimeTests
     {
         [Test]
-        public void SentryLoop_StimulusAdvancesIdleToAlert()
+        public void SentryHfsm_StimulusEntersAlertingSubtree_ThenCyclesToIdle()
         {
-            FsmDefinition fsm = FsmFactory.CreateSentryLoop("fsm.sentry");
-            var world = new FsmWorld(fsm, capacity: 2);
+            HfsmDefinition hfsm = HfsmFactory.CreateSentryHierarchy("hfsm.sentry");
+            var world = new HfsmWorld(hfsm, capacity: 2);
             world.AddAgent();
-            world.AddAgent();
-            Assert.That(world.States[0], Is.EqualTo(0));
+            Assert.That(world.GetLeafState(0), Is.EqualTo(1)); // Idle
             world.TickAll();
-            Assert.That(world.States[0], Is.EqualTo(0));
+            Assert.That(world.GetLeafState(0), Is.EqualTo(1));
             world.LatchStimulus(0);
             world.TickAll();
-            Assert.That(world.States[0], Is.EqualTo(1));
+            Assert.That(world.GetLeafState(0), Is.EqualTo(3)); // Alert under Alerting
             world.TickAll();
-            Assert.That(world.States[0], Is.EqualTo(2));
+            Assert.That(world.GetLeafState(0), Is.EqualTo(4)); // Combat
+            world.TickAll();
+            Assert.That(world.GetLeafState(0), Is.EqualTo(5)); // Retreat
+            world.TickAll();
+            Assert.That(world.GetLeafState(0), Is.EqualTo(1)); // Idle
         }
 
         [Test]
-        public void ThinkWave_10k_Sentry_UnderFiveMilliseconds()
+        public void ThinkWave_10k_SentryHfsm_UnderFiveMilliseconds()
         {
-            FsmDefinition fsm = FsmFactory.CreateSentryLoop("fsm.perf");
+            HfsmDefinition hfsm = HfsmFactory.CreateSentryHierarchy("hfsm.perf");
             const int agents = 10_000;
-            var world = new FsmWorld(fsm, capacity: agents);
+            var world = new HfsmWorld(hfsm, capacity: agents);
             for (int i = 0; i < agents; i++)
             {
                 world.AddAgent();
@@ -42,11 +45,11 @@ namespace Ludots.Tests.Gas.AI
 
             world.TickAll();
             var sw = Stopwatch.StartNew();
-            FsmThinkStats stats = world.TickAll();
+            HfsmThinkStats stats = world.TickAll();
             sw.Stop();
             double ms = sw.Elapsed.TotalMilliseconds;
             TestContext.WriteLine($"A={stats.Agents} preds={stats.PredicatesChecked} taken={stats.TransitionsTaken} T_ai_ms={ms:F3}");
-            Assert.That(ms, Is.LessThan(5.0), $"FSM think wave exceeded 5ms: {ms:F3}ms");
+            Assert.That(ms, Is.LessThan(5.0), $"HFSM think wave exceeded 5ms: {ms:F3}ms");
         }
     }
 }

@@ -1,2 +1,2 @@
 A,states,out_edges,T_ai_ms,predicates,transitions,notes
-10000,4,1,0.057,10000,5000,Sentry loop half stimulated Release
+10000,6,1,0.227,10000,5000,HFSM sentry hierarchy half stimulated Release

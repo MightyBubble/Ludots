@@ -6,7 +6,7 @@ Ludots 的图能力分成三层，对标 Paradox **FlowCanvas（细流程）+ No
 
 1. **L0 发动机**：一套指令、一套登记表、一套 handler 执行器（含一次跑完 / 按拍切片）
 2. **L1 流程图方言**：`Script`、`Effect`、`Score`、`Query`、`Validation`、`Derived`
-3. **L2 行为调度（未来）**：行为树、状态机、关卡触发——自己管粗结构，叶子调用 L1 图
+3. **L2 行为调度**：行为树、**分层状态机（HFSM）**、关卡触发——自己管粗结构，叶子调用 L1 图（学 Animator 的转移索引/校验思路，但不复用表现层类型）
 
 本页是分层合同的文档 SSOT；实现以 `GraphKind`、`GasGraphOpHandlerTable`、`GraphKindOperationPolicy` 为准。
 

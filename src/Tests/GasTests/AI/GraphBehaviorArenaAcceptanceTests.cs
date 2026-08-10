@@ -21,18 +21,18 @@ namespace Ludots.Tests.Gas.AI
             const int waves = 25; // 5s / 0.2s
             // Showcase default topology N=8; N=16 remains BT-only stress (see BehaviorTreeRuntimeTests).
             BehaviorTreeDefinition bt = BehaviorTreeFactory.CreateAlwaysSuccessSequence("arena.bt", leafCount: 7);
-            FsmDefinition fsm = FsmFactory.CreateSentryLoop("arena.fsm");
+            HfsmDefinition hfsm = HfsmFactory.CreateSentryHierarchy("arena.hfsm");
             LevelDirector level = LevelBlueprintFactory.CreateTwoPhaseTrial("arena.level");
 
             var btWorld = new BehaviorTreeWorld(bt, agents);
-            var fsmWorld = new FsmWorld(fsm, agents);
+            var hfsmWorld = new HfsmWorld(hfsm, agents);
             for (int i = 0; i < agents; i++)
             {
                 btWorld.AddAgent();
-                fsmWorld.AddAgent();
+                hfsmWorld.AddAgent();
                 if ((i % 32) == 0)
                 {
-                    fsmWorld.LatchStimulus(i);
+                    hfsmWorld.LatchStimulus(i);
                 }
             }
 
@@ -51,7 +51,7 @@ namespace Ludots.Tests.Gas.AI
             {
                 RestartReady();
                 btWorld.TickAll(ReadOnlySpan<GraphInstruction>.Empty, 32);
-                fsmWorld.TickAll();
+                hfsmWorld.TickAll();
                 level.TickThinkWave();
             }
 
@@ -61,7 +61,7 @@ namespace Ludots.Tests.Gas.AI
                 RestartReady();
                 var sw = Stopwatch.StartNew();
                 btWorld.TickAll(ReadOnlySpan<GraphInstruction>.Empty, 32);
-                fsmWorld.TickAll();
+                hfsmWorld.TickAll();
                 level.TickThinkWave();
                 if (w == 5)
                 {

@@ -13,7 +13,7 @@
 |-------|-----------|----------|---------|------|
 | L1 Script slice (drink) | 10_000 | 15 nodes → 29 instr | 9.398 (per-agent full slice) | L1-only bound; not BT think |
 | BT AlwaysSuccess sequence | 10_000 | N_topo=16 | **2.134** | PASS &lt;5ms |
-| FSM sentry (half stimulated) | 10_000 | 4 states | **0.057** | PASS &lt;5ms |
+| HFSM sentry (half stimulated) | 10_000 | hierarchical 6 states (Idle + Alerting subtree) | **0.227** | PASS &lt;5ms |
 | Level director stress | 128 armed triggers (peakUnits marker 10k) | — | **0.202** | PASS &lt;5ms |
 | Combined BT+FSM+Level (25 waves) | 10_000 | N_topo=8 | avg **1.043** / p95 **1.089** | PASS |
 
