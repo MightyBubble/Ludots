@@ -110,72 +110,6 @@ N/A — 禁止新增 While/Until/Wait opcode；Wait 编译为 Yield；While/Unti
 
 「下一个 Mod 变体」将修改: Script graph 连线（Wait/While/Until 边），不改 Core enum / Effect skill。
 
-## GAS Composition Gate — Self Review
-
-- **Task / Issue**: #860 Track C — Roslyn/ALC codegen 控制流 IR（`Jump` / `JumpIfFalse` + `CompareLtInt` / `CompareEqInt`），叠在 R0 spike（#862）之上
-- **Date**: 2026-08-11
-- **Agent / Author**: Cursor cloud agent (bc-4cf49da4)
-
-### 1. Core judgment
-
-新变体主要交付物是（A/B/C/D）: A（执行后端扩展；同一 `GraphInstruction` IR，不新增 gameplay 变体 DSL）
-
-结论: PASS
-
-一句话理由: Track C 仅扩展 Tests 侧 emitter 白名单以发射既有控制流/比较 op 的 labels+goto C#，不新增 `BuiltinHandlerId`、`EffectPresetType`、Core GraphOps、profile enum、平行 VM 或作者糖（Tracks A/B）；仍无 Query/Effect world ops。
-
-### 2. Layer assignment
-
-| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
-|-----------|-----------------|----------|
-| 既有 IR 控制流语义 | 0（既有） | `GasGraphOpHandlerTable` Jump/JumpIfFalse/Compare*（对照基线，不改） |
-| 分支 IR → C#（labels+goto） | 工具链（非 gameplay Layer） | `LinearIntGraphCsharpEmitter`（GasTests spike 扩展） |
-| Roslyn + Collectible ALC 热换 | 工具链 | 既有 `GraphRoslynAlcCompilerHost` / `GraphGeneratedAssemblyLoadContext` |
-| 验收 | 测试 | 分支程序 ≡ interpret VM；热换；fail-closed |
-
-### 3. Reuse list
-
-- Handlers: 既有 `GasGraphOpHandlerTable`（对照基线，不改 opcode 语义）
-- Queues / Systems: N/A（不接线正式 SystemGroup）
-- Resolvers / Registries: N/A
-- Existing presets / graphs: `GraphInstruction` / `GraphExecutionState` / R0 host 合同面
-
-### 4. New Layer 0 ops (if any)
-
-N/A — 无新增 graph op；仅白名单发射既有 `Jump` / `JumpIfFalse` / `CompareLtInt` / `CompareEqInt`（外加 R0 的 `None`/`ConstInt`/`AddInt`）。非白名单仍失败关闭。
-
-### 5. Transaction boundary
-
-热重载替换：编译成功才切换执行入口；编译失败保持上一份成功实现。禁止静默回退解释器。Jump Imm 解析负 PC 失败关闭。
-
-### 6. Config SSOT
-
-行为配置落在: 既有 graph IR / 作者文档，无新 gameplay JSON schema。
-
-是否新增 JSON schema: NO — 执行后端扩展，不是新 profile DSL；不做 Tracks A/B 作者糖。
-
-### 7. Red flag scan
-
-- [x] 未新增 profile inherit/placement enum
-- [x] 未新建与 spawn 平行的物化管线
-- [x] 未把 placement 校验塞进 lifecycle op
-- [x] 未添加「说不清的」默认 fallback（unsupported op / 编译失败 fail-closed；不静默切解释器）
-
-### 8. Next variant test
-
-「下一个 Mod 变体」将修改: graph 连线 / IR 程序（改分支常量或跳转目标 → 重编 → 行为变更），不改 Core enum。后续轨再谈 Query/Effect/Yield 生成路径与正式接线。
-
-### Reuse / 新增汇总（§4.2）
-
-| 类型 | 项 |
-|------|-----|
-| 复用 | R0 emitter/host/ALC、`GraphInstruction` PC+Imm 跳转语义、`GasGraphOpHandlerTable.Execute` 对照 |
-| 新增（spike，Tests） | Jump/JumpIfFalse/Compare* → labels+goto；分支一致性与热换测试 |
-| 禁止 | 扩展 Core GraphOps；Tracks A/B 作者糖；Query/Effect world ops；静默解释器回退 |
-
-
----
-
 ## GAS Composition Gate — Self Review (Track A: BranchBool / SwitchInt sugar)
 
 - **Task / Issue**: Track A — Script CF authoring sugar BranchBool (complete) + SwitchInt (new); lower to existing L0 Jump / JumpIfFalse / CompareEqInt
@@ -240,3 +174,54 @@ N/A — 禁止新增 switch/branch opcode
 | 新增 Layer 1 | SwitchInt 编译期糖（AuthoredOpKind）+ case/default 端口约定 |
 | 新增 Layer 2 | 无 |
 | 禁止 | Yield/while（Track B）、Roslyn/codegen、平行 VM、新 GraphNodeOp |
+
+
+## GAS Composition Gate — Self Review (A+B integrate)
+
+- **Task / Issue**: Integrate Track A (BranchBool/SwitchInt) + Track B (Wait/While/Until) on #859 CF baseline
+- **Date**: 2026-08-11
+- **Agent / Author**: Cursor cloud agent (parent)
+
+### 1. Core judgment
+
+新变体主要交付物是（A/B/C/D）: A — 合并两轨作者糖，统一 `AuthoredOpKind` 编号，不新增 L0 opcode
+
+结论: PASS
+
+一句话理由: 整合仅解决 A/B 共享编译器冲突（`SwitchInt=2` vs `While=2` → SwitchInt=2/While=3/Until=4），硬化非 Script 糖的 fail-closed 重置；不新增 GraphNodeOp、不平行 VM、Effect 仍禁 Wait/Yield。
+
+### 2. Layer assignment
+
+| 步骤/能力 | Layer | 实现载体 |
+|-----------|-------|----------|
+| Branch/Switch/While/Until 糖 | 1 | GraphControlFlowCompiler AuthoredOpKind |
+| Wait→Yield | 1→0 | 作者别名到既有 Yield |
+| 端口 | 1 | true/false/selector/case/default/body/next |
+
+### 3. Reuse list
+
+- Track A + Track B 既有测试与糖降级路径
+- GraphKindOperationPolicy Yield=Script-only
+
+### 4. New Layer 0 ops
+
+N/A
+
+### 5. Transaction boundary
+
+编译失败不产出 program；Effect 禁 Yield 不变
+
+### 6. Config SSOT
+
+GraphControlFlowDocument；无新 JSON schema
+
+### 7. Red flag scan
+
+- [x] 未新增 profile enum
+- [x] 未平行物化管线
+- [x] AuthoredOpKind 编号冲突已消除
+- [x] 非 Script 使用糖时重置为 None（fail-closed）
+
+### 8. Next variant test
+
+改 Script 连线；不改 Core enum
