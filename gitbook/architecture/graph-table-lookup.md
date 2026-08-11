@@ -22,7 +22,8 @@
 - 跨实体合计/排序继续用既有 Query / Filter / Agg*，**不**在表上做假 SQL
 
 Epic：[#858](https://github.com/MightyBubble/Ludots/issues/858)。  
-入口钉：[#878](https://github.com/MightyBubble/Ludots/issues/878) · ADR：[#876](https://github.com/MightyBubble/Ludots/issues/876) · 实现：[#871](https://github.com/MightyBubble/Ludots/issues/871) · 清理：[#877](https://github.com/MightyBubble/Ludots/issues/877)。
+全景入口钉：[#886](https://github.com/MightyBubble/Ludots/issues/886) · 查表 ADR：[#876](https://github.com/MightyBubble/Ludots/issues/876) · 实现：[#881](https://github.com/MightyBubble/Ludots/issues/881) · 清理：[#877](https://github.com/MightyBubble/Ludots/issues/877)。  
+（#870/#871/#878 正文过时或过窄，以 #886/#881 为准。）
 
 ## 2. 结构
 
@@ -162,11 +163,11 @@ Feature: 作者用自建表查多字段
 
 | 角色 | Issue |
 |------|-------|
-| 入口钉（先读） | [#878](https://github.com/MightyBubble/Ludots/issues/878) |
-| ADR / 计划 SSOT | [#876](https://github.com/MightyBubble/Ludots/issues/876) |
-| 实现 | [#871](https://github.com/MightyBubble/Ludots/issues/871)（旧正文「与 TagDisplay 分离」作废，以 #876 + 本页为准） |
+| 全景入口钉（先读） | [#886](https://github.com/MightyBubble/Ludots/issues/886) |
+| 查表 ADR | [#876](https://github.com/MightyBubble/Ludots/issues/876) |
+| 实现 | [#881](https://github.com/MightyBubble/Ludots/issues/881) |
 | TagDisplay 清理 | [#877](https://github.com/MightyBubble/Ludots/issues/877) |
-| 占位误开（应关） | [#870](https://github.com/MightyBubble/Ludots/issues/870) |
+| 过时/占位（应关） | #870 · #871 · #878 |
 
 作者形态：[`ui-panel-authoring-form.md`](ui-panel-authoring-form.md)  
 旧文：[`tag-display-lookup.md`](tag-display-lookup.md)（**已废止**，仅作重定向）

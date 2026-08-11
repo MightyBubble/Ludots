@@ -2,7 +2,7 @@
 
 > **状态：SUPERSEDED / 废止**  
 > **生效正本**：[`graph-table-lookup.md`](graph-table-lookup.md)（通用查表是**唯一**查表路径）  
-> **Issue SSOT**：入口钉 [#878](https://github.com/MightyBubble/Ludots/issues/878) · ADR [#876](https://github.com/MightyBubble/Ludots/issues/876) · 清理 [#877](https://github.com/MightyBubble/Ludots/issues/877)  
+> **Issue SSOT**：全景 [#886](https://github.com/MightyBubble/Ludots/issues/886) · ADR [#876](https://github.com/MightyBubble/Ludots/issues/876) · 实现 [#881](https://github.com/MightyBubble/Ludots/issues/881) · 清理 [#877](https://github.com/MightyBubble/Ludots/issues/877)  
 > **产品裁定**：不得在 Core 维护「TagDisplay」专用映射表或专用查表 opcode。若 Mod 需要「状态标签 → 文案 token」，作者自建一张普通 lookup 表，走 `ResolveTableRow` + `TableRead*`。
 
 ## 为什么废止
