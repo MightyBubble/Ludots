@@ -1,5 +1,17 @@
 [
   {
+    "id": "vfx_forge.texture.flame_flipbook",
+    "type": "Billboard"
+  },
+  {
+    "id": "vfx_forge.texture.smoke_flipbook",
+    "type": "Billboard"
+  },
+  {
+    "id": "vfx_forge.texture.spark_streak_flipbook",
+    "type": "Billboard"
+  },
+  {
     "id": "vfx_forge.spark_column.effect",
     "type": "Primitive",
     "primitiveKind": "Sphere",
@@ -51,6 +63,33 @@
     "vfx": {
       "spawnMode": "Loop",
       "particleEffectId": "vfx_forge.gravity_well"
+    }
+  },
+  {
+    "id": "vfx_forge.flame_flipbook.effect",
+    "type": "Primitive",
+    "primitiveKind": "Sphere",
+    "vfx": {
+      "spawnMode": "Loop",
+      "particleEffectId": "vfx_forge.flame_flipbook"
+    }
+  },
+  {
+    "id": "vfx_forge.smoke_flipbook.effect",
+    "type": "Primitive",
+    "primitiveKind": "Sphere",
+    "vfx": {
+      "spawnMode": "Loop",
+      "particleEffectId": "vfx_forge.smoke_flipbook"
+    }
+  },
+  {
+    "id": "vfx_forge.stretched_sparks.effect",
+    "type": "Primitive",
+    "primitiveKind": "Sphere",
+    "vfx": {
+      "spawnMode": "Loop",
+      "particleEffectId": "vfx_forge.stretched_sparks"
     }
   }
 ]

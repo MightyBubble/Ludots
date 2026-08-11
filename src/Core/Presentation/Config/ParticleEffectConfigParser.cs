@@ -26,6 +26,7 @@ namespace Ludots.Core.Presentation.Config
                 "spawnMode",
                 "shape",
                 "renderMode",
+                "blendMode",
                 "primitive",
                 "overflowPolicy",
                 "maxParticles",
@@ -44,7 +45,9 @@ namespace Ludots.Core.Presentation.Config
                 "colorOverLife",
                 "gravity",
                 "drag",
-                "worldSpace");
+                "worldSpace",
+                "textureSheet",
+                "stretchedLengthScale");
 
             string version = ReadRequiredString(obj["version"], $"{sourceLabel} asset '{key}'.version");
             if (!string.Equals(version, CurrentVersion, StringComparison.Ordinal))
@@ -61,10 +64,12 @@ namespace Ludots.Core.Presentation.Config
 
         private static ParticleEffectAssetData ParseObject(JsonObject obj, string label, PrefabVfxSpawnMode spawnMode)
         {
+            ParticleRenderMode renderMode = ReadRequiredEnum<ParticleRenderMode>(obj["renderMode"], $"{label}.renderMode");
             return new ParticleEffectAssetData(
                 spawnMode,
                 ReadRequiredEnum<ParticleEmitterShapeKind>(obj["shape"], $"{label}.shape"),
-                ReadRequiredEnum<ParticleRenderMode>(obj["renderMode"], $"{label}.renderMode"),
+                renderMode,
+                ReadRequiredEnum<ParticleBlendMode>(obj["blendMode"], $"{label}.blendMode"),
                 ReadRequiredEnum<ParticlePrimitiveKind>(obj["primitive"], $"{label}.primitive"),
                 ReadRequiredEnum<ParticleOverflowPolicy>(obj["overflowPolicy"], $"{label}.overflowPolicy"),
                 ReadRequiredPositiveInt(obj["maxParticles"], $"{label}.maxParticles"),
@@ -83,7 +88,9 @@ namespace Ludots.Core.Presentation.Config
                 ReadRequiredParticleGradient(obj["colorOverLife"], $"{label}.colorOverLife"),
                 ReadRequiredVector3(obj["gravity"], $"{label}.gravity"),
                 ReadRequiredNonNegativeFloat(obj["drag"], $"{label}.drag"),
-                ReadRequiredBool(obj["worldSpace"], $"{label}.worldSpace"));
+                ReadRequiredBool(obj["worldSpace"], $"{label}.worldSpace"),
+                ReadTextureSheet(obj["textureSheet"], $"{label}.textureSheet", renderMode),
+                ReadStretchedLengthScale(obj["stretchedLengthScale"], $"{label}.stretchedLengthScale", renderMode));
         }
 
         private static string ReadRequiredString(JsonNode? node, string label)
@@ -139,6 +146,17 @@ namespace Ludots.Core.Presentation.Config
             if (value < min)
             {
                 throw new InvalidOperationException($"{label} must be greater than or equal to {min}.");
+            }
+
+            return value;
+        }
+
+        private static int ReadRequiredIntRange(JsonNode? node, int min, int max, string label)
+        {
+            int value = ReadRequiredMinInt(node, min, label);
+            if (value > max)
+            {
+                throw new InvalidOperationException($"{label} must be less than or equal to {max}.");
             }
 
             return value;
@@ -270,6 +288,18 @@ namespace Ludots.Core.Presentation.Config
             return new ParticleValueRange(min, max);
         }
 
+        private static ParticleIntRange ReadRequiredParticleIntRange(JsonNode? node, int min, int max, string label)
+        {
+            if (node is not JsonArray arr || arr.Count != 2)
+            {
+                throw new InvalidOperationException($"{label} must be an array [min, max].");
+            }
+
+            int rangeMin = ReadRequiredIntRange(arr[0], min, max, $"{label}[0]");
+            int rangeMax = ReadRequiredIntRange(arr[1], min, max, $"{label}[1]");
+            return new ParticleIntRange(rangeMin, rangeMax);
+        }
+
         private static ParticleScalarCurve ReadRequiredParticleCurve(JsonNode? node, string label)
         {
             if (node is not JsonArray arr || arr.Count == 0)
@@ -316,6 +346,77 @@ namespace Ludots.Core.Presentation.Config
             }
 
             return new ParticleColorGradient(keys);
+        }
+
+        private static ParticleTextureSheetAsset? ReadTextureSheet(
+            JsonNode? node,
+            string label,
+            ParticleRenderMode renderMode)
+        {
+            bool texturedRenderMode =
+                renderMode == ParticleRenderMode.Billboard ||
+                renderMode == ParticleRenderMode.StretchedBillboard;
+            if (node == null)
+            {
+                if (texturedRenderMode)
+                {
+                    throw new InvalidOperationException($"{label} is required for billboard particle render modes.");
+                }
+
+                return null;
+            }
+
+            if (!texturedRenderMode)
+            {
+                throw new InvalidOperationException($"{label} is only valid for billboard particle render modes.");
+            }
+
+            if (node is not JsonObject obj)
+            {
+                throw new InvalidOperationException($"{label} must be an object.");
+            }
+
+            ValidateObjectFields(
+                obj,
+                label,
+                "textureAssetId",
+                "columns",
+                "rows",
+                "frameCount",
+                "framesPerSecond",
+                "startFrame",
+                "playbackMode");
+
+            int columns = ReadRequiredPositiveInt(obj["columns"], $"{label}.columns");
+            int rows = ReadRequiredPositiveInt(obj["rows"], $"{label}.rows");
+            int frameCapacity = checked(columns * rows);
+            int frameCount = ReadRequiredIntRange(obj["frameCount"], 1, frameCapacity, $"{label}.frameCount");
+            return new ParticleTextureSheetAsset(
+                ReadRequiredString(obj["textureAssetId"], $"{label}.textureAssetId"),
+                columns,
+                rows,
+                frameCount,
+                ReadRequiredPositiveFloat(obj["framesPerSecond"], $"{label}.framesPerSecond"),
+                ReadRequiredParticleIntRange(obj["startFrame"], 0, frameCount - 1, $"{label}.startFrame"),
+                ReadRequiredEnum<ParticleTextureSheetPlaybackMode>(obj["playbackMode"], $"{label}.playbackMode"));
+        }
+
+        private static float ReadStretchedLengthScale(
+            JsonNode? node,
+            string label,
+            ParticleRenderMode renderMode)
+        {
+            if (renderMode == ParticleRenderMode.StretchedBillboard)
+            {
+                return ReadRequiredPositiveFloat(node, label);
+            }
+
+            if (node != null)
+            {
+                throw new InvalidOperationException($"{label} is only valid for StretchedBillboard particle render mode.");
+            }
+
+            return 0f;
         }
 
         private static float ReadRequiredFiniteFloat(JsonNode? node, string label)

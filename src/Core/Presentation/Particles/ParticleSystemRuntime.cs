@@ -13,6 +13,7 @@ namespace Ludots.Core.Presentation.Particles
             ReadOnlySpan<float> ages,
             ReadOnlySpan<float> lives,
             ReadOnlySpan<Vector4> colors,
+            ReadOnlySpan<int> frameIndices,
             int rejectedSpawnCount)
         {
             Positions = positions;
@@ -21,6 +22,7 @@ namespace Ludots.Core.Presentation.Particles
             Ages = ages;
             Lives = lives;
             Colors = colors;
+            FrameIndices = frameIndices;
             RejectedSpawnCount = rejectedSpawnCount;
         }
 
@@ -36,6 +38,8 @@ namespace Ludots.Core.Presentation.Particles
 
         public ReadOnlySpan<Vector4> Colors { get; }
 
+        public ReadOnlySpan<int> FrameIndices { get; }
+
         public int Count => Positions.Length;
 
         public int RejectedSpawnCount { get; }
@@ -50,6 +54,8 @@ namespace Ludots.Core.Presentation.Particles
         private readonly float[] _ages;
         private readonly float[] _lives;
         private readonly Vector4[] _colors;
+        private readonly int[] _startFrames;
+        private readonly int[] _frameIndices;
 
         private ParticleRandom _random;
         private float _elapsedSeconds;
@@ -76,6 +82,8 @@ namespace Ludots.Core.Presentation.Particles
             _ages = new float[capacity];
             _lives = new float[capacity];
             _colors = new Vector4[capacity];
+            _startFrames = new int[capacity];
+            _frameIndices = new int[capacity];
             _random = new ParticleRandom(seed);
         }
 
@@ -178,6 +186,7 @@ namespace Ludots.Core.Presentation.Particles
                 _ages.AsSpan(0, _particleCount),
                 _lives.AsSpan(0, _particleCount),
                 _colors.AsSpan(0, _particleCount),
+                _frameIndices.AsSpan(0, _particleCount),
                 RejectedSpawnCount);
         }
 
@@ -218,6 +227,16 @@ namespace Ludots.Core.Presentation.Particles
                 _ages[slot] = 0f;
                 _lives[slot] = life;
                 _colors[slot] = MultiplyColor(effect.StartColor, effect.ColorOverLife.Evaluate(0f));
+                if (effect.TextureSheet != null)
+                {
+                    _startFrames[slot] = effect.TextureSheet.SampleStartFrame(ref _random);
+                    _frameIndices[slot] = effect.TextureSheet.EvaluateFrame(_startFrames[slot], 0f);
+                }
+                else
+                {
+                    _startFrames[slot] = 0;
+                    _frameIndices[slot] = 0;
+                }
             }
         }
 
@@ -237,6 +256,8 @@ namespace Ludots.Core.Presentation.Particles
                     _ages[index] = _ages[last];
                     _lives[index] = _lives[last];
                     _colors[index] = _colors[last];
+                    _startFrames[index] = _startFrames[last];
+                    _frameIndices[index] = _frameIndices[last];
                     _particleCount--;
                     continue;
                 }
@@ -253,6 +274,11 @@ namespace Ludots.Core.Presentation.Particles
                 float life01 = Math.Clamp(age / _lives[index], 0f, 1f);
                 _sizes[index] = _startSizes[index] * effect.SizeOverLife.Evaluate(life01);
                 _colors[index] = MultiplyColor(effect.StartColor, effect.ColorOverLife.Evaluate(life01));
+                if (effect.TextureSheet != null)
+                {
+                    _frameIndices[index] = effect.TextureSheet.EvaluateFrame(_startFrames[index], age);
+                }
+
                 index++;
             }
         }

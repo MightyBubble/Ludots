@@ -1452,6 +1452,7 @@ namespace Ludots.Tests.Presentation
                 PrefabVfxSpawnMode.Loop,
                 ParticleEmitterShapeKind.Cone,
                 ParticleRenderMode.Mesh,
+                ParticleBlendMode.Alpha,
                 ParticlePrimitiveKind.Sphere,
                 ParticleOverflowPolicy.DropNewest,
                 maxParticles: 32,
@@ -1480,7 +1481,9 @@ namespace Ludots.Tests.Presentation
                     }),
                 new Vector3(0f, 0.2f, 0f),
                 drag: 0.08f,
-                worldSpace: true);
+                worldSpace: true,
+                textureSheet: null,
+                stretchedLengthScale: 0f);
         }
 
         private static int ResolvePresentationEventKey(PresentationEventKind eventKind, string key)

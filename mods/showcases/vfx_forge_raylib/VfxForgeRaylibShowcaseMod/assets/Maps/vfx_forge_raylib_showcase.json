@@ -3,7 +3,7 @@
   "Tags": ["showcase", "raylib", "vfx", "quarks"],
   "Metadata": {
     "vfxForge": {
-      "effectCount": 6,
+      "effectCount": 9,
       "entry": "raylib",
       "assetSource": "Presentation/particle_effects.json"
     }
@@ -21,10 +21,10 @@
   "DefaultCamera": {
     "VirtualCameraId": "Tactical",
     "TargetXCm": 0,
-    "TargetYCm": 0,
+    "TargetYCm": 180,
     "Yaw": 180,
     "Pitch": 54,
-    "DistanceCm": 4300,
+    "DistanceCm": 5600,
     "FovYDeg": 55
   },
   "Entities": [

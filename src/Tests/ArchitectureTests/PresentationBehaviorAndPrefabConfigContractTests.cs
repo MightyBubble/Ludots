@@ -1581,6 +1581,7 @@ namespace Ludots.Tests.Architecture
     "spawnMode": "Loop",
     "shape": "Cone",
     "renderMode": "Mesh",
+    "blendMode": "Alpha",
     "primitive": "Sphere",
     "overflowPolicy": "DropNewest",
     "maxParticles": 32,

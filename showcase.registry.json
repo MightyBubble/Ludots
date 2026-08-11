@@ -2440,7 +2440,7 @@
       "path": "mods/showcases/vfx_forge_raylib/VfxForgeRaylibShowcaseMod",
       "projectPath": null,
       "title": "Raylib VFX Forge",
-      "summary": "面向玩家的 raylib 粒子展示场景：六座锻造台展示火花柱、能量环、尾迹弧线、余烬雨、护盾半球和引力井，粒子定义来自统一 Quarks 资产源。",
+      "summary": "面向玩家的 raylib 粒子展示场景：九座锻造台展示火花柱、能量环、尾迹弧线、余烬雨、护盾半球、引力井、火焰序列帧、烟雾序列帧和拉伸火星，粒子定义来自统一 Quarks 资产源。",
       "tier": "T2",
       "category": "showcase",
       "binding": "vfx_forge_raylib",

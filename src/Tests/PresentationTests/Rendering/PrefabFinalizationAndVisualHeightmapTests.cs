@@ -1171,6 +1171,7 @@ namespace Ludots.Tests.Presentation
                 spawnMode,
                 ParticleEmitterShapeKind.Cone,
                 ParticleRenderMode.Mesh,
+                ParticleBlendMode.Alpha,
                 ParticlePrimitiveKind.Sphere,
                 ParticleOverflowPolicy.DropNewest,
                 maxParticles: 16,
@@ -1199,7 +1200,9 @@ namespace Ludots.Tests.Presentation
                     }),
                 new Vector3(0f, 0.2f, 0f),
                 drag: 0.05f,
-                worldSpace: true);
+                worldSpace: true,
+                textureSheet: null,
+                stretchedLengthScale: 0f);
         }
 
         private sealed class CountingGroundProjector : IVisualGroundProjector

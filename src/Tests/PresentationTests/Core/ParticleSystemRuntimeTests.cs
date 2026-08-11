@@ -35,6 +35,7 @@ public sealed class ParticleSystemRuntimeTests
             Assert.That(firstSnapshot.Velocities[i], Is.EqualTo(secondSnapshot.Velocities[i]));
             Assert.That(firstSnapshot.Sizes[i], Is.EqualTo(secondSnapshot.Sizes[i]));
             Assert.That(firstSnapshot.Colors[i], Is.EqualTo(secondSnapshot.Colors[i]));
+            Assert.That(firstSnapshot.FrameIndices[i], Is.EqualTo(secondSnapshot.FrameIndices[i]));
         }
     }
 
@@ -109,6 +110,83 @@ public sealed class ParticleSystemRuntimeTests
     }
 
     [Test]
+    public void Runtime_AdvancesTextureSheetFrameIndicesFromParticleAge()
+    {
+        var sheet = new ParticleTextureSheetAsset(
+            "quarks.texture.flame",
+            columns: 4,
+            rows: 2,
+            frameCount: 8,
+            framesPerSecond: 10f,
+            new ParticleIntRange(0, 0),
+            ParticleTextureSheetPlaybackMode.Loop);
+        ParticleEffectAssetData effect = CreateEffect(
+            maxParticles: 4,
+            seed: 123u,
+            emissionRatePerSecond: 0f,
+            burstCount: 1,
+            startLife: new ParticleValueRange(1f, 1f),
+            renderMode: ParticleRenderMode.Billboard,
+            textureSheet: sheet);
+        var runtime = new ParticleSystemRuntime(effect.MaxParticles, effect.Seed);
+
+        runtime.Update(effect, 0f, Vector3.Zero, Quaternion.Identity);
+        ParticleSystemSnapshot initial = runtime.GetSnapshot();
+        Assert.That(initial.Count, Is.EqualTo(1));
+        Assert.That(initial.FrameIndices[0], Is.EqualTo(0));
+
+        runtime.Update(effect, 0.11f, Vector3.Zero, Quaternion.Identity);
+        ParticleSystemSnapshot advanced = runtime.GetSnapshot();
+        Assert.That(advanced.FrameIndices[0], Is.EqualTo(1));
+    }
+
+    [Test]
+    public void Runtime_SamplesTextureSheetStartFramesInsideAuthoredRange()
+    {
+        var sheet = new ParticleTextureSheetAsset(
+            "quarks.texture.flame",
+            columns: 4,
+            rows: 2,
+            frameCount: 8,
+            framesPerSecond: 8f,
+            new ParticleIntRange(2, 4),
+            ParticleTextureSheetPlaybackMode.Loop);
+        ParticleEffectAssetData effect = CreateEffect(
+            maxParticles: 12,
+            seed: 222u,
+            emissionRatePerSecond: 0f,
+            burstCount: 12,
+            startLife: new ParticleValueRange(1f, 1f),
+            renderMode: ParticleRenderMode.Billboard,
+            textureSheet: sheet);
+        var runtime = new ParticleSystemRuntime(effect.MaxParticles, effect.Seed);
+
+        runtime.Update(effect, 0f, Vector3.Zero, Quaternion.Identity);
+        ParticleSystemSnapshot snapshot = runtime.GetSnapshot();
+
+        Assert.That(snapshot.Count, Is.EqualTo(12));
+        for (int i = 0; i < snapshot.Count; i++)
+        {
+            Assert.That(snapshot.FrameIndices[i], Is.InRange(2, 4));
+        }
+    }
+
+    [Test]
+    public void ParticleTextureSheetAsset_EvaluateFrame_ClampsAtLastFrameWhenAuthored()
+    {
+        var sheet = new ParticleTextureSheetAsset(
+            "quarks.texture.smoke",
+            columns: 2,
+            rows: 2,
+            frameCount: 4,
+            framesPerSecond: 12f,
+            new ParticleIntRange(2, 2),
+            ParticleTextureSheetPlaybackMode.Clamp);
+
+        Assert.That(sheet.EvaluateFrame(startFrame: 2, ageSeconds: 9f), Is.EqualTo(3));
+    }
+
+    [Test]
     public void ParticleGradientAndCurve_InterpolateBetweenAuthoredKeys()
     {
         var curve = new ParticleScalarCurve(
@@ -135,12 +213,16 @@ public sealed class ParticleSystemRuntimeTests
         int burstCount,
         ParticleValueRange? startLife = null,
         ParticleValueRange? startSpeed = null,
-        in Vector3 gravity = default)
+        in Vector3 gravity = default,
+        ParticleRenderMode renderMode = ParticleRenderMode.Mesh,
+        ParticleTextureSheetAsset? textureSheet = null,
+        float stretchedLengthScale = 0f)
     {
         return new ParticleEffectAssetData(
             PrefabVfxSpawnMode.Once,
             ParticleEmitterShapeKind.Cone,
-            ParticleRenderMode.Mesh,
+            renderMode,
+            ParticleBlendMode.Alpha,
             ParticlePrimitiveKind.Sphere,
             ParticleOverflowPolicy.DropNewest,
             maxParticles,
@@ -169,6 +251,8 @@ public sealed class ParticleSystemRuntimeTests
                 }),
             gravity,
             drag: 0f,
-            worldSpace: true);
+            worldSpace: true,
+            textureSheet,
+            stretchedLengthScale);
     }
 }

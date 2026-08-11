@@ -6,6 +6,7 @@ using Ludots.Core.Presentation.Particles;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
 using NUnit.Framework;
+using Raylib_cs;
 
 namespace Ludots.Tests.RaylibAdapter;
 
@@ -68,46 +69,66 @@ public sealed class RaylibVfxRendererTests
         renderer.BeginFrame();
 
         Assert.That(
-            () => renderer.Draw(in visual, meshes, timeSeconds: 0d),
+            () => renderer.Draw(in visual, meshes, CreateCamera(), timeSeconds: 0d),
             Throws.InvalidOperationException.With.Message.Contains("registered Quarks particle effect"));
     }
 
     [Test]
-    public void Draw_QuarksBillboardParticleMode_ThrowsExplicitUnsupportedRendererError()
+    public void ToRaylibBlendMode_MapsAuthoredQuarksBlendModes()
     {
-        var meshes = new MeshAssetRegistry();
-        MeshAssetDescriptor descriptor = MeshAssetDescriptor.Primitive(0, PrimitiveMeshKind.Sphere);
-        descriptor.VfxEffectData = new VfxEffectAssetData(
-            PrefabVfxSpawnMode.Loop,
-            CreateParticleEffect(ParticleRenderMode.Billboard),
-            particleEffectAssetId: 13);
-        int effectAssetId = meshes.Register("effect.quarks.billboard", in descriptor);
-        PrefabFinalizedVisual visual = CreateVisual(effectAssetId, stableId: 51);
-        var renderer = new RaylibVfxRenderer();
-        renderer.BeginFrame();
-
-        Assert.That(
-            () => renderer.Draw(in visual, meshes, timeSeconds: 0d),
-            Throws.InvalidOperationException.With.Message.Contains("Billboard"));
+        Assert.That(RaylibVfxRenderer.ToRaylibBlendMode(ParticleBlendMode.Alpha), Is.EqualTo(BlendMode.BLEND_ALPHA));
+        Assert.That(RaylibVfxRenderer.ToRaylibBlendMode(ParticleBlendMode.Additive), Is.EqualTo(BlendMode.BLEND_ADDITIVE));
+        Assert.That(RaylibVfxRenderer.ToRaylibBlendMode(ParticleBlendMode.PremultipliedAlpha), Is.EqualTo(BlendMode.BLEND_ALPHA_PREMULTIPLY));
+        Assert.That(RaylibVfxRenderer.ToRaylibBlendMode(ParticleBlendMode.Multiply), Is.EqualTo(BlendMode.BLEND_MULTIPLIED));
     }
 
     [Test]
-    public void Draw_QuarksStretchedBillboardParticleMode_ThrowsExplicitUnsupportedRendererError()
+    public void BuildTextureSourceRectangle_MapsFrameIndexIntoAuthoredSheetGrid()
     {
-        var meshes = new MeshAssetRegistry();
-        MeshAssetDescriptor descriptor = MeshAssetDescriptor.Primitive(0, PrimitiveMeshKind.Sphere);
-        descriptor.VfxEffectData = new VfxEffectAssetData(
-            PrefabVfxSpawnMode.Loop,
-            CreateParticleEffect(ParticleRenderMode.StretchedBillboard),
-            particleEffectAssetId: 14);
-        int effectAssetId = meshes.Register("effect.quarks.stretched_billboard", in descriptor);
-        PrefabFinalizedVisual visual = CreateVisual(effectAssetId, stableId: 52);
-        var renderer = new RaylibVfxRenderer();
-        renderer.BeginFrame();
+        var texture = new Texture2D
+        {
+            id = 77,
+            width = 256,
+            height = 128,
+        };
+        var sheet = new ParticleTextureSheetAsset(
+            "effect.quarks.fire.sheet",
+            columns: 4,
+            rows: 2,
+            frameCount: 8,
+            framesPerSecond: 16f,
+            new ParticleIntRange(0, 0),
+            ParticleTextureSheetPlaybackMode.Loop);
+
+        Rectangle frame = RaylibVfxRenderer.BuildTextureSourceRectangle(texture, sheet, frameIndex: 5);
+
+        Assert.That(frame.x, Is.EqualTo(64f));
+        Assert.That(frame.y, Is.EqualTo(64f));
+        Assert.That(frame.width, Is.EqualTo(64f));
+        Assert.That(frame.height, Is.EqualTo(64f));
+    }
+
+    [Test]
+    public void BuildTextureSourceRectangle_RejectsTextureSizeThatDoesNotMatchSheetGrid()
+    {
+        var texture = new Texture2D
+        {
+            id = 77,
+            width = 250,
+            height = 128,
+        };
+        var sheet = new ParticleTextureSheetAsset(
+            "effect.quarks.fire.sheet",
+            columns: 4,
+            rows: 2,
+            frameCount: 8,
+            framesPerSecond: 16f,
+            new ParticleIntRange(0, 0),
+            ParticleTextureSheetPlaybackMode.Loop);
 
         Assert.That(
-            () => renderer.Draw(in visual, meshes, timeSeconds: 0d),
-            Throws.InvalidOperationException.With.Message.Contains("StretchedBillboard"));
+            () => RaylibVfxRenderer.BuildTextureSourceRectangle(texture, sheet, frameIndex: 0),
+            Throws.InvalidOperationException.With.Message.Contains("divisible"));
     }
 
     private static PrefabFinalizedVisual CreateVisual(int effectAssetId, int stableId)
@@ -138,6 +159,7 @@ public sealed class RaylibVfxRendererTests
             PrefabVfxSpawnMode.Loop,
             ParticleEmitterShapeKind.Cone,
             renderMode,
+            ParticleBlendMode.Alpha,
             ParticlePrimitiveKind.Sphere,
             ParticleOverflowPolicy.DropNewest,
             maxParticles: 16,
@@ -166,6 +188,20 @@ public sealed class RaylibVfxRendererTests
                 }),
             new Vector3(0f, 0.2f, 0f),
             drag: 0.05f,
-            worldSpace: true);
+            worldSpace: true,
+            textureSheet: null,
+            stretchedLengthScale: 0f);
+    }
+
+    private static Camera3D CreateCamera()
+    {
+        return new Camera3D
+        {
+            position = new Vector3(0f, 4f, 8f),
+            target = Vector3.Zero,
+            up = Vector3.UnitY,
+            fovy = 45f,
+            projection = CameraProjection.CAMERA_PERSPECTIVE,
+        };
     }
 }

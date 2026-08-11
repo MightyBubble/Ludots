@@ -48,7 +48,7 @@ namespace Ludots.Client.Raylib.Rendering
         private readonly Dictionary<GpuSkinnedInstanceBatchKey, GpuSkinnedInstanceBatch> _gpuSkinnedInstanceBatches = new();
         private readonly List<GpuSkinnedInstanceBatch> _activeGpuSkinnedInstanceBatches = new(64);
         private readonly RaylibIsmRenderBridge _ismBridge = new RaylibIsmRenderBridge();
-        private readonly RaylibVfxRenderer _vfxRenderer = new();
+        private readonly RaylibVfxRenderer _vfxRenderer;
 
         private readonly Dictionary<int, CachedModel> _modelCache = new Dictionary<int, CachedModel>();
         private readonly Dictionary<int, CachedProceduralMesh> _proceduralMeshCache = new Dictionary<int, CachedProceduralMesh>();
@@ -99,6 +99,7 @@ namespace Ludots.Client.Raylib.Rendering
             _mode = mode;
             _vfs = vfs;
             _materials = materials;
+            _vfxRenderer = new RaylibVfxRenderer(vfs);
             _diagnosticPath = Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_DIAGNOSTIC_PATH");
             _maxModelInstancesPerDraw = ResolveMaxModelInstancesPerDraw();
         }
@@ -495,7 +496,7 @@ namespace Ludots.Client.Raylib.Rendering
                     DrawDecalVisual(in visual);
                     break;
                 case PrefabVisualPartKind.Vfx:
-                    DrawVfxVisual(in visual, meshes, timeSeconds);
+                    DrawVfxVisual(in visual, meshes, camera, timeSeconds);
                     break;
                 case PrefabVisualPartKind.Surface:
                     DrawSurfaceVisual(in visual, camera);
@@ -765,7 +766,7 @@ namespace Ludots.Client.Raylib.Rendering
                     DrawDecalVisual(in visual);
                     break;
                 case PrefabVisualPartKind.Vfx:
-                    DrawVfxVisual(in visual, meshes, timeSeconds);
+                    DrawVfxVisual(in visual, meshes, camera, timeSeconds);
                     break;
                 case PrefabVisualPartKind.Surface:
                     DrawSurfaceVisual(in visual, camera);
@@ -882,9 +883,9 @@ namespace Ludots.Client.Raylib.Rendering
             Rl.DrawLine3D(center, markerTop, edge);
         }
 
-        private void DrawVfxVisual(in PrefabFinalizedVisual visual, MeshAssetRegistry meshes, double timeSeconds)
+        private void DrawVfxVisual(in PrefabFinalizedVisual visual, MeshAssetRegistry meshes, Camera3D camera, double timeSeconds)
         {
-            _vfxRenderer.Draw(in visual, meshes, timeSeconds);
+            _vfxRenderer.Draw(in visual, meshes, camera, timeSeconds);
         }
 
         private void DrawSurfaceVisual(in PrefabFinalizedVisual visual, Camera3D camera)
@@ -2241,6 +2242,8 @@ namespace Ludots.Client.Raylib.Rendering
 
         public void Dispose()
         {
+            _vfxRenderer.Dispose();
+
             foreach (var kvp in _modelCache)
             {
                 if (kvp.Value.Loaded)

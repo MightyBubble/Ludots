@@ -5,6 +5,7 @@
     "spawnMode": "Loop",
     "shape": "Sphere",
     "renderMode": "Mesh",
+    "blendMode": "Additive",
     "primitive": "Sphere",
     "overflowPolicy": "DropNewest",
     "maxParticles": 96,

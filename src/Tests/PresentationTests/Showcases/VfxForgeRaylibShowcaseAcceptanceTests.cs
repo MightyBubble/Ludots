@@ -29,7 +29,10 @@ public sealed class VfxForgeRaylibShowcaseAcceptanceTests
         "vfx_forge.trail_arc",
         "vfx_forge.ember_rain",
         "vfx_forge.shield_dome",
-        "vfx_forge.gravity_well"
+        "vfx_forge.gravity_well",
+        "vfx_forge.flame_flipbook",
+        "vfx_forge.smoke_flipbook",
+        "vfx_forge.stretched_sparks"
     ];
 
     private static readonly string[] VfxAssetKeys =
@@ -39,21 +42,40 @@ public sealed class VfxForgeRaylibShowcaseAcceptanceTests
         "vfx_forge.trail_arc.effect",
         "vfx_forge.ember_rain.effect",
         "vfx_forge.shield_dome.effect",
-        "vfx_forge.gravity_well.effect"
+        "vfx_forge.gravity_well.effect",
+        "vfx_forge.flame_flipbook.effect",
+        "vfx_forge.smoke_flipbook.effect",
+        "vfx_forge.stretched_sparks.effect"
+    ];
+
+    private static readonly string[] TextureAssetKeys =
+    [
+        "vfx_forge.texture.flame_flipbook",
+        "vfx_forge.texture.smoke_flipbook",
+        "vfx_forge.texture.spark_streak_flipbook"
     ];
 
     private static readonly string[] PerformerDefinitionKeys =
     [
         "vfx_forge_root",
+        "vfx_forge_left_pedestal",
+        "vfx_forge_center_pedestal",
+        "vfx_forge_right_pedestal",
         "vfx_forge_spark_column",
         "vfx_forge_energy_orbit",
         "vfx_forge_trail_arc",
         "vfx_forge_ember_pedestal",
         "vfx_forge_shield_pedestal",
         "vfx_forge_gravity_pedestal",
+        "vfx_forge_flame_flipbook_pedestal",
+        "vfx_forge_smoke_flipbook_pedestal",
+        "vfx_forge_stretched_sparks_pedestal",
         "vfx_forge_ember_rain",
         "vfx_forge_shield_dome",
-        "vfx_forge_gravity_well"
+        "vfx_forge_gravity_well",
+        "vfx_forge_flame_flipbook",
+        "vfx_forge_smoke_flipbook",
+        "vfx_forge_stretched_sparks"
     ];
 
     [Test]
@@ -94,6 +116,7 @@ public sealed class VfxForgeRaylibShowcaseAcceptanceTests
             Assert.That(particleId, Is.GreaterThan(0), $"Particle effect '{ParticleEffectKeys[i]}' should be registered.");
             Assert.That(particleEffects.TryGet(particleId, out ParticleEffectAssetData particleEffect), Is.True);
             Assert.That(particleEffect.IsValid, Is.True);
+            Assert.That(particleEffect.BlendMode, Is.EqualTo(ExpectedBlendMode(ParticleEffectKeys[i])));
 
             int vfxAssetId = meshes.GetId(VfxAssetKeys[i]);
             Assert.That(vfxAssetId, Is.GreaterThan(0), $"VFX asset '{VfxAssetKeys[i]}' should be registered.");
@@ -102,6 +125,46 @@ public sealed class VfxForgeRaylibShowcaseAcceptanceTests
             Assert.That(descriptor.VfxEffectData.ParticleEffectAssetId, Is.EqualTo(particleId));
             Assert.That(descriptor.VfxEffectData.ParticleSystem, Is.SameAs(particleEffect));
         }
+
+        foreach (string textureAssetKey in TextureAssetKeys)
+        {
+            int textureAssetId = meshes.GetId(textureAssetKey);
+            Assert.That(textureAssetId, Is.GreaterThan(0), $"Texture billboard asset '{textureAssetKey}' should be registered.");
+            Assert.That(meshes.TryGetDescriptor(textureAssetId, out MeshAssetDescriptor textureDescriptor), Is.True);
+            Assert.That(textureDescriptor.Type, Is.EqualTo(MeshAssetType.Billboard));
+        }
+
+        AssertTextureParticle(
+            particleEffects,
+            "vfx_forge.flame_flipbook",
+            ParticleRenderMode.Billboard,
+            ParticleBlendMode.Additive,
+            "vfx_forge.texture.flame_flipbook",
+            ParticleTextureSheetPlaybackMode.Loop,
+            expectedColumns: 4,
+            expectedRows: 2,
+            expectedFrames: 8);
+        AssertTextureParticle(
+            particleEffects,
+            "vfx_forge.smoke_flipbook",
+            ParticleRenderMode.Billboard,
+            ParticleBlendMode.PremultipliedAlpha,
+            "vfx_forge.texture.smoke_flipbook",
+            ParticleTextureSheetPlaybackMode.Clamp,
+            expectedColumns: 4,
+            expectedRows: 2,
+            expectedFrames: 8);
+        AssertTextureParticle(
+            particleEffects,
+            "vfx_forge.stretched_sparks",
+            ParticleRenderMode.StretchedBillboard,
+            ParticleBlendMode.Additive,
+            "vfx_forge.texture.spark_streak_flipbook",
+            ParticleTextureSheetPlaybackMode.Loop,
+            expectedColumns: 4,
+            expectedRows: 1,
+            expectedFrames: 4);
+        AssertRaylibHostTextureRows(repoRoot);
 
         foreach (string definitionKey in PerformerDefinitionKeys)
         {
@@ -137,7 +200,7 @@ public sealed class VfxForgeRaylibShowcaseAcceptanceTests
             }
         }
 
-        Assert.That(visibleVfxCount, Is.GreaterThanOrEqualTo(ParticleEffectKeys.Length), "The player-facing scene should emit all six VFX performer visuals.");
+        Assert.That(visibleVfxCount, Is.GreaterThanOrEqualTo(ParticleEffectKeys.Length), "The player-facing scene should emit all nine VFX performer visuals.");
     }
 
     [Test]
@@ -178,6 +241,90 @@ public sealed class VfxForgeRaylibShowcaseAcceptanceTests
         return count;
     }
 
+    private static ParticleBlendMode ExpectedBlendMode(string key)
+    {
+        return key switch
+        {
+            "vfx_forge.spark_column" => ParticleBlendMode.Additive,
+            "vfx_forge.energy_orbit" => ParticleBlendMode.Additive,
+            "vfx_forge.trail_arc" => ParticleBlendMode.Additive,
+            "vfx_forge.ember_rain" => ParticleBlendMode.Additive,
+            "vfx_forge.shield_dome" => ParticleBlendMode.Alpha,
+            "vfx_forge.gravity_well" => ParticleBlendMode.Multiply,
+            "vfx_forge.flame_flipbook" => ParticleBlendMode.Additive,
+            "vfx_forge.smoke_flipbook" => ParticleBlendMode.PremultipliedAlpha,
+            "vfx_forge.stretched_sparks" => ParticleBlendMode.Additive,
+            _ => throw new ArgumentOutOfRangeException(nameof(key), key, "Unknown VFX Forge particle effect key."),
+        };
+    }
+
+    private static void AssertTextureParticle(
+        ParticleEffectRegistry particleEffects,
+        string key,
+        ParticleRenderMode expectedRenderMode,
+        ParticleBlendMode expectedBlendMode,
+        string expectedTextureAssetId,
+        ParticleTextureSheetPlaybackMode expectedPlaybackMode,
+        int expectedColumns,
+        int expectedRows,
+        int expectedFrames)
+    {
+        int id = particleEffects.GetId(key);
+        Assert.That(particleEffects.TryGet(id, out ParticleEffectAssetData particleEffect), Is.True);
+        Assert.That(particleEffect.RenderMode, Is.EqualTo(expectedRenderMode));
+        Assert.That(particleEffect.BlendMode, Is.EqualTo(expectedBlendMode));
+        Assert.That(particleEffect.TextureSheet, Is.Not.Null);
+        Assert.That(particleEffect.TextureSheet!.TextureAssetId, Is.EqualTo(expectedTextureAssetId));
+        Assert.That(particleEffect.TextureSheet.PlaybackMode, Is.EqualTo(expectedPlaybackMode));
+        Assert.That(particleEffect.TextureSheet.Columns, Is.EqualTo(expectedColumns));
+        Assert.That(particleEffect.TextureSheet.Rows, Is.EqualTo(expectedRows));
+        Assert.That(particleEffect.TextureSheet.FrameCount, Is.EqualTo(expectedFrames));
+        if (expectedRenderMode == ParticleRenderMode.StretchedBillboard)
+        {
+            Assert.That(particleEffect.StretchedLengthScale, Is.GreaterThan(0f));
+        }
+    }
+
+    private static void AssertRaylibHostTextureRows(string repoRoot)
+    {
+        JsonArray hostAssets = ReadJsonArray(Path.Combine(
+            repoRoot,
+            "mods",
+            "showcases",
+            "vfx_forge_raylib",
+            "VfxForgeRaylibShowcaseMod",
+            "assets",
+            "Presentation",
+            "host_assets.json"));
+
+        AssertRaylibHostTextureRow(
+            hostAssets,
+            "vfx_forge.texture.flame_flipbook.raylib",
+            "vfx_forge.texture.flame_flipbook",
+            "VfxForgeRaylibShowcaseMod:assets/Presentation/textures/flame_flipbook.png");
+        AssertRaylibHostTextureRow(
+            hostAssets,
+            "vfx_forge.texture.smoke_flipbook.raylib",
+            "vfx_forge.texture.smoke_flipbook",
+            "VfxForgeRaylibShowcaseMod:assets/Presentation/textures/smoke_flipbook.png");
+        AssertRaylibHostTextureRow(
+            hostAssets,
+            "vfx_forge.texture.spark_streak_flipbook.raylib",
+            "vfx_forge.texture.spark_streak_flipbook",
+            "VfxForgeRaylibShowcaseMod:assets/Presentation/textures/spark_streak_flipbook.png");
+    }
+
+    private static void AssertRaylibHostTextureRow(JsonArray hostAssets, string rowId, string assetId, string sourceUri)
+    {
+        JsonObject row = RequireObjectById(hostAssets, rowId);
+        Assert.That(row["assetKind"]?.GetValue<string>(), Is.EqualTo("Mesh"));
+        Assert.That(row["assetId"]?.GetValue<string>(), Is.EqualTo(assetId));
+        Assert.That(row["backendId"]?.GetValue<string>(), Is.EqualTo("raylib"));
+        JsonArray sourceUris = row["sourceUris"]?.AsArray()
+            ?? throw new InvalidOperationException($"Host texture row '{rowId}' must declare sourceUris.");
+        Assert.That(sourceUris.Select(node => node?.GetValue<string>()).ToArray(), Is.EqualTo(new[] { sourceUri }));
+    }
+
     private static string FindRepoRoot()
     {
         string current = TestContext.CurrentContext.WorkDirectory;
@@ -199,6 +346,12 @@ public sealed class VfxForgeRaylibShowcaseAcceptanceTests
     {
         return JsonNode.Parse(File.ReadAllText(path))?.AsObject()
             ?? throw new InvalidOperationException($"JSON file '{path}' must contain an object.");
+    }
+
+    private static JsonArray ReadJsonArray(string path)
+    {
+        return JsonNode.Parse(File.ReadAllText(path))?.AsArray()
+            ?? throw new InvalidOperationException($"JSON file '{path}' must contain an array.");
     }
 
     private static JsonObject RequireObjectById(JsonArray? array, string id)

@@ -58,6 +58,7 @@ public sealed class ParticleEffectConfigTests
         Assert.That(descriptor.VfxEffectData.ParticleSystem, Is.Not.Null);
         Assert.That(descriptor.VfxEffectData.ParticleEffectAssetId, Is.EqualTo(particleEffects.GetId("quarks.spark.trail")));
         Assert.That(descriptor.VfxEffectData.ParticleSystem!.RenderMode, Is.EqualTo(ParticleRenderMode.Mesh));
+        Assert.That(descriptor.VfxEffectData.ParticleSystem!.BlendMode, Is.EqualTo(ParticleBlendMode.Alpha));
     }
 
     [Test]
@@ -309,6 +310,101 @@ public sealed class ParticleEffectConfigTests
     }
 
     [Test]
+    public void ParticleEffectConfigLoader_RejectsMissingBlendMode()
+    {
+        JsonObject effect = ValidParticleEffectObject();
+        effect.Remove("blendMode");
+
+        Exception ex = AssertParticleEffectLoadFails(JsonArrayString(effect));
+        Assert.That(ex.Message, Does.Contain("blendMode"));
+    }
+
+    [Test]
+    public void ParticleEffectConfigLoader_LoadsBillboardTextureSheetAndBlendMode()
+    {
+        JsonObject effect = ValidParticleEffectObject();
+        effect["renderMode"] = "Billboard";
+        effect["blendMode"] = "Additive";
+        effect["textureSheet"] = ValidTextureSheetObject();
+
+        string core = CreateCoreRoot("Ludots_ParticleEffectConfig_LoadsTextureSheet");
+        WriteCatalog(core, "Presentation/particle_effects.json", "ArrayById", "id");
+        WriteParticleEffects(core, JsonArrayString(effect));
+
+        var pipeline = CreatePipeline(core);
+        ConfigCatalog catalog = ConfigCatalogLoader.Load(pipeline);
+        var particleEffects = new ParticleEffectRegistry();
+        new ParticleEffectConfigLoader(pipeline, particleEffects).Load(catalog);
+
+        int effectId = particleEffects.GetId("quarks.spark.trail");
+        Assert.That(particleEffects.TryGet(effectId, out ParticleEffectAssetData loaded), Is.True);
+        Assert.That(loaded.RenderMode, Is.EqualTo(ParticleRenderMode.Billboard));
+        Assert.That(loaded.BlendMode, Is.EqualTo(ParticleBlendMode.Additive));
+        Assert.That(loaded.TextureSheet, Is.Not.Null);
+        Assert.That(loaded.TextureSheet!.TextureAssetId, Is.EqualTo("quarks.texture.flame"));
+        Assert.That(loaded.TextureSheet.Columns, Is.EqualTo(4));
+        Assert.That(loaded.TextureSheet.Rows, Is.EqualTo(2));
+        Assert.That(loaded.TextureSheet.FrameCount, Is.EqualTo(8));
+    }
+
+    [Test]
+    public void ParticleEffectConfigLoader_RejectsBillboardWithoutTextureSheet()
+    {
+        JsonObject effect = ValidParticleEffectObject();
+        effect["renderMode"] = "Billboard";
+
+        Exception ex = AssertParticleEffectLoadFails(JsonArrayString(effect));
+        Assert.That(ex.Message, Does.Contain("textureSheet"));
+        Assert.That(ex.Message, Does.Contain("required"));
+    }
+
+    [Test]
+    public void ParticleEffectConfigLoader_RejectsTextureSheetOnMeshParticles()
+    {
+        JsonObject effect = ValidParticleEffectObject();
+        effect["textureSheet"] = ValidTextureSheetObject();
+
+        Exception ex = AssertParticleEffectLoadFails(JsonArrayString(effect));
+        Assert.That(ex.Message, Does.Contain("textureSheet"));
+        Assert.That(ex.Message, Does.Contain("only valid"));
+    }
+
+    [Test]
+    public void ParticleEffectConfigLoader_RejectsTextureSheetStartFrameOutsideFrameCount()
+    {
+        JsonObject effect = ValidParticleEffectObject();
+        effect["renderMode"] = "Billboard";
+        JsonObject sheet = ValidTextureSheetObject();
+        sheet["startFrame"] = new JsonArray(0, 8);
+        effect["textureSheet"] = sheet;
+
+        Exception ex = AssertParticleEffectLoadFails(JsonArrayString(effect));
+        Assert.That(ex.Message, Does.Contain("startFrame"));
+    }
+
+    [Test]
+    public void ParticleEffectConfigLoader_RejectsStretchedBillboardWithoutLengthScale()
+    {
+        JsonObject effect = ValidParticleEffectObject();
+        effect["renderMode"] = "StretchedBillboard";
+        effect["textureSheet"] = ValidTextureSheetObject();
+
+        Exception ex = AssertParticleEffectLoadFails(JsonArrayString(effect));
+        Assert.That(ex.Message, Does.Contain("stretchedLengthScale"));
+    }
+
+    [Test]
+    public void ParticleEffectConfigLoader_RejectsLengthScaleOnNonStretchedParticles()
+    {
+        JsonObject effect = ValidParticleEffectObject();
+        effect["stretchedLengthScale"] = 1.2;
+
+        Exception ex = AssertParticleEffectLoadFails(JsonArrayString(effect));
+        Assert.That(ex.Message, Does.Contain("stretchedLengthScale"));
+        Assert.That(ex.Message, Does.Contain("only valid"));
+    }
+
+    [Test]
     public void ParticleEffectConfigLoader_RejectsNumericEnumString()
     {
         JsonObject effect = ValidParticleEffectObject();
@@ -491,6 +587,7 @@ public sealed class ParticleEffectConfigTests
             "spawnMode": "Loop",
             "shape": "Cone",
             "renderMode": "Mesh",
+            "blendMode": "Alpha",
             "primitive": "Sphere",
             "overflowPolicy": "DropNewest",
             "maxParticles": 96,
@@ -521,5 +618,19 @@ public sealed class ParticleEffectConfigTests
           }
         ]
         """;
+    }
+
+    private static JsonObject ValidTextureSheetObject()
+    {
+        return new JsonObject
+        {
+            ["textureAssetId"] = "quarks.texture.flame",
+            ["columns"] = 4,
+            ["rows"] = 2,
+            ["frameCount"] = 8,
+            ["framesPerSecond"] = 16.0,
+            ["startFrame"] = new JsonArray(0, 0),
+            ["playbackMode"] = "Loop",
+        };
     }
 }

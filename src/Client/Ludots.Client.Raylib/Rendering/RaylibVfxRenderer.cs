@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Numerics;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Particles;
 using Raylib_cs;
@@ -11,11 +13,18 @@ namespace Ludots.Client.Raylib.Rendering
 {
     internal readonly record struct RaylibVfxEffectKey(int StableId, int EffectAssetId);
 
-    public sealed class RaylibVfxRenderer
+    public sealed class RaylibVfxRenderer : IDisposable
     {
+        private readonly IVirtualFileSystem? _vfs;
         private readonly Dictionary<RaylibVfxEffectKey, RaylibParticleEffectInstance> _particleEffects = new();
         private readonly HashSet<RaylibVfxEffectKey> _activeKeys = new();
         private readonly List<RaylibVfxEffectKey> _inactiveKeys = new();
+        private readonly Dictionary<int, CachedTexture> _textureCache = new();
+
+        public RaylibVfxRenderer(IVirtualFileSystem? vfs = null)
+        {
+            _vfs = vfs;
+        }
 
         public int LastDrawnEffectCount { get; private set; }
 
@@ -27,7 +36,7 @@ namespace Ludots.Client.Raylib.Rendering
             LastDrawnEffectCount = 0;
         }
 
-        public void Draw(in PrefabFinalizedVisual visual, MeshAssetRegistry effectAssets, double timeSeconds)
+        public void Draw(in PrefabFinalizedVisual visual, MeshAssetRegistry effectAssets, Camera3D camera, double timeSeconds)
         {
             if (effectAssets == null)
             {
@@ -63,7 +72,7 @@ namespace Ludots.Client.Raylib.Rendering
 
             RaylibParticleEffectInstance particleEffect = GetOrCreateParticleEffect(key, effect.ParticleSystem);
             particleEffect.Update(effect.ParticleSystem, timeSeconds, visual.Position, visual.Rotation);
-            DrawParticleEffect(in visual, effect.ParticleSystem, particleEffect);
+            DrawParticleEffect(in visual, effect.ParticleSystem, particleEffect, effectAssets, camera);
             LastDrawnEffectCount++;
             TotalDrawnEffectCount++;
         }
@@ -104,57 +113,230 @@ namespace Ludots.Client.Raylib.Rendering
             return created;
         }
 
-        private static void DrawParticleEffect(
+        private void DrawParticleEffect(
             in PrefabFinalizedVisual visual,
             ParticleEffectAssetData effect,
-            RaylibParticleEffectInstance particleEffect)
+            RaylibParticleEffectInstance particleEffect,
+            MeshAssetRegistry effectAssets,
+            Camera3D camera)
         {
             ParticleSystemSnapshot snapshot = particleEffect.Runtime.GetSnapshot();
-            if (effect.RenderMode == ParticleRenderMode.Billboard)
-            {
-                throw new InvalidOperationException(
-                    "Particle render mode 'Billboard' requires an authored texture asset and a billboard texture renderer.");
-            }
-
-            if (effect.RenderMode == ParticleRenderMode.StretchedBillboard)
-            {
-                throw new InvalidOperationException(
-                    "Particle render mode 'StretchedBillboard' requires an authored texture asset and a billboard texture renderer.");
-            }
-
             float visualScale = MathF.Max(
                 0.01f,
                 MathF.Max(MathF.Abs(visual.Scale.X), MathF.Max(MathF.Abs(visual.Scale.Y), MathF.Abs(visual.Scale.Z))));
             Quaternion rotation = WorldPlane2D.NormalizeOrIdentity(visual.Rotation);
-            for (int i = 0; i < snapshot.Count; i++)
+            Rl.BeginBlendMode(ToRaylibBlendMode(effect.BlendMode));
+            try
             {
-                Vector3 position = snapshot.Positions[i];
-                Vector3 velocity = snapshot.Velocities[i];
-                if (!effect.WorldSpace)
+                for (int i = 0; i < snapshot.Count; i++)
                 {
-                    position = visual.Position + Vector3.Transform(position, rotation);
-                    velocity = Vector3.TransformNormal(velocity, Matrix4x4.CreateFromQuaternion(rotation));
+                    Vector3 position = snapshot.Positions[i];
+                    Vector3 velocity = snapshot.Velocities[i];
+                    if (!effect.WorldSpace)
+                    {
+                        position = visual.Position + Vector3.Transform(position, rotation);
+                        velocity = Vector3.TransformNormal(velocity, Matrix4x4.CreateFromQuaternion(rotation));
+                    }
+
+                    Vector4 color = ModulateColor(snapshot.Colors[i], visual.Color);
+                    float size = MathF.Max(0.0025f, snapshot.Sizes[i] * visualScale);
+                    Color raylibColor = ToRaylibColor(color);
+                    if (effect.RenderMode == ParticleRenderMode.Trail)
+                    {
+                        Vector3 previous = position - (velocity * 0.08f);
+                        Rl.DrawLine3D(previous, position, raylibColor);
+                        continue;
+                    }
+
+                    if (effect.RenderMode == ParticleRenderMode.Billboard ||
+                        effect.RenderMode == ParticleRenderMode.StretchedBillboard)
+                    {
+                        DrawTexturedBillboard(effect, effectAssets, camera, position, velocity, size, snapshot.FrameIndices[i], raylibColor);
+                        continue;
+                    }
+
+                    if (effect.PrimitiveKind == ParticlePrimitiveKind.Cube)
+                    {
+                        Rl.DrawCube(position, size, size, size, raylibColor);
+                    }
+                    else
+                    {
+                        Rl.DrawSphere(position, size * 0.5f, raylibColor);
+                    }
+                }
+            }
+            finally
+            {
+                Rl.EndBlendMode();
+            }
+        }
+
+        private void DrawTexturedBillboard(
+            ParticleEffectAssetData effect,
+            MeshAssetRegistry effectAssets,
+            Camera3D camera,
+            Vector3 position,
+            Vector3 velocity,
+            float size,
+            int frameIndex,
+            Color tint)
+        {
+            CachedTexture cached = RequireTexture(effect, effectAssets);
+            ParticleTextureSheetAsset textureSheet = effect.TextureSheet
+                ?? throw new InvalidOperationException("Billboard particle render modes require a texture sheet.");
+            Rectangle source = BuildTextureSourceRectangle(cached.Texture, textureSheet, frameIndex);
+            float aspect = source.height > 0f ? source.width / source.height : 1f;
+            float width = size * aspect;
+            float height = size;
+            if (effect.RenderMode == ParticleRenderMode.StretchedBillboard)
+            {
+                height *= MathF.Max(1f, velocity.Length() * effect.StretchedLengthScale);
+            }
+
+            Rl.DrawBillboardRec(camera, cached.Texture, source, position, new Vector2(width, height), tint);
+        }
+
+        private CachedTexture RequireTexture(ParticleEffectAssetData effect, MeshAssetRegistry effectAssets)
+        {
+            ParticleTextureSheetAsset textureSheet = effect.TextureSheet
+                ?? throw new InvalidOperationException("Billboard particle render modes require a texture sheet.");
+            int textureAssetId = effectAssets.GetId(textureSheet.TextureAssetId);
+            if (textureAssetId <= 0 || !effectAssets.TryGetDescriptor(textureAssetId, out MeshAssetDescriptor textureDescriptor))
+            {
+                throw new InvalidOperationException(
+                    $"Particle texture sheet references unknown texture asset '{textureSheet.TextureAssetId}'.");
+            }
+
+            if (textureDescriptor.Type != MeshAssetType.Billboard)
+            {
+                throw new InvalidOperationException(
+                    $"Particle texture sheet asset '{textureSheet.TextureAssetId}' must be a Billboard mesh asset, but was '{textureDescriptor.Type}'.");
+            }
+
+            if (_textureCache.TryGetValue(textureAssetId, out CachedTexture cached))
+            {
+                if (!cached.Loaded)
+                {
+                    throw new InvalidOperationException(
+                        $"Particle texture sheet asset '{textureSheet.TextureAssetId}' could not be loaded by raylib.");
                 }
 
-                Vector4 color = ModulateColor(snapshot.Colors[i], visual.Color);
-                float size = MathF.Max(0.0025f, snapshot.Sizes[i] * visualScale);
-                Color raylibColor = ToRaylibColor(color);
-                if (effect.RenderMode == ParticleRenderMode.Trail)
+                return cached;
+            }
+
+            cached = LoadTexture(textureSheet.TextureAssetId, textureDescriptor);
+            _textureCache.Add(textureAssetId, cached);
+            return cached;
+        }
+
+        private CachedTexture LoadTexture(string textureAssetKey, in MeshAssetDescriptor textureDescriptor)
+        {
+            if (_vfs == null)
+            {
+                throw new InvalidOperationException(
+                    $"Particle texture sheet asset '{textureAssetKey}' requires a virtual file system to resolve Presentation/host_assets.json sourceUris.");
+            }
+
+            if (textureDescriptor.SourceUris == null || textureDescriptor.SourceUris.Length == 0)
+            {
+                throw new InvalidOperationException(
+                    $"Particle texture sheet asset '{textureAssetKey}' requires raylib sourceUris from Presentation/host_assets.json.");
+            }
+
+            for (int i = 0; i < textureDescriptor.SourceUris.Length; i++)
+            {
+                string uri = textureDescriptor.SourceUris[i];
+                if (string.IsNullOrWhiteSpace(uri))
                 {
-                    Vector3 previous = position - (velocity * 0.08f);
-                    Rl.DrawLine3D(previous, position, raylibColor);
                     continue;
                 }
 
-                if (effect.PrimitiveKind == ParticlePrimitiveKind.Cube)
+                if (!_vfs.TryResolveFullPath(uri, out string fullPath))
                 {
-                    Rl.DrawCube(position, size, size, size, raylibColor);
+                    continue;
                 }
-                else
+
+                if (!File.Exists(fullPath))
                 {
-                    Rl.DrawSphere(position, size * 0.5f, raylibColor);
+                    continue;
+                }
+
+                Texture2D texture = Rl.LoadTexture(fullPath);
+                if (texture.id != 0 && texture.width > 0 && texture.height > 0)
+                {
+                    return new CachedTexture(texture, Loaded: true);
+                }
+
+                if (texture.id != 0)
+                {
+                    Rl.UnloadTexture(texture);
                 }
             }
+
+            return new CachedTexture(default, Loaded: false);
+        }
+
+        internal static Rectangle BuildTextureSourceRectangle(
+            Texture2D texture,
+            ParticleTextureSheetAsset textureSheet,
+            int frameIndex)
+        {
+            if (texture.id == 0 || texture.width <= 0 || texture.height <= 0)
+            {
+                throw new InvalidOperationException("Particle texture sheet requires a loaded non-empty texture.");
+            }
+
+            if (textureSheet == null || !textureSheet.IsValid)
+            {
+                throw new ArgumentException("Particle texture sheet must be valid.", nameof(textureSheet));
+            }
+
+            if (texture.width % textureSheet.Columns != 0 ||
+                texture.height % textureSheet.Rows != 0)
+            {
+                throw new InvalidOperationException(
+                    $"Particle texture sheet '{textureSheet.TextureAssetId}' texture size {texture.width}x{texture.height} must be divisible by authored grid {textureSheet.Columns}x{textureSheet.Rows}.");
+            }
+
+            if (frameIndex < 0 || frameIndex >= textureSheet.FrameCount)
+            {
+                throw new ArgumentOutOfRangeException(nameof(frameIndex));
+            }
+
+            int frameWidth = texture.width / textureSheet.Columns;
+            int frameHeight = texture.height / textureSheet.Rows;
+            int column = frameIndex % textureSheet.Columns;
+            int row = frameIndex / textureSheet.Columns;
+            return new Rectangle(
+                column * frameWidth,
+                row * frameHeight,
+                frameWidth,
+                frameHeight);
+        }
+
+        internal static BlendMode ToRaylibBlendMode(ParticleBlendMode blendMode)
+        {
+            return blendMode switch
+            {
+                ParticleBlendMode.Alpha => BlendMode.BLEND_ALPHA,
+                ParticleBlendMode.Additive => BlendMode.BLEND_ADDITIVE,
+                ParticleBlendMode.PremultipliedAlpha => BlendMode.BLEND_ALPHA_PREMULTIPLY,
+                ParticleBlendMode.Multiply => BlendMode.BLEND_MULTIPLIED,
+                _ => throw new ArgumentOutOfRangeException(nameof(blendMode), blendMode, "Unsupported particle blend mode."),
+            };
+        }
+
+        public void Dispose()
+        {
+            foreach (CachedTexture cached in _textureCache.Values)
+            {
+                if (cached.Loaded)
+                {
+                    Rl.UnloadTexture(cached.Texture);
+                }
+            }
+
+            _textureCache.Clear();
         }
 
         internal static RaylibVfxEffectKey ComposeEffectKey(int stableId, int effectAssetId)
@@ -213,5 +395,7 @@ namespace Ludots.Client.Raylib.Rendering
                 _hasLastTime = true;
             }
         }
+
+        private readonly record struct CachedTexture(Texture2D Texture, bool Loaded);
     }
 }
