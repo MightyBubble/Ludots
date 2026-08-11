@@ -73,8 +73,10 @@ public sealed class UiPlayerAggregateGraphMvpShowcaseAcceptanceTests
             Assert.That(initial.OreTotal, Is.EqualTo(expectedOre).Within(0.001f));
             Assert.That(initial.CrystalTotal, Is.EqualTo(expectedCrystal).Within(0.001f));
             Assert.That(initial.BuildingShutDown, Is.False);
-            Assert.That(AcceptanceUiEvidenceWriter.ExtractUiText(uiRoot), Does.Contain(config.Presentation.Title));
-            Assert.That(AcceptanceUiEvidenceWriter.ExtractUiText(uiRoot), Does.Contain("tally Query graph"));
+            IReadOnlyList<string> uiText = AcceptanceUiEvidenceWriter.ExtractUiText(uiRoot);
+            Assert.That(uiText, Does.Contain(config.Presentation.Title));
+            Assert.That(string.Join('\n', uiText), Does.Contain("GraphOutputValueStore"));
+            Assert.That(string.Join('\n', uiText), Does.Contain(config.GraphId));
             Assert.That(
                 uiRoot.Scene!.FindByElementId(UiPlayerAggregateGraphMvpIds.PanelRootElementId),
                 Is.Not.Null);
