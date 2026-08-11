@@ -115,7 +115,8 @@ Instance = templateId + scope（多开；Router 另册）
 
 ## 4. 场景
 
-1. **实体信息卡**：变量 `hp` / `lastKill` / `curState`；图从选中集合取实体再读属性；Reactive `TState` 三字段同构。  
+1. **实体信息卡**：变量 `hp` / `lastKill` / `curState`；选中实体后 — `LoadAttribute`(血量)、`ReadBlackboard`(上次击杀)、`ReadGameplayTag`→`LookupTagDisplayText`(状态文案)；Reactive `TState` 三字段同构。  
+   > 债务：L0 今日仅有 BB Float/Int/Entity 与 `HasTag`；Text BB 读与 Tag→文案查表节点需按作者意图补齐，禁止用 Attribute 假冒。  
 2. **资源总览条**：变量 `oreTotal` / `crystalTotal`；Query 聚合 → Summary；WebUI `aggregateProjection`。  
 3. **切换表面**：同一模板把 `surfaceKind` 从 Reactive 换成 WebUI，变量与图不变，仅右侧投影形态变。
 

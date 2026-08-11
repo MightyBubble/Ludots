@@ -263,6 +263,18 @@ export function UiPanelAuthoringPage() {
                       </div>
                     ) : null}
                   </dl>
+                  {activeVar === 'lastKill' ? (
+                    <p className="upa-debt">
+                      作者意图：实体 BB 读上次击杀文案。现有 L0 仅有 Float/Int/Entity 黑板读；Text
+                      BB 读需补 op（勿用 Attribute 假装）。
+                    </p>
+                  ) : null}
+                  {activeVar === 'curState' ? (
+                    <p className="upa-debt">
+                      作者意图：读当前 GameplayTag → LookupTagDisplayText
+                      查表成文案。HasTag 只做是否拥有；完整「取态 tag + 查表」需补节点。
+                    </p>
+                  ) : null}
                 </div>
               ) : null}
             </div>

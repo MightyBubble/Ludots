@@ -671,3 +671,14 @@
 .upa-edge.is-lit {
   filter: drop-shadow(0 0 4px rgba(212, 180, 131, 0.55));
 }
+
+.upa-debt {
+  margin: 10px 0 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(217, 120, 92, 0.45);
+  background: rgba(217, 120, 92, 0.1);
+  color: #f0c4b6;
+  font-size: 0.74rem;
+  line-height: 1.4;
+}
