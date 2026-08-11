@@ -16,8 +16,7 @@
         {
           "variableId": "hp",
           "sourceKind": "graphOutput",
-          "graphOutputKey": "panel.entity_info.hp",
-          "attributeId": "attribute.health.current"
+          "graphOutputKey": "panel.entity_info.hp"
         },
         {
           "variableId": "lastKill",
