@@ -11,6 +11,7 @@ using Ludots.Core.Modding;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Scripting;
+using Ludots.Core.UI.PanelProjection;
 using Ludots.UI;
 using UiPlayerAggregateGraphMvpShowcaseMod.Input;
 using UiPlayerAggregateGraphMvpShowcaseMod.UI;
@@ -200,30 +201,25 @@ public sealed class UiPlayerAggregateGraphMvpRuntime
 
         GraphOutputValueStore values = engine.GetService(CoreServiceKeys.GraphOutputValueStore)
             ?? throw new InvalidOperationException("GraphOutputValueStore is missing.");
-        _oreTotal = RequireSummaryFloat(values, _owner, _config.SummaryKeys.OreTotal);
-        _crystalTotal = RequireSummaryFloat(values, _owner, _config.SummaryKeys.CrystalTotal);
+        var reader = new PanelProjectionReader(engine.World, values);
+        _oreTotal = reader.ResolveFloat(
+            _owner,
+            new PanelVariableBinding(
+                "oreTotal",
+                PanelBindingSourceKind.AggregateProjection,
+                attributeId: null,
+                graphOutputKey: _config.SummaryKeys.OreTotal));
+        _crystalTotal = reader.ResolveFloat(
+            _owner,
+            new PanelVariableBinding(
+                "crystalTotal",
+                PanelBindingSourceKind.AggregateProjection,
+                attributeId: null,
+                graphOutputKey: _config.SummaryKeys.CrystalTotal));
         if (!_buildingShutDown)
         {
             _status = "Tally graph projections are live on the resource strip.";
         }
-    }
-
-    private static float RequireSummaryFloat(GraphOutputValueStore values, Entity owner, string key)
-    {
-        if (!values.TryGet(owner, key, out GraphOutputValueHandle handle) ||
-            !values.TryGetView(handle, out GraphOutputValueView view))
-        {
-            throw new InvalidOperationException(
-                $"GraphOutputValueStore is missing required summary key '{key}' on owner #{owner.Id}. Silent zero is forbidden.");
-        }
-
-        if (view.Kind != GraphOutputValueKind.Float)
-        {
-            throw new InvalidOperationException(
-                $"GraphOutputValueStore key '{key}' must be Float, found '{view.Kind}'.");
-        }
-
-        return view.FloatValue;
     }
 
     private UiPlayerAggregateGraphMvpConfig EnsureConfig(GameEngine engine)
