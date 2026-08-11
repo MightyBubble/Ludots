@@ -14,11 +14,27 @@ export type PanelVariable = {
   valueKind: ValueKind;
 };
 
-export type GraphStep = {
+/** Authoring-canvas node (Shader-graph style). Panel sink is UI sugar → outputs/bindings. */
+export type CanvasNode = {
   id: string;
   title: string;
   detail: string;
-  kind: 'source' | 'op' | 'const' | 'sink';
+  kind: 'source' | 'op' | 'const' | 'panel';
+  x: number;
+  y: number;
+  /** output port ids on this node (default: ["out"]) */
+  outs?: string[];
+  /** input port ids (panel sink lists variable pins) */
+  ins?: string[];
+};
+
+export type CanvasEdge = {
+  id: string;
+  from: string;
+  fromPort: string;
+  to: string;
+  toPort: string;
+  valueKind?: ValueKind;
 };
 
 export type PanelTemplate = {
@@ -27,16 +43,16 @@ export type PanelTemplate = {
   blurb: string;
   surfaceKind: SurfaceKind;
   variables: PanelVariable[];
-  steps: GraphStep[];
-  /** stepId -> variableId edges into sinks */
-  stepToVariable: Record<string, string>;
+  nodes: CanvasNode[];
+  edges: CanvasEdge[];
   bindings: Record<
     string,
     {
       sourceKind: SourceKind;
       attributeId?: string;
       graphOutputKey?: string;
-      graphStepId?: string;
+      /** producer canvas node id */
+      fromNodeId?: string;
     }
   >;
   copyTemplate: string;
@@ -72,65 +88,141 @@ export const TEMPLATES: PanelTemplate[] = [
   {
     id: 'panel.entity_info',
     name: '实体信息卡',
-    blurb: '选中单位 → 读血量与状态 → 填面板变量',
+    blurb: '一张图多出口 → Panel 多引脚（像 Shader Graph）',
     surfaceKind: 'reactive',
     variables: [
       { id: 'hp', label: '血量', valueKind: 'Float' },
       { id: 'lastKill', label: '上一次击杀', valueKind: 'Text' },
       { id: 'curState', label: '当前状态', valueKind: 'Text' },
     ],
-    steps: [
+    nodes: [
       {
         id: 'col',
         title: 'EntityCollection.Selected',
         detail: 'collectionKey',
         kind: 'source',
+        x: 40,
+        y: 120,
+        outs: ['key'],
       },
       {
         id: 'getCol',
         title: 'QueryFromCollection',
         detail: 'list',
         kind: 'op',
+        x: 220,
+        y: 120,
+        ins: ['key'],
+        outs: ['list'],
       },
       {
         id: 'idx',
-        title: 'ConstInt 0',
-        detail: '主选中下标',
+        title: '0',
+        detail: 'ConstInt',
         kind: 'const',
+        x: 220,
+        y: 260,
+        outs: ['value'],
       },
       {
         id: 'at',
         title: 'TargetListGet',
-        detail: 'entity',
+        detail: '主选中实体',
         kind: 'op',
+        x: 420,
+        y: 160,
+        ins: ['list', 'index'],
+        outs: ['entity'],
       },
       {
-        id: 'attr',
+        id: 'hpAttr',
         title: 'LoadAttribute',
-        detail: 'attribute.health.current',
+        detail: 'health.current',
         kind: 'op',
+        x: 620,
+        y: 40,
+        ins: ['entity'],
+        outs: ['value'],
       },
       {
-        id: 'sinkHp',
-        title: '变量槽 hp',
-        detail: 'output → hp',
-        kind: 'sink',
+        id: 'killAttr',
+        title: 'LoadAttribute',
+        detail: 'combat.last_kill_name',
+        kind: 'op',
+        x: 620,
+        y: 160,
+        ins: ['entity'],
+        outs: ['value'],
+      },
+      {
+        id: 'stateAttr',
+        title: 'LoadAttribute',
+        detail: 'combat.state_label',
+        kind: 'op',
+        x: 620,
+        y: 280,
+        ins: ['entity'],
+        outs: ['value'],
+      },
+      {
+        id: 'panel',
+        title: 'Panel · EntityInfoCard',
+        detail: '多引脚汇入（作者糖 → outputs/bindings）',
+        kind: 'panel',
+        x: 860,
+        y: 80,
+        ins: ['hp', 'lastKill', 'curState'],
       },
     ],
-    stepToVariable: { sinkHp: 'hp' },
+    edges: [
+      { id: 'e1', from: 'col', fromPort: 'key', to: 'getCol', toPort: 'key' },
+      { id: 'e2', from: 'getCol', fromPort: 'list', to: 'at', toPort: 'list' },
+      { id: 'e3', from: 'idx', fromPort: 'value', to: 'at', toPort: 'index', valueKind: 'Int' },
+      { id: 'e4', from: 'at', fromPort: 'entity', to: 'hpAttr', toPort: 'entity' },
+      { id: 'e5', from: 'at', fromPort: 'entity', to: 'killAttr', toPort: 'entity' },
+      { id: 'e6', from: 'at', fromPort: 'entity', to: 'stateAttr', toPort: 'entity' },
+      {
+        id: 'e7',
+        from: 'hpAttr',
+        fromPort: 'value',
+        to: 'panel',
+        toPort: 'hp',
+        valueKind: 'Float',
+      },
+      {
+        id: 'e8',
+        from: 'killAttr',
+        fromPort: 'value',
+        to: 'panel',
+        toPort: 'lastKill',
+        valueKind: 'Text',
+      },
+      {
+        id: 'e9',
+        from: 'stateAttr',
+        fromPort: 'value',
+        to: 'panel',
+        toPort: 'curState',
+        valueKind: 'Text',
+      },
+    ],
     bindings: {
       hp: {
         sourceKind: 'graphOutput',
         graphOutputKey: 'panel.entity_info.hp',
-        graphStepId: 'attr',
+        fromNodeId: 'hpAttr',
         attributeId: 'attribute.health.current',
       },
       lastKill: {
-        sourceKind: 'singleAttribute',
+        sourceKind: 'graphOutput',
+        graphOutputKey: 'panel.entity_info.lastKill',
+        fromNodeId: 'killAttr',
         attributeId: 'attribute.combat.last_kill_name',
       },
       curState: {
-        sourceKind: 'derivedAttribute',
+        sourceKind: 'graphOutput',
+        graphOutputKey: 'panel.entity_info.curState',
+        fromNodeId: 'stateAttr',
         attributeId: 'attribute.combat.state_label',
       },
     },
@@ -139,67 +231,102 @@ export const TEMPLATES: PanelTemplate[] = [
   {
     id: 'panel.player_aggregate',
     name: '玩家资源总览',
-    blurb: '势力建筑合计 → 顶栏变量（跨实体必须走图）',
+    blurb: '一张 Query 图双出口 → Panel 双引脚',
     surfaceKind: 'webui',
     variables: [
       { id: 'oreTotal', label: '矿石合计', valueKind: 'Float' },
       { id: 'crystalTotal', label: '晶体合计', valueKind: 'Float' },
     ],
-    steps: [
+    nodes: [
       {
         id: 'owner',
         title: 'LoadCaster',
         detail: '势力 Owner',
         kind: 'source',
+        x: 40,
+        y: 140,
+        outs: ['entity'],
       },
       {
         id: 'all',
         title: 'QueryAllMapEntities',
         detail: 'list',
         kind: 'op',
+        x: 220,
+        y: 140,
+        outs: ['list'],
       },
       {
         id: 'team',
         title: 'QueryFilterTeam',
-        detail: 'self team',
+        detail: 'self',
         kind: 'op',
+        x: 420,
+        y: 140,
+        ins: ['list'],
+        outs: ['list'],
       },
       {
         id: 'sumOre',
         title: 'AggSumAttribute',
         detail: 'Resource.Ore',
         kind: 'op',
+        x: 620,
+        y: 60,
+        ins: ['list'],
+        outs: ['value'],
       },
       {
         id: 'sumCrystal',
         title: 'AggSumAttribute',
         detail: 'Resource.Crystal',
         kind: 'op',
+        x: 620,
+        y: 220,
+        ins: ['list'],
+        outs: ['value'],
       },
       {
-        id: 'sinkOre',
-        title: '变量槽 oreTotal',
-        detail: 'Summary key',
-        kind: 'sink',
-      },
-      {
-        id: 'sinkCrystal',
-        title: '变量槽 crystalTotal',
-        detail: 'Summary key',
-        kind: 'sink',
+        id: 'panel',
+        title: 'Panel · ResourceStrip',
+        detail: '多引脚汇入（作者糖 → Summary keys）',
+        kind: 'panel',
+        x: 860,
+        y: 100,
+        ins: ['oreTotal', 'crystalTotal'],
       },
     ],
-    stepToVariable: { sinkOre: 'oreTotal', sinkCrystal: 'crystalTotal' },
+    edges: [
+      { id: 'a1', from: 'all', fromPort: 'list', to: 'team', toPort: 'list' },
+      { id: 'a2', from: 'team', fromPort: 'list', to: 'sumOre', toPort: 'list' },
+      { id: 'a3', from: 'team', fromPort: 'list', to: 'sumCrystal', toPort: 'list' },
+      {
+        id: 'a4',
+        from: 'sumOre',
+        fromPort: 'value',
+        to: 'panel',
+        toPort: 'oreTotal',
+        valueKind: 'Float',
+      },
+      {
+        id: 'a5',
+        from: 'sumCrystal',
+        fromPort: 'value',
+        to: 'panel',
+        toPort: 'crystalTotal',
+        valueKind: 'Float',
+      },
+    ],
     bindings: {
       oreTotal: {
         sourceKind: 'aggregateProjection',
         graphOutputKey: 'ui.panel.player.ore.total',
-        graphStepId: 'sumOre',
+        fromNodeId: 'sumOre',
       },
       crystalTotal: {
         sourceKind: 'aggregateProjection',
         graphOutputKey: 'ui.panel.player.crystal.total',
-        graphStepId: 'sumCrystal',
+        fromNodeId: 'sumCrystal',
       },
     },
     copyTemplate: '矿 {oreTotal} · 晶 {crystalTotal}',
@@ -225,4 +352,18 @@ export function csharpType(kind: ValueKind): string {
     case 'Text':
       return 'string';
   }
+}
+
+export function pinY(node: CanvasNode, port: string, side: 'in' | 'out'): number {
+  const ports = side === 'in' ? node.ins ?? [] : node.outs ?? ['out'];
+  const idx = Math.max(0, ports.indexOf(port));
+  const n = Math.max(1, ports.length);
+  const top = node.kind === 'panel' ? 56 : 44;
+  const span = node.kind === 'panel' ? 28 : 22;
+  return node.y + top + idx * span;
+}
+
+export function pinX(node: CanvasNode, side: 'in' | 'out'): number {
+  const w = node.kind === 'panel' ? 220 : 168;
+  return side === 'in' ? node.x : node.x + w;
 }
