@@ -7,7 +7,8 @@ It reads/writes:
 
 `mods/showcases/ui_player_aggregate_graph_mvp/UiPlayerAggregateGraphMvpShowcaseMod/assets/GAS/graphs.json`
 
-and validates through the Bridge with `GraphControlFlowCompiler.CompileWithOutputs` for CF documents or `GraphCompiler.CompileWithOutputs` for legacy next-chain graphs (no mock compiler).
+and validates through the Bridge with `GraphControlFlowCompiler.CompileWithOutputs` for CF documents.
+`Kind: Query` / `Kind: Script` Next-chain graphs are rejected (same contract as load-time `GraphProgramConfigLoader`).
 
 ## Run
 
@@ -40,8 +41,8 @@ Toolbar link: **GAS Graphs** (top-left of the map editor).
 |--------|------|---------|
 | `GET` | `/api/mods/{modId}/gas/graphs` | List `{ id, kind }` from `assets/GAS/graphs.json` |
 | `GET` | `/api/mods/{modId}/gas/graphs/{graphId}` | Full graph JSON; CF documents include `controlEdges`/`valueEdges` |
-| `PUT` | `/api/mods/{modId}/gas/graphs/{graphId}` | Replace graph in array (atomic temp+replace), accepting CF or legacy JSON |
-| `POST` | `/api/mods/{modId}/gas/graphs/{graphId}/validate` | Body graph JSON or empty (load file) → CF compiler when `controlEdges`/`valueEdges` are present, otherwise legacy compiler |
+| `PUT` | `/api/mods/{modId}/gas/graphs/{graphId}` | Replace graph in array (atomic temp+replace); Query/Script must be CF pin IR |
+| `POST` | `/api/mods/{modId}/gas/graphs/{graphId}/validate` | Body graph JSON or empty (load file) → CF compiler when `controlEdges`/`valueEdges` are present; Query/Script Next-chain fails closed |
 
 Validate response shape:
 
@@ -62,6 +63,7 @@ Validate response shape:
 - `QueryFilterTeam` uses an explicit `list` value input and either a `teamId` node field or `teamId` int value input.
 - `AggSumAttribute` uses an explicit `list` value input and an `attribute` node field.
 - The Bridge rejects mixed CF and legacy JSON (`controlEdges`/`valueEdges` plus `nodes[].next`).
+- Query Next-chain without CF edges fails closed (use `controlEdges`/`valueEdges`).
 
 ## curl smoke
 

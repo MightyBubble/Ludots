@@ -114,11 +114,92 @@ type ValidateResponse = {
 const DEFAULT_MOD_ID = 'UiPlayerAggregateGraphMvpShowcaseMod';
 const DEFAULT_GRAPH_ID = 'ui.panel.player.resource.aggregate';
 
+const LIST_INPUT_OPS = new Set([
+  'QueryFilterTeam',
+  'QueryFilterTemplate',
+  'QueryFilterTagAny',
+  'QueryFilterTagNone',
+  'QueryFilterAttributeRange',
+  'QuerySortByAttribute',
+  'RelationshipFilterMetricRange',
+  'RelationshipFilterFlag',
+  'RelationshipSortByMetric',
+  'AggCount',
+  'AggSumAttribute',
+  'AggAverageAttribute',
+  'AggMaxAttribute',
+  'AggMinAttribute',
+  'AggMaxEntityByAttribute',
+  'AggMinEntityByAttribute',
+  'RelationshipAggSumMetric',
+  'RelationshipAggMaxMetric',
+  'RelationshipAggAverageMetric',
+  'RelationshipAggMinMetric',
+  'RelationshipAggMaxEntityByMetric',
+  'RelationshipAggMinEntityByMetric',
+]);
+
+const LIST_OUTPUT_OPS = new Set([
+  'QueryAllMapEntities',
+  'QueryFromCollection',
+  'QueryFilterTeam',
+  'QueryFilterTemplate',
+  'QueryFilterTagAny',
+  'QueryFilterTagNone',
+  'QueryFilterAttributeRange',
+  'QuerySortByAttribute',
+  'RelationshipQueryOutgoing',
+  'RelationshipQueryIncoming',
+  'RelationshipQueryMutual',
+  'RelationshipFilterMetricRange',
+  'RelationshipFilterFlag',
+  'RelationshipSortByMetric',
+]);
+
+const VALUE_OUTPUT_OPS = new Set([
+  'ConstFloat',
+  'ConstInt',
+  'LoadCaster',
+  'AggCount',
+  'AggSumAttribute',
+  'AggAverageAttribute',
+  'AggMaxAttribute',
+  'AggMinAttribute',
+  'AggMaxEntityByAttribute',
+  'AggMinEntityByAttribute',
+  'RelationshipAggSumMetric',
+  'RelationshipAggMaxMetric',
+  'RelationshipAggAverageMetric',
+  'RelationshipAggMinMetric',
+  'RelationshipAggMaxEntityByMetric',
+  'RelationshipAggMinEntityByMetric',
+]);
+
+const SOURCE_INPUT_OPS = new Set([
+  'QueryFromCollection',
+  'RelationshipQueryOutgoing',
+  'RelationshipQueryIncoming',
+  'RelationshipQueryMutual',
+  'RelationshipFilterMetricRange',
+  'RelationshipFilterFlag',
+  'RelationshipSortByMetric',
+  'RelationshipAggSumMetric',
+  'RelationshipAggMaxMetric',
+  'RelationshipAggAverageMetric',
+  'RelationshipAggMinMetric',
+  'RelationshipAggMaxEntityByMetric',
+  'RelationshipAggMinEntityByMetric',
+]);
+
+const RANGE_INPUT_OPS = new Set(['QueryFilterAttributeRange', 'RelationshipFilterMetricRange']);
+
 function GasNode({ data, selected }: NodeProps<Node<GasNodeData>>) {
-  const hasListInput = data.op === 'QueryFilterTeam' || data.op === 'AggSumAttribute';
+  const hasListInput = LIST_INPUT_OPS.has(data.op);
   const hasTeamInput = data.op === 'QueryFilterTeam';
-  const valueOutput = data.op === 'LoadCaster' || data.op === 'AggSumAttribute' ? 'value' : null;
-  const listOutput = data.op === 'QueryAllMapEntities' || data.op === 'QueryFilterTeam' ? 'list' : null;
+  const hasSourceInput = SOURCE_INPUT_OPS.has(data.op);
+  const hasRangeInputs = RANGE_INPUT_OPS.has(data.op);
+  const valueOutput = VALUE_OUTPUT_OPS.has(data.op) ? 'value' : null;
+  const listOutput = LIST_OUTPUT_OPS.has(data.op) ? 'list' : null;
 
   return (
     <div
@@ -130,8 +211,17 @@ function GasNode({ data, selected }: NodeProps<Node<GasNodeData>>) {
       {hasListInput ? (
         <Handle id="list" type="target" position={Position.Left} className="!top-12 !bg-emerald-400" />
       ) : null}
+      {hasSourceInput ? (
+        <Handle id="source" type="target" position={Position.Left} className="!top-20 !bg-violet-400" />
+      ) : null}
       {hasTeamInput ? (
         <Handle id="teamId" type="target" position={Position.Left} className="!top-20 !bg-amber-400" />
+      ) : null}
+      {hasRangeInputs ? (
+        <>
+          <Handle id="min" type="target" position={Position.Left} className="!top-28 !bg-fuchsia-400" />
+          <Handle id="max" type="target" position={Position.Left} className="!top-36 !bg-fuchsia-400" />
+        </>
       ) : null}
       <div className="font-semibold text-slate-100">{data.label}</div>
       <div className="mt-1 text-[10px] text-sky-300">{data.op}</div>
@@ -139,7 +229,9 @@ function GasNode({ data, selected }: NodeProps<Node<GasNodeData>>) {
         <span className="rounded bg-sky-950 px-1 text-sky-300">next</span>
         {valueOutput ? <span className="rounded bg-violet-950 px-1 text-violet-300">{valueOutput}</span> : null}
         {listOutput ? <span className="rounded bg-emerald-950 px-1 text-emerald-300">{listOutput}</span> : null}
+        {hasSourceInput ? <span className="rounded bg-violet-950 px-1 text-violet-300">source</span> : null}
         {hasTeamInput ? <span className="rounded bg-amber-950 px-1 text-amber-300">teamId</span> : null}
+        {hasRangeInputs ? <span className="rounded bg-fuchsia-950 px-1 text-fuchsia-300">min/max</span> : null}
       </div>
       <Handle id="next" type="source" position={Position.Right} className="!top-4 !bg-sky-400" />
       {valueOutput ? (

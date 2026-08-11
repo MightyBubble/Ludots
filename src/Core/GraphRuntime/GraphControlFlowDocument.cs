@@ -4,7 +4,7 @@ using Ludots.Core.NodeLibraries.GASGraph;
 namespace Ludots.Core.GraphRuntime
 {
     /// <summary>
-    /// Authored Script and Query (phase 1) document with explicit control and value edges.
+    /// Authored Script and Query document with explicit control and value edges.
     /// Compiles to <see cref="GraphInstruction"/> via GASGraph control-flow compiler.
     /// </summary>
     public sealed class GraphControlFlowDocument
@@ -23,10 +23,19 @@ namespace Ludots.Core.GraphRuntime
         public string Id { get; set; } = string.Empty;
         public string Op { get; set; } = string.Empty;
         public int IntValue { get; set; }
+        public float FloatValue { get; set; }
+        public bool BoolValue { get; set; }
         /// <summary>Optional target Script graph id for InvokeScript (patched or literal).</summary>
         public int GraphId { get; set; }
         public string? Attribute { get; set; }
+        public string? Tag { get; set; }
+        public string? Template { get; set; }
+        public string? CollectionKey { get; set; }
+        public string? RelationshipType { get; set; }
+        public string? Metric { get; set; }
+        public string? Flag { get; set; }
         public int TeamId { get; set; }
+        public bool Descending { get; set; }
         /// <summary>
         /// When &gt;= 0, forces this node's int output (or MoveInt source via Imm) onto a fixed int register.
         /// Used for loop-carried values without inventing a second memory space.
@@ -83,6 +92,9 @@ namespace Ludots.Core.GraphRuntime
         public const string Value = "value";
         public const string List = "list";
         public const string TeamId = "teamId";
+        public const string Source = "source";
+        public const string Min = "min";
+        public const string Max = "max";
         public const string A = "a";
         public const string B = "b";
         public const string Condition = "condition";

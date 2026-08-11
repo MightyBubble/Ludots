@@ -41,6 +41,16 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 return (null, GraphOutputSchema.Empty, diagnostics);
             }
 
+            if (graphKind == GraphKind.Query)
+            {
+                diagnostics.Add(new GraphDiagnostic(
+                    GraphDiagnosticSeverity.Error,
+                    GraphDiagnosticCodes.UnsupportedGraphKind,
+                    "GraphKind.Query cannot be compiled by GraphCompiler (Next-chain). Use GraphControlFlowCompiler for Query documents with controlEdges/valueEdges.",
+                    cfg.Id ?? string.Empty));
+                return (null, GraphOutputSchema.Empty, diagnostics);
+            }
+
             var nodesById = new Dictionary<string, GraphNodeConfig>(StringComparer.OrdinalIgnoreCase);
             for (int i = 0; i < cfg.Nodes.Count; i++)
             {

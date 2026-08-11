@@ -96,6 +96,120 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
+        public void GraphCompiler_RejectsQueryKind_OnNextChainPath()
+        {
+            var cfg = new GraphConfig
+            {
+                Id = "bad.query.next",
+                Kind = "Query",
+                Entry = "allMap",
+                Nodes =
+                {
+                    new GraphNodeConfig
+                    {
+                        Id = "allMap",
+                        Op = nameof(GraphNodeOp.QueryAllMapEntities)
+                    }
+                }
+            };
+
+            var (package, _, diagnostics) = GraphCompiler.CompileWithOutputs(cfg);
+
+            Assert.That(package.HasValue, Is.False);
+            Assert.That(diagnostics, Has.Some.Matches<GraphDiagnostic>(d =>
+                d.Severity == GraphDiagnosticSeverity.Error &&
+                d.Code == GraphDiagnosticCodes.UnsupportedGraphKind &&
+                d.Message.Contains("GraphControlFlowCompiler", StringComparison.Ordinal)));
+        }
+
+        [Test]
+        public void CompileWithOutputs_CityEconomyControlFlowQuery_CompilesFullOpSurface()
+        {
+            var doc = new GraphControlFlowDocument
+            {
+                Id = "tests.graph.4x.cityEconomy",
+                Kind = "Query",
+                Entry = "minProduction",
+                Nodes = new List<GraphControlFlowNode>
+                {
+                    new() { Id = "minProduction", Op = nameof(GraphNodeOp.ConstFloat), FloatValue = 0 },
+                    new() { Id = "maxProduction", Op = nameof(GraphNodeOp.ConstFloat), FloatValue = 100 },
+                    new() { Id = "allMapEntities", Op = nameof(GraphNodeOp.QueryAllMapEntities) },
+                    new() { Id = "team", Op = nameof(GraphNodeOp.QueryFilterTeam), TeamId = 1 },
+                    new() { Id = "template", Op = nameof(GraphNodeOp.QueryFilterTemplate), Template = "tests.graph.city" },
+                    new() { Id = "notBlocked", Op = nameof(GraphNodeOp.QueryFilterTagNone), Tag = "Tests.GraphQuery.Blocked" },
+                    new() { Id = "productionRange", Op = nameof(GraphNodeOp.QueryFilterAttributeRange), Attribute = "Health" },
+                    new() { Id = "sortProduction", Op = nameof(GraphNodeOp.QuerySortByAttribute), Attribute = "Health", Descending = true },
+                    new() { Id = "countCities", Op = nameof(GraphNodeOp.AggCount) },
+                    new() { Id = "sumProduction", Op = nameof(GraphNodeOp.AggSumAttribute), Attribute = "Health" },
+                    new() { Id = "bestProductionCity", Op = nameof(GraphNodeOp.AggMaxEntityByAttribute), Attribute = "Health" }
+                },
+                ControlEdges = new List<GraphControlFlowEdge>
+                {
+                    new("minProduction", GraphControlFlowPorts.Next, "maxProduction"),
+                    new("maxProduction", GraphControlFlowPorts.Next, "allMapEntities"),
+                    new("allMapEntities", GraphControlFlowPorts.Next, "team"),
+                    new("team", GraphControlFlowPorts.Next, "template"),
+                    new("template", GraphControlFlowPorts.Next, "notBlocked"),
+                    new("notBlocked", GraphControlFlowPorts.Next, "productionRange"),
+                    new("productionRange", GraphControlFlowPorts.Next, "sortProduction"),
+                    new("sortProduction", GraphControlFlowPorts.Next, "countCities"),
+                    new("countCities", GraphControlFlowPorts.Next, "sumProduction"),
+                    new("sumProduction", GraphControlFlowPorts.Next, "bestProductionCity")
+                },
+                ValueEdges = new List<GraphControlFlowValueEdge>
+                {
+                    new("allMapEntities", GraphControlFlowPorts.List, "team", GraphControlFlowPorts.List),
+                    new("team", GraphControlFlowPorts.List, "template", GraphControlFlowPorts.List),
+                    new("template", GraphControlFlowPorts.List, "notBlocked", GraphControlFlowPorts.List),
+                    new("notBlocked", GraphControlFlowPorts.List, "productionRange", GraphControlFlowPorts.List),
+                    new("minProduction", GraphControlFlowPorts.Value, "productionRange", GraphControlFlowPorts.Min),
+                    new("maxProduction", GraphControlFlowPorts.Value, "productionRange", GraphControlFlowPorts.Max),
+                    new("productionRange", GraphControlFlowPorts.List, "sortProduction", GraphControlFlowPorts.List),
+                    new("sortProduction", GraphControlFlowPorts.List, "countCities", GraphControlFlowPorts.List),
+                    new("sortProduction", GraphControlFlowPorts.List, "sumProduction", GraphControlFlowPorts.List),
+                    new("sortProduction", GraphControlFlowPorts.List, "bestProductionCity", GraphControlFlowPorts.List)
+                },
+                Outputs = new List<GraphOutputConfig>
+                {
+                    new()
+                    {
+                        Id = "cities",
+                        Destination = nameof(GraphOutputDestinationKind.EntityCollection),
+                        Type = nameof(GraphOutputValueKind.TargetList),
+                        CollectionKey = "tests.graph.collection.cities",
+                        Role = "Display"
+                    },
+                    new()
+                    {
+                        Id = "cityCount",
+                        Destination = nameof(GraphOutputDestinationKind.Summary),
+                        Type = nameof(GraphOutputValueKind.Int),
+                        Source = "countCities",
+                        Key = "tests.graph.cityCount"
+                    },
+                    new()
+                    {
+                        Id = "bestProductionCity",
+                        Destination = nameof(GraphOutputDestinationKind.Summary),
+                        Type = nameof(GraphOutputValueKind.Entity),
+                        Source = "bestProductionCity",
+                        Key = "tests.graph.bestProductionCity"
+                    }
+                }
+            };
+
+            var (package, schema, diagnostics) = GraphControlFlowCompiler.CompileWithOutputs(doc);
+
+            Assert.That(package.HasValue, Is.True, FormatDiagnostics(diagnostics));
+            Assert.That(schema.Bindings, Has.Some.Matches<GraphOutputBinding>(b =>
+                b.Destination == GraphOutputDestinationKind.EntityCollection &&
+                b.CollectionKey == "tests.graph.collection.cities"));
+            Assert.That(package!.Value.Program.Select(i => (GraphNodeOp)i.Op), Does.Contain(GraphNodeOp.QueryFilterAttributeRange));
+            Assert.That(package.Value.Program.Select(i => (GraphNodeOp)i.Op), Does.Contain(GraphNodeOp.AggMaxEntityByAttribute));
+        }
+
+        [Test]
         public void Compile_ScriptKindRejectsQueryAllMapEntities()
         {
             var doc = new GraphControlFlowDocument

@@ -353,10 +353,25 @@ namespace Ludots.Tests.GAS
             int collectionKeyId = graph.Collections.KeyRegistry.GetId(GraphCollectionKey);
             Assert.That(collectionKeyId, Is.GreaterThan(0));
             Assert.That(graph.Programs.TryGetProgram(graphId, out ReadOnlySpan<GraphInstruction> program), Is.True);
-            Assert.That(program.Length, Is.EqualTo(2));
-            Assert.That((GraphNodeOp)program[0].Op, Is.EqualTo(GraphNodeOp.LoadCaster));
-            Assert.That((GraphNodeOp)program[1].Op, Is.EqualTo(GraphNodeOp.QueryFromCollection));
-            Assert.That(program[1].Imm, Is.EqualTo(collectionKeyId));
+            int loadCasterIndex = -1;
+            int fromCollectionIndex = -1;
+            for (int i = 0; i < program.Length; i++)
+            {
+                var op = (GraphNodeOp)program[i].Op;
+                if (op == GraphNodeOp.LoadCaster && loadCasterIndex < 0)
+                {
+                    loadCasterIndex = i;
+                }
+
+                if (op == GraphNodeOp.QueryFromCollection && fromCollectionIndex < 0)
+                {
+                    fromCollectionIndex = i;
+                }
+            }
+
+            Assert.That(loadCasterIndex, Is.GreaterThanOrEqualTo(0));
+            Assert.That(fromCollectionIndex, Is.GreaterThanOrEqualTo(0));
+            Assert.That(program[fromCollectionIndex].Imm, Is.EqualTo(collectionKeyId));
 
             var descriptor = EntityCollectionDescriptor.Create(
                 GraphCollectionKey,
@@ -691,18 +706,190 @@ namespace Ludots.Tests.GAS
     "kind": "Query",
     "entry": "minProduction",
     "nodes": [
-      { "id": "minProduction", "op": "ConstFloat", "floatValue": 0, "next": "maxProduction" },
-      { "id": "maxProduction", "op": "ConstFloat", "floatValue": 100, "next": "allMapEntities" },
-      { "id": "allMapEntities", "op": "QueryAllMapEntities", "next": "team" },
-      { "id": "team", "op": "QueryFilterTeam", "teamId": 1, "next": "template" },
-      { "id": "template", "op": "QueryFilterTemplate", "template": "tests.graph.city", "next": "notBlocked" },
-      { "id": "notBlocked", "op": "QueryFilterTagNone", "tag": "Tests.GraphQuery.Blocked", "next": "productionRange" },
-      { "id": "productionRange", "op": "QueryFilterAttributeRange", "attribute": "Health", "inputs": [ "minProduction", "maxProduction" ], "next": "sortProduction" },
-      { "id": "sortProduction", "op": "QuerySortByAttribute", "attribute": "Health", "descending": true, "next": "countCities" },
-      { "id": "countCities", "op": "AggCount", "next": "sumProduction" },
-      { "id": "sumProduction", "op": "AggSumAttribute", "attribute": "Health", "next": "sumGold" },
-      { "id": "sumGold", "op": "AggSumAttribute", "attribute": "Mana", "next": "bestProductionCity" },
-      { "id": "bestProductionCity", "op": "AggMaxEntityByAttribute", "attribute": "Health" }
+      {
+        "id": "minProduction",
+        "op": "ConstFloat",
+        "floatValue": 0
+      },
+      {
+        "id": "maxProduction",
+        "op": "ConstFloat",
+        "floatValue": 100
+      },
+      {
+        "id": "allMapEntities",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "team",
+        "op": "QueryFilterTeam",
+        "teamId": 1
+      },
+      {
+        "id": "template",
+        "op": "QueryFilterTemplate",
+        "template": "tests.graph.city"
+      },
+      {
+        "id": "notBlocked",
+        "op": "QueryFilterTagNone",
+        "tag": "Tests.GraphQuery.Blocked"
+      },
+      {
+        "id": "productionRange",
+        "op": "QueryFilterAttributeRange",
+        "attribute": "Health"
+      },
+      {
+        "id": "sortProduction",
+        "op": "QuerySortByAttribute",
+        "attribute": "Health",
+        "descending": true
+      },
+      {
+        "id": "countCities",
+        "op": "AggCount"
+      },
+      {
+        "id": "sumProduction",
+        "op": "AggSumAttribute",
+        "attribute": "Health"
+      },
+      {
+        "id": "sumGold",
+        "op": "AggSumAttribute",
+        "attribute": "Mana"
+      },
+      {
+        "id": "bestProductionCity",
+        "op": "AggMaxEntityByAttribute",
+        "attribute": "Health"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "minProduction",
+        "fromPort": "next",
+        "to": "maxProduction"
+      },
+      {
+        "from": "maxProduction",
+        "fromPort": "next",
+        "to": "allMapEntities"
+      },
+      {
+        "from": "allMapEntities",
+        "fromPort": "next",
+        "to": "team"
+      },
+      {
+        "from": "team",
+        "fromPort": "next",
+        "to": "template"
+      },
+      {
+        "from": "template",
+        "fromPort": "next",
+        "to": "notBlocked"
+      },
+      {
+        "from": "notBlocked",
+        "fromPort": "next",
+        "to": "productionRange"
+      },
+      {
+        "from": "productionRange",
+        "fromPort": "next",
+        "to": "sortProduction"
+      },
+      {
+        "from": "sortProduction",
+        "fromPort": "next",
+        "to": "countCities"
+      },
+      {
+        "from": "countCities",
+        "fromPort": "next",
+        "to": "sumProduction"
+      },
+      {
+        "from": "sumProduction",
+        "fromPort": "next",
+        "to": "sumGold"
+      },
+      {
+        "from": "sumGold",
+        "fromPort": "next",
+        "to": "bestProductionCity"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "allMapEntities",
+        "fromPort": "list",
+        "to": "team",
+        "toPort": "list"
+      },
+      {
+        "from": "team",
+        "fromPort": "list",
+        "to": "template",
+        "toPort": "list"
+      },
+      {
+        "from": "template",
+        "fromPort": "list",
+        "to": "notBlocked",
+        "toPort": "list"
+      },
+      {
+        "from": "notBlocked",
+        "fromPort": "list",
+        "to": "productionRange",
+        "toPort": "list"
+      },
+      {
+        "from": "minProduction",
+        "fromPort": "value",
+        "to": "productionRange",
+        "toPort": "min"
+      },
+      {
+        "from": "maxProduction",
+        "fromPort": "value",
+        "to": "productionRange",
+        "toPort": "max"
+      },
+      {
+        "from": "productionRange",
+        "fromPort": "list",
+        "to": "sortProduction",
+        "toPort": "list"
+      },
+      {
+        "from": "sortProduction",
+        "fromPort": "list",
+        "to": "countCities",
+        "toPort": "list"
+      },
+      {
+        "from": "sortProduction",
+        "fromPort": "list",
+        "to": "sumProduction",
+        "toPort": "list"
+      },
+      {
+        "from": "sortProduction",
+        "fromPort": "list",
+        "to": "sumGold",
+        "toPort": "list"
+      },
+      {
+        "from": "sortProduction",
+        "fromPort": "list",
+        "to": "bestProductionCity",
+        "toPort": "list"
+      }
     ],
     "outputs": [
       {
@@ -714,10 +901,34 @@ namespace Ludots.Tests.GAS
         "title": "Cities",
         "summary": "Filtered 4X economy cities"
       },
-      { "id": "cityCount", "destination": "Summary", "type": "Int", "source": "countCities", "key": "tests.graph.cityCount" },
-      { "id": "totalProduction", "destination": "Summary", "type": "Float", "source": "sumProduction", "key": "tests.graph.totalProduction" },
-      { "id": "totalGold", "destination": "Summary", "type": "Float", "source": "sumGold", "key": "tests.graph.totalGold" },
-      { "id": "bestProductionCity", "destination": "Summary", "type": "Entity", "source": "bestProductionCity", "key": "tests.graph.bestProductionCity" }
+      {
+        "id": "cityCount",
+        "destination": "Summary",
+        "type": "Int",
+        "source": "countCities",
+        "key": "tests.graph.cityCount"
+      },
+      {
+        "id": "totalProduction",
+        "destination": "Summary",
+        "type": "Float",
+        "source": "sumProduction",
+        "key": "tests.graph.totalProduction"
+      },
+      {
+        "id": "totalGold",
+        "destination": "Summary",
+        "type": "Float",
+        "source": "sumGold",
+        "key": "tests.graph.totalGold"
+      },
+      {
+        "id": "bestProductionCity",
+        "destination": "Summary",
+        "type": "Entity",
+        "source": "bestProductionCity",
+        "key": "tests.graph.bestProductionCity"
+      }
     ]
   }
 ]
@@ -730,9 +941,32 @@ namespace Ludots.Tests.GAS
     "kind": "Query",
     "entry": "owner",
     "nodes": [
-      { "id": "owner", "op": "LoadCaster", "next": "fromCollection" },
-      { "id": "fromCollection", "op": "QueryFromCollection", "collectionKey": "tests.graph.collection.cities", "inputs": [ "owner" ] }
-    ]
+      {
+        "id": "owner",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "fromCollection",
+        "op": "QueryFromCollection",
+        "collectionKey": "tests.graph.collection.cities"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "owner",
+        "fromPort": "next",
+        "to": "fromCollection"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "owner",
+        "fromPort": "value",
+        "to": "fromCollection",
+        "toPort": "source"
+      }
+    ],
+    "outputs": []
   }
 ]
 """;

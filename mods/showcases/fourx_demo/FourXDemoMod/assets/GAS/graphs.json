@@ -4,18 +4,190 @@
     "kind": "Query",
     "entry": "minProduction",
     "nodes": [
-      { "id": "minProduction", "op": "ConstFloat", "floatValue": 0, "next": "maxProduction" },
-      { "id": "maxProduction", "op": "ConstFloat", "floatValue": 1000, "next": "allMapEntities" },
-      { "id": "allMapEntities", "op": "QueryAllMapEntities", "next": "teamCities" },
-      { "id": "teamCities", "op": "QueryFilterTeam", "teamId": 2, "next": "federationCities" },
-      { "id": "federationCities", "op": "QueryFilterTemplate", "template": "fourx_federation_city", "next": "notBlockaded" },
-      { "id": "notBlockaded", "op": "QueryFilterTagNone", "tag": "State.4X.Blockaded", "next": "productionRange" },
-      { "id": "productionRange", "op": "QueryFilterAttributeRange", "attribute": "Production", "inputs": [ "minProduction", "maxProduction" ], "next": "sortProduction" },
-      { "id": "sortProduction", "op": "QuerySortByAttribute", "attribute": "Production", "descending": true, "next": "cityCount" },
-      { "id": "cityCount", "op": "AggCount", "next": "totalProduction" },
-      { "id": "totalProduction", "op": "AggSumAttribute", "attribute": "Production", "next": "totalGold" },
-      { "id": "totalGold", "op": "AggSumAttribute", "attribute": "Gold", "next": "bestProductionCity" },
-      { "id": "bestProductionCity", "op": "AggMaxEntityByAttribute", "attribute": "Production" }
+      {
+        "id": "minProduction",
+        "op": "ConstFloat",
+        "floatValue": 0
+      },
+      {
+        "id": "maxProduction",
+        "op": "ConstFloat",
+        "floatValue": 1000
+      },
+      {
+        "id": "allMapEntities",
+        "op": "QueryAllMapEntities"
+      },
+      {
+        "id": "teamCities",
+        "op": "QueryFilterTeam",
+        "teamId": 2
+      },
+      {
+        "id": "federationCities",
+        "op": "QueryFilterTemplate",
+        "template": "fourx_federation_city"
+      },
+      {
+        "id": "notBlockaded",
+        "op": "QueryFilterTagNone",
+        "tag": "State.4X.Blockaded"
+      },
+      {
+        "id": "productionRange",
+        "op": "QueryFilterAttributeRange",
+        "attribute": "Production"
+      },
+      {
+        "id": "sortProduction",
+        "op": "QuerySortByAttribute",
+        "attribute": "Production",
+        "descending": true
+      },
+      {
+        "id": "cityCount",
+        "op": "AggCount"
+      },
+      {
+        "id": "totalProduction",
+        "op": "AggSumAttribute",
+        "attribute": "Production"
+      },
+      {
+        "id": "totalGold",
+        "op": "AggSumAttribute",
+        "attribute": "Gold"
+      },
+      {
+        "id": "bestProductionCity",
+        "op": "AggMaxEntityByAttribute",
+        "attribute": "Production"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "minProduction",
+        "fromPort": "next",
+        "to": "maxProduction"
+      },
+      {
+        "from": "maxProduction",
+        "fromPort": "next",
+        "to": "allMapEntities"
+      },
+      {
+        "from": "allMapEntities",
+        "fromPort": "next",
+        "to": "teamCities"
+      },
+      {
+        "from": "teamCities",
+        "fromPort": "next",
+        "to": "federationCities"
+      },
+      {
+        "from": "federationCities",
+        "fromPort": "next",
+        "to": "notBlockaded"
+      },
+      {
+        "from": "notBlockaded",
+        "fromPort": "next",
+        "to": "productionRange"
+      },
+      {
+        "from": "productionRange",
+        "fromPort": "next",
+        "to": "sortProduction"
+      },
+      {
+        "from": "sortProduction",
+        "fromPort": "next",
+        "to": "cityCount"
+      },
+      {
+        "from": "cityCount",
+        "fromPort": "next",
+        "to": "totalProduction"
+      },
+      {
+        "from": "totalProduction",
+        "fromPort": "next",
+        "to": "totalGold"
+      },
+      {
+        "from": "totalGold",
+        "fromPort": "next",
+        "to": "bestProductionCity"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "allMapEntities",
+        "fromPort": "list",
+        "to": "teamCities",
+        "toPort": "list"
+      },
+      {
+        "from": "teamCities",
+        "fromPort": "list",
+        "to": "federationCities",
+        "toPort": "list"
+      },
+      {
+        "from": "federationCities",
+        "fromPort": "list",
+        "to": "notBlockaded",
+        "toPort": "list"
+      },
+      {
+        "from": "notBlockaded",
+        "fromPort": "list",
+        "to": "productionRange",
+        "toPort": "list"
+      },
+      {
+        "from": "minProduction",
+        "fromPort": "value",
+        "to": "productionRange",
+        "toPort": "min"
+      },
+      {
+        "from": "maxProduction",
+        "fromPort": "value",
+        "to": "productionRange",
+        "toPort": "max"
+      },
+      {
+        "from": "productionRange",
+        "fromPort": "list",
+        "to": "sortProduction",
+        "toPort": "list"
+      },
+      {
+        "from": "sortProduction",
+        "fromPort": "list",
+        "to": "cityCount",
+        "toPort": "list"
+      },
+      {
+        "from": "sortProduction",
+        "fromPort": "list",
+        "to": "totalProduction",
+        "toPort": "list"
+      },
+      {
+        "from": "sortProduction",
+        "fromPort": "list",
+        "to": "totalGold",
+        "toPort": "list"
+      },
+      {
+        "from": "sortProduction",
+        "fromPort": "list",
+        "to": "bestProductionCity",
+        "toPort": "list"
+      }
     ],
     "outputs": [
       {
@@ -27,10 +199,34 @@
         "title": "Federation Cities",
         "summary": "Team 2 cities filtered by template, state tag, and production."
       },
-      { "id": "cityCount", "destination": "Summary", "type": "Int", "source": "cityCount", "key": "fourx.summary.cityCount" },
-      { "id": "totalProduction", "destination": "Summary", "type": "Float", "source": "totalProduction", "key": "fourx.summary.totalProduction" },
-      { "id": "totalGold", "destination": "Summary", "type": "Float", "source": "totalGold", "key": "fourx.summary.totalGold" },
-      { "id": "bestProductionCity", "destination": "Summary", "type": "Entity", "source": "bestProductionCity", "key": "fourx.summary.bestProductionCity" }
+      {
+        "id": "cityCount",
+        "destination": "Summary",
+        "type": "Int",
+        "source": "cityCount",
+        "key": "fourx.summary.cityCount"
+      },
+      {
+        "id": "totalProduction",
+        "destination": "Summary",
+        "type": "Float",
+        "source": "totalProduction",
+        "key": "fourx.summary.totalProduction"
+      },
+      {
+        "id": "totalGold",
+        "destination": "Summary",
+        "type": "Float",
+        "source": "totalGold",
+        "key": "fourx.summary.totalGold"
+      },
+      {
+        "id": "bestProductionCity",
+        "destination": "Summary",
+        "type": "Entity",
+        "source": "bestProductionCity",
+        "key": "fourx.summary.bestProductionCity"
+      }
     ]
   },
   {
@@ -38,18 +234,239 @@
     "kind": "Query",
     "entry": "source",
     "nodes": [
-      { "id": "source", "op": "LoadCaster", "next": "minTrust" },
-      { "id": "minTrust", "op": "ConstFloat", "floatValue": 40, "next": "maxTrust" },
-      { "id": "maxTrust", "op": "ConstFloat", "floatValue": 100, "next": "outgoingDiplomacy" },
-      { "id": "outgoingDiplomacy", "op": "RelationshipQueryOutgoing", "relationshipType": "Diplomacy", "inputs": [ "source" ], "next": "trusted" },
-      { "id": "trusted", "op": "RelationshipFilterMetricRange", "relationshipType": "Diplomacy", "metric": "Trust", "inputs": [ "source", "minTrust", "maxTrust" ], "next": "tradePacts" },
-      { "id": "tradePacts", "op": "RelationshipFilterFlag", "relationshipType": "Diplomacy", "flag": "TradePact", "inputs": [ "source" ], "next": "sortTrust" },
-      { "id": "sortTrust", "op": "RelationshipSortByMetric", "relationshipType": "Diplomacy", "metric": "Trust", "inputs": [ "source" ], "descending": true, "next": "partnerCount" },
-      { "id": "partnerCount", "op": "AggCount", "next": "trustTotal" },
-      { "id": "trustTotal", "op": "RelationshipAggSumMetric", "relationshipType": "Diplomacy", "metric": "Trust", "inputs": [ "source" ], "next": "trustAverage" },
-      { "id": "trustAverage", "op": "RelationshipAggAverageMetric", "relationshipType": "Diplomacy", "metric": "Trust", "inputs": [ "source" ], "next": "tradeValueTotal" },
-      { "id": "tradeValueTotal", "op": "RelationshipAggSumMetric", "relationshipType": "Diplomacy", "metric": "TradeValue", "inputs": [ "source" ], "next": "bestPartner" },
-      { "id": "bestPartner", "op": "RelationshipAggMaxEntityByMetric", "relationshipType": "Diplomacy", "metric": "Trust", "inputs": [ "source" ] }
+      {
+        "id": "source",
+        "op": "LoadCaster"
+      },
+      {
+        "id": "minTrust",
+        "op": "ConstFloat",
+        "floatValue": 40
+      },
+      {
+        "id": "maxTrust",
+        "op": "ConstFloat",
+        "floatValue": 100
+      },
+      {
+        "id": "outgoingDiplomacy",
+        "op": "RelationshipQueryOutgoing",
+        "relationshipType": "Diplomacy"
+      },
+      {
+        "id": "trusted",
+        "op": "RelationshipFilterMetricRange",
+        "relationshipType": "Diplomacy",
+        "metric": "Trust"
+      },
+      {
+        "id": "tradePacts",
+        "op": "RelationshipFilterFlag",
+        "relationshipType": "Diplomacy",
+        "flag": "TradePact"
+      },
+      {
+        "id": "sortTrust",
+        "op": "RelationshipSortByMetric",
+        "relationshipType": "Diplomacy",
+        "metric": "Trust",
+        "descending": true
+      },
+      {
+        "id": "partnerCount",
+        "op": "AggCount"
+      },
+      {
+        "id": "trustTotal",
+        "op": "RelationshipAggSumMetric",
+        "relationshipType": "Diplomacy",
+        "metric": "Trust"
+      },
+      {
+        "id": "trustAverage",
+        "op": "RelationshipAggAverageMetric",
+        "relationshipType": "Diplomacy",
+        "metric": "Trust"
+      },
+      {
+        "id": "tradeValueTotal",
+        "op": "RelationshipAggSumMetric",
+        "relationshipType": "Diplomacy",
+        "metric": "TradeValue"
+      },
+      {
+        "id": "bestPartner",
+        "op": "RelationshipAggMaxEntityByMetric",
+        "relationshipType": "Diplomacy",
+        "metric": "Trust"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "source",
+        "fromPort": "next",
+        "to": "minTrust"
+      },
+      {
+        "from": "minTrust",
+        "fromPort": "next",
+        "to": "maxTrust"
+      },
+      {
+        "from": "maxTrust",
+        "fromPort": "next",
+        "to": "outgoingDiplomacy"
+      },
+      {
+        "from": "outgoingDiplomacy",
+        "fromPort": "next",
+        "to": "trusted"
+      },
+      {
+        "from": "trusted",
+        "fromPort": "next",
+        "to": "tradePacts"
+      },
+      {
+        "from": "tradePacts",
+        "fromPort": "next",
+        "to": "sortTrust"
+      },
+      {
+        "from": "sortTrust",
+        "fromPort": "next",
+        "to": "partnerCount"
+      },
+      {
+        "from": "partnerCount",
+        "fromPort": "next",
+        "to": "trustTotal"
+      },
+      {
+        "from": "trustTotal",
+        "fromPort": "next",
+        "to": "trustAverage"
+      },
+      {
+        "from": "trustAverage",
+        "fromPort": "next",
+        "to": "tradeValueTotal"
+      },
+      {
+        "from": "tradeValueTotal",
+        "fromPort": "next",
+        "to": "bestPartner"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "source",
+        "fromPort": "value",
+        "to": "outgoingDiplomacy",
+        "toPort": "source"
+      },
+      {
+        "from": "outgoingDiplomacy",
+        "fromPort": "list",
+        "to": "trusted",
+        "toPort": "list"
+      },
+      {
+        "from": "source",
+        "fromPort": "value",
+        "to": "trusted",
+        "toPort": "source"
+      },
+      {
+        "from": "minTrust",
+        "fromPort": "value",
+        "to": "trusted",
+        "toPort": "min"
+      },
+      {
+        "from": "maxTrust",
+        "fromPort": "value",
+        "to": "trusted",
+        "toPort": "max"
+      },
+      {
+        "from": "trusted",
+        "fromPort": "list",
+        "to": "tradePacts",
+        "toPort": "list"
+      },
+      {
+        "from": "source",
+        "fromPort": "value",
+        "to": "tradePacts",
+        "toPort": "source"
+      },
+      {
+        "from": "tradePacts",
+        "fromPort": "list",
+        "to": "sortTrust",
+        "toPort": "list"
+      },
+      {
+        "from": "source",
+        "fromPort": "value",
+        "to": "sortTrust",
+        "toPort": "source"
+      },
+      {
+        "from": "sortTrust",
+        "fromPort": "list",
+        "to": "partnerCount",
+        "toPort": "list"
+      },
+      {
+        "from": "sortTrust",
+        "fromPort": "list",
+        "to": "trustTotal",
+        "toPort": "list"
+      },
+      {
+        "from": "source",
+        "fromPort": "value",
+        "to": "trustTotal",
+        "toPort": "source"
+      },
+      {
+        "from": "sortTrust",
+        "fromPort": "list",
+        "to": "trustAverage",
+        "toPort": "list"
+      },
+      {
+        "from": "source",
+        "fromPort": "value",
+        "to": "trustAverage",
+        "toPort": "source"
+      },
+      {
+        "from": "sortTrust",
+        "fromPort": "list",
+        "to": "tradeValueTotal",
+        "toPort": "list"
+      },
+      {
+        "from": "source",
+        "fromPort": "value",
+        "to": "tradeValueTotal",
+        "toPort": "source"
+      },
+      {
+        "from": "sortTrust",
+        "fromPort": "list",
+        "to": "bestPartner",
+        "toPort": "list"
+      },
+      {
+        "from": "source",
+        "fromPort": "value",
+        "to": "bestPartner",
+        "toPort": "source"
+      }
     ],
     "outputs": [
       {
@@ -61,11 +478,41 @@
         "title": "Trade Partners",
         "summary": "Outgoing Diplomacy links filtered by relation metric and relation flag."
       },
-      { "id": "partnerCount", "destination": "Summary", "type": "Int", "source": "partnerCount", "key": "fourx.summary.tradePartnerCount" },
-      { "id": "trustTotal", "destination": "Summary", "type": "Int", "source": "trustTotal", "key": "fourx.summary.tradePartnerTrustTotal" },
-      { "id": "trustAverage", "destination": "Summary", "type": "Int", "source": "trustAverage", "key": "fourx.summary.tradePartnerTrustAverage" },
-      { "id": "tradeValueTotal", "destination": "Summary", "type": "Int", "source": "tradeValueTotal", "key": "fourx.summary.tradeValueTotal" },
-      { "id": "bestPartner", "destination": "Summary", "type": "Entity", "source": "bestPartner", "key": "fourx.summary.bestTradePartner" }
+      {
+        "id": "partnerCount",
+        "destination": "Summary",
+        "type": "Int",
+        "source": "partnerCount",
+        "key": "fourx.summary.tradePartnerCount"
+      },
+      {
+        "id": "trustTotal",
+        "destination": "Summary",
+        "type": "Int",
+        "source": "trustTotal",
+        "key": "fourx.summary.tradePartnerTrustTotal"
+      },
+      {
+        "id": "trustAverage",
+        "destination": "Summary",
+        "type": "Int",
+        "source": "trustAverage",
+        "key": "fourx.summary.tradePartnerTrustAverage"
+      },
+      {
+        "id": "tradeValueTotal",
+        "destination": "Summary",
+        "type": "Int",
+        "source": "tradeValueTotal",
+        "key": "fourx.summary.tradeValueTotal"
+      },
+      {
+        "id": "bestPartner",
+        "destination": "Summary",
+        "type": "Entity",
+        "source": "bestPartner",
+        "key": "fourx.summary.bestTradePartner"
+      }
     ]
   }
 ]

@@ -16,11 +16,11 @@ Ludots 的图能力分成三层，对标 Paradox **FlowCanvas（细流程）+ No
 L2 BehaviorTree / HFSM / LevelDirector ← 粗节点拓扑（Core runtime 已落地）
         │ BT ScriptSlice(GraphId) / HFSM GraphProgramHfsmHost / Level RunScript
 L1 Script / Query / Effect / Score / … ← 细节点流程（GraphInstruction）
-        │ Script 与 Query(phase 1) 文档走 GraphControlFlowCompiler pin IR
+        │ Script 与 Query 文档走 GraphControlFlowCompiler pin IR
 L0 GraphInstruction + handler table + Execute / ExecuteSlice
 ```
 
-说明：`GAS/graphs.json` 的旧 Next 链编译器**拒绝** `Kind: Script`。Script 作者文档走 `GraphControlFlowDocument` + `GraphControlFlowCompiler`。Query phase 1 也可用同一 pin IR，当前支持 `LoadCaster`、`QueryAllMapEntities`、`QueryFilterTeam`、`AggSumAttribute` 与 Summary outputs，编译为同一套 L0 `GraphInstruction`。旧 Next-chain Query 仍在迁移窗口内双读，供尚未迁移的现有 Mod 继续加载；新 Query 作者文档应使用 `controlEdges`/`valueEdges`，不得把 `nodes[].next` 与 CF 边混写。`Execute`/`ExecuteSlice` 均要求调用方提供 CallStack（禁止堆分配兜底）。BT 条件 Script 前由 `IBehaviorTreeSensorFeed` 写入 I[0]。
+说明：`GAS/graphs.json` 的旧 Next 链编译器**拒绝** `Kind: Script` 与 `Kind: Query`。Script / Query 作者文档一律走 `GraphControlFlowDocument` + `GraphControlFlowCompiler`（`controlEdges` / `valueEdges`），编译为同一套 L0 `GraphInstruction`。不得把 `nodes[].next` 与 CF 边混写。Query 真引脚覆盖仓库在用的检索/过滤/聚合/关系查询 ops，以及 Summary / EntityCollection outputs。`Execute`/`ExecuteSlice` 均要求调用方提供 CallStack（禁止堆分配兜底）。BT 条件 Script 前由 `IBehaviorTreeSensorFeed` 写入 I[0]。
 
 ## 3. 详情
 
@@ -40,11 +40,11 @@ L0 GraphInstruction + handler table + Execute / ExecuteSlice
 
 跨图复用：`InvokeScript`（本切片只允许目标 Script **不含 Yield**）。
 
-### Query ControlFlow phase 1
+### Query ControlFlow
 
-- `QueryAllMapEntities.list -> QueryFilterTeam.list -> AggSumAttribute.list` 等列表流必须用 `valueEdges` 显式连接，控制 `next` 不隐含 TargetList。
-- `QueryFilterTeam` 的队伍来源必须二选一：节点字段 `teamId`，或 `teamId` int value pin；不能同时提供，也不能都缺失。
-- `AggSumAttribute` 以节点字段 `attribute` 解析符号并输出 Float，可绑定到 Summary outputs。
+- 列表流（`Query*` / `Relationship*` 过滤与聚合）必须用 `valueEdges` 的 `list` 显式连接；控制边 `next` 不隐含 TargetList。
+- 实体输入用 `source`；区间过滤用 `min` / `max`；`QueryFilterTeam` 的队伍来源必须二选一：节点字段 `teamId`，或 `teamId` int value pin。
+- 标量 / 实体结果绑 Summary；当前 TargetList 结果绑 EntityCollection（`collectionKey` 必填）。
 
 ### L2 HFSM 绑定合同
 - **转移上配条件**：`ConditionGraphId`（Script/Validation）+ 可选快速 builtin（如 Stimulus）
