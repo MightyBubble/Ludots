@@ -3,6 +3,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json.Nodes;
+using Ludots.Core.Config;
+using Ludots.Core.Gameplay.Spawning;
+using Ludots.Core.Navigation.NavMesh.Config;
+using Ludots.Core.Physics2D.Navigation;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Architecture
@@ -160,6 +164,49 @@ namespace Ludots.Tests.Architecture
         private static string ToRepoRelativePath(string repoRoot, string file)
         {
             return Path.GetRelativePath(repoRoot, file).Replace('\\', '/');
+        }
+
+        [Test]
+        public void Physics2DAuthoringAdapter_ProducesValidVerticalIntervals()
+        {
+            var map = new MapConfig
+            {
+                Id = "test-map",
+                Entities = new List<EntitySpawnData>
+                {
+                    new EntitySpawnData
+                    {
+                        Template = "box-obstacle",
+                        InstanceId = "box1",
+                        Overrides = new Dictionary<string, JsonNode>
+                        {
+                            ["WorldPositionCm"] = JsonNode.Parse("{\"Value\":{\"X\":100,\"Y\":100}}"),
+                            ["ManifestationObstacleIntent2D"] = JsonNode.Parse("{\"shape\":\"Box\",\"sinkPhysicsCollider\":false,\"sinkNavigationObstacle\":true,\"navRadiusCm\":0,\"halfWidthCm\":50,\"halfHeightCm\":50,\"localOffsetXCm\":0,\"localOffsetYCm\":0}")
+                        }
+                    }
+                }
+            };
+
+            var templates = new Dictionary<string, EntityTemplate>(StringComparer.Ordinal)
+            {
+                ["box-obstacle"] = new EntityTemplate
+                {
+                    Id = "box-obstacle",
+                    Components = new Dictionary<string, JsonNode>(StringComparer.Ordinal)
+                    {
+                        ["WorldPositionCm"] = JsonNode.Parse("{\"Value\":{\"X\":0,\"Y\":0}}"),
+                        ["ManifestationObstacleIntent2D"] = JsonNode.Parse("{\"shape\":\"Box\",\"halfWidthCm\":50,\"halfHeightCm\":50,\"sinkPhysicsCollider\":false,\"sinkNavigationObstacle\":true,\"navRadiusCm\":0,\"localOffsetXCm\":0,\"localOffsetYCm\":0}")
+                    }
+                }
+            };
+
+            NavObstacleSet set = NavObstacleAuthoringAdapter.BuildFromMapAuthoring(map, templates, "Ground");
+
+            Assert.That(set.Obstacles.Count, Is.EqualTo(1), "Expected exactly one obstacle from authoring.");
+            NavObstacle obstacle = set.Obstacles[0];
+            Assert.That(obstacle.MinYcm, Is.EqualTo(0), "Physics2D authoring must populate MinYcm.");
+            Assert.That(obstacle.MaxYcm, Is.EqualTo(NavObstacle.DefaultPhysics2DVerticalExtentCm), "Physics2D authoring must populate MaxYcm with the default vertical extent.");
+            Assert.That(obstacle.MinYcm, Is.LessThan(obstacle.MaxYcm), "MinYcm must be less than MaxYcm to pass ValidateForBake.");
         }
     }
 }

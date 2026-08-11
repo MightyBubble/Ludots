@@ -9,6 +9,7 @@ using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Config;
+using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
 using Ludots.UI;
@@ -92,6 +93,9 @@ namespace Ludots.Adapter.Raylib
             }
             engine.SetService(CoreServiceKeys.InputHandler, inputHandler);
             engine.SetService(CoreServiceKeys.InputBackend, (Core.Input.Runtime.IInputBackend)inputBackend);
+
+            engine.RegisterPresentationAdapterCapabilities(
+                new PresentationAdapterCapabilities(PresentationVisualCapabilities.NavMeshTileGeometry));
 
             ValidateRequiredContextBeforeStart(engine);
 

@@ -338,8 +338,9 @@ namespace Ludots.Core.Navigation.NavMesh
         {
             var filtered = new List<NavTile>(tiles.Length);
             int maxPolys = 0;
-            int minOriginXcm = int.MaxValue;
-            int minOriginZcm = int.MaxValue;
+            int gridOriginXcm = 0;
+            int gridOriginZcm = 0;
+            bool hasGridOrigin = false;
             for (int i = 0; i < tiles.Length; i++)
             {
                 NavTile tile = tiles[i];
@@ -348,10 +349,23 @@ namespace Ludots.Core.Navigation.NavMesh
                     continue;
                 }
 
+                int derivedOriginXcm = checked(tile.OriginXcm - (tile.TileId.ChunkX * tileWidthCm));
+                int derivedOriginZcm = checked(tile.OriginZcm - (tile.TileId.ChunkY * tileHeightCm));
+                if (!hasGridOrigin)
+                {
+                    gridOriginXcm = derivedOriginXcm;
+                    gridOriginZcm = derivedOriginZcm;
+                    hasGridOrigin = true;
+                }
+                else if (derivedOriginXcm != gridOriginXcm || derivedOriginZcm != gridOriginZcm)
+                {
+                    throw new InvalidOperationException(
+                        $"DetourNavQueryEngine.BuildNavMesh requires a single tile-space origin across loaded tiles. " +
+                        $"Tile {tile.TileId} derives origin ({derivedOriginXcm},{derivedOriginZcm}) but batch origin is ({gridOriginXcm},{gridOriginZcm}).");
+                }
+
                 filtered.Add(tile);
                 maxPolys = Math.Max(maxPolys, tile.TriangleCount);
-                minOriginXcm = Math.Min(minOriginXcm, tile.OriginXcm);
-                minOriginZcm = Math.Min(minOriginZcm, tile.OriginZcm);
             }
 
             if (filtered.Count == 0 || maxPolys == 0)
@@ -361,7 +375,7 @@ namespace Ludots.Core.Navigation.NavMesh
 
             var navMeshParams = new DtNavMeshParams
             {
-                orig = new RcVec3f(minOriginXcm / 100f, 0f, minOriginZcm / 100f),
+                orig = new RcVec3f(gridOriginXcm / 100f, 0f, gridOriginZcm / 100f),
                 tileWidth = tileWidthCm / 100f,
                 tileHeight = tileHeightCm / 100f,
                 maxTiles = Math.Max(1, filtered.Count),
@@ -419,12 +433,38 @@ namespace Ludots.Core.Navigation.NavMesh
             for (int i = 0; i < tile.TriangleCount; i++)
             {
                 int src = i * Nvp * 2;
-                polys[src + 0] = tile.TriA[i];
-                polys[src + 1] = tile.TriB[i];
-                polys[src + 2] = tile.TriC[i];
-                polys[src + Nvp + 0] = ToDetourNeighbor(tile, i, edge: 0, tileWidthCm, tileHeightCm);
-                polys[src + Nvp + 1] = ToDetourNeighbor(tile, i, edge: 1, tileWidthCm, tileHeightCm);
-                polys[src + Nvp + 2] = ToDetourNeighbor(tile, i, edge: 2, tileWidthCm, tileHeightCm);
+                int a = tile.TriA[i];
+                int b = tile.TriB[i];
+                int c = tile.TriC[i];
+                
+                int ax = tile.VertexXcm[a];
+                int az = tile.VertexZcm[a];
+                int bx = tile.VertexXcm[b];
+                int bz = tile.VertexZcm[b];
+                int cx = tile.VertexXcm[c];
+                int cz = tile.VertexZcm[c];
+                
+                long signedArea2 = (long)(bx - ax) * (cz - az) - (long)(cx - ax) * (bz - az);
+                bool needsReversal = signedArea2 > 0;
+                
+                if (needsReversal)
+                {
+                    polys[src + 0] = a;
+                    polys[src + 1] = c;
+                    polys[src + 2] = b;
+                    polys[src + Nvp + 0] = ToDetourNeighbor(tile, i, edge: 2, tileWidthCm, tileHeightCm);
+                    polys[src + Nvp + 1] = ToDetourNeighbor(tile, i, edge: 1, tileWidthCm, tileHeightCm);
+                    polys[src + Nvp + 2] = ToDetourNeighbor(tile, i, edge: 0, tileWidthCm, tileHeightCm);
+                }
+                else
+                {
+                    polys[src + 0] = a;
+                    polys[src + 1] = b;
+                    polys[src + 2] = c;
+                    polys[src + Nvp + 0] = ToDetourNeighbor(tile, i, edge: 0, tileWidthCm, tileHeightCm);
+                    polys[src + Nvp + 1] = ToDetourNeighbor(tile, i, edge: 1, tileWidthCm, tileHeightCm);
+                    polys[src + Nvp + 2] = ToDetourNeighbor(tile, i, edge: 2, tileWidthCm, tileHeightCm);
+                }
 
                 int area = tile.TriAreaIds[i];
                 if (area >= DtDetour.DT_MAX_AREAS)

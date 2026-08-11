@@ -1,0 +1,13 @@
+{
+  "name": "NavMeshRuntimeShowcaseMod",
+  "version": "1.0.0",
+  "description": "Runtime navmesh bake showcase: visualizes navmesh overlay with runtime hole-carving driven by spawning/despawning obstacles.",
+  "main": "bin/net8.0/NavMeshRuntimeShowcaseMod.dll",
+  "priority": 0,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": ["showcase", "navmesh", "runtime-bake", "navigation", "detour"]
+}

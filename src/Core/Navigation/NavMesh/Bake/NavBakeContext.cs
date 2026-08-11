@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh.Config;
+using Ludots.Core.Navigation.NavMesh.Surface;
 using Ludots.Core.Navigation.Terrain;
 
 namespace Ludots.Core.Navigation.NavMesh.Bake
@@ -15,7 +16,90 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
     public enum NavBakeAlgorithmKind : byte
     {
         Recast = 0,
-        Cdt = 1
+        ExactCdt = 1,
+        LayeredSpan = 2
+    }
+
+    public enum NavBakeInputKind : byte
+    {
+        LogicTerrain = 0,
+        TriangleSurface = 1
+    }
+
+    [Flags]
+    public enum NavBakeAdapterCapabilities : byte
+    {
+        None = 0,
+        OfflineLogicTerrain = 1 << 0,
+        OfflineTriangleSurface = 1 << 1,
+        RuntimeIncrementalLogicTerrain = 1 << 2,
+        RuntimeIncrementalTriangleSurface = 1 << 3
+    }
+
+    public static class NavBakeAdapterCapability
+    {
+        public static NavBakeAdapterCapabilities Require(NavBakeMode mode, NavBakeInputKind inputKind)
+        {
+            return (mode, inputKind) switch
+            {
+                (NavBakeMode.Offline, NavBakeInputKind.LogicTerrain)
+                    => NavBakeAdapterCapabilities.OfflineLogicTerrain,
+                (NavBakeMode.Offline, NavBakeInputKind.TriangleSurface)
+                    => NavBakeAdapterCapabilities.OfflineTriangleSurface,
+                (NavBakeMode.RuntimeIncremental, NavBakeInputKind.LogicTerrain)
+                    => NavBakeAdapterCapabilities.RuntimeIncrementalLogicTerrain,
+                (NavBakeMode.RuntimeIncremental, NavBakeInputKind.TriangleSurface)
+                    => NavBakeAdapterCapabilities.RuntimeIncrementalTriangleSurface,
+                _ => throw new InvalidOperationException(
+                    $"Unsupported bake mode/input combination: {NavBakeNames.FormatMode(mode)}/{FormatInputKind(inputKind)}.")
+            };
+        }
+
+        public static string FormatInputKind(NavBakeInputKind inputKind)
+            => inputKind switch
+            {
+                NavBakeInputKind.LogicTerrain => "logic-terrain",
+                NavBakeInputKind.TriangleSurface => "triangle-surface",
+                _ => throw new InvalidOperationException($"Unknown NavBakeInputKind '{inputKind}'.")
+            };
+
+        /// <summary>
+        /// Boolean mode support derived from the capability flags: a mode is supported when at least one
+        /// input flag of that mode is declared. Adapters must keep <see cref="INavBakeAlgorithm.SupportsMode"/>
+        /// consistent with this derivation.
+        /// </summary>
+        public static bool SupportsMode(NavBakeAdapterCapabilities capabilities, NavBakeMode mode)
+        {
+            return (capabilities & ModeMask(mode)) != 0;
+        }
+
+        public static void ValidateConsistency(
+            NavBakeAlgorithmKind kind,
+            NavBakeAdapterCapabilities capabilities,
+            Func<NavBakeMode, bool> supportsMode)
+        {
+            for (NavBakeMode mode = NavBakeMode.Offline; mode <= NavBakeMode.RuntimeIncremental; mode++)
+            {
+                bool declared = supportsMode(mode);
+                bool derived = SupportsMode(capabilities, mode);
+                if (declared != derived)
+                {
+                    throw new InvalidOperationException(
+                        $"NavBakeService adapter '{NavBakeNames.FormatAlgorithm(kind)}' capability matrix is inconsistent: " +
+                        $"SupportsMode({NavBakeNames.FormatMode(mode)})={declared} but Capabilities={capabilities}.");
+                }
+            }
+        }
+
+        private static NavBakeAdapterCapabilities ModeMask(NavBakeMode mode)
+        {
+            return mode switch
+            {
+                NavBakeMode.Offline => NavBakeAdapterCapabilities.OfflineLogicTerrain | NavBakeAdapterCapabilities.OfflineTriangleSurface,
+                NavBakeMode.RuntimeIncremental => NavBakeAdapterCapabilities.RuntimeIncrementalLogicTerrain | NavBakeAdapterCapabilities.RuntimeIncrementalTriangleSurface,
+                _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, $"Unknown nav bake mode '{mode}'.")
+            };
+        }
     }
 
     public readonly struct NavBakeTileCoord : IEquatable<NavBakeTileCoord>
@@ -54,9 +138,16 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
 
         public string SourceUri { get; init; } = string.Empty;
 
-        public LogicTerrainField Terrain { get; init; } = null!;
+        public LogicTerrainField? Terrain { get; init; }
 
-        public NavObstacleSet Obstacles { get; init; } = new();
+        /// <summary>
+        /// Mutable: the runtime rebuild queue owns in-place replacement of the active surface
+        /// (<see cref="RuntimeIncrementalNavMeshRebuildQueue.ReplaceTriangleSurface"/>) so sealed
+        /// generations never observe a mixed surface. Cold construction remains init-only elsewhere.
+        /// </summary>
+        public NavTriangleSurfaceTileIndex? TriangleSurface { get; set; }
+
+        public INavObstacleSource Obstacles { get; init; } = new NavObstacleSet();
 
         public NavMeshBakeConfig Config { get; init; } = null!;
 
@@ -66,22 +157,65 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
 
         public NavBuildConfig BuildConfig { get; init; }
 
-        public uint TileVersion { get; init; } = 1;
+        public uint TileVersion { get; set; } = 1;
 
         public NavBakeMode Mode { get; init; } = NavBakeMode.Offline;
 
-        public NavBakeAlgorithmKind Algorithm { get; init; } = NavBakeAlgorithmKind.Recast;
+        /// <summary>
+        /// Mutable: the runtime rebuild queue switches the active bake adapter on its frame context
+        /// during an algorithm-switch generation (<see cref="RuntimeIncrementalNavMeshRebuildQueue.SwitchAlgorithm"/>)
+        /// while the committed/visible algorithm stays unchanged until atomic commit.
+        /// </summary>
+        public NavBakeAlgorithmKind Algorithm { get; set; } = NavBakeAlgorithmKind.Recast;
 
         public NavBakeExecutionOptions Execution { get; init; } = new();
+
+        public NavBakeInputKind InputKind
+        {
+            get
+            {
+                bool hasTerrain = Terrain != null;
+                bool hasTriangleSurface = TriangleSurface != null;
+                if (hasTerrain == hasTriangleSurface)
+                {
+                    throw new InvalidOperationException(
+                        hasTerrain
+                            ? "NavBakeContext requires exactly one of terrain or triangleSurface; both were provided."
+                            : "NavBakeContext requires exactly one of terrain or triangleSurface; neither was provided.");
+                }
+
+                return hasTerrain ? NavBakeInputKind.LogicTerrain : NavBakeInputKind.TriangleSurface;
+            }
+        }
+
+        public LogicTerrainField RequireTerrain()
+        {
+            if (InputKind != NavBakeInputKind.LogicTerrain || Terrain == null)
+            {
+                throw new InvalidOperationException(
+                    "NavBakeContext.RequireTerrain failed: active input is not LogicTerrain.");
+            }
+
+            return Terrain;
+        }
+
+        public NavTriangleSurfaceTileIndex RequireTriangleSurface()
+        {
+            if (InputKind != NavBakeInputKind.TriangleSurface || TriangleSurface == null)
+            {
+                throw new InvalidOperationException(
+                    "NavBakeContext.RequireTriangleSurface failed: active input is not TriangleSurface.");
+            }
+
+            return TriangleSurface;
+        }
 
         public void Validate()
         {
             ValidateSourceUri(SourceUri);
 
-            if (Terrain == null)
-            {
-                throw new InvalidOperationException("NavBakeContext.terrain is required.");
-            }
+            // Resolve InputKind first so both/neither fail before other fields are checked.
+            NavBakeInputKind inputKind = InputKind;
 
             if (Config == null)
             {
@@ -123,27 +257,13 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                 throw new InvalidOperationException("NavBakeContext.config.layers is empty.");
             }
 
-            ValidateObstacles();
-
-            for (int i = 0; i < Targets.Count; i++)
-            {
-                NavBakeTileCoord target = Targets[i];
-                if (target.ChunkX < 0 || target.ChunkY < 0 ||
-                    target.ChunkX >= Terrain.WidthChunks ||
-                    target.ChunkY >= Terrain.HeightChunks)
-                {
-                    throw new InvalidOperationException($"NavBakeContext.targets[{i}] is out of terrain range: {target}.");
-                }
-            }
+            ValidateLayerIds();
+            Obstacles.ValidateForBake(Config.Layers, "NavBakeContext.obstacles");
+            ValidateTargets(inputKind);
         }
 
-        private void ValidateObstacles()
+        private void ValidateLayerIds()
         {
-            if (Obstacles.Obstacles == null)
-            {
-                throw new InvalidOperationException("NavBakeContext.obstacles.obstacles is required.");
-            }
-
             var layerIds = new HashSet<string>(StringComparer.Ordinal);
             for (int i = 0; i < Config.Layers.Count; i++)
             {
@@ -160,50 +280,40 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
                     throw new InvalidOperationException($"NavBakeContext.config.layers contains duplicate id '{layer.Id}'.");
                 }
             }
+        }
 
-            for (int i = 0; i < Obstacles.Obstacles.Count; i++)
+        private void ValidateTargets(NavBakeInputKind inputKind)
+        {
+            int width;
+            int height;
+            string rangeOwner;
+            switch (inputKind)
             {
-                NavObstacle obstacle = Obstacles.Obstacles[i]
-                    ?? throw new InvalidOperationException($"NavBakeContext.obstacles.obstacles[{i}] is null.");
-                string path = $"NavBakeContext.obstacles.obstacles[{i}]";
-                if (string.IsNullOrWhiteSpace(obstacle.Id) ||
-                    !string.Equals(obstacle.Id.Trim(), obstacle.Id, StringComparison.Ordinal))
-                {
-                    throw new InvalidOperationException($"{path}.id must be a non-empty trimmed string.");
-                }
+                case NavBakeInputKind.LogicTerrain:
+                    LogicTerrainField terrain = Terrain!;
+                    width = terrain.WidthChunks;
+                    height = terrain.HeightChunks;
+                    rangeOwner = "terrain";
+                    break;
+                case NavBakeInputKind.TriangleSurface:
+                    NavTriangleSurfaceTileGrid grid = TriangleSurface!.Grid;
+                    width = grid.TileCountX;
+                    height = grid.TileCountZ;
+                    rangeOwner = "triangleSurface.grid";
+                    break;
+                default:
+                    throw new InvalidOperationException($"Unknown NavBakeInputKind '{inputKind}'.");
+            }
 
-                if (string.IsNullOrWhiteSpace(obstacle.LayerId) ||
-                    !string.Equals(obstacle.LayerId.Trim(), obstacle.LayerId, StringComparison.Ordinal))
+            for (int i = 0; i < Targets.Count; i++)
+            {
+                NavBakeTileCoord target = Targets[i];
+                if (target.ChunkX < 0 || target.ChunkY < 0 ||
+                    target.ChunkX >= width ||
+                    target.ChunkY >= height)
                 {
-                    throw new InvalidOperationException($"{path}.layerId must be a non-empty trimmed string.");
-                }
-
-                if (!layerIds.Contains(obstacle.LayerId))
-                {
-                    throw new InvalidOperationException($"{path}.layerId references unknown nav layer '{obstacle.LayerId}'.");
-                }
-
-                if (obstacle.AreaId.HasValue && ((uint)obstacle.AreaId.Value > byte.MaxValue))
-                {
-                    throw new InvalidOperationException($"{path}.areaId must be between 0 and 255.");
-                }
-
-                switch (obstacle.Kind)
-                {
-                    case NavObstacleKind.Circle:
-                        if (obstacle.RadiusCm <= 0)
-                        {
-                            throw new InvalidOperationException($"{path}.radiusCm must be > 0 for circle obstacles.");
-                        }
-                        break;
-                    case NavObstacleKind.Polygon:
-                        if (obstacle.Points == null || obstacle.Points.Count < 3)
-                        {
-                            throw new InvalidOperationException($"{path}.points must contain at least 3 points for polygon obstacles.");
-                        }
-                        break;
-                    default:
-                        throw new InvalidOperationException($"{path}.kind '{obstacle.Kind}' is not supported by navmesh bake.");
+                    throw new InvalidOperationException(
+                        $"NavBakeContext.targets[{i}] is out of {rangeOwner} range: {target}.");
                 }
             }
         }
@@ -240,7 +350,8 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
         public const string ModeOffline = "offline";
         public const string ModeRuntimeIncremental = "runtime-incremental";
         public const string AlgorithmRecast = "recast";
-        public const string AlgorithmCdt = "cdt";
+        public const string AlgorithmExactCdt = "exact-cdt";
+        public const string AlgorithmLayeredSpan = "layered-span";
 
         public static NavBakeMode ParseMode(string text, string path)
         {
@@ -252,14 +363,31 @@ namespace Ludots.Core.Navigation.NavMesh.Bake
         public static NavBakeAlgorithmKind ParseAlgorithm(string text, string path)
         {
             if (string.Equals(text, AlgorithmRecast, StringComparison.Ordinal)) return NavBakeAlgorithmKind.Recast;
-            if (string.Equals(text, AlgorithmCdt, StringComparison.Ordinal)) return NavBakeAlgorithmKind.Cdt;
-            throw new InvalidOperationException($"{path} must be '{AlgorithmRecast}' or '{AlgorithmCdt}'.");
+            if (string.Equals(text, AlgorithmExactCdt, StringComparison.Ordinal)) return NavBakeAlgorithmKind.ExactCdt;
+            if (string.Equals(text, AlgorithmLayeredSpan, StringComparison.Ordinal)) return NavBakeAlgorithmKind.LayeredSpan;
+            throw new InvalidOperationException(
+                $"{path} must be '{AlgorithmRecast}', '{AlgorithmExactCdt}', or '{AlgorithmLayeredSpan}'.");
         }
 
         public static string FormatAlgorithm(NavBakeAlgorithmKind algorithm)
-            => algorithm == NavBakeAlgorithmKind.Recast ? AlgorithmRecast : AlgorithmCdt;
+        {
+            return algorithm switch
+            {
+                NavBakeAlgorithmKind.Recast => AlgorithmRecast,
+                NavBakeAlgorithmKind.ExactCdt => AlgorithmExactCdt,
+                NavBakeAlgorithmKind.LayeredSpan => AlgorithmLayeredSpan,
+                _ => throw new ArgumentOutOfRangeException(nameof(algorithm), algorithm, $"Unknown nav bake algorithm kind '{algorithm}'.")
+            };
+        }
 
         public static string FormatMode(NavBakeMode mode)
-            => mode == NavBakeMode.Offline ? ModeOffline : ModeRuntimeIncremental;
+        {
+            return mode switch
+            {
+                NavBakeMode.Offline => ModeOffline,
+                NavBakeMode.RuntimeIncremental => ModeRuntimeIncremental,
+                _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, $"Unknown nav bake mode '{mode}'.")
+            };
+        }
     }
 }

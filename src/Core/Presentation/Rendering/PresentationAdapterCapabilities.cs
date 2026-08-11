@@ -18,6 +18,7 @@ namespace Ludots.Core.Presentation.Rendering
         InstancedBatchRefresh = 1 << 9,
         InstancedBatchPresentationState = 1 << 10,
         InstancedBatchEffect = 1 << 11,
+        NavMeshTileGeometry = 1 << 12,
     }
 
     public sealed class PresentationAdapterCapabilities

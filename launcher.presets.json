@@ -2,6 +2,15 @@
   "schemaVersion": 1,
   "presets": [
     {
+      "id": "navmesh_runtime_showcase_raylib",
+      "name": "NavMesh Runtime Bake Showcase Raylib",
+      "selectors": [
+        "$navmesh_runtime_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "camera_acceptance_raylib",
       "name": "Camera Acceptance Raylib",
       "selectors": [

@@ -174,7 +174,7 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
-        public void GameEngine_NavBootstrap_RuntimeIncrementalCdtRegistersRuntimeQueue()
+        public void GameEngine_NavBootstrap_RuntimeIncrementalExactCdtRegistersRuntimeQueue()
         {
             string repoRoot = FindRepoRoot();
             string mapId = "nav_bootstrap_runtime_incremental_contract";
@@ -182,7 +182,7 @@ namespace Ludots.Tests.Architecture
 
             try
             {
-                RewriteTempNavmeshMode(tempAssetsRoot, NavBakeNames.ModeRuntimeIncremental, NavBakeNames.AlgorithmCdt);
+                RewriteTempNavmeshMode(tempAssetsRoot, NavBakeNames.ModeRuntimeIncremental, NavBakeNames.AlgorithmExactCdt);
                 using var engine = CreateEngineWithTempNavAssets(repoRoot, tempAssetsRoot, mapId);
 
                 Assert.That(engine.GetService(CoreServiceKeys.NavMeshBakeConfig), Is.Not.Null);
@@ -230,7 +230,62 @@ namespace Ludots.Tests.Architecture
                     "includeNeighborTiles": true,
                     "heightScaleMeters": 1,
                     "minWalkableUpDot": 0.6,
-                    "cliffHeightThreshold": 1
+                    "cliffHeightThreshold": 1,
+                    "trackedStructuralEntityCapacity": 256,
+                    "obstaclePrimitiveCapacity": 512,
+                    "polygonVertexCapacity": 4096,
+                    "dirtyTileCapacity": 64,
+                    "stagedEntryCapacity": 64,
+                    "publishedTileCapacity": 64,
+                    "storeGroupCapacity": 8,
+                    "residentTileCapacity": 128,
+                    "outputVertexCapacity": 256,
+                    "outputTriangleCapacity": 512,
+                    "outputPortalCapacity": 64,
+                    "initialResidentChunkX": 0,
+                    "initialResidentChunkZ": 0,
+                    "initialResidentWidthChunks": 1,
+                    "initialResidentHeightChunks": 1
+                  },
+                  "layeredSpan": {
+                    "scratchSlotCount": 2,
+                    "rasterCellSizeCm": 100,
+                    "rasterHaloCells": 1,
+                    "sameSurfaceToleranceCm": 5,
+                    "maxSimplificationErrorCm": 0,
+                    "heightRounding": "roundHalfAwayFromZero",
+                    "maxLawsonFlipCount": 100000,
+                    "columnCapacity": 64,
+                    "spanCapacity": 128,
+                    "classifiedSpanCapacity": 128,
+                    "walkableSpanCapacity": 128,
+                    "linkCapacity": 256,
+                    "sheetCapacity": 128,
+                    "portalIntervalCapacity": 256,
+                    "regionCapacity": 64,
+                    "chartCapacity": 32,
+                    "ringCapacity": 32,
+                    "contourVertexCapacity": 256,
+                    "contourEdgeCapacity": 256,
+                    "seamCapacity": 64,
+                    "canonicalLinkCapacity": 256,
+                    "splitPointCapacity": 64,
+                    "triangulationVertexCapacity": 256,
+                    "triangulationTriangleCapacity": 512,
+                    "constrainedEdgeCapacity": 512,
+                    "borderPortalCapacity": 64,
+                    "polygonVertexCapacity": 256,
+                    "adjacencyEdgeCapacity": 1536,
+                    "bridgeCandidateCapacity": 256,
+                    "ringWorkCapacity": 64,
+                    "temporaryConstraintFlagCapacity": 512
+                  },
+                  "triangleSurface": {
+                    "haloPaddingCm": 100
+                  },
+                  "recast": {
+                    "rasterCellSizeCm": 10,
+                    "rasterCellHeightCm": 5
                   }
                 }
                 """,

@@ -1128,9 +1128,11 @@ export const HexRenderer: React.FC = () => {
             const z0 = (tile.originZcm + p.leftZcm) / 100.0;
             const x1 = (tile.originXcm + p.rightXcm) / 100.0;
             const z1 = (tile.originZcm + p.rightZcm) / 100.0;
-            const y = 0.08;
-            pos[o++] = x0; pos[o++] = y; pos[o++] = z0;
-            pos[o++] = x1; pos[o++] = y; pos[o++] = z1;
+            const surfaceOffset = 0.08;
+            const y0 = p.leftYcm / 100.0 + surfaceOffset;
+            const y1 = p.rightYcm / 100.0 + surfaceOffset;
+            pos[o++] = x0; pos[o++] = y0; pos[o++] = z0;
+            pos[o++] = x1; pos[o++] = y1; pos[o++] = z1;
         }
 
         const geo = new THREE.BufferGeometry();

@@ -1,0 +1,10 @@
+{
+  "startupMapId": "navmesh_runtime_demo",
+  "windowTitle": "Ludots Engine - NavMesh Runtime Bake Showcase",
+  "targetFps": 50,
+  "worldWidthInMacroTiles": 10,
+  "worldHeightInMacroTiles": 10,
+  "presentation": {
+    "navMeshTileCapacity": 512
+  }
+}

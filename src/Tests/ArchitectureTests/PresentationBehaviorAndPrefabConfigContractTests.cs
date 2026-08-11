@@ -1058,6 +1058,7 @@ namespace Ludots.Tests.Architecture
     "worldHudCapacity": 4096,
     "screenHudCapacity": 4096,
     "minimapMarkerCapacity": 4096,
+    "navMeshTileCapacity": 4096,
     "runtimeEntitySpawnQueueCapacity": 8192,
     "runtimeEntitySpawnReceiptQueueCapacity": 8192,
     "runtimeEntityLifecycleQueueCapacity": 8192,
@@ -1139,6 +1140,7 @@ namespace Ludots.Tests.Architecture
             Assert.That(config.Presentation.WorldHudCapacity, Is.EqualTo(65536));
             Assert.That(config.Presentation.ScreenHudCapacity, Is.EqualTo(65536));
             Assert.That(config.Presentation.MinimapMarkerCapacity, Is.EqualTo(65536));
+            Assert.That(config.Presentation.NavMeshTileCapacity, Is.EqualTo(4096));
             Assert.That(config.Presentation.RuntimeEntitySpawnQueueCapacity, Is.EqualTo(65536));
             Assert.That(config.Presentation.RuntimeEntitySpawnReceiptQueueCapacity, Is.EqualTo(32768));
             Assert.That(config.Presentation.CameraCulling.HighLodDistanceCm, Is.EqualTo(4000.0f));

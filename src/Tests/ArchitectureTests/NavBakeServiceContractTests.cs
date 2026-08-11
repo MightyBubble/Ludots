@@ -8,6 +8,7 @@ using Ludots.Core.Navigation.AgentProfiles;
 using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.NavMesh.Bake;
 using Ludots.Core.Navigation.NavMesh.Config;
+using Ludots.Core.Navigation.NavMesh.Surface;
 using Ludots.Core.Navigation.Terrain;
 using Ludots.Core.Spatial;
 using Ludots.NavBake.Recast;
@@ -20,29 +21,33 @@ namespace Ludots.Tests.Architecture
     {
         private const string GroundLayerId = "Ground";
 
+        private static readonly NavTriangleSurfaceFlags FloorFlags =
+            NavTriangleSurfaceFlags.Solid | NavTriangleSurfaceFlags.WalkCandidate;
+
         [Test]
         public void NavBakeService_RunsSingleContextForHeadlessAndBridgeAdapters()
         {
             var terrain = new FlatGridLogicTerrainField(4, 4, chunkSizeCells: 4);
-            var config = CreateBakeConfig(NavBakeNames.ModeOffline, NavBakeNames.AlgorithmCdt);
+            var build = new NavBuildConfig(1f, 0.6f, 1);
+            var config = CreateBakeConfig(NavBakeNames.ModeOffline, NavBakeNames.AlgorithmExactCdt);
             var profiles = CreateAgentProfiles();
             var context = new NavBakeContext
             {
                 MapId = "nav_bake_contract",
                 SourceUri = "Core:Maps/nav_bake_contract.vtxm",
-                Terrain = terrain,
+                TriangleSurface = LogicTerrainTriangleSurfaceCompiler.Compile(terrain, build, haloPaddingCm: 0),
                 Obstacles = new NavObstacleSet(),
                 Config = config,
                 AgentProfiles = profiles,
                 Targets = new[] { new NavBakeTileCoord(0, 0) },
-                BuildConfig = new NavBuildConfig(1f, 0.6f, 1),
+                BuildConfig = build,
                 TileVersion = 7,
                 Mode = NavBakeMode.Offline,
-                Algorithm = NavBakeAlgorithmKind.Cdt,
+                Algorithm = NavBakeAlgorithmKind.ExactCdt,
                 Execution = new NavBakeExecutionOptions { Parallel = false, MaxDegreeOfParallelism = 1 }
             };
 
-            var service = new NavBakeService(new CdtNavBakeAlgorithm());
+            var service = new NavBakeService(new ExactCdtNavBakeAlgorithm());
             NavBakeResult headless = service.Bake(context);
             NavBakeResult bridge = service.Bake(context);
 
@@ -55,16 +60,18 @@ namespace Ludots.Tests.Architecture
         [Test]
         public void RecastBake_FlatGridProducesNonEmptyTile()
         {
+            var terrain = new FlatGridLogicTerrainField(16, 16, chunkSizeCells: 16);
+            var build = new NavBuildConfig(1f, 0.6f, 1);
             var context = new NavBakeContext
             {
                 MapId = "nav_recast_grid_contract",
-                SourceUri = "Core:Maps/nav_recast_grid_contract.bin",
-                Terrain = new FlatGridLogicTerrainField(16, 16, chunkSizeCells: 16),
+                SourceUri = "Core:Maps/nav_recast_grid_contract.tris",
+                TriangleSurface = LogicTerrainTriangleSurfaceCompiler.Compile(terrain, build, haloPaddingCm: 100),
                 Obstacles = new NavObstacleSet(),
                 Config = CreateBakeConfig(NavBakeNames.ModeOffline, NavBakeNames.AlgorithmRecast),
                 AgentProfiles = CreateAgentProfiles(),
                 Targets = new[] { new NavBakeTileCoord(0, 0) },
-                BuildConfig = new NavBuildConfig(1f, 0.6f, 1),
+                BuildConfig = build,
                 TileVersion = 1,
                 Mode = NavBakeMode.Offline,
                 Algorithm = NavBakeAlgorithmKind.Recast,
@@ -85,11 +92,13 @@ namespace Ludots.Tests.Architecture
         {
             const int chunkSizeCells = 4;
             const int tileSizeCm = chunkSizeCells * SpatialScaleDefaults.CellCm;
+            var terrain = new FlatGridLogicTerrainField(12, 4, chunkSizeCells: chunkSizeCells);
+            var build = new NavBuildConfig(1f, 0.6f, 1);
             var context = new NavBakeContext
             {
                 MapId = "nav_recast_open_grid_query_contract",
-                SourceUri = "Core:Maps/nav_recast_open_grid_query_contract.bin",
-                Terrain = new FlatGridLogicTerrainField(12, 4, chunkSizeCells: chunkSizeCells),
+                SourceUri = "Core:Maps/nav_recast_open_grid_query_contract.tris",
+                TriangleSurface = LogicTerrainTriangleSurfaceCompiler.Compile(terrain, build, haloPaddingCm: 100),
                 Obstacles = new NavObstacleSet(),
                 Config = CreateBakeConfig(NavBakeNames.ModeOffline, NavBakeNames.AlgorithmRecast),
                 AgentProfiles = CreateAgentProfiles(),
@@ -99,7 +108,7 @@ namespace Ludots.Tests.Architecture
                     new NavBakeTileCoord(1, 0),
                     new NavBakeTileCoord(2, 0)
                 },
-                BuildConfig = new NavBuildConfig(1f, 0.6f, 1),
+                BuildConfig = build,
                 TileVersion = 1,
                 Mode = NavBakeMode.Offline,
                 Algorithm = NavBakeAlgorithmKind.Recast,
@@ -219,8 +228,11 @@ namespace Ludots.Tests.Architecture
             var context = new NavBakeContext
             {
                 MapId = "nav_recast_blocked_hole_query_contract",
-                SourceUri = "Core:Maps/nav_recast_blocked_hole_query_contract.bin",
-                Terrain = new FlatGridLogicTerrainField(9, 9, chunkSizeCells: chunkSizeCells),
+                SourceUri = "Core:Maps/nav_recast_blocked_hole_query_contract.tris",
+                TriangleSurface = LogicTerrainTriangleSurfaceCompiler.Compile(
+                    new FlatGridLogicTerrainField(9, 9, chunkSizeCells: chunkSizeCells),
+                    new NavBuildConfig(1f, 0.6f, 1),
+                    haloPaddingCm: 100),
                 Obstacles = new NavObstacleSet
                 {
                     Obstacles =
@@ -231,6 +243,8 @@ namespace Ludots.Tests.Architecture
                             Enabled = true,
                             Kind = NavObstacleKind.Polygon,
                             LayerId = GroundLayerId,
+                            MinYcm = 0,
+                            MaxYcm = 1000,
                             Points =
                             {
                                 new NavPointCm(obstacleMinXcm, obstacleMinZcm),
@@ -275,32 +289,162 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
-        public void NavBakeService_RuntimeIncremental_RequiresCdtAlgorithm()
+        public void RuntimeIncremental_RejectsAlgorithmThatDoesNotDeclareSupport()
         {
+            // Recast declares runtime-incremental support over triangle surface only; a
+            // LogicTerrain runtime-incremental context must hard-fail with the capability diagnostic.
             var context = CreateRuntimeIncrementalContext(
                 new FlatGridLogicTerrainField(4, 4, chunkSizeCells: 4),
                 algorithm: NavBakeAlgorithmKind.Recast);
 
-            var service = new NavBakeService(new CdtNavBakeAlgorithm());
+            var service = new NavBakeService(new RecastNavBakeAlgorithm());
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => service.Bake(context))!;
+            Assert.That(ex.Message, Does.Contain("recast"));
             Assert.That(ex.Message, Does.Contain("runtime-incremental"));
-            Assert.That(ex.Message, Does.Contain("cdt"));
+        }
+
+        [Test]
+        public void AlgorithmAdapters_DeclareExplicitCapabilityMatrix()
+        {
+            var exactCdt = new ExactCdtNavBakeAlgorithm();
+            Assert.That(exactCdt.SupportsMode(NavBakeMode.Offline), Is.True);
+            Assert.That(exactCdt.SupportsMode(NavBakeMode.RuntimeIncremental), Is.True);
+            Assert.That(exactCdt.GuaranteesBitwiseDeterminism, Is.True);
+            Assert.That(exactCdt.Supports3DMultiLayer, Is.True);
+            Assert.That(exactCdt.IsZeroAllocationHotPath, Is.False);
+
+            var recast = new RecastNavBakeAlgorithm();
+            Assert.That(recast.SupportsMode(NavBakeMode.Offline), Is.True);
+            Assert.That(recast.SupportsMode(NavBakeMode.RuntimeIncremental), Is.True);
+            Assert.That(recast.GuaranteesBitwiseDeterminism, Is.False);
+            Assert.That(recast.Supports3DMultiLayer, Is.True);
+            Assert.That(recast.IsZeroAllocationHotPath, Is.False);
+        }
+
+        [Test]
+        public void RuntimeIncrementalNavMeshRebuildQueue_RejectsUnsupportedOrMissingAdapterAtConstruction()
+        {
+            var context = CreateRuntimeIncrementalContext(
+                new FlatGridLogicTerrainField(4, 4, chunkSizeCells: 4),
+                algorithm: NavBakeAlgorithmKind.Recast);
+            var navProfiles = new NavMeshProfileRegistry(context.Config, context.AgentProfiles);
+            var queryServices = new NavQueryServiceRegistry(new Dictionary<NavQueryServiceKey, NavTileStore>());
+
+            InvalidOperationException noSupport = Assert.Throws<InvalidOperationException>(() =>
+                new RuntimeIncrementalNavMeshRebuildQueue(
+                    new NavBakeService(new RecastNavBakeAlgorithm()),
+                    context,
+                    queryServices,
+                    navProfiles))!;
+            Assert.That(noSupport.Message, Does.Contain("recast"));
+            Assert.That(noSupport.Message, Does.Contain("runtime-incremental"));
+
+            InvalidOperationException missingAdapter = Assert.Throws<InvalidOperationException>(() =>
+                new RuntimeIncrementalNavMeshRebuildQueue(
+                    new NavBakeService(new ExactCdtNavBakeAlgorithm()),
+                    context,
+                    queryServices,
+                    navProfiles))!;
+            Assert.That(missingAdapter.Message, Does.Contain("recast"));
+            Assert.That(missingAdapter.Message, Does.Contain("runtime-incremental"));
+        }
+
+        [Test]
+        public void RuntimeIncrementalNavMeshRebuildQueue_RejectsUnsupportedInputAtConstruction()
+        {
+            var terrain = new FlatGridLogicTerrainField(4, 4, chunkSizeCells: 4);
+            var context = CreateRuntimeIncrementalContext(terrain, algorithm: NavBakeAlgorithmKind.ExactCdt);
+            var navProfiles = new NavMeshProfileRegistry(context.Config, context.AgentProfiles);
+            var queryServices = new NavQueryServiceRegistry(new Dictionary<NavQueryServiceKey, NavTileStore>());
+
+            // ExactCdt now declares triangle-surface capabilities only; LogicTerrain runtime-incremental
+            // input must hard-fail with the capability diagnostic (no fake conversion).
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+                new RuntimeIncrementalNavMeshRebuildQueue(
+                    new NavBakeService(new ExactCdtNavBakeAlgorithm()),
+                    context,
+                    queryServices,
+                    navProfiles))!;
+
+            Assert.That(ex.Message, Does.Contain("exact-cdt"));
+            Assert.That(ex.Message, Does.Contain("runtime-incremental"));
+            Assert.That(ex.Message, Does.Contain("logic-terrain"));
+        }
+
+        [Test]
+        public void RuntimeIncrementalNavMeshRebuildQueue_PreservesBaseContextAlgorithmThroughRebuild()
+        {
+            var terrain = new FlatGridLogicTerrainField(4, 4, chunkSizeCells: 4);
+            NavTriangleSurfaceTileIndex surface = LogicTerrainTriangleSurfaceCompiler.Compile(
+                terrain,
+                new NavBuildConfig(1f, 0.6f, 1),
+                haloPaddingCm: 0);
+            var context = CreateRuntimeIncrementalSurfaceContext(surface, algorithm: NavBakeAlgorithmKind.Recast);
+            var navProfiles = new NavMeshProfileRegistry(context.Config, context.AgentProfiles);
+            var store = CreateRuntimeTestStore(context.Config);
+            var queryServices = new NavQueryServiceRegistry(new Dictionary<NavQueryServiceKey, NavTileStore>
+            {
+                [new NavQueryServiceKey(layer: 0, profile: 0)] = store
+            }, NavQueryTileSpace.FromGrid(context.RequireTriangleSurface().Grid));
+            var probe = new RecordingBakeAlgorithm();
+            var queue = new RuntimeIncrementalNavMeshRebuildQueue(
+                new NavBakeService(probe),
+                context,
+                queryServices,
+                navProfiles);
+
+            Assert.That(queue.EnqueueDirtyTile(new NavBakeTileCoord(0, 0)), Is.True);
+            RuntimeNavMeshRebuildBatch batch = queue.ProcessBudget(1);
+
+            Assert.That(batch.FailedEntryCount, Is.EqualTo(0));
+            Assert.That(batch.PublishedTiles.Count, Is.EqualTo(1));
+            Assert.That(probe.LastBakedAlgorithm, Is.EqualTo(context.Algorithm));
+        }
+
+        [Test]
+        public void NavBakeNames_RejectsUnknownEnumValuesInsteadOfFallingBack()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(() => NavBakeNames.FormatAlgorithm((NavBakeAlgorithmKind)127));
+            Assert.Throws<ArgumentOutOfRangeException>(() => NavBakeNames.FormatMode((NavBakeMode)127));
+        }
+
+        [Test]
+        public void NavBakeEstimator_RejectsUnknownAlgorithmKindInsteadOfFallingBack()
+        {
+            var config = CreateBakeConfig(NavBakeNames.ModeOffline, NavBakeNames.AlgorithmRecast);
+            var context = new NavBakeContext
+            {
+                MapId = "nav_estimate_unknown_kind",
+                SourceUri = "Core:Maps/nav_estimate_unknown_kind.vtxm",
+                Terrain = new FlatGridLogicTerrainField(4, 4, chunkSizeCells: 4),
+                Obstacles = new NavObstacleSet(),
+                Config = config,
+                AgentProfiles = CreateAgentProfiles(),
+                Targets = new[] { new NavBakeTileCoord(0, 0) },
+                BuildConfig = new NavBuildConfig(1f, 0.6f, 1),
+                TileVersion = 1,
+                Mode = NavBakeMode.Offline,
+                Algorithm = (NavBakeAlgorithmKind)127,
+                Execution = new NavBakeExecutionOptions { Parallel = false, MaxDegreeOfParallelism = 1 }
+            };
+
+            Assert.Throws<ArgumentOutOfRangeException>(() => NavBakeEstimator.Estimate(context));
         }
 
         [Test]
         public void RuntimeIncrementalNavMeshRebuildQueue_ProcessesDirtyTilesByBudgetAndPublishesRevision()
         {
-            var terrain = new FlatGridLogicTerrainField(8, 4, chunkSizeCells: 4);
-            var context = CreateRuntimeIncrementalContext(terrain);
+            NavTriangleSurfaceTileIndex surface = CreateFlatGridTriangleSurfaceIndex(tileCountX: 2, tileCountZ: 1);
+            var context = CreateRuntimeIncrementalSurfaceContext(surface);
             var navProfiles = new NavMeshProfileRegistry(context.Config, context.AgentProfiles);
-            var store = new NavTileStore(_ => throw new InvalidOperationException("Runtime incremental test publishes tiles before disk load."));
+            var store = CreateRuntimeTestStore(context.Config);
             var queryServices = new NavQueryServiceRegistry(new Dictionary<NavQueryServiceKey, NavTileStore>
             {
                 [new NavQueryServiceKey(layer: 0, profile: 0)] = store
-            });
+            }, NavQueryTileSpace.FromGrid(context.RequireTriangleSurface().Grid));
             var queue = new RuntimeIncrementalNavMeshRebuildQueue(
-                new NavBakeService(new CdtNavBakeAlgorithm()),
+                new NavBakeService(new ExactCdtNavBakeAlgorithm()),
                 context,
                 queryServices,
                 navProfiles);
@@ -314,35 +458,48 @@ namespace Ludots.Tests.Architecture
             Assert.That(first.RebuiltTileCount, Is.EqualTo(1));
             Assert.That(first.FailedEntryCount, Is.EqualTo(0));
             Assert.That(first.PendingTileCount, Is.EqualTo(1));
-            Assert.That(first.PublishedTiles.Count, Is.EqualTo(1));
-            Assert.That(first.PublishedTiles[0].Target, Is.EqualTo(new NavBakeTileCoord(0, 0)));
-            Assert.That(store.Revision, Is.EqualTo(1u));
-            Assert.That(store.TryGet(new NavTileId(0, 0, 0), out NavTile firstTile), Is.True);
-            Assert.That(firstTile.TileVersion, Is.EqualTo(context.TileVersion + 1u));
+            Assert.That(first.SealedRemainingCount, Is.EqualTo(1));
+            Assert.That(first.Committed, Is.False);
+            Assert.That(first.Aborted, Is.False);
+            Assert.That(first.PublishedTiles.Count, Is.EqualTo(0));
+            Assert.That(store.Revision, Is.EqualTo(0u));
+            Assert.That(store.Generation, Is.EqualTo(0UL));
+            Assert.That(store.TryGet(new NavTileId(0, 0, 0), out _), Is.False);
 
             RuntimeNavMeshRebuildBatch second = queue.ProcessBudget(1);
             Assert.That(second.RebuiltTileCount, Is.EqualTo(1));
             Assert.That(second.FailedEntryCount, Is.EqualTo(0));
             Assert.That(second.PendingTileCount, Is.EqualTo(0));
-            Assert.That(second.PublishedTiles.Count, Is.EqualTo(1));
-            Assert.That(second.PublishedTiles[0].Target, Is.EqualTo(new NavBakeTileCoord(1, 0)));
-            Assert.That(store.Revision, Is.EqualTo(2u));
-            Assert.That(store.TryGet(new NavTileId(1, 0, 0), out _), Is.True);
+            Assert.That(second.SealedRemainingCount, Is.EqualTo(0));
+            Assert.That(second.Committed, Is.True);
+            Assert.That(second.Aborted, Is.False);
+            Assert.That(second.PublishedTiles.Count, Is.EqualTo(2));
+            Assert.That(second.Generation, Is.EqualTo(1UL));
+            Assert.That(store.Revision, Is.EqualTo(1u));
+            Assert.That(store.Generation, Is.EqualTo(1UL));
+            Assert.That(store.TryGet(new NavTileId(0, 0, 0), out NavTile firstTile), Is.True);
+            Assert.That(store.TryGet(new NavTileId(1, 0, 0), out NavTile secondTile), Is.True);
+            Assert.That(firstTile.TileVersion, Is.EqualTo(context.TileVersion + 1u));
+            Assert.That(secondTile.TileVersion, Is.EqualTo(context.TileVersion + 1u));
+            Assert.That(second.PublishedTiles[0].Generation, Is.EqualTo(1UL));
+            Assert.That(second.PublishedTiles[1].Generation, Is.EqualTo(1UL));
+            Assert.That(second.PublishedTiles[0].StoreRevision, Is.EqualTo(1u));
+            Assert.That(second.PublishedTiles[1].StoreRevision, Is.EqualTo(1u));
         }
 
         [Test]
         public void RuntimeIncrementalNavMeshRebuildQueue_DirtyAabbMapsToNeighborTilesAndIgnoresOutOfWorld()
         {
-            var terrain = new FlatGridLogicTerrainField(8, 8, chunkSizeCells: 4);
-            var context = CreateRuntimeIncrementalContext(terrain);
+            NavTriangleSurfaceTileIndex surface = CreateFlatGridTriangleSurfaceIndex(tileCountX: 2, tileCountZ: 2);
+            var context = CreateRuntimeIncrementalSurfaceContext(surface);
             var navProfiles = new NavMeshProfileRegistry(context.Config, context.AgentProfiles);
-            var store = new NavTileStore(_ => throw new InvalidOperationException("Runtime incremental test publishes tiles before disk load."));
+            var store = CreateRuntimeTestStore(context.Config);
             var queryServices = new NavQueryServiceRegistry(new Dictionary<NavQueryServiceKey, NavTileStore>
             {
                 [new NavQueryServiceKey(layer: 0, profile: 0)] = store
-            });
+            }, NavQueryTileSpace.FromGrid(context.RequireTriangleSurface().Grid));
             var queue = new RuntimeIncrementalNavMeshRebuildQueue(
-                new NavBakeService(new CdtNavBakeAlgorithm()),
+                new NavBakeService(new ExactCdtNavBakeAlgorithm()),
                 context,
                 queryServices,
                 navProfiles);
@@ -353,7 +510,11 @@ namespace Ludots.Tests.Architecture
             RuntimeNavMeshRebuildBatch batch = queue.ProcessBudget(4);
             Assert.That(batch.FailedEntryCount, Is.EqualTo(0));
             Assert.That(batch.PendingTileCount, Is.EqualTo(0));
+            Assert.That(batch.Committed, Is.True);
             Assert.That(batch.PublishedTiles.Count, Is.EqualTo(4));
+            Assert.That(batch.Generation, Is.EqualTo(1UL));
+            Assert.That(store.Revision, Is.EqualTo(1u));
+            Assert.That(store.Generation, Is.EqualTo(1UL));
             Assert.That(batch.PublishedTiles[0].Target, Is.EqualTo(new NavBakeTileCoord(0, 0)));
             Assert.That(batch.PublishedTiles[1].Target, Is.EqualTo(new NavBakeTileCoord(1, 0)));
             Assert.That(batch.PublishedTiles[2].Target, Is.EqualTo(new NavBakeTileCoord(0, 1)));
@@ -363,49 +524,69 @@ namespace Ludots.Tests.Architecture
         [Test]
         public void RuntimeIncrementalNavMeshRebuildQueue_FailedBakeKeepsReadablePreviousTile()
         {
-            var context = CreateRuntimeIncrementalContext(new MutableGridLogicTerrainField(4, 4, chunkSizeCells: 4));
+            NavTriangleSurfaceTileIndex surface = CreateFlatGridTriangleSurfaceIndex(tileCountX: 2, tileCountZ: 1);
+            var context = CreateRuntimeIncrementalSurfaceContext(surface);
             var navProfiles = new NavMeshProfileRegistry(context.Config, context.AgentProfiles);
-            var baseline = new NavBakeService(new CdtNavBakeAlgorithm()).Bake(CreateRuntimeIncrementalContext(
-                new FlatGridLogicTerrainField(4, 4, chunkSizeCells: 4)));
+            var baseline = new NavBakeService(new ExactCdtNavBakeAlgorithm()).Bake(
+                CreateRuntimeIncrementalSurfaceContext(CreateFlatGridTriangleSurfaceIndex(tileCountX: 1, tileCountZ: 1)));
             Assert.That(baseline.FailureCount, Is.EqualTo(0));
 
-            var store = new NavTileStore(_ => throw new InvalidOperationException("Runtime incremental test publishes tiles before disk load."));
+            var store = CreateRuntimeTestStore(context.Config);
             uint baselineRevision = store.Replace(baseline.Entries[0].Tile);
+            ulong baselineGeneration = store.Generation;
             Assert.That(baselineRevision, Is.EqualTo(1u));
+            Assert.That(baselineGeneration, Is.EqualTo(1UL));
 
-            ((MutableGridLogicTerrainField)context.Terrain).Fill(
-                new LogicTerrainCell(0, 0, LogicTerrainSurfaceFlags.Blocked));
             var queryServices = new NavQueryServiceRegistry(new Dictionary<NavQueryServiceKey, NavTileStore>
             {
                 [new NavQueryServiceKey(layer: 0, profile: 0)] = store
-            });
+            }, NavQueryTileSpace.FromGrid(context.RequireTriangleSurface().Grid));
             var queue = new RuntimeIncrementalNavMeshRebuildQueue(
-                new NavBakeService(new CdtNavBakeAlgorithm()),
+                new NavBakeService(new SelectiveFailNavBakeAlgorithm(failTarget: new NavBakeTileCoord(1, 0))),
                 context,
                 queryServices,
                 navProfiles);
 
             Assert.That(queue.EnqueueDirtyTile(new NavBakeTileCoord(0, 0)), Is.True);
-            RuntimeNavMeshRebuildBatch failed = queue.ProcessBudget(1);
+            Assert.That(queue.EnqueueDirtyTile(new NavBakeTileCoord(1, 0)), Is.True);
 
+            RuntimeNavMeshRebuildBatch first = queue.ProcessBudget(1);
+            Assert.That(first.PublishedTiles.Count, Is.EqualTo(0));
+            Assert.That(first.Committed, Is.False);
+            Assert.That(store.Revision, Is.EqualTo(baselineRevision));
+            Assert.That(store.Generation, Is.EqualTo(baselineGeneration));
+
+            RuntimeNavMeshRebuildBatch failed = queue.ProcessBudget(1);
             Assert.That(failed.RebuiltTileCount, Is.EqualTo(1));
             Assert.That(failed.FailedEntryCount, Is.EqualTo(1));
             Assert.That(failed.PublishedTiles.Count, Is.EqualTo(0));
+            Assert.That(failed.Committed, Is.False);
+            Assert.That(failed.Aborted, Is.True);
+            Assert.That(failed.FailedEntries[0].Success, Is.False);
+            Assert.That(failed.FailedEntries[0].Artifact.ErrorCode, Is.EqualTo(NavBakeErrorCode.TriangulationFailed));
             Assert.That(store.Revision, Is.EqualTo(baselineRevision));
+            Assert.That(store.Generation, Is.EqualTo(baselineGeneration));
             Assert.That(store.TryGet(new NavTileId(0, 0, 0), out NavTile current), Is.True);
             Assert.That(current.Checksum, Is.EqualTo(baseline.Entries[0].Tile.Checksum));
+            Assert.That(store.TryGet(new NavTileId(1, 0, 0), out _), Is.False);
         }
 
         [Test]
-        public void CdtBake_ConsumesObstacleSetWithStrictLayerId()
+        public void ExactCdtBake_ConsumesObstacleSetWithStrictLayerId()
         {
             var terrain = new FlatGridLogicTerrainField(4, 4, chunkSizeCells: 4);
-            NavBakeContext clearContext = CreateRuntimeIncrementalContext(terrain);
-            NavBakeResult clear = new NavBakeService(new CdtNavBakeAlgorithm()).Bake(clearContext);
+            NavTriangleSurfaceTileIndex surface = LogicTerrainTriangleSurfaceCompiler.Compile(
+                terrain,
+                new NavBuildConfig(1f, 0.6f, 1),
+                haloPaddingCm: 0);
+            NavBakeContext clearContext = CreateRuntimeIncrementalSurfaceContext(surface);
+            NavBakeResult clear = new NavBakeService(new ExactCdtNavBakeAlgorithm()).Bake(clearContext);
             Assert.That(clear.FailureCount, Is.EqualTo(0));
 
-            NavBakeContext blockedContext = CreateRuntimeIncrementalContext(
-                terrain,
+            // Fully blocked tile is a legitimate valid-empty success under the triangle-surface
+            // contract (zero walkable triangles, real checksum), never a fallback.
+            NavBakeContext blockedContext = CreateRuntimeIncrementalSurfaceContext(
+                surface,
                 obstacles: new NavObstacleSet
                 {
                     Obstacles =
@@ -417,17 +598,20 @@ namespace Ludots.Tests.Architecture
                             Kind = NavObstacleKind.Circle,
                             LayerId = GroundLayerId,
                             Center = new NavPointCm(200, 200),
-                            RadiusCm = 500
+                            RadiusCm = 500,
+                            MinYcm = 0,
+                            MaxYcm = 1000
                         }
                     }
                 });
-            NavBakeResult blocked = new NavBakeService(new CdtNavBakeAlgorithm()).Bake(blockedContext);
+            NavBakeResult blocked = new NavBakeService(new ExactCdtNavBakeAlgorithm()).Bake(blockedContext);
 
-            Assert.That(blocked.FailureCount, Is.EqualTo(1));
-            Assert.That(blocked.Entries[0].Artifact.ErrorCode, Is.EqualTo(NavBakeErrorCode.NoWalkableDomain));
+            Assert.That(blocked.FailureCount, Is.EqualTo(0));
+            Assert.That(blocked.Entries[0].Tile.TriangleCount, Is.EqualTo(0), "Fully blocked tile bakes to a valid empty tile.");
+            Assert.That(blocked.Entries[0].Tile.Checksum, Is.Not.EqualTo(0UL));
 
-            NavBakeContext wrongCaseLayerContext = CreateRuntimeIncrementalContext(
-                terrain,
+            NavBakeContext wrongCaseLayerContext = CreateRuntimeIncrementalSurfaceContext(
+                surface,
                 obstacles: new NavObstacleSet
                 {
                     Obstacles =
@@ -439,13 +623,15 @@ namespace Ludots.Tests.Architecture
                             Kind = NavObstacleKind.Circle,
                             LayerId = "ground",
                             Center = new NavPointCm(150, 150),
-                            RadiusCm = 45
+                            RadiusCm = 45,
+                            MinYcm = 0,
+                            MaxYcm = 1000
                         }
                     }
                 });
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
-                () => new NavBakeService(new CdtNavBakeAlgorithm()).Bake(wrongCaseLayerContext))!;
+                () => new NavBakeService(new ExactCdtNavBakeAlgorithm()).Bake(wrongCaseLayerContext))!;
             Assert.That(ex.Message, Does.Contain("unknown nav layer"));
         }
 
@@ -453,7 +639,12 @@ namespace Ludots.Tests.Architecture
         public void NavTileStore_StableReadRejectsMixedRevision()
         {
             var terrain = new FlatGridLogicTerrainField(4, 4, chunkSizeCells: 4);
-            NavBakeResult baseline = new NavBakeService(new CdtNavBakeAlgorithm()).Bake(CreateRuntimeIncrementalContext(terrain));
+            NavTriangleSurfaceTileIndex surface = LogicTerrainTriangleSurfaceCompiler.Compile(
+                terrain,
+                new NavBuildConfig(1f, 0.6f, 1),
+                haloPaddingCm: 0);
+            NavBakeResult baseline = new NavBakeService(new ExactCdtNavBakeAlgorithm()).Bake(
+                CreateOfflineContext(triangleSurface: surface, algorithm: NavBakeAlgorithmKind.ExactCdt));
             Assert.That(baseline.FailureCount, Is.EqualTo(0));
 
             var store = new NavTileStore(_ => throw new InvalidOperationException("Stable read test publishes tiles before disk load."));
@@ -496,7 +687,9 @@ namespace Ludots.Tests.Architecture
                             Kind = NavObstacleKind.Circle,
                             LayerId = GroundLayerId,
                             Center = new NavPointCm(150, 150),
-                            RadiusCm = 35
+                            RadiusCm = 35,
+                            MinYcm = 0,
+                            MaxYcm = 1000
                         }
                     }
                 },
@@ -533,8 +726,11 @@ namespace Ludots.Tests.Architecture
             Assert.That(estimate.TileWorldWidthCm, Is.EqualTo(400));
             Assert.That(estimate.TileWorldHeightCm, Is.EqualTo(400));
             Assert.That(estimate.TerrainCellSampleCount, Is.EqualTo(32));
-            Assert.That(estimate.RecastColumnBudgetTotal, Is.EqualTo(7184));
-            Assert.That(estimate.BudgetWorkUnitCount, Is.EqualTo(7184));
+            // Raster resolution is data-driven from NavMeshBakeConfig.recast, so every profile shares the
+            // configured 10cm/5cm cells instead of deriving them from agent radius. Both profiles therefore
+            // rasterize 40 columns per axis: 2 tiles * 2 layers * (1600 + 1600).
+            Assert.That(estimate.RecastColumnBudgetTotal, Is.EqualTo(12800));
+            Assert.That(estimate.BudgetWorkUnitCount, Is.EqualTo(12800));
             Assert.That(estimate.EstimatedTileBytesLow, Is.EqualTo(8L * NavBakeEstimator.EstimatedBytesPerOperationLow));
             Assert.That(estimate.EstimatedTileBytesHigh, Is.EqualTo(8L * NavBakeEstimator.EstimatedBytesPerOperationHigh));
             Assert.That(estimate.EstimatedSerialSecondsLow, Is.EqualTo(0.64d).Within(0.0001d));
@@ -551,6 +747,14 @@ namespace Ludots.Tests.Architecture
             Assert.That(small.WalkableHeightVoxels, Is.EqualTo(36));
             Assert.That(small.WalkableClimbVoxels, Is.EqualTo(8));
             Assert.That(small.MinWalkableUpDot, Is.EqualTo(MathF.Cos(45f * MathF.PI / 180f)).Within(0.0001f));
+
+            NavBakeProfileEstimate large = estimate.Profiles[1];
+            Assert.That(large.ProfileId, Is.EqualTo("Large"));
+            Assert.That(large.RecastCellSizeCm, Is.EqualTo(10f).Within(0.0001f));
+            Assert.That(large.RecastCellHeightCm, Is.EqualTo(5f).Within(0.0001f));
+            Assert.That(large.RecastColumnsPerAxis, Is.EqualTo(40));
+            Assert.That(large.WalkableHeightVoxels, Is.EqualTo(48));
+            Assert.That(large.WalkableClimbVoxels, Is.EqualTo(15));
         }
 
         [Test]
@@ -634,26 +838,7 @@ namespace Ludots.Tests.Architecture
         {
             var profiles = CreateAgentProfiles();
 
-            string missingAlgorithmRoot = CreateTempNavConfig(
-                """
-                {
-                  "mode": "offline",
-                  "profiles": [
-                    { "id": "Small", "maxClimbCm": 40, "maxSlopeDeg": 45 }
-                  ],
-                  "layers": [
-                    { "id": "Ground", "layer": 0 }
-                  ],
-                  "areas": [],
-                  "runtimeIncremental": {
-                    "tileBudgetPerFixedTick": 1,
-                    "includeNeighborTiles": true,
-                    "heightScaleMeters": 1,
-                    "minWalkableUpDot": 0.6,
-                    "cliffHeightThreshold": 1
-                  }
-                }
-                """);
+            string missingAlgorithmRoot = CreateTempNavConfig(WithRemovedProperty(ValidNavmeshJson(), "algorithm"));
 
             try
             {
@@ -666,27 +851,7 @@ namespace Ludots.Tests.Architecture
                 Directory.Delete(missingAlgorithmRoot, recursive: true);
             }
 
-            string wrongCaseRoot = CreateTempNavConfig(
-                """
-                {
-                  "mode": "offline",
-                  "algorithm": "Recast",
-                  "profiles": [
-                    { "id": "Small", "maxClimbCm": 40, "maxSlopeDeg": 45 }
-                  ],
-                  "layers": [
-                    { "id": "Ground", "layer": 0 }
-                  ],
-                  "areas": [],
-                  "runtimeIncremental": {
-                    "tileBudgetPerFixedTick": 1,
-                    "includeNeighborTiles": true,
-                    "heightScaleMeters": 1,
-                    "minWalkableUpDot": 0.6,
-                    "cliffHeightThreshold": 1
-                  }
-                }
-                """);
+            string wrongCaseRoot = CreateTempNavConfig(WithSetProperty(ValidNavmeshJson(), "algorithm", "Recast"));
 
             try
             {
@@ -703,20 +868,7 @@ namespace Ludots.Tests.Architecture
         [Test]
         public void NavMeshBakeConfig_RequiresExplicitRuntimeIncrementalConfig()
         {
-            string missingRuntimeRoot = CreateTempNavConfig(
-                """
-                {
-                  "mode": "offline",
-                  "algorithm": "recast",
-                  "profiles": [
-                    { "id": "Small", "maxClimbCm": 40, "maxSlopeDeg": 45 }
-                  ],
-                  "layers": [
-                    { "id": "Ground", "layer": 0 }
-                  ],
-                  "areas": []
-                }
-                """);
+            string missingRuntimeRoot = CreateTempNavConfig(WithRemovedProperty(ValidNavmeshJson(), "runtimeIncremental"));
 
             try
             {
@@ -820,7 +972,7 @@ namespace Ludots.Tests.Architecture
                     """
                     {
                       "mode": "offline",
-                      "algorithm": "cdt",
+                      "algorithm": "exact-cdt",
                       "profiles": [
                         { "id": "Small", "maxClimbCm": 12, "maxSlopeDeg": 20 }
                       ],
@@ -833,7 +985,62 @@ namespace Ludots.Tests.Architecture
                         "includeNeighborTiles": false,
                         "heightScaleMeters": 1,
                         "minWalkableUpDot": 0.5,
-                        "cliffHeightThreshold": 1
+                        "cliffHeightThreshold": 1,
+                        "trackedStructuralEntityCapacity": 256,
+                        "obstaclePrimitiveCapacity": 512,
+                        "polygonVertexCapacity": 4096,
+                        "dirtyTileCapacity": 64,
+                        "stagedEntryCapacity": 64,
+                        "publishedTileCapacity": 64,
+                        "storeGroupCapacity": 8,
+                        "residentTileCapacity": 128,
+                        "outputVertexCapacity": 256,
+                        "outputTriangleCapacity": 512,
+                        "outputPortalCapacity": 64,
+                        "initialResidentChunkX": 0,
+                        "initialResidentChunkZ": 0,
+                        "initialResidentWidthChunks": 1,
+                        "initialResidentHeightChunks": 1
+                      },
+                      "layeredSpan": {
+                        "scratchSlotCount": 2,
+                        "rasterCellSizeCm": 100,
+                        "rasterHaloCells": 1,
+                        "sameSurfaceToleranceCm": 5,
+                        "maxSimplificationErrorCm": 0,
+                        "heightRounding": "roundHalfAwayFromZero",
+                        "maxLawsonFlipCount": 100000,
+                        "columnCapacity": 64,
+                        "spanCapacity": 128,
+                        "classifiedSpanCapacity": 128,
+                        "walkableSpanCapacity": 128,
+                        "linkCapacity": 256,
+                        "sheetCapacity": 128,
+                        "portalIntervalCapacity": 256,
+                        "regionCapacity": 64,
+                        "chartCapacity": 32,
+                        "ringCapacity": 32,
+                        "contourVertexCapacity": 256,
+                        "contourEdgeCapacity": 256,
+                        "seamCapacity": 64,
+                        "canonicalLinkCapacity": 256,
+                        "splitPointCapacity": 64,
+                        "triangulationVertexCapacity": 256,
+                        "triangulationTriangleCapacity": 512,
+                        "constrainedEdgeCapacity": 512,
+                        "borderPortalCapacity": 64,
+                        "polygonVertexCapacity": 256,
+                        "adjacencyEdgeCapacity": 1536,
+                        "bridgeCandidateCapacity": 256,
+                        "ringWorkCapacity": 64,
+                        "temporaryConstraintFlagCapacity": 512
+                      },
+                      "triangleSurface": {
+                        "haloPaddingCm": 100
+                      },
+                      "recast": {
+                        "rasterCellSizeCm": 10,
+                        "rasterCellHeightCm": 5
                       }
                     }
                     """);
@@ -848,7 +1055,7 @@ namespace Ludots.Tests.Architecture
 
                 NavMeshBakeConfig config = NavMeshBakeConfigLoader.LoadFromRepoRoot(repoRoot, "Navigation/alt_navmesh.json");
 
-                Assert.That(config.Algorithm, Is.EqualTo(NavBakeNames.AlgorithmCdt));
+                Assert.That(config.Algorithm, Is.EqualTo(NavBakeNames.AlgorithmExactCdt));
                 Assert.That(config.Profiles[0].MaxClimbCm, Is.EqualTo(12));
                 Assert.That(config.RuntimeIncremental.TileBudgetPerFixedTick, Is.EqualTo(2));
             }
@@ -867,13 +1074,13 @@ namespace Ludots.Tests.Architecture
                 SourceUri = "Core:C:/absolute/map_data.bin",
                 Terrain = new FlatGridLogicTerrainField(4, 4, chunkSizeCells: 4),
                 Obstacles = new NavObstacleSet(),
-                Config = CreateBakeConfig(NavBakeNames.ModeOffline, NavBakeNames.AlgorithmCdt),
+                Config = CreateBakeConfig(NavBakeNames.ModeOffline, NavBakeNames.AlgorithmExactCdt),
                 AgentProfiles = CreateAgentProfiles(),
                 Targets = new[] { new NavBakeTileCoord(0, 0) },
                 BuildConfig = new NavBuildConfig(1f, 0.6f, 1),
                 TileVersion = 1,
                 Mode = NavBakeMode.Offline,
-                Algorithm = NavBakeAlgorithmKind.Cdt,
+                Algorithm = NavBakeAlgorithmKind.ExactCdt,
                 Execution = new NavBakeExecutionOptions { Parallel = false, MaxDegreeOfParallelism = 1 }
             };
 
@@ -882,51 +1089,246 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
-        public void CdtBakePipeline_DoesNotFallbackToGridMesh()
+        public void ExactCdtBake_DoesNotFallbackToGridMesh()
         {
             var terrain = new MutableGridLogicTerrainField(4, 4, chunkSizeCells: 4);
             terrain.Fill(new LogicTerrainCell(0, 0, LogicTerrainSurfaceFlags.Blocked));
-
-            BakePipelineResult result = BakePipeline.Execute(
+            NavTriangleSurfaceTileIndex surface = LogicTerrainTriangleSurfaceCompiler.Compile(
                 terrain,
-                chunkX: 0,
-                chunkY: 0,
-                tileVersion: 1,
                 new NavBuildConfig(1f, 0.6f, 1),
-                new NavObstacleSet(),
-                GroundLayerId);
+                haloPaddingCm: 0);
 
-            Assert.That(result.Success, Is.False);
-            string artifact = JsonSerializer.Serialize(result.Artifact, new JsonSerializerOptions { IncludeFields = true });
+            NavBakeResult result = new NavBakeService(new ExactCdtNavBakeAlgorithm()).Bake(
+                CreateOfflineContext(triangleSurface: surface, algorithm: NavBakeAlgorithmKind.ExactCdt));
+
+            Assert.That(result.FailureCount, Is.EqualTo(0));
+            Assert.That(result.Entries[0].Tile.TriangleCount, Is.EqualTo(0), "Fully blocked tile bakes to a valid empty tile, never a fallback.");
+            Assert.That(result.Entries[0].Tile.Checksum, Is.Not.EqualTo(0UL));
+            string artifact = JsonSerializer.Serialize(result.Entries[0].Artifact, new JsonSerializerOptions { IncludeFields = true });
             Assert.That(artifact, Does.Not.Contain("Grid mesh fallback"));
         }
 
         [Test]
-        public void CdtBakePipeline_RequiresExplicitObstacleSetAndLayer()
+        public void ExactCdtBake_RequiresTriangleSurfaceInputAndStrictObstacleLayer()
         {
             var terrain = new FlatGridLogicTerrainField(4, 4, chunkSizeCells: 4);
 
-            InvalidOperationException missingObstacles = Assert.Throws<InvalidOperationException>(() =>
-                BakePipeline.Execute(
-                    terrain,
-                    chunkX: 0,
-                    chunkY: 0,
-                    tileVersion: 1,
-                    new NavBuildConfig(1f, 0.6f, 1),
-                    obstacles: null!,
-                    GroundLayerId))!;
-            Assert.That(missingObstacles.Message, Does.Contain("NavObstacleSet"));
+            InvalidOperationException unsupportedInput = Assert.Throws<InvalidOperationException>(() =>
+                new NavBakeService(new ExactCdtNavBakeAlgorithm()).Bake(
+                    CreateOfflineContext(terrain, algorithm: NavBakeAlgorithmKind.ExactCdt)))!;
+            Assert.That(unsupportedInput.Message, Does.Contain("does not support offline/logic-terrain"));
 
-            InvalidOperationException missingLayer = Assert.Throws<InvalidOperationException>(() =>
-                BakePipeline.Execute(
-                    terrain,
-                    chunkX: 0,
-                    chunkY: 0,
-                    tileVersion: 1,
-                    new NavBuildConfig(1f, 0.6f, 1),
-                    new NavObstacleSet(),
-                    layerId: ""))!;
-            Assert.That(missingLayer.Message, Does.Contain("layer id"));
+            NavTriangleSurfaceTileIndex surface = LogicTerrainTriangleSurfaceCompiler.Compile(
+                terrain,
+                new NavBuildConfig(1f, 0.6f, 1),
+                haloPaddingCm: 0);
+            NavBakeContext wrongCaseLayerContext = CreateOfflineContext(
+                triangleSurface: surface,
+                algorithm: NavBakeAlgorithmKind.ExactCdt,
+                obstacles: new NavObstacleSet
+                {
+                    Obstacles =
+                    {
+                        new NavObstacle
+                        {
+                            Id = "wrong-case-blocker",
+                            Enabled = true,
+                            Kind = NavObstacleKind.Circle,
+                            LayerId = "ground",
+                            Center = new NavPointCm(150, 150),
+                            RadiusCm = 45,
+                            MinYcm = 0,
+                            MaxYcm = 1000
+                        }
+                    }
+                });
+            InvalidOperationException missingLayer = Assert.Throws<InvalidOperationException>(
+                () => new NavBakeService(new ExactCdtNavBakeAlgorithm()).Bake(wrongCaseLayerContext))!;
+            Assert.That(missingLayer.Message, Does.Contain("unknown nav layer"));
+        }
+
+        [Test]
+        public void NavBakeContext_RequiresExactlyOneInput()
+        {
+            InvalidOperationException neither = Assert.Throws<InvalidOperationException>(
+                () => CreateOfflineContext(terrain: null, triangleSurface: null).Validate())!;
+            Assert.That(neither.Message, Does.Contain("exactly one"));
+            Assert.That(neither.Message, Does.Contain("neither"));
+
+            var terrain = new FlatGridLogicTerrainField(4, 4, chunkSizeCells: 4);
+            NavTriangleSurfaceTileIndex surface = CreateTinyTriangleSurfaceIndex();
+            InvalidOperationException both = Assert.Throws<InvalidOperationException>(
+                () => new NavBakeContext
+                {
+                    MapId = "nav_bake_input_union_contract",
+                    SourceUri = "Core:Maps/nav_bake_input_union_contract.vtxm",
+                    Terrain = terrain,
+                    TriangleSurface = surface,
+                    Obstacles = new NavObstacleSet(),
+                    Config = CreateBakeConfig(NavBakeNames.ModeOffline, NavBakeNames.AlgorithmRecast),
+                    AgentProfiles = CreateAgentProfiles(),
+                    Targets = new[] { new NavBakeTileCoord(0, 0) },
+                    BuildConfig = new NavBuildConfig(1f, 0.6f, 1),
+                    TileVersion = 1,
+                    Mode = NavBakeMode.Offline,
+                    Algorithm = NavBakeAlgorithmKind.Recast,
+                    Execution = new NavBakeExecutionOptions { Parallel = false, MaxDegreeOfParallelism = 1 }
+                }.Validate())!;
+            Assert.That(both.Message, Does.Contain("exactly one"));
+            Assert.That(both.Message, Does.Contain("both"));
+        }
+
+        [Test]
+        public void NavBakeContext_TriangleSurfaceTargetBounds_UseGridTileCounts()
+        {
+            NavTriangleSurfaceTileIndex surface = CreateTinyTriangleSurfaceIndex(
+                tileCountX: 2,
+                tileCountZ: 1);
+            NavBakeContext ok = CreateOfflineContext(
+                terrain: null,
+                triangleSurface: surface,
+                targets: new[] { new NavBakeTileCoord(1, 0) });
+            Assert.DoesNotThrow(() => ok.Validate());
+            Assert.That(ok.InputKind, Is.EqualTo(NavBakeInputKind.TriangleSurface));
+            Assert.That(ok.RequireTriangleSurface(), Is.SameAs(surface));
+
+            NavBakeContext outOfRange = CreateOfflineContext(
+                terrain: null,
+                triangleSurface: surface,
+                targets: new[] { new NavBakeTileCoord(0, 1) });
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => outOfRange.Validate())!;
+            Assert.That(ex.Message, Does.Contain("triangleSurface.grid"));
+            Assert.That(ex.Message, Does.Contain("0,1"));
+        }
+
+        [Test]
+        public void NavBakeService_RejectsUnsupportedCapabilityWithoutFallback()
+        {
+            NavTriangleSurfaceTileIndex surface = CreateTinyTriangleSurfaceIndex();
+            var context = CreateOfflineContext(
+                terrain: null,
+                triangleSurface: surface,
+                algorithm: NavBakeAlgorithmKind.ExactCdt);
+            var exactCdt = new RecordingFakeNavBakeAlgorithm(
+                NavBakeAlgorithmKind.ExactCdt,
+                NavBakeAdapterCapabilities.OfflineLogicTerrain |
+                NavBakeAdapterCapabilities.RuntimeIncrementalLogicTerrain);
+            var recast = new RecordingFakeNavBakeAlgorithm(
+                NavBakeAlgorithmKind.Recast,
+                NavBakeAdapterCapabilities.OfflineLogicTerrain);
+            var service = new NavBakeService(exactCdt, recast);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => service.Bake(context))!;
+            Assert.That(ex.Message, Does.Contain("does not support"));
+            Assert.That(ex.Message, Does.Contain("triangle-surface"));
+            Assert.That(ex.Message, Does.Contain("exact-cdt"));
+            Assert.That(exactCdt.InvokeCount, Is.EqualTo(0));
+            Assert.That(recast.InvokeCount, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void NavBakeService_MissingAdapterFailsFast()
+        {
+            var context = CreateOfflineContext(
+                new FlatGridLogicTerrainField(4, 4, chunkSizeCells: 4),
+                algorithm: NavBakeAlgorithmKind.LayeredSpan);
+            var service = new NavBakeService(new ExactCdtNavBakeAlgorithm());
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() => service.Bake(context))!;
+            Assert.That(ex.Message, Does.Contain("no adapter"));
+            Assert.That(ex.Message, Does.Contain(NavBakeNames.AlgorithmLayeredSpan));
+        }
+
+        [Test]
+        public void RecastAndExactCdt_DeclareOnlyTriangleSurfaceCapabilities()
+        {
+            var recast = new RecastNavBakeAlgorithm();
+            var exactCdt = new ExactCdtNavBakeAlgorithm();
+
+            Assert.That(
+                recast.Capabilities,
+                Is.EqualTo(
+                    NavBakeAdapterCapabilities.OfflineTriangleSurface |
+                    NavBakeAdapterCapabilities.RuntimeIncrementalTriangleSurface));
+            Assert.That(
+                exactCdt.Capabilities,
+                Is.EqualTo(
+                    NavBakeAdapterCapabilities.OfflineTriangleSurface |
+                    NavBakeAdapterCapabilities.RuntimeIncrementalTriangleSurface));
+            Assert.That(recast.Capabilities.HasFlag(NavBakeAdapterCapabilities.OfflineLogicTerrain), Is.False);
+            Assert.That(recast.Capabilities.HasFlag(NavBakeAdapterCapabilities.RuntimeIncrementalLogicTerrain), Is.False);
+            Assert.That(exactCdt.Capabilities.HasFlag(NavBakeAdapterCapabilities.OfflineLogicTerrain), Is.False);
+            Assert.That(exactCdt.Capabilities.HasFlag(NavBakeAdapterCapabilities.RuntimeIncrementalLogicTerrain), Is.False);
+        }
+
+        [Test]
+        public void NavBakeAdapterCapabilities_ValidateConsistency_RejectsContradictoryDeclarations()
+        {
+            NavBakeAdapterCapabilities flags = NavBakeAdapterCapabilities.OfflineLogicTerrain;
+
+            Assert.DoesNotThrow(
+                () => NavBakeAdapterCapability.ValidateConsistency(
+                    NavBakeAlgorithmKind.Recast,
+                    flags,
+                    mode => mode == NavBakeMode.Offline));
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                () => NavBakeAdapterCapability.ValidateConsistency(
+                    NavBakeAlgorithmKind.Recast,
+                    flags,
+                    mode => true))!;
+            Assert.That(ex.Message, Does.Contain("inconsistent"));
+            Assert.That(ex.Message, Does.Contain("runtime-incremental"));
+        }
+
+        [Test]
+        public void NavBakeNames_ParseAndFormatLayeredSpanExplicitly()
+        {
+            Assert.That(
+                NavBakeNames.ParseAlgorithm(NavBakeNames.AlgorithmLayeredSpan, "test.algorithm"),
+                Is.EqualTo(NavBakeAlgorithmKind.LayeredSpan));
+            Assert.That(NavBakeNames.FormatAlgorithm(NavBakeAlgorithmKind.LayeredSpan), Is.EqualTo(NavBakeNames.AlgorithmLayeredSpan));
+            Assert.That(NavBakeNames.FormatAlgorithm(NavBakeAlgorithmKind.Recast), Is.EqualTo(NavBakeNames.AlgorithmRecast));
+            Assert.That(NavBakeNames.FormatAlgorithm(NavBakeAlgorithmKind.ExactCdt), Is.EqualTo(NavBakeNames.AlgorithmExactCdt));
+
+            Assert.Throws<InvalidOperationException>(
+                () => NavBakeNames.ParseAlgorithm("bogus", "test.algorithm"));
+            ArgumentOutOfRangeException unknown = Assert.Throws<ArgumentOutOfRangeException>(
+                () => NavBakeNames.FormatAlgorithm((NavBakeAlgorithmKind)255))!;
+            Assert.That(unknown.Message, Does.Contain("Unknown nav bake algorithm kind"));
+            Assert.That(unknown.Message, Does.Not.Contain(NavBakeNames.AlgorithmExactCdt));
+            Assert.That(unknown.Message, Does.Not.Contain(NavBakeNames.AlgorithmRecast));
+        }
+
+        [Test]
+        public void NavMeshBakeConfigLoader_AcceptsLayeredSpanWithoutAdapterClaim()
+        {
+            string root = CreateTempNavConfig(WithSetProperty(ValidNavmeshJson(), "algorithm", NavBakeNames.AlgorithmLayeredSpan));
+
+            try
+            {
+                NavMeshBakeConfig config = LoadTempConfig(root, CreateAgentProfiles());
+                Assert.That(config.Algorithm, Is.EqualTo(NavBakeNames.AlgorithmLayeredSpan));
+                Assert.That(config.ParsedAlgorithm, Is.EqualTo(NavBakeAlgorithmKind.LayeredSpan));
+            }
+            finally
+            {
+                Directory.Delete(root, recursive: true);
+            }
+        }
+
+        [Test]
+        public void NavBakeEstimator_LayeredSpanFailsFastWithoutInheritingOtherMetrics()
+        {
+            var context = CreateOfflineContext(
+                new FlatGridLogicTerrainField(4, 4, chunkSizeCells: 4),
+                algorithm: NavBakeAlgorithmKind.LayeredSpan);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(
+                () => NavBakeEstimator.Estimate(context))!;
+            Assert.That(ex.Message, Does.Contain("layered-span"));
+            Assert.That(ex.Message, Does.Contain("does not support"));
+            Assert.That(ex.Message, Does.Contain("not implemented"));
         }
 
         private static void AssertPathSegmentsDoNotEnterAabb(
@@ -1077,13 +1479,34 @@ namespace Ludots.Tests.Architecture
                     new NavLayerConfig { Id = GroundLayerId, Layer = 0 }
                 },
                 Areas = new List<NavAreaCostConfig>(),
+                Recast = new NavRecastConfig
+                {
+                    RasterCellSizeCm = 10,
+                    RasterCellHeightCm = 5
+                },
+                TriangleSurface = new NavTriangleSurfaceConfig { HaloPaddingCm = 100 },
                 RuntimeIncremental = new NavRuntimeIncrementalConfig
                 {
                     TileBudgetPerFixedTick = 1,
                     IncludeNeighborTiles = true,
                     HeightScaleMeters = 1f,
                     MinWalkableUpDot = 0.6f,
-                    CliffHeightThreshold = 1
+                    CliffHeightThreshold = 1,
+                    TrackedStructuralEntityCapacity = 32,
+                    ObstaclePrimitiveCapacity = 64,
+                    PolygonVertexCapacity = 512,
+                    DirtyTileCapacity = 64,
+                    StagedEntryCapacity = 64,
+                    PublishedTileCapacity = 64,
+                    StoreGroupCapacity = 8,
+                    ResidentTileCapacity = 64,
+                    OutputVertexCapacity = 256,
+                    OutputTriangleCapacity = 512,
+                    OutputPortalCapacity = 64,
+                    InitialResidentChunkX = 0,
+                    InitialResidentChunkZ = 0,
+                    InitialResidentWidthChunks = 1,
+                    InitialResidentHeightChunks = 1
                 }
             };
         }
@@ -1106,9 +1529,65 @@ namespace Ludots.Tests.Architecture
             return new AgentProfileRegistry(profiles);
         }
 
+        private static NavBakeContext CreateOfflineContext(
+            LogicTerrainField? terrain = null,
+            NavTriangleSurfaceTileIndex? triangleSurface = null,
+            IReadOnlyList<NavBakeTileCoord>? targets = null,
+            NavBakeAlgorithmKind algorithm = NavBakeAlgorithmKind.Recast,
+            NavObstacleSet? obstacles = null)
+        {
+            return new NavBakeContext
+            {
+                MapId = "nav_bake_input_union_contract",
+                SourceUri = "Core:Maps/nav_bake_input_union_contract.vtxm",
+                Terrain = terrain,
+                TriangleSurface = triangleSurface,
+                Obstacles = obstacles ?? new NavObstacleSet(),
+                Config = CreateBakeConfig(NavBakeNames.ModeOffline, NavBakeNames.FormatAlgorithm(algorithm)),
+                AgentProfiles = CreateAgentProfiles(),
+                Targets = targets ?? new[] { new NavBakeTileCoord(0, 0) },
+                BuildConfig = new NavBuildConfig(1f, 0.6f, 1),
+                TileVersion = 1,
+                Mode = NavBakeMode.Offline,
+                Algorithm = algorithm,
+                Execution = new NavBakeExecutionOptions { Parallel = false, MaxDegreeOfParallelism = 1 }
+            };
+        }
+
+        private static NavTriangleSurfaceTileIndex CreateTinyTriangleSurfaceIndex(
+            int originXcm = 0,
+            int originZcm = 0,
+            int tileWidthCm = 100,
+            int tileHeightCm = 100,
+            int tileCountX = 1,
+            int tileCountZ = 1,
+            int haloPaddingCm = 0)
+        {
+            var snapshot = new NavTriangleSurfaceSnapshot(
+                Array.Empty<int>(),
+                Array.Empty<int>(),
+                Array.Empty<int>(),
+                Array.Empty<int>(),
+                Array.Empty<int>(),
+                Array.Empty<int>(),
+                Array.Empty<byte>(),
+                Array.Empty<int>(),
+                Array.Empty<NavTriangleSurfaceFlags>());
+            return NavTriangleSurfaceTileIndex.Build(
+                snapshot,
+                new NavTriangleSurfaceTileGrid(
+                    originXcm,
+                    originZcm,
+                    tileWidthCm,
+                    tileHeightCm,
+                    tileCountX,
+                    tileCountZ,
+                    haloPaddingCm));
+        }
+
         private static NavBakeContext CreateRuntimeIncrementalContext(
             LogicTerrainField terrain,
-            NavBakeAlgorithmKind algorithm = NavBakeAlgorithmKind.Cdt,
+            NavBakeAlgorithmKind algorithm = NavBakeAlgorithmKind.ExactCdt,
             NavObstacleSet obstacles = null)
         {
             return new NavBakeContext
@@ -1126,6 +1605,68 @@ namespace Ludots.Tests.Architecture
                 Algorithm = algorithm,
                 Execution = new NavBakeExecutionOptions { Parallel = false, MaxDegreeOfParallelism = 1 }
             };
+        }
+
+        private static NavBakeContext CreateRuntimeIncrementalSurfaceContext(
+            NavTriangleSurfaceTileIndex surface,
+            NavBakeAlgorithmKind algorithm = NavBakeAlgorithmKind.ExactCdt,
+            NavObstacleSet obstacles = null,
+            IReadOnlyList<NavBakeTileCoord> targets = null,
+            uint tileVersion = 11)
+        {
+            return new NavBakeContext
+            {
+                MapId = "nav_runtime_incremental_surface_contract",
+                SourceUri = "Core:Maps/nav_runtime_incremental_surface_contract.tris",
+                TriangleSurface = surface,
+                Obstacles = obstacles ?? new NavObstacleSet(),
+                Config = CreateBakeConfig(NavBakeNames.ModeRuntimeIncremental, NavBakeNames.FormatAlgorithm(algorithm)),
+                AgentProfiles = CreateAgentProfiles(),
+                Targets = targets ?? new[] { new NavBakeTileCoord(0, 0) },
+                BuildConfig = new NavBuildConfig(1f, 0.6f, 1),
+                TileVersion = tileVersion,
+                Mode = NavBakeMode.RuntimeIncremental,
+                Algorithm = algorithm,
+                Execution = new NavBakeExecutionOptions { Parallel = false, MaxDegreeOfParallelism = 1 }
+            };
+        }
+
+        private static NavTriangleSurfaceTileIndex CreateFlatGridTriangleSurfaceIndex(
+            int tileCountX,
+            int tileCountZ,
+            int tileWidthCm = 400,
+            int tileHeightCm = 400,
+            int yCm = 0,
+            int haloPaddingCm = 100)
+        {
+            int widthCm = checked(tileCountX * tileWidthCm);
+            int heightCm = checked(tileCountZ * tileHeightCm);
+            var surface = new NavTriangleSurfaceSnapshot(
+                vertexXcm: new[] { 0, widthCm, 0, widthCm },
+                vertexYcm: new[] { yCm, yCm, yCm, yCm },
+                vertexZcm: new[] { 0, 0, heightCm, heightCm },
+                triA: new[] { 0, 1 },
+                triB: new[] { 1, 3 },
+                triC: new[] { 2, 2 },
+                triAreaIds: new byte[] { 0, 0 },
+                triStableIds: new[] { 1, 2 },
+                triFlags: new[] { FloorFlags, FloorFlags });
+            var grid = new NavTriangleSurfaceTileGrid(
+                originXcm: 0,
+                originZcm: 0,
+                tileWidthCm,
+                tileHeightCm,
+                tileCountX,
+                tileCountZ,
+                haloPaddingCm);
+            return NavTriangleSurfaceTileIndex.Build(surface, grid);
+        }
+
+        private static NavTileStore CreateRuntimeTestStore(NavMeshBakeConfig config)
+        {
+            return new NavTileStore(
+                _ => throw new InvalidOperationException("Runtime incremental test publishes tiles before disk load."),
+                config.RuntimeIncremental);
         }
 
         private static NavBakeContext CreateEstimateBudgetContext(
@@ -1237,6 +1778,99 @@ namespace Ludots.Tests.Architecture
             return tempRoot;
         }
 
+        private static string ValidNavmeshJson()
+        {
+            return """
+            {
+              "mode": "offline",
+              "algorithm": "recast",
+              "profiles": [
+                { "id": "Small", "maxClimbCm": 40, "maxSlopeDeg": 45 }
+              ],
+              "layers": [
+                { "id": "Ground", "layer": 0 }
+              ],
+              "areas": [],
+              "runtimeIncremental": {
+                "tileBudgetPerFixedTick": 4,
+                "includeNeighborTiles": true,
+                "heightScaleMeters": 1,
+                "minWalkableUpDot": 0.6,
+                "cliffHeightThreshold": 1,
+                "trackedStructuralEntityCapacity": 256,
+                "obstaclePrimitiveCapacity": 512,
+                "polygonVertexCapacity": 4096,
+                "dirtyTileCapacity": 64,
+                "stagedEntryCapacity": 64,
+                "publishedTileCapacity": 64,
+                "storeGroupCapacity": 8,
+                "residentTileCapacity": 128,
+                "outputVertexCapacity": 256,
+                "outputTriangleCapacity": 512,
+                "outputPortalCapacity": 64,
+                "initialResidentChunkX": 0,
+                "initialResidentChunkZ": 0,
+                "initialResidentWidthChunks": 1,
+                "initialResidentHeightChunks": 1
+              },
+              "layeredSpan": {
+                "scratchSlotCount": 2,
+                "rasterCellSizeCm": 100,
+                "rasterHaloCells": 1,
+                "sameSurfaceToleranceCm": 5,
+                "maxSimplificationErrorCm": 0,
+                "heightRounding": "roundHalfAwayFromZero",
+                "maxLawsonFlipCount": 100000,
+                "columnCapacity": 64,
+                "spanCapacity": 128,
+                "classifiedSpanCapacity": 128,
+                "walkableSpanCapacity": 128,
+                "linkCapacity": 256,
+                "sheetCapacity": 128,
+                "portalIntervalCapacity": 256,
+                "regionCapacity": 64,
+                "chartCapacity": 32,
+                "ringCapacity": 32,
+                "contourVertexCapacity": 256,
+                "contourEdgeCapacity": 256,
+                "seamCapacity": 64,
+                "canonicalLinkCapacity": 256,
+                "splitPointCapacity": 64,
+                "triangulationVertexCapacity": 256,
+                "triangulationTriangleCapacity": 512,
+                "constrainedEdgeCapacity": 512,
+                "borderPortalCapacity": 64,
+                "polygonVertexCapacity": 256,
+                "adjacencyEdgeCapacity": 1536,
+                "bridgeCandidateCapacity": 256,
+                "ringWorkCapacity": 64,
+                "temporaryConstraintFlagCapacity": 512
+              },
+              "triangleSurface": {
+                "haloPaddingCm": 100
+              },
+              "recast": {
+                "rasterCellSizeCm": 10,
+                "rasterCellHeightCm": 5
+              }
+            }
+            """;
+        }
+
+        private static string WithRemovedProperty(string json, string propertyName)
+        {
+            System.Text.Json.Nodes.JsonObject root = System.Text.Json.Nodes.JsonNode.Parse(json)!.AsObject();
+            root.Remove(propertyName);
+            return root.ToJsonString();
+        }
+
+        private static string WithSetProperty(string json, string propertyName, string value)
+        {
+            System.Text.Json.Nodes.JsonObject root = System.Text.Json.Nodes.JsonNode.Parse(json)!.AsObject();
+            root[propertyName] = value;
+            return root.ToJsonString();
+        }
+
         private static string CreateTempRepoNavigationConfig()
         {
             string repoRoot = Path.Combine(Path.GetTempPath(), "ludots-nav-config-repo-" + Guid.NewGuid().ToString("N"));
@@ -1256,27 +1890,7 @@ namespace Ludots.Tests.Architecture
                   { "id": "Small", "radiusCm": 30, "heightCm": 180, "clearanceCm": 40, "draftCm": 0, "beamCm": 0, "mass": 1, "layer": 0 }
                 ]
                 """);
-            File.WriteAllText(Path.Combine(navigationDir, "navmesh.json"),
-                """
-                {
-                  "mode": "offline",
-                  "algorithm": "recast",
-                  "profiles": [
-                    { "id": "Small", "maxClimbCm": 40, "maxSlopeDeg": 45 }
-                  ],
-                  "layers": [
-                    { "id": "Ground", "layer": 0 }
-                  ],
-                  "areas": [],
-                  "runtimeIncremental": {
-                    "tileBudgetPerFixedTick": 4,
-                    "includeNeighborTiles": true,
-                    "heightScaleMeters": 1,
-                    "minWalkableUpDot": 0.6,
-                    "cliffHeightThreshold": 1
-                  }
-                }
-                """);
+            File.WriteAllText(Path.Combine(navigationDir, "navmesh.json"), ValidNavmeshJson());
             return repoRoot;
         }
 
@@ -1305,6 +1919,164 @@ namespace Ludots.Tests.Architecture
             string dir = Path.Combine(modRoot, "assets", "Configs", "Navigation");
             Directory.CreateDirectory(dir);
             File.WriteAllText(Path.Combine(dir, "navmesh.json"), json);
+        }
+
+        private sealed class RecordingBakeAlgorithm : INavBakeAlgorithm
+        {
+            public NavBakeAlgorithmKind LastBakedAlgorithm { get; private set; } = (NavBakeAlgorithmKind)127;
+
+            // Test fake: claims Recast identity while explicitly declaring the triangle-surface
+            // runtime contract so the rebuild-context algorithm contract is observable without
+            // changing production Recast capability.
+            public NavBakeAlgorithmKind Kind => NavBakeAlgorithmKind.Recast;
+
+            public NavBakeAdapterCapabilities Capabilities =>
+                NavBakeAdapterCapabilities.OfflineTriangleSurface |
+                NavBakeAdapterCapabilities.RuntimeIncrementalTriangleSurface;
+
+            public bool SupportsMode(NavBakeMode mode)
+            {
+                return mode switch
+                {
+                    NavBakeMode.Offline => true,
+                    NavBakeMode.RuntimeIncremental => true,
+                    _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, $"Unknown nav bake mode '{mode}'.")
+                };
+            }
+
+            public bool GuaranteesBitwiseDeterminism => false;
+
+            public bool Supports3DMultiLayer => false;
+
+            public bool IsZeroAllocationHotPath => false;
+
+            public bool TryBake(
+                NavBakeContext context,
+                NavBakeTileCoord target,
+                NavLayerConfig layer,
+                NavMeshAgentProfileConfig navProfile,
+                AgentProfileConfig agentProfile,
+                out NavTile tile,
+                out byte[] detourTileBytes,
+                out NavBakeArtifact artifact)
+            {
+                LastBakedAlgorithm = context.Algorithm;
+                tile = NavValidEmptyTile.Create(
+                    new NavTileId(target.ChunkX, target.ChunkY, layer.Layer),
+                    context.TileVersion,
+                    buildConfigHash: 1,
+                    originXcm: 0,
+                    originZcm: 0);
+                detourTileBytes = Array.Empty<byte>();
+                artifact = NavValidEmptyTile.CreateSuccessArtifact(tile, "recording-fake-ok");
+                return true;
+            }
+        }
+
+        private sealed class SelectiveFailNavBakeAlgorithm : INavBakeAlgorithm
+        {
+            private readonly NavBakeTileCoord _failTarget;
+            private readonly ExactCdtNavBakeAlgorithm _ok = new ExactCdtNavBakeAlgorithm();
+
+            public SelectiveFailNavBakeAlgorithm(NavBakeTileCoord failTarget)
+            {
+                _failTarget = failTarget;
+            }
+
+            public NavBakeAlgorithmKind Kind => NavBakeAlgorithmKind.ExactCdt;
+
+            public NavBakeAdapterCapabilities Capabilities =>
+                NavBakeAdapterCapabilities.OfflineTriangleSurface |
+                NavBakeAdapterCapabilities.RuntimeIncrementalTriangleSurface;
+
+            public bool SupportsMode(NavBakeMode mode)
+            {
+                return mode switch
+                {
+                    NavBakeMode.Offline => true,
+                    NavBakeMode.RuntimeIncremental => true,
+                    _ => throw new ArgumentOutOfRangeException(nameof(mode), mode, $"Unknown nav bake mode '{mode}'.")
+                };
+            }
+
+            public bool GuaranteesBitwiseDeterminism => false;
+
+            public bool Supports3DMultiLayer => false;
+
+            public bool IsZeroAllocationHotPath => false;
+
+            public bool TryBake(
+                NavBakeContext context,
+                NavBakeTileCoord target,
+                NavLayerConfig layer,
+                NavMeshAgentProfileConfig navProfile,
+                AgentProfileConfig agentProfile,
+                out NavTile tile,
+                out byte[] detourTileBytes,
+                out NavBakeArtifact artifact)
+            {
+                if (target.Equals(_failTarget))
+                {
+                    tile = null!;
+                    detourTileBytes = Array.Empty<byte>();
+                    artifact = new NavBakeArtifact(
+                        new NavTileId(target.ChunkX, target.ChunkY, layer.Layer),
+                        context.TileVersion,
+                        NavBakeStage.Triangulate,
+                        NavBakeErrorCode.TriangulationFailed,
+                        "selective-fail",
+                        walkableTriangleCount: 0,
+                        vertexCount: 0,
+                        triangleCount: 0,
+                        portalCount: 0);
+                    return false;
+                }
+
+                return _ok.TryBake(context, target, layer, navProfile, agentProfile, out tile, out detourTileBytes, out artifact);
+            }
+        }
+
+        private sealed class RecordingFakeNavBakeAlgorithm : INavBakeAlgorithm
+        {
+            private readonly NavBakeAlgorithmKind _kind;
+            private readonly NavBakeAdapterCapabilities _capabilities;
+
+            public RecordingFakeNavBakeAlgorithm(NavBakeAlgorithmKind kind, NavBakeAdapterCapabilities capabilities)
+            {
+                _kind = kind;
+                _capabilities = capabilities;
+            }
+
+            public int InvokeCount { get; private set; }
+
+            public NavBakeAlgorithmKind Kind => _kind;
+
+            public NavBakeAdapterCapabilities Capabilities => _capabilities;
+
+            public bool SupportsMode(NavBakeMode mode)
+            {
+                return NavBakeAdapterCapability.SupportsMode(_capabilities, mode);
+            }
+
+            public bool GuaranteesBitwiseDeterminism => false;
+
+            public bool Supports3DMultiLayer => false;
+
+            public bool IsZeroAllocationHotPath => false;
+
+            public bool TryBake(
+                NavBakeContext context,
+                NavBakeTileCoord target,
+                NavLayerConfig layer,
+                NavMeshAgentProfileConfig navProfile,
+                AgentProfileConfig agentProfile,
+                out NavTile tile,
+                out byte[] detourTileBytes,
+                out NavBakeArtifact artifact)
+            {
+                InvokeCount++;
+                throw new InvalidOperationException("RecordingFakeNavBakeAlgorithm must never be invoked for unsupported capability checks.");
+            }
         }
     }
 }

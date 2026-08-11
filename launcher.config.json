@@ -10,6 +10,14 @@
   ],
   "bindings": [
     {
+      "name": "navmesh_runtime_showcase",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/navmesh/NavMeshRuntimeShowcaseMod",
+        "projectPath": "NavMeshRuntimeShowcaseMod.csproj"
+      }
+    },
+    {
       "name": "camera_acceptance",
       "target": {
         "type": "path",

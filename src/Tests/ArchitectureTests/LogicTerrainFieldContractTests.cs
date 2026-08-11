@@ -2,6 +2,7 @@ using Ludots.Core.Map.Hex;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.NavMesh.Bake;
+using Ludots.Core.Navigation.NavMesh.Surface;
 using Ludots.Core.Navigation.Terrain;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Spatial;
@@ -16,19 +17,51 @@ namespace Ludots.Tests.Architecture
     public sealed class LogicTerrainFieldContractTests
     {
         [Test]
-        public void VertexMapAdapter_PreservesWalkMaskSemantics()
+        public void VertexMapAdapter_TriangleSurfaceExcludesBlockedAndSubmergedCells()
         {
             var map = CreateFlatVertexMap();
             map.SetBlocked(10, 10, true);
             map.SetWaterHeight(20, 20, 4);
 
+            var terrain = new VertexMapLogicTerrainField(map);
             var config = new NavBuildConfig(heightScaleMeters: 2f, minWalkableUpDot: 0.6f, cliffHeightThreshold: 1);
-            TriWalkMask legacy = WalkMaskBuilder.Build(map, 0, 0, config);
-            TriWalkMask adapted = WalkMaskBuilder.Build(new VertexMapLogicTerrainField(map), 0, 0, config);
+            NavTriangleSurfaceTileIndex index = LogicTerrainTriangleSurfaceCompiler.Compile(terrain, config, haloPaddingCm: 0);
+            NavTriangleSurfaceSnapshot surface = index.Surface;
 
-            Assert.That(adapted.WalkableTriangleCount, Is.EqualTo(legacy.WalkableTriangleCount));
-            Assert.That(adapted.IsWalkable(10, 10, 0), Is.EqualTo(legacy.IsWalkable(10, 10, 0)));
-            Assert.That(adapted.IsWalkable(20, 20, 0), Is.EqualTo(legacy.IsWalkable(20, 20, 0)));
+            Assert.That(surface.TriangleCount, Is.GreaterThan(0));
+
+            int blockedCellX = (int)MathF.Round(HexCoordinates.HexWidth * 10f * 100f);
+            int blockedCellZ = (int)MathF.Round(HexCoordinates.RowSpacing * 10f * 100f);
+            int waterCellX = (int)MathF.Round(HexCoordinates.HexWidth * 20f * 100f);
+            int waterCellZ = (int)MathF.Round(HexCoordinates.RowSpacing * 20f * 100f);
+            int cellWidthCm = (int)MathF.Round(HexCoordinates.HexWidth * 100f);
+            int cellHeightCm = (int)MathF.Round(HexCoordinates.RowSpacing * 100f);
+
+            bool anyOpenCentroid = false;
+            for (int i = 0; i < surface.TriangleCount; i++)
+            {
+                int a = surface.TriA[i];
+                int b = surface.TriB[i];
+                int c = surface.TriC[i];
+                long cx = ((long)surface.VertexXcm[a] + surface.VertexXcm[b] + surface.VertexXcm[c]) / 3;
+                long cz = ((long)surface.VertexZcm[a] + surface.VertexZcm[b] + surface.VertexZcm[c]) / 3;
+
+                Assert.That(
+                    IsInsideCell(cx, cz, blockedCellX, blockedCellZ, cellWidthCm, cellHeightCm),
+                    Is.False,
+                    $"Triangle {i} centroid covers the blocked cell (10,10).");
+                Assert.That(
+                    IsInsideCell(cx, cz, waterCellX, waterCellZ, cellWidthCm, cellHeightCm),
+                    Is.False,
+                    $"Triangle {i} centroid covers the submerged cell (20,20).");
+
+                if (IsInsideCell(cx, cz, 0, 0, cellWidthCm, cellHeightCm))
+                {
+                    anyOpenCentroid = true;
+                }
+            }
+
+            Assert.That(anyOpenCentroid, Is.True, "Open cell (0,0) must retain walk-candidate triangle evidence.");
         }
 
         [Test]
@@ -57,10 +90,10 @@ namespace Ludots.Tests.Architecture
                 SpatialScaleDefaults.TerrainChunkCells,
                 SpatialScaleDefaults.CellCm);
             var config = new NavBuildConfig(heightScaleMeters: 1f, minWalkableUpDot: 0.6f, cliffHeightThreshold: 1);
-            int before = WalkMaskBuilder.Build(terrain, 0, 0, config).WalkableTriangleCount;
+            int before = LogicTerrainTriangleSurfaceCompiler.Compile(terrain, config, haloPaddingCm: 0).Surface.TriangleCount;
 
             var visual = CreateRaisedVisualHeightmap(SpatialScaleDefaults.TerrainChunkCells, SpatialScaleDefaults.TerrainChunkCells);
-            int afterVisualOnly = WalkMaskBuilder.Build(terrain, 0, 0, config).WalkableTriangleCount;
+            int afterVisualOnly = LogicTerrainTriangleSurfaceCompiler.Compile(terrain, config, haloPaddingCm: 0).Surface.TriangleCount;
             var projected = VisualHeightmapLogicTerrainProjection.ProjectToGrid(
                 visual,
                 SpatialScaleDefaults.TerrainChunkCells,
@@ -200,6 +233,12 @@ namespace Ludots.Tests.Architecture
                     File.Delete(reactPath);
                 }
             }
+        }
+
+        private static bool IsInsideCell(long xcm, long zcm, int cellOriginXcm, int cellOriginZcm, int cellWidthCm, int cellHeightCm)
+        {
+            return xcm >= cellOriginXcm && xcm < cellOriginXcm + cellWidthCm &&
+                   zcm >= cellOriginZcm && zcm < cellOriginZcm + cellHeightCm;
         }
 
         private static VertexMap CreateFlatVertexMap()
