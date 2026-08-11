@@ -7,10 +7,10 @@ Last Updated: 2026-04-16
 
 本计划把当前 RFC 与相位系统设计稿拆成可执行的开发任务，供不同开发者并行接手。
 
-目标不是一次性完成全部 performer 重构，而是分阶段交付：
+目标不是一次性完成全部 presenter 重构，而是分阶段交付：
 
 - 先把 phase system 边界和契约立住
-- 再让 performer 能消费 phase result
+- 再让 presenter 能消费 phase result
 - 最后逐步迁移 model / animator / HUD / indicator 等行为
 
 ## 2. 总原则
@@ -18,12 +18,12 @@ Last Updated: 2026-04-16
 所有开发任务必须遵守以下约束：
 
 1. 不把 `selection` 混入 phase system
-2. 不把 visibility truth 放进 `Performer`
+2. 不把 visibility truth 放进 `Presenter`
 3. 不把 `player` / `team` 硬编码成唯一观众模型
-4. 不复制多个 performer 实例来表达多观众差异
+4. 不复制多个 presenter 实例来表达多观众差异
 5. 不把 `PresentationRequest` 变成 orchestration state 容器
-6. performer 参数透传、联动、投影只允许扩展现有 `bindings + override + set-param` 机制
-7. 不再新增第二套 performer 参数黑板、linkage context 或隐式继承容器
+6. presenter 参数透传、联动、投影只允许扩展现有 `bindings + override + set-param` 机制
+7. 不再新增第二套 presenter 参数黑板、linkage context 或隐式继承容器
 8. 不以“只有测试通过”作为完成标准，必须提供 UAT 与用户第一视角可见证据
 
 ## 3. 开发分期
@@ -44,7 +44,7 @@ Last Updated: 2026-04-16
   - `src/Core/Presentation/Perform/PerformPhaseInput.cs`
   - `src/Core/Presentation/Perform/PerformPhaseResult.cs`
 - 要求：
-  - 只表达 performer 需要消费的输入与结果
+  - 只表达 presenter 需要消费的输入与结果
   - 不直接嵌入 selection 概念
   - 不直接绑定 adapter-facing 类型
 
@@ -64,8 +64,8 @@ Last Updated: 2026-04-16
 - 要求：
   - phase contract 不依赖 selection runtime
   - phase contract 不依赖 request flush 层
-  - performer 只消费 phase input，不拥有 visibility truth
-  - performer 参数联动仍以现有参数黑板为真相
+  - presenter 只消费 phase input，不拥有 visibility truth
+  - presenter 参数联动仍以现有参数黑板为真相
 
 完成标准：
 
@@ -122,18 +122,18 @@ Last Updated: 2026-04-16
 
 - 必须在 Phase A 完成后开始
 
-## 5. Phase C: Performer 消费相位结果
+## 5. Phase C: Presenter 消费相位结果
 
 目标：
 
-- performer 从“直接读零散 visibility 条件”改为“消费 phase result”
+- presenter 从“直接读零散 visibility 条件”改为“消费 phase result”
 
 任务包：
 
-1. 在 performer runtime 中接入 phase result
+1. 在 presenter runtime 中接入 phase result
 - 重点文件：
-  - `src/Core/Presentation/Systems/PerformerRuntimeSystem.cs`
-  - `src/Core/Presentation/Systems/PerformerEmitSystem.cs`
+  - `src/Core/Presentation/Systems/PresenterRuntimeSystem.cs`
+  - `src/Core/Presentation/Systems/PresenterEmitSystem.cs`
 
 2. 把当前零散条件收束为 phase-driven projection
 - 当前已有：
@@ -141,8 +141,8 @@ Last Updated: 2026-04-16
   - owner cull visible
   - LOD
 - 改造方向：
-  - performer 不再自己决定 visibility truth
-  - performer 只根据 phase result 决定 active / suspended / emitted variant
+  - presenter 不再自己决定 visibility truth
+  - presenter 只根据 phase result 决定 active / suspended / emitted variant
   - emitted variant 的具体参数继续通过现有 param binding / override 流计算
 
 3. 保持 legacy lane 不扩张
@@ -150,7 +150,7 @@ Last Updated: 2026-04-16
 
 完成标准：
 
-- performer 可以读取统一 phase result
+- presenter 可以读取统一 phase result
 - 不再新增散落的 visibility if/switch
 
 建议负责人：
@@ -192,13 +192,13 @@ Last Updated: 2026-04-16
 
 额外约束：
 
-- 行为之间的参数联动必须优先通过现有 performer 参数黑板表达
+- 行为之间的参数联动必须优先通过现有 presenter 参数黑板表达
 - 如果现有 param key 不够，只新增 key、value source 或 graph 绑定，不新增第二套联动状态容器
 
 完成标准：
 
 - 至少 2 类行为能消费统一 phase result
-- 不需要为不同 viewer 复制 performer
+- 不需要为不同 viewer 复制 presenter
 
 建议负责人：
 
@@ -222,11 +222,11 @@ Last Updated: 2026-04-16
   - phase contract 不依赖 selection
   - `PresentationRequest` 不持有 phase/orchestration state
   - `PrefabPart` 不持有 phase/runtime state
-  - performer 参数联动不依赖第二套黑板或 linkage context
+  - presenter 参数联动不依赖第二套黑板或 linkage context
 
 2. PresentationTests
 - 建议新增：
-  - 同一 performer 对不同 audience 输出不同 projection
+  - 同一 presenter 对不同 audience 输出不同 projection
   - same semantic behavior under different phase result
   - hidden / ghosted / debug 分支正确
   - attachment / grounding / fade / attr mapping 所需数值均可由现有 param binding / override 正确驱动
@@ -288,16 +288,16 @@ Last Updated: 2026-04-16
 
 - 能从上游 identity / relation / visibility 输入产出稳定 phase result
 
-### Ticket 3: Performer Phase Consumption
+### Ticket 3: Presenter Phase Consumption
 
 产出：
 
-- `PerformerEmitSystem` 接入 phase result
+- `PresenterEmitSystem` 接入 phase result
 - 停止新增零散 visibility 分支
 
 完成定义：
 
-- performer 根据 phase result 投影输出
+- presenter 根据 phase result 投影输出
 
 ### Ticket 4: HUD / Indicator Projection
 
@@ -307,7 +307,7 @@ Last Updated: 2026-04-16
 
 完成定义：
 
-- 同一 performer 在不同 audience 下显示不同 HUD / indicator
+- 同一 presenter 在不同 audience 下显示不同 HUD / indicator
 
 ### Ticket 5: Model Projection
 
@@ -317,7 +317,7 @@ Last Updated: 2026-04-16
 
 完成定义：
 
-- 模型显示不再依赖复制 performer 实例
+- 模型显示不再依赖复制 presenter 实例
 
 ### Ticket 6: Animator Projection
 
@@ -327,7 +327,7 @@ Last Updated: 2026-04-16
 
 完成定义：
 
-- animator 跟随 performer projection，而不是 entity visual 旁路
+- animator 跟随 presenter projection，而不是 entity visual 旁路
 
 ### Ticket 7: UAT And Player-Visible Evidence
 
@@ -382,11 +382,11 @@ Last Updated: 2026-04-16
 
 ### 风险 3
 
-开发者用“不同玩家一个 performer”快速实现。
+开发者用“不同玩家一个 presenter”快速实现。
 
 规避：
 
-- 测试明确校验“一个语义对象，一个 performer，多份 projection”
+- 测试明确校验“一个语义对象，一个 presenter，多份 projection”
 
 ### 风险 4
 
@@ -416,7 +416,7 @@ Last Updated: 2026-04-16
 5. `src/Core/Gameplay/Components/IdentityComponents.cs`
 6. `src/Core/Gameplay/Teams/TeamManager.cs`
 7. `src/Core/Gameplay/Relationships/RelationshipRuntime.cs`
-8. `src/Core/Presentation/Systems/PerformerEmitSystem.cs`
+8. `src/Core/Presentation/Systems/PresenterEmitSystem.cs`
 
 ## 12. 相关文档
 
@@ -429,7 +429,7 @@ Last Updated: 2026-04-16
 
 当前最高优先级问题不是某个单独名词或子系统，而是：
 
-- 演出语义真相仍然分裂在 `entity visual / animator` 与 `performer` 两条主线上
+- 演出语义真相仍然分裂在 `entity visual / animator` 与 `presenter` 两条主线上
 
 只要这个主问题不解决：
 
@@ -478,13 +478,13 @@ Last Updated: 2026-04-16
 
 ## 6. 参数黑板附录
 
-后续开发时，performer 参数真相统一为现有机制：
+后续开发时，presenter 参数真相统一为现有机制：
 
-- `PerformerDefinition.Bindings`
+- `PresenterDefinition.Bindings`
 - `BindingIndex`
-- `PerformerInstanceBuffer.SetParamOverride`
-- `PerformerInstanceBuffer.TryGetParamOverride`
-- `PresentationCommandKind.SetPerformerParam`
+- `PresenterInstanceBuffer.SetParamOverride`
+- `PresenterInstanceBuffer.TryGetParamOverride`
+- `PresentationCommandKind.SetPresenterParam`
 
 因此任何新需求都应优先落到以下扩展点：
 
@@ -495,6 +495,6 @@ Last Updated: 2026-04-16
 
 不应新增：
 
-- 第二套 performer 参数黑板
+- 第二套 presenter 参数黑板
 - phase-specific linkage bag
-- child performer implicit inheritance state
+- child presenter implicit inheritance state

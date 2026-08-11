@@ -1,19 +1,19 @@
 using System;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 
 namespace Ludots.Core.Config
 {
     internal static class TemplateBatchOwnerPayloadPreseedPolicy
     {
         public static bool CanPreseedOwnerPayloadMarker(
-            CompiledPerformerBootstrapRegistry? bootstrap,
+            CompiledPresenterBootstrapRegistry? bootstrap,
             EntityTemplate template,
             int templateKeyId)
         {
             if (bootstrap == null ||
                 template == null ||
                 templateKeyId <= 0 ||
-                !bootstrap.TryGetEntitySpawnCreates(templateKeyId, out CompiledPerformerBootstrapRegistry.BootstrapCreateRule[] rules) ||
+                !bootstrap.TryGetEntitySpawnCreates(templateKeyId, out CompiledPresenterBootstrapRegistry.BootstrapCreateRule[] rules) ||
                 rules.Length == 0)
             {
                 return false;
@@ -21,7 +21,7 @@ namespace Ludots.Core.Config
 
             for (int i = 0; i < rules.Length; i++)
             {
-                ref readonly CompiledPerformerBootstrapRegistry.BootstrapCreateRule rule = ref rules[i];
+                ref readonly CompiledPresenterBootstrapRegistry.BootstrapCreateRule rule = ref rules[i];
                 if (rule.ResolveScopeTag(1) <= 0 || !TemplateSatisfiesBootstrapCondition(template, rule.InlineCondition))
                 {
                     return false;
@@ -38,7 +38,7 @@ namespace Ludots.Core.Config
                 InlineConditionKind.None => true,
                 InlineConditionKind.SourceHasVisualTransform => true,
                 InlineConditionKind.SourceHasAttributes => template.Components != null && template.Components.ContainsKey("AttributeBuffer"),
-                _ => throw new InvalidOperationException($"Unsupported performer bootstrap inline condition '{condition}'."),
+                _ => throw new InvalidOperationException($"Unsupported presenter bootstrap inline condition '{condition}'."),
             };
         }
     }

@@ -17,7 +17,7 @@ using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Hud;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 using MobaDemoMod.Triggers;
@@ -172,19 +172,19 @@ namespace MobaDemoMod.Systems
             });
             
             // Order submit handler
-            // Visual feedback (markers, cooldown text) is handled by Core PerformerRuleSystem
+            // Visual feedback (markers, cooldown text) is handled by Core PresenterRuleSystem
             // via GAS -> PresentationEvent bridge; no mod-level marker logic needed.
             _inputOrderMapping.SetOrderSubmitHandler((in Order order) =>
             {
                 return _orders.Submit(in order);
             });
 
-            // Aiming state -> Performer direct API (for AimCast mode)
-            // Uses PerformerCommandBuffer to create/destroy a performer scope.
-            if (_globals.TryGetValue(CoreServiceKeys.PerformerCommandBuffer.Name, out var cmdObj) && cmdObj is PerformerCommandBuffer commands)
+            // Aiming state -> Presenter direct API (for AimCast mode)
+            // Uses PresenterCommandBuffer to create/destroy a presenter scope.
+            if (_globals.TryGetValue(CoreServiceKeys.PresenterCommandBuffer.Name, out var cmdObj) && cmdObj is PresenterCommandBuffer commands)
             {
                 var mc = (MobaConfig)_globals[InstallMobaDemoOnGameStartTrigger.MobaConfigKey];
-                var perfReg = _globals.TryGetValue(CoreServiceKeys.PerformerDefinitionRegistry.Name, out var prObj) && prObj is PerformerDefinitionRegistry pr ? pr : null;
+                var perfReg = _globals.TryGetValue(CoreServiceKeys.PresenterDefinitionRegistry.Name, out var prObj) && prObj is PresenterDefinitionRegistry pr ? pr : null;
                 int rangeCircleDefId = perfReg?.GetId(mc.Presentation.RangeCircleIndicatorDefKey) ?? 0;
 
                 _inputOrderMapping.SetAimingStateChangedHandler((isAiming, mapping) =>
@@ -192,10 +192,10 @@ namespace MobaDemoMod.Systems
                     int scopeId = mapping.ActionId.GetHashCode();
                     if (isAiming)
                     {
-                        commands.TryAdd(new PerformerCommand
+                        commands.TryAdd(new PresenterCommand
                         {
-                            CommandKind = PerformerCommandKind.CreatePerformer,
-                            PerformerDefinitionId = rangeCircleDefId,
+                            CommandKind = PresenterCommandKind.CreatePresenter,
+                            PresenterDefinitionId = rangeCircleDefId,
                             ScopeTag = scopeId,
                             Source = TryGetLocalPlayerId(out int playerId)
                                 ? GetControlledActor(playerId)
@@ -205,15 +205,15 @@ namespace MobaDemoMod.Systems
                     else
                     {
                         // Destroy the entire aiming scope
-                        commands.TryAdd(new PerformerCommand
+                        commands.TryAdd(new PresenterCommand
                         {
-                            CommandKind = PerformerCommandKind.DestroyPerformerScope,
+                            CommandKind = PresenterCommandKind.DestroyPresenterScope,
                             ScopeTag = scopeId
                         });
                     }
                 });
 
-                // No update handler needed; performer position resolves from Owner entity each frame.
+                // No update handler needed; presenter position resolves from Owner entity each frame.
             }
         }
 

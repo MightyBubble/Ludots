@@ -1040,11 +1040,11 @@ namespace Ludots.Tests.Architecture
             File.WriteAllText(Path.Combine(core, "Configs", "game.json"), """
 {
   "presentation": {
-    "performerInstanceCapacity": 2048,
+    "presenterInstanceCapacity": 2048,
     "gasPresentationEventCapacity": 16384,
     "presentationEventStreamCapacity": 32768,
     "presentationOwnerChangeCapacity": 12288,
-    "performerCommandCapacity": 4096,
+    "presenterCommandCapacity": 4096,
     "primitiveDrawBufferCapacity": 8192,
     "visualSnapshotBufferCapacity": 16384,
     "visualProxyBufferCapacity": 16384,
@@ -1086,11 +1086,11 @@ namespace Ludots.Tests.Architecture
             File.WriteAllText(Path.Combine(mod, "assets", "game.json"), """
 {
   "presentation": {
-    "performerInstanceCapacity": 8192,
+    "presenterInstanceCapacity": 8192,
     "gasPresentationEventCapacity": 32768,
     "presentationEventStreamCapacity": 65536,
     "presentationOwnerChangeCapacity": 24576,
-    "performerCommandCapacity": 32768,
+    "presenterCommandCapacity": 32768,
     "primitiveDrawBufferCapacity": 65536,
     "visualSnapshotBufferCapacity": 131072,
     "visualProxyBufferCapacity": 131072,
@@ -1121,11 +1121,11 @@ namespace Ludots.Tests.Architecture
             var pipeline = new ConfigPipeline(vfs, modLoader);
             var config = pipeline.MergeGameConfig();
 
-            Assert.That(config.Presentation.PerformerInstanceCapacity, Is.EqualTo(8192));
+            Assert.That(config.Presentation.PresenterInstanceCapacity, Is.EqualTo(8192));
             Assert.That(config.Presentation.GasPresentationEventCapacity, Is.EqualTo(32768));
             Assert.That(config.Presentation.PresentationEventStreamCapacity, Is.EqualTo(65536));
             Assert.That(config.Presentation.PresentationOwnerChangeCapacity, Is.EqualTo(24576));
-            Assert.That(config.Presentation.PerformerCommandCapacity, Is.EqualTo(32768));
+            Assert.That(config.Presentation.PresenterCommandCapacity, Is.EqualTo(32768));
             Assert.That(config.Presentation.PrimitiveDrawBufferCapacity, Is.EqualTo(65536));
             Assert.That(config.Presentation.VisualSnapshotBufferCapacity, Is.EqualTo(131072));
             Assert.That(config.Presentation.VisualProxyBufferCapacity, Is.EqualTo(131072));

@@ -36,7 +36,7 @@ public sealed class BrowserMinimapWebShellShowcaseAcceptanceTests
             .EnumerateArray()
             .Single(item => string.Equals(item.GetProperty("id").GetString(), PresetId, StringComparison.Ordinal));
         string[] selectors = preset.GetProperty("selectors").EnumerateArray().Select(item => item.GetString() ?? string.Empty).ToArray();
-        Assert.That(selectors, Is.EqualTo(new[] { "$performer_blacksmith_large_world_nohud", $"${BindingName}" }));
+        Assert.That(selectors, Is.EqualTo(new[] { "$presenter_blacksmith_large_world_nohud", $"${BindingName}" }));
         Assert.That(preset.GetProperty("adapterId").GetString(), Is.EqualTo("raylib"));
         Assert.That(preset.GetProperty("browserRuntime").GetProperty("enabled").GetBoolean(), Is.True);
         Assert.That(preset.GetProperty("browserRuntime").GetProperty("required").GetBoolean(), Is.True);

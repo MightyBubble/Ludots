@@ -595,7 +595,7 @@ z
     <text style="font-weight: 700; font-size: 10.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="821.88" y="360.966328" transform="rotate(-0 821.88 360.966328)">EffectSystem</text>
    </g>
    <g id="text_16">
-    <text style="font-weight: 700; font-size: 10.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="942.12" y="360.966328" transform="rotate(-0 942.12 360.966328)">PerformerSystem</text>
+    <text style="font-weight: 700; font-size: 10.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="942.12" y="360.966328" transform="rotate(-0 942.12 360.966328)">PresenterSystem</text>
    </g>
    <g id="text_17">
     <text style="font-weight: 700; font-size: 10.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="1062.36" y="360.782578" transform="rotate(-0 1062.36 360.782578)">ActSystem</text>
@@ -670,7 +670,7 @@ z
     <text style="font-weight: 700; font-size: 10.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #23272e" x="864" y="877.757344" transform="rotate(-0 864 877.757344)">Registry</text>
    </g>
    <g id="text_41">
-    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="864" y="896.393156" transform="rotate(-0 864 896.393156)">StringIntRegistry -&gt; Ability/Performer/...</text>
+    <text style="font-size: 10.2px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #5b6470" x="864" y="896.393156" transform="rotate(-0 864 896.393156)">StringIntRegistry -&gt; Ability/Presenter/...</text>
    </g>
    <g id="line2d_1">
     <path d="M 776.057143 151.2

@@ -10,7 +10,7 @@ public sealed class MassNavigationTelemetry
     private long _controlTick;
     private long _commandTick;
     private long _simTick;
-    private long _performerTick;
+    private long _presenterTick;
     private long _panelTick;
 
     public int CommandCountFrame { get; private set; }
@@ -28,16 +28,16 @@ public sealed class MassNavigationTelemetry
     public float SimStepMs { get; private set; }
     public float HardResolveMs { get; private set; }
     public float EntitySyncMs { get; private set; }
-    public float PerformerCommandMs { get; private set; }
+    public float PresenterCommandMs { get; private set; }
     public float ControlHzObserved { get; private set; }
     public float CommandHzObserved { get; private set; }
     public float SimHzObserved { get; private set; }
-    public float PerformerHzObserved { get; private set; }
+    public float PresenterHzObserved { get; private set; }
     public float PanelHzObserved { get; private set; }
     public int CrowdInViewCount { get; private set; }
     public int CrowdSubmittedCount { get; private set; }
     public int ObstacleSubmittedCount { get; private set; }
-    public int PerformerDroppedCount { get; private set; }
+    public int PresenterDroppedCount { get; private set; }
     public int StreamingWindowUpdatesFrame { get; private set; }
     public int FocusBudgetUpdatesTotal { get; private set; }
     public int SolverWindowMovesTotal { get; private set; }
@@ -63,24 +63,24 @@ public sealed class MassNavigationTelemetry
     public void ObserveSimStep(double sampleMs) => SimStepMs = Smooth(SimStepMs, (float)sampleMs);
     public void ObserveHardResolve(double sampleMs) => HardResolveMs = Smooth(HardResolveMs, (float)sampleMs);
     public void ObserveEntitySync(double sampleMs) => EntitySyncMs = Smooth(EntitySyncMs, (float)sampleMs);
-    public void ObservePerformerCommand(double sampleMs) => PerformerCommandMs = Smooth(PerformerCommandMs, (float)sampleMs);
+    public void ObservePresenterCommand(double sampleMs) => PresenterCommandMs = Smooth(PresenterCommandMs, (float)sampleMs);
 
-    public void ObservePerformerCoverage(
+    public void ObservePresenterCoverage(
         int crowdInViewCount,
         int crowdSubmittedCount,
         int obstacleSubmittedCount,
-        int performerDroppedCount)
+        int presenterDroppedCount)
     {
         CrowdInViewCount = Math.Max(0, crowdInViewCount);
         CrowdSubmittedCount = Math.Max(0, crowdSubmittedCount);
         ObstacleSubmittedCount = Math.Max(0, obstacleSubmittedCount);
-        PerformerDroppedCount = Math.Max(0, performerDroppedCount);
+        PresenterDroppedCount = Math.Max(0, presenterDroppedCount);
     }
 
     public void ObserveControlTick() => ControlHzObserved = ObserveHz(ref _controlTick, ControlHzObserved);
     public void ObserveCommandTick() => CommandHzObserved = ObserveHz(ref _commandTick, CommandHzObserved);
     public void ObserveSimTick() => SimHzObserved = ObserveHz(ref _simTick, SimHzObserved);
-    public void ObservePerformerTick() => PerformerHzObserved = ObserveHz(ref _performerTick, PerformerHzObserved);
+    public void ObservePresenterTick() => PresenterHzObserved = ObserveHz(ref _presenterTick, PresenterHzObserved);
     public void ObservePanelTick() => PanelHzObserved = ObserveHz(ref _panelTick, PanelHzObserved);
 
     public void MarkStructuralChange()

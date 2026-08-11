@@ -1,0 +1,20 @@
+{
+  "startupMapId": "presenter_blacksmith_scatter_hudtext_benchmark",
+  "presentation": {
+    "presenterInstanceCapacity": 1048576,
+    "gasPresentationEventCapacity": 2097152,
+    "presentationEventStreamCapacity": 2097152,
+    "presentationOwnerChangeCapacity": 2097152,
+    "presenterCommandCapacity": 2097152,
+    "primitiveDrawBufferCapacity": 1048576,
+    "visualSnapshotBufferCapacity": 1048576,
+    "visualProxyBufferCapacity": 1048576,
+    "skinnedVisualBatchCapacity": 65536,
+    "presentationRequestCapacity": 2097152,
+    "groundOverlayCapacity": 1,
+    "roadSplineCapacity": 1,
+    "worldHudCapacity": 1048576,
+    "screenHudCapacity": 1048576,
+    "runtimeEntitySpawnQueueCapacity": 524288
+  }
+}

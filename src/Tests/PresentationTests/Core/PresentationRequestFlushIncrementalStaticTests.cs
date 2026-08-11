@@ -4,7 +4,7 @@ using Arch.Core;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Requests;
 using NUnit.Framework;
@@ -183,7 +183,7 @@ namespace Ludots.Tests.Presentation
         {
             return new PresentationVisualProxy
             {
-                ProxyKind = PresentationVisualProxyKind.Performer,
+                ProxyKind = PresentationVisualProxyKind.Presenter,
                 MeshAssetId = 10,
                 MaterialId = 1,
                 StableId = stableId,

@@ -14,11 +14,11 @@
       "mediumLodDistanceCm": 36000,
       "lowLodDistanceCm": 72000
     },
-    "performerInstanceCapacity": 4096,
+    "presenterInstanceCapacity": 4096,
     "gasPresentationEventCapacity": 4096,
     "presentationEventStreamCapacity": 4096,
     "presentationOwnerChangeCapacity": 4096,
-    "performerCommandCapacity": 4096,
+    "presenterCommandCapacity": 4096,
     "primitiveDrawBufferCapacity": 8192,
     "visualSnapshotBufferCapacity": 8192,
     "visualProxyBufferCapacity": 8192,

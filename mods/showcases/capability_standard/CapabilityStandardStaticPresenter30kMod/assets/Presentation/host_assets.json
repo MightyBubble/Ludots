@@ -1,0 +1,65 @@
+[
+  {
+    "id": "capability_static_presenter.building.north.intact.raylib",
+    "assetKind": "Mesh",
+    "assetId": "capability_static_presenter.building.north.intact",
+    "backendId": "raylib",
+    "sourceUris": [
+      "CapabilityStandardStaticPresenter30kMod:assets/Models/building_blacksmith_blue.gltf"
+    ]
+  },
+  {
+    "id": "capability_static_presenter.building.south.intact.raylib",
+    "assetKind": "Mesh",
+    "assetId": "capability_static_presenter.building.south.intact",
+    "backendId": "raylib",
+    "sourceUris": [
+      "CapabilityStandardStaticPresenter30kMod:assets/Models/building_blacksmith_red.gltf"
+    ]
+  },
+  {
+    "id": "capability_static_presenter.building.damaged.raylib",
+    "assetKind": "Mesh",
+    "assetId": "capability_static_presenter.building.damaged",
+    "backendId": "raylib",
+    "sourceUris": [
+      "CapabilityStandardStaticPresenter30kMod:assets/Models/building_scaffolding.gltf"
+    ]
+  },
+  {
+    "id": "capability_static_presenter.building.ruined.raylib",
+    "assetKind": "Mesh",
+    "assetId": "capability_static_presenter.building.ruined",
+    "backendId": "raylib",
+    "sourceUris": [
+      "CapabilityStandardStaticPresenter30kMod:assets/Models/building_destroyed.gltf"
+    ]
+  },
+  {
+    "id": "capability_static_presenter.furnace.raylib",
+    "assetKind": "Mesh",
+    "assetId": "capability_static_presenter.furnace",
+    "backendId": "raylib",
+    "sourceUris": [
+      "CapabilityStandardStaticPresenter30kMod:assets/Models/building_mine_blue.gltf"
+    ]
+  },
+  {
+    "id": "capability_static_presenter.worker.knight.raylib",
+    "assetKind": "Mesh",
+    "assetId": "capability_static_presenter.worker.knight",
+    "backendId": "raylib",
+    "sourceUris": [
+      "CapabilityStandardStaticPresenter30kMod:assets/Models/Knight.glb"
+    ]
+  },
+  {
+    "id": "capability_static_presenter.smoke.billboard.raylib",
+    "assetKind": "Mesh",
+    "assetId": "capability_static_presenter.smoke.billboard",
+    "backendId": "raylib",
+    "sourceUris": [
+      "CapabilityStandardStaticPresenter30kMod:assets/Textures/smoke_puff.png"
+    ]
+  }
+]

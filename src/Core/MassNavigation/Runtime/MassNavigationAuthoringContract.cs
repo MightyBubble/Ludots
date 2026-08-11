@@ -4,7 +4,7 @@ using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Presentation.Assets;
-using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Scripting;
 
@@ -14,20 +14,20 @@ internal sealed class MassNavigationAuthoringContract
 {
     private readonly Dictionary<string, EntityTemplate> _templates;
     private readonly EntityTemplateKeyRegistry? _templateKeys;
-    private readonly PerformerDefinitionRegistry? _performers;
+    private readonly PresenterDefinitionRegistry? _presenters;
     private readonly MeshAssetRegistry? _meshAssets;
     private readonly MassNavigationConfig _config;
 
     private MassNavigationAuthoringContract(
         Dictionary<string, EntityTemplate> templates,
         EntityTemplateKeyRegistry? templateKeys,
-        PerformerDefinitionRegistry? performers,
+        PresenterDefinitionRegistry? presenters,
         MeshAssetRegistry? meshAssets,
         MassNavigationConfig config)
     {
         _templates = templates;
         _templateKeys = templateKeys;
-        _performers = performers;
+        _presenters = presenters;
         _meshAssets = meshAssets;
         _config = config;
     }
@@ -51,15 +51,15 @@ internal sealed class MassNavigationAuthoringContract
             return new MassNavigationAuthoringContract(
                 new Dictionary<string, EntityTemplate>(StringComparer.Ordinal),
                 templateKeys: null,
-                performers: null,
+                presenters: null,
                 meshAssets: null,
                 config);
         }
 
         EntityTemplateKeyRegistry templateKeys = engine.GetService(CoreServiceKeys.EntityTemplateKeyRegistry)
             ?? throw new InvalidOperationException("MassNavigation runtime auto-spawn requires EntityTemplateKeyRegistry.");
-        PerformerDefinitionRegistry performers = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry)
-            ?? throw new InvalidOperationException("MassNavigation runtime auto-spawn requires PerformerDefinitionRegistry.");
+        PresenterDefinitionRegistry presenters = engine.GetService(CoreServiceKeys.PresenterDefinitionRegistry)
+            ?? throw new InvalidOperationException("MassNavigation runtime auto-spawn requires PresenterDefinitionRegistry.");
         MeshAssetRegistry meshAssets = engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry)
             ?? throw new InvalidOperationException("MassNavigation runtime auto-spawn requires PresentationMeshAssetRegistry.");
         IVisualHeightmap visualHeightmap = engine.GetService(CoreServiceKeys.VisualHeightmap)
@@ -80,7 +80,7 @@ internal sealed class MassNavigationAuthoringContract
             templates[template.Id] = template;
         }
 
-        var contract = new MassNavigationAuthoringContract(templates, templateKeys, performers, meshAssets, config);
+        var contract = new MassNavigationAuthoringContract(templates, templateKeys, presenters, meshAssets, config);
         contract.ValidateAll();
         return contract;
     }
@@ -127,8 +127,8 @@ internal sealed class MassNavigationAuthoringContract
             return;
         }
 
-        ValidatePerformer(_config.Presentation.BlockerPerformerId);
-        ValidatePerformer(_config.Presentation.HotspotPerformerId);
+        ValidatePresenter(_config.Presentation.BlockerPresenterId);
+        ValidatePresenter(_config.Presentation.HotspotPresenterId);
         ValidateTemplate(_config.Presentation.BlockerTemplateId);
         ValidateTemplate(_config.Presentation.HotspotTemplateId);
 
@@ -139,24 +139,24 @@ internal sealed class MassNavigationAuthoringContract
             ValidateTemplate(team.HeavyTemplateId);
             MassNavigationTemplateLayerResolver.RequireAgentLayer(_templates[team.LightTemplateId], team.LightTemplateId);
             MassNavigationTemplateLayerResolver.RequireAgentLayer(_templates[team.HeavyTemplateId], team.HeavyTemplateId);
-            ValidatePerformer(team.LightPerformerId);
-            ValidatePerformer(team.HeavyPerformerId);
+            ValidatePresenter(team.LightPresenterId);
+            ValidatePresenter(team.HeavyPresenterId);
         }
     }
 
-    private void ValidatePerformer(string performerId)
+    private void ValidatePresenter(string presenterId)
     {
-        if (string.IsNullOrWhiteSpace(performerId))
+        if (string.IsNullOrWhiteSpace(presenterId))
         {
-            throw new InvalidOperationException("MassNavigation runtime performer id must be non-empty.");
+            throw new InvalidOperationException("MassNavigation runtime presenter id must be non-empty.");
         }
 
-        PerformerDefinitionRegistry performers = _performers
-            ?? throw new InvalidOperationException("MassNavigation runtime requires PerformerDefinitionRegistry before validating auto-spawn performers.");
-        int performerDefinitionId = performers.GetId(performerId);
-        if (performerDefinitionId <= 0 || !performers.TryGet(performerDefinitionId, out _))
+        PresenterDefinitionRegistry presenters = _presenters
+            ?? throw new InvalidOperationException("MassNavigation runtime requires PresenterDefinitionRegistry before validating auto-spawn presenters.");
+        int presenterDefinitionId = presenters.GetId(presenterId);
+        if (presenterDefinitionId <= 0 || !presenters.TryGet(presenterDefinitionId, out _))
         {
-            throw new InvalidOperationException($"MassNavigation runtime requires configured performer definition '{performerId}'.");
+            throw new InvalidOperationException($"MassNavigation runtime requires configured presenter definition '{presenterId}'.");
         }
     }
 

@@ -75,7 +75,7 @@ Normal Attack ability:
           }
         ]
       },
-      "performer": "block_stance_animation"
+      "presenter": "block_stance_animation"
     },
     {
       "id": "counter_attack",
@@ -88,7 +88,7 @@ Normal Attack ability:
           { "type": "RemoveTag", "tag": "post_block" }
         ]
       },
-      "performer": "riposte_animation"
+      "presenter": "riposte_animation"
     },
     {
       "id": "normal_attack",
@@ -99,7 +99,7 @@ Normal Attack ability:
           { "type": "Damage", "amount": 50 }
         ]
       },
-      "performer": "standard_slash_animation"
+      "presenter": "standard_slash_animation"
     }
   ]
 }

@@ -7,12 +7,12 @@ Last Updated: 2026-04-16
 
 ## 1. 文档目标
 
-本文专门补充 `Performer` 统一编排 RFC 中最容易跑偏、但又最关键的一块：相位系统。
+本文专门补充 `Presenter` 统一编排 RFC 中最容易跑偏、但又最关键的一块：相位系统。
 
 这里的核心目标不是继续讨论 `selection`、HUD 或具体某个 showcase，而是明确：
 
 - 什么是表现层相位
-- 相位系统和 `Performer` 的边界在哪里
+- 相位系统和 `Presenter` 的边界在哪里
 - 相位系统和 `player` / `team` / `relationship` / visibility 上游的关系是什么
 - 多玩家看到不同演出时，系统应如何建模
 
@@ -22,14 +22,14 @@ Last Updated: 2026-04-16
 
 一句话定义：
 
-> 相位系统负责给定某个“观看者上下文”后，计算当前语义对象在该观看者视角下处于什么表现相位；`Performer` 只消费相位结果并投影出对应行为与输出。
+> 相位系统负责给定某个“观看者上下文”后，计算当前语义对象在该观看者视角下处于什么表现相位；`Presenter` 只消费相位结果并投影出对应行为与输出。
 
 因此：
 
-- `Performer` 不是相位真相
-- `Performer` 也不是 visibility truth
+- `Presenter` 不是相位真相
+- `Presenter` 也不是 visibility truth
 - `selection` 更不是相位系统
-- `PerformPhaseResult` 也不应变成第二套 performer 参数黑板
+- `PerformPhaseResult` 也不应变成第二套 presenter 参数黑板
 
 更准确的职责划分应该是：
 
@@ -40,9 +40,9 @@ Last Updated: 2026-04-16
 - 负责把这些上游输入折叠成表现层可消费的 phase result
 - 建议由 `PerformPhaseResolver` 统一承担 raw facts -> `PerformPhaseInput` -> `PerformPhaseResult` 的折叠责任
 
-3. `Performer`
+3. `Presenter`
 - 负责根据 phase result 决定哪些 behavior active、哪些 behavior suspended、哪些 output variant 生效
-- 具体投影参数仍优先写回现有 performer 参数黑板，由 binding / override / set-param 流消费
+- 具体投影参数仍优先写回现有 presenter 参数黑板，由 binding / override / set-param 流消费
 
 4. `PresentationRequest`
 - 负责承载最终输出包
@@ -71,7 +71,7 @@ Last Updated: 2026-04-16
 
 - 观众关系真相
 - visibility truth
-- performer phase truth
+- presenter phase truth
 
 ### 3.2 visibility
 
@@ -85,7 +85,7 @@ visibility 是“当前某观看者是否应看见某对象”的上游结果。
 - debug / replay / observer 模式
 - 其他 gameplay 或客户端投影规则
 
-visibility 不属于 performer 自己。
+visibility 不属于 presenter 自己。
 
 ### 3.3 phase
 
@@ -183,35 +183,35 @@ phase system 应负责：
 - 接收一个语义对象 owner
 - 接收一个 viewer context 或更上游 projection context
 - 接收 visibility / relation / mode 等输入
-- 输出 performer 可消费的 phase result
+- 输出 presenter 可消费的 phase result
 
 ### 5.2 phase system 不负责
 
 phase system 不应负责：
 
-- 存储 performer 生命周期
+- 存储 presenter 生命周期
 - 直接发 adapter output
 - 直接承担 selection state
 - 直接成为 player/team/relationship 的真相来源
 
-### 5.3 `Performer` 的职责
+### 5.3 `Presenter` 的职责
 
-`Performer` 只做两件事：
+`Presenter` 只做两件事：
 
 1. 保存语义演出实例真相
 2. 根据 phase result 投影行为
 
-所以同一个 performer：
+所以同一个 presenter：
 
 - 在 player A 看来可能是完整模型 + HUD + indicator
 - 在 player B 看来可能是简化模型
 - 在 observer 看来可能多一层 debug overlay
 
-这不是三个 performer。
+这不是三个 presenter。
 
 这是：
 
-- 一个 performer
+- 一个 presenter
 - 三份 phase-driven projection
 
 ## 6. 推荐数据流
@@ -222,7 +222,7 @@ flowchart LR
     C["Viewer Context"] --> B
     B --> D["Phase System"]
     D --> E["Phase Result"]
-    E --> F["Performer"]
+    E --> F["Presenter"]
     F --> G["PerformBehavior Projection"]
     G --> H["PresentationRequest"]
     H --> I["Flush / Adapter"]
@@ -232,8 +232,8 @@ flowchart LR
 
 - 上游算输入
 - 相位系统算 phase result
-- performer 按结果投影
-- performer 间参数透传仍优先走现有参数黑板，不新增 phase-specific linkage container
+- presenter 按结果投影
+- presenter 间参数透传仍优先走现有参数黑板，不新增 phase-specific linkage container
 
 ## 7. 推荐术语
 
@@ -255,7 +255,7 @@ flowchart LR
 
 ### `Phase Result`
 
-指 phase system 产出的、供 performer 消费的投影结果。
+指 phase system 产出的、供 presenter 消费的投影结果。
 
 例如：
 
@@ -306,7 +306,7 @@ flowchart LR
 
 1. phase system 先给 phase result
 2. behavior 再根据 phase result 选择 projection branch
-3. branch 需要的具体数值、权重、偏移、variant key，优先通过现有 performer 参数黑板提供
+3. branch 需要的具体数值、权重、偏移、variant key，优先通过现有 presenter 参数黑板提供
 
 例如：
 
@@ -330,7 +330,7 @@ flowchart LR
 - ally 看到团队版投影
 - enemy 看不到或只看结果
 
-这些都不该通过复制多个 performer 实例来实现。
+这些都不该通过复制多个 presenter 实例来实现。
 
 ## 10. 设计约束
 
@@ -347,23 +347,23 @@ phase system 可以复用：
 
 ### 10.2 不把 selection 重新带回相位
 
-selection 可能影响 UI 看到什么，但不应作为 performer audience phase truth。
+selection 可能影响 UI 看到什么，但不应作为 presenter audience phase truth。
 
-### 10.3 不把 performer 变成 policy owner
+### 10.3 不把 presenter 变成 policy owner
 
-performer 不拥有：
+presenter 不拥有：
 
 - relation truth
 - visibility truth
 - viewer truth
 
-performer 也不应新增第二套参数真相：
+presenter 也不应新增第二套参数真相：
 
 - 现有 `bindings + override + set-param` 应继续作为参数真相
 - 相位系统只负责决定“该投影什么”
-- 不负责另建一套“怎么把值传给 performer”的黑板
+- 不负责另建一套“怎么把值传给 presenter”的黑板
 
-performer 只消费结果。
+presenter 只消费结果。
 
 ## 11. 对后续实现的建议顺序
 
@@ -396,14 +396,14 @@ performer 只消费结果。
 
 1. 用 `selection` 代替 audience
 2. 把 `LocalPlayerEntity` 当成完整相位模型
-3. 为不同玩家复制多个 performer
+3. 为不同玩家复制多个 presenter
 
 应该坚持的原则是：
 
-- 一个语义对象，一个 performer
+- 一个语义对象，一个 presenter
 - 多个观看者，多份 phase projection
-- 上游算相位输入，phase system 算相位结果，performer 消费结果
-- performer 参数透传与数值投影优先复用现有参数黑板，只允许扩展 param key / binding source / override 流
+- 上游算相位输入，phase system 算相位结果，presenter 消费结果
+- presenter 参数透传与数值投影优先复用现有参数黑板，只允许扩展 param key / binding source / override 流
 
 ## 13. UAT 验收标准
 
@@ -412,7 +412,7 @@ performer 只消费结果。
 ### 13.1 必须满足的三层证据
 
 1. 代码层证据
-- phase contract、phase resolver、performer projection 有对应测试覆盖
+- phase contract、phase resolver、presenter projection 有对应测试覆盖
 
 2. headless 验收证据
 - 必须生成：
@@ -483,8 +483,8 @@ performer 只消费结果。
   - `docs/rfcs/perform-architecture-unification/02_cross_review.md`
 - 开发计划：
   - `docs/rfcs/perform-architecture-unification/04_development_plan.md`
-- 当前 performer 架构：
-  - `gitbook/architecture/presentation-performer-current-architecture.md`
+- 当前 presenter 架构：
+  - `gitbook/architecture/presentation-presenter-current-architecture.md`
 - 选择架构：
   - `docs/architecture/entity_selection_architecture.md`
 - relationship 参考：

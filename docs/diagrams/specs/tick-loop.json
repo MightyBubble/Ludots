@@ -38,8 +38,8 @@
     { "id": "v1", "title": "Clear Buffers", "tint": "stone", "x": 70, "y": 870, "w": 200, "h": 80 },
     { "id": "v2", "title": "FrameSetup", "tint": "stone", "x": 300, "y": 870, "w": 200, "h": 80 },
     { "id": "v3", "title": "WorldToVisual", "tint": "stone", "x": 530, "y": 870, "w": 200, "h": 80 },
-    { "id": "v4", "title": "PerformerRule", "tint": "stone", "x": 760, "y": 870, "w": 200, "h": 80 },
-    { "id": "v5", "title": "PerformerEmit", "tint": "stone", "x": 990, "y": 870, "w": 200, "h": 80 },
+    { "id": "v4", "title": "PresenterRule", "tint": "stone", "x": 760, "y": 870, "w": 200, "h": 80 },
+    { "id": "v5", "title": "PresenterEmit", "tint": "stone", "x": 990, "y": 870, "w": 200, "h": 80 },
 
     { "id": "n12", "title": "12 · Clear GAS Events", "tint": "stone", "x": 240, "y": 1080, "w": 360, "h": 70 },
     { "id": "n13", "title": "13 · Swap / Submit", "tint": "stone", "x": 680, "y": 1080, "w": 360, "h": 70 },

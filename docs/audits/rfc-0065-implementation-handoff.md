@@ -31,14 +31,14 @@ This addendum supersedes the older static-frame wording in this handoff.
 | INT-1/2/3 内核 | CommandIntentProfile（谓词 SoA lower、priority 全序 fail-fast、胜出即终局、语义 slot 白名单禁裸 index）；AbilityDefinition.CatalogTags | `CommandIntentProfileRegistry` | CommandIntentProfileTests |
 | GUARD | 6 条 M9 架构护栏（业务字面量禁令/零跨域迁移 API/零施法 FSM/slot 白名单/唯一边变更入口/无扫描回归） | `Rfc0065InteractionCastingBoundaryContractTests` | 同名 |
 | INT-2/4 + DSP + PNL-1/2/3 | KnowledgeCommandTargetGate（fog 目标降级 ground、ContextScored 候选过滤）；CastDispatchProfile（all/topN/cycle × parallel/sequential、distanceToTarget consideration）；AbilityAggregationProfile（groupBy 取值路径表达式） | `KnowledgeCommandTargetGate`、`CastDispatchProfileRegistry`、`AbilityAggregationProfileRegistry` | CastDispatchProfileTests、AbilityAggregationProfileTests |
-| CTX-6/7 + PROV-4b/2b + PNL-4 | exec 生命周期 push/pop context frame（组件对账，覆盖 abort/死亡）；CastCommitProfile op registry（pushFrame/popFrame/submitOrder，states/transitions 键加载拒绝）；Performer graph 条件注入 E[2]=Viewer + payload + 8 个拓扑谓词 op（§5.9 own/proxy/grant 三分支可数据表达、revoke 即翻转）；面板聚合迁移（旧合并键删除） | `AbilityExecInteractionContextSystem`、`CastCommitProfileRegistry`、graph ops 397/410-412/420-422、`CollectionGasEntityCommandPanelSource` | AbilityExecInteractionContextTests、CastCommitProfileTests、PerformerTopologyConditionGraphTests、CollectionGasEntityCommandPanelAggregationTests |
+| CTX-6/7 + PROV-4b/2b + PNL-4 | exec 生命周期 push/pop context frame（组件对账，覆盖 abort/死亡）；CastCommitProfile op registry（pushFrame/popFrame/submitOrder，states/transitions 键加载拒绝）；Presenter graph 条件注入 E[2]=Viewer + payload + 8 个拓扑谓词 op（§5.9 own/proxy/grant 三分支可数据表达、revoke 即翻转）；面板聚合迁移（旧合并键删除） | `AbilityExecInteractionContextSystem`、`CastCommitProfileRegistry`、graph ops 397/410-412/420-422、`CollectionGasEntityCommandPanelSource` | AbilityExecInteractionContextTests、CastCommitProfileTests、PresenterTopologyConditionGraphTests、CollectionGasEntityCommandPanelAggregationTests |
 | CTX-8 + INT-5/6/7 | ClientCastPreference scope 链（perSlot>perFormSet>perTemplate>global + mod 锁 + 持久化）；ControlScheme（IMC 组合热切换 + allowedSchemes）；CommandIntentArbiter（frame > scheme default > 不冒泡）；AxisMoveOrderSystem（轴→节流 moveTo order，禁直写位置，启用与参数=scheme 的 `axisMove` 声明，热切换即声明切换） | `ClientCastPreferenceStore`、`ControlSchemeRuntime`、`CommandIntentArbiter`、`AxisMoveOrderSystem` | ClientCastPreferenceTests、ControlSchemeRuntimeTests、AxisMoveOrderSystemTests |
 
 新增数据档（加载 fail-fast）：`Configs/Relationships/control_profiles.json` + catalog stance 段、`Configs/Input/{filter_profiles, command_intent_profiles, cast_dispatch_profiles, interaction_context_profiles, cast_commit_profiles, control_schemes, cast_commit_locks}.json`（DeepObject 合并）、`Configs/UI/ability_aggregation_profiles.json`（ArrayById 合并，mod fragment 可增量追加 profile）。
 
 ## 二、审计时请重点核查
 
-1. **铁律合规**：`Rfc0065InteractionCastingBoundaryContractTests` 6 条护栏是初步面；请对照 RFC §3 铁律 1~16 与 §6.1 M9 全表，补齐未覆盖断言（如 order payload 自包含、Performer 只读）。
+1. **铁律合规**：`Rfc0065InteractionCastingBoundaryContractTests` 6 条护栏是初步面；请对照 RFC §3 铁律 1~16 与 §6.1 M9 全表，补齐未覆盖断言（如 order payload 自包含、Presenter 只读）。
 2. **0 alloc 声明**：各内核有两窗口取 min 的稳态零分配测试；本 VM 存在 24B GC 测量波动（多个基线测试同病）——审计时在稳定环境复测。
 3. **并发子代理产物的接缝**：GameEngine 接线块（约 L957/L1190-1300）是多任务合流点，审查服务构造顺序依赖（aggregation 必须在 abilities.json 后、commandIntent 在 orderTypes 后）。
 4. **已知基线失败**（非本分支引入，均经 stash/worktree 基线对照确认）：`AbilityExecLoaderFailFastTests`（14 个）、`OrderTypeConfigLoader_*`（5 个）、SkiaSharp 缺 so、零分配波动类。建议单独开 issue 追踪。
@@ -62,7 +62,7 @@ This addendum supersedes the older static-frame wording in this handoff.
 | **CTRL-3：删除 embodied PlayerOwner/Team（breaking）** | 消费者面极大（GAS targeting/TeamColorResolver/PerformPhaseResolver/SelectionEligibility.CanAcquire/lifecycle snapshot/#499 publisher/MassNav 等），需 DomainStanceQuery 全面替换热路径后才能删。**被替代清单另含 `TeamManager`（静态 (TeamA,TeamB)→TeamRelationship enum 矩阵 + `TeamRelationshipSnapshot` 持久化）**：桥接已建立——`ParticipantBindingResolver` 在写 TeamManager 的同一循环把 map attitude 双写为 teamRep→teamRep / playerRep→teamRep stance 边（stance catalog 配置时 fail-fast 校验，未配置时跳过），SSOT 迁移到 relationship 边完成后 TeamManager 退役 | 独立 PR；先迁消费者（每个一个子单），最后删组件 + ArchitectureTests 禁令 |
 | **ORD 工作流 + PR #535 vs #577 仲裁** | 两个外部 PR 25 文件重叠、closes 同批子单，需人工 triage | 人工决策 canonical 后，迁移剩余 skill/cast fan-out 与 InteractionModeType 调用面；`Command` ground path 已通过 `CommandIntentArbiter` → `RouteGroup` → `SelectDispatchTargets` → `OrderQueue` 接入 |
 | **CastCommit/Intent/Dispatch 与 InputOrderMappingSystem 的接线** | `Command` ground slice 已接入 RFC-0065 intent/dispatch；skill/cast 主链仍保留旧 `InteractionModeType` 表达，退役 InteractionModeType 是 ORD/CTX-7 收尾 | 剩余接线顺序：frameActions 拦截 → CommandIntentArbiter → RouteGroup → Dispatch → OrderQueue（约定已在 XML doc） |
-| **PROV-4c：VisibilityCondition graph Emit 接线** | PerformerEmitSystem 该路径现状 throw；触碰 emit 热路径，未在本轮改 | 小单独做，加 per-viewer 可见性测试 |
+| **PROV-4c：VisibilityCondition graph Emit 接线** | PresenterEmitSystem 该路径现状 throw；触碰 emit 热路径，未在本轮改 | 小单独做，加 per-viewer 可见性测试 |
 | **PROV-3/5/6：marker catalog JSON、referee knowledge grant showcase、team palette** | 表现层数据 + 需要可视验收 | 与 GUI showcase 一起做 |
 | **INT-8：KnowledgeProjection tag/stance 事实投影（伪装）** | 新基建，M11 伪装 UAT 标 deferred | 独立 RFC 子单 |
 | **INT-6 RTS 多选轴移动 dispatch** | AxisMoveOrderSystem 当前最小面只动 local rep 化身 | 接 Dispatch 后扩展 |
@@ -93,9 +93,9 @@ Showcase 通用注意：单位外观用 cube/sphere + Static/InstancedStaticMesh
 
 | 单 | 内容 | 就绪度 | 验收 Gherkin |
 |---|---|---|---|
-| A1 | `control_plane_projection_showcase` 可视化：① 用 PROV-4b 拓扑谓词 graph ops 写 marker performer 规则（own=深绿 / proxy=浅绿 ring，条件样板在 `PerformerTopologyConditionGraphTests`，规则形态在 RFC §5.9）；② CEF 面板订阅 `ludots.showcase.control_plane.state` topic + `toggleProxy` command；③ 录屏：框选混编 → O 键 toggle → marker 变色 → revoke 收缩 | 无头链路全绿；launcher binding 已注册；CEF panel framebuffer 已捕获 | M3/M4/P5 |
+| A1 | `control_plane_projection_showcase` 可视化：① 用 PROV-4b 拓扑谓词 graph ops 写 marker presenter 规则（own=深绿 / proxy=浅绿 ring，条件样板在 `PresenterTopologyConditionGraphTests`，规则形态在 RFC §5.9）；② CEF 面板订阅 `ludots.showcase.control_plane.state` topic + `toggleProxy` command；③ 录屏：框选混编 → O 键 toggle → marker 变色 → revoke 收缩 | 无头链路全绿；launcher binding 已注册；CEF panel framebuffer 已捕获 | M3/M4/P5 |
 | A2 | 面板聚合演示：EntityCommandPanel 宿主 + `SetAggregationProfile` 运行时切换（by_family fragment 在 EntityCommandPanelMod） | 内核+迁移完成；`entity_command_panel_showcase` binding 已注册；WebUI/CEF War3-style bottom command panel 已捕获并复核，截图内直接展示 active profile、CommandSource 三人、24/8/24 profile counts 和 owner-qualified splits | M6/P3 |
-| A3 | 超级武器 context showcase：ability 配 `interactionContextProfile` + targeting collection + indicator performer + IMC 切换 | showcase mod、binding、headless acceptance 已完成；Raylib pending -> published/restored timeline 已捕获并复核 | M2/P6 |
+| A3 | 超级武器 context showcase：ability 配 `interactionContextProfile` + targeting collection + indicator presenter + IMC 切换 | showcase mod、binding、headless acceptance 已完成；Raylib pending -> published/restored timeline 已捕获并复核 | M2/P6 |
 | A4 | pointer intent + dispatch + ControlScheme 演示（追猎 blink 三种 dispatch、右键语义路由、WASD⇄鼠标热切换） | default right-click production path、CommandSource startup、hover ignored、`scheme.wasd_move` hot-switch/WASD headless 完成；`interaction_showcase` binding + Raylib default/off -> WASD/enabled timeline 已完成；blink/mixed-selection visible animation 仍可后续追加 | M8/M11/M12/P4/P9 |
 
 ### 工作流 B：benchmark 固化与复验
@@ -123,7 +123,7 @@ Showcase 通用注意：单位外观用 cube/sphere + Static/InstancedStaticMesh
 
 审计范围 = git log 中含 "RFC-0065" 的全部提交。后续实现单在本文档 §五（A/B/C 三条工作流）。逐项核查：
 1) 铁律 1~16 合规（重点：零业务语义字面量、零 fallback、collection 永不跨域迁移、
-   Performer 只读、OrderQueue 唯一 intake——注意旧输入链路尚未迁移属已知尾巴，不算违规）；
+   Presenter 只读、OrderQueue 唯一 intake——注意旧输入链路尚未迁移属已知尾巴，不算违规）；
 2) 每个新 registry/profile 的加载 fail-fast 完整性（未知 kind/重复 id/悬空引用）；
 3) 0 alloc 声明在你的环境复测（本实现 VM 有 24B GC 测量波动）；
 4) GameEngine 接线块的构造顺序依赖与服务空引用风险；

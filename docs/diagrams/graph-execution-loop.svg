@@ -608,7 +608,7 @@ z
     <text style="font-size: 9.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: middle; fill: #8a94a3" x="892.8" y="482.794062" transform="rotate(-0 892.8 482.794062)">Yes → Abort</text>
    </g>
    <g id="text_28">
-    <text style="font-size: 9.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: start; fill: #8a94a3" x="64.8" y="965.611172" transform="rotate(-0 64.8 965.611172)">⚠ GraphExecutor 是解释型执行器（非 JIT）。未来可能引入编译式执行优化（performer-compiled-lanes）。</text>
+    <text style="font-size: 9.5px; font-family: 'Microsoft YaHei', 'DejaVu Sans'; text-anchor: start; fill: #8a94a3" x="64.8" y="965.611172" transform="rotate(-0 64.8 965.611172)">⚠ GraphExecutor 是解释型执行器（非 JIT）。未来可能引入编译式执行优化（presenter-compiled-lanes）。</text>
    </g>
   </g>
  </g>

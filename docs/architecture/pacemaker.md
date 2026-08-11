@@ -1,4 +1,4 @@
-﻿# Pacemaker 时间与步进
+# Pacemaker 时间与步进
 
 本篇只讲 Pacemaker 的职责边界：它如何把平台帧间隔 `dt` 转换为固定步长的模拟推进，以及在预算受限时如何切片执行并触发 BudgetFuse。
 
@@ -74,6 +74,6 @@ RealtimePacemaker 使用累加器 `_accumulator` 累积 `dt`。当累加器达�
 
 ## 7 相关文档
 
-*   表现管线与 Performer 体系：见 [表现管线与 Performer 体系](presentation_performer.md)
+*   表现管线与 Presenter 体系：见 [表现管线与 Presenter 体系](presentation_presenter.md)
 *   ConfigPipeline 合并管线：见 [ConfigPipeline 合并管线](config_pipeline.md)
 *   时间体系：见 [Time Flow](time_flow.md)

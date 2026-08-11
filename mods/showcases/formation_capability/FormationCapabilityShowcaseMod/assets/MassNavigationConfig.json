@@ -5,8 +5,8 @@
       "mass_navigation.agent.soldier",
       "mass_navigation.command.marker"
     ],
-    "blockerPerformerId": null,
-    "hotspotPerformerId": null,
+    "blockerPresenterId": null,
+    "hotspotPresenterId": null,
     "hotspotTemplateId": null,
     "teams": []
   },

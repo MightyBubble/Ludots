@@ -66,8 +66,8 @@
       "mass_navigation.blocker.rock",
       "mass_navigation.hotspot.obelisk"
     ],
-    "blockerPerformerId": "mass_navigation_blocker",
-    "hotspotPerformerId": "mass_navigation_hotspot_marker",
+    "blockerPresenterId": "mass_navigation_blocker",
+    "hotspotPresenterId": "mass_navigation_hotspot_marker",
     "blockerTemplateId": "mass_navigation_blocker",
     "hotspotTemplateId": "mass_navigation_hotspot_marker",
     "teams": [
@@ -76,32 +76,32 @@
         "styleId": "blue",
         "lightTemplateId": "mass_navigation_agent_azure_light",
         "heavyTemplateId": "mass_navigation_agent_azure_heavy",
-        "lightPerformerId": "mass_navigation_agent_azure_light",
-        "heavyPerformerId": "mass_navigation_agent_azure_heavy"
+        "lightPresenterId": "mass_navigation_agent_azure_light",
+        "heavyPresenterId": "mass_navigation_agent_azure_heavy"
       },
       {
         "teamId": 2,
         "styleId": "red",
         "lightTemplateId": "mass_navigation_agent_crimson_light",
         "heavyTemplateId": "mass_navigation_agent_crimson_heavy",
-        "lightPerformerId": "mass_navigation_agent_crimson_light",
-        "heavyPerformerId": "mass_navigation_agent_crimson_heavy"
+        "lightPresenterId": "mass_navigation_agent_crimson_light",
+        "heavyPresenterId": "mass_navigation_agent_crimson_heavy"
       },
       {
         "teamId": 3,
         "styleId": "gold",
         "lightTemplateId": "mass_navigation_agent_amber_light",
         "heavyTemplateId": "mass_navigation_agent_amber_heavy",
-        "lightPerformerId": "mass_navigation_agent_amber_light",
-        "heavyPerformerId": "mass_navigation_agent_amber_heavy"
+        "lightPresenterId": "mass_navigation_agent_amber_light",
+        "heavyPresenterId": "mass_navigation_agent_amber_heavy"
       },
       {
         "teamId": 4,
         "styleId": "green",
         "lightTemplateId": "mass_navigation_agent_emerald_light",
         "heavyTemplateId": "mass_navigation_agent_emerald_heavy",
-        "lightPerformerId": "mass_navigation_agent_emerald_light",
-        "heavyPerformerId": "mass_navigation_agent_emerald_heavy"
+        "lightPresenterId": "mass_navigation_agent_emerald_light",
+        "heavyPresenterId": "mass_navigation_agent_emerald_heavy"
       }
     ]
   },
