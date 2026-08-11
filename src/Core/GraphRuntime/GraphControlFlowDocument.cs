@@ -6,7 +6,7 @@ using Ludots.Core.NodeLibraries.GASGraph;
 namespace Ludots.Core.GraphRuntime
 {
     /// <summary>
-    /// Authored Script and Query document with explicit control and value edges.
+    /// L1 authoring SSOT document: explicit control and value edges for every GraphKind.
     /// Compiles to <see cref="GraphInstruction"/> via GASGraph control-flow compiler.
     /// </summary>
     public sealed class GraphControlFlowDocument
@@ -33,9 +33,25 @@ namespace Ludots.Core.GraphRuntime
         public string? Tag { get; set; }
         public string? Template { get; set; }
         public string? CollectionKey { get; set; }
+        public string? EffectTemplate { get; set; }
+        public string? BuiltinHandler { get; set; }
+        public string? BlackboardKey { get; set; }
+        public string? ConfigKey { get; set; }
         public string? RelationshipType { get; set; }
+        public string? RelationshipMode { get; set; }
         public string? Metric { get; set; }
         public string? Flag { get; set; }
+        public string? QueryCapacityPolicy { get; set; }
+        public float RadiusCm { get; set; }
+        public float RangeCm { get; set; }
+        public int DirectionDeg { get; set; }
+        public int HalfAngleDeg { get; set; }
+        public int LengthCm { get; set; }
+        public int HalfWidthCm { get; set; }
+        public int HalfHeightCm { get; set; }
+        public int RotationDeg { get; set; }
+        public int HexRadius { get; set; }
+        public uint LayerMask { get; set; }
         public int TeamId { get; set; }
         public bool Descending { get; set; }
         /// <summary>

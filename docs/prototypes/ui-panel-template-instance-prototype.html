@@ -1,0 +1,645 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Ludots 面板合同原型 · 模板 / 实例 / 数据图</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --ink: #0e1210;
+      --paper: #e8efe6;
+      --panel: #151b18;
+      --panel-2: #1c2420;
+      --line: #2f3b34;
+      --mint: #7dcea0;
+      --amber: #e2b15a;
+      --coral: #e07a5f;
+      --sky: #7eb8c9;
+      --mute: #8a9a90;
+      --text: #e7eee8;
+      --soft: rgba(232, 239, 230, 0.08);
+      --radius: 10px;
+      --font: "IBM Plex Sans", sans-serif;
+      --display: Syne, "IBM Plex Sans", sans-serif;
+      --mono: "IBM Plex Mono", monospace;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; }
+    body {
+      font-family: var(--font);
+      color: var(--text);
+      background:
+        radial-gradient(900px 480px at 8% -10%, rgba(125, 206, 160, 0.14), transparent 55%),
+        radial-gradient(700px 420px at 100% 0%, rgba(226, 177, 90, 0.10), transparent 50%),
+        linear-gradient(180deg, #101612 0%, var(--ink) 40%, #0a0e0c 100%);
+      line-height: 1.45;
+    }
+
+    .shell { max-width: 1280px; margin: 0 auto; padding: 28px 22px 64px; }
+
+    header.hero {
+      display: grid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 28px;
+      align-items: end;
+      margin-bottom: 28px;
+      padding-bottom: 22px;
+      border-bottom: 1px solid var(--line);
+    }
+    .brand {
+      font-family: var(--display);
+      font-size: clamp(2rem, 4vw, 3rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 0.95;
+      margin: 0 0 10px;
+    }
+    .brand span { color: var(--mint); }
+    .lede { margin: 0; max-width: 42ch; color: var(--mute); font-size: 1.02rem; }
+    .contract {
+      background: linear-gradient(145deg, rgba(125,206,160,0.12), rgba(126,184,201,0.06));
+      border: 1px solid rgba(125,206,160,0.35);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+    }
+    .contract h2 {
+      margin: 0 0 8px;
+      font-family: var(--display);
+      font-size: 0.95rem;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--mint);
+    }
+    .contract ol { margin: 0; padding-left: 1.1rem; color: var(--text); font-size: 0.92rem; }
+    .contract li + li { margin-top: 4px; }
+
+    .tabs {
+      display: flex; flex-wrap: wrap; gap: 8px;
+      margin-bottom: 18px;
+    }
+    .tab {
+      font-family: var(--mono);
+      font-size: 0.78rem;
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: transparent;
+      color: var(--mute);
+      cursor: pointer;
+    }
+    .tab[aria-selected="true"] {
+      background: var(--mint);
+      color: var(--ink);
+      border-color: var(--mint);
+      font-weight: 500;
+    }
+
+    .stage {
+      display: grid;
+      grid-template-columns: 260px 1fr 320px;
+      gap: 14px;
+      min-height: 560px;
+    }
+    @media (max-width: 1100px) {
+      header.hero { grid-template-columns: 1fr; }
+      .stage { grid-template-columns: 1fr; }
+    }
+
+    .col {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+    }
+    .col-h {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+      background: var(--panel-2);
+    }
+    .col-h h3 {
+      margin: 0;
+      font-family: var(--display);
+      font-size: 0.95rem;
+      font-weight: 700;
+    }
+    .col-h small { color: var(--mute); font-family: var(--mono); font-size: 0.72rem; }
+    .col-b { padding: 12px; overflow: auto; flex: 1; }
+
+    .tpl {
+      width: 100%;
+      text-align: left;
+      border: 1px solid transparent;
+      background: var(--soft);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 10px 11px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: border-color .15s, transform .15s;
+    }
+    .tpl:hover { border-color: rgba(125,206,160,0.35); }
+    .tpl.active {
+      border-color: var(--mint);
+      background: rgba(125,206,160,0.12);
+      transform: translateX(2px);
+    }
+    .tpl .id { font-family: var(--mono); font-size: 0.68rem; color: var(--sky); }
+    .tpl .name { font-weight: 600; font-size: 0.92rem; margin: 2px 0; }
+    .tpl .hint { font-size: 0.78rem; color: var(--mute); }
+
+    .hud {
+      position: relative;
+      min-height: 520px;
+      border-radius: 8px;
+      background:
+        linear-gradient(180deg, rgba(20,28,24,0.2), rgba(8,12,10,0.55)),
+        repeating-linear-gradient(0deg, transparent, transparent 27px, rgba(47,59,52,0.35) 28px),
+        repeating-linear-gradient(90deg, transparent, transparent 27px, rgba(47,59,52,0.35) 28px);
+      border: 1px dashed rgba(125,206,160,0.25);
+      overflow: hidden;
+    }
+    .hud-label {
+      position: absolute; top: 10px; left: 12px;
+      font-family: var(--mono); font-size: 0.7rem; color: var(--mute);
+      letter-spacing: 0.06em; text-transform: uppercase;
+    }
+    .slot {
+      position: absolute;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(21, 27, 24, 0.92);
+      box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+      padding: 10px 12px;
+      width: 210px;
+      cursor: pointer;
+      transition: border-color .15s, box-shadow .15s;
+    }
+    .slot:hover { border-color: rgba(226,177,90,0.5); }
+    .slot.active {
+      border-color: var(--amber);
+      box-shadow: 0 0 0 1px rgba(226,177,90,0.35), 0 12px 28px rgba(0,0,0,0.4);
+    }
+    .slot .kind {
+      font-family: var(--mono); font-size: 0.65rem; color: var(--amber);
+      text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .slot .title { font-weight: 600; margin: 2px 0 6px; font-size: 0.92rem; }
+    .slot .bind {
+      font-family: var(--mono); font-size: 0.68rem; color: var(--mute);
+      border-top: 1px solid var(--line); padding-top: 6px; margin-top: 4px;
+    }
+    .slot .bind b { color: var(--sky); font-weight: 500; }
+    .slot.ghost {
+      opacity: 0.45; border-style: dashed;
+    }
+
+    .router {
+      margin-top: 12px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      background: rgba(126,184,201,0.08);
+      border: 1px solid rgba(126,184,201,0.25);
+      font-size: 0.82rem;
+    }
+    .router code {
+      font-family: var(--mono); font-size: 0.75rem;
+      color: var(--sky); background: rgba(0,0,0,0.25);
+      padding: 1px 5px; border-radius: 4px;
+    }
+
+    .graph {
+      display: grid;
+      gap: 8px;
+    }
+    .gnode {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 9px 10px;
+      background: var(--panel-2);
+      position: relative;
+    }
+    .gnode::before {
+      content: "";
+      position: absolute;
+      left: 16px; top: -9px;
+      width: 2px; height: 9px;
+      background: var(--line);
+    }
+    .gnode:first-child::before { display: none; }
+    .gnode .role {
+      font-family: var(--mono); font-size: 0.65rem;
+      letter-spacing: 0.04em; text-transform: uppercase;
+    }
+    .gnode.source .role { color: var(--coral); }
+    .gnode.expr .role { color: var(--amber); }
+    .gnode.bind .role { color: var(--mint); }
+    .gnode .body { font-size: 0.84rem; margin-top: 2px; }
+    .gnode .body code {
+      font-family: var(--mono); font-size: 0.74rem; color: var(--sky);
+    }
+
+    .yaml {
+      margin-top: 10px;
+      background: #0a0e0c;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px 12px;
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      color: #c6d4cb;
+      white-space: pre-wrap;
+      max-height: 220px;
+      overflow: auto;
+    }
+
+    .questions {
+      margin-top: 22px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+    @media (max-width: 900px) { .questions { grid-template-columns: 1fr; } }
+    .q {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 14px 16px;
+      background: rgba(28,36,32,0.7);
+    }
+    .q h4 {
+      margin: 0 0 6px;
+      font-family: var(--display);
+      font-size: 0.95rem;
+      color: var(--amber);
+    }
+    .q p { margin: 0; font-size: 0.86rem; color: var(--mute); }
+
+    .legend {
+      display: flex; flex-wrap: wrap; gap: 10px 16px;
+      margin: 14px 0 0;
+      font-size: 0.78rem; color: var(--mute);
+    }
+    .legend i {
+      display: inline-block; width: 10px; height: 10px;
+      border-radius: 2px; margin-right: 6px; vertical-align: -1px;
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="hero">
+      <div>
+        <p class="brand">面板合同<span>·</span>静态原型</p>
+        <p class="lede">
+          用来对齐三件事：模板与实例分开、多实例并存、面板读数走「类图」表达式管线。
+          不是最终运行时，是需求讨论页。
+        </p>
+      </div>
+      <aside class="contract">
+        <h2>建议合同（草稿）</h2>
+        <ol>
+          <li><b>Template</b>：面板长什么样、关心哪些上下文、暴露哪些绑定口</li>
+          <li><b>Instance</b>：某次挂载的具体身份（槽位、作用域、生命周期）</li>
+          <li><b>DataGraph</b>：从玩法真相 → 表达式节点 → 绑定口的只读投影</li>
+        </ol>
+      </aside>
+    </header>
+
+    <div class="tabs" role="tablist" aria-label="场景">
+      <button class="tab" data-scene="rts" aria-selected="true">场景 A · RTS 选中步兵</button>
+      <button class="tab" data-scene="multi" aria-selected="false">场景 B · 两座兵营双队列</button>
+      <button class="tab" data-scene="empty" aria-selected="false">场景 C · 空选中（全局态）</button>
+    </div>
+
+    <div class="stage">
+      <section class="col">
+        <div class="col-h">
+          <h3>模板库</h3>
+          <small>Template · 可复用</small>
+        </div>
+        <div class="col-b" id="templates"></div>
+      </section>
+
+      <section class="col">
+        <div class="col-h">
+          <h3>运行时挂载</h3>
+          <small>Instance · 可多份</small>
+        </div>
+        <div class="col-b">
+          <div class="hud" id="hud">
+            <div class="hud-label">Mock HUD · 点实例看数据图</div>
+          </div>
+          <div class="router" id="router"></div>
+          <div class="legend">
+            <span><i style="background:var(--amber)"></i>选中实例</span>
+            <span><i style="background:var(--mint)"></i>来自当前路由</span>
+            <span><i style="background:var(--line)"></i>同模板的另一份实例</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="col">
+        <div class="col-h">
+          <h3>数据图</h3>
+          <small>Source → Expr → Bind</small>
+        </div>
+        <div class="col-b">
+          <div class="graph" id="graph"></div>
+          <div class="yaml" id="yaml"></div>
+        </div>
+      </section>
+    </div>
+
+    <section class="questions">
+      <div class="q">
+        <h4>1. 实例身份</h4>
+        <p>实例 id 是否等于「模板 id + 作用域键」（如 entity:42 / building:7），还是允许同作用域多开窗口？</p>
+      </div>
+      <div class="q">
+        <h4>2. 表达式图归属</h4>
+        <p>面板 DataGraph 是专用投影图，还是直接复用现有 Func/Data 图子集？跨 Mod 覆盖时以谁为 SSOT？</p>
+      </div>
+      <div class="q">
+        <h4>3. 写回边界</h4>
+        <p>图默认只读投影；按钮点击走正式指令口。是否允许极少数「配置态」双向绑定，还是一律命令？</p>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const TEMPLATES = [
+      {
+        id: "panel.entity_info",
+        name: "实体信息聚合",
+        hint: "选中实体核心属性 / Effect / Ability",
+        contexts: ["selection.unit", "selection.building"],
+      },
+      {
+        id: "panel.ability_bar",
+        name: "技能/指令栏",
+        hint: "Ability 格子 + 目标选取",
+        contexts: ["selection.unit", "selection.building"],
+      },
+      {
+        id: "panel.production_queue",
+        name: "生产（指令）队列",
+        hint: "可多实例：每座兵营一份",
+        contexts: ["selection.building.producer", "selection.multi.producer"],
+      },
+      {
+        id: "panel.minimap",
+        name: "小地图",
+        hint: "通常单例；全局槽位",
+        contexts: ["global", "selection.*"],
+      },
+      {
+        id: "panel.player_aggregate",
+        name: "玩家信息聚合",
+        hint: "空选中缺省 / 全局态",
+        contexts: ["global", "selection.empty"],
+      },
+      {
+        id: "panel.context_router",
+        name: "上下文路由（机制）",
+        hint: "不是可见面板，是挂载表",
+        contexts: ["*"],
+      },
+    ];
+
+    const SCENES = {
+      rts: {
+        router: "上下文 = <code>selection.unit</code> · Tag <code>Unit.Infantry</code> → 挂载实体信息 + 技能栏；小地图保持全局单例。",
+        instances: [
+          {
+            id: "inst.minimap#global",
+            templateId: "panel.minimap",
+            title: "小地图",
+            scope: "scope:global",
+            slot: { top: 18, right: 18, left: "auto" },
+            graph: [
+              { role: "source", text: "WorldVisibility + CameraViewport" },
+              { role: "expr", text: "ProjectFogMask(explored ∪ visible)" },
+              { role: "expr", text: "MapEntityDots(factionColor)" },
+              { role: "bind", text: "bind.terrainLayer / bind.dots / bind.viewportRect" },
+            ],
+            yaml: `instance:\n  id: inst.minimap#global\n  template: panel.minimap\n  scope: global\n  singleton: true\nbinds:\n  terrainLayer: graph.fogMask\n  dots: graph.entityDots\n  viewportRect: camera.viewport`,
+          },
+          {
+            id: "inst.entity_info#e:42",
+            templateId: "panel.entity_info",
+            title: "步兵 · 哨兵甲",
+            scope: "scope:entity:42",
+            slot: { bottom: 18, left: 18 },
+            graph: [
+              { role: "source", text: "Selection.Primary → Entity(42)" },
+              { role: "source", text: "GAS.Attributes / ActiveEffects" },
+              { role: "expr", text: "AttrBar(hp) = current/max · tint by buff" },
+              { role: "expr", text: "EffectIcons = filter(duration>0) sort by remaining" },
+              { role: "bind", text: "bind.hpBar / bind.effectRow / bind.tagList" },
+            ],
+            yaml: `instance:\n  id: inst.entity_info#e:42\n  template: panel.entity_info\n  scope: entity:42\ndata_graph: panel.entity_info/default\n  # 可被 Mod 覆盖同名图\nbinds:\n  hpBar: expr.AttrBar("hp")\n  effectRow: expr.EffectIcons\n  tagList: entity.tags`,
+          },
+          {
+            id: "inst.ability#e:42",
+            templateId: "panel.ability_bar",
+            title: "指令栏 · 哨兵甲",
+            scope: "scope:entity:42",
+            slot: { bottom: 18, left: 250 },
+            graph: [
+              { role: "source", text: "Entity(42).Abilities" },
+              { role: "expr", text: "SlotGrid = map ability → {icon,cd,cost,hotkey}" },
+              { role: "expr", text: "DisabledReason = !HasTag ∨ cd>0 ∨ cost?" },
+              { role: "bind", text: "bind.slots[] / bind.cursorMode" },
+            ],
+            yaml: `instance:\n  id: inst.ability#e:42\n  template: panel.ability_bar\n  scope: entity:42\nbinds:\n  slots: expr.SlotGrid\n  onClick: command.CastAbility  # 写走指令，不走双向绑定`,
+          },
+        ],
+      },
+      multi: {
+        router: "上下文 = <code>selection.multi.producer</code>（兵营 A+B）→ <b>同模板两份实例</b>；队列图各自以建筑为 scope。",
+        instances: [
+          {
+            id: "inst.queue#b:7",
+            templateId: "panel.production_queue",
+            title: "队列 · 兵营 A",
+            scope: "scope:building:7",
+            slot: { bottom: 24, left: 24 },
+            graph: [
+              { role: "source", text: "Building(7).ProductionQueue" },
+              { role: "expr", text: "ETA = remainingTicks / SimulationClock.rate" },
+              { role: "expr", text: "WarnIfStuck = costGap(resources)" },
+              { role: "bind", text: "bind.entries[] / bind.eta / bind.stuck" },
+            ],
+            yaml: `instance:\n  id: inst.queue#b:7\n  template: panel.production_queue\n  scope: building:7\n  # 多实例：模板相同，scope 不同\nbinds:\n  entries: queue.items\n  eta: expr.ETA\n  stuck: expr.WarnIfStuck`,
+          },
+          {
+            id: "inst.queue#b:9",
+            templateId: "panel.production_queue",
+            title: "队列 · 兵营 B",
+            scope: "scope:building:9",
+            slot: { bottom: 24, left: 260 },
+            graph: [
+              { role: "source", text: "Building(9).ProductionQueue" },
+              { role: "expr", text: "ETA = remainingTicks / SimulationClock.rate" },
+              { role: "expr", text: "WarnIfStuck = costGap(resources)" },
+              { role: "bind", text: "bind.entries[] / bind.eta / bind.stuck" },
+            ],
+            yaml: `instance:\n  id: inst.queue#b:9\n  template: panel.production_queue\n  scope: building:9\nbinds:\n  entries: queue.items\n  eta: expr.ETA`,
+          },
+          {
+            id: "inst.minimap#global",
+            templateId: "panel.minimap",
+            title: "小地图",
+            scope: "scope:global",
+            slot: { top: 18, right: 18, left: "auto" },
+            graph: [
+              { role: "source", text: "WorldVisibility + CameraViewport" },
+              { role: "bind", text: "bind.terrainLayer / bind.viewportRect" },
+            ],
+            yaml: `instance:\n  id: inst.minimap#global\n  template: panel.minimap\n  singleton: true`,
+          },
+        ],
+      },
+      empty: {
+        router: "上下文 = <code>selection.empty</code> → 路由到全局态；实体类面板卸载，玩家聚合 + 小地图保留。",
+        instances: [
+          {
+            id: "inst.player#global",
+            templateId: "panel.player_aggregate",
+            title: "玩家资源总览",
+            scope: "scope:faction:self",
+            slot: { top: 18, left: 18 },
+            graph: [
+              { role: "source", text: "Faction(self).Resources / Population" },
+              { role: "expr", text: "NetPerMin = sum(producers) - sum(upkeep)" },
+              { role: "expr", text: "Tint = NetPerMin < 0 ? danger : ok" },
+              { role: "bind", text: "bind.resourceStrip / bind.popCap" },
+            ],
+            yaml: `instance:\n  id: inst.player#global\n  template: panel.player_aggregate\n  scope: faction:self\nbinds:\n  resourceStrip: map resources → {stock, net: expr.NetPerMin, tint}`,
+          },
+          {
+            id: "inst.minimap#global",
+            templateId: "panel.minimap",
+            title: "小地图",
+            scope: "scope:global",
+            slot: { top: 18, right: 18, left: "auto" },
+            graph: [
+              { role: "source", text: "WorldVisibility + CameraViewport" },
+              { role: "bind", text: "bind.*" },
+            ],
+            yaml: `instance:\n  id: inst.minimap#global\n  template: panel.minimap\n  singleton: true`,
+          },
+        ],
+      },
+    };
+
+    let sceneId = "rts";
+    let selectedTpl = "panel.entity_info";
+    let selectedInst = null;
+
+    const elTemplates = document.getElementById("templates");
+    const elHud = document.getElementById("hud");
+    const elRouter = document.getElementById("router");
+    const elGraph = document.getElementById("graph");
+    const elYaml = document.getElementById("yaml");
+
+    function renderTemplates() {
+      elTemplates.innerHTML = TEMPLATES.map((t) => `
+        <button class="tpl ${t.id === selectedTpl ? "active" : ""}" data-id="${t.id}">
+          <div class="id">${t.id}</div>
+          <div class="name">${t.name}</div>
+          <div class="hint">${t.hint}</div>
+        </button>
+      `).join("");
+      elTemplates.querySelectorAll(".tpl").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          selectedTpl = btn.dataset.id;
+          const match = SCENES[sceneId].instances.find((i) => i.templateId === selectedTpl);
+          selectedInst = match ? match.id : selectedInst;
+          render();
+        });
+      });
+    }
+
+    function renderHud() {
+      const scene = SCENES[sceneId];
+      elRouter.innerHTML = scene.router;
+      const label = elHud.querySelector(".hud-label");
+      elHud.innerHTML = "";
+      elHud.appendChild(label);
+
+      if (!selectedInst || !scene.instances.some((i) => i.id === selectedInst)) {
+        selectedInst = scene.instances[0]?.id;
+      }
+
+      scene.instances.forEach((inst) => {
+        const div = document.createElement("div");
+        const related = inst.templateId === selectedTpl;
+        div.className = "slot" + (inst.id === selectedInst ? " active" : "") + (!related && selectedTpl ? "" : "");
+        if (selectedTpl && inst.templateId !== selectedTpl) div.classList.add("ghost");
+        Object.assign(div.style, {
+          top: inst.slot.top != null ? inst.slot.top + "px" : "auto",
+          left: inst.slot.left != null && inst.slot.left !== "auto" ? inst.slot.left + "px" : "auto",
+          right: inst.slot.right != null ? inst.slot.right + "px" : "auto",
+          bottom: inst.slot.bottom != null ? inst.slot.bottom + "px" : "auto",
+        });
+        div.innerHTML = `
+          <div class="kind">instance</div>
+          <div class="title">${inst.title}</div>
+          <div class="bind"><b>${inst.templateId}</b><br/>${inst.scope}</div>
+        `;
+        div.addEventListener("click", () => {
+          selectedInst = inst.id;
+          selectedTpl = inst.templateId;
+          render();
+        });
+        elHud.appendChild(div);
+      });
+    }
+
+    function renderGraph() {
+      const inst = SCENES[sceneId].instances.find((i) => i.id === selectedInst);
+      if (!inst) {
+        elGraph.innerHTML = "<p style='color:var(--mute);font-size:0.85rem'>选一个实例</p>";
+        elYaml.textContent = "";
+        return;
+      }
+      elGraph.innerHTML = inst.graph.map((n) => `
+        <div class="gnode ${n.role === "source" ? "source" : n.role === "expr" ? "expr" : "bind"}">
+          <div class="role">${n.role}</div>
+          <div class="body"><code>${n.text}</code></div>
+        </div>
+      `).join("");
+      elYaml.textContent = inst.yaml;
+    }
+
+    function render() {
+      renderTemplates();
+      renderHud();
+      renderGraph();
+    }
+
+    document.querySelectorAll(".tab").forEach((tab) => {
+      tab.addEventListener("click", () => {
+        document.querySelectorAll(".tab").forEach((t) => t.setAttribute("aria-selected", "false"));
+        tab.setAttribute("aria-selected", "true");
+        sceneId = tab.dataset.scene;
+        selectedInst = null;
+        render();
+      });
+    });
+
+    render();
+  </script>
+</body>
+</html>

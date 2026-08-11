@@ -4,13 +4,107 @@
     "kind": "Effect",
     "entry": "target",
     "nodes": [
-      { "id": "target", "op": "LoadContextTarget", "next": "random" },
-      { "id": "random", "op": "RandomFloat01", "next": "center" },
-      { "id": "center", "op": "ConstFloat", "floatValue": 0.5, "next": "signed" },
-      { "id": "signed", "op": "SubFloat", "inputs": ["random", "center"], "next": "scale" },
-      { "id": "scale", "op": "ConstFloat", "floatValue": 16.0, "next": "delta" },
-      { "id": "delta", "op": "MulFloat", "inputs": ["signed", "scale"], "next": "modify" },
-      { "id": "modify", "op": "ModifyAttributeAdd", "attribute": "Health", "inputs": ["target", "delta"] }
+      {
+        "id": "target",
+        "op": "LoadContextTarget"
+      },
+      {
+        "id": "random",
+        "op": "RandomFloat01"
+      },
+      {
+        "id": "center",
+        "op": "ConstFloat",
+        "floatValue": 0.5
+      },
+      {
+        "id": "signed",
+        "op": "SubFloat"
+      },
+      {
+        "id": "scale",
+        "op": "ConstFloat",
+        "floatValue": 16.0
+      },
+      {
+        "id": "delta",
+        "op": "MulFloat"
+      },
+      {
+        "id": "modify",
+        "op": "ModifyAttributeAdd",
+        "attribute": "Health"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "target",
+        "fromPort": "next",
+        "to": "random"
+      },
+      {
+        "from": "random",
+        "fromPort": "next",
+        "to": "center"
+      },
+      {
+        "from": "center",
+        "fromPort": "next",
+        "to": "signed"
+      },
+      {
+        "from": "signed",
+        "fromPort": "next",
+        "to": "scale"
+      },
+      {
+        "from": "scale",
+        "fromPort": "next",
+        "to": "delta"
+      },
+      {
+        "from": "delta",
+        "fromPort": "next",
+        "to": "modify"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "random",
+        "fromPort": "value",
+        "to": "signed",
+        "toPort": "a"
+      },
+      {
+        "from": "center",
+        "fromPort": "value",
+        "to": "signed",
+        "toPort": "b"
+      },
+      {
+        "from": "signed",
+        "fromPort": "value",
+        "to": "delta",
+        "toPort": "a"
+      },
+      {
+        "from": "scale",
+        "fromPort": "value",
+        "to": "delta",
+        "toPort": "b"
+      },
+      {
+        "from": "target",
+        "fromPort": "value",
+        "to": "modify",
+        "toPort": "target"
+      },
+      {
+        "from": "delta",
+        "fromPort": "value",
+        "to": "modify",
+        "toPort": "value"
+      }
     ]
   }
 ]

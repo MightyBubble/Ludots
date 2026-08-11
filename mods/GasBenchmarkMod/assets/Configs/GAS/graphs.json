@@ -4,9 +4,46 @@
     "kind": "Effect",
     "entry": "t1",
     "nodes": [
-      { "id": "t1", "op": "LoadExplicitTarget", "next": "c1" },
-      { "id": "c1", "op": "ConstFloat", "floatValue": 5.0, "next": "m1" },
-      { "id": "m1", "op": "ModifyAttributeAdd", "attribute": "Health", "inputs": [ "t1", "c1" ] }
+      {
+        "id": "t1",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "c1",
+        "op": "ConstFloat",
+        "floatValue": 5.0
+      },
+      {
+        "id": "m1",
+        "op": "ModifyAttributeAdd",
+        "attribute": "Health"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "t1",
+        "fromPort": "next",
+        "to": "c1"
+      },
+      {
+        "from": "c1",
+        "fromPort": "next",
+        "to": "m1"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "t1",
+        "fromPort": "value",
+        "to": "m1",
+        "toPort": "target"
+      },
+      {
+        "from": "c1",
+        "fromPort": "value",
+        "to": "m1",
+        "toPort": "value"
+      }
     ]
   },
   {
@@ -14,10 +51,62 @@
     "kind": "Effect",
     "entry": "t1",
     "nodes": [
-      { "id": "t1", "op": "LoadExplicitTarget", "next": "fx" },
-      { "id": "fx", "op": "ConstFloat", "floatValue": 12.5, "next": "fy" },
-      { "id": "fy", "op": "ConstFloat", "floatValue": -7.0, "next": "a1" },
-      { "id": "a1", "op": "ApplyEffectTemplate", "effectTemplate": "Effect.Preset.ApplyForce2D", "inputs": [ "t1", "fx", "fy" ] }
+      {
+        "id": "t1",
+        "op": "LoadExplicitTarget"
+      },
+      {
+        "id": "fx",
+        "op": "ConstFloat",
+        "floatValue": 12.5
+      },
+      {
+        "id": "fy",
+        "op": "ConstFloat",
+        "floatValue": -7.0
+      },
+      {
+        "id": "a1",
+        "op": "ApplyEffectTemplate",
+        "effectTemplate": "Effect.Preset.ApplyForce2D"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "t1",
+        "fromPort": "next",
+        "to": "fx"
+      },
+      {
+        "from": "fx",
+        "fromPort": "next",
+        "to": "fy"
+      },
+      {
+        "from": "fy",
+        "fromPort": "next",
+        "to": "a1"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "t1",
+        "fromPort": "value",
+        "to": "a1",
+        "toPort": "target"
+      },
+      {
+        "from": "fx",
+        "fromPort": "value",
+        "to": "a1",
+        "toPort": "a"
+      },
+      {
+        "from": "fy",
+        "fromPort": "value",
+        "to": "a1",
+        "toPort": "b"
+      }
     ]
   }
 ]
