@@ -10,8 +10,8 @@
 - [Mod 架构](mod-architecture.md)
 - [GAS 分层架构](gas-layered-architecture.md)
 - [图分层：Flow / Script 与行为调度](graph-layering-flow-and-behavior.md)
-- [Tag → 展示 Token 查表（面板 curState）](tag-display-lookup.md)
-- [通用图查表（ResolveTableRow + TableRead）](graph-table-lookup.md)
+- [通用图查表（唯一查表路径）](graph-table-lookup.md) — **查表 SSOT**
+- [（已废止）TagDisplay 专线查表](tag-display-lookup.md)
 - [GAS、订单与输入运行时合同](gas-order-input-runtime-contract.md)
 - [Input Order Routing 与 Spawn Target 基建](input-order-and-spawn-target.md)
 - [Entity Lifecycle 原子 Op](entity-lifecycle-atomic-ops.md) — **实体结构替换 / deploy consume source 的 SSOT**
