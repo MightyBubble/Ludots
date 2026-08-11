@@ -71,11 +71,6 @@ namespace Ludots.Core.Gameplay.AI.Fsm
 
         private int RunTickCallbacks(int agent, IHfsmGraphHost? host)
         {
-            if (host == null)
-            {
-                return 0;
-            }
-
             int runs = 0;
             int baseIndex = agent * HfsmLimits.MaxStackDepth;
             int depth = _depth[agent];
@@ -83,11 +78,19 @@ namespace Ludots.Core.Gameplay.AI.Fsm
             {
                 int stateIndex = _stack[baseIndex + i];
                 int tickGraph = _hfsm.States[stateIndex].OnTickGraphId;
-                if (tickGraph > 0)
+                if (tickGraph <= 0)
                 {
-                    host.RunAction(agent, tickGraph);
-                    runs++;
+                    continue;
                 }
+
+                if (host == null)
+                {
+                    throw new InvalidOperationException(
+                        $"HFSM state[{stateIndex}] OnTickGraphId={tickGraph} requires IHfsmGraphHost.");
+                }
+
+                host.RunAction(agent, tickGraph);
+                runs++;
             }
 
             return runs;

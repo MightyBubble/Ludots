@@ -277,7 +277,9 @@ namespace Ludots.Tests.GAS
                 E = eRegs,
                 Targets = targetBuffer,
                 TargetList = targetList,
-            };
+            CallStack = new int[Ludots.Core.NodeLibraries.GASGraph.GraphVmLimits.MaxCallStackDepth],
+            CallStackCount = 0,
+        };
 
             // I[0] = 1 (index)
             iRegs[0] = 1;
@@ -337,7 +339,9 @@ namespace Ludots.Tests.GAS
                 E = eRegs,
                 Targets = targetBuffer,
                 TargetList = targetList,
-            };
+            CallStack = new int[Ludots.Core.NodeLibraries.GASGraph.GraphVmLimits.MaxCallStackDepth],
+            CallStackCount = 0,
+        };
 
             var program = new GraphProgramBuffer();
             program.Add((ushort)GraphNodeOp.FanOutApplyEffect, imm: 42); // templateId = 42
@@ -1544,7 +1548,9 @@ namespace Ludots.Tests.GAS
                 E = eRegs,
                 Targets = targetBuffer,
                 TargetList = targetList,
-            };
+            CallStack = new int[Ludots.Core.NodeLibraries.GASGraph.GraphVmLimits.MaxCallStackDepth],
+            CallStackCount = 0,
+        };
 
             var program = new GraphProgramBuffer();
             program.Add((ushort)GraphNodeOp.FanOutApplyEffect, imm: 1);
@@ -1787,7 +1793,9 @@ namespace Ludots.Tests.GAS
                 E = _testEntityRegs,
                 Targets = _testTargetBuffer,
                 TargetList = targetList,
-            };
+            CallStack = new int[Ludots.Core.NodeLibraries.GASGraph.GraphVmLimits.MaxCallStackDepth],
+            CallStackCount = 0,
+        };
         }
 
         private static GraphInstruction[] ExtractInstructions(GraphProgramBuffer program)

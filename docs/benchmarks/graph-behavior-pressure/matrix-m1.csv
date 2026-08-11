@@ -6,8 +6,8 @@ A,N_topo,G,I,T_ai_ms,notes
 2000,8,1,0,0.013,AlwaysSuccess sequence
 2000,16,1,0,0.013,AlwaysSuccess sequence
 2000,32,1,0,0.013,AlwaysSuccess sequence
-2000,64,1,0,0.013,AlwaysSuccess sequence
-10000,8,1,0,0.020,AlwaysSuccess sequence
-10000,16,1,0,0.021,AlwaysSuccess sequence
-10000,32,1,0,0.023,AlwaysSuccess sequence
-10000,64,1,0,0.024,AlwaysSuccess sequence
+2000,64,1,0,0.014,AlwaysSuccess sequence
+10000,8,1,0,0.019,AlwaysSuccess sequence
+10000,16,1,0,0.023,AlwaysSuccess sequence
+10000,32,1,0,0.025,AlwaysSuccess sequence
+10000,64,1,0,0.026,AlwaysSuccess sequence

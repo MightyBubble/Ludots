@@ -369,6 +369,14 @@
       }
     },
     {
+      "name": "capability_standard_script_flow_sandbox",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardScriptFlowSandboxMod",
+        "projectPath": "CapabilityStandardScriptFlowSandboxMod.csproj"
+      }
+    },
+    {
       "name": "capability_standard_graph_behavior_integration",
       "target": {
         "type": "path",

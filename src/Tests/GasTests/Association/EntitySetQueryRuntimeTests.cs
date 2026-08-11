@@ -393,7 +393,9 @@ namespace Ludots.Tests.GAS
                 E = entities,
                 Targets = targets,
                 TargetList = targetList,
-            };
+            CallStack = new int[Ludots.Core.NodeLibraries.GASGraph.GraphVmLimits.MaxCallStackDepth],
+            CallStackCount = 0,
+        };
 
             GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
 

@@ -13,11 +13,4 @@ public sealed class GraphShowcaseConfig
     public float CombatRadius { get; set; } = 2f;
     public float PatrolSpeed { get; set; } = 3.2f;
     public float ChaseSpeed { get; set; } = 5.5f;
-
-    /// <summary>Legacy alias used by older metrics paths.</summary>
-    public int AgentCount
-    {
-        get => FeaturedAgentCount;
-        set => FeaturedAgentCount = value;
-    }
 }

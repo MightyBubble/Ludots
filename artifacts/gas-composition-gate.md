@@ -2028,45 +2028,47 @@ A new Mod variant changes graph wiring or effect-template steps, then passes thr
 
 新变体主要交付物是（A/B/C/D）: A
 
-结论: PASS
+结论: CONDITIONAL PASS（合同收口中）
 
-一句话理由: 新增 L2 调度（BT/FSM/LevelTrigger）与 Showcase 组合；叶子复用既有 Script/Validation/Effect；不新建平行 VM、不把拓扑编进 GraphNodeOp、不在 Graph 底层做分帧休眠。
+一句话理由: 新增 L2 调度（BT/HFSM/LevelDirector）与 Showcase；L0/L1 Script 控制流 op 为 430–435（含 MoveInt）；不新建平行 VM。**诚实边界**：BT 仍有 Host* 过渡叶子（玩法演示），叶子全量改挂 Script 仍是 follow-up；`GraphCompiler` Next 链已硬拒绝 Script；`Execute`/`ExecuteSlice` 均要求调用方 CallStack（已去掉堆分配兜底）。
 
 ### 2. Layer assignment
 
 | 步骤/能力 | Layer | 实现载体 |
 |-----------|-------|----------|
-| BT/FSM/Level 拓扑调度 | 2 | 新 Core AI/Level 运行时 |
-| Script/Effect 叶子 | 0–2 | 既有 GASGraph (#848) |
-| Showcase 内容 | 3 | capability_standard_* mods |
+| BT/HFSM/Level 拓扑调度 | 2 | Core AI/Level 运行时 |
+| Script 控制流 | 0–1 | GASGraph + GraphControlFlowCompiler |
+| Script 原子 Showcase | 3 | capability_standard_script_flow_sandbox |
+| L2 剧本 Showcase | 3 | BT/HFSM/Level/Ability/Integration mods |
 
 ### 3. Reuse list
 
-- Handlers/Registries: GasGraphOpHandlerTable, GraphProgramRegistry, Effect pipeline, Performer/MassNav presentation patterns
+- Handlers/Registries: GasGraphOpHandlerTable, GraphProgramRegistry, Effect pipeline
 - Existing: Script ExecuteSlice, Validation, Score
 
 ### 4. New Layer 0 ops
 
-N/A（本史诗不新增 GraphNodeOp；L2 自有 IR）
+Call/Return/Yield/HaltReturnInt/InvokeScript/MoveInt（430–435）
 
 ### 5. Transaction boundary
 
-Effect 事务仍在 effect 生命周期；Script Yield 不进入 Effect；BT Running 由 L2 持有 Script cursor。
+Effect 事务仍在 effect 生命周期；Script Yield 不进入 Effect；BT Running 由 L2 持有 cursor（Host* 过渡路径可独立于 Script）。
 
 ### 6. Config SSOT
 
-BT/FSM/Level JSON + 既有 GAS graphs；无新 profile inherit enum。
+Showcase GraphShowcaseConfig.json + Script document 编译；GAS/graphs.json 不得用 Kind=Script 走旧 Next 链。
 
 ### 7. Red flag scan
 
 - [x] 未新增 profile inherit/placement enum
 - [x] 未新建平行物化管线
 - [x] 未把 placement 塞进 lifecycle op
-- [x] 无 graph 底层分帧/休眠 fallback 冒充性能
+- [x] Execute 路径禁止 CallStack 堆分配兜底
+- [ ] L2 全部叶子改为 Script GraphId（Host* 待收敛）
 
 ### 8. Next variant test
 
-下一个变体改 BT/FSM/Level 连线或叶子 Script，不改 Core 枚举开关。
+下一个变体：BT ScriptSlice 按节点 GraphId 取程序；收缩 Host*；Level 接 Script 动作口。
 
 ### Perf contract
 

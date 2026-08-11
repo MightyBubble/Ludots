@@ -41,6 +41,7 @@ namespace Ludots.Core.Presentation.Systems
         private readonly byte[] _boolRegs = new byte[GraphVmLimits.MaxBoolRegisters];
         private readonly Entity[] _entityRegs = new Entity[GraphVmLimits.MaxEntityRegisters];
         private readonly Entity[] _targets = new Entity[GraphVmLimits.MaxTargets];
+        private readonly int[] _callStack = new int[GraphVmLimits.MaxCallStackDepth];
         private readonly GasGraphOpHandlerTable _handlers = GasGraphOpHandlerTable.Instance;
 
         // ── Inverted rule index: replaces O(E×D×R) triple loop with O(E × matched) ──
@@ -356,6 +357,7 @@ namespace Ludots.Core.Presentation.Systems
             Array.Clear(_intRegs, 0, _intRegs.Length);
             Array.Clear(_boolRegs, 0, _boolRegs.Length);
             Array.Clear(_entityRegs, 0, _entityRegs.Length);
+            Array.Clear(_callStack, 0, _callStack.Length);
 
             _entityRegs[0] = evt.Source;
             _entityRegs[1] = evt.Target;
@@ -386,6 +388,8 @@ namespace Ludots.Core.Presentation.Systems
                 E = _entityRegs,
                 Targets = _targets,
                 TargetList = targetList,
+                CallStack = _callStack,
+                CallStackCount = 0,
             };
 
             GasGraphOpHandlerTable.Execute(ref state, program, _handlers);

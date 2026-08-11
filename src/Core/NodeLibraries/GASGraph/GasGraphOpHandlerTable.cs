@@ -270,13 +270,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         /// </summary>
         public static void Execute(ref GraphExecutionState state, ReadOnlySpan<GraphInstruction> program, GasGraphOpHandlerTable handlers)
         {
-            // Legacy Effect callers omit CallStack. Provide a heap fallback so stackalloc
-            // does not escape through the by-ref state parameter (CS8352). Script hot paths
-            // should pass a caller-owned stackalloc into ExecuteSlice instead.
             if (state.CallStack.Length < GraphVmLimits.MaxCallStackDepth)
             {
-                state.CallStack = new int[GraphVmLimits.MaxCallStackDepth];
-                state.CallStackCount = 0;
+                throw new InvalidOperationException(
+                    $"Execute requires a call stack span of at least {GraphVmLimits.MaxCallStackDepth} (caller-owned; heap allocation is forbidden on this path).");
             }
 
             var cursor = new GraphExecutionCursor
@@ -662,6 +659,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Span<byte> b = stackalloc byte[GraphVmLimits.MaxBoolRegisters];
             Span<Entity> e = stackalloc Entity[GraphVmLimits.MaxEntityRegisters];
             Span<Entity> targets = stackalloc Entity[GraphVmLimits.MaxTargets];
+            Span<int> callStack = stackalloc int[GraphVmLimits.MaxCallStackDepth];
             var targetList = new GraphTargetList(targets);
             e[0] = s.Caster;
             e[1] = s.ExplicitTarget;
@@ -684,6 +682,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 E = e,
                 Targets = targets,
                 TargetList = targetList,
+                CallStack = callStack,
                 Status = GraphExecutionStatus.Running
             };
 

@@ -423,6 +423,15 @@
       "buildMode": "auto"
     },
     {
+      "id": "capability_standard_script_flow_sandbox_raylib",
+      "name": "Capability Standard Script Flow Sandbox Raylib",
+      "selectors": [
+        "$capability_standard_script_flow_sandbox"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "capability_standard_graph_behavior_integration_raylib",
       "name": "Capability Standard Graph Behavior Integration Raylib",
       "selectors": [
