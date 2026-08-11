@@ -3,6 +3,7 @@ using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Spawning;
+using Ludots.Core.Presentation.TagDisplay;
 
 namespace Ludots.Core.NodeLibraries.GASGraph.Host
 {
@@ -18,6 +19,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private readonly RelationshipReasonRegistry _reasons;
         private readonly TargetDispatchPresetRegistry _targetDispatchPresets;
         private readonly EntityTemplateKeyRegistry? _entityTemplateKeys;
+        private readonly TagDisplayTableRegistry? _tagDisplayTables;
 
         public GasGraphSymbolResolver(
             RelationshipTypeRegistry types,
@@ -25,7 +27,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             RelationshipFlagRegistry flags,
             RelationshipReasonRegistry reasons,
             TargetDispatchPresetRegistry targetDispatchPresets,
-            EntityTemplateKeyRegistry? entityTemplateKeys = null)
+            EntityTemplateKeyRegistry? entityTemplateKeys = null,
+            TagDisplayTableRegistry? tagDisplayTables = null)
         {
             _types = types ?? throw new ArgumentNullException(nameof(types));
             _metrics = metrics ?? throw new ArgumentNullException(nameof(metrics));
@@ -33,6 +36,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _reasons = reasons ?? throw new ArgumentNullException(nameof(reasons));
             _targetDispatchPresets = targetDispatchPresets ?? throw new ArgumentNullException(nameof(targetDispatchPresets));
             _entityTemplateKeys = entityTemplateKeys;
+            _tagDisplayTables = tagDisplayTables;
         }
 
         public int ResolveTag(string name)
@@ -108,6 +112,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             }
 
             return id;
+        }
+
+        public int ResolveTagDisplayTable(string name)
+        {
+            if (_tagDisplayTables == null)
+            {
+                throw new InvalidOperationException(
+                    $"Graph references tag display table '{name}', but no TagDisplayTableRegistry was provided.");
+            }
+
+            return _tagDisplayTables.GetTableId(name);
         }
     }
 }

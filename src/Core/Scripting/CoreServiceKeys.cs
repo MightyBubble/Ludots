@@ -64,6 +64,7 @@ using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.DebugDraw;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.TagDisplay;
 using Ludots.Core.Presentation.Instancing;
 using Ludots.Core.Presentation.Minimap;
 using Ludots.Core.Presentation.Performers;
@@ -323,6 +324,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<WorldHudBatchBuffer> PresentationWorldHudBuffer = new("PresentationWorldHudBuffer");
         public static readonly ServiceKey<WorldHudStringTable> PresentationWorldHudStrings = new("PresentationWorldHudStrings");
         public static readonly ServiceKey<PresentationTextCatalog> PresentationTextCatalog = new("PresentationTextCatalog");
+        public static readonly ServiceKey<TagDisplayTableRegistry> TagDisplayTableRegistry = new("TagDisplayTableRegistry");
         public static readonly ServiceKey<PresentationTextLocaleSelection> PresentationTextLocaleSelection = new("PresentationTextLocaleSelection");
         public static readonly ServiceKey<ScreenHudBatchBuffer> PresentationScreenHudBuffer = new("PresentationScreenHudBuffer");
         public static readonly ServiceKey<ScreenOverlayBuffer> ScreenOverlayBuffer = new("ScreenOverlayBuffer");
