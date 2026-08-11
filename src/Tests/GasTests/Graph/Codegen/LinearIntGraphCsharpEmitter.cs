@@ -247,6 +247,15 @@ namespace Ludots.Tests.Gas.Graph.Codegen
         /// </summary>
         private static int ResolveJumpTarget(int instructionIndex, int imm, int programLength)
         {
+            // Spike contract: forward-only jumps. Backward Imm would codegen an infinite loop without
+            // MaxInstructionsPerExecution; loops belong to a later Yield-aware track, not silent allow.
+            if (imm < 0)
+            {
+                throw new InvalidOperationException(
+                    $"Jump/JumpIfFalse at index {instructionIndex} rejects backward Imm={imm}. " +
+                    "R0/Track C codegen is forward-only; widen via explicit loop/Yield work.");
+            }
+
             long target = (long)instructionIndex + 1L + imm;
             if (target < 0)
             {

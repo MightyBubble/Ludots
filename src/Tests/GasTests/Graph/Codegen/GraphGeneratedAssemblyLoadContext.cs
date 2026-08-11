@@ -7,8 +7,10 @@ using System.Runtime.Loader;
 namespace Ludots.Tests.Gas.Graph.Codegen
 {
     /// <summary>
-    /// Collectible ALC for generated graph assemblies.
-    /// Mirrors <c>ModLoadContext</c> host-sharing rules: Ludots.*/Arch resolve from host, never re-load Core into the child ALC.
+    /// Spike-local Collectible ALC for generated graph assemblies (GasTests only).
+    /// Intentionally mirrors host-sharing intent of <c>ModLoadContext</c> (Ludots.*/Arch from host),
+    /// but is <b>not</b> a second production ALC policy SSOT — R2 must extract a shared helper
+    /// rather than keep this parallel whitelist as the long-term host rule.
     /// </summary>
     public sealed class GraphGeneratedAssemblyLoadContext : AssemblyLoadContext
     {

@@ -2076,4 +2076,25 @@ N/A — 无新增 graph op；仅白名单发射既有 `Jump` / `JumpIfFalse` / `
 | 新增（spike，Tests） | Jump/JumpIfFalse/Compare* → labels+goto；分支一致性与热换测试 |
 | 禁止 | 扩展 Core GraphOps；Tracks A/B 作者糖；Query/Effect world ops；静默解释器回退 |
 
+## GAS Composition Gate — #860 codegen merge-ready hardening (PR #865)
+
+- **Task / Issue**: #860 / PR #865 — clear merge blockers without expanding gameplay surface
+- **Date**: 2026-08-11
+- **Agent / Author**: Cursor cloud agent
+
+### 1. Core judgment
+
+新变体主要交付物是（A/B/C/D）: A（测试合同硬化）
+
+结论: PASS
+
+一句话理由: 仅收紧 Tests spike 门禁与边界（ci-gate/microbench 分离、IR-only 输入、后向 Jump 失败关闭、ALC 非生产 SSOT 声明），不新增 op / preset / profile / 作者糖。
+
+### 2–8 摘要
+
+- Layer: 工具链 / GasTests only
+- Reuse: 既有 emitter/host/ALC
+- New Layer 0: N/A
+- Config SSOT: 仍只吃 `GraphInstruction[]`
+- Red flags: 未引入平行生产 ALC 政策；后向跳转不再静默允许
 
