@@ -42,7 +42,7 @@ Toolbar link: **GAS Graphs** (top-left of the map editor).
 | `GET` | `/api/mods/{modId}/gas/graphs` | List `{ id, kind }` from `assets/GAS/graphs.json` |
 | `GET` | `/api/mods/{modId}/gas/graphs/{graphId}` | Full graph JSON; CF documents include `controlEdges`/`valueEdges` |
 | `PUT` | `/api/mods/{modId}/gas/graphs/{graphId}` | Replace graph in array (atomic temp+replace); Query/Script must be CF pin IR |
-| `POST` | `/api/mods/{modId}/gas/graphs/{graphId}/validate` | Body graph JSON or empty (load file) → CF compiler when `controlEdges`/`valueEdges` are present; Query/Script Next-chain fails closed |
+| `POST` | `/api/mods/{modId}/gas/graphs/{graphId}/validate` | Body graph JSON or empty (load file) → `GraphProgramAuthoringFrontDoor` (Kind → ControlFlow only); `nodes[].next` fails closed for every Kind |
 
 Validate response shape:
 
@@ -62,8 +62,8 @@ Validate response shape:
 - Value edges render by pin type: `list` edges in green and `value` edges in violet.
 - `QueryFilterTeam` uses an explicit `list` value input and either a `teamId` node field or `teamId` int value input.
 - `AggSumAttribute` uses an explicit `list` value input and an `attribute` node field.
-- The Bridge rejects mixed CF and legacy JSON (`controlEdges`/`valueEdges` plus `nodes[].next`).
-- Query Next-chain without CF edges fails closed (use `controlEdges`/`valueEdges`).
+- The Bridge uses the same Kind-driven ControlFlow front door as `GraphProgramConfigLoader` (#861).
+- Every Kind must author `controlEdges`/`valueEdges`; `nodes[].next` fails closed (no shape-based dual compiler).
 
 ## curl smoke
 
