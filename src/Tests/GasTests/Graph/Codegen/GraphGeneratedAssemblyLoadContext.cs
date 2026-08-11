@@ -9,7 +9,7 @@ namespace Ludots.Tests.Gas.Graph.Codegen
     /// <summary>
     /// Spike-local Collectible ALC for generated graph assemblies (GasTests only).
     /// Intentionally mirrors host-sharing intent of <c>ModLoadContext</c> (Ludots.*/Arch from host),
-    /// but is <b>not</b> a second production ALC policy SSOT — R2 must extract a shared helper
+    /// but is not a second production ALC policy SSOT — R2 must extract a shared helper
     /// rather than keep this parallel whitelist as the long-term host rule.
     /// </summary>
     public sealed class GraphGeneratedAssemblyLoadContext : AssemblyLoadContext
