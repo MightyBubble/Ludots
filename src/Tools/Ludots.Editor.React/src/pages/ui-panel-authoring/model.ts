@@ -80,7 +80,7 @@ export const SURFACE_META: Record<
   webui: {
     label: 'Web UI',
     native: 'WPK descriptor fields[]',
-    note: 'sourceKind + attributeId / graphOutputKey',
+    note: 'sourceKind 互斥：attributeId 或 graphOutputKey',
   },
 };
 
@@ -228,7 +228,6 @@ export const TEMPLATES: PanelTemplate[] = [
         sourceKind: 'graphOutput',
         graphOutputKey: 'panel.entity_info.hp',
         fromNodeId: 'hpAttr',
-        attributeId: 'attribute.health.current',
       },
       lastKill: {
         sourceKind: 'graphOutput',

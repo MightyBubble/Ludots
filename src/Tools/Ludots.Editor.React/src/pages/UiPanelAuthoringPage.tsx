@@ -11,7 +11,11 @@ import {
 } from './ui-panel-authoring/model';
 import { ShaderGraphCanvas } from './ui-panel-authoring/ShaderGraphCanvas';
 import { PlayerShowcase } from './ui-panel-authoring/PlayerShowcase';
-import { authoringConfigJson, toAuthoringTemplate } from './ui-panel-authoring/authoringConfig';
+import {
+  assertPanelBindingContract,
+  authoringConfigJson,
+  toAuthoringTemplate,
+} from './ui-panel-authoring/authoringConfig';
 import './ui-panel-authoring/authoring.css';
 
 type WorkspaceMode = 'author' | 'play' | 'config';
@@ -96,13 +100,23 @@ function SurfaceArtifact({
   const fields = tpl.variables
     .map((v) => {
       const b = tpl.bindings[v.id];
+      const sourceKind = b?.sourceKind ?? 'graphOutput';
+      assertPanelBindingContract({
+        variableId: v.id,
+        sourceKind,
+        attributeId: b?.attributeId,
+        graphOutputKey: b?.graphOutputKey,
+      });
       const lines = [
         `    {`,
         `      "fieldId": "${v.id}",`,
-        `      "sourceKind": "${b?.sourceKind ?? 'graphOutput'}",`,
+        `      "sourceKind": "${sourceKind}",`,
       ];
-      if (b?.attributeId) lines.push(`      "attributeId": "${b.attributeId}",`);
-      if (b?.graphOutputKey) lines.push(`      "graphOutputKey": "${b.graphOutputKey}",`);
+      if (sourceKind === 'singleAttribute' || sourceKind === 'derivedAttribute') {
+        lines.push(`      "attributeId": "${b?.attributeId}",`);
+      } else if (b?.graphOutputKey) {
+        lines.push(`      "graphOutputKey": "${b.graphOutputKey}",`);
+      }
       lines.push(`    }`);
       return lines.join('\n');
     })
@@ -131,6 +145,21 @@ function downloadJson(filename: string, text: string) {
   a.download = filename;
   a.click();
   URL.revokeObjectURL(url);
+}
+
+function exportOrAlert(action: () => void | Promise<void>): void {
+  try {
+    const result = action();
+    if (result && typeof (result as Promise<void>).then === 'function') {
+      void (result as Promise<void>).catch((err: unknown) => {
+        const message = err instanceof Error ? err.message : String(err);
+        window.alert(`导出失败（fail-closed）：${message}`);
+      });
+    }
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    window.alert(`导出失败（fail-closed）：${message}`);
+  }
 }
 
 export function UiPanelAuthoringPage() {
@@ -253,18 +282,30 @@ export function UiPanelAuthoringPage() {
           <div className="upa-config-actions">
             <button
               type="button"
-              onClick={async () => {
-                await copyText(activeConfigJson);
-                setCopied(true);
-                window.setTimeout(() => setCopied(false), 1200);
-              }}
+              onClick={() =>
+                exportOrAlert(async () => {
+                  await copyText(activeConfigJson);
+                  setCopied(true);
+                  window.setTimeout(() => setCopied(false), 1200);
+                })
+              }
             >
               {copied ? '已复制当前模板' : '复制当前模板 JSON'}
             </button>
-            <button type="button" onClick={() => downloadJson(`${tpl.id}.json`, activeConfigJson)}>
+            <button
+              type="button"
+              onClick={() =>
+                exportOrAlert(() => downloadJson(`${tpl.id}.json`, activeConfigJson))
+              }
+            >
               下载当前模板
             </button>
-            <button type="button" onClick={() => downloadJson('panel_templates.json', configJson)}>
+            <button
+              type="button"
+              onClick={() =>
+                exportOrAlert(() => downloadJson('panel_templates.json', configJson))
+              }
+            >
               下载全部模板
             </button>
           </div>
