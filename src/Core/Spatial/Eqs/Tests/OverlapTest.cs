@@ -38,11 +38,21 @@ namespace Ludots.Core.Spatial.Eqs.Tests
             int maxCount = 0,
             bool filterByCount = false)
         {
+            if (!Enum.IsDefined(typeof(OverlapShape), shape))
+            {
+                throw new ArgumentOutOfRangeException(nameof(shape), shape, "Unknown OverlapShape.");
+            }
+
+            if (normalizeCount <= 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(normalizeCount), normalizeCount, "normalizeCount must be > 0.");
+            }
+
             _shape = shape;
             _extentCm = extentCm;
             _preferMore = preferMore;
             _weight = weight;
-            _normalizeCount = normalizeCount <= 0 ? 1 : normalizeCount;
+            _normalizeCount = normalizeCount;
             _minCount = minCount;
             _maxCount = maxCount;
             _filterByCount = filterByCount;
@@ -50,9 +60,15 @@ namespace Ludots.Core.Spatial.Eqs.Tests
 
         public void Score(in EqsContext ctx, ref EqsItem item)
         {
-            if (item.Filtered || ctx.SpatialQueries == null)
+            if (item.Filtered)
             {
                 return;
+            }
+
+            if (ctx.SpatialQueries == null)
+            {
+                throw new InvalidOperationException(
+                    "OverlapTest requires EqsContext.SpatialQueries; spatial query service was not provided.");
             }
 
             Span<Entity> hits = stackalloc Entity[64];
@@ -101,7 +117,7 @@ namespace Ludots.Core.Spatial.Eqs.Tests
                 }
 
                 default:
-                    return 0;
+                    throw new InvalidOperationException($"Unhandled OverlapShape '{_shape}'.");
             }
         }
 

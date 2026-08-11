@@ -51,6 +51,16 @@ namespace Ludots.Core.Fields
             return _codec.GetFloatChannel(_channels, channelIndex);
         }
 
+        public Span<float> GetMutableFloatChannel(int channelIndex)
+        {
+            if (_codec is not FloatFieldValueCodec floatCodec)
+            {
+                throw new InvalidOperationException("Mutable float channel requires scalar float field storage.");
+            }
+
+            return floatCodec.GetMutableFloatChannel(_channels, channelIndex);
+        }
+
         public bool TryMarkDirty(int localIndex)
         {
             if (_dirtyMask[localIndex] != 0)

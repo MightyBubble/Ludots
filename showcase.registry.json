@@ -2834,6 +2834,31 @@
         "version",
         "negative-test"
       ]
+    },
+    {
+      "id": "eqs_influence",
+      "path": "mods/showcases/eqs_influence/EqsInfluenceShowcaseMod",
+      "projectPath": "EqsInfluenceShowcaseMod.csproj",
+      "title": "EQS 避威胁落点",
+      "summary": "数据驱动 Influence 热力 + EQS 环形选点：看到威胁场、候选点与最优绕行落点。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "eqs",
+        "influence",
+        "ai",
+        "spatial",
+        "presentation"
+      ],
+      "binding": "eqs_influence",
+      "preset": "eqs_influence_raylib",
+      "docsPath": "gitbook/architecture/eqs-influence-config-and-showcase.md",
+      "readmePath": null,
+      "acceptanceTest": "EqsInfluenceShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/acceptance/eqs-influence",
+      "screenshot": "artifacts/acceptance/eqs-influence/screens/000_heat_probes.png",
+      "status": "active",
+      "notes": "Pages 交互预览见 docs/eqs-influence.html"
     }
   ]
 }

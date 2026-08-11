@@ -239,6 +239,19 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void UtilityAiDecisionSystem_InfluenceSample01_WithoutRegistry_Throws()
+        {
+            using var fixture = RuntimeFixture.Create();
+            _ = fixture.CreateHostile(100, 0);
+            var runtime = fixture.CreateSingleDecisionRuntime(
+                orderTypeId: 102,
+                inputKind: UtilityAiInputKind.InfluenceSample01);
+            fixture.AddActor();
+
+            Assert.Throws<InvalidOperationException>(() => fixture.RunDecision(runtime));
+        }
+
+        [Test]
         public void UtilityAiDecisionSystem_ScoreGraphBudgetExhaustionIsObservable()
         {
             using var fixture = RuntimeFixture.Create();

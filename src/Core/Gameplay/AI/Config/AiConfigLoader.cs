@@ -695,6 +695,13 @@ namespace Ludots.Core.Gameplay.AI.Config
                     parsedKind = UtilityAiInputKind.SourceHasTag;
                     arg0 = ResolveTag(RequireString(obj, "Tag", path), $"{path}.Tag");
                 }
+                else if (string.Equals(kind, "InfluenceSample01", StringComparison.OrdinalIgnoreCase))
+                {
+                    throw Fail(
+                        $"{path}.Kind",
+                        "InfluenceSample01 is runtime-injected only (InfluenceFieldRegistry + field key table). " +
+                        "AI/inputs.json authoring is not supported until influence projection is wired into the main loop.");
+                }
                 else
                 {
                     throw Fail($"{path}.Kind", $"Unknown input kind '{kind}'.");

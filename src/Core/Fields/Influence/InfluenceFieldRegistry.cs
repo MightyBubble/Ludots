@@ -16,6 +16,9 @@ namespace Ludots.Core.Fields.Influence
             _fields = new Dictionary<string, InfluenceField>(StringComparer.Ordinal);
         }
 
+        /// <summary>Peak used when quantizing float influence to GlobalFieldVisual byte cells.</summary>
+        public float PresentationNormalizePeak { get; set; } = 10f;
+
         /// <summary>Register or retrieve a field. If it exists with different grid, throws.</summary>
         public InfluenceField GetOrCreate(string key, FieldGridSpec2D grid, float defaultValue = 0f)
         {
