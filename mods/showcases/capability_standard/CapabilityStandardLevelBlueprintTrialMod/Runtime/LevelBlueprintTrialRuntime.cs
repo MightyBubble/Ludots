@@ -9,6 +9,7 @@ public sealed class LevelBlueprintTrialRuntime
 {
     private readonly GraphShowcaseConfig _config = new();
     private LevelDirector? _director;
+    private GraphProgramLevelHost? _scriptHost;
     private float _accum;
     private float _time;
     private float _markerX;
@@ -19,6 +20,7 @@ public sealed class LevelBlueprintTrialRuntime
     private int _aliveCount;
     private bool _spawned;
     private bool _clearedReported;
+    private bool _manualScriptFired;
 
     public LevelDirector? Director => _director;
     public float MarkerX => _markerX;
@@ -29,19 +31,21 @@ public sealed class LevelBlueprintTrialRuntime
     public int MobSlotCount => _mx.Length;
     public int AliveMobs => _aliveCount;
     public bool GateOpen => _director != null && _director.Phase >= 2;
+    public int LastScriptGraphId => _scriptHost?.LastRanGraphId ?? 0;
     public GraphShowcaseMetrics Metrics { get; } = new() { ShowcaseId = "capability_standard_level_blueprint_trial" };
 
     public void EnsureWorld()
     {
         if (_director != null) return;
         _director = LevelBlueprintFactory.CreateTwoPhaseTrial("showcase.level.trial");
+        _scriptHost = new GraphProgramLevelHost(LevelScriptPrograms.CreateTwoPhaseTrialPrograms());
         _markerX = 0f;
         _markerY = -10f;
         _mx = new float[6];
         _my = new float[6];
         _mAlive = new bool[6];
         Metrics.AgentCount = _config.CrowdBandCount;
-        Metrics.Detail = "Level: walk in → spawn → clear → open gate";
+        Metrics.Detail = "Level Script: walk in → spawn → clear → open gate";
     }
 
     public void Tick(float dt)
@@ -61,13 +65,19 @@ public sealed class LevelBlueprintTrialRuntime
             }
 
             var sw = Stopwatch.StartNew();
-            LevelThinkStats stats = _director!.TickThinkWave();
+            LevelThinkStats stats = _director!.TickThinkWave(_scriptHost);
+            if (_director.Phase >= 2 && !_manualScriptFired)
+            {
+                _director.PulseManual(2, _scriptHost);
+                _manualScriptFired = true;
+            }
+
             sw.Stop();
             Metrics.LastThinkMs = sw.Elapsed.TotalMilliseconds;
             if (Metrics.LastThinkMs > Metrics.MaxThinkMs) Metrics.MaxThinkMs = Metrics.LastThinkMs;
             Metrics.ThinkWaves++;
             Metrics.Detail =
-                $"Level vignette phase={_director.Phase} fired={stats.Fired} last={Metrics.LastThinkMs:F3}ms";
+                $"Level Script vignette phase={_director.Phase} script={LastScriptGraphId} fired={stats.Fired} last={Metrics.LastThinkMs:F3}ms";
 
             if (_director.Phase >= 1 && !_spawned)
             {

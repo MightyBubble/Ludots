@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
 
@@ -15,6 +16,7 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
         private readonly byte[] _stackCount;
         private readonly byte[] _childCursor;
         private readonly BehaviorTreeStatus[] _status;
+        private readonly int[] _lastScriptReturns;
         private readonly GraphExecutionCursor[] _scriptCursors;
         private readonly int[] _scriptIntRegs;
         private readonly byte[] _scriptBoolRegs;
@@ -36,6 +38,7 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
             _stackCount = new byte[capacity];
             _childCursor = new byte[capacity * BehaviorTreeLimits.MaxStackDepth];
             _status = new BehaviorTreeStatus[capacity];
+            _lastScriptReturns = new int[capacity];
             _scriptCursors = new GraphExecutionCursor[capacity];
             _scriptIntRegs = new int[capacity * GraphVmLimits.MaxIntRegisters];
             _scriptBoolRegs = new byte[capacity * GraphVmLimits.MaxBoolRegisters];
@@ -46,6 +49,8 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
         public int Capacity { get; }
         public int Count => _count;
         public BehaviorTreeStatus[] Statuses => _status;
+        /// <summary>Last HaltReturnInt from a ScriptSlice action leaf (intent codes for showcases).</summary>
+        public int[] LastScriptReturns => _lastScriptReturns;
 
         public int AddAgent()
         {
@@ -81,19 +86,26 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
         }
 
         /// <summary>
-        /// Runs one think wave over [0, Count). Returns wall-time via <paramref name="elapsedMs"/> when measured by caller.
+        /// Topology-only tick (AlwaysSuccess / HoldRunning trees). ScriptSlice leaves are forbidden.
+        /// </summary>
+        public BehaviorTreeThinkStats TickAll(int scriptBudgetSteps = 32)
+            => TickAll(scriptPrograms: null, scriptBudgetSteps, sensors: null);
+
+        /// <summary>
+        /// Runs one think wave. ScriptSlice leaves resolve <see cref="BehaviorTreeNode.GraphId"/> in
+        /// <paramref name="scriptPrograms"/>; sensors write I[0] before condition scripts.
         /// </summary>
         public BehaviorTreeThinkStats TickAll(
-            ReadOnlySpan<GraphInstruction> scriptProgram,
+            IReadOnlyDictionary<int, GraphInstruction[]>? scriptPrograms,
             int scriptBudgetSteps,
-            IBehaviorTreeLeafHost? leafHost = null)
+            IBehaviorTreeSensorFeed? sensors)
         {
             int visited = 0;
             int scriptSlices = 0;
             int scriptSteps = 0;
             for (int agent = 0; agent < _count; agent++)
             {
-                TickAgent(agent, scriptProgram, scriptBudgetSteps, leafHost, ref visited, ref scriptSlices, ref scriptSteps);
+                TickAgent(agent, scriptPrograms, scriptBudgetSteps, sensors, ref visited, ref scriptSlices, ref scriptSteps);
             }
 
             return new BehaviorTreeThinkStats(_count, visited, scriptSlices, scriptSteps);
@@ -101,9 +113,9 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
 
         private void TickAgent(
             int agent,
-            ReadOnlySpan<GraphInstruction> scriptProgram,
+            IReadOnlyDictionary<int, GraphInstruction[]>? scriptPrograms,
             int scriptBudgetSteps,
-            IBehaviorTreeLeafHost? leafHost,
+            IBehaviorTreeSensorFeed? sensors,
             ref int visited,
             ref int scriptSlices,
             ref int scriptSteps)
@@ -133,9 +145,9 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
                     BehaviorTreeStatus leaf = EvalLeaf(
                         agent,
                         node,
-                        scriptProgram,
+                        scriptPrograms,
                         scriptBudgetSteps,
-                        leafHost,
+                        sensors,
                         ref scriptSlices,
                         ref scriptSteps);
                     if (leaf == BehaviorTreeStatus.Running)
@@ -217,9 +229,9 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
         private BehaviorTreeStatus EvalLeaf(
             int agent,
             in BehaviorTreeNode node,
-            ReadOnlySpan<GraphInstruction> scriptProgram,
+            IReadOnlyDictionary<int, GraphInstruction[]>? scriptPrograms,
             int scriptBudgetSteps,
-            IBehaviorTreeLeafHost? leafHost,
+            IBehaviorTreeSensorFeed? sensors,
             ref int scriptSlices,
             ref int scriptSteps)
         {
@@ -231,57 +243,73 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
                     return BehaviorTreeStatus.Failure;
                 case BehaviorTreeLeafBinding.HoldRunning:
                     return BehaviorTreeStatus.Running;
-                case BehaviorTreeLeafBinding.HostCondition:
-                    if (leafHost == null)
-                    {
-                        throw new InvalidOperationException(
-                            $"BT HostCondition binding {node.GraphId} requires IBehaviorTreeLeafHost.");
-                    }
-
-                    return leafHost.EvalCondition(agent, node.GraphId);
-                case BehaviorTreeLeafBinding.HostAction:
-                    if (leafHost == null)
-                    {
-                        throw new InvalidOperationException(
-                            $"BT HostAction binding {node.GraphId} requires IBehaviorTreeLeafHost.");
-                    }
-
-                    return leafHost.TickAction(agent, node.GraphId);
                 case BehaviorTreeLeafBinding.ScriptSlice:
                 {
-                    if (scriptProgram.Length == 0)
+                    if (node.GraphId <= 0)
                     {
-                        throw new InvalidOperationException("ScriptSlice leaf requires a compiled program span.");
+                        throw new InvalidOperationException("ScriptSlice leaf requires a positive GraphId.");
+                    }
+
+                    if (scriptPrograms == null ||
+                        !scriptPrograms.TryGetValue(node.GraphId, out GraphInstruction[]? program) ||
+                        program == null ||
+                        program.Length == 0)
+                    {
+                        throw new InvalidOperationException(
+                            $"ScriptSlice GraphId={node.GraphId} is not registered in scriptPrograms.");
                     }
 
                     scriptSlices++;
                     Span<int> ints = _scriptIntRegs.AsSpan(agent * GraphVmLimits.MaxIntRegisters, GraphVmLimits.MaxIntRegisters);
                     Span<byte> bools = _scriptBoolRegs.AsSpan(agent * GraphVmLimits.MaxBoolRegisters, GraphVmLimits.MaxBoolRegisters);
                     Span<int> callStack = _scriptCallStacks.AsSpan(agent * GraphVmLimits.MaxCallStackDepth, GraphVmLimits.MaxCallStackDepth);
+                    ints.Clear();
+                    bools.Clear();
+                    callStack.Clear();
+                    sensors?.WriteSensors(agent, node.GraphId, ints, bools);
+
                     ref GraphExecutionCursor cursor = ref _scriptCursors[agent];
+                    cursor.Reset();
                     var state = new GraphExecutionState
                     {
                         I = ints,
                         B = bools,
                         CallStack = callStack,
-                        CallStackCount = cursor.CallStackCount,
-                        ReturnInt = cursor.ReturnInt,
+                        CallStackCount = 0,
                         Status = GraphExecutionStatus.Running
                     };
                     GraphSliceResult result = GasGraphOpHandlerTable.ExecuteSlice(
                         ref state,
-                        scriptProgram,
+                        program,
                         GasGraphOpHandlerTable.Instance,
                         ref cursor,
                         scriptBudgetSteps);
                     scriptSteps += result.Steps;
+
+                    if (node.Kind == BehaviorTreeNodeKind.Condition)
+                    {
+                        if (!result.Halted)
+                        {
+                            throw new InvalidOperationException(
+                                $"Condition Script GraphId={node.GraphId} must halt (got {result.Status}).");
+                        }
+
+                        return result.ReturnInt != 0 ? BehaviorTreeStatus.Success : BehaviorTreeStatus.Failure;
+                    }
+
                     if (result.Yielded || result.Running)
                     {
                         return BehaviorTreeStatus.Running;
                     }
 
+                    if (!result.Halted)
+                    {
+                        throw new InvalidOperationException(
+                            $"Action Script GraphId={node.GraphId} returned unexpected status {result.Status}.");
+                    }
+
+                    _lastScriptReturns[agent] = result.ReturnInt;
                     cursor.Reset();
-                    Array.Clear(_scriptCallStacks, agent * GraphVmLimits.MaxCallStackDepth, GraphVmLimits.MaxCallStackDepth);
                     return BehaviorTreeStatus.Success;
                 }
                 default:

@@ -24,7 +24,7 @@ namespace Ludots.Tests.Gas.Production
             Warm(runtime.Tick);
             Drive(runtime.Tick, runtime.Metrics);
             Assert.That(runtime.Metrics.ShowcaseId, Is.EqualTo("capability_standard_behavior_tree_arena"));
-            Assert.That(runtime.Metrics.Detail, Does.Contain("BT vignette"));
+            Assert.That(runtime.Metrics.Detail, Does.Contain("BT Script"));
             Assert.That(runtime.GuardCount, Is.GreaterThanOrEqualTo(8));
             Assert.That(runtime.Metrics.MaxThinkMs, Is.LessThan(5.0));
         }
@@ -49,7 +49,7 @@ namespace Ludots.Tests.Gas.Production
             runtime.EnsureWorld();
             Warm(runtime.Tick, waves: 40);
             Assert.That(runtime.Metrics.ShowcaseId, Is.EqualTo("capability_standard_level_blueprint_trial"));
-            Assert.That(runtime.Metrics.Detail, Does.Contain("Level vignette"));
+            Assert.That(runtime.Metrics.Detail, Does.Contain("Level Script"));
             Assert.That(runtime.Director!.Phase, Is.GreaterThanOrEqualTo(2));
             Assert.That(runtime.GateOpen, Is.True);
             Assert.That(runtime.Metrics.MaxThinkMs, Is.LessThan(5.0));
@@ -63,7 +63,7 @@ namespace Ludots.Tests.Gas.Production
             Warm(runtime.Tick);
             Drive(runtime.Tick, runtime.Metrics);
             Assert.That(runtime.Metrics.ShowcaseId, Is.EqualTo("capability_standard_ability_graph_sandbox"));
-            Assert.That(runtime.Metrics.Detail, Does.Contain("Ability vignette"));
+            Assert.That(runtime.Metrics.Detail, Does.Contain("FuncLib"));
             Assert.That(runtime.TargetCount, Is.EqualTo(8));
             Assert.That(runtime.Metrics.MaxThinkMs, Is.LessThan(5.0));
         }

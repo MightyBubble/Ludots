@@ -12,8 +12,15 @@ namespace Ludots.Core.Gameplay.Level
         None = 0,
         IncrementCounter = 1,
         SetPhase = 2,
-        /// <summary>Records fire for tests/showcases; host maps to Script/Spawn.</summary>
-        EmitSignal = 3
+        /// <summary>Records fire for tests/showcases; host may map to Spawn.</summary>
+        EmitSignal = 3,
+        /// <summary>Run L1 Script graph id in Arg0 via <see cref="ILevelGraphHost"/>.</summary>
+        RunScript = 4
+    }
+
+    public interface ILevelGraphHost
+    {
+        void RunScript(int scriptGraphId);
     }
 
     public readonly struct LevelTriggerDef

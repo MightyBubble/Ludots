@@ -12,14 +12,16 @@ namespace Ludots.Tests.Gas.AI
         public void TwoPhaseTrial_AdvancesOnWavesAndCounter()
         {
             LevelDirector director = LevelBlueprintFactory.CreateTwoPhaseTrial("level.trial");
+            var host = new GraphProgramLevelHost(LevelScriptPrograms.CreateTwoPhaseTrialPrograms());
             Assert.That(director.Phase, Is.EqualTo(0));
-            director.TickThinkWave();
+            director.TickThinkWave(host);
             Assert.That(director.Phase, Is.EqualTo(1));
             director.AddCounter(10);
-            director.TickThinkWave();
+            director.TickThinkWave(host);
             Assert.That(director.Phase, Is.EqualTo(2));
-            director.PulseManual(2);
-            Assert.That(director.LastSignal, Is.EqualTo(100));
+            director.PulseManual(2, host);
+            Assert.That(host.LastRanGraphId, Is.EqualTo(LevelBlueprintFactory.PhaseAdvanceScriptGraphId));
+            Assert.That(director.LastSignal, Is.EqualTo(LevelBlueprintFactory.PhaseAdvanceScriptGraphId));
         }
 
         [Test]

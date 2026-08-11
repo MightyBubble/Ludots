@@ -20,33 +20,24 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
     public enum BehaviorTreeLeafBinding : byte
     {
         None = 0,
-        /// <summary>Always Success (for topology pressure tests).</summary>
         AlwaysSuccess = 1,
-        /// <summary>Always Failure.</summary>
         AlwaysFailure = 2,
-        /// <summary>Stay Running until cleared by host (simulates long action without Script).</summary>
         HoldRunning = 3,
-        /// <summary>Run Script program via ExecuteSlice; Yield => Running.</summary>
-        ScriptSlice = 4,
-        /// <summary>Ask <see cref="IBehaviorTreeLeafHost"/>; GraphId is the binding key.</summary>
-        HostCondition = 5,
-        /// <summary>Ask <see cref="IBehaviorTreeLeafHost"/>; GraphId is the binding key.</summary>
-        HostAction = 6
+        /// <summary>Run Script by <see cref="BehaviorTreeNode.GraphId"/> via ExecuteSlice.</summary>
+        ScriptSlice = 4
     }
 
     /// <summary>
-    /// Host evaluates gameplay-facing BT leaves (see enemy, chase, attack, patrol).
-    /// Keeps the BT scheduler free of world queries and free of a second VM.
+    /// Writes per-agent sensor registers before a ScriptSlice leaf runs.
+    /// Contract: I[0] is the primary condition/action input cell for patrol scripts.
     /// </summary>
-    public interface IBehaviorTreeLeafHost
+    public interface IBehaviorTreeSensorFeed
     {
-        BehaviorTreeStatus EvalCondition(int agentIndex, int bindingId);
-
-        BehaviorTreeStatus TickAction(int agentIndex, int bindingId);
+        void WriteSensors(int agentIndex, int graphId, System.Span<int> ints, System.Span<byte> bools);
     }
 
-    /// <summary>Well-known binding ids for <see cref="BehaviorTreeFactory.CreatePatrolChaseAttackTree"/>.</summary>
-    public static class BehaviorTreeHostBindings
+    /// <summary>Well-known Script graph ids for <see cref="BehaviorTreeFactory.CreatePatrolChaseAttackTree"/>.</summary>
+    public static class BehaviorTreeScriptBindings
     {
         public const int SeeEnemy = 1;
         public const int InAttackRange = 2;
@@ -55,7 +46,6 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
         public const int Patrol = 5;
     }
 
-    /// <summary>Compiled flat node. Children are a contiguous range [ChildStart, ChildStart+ChildCount).</summary>
     public readonly struct BehaviorTreeNode
     {
         public BehaviorTreeNode(

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
 using CapabilityStandardGraphBehaviorCommon;
@@ -7,18 +8,19 @@ using Ludots.Core.GraphRuntime;
 
 namespace CapabilityStandardBehaviorTreeArenaMod.Runtime;
 
-public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeLeafHost
+public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeSensorFeed
 {
     private readonly GraphShowcaseConfig _config = new();
     private BehaviorTreeWorld? _world;
     private BehaviorTreeWorld? _crowd;
+    private Dictionary<int, GraphInstruction[]>? _scripts;
     private float _accum;
     private float _time;
 
     private float[] _gx = Array.Empty<float>();
     private float[] _gy = Array.Empty<float>();
     private int[] _wp = Array.Empty<int>();
-    private byte[] _intent = Array.Empty<byte>(); // 0 patrol 1 chase 2 attack
+    private byte[] _intent = Array.Empty<byte>();
     private byte[] _flash = Array.Empty<byte>();
     private int[] _target = Array.Empty<int>();
 
@@ -49,6 +51,7 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeLeafHost
         if (_world != null) return;
 
         BehaviorTreeDefinition tree = BehaviorTreeFactory.CreatePatrolChaseAttackTree("showcase.bt.patrol_chase_attack");
+        _scripts = BehaviorTreePatrolScripts.CreatePatrolChaseAttackPrograms();
         int n = _config.FeaturedAgentCount;
         _world = new BehaviorTreeWorld(tree, n);
         _gx = new float[n];
@@ -84,7 +87,7 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeLeafHost
         }
 
         Metrics.AgentCount = n;
-        Metrics.Detail = "BT patrol→see→chase→attack vignette";
+        Metrics.Detail = "BT Script leaves patrol→see→chase→attack";
     }
 
     public void Tick(float dt)
@@ -115,7 +118,7 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeLeafHost
         for (int i = 0; i < world.Count; i++) world.RestartThinking(i);
 
         var sw = Stopwatch.StartNew();
-        BehaviorTreeThinkStats stats = world.TickAll(ReadOnlySpan<GraphInstruction>.Empty, 32, this);
+        BehaviorTreeThinkStats stats = world.TickAll(_scripts, 32, this);
         if (_crowd != null)
         {
             for (int i = 0; i < _crowd.Count; i++)
@@ -126,20 +129,41 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeLeafHost
                 }
             }
 
-            _crowd.TickAll(ReadOnlySpan<GraphInstruction>.Empty, 8);
+            _crowd.TickAll(8);
         }
 
         sw.Stop();
+
+        for (int i = 0; i < world.Count; i++)
+        {
+            int ret = world.LastScriptReturns[i];
+            _intent[i] = (byte)ret;
+            if (ret == 2) _flash[i] = 10;
+        }
+
         Metrics.LastThinkMs = sw.Elapsed.TotalMilliseconds;
         if (Metrics.LastThinkMs > Metrics.MaxThinkMs) Metrics.MaxThinkMs = Metrics.LastThinkMs;
         Metrics.ThinkWaves++;
         Metrics.Detail =
-            $"BT vignette guards={_gx.Length} visited={stats.NodesVisited} last={Metrics.LastThinkMs:F3}ms";
+            $"BT Script vignette guards={_gx.Length} slices={stats.ScriptSlices} last={Metrics.LastThinkMs:F3}ms";
+    }
+
+    public void WriteSensors(int agentIndex, int graphId, Span<int> ints, Span<byte> bools)
+    {
+        if (graphId == BehaviorTreeScriptBindings.SeeEnemy)
+        {
+            ints[0] = _target[agentIndex] >= 0 ? 1 : 0;
+            return;
+        }
+
+        if (graphId == BehaviorTreeScriptBindings.InAttackRange)
+        {
+            ints[0] = InAttackRange(agentIndex) ? 1 : 0;
+        }
     }
 
     private void UpdateEnemies()
     {
-        // Enemy 0: enter from right every 8s, cross, despawn
         float cycle = _time % 8f;
         if (cycle < 6f)
         {
@@ -152,7 +176,6 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeLeafHost
             _eAlive[0] = false;
         }
 
-        // Enemy 1: delayed opposite path
         float c2 = (_time + 4f) % 10f;
         if (c2 < 5f)
         {
@@ -198,11 +221,7 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeLeafHost
     {
         for (int i = 0; i < _gx.Length; i++)
         {
-            if (_intent[i] == 2)
-            {
-                // attack: hold position
-                continue;
-            }
+            if (_intent[i] == 2) continue;
 
             if (_intent[i] == 1 && _target[i] >= 0 && _eAlive[_target[i]])
             {
@@ -221,7 +240,6 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeLeafHost
                 continue;
             }
 
-            // patrol toward waypoint
             Vector2 dest = PatrolPath[_wp[i]];
             float pdx = dest.X - _gx[i];
             float pdy = dest.Y - _gy[i];
@@ -242,37 +260,6 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeLeafHost
                 _gx[i] += pdx / plen * step;
                 _gy[i] += pdy / plen * step;
             }
-        }
-    }
-
-    public BehaviorTreeStatus EvalCondition(int agentIndex, int bindingId)
-    {
-        return bindingId switch
-        {
-            BehaviorTreeHostBindings.SeeEnemy =>
-                _target[agentIndex] >= 0 ? BehaviorTreeStatus.Success : BehaviorTreeStatus.Failure,
-            BehaviorTreeHostBindings.InAttackRange =>
-                InAttackRange(agentIndex) ? BehaviorTreeStatus.Success : BehaviorTreeStatus.Failure,
-            _ => throw new InvalidOperationException($"Unknown BT condition binding {bindingId}")
-        };
-    }
-
-    public BehaviorTreeStatus TickAction(int agentIndex, int bindingId)
-    {
-        switch (bindingId)
-        {
-            case BehaviorTreeHostBindings.Patrol:
-                _intent[agentIndex] = 0;
-                return BehaviorTreeStatus.Running;
-            case BehaviorTreeHostBindings.Chase:
-                _intent[agentIndex] = 1;
-                return BehaviorTreeStatus.Running;
-            case BehaviorTreeHostBindings.Attack:
-                _intent[agentIndex] = 2;
-                _flash[agentIndex] = 10;
-                return BehaviorTreeStatus.Running;
-            default:
-                throw new InvalidOperationException($"Unknown BT action binding {bindingId}");
         }
     }
 

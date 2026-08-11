@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using CapabilityStandardGraphBehaviorCommon;
 using Ludots.Core.GraphRuntime;
@@ -10,8 +11,7 @@ public sealed class AbilityGraphSandboxRuntime
 {
     private readonly GraphShowcaseConfig _config = new();
     private readonly GraphFunctionCatalog _catalog = new();
-    private GraphInstruction[]? _slashProgram;
-    private GraphInstruction[]? _bashProgram;
+    private readonly Dictionary<int, GraphInstruction[]> _programs = new();
     private float _accum;
     private int _castWave;
     private float[] _tx = Array.Empty<float>();
@@ -32,9 +32,9 @@ public sealed class AbilityGraphSandboxRuntime
 
     public void EnsureWorld()
     {
-        if (_slashProgram != null) return;
-        _slashProgram = CompileConstHalt("ability.slash", 11);
-        _bashProgram = CompileConstHalt("ability.bash", 22);
+        if (_programs.Count > 0) return;
+        _programs[101] = CompileConstHalt("ability.slash", 11);
+        _programs[102] = CompileConstHalt("ability.bash", 22);
         _catalog.Register("ability.slash", 101, GraphKind.Script);
         _catalog.Register("ability.bash", 102, GraphKind.Script);
 
@@ -51,7 +51,7 @@ public sealed class AbilityGraphSandboxRuntime
         }
 
         Metrics.AgentCount = targets;
-        Metrics.Detail = $"Ability vignette funcLib={_catalog.Count}";
+        Metrics.Detail = $"Ability FuncLib consume catalog={_catalog.Count}";
     }
 
     public void Tick(float dt)
@@ -67,8 +67,13 @@ public sealed class AbilityGraphSandboxRuntime
         _accum = 0f;
         _castWave++;
 
-        GraphInstruction[] program = (_castWave & 1) == 0 ? _slashProgram! : _bashProgram!;
-        _lastSpell = (_castWave & 1) == 0 ? "slash" : "bash";
+        _lastSpell = (_castWave & 1) == 0 ? "ability.slash" : "ability.bash";
+        GraphFunctionEntry fn = _catalog.Require(_lastSpell);
+        if (!_programs.TryGetValue(fn.GraphId, out GraphInstruction[]? program) || program == null)
+        {
+            throw new InvalidOperationException($"FuncLib '{_lastSpell}' graph id {fn.GraphId} has no program.");
+        }
+
         _lastHit = _castWave % _tx.Length;
 
         Span<int> ints = stackalloc int[GraphVmLimits.MaxIntRegisters];
@@ -104,7 +109,7 @@ public sealed class AbilityGraphSandboxRuntime
         if (Metrics.LastThinkMs > Metrics.MaxThinkMs) Metrics.MaxThinkMs = Metrics.LastThinkMs;
         Metrics.ThinkWaves++;
         Metrics.Detail =
-            $"Ability vignette cast={_lastSpell} hit={_lastHit} last={Metrics.LastThinkMs:F3}ms";
+            $"Ability FuncLib cast={_lastSpell} id={fn.GraphId} hit={_lastHit} last={Metrics.LastThinkMs:F3}ms";
     }
 
     private static GraphInstruction[] CompileConstHalt(string id, int value)

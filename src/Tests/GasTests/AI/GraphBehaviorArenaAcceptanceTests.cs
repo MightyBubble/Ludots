@@ -50,7 +50,7 @@ namespace Ludots.Tests.Gas.AI
             for (int w = 0; w < 8; w++)
             {
                 RestartReady();
-                btWorld.TickAll(ReadOnlySpan<GraphInstruction>.Empty, 32);
+                btWorld.TickAll(32);
                 hfsmWorld.TickAll();
                 level.TickThinkWave();
             }
@@ -60,7 +60,7 @@ namespace Ludots.Tests.Gas.AI
             {
                 RestartReady();
                 var sw = Stopwatch.StartNew();
-                btWorld.TickAll(ReadOnlySpan<GraphInstruction>.Empty, 32);
+                btWorld.TickAll(32);
                 hfsmWorld.TickAll();
                 level.TickThinkWave();
                 if (w == 5)

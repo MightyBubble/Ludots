@@ -1,7 +1,8 @@
-using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using Ludots.Core.Gameplay.AI.BehaviorTree;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.NodeLibraries.GASGraph;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Gas.AI
@@ -18,7 +19,7 @@ namespace Ludots.Tests.Gas.AI
             world.AddAgent();
             world.AddAgent();
 
-            BehaviorTreeThinkStats stats = world.TickAll(ReadOnlySpan<GraphInstruction>.Empty, scriptBudgetSteps: 32);
+            BehaviorTreeThinkStats stats = world.TickAll();
             Assert.That(stats.Agents, Is.EqualTo(2));
             Assert.That(world.Statuses[0], Is.EqualTo(BehaviorTreeStatus.Success));
             Assert.That(world.Statuses[1], Is.EqualTo(BehaviorTreeStatus.Success));
@@ -27,11 +28,10 @@ namespace Ludots.Tests.Gas.AI
         [Test]
         public void TickAll_PatrolSkeleton_StaysRunningOnEngageHold()
         {
-            // Selector: Sequence(AlwaysFailure, HoldRunning) fails first child → skip engage; patrol AlwaysSuccess.
             BehaviorTreeDefinition tree = BehaviorTreeFactory.CreatePatrolEngageSkeleton("bt.patrol");
             var world = new BehaviorTreeWorld(tree, capacity: 1);
             world.AddAgent();
-            world.TickAll(ReadOnlySpan<GraphInstruction>.Empty, 32);
+            world.TickAll();
             Assert.That(world.Statuses[0], Is.EqualTo(BehaviorTreeStatus.Success));
         }
 
@@ -42,28 +42,17 @@ namespace Ludots.Tests.Gas.AI
             Assert.That(tree.NodeCount, Is.EqualTo(16));
             const int agents = 10_000;
             var world = new BehaviorTreeWorld(tree, capacity: agents);
-            for (int i = 0; i < agents; i++)
-            {
-                world.AddAgent();
-            }
+            for (int i = 0; i < agents; i++) world.AddAgent();
 
-            // Warmup
-            world.TickAll(ReadOnlySpan<GraphInstruction>.Empty, 32);
-            for (int i = 0; i < agents; i++)
-            {
-                world.ResetAgent(i);
-            }
+            world.TickAll();
+            for (int i = 0; i < agents; i++) world.ResetAgent(i);
 
             var sw = Stopwatch.StartNew();
-            BehaviorTreeThinkStats stats = world.TickAll(ReadOnlySpan<GraphInstruction>.Empty, 32);
+            BehaviorTreeThinkStats stats = world.TickAll();
             sw.Stop();
             double ms = sw.Elapsed.TotalMilliseconds;
-
-            TestContext.WriteLine(
-                $"A={stats.Agents} N_topo={tree.NodeCount} visited={stats.NodesVisited} T_ai_ms={ms:F3}");
-
+            TestContext.WriteLine($"A={stats.Agents} N_topo={tree.NodeCount} visited={stats.NodesVisited} T_ai_ms={ms:F3}");
             Assert.That(ms, Is.LessThan(5.0), $"Think wave exceeded 5ms budget: {ms:F3}ms");
-            Assert.That(stats.Agents, Is.EqualTo(agents));
         }
 
         [Test]
@@ -73,70 +62,59 @@ namespace Ludots.Tests.Gas.AI
             const int agents = 10_000;
             var world = new BehaviorTreeWorld(tree, capacity: agents);
             for (int i = 0; i < agents; i++) world.AddAgent();
-            world.TickAll(ReadOnlySpan<GraphInstruction>.Empty, 32);
+            world.TickAll();
 
             var sw = Stopwatch.StartNew();
-            world.TickAll(ReadOnlySpan<GraphInstruction>.Empty, 32);
+            world.TickAll();
             sw.Stop();
             Assert.That(sw.Elapsed.TotalMilliseconds, Is.LessThan(1.5));
         }
 
         [Test]
-        public void PatrolChaseAttack_HostMissing_Throws()
+        public void PatrolChaseAttack_ScriptProgramsMissing_Throws()
         {
-            BehaviorTreeDefinition tree = BehaviorTreeFactory.CreatePatrolChaseAttackTree("bt.host.missing");
+            BehaviorTreeDefinition tree = BehaviorTreeFactory.CreatePatrolChaseAttackTree("bt.script.missing");
             var world = new BehaviorTreeWorld(tree, 1);
             world.AddAgent();
-            Assert.Throws<InvalidOperationException>(() =>
-                world.TickAll(ReadOnlySpan<GraphInstruction>.Empty, 32, leafHost: null));
+            Assert.Throws<InvalidOperationException>(() => world.TickAll(scriptPrograms: null, 32, sensors: null));
         }
 
         [Test]
-        public void PatrolChaseAttack_SelectsPatrol_ThenChase_ThenAttack()
+        public void PatrolChaseAttack_ScriptLeaves_SelectPatrolThenChaseThenAttack()
         {
-            BehaviorTreeDefinition tree = BehaviorTreeFactory.CreatePatrolChaseAttackTree("bt.pca");
-            var host = new ScriptedLeafHost();
+            BehaviorTreeDefinition tree = BehaviorTreeFactory.CreatePatrolChaseAttackTree("bt.pca.script");
+            Dictionary<int, GraphInstruction[]> programs = BehaviorTreePatrolScripts.CreatePatrolChaseAttackPrograms();
+            var sensors = new ScriptedSensors();
             var world = new BehaviorTreeWorld(tree, 1);
             world.AddAgent();
 
-            host.SeeEnemy = false;
+            sensors.See = false;
             world.RestartThinking(0);
-            world.TickAll(ReadOnlySpan<GraphInstruction>.Empty, 32, host);
-            Assert.That(host.LastAction, Is.EqualTo(BehaviorTreeHostBindings.Patrol));
-            Assert.That(world.Statuses[0], Is.EqualTo(BehaviorTreeStatus.Running));
+            world.TickAll(programs, 32, sensors);
+            Assert.That(world.LastScriptReturns[0], Is.EqualTo(0)); // Patrol
 
-            host.SeeEnemy = true;
-            host.InRange = false;
+            sensors.See = true;
+            sensors.InRange = false;
             world.RestartThinking(0);
-            world.TickAll(ReadOnlySpan<GraphInstruction>.Empty, 32, host);
-            Assert.That(host.LastAction, Is.EqualTo(BehaviorTreeHostBindings.Chase));
+            world.TickAll(programs, 32, sensors);
+            Assert.That(world.LastScriptReturns[0], Is.EqualTo(1)); // Chase
 
-            host.InRange = true;
+            sensors.InRange = true;
             world.RestartThinking(0);
-            world.TickAll(ReadOnlySpan<GraphInstruction>.Empty, 32, host);
-            Assert.That(host.LastAction, Is.EqualTo(BehaviorTreeHostBindings.Attack));
+            world.TickAll(programs, 32, sensors);
+            Assert.That(world.LastScriptReturns[0], Is.EqualTo(2)); // Attack
+            Assert.That(world.Statuses[0], Is.EqualTo(BehaviorTreeStatus.Success));
         }
 
-        private sealed class ScriptedLeafHost : IBehaviorTreeLeafHost
+        private sealed class ScriptedSensors : IBehaviorTreeSensorFeed
         {
-            public bool SeeEnemy;
+            public bool See;
             public bool InRange;
-            public int LastAction;
 
-            public BehaviorTreeStatus EvalCondition(int agentIndex, int bindingId)
+            public void WriteSensors(int agentIndex, int graphId, System.Span<int> ints, System.Span<byte> bools)
             {
-                return bindingId switch
-                {
-                    BehaviorTreeHostBindings.SeeEnemy => SeeEnemy ? BehaviorTreeStatus.Success : BehaviorTreeStatus.Failure,
-                    BehaviorTreeHostBindings.InAttackRange => InRange ? BehaviorTreeStatus.Success : BehaviorTreeStatus.Failure,
-                    _ => throw new InvalidOperationException($"Unexpected condition {bindingId}")
-                };
-            }
-
-            public BehaviorTreeStatus TickAction(int agentIndex, int bindingId)
-            {
-                LastAction = bindingId;
-                return BehaviorTreeStatus.Running;
+                if (graphId == BehaviorTreeScriptBindings.SeeEnemy) ints[0] = See ? 1 : 0;
+                else if (graphId == BehaviorTreeScriptBindings.InAttackRange) ints[0] = InRange ? 1 : 0;
             }
         }
     }

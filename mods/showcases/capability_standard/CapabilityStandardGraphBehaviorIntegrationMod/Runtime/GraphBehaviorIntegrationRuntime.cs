@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
 using CapabilityStandardGraphBehaviorCommon;
@@ -9,16 +10,15 @@ using Ludots.Core.GraphRuntime;
 
 namespace CapabilityStandardGraphBehaviorIntegrationMod.Runtime;
 
-/// <summary>
-/// Readable short play: left BT patrol lane, right HFSM gate, top level trigger that spawns a raid enemy.
-/// </summary>
-public sealed class GraphBehaviorIntegrationRuntime : IBehaviorTreeLeafHost
+public sealed class GraphBehaviorIntegrationRuntime : IBehaviorTreeSensorFeed
 {
     private readonly GraphShowcaseConfig _config = new();
     private BehaviorTreeWorld? _bt;
+    private Dictionary<int, GraphInstruction[]>? _btScripts;
     private HfsmWorld? _hfsm;
     private GraphProgramHfsmHost? _hfsmHost;
     private LevelDirector? _level;
+    private GraphProgramLevelHost? _levelHost;
     private float _accum;
     private float _time;
 
@@ -63,9 +63,11 @@ public sealed class GraphBehaviorIntegrationRuntime : IBehaviorTreeLeafHost
         if (_bt != null) return;
         int guards = 6;
         int sentries = 6;
+        _btScripts = BehaviorTreePatrolScripts.CreatePatrolChaseAttackPrograms();
         _bt = new BehaviorTreeWorld(BehaviorTreeFactory.CreatePatrolChaseAttackTree("integration.bt"), guards);
         _hfsmHost = new GraphProgramHfsmHost(HfsmFactory.CreateSentryScriptPrograms());
         _hfsm = new HfsmWorld(HfsmFactory.CreateSentryHierarchyWithScripts("integration.hfsm"), sentries);
+        _levelHost = new GraphProgramLevelHost(LevelScriptPrograms.CreateTwoPhaseTrialPrograms());
         _level = LevelBlueprintFactory.CreateTwoPhaseTrial("integration.level");
 
         _gx = new float[guards];
@@ -76,7 +78,6 @@ public sealed class GraphBehaviorIntegrationRuntime : IBehaviorTreeLeafHost
         for (int i = 0; i < guards; i++)
         {
             _bt.AddAgent();
-            float t = i / (float)guards;
             _gx[i] = -10f + (i % 3) * 1.2f;
             _gy[i] = -3f + (i / 3) * 3f;
             _wp[i] = i % LeftPatrol.Length;
@@ -93,7 +94,7 @@ public sealed class GraphBehaviorIntegrationRuntime : IBehaviorTreeLeafHost
         }
 
         Metrics.AgentCount = guards + sentries;
-        Metrics.Detail = "Integration short play: BT lane + HFSM gate + level trigger";
+        Metrics.Detail = "Integration Script leaves: BT+HFSM+Level";
     }
 
     public void Tick(float dt)
@@ -102,7 +103,6 @@ public sealed class GraphBehaviorIntegrationRuntime : IBehaviorTreeLeafHost
         _time += dt;
         if (_markerY < -7.5f) _markerY += 2f * dt;
 
-        // After level phase 1, spawn one raid enemy that walks across
         if (_level!.Phase >= 1 && !_enemyAlive && _time < 20f)
         {
             _enemyAlive = true;
@@ -142,18 +142,45 @@ public sealed class GraphBehaviorIntegrationRuntime : IBehaviorTreeLeafHost
 
             for (int i = 0; i < _bt!.Count; i++) _bt.RestartThinking(i);
             var sw = Stopwatch.StartNew();
-            _bt.TickAll(ReadOnlySpan<GraphInstruction>.Empty, 32, this);
+            _bt.TickAll(_btScripts, 32, this);
             _hfsm!.TickAll(_hfsmHost);
-            _level.TickThinkWave();
+            _level.TickThinkWave(_levelHost);
+            if (Metrics.ThinkWaves == 12)
+            {
+                _level.PulseManual(2, _levelHost);
+            }
+
             sw.Stop();
+            for (int i = 0; i < _bt.Count; i++)
+            {
+                _intent[i] = (byte)_bt.LastScriptReturns[i];
+            }
+
             Metrics.LastThinkMs = sw.Elapsed.TotalMilliseconds;
             if (Metrics.LastThinkMs > Metrics.MaxThinkMs) Metrics.MaxThinkMs = Metrics.LastThinkMs;
             Metrics.ThinkWaves++;
             Metrics.Detail =
-                $"Integration phase={_level.Phase} last={Metrics.LastThinkMs:F3}ms enemy={_enemyAlive}";
+                $"Integration phase={_level.Phase} script={_levelHost!.LastRanGraphId} last={Metrics.LastThinkMs:F3}ms";
         }
 
         IntegrateGuards(dt);
+    }
+
+    public void WriteSensors(int agentIndex, int graphId, Span<int> ints, Span<byte> bools)
+    {
+        if (graphId == BehaviorTreeScriptBindings.SeeEnemy)
+        {
+            ints[0] = _target[agentIndex] >= 0 ? 1 : 0;
+            return;
+        }
+
+        if (graphId == BehaviorTreeScriptBindings.InAttackRange)
+        {
+            ints[0] = _enemyAlive && Dist2(_gx[agentIndex], _gy[agentIndex], _ex, _ey) <=
+                      _config.AttackRadius * _config.AttackRadius
+                ? 1
+                : 0;
+        }
     }
 
     private void IntegrateGuards(float dt)
@@ -191,33 +218,6 @@ public sealed class GraphBehaviorIntegrationRuntime : IBehaviorTreeLeafHost
             _gx[i] += pdx / plen * stepP;
             _gy[i] += pdy / plen * stepP;
         }
-    }
-
-    public BehaviorTreeStatus EvalCondition(int agentIndex, int bindingId)
-    {
-        return bindingId switch
-        {
-            BehaviorTreeHostBindings.SeeEnemy =>
-                _target[agentIndex] >= 0 ? BehaviorTreeStatus.Success : BehaviorTreeStatus.Failure,
-            BehaviorTreeHostBindings.InAttackRange =>
-                _enemyAlive && Dist2(_gx[agentIndex], _gy[agentIndex], _ex, _ey) <=
-                _config.AttackRadius * _config.AttackRadius
-                    ? BehaviorTreeStatus.Success
-                    : BehaviorTreeStatus.Failure,
-            _ => throw new InvalidOperationException($"Unknown condition {bindingId}")
-        };
-    }
-
-    public BehaviorTreeStatus TickAction(int agentIndex, int bindingId)
-    {
-        _intent[agentIndex] = bindingId switch
-        {
-            BehaviorTreeHostBindings.Patrol => (byte)0,
-            BehaviorTreeHostBindings.Chase => (byte)1,
-            BehaviorTreeHostBindings.Attack => (byte)2,
-            _ => throw new InvalidOperationException($"Unknown action {bindingId}")
-        };
-        return BehaviorTreeStatus.Running;
     }
 
     private static float Dist2(float ax, float ay, float bx, float by)

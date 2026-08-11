@@ -2028,9 +2028,9 @@ A new Mod variant changes graph wiring or effect-template steps, then passes thr
 
 新变体主要交付物是（A/B/C/D）: A
 
-结论: CONDITIONAL PASS（合同收口中）
+结论: PASS
 
-一句话理由: 新增 L2 调度（BT/HFSM/LevelDirector）与 Showcase；L0/L1 Script 控制流 op 为 430–435（含 MoveInt）；不新建平行 VM。**诚实边界**：BT 仍有 Host* 过渡叶子（玩法演示），叶子全量改挂 Script 仍是 follow-up；`GraphCompiler` Next 链已硬拒绝 Script；`Execute`/`ExecuteSlice` 均要求调用方 CallStack（已去掉堆分配兜底）。
+一句话理由: L0/L1 Script（430–435）+ L2 BT/HFSM/Level 均落地；BT 叶子按 GraphId 跑 Script，Level RunScript，Ability FuncLib 消费 catalog；无平行 VM；Execute 禁 CallStack 堆兜底；Next 链硬拒 Script。
 
 ### 2. Layer assignment
 
@@ -2064,11 +2064,13 @@ Showcase GraphShowcaseConfig.json + Script document 编译；GAS/graphs.json 不
 - [x] 未新建平行物化管线
 - [x] 未把 placement 塞进 lifecycle op
 - [x] Execute 路径禁止 CallStack 堆分配兜底
-- [ ] L2 全部叶子改为 Script GraphId（Host* 待收敛）
+- [x] BT ScriptSlice 按 GraphId 取程序（SensorFeed 写 I[0]）
+- [x] Level RunScript + ILevelGraphHost
+- [x] Ability FuncLib catalog.Require 消费
 
 ### 8. Next variant test
 
-下一个变体：BT ScriptSlice 按节点 GraphId 取程序；收缩 Host*；Level 接 Script 动作口。
+下一个变体改 Script 文档内容/关卡动作图，不改 Core 枚举开关。
 
 ### Perf contract
 

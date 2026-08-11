@@ -47,7 +47,7 @@ namespace Ludots.Core.Gameplay.Level
         public int LastSignal => _lastSignal;
         public int TriggerCount => _triggers.Length;
 
-        public void PulseManual(int triggerIndex)
+        public void PulseManual(int triggerIndex, ILevelGraphHost? scriptHost = null)
         {
             ValidateTrigger(triggerIndex);
             if (_triggers[triggerIndex].Kind != LevelTriggerKind.ManualPulse)
@@ -55,7 +55,7 @@ namespace Ludots.Core.Gameplay.Level
                 throw new InvalidOperationException("Trigger is not ManualPulse.");
             }
 
-            TryFire(triggerIndex);
+            TryFire(triggerIndex, scriptHost);
         }
 
         public void AddCounter(int delta)
@@ -63,7 +63,7 @@ namespace Ludots.Core.Gameplay.Level
             _counter += delta;
         }
 
-        public LevelThinkStats TickThinkWave()
+        public LevelThinkStats TickThinkWave(ILevelGraphHost? scriptHost = null)
         {
             _thinkWaves++;
             int fired = 0;
@@ -84,7 +84,7 @@ namespace Ludots.Core.Gameplay.Level
                     LevelTriggerKind.CounterReached => _counter >= tr.Threshold,
                     _ => throw new InvalidOperationException($"Unknown trigger kind {tr.Kind}.")
                 };
-                if (ready && TryFire(i))
+                if (ready && TryFire(i, scriptHost))
                 {
                     fired++;
                 }
@@ -93,7 +93,7 @@ namespace Ludots.Core.Gameplay.Level
             return new LevelThinkStats(checkedCount, fired, _phase, _counter);
         }
 
-        private bool TryFire(int triggerIndex)
+        private bool TryFire(int triggerIndex, ILevelGraphHost? scriptHost)
         {
             if (_fired[triggerIndex] != 0 || _armed[triggerIndex] == 0)
             {
@@ -106,12 +106,12 @@ namespace Ludots.Core.Gameplay.Level
                 throw new InvalidOperationException($"Trigger {triggerIndex} action out of range.");
             }
 
-            RunAction(_actions[tr.ActionIndex]);
+            RunAction(_actions[tr.ActionIndex], scriptHost);
             _fired[triggerIndex] = 1;
             return true;
         }
 
-        private void RunAction(in LevelActionDef action)
+        private void RunAction(in LevelActionDef action, ILevelGraphHost? scriptHost)
         {
             switch (action.Kind)
             {
@@ -124,6 +124,21 @@ namespace Ludots.Core.Gameplay.Level
                     _phase = action.Arg0;
                     break;
                 case LevelActionKind.EmitSignal:
+                    _lastSignal = action.Arg0;
+                    break;
+                case LevelActionKind.RunScript:
+                    if (scriptHost == null)
+                    {
+                        throw new InvalidOperationException(
+                            $"Level RunScript action graphId={action.Arg0} requires ILevelGraphHost.");
+                    }
+
+                    if (action.Arg0 <= 0)
+                    {
+                        throw new InvalidOperationException("Level RunScript requires positive Arg0 graph id.");
+                    }
+
+                    scriptHost.RunScript(action.Arg0);
                     _lastSignal = action.Arg0;
                     break;
                 default:
@@ -159,13 +174,16 @@ namespace Ludots.Core.Gameplay.Level
     public static class LevelBlueprintFactory
     {
         /// <summary>Wave0: after 1 think → phase1; counter>=10 → phase2 signal.</summary>
+        public const int PhaseAdvanceScriptGraphId = 7101;
+
         public static LevelDirector CreateTwoPhaseTrial(string id)
         {
             var actions = new[]
             {
                 new LevelActionDef(LevelActionKind.SetPhase, arg0: 1, arg1: 0),
                 new LevelActionDef(LevelActionKind.SetPhase, arg0: 2, arg1: 0),
-                new LevelActionDef(LevelActionKind.EmitSignal, arg0: 100, arg1: 0),
+                // Manual pulse runs a Script then records signal = graph id.
+                new LevelActionDef(LevelActionKind.RunScript, arg0: PhaseAdvanceScriptGraphId, arg1: 0),
             };
             var triggers = new[]
             {

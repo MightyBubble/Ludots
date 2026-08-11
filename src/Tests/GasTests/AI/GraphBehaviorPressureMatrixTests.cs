@@ -61,9 +61,9 @@ namespace Ludots.Tests.Gas.AI
                     BehaviorTreeDefinition tree = BehaviorTreeFactory.CreateAlwaysSuccessSequence($"m1.{nTopo}", leaf);
                     var world = new BehaviorTreeWorld(tree, a);
                     for (int i = 0; i < a; i++) world.AddAgent();
-                    world.TickAll(ReadOnlySpan<GraphInstruction>.Empty, 8);
+                    world.TickAll(8);
                     var sw = Stopwatch.StartNew();
-                    world.TickAll(ReadOnlySpan<GraphInstruction>.Empty, 8);
+                    world.TickAll(8);
                     sw.Stop();
                     sb.AppendLine($"{a},{nTopo},1,0,{sw.Elapsed.TotalMilliseconds:F3},AlwaysSuccess sequence");
                 }
@@ -95,9 +95,9 @@ namespace Ludots.Tests.Gas.AI
                 {
                     var world = new BehaviorTreeWorld(trees[i], per);
                     for (int j = 0; j < per; j++) world.AddAgent();
-                    world.TickAll(ReadOnlySpan<GraphInstruction>.Empty, 8);
+                    world.TickAll(8);
                     var sw = Stopwatch.StartNew();
-                    world.TickAll(ReadOnlySpan<GraphInstruction>.Empty, 8);
+                    world.TickAll(8);
                     sw.Stop();
                     totalMs += sw.Elapsed.TotalMilliseconds;
                 }
