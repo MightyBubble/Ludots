@@ -40,6 +40,22 @@ L0 GraphInstruction + handler table + Execute / ExecuteSlice
 
 跨图复用：`InvokeScript`（本切片只允许目标 Script **不含 Yield**）。
 
+### Script 作者糖（编译期降级）
+
+作者节点名 SSOT：`GraphAuthoringSugar`（非 `GraphNodeOp`）。仅 **Script** ControlFlow 文档可用；Query / Effect / Score / Validation / Derived 使用必须失败关闭。运行时仍是同一套 L0 handler 表，不新增 While/Switch opcode。
+
+| 节点 | 端口 | 降级为 L0 | Kind |
+|------|------|-----------|------|
+| `BranchBool` | `condition`（bool 值边）；`true` / `false`（控制边） | `JumpIfFalse` + `Jump` | Script only |
+| `SwitchInt` | `selector`（int 值边）；`case:{N}` / `default`（控制边） | 每臂 `ConstInt` + `CompareEqInt` + `JumpIfFalse` + `Jump`，再 `Jump(default)` | Script only |
+| `Wait` | `next`（控制边） | 作者别名 → `Yield` | Script only |
+| `While` | `condition`（bool）；`body` / `next`（控制边） | `JumpIfFalse(cond)→next` + `Jump→body`（回边由作者边闭合） | Script only |
+| `Until` | `condition`（bool）；`body` / `next`（控制边） | `JumpIfFalse(cond)→body` + `Jump→next`（条件为真时退出） | Script only |
+
+步数硬顶：`GraphVmLimits.MaxInstructionsPerExecution`（失控循环失败关闭，禁止静默截断当成功）。
+
+与 [#861](https://github.com/MightyBubble/Ludots/issues/861) / PR #863（`GraphAuthoringKindPolicy` Kind 矩阵）的合并约定：糖必须保持 **Script-only**；扩展线性 Kind 前门时不得把上述糖名放进 Effect/Score 白名单；两线改 `GraphControlFlowCompiler.ParseOps` 时以本表 + `GraphAuthoringSugar` 为名册 SSOT。
+
 ### Query ControlFlow
 
 - 列表流（`Query*` / `Relationship*` 过滤与聚合）必须用 `valueEdges` 的 `list` 显式连接；控制边 `next` 不隐含 TargetList。
