@@ -6,7 +6,7 @@
     "nodes": [
       { "id": "owner", "op": "LoadCaster" },
       { "id": "allMap", "op": "QueryAllMapEntities" },
-      { "id": "team", "op": "QueryFilterTeam", "teamId": 1 },
+      { "id": "team", "op": "QueryFilterTeam", "teamId": 2147483646 },
       { "id": "oreSum", "op": "AggSumAttribute", "attribute": "Showcase.Resource.Ore" },
       { "id": "crystalSum", "op": "AggSumAttribute", "attribute": "Showcase.Resource.Crystal" }
     ],
