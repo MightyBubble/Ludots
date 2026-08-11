@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using Arch.Core;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
@@ -11,7 +12,7 @@ namespace Ludots.Tests.Gas.Graph
 {
     /// <summary>
     /// Objective compare: next-chain <see cref="GraphCompiler"/> vs pin-edge <see cref="GraphControlFlowCompiler"/>
-    /// for the same linear arithmetic program. Reports instruction shape and Execute cost; does not guess.
+    /// vs equivalent native C# for the same linear arithmetic. Reports costs; does not guess.
     /// </summary>
     [TestFixture]
     [Category("ci-gate")]
@@ -47,14 +48,19 @@ namespace Ludots.Tests.Gas.Graph
                 "Script ControlFlow requires an explicit halt/return terminal.");
             Assert.That(cfJumpCount, Is.GreaterThan(nextJumpCount),
                 "ControlFlow lowers controlEdges to Jump; linear next-chain should not need those Jumps.");
+            Assert.That(NativeLinearIntChain(), Is.EqualTo(6), "Native baseline must match graph arithmetic ((1+2)+2)+1.");
 
             using var world = World.Create();
             Entity caster = world.Create();
 
+            RuntimeSample nativeSample = MeasureNative(WarmupIterations, MeasuredIterations);
             RuntimeSample nextSample = MeasureExecute(world, caster, nextProgram, WarmupIterations, MeasuredIterations);
             RuntimeSample cfSample = MeasureExecute(world, caster, cfProgram, WarmupIterations, MeasuredIterations);
 
             TestContext.WriteLine("=== Graph authoring format compare (linear int chain) ===");
+            TestContext.WriteLine("Native C# (same arithmetic, NoInlining):");
+            TestContext.WriteLine($"  Result check: {NativeLinearIntChain()}");
+            TestContext.WriteLine($"  Execute x{MeasuredIterations}: {nativeSample.ElapsedMs:F3} ms, {nativeSample.PerExecNs:F1} ns/exec, alloc={nativeSample.AllocatedBytes}");
             TestContext.WriteLine("Next-chain (GraphConfig + GraphCompiler, kind=Score):");
             TestContext.WriteLine($"  Instructions: {nextProgram.Length} (arith={nextArithCount}, Jump={nextJumpCount})");
             TestContext.WriteLine($"  Ops: {FormatOps(nextProgram)}");
@@ -64,12 +70,57 @@ namespace Ludots.Tests.Gas.Graph
             TestContext.WriteLine($"  Ops: {FormatOps(cfProgram)}");
             TestContext.WriteLine($"  Execute x{MeasuredIterations}: {cfSample.ElapsedMs:F3} ms, {cfSample.PerExecNs:F1} ns/exec, alloc={cfSample.AllocatedBytes}");
             TestContext.WriteLine(
-                $"Delta: instructions CF-Next={cfProgram.Length - nextProgram.Length}, " +
-                $"Jump CF-Next={cfJumpCount - nextJumpCount}, " +
-                $"time CF/Next={cfSample.ElapsedMs / Math.Max(1e-9, nextSample.ElapsedMs):F3}x");
+                $"Delta vs native: Next/Native={nextSample.ElapsedMs / Math.Max(1e-9, nativeSample.ElapsedMs):F2}x, " +
+                $"CF/Native={cfSample.ElapsedMs / Math.Max(1e-9, nativeSample.ElapsedMs):F2}x, " +
+                $"CF/Next={cfSample.ElapsedMs / Math.Max(1e-9, nextSample.ElapsedMs):F3}x");
+            TestContext.WriteLine(
+                $"Delta instructions CF-Next={cfProgram.Length - nextProgram.Length}, Jump CF-Next={cfJumpCount - nextJumpCount}");
 
             // Timing/alloc are host-noisy; only report them. Structural Jump delta is the stable contract.
             Assert.That(cfProgram.Length, Is.GreaterThan(nextProgram.Length));
+        }
+
+        /// <summary>Same values as the graph: a=1, b=2, c=a+b, d=c+b, e=d+a → 6.</summary>
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static int NativeLinearIntChain()
+        {
+            int a = 1;
+            int b = 2;
+            int c = a + b;
+            int d = c + b;
+            int e = d + a;
+            return e;
+        }
+
+        private static RuntimeSample MeasureNative(int warmupIterations, int measuredIterations)
+        {
+            int sink = 0;
+            for (int i = 0; i < warmupIterations; i++)
+            {
+                sink ^= NativeLinearIntChain();
+            }
+
+            GC.Collect();
+            GC.WaitForPendingFinalizers();
+            GC.Collect();
+
+            long allocBefore = GC.GetAllocatedBytesForCurrentThread();
+            var sw = Stopwatch.StartNew();
+            for (int i = 0; i < measuredIterations; i++)
+            {
+                sink ^= NativeLinearIntChain();
+            }
+
+            sw.Stop();
+            long allocAfter = GC.GetAllocatedBytesForCurrentThread();
+
+            // Keep sink live so the loop cannot be deleted.
+            Assert.That(sink, Is.Not.EqualTo(int.MinValue));
+
+            return new RuntimeSample(
+                sw.Elapsed.TotalMilliseconds,
+                sw.Elapsed.TotalMilliseconds * 1_000_000.0 / measuredIterations,
+                allocAfter - allocBefore);
         }
 
         private static GraphConfig CreateNextChainLinearIntGraph()
