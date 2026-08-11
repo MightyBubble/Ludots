@@ -329,15 +329,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         ins.A = RequireInput(node, 0, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
                         ins.Imm = RequireSymbol(node.Tag, "tag", node, symbolToIndex, symbols, cfg.Id, diagnostics);
                         break;
-                    case GraphNodeOp.SelectTagInMask:
-                        ins.A = RequireInput(node, 0, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
-                        ins.Imm = RequireSymbol(node.DisplayTable, "displayTable", node, symbolToIndex, symbols, cfg.Id, diagnostics);
-                        ins.Flags = ParseTagSelectPolicy(node.TagSelectPolicy, cfg.Id, node.Id, diagnostics);
-                        break;
-                    case GraphNodeOp.LookupTagDisplayToken:
-                        ins.A = RequireInput(node, 0, GraphValueType.Int, valueMap, cfg.Id, diagnostics);
-                        ins.Imm = RequireSymbol(node.DisplayTable, "displayTable", node, symbolToIndex, symbols, cfg.Id, diagnostics);
-                        break;
                     case GraphNodeOp.ModifyAttributeAdd:
                         ins.A = RequireInput(node, 0, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
                         ins.B = RequireInput(node, 1, GraphValueType.Float, valueMap, cfg.Id, diagnostics);
@@ -616,8 +607,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.CompareLtInt => (GraphValueType.Bool, null),
                 GraphNodeOp.CompareEqInt => (GraphValueType.Bool, null),
                 GraphNodeOp.HasTag => (GraphValueType.Bool, null),
-                GraphNodeOp.SelectTagInMask => (GraphValueType.Int, null),
-                GraphNodeOp.LookupTagDisplayToken => (GraphValueType.Int, null),
                 GraphNodeOp.SelectEntity => (GraphValueType.Entity, null),
                 GraphNodeOp.AggCount => (GraphValueType.Int, null),
                 GraphNodeOp.AggMinByDistance => (GraphValueType.Entity, null),
@@ -897,32 +886,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 collectionRole: EntityCollectionRoleKind.Display,
                 title: output.Title,
                 summary: output.Summary));
-        }
-
-        private static byte ParseTagSelectPolicy(
-            string? value,
-            string graphId,
-            string nodeId,
-            List<GraphDiagnostic> diagnostics)
-        {
-            if (string.IsNullOrWhiteSpace(value))
-            {
-                return (byte)Ludots.Core.Presentation.TagDisplay.TagSelectPolicy.RequireOne;
-            }
-
-            if (Enum.TryParse(value.Trim(), ignoreCase: true, out Ludots.Core.Presentation.TagDisplay.TagSelectPolicy policy) &&
-                Enum.IsDefined(typeof(Ludots.Core.Presentation.TagDisplay.TagSelectPolicy), policy))
-            {
-                return (byte)policy;
-            }
-
-            diagnostics.Add(new GraphDiagnostic(
-                GraphDiagnosticSeverity.Error,
-                GraphDiagnosticCodes.UnknownNodeOp,
-                $"Graph node '{nodeId}' has unknown tagSelectPolicy '{value}'.",
-                graphId,
-                nodeId));
-            return (byte)Ludots.Core.Presentation.TagDisplay.TagSelectPolicy.RequireOne;
         }
 
         private static bool TryParseOutputDestination(string value, out GraphOutputDestinationKind destination)

@@ -182,8 +182,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.CompareLtInt or
                 GraphNodeOp.CompareEqInt or
                 GraphNodeOp.HasTag or
-                GraphNodeOp.SelectTagInMask or
-                GraphNodeOp.LookupTagDisplayToken or
                 GraphNodeOp.CompareEqEntity or
                 GraphNodeOp.SelectEntity or
                 GraphNodeOp.QueryRadius or
@@ -501,8 +499,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.CompareLtInt, HandleCompareLtInt, "CompareLtInt graph opcode.");
             Register(GraphNodeOp.CompareEqInt, HandleCompareEqInt, "CompareEqInt graph opcode.");
             Register(GraphNodeOp.HasTag, HandleHasTag, "HasTag graph opcode.");
-            Register(GraphNodeOp.SelectTagInMask, HandleSelectTagInMask, "SelectTagInMask graph opcode.");
-            Register(GraphNodeOp.LookupTagDisplayToken, HandleLookupTagDisplayToken, "LookupTagDisplayToken graph opcode.");
             Register(GraphNodeOp.CompareEqEntity, HandleCompareEqEntity, "CompareEqEntity graph opcode.");
             Register(GraphNodeOp.RandomFloat01, HandleRandomFloat01, "RandomFloat01 graph opcode.");
             Register(GraphNodeOp.QueryHexRange, HandleQueryHexRange, "QueryHexRange graph opcode.");
@@ -1193,18 +1189,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             // B[Dst] = E[A].HasTag(Imm) ? 1 : 0
             var entity = s.E[ins.A];
             s.B[ins.Dst] = (byte)(s.Api.HasTag(entity, ins.Imm) ? 1 : 0);
-        }
-
-        private static void HandleSelectTagInMask(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
-        {
-            // I[Dst] = SelectEffectiveTagInMask(E[A], Imm=tableId, Flags=policy)
-            s.I[ins.Dst] = s.Api.SelectEffectiveTagInMask(s.E[ins.A], ins.Imm, ins.Flags);
-        }
-
-        private static void HandleLookupTagDisplayToken(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
-        {
-            // I[Dst] = LookupTagDisplayToken(Imm=tableId, I[A]=tagId)
-            s.I[ins.Dst] = s.Api.LookupTagDisplayToken(ins.Imm, s.I[ins.A]);
         }
 
         private static void HandleCompareEqEntity(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
