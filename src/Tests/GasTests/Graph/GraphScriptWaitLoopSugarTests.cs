@@ -236,7 +236,7 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
-        public void Compile_QueryKind_RejectsWaitAndWhile()
+        public void Compile_QueryKind_RejectsWaitWhileAndUntil()
         {
             var waitDoc = new GraphControlFlowDocument
             {
@@ -274,6 +274,28 @@ namespace Ludots.Tests.Gas.Graph
             Assert.That(whileCompiled.Succeeded, Is.False);
             Assert.That(whileCompiled.Diagnostics, Has.Some.Matches<GraphDiagnostic>(d =>
                 d.Code == GraphDiagnosticCodes.UnknownNodeOp && d.NodeId == "loop"));
+
+            var untilDoc = new GraphControlFlowDocument
+            {
+                Id = "tests.query.until-forbidden",
+                Kind = "Query",
+                Entry = "until",
+                Nodes =
+                {
+                    new GraphControlFlowNode { Id = "one", Op = nameof(GraphNodeOp.ConstInt), IntValue = 1 },
+                    new GraphControlFlowNode { Id = "until", Op = GraphControlFlowCompiler.UntilOp }
+                },
+                ControlEdges =
+                {
+                    new GraphControlFlowEdge("until", GraphControlFlowPorts.Body, "one"),
+                    new GraphControlFlowEdge("until", GraphControlFlowPorts.Next, "one"),
+                    new GraphControlFlowEdge("one", GraphControlFlowPorts.Next, "until")
+                }
+            };
+            GraphControlFlowCompileResult untilCompiled = GraphControlFlowCompiler.Compile(untilDoc);
+            Assert.That(untilCompiled.Succeeded, Is.False);
+            Assert.That(untilCompiled.Diagnostics, Has.Some.Matches<GraphDiagnostic>(d =>
+                d.Code == GraphDiagnosticCodes.UnknownNodeOp && d.NodeId == "until"));
         }
     }
 }

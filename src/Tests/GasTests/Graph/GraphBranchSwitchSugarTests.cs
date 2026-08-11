@@ -112,6 +112,41 @@ namespace Ludots.Tests.Gas.Graph
                 d.Message.Contains("case value 1", StringComparison.Ordinal)));
         }
 
+        [Test]
+        public void SwitchInt_MissingSelector_FailsClosed()
+        {
+            GraphControlFlowDocument graph = CreateSwitchIntGraph(selectorValue: 0);
+            graph.ValueEdges.RemoveAll(e =>
+                e.To == "sw" && e.ToPort == GraphControlFlowPorts.Selector);
+
+            GraphControlFlowCompileResult compiled = GraphControlFlowCompiler.Compile(graph);
+            Assert.That(compiled.Succeeded, Is.False);
+            Assert.That(compiled.Diagnostics, Has.Some.Matches<GraphDiagnostic>(d =>
+                d.Code == GraphDiagnosticCodes.MissingValueInput && d.NodeId == "sw"));
+        }
+
+        [Test]
+        public void QueryKind_RejectsBranchBoolAndSwitchInt()
+        {
+            GraphControlFlowDocument branch = CreateBranchBoolGraph(left: 1, right: 2);
+            branch.Kind = "Query";
+            GraphControlFlowCompileResult branchCompiled = GraphControlFlowCompiler.Compile(branch);
+            Assert.That(branchCompiled.Succeeded, Is.False);
+            Assert.That(branchCompiled.Diagnostics, Has.Some.Matches<GraphDiagnostic>(d =>
+                d.Code == GraphDiagnosticCodes.UnknownNodeOp &&
+                d.NodeId == "branch" &&
+                d.Message.Contains(GraphControlFlowCompiler.BranchBoolOp, StringComparison.Ordinal)));
+
+            GraphControlFlowDocument sw = CreateSwitchIntGraph(selectorValue: 1);
+            sw.Kind = "Query";
+            GraphControlFlowCompileResult switchCompiled = GraphControlFlowCompiler.Compile(sw);
+            Assert.That(switchCompiled.Succeeded, Is.False);
+            Assert.That(switchCompiled.Diagnostics, Has.Some.Matches<GraphDiagnostic>(d =>
+                d.Code == GraphDiagnosticCodes.UnknownNodeOp &&
+                d.NodeId == "sw" &&
+                d.Message.Contains(GraphControlFlowCompiler.SwitchIntOp, StringComparison.Ordinal)));
+        }
+
         private static GraphControlFlowDocument CreateBranchBoolGraph(int left, int right)
         {
             return new GraphControlFlowDocument
