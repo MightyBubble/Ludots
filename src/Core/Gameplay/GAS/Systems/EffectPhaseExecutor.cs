@@ -53,6 +53,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         private readonly byte[] _boolRegs = new byte[GraphVmLimits.MaxBoolRegisters];
         private readonly Entity[] _entityRegs = new Entity[GraphVmLimits.MaxEntityRegisters];
         private readonly Entity[] _targets = new Entity[GraphVmLimits.MaxTargets];
+        private readonly int[] _callStack = new int[GraphVmLimits.MaxCallStackDepth];
 
         // Scratch buffer for collected listener actions
         private readonly PhaseListenerCollectedAction[] _collectedActions = new PhaseListenerCollectedAction[PhaseListenerDispatchScratchCapacity];
@@ -762,6 +763,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
 
             var targetList = new GraphTargetList(_targets);
 
+            Array.Clear(_callStack, 0, _callStack.Length);
             var state = new GraphExecutionState
             {
                 World = world,
@@ -777,6 +779,8 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 E = _entityRegs,
                 Targets = _targets,
                 TargetList = targetList,
+                CallStack = _callStack,
+                CallStackCount = 0,
             };
 
             GasGraphRuntimeApi? graphHost = api as GasGraphRuntimeApi;

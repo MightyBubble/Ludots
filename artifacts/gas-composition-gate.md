@@ -1947,3 +1947,132 @@ Behavior remains in existing effect templates, preset definitions, and graph ass
 ### 8. Next variant test
 
 A new Mod variant changes graph wiring or effect-template steps, then passes through the same whole-registry compilation and freeze before runtime starts.
+
+## GAS Composition Gate — Self Review
+
+- **Task / Issue**: PR #736 follow-up — unify ExecuteSlice/Call/Yield/source map into GASGraph; add GraphKind.Script; InvokeScript minimal; layering contract for BT/FSM/LevelTrigger
+- **Date**: 2026-08-10
+- **Agent / Author**: Cursor cloud agent
+
+### 1. Core judgment
+
+新变体主要交付物是（A/B/C/D）: A
+
+结论: PASS
+
+一句话理由: 交付物是共享图发动机的执行模式（ExecuteSlice）与控制流原子 op（Call/Return/Yield/HaltReturnInt/InvokeScript），加上 L1 Script 方言与编译器；不是 profile enum / 平行 VM / 平行 spawn 管线。L2 BT/FSM/LevelTrigger 本切片只定挂靠合同，不实现调度 runtime。
+
+### 2. Layer assignment
+
+| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
+|-----------|-----------------|----------|
+| Execute / ExecuteSlice / call stack / source map | 0 | GasGraphOpHandlerTable + GraphRuntime IR |
+| Call / Return / Yield / HaltReturnInt / InvokeScript | 0 | GraphNodeOp handlers（430–434） |
+| GraphKind.Script + control-flow compiler | 1–2 | GraphKind + GraphControlFlowCompiler + policy |
+| Effect/Score/Query/Validation/Derived 既有方言 | 2 | 既有 GraphKind + GraphKindOperationPolicy |
+| BT / FSM / LevelTrigger | 2（合同）/ 未来 runtime | 文档约定：叶子 InvokeScript/Score/Validation；拓扑不进 GraphNodeOp |
+
+### 3. Reuse list
+
+- Handlers: GasGraphOpHandlerTable（扩展，不平行 switch VM）
+- Queues / Systems: EffectPhaseSideEffectTransaction / IGraphRuntimeApi（事务边界不变）
+- Resolvers / Registries: GraphProgramRegistry、GraphKindOperationPolicy、GraphCompiler/GraphValidator（Effect 路径）
+- Existing presets / graphs: 既有 Effect/Score 图不变；Script 为新 kind
+
+### 4. New Layer 0 ops (if any)
+
+| Op 名 | 单一职责 | 为何不能组合现有 op |
+|-------|----------|---------------------|
+| Call | 压栈并绝对跳转 | Jump 无返回约定 |
+| Return | 弹栈恢复 PC | 无等价组合 |
+| Yield | 可恢复暂停 | run-to-halt Execute 无法表达跨拍 |
+| HaltReturnInt | 停机并返回 I[A] | Score 用 F[0]、Validation 用 B[0]，Script 需要显式 int 返回 |
+| InvokeScript | 同步跑另一张 Script（禁 Yield 子图） | 跨程序复用；给未来 L2 叶子挂钩 |
+
+### 5. Transaction boundary
+
+必须原子 rollback 的步骤: 无新增。Effect 事务仍由 effect 实例生命周期 + IGraphRuntimeApi sink 承担。Script Yield 禁止出现在 Effect kind，避免事务跨帧悬挂。InvokeScript 子图本切片要求一次跑完，不把父事务切到子 Yield。
+
+### 6. Config SSOT
+
+行为配置落在: graph（Script control-flow document / 既有 GraphConfig）: `GraphControlFlowDocument` + 既有 GAS graph JSON
+
+是否新增 JSON schema: NO — 本切片以代码侧 document/compiler 合同为主；Mod JSON 加载 Script 可 follow-up 挂 GraphProgramConfigLoader。
+
+### 7. Red flag scan
+
+- [x] 未新增 profile inherit/placement enum
+- [x] 未新建与 spawn 平行的物化管线
+- [x] 未把 placement 校验塞进 lifecycle op
+- [x] 未添加「说不清的」默认 fallback（未定值读、数字 op、不可达、Effect+Yield 均 fail-fast）
+
+### 8. Next variant test
+
+「下一个 Mod 变体」将修改: graph 连线（Script 拼装或未来 L2 叶子挂 Script id）
+
+### Architecture notes (SSOT)
+
+- 禁止平行 GraphVmOpcode / GraphVmExecutor。
+- 审计建议的 128/256/384 opcode 段位作废（与现有 GAS op 冲突）；控制流用 430–434。
+- L2 BT/FSM/LevelTrigger 拓扑不进 GraphNodeOp；叶子调用 L1。
+- 容量沿用 GraphVmLimits；扩容 = 提高常量 + 编译期预算诊断。
+
+
+## GAS Composition Gate — Self Review
+
+- **Task / Issue**: Graph behavior showcases epic — L2 BT/FSM/LevelTrigger + 4 showcases; perf contract 60FPS / AI 0.2s think / ≤5ms per think wave / no graph-layer stagger
+- **Date**: 2026-08-10
+- **Agent / Author**: Cursor cloud agent
+
+### 1. Core judgment
+
+新变体主要交付物是（A/B/C/D）: A
+
+结论: PASS
+
+一句话理由: L0/L1 Script（430–435）+ L2 BT/HFSM/Level 均落地；BT 叶子按 GraphId 跑 Script，Level RunScript，Ability FuncLib 消费 catalog；无平行 VM；Execute 禁 CallStack 堆兜底；Next 链硬拒 Script。
+
+### 2. Layer assignment
+
+| 步骤/能力 | Layer | 实现载体 |
+|-----------|-------|----------|
+| BT/HFSM/Level 拓扑调度 | 2 | Core AI/Level 运行时 |
+| Script 控制流 | 0–1 | GASGraph + GraphControlFlowCompiler |
+| Script 原子 Showcase | 3 | capability_standard_script_flow_sandbox |
+| L2 剧本 Showcase | 3 | BT/HFSM/Level/Ability/Integration mods |
+
+### 3. Reuse list
+
+- Handlers/Registries: GasGraphOpHandlerTable, GraphProgramRegistry, Effect pipeline
+- Existing: Script ExecuteSlice, Validation, Score
+
+### 4. New Layer 0 ops
+
+Call/Return/Yield/HaltReturnInt/InvokeScript/MoveInt（430–435）
+
+### 5. Transaction boundary
+
+Effect 事务仍在 effect 生命周期；Script Yield 不进入 Effect；BT Running 由 L2 持有 cursor（Host* 过渡路径可独立于 Script）。
+
+### 6. Config SSOT
+
+Showcase GraphShowcaseConfig.json + Script document 编译；GAS/graphs.json 不得用 Kind=Script 走旧 Next 链。
+
+### 7. Red flag scan
+
+- [x] 未新增 profile inherit/placement enum
+- [x] 未新建平行物化管线
+- [x] 未把 placement 塞进 lifecycle op
+- [x] Execute 路径禁止 CallStack 堆分配兜底
+- [x] BT ScriptSlice 按 GraphId 取程序（SensorFeed 写 I[0]）
+- [x] Level RunScript + ILevelGraphHost
+- [x] Ability FuncLib catalog.Require 消费
+
+### 8. Next variant test
+
+下一个变体改 Script 文档内容/关卡动作图，不改 Core 枚举开关。
+
+### Perf contract
+
+60FPS present; AI think 0.2s; one think wave A=10k T_ai&lt;5ms; Graph layer clean.
+

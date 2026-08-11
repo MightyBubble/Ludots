@@ -5,6 +5,11 @@
       "kind": "csproj",
       "value": "mods/showcases/shared/RoadNetworkShowcaseData",
       "reason": "road_network 共享数据库，非独立 showcase 条目"
+    },
+    {
+      "kind": "csproj",
+      "value": "mods/showcases/capability_standard/CapabilityStandardGraphBehaviorCommon",
+      "reason": "shared library for graph-behavior capability showcases; not a standalone showcase entry"
     }
   ],
   "showcases": [
@@ -2834,6 +2839,142 @@
         "version",
         "negative-test"
       ]
+    },
+    {
+      "id": "capability_standard_behavior_tree_arena",
+      "path": "mods/showcases/capability_standard/CapabilityStandardBehaviorTreeArenaMod",
+      "projectPath": "CapabilityStandardBehaviorTreeArenaMod.csproj",
+      "title": "行为树演武场",
+      "summary": "独立 BT 万人思考波次演示（不含 HFSM/关卡/技能）。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard"
+      ],
+      "binding": "capability_standard_behavior_tree_arena",
+      "preset": "capability_standard_behavior_tree_arena_raylib",
+      "docsPath": "gitbook/architecture/graph-layering-flow-and-behavior.md",
+      "readmePath": null,
+      "acceptanceTest": "BehaviorTreeArenaShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_behavior_tree_arena",
+      "screenshot": null,
+      "status": "active",
+      "notes": "Headless think-wave acceptance first; visual captures follow."
+    },
+    {
+      "id": "capability_standard_hfsm_sentry_arena",
+      "path": "mods/showcases/capability_standard/CapabilityStandardHfsmSentryArenaMod",
+      "projectPath": "CapabilityStandardHfsmSentryArenaMod.csproj",
+      "title": "HFSM 岗哨演武场",
+      "summary": "独立分层状态机万人演示（不含 BT/关卡/技能）。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard"
+      ],
+      "binding": "capability_standard_hfsm_sentry_arena",
+      "preset": "capability_standard_hfsm_sentry_arena_raylib",
+      "docsPath": "gitbook/architecture/graph-layering-flow-and-behavior.md",
+      "readmePath": null,
+      "acceptanceTest": "HfsmSentryArenaShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_hfsm_sentry_arena",
+      "screenshot": null,
+      "status": "active",
+      "notes": "Headless think-wave acceptance first; visual captures follow."
+    },
+    {
+      "id": "capability_standard_level_blueprint_trial",
+      "path": "mods/showcases/capability_standard/CapabilityStandardLevelBlueprintTrialMod",
+      "projectPath": "CapabilityStandardLevelBlueprintTrialMod.csproj",
+      "title": "关卡蓝图试炼",
+      "summary": "独立关卡导演/触发器演示（不含 BT/HFSM/技能）。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard"
+      ],
+      "binding": "capability_standard_level_blueprint_trial",
+      "preset": "capability_standard_level_blueprint_trial_raylib",
+      "docsPath": "gitbook/architecture/graph-layering-flow-and-behavior.md",
+      "readmePath": null,
+      "acceptanceTest": "LevelBlueprintTrialShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_level_blueprint_trial",
+      "screenshot": null,
+      "status": "active",
+      "notes": "Headless think-wave acceptance first; visual captures follow."
+    },
+    {
+      "id": "capability_standard_ability_graph_sandbox",
+      "path": "mods/showcases/capability_standard/CapabilityStandardAbilityGraphSandboxMod",
+      "projectPath": "CapabilityStandardAbilityGraphSandboxMod.csproj",
+      "title": "能力/效果图沙盘",
+      "summary": "独立 GAS Ability/Effect 图与 FuncLib 演示（不含 BT/HFSM/关卡）。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "ability",
+        "effect"
+      ],
+      "binding": "capability_standard_ability_graph_sandbox",
+      "preset": "capability_standard_ability_graph_sandbox_raylib",
+      "docsPath": "gitbook/architecture/graph-layering-flow-and-behavior.md",
+      "readmePath": null,
+      "acceptanceTest": "AbilityGraphSandboxShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_ability_graph_sandbox",
+      "screenshot": null,
+      "status": "active",
+      "notes": "Headless think-wave acceptance first; visual captures follow."
+    },
+    {
+      "id": "capability_standard_graph_behavior_integration",
+      "path": "mods/showcases/capability_standard/CapabilityStandardGraphBehaviorIntegrationMod",
+      "projectPath": "CapabilityStandardGraphBehaviorIntegrationMod.csproj",
+      "title": "图行为整合演示",
+      "summary": "单独的整合演示：BT+HFSM+Level 合波（不是四个单秀的大杂烩合并）。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard"
+      ],
+      "binding": "capability_standard_graph_behavior_integration",
+      "preset": "capability_standard_graph_behavior_integration_raylib",
+      "docsPath": "gitbook/architecture/graph-layering-flow-and-behavior.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphBehaviorIntegrationShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_behavior_integration",
+      "screenshot": null,
+      "status": "active",
+      "notes": "Headless think-wave acceptance first; visual captures follow."
+    },
+    {
+      "id": "capability_standard_script_flow_sandbox",
+      "path": "mods/showcases/capability_standard/CapabilityStandardScriptFlowSandboxMod",
+      "projectPath": "CapabilityStandardScriptFlowSandboxMod.csproj",
+      "title": "Script 原子流程沙盘",
+      "summary": "L1 Script 最小演示：Call/Yield/HaltReturnInt 喝水直到满（不含 BT/HFSM/Level）。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "script",
+        "capability-standard"
+      ],
+      "binding": "capability_standard_script_flow_sandbox",
+      "preset": "capability_standard_script_flow_sandbox_raylib",
+      "docsPath": "gitbook/architecture/graph-layering-flow-and-behavior.md",
+      "readmePath": null,
+      "acceptanceTest": "ScriptFlowSandboxShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_script_flow_sandbox",
+      "screenshot": null,
+      "status": "active",
+      "notes": "Atomic L1 Script showcase; separate from L2 behavior arenas."
     }
   ]
 }

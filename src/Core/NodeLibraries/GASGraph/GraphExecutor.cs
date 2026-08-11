@@ -167,6 +167,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Span<byte> b = stackalloc byte[GraphVmLimits.MaxBoolRegisters];
             Span<Entity> e = stackalloc Entity[GraphVmLimits.MaxEntityRegisters];
             Span<Entity> targets = stackalloc Entity[GraphVmLimits.MaxTargets];
+            Span<int> callStack = stackalloc int[GraphVmLimits.MaxCallStackDepth];
             var targetList = new GraphTargetList(targets);
 
             e[0] = caster;
@@ -184,7 +185,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 B = b,
                 E = e,
                 Targets = targets,
-                TargetList = targetList
+                TargetList = targetList,
+                CallStack = callStack
             };
 
             GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
@@ -205,6 +207,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Span<byte> b = stackalloc byte[GraphVmLimits.MaxBoolRegisters];
             Span<Entity> e = stackalloc Entity[GraphVmLimits.MaxEntityRegisters];
             Span<Entity> targets = stackalloc Entity[GraphVmLimits.MaxTargets];
+            Span<int> callStack = stackalloc int[GraphVmLimits.MaxCallStackDepth];
             var targetList = new GraphTargetList(targets);
 
             // Fail-closed: B[0] defaults to 0 (reject). Validation graphs must explicitly set B[0]=1 to pass.
@@ -225,7 +228,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 B = b,
                 E = e,
                 Targets = targets,
-                TargetList = targetList
+                TargetList = targetList,
+                CallStack = callStack
             };
 
             GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
@@ -248,6 +252,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Span<byte> b = stackalloc byte[GraphVmLimits.MaxBoolRegisters];
             Span<Entity> e = stackalloc Entity[GraphVmLimits.MaxEntityRegisters];
             Span<Entity> targets = stackalloc Entity[GraphVmLimits.MaxTargets];
+            Span<int> callStack = stackalloc int[GraphVmLimits.MaxCallStackDepth];
             var targetList = new GraphTargetList(targets);
 
             e[0] = caster;
@@ -265,11 +270,78 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 B = b,
                 E = e,
                 Targets = targets,
-                TargetList = targetList
+                TargetList = targetList,
+                CallStack = callStack
             };
 
             GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
             return f[0];
+        }
+
+        /// <summary>
+        /// Resumable Script execution. Caller owns register/call-stack spans across slices.
+        /// </summary>
+        public static GraphSliceResult ExecuteScriptSlice(
+            World world,
+            Entity caster,
+            Entity explicitTarget,
+            IntVector2 targetPosCm,
+            ReadOnlySpan<GraphInstruction> program,
+            IGraphRuntimeApi? api,
+            GraphProgramRegistry? programs,
+            Span<float> floats,
+            Span<int> ints,
+            Span<byte> bools,
+            Span<Entity> entities,
+            Span<Entity> targets,
+            Span<int> callStack,
+            ref GraphExecutionCursor cursor,
+            int budgetSteps,
+            GraphKind kind = GraphKind.Script)
+        {
+            RequireKind(kind, GraphKind.Script, nameof(ExecuteScriptSlice));
+            GraphKindOperationPolicy.RequireAllowed(kind, program, GasGraphOpHandlerTable.Instance, entrypoint: nameof(ExecuteScriptSlice));
+
+            if (floats.Length < GraphVmLimits.MaxFloatRegisters ||
+                ints.Length < GraphVmLimits.MaxIntRegisters ||
+                bools.Length < GraphVmLimits.MaxBoolRegisters ||
+                entities.Length < GraphVmLimits.MaxEntityRegisters ||
+                targets.Length < GraphVmLimits.MaxTargets ||
+                callStack.Length < GraphVmLimits.MaxCallStackDepth)
+            {
+                throw new ArgumentException("ExecuteScriptSlice register/call-stack spans are smaller than GraphVmLimits.");
+            }
+
+            var targetList = new GraphTargetList(targets);
+            entities[0] = caster;
+            entities[1] = explicitTarget;
+
+            var state = new GraphExecutionState
+            {
+                World = world,
+                Caster = caster,
+                ExplicitTarget = explicitTarget,
+                TargetPosCm = targetPosCm,
+                Api = api!,
+                Programs = programs,
+                F = floats,
+                I = ints,
+                B = bools,
+                E = entities,
+                Targets = targets,
+                TargetList = targetList,
+                CallStack = callStack,
+                CallStackCount = cursor.CallStackCount,
+                ReturnInt = cursor.ReturnInt,
+                Status = GraphExecutionStatus.Running
+            };
+
+            return GasGraphOpHandlerTable.ExecuteSlice(
+                ref state,
+                program,
+                GasGraphOpHandlerTable.Instance,
+                ref cursor,
+                budgetSteps);
         }
     }
 }

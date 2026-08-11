@@ -71,6 +71,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Span<byte> bools = stackalloc byte[GraphVmLimits.MaxBoolRegisters];
             Span<Entity> entities = stackalloc Entity[GraphVmLimits.MaxEntityRegisters];
             Span<Entity> targets = stackalloc Entity[GraphVmLimits.MaxTargets];
+            Span<int> callStack = stackalloc int[GraphVmLimits.MaxCallStackDepth];
             var targetList = new GraphTargetList(targets);
 
             var state = new GraphExecutionState
@@ -88,6 +89,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 E = entities,
                 Targets = targets,
                 TargetList = targetList,
+                CallStack = callStack,
+                CallStackCount = 0,
             };
 
             GasGraphOpHandlerTable.Execute(ref state, program, _handlers);
