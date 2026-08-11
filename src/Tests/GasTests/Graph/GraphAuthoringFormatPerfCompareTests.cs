@@ -18,7 +18,6 @@ namespace Ludots.Tests.Gas.Graph
     /// vs equivalent native C# for the same linear arithmetic. Reports costs; does not guess.
     /// </summary>
     [TestFixture]
-    [Category("ci-gate")]
     public sealed class GraphAuthoringFormatPerfCompareTests
     {
         private const int WarmupIterations = 2_000;
@@ -29,35 +28,36 @@ namespace Ludots.Tests.Gas.Graph
         private static volatile int OpaqueB = 2;
 
         [Test]
+        [Category("ci-gate")]
         public void Compare_LinearIntChain_NextChainVsControlFlow_InstructionShapeAndRuntime()
         {
-            GraphConfig nextChainDoc = CreateNextChainLinearIntGraph();
-            GraphControlFlowDocument controlFlowDoc = CreateControlFlowLinearIntGraph();
+            CompiledLinearPrograms compiled = CompileLinearPrograms();
+            using var world = World.Create();
+            Entity caster = world.Create();
 
-            var (nextPackage, _, nextDiags) = GraphCompiler.CompileWithOutputs(nextChainDoc);
-            var (cfPackage, _, cfDiags) = GraphControlFlowCompiler.CompileWithOutputs(controlFlowDoc);
+            RuntimeSample nativeSample = MeasureNative(WarmupIterations, MeasuredIterations);
+            RuntimeSample nextSample = MeasureExecute(world, caster, compiled.NextProgram, WarmupIterations, MeasuredIterations);
+            RuntimeSample cfSample = MeasureExecute(world, caster, compiled.ControlFlowProgram, WarmupIterations, MeasuredIterations);
 
-            Assert.That(nextPackage.HasValue, Is.True, FormatDiagnostics(nextDiags));
-            Assert.That(cfPackage.HasValue, Is.True, FormatDiagnostics(cfDiags));
+            TestContext.WriteLine("=== Graph authoring format compare (linear int chain) ===");
+            TestContext.WriteLine("Native C# (same arithmetic, NoInlining, opaque operands):");
+            TestContext.WriteLine($"  Result check: {NativeLinearIntChain(OpaqueA, OpaqueB)}");
+            WriteRuntimeLine(nativeSample);
+            WriteCompiledProgramLines(compiled, nextSample, cfSample);
+            TestContext.WriteLine(
+                $"Delta vs native C#: Next={Ratio(nextSample, nativeSample):F2}x, CF={Ratio(cfSample, nativeSample):F2}x");
+            TestContext.WriteLine(
+                $"Delta instructions CF-Next={compiled.ControlFlowProgram.Length - compiled.NextProgram.Length}, " +
+                $"Jump CF-Next={compiled.ControlFlowJumpCount - compiled.NextJumpCount}");
 
-            GraphInstruction[] nextProgram = nextPackage!.Value.Program;
-            GraphInstruction[] cfProgram = cfPackage!.Value.Program;
+            Assert.That(compiled.ControlFlowProgram.Length, Is.GreaterThan(compiled.NextProgram.Length));
+        }
 
-            int nextJumpCount = CountOp(nextProgram, GraphNodeOp.Jump);
-            int cfJumpCount = CountOp(cfProgram, GraphNodeOp.Jump);
-            int nextArithCount = CountOp(nextProgram, GraphNodeOp.ConstInt) + CountOp(nextProgram, GraphNodeOp.AddInt);
-            int cfArithCount = CountOp(cfProgram, GraphNodeOp.ConstInt) + CountOp(cfProgram, GraphNodeOp.AddInt);
-
-            // Same authored arithmetic: ConstInt x2 + AddInt x3. Script CF also needs HaltReturnInt terminal.
-            Assert.That(nextArithCount, Is.EqualTo(5));
-            Assert.That(cfArithCount, Is.EqualTo(5));
-            Assert.That(CountOp(cfProgram, GraphNodeOp.HaltReturnInt), Is.EqualTo(1),
-                "Script ControlFlow requires an explicit halt/return terminal.");
-            Assert.That(cfJumpCount, Is.GreaterThan(nextJumpCount),
-                "ControlFlow lowers controlEdges to Jump; linear next-chain should not need those Jumps.");
-            Assert.That(NativeLinearIntChain(OpaqueA, OpaqueB), Is.EqualTo(6),
-                "Native baseline must match graph arithmetic ((1+2)+2)+1.");
-
+        [Test]
+        [Category("benchmark")]
+        public void Compare_LinearIntChain_IncludesPythonAndNodeBaselines()
+        {
+            CompiledLinearPrograms compiled = CompileLinearPrograms();
             using var world = World.Create();
             Entity caster = world.Create();
 
@@ -70,37 +70,95 @@ namespace Ludots.Tests.Gas.Graph
                 "Node.js",
                 ResolveExecutable("node"),
                 new[] { "-e", BuildNodeProbe(WarmupIterations, MeasuredIterations) });
-            RuntimeSample nextSample = MeasureExecute(world, caster, nextProgram, WarmupIterations, MeasuredIterations);
-            RuntimeSample cfSample = MeasureExecute(world, caster, cfProgram, WarmupIterations, MeasuredIterations);
+            RuntimeSample nextSample = MeasureExecute(world, caster, compiled.NextProgram, WarmupIterations, MeasuredIterations);
+            RuntimeSample cfSample = MeasureExecute(world, caster, compiled.ControlFlowProgram, WarmupIterations, MeasuredIterations);
 
-            TestContext.WriteLine("=== Graph authoring format compare (linear int chain) ===");
-            TestContext.WriteLine("Native C# (same arithmetic, NoInlining, opaque operands):");
-            TestContext.WriteLine($"  Result check: {NativeLinearIntChain(OpaqueA, OpaqueB)}");
+            TestContext.WriteLine("=== Graph authoring format compare + script baselines ===");
+            TestContext.WriteLine("Native C#:");
             WriteRuntimeLine(nativeSample);
-            TestContext.WriteLine("Python3 (same arithmetic; timed inside process, excludes spawn):");
+            TestContext.WriteLine("Python3 (in-process; excludes spawn):");
             WriteRuntimeLine(pythonSample);
-            TestContext.WriteLine("Node.js (same arithmetic; timed inside process, excludes spawn):");
+            TestContext.WriteLine("Node.js (in-process; excludes spawn):");
             WriteRuntimeLine(nodeSample);
-            TestContext.WriteLine("Next-chain (GraphConfig + GraphCompiler, kind=Score):");
-            TestContext.WriteLine($"  Instructions: {nextProgram.Length} (arith={nextArithCount}, Jump={nextJumpCount})");
-            TestContext.WriteLine($"  Ops: {FormatOps(nextProgram)}");
-            WriteRuntimeLine(nextSample);
-            TestContext.WriteLine("ControlFlow (GraphControlFlowDocument + GraphControlFlowCompiler, kind=Script):");
-            TestContext.WriteLine($"  Instructions: {cfProgram.Length} (arith={cfArithCount}, Jump={cfJumpCount}, HaltReturnInt={CountOp(cfProgram, GraphNodeOp.HaltReturnInt)})");
-            TestContext.WriteLine($"  Ops: {FormatOps(cfProgram)}");
-            WriteRuntimeLine(cfSample);
+            WriteCompiledProgramLines(compiled, nextSample, cfSample);
             TestContext.WriteLine(
                 $"Delta vs native C#: Python={Ratio(pythonSample, nativeSample):F2}x, Node={Ratio(nodeSample, nativeSample):F2}x, " +
                 $"Next={Ratio(nextSample, nativeSample):F2}x, CF={Ratio(cfSample, nativeSample):F2}x");
             TestContext.WriteLine(
                 $"Delta vs Python: Node={Ratio(nodeSample, pythonSample):F2}x, Next={Ratio(nextSample, pythonSample):F2}x, CF={Ratio(cfSample, pythonSample):F2}x");
-            TestContext.WriteLine(
-                $"Delta instructions CF-Next={cfProgram.Length - nextProgram.Length}, Jump CF-Next={cfJumpCount - nextJumpCount}");
 
-            // Timing/alloc are host-noisy; only report them. Structural Jump delta is the stable contract.
-            Assert.That(cfProgram.Length, Is.GreaterThan(nextProgram.Length));
             Assert.That(pythonSample.Result, Is.EqualTo(6));
             Assert.That(nodeSample.Result, Is.EqualTo(6));
+        }
+
+        private static CompiledLinearPrograms CompileLinearPrograms()
+        {
+            GraphConfig nextChainDoc = CreateNextChainLinearIntGraph();
+            GraphControlFlowDocument controlFlowDoc = CreateControlFlowLinearIntGraph();
+
+            var (nextPackage, _, nextDiags) = GraphCompiler.CompileWithOutputs(nextChainDoc);
+            var (cfPackage, _, cfDiags) = GraphControlFlowCompiler.CompileWithOutputs(controlFlowDoc);
+
+            Assert.That(nextPackage.HasValue, Is.True, FormatDiagnostics(nextDiags));
+            Assert.That(cfPackage.HasValue, Is.True, FormatDiagnostics(cfDiags));
+
+            GraphInstruction[] nextProgram = nextPackage!.Value.Program;
+            GraphInstruction[] cfProgram = cfPackage!.Value.Program;
+            int nextJumpCount = CountOp(nextProgram, GraphNodeOp.Jump);
+            int cfJumpCount = CountOp(cfProgram, GraphNodeOp.Jump);
+            int nextArithCount = CountOp(nextProgram, GraphNodeOp.ConstInt) + CountOp(nextProgram, GraphNodeOp.AddInt);
+            int cfArithCount = CountOp(cfProgram, GraphNodeOp.ConstInt) + CountOp(cfProgram, GraphNodeOp.AddInt);
+
+            Assert.That(nextArithCount, Is.EqualTo(5));
+            Assert.That(cfArithCount, Is.EqualTo(5));
+            Assert.That(CountOp(cfProgram, GraphNodeOp.HaltReturnInt), Is.EqualTo(1));
+            Assert.That(cfJumpCount, Is.GreaterThan(nextJumpCount));
+            Assert.That(NativeLinearIntChain(OpaqueA, OpaqueB), Is.EqualTo(6));
+
+            return new CompiledLinearPrograms(nextProgram, cfProgram, nextJumpCount, cfJumpCount, nextArithCount, cfArithCount);
+        }
+
+        private static void WriteCompiledProgramLines(
+            CompiledLinearPrograms compiled,
+            RuntimeSample nextSample,
+            RuntimeSample cfSample)
+        {
+            TestContext.WriteLine("Next-chain (GraphConfig + GraphCompiler, kind=Score):");
+            TestContext.WriteLine(
+                $"  Instructions: {compiled.NextProgram.Length} (arith={compiled.NextArithCount}, Jump={compiled.NextJumpCount})");
+            TestContext.WriteLine($"  Ops: {FormatOps(compiled.NextProgram)}");
+            WriteRuntimeLine(nextSample);
+            TestContext.WriteLine("ControlFlow (GraphControlFlowDocument + GraphControlFlowCompiler, kind=Script):");
+            TestContext.WriteLine(
+                $"  Instructions: {compiled.ControlFlowProgram.Length} (arith={compiled.ControlFlowArithCount}, Jump={compiled.ControlFlowJumpCount}, HaltReturnInt={CountOp(compiled.ControlFlowProgram, GraphNodeOp.HaltReturnInt)})");
+            TestContext.WriteLine($"  Ops: {FormatOps(compiled.ControlFlowProgram)}");
+            WriteRuntimeLine(cfSample);
+        }
+
+        private readonly struct CompiledLinearPrograms
+        {
+            public CompiledLinearPrograms(
+                GraphInstruction[] nextProgram,
+                GraphInstruction[] controlFlowProgram,
+                int nextJumpCount,
+                int controlFlowJumpCount,
+                int nextArithCount,
+                int controlFlowArithCount)
+            {
+                NextProgram = nextProgram;
+                ControlFlowProgram = controlFlowProgram;
+                NextJumpCount = nextJumpCount;
+                ControlFlowJumpCount = controlFlowJumpCount;
+                NextArithCount = nextArithCount;
+                ControlFlowArithCount = controlFlowArithCount;
+            }
+
+            public GraphInstruction[] NextProgram { get; }
+            public GraphInstruction[] ControlFlowProgram { get; }
+            public int NextJumpCount { get; }
+            public int ControlFlowJumpCount { get; }
+            public int NextArithCount { get; }
+            public int ControlFlowArithCount { get; }
         }
 
         private static void WriteRuntimeLine(RuntimeSample sample)
