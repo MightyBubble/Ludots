@@ -102,7 +102,7 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
-        public void GraphCompiler_EffectWithYield_CompilesThenPolicyRejects()
+        public void GraphCompiler_EffectWithYield_PolicyRejects()
         {
             var cfg = new GraphConfig
             {
@@ -114,26 +114,26 @@ namespace Ludots.Tests.Gas.Graph
                     new GraphNodeConfig
                     {
                         Id = "y",
-                        Op = nameof(GraphNodeOp.Yield)
+                        Op = nameof(GraphNodeOp.Yield),
+                        Next = "halt"
+                    },
+                    new GraphNodeConfig
+                    {
+                        Id = "halt",
+                        Op = nameof(GraphNodeOp.ConstInt),
+                        IntValue = 1
                     }
                 }
             };
 
             var (pkg, _, diags) = GraphCompiler.CompileWithOutputs(cfg);
-            // Yield may compile as an opcode on next-chain; policy must still fail-closed for Effect.
-            if (pkg.HasValue)
-            {
-                Assert.Throws<InvalidOperationException>(() =>
-                    GraphKindOperationPolicy.RequireAllowed(
-                        GraphKind.Effect,
-                        pkg.Value.Program,
-                        GasGraphOpHandlerTable.Instance));
-            }
-            else
-            {
-                Assert.That(diags, Has.Some.Matches<GraphDiagnostic>(d =>
-                    d.Severity == GraphDiagnosticSeverity.Error));
-            }
+            // Next-chain may still emit Yield as an opcode; Effect must fail at kind policy (not silently run).
+            Assert.That(pkg.HasValue, Is.True, GraphScriptTestGraphs.FormatDiagnostics(diags));
+            Assert.Throws<InvalidOperationException>(() =>
+                GraphKindOperationPolicy.RequireAllowed(
+                    GraphKind.Effect,
+                    pkg!.Value.Program,
+                    GasGraphOpHandlerTable.Instance));
         }
 
         [Test]

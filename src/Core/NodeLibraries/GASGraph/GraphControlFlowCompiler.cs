@@ -62,11 +62,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
     /// </summary>
     public static partial class GraphControlFlowCompiler
     {
-        public const string BranchBoolOp = "BranchBool";
-        public const string SwitchIntOp = "SwitchInt";
-        public const string WaitOp = "Wait";
-        public const string WhileOp = "While";
-        public const string UntilOp = "Until";
+        public const string BranchBoolOp = GraphAuthoringSugar.BranchBool;
+        public const string SwitchIntOp = GraphAuthoringSugar.SwitchInt;
+        public const string WaitOp = GraphAuthoringSugar.Wait;
+        public const string WhileOp = GraphAuthoringSugar.While;
+        public const string UntilOp = GraphAuthoringSugar.Until;
 
         private readonly struct SugarScratch
         {
