@@ -22,6 +22,8 @@ using Ludots.Core.Presentation.Config;
 using Ludots.Core.Presentation.DebugDraw;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Minimap;
+using Ludots.Core.Fields.Influence;
+using Ludots.Core.Presentation.Fields;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Presentation.Performers;
@@ -278,6 +280,7 @@ namespace Ludots.Adapter.Raylib
                 var debugDrawRenderer = new RaylibDebugDrawRenderer { PlaneY = 0.35f };
                 GlobalFieldVisualBuffer? globalFieldVisualBuffer = engine.GetService(CoreServiceKeys.GlobalFieldVisualBuffer);
                 var fogFieldProjector = new FogGlobalFieldVisualProjector();
+                var influenceFieldProjector = new InfluenceGlobalFieldVisualProjector();
                 using var fieldRenderPerformer = new RaylibFieldRenderPerformer();
                 PresentationMaterialRegistry? materials = engine.GetService(CoreServiceKeys.PresentationMaterialRegistry);
                 using var primitiveRenderer = new RaylibPrimitiveRenderer(RaylibPrimitiveRenderMode.Instanced, engine.VFS, materials);
@@ -440,6 +443,12 @@ namespace Ludots.Adapter.Raylib
                             if (engine.TryGetService(CoreServiceKeys.VisionFogFieldStore, out FogFieldStore fogFieldsForProjection))
                             {
                                 fogFieldProjector.Project(fogFieldsForProjection, globalFieldVisualBuffer);
+                            }
+
+                            if (engine.TryGetService(CoreServiceKeys.InfluenceFieldRegistry, out InfluenceFieldRegistry influenceFieldsForProjection))
+                            {
+                                influenceFieldProjector.NormalizePeak = influenceFieldsForProjection.PresentationNormalizePeak;
+                                influenceFieldProjector.Project(influenceFieldsForProjection, globalFieldVisualBuffer);
                             }
                         }
 

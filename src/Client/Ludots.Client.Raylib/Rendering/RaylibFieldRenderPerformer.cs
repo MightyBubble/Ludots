@@ -92,7 +92,7 @@ namespace Ludots.Client.Raylib.Rendering
                 }
 
                 GlobalFieldVisualDescriptor descriptor = record.Descriptor;
-                if (descriptor.Id.Kind != GlobalFieldVisualKind.Fog)
+                if (descriptor.Id.Kind is not (GlobalFieldVisualKind.Fog or GlobalFieldVisualKind.Influence))
                 {
                     LastUnsupportedFieldCount++;
                     throw new InvalidOperationException(
@@ -102,7 +102,7 @@ namespace Ludots.Client.Raylib.Rendering
                 if (descriptor.ValueKind != GlobalFieldVisualValueKind.Byte)
                 {
                     throw new InvalidOperationException(
-                        $"Raylib fog field renderer requires byte-valued cells, but field '{descriptor.Id}' published {descriptor.ValueKind}.");
+                        $"Raylib field renderer requires byte-valued cells, but field '{descriptor.Id}' published {descriptor.ValueKind}.");
                 }
 
                 if (descriptor.BoundsCells.Width <= 0 || descriptor.BoundsCells.Height <= 0)
@@ -111,13 +111,22 @@ namespace Ludots.Client.Raylib.Rendering
                 }
 
                 FieldTextureState state = GetOrCreateState(descriptor.Id);
+                state.Kind = descriptor.Id.Kind;
                 bool fullUpload = EnsureStateSize(state, descriptor.BoundsCells);
                 ReadOnlySpan<GlobalFieldVisualCell> cells = buffer.GetCells(record);
                 ReadOnlySpan<IntRect> dirtyRects = buffer.GetDirtyRects(record);
 
                 if (fullUpload)
                 {
-                    FillRect(state.Pixels, state.Width, new IntRect(0, 0, state.Width, state.Height), FogVisibilityUnseen);
+                    if (descriptor.Id.Kind == GlobalFieldVisualKind.Fog)
+                    {
+                        FillRect(state.Pixels, state.Width, new IntRect(0, 0, state.Width, state.Height), FogVisibilityUnseen);
+                    }
+                    else
+                    {
+                        FillRectRgba(state.Pixels, state.Width, new IntRect(0, 0, state.Width, state.Height), 0, 0, 0, 0);
+                    }
+
                     ApplyCells(state, cells);
                     SetSingleDirtyRect(state, new IntRect(0, 0, state.Width, state.Height));
                 }
@@ -276,7 +285,14 @@ namespace Ludots.Client.Raylib.Rendering
                     continue;
                 }
 
-                SetPixel(state.Pixels, state.Width, x, y, cell.ByteValue);
+                if (state.Kind == GlobalFieldVisualKind.Influence)
+                {
+                    SetInfluencePixel(state.Pixels, state.Width, x, y, cell.ByteValue);
+                }
+                else
+                {
+                    SetPixel(state.Pixels, state.Width, x, y, cell.ByteValue);
+                }
             }
         }
 
@@ -299,7 +315,14 @@ namespace Ludots.Client.Raylib.Rendering
         {
             for (int i = 0; i < state.DirtyRectCount; i++)
             {
-                FillRect(state.Pixels, state.Width, state.DirtyRects[i], FogVisibilityUnseen);
+                if (state.Kind == GlobalFieldVisualKind.Influence)
+                {
+                    FillRectRgba(state.Pixels, state.Width, state.DirtyRects[i], 0, 0, 0, 0);
+                }
+                else
+                {
+                    FillRect(state.Pixels, state.Width, state.DirtyRects[i], FogVisibilityUnseen);
+                }
             }
         }
 
@@ -361,6 +384,18 @@ namespace Ludots.Client.Raylib.Rendering
         private static void FillRect(byte[] pixels, int textureWidth, IntRect rect, byte visibility)
         {
             ResolveFogColorBytes(visibility, out byte r, out byte g, out byte b, out byte a);
+            FillRectRgba(pixels, textureWidth, rect, r, g, b, a);
+        }
+
+        private static void FillRectRgba(
+            byte[] pixels,
+            int textureWidth,
+            IntRect rect,
+            byte r,
+            byte g,
+            byte b,
+            byte a)
+        {
             int endY = rect.Y + rect.Height;
             int endX = rect.X + rect.Width;
             for (int y = rect.Y; y < endY; y++)
@@ -385,6 +420,32 @@ namespace Ludots.Client.Raylib.Rendering
             pixels[pixel + 1] = g;
             pixels[pixel + 2] = b;
             pixels[pixel + 3] = a;
+        }
+
+        private static void SetInfluencePixel(byte[] pixels, int textureWidth, int x, int y, byte intensity)
+        {
+            ResolveInfluenceColorBytes(intensity, out byte r, out byte g, out byte b, out byte a);
+            int pixel = ((y * textureWidth) + x) * 4;
+            pixels[pixel] = r;
+            pixels[pixel + 1] = g;
+            pixels[pixel + 2] = b;
+            pixels[pixel + 3] = a;
+        }
+
+        public static Color ResolveInfluenceColor(byte intensity)
+        {
+            ResolveInfluenceColorBytes(intensity, out byte r, out byte g, out byte b, out byte a);
+            return new Color(r, g, b, a);
+        }
+
+        private static void ResolveInfluenceColorBytes(byte intensity, out byte r, out byte g, out byte b, out byte a)
+        {
+            // Warm threat heat: amber → crimson, alpha scales with intensity.
+            float t = intensity / 255f;
+            r = (byte)Math.Clamp((int)Math.Round(180 + (55 * t)), 0, 255);
+            g = (byte)Math.Clamp((int)Math.Round(90 * (1f - t)), 0, 255);
+            b = (byte)Math.Clamp((int)Math.Round(40 * (1f - (0.5f * t))), 0, 255);
+            a = (byte)Math.Clamp((int)Math.Round(28 + (150 * t)), 0, 255);
         }
 
         public static Color ResolveFogColor(byte visibility)
@@ -627,6 +688,7 @@ namespace Ludots.Client.Raylib.Rendering
             }
 
             public readonly GlobalFieldVisualId Id;
+            public GlobalFieldVisualKind Kind;
             public IntRect BoundsCells;
             public int Width;
             public int Height;

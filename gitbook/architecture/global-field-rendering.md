@@ -24,6 +24,7 @@ Global Field Rendering 是面向全图或大面积栅格数据的正式 Presenta
 - `src/Core/Presentation/Rendering/GlobalFieldVisualBuffer.cs` 不能引用 Raylib、Skia、窗口、GPU texture 或平台句柄。
 - Raylib field renderer 的 public input 只能是 Presentation field buffer；不能公开 `FogFieldStore` 或其它领域 store。
 - Fog 的可视化适配必须走 `FogGlobalFieldVisualProjector -> GlobalFieldVisualBuffer -> RaylibFieldRenderPerformer`。
+- Influence 的可视化适配必须走 `InfluenceGlobalFieldVisualProjector -> GlobalFieldVisualBuffer(Influence) -> RaylibFieldRenderPerformer`（float 量化为 byte 热力）。
 - 不允许保留 per-cell overlay fallback 作为生产渲染路径。
 - 不允许为 weather、water、flow、heat、influence 分别新建平行 renderer family；先扩展 shared buffer 的 kind/value contract。
 
@@ -43,6 +44,7 @@ Global Field Rendering 是面向全图或大面积栅格数据的正式 Presenta
 
 - `src/Core/Presentation/Rendering/GlobalFieldVisualBuffer.cs`
 - `src/Core/Vision/FogGlobalFieldVisualProjector.cs`
+- `src/Core/Presentation/Fields/InfluenceGlobalFieldVisualProjector.cs`
 - `src/Client/Ludots.Client.Raylib/Rendering/RaylibFieldRenderPerformer.cs`
 - `src/Adapters/Raylib/Ludots.Adapter.Raylib/RaylibHostLoop.cs`
 - `src/Tests/GasTests/Vision/GlobalFieldVisualBufferTests.cs`

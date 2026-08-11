@@ -1,0 +1,14 @@
+[
+  {
+    "id": "avoid_threat_demo",
+    "origin": { "xCm": 0, "yCm": 0 },
+    "queryId": "avoid_threat_near_goal",
+    "influenceFieldIds": ["threat"],
+    "presentation": {
+      "influenceFieldId": "threat",
+      "drawCandidates": true,
+      "drawBest": true,
+      "normalizePeak": 10
+    }
+  }
+]

@@ -118,9 +118,10 @@ Future：
 
 ## 未接线清单（诚实完成度）
 
-- EQS 仍代码拼装，无 config loader / authoring
-- Influence 无主循环投影 System（registry 可选注入，非 gameplay 全链路已通）
-- `UtilityAiInputKind.InfluenceSample01`：运行时 hook 已实现；`AI/inputs.json` 暂拒载（待投影接线）
+- ✅ Spatial 配置契约：`Configs/Spatial/{influence_fields,eqs_queries,eqs_scenarios}.json` + `EqsInfluenceConfigLoader`
+- ✅ Influence → `GlobalFieldVisualBuffer` 投影 + Raylib Influence 热力
+- ✅ Showcase `eqs_influence` + Pages `docs/eqs-influence.html`
+- `UtilityAiInputKind.InfluenceSample01`：运行时 hook 已实现；`AI/inputs.json` 暂拒载（待 Utility 作者面接线）
 - `EqsBestScore01`、`BoardCellGenerator`：Future
 - `Stamp` 定点近似：Future
 

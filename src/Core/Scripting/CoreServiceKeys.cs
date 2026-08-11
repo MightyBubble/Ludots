@@ -10,6 +10,7 @@ using Ludots.Core.Engine.Physics2D;
 using Ludots.Core.Engine.TimeFlow;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.EntityQueries;
+using Ludots.Core.Fields.Influence;
 using Ludots.Core.Gameplay;
 using Ludots.Core.Gameplay.AI.Config;
 using Ludots.Core.Gameplay.Camera;
@@ -227,6 +228,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<DynamicParticipantVisibilityPublisher> DynamicParticipantVisibilityPublisher = new("DynamicParticipantVisibilityPublisher");
         public static readonly ServiceKey<FogLayerRegistry> VisionFogLayerRegistry = new("Vision.FogLayerRegistry");
         public static readonly ServiceKey<FogFieldStore> VisionFogFieldStore = new("Vision.FogFieldStore");
+        public static readonly ServiceKey<InfluenceFieldRegistry> InfluenceFieldRegistry = new("Fields.InfluenceFieldRegistry");
         public static readonly ServiceKey<FogSnapshotStore> VisionFogSnapshotStore = new("Vision.FogSnapshotStore");
         public static readonly ServiceKey<FogCellMap> VisionFogCellMap = new("Vision.FogCellMap");
         public static readonly ServiceKey<VisionResolver> VisionResolver = new("Vision.Resolver");

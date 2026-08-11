@@ -23,6 +23,7 @@ namespace Ludots.Core.Fields.Influence
         public string Key => _key;
         public FieldGridSpec2D Grid => _field.Grid;
         public int CellCount => _field.NonDefaultCount;
+        public int CellSizeCm => _field.Grid.CellSizeCm;
 
         /// <summary>Sample influence value at world position. Returns default if outside written region.</summary>
         public float Sample(WorldCmInt2 world)
@@ -30,6 +31,10 @@ namespace Ludots.Core.Fields.Influence
             FieldCell2D cell = _field.WorldToCell(world);
             return _field.Get(cell);
         }
+
+        /// <summary>Copy non-default cells into caller span (0-alloc warm path when capacity is sufficient).</summary>
+        public int CopyNonDefaultCells(Span<FieldCellValue2D<float>> destination)
+            => _field.CopyNonDefaultCells(destination);
 
         /// <summary>Project radial influence centered at <paramref name="center"/> with peak value and falloff.</summary>
         public void Stamp(WorldCmInt2 center, int radiusCm, float peak, FalloffKind falloff)

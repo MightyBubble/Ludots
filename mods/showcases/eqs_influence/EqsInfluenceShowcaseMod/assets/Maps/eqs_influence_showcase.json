@@ -1,0 +1,30 @@
+{
+  "Id": "eqs_influence_showcase",
+  "Tags": ["eqs_influence_showcase", "eqs", "influence"],
+  "DefaultCamera": {
+    "TargetXCm": 250,
+    "TargetYCm": 0,
+    "Yaw": 180,
+    "Pitch": 55,
+    "DistanceCm": 1400,
+    "FovYDeg": 55
+  },
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "HexGrid",
+      "WidthInMacroTiles": 16,
+      "HeightInMacroTiles": 16,
+      "HexEdgeLengthCm": 100,
+      "ChunkSizeCells": 16,
+      "NavigationEnabled": false
+    }
+  ],
+  "Entities": [],
+  "Teams": [
+    { "TeamId": 1, "RepresentativeInstanceId": null }
+  ],
+  "Players": [
+    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": null }
+  ]
+}
