@@ -20,6 +20,7 @@
     "worldHudCapacity": 131072,
     "screenHudCapacity": 131072,
     "minimapMarkerCapacity": 131072,
+    "navMeshTileCapacity": 4096,
     "runtimeEntitySpawnQueueCapacity": 131072,
     "runtimeEntitySpawnReceiptQueueCapacity": 131072,
     "runtimeEntityLifecycleQueueCapacity": 131072,

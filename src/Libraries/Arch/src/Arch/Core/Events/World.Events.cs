@@ -55,7 +55,10 @@ public partial class World
     /// <param name="handler">The delegate to call.</param>
     public void SubscribeEntityDestroyed(EntityDestroyedHandler handler)
     {
-        ArgumentNullException.ThrowIfNull(handler);
+        if (handler is null)
+        {
+            throw new ArgumentNullException(nameof(handler));
+        }
         lock (_entityDestroyedHandlersWriteLock)
         {
             EntityDestroyedHandler[] current = Volatile.Read(ref _entityDestroyedHandlers);

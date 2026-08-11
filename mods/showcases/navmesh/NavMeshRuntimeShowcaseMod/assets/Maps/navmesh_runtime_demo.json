@@ -1,0 +1,24 @@
+{
+  "Id": "navmesh_runtime_demo",
+  "Tags": ["showcase", "navmesh", "runtime-bake", "Feature.NavMesh:On"],
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "Grid",
+      "WidthInMacroTiles": 2,
+      "HeightInMacroTiles": 2,
+      "GridCellSizeCm": 100,
+      "ChunkSizeCells": 4,
+      "LoadedChunkCapacity": 64
+    }
+  ],
+  "DefaultCamera": {
+    "VirtualCameraId": "Default",
+    "TargetXCm": 200,
+    "TargetYCm": 200,
+    "Yaw": 45,
+    "Pitch": 50,
+    "DistanceCm": 800,
+    "FovYDeg": 60
+  }
+}
