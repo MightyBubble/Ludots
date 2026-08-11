@@ -10,7 +10,11 @@ import {
   type PanelVariable,
 } from './ui-panel-authoring/model';
 import { ShaderGraphCanvas } from './ui-panel-authoring/ShaderGraphCanvas';
+import { PlayerShowcase } from './ui-panel-authoring/PlayerShowcase';
+import { authoringConfigJson, toAuthoringTemplate } from './ui-panel-authoring/authoringConfig';
 import './ui-panel-authoring/authoring.css';
+
+type WorkspaceMode = 'author' | 'play' | 'config';
 
 function renderCopy(template: string, vars: PanelVariable[], demo: Record<string, string>) {
   let text = template;
@@ -115,14 +119,36 @@ ${fields}
   );
 }
 
+async function copyText(text: string): Promise<void> {
+  await navigator.clipboard.writeText(text);
+}
+
+function downloadJson(filename: string, text: string) {
+  const blob = new Blob([text], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 export function UiPanelAuthoringPage() {
   const [templateId, setTemplateId] = useState(TEMPLATES[0].id);
   const [surface, setSurface] = useState<SurfaceKind>('reactive');
   const [selectedVar, setSelectedVar] = useState<string | null>('hp');
+  const [mode, setMode] = useState<WorkspaceMode>('author');
+  const [copied, setCopied] = useState(false);
 
   const tpl = useMemo(
     () => TEMPLATES.find((t) => t.id === templateId) ?? TEMPLATES[0],
     [templateId],
+  );
+
+  const configJson = useMemo(() => authoringConfigJson(TEMPLATES), []);
+  const activeConfigJson = useMemo(
+    () => JSON.stringify({ schema: 'ludots.ui.panel_template/v1', templates: [toAuthoringTemplate(tpl)] }, null, 2),
+    [tpl],
   );
 
   const activeVar =
@@ -152,7 +178,7 @@ export function UiPanelAuthoringPage() {
           </h1>
           <p className="upa-lede">
             像编 Shader Graph：一张图、多种类型、右边一个带多引脚的 Panel
-            汇入。引脚就是面板变量；表面（Compose / Markup / Reactive / Web UI）只决定怎么画。
+            汇入。引脚就是面板变量；表面只决定怎么画。可导出作者配置，也可切到试玩看玩家视角。
           </p>
         </div>
         <aside className="upa-contract" aria-label="第一性原则">
@@ -165,6 +191,27 @@ export function UiPanelAuthoringPage() {
           </ol>
         </aside>
       </header>
+
+      <div className="upa-mode-row" role="tablist" aria-label="工作区">
+        {(
+          [
+            ['author', '编排'],
+            ['play', '试玩'],
+            ['config', '配置'],
+          ] as const
+        ).map(([id, label]) => (
+          <button
+            key={id}
+            type="button"
+            role="tab"
+            aria-selected={mode === id}
+            className={`upa-mode ${mode === id ? 'is-active' : ''}`}
+            onClick={() => setMode(id)}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
 
       <div className="upa-tpl-row" role="tablist" aria-label="模板">
         {TEMPLATES.map((t) => (
@@ -199,99 +246,132 @@ export function UiPanelAuthoringPage() {
         ))}
       </div>
 
-      <div className="upa-stage upa-stage-shader">
-        <section className="upa-col upa-col-graph" aria-labelledby="upa-graph-h">
-          <div className="upa-col-h">
-            <h3 id="upa-graph-h">计算图 · 多引脚 Panel 汇入</h3>
-            <small>一眼看完：像材质输出节点</small>
-          </div>
-          <div className="upa-col-b upa-col-b-canvas">
-            <ShaderGraphCanvas tpl={tpl} activeVar={activeVar} onSelectVar={setSelectedVar} />
-          </div>
-        </section>
+      {mode === 'play' ? <PlayerShowcase tpl={tpl} surface={surface} /> : null}
 
-        <aside className="upa-side">
-          <section className="upa-col" aria-labelledby="upa-vars-h">
+      {mode === 'config' ? (
+        <div className="upa-config-panel">
+          <div className="upa-config-actions">
+            <button
+              type="button"
+              onClick={async () => {
+                await copyText(activeConfigJson);
+                setCopied(true);
+                window.setTimeout(() => setCopied(false), 1200);
+              }}
+            >
+              {copied ? '已复制当前模板' : '复制当前模板 JSON'}
+            </button>
+            <button type="button" onClick={() => downloadJson(`${tpl.id}.json`, activeConfigJson)}>
+              下载当前模板
+            </button>
+            <button type="button" onClick={() => downloadJson('panel_templates.json', configJson)}>
+              下载全部模板
+            </button>
+          </div>
+          <p className="upa-play-footnote">
+            schema <code>ludots.ui.panel_template/v1</code> — variables / bindings / outputs /
+            surfaceKind；运行时读这份配置，不读画布糖节点。
+          </p>
+          <pre className="upa-config-json">{activeConfigJson}</pre>
+        </div>
+      ) : null}
+
+      {mode === 'author' ? (
+        <div className="upa-stage upa-stage-shader">
+          <section className="upa-col upa-col-graph" aria-labelledby="upa-graph-h">
             <div className="upa-col-h">
-              <h3 id="upa-vars-h">引脚 = 变量</h3>
-              <small>点引脚高亮连线</small>
+              <h3 id="upa-graph-h">计算图 · 多引脚 Panel 汇入</h3>
+              <small>一眼看完：像材质输出节点</small>
             </div>
-            <div className="upa-col-b">
-              <ul className="upa-var-list">
-                {tpl.variables.map((v) => {
-                  const b = tpl.bindings[v.id];
-                  return (
-                    <li key={v.id}>
-                      <button
-                        type="button"
-                        className={`upa-var ${activeVar === v.id ? 'is-active' : ''}`}
-                        onClick={() => setSelectedVar(v.id)}
-                      >
-                        <span className="upa-var-id">{v.id}</span>
-                        <span className="upa-var-label">{v.label}</span>
-                        <span className="upa-var-meta">
-                          {v.valueKind}
-                          {b ? ` · ← ${b.fromNodeId ?? b.sourceKind}` : ''}
-                        </span>
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-              <div className="upa-preview">
-                <div className="upa-preview-label">模板文案 · {'{引脚}'}</div>
-                <pre>{renderCopy(tpl.copyTemplate, tpl.variables, demo)}</pre>
+            <div className="upa-col-b upa-col-b-canvas">
+              <ShaderGraphCanvas tpl={tpl} activeVar={activeVar} onSelectVar={setSelectedVar} />
+            </div>
+          </section>
+
+          <aside className="upa-side">
+            <section className="upa-col" aria-labelledby="upa-vars-h">
+              <div className="upa-col-h">
+                <h3 id="upa-vars-h">引脚 = 变量</h3>
+                <small>点引脚高亮连线</small>
               </div>
-              {binding ? (
-                <div className="upa-bind-card">
-                  <h4>选中引脚 · {activeVar}</h4>
-                  <dl>
-                    <div>
-                      <dt>sourceKind</dt>
-                      <dd>{binding.sourceKind}</dd>
-                    </div>
-                    {binding.fromNodeId ? (
-                      <div>
-                        <dt>from node</dt>
-                        <dd>{binding.fromNodeId}</dd>
-                      </div>
-                    ) : null}
-                    {binding.graphOutputKey ? (
-                      <div>
-                        <dt>output key</dt>
-                        <dd>{binding.graphOutputKey}</dd>
-                      </div>
-                    ) : null}
-                  </dl>
-                  {activeVar === 'lastKill' ? (
-                    <p className="upa-debt">
-                      作者意图：实体 BB 读上次击杀文案。现有 L0 仅有 Float/Int/Entity 黑板读；Text
-                      BB 读需补 op（勿用 Attribute 假装）。
-                    </p>
-                  ) : null}
-                  {activeVar === 'curState' ? (
-                    <p className="upa-debt">
-                      作者意图：读当前 GameplayTag → LookupTagDisplayText
-                      查表成文案。HasTag 只做是否拥有；完整「取态 tag + 查表」需补节点。
-                    </p>
-                  ) : null}
+              <div className="upa-col-b">
+                <ul className="upa-var-list">
+                  {tpl.variables.map((v) => {
+                    const b = tpl.bindings[v.id];
+                    return (
+                      <li key={v.id}>
+                        <button
+                          type="button"
+                          className={`upa-var ${activeVar === v.id ? 'is-active' : ''}`}
+                          onClick={() => setSelectedVar(v.id)}
+                        >
+                          <span className="upa-var-id">{v.id}</span>
+                          <span className="upa-var-label">{v.label}</span>
+                          <span className="upa-var-meta">
+                            {v.valueKind}
+                            {b ? ` · ← ${b.fromNodeId ?? b.sourceKind}` : ''}
+                          </span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+                <div className="upa-preview">
+                  <div className="upa-preview-label">模板文案 · {'{引脚}'}</div>
+                  <pre>{renderCopy(tpl.copyTemplate, tpl.variables, demo)}</pre>
                 </div>
-              ) : null}
-            </div>
-          </section>
+                {binding ? (
+                  <div className="upa-bind-card">
+                    <h4>选中引脚 · {activeVar}</h4>
+                    <dl>
+                      <div>
+                        <dt>sourceKind</dt>
+                        <dd>{binding.sourceKind}</dd>
+                      </div>
+                      {binding.fromNodeId ? (
+                        <div>
+                          <dt>from node</dt>
+                          <dd>{binding.fromNodeId}</dd>
+                        </div>
+                      ) : null}
+                      {binding.graphOutputKey ? (
+                        <div>
+                          <dt>output key</dt>
+                          <dd>{binding.graphOutputKey}</dd>
+                        </div>
+                      ) : null}
+                    </dl>
+                    {activeVar === 'lastKill' ? (
+                      <p className="upa-debt">
+                        作者意图：实体 BB 读上次击杀文案。现有 L0 仅有 Float/Int/Entity
+                        黑板读；Text BB 仍欠（勿用 Attribute 假装）。也可改为 BB Entity +
+                        表面解析显示名。
+                      </p>
+                    ) : null}
+                    {activeVar === 'curState' ? (
+                      <p className="upa-debt">
+                        作者意图：ReadGameplayTag → LookupTagDisplayText。L0 快捷 op 已在运行时线
+                        #868 落地；本编辑器仍是作者糖。仍欠表资产装载与表面 token→文案接线。
+                      </p>
+                    ) : null}
+                  </div>
+                ) : null}
+              </div>
+            </section>
 
-          <section className="upa-col" aria-labelledby="upa-lower-h">
-            <div className="upa-col-h">
-              <h3 id="upa-lower-h">落盘 / {SURFACE_META[surface].label}</h3>
-              <small>{SURFACE_META[surface].note}</small>
-            </div>
-            <div className="upa-col-b">
-              <pre className="upa-code upa-code-tight">{loweredOutputs(tpl)}</pre>
-              <SurfaceArtifact surface={surface} tpl={tpl} />
-            </div>
-          </section>
-        </aside>
-      </div>
+            <section className="upa-col" aria-labelledby="upa-lower-h">
+              <div className="upa-col-h">
+                <h3 id="upa-lower-h">落盘 / {SURFACE_META[surface].label}</h3>
+                <small>{SURFACE_META[surface].note}</small>
+              </div>
+              <div className="upa-col-b">
+                <pre className="upa-code upa-code-tight">{loweredOutputs(tpl)}</pre>
+                <SurfaceArtifact surface={surface} tpl={tpl} />
+              </div>
+            </section>
+          </aside>
+        </div>
+      ) : null}
     </div>
   );
 }
