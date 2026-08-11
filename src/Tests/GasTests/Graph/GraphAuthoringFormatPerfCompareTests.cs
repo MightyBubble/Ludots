@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Text.RegularExpressions;
 using Arch.Core;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
@@ -20,6 +23,10 @@ namespace Ludots.Tests.Gas.Graph
     {
         private const int WarmupIterations = 2_000;
         private const int MeasuredIterations = 50_000;
+
+        // Volatile so native/script baselines cannot constant-fold the whole chain to `return 6`.
+        private static volatile int OpaqueA = 1;
+        private static volatile int OpaqueB = 2;
 
         [Test]
         public void Compare_LinearIntChain_NextChainVsControlFlow_InstructionShapeAndRuntime()
@@ -48,44 +55,67 @@ namespace Ludots.Tests.Gas.Graph
                 "Script ControlFlow requires an explicit halt/return terminal.");
             Assert.That(cfJumpCount, Is.GreaterThan(nextJumpCount),
                 "ControlFlow lowers controlEdges to Jump; linear next-chain should not need those Jumps.");
-            Assert.That(NativeLinearIntChain(), Is.EqualTo(6), "Native baseline must match graph arithmetic ((1+2)+2)+1.");
+            Assert.That(NativeLinearIntChain(OpaqueA, OpaqueB), Is.EqualTo(6),
+                "Native baseline must match graph arithmetic ((1+2)+2)+1.");
 
             using var world = World.Create();
             Entity caster = world.Create();
 
             RuntimeSample nativeSample = MeasureNative(WarmupIterations, MeasuredIterations);
+            RuntimeSample pythonSample = MeasureExternalScript(
+                "Python3",
+                ResolveExecutable("python3"),
+                new[] { "-c", BuildPythonProbe(WarmupIterations, MeasuredIterations) });
+            RuntimeSample nodeSample = MeasureExternalScript(
+                "Node.js",
+                ResolveExecutable("node"),
+                new[] { "-e", BuildNodeProbe(WarmupIterations, MeasuredIterations) });
             RuntimeSample nextSample = MeasureExecute(world, caster, nextProgram, WarmupIterations, MeasuredIterations);
             RuntimeSample cfSample = MeasureExecute(world, caster, cfProgram, WarmupIterations, MeasuredIterations);
 
             TestContext.WriteLine("=== Graph authoring format compare (linear int chain) ===");
-            TestContext.WriteLine("Native C# (same arithmetic, NoInlining):");
-            TestContext.WriteLine($"  Result check: {NativeLinearIntChain()}");
-            TestContext.WriteLine($"  Execute x{MeasuredIterations}: {nativeSample.ElapsedMs:F3} ms, {nativeSample.PerExecNs:F1} ns/exec, alloc={nativeSample.AllocatedBytes}");
+            TestContext.WriteLine("Native C# (same arithmetic, NoInlining, opaque operands):");
+            TestContext.WriteLine($"  Result check: {NativeLinearIntChain(OpaqueA, OpaqueB)}");
+            WriteRuntimeLine(nativeSample);
+            TestContext.WriteLine("Python3 (same arithmetic; timed inside process, excludes spawn):");
+            WriteRuntimeLine(pythonSample);
+            TestContext.WriteLine("Node.js (same arithmetic; timed inside process, excludes spawn):");
+            WriteRuntimeLine(nodeSample);
             TestContext.WriteLine("Next-chain (GraphConfig + GraphCompiler, kind=Score):");
             TestContext.WriteLine($"  Instructions: {nextProgram.Length} (arith={nextArithCount}, Jump={nextJumpCount})");
             TestContext.WriteLine($"  Ops: {FormatOps(nextProgram)}");
-            TestContext.WriteLine($"  Execute x{MeasuredIterations}: {nextSample.ElapsedMs:F3} ms, {nextSample.PerExecNs:F1} ns/exec, alloc={nextSample.AllocatedBytes}");
+            WriteRuntimeLine(nextSample);
             TestContext.WriteLine("ControlFlow (GraphControlFlowDocument + GraphControlFlowCompiler, kind=Script):");
             TestContext.WriteLine($"  Instructions: {cfProgram.Length} (arith={cfArithCount}, Jump={cfJumpCount}, HaltReturnInt={CountOp(cfProgram, GraphNodeOp.HaltReturnInt)})");
             TestContext.WriteLine($"  Ops: {FormatOps(cfProgram)}");
-            TestContext.WriteLine($"  Execute x{MeasuredIterations}: {cfSample.ElapsedMs:F3} ms, {cfSample.PerExecNs:F1} ns/exec, alloc={cfSample.AllocatedBytes}");
+            WriteRuntimeLine(cfSample);
             TestContext.WriteLine(
-                $"Delta vs native: Next/Native={nextSample.ElapsedMs / Math.Max(1e-9, nativeSample.ElapsedMs):F2}x, " +
-                $"CF/Native={cfSample.ElapsedMs / Math.Max(1e-9, nativeSample.ElapsedMs):F2}x, " +
-                $"CF/Next={cfSample.ElapsedMs / Math.Max(1e-9, nextSample.ElapsedMs):F3}x");
+                $"Delta vs native C#: Python={Ratio(pythonSample, nativeSample):F2}x, Node={Ratio(nodeSample, nativeSample):F2}x, " +
+                $"Next={Ratio(nextSample, nativeSample):F2}x, CF={Ratio(cfSample, nativeSample):F2}x");
+            TestContext.WriteLine(
+                $"Delta vs Python: Node={Ratio(nodeSample, pythonSample):F2}x, Next={Ratio(nextSample, pythonSample):F2}x, CF={Ratio(cfSample, pythonSample):F2}x");
             TestContext.WriteLine(
                 $"Delta instructions CF-Next={cfProgram.Length - nextProgram.Length}, Jump CF-Next={cfJumpCount - nextJumpCount}");
 
             // Timing/alloc are host-noisy; only report them. Structural Jump delta is the stable contract.
             Assert.That(cfProgram.Length, Is.GreaterThan(nextProgram.Length));
+            Assert.That(pythonSample.Result, Is.EqualTo(6));
+            Assert.That(nodeSample.Result, Is.EqualTo(6));
         }
+
+        private static void WriteRuntimeLine(RuntimeSample sample)
+        {
+            TestContext.WriteLine(
+                $"  Execute x{MeasuredIterations}: {sample.ElapsedMs:F3} ms, {sample.PerExecNs:F1} ns/exec, alloc={sample.AllocatedBytes}");
+        }
+
+        private static double Ratio(RuntimeSample numerator, RuntimeSample denominator)
+            => numerator.ElapsedMs / Math.Max(1e-9, denominator.ElapsedMs);
 
         /// <summary>Same values as the graph: a=1, b=2, c=a+b, d=c+b, e=d+a → 6.</summary>
         [MethodImpl(MethodImplOptions.NoInlining)]
-        private static int NativeLinearIntChain()
+        private static int NativeLinearIntChain(int a, int b)
         {
-            int a = 1;
-            int b = 2;
             int c = a + b;
             int d = c + b;
             int e = d + a;
@@ -97,7 +127,7 @@ namespace Ludots.Tests.Gas.Graph
             int sink = 0;
             for (int i = 0; i < warmupIterations; i++)
             {
-                sink ^= NativeLinearIntChain();
+                sink ^= NativeLinearIntChain(OpaqueA, OpaqueB);
             }
 
             GC.Collect();
@@ -108,7 +138,7 @@ namespace Ludots.Tests.Gas.Graph
             var sw = Stopwatch.StartNew();
             for (int i = 0; i < measuredIterations; i++)
             {
-                sink ^= NativeLinearIntChain();
+                sink ^= NativeLinearIntChain(OpaqueA, OpaqueB);
             }
 
             sw.Stop();
@@ -118,9 +148,122 @@ namespace Ludots.Tests.Gas.Graph
             Assert.That(sink, Is.Not.EqualTo(int.MinValue));
 
             return new RuntimeSample(
+                NativeLinearIntChain(OpaqueA, OpaqueB),
                 sw.Elapsed.TotalMilliseconds,
                 sw.Elapsed.TotalMilliseconds * 1_000_000.0 / measuredIterations,
                 allocAfter - allocBefore);
+        }
+
+        private static string ResolveExecutable(string name)
+        {
+            string? path = FindOnPath(name);
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                Assert.Fail($"Required script runtime '{name}' was not found on PATH.");
+            }
+
+            return path!;
+        }
+
+        private static string? FindOnPath(string name)
+        {
+            string? pathEnv = Environment.GetEnvironmentVariable("PATH");
+            if (string.IsNullOrWhiteSpace(pathEnv))
+            {
+                return null;
+            }
+
+            foreach (string directory in pathEnv.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries))
+            {
+                string candidate = Path.Combine(directory, name);
+                if (File.Exists(candidate))
+                {
+                    return candidate;
+                }
+            }
+
+            return null;
+        }
+
+        private static string BuildPythonProbe(int warmupIterations, int measuredIterations)
+            => string.Join(
+                "\n",
+                "import time",
+                "ops = [1, 2]  # list read keeps operands opaque to constant folding",
+                "def chain():",
+                "    a = ops[0]",
+                "    b = ops[1]",
+                "    c = a + b",
+                "    d = c + b",
+                "    e = d + a",
+                "    return e",
+                "assert chain() == 6",
+                $"warmup = {warmupIterations}",
+                $"measured = {measuredIterations}",
+                "sink = 0",
+                "for _ in range(warmup):",
+                "    sink ^= chain()",
+                "t0 = time.perf_counter()",
+                "for _ in range(measured):",
+                "    sink ^= chain()",
+                "elapsed_ms = (time.perf_counter() - t0) * 1000.0",
+                "per_exec_ns = elapsed_ms * 1_000_000.0 / measured",
+                "print(f'result={chain()} elapsed_ms={elapsed_ms:.6f} per_exec_ns={per_exec_ns:.3f} sink={sink}')");
+
+        private static string BuildNodeProbe(int warmupIterations, int measuredIterations)
+            => string.Join(
+                "\n",
+                "const ops = [1, 2]; // array read keeps operands opaque to constant folding",
+                "function chain() {",
+                "  const a = ops[0];",
+                "  const b = ops[1];",
+                "  const c = a + b;",
+                "  const d = c + b;",
+                "  const e = d + a;",
+                "  return e;",
+                "}",
+                "if (chain() !== 6) throw new Error('native script result mismatch');",
+                $"const warmup = {warmupIterations};",
+                $"const measured = {measuredIterations};",
+                "let sink = 0;",
+                "for (let i = 0; i < warmup; i++) sink ^= chain();",
+                "const t0 = performance.now();",
+                "for (let i = 0; i < measured; i++) sink ^= chain();",
+                "const elapsed_ms = performance.now() - t0;",
+                "const per_exec_ns = elapsed_ms * 1_000_000.0 / measured;",
+                "console.log(`result=${chain()} elapsed_ms=${elapsed_ms.toFixed(6)} per_exec_ns=${per_exec_ns.toFixed(3)} sink=${sink}`);");
+
+        private static RuntimeSample MeasureExternalScript(string label, string executable, string[] args)
+        {
+            var start = new ProcessStartInfo
+            {
+                FileName = executable,
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+            for (int i = 0; i < args.Length; i++)
+            {
+                start.ArgumentList.Add(args[i]);
+            }
+
+            using var process = Process.Start(start);
+            Assert.That(process, Is.Not.Null, $"{label}: failed to start '{executable}'.");
+            string stdout = process!.StandardOutput.ReadToEnd();
+            string stderr = process.StandardError.ReadToEnd();
+            process.WaitForExit();
+            Assert.That(process.ExitCode, Is.EqualTo(0), $"{label} exited {process.ExitCode}. stderr={stderr}\nstdout={stdout}");
+
+            Match match = Regex.Match(
+                stdout,
+                @"result=(?<result>-?\d+)\s+elapsed_ms=(?<ms>[0-9.]+)\s+per_exec_ns=(?<ns>[0-9.]+)");
+            Assert.That(match.Success, Is.True, $"{label}: could not parse timing line from stdout:\n{stdout}");
+
+            int result = int.Parse(match.Groups["result"].Value, CultureInfo.InvariantCulture);
+            double elapsedMs = double.Parse(match.Groups["ms"].Value, CultureInfo.InvariantCulture);
+            double perExecNs = double.Parse(match.Groups["ns"].Value, CultureInfo.InvariantCulture);
+            return new RuntimeSample(result, elapsedMs, perExecNs, allocatedBytes: -1);
         }
 
         private static GraphConfig CreateNextChainLinearIntGraph()
@@ -231,6 +374,7 @@ namespace Ludots.Tests.Gas.Graph
             long allocAfter = GC.GetAllocatedBytesForCurrentThread();
 
             return new RuntimeSample(
+                result: 0,
                 sw.Elapsed.TotalMilliseconds,
                 sw.Elapsed.TotalMilliseconds * 1_000_000.0 / measuredIterations,
                 allocAfter - allocBefore);
@@ -296,13 +440,15 @@ namespace Ludots.Tests.Gas.Graph
 
         private readonly struct RuntimeSample
         {
-            public RuntimeSample(double elapsedMs, double perExecNs, long allocatedBytes)
+            public RuntimeSample(int result, double elapsedMs, double perExecNs, long allocatedBytes)
             {
+                Result = result;
                 ElapsedMs = elapsedMs;
                 PerExecNs = perExecNs;
                 AllocatedBytes = allocatedBytes;
             }
 
+            public int Result { get; }
             public double ElapsedMs { get; }
             public double PerExecNs { get; }
             public long AllocatedBytes { get; }
