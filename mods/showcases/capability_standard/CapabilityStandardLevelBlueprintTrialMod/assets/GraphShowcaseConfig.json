@@ -1,0 +1,7 @@
+{
+  "FeaturedAgentCount": 12,
+  "CrowdBandCount": 10000,
+  "ShowCrowdBand": true,
+  "ThinkPeriodSeconds": 0.2,
+  "ThinkBudgetMs": 5
+}

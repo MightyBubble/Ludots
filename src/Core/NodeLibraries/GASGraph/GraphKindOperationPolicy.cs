@@ -162,7 +162,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             out Violation violation)
         {
             ArgumentNullException.ThrowIfNull(handlers);
-            if (kind is not (GraphKind.Effect or GraphKind.Query or GraphKind.Score or GraphKind.Validation or GraphKind.Derived))
+            if (kind is not (GraphKind.Effect or GraphKind.Query or GraphKind.Score or GraphKind.Validation or GraphKind.Derived or GraphKind.Script))
             {
                 throw new ArgumentOutOfRangeException(nameof(kind), kind, "Graph operation policy requires an explicit supported kind.");
             }
@@ -240,9 +240,20 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             GraphNodeOp op,
             in EffectOperationMetadata metadata)
         {
+            // Yield crosses frames; only Script (L1 flow) may pause. Effect transactions must not.
+            if (op == GraphNodeOp.Yield)
+            {
+                return kind == GraphKind.Script;
+            }
+
             if (kind == GraphKind.Effect)
             {
                 return true;
+            }
+
+            if (kind == GraphKind.Script)
+            {
+                return metadata.Kind == EffectOperationKind.Pure;
             }
 
             if (metadata.Kind == EffectOperationKind.Pure)

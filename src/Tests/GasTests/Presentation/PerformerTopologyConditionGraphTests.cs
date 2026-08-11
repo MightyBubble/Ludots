@@ -389,7 +389,9 @@ namespace Ludots.Tests.Presentation
                 E = entities,
                 Targets = targets,
                 TargetList = new GraphTargetList(targets),
-            };
+            CallStack = new int[Ludots.Core.NodeLibraries.GASGraph.GraphVmLimits.MaxCallStackDepth],
+            CallStackCount = 0,
+        };
             GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
 
             // isSelf → bool reg 0: ControlDomainResolve(unit)=P1Rep != viewer P2Rep.

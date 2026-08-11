@@ -139,7 +139,9 @@ namespace Ludots.Tests.GAS
                 E = e,
                 Targets = targets,
                 TargetList = new GraphTargetList(targets),
-            };
+            CallStack = new int[Ludots.Core.NodeLibraries.GASGraph.GraphVmLimits.MaxCallStackDepth],
+            CallStackCount = 0,
+        };
 
             GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
             That(state.TargetPosCm.X, Is.EqualTo(500));
@@ -289,7 +291,9 @@ namespace Ludots.Tests.GAS
                 E = e,
                 Targets = targets,
                 TargetList = new GraphTargetList(targets),
-            };
+            CallStack = new int[Ludots.Core.NodeLibraries.GASGraph.GraphVmLimits.MaxCallStackDepth],
+            CallStackCount = 0,
+        };
 
             GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
             That(state.B[0], Is.EqualTo(1));
