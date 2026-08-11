@@ -1947,3 +1947,154 @@ Behavior remains in existing effect templates, preset definitions, and graph ass
 ### 8. Next variant test
 
 A new Mod variant changes graph wiring or effect-template steps, then passes through the same whole-registry compilation and freeze before runtime starts.
+
+## GAS Composition Gate — Self Review
+
+- **Task / Issue**: #860 Epic R0 — GAS 图 Roslyn/ALC 代码生成执行后端 spike（线性无 Yield → `Execute(ref state)` 委托 → Collectible ALC 热换）
+- **Date**: 2026-08-11
+- **Agent / Author**: Cursor cloud agent (bc-46a7b6cc)
+
+### 1. Core judgment
+
+新变体主要交付物是（A/B/C/D）: A（执行后端；同一 `GraphInstruction` IR / 作者文档输入，不新增 gameplay 变体 DSL）
+
+结论: PASS
+
+一句话理由: R0 只为既有线性整数图增加「生成 C# + Roslyn 编译 + Collectible ALC 加载」科研路径，不新增 `BuiltinHandlerId`、`EffectPresetType`、profile enum、平行 Graph VM 或作者 DSL；生成代码唯一世界访问面仍预留给 `IGraphRuntimeApi`（本 spike 仅寄存器算术，不扫 World）。
+
+### 2. Layer assignment
+
+| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
+|-----------|-----------------|----------|
+| 作者文档 → IR | 2（既有） | `GraphConfig` + `GraphCompiler` |
+| 线性 IR → C# 源 | 工具链（非 gameplay Layer） | `LinearIntGraphCsharpEmitter`（GasTests spike） |
+| Roslyn 内存编译 | 工具链 | `GraphRoslynAlcCompilerHost` |
+| Collectible ALC 加载/热换 | 工具链（对齐 Mod ALC） | `GraphGeneratedAssemblyLoadContext`（复用 `ModLoadContext` 宿主共享思想） |
+| 执行入口 | 与既有 VM 同合同面 | `GraphGeneratedExecute(ref GraphExecutionState)` |
+| 微基准对照 | 验收 | native / interpret VM / codegen 三路径报告 |
+
+### 3. Reuse list
+
+- Handlers: 既有 `GasGraphOpHandlerTable`（对照基线，不改 opcode 语义）
+- Queues / Systems: N/A（R0 不接线正式 SystemGroup）
+- Resolvers / Registries: 复用注册思想（`GraphProgramRegistry` / `GraphKindOperationPolicy` 门禁在后续轨接入）；本 spike 用显式 host 持有委托入口
+- Existing presets / graphs: `GraphConfig` / `GraphInstruction` / `GraphExecutionState` / `IGraphRuntimeApi` 合同面
+
+### 4. New Layer 0 ops (if any)
+
+N/A — 无新增 graph op；仅允许发射既有 `ConstInt` / `AddInt`（及线性链上为跳过控制流而拒绝的非白名单 op 失败关闭）。
+
+### 5. Transaction boundary
+
+热重载替换：编译成功才切换执行入口；编译失败保持上一份成功实现并返回可读诊断。禁止静默回退解释器并报告成功。ALC Unload 要求调用方先放下旧委托引用。
+
+### 6. Config SSOT
+
+行为配置落在: 既有 graph 作者文档（`GraphConfig` / IR），无新 gameplay JSON schema。
+
+是否新增 JSON schema: NO — 执行后端替换，不是新 profile DSL。
+
+### 7. Red flag scan
+
+- [x] 未新增 profile inherit/placement enum
+- [x] 未新建与 spawn 平行的物化管线
+- [x] 未把 placement 校验塞进 lifecycle op
+- [x] 未添加「说不清的」默认 fallback（编译失败 fail-closed；不静默切解释器）
+
+### 8. Next variant test
+
+「下一个 Mod 变体」将修改: graph 连线 / 作者文档节点参数（改 JSON → 重编 → 行为变更），不改 Core enum。R1 再谈 Query/Chunk 生成路径；R4 再谈 Effect/Yield。
+
+### Reuse / 新增汇总（§4.2）
+
+| 类型 | 项 |
+|------|-----|
+| 复用 | `GraphConfig`、`GraphCompiler`、`GraphInstruction`、`GraphExecutionState`、`GasGraphOpHandlerTable.Execute`、`ModLoadContext` 的 Collectible+宿主共享模式、`IGraphRuntimeApi` 白名单思想 |
+| 新增（spike，Tests） | 线性 IR→C# emitter、Roslyn+ALC host、热换与微基准测试 |
+| 禁止 | 第二套平行 VM 正式双轨静默互切；子 ALC 再装 Core；profile enum / 平行 DSL |
+
+## GAS Composition Gate — Self Review
+
+- **Task / Issue**: #860 Track C — Roslyn/ALC codegen 控制流 IR（`Jump` / `JumpIfFalse` + `CompareLtInt` / `CompareEqInt`），叠在 R0 spike（#862）之上
+- **Date**: 2026-08-11
+- **Agent / Author**: Cursor cloud agent (bc-4cf49da4)
+
+### 1. Core judgment
+
+新变体主要交付物是（A/B/C/D）: A（执行后端扩展；同一 `GraphInstruction` IR，不新增 gameplay 变体 DSL）
+
+结论: PASS
+
+一句话理由: Track C 仅扩展 Tests 侧 emitter 白名单以发射既有控制流/比较 op 的 labels+goto C#，不新增 `BuiltinHandlerId`、`EffectPresetType`、Core GraphOps、profile enum、平行 VM 或作者糖（Tracks A/B）；仍无 Query/Effect world ops。
+
+### 2. Layer assignment
+
+| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
+|-----------|-----------------|----------|
+| 既有 IR 控制流语义 | 0（既有） | `GasGraphOpHandlerTable` Jump/JumpIfFalse/Compare*（对照基线，不改） |
+| 分支 IR → C#（labels+goto） | 工具链（非 gameplay Layer） | `LinearIntGraphCsharpEmitter`（GasTests spike 扩展） |
+| Roslyn + Collectible ALC 热换 | 工具链 | 既有 `GraphRoslynAlcCompilerHost` / `GraphGeneratedAssemblyLoadContext` |
+| 验收 | 测试 | 分支程序 ≡ interpret VM；热换；fail-closed |
+
+### 3. Reuse list
+
+- Handlers: 既有 `GasGraphOpHandlerTable`（对照基线，不改 opcode 语义）
+- Queues / Systems: N/A（不接线正式 SystemGroup）
+- Resolvers / Registries: N/A
+- Existing presets / graphs: `GraphInstruction` / `GraphExecutionState` / R0 host 合同面
+
+### 4. New Layer 0 ops (if any)
+
+N/A — 无新增 graph op；仅白名单发射既有 `Jump` / `JumpIfFalse` / `CompareLtInt` / `CompareEqInt`（外加 R0 的 `None`/`ConstInt`/`AddInt`）。非白名单仍失败关闭。
+
+### 5. Transaction boundary
+
+热重载替换：编译成功才切换执行入口；编译失败保持上一份成功实现。禁止静默回退解释器。Jump Imm 解析负 PC 失败关闭。
+
+### 6. Config SSOT
+
+行为配置落在: 既有 graph IR / 作者文档，无新 gameplay JSON schema。
+
+是否新增 JSON schema: NO — 执行后端扩展，不是新 profile DSL；不做 Tracks A/B 作者糖。
+
+### 7. Red flag scan
+
+- [x] 未新增 profile inherit/placement enum
+- [x] 未新建与 spawn 平行的物化管线
+- [x] 未把 placement 校验塞进 lifecycle op
+- [x] 未添加「说不清的」默认 fallback（unsupported op / 编译失败 fail-closed；不静默切解释器）
+
+### 8. Next variant test
+
+「下一个 Mod 变体」将修改: graph 连线 / IR 程序（改分支常量或跳转目标 → 重编 → 行为变更），不改 Core enum。后续轨再谈 Query/Effect/Yield 生成路径与正式接线。
+
+### Reuse / 新增汇总（§4.2）
+
+| 类型 | 项 |
+|------|-----|
+| 复用 | R0 emitter/host/ALC、`GraphInstruction` PC+Imm 跳转语义、`GasGraphOpHandlerTable.Execute` 对照 |
+| 新增（spike，Tests） | Jump/JumpIfFalse/Compare* → labels+goto；分支一致性与热换测试 |
+| 禁止 | 扩展 Core GraphOps；Tracks A/B 作者糖；Query/Effect world ops；静默解释器回退 |
+
+## GAS Composition Gate — #860 codegen merge-ready hardening (PR #865)
+
+- **Task / Issue**: #860 / PR #865 — clear merge blockers without expanding gameplay surface
+- **Date**: 2026-08-11
+- **Agent / Author**: Cursor cloud agent
+
+### 1. Core judgment
+
+新变体主要交付物是（A/B/C/D）: A（测试合同硬化）
+
+结论: PASS
+
+一句话理由: 仅收紧 Tests spike 门禁与边界（ci-gate/microbench 分离、IR-only 输入、后向 Jump 失败关闭、ALC 非生产 SSOT 声明），不新增 op / preset / profile / 作者糖。
+
+### 2–8 摘要
+
+- Layer: 工具链 / GasTests only
+- Reuse: 既有 emitter/host/ALC
+- New Layer 0: N/A
+- Config SSOT: 仍只吃 `GraphInstruction[]`
+- Red flags: 未引入平行生产 ALC 政策；后向跳转不再静默允许
+
