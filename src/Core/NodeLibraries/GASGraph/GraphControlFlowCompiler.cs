@@ -57,11 +57,40 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
     /// <summary>
     /// Compiles L1 Script and Query control-flow documents into <see cref="GraphInstruction"/> using GraphNodeOp.
-    /// BranchBool is compile-time sugar only (not a GraphNodeOp).
+    /// BranchBool / SwitchInt / While / Until are compile-time sugar only (not GraphNodeOp values).
+    /// Wait is an author alias for <see cref="GraphNodeOp.Yield"/> (Script only).
     /// </summary>
     public static partial class GraphControlFlowCompiler
     {
-        public const string BranchBoolOp = "BranchBool";
+        public const string BranchBoolOp = GraphAuthoringSugar.BranchBool;
+        public const string SwitchIntOp = GraphAuthoringSugar.SwitchInt;
+        public const string WaitOp = GraphAuthoringSugar.Wait;
+        public const string WhileOp = GraphAuthoringSugar.While;
+        public const string UntilOp = GraphAuthoringSugar.Until;
+
+        private readonly struct SugarScratch
+        {
+            public SugarScratch(byte intReg, byte boolReg)
+            {
+                IntReg = intReg;
+                BoolReg = boolReg;
+            }
+
+            public byte IntReg { get; }
+            public byte BoolReg { get; }
+        }
+
+        private readonly struct SwitchCaseArm
+        {
+            public SwitchCaseArm(int caseValue, string targetNodeId)
+            {
+                CaseValue = caseValue;
+                TargetNodeId = targetNodeId;
+            }
+
+            public int CaseValue { get; }
+            public string TargetNodeId { get; }
+        }
 
         private readonly struct ControlKey : IEquatable<ControlKey>
         {
@@ -116,7 +145,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         private enum AuthoredOpKind : byte
         {
             GraphNodeOp = 0,
-            BranchBool = 1
+            BranchBool = 1,
+            SwitchInt = 2,
+            While = 3,
+            Until = 4
         }
 
         private readonly struct AuthoredOp
@@ -171,6 +203,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             ValidateRequiredEdges(nodes, ops, graphKind, controlEdges, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
             DetectUnreachable(document.Entry, nodes, document.ControlEdges, graphId, diagnostics);
 
+            var sugarScratches = new SugarScratch[nodes.Count];
+            AllocateSugarScratches(nodes, ops, outputTypes, outputRegisters, sugarScratches, graphId, diagnostics);
             NodeLayout[] layouts = BuildLayouts(nodes, ops, graphKind, controlEdges, diagnostics);
             if (HasErrors(diagnostics))
             {
@@ -228,6 +262,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     ops[i],
                     outputRegisters,
                     outputTypes,
+                    sugarScratches,
                     controlEdges,
                     valueEdges,
                     nodeIndices,
@@ -347,7 +382,72 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphControlFlowNode node = nodes[i];
                 if (string.Equals(node.Op, BranchBoolOp, StringComparison.Ordinal))
                 {
+                    if (graphKind != GraphKind.Script)
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnknownNodeOp,
+                            $"{BranchBoolOp} is Script compile-time sugar only.", node.Id));
+                        ops[i] = new AuthoredOp(AuthoredOpKind.GraphNodeOp, GraphNodeOp.None);
+                        continue;
+                    }
+
                     ops[i] = new AuthoredOp(AuthoredOpKind.BranchBool, GraphNodeOp.None);
+                    continue;
+                }
+
+                if (string.Equals(node.Op, SwitchIntOp, StringComparison.Ordinal))
+                {
+                    if (graphKind != GraphKind.Script)
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnknownNodeOp,
+                            $"{SwitchIntOp} is Script compile-time sugar only.", node.Id));
+                        ops[i] = new AuthoredOp(AuthoredOpKind.GraphNodeOp, GraphNodeOp.None);
+                        continue;
+                    }
+
+                    ops[i] = new AuthoredOp(AuthoredOpKind.SwitchInt, GraphNodeOp.None);
+                    continue;
+                }
+
+                if (string.Equals(node.Op, WhileOp, StringComparison.Ordinal))
+                {
+                    if (graphKind != GraphKind.Script)
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnknownNodeOp,
+                            $"While is Script-only author sugar (kind='{graphKind}').", node.Id));
+                        ops[i] = new AuthoredOp(AuthoredOpKind.GraphNodeOp, GraphNodeOp.None);
+                        continue;
+                    }
+
+                    ops[i] = new AuthoredOp(AuthoredOpKind.While, GraphNodeOp.None);
+                    continue;
+                }
+
+                if (string.Equals(node.Op, UntilOp, StringComparison.Ordinal))
+                {
+                    if (graphKind != GraphKind.Script)
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnknownNodeOp,
+                            $"Until is Script-only author sugar (kind='{graphKind}').", node.Id));
+                        ops[i] = new AuthoredOp(AuthoredOpKind.GraphNodeOp, GraphNodeOp.None);
+                        continue;
+                    }
+
+                    ops[i] = new AuthoredOp(AuthoredOpKind.Until, GraphNodeOp.None);
+                    continue;
+                }
+
+                // Wait is author alias for Yield — Script CF only; never a second waiter opcode.
+                if (string.Equals(node.Op, WaitOp, StringComparison.Ordinal))
+                {
+                    if (graphKind != GraphKind.Script)
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnknownNodeOp,
+                            $"Wait is Script-only author alias for Yield (kind='{graphKind}').", node.Id));
+                        ops[i] = new AuthoredOp(AuthoredOpKind.GraphNodeOp, GraphNodeOp.None);
+                        continue;
+                    }
+
+                    ops[i] = new AuthoredOp(AuthoredOpKind.GraphNodeOp, GraphNodeOp.Yield);
                     continue;
                 }
 
@@ -541,7 +641,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static GraphValueType GetOutputType(AuthoredOp op, GraphKind graphKind)
         {
-            if (op.Kind == AuthoredOpKind.BranchBool)
+            if (op.Kind is AuthoredOpKind.BranchBool or AuthoredOpKind.SwitchInt
+                or AuthoredOpKind.While or AuthoredOpKind.Until)
             {
                 return GraphValueType.Void;
             }
@@ -593,10 +694,24 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     continue;
                 }
 
+                if (op.Kind == AuthoredOpKind.SwitchInt)
+                {
+                    ValidateSwitchIntEdges(node, controlEdges, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    continue;
+                }
+
                 if (op.Kind == AuthoredOpKind.BranchBool || op.NodeOp == GraphNodeOp.JumpIfFalse)
                 {
                     RequireControlEdge(node, GraphControlFlowPorts.True, controlEdges, graphId, diagnostics);
                     RequireControlEdge(node, GraphControlFlowPorts.False, controlEdges, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.Condition, GraphValueType.Bool, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    continue;
+                }
+
+                if (op.Kind is AuthoredOpKind.While or AuthoredOpKind.Until)
+                {
+                    RequireControlEdge(node, GraphControlFlowPorts.Body, controlEdges, graphId, diagnostics);
+                    RequireControlEdge(node, GraphControlFlowPorts.Next, controlEdges, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.Condition, GraphValueType.Bool, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     continue;
                 }
@@ -691,6 +806,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 return port is GraphControlFlowPorts.True or GraphControlFlowPorts.False;
             }
 
+            if (op.Kind == AuthoredOpKind.SwitchInt)
+            {
+                return port == GraphControlFlowPorts.Default ||
+                       GraphControlFlowPorts.TryParseCasePort(port, out _);
+            }
+
+            if (op.Kind is AuthoredOpKind.While or AuthoredOpKind.Until)
+            {
+                return port is GraphControlFlowPorts.Body or GraphControlFlowPorts.Next;
+            }
+
             return op.NodeOp switch
             {
                 GraphNodeOp.Call => port is GraphControlFlowPorts.Call or GraphControlFlowPorts.Next,
@@ -707,9 +833,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 return IsAllowedQueryInputPort(op.NodeOp, port);
             }
 
-            if (op.Kind == AuthoredOpKind.BranchBool || op.NodeOp == GraphNodeOp.JumpIfFalse)
+            if (op.Kind == AuthoredOpKind.BranchBool ||
+                op.Kind == AuthoredOpKind.While ||
+                op.Kind == AuthoredOpKind.Until ||
+                op.NodeOp == GraphNodeOp.JumpIfFalse)
             {
                 return port == GraphControlFlowPorts.Condition;
+            }
+
+            if (op.Kind == AuthoredOpKind.SwitchInt)
+            {
+                return port == GraphControlFlowPorts.Selector;
             }
 
             return op.NodeOp switch
@@ -826,9 +960,19 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 return controlEdges.ContainsKey(new ControlKey(node.Id, GraphControlFlowPorts.Next)) ? 2 : 1;
             }
 
-            if (op.Kind == AuthoredOpKind.BranchBool || op.NodeOp == GraphNodeOp.JumpIfFalse)
+            if (op.Kind == AuthoredOpKind.BranchBool ||
+                op.Kind == AuthoredOpKind.While ||
+                op.Kind == AuthoredOpKind.Until ||
+                op.NodeOp == GraphNodeOp.JumpIfFalse)
             {
-                return 2; // JumpIfFalse + Jump(true)
+                return 2; // JumpIfFalse + Jump(arm)
+            }
+
+            if (op.Kind == AuthoredOpKind.SwitchInt)
+            {
+                int cases = CountSwitchCaseArms(node.Id, controlEdges);
+                // per arm: ConstInt + CompareEqInt + JumpIfFalse + Jump(arm); then Jump(default)
+                return (cases * 4) + 1;
             }
 
             return op.NodeOp switch
@@ -846,6 +990,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             AuthoredOp op,
             byte[] outputRegisters,
             GraphValueType[] outputTypes,
+            SugarScratch[] sugarScratches,
             Dictionary<ControlKey, string> controlEdges,
             Dictionary<ValueInputKey, GraphControlFlowValueEdge> valueEdges,
             Dictionary<string, int> nodeIndices,
@@ -901,6 +1046,67 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 SetSource(sources, bodyIndex, graphId, node, BranchBoolOp, GraphControlFlowPorts.Enter);
                 EmitRelativeJump(
                     document, node, GraphControlFlowPorts.True, bodyIndex + 1,
+                    controlEdges, nodeIndices, layouts, program, sources, graphId);
+                return;
+            }
+
+            if (op.Kind == AuthoredOpKind.SwitchInt)
+            {
+                CompileSwitchInt(
+                    document,
+                    node,
+                    sugarScratches[nodeIndex],
+                    controlEdges,
+                    valueEdges,
+                    nodeIndices,
+                    layouts,
+                    program,
+                    sources,
+                    outputRegisters,
+                    outputTypes,
+                    definedInts,
+                    definedBools,
+                    graphId,
+                    diagnostics);
+                return;
+            }
+
+            if (op.Kind == AuthoredOpKind.While)
+            {
+                // while (cond) body;  =>  JumpIfFalse(cond)->next; Jump->body
+                byte cond = ResolveValueInput(
+                    node, GraphControlFlowPorts.Condition, GraphValueType.Bool,
+                    valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                int nextAbs = ResolveControlTarget(node, GraphControlFlowPorts.Next, controlEdges, nodeIndices, layouts);
+                program[bodyIndex] = new GraphInstruction
+                {
+                    Op = (ushort)GraphNodeOp.JumpIfFalse,
+                    A = cond,
+                    Imm = RelativeOffset(bodyIndex, nextAbs)
+                };
+                SetSource(sources, bodyIndex, graphId, node, WhileOp, GraphControlFlowPorts.Enter);
+                EmitRelativeJump(
+                    document, node, GraphControlFlowPorts.Body, bodyIndex + 1,
+                    controlEdges, nodeIndices, layouts, program, sources, graphId);
+                return;
+            }
+
+            if (op.Kind == AuthoredOpKind.Until)
+            {
+                // until (cond) body;  =>  JumpIfFalse(cond)->body; Jump->next  (exit when true)
+                byte cond = ResolveValueInput(
+                    node, GraphControlFlowPorts.Condition, GraphValueType.Bool,
+                    valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                int bodyAbs = ResolveControlTarget(node, GraphControlFlowPorts.Body, controlEdges, nodeIndices, layouts);
+                program[bodyIndex] = new GraphInstruction
+                {
+                    Op = (ushort)GraphNodeOp.JumpIfFalse,
+                    A = cond,
+                    Imm = RelativeOffset(bodyIndex, bodyAbs)
+                };
+                SetSource(sources, bodyIndex, graphId, node, UntilOp, GraphControlFlowPorts.Enter);
+                EmitRelativeJump(
+                    document, node, GraphControlFlowPorts.Next, bodyIndex + 1,
                     controlEdges, nodeIndices, layouts, program, sources, graphId);
                 return;
             }
@@ -997,7 +1203,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
                 case GraphNodeOp.Yield:
                     program[bodyIndex] = new GraphInstruction { Op = (ushort)GraphNodeOp.Yield };
-                    SetSource(sources, bodyIndex, graphId, node, nameof(GraphNodeOp.Yield), GraphControlFlowPorts.Enter);
+                    SetSource(
+                        sources,
+                        bodyIndex,
+                        graphId,
+                        node,
+                        string.Equals(node.Op, WaitOp, StringComparison.Ordinal) ? WaitOp : nameof(GraphNodeOp.Yield),
+                        GraphControlFlowPorts.Enter);
                     EmitRelativeJump(document, node, GraphControlFlowPorts.Next, bodyIndex + 1, controlEdges, nodeIndices, layouts, program, sources, graphId);
                     break;
 
@@ -1022,6 +1234,225 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         $"Op '{op.NodeOp}' is not supported by GraphControlFlowCompiler.", node.Id));
                     break;
             }
+        }
+
+
+        private static void AllocateSugarScratches(
+            List<GraphControlFlowNode> nodes,
+            AuthoredOp[] ops,
+            GraphValueType[] outputTypes,
+            byte[] outputRegisters,
+            SugarScratch[] sugarScratches,
+            string graphId,
+            List<GraphDiagnostic> diagnostics)
+        {
+            var usedInt = new bool[GraphVmLimits.MaxIntRegisters];
+            var usedBool = new bool[GraphVmLimits.MaxBoolRegisters];
+            for (int i = 0; i < nodes.Count; i++)
+            {
+                if (outputTypes[i] == GraphValueType.Int)
+                {
+                    usedInt[outputRegisters[i]] = true;
+                }
+                else if (outputTypes[i] == GraphValueType.Bool)
+                {
+                    usedBool[outputRegisters[i]] = true;
+                }
+            }
+
+            for (int i = 0; i < nodes.Count; i++)
+            {
+                if (ops[i].Kind != AuthoredOpKind.SwitchInt)
+                {
+                    continue;
+                }
+
+                byte intReg = AllocFree(usedInt, GraphVmLimits.MaxIntRegisters, graphId, nodes[i].Id, diagnostics);
+                byte boolReg = AllocFree(usedBool, GraphVmLimits.MaxBoolRegisters, graphId, nodes[i].Id, diagnostics);
+                sugarScratches[i] = new SugarScratch(intReg, boolReg);
+            }
+        }
+
+        private static byte AllocFree(
+            bool[] used,
+            int max,
+            string graphId,
+            string nodeId,
+            List<GraphDiagnostic> diagnostics)
+        {
+            for (int i = 0; i < max; i++)
+            {
+                if (!used[i])
+                {
+                    used[i] = true;
+                    return (byte)i;
+                }
+            }
+
+            diagnostics.Add(Error(graphId, GraphDiagnosticCodes.RegisterOutOfRange,
+                $"Register budget exceeded ({max}).", nodeId));
+            return 0;
+        }
+
+        private static void ValidateSwitchIntEdges(
+            GraphControlFlowNode node,
+            Dictionary<ControlKey, string> controlEdges,
+            Dictionary<ValueInputKey, GraphControlFlowValueEdge> valueEdges,
+            Dictionary<string, int> nodeIndices,
+            GraphValueType[] outputTypes,
+            string graphId,
+            List<GraphDiagnostic> diagnostics)
+        {
+            RequireControlEdge(node, GraphControlFlowPorts.Default, controlEdges, graphId, diagnostics);
+            RequireValueInput(node, GraphControlFlowPorts.Selector, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+
+            var seenCases = new HashSet<int>();
+            int caseCount = 0;
+            foreach (ControlKey key in controlEdges.Keys)
+            {
+                if (!string.Equals(key.NodeId, node.Id, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                if (key.Port == GraphControlFlowPorts.Default)
+                {
+                    continue;
+                }
+
+                if (!GraphControlFlowPorts.TryParseCasePort(key.Port, out int caseValue))
+                {
+                    continue;
+                }
+
+                if (!seenCases.Add(caseValue))
+                {
+                    diagnostics.Add(Error(graphId, GraphDiagnosticCodes.DuplicateControlEdge,
+                        $"Duplicate SwitchInt case value {caseValue} on node '{node.Id}'.", node.Id));
+                }
+
+                caseCount++;
+            }
+
+            if (caseCount == 0)
+            {
+                diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingControlEdge,
+                    $"SwitchInt node '{node.Id}' requires at least one case:{{n}} control edge.", node.Id));
+            }
+        }
+
+        private static int CountSwitchCaseArms(string nodeId, Dictionary<ControlKey, string> controlEdges)
+        {
+            int count = 0;
+            foreach (ControlKey key in controlEdges.Keys)
+            {
+                if (string.Equals(key.NodeId, nodeId, StringComparison.Ordinal) &&
+                    GraphControlFlowPorts.TryParseCasePort(key.Port, out _))
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        private static List<SwitchCaseArm> CollectSwitchCaseArms(
+            GraphControlFlowDocument document,
+            GraphControlFlowNode node)
+        {
+            var arms = new List<SwitchCaseArm>();
+            List<GraphControlFlowEdge> edges = document.ControlEdges ?? new List<GraphControlFlowEdge>();
+            for (int i = 0; i < edges.Count; i++)
+            {
+                GraphControlFlowEdge edge = edges[i];
+                if (!string.Equals(edge.From, node.Id, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                if (!GraphControlFlowPorts.TryParseCasePort(edge.FromPort, out int caseValue))
+                {
+                    continue;
+                }
+
+                arms.Add(new SwitchCaseArm(caseValue, edge.To));
+            }
+
+            return arms;
+        }
+
+        private static void CompileSwitchInt(
+            GraphControlFlowDocument document,
+            GraphControlFlowNode node,
+            SugarScratch scratch,
+            Dictionary<ControlKey, string> controlEdges,
+            Dictionary<ValueInputKey, GraphControlFlowValueEdge> valueEdges,
+            Dictionary<string, int> nodeIndices,
+            NodeLayout[] layouts,
+            GraphInstruction[] program,
+            GraphInstructionSource[] sources,
+            byte[] outputRegisters,
+            GraphValueType[] outputTypes,
+            bool[] definedInts,
+            bool[] definedBools,
+            string graphId,
+            List<GraphDiagnostic> diagnostics)
+        {
+            int nodeIndex = nodeIndices[node.Id];
+            int bodyIndex = layouts[nodeIndex].BodyIndex;
+            List<SwitchCaseArm> arms = CollectSwitchCaseArms(document, node);
+            byte selector = ResolveValueInput(
+                node, GraphControlFlowPorts.Selector, GraphValueType.Int,
+                valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+            int defaultAbs = ResolveControlTarget(node, GraphControlFlowPorts.Default, controlEdges, nodeIndices, layouts);
+            int defaultJumpIndex = bodyIndex + (arms.Count * 4);
+
+            for (int i = 0; i < arms.Count; i++)
+            {
+                SwitchCaseArm arm = arms[i];
+                int armBase = bodyIndex + (i * 4);
+                int nextCheck = (i + 1 < arms.Count) ? bodyIndex + ((i + 1) * 4) : defaultJumpIndex;
+                int armAbs = layouts[nodeIndices[arm.TargetNodeId]].BodyIndex;
+
+                program[armBase] = new GraphInstruction
+                {
+                    Op = (ushort)GraphNodeOp.ConstInt,
+                    Dst = scratch.IntReg,
+                    Imm = arm.CaseValue
+                };
+                SetSource(sources, armBase, graphId, node, SwitchIntOp, GraphControlFlowPorts.Case(arm.CaseValue));
+
+                program[armBase + 1] = new GraphInstruction
+                {
+                    Op = (ushort)GraphNodeOp.CompareEqInt,
+                    Dst = scratch.BoolReg,
+                    A = selector,
+                    B = scratch.IntReg
+                };
+                SetSource(sources, armBase + 1, graphId, node, SwitchIntOp, GraphControlFlowPorts.Case(arm.CaseValue));
+
+                program[armBase + 2] = new GraphInstruction
+                {
+                    Op = (ushort)GraphNodeOp.JumpIfFalse,
+                    A = scratch.BoolReg,
+                    Imm = RelativeOffset(armBase + 2, nextCheck)
+                };
+                SetSource(sources, armBase + 2, graphId, node, SwitchIntOp, GraphControlFlowPorts.Case(arm.CaseValue));
+
+                program[armBase + 3] = new GraphInstruction
+                {
+                    Op = (ushort)GraphNodeOp.Jump,
+                    Imm = RelativeOffset(armBase + 3, armAbs)
+                };
+                SetSource(sources, armBase + 3, graphId, node, SwitchIntOp, GraphControlFlowPorts.Case(arm.CaseValue));
+            }
+
+            program[defaultJumpIndex] = new GraphInstruction
+            {
+                Op = (ushort)GraphNodeOp.Jump,
+                Imm = RelativeOffset(defaultJumpIndex, defaultAbs)
+            };
+            SetSource(sources, defaultJumpIndex, graphId, node, SwitchIntOp, GraphControlFlowPorts.Default);
         }
 
         private static void EmitRelativeJump(
