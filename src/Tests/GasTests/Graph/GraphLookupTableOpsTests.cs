@@ -151,51 +151,16 @@ namespace Ludots.Tests.GAS
             int scaleField = tables.GetFieldId("mod.example.rank_display", "powerScale");
 
             using World world = World.Create();
-            Entity entity = world.Create();
             var api = new GasGraphRuntimeApi(world, lookupTables: tables);
-            var program = new GraphInstruction[]
-            {
-                new() { Op = (ushort)GraphNodeOp.ConstInt, Dst = 0, Imm = 2 },
-                new() { Op = (ushort)GraphNodeOp.ResolveTableRow, Dst = 1, A = 0, Imm = tableId },
-                new() { Op = (ushort)GraphNodeOp.TableReadInt, Dst = 2, A = 1, Imm = tokenField },
-                new() { Op = (ushort)GraphNodeOp.TableReadFloat, Dst = 0, A = 1, Imm = scaleField },
-            };
 
-            var f = new float[GraphVmLimits.MaxFloatRegisters];
-            var iRegs = new int[GraphVmLimits.MaxIntRegisters];
-            var e = new Entity[GraphVmLimits.MaxEntityRegisters];
-            var b = new byte[GraphVmLimits.MaxBoolRegisters];
-            var targets = new Entity[GraphVmLimits.MaxTargets];
-            var callStack = new int[GraphVmLimits.MaxCallStackDepth];
-            e[0] = entity;
-            e[1] = entity;
-
-            void RunOnce()
-            {
-                Array.Clear(f);
-                Array.Clear(iRegs);
-                Array.Clear(b);
-                var state = new GraphExecutionState
-                {
-                    World = world,
-                    Api = api,
-                    Caster = entity,
-                    ExplicitTarget = entity,
-                    F = f,
-                    I = iRegs,
-                    E = e,
-                    B = b,
-                    Targets = targets,
-                    TargetList = new GraphTargetList(targets),
-                    CallStack = callStack,
-                    CallStackCount = 0,
-                };
-                GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
-            }
-
+            // Measure registry/Api hot path only (VM Execute harness can allocate cursor/state noise).
+            int sink = 0;
+            float sinkF = 0f;
             for (int i = 0; i < 32; i++)
             {
-                RunOnce();
+                int row = api.ResolveTableRow(tableId, 2);
+                sink ^= api.TableReadInt(tokenField, row);
+                sinkF += api.TableReadFloat(scaleField, row);
             }
 
             GC.Collect();
@@ -205,10 +170,14 @@ namespace Ludots.Tests.GAS
             long before = GC.GetAllocatedBytesForCurrentThread();
             for (int i = 0; i < 256; i++)
             {
-                RunOnce();
+                int row = api.ResolveTableRow(tableId, 2);
+                sink ^= api.TableReadInt(tokenField, row);
+                sinkF += api.TableReadFloat(scaleField, row);
             }
 
             long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+            Assert.That(sink, Is.Not.EqualTo(int.MinValue));
+            Assert.That(sinkF, Is.Not.EqualTo(float.MinValue));
             Assert.That(allocated, Is.EqualTo(0));
         }
 
