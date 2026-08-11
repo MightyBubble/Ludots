@@ -42,3 +42,4 @@ dotnet test src/Tests/GasTests/GasTests.csproj \
 - #874 正式热应用（等 LSW）
 - 人手关闭过时 issue：#870 / #871 / #878
 - #880 issue 正文粘贴 ADR（token 无 issue 写权限时）
+- showcase `UiPlayerAggregateGraphMvp`：`ModEntry.OnLoad` 仍用 resource stream 预注册 Attribute（`GasGraphSymbolResolver` 要求图 patch 前已 Register）；runtime 场景装载走 `ConfigPipeline`。`IModContext` 无 ConfigPipeline，统一权威需上移注册时机或扩展 Mod 上下文——本补线未改，避免碰 Attribute 冻结/装载序。

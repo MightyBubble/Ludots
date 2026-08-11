@@ -1854,6 +1854,24 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             return Intern(symbolToIndex, symbols, symbol);
         }
 
+        private static int RequireLookupFieldSymbol(
+            GraphControlFlowNode node,
+            Dictionary<string, int> symbolToIndex,
+            List<string> symbols,
+            string graphId,
+            List<GraphDiagnostic> diagnostics)
+        {
+            if (string.IsNullOrWhiteSpace(node.LookupTable) || string.IsNullOrWhiteSpace(node.LookupField))
+            {
+                diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingNodeRef,
+                    $"Node '{node.Id}' requires non-empty lookupTable and lookupField.", node.Id));
+                return -1;
+            }
+
+            string fieldSymbol = Host.GraphLookupTableRegistry.EncodeFieldSymbol(node.LookupTable, node.LookupField);
+            return Intern(symbolToIndex, symbols, fieldSymbol);
+        }
+
         private static int Intern(Dictionary<string, int> symbolToIndex, List<string> symbols, string symbol)
         {
             if (symbolToIndex.TryGetValue(symbol, out int existing))

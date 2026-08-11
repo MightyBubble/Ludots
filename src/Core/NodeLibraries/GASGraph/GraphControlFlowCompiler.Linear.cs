@@ -21,6 +21,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                       GraphNodeOp.LoadContextTarget or
                       GraphNodeOp.LoadAttribute or
                       GraphNodeOp.LoadSelfAttribute or
+                      GraphNodeOp.ResolveTableRow or
+                      GraphNodeOp.TableReadInt or
+                      GraphNodeOp.TableReadFloat or
                       GraphNodeOp.RandomFloat01 or
                       GraphNodeOp.ModifyAttributeAdd or
                       GraphNodeOp.WriteSelfAttribute or
@@ -58,11 +61,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     GraphNodeOp.SubFloat or
                     GraphNodeOp.LoadAttribute or
                     GraphNodeOp.LoadSelfAttribute or
+                    GraphNodeOp.TableReadFloat or
                     GraphNodeOp.RandomFloat01 or
                     GraphNodeOp.ReadBlackboardFloat or
                     GraphNodeOp.LoadConfigFloat => GraphValueType.Float,
                 GraphNodeOp.ConstInt or
                     GraphNodeOp.AddInt or
+                    GraphNodeOp.ResolveTableRow or
+                    GraphNodeOp.TableReadInt or
                     GraphNodeOp.AggCount or
                     GraphNodeOp.ReadBlackboardInt or
                     GraphNodeOp.LoadConfigInt or
@@ -90,6 +96,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.SelectEntity
                     => port is GraphControlFlowPorts.Condition or GraphControlFlowPorts.A or GraphControlFlowPorts.B,
                 GraphNodeOp.LoadAttribute => port == GraphControlFlowPorts.Source,
+                GraphNodeOp.ResolveTableRow or
+                    GraphNodeOp.TableReadInt or
+                    GraphNodeOp.TableReadFloat => port == GraphControlFlowPorts.A,
                 GraphNodeOp.ModifyAttributeAdd
                     => port is GraphControlFlowPorts.Target or GraphControlFlowPorts.Value,
                 GraphNodeOp.WriteSelfAttribute => port == GraphControlFlowPorts.Value,
@@ -161,6 +170,22 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.LoadAttribute:
                     RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireNonEmpty(node.Attribute, "attribute", node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.ResolveTableRow:
+                    RequireValueInput(node, GraphControlFlowPorts.A, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireNonEmpty(node.LookupTable, "lookupTable", node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.TableReadInt:
+                case GraphNodeOp.TableReadFloat:
+                    RequireValueInput(node, GraphControlFlowPorts.A, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    if (string.IsNullOrWhiteSpace(node.LookupTable) || string.IsNullOrWhiteSpace(node.LookupField))
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingNodeRef,
+                            $"Node '{node.Id}' requires non-empty lookupTable and lookupField.", node.Id));
+                    }
+
                     break;
 
                 case GraphNodeOp.LoadSelfAttribute:
@@ -400,6 +425,21 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         node, GraphControlFlowPorts.Source, GraphValueType.Entity,
                         valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
                     instruction.Imm = RequireSymbol(node.Attribute, "attribute", node, symbolToIndex, symbols, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.ResolveTableRow:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.A, GraphValueType.Int,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Imm = RequireSymbol(node.LookupTable, "lookupTable", node, symbolToIndex, symbols, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.TableReadInt:
+                case GraphNodeOp.TableReadFloat:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.A, GraphValueType.Int,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Imm = RequireLookupFieldSymbol(node, symbolToIndex, symbols, graphId, diagnostics);
                     break;
 
                 case GraphNodeOp.LoadSelfAttribute:

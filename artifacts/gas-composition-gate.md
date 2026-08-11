@@ -1,23 +1,24 @@
-## GAS Composition Gate — Self Review
+﻿## GAS Composition Gate — Self Review
 
-- **Task / Issue**: #886 全景收尾落地（#881 通用查表 + #877 删除 TagDisplay 专线 + 文档/showcase/审计）
+- **Task / Issue**: #886 全景收尾落地（#881 通用查表 + #877 删除 TagDisplay 专线 + 文档/showcase/审计）+ Bugbot 补线：ControlFlow 前门查表 emit
 - **Date**: 2026-08-11
 - **Agent / Author**: Cloud Agent (cursor/ui-panel-debt-land-28e6)
 
 ### 1. Core judgment
 
-新变体主要交付物是（A/B/C/D）: **A + D**（新增通用查表 L0 ops；删除误开 TagDisplay 专线）
+新变体主要交付物是（A/B/C/D）: **A**（把已有 L0 `ResolveTableRow` / `TableRead*` 接到 Query/Linear ControlFlow 作者矩阵与 emit；不新开 op / 不复活 TagDisplay）
 
 结论: **PASS**
 
-一句话理由: 查表收成唯一用户/Mod 表路径；TagDisplay 专线删除而非接入生产；不新增 profile enum / 平行 Presentation Graph。
+一句话理由: 查表收成唯一用户/Mod 表路径；TagDisplay 专线删除而非接入生产；ControlFlow 前门与 legacy GraphCompiler 共用同一 L0 ops + symbol patch，无平行 Presentation Graph。
 
 ### 2. Layer assignment
 
 | 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
 |-----------|-----------------|----------|
-| ResolveTableRow / TableReadInt / TableReadFloat | 0 | GraphNodeOp + Pure handler |
+| ResolveTableRow / TableReadInt / TableReadFloat | 0 | GraphNodeOp + Pure handler（已有） |
 | GraphLookupTableRegistry / Loader | 0 只读索引 + 配置装载 | StringIntRegistry + ConfigPipeline |
+| Query/Linear ControlFlow 白名单 + emit | 2（作者面） | GraphControlFlowCompiler.*.cs + GraphControlFlowNode 字段 |
 | 删除 LookupTagDisplay* / SelectTagInMask / TagDisplayTableRegistry | L0/基建回撤 | GraphOps + Handler + Presentation.TagDisplay |
 | 作者表语义（rank/state_display…） | 3（内容） | Mod JSON |
 
@@ -25,16 +26,14 @@
 
 - Handlers: `GasGraphOpHandlerTable` Pure 分类
 - Resolvers: `IGraphSymbolResolver` / `GraphProgramSymbolPatcher` / `GasGraphRuntimeApi`
+- Compiler pattern: `LoadAttribute` / `ConstInt` / `HasTag` 在 ControlFlow 的 Validate + Compile + `RequireSymbol`
+- Front door: `GraphProgramAuthoringFrontDoor` → `GraphControlFlowCompiler`
 - Config: `ConfigPipeline`、`PresentationTextCatalog`（TextToken id）
-- 无新 System / 无平行 VM
+- 无新 System / 无平行 VM / 无新 L0 op
 
 ### 4. New Layer 0 ops (if any)
 
-| Op 名 | 单一职责 | 为何不能组合现有 op |
-|-------|----------|---------------------|
-| ResolveTableRow | key → rowHandle | 现有 op 无通用表索引 |
-| TableReadInt | rowHandle+field → Int/TextToken id | typed 只读字段 |
-| TableReadFloat | rowHandle+field → Float | 同上 |
+N/A（本补线不新增 L0 op；复用 #881 已落地的 ResolveTableRow / TableRead*）
 
 删除：`LookupTagDisplayToken`、`SelectTagInMask`（及作者糖）。
 
@@ -46,15 +45,16 @@
 
 行为配置落在: graph 连线 + Mod `GraphTables/lookup_tables.json`
 
-是否新增 JSON schema: **YES** — 通用 lookup 表内容合同（非 profile DSL）
+是否新增 JSON schema: **NO**（本补线）— 通用 lookup 表合同已由 #881 落地
 
 ### 7. Red flag scan
 
 - [x] 未新增 profile inherit/placement enum
 - [x] 未新建与 spawn 平行的物化管线
 - [x] 未把 placement 校验塞进 lifecycle op
-- [x] 未添加「说不清的」默认 fallback（缺表/缺行 fail-closed）
+- [x] 未添加「说不清的」默认 fallback（缺表/缺行/缺 lookupTable·lookupField fail-closed）
 - [x] **未**把 TagDisplay 接到 GameEngine 当完成
+- [x] **未**只接 legacy `GraphCompiler`；生产前门 ControlFlow 同步接线
 
 ### 8. Next variant test
 
@@ -77,8 +77,9 @@
 | 资源条 MVP + PanelProjectionReader + 编辑器样板 | **已做**（#875 / main） |
 | UIP-0 Template/Instance/Router 运行时 | **未做**（合同 ADR 文档见本落地 PR / #880） |
 | 通用查表 ResolveTableRow / TableRead* | **本落地 PR 实现**（#881） |
+| ControlFlow 前门查表白名单/emit | **本补线**（Query + Linear Pure） |
 | TagDisplay 专线 | **本落地 PR 删除**（#877）；废止 #876 |
-| showcase 配置卫生 | **本落地 PR**（#882） |
+| showcase 配置卫生 | **本落地 PR**（#882）；ModEntry OnLoad 仍需 stream 预注册 Attribute（见手交接残留） |
 | 本附录审计结论 | **PASS**（落地切片）；UIP-0 运行时仍为后续债 |
 
 Epic 勾选建议与残留债指针：见 handoff 正文与全景 #886。

@@ -8,7 +8,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
     {
         private static bool IsQueryControlFlowAuthorable(GraphNodeOp op)
             => op is GraphNodeOp.ConstFloat or
+                      GraphNodeOp.ConstInt or
                       GraphNodeOp.LoadCaster or
+                      GraphNodeOp.ResolveTableRow or
+                      GraphNodeOp.TableReadInt or
+                      GraphNodeOp.TableReadFloat or
                       GraphNodeOp.QueryAllMapEntities or
                       GraphNodeOp.QueryFromCollection or
                       GraphNodeOp.QueryFilterTeam or
@@ -40,7 +44,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         private static GraphValueType GetQueryOutputType(GraphNodeOp op)
             => op switch
             {
-                GraphNodeOp.ConstFloat => GraphValueType.Float,
+                GraphNodeOp.ConstFloat or
+                    GraphNodeOp.TableReadFloat => GraphValueType.Float,
+                GraphNodeOp.ConstInt or
+                    GraphNodeOp.ResolveTableRow or
+                    GraphNodeOp.TableReadInt or
+                    GraphNodeOp.AggCount => GraphValueType.Int,
                 GraphNodeOp.LoadCaster => GraphValueType.Entity,
                 GraphNodeOp.QueryAllMapEntities or
                     GraphNodeOp.QueryFromCollection or
@@ -56,7 +65,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     GraphNodeOp.RelationshipFilterMetricRange or
                     GraphNodeOp.RelationshipFilterFlag or
                     GraphNodeOp.RelationshipSortByMetric => GraphValueType.TargetList,
-                GraphNodeOp.AggCount => GraphValueType.Int,
                 GraphNodeOp.AggSumAttribute or
                     GraphNodeOp.AggAverageAttribute or
                     GraphNodeOp.AggMaxAttribute or
@@ -78,6 +86,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         private static bool IsAllowedQueryInputPort(GraphNodeOp op, string port)
             => op switch
             {
+                GraphNodeOp.ResolveTableRow or
+                    GraphNodeOp.TableReadInt or
+                    GraphNodeOp.TableReadFloat => port == GraphControlFlowPorts.A,
                 GraphNodeOp.QueryFilterTeam => port is GraphControlFlowPorts.List or GraphControlFlowPorts.TeamId,
                 GraphNodeOp.QueryFilterTemplate or
                     GraphNodeOp.QueryFilterTagAny or
@@ -134,8 +145,28 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             switch (op.NodeOp)
             {
                 case GraphNodeOp.ConstFloat:
+                case GraphNodeOp.ConstInt:
                 case GraphNodeOp.LoadCaster:
                 case GraphNodeOp.QueryAllMapEntities:
+                    break;
+                case GraphNodeOp.ResolveTableRow:
+                    RequireValueInput(node, GraphControlFlowPorts.A, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    if (string.IsNullOrWhiteSpace(node.LookupTable))
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingNodeRef,
+                            $"Node '{node.Id}' requires a non-empty lookupTable.", node.Id));
+                    }
+
+                    break;
+                case GraphNodeOp.TableReadInt:
+                case GraphNodeOp.TableReadFloat:
+                    RequireValueInput(node, GraphControlFlowPorts.A, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    if (string.IsNullOrWhiteSpace(node.LookupTable) || string.IsNullOrWhiteSpace(node.LookupField))
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingNodeRef,
+                            $"Node '{node.Id}' requires non-empty lookupTable and lookupField.", node.Id));
+                    }
+
                     break;
                 case GraphNodeOp.QueryFromCollection:
                     RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
@@ -313,8 +344,24 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.ConstFloat:
                     instruction.ImmF = node.FloatValue;
                     break;
+                case GraphNodeOp.ConstInt:
+                    instruction.Imm = node.IntValue;
+                    break;
                 case GraphNodeOp.LoadCaster:
                 case GraphNodeOp.QueryAllMapEntities:
+                    break;
+                case GraphNodeOp.ResolveTableRow:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.A, GraphValueType.Int,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Imm = RequireSymbol(node.LookupTable, "lookupTable", node, symbolToIndex, symbols, graphId, diagnostics);
+                    break;
+                case GraphNodeOp.TableReadInt:
+                case GraphNodeOp.TableReadFloat:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.A, GraphValueType.Int,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Imm = RequireLookupFieldSymbol(node, symbolToIndex, symbols, graphId, diagnostics);
                     break;
                 case GraphNodeOp.QueryFromCollection:
                     instruction.A = ResolveValueInput(
