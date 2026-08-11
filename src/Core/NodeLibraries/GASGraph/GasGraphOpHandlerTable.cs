@@ -258,7 +258,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.Yield or
                 GraphNodeOp.HaltReturnInt or
                 GraphNodeOp.InvokeScript or
-                GraphNodeOp.MoveInt
+                GraphNodeOp.MoveInt or
+                GraphNodeOp.ResolveTableRow or
+                GraphNodeOp.TableReadInt or
+                GraphNodeOp.TableReadFloat
                     => EffectOperationMetadata.Pure(description),
 
                 _ => throw new InvalidOperationException(
@@ -503,6 +506,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             Register(GraphNodeOp.HasTag, HandleHasTag, "HasTag graph opcode.");
             Register(GraphNodeOp.SelectTagInMask, HandleSelectTagInMask, "SelectTagInMask graph opcode.");
             Register(GraphNodeOp.LookupTagDisplayToken, HandleLookupTagDisplayToken, "LookupTagDisplayToken graph opcode.");
+            Register(GraphNodeOp.ResolveTableRow, HandleResolveTableRow, "ResolveTableRow graph opcode.");
+            Register(GraphNodeOp.TableReadInt, HandleTableReadInt, "TableReadInt graph opcode.");
+            Register(GraphNodeOp.TableReadFloat, HandleTableReadFloat, "TableReadFloat graph opcode.");
             Register(GraphNodeOp.CompareEqEntity, HandleCompareEqEntity, "CompareEqEntity graph opcode.");
             Register(GraphNodeOp.RandomFloat01, HandleRandomFloat01, "RandomFloat01 graph opcode.");
             Register(GraphNodeOp.QueryHexRange, HandleQueryHexRange, "QueryHexRange graph opcode.");
@@ -1205,6 +1211,24 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         {
             // I[Dst] = LookupTagDisplayToken(Imm=tableId, I[A]=tagId)
             s.I[ins.Dst] = s.Api.LookupTagDisplayToken(ins.Imm, s.I[ins.A]);
+        }
+
+        private static void HandleResolveTableRow(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            // I[Dst] = ResolveTableRow(Imm=tableId, I[A]=key)
+            s.I[ins.Dst] = s.Api.ResolveTableRow(ins.Imm, s.I[ins.A]);
+        }
+
+        private static void HandleTableReadInt(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            // I[Dst] = TableReadInt(Imm=fieldId, I[A]=rowHandle)
+            s.I[ins.Dst] = s.Api.TableReadInt(ins.Imm, s.I[ins.A]);
+        }
+
+        private static void HandleTableReadFloat(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)
+        {
+            // F[Dst] = TableReadFloat(Imm=fieldId, I[A]=rowHandle)
+            s.F[ins.Dst] = s.Api.TableReadFloat(ins.Imm, s.I[ins.A]);
         }
 
         private static void HandleCompareEqEntity(ref GraphExecutionState s, in GraphInstruction ins, ref int pc)

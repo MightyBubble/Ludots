@@ -20,6 +20,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private readonly TargetDispatchPresetRegistry _targetDispatchPresets;
         private readonly EntityTemplateKeyRegistry? _entityTemplateKeys;
         private readonly TagDisplayTableRegistry? _tagDisplayTables;
+        private readonly GraphLookupTableRegistry? _lookupTables;
 
         public GasGraphSymbolResolver(
             RelationshipTypeRegistry types,
@@ -28,7 +29,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             RelationshipReasonRegistry reasons,
             TargetDispatchPresetRegistry targetDispatchPresets,
             EntityTemplateKeyRegistry? entityTemplateKeys = null,
-            TagDisplayTableRegistry? tagDisplayTables = null)
+            TagDisplayTableRegistry? tagDisplayTables = null,
+            GraphLookupTableRegistry? lookupTables = null)
         {
             _types = types ?? throw new ArgumentNullException(nameof(types));
             _metrics = metrics ?? throw new ArgumentNullException(nameof(metrics));
@@ -37,6 +39,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _targetDispatchPresets = targetDispatchPresets ?? throw new ArgumentNullException(nameof(targetDispatchPresets));
             _entityTemplateKeys = entityTemplateKeys;
             _tagDisplayTables = tagDisplayTables;
+            _lookupTables = lookupTables;
         }
 
         public int ResolveTag(string name)
@@ -123,6 +126,28 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             }
 
             return _tagDisplayTables.GetTableId(name);
+        }
+
+        public int ResolveGraphLookupTable(string name)
+        {
+            if (_lookupTables == null)
+            {
+                throw new InvalidOperationException(
+                    $"Graph references lookup table '{name}', but no GraphLookupTableRegistry was provided.");
+            }
+
+            return _lookupTables.GetTableId(name);
+        }
+
+        public int ResolveGraphLookupField(string name)
+        {
+            if (_lookupTables == null)
+            {
+                throw new InvalidOperationException(
+                    $"Graph references lookup field '{name}', but no GraphLookupTableRegistry was provided.");
+            }
+
+            return _lookupTables.GetFieldId(name);
         }
     }
 }

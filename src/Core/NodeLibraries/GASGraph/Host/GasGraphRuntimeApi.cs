@@ -44,7 +44,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             EntitySetQueryRuntime entityQueries,
             ControlDomainQuery controlDomains,
             KnowledgeProjectionResolver knowledgeProjections,
-            IClock clock)
+            IClock clock,
+            GraphLookupTableRegistry lookupTables)
         {
             World = world ?? throw new ArgumentNullException(nameof(world));
             SpatialQueries = spatialQueries ?? throw new ArgumentNullException(nameof(spatialQueries));
@@ -63,6 +64,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             ControlDomains = controlDomains ?? throw new ArgumentNullException(nameof(controlDomains));
             KnowledgeProjections = knowledgeProjections ?? throw new ArgumentNullException(nameof(knowledgeProjections));
             Clock = clock ?? throw new ArgumentNullException(nameof(clock));
+            LookupTables = lookupTables ?? throw new ArgumentNullException(nameof(lookupTables));
         }
 
         public World World { get; }
@@ -82,6 +84,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         public ControlDomainQuery ControlDomains { get; }
         public KnowledgeProjectionResolver KnowledgeProjections { get; }
         public IClock Clock { get; }
+        public GraphLookupTableRegistry LookupTables { get; }
     }
 
     public sealed class GasGraphRuntimeApi : IDerivedAttributeGraphRuntimeApi
@@ -95,6 +98,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private readonly EffectRequestQueue? _effectRequests;
         private readonly TagOps? _tagOps;
         private readonly Ludots.Core.Presentation.TagDisplay.TagDisplayTableRegistry? _tagDisplayTables;
+        private readonly GraphLookupTableRegistry? _lookupTables;
         private readonly RelationshipRuntime? _relationshipRuntime;
         private readonly TargetDispatchPresetRegistry? _targetDispatchPresets;
         private readonly EntityCollectionStore? _entityCollections;
@@ -153,7 +157,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 RequireService(services, CoreServiceKeys.EntitySetQueryRuntime),
                 RequireService(services, CoreServiceKeys.ControlDomainQuery),
                 RequireService(services, CoreServiceKeys.KnowledgeProjectionResolver),
-                RequireService(services, CoreServiceKeys.Clock)));
+                RequireService(services, CoreServiceKeys.Clock),
+                RequireService(services, CoreServiceKeys.GraphLookupTableRegistry)));
         }
 
         public static GasGraphRuntimeApi CreateProduction(GasGraphRuntimeProductionServices services)
@@ -177,7 +182,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 services.ReasonRegistry,
                 services.TargetDispatchPresets,
                 services.EntityCollections,
-                services.EntityQueries);
+                services.EntityQueries,
+                tagDisplayTables: null,
+                lookupTables: services.LookupTables);
             api.BindTopologyServices(
                 services.ControlDomains,
                 services.KnowledgeProjections,
@@ -210,7 +217,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             TargetDispatchPresetRegistry? targetDispatchPresets = null,
             EntityCollectionStore? entityCollections = null,
             EntitySetQueryRuntime? entityQueries = null,
-            Ludots.Core.Presentation.TagDisplay.TagDisplayTableRegistry? tagDisplayTables = null)
+            Ludots.Core.Presentation.TagDisplay.TagDisplayTableRegistry? tagDisplayTables = null,
+            GraphLookupTableRegistry? lookupTables = null)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
             _spatialQueries = spatialQueries;
@@ -223,6 +231,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _entityCollections = entityCollections;
             _entityQueries = entityQueries;
             _tagDisplayTables = tagDisplayTables;
+            _lookupTables = lookupTables;
             _ = typeRegistry;
             _ = metricRegistry;
             _ = flagRegistry;
@@ -647,6 +656,27 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             var tables = _tagDisplayTables
                 ?? throw new InvalidOperationException("GAS.GRAPH.ERR.TagDisplayLookupUnavailable");
             return tables.LookupToken(tableId, tagId);
+        }
+
+        public int ResolveTableRow(int tableId, int key)
+        {
+            var tables = _lookupTables
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.LookupTableUnavailable");
+            return tables.ResolveRow(tableId, key);
+        }
+
+        public int TableReadInt(int fieldId, int rowHandle)
+        {
+            var tables = _lookupTables
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.LookupTableUnavailable");
+            return tables.ReadInt(rowHandle, fieldId);
+        }
+
+        public float TableReadFloat(int fieldId, int rowHandle)
+        {
+            var tables = _lookupTables
+                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.LookupTableUnavailable");
+            return tables.ReadFloat(rowHandle, fieldId);
         }
 
         public bool TryGetAttributeCurrent(Entity entity, int attributeId, out float value)

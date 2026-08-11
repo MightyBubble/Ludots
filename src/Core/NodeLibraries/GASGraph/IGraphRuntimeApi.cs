@@ -336,6 +336,21 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             throw new InvalidOperationException("GAS.GRAPH.ERR.TagDisplayLookupUnavailable");
         }
 
+        int ResolveTableRow(int tableId, int key)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.LookupTableUnavailable");
+        }
+
+        int TableReadInt(int fieldId, int rowHandle)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.LookupTableUnavailable");
+        }
+
+        float TableReadFloat(int fieldId, int rowHandle)
+        {
+            throw new InvalidOperationException("GAS.GRAPH.ERR.LookupTableUnavailable");
+        }
+
         // ── Config parameter reading (from current EffectTemplate context) ──
 
         bool TryLoadConfigFloat(int keyId, out float value);
@@ -382,6 +397,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         {
             throw new InvalidOperationException(
                 $"Graph references tag display table '{name}', but no TagDisplayTableRegistry resolver is available.");
+        }
+
+        int ResolveGraphLookupTable(string name)
+        {
+            throw new InvalidOperationException(
+                $"Graph references lookup table '{name}', but no GraphLookupTableRegistry resolver is available.");
+        }
+
+        int ResolveGraphLookupField(string name)
+        {
+            throw new InvalidOperationException(
+                $"Graph references lookup field '{name}', but no GraphLookupTableRegistry resolver is available.");
         }
     }
 }
