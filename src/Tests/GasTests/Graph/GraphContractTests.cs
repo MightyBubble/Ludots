@@ -115,24 +115,44 @@ namespace Ludots.Tests.GAS.Graph
         }
 
         [Test]
-        public void GraphProgramConfigLoader_RejectsQueryGraphWithGameplayWrite()
+        public void GraphProgramConfigLoader_RejectsQueryGraphOnNextChainPath()
         {
             const string json = """
 [
   {
-    "id": "tests.graph.query-write",
+    "id": "tests.graph.query-next-chain",
     "kind": "Query",
-    "entry": "target",
+    "entry": "allMap",
     "nodes": [
-      { "id": "target", "op": "LoadExplicitTarget", "next": "amount" },
-      { "id": "amount", "op": "ConstFloat", "floatValue": 1.0, "next": "write" },
-      { "id": "write", "op": "ModifyAttributeAdd", "attribute": "tests.attr.health", "inputs": [ "target", "amount" ] }
+      { "id": "allMap", "op": "QueryAllMapEntities" }
     ]
   }
 ]
 """;
 
-            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => LoadPrograms(json))!;
+            AggregateException error = Assert.Throws<AggregateException>(() => LoadPrograms(json))!;
+            Assert.That(error.InnerExceptions, Has.Some.Matches<Exception>(ex =>
+                ex.Message.Contains("GraphKind.Query cannot be compiled by GraphCompiler", StringComparison.Ordinal) ||
+                ex.Message.Contains("Use GraphControlFlowCompiler for Query", StringComparison.Ordinal)));
+        }
+
+        [Test]
+        public void GraphKindOperationPolicy_RejectsQueryGraphWithGameplayWrite()
+        {
+            var program = new[]
+            {
+                new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 1 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = 1f },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.ModifyAttributeAdd, A = 1, B = 0, Imm = 1 }
+            };
+
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
+                GraphKindOperationPolicy.RequireAllowed(
+                    GraphKind.Query,
+                    program,
+                    GasGraphOpHandlerTable.Instance,
+                    graphId: 1,
+                    entrypoint: nameof(GraphContractTests)))!;
 
             Assert.That(error.Message, Does.StartWith(GraphKindOperationPolicy.OperationNotAllowedError));
             Assert.That(error.Message, Does.Contain("kind='Query'"));

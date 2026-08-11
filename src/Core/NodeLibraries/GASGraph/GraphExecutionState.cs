@@ -45,11 +45,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public IntVector2 TargetPosCm;
         public uint RandomSeed;
         public IGraphRuntimeApi Api;
+        public GraphProgramRegistry? Programs;
         public Span<float> F;
         public Span<int> I;
         public Span<byte> B;
         public Span<Entity> E;
         public Span<Entity> Targets;
         public GraphTargetList TargetList;
+        public Span<int> CallStack;
+        public int CallStackCount;
+        public int ReturnInt;
+        public GraphExecutionStatus Status;
+        /// <summary>Set by the executor for the active program; used by Call absolute-target checks.</summary>
+        public int ProgramLength;
     }
 }

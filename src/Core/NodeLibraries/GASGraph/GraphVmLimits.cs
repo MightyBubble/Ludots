@@ -7,6 +7,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public const int MaxBoolRegisters = 32;
         public const int MaxEntityRegisters = 32;
         public const int MaxTargets = 256;
+        public const int MaxCallStackDepth = 16;
 
         /// <summary>
         /// Hard limit on instructions executed per single Execute call.

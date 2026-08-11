@@ -18,10 +18,18 @@ namespace Ludots.Core.GraphRuntime
     public sealed class GraphProgramRegistry
     {
         private readonly Dictionary<int, GraphProgramRegistration> _programs = new();
+        private readonly Dictionary<int, GraphInstructionSourceMap> _sourceMaps = new();
 
-        public void Clear() => _programs.Clear();
+        public void Clear()
+        {
+            _programs.Clear();
+            _sourceMaps.Clear();
+        }
 
         public void Register(int graphId, GraphInstruction[] program, GraphKind kind)
+            => Register(graphId, program, kind, GraphInstructionSourceMap.Empty);
+
+        public void Register(int graphId, GraphInstruction[] program, GraphKind kind, GraphInstructionSourceMap sourceMap)
         {
             if (graphId <= 0) throw new ArgumentOutOfRangeException(nameof(graphId));
             if (program == null) throw new ArgumentNullException(nameof(program));
@@ -29,10 +37,16 @@ namespace Ludots.Core.GraphRuntime
             {
                 throw new ArgumentOutOfRangeException(nameof(kind), kind, "Graph registration requires an explicit supported kind.");
             }
+
             if (!_programs.TryAdd(graphId, new GraphProgramRegistration(program, kind)))
             {
                 throw new InvalidOperationException(
                     $"Graph program id {graphId} is already registered; duplicate registration is not allowed.");
+            }
+
+            if (sourceMap.HasSources)
+            {
+                _sourceMaps[graphId] = sourceMap;
             }
         }
 
@@ -81,5 +95,8 @@ namespace Ludots.Core.GraphRuntime
 
             return entry.Kind;
         }
+
+        public bool TryGetSourceMap(int graphId, out GraphInstructionSourceMap sourceMap)
+            => _sourceMaps.TryGetValue(graphId, out sourceMap);
     }
 }

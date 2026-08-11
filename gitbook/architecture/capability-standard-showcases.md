@@ -16,6 +16,14 @@ This page is the SSOT for production-grade capability acceptance showcase roots 
 | Physics2D Tuning | `capability_standard_physics2d_showcase` | `mods/showcases/capability_standard/CapabilityStandardPhysics2DShowcaseMod` | 15Hz Physics2D, 30K dynamic entities, 100K static entities, broadphase strategy, static obstacle templates, polygon authoring |
 | TimeFlow | `capability_standard_time_flow_showcase` | `mods/showcases/capability_standard/CapabilityStandardTimeFlowShowcaseMod` | TimeFlow pause/scale token stacks: settings pause, menu pause, skill indicator pause, nested system guide pause, scale layering, with MassNavigation, Physics2D, and GAS clock probes and no Formation/action coupling |
 | Crowd Physics Arena | `capability_standard_crowd_physics_arena` | `mods/showcases/capability_standard/CapabilityStandardCrowdPhysicsArenaMod` | massnav→kinematic bridge acceptance: kinematic squads push dynamic crates, pressure plate contact events open a door, Q shockwave displacement windows with handback, E boulder spawn with initial velocity, HUD counters |
+| Script Flow Sandbox | `capability_standard_script_flow_sandbox` | `mods/showcases/capability_standard/CapabilityStandardScriptFlowSandboxMod` | **原子 L1 Script**：Call/Yield/Halt「喝水直到满」水位条；不含 BT/HFSM/Level |
+| Behavior Tree Arena | `capability_standard_behavior_tree_arena` | `mods/showcases/capability_standard/CapabilityStandardBehaviorTreeArenaMod` | **可读剧本**：绿卫兵沿黄线巡逻；红敌人出现就追打（追击线）；消失后归位。灰点带=后台万人思考；思考波 &lt;5ms |
+| HFSM Sentry Arena | `capability_standard_hfsm_sentry_arena` | `mods/showcases/capability_standard/CapabilityStandardHfsmSentryArenaMod` | **可读剧本**：门岗线哨兵 Idle→警戒→交战→撤退；入侵者来回走；交战生命周期 Script |
+| Level Blueprint Trial | `capability_standard_level_blueprint_trial` | `mods/showcases/capability_standard/CapabilityStandardLevelBlueprintTrialMod` | **可读剧本**：走进触发圈→刷怪→清完开门→阶段色块推进 |
+| Ability Graph Sandbox | `capability_standard_ability_graph_sandbox` | `mods/showcases/capability_standard/CapabilityStandardAbilityGraphSandboxMod` | **可读剧本**：中间施法者对弧形靶子轮流 slash/bash，施法线+命中闪白 |
+| Graph Behavior Integration | `capability_standard_graph_behavior_integration` | `mods/showcases/capability_standard/CapabilityStandardGraphBehaviorIntegrationMod` | **单独短剧**：左巡逻 / 右门岗 / 上触发刷敌，串一条故事（不是四套糊在一起） |
+
+压力矩阵与 &lt;5ms 思考波报告：`docs/benchmarks/graph-behavior-pressure/`（Showcase 主镜头是剧本，万人在无头测试与灰点带）。
 
 Standard launch commands:
 
@@ -30,6 +38,12 @@ Standard launch commands:
 .\scripts\run-mod-launcher.cmd cli launch '$capability_standard_physics2d_showcase' --adapter raylib
 .\scripts\run-mod-launcher.cmd cli launch '$capability_standard_time_flow_showcase' --adapter raylib
 .\scripts\run-mod-launcher.cmd cli launch '$capability_standard_crowd_physics_arena' --adapter raylib
+.\scripts\run-mod-launcher.cmd cli launch '$capability_standard_script_flow_sandbox' --adapter raylib
+.\scripts\run-mod-launcher.cmd cli launch '$capability_standard_behavior_tree_arena' --adapter raylib
+.\scripts\run-mod-launcher.cmd cli launch '$capability_standard_hfsm_sentry_arena' --adapter raylib
+.\scripts\run-mod-launcher.cmd cli launch '$capability_standard_level_blueprint_trial' --adapter raylib
+.\scripts\run-mod-launcher.cmd cli launch '$capability_standard_ability_graph_sandbox' --adapter raylib
+.\scripts\run-mod-launcher.cmd cli launch '$capability_standard_graph_behavior_integration' --adapter raylib
 ```
 
 Preset launch commands:
@@ -45,6 +59,12 @@ Preset launch commands:
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_physics2d_showcase_raylib'
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_time_flow_showcase_raylib'
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_crowd_physics_arena_raylib'
+.\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_script_flow_sandbox_raylib'
+.\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_behavior_tree_arena_raylib'
+.\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_hfsm_sentry_arena_raylib'
+.\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_level_blueprint_trial_raylib'
+.\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_ability_graph_sandbox_raylib'
+.\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_graph_behavior_integration_raylib'
 ```
 
 ## Dependency Path

@@ -21,6 +21,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public const string BudgetExceeded = "GASG0009";
         public const string TypeMismatch = "GASG0010";
         public const string UnsupportedGraphKind = "GASG0011";
+        public const string MissingControlEdge = "GASG0012";
+        public const string UnexpectedControlEdge = "GASG0013";
+        public const string DuplicateControlEdge = "GASG0014";
+        public const string MissingValueInput = "GASG0015";
+        public const string DuplicateValueEdge = "GASG0016";
+        public const string RegisterOutOfRange = "GASG0017";
+        public const string UninitializedRegisterRead = "GASG0018";
+        public const string EmptyGraph = "GASG0019";
+        public const string MissingNodeId = "GASG0020";
     }
 }
 
