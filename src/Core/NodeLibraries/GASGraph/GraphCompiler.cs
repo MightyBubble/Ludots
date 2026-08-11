@@ -338,6 +338,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         ins.A = RequireInput(node, 0, GraphValueType.Int, valueMap, cfg.Id, diagnostics);
                         ins.Imm = RequireSymbol(node.DisplayTable, "displayTable", node, symbolToIndex, symbols, cfg.Id, diagnostics);
                         break;
+                    case GraphNodeOp.ResolveTableRow:
+                        ins.A = RequireInput(node, 0, GraphValueType.Int, valueMap, cfg.Id, diagnostics);
+                        ins.Imm = RequireSymbol(node.LookupTable, "lookupTable", node, symbolToIndex, symbols, cfg.Id, diagnostics);
+                        break;
+                    case GraphNodeOp.TableReadInt:
+                    case GraphNodeOp.TableReadFloat:
+                        ins.A = RequireInput(node, 0, GraphValueType.Int, valueMap, cfg.Id, diagnostics);
+                        ins.Imm = RequireLookupFieldSymbol(node, symbolToIndex, symbols, cfg.Id, diagnostics);
+                        break;
                     case GraphNodeOp.ModifyAttributeAdd:
                         ins.A = RequireInput(node, 0, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
                         ins.B = RequireInput(node, 1, GraphValueType.Float, valueMap, cfg.Id, diagnostics);
@@ -618,6 +627,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.HasTag => (GraphValueType.Bool, null),
                 GraphNodeOp.SelectTagInMask => (GraphValueType.Int, null),
                 GraphNodeOp.LookupTagDisplayToken => (GraphValueType.Int, null),
+                GraphNodeOp.ResolveTableRow => (GraphValueType.Int, null),
+                GraphNodeOp.TableReadInt => (GraphValueType.Int, null),
+                GraphNodeOp.TableReadFloat => (GraphValueType.Float, null),
                 GraphNodeOp.SelectEntity => (GraphValueType.Entity, null),
                 GraphNodeOp.AggCount => (GraphValueType.Int, null),
                 GraphNodeOp.AggMinByDistance => (GraphValueType.Entity, null),
@@ -1077,6 +1089,28 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             }
 
             return Intern(symbolToIndex, symbols, symbol);
+        }
+
+        private static int RequireLookupFieldSymbol(
+            GraphNodeConfig node,
+            Dictionary<string, int> symbolToIndex,
+            List<string> symbols,
+            string graphId,
+            List<GraphDiagnostic> diagnostics)
+        {
+            if (string.IsNullOrWhiteSpace(node.LookupTable) || string.IsNullOrWhiteSpace(node.LookupField))
+            {
+                diagnostics.Add(new GraphDiagnostic(
+                    GraphDiagnosticSeverity.Error,
+                    GraphDiagnosticCodes.MissingNodeRef,
+                    $"Node '{node.Id}' requires non-empty lookupTable and lookupField.",
+                    graphId,
+                    node.Id));
+                return -1;
+            }
+
+            string fieldSymbol = Host.GraphLookupTableRegistry.EncodeFieldSymbol(node.LookupTable, node.LookupField);
+            return Intern(symbolToIndex, symbols, fieldSymbol);
         }
 
         private static int ParseRelationshipFilterMode(

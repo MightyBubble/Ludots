@@ -29,6 +29,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         public string? DisplayTable { get; set; }
         /// <summary>RequireOne | AllowNone | LowestId for SelectTagInMask (default RequireOne).</summary>
         public string? TagSelectPolicy { get; set; }
+        /// <summary>GraphLookupTable id for ResolveTableRow / TableRead*.</summary>
+        public string? LookupTable { get; set; }
+        /// <summary>Column id within LookupTable for TableReadInt / TableReadFloat.</summary>
+        public string? LookupField { get; set; }
         public string? Attribute { get; set; }
         public string? Template { get; set; }
         public string? CollectionKey { get; set; }

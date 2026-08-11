@@ -166,6 +166,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         HaltReturnInt = 433,   // halt with ReturnInt = I[A]
         InvokeScript = 434,    // run Script graph Imm to halt (callee must not Yield)
         MoveInt = 435,         // I[Dst] = I[A]
+
+        // ── Generic Mod lookup tables (436-438) ──
+        /// <summary>I[Dst] = ResolveTableRow(Imm=tableId, I[A]=key).</summary>
+        ResolveTableRow = 436,
+        /// <summary>I[Dst] = TableReadInt(Imm=fieldId, I[A]=rowHandle). TextToken columns return token id.</summary>
+        TableReadInt = 437,
+        /// <summary>F[Dst] = TableReadFloat(Imm=fieldId, I[A]=rowHandle).</summary>
+        TableReadFloat = 438,
     }
 
     public static class GraphNodeOpParser
