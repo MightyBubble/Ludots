@@ -18,6 +18,7 @@
   - [图分层：Flow / Script 与行为调度](architecture/graph-layering-flow-and-behavior.md)
   - [Tag → 展示 Token 查表（面板 curState）](architecture/tag-display-lookup.md)
   - [GAS、订单与输入运行时合同](architecture/gas-order-input-runtime-contract.md)
+  - [实时技能工作台（LSW）架构契约](architecture/live-skill-workbench.md)
   - [Input Order Routing 与 Spawn Target 基建](architecture/input-order-and-spawn-target.md)
   - [Entity Lifecycle 原子 Op](architecture/entity-lifecycle-atomic-ops.md)
   - [时间体系](architecture/time-system.md)
