@@ -4,7 +4,12 @@
     "kind": "Effect",
     "entry": "n1",
     "nodes": [
-      { "id": "n1", "op": "LoadContextTarget" }
-    ]
+      {
+        "id": "n1",
+        "op": "LoadContextTarget"
+      }
+    ],
+    "controlEdges": [],
+    "valueEdges": []
   }
 ]

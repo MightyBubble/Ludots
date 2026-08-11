@@ -4,6 +4,7 @@ using Ludots.Core.Map.Hex;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Modding;
 using Ludots.Core.NodeLibraries.GASGraph;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Launcher.Backend;
 using Ludots.Core.Navigation.NavMesh;
 using Ludots.Core.Navigation.NavMesh.Bake;
@@ -1711,34 +1712,22 @@ static bool TryNormalizeGasGraphBody(JsonObject bodyObj, string graphId, out str
     error = string.Empty;
     try
     {
-        if (IsControlFlowGraphObject(bodyObj))
+        GraphKind kind = GraphProgramAuthoringFrontDoor.RequireKind(bodyObj, graphId);
+        GraphProgramAuthoringFrontDoor.RequireControlFlowAuthoringShape(bodyObj, graphId, kind);
+
+        GraphControlFlowDocument? doc = bodyObj.Deserialize<GraphControlFlowDocument>(StrictJsonOptions.CreateCamelCase(includeFields: true));
+        if (doc == null)
         {
-            if (HasLegacyNextChain(bodyObj))
-            {
-                error = "ControlFlow graph JSON cannot mix controlEdges/valueEdges with nodes[].next.";
-                return false;
-            }
-
-            GraphControlFlowDocument? doc = bodyObj.Deserialize<GraphControlFlowDocument>(StrictJsonOptions.CreateCamelCase(includeFields: true));
-            if (doc == null)
-            {
-                error = "Failed to deserialize GraphControlFlowDocument.";
-                return false;
-            }
-
-            normalizedId = string.IsNullOrWhiteSpace(doc.Id) ? graphId : doc.Id;
+            error = "Failed to deserialize GraphControlFlowDocument.";
+            return false;
         }
-        else
-        {
-            GraphConfig? cfg = bodyObj.Deserialize<GraphConfig>(StrictJsonOptions.CreateCamelCase());
-            if (cfg == null)
-            {
-                error = "Failed to deserialize GraphConfig.";
-                return false;
-            }
 
-            normalizedId = string.IsNullOrWhiteSpace(cfg.Id) ? graphId : cfg.Id;
-        }
+        normalizedId = string.IsNullOrWhiteSpace(doc.Id) ? graphId : doc.Id;
+    }
+    catch (InvalidOperationException ex)
+    {
+        error = ex.Message;
+        return false;
     }
     catch (JsonException ex)
     {
@@ -1767,71 +1756,24 @@ static bool TryCompileGasGraph(
     error = string.Empty;
     try
     {
-        if (IsControlFlowGraphObject(graphObj))
-        {
-            if (HasLegacyNextChain(graphObj))
-            {
-                error = "ControlFlow graph JSON cannot mix controlEdges/valueEdges with nodes[].next.";
-                return false;
-            }
-
-            GraphControlFlowDocument? doc = graphObj.Deserialize<GraphControlFlowDocument>(StrictJsonOptions.CreateCamelCase(includeFields: true));
-            if (doc == null)
-            {
-                error = "Failed to deserialize GraphControlFlowDocument.";
-                return false;
-            }
-
-            if (string.IsNullOrWhiteSpace(doc.Id))
-                doc.Id = graphId;
-
-            var result = GraphControlFlowCompiler.CompileWithOutputs(doc);
-            package = result.Package;
-            diagnostics = result.Diagnostics;
-            return true;
-        }
-
-        GraphConfig? cfg = graphObj.Deserialize<GraphConfig>(StrictJsonOptions.CreateCamelCase());
-        if (cfg == null)
-        {
-            error = "Failed to deserialize GraphConfig.";
-            return false;
-        }
-
-        if (string.IsNullOrWhiteSpace(cfg.Id))
-            cfg.Id = graphId;
-
-        var legacyResult = GraphCompiler.CompileWithOutputs(cfg);
-        package = legacyResult.Package;
-        diagnostics = legacyResult.Diagnostics;
+        var result = GraphProgramAuthoringFrontDoor.CompileJsonObject(
+            graphObj,
+            graphId,
+            StrictJsonOptions.CreateCamelCase(includeFields: true));
+        package = result.Package;
+        diagnostics = result.Diagnostics;
         return true;
+    }
+    catch (InvalidOperationException ex)
+    {
+        error = ex.Message;
+        return false;
     }
     catch (JsonException ex)
     {
         error = $"Failed to deserialize gas graph: {ex.Message}";
         return false;
     }
-}
-
-static bool IsControlFlowGraphObject(JsonObject obj)
-    => obj.ContainsKey("controlEdges") || obj.ContainsKey("valueEdges");
-
-static bool HasLegacyNextChain(JsonObject obj)
-{
-    if (obj["nodes"] is not JsonArray nodes)
-    {
-        return false;
-    }
-
-    for (int i = 0; i < nodes.Count; i++)
-    {
-        if (nodes[i] is JsonObject node && node.ContainsKey("next"))
-        {
-            return true;
-        }
-    }
-
-    return false;
 }
 
 app.Run("http://localhost:5299");

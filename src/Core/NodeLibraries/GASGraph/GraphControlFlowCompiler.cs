@@ -56,7 +56,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
     }
 
     /// <summary>
-    /// Compiles L1 Script and Query control-flow documents into <see cref="GraphInstruction"/> using GraphNodeOp.
+    /// Compiles L1 ControlFlow documents (all GraphKinds) into <see cref="GraphInstruction"/> using GraphNodeOp.
     /// BranchBool is compile-time sugar only (not a GraphNodeOp).
     /// </summary>
     public static partial class GraphControlFlowCompiler
@@ -275,10 +275,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             }
 
             if (!GraphKindParser.TryParse(document.Kind, out GraphKind graphKind) ||
-                graphKind is not (GraphKind.Script or GraphKind.Query))
+                !GraphAuthoringKindPolicy.IsControlFlowAuthoringKind(graphKind))
             {
                 diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnsupportedGraphKind,
-                    $"ControlFlow document kind '{document.Kind}' is not supported. Supported kinds: Script, Query."));
+                    $"ControlFlow document kind '{document.Kind}' is not supported. Supported kinds: {GraphAuthoringKindPolicy.DescribeSupportedKinds()}."));
                 return GraphKind.Script;
             }
 
@@ -371,6 +371,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 return IsQueryControlFlowAuthorable(op);
             }
 
+            if (GraphAuthoringKindPolicy.IsLinearAuthoringKind(graphKind))
+            {
+                return IsLinearControlFlowAuthorable(op);
+            }
+
             return op is GraphNodeOp.ConstInt or
                          GraphNodeOp.AddInt or
                          GraphNodeOp.CompareLtInt or
@@ -385,7 +390,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
 
         private static string GraphKindLabel(GraphKind graphKind)
-            => graphKind == GraphKind.Query ? "Query" : "Script";
+            => graphKind.ToString();
 
         private static Dictionary<ControlKey, string> BuildControlEdges(
             GraphControlFlowDocument document,
@@ -521,6 +526,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     GraphValueType.Bool => Alloc(ref boolNext, GraphVmLimits.MaxBoolRegisters, graphId, nodes[i].Id, diagnostics),
                     GraphValueType.Float => Alloc(ref floatNext, GraphVmLimits.MaxFloatRegisters, graphId, nodes[i].Id, diagnostics),
                     GraphValueType.Entity when ops[i].NodeOp == GraphNodeOp.LoadCaster => 0,
+                    GraphValueType.Entity when ops[i].NodeOp == GraphNodeOp.LoadExplicitTarget => 1,
+                    GraphValueType.Entity when ops[i].NodeOp == GraphNodeOp.LoadViewer => 2,
                     GraphValueType.Entity => Alloc(ref entityNext, GraphVmLimits.MaxEntityRegisters, graphId, nodes[i].Id, diagnostics),
                     _ => (byte)0
                 };
@@ -549,6 +556,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             if (graphKind == GraphKind.Query)
             {
                 return GetQueryOutputType(op.NodeOp);
+            }
+
+            if (GraphAuthoringKindPolicy.IsLinearAuthoringKind(graphKind))
+            {
+                return GetLinearOutputType(op.NodeOp);
             }
 
             return op.NodeOp switch
@@ -583,6 +595,20 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     ValidateQueryNode(
                         nodes,
                         i,
+                        op,
+                        controlEdges,
+                        valueEdges,
+                        nodeIndices,
+                        outputTypes,
+                        graphId,
+                        diagnostics);
+                    continue;
+                }
+
+                if (GraphAuthoringKindPolicy.IsLinearAuthoringKind(graphKind))
+                {
+                    ValidateLinearNode(
+                        node,
                         op,
                         controlEdges,
                         valueEdges,
@@ -686,6 +712,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 return IsAllowedQueryControlPort(port);
             }
 
+            if (GraphAuthoringKindPolicy.IsLinearAuthoringKind(graphKind))
+            {
+                return IsAllowedLinearControlPort(port);
+            }
+
             if (op.Kind == AuthoredOpKind.BranchBool || op.NodeOp == GraphNodeOp.JumpIfFalse)
             {
                 return port is GraphControlFlowPorts.True or GraphControlFlowPorts.False;
@@ -707,6 +738,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 return IsAllowedQueryInputPort(op.NodeOp, port);
             }
 
+            if (GraphAuthoringKindPolicy.IsLinearAuthoringKind(graphKind))
+            {
+                return IsAllowedLinearInputPort(op.NodeOp, port);
+            }
+
             if (op.Kind == AuthoredOpKind.BranchBool || op.NodeOp == GraphNodeOp.JumpIfFalse)
             {
                 return port == GraphControlFlowPorts.Condition;
@@ -725,6 +761,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             if (graphKind == GraphKind.Query)
             {
                 return IsAllowedQueryOutputPort(op.NodeOp, port);
+            }
+
+            if (GraphAuthoringKindPolicy.IsLinearAuthoringKind(graphKind))
+            {
+                return IsAllowedLinearOutputPort(op.NodeOp, port);
             }
 
             return GetOutputType(op, graphKind) != GraphValueType.Void && port == GraphControlFlowPorts.Value;
@@ -821,7 +862,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             GraphKind graphKind,
             Dictionary<ControlKey, string> controlEdges)
         {
-            if (graphKind == GraphKind.Query)
+            if (graphKind == GraphKind.Query || GraphAuthoringKindPolicy.IsLinearAuthoringKind(graphKind))
             {
                 return controlEdges.ContainsKey(new ControlKey(node.Id, GraphControlFlowPorts.Next)) ? 2 : 1;
             }
@@ -866,6 +907,29 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             if (graphKind == GraphKind.Query)
             {
                 CompileQueryNode(
+                    document,
+                    node,
+                    op,
+                    outputRegisters,
+                    outputTypes,
+                    controlEdges,
+                    valueEdges,
+                    nodeIndices,
+                    layouts,
+                    program,
+                    sources,
+                    definedInts,
+                    definedBools,
+                    symbolToIndex,
+                    symbols,
+                    graphId,
+                    diagnostics);
+                return;
+            }
+
+            if (GraphAuthoringKindPolicy.IsLinearAuthoringKind(graphKind))
+            {
+                CompileLinearNode(
                     document,
                     node,
                     op,

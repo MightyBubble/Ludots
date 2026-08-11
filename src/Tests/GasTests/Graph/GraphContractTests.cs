@@ -40,7 +40,9 @@ namespace Ludots.Tests.GAS.Graph
     "kind": "Effect",
     "entry": "n0",
     "notARealField": true,
-    "nodes": [ { "id": "n0", "op": "ConstBool", "boolValue": true } ]
+    "nodes": [ { "id": "n0", "op": "ConstFloat", "floatValue": 1.0 } ],
+    "controlEdges": [],
+    "valueEdges": []
   }
 ]
 """;
@@ -100,7 +102,9 @@ namespace Ludots.Tests.GAS.Graph
     "id": "tests.graph.kind-score",
     "kind": "Score",
     "entry": "n0",
-    "nodes": [ { "id": "n0", "op": "ConstFloat", "floatValue": 1.5 } ]
+    "nodes": [ { "id": "n0", "op": "ConstFloat", "floatValue": 1.5 } ],
+    "controlEdges": [],
+    "valueEdges": []
   }
 ]
 """;
@@ -132,8 +136,64 @@ namespace Ludots.Tests.GAS.Graph
 
             AggregateException error = Assert.Throws<AggregateException>(() => LoadPrograms(json))!;
             Assert.That(error.InnerExceptions, Has.Some.Matches<Exception>(ex =>
-                ex.Message.Contains("GraphKind.Query cannot be compiled by GraphCompiler", StringComparison.Ordinal) ||
-                ex.Message.Contains("Use GraphControlFlowCompiler for Query", StringComparison.Ordinal)));
+                ex.Message.Contains("must author controlEdges and valueEdges", StringComparison.Ordinal) ||
+                ex.Message.Contains("uses nodes[].next", StringComparison.Ordinal)));
+        }
+
+        [Test]
+        public void GraphProgramConfigLoader_RejectsEffectGraphOnNextChainPath()
+        {
+            const string json = """
+[
+  {
+    "id": "tests.graph.effect-next-chain",
+    "kind": "Effect",
+    "entry": "c0",
+    "nodes": [
+      { "id": "c0", "op": "ConstFloat", "floatValue": 1.0, "next": "c1" },
+      { "id": "c1", "op": "ConstFloat", "floatValue": 2.0 }
+    ]
+  }
+]
+""";
+
+            AggregateException error = Assert.Throws<AggregateException>(() => LoadPrograms(json))!;
+            Assert.That(error.InnerExceptions, Has.Some.Matches<Exception>(ex =>
+                ex.Message.Contains("uses nodes[].next", StringComparison.Ordinal)));
+        }
+
+        [Test]
+        public void GraphProgramConfigLoader_CompilesEffectControlFlowByKind()
+        {
+            const string json = """
+[
+  {
+    "id": "tests.graph.effect-control-flow",
+    "kind": "Effect",
+    "entry": "target",
+    "nodes": [
+      { "id": "target", "op": "LoadExplicitTarget" },
+      { "id": "delta", "op": "ConstFloat", "floatValue": 3.0 },
+      { "id": "modify", "op": "ModifyAttributeAdd", "attribute": "Health" }
+    ],
+    "controlEdges": [
+      { "from": "target", "fromPort": "next", "to": "delta" },
+      { "from": "delta", "fromPort": "next", "to": "modify" }
+    ],
+    "valueEdges": [
+      { "from": "target", "fromPort": "value", "to": "modify", "toPort": "target" },
+      { "from": "delta", "fromPort": "value", "to": "modify", "toPort": "value" }
+    ]
+  }
+]
+""";
+
+            GraphProgramRegistry programs = LoadPrograms(json);
+            int graphId = GraphIdRegistry.GetId("tests.graph.effect-control-flow");
+            Assert.That(programs.TryGetKind(graphId, out GraphKind kind), Is.True);
+            Assert.That(kind, Is.EqualTo(GraphKind.Effect));
+            Assert.That(programs.TryGetProgram(graphId, out ReadOnlySpan<GraphInstruction> program), Is.True);
+            Assert.That(program.Length, Is.GreaterThan(0));
         }
 
         [Test]

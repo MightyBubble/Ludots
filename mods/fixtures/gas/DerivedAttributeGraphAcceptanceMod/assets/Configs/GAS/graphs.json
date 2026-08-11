@@ -7,45 +7,105 @@
       {
         "id": "source",
         "op": "LoadSelfAttribute",
-        "attribute": "tests.production-derived-graph.source",
-        "next": "two"
+        "attribute": "tests.production-derived-graph.source"
       },
       {
         "id": "two",
         "op": "ConstFloat",
-        "floatValue": 2.0,
-        "next": "multiply"
+        "floatValue": 2.0
       },
       {
         "id": "multiply",
-        "op": "MulFloat",
-        "inputs": [ "source", "two" ],
-        "next": "writeDoubled"
+        "op": "MulFloat"
       },
       {
         "id": "writeDoubled",
         "op": "WriteSelfAttribute",
-        "attribute": "tests.production-derived-graph.doubled",
-        "inputs": [ "multiply" ],
-        "next": "three"
+        "attribute": "tests.production-derived-graph.doubled"
       },
       {
         "id": "three",
         "op": "ConstFloat",
-        "floatValue": 3.0,
-        "next": "addOffset"
+        "floatValue": 3.0
       },
       {
         "id": "addOffset",
-        "op": "AddFloat",
-        "inputs": [ "source", "three" ],
-        "next": "writeOffset"
+        "op": "AddFloat"
       },
       {
         "id": "writeOffset",
         "op": "WriteSelfAttribute",
-        "attribute": "tests.production-derived-graph.offset",
-        "inputs": [ "addOffset" ]
+        "attribute": "tests.production-derived-graph.offset"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "source",
+        "fromPort": "next",
+        "to": "two"
+      },
+      {
+        "from": "two",
+        "fromPort": "next",
+        "to": "multiply"
+      },
+      {
+        "from": "multiply",
+        "fromPort": "next",
+        "to": "writeDoubled"
+      },
+      {
+        "from": "writeDoubled",
+        "fromPort": "next",
+        "to": "three"
+      },
+      {
+        "from": "three",
+        "fromPort": "next",
+        "to": "addOffset"
+      },
+      {
+        "from": "addOffset",
+        "fromPort": "next",
+        "to": "writeOffset"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "source",
+        "fromPort": "value",
+        "to": "multiply",
+        "toPort": "a"
+      },
+      {
+        "from": "two",
+        "fromPort": "value",
+        "to": "multiply",
+        "toPort": "b"
+      },
+      {
+        "from": "multiply",
+        "fromPort": "value",
+        "to": "writeDoubled",
+        "toPort": "value"
+      },
+      {
+        "from": "source",
+        "fromPort": "value",
+        "to": "addOffset",
+        "toPort": "a"
+      },
+      {
+        "from": "three",
+        "fromPort": "value",
+        "to": "addOffset",
+        "toPort": "b"
+      },
+      {
+        "from": "addOffset",
+        "fromPort": "value",
+        "to": "writeOffset",
+        "toPort": "value"
       }
     ]
   }

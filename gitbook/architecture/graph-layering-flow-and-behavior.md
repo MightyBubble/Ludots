@@ -15,12 +15,12 @@ Ludots 的图能力分成三层，对标 Paradox **FlowCanvas（细流程）+ No
 ```text
 L2 BehaviorTree / HFSM / LevelDirector ← 粗节点拓扑（Core runtime 已落地）
         │ BT ScriptSlice(GraphId) / HFSM GraphProgramHfsmHost / Level RunScript
-L1 Script / Query / Effect / Score / … ← 细节点流程（GraphInstruction）
-        │ Script 与 Query 文档走 GraphControlFlowCompiler pin IR
+L1 全 Kind 作者 SSOT ← GraphControlFlowDocument（controlEdges + valueEdges）
+        │ Kind → GraphProgramAuthoringFrontDoor → GraphControlFlowCompiler
 L0 GraphInstruction + handler table + Execute / ExecuteSlice
 ```
 
-说明：`GAS/graphs.json` 的旧 Next 链编译器**拒绝** `Kind: Script` 与 `Kind: Query`。Script / Query 作者文档一律走 `GraphControlFlowDocument` + `GraphControlFlowCompiler`（`controlEdges` / `valueEdges`），编译为同一套 L0 `GraphInstruction`。不得把 `nodes[].next` 与 CF 边混写。Query 真引脚覆盖仓库在用的检索/过滤/聚合/关系查询 ops，以及 Summary / EntityCollection outputs。`Execute`/`ExecuteSlice` 均要求调用方提供 CallStack（禁止堆分配兜底）。BT 条件 Script 前由 `IBehaviorTreeSensorFeed` 写入 I[0]。
+说明（#861）：`GAS/graphs.json` **唯一加载前门**是 `GraphProgramAuthoringFrontDoor`——按 `kind` 校验作者 schema，再进 `GraphControlFlowCompiler`。正式资产必须写 `controlEdges` / `valueEdges`；`nodes[].next` 在加载路径硬拒（不得再按「有没有 controlEdges」猜编译器）。节点白名单按 Kind 过滤（Script / Query / Effect·Score·Validation·Derived 线性方言）。Query 列表流仍用 `list` 显式连接。旧 `GraphCompiler`（next-chain）仅保留给对照/研究测试，不是生产真相。`Execute`/`ExecuteSlice` 均要求调用方提供 CallStack。BT 条件 Script 前由 `IBehaviorTreeSensorFeed` 写入 I[0]。
 
 ## 3. 详情
 
