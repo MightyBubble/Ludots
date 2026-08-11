@@ -1,0 +1,30 @@
+[
+  {
+    "id": "ui.panel.player.resource.aggregate",
+    "kind": "Query",
+    "entry": "owner",
+    "nodes": [
+      { "id": "owner", "op": "LoadCaster", "next": "allMap" },
+      { "id": "allMap", "op": "QueryAllMapEntities", "next": "team" },
+      { "id": "team", "op": "QueryFilterTeam", "teamId": 1, "next": "oreSum" },
+      { "id": "oreSum", "op": "AggSumAttribute", "attribute": "Showcase.Resource.Ore", "next": "crystalSum" },
+      { "id": "crystalSum", "op": "AggSumAttribute", "attribute": "Showcase.Resource.Crystal" }
+    ],
+    "outputs": [
+      {
+        "id": "oreTotal",
+        "destination": "Summary",
+        "type": "Float",
+        "source": "oreSum",
+        "key": "ui.panel.player.ore.total"
+      },
+      {
+        "id": "crystalTotal",
+        "destination": "Summary",
+        "type": "Float",
+        "source": "crystalSum",
+        "key": "ui.panel.player.crystal.total"
+      }
+    ]
+  }
+]

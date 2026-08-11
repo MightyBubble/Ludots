@@ -1719,6 +1719,31 @@
       ]
     },
     {
+      "id": "ui_player_aggregate_graph_mvp",
+      "path": "mods/showcases/ui_player_aggregate_graph_mvp/UiPlayerAggregateGraphMvpShowcaseMod",
+      "projectPath": "UiPlayerAggregateGraphMvpShowcaseMod.csproj",
+      "title": "玩家信息聚合 · 资源总览条 MVP",
+      "summary": "Query graph → GraphReturnWriter → GraphOutputValueStore 驱动的原生资源总览条；禁止 showcase 内手写跨实体求和。",
+      "tier": "T2",
+      "category": "panel",
+      "tags": [
+        "ui",
+        "panel",
+        "graph",
+        "aggregate",
+        "mvp"
+      ],
+      "binding": "ui_player_aggregate_graph_mvp",
+      "preset": "ui_player_aggregate_graph_mvp_raylib",
+      "docsPath": null,
+      "readmePath": null,
+      "acceptanceTest": "UiPlayerAggregateGraphMvpShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/acceptance/ui-player-aggregate-graph-mvp",
+      "screenshot": null,
+      "status": "active",
+      "notes": "Epic #858 UIP-1 MVP; screenshot evidence pending CI"
+    },
+    {
       "id": "ui_showcase_core",
       "path": "mods/UiShowcaseCoreMod",
       "projectPath": "UiShowcaseCoreMod.csproj",

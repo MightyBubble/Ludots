@@ -216,6 +216,15 @@
       }
     },
     {
+      "id": "ui_player_aggregate_graph_mvp_raylib",
+      "name": "Player Aggregate Graph MVP Raylib",
+      "selectors": [
+        "$ui_player_aggregate_graph_mvp"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "utility_autocast_showcase_raylib",
       "name": "Utility Autocast Showcase Raylib",
       "selectors": [

@@ -218,6 +218,14 @@
       }
     },
     {
+      "name": "ui_player_aggregate_graph_mvp",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/ui_player_aggregate_graph_mvp/UiPlayerAggregateGraphMvpShowcaseMod",
+        "projectPath": "UiPlayerAggregateGraphMvpShowcaseMod.csproj"
+      }
+    },
+    {
       "name": "utility_autocast_showcase",
       "target": {
         "type": "path",
