@@ -2,6 +2,7 @@ using System.Threading.Tasks;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Modding;
+using Ludots.Core.Presentation.DebugDraw;
 using Ludots.Core.Scripting;
 using UiPlayerAggregateGraphMvpShowcaseMod.Runtime;
 using UiPlayerAggregateGraphMvpShowcaseMod.Systems;
@@ -34,8 +35,10 @@ public sealed class UiPlayerAggregateGraphMvpShowcaseModEntry : IMod
 
             engine.GlobalContext[UiPlayerAggregateGraphMvpIds.InstalledKey] = true;
             engine.GlobalContext[UiPlayerAggregateGraphMvpIds.RuntimeServiceKey] = runtime;
+            var debugDraw = engine.GetService(CoreServiceKeys.DebugDrawCommandBuffer) ?? new DebugDrawCommandBuffer();
+            engine.SetService(CoreServiceKeys.DebugDrawCommandBuffer, debugDraw);
             engine.RegisterSystem(new UiPlayerAggregateGraphMvpSimulationSystem(engine, runtime), SystemGroup.PostMovement);
-            engine.RegisterPresentationSystem(new UiPlayerAggregateGraphMvpPresentationSystem(engine, runtime));
+            engine.RegisterPresentationSystem(new UiPlayerAggregateGraphMvpPresentationSystem(engine, runtime, debugDraw));
             context.Log("[UiPlayerAggregateGraphMvpShowcaseMod] production systems registered.");
             return Task.CompletedTask;
         });
