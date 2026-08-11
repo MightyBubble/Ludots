@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Globalization;
 using Ludots.Core.NodeLibraries.GASGraph;
 
 namespace Ludots.Core.GraphRuntime
@@ -98,5 +100,30 @@ namespace Ludots.Core.GraphRuntime
         public const string A = "a";
         public const string B = "b";
         public const string Condition = "condition";
+        /// <summary>Int selector input for SwitchInt compile-time sugar.</summary>
+        public const string Selector = "selector";
+        /// <summary>Default arm control port for SwitchInt compile-time sugar.</summary>
+        public const string Default = "default";
+        /// <summary>Control port prefix for SwitchInt arms; full port is case:{int}.</summary>
+        public const string CasePrefix = "case:";
+
+        public static string Case(int caseValue)
+            => CasePrefix + caseValue.ToString(CultureInfo.InvariantCulture);
+
+        public static bool TryParseCasePort(string port, out int caseValue)
+        {
+            caseValue = 0;
+            if (string.IsNullOrEmpty(port) ||
+                !port.StartsWith(CasePrefix, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            return int.TryParse(
+                port.AsSpan(CasePrefix.Length),
+                NumberStyles.Integer,
+                CultureInfo.InvariantCulture,
+                out caseValue);
+        }
     }
 }
