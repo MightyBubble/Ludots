@@ -55,3 +55,20 @@ N/A — 不新增 `GraphNodeOp`。
 「下一个 Mod 变体」将修改: **graph 连线**
 
 若选了 Core enum → FAIL
+
+---
+
+## Appendix: #858 / #875 面板投影落地审计（#883）
+
+> **不覆盖上文 #861 主体。** 面板线审计正本（可提交）：`docs/audits/875-or-858-audit-handoff.md`  
+> 约定路径 `artifacts/pr/875-or-858-audit-handoff.md` 因 `artifacts/` gitignore 不可作为唯一交付。
+
+| 项 | 结论 |
+|----|------|
+| 资源条 MVP + PanelProjectionReader + 编辑器样板 | **已做**（#875 / main） |
+| UIP-0 Template/Instance/Router 运行时 | **未做**（#880） |
+| 通用查表 ResolveTableRow / TableRead* | **未做**（#881） |
+| TagDisplay 专线 | **废止**（#876），不是待接线；清理 #877；文档纠偏 #879 |
+| 本附录审计结论 | **PASS**（落地切片）；SSOT 文档残留见 handoff |
+
+Epic 勾选建议与残留债指针：见 handoff 正文。

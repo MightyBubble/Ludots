@@ -14,6 +14,7 @@
 * [RFC-0065 PR581 Workflow Closeout](rfc_0065_pr581_workflow_closeout.md)
 * [最近提交审计与端到端交互验收](recent_commit_audit_and_e2e_showcase.md)
 * [版本收敛处置矩阵](convergence_disposition_matrix.md)
+* [#858 / #875 落地架构审计交接](875-or-858-audit-handoff.md)（issue #883）
 
 ## 2 使用边界
 
