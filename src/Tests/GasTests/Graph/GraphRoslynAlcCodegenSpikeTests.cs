@@ -11,7 +11,7 @@ using static NUnit.Framework.Assert;
 namespace Ludots.Tests.Gas.Graph
 {
     /// <summary>
-    /// #860 R0 spike: linear int graph → C# codegen → Roslyn → Collectible ALC → hot swap,
+    /// #860 R0 + Track C spike: linear/branch int graph → C# codegen → Roslyn → Collectible ALC → hot swap,
     /// with fail-closed compile errors and native/interpret/codegen microbench reporting.
     /// </summary>
     [TestFixture]
@@ -19,6 +19,8 @@ namespace Ludots.Tests.Gas.Graph
     public sealed class GraphRoslynAlcCodegenSpikeTests
     {
         private const int ExpectedLinearResult = 6;
+        private const int ExpectedIfElseTrueResult = 10;
+        private const int ExpectedIfElseFalseResult = 20;
 
         [Test]
         public void Codegen_LinearIntChain_MatchesInterpretVm()
@@ -134,13 +136,93 @@ namespace Ludots.Tests.Gas.Graph
             GraphInstruction[] program =
             {
                 new() { Op = (ushort)GraphNodeOp.ConstInt, Dst = 0, Imm = 1 },
-                new() { Op = (ushort)GraphNodeOp.Jump, Imm = 0 },
+                new() { Op = (ushort)GraphNodeOp.QueryRadius, Imm = 0 },
             };
 
             var ex = Throws<InvalidOperationException>(() =>
                 LinearIntGraphCsharpEmitter.Emit(program, "bad-op"));
-            That(ex!.Message, Does.Contain("Jump"));
+            That(ex!.Message, Does.Contain("QueryRadius"));
             That(ex.Message, Does.Contain("whitelist"));
+        }
+
+        [Test]
+        public void Codegen_IfElseIntProgram_MatchesInterpretVm_TrueBranch()
+        {
+            // if (3 < 7) I[2]=10; else I[2]=20;
+            GraphInstruction[] program = BuildIfElseLtProgram(left: 3, right: 7);
+            int interpret = ExecuteInterpretRegister(program, register: 2);
+
+            using var host = new GraphRoslynAlcCompilerHost();
+            GraphGeneratedExecute execute = host.CompileAndActivate(program, "ifelse-true");
+            int codegen = ExecuteCodegenRegister(execute, register: 2);
+
+            That(interpret, Is.EqualTo(ExpectedIfElseTrueResult));
+            That(codegen, Is.EqualTo(ExpectedIfElseTrueResult));
+            That(host.ActiveSource, Does.Contain("goto L"));
+            That(host.ActiveSource, Does.Contain("== 0) goto"));
+            That(host.ActiveTightExecute!(), Is.EqualTo(ExpectedIfElseTrueResult));
+        }
+
+        [Test]
+        public void Codegen_IfElseIntProgram_MatchesInterpretVm_FalseBranch()
+        {
+            // if (9 < 4) I[2]=10; else I[2]=20;
+            GraphInstruction[] program = BuildIfElseLtProgram(left: 9, right: 4);
+            int interpret = ExecuteInterpretRegister(program, register: 2);
+
+            using var host = new GraphRoslynAlcCompilerHost();
+            GraphGeneratedExecute execute = host.CompileAndActivate(program, "ifelse-false");
+            int codegen = ExecuteCodegenRegister(execute, register: 2);
+
+            That(interpret, Is.EqualTo(ExpectedIfElseFalseResult));
+            That(codegen, Is.EqualTo(ExpectedIfElseFalseResult));
+            That(host.ActiveTightExecute!(), Is.EqualTo(ExpectedIfElseFalseResult));
+        }
+
+        [Test]
+        public void Codegen_CompareEqInt_Branch_MatchesInterpretVm()
+        {
+            GraphInstruction[] eq = BuildIfElseEqProgram(left: 5, right: 5);
+            GraphInstruction[] ne = BuildIfElseEqProgram(left: 5, right: 3);
+
+            using var host = new GraphRoslynAlcCompilerHost();
+            That(ExecuteCodegenRegister(host.CompileAndActivate(eq, "eq"), 2),
+                Is.EqualTo(ExecuteInterpretRegister(eq, 2)));
+            That(ExecuteInterpretRegister(eq, 2), Is.EqualTo(1));
+
+            That(ExecuteCodegenRegister(host.CompileAndActivate(ne, "ne"), 2),
+                Is.EqualTo(ExecuteInterpretRegister(ne, 2)));
+            That(ExecuteInterpretRegister(ne, 2), Is.EqualTo(0));
+            That(host.ActiveSource, Does.Contain("=="));
+        }
+
+        [Test]
+        public void HotReload_BranchedProgram_ReplacesEntrypoint()
+        {
+            GraphInstruction[] programA = BuildIfElseLtProgram(left: 1, right: 2); // → 10
+            GraphInstruction[] programB = BuildIfElseLtProgram(left: 8, right: 2); // → 20
+
+            using var host = new GraphRoslynAlcCompilerHost();
+            That(ExecuteCodegenRegister(host.CompileAndActivate(programA, "branch-a"), 2),
+                Is.EqualTo(ExpectedIfElseTrueResult));
+            That(ExecuteCodegenRegister(host.CompileAndActivate(programB, "branch-b"), 2),
+                Is.EqualTo(ExpectedIfElseFalseResult));
+            That(host.ActiveAssemblyMarker, Is.EqualTo("branch-b"));
+        }
+
+        [Test]
+        public void Emitter_IfElse_EmitsLabelsAndGoto_NotStructuredSugarOnly()
+        {
+            GraphInstruction[] program = BuildIfElseLtProgram(left: 3, right: 7);
+            string source = LinearIntGraphCsharpEmitter.Emit(program, "sample-ifelse");
+
+            That(source, Does.Contain("L0:"));
+            That(source, Does.Contain("L3:"));
+            That(source, Does.Contain("if (state.B[0] == 0) goto L6;"));
+            That(source, Does.Contain("goto L7;"));
+            That(source, Does.Contain("state.B[0] = (byte)(state.I[0] < state.I[1] ? 1 : 0);"));
+            TestContext.Out.WriteLine("[TrackC] sample generated C# for if/else int program:");
+            TestContext.Out.WriteLine(source);
         }
 
         [Test]
@@ -209,6 +291,41 @@ namespace Ludots.Tests.Gas.Graph
             ];
         }
 
+        /// <summary>
+        /// if (I[0] &lt; I[1]) I[2]=10; else I[2]=20;
+        /// IR PC: after JumpIfFalse at index 3, Imm=2 skips then-arm; Jump Imm=1 skips else-arm.
+        /// </summary>
+        private static GraphInstruction[] BuildIfElseLtProgram(int left, int right)
+        {
+            return
+            [
+                new() { Op = (ushort)GraphNodeOp.ConstInt, Dst = 0, Imm = left },
+                new() { Op = (ushort)GraphNodeOp.ConstInt, Dst = 1, Imm = right },
+                new() { Op = (ushort)GraphNodeOp.CompareLtInt, Dst = 0, A = 0, B = 1 },
+                new() { Op = (ushort)GraphNodeOp.JumpIfFalse, A = 0, Imm = 2 },
+                new() { Op = (ushort)GraphNodeOp.ConstInt, Dst = 2, Imm = 10 },
+                new() { Op = (ushort)GraphNodeOp.Jump, Imm = 1 },
+                new() { Op = (ushort)GraphNodeOp.ConstInt, Dst = 2, Imm = 20 },
+            ];
+        }
+
+        /// <summary>
+        /// if (I[0] == I[1]) I[2]=1; else I[2]=0;
+        /// </summary>
+        private static GraphInstruction[] BuildIfElseEqProgram(int left, int right)
+        {
+            return
+            [
+                new() { Op = (ushort)GraphNodeOp.ConstInt, Dst = 0, Imm = left },
+                new() { Op = (ushort)GraphNodeOp.ConstInt, Dst = 1, Imm = right },
+                new() { Op = (ushort)GraphNodeOp.CompareEqInt, Dst = 0, A = 0, B = 1 },
+                new() { Op = (ushort)GraphNodeOp.JumpIfFalse, A = 0, Imm = 2 },
+                new() { Op = (ushort)GraphNodeOp.ConstInt, Dst = 2, Imm = 1 },
+                new() { Op = (ushort)GraphNodeOp.Jump, Imm = 1 },
+                new() { Op = (ushort)GraphNodeOp.ConstInt, Dst = 2, Imm = 0 },
+            ];
+        }
+
         private static GraphConfig BuildLinearIntChainConfig()
         {
             return new GraphConfig
@@ -240,6 +357,11 @@ namespace Ludots.Tests.Gas.Graph
 
         private static int ExecuteInterpret(ReadOnlySpan<GraphInstruction> program)
         {
+            return ExecuteInterpretRegister(program, register: 4);
+        }
+
+        private static int ExecuteInterpretRegister(ReadOnlySpan<GraphInstruction> program, int register)
+        {
             Span<float> f = stackalloc float[GraphVmLimits.MaxFloatRegisters];
             Span<int> i = stackalloc int[GraphVmLimits.MaxIntRegisters];
             Span<byte> b = stackalloc byte[GraphVmLimits.MaxBoolRegisters];
@@ -254,7 +376,7 @@ namespace Ludots.Tests.Gas.Graph
                 Targets = targets,
             };
             GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
-            return state.I[4];
+            return state.I[register];
         }
 
         private static int ExecuteCodegen(GraphGeneratedExecute execute)
