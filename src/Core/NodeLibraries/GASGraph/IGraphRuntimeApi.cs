@@ -322,20 +322,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         void WriteBlackboardInt(Entity entity, int keyId, int value);
         void WriteBlackboardEntity(Entity entity, int keyId, Entity value);
 
-        /// <summary>
-        /// Select one Effective tag in the TagDisplayTable mask. Policy in
-        /// <see cref="Ludots.Core.Presentation.TagDisplay.TagSelectPolicy"/>.
-        /// </summary>
-        int SelectEffectiveTagInMask(Entity entity, int tableId, byte policy)
-        {
-            throw new InvalidOperationException("GAS.GRAPH.ERR.TagDisplaySelectUnavailable");
-        }
-
-        int LookupTagDisplayToken(int tableId, int tagId)
-        {
-            throw new InvalidOperationException("GAS.GRAPH.ERR.TagDisplayLookupUnavailable");
-        }
-
         int ResolveTableRow(int tableId, int key)
         {
             throw new InvalidOperationException("GAS.GRAPH.ERR.LookupTableUnavailable");
@@ -393,11 +379,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         int ResolveTargetDispatchPreset(string name);
         int ResolveEntityTemplate(string name);
 
-        int ResolveTagDisplayTable(string name)
-        {
-            throw new InvalidOperationException(
-                $"Graph references tag display table '{name}', but no TagDisplayTableRegistry resolver is available.");
-        }
 
         int ResolveGraphLookupTable(string name)
         {

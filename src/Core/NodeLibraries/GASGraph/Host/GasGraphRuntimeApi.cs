@@ -97,7 +97,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private readonly GameplayEventBus? _eventBus;
         private readonly EffectRequestQueue? _effectRequests;
         private readonly TagOps? _tagOps;
-        private readonly Ludots.Core.Presentation.TagDisplay.TagDisplayTableRegistry? _tagDisplayTables;
         private readonly GraphLookupTableRegistry? _lookupTables;
         private readonly RelationshipRuntime? _relationshipRuntime;
         private readonly TargetDispatchPresetRegistry? _targetDispatchPresets;
@@ -183,7 +182,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 services.TargetDispatchPresets,
                 services.EntityCollections,
                 services.EntityQueries,
-                tagDisplayTables: null,
                 lookupTables: services.LookupTables);
             api.BindTopologyServices(
                 services.ControlDomains,
@@ -217,7 +215,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             TargetDispatchPresetRegistry? targetDispatchPresets = null,
             EntityCollectionStore? entityCollections = null,
             EntitySetQueryRuntime? entityQueries = null,
-            Ludots.Core.Presentation.TagDisplay.TagDisplayTableRegistry? tagDisplayTables = null,
             GraphLookupTableRegistry? lookupTables = null)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
@@ -230,7 +227,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _relationshipRuntime = relationshipRuntime;
             _entityCollections = entityCollections;
             _entityQueries = entityQueries;
-            _tagDisplayTables = tagDisplayTables;
             _lookupTables = lookupTables;
             _ = typeRegistry;
             _ = metricRegistry;
@@ -599,63 +595,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             if (!_world.IsAlive(entity) || !_world.Has<GameplayTagContainer>(entity)) return false;
             ref var tags = ref _world.Get<GameplayTagContainer>(entity);
             return RequireTagOps().HasTag(ref tags, tagId, TagSense.Effective);
-        }
-
-        public int SelectEffectiveTagInMask(Entity entity, int tableId, byte policy)
-        {
-            var tables = _tagDisplayTables
-                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.TagDisplaySelectUnavailable");
-
-            if (!_world.IsAlive(entity))
-            {
-                throw new InvalidOperationException(TagStateInstaller.DeadEntityError);
-            }
-
-            if (!_world.Has<GameplayTagContainer>(entity))
-            {
-                throw new InvalidOperationException(TagOps.MissingGameplayTagContainerError);
-            }
-
-            GameplayTagContainer mask = tables.GetMask(tableId);
-
-            // 0Alloc: scan dense tag id space (≤255). Uses HasTag so staged side-effects stay in sync.
-            int matchCount = 0;
-            int firstTagId = 0;
-            for (int tagId = 1; tagId <= GameplayTagContainer.MAX_TAG_ID; tagId++)
-            {
-                if (!mask.HasTag(tagId) || !HasTag(entity, tagId))
-                {
-                    continue;
-                }
-
-                matchCount++;
-                if (firstTagId == 0)
-                {
-                    firstTagId = tagId;
-                }
-            }
-
-            var selectPolicy = (Ludots.Core.Presentation.TagDisplay.TagSelectPolicy)policy;
-            return selectPolicy switch
-            {
-                Ludots.Core.Presentation.TagDisplay.TagSelectPolicy.RequireOne when matchCount == 1 => firstTagId,
-                Ludots.Core.Presentation.TagDisplay.TagSelectPolicy.RequireOne => throw new InvalidOperationException(
-                    $"GAS.GRAPH.ERR.TagSelectRequireOneFailed: entity=#{entity.Id} tableId={tableId} matchCount={matchCount}."),
-                Ludots.Core.Presentation.TagDisplay.TagSelectPolicy.AllowNone when matchCount == 0 => 0,
-                Ludots.Core.Presentation.TagDisplay.TagSelectPolicy.AllowNone when matchCount == 1 => firstTagId,
-                Ludots.Core.Presentation.TagDisplay.TagSelectPolicy.AllowNone => throw new InvalidOperationException(
-                    $"GAS.GRAPH.ERR.TagSelectAmbiguous: entity=#{entity.Id} tableId={tableId} matchCount={matchCount}."),
-                Ludots.Core.Presentation.TagDisplay.TagSelectPolicy.LowestId => firstTagId,
-                _ => throw new InvalidOperationException(
-                    $"GAS.GRAPH.ERR.UnknownTagSelectPolicy: {(byte)selectPolicy}."),
-            };
-        }
-
-        public int LookupTagDisplayToken(int tableId, int tagId)
-        {
-            var tables = _tagDisplayTables
-                ?? throw new InvalidOperationException("GAS.GRAPH.ERR.TagDisplayLookupUnavailable");
-            return tables.LookupToken(tableId, tagId);
         }
 
         public int ResolveTableRow(int tableId, int key)

@@ -837,7 +837,6 @@ namespace Ludots.Core.Engine
                 relationshipReasonRegistry,
                 targetDispatchPresetRegistry,
                 MapLoader.EntityTemplateKeys,
-                tagDisplayTables: null,
                 lookupTables: graphLookupTables);
             var graphConfigLoader = new GraphProgramConfigLoader(
                 ConfigPipeline,

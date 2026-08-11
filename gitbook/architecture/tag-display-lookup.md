@@ -17,9 +17,10 @@
 
 | 旧说法 | 新说法 |
 |--------|--------|
-| `LookupTagDisplayText` / `LookupTagDisplayToken` | 删除；改 `ResolveTableRow` + `TableReadInt(displayToken)` |
+| `LookupTagDisplayText` / `LookupTagDisplayToken` | 已删除；改 `ResolveTableRow` + `TableReadInt(displayToken)` |
+| `SelectTagInMask` / `ReadGameplayTag`（绑 Display 表 mask） | 已删除；纯读 tag id 若需要另开子单，禁止绑 Display 表 |
 | `GraphTables/tag_display_tables.json` | 不采用；改通用 lookup 表资产 |
-| `TagDisplayTableRegistry` 接入生产 | **禁止**；按清理 issue 删除 |
+| `TagDisplayTableRegistry` 接入生产 | **已删除**；禁止复活 |
 | 读当前状态 tag | 纯读玩法标签（tag id）→ 再查**作者表** |
 
 历史长文论证已失效，不再作为实现依据。勿在本页追加新合同。

@@ -100,13 +100,12 @@ P1：`TableReadEntity` / `TableReadBool`。
 
 | 误开物 | 处置 |
 |--------|------|
-| `TagDisplayTableRegistry` / `CoreServiceKeys.TagDisplayTableRegistry` | 删除或降为测试夹具后删除；**禁止**接入 `CreateProduction` / `GameEngine` |
-| `GraphNodeOp.LookupTagDisplayToken` 与作者糖 `LookupTagDisplayText` | 删除；场景改走通用表 |
+| `TagDisplayTableRegistry` / `CoreServiceKeys.TagDisplayTableRegistry` | **已删除**（#877）；禁止复活或接入 `CreateProduction` / `GameEngine` |
+| `GraphNodeOp.LookupTagDisplayToken` 与作者糖 `LookupTagDisplayText` | **已删除**（#877）；场景改走通用表 |
+| `SelectTagInMask` / `ReadGameplayTag` | **已删除**（#877）：现行实现绑 Display 表 mask，无法独立保留；纯读 Effective tag→tagId 若需要另开子单，禁止绑 Display 表 |
 | `tag_display_tables.json` 合同 | 不采用；统一走通用 lookup 表资产 |
 | 设计文把「Tag 快捷路径」写成与通用查表并列的正线 | 作废；以本页为准 |
 | 文档/issue 写「Tag 文案继续走 #868 快捷 op」 | 过时；#868 中 TagDisplay 部分不得再扩展 |
-
-`SelectTagInMask` / `ReadGameplayTag`：**仅当**其语义是「从玩法 Effective tags 选出 tag id」时，可作为纯读原子保留或另单澄清；**不得**再绑定任何 Display 专表。
 
 ### 3.4 性能
 
