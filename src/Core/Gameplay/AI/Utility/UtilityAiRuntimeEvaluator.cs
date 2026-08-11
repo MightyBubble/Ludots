@@ -679,23 +679,27 @@ namespace Ludots.Core.Gameplay.AI.Utility
         {
             if (_influenceFields == null || _influenceFieldKeys == null)
             {
-                return 0f; // influence system not wired
+                throw new InvalidOperationException(
+                    "UtilityAiInputKind.InfluenceSample01 requires InfluenceFieldRegistry and field key table injection; influence is not wired.");
             }
 
             if ((uint)fieldKeyIndex >= (uint)_influenceFieldKeys.Count)
             {
-                return 0f;
+                throw new InvalidOperationException(
+                    $"UtilityAiInputKind.InfluenceSample01 field key index {fieldKeyIndex} is out of range (count={_influenceFieldKeys.Count}).");
             }
 
             string fieldKey = _influenceFieldKeys[fieldKeyIndex];
             if (!_influenceFields.TryGet(fieldKey, out var field))
             {
-                return 0f;
+                throw new InvalidOperationException(
+                    $"UtilityAiInputKind.InfluenceSample01 field '{fieldKey}' is not registered in InfluenceFieldRegistry.");
             }
 
             if (!_world.TryGet(target, out WorldPositionCm pos))
             {
-                return 0f;
+                throw new InvalidOperationException(
+                    $"UtilityAiInputKind.InfluenceSample01 target {target} has no WorldPositionCm.");
             }
 
             return field.Sample(pos.ToWorldCmInt2());

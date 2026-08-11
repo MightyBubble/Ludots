@@ -65,7 +65,7 @@ namespace Ludots.Core.Fields.Influence
                         FalloffKind.Constant => peak,
                         FalloffKind.Linear => peak * Math.Max(0f, 1f - ratio),
                         FalloffKind.Quadratic => peak * (float)Math.Pow(Math.Max(0f, 1f - ratio), 2.0),
-                        _ => 0f
+                        _ => throw new ArgumentOutOfRangeException(nameof(falloff), falloff, "Unknown FalloffKind.")
                     };
 
                     float current = _field.Get(cell);
@@ -74,26 +74,13 @@ namespace Ludots.Core.Fields.Influence
             }
         }
 
-        /// <summary>Multiply all non-default cells by <paramref name="factor"/> (time decay).</summary>
+        /// <summary>
+        /// Multiply all non-default cells by <paramref name="factor"/> (time decay).
+        /// SoA in-place via ChunkedField2D.ScaleNonDefault; 0-alloc warm path.
+        /// </summary>
         public void Decay(float factor)
         {
-            if (factor <= 0f || factor >= 1f)
-            {
-                return; // no-op or clear
-            }
-
-            Span<FieldCellValue2D<float>> cells = stackalloc FieldCellValue2D<float>[256];
-            int copied;
-            do
-            {
-                copied = _field.CopyNonDefaultCells(cells);
-                for (int i = 0; i < copied; i++)
-                {
-                    var cellValue = cells[i];
-                    _field.Set(cellValue.Cell, cellValue.Value * factor);
-                }
-            }
-            while (copied == cells.Length); // continue if buffer was full
+            _field.ScaleNonDefault(factor);
         }
 
         /// <summary>Clear all influence values to default.</summary>

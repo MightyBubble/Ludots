@@ -30,23 +30,35 @@ namespace Ludots.Core.Spatial.Eqs.Tests
             float threshold = 0f)
         {
             _fieldKey = fieldKey ?? throw new ArgumentNullException(nameof(fieldKey));
+            if (normalizeScale <= 0f)
+            {
+                throw new ArgumentOutOfRangeException(nameof(normalizeScale), normalizeScale, "normalizeScale must be > 0.");
+            }
+
             _preferLow = preferLow;
             _weight = weight;
-            _normalizeScale = normalizeScale <= 0f ? 1f : normalizeScale;
+            _normalizeScale = normalizeScale;
             _filterAboveThreshold = filterAboveThreshold;
             _threshold = threshold;
         }
 
         public void Score(in EqsContext ctx, ref EqsItem item)
         {
-            if (item.Filtered || ctx.InfluenceFields == null)
+            if (item.Filtered)
             {
                 return;
             }
 
+            if (ctx.InfluenceFields == null)
+            {
+                throw new InvalidOperationException(
+                    "InfluenceTest requires EqsContext.InfluenceFields; registry was not provided.");
+            }
+
             if (!ctx.InfluenceFields.TryGet(_fieldKey, out var field))
             {
-                return; // field not registered; no contribution
+                throw new InvalidOperationException(
+                    $"InfluenceTest field '{_fieldKey}' is not registered in InfluenceFieldRegistry.");
             }
 
             float raw = field.Sample(item.Position);

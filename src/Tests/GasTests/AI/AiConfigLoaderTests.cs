@@ -239,6 +239,20 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void AiConfigLoader_RejectsInfluenceSample01UntilMainLoopWiring()
+        {
+            using var fixture = AiConfigFixture.Create();
+            fixture.WriteUtilityConfig();
+            fixture.WriteUtilityInputsJson(
+                "[ { \"id\": \"Input.Threat\", \"Kind\": \"InfluenceSample01\", \"FieldKey\": \"threat\" } ]");
+
+            var ex = Assert.Throws<InvalidOperationException>(() => fixture.Load());
+
+            Assert.That(ex!.Message, Does.Contain("InfluenceSample01"));
+            Assert.That(ex.Message, Does.Contain("runtime-injected"));
+        }
+
+        [Test]
         public void AiConfigLoader_RejectsUtilityAiUnknownSourceTag()
         {
             using var fixture = AiConfigFixture.Create();

@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 using Ludots.Core.Mathematics;
 
 namespace Ludots.Core.Fields
@@ -203,6 +204,70 @@ namespace Ludots.Core.Fields
             }
 
             return written;
+        }
+
+        /// <summary>
+        /// Multiply every non-default scalar-float cell by <paramref name="factor"/> in-place.
+        /// Walks SoA float channels directly; 0-alloc warm path. factor must be in [0, 1].
+        /// </summary>
+        public int ScaleNonDefault(float factor)
+        {
+            if (_codec is not FloatFieldValueCodec)
+            {
+                throw new InvalidOperationException("ScaleNonDefault requires scalar float field storage.");
+            }
+
+            if (float.IsNaN(factor) || factor < 0f || factor > 1f)
+            {
+                throw new ArgumentOutOfRangeException(nameof(factor), factor, "Scale factor must be in [0, 1].");
+            }
+
+            if (factor == 0f)
+            {
+                int cleared = _nonDefaultCount;
+                Clear();
+                return cleared;
+            }
+
+            if (factor == 1f || _nonDefaultCount == 0)
+            {
+                return 0;
+            }
+
+            T defaultLocal = _defaultValue;
+            float defaultFloat = Unsafe.As<T, float>(ref defaultLocal);
+            int scaled = 0;
+
+            for (int chunkIndex = 0; chunkIndex < _chunkCount; chunkIndex++)
+            {
+                FieldChunk2D<T> chunk = _chunks[chunkIndex];
+                Span<float> values = chunk.GetMutableFloatChannel(0);
+                for (int local = 0; local < values.Length; local++)
+                {
+                    float current = values[local];
+                    if (current.Equals(defaultFloat))
+                    {
+                        continue;
+                    }
+
+                    float next = current * factor;
+                    if (next.Equals(current))
+                    {
+                        continue;
+                    }
+
+                    values[local] = next;
+                    if (next.Equals(defaultFloat))
+                    {
+                        _nonDefaultCount--;
+                    }
+
+                    MarkDirtyInChunk(chunk, local);
+                    scaled++;
+                }
+            }
+
+            return scaled;
         }
 
         public FieldChunk2D<T> GetChunkAt(int index)
