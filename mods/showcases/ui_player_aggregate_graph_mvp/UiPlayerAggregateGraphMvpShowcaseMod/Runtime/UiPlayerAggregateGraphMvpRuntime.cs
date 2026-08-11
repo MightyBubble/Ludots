@@ -18,12 +18,28 @@ using UiPlayerAggregateGraphMvpShowcaseMod.UI;
 
 namespace UiPlayerAggregateGraphMvpShowcaseMod.Runtime;
 
+public readonly struct UiPlayerAggregateProducerMarker
+{
+    public UiPlayerAggregateProducerMarker(float xMeters, float zMeters, bool offline)
+    {
+        XMeters = xMeters;
+        ZMeters = zMeters;
+        Offline = offline;
+    }
+
+    public float XMeters { get; }
+    public float ZMeters { get; }
+    public bool Offline { get; }
+}
+
 public sealed class UiPlayerAggregateGraphMvpRuntime
 {
     private readonly UiPlayerAggregateGraphMvpPanelController _panelController;
     private UiPlayerAggregateGraphMvpConfig? _config;
     private Entity _owner = Entity.Null;
     private Entity _shutDownBuilding = Entity.Null;
+    private Entity[] _producerEntities = Array.Empty<Entity>();
+    private UiPlayerAggregateProducerMarker[] _producerMarkers = Array.Empty<UiPlayerAggregateProducerMarker>();
     private int _graphId;
     private int _oreAttributeId = AttributeRegistry.InvalidId;
     private int _crystalAttributeId = AttributeRegistry.InvalidId;
@@ -41,6 +57,8 @@ public sealed class UiPlayerAggregateGraphMvpRuntime
     }
 
     public UiPlayerAggregateGraphMvpSnapshot Snapshot => BuildSnapshot();
+
+    public ReadOnlySpan<UiPlayerAggregateProducerMarker> ProducerMarkers => _producerMarkers;
 
     public UiPlayerAggregateGraphMvpConfig RequireConfig(GameEngine engine) => EnsureConfig(engine);
 
@@ -102,6 +120,7 @@ public sealed class UiPlayerAggregateGraphMvpRuntime
         }
 
         ExecuteAggregateGraph(engine);
+        RefreshProducerMarkers(engine);
     }
 
     public void ShutDownBuilding(GameEngine engine)
@@ -130,6 +149,7 @@ public sealed class UiPlayerAggregateGraphMvpRuntime
         _buildingShutDown = true;
         _status = $"{config.ShutDownBuildingName} shut down; resource attributes set to 0.";
         ExecuteAggregateGraph(engine);
+        RefreshProducerMarkers(engine);
     }
 
     public void RefreshPanel(GameEngine engine)
@@ -265,19 +285,56 @@ public sealed class UiPlayerAggregateGraphMvpRuntime
 
         _owner = FindEntityByName(engine.World, config.FactionOwnerName);
         _shutDownBuilding = FindEntityByName(engine.World, config.ShutDownBuildingName);
+        _producerEntities = new Entity[config.Buildings.Length];
+        _producerMarkers = new UiPlayerAggregateProducerMarker[config.Buildings.Length];
         for (int i = 0; i < config.Buildings.Length; i++)
         {
-            _ = FindEntityByName(engine.World, config.Buildings[i].Name);
+            _producerEntities[i] = FindEntityByName(engine.World, config.Buildings[i].Name);
         }
 
         _scenarioReady = true;
         _status = "Scenario ready: faction owner and producer buildings are live.";
+        RefreshProducerMarkers(engine);
+    }
+
+    private void RefreshProducerMarkers(GameEngine engine)
+    {
+        if (!_scenarioReady || _config == null)
+        {
+            _producerMarkers = Array.Empty<UiPlayerAggregateProducerMarker>();
+            return;
+        }
+
+        World world = engine.World;
+        for (int i = 0; i < _producerEntities.Length; i++)
+        {
+            Entity entity = _producerEntities[i];
+            if (entity == Entity.Null || !world.IsAlive(entity) || !world.Has<WorldPositionCm>(entity))
+            {
+                throw new InvalidOperationException(
+                    $"Producer building '{_config.Buildings[i].Name}' is missing WorldPositionCm.");
+            }
+
+            ref WorldPositionCm pos = ref world.Get<WorldPositionCm>(entity);
+            System.Numerics.Vector3 meters = WorldUnits.WorldCmToVisualMeters(in pos.Value);
+            bool offline = false;
+            if (world.Has<AttributeBuffer>(entity))
+            {
+                ref AttributeBuffer attrs = ref world.Get<AttributeBuffer>(entity);
+                float stock = attrs.GetCurrent(_oreAttributeId) + attrs.GetCurrent(_crystalAttributeId);
+                offline = stock <= 0.01f;
+            }
+
+            _producerMarkers[i] = new UiPlayerAggregateProducerMarker(meters.X, meters.Z, offline);
+        }
     }
 
     private void ResetScenario()
     {
         _owner = Entity.Null;
         _shutDownBuilding = Entity.Null;
+        _producerEntities = Array.Empty<Entity>();
+        _producerMarkers = Array.Empty<UiPlayerAggregateProducerMarker>();
         _graphId = 0;
         _oreAttributeId = AttributeRegistry.InvalidId;
         _crystalAttributeId = AttributeRegistry.InvalidId;
