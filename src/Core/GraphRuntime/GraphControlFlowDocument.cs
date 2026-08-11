@@ -1,18 +1,21 @@
 using System.Collections.Generic;
+using Ludots.Core.NodeLibraries.GASGraph;
 
 namespace Ludots.Core.GraphRuntime
 {
     /// <summary>
-    /// Authored Script (L1 flow) document with explicit control and value edges.
+    /// Authored Script and Query (phase 1) document with explicit control and value edges.
     /// Compiles to <see cref="GraphInstruction"/> via GASGraph control-flow compiler.
     /// </summary>
     public sealed class GraphControlFlowDocument
     {
         public string Id { get; set; } = string.Empty;
+        public string Kind { get; set; } = string.Empty;
         public string Entry { get; set; } = string.Empty;
         public List<GraphControlFlowNode> Nodes { get; set; } = new();
         public List<GraphControlFlowEdge> ControlEdges { get; set; } = new();
         public List<GraphControlFlowValueEdge> ValueEdges { get; set; } = new();
+        public List<GraphOutputConfig> Outputs { get; set; } = new();
     }
 
     public sealed class GraphControlFlowNode
@@ -22,6 +25,8 @@ namespace Ludots.Core.GraphRuntime
         public int IntValue { get; set; }
         /// <summary>Optional target Script graph id for InvokeScript (patched or literal).</summary>
         public int GraphId { get; set; }
+        public string? Attribute { get; set; }
+        public int TeamId { get; set; }
         /// <summary>
         /// When &gt;= 0, forces this node's int output (or MoveInt source via Imm) onto a fixed int register.
         /// Used for loop-carried values without inventing a second memory space.
@@ -76,6 +81,8 @@ namespace Ludots.Core.GraphRuntime
         public const string Call = "call";
         public const string Target = "target";
         public const string Value = "value";
+        public const string List = "list";
+        public const string TeamId = "teamId";
         public const string A = "a";
         public const string B = "b";
         public const string Condition = "condition";

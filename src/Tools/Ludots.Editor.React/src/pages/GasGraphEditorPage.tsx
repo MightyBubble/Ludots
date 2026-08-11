@@ -60,6 +60,23 @@ type GraphNodeConfig = {
 
 type GasNodeData = GraphNodeConfig & { label: string };
 
+type GraphControlEdgeConfig = {
+  from: string;
+  fromPort: string;
+  to: string;
+};
+
+type GraphValueEdgeConfig = {
+  from: string;
+  fromPort: string;
+  to: string;
+  toPort: string;
+};
+
+type GasEdgeData = {
+  kind: 'control' | 'value';
+};
+
 type GraphOutputConfig = {
   id: string;
   destination?: string;
@@ -73,6 +90,8 @@ type GraphConfig = {
   kind: string;
   entry: string;
   nodes: GraphNodeConfig[];
+  controlEdges?: GraphControlEdgeConfig[];
+  valueEdges?: GraphValueEdgeConfig[];
   outputs?: GraphOutputConfig[];
 };
 
@@ -96,16 +115,39 @@ const DEFAULT_MOD_ID = 'UiPlayerAggregateGraphMvpShowcaseMod';
 const DEFAULT_GRAPH_ID = 'ui.panel.player.resource.aggregate';
 
 function GasNode({ data, selected }: NodeProps<Node<GasNodeData>>) {
+  const hasListInput = data.op === 'QueryFilterTeam' || data.op === 'AggSumAttribute';
+  const hasTeamInput = data.op === 'QueryFilterTeam';
+  const valueOutput = data.op === 'LoadCaster' || data.op === 'AggSumAttribute' ? 'value' : null;
+  const listOutput = data.op === 'QueryAllMapEntities' || data.op === 'QueryFilterTeam' ? 'list' : null;
+
   return (
     <div
-      className={`min-w-[160px] rounded border px-3 py-2 text-xs shadow ${
+      className={`relative min-w-[180px] rounded border px-3 py-2 text-xs shadow ${
         selected ? 'border-sky-400 bg-slate-800' : 'border-slate-600 bg-slate-900'
       }`}
     >
-      <Handle type="target" position={Position.Left} className="!bg-slate-400" />
+      <Handle id="control-in" type="target" position={Position.Left} className="!top-4 !bg-sky-400" />
+      {hasListInput ? (
+        <Handle id="list" type="target" position={Position.Left} className="!top-12 !bg-emerald-400" />
+      ) : null}
+      {hasTeamInput ? (
+        <Handle id="teamId" type="target" position={Position.Left} className="!top-20 !bg-amber-400" />
+      ) : null}
       <div className="font-semibold text-slate-100">{data.label}</div>
       <div className="mt-1 text-[10px] text-sky-300">{data.op}</div>
-      <Handle type="source" position={Position.Right} className="!bg-slate-400" />
+      <div className="mt-2 flex flex-wrap gap-1 text-[9px] uppercase tracking-wide text-slate-500">
+        <span className="rounded bg-sky-950 px-1 text-sky-300">next</span>
+        {valueOutput ? <span className="rounded bg-violet-950 px-1 text-violet-300">{valueOutput}</span> : null}
+        {listOutput ? <span className="rounded bg-emerald-950 px-1 text-emerald-300">{listOutput}</span> : null}
+        {hasTeamInput ? <span className="rounded bg-amber-950 px-1 text-amber-300">teamId</span> : null}
+      </div>
+      <Handle id="next" type="source" position={Position.Right} className="!top-4 !bg-sky-400" />
+      {valueOutput ? (
+        <Handle id={valueOutput} type="source" position={Position.Right} className="!top-12 !bg-violet-400" />
+      ) : null}
+      {listOutput ? (
+        <Handle id={listOutput} type="source" position={Position.Right} className="!top-12 !bg-emerald-400" />
+      ) : null}
     </div>
   );
 }
@@ -164,7 +206,16 @@ function toWireNode(n: GraphNodeConfig): GraphNodeConfig {
   });
 }
 
-function graphToFlow(graph: GraphConfig): { nodes: Node<GasNodeData>[]; edges: Edge[] } {
+function isControlFlowGraph(graph: GraphConfig): boolean {
+  return Array.isArray(graph.controlEdges) || Array.isArray(graph.valueEdges);
+}
+
+function edgeLabel(edge: Edge<GasEdgeData>): string {
+  if (edge.data?.kind === 'control') return String(edge.sourceHandle ?? 'next');
+  return `${String(edge.sourceHandle ?? '')} -> ${String(edge.targetHandle ?? '')}`;
+}
+
+function graphToFlow(graph: GraphConfig): { nodes: Node<GasNodeData>[]; edges: Edge<GasEdgeData>[] } {
   const nodes: Node<GasNodeData>[] = graph.nodes.map((n, index) => ({
     id: n.id,
     type: 'gas',
@@ -172,7 +223,41 @@ function graphToFlow(graph: GraphConfig): { nodes: Node<GasNodeData>[]; edges: E
     data: { ...n, label: n.id },
   }));
 
-  const edges: Edge[] = [];
+  const edges: Edge<GasEdgeData>[] = [];
+  if (isControlFlowGraph(graph)) {
+    for (const edge of graph.controlEdges ?? []) {
+      edges.push({
+        id: `c:${edge.from}:${edge.fromPort}:${edge.to}`,
+        source: edge.from,
+        sourceHandle: edge.fromPort,
+        target: edge.to,
+        targetHandle: 'control-in',
+        markerEnd: { type: MarkerType.ArrowClosed },
+        label: edge.fromPort,
+        style: { stroke: '#38bdf8', strokeWidth: 2 },
+        labelStyle: { fill: '#bae6fd', fontSize: 11 },
+        data: { kind: 'control' },
+      });
+    }
+
+    for (const edge of graph.valueEdges ?? []) {
+      edges.push({
+        id: `v:${edge.from}:${edge.fromPort}:${edge.to}:${edge.toPort}`,
+        source: edge.from,
+        sourceHandle: edge.fromPort,
+        target: edge.to,
+        targetHandle: edge.toPort,
+        markerEnd: { type: MarkerType.ArrowClosed },
+        label: `${edge.fromPort} -> ${edge.toPort}`,
+        style: { stroke: edge.fromPort === 'list' ? '#34d399' : '#a78bfa', strokeWidth: 2 },
+        labelStyle: { fill: edge.fromPort === 'list' ? '#bbf7d0' : '#ddd6fe', fontSize: 11 },
+        data: { kind: 'value' },
+      });
+    }
+
+    return { nodes, edges };
+  }
+
   for (const n of graph.nodes) {
     if (!n.next) continue;
     edges.push({
@@ -182,31 +267,62 @@ function graphToFlow(graph: GraphConfig): { nodes: Node<GasNodeData>[]; edges: E
       markerEnd: { type: MarkerType.ArrowClosed },
       label: 'next',
       style: { stroke: '#64748b' },
+      data: { kind: 'control' },
     });
   }
 
   return { nodes, edges };
 }
 
-function flowNodesToGraph(graph: GraphConfig, nodes: Node<GasNodeData>[]): GraphConfig {
+function flowToGraph(graph: GraphConfig, nodes: Node<GasNodeData>[], edges: Edge<GasEdgeData>[]): GraphConfig {
   const byId = new Map(nodes.map((n) => [n.id, n.data]));
+  const wireNodes = graph.nodes.map((n) => {
+    const edited = byId.get(n.id);
+    if (!edited) return toWireNode(n);
+    const { label: _label, ...rest } = edited;
+    return toWireNode({
+      ...n,
+      ...rest,
+      id: n.id,
+      op: rest.op || n.op,
+      next: isControlFlowGraph(graph) ? undefined : rest.next ?? null,
+    });
+  });
+
+  if (isControlFlowGraph(graph)) {
+    return {
+      id: graph.id,
+      kind: graph.kind,
+      entry: graph.entry,
+      nodes: wireNodes.map((n) => {
+        const { next: _next, inputs: _inputs, ...rest } = n;
+        return rest;
+      }),
+      controlEdges: edges
+        .filter((edge) => edge.data?.kind === 'control')
+        .map((edge) => ({
+          from: edge.source,
+          fromPort: String(edge.sourceHandle ?? 'next'),
+          to: edge.target,
+        })),
+      valueEdges: edges
+        .filter((edge) => edge.data?.kind === 'value')
+        .map((edge) => ({
+          from: edge.source,
+          fromPort: String(edge.sourceHandle ?? ''),
+          to: edge.target,
+          toPort: String(edge.targetHandle ?? ''),
+        })),
+      outputs: graph.outputs,
+    };
+  }
+
   return {
     id: graph.id,
     kind: graph.kind,
     entry: graph.entry,
     outputs: graph.outputs,
-    nodes: graph.nodes.map((n) => {
-      const edited = byId.get(n.id);
-      if (!edited) return toWireNode(n);
-      const { label: _label, ...rest } = edited;
-      return toWireNode({
-        ...n,
-        ...rest,
-        id: n.id,
-        op: rest.op || n.op,
-        next: rest.next ?? null,
-      });
-    }),
+    nodes: wireNodes,
   };
 }
 
@@ -215,8 +331,9 @@ export const GasGraphEditorPage: React.FC = () => {
   const [graphId, setGraphId] = React.useState(DEFAULT_GRAPH_ID);
   const [graph, setGraph] = React.useState<GraphConfig | null>(null);
   const [nodes, setNodes] = React.useState<Node<GasNodeData>[]>([]);
-  const [edges, setEdges] = React.useState<Edge[]>([]);
+  const [edges, setEdges] = React.useState<Edge<GasEdgeData>[]>([]);
   const [selectedNodeId, setSelectedNodeId] = React.useState<string | null>(null);
+  const [selectedEdgeId, setSelectedEdgeId] = React.useState<string | null>(null);
   const [status, setStatus] = React.useState<string>('Idle');
   const [diagnosticsText, setDiagnosticsText] = React.useState<string>('');
   const [busy, setBusy] = React.useState(false);
@@ -227,6 +344,10 @@ export const GasGraphEditorPage: React.FC = () => {
   );
 
   const selectedData = selectedNode?.data ?? null;
+  const selectedEdge = React.useMemo(
+    () => edges.find((e) => e.id === selectedEdgeId) ?? null,
+    [edges, selectedEdgeId],
+  );
 
   const loadGraph = React.useCallback(async () => {
     setBusy(true);
@@ -244,6 +365,7 @@ export const GasGraphEditorPage: React.FC = () => {
       setNodes(flow.nodes);
       setEdges(flow.edges);
       setSelectedNodeId(null);
+      setSelectedEdgeId(null);
       setStatus(`Loaded ${loaded.id} (${loaded.kind})`);
     } catch (err) {
       setGraph(null);
@@ -261,8 +383,8 @@ export const GasGraphEditorPage: React.FC = () => {
 
   const currentGraph = React.useMemo(() => {
     if (!graph) return null;
-    return flowNodesToGraph(graph, nodes);
-  }, [graph, nodes]);
+    return flowToGraph(graph, nodes, edges);
+  }, [graph, nodes, edges]);
 
   const updateSelectedField = (field: 'teamId' | 'attribute' | 'next', value: string) => {
     if (!selectedNodeId || !graph) return;
@@ -281,8 +403,29 @@ export const GasGraphEditorPage: React.FC = () => {
     });
     setNodes(nextNodes);
     if (field === 'next') {
-      setEdges(graphToFlow(flowNodesToGraph(graph, nextNodes)).edges);
+      setEdges(graphToFlow(flowToGraph(graph, nextNodes, edges)).edges);
     }
+  };
+
+  const updateSelectedEdgeField = (field: 'source' | 'sourceHandle' | 'target' | 'targetHandle', value: string) => {
+    if (!selectedEdgeId) return;
+    setEdges((prev) =>
+      prev.map((edge) => {
+        if (edge.id !== selectedEdgeId) return edge;
+        const nextEdge: Edge<GasEdgeData> = {
+          ...edge,
+          source: field === 'source' ? value.trim() : edge.source,
+          sourceHandle: field === 'sourceHandle' ? value.trim() : edge.sourceHandle,
+          target: field === 'target' ? value.trim() : edge.target,
+          targetHandle: field === 'targetHandle' ? value.trim() : edge.targetHandle,
+        };
+        return {
+          ...nextEdge,
+          id: `${nextEdge.data?.kind ?? 'edge'}:${nextEdge.source}:${nextEdge.sourceHandle ?? ''}:${nextEdge.target}:${nextEdge.targetHandle ?? ''}`,
+          label: edgeLabel(nextEdge),
+        };
+      }),
+    );
   };
 
   const onNodesChange = React.useCallback((changes: NodeChange<Node<GasNodeData>>[]) => {
@@ -324,7 +467,7 @@ export const GasGraphEditorPage: React.FC = () => {
   const onValidate = async () => {
     if (!currentGraph) return;
     setBusy(true);
-    setStatus('Validating via GraphCompiler…');
+    setStatus('Validating via Bridge compiler…');
     try {
       const payload = await runValidate(currentGraph);
       setDiagnosticsText(formatDiagnostics(payload));
@@ -344,7 +487,7 @@ export const GasGraphEditorPage: React.FC = () => {
       const validation = await runValidate(currentGraph);
       setDiagnosticsText(formatDiagnostics(validation));
       if (!validation.ok) {
-        setStatus('Save refused: GraphCompiler failed');
+        setStatus('Save refused: compiler failed');
         return;
       }
 
@@ -374,7 +517,7 @@ export const GasGraphEditorPage: React.FC = () => {
       <header className="flex flex-wrap items-center gap-3 border-b border-slate-800 bg-slate-900 px-4 py-3">
         <div className="min-w-40">
           <div className="text-sm font-semibold text-white">GAS Query Graph Editor</div>
-          <div className="text-[10px] text-slate-500">Bridge → graphs.json → GraphCompiler</div>
+          <div className="text-[10px] text-slate-500">Bridge → graphs.json → ControlFlow pins</div>
         </div>
         <Link to="/" className="rounded border border-slate-700 px-2 py-1 text-xs text-slate-300 hover:bg-slate-800">
           Map Editor
@@ -430,8 +573,9 @@ export const GasGraphEditorPage: React.FC = () => {
               edges={edges}
               nodeTypes={nodeTypes}
               onNodesChange={onNodesChange}
-              onSelectionChange={({ nodes: selected }) => {
+              onSelectionChange={({ nodes: selected, edges: selectedEdges }) => {
                 setSelectedNodeId(selected[0]?.id ?? null);
+                setSelectedEdgeId(selectedEdges[0]?.id ?? null);
               }}
               fitView
               proOptions={{ hideAttribution: true }}
@@ -462,14 +606,16 @@ export const GasGraphEditorPage: React.FC = () => {
                   <div className="text-slate-500">Op</div>
                   <div className="font-mono text-sky-300">{selectedData.op}</div>
                 </div>
-                <label className="block">
-                  <div className="mb-1 text-slate-500">Next</div>
-                  <input
-                    value={selectedData.next ?? ''}
-                    onChange={(e) => updateSelectedField('next', e.target.value)}
-                    className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono"
-                  />
-                </label>
+                {!graph || !isControlFlowGraph(graph) ? (
+                  <label className="block">
+                    <div className="mb-1 text-slate-500">Next</div>
+                    <input
+                      value={selectedData.next ?? ''}
+                      onChange={(e) => updateSelectedField('next', e.target.value)}
+                      className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono"
+                    />
+                  </label>
+                ) : null}
                 <label className="block">
                   <div className="mb-1 text-slate-500">TeamId</div>
                   <input
@@ -500,8 +646,49 @@ export const GasGraphEditorPage: React.FC = () => {
                   </div>
                 ) : null}
               </>
+            ) : selectedEdge ? (
+              <>
+                <div>
+                  <div className="text-slate-500">Edge</div>
+                  <div className="font-mono text-slate-100">{selectedEdge.data?.kind ?? 'edge'}</div>
+                </div>
+                <label className="block">
+                  <div className="mb-1 text-slate-500">From node</div>
+                  <input
+                    value={selectedEdge.source}
+                    onChange={(e) => updateSelectedEdgeField('source', e.target.value)}
+                    className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono"
+                  />
+                </label>
+                <label className="block">
+                  <div className="mb-1 text-slate-500">From port</div>
+                  <input
+                    value={selectedEdge.sourceHandle ?? ''}
+                    onChange={(e) => updateSelectedEdgeField('sourceHandle', e.target.value)}
+                    className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono"
+                  />
+                </label>
+                <label className="block">
+                  <div className="mb-1 text-slate-500">To node</div>
+                  <input
+                    value={selectedEdge.target}
+                    onChange={(e) => updateSelectedEdgeField('target', e.target.value)}
+                    className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono"
+                  />
+                </label>
+                {selectedEdge.data?.kind === 'value' ? (
+                  <label className="block">
+                    <div className="mb-1 text-slate-500">To port</div>
+                    <input
+                      value={selectedEdge.targetHandle ?? ''}
+                      onChange={(e) => updateSelectedEdgeField('targetHandle', e.target.value)}
+                      className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 font-mono"
+                    />
+                  </label>
+                ) : null}
+              </>
             ) : (
-              <div className="text-slate-500">Select a node to edit TeamId / Attribute / Next.</div>
+              <div className="text-slate-500">Select a node to edit TeamId / Attribute, or select an edge to edit pin endpoints.</div>
             )}
           </div>
 
@@ -509,7 +696,7 @@ export const GasGraphEditorPage: React.FC = () => {
             Diagnostics
           </div>
           <pre className="min-h-0 flex-1 overflow-auto whitespace-pre-wrap p-3 font-mono text-[11px] text-amber-200">
-            {diagnosticsText || 'Validate or Save to run GraphCompiler.CompileWithOutputs.'}
+            {diagnosticsText || 'Validate or Save to run the Bridge compiler.'}
           </pre>
         </aside>
       </div>

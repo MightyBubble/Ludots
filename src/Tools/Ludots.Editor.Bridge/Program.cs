@@ -1,4 +1,5 @@
 using Ludots.Core.Config;
+using Ludots.Core.GraphRuntime;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Modding;
@@ -1591,25 +1592,10 @@ app.MapPut("/api/mods/{modId}/gas/graphs/{graphId}", async (string modId, string
     if (bodyNode is not JsonObject bodyObj)
         return Results.BadRequest(new { ok = false, error = "Body must be a GraphConfig JSON object." });
 
-    GraphConfig? cfg;
-    try
-    {
-        cfg = bodyObj.Deserialize<GraphConfig>(StrictJsonOptions.CreateCamelCase());
-    }
-    catch (JsonException ex)
-    {
-        return Results.BadRequest(new { ok = false, error = $"Failed to deserialize GraphConfig: {ex.Message}" });
-    }
+    if (!TryNormalizeGasGraphBody(bodyObj, graphId, out var normalizedId, out var normalizeError))
+        return Results.BadRequest(new { ok = false, error = normalizeError });
 
-    if (cfg == null)
-        return Results.BadRequest(new { ok = false, error = "Failed to deserialize GraphConfig." });
-
-    if (string.IsNullOrWhiteSpace(cfg.Id))
-        cfg.Id = graphId;
-    if (!string.Equals(cfg.Id, graphId, StringComparison.OrdinalIgnoreCase))
-        return Results.BadRequest(new { ok = false, error = $"Body id '{cfg.Id}' does not match route graphId '{graphId}'." });
-
-    bodyObj["id"] = cfg.Id;
+    bodyObj["id"] = normalizedId;
 
     if (!TryReadGraphsArray(graphsPath, out var arr, out var readError))
         return readError!;
@@ -1631,7 +1617,7 @@ app.MapPut("/api/mods/{modId}/gas/graphs/{graphId}", async (string modId, string
         return Results.BadRequest(new { ok = false, error = $"Failed to write graphs.json: {ex.Message}", path = graphsPath });
     }
 
-    return Results.Ok(new { ok = true, path = graphsPath, graphId = cfg.Id });
+    return Results.Ok(new { ok = true, path = graphsPath, graphId = normalizedId });
 });
 
 app.MapPost("/api/mods/{modId}/gas/graphs/{graphId}/validate", async (string modId, string graphId, HttpRequest req) =>
@@ -1642,8 +1628,8 @@ app.MapPost("/api/mods/{modId}/gas/graphs/{graphId}/validate", async (string mod
     using var sr = new StreamReader(req.Body, Encoding.UTF8, leaveOpen: false);
     string body = await sr.ReadToEndAsync();
 
-    GraphConfig? cfg;
     string source;
+    JsonObject graphObj;
     try
     {
         if (!string.IsNullOrWhiteSpace(body))
@@ -1662,25 +1648,17 @@ app.MapPost("/api/mods/{modId}/gas/graphs/{graphId}/validate", async (string mod
             if (bodyNode is not JsonObject bodyObj)
                 return Results.BadRequest(new { ok = false, error = "Body must be a GraphConfig JSON object." });
 
-            cfg = bodyObj.Deserialize<GraphConfig>(StrictJsonOptions.CreateCamelCase());
-            if (cfg == null)
-                return Results.BadRequest(new { ok = false, error = "Failed to deserialize GraphConfig." });
-            if (string.IsNullOrWhiteSpace(cfg.Id))
-                cfg.Id = graphId;
+            graphObj = bodyObj;
         }
         else
         {
             source = "file";
             if (!TryReadGraphsArray(graphsPath, out var arr, out var readError))
                 return readError!;
-            if (!TryFindGraphObject(arr, graphId, out var graphObj, out _))
+            if (!TryFindGraphObject(arr, graphId, out var fileGraphObj, out _))
                 return Results.NotFound(new { ok = false, error = $"Graph not found: {graphId}", path = graphsPath });
 
-            cfg = graphObj.Deserialize<GraphConfig>(StrictJsonOptions.CreateCamelCase());
-            if (cfg == null)
-                return Results.BadRequest(new { ok = false, error = "Failed to deserialize GraphConfig from graphs.json." });
-            if (string.IsNullOrWhiteSpace(cfg.Id))
-                cfg.Id = graphId;
+            graphObj = fileGraphObj;
         }
     }
     catch (JsonException ex)
@@ -1688,7 +1666,8 @@ app.MapPost("/api/mods/{modId}/gas/graphs/{graphId}/validate", async (string mod
         return Results.BadRequest(new { ok = false, error = $"Failed to deserialize GraphConfig: {ex.Message}" });
     }
 
-    var (package, _, diagnostics) = GraphCompiler.CompileWithOutputs(cfg);
+    if (!TryCompileGasGraph(graphObj, graphId, out var package, out var diagnostics, out var compileError))
+        return Results.BadRequest(new { ok = false, error = compileError });
     bool hasErrors = false;
     for (int i = 0; i < diagnostics.Count; i++)
     {
@@ -1725,6 +1704,135 @@ app.MapPost("/api/mods/{modId}/gas/graphs/{graphId}/validate", async (string mod
         instructionCount
     });
 });
+
+static bool TryNormalizeGasGraphBody(JsonObject bodyObj, string graphId, out string normalizedId, out string error)
+{
+    normalizedId = string.Empty;
+    error = string.Empty;
+    try
+    {
+        if (IsControlFlowGraphObject(bodyObj))
+        {
+            if (HasLegacyNextChain(bodyObj))
+            {
+                error = "ControlFlow graph JSON cannot mix controlEdges/valueEdges with nodes[].next.";
+                return false;
+            }
+
+            GraphControlFlowDocument? doc = bodyObj.Deserialize<GraphControlFlowDocument>(StrictJsonOptions.CreateCamelCase(includeFields: true));
+            if (doc == null)
+            {
+                error = "Failed to deserialize GraphControlFlowDocument.";
+                return false;
+            }
+
+            normalizedId = string.IsNullOrWhiteSpace(doc.Id) ? graphId : doc.Id;
+        }
+        else
+        {
+            GraphConfig? cfg = bodyObj.Deserialize<GraphConfig>(StrictJsonOptions.CreateCamelCase());
+            if (cfg == null)
+            {
+                error = "Failed to deserialize GraphConfig.";
+                return false;
+            }
+
+            normalizedId = string.IsNullOrWhiteSpace(cfg.Id) ? graphId : cfg.Id;
+        }
+    }
+    catch (JsonException ex)
+    {
+        error = $"Failed to deserialize gas graph: {ex.Message}";
+        return false;
+    }
+
+    if (!string.Equals(normalizedId, graphId, StringComparison.OrdinalIgnoreCase))
+    {
+        error = $"Body id '{normalizedId}' does not match route graphId '{graphId}'.";
+        return false;
+    }
+
+    return true;
+}
+
+static bool TryCompileGasGraph(
+    JsonObject graphObj,
+    string graphId,
+    out GraphProgramPackage? package,
+    out List<GraphDiagnostic> diagnostics,
+    out string error)
+{
+    package = null;
+    diagnostics = new List<GraphDiagnostic>();
+    error = string.Empty;
+    try
+    {
+        if (IsControlFlowGraphObject(graphObj))
+        {
+            if (HasLegacyNextChain(graphObj))
+            {
+                error = "ControlFlow graph JSON cannot mix controlEdges/valueEdges with nodes[].next.";
+                return false;
+            }
+
+            GraphControlFlowDocument? doc = graphObj.Deserialize<GraphControlFlowDocument>(StrictJsonOptions.CreateCamelCase(includeFields: true));
+            if (doc == null)
+            {
+                error = "Failed to deserialize GraphControlFlowDocument.";
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(doc.Id))
+                doc.Id = graphId;
+
+            var result = GraphControlFlowCompiler.CompileWithOutputs(doc);
+            package = result.Package;
+            diagnostics = result.Diagnostics;
+            return true;
+        }
+
+        GraphConfig? cfg = graphObj.Deserialize<GraphConfig>(StrictJsonOptions.CreateCamelCase());
+        if (cfg == null)
+        {
+            error = "Failed to deserialize GraphConfig.";
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(cfg.Id))
+            cfg.Id = graphId;
+
+        var legacyResult = GraphCompiler.CompileWithOutputs(cfg);
+        package = legacyResult.Package;
+        diagnostics = legacyResult.Diagnostics;
+        return true;
+    }
+    catch (JsonException ex)
+    {
+        error = $"Failed to deserialize gas graph: {ex.Message}";
+        return false;
+    }
+}
+
+static bool IsControlFlowGraphObject(JsonObject obj)
+    => obj.ContainsKey("controlEdges") || obj.ContainsKey("valueEdges");
+
+static bool HasLegacyNextChain(JsonObject obj)
+{
+    if (obj["nodes"] is not JsonArray nodes)
+    {
+        return false;
+    }
+
+    for (int i = 0; i < nodes.Count; i++)
+    {
+        if (nodes[i] is JsonObject node && node.ContainsKey("next"))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
 
 app.Run("http://localhost:5299");
 

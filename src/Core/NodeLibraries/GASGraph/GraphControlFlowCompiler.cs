@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Ludots.Core.EntityCollections;
 using Ludots.Core.GraphRuntime;
 
 namespace Ludots.Core.NodeLibraries.GASGraph
@@ -10,15 +11,34 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             GraphInstruction[] program,
             GraphInstructionSourceMap sourceMap,
             List<GraphDiagnostic> diagnostics)
+            : this(
+                program,
+                sourceMap,
+                diagnostics,
+                null,
+                GraphOutputSchema.Empty)
+        {
+        }
+
+        public GraphControlFlowCompileResult(
+            GraphInstruction[] program,
+            GraphInstructionSourceMap sourceMap,
+            List<GraphDiagnostic> diagnostics,
+            GraphProgramPackage? package,
+            GraphOutputSchema outputSchema)
         {
             Program = program ?? Array.Empty<GraphInstruction>();
             SourceMap = sourceMap;
             Diagnostics = diagnostics ?? new List<GraphDiagnostic>();
+            Package = package;
+            OutputSchema = outputSchema ?? GraphOutputSchema.Empty;
         }
 
         public GraphInstruction[] Program { get; }
         public GraphInstructionSourceMap SourceMap { get; }
         public List<GraphDiagnostic> Diagnostics { get; }
+        public GraphProgramPackage? Package { get; }
+        public GraphOutputSchema OutputSchema { get; }
         public bool Succeeded => !HasErrors(Diagnostics);
 
         private static bool HasErrors(List<GraphDiagnostic> diagnostics)
@@ -36,7 +56,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
     }
 
     /// <summary>
-    /// Compiles L1 Script control-flow documents into <see cref="GraphInstruction"/> using GraphNodeOp.
+    /// Compiles L1 Script and Query control-flow documents into <see cref="GraphInstruction"/> using GraphNodeOp.
     /// BranchBool is compile-time sugar only (not a GraphNodeOp).
     /// </summary>
     public static class GraphControlFlowCompiler
@@ -112,23 +132,34 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         }
 
         public static GraphControlFlowCompileResult Compile(GraphControlFlowDocument document)
+            => CompileCore(document);
+
+        public static (GraphProgramPackage? Package, GraphOutputSchema OutputSchema, List<GraphDiagnostic> Diagnostics) CompileWithOutputs(
+            GraphControlFlowDocument document)
+        {
+            GraphControlFlowCompileResult result = CompileCore(document);
+            return (result.Package, result.OutputSchema, result.Diagnostics);
+        }
+
+        private static GraphControlFlowCompileResult CompileCore(GraphControlFlowDocument document)
         {
             if (document == null) throw new ArgumentNullException(nameof(document));
 
             var diagnostics = new List<GraphDiagnostic>();
             string graphId = document.Id ?? string.Empty;
-            ValidateHeader(document, graphId, diagnostics);
+            GraphKind graphKind = ParseControlFlowKind(document, graphId, diagnostics);
+            ValidateHeader(document, graphId, graphKind, diagnostics);
 
             List<GraphControlFlowNode> nodes = document.Nodes ?? new List<GraphControlFlowNode>();
             Dictionary<string, int> nodeIndices = BuildNodeIndex(nodes, graphId, diagnostics);
             var ops = new AuthoredOp[nodes.Count];
-            ParseOps(nodes, ops, graphId, diagnostics);
+            ParseOps(nodes, ops, graphKind, graphId, diagnostics);
 
             if (!string.IsNullOrWhiteSpace(document.Entry) &&
                 !nodeIndices.ContainsKey(document.Entry))
             {
                 diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingNodeRef,
-                    $"Script entry node '{document.Entry}' does not exist.", document.Entry));
+                    $"{GraphKindLabel(graphKind)} entry node '{document.Entry}' does not exist.", document.Entry));
             }
 
             Dictionary<ControlKey, string> controlEdges = BuildControlEdges(document, nodeIndices, ops, graphId, diagnostics);
@@ -136,11 +167,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
             var outputTypes = new GraphValueType[nodes.Count];
             var outputRegisters = new byte[nodes.Count];
-            AllocateOutputs(nodes, ops, outputTypes, outputRegisters, graphId, diagnostics);
-            ValidateRequiredEdges(nodes, ops, controlEdges, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+            AllocateOutputs(nodes, ops, outputTypes, outputRegisters, graphId, graphKind, diagnostics);
+            ValidateRequiredEdges(nodes, ops, graphKind, controlEdges, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
             DetectUnreachable(document.Entry, nodes, document.ControlEdges, graphId, diagnostics);
 
-            NodeLayout[] layouts = BuildLayouts(nodes, ops, diagnostics);
+            NodeLayout[] layouts = BuildLayouts(nodes, ops, graphKind, controlEdges, diagnostics);
             if (HasErrors(diagnostics))
             {
                 return new GraphControlFlowCompileResult(Array.Empty<GraphInstruction>(), GraphInstructionSourceMap.Empty, diagnostics);
@@ -155,7 +186,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             if (totalInstructions > GraphVmLimits.MaxInstructionsPerExecution)
             {
                 diagnostics.Add(Error(graphId, GraphDiagnosticCodes.BudgetExceeded,
-                    $"Script exceeds instruction budget ({GraphVmLimits.MaxInstructionsPerExecution})."));
+                    $"{GraphKindLabel(graphKind)} exceeds instruction budget ({GraphVmLimits.MaxInstructionsPerExecution})."));
                 return new GraphControlFlowCompileResult(Array.Empty<GraphInstruction>(), GraphInstructionSourceMap.Empty, diagnostics);
             }
 
@@ -177,6 +208,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
             var definedInts = new bool[GraphVmLimits.MaxIntRegisters];
             var definedBools = new bool[GraphVmLimits.MaxBoolRegisters];
+            var symbolToIndex = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            var symbols = new List<string>();
             // ConstInt pins are entry/loop-carried int cells; treat as defined for SSA edge checks.
             for (int i = 0; i < nodes.Count; i++)
             {
@@ -203,6 +236,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     sources,
                     definedInts,
                     definedBools,
+                    symbolToIndex,
+                    symbols,
+                    graphKind,
                     graphId,
                     diagnostics);
             }
@@ -212,27 +248,65 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 return new GraphControlFlowCompileResult(Array.Empty<GraphInstruction>(), GraphInstructionSourceMap.Empty, diagnostics);
             }
 
+            GraphOutputSchema outputSchema = CompileOutputSchema(document, outputTypes, outputRegisters, nodeIndices, diagnostics);
+            if (HasErrors(diagnostics))
+            {
+                return new GraphControlFlowCompileResult(Array.Empty<GraphInstruction>(), GraphInstructionSourceMap.Empty, diagnostics);
+            }
+
+            var sourceMap = new GraphInstructionSourceMap(graphId, sources);
+            var package = new GraphProgramPackage(graphId, symbols.ToArray(), program, graphKind);
             return new GraphControlFlowCompileResult(
                 program,
-                new GraphInstructionSourceMap(graphId, sources),
-                diagnostics);
+                sourceMap,
+                diagnostics,
+                package,
+                outputSchema);
         }
 
-        private static void ValidateHeader(GraphControlFlowDocument document, string graphId, List<GraphDiagnostic> diagnostics)
+        private static GraphKind ParseControlFlowKind(
+            GraphControlFlowDocument document,
+            string graphId,
+            List<GraphDiagnostic> diagnostics)
+        {
+            if (string.IsNullOrWhiteSpace(document.Kind))
+            {
+                return GraphKind.Script;
+            }
+
+            if (!GraphKindParser.TryParse(document.Kind, out GraphKind graphKind) ||
+                graphKind is not (GraphKind.Script or GraphKind.Query))
+            {
+                diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnsupportedGraphKind,
+                    $"ControlFlow document kind '{document.Kind}' is not supported. Supported kinds: Script, Query."));
+                return GraphKind.Script;
+            }
+
+            return graphKind;
+        }
+
+        private static void ValidateHeader(
+            GraphControlFlowDocument document,
+            string graphId,
+            GraphKind graphKind,
+            List<GraphDiagnostic> diagnostics)
         {
             if (string.IsNullOrWhiteSpace(document.Id))
             {
-                diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingGraphId, "Script document requires a non-empty id."));
+                diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingGraphId,
+                    $"{GraphKindLabel(graphKind)} document requires a non-empty id."));
             }
 
             if (string.IsNullOrWhiteSpace(document.Entry))
             {
-                diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingEntry, "Script document requires an entry node id."));
+                diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingEntry,
+                    $"{GraphKindLabel(graphKind)} document requires an entry node id."));
             }
 
             if (document.Nodes == null || document.Nodes.Count == 0)
             {
-                diagnostics.Add(Error(graphId, GraphDiagnosticCodes.EmptyGraph, "Script document requires at least one node."));
+                diagnostics.Add(Error(graphId, GraphDiagnosticCodes.EmptyGraph,
+                    $"{GraphKindLabel(graphKind)} document requires at least one node."));
             }
         }
 
@@ -264,6 +338,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         private static void ParseOps(
             List<GraphControlFlowNode> nodes,
             AuthoredOp[] ops,
+            GraphKind graphKind,
             string graphId,
             List<GraphDiagnostic> diagnostics)
         {
@@ -277,10 +352,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 }
 
                 if (!GraphNodeOpParser.TryParse(node.Op, out GraphNodeOp nodeOp) ||
-                    !IsControlFlowAuthorable(nodeOp))
+                    !IsControlFlowAuthorable(graphKind, nodeOp))
                 {
                     diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnknownNodeOp,
-                        $"Unknown or non-Script-authorable op '{node.Op}'.", node.Id));
+                        $"Unknown or non-{GraphKindLabel(graphKind)}-authorable op '{node.Op}'.", node.Id));
                     ops[i] = new AuthoredOp(AuthoredOpKind.GraphNodeOp, GraphNodeOp.None);
                     continue;
                 }
@@ -289,18 +364,31 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             }
         }
 
-        private static bool IsControlFlowAuthorable(GraphNodeOp op)
-            => op is GraphNodeOp.ConstInt or
-                     GraphNodeOp.AddInt or
-                     GraphNodeOp.CompareLtInt or
-                     GraphNodeOp.Jump or
-                     GraphNodeOp.JumpIfFalse or
-                     GraphNodeOp.Call or
-                     GraphNodeOp.Return or
-                     GraphNodeOp.Yield or
-                     GraphNodeOp.HaltReturnInt or
-                     GraphNodeOp.InvokeScript or
-                     GraphNodeOp.MoveInt;
+        private static bool IsControlFlowAuthorable(GraphKind graphKind, GraphNodeOp op)
+        {
+            if (graphKind == GraphKind.Query)
+            {
+                return op is GraphNodeOp.LoadCaster or
+                             GraphNodeOp.QueryAllMapEntities or
+                             GraphNodeOp.QueryFilterTeam or
+                             GraphNodeOp.AggSumAttribute;
+            }
+
+            return op is GraphNodeOp.ConstInt or
+                         GraphNodeOp.AddInt or
+                         GraphNodeOp.CompareLtInt or
+                         GraphNodeOp.Jump or
+                         GraphNodeOp.JumpIfFalse or
+                         GraphNodeOp.Call or
+                         GraphNodeOp.Return or
+                         GraphNodeOp.Yield or
+                         GraphNodeOp.HaltReturnInt or
+                         GraphNodeOp.InvokeScript or
+                         GraphNodeOp.MoveInt;
+        }
+
+        private static string GraphKindLabel(GraphKind graphKind)
+            => graphKind == GraphKind.Query ? "Query" : "Script";
 
         private static Dictionary<ControlKey, string> BuildControlEdges(
             GraphControlFlowDocument document,
@@ -353,11 +441,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             {
                 GraphControlFlowValueEdge edge = edges[i];
                 if (string.IsNullOrWhiteSpace(edge.From) ||
+                    string.IsNullOrWhiteSpace(edge.FromPort) ||
                     string.IsNullOrWhiteSpace(edge.To) ||
                     string.IsNullOrWhiteSpace(edge.ToPort))
                 {
                     diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingValueInput,
-                        "Value edge requires From, To, and ToPort."));
+                        "Value edge requires From, FromPort, To, and ToPort."));
                     continue;
                 }
 
@@ -385,14 +474,16 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             GraphValueType[] outputTypes,
             byte[] outputRegisters,
             string graphId,
+            GraphKind graphKind,
             List<GraphDiagnostic> diagnostics)
         {
             int intNext = 0;
             int boolNext = 0;
+            int floatNext = 0;
 
             for (int i = 0; i < nodes.Count; i++)
             {
-                GraphValueType outputType = GetOutputType(ops[i]);
+                GraphValueType outputType = GetOutputType(ops[i], graphKind);
                 outputTypes[i] = outputType;
                 if (outputType == GraphValueType.Void)
                 {
@@ -429,6 +520,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 {
                     GraphValueType.Int => Alloc(ref intNext, GraphVmLimits.MaxIntRegisters, graphId, nodes[i].Id, diagnostics),
                     GraphValueType.Bool => Alloc(ref boolNext, GraphVmLimits.MaxBoolRegisters, graphId, nodes[i].Id, diagnostics),
+                    GraphValueType.Float => Alloc(ref floatNext, GraphVmLimits.MaxFloatRegisters, graphId, nodes[i].Id, diagnostics),
+                    GraphValueType.Entity when ops[i].NodeOp == GraphNodeOp.LoadCaster => 0,
                     _ => (byte)0
                 };
             }
@@ -446,11 +539,22 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             return (byte)next++;
         }
 
-        private static GraphValueType GetOutputType(AuthoredOp op)
+        private static GraphValueType GetOutputType(AuthoredOp op, GraphKind graphKind)
         {
             if (op.Kind == AuthoredOpKind.BranchBool)
             {
                 return GraphValueType.Void;
+            }
+
+            if (graphKind == GraphKind.Query)
+            {
+                return op.NodeOp switch
+                {
+                    GraphNodeOp.LoadCaster => GraphValueType.Entity,
+                    GraphNodeOp.QueryAllMapEntities or GraphNodeOp.QueryFilterTeam => GraphValueType.TargetList,
+                    GraphNodeOp.AggSumAttribute => GraphValueType.Float,
+                    _ => GraphValueType.Void
+                };
             }
 
             return op.NodeOp switch
@@ -465,6 +569,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         private static void ValidateRequiredEdges(
             List<GraphControlFlowNode> nodes,
             AuthoredOp[] ops,
+            GraphKind graphKind,
             Dictionary<ControlKey, string> controlEdges,
             Dictionary<ValueInputKey, GraphControlFlowValueEdge> valueEdges,
             Dictionary<string, int> nodeIndices,
@@ -476,6 +581,23 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             {
                 GraphControlFlowNode node = nodes[i];
                 AuthoredOp op = ops[i];
+
+                ValidateAllowedPorts(node, op, graphKind, controlEdges, valueEdges, graphId, diagnostics);
+
+                if (graphKind == GraphKind.Query)
+                {
+                    ValidateQueryNode(
+                        nodes,
+                        i,
+                        op,
+                        controlEdges,
+                        valueEdges,
+                        nodeIndices,
+                        outputTypes,
+                        graphId,
+                        diagnostics);
+                    continue;
+                }
 
                 if (op.Kind == AuthoredOpKind.BranchBool || op.NodeOp == GraphNodeOp.JumpIfFalse)
                 {
@@ -520,6 +642,161 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         break;
                 }
             }
+        }
+
+        private static void ValidateQueryNode(
+            List<GraphControlFlowNode> nodes,
+            int nodeIndex,
+            AuthoredOp op,
+            Dictionary<ControlKey, string> controlEdges,
+            Dictionary<ValueInputKey, GraphControlFlowValueEdge> valueEdges,
+            Dictionary<string, int> nodeIndices,
+            GraphValueType[] outputTypes,
+            string graphId,
+            List<GraphDiagnostic> diagnostics)
+        {
+            GraphControlFlowNode node = nodes[nodeIndex];
+            switch (op.NodeOp)
+            {
+                case GraphNodeOp.LoadCaster:
+                case GraphNodeOp.QueryAllMapEntities:
+                    RequireControlEdge(node, GraphControlFlowPorts.Next, controlEdges, graphId, diagnostics);
+                    break;
+                case GraphNodeOp.QueryFilterTeam:
+                    RequireControlEdge(node, GraphControlFlowPorts.Next, controlEdges, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.List, GraphValueType.TargetList, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    bool hasTeamField = node.TeamId != 0;
+                    bool hasTeamPin = valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.TeamId));
+                    if (hasTeamField == hasTeamPin)
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingValueInput,
+                            $"Node '{node.Id}' must provide exactly one team source: TeamId field or teamId value pin.", node.Id));
+                    }
+                    else if (hasTeamPin)
+                    {
+                        RequireValueInput(node, GraphControlFlowPorts.TeamId, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    }
+
+                    break;
+                case GraphNodeOp.AggSumAttribute:
+                    RequireValueInput(node, GraphControlFlowPorts.List, GraphValueType.TargetList, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    if (string.IsNullOrWhiteSpace(node.Attribute))
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingNodeRef,
+                            $"Node '{node.Id}' requires a non-empty attribute.", node.Id));
+                    }
+
+                    if (!controlEdges.ContainsKey(new ControlKey(node.Id, GraphControlFlowPorts.Next)) &&
+                        nodeIndex != nodes.Count - 1)
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingControlEdge,
+                            $"Missing control edge 'next' on non-terminal Query node '{node.Id}'.", node.Id));
+                    }
+
+                    break;
+            }
+        }
+
+        private static void ValidateAllowedPorts(
+            GraphControlFlowNode node,
+            AuthoredOp op,
+            GraphKind graphKind,
+            Dictionary<ControlKey, string> controlEdges,
+            Dictionary<ValueInputKey, GraphControlFlowValueEdge> valueEdges,
+            string graphId,
+            List<GraphDiagnostic> diagnostics)
+        {
+            foreach (ControlKey edge in controlEdges.Keys)
+            {
+                if (!string.Equals(edge.NodeId, node.Id, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                if (!IsAllowedControlPort(op, graphKind, edge.Port))
+                {
+                    diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnexpectedControlEdge,
+                        $"Unexpected control edge '{edge.Port}' on node '{node.Id}'.", node.Id));
+                }
+            }
+
+            foreach (GraphControlFlowValueEdge edge in valueEdges.Values)
+            {
+                if (string.Equals(edge.From, node.Id, StringComparison.Ordinal) &&
+                    !IsAllowedOutputPort(op, graphKind, edge.FromPort))
+                {
+                    diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
+                        $"Unexpected value output '{edge.FromPort}' on node '{node.Id}'.", node.Id));
+                }
+
+                if (string.Equals(edge.To, node.Id, StringComparison.Ordinal) &&
+                    !IsAllowedInputPort(op, graphKind, edge.ToPort))
+                {
+                    diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingValueInput,
+                        $"Unexpected value input '{edge.ToPort}' on node '{node.Id}'.", node.Id));
+                }
+            }
+        }
+
+        private static bool IsAllowedControlPort(AuthoredOp op, GraphKind graphKind, string port)
+        {
+            if (graphKind == GraphKind.Query)
+            {
+                return port == GraphControlFlowPorts.Next;
+            }
+
+            if (op.Kind == AuthoredOpKind.BranchBool || op.NodeOp == GraphNodeOp.JumpIfFalse)
+            {
+                return port is GraphControlFlowPorts.True or GraphControlFlowPorts.False;
+            }
+
+            return op.NodeOp switch
+            {
+                GraphNodeOp.Call => port is GraphControlFlowPorts.Call or GraphControlFlowPorts.Next,
+                GraphNodeOp.Jump => port == GraphControlFlowPorts.Target,
+                GraphNodeOp.Return or GraphNodeOp.HaltReturnInt => false,
+                _ => port == GraphControlFlowPorts.Next
+            };
+        }
+
+        private static bool IsAllowedInputPort(AuthoredOp op, GraphKind graphKind, string port)
+        {
+            if (graphKind == GraphKind.Query)
+            {
+                return op.NodeOp switch
+                {
+                    GraphNodeOp.QueryFilterTeam => port is GraphControlFlowPorts.List or GraphControlFlowPorts.TeamId,
+                    GraphNodeOp.AggSumAttribute => port == GraphControlFlowPorts.List,
+                    _ => false
+                };
+            }
+
+            if (op.Kind == AuthoredOpKind.BranchBool || op.NodeOp == GraphNodeOp.JumpIfFalse)
+            {
+                return port == GraphControlFlowPorts.Condition;
+            }
+
+            return op.NodeOp switch
+            {
+                GraphNodeOp.AddInt or GraphNodeOp.CompareLtInt => port is GraphControlFlowPorts.A or GraphControlFlowPorts.B,
+                GraphNodeOp.MoveInt or GraphNodeOp.HaltReturnInt => port == GraphControlFlowPorts.Value,
+                _ => false
+            };
+        }
+
+        private static bool IsAllowedOutputPort(AuthoredOp op, GraphKind graphKind, string port)
+        {
+            if (graphKind == GraphKind.Query)
+            {
+                return op.NodeOp switch
+                {
+                    GraphNodeOp.LoadCaster or GraphNodeOp.AggSumAttribute => port == GraphControlFlowPorts.Value,
+                    GraphNodeOp.QueryAllMapEntities or GraphNodeOp.QueryFilterTeam => port == GraphControlFlowPorts.List,
+                    _ => false
+                };
+            }
+
+            return GetOutputType(op, graphKind) != GraphValueType.Void && port == GraphControlFlowPorts.Value;
         }
 
         private static void DetectUnreachable(
@@ -591,13 +868,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         private static NodeLayout[] BuildLayouts(
             List<GraphControlFlowNode> nodes,
             AuthoredOp[] ops,
+            GraphKind graphKind,
+            Dictionary<ControlKey, string> controlEdges,
             List<GraphDiagnostic> diagnostics)
         {
             var layouts = new NodeLayout[nodes.Count];
             int cursor = 0;
             for (int i = 0; i < nodes.Count; i++)
             {
-                int count = InstructionCount(ops[i]);
+                int count = InstructionCount(nodes[i], ops[i], graphKind, controlEdges);
                 layouts[i] = new NodeLayout(cursor, count);
                 cursor += count;
             }
@@ -605,8 +884,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             return layouts;
         }
 
-        private static int InstructionCount(AuthoredOp op)
+        private static int InstructionCount(
+            GraphControlFlowNode node,
+            AuthoredOp op,
+            GraphKind graphKind,
+            Dictionary<ControlKey, string> controlEdges)
         {
+            if (graphKind == GraphKind.Query)
+            {
+                return controlEdges.ContainsKey(new ControlKey(node.Id, GraphControlFlowPorts.Next)) ? 2 : 1;
+            }
+
             if (op.Kind == AuthoredOpKind.BranchBool || op.NodeOp == GraphNodeOp.JumpIfFalse)
             {
                 return 2; // JumpIfFalse + Jump(true)
@@ -635,11 +923,37 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             GraphInstructionSource[] sources,
             bool[] definedInts,
             bool[] definedBools,
+            Dictionary<string, int> symbolToIndex,
+            List<string> symbols,
+            GraphKind graphKind,
             string graphId,
             List<GraphDiagnostic> diagnostics)
         {
             int nodeIndex = nodeIndices[node.Id];
             int bodyIndex = layouts[nodeIndex].BodyIndex;
+
+            if (graphKind == GraphKind.Query)
+            {
+                CompileQueryNode(
+                    document,
+                    node,
+                    op,
+                    outputRegisters,
+                    outputTypes,
+                    controlEdges,
+                    valueEdges,
+                    nodeIndices,
+                    layouts,
+                    program,
+                    sources,
+                    definedInts,
+                    definedBools,
+                    symbolToIndex,
+                    symbols,
+                    graphId,
+                    diagnostics);
+                return;
+            }
 
             if (op.Kind == AuthoredOpKind.BranchBool || op.NodeOp == GraphNodeOp.JumpIfFalse)
             {
@@ -779,6 +1093,106 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             }
         }
 
+        private static void CompileQueryNode(
+            GraphControlFlowDocument document,
+            GraphControlFlowNode node,
+            AuthoredOp op,
+            byte[] outputRegisters,
+            GraphValueType[] outputTypes,
+            Dictionary<ControlKey, string> controlEdges,
+            Dictionary<ValueInputKey, GraphControlFlowValueEdge> valueEdges,
+            Dictionary<string, int> nodeIndices,
+            NodeLayout[] layouts,
+            GraphInstruction[] program,
+            GraphInstructionSource[] sources,
+            bool[] definedInts,
+            bool[] definedBools,
+            Dictionary<string, int> symbolToIndex,
+            List<string> symbols,
+            string graphId,
+            List<GraphDiagnostic> diagnostics)
+        {
+            int nodeIndex = nodeIndices[node.Id];
+            int bodyIndex = layouts[nodeIndex].BodyIndex;
+            var instruction = new GraphInstruction
+            {
+                Op = (ushort)op.NodeOp,
+                Dst = outputRegisters[nodeIndex]
+            };
+
+            switch (op.NodeOp)
+            {
+                case GraphNodeOp.LoadCaster:
+                    program[bodyIndex] = instruction;
+                    SetSource(sources, bodyIndex, graphId, node, nameof(GraphNodeOp.LoadCaster), GraphControlFlowPorts.Enter);
+                    break;
+                case GraphNodeOp.QueryAllMapEntities:
+                    program[bodyIndex] = instruction;
+                    SetSource(sources, bodyIndex, graphId, node, nameof(GraphNodeOp.QueryAllMapEntities), GraphControlFlowPorts.Enter);
+                    break;
+                case GraphNodeOp.QueryFilterTeam:
+                    if (valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.TeamId)))
+                    {
+                        instruction.A = ResolveValueInput(
+                            node,
+                            GraphControlFlowPorts.TeamId,
+                            GraphValueType.Int,
+                            valueEdges,
+                            nodeIndices,
+                            outputTypes,
+                            outputRegisters,
+                            definedInts,
+                            definedBools,
+                            graphId,
+                            diagnostics);
+                        instruction.Flags = 1;
+                    }
+                    else
+                    {
+                        instruction.Imm = node.TeamId;
+                        instruction.Flags = 0;
+                    }
+
+                    program[bodyIndex] = instruction;
+                    SetSource(sources, bodyIndex, graphId, node, nameof(GraphNodeOp.QueryFilterTeam), GraphControlFlowPorts.Enter);
+                    break;
+                case GraphNodeOp.AggSumAttribute:
+                    instruction.Imm = RequireSymbol(node.Attribute, "attribute", node, symbolToIndex, symbols, graphId, diagnostics);
+                    program[bodyIndex] = instruction;
+                    SetSource(sources, bodyIndex, graphId, node, nameof(GraphNodeOp.AggSumAttribute), GraphControlFlowPorts.Enter);
+                    break;
+                default:
+                    diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnknownNodeOp,
+                        $"Op '{op.NodeOp}' is not supported by Query ControlFlow compiler.", node.Id));
+                    return;
+            }
+
+            if (outputTypes[nodeIndex] == GraphValueType.Int)
+            {
+                definedInts[outputRegisters[nodeIndex]] = true;
+            }
+
+            if (outputTypes[nodeIndex] == GraphValueType.Bool)
+            {
+                definedBools[outputRegisters[nodeIndex]] = true;
+            }
+
+            if (controlEdges.ContainsKey(new ControlKey(node.Id, GraphControlFlowPorts.Next)))
+            {
+                EmitRelativeJump(
+                    document,
+                    node,
+                    GraphControlFlowPorts.Next,
+                    bodyIndex + 1,
+                    controlEdges,
+                    nodeIndices,
+                    layouts,
+                    program,
+                    sources,
+                    graphId);
+            }
+        }
+
         private static void EmitRelativeJump(
             GraphControlFlowDocument document,
             GraphControlFlowNode node,
@@ -915,6 +1329,154 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             string port)
         {
             sources[index] = new GraphInstructionSource(graphId, node.Id, op, port);
+        }
+
+        private static GraphOutputSchema CompileOutputSchema(
+            GraphControlFlowDocument document,
+            GraphValueType[] outputTypes,
+            byte[] outputRegisters,
+            Dictionary<string, int> nodeIndices,
+            List<GraphDiagnostic> diagnostics)
+        {
+            List<GraphOutputConfig> outputs = document.Outputs ?? new List<GraphOutputConfig>();
+            if (outputs.Count == 0)
+            {
+                return GraphOutputSchema.Empty;
+            }
+
+            var bindings = new List<GraphOutputBinding>(outputs.Count);
+            string graphId = document.Id ?? string.Empty;
+            for (int i = 0; i < outputs.Count; i++)
+            {
+                GraphOutputConfig output = outputs[i];
+                if (output == null)
+                {
+                    continue;
+                }
+
+                string outputId = string.IsNullOrWhiteSpace(output.Id)
+                    ? $"output[{i}]"
+                    : output.Id;
+
+                if (!TryParseOutputDestination(output.Destination, out GraphOutputDestinationKind destination) ||
+                    destination != GraphOutputDestinationKind.Summary)
+                {
+                    diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
+                        $"ControlFlow graph output '{outputId}' must use destination Summary.", outputId));
+                    continue;
+                }
+
+                if (!TryParseOutputValueKind(output.Type, out GraphOutputValueKind valueKind) ||
+                    valueKind == GraphOutputValueKind.TargetList)
+                {
+                    diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
+                        $"ControlFlow summary output '{outputId}' has unsupported type '{output.Type}'.", outputId));
+                    continue;
+                }
+
+                if (string.IsNullOrWhiteSpace(output.Source) ||
+                    !nodeIndices.TryGetValue(output.Source, out int sourceIndex))
+                {
+                    diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingNodeRef,
+                        $"ControlFlow summary output '{outputId}' references missing source '{output.Source}'.", outputId));
+                    continue;
+                }
+
+                GraphValueType sourceType = outputTypes[sourceIndex];
+                if (!MatchesOutputType(valueKind, sourceType))
+                {
+                    diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
+                        $"ControlFlow summary output '{outputId}' type {valueKind} does not match source '{output.Source}' type {sourceType}.",
+                        outputId));
+                    continue;
+                }
+
+                string key = string.IsNullOrWhiteSpace(output.Key) ? outputId : output.Key.Trim();
+                bindings.Add(new GraphOutputBinding(
+                    outputId,
+                    GraphOutputDestinationKind.Summary,
+                    valueKind,
+                    outputRegisters[sourceIndex],
+                    keyId: 0,
+                    key,
+                    collectionKey: string.Empty,
+                    collectionRole: EntityCollectionRoleKind.Display,
+                    title: output.Title,
+                    summary: output.Summary));
+            }
+
+            return bindings.Count == 0
+                ? GraphOutputSchema.Empty
+                : new GraphOutputSchema(bindings.ToArray());
+        }
+
+        private static bool TryParseOutputDestination(string value, out GraphOutputDestinationKind destination)
+        {
+            destination = GraphOutputDestinationKind.Summary;
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return false;
+            }
+
+            return Enum.TryParse(value, ignoreCase: false, out destination) &&
+                   Enum.IsDefined(typeof(GraphOutputDestinationKind), destination);
+        }
+
+        private static bool TryParseOutputValueKind(string value, out GraphOutputValueKind valueKind)
+        {
+            valueKind = default;
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return false;
+            }
+
+            return Enum.TryParse(value, ignoreCase: false, out valueKind) &&
+                   Enum.IsDefined(typeof(GraphOutputValueKind), valueKind);
+        }
+
+        private static bool MatchesOutputType(GraphOutputValueKind outputKind, GraphValueType graphType)
+        {
+            return outputKind switch
+            {
+                GraphOutputValueKind.Bool => graphType == GraphValueType.Bool,
+                GraphOutputValueKind.Int => graphType == GraphValueType.Int,
+                GraphOutputValueKind.Float => graphType == GraphValueType.Float,
+                GraphOutputValueKind.Entity => graphType == GraphValueType.Entity,
+                GraphOutputValueKind.TargetList => graphType == GraphValueType.TargetList,
+                _ => false,
+            };
+        }
+
+        private static int RequireSymbol(
+            string? symbol,
+            string fieldName,
+            GraphControlFlowNode node,
+            Dictionary<string, int> symbolToIndex,
+            List<string> symbols,
+            string graphId,
+            List<GraphDiagnostic> diagnostics)
+        {
+            if (string.IsNullOrWhiteSpace(symbol))
+            {
+                diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingNodeRef,
+                    $"Node '{node.Id}' requires a non-empty {fieldName}.", node.Id));
+                return -1;
+            }
+
+            return Intern(symbolToIndex, symbols, symbol);
+        }
+
+        private static int Intern(Dictionary<string, int> symbolToIndex, List<string> symbols, string symbol)
+        {
+            if (symbolToIndex.TryGetValue(symbol, out int existing))
+            {
+                return existing;
+            }
+
+            int index = symbols.Count;
+            symbolToIndex[symbol] = index;
+            symbols.Add(symbol);
+            return index;
         }
 
         private static GraphDiagnostic Error(string graphId, string code, string message, string? nodeId = null)

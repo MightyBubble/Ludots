@@ -1,4 +1,57 @@
-﻿## GAS Composition Gate 鈥?Self Review
+﻿## GAS Composition Gate — Self Review
+
+- **Task / Issue**: Query graphs join Script on GraphControlFlow pin IR for Phase 1 aggregate authoring
+- **Date**: 2026-08-11
+- **Agent / Author**: Cursor Cloud Agent
+
+### 1. Core judgment
+
+新变体主要交付物是（A/B/C/D）: A
+
+结论: PASS
+
+一句话理由: 需求复用既有 GraphNodeOp、GraphInstruction VM 与 GAS graph 编译链路，只把 Query authoring 从 next-chain 扩展到现有 pin IR。
+
+### 2. Layer assignment
+
+| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
+|-----------|-----------------|----------|
+| Query aggregate graph authoring | 2 | `GraphControlFlowDocument` + graph asset |
+| Query aggregate graph compilation | 2 | `GraphControlFlowCompiler` emitting existing `GraphInstruction` |
+| Runtime execution | 0 | Existing `GraphExecutor` / `GraphNodeOp` handlers |
+
+### 3. Reuse list
+
+- Handlers: Existing `LoadCaster`, `QueryAllMapEntities`, `QueryFilterTeam`, `AggSumAttribute` handlers
+- Queues / Systems: Existing GAS graph runtime and program registry loading path
+- Resolvers / Registries: Existing symbol table / `GasGraphSymbolResolver` and graph program package
+- Existing presets / graphs: Existing showcase `ui.panel.player.resource.aggregate` graph migrated to ControlFlow JSON
+
+### 4. New Layer 0 ops (if any)
+
+N/A — no new `GraphNodeOp` values or runtime VM instructions.
+
+### 5. Transaction boundary
+
+必须原子 rollback 的步骤: N/A — Query graphs are read-only aggregation programs.
+
+### 6. Config SSOT
+
+行为配置落在: effect template / graph / catalog（路径）: `mods/showcases/ui_player_aggregate_graph_mvp/UiPlayerAggregateGraphMvpShowcaseMod/assets/GAS/graphs.json`
+
+是否新增 JSON schema: NO — existing ControlFlow document DTO gains Query fields and outputs.
+
+### 7. Red flag scan
+
+- [x] 未新增 profile inherit/placement enum
+- [x] 未新建与 spawn 平行的物化管线
+- [x] 未把 placement 校验塞进 lifecycle op
+- [x] 未添加「说不清的」默认 fallback
+
+### 8. Next variant test
+
+「下一个 Mod 变体」将修改: graph 连线
+## GAS Composition Gate 鈥?Self Review
 
 Current closeouts and prior issue reviews follow.
 

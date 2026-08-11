@@ -1,12 +1,13 @@
 # GAS Query Graph Editor (MVP)
 
 Minimal real editor for showcase graph `ui.panel.player.resource.aggregate`.
+The showcase graph is authored as Query ControlFlow pin IR, not a fake next-chain view.
 
 It reads/writes:
 
 `mods/showcases/ui_player_aggregate_graph_mvp/UiPlayerAggregateGraphMvpShowcaseMod/assets/GAS/graphs.json`
 
-and validates with `GraphCompiler.CompileWithOutputs` (no mock compiler).
+and validates through the Bridge with `GraphControlFlowCompiler.CompileWithOutputs` for CF documents or `GraphCompiler.CompileWithOutputs` for legacy next-chain graphs (no mock compiler).
 
 ## Run
 
@@ -38,9 +39,9 @@ Toolbar link: **GAS Graphs** (top-left of the map editor).
 | Method | Path | Purpose |
 |--------|------|---------|
 | `GET` | `/api/mods/{modId}/gas/graphs` | List `{ id, kind }` from `assets/GAS/graphs.json` |
-| `GET` | `/api/mods/{modId}/gas/graphs/{graphId}` | Full `GraphConfig` JSON |
-| `PUT` | `/api/mods/{modId}/gas/graphs/{graphId}` | Replace graph in array (atomic temp+replace) |
-| `POST` | `/api/mods/{modId}/gas/graphs/{graphId}/validate` | Body `GraphConfig` or empty (load file) → `GraphCompiler.CompileWithOutputs` |
+| `GET` | `/api/mods/{modId}/gas/graphs/{graphId}` | Full graph JSON; CF documents include `controlEdges`/`valueEdges` |
+| `PUT` | `/api/mods/{modId}/gas/graphs/{graphId}` | Replace graph in array (atomic temp+replace), accepting CF or legacy JSON |
+| `POST` | `/api/mods/{modId}/gas/graphs/{graphId}/validate` | Body graph JSON or empty (load file) → CF compiler when `controlEdges`/`valueEdges` are present, otherwise legacy compiler |
 
 Validate response shape:
 
@@ -53,6 +54,14 @@ Validate response shape:
 ```
 
 `ok` is false when compile fails. Save in the UI validates first and refuses write on failure.
+
+## Query CF pins
+
+- Control edges render in blue and use `fromPort: "next"`.
+- Value edges render by pin type: `list` edges in green and `value` edges in violet.
+- `QueryFilterTeam` uses an explicit `list` value input and either a `teamId` node field or `teamId` int value input.
+- `AggSumAttribute` uses an explicit `list` value input and an `attribute` node field.
+- The Bridge rejects mixed CF and legacy JSON (`controlEdges`/`valueEdges` plus `nodes[].next`).
 
 ## curl smoke
 
