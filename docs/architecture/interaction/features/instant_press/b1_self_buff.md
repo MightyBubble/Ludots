@@ -88,7 +88,7 @@ Effect 模板示例：
 - **DO**: 状态标签（如 `Status.Empowered`、`Status.Invulnerable`）通过 `grantedTags` 由 Effect 生命周期管理，Effect 移除时标签自动撤销。
 - **DO**: 若需"同一 Buff 不可重复叠加"，在 EffectTemplate 设置 `stackPolicy: Replace` 或 `stackPolicy: Refresh`，不在 Graph 内手动检查。
 - **DON'T**: 不允许在 Graph 内直接写 Position / Tag 位，位移用 Displacement Preset，标签用 `grantedTags`。
-- **DON'T**: 不允许将冷却逻辑嵌入 Graph；冷却由 AbilitySystem 的 `CooldownComponent` 统一管理。
+- **DON'T**: 不允许将冷却写成 Graph 内的手动计时或 Core 专用字段；若某个 Mod 需要冷却，用一个有持续时间的 Effect 授予限时 tag，再由 Ability 的 `blockTags` 阻止再次施放。
 - **DON'T**: Buff 持续时间不用 `ConstFloat` + 自定义计时器，统一走 `lifetime.ticks`，确保时间轴一致性。
 
 ---

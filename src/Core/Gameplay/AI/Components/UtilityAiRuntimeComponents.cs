@@ -18,10 +18,6 @@ namespace Ludots.Core.Gameplay.AI.Components
         public int CurrentTaskOffset;
         public byte CurrentTaskStatus;
         public int DecisionStartedStep;
-        public int CooldownDecisionId;
-        public int DecisionCooldownUntilStep;
-        public int SharedCooldownUntilStep;
-        public int SharedCooldownTagId;
     }
 
     public struct UtilityAiDecisionTrace
@@ -33,9 +29,8 @@ namespace Ludots.Core.Gameplay.AI.Components
         public int BestPriorityBucket;
         public long BestDistanceSq;
         public int LastFilterRejectReason;
-        public int LastReadinessBlockReason;
         public int LastSubmittedOrderTypeId;
-        public int LastSubmittedAbilityId;
+        public int LastSubmittedOrderId;
         public int LastTaskKind;
         public int LastTaskStatus;
     }

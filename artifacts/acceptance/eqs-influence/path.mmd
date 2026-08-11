@@ -1,0 +1,43 @@
+```mermaid
+graph TD
+    Start([Start: AI 决策空间落点]) --> ProjectInfluence[投影威胁 Influence<br/>Stamp threat @ 300,0<br/>radius=200cm peak=10.0 linear]
+    ProjectInfluence --> ValidateField{威胁场<br/>有效?}
+    ValidateField -->|✓ center ~8.23| GenerateCandidates[EQS 生成候选<br/>RingGenerator<br/>radius=400cm count=16]
+    
+    GenerateCandidates --> TestDistance[Test 1: Distance<br/>preferNear goal<br/>weight=1.0]
+    TestDistance --> TestInfluence[Test 2: Influence<br/>preferLow threat<br/>weight=2.0]
+    
+    TestInfluence --> ScoreAll[为每个候选计算<br/>score = dist分 + 2×安全分]
+    ScoreAll --> SelectBest{Selection: Best}
+    
+    SelectBest -->|found| AssertRing{候选在环上?<br/>dist² ~160000}
+    SelectBest -->|not found| Fail([FAIL: 无候选])
+    
+    AssertRing -->|✓| AssertThreat{威胁低?<br/>influence < 3.0}
+    AssertRing -->|✗| Fail
+    
+    AssertThreat -->|✓| AssertAvoid{避开直线?<br/>|Y| > 50cm}
+    AssertThreat -->|✗| Fail
+    
+    AssertAvoid -->|✓| Success([PASS:<br/>绕过威胁落点])
+    AssertAvoid -->|✗| Fail
+    
+    style Success fill:#4a4,stroke:#282,stroke-width:3px
+    style Fail fill:#a44,stroke:#822,stroke-width:3px
+    style ProjectInfluence fill:#46a,stroke:#258,stroke-width:2px
+    style GenerateCandidates fill:#46a,stroke:#258,stroke-width:2px
+    style SelectBest fill:#a64,stroke:#852,stroke-width:2px
+```
+
+## 分支覆盖
+
+| 分支 | 触发条件 | 结果 |
+|------|---------|------|
+| ValidateField ✓ | threat field 成功投影且采样有效 | ✓ covered |
+| SelectBest found | 至少一个候选未被过滤 | ✓ covered |
+| SelectBest not found | 全部候选被过滤（本场景无此分支）| untested |
+| AssertRing ✓ | 最佳候选距原点 ~400cm | ✓ covered |
+| AssertThreat ✓ | 最佳候选威胁 < 3.0 | ✓ covered |
+| AssertAvoid ✓ | 最佳候选 Y 偏离直线 > 50cm | ✓ covered |
+
+**关键路径**：Start → ProjectInfluence → GenerateCandidates → TestDistance → TestInfluence → ScoreAll → SelectBest → AssertRing → AssertThreat → AssertAvoid → **Success** ✓

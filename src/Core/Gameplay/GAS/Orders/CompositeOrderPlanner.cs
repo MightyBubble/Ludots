@@ -142,7 +142,7 @@ namespace Ludots.Core.Gameplay.GAS.Orders
                 if (plan.State == MoveThenCastPlanState.Planned)
                 {
                     throw new InvalidOperationException(
-                        "CompositeOrderPlanner cannot split a shared order batch into move-then-cast continuations without breaking the shared OrderId boundary.");
+                        "CompositeOrderPlanner cannot split an atomic order batch into move-then-cast continuations without breaking the admission batch boundary.");
                 }
             }
 

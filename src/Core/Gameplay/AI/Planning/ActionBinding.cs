@@ -2,12 +2,10 @@ namespace Ludots.Core.Gameplay.AI.Planning
 {
     public enum ActionBindingOp : byte
     {
-        IntToOrderI0 = 0,
-        IntToOrderI1 = 1,
-        IntToOrderI2 = 2,
-        IntToOrderI3 = 3,
+        IntToAbilitySlot = 0,
         EntityToTarget = 4,
-        EntityToTargetContext = 5
+        EntityToTargetContext = 5,
+        EntityPositionToMoveDestination = 6
     }
 
     public readonly struct ActionBinding
@@ -22,4 +20,3 @@ namespace Ludots.Core.Gameplay.AI.Planning
         }
     }
 }
-

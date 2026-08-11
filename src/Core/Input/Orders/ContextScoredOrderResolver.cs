@@ -4,6 +4,7 @@ using Arch.Core;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Scoring;
 using Ludots.Core.Gameplay.Items;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Mathematics;
@@ -110,6 +111,7 @@ namespace Ludots.Core.Input.Orders
             float bestScore = float.MinValue;
             int bestSlotIndex = -1;
             Entity bestTarget = default;
+            var scoreBudget = GraphScoreEvaluationBudget.CreateUnbounded();
 
             for (int i = 0; i < group.Candidates.Count; i++)
             {
@@ -121,7 +123,7 @@ namespace Ludots.Core.Input.Orders
 
                 if (!candidate.RequiresTarget)
                 {
-                    if (TryScoreCandidate(actor, default, hoveredEntity, actorWorldCm, candidate, out float score) &&
+                    if (TryScoreCandidate(actor, default, hoveredEntity, actorWorldCm, candidate, ref scoreBudget, out float score) &&
                         IsBetterCandidate(score, default, candidateSlotIndex, bestScore, bestTarget, bestSlotIndex))
                     {
                         bestScore = score;
@@ -139,7 +141,7 @@ namespace Ludots.Core.Input.Orders
                         continue;
                     }
 
-                    if (TryScoreCandidate(actor, target, hoveredEntity, actorWorldCm, candidate, out float score) &&
+                    if (TryScoreCandidate(actor, target, hoveredEntity, actorWorldCm, candidate, ref scoreBudget, out float score) &&
                         IsBetterCandidate(score, target, candidateSlotIndex, bestScore, bestTarget, bestSlotIndex))
                     {
                         bestScore = score;
@@ -178,6 +180,7 @@ namespace Ludots.Core.Input.Orders
             Entity hoveredEntity,
             WorldCmInt2 actorWorldCm,
             in ContextGroupCandidate candidate,
+            ref GraphScoreEvaluationBudget scoreBudget,
             out float totalScore)
         {
             totalScore = candidate.BasePriority;
@@ -248,20 +251,22 @@ namespace Ludots.Core.Input.Orders
 
             if (candidate.ScoreGraphId > 0)
             {
-                if (!_graphPrograms.TryGetProgram(candidate.ScoreGraphId, out var scoreProgram))
-                {
-                    throw new InvalidOperationException($"Missing score graph id {candidate.ScoreGraphId}.");
-                }
-
-                GraphKind scoreKind = _graphPrograms.RequireKind(candidate.ScoreGraphId, GraphKind.Score);
-                totalScore += GasGraphExecutor.ExecuteScore(
+                if (!GraphScoreEvaluator.TryEvaluate(
                     _world,
+                    _graphPrograms,
+                    _graphApi,
+                    candidate.ScoreGraphId,
                     actor,
                     target,
                     default,
-                    scoreProgram,
-                    _graphApi,
-                    scoreKind);
+                    ref scoreBudget,
+                    out float graphScore))
+                {
+                    throw new InvalidOperationException(
+                        $"Context-scored resolver exhausted score graph budget while evaluating graph id {candidate.ScoreGraphId}.");
+                }
+
+                totalScore += graphScore;
             }
 
             return true;

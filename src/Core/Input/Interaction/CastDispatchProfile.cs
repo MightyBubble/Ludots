@@ -21,7 +21,7 @@ namespace Ludots.Core.Input.Interaction
     /// <summary>Built-in router kinds (RFC-0065 §5.8, DEC-11). Registry keys, not a closed enum.</summary>
     public static class CastDispatchRouterKinds
     {
-        /// <summary>Resolved dispatch actors submit together; <c>sharedOrderId</c> declares shared fan-out.</summary>
+        /// <summary>Resolved dispatch actors submit together; <c>sharedOrderId</c> declares atomic fan-out.</summary>
         public const string Parallel = "parallel";
 
         /// <summary>Resolved dispatch actors submit one after another; incompatible with <c>sharedOrderId</c>.</summary>
@@ -62,7 +62,7 @@ namespace Ludots.Core.Input.Interaction
         public long GroupKey { get; }
     }
 
-    /// <summary>Router semantics for one dispatch: shared order id fan-out and/or sequential submit.</summary>
+    /// <summary>Router semantics for one dispatch: atomic fan-out and/or sequential submit.</summary>
     public readonly record struct CastDispatchRouting(bool SharedOrderId, bool Sequential);
 
     /// <summary>
@@ -145,16 +145,16 @@ namespace Ludots.Core.Input.Interaction
     /// <summary>Merged root of <c>Input/cast_dispatch_profiles.json</c>.</summary>
     public sealed class CastDispatchProfilesConfig
     {
-        public List<CastDispatchProfileDefinition> Profiles { get; set; }
+        public List<CastDispatchProfileDefinition>? Profiles { get; set; }
     }
 
     /// <summary>One dispatch profile (RFC-0065 §5.8). Strings live only in JSON.</summary>
     public sealed class CastDispatchProfileDefinition
     {
         public string Id { get; set; } = string.Empty;
-        public CastDispatchSelectorDefinition Selector { get; set; }
-        public CastDispatchScorerDefinition Scorer { get; set; }
-        public CastDispatchRouterDefinition Router { get; set; }
+        public CastDispatchSelectorDefinition? Selector { get; set; }
+        public CastDispatchScorerDefinition? Scorer { get; set; }
+        public CastDispatchRouterDefinition? Router { get; set; }
     }
 
     /// <summary>Selector declaration: a registry kind plus kind-specific parameters.</summary>
@@ -166,14 +166,14 @@ namespace Ludots.Core.Input.Interaction
         public int? N { get; set; }
 
         /// <summary>cycle: event key that advances the cursor (registered into the advance event id space at install).</summary>
-        public string AdvanceOn { get; set; }
+        public string? AdvanceOn { get; set; }
     }
 
     /// <summary>Scorer declaration: a registry kind plus <c>considerationId[:modifier]</c> entries.</summary>
     public sealed class CastDispatchScorerDefinition
     {
         public string Kind { get; set; } = string.Empty;
-        public List<string> Considerations { get; set; }
+        public List<string>? Considerations { get; set; }
     }
 
     /// <summary>Router declaration: a registry kind plus kind-specific parameters.</summary>
