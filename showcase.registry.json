@@ -2856,7 +2856,7 @@
       "readmePath": null,
       "acceptanceTest": "EqsInfluenceShowcaseAcceptanceTests",
       "artifactDir": "artifacts/acceptance/eqs-influence",
-      "screenshot": null,
+      "screenshot": "artifacts/acceptance/eqs-influence/screens/000_heat_probes.png",
       "status": "active",
       "notes": "Pages 交互预览见 docs/eqs-influence.html"
     }

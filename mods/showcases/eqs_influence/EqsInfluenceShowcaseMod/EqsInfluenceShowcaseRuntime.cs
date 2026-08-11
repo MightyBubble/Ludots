@@ -135,11 +135,11 @@ internal sealed class EqsInfluenceShowcaseRuntime
                 {
                     StableId = 10_000 + i,
                     Shape = GroundOverlayShape.Circle,
-                    Center = WorldPlane2D.LogicCmToVisualMeters(item.Position.X, item.Position.Y, 0.06f),
-                    Radius = 0.35f,
-                    FillColor = new Vector4(0.25f + (0.45f * t), 0.75f, 0.35f + (0.2f * (1f - t)), 0.18f + (0.22f * t)),
-                    BorderColor = new Vector4(0.2f, 0.85f, 0.55f, 0.55f + (0.35f * t)),
-                    BorderWidth = 0.03f
+                    Center = WorldPlane2D.LogicCmToVisualMeters(item.Position.X, item.Position.Y, 0.12f),
+                    Radius = 0.7f,
+                    FillColor = new Vector4(0.15f + (0.55f * t), 0.88f, 0.45f, 0.35f + (0.35f * t)),
+                    BorderColor = new Vector4(0.1f, 0.95f, 0.55f, 0.95f),
+                    BorderWidth = 0.08f
                 });
             }
         }
@@ -150,38 +150,50 @@ internal sealed class EqsInfluenceShowcaseRuntime
             {
                 StableId = 20_001,
                 Shape = GroundOverlayShape.Ring,
-                Center = WorldPlane2D.LogicCmToVisualMeters(_best.Position.X, _best.Position.Y, 0.08f),
-                Radius = 0.7f,
-                InnerRadius = 0.45f,
-                FillColor = new Vector4(0.95f, 0.82f, 0.25f, 0.12f),
-                BorderColor = new Vector4(0.95f, 0.78f, 0.15f, 0.95f),
-                BorderWidth = 0.05f
+                Center = WorldPlane2D.LogicCmToVisualMeters(_best.Position.X, _best.Position.Y, 0.16f),
+                Radius = 1.25f,
+                InnerRadius = 0.85f,
+                FillColor = new Vector4(0.98f, 0.84f, 0.15f, 0.22f),
+                BorderColor = new Vector4(1f, 0.86f, 0.1f, 1f),
+                BorderWidth = 0.1f
             });
         }
+
+        // Actor origin probe
+        overlays.Upsert(new GroundOverlayItem
+        {
+            StableId = 20_000,
+            Shape = GroundOverlayShape.Circle,
+            Center = WorldPlane2D.LogicCmToVisualMeters(0, 0, 0.1f),
+            Radius = 0.55f,
+            FillColor = new Vector4(0.12f, 0.14f, 0.18f, 0.55f),
+            BorderColor = new Vector4(0.95f, 0.95f, 0.95f, 0.95f),
+            BorderWidth = 0.07f
+        });
 
         // Goal marker
         overlays.Upsert(new GroundOverlayItem
         {
             StableId = 20_002,
             Shape = GroundOverlayShape.Circle,
-            Center = WorldPlane2D.LogicCmToVisualMeters(500, 0, 0.05f),
-            Radius = 0.4f,
-            FillColor = new Vector4(0.2f, 0.45f, 0.95f, 0.2f),
-            BorderColor = new Vector4(0.3f, 0.55f, 1f, 0.85f),
-            BorderWidth = 0.04f
+            Center = WorldPlane2D.LogicCmToVisualMeters(500, 0, 0.1f),
+            Radius = 0.65f,
+            FillColor = new Vector4(0.2f, 0.5f, 1f, 0.4f),
+            BorderColor = new Vector4(0.35f, 0.7f, 1f, 1f),
+            BorderWidth = 0.08f
         });
 
-        // Threat source ring
+        // Threat source ring (matches stamp radius 200cm)
         overlays.Upsert(new GroundOverlayItem
         {
             StableId = 20_003,
             Shape = GroundOverlayShape.Ring,
-            Center = WorldPlane2D.LogicCmToVisualMeters(300, 0, 0.05f),
-            Radius = 2.0f,
+            Center = WorldPlane2D.LogicCmToVisualMeters(300, 0, 0.1f),
+            Radius = 2.05f,
             InnerRadius = 1.85f,
-            FillColor = new Vector4(0.9f, 0.25f, 0.2f, 0.05f),
-            BorderColor = new Vector4(0.9f, 0.3f, 0.2f, 0.7f),
-            BorderWidth = 0.04f
+            FillColor = new Vector4(0.95f, 0.25f, 0.18f, 0.08f),
+            BorderColor = new Vector4(1f, 0.35f, 0.2f, 0.95f),
+            BorderWidth = 0.08f
         });
     }
 }

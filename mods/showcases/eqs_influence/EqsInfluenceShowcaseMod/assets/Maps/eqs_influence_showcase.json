@@ -5,26 +5,9 @@
     "TargetXCm": 250,
     "TargetYCm": 0,
     "Yaw": 180,
-    "Pitch": 55,
-    "DistanceCm": 1400,
-    "FovYDeg": 55
+    "Pitch": 68,
+    "DistanceCm": 1600,
+    "FovYDeg": 50
   },
-  "Boards": [
-    {
-      "Name": "default",
-      "SpatialType": "HexGrid",
-      "WidthInMacroTiles": 16,
-      "HeightInMacroTiles": 16,
-      "HexEdgeLengthCm": 100,
-      "ChunkSizeCells": 16,
-      "NavigationEnabled": false
-    }
-  ],
-  "Entities": [],
-  "Teams": [
-    { "TeamId": 1, "RepresentativeInstanceId": null }
-  ],
-  "Players": [
-    { "PlayerId": 1, "TeamId": 1, "RepresentativeInstanceId": null }
-  ]
+  "Entities": []
 }
