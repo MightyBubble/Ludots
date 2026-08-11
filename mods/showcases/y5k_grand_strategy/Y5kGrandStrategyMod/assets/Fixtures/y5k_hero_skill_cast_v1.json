@@ -1,0 +1,10 @@
+{
+  "fixture_id": "y5k_hero_skill_cast_v1",
+  "scenario_id": "y5k_hero_skill_cast",
+  "fields": {
+    "hero_ability_id": { "semantics": "英雄主动技标识", "unit": "ability_id", "owner": "content" },
+    "unit_passive_ability_id": { "semantics": "单位被动标识", "unit": "ability_id", "owner": "content" },
+    "expected_target_attribute_key": { "semantics": "主动技修改的属性键", "unit": "attribute_id", "owner": "content" },
+    "expected_passive_command_bar_button": { "semantics": "被动是否占命令栏", "unit": "bool", "owner": "contract" }
+  }
+}

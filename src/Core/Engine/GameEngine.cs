@@ -20,7 +20,10 @@ using Ludots.Core.Gameplay.AI.Systems;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Exchange;
 using Ludots.Core.Gameplay.Narrative;
+using Ludots.Core.Gameplay.Activities;
+using Ludots.Core.Gameplay.Providers;
 using Ludots.Core.Gameplay.Quests;
+using Ludots.Core.Gameplay.Tasks;
 using Arch.System;
 using Ludots.Core.Gameplay.GAS.Systems;
 using Ludots.Core.Gameplay.GAS.Bindings;
@@ -1612,6 +1615,63 @@ namespace Ludots.Core.Engine
             var questRuntime = new QuestRuntimeService(World, questDefinitions);
             SetService(CoreServiceKeys.QuestDefinitionRegistry, questDefinitions);
             SetService(CoreServiceKeys.QuestRuntimeService, questRuntime);
+            var providerServices = new ProviderServices(registerDefaultGaps: true, allowTestDomainOverride: false);
+            SetService(CoreServiceKeys.ProviderServices, providerServices);
+            SetService(CoreServiceKeys.ProviderGapCatalog, providerServices.Gaps);
+            SetService(CoreServiceKeys.SourceProviderRegistry, providerServices.Sources);
+            SetService(CoreServiceKeys.SelectorProviderRegistry, providerServices.Selectors);
+            SetService(CoreServiceKeys.ConditionProviderRegistry, providerServices.Conditions);
+            SetService(CoreServiceKeys.EffectHandlerRegistry, providerServices.Effects);
+            SetService(CoreServiceKeys.ProviderDefinitionValidator, providerServices.Validator);
+            var activityDefinitions = new ActivityDefinitionRegistry();
+            // Domain providers are installed by capability mods on GameStart; validate keys at resolve-time.
+            new ActivityConfigLoader(ConfigPipeline, activityDefinitions, validator: null)
+                .Load(ConfigCatalog, ConfigConflictReport);
+            var activityPresentation = new ActivityPresentationBuffer();
+            var activityRuntime = new ActivityRuntimeService(
+                World,
+                activityDefinitions,
+                providerServices,
+                activityPresentation);
+            SetService(CoreServiceKeys.ActivityDefinitionRegistry, activityDefinitions);
+            SetService(CoreServiceKeys.ActivityPresentationBuffer, activityPresentation);
+            SetService(CoreServiceKeys.ActivityRuntimeService, activityRuntime);
+            var taskDefinitions = new TaskDefinitionRegistry();
+            new TaskConfigLoader(ConfigPipeline, taskDefinitions, validator: null)
+                .Load(ConfigCatalog, ConfigConflictReport);
+            var taskPresentation = new TaskPresentationBuffer();
+            var taskRuntime = new TaskRuntimeService(
+                World,
+                taskDefinitions,
+                providerServices,
+                taskPresentation);
+            TaskBridgeProviderInstaller.Install(providerServices, taskRuntime);
+            var taskQuestAdapter = new TaskQuestAdapter(taskRuntime);
+            // Fail fast if content simultaneously owns progress in Quest and Task stores.
+            var questActiveIds = new List<string>();
+            foreach (QuestDefinition questDefinition in questDefinitions.Definitions)
+            {
+                if (questRuntime.TryGetQuestState(questDefinition.Id, out QuestState questState, out _) &&
+                    questState == QuestState.Active)
+                {
+                    questActiveIds.Add(questDefinition.Id);
+                }
+            }
+
+            var taskActiveIds = new List<string>();
+            foreach (TaskView taskView in taskRuntime.CaptureViews())
+            {
+                if (taskView.State is TaskInstanceState.Offered or TaskInstanceState.Active)
+                {
+                    taskActiveIds.Add(taskView.TaskId);
+                }
+            }
+
+            TaskQuestAdapter.GuardAgainstDualProgressStore(questActiveIds, taskActiveIds);
+            SetService(CoreServiceKeys.TaskDefinitionRegistry, taskDefinitions);
+            SetService(CoreServiceKeys.TaskPresentationBuffer, taskPresentation);
+            SetService(CoreServiceKeys.TaskRuntimeService, taskRuntime);
+            SetService(CoreServiceKeys.TaskQuestAdapter, taskQuestAdapter);
             var narrativeDefinitions = new NarrativeDefinitionRegistry();
             new NarrativeConfigLoader(ConfigPipeline, narrativeDefinitions).Load(ConfigCatalog, ConfigConflictReport);
             var narrativeDirector = new NarrativeDirector(this, narrativeDefinitions, questRuntime);

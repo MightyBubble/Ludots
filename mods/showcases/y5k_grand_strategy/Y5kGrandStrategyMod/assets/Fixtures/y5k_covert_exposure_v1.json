@@ -1,0 +1,8 @@
+{
+  "fixture_id": "y5k_covert_exposure_v1",
+  "scenario_id": "y5k_covert_exposure",
+  "fields": {
+    "expected_exposed_on_failure": { "semantics": "失败必定暴露", "unit": "bool", "owner": "contract" },
+    "hidden_probability_allowed": { "semantics": "是否允许隐藏概率", "unit": "bool", "owner": "contract" }
+  }
+}

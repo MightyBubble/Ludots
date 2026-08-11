@@ -385,6 +385,15 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "y5k_grand_strategy_raylib",
+      "name": "y5k Grand Strategy Raylib",
+      "selectors": [
+        "$y5k_grand_strategy"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

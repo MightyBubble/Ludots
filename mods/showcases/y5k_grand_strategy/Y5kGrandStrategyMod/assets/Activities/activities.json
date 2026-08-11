@@ -1,0 +1,153 @@
+[
+  {
+    "id": "activity.supply_strain",
+    "display_name": "前线断补",
+    "summary": "枢纽易主，前线补给子网超限。",
+    "source_key": "supply.network_changed",
+    "dispatch_policy": "forced",
+    "options": [
+      { "id": "withdraw", "title": "撤回前线部队", "body": "把部队拉回后方子网。", "effects": [] },
+      { "id": "retake_hub", "title": "夺回枢纽", "body": "组织兵力夺回隘口。", "effects": [] },
+      { "id": "push_camp", "title": "前推补给营地", "body": "把前进营地推上去。", "effects": [] },
+      { "id": "hold", "title": "硬扛宽限期", "body": "什么都不做，撑过宽限。", "is_baseline": true, "effects": [] }
+    ]
+  },
+  {
+    "id": "activity.supply_recovered",
+    "display_name": "补给恢复",
+    "summary": "前线需求已回落到供给上限以内。",
+    "source_key": "supply.network_changed",
+    "dispatch_policy": "automatic",
+    "automatic_effects": []
+  },
+  {
+    "id": "activity.siege_breach_garrison",
+    "display_name": "守军耗尽",
+    "summary": "兵力储备池归零，聚落进入可接管状态。",
+    "source_key": "city_control.defense_breached",
+    "dispatch_policy": "automatic",
+    "automatic_effects": []
+  },
+  {
+    "id": "activity.siege_breach_wall",
+    "display_name": "城防陷落",
+    "summary": "城防耐久归零，聚落进入损毁状态。",
+    "source_key": "city_control.defense_breached",
+    "dispatch_policy": "automatic",
+    "automatic_effects": []
+  },
+  {
+    "id": "activity.takeover_confirm",
+    "display_name": "投入兵力接管",
+    "summary": "破防之后，是否投入兵力完成归属切换？",
+    "source_key": "city_control.defense_breached",
+    "dispatch_policy": "forced",
+    "options": [
+      {
+        "id": "commit",
+        "title": "投入兵力",
+        "body": "完成归属切换。",
+        "effects": [
+          {
+            "effect_key": "city_control.commit_troops_takeover",
+            "parameters": { "settlement_key": 3, "faction_owner": 1, "troop_commitment": 5 }
+          }
+        ]
+      },
+      { "id": "wait", "title": "暂缓", "body": "先巩固外围。", "is_baseline": true, "effects": [] }
+    ]
+  },
+  {
+    "id": "activity.captive_disposal",
+    "display_name": "俘虏处置",
+    "summary": "在押英雄等待处置。",
+    "source_key": "city_control.defense_breached",
+    "dispatch_policy": "forced",
+    "options": [
+      {
+        "id": "recruit",
+        "title": "转化",
+        "effects": [{ "effect_key": "prisoner.recruit", "parameters": { "settlement_key": 3 } }]
+      },
+      {
+        "id": "release",
+        "title": "释放",
+        "is_baseline": true,
+        "effects": [{ "effect_key": "prisoner.release", "parameters": { "settlement_key": 3 } }]
+      },
+      {
+        "id": "execute",
+        "title": "处决",
+        "effects": [{ "effect_key": "prisoner.execute", "parameters": { "settlement_key": 3 } }]
+      }
+    ]
+  },
+  {
+    "id": "activity.governor_offer",
+    "display_name": "任命主官",
+    "summary": "新到手的聚落需要主官。",
+    "source_key": "time.day_started",
+    "dispatch_policy": "forced",
+    "options": [
+      {
+        "id": "appoint_a",
+        "title": "任命英雄甲",
+        "effects": [
+          {
+            "effect_key": "population.appoint_governor",
+            "parameters": { "settlement_key": 3, "hero_key": 100 }
+          }
+        ]
+      },
+      { "id": "autonomy", "title": "暂自治", "is_baseline": true, "effects": [] }
+    ]
+  },
+  {
+    "id": "activity.covert_exposure",
+    "display_name": "隐秘行动暴露",
+    "summary": "隐秘行动失败，后果公开。",
+    "source_key": "time.day_started",
+    "dispatch_policy": "forced",
+    "options": [
+      { "id": "acknowledge", "title": "已知晓", "is_baseline": true, "effects": [] }
+    ]
+  },
+  {
+    "id": "activity.covert_planning",
+    "display_name": "发起隐秘行动",
+    "summary": "是否对敌方枢纽发起探查？失败必定暴露。",
+    "source_key": "time.day_started",
+    "dispatch_policy": "pooled",
+    "options": [
+      { "id": "launch", "title": "发起", "effects": [] },
+      { "id": "cancel", "title": "取消", "is_baseline": true, "effects": [] }
+    ]
+  },
+  {
+    "id": "activity.field_skill_ready",
+    "display_name": "英雄可出手",
+    "summary": "守方英雄技能位就绪。",
+    "source_key": "time.day_started",
+    "dispatch_policy": "automatic",
+    "automatic_effects": []
+  },
+  {
+    "id": "activity.season_report",
+    "display_name": "周期通报",
+    "summary": "本周期供给与需求已结算。",
+    "source_key": "time.season_started",
+    "dispatch_policy": "automatic",
+    "automatic_effects": []
+  },
+  {
+    "id": "activity.hub_contested",
+    "display_name": "枢纽告急",
+    "summary": "敌方正在争夺隘口。",
+    "source_key": "supply.network_changed",
+    "dispatch_policy": "pooled",
+    "options": [
+      { "id": "reinforce", "title": "增援", "effects": [] },
+      { "id": "ignore", "title": "继续观望", "is_baseline": true, "effects": [] }
+    ]
+  }
+]

@@ -1,0 +1,76 @@
+[
+  {
+    "id": "task.stabilize_supply",
+    "display_name": "稳住补给网络",
+    "summary": "需求回落或夺回枢纽。",
+    "start_policy": "automatic",
+    "completion_rule": "any",
+    "objectives": [
+      { "id": "recover", "kind": "signal", "title": "需求回落到供给上限以内", "signal_key": "supply.recovered" },
+      { "id": "retake", "kind": "signal", "title": "夺回枢纽节点", "signal_key": "supply.hub_reclaimed" }
+    ]
+  },
+  {
+    "id": "task.take_mountain",
+    "display_name": "拿下攻防标的",
+    "summary": "破防并完成归属切换。",
+    "start_policy": "automatic",
+    "completion_rule": "all",
+    "objectives": [
+      { "id": "breach", "kind": "signal", "title": "任一防御资源归零", "signal_key": "siege.breached" },
+      { "id": "transfer", "kind": "signal", "title": "完成归属切换", "signal_key": "siege.owner_transferred" }
+    ],
+    "next_task_id": "task.dispose_captive"
+  },
+  {
+    "id": "task.dispose_captive",
+    "display_name": "处置在押英雄",
+    "summary": "接受并完成俘虏处置。",
+    "start_policy": "playerAccept",
+    "completion_rule": "all",
+    "objectives": [
+      { "id": "resolved", "kind": "signal", "title": "俘虏已处置", "signal_key": "captive.resolved" }
+    ]
+  },
+  {
+    "id": "task.appoint_governor",
+    "display_name": "任命聚落主官",
+    "summary": "给新到手的聚落填上主官席。",
+    "start_policy": "automatic",
+    "completion_rule": "all",
+    "objectives": [
+      { "id": "appointed", "kind": "signal", "title": "主官席已填充", "signal_key": "governance.governor_appointed" }
+    ]
+  },
+  {
+    "id": "task.covert_probe",
+    "display_name": "完成一次隐秘探查",
+    "summary": "无论成败，都要留下公开可查的结果。",
+    "start_policy": "playerAccept",
+    "completion_rule": "any",
+    "objectives": [
+      { "id": "success", "kind": "signal", "title": "探查成功", "signal_key": "covert.succeeded" },
+      { "id": "exposed", "kind": "signal", "title": "失败并暴露", "signal_key": "covert.exposed" }
+    ]
+  },
+  {
+    "id": "task.hero_field_cast",
+    "display_name": "英雄出手一次",
+    "summary": "在攻防语境下确认施放主动技。",
+    "start_policy": "automatic",
+    "completion_rule": "all",
+    "objectives": [
+      { "id": "cast", "kind": "signal", "title": "主动技已确认施放", "signal_key": "skill.cast_committed" }
+    ]
+  },
+  {
+    "id": "task.hold_estuary",
+    "display_name": "固守补给源头",
+    "summary": "在河口保有储备池。",
+    "start_policy": "automatic",
+    "completion_rule": "all",
+    "objectives": [
+      { "id": "hold", "kind": "count", "title": "连续周期保有储备", "signal_key": "supply.hold_tick", "target_count": 2 }
+    ]
+  }
+]

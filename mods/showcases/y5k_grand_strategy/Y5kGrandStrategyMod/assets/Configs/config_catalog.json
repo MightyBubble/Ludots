@@ -1,0 +1,7 @@
+[
+  { "Path": "Activities/activities.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "Tasks/tasks.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "GAS/abilities.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "GAS/effects.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "Entities/templates.json", "Policy": "ArrayById", "IdField": "id" }
+]

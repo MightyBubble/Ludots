@@ -1,0 +1,44 @@
+[
+  {
+    "id": "y5k_marker_estuary",
+    "components": {
+      "Name": { "Value": "Settlement.Estuary" },
+      "Team": { "Id": 1 },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } }
+    }
+  },
+  {
+    "id": "y5k_marker_pass",
+    "components": {
+      "Name": { "Value": "Settlement.Pass" },
+      "Team": { "Id": 1 },
+      "WorldPositionCm": { "Value": { "X": 2400, "Y": 0 } }
+    }
+  },
+  {
+    "id": "y5k_marker_mountain",
+    "components": {
+      "Name": { "Value": "Settlement.Mountain" },
+      "Team": { "Id": 2 },
+      "WorldPositionCm": { "Value": { "X": 4800, "Y": 800 } }
+    }
+  },
+  {
+    "id": "y5k_hero_a",
+    "components": {
+      "Name": { "Value": "Hero.A" },
+      "Team": { "Id": 1 },
+      "WorldPositionCm": { "Value": { "X": 200, "Y": 200 } },
+      "AttributeBuffer": { "base": { "Health": 100, "Attack": 10, "Armor": 2 } }
+    }
+  },
+  {
+    "id": "y5k_unit_guard",
+    "components": {
+      "Name": { "Value": "Unit.Guard" },
+      "Team": { "Id": 2 },
+      "WorldPositionCm": { "Value": { "X": 4600, "Y": 800 } },
+      "AttributeBuffer": { "base": { "Health": 80, "Attack": 6, "Armor": 3 } }
+    }
+  }
+]

@@ -1,0 +1,10 @@
+{
+  "fixture_id": "y5k_siege_two_paths_v1",
+  "scenario_id": "y5k_siege_two_paths",
+  "fields": {
+    "settlement_key": { "semantics": "攻防标的聚落", "unit": "settlement_key", "owner": "content" },
+    "expected_owner_unchanged_after_breach": { "semantics": "破防后归属不变", "unit": "bool", "owner": "test" },
+    "garrison_path_state": { "semantics": "打空储备池后的状态", "unit": "enum", "owner": "test" },
+    "wall_path_state": { "semantics": "打空城防后的状态", "unit": "enum", "owner": "test" }
+  }
+}

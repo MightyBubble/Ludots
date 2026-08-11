@@ -38,14 +38,7 @@ public static class WebUiPanelKitSampleCatalog
 		ArgumentNullException.ThrowIfNull(isTopicRegistered);
 
 		var surfaceRegions = new WebUiPanelIdRegistry("surface region");
-		surfaceRegions.RegisterAll([
-			"region.top-left",
-			"region.top-right",
-			"region.bottom-center",
-			"region.bottom-left",
-			"region.top-center",
-			"region.center"
-		]);
+		surfaceRegions.RegisterAll(WebUiNineGridRegions.All);
 
 		var profiles = new WebUiPanelIdRegistry("profile");
 		profiles.RegisterAll([
