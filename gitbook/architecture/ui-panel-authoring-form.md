@@ -4,10 +4,10 @@
 
 作者第一性原则：
 
-1. **面板先声明变量**（绑定口），不在图里发明 Panel 节点宇宙  
-2. **一张（或一组）计算图**把这些变量算满；中间过滤/聚合/派生步骤可见、可组合  
-3. **Compose / Markup / Reactive / Ludots Web UI** 只是四种**表面投影语言**，共享同一套变量与图合同  
-4. 禁止平行 Presentation Graph VM；图复用 GAS L1（Query / Derived）+ `GraphOutput`
+1. **像 Shader Graph**：一张计算图画布，右边一个带**多类型引脚**的 Panel 汇入（你原型里的 PanelNode）  
+2. **引脚 = 面板变量**；文案 `{hp}` 引用引脚名；多种 Float/Text/… 可在同一张图里汇入  
+3. **Compose / Markup / Reactive / Ludots Web UI** 只是四种**表面投影语言**，共享同一套引脚与图  
+4. **编辑器糖 ≠ 新 VM**：Panel 汇入节点落盘为 `outputs[]` / bindings，**不是** `GraphNodeOp.Panel` / `GraphKind.Presentation`
 
 本页是作者形态的文档 SSOT；交互样板在编辑器路由 `/ui-panel-authoring`（`Ludots.Editor.React`）。计划 Epic：[#858](https://github.com/MightyBubble/Ludots/issues/858)。
 
@@ -37,10 +37,30 @@ Instance = templateId + scope（多开；Router 另册）
 
 | 层 | 作者看见什么 | 不是什么 |
 |----|--------------|----------|
-| Variables | 面板口子表 | 图里的假 PanelNode |
-| DataGraph | 从选中/集合到数值的步骤 | DOM / 每帧 UI 循环 |
-| Binding | 口子从哪读 | 手写跨实体求和 |
+| Panel 汇入（多引脚） | Shader 式输出节点；引脚=变量 | 运行时 Graph 操作码 |
+| DataGraph | 一张图多分支、多类型出口 | DOM / 每帧 UI 循环 |
+| Binding / outputs[] | 引脚 ← 图节点 / Summary key | 手写跨实体求和 |
 | Surface | 四种语言各自的原生写法 | 第二套绑定 DSL |
+
+### 和「PanelNode 多引脚」原型的对齐
+
+```text
+编辑器（你期待的样子）
+  [选中集合]→[取实体]┬→[读血量]──→ Panel.hp (Float)
+                    ├→[读击杀]──→ Panel.lastKill (Text)
+                    └→[读状态]──→ Panel.curState (Text)
+
+落盘 / 运行（合同）
+  outputs: [
+    { id: "hp", key: "panel.entity_info.hp", … },
+    { id: "lastKill", … },
+    { id: "curState", … }
+  ]
+  → GraphOutputValueStore / Attribute
+  → Reactive TState 或 WPK fields[] 等母语投影
+```
+
+作者始终面对**一张图 + 一个多引脚 Panel**；引擎不增加 Presentation Graph 宇宙。
 
 ## 3. 详情
 

@@ -9,6 +9,7 @@ import {
   type SurfaceKind,
   type PanelVariable,
 } from './ui-panel-authoring/model';
+import { ShaderGraphCanvas } from './ui-panel-authoring/ShaderGraphCanvas';
 import './ui-panel-authoring/authoring.css';
 
 function renderCopy(template: string, vars: PanelVariable[], demo: Record<string, string>) {
@@ -26,6 +27,16 @@ function demoValues(tpl: PanelTemplate): Record<string, string> {
   return { hp: '840', lastKill: 'Scout-7', curState: '交战中' };
 }
 
+function loweredOutputs(tpl: PanelTemplate): string {
+  const lines = tpl.variables.map((v) => {
+    const b = tpl.bindings[v.id];
+    return `  { "id": "${v.id}", "type": "${v.valueKind}", "key": "${b?.graphOutputKey ?? v.id}", "source": "${b?.fromNodeId ?? '?'}" }`;
+  });
+  return ['// 落盘：Panel 多引脚 → outputs[]（不是 GraphNodeOp.Panel）', '"outputs": [', lines.join(',\n'), ']'].join(
+    '\n',
+  );
+}
+
 function SurfaceArtifact({
   surface,
   tpl,
@@ -39,12 +50,12 @@ function SurfaceArtifact({
 
   if (surface === 'reactive') {
     const code = [
-      '// Reactive — 变量落在 TState',
+      '// Reactive — 每个引脚 → TState 一个字段',
       `public sealed record ${pascal(tpl.id)}State(`,
       stateFields,
       ');',
       '',
-      '// 投影：GraphOutput / Attribute → State → Ui.*',
+      '// 一张图多出口写满 State，再 Ui.* 画',
       'Ui.Column(',
       '    Ui.Text($"… {state.' + pascal(tpl.variables[0]?.id ?? 'Value') + '}"),',
       '    …',
@@ -54,19 +65,13 @@ function SurfaceArtifact({
   }
 
   if (surface === 'compose') {
-    const fields = tpl.variables
-      .map((v) => `${csharpType(v.valueKind)} _${v.id};`)
-      .join('\n');
+    const fields = tpl.variables.map((v) => `${csharpType(v.valueKind)} _${v.id};`).join('\n');
     const code = [
-      '// Compose — 变量落在控制器字段',
+      '// Compose — 每个引脚 → 控制器字段',
       fields,
       '',
       'void Rebuild() {',
-      '    // 先 RequireSummary / Attribute，再：',
-      '    root = Ui.Panel(',
-      `        Ui.Text($"… {_${tpl.variables[0]?.id ?? 'value'}}"),`,
-      '        …',
-      '    );',
+      '    root = Ui.Panel(…);',
       '}',
     ].join('\n');
     return <pre className="upa-code">{code}</pre>;
@@ -74,17 +79,12 @@ function SurfaceArtifact({
 
   if (surface === 'markup') {
     const code = [
-      '<!-- Markup：布局 + ui-click；无引擎级 {{var}} 绑定 -->',
+      '<!-- Markup：布局；引脚值由 code-behind 写入 -->',
       '<section class="entity-card">',
       ...tpl.variables.map(
-        (v) => `  <p data-field="${v.id}">${v.label}: <!-- code-behind 写入 --></p>`,
+        (v) => `  <p data-field="${v.id}">${v.label}: <!-- code-behind --></p>`,
       ),
       '</section>',
-      '',
-      '// code-behind',
-      'void Refresh() {',
-      ...tpl.variables.map((v) => `    SetFieldText("${v.id}", ${pascal(v.id)}.ToString());`),
-      '}',
     ].join('\n');
     return <pre className="upa-code">{code}</pre>;
   }
@@ -105,7 +105,7 @@ function SurfaceArtifact({
     .join(',\n');
 
   return (
-    <pre className="upa-code">{`// Web UI — WPK descriptor（母语）
+    <pre className="upa-code">{`// Web UI — 每个引脚 → fields[] 一项
 {
   "descriptorId": "${tpl.id}",
   "fields": [
@@ -119,16 +119,16 @@ export function UiPanelAuthoringPage() {
   const [templateId, setTemplateId] = useState(TEMPLATES[0].id);
   const [surface, setSurface] = useState<SurfaceKind>('reactive');
   const [selectedVar, setSelectedVar] = useState<string | null>('hp');
-  const [highlightStep, setHighlightStep] = useState<string | null>(null);
 
   const tpl = useMemo(
     () => TEMPLATES.find((t) => t.id === templateId) ?? TEMPLATES[0],
     [templateId],
   );
 
-  const activeVar = selectedVar && tpl.variables.some((v) => v.id === selectedVar)
-    ? selectedVar
-    : tpl.variables[0]?.id ?? null;
+  const activeVar =
+    selectedVar && tpl.variables.some((v) => v.id === selectedVar)
+      ? selectedVar
+      : tpl.variables[0]?.id ?? null;
 
   const binding = activeVar ? tpl.bindings[activeVar] : undefined;
   const demo = demoValues(tpl);
@@ -136,7 +136,6 @@ export function UiPanelAuthoringPage() {
   React.useEffect(() => {
     setSurface(tpl.surfaceKind);
     setSelectedVar(tpl.variables[0]?.id ?? null);
-    setHighlightStep(null);
   }, [tpl.id, tpl.surfaceKind, tpl.variables]);
 
   return (
@@ -152,17 +151,17 @@ export function UiPanelAuthoringPage() {
             Panel <span>Authoring</span>
           </h1>
           <p className="upa-lede">
-            先声明面板变量，再用计算图算满；Compose / Markup / Reactive / Web UI
-            只是四种表面投影，不另造一套 Panel 图宇宙。
+            像编 Shader Graph：一张图、多种类型、右边一个带多引脚的 Panel
+            汇入。引脚就是面板变量；表面（Compose / Markup / Reactive / Web UI）只决定怎么画。
           </p>
         </div>
         <aside className="upa-contract" aria-label="第一性原则">
-          <h2>第一性原则</h2>
+          <h2>和你原型的对应</h2>
           <ol>
-            <li>变量在模板声明，文案只写 {'{variableId}'}</li>
-            <li>图终点是变量槽，不是 PanelNode</li>
-            <li>四种表面共用变量表与绑定，保持各自母语</li>
-            <li>跨实体合计必须走图投影，禁止界面私算</li>
+            <li>PanelNode 多引脚 → 画布右侧 Panel 汇入（作者糖）</li>
+            <li>一张图多出口 → 多条边进不同引脚（Float/Text/…）</li>
+            <li>落盘 → outputs[] / bindings，不是新的 Graph 操作码</li>
+            <li>四种表面只换投影母语，不拆成多张算数图</li>
           </ol>
         </aside>
       </header>
@@ -200,122 +199,86 @@ export function UiPanelAuthoringPage() {
         ))}
       </div>
 
-      <div className="upa-stage">
-        <section className="upa-col" aria-labelledby="upa-vars-h">
+      <div className="upa-stage upa-stage-shader">
+        <section className="upa-col upa-col-graph" aria-labelledby="upa-graph-h">
           <div className="upa-col-h">
-            <h3 id="upa-vars-h">1 · 变量</h3>
-            <small>模板声明</small>
+            <h3 id="upa-graph-h">计算图 · 多引脚 Panel 汇入</h3>
+            <small>一眼看完：像材质输出节点</small>
           </div>
-          <div className="upa-col-b">
-            <ul className="upa-var-list">
-              {tpl.variables.map((v) => {
-                const b = tpl.bindings[v.id];
-                return (
-                  <li key={v.id}>
-                    <button
-                      type="button"
-                      className={`upa-var ${activeVar === v.id ? 'is-active' : ''}`}
-                      onClick={() => {
-                        setSelectedVar(v.id);
-                        setHighlightStep(
-                          Object.entries(tpl.stepToVariable).find(([, vid]) => vid === v.id)?.[0]
-                            ?? b?.graphStepId
-                            ?? null,
-                        );
-                      }}
-                    >
-                      <span className="upa-var-id">{v.id}</span>
-                      <span className="upa-var-label">{v.label}</span>
-                      <span className="upa-var-meta">
-                        {v.valueKind}
-                        {b ? ` · ${b.sourceKind}` : ''}
-                      </span>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-            <div className="upa-preview">
-              <div className="upa-preview-label">模板预览 · 引用变量</div>
-              <pre>{renderCopy(tpl.copyTemplate, tpl.variables, demo)}</pre>
-            </div>
+          <div className="upa-col-b upa-col-b-canvas">
+            <ShaderGraphCanvas tpl={tpl} activeVar={activeVar} onSelectVar={setSelectedVar} />
           </div>
         </section>
 
-        <section className="upa-col upa-col-wide" aria-labelledby="upa-graph-h">
-          <div className="upa-col-h">
-            <h3 id="upa-graph-h">2 · 计算图 → 变量槽</h3>
-            <small>共用 L1，无 Presentation Kind</small>
-          </div>
-          <div className="upa-col-b">
-            <div className="upa-flow" role="list">
-              {tpl.steps.map((step, index) => {
-                const sinkVar = tpl.stepToVariable[step.id];
-                const lit =
-                  highlightStep === step.id ||
-                  (activeVar != null && sinkVar === activeVar) ||
-                  (activeVar != null && tpl.bindings[activeVar]?.graphStepId === step.id);
-                return (
-                  <React.Fragment key={step.id}>
-                    {index > 0 ? <div className="upa-flow-arrow" aria-hidden /> : null}
-                    <button
-                      type="button"
-                      role="listitem"
-                      className={`upa-step kind-${step.kind} ${lit ? 'is-lit' : ''}`}
-                      onClick={() => {
-                        setHighlightStep(step.id);
-                        if (sinkVar) setSelectedVar(sinkVar);
-                      }}
-                    >
-                      <span className="upa-step-kind">{step.kind}</span>
-                      <span className="upa-step-title">{step.title}</span>
-                      <span className="upa-step-detail">{step.detail}</span>
-                      {sinkVar ? (
-                        <span className="upa-step-sink">→ {'{' + sinkVar + '}'}</span>
-                      ) : null}
-                    </button>
-                  </React.Fragment>
-                );
-              })}
+        <aside className="upa-side">
+          <section className="upa-col" aria-labelledby="upa-vars-h">
+            <div className="upa-col-h">
+              <h3 id="upa-vars-h">引脚 = 变量</h3>
+              <small>点引脚高亮连线</small>
             </div>
-            {binding ? (
-              <div className="upa-bind-card">
-                <h4>绑定 · {activeVar}</h4>
-                <dl>
-                  <div>
-                    <dt>sourceKind</dt>
-                    <dd>{binding.sourceKind}</dd>
-                  </div>
-                  {binding.attributeId ? (
-                    <div>
-                      <dt>attributeId</dt>
-                      <dd>{binding.attributeId}</dd>
-                    </div>
-                  ) : null}
-                  {binding.graphOutputKey ? (
-                    <div>
-                      <dt>graphOutputKey</dt>
-                      <dd>{binding.graphOutputKey}</dd>
-                    </div>
-                  ) : null}
-                </dl>
+            <div className="upa-col-b">
+              <ul className="upa-var-list">
+                {tpl.variables.map((v) => {
+                  const b = tpl.bindings[v.id];
+                  return (
+                    <li key={v.id}>
+                      <button
+                        type="button"
+                        className={`upa-var ${activeVar === v.id ? 'is-active' : ''}`}
+                        onClick={() => setSelectedVar(v.id)}
+                      >
+                        <span className="upa-var-id">{v.id}</span>
+                        <span className="upa-var-label">{v.label}</span>
+                        <span className="upa-var-meta">
+                          {v.valueKind}
+                          {b ? ` · ← ${b.fromNodeId ?? b.sourceKind}` : ''}
+                        </span>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+              <div className="upa-preview">
+                <div className="upa-preview-label">模板文案 · {'{引脚}'}</div>
+                <pre>{renderCopy(tpl.copyTemplate, tpl.variables, demo)}</pre>
               </div>
-            ) : null}
-          </div>
-        </section>
+              {binding ? (
+                <div className="upa-bind-card">
+                  <h4>选中引脚 · {activeVar}</h4>
+                  <dl>
+                    <div>
+                      <dt>sourceKind</dt>
+                      <dd>{binding.sourceKind}</dd>
+                    </div>
+                    {binding.fromNodeId ? (
+                      <div>
+                        <dt>from node</dt>
+                        <dd>{binding.fromNodeId}</dd>
+                      </div>
+                    ) : null}
+                    {binding.graphOutputKey ? (
+                      <div>
+                        <dt>output key</dt>
+                        <dd>{binding.graphOutputKey}</dd>
+                      </div>
+                    ) : null}
+                  </dl>
+                </div>
+              ) : null}
+            </div>
+          </section>
 
-        <section className="upa-col" aria-labelledby="upa-surface-h">
-          <div className="upa-col-h">
-            <h3 id="upa-surface-h">3 · {SURFACE_META[surface].label} 投影</h3>
-            <small>{SURFACE_META[surface].note}</small>
-          </div>
-          <div className="upa-col-b">
-            <SurfaceArtifact surface={surface} tpl={tpl} />
-            <p className="upa-footnote">
-              切换上方表面标签时，左侧变量与中间图不变——变的只是母语投影。
-            </p>
-          </div>
-        </section>
+          <section className="upa-col" aria-labelledby="upa-lower-h">
+            <div className="upa-col-h">
+              <h3 id="upa-lower-h">落盘 / {SURFACE_META[surface].label}</h3>
+              <small>{SURFACE_META[surface].note}</small>
+            </div>
+            <div className="upa-col-b">
+              <pre className="upa-code upa-code-tight">{loweredOutputs(tpl)}</pre>
+              <SurfaceArtifact surface={surface} tpl={tpl} />
+            </div>
+          </section>
+        </aside>
       </div>
     </div>
   );
