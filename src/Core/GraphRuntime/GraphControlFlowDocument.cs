@@ -87,6 +87,8 @@ namespace Ludots.Core.GraphRuntime
         public const string Next = "next";
         public const string True = "true";
         public const string False = "false";
+        /// <summary>Loop body entry for While/Until author sugar.</summary>
+        public const string Body = "body";
         public const string Call = "call";
         public const string Target = "target";
         public const string Value = "value";

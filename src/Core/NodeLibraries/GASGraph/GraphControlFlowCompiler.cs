@@ -57,11 +57,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
     /// <summary>
     /// Compiles L1 Script and Query control-flow documents into <see cref="GraphInstruction"/> using GraphNodeOp.
-    /// BranchBool is compile-time sugar only (not a GraphNodeOp).
+    /// BranchBool / While / Until are compile-time sugar only (not GraphNodeOp values).
+    /// Wait is an author alias for <see cref="GraphNodeOp.Yield"/> (Script only).
     /// </summary>
     public static partial class GraphControlFlowCompiler
     {
         public const string BranchBoolOp = "BranchBool";
+        public const string WaitOp = "Wait";
+        public const string WhileOp = "While";
+        public const string UntilOp = "Until";
 
         private readonly struct ControlKey : IEquatable<ControlKey>
         {
@@ -116,7 +120,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         private enum AuthoredOpKind : byte
         {
             GraphNodeOp = 0,
-            BranchBool = 1
+            BranchBool = 1,
+            While = 2,
+            Until = 3
         }
 
         private readonly struct AuthoredOp
@@ -351,6 +357,49 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     continue;
                 }
 
+                if (string.Equals(node.Op, WhileOp, StringComparison.Ordinal))
+                {
+                    if (graphKind != GraphKind.Script)
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnknownNodeOp,
+                            $"While is Script-only author sugar (kind='{graphKind}').", node.Id));
+                        ops[i] = new AuthoredOp(AuthoredOpKind.GraphNodeOp, GraphNodeOp.None);
+                        continue;
+                    }
+
+                    ops[i] = new AuthoredOp(AuthoredOpKind.While, GraphNodeOp.None);
+                    continue;
+                }
+
+                if (string.Equals(node.Op, UntilOp, StringComparison.Ordinal))
+                {
+                    if (graphKind != GraphKind.Script)
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnknownNodeOp,
+                            $"Until is Script-only author sugar (kind='{graphKind}').", node.Id));
+                        ops[i] = new AuthoredOp(AuthoredOpKind.GraphNodeOp, GraphNodeOp.None);
+                        continue;
+                    }
+
+                    ops[i] = new AuthoredOp(AuthoredOpKind.Until, GraphNodeOp.None);
+                    continue;
+                }
+
+                // Wait is author alias for Yield — Script CF only; never a second waiter opcode.
+                if (string.Equals(node.Op, WaitOp, StringComparison.Ordinal))
+                {
+                    if (graphKind != GraphKind.Script)
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnknownNodeOp,
+                            $"Wait is Script-only author alias for Yield (kind='{graphKind}').", node.Id));
+                        ops[i] = new AuthoredOp(AuthoredOpKind.GraphNodeOp, GraphNodeOp.None);
+                        continue;
+                    }
+
+                    ops[i] = new AuthoredOp(AuthoredOpKind.GraphNodeOp, GraphNodeOp.Yield);
+                    continue;
+                }
+
                 if (!GraphNodeOpParser.TryParse(node.Op, out GraphNodeOp nodeOp) ||
                     !IsControlFlowAuthorable(graphKind, nodeOp))
                 {
@@ -541,7 +590,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static GraphValueType GetOutputType(AuthoredOp op, GraphKind graphKind)
         {
-            if (op.Kind == AuthoredOpKind.BranchBool)
+            if (op.Kind is AuthoredOpKind.BranchBool or AuthoredOpKind.While or AuthoredOpKind.Until)
             {
                 return GraphValueType.Void;
             }
@@ -597,6 +646,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 {
                     RequireControlEdge(node, GraphControlFlowPorts.True, controlEdges, graphId, diagnostics);
                     RequireControlEdge(node, GraphControlFlowPorts.False, controlEdges, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.Condition, GraphValueType.Bool, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    continue;
+                }
+
+                if (op.Kind is AuthoredOpKind.While or AuthoredOpKind.Until)
+                {
+                    RequireControlEdge(node, GraphControlFlowPorts.Body, controlEdges, graphId, diagnostics);
+                    RequireControlEdge(node, GraphControlFlowPorts.Next, controlEdges, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.Condition, GraphValueType.Bool, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     continue;
                 }
@@ -691,6 +748,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 return port is GraphControlFlowPorts.True or GraphControlFlowPorts.False;
             }
 
+            if (op.Kind is AuthoredOpKind.While or AuthoredOpKind.Until)
+            {
+                return port is GraphControlFlowPorts.Body or GraphControlFlowPorts.Next;
+            }
+
             return op.NodeOp switch
             {
                 GraphNodeOp.Call => port is GraphControlFlowPorts.Call or GraphControlFlowPorts.Next,
@@ -707,7 +769,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 return IsAllowedQueryInputPort(op.NodeOp, port);
             }
 
-            if (op.Kind == AuthoredOpKind.BranchBool || op.NodeOp == GraphNodeOp.JumpIfFalse)
+            if (op.Kind == AuthoredOpKind.BranchBool ||
+                op.Kind == AuthoredOpKind.While ||
+                op.Kind == AuthoredOpKind.Until ||
+                op.NodeOp == GraphNodeOp.JumpIfFalse)
             {
                 return port == GraphControlFlowPorts.Condition;
             }
@@ -826,9 +891,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 return controlEdges.ContainsKey(new ControlKey(node.Id, GraphControlFlowPorts.Next)) ? 2 : 1;
             }
 
-            if (op.Kind == AuthoredOpKind.BranchBool || op.NodeOp == GraphNodeOp.JumpIfFalse)
+            if (op.Kind == AuthoredOpKind.BranchBool ||
+                op.Kind == AuthoredOpKind.While ||
+                op.Kind == AuthoredOpKind.Until ||
+                op.NodeOp == GraphNodeOp.JumpIfFalse)
             {
-                return 2; // JumpIfFalse + Jump(true)
+                return 2; // JumpIfFalse + Jump(arm)
             }
 
             return op.NodeOp switch
@@ -901,6 +969,46 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 SetSource(sources, bodyIndex, graphId, node, BranchBoolOp, GraphControlFlowPorts.Enter);
                 EmitRelativeJump(
                     document, node, GraphControlFlowPorts.True, bodyIndex + 1,
+                    controlEdges, nodeIndices, layouts, program, sources, graphId);
+                return;
+            }
+
+            if (op.Kind == AuthoredOpKind.While)
+            {
+                // while (cond) body;  =>  JumpIfFalse(cond)->next; Jump->body
+                byte cond = ResolveValueInput(
+                    node, GraphControlFlowPorts.Condition, GraphValueType.Bool,
+                    valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                int nextAbs = ResolveControlTarget(node, GraphControlFlowPorts.Next, controlEdges, nodeIndices, layouts);
+                program[bodyIndex] = new GraphInstruction
+                {
+                    Op = (ushort)GraphNodeOp.JumpIfFalse,
+                    A = cond,
+                    Imm = RelativeOffset(bodyIndex, nextAbs)
+                };
+                SetSource(sources, bodyIndex, graphId, node, WhileOp, GraphControlFlowPorts.Enter);
+                EmitRelativeJump(
+                    document, node, GraphControlFlowPorts.Body, bodyIndex + 1,
+                    controlEdges, nodeIndices, layouts, program, sources, graphId);
+                return;
+            }
+
+            if (op.Kind == AuthoredOpKind.Until)
+            {
+                // until (cond) body;  =>  JumpIfFalse(cond)->body; Jump->next  (exit when true)
+                byte cond = ResolveValueInput(
+                    node, GraphControlFlowPorts.Condition, GraphValueType.Bool,
+                    valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                int bodyAbs = ResolveControlTarget(node, GraphControlFlowPorts.Body, controlEdges, nodeIndices, layouts);
+                program[bodyIndex] = new GraphInstruction
+                {
+                    Op = (ushort)GraphNodeOp.JumpIfFalse,
+                    A = cond,
+                    Imm = RelativeOffset(bodyIndex, bodyAbs)
+                };
+                SetSource(sources, bodyIndex, graphId, node, UntilOp, GraphControlFlowPorts.Enter);
+                EmitRelativeJump(
+                    document, node, GraphControlFlowPorts.Next, bodyIndex + 1,
                     controlEdges, nodeIndices, layouts, program, sources, graphId);
                 return;
             }
@@ -997,7 +1105,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
                 case GraphNodeOp.Yield:
                     program[bodyIndex] = new GraphInstruction { Op = (ushort)GraphNodeOp.Yield };
-                    SetSource(sources, bodyIndex, graphId, node, nameof(GraphNodeOp.Yield), GraphControlFlowPorts.Enter);
+                    SetSource(
+                        sources,
+                        bodyIndex,
+                        graphId,
+                        node,
+                        string.Equals(node.Op, WaitOp, StringComparison.Ordinal) ? WaitOp : nameof(GraphNodeOp.Yield),
+                        GraphControlFlowPorts.Enter);
                     EmitRelativeJump(document, node, GraphControlFlowPorts.Next, bodyIndex + 1, controlEdges, nodeIndices, layouts, program, sources, graphId);
                     break;
 

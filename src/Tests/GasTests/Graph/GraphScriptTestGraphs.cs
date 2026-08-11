@@ -88,6 +88,179 @@ namespace Ludots.Tests.Gas.Graph
             };
         }
 
+
+        public static GraphControlFlowDocument CreateWaitOnceThenHaltGraph(int value = 9)
+        {
+            return new GraphControlFlowDocument
+            {
+                Id = "tests.script.wait-once",
+                Kind = "Script",
+                Entry = "const",
+                Nodes = new List<GraphControlFlowNode>
+                {
+                    new() { Id = "const", Op = nameof(GraphNodeOp.ConstInt), IntValue = value },
+                    new() { Id = "wait", Op = GraphControlFlowCompiler.WaitOp },
+                    new() { Id = "done", Op = nameof(GraphNodeOp.HaltReturnInt) }
+                },
+                ControlEdges = new List<GraphControlFlowEdge>
+                {
+                    new("const", GraphControlFlowPorts.Next, "wait"),
+                    new("wait", GraphControlFlowPorts.Next, "done")
+                },
+                ValueEdges = new List<GraphControlFlowValueEdge>
+                {
+                    new("const", GraphControlFlowPorts.Value, "done", GraphControlFlowPorts.Value)
+                }
+            };
+        }
+
+        public static GraphControlFlowDocument CreateCountWhileGraph(int limit = 3)
+        {
+            // while (counter < limit) counter += 1; return counter
+            return new GraphControlFlowDocument
+            {
+                Id = "tests.script.count-while",
+                Kind = "Script",
+                Entry = "zero",
+                Nodes = new List<GraphControlFlowNode>
+                {
+                    new() { Id = "zero", Op = nameof(GraphNodeOp.ConstInt), IntValue = 0, PinRegister = 0 },
+                    new() { Id = "limit", Op = nameof(GraphNodeOp.ConstInt), IntValue = limit, PinRegister = 1 },
+                    new() { Id = "one", Op = nameof(GraphNodeOp.ConstInt), IntValue = 1, PinRegister = 2 },
+                    new() { Id = "readCounter", Op = nameof(GraphNodeOp.MoveInt) },
+                    new() { Id = "readLimit", Op = nameof(GraphNodeOp.MoveInt) },
+                    new() { Id = "pred", Op = nameof(GraphNodeOp.CompareLtInt) },
+                    new() { Id = "loop", Op = GraphControlFlowCompiler.WhileOp },
+                    new() { Id = "bodyReadCounter", Op = nameof(GraphNodeOp.MoveInt) },
+                    new() { Id = "bodyReadOne", Op = nameof(GraphNodeOp.MoveInt) },
+                    new() { Id = "bodyAdd", Op = nameof(GraphNodeOp.AddInt), PinRegister = 0 },
+                    new() { Id = "readReturn", Op = nameof(GraphNodeOp.MoveInt) },
+                    new() { Id = "done", Op = nameof(GraphNodeOp.HaltReturnInt) }
+                },
+                ControlEdges = new List<GraphControlFlowEdge>
+                {
+                    new("zero", GraphControlFlowPorts.Next, "limit"),
+                    new("limit", GraphControlFlowPorts.Next, "one"),
+                    new("one", GraphControlFlowPorts.Next, "readCounter"),
+                    new("readCounter", GraphControlFlowPorts.Next, "readLimit"),
+                    new("readLimit", GraphControlFlowPorts.Next, "pred"),
+                    new("pred", GraphControlFlowPorts.Next, "loop"),
+                    new("loop", GraphControlFlowPorts.Body, "bodyReadCounter"),
+                    new("loop", GraphControlFlowPorts.Next, "readReturn"),
+                    new("bodyReadCounter", GraphControlFlowPorts.Next, "bodyReadOne"),
+                    new("bodyReadOne", GraphControlFlowPorts.Next, "bodyAdd"),
+                    new("bodyAdd", GraphControlFlowPorts.Next, "readCounter"),
+                    new("readReturn", GraphControlFlowPorts.Next, "done")
+                },
+                ValueEdges = new List<GraphControlFlowValueEdge>
+                {
+                    new("zero", GraphControlFlowPorts.Value, "readCounter", GraphControlFlowPorts.Value),
+                    new("limit", GraphControlFlowPorts.Value, "readLimit", GraphControlFlowPorts.Value),
+                    new("readCounter", GraphControlFlowPorts.Value, "pred", GraphControlFlowPorts.A),
+                    new("readLimit", GraphControlFlowPorts.Value, "pred", GraphControlFlowPorts.B),
+                    new("pred", GraphControlFlowPorts.Value, "loop", GraphControlFlowPorts.Condition),
+                    new("zero", GraphControlFlowPorts.Value, "bodyReadCounter", GraphControlFlowPorts.Value),
+                    new("one", GraphControlFlowPorts.Value, "bodyReadOne", GraphControlFlowPorts.Value),
+                    new("bodyReadCounter", GraphControlFlowPorts.Value, "bodyAdd", GraphControlFlowPorts.A),
+                    new("bodyReadOne", GraphControlFlowPorts.Value, "bodyAdd", GraphControlFlowPorts.B),
+                    new("zero", GraphControlFlowPorts.Value, "readReturn", GraphControlFlowPorts.Value),
+                    new("readReturn", GraphControlFlowPorts.Value, "done", GraphControlFlowPorts.Value)
+                }
+            };
+        }
+
+        public static GraphControlFlowDocument CreateCountUntilGraph(int limit = 3)
+        {
+            // until (limit < counter) counter += 1; return counter
+            // exits when counter becomes > limit
+            return new GraphControlFlowDocument
+            {
+                Id = "tests.script.count-until",
+                Kind = "Script",
+                Entry = "zero",
+                Nodes = new List<GraphControlFlowNode>
+                {
+                    new() { Id = "zero", Op = nameof(GraphNodeOp.ConstInt), IntValue = 0, PinRegister = 0 },
+                    new() { Id = "limit", Op = nameof(GraphNodeOp.ConstInt), IntValue = limit, PinRegister = 1 },
+                    new() { Id = "one", Op = nameof(GraphNodeOp.ConstInt), IntValue = 1, PinRegister = 2 },
+                    new() { Id = "readCounter", Op = nameof(GraphNodeOp.MoveInt) },
+                    new() { Id = "readLimit", Op = nameof(GraphNodeOp.MoveInt) },
+                    new() { Id = "pred", Op = nameof(GraphNodeOp.CompareLtInt) },
+                    new() { Id = "loop", Op = GraphControlFlowCompiler.UntilOp },
+                    new() { Id = "bodyReadCounter", Op = nameof(GraphNodeOp.MoveInt) },
+                    new() { Id = "bodyReadOne", Op = nameof(GraphNodeOp.MoveInt) },
+                    new() { Id = "bodyAdd", Op = nameof(GraphNodeOp.AddInt), PinRegister = 0 },
+                    new() { Id = "readReturn", Op = nameof(GraphNodeOp.MoveInt) },
+                    new() { Id = "done", Op = nameof(GraphNodeOp.HaltReturnInt) }
+                },
+                ControlEdges = new List<GraphControlFlowEdge>
+                {
+                    new("zero", GraphControlFlowPorts.Next, "limit"),
+                    new("limit", GraphControlFlowPorts.Next, "one"),
+                    new("one", GraphControlFlowPorts.Next, "readCounter"),
+                    new("readCounter", GraphControlFlowPorts.Next, "readLimit"),
+                    new("readLimit", GraphControlFlowPorts.Next, "pred"),
+                    new("pred", GraphControlFlowPorts.Next, "loop"),
+                    new("loop", GraphControlFlowPorts.Body, "bodyReadCounter"),
+                    new("loop", GraphControlFlowPorts.Next, "readReturn"),
+                    new("bodyReadCounter", GraphControlFlowPorts.Next, "bodyReadOne"),
+                    new("bodyReadOne", GraphControlFlowPorts.Next, "bodyAdd"),
+                    new("bodyAdd", GraphControlFlowPorts.Next, "readCounter"),
+                    new("readReturn", GraphControlFlowPorts.Next, "done")
+                },
+                ValueEdges = new List<GraphControlFlowValueEdge>
+                {
+                    // pred = limit < counter  (CompareLtInt A=limit, B=counter)
+                    new("limit", GraphControlFlowPorts.Value, "readLimit", GraphControlFlowPorts.Value),
+                    new("zero", GraphControlFlowPorts.Value, "readCounter", GraphControlFlowPorts.Value),
+                    new("readLimit", GraphControlFlowPorts.Value, "pred", GraphControlFlowPorts.A),
+                    new("readCounter", GraphControlFlowPorts.Value, "pred", GraphControlFlowPorts.B),
+                    new("pred", GraphControlFlowPorts.Value, "loop", GraphControlFlowPorts.Condition),
+                    new("zero", GraphControlFlowPorts.Value, "bodyReadCounter", GraphControlFlowPorts.Value),
+                    new("one", GraphControlFlowPorts.Value, "bodyReadOne", GraphControlFlowPorts.Value),
+                    new("bodyReadCounter", GraphControlFlowPorts.Value, "bodyAdd", GraphControlFlowPorts.A),
+                    new("bodyReadOne", GraphControlFlowPorts.Value, "bodyAdd", GraphControlFlowPorts.B),
+                    new("zero", GraphControlFlowPorts.Value, "readReturn", GraphControlFlowPorts.Value),
+                    new("readReturn", GraphControlFlowPorts.Value, "done", GraphControlFlowPorts.Value)
+                }
+            };
+        }
+
+        public static GraphControlFlowDocument CreateInfiniteWhileGraph()
+        {
+            return new GraphControlFlowDocument
+            {
+                Id = "tests.script.infinite-while",
+                Kind = "Script",
+                Entry = "zero",
+                Nodes = new List<GraphControlFlowNode>
+                {
+                    new() { Id = "zero", Op = nameof(GraphNodeOp.ConstInt), IntValue = 0 },
+                    new() { Id = "one", Op = nameof(GraphNodeOp.ConstInt), IntValue = 1 },
+                    new() { Id = "pred", Op = nameof(GraphNodeOp.CompareLtInt) },
+                    new() { Id = "loop", Op = GraphControlFlowCompiler.WhileOp },
+                    new() { Id = "body", Op = nameof(GraphNodeOp.ConstInt), IntValue = 0 },
+                    new() { Id = "done", Op = nameof(GraphNodeOp.HaltReturnInt) }
+                },
+                ControlEdges = new List<GraphControlFlowEdge>
+                {
+                    new("zero", GraphControlFlowPorts.Next, "one"),
+                    new("one", GraphControlFlowPorts.Next, "pred"),
+                    new("pred", GraphControlFlowPorts.Next, "loop"),
+                    new("loop", GraphControlFlowPorts.Body, "body"),
+                    new("loop", GraphControlFlowPorts.Next, "done"),
+                    new("body", GraphControlFlowPorts.Next, "loop")
+                },
+                ValueEdges = new List<GraphControlFlowValueEdge>
+                {
+                    new("zero", GraphControlFlowPorts.Value, "pred", GraphControlFlowPorts.A),
+                    new("one", GraphControlFlowPorts.Value, "pred", GraphControlFlowPorts.B),
+                    new("pred", GraphControlFlowPorts.Value, "loop", GraphControlFlowPorts.Condition),
+                    new("zero", GraphControlFlowPorts.Value, "done", GraphControlFlowPorts.Value)
+                }
+            };
+        }
+
         public static string FormatDiagnostics(IReadOnlyList<GraphDiagnostic> diagnostics)
         {
             if (diagnostics.Count == 0)
