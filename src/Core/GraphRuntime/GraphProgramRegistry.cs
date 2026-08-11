@@ -50,6 +50,35 @@ namespace Ludots.Core.GraphRuntime
             }
         }
 
+        public void Replace(int graphId, GraphInstruction[] program, GraphKind kind)
+            => Replace(graphId, program, kind, GraphInstructionSourceMap.Empty);
+
+        public void Replace(int graphId, GraphInstruction[] program, GraphKind kind, GraphInstructionSourceMap sourceMap)
+        {
+            if (graphId <= 0) throw new ArgumentOutOfRangeException(nameof(graphId));
+            if (program == null) throw new ArgumentNullException(nameof(program));
+            if (kind == GraphKind.None || !Enum.IsDefined(typeof(GraphKind), kind))
+            {
+                throw new ArgumentOutOfRangeException(nameof(kind), kind, "Graph replacement requires an explicit supported kind.");
+            }
+
+            if (!_programs.ContainsKey(graphId))
+            {
+                throw new InvalidOperationException(
+                    $"Graph program id {graphId} is not registered; Replace cannot introduce a new graph id after freeze.");
+            }
+
+            _programs[graphId] = new GraphProgramRegistration(program, kind);
+            if (sourceMap.HasSources)
+            {
+                _sourceMaps[graphId] = sourceMap;
+            }
+            else
+            {
+                _sourceMaps.Remove(graphId);
+            }
+        }
+
         public bool TryGetProgram(int graphId, out ReadOnlySpan<GraphInstruction> program)
         {
             if (_programs.TryGetValue(graphId, out GraphProgramRegistration entry))

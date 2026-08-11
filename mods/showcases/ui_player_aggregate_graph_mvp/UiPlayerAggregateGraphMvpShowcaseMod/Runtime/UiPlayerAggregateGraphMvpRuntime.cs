@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Threading.Tasks;
 using Arch.Core;
 using Ludots.Core.Components;
@@ -20,6 +21,9 @@ namespace UiPlayerAggregateGraphMvpShowcaseMod.Runtime;
 
 public sealed class UiPlayerAggregateGraphMvpRuntime
 {
+    private const string GraphsAssetUri = "UiPlayerAggregateGraphMvpShowcaseMod:assets/GAS/graphs.json";
+    private const string GraphsRelativePath = "GAS/graphs.json";
+
     private readonly UiPlayerAggregateGraphMvpPanelController _panelController;
     private UiPlayerAggregateGraphMvpConfig? _config;
     private Entity _owner = Entity.Null;
@@ -34,6 +38,11 @@ public sealed class UiPlayerAggregateGraphMvpRuntime
     private string _status = "Load the player aggregate graph MVP map.";
     private uint _randomSeed = 1u;
     private IGraphRuntimeApi? _graphApi;
+    private string? _graphsFilePath;
+    private DateTime _graphsAppliedWriteUtc;
+    private DateTime _graphsSeenWriteUtc;
+    private DateTime _graphsReloadQuietUntilUtc;
+    private bool _graphsReloadPending;
 
     public UiPlayerAggregateGraphMvpRuntime()
     {
@@ -94,6 +103,7 @@ public sealed class UiPlayerAggregateGraphMvpRuntime
 
         UiPlayerAggregateGraphMvpConfig config = EnsureConfig(engine);
         EnsureScenario(engine, config);
+        PollGraphAssetHotReload(engine);
 
         if (engine.GetService(CoreServiceKeys.AuthoritativeInput) is IInputActionReader input &&
             input.PressedThisFrame(UiPlayerAggregateGraphMvpIds.ShutDownBuildingActionId))
@@ -102,6 +112,58 @@ public sealed class UiPlayerAggregateGraphMvpRuntime
         }
 
         ExecuteAggregateGraph(engine);
+    }
+
+    private void PollGraphAssetHotReload(GameEngine engine)
+    {
+        if (engine.VFS == null)
+        {
+            return;
+        }
+
+        if (_graphsFilePath == null)
+        {
+            if (!engine.VFS.TryResolveFullPath(GraphsAssetUri, out string fullPath) || !File.Exists(fullPath))
+            {
+                throw new InvalidOperationException(
+                    $"Showcase graph asset is missing for hot reload: {GraphsAssetUri}");
+            }
+
+            _graphsFilePath = fullPath;
+            _graphsAppliedWriteUtc = File.GetLastWriteTimeUtc(fullPath);
+            _graphsSeenWriteUtc = _graphsAppliedWriteUtc;
+            return;
+        }
+
+        DateTime writeUtc = File.GetLastWriteTimeUtc(_graphsFilePath);
+        DateTime now = DateTime.UtcNow;
+
+        if (writeUtc > _graphsSeenWriteUtc)
+        {
+            // Atomic editor saves can emit several mtimes; debounce before reload.
+            _graphsSeenWriteUtc = writeUtc;
+            _graphsReloadPending = true;
+            _graphsReloadQuietUntilUtc = now.AddMilliseconds(200);
+            return;
+        }
+
+        if (!_graphsReloadPending || now < _graphsReloadQuietUntilUtc)
+        {
+            return;
+        }
+
+        if (writeUtc > _graphsAppliedWriteUtc)
+        {
+            _graphsReloadPending = false;
+            _graphsAppliedWriteUtc = writeUtc;
+            engine.ReloadConfigs(group: "GAS", relativePath: GraphsRelativePath);
+            _status = "Graph reloaded from editor save; strip is using the new projection.";
+            ExecuteAggregateGraph(engine);
+        }
+        else
+        {
+            _graphsReloadPending = false;
+        }
     }
 
     public void ShutDownBuilding(GameEngine engine)

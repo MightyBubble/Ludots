@@ -151,6 +151,7 @@ namespace Ludots.Core.Engine
 
         private bool _isRunning;
         private EffectTemplateLoader _effectTemplateLoader;
+        private GraphProgramConfigLoader _graphProgramConfigLoader;
         private ICooperativeSimulation _cooperativeSimulation;
         private bool _simulationBudgetFused;
 
@@ -621,6 +622,10 @@ namespace Ludots.Core.Engine
             bool reloadQuests = string.IsNullOrWhiteSpace(group)
                              || string.Equals(group, "Quests", StringComparison.OrdinalIgnoreCase)
                              || (!string.IsNullOrWhiteSpace(relativePath) && relativePath.StartsWith("Quests/", StringComparison.OrdinalIgnoreCase));
+            bool reloadGasGraphs = string.IsNullOrWhiteSpace(group)
+                                 || string.Equals(group, "GAS", StringComparison.OrdinalIgnoreCase)
+                                 || (!string.IsNullOrWhiteSpace(relativePath) &&
+                                     relativePath.Equals("GAS/graphs.json", StringComparison.OrdinalIgnoreCase));
 
             if (reloadQuests &&
                 GetService(CoreServiceKeys.QuestDefinitionRegistry) is QuestDefinitionRegistry questDefinitions &&
@@ -637,6 +642,18 @@ namespace Ludots.Core.Engine
                 {
                     narrativeDirector.ResetNarrativeState();
                 }
+            }
+
+            if (reloadGasGraphs)
+            {
+                if (_graphProgramConfigLoader == null)
+                {
+                    throw new InvalidOperationException(
+                        "GAS graph reload requested before GraphProgramConfigLoader was installed.");
+                }
+
+                _graphProgramConfigLoader.ReloadExistingAndReplace(ConfigCatalog, ConfigConflictReport);
+                Diagnostics.Log.Info(in LogChannels.Engine, "Reloaded GAS/graphs.json into GraphProgramRegistry (existing ids only).");
             }
 
             SetService(CoreServiceKeys.ConfigCatalog, ConfigCatalog);
@@ -833,14 +850,14 @@ namespace Ludots.Core.Engine
                 relationshipReasonRegistry,
                 targetDispatchPresetRegistry,
                 MapLoader.EntityTemplateKeys);
-            var graphConfigLoader = new GraphProgramConfigLoader(
+            _graphProgramConfigLoader = new GraphProgramConfigLoader(
                 ConfigPipeline,
                 graphProgramRegistry,
                 graphSymbolResolver,
                 graphOutputSchemas,
                 graphOutputValueKeyRegistry,
                 entityCollectionStore);
-            var graphPackages = graphConfigLoader.LoadIdsAndCompile(ConfigCatalog, ConfigConflictReport);
+            var graphPackages = _graphProgramConfigLoader.LoadIdsAndCompile(ConfigCatalog, ConfigConflictReport);
             var presetTypes = new PresetTypeRegistry();
             var presetTypeLoader = new PresetTypeLoader(ConfigPipeline, presetTypes);
             presetTypeLoader.Load(ConfigCatalog, ConfigConflictReport);
@@ -903,7 +920,7 @@ namespace Ludots.Core.Engine
             {
                 tagOps.RegisterTagRuleSet(tagRules[i].TagId, tagRules[i].RuleSet);
             }
-            graphConfigLoader.PatchAndRegister(graphPackages);
+            _graphProgramConfigLoader.PatchAndRegister(graphPackages);
             EffectExecutionPlanCompiler.FinalizeAll(
                 effectTemplateRegistry,
                 presetTypes,

@@ -262,6 +262,73 @@ namespace Ludots.Tests.Gas.Graph
             Assert.That(outputKeys.GetId("ui.panel.player.crystal.total"), Is.GreaterThan(0));
         }
 
+        [Test]
+        public void GraphProgramConfigLoader_ReloadExistingAndReplace_UpdatesProgramWithoutRenumbering()
+        {
+            _tempRoot = Path.Combine(Path.GetTempPath(), "Ludots_GraphQueryControlFlowTests", Guid.NewGuid().ToString("N"));
+            string coreRoot = Path.Combine(_tempRoot, "Core");
+            string graphDir = Path.Combine(coreRoot, "Configs", "GAS");
+            Directory.CreateDirectory(graphDir);
+            string graphPath = Path.Combine(graphDir, "graphs.json");
+            File.WriteAllText(graphPath, AggregateGraphJson);
+
+            var vfs = new VirtualFileSystem();
+            vfs.Mount("Core", coreRoot);
+            var modLoader = new ModLoader(vfs, new FunctionRegistry(), new TriggerManager());
+            var pipeline = new ConfigPipeline(vfs, modLoader);
+            var catalog = new ConfigCatalog();
+            catalog.Add(new ConfigCatalogEntry("GAS/graphs.json", ConfigMergePolicy.ArrayById, "id"));
+
+            var programs = new GraphProgramRegistry();
+            var outputs = new GraphOutputSchemaRegistry();
+            var outputKeys = new StringIntRegistry();
+            var loader = new GraphProgramConfigLoader(pipeline, programs, new TestGraphSymbolResolver(), outputs, outputKeys);
+            List<GraphProgramPackage> packages = loader.LoadIdsAndCompile(catalog, relativePath: "GAS/graphs.json");
+            loader.PatchAndRegister(packages);
+
+            int graphId = GraphIdRegistry.GetId("ui.panel.player.resource.aggregate");
+            Assert.That(graphId, Is.GreaterThan(0));
+            Assert.That(programs.TryGetProgram(graphId, out ReadOnlySpan<GraphInstruction> before), Is.True);
+            int beforeLength = before.Length;
+
+            File.WriteAllText(graphPath, AggregateGraphOreOnlyJson);
+            loader.ReloadExistingAndReplace(catalog, relativePath: "GAS/graphs.json");
+
+            Assert.That(GraphIdRegistry.GetId("ui.panel.player.resource.aggregate"), Is.EqualTo(graphId));
+            Assert.That(programs.TryGetProgram(graphId, out ReadOnlySpan<GraphInstruction> after), Is.True);
+            Assert.That(after.Length, Is.Not.EqualTo(beforeLength));
+            Assert.That(outputs.Get(graphId).Bindings.Select(b => b.Key), Does.Contain("ui.panel.player.ore.total"));
+            Assert.That(outputs.Get(graphId).Bindings.Select(b => b.Key), Does.Not.Contain("ui.panel.player.crystal.total"));
+        }
+
+        [Test]
+        public void GraphProgramConfigLoader_ReloadExistingAndReplace_RejectsNewGraphId()
+        {
+            _tempRoot = Path.Combine(Path.GetTempPath(), "Ludots_GraphQueryControlFlowTests", Guid.NewGuid().ToString("N"));
+            string coreRoot = Path.Combine(_tempRoot, "Core");
+            string graphDir = Path.Combine(coreRoot, "Configs", "GAS");
+            Directory.CreateDirectory(graphDir);
+            string graphPath = Path.Combine(graphDir, "graphs.json");
+            File.WriteAllText(graphPath, AggregateGraphJson);
+
+            var vfs = new VirtualFileSystem();
+            vfs.Mount("Core", coreRoot);
+            var modLoader = new ModLoader(vfs, new FunctionRegistry(), new TriggerManager());
+            var pipeline = new ConfigPipeline(vfs, modLoader);
+            var catalog = new ConfigCatalog();
+            catalog.Add(new ConfigCatalogEntry("GAS/graphs.json", ConfigMergePolicy.ArrayById, "id"));
+
+            var programs = new GraphProgramRegistry();
+            var loader = new GraphProgramConfigLoader(pipeline, programs, new TestGraphSymbolResolver());
+            loader.PatchAndRegister(loader.LoadIdsAndCompile(catalog, relativePath: "GAS/graphs.json"));
+
+            File.WriteAllText(graphPath, AggregateGraphWithExtraIdJson);
+            AggregateException ex = Assert.Throws<AggregateException>(
+                () => loader.ReloadExistingAndReplace(catalog, relativePath: "GAS/graphs.json"));
+            Assert.That(ex!.Message, Does.Contain("reload error"));
+            Assert.That(ex.InnerExceptions[0].Message, Does.Contain("hot reload cannot introduce new graph ids"));
+        }
+
         private static GraphControlFlowDocument CreateAggregateDocument()
         {
             return new GraphControlFlowDocument
@@ -355,6 +422,67 @@ namespace Ludots.Tests.Gas.Graph
         "key": "ui.panel.player.crystal.total"
       }
     ]
+  }
+]
+""";
+
+        private const string AggregateGraphOreOnlyJson = """
+[
+  {
+    "id": "ui.panel.player.resource.aggregate",
+    "kind": "Query",
+    "entry": "owner",
+    "nodes": [
+      { "id": "owner", "op": "LoadCaster" },
+      { "id": "allMap", "op": "QueryAllMapEntities" },
+      { "id": "team", "op": "QueryFilterTeam", "teamId": 1 },
+      { "id": "oreSum", "op": "AggSumAttribute", "attribute": "Showcase.Resource.Ore" }
+    ],
+    "controlEdges": [
+      { "from": "owner", "fromPort": "next", "to": "allMap" },
+      { "from": "allMap", "fromPort": "next", "to": "team" },
+      { "from": "team", "fromPort": "next", "to": "oreSum" }
+    ],
+    "valueEdges": [
+      { "from": "allMap", "fromPort": "list", "to": "team", "toPort": "list" },
+      { "from": "team", "fromPort": "list", "to": "oreSum", "toPort": "list" }
+    ],
+    "outputs": [
+      {
+        "id": "oreTotal",
+        "destination": "Summary",
+        "type": "Float",
+        "source": "oreSum",
+        "key": "ui.panel.player.ore.total"
+      }
+    ]
+  }
+]
+""";
+
+        private const string AggregateGraphWithExtraIdJson = """
+[
+  {
+    "id": "ui.panel.player.resource.aggregate",
+    "kind": "Query",
+    "entry": "owner",
+    "nodes": [
+      { "id": "owner", "op": "LoadCaster" }
+    ],
+    "controlEdges": [],
+    "valueEdges": [],
+    "outputs": []
+  },
+  {
+    "id": "ui.panel.player.resource.aggregate.v2",
+    "kind": "Query",
+    "entry": "owner",
+    "nodes": [
+      { "id": "owner", "op": "LoadCaster" }
+    ],
+    "controlEdges": [],
+    "valueEdges": [],
+    "outputs": []
   }
 ]
 """;

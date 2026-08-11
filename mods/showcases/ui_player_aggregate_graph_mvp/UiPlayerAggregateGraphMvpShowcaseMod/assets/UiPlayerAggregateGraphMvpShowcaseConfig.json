@@ -27,6 +27,6 @@
   "presentation": {
     "title": "Player Resource Overview",
     "copy": "Ore and Crystal totals come from the tally Query graph projection written into GraphOutputValueStore — the panel never hand-sums buildings.",
-    "controls": "Click Shut down Crystal Hub, or press Space."
+    "controls": "Click Shut down Crystal Hub, or press Space. Save the tally graph in the GAS editor to hot-reload the strip."
   }
 }

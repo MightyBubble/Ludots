@@ -46,6 +46,80 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             _pendingOutputSchemas.Clear();
             _outputSchemas?.Clear();
 
+            return CompileMergedGraphs(
+                catalog,
+                report,
+                relativePath,
+                GraphIdBindingMode.RegisterNew,
+                errorNoun: "compilation");
+        }
+
+        public void PatchAndRegister(IReadOnlyList<GraphProgramPackage> packages)
+        {
+            for (int i = 0; i < packages.Count; i++)
+            {
+                var (name, symbols, program, kind) = packages[i];
+                GraphProgramSymbolPatcher.Patch(symbols, program, _symbolResolver, _entityCollections);
+                int id = GraphIdRegistry.GetId(name);
+                if (id <= 0) id = GraphIdRegistry.Register(name);
+                ApplyProgram(id, name, program, kind, replaceExisting: false);
+            }
+
+            GraphIdRegistry.Freeze();
+        }
+
+        /// <summary>
+        /// Recompile GAS/graphs.json and replace programs for already-registered graph ids.
+        /// Does not clear or renumber <see cref="GraphIdRegistry"/> (safe after Freeze).
+        /// New graph ids in the file are rejected fail-closed.
+        /// </summary>
+        public void ReloadExistingAndReplace(
+            ConfigCatalog catalog = null,
+            ConfigConflictReport report = null,
+            string relativePath = "GAS/graphs.json")
+        {
+            if (!GraphIdRegistry.IsFrozen)
+            {
+                throw new InvalidOperationException(
+                    "ReloadExistingAndReplace requires GraphIdRegistry to be frozen after boot registration.");
+            }
+
+            _pendingOutputSchemas.Clear();
+            List<GraphProgramPackage> packages = CompileMergedGraphs(
+                catalog,
+                report,
+                relativePath,
+                GraphIdBindingMode.RequireExisting,
+                errorNoun: "reload");
+
+            for (int i = 0; i < packages.Count; i++)
+            {
+                var (name, symbols, program, kind) = packages[i];
+                GraphProgramSymbolPatcher.Patch(symbols, program, _symbolResolver, _entityCollections);
+                int graphId = GraphIdRegistry.GetId(name);
+                if (graphId == GraphIdRegistry.InvalidId)
+                {
+                    throw new InvalidOperationException(
+                        $"Graph '{name}' disappeared from GraphIdRegistry during reload.");
+                }
+
+                ApplyProgram(graphId, name, program, kind, replaceExisting: true);
+            }
+        }
+
+        private enum GraphIdBindingMode
+        {
+            RegisterNew,
+            RequireExisting
+        }
+
+        private List<GraphProgramPackage> CompileMergedGraphs(
+            ConfigCatalog catalog,
+            ConfigConflictReport report,
+            string relativePath,
+            GraphIdBindingMode idMode,
+            string errorNoun)
+        {
             var entry = ConfigPipeline.RequireEntry(catalog, relativePath, ConfigMergePolicy.ArrayById, "id");
             var merged = _pipeline.MergeArrayByIdFromCatalog(in entry, report);
 
@@ -63,7 +137,20 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 var (id, obj) = sorted[i];
                 try
                 {
-                    GraphIdRegistry.Register(id);
+                    if (idMode == GraphIdBindingMode.RegisterNew)
+                    {
+                        GraphIdRegistry.Register(id);
+                    }
+                    else
+                    {
+                        int graphId = GraphIdRegistry.GetId(id);
+                        if (graphId == GraphIdRegistry.InvalidId)
+                        {
+                            throw new InvalidOperationException(
+                                $"Graph '{id}' is not registered; hot reload cannot introduce new graph ids.");
+                        }
+                    }
+
                     GraphProgramPackage? pkg;
                     GraphOutputSchema outputSchema;
                     List<GraphDiagnostic> diags;
@@ -123,6 +210,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                             errors.Add($"Graph '{id}' in '{relativePath}': {diags[d].Code} {diags[d].Message}");
                         }
                     }
+
                     if (pkg.HasValue)
                     {
                         packages.Add(pkg.Value);
@@ -138,11 +226,49 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             if (errors.Count > 0)
             {
                 throw new AggregateException(
-                    $"[GraphProgramConfigLoader] {errors.Count} graph compilation error(s) in '{relativePath}'.",
+                    $"[GraphProgramConfigLoader] {errors.Count} graph {errorNoun} error(s) in '{relativePath}'.",
                     errors.ConvertAll(e => (Exception)new InvalidOperationException(e)));
             }
 
             return packages;
+        }
+
+        private void ApplyProgram(
+            int graphId,
+            string name,
+            GraphInstruction[] program,
+            GraphKind kind,
+            bool replaceExisting)
+        {
+            if (kind == GraphKind.None)
+            {
+                throw new InvalidOperationException(
+                    $"Graph '{name}' (id={graphId}) cannot be {(replaceExisting ? "replaced" : "registered")} without an authored kind.");
+            }
+
+            GraphKindOperationPolicy.RequireAllowed(
+                kind,
+                program,
+                GasGraphOpHandlerTable.Instance,
+                graphId,
+                nameof(GraphProgramConfigLoader));
+
+            if (replaceExisting)
+            {
+                _registry.Replace(graphId, program, kind);
+            }
+            else
+            {
+                _registry.Register(graphId, program, kind);
+            }
+
+            if (_outputSchemas != null)
+            {
+                GraphOutputSchema schema = _pendingOutputSchemas.TryGetValue(name, out GraphOutputSchema pendingSchema)
+                    ? ResolveOutputValueKeys(pendingSchema)
+                    : GraphOutputSchema.Empty;
+                _outputSchemas.Register(graphId, schema);
+            }
         }
 
         private static bool IsControlFlowGraphObject(JsonObject obj)
@@ -164,40 +290,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             }
 
             return false;
-        }
-
-        public void PatchAndRegister(IReadOnlyList<GraphProgramPackage> packages)
-        {
-            for (int i = 0; i < packages.Count; i++)
-            {
-                var (name, symbols, program, kind) = packages[i];
-                GraphProgramSymbolPatcher.Patch(symbols, program, _symbolResolver, _entityCollections);
-                int id = GraphIdRegistry.GetId(name);
-                if (id <= 0) id = GraphIdRegistry.Register(name);
-                if (kind == GraphKind.None)
-                {
-                    throw new InvalidOperationException(
-                        $"Graph '{name}' (id={id}) cannot be registered without an authored kind.");
-                }
-
-                GraphKindOperationPolicy.RequireAllowed(
-                    kind,
-                    program,
-                    GasGraphOpHandlerTable.Instance,
-                    id,
-                    nameof(GraphProgramConfigLoader));
-
-                _registry.Register(id, program, kind);
-                if (_outputSchemas != null)
-                {
-                    GraphOutputSchema schema = _pendingOutputSchemas.TryGetValue(name, out GraphOutputSchema pendingSchema)
-                        ? ResolveOutputValueKeys(pendingSchema)
-                        : GraphOutputSchema.Empty;
-                    _outputSchemas.Register(id, schema);
-                }
-            }
-
-            GraphIdRegistry.Freeze();
         }
 
         private GraphOutputSchema ResolveOutputValueKeys(GraphOutputSchema schema)
