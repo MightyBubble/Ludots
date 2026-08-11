@@ -13,6 +13,7 @@
   - [运行时总览](architecture/runtime-overview.md)
   - [UI 渲染控制与 Surface 所有权](architecture/ui-rendering-and-surface-ownership.md)
   - [UI 面板作者形态（四种表面）](architecture/ui-panel-authoring-form.md)
+  - [UIP-0：Template / Instance / Router 合同](architecture/ui-panel-template-instance-router.md)
   - [Browser Runtime Provider Adapter Guide](architecture/browser-runtime-provider-adapter-guide.md)
   - [Mod 架构](architecture/mod-architecture.md)
   - [GAS 分层架构](architecture/gas-layered-architecture.md)

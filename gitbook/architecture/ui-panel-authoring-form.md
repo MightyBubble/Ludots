@@ -123,7 +123,7 @@ Instance = templateId + scope（多开；Router 另册）
 
 ## 5. 边界
 
-- 本页定义**作者形态**；Template/Instance/Router 运行时落地见 #858 子单  
+- 本页定义**作者形态**；Template/Instance/Router **合同**见 [`ui-panel-template-instance-router.md`](ui-panel-template-instance-router.md)（ADR [#880](https://github.com/MightyBubble/Ludots/issues/880)）；运行时落地见 #858 后续切片 
 - Markup 不扩展为表达式语言；需要绑定走 code-behind 或换 Reactive/WebUI  
 - 图编辑真机仍走 GAS 图工具链；本编辑器中心画布是作者形态样板，可与真编译器对接但不得平行 VM
 
