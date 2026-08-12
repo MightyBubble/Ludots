@@ -18,9 +18,9 @@ key/tag/entity/template id -> TableLookup -> display text token / 数值 / entit
 
 - L0 Graph VM 继续只运行数值、bool、entity、target list；不新增字符串寄存器。
 - Text 进入面板的方式是 `PresentationTextCatalog` token id 进入 `GraphOutputValueStore`，surface/projection 层按 locale 格式化成最终字符串。
-- `ReadGameplayTag` 是新的纯读原子 op；`LookupTagDisplayText` 是作者糖，运行时产物必须命名为 token id。
-- 通用表查询拆成 `ResolveTableRow` + typed field read，支持多字段聚合时复用 row handle，避免每个字段重复查 key。
-- L0 只新增必须的 GraphNodeOp，不新增 `GraphKind.Presentation`、不新增 `GraphNodeOp.Panel`、不把 Attribute 当 Tag/BB/Text/Table 的替身。
+- Tag / 显示前门已落地：作者写 `ReadGameplayTag` / `LookupTagDisplayText`（`GraphNodeOpParser` 糖），L0 为 `SelectTagInMask` / `LookupTagDisplayToken`；节点字段 `displayTable` + `tagSelectPolicy`。
+- 通用表查询（若扩展）拆成 `ResolveTableRow` + typed field read，支持多字段聚合时复用 row handle；与 Tag 显示表分册（见 [graph-table-lookup](graph-table-lookup.md)）。
+- 不新增 `GraphKind.Presentation`、不新增 `GraphNodeOp.Panel`、不把 Attribute 当 Tag/BB/Text/Table 的替身。
 
 对照 #858：本设计复用 `Query/Derived -> GraphOutputValueStore -> Panel binds[]`，服务 Template/Instance/Router，不创建 Presentation Graph VM。  
 对照 #848：复用同一 VM 与 `GraphKind.Query/Derived` 分层，查表 op 归类为 Pure；Query 真引脚/outputs 仍是计算图投影的 SSOT。  
@@ -40,17 +40,15 @@ ConfigPipeline
         |
         +--> PresentationTextCatalog          (既有文案 SSOT)
         +--> TagRegistry / AttributeRegistry  (既有 gameplay id SSOT)
-        +--> GraphLookupTableRegistry         (新增，只读 SoA 表索引)
+        +--> TagDisplayTableRegistry          (tag mask + dense tokenByTagId)
         |
         v
 GraphProgramConfigLoader / GraphProgramAuthoringFrontDoor / GraphControlFlowCompiler / GraphProgramSymbolPatcher
         |
         v
-L0 Graph VM (GraphKind.Query | Derived)
-  ReadGameplayTag -> Int tagId
-  LookupTagDisplayToken -> Int tokenId
-  ResolveTableRow -> Int rowHandle
-  TableReadFloat/Int/Entity/Token/Tag -> typed register
+L0 Graph VM (GraphKind.Query | Effect 线性 | Derived …)
+  SelectTagInMask (作者名 ReadGameplayTag) -> Int tagId
+  LookupTagDisplayToken (作者名 LookupTagDisplayText) -> Int tokenId
         |
         v
 GraphReturnWriter
@@ -58,7 +56,7 @@ GraphReturnWriter
         v
 GraphOutputValueStore
   Bool / Int / Float / Entity / TargetList
-  + TextToken semantic over Int (recommended as GraphOutputValueKind.TextToken)
+  （Panel Text 绑定侧以 token id / semantic 合同承载；见 §3.7）
         |
         v
 Panel Projection
@@ -71,8 +69,8 @@ Panel Projection
 | 层 | 负责 | 不负责 |
 | --- | --- | --- |
 | GameplayTag / TagOps | 状态真相、Effective tag 语义 | 玩家文案 |
-| GraphLookupTableRegistry | 已解析 id 的只读表索引 | ECS 组件读写、locale 格式化 |
-| Graph VM | 0Alloc 读取 tag/table/value id | 字符串拼接、DOM、fallback |
+| TagDisplayTableRegistry | tag mask + tagId→tokenId 只读索引 | ECS 组件读写、locale 格式化 |
+| Graph VM | 0Alloc 读取 tag/token id | 字符串拼接、DOM、缺行静默降级 |
 | GraphOutputValueStore | scope owner + key 的 typed projection | 文案 SSOT |
 | Panel surface | Text token 格式化与展示 | 玩法状态推导 |
 
@@ -80,28 +78,30 @@ Panel Projection
 
 ### 3.1 现有代码对照
 
-已确认可复用能力：
+已确认可复用 / 已落地能力：
 
-- `GraphNodeOp` 已有 `HasTag`、`ReadBlackboardFloat/Int/Entity`、`LoadAttribute`、`GraphOutput` 相关 Query/Agg op；没有 `ReadGameplayTag`、`LookupTagDisplayText`、通用 `TableLookup`。
-- `IGraphRuntimeApi` 已承载 tag、attribute、blackboard、entity query、relationship 的只读接口，新增读表接口应挂这里。
-- `GameplayTagContainer` 是固定 256 bit；`TagRegistry` 限定 tag id 1..255；适合 dense tag display lookup。
+- `GraphNodeOp`：`HasTag`、`CompareEqEntity`、`SelectTagInMask`、`LookupTagDisplayToken`，以及既有 BB / Attribute / Query/Agg。
+- 作者糖（`GraphNodeOpParser`）：`ReadGameplayTag` → `SelectTagInMask`，`LookupTagDisplayText` → `LookupTagDisplayToken`；亦可直接写 L0 名。
+- FrontDoor 字段：`displayTable`（必填）、`tagSelectPolicy`（`RequireOne` \| `AllowNone` \| `LowestId`，默认 `RequireOne`）。
+- `IGraphRuntimeApi.SelectEffectiveTagInMask` / `LookupTagDisplayToken`；实现注入 `TagDisplayTableRegistry`。
+- `GameplayTagContainer` 是固定 256 bit；`TagRegistry` 限定 tag id 1..255；dense tag display lookup。
 - Blackboard 当前只有 Float/Int/Entity buffer；没有 Text BB。不能用 `BlackboardInt` 的裸 int 偷偷表示 Text，必须有语义合同。
 - `AttributeBuffer` 是 float 属性 SoA；Text/Tag/表查询不得塞进 Attribute。
-- `GraphOutputValueStore` 当前只存 Bool/Int/Float/Entity；Text 输出需要 token 语义，不能直接存 string。
+- `GraphOutputValueStore` 当前存 Bool/Int/Float/Entity/TargetList；Text 输出走 token id + Panel binding 语义，不能直接存 string。
 - `EntityCollectionStore` 是实体集合 SoA，不是通用表数据仓库。
 - `PresentationTextCatalog`、`PresentationTextCatalogLoader`、`PresentationTextFormatter` 已是文案 token/locale SSOT。
-- 各领域 `DefinitionRegistry` 多为领域专用，没有可直接复用的通用 typed lookup table；新增表 registry 必须复用 `StringIntRegistry`、`ConfigPipeline`，不能各节点自建字典。
+- 通用 typed `TableLookup`（`ResolveTableRow` / `TableRead*`）不在本 Tag 显示切片；见 [graph-table-lookup](graph-table-lookup.md)。
 
 ### 3.2 L0 vs L1 拆分
 
 | 层 | 名称 | 形态 | 原因 |
 | --- | --- | --- | --- |
-| L1 作者节点 | `ReadGameplayTag` | 画布节点 | 作者关心 State.* 语义，不关心 bitset mask |
-| L0 op | `ReadGameplayTag` 或更精确 `SelectGameplayTag` | `GraphNodeOp` | VM 需要一个可执行纯 op |
-| L1 作者节点 | `LookupTagDisplayText` | 画布节点 | Panel 引脚是 Text |
+| L1 作者节点 | `ReadGameplayTag` | 画布节点 / JSON `op` | 作者关心 State.* 语义，不关心 bitset mask |
+| L0 op | `SelectTagInMask` | `GraphNodeOp` | VM 可执行纯 op；Imm=tableId，Flags=`TagSelectPolicy` |
+| L1 作者节点 | `LookupTagDisplayText` | 画布节点 / JSON `op` | Panel 引脚是 Text 语义 |
 | L0 op | `LookupTagDisplayToken` | `GraphNodeOp` | VM 只返回 token id，不返回 string |
-| L1 作者节点 | `TableLookup` | 组合节点 | 作者按 key 查字段 |
-| L0 op | `ResolveTableRow` + `TableRead*` | 多个 `GraphNodeOp` | 多字段聚合复用 row，保持 typed register |
+| L1 作者节点 | `TableLookup`（通用表，另册） | 组合节点 | 作者按 key 查字段 |
+| L0 op | `ResolveTableRow` + `TableRead*`（另册） | 多个 `GraphNodeOp` | 多字段聚合复用 row，保持 typed register |
 
 ### 3.3 ValueType / OutputKind 决策
 
@@ -122,67 +122,65 @@ Panel Projection
 
 如果第一刀不改 `GraphOutputValueKind`，可临时用 `Int + binding.semantic = presentationToken`，但实现 issue 应优先新增 `TextToken`，避免裸 int 在 projection 层被误读。
 
-### 3.4 `ReadGameplayTag`
+### 3.4 `ReadGameplayTag` / `SelectTagInMask`
 
 语义：
 
 ```text
-tagId = Select exactly one effective tag from entity tags within authored domain/table mask
+tagId = SelectEffectiveTagInMask(entity, displayTableId, tagSelectPolicy)
 ```
 
 输入：
 
-- Entity register。
-- `tagDomain` 或 `table` 符号；P0 推荐复用 tag display table 的 mask，减少重复配置。
-- Cardinality policy：默认 `RequireOne`。
+- Entity 值边端口：`source`。
+- 节点字段 `displayTable`：TagDisplayTable id 符号（mask + token 行同源）。
+- 节点字段 `tagSelectPolicy`：默认 `RequireOne`。
 
 输出：
 
-- Int register：tag id。
-- 可选 Bool register：found，仅 `AllowNone` 策略可启用。
+- Int register：tag id。`AllowNone` 且 0 匹配时返回 `0`（无单独 found bool 端口）。
 
-策略：
+策略（`TagSelectPolicy`）：
 
 | 策略 | 行为 |
 | --- | --- |
-| `RequireOne` | 0 个或多个匹配 tag 直接抛错；EntityInfoCard 的 `State.*` 默认用它 |
-| `AllowNone` | 0 个返回 found=false；多个仍抛错 |
-| `LowestId` | 取最低 id，仅调试或明确排序域；UI Panel 默认不允许 |
+| `RequireOne` | 必须恰好 1 个匹配，否则抛错；EntityInfoCard 的 `State.*` 默认用它 |
+| `AllowNone` | 0 个返回 tagId `0`；多个仍抛错 |
+| `LowestId` | 取最低 id（非 UI 默认） |
 
-实现挂点：
+实现挂点（已落地）：
 
-- `IGraphRuntimeApi.SelectGameplayTag(Entity entity, int tagDomainId, TagSelectionPolicy policy, out int tagId, out int matchCount)`。
-- `GasGraphRuntimeApi` 必须与 `HasTag` 同源，尊重 staged side-effect 视图与 `TagOps` Effective 语义。
-- 无 `GameplayTagContainer`、entity dead、domain 空 mask、ambiguous state 都失败关闭。
+- `IGraphRuntimeApi.SelectEffectiveTagInMask(Entity entity, int tableId, byte policy)`。
+- `GasGraphRuntimeApi` 与 `HasTag` 同源，尊重 staged side-effect 视图与 `TagOps` Effective 语义。
+- 无 `GameplayTagContainer`、entity dead、空 mask、歧义匹配都失败关闭。
 
 为什么 `HasTag` 不够：
 
-- `HasTag(State.Moving)` 是谓词；`ReadGameplayTag(State.*)` 是“从互斥族选出当前状态”的读取。
+- `HasTag(State.Moving)` 是谓词；`ReadGameplayTag` 是“从互斥族选出当前状态”的读取。
 - 用 N 个 `HasTag` + branch 会把作者图变成手写 if-else，也无法统一处理“0/多个状态”的合同错误。
 
 ### 3.5 `LookupTagDisplayText` / `LookupTagDisplayToken`
 
-作者节点名：`LookupTagDisplayText`。  
-运行时 op 名：`LookupTagDisplayToken`。
+作者节点名：`LookupTagDisplayText`（亦可直接写 `LookupTagDisplayToken`）。  
+L0 op：`LookupTagDisplayToken`。
 
 语义：
 
 ```text
-tokenId = TagDisplayTable[tableId].TokenByTagId[tagId]
+tokenId = TagDisplayTableRegistry.LookupToken(tableId, tagId)
 ```
 
 输入/输出：
 
-- 输入：Int tagId。
-- Immediate：table id。
-- 输出：Int tokenId，或 `GraphOutputValueKind.TextToken` summary。
+- 值边端口：`a`（Int tagId）。
+- 节点字段：`displayTable`（table id 符号 → Imm）。
+- 输出：Int tokenId（Summary / Panel 侧按 token 语义绑定）。
 
 失败关闭：
 
-- `tagId == 0` 且未通过显式 `AllowNone` 分支处理：抛错。
-- table 没有该 tag 行：抛错。
-- token 未注册或 locale 缺模板：加载期优先失败；运行期仍保留断言。
-- 禁止 fallback 到 `TagRegistry.GetName(tagId)`、英文硬编码、空串。
+- table 没有该 tag 映射：抛错（`GAS.TAG_DISPLAY.ERR.MappingMissing`）。
+- 未知 table / 未注入 registry：抛错。
+- 禁止用 `TagRegistry.GetName(tagId)`、英文硬编码、空串顶替文案。
 
 ### 3.6 通用 TableLookup
 
@@ -233,7 +231,7 @@ tokenId = TagDisplayTable[tableId].TokenByTagId[tagId]
 | `TableReadInt` | rowHandle, field id | Int | 读 Int/Tag/TextToken/EntityTemplate 这类 id |
 | `TableReadFloat` | rowHandle, field id | Float | 读数值 |
 | `TableReadEntity` | rowHandle, field id | Entity | 仅用于明确注册的 entity 引用表；P0 可不开放 |
-| `LookupTagDisplayToken` | tagId, table id | Int tokenId | tag display 快捷 op；内部等价 dense tag table |
+| `LookupTagDisplayToken` | tagId + `displayTable` | Int tokenId | Tag 显示快捷 op（本页前门已落地；非通用 TableRead） |
 
 不建议 P0 做：
 
@@ -322,37 +320,19 @@ Projection：
 
 ### 3.9 FrontDoor / ControlFlow / Patch / Runtime 接线
 
-必须改动的基建点（实现期）：
+Tag / 显示前门（已落地，以源码为准）：
 
-1. `GraphNodeOp`
-   - 新增 `ReadGameplayTag` 或 `SelectGameplayTag`。
-   - 新增 `LookupTagDisplayToken`。
-   - 新增 `ResolveTableRow`、`TableReadInt`、`TableReadFloat`；`TableReadEntity` 可 L1。
-
-2. `GasGraphOpHandlerTable`
-   - 全部注册为 Pure。
-   - handler 只访问 span / readonly registry；不分配。
-
-3. `IGraphRuntimeApi`
-   - 增加 tag domain selection 和 table lookup 接口。
-   - 默认实现 throw，保持现有缺基建 fail-fast 风格。
-
-4. `GasGraphRuntimeApi`
-   - 注入 `GraphLookupTableRegistry`。
-   - `ReadGameplayTag` 与现有 `HasTag` 同源。
-
-5. `GraphProgramAuthoringFrontDoor` / `GraphControlFlowCompiler`
-   - 作者字段：`table`、`field`、`tagDomain` 或复用 table mask。
-   - ControlFlow 输出 type 映射：tag/token/rowHandle 都是 Int；float field 是 Float。
-
-6. `GraphProgramSymbolPatcher` / `IGraphSymbolResolver`
-   - 新增 `ResolveGraphLookupTable`、`ResolveGraphLookupField` 或 combined field symbol。
-
-7. `GraphOutputTypes` / `GraphOutputValueStore`
-   - 推荐新增 `TextToken` kind，底层复用 int 列。
-
-8. Panel binding / WPK
-   - Text variable 必须验证 source 是 `TextToken` 或显式 formatter，不接受裸 Float/Attribute。
+1. `GraphNodeOp`：`SelectTagInMask`、`LookupTagDisplayToken`（另有 `HasTag` / `CompareEqEntity`）。
+2. `GraphNodeOpParser` 作者糖：`ReadGameplayTag`、`LookupTagDisplayText`。
+3. `GasGraphOpHandlerTable`：Pure handler；`SelectTagInMask` → `SelectEffectiveTagInMask`；`LookupTagDisplayToken` → registry lookup。
+4. `IGraphRuntimeApi` / `GasGraphRuntimeApi`：注入 `TagDisplayTableRegistry`；与 `HasTag` 同源。
+5. `GraphProgramAuthoringFrontDoor` / `GraphControlFlowCompiler`（Query + 线性 Kind）：
+   - 作者字段：`displayTable`、`tagSelectPolicy`。
+   - 值边：`source`（Select/HasTag）、`a`（Lookup tagId）、`a`/`b`（CompareEqEntity）。
+   - 输出类型：tagId / tokenId 均为 Int。
+6. `GraphProgramSymbolPatcher` / `GasGraphSymbolResolver`：解析 `displayTable` 与 tag 符号到 Imm。
+7. Panel binding：Text 变量绑定 token id（或显式 formatter）；不接受裸 Float/Attribute 假扮文案。
+8. 通用 `ResolveTableRow` / `TableRead*`：另册 [graph-table-lookup](graph-table-lookup.md)，不混进 Tag 显示前门。
 
 ## 4. 场景
 
@@ -360,9 +340,9 @@ Projection：
 
 ```text
 LoadExplicitTarget
-  -> ReadGameplayTag(table = entity.state.display, policy = RequireOne)
-  -> LookupTagDisplayText(table = entity.state.display)
-  -> GraphOutput curState(TextToken)
+  -> ReadGameplayTag(displayTable = entity.state.display, tagSelectPolicy = RequireOne)
+  -> LookupTagDisplayText(displayTable = entity.state.display)
+  -> GraphOutput curState(Int tokenId / Panel Text 绑定)
   -> Panel.curState(Text)
 ```
 
@@ -422,8 +402,8 @@ ConstTag(State.Stunned)
 - 新增 `GraphNodeOp.Panel`。
 - Graph handler 返回/拼接/缓存 string。
 - Attribute 假扮 Tag、BB、Text、TableLookup。
-- `TagRegistry.GetName` 作为玩家文案 fallback。
-- 缺表行、缺 token、缺 locale 时返回空串/Unknown/0。
+- `TagRegistry.GetName` 充当玩家文案。
+- 缺表行、缺 token、缺 locale 时返回空串/Unknown 或静默降级。
 - 在 ECS 热路径动态添加 Text BB 组件。
 - 在 showcase/Web 层手写跨实体求和绕过 Query/Agg。
 
@@ -457,7 +437,7 @@ Feature: EntityInfoCard 状态文案来自 GameplayTag 查表
     When 图执行 ReadGameplayTag
     Then 执行失败并报告缺失状态域
     And 面板不显示空字符串
-    And 面板不显示 Unknown fallback
+    And 面板不显示 Unknown 或空串
 
   Scenario: 状态族冲突时失败关闭
     Given EntityInfoCard 使用 RequireOne 策略读取 "State.*"
@@ -531,7 +511,7 @@ Feature: 跨实体聚合仍复用 Query/Agg
 
 - Graph handler 内不可缓存 locale string。
 - 不在实体组件上缓存最终 UI 文案。
-- 不为缺失行缓存 fallback。
+- 不为缺失行缓存替代文案。
 
 ### 7.4 与 Graph 执行频率的关系
 
@@ -551,11 +531,11 @@ Feature: 跨实体聚合仍复用 Query/Agg
 
 ### 8.1 复用
 
-- `GraphKind.Query` / `GraphKind.Derived`
-- `GraphNodeOp` / `GasGraphOpHandlerTable`
+- `GraphKind.Query` / 线性 Kind（含 Effect）/ `GraphKind.Derived`
+- `GraphNodeOp` / `GasGraphOpHandlerTable` / `GraphNodeOpParser`
 - `GraphProgramAuthoringFrontDoor` / `GraphControlFlowCompiler` / `GraphProgramConfigLoader` / `GraphProgramSymbolPatcher`
-- `IGraphRuntimeApi` / `GasGraphRuntimeApi`
-- `TagRegistry` / `GameplayTagContainer` / `TagOps`
+- `IGraphRuntimeApi` / `GasGraphRuntimeApi` / `TagDisplayTableRegistry`
+- `TagRegistry` / `GameplayTagContainer` / `TagOps` / `TagSelectPolicy`
 - `ReadBlackboardFloat/Int/Entity`
 - `LoadAttribute`
 - Query/Agg ops：`QueryFromCollection`、`QueryFilterTagAny/None`、`AggCount`、`AggSumAttribute`
@@ -566,36 +546,25 @@ Feature: 跨实体聚合仍复用 Query/Agg
 - `StringIntRegistry`
 - `ConfigPipeline`
 
-### 8.2 必须新开 GraphNodeOp
+### 8.2 Tag / 显示（已落地）
 
-P0 必须：
-
-1. `ReadGameplayTag` 或 `SelectGameplayTag`
-2. `LookupTagDisplayToken`
-3. `ResolveTableRow`
-4. `TableReadInt`
-5. `TableReadFloat`
-
-P1 可选：
-
-6. `TableReadEntity`
-7. `TableReadBool`（也可由 `TableReadInt + Compare` 覆盖）
+1. `SelectTagInMask`（作者糖 `ReadGameplayTag`）
+2. `LookupTagDisplayToken`（作者糖 `LookupTagDisplayText`）
+3. `TagDisplayTableRegistry` + `TagSelectPolicy`
+4. FrontDoor 字段 `displayTable` / `tagSelectPolicy`
 
 不新增：
 
-- `TableReadString`
-- `LookupTagDisplayString`
+- `TableReadString` / `LookupTagDisplayString`
 - `GraphNodeOp.Panel`
+- 平行 `SelectGameplayTag` API 名（Runtime 合同是 `SelectEffectiveTagInMask`）
 
-### 8.3 必须新开非 op 基建
+### 8.3 通用表查（另册，非本 Tag 显示前门）
 
-- `GraphLookupTableRegistry`
-- `GraphLookupTableLoader`
-- `IGraphSymbolResolver.ResolveGraphLookupTable`
-- `IGraphSymbolResolver.ResolveGraphLookupField`
-- `GraphOutputValueKind.TextToken`（推荐）
-- Panel binding 的 TextToken validation
+见 [graph-table-lookup](graph-table-lookup.md)：`ResolveTableRow` / `TableRead*` 与通用 registry。Panel Text 绑定须验证 token 语义，不接受裸 Float/Attribute。
 
-## 9. 建议的 GitHub issue 标题
+## 9. 验收锚点
 
-`feat(graph): add ReadGameplayTag and typed TableLookup tokens for UI Panel text bindings`
+- FrontDoor：`GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectTagAndDisplayOps_*` / `FrontDoor_QueryTagDisplayOps_*`
+- Runtime：`TagDisplayGraphOpsTests`
+- 分层合同：[图分层 Flow/Script](graph-layering-flow-and-behavior.md)
