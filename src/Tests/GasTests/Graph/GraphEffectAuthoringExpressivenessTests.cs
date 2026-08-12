@@ -186,6 +186,189 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
+        public void FrontDoor_EffectTagAndDisplayOps_CompileAndEmit()
+        {
+            GraphControlFlowCompileResult compiled = CompileFrontDoor(
+                """
+                {
+                  "kind": "Effect",
+                  "entry": "self",
+                  "nodes": [
+                    { "id": "self", "op": "LoadCaster" },
+                    { "id": "target", "op": "LoadExplicitTarget" },
+                    { "id": "hasTag", "op": "HasTag", "tag": "State.Moving" },
+                    { "id": "eqEntity", "op": "CompareEqEntity" },
+                    { "id": "readTag", "op": "ReadGameplayTag", "displayTable": "entity.state.display", "tagSelectPolicy": "RequireOne" },
+                    { "id": "lookup", "op": "LookupTagDisplayText", "displayTable": "entity.state.display" }
+                  ],
+                  "controlEdges": [
+                    { "from": "self", "fromPort": "next", "to": "target" },
+                    { "from": "target", "fromPort": "next", "to": "hasTag" },
+                    { "from": "hasTag", "fromPort": "next", "to": "eqEntity" },
+                    { "from": "eqEntity", "fromPort": "next", "to": "readTag" },
+                    { "from": "readTag", "fromPort": "next", "to": "lookup" }
+                  ],
+                  "valueEdges": [
+                    { "from": "self", "fromPort": "value", "to": "hasTag", "toPort": "source" },
+                    { "from": "self", "fromPort": "value", "to": "eqEntity", "toPort": "a" },
+                    { "from": "target", "fromPort": "value", "to": "eqEntity", "toPort": "b" },
+                    { "from": "self", "fromPort": "value", "to": "readTag", "toPort": "source" },
+                    { "from": "readTag", "fromPort": "value", "to": "lookup", "toPort": "a" }
+                  ]
+                }
+                """,
+                "tests.effect.tag-display-ops");
+
+            Assert.That(compiled.Succeeded, Is.True, GraphScriptTestGraphs.FormatDiagnostics(compiled.Diagnostics));
+            Assert.That(compiled.Package.HasValue, Is.True);
+
+            GraphInstruction[] program = compiled.Package!.Value.Program;
+            Assert.Multiple(() =>
+            {
+                Assert.That(program.Select(i => (GraphNodeOp)i.Op), Does.Contain(GraphNodeOp.HasTag));
+                Assert.That(program.Select(i => (GraphNodeOp)i.Op), Does.Contain(GraphNodeOp.CompareEqEntity));
+                Assert.That(program.Select(i => (GraphNodeOp)i.Op), Does.Contain(GraphNodeOp.SelectTagInMask));
+                Assert.That(program.Select(i => (GraphNodeOp)i.Op), Does.Contain(GraphNodeOp.LookupTagDisplayToken));
+            });
+
+            GraphInstruction hasTag = program.Single(i => i.Op == (ushort)GraphNodeOp.HasTag);
+            GraphInstruction compareEq = program.Single(i => i.Op == (ushort)GraphNodeOp.CompareEqEntity);
+            GraphInstruction selectTag = program.Single(i => i.Op == (ushort)GraphNodeOp.SelectTagInMask);
+            GraphInstruction lookup = program.Single(i => i.Op == (ushort)GraphNodeOp.LookupTagDisplayToken);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(hasTag.A, Is.EqualTo(0));
+                Assert.That(compareEq.A, Is.EqualTo(0));
+                Assert.That(compareEq.B, Is.EqualTo(1));
+                Assert.That(selectTag.A, Is.EqualTo(0));
+                Assert.That(selectTag.Flags, Is.EqualTo((byte)TagSelectPolicy.RequireOne));
+                Assert.That(lookup.A, Is.EqualTo(selectTag.Dst));
+            });
+
+            int tagSymbol = compiled.Package.Value.Symbols.ToList().IndexOf("State.Moving");
+            int tableSymbol = compiled.Package.Value.Symbols.ToList().IndexOf("entity.state.display");
+            Assert.Multiple(() =>
+            {
+                Assert.That(hasTag.Imm, Is.EqualTo(tagSymbol));
+                Assert.That(selectTag.Imm, Is.EqualTo(tableSymbol));
+                Assert.That(lookup.Imm, Is.EqualTo(tableSymbol));
+            });
+
+            var tables = new TagDisplayTableRegistry();
+            int movingTagId = TagRegistry.Register("State.Moving");
+            var mask = new GameplayTagContainer();
+            mask.AddTag(movingTagId);
+            tables.RegisterTable("entity.state.display", in mask, new (int, int)[] { (movingTagId, 42) });
+            tables.Freeze();
+            var resolver = new GasGraphSymbolResolver(
+                new Ludots.Core.Gameplay.Relationships.RelationshipTypeRegistry(),
+                new Ludots.Core.Gameplay.Relationships.RelationshipMetricRegistry(),
+                new Ludots.Core.Gameplay.Relationships.RelationshipFlagRegistry(),
+                new Ludots.Core.Gameplay.Relationships.RelationshipReasonRegistry(),
+                new TargetDispatchPresetRegistry(),
+                new EntityTemplateKeyRegistry(),
+                tagDisplayTables: tables);
+            GraphProgramSymbolPatcher.Patch(compiled.Package.Value.Symbols, program, resolver);
+
+            hasTag = program.Single(i => i.Op == (ushort)GraphNodeOp.HasTag);
+            selectTag = program.Single(i => i.Op == (ushort)GraphNodeOp.SelectTagInMask);
+            lookup = program.Single(i => i.Op == (ushort)GraphNodeOp.LookupTagDisplayToken);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(hasTag.Imm, Is.EqualTo(movingTagId));
+                Assert.That(selectTag.Imm, Is.EqualTo(tables.GetTableId("entity.state.display")));
+                Assert.That(lookup.Imm, Is.EqualTo(tables.GetTableId("entity.state.display")));
+            });
+
+            Assert.DoesNotThrow(() =>
+                GraphKindOperationPolicy.RequireAllowed(
+                    GraphKind.Effect,
+                    program,
+                    GasGraphOpHandlerTable.Instance));
+        }
+
+        [Test]
+        public void FrontDoor_QueryTagDisplayOps_CompileAndEmit()
+        {
+            GraphControlFlowCompileResult compiled = CompileFrontDoor(
+                """
+                {
+                  "kind": "Query",
+                  "entry": "self",
+                  "nodes": [
+                    { "id": "self", "op": "LoadCaster" },
+                    { "id": "readTag", "op": "ReadGameplayTag", "displayTable": "entity.state.display" },
+                    { "id": "lookup", "op": "LookupTagDisplayText", "displayTable": "entity.state.display" }
+                  ],
+                  "controlEdges": [
+                    { "from": "self", "fromPort": "next", "to": "readTag" },
+                    { "from": "readTag", "fromPort": "next", "to": "lookup" }
+                  ],
+                  "valueEdges": [
+                    { "from": "self", "fromPort": "value", "to": "readTag", "toPort": "source" },
+                    { "from": "readTag", "fromPort": "value", "to": "lookup", "toPort": "a" }
+                  ],
+                  "outputs": [
+                    {
+                      "id": "stateToken",
+                      "destination": "Summary",
+                      "type": "Int",
+                      "source": "lookup",
+                      "key": "panel.entity_info.curState"
+                    }
+                  ]
+                }
+                """,
+                "tests.query.tag-display-ops");
+
+            Assert.That(compiled.Succeeded, Is.True, GraphScriptTestGraphs.FormatDiagnostics(compiled.Diagnostics));
+            Assert.That(compiled.Package.HasValue, Is.True);
+            Assert.That(compiled.OutputSchema.Bindings.Length, Is.EqualTo(1));
+            Assert.That(compiled.Program.Select(i => (GraphNodeOp)i.Op), Does.Contain(GraphNodeOp.SelectTagInMask));
+            Assert.That(compiled.Program.Select(i => (GraphNodeOp)i.Op), Does.Contain(GraphNodeOp.LookupTagDisplayToken));
+
+            GraphInstruction selectTag = compiled.Program.Single(i => i.Op == (ushort)GraphNodeOp.SelectTagInMask);
+            Assert.That(selectTag.Flags, Is.EqualTo((byte)TagSelectPolicy.RequireOne));
+
+            Assert.DoesNotThrow(() =>
+                GraphKindOperationPolicy.RequireAllowed(
+                    GraphKind.Query,
+                    compiled.Package!.Value.Program,
+                    GasGraphOpHandlerTable.Instance));
+        }
+
+        [Test]
+        public void FrontDoor_SelectTagInMask_RequiresDisplayTable()
+        {
+            GraphControlFlowCompileResult compiled = CompileFrontDoor(
+                """
+                {
+                  "kind": "Effect",
+                  "entry": "self",
+                  "nodes": [
+                    { "id": "self", "op": "LoadCaster" },
+                    { "id": "readTag", "op": "SelectTagInMask" }
+                  ],
+                  "controlEdges": [
+                    { "from": "self", "fromPort": "next", "to": "readTag" }
+                  ],
+                  "valueEdges": [
+                    { "from": "self", "fromPort": "value", "to": "readTag", "toPort": "source" }
+                  ]
+                }
+                """,
+                "tests.effect.select-tag-missing-table");
+
+            Assert.That(compiled.Succeeded, Is.False);
+            Assert.That(compiled.Diagnostics, Has.Some.Matches<GraphDiagnostic>(d =>
+                d.Code == GraphDiagnosticCodes.MissingNodeRef &&
+                d.NodeId == "readTag" &&
+                d.Message.Contains("displayTable", StringComparison.Ordinal)));
+        }
+
+        [Test]
         public void FrontDoor_EffectClampFloat_RequiresValueMinAndMaxInputs()
         {
             GraphControlFlowCompileResult compiled = CompileFrontDoor(

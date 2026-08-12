@@ -273,3 +273,11 @@ N/A
 ### 8. Next variant test
 
 「下一个 Mod 变体」将修改: graph 连线 / effect 步骤
+
+## GAS Composition Gate — Self Review
+
+- **Task / Issue**: PR911 audit P1-B — restore FrontDoor authoring for HasTag / CompareEqEntity / SelectTagInMask / LookupTagDisplayToken
+- **Date**: 2026-08-12
+- **Agent / Author**: Cursor cloud agent
+
+结论: PASS — 既有 L0 tag/display opcode 补回 ControlFlow 作者白名单、校验与 emit；无新 profile enum / fallback。
