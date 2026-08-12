@@ -73,10 +73,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     }
 
                     if (!GraphKindParser.TryParse(kindText, out GraphKind kind) ||
-                        kind is not (GraphKind.Script or GraphKind.Validation or GraphKind.Score))
+                        kind != GraphKind.Script)
                     {
                         throw new InvalidOperationException(
-                            $"FuncLib '{name}' kind '{kindText}' must be Script, Validation, or Score.");
+                            $"FuncLib '{name}' kind '{kindText}' must be Script (pure); Score and Validation are deferred until InvokeScore/InvokeValidation exist.");
                     }
 
                     int graphId = GraphIdRegistry.GetId(graphKey!);
