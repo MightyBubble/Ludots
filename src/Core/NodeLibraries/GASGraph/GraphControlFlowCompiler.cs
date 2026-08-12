@@ -382,10 +382,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphControlFlowNode node = nodes[i];
                 if (string.Equals(node.Op, BranchBoolOp, StringComparison.Ordinal))
                 {
-                    if (graphKind != GraphKind.Script)
+                    if (!IsBranchBoolAuthorable(graphKind))
                     {
                         diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnknownNodeOp,
-                            $"{BranchBoolOp} is Script compile-time sugar only.", node.Id));
+                            $"{BranchBoolOp} is Script/Effect compile-time sugar only.", node.Id));
                         ops[i] = new AuthoredOp(AuthoredOpKind.GraphNodeOp, GraphNodeOp.None);
                         continue;
                     }
@@ -463,6 +463,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 ops[i] = new AuthoredOp(AuthoredOpKind.GraphNodeOp, nodeOp);
             }
         }
+
+        private static bool IsBranchBoolAuthorable(GraphKind graphKind)
+            => graphKind is GraphKind.Script or GraphKind.Effect;
 
         private static bool IsControlFlowAuthorable(GraphKind graphKind, GraphNodeOp op)
         {
@@ -829,16 +832,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static bool IsAllowedControlPort(AuthoredOp op, GraphKind graphKind, string port)
         {
-            if (graphKind == GraphKind.Query)
-            {
-                return IsAllowedQueryControlPort(port);
-            }
-
-            if (GraphAuthoringKindPolicy.IsLinearAuthoringKind(graphKind))
-            {
-                return IsAllowedLinearControlPort(port);
-            }
-
             if (op.Kind == AuthoredOpKind.BranchBool || op.NodeOp == GraphNodeOp.JumpIfFalse)
             {
                 return port is GraphControlFlowPorts.True or GraphControlFlowPorts.False;
@@ -855,6 +848,16 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 return port is GraphControlFlowPorts.Body or GraphControlFlowPorts.Next;
             }
 
+            if (graphKind == GraphKind.Query)
+            {
+                return IsAllowedQueryControlPort(port);
+            }
+
+            if (GraphAuthoringKindPolicy.IsLinearAuthoringKind(graphKind))
+            {
+                return IsAllowedLinearControlPort(port);
+            }
+
             return op.NodeOp switch
             {
                 GraphNodeOp.Call => port is GraphControlFlowPorts.Call or GraphControlFlowPorts.Next,
@@ -866,16 +869,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
         private static bool IsAllowedInputPort(AuthoredOp op, GraphKind graphKind, string port)
         {
-            if (graphKind == GraphKind.Query)
-            {
-                return IsAllowedQueryInputPort(op.NodeOp, port);
-            }
-
-            if (GraphAuthoringKindPolicy.IsLinearAuthoringKind(graphKind))
-            {
-                return IsAllowedLinearInputPort(op.NodeOp, port);
-            }
-
             if (op.Kind == AuthoredOpKind.BranchBool ||
                 op.Kind == AuthoredOpKind.While ||
                 op.Kind == AuthoredOpKind.Until ||
@@ -887,6 +880,16 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             if (op.Kind == AuthoredOpKind.SwitchInt)
             {
                 return port == GraphControlFlowPorts.Selector;
+            }
+
+            if (graphKind == GraphKind.Query)
+            {
+                return IsAllowedQueryInputPort(op.NodeOp, port);
+            }
+
+            if (GraphAuthoringKindPolicy.IsLinearAuthoringKind(graphKind))
+            {
+                return IsAllowedLinearInputPort(op.NodeOp, port);
             }
 
             return op.NodeOp switch
@@ -1003,11 +1006,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             GraphKind graphKind,
             Dictionary<ControlKey, string> controlEdges)
         {
-            if (graphKind == GraphKind.Query || GraphAuthoringKindPolicy.IsLinearAuthoringKind(graphKind))
-            {
-                return controlEdges.ContainsKey(new ControlKey(node.Id, GraphControlFlowPorts.Next)) ? 2 : 1;
-            }
-
             if (op.Kind == AuthoredOpKind.BranchBool ||
                 op.Kind == AuthoredOpKind.While ||
                 op.Kind == AuthoredOpKind.Until ||
@@ -1021,6 +1019,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 int cases = CountSwitchCaseArms(node.Id, controlEdges);
                 // per arm: ConstInt + CompareEqInt + JumpIfFalse + Jump(arm); then Jump(default)
                 return (cases * 4) + 1;
+            }
+
+            if (graphKind == GraphKind.Query || GraphAuthoringKindPolicy.IsLinearAuthoringKind(graphKind))
+            {
+                return controlEdges.ContainsKey(new ControlKey(node.Id, GraphControlFlowPorts.Next)) ? 2 : 1;
             }
 
             return op.NodeOp switch
@@ -1055,6 +1058,25 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         {
             int nodeIndex = nodeIndices[node.Id];
             int bodyIndex = layouts[nodeIndex].BodyIndex;
+
+            if (op.Kind == AuthoredOpKind.BranchBool || op.NodeOp == GraphNodeOp.JumpIfFalse)
+            {
+                byte cond = ResolveValueInput(
+                    node, GraphControlFlowPorts.Condition, GraphValueType.Bool,
+                    valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                int falseAbs = ResolveControlTarget(node, GraphControlFlowPorts.False, controlEdges, nodeIndices, layouts);
+                program[bodyIndex] = new GraphInstruction
+                {
+                    Op = (ushort)GraphNodeOp.JumpIfFalse,
+                    A = cond,
+                    Imm = RelativeOffset(bodyIndex, falseAbs)
+                };
+                SetSource(sources, bodyIndex, graphId, node, BranchBoolOp, GraphControlFlowPorts.Enter);
+                EmitRelativeJump(
+                    document, node, GraphControlFlowPorts.True, bodyIndex + 1,
+                    controlEdges, nodeIndices, layouts, program, sources, graphId);
+                return;
+            }
 
             if (graphKind == GraphKind.Query)
             {
@@ -1099,25 +1121,6 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     symbols,
                     graphId,
                     diagnostics);
-                return;
-            }
-
-            if (op.Kind == AuthoredOpKind.BranchBool || op.NodeOp == GraphNodeOp.JumpIfFalse)
-            {
-                byte cond = ResolveValueInput(
-                    node, GraphControlFlowPorts.Condition, GraphValueType.Bool,
-                    valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
-                int falseAbs = ResolveControlTarget(node, GraphControlFlowPorts.False, controlEdges, nodeIndices, layouts);
-                program[bodyIndex] = new GraphInstruction
-                {
-                    Op = (ushort)GraphNodeOp.JumpIfFalse,
-                    A = cond,
-                    Imm = RelativeOffset(bodyIndex, falseAbs)
-                };
-                SetSource(sources, bodyIndex, graphId, node, BranchBoolOp, GraphControlFlowPorts.Enter);
-                EmitRelativeJump(
-                    document, node, GraphControlFlowPorts.True, bodyIndex + 1,
-                    controlEdges, nodeIndices, layouts, program, sources, graphId);
                 return;
             }
 

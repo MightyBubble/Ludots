@@ -101,10 +101,10 @@ namespace Ludots.Tests.Gas.AI
         [Test]
         public void SentryHfsm_WithRealScriptHost_RunsConditionAndLifecycle()
         {
-            var programs = Ludots.Tests.Gas.Graph.GraphRegistryTestBootstrap.LoadCoreScriptsAndFuncLib(out _);
+            var programs = Ludots.Tests.Gas.Graph.GraphRegistryTestBootstrap.LoadCoreScriptsAndFuncLib(out _, out GraphActionCatalog actions);
             HfsmDefinition hfsm = HfsmFactory.CreateSentryHierarchyWithScripts(
                 "hfsm.scripted",
-                Ludots.Core.Gameplay.AI.BehaviorTree.GraphRegistryScriptResolver.RequireId);
+                name => Ludots.Core.Gameplay.AI.BehaviorTree.GraphRegistryScriptResolver.RequireActionId(actions, name));
             var host = new GraphProgramHfsmHost(programs);
             var world = new HfsmWorld(hfsm, capacity: 1);
             world.AddAgent(host);
@@ -120,10 +120,10 @@ namespace Ludots.Tests.Gas.AI
         [Test]
         public void ThinkWave_10k_SentryHfsmWithScripts_UnderFiveMilliseconds()
         {
-            var programs = Ludots.Tests.Gas.Graph.GraphRegistryTestBootstrap.LoadCoreScriptsAndFuncLib(out _);
+            var programs = Ludots.Tests.Gas.Graph.GraphRegistryTestBootstrap.LoadCoreScriptsAndFuncLib(out _, out GraphActionCatalog actions);
             HfsmDefinition hfsm = HfsmFactory.CreateSentryHierarchyWithScripts(
                 "hfsm.perf.scripted",
-                Ludots.Core.Gameplay.AI.BehaviorTree.GraphRegistryScriptResolver.RequireId);
+                name => Ludots.Core.Gameplay.AI.BehaviorTree.GraphRegistryScriptResolver.RequireActionId(actions, name));
             var host = new GraphProgramHfsmHost(programs);
             const int agents = 10_000;
             var world = new HfsmWorld(hfsm, capacity: agents);

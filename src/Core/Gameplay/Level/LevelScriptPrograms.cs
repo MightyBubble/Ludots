@@ -6,7 +6,7 @@ namespace Ludots.Core.Gameplay.Level
 {
     public static class LevelScriptKeys
     {
-        public const string PhaseAdvance = "Graph.Level.PhaseAdvance";
+        public const string PhaseAdvance = "level.phaseAdvance";
     }
 
     /// <summary>Runs Level Scripts from <see cref="GraphProgramRegistry"/> only.</summary>

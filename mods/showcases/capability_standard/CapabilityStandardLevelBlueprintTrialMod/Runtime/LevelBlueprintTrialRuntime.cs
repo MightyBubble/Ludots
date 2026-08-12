@@ -11,6 +11,7 @@ public sealed class LevelBlueprintTrialRuntime
 {
     private readonly GraphShowcaseConfig _config = new();
     private GraphProgramRegistry? _programs;
+    private GraphActionCatalog? _actions;
     private LevelDirector? _director;
     private GraphProgramLevelHost? _scriptHost;
     private float _accum;
@@ -37,17 +38,20 @@ public sealed class LevelBlueprintTrialRuntime
     public int LastScriptGraphId => _scriptHost?.LastRanGraphId ?? 0;
     public GraphShowcaseMetrics Metrics { get; } = new() { ShowcaseId = "capability_standard_level_blueprint_trial" };
 
-    public void Bind(GraphProgramRegistry programs)
-        => _programs = programs ?? throw new ArgumentNullException(nameof(programs));
+    public void Bind(GraphProgramRegistry programs, GraphActionCatalog actions)
+    {
+        _programs = programs ?? throw new ArgumentNullException(nameof(programs));
+        _actions = actions ?? throw new ArgumentNullException(nameof(actions));
+    }
 
     public void EnsureWorld()
     {
         if (_director != null) return;
-        if (_programs == null) throw new InvalidOperationException("Bind(Registry) required.");
+        if (_programs == null || _actions == null) throw new InvalidOperationException("Bind(Registry, ActionCatalog) required.");
 
         _director = LevelBlueprintFactory.CreateTwoPhaseTrial(
             "showcase.level.trial",
-            GraphRegistryScriptResolver.RequireId);
+            name => GraphRegistryScriptResolver.RequireActionId(_actions, name));
         _scriptHost = new GraphProgramLevelHost(_programs);
         _markerX = 0f;
         _markerY = -10f;
@@ -55,7 +59,7 @@ public sealed class LevelBlueprintTrialRuntime
         _my = new float[6];
         _mAlive = new bool[6];
         Metrics.AgentCount = _config.CrowdBandCount;
-        Metrics.Detail = "Level Script from GraphProgramRegistry";
+        Metrics.Detail = "Level Script from ActionLib";
     }
 
     public void Tick(float dt)

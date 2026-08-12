@@ -22,7 +22,9 @@ public sealed class CapabilityStandardHfsmSentryArenaModEntry : IMod
         {
             GameEngine? engine = ctx.GetEngine();
             if (engine == null) return Task.CompletedTask;
-            runtime.Bind(engine.GetService(CoreServiceKeys.GraphProgramRegistry));
+            runtime.Bind(
+                engine.GetService(CoreServiceKeys.GraphProgramRegistry),
+                engine.GetService(CoreServiceKeys.GraphActionCatalog));
             engine.SetService(MetricsKey, runtime.Metrics);
             var debugDraw = new DebugDrawCommandBuffer();
             engine.SetService(CoreServiceKeys.DebugDrawCommandBuffer, debugDraw);

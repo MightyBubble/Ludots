@@ -14,11 +14,11 @@ namespace Ludots.Tests.Gas.AI
         [Test]
         public void TwoPhaseTrial_AdvancesOnWavesAndCounter()
         {
-            GraphProgramRegistry programs = GraphRegistryTestBootstrap.LoadCoreScriptsAndFuncLib(out _);
-            int phaseScript = GraphRegistryScriptResolver.RequireId(LevelScriptKeys.PhaseAdvance);
+            GraphProgramRegistry programs = GraphRegistryTestBootstrap.LoadCoreScriptsAndFuncLib(out _, out GraphActionCatalog actions);
+            int phaseScript = GraphRegistryScriptResolver.RequireActionId(actions, LevelScriptKeys.PhaseAdvance);
             LevelDirector director = LevelBlueprintFactory.CreateTwoPhaseTrial(
                 "level.trial",
-                GraphRegistryScriptResolver.RequireId);
+                name => GraphRegistryScriptResolver.RequireActionId(actions, name));
             var host = new GraphProgramLevelHost(programs);
             Assert.That(director.Phase, Is.EqualTo(0));
             director.TickThinkWave(host);

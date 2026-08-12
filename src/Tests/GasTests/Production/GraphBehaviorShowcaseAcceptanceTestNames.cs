@@ -18,9 +18,9 @@ namespace Ludots.Tests.Gas.Production
         [Test]
         public void RegistryName_DelegatesToSeparatedSuite()
         {
-            GraphProgramRegistry programs = GraphRegistryTestBootstrap.LoadCoreScriptsAndFuncLib(out _);
+            GraphProgramRegistry programs = GraphRegistryTestBootstrap.LoadCoreScriptsAndFuncLib(out _, out GraphActionCatalog actions);
             var runtime = new BehaviorTreeArenaRuntime();
-            runtime.Bind(programs);
+            runtime.Bind(programs, actions);
             runtime.EnsureWorld();
             for (int i = 0; i < 8; i++) runtime.Tick(0.2f);
             Assert.That(runtime.Metrics.MaxThinkMs, Is.LessThan(5.0));
@@ -34,9 +34,9 @@ namespace Ludots.Tests.Gas.Production
         [Test]
         public void RegistryName_DelegatesToSeparatedSuite()
         {
-            GraphProgramRegistry programs = GraphRegistryTestBootstrap.LoadCoreScriptsAndFuncLib(out _);
+            GraphProgramRegistry programs = GraphRegistryTestBootstrap.LoadCoreScriptsAndFuncLib(out _, out GraphActionCatalog actions);
             var runtime = new HfsmSentryArenaRuntime();
-            runtime.Bind(programs);
+            runtime.Bind(programs, actions);
             runtime.EnsureWorld();
             for (int i = 0; i < 8; i++) runtime.Tick(0.2f);
             Assert.That(runtime.Metrics.MaxThinkMs, Is.LessThan(5.0));
@@ -50,9 +50,9 @@ namespace Ludots.Tests.Gas.Production
         [Test]
         public void RegistryName_DelegatesToSeparatedSuite()
         {
-            GraphProgramRegistry programs = GraphRegistryTestBootstrap.LoadCoreScriptsAndFuncLib(out _);
+            GraphProgramRegistry programs = GraphRegistryTestBootstrap.LoadCoreScriptsAndFuncLib(out _, out GraphActionCatalog actions);
             var runtime = new LevelBlueprintTrialRuntime();
-            runtime.Bind(programs);
+            runtime.Bind(programs, actions);
             runtime.EnsureWorld();
             for (int i = 0; i < 40; i++) runtime.Tick(0.2f);
             Assert.That(runtime.GateOpen, Is.True);
@@ -82,9 +82,9 @@ namespace Ludots.Tests.Gas.Production
         [Test]
         public void RegistryName_DelegatesToSeparatedSuite()
         {
-            GraphProgramRegistry programs = GraphRegistryTestBootstrap.LoadCoreScriptsAndFuncLib(out _);
+            GraphProgramRegistry programs = GraphRegistryTestBootstrap.LoadCoreScriptsAndFuncLib(out _, out GraphActionCatalog actions);
             var runtime = new GraphBehaviorIntegrationRuntime();
-            runtime.Bind(programs);
+            runtime.Bind(programs, actions);
             runtime.EnsureWorld();
             for (int i = 0; i < 15; i++) runtime.Tick(0.2f);
             Assert.That(runtime.GuardCount, Is.EqualTo(6));

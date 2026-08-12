@@ -7,11 +7,12 @@ using Ludots.Core.NodeLibraries.GASGraph;
 
 namespace CapabilityStandardScriptFlowSandboxMod.Runtime;
 
-/// <summary>Atomic L1 Script demo loaded only from GraphProgramRegistry (Graph.Script.DrinkUntilFull).</summary>
+/// <summary>Atomic Script slice demo loaded through ActionLib.</summary>
 public sealed class ScriptFlowSandboxRuntime
 {
     private readonly GraphShowcaseConfig _config = new();
     private GraphProgramRegistry? _programs;
+    private GraphActionCatalog? _actions;
     private int _drinkGraphId;
     private GraphExecutionCursor _cursor;
     private readonly int[] _ints = new int[GraphVmLimits.MaxIntRegisters];
@@ -22,29 +23,30 @@ public sealed class ScriptFlowSandboxRuntime
     private float _accum;
     private int _water;
 
-    public const string DrinkGraphKey = "Graph.Script.DrinkUntilFull";
+    public const string DrinkActionName = "script.drinkUntilFull";
     public int Water => _water;
     public int Limit { get; } = 5;
     public bool Halted => _halted;
     public GraphShowcaseMetrics Metrics { get; } = new() { ShowcaseId = "capability_standard_script_flow_sandbox" };
 
-    public void Bind(GraphProgramRegistry programs)
+    public void Bind(GraphProgramRegistry programs, GraphActionCatalog actions)
     {
         _programs = programs ?? throw new ArgumentNullException(nameof(programs));
+        _actions = actions ?? throw new ArgumentNullException(nameof(actions));
     }
 
     public void EnsureWorld()
     {
         if (_drinkGraphId > 0) return;
-        if (_programs == null)
+        if (_programs == null || _actions == null)
         {
-            throw new InvalidOperationException("ScriptFlowSandboxRuntime.Bind(Registry) required.");
+            throw new InvalidOperationException("ScriptFlowSandboxRuntime.Bind(Registry, ActionCatalog) required.");
         }
 
-        _drinkGraphId = GraphRegistryScriptResolver.RequireId(DrinkGraphKey);
+        _drinkGraphId = GraphRegistryScriptResolver.RequireActionId(_actions, DrinkActionName);
         _ = GraphRegistryScriptResolver.RequireProgram(_programs, _drinkGraphId);
         Metrics.AgentCount = 1;
-        Metrics.Detail = "Script L1 drink-until-full from Registry";
+        Metrics.Detail = "Script drink-until-full from ActionLib";
     }
 
     public void Tick(float dt)

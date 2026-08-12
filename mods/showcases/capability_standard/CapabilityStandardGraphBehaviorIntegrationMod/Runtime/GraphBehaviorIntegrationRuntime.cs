@@ -13,6 +13,7 @@ public sealed class GraphBehaviorIntegrationRuntime : IBehaviorTreeSensorFeed
 {
     private readonly GraphShowcaseConfig _config = new();
     private GraphProgramRegistry? _programs;
+    private GraphActionCatalog? _actions;
     private BehaviorTreeWorld? _bt;
     private HfsmWorld? _hfsm;
     private GraphProgramHfsmHost? _hfsmHost;
@@ -53,26 +54,35 @@ public sealed class GraphBehaviorIntegrationRuntime : IBehaviorTreeSensorFeed
     public float MarkerY => _markerY;
     public GraphShowcaseMetrics Metrics { get; } = new() { ShowcaseId = "capability_standard_graph_behavior_integration" };
 
-    public void Bind(GraphProgramRegistry programs)
-        => _programs = programs ?? throw new ArgumentNullException(nameof(programs));
+    public void Bind(GraphProgramRegistry programs, GraphActionCatalog actions)
+    {
+        _programs = programs ?? throw new ArgumentNullException(nameof(programs));
+        _actions = actions ?? throw new ArgumentNullException(nameof(actions));
+    }
 
     public void EnsureWorld()
     {
         if (_bt != null) return;
-        if (_programs == null) throw new InvalidOperationException("Bind(Registry) required.");
+        if (_programs == null || _actions == null) throw new InvalidOperationException("Bind(Registry, ActionCatalog) required.");
 
         int guards = 6, sentries = 6;
-        _seeId = GraphRegistryScriptResolver.RequireId(BehaviorTreeScriptKeys.SeeEnemy);
-        _rangeId = GraphRegistryScriptResolver.RequireId(BehaviorTreeScriptKeys.InAttackRange);
+        _seeId = GraphRegistryScriptResolver.RequireActionId(_actions, BehaviorTreeScriptKeys.SeeEnemy);
+        _rangeId = GraphRegistryScriptResolver.RequireActionId(_actions, BehaviorTreeScriptKeys.InAttackRange);
         _bt = new BehaviorTreeWorld(
-            BehaviorTreeFactory.CreatePatrolChaseAttackTree("integration.bt", GraphRegistryScriptResolver.RequireId),
+            BehaviorTreeFactory.CreatePatrolChaseAttackTree(
+                "integration.bt",
+                name => GraphRegistryScriptResolver.RequireActionId(_actions, name)),
             guards);
         _hfsmHost = new GraphProgramHfsmHost(_programs);
         _hfsm = new HfsmWorld(
-            HfsmFactory.CreateSentryHierarchyWithScripts("integration.hfsm", GraphRegistryScriptResolver.RequireId),
+            HfsmFactory.CreateSentryHierarchyWithScripts(
+                "integration.hfsm",
+                name => GraphRegistryScriptResolver.RequireActionId(_actions, name)),
             sentries);
         _levelHost = new GraphProgramLevelHost(_programs);
-        _level = LevelBlueprintFactory.CreateTwoPhaseTrial("integration.level", GraphRegistryScriptResolver.RequireId);
+        _level = LevelBlueprintFactory.CreateTwoPhaseTrial(
+            "integration.level",
+            name => GraphRegistryScriptResolver.RequireActionId(_actions, name));
 
         _gx = new float[guards];
         _gy = new float[guards];
@@ -97,7 +107,7 @@ public sealed class GraphBehaviorIntegrationRuntime : IBehaviorTreeSensorFeed
         }
 
         Metrics.AgentCount = guards + sentries;
-        Metrics.Detail = "Integration Scripts exclusively from Registry";
+        Metrics.Detail = "Integration Scripts from ActionLib";
     }
 
     public void Tick(float dt)

@@ -5,10 +5,10 @@ namespace Ludots.Core.Gameplay.AI.Fsm
 {
     public static class HfsmScriptKeys
     {
-        public const string CondAlwaysTrue = "Graph.HFSM.Cond.AlwaysTrue";
-        public const string CombatOnEnter = "Graph.HFSM.Combat.OnEnter";
-        public const string CombatOnTick = "Graph.HFSM.Combat.OnTick";
-        public const string CombatOnExit = "Graph.HFSM.Combat.OnExit";
+        public const string CondAlwaysTrue = "hfsm.cond.alwaysTrue";
+        public const string CombatOnEnter = "hfsm.combat.onEnter";
+        public const string CombatOnTick = "hfsm.combat.onTick";
+        public const string CombatOnExit = "hfsm.combat.onExit";
     }
 
     public sealed class HfsmDefinition

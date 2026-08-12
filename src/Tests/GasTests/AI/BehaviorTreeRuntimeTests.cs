@@ -11,9 +11,19 @@ namespace Ludots.Tests.Gas.AI
     public sealed class BehaviorTreeRuntimeTests
     {
         private GraphProgramRegistry? _programs;
+        private GraphActionCatalog? _actions;
 
         private GraphProgramRegistry Programs
-            => _programs ??= GraphRegistryTestBootstrap.LoadCoreScriptsAndFuncLib(out _);
+            => _programs ??= GraphRegistryTestBootstrap.LoadCoreScriptsAndFuncLib(out _, out _actions);
+
+        private GraphActionCatalog Actions
+        {
+            get
+            {
+                _ = Programs;
+                return _actions!;
+            }
+        }
 
         [Test]
         public void TickAll_AlwaysSuccessSequence_ReachesSuccess()
@@ -72,7 +82,8 @@ namespace Ludots.Tests.Gas.AI
         public void PatrolChaseAttack_RegistryMissing_Throws()
         {
             BehaviorTreeDefinition tree = BehaviorTreeFactory.CreatePatrolChaseAttackTree(
-                "bt.missing", GraphRegistryScriptResolver.RequireId);
+                "bt.missing",
+                name => GraphRegistryScriptResolver.RequireActionId(Actions, name));
             var world = new BehaviorTreeWorld(tree, 1);
             world.AddAgent();
             Assert.Throws<InvalidOperationException>(() => world.TickAll(programs: null, 32, sensors: null));
@@ -83,8 +94,9 @@ namespace Ludots.Tests.Gas.AI
         {
             _ = Programs; // ensure GraphIdRegistry is populated before sensor key resolve
             BehaviorTreeDefinition tree = BehaviorTreeFactory.CreatePatrolChaseAttackTree(
-                "bt.pca", GraphRegistryScriptResolver.RequireId);
-            var sensors = new ScriptedSensors();
+                "bt.pca",
+                name => GraphRegistryScriptResolver.RequireActionId(Actions, name));
+            var sensors = new ScriptedSensors(Actions);
             var world = new BehaviorTreeWorld(tree, 1);
             world.AddAgent();
 
@@ -109,8 +121,14 @@ namespace Ludots.Tests.Gas.AI
         {
             public bool See;
             public bool InRange;
-            private readonly int _see = GraphRegistryScriptResolver.RequireId(BehaviorTreeScriptKeys.SeeEnemy);
-            private readonly int _range = GraphRegistryScriptResolver.RequireId(BehaviorTreeScriptKeys.InAttackRange);
+            private readonly int _see;
+            private readonly int _range;
+
+            public ScriptedSensors(GraphActionCatalog actions)
+            {
+                _see = GraphRegistryScriptResolver.RequireActionId(actions, BehaviorTreeScriptKeys.SeeEnemy);
+                _range = GraphRegistryScriptResolver.RequireActionId(actions, BehaviorTreeScriptKeys.InAttackRange);
+            }
 
             public void WriteSensors(int agentIndex, int graphId, System.Span<int> ints, System.Span<byte> bools)
             {

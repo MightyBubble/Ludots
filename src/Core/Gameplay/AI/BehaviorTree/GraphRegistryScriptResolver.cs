@@ -38,5 +38,16 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
 
         public static ReadOnlySpan<GraphInstruction> RequireProgram(GraphProgramRegistry registry, string graphKey)
             => RequireProgram(registry, RequireId(graphKey));
+
+        public static int RequireActionId(GraphActionCatalog catalog, string actionName)
+        {
+            if (catalog == null) throw new ArgumentNullException(nameof(catalog));
+            if (string.IsNullOrWhiteSpace(actionName))
+            {
+                throw new ArgumentException("Action name is required.", nameof(actionName));
+            }
+
+            return catalog.Require(actionName);
+        }
     }
 }

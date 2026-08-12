@@ -47,7 +47,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                       GraphNodeOp.QueryFilterNotEntity or
                       GraphNodeOp.QueryFilterRelationship or
                       GraphNodeOp.AggCount or
-                      GraphNodeOp.TargetListGet;
+                      GraphNodeOp.TargetListGet or
+                      GraphNodeOp.InvokeScript;
 
         private static GraphValueType GetLinearOutputType(GraphNodeOp op)
             => op switch
@@ -66,7 +67,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     GraphNodeOp.AggCount or
                     GraphNodeOp.ReadBlackboardInt or
                     GraphNodeOp.LoadConfigInt or
-                    GraphNodeOp.LoadConfigEffectId => GraphValueType.Int,
+                    GraphNodeOp.LoadConfigEffectId or
+                    GraphNodeOp.InvokeScript => GraphValueType.Int,
                 GraphNodeOp.CompareLtInt or
                     GraphNodeOp.CompareEqInt => GraphValueType.Bool,
                 GraphNodeOp.LoadCaster or
@@ -132,6 +134,21 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.BeginLifecycleTransaction:
                 case GraphNodeOp.AggCount:
                 case GraphNodeOp.QueryFilterLayer:
+                    break;
+
+                case GraphNodeOp.InvokeScript:
+                    if (string.IsNullOrWhiteSpace(node.FunctionName))
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingNodeRef,
+                            $"InvokeScript node '{node.Id}' requires functionName for linear FuncLib calls.", node.Id));
+                    }
+
+                    if (node.GraphId > 0)
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
+                            $"InvokeScript node '{node.Id}' cannot use graphId in linear FuncLib authoring.", node.Id));
+                    }
+
                     break;
 
                 case GraphNodeOp.QueryHexNeighbors:
@@ -568,6 +585,11 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
                     // Scratch validity bool; ValidOutput authoring is not yet on the linear CF matrix.
                     instruction.Flags = (byte)(GraphVmLimits.MaxBoolRegisters - 1);
+                    break;
+
+                case GraphNodeOp.InvokeScript:
+                    instruction.Imm = RequireSymbol(node.FunctionName, "functionName", node, symbolToIndex, symbols, graphId, diagnostics);
+                    instruction.Flags = GraphInstructionFlags.FuncLibName;
                     break;
 
                 default:

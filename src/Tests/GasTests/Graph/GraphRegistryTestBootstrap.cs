@@ -9,10 +9,48 @@ using Ludots.Core.NodeLibraries.GASGraph.Host;
 
 namespace Ludots.Tests.Gas.Graph
 {
-    /// <summary>Loads core GAS Script graphs (+ func_lib) into Registry for headless tests.</summary>
+    /// <summary>Loads core GAS Script graphs (+ func_lib / action_lib) into Registry for headless tests.</summary>
     internal static class GraphRegistryTestBootstrap
     {
         public static GraphProgramRegistry LoadCoreScriptsAndFuncLib(out GraphFunctionCatalog catalog)
+            => LoadCoreScriptsAndFuncLib(out catalog, out _);
+
+        public static GraphProgramRegistry LoadCoreScriptsAndFuncLib(
+            out GraphFunctionCatalog catalog,
+            out GraphActionCatalog actions)
+        {
+            GraphProgramRegistry programs = LoadProgramsAndFuncLib(out catalog);
+            actions = new GraphActionCatalog();
+            string actionPath = Path.Combine(FindRepoRoot(), "assets", "Configs", "GAS", "action_lib.json");
+            using var actionDoc = JsonDocument.Parse(File.ReadAllText(actionPath));
+            foreach (JsonElement el in actionDoc.RootElement.EnumerateArray())
+            {
+                string name = el.GetProperty("name").GetString()!;
+                string graphKey = el.GetProperty("graph").GetString()!;
+                string kindText = el.GetProperty("kind").GetString()!;
+                if (!GraphKindParser.TryParse(kindText, out GraphKind kind))
+                {
+                    throw new InvalidOperationException($"Bad action_lib kind {kindText}");
+                }
+
+                if (catalog.TryGet(name, out _))
+                {
+                    throw new InvalidOperationException($"action_lib '{name}' duplicates func_lib.");
+                }
+
+                int id = GraphIdRegistry.GetId(graphKey);
+                if (id <= 0)
+                {
+                    throw new InvalidOperationException($"action_lib '{name}' graph '{graphKey}' missing.");
+                }
+
+                actions.Register(name, id, kind);
+            }
+
+            return programs;
+        }
+
+        private static GraphProgramRegistry LoadProgramsAndFuncLib(out GraphFunctionCatalog catalog)
         {
             GraphIdRegistry.Clear();
             var programs = new GraphProgramRegistry();

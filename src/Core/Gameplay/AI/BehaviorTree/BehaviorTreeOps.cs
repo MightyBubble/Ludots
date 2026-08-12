@@ -36,14 +36,14 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
         void WriteSensors(int agentIndex, int graphId, System.Span<int> ints, System.Span<byte> bools);
     }
 
-    /// <summary>Authored graph keys (GAS/graphs.json) for patrol/chase/attack leaves.</summary>
+    /// <summary>ActionLib names for patrol/chase/attack leaves.</summary>
     public static class BehaviorTreeScriptKeys
     {
-        public const string SeeEnemy = "Graph.BT.Leaf.SeeEnemy";
-        public const string InAttackRange = "Graph.BT.Leaf.InAttackRange";
-        public const string Chase = "Graph.BT.Leaf.Chase";
-        public const string Attack = "Graph.BT.Leaf.Attack";
-        public const string Patrol = "Graph.BT.Leaf.Patrol";
+        public const string SeeEnemy = "bt.seeEnemy";
+        public const string InAttackRange = "bt.inAttackRange";
+        public const string Chase = "bt.chase";
+        public const string Attack = "bt.attack";
+        public const string Patrol = "bt.patrol";
     }
 
     public readonly struct BehaviorTreeNode

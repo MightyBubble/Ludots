@@ -16,18 +16,19 @@ namespace Ludots.Tests.Gas.Production
     {
         private GraphProgramRegistry _programs = null!;
         private GraphFunctionCatalog _catalog = null!;
+        private GraphActionCatalog _actions = null!;
 
         [SetUp]
         public void SetUp()
         {
-            _programs = GraphRegistryTestBootstrap.LoadCoreScriptsAndFuncLib(out _catalog);
+            _programs = GraphRegistryTestBootstrap.LoadCoreScriptsAndFuncLib(out _catalog, out _actions);
         }
 
         [Test]
         public void BehaviorTreeArena_PatrolVignette_ThinkWavesUnderBudget()
         {
             var runtime = new BehaviorTreeArenaRuntime();
-            runtime.Bind(_programs);
+            runtime.Bind(_programs, _actions);
             runtime.EnsureWorld();
             Warm(runtime.Tick);
             Drive(runtime.Tick, runtime.Metrics);
@@ -40,7 +41,7 @@ namespace Ludots.Tests.Gas.Production
         public void HfsmSentryArena_GateVignette_ThinkWavesUnderBudget()
         {
             var runtime = new HfsmSentryArenaRuntime();
-            runtime.Bind(_programs);
+            runtime.Bind(_programs, _actions);
             runtime.EnsureWorld();
             Warm(runtime.Tick);
             Drive(runtime.Tick, runtime.Metrics);
@@ -53,7 +54,7 @@ namespace Ludots.Tests.Gas.Production
         public void LevelBlueprintTrial_SpawnClearGate_AdvancesPhaseUnderBudget()
         {
             var runtime = new LevelBlueprintTrialRuntime();
-            runtime.Bind(_programs);
+            runtime.Bind(_programs, _actions);
             runtime.EnsureWorld();
             Warm(runtime.Tick, waves: 40);
             Assert.That(runtime.Metrics.Detail, Does.Contain("Level Script"));
@@ -79,7 +80,7 @@ namespace Ludots.Tests.Gas.Production
         public void GraphBehaviorIntegration_ShortPlay_UnderBudget()
         {
             var runtime = new GraphBehaviorIntegrationRuntime();
-            runtime.Bind(_programs);
+            runtime.Bind(_programs, _actions);
             runtime.EnsureWorld();
             Warm(runtime.Tick, waves: 10);
             Drive(runtime.Tick, runtime.Metrics);
