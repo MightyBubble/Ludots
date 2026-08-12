@@ -75,7 +75,8 @@ public sealed class GraphOpsAttrRuntime : IDisposable
 
         _world = World.Create();
         _requests = new EffectRequestQueue();
-        _api = new GasGraphRuntimeApi(_world, spatialQueries: null, coords: null, eventBus: null, effectRequests: _requests);
+        var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
+        _api = new GasGraphRuntimeApi(_world, spatialQueries: null, coords: null, eventBus: null, effectRequests: _requests, tagOps: tagOps);
 
         _caster = _world.Create(new AttributeBuffer(), new DirtyFlags());
         _target = _world.Create(new AttributeBuffer(), new DirtyFlags(), new ActiveEffectContainer());

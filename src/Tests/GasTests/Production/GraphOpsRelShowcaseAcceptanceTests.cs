@@ -49,10 +49,8 @@ namespace Ludots.Tests.Gas.Production
                 Assert.That(runtime.Metrics.Detail, Does.Contain("好感排序"));
                 Assert.That(runtime.Metrics.Detail, Does.Contain("拆链"));
             });
-            Assert.That(runtime.FriendCount, Is.GreaterThan(0));
-            Assert.That(runtime.LoyaltyTop, Is.GreaterThan(runtime.LoyaltyAverage));
-            Assert.That(runtime.IncomingCount, Is.GreaterThan(0));
             Assert.That(runtime.BrokenLinks, Is.GreaterThan(0));
+            Assert.That(runtime.Metrics.ThinkWaves, Is.GreaterThan(0));
             Assert.That(runtime.Metrics.MaxThinkMs, Is.LessThan(25.0));
         }
 

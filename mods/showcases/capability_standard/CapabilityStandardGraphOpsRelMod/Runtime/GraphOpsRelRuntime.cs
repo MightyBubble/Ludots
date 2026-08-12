@@ -17,6 +17,9 @@ public sealed class GraphOpsRelRuntime
     public const string QueryFriendRankName = "rel.query.friendRank";
     public const string QueryChainProbeName = "rel.query.chainProbe";
     public const string EffectBreakLinkName = "rel.effect.breakLink";
+    public const string QueryFriendRankGraph = "Graph.GraphOpsRel.QueryFriendRank";
+    public const string QueryChainProbeGraph = "Graph.GraphOpsRel.QueryChainProbe";
+    public const string EffectBreakLinkGraph = "Graph.GraphOpsRel.EffectBreakLink";
 
     private readonly GraphShowcaseConfig _config = new();
     private GraphProgramRegistry? _programs;
@@ -68,14 +71,14 @@ public sealed class GraphOpsRelRuntime
     public void EnsureWorld()
     {
         if (_world != null) return;
-        if (_programs == null || _catalog == null)
+        if (_programs == null)
         {
             throw new InvalidOperationException("GraphOpsRelRuntime.Bind(Registry, Catalog) required before EnsureWorld.");
         }
 
-        _ = _catalog.Require(QueryFriendRankName);
-        _ = _catalog.Require(QueryChainProbeName);
-        _ = _catalog.Require(EffectBreakLinkName);
+        RequireGraph(QueryFriendRankGraph);
+        RequireGraph(QueryChainProbeGraph);
+        RequireGraph(EffectBreakLinkGraph);
 
         _world = World.Create();
         var typeRegistry = new RelationshipTypeRegistry();
@@ -87,6 +90,7 @@ public sealed class GraphOpsRelRuntime
         _loyaltyMetricId = metricRegistry.Register("Loyalty", -100, 100, 0);
         _trustedFlagId = flagRegistry.Register("Trusted");
         _ = flagRegistry.Register("Estranged");
+        PatchPrograms(new GraphOpsRelSymbolResolver(typeRegistry, metricRegistry, flagRegistry));
         _relationships = new RelationshipRuntime(
             _world,
             typeRegistry,
@@ -202,10 +206,16 @@ public sealed class GraphOpsRelRuntime
 
     private void ExecuteQuery(string funcName, Entity caster, Entity explicitTarget)
     {
-        GraphFunctionEntry fn = _catalog!.Require(funcName);
-        if (!_programs!.TryGetProgram(fn.GraphId, out ReadOnlySpan<GraphInstruction> program) || program.Length == 0)
+        string graphKey = funcName switch
         {
-            throw new InvalidOperationException($"FuncLib '{funcName}' graph id {fn.GraphId} missing from Registry.");
+            QueryFriendRankName => QueryFriendRankGraph,
+            QueryChainProbeName => QueryChainProbeGraph,
+            _ => throw new InvalidOperationException($"Unknown rel query '{funcName}'.")
+        };
+        if (!_programs!.TryGetProgram(GraphIdRegistry.GetId(graphKey), out ReadOnlySpan<GraphInstruction> program) ||
+            program.Length == 0)
+        {
+            throw new InvalidOperationException($"Rel graph '{graphKey}' missing from Registry.");
         }
 
         var state = CreateState(caster, explicitTarget);
@@ -223,15 +233,29 @@ public sealed class GraphOpsRelRuntime
 
     private void ExecuteEffect(string funcName, Entity caster, Entity target)
     {
-        GraphFunctionEntry fn = _catalog!.Require(funcName);
-        if (!_programs!.TryGetProgram(fn.GraphId, out ReadOnlySpan<GraphInstruction> program) || program.Length == 0)
+        if (!string.Equals(funcName, EffectBreakLinkName, StringComparison.Ordinal))
         {
-            throw new InvalidOperationException($"FuncLib '{funcName}' graph id {fn.GraphId} missing from Registry.");
+            throw new InvalidOperationException($"Unknown rel effect '{funcName}'.");
+        }
+
+        if (!_programs!.TryGetProgram(GraphIdRegistry.GetId(EffectBreakLinkGraph), out ReadOnlySpan<GraphInstruction> program) ||
+            program.Length == 0)
+        {
+            throw new InvalidOperationException($"Rel graph '{EffectBreakLinkGraph}' missing from Registry.");
         }
 
         var state = CreateState(caster, target);
         GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
         _topFriendLabel = EntityLabel(target);
+    }
+
+    private void RequireGraph(string graphKey)
+    {
+        int graphId = GraphIdRegistry.GetId(graphKey);
+        if (graphId <= 0 || !_programs!.TryGetProgram(graphId, out _))
+        {
+            throw new InvalidOperationException($"Required rel graph '{graphKey}' is missing.");
+        }
     }
 
     private GraphExecutionState CreateState(Entity caster, Entity explicitTarget)
@@ -317,4 +341,45 @@ public sealed class GraphOpsRelRuntime
 
         return entity == Entity.Null ? "无" : "未知";
     }
+
+    private void PatchPrograms(IGraphSymbolResolver resolver)
+    {
+        foreach (string graphKey in new[] { QueryFriendRankGraph, QueryChainProbeGraph, EffectBreakLinkGraph })
+        {
+            int graphId = GraphIdRegistry.GetId(graphKey);
+            if (!_programs!.TryGetRegistration(graphId, out GraphProgramRegistration registration))
+            {
+                throw new InvalidOperationException($"Rel graph '{graphKey}' registration missing for symbol patch.");
+            }
+
+            GraphProgramSymbolPatcher.Patch(registration.Symbols, registration.Program, resolver);
+        }
+    }
+}
+
+internal sealed class GraphOpsRelSymbolResolver : IGraphSymbolResolver
+{
+    private readonly RelationshipTypeRegistry _types;
+    private readonly RelationshipMetricRegistry _metrics;
+    private readonly RelationshipFlagRegistry _flags;
+
+    public GraphOpsRelSymbolResolver(
+        RelationshipTypeRegistry types,
+        RelationshipMetricRegistry metrics,
+        RelationshipFlagRegistry flags)
+    {
+        _types = types;
+        _metrics = metrics;
+        _flags = flags;
+    }
+
+    public int ResolveTag(string name) => TagRegistry.Register(name);
+    public int ResolveAttribute(string name) => AttributeRegistry.Register(name);
+    public int ResolveEffectTemplate(string name) => EffectTemplateIdRegistry.Register(name);
+    public int ResolveRelationshipType(string name) => _types.Register(name);
+    public int ResolveRelationshipMetric(string name) => _metrics.Register(name, -100, 100, 0);
+    public int ResolveRelationshipFlag(string name) => _flags.Register(name);
+    public int ResolveRelationshipReason(string name) => ConfigKeyRegistry.Register($"relationship.reason.{name}");
+    public int ResolveTargetDispatchPreset(string name) => ConfigKeyRegistry.Register($"targetDispatch.{name}");
+    public int ResolveEntityTemplate(string name) => ConfigKeyRegistry.Register($"entityTemplate.{name}");
 }

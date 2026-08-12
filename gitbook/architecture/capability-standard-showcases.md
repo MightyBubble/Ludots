@@ -21,8 +21,14 @@ This page is the SSOT for production-grade capability acceptance showcase roots 
 | HFSM Sentry Arena | `capability_standard_hfsm_sentry_arena` | `mods/showcases/capability_standard/CapabilityStandardHfsmSentryArenaMod` | **可读剧本**：门岗线哨兵 Idle→警戒→交战→撤退；入侵者来回走；交战生命周期 Script |
 | Level Blueprint Trial | `capability_standard_level_blueprint_trial` | `mods/showcases/capability_standard/CapabilityStandardLevelBlueprintTrialMod` | **可读剧本**：走进触发圈→刷怪→清完开门→阶段色块推进 |
 | Ability Graph Sandbox | `capability_standard_ability_graph_sandbox` | `mods/showcases/capability_standard/CapabilityStandardAbilityGraphSandboxMod` | **可读剧本**：巡逻查一圈找范围目标，给命中对象挂状态、加好感，并把状态牌读成面板 token |
+| Graph Ops Attr | `capability_standard_graph_ops_attr` | `mods/showcases/capability_standard/CapabilityStandardGraphOpsAttrMod` | **可读剧本**：读血量、加伤、上效果、卸效果 |
+| Graph Ops Float | `capability_standard_graph_ops_float` | `mods/showcases/capability_standard/CapabilityStandardGraphOpsFloatMod` | **可读剧本**：距离衰减、倍率、抖动再钳制，算出最终伤害 |
+| Graph Ops Script | `capability_standard_graph_ops_script` | `mods/showcases/capability_standard/CapabilityStandardGraphOpsScriptMod` | **可读剧本**：喝茶续杯 → 巡逻两站 → FuncLib 常量管线（Yield/Call/跳转） |
+| Graph Ops Spatial | `capability_standard_graph_ops_spatial` | `mods/showcases/capability_standard/CapabilityStandardGraphOpsSpatialMod` | **可读剧本**：扇形/矩形/直线/六角圈人并标最近目标 |
+| Graph Ops Query | `capability_standard_graph_ops_query` | `mods/showcases/capability_standard/CapabilityStandardGraphOpsQueryMod` | **可读剧本**：全图搜人后按阵营标签筛人，再按生命排序聚合 |
 | Graph Ops Rel | `capability_standard_graph_ops_rel` | `mods/showcases/capability_standard/CapabilityStandardGraphOpsRelMod` | **可读剧本**：查好友链、按好感排序、拆链（关系查询/过滤/排序/聚合 + 拆链） |
 | Graph Ops Blackboard | `capability_standard_graph_ops_blackboard` | `mods/showcases/capability_standard/CapabilityStandardGraphOpsBlackboardMod` | **黑板记事/读配置/生命周期事务**：写入来源与情境，从配置读出威力/阶位/连锁并回读，再跑生命周期内置步骤 |
+| Graph Ops Event | `capability_standard_graph_ops_event` | `mods/showcases/capability_standard/CapabilityStandardGraphOpsEventMod` | **可读剧本**：发事件、读载荷、控制域/知识投影、扇出派发与落点吸附 |
 | Graph Behavior Integration | `capability_standard_graph_behavior_integration` | `mods/showcases/capability_standard/CapabilityStandardGraphBehaviorIntegrationMod` | **单独短剧**：左巡逻 / 右门岗 / 上触发刷敌，串一条故事（不是四套糊在一起） |
 
 压力矩阵与 &lt;5ms 思考波报告：`docs/benchmarks/graph-behavior-pressure/`（Showcase 主镜头是剧本，万人在无头测试与灰点带）。

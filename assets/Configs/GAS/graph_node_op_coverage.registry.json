@@ -7,18 +7,18 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectFloatAndBoolRuntimeOps_CompileAndEmit",
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectFloatAndBoolRuntimeOps_CompileAndEmit;GraphOpsFloatShowcaseAcceptanceTests.FrontDoor_EffectGraph_ContainsAllFloatOps;GraphOpsFloatShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
+      "showcaseId": "capability_standard_graph_ops_float",
+      "status": "covered"
     },
     {
       "op": "ConstInt",
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": null,
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_CoreGraphs_EmitControlFlowOps",
+      "showcaseId": "capability_standard_graph_ops_attr",
+      "status": "covered"
     },
     {
       "op": "ConstFloat",
@@ -26,9 +26,9 @@
         "Linear",
         "Query"
       ],
-      "unitTestFilter": null,
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphOpsFloatShowcaseAcceptanceTests.FrontDoor_EffectGraph_ContainsAllFloatOps;GraphOpsFloatShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
+      "showcaseId": "capability_standard_graph_ops_float",
+      "status": "covered"
     },
     {
       "op": "LoadCaster",
@@ -54,9 +54,9 @@
       "authorableKinds": [
         "Script"
       ],
-      "unitTestFilter": null,
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectBranchBool_CompilesToJumps;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_CoreGraphs_EmitControlFlowOps",
+      "showcaseId": "capability_standard_graph_ops_script",
+      "status": "covered"
     },
     {
       "op": "JumpIfFalse",
@@ -64,9 +64,9 @@
         "Effect",
         "Script"
       ],
-      "unitTestFilter": null,
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectBranchBool_CompilesToJumps;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_CoreGraphs_EmitControlFlowOps",
+      "showcaseId": "capability_standard_graph_ops_script",
+      "status": "covered"
     },
     {
       "op": "LoadAttribute",
@@ -82,34 +82,34 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": null,
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphOpsFloatShowcaseAcceptanceTests.FrontDoor_EffectGraph_ContainsAllFloatOps;GraphOpsFloatShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
+      "showcaseId": "capability_standard_graph_ops_float",
+      "status": "covered"
     },
     {
       "op": "MulFloat",
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": null,
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphOpsFloatShowcaseAcceptanceTests.FrontDoor_EffectGraph_ContainsAllFloatOps;GraphOpsFloatShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
+      "showcaseId": "capability_standard_graph_ops_float",
+      "status": "covered"
     },
     {
       "op": "SubFloat",
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": null,
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphOpsFloatShowcaseAcceptanceTests.FrontDoor_EffectGraph_ContainsAllFloatOps;GraphOpsFloatShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
+      "showcaseId": "capability_standard_graph_ops_float",
+      "status": "covered"
     },
     {
       "op": "DivFloat",
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsFloatShowcaseAcceptanceTests.FrontDoor_EffectGraph_ContainsAllFloatOps",
+      "unitTestFilter": "GraphOpsFloatShowcaseAcceptanceTests.FrontDoor_EffectGraph_ContainsAllFloatOps;GraphOpsFloatShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
       "showcaseId": "capability_standard_graph_ops_float",
       "status": "covered"
     },
@@ -118,7 +118,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsFloatShowcaseAcceptanceTests.FrontDoor_EffectGraph_ContainsAllFloatOps",
+      "unitTestFilter": "GraphOpsFloatShowcaseAcceptanceTests.FrontDoor_EffectGraph_ContainsAllFloatOps;GraphOpsFloatShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
       "showcaseId": "capability_standard_graph_ops_float",
       "status": "covered"
     },
@@ -127,7 +127,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsFloatShowcaseAcceptanceTests.FrontDoor_EffectGraph_ContainsAllFloatOps",
+      "unitTestFilter": "GraphOpsFloatShowcaseAcceptanceTests.FrontDoor_EffectGraph_ContainsAllFloatOps;GraphOpsFloatShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
       "showcaseId": "capability_standard_graph_ops_float",
       "status": "covered"
     },
@@ -136,7 +136,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsFloatShowcaseAcceptanceTests.FrontDoor_EffectGraph_ContainsAllFloatOps;GraphOpsFloatShowcaseAcceptanceTests.FrontDoor_ValidationGraph_CompilesAndUsesClampAndCompare",
+      "unitTestFilter": "GraphOpsFloatShowcaseAcceptanceTests.FrontDoor_EffectGraph_ContainsAllFloatOps;GraphOpsFloatShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
       "showcaseId": "capability_standard_graph_ops_float",
       "status": "covered"
     },
@@ -145,7 +145,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsFloatShowcaseAcceptanceTests.FrontDoor_EffectGraph_ContainsAllFloatOps",
+      "unitTestFilter": "GraphOpsFloatShowcaseAcceptanceTests.FrontDoor_EffectGraph_ContainsAllFloatOps;GraphOpsFloatShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
       "showcaseId": "capability_standard_graph_ops_float",
       "status": "covered"
     },
@@ -154,7 +154,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsFloatShowcaseAcceptanceTests.FrontDoor_EffectGraph_ContainsAllFloatOps",
+      "unitTestFilter": "GraphOpsFloatShowcaseAcceptanceTests.FrontDoor_EffectGraph_ContainsAllFloatOps;GraphOpsFloatShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
       "showcaseId": "capability_standard_graph_ops_float",
       "status": "covered"
     },
@@ -163,7 +163,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsFloatShowcaseAcceptanceTests.FrontDoor_EffectGraph_ContainsAllFloatOps",
+      "unitTestFilter": "GraphOpsFloatShowcaseAcceptanceTests.FrontDoor_EffectGraph_ContainsAllFloatOps;GraphOpsFloatShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
       "showcaseId": "capability_standard_graph_ops_float",
       "status": "covered"
     },
@@ -181,7 +181,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphOpsFloatShowcaseAcceptanceTests.FrontDoor_EffectGraph_ContainsAllFloatOps;GraphOpsFloatShowcaseAcceptanceTests.FrontDoor_ValidationGraph_CompilesAndUsesClampAndCompare",
+      "unitTestFilter": "GraphOpsFloatShowcaseAcceptanceTests.FrontDoor_EffectGraph_ContainsAllFloatOps;GraphOpsFloatShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
       "showcaseId": "capability_standard_graph_ops_float",
       "status": "covered"
     },
@@ -287,54 +287,54 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "FullyQualifiedName~GraphEffectAuthoringExpressivenessTests|FullyQualifiedName~GraphControlFlowConfigCoverageTests",
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail",
+      "showcaseId": "capability_standard_graph_ops_spatial",
+      "status": "covered"
     },
     {
       "op": "QueryRectangle",
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "FullyQualifiedName~GraphEffectAuthoringExpressivenessTests|FullyQualifiedName~GraphControlFlowConfigCoverageTests",
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail",
+      "showcaseId": "capability_standard_graph_ops_spatial",
+      "status": "covered"
     },
     {
       "op": "QueryLine",
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "FullyQualifiedName~GraphEffectAuthoringExpressivenessTests|FullyQualifiedName~GraphControlFlowConfigCoverageTests",
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail",
+      "showcaseId": "capability_standard_graph_ops_spatial",
+      "status": "covered"
     },
     {
       "op": "QueryFilterNotEntity",
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "FullyQualifiedName~GraphEffectAuthoringExpressivenessTests|FullyQualifiedName~GraphControlFlowConfigCoverageTests",
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail",
+      "showcaseId": "capability_standard_graph_ops_spatial",
+      "status": "covered"
     },
     {
       "op": "QueryFilterLayer",
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "FullyQualifiedName~GraphEffectAuthoringExpressivenessTests|FullyQualifiedName~GraphControlFlowConfigCoverageTests",
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail",
+      "showcaseId": "capability_standard_graph_ops_spatial",
+      "status": "covered"
     },
     {
       "op": "QueryFilterRelationship",
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": null,
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail",
+      "showcaseId": "capability_standard_graph_ops_spatial",
+      "status": "covered"
     },
     {
       "op": "AggCount",
@@ -342,9 +342,9 @@
         "Linear",
         "Query"
       ],
-      "unitTestFilter": null,
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail",
+      "showcaseId": "capability_standard_graph_ops_spatial",
+      "status": "covered"
     },
     {
       "op": "AggMinByDistance",
@@ -352,45 +352,45 @@
         "Linear",
         "Query"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectQueryListOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryKind_QueryListOps_CompileAndEmit",
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail",
+      "showcaseId": "capability_standard_graph_ops_spatial",
+      "status": "covered"
     },
     {
       "op": "TargetListGet",
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": null,
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail",
+      "showcaseId": "capability_standard_graph_ops_spatial",
+      "status": "covered"
     },
     {
       "op": "QueryHexRange",
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "FullyQualifiedName~GraphEffectAuthoringExpressivenessTests|FullyQualifiedName~GraphControlFlowConfigCoverageTests",
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail",
+      "showcaseId": "capability_standard_graph_ops_spatial",
+      "status": "covered"
     },
     {
       "op": "QueryHexRing",
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "FullyQualifiedName~GraphEffectAuthoringExpressivenessTests|FullyQualifiedName~GraphControlFlowConfigCoverageTests",
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail",
+      "showcaseId": "capability_standard_graph_ops_spatial",
+      "status": "covered"
     },
     {
       "op": "QueryHexNeighbors",
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "FullyQualifiedName~GraphEffectAuthoringExpressivenessTests|FullyQualifiedName~GraphControlFlowConfigCoverageTests",
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphOpsSpatialShowcaseAcceptanceTests.SpatialQueries_ConeRectLineHex_UnderBudgetWithPlayerReadableDetail",
+      "showcaseId": "capability_standard_graph_ops_spatial",
+      "status": "covered"
     },
     {
       "op": "ApplyEffectTemplate",
@@ -442,18 +442,18 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectDynamicAndFanOutEffectOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectFanOutDispatchEffect_RequiresEffectTemplateAndPayloadPreset",
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectDynamicAndFanOutEffectOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchControlDomainAndSnap_PlayerReadable",
+      "showcaseId": "capability_standard_graph_ops_event",
+      "status": "covered"
     },
     {
       "op": "FanOutDispatchEffectDynamic",
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectDynamicAndFanOutEffectOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectFanOutDispatchEffectDynamic_RequiresPayloadPreset",
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectDynamicAndFanOutEffectOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchControlDomainAndSnap_PlayerReadable",
+      "showcaseId": "capability_standard_graph_ops_event",
+      "status": "covered"
     },
     {
       "op": "ModifyAttributeAdd",
@@ -469,9 +469,9 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectSendEvent_RequiresEventTag",
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchControlDomainAndSnap_PlayerReadable",
+      "showcaseId": "capability_standard_graph_ops_event",
+      "status": "covered"
     },
     {
       "op": "ReadBlackboardFloat",
@@ -613,7 +613,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectRelationshipPairMutationAndReadOps_CompileAndEmit;NewGraphOpsTests.GraphOps_RelationshipRemoveLink_RemovesOnlyRequestedTypedEdge;GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget",
+      "unitTestFilter": "GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget;GraphOpsRelShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
       "showcaseId": "capability_standard_graph_ops_rel",
       "status": "covered"
     },
@@ -640,7 +640,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectRelationshipPairMutationAndReadOps_CompileAndEmit;NewGraphOpsTests.GraphControlFlowCompiler_RelationshipMetricOpsRequireExplicitRelationshipType;GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget",
+      "unitTestFilter": "GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget;GraphOpsRelShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
       "showcaseId": "capability_standard_graph_ops_rel",
       "status": "covered"
     },
@@ -659,7 +659,7 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectRelationshipPairMutationAndReadOps_CompileAndEmit;GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget",
+      "unitTestFilter": "GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget;GraphOpsRelShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
       "showcaseId": "capability_standard_graph_ops_rel",
       "status": "covered"
     },
@@ -668,7 +668,7 @@
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryRelationshipChainFilterSortAggregateOps_CompileAndEmit;NewGraphOpsTests.GraphOps_RelationshipQueryFilterSortAndAggregate_Work;GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget",
+      "unitTestFilter": "GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget;GraphOpsRelShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
       "showcaseId": "capability_standard_graph_ops_rel",
       "status": "covered"
     },
@@ -677,7 +677,7 @@
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryRelationshipChainFilterSortAggregateOps_CompileAndEmit;NewGraphOpsTests.GraphOps_RelationshipQueryIncoming_CollectsTypedSources;GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget",
+      "unitTestFilter": "GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget;GraphOpsRelShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
       "showcaseId": "capability_standard_graph_ops_rel",
       "status": "covered"
     },
@@ -686,7 +686,7 @@
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryRelationshipChainFilterSortAggregateOps_CompileAndEmit;NewGraphOpsTests.GraphOps_RelationshipQueryMutual_CollectsDirectedMutualCandidates;GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget",
+      "unitTestFilter": "GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget;GraphOpsRelShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
       "showcaseId": "capability_standard_graph_ops_rel",
       "status": "covered"
     },
@@ -695,7 +695,7 @@
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryRelationshipChainFilterSortAggregateOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryRelationshipPairAndPredicateOps_CompileAndEmit;NewGraphOpsTests.GraphOps_RelationshipQueryBetweenPair_CollectsBothDirections;GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget",
+      "unitTestFilter": "GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget;GraphOpsRelShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
       "showcaseId": "capability_standard_graph_ops_rel",
       "status": "covered"
     },
@@ -704,7 +704,7 @@
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryRelationshipChainFilterSortAggregateOps_CompileAndEmit;NewGraphOpsTests.GraphOps_RelationshipQueryFilterSortAndAggregate_Work;GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget",
+      "unitTestFilter": "GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget;GraphOpsRelShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
       "showcaseId": "capability_standard_graph_ops_rel",
       "status": "covered"
     },
@@ -713,7 +713,7 @@
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryRelationshipChainFilterSortAggregateOps_CompileAndEmit;NewGraphOpsTests.GraphOps_RelationshipQueryFilterSortAndAggregate_Work;GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget",
+      "unitTestFilter": "GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget;GraphOpsRelShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
       "showcaseId": "capability_standard_graph_ops_rel",
       "status": "covered"
     },
@@ -722,7 +722,7 @@
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryRelationshipChainFilterSortAggregateOps_CompileAndEmit;NewGraphOpsTests.GraphOps_RelationshipQueryFilterSortAndAggregate_Work;GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget",
+      "unitTestFilter": "GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget;GraphOpsRelShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
       "showcaseId": "capability_standard_graph_ops_rel",
       "status": "covered"
     },
@@ -731,7 +731,7 @@
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryRelationshipChainFilterSortAggregateOps_CompileAndEmit;NewGraphOpsTests.GraphOps_RelationshipQueryFilterSortAndAggregate_Work;GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget",
+      "unitTestFilter": "GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget;GraphOpsRelShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
       "showcaseId": "capability_standard_graph_ops_rel",
       "status": "covered"
     },
@@ -740,7 +740,7 @@
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryRelationshipChainFilterSortAggregateOps_CompileAndEmit;NewGraphOpsTests.GraphOps_RelationshipQueryFilterSortAndAggregate_Work;GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget",
+      "unitTestFilter": "GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget;GraphOpsRelShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
       "showcaseId": "capability_standard_graph_ops_rel",
       "status": "covered"
     },
@@ -749,7 +749,7 @@
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryRelationshipChainFilterSortAggregateOps_CompileAndEmit;NewGraphOpsTests.GraphOps_RelationshipQueryFilterSortAndAggregate_Work;GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget",
+      "unitTestFilter": "GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget;GraphOpsRelShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
       "showcaseId": "capability_standard_graph_ops_rel",
       "status": "covered"
     },
@@ -884,7 +884,7 @@
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryRelationshipChainFilterSortAggregateOps_CompileAndEmit;GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget",
+      "unitTestFilter": "GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget;GraphOpsRelShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
       "showcaseId": "capability_standard_graph_ops_rel",
       "status": "covered"
     },
@@ -893,7 +893,7 @@
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryRelationshipChainFilterSortAggregateOps_CompileAndEmit;GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget",
+      "unitTestFilter": "GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget;GraphOpsRelShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
       "showcaseId": "capability_standard_graph_ops_rel",
       "status": "covered"
     },
@@ -902,7 +902,7 @@
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryRelationshipChainFilterSortAggregateOps_CompileAndEmit;GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget",
+      "unitTestFilter": "GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget;GraphOpsRelShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
       "showcaseId": "capability_standard_graph_ops_rel",
       "status": "covered"
     },
@@ -912,7 +912,7 @@
         "Linear",
         "Query"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectRelationshipPairMutationAndReadOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryRelationshipPairAndPredicateOps_CompileAndEmit;GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget",
+      "unitTestFilter": "GraphOpsRelShowcaseAcceptanceTests.GraphOpsRel_FriendChainRankAndUnlink_UnderBudget;GraphOpsRelShowcaseAcceptanceTests.RegistryName_DelegatesToSeparatedSuite",
       "showcaseId": "capability_standard_graph_ops_rel",
       "status": "covered"
     },
@@ -939,160 +939,162 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit",
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_PlacementGraph_ContainsSnapOps",
+      "showcaseId": "capability_standard_graph_ops_event",
+      "status": "covered"
     },
     {
       "op": "LoadTargetPosY",
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit",
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_PlacementGraph_ContainsSnapOps",
+      "showcaseId": "capability_standard_graph_ops_event",
+      "status": "covered"
     },
     {
       "op": "ClampTargetToRange",
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationClampTargetToRange_RequiresOriginAndRangeInputs",
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_PlacementGraph_ContainsSnapOps",
+      "showcaseId": "capability_standard_graph_ops_event",
+      "status": "covered"
     },
     {
       "op": "IsPointInCircle",
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit",
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_PlacementGraph_ContainsSnapOps",
+      "showcaseId": "capability_standard_graph_ops_event",
+      "status": "covered"
     },
     {
       "op": "SnapToNearestInCollection",
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationSnapToNearestInCollection_RequiresCollectionKey;GraphControlFlowConfigCoverageTests.SnapWithoutValidOutput_DoesNotOverwriteValidationResult;GraphControlFlowConfigCoverageTests.SnapWithValidOutput_AllocatesDedicatedBoolRegister",
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_PlacementGraph_ContainsSnapOps",
+      "showcaseId": "capability_standard_graph_ops_event",
+      "status": "covered"
     },
     {
       "op": "SnapToNearestGraphEdge",
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit",
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_PlacementGraph_ContainsSnapOps",
+      "showcaseId": "capability_standard_graph_ops_event",
+      "status": "covered"
     },
     {
       "op": "LoadViewer",
-      "authorableKinds": null,
-      "unitTestFilter": null,
-      "showcaseId": null,
-      "status": "runtime-only"
+      "authorableKinds": [
+        "Linear"
+      ],
+      "unitTestFilter": "GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchGraph_ContainsEventControlOps;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchControlDomainAndSnap_PlayerReadable",
+      "showcaseId": "capability_standard_graph_ops_event",
+      "status": "covered"
     },
     {
       "op": "LoadEventPayloadInt",
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit",
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchGraph_ContainsEventControlOps",
+      "showcaseId": "capability_standard_graph_ops_event",
+      "status": "covered"
     },
     {
       "op": "LoadEventPayloadFloat",
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit",
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchGraph_ContainsEventControlOps",
+      "showcaseId": "capability_standard_graph_ops_event",
+      "status": "covered"
     },
     {
       "op": "ControlDomainResolve",
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit",
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchGraph_ContainsEventControlOps",
+      "showcaseId": "capability_standard_graph_ops_event",
+      "status": "covered"
     },
     {
       "op": "ControlDomainControls",
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit",
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchGraph_ContainsEventControlOps",
+      "showcaseId": "capability_standard_graph_ops_event",
+      "status": "covered"
     },
     {
       "op": "KnowledgeHasProjection",
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit",
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit;GraphOpsEventShowcaseAcceptanceTests.EventVignette_DispatchGraph_ContainsEventControlOps",
+      "showcaseId": "capability_standard_graph_ops_event",
+      "status": "covered"
     },
     {
       "op": "Call",
       "authorableKinds": [
         "Script"
       ],
-      "unitTestFilter": null,
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_DrinkAndPatrol_YieldThenHalt;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_CoreGraphs_EmitControlFlowOps",
+      "showcaseId": "capability_standard_graph_ops_script",
+      "status": "covered"
     },
     {
       "op": "Return",
       "authorableKinds": [
         "Script"
       ],
-      "unitTestFilter": null,
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_DrinkAndPatrol_YieldThenHalt;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_CoreGraphs_EmitControlFlowOps",
+      "showcaseId": "capability_standard_graph_ops_script",
+      "status": "covered"
     },
     {
       "op": "Yield",
       "authorableKinds": [
         "Script"
       ],
-      "unitTestFilter": null,
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_DrinkAndPatrol_YieldThenHalt;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_CoreGraphs_EmitControlFlowOps",
+      "showcaseId": "capability_standard_graph_ops_script",
+      "status": "covered"
     },
     {
       "op": "HaltReturnInt",
       "authorableKinds": [
         "Script"
       ],
-      "unitTestFilter": null,
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_ConstPipeline_ReturnsSeven;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_CoreGraphs_EmitControlFlowOps",
+      "showcaseId": "capability_standard_graph_ops_script",
+      "status": "covered"
     },
     {
       "op": "InvokeScript",
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": null,
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_ConstPipeline_ReturnsSeven;GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectInvokeScriptFunctionName_CompilesAndPatchesViaFuncLib;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_CoreGraphs_EmitControlFlowOps",
+      "showcaseId": "capability_standard_graph_ops_script",
+      "status": "covered"
     },
     {
       "op": "MoveInt",
       "authorableKinds": [
         "Script"
       ],
-      "unitTestFilter": null,
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_DrinkAndPatrol_YieldThenHalt;GraphOpsScriptShowcaseAcceptanceTests.ScriptControl_CoreGraphs_EmitControlFlowOps",
+      "showcaseId": "capability_standard_graph_ops_script",
+      "status": "covered"
     }
   ]
 }

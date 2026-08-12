@@ -34,6 +34,7 @@ public sealed class GraphOpsFloatShowcaseAcceptanceTests
 
         GraphNodeOp[] required =
         [
+            GraphNodeOp.ConstFloat,
             GraphNodeOp.AddFloat,
             GraphNodeOp.MulFloat,
             GraphNodeOp.SubFloat,

@@ -4,6 +4,7 @@ using CapabilityStandardGraphBehaviorCommon;
 using Ludots.Core.Gameplay.AI.BehaviorTree;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
 
 namespace CapabilityStandardGraphOpsScriptMod.Runtime;
 
@@ -68,8 +69,19 @@ public sealed class GraphOpsScriptRuntime
         _ = GraphRegistryScriptResolver.RequireProgram(_programs, _patrolGraphId);
         _ = GraphRegistryScriptResolver.RequireProgram(_programs, _invokeConstGraphId);
         _ = _catalog.Require(ConstFunctionName);
+        EnsureInvokeGraphPatched();
         Metrics.AgentCount = 1;
         Metrics.Detail = "脚本控制演示：先喝茶续杯，再巡逻推进，最后走常量管线。";
+    }
+
+    private void EnsureInvokeGraphPatched()
+    {
+        if (!_programs!.TryGetRegistration(_invokeConstGraphId, out GraphProgramRegistration registration))
+        {
+            throw new InvalidOperationException($"Invoke graph id {_invokeConstGraphId} is not registered.");
+        }
+
+        GraphProgramSymbolPatcher.PatchFuncLib(registration.Symbols, registration.Program, _catalog!);
     }
 
     public void Tick(float dt)

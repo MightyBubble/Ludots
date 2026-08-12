@@ -84,11 +84,12 @@ P3 Major / UAT / 文档名实
 
 - [x] 新增 `assets/Configs/GAS/graph_node_op_coverage.registry.json`（SSOT）：每个 `GraphNodeOp` 一行：`op` / `authorableKinds` / `unitTestFilter` / `showcaseId` / `status`（初值：`GraphControlFlowCompiler*` 作者矩阵 + 44 无前门 opcode 标 `missing`；守卫见 `GraphNodeOpCoverageRegistryTests`）
 - [x] CI 守卫：registry 成员集合 == `GraphNodeOp` 枚举（**已落地**）；`status=covered` 要求测试名可解析且 Showcase 在 `showcase.registry.json` 注册（待 P2 全量覆盖）
-- [ ] **每一个**可执行 opcode：
-  - [ ] ≥1 条自动化测试（优先 FrontDoor 作者路径；VM-only 仅过渡期并标 `status=runtime-only`）
-  - [ ] ≥1 条 Showcase 可见演示（可共用能力标准图行为沙盘分镜，但画廊文案必须说人话）
-- [ ] 现有已有作者路径的 opcode：补齐 registry 映射，缺口补测/补 Showcase
-- [ ] Showcase Detail / registry summary：**禁止**只堆 opcode 名；用玩家/作者场景句
+- [x] **每一个**可执行 opcode：
+  - [x] ≥1 条自动化测试（优先 FrontDoor 作者路径；VM-only 仅过渡期并标 `status=runtime-only`）
+  - [x] ≥1 条 Showcase 可见演示（可共用能力标准图行为沙盘分镜，但画廊文案必须说人话）
+- [x] 现有已有作者路径的 opcode：补齐 registry 映射，缺口补测/补 Showcase
+- [x] Showcase Detail / registry summary：**禁止**只堆 opcode 名；用玩家/作者场景句
+  - 证据：`graph_node_op_coverage.registry.json` → **covered 120/120**
 
 ### P3 — Major 余项与合同落地
 

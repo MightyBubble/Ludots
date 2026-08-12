@@ -17,13 +17,17 @@ internal static class GraphOpsFloatGraphAuthoring
 
     public static GraphControlFlowCompileResult CompileEffectGraph(float distance)
     {
-        string json = string.Format(CultureInfo.InvariantCulture, EffectGraphJsonTemplate, distance);
+        string json = EffectGraphJsonTemplate.Replace(
+            DistancePlaceholder,
+            distance.ToString(CultureInfo.InvariantCulture));
         return Compile(json, EffectGraphId);
     }
 
     public static GraphControlFlowCompileResult CompileValidationGraph(float distance)
     {
-        string json = string.Format(CultureInfo.InvariantCulture, ValidationGraphJsonTemplate, distance);
+        string json = ValidationGraphJsonTemplate.Replace(
+            DistancePlaceholder,
+            distance.ToString(CultureInfo.InvariantCulture));
         return Compile(json, ValidationGraphId);
     }
 
@@ -86,13 +90,15 @@ internal static class GraphOpsFloatGraphAuthoring
         return compiled;
     }
 
+    private const string DistancePlaceholder = "__DISTANCE__";
+
     private const string EffectGraphJsonTemplate = """
         {
           "kind": "Effect",
           "entry": "base",
           "nodes": [
             { "id": "base", "op": "ConstFloat", "floatValue": 100 },
-            { "id": "dist", "op": "ConstFloat", "floatValue": {0} },
+            { "id": "dist", "op": "ConstFloat", "floatValue": __DISTANCE__ },
             { "id": "decay", "op": "SubFloat" },
             { "id": "range", "op": "ConstFloat", "floatValue": 50 },
             { "id": "attenuation", "op": "DivFloat" },
@@ -171,7 +177,7 @@ internal static class GraphOpsFloatGraphAuthoring
           "entry": "caster",
           "nodes": [
             { "id": "caster", "op": "LoadCaster" },
-            { "id": "dist", "op": "ConstFloat", "floatValue": {0} },
+            { "id": "dist", "op": "ConstFloat", "floatValue": __DISTANCE__ },
             { "id": "minRange", "op": "ConstFloat", "floatValue": 5 },
             { "id": "maxRange", "op": "ConstFloat", "floatValue": 45 },
             { "id": "snapped", "op": "ClampFloat" },

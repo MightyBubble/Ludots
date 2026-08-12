@@ -441,6 +441,33 @@
       "buildMode": "auto"
     },
     {
+      "id": "capability_standard_graph_ops_spatial_raylib",
+      "name": "Capability Standard Graph Ops Spatial Raylib",
+      "selectors": [
+        "$capability_standard_graph_ops_spatial"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_ops_script_raylib",
+      "name": "Capability Standard Graph Ops Script Raylib",
+      "selectors": [
+        "$capability_standard_graph_ops_script"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_ops_float_raylib",
+      "name": "Capability Standard Graph Ops Float Raylib",
+      "selectors": [
+        "$capability_standard_graph_ops_float"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "capability_standard_graph_ops_rel_raylib",
       "name": "Capability Standard Graph Ops Rel Raylib",
       "selectors": [

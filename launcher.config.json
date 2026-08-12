@@ -385,6 +385,38 @@
       }
     },
     {
+      "name": "capability_standard_graph_ops_query",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardGraphOpsQueryMod",
+        "projectPath": "CapabilityStandardGraphOpsQueryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_ops_spatial",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardGraphOpsSpatialMod",
+        "projectPath": "CapabilityStandardGraphOpsSpatialMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_ops_script",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardGraphOpsScriptMod",
+        "projectPath": "CapabilityStandardGraphOpsScriptMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_ops_float",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardGraphOpsFloatMod",
+        "projectPath": "CapabilityStandardGraphOpsFloatMod.csproj"
+      }
+    },
+    {
       "name": "capability_standard_graph_ops_rel",
       "target": {
         "type": "path",

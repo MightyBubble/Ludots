@@ -31,6 +31,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                       GraphNodeOp.SelectEntity or
                       GraphNodeOp.LoadCaster or
                       GraphNodeOp.LoadExplicitTarget or
+                      GraphNodeOp.LoadViewer or
                       GraphNodeOp.LoadContextSource or
                       GraphNodeOp.LoadContextTarget or
                       GraphNodeOp.LoadContextTargetContext or
@@ -143,6 +144,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     GraphNodeOp.SnapToNearestGraphEdge => GraphValueType.Bool,
                 GraphNodeOp.LoadCaster or
                     GraphNodeOp.LoadExplicitTarget or
+                    GraphNodeOp.LoadViewer or
                     GraphNodeOp.LoadContextSource or
                     GraphNodeOp.LoadContextTarget or
                     GraphNodeOp.LoadContextTargetContext or
@@ -237,6 +239,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.ConstInt:
                 case GraphNodeOp.LoadCaster:
                 case GraphNodeOp.LoadExplicitTarget:
+                case GraphNodeOp.LoadViewer:
                 case GraphNodeOp.LoadContextSource:
                 case GraphNodeOp.LoadContextTarget:
                 case GraphNodeOp.LoadContextTargetContext:
@@ -651,6 +654,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
                 case GraphNodeOp.LoadCaster:
                 case GraphNodeOp.LoadExplicitTarget:
+                case GraphNodeOp.LoadViewer:
                 case GraphNodeOp.LoadContextSource:
                 case GraphNodeOp.LoadContextTarget:
                 case GraphNodeOp.LoadContextTargetContext:

@@ -22,41 +22,8 @@ public static class GraphOpsRelShowcaseBootstrap
         string repoRoot = FindRepoRoot();
         string modAssets = Path.Combine(repoRoot, ModAssetsRelative);
         string modGraphsPath = Path.Combine(modAssets, "GAS", "graphs.json");
-        string modFuncLibPath = Path.Combine(modAssets, "GAS", "func_lib.json");
-
         LoadGraphs(programs, modGraphsPath);
-        RegisterFuncLib(catalog, programs, modFuncLibPath);
-
         return programs;
-    }
-
-    private static void RegisterFuncLib(GraphFunctionCatalog catalog, GraphProgramRegistry programs, string funcLibPath)
-    {
-        using var doc = JsonDocument.Parse(File.ReadAllText(funcLibPath));
-        foreach (JsonElement el in doc.RootElement.EnumerateArray())
-        {
-            string name = el.GetProperty("name").GetString()
-                ?? throw new InvalidOperationException("func_lib entry missing name.");
-            string graphKey = el.GetProperty("graph").GetString()
-                ?? throw new InvalidOperationException($"func_lib '{name}' missing graph.");
-            string kindText = el.GetProperty("kind").GetString() ?? "Script";
-            GraphKind kind = kindText switch
-            {
-                "Query" => GraphKind.Query,
-                "Effect" => GraphKind.Effect,
-                "Script" => GraphKind.Script,
-                _ => throw new InvalidOperationException($"Unsupported func_lib kind '{kindText}'.")
-            };
-
-            int graphId = GraphIdRegistry.GetId(graphKey);
-            if (graphId <= 0)
-            {
-                throw new InvalidOperationException($"Graph '{graphKey}' for func_lib '{name}' is not registered.");
-            }
-
-            programs.RequireKind(graphId, kind);
-            catalog.Register(name, graphId, kind);
-        }
     }
 
     private static void LoadGraphs(GraphProgramRegistry programs, string graphsPath)
@@ -83,6 +50,7 @@ public static class GraphOpsRelShowcaseBootstrap
                 throw new InvalidOperationException($"Compile {id} produced no package.");
             }
 
+            // Symbols are patched later by GraphOpsRelRuntime against the live relationship registries.
             int graphId = GraphIdRegistry.Register(id);
             programs.Register(graphId, pkg.Value.Program, ParseKind(kind), GraphInstructionSourceMap.Empty, pkg.Value.Symbols);
         }
@@ -91,9 +59,10 @@ public static class GraphOpsRelShowcaseBootstrap
     private static GraphKind ParseKind(string kind)
         => kind switch
         {
-            "Script" => GraphKind.Script,
             "Query" => GraphKind.Query,
             "Effect" => GraphKind.Effect,
+            "Script" => GraphKind.Script,
+            "Validation" => GraphKind.Validation,
             _ => throw new InvalidOperationException($"Unsupported graph kind '{kind}'.")
         };
 
@@ -105,6 +74,7 @@ public static class GraphOpsRelShowcaseBootstrap
             dir = dir.Parent;
         }
 
-        return dir?.FullName ?? throw new InvalidOperationException("repo root not found");
+        return dir?.FullName
+            ?? throw new InvalidOperationException("Repository root not found for Rel GraphOps assets.");
     }
 }
