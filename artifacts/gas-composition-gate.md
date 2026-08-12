@@ -81,14 +81,15 @@ N/A. This change does not alter runtime transaction behavior.
 | 新增 Layer 2 | Restored authoring metadata/tests for existing effect ops |
 | 禁止 | New profile DSL, parallel loader, effect preset switches, runtime fallback |
 ## GAS Composition Gate — Self Review
+# GAS Composition Gate
 
-- **Task / Issue**: PR911 audit blockers B2a/B2b — close FuncLib yield purity holes across InvokeScript/Call and Live Skill Workbench ReplaceProgram
+- **Task / Issue**: P1-D restore FrontDoor authoring for dynamic/FanOut effect ops
 - **Date**: 2026-08-12
 - **Agent / Author**: Cursor cloud agent
 
-### 1. Core judgment
+## Judgment
 
-新变体主要交付物是（A/B/C/D）: A
+Conclusion: PASS
 
 结论: PASS
 
@@ -245,12 +246,9 @@ N/A — no lifecycle transaction behavior is added or changed.
 ### 8. Next variant test
 
 「下一个 Mod 变体」将修改: graph 连线 / effect 步骤
+This task restores FrontDoor authoring metadata and tests for existing effect graph ops. The main deliverable is authoring support for existing Layer 2 graph/effect composition, not a new profile enum, preset switch, JSON schema, or runtime pipeline.
 
 ## GAS Composition Gate — Self Review
-
-- **Task / Issue**: Epic #915 P1-A restore FrontDoor authoring for orphaned float/bool opcodes
-- **Date**: 2026-08-12
-- **Agent / Author**: Cursor Cloud Agent
 
 ### 1. Core judgment
 
@@ -258,23 +256,22 @@ N/A — no lifecycle transaction behavior is added or changed.
 
 结论: PASS
 
-一句话理由: 本任务只把已有 runtime `GraphNodeOp` 扩展进既有 ControlFlow authoring matrix 与测试，不新增 profile enum、preset 开关、JSON schema 或平行编译管线。
+一句话理由: Restores graph node authoring for existing effect ops so mods can compose existing behavior through FrontDoor.
 
 ### 2. Layer assignment
 
 | 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
 |-----------|-----------------|----------|
-| Float/bool op FrontDoor authoring | 2 | `GraphControlFlowCompiler` linear authoring matrix |
-| Runtime opcode execution | 0 | Existing `GasGraphOpHandlerTable` handlers |
-| Coverage tracking | 2 | `graph_node_op_coverage.registry.json` |
-| FrontDoor tests | 2 | GAS graph authoring tests |
+| FrontDoor field requirements for effect graph ops | 2 | Graph authoring registry / FrontDoor validation |
+| Linear Effect authoring category wiring | 2 | Existing graph op authoring catalog |
+| Compile and missing-field coverage | 2 | Existing FrontDoor graph tests |
 
 ### 3. Reuse list
 
-- Handlers: existing `ConstBool`, `DivFloat`, `MinFloat`, `MaxFloat`, `ClampFloat`, `AbsFloat`, `NegFloat`, `CompareGtFloat` handlers in `GasGraphOpHandlerTable`.
-- Queues / Systems: existing ControlFlow compiler, FrontDoor compile path, graph execution and GAS kind policy.
-- Resolvers / Registries: existing graph op parser, graph program package, source map, coverage registry.
-- Existing presets / graphs: existing ControlFlow graph JSON model with `controlEdges` and `valueEdges`.
+- Handlers: Existing effect handlers for `ApplyEffectDynamic`, `FanOutApplyEffect`, `FanOutApplyEffectDynamic`, `FanOutDispatchEffect`, `FanOutDispatchEffectDynamic`
+- Queues / Systems: Existing graph compile pipeline and GAS effect processing
+- Resolvers / Registries: Existing FrontDoor authoring registry, graph op coverage registry, symbol patcher support
+- Existing presets / graphs: Existing graph/effect authoring assets and effect template catalog
 
 ### 4. New Layer 0 ops (if any)
 
@@ -282,13 +279,13 @@ N/A
 
 ### 5. Transaction boundary
 
-必须原子 rollback 的步骤: N/A；本任务不改变 effect transaction execution.
+N/A. This change does not alter runtime transaction behavior.
 
 ### 6. Config SSOT
 
-行为配置落在: graph authoring assets / tests through existing ControlFlow nodes (`GAS/graphs.json` shape).
+行为配置落在: FrontDoor graph authoring metadata and tests for existing graph ops.
 
-是否新增 JSON schema: NO.
+是否新增 JSON schema: NO
 
 ### 7. Red flag scan
 
@@ -301,7 +298,7 @@ N/A
 
 「下一个 Mod 变体」将修改: graph 连线 / effect 步骤
 
-## GAS Composition Gate — Self Review
+## Reuse / Add Table
 
 - **Task / Issue**: Effect-phase authoring expressiveness for FuncLib InvokeScript and BranchBool
 - **Date**: 2026-08-12
@@ -363,3 +360,10 @@ N/A
 - **Agent / Author**: Cursor cloud agent
 
 结论: PASS — 既有 L0 tag/display opcode 补回 ControlFlow 作者白名单、校验与 emit；无新 profile enum / fallback。
+| 类型 | 项 |
+|------|-----|
+| 复用 | Existing FrontDoor graph authoring registry, graph compiler, effect op handlers, symbol patcher, coverage registry |
+| 新增 Layer 0 op | N/A |
+| 新增 Layer 1 | N/A |
+| 新增 Layer 2 | Restored authoring metadata/tests for existing effect ops |
+| 禁止 | New profile DSL, parallel loader, effect preset switches, runtime fallback |

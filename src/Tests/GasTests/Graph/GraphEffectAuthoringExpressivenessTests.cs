@@ -230,6 +230,8 @@ namespace Ludots.Tests.Gas.Graph
 
             GraphProgramPackage package = compiled.Package!.Value;
             GraphInstruction[] program = package.Program;
+            GraphInstruction target = SingleInstruction(program, GraphNodeOp.LoadExplicitTarget);
+            GraphInstruction templateId = SingleInstruction(program, GraphNodeOp.ConstInt);
             GraphInstruction fanStatic = SingleInstruction(program, GraphNodeOp.FanOutApplyEffect);
             GraphInstruction applyDynamic = SingleInstruction(program, GraphNodeOp.ApplyEffectDynamic);
             GraphInstruction fanDynamic = SingleInstruction(program, GraphNodeOp.FanOutApplyEffectDynamic);
@@ -245,6 +247,10 @@ namespace Ludots.Tests.Gas.Graph
                 Assert.That(package.Symbols[dispatchStatic.Imm], Is.EqualTo("effect.dispatch.static"));
                 Assert.That(package.Symbols[dispatchStatic.Dst], Is.EqualTo("TargetToResolved"));
                 Assert.That(dispatchDynamic.A, Is.EqualTo(0));
+                Assert.That(applyDynamic.A, Is.EqualTo(target.Dst));
+                Assert.That(applyDynamic.B, Is.EqualTo(templateId.Dst));
+                Assert.That(fanDynamic.A, Is.EqualTo(templateId.Dst));
+                Assert.That(dispatchDynamic.A, Is.EqualTo(templateId.Dst));
                 Assert.That(package.Symbols[dispatchDynamic.Dst], Is.EqualTo("TargetToResolved"));
             });
 
@@ -310,6 +316,63 @@ namespace Ludots.Tests.Gas.Graph
                 d.Code == GraphDiagnosticCodes.MissingNodeRef &&
                 d.NodeId == "fan" &&
                 d.Message.Contains("effectTemplate", StringComparison.Ordinal)));
+        }
+
+        [Test]
+        public void FrontDoor_EffectFanOutApplyEffectDynamic_RequiresValueInput()
+        {
+            GraphControlFlowCompileResult compiled = CompileFrontDoor(
+                """
+                {
+                  "kind": "Effect",
+                  "entry": "fan",
+                  "nodes": [
+                    { "id": "fan", "op": "FanOutApplyEffectDynamic" }
+                  ],
+                  "controlEdges": [],
+                  "valueEdges": []
+                }
+                """,
+                "tests.effect.fanout-apply-effect-dynamic-missing-value");
+
+            Assert.That(compiled.Succeeded, Is.False);
+            Assert.That(compiled.Package.HasValue, Is.False);
+            Assert.That(compiled.Diagnostics, Has.Some.Matches<GraphDiagnostic>(d =>
+                d.Code == GraphDiagnosticCodes.MissingValueInput &&
+                d.NodeId == "fan" &&
+                d.Message.Contains("'value'", StringComparison.Ordinal)));
+        }
+
+        [Test]
+        public void FrontDoor_EffectFanOutDispatchEffect_RequiresEffectTemplateAndPayloadPreset()
+        {
+            GraphControlFlowCompileResult compiled = CompileFrontDoor(
+                """
+                {
+                  "kind": "Effect",
+                  "entry": "dispatch",
+                  "nodes": [
+                    { "id": "dispatch", "op": "FanOutDispatchEffect" }
+                  ],
+                  "controlEdges": [],
+                  "valueEdges": []
+                }
+                """,
+                "tests.effect.fanout-dispatch-effect-missing-fields");
+
+            Assert.That(compiled.Succeeded, Is.False);
+            Assert.That(compiled.Package.HasValue, Is.False);
+            Assert.Multiple(() =>
+            {
+                Assert.That(compiled.Diagnostics, Has.Some.Matches<GraphDiagnostic>(d =>
+                    d.Code == GraphDiagnosticCodes.MissingNodeRef &&
+                    d.NodeId == "dispatch" &&
+                    d.Message.Contains("effectTemplate", StringComparison.Ordinal)));
+                Assert.That(compiled.Diagnostics, Has.Some.Matches<GraphDiagnostic>(d =>
+                    d.Code == GraphDiagnosticCodes.MissingNodeRef &&
+                    d.NodeId == "dispatch" &&
+                    d.Message.Contains("payloadPreset", StringComparison.Ordinal)));
+            });
         }
 
         [Test]
