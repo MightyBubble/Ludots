@@ -155,7 +155,7 @@ namespace Ludots.Tests.GAS
                 That(fxId, Is.GreaterThanOrEqualTo(0));
                 That(fyId, Is.GreaterThanOrEqualTo(0));
 
-                var target = world.Create(new AttributeBuffer(), new DirtyFlags(), new ForceInput2D());
+                var target = world.Create(AttributeBuffer.CreateAttached(), new DirtyFlags(), new ForceInput2D());
 
                 GraphExecutor.Execute(world, caster: default, explicitTarget: target, targetPosCm: new IntVector2(0, 0), program, api);
 

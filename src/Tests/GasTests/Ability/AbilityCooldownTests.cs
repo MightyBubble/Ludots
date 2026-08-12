@@ -38,7 +38,7 @@ namespace Ludots.Tests.GAS
         public void CDAttribute_CountsDown_ViaAttributeBuffer()
         {
             using var world = World.Create();
-            var entity = world.Create(new AttributeBuffer());
+            var entity = world.Create(AttributeBuffer.CreateAttached());
 
             int cdAttrId = AttributeRegistry.Register("Test.Cooldown.Countdown");
             ref var buf = ref world.Get<AttributeBuffer>(entity);
@@ -60,7 +60,7 @@ namespace Ludots.Tests.GAS
         public void CDAttribute_Reset_SetsToFullValue()
         {
             using var world = World.Create();
-            var entity = world.Create(new AttributeBuffer());
+            var entity = world.Create(AttributeBuffer.CreateAttached());
 
             int cdAttrId = AttributeRegistry.Register("Test.Cooldown.Reset");
             ref var buf = ref world.Get<AttributeBuffer>(entity);
@@ -76,7 +76,7 @@ namespace Ludots.Tests.GAS
         public void CDAttribute_Reduction_ReducesByAmount()
         {
             using var world = World.Create();
-            var entity = world.Create(new AttributeBuffer());
+            var entity = world.Create(AttributeBuffer.CreateAttached());
 
             int cdAttrId = AttributeRegistry.Register("Test.Cooldown.Reduction");
             ref var buf = ref world.Get<AttributeBuffer>(entity);
@@ -96,7 +96,7 @@ namespace Ludots.Tests.GAS
         public void CDAttribute_Reduction_ClampsToZero()
         {
             using var world = World.Create();
-            var entity = world.Create(new AttributeBuffer());
+            var entity = world.Create(AttributeBuffer.CreateAttached());
 
             int cdAttrId = AttributeRegistry.Register("Test.Cooldown.Clamp");
             ref var buf = ref world.Get<AttributeBuffer>(entity);
@@ -115,7 +115,7 @@ namespace Ludots.Tests.GAS
         public void MultipleAbilities_IndependentCDs()
         {
             using var world = World.Create();
-            var entity = world.Create(new AttributeBuffer());
+            var entity = world.Create(AttributeBuffer.CreateAttached());
 
             int cdAttrA = AttributeRegistry.Register("Test.Cooldown.Multi.A");
             int cdAttrB = AttributeRegistry.Register("Test.Cooldown.Multi.B");

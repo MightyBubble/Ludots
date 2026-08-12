@@ -30,7 +30,7 @@ namespace Ludots.Tests.GasTests.UI
             int attrId = AttributeRegistry.Register("tests.panel.hp");
             using World world = World.Create();
             Entity owner = world.Create();
-            world.Add(owner, new AttributeBuffer());
+            world.Add(owner, AttributeBuffer.CreateAttached());
             ref AttributeBuffer buffer = ref world.Get<AttributeBuffer>(owner);
             buffer.SetBase(attrId, 77f);
 
@@ -88,7 +88,7 @@ namespace Ludots.Tests.GasTests.UI
             AttributeRegistry.Register("tests.panel.hp");
             using World world = World.Create();
             Entity owner = world.Create();
-            world.Add(owner, new AttributeBuffer());
+            world.Add(owner, AttributeBuffer.CreateAttached());
 
             var reader = new PanelProjectionReader(world);
             var binding = new PanelVariableBinding(

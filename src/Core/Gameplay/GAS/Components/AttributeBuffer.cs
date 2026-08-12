@@ -1,100 +1,145 @@
 using System;
-using Ludots.Core.Gameplay.GAS.Registry;
+using System.Runtime.CompilerServices;
+using Arch.Core;
+using Ludots.Core.Gameplay.GAS.Capacity;
 
 namespace Ludots.Core.Gameplay.GAS.Components
 {
     /// <summary>
-    /// Zero-GC storage for dynamic attributes.
-    /// Uses a fixed buffer to avoid heap allocations.
-    /// Max 64 attributes supported per entity with this struct.
+    /// Entity-side handle into session <see cref="GasWorldColumnStore"/> attribute columns.
+    /// Capacity truth is the frozen plan / world store — not an embedded float array.
     /// </summary>
-    public unsafe struct AttributeBuffer
+    public struct AttributeBuffer
     {
+        /// <summary>0 matches default(AttributeBuffer) so archetype Create without Attach fails closed.</summary>
+        public const int InvalidRow = 0;
+
+        /// <summary>
+        /// Obsolete bridge for call sites still using the old 64-slot constant.
+        /// Prefer <see cref="GasLoadTimeCapacitySession.Plan"/>.AttributeSlotCount for loops.
+        /// </summary>
         public const int MAX_ATTRS = 64;
 
-        public fixed float BaseValues[MAX_ATTRS];
-        public fixed float CapValues[MAX_ATTRS];
-        public fixed float CurrentValues[MAX_ATTRS];
-        public ulong DefinedMask;
-        
-        // Modifiers could be aggregated here or calculated on the fly.
-        // For simplicity in this 0GC version, we update CurrentValues directly 
-        // when BaseValues change or when effects are applied.
-        
-        /// <summary>
-        /// Gets the current value of an attribute by ID.
-        /// </summary>
+        public int RowId;
+
+        public static AttributeBuffer CreateAttached()
+        {
+            var store = GasLoadTimeCapacitySession.ActiveStore;
+            return new AttributeBuffer { RowId = store.AllocateEntityRow() };
+        }
+
+        public static void Release(ref AttributeBuffer buffer)
+        {
+            if (buffer.RowId == InvalidRow)
+            {
+                return;
+            }
+
+            GasLoadTimeCapacitySession.ActiveStore.ReleaseEntityRow(buffer.RowId);
+            buffer.RowId = InvalidRow;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public float GetCurrent(int attributeId)
         {
-            if (attributeId < 0 || attributeId >= MAX_ATTRS) return 0f;
-            return CurrentValues[attributeId];
+            return Store().GetCurrent(RequireRow(), attributeId);
         }
 
-        /// <summary>
-        /// Gets the base value of an attribute by ID.
-        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public float GetBase(int attributeId)
         {
-            if (attributeId < 0 || attributeId >= MAX_ATTRS) return 0f;
-            if (AttributeRegistry.TryGetConstraints(attributeId, out var constraints) &&
-                constraints.ClampCurrentToBase)
-            {
-                return CapValues[attributeId];
-            }
-
-            return BaseValues[attributeId];
+            return Store().GetBase(RequireRow(), attributeId);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool HasAttribute(int attributeId)
         {
-            if (attributeId < 0 || attributeId >= MAX_ATTRS)
-            {
-                return false;
-            }
-
-            return (DefinedMask & (1UL << attributeId)) != 0UL;
+            return Store().HasAttribute(RequireRow(), attributeId);
         }
 
-        /// <summary>
-        /// Sets the base value of an attribute by ID.
-        /// Also re-applies constraints to CurrentValue (e.g. ClampCurrentToBase, Min/Max).
-        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void SetBase(int attributeId, float value)
         {
-            if (attributeId < 0 || attributeId >= MAX_ATTRS) return;
-            DefinedMask |= 1UL << attributeId;
-            BaseValues[attributeId] = value;
-            CapValues[attributeId] = value;
-            // Re-apply current value through constraints.
-            // Uses the new base as default current (reset to base), then SetCurrent applies clamping.
-            SetCurrent(attributeId, value);
+            Store().SetBase(RequireRow(), attributeId, value);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void SetCurrent(int attributeId, float value)
         {
-            SetCurrentInternal(attributeId, value, clampToCapacity: true);
+            Store().SetCurrent(RequireRow(), attributeId, value);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void SetAggregatedCurrent(int attributeId, float value)
         {
-            SetCurrentInternal(attributeId, value, clampToCapacity: false);
+            Store().SetAggregatedCurrent(RequireRow(), attributeId, value);
         }
 
-        private void SetCurrentInternal(int attributeId, float value, bool clampToCapacity)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal float GetRawBase(int attributeId) => Store().GetRawBase(RequireRow(), attributeId);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal float GetRawCap(int attributeId) => Store().GetRawCap(RequireRow(), attributeId);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal void SetRawCap(int attributeId, float value) => Store().SetRawCap(RequireRow(), attributeId, value);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal void SetRawCurrentUnconstrained(int attributeId, float value) =>
+            Store().SetRawCurrentUnconstrained(RequireRow(), attributeId, value);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private int RequireRow()
         {
-            if (attributeId < 0 || attributeId >= MAX_ATTRS) return;
-            DefinedMask |= 1UL << attributeId;
-            if (AttributeRegistry.TryGetConstraints(attributeId, out var constraints))
+            if (RowId == InvalidRow || RowId < 0)
             {
-                if (clampToCapacity && constraints.ClampCurrentToBase)
-                {
-                    float max = GetBase(attributeId);
-                    if (value > max) value = max;
-                }
-                if (constraints.HasMin && value < constraints.Min) value = constraints.Min;
-                if (constraints.HasMax && value > constraints.Max) value = constraints.Max;
+                throw new InvalidOperationException(
+                    "AttributeBuffer has no world-store row. Use AttributeBuffer.CreateAttached() or GasAttributeRows.Attach.");
             }
-            CurrentValues[attributeId] = value;
+
+            return RowId;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static GasWorldColumnStore Store() => GasLoadTimeCapacitySession.ActiveStore;
+    }
+
+    public static class GasAttributeRows
+    {
+        public static ref AttributeBuffer Attach(World world, Entity entity)
+        {
+            if (world == null)
+            {
+                throw new ArgumentNullException(nameof(world));
+            }
+
+            if (!world.IsAlive(entity))
+            {
+                throw new InvalidOperationException("Cannot attach attribute row to a dead entity.");
+            }
+
+            var buffer = AttributeBuffer.CreateAttached();
+            if (world.Has<AttributeBuffer>(entity))
+            {
+                ref var existing = ref world.Get<AttributeBuffer>(entity);
+                AttributeBuffer.Release(ref existing);
+                existing = buffer;
+                return ref existing;
+            }
+
+            world.Add(entity, buffer);
+            return ref world.Get<AttributeBuffer>(entity);
+        }
+
+        public static void ReleaseIfPresent(World world, Entity entity)
+        {
+            if (world == null || !world.IsAlive(entity) || !world.Has<AttributeBuffer>(entity))
+            {
+                return;
+            }
+
+            ref var buffer = ref world.Get<AttributeBuffer>(entity);
+            AttributeBuffer.Release(ref buffer);
         }
     }
 }

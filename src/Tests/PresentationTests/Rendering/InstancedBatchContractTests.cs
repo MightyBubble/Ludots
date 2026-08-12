@@ -1046,7 +1046,7 @@ namespace Ludots.Tests.Presentation
                 InstancedBatches = new[] { new InstancedBatchBinding(batchId) },
             });
             var runtime = new PerformerEntityRuntime(world);
-            var owner = world.Create(new AttributeBuffer());
+            var owner = world.Create(AttributeBuffer.CreateAttached());
             ref AttributeBuffer attributes = ref world.Get<AttributeBuffer>(owner);
             attributes.SetCurrent(attributeId, 50f);
             Entity performer = runtime.Create(defId, owner, 0, PresentationAnchorKind.Entity, Vector3.Zero, stableId: 500, Entity.Null, definitions.Get(defId));

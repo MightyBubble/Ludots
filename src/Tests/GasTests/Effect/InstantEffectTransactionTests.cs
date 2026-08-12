@@ -152,7 +152,7 @@ public sealed class InstantEffectTransactionTests
             effectRequests: requests,
             tagOps: tagOps);
         Entity source = world.Create();
-        Entity target = world.Create(new AttributeBuffer(), new DirtyFlags());
+        Entity target = world.Create(AttributeBuffer.CreateAttached(), new DirtyFlags());
         world.Get<AttributeBuffer>(target).SetBase(healthId, 100f);
         requests.Publish(new EffectRequest
         {

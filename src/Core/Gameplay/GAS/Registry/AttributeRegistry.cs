@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Ludots.Core.Gameplay.GAS.Capacity;
 using Ludots.Core.Registry;
 
 namespace Ludots.Core.Gameplay.GAS.Registry
@@ -11,12 +12,15 @@ namespace Ludots.Core.Gameplay.GAS.Registry
     {
         private static readonly Dictionary<string, int> _nameToId = new();
         private static readonly Dictionary<int, string> _idToName = new();
-        private static readonly AttributeConstraints[] _constraints = new AttributeConstraints[MaxAttributes];
+        private static readonly AttributeConstraints[] _constraints =
+            new AttributeConstraints[GasLoadTimeCapacityPlan.AbsoluteMaxAttributeSlots];
         private static int _nextId = 0;
         private static bool _frozen;
 
         public const int InvalidId = -1;
-        public const int MaxAttributes = 64;
+
+        /// <summary>Absolute registration ceiling (RFC-0066). Live session plan may be lower when frozen.</summary>
+        public const int MaxAttributes = GasLoadTimeCapacityPlan.AbsoluteMaxAttributeSlots;
 
         public static bool IsFrozen => _frozen;
 
@@ -53,9 +57,14 @@ namespace Ludots.Core.Gameplay.GAS.Registry
                 return id;
             }
 
-            if (_nextId >= MaxAttributes)
+            int ceiling = RegistrationCeiling();
+            if (_nextId >= ceiling)
             {
-                throw new System.InvalidOperationException($"AttributeBuffer supports up to {MaxAttributes} attributes.");
+                throw new System.InvalidOperationException(
+                    $"Attribute registration would exceed ceiling {ceiling} " +
+                    (GasLoadTimeCapacitySession.IsFrozen
+                        ? "(frozen GasLoadTimeCapacityPlan.AttributeSlotCount)."
+                        : $"(AbsoluteMaxAttributeSlots={MaxAttributes})."));
             }
 
             id = _nextId++;
@@ -102,6 +111,16 @@ namespace Ludots.Core.Gameplay.GAS.Registry
                 id = Register(attributeName);
             }
             SetConstraints(id, in constraints);
+        }
+
+        private static int RegistrationCeiling()
+        {
+            if (GasLoadTimeCapacitySession.IsFrozen)
+            {
+                return GasLoadTimeCapacitySession.Plan.AttributeSlotCount;
+            }
+
+            return MaxAttributes;
         }
 
         public readonly struct AttributeConstraints

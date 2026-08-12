@@ -557,7 +557,7 @@ namespace Ludots.Tests.GAS
 
         private static AttributeBuffer CreateAttributes(int attributeId, float value)
         {
-            var attributes = new AttributeBuffer();
+            var attributes = AttributeBuffer.CreateAttached();
             attributes.SetBase(attributeId, value);
             return attributes;
         }

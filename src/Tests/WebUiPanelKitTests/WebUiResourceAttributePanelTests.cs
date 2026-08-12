@@ -60,7 +60,7 @@ public sealed class WebUiResourceAttributePanelTests
 		RegisterSampleAttributes();
 		using World world = World.Create();
 		Entity owner = world.Create();
-		world.Add(owner, new AttributeBuffer());
+		world.Add(owner, AttributeBuffer.CreateAttached());
 		ref AttributeBuffer buffer = ref world.Get<AttributeBuffer>(owner);
 		buffer.SetBase(AttributeRegistry.GetId("attr.sample.primary"), 12f);
 		buffer.SetBase(AttributeRegistry.GetId("attr.sample.derived"), 3.5f);
@@ -171,7 +171,7 @@ public sealed class WebUiResourceAttributePanelTests
 		RegisterSampleAttributes();
 		using World world = World.Create();
 		Entity owner = world.Create();
-		world.Add(owner, new AttributeBuffer());
+		world.Add(owner, AttributeBuffer.CreateAttached());
 		ref AttributeBuffer buffer = ref world.Get<AttributeBuffer>(owner);
 		buffer.SetBase(AttributeRegistry.GetId("attr.sample.primary"), 1f);
 		buffer.SetBase(AttributeRegistry.GetId("attr.sample.derived"), 2f);
@@ -200,7 +200,7 @@ public sealed class WebUiResourceAttributePanelTests
 		RegisterSampleAttributes();
 		using World world = World.Create();
 		Entity owner = world.Create();
-		world.Add(owner, new AttributeBuffer());
+		world.Add(owner, AttributeBuffer.CreateAttached());
 		ref AttributeBuffer buffer = ref world.Get<AttributeBuffer>(owner);
 		buffer.SetBase(AttributeRegistry.GetId("attr.sample.primary"), 1f);
 		buffer.SetBase(AttributeRegistry.GetId("attr.sample.derived"), 2f);

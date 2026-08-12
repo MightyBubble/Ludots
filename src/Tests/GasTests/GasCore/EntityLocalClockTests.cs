@@ -24,7 +24,7 @@ namespace Ludots.Tests.GAS
         {
             using var world = World.Create();
             int timeScaleId = AttributeRegistry.Register(TimeAttributeNames.ScalePermille);
-            var attributes = new AttributeBuffer();
+            var attributes = AttributeBuffer.CreateAttached();
             attributes.SetBase(timeScaleId, 2000f);
             Entity entity = world.Create(new EntityLocalClock(), attributes);
 
@@ -48,7 +48,7 @@ namespace Ludots.Tests.GAS
         {
             using var world = World.Create();
             int timeScaleId = AttributeRegistry.Register(TimeAttributeNames.ScalePermille);
-            var attributes = new AttributeBuffer();
+            var attributes = AttributeBuffer.CreateAttached();
             attributes.SetBase(timeScaleId, 1000f);
             Entity entity = world.Create(new EntityLocalClock(), attributes);
 
@@ -73,7 +73,7 @@ namespace Ludots.Tests.GAS
         {
             using var world = World.Create();
             int timeScaleId = AttributeRegistry.Register(TimeAttributeNames.ScalePermille);
-            var attributes = new AttributeBuffer();
+            var attributes = AttributeBuffer.CreateAttached();
             attributes.SetBase(timeScaleId, 0f);
             Entity entity = world.Create(new EntityLocalClock(), attributes);
 
@@ -112,7 +112,7 @@ namespace Ludots.Tests.GAS
         {
             using var world = World.Create();
             int timeScaleId = AttributeRegistry.Register(TimeAttributeNames.ScalePermille);
-            world.Create(new EntityLocalClock(), new AttributeBuffer());
+            world.Create(new EntityLocalClock(), AttributeBuffer.CreateAttached());
 
             var policy = new GasClockStepPolicy(stepEveryFixedTicks: 1);
             var localSystem = new EntityLocalClockSystem(world, policy, timeScaleId);
@@ -127,7 +127,7 @@ namespace Ludots.Tests.GAS
         {
             using var world = World.Create();
             int timeScaleId = AttributeRegistry.Register(TimeAttributeNames.ScalePermille);
-            var attributes = new AttributeBuffer();
+            var attributes = AttributeBuffer.CreateAttached();
             attributes.SetBase(timeScaleId, TimeFlowService.MaxScalePermille + 1f);
             world.Create(new EntityLocalClock(), attributes);
 

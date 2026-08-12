@@ -67,7 +67,7 @@ namespace Ludots.Tests.GAS
                 That(fxAttrId, Is.GreaterThanOrEqualTo(0));
                 That(fyAttrId, Is.GreaterThanOrEqualTo(0));
 
-                var target = world.Create(new AttributeBuffer(), new DirtyFlags());
+                var target = world.Create(AttributeBuffer.CreateAttached(), new DirtyFlags());
                 var requests = new EffectRequestQueue();
 
                 // Publish request with CallerParams overriding default force
@@ -133,7 +133,7 @@ namespace Ludots.Tests.GAS
                 int fxAttrId = AttributeRegistry.GetId("Physics.ForceRequestX");
                 int fyAttrId = AttributeRegistry.GetId("Physics.ForceRequestY");
 
-                var target = world.Create(new AttributeBuffer(), new DirtyFlags());
+                var target = world.Create(AttributeBuffer.CreateAttached(), new DirtyFlags());
                 var requests = new EffectRequestQueue();
 
                 int tplId = EffectTemplateIdRegistry.GetId("Effect.Preset.ApplyForce2D");

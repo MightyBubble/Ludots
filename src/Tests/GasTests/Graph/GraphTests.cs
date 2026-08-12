@@ -67,7 +67,7 @@ namespace Ludots.Tests.GAS
             world.Add(e1, new Position { GridPos = new IntVector2(2, 0) });
             world.Add(e1, WorldPositionCm.FromCm(250, 50));
             world.Add(e1, new GameplayTagContainer());
-            world.Add(e1, new AttributeBuffer());
+            world.Add(e1, AttributeBuffer.CreateAttached());
             world.Add(e1, new DirtyFlags());
             unsafe
             {
@@ -82,7 +82,7 @@ namespace Ludots.Tests.GAS
             world.Add(e2, new Position { GridPos = new IntVector2(6, 0) });
             world.Add(e2, WorldPositionCm.FromCm(650, 50));
             world.Add(e2, new GameplayTagContainer());
-            world.Add(e2, new AttributeBuffer());
+            world.Add(e2, AttributeBuffer.CreateAttached());
             world.Add(e2, new DirtyFlags());
             unsafe
             {

@@ -449,7 +449,7 @@ namespace Ludots.Tests.GAS
             int cdMultiplierAttrId = AttributeRegistry.Register("tests.derived-graph.non-linear.cooldown-multiplier");
 
             var entity = world.Create(
-                new AttributeBuffer(),
+                AttributeBuffer.CreateAttached(),
                 new ActiveEffectContainer(),
                 new AttributeAggregateDirty(),
                 new DirtyFlags()
@@ -511,7 +511,7 @@ namespace Ludots.Tests.GAS
             int physEhpAttrId = AttributeRegistry.Register("tests.derived-graph.armor.physical-ehp");
 
             var entity = world.Create(
-                new AttributeBuffer(),
+                AttributeBuffer.CreateAttached(),
                 new ActiveEffectContainer(),
                 new AttributeAggregateDirty(),
                 new DirtyFlags()
@@ -570,7 +570,7 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
 
             var entity = world.Create(
-                new AttributeBuffer(),
+                AttributeBuffer.CreateAttached(),
                 new ActiveEffectContainer(),
                 new AttributeAggregateDirty(),
                 new DirtyFlags()
@@ -603,7 +603,7 @@ namespace Ludots.Tests.GAS
             int derivedAttr = AttributeRegistry.Register("tests.derived-graph.dirty.result");
 
             var entity = world.Create(
-                new AttributeBuffer(),
+                AttributeBuffer.CreateAttached(),
                 new ActiveEffectContainer(),
                 new AttributeAggregateDirty(),
                 new DirtyFlags()
@@ -648,7 +648,7 @@ namespace Ludots.Tests.GAS
 
         private static AttributeBuffer CreateAttributes(int attributeId, float value)
         {
-            var attributes = new AttributeBuffer();
+            var attributes = AttributeBuffer.CreateAttached();
             attributes.SetBase(attributeId, value);
             attributes.SetCurrent(attributeId, value);
             return attributes;

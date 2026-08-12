@@ -70,7 +70,7 @@ namespace Ludots.Tests.GAS
                 using var world = World.Create();
                 int fxId = AttributeRegistry.Register("Physics.ForceRequestX");
                 int fyId = AttributeRegistry.Register("Physics.ForceRequestY");
-                var e = world.Create(new AttributeBuffer(), new ForceInput2D());
+                var e = world.Create(AttributeBuffer.CreateAttached(), new ForceInput2D());
                 ref var attr = ref world.Get<AttributeBuffer>(e);
                 attr.SetCurrent(fxId, 3f);
                 attr.SetCurrent(fyId, 4f);
@@ -144,7 +144,7 @@ namespace Ludots.Tests.GAS
         {
             using var world = World.Create();
             int attributeId = AttributeRegistry.Register("Camera.Behavior.TestMoveX");
-            Entity target = world.Create(new AttributeBuffer(), new CameraBehaviorInputTarget());
+            Entity target = world.Create(AttributeBuffer.CreateAttached(), new CameraBehaviorInputTarget());
             world.Get<AttributeBuffer>(target).SetCurrent(attributeId, 1f);
 
             var state = new CameraBehaviorInputState();

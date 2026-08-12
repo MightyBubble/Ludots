@@ -901,7 +901,7 @@ namespace Ludots.Core.Config
 
         private static unsafe void SetAttributeBuffer(Entity entity, JsonNode data)
         {
-            var buffer = default(AttributeBuffer);
+            var buffer = AttributeBuffer.CreateAttached();
             if (data is not JsonObject obj)
             {
                 throw new InvalidOperationException("AttributeBuffer requires an object payload.");
@@ -949,12 +949,13 @@ namespace Ludots.Core.Config
             }
 
             var snapshot = default(AttributeLastSnapshot);
-            ulong definedMask = buffer.DefinedMask;
-            while (definedMask != 0UL)
+            int slots = Ludots.Core.Gameplay.GAS.Capacity.GasLoadTimeCapacitySession.Plan.AttributeSlotCount;
+            for (int attributeId = 0; attributeId < slots; attributeId++)
             {
-                int attributeId = System.Numerics.BitOperations.TrailingZeroCount(definedMask);
-                definedMask &= definedMask - 1UL;
-                snapshot.Values[attributeId] = buffer.GetCurrent(attributeId);
+                if (buffer.HasAttribute(attributeId))
+                {
+                    snapshot.Values[attributeId] = buffer.GetCurrent(attributeId);
+                }
             }
 
             entity.Add(buffer);

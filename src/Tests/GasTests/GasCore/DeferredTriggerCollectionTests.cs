@@ -35,7 +35,7 @@ namespace Ludots.Tests.GAS
             var system = new DeferredTriggerCollectionSystem(world, queue, new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 
             var e = world.Create();
-            var attrs = new AttributeBuffer();
+            var attrs = AttributeBuffer.CreateAttached();
             attrs.SetBase(0, 20f);
             attrs.SetCurrent(0, 20f);
             world.Add(e, attrs);
@@ -132,7 +132,7 @@ namespace Ludots.Tests.GAS
 
             for (int i = 0; i < 10_000; i++)
             {
-                Entity entity = world.Create(new DirtyFlags(), new AttributeBuffer());
+                Entity entity = world.Create(new DirtyFlags(), AttributeBuffer.CreateAttached());
                 if (i < dirtyEntities.Length)
                 {
                     world.Get<DirtyFlags>(entity).MarkAttributeDirty(0);
@@ -181,7 +181,7 @@ namespace Ludots.Tests.GAS
             var active = new DirtyEntityQueue(1);
             var tagOps = new TagOps(active, new TagRuleRegistry());
             Entity queued = world.Create(new DirtyFlags());
-            var attributes = new AttributeBuffer();
+            var attributes = AttributeBuffer.CreateAttached();
             attributes.SetBase(0, 100f);
             attributes.SetCurrent(0, 100f);
             Entity target = world.Create(attributes, new DirtyFlags());
@@ -203,7 +203,7 @@ namespace Ludots.Tests.GAS
             var active = new DirtyEntityQueue(1);
             var tagOps = new TagOps(active, new TagRuleRegistry());
             Entity queued = world.Create(new DirtyFlags());
-            var attributes = new AttributeBuffer();
+            var attributes = AttributeBuffer.CreateAttached();
             attributes.SetBase(0, 100f);
             attributes.SetCurrent(0, 100f);
             attributes.SetBase(1, 50f);
@@ -232,7 +232,7 @@ namespace Ludots.Tests.GAS
             var active = new DirtyEntityQueue(4);
             var tagOps = new TagOps(active, new TagRuleRegistry());
             var system = new DeferredTriggerCollectionSystem(world, triggers, tagOps, active);
-            var attributes = new AttributeBuffer();
+            var attributes = AttributeBuffer.CreateAttached();
             attributes.SetCurrent(0, 1f);
             var snapshot = default(AttributeLastSnapshot);
             unsafe { snapshot.Values[0] = 1f; }

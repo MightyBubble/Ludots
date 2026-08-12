@@ -174,7 +174,7 @@ namespace Ludots.Tests.GAS
             var world = World.Create();
             try
             {
-                var entity = world.Create(new AttributeBuffer());
+                var entity = world.Create(AttributeBuffer.CreateAttached());
                 var api = new GasGraphRuntimeApi(world, null, null, null);
 
                 // Chain: F[0]=100, F[1]=30, F[2]=Sub(100,30)=70, F[3]=5,

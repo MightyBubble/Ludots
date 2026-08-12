@@ -1,4 +1,6 @@
+using System;
 using Arch.Core;
+using Ludots.Core.Gameplay.GAS.Capacity;
 using Ludots.Core.Gameplay.GAS.Components;
 
 namespace Ludots.Core.Gameplay.GAS
@@ -30,7 +32,6 @@ namespace Ludots.Core.Gameplay.GAS
             RequireTagOps(tagOps);
             EnsureDirtyFlags(world, target);
             ref AttributeBuffer attributes = ref world.Get<AttributeBuffer>(target);
-            AttributeBuffer attributesBefore = attributes;
             DirtyFlags dirtyBefore = world.Get<DirtyFlags>(target);
             float before = attributes.GetCurrent(attributeId);
             attributes.SetCurrent(attributeId, value);
@@ -47,7 +48,7 @@ namespace Ludots.Core.Gameplay.GAS
             }
             catch
             {
-                attributes = attributesBefore;
+                attributes.SetCurrent(attributeId, before);
                 world.Get<DirtyFlags>(target) = dirtyBefore;
                 throw;
             }
@@ -65,14 +66,15 @@ namespace Ludots.Core.Gameplay.GAS
             RequireTagOps(tagOps);
             EnsureDirtyFlags(world, target);
             ref AttributeBuffer attributes = ref world.Get<AttributeBuffer>(target);
-            AttributeBuffer attributesBefore = attributes;
             DirtyFlags dirtyBefore = world.Get<DirtyFlags>(target);
-            float beforeBase = attributes.GetBase(attributeId);
+            float beforeBase = attributes.GetRawBase(attributeId);
+            float beforeCap = attributes.GetRawCap(attributeId);
             float beforeCurrent = attributes.GetCurrent(attributeId);
+            bool wasDefined = attributes.HasAttribute(attributeId);
             attributes.SetBase(attributeId, value);
             float afterBase = attributes.GetBase(attributeId);
             float afterCurrent = attributes.GetCurrent(attributeId);
-            if (beforeBase == afterBase && beforeCurrent == afterCurrent)
+            if (beforeBase == afterBase && beforeCurrent == afterCurrent && wasDefined)
             {
                 return;
             }
@@ -84,7 +86,13 @@ namespace Ludots.Core.Gameplay.GAS
             }
             catch
             {
-                attributes = attributesBefore;
+                if (wasDefined)
+                {
+                    attributes.SetBase(attributeId, beforeBase);
+                    attributes.SetRawCap(attributeId, beforeCap);
+                    attributes.SetCurrent(attributeId, beforeCurrent);
+                }
+
                 world.Get<DirtyFlags>(target) = dirtyBefore;
                 throw;
             }
@@ -101,42 +109,62 @@ namespace Ludots.Core.Gameplay.GAS
 
             RequireTagOps(tagOps);
             ref AttributeBuffer attributes = ref world.Get<AttributeBuffer>(target);
-            Span<float> beforeValues = stackalloc float[AttributeBuffer.MAX_ATTRS];
-            ulong touchedMask = 0UL;
+            int slots = GasLoadTimeCapacitySession.Plan.AttributeSlotCount;
+            Span<float> beforeValues = stackalloc float[GasLoadTimeCapacityPlan.AbsoluteMaxAttributeSlots];
+            Span<ulong> touchedWords = stackalloc ulong[DirtyFlags.MAX_ATTR_DIRTY_WORDS];
+            touchedWords.Clear();
             for (int i = 0; i < modifiers.Count; i++)
             {
                 int attributeId = modifiers.Get(i).AttributeId;
-                if (attributeId < 0 || attributeId >= AttributeBuffer.MAX_ATTRS)
+                if ((uint)attributeId >= (uint)slots)
+                {
+                    throw new ArgumentOutOfRangeException(
+                        nameof(attributeId),
+                        attributeId,
+                        $"Modifier attributeId exceeds plan slots {slots}.");
+                }
+
+                int word = attributeId >> 6;
+                ulong bit = 1UL << (attributeId & 63);
+                if ((touchedWords[word] & bit) != 0UL)
                 {
                     continue;
                 }
 
-                ulong bit = 1UL << attributeId;
-                if ((touchedMask & bit) != 0UL)
-                {
-                    continue;
-                }
-
-                touchedMask |= bit;
+                touchedWords[word] |= bit;
                 beforeValues[attributeId] = attributes.GetCurrent(attributeId);
             }
 
-            if (touchedMask == 0UL)
+            bool anyTouched = false;
+            for (int w = 0; w < touchedWords.Length; w++)
+            {
+                if (touchedWords[w] != 0UL)
+                {
+                    anyTouched = true;
+                    break;
+                }
+            }
+
+            if (!anyTouched)
             {
                 return;
             }
 
             EnsureDirtyFlags(world, target);
-            AttributeBuffer attributesBefore = attributes;
             DirtyFlags dirtyBefore = world.Get<DirtyFlags>(target);
+            var store = GasLoadTimeCapacitySession.ActiveStore;
+            int snapRow = store.AllocateEntityRow();
+            store.CopyAttributeRow(attributes.RowId, snapRow);
             EffectModifierOps.Apply(in modifiers, ref attributes);
 
             bool hasDirty = false;
-            ulong changedMask = 0UL;
-            for (int attributeId = 0; attributeId < AttributeBuffer.MAX_ATTRS; attributeId++)
+            Span<ulong> changedWords = stackalloc ulong[DirtyFlags.MAX_ATTR_DIRTY_WORDS];
+            changedWords.Clear();
+            for (int attributeId = 0; attributeId < slots; attributeId++)
             {
-                ulong bit = 1UL << attributeId;
-                if ((touchedMask & bit) == 0UL)
+                int word = attributeId >> 6;
+                ulong bit = 1UL << (attributeId & 63);
+                if ((touchedWords[word] & bit) == 0UL)
                 {
                     continue;
                 }
@@ -146,13 +174,9 @@ namespace Ludots.Core.Gameplay.GAS
                     continue;
                 }
 
-                if (!hasDirty)
-                {
-                    hasDirty = true;
-                }
-
+                hasDirty = true;
                 world.Get<DirtyFlags>(target).MarkAttributeDirty(attributeId);
-                changedMask |= bit;
+                changedWords[word] |= bit;
             }
 
             if (hasDirty)
@@ -163,19 +187,22 @@ namespace Ludots.Core.Gameplay.GAS
                 }
                 catch
                 {
-                    attributes = attributesBefore;
+                    store.CopyAttributeRow(snapRow, attributes.RowId);
                     world.Get<DirtyFlags>(target) = dirtyBefore;
+                    store.ReleaseEntityRow(snapRow);
                     throw;
                 }
 
-                for (int attributeId = 0; attributeId < AttributeBuffer.MAX_ATTRS; attributeId++)
+                for (int attributeId = 0; attributeId < slots; attributeId++)
                 {
-                    if ((changedMask & (1UL << attributeId)) != 0UL)
+                    if ((changedWords[attributeId >> 6] & (1UL << (attributeId & 63))) != 0UL)
                     {
                         MarkPresentationChanged(world, target, attributeId);
                     }
                 }
             }
+
+            store.ReleaseEntityRow(snapRow);
         }
 
         private static void EnsureDirtyFlags(World world, Entity target)

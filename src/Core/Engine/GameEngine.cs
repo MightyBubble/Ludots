@@ -1261,7 +1261,9 @@ namespace Ludots.Core.Engine
             var graphEdgeCostOverlay = new GraphEdgeCostOverlay();
             var cameraBehaviorInput = new CameraBehaviorInputState();
             var cameraImpulseRuntime = new CameraImpulseRuntime();
-            World.Create(new AttributeBuffer(), new DirtyFlags(), new CameraBehaviorInputTarget());
+            // RFC-0066 P1 interim: bind legacy-sized world attribute columns until a post-registration freeze hook lands.
+            Ludots.Core.Gameplay.GAS.Capacity.GasLoadTimeCapacitySession.EnsureLegacyPlanAndStore();
+            World.Create(AttributeBuffer.CreateAttached(), new DirtyFlags(), new CameraBehaviorInputTarget());
             var attributeSinks = new AttributeSinkRegistry();
             GasAttributeSinks.RegisterBuiltins(attributeSinks, cameraBehaviorInput);
             GraphAttributeSinks.RegisterBuiltins(attributeSinks, graphEdgeCostOverlay);

@@ -274,7 +274,7 @@ namespace GenreInfoShowcaseMod.Runtime
                 return;
             }
 
-            AttributeBuffer attributes = world.TryGet(entity, out AttributeBuffer existing) ? existing : new AttributeBuffer();
+            AttributeBuffer attributes = world.TryGet(entity, out AttributeBuffer existing) ? existing : AttributeBuffer.CreateAttached();
             for (int i = 0; i < values.Length; i++)
             {
                 int attributeId = AttributeRegistry.Register(values[i].Name);

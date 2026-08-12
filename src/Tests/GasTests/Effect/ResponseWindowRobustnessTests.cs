@@ -44,7 +44,7 @@ namespace Ludots.Tests.GAS
                 var budget = new GasBudget();
                 var queue = new EffectRequestQueue();
 
-                var target = world.Create(new AttributeBuffer(), new DirtyFlags());
+                var target = world.Create(AttributeBuffer.CreateAttached(), new DirtyFlags());
                 ref var attributes = ref world.Get<AttributeBuffer>(target);
                 attributes.SetBase(attrHealth, 100f);
                 attributes.SetCurrent(attrHealth, 100f);

@@ -114,7 +114,7 @@ public sealed class ArchPersistenceCharacterizationTests
     public void BinaryWorldRoundTripCurrentlyFailsOrCorruptsAttributeBufferFixedStorage()
     {
         using World world = World.Create();
-        var attributes = new AttributeBuffer();
+        var attributes = AttributeBuffer.CreateAttached();
         attributes.SetBase(1, 12.5f);
         attributes.SetCurrent(1, 7.25f);
         attributes.SetBase(7, 99f);
@@ -148,7 +148,7 @@ public sealed class ArchPersistenceCharacterizationTests
     public void CoreBinarySerializerPreservesAttributeBufferFixedStorage()
     {
         using World world = World.Create();
-        var attributes = new AttributeBuffer();
+        var attributes = AttributeBuffer.CreateAttached();
         attributes.SetBase(1, 12.5f);
         attributes.SetCurrent(1, 7.25f);
         attributes.SetBase(7, 99f);

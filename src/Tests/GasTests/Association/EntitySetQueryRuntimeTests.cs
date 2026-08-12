@@ -588,7 +588,7 @@ namespace Ludots.Tests.GAS
                 new MapEntity(),
                 new Team { Id = teamId },
                 new EntityTemplateKeyRef { TemplateKeyId = templateKeyId },
-                new AttributeBuffer(),
+                AttributeBuffer.CreateAttached(),
                 new GameplayTagContainer());
             ref AttributeBuffer attributes = ref world.Get<AttributeBuffer>(entity);
             attributes.SetBase(productionId, production);

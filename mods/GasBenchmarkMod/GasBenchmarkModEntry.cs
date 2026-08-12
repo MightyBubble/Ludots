@@ -127,6 +127,7 @@ namespace GasBenchmarkMod
                 var e = world.Create(archetype);
                 entities[i] = e;
 
+                world.Set(e, AttributeBuffer.CreateAttached());
                 ref var attr = ref world.Get<AttributeBuffer>(e);
                 attr.SetBase(healthId, 100f);
                 attr.SetBase(manaId, 100f);

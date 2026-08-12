@@ -1,27 +1,32 @@
+using Ludots.Core.Gameplay.GAS.Capacity;
+
 namespace Ludots.Core.Gameplay.GAS.Components
 {
+    /// <summary>
+    /// Presentation dirty bits per attribute id. Absolute-max fixed layout; validate against plan on write.
+    /// </summary>
     public unsafe struct GameplayAttributeChangedBits
     {
-        public fixed byte Bits[AttributeBuffer.MAX_ATTRS];
+        public const int Capacity = GasLoadTimeCapacityPlan.AbsoluteMaxAttributeSlots;
+
+        public fixed byte Bits[Capacity];
 
         public void Mark(int attributeId)
         {
-            if ((uint)attributeId >= AttributeBuffer.MAX_ATTRS)
-            {
-                return;
-            }
-
+            ValidateAttributeId(attributeId);
             Bits[attributeId] = 1;
         }
 
         public bool IsSet(int attributeId)
         {
-            return (uint)attributeId < AttributeBuffer.MAX_ATTRS && Bits[attributeId] != 0;
+            ValidateAttributeId(attributeId);
+            return Bits[attributeId] != 0;
         }
 
         public bool IsAnyBitSet()
         {
-            for (int i = 0; i < AttributeBuffer.MAX_ATTRS; i++)
+            int slots = ActiveAttributeSlotCount();
+            for (int i = 0; i < slots; i++)
             {
                 if (Bits[i] != 0)
                 {
@@ -34,9 +39,29 @@ namespace Ludots.Core.Gameplay.GAS.Components
 
         public void Clear()
         {
-            for (int i = 0; i < AttributeBuffer.MAX_ATTRS; i++)
+            int slots = ActiveAttributeSlotCount();
+            for (int i = 0; i < slots; i++)
             {
                 Bits[i] = 0;
+            }
+        }
+
+        private static int ActiveAttributeSlotCount()
+        {
+            return GasLoadTimeCapacitySession.IsFrozen
+                ? GasLoadTimeCapacitySession.Plan.AttributeSlotCount
+                : Capacity;
+        }
+
+        private static void ValidateAttributeId(int attributeId)
+        {
+            int slots = ActiveAttributeSlotCount();
+            if ((uint)attributeId >= (uint)slots)
+            {
+                throw new System.ArgumentOutOfRangeException(
+                    nameof(attributeId),
+                    attributeId,
+                    $"attributeId must be in [0, {slots - 1}].");
             }
         }
     }

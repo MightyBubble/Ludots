@@ -131,7 +131,7 @@ namespace Ludots.Tests.GAS
             AttributeRegistry.SetConstraints(healthId, AttributeRegistry.AttributeConstraints.ClampToBase());
 
             using var world = World.Create();
-            var entity = world.Create(new AttributeBuffer(), new ActiveEffectContainer());
+            var entity = world.Create(AttributeBuffer.CreateAttached(), new ActiveEffectContainer());
             ref var attr = ref world.Get<AttributeBuffer>(entity);
             attr.SetBase(healthId, 100f);
             attr.SetCurrent(healthId, 70f);
@@ -150,7 +150,7 @@ namespace Ludots.Tests.GAS
             AttributeRegistry.SetConstraints(healthId, AttributeRegistry.AttributeConstraints.ClampToBase());
 
             using var world = World.Create();
-            var entity = world.Create(new AttributeBuffer(), new ActiveEffectContainer(), new AttributeAggregateDirty(), new DirtyFlags());
+            var entity = world.Create(AttributeBuffer.CreateAttached(), new ActiveEffectContainer(), new AttributeAggregateDirty(), new DirtyFlags());
             ref var attr = ref world.Get<AttributeBuffer>(entity);
             attr.SetBase(healthId, 100f);
             attr.SetCurrent(healthId, 70f);
@@ -181,7 +181,7 @@ namespace Ludots.Tests.GAS
             int durabilityId = EnsureAttribute("Durability");
 
             using var world = World.Create();
-            var entity = world.Create(new AttributeBuffer(), new ActiveEffectContainer());
+            var entity = world.Create(AttributeBuffer.CreateAttached(), new ActiveEffectContainer());
             ref var attr = ref world.Get<AttributeBuffer>(entity);
             attr.SetBase(durabilityId, 100f);
             attr.SetCurrent(durabilityId, 93f);
@@ -200,7 +200,7 @@ namespace Ludots.Tests.GAS
             AttributeRegistry.SetConstraints(healthId, AttributeRegistry.AttributeConstraints.ClampToBase());
 
             using var world = World.Create();
-            var entity = world.Create(new AttributeBuffer(), new ActiveEffectContainer());
+            var entity = world.Create(AttributeBuffer.CreateAttached(), new ActiveEffectContainer());
             ref var attr = ref world.Get<AttributeBuffer>(entity);
             attr.SetBase(healthId, 100f);
             attr.SetCurrent(healthId, 70f);
@@ -227,7 +227,7 @@ namespace Ludots.Tests.GAS
             int moveSpeedId = EnsureAttribute("MoveSpeed");
 
             using var world = World.Create();
-            var entity = world.Create(new AttributeBuffer(), new ActiveEffectContainer(), new AttributeAggregateDirty(), new DirtyFlags());
+            var entity = world.Create(AttributeBuffer.CreateAttached(), new ActiveEffectContainer(), new AttributeAggregateDirty(), new DirtyFlags());
             ref var attr = ref world.Get<AttributeBuffer>(entity);
             attr.SetBase(moveSpeedId, 100f);
 
@@ -264,7 +264,7 @@ namespace Ludots.Tests.GAS
             AttributeRegistry.SetConstraints(healthId, AttributeRegistry.AttributeConstraints.ClampToBase());
 
             using var world = World.Create();
-            var target = world.Create(new AttributeBuffer(), new DirtyFlags());
+            var target = world.Create(AttributeBuffer.CreateAttached(), new DirtyFlags());
             ref var attributes = ref world.Get<AttributeBuffer>(target);
             attributes.SetBase(healthId, 100f);
             attributes.SetCurrent(healthId, 60f);
@@ -323,11 +323,11 @@ namespace Ludots.Tests.GAS
 
             using var world = World.Create();
             var source = world.Create();
-            var target = world.Create(new AttributeBuffer(), new DirtyFlags());
+            var target = world.Create(AttributeBuffer.CreateAttached(), new DirtyFlags());
             ref var attributes = ref world.Get<AttributeBuffer>(target);
             attributes.SetBase(healthId, 100f);
             attributes.SetCurrent(healthId, 60f);
-            var sibling = world.Create(new AttributeBuffer(), new DirtyFlags());
+            var sibling = world.Create(AttributeBuffer.CreateAttached(), new DirtyFlags());
             world.Get<AttributeBuffer>(sibling).SetBase(healthId, 17f);
             world.Get<AttributeBuffer>(sibling).SetCurrent(healthId, 17f);
 
@@ -390,7 +390,7 @@ namespace Ludots.Tests.GAS
             AttributeRegistry.SetConstraints(healthId, AttributeRegistry.AttributeConstraints.ClampToBase());
 
             using var world = World.Create();
-            var target = world.Create(new AttributeBuffer(), new DirtyFlags());
+            var target = world.Create(AttributeBuffer.CreateAttached(), new DirtyFlags());
             ref var attributes = ref world.Get<AttributeBuffer>(target);
             attributes.SetBase(healthId, 100f);
             attributes.SetCurrent(healthId, 60f);
@@ -453,7 +453,7 @@ namespace Ludots.Tests.GAS
             active.Track(world, blocker);
 
             var target = world.Create(
-                new AttributeBuffer(),
+                AttributeBuffer.CreateAttached(),
                 new ActiveEffectContainer(),
                 new AttributeAggregateDirty(),
                 new DirtyFlags());

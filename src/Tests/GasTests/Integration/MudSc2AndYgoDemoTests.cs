@@ -160,7 +160,7 @@ namespace Ludots.Tests.GAS
                 };
                 var agg = new AttributeAggregatorSystem(world, tagOps: tagOps);
 
-                var player = world.Create(new AttributeBuffer(), new DirtyFlags(), new AbilityStateBuffer(), new GameplayTagContainer(), new TagCountContainer(), new TimedTagBuffer(), OrderBuffer.CreateEmpty(), new BlackboardSpatialBuffer(), new BlackboardEntityBuffer(), new BlackboardIntBuffer());
+                var player = world.Create(AttributeBuffer.CreateAttached(), new DirtyFlags(), new AbilityStateBuffer(), new GameplayTagContainer(), new TagCountContainer(), new TimedTagBuffer(), OrderBuffer.CreateEmpty(), new BlackboardSpatialBuffer(), new BlackboardEntityBuffer(), new BlackboardIntBuffer());
                 ref var playerAttr = ref world.Get<AttributeBuffer>(player);
                 playerAttr.SetBase(attrHealth, 100f);
                 playerAttr.SetBase(attrEnergy, 75f);
@@ -168,7 +168,7 @@ namespace Ludots.Tests.GAS
                 playerAttr.SetBase(attrMoveSpeed, 1f);
                 playerAttr.SetBase(attrShield, 0f);
 
-                var enemy = world.Create(new AttributeBuffer(), new DirtyFlags(), new AbilityStateBuffer(), new GameplayTagContainer(), new TagCountContainer(), new TimedTagBuffer(), OrderBuffer.CreateEmpty(), new BlackboardSpatialBuffer(), new BlackboardEntityBuffer(), new BlackboardIntBuffer());
+                var enemy = world.Create(AttributeBuffer.CreateAttached(), new DirtyFlags(), new AbilityStateBuffer(), new GameplayTagContainer(), new TagCountContainer(), new TimedTagBuffer(), OrderBuffer.CreateEmpty(), new BlackboardSpatialBuffer(), new BlackboardEntityBuffer(), new BlackboardIntBuffer());
                 ref var enemyAttr = ref world.Get<AttributeBuffer>(enemy);
                 enemyAttr.SetBase(attrHealth, 60f);
                 enemyAttr.SetBase(attrEnergy, 50f);
@@ -176,7 +176,7 @@ namespace Ludots.Tests.GAS
                 enemyAttr.SetBase(attrMoveSpeed, 1f);
                 enemyAttr.SetBase(attrShield, 40f);
 
-                var enemy2 = world.Create(new AttributeBuffer(), new DirtyFlags(), new GameplayTagContainer(), new TagCountContainer());
+                var enemy2 = world.Create(AttributeBuffer.CreateAttached(), new DirtyFlags(), new GameplayTagContainer(), new TagCountContainer());
                 ref var enemy2Attr = ref world.Get<AttributeBuffer>(enemy2);
                 enemy2Attr.SetBase(attrHealth, 60f);
                 enemy2Attr.SetBase(attrEnergy, 50f);
@@ -392,9 +392,9 @@ namespace Ludots.Tests.GAS
                     world.Add(listenerEntity, listener);
                 }
 
-                var player = world.Create(new AttributeBuffer(), new DirtyFlags());
+                var player = world.Create(AttributeBuffer.CreateAttached(), new DirtyFlags());
                 world.Get<AttributeBuffer>(player).SetBase(attrHealth, 50f);
-                var opponent = world.Create(new AttributeBuffer(), new DirtyFlags());
+                var opponent = world.Create(AttributeBuffer.CreateAttached(), new DirtyFlags());
                 world.Get<AttributeBuffer>(opponent).SetBase(attrHealth, 50f);
 
                 string logPath = Path.Combine(TestContext.CurrentContext.WorkDirectory, "mud_ygo_chain_demo.log");
@@ -536,7 +536,7 @@ namespace Ludots.Tests.GAS
                 var targets = new Entity[targetsCount];
                 for (int i = 0; i < targets.Length; i++)
                 {
-                    targets[i] = world.Create(new AttributeBuffer(), new DirtyFlags());
+                    targets[i] = world.Create(AttributeBuffer.CreateAttached(), new DirtyFlags());
                     ref var attr = ref world.Get<AttributeBuffer>(targets[i]);
                     attr.SetBase(attrEnergy, 50f);
                     attr.SetBase(attrShield, 40f);

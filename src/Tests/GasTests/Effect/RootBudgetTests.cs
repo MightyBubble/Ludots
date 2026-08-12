@@ -263,7 +263,7 @@ namespace Ludots.Tests.GAS
                 tagOps: tagOps);
 
             Entity source = world.Create();
-            Entity target = world.Create(new AttributeBuffer(), new DirtyFlags());
+            Entity target = world.Create(AttributeBuffer.CreateAttached(), new DirtyFlags());
             world.Get<AttributeBuffer>(target).SetBase(hpAttrId, 100f);
 
             requests.Publish(new EffectRequest
@@ -324,7 +324,7 @@ namespace Ludots.Tests.GAS
                 tagOps: CreateTagOps());
 
             Entity source = world.Create();
-            Entity target = world.Create(new AttributeBuffer(), new DirtyFlags());
+            Entity target = world.Create(AttributeBuffer.CreateAttached(), new DirtyFlags());
             world.Get<AttributeBuffer>(target).SetBase(hpAttrId, 100f);
 
             requests.Publish(new EffectRequest
@@ -393,7 +393,7 @@ namespace Ludots.Tests.GAS
                 tagOps: CreateTagOps());
 
             Entity source = world.Create();
-            Entity target = world.Create(new AttributeBuffer(), new DirtyFlags());
+            Entity target = world.Create(AttributeBuffer.CreateAttached(), new DirtyFlags());
             world.Get<AttributeBuffer>(target).SetBase(hpAttrId, 100f);
 
             requests.Publish(new EffectRequest
@@ -525,7 +525,7 @@ namespace Ludots.Tests.GAS
                 templates: templates);
 
             var source = world.Create();
-            var target = world.Create(new AttributeBuffer(), new ActiveEffectContainer());
+            var target = world.Create(AttributeBuffer.CreateAttached(), new ActiveEffectContainer());
 
             var modifiers = default(EffectModifiers);
             modifiers.Add(attrId: 0, ModifierOp.Add, -5f);

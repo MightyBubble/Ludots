@@ -43,7 +43,7 @@ namespace Ludots.Tests.GAS
                 overlay.CostMul[1] = 456f;
                 overlay.Blocked[1] = 1;
 
-                var e = world.Create(new AttributeBuffer(), new GraphEdgeRef(edgeId: 1));
+                var e = world.Create(AttributeBuffer.CreateAttached(), new GraphEdgeRef(edgeId: 1));
                 world.Get<AttributeBuffer>(e).SetCurrent(0, 5f);
                 world.Get<AttributeBuffer>(e).SetCurrent(1, 0.25f);
                 world.Get<AttributeBuffer>(e).SetCurrent(2, 1f);

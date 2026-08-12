@@ -17,7 +17,7 @@ namespace Ludots.Tests.GAS
         public void ExecuteGraph_ResetsReferencedScratchRegistersBeforeReuse()
         {
             using var world = World.Create();
-            var target = world.Create(new AttributeBuffer(), new DirtyFlags());
+            var target = world.Create(AttributeBuffer.CreateAttached(), new DirtyFlags());
 
             const int attributeId = 7;
             var programs = new GraphProgramRegistry();
@@ -65,7 +65,7 @@ namespace Ludots.Tests.GAS
         public void ExecuteGraph_WhenProgramIdExceedsScratchCapacity_FailsWithoutResizing()
         {
             using var world = World.Create();
-            var target = world.Create(new AttributeBuffer(), new DirtyFlags());
+            var target = world.Create(AttributeBuffer.CreateAttached(), new DirtyFlags());
 
             var programs = new GraphProgramRegistry();
             programs.Register(2, new[]

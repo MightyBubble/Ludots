@@ -1,6 +1,7 @@
 using Arch.Core;
 using Arch.Core.Extensions;
 using Arch.Buffer;
+using Ludots.Core.Gameplay.GAS.Capacity;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.GraphRuntime;
@@ -57,6 +58,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         {
             _commandBuffer.Dispose();
             base.Dispose();
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static int ActiveSlotCount()
+        {
+            return GasLoadTimeCapacitySession.Plan.AttributeSlotCount;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -121,24 +128,26 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static unsafe ulong RecomputeEffectiveValues(
+        private static unsafe void RecomputeEffectiveValues(
             World world,
             Entity entity,
             ref AttributeBuffer attrBuffer,
             ref ActiveEffectContainer effects,
             GraphProgramRegistry graphPrograms,
-            IGraphRuntimeApi graphApi)
+            IGraphRuntimeApi graphApi,
+            Span<ulong> touchedWords)
         {
-            ulong touchedMask = 0UL;
+            int slots = ActiveSlotCount();
+            touchedWords.Clear();
 
-            for (int i = 0; i < AttributeBuffer.MAX_ATTRS; i++)
+            for (int i = 0; i < slots; i++)
             {
-                if (attrBuffer.CapValues[i] != attrBuffer.BaseValues[i])
+                if (attrBuffer.GetRawCap(i) != attrBuffer.GetRawBase(i))
                 {
-                    touchedMask |= 1UL << i;
+                    SetBit(touchedWords, i);
                 }
 
-                attrBuffer.CurrentValues[i] = attrBuffer.BaseValues[i];
+                attrBuffer.SetRawCurrentUnconstrained(i, attrBuffer.GetRawBase(i));
             }
 
             if (effects.Count > 0)
@@ -167,44 +176,45 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     }
 
                     ref readonly var modifiers = ref world.Get<EffectModifiers>(effectEntity);
-                    touchedMask |= BuildTouchedMask(in modifiers);
+                    OrTouchedBits(touchedWords, in modifiers);
                     EffectModifierOps.ApplyAggregated(in modifiers, ref attrBuffer);
                 }
             }
 
-            Span<float> beforeDerived = stackalloc float[AttributeBuffer.MAX_ATTRS];
-            for (int i = 0; i < AttributeBuffer.MAX_ATTRS; i++)
+            Span<float> beforeDerived = stackalloc float[GasLoadTimeCapacityPlan.AbsoluteMaxAttributeSlots];
+            for (int i = 0; i < slots; i++)
             {
-                beforeDerived[i] = attrBuffer.CurrentValues[i];
+                beforeDerived[i] = attrBuffer.GetCurrent(i);
             }
 
             ExecuteDerivedGraphs(world, entity, ref attrBuffer, graphPrograms, graphApi);
 
-            for (int i = 0; i < AttributeBuffer.MAX_ATTRS; i++)
+            for (int i = 0; i < slots; i++)
             {
-                if (beforeDerived[i] != attrBuffer.CurrentValues[i])
+                if (beforeDerived[i] != attrBuffer.GetCurrent(i))
                 {
-                    touchedMask |= 1UL << i;
+                    SetBit(touchedWords, i);
                 }
             }
-
-            return touchedMask;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static unsafe ulong BuildTouchedMask(in EffectModifiers modifiers)
+        private static void OrTouchedBits(Span<ulong> touchedWords, in EffectModifiers modifiers)
         {
-            ulong mask = 0UL;
+            int slots = ActiveSlotCount();
             for (int i = 0; i < modifiers.Count; i++)
             {
                 int attributeId = modifiers.Get(i).AttributeId;
-                if ((uint)attributeId < AttributeBuffer.MAX_ATTRS)
+                if ((uint)attributeId >= (uint)slots)
                 {
-                    mask |= 1UL << attributeId;
+                    throw new ArgumentOutOfRangeException(
+                        nameof(attributeId),
+                        attributeId,
+                        $"Effect modifier attributeId exceeds plan slots {slots}.");
                 }
-            }
 
-            return mask;
+                SetBit(touchedWords, attributeId);
+            }
         }
 
         struct AttributeAggregatorWithDirtyJob : IForEachWithEntity<AttributeBuffer, ActiveEffectContainer, DirtyFlags>
@@ -218,64 +228,69 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public unsafe void Update(Entity entity, ref AttributeBuffer attrBuffer, ref ActiveEffectContainer effects, ref DirtyFlags dirtyFlags)
             {
-                AttributeBuffer attributesBefore = attrBuffer;
+                var store = GasLoadTimeCapacitySession.ActiveStore;
+                int snapRow = store.AllocateEntityRow();
+                store.CopyAttributeRow(attrBuffer.RowId, snapRow);
                 DirtyFlags dirtyBefore = dirtyFlags;
-                Span<float> oldValues = stackalloc float[AttributeBuffer.MAX_ATTRS];
-                for (int i = 0; i < AttributeBuffer.MAX_ATTRS; i++)
+                int slots = ActiveSlotCount();
+
+                Span<float> oldValues = stackalloc float[GasLoadTimeCapacityPlan.AbsoluteMaxAttributeSlots];
+                for (int i = 0; i < slots; i++)
                 {
-                    oldValues[i] = attrBuffer.CurrentValues[i];
+                    oldValues[i] = attrBuffer.GetCurrent(i);
                 }
 
-                ulong touchedMask = RecomputeEffectiveValues(
-                    World,
-                    entity,
-                    ref attrBuffer,
-                    ref effects,
-                    GraphPrograms,
-                    GraphApi);
-                RestorePersistentCurrentValues(ref attrBuffer, oldValues, touchedMask);
-                bool hasPresentationChanged = World.Has<GameplayAttributeChangedBits>(entity);
-                GameplayAttributeChangedBits presentationChangedLocal = default;
-
-                // 4. 标记脏属性（用于延迟触发器）
-                ulong changedMask = 0UL;
-                for (int i = 0; i < AttributeBuffer.MAX_ATTRS; i++)
+                Span<ulong> touchedWords = stackalloc ulong[DirtyFlags.MAX_ATTR_DIRTY_WORDS];
+                try
                 {
-                    if (oldValues[i] != attrBuffer.CurrentValues[i])
-                    {
-                        dirtyFlags.MarkAttributeDirty(i);
-                        changedMask |= 1UL << i;
-                    }
-                }
+                    RecomputeEffectiveValues(
+                        World,
+                        entity,
+                        ref attrBuffer,
+                        ref effects,
+                        GraphPrograms,
+                        GraphApi,
+                        touchedWords);
+                    RestorePersistentCurrentValues(ref attrBuffer, oldValues, touchedWords);
+                    bool hasPresentationChanged = World.Has<GameplayAttributeChangedBits>(entity);
+                    GameplayAttributeChangedBits presentationChangedLocal = default;
 
-                if (changedMask != 0UL)
-                {
-                    try
+                    bool anyChanged = false;
+                    for (int i = 0; i < slots; i++)
                     {
-                        TagOps.MarkDirtyEntity(World, entity);
-                    }
-                    catch
-                    {
-                        attrBuffer = attributesBefore;
-                        dirtyFlags = dirtyBefore;
-                        throw;
-                    }
-
-                    for (int i = 0; i < AttributeBuffer.MAX_ATTRS; i++)
-                    {
-                        if ((changedMask & (1UL << i)) != 0UL)
+                        if (oldValues[i] != attrBuffer.GetCurrent(i))
                         {
+                            dirtyFlags.MarkAttributeDirty(i);
+                            anyChanged = true;
                             MarkPresentationChanged(World, entity, i, ref presentationChangedLocal, ref hasPresentationChanged);
                         }
                     }
-                }
 
-                if (!hasPresentationChanged && presentationChangedLocal.IsAnyBitSet())
+                    if (anyChanged)
+                    {
+                        try
+                        {
+                            TagOps.MarkDirtyEntity(World, entity);
+                        }
+                        catch
+                        {
+                            store.CopyAttributeRow(snapRow, attrBuffer.RowId);
+                            dirtyFlags = dirtyBefore;
+                            throw;
+                        }
+                    }
+
+                    if (!hasPresentationChanged && presentationChangedLocal.IsAnyBitSet())
+                    {
+                        CommandBuffer.Add(entity, presentationChangedLocal);
+                    }
+
+                    CommandBuffer.Remove<AttributeAggregateDirty>(entity);
+                }
+                finally
                 {
-                    CommandBuffer.Add(entity, presentationChangedLocal);
+                    store.ReleaseEntityRow(snapRow);
                 }
-
-                CommandBuffer.Remove<AttributeAggregateDirty>(entity);
             }
 
         }
@@ -292,19 +307,21 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static unsafe void RestorePersistentCurrentValues(ref AttributeBuffer attrBuffer, Span<float> previousCurrentValues, ulong touchedMask)
+        private static unsafe void RestorePersistentCurrentValues(
+            ref AttributeBuffer attrBuffer,
+            Span<float> previousCurrentValues,
+            Span<ulong> touchedWords)
         {
-            ulong definedMask = attrBuffer.DefinedMask;
-            for (int i = 0; i < AttributeBuffer.MAX_ATTRS; i++)
+            int slots = ActiveSlotCount();
+            for (int i = 0; i < slots; i++)
             {
-                ulong bit = 1UL << i;
-                if ((definedMask & bit) == 0UL)
+                if (!attrBuffer.HasAttribute(i))
                 {
                     continue;
                 }
 
-                attrBuffer.CapValues[i] = attrBuffer.CurrentValues[i];
-                bool touchedByAggregation = (touchedMask & bit) != 0UL;
+                attrBuffer.SetRawCap(i, attrBuffer.GetCurrent(i));
+                bool touchedByAggregation = HasBit(touchedWords, i);
                 bool clampsToEffectiveCap =
                     AttributeRegistry.TryGetConstraints(i, out var constraints) &&
                     constraints.ClampCurrentToBase;
@@ -330,6 +347,18 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             }
 
             presentationChangedLocal.Mark(attributeId);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static void SetBit(Span<ulong> words, int attributeId)
+        {
+            words[attributeId >> 6] |= 1UL << (attributeId & 63);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool HasBit(Span<ulong> words, int attributeId)
+        {
+            return (words[attributeId >> 6] & (1UL << (attributeId & 63))) != 0UL;
         }
     }
 }

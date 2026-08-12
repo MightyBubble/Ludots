@@ -30,7 +30,7 @@ public sealed class EntityInfoPanelServiceTests
         int healthId = AttributeRegistry.Register("Tests.EntityInfo.Health");
         int burningTagId = TagRegistry.Register("Tests.EntityInfo.Burning");
 
-        var attributes = new AttributeBuffer();
+        var attributes = AttributeBuffer.CreateAttached();
         attributes.SetBase(healthId, 100f);
         attributes.SetCurrent(healthId, 75f);
 
@@ -124,7 +124,7 @@ public sealed class EntityInfoPanelServiceTests
 
         Entity source = world.Create(new Name { Value = "Commander" });
 
-        var attributes = new AttributeBuffer();
+        var attributes = AttributeBuffer.CreateAttached();
         attributes.SetBase(healthId, 100f);
         attributes.SetCurrent(healthId, 135f);
 
@@ -252,7 +252,7 @@ public sealed class EntityInfoPanelServiceTests
         using var world = World.Create();
         int healthId = AttributeRegistry.Register("Tests.EntityInfo.Selection.Health");
         int manaId = AttributeRegistry.Register("Tests.EntityInfo.Selection.Mana");
-        var firstAttributes = new AttributeBuffer();
+        var firstAttributes = AttributeBuffer.CreateAttached();
         firstAttributes.SetBase(healthId, 100f);
         firstAttributes.SetCurrent(healthId, 75f);
         firstAttributes.SetBase(manaId, 80f);
@@ -393,7 +393,7 @@ public sealed class EntityInfoPanelServiceTests
         int healthId = AttributeRegistry.Register("Tests.EntityInfo.Template.Health");
         int abilityId = AbilityIdRegistry.Register("Tests.EntityInfo.Template.Ability");
 
-        var attributes = new AttributeBuffer();
+        var attributes = AttributeBuffer.CreateAttached();
         attributes.SetBase(healthId, 90f);
         attributes.SetCurrent(healthId, 45f);
 

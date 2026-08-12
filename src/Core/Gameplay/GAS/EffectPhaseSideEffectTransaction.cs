@@ -2,6 +2,7 @@ using System;
 using Arch.Buffer;
 using Arch.Core;
 using Ludots.Core.Components;
+using Ludots.Core.Gameplay.GAS.Capacity;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Presentation;
 using Ludots.Core.Gameplay.Spawning;
@@ -29,9 +30,10 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
     private readonly GasPresentationEventBuffer? _presentationEvents;
     private readonly RootBudgetTable? _rootBudget;
     private readonly Entity[] _attributeEntities;
+    private readonly int[] _attributeLiveRowIds;
     private readonly AttributeBuffer[] _attributeOriginalValues;
     private readonly AttributeBuffer[] _attributeValues;
-    private readonly ulong[] _attributeChangedMasks;
+    private readonly ulong[] _attributeChangedMaskWords;
     private readonly GameplayAttributeChangedBits[] _attributeChangedOriginalValues;
     private readonly GameplayAttributeChangedBits[] _attributeChangedValues;
     private readonly bool[] _attributeChangedExisted;
@@ -149,9 +151,10 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         _presentationEvents = presentationEvents;
         _rootBudget = rootBudget;
         _attributeEntities = new Entity[attributeEntityCapacity];
+        _attributeLiveRowIds = new int[attributeEntityCapacity];
         _attributeOriginalValues = new AttributeBuffer[attributeEntityCapacity];
         _attributeValues = new AttributeBuffer[attributeEntityCapacity];
-        _attributeChangedMasks = new ulong[attributeEntityCapacity];
+        _attributeChangedMaskWords = new ulong[attributeEntityCapacity * DirtyFlags.MAX_ATTR_DIRTY_WORDS];
         _attributeChangedOriginalValues = new GameplayAttributeChangedBits[attributeEntityCapacity];
         _attributeChangedValues = new GameplayAttributeChangedBits[attributeEntityCapacity];
         _attributeChangedExisted = new bool[attributeEntityCapacity];
@@ -809,19 +812,21 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
                 _structuralCommands.Playback(_world);
             }
 
+            var store = GasLoadTimeCapacitySession.ActiveStore;
+            int slots = GasLoadTimeCapacitySession.Plan.AttributeSlotCount;
             for (int i = 0; i < _attributeCount; i++)
             {
-                if (_attributeChangedMasks[i] == 0UL)
+                if (!IsAttributeChanged(i))
                 {
                     continue;
                 }
 
                 Entity entity = _attributeEntities[i];
-                _world.Get<AttributeBuffer>(entity) = _attributeValues[i];
+                store.CopyAttributeRow(_attributeValues[i].RowId, _attributeLiveRowIds[i]);
                 _world.Get<GameplayAttributeChangedBits>(entity) = _attributeChangedValues[i];
-                for (int attributeId = 0; attributeId < AttributeBuffer.MAX_ATTRS; attributeId++)
+                for (int attributeId = 0; attributeId < slots; attributeId++)
                 {
-                    if ((_attributeChangedMasks[i] & (1UL << attributeId)) != 0UL)
+                    if (IsAttributeChangedBit(i, attributeId))
                     {
                         _world.Get<DirtyFlags>(entity).MarkAttributeDirty(attributeId);
                     }
@@ -983,9 +988,22 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
 
         int index = _attributeCount++;
         _attributeEntities[index] = entity;
-        _attributeOriginalValues[index] = _world.Get<AttributeBuffer>(entity);
-        _attributeValues[index] = _attributeOriginalValues[index];
-        _attributeChangedMasks[index] = 0UL;
+        AttributeBuffer live = _world.Get<AttributeBuffer>(entity);
+        if (live.RowId == AttributeBuffer.InvalidRow)
+        {
+            throw new InvalidOperationException(
+                $"{AttributeTargetInvalidError}: entity={entity.Id} has AttributeBuffer without world-store row.");
+        }
+
+        var store = GasLoadTimeCapacitySession.ActiveStore;
+        int originalSnapRow = store.AllocateEntityRow();
+        store.CopyAttributeRow(live.RowId, originalSnapRow);
+        int stagingRow = store.AllocateEntityRow();
+        store.CopyAttributeRow(live.RowId, stagingRow);
+        _attributeLiveRowIds[index] = live.RowId;
+        _attributeOriginalValues[index] = new AttributeBuffer { RowId = originalSnapRow };
+        _attributeValues[index] = new AttributeBuffer { RowId = stagingRow };
+        ClearAttributeChangedWords(index);
         StageDirtyEntity(entity);
         return index;
     }
@@ -1151,19 +1169,23 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
 
     private void RefreshAttributeChanged(int index, int attributeId)
     {
-        if ((uint)attributeId >= AttributeBuffer.MAX_ATTRS)
+        int slots = GasLoadTimeCapacitySession.Plan.AttributeSlotCount;
+        if ((uint)attributeId >= (uint)slots)
         {
-            return;
+            throw new ArgumentOutOfRangeException(
+                nameof(attributeId),
+                attributeId,
+                $"attributeId must be in [0, {slots - 1}] for frozen plan.");
         }
-        ulong bit = 1UL << attributeId;
+
         if (_attributeValues[index].GetCurrent(attributeId) !=
             _attributeOriginalValues[index].GetCurrent(attributeId))
         {
-            _attributeChangedMasks[index] |= bit;
+            SetAttributeChangedBit(index, attributeId);
         }
         else
         {
-            _attributeChangedMasks[index] &= ~bit;
+            ClearAttributeChangedBit(index, attributeId);
         }
     }
 
@@ -1344,10 +1366,10 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
 
     private void PrepareCommitState()
     {
+        int slots = GasLoadTimeCapacitySession.Plan.AttributeSlotCount;
         for (int i = 0; i < _attributeCount; i++)
         {
-            ulong changedMask = _attributeChangedMasks[i];
-            if (changedMask == 0UL)
+            if (!IsAttributeChanged(i))
             {
                 continue;
             }
@@ -1359,9 +1381,9 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
                 ? _world.Get<GameplayAttributeChangedBits>(entity)
                 : default;
             _attributeChangedValues[i] = _attributeChangedOriginalValues[i];
-            for (int attributeId = 0; attributeId < AttributeBuffer.MAX_ATTRS; attributeId++)
+            for (int attributeId = 0; attributeId < slots; attributeId++)
             {
-                if ((changedMask & (1UL << attributeId)) != 0UL)
+                if (IsAttributeChangedBit(i, attributeId))
                 {
                     _attributeChangedValues[i].Mark(attributeId);
                 }
@@ -1654,19 +1676,22 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
 
     private void RollbackWorldWrites()
     {
+        var store = GasLoadTimeCapacitySession.HasStore ? GasLoadTimeCapacitySession.ActiveStore : null;
         for (int i = 0; i < _attributeCount; i++)
         {
             Entity entity = _attributeEntities[i];
-            if (!_world.IsAlive(entity))
+            if (_worldCommitStarted &&
+                store != null &&
+                _world.IsAlive(entity) &&
+                _world.Has<AttributeBuffer>(entity) &&
+                _attributeOriginalValues[i].RowId != AttributeBuffer.InvalidRow)
             {
-                continue;
+                store.CopyAttributeRow(_attributeOriginalValues[i].RowId, _attributeLiveRowIds[i]);
             }
-            if (_world.Has<AttributeBuffer>(entity))
-            {
-                _world.Get<AttributeBuffer>(entity) = _attributeOriginalValues[i];
-            }
-            if (_attributeChangedMasks[i] != 0UL &&
+
+            if (IsAttributeChanged(i) &&
                 _attributeChangedExisted[i] &&
+                _world.IsAlive(entity) &&
                 _world.Has<GameplayAttributeChangedBits>(entity))
             {
                 _world.Get<GameplayAttributeChangedBits>(entity) = _attributeChangedOriginalValues[i];
@@ -1768,7 +1793,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
 
         for (int i = 0; i < _attributeCount; i++)
         {
-            if (_attributeChangedMasks[i] != 0UL &&
+            if (IsAttributeChanged(i) &&
                 !_attributeChangedExisted[i] &&
                 _world.IsAlive(_attributeEntities[i]) &&
                 _world.Has<GameplayAttributeChangedBits>(_attributeEntities[i]))
@@ -1990,8 +2015,77 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         }
     }
 
+    private void ClearAttributeChangedWords(int index)
+    {
+        int baseIndex = index * DirtyFlags.MAX_ATTR_DIRTY_WORDS;
+        for (int i = 0; i < DirtyFlags.MAX_ATTR_DIRTY_WORDS; i++)
+        {
+            _attributeChangedMaskWords[baseIndex + i] = 0UL;
+        }
+    }
+
+    private bool IsAttributeChanged(int index)
+    {
+        int baseIndex = index * DirtyFlags.MAX_ATTR_DIRTY_WORDS;
+        for (int i = 0; i < DirtyFlags.MAX_ATTR_DIRTY_WORDS; i++)
+        {
+            if (_attributeChangedMaskWords[baseIndex + i] != 0UL)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private bool IsAttributeChangedBit(int index, int attributeId)
+    {
+        int wordIndex = attributeId >> 6;
+        return (_attributeChangedMaskWords[index * DirtyFlags.MAX_ATTR_DIRTY_WORDS + wordIndex] &
+                (1UL << (attributeId & 63))) != 0UL;
+    }
+
+    private void SetAttributeChangedBit(int index, int attributeId)
+    {
+        int wordIndex = attributeId >> 6;
+        _attributeChangedMaskWords[index * DirtyFlags.MAX_ATTR_DIRTY_WORDS + wordIndex] |=
+            1UL << (attributeId & 63);
+    }
+
+    private void ClearAttributeChangedBit(int index, int attributeId)
+    {
+        int wordIndex = attributeId >> 6;
+        _attributeChangedMaskWords[index * DirtyFlags.MAX_ATTR_DIRTY_WORDS + wordIndex] &=
+            ~(1UL << (attributeId & 63));
+    }
+
+    private void ReleaseAttributeStagingRows()
+    {
+        if (!GasLoadTimeCapacitySession.HasStore)
+        {
+            return;
+        }
+
+        var store = GasLoadTimeCapacitySession.ActiveStore;
+        for (int i = 0; i < _attributeCount; i++)
+        {
+            if (_attributeValues[i].RowId != AttributeBuffer.InvalidRow)
+            {
+                store.ReleaseEntityRow(_attributeValues[i].RowId);
+                _attributeValues[i].RowId = AttributeBuffer.InvalidRow;
+            }
+
+            if (_attributeOriginalValues[i].RowId != AttributeBuffer.InvalidRow)
+            {
+                store.ReleaseEntityRow(_attributeOriginalValues[i].RowId);
+                _attributeOriginalValues[i].RowId = AttributeBuffer.InvalidRow;
+            }
+        }
+    }
+
     private void End()
     {
+        ReleaseAttributeStagingRows();
         _attributeCount = 0;
         _dirtyEntityCount = 0;
         _effectRequestCount = 0;

@@ -254,11 +254,16 @@ public sealed partial class EntityInfoPanelService
 
         dirty |= SetGasLine(slot, lineCount++, "[Attributes]");
         bool wroteAttribute = false;
-        for (int attrId = 0; attrId < AttributeRegistry.MaxAttributes && lineCount < MaxGasLinesPerPanel; attrId++)
+        for (int attrId = 0; attrId < AttributeRegistry.RegisteredCount && lineCount < MaxGasLinesPerPanel; attrId++)
         {
             if (!hasAttributes)
             {
                 break;
+            }
+
+            if (!attributes.HasAttribute(attrId))
+            {
+                continue;
             }
 
             float baseValue = attributes.GetBase(attrId);

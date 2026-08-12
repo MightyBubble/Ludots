@@ -890,7 +890,7 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
             FinalizeTemplates(templates, "AllStagesShareOneDeterministicWorkBudget");
 
             Entity source = world.Create();
-            Entity target = world.Create(new AttributeBuffer(), new ActiveEffectContainer(), new DirtyFlags());
+            Entity target = world.Create(AttributeBuffer.CreateAttached(), new ActiveEffectContainer(), new DirtyFlags());
             requests.Publish(new EffectRequest
             {
                 RootId = 1,

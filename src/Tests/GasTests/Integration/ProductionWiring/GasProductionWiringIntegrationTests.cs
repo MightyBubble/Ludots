@@ -306,7 +306,7 @@ namespace Ludots.Tests.GAS.Integration.ProductionWiring
             int graphId = GraphIdRegistry.GetId("Tests.DerivedAttributeGraph.EngineOwned");
             Assert.That(graphId, Is.GreaterThan(0));
             Assert.That(programs.TryGetProgram(graphId, out _), Is.True);
-            var attributes = new AttributeBuffer();
+            var attributes = AttributeBuffer.CreateAttached();
             attributes.SetBase(sourceAttributeId, 10f);
             var binding = new AttributeDerivedGraphBinding();
             binding.Add(graphId);

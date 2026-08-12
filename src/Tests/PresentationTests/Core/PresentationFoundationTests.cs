@@ -1139,7 +1139,7 @@ namespace Ludots.Tests.Presentation
 
             const int healthAttributeId = 7;
             Entity ownerWithAttributes = world.Create(
-                new AttributeBuffer(),
+                AttributeBuffer.CreateAttached(),
                 new CullState { IsVisible = true, LOD = LODLevel.High });
             ref AttributeBuffer attributes = ref world.Get<AttributeBuffer>(ownerWithAttributes);
             attributes.SetCurrent(healthAttributeId, 100f);
@@ -1401,7 +1401,7 @@ namespace Ludots.Tests.Presentation
                         ],
                     });
 
-                var ownerAttributes = new AttributeBuffer();
+                var ownerAttributes = AttributeBuffer.CreateAttached();
                 ownerAttributes.SetBase(durabilityAttributeId, 100f);
                 ownerAttributes.SetCurrent(durabilityAttributeId, 100f);
                 Entity owner = world.Create(
@@ -1491,7 +1491,7 @@ namespace Ludots.Tests.Presentation
                     new Team { Id = 20 },
                     new PlayerOwner { PlayerId = 20 });
                 Entity grantSource = world.Create();
-                var mapObjectAttributes = new AttributeBuffer();
+                var mapObjectAttributes = AttributeBuffer.CreateAttached();
                 mapObjectAttributes.SetCurrent(durabilityAttributeId, 100f);
                 Entity mapObject = world.Create(
                     mapObjectAttributes,
@@ -1556,7 +1556,7 @@ namespace Ludots.Tests.Presentation
                     new Team { Id = 20 },
                     new PlayerOwner { PlayerId = 20 });
                 Entity grantSource = world.Create();
-                var mapObjectAttributes = new AttributeBuffer();
+                var mapObjectAttributes = AttributeBuffer.CreateAttached();
                 mapObjectAttributes.SetCurrent(durabilityAttributeId, 100f);
                 Entity mapObject = world.Create(
                     mapObjectAttributes,

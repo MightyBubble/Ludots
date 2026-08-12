@@ -70,7 +70,7 @@ public sealed class CommandSourceEntityCollectionPanelAcceptanceTests
                 1 => $"Archer {i / 3:00}",
                 _ => $"Knight {i / 3:00}",
             };
-            var attributes = new AttributeBuffer();
+            var attributes = AttributeBuffer.CreateAttached();
             attributes.SetBase(healthId, 100f + i);
             attributes.SetCurrent(healthId, 60f + i);
             attributes.SetBase(manaId, 80f);

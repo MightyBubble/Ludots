@@ -216,7 +216,7 @@ namespace Ludots.Core.Gameplay.Spawning
                 new PreviousWorldPositionCm { Value = request.WorldPositionCm },
                 VisualTransform.Default,
                 new CullState { IsVisible = false, LOD = LODLevel.Low },
-                new AttributeBuffer(),
+                AttributeBuffer.CreateAttached(),
                 new DirtyFlags());
             EnsurePresentationStableId(entity);
 

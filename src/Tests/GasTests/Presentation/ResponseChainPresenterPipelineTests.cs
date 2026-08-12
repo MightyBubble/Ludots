@@ -80,7 +80,7 @@ namespace Ludots.Tests.GAS
                     MaxWorkUnitsPerSlice = int.MaxValue
                 };
  
-                var target = world.Create(new AttributeBuffer(), new ActiveEffectContainer(), new DirtyFlags(), new PlayerOwner { PlayerId = 1 });
+                var target = world.Create(AttributeBuffer.CreateAttached(), new ActiveEffectContainer(), new DirtyFlags(), new PlayerOwner { PlayerId = 1 });
                 var listener = default(ResponseChainListener);
                 listener.Add(tag, ResponseType.PromptInput, priority: 100, effectTemplateId: tplRoot);
                 world.Add(target, listener);
@@ -182,7 +182,7 @@ namespace Ludots.Tests.GAS
                 MaxWorkUnitsPerSlice = int.MaxValue
             };
 
-            var actor = world.Create(new AttributeBuffer(), new ActiveEffectContainer(), new DirtyFlags(), new PlayerOwner { PlayerId = 1 });
+            var actor = world.Create(AttributeBuffer.CreateAttached(), new ActiveEffectContainer(), new DirtyFlags(), new PlayerOwner { PlayerId = 1 });
             var listener = default(ResponseChainListener);
             listener.Add(tag, ResponseType.PromptInput, priority: 100, effectTemplateId: tplRoot);
             world.Add(actor, listener);

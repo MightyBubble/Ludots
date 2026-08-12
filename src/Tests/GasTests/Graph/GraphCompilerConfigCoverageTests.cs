@@ -65,7 +65,7 @@ namespace Ludots.Tests.GAS
         public void GraphsJson_CompilesAndExecutesIntBlackboardConfigAndSelfAttributeOps()
         {
             using var world = World.Create();
-            var caster = world.Create(new AttributeBuffer(), new DirtyFlags());
+            var caster = world.Create(AttributeBuffer.CreateAttached(), new DirtyFlags());
             var target = world.Create();
             int copiedAttr = AttributeRegistry.Register("tests.attr.copiedFloat");
             var api = new RecordingGraphApi(world);
@@ -142,7 +142,7 @@ namespace Ludots.Tests.GAS
             int sourceAttr = AttributeRegistry.Register("tests.attr.source");
             int derivedAttr = AttributeRegistry.Register("tests.attr.derived");
             var entity = world.Create(
-                new AttributeBuffer(),
+                AttributeBuffer.CreateAttached(),
                 new ActiveEffectContainer(),
                 new AttributeAggregateDirty(),
                 new DirtyFlags());

@@ -3095,7 +3095,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             int moveSpeedId = AttributeRegistry.Register("MoveSpeed");
             var actor = world.Create(
                 WorldPositionCm.FromCm(0, 0),
-                new AttributeBuffer(),
+                AttributeBuffer.CreateAttached(),
                 OrderBuffer.CreateEmpty());
 
             ref var attributes = ref world.Get<AttributeBuffer>(actor);
@@ -3144,7 +3144,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 new Position2D { Value = Fix64Vec2.FromInt(0, 0) },
                 Velocity2D.Zero,
                 Mass2D.FromFloat(1f, 1f),
-                new AttributeBuffer(),
+                AttributeBuffer.CreateAttached(),
                 OrderBuffer.CreateEmpty());
 
             ref var attributes = ref world.Get<AttributeBuffer>(actor);
@@ -3188,7 +3188,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 new Position2D { Value = Fix64Vec2.FromInt(0, 0) },
                 Velocity2D.FromCmPerSec(0f, 180f),
                 Mass2D.FromFloat(1f, 1f),
-                new AttributeBuffer(),
+                AttributeBuffer.CreateAttached(),
                 OrderBuffer.CreateEmpty());
 
             ref var attributes = ref world.Get<AttributeBuffer>(actor);
@@ -3231,7 +3231,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 new Position2D { Value = Fix64Vec2.FromInt(0, 0) },
                 Velocity2D.FromCmPerSec(-180f, 60f),
                 Mass2D.FromFloat(1f, 1f),
-                new AttributeBuffer(),
+                AttributeBuffer.CreateAttached(),
                 OrderBuffer.CreateEmpty());
 
             ref var attributes = ref world.Get<AttributeBuffer>(actor);
@@ -3271,7 +3271,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             int moveSpeedId = AttributeRegistry.Register("MoveSpeed");
             var actor = world.Create(
                 WorldPositionCm.FromCm(0, 0),
-                new AttributeBuffer(),
+                AttributeBuffer.CreateAttached(),
                 OrderBuffer.CreateEmpty(),
                 new BlackboardSpatialBuffer());
 
@@ -3370,7 +3370,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             int moveSpeedId = AttributeRegistry.Register("MoveSpeed");
             var actor = world.Create(
                 WorldPositionCm.FromCm(0, 0),
-                new AttributeBuffer(),
+                AttributeBuffer.CreateAttached(),
                 OrderBuffer.CreateEmpty());
 
             ref var attributes = ref world.Get<AttributeBuffer>(actor);
@@ -3411,7 +3411,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             int moveSpeedId = AttributeRegistry.Register("MoveSpeed");
             var actor = world.Create(
                 WorldPositionCm.FromCm(0, 0),
-                new AttributeBuffer(),
+                AttributeBuffer.CreateAttached(),
                 OrderBuffer.CreateEmpty(),
                 new MovementSuppressed2D());
 

@@ -621,7 +621,7 @@ internal sealed class ItemSystemShowcaseRuntime
         _hero = world.Create(new Name { Value = "Loadout Pilot" });
         TrackMapEntity(engine, _hero);
         world.Add(_hero, WorldPositionCm.FromCm(1200, 900));
-        world.Add(_hero, new AttributeBuffer());
+        world.Add(_hero, AttributeBuffer.CreateAttached());
         world.Add(_hero, new ActiveEffectContainer());
         TagStateInstaller.EnsureInstalled(world, _hero);
         world.Add(_hero, new AbilityStateBuffer());
@@ -632,7 +632,7 @@ internal sealed class ItemSystemShowcaseRuntime
         _dummy = world.Create(new Name { Value = "Target Dummy" });
         TrackMapEntity(engine, _dummy);
         world.Add(_dummy, WorldPositionCm.FromCm(1600, 900));
-        world.Add(_dummy, new AttributeBuffer());
+        world.Add(_dummy, AttributeBuffer.CreateAttached());
         world.Add(_dummy, new ActiveEffectContainer());
         TagStateInstaller.EnsureInstalled(world, _dummy);
         InitAttributes(ref world.Get<AttributeBuffer>(_dummy), false);

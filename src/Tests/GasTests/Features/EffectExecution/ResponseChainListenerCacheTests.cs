@@ -42,7 +42,7 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
                 new GraphProgramRegistry(),
                 "Test/ResponseChainListenerCacheTests.RuntimeRegistration.json");
 
-            Entity target = world.Create(new AttributeBuffer(), new DirtyFlags());
+            Entity target = world.Create(AttributeBuffer.CreateAttached(), new DirtyFlags());
             world.Get<AttributeBuffer>(target).SetBase(healthAttributeId, 100f);
             var queue = new EffectRequestQueue();
             var system = new EffectProposalProcessingSystem(

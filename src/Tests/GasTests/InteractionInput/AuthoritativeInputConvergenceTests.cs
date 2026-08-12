@@ -147,7 +147,7 @@ namespace Ludots.Tests.GAS
         {
             using var world = World.Create();
             Entity localPlayerIdentity = world.Create();
-            Entity cameraBehaviorInputTarget = world.Create(new AttributeBuffer(), new CameraBehaviorInputTarget());
+            Entity cameraBehaviorInputTarget = world.Create(AttributeBuffer.CreateAttached(), new CameraBehaviorInputTarget());
             int lookXAttribute = AttributeRegistry.Register(CameraBehaviorAttributes.LookX);
 
             var authoritativeInput = new FrozenInputActionReader();
@@ -315,7 +315,7 @@ namespace Ludots.Tests.GAS
             var session = new GameSession();
             using var world = World.Create();
             var behaviorInput = new CameraBehaviorInputState();
-            Entity localPlayer = world.Create(new AttributeBuffer(), new CameraBehaviorInputTarget());
+            Entity localPlayer = world.Create(AttributeBuffer.CreateAttached(), new CameraBehaviorInputTarget());
             var registry = new VirtualCameraRegistry();
             registry.Register(new VirtualCameraDefinition
             {

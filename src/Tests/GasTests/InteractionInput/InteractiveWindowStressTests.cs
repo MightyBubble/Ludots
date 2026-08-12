@@ -103,7 +103,7 @@ namespace Ludots.Tests.GAS
                 };
 
                 var source = world.Create();
-                var target = world.Create(new AttributeBuffer(), new DirtyFlags());
+                var target = world.Create(AttributeBuffer.CreateAttached(), new DirtyFlags());
                 ref var attr = ref world.Get<AttributeBuffer>(target);
                 attr.SetCurrent(attrHealth, 1000f);
 

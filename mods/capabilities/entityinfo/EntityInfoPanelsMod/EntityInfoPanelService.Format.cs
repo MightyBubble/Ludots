@@ -64,8 +64,13 @@ public sealed partial class EntityInfoPanelService
         if (type == typeof(AttributeBuffer) && world.TryGet(entity, out AttributeBuffer attrs))
         {
             bool any = false;
-            for (int attrId = 0; attrId < AttributeRegistry.MaxAttributes && lineCursor < MaxComponentLinesPerPanel; attrId++)
+            for (int attrId = 0; attrId < AttributeRegistry.RegisteredCount && lineCursor < MaxComponentLinesPerPanel; attrId++)
             {
+                if (!attrs.HasAttribute(attrId))
+                {
+                    continue;
+                }
+
                 float baseValue = attrs.GetBase(attrId);
                 float currentValue = attrs.GetCurrent(attrId);
                 if (baseValue == 0f && currentValue == 0f)
@@ -272,8 +277,13 @@ public sealed partial class EntityInfoPanelService
         int appended = 0;
         int hidden = 0;
         string preview = string.Empty;
-        for (int attrId = 0; attrId < AttributeRegistry.MaxAttributes; attrId++)
+        for (int attrId = 0; attrId < AttributeRegistry.RegisteredCount; attrId++)
         {
+            if (!attributes.HasAttribute(attrId))
+            {
+                continue;
+            }
+
             float baseValue = attributes.GetBase(attrId);
             float currentValue = attributes.GetCurrent(attrId);
             if (baseValue == 0f && currentValue == 0f)

@@ -76,7 +76,7 @@ namespace Ludots.Tests.GAS
             var api = new GasGraphRuntimeApi(world, null, null, null);
 
             var caster = world.Create();
-            var target = world.Create(new AttributeBuffer(), new DirtyFlags());
+            var target = world.Create(AttributeBuffer.CreateAttached(), new DirtyFlags());
             world.Get<AttributeBuffer>(target).SetBase(hpAttrId, 100f);
 
             var behavior = new EffectPhaseGraphBindings();
@@ -125,7 +125,7 @@ namespace Ludots.Tests.GAS
             int hpAttrId = AttributeRegistry.Register("Test.Audit.MissingTemplate.Health");
 
             var caster = world.Create();
-            var target = world.Create(new AttributeBuffer(), new DirtyFlags());
+            var target = world.Create(AttributeBuffer.CreateAttached(), new DirtyFlags());
             world.Get<AttributeBuffer>(target).SetBase(hpAttrId, 100f);
 
             var behavior = new EffectPhaseGraphBindings();
@@ -175,7 +175,7 @@ namespace Ludots.Tests.GAS
 
                 var budget = new GasBudget();
                 var queue = new EffectRequestQueue();
-                var target = world.Create(new AttributeBuffer(), new DirtyFlags());
+                var target = world.Create(AttributeBuffer.CreateAttached(), new DirtyFlags());
 
                 queue.Publish(new EffectRequest
                 {
@@ -400,7 +400,7 @@ namespace Ludots.Tests.GAS
             var api = new GasGraphRuntimeApi(world, null, null, null);
 
             var caster = world.Create();
-            var target = world.Create(new AttributeBuffer(), new DirtyFlags());
+            var target = world.Create(AttributeBuffer.CreateAttached(), new DirtyFlags());
 
             var behavior = new EffectPhaseGraphBindings();
 

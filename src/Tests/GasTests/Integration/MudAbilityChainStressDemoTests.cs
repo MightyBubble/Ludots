@@ -132,7 +132,7 @@ namespace Ludots.Tests.GAS
                     onActivate.Add(tplHeal);
                 }
 
-                var player = world.Create(new AbilityStateBuffer(), new AttributeBuffer(), new DirtyFlags());
+                var player = world.Create(new AbilityStateBuffer(), AttributeBuffer.CreateAttached(), new DirtyFlags());
                 ref var playerAbilities = ref world.Get<AbilityStateBuffer>(player);
                 var abilityDefs = new AbilityDefinitionRegistry();
                 abilityDefs.RegisterFromEntity(world, abilityFirebolt, 6001);
@@ -141,8 +141,8 @@ namespace Ludots.Tests.GAS
                 playerAbilities.AddAbility(6002);
                 world.Get<AttributeBuffer>(player).SetBase(attrHealth, 100f);
 
-                var goblinA = world.Create(new AttributeBuffer(), new DirtyFlags());
-                var goblinB = world.Create(new AttributeBuffer(), new DirtyFlags());
+                var goblinA = world.Create(AttributeBuffer.CreateAttached(), new DirtyFlags());
+                var goblinB = world.Create(AttributeBuffer.CreateAttached(), new DirtyFlags());
                 world.Get<AttributeBuffer>(goblinA).SetBase(attrHealth, 100f);
                 world.Get<AttributeBuffer>(goblinB).SetBase(attrHealth, 100f);
 
@@ -312,7 +312,7 @@ namespace Ludots.Tests.GAS
                 var targets = new Entity[targetsCount];
                 for (int i = 0; i < targets.Length; i++)
                 {
-                    targets[i] = world.Create(new AttributeBuffer(), new DirtyFlags());
+                    targets[i] = world.Create(AttributeBuffer.CreateAttached(), new DirtyFlags());
                     ref var attr = ref world.Get<AttributeBuffer>(targets[i]);
                     attr.SetBase(attrHealth, 1000f);
                 }

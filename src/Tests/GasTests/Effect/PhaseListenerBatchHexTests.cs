@@ -1088,7 +1088,7 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             int healthId = AttributeRegistry.Register("Test.ListenerTransactionRequired.Health");
             Entity caster = world.Create();
-            Entity target = world.Create(new AttributeBuffer(), new DirtyFlags());
+            Entity target = world.Create(AttributeBuffer.CreateAttached(), new DirtyFlags());
             world.Get<AttributeBuffer>(target).SetBase(healthId, 100f);
             const int phaseGraphId = 992;
             const int listenerGraphId = 993;
@@ -1141,7 +1141,7 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             int healthId = AttributeRegistry.Register("Test.ListenerGraphEventBus.Health");
             Entity caster = world.Create();
-            Entity target = world.Create(new AttributeBuffer(), new DirtyFlags());
+            Entity target = world.Create(AttributeBuffer.CreateAttached(), new DirtyFlags());
             world.Get<AttributeBuffer>(target).SetBase(healthId, 100f);
             const int phaseGraphId = 994;
             const int listenerGraphId = 995;
@@ -1199,7 +1199,7 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             int healthId = AttributeRegistry.Register("Test.ListenerPreflight.Health");
             Entity caster = world.Create();
-            Entity target = world.Create(new AttributeBuffer(), new DirtyFlags());
+            Entity target = world.Create(AttributeBuffer.CreateAttached(), new DirtyFlags());
             world.Get<AttributeBuffer>(target).SetBase(healthId, 100f);
             const int phaseGraphId = 988;
             const int missingListenerGraphId = 989;
@@ -1422,7 +1422,7 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             int healthId = AttributeRegistry.Register("Test.OnCalculateListener.Health");
             Entity caster = world.Create();
-            Entity target = world.Create(new AttributeBuffer(), new DirtyFlags());
+            Entity target = world.Create(AttributeBuffer.CreateAttached(), new DirtyFlags());
             world.Get<AttributeBuffer>(target).SetBase(healthId, 100f);
             const int graphId = 38;
             var programs = new GraphProgramRegistry();

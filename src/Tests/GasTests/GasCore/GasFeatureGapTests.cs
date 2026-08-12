@@ -194,7 +194,7 @@ namespace Ludots.Tests.GAS
             var system = new DeferredTriggerCollectionSystem(world, queue, new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 
             var e = world.Create();
-            var attrs = new AttributeBuffer();
+            var attrs = AttributeBuffer.CreateAttached();
             attrs.SetCurrent(3, 75f); // attribute 3 = 75
             world.Add(e, attrs);
 
@@ -402,7 +402,7 @@ namespace Ludots.Tests.GAS
         public void AbilityCost_MultiResource_CheckBothBeforeDeducting()
         {
             using var world = World.Create();
-            var entity = world.Create(new AttributeBuffer());
+            var entity = world.Create(AttributeBuffer.CreateAttached());
             ref var buf = ref world.Get<AttributeBuffer>(entity);
 
             const int minerals = AttributeBuffer.MAX_ATTRS - 2;

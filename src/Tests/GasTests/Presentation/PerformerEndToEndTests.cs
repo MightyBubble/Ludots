@@ -409,7 +409,7 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void LifecycleHealthBar_EmitsForEntityWithAttributes()
         {
-            var attrBuf = new AttributeBuffer();
+            var attrBuf = AttributeBuffer.CreateAttached();
             attrBuf.SetBase(_healthAttrId, 100f);
             attrBuf.SetCurrent(_healthAttrId, 100f);
             CreatePresentableEntity(new Vector3(10f, 0f, 10f), attrBuf, hasAttributes: true);
@@ -455,7 +455,7 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void LifecycleHealthBar_CullInvisible_NoOutput()
         {
-            var attrBuf = new AttributeBuffer();
+            var attrBuf = AttributeBuffer.CreateAttached();
             attrBuf.SetBase(_healthAttrId, 100f);
             attrBuf.SetCurrent(_healthAttrId, 100f);
             CreatePresentableEntity(Vector3.Zero, attrBuf, hasAttributes: true, isVisible: false);
@@ -478,7 +478,7 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void LifecycleHealthBar_PendingDestroy_ReleasesBeforeEmit()
         {
-            var attrBuf = new AttributeBuffer();
+            var attrBuf = AttributeBuffer.CreateAttached();
             attrBuf.SetBase(_healthAttrId, 100f);
             attrBuf.SetCurrent(_healthAttrId, 50f);
             var entity = CreatePresentableEntity(new Vector3(4f, 0f, 4f), attrBuf, hasAttributes: true);
@@ -632,12 +632,12 @@ namespace Ludots.Tests.Presentation
                     }
                 }));
 
-            var heroAttr = new AttributeBuffer();
+            var heroAttr = AttributeBuffer.CreateAttached();
             heroAttr.SetBase(_healthAttrId, 200f);
             heroAttr.SetCurrent(_healthAttrId, 200f);
             CreatePresentableEntity(new Vector3(1f, 0f, 1f), heroAttr, hasAttributes: true, templateKeyId: heroTemplateId);
 
-            var minionAttr = new AttributeBuffer();
+            var minionAttr = AttributeBuffer.CreateAttached();
             minionAttr.SetBase(_healthAttrId, 50f);
             minionAttr.SetCurrent(_healthAttrId, 50f);
             CreatePresentableEntity(new Vector3(5f, 0f, 5f), minionAttr, hasAttributes: true, templateKeyId: 99);

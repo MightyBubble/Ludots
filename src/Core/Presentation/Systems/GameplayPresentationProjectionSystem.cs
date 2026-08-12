@@ -289,7 +289,8 @@ namespace Ludots.Core.Presentation.Systems
             {
                 fixed (byte* bits = changed.Bits)
                 {
-                    for (int attributeId = 0; attributeId < AttributeBuffer.MAX_ATTRS; attributeId++)
+                    int attributeSlots = Ludots.Core.Gameplay.GAS.Capacity.GasLoadTimeCapacitySession.Plan.AttributeSlotCount;
+                    for (int attributeId = 0; attributeId < attributeSlots; attributeId++)
                     {
                         if (bits[attributeId] == 0)
                         {

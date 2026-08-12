@@ -77,7 +77,7 @@ namespace Ludots.Tests.GasTests
             var source = world.Create(
                 WorldPositionCm.FromCm(9000, 8000),
                 new PresentationStableId { Value = 11 },
-                new AttributeBuffer(),
+                AttributeBuffer.CreateAttached(),
                 new AbilityExecInstance { HasTargetPos = 1, TargetPosCm = Fix64Vec2.FromInt(9000, 8000) });
             world.Get<AttributeBuffer>(source).SetBase(AttributeRegistry.GetId("Health"), 55f);
 
@@ -140,7 +140,7 @@ namespace Ludots.Tests.GasTests
             var source = world.Create(
                 WorldPositionCm.FromCm(9000, 8000),
                 new PresentationStableId { Value = 42 },
-                new AttributeBuffer(),
+                AttributeBuffer.CreateAttached(),
                 new AbilityExecInstance { HasTargetPos = 1, TargetPosCm = Fix64Vec2.FromInt(9000, 8000) });
             world.Get<AttributeBuffer>(source).SetBase(AttributeRegistry.GetId("Health"), 55f);
 
@@ -240,7 +240,7 @@ namespace Ludots.Tests.GasTests
             var source = world.Create(
                 WorldPositionCm.FromCm(9000, 8000),
                 new PresentationStableId { Value = 43 },
-                new AttributeBuffer(),
+                AttributeBuffer.CreateAttached(),
                 new AbilityExecInstance { HasTargetPos = 1, TargetPosCm = Fix64Vec2.FromInt(9000, 8000) });
             ref var sourceAttributes = ref world.Get<AttributeBuffer>(source);
             sourceAttributes.SetBase(AttributeRegistry.GetId("Health"), 55f);
@@ -398,7 +398,7 @@ namespace Ludots.Tests.GasTests
                 WorldPositionCm.FromCm(9000, 8000),
                 new PresentationStableId { Value = 77 },
                 new PlayerOwner { PlayerId = 3 },
-                new AttributeBuffer(),
+                AttributeBuffer.CreateAttached(),
                 new AbilityExecInstance { HasTargetPos = 1, TargetPosCm = Fix64Vec2.FromInt(9000, 8000) });
             world.Get<AttributeBuffer>(source).SetBase(AttributeRegistry.GetId("Health"), 75f);
 
@@ -577,7 +577,7 @@ namespace Ludots.Tests.GasTests
             var source = world.Create(
                 WorldPositionCm.FromCm(100, 100),
                 new PresentationStableId { Value = 1 },
-                new AttributeBuffer(),
+                AttributeBuffer.CreateAttached(),
                 new AbilityExecInstance { HasTargetPos = 1, TargetPosCm = Fix64Vec2.FromInt(5000, 5000) });
             world.Get<AttributeBuffer>(source).SetBase(AttributeRegistry.GetId("Health"), 50f);
 

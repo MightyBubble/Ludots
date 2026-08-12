@@ -333,7 +333,7 @@ namespace Ludots.Tests.GAS
                 new MassNavigationAgent { ProfileId = MassNavigationProfileRegistry.Register("Small") },
                 WorldPositionCm.FromCm(330, 170),
                 OrderBuffer.CreateEmpty(),
-                new AttributeBuffer(),
+                AttributeBuffer.CreateAttached(),
                 new GameplayTagContainer(),
                 new OrderSpatialPayloadBuffer());
             MassNavigationSimulationRuntime simulation = CreateRoadMassRuntime(world, actor);
@@ -545,7 +545,7 @@ namespace Ludots.Tests.GAS
                 new RoadColumnTag(),
                 WorldPositionCm.FromCm(40, 340),
                 OrderBuffer.CreateEmpty(),
-                new AttributeBuffer(),
+                AttributeBuffer.CreateAttached(),
                 new GameplayTagContainer(),
                 new OrderSpatialPayloadBuffer());
 
@@ -1991,7 +1991,7 @@ namespace Ludots.Tests.GAS
                 new MassNavigationAgent { ProfileId = profileId },
                 WorldPositionCm.FromCm(xcm, ycm),
                 OrderBuffer.CreateEmpty(),
-                new AttributeBuffer(),
+                AttributeBuffer.CreateAttached(),
                 new GameplayTagContainer(),
                 new OrderSpatialPayloadBuffer());
         }

@@ -202,7 +202,7 @@ namespace Ludots.Tests.GAS
         {
             // Arrange
             var entity = _world.Create();
-            _world.Add(entity, new AttributeBuffer());
+            _world.Add(entity, AttributeBuffer.CreateAttached());
             _world.Add(entity, new ActiveEffectContainer());
             _world.Add(entity, new DirtyFlags());
             

@@ -162,7 +162,7 @@ namespace Ludots.Tests.GAS
                 new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME),
                 new TagRuleRegistry());
 
-            var target = world.Create(new AttributeBuffer(), new ActiveEffectContainer(), new DirtyFlags());
+            var target = world.Create(AttributeBuffer.CreateAttached(), new ActiveEffectContainer(), new DirtyFlags());
             ref var targetAttributes = ref world.Get<AttributeBuffer>(target);
             targetAttributes.SetBase(durabilityId, 100f);
             targetAttributes.SetCurrent(durabilityId, 100f);
@@ -283,7 +283,7 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
 
             Entity source = world.Create();
-            Entity target = world.Create(new AttributeBuffer(), new ActiveEffectContainer());
+            Entity target = world.Create(AttributeBuffer.CreateAttached(), new ActiveEffectContainer());
 
             if (materializeSelfRelationshipBeforeEffect)
             {

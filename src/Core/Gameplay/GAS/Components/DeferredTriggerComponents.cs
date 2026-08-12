@@ -1,4 +1,5 @@
 using Arch.Core;
+using Ludots.Core.Gameplay.GAS.Capacity;
 
 namespace Ludots.Core.Gameplay.GAS.Components
 {
@@ -37,30 +38,34 @@ namespace Ludots.Core.Gameplay.GAS.Components
     
     /// <summary>
     /// 脏标记组件（用于标记需要延迟触发）
+    /// Attribute dirty words are absolute-max fixed (1024/64); live ids fail-closed against the plan.
     /// </summary>
     public unsafe struct DirtyFlags
     {
+        public const int MAX_ATTR_DIRTY_WORDS =
+            GasLoadTimeCapacityPlan.AbsoluteMaxAttributeSlots / GasLoadTimeCapacityPlan.TagBitsPerWord;
+
+        /// <summary>Obsolete bridge for the old single-ulong 64-slot mask.</summary>
         public const int MAX_ATTRS = 64;
         public const int TAG_DIRTY_BYTES = 32; // 256 tags / 8
-        
-        public ulong AttributeDirtyMask;
+
+        public fixed ulong AttributeDirtyWords[MAX_ATTR_DIRTY_WORDS];
         public byte DeferredTriggerQueued;
         public fixed byte TagDirty[TAG_DIRTY_BYTES];
-        
-        /// <summary>
-        /// 标记属性为脏（需要延迟触发）
-        /// </summary>
+
+        /// <summary>Word 0 of the multi-word attribute dirty set (ids 0..63).</summary>
+        public ulong AttributeDirtyMask
+        {
+            get => AttributeDirtyWords[0];
+            set => AttributeDirtyWords[0] = value;
+        }
+
         public void MarkAttributeDirty(int attrId)
         {
-            if (attrId >= 0 && attrId < MAX_ATTRS)
-            {
-                AttributeDirtyMask |= 1UL << attrId;
-            }
+            ValidateAttributeId(attrId);
+            AttributeDirtyWords[attrId >> 6] |= 1UL << (attrId & 63);
         }
-        
-        /// <summary>
-        /// 标记Tag为脏（需要延迟触发）
-        /// </summary>
+
         public void MarkTagDirty(int tagId)
         {
             if (tagId >= 0 && tagId < 256)
@@ -70,22 +75,13 @@ namespace Ludots.Core.Gameplay.GAS.Components
                 TagDirty[byteIndex] |= (byte)(1 << bitIndex);
             }
         }
-        
-        /// <summary>
-        /// 检查属性是否为脏
-        /// </summary>
+
         public bool IsAttributeDirty(int attrId)
         {
-            if (attrId < 0 || attrId >= MAX_ATTRS)
-            {
-                return false;
-            }
-            return ((AttributeDirtyMask >> attrId) & 1UL) != 0;
+            ValidateAttributeId(attrId);
+            return (AttributeDirtyWords[attrId >> 6] & (1UL << (attrId & 63))) != 0UL;
         }
-        
-        /// <summary>
-        /// 检查Tag是否为脏
-        /// </summary>
+
         public bool IsTagDirty(int tagId)
         {
             if (tagId < 0 || tagId >= 256)
@@ -96,13 +92,14 @@ namespace Ludots.Core.Gameplay.GAS.Components
             int bitIndex = tagId % 8;
             return (TagDirty[byteIndex] & (1 << bitIndex)) != 0;
         }
-        
-        /// <summary>
-        /// 清除所有脏标记
-        /// </summary>
+
         public void Clear()
         {
-            AttributeDirtyMask = 0UL;
+            for (int i = 0; i < MAX_ATTR_DIRTY_WORDS; i++)
+            {
+                AttributeDirtyWords[i] = 0UL;
+            }
+
             for (int i = 0; i < TAG_DIRTY_BYTES; i++)
             {
                 TagDirty[i] = 0;
@@ -111,7 +108,16 @@ namespace Ludots.Core.Gameplay.GAS.Components
 
         public bool IsAnyAttributeDirty()
         {
-            return AttributeDirtyMask != 0UL;
+            int words = ActiveAttributeDirtyWordCount();
+            for (int i = 0; i < words; i++)
+            {
+                if (AttributeDirtyWords[i] != 0UL)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         public bool IsAnyTagDirty()
@@ -122,21 +128,13 @@ namespace Ludots.Core.Gameplay.GAS.Components
             }
             return false;
         }
-        
-        /// <summary>
-        /// 清除属性脏标记
-        /// </summary>
+
         public void ClearAttributeDirty(int attrId)
         {
-            if (attrId >= 0 && attrId < MAX_ATTRS)
-            {
-                AttributeDirtyMask &= ~(1UL << attrId);
-            }
+            ValidateAttributeId(attrId);
+            AttributeDirtyWords[attrId >> 6] &= ~(1UL << (attrId & 63));
         }
-        
-        /// <summary>
-        /// 清除Tag脏标记
-        /// </summary>
+
         public void ClearTagDirty(int tagId)
         {
             if (tagId >= 0 && tagId < 256)
@@ -144,6 +142,30 @@ namespace Ludots.Core.Gameplay.GAS.Components
                 int byteIndex = tagId / 8;
                 int bitIndex = tagId % 8;
                 TagDirty[byteIndex] &= (byte)~(1 << bitIndex);
+            }
+        }
+
+        private static int ActiveAttributeSlotCount()
+        {
+            return GasLoadTimeCapacitySession.IsFrozen
+                ? GasLoadTimeCapacitySession.Plan.AttributeSlotCount
+                : GasLoadTimeCapacityPlan.AbsoluteMaxAttributeSlots;
+        }
+
+        private static int ActiveAttributeDirtyWordCount()
+        {
+            return GasWorldColumnStore.AttrDirtyWordCount(ActiveAttributeSlotCount());
+        }
+
+        private static void ValidateAttributeId(int attrId)
+        {
+            int slots = ActiveAttributeSlotCount();
+            if ((uint)attrId >= (uint)slots)
+            {
+                throw new System.ArgumentOutOfRangeException(
+                    nameof(attrId),
+                    attrId,
+                    $"attributeId must be in [0, {slots - 1}] for dirty flags.");
             }
         }
     }

@@ -225,7 +225,7 @@ public sealed class GoldMarketRuntime
         _buyer = world.Create(
             new Name { Value = _config!.BuyerName },
             new MapEntity { MapId = new MapId(GoldMarketIds.ShowcaseMapId) },
-            new AttributeBuffer(),
+            AttributeBuffer.CreateAttached(),
             new DirtyFlags());
         _market = world.Create(
             new Name { Value = _config.MarketName },

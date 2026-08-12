@@ -521,7 +521,7 @@ namespace Ludots.Tests.Presentation
             var ownerChanges = new PresentationOwnerChangeBuffer(8);
             var sounds = new SoundRequestBuffer();
             int durabilityId = 7;
-            Entity owner = world.Create(new AttributeBuffer());
+            Entity owner = world.Create(AttributeBuffer.CreateAttached());
             ref AttributeBuffer attributes = ref world.Get<AttributeBuffer>(owner);
             attributes.SetBase(durabilityId, 100f);
             attributes.SetCurrent(durabilityId, 50f);

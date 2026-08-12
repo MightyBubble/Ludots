@@ -212,8 +212,13 @@ namespace DiagnosticsOverlayMod.Systems
                 lines.Add($"  [{e.Id}] {name}: HP={hp:F0}/{hpBase:F0}");
 
                 int modCount = 0;
-                for (int a = 0; a < AttributeBuffer.MAX_ATTRS; a++)
+                for (int a = 0; a < AttributeRegistry.RegisteredCount; a++)
                 {
+                    if (!buf.HasAttribute(a))
+                    {
+                        continue;
+                    }
+
                     float cur = buf.GetCurrent(a);
                     float bas = buf.GetBase(a);
                     if (a != healthId && (cur != 0f || bas != 0f))

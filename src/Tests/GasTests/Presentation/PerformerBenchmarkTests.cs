@@ -242,7 +242,7 @@ namespace Ludots.Tests.Presentation
             int defId = _healthBarDefId;
             for (int i = 0; i < ENTITY_COUNT; i++)
             {
-                var attrBuf = new AttributeBuffer();
+                var attrBuf = AttributeBuffer.CreateAttached();
                 attrBuf.SetBase(_healthAttrId, 100f);
                 attrBuf.SetCurrent(_healthAttrId, 70f + (i % 30));
                 var owner = CreateOwner(new Vector3(i, 0f, i), attrBuf, hasAttributes: true);
@@ -282,7 +282,7 @@ namespace Ludots.Tests.Presentation
             int defId = _healthBarDefId;
             for (int i = 0; i < ENTITY_COUNT; i++)
             {
-                var attrBuf = new AttributeBuffer();
+                var attrBuf = AttributeBuffer.CreateAttached();
                 attrBuf.SetBase(_healthAttrId, 100f);
                 attrBuf.SetCurrent(_healthAttrId, 80f);
                 var owner = CreateOwner(new Vector3(i, 0f, i), attrBuf, hasAttributes: true, visible: i % 3 != 0);
@@ -461,7 +461,7 @@ namespace Ludots.Tests.Presentation
 
             for (int i = 0; i < ENTITY_COUNT; i++)
             {
-                var attrBuf = new AttributeBuffer();
+                var attrBuf = AttributeBuffer.CreateAttached();
                 attrBuf.SetBase(_healthAttrId, 100f);
                 attrBuf.SetCurrent(_healthAttrId, 50f + (i % 50));
                 var owner = CreateOwner(new Vector3(i, 0f, i), attrBuf, hasAttributes: true);
@@ -584,7 +584,7 @@ namespace Ludots.Tests.Presentation
             int defId = _healthBarDefId;
             for (int i = 0; i < ENTITY_COUNT; i++)
             {
-                var attrBuf = new AttributeBuffer();
+                var attrBuf = AttributeBuffer.CreateAttached();
                 attrBuf.SetBase(_healthAttrId, 100f);
                 attrBuf.SetCurrent(_healthAttrId, 80f);
                 var owner = CreateOwner(new Vector3(i, 0f, i), attrBuf, hasAttributes: true);

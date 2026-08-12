@@ -22,10 +22,10 @@ namespace Ludots.Tests.GAS
             var world = World.Create();
             try
             {
-                var caster = world.Create(new AttributeBuffer(), new DirtyFlags(), new Position { GridPos = new IntVector2(0, 0) });
+                var caster = world.Create(AttributeBuffer.CreateAttached(), new DirtyFlags(), new Position { GridPos = new IntVector2(0, 0) });
                 world.Get<AttributeBuffer>(caster).SetCurrent(0, 0f);
 
-                var target = world.Create(new AttributeBuffer(), new DirtyFlags(), new Position { GridPos = new IntVector2(1, 0) });
+                var target = world.Create(AttributeBuffer.CreateAttached(), new DirtyFlags(), new Position { GridPos = new IntVector2(1, 0) });
                 world.Get<AttributeBuffer>(target).SetCurrent(0, 7f);
 
                 var effectRequests = new EffectRequestQueue();
@@ -86,8 +86,8 @@ namespace Ludots.Tests.GAS
             var world = World.Create();
             try
             {
-                var caster = world.Create(new AttributeBuffer(), new DirtyFlags(), new Position { GridPos = new IntVector2(0, 0) });
-                var target = world.Create(new AttributeBuffer(), new DirtyFlags(), new Position { GridPos = new IntVector2(1, 0) });
+                var caster = world.Create(AttributeBuffer.CreateAttached(), new DirtyFlags(), new Position { GridPos = new IntVector2(0, 0) });
+                var target = world.Create(AttributeBuffer.CreateAttached(), new DirtyFlags(), new Position { GridPos = new IntVector2(1, 0) });
 
                 var effectRequests = new EffectRequestQueue();
                 var eventBus = new GameplayEventBus();
@@ -122,7 +122,7 @@ namespace Ludots.Tests.GAS
             {
                 var physics = new PhysicsWorld();
                 var caster = world.Create(new Position { GridPos = new IntVector2(0, 0) });
-                var target = world.Create(new AttributeBuffer(), new DirtyFlags(), new Position { GridPos = new IntVector2(1, 0) });
+                var target = world.Create(AttributeBuffer.CreateAttached(), new DirtyFlags(), new Position { GridPos = new IntVector2(1, 0) });
                 world.Get<AttributeBuffer>(target).SetCurrent(0, 0f);
 
                 var e1 = world.Create(new Position { GridPos = new IntVector2(2, 0) });

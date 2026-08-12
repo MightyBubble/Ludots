@@ -22,7 +22,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
         public EntityLocalClockSystem(World world, GasClockStepPolicy stepPolicy, int scalePermilleAttributeId) : base(world)
         {
             _stepPolicy = stepPolicy ?? throw new ArgumentNullException(nameof(stepPolicy));
-            if ((uint)scalePermilleAttributeId >= AttributeBuffer.MAX_ATTRS)
+            if ((uint)scalePermilleAttributeId >= Ludots.Core.Gameplay.GAS.Capacity.GasLoadTimeCapacityPlan.AbsoluteMaxAttributeSlots)
             {
                 throw new ArgumentOutOfRangeException(nameof(scalePermilleAttributeId));
             }

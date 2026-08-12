@@ -3,6 +3,7 @@ using Arch.Core;
 using Arch.Core.Extensions;
 using Arch.System;
 using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Gameplay.GAS.Capacity;
 using Ludots.Core.Gameplay.GAS.Components;
 using System.Numerics;
 using System.Runtime.CompilerServices;
@@ -116,48 +117,23 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     if (!hasSnapshot)
                     {
                         var snap = default(AttributeLastSnapshot);
-                        ulong dirtyMask = dirtyFlags.AttributeDirtyMask;
-                        while (dirtyMask != 0UL)
-                        {
-                            int i = BitOperations.TrailingZeroCount(dirtyMask);
-                            dirtyMask &= dirtyMask - 1UL;
-                            float newValue = attrBuffer.GetCurrent(i);
-                            snap.Values[i] = newValue;
-
-                            TriggerQueue.EnqueueAttributeChanged(new AttributeChangedTrigger
-                            {
-                                Target = entity,
-                                AttributeId = i,
-                                OldValue = 0f,
-                                NewValue = newValue
-                            });
-                            dirtyFlags.ClearAttributeDirty(i);
-                        }
+                        CollectAttributeDirtyTriggers(
+                            entity,
+                            ref attrBuffer,
+                            ref dirtyFlags,
+                            ref snap,
+                            hasExistingSnapshot: false);
                         CommandBuffer.Add(entity, snap);
                     }
                     else
                     {
                         ref var snap = ref World.Get<AttributeLastSnapshot>(entity);
-                        ulong dirtyMask = dirtyFlags.AttributeDirtyMask;
-                        while (dirtyMask != 0UL)
-                        {
-                            int i = BitOperations.TrailingZeroCount(dirtyMask);
-                            dirtyMask &= dirtyMask - 1UL;
-                            float oldValue = snap.Values[i];
-                            float newValue = attrBuffer.GetCurrent(i);
-                            snap.Values[i] = newValue;
-                            if (oldValue != newValue)
-                            {
-                                TriggerQueue.EnqueueAttributeChanged(new AttributeChangedTrigger
-                                {
-                                    Target = entity,
-                                    AttributeId = i,
-                                    OldValue = oldValue,
-                                    NewValue = newValue
-                                });
-                            }
-                            dirtyFlags.ClearAttributeDirty(i);
-                        }
+                        CollectAttributeDirtyTriggers(
+                            entity,
+                            ref attrBuffer,
+                            ref dirtyFlags,
+                            ref snap,
+                            hasExistingSnapshot: true);
                     }
                 }
 
@@ -360,6 +336,57 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 }
 
                 ClearDirtyFlagsIfClean(entity, ref dirtyFlags);
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            private void CollectAttributeDirtyTriggers(
+                Entity entity,
+                ref AttributeBuffer attrBuffer,
+                ref DirtyFlags dirtyFlags,
+                ref AttributeLastSnapshot snap,
+                bool hasExistingSnapshot)
+            {
+                int words = GasWorldColumnStore.AttrDirtyWordCount(
+                    GasLoadTimeCapacitySession.Plan.AttributeSlotCount);
+                for (int wordIndex = 0; wordIndex < words; wordIndex++)
+                {
+                    ulong dirtyMask = dirtyFlags.AttributeDirtyWords[wordIndex];
+                    while (dirtyMask != 0UL)
+                    {
+                        int bit = BitOperations.TrailingZeroCount(dirtyMask);
+                        dirtyMask &= dirtyMask - 1UL;
+                        int attributeId = (wordIndex << 6) + bit;
+                        float newValue = attrBuffer.GetCurrent(attributeId);
+                        if (!hasExistingSnapshot)
+                        {
+                            snap.Values[attributeId] = newValue;
+                            TriggerQueue.EnqueueAttributeChanged(new AttributeChangedTrigger
+                            {
+                                Target = entity,
+                                AttributeId = attributeId,
+                                OldValue = 0f,
+                                NewValue = newValue
+                            });
+                        }
+                        else
+                        {
+                            float oldValue = snap.Values[attributeId];
+                            snap.Values[attributeId] = newValue;
+                            if (oldValue != newValue)
+                            {
+                                TriggerQueue.EnqueueAttributeChanged(new AttributeChangedTrigger
+                                {
+                                    Target = entity,
+                                    AttributeId = attributeId,
+                                    OldValue = oldValue,
+                                    NewValue = newValue
+                                });
+                            }
+                        }
+
+                        dirtyFlags.ClearAttributeDirty(attributeId);
+                    }
+                }
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]

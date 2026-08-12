@@ -133,8 +133,8 @@ namespace Ludots.Tests.GAS
                 configParams.TryAddFloat(ConfigKeyDmgMultiplier, 1.5f); // actual = 20 * 1.5 = 30
 
                 // ── Create entities ──
-                var caster = world.Create(new AttributeBuffer(), new DirtyFlags());
-                var target = world.Create(new AttributeBuffer(), new DirtyFlags(), new BlackboardFloatBuffer());
+                var caster = world.Create(AttributeBuffer.CreateAttached(), new DirtyFlags());
+                var target = world.Create(AttributeBuffer.CreateAttached(), new DirtyFlags(), new BlackboardFloatBuffer());
                 world.Get<AttributeBuffer>(caster).SetBase(attrHealth, 100f);
                 world.Get<AttributeBuffer>(target).SetBase(attrHealth, 100f);
 
@@ -265,7 +265,7 @@ namespace Ludots.Tests.GAS
                 configParams.TryAddFloat(ConfigKeyBaseDamage, 25f); // damage = 25 * 2 = 50
 
                 var caster = world.Create();
-                var target = world.Create(new AttributeBuffer(), new DirtyFlags(), new BlackboardFloatBuffer());
+                var target = world.Create(AttributeBuffer.CreateAttached(), new DirtyFlags(), new BlackboardFloatBuffer());
                 world.Get<AttributeBuffer>(target).SetBase(attrHealth, 100f);
 
                 var api = new GasGraphRuntimeApi(world, null, null, null, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
@@ -345,8 +345,8 @@ namespace Ludots.Tests.GAS
                 iceConfig.TryAddFloat(ConfigKeyDmgMultiplier, 1.0f);
 
                 var caster = world.Create();
-                var targetA = world.Create(new AttributeBuffer(), new DirtyFlags());
-                var targetB = world.Create(new AttributeBuffer(), new DirtyFlags());
+                var targetA = world.Create(AttributeBuffer.CreateAttached(), new DirtyFlags());
+                var targetB = world.Create(AttributeBuffer.CreateAttached(), new DirtyFlags());
                 world.Get<AttributeBuffer>(targetA).SetBase(attrHealth, 100f);
                 world.Get<AttributeBuffer>(targetB).SetBase(attrHealth, 100f);
 

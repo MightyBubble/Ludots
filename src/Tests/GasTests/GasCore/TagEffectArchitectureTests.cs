@@ -442,7 +442,7 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
         public void BuiltinHandlers_ApplyModifiers_AppliesModifiersToTarget()
         {
             using var world = World.Create();
-            var target = world.Create(new AttributeBuffer(), new DirtyFlags());
+            var target = world.Create(AttributeBuffer.CreateAttached(), new DirtyFlags());
             var effect = world.Create();
             var registry = new BuiltinHandlerRegistry();
             BuiltinHandlers.RegisterAll(registry);
@@ -470,7 +470,7 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
             That(fxKey, Is.Not.EqualTo(0), "EffectParamKeys must be initialized");
             That(fyKey, Is.Not.EqualTo(0), "EffectParamKeys must be initialized");
 
-            var target = world.Create(new AttributeBuffer(), new DirtyFlags());
+            var target = world.Create(AttributeBuffer.CreateAttached(), new DirtyFlags());
             var effect = world.Create();
             var registry = new BuiltinHandlerRegistry();
             BuiltinHandlers.RegisterAll(registry);
