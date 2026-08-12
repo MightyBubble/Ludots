@@ -763,52 +763,73 @@
     },
     {
       "op": "RelationshipEnsureLink",
-      "authorableKinds": null,
-      "unitTestFilter": null,
+      "authorableKinds": [
+        "Effect"
+      ],
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectRelationshipPairMutationAndReadOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_RelationshipOpsRequireAuthoredSymbols",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "RelationshipRemoveLink",
-      "authorableKinds": null,
-      "unitTestFilter": null,
+      "authorableKinds": [
+        "Effect"
+      ],
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectRelationshipPairMutationAndReadOps_CompileAndEmit",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "RelationshipSetMetric",
-      "authorableKinds": null,
-      "unitTestFilter": null,
+      "authorableKinds": [
+        "Effect"
+      ],
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectRelationshipPairMutationAndReadOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_RelationshipOpsRequireAuthoredSymbols",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "RelationshipAddMetric",
-      "authorableKinds": null,
-      "unitTestFilter": null,
+      "authorableKinds": [
+        "Effect"
+      ],
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectRelationshipPairMutationAndReadOps_CompileAndEmit",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "RelationshipGetMetric",
-      "authorableKinds": null,
-      "unitTestFilter": null,
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": "NewGraphOpsTests.GraphControlFlowCompiler_RelationshipMetricOpsRequireExplicitRelationshipType",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "RelationshipHasFlag",
-      "authorableKinds": null,
-      "unitTestFilter": null,
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Query",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectRelationshipPairMutationAndReadOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryRelationshipPairAndPredicateOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_RelationshipOpsRequireAuthoredSymbols",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "RelationshipSetFlag",
-      "authorableKinds": null,
-      "unitTestFilter": null,
+      "authorableKinds": [
+        "Effect"
+      ],
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectRelationshipPairMutationAndReadOps_CompileAndEmit",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "RelationshipQueryOutgoing",
@@ -839,10 +860,12 @@
     },
     {
       "op": "RelationshipQueryBetweenPair",
-      "authorableKinds": null,
-      "unitTestFilter": null,
+      "authorableKinds": [
+        "Query"
+      ],
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryRelationshipPairAndPredicateOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_RelationshipOpsRequireAuthoredSymbols",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "RelationshipFilterMetricRange",
@@ -1053,10 +1076,16 @@
     },
     {
       "op": "RelationshipHasLink",
-      "authorableKinds": null,
-      "unitTestFilter": null,
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Query",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectRelationshipPairMutationAndReadOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryRelationshipPairAndPredicateOps_CompileAndEmit",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "BeginLifecycleTransaction",

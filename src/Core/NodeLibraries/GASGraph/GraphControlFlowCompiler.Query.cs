@@ -36,6 +36,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                       GraphNodeOp.RelationshipQueryOutgoing or
                       GraphNodeOp.RelationshipQueryIncoming or
                       GraphNodeOp.RelationshipQueryMutual or
+                      GraphNodeOp.RelationshipQueryBetweenPair or
                       GraphNodeOp.RelationshipFilterMetricRange or
                       GraphNodeOp.RelationshipFilterFlag or
                       GraphNodeOp.RelationshipSortByMetric or
@@ -44,7 +45,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                       GraphNodeOp.RelationshipAggAverageMetric or
                       GraphNodeOp.RelationshipAggMinMetric or
                       GraphNodeOp.RelationshipAggMaxEntityByMetric or
-                      GraphNodeOp.RelationshipAggMinEntityByMetric;
+                      GraphNodeOp.RelationshipAggMinEntityByMetric or
+                      GraphNodeOp.RelationshipHasFlag or
+                      GraphNodeOp.RelationshipHasLink;
 
         private static GraphValueType GetQueryOutputType(GraphNodeOp op)
             => op switch
@@ -65,6 +68,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     GraphNodeOp.RelationshipQueryOutgoing or
                     GraphNodeOp.RelationshipQueryIncoming or
                     GraphNodeOp.RelationshipQueryMutual or
+                    GraphNodeOp.RelationshipQueryBetweenPair or
                     GraphNodeOp.RelationshipFilterMetricRange or
                     GraphNodeOp.RelationshipFilterFlag or
                     GraphNodeOp.RelationshipSortByMetric => GraphValueType.TargetList,
@@ -85,7 +89,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     GraphNodeOp.RelationshipAggAverageMetric or
                     GraphNodeOp.RelationshipAggMinMetric => GraphValueType.Int,
                 GraphNodeOp.HasTag or
-                    GraphNodeOp.CompareEqEntity => GraphValueType.Bool,
+                    GraphNodeOp.CompareEqEntity or
+                    GraphNodeOp.RelationshipHasFlag or
+                    GraphNodeOp.RelationshipHasLink => GraphValueType.Bool,
                 _ => GraphValueType.Void
             };
 
@@ -114,7 +120,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.QueryFromCollection or
                     GraphNodeOp.RelationshipQueryOutgoing or
                     GraphNodeOp.RelationshipQueryIncoming => port == GraphControlFlowPorts.Source,
-                GraphNodeOp.RelationshipQueryMutual => port is GraphControlFlowPorts.Source or GraphControlFlowPorts.B,
+                GraphNodeOp.RelationshipQueryMutual or
+                    GraphNodeOp.RelationshipQueryBetweenPair => port is GraphControlFlowPorts.Source or GraphControlFlowPorts.B,
+                GraphNodeOp.RelationshipHasFlag or
+                    GraphNodeOp.RelationshipHasLink => port is GraphControlFlowPorts.Source or GraphControlFlowPorts.Target,
                 GraphNodeOp.RelationshipFilterMetricRange => port is GraphControlFlowPorts.List or GraphControlFlowPorts.Source or GraphControlFlowPorts.Min or GraphControlFlowPorts.Max,
                 GraphNodeOp.RelationshipFilterFlag or
                     GraphNodeOp.RelationshipSortByMetric or
@@ -291,12 +300,27 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.B, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     break;
+                case GraphNodeOp.RelationshipQueryBetweenPair:
+                    RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.B, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireRelationshipFields(node, requireMetric: false, requireFlag: false, graphId, diagnostics);
+                    break;
                 case GraphNodeOp.RelationshipFilterMetricRange:
                     RequireValueInput(node, GraphControlFlowPorts.List, GraphValueType.TargetList, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.Min, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.Max, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireRelationshipFields(node, requireMetric: true, requireFlag: false, graphId, diagnostics);
+                    break;
+                case GraphNodeOp.RelationshipHasFlag:
+                    RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.Target, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireRelationshipFields(node, requireMetric: false, requireFlag: true, graphId, diagnostics);
+                    break;
+                case GraphNodeOp.RelationshipHasLink:
+                    RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.Target, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireRelationshipFields(node, requireMetric: false, requireFlag: false, graphId, diagnostics);
                     break;
                 case GraphNodeOp.RelationshipFilterFlag:
                     RequireValueInput(node, GraphControlFlowPorts.List, GraphValueType.TargetList, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
@@ -487,6 +511,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
                     instruction.Dst = EncodeByteSymbol(node.RelationshipType, symbolToIndex, symbols, graphId, node.Id, diagnostics);
                     break;
+                case GraphNodeOp.RelationshipQueryBetweenPair:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.B = ResolveValueInput(
+                        node, GraphControlFlowPorts.B, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Dst = RequireRelationshipTypeSymbol(node.RelationshipType, symbolToIndex, symbols, graphId, node.Id, diagnostics);
+                    break;
                 case GraphNodeOp.RelationshipFilterMetricRange:
                     instruction.A = ResolveValueInput(
                         node, GraphControlFlowPorts.Source, GraphValueType.Entity,
@@ -499,6 +532,25 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
                     instruction.Imm = InternOptional(symbolToIndex, symbols, node.Metric);
                     instruction.Dst = RequireRelationshipTypeSymbol(node.RelationshipType, symbolToIndex, symbols, graphId, node.Id, diagnostics);
+                    break;
+                case GraphNodeOp.RelationshipHasFlag:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.B = ResolveValueInput(
+                        node, GraphControlFlowPorts.Target, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Imm = InternOptional(symbolToIndex, symbols, node.Flag);
+                    instruction.Flags = RequireRelationshipTypeSymbol(node.RelationshipType, symbolToIndex, symbols, graphId, node.Id, diagnostics);
+                    break;
+                case GraphNodeOp.RelationshipHasLink:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.B = ResolveValueInput(
+                        node, GraphControlFlowPorts.Target, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Flags = RequireRelationshipTypeSymbol(node.RelationshipType, symbolToIndex, symbols, graphId, node.Id, diagnostics);
                     break;
                 case GraphNodeOp.RelationshipFilterFlag:
                     instruction.A = ResolveValueInput(
