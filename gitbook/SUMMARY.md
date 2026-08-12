@@ -48,6 +48,7 @@
   - [Performer 开发看板](architecture/performer-development-kanban.md)
   - [Performer 编译式执行分层](architecture/performer-compiled-lanes.md)
   - [Instanced Batch 外部 Source Contract](architecture/instanced-batch-source-contract.md)
+  - [GPU 骨骼实例化与离线开源重定向](architecture/gpu-skinned-instancing-and-offline-retarget.md)
   - [Map Batch Performer Param Overrides](architecture/map-batch-performer-param-overrides.md)
   - [Retained Static Incremental Projection](architecture/retained-static-incremental-projection.md)
   - [Core Minimap Authoring](architecture/core-minimap-authoring.md)
