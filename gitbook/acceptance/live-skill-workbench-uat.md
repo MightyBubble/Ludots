@@ -2,19 +2,29 @@
 
 ## 1. 概述
 
-玩家/策划用工作台热调技能与规则、看效果链、试 AI 草稿并保存进 Mod。
+策划在运行中热改技能配置，玩家立刻用同一技能看到新效果。Showcase 验收故事：火球变冰球，头顶血条数字与冰冻倒计时可读。
 
 ## 2. 结构
 
-改数值 → 预检/应用 → 施放 → 效果链 → 改属性 → AI 草稿试玩 → 保存。
+真施放 → 工作台热改（下次释放） → 再施放 → 更高伤害 / 冰冻 / 蓝色表现 → HUD 可读。
 
 ## 3. 详情
 
-覆盖子单 #616–#625 / #655。
+覆盖子单 #616–#625 / #655。Showcase 走生产 `LiveGasEditPipeline` 与冠军技能施放管线，不做假伤害表、不做面板流水账。
 
 ## 4. 场景
 
 ```gherkin
+Feature: 火球热改成冰球
+  Scenario: 新玩家看懂一次热改前后的差别
+    Given 场上站着射手和木桩，头顶显示满血 200/200
+    When 射手放出第一发火球打中木桩
+    Then 木桩血量变成 185/200
+    When 编辑器把这次技能的命中改成冰球、伤害提高并带上冰冻
+    And 射手再放同一技能
+    Then 木桩掉更多血，身上出现冰冻，倒计时在跳
+    And 玩家能从血条数字和冰冻倒计时看出数值变化
+
 Feature: 实时调试技能数值
   Scenario: 策划修改火球伤害后试玩
     Given 玩家打开实时技能工作台并选中火球术
@@ -53,7 +63,7 @@ Feature: 保存试玩成功的技能为 Mod
     And 保存完成后配置文件可被重新加载
 
 Feature: 不安全改动被拒绝
-  Scenario: 改名标签身份
+  Scenario: 改名破坏身份
     Given 运行中存在稳定标签 State.Burning
     When 策划试图换成未注册的新标签身份
     Then 工作台显示需要重启
@@ -62,8 +72,8 @@ Feature: 不安全改动被拒绝
 
 ## 5. 边界
 
-不做外部 LLM；Immediate 属性默认不落盘；禁止 ReloadConfigs 冒充热更。
+不做外部 LLM；Immediate 属性默认不落盘；禁止 ReloadConfigs 冒充热更；Showcase 不以 Skia 证据板或假伤害表冒充局内验收。
 
 ## 6. UAT
 
-见上 Cucumber；自动化见 `LiveSkillWorkbenchEpicAcceptanceTests` 与 Showcase acceptance。
+见上 Cucumber；自动化见 `LiveSkillWorkbenchEpicAcceptanceTests`、`LiveSkillWorkbenchShowcaseAcceptanceTests`、`LswFireToIceHotApplyTests`。Preset：`capability_standard_live_skill_workbench_raylib`。

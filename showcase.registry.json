@@ -3005,25 +3005,26 @@
       "id": "capability_standard_live_skill_workbench",
       "path": "mods/showcases/capability_standard/CapabilityStandardLiveSkillWorkbenchShowcaseMod",
       "projectPath": "CapabilityStandardLiveSkillWorkbenchShowcaseMod.csproj",
-      "title": "实时技能工作台局内演示",
-      "summary": "可读小场景：弱火球→热应用加伤→强火球→回血→效果链点亮→AI 冰冻草稿试玩。",
+      "title": "实时技能热改：火球变冰球",
+      "summary": "冠军技能真施放：火球→工作台热改命中/表现/伤害→再放成冰球加伤并挂冰冻；头顶血条数字与冰冻倒计时可读。",
       "tier": "T2",
       "category": "capability",
       "tags": [
         "live-skill-workbench",
         "capability-standard",
         "gas",
-        "hot-reload"
+        "hot-reload",
+        "champion-skill"
       ],
       "binding": "capability_standard_live_skill_workbench",
       "preset": "capability_standard_live_skill_workbench_raylib",
       "docsPath": "gitbook/acceptance/live-skill-workbench-uat.md",
       "readmePath": null,
-      "acceptanceTest": "LiveSkillWorkbenchVignetteShowcaseAcceptanceTests",
+      "acceptanceTest": "LiveSkillWorkbenchShowcaseAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_live_skill_workbench",
       "screenshot": null,
       "status": "active",
-      "notes": "Player-facing vignette for Epic #615; not a workbench panel dump."
+      "notes": "Editor hot-apply via production LiveGasEditPipeline on Champion cast pipeline; WorldHud HP + chill countdown."
     }
   ]
 }
