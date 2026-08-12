@@ -73,7 +73,10 @@
 
 - **不做**上游侵蚀模拟移植与交互热键  
 - **不抄**上游无许可着色器/贴图原文；技法自研 + CC0/自有资产  
-- **不做**级联阴影 / 多光源完整 PBR（可列 P2 债务）  
+- **不做**级联阴影 / 多光源完整 PBR / 金属度-粗糙度材质球（P2 债务；本轨仅有单光源 Lambert+Blinn 与高度分层 albedo 平铺）  
+- **做** VisualHeightmap 高度分层地形贴图（`Presentation/terrain_albedo_environments.json`，非 splatmap）  
+- **做** 同光源月光重映射 + 夜环境光可读剪影（非第二套灯光系统）  
+
 - **不删** Prefab 全库；贴画占位另轨可并行但本 DoD 不强制  
 - Core：只消费已有 `GlobalDayNight`；缺 Host 天空表字段时先补 Host/客户端配置，不发明平行 Core 资产体系
 

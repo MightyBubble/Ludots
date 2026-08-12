@@ -71,9 +71,14 @@ void main()
 
     vec3 N = normalize(fragNormal);
     vec3 L = normalize(uLightDir);
+    vec3 V = normalize(uViewPos - fragPos);
+    vec3 H = normalize(L + V);
     float ndl = max(dot(N, L), 0.0);
+    // Single-light Blinn highlight (not metallic-roughness PBR). Rock/peak bands get a bit more gloss.
+    float gloss = mix(0.04, 0.18, smoothstep(0.32, 0.85, clamp(fragHeightBand, 0.0, 1.0)));
+    float spec = pow(max(dot(N, H), 0.0), 48.0) * gloss * step(0.02, ndl);
     vec3 lighting = (uAmbient.rgb * uAmbient.a) + (uLightColor * uLightIntensity * ndl);
-    vec3 lit = albedo * lighting;
+    vec3 lit = albedo * lighting + (uLightColor * uLightIntensity * spec);
     float fogAmount = DistanceFogAmount(length(fragPos - uViewPos));
     vec3 fogged = mix(lit, uFogColor, fogAmount);
     finalColor = vec4(clamp(fogged, 0.0, 1.0), 1.0);

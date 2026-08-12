@@ -4,23 +4,25 @@ Updated by agents. Use: `pending` | `in_progress` | `blocked` | `done`.
 
 | ID | Package | Status | Owner | Notes |
 |----|---------|--------|-------|-------|
-| V1 | Skybox + day/night env | done | cloud-agent | `RaylibSkyEnvironment` + skybox shaders; phase from `GlobalDayNight` via latch; `Presentation/sky_environments.json` (`backendId=raylib`) |
-| V2 | Directional + ambient lighting | done | agent-v2 | RaylibFrameLighting + terrain/ISM/skin N·L+ambient; ambient_day_ramp.json; below-horizon remaps same key to moonlight; cool night ambient/sky; billboards tinted by frame lighting |
-| V3 | Cutout + Alpha/Additive blend | done | cloud-agent | material flags Cutout / Transparent|AlphaBlend / Additive; vegetation_cutout discard; VFX BeginBlendMode |
-| V4 | Distance fog | done | cloud-agent | `distance_fog.json` widened for strategic cameras; fog color dims with day phase |
-| V5 | Reflective/refractive water FBO | done | cloud-agent | `RaylibWaterPass` + upgraded `water.*`; HostLoop fills RTs from **VisualHeightmap** (or VertexMap); ocean plane for VH maps; `Presentation/water_environments.json` |
-| V6 | Showcase + screenshot acceptance | done | cloud-agent | Continuous `tropical_island.vhtm`; aerial shows relief/sand/shelf; day/night delta; water shore shot; acceptance PNGs recaptured |
+| V1 | Skybox + day/night env | done | cloud-agent | `RaylibSkyEnvironment` + skybox shaders; cool night gradient columns |
+| V2 | Directional + ambient lighting | done | cloud-agent | ambient ramp moonlight floor; sun-below → same slot moon remap + cool key; billboards tinted |
+| V3 | Cutout + Alpha/Additive blend | done | cloud-agent | Cutout / AlphaBlend / Additive; vegetation_cutout discard |
+| V4 | Distance fog | done | cloud-agent | widened fog; night fog cool-dim |
+| V5 | Reflective/refractive water FBO | done | cloud-agent | VH ocean plane + water FBO |
+| V6 | Showcase + screenshot acceptance | done | cloud-agent | VH island; acceptance recapture loop |
+| V7 | Height-band terrain albedo | done | cloud-agent | `terrain_albedo_environments.json` + 4 tiled albedos; not splat/PBR |
+| V8 | Full PBR material spheres | blocked | — | No Core MR schema / Raylib BRDF; declared P2 in MASTER — do not invent parallel engine |
 
 ## Blockers
 
-_None._
+| Item | Why |
+|------|-----|
+| Full PBR | materials-notes + MASTER: host albedo-only; no metallic/roughness/normal BRDF. Needs dedicated materials track. |
 
 ## Evidence
 
 | Artifact | Path |
 |----------|------|
 | Master | `docs/audits/raylib-visual-atmosphere/MASTER.md` |
-| Reference study | `docs/audits/raylib-visual-atmosphere/REFERENCE_RaylibErosionStandalone.md` |
 | Acceptance | `docs/audits/raylib-visual-atmosphere/ACCEPTANCE.md` |
-| Shots (opt) | `/opt/cursor/artifacts/raylib-visual-atmosphere/acceptance/` |
-| Shots (repo local) | `artifacts/raylib-visual-atmosphere/acceptance/` |
+| Shots | `/opt/cursor/artifacts/raylib-visual-atmosphere/acceptance/` |
