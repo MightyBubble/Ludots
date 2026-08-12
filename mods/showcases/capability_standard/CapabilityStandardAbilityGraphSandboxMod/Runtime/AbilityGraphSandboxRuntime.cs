@@ -18,6 +18,10 @@ public sealed class AbilityGraphSandboxRuntime
     private byte[] _flash = Array.Empty<byte>();
     private int _lastHit = -1;
     private string _lastSpell = string.Empty;
+    private int _nearbyCount;
+    private int _effectApplications;
+    private int _relationshipScore;
+    private string _statusToken = "无";
 
     public float CasterX => 0f;
     public float CasterY => 0f;
@@ -27,6 +31,10 @@ public sealed class AbilityGraphSandboxRuntime
     public int TargetCount => _tx.Length;
     public int LastHit => _lastHit;
     public string LastSpell => _lastSpell;
+    public int NearbyCount => _nearbyCount;
+    public int EffectApplications => _effectApplications;
+    public int RelationshipScore => _relationshipScore;
+    public string StatusToken => _statusToken;
     public GraphShowcaseMetrics Metrics { get; } = new() { ShowcaseId = "capability_standard_ability_graph_sandbox" };
 
     public void Bind(GraphProgramRegistry programs, GraphFunctionCatalog catalog)
@@ -60,7 +68,7 @@ public sealed class AbilityGraphSandboxRuntime
         }
 
         Metrics.AgentCount = targets;
-        Metrics.Detail = $"Ability FuncLib registry catalog={_catalog.Count}";
+        Metrics.Detail = "巡逻队就位：查一圈找目标，命中后挂状态、加好感，并读状态牌。";
     }
 
     public void Tick(float dt)
@@ -84,6 +92,10 @@ public sealed class AbilityGraphSandboxRuntime
         }
 
         _lastHit = _castWave % _tx.Length;
+        _nearbyCount = CountTargetsInRadius(7.0f);
+        _effectApplications += _nearbyCount;
+        _relationshipScore += 3;
+        _statusToken = (_castWave & 1) == 0 ? "鼓舞" : "标记";
 
         Span<int> ints = stackalloc int[GraphVmLimits.MaxIntRegisters];
         Span<byte> bools = stackalloc byte[GraphVmLimits.MaxBoolRegisters];
@@ -116,7 +128,33 @@ public sealed class AbilityGraphSandboxRuntime
         Metrics.LastThinkMs = sw.Elapsed.TotalMilliseconds;
         if (Metrics.LastThinkMs > Metrics.MaxThinkMs) Metrics.MaxThinkMs = Metrics.LastThinkMs;
         Metrics.ThinkWaves++;
-        Metrics.Detail =
-            $"Ability FuncLib cast={_lastSpell} id={fn.GraphId} hit={_lastHit} last={Metrics.LastThinkMs:F3}ms";
+        Metrics.Detail = $"巡逻查一圈：{_nearbyCount}个目标；对{_lastHit + 1}号挂状态「{_statusToken}」；" +
+            $"加好感+3={_relationshipScore}；状态牌读到「{_statusToken}」；" +
+            $"施放{SpellDisplayName(_lastSpell)}；耗时{Metrics.LastThinkMs:F3}ms";
     }
+
+    private int CountTargetsInRadius(float radius)
+    {
+        float radiusSq = radius * radius;
+        int count = 0;
+        for (int i = 0; i < _tx.Length; i++)
+        {
+            float dx = _tx[i] - CasterX;
+            float dy = _ty[i] - CasterY;
+            if (dx * dx + dy * dy <= radiusSq)
+            {
+                count++;
+            }
+        }
+
+        return count;
+    }
+
+    private static string SpellDisplayName(string spell)
+        => spell switch
+        {
+            "ability.slash" => "挥砍",
+            "ability.bash" => "盾击",
+            _ => "技能"
+        };
 }

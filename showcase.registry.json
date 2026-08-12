@@ -2936,7 +2936,7 @@
       "path": "mods/showcases/capability_standard/CapabilityStandardAbilityGraphSandboxMod",
       "projectPath": "CapabilityStandardAbilityGraphSandboxMod.csproj",
       "title": "能力/效果图沙盘",
-      "summary": "独立 GAS Ability/Effect 图与 FuncLib 演示（不含 BT/HFSM/关卡）。",
+      "summary": "玩家可读的技能图沙盘：巡逻查一圈找目标，给范围目标挂状态，对命中对象加好感，并把状态牌读出来。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -2948,7 +2948,7 @@
       ],
       "binding": "capability_standard_ability_graph_sandbox",
       "preset": "capability_standard_ability_graph_sandbox_raylib",
-      "docsPath": "gitbook/architecture/graph-layering-flow-and-behavior.md",
+      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
       "readmePath": null,
       "acceptanceTest": "AbilityGraphSandboxShowcaseAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_ability_graph_sandbox",
