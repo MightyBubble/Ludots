@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
 
@@ -89,14 +88,14 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
         /// Topology-only tick (AlwaysSuccess / HoldRunning trees). ScriptSlice leaves are forbidden.
         /// </summary>
         public BehaviorTreeThinkStats TickAll(int scriptBudgetSteps = 32)
-            => TickAll(scriptPrograms: null, scriptBudgetSteps, sensors: null);
+            => TickAll(programs: null, scriptBudgetSteps, sensors: null);
 
         /// <summary>
-        /// Runs one think wave. ScriptSlice leaves resolve <see cref="BehaviorTreeNode.GraphId"/> in
-        /// <paramref name="scriptPrograms"/>; sensors write I[0] before condition scripts.
+        /// Runs one think wave. ScriptSlice leaves resolve <see cref="BehaviorTreeNode.GraphId"/> from
+        /// <paramref name="programs"/> (engine <see cref="GraphProgramRegistry"/>); sensors write I[0].
         /// </summary>
         public BehaviorTreeThinkStats TickAll(
-            IReadOnlyDictionary<int, GraphInstruction[]>? scriptPrograms,
+            GraphProgramRegistry? programs,
             int scriptBudgetSteps,
             IBehaviorTreeSensorFeed? sensors)
         {
@@ -105,7 +104,7 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
             int scriptSteps = 0;
             for (int agent = 0; agent < _count; agent++)
             {
-                TickAgent(agent, scriptPrograms, scriptBudgetSteps, sensors, ref visited, ref scriptSlices, ref scriptSteps);
+                TickAgent(agent, programs, scriptBudgetSteps, sensors, ref visited, ref scriptSlices, ref scriptSteps);
             }
 
             return new BehaviorTreeThinkStats(_count, visited, scriptSlices, scriptSteps);
@@ -113,7 +112,7 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
 
         private void TickAgent(
             int agent,
-            IReadOnlyDictionary<int, GraphInstruction[]>? scriptPrograms,
+            GraphProgramRegistry? programs,
             int scriptBudgetSteps,
             IBehaviorTreeSensorFeed? sensors,
             ref int visited,
@@ -145,7 +144,7 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
                     BehaviorTreeStatus leaf = EvalLeaf(
                         agent,
                         node,
-                        scriptPrograms,
+                        programs,
                         scriptBudgetSteps,
                         sensors,
                         ref scriptSlices,
@@ -229,7 +228,7 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
         private BehaviorTreeStatus EvalLeaf(
             int agent,
             in BehaviorTreeNode node,
-            IReadOnlyDictionary<int, GraphInstruction[]>? scriptPrograms,
+            GraphProgramRegistry? programs,
             int scriptBudgetSteps,
             IBehaviorTreeSensorFeed? sensors,
             ref int scriptSlices,
@@ -250,14 +249,14 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
                         throw new InvalidOperationException("ScriptSlice leaf requires a positive GraphId.");
                     }
 
-                    if (scriptPrograms == null ||
-                        !scriptPrograms.TryGetValue(node.GraphId, out GraphInstruction[]? program) ||
-                        program == null ||
-                        program.Length == 0)
+                    if (programs == null)
                     {
                         throw new InvalidOperationException(
-                            $"ScriptSlice GraphId={node.GraphId} is not registered in scriptPrograms.");
+                            $"ScriptSlice GraphId={node.GraphId} requires GraphProgramRegistry.");
                     }
+
+                    ReadOnlySpan<GraphInstruction> program =
+                        GraphRegistryScriptResolver.RequireProgram(programs, node.GraphId);
 
                     scriptSlices++;
                     Span<int> ints = _scriptIntRegs.AsSpan(agent * GraphVmLimits.MaxIntRegisters, GraphVmLimits.MaxIntRegisters);

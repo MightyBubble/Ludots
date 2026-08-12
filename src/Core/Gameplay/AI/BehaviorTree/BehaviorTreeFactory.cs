@@ -51,24 +51,41 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
         }
 
         /// <summary>
-        /// Classic AI: Selector( Sequence(SeeEnemy Script, Selector(AttackIfInRange, Chase)), Patrol ).
-        /// Leaves are ScriptSlice keyed by <see cref="BehaviorTreeScriptBindings"/>.
+        /// Classic AI tree. <paramref name="resolveGraphId"/> maps <see cref="BehaviorTreeScriptKeys"/> to Registry ids.
         /// </summary>
-        public static BehaviorTreeDefinition CreatePatrolChaseAttackTree(string id)
+        public static BehaviorTreeDefinition CreatePatrolChaseAttackTree(string id, Func<string, int> resolveGraphId)
         {
+            if (resolveGraphId == null) throw new ArgumentNullException(nameof(resolveGraphId));
+            int see = Require(resolveGraphId, BehaviorTreeScriptKeys.SeeEnemy);
+            int inRange = Require(resolveGraphId, BehaviorTreeScriptKeys.InAttackRange);
+            int chase = Require(resolveGraphId, BehaviorTreeScriptKeys.Chase);
+            int attack = Require(resolveGraphId, BehaviorTreeScriptKeys.Attack);
+            int patrol = Require(resolveGraphId, BehaviorTreeScriptKeys.Patrol);
+
             var nodes = new BehaviorTreeNode[]
             {
                 new(BehaviorTreeNodeKind.Selector, childStart: 1, childCount: 2, BehaviorTreeLeafBinding.None, 0),
                 new(BehaviorTreeNodeKind.Sequence, childStart: 3, childCount: 2, BehaviorTreeLeafBinding.None, 0),
-                new(BehaviorTreeNodeKind.Action, 0, 0, BehaviorTreeLeafBinding.ScriptSlice, BehaviorTreeScriptBindings.Patrol),
-                new(BehaviorTreeNodeKind.Condition, 0, 0, BehaviorTreeLeafBinding.ScriptSlice, BehaviorTreeScriptBindings.SeeEnemy),
+                new(BehaviorTreeNodeKind.Action, 0, 0, BehaviorTreeLeafBinding.ScriptSlice, patrol),
+                new(BehaviorTreeNodeKind.Condition, 0, 0, BehaviorTreeLeafBinding.ScriptSlice, see),
                 new(BehaviorTreeNodeKind.Selector, childStart: 5, childCount: 2, BehaviorTreeLeafBinding.None, 0),
                 new(BehaviorTreeNodeKind.Sequence, childStart: 7, childCount: 2, BehaviorTreeLeafBinding.None, 0),
-                new(BehaviorTreeNodeKind.Action, 0, 0, BehaviorTreeLeafBinding.ScriptSlice, BehaviorTreeScriptBindings.Chase),
-                new(BehaviorTreeNodeKind.Condition, 0, 0, BehaviorTreeLeafBinding.ScriptSlice, BehaviorTreeScriptBindings.InAttackRange),
-                new(BehaviorTreeNodeKind.Action, 0, 0, BehaviorTreeLeafBinding.ScriptSlice, BehaviorTreeScriptBindings.Attack),
+                new(BehaviorTreeNodeKind.Action, 0, 0, BehaviorTreeLeafBinding.ScriptSlice, chase),
+                new(BehaviorTreeNodeKind.Condition, 0, 0, BehaviorTreeLeafBinding.ScriptSlice, inRange),
+                new(BehaviorTreeNodeKind.Action, 0, 0, BehaviorTreeLeafBinding.ScriptSlice, attack),
             };
             return new BehaviorTreeDefinition(id, nodes, rootIndex: 0);
+        }
+
+        private static int Require(Func<string, int> resolve, string key)
+        {
+            int id = resolve(key);
+            if (id <= 0)
+            {
+                throw new InvalidOperationException($"BT Script graph '{key}' is not registered.");
+            }
+
+            return id;
         }
     }
 }

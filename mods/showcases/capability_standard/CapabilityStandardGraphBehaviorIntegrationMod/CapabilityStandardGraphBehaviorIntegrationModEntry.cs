@@ -2,6 +2,7 @@ using System.Threading.Tasks;
 using CapabilityStandardGraphBehaviorCommon;
 using CapabilityStandardGraphBehaviorIntegrationMod.Runtime;
 using Ludots.Core.Engine;
+using Ludots.Core.GraphRuntime;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.DebugDraw;
 using Ludots.Core.Scripting;
@@ -21,6 +22,7 @@ public sealed class CapabilityStandardGraphBehaviorIntegrationModEntry : IMod
         {
             GameEngine? engine = ctx.GetEngine();
             if (engine == null) return Task.CompletedTask;
+            runtime.Bind(engine.GetService(CoreServiceKeys.GraphProgramRegistry));
             engine.SetService(MetricsKey, runtime.Metrics);
             var debugDraw = new DebugDrawCommandBuffer();
             engine.SetService(CoreServiceKeys.DebugDrawCommandBuffer, debugDraw);

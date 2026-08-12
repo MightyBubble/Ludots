@@ -1,9 +1,15 @@
+using CapabilityStandardAbilityGraphSandboxMod.Runtime;
+using CapabilityStandardBehaviorTreeArenaMod.Runtime;
+using CapabilityStandardGraphBehaviorIntegrationMod.Runtime;
+using CapabilityStandardHfsmSentryArenaMod.Runtime;
+using CapabilityStandardLevelBlueprintTrialMod.Runtime;
+using Ludots.Core.GraphRuntime;
+using Ludots.Tests.Gas.Graph;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Gas.Production
 {
     // Named fixtures referenced by showcase.registry.json acceptanceTest fields.
-    // Behavior is owned by GraphBehaviorSeparatedShowcaseAcceptanceTests (ci-gate).
 
     [TestFixture]
     [Category("ci-gate")]
@@ -12,8 +18,12 @@ namespace Ludots.Tests.Gas.Production
         [Test]
         public void RegistryName_DelegatesToSeparatedSuite()
         {
-            new GraphBehaviorSeparatedShowcaseAcceptanceTests()
-                .BehaviorTreeArena_PatrolVignette_ThinkWavesUnderBudget();
+            GraphProgramRegistry programs = GraphRegistryTestBootstrap.LoadCoreScriptsAndFuncLib(out _);
+            var runtime = new BehaviorTreeArenaRuntime();
+            runtime.Bind(programs);
+            runtime.EnsureWorld();
+            for (int i = 0; i < 8; i++) runtime.Tick(0.2f);
+            Assert.That(runtime.Metrics.MaxThinkMs, Is.LessThan(5.0));
         }
     }
 
@@ -24,8 +34,12 @@ namespace Ludots.Tests.Gas.Production
         [Test]
         public void RegistryName_DelegatesToSeparatedSuite()
         {
-            new GraphBehaviorSeparatedShowcaseAcceptanceTests()
-                .HfsmSentryArena_GateVignette_ThinkWavesUnderBudget();
+            GraphProgramRegistry programs = GraphRegistryTestBootstrap.LoadCoreScriptsAndFuncLib(out _);
+            var runtime = new HfsmSentryArenaRuntime();
+            runtime.Bind(programs);
+            runtime.EnsureWorld();
+            for (int i = 0; i < 8; i++) runtime.Tick(0.2f);
+            Assert.That(runtime.Metrics.MaxThinkMs, Is.LessThan(5.0));
         }
     }
 
@@ -36,8 +50,12 @@ namespace Ludots.Tests.Gas.Production
         [Test]
         public void RegistryName_DelegatesToSeparatedSuite()
         {
-            new GraphBehaviorSeparatedShowcaseAcceptanceTests()
-                .LevelBlueprintTrial_SpawnClearGate_AdvancesPhaseUnderBudget();
+            GraphProgramRegistry programs = GraphRegistryTestBootstrap.LoadCoreScriptsAndFuncLib(out _);
+            var runtime = new LevelBlueprintTrialRuntime();
+            runtime.Bind(programs);
+            runtime.EnsureWorld();
+            for (int i = 0; i < 40; i++) runtime.Tick(0.2f);
+            Assert.That(runtime.GateOpen, Is.True);
         }
     }
 
@@ -48,8 +66,12 @@ namespace Ludots.Tests.Gas.Production
         [Test]
         public void RegistryName_DelegatesToSeparatedSuite()
         {
-            new GraphBehaviorSeparatedShowcaseAcceptanceTests()
-                .AbilityGraphSandbox_CastArc_UnderBudget();
+            GraphProgramRegistry programs = GraphRegistryTestBootstrap.LoadCoreScriptsAndFuncLib(out GraphFunctionCatalog catalog);
+            var runtime = new AbilityGraphSandboxRuntime();
+            runtime.Bind(programs, catalog);
+            runtime.EnsureWorld();
+            for (int i = 0; i < 8; i++) runtime.Tick(0.2f);
+            Assert.That(runtime.Metrics.Detail, Does.Contain("FuncLib"));
         }
     }
 
@@ -60,8 +82,12 @@ namespace Ludots.Tests.Gas.Production
         [Test]
         public void RegistryName_DelegatesToSeparatedSuite()
         {
-            new GraphBehaviorSeparatedShowcaseAcceptanceTests()
-                .GraphBehaviorIntegration_ShortPlay_UnderBudget();
+            GraphProgramRegistry programs = GraphRegistryTestBootstrap.LoadCoreScriptsAndFuncLib(out _);
+            var runtime = new GraphBehaviorIntegrationRuntime();
+            runtime.Bind(programs);
+            runtime.EnsureWorld();
+            for (int i = 0; i < 15; i++) runtime.Tick(0.2f);
+            Assert.That(runtime.GuardCount, Is.EqualTo(6));
         }
     }
 }

@@ -134,5 +134,560 @@
         "toPort": "value"
       }
     ]
+  },
+  {
+    "id": "Graph.BT.Leaf.SeeEnemy",
+    "kind": "Script",
+    "entry": "h",
+    "nodes": [
+      {
+        "id": "h",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [],
+    "valueEdges": []
+  },
+  {
+    "id": "Graph.BT.Leaf.InAttackRange",
+    "kind": "Script",
+    "entry": "h",
+    "nodes": [
+      {
+        "id": "h",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [],
+    "valueEdges": []
+  },
+  {
+    "id": "Graph.BT.Leaf.Chase",
+    "kind": "Script",
+    "entry": "c",
+    "nodes": [
+      {
+        "id": "c",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "h",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "c",
+        "fromPort": "next",
+        "to": "h"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "c",
+        "fromPort": "value",
+        "to": "h",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "Graph.BT.Leaf.Attack",
+    "kind": "Script",
+    "entry": "c",
+    "nodes": [
+      {
+        "id": "c",
+        "op": "ConstInt",
+        "intValue": 2
+      },
+      {
+        "id": "h",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "c",
+        "fromPort": "next",
+        "to": "h"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "c",
+        "fromPort": "value",
+        "to": "h",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "Graph.BT.Leaf.Patrol",
+    "kind": "Script",
+    "entry": "c",
+    "nodes": [
+      {
+        "id": "c",
+        "op": "ConstInt",
+        "intValue": 0
+      },
+      {
+        "id": "h",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "c",
+        "fromPort": "next",
+        "to": "h"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "c",
+        "fromPort": "value",
+        "to": "h",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "Graph.HFSM.Cond.AlwaysTrue",
+    "kind": "Script",
+    "entry": "c",
+    "nodes": [
+      {
+        "id": "c",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "h",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "c",
+        "fromPort": "next",
+        "to": "h"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "c",
+        "fromPort": "value",
+        "to": "h",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "Graph.HFSM.Combat.OnEnter",
+    "kind": "Script",
+    "entry": "c",
+    "nodes": [
+      {
+        "id": "c",
+        "op": "ConstInt",
+        "intValue": 1
+      },
+      {
+        "id": "h",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "c",
+        "fromPort": "next",
+        "to": "h"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "c",
+        "fromPort": "value",
+        "to": "h",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "Graph.HFSM.Combat.OnTick",
+    "kind": "Script",
+    "entry": "c",
+    "nodes": [
+      {
+        "id": "c",
+        "op": "ConstInt",
+        "intValue": 2
+      },
+      {
+        "id": "h",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "c",
+        "fromPort": "next",
+        "to": "h"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "c",
+        "fromPort": "value",
+        "to": "h",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "Graph.HFSM.Combat.OnExit",
+    "kind": "Script",
+    "entry": "c",
+    "nodes": [
+      {
+        "id": "c",
+        "op": "ConstInt",
+        "intValue": 3
+      },
+      {
+        "id": "h",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "c",
+        "fromPort": "next",
+        "to": "h"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "c",
+        "fromPort": "value",
+        "to": "h",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "Graph.Level.PhaseAdvance",
+    "kind": "Script",
+    "entry": "c",
+    "nodes": [
+      {
+        "id": "c",
+        "op": "ConstInt",
+        "intValue": 7101
+      },
+      {
+        "id": "h",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "c",
+        "fromPort": "next",
+        "to": "h"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "c",
+        "fromPort": "value",
+        "to": "h",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "Graph.Ability.Slash",
+    "kind": "Script",
+    "entry": "c",
+    "nodes": [
+      {
+        "id": "c",
+        "op": "ConstInt",
+        "intValue": 11
+      },
+      {
+        "id": "h",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "c",
+        "fromPort": "next",
+        "to": "h"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "c",
+        "fromPort": "value",
+        "to": "h",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "Graph.Ability.Bash",
+    "kind": "Script",
+    "entry": "c",
+    "nodes": [
+      {
+        "id": "c",
+        "op": "ConstInt",
+        "intValue": 22
+      },
+      {
+        "id": "h",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "c",
+        "fromPort": "next",
+        "to": "h"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "c",
+        "fromPort": "value",
+        "to": "h",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "Graph.Script.DrinkUntilFull",
+    "kind": "Script",
+    "entry": "zeroWater",
+    "nodes": [
+      {
+        "id": "zeroWater",
+        "op": "ConstInt",
+        "intValue": 0,
+        "pinRegister": 0
+      },
+      {
+        "id": "limitValue",
+        "op": "ConstInt",
+        "intValue": 5,
+        "pinRegister": 1
+      },
+      {
+        "id": "oneValue",
+        "op": "ConstInt",
+        "intValue": 1,
+        "pinRegister": 2
+      },
+      {
+        "id": "readWater",
+        "op": "MoveInt"
+      },
+      {
+        "id": "readLimit",
+        "op": "MoveInt"
+      },
+      {
+        "id": "waterBelowLimit",
+        "op": "CompareLtInt"
+      },
+      {
+        "id": "branchNeedDrink",
+        "op": "BranchBool"
+      },
+      {
+        "id": "callDrink",
+        "op": "Call"
+      },
+      {
+        "id": "readWaterForReturn",
+        "op": "MoveInt"
+      },
+      {
+        "id": "done",
+        "op": "HaltReturnInt"
+      },
+      {
+        "id": "drinkReadWater",
+        "op": "MoveInt"
+      },
+      {
+        "id": "drinkReadOne",
+        "op": "MoveInt"
+      },
+      {
+        "id": "drinkAdd",
+        "op": "AddInt",
+        "pinRegister": 0
+      },
+      {
+        "id": "drinkYield",
+        "op": "Yield"
+      },
+      {
+        "id": "drinkReturn",
+        "op": "Return"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "zeroWater",
+        "fromPort": "next",
+        "to": "limitValue"
+      },
+      {
+        "from": "limitValue",
+        "fromPort": "next",
+        "to": "oneValue"
+      },
+      {
+        "from": "oneValue",
+        "fromPort": "next",
+        "to": "readWater"
+      },
+      {
+        "from": "readWater",
+        "fromPort": "next",
+        "to": "readLimit"
+      },
+      {
+        "from": "readLimit",
+        "fromPort": "next",
+        "to": "waterBelowLimit"
+      },
+      {
+        "from": "waterBelowLimit",
+        "fromPort": "next",
+        "to": "branchNeedDrink"
+      },
+      {
+        "from": "branchNeedDrink",
+        "fromPort": "true",
+        "to": "callDrink"
+      },
+      {
+        "from": "branchNeedDrink",
+        "fromPort": "false",
+        "to": "readWaterForReturn"
+      },
+      {
+        "from": "callDrink",
+        "fromPort": "call",
+        "to": "drinkReadWater"
+      },
+      {
+        "from": "callDrink",
+        "fromPort": "next",
+        "to": "readWater"
+      },
+      {
+        "from": "readWaterForReturn",
+        "fromPort": "next",
+        "to": "done"
+      },
+      {
+        "from": "drinkReadWater",
+        "fromPort": "next",
+        "to": "drinkReadOne"
+      },
+      {
+        "from": "drinkReadOne",
+        "fromPort": "next",
+        "to": "drinkAdd"
+      },
+      {
+        "from": "drinkAdd",
+        "fromPort": "next",
+        "to": "drinkYield"
+      },
+      {
+        "from": "drinkYield",
+        "fromPort": "next",
+        "to": "drinkReturn"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "zeroWater",
+        "fromPort": "value",
+        "to": "readWater",
+        "toPort": "value"
+      },
+      {
+        "from": "limitValue",
+        "fromPort": "value",
+        "to": "readLimit",
+        "toPort": "value"
+      },
+      {
+        "from": "readWater",
+        "fromPort": "value",
+        "to": "waterBelowLimit",
+        "toPort": "a"
+      },
+      {
+        "from": "readLimit",
+        "fromPort": "value",
+        "to": "waterBelowLimit",
+        "toPort": "b"
+      },
+      {
+        "from": "waterBelowLimit",
+        "fromPort": "value",
+        "to": "branchNeedDrink",
+        "toPort": "condition"
+      },
+      {
+        "from": "zeroWater",
+        "fromPort": "value",
+        "to": "readWaterForReturn",
+        "toPort": "value"
+      },
+      {
+        "from": "readWaterForReturn",
+        "fromPort": "value",
+        "to": "done",
+        "toPort": "value"
+      },
+      {
+        "from": "zeroWater",
+        "fromPort": "value",
+        "to": "drinkReadWater",
+        "toPort": "value"
+      },
+      {
+        "from": "oneValue",
+        "fromPort": "value",
+        "to": "drinkReadOne",
+        "toPort": "value"
+      },
+      {
+        "from": "drinkReadWater",
+        "fromPort": "value",
+        "to": "drinkAdd",
+        "toPort": "a"
+      },
+      {
+        "from": "drinkReadOne",
+        "fromPort": "value",
+        "to": "drinkAdd",
+        "toPort": "b"
+      }
+    ]
   }
 ]

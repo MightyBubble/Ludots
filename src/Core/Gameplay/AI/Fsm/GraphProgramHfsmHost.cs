@@ -1,35 +1,33 @@
 using System;
-using System.Collections.Generic;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
 
 namespace Ludots.Core.Gameplay.AI.Fsm;
 
 /// <summary>
-/// Evaluates HFSM condition/lifecycle bindings against registered GraphInstruction programs (L1 Script).
-/// Caller owns program storage; host never compiles.
+/// Evaluates HFSM condition/lifecycle bindings against <see cref="GraphProgramRegistry"/> only.
 /// </summary>
 public sealed class GraphProgramHfsmHost : IHfsmGraphHost
 {
-    private readonly Dictionary<int, GraphInstruction[]> _programs;
+    private readonly GraphProgramRegistry _programs;
     private readonly int[] _ints = new int[GraphVmLimits.MaxIntRegisters];
     private readonly byte[] _bools = new byte[GraphVmLimits.MaxBoolRegisters];
     private readonly int[] _callStack = new int[GraphVmLimits.MaxCallStackDepth];
 
-    public GraphProgramHfsmHost(Dictionary<int, GraphInstruction[]> programs)
+    public GraphProgramHfsmHost(GraphProgramRegistry programs)
     {
         _programs = programs ?? throw new ArgumentNullException(nameof(programs));
     }
 
     public bool EvalCondition(int agentIndex, int conditionGraphId)
     {
-        GraphSliceResult result = ExecuteHalt(Require(conditionGraphId));
+        GraphSliceResult result = ExecuteHalt(conditionGraphId);
         return result.ReturnInt != 0;
     }
 
     public void RunAction(int agentIndex, int actionGraphId)
     {
-        GraphSliceResult result = ExecuteHalt(Require(actionGraphId));
+        GraphSliceResult result = ExecuteHalt(actionGraphId);
         if (!result.Halted)
         {
             throw new InvalidOperationException(
@@ -37,20 +35,16 @@ public sealed class GraphProgramHfsmHost : IHfsmGraphHost
         }
     }
 
-    private GraphInstruction[] Require(int graphId)
+    private GraphSliceResult ExecuteHalt(int graphId)
     {
-        if (!_programs.TryGetValue(graphId, out GraphInstruction[]? program) || program == null)
+        if (!_programs.TryGetProgram(graphId, out ReadOnlySpan<GraphInstruction> program) || program.Length == 0)
         {
-            throw new InvalidOperationException($"HFSM graph id {graphId} is not registered on GraphProgramHfsmHost.");
+            throw new InvalidOperationException($"HFSM graph id {graphId} is not registered in GraphProgramRegistry.");
         }
 
-        return program;
-    }
-
-    private GraphSliceResult ExecuteHalt(GraphInstruction[] program)
-    {
         Array.Clear(_ints, 0, _ints.Length);
         Array.Clear(_bools, 0, _bools.Length);
+        Array.Clear(_callStack, 0, _callStack.Length);
         var cursor = new GraphExecutionCursor();
         var state = new GraphExecutionState
         {

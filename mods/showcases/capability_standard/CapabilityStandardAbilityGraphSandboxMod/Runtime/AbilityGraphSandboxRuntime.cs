@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using CapabilityStandardGraphBehaviorCommon;
 using Ludots.Core.GraphRuntime;
@@ -10,8 +9,8 @@ namespace CapabilityStandardAbilityGraphSandboxMod.Runtime;
 public sealed class AbilityGraphSandboxRuntime
 {
     private readonly GraphShowcaseConfig _config = new();
-    private readonly GraphFunctionCatalog _catalog = new();
-    private readonly Dictionary<int, GraphInstruction[]> _programs = new();
+    private GraphProgramRegistry? _programs;
+    private GraphFunctionCatalog? _catalog;
     private float _accum;
     private int _castWave;
     private float[] _tx = Array.Empty<float>();
@@ -30,13 +29,23 @@ public sealed class AbilityGraphSandboxRuntime
     public string LastSpell => _lastSpell;
     public GraphShowcaseMetrics Metrics { get; } = new() { ShowcaseId = "capability_standard_ability_graph_sandbox" };
 
+    public void Bind(GraphProgramRegistry programs, GraphFunctionCatalog catalog)
+    {
+        _programs = programs ?? throw new ArgumentNullException(nameof(programs));
+        _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
+    }
+
     public void EnsureWorld()
     {
-        if (_programs.Count > 0) return;
-        _programs[101] = CompileConstHalt("ability.slash", 11);
-        _programs[102] = CompileConstHalt("ability.bash", 22);
-        _catalog.Register("ability.slash", 101, GraphKind.Script);
-        _catalog.Register("ability.bash", 102, GraphKind.Script);
+        if (_tx.Length > 0) return;
+        if (_programs == null || _catalog == null)
+        {
+            throw new InvalidOperationException("AbilityGraphSandboxRuntime.Bind(Registry, Catalog) required before EnsureWorld.");
+        }
+
+        // Fail-closed: Func Lib entries must exist in engine-loaded catalog.
+        _ = _catalog.Require("ability.slash");
+        _ = _catalog.Require("ability.bash");
 
         int targets = Math.Min(_config.FeaturedAgentCount, 8);
         _tx = new float[targets];
@@ -51,7 +60,7 @@ public sealed class AbilityGraphSandboxRuntime
         }
 
         Metrics.AgentCount = targets;
-        Metrics.Detail = $"Ability FuncLib consume catalog={_catalog.Count}";
+        Metrics.Detail = $"Ability FuncLib registry catalog={_catalog.Count}";
     }
 
     public void Tick(float dt)
@@ -68,10 +77,10 @@ public sealed class AbilityGraphSandboxRuntime
         _castWave++;
 
         _lastSpell = (_castWave & 1) == 0 ? "ability.slash" : "ability.bash";
-        GraphFunctionEntry fn = _catalog.Require(_lastSpell);
-        if (!_programs.TryGetValue(fn.GraphId, out GraphInstruction[]? program) || program == null)
+        GraphFunctionEntry fn = _catalog!.Require(_lastSpell);
+        if (!_programs!.TryGetProgram(fn.GraphId, out ReadOnlySpan<GraphInstruction> program) || program.Length == 0)
         {
-            throw new InvalidOperationException($"FuncLib '{_lastSpell}' graph id {fn.GraphId} has no program.");
+            throw new InvalidOperationException($"FuncLib '{_lastSpell}' graph id {fn.GraphId} missing from Registry.");
         }
 
         _lastHit = _castWave % _tx.Length;
@@ -81,7 +90,6 @@ public sealed class AbilityGraphSandboxRuntime
         Span<int> callStack = stackalloc int[GraphVmLimits.MaxCallStackDepth];
 
         var sw = Stopwatch.StartNew();
-        // Featured cast on one target; also run a cheap crowd of halt scripts for pressure band budget.
         var cursor = new GraphExecutionCursor();
         var state = new GraphExecutionState
         {
@@ -110,24 +118,5 @@ public sealed class AbilityGraphSandboxRuntime
         Metrics.ThinkWaves++;
         Metrics.Detail =
             $"Ability FuncLib cast={_lastSpell} id={fn.GraphId} hit={_lastHit} last={Metrics.LastThinkMs:F3}ms";
-    }
-
-    private static GraphInstruction[] CompileConstHalt(string id, int value)
-    {
-        var doc = new GraphControlFlowDocument
-        {
-            Id = id,
-            Entry = "c",
-            Nodes =
-            {
-                new GraphControlFlowNode { Id = "c", Op = nameof(GraphNodeOp.ConstInt), IntValue = value },
-                new GraphControlFlowNode { Id = "h", Op = nameof(GraphNodeOp.HaltReturnInt) }
-            },
-            ControlEdges = { new GraphControlFlowEdge("c", GraphControlFlowPorts.Next, "h") },
-            ValueEdges = { new GraphControlFlowValueEdge("c", GraphControlFlowPorts.Value, "h", GraphControlFlowPorts.Value) }
-        };
-        GraphControlFlowCompileResult compiled = GraphControlFlowCompiler.Compile(doc);
-        if (!compiled.Succeeded) throw new InvalidOperationException($"Ability Script '{id}' failed to compile.");
-        return compiled.Program;
     }
 }

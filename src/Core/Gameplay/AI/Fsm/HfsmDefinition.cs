@@ -1,10 +1,16 @@
 using System;
-using System.Collections.Generic;
-using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
 
 namespace Ludots.Core.Gameplay.AI.Fsm
 {
+    public static class HfsmScriptKeys
+    {
+        public const string CondAlwaysTrue = "Graph.HFSM.Cond.AlwaysTrue";
+        public const string CombatOnEnter = "Graph.HFSM.Combat.OnEnter";
+        public const string CombatOnTick = "Graph.HFSM.Combat.OnTick";
+        public const string CombatOnExit = "Graph.HFSM.Combat.OnExit";
+    }
+
     public sealed class HfsmDefinition
     {
         private readonly int[] _transitionStarts;
@@ -146,11 +152,6 @@ namespace Ludots.Core.Gameplay.AI.Fsm
 
     public static class HfsmFactory
     {
-        public const int CondAlwaysTrueGraphId = 9101;
-        public const int CombatOnEnterGraphId = 9201;
-        public const int CombatOnTickGraphId = 9202;
-        public const int CombatOnExitGraphId = 9203;
-
         /// <summary>
         /// Root(Compound) → Idle | Alerting(Compound → Alert/Combat/Retreat).
         /// Idle --stimulus--> Alert; Alert→Combat→Retreat→Idle.
@@ -183,11 +184,17 @@ namespace Ludots.Core.Gameplay.AI.Fsm
         }
 
         /// <summary>
-        /// Same topology as <see cref="CreateSentryHierarchy"/> with Combat lifecycle Scripts and
-        /// Alert→Combat gated by a condition Script on the transition.
+        /// Same topology as <see cref="CreateSentryHierarchy"/> with Combat lifecycle Scripts.
+        /// <paramref name="resolveGraphId"/> maps <see cref="HfsmScriptKeys"/> to Registry ids.
         /// </summary>
-        public static HfsmDefinition CreateSentryHierarchyWithScripts(string id)
+        public static HfsmDefinition CreateSentryHierarchyWithScripts(string id, Func<string, int> resolveGraphId)
         {
+            if (resolveGraphId == null) throw new ArgumentNullException(nameof(resolveGraphId));
+            int cond = Require(resolveGraphId, HfsmScriptKeys.CondAlwaysTrue);
+            int enter = Require(resolveGraphId, HfsmScriptKeys.CombatOnEnter);
+            int tick = Require(resolveGraphId, HfsmScriptKeys.CombatOnTick);
+            int exit = Require(resolveGraphId, HfsmScriptKeys.CombatOnExit);
+
             var states = new[]
             {
                 new HfsmState(HfsmStateKind.Compound, parentIndex: -1, childStart: 1, childCount: 2, defaultChildIndex: 1),
@@ -200,9 +207,9 @@ namespace Ludots.Core.Gameplay.AI.Fsm
                     childStart: 0,
                     childCount: 0,
                     defaultChildIndex: 0,
-                    onEnterGraphId: CombatOnEnterGraphId,
-                    onTickGraphId: CombatOnTickGraphId,
-                    onExitGraphId: CombatOnExitGraphId),
+                    onEnterGraphId: enter,
+                    onTickGraphId: tick,
+                    onExitGraphId: exit),
                 new HfsmState(HfsmStateKind.Leaf, parentIndex: 2, childStart: 0, childCount: 0, defaultChildIndex: 0),
             };
             var transitions = new[]
@@ -213,48 +220,22 @@ namespace Ludots.Core.Gameplay.AI.Fsm
                     toState: 4,
                     HfsmTransitionPredicate.Always,
                     priority: 0,
-                    conditionGraphId: CondAlwaysTrueGraphId),
+                    conditionGraphId: cond),
                 new HfsmTransition(fromState: 4, toState: 5, HfsmTransitionPredicate.Always, priority: 0),
                 new HfsmTransition(fromState: 5, toState: 1, HfsmTransitionPredicate.Always, priority: 0),
             };
             return new HfsmDefinition(id, states, rootIndex: 0, transitions);
         }
 
-        public static Dictionary<int, GraphInstruction[]> CreateSentryScriptPrograms()
+        private static int Require(Func<string, int> resolve, string key)
         {
-            return new Dictionary<int, GraphInstruction[]>
+            int id = resolve(key);
+            if (id <= 0)
             {
-                [CondAlwaysTrueGraphId] = CompileConstHalt("hfsm.cond.true", 1),
-                [CombatOnEnterGraphId] = CompileConstHalt("hfsm.combat.enter", 1),
-                [CombatOnTickGraphId] = CompileConstHalt("hfsm.combat.tick", 2),
-                [CombatOnExitGraphId] = CompileConstHalt("hfsm.combat.exit", 3),
-            };
-        }
-
-        private static GraphInstruction[] CompileConstHalt(string id, int value)
-        {
-            var doc = new GraphControlFlowDocument
-            {
-                Id = id,
-                Entry = "c",
-                Nodes =
-                {
-                    new GraphControlFlowNode { Id = "c", Op = nameof(GraphNodeOp.ConstInt), IntValue = value },
-                    new GraphControlFlowNode { Id = "h", Op = nameof(GraphNodeOp.HaltReturnInt) }
-                },
-                ControlEdges = { new GraphControlFlowEdge("c", GraphControlFlowPorts.Next, "h") },
-                ValueEdges =
-                {
-                    new GraphControlFlowValueEdge("c", GraphControlFlowPorts.Value, "h", GraphControlFlowPorts.Value)
-                }
-            };
-            GraphControlFlowCompileResult compiled = GraphControlFlowCompiler.Compile(doc);
-            if (!compiled.Succeeded)
-            {
-                throw new InvalidOperationException($"Failed to compile HFSM Script '{id}'.");
+                throw new InvalidOperationException($"HFSM Script graph '{key}' is not registered.");
             }
 
-            return compiled.Program;
+            return id;
         }
     }
 }

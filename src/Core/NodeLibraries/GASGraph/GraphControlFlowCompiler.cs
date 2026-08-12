@@ -772,8 +772,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         RequireValueInput(node, GraphControlFlowPorts.B, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                         break;
                     case GraphNodeOp.MoveInt:
-                    case GraphNodeOp.HaltReturnInt:
                         RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                        break;
+                    case GraphNodeOp.HaltReturnInt:
+                        // Value pin optional: absent means I[0] (sensor / ambient register contract).
+                        if (valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Value)))
+                        {
+                            RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                        }
+
                         break;
                 }
             }
@@ -1255,7 +1262,23 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
                 case GraphNodeOp.HaltReturnInt:
                 {
-                    byte a = ResolveValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                    byte a = 0;
+                    if (valueEdges.ContainsKey(new ValueInputKey(node.Id, GraphControlFlowPorts.Value)))
+                    {
+                        a = ResolveValueInput(
+                            node,
+                            GraphControlFlowPorts.Value,
+                            GraphValueType.Int,
+                            valueEdges,
+                            nodeIndices,
+                            outputTypes,
+                            outputRegisters,
+                            definedInts,
+                            definedBools,
+                            graphId,
+                            diagnostics);
+                    }
+
                     program[bodyIndex] = new GraphInstruction
                     {
                         Op = (ushort)GraphNodeOp.HaltReturnInt,

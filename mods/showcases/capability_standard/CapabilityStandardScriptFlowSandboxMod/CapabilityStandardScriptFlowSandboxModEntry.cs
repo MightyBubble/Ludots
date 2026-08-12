@@ -15,12 +15,13 @@ public sealed class CapabilityStandardScriptFlowSandboxModEntry : IMod
 
     public void OnLoad(IModContext context)
     {
-        context.Log("[CapabilityStandardScriptFlowSandboxMod] Loaded (atomic L1 Script showcase)");
+        context.Log("[CapabilityStandardScriptFlowSandboxMod] Loaded (Script from Registry)");
         var runtime = new ScriptFlowSandboxRuntime();
         context.OnEvent(GameEvents.GameStart, ctx =>
         {
             GameEngine? engine = ctx.GetEngine();
             if (engine == null) return Task.CompletedTask;
+            runtime.Bind(engine.GetService(CoreServiceKeys.GraphProgramRegistry));
             engine.SetService(MetricsKey, runtime.Metrics);
             var debugDraw = new DebugDrawCommandBuffer();
             engine.SetService(CoreServiceKeys.DebugDrawCommandBuffer, debugDraw);

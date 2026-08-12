@@ -101,24 +101,30 @@ namespace Ludots.Tests.Gas.AI
         [Test]
         public void SentryHfsm_WithRealScriptHost_RunsConditionAndLifecycle()
         {
-            HfsmDefinition hfsm = HfsmFactory.CreateSentryHierarchyWithScripts("hfsm.scripted");
-            var host = new GraphProgramHfsmHost(HfsmFactory.CreateSentryScriptPrograms());
+            var programs = Ludots.Tests.Gas.Graph.GraphRegistryTestBootstrap.LoadCoreScriptsAndFuncLib(out _);
+            HfsmDefinition hfsm = HfsmFactory.CreateSentryHierarchyWithScripts(
+                "hfsm.scripted",
+                Ludots.Core.Gameplay.AI.BehaviorTree.GraphRegistryScriptResolver.RequireId);
+            var host = new GraphProgramHfsmHost(programs);
             var world = new HfsmWorld(hfsm, capacity: 1);
             world.AddAgent(host);
             world.LatchStimulus(0);
-            world.TickAll(host); // Idle -> Alert
+            world.TickAll(host);
             Assert.That(world.GetLeafState(0), Is.EqualTo(3));
-            world.TickAll(host); // Alert -> Combat (condition Script true) + OnEnter
+            world.TickAll(host);
             Assert.That(world.GetLeafState(0), Is.EqualTo(4));
-            world.TickAll(host); // Combat OnTick then -> Retreat + OnExit
+            world.TickAll(host);
             Assert.That(world.GetLeafState(0), Is.EqualTo(5));
         }
 
         [Test]
         public void ThinkWave_10k_SentryHfsmWithScripts_UnderFiveMilliseconds()
         {
-            HfsmDefinition hfsm = HfsmFactory.CreateSentryHierarchyWithScripts("hfsm.perf.scripted");
-            var host = new GraphProgramHfsmHost(HfsmFactory.CreateSentryScriptPrograms());
+            var programs = Ludots.Tests.Gas.Graph.GraphRegistryTestBootstrap.LoadCoreScriptsAndFuncLib(out _);
+            HfsmDefinition hfsm = HfsmFactory.CreateSentryHierarchyWithScripts(
+                "hfsm.perf.scripted",
+                Ludots.Core.Gameplay.AI.BehaviorTree.GraphRegistryScriptResolver.RequireId);
+            var host = new GraphProgramHfsmHost(programs);
             const int agents = 10_000;
             var world = new HfsmWorld(hfsm, capacity: agents);
             for (int i = 0; i < agents; i++)

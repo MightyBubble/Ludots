@@ -1,13 +1,16 @@
 using System;
 using System.Diagnostics;
 using CapabilityStandardGraphBehaviorCommon;
+using Ludots.Core.Gameplay.AI.BehaviorTree;
 using Ludots.Core.Gameplay.AI.Fsm;
+using Ludots.Core.GraphRuntime;
 
 namespace CapabilityStandardHfsmSentryArenaMod.Runtime;
 
 public sealed class HfsmSentryArenaRuntime
 {
     private readonly GraphShowcaseConfig _config = new();
+    private GraphProgramRegistry? _programs;
     private HfsmWorld? _world;
     private HfsmWorld? _crowd;
     private GraphProgramHfsmHost? _host;
@@ -28,11 +31,18 @@ public sealed class HfsmSentryArenaRuntime
     public bool IntruderAlive => _intruderAlive;
     public GraphShowcaseMetrics Metrics { get; } = new() { ShowcaseId = "capability_standard_hfsm_sentry_arena" };
 
+    public void Bind(GraphProgramRegistry programs)
+        => _programs = programs ?? throw new ArgumentNullException(nameof(programs));
+
     public void EnsureWorld()
     {
         if (_world != null) return;
-        HfsmDefinition def = HfsmFactory.CreateSentryHierarchyWithScripts("showcase.hfsm.sentry");
-        _host = new GraphProgramHfsmHost(HfsmFactory.CreateSentryScriptPrograms());
+        if (_programs == null) throw new InvalidOperationException("Bind(Registry) required.");
+
+        HfsmDefinition def = HfsmFactory.CreateSentryHierarchyWithScripts(
+            "showcase.hfsm.sentry",
+            GraphRegistryScriptResolver.RequireId);
+        _host = new GraphProgramHfsmHost(_programs);
         int n = _config.FeaturedAgentCount;
         _world = new HfsmWorld(def, n);
         _sx = new float[n];
@@ -46,13 +56,12 @@ public sealed class HfsmSentryArenaRuntime
 
         if (_config.ShowCrowdBand && _config.CrowdBandCount > 0)
         {
-            HfsmDefinition crowdDef = HfsmFactory.CreateSentryHierarchy("showcase.hfsm.crowd");
-            _crowd = new HfsmWorld(crowdDef, _config.CrowdBandCount);
+            _crowd = new HfsmWorld(HfsmFactory.CreateSentryHierarchy("showcase.hfsm.crowd"), _config.CrowdBandCount);
             for (int i = 0; i < _config.CrowdBandCount; i++) _crowd.AddAgent();
         }
 
         Metrics.AgentCount = n;
-        Metrics.Detail = "HFSM gate: idle→alert→combat→retreat";
+        Metrics.Detail = "HFSM Scripts from GraphProgramRegistry";
     }
 
     public void Tick(float dt)
@@ -60,17 +69,13 @@ public sealed class HfsmSentryArenaRuntime
         EnsureWorld();
         _time += dt;
         UpdateIntruder();
-
         var world = _world!;
         for (int i = 0; i < world.Count; i++)
         {
             float dx = _ix - _sx[i];
             float dy = _iy - _sy[i];
-            float d2 = dx * dx + dy * dy;
-            if (_intruderAlive && d2 <= _config.AlertRadius * _config.AlertRadius)
-            {
+            if (_intruderAlive && dx * dx + dy * dy <= _config.AlertRadius * _config.AlertRadius)
                 world.LatchStimulus(i);
-            }
         }
 
         _accum += dt;
@@ -79,25 +84,13 @@ public sealed class HfsmSentryArenaRuntime
 
         var sw = Stopwatch.StartNew();
         HfsmThinkStats stats = world.TickAll(_host);
-        if (_crowd != null)
-        {
-            if ((Metrics.ThinkWaves % 5) == 0)
-            {
-                for (int i = 0; i < 200 && i < _crowd.Count; i++)
-                {
-                    _crowd.LatchStimulus((Metrics.ThinkWaves * 17 + i) % _crowd.Count);
-                }
-            }
-
-            _crowd.TickAll();
-        }
-
+        _crowd?.TickAll();
         sw.Stop();
         Metrics.LastThinkMs = sw.Elapsed.TotalMilliseconds;
         if (Metrics.LastThinkMs > Metrics.MaxThinkMs) Metrics.MaxThinkMs = Metrics.LastThinkMs;
         Metrics.ThinkWaves++;
         Metrics.Detail =
-            $"HFSM vignette sentries={world.Count} taken={stats.TransitionsTaken} last={Metrics.LastThinkMs:F3}ms leaf0={world.GetLeafState(0)}";
+            $"HFSM vignette taken={stats.TransitionsTaken} last={Metrics.LastThinkMs:F3}ms leaf0={world.GetLeafState(0)}";
     }
 
     private void UpdateIntruder()
@@ -106,7 +99,6 @@ public sealed class HfsmSentryArenaRuntime
         if (cycle < 9f)
         {
             _intruderAlive = true;
-            // Approach from +x, pass the gate line, then leave
             _ix = 10f - cycle * 2.2f;
             _iy = MathF.Sin(cycle * 0.7f) * 1.5f;
         }

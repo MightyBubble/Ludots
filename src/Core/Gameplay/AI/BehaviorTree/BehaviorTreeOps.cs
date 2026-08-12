@@ -29,21 +29,21 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
 
     /// <summary>
     /// Writes per-agent sensor registers before a ScriptSlice leaf runs.
-    /// Contract: I[0] is the primary condition/action input cell for patrol scripts.
+    /// Contract: I[0] is the primary condition input cell for sensor HaltReturnInt scripts.
     /// </summary>
     public interface IBehaviorTreeSensorFeed
     {
         void WriteSensors(int agentIndex, int graphId, System.Span<int> ints, System.Span<byte> bools);
     }
 
-    /// <summary>Well-known Script graph ids for <see cref="BehaviorTreeFactory.CreatePatrolChaseAttackTree"/>.</summary>
-    public static class BehaviorTreeScriptBindings
+    /// <summary>Authored graph keys (GAS/graphs.json) for patrol/chase/attack leaves.</summary>
+    public static class BehaviorTreeScriptKeys
     {
-        public const int SeeEnemy = 1;
-        public const int InAttackRange = 2;
-        public const int Chase = 3;
-        public const int Attack = 4;
-        public const int Patrol = 5;
+        public const string SeeEnemy = "Graph.BT.Leaf.SeeEnemy";
+        public const string InAttackRange = "Graph.BT.Leaf.InAttackRange";
+        public const string Chase = "Graph.BT.Leaf.Chase";
+        public const string Attack = "Graph.BT.Leaf.Attack";
+        public const string Patrol = "Graph.BT.Leaf.Patrol";
     }
 
     public readonly struct BehaviorTreeNode

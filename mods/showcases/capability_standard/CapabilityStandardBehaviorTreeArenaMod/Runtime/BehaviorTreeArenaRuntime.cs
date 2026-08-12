@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
 using CapabilityStandardGraphBehaviorCommon;
@@ -11,9 +10,9 @@ namespace CapabilityStandardBehaviorTreeArenaMod.Runtime;
 public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeSensorFeed
 {
     private readonly GraphShowcaseConfig _config = new();
+    private GraphProgramRegistry? _programs;
     private BehaviorTreeWorld? _world;
     private BehaviorTreeWorld? _crowd;
-    private Dictionary<int, GraphInstruction[]>? _scripts;
     private float _accum;
     private float _time;
 
@@ -23,7 +22,6 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeSensorFeed
     private byte[] _intent = Array.Empty<byte>();
     private byte[] _flash = Array.Empty<byte>();
     private int[] _target = Array.Empty<int>();
-
     private float[] _ex = Array.Empty<float>();
     private float[] _ey = Array.Empty<float>();
     private bool[] _eAlive = Array.Empty<bool>();
@@ -46,12 +44,17 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeSensorFeed
     public int EnemyCount => _ex.Length;
     public GraphShowcaseMetrics Metrics { get; } = new() { ShowcaseId = "capability_standard_behavior_tree_arena" };
 
+    public void Bind(GraphProgramRegistry programs)
+        => _programs = programs ?? throw new ArgumentNullException(nameof(programs));
+
     public void EnsureWorld()
     {
         if (_world != null) return;
+        if (_programs == null) throw new InvalidOperationException("Bind(Registry) required.");
 
-        BehaviorTreeDefinition tree = BehaviorTreeFactory.CreatePatrolChaseAttackTree("showcase.bt.patrol_chase_attack");
-        _scripts = BehaviorTreePatrolScripts.CreatePatrolChaseAttackPrograms();
+        BehaviorTreeDefinition tree = BehaviorTreeFactory.CreatePatrolChaseAttackTree(
+            "showcase.bt.patrol_chase_attack",
+            GraphRegistryScriptResolver.RequireId);
         int n = _config.FeaturedAgentCount;
         _world = new BehaviorTreeWorld(tree, n);
         _gx = new float[n];
@@ -87,7 +90,7 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeSensorFeed
         }
 
         Metrics.AgentCount = n;
-        Metrics.Detail = "BT Script leaves patrol→see→chase→attack";
+        Metrics.Detail = "BT Script leaves from GraphProgramRegistry";
     }
 
     public void Tick(float dt)
@@ -95,12 +98,8 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeSensorFeed
         EnsureWorld();
         _time += dt;
         UpdateEnemies();
-        DecayFlash();
-
-        for (int i = 0; i < _gx.Length; i++)
-        {
-            _target[i] = FindNearestEnemy(i);
-        }
+        for (int i = 0; i < _flash.Length; i++) if (_flash[i] > 0) _flash[i]--;
+        for (int i = 0; i < _gx.Length; i++) _target[i] = FindNearestEnemy(i);
 
         _accum += dt;
         if (_accum >= _config.ThinkPeriodSeconds)
@@ -116,24 +115,20 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeSensorFeed
     {
         var world = _world!;
         for (int i = 0; i < world.Count; i++) world.RestartThinking(i);
-
         var sw = Stopwatch.StartNew();
-        BehaviorTreeThinkStats stats = world.TickAll(_scripts, 32, this);
+        BehaviorTreeThinkStats stats = world.TickAll(_programs, 32, this);
         if (_crowd != null)
         {
             for (int i = 0; i < _crowd.Count; i++)
             {
                 if (_crowd.Statuses[i] is BehaviorTreeStatus.Success or BehaviorTreeStatus.Failure)
-                {
                     _crowd.RestartThinking(i);
-                }
             }
 
             _crowd.TickAll(8);
         }
 
         sw.Stop();
-
         for (int i = 0; i < world.Count; i++)
         {
             int ret = world.LastScriptReturns[i];
@@ -145,56 +140,25 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeSensorFeed
         if (Metrics.LastThinkMs > Metrics.MaxThinkMs) Metrics.MaxThinkMs = Metrics.LastThinkMs;
         Metrics.ThinkWaves++;
         Metrics.Detail =
-            $"BT Script vignette guards={_gx.Length} slices={stats.ScriptSlices} last={Metrics.LastThinkMs:F3}ms";
+            $"BT Script vignette slices={stats.ScriptSlices} last={Metrics.LastThinkMs:F3}ms";
     }
 
     public void WriteSensors(int agentIndex, int graphId, Span<int> ints, Span<byte> bools)
     {
-        if (graphId == BehaviorTreeScriptBindings.SeeEnemy)
-        {
-            ints[0] = _target[agentIndex] >= 0 ? 1 : 0;
-            return;
-        }
-
-        if (graphId == BehaviorTreeScriptBindings.InAttackRange)
-        {
-            ints[0] = InAttackRange(agentIndex) ? 1 : 0;
-        }
+        int seeId = GraphRegistryScriptResolver.RequireId(BehaviorTreeScriptKeys.SeeEnemy);
+        int rangeId = GraphRegistryScriptResolver.RequireId(BehaviorTreeScriptKeys.InAttackRange);
+        if (graphId == seeId) ints[0] = _target[agentIndex] >= 0 ? 1 : 0;
+        else if (graphId == rangeId) ints[0] = InAttackRange(agentIndex) ? 1 : 0;
     }
 
     private void UpdateEnemies()
     {
         float cycle = _time % 8f;
-        if (cycle < 6f)
-        {
-            _eAlive[0] = true;
-            _ex[0] = 12f - cycle * 3.5f;
-            _ey[0] = MathF.Sin(cycle * 1.2f) * 2f;
-        }
-        else
-        {
-            _eAlive[0] = false;
-        }
-
+        if (cycle < 6f) { _eAlive[0] = true; _ex[0] = 12f - cycle * 3.5f; _ey[0] = MathF.Sin(cycle * 1.2f) * 2f; }
+        else _eAlive[0] = false;
         float c2 = (_time + 4f) % 10f;
-        if (c2 < 5f)
-        {
-            _eAlive[1] = true;
-            _ex[1] = -12f + c2 * 4f;
-            _ey[1] = 3f;
-        }
-        else
-        {
-            _eAlive[1] = false;
-        }
-    }
-
-    private void DecayFlash()
-    {
-        for (int i = 0; i < _flash.Length; i++)
-        {
-            if (_flash[i] > 0) _flash[i]--;
-        }
+        if (c2 < 5f) { _eAlive[1] = true; _ex[1] = -12f + c2 * 4f; _ey[1] = 3f; }
+        else _eAlive[1] = false;
     }
 
     private int FindNearestEnemy(int guard)
@@ -207,11 +171,7 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeSensorFeed
             float dx = _ex[e] - _gx[guard];
             float dy = _ey[e] - _gy[guard];
             float d = MathF.Sqrt(dx * dx + dy * dy);
-            if (d <= bestD)
-            {
-                bestD = d;
-                best = e;
-            }
+            if (d <= bestD) { bestD = d; best = e; }
         }
 
         return best;
@@ -222,7 +182,6 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeSensorFeed
         for (int i = 0; i < _gx.Length; i++)
         {
             if (_intent[i] == 2) continue;
-
             if (_intent[i] == 1 && _target[i] >= 0 && _eAlive[_target[i]])
             {
                 int e = _target[i];
@@ -231,8 +190,7 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeSensorFeed
                 float len = MathF.Sqrt(dx * dx + dy * dy);
                 if (len > 0.001f)
                 {
-                    float step = _config.ChaseSpeed * dt;
-                    if (step > len) step = len;
+                    float step = MathF.Min(_config.ChaseSpeed * dt, len);
                     _gx[i] += dx / len * step;
                     _gy[i] += dy / len * step;
                 }
@@ -255,8 +213,7 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeSensorFeed
 
             if (plen > 0.001f)
             {
-                float step = _config.PatrolSpeed * dt;
-                if (step > plen) step = plen;
+                float step = MathF.Min(_config.PatrolSpeed * dt, plen);
                 _gx[i] += pdx / plen * step;
                 _gy[i] += pdy / plen * step;
             }

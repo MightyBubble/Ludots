@@ -1,4 +1,5 @@
 using CapabilityStandardScriptFlowSandboxMod.Runtime;
+using Ludots.Tests.Gas.Graph;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Gas.Production
@@ -10,7 +11,9 @@ namespace Ludots.Tests.Gas.Production
         [Test]
         public void DrinkUntilFull_YieldsThenHaltsAtLimit()
         {
+            var programs = GraphRegistryTestBootstrap.LoadCoreScriptsAndFuncLib(out _);
             var runtime = new ScriptFlowSandboxRuntime();
+            runtime.Bind(programs);
             runtime.EnsureWorld();
             for (int i = 0; i < 20 && !runtime.Halted; i++)
             {

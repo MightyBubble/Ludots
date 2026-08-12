@@ -2,6 +2,7 @@ using System.Threading.Tasks;
 using CapabilityStandardAbilityGraphSandboxMod.Runtime;
 using CapabilityStandardGraphBehaviorCommon;
 using Ludots.Core.Engine;
+using Ludots.Core.GraphRuntime;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.DebugDraw;
 using Ludots.Core.Scripting;
@@ -15,12 +16,15 @@ public sealed class CapabilityStandardAbilityGraphSandboxModEntry : IMod
 
     public void OnLoad(IModContext context)
     {
-        context.Log("[CapabilityStandardAbilityGraphSandboxMod] Loaded (Ability/Effect-only showcase)");
+        context.Log("[CapabilityStandardAbilityGraphSandboxMod] Loaded (Ability FuncLib via Registry)");
         var runtime = new AbilityGraphSandboxRuntime();
         context.OnEvent(GameEvents.GameStart, ctx =>
         {
             GameEngine? engine = ctx.GetEngine();
             if (engine == null) return Task.CompletedTask;
+            runtime.Bind(
+                engine.GetService(CoreServiceKeys.GraphProgramRegistry),
+                engine.GetService(CoreServiceKeys.GraphFunctionCatalog));
             engine.SetService(MetricsKey, runtime.Metrics);
             var debugDraw = new DebugDrawCommandBuffer();
             engine.SetService(CoreServiceKeys.DebugDrawCommandBuffer, debugDraw);

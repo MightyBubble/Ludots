@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Numerics;
 using CapabilityStandardGraphBehaviorCommon;
@@ -13,28 +12,24 @@ namespace CapabilityStandardGraphBehaviorIntegrationMod.Runtime;
 public sealed class GraphBehaviorIntegrationRuntime : IBehaviorTreeSensorFeed
 {
     private readonly GraphShowcaseConfig _config = new();
+    private GraphProgramRegistry? _programs;
     private BehaviorTreeWorld? _bt;
-    private Dictionary<int, GraphInstruction[]>? _btScripts;
     private HfsmWorld? _hfsm;
     private GraphProgramHfsmHost? _hfsmHost;
     private LevelDirector? _level;
     private GraphProgramLevelHost? _levelHost;
     private float _accum;
     private float _time;
-
     private float[] _gx = Array.Empty<float>();
     private float[] _gy = Array.Empty<float>();
     private int[] _wp = Array.Empty<int>();
     private byte[] _intent = Array.Empty<byte>();
     private int[] _target = Array.Empty<int>();
-
     private float[] _sx = Array.Empty<float>();
     private float[] _sy = Array.Empty<float>();
-
-    private float _ex;
-    private float _ey;
+    private float _ex, _ey, _markerY = -10f;
     private bool _enemyAlive;
-    private float _markerY = -10f;
+    private int _seeId, _rangeId;
 
     public static readonly Vector2[] LeftPatrol =
     {
@@ -58,17 +53,26 @@ public sealed class GraphBehaviorIntegrationRuntime : IBehaviorTreeSensorFeed
     public float MarkerY => _markerY;
     public GraphShowcaseMetrics Metrics { get; } = new() { ShowcaseId = "capability_standard_graph_behavior_integration" };
 
+    public void Bind(GraphProgramRegistry programs)
+        => _programs = programs ?? throw new ArgumentNullException(nameof(programs));
+
     public void EnsureWorld()
     {
         if (_bt != null) return;
-        int guards = 6;
-        int sentries = 6;
-        _btScripts = BehaviorTreePatrolScripts.CreatePatrolChaseAttackPrograms();
-        _bt = new BehaviorTreeWorld(BehaviorTreeFactory.CreatePatrolChaseAttackTree("integration.bt"), guards);
-        _hfsmHost = new GraphProgramHfsmHost(HfsmFactory.CreateSentryScriptPrograms());
-        _hfsm = new HfsmWorld(HfsmFactory.CreateSentryHierarchyWithScripts("integration.hfsm"), sentries);
-        _levelHost = new GraphProgramLevelHost(LevelScriptPrograms.CreateTwoPhaseTrialPrograms());
-        _level = LevelBlueprintFactory.CreateTwoPhaseTrial("integration.level");
+        if (_programs == null) throw new InvalidOperationException("Bind(Registry) required.");
+
+        int guards = 6, sentries = 6;
+        _seeId = GraphRegistryScriptResolver.RequireId(BehaviorTreeScriptKeys.SeeEnemy);
+        _rangeId = GraphRegistryScriptResolver.RequireId(BehaviorTreeScriptKeys.InAttackRange);
+        _bt = new BehaviorTreeWorld(
+            BehaviorTreeFactory.CreatePatrolChaseAttackTree("integration.bt", GraphRegistryScriptResolver.RequireId),
+            guards);
+        _hfsmHost = new GraphProgramHfsmHost(_programs);
+        _hfsm = new HfsmWorld(
+            HfsmFactory.CreateSentryHierarchyWithScripts("integration.hfsm", GraphRegistryScriptResolver.RequireId),
+            sentries);
+        _levelHost = new GraphProgramLevelHost(_programs);
+        _level = LevelBlueprintFactory.CreateTwoPhaseTrial("integration.level", GraphRegistryScriptResolver.RequireId);
 
         _gx = new float[guards];
         _gy = new float[guards];
@@ -81,7 +85,6 @@ public sealed class GraphBehaviorIntegrationRuntime : IBehaviorTreeSensorFeed
             _gx[i] = -10f + (i % 3) * 1.2f;
             _gy[i] = -3f + (i / 3) * 3f;
             _wp[i] = i % LeftPatrol.Length;
-            _target[i] = -1;
         }
 
         _sx = new float[sentries];
@@ -94,7 +97,7 @@ public sealed class GraphBehaviorIntegrationRuntime : IBehaviorTreeSensorFeed
         }
 
         Metrics.AgentCount = guards + sentries;
-        Metrics.Detail = "Integration Script leaves: BT+HFSM+Level";
+        Metrics.Detail = "Integration Scripts exclusively from Registry";
     }
 
     public void Tick(float dt)
@@ -102,7 +105,6 @@ public sealed class GraphBehaviorIntegrationRuntime : IBehaviorTreeSensorFeed
         EnsureWorld();
         _time += dt;
         if (_markerY < -7.5f) _markerY += 2f * dt;
-
         if (_level!.Phase >= 1 && !_enemyAlive && _time < 20f)
         {
             _enemyAlive = true;
@@ -117,45 +119,26 @@ public sealed class GraphBehaviorIntegrationRuntime : IBehaviorTreeSensorFeed
         }
 
         for (int i = 0; i < _gx.Length; i++)
-        {
-            _target[i] = (_enemyAlive && Dist2(_gx[i], _gy[i], _ex, _ey) <= _config.SightRadius * _config.SightRadius)
-                ? 0
-                : -1;
-        }
-
+            _target[i] = (_enemyAlive && Dist2(_gx[i], _gy[i], _ex, _ey) <= _config.SightRadius * _config.SightRadius) ? 0 : -1;
         for (int i = 0; i < _sx.Length; i++)
         {
             if (_enemyAlive && Dist2(_sx[i], _sy[i], _ex, _ey) <= _config.AlertRadius * _config.AlertRadius)
-            {
                 _hfsm!.LatchStimulus(i);
-            }
         }
 
         _accum += dt;
         if (_accum >= _config.ThinkPeriodSeconds)
         {
             _accum = 0f;
-            if (_level.Phase == 1 && !_enemyAlive && Metrics.ThinkWaves > 8)
-            {
-                _level.AddCounter(10);
-            }
-
+            if (_level.Phase == 1 && !_enemyAlive && Metrics.ThinkWaves > 8) _level.AddCounter(10);
             for (int i = 0; i < _bt!.Count; i++) _bt.RestartThinking(i);
             var sw = Stopwatch.StartNew();
-            _bt.TickAll(_btScripts, 32, this);
+            _bt.TickAll(_programs, 32, this);
             _hfsm!.TickAll(_hfsmHost);
             _level.TickThinkWave(_levelHost);
-            if (Metrics.ThinkWaves == 12)
-            {
-                _level.PulseManual(2, _levelHost);
-            }
-
+            if (Metrics.ThinkWaves == 12) _level.PulseManual(2, _levelHost);
             sw.Stop();
-            for (int i = 0; i < _bt.Count; i++)
-            {
-                _intent[i] = (byte)_bt.LastScriptReturns[i];
-            }
-
+            for (int i = 0; i < _bt.Count; i++) _intent[i] = (byte)_bt.LastScriptReturns[i];
             Metrics.LastThinkMs = sw.Elapsed.TotalMilliseconds;
             if (Metrics.LastThinkMs > Metrics.MaxThinkMs) Metrics.MaxThinkMs = Metrics.LastThinkMs;
             Metrics.ThinkWaves++;
@@ -168,19 +151,12 @@ public sealed class GraphBehaviorIntegrationRuntime : IBehaviorTreeSensorFeed
 
     public void WriteSensors(int agentIndex, int graphId, Span<int> ints, Span<byte> bools)
     {
-        if (graphId == BehaviorTreeScriptBindings.SeeEnemy)
-        {
-            ints[0] = _target[agentIndex] >= 0 ? 1 : 0;
-            return;
-        }
-
-        if (graphId == BehaviorTreeScriptBindings.InAttackRange)
-        {
+        if (graphId == _seeId) ints[0] = _target[agentIndex] >= 0 ? 1 : 0;
+        else if (graphId == _rangeId)
             ints[0] = _enemyAlive && Dist2(_gx[agentIndex], _gy[agentIndex], _ex, _ey) <=
                       _config.AttackRadius * _config.AttackRadius
                 ? 1
                 : 0;
-        }
     }
 
     private void IntegrateGuards(float dt)
@@ -189,13 +165,11 @@ public sealed class GraphBehaviorIntegrationRuntime : IBehaviorTreeSensorFeed
         {
             if (_intent[i] == 1 && _enemyAlive)
             {
-                float dx = _ex - _gx[i];
-                float dy = _ey - _gy[i];
+                float dx = _ex - _gx[i], dy = _ey - _gy[i];
                 float len = MathF.Sqrt(dx * dx + dy * dy);
                 if (len > 0.001f)
                 {
-                    float step = _config.ChaseSpeed * dt;
-                    if (step > len) step = len;
+                    float step = MathF.Min(_config.ChaseSpeed * dt, len);
                     _gx[i] += dx / len * step;
                     _gy[i] += dy / len * step;
                 }
@@ -204,17 +178,10 @@ public sealed class GraphBehaviorIntegrationRuntime : IBehaviorTreeSensorFeed
             }
 
             Vector2 dest = LeftPatrol[_wp[i]];
-            float pdx = dest.X - _gx[i];
-            float pdy = dest.Y - _gy[i];
+            float pdx = dest.X - _gx[i], pdy = dest.Y - _gy[i];
             float plen = MathF.Sqrt(pdx * pdx + pdy * pdy);
-            if (plen < 0.4f)
-            {
-                _wp[i] = (_wp[i] + 1) % LeftPatrol.Length;
-                continue;
-            }
-
-            float stepP = _config.PatrolSpeed * dt;
-            if (stepP > plen) stepP = plen;
+            if (plen < 0.4f) { _wp[i] = (_wp[i] + 1) % LeftPatrol.Length; continue; }
+            float stepP = MathF.Min(_config.PatrolSpeed * dt, plen);
             _gx[i] += pdx / plen * stepP;
             _gy[i] += pdy / plen * stepP;
         }
@@ -222,8 +189,7 @@ public sealed class GraphBehaviorIntegrationRuntime : IBehaviorTreeSensorFeed
 
     private static float Dist2(float ax, float ay, float bx, float by)
     {
-        float dx = ax - bx;
-        float dy = ay - by;
+        float dx = ax - bx, dy = ay - by;
         return dx * dx + dy * dy;
     }
 }
