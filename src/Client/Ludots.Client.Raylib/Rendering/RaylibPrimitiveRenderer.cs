@@ -899,6 +899,12 @@ namespace Ludots.Client.Raylib.Rendering
             }
 
             bool blending = TryBeginAuthorBlendMode(blendMode);
+            bool depthMaskDisabled = blending;
+            if (depthMaskDisabled)
+            {
+                Rl.rlDisableDepthMask();
+            }
+
             Shader previousShader = _decalMaterial.shader;
             try
             {
@@ -925,6 +931,11 @@ namespace Ludots.Client.Raylib.Rendering
             finally
             {
                 _decalMaterial.shader = previousShader;
+
+                if (depthMaskDisabled)
+                {
+                    Rl.rlEnableDepthMask();
+                }
 
                 if (blending)
                 {

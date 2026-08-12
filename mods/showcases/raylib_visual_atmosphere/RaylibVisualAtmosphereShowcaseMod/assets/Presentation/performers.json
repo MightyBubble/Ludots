@@ -254,10 +254,10 @@
           "materialId": "raylib_visual_atmosphere.beach_path_decal",
           "renderPath": "StaticMesh",
           "mobility": "Static",
-          "localScale": [4.8, 1.0, 2.6]
+          "localScale": [6.5, 1.0, 3.4]
         },
         "style": {
-          "color": [1.0, 0.96, 0.88, 0.92]
+          "color": [1.0, 1.0, 1.0, 1.0]
         }
       },
       {
@@ -266,7 +266,7 @@
         "activeByDefault": true,
         "grounding": {
           "mode": "AlignToSurface",
-          "offset": 0.05,
+          "offset": 0.08,
           "updatePolicy": "Once"
         }
       }
@@ -285,10 +285,10 @@
           "materialId": "raylib_visual_atmosphere.sand_scar_decal",
           "renderPath": "StaticMesh",
           "mobility": "Static",
-          "localScale": [3.6, 1.0, 2.4]
+          "localScale": [5.2, 1.0, 3.2]
         },
         "style": {
-          "color": [0.95, 0.88, 0.78, 0.95]
+          "color": [1.0, 1.0, 1.0, 1.0]
         }
       },
       {
@@ -297,7 +297,7 @@
         "activeByDefault": true,
         "grounding": {
           "mode": "AlignToSurface",
-          "offset": 0.05,
+          "offset": 0.08,
           "updatePolicy": "Once"
         }
       }
