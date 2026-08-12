@@ -49,7 +49,7 @@ dotnet test src/Tests/GasTests/GasTests.csproj -c Release \
 ## 残留债（明确不在本 PR）
 
 - UIP-0 Template/Instance/Router **运行时**（#880 合同后的实现）
-- #874 正式热应用（等 LSW）
+- #874 正式热应用（等实时技能工作台正式管线，勿用 ReloadConfigs 捷径冒充）
 - 玩法纯读 Effective tag → tag id 原子能力（作者样板节点 `EffectiveStateTagId` 仅为意图占位）
 - Text BB；表面 token→文案接线
 - 人手关闭过时 issue：#870 / #871 / #878
