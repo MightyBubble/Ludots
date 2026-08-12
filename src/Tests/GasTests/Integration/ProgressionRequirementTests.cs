@@ -90,8 +90,10 @@ namespace Ludots.Tests.GAS
             var scopeKeys = new ScopeKeyRegistry();
             int cityScopeId = RegisterCityScope(scopeKeys);
 
-            var tags = default(GameplayTagContainer);
-            tags.AddTag(heroTag);
+            var requiredTags = default(GameplayTagBitSet);
+            requiredTags.AddTag(heroTag);
+            var heroTags = GameplayTagContainer.CreateAttached();
+            heroTags.AddTag(heroTag);
 
             var requirements = new ProgressionRequirementRegistry();
             requirements.Register(reqId, CreateSingleNodeRequirement(
@@ -101,14 +103,14 @@ namespace Ludots.Tests.GAS
                 RoleSlot.ScopeMembers,
                 progressionId: 0,
                 requiredCount: 1,
-                requiredTags: in tags));
+                requiredTags: in requiredTags));
 
             var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
             Entity cityA = world.Create(new ProgressionStateBuffer());
             Entity cityB = world.Create();
             Entity barracksA = world.Create();
             Entity barracksB = world.Create();
-            Entity hero = world.Create(tags);
+            Entity hero = world.Create(heroTags);
             PrepareScopeHost(world, cityA);
             PrepareScopeHost(world, cityB);
             PrepareScopeMember(world, barracksA);
@@ -138,7 +140,7 @@ namespace Ludots.Tests.GAS
             scopeKeys.RegisterCollectionMembers("team", teamMembersKeyId);
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 8, initialRowCapacity: 16);
 
-            var requiredTags = default(GameplayTagContainer);
+            var requiredTags = default(GameplayTagBitSet);
             requiredTags.AddTag(workerTag);
 
             var requirements = new ProgressionRequirementRegistry();
@@ -194,7 +196,7 @@ namespace Ludots.Tests.GAS
             int memberTypeId = relationshipTypes.Register("TeamMember");
             scopeKeys.RegisterRelationshipOutgoingMembers("team", memberTypeId);
 
-            var requiredTags = default(GameplayTagContainer);
+            var requiredTags = default(GameplayTagBitSet);
             requiredTags.AddTag(workerTag);
 
             var requirements = new ProgressionRequirementRegistry();
@@ -244,7 +246,7 @@ namespace Ludots.Tests.GAS
             scopeKeys.RegisterCollectionMembers("team", teamMembersKeyId);
             var collections = new EntityCollectionStore(collectionKeys, initialCollectionCapacity: 8, initialRowCapacity: 16);
 
-            var requiredTags = default(GameplayTagContainer);
+            var requiredTags = default(GameplayTagBitSet);
             requiredTags.AddTag(workerTag);
 
             var requirements = new ProgressionRequirementRegistry();
@@ -916,7 +918,7 @@ namespace Ludots.Tests.GAS
             using var world = World.Create();
             int graphReqId = ProgressionRequirementIdRegistry.Register("Req.GraphBacked");
             var requirements = new ProgressionRequirementRegistry();
-            var emptyTags = default(GameplayTagContainer);
+            var emptyTags = default(GameplayTagBitSet);
             var nodes = new[]
             {
                 new ProgressionRequirementNode(
@@ -956,7 +958,7 @@ namespace Ludots.Tests.GAS
             var scopeKeys = new ScopeKeyRegistry();
             int cityScopeId = RegisterCityScope(scopeKeys);
 
-            var requiredTags = default(GameplayTagContainer);
+            var requiredTags = default(GameplayTagBitSet);
             requiredTags.AddTag(heroTag);
 
             var requirements = new ProgressionRequirementRegistry();
@@ -1000,7 +1002,7 @@ namespace Ludots.Tests.GAS
             var scopeKeys = new ScopeKeyRegistry();
             int cityScopeId = RegisterCityScope(scopeKeys);
 
-            var requiredTags = default(GameplayTagContainer);
+            var requiredTags = default(GameplayTagBitSet);
             requiredTags.AddTag(heroTag);
 
             var requirements = new ProgressionRequirementRegistry();
@@ -1056,7 +1058,7 @@ namespace Ludots.Tests.GAS
             var scopeKeys = new ScopeKeyRegistry();
             int cityScopeId = RegisterCityScope(scopeKeys);
 
-            var requiredTags = default(GameplayTagContainer);
+            var requiredTags = default(GameplayTagBitSet);
             requiredTags.AddTag(heroTag);
 
             var requirements = new ProgressionRequirementRegistry();
@@ -1110,7 +1112,7 @@ namespace Ludots.Tests.GAS
             var scopeKeys = new ScopeKeyRegistry();
             int cityScopeId = RegisterCityScope(scopeKeys);
 
-            var requiredTags = default(GameplayTagContainer);
+            var requiredTags = default(GameplayTagBitSet);
             requiredTags.AddTag(fortifiedTag);
 
             var requirements = new ProgressionRequirementRegistry();
@@ -1584,7 +1586,7 @@ namespace Ludots.Tests.GAS
             int progressionId,
             int requiredCount = 1,
             int graphProgramId = 0,
-            in GameplayTagContainer requiredTags = default)
+            in GameplayTagBitSet requiredTags = default)
         {
             var nodes = new[]
             {

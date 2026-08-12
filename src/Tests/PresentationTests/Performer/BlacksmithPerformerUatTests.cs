@@ -634,7 +634,7 @@ namespace Ludots.Tests.Presentation
 
             public Entity SpawnBlacksmith()
             {
-                var attributes = default(AttributeBuffer);
+                var attributes = AttributeBuffer.CreateAttached();
                 attributes.SetBase(_durabilityAttributeId, 100f);
                 attributes.SetCurrent(_durabilityAttributeId, 100f);
 
@@ -644,7 +644,7 @@ namespace Ludots.Tests.Presentation
                     new VisualTransform { Position = new Vector3(10f, 0f, 20f), Rotation = Quaternion.Identity, Scale = Vector3.One },
                     new CullState { IsVisible = true, LOD = LODLevel.High },
                     attributes,
-                    default(GameplayTagContainer));
+                    GameplayTagContainer.CreateAttached());
             }
 
             public Entity SpawnBlacksmithAndWarmup()

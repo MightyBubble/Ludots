@@ -273,14 +273,11 @@ namespace Ludots.Core.Gameplay.Relationships
             }
         }
 
-        private static unsafe void OrBits(in GameplayTagContainer container, Span<ulong> mask)
+        private static void OrBits(in GameplayTagBitSet container, Span<ulong> mask)
         {
-            fixed (ulong* bits = container.Bits)
+            for (int w = 0; w < TagWordCount; w++)
             {
-                for (int w = 0; w < TagWordCount; w++)
-                {
-                    mask[w] |= bits[w];
-                }
+                mask[w] |= container.WordAt(w);
             }
         }
 
@@ -304,14 +301,14 @@ namespace Ludots.Core.Gameplay.Relationships
                 else
                 {
                     ref GameplayTagContainer tags = ref _world.Get<GameplayTagContainer>(candidate);
-                    fixed (ulong* bits = tags.Bits)
+                    Span<ulong> present = stackalloc ulong[TagWordCount];
+                    present.Clear();
+                    tags.CopyWordsTo(present.Slice(0, tags.WordCount));
+                    for (int w = 0; w < TagWordCount; w++)
                     {
-                        for (int w = 0; w < TagWordCount; w++)
-                        {
-                            ulong masked = bits[w] & _relevantTagMask[w];
-                            candidateChanged |= _tagSnapshot[baseIndex + w] != masked;
-                            _tagSnapshot[baseIndex + w] = masked;
-                        }
+                        ulong masked = present[w] & _relevantTagMask[w];
+                        candidateChanged |= _tagSnapshot[baseIndex + w] != masked;
+                        _tagSnapshot[baseIndex + w] = masked;
                     }
                 }
 

@@ -160,7 +160,7 @@ namespace Ludots.Core.Gameplay.GAS.Config
             // ── catalogTags (RFC-0065 DEC-14) ──
             if (obj["catalogTags"] is JsonArray catalogArr)
             {
-                var catalogTags = default(GameplayTagContainer);
+                var catalogTags = default(GameplayTagBitSet);
                 bool hasCatalogTags = false;
                 foreach (var t in catalogArr)
                 {

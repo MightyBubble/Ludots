@@ -1,22 +1,33 @@
 using System;
+using Ludots.Core.Gameplay.GAS.Capacity;
 using Ludots.Core.Gameplay.GAS.Components;
 
 namespace Ludots.Core.Gameplay.GAS
 {
     public readonly struct TagRuleCompiled
     {
-        public readonly GameplayTagContainer RequiredMask;
-        public readonly GameplayTagContainer BlockedMask;
-        public readonly GameplayTagContainer AttachedMask;
-        public readonly GameplayTagContainer RemovedMask;
-        public readonly GameplayTagContainer DisabledIfMask;
-        public readonly GameplayTagContainer RemoveIfMask;
+        public readonly GameplayTagBitSet RequiredMask;
+        public readonly GameplayTagBitSet BlockedMask;
+        public readonly GameplayTagBitSet AttachedMask;
+        public readonly GameplayTagBitSet RemovedMask;
+        public readonly GameplayTagBitSet DisabledIfMask;
+        public readonly GameplayTagBitSet RemoveIfMask;
         public readonly ulong AttachedAny;
         public readonly ulong RemovedAny;
         public readonly ulong DisabledIfAny;
         public readonly ulong RemoveIfAny;
 
-        public TagRuleCompiled(in GameplayTagContainer requiredMask, in GameplayTagContainer blockedMask, in GameplayTagContainer attachedMask, in GameplayTagContainer removedMask, in GameplayTagContainer disabledIfMask, in GameplayTagContainer removeIfMask, ulong attachedAny, ulong removedAny, ulong disabledIfAny, ulong removeIfAny)
+        public TagRuleCompiled(
+            in GameplayTagBitSet requiredMask,
+            in GameplayTagBitSet blockedMask,
+            in GameplayTagBitSet attachedMask,
+            in GameplayTagBitSet removedMask,
+            in GameplayTagBitSet disabledIfMask,
+            in GameplayTagBitSet removeIfMask,
+            ulong attachedAny,
+            ulong removedAny,
+            ulong disabledIfAny,
+            ulong removeIfAny)
         {
             RequiredMask = requiredMask;
             BlockedMask = blockedMask;
@@ -33,10 +44,11 @@ namespace Ludots.Core.Gameplay.GAS
 
     public sealed class TagRuleRegistry
     {
-        public const int MaxCoreTags = 256;
+        public const int MaxCoreTags = GasLoadTimeCapacityPlan.AbsoluteMaxTagIdSpace;
+        private const int HasRuleWordCount = MaxCoreTags / GasLoadTimeCapacityPlan.TagBitsPerWord;
 
         private readonly TagRuleCompiled[] _compiled = new TagRuleCompiled[MaxCoreTags];
-        private readonly ulong[] _hasRuleBits = new ulong[4];
+        private readonly ulong[] _hasRuleBits = new ulong[HasRuleWordCount];
 
         public void Clear()
         {
@@ -65,23 +77,17 @@ namespace Ludots.Core.Gameplay.GAS
             var disabledIfMask = BuildMask(disabledIfTags, ruleSet.DisabledIfCount);
             var removeIfMask = BuildMask(removeIfTags, ruleSet.RemoveIfCount);
 
-            ulong attachedAny = 0;
-            ulong removedAny = 0;
-            ulong disabledIfAny = 0;
-            ulong removeIfAny = 0;
-            unsafe
-            {
-                ulong* a = attachedMask.Bits;
-                ulong* r = removedMask.Bits;
-                ulong* d = disabledIfMask.Bits;
-                ulong* x = removeIfMask.Bits;
-                attachedAny = a[0] | a[1] | a[2] | a[3];
-                removedAny = r[0] | r[1] | r[2] | r[3];
-                disabledIfAny = d[0] | d[1] | d[2] | d[3];
-                removeIfAny = x[0] | x[1] | x[2] | x[3];
-            }
-
-            _compiled[tagId] = new TagRuleCompiled(in requiredMask, in blockedMask, in attachedMask, in removedMask, in disabledIfMask, in removeIfMask, attachedAny, removedAny, disabledIfAny, removeIfAny);
+            _compiled[tagId] = new TagRuleCompiled(
+                in requiredMask,
+                in blockedMask,
+                in attachedMask,
+                in removedMask,
+                in disabledIfMask,
+                in removeIfMask,
+                attachedMask.AnyWordBits(),
+                removedMask.AnyWordBits(),
+                disabledIfMask.AnyWordBits(),
+                removeIfMask.AnyWordBits());
             SetHasRule(tagId);
         }
 
@@ -114,9 +120,9 @@ namespace Ludots.Core.Gameplay.GAS
             _hasRuleBits[word] |= 1UL << bit;
         }
 
-        private static unsafe GameplayTagContainer BuildMask(int* tagIds, int count)
+        private static unsafe GameplayTagBitSet BuildMask(int* tagIds, int count)
         {
-            var mask = default(GameplayTagContainer);
+            var mask = default(GameplayTagBitSet);
 
             for (int i = 0; i < count; i++)
             {
@@ -125,6 +131,7 @@ namespace Ludots.Core.Gameplay.GAS
                 {
                     throw new ArgumentOutOfRangeException(nameof(tagIds));
                 }
+
                 mask.AddTag(id);
             }
 

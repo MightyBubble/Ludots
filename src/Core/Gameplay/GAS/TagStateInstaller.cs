@@ -1,4 +1,5 @@
 using Arch.Core;
+using Ludots.Core.Gameplay.GAS.Capacity;
 using Ludots.Core.Gameplay.GAS.Components;
 
 namespace Ludots.Core.Gameplay.GAS;
@@ -21,14 +22,23 @@ public static class TagStateInstaller
 
         if (!world.Has<GameplayTagContainer>(entity))
         {
-            world.Add(entity, new GameplayTagContainer());
+            world.Add(entity, GameplayTagContainer.CreateAttached(world, entity));
+        }
+        else
+        {
+            ref var existing = ref world.Get<GameplayTagContainer>(entity);
+            if (existing.RowId == GameplayTagContainer.InvalidRow)
+            {
+                existing = GameplayTagContainer.CreateAttached(world, entity);
+            }
         }
 
         if (!world.Has<TagCountContainer>(entity))
         {
             var counts = new TagCountContainer();
             ref GameplayTagContainer tags = ref world.Get<GameplayTagContainer>(entity);
-            for (int tagId = 1; tagId <= GameplayTagContainer.MAX_TAG_ID; tagId++)
+            int maxTagId = GasLoadTimeCapacitySession.Plan.MaxUsableTagId;
+            for (int tagId = 1; tagId <= maxTagId; tagId++)
             {
                 if (tags.HasTag(tagId) && !counts.AddCount(tagId))
                 {

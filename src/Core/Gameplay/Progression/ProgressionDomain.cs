@@ -50,7 +50,7 @@ namespace Ludots.Core.Gameplay.Progression
         public readonly int ProgressionId;
         public readonly int RequiredCount;
         public readonly int GraphProgramId;
-        public readonly GameplayTagContainer RequiredTags;
+        public readonly GameplayTagBitSet RequiredTags;
 
         public ProgressionRequirementNode(
             ProgressionRequirementNodeKind kind,
@@ -61,7 +61,7 @@ namespace Ludots.Core.Gameplay.Progression
             int progressionId,
             int requiredCount,
             int graphProgramId,
-            in GameplayTagContainer requiredTags)
+            in GameplayTagBitSet requiredTags)
         {
             Kind = kind;
             Scope = scope;

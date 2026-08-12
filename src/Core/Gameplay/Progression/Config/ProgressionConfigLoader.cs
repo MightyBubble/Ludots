@@ -273,7 +273,7 @@ namespace Ludots.Core.Gameplay.Progression.Config
                 childCount = 1;
             }
 
-            var requiredTags = default(GameplayTagContainer);
+            var requiredTags = default(GameplayTagBitSet);
             if (cfg.Tags != null)
             {
                 for (int i = 0; i < cfg.Tags.Count; i++)

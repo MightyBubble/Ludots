@@ -23,6 +23,7 @@ namespace Ludots.Tests.GAS
         public const int Iterations = 100;
         public const string BaselineRelativePath = "docs/rfcs/gas-loadtime-capacity/benchmark-baseline.json";
         public const string AfterP1RelativePath = "docs/rfcs/gas-loadtime-capacity/benchmark-after-p1.json";
+        public const string AfterP2RelativePath = "docs/rfcs/gas-loadtime-capacity/benchmark-after-p2.json";
 
         private World _world = null!;
         private readonly TagOps _tagOps = new TagOps(
@@ -35,7 +36,7 @@ namespace Ludots.Tests.GAS
             _world = World.Create();
             _tagOps.ClearRuleRegistry();
             GasLoadTimeCapacitySession.ClearForTests();
-            GasLoadTimeCapacitySession.EnsureLegacyPlanAndStore(entityRowCapacity: EntityCount * 3);
+            GasLoadTimeCapacitySession.EnsureLegacyPlanAndStoreForTests(entityRowCapacity: EntityCount * 3);
         }
 
         [TearDown]
@@ -43,7 +44,7 @@ namespace Ludots.Tests.GAS
         {
             _world?.Dispose();
             GasLoadTimeCapacitySession.ClearForTests();
-            GasLoadTimeCapacitySession.EnsureLegacyPlanAndStore();
+            GasLoadTimeCapacitySession.EnsureLegacyPlanAndStoreForTests();
         }
 
         [Test]
@@ -74,6 +75,43 @@ namespace Ludots.Tests.GAS
 
             That(report.StorageKind, Is.EqualTo("world-column-store"));
             That(report.Phase, Is.EqualTo("after-p1"));
+        }
+
+
+        [Test]
+        public void Capture_AfterP2_WorldStoreReport()
+        {
+            var report = CaptureWorldStoreReport(phase: "after-p2");
+            string outPath = ResolveOutputPath("gas-capacity-benchmark-after-p2.json");
+            report.WriteToFile(outPath);
+
+            string repoOut = ResolveRepoPath(AfterP2RelativePath);
+            report.WriteToFile(repoOut);
+            TestContext.Out.WriteLine($"Wrote capacity benchmark after-p2: {repoOut}");
+            TestContext.Out.WriteLine(report.ToJson());
+
+            That(report.StorageKind, Is.EqualTo("world-column-store"));
+            That(report.Phase, Is.EqualTo("after-p2"));
+        }
+
+        [Test]
+        public void Compare_AfterP2AgainstCommittedBaseline_WhenBaselineExists()
+        {
+            string baselinePath = ResolveRepoPath(BaselineRelativePath);
+            if (!File.Exists(baselinePath))
+            {
+                Assert.Ignore($"Baseline not committed yet at {baselinePath}. Run capture and commit P0 baseline first.");
+            }
+
+            var baseline = GasCapacityBenchmarkReport.FromJsonFile(baselinePath);
+            var after = CaptureWorldStoreReport(phase: "after-p2");
+            string result = GasCapacityBenchmarkReport.Compare(baseline, after);
+
+            TestContext.Out.WriteLine(result);
+            string notesPath = ResolveRepoPath("docs/rfcs/gas-loadtime-capacity/benchmark-regression-notes.md");
+            That(File.Exists(notesPath), Is.True, "P2 must document benchmark overrides in benchmark-regression-notes.md");
+            AssertNoUndocumentedHotPathAllocGrowth(result);
+            AssertAttrSetGetOpsWithinOverride(result, maxOpsRegression: 0.40);
         }
 
         [Test]
@@ -332,7 +370,8 @@ namespace Ludots.Tests.GAS
             };
             for (int i = 0; i < EntityCount; i++)
             {
-                entities[i] = _world.Create(archetype);
+                var tags = GameplayTagContainer.CreateAttached();
+                entities[i] = _world.Create(tags, new TagCountContainer(), new DirtyFlags(), new GameplayTagEffectiveCache());
             }
 
             long after = GC.GetTotalMemory(true);
@@ -353,7 +392,7 @@ namespace Ludots.Tests.GAS
             var entities = new Entity[EntityCount];
             for (int i = 0; i < EntityCount; i++)
             {
-                entities[i] = _world.Create(new GameplayTagContainer(), new TagCountContainer());
+                entities[i] = _world.Create(GameplayTagContainer.CreateAttached(), new TagCountContainer());
             }
 
             GC.Collect();
@@ -398,7 +437,7 @@ namespace Ludots.Tests.GAS
             for (int i = 0; i < entityCount; i++)
             {
                 int tagId = (i % 31) + 1;
-                var tags = default(GameplayTagContainer);
+                var tags = GameplayTagContainer.CreateAttached();
                 var counts = default(TagCountContainer);
                 var dirty = default(DirtyFlags);
                 tags.AddTag(tagId);

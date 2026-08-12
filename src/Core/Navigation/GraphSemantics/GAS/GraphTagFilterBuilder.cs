@@ -12,12 +12,12 @@ namespace Ludots.Core.Navigation.GraphSemantics.GAS
             return new TagFilter256(in req, in forb);
         }
 
-        public static unsafe TagFilter256 Compile(in GameplayTagContainer requiredAll, in GameplayTagContainer forbiddenAny)
+        public static TagFilter256 Compile(in GameplayTagBitSet requiredAll, in GameplayTagBitSet forbiddenAny)
         {
-            var req = new TagBits256(requiredAll.Bits[0], requiredAll.Bits[1], requiredAll.Bits[2], requiredAll.Bits[3]);
-            var forb = new TagBits256(forbiddenAny.Bits[0], forbiddenAny.Bits[1], forbiddenAny.Bits[2], forbiddenAny.Bits[3]);
+            // P3 bridge: first four words only; freeze fails closed when Plan.TagIdSpace > 256.
+            var req = new TagBits256(requiredAll.WordAt(0), requiredAll.WordAt(1), requiredAll.WordAt(2), requiredAll.WordAt(3));
+            var forb = new TagBits256(forbiddenAny.WordAt(0), forbiddenAny.WordAt(1), forbiddenAny.WordAt(2), forbiddenAny.WordAt(3));
             return new TagFilter256(in req, in forb);
         }
     }
 }
-

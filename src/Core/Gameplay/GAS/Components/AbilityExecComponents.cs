@@ -90,7 +90,7 @@ namespace Ludots.Core.Gameplay.GAS.Components
         /// <summary>Default clock for tick advancement.</summary>
         public GasClockId ClockId;
         /// <summary>Tags that interrupt this ability when present on the caster.</summary>
-        public GameplayTagContainer InterruptAny;
+        public GameplayTagBitSet InterruptAny;
         /// <summary>Number of items in this spec.</summary>
         public int ItemCount;
 

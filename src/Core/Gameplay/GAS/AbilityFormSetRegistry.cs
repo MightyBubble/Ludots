@@ -20,8 +20,8 @@ namespace Ludots.Core.Gameplay.GAS
     public readonly struct AbilityFormRouteDefinition
     {
         public AbilityFormRouteDefinition(
-            GameplayTagContainer requiredAll,
-            GameplayTagContainer blockedAny,
+            GameplayTagBitSet requiredAll,
+            GameplayTagBitSet blockedAny,
             int priority,
             AbilityFormSlotOverride[] slotOverrides)
         {
@@ -31,8 +31,8 @@ namespace Ludots.Core.Gameplay.GAS
             SlotOverrides = slotOverrides ?? Array.Empty<AbilityFormSlotOverride>();
         }
 
-        public GameplayTagContainer RequiredAll { get; }
-        public GameplayTagContainer BlockedAny { get; }
+        public GameplayTagBitSet RequiredAll { get; }
+        public GameplayTagBitSet BlockedAny { get; }
         public int Priority { get; }
         public IReadOnlyList<AbilityFormSlotOverride> SlotOverrides { get; }
     }

@@ -81,9 +81,9 @@ namespace Ludots.Core.Gameplay.Items
 
         public string Label { get; init; } = string.Empty;
 
-        public GameplayTagContainer RequiredAll { get; init; }
+        public GameplayTagBitSet RequiredAll { get; init; }
 
-        public GameplayTagContainer BlockedAny { get; init; }
+        public GameplayTagBitSet BlockedAny { get; init; }
 
         public bool SingleItemOnly { get; init; } = true;
     }
@@ -204,7 +204,7 @@ namespace Ludots.Core.Gameplay.Items
 
         public int MaxStack { get; init; } = 1;
 
-        public GameplayTagContainer Tags { get; init; }
+        public GameplayTagBitSet Tags { get; init; }
 
         public string[] AllowedNamedSlots { get; init; } = Array.Empty<string>();
 

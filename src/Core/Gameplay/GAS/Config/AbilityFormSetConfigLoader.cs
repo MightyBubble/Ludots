@@ -70,9 +70,9 @@ namespace Ludots.Core.Gameplay.GAS.Config
             return new AbilityFormSetDefinition(routes.ToArray());
         }
 
-        private static GameplayTagContainer CompileTagMask(JsonArray? tagsNode, string formSetName, int routeIndex, string fieldName)
+        private static GameplayTagBitSet CompileTagMask(JsonArray? tagsNode, string formSetName, int routeIndex, string fieldName)
         {
-            var tags = default(GameplayTagContainer);
+            var tags = default(GameplayTagBitSet);
             if (tagsNode == null)
             {
                 return tags;

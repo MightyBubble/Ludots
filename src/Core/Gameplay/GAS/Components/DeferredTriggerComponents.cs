@@ -1,3 +1,4 @@
+using System;
 using Arch.Core;
 using Ludots.Core.Gameplay.GAS.Capacity;
 
@@ -13,7 +14,7 @@ namespace Ludots.Core.Gameplay.GAS.Components
         public float OldValue;
         public float NewValue;
     }
-    
+
     /// <summary>
     /// Tag变化触发器（延迟到下一帧执行）
     /// </summary>
@@ -24,7 +25,7 @@ namespace Ludots.Core.Gameplay.GAS.Components
         public bool WasPresent;
         public bool IsPresent;
     }
-    
+
     /// <summary>
     /// TagCount变化触发器（延迟到下一帧执行）
     /// </summary>
@@ -35,23 +36,28 @@ namespace Ludots.Core.Gameplay.GAS.Components
         public ushort OldCount;
         public ushort NewCount;
     }
-    
+
     /// <summary>
-    /// 脏标记组件（用于标记需要延迟触发）
-    /// Attribute dirty words are absolute-max fixed (1024/64); live ids fail-closed against the plan.
+    /// Dirty markers for deferred triggers.
+    /// Attribute and tag dirty words are absolute-max fixed; live ids fail-closed against the plan.
     /// </summary>
     public unsafe struct DirtyFlags
     {
         public const int MAX_ATTR_DIRTY_WORDS =
             GasLoadTimeCapacityPlan.AbsoluteMaxAttributeSlots / GasLoadTimeCapacityPlan.TagBitsPerWord;
 
+        public const int MAX_TAG_DIRTY_WORDS =
+            GasLoadTimeCapacityPlan.AbsoluteMaxTagIdSpace / GasLoadTimeCapacityPlan.TagBitsPerWord;
+
         /// <summary>Obsolete bridge for the old single-ulong 64-slot mask.</summary>
         public const int MAX_ATTRS = 64;
-        public const int TAG_DIRTY_BYTES = 32; // 256 tags / 8
+
+        /// <summary>Obsolete bridge for the old 256-tag byte dirty map.</summary>
+        public const int TAG_DIRTY_BYTES = MAX_TAG_DIRTY_WORDS * (GasLoadTimeCapacityPlan.TagBitsPerWord / 8);
 
         public fixed ulong AttributeDirtyWords[MAX_ATTR_DIRTY_WORDS];
         public byte DeferredTriggerQueued;
-        public fixed byte TagDirty[TAG_DIRTY_BYTES];
+        public fixed ulong TagDirtyWords[MAX_TAG_DIRTY_WORDS];
 
         /// <summary>Word 0 of the multi-word attribute dirty set (ids 0..63).</summary>
         public ulong AttributeDirtyMask
@@ -68,12 +74,8 @@ namespace Ludots.Core.Gameplay.GAS.Components
 
         public void MarkTagDirty(int tagId)
         {
-            if (tagId >= 0 && tagId < 256)
-            {
-                int byteIndex = tagId / 8;
-                int bitIndex = tagId % 8;
-                TagDirty[byteIndex] |= (byte)(1 << bitIndex);
-            }
+            ValidateTagId(tagId);
+            TagDirtyWords[tagId >> 6] |= 1UL << (tagId & 63);
         }
 
         public bool IsAttributeDirty(int attrId)
@@ -84,13 +86,8 @@ namespace Ludots.Core.Gameplay.GAS.Components
 
         public bool IsTagDirty(int tagId)
         {
-            if (tagId < 0 || tagId >= 256)
-            {
-                return false;
-            }
-            int byteIndex = tagId / 8;
-            int bitIndex = tagId % 8;
-            return (TagDirty[byteIndex] & (1 << bitIndex)) != 0;
+            ValidateTagId(tagId);
+            return (TagDirtyWords[tagId >> 6] & (1UL << (tagId & 63))) != 0UL;
         }
 
         public void Clear()
@@ -100,9 +97,9 @@ namespace Ludots.Core.Gameplay.GAS.Components
                 AttributeDirtyWords[i] = 0UL;
             }
 
-            for (int i = 0; i < TAG_DIRTY_BYTES; i++)
+            for (int i = 0; i < MAX_TAG_DIRTY_WORDS; i++)
             {
-                TagDirty[i] = 0;
+                TagDirtyWords[i] = 0UL;
             }
         }
 
@@ -122,10 +119,15 @@ namespace Ludots.Core.Gameplay.GAS.Components
 
         public bool IsAnyTagDirty()
         {
-            for (int i = 0; i < TAG_DIRTY_BYTES; i++)
+            int words = ActiveTagDirtyWordCount();
+            for (int i = 0; i < words; i++)
             {
-                if (TagDirty[i] != 0) return true;
+                if (TagDirtyWords[i] != 0UL)
+                {
+                    return true;
+                }
             }
+
             return false;
         }
 
@@ -137,24 +139,37 @@ namespace Ludots.Core.Gameplay.GAS.Components
 
         public void ClearTagDirty(int tagId)
         {
-            if (tagId >= 0 && tagId < 256)
-            {
-                int byteIndex = tagId / 8;
-                int bitIndex = tagId % 8;
-                TagDirty[byteIndex] &= (byte)~(1 << bitIndex);
-            }
+            ValidateTagId(tagId);
+            TagDirtyWords[tagId >> 6] &= ~(1UL << (tagId & 63));
         }
 
-        private static int ActiveAttributeSlotCount()
+        public static int ActiveAttributeSlotCount()
         {
             return GasLoadTimeCapacitySession.IsFrozen
                 ? GasLoadTimeCapacitySession.Plan.AttributeSlotCount
                 : GasLoadTimeCapacityPlan.AbsoluteMaxAttributeSlots;
         }
 
-        private static int ActiveAttributeDirtyWordCount()
+        public static int ActiveAttributeDirtyWordCount()
         {
             return GasWorldColumnStore.AttrDirtyWordCount(ActiveAttributeSlotCount());
+        }
+
+        public static int ActiveMaxUsableTagId()
+        {
+            return GasLoadTimeCapacitySession.IsFrozen
+                ? GasLoadTimeCapacitySession.Plan.MaxUsableTagId
+                : GasLoadTimeCapacityPlan.AbsoluteMaxTagIdSpace - 1;
+        }
+
+        public static int ActiveTagDirtyWordCount()
+        {
+            if (!GasLoadTimeCapacitySession.IsFrozen)
+            {
+                return MAX_TAG_DIRTY_WORDS;
+            }
+
+            return GasLoadTimeCapacitySession.Plan.TagUlongWordCount;
         }
 
         private static void ValidateAttributeId(int attrId)
@@ -162,10 +177,22 @@ namespace Ludots.Core.Gameplay.GAS.Components
             int slots = ActiveAttributeSlotCount();
             if ((uint)attrId >= (uint)slots)
             {
-                throw new System.ArgumentOutOfRangeException(
+                throw new ArgumentOutOfRangeException(
                     nameof(attrId),
                     attrId,
                     $"attributeId must be in [0, {slots - 1}] for dirty flags.");
+            }
+        }
+
+        private static void ValidateTagId(int tagId)
+        {
+            int max = ActiveMaxUsableTagId();
+            if (tagId <= 0 || tagId > max)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(tagId),
+                    tagId,
+                    $"tagId must be in [1, {max}] for dirty flags.");
             }
         }
     }

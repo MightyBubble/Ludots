@@ -67,7 +67,7 @@ namespace Ludots.Tests.Presentation
         public void AttributeBinding_MapsAttributeRatioAndThreshold()
         {
             using var world = World.Create();
-            var attributes = default(AttributeBuffer);
+            var attributes = AttributeBuffer.CreateAttached();
             attributes.SetBase(7, 100f);
             attributes.SetCurrent(7, 50f);
             Entity owner = world.Create(attributes);
@@ -121,7 +121,7 @@ namespace Ludots.Tests.Presentation
         public void OwnerAttributeChangeBuffer_OnlyUpdatesMatchingAttributeBindingBehaviors()
         {
             using var world = World.Create();
-            var attributes = default(AttributeBuffer);
+            var attributes = AttributeBuffer.CreateAttached();
             attributes.SetBase(7, 100f);
             attributes.SetCurrent(7, 25f);
             attributes.SetBase(8, 200f);
@@ -221,7 +221,7 @@ namespace Ludots.Tests.Presentation
         public void AttributeBindingAndParamBindings_ResolveAttributeEntityColorAndFacingIntoBlackboard()
         {
             using var world = World.Create();
-            var attributes = default(AttributeBuffer);
+            var attributes = AttributeBuffer.CreateAttached();
             attributes.SetBase(7, 100f);
             attributes.SetCurrent(7, 25f);
             Entity owner = world.Create(
@@ -358,7 +358,7 @@ namespace Ludots.Tests.Presentation
             Assert.That(instances.ResolveInt(performer, 110), Is.EqualTo(0));
             Assert.That(instances.ResolveInt(performer, 111), Is.EqualTo(1));
 
-            world.Add(owner, default(GameplayTagContainer));
+            world.Add(owner, GameplayTagContainer.CreateAttached(world, owner));
             ref GameplayTagContainer tags = ref world.Get<GameplayTagContainer>(owner);
             tags.AddTag(workingTagId);
             Assert.That(ownerChanges.TryAdd(new PresentationOwnerChange(owner, PresentationOwnerChangeKind.Tag, workingTagId, stateValue: 1)), Is.True);
@@ -374,7 +374,7 @@ namespace Ludots.Tests.Presentation
             using var world = World.Create();
             int workingTagId = TagRegistry.Register("working.fastpath");
             int alertTagId = TagRegistry.Register("alert.fastpath");
-            Entity owner = world.Create(default(GameplayTagContainer));
+            Entity owner = world.Create(GameplayTagContainer.CreateAttached());
 
             var instances = new PerformerEntityRuntime(world);
             var definitions = new PerformerDefinitionRegistry();

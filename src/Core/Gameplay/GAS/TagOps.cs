@@ -1,6 +1,8 @@
-using Arch.Core;
-using Ludots.Core.Gameplay.GAS.Components;
+using System;
 using System.Numerics;
+using Arch.Core;
+using Ludots.Core.Gameplay.GAS.Capacity;
+using Ludots.Core.Gameplay.GAS.Components;
 
 namespace Ludots.Core.Gameplay.GAS
 {
@@ -31,9 +33,6 @@ namespace Ludots.Core.Gameplay.GAS
             _dirtyEntities = dirtyEntities ?? throw new ArgumentNullException(nameof(dirtyEntities));
         }
 
-        /// <summary>
-        /// Access the underlying TagRuleRegistry (e.g. for OrderSubmitter).
-        /// </summary>
         public TagRuleRegistry Rules => _rules;
         public DirtyEntityQueue DirtyEntities => _dirtyEntities;
 
@@ -48,7 +47,9 @@ namespace Ludots.Core.Gameplay.GAS
             ref GameplayTagContainer tags = ref world.Get<GameplayTagContainer>(entity);
             ref TagCountContainer counts = ref world.Get<TagCountContainer>(entity);
             ref DirtyFlags dirty = ref world.Get<DirtyFlags>(entity);
-            GameplayTagContainer tagsBefore = tags;
+            int words = tags.WordCount;
+            Span<ulong> tagsBefore = stackalloc ulong[GameplayTagBitSet.MaxWords];
+            tags.CopyWordsTo(tagsBefore.Slice(0, words));
             TagCountContainer countsBefore = counts;
             DirtyFlags dirtyBefore = dirty;
             try
@@ -59,7 +60,7 @@ namespace Ludots.Core.Gameplay.GAS
             }
             catch
             {
-                tags = tagsBefore;
+                tags.CopyWordsFrom(tagsBefore.Slice(0, words));
                 counts = countsBefore;
                 dirty = dirtyBefore;
                 throw;
@@ -72,7 +73,9 @@ namespace Ludots.Core.Gameplay.GAS
             ref GameplayTagContainer tags = ref world.Get<GameplayTagContainer>(entity);
             ref TagCountContainer counts = ref world.Get<TagCountContainer>(entity);
             ref DirtyFlags dirty = ref world.Get<DirtyFlags>(entity);
-            GameplayTagContainer tagsBefore = tags;
+            int words = tags.WordCount;
+            Span<ulong> tagsBefore = stackalloc ulong[GameplayTagBitSet.MaxWords];
+            tags.CopyWordsTo(tagsBefore.Slice(0, words));
             TagCountContainer countsBefore = counts;
             DirtyFlags dirtyBefore = dirty;
             try
@@ -83,7 +86,7 @@ namespace Ludots.Core.Gameplay.GAS
             }
             catch
             {
-                tags = tagsBefore;
+                tags.CopyWordsFrom(tagsBefore.Slice(0, words));
                 counts = countsBefore;
                 dirty = dirtyBefore;
                 throw;
@@ -134,7 +137,7 @@ namespace Ludots.Core.Gameplay.GAS
             return true;
         }
 
-        public bool EffectiveMayChangeForDirtyTags(int tagId, in GameplayTagContainer dirtyTags)
+        public bool EffectiveMayChangeForDirtyTags(int tagId, in GameplayTagBitSet dirtyTags)
         {
             if (tagId <= 0 || (uint)tagId >= TagRuleRegistry.MaxCoreTags)
             {
@@ -155,8 +158,6 @@ namespace Ludots.Core.Gameplay.GAS
             return compiled.DisabledIfAny != 0 && dirtyTags.Intersects(in compiled.DisabledIfMask);
         }
 
-        // ── Public API: without DirtyFlags ──
-
         internal unsafe bool AddTag(ref GameplayTagContainer tagContainer, ref TagCountContainer countContainer, int tagId)
         {
             return AddTagCore(ref tagContainer, ref countContainer, tagId, dirty: null);
@@ -166,8 +167,6 @@ namespace Ludots.Core.Gameplay.GAS
         {
             return RemoveTagCore(ref tagContainer, ref countContainer, tagId, dirty: null);
         }
-
-        // ── Public API: with DirtyFlags ──
 
         internal bool AddTag(ref GameplayTagContainer tagContainer, ref TagCountContainer countContainer, int tagId, ref DirtyFlags dirtyFlags)
         {
@@ -191,11 +190,11 @@ namespace Ludots.Core.Gameplay.GAS
             }
         }
 
-        // ── Unified core implementations ──
-
         private unsafe bool AddTagCore(ref GameplayTagContainer tagContainer, ref TagCountContainer countContainer, int tagId, DirtyFlags* dirty)
         {
-            GameplayTagContainer tagsBefore = tagContainer;
+            int words = tagContainer.WordCount;
+            Span<ulong> tagsBefore = stackalloc ulong[GameplayTagBitSet.MaxWords];
+            tagContainer.CopyWordsTo(tagsBefore.Slice(0, words));
             TagCountContainer countsBefore = countContainer;
             DirtyFlags dirtyBefore = dirty == null ? default : *dirty;
             try
@@ -204,7 +203,7 @@ namespace Ludots.Core.Gameplay.GAS
             }
             catch
             {
-                tagContainer = tagsBefore;
+                tagContainer.CopyWordsFrom(tagsBefore.Slice(0, words));
                 countContainer = countsBefore;
                 if (dirty != null) *dirty = dirtyBefore;
                 throw;
@@ -213,8 +212,7 @@ namespace Ludots.Core.Gameplay.GAS
 
         private unsafe bool AddTagCoreTransactional(ref GameplayTagContainer tagContainer, ref TagCountContainer countContainer, int tagId, DirtyFlags* dirty)
         {
-            if (tagId <= 0 || (uint)tagId >= TagRuleRegistry.MaxCoreTags)
-                throw new ArgumentOutOfRangeException(nameof(tagId), tagId, $"tagId must be in [1, {TagRuleRegistry.MaxCoreTags - 1}].");
+            ValidateTagId(tagId);
 
             if (tagContainer.HasTag(tagId))
             {
@@ -254,8 +252,7 @@ namespace Ludots.Core.Gameplay.GAS
 
         private unsafe bool RemoveTagCore(ref GameplayTagContainer tagContainer, ref TagCountContainer countContainer, int tagId, DirtyFlags* dirty)
         {
-            if (tagId <= 0 || (uint)tagId >= TagRuleRegistry.MaxCoreTags)
-                throw new ArgumentOutOfRangeException(nameof(tagId), tagId, $"tagId must be in [1, {TagRuleRegistry.MaxCoreTags - 1}].");
+            ValidateTagId(tagId);
 
             ushort currentCount = countContainer.GetCount(tagId);
             if (currentCount == 0) return false;
@@ -340,55 +337,60 @@ namespace Ludots.Core.Gameplay.GAS
             MarkDirty(dirty, tagId);
         }
 
-        private unsafe void ApplyRemovedCore(in GameplayTagContainer removedMask, ref GameplayTagContainer tagContainer, ref TagCountContainer countContainer, DirtyFlags* dirty)
+        private unsafe void ApplyRemovedCore(in GameplayTagBitSet removedMask, ref GameplayTagContainer tagContainer, ref TagCountContainer countContainer, DirtyFlags* dirty)
         {
-            fixed (ulong* removedBits = removedMask.Bits)
-            fixed (ulong* presentBits = tagContainer.Bits)
+            int words = tagContainer.WordCount;
+            Span<ulong> present = stackalloc ulong[GameplayTagBitSet.MaxWords];
+            tagContainer.CopyWordsTo(present.Slice(0, words));
+            for (int wordIndex = 0; wordIndex < words; wordIndex++)
             {
-                for (int wordIndex = 0; wordIndex < 4; wordIndex++)
+                ulong bits = removedMask.WordAt(wordIndex) & present[wordIndex];
+                while (bits != 0)
                 {
-                    ulong bits = removedBits[wordIndex] & presentBits[wordIndex];
-                    while (bits != 0)
-                    {
-                        int bit = BitOperations.TrailingZeroCount(bits);
-                        bits &= bits - 1;
-                        int removedTagId = (wordIndex << 6) + bit;
-                        RemoveAllInternalCore(removedTagId, ref tagContainer, ref countContainer, dirty);
-                    }
+                    int bit = BitOperations.TrailingZeroCount(bits);
+                    bits &= bits - 1;
+                    int removedTagId = (wordIndex << 6) + bit;
+                    RemoveAllInternalCore(removedTagId, ref tagContainer, ref countContainer, dirty);
                 }
             }
         }
 
-        private unsafe void ApplyAttachedCore(in GameplayTagContainer attachedMask, ref GameplayTagContainer tagContainer, ref TagCountContainer countContainer, DirtyFlags* dirty)
+        private unsafe void ApplyAttachedCore(in GameplayTagBitSet attachedMask, ref GameplayTagContainer tagContainer, ref TagCountContainer countContainer, DirtyFlags* dirty)
         {
-            fixed (ulong* attachedBits = attachedMask.Bits)
-            fixed (ulong* presentBits = tagContainer.Bits)
+            int words = tagContainer.WordCount;
+            Span<ulong> present = stackalloc ulong[GameplayTagBitSet.MaxWords];
+            tagContainer.CopyWordsTo(present.Slice(0, words));
+            for (int wordIndex = 0; wordIndex < words; wordIndex++)
             {
-                for (int wordIndex = 0; wordIndex < 4; wordIndex++)
+                ulong bits = attachedMask.WordAt(wordIndex) & ~present[wordIndex];
+                while (bits != 0)
                 {
-                    ulong bits = attachedBits[wordIndex] & ~presentBits[wordIndex];
-                    while (bits != 0)
-                    {
-                        int bit = BitOperations.TrailingZeroCount(bits);
-                        bits &= bits - 1;
-                        int attachedTagId = (wordIndex << 6) + bit;
-                        if (!CanAddTag(attachedTagId, ref tagContainer)) continue;
-                        AddTagInternalCore(attachedTagId, ref tagContainer, ref countContainer, dirty);
-                    }
+                    int bit = BitOperations.TrailingZeroCount(bits);
+                    bits &= bits - 1;
+                    int attachedTagId = (wordIndex << 6) + bit;
+                    if (!CanAddTag(attachedTagId, ref tagContainer)) continue;
+                    AddTagInternalCore(attachedTagId, ref tagContainer, ref countContainer, dirty);
                 }
             }
         }
-
-        // ── Helpers ──
 
         private static unsafe void MarkDirty(DirtyFlags* dirty, int tagId)
         {
             if (dirty != null) dirty->MarkTagDirty(tagId);
         }
 
-        // ── Multi-tag operations ──
+        private static void ValidateTagId(int tagId)
+        {
+            int max = GasLoadTimeCapacitySession.IsFrozen
+                ? GasLoadTimeCapacitySession.Plan.MaxUsableTagId
+                : TagRuleRegistry.MaxCoreTags - 1;
+            if (tagId <= 0 || tagId > max)
+            {
+                throw new ArgumentOutOfRangeException(nameof(tagId), tagId, $"tagId must be in [1, {max}].");
+            }
+        }
 
-        public bool ContainsAll(ref GameplayTagContainer tagContainer, in GameplayTagContainer required, TagSense sense)
+        public bool ContainsAll(ref GameplayTagContainer tagContainer, in GameplayTagBitSet required, TagSense sense)
         {
             if (sense == TagSense.Present)
             {
@@ -400,23 +402,18 @@ namespace Ludots.Core.Gameplay.GAS
                 return false;
             }
 
-            unsafe
+            int words = GameplayTagBitSet.ActiveWordCount();
+            for (int wordIndex = 0; wordIndex < words; wordIndex++)
             {
-                fixed (ulong* requiredBits = required.Bits)
+                ulong bits = required.WordAt(wordIndex);
+                while (bits != 0)
                 {
-                    for (int wordIndex = 0; wordIndex < 4; wordIndex++)
+                    int bit = BitOperations.TrailingZeroCount(bits);
+                    bits &= bits - 1;
+                    int tagId = (wordIndex << 6) + bit;
+                    if (!HasTag(ref tagContainer, tagId, sense))
                     {
-                        ulong bits = requiredBits[wordIndex];
-                        while (bits != 0)
-                        {
-                            int bit = BitOperations.TrailingZeroCount(bits);
-                            bits &= bits - 1;
-                            int tagId = (wordIndex << 6) + bit;
-                            if (!HasTag(ref tagContainer, tagId, sense))
-                            {
-                                return false;
-                            }
-                        }
+                        return false;
                     }
                 }
             }
@@ -424,31 +421,27 @@ namespace Ludots.Core.Gameplay.GAS
             return true;
         }
 
-        public bool Intersects(ref GameplayTagContainer tagContainer, in GameplayTagContainer other, TagSense sense)
+        public bool Intersects(ref GameplayTagContainer tagContainer, in GameplayTagBitSet other, TagSense sense)
         {
             if (sense == TagSense.Present)
             {
                 return tagContainer.Intersects(in other);
             }
 
-            unsafe
+            int words = tagContainer.WordCount;
+            Span<ulong> present = stackalloc ulong[GameplayTagBitSet.MaxWords];
+            tagContainer.CopyWordsTo(present.Slice(0, words));
+            for (int wordIndex = 0; wordIndex < words; wordIndex++)
             {
-                fixed (ulong* otherBits = other.Bits)
-                fixed (ulong* presentBits = tagContainer.Bits)
+                ulong bits = other.WordAt(wordIndex) & present[wordIndex];
+                while (bits != 0)
                 {
-                    for (int wordIndex = 0; wordIndex < 4; wordIndex++)
+                    int bit = BitOperations.TrailingZeroCount(bits);
+                    bits &= bits - 1;
+                    int tagId = (wordIndex << 6) + bit;
+                    if (HasTag(ref tagContainer, tagId, sense))
                     {
-                        ulong bits = otherBits[wordIndex] & presentBits[wordIndex];
-                        while (bits != 0)
-                        {
-                            int bit = BitOperations.TrailingZeroCount(bits);
-                            bits &= bits - 1;
-                            int tagId = (wordIndex << 6) + bit;
-                            if (HasTag(ref tagContainer, tagId, sense))
-                            {
-                                return true;
-                            }
-                        }
+                        return true;
                     }
                 }
             }

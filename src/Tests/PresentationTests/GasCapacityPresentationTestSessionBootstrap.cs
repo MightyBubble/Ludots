@@ -1,14 +1,13 @@
 using Ludots.Core.Gameplay.GAS.Capacity;
 using NUnit.Framework;
 
-namespace Ludots.Tests.GAS
+namespace Ludots.Tests.Presentation
 {
     /// <summary>
-    /// Binds a legacy-sized world attribute column store for GasTests so CreateAttached works
-    /// without each fixture repeating freeze/EnsureStore. Capacity plan tests rebind as needed.
+    /// Binds a legacy-sized world column store for PresentationTests so CreateAttached works.
     /// </summary>
     [SetUpFixture]
-    public sealed class GasCapacityTestSessionBootstrap
+    public sealed class GasCapacityPresentationTestSessionBootstrap
     {
         [OneTimeSetUp]
         public void OneTimeSetUp()

@@ -462,8 +462,8 @@ public sealed partial class EntityInfoPanelService
             return false;
         }
 
-        GameplayTagContainer blockedAny = definition.ActivationBlockTags.BlockedAny;
-        GameplayTagContainer requiredAll = definition.ActivationBlockTags.RequiredAll;
+        GameplayTagBitSet blockedAny = definition.ActivationBlockTags.BlockedAny;
+        GameplayTagBitSet requiredAll = definition.ActivationBlockTags.RequiredAll;
         if (!hasTags)
         {
             return !requiredAll.IsEmpty;

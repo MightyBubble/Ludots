@@ -514,7 +514,7 @@ namespace Ludots.Core.Input.Interaction
                 $"only '{ByAbilityTagSelectorPrefix}<tag>' and '{ContextGroupSelectorPrefix}<id>' are allowed.");
         }
 
-        private static bool TryBuildMask(string profileId, List<string> tags, ref GameplayTagContainer mask)
+        private static bool TryBuildMask(string profileId, List<string> tags, ref GameplayTagBitSet mask)
         {
             if (tags == null || tags.Count == 0)
             {
@@ -551,13 +551,13 @@ namespace Ludots.Core.Input.Interaction
         private struct CompiledRule
         {
             public int Priority;
-            public GameplayTagContainer ActorAllTags;
-            public GameplayTagContainer ActorAnyTags;
+            public GameplayTagBitSet ActorAllTags;
+            public GameplayTagBitSet ActorAnyTags;
             public bool HasActorAllTags;
             public bool HasActorAnyTags;
             public int ActorAbilityCatalogTagId;
-            public GameplayTagContainer TargetAllTags;
-            public GameplayTagContainer TargetAnyTags;
+            public GameplayTagBitSet TargetAllTags;
+            public GameplayTagBitSet TargetAnyTags;
             public bool HasTargetAllTags;
             public bool HasTargetAnyTags;
             public int StanceOffset;

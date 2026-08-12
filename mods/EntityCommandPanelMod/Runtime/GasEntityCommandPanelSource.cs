@@ -1234,10 +1234,10 @@ namespace EntityCommandPanelMod.Runtime
             for (int routeIndex = 0; routeIndex < formSet.Routes.Count; routeIndex++)
             {
                 var route = formSet.Routes[routeIndex];
-                GameplayTagContainer requiredAll = route.RequiredAll;
-                GameplayTagContainer blockedAny = route.BlockedAny;
-                string required = FormatTagContainer(in requiredAll);
-                string blocked = FormatTagContainer(in blockedAny);
+                GameplayTagBitSet requiredAll = route.RequiredAll;
+                GameplayTagBitSet blockedAny = route.BlockedAny;
+                string required = FormatTagBitSet(in requiredAll);
+                string blocked = FormatTagBitSet(in blockedAny);
 
                 if (!string.IsNullOrWhiteSpace(required))
                 {
@@ -1256,7 +1256,7 @@ namespace EntityCommandPanelMod.Runtime
             return labels;
         }
 
-        private static string FormatTagContainer(in GameplayTagContainer tags)
+        private static string FormatTagBitSet(in GameplayTagBitSet tags)
         {
             if (tags.IsEmpty)
             {
@@ -1264,7 +1264,8 @@ namespace EntityCommandPanelMod.Runtime
             }
 
             var parts = new List<string>(4);
-            for (int tagId = 1; tagId <= GameplayTagContainer.MAX_TAG_ID; tagId++)
+            int maxTagId = GameplayTagBitSet.ActiveMaxUsableTagId();
+            for (int tagId = 1; tagId <= maxTagId; tagId++)
             {
                 if (!tags.HasTag(tagId))
                 {

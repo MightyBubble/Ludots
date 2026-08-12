@@ -73,7 +73,7 @@ namespace Ludots.Tests.Presentation
             var entities = new Entity[EntityCount];
             for (int i = 0; i < EntityCount; i++)
             {
-                var attributes = default(AttributeBuffer);
+                var attributes = AttributeBuffer.CreateAttached();
                 attributes.SetBase(healthAttributeId, MaxHealth);
                 attributes.SetCurrent(healthAttributeId, 250f + (i % 501));
                 entities[i] = world.Create(attributes);

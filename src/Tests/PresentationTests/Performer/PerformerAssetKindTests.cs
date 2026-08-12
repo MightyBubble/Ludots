@@ -1240,7 +1240,7 @@ namespace Ludots.Tests.Presentation
         public void SurfaceOnlyDefinition_AttributeBindingUpdatesParamsThroughProductionBehaviorPath()
         {
             using var world = World.Create();
-            var attributes = default(AttributeBuffer);
+            var attributes = AttributeBuffer.CreateAttached();
             attributes.SetBase(17, 100f);
             attributes.SetCurrent(17, 25f);
             Entity owner = world.Create(attributes);
@@ -1402,7 +1402,7 @@ namespace Ludots.Tests.Presentation
         public void AttributeBindingThreshold_PropagatesAssetSwapParamToAffectedStaticVisualChildren()
         {
             using var world = World.Create();
-            var attributes = default(AttributeBuffer);
+            var attributes = AttributeBuffer.CreateAttached();
             attributes.SetBase(17, 100f);
             attributes.SetCurrent(17, 50f);
             Entity owner = world.Create(attributes, new CullState { IsVisible = true, LOD = LODLevel.High });

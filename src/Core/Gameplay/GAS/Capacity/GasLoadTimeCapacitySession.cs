@@ -10,6 +10,7 @@ namespace Ludots.Core.Gameplay.GAS.Capacity
     public static class GasLoadTimeCapacitySession
     {
         public const int DefaultEntityRowCapacity = 65_536;
+        public const int LegacyEmbeddedTagIdSpaceBridge = 256;
 
         private static GasLoadTimeCapacityPlan? _plan;
         private static GasWorldColumnStore? _store;
@@ -110,10 +111,10 @@ namespace Ludots.Core.Gameplay.GAS.Capacity
         }
 
         /// <summary>
-        /// Interim bootstrap (tests + pre-hook production): freeze legacy 64/256 plan if needed and bind a world store.
-        /// Production should replace this with FreezeFromRegistries after the registration window closes.
+        /// Tests-only bootstrap: freeze the legacy 64/256 plan if needed and bind a world store.
+        /// Production must use <see cref="FreezeEnsureStoreAndSealFromRegistries"/>.
         /// </summary>
-        public static GasWorldColumnStore EnsureLegacyPlanAndStore(
+        public static GasWorldColumnStore EnsureLegacyPlanAndStoreForTests(
             int entityRowCapacity = DefaultEntityRowCapacity)
         {
             if (!_frozen)
@@ -122,6 +123,26 @@ namespace Ludots.Core.Gameplay.GAS.Capacity
             }
 
             return EnsureStore(Plan, entityRowCapacity);
+        }
+
+        /// <summary>
+        /// Production commit after mod/config registration closes: freeze from dense registry
+        /// counts, bind the world store, seal gameplay growth, and fail-closed on P3 bridges.
+        /// </summary>
+        public static GasWorldColumnStore FreezeEnsureStoreAndSealFromRegistries(
+            int entityRowCapacity = DefaultEntityRowCapacity,
+            GasLoadTimeCapacityRounding rounding = GasLoadTimeCapacityRounding.WordAlignTags)
+        {
+            if (_frozen)
+            {
+                throw new InvalidOperationException(
+                    "GasLoadTimeCapacityPlan is already frozen. Production freeze runs once after registration.");
+            }
+
+            var plan = FreezeFromRegistries(rounding);
+            var store = EnsureStore(plan, entityRowCapacity);
+            store.SealGameplay();
+            return store;
         }
 
         public static GasLoadTimeCapacityPlan FreezeFromRegistries(
@@ -137,7 +158,7 @@ namespace Ludots.Core.Gameplay.GAS.Capacity
                 TagRegistry.RegisteredCount,
                 rounding);
 
-            EnsureLegacyEmbeddedCeiling(plan);
+            EnsureP3BitmapBridge(plan);
 
             _plan = plan;
             _frozen = true;
@@ -156,21 +177,22 @@ namespace Ludots.Core.Gameplay.GAS.Capacity
                 throw new InvalidOperationException("GasLoadTimeCapacityPlan is already frozen.");
             }
 
-            EnsureLegacyEmbeddedCeiling(plan);
+            EnsureP3BitmapBridge(plan);
             _plan = plan;
             _frozen = true;
             return plan;
         }
 
-        private static void EnsureLegacyEmbeddedCeiling(GasLoadTimeCapacityPlan plan)
+        private static void EnsureP3BitmapBridge(GasLoadTimeCapacityPlan plan)
         {
-            // Attribute slots may exceed the old embedded 64 once a world column store is in use.
-            // Tag bit containers remain on the P0/P2 legacy ceiling until tag columns land.
-            if (plan.TagIdSpace > TagRegistry.MaxTags)
+            // Nav TagBits256 / KnowledgeIdMask256 / TagDisplayTable remain 256 until RFC-0066 P3.
+            // Fail closed when content needs a wider tag universe — never silent truncate.
+            if (plan.TagIdSpace > LegacyEmbeddedTagIdSpaceBridge)
             {
                 throw new InvalidOperationException(
-                    $"Frozen tag id space {plan.TagIdSpace} exceeds legacy GameplayTagContainer ceiling " +
-                    $"{TagRegistry.MaxTags}. Complete RFC-0066 P2/P3 world tag columns before raising content past this bridge.");
+                    $"Frozen tag id space {plan.TagIdSpace} exceeds P3 bridge ceiling " +
+                    $"{LegacyEmbeddedTagIdSpaceBridge} (TagBits256 / KnowledgeIdMask256 / TagDisplayTable). " +
+                    "Complete RFC-0066 P3 cross-domain bitmaps before raising content past this bridge.");
             }
         }
     }

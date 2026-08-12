@@ -158,7 +158,7 @@ namespace Ludots.Core.Gameplay.Quests
 
         public GameplayTagContainer CreateTagContainer(QuestDefinition definition)
         {
-            var tags = default(GameplayTagContainer);
+            var tags = GameplayTagContainer.CreateAttached();
             for (int i = 0; i < definition.ResolvedTagIds.Count; i++)
             {
                 tags.AddTag(definition.ResolvedTagIds[i]);

@@ -34,7 +34,7 @@ namespace Ludots.Tests.GAS
             }
 
             TagRegistry.Clear();
-            GasLoadTimeCapacitySession.EnsureLegacyPlanAndStore();
+            GasLoadTimeCapacitySession.EnsureLegacyPlanAndStoreForTests();
         }
 
         [Test]
@@ -84,7 +84,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void Session_Freeze_AllowsAttributeSlotsAbove64_ButRejectsTagLegacyCeiling()
+        public void Session_Freeze_AllowsAttributeSlotsAbove64_ButRejectsP3TagBitmapBridge()
         {
             var attrsOk = GasLoadTimeCapacityPlan.FromRegisteredCounts(70, 10);
             That(GasLoadTimeCapacitySession.Freeze(attrsOk).AttributeSlotCount, Is.EqualTo(70));
@@ -92,7 +92,17 @@ namespace Ludots.Tests.GAS
             GasLoadTimeCapacitySession.ClearForTests();
             var tagsTooWide = GasLoadTimeCapacityPlan.FromRegisteredCounts(8, 300);
             var ex = Throws<InvalidOperationException>(() => GasLoadTimeCapacitySession.Freeze(tagsTooWide));
-            That(ex!.Message, Does.Contain("legacy GameplayTagContainer"));
+            That(ex!.Message, Does.Contain("P3 bridge"));
+        }
+
+        [Test]
+        public void Session_FreezeEnsureStoreAndSealFromRegistries_SealsGameplay()
+        {
+            AttributeRegistry.Register("seal.a");
+            TagRegistry.Register("Tag.Seal.A");
+            var store = GasLoadTimeCapacitySession.FreezeEnsureStoreAndSealFromRegistries(entityRowCapacity: 8);
+            That(store.IsGameplaySealed, Is.True);
+            Throws<InvalidOperationException>(() => store.EnsureEntityRowCapacity(16));
         }
 
         [Test]

@@ -145,27 +145,29 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                     return;
                 }
 
-                var dirtyTagMask = default(GameplayTagContainer);
+                var dirtyTagMask = default(GameplayTagBitSet);
                 bool anyDirty = false;
-                for (int byteIndex = 0; byteIndex < DirtyFlags.TAG_DIRTY_BYTES; byteIndex++)
+                int tagDirtyWords = DirtyFlags.ActiveTagDirtyWordCount();
+                for (int wordIndex = 0; wordIndex < tagDirtyWords; wordIndex++)
                 {
-                    byte dirtyByte = dirtyFlags.TagDirty[byteIndex];
-                    if (dirtyByte == 0)
+                    ulong dirtyWord = dirtyFlags.TagDirtyWords[wordIndex];
+                    if (dirtyWord == 0UL)
                     {
                         continue;
                     }
 
                     anyDirty = true;
-                    while (dirtyByte != 0)
+                    while (dirtyWord != 0UL)
                     {
-                        int bit = BitOperations.TrailingZeroCount(dirtyByte);
-                        dirtyByte = (byte)(dirtyByte & (dirtyByte - 1));
-                        int tagId = (byteIndex << 3) + bit;
+                        int bit = BitOperations.TrailingZeroCount(dirtyWord);
+                        dirtyWord &= dirtyWord - 1UL;
+                        int tagId = (wordIndex << 6) + bit;
                         if (tagId == 0)
                         {
-                            dirtyFlags.ClearTagDirty(tagId);
-                            continue;
+                            throw new InvalidOperationException(
+                                "DirtyFlags must not mark reserved tag id 0.");
                         }
+
                         dirtyTagMask.AddTag(tagId);
                     }
                 }
@@ -182,10 +184,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 if (hasTags && !hasTagSnapshot)
                 {
                     ref var tagsInit = ref World.Get<GameplayTagContainer>(entity);
-                    tagSnapLocal.Bits[0] = tagsInit.Bits[0];
-                    tagSnapLocal.Bits[1] = tagsInit.Bits[1];
-                    tagSnapLocal.Bits[2] = tagsInit.Bits[2];
-                    tagSnapLocal.Bits[3] = tagsInit.Bits[3];
+                    tagSnapLocal.CopyFromContainer(in tagsInit);
                 }
 
                 bool hasCountSnapshot = hasCountsRef && World.Has<TagCountSnapshot>(entity);
@@ -201,9 +200,10 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 bool hasEffectiveChanged = hasTags && World.Has<GameplayTagEffectiveChangedBits>(entity);
                 GameplayTagEffectiveChangedBits effChangedLocal = default;
 
-                for (int wordIndex = 0; wordIndex < 4; wordIndex++)
+                int dirtyWords = GameplayTagBitSet.ActiveWordCount();
+                for (int wordIndex = 0; wordIndex < dirtyWords; wordIndex++)
                 {
-                    ulong dirtyBits = dirtyTagMask.Bits[wordIndex];
+                    ulong dirtyBits = dirtyTagMask.WordAt(wordIndex);
                     while (dirtyBits != 0UL)
                     {
                         int bit = BitOperations.TrailingZeroCount(dirtyBits);
@@ -230,11 +230,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             else
                             {
                                 ref var snap = ref World.Get<GameplayTagSnapshot>(entity);
-                                int word = tagId >> 6;
-                                int tagBit = tagId & 63;
-                                ulong mask = 1UL << tagBit;
-                                ulong value = snap.Bits[word];
-                                bool wasPresent = (value & mask) != 0;
+                                bool wasPresent = snap.Has(tagId);
                                 if (wasPresent != isPresent)
                                 {
                                     TriggerQueue.EnqueueTagChanged(new TagChangedTrigger
@@ -245,7 +241,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                                         IsPresent = isPresent
                                     });
                                 }
-                                snap.Bits[word] = isPresent ? (value | mask) : (value & ~mask);
+                                snap.Set(tagId, isPresent);
                             }
                         }
 
@@ -292,9 +288,12 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 {
                     ref var tags = ref World.Get<GameplayTagContainer>(entity);
                     var effectiveCandidateMask = dirtyTagMask;
-                    for (int wordIndex = 0; wordIndex < 4; wordIndex++)
+                    int presentWords = tags.WordCount;
+                    Span<ulong> presentScratch = stackalloc ulong[GameplayTagBitSet.MaxWords];
+                    tags.CopyWordsTo(presentScratch.Slice(0, presentWords));
+                    for (int wordIndex = 0; wordIndex < presentWords; wordIndex++)
                     {
-                        ulong presentBits = tags.Bits[wordIndex];
+                        ulong presentBits = presentScratch[wordIndex];
                         while (presentBits != 0UL)
                         {
                             int bit = BitOperations.TrailingZeroCount(presentBits);
@@ -302,7 +301,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                             int tagId = (wordIndex << 6) + bit;
                             if (!hasEffectiveCache || TagOps.EffectiveMayChangeForDirtyTags(tagId, in dirtyTagMask))
                             {
-                                effectiveCandidateMask.Bits[wordIndex] |= 1UL << bit;
+                                effectiveCandidateMask.AddTag(tagId);
                             }
                         }
                     }
@@ -330,7 +329,7 @@ namespace Ludots.Core.Gameplay.GAS.Systems
                 {
                     CommandBuffer.Add(entity, effCacheLocal);
                 }
-                if (hasTags && !hasEffectiveChanged && (effChangedLocal.Bits[0] | effChangedLocal.Bits[1] | effChangedLocal.Bits[2] | effChangedLocal.Bits[3]) != 0)
+                if (hasTags && !hasEffectiveChanged && effChangedLocal.IsAnyBitSet())
                 {
                     CommandBuffer.Add(entity, effChangedLocal);
                 }
@@ -402,14 +401,15 @@ namespace Ludots.Core.Gameplay.GAS.Systems
             private void ApplyEffectiveCandidateChanges(
                 Entity entity,
                 ref GameplayTagContainer tags,
-                in GameplayTagContainer candidates,
+                in GameplayTagBitSet candidates,
                 ref GameplayTagEffectiveCache cache,
                 bool hasEffectiveChanged,
                 ref GameplayTagEffectiveChangedBits effChangedLocal)
             {
-                for (int wordIndex = 0; wordIndex < 4; wordIndex++)
+                int words = GameplayTagBitSet.ActiveWordCount();
+                for (int wordIndex = 0; wordIndex < words; wordIndex++)
                 {
-                    ulong candidateBits = candidates.Bits[wordIndex];
+                    ulong candidateBits = candidates.WordAt(wordIndex);
                     while (candidateBits != 0UL)
                     {
                         int bit = BitOperations.TrailingZeroCount(candidateBits);

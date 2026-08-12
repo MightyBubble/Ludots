@@ -49,9 +49,10 @@ namespace Ludots.Core.Navigation.GraphSemantics.GAS
             return GetOrAdd(in bits);
         }
 
-        public unsafe ushort GetOrAddFromContainer(in GameplayTagContainer container)
+        public ushort GetOrAddFromContainer(in GameplayTagBitSet container)
         {
-            var bits = new TagBits256(container.Bits[0], container.Bits[1], container.Bits[2], container.Bits[3]);
+            // P3 bridge: TagBits256 only covers the first 256 ids; freeze already fails when Plan.TagIdSpace > 256.
+            var bits = new TagBits256(container.WordAt(0), container.WordAt(1), container.WordAt(2), container.WordAt(3));
             return GetOrAdd(in bits);
         }
 
@@ -65,7 +66,14 @@ namespace Ludots.Core.Navigation.GraphSemantics.GAS
             for (int i = 0; i < tagIds.Length; i++)
             {
                 int tagId = tagIds[i];
-                if ((uint)tagId >= 256u) continue;
+                if ((uint)tagId >= 256u)
+                {
+                    throw new ArgumentOutOfRangeException(
+                        nameof(tagIds),
+                        tagId,
+                        "Tag id exceeds TagBits256 bridge (256). Complete RFC-0066 P3 before using wider tag ids in graph tag sets.");
+                }
+
                 int index = tagId >> 6;
                 int bit = tagId & 63;
                 ulong mask = 1UL << bit;
@@ -90,4 +98,3 @@ namespace Ludots.Core.Navigation.GraphSemantics.GAS
         }
     }
 }
-

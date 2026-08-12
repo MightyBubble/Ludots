@@ -254,7 +254,7 @@ namespace Ludots.Core.UI.EntityCommandPanels
             }
 
             string dottedPrefix = tagPrefix + ".";
-            var mask = default(GameplayTagContainer);
+            var mask = default(GameplayTagBitSet);
             for (int tagId = 1; tagId <= GameplayTagContainer.MAX_TAG_ID; tagId++)
             {
                 string name = TagRegistry.GetName(tagId);

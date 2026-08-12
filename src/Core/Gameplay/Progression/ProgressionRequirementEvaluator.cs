@@ -450,7 +450,7 @@ namespace Ludots.Core.Gameplay.Progression
             return _scopeResolver.TryResolveHost(in scope, in context, out scopeHost);
         }
 
-        private bool HasRequiredTags(Entity entity, in GameplayTagContainer requiredTags)
+        private bool HasRequiredTags(Entity entity, in GameplayTagBitSet requiredTags)
         {
             if (!_world.IsAlive(entity))
             {
@@ -568,7 +568,10 @@ namespace Ludots.Core.Gameplay.Progression
 
         private static uint HashTagContainer(uint revision, in GameplayTagContainer tags)
         {
-            for (int tagId = 1; tagId <= GameplayTagContainer.MAX_TAG_ID; tagId++)
+            int maxTagId = Ludots.Core.Gameplay.GAS.Capacity.GasLoadTimeCapacitySession.IsFrozen
+                ? Ludots.Core.Gameplay.GAS.Capacity.GasLoadTimeCapacitySession.Plan.MaxUsableTagId
+                : GameplayTagContainer.MAX_TAG_ID;
+            for (int tagId = 1; tagId <= maxTagId; tagId++)
             {
                 if (tags.HasTag(tagId))
                 {

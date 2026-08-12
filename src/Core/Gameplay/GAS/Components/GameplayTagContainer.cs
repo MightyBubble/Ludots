@@ -1,214 +1,237 @@
 using System;
 using System.Runtime.CompilerServices;
+using Arch.Core;
+using Ludots.Core.Gameplay.GAS.Capacity;
 
 namespace Ludots.Core.Gameplay.GAS.Components
 {
     /// <summary>
-    /// Stores GameplayTags using a fixed bitset.
-    /// Supports up to 256 unique tags (4 * 64 bits).
-    /// tagId must be in range [1, 255]. Out-of-range throws <see cref="ArgumentOutOfRangeException"/>.
+    /// Entity-side handle into session <see cref="GasWorldColumnStore"/> tag bit columns.
+    /// Prefer sharing <see cref="RowId"/> with <see cref="AttributeBuffer"/> on the same entity.
     /// </summary>
-    public unsafe struct GameplayTagContainer
+    public struct GameplayTagContainer
     {
-        private const int ULONG_COUNT = 4;
-        /// <summary>Maximum number of distinct tags this container can hold (256 = 4 * 64 bits).</summary>
-        public const int MAX_TAG_ID = ULONG_COUNT * 64 - 1; // 255
+        public const int InvalidRow = 0;
 
-        public fixed ulong Bits[ULONG_COUNT];
+        /// <summary>
+        /// Obsolete bridge for call sites still using the old 255 usable-id constant.
+        /// Prefer <see cref="GasLoadTimeCapacitySession.Plan"/>.MaxUsableTagId for loops.
+        /// </summary>
+        public const int MAX_TAG_ID = GasLoadTimeCapacityPlan.AbsoluteMaxTagIdSpace - 1;
+
+        public int RowId;
+
+        public static GameplayTagContainer CreateAttached()
+        {
+            var store = GasLoadTimeCapacitySession.ActiveStore;
+            return new GameplayTagContainer { RowId = store.AllocateEntityRow() };
+        }
+
+        public static GameplayTagContainer CreateAttachedShared(int rowId)
+        {
+            if (rowId == InvalidRow)
+            {
+                throw new ArgumentOutOfRangeException(nameof(rowId), "Cannot share an invalid gas world row.");
+            }
+
+            GasLoadTimeCapacitySession.ActiveStore.RetainEntityRow(rowId);
+            return new GameplayTagContainer { RowId = rowId };
+        }
+
+        public static GameplayTagContainer CreateAttached(World world, Entity entity)
+        {
+            if (world == null)
+            {
+                throw new ArgumentNullException(nameof(world));
+            }
+
+            if (world.IsAlive(entity) &&
+                world.Has<AttributeBuffer>(entity))
+            {
+                ref var attrs = ref world.Get<AttributeBuffer>(entity);
+                if (attrs.RowId != AttributeBuffer.InvalidRow)
+                {
+                    return CreateAttachedShared(attrs.RowId);
+                }
+            }
+
+            return CreateAttached();
+        }
+
+        public static void Release(ref GameplayTagContainer container)
+        {
+            if (container.RowId == InvalidRow)
+            {
+                return;
+            }
+
+            GasLoadTimeCapacitySession.ActiveStore.ReleaseEntityRow(container.RowId);
+            container.RowId = InvalidRow;
+        }
 
         public bool IsEmpty
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            get
-            {
-                for (int i = 0; i < ULONG_COUNT; i++)
-                {
-                    if (Bits[i] != 0) return false;
-                }
-                return true;
-            }
+            get => GasLoadTimeCapacitySession.ActiveStoreUnchecked.AreTagsEmpty(RequireRow());
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void AddTag(int tagId)
         {
-            ValidateTagId(tagId);
-            int index = tagId / 64;
-            int bit = tagId % 64;
-            Bits[index] |= (1UL << bit);
+            GasLoadTimeCapacitySession.ActiveStoreUnchecked.AddTag(RequireRow(), tagId);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void RemoveTag(int tagId)
         {
-            ValidateTagId(tagId);
-            int bit = tagId % 64;
-            Bits[tagId / 64] &= ~(1UL << bit);
+            GasLoadTimeCapacitySession.ActiveStoreUnchecked.RemoveTag(RequireRow(), tagId);
         }
 
-        /// <summary>
-        /// Remove all tags in a contiguous range [startTagId, endTagId].
-        /// More efficient than calling RemoveTag multiple times.
-        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void RemoveTagRange(int startTagId, int endTagId)
         {
-            if (startTagId <= 0 || endTagId < startTagId)
-                throw new ArgumentOutOfRangeException(nameof(startTagId), $"Invalid tag range [{startTagId}, {endTagId}].");
-            if (endTagId > MAX_TAG_ID)
-                throw new ArgumentOutOfRangeException(nameof(endTagId), $"endTagId {endTagId} exceeds MAX_TAG_ID ({MAX_TAG_ID}).");
-
-            int startIndex = startTagId / 64;
-            int endIndex = endTagId / 64;
-            
-            int startBit = startTagId % 64;
-            int endBit = endTagId % 64;
-            
-            if (startIndex == endIndex)
-            {
-                // All bits in the same ulong - create a mask for the range
-                ulong mask = ((1UL << (endBit - startBit + 1)) - 1) << startBit;
-                Bits[startIndex] &= ~mask;
-            }
-            else
-            {
-                // Clear bits in start ulong (from startBit to 63)
-                ulong startMask = ~0UL << startBit;
-                Bits[startIndex] &= ~startMask;
-                
-                // Clear all middle ulongs completely
-                for (int i = startIndex + 1; i < endIndex; i++)
-                {
-                    Bits[i] = 0;
-                }
-                
-                // Clear bits in end ulong (from 0 to endBit)
-                if (endIndex < ULONG_COUNT)
-                {
-                    ulong endMask = (1UL << (endBit + 1)) - 1;
-                    Bits[endIndex] &= ~endMask;
-                }
-            }
+            GasLoadTimeCapacitySession.ActiveStoreUnchecked.RemoveTagRange(RequireRow(), startTagId, endTagId);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool HasTag(int tagId)
         {
-            ValidateTagId(tagId);
-            int bit = tagId % 64;
-            return (Bits[tagId / 64] & (1UL << bit)) != 0;
+            return GasLoadTimeCapacitySession.ActiveStoreUnchecked.HasTag(RequireRow(), tagId);
         }
 
-        /// <summary>
-        /// Check if any tag in the range [startTagId, endTagId] is set.
-        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool HasAnyTagInRange(int startTagId, int endTagId)
         {
-            if (startTagId <= 0 || endTagId < startTagId)
-                throw new ArgumentOutOfRangeException(nameof(startTagId), $"Invalid tag range [{startTagId}, {endTagId}].");
-            if (endTagId > MAX_TAG_ID)
-                throw new ArgumentOutOfRangeException(nameof(endTagId), $"endTagId {endTagId} exceeds MAX_TAG_ID ({MAX_TAG_ID}).");
-
-            int startIndex = startTagId / 64;
-            int endIndex = endTagId / 64;
-            
-            int startBit = startTagId % 64;
-            int endBit = endTagId % 64;
-            
-            if (startIndex == endIndex)
-            {
-                ulong mask = ((1UL << (endBit - startBit + 1)) - 1) << startBit;
-                return (Bits[startIndex] & mask) != 0;
-            }
-            else
-            {
-                // Check start ulong
-                ulong startMask = ~0UL << startBit;
-                if ((Bits[startIndex] & startMask) != 0) return true;
-                
-                // Check middle ulongs
-                for (int i = startIndex + 1; i < endIndex; i++)
-                {
-                    if (Bits[i] != 0) return true;
-                }
-                
-                // Check end ulong
-                if (endIndex < ULONG_COUNT)
-                {
-                    ulong endMask = (1UL << (endBit + 1)) - 1;
-                    if ((Bits[endIndex] & endMask) != 0) return true;
-                }
-                
-                return false;
-            }
+            return GasLoadTimeCapacitySession.ActiveStoreUnchecked.HasAnyTagInRange(RequireRow(), startTagId, endTagId);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool ContainsAll(in GameplayTagContainer required)
+        public bool ContainsAll(in GameplayTagBitSet required)
         {
-            for (int i = 0; i < ULONG_COUNT; i++)
-            {
-                if ((Bits[i] & required.Bits[i]) != required.Bits[i]) return false;
-            }
-            return true;
+            return GasLoadTimeCapacitySession.ActiveStoreUnchecked.ContainsAllTags(RequireRow(), in required);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool Intersects(in GameplayTagBitSet other)
+        {
+            return GasLoadTimeCapacitySession.ActiveStoreUnchecked.IntersectsTags(RequireRow(), in other);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Intersects(in GameplayTagContainer other)
         {
-            for (int i = 0; i < ULONG_COUNT; i++)
-            {
-                if ((Bits[i] & other.Bits[i]) != 0) return true;
-            }
-            return false;
+            return GasLoadTimeCapacitySession.ActiveStoreUnchecked.IntersectsTags(
+                RequireRow(),
+                other.RequireRow());
         }
 
-        /// <summary>
-        /// Lowest tag id set in both this container and <paramref name="other"/>;
-        /// 0 (the reserved invalid id) when the intersection is empty.
-        /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int FirstCommonTag(in GameplayTagContainer other)
+        public int FirstCommonTag(in GameplayTagBitSet other)
         {
-            for (int i = 0; i < ULONG_COUNT; i++)
-            {
-                ulong intersection = Bits[i] & other.Bits[i];
-                if (intersection != 0)
-                {
-                    return i * 64 + System.Numerics.BitOperations.TrailingZeroCount(intersection);
-                }
-            }
-            return 0;
+            return GasLoadTimeCapacitySession.ActiveStoreUnchecked.FirstCommonTag(RequireRow(), in other);
         }
 
-        /// <summary>Number of bits set in both this container and <paramref name="other"/>.</summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public int CountCommonTags(in GameplayTagContainer other)
+        public int CountCommonTags(in GameplayTagBitSet other)
         {
-            int count = 0;
-            for (int i = 0; i < ULONG_COUNT; i++)
-            {
-                count += System.Numerics.BitOperations.PopCount(Bits[i] & other.Bits[i]);
-            }
-
-            return count;
+            return GasLoadTimeCapacitySession.ActiveStoreUnchecked.CountCommonTags(RequireRow(), in other);
         }
-        
+
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Clear()
         {
-            for(int i=0; i<ULONG_COUNT; i++)
-            {
-                Bits[i] = 0;
-            }
+            GasLoadTimeCapacitySession.ActiveStoreUnchecked.ClearTags(RequireRow());
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static void ValidateTagId(int tagId)
+        public void CopyWordsTo(Span<ulong> destination)
         {
-            if ((uint)tagId > MAX_TAG_ID || tagId == 0)
-                throw new ArgumentOutOfRangeException(nameof(tagId), tagId, $"tagId must be in [1, {MAX_TAG_ID}].");
+            GasLoadTimeCapacitySession.ActiveStoreUnchecked.CopyTagWordsTo(RequireRow(), destination);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void CopyWordsFrom(ReadOnlySpan<ulong> source)
+        {
+            GasLoadTimeCapacitySession.ActiveStoreUnchecked.CopyTagWordsFrom(RequireRow(), source);
+        }
+
+        public int WordCount
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get => GasLoadTimeCapacitySession.Plan.TagUlongWordCount;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal int RequireRow()
+        {
+            if (RowId == InvalidRow)
+            {
+                ThrowDetached();
+            }
+
+            return RowId;
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void ThrowDetached()
+        {
+            throw new InvalidOperationException(
+                "GameplayTagContainer has no world-store row. Use GameplayTagContainer.CreateAttached() or GasTagRows.Attach.");
+        }
+    }
+
+    public static class GasTagRows
+    {
+        public static ref GameplayTagContainer Attach(World world, Entity entity)
+        {
+            if (world == null)
+            {
+                throw new ArgumentNullException(nameof(world));
+            }
+
+            if (!world.IsAlive(entity))
+            {
+                throw new InvalidOperationException("Cannot attach tag row to a dead entity.");
+            }
+
+            if (world.Has<GameplayTagContainer>(entity))
+            {
+                ref var existing = ref world.Get<GameplayTagContainer>(entity);
+                if (existing.RowId != GameplayTagContainer.InvalidRow)
+                {
+                    return ref existing;
+                }
+
+                existing = GameplayTagContainer.CreateAttached(world, entity);
+                return ref existing;
+            }
+
+            world.Add(entity, GameplayTagContainer.CreateAttached(world, entity));
+            return ref world.Get<GameplayTagContainer>(entity);
+        }
+
+        public static void ReleaseIfPresent(World world, Entity entity)
+        {
+            if (world == null || !world.IsAlive(entity) || !world.Has<GameplayTagContainer>(entity))
+            {
+                return;
+            }
+
+            ref var container = ref world.Get<GameplayTagContainer>(entity);
+            GameplayTagContainer.Release(ref container);
+        }
+    }
+
+    public static class GasWorldRows
+    {
+        /// <summary>
+        /// Releases the shared world row once when attribute and/or tag handles are present.
+        /// Prefers refcount Release on each handle so shared rows free at zero.
+        /// </summary>
+        public static void ReleaseIfPresent(World world, Entity entity)
+        {
+            GasAttributeRows.ReleaseIfPresent(world, entity);
+            GasTagRows.ReleaseIfPresent(world, entity);
         }
     }
 }

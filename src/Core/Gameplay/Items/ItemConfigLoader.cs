@@ -278,9 +278,9 @@ namespace Ludots.Core.Gameplay.Items
             return output;
         }
 
-        private static GameplayTagContainer CompileTags(string[]? tags)
+        private static GameplayTagBitSet CompileTags(string[]? tags)
         {
-            GameplayTagContainer container = default;
+            GameplayTagBitSet container = default;
             if (tags == null)
             {
                 return container;

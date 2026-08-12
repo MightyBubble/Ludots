@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Ludots.Core.Gameplay.GAS.Capacity;
 using Ludots.Core.Registry;
 
 namespace Ludots.Core.Gameplay.GAS.Registry
@@ -15,7 +16,9 @@ namespace Ludots.Core.Gameplay.GAS.Registry
         private static bool _frozen;
 
         public const int InvalidId = 0;
-        public const int MaxTags = 256;
+
+        /// <summary>Absolute registration ceiling (RFC-0066). Live session plan may be lower when frozen.</summary>
+        public const int MaxTags = GasLoadTimeCapacityPlan.AbsoluteMaxTagIdSpace;
 
         public static bool IsFrozen => _frozen;
 
@@ -52,9 +55,14 @@ namespace Ludots.Core.Gameplay.GAS.Registry
                 return id;
             }
 
-            if (_nextId >= MaxTags)
+            int ceiling = RegistrationCeiling();
+            if (_nextId >= ceiling)
             {
-                throw new InvalidOperationException($"GameplayTagContainer supports up to {MaxTags - 1} tags (id 1..{MaxTags - 1}, id 0 reserved).");
+                throw new InvalidOperationException(
+                    $"Tag registration would exceed ceiling {ceiling} " +
+                    (GasLoadTimeCapacitySession.IsFrozen
+                        ? "(frozen GasLoadTimeCapacityPlan.TagIdSpace)."
+                        : $"(AbsoluteMaxTagIdSpace={MaxTags})."));
             }
 
             id = _nextId++;
@@ -76,6 +84,16 @@ namespace Ludots.Core.Gameplay.GAS.Registry
         public static RegistryMapping[] SnapshotMappings()
         {
             return RegistryMappingSnapshot.FromNameToId(_nameToId);
+        }
+
+        private static int RegistrationCeiling()
+        {
+            if (GasLoadTimeCapacitySession.IsFrozen)
+            {
+                return GasLoadTimeCapacitySession.Plan.TagIdSpace;
+            }
+
+            return MaxTags;
         }
     }
 }

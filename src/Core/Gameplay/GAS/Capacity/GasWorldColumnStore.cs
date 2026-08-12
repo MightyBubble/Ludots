@@ -1,12 +1,13 @@
 using System;
 using System.Runtime.CompilerServices;
+using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 
 namespace Ludots.Core.Gameplay.GAS.Capacity
 {
     /// <summary>
     /// Session-scoped SoA columns sized by <see cref="GasLoadTimeCapacityPlan"/>.
-    /// Attribute Base/Cap/Current live here; entity <c>AttributeBuffer</c> holds only a row id.
+    /// Attribute Base/Cap/Current and tag bit words live here; entity handles hold only a row id.
     /// Not a hot-path growable buffer — <see cref="EnsureEntityRowCapacity"/> is load/Schema only.
     /// </summary>
     public sealed class GasWorldColumnStore : IDisposable
@@ -15,6 +16,7 @@ namespace Ludots.Core.Gameplay.GAS.Capacity
         private bool _gameplaySealed;
         private int[] _freeList = Array.Empty<int>();
         private int _freeCount;
+        private int[] _rowRefCounts = Array.Empty<int>();
 
         public GasLoadTimeCapacityPlan Plan { get; }
         public int EntityRowCapacity { get; private set; }
@@ -41,6 +43,7 @@ namespace Ludots.Core.Gameplay.GAS.Capacity
             EntityRowCapacity = initialEntityRowCapacity;
             AllocateColumns(initialEntityRowCapacity);
             _freeList = initialEntityRowCapacity == 0 ? Array.Empty<int>() : new int[initialEntityRowCapacity];
+            _rowRefCounts = initialEntityRowCapacity == 0 ? Array.Empty<int>() : new int[initialEntityRowCapacity + 1];
             EntityRowCount = 0;
         }
 
@@ -83,6 +86,13 @@ namespace Ludots.Core.Gameplay.GAS.Capacity
             }
 
             _freeList = grownFree;
+            var grownRefs = new int[requiredRows + 1];
+            if (_rowRefCounts.Length > 0)
+            {
+                Array.Copy(_rowRefCounts, grownRefs, Math.Min(_rowRefCounts.Length, grownRefs.Length));
+            }
+
+            _rowRefCounts = grownRefs;
             EntityRowCapacity = requiredRows;
         }
 
@@ -92,7 +102,8 @@ namespace Ludots.Core.Gameplay.GAS.Capacity
             if (_freeCount > 0)
             {
                 int reused = _freeList[--_freeCount];
-                ClearAttributeRow(reused);
+                ClearRow(reused);
+                _rowRefCounts[reused] = 1;
                 return reused;
             }
 
@@ -104,14 +115,41 @@ namespace Ludots.Core.Gameplay.GAS.Capacity
             }
 
             EntityRowCount++;
-            return EntityRowCount; // 1-based
+            int rowId = EntityRowCount; // 1-based
+            _rowRefCounts[rowId] = 1;
+            return rowId;
+        }
+
+        public void RetainEntityRow(int rowId)
+        {
+            ThrowIfDisposed();
+            ValidateRowId(rowId);
+            if (_rowRefCounts[rowId] <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"Cannot retain gas world row {rowId}: refcount is {_rowRefCounts[rowId]}.");
+            }
+
+            _rowRefCounts[rowId]++;
         }
 
         public void ReleaseEntityRow(int rowId)
         {
             ThrowIfDisposed();
             ValidateRowId(rowId);
-            ClearAttributeRow(rowId);
+            int refs = _rowRefCounts[rowId];
+            if (refs <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"GasWorldColumnStore ReleaseEntityRow({rowId}) with non-positive refcount {refs}.");
+            }
+
+            if (--_rowRefCounts[rowId] > 0)
+            {
+                return;
+            }
+
+            ClearRow(rowId);
             if (_freeCount >= _freeList.Length)
             {
                 throw new InvalidOperationException(
@@ -143,6 +181,22 @@ namespace Ludots.Core.Gameplay.GAS.Capacity
                 int toWords = RowWordOffset(toRowId, attrWords);
                 Array.Copy(AttributeDefinedWords!, fromWords, AttributeDefinedWords!, toWords, attrWords);
             }
+        }
+
+        public void CopyTagRow(int fromRowId, int toRowId)
+        {
+            ThrowIfDisposed();
+            ValidateRowId(fromRowId);
+            ValidateRowId(toRowId);
+            int tagWords = Plan.TagUlongWordCount;
+            if (tagWords <= 0)
+            {
+                return;
+            }
+
+            int fromWords = RowWordOffset(fromRowId, tagWords);
+            int toWords = RowWordOffset(toRowId, tagWords);
+            Array.Copy(TagBitWords!, fromWords, TagBitWords!, toWords, tagWords);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -261,6 +315,256 @@ namespace Ludots.Core.Gameplay.GAS.Capacity
             AttributeCurrentValues![RowFloatOffset(rowId) + attributeId] = value;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void AddTag(int rowId, int tagId)
+        {
+            ThrowIfDisposed();
+            ValidateRowId(rowId);
+            ValidateTagId(tagId);
+            TagBitWords![TagWordIndex(rowId, tagId)] |= 1UL << (tagId & 63);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void RemoveTag(int rowId, int tagId)
+        {
+            ThrowIfDisposed();
+            ValidateRowId(rowId);
+            ValidateTagId(tagId);
+            TagBitWords![TagWordIndex(rowId, tagId)] &= ~(1UL << (tagId & 63));
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool HasTag(int rowId, int tagId)
+        {
+            ThrowIfDisposed();
+            ValidateRowId(rowId);
+            ValidateTagId(tagId);
+            return (TagBitWords![TagWordIndex(rowId, tagId)] & (1UL << (tagId & 63))) != 0UL;
+        }
+
+        public void RemoveTagRange(int rowId, int startTagId, int endTagId)
+        {
+            ThrowIfDisposed();
+            ValidateRowId(rowId);
+            if (startTagId <= 0 || endTagId < startTagId)
+            {
+                throw new ArgumentOutOfRangeException(nameof(startTagId), $"Invalid tag range [{startTagId}, {endTagId}].");
+            }
+
+            ValidateTagId(endTagId);
+            int tagWords = Plan.TagUlongWordCount;
+            int baseIndex = RowWordOffset(rowId, tagWords);
+            int startIndex = startTagId >> 6;
+            int endIndex = endTagId >> 6;
+            int startBit = startTagId & 63;
+            int endBit = endTagId & 63;
+            if (startIndex == endIndex)
+            {
+                ulong mask = ((1UL << (endBit - startBit + 1)) - 1UL) << startBit;
+                TagBitWords![baseIndex + startIndex] &= ~mask;
+                return;
+            }
+
+            TagBitWords![baseIndex + startIndex] &= ~(~0UL << startBit);
+            for (int i = startIndex + 1; i < endIndex; i++)
+            {
+                TagBitWords![baseIndex + i] = 0UL;
+            }
+
+            if (endIndex < tagWords)
+            {
+                ulong endMask = (1UL << (endBit + 1)) - 1UL;
+                TagBitWords![baseIndex + endIndex] &= ~endMask;
+            }
+        }
+
+        public bool HasAnyTagInRange(int rowId, int startTagId, int endTagId)
+        {
+            ThrowIfDisposed();
+            ValidateRowId(rowId);
+            if (startTagId <= 0 || endTagId < startTagId)
+            {
+                throw new ArgumentOutOfRangeException(nameof(startTagId), $"Invalid tag range [{startTagId}, {endTagId}].");
+            }
+
+            ValidateTagId(endTagId);
+            int tagWords = Plan.TagUlongWordCount;
+            int baseIndex = RowWordOffset(rowId, tagWords);
+            int startIndex = startTagId >> 6;
+            int endIndex = endTagId >> 6;
+            int startBit = startTagId & 63;
+            int endBit = endTagId & 63;
+            if (startIndex == endIndex)
+            {
+                ulong mask = ((1UL << (endBit - startBit + 1)) - 1UL) << startBit;
+                return (TagBitWords![baseIndex + startIndex] & mask) != 0UL;
+            }
+
+            if ((TagBitWords![baseIndex + startIndex] & (~0UL << startBit)) != 0UL)
+            {
+                return true;
+            }
+
+            for (int i = startIndex + 1; i < endIndex; i++)
+            {
+                if (TagBitWords![baseIndex + i] != 0UL)
+                {
+                    return true;
+                }
+            }
+
+            if (endIndex < tagWords)
+            {
+                ulong endMask = (1UL << (endBit + 1)) - 1UL;
+                return (TagBitWords![baseIndex + endIndex] & endMask) != 0UL;
+            }
+
+            return false;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool AreTagsEmpty(int rowId)
+        {
+            ThrowIfDisposed();
+            ValidateRowId(rowId);
+            int tagWords = Plan.TagUlongWordCount;
+            int baseIndex = RowWordOffset(rowId, tagWords);
+            for (int i = 0; i < tagWords; i++)
+            {
+                if (TagBitWords![baseIndex + i] != 0UL)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void ClearTags(int rowId)
+        {
+            ThrowIfDisposed();
+            ValidateRowId(rowId);
+            int tagWords = Plan.TagUlongWordCount;
+            if (tagWords > 0)
+            {
+                Array.Clear(TagBitWords!, RowWordOffset(rowId, tagWords), tagWords);
+            }
+        }
+
+        public bool ContainsAllTags(int rowId, in GameplayTagBitSet required)
+        {
+            ThrowIfDisposed();
+            ValidateRowId(rowId);
+            int tagWords = Plan.TagUlongWordCount;
+            int baseIndex = RowWordOffset(rowId, tagWords);
+            for (int i = 0; i < tagWords; i++)
+            {
+                ulong requiredWord = required.WordAt(i);
+                if ((TagBitWords![baseIndex + i] & requiredWord) != requiredWord)
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        public bool IntersectsTags(int rowId, in GameplayTagBitSet other)
+        {
+            ThrowIfDisposed();
+            ValidateRowId(rowId);
+            int tagWords = Plan.TagUlongWordCount;
+            int baseIndex = RowWordOffset(rowId, tagWords);
+            for (int i = 0; i < tagWords; i++)
+            {
+                if ((TagBitWords![baseIndex + i] & other.WordAt(i)) != 0UL)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        public bool IntersectsTags(int rowIdA, int rowIdB)
+        {
+            ThrowIfDisposed();
+            ValidateRowId(rowIdA);
+            ValidateRowId(rowIdB);
+            int tagWords = Plan.TagUlongWordCount;
+            int baseA = RowWordOffset(rowIdA, tagWords);
+            int baseB = RowWordOffset(rowIdB, tagWords);
+            for (int i = 0; i < tagWords; i++)
+            {
+                if ((TagBitWords![baseA + i] & TagBitWords![baseB + i]) != 0UL)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        public int FirstCommonTag(int rowId, in GameplayTagBitSet other)
+        {
+            ThrowIfDisposed();
+            ValidateRowId(rowId);
+            int tagWords = Plan.TagUlongWordCount;
+            int baseIndex = RowWordOffset(rowId, tagWords);
+            for (int i = 0; i < tagWords; i++)
+            {
+                ulong intersection = TagBitWords![baseIndex + i] & other.WordAt(i);
+                if (intersection != 0UL)
+                {
+                    return (i << 6) + System.Numerics.BitOperations.TrailingZeroCount(intersection);
+                }
+            }
+
+            return 0;
+        }
+
+        public int CountCommonTags(int rowId, in GameplayTagBitSet other)
+        {
+            ThrowIfDisposed();
+            ValidateRowId(rowId);
+            int count = 0;
+            int tagWords = Plan.TagUlongWordCount;
+            int baseIndex = RowWordOffset(rowId, tagWords);
+            for (int i = 0; i < tagWords; i++)
+            {
+                count += System.Numerics.BitOperations.PopCount(TagBitWords![baseIndex + i] & other.WordAt(i));
+            }
+
+            return count;
+        }
+
+        public void CopyTagWordsTo(int rowId, Span<ulong> destination)
+        {
+            ThrowIfDisposed();
+            ValidateRowId(rowId);
+            int tagWords = Plan.TagUlongWordCount;
+            if (destination.Length < tagWords)
+            {
+                throw new ArgumentException("Destination span is shorter than plan tag word count.", nameof(destination));
+            }
+
+            new ReadOnlySpan<ulong>(TagBitWords!, RowWordOffset(rowId, tagWords), tagWords).CopyTo(destination);
+        }
+
+        public void CopyTagWordsFrom(int rowId, ReadOnlySpan<ulong> source)
+        {
+            ThrowIfDisposed();
+            ValidateRowId(rowId);
+            int tagWords = Plan.TagUlongWordCount;
+            if (source.Length < tagWords)
+            {
+                throw new ArgumentException("Source span is shorter than plan tag word count.", nameof(source));
+            }
+
+            source.Slice(0, tagWords).CopyTo(TagBitWords!.AsSpan(RowWordOffset(rowId, tagWords), tagWords));
+        }
+
         public void Dispose()
         {
             if (_disposed)
@@ -274,6 +578,7 @@ namespace Ludots.Core.Gameplay.GAS.Capacity
             AttributeDefinedWords = null;
             TagBitWords = null;
             _freeList = Array.Empty<int>();
+            _rowRefCounts = Array.Empty<int>();
             _freeCount = 0;
             EntityRowCount = 0;
             EntityRowCapacity = 0;
@@ -310,7 +615,7 @@ namespace Ludots.Core.Gameplay.GAS.Capacity
             AttributeDefinedWords![RowWordOffset(rowId, wordsPerRow) + wordIndex] |= 1UL << bitIndex;
         }
 
-        private void ClearAttributeRow(int rowId)
+        private void ClearRow(int rowId)
         {
             int attrSlots = Plan.AttributeSlotCount;
             if (attrSlots > 0)
@@ -325,6 +630,12 @@ namespace Ludots.Core.Gameplay.GAS.Capacity
             if (attrWords > 0)
             {
                 Array.Clear(AttributeDefinedWords!, RowWordOffset(rowId, attrWords), attrWords);
+            }
+
+            int tagWords = Plan.TagUlongWordCount;
+            if (tagWords > 0)
+            {
+                Array.Clear(TagBitWords!, RowWordOffset(rowId, tagWords), tagWords);
             }
         }
 
@@ -377,6 +688,10 @@ namespace Ludots.Core.Gameplay.GAS.Capacity
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static int RowWordOffset(int rowId, int wordsPerRow) => rowId * wordsPerRow;
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private int TagWordIndex(int rowId, int tagId) =>
+            RowWordOffset(rowId, Plan.TagUlongWordCount) + (tagId >> 6);
+
         public static int AttrDefinedWordCount(int attributeSlotCount)
         {
             if (attributeSlotCount <= 0)
@@ -389,6 +704,17 @@ namespace Ludots.Core.Gameplay.GAS.Capacity
         }
 
         public static int AttrDirtyWordCount(int attributeSlotCount) => AttrDefinedWordCount(attributeSlotCount);
+
+        public static int TagDirtyWordCount(int tagIdSpace)
+        {
+            if (tagIdSpace <= 0)
+            {
+                return 0;
+            }
+
+            return (tagIdSpace + GasLoadTimeCapacityPlan.TagBitsPerWord - 1) /
+                   GasLoadTimeCapacityPlan.TagBitsPerWord;
+        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void ValidateRowId(int rowId)
@@ -407,6 +733,19 @@ namespace Ludots.Core.Gameplay.GAS.Capacity
             if ((uint)attributeId >= (uint)slots)
             {
                 ThrowAttributeOob(attributeId, slots);
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ValidateTagId(int tagId)
+        {
+            int max = Plan.MaxUsableTagId;
+            if (tagId <= 0 || tagId > max)
+            {
+                throw new ArgumentOutOfRangeException(
+                    nameof(tagId),
+                    tagId,
+                    $"tagId must be in [1, {max}] for frozen plan.");
             }
         }
 

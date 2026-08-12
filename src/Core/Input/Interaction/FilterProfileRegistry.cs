@@ -224,7 +224,7 @@ namespace Ludots.Core.Input.Interaction
             _profiles[profileId] = profile;
         }
 
-        private static bool TryBuildMask(string profileId, FilterProfileTagRule rule, ref GameplayTagContainer mask)
+        private static bool TryBuildMask(string profileId, FilterProfileTagRule rule, ref GameplayTagBitSet mask)
         {
             if (rule?.AnyTags == null || rule.AnyTags.Count == 0)
             {
@@ -304,8 +304,8 @@ namespace Ludots.Core.Input.Interaction
         private sealed class CompiledProfile
         {
             public int ExpanderIndex = -1;
-            public GameplayTagContainer ExcludeMask;
-            public GameplayTagContainer IncludeMask;
+            public GameplayTagBitSet ExcludeMask;
+            public GameplayTagBitSet IncludeMask;
             public bool HasExclude;
             public bool HasInclude;
 

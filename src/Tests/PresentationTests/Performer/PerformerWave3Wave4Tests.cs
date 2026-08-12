@@ -454,10 +454,10 @@ namespace Ludots.Tests.Presentation
         public void PerformerBehaviorSystem_AttributeTagMaterialAndSound_WriteBlackboardAndRequests()
         {
             using var world = World.Create();
-            var attributes = default(AttributeBuffer);
+            var attributes = AttributeBuffer.CreateAttached();
             attributes.SetBase(3, 100f);
             attributes.SetCurrent(3, 25f);
-            var tags = default(GameplayTagContainer);
+            var tags = GameplayTagContainer.CreateAttached();
             tags.AddTag(5);
             Entity owner = world.Create(attributes, tags);
 
@@ -598,7 +598,7 @@ namespace Ludots.Tests.Presentation
         public void PerformerBehaviorSystem_OwnerCulled_StillUpdatesDirtySyncState()
         {
             using var world = World.Create();
-            var attributes = default(AttributeBuffer);
+            var attributes = AttributeBuffer.CreateAttached();
             attributes.SetBase(3, 100f);
             attributes.SetCurrent(3, 25f);
             Entity owner = world.Create(attributes, new CullState { IsVisible = false, LOD = LODLevel.Culled });

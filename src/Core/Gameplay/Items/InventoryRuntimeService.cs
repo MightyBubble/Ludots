@@ -1072,8 +1072,8 @@ namespace Ludots.Core.Gameplay.Items
                 return false;
             }
 
-            GameplayTagContainer requiredAll = slot.RequiredAll;
-            GameplayTagContainer blockedAny = slot.BlockedAny;
+            GameplayTagBitSet requiredAll = slot.RequiredAll;
+            GameplayTagBitSet blockedAny = slot.BlockedAny;
             if (!definition.AllowsNamedSlot(slot.Id) ||
                 !definition.Tags.ContainsAll(in requiredAll) ||
                 definition.Tags.Intersects(in blockedAny))

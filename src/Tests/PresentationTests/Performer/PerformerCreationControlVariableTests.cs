@@ -147,8 +147,8 @@ namespace Ludots.Tests.Presentation
                     new FacingDirection { AngleRad = 0f },
                     VisualTransform.Default,
                     new CullState { IsVisible = false, LOD = LODLevel.Culled },
-                    default(AttributeBuffer),
-                    default(GameplayTagContainer),
+                    AttributeBuffer.CreateAttached(),
+                    GameplayTagContainer.CreateAttached(),
                     default(TagCountContainer),
                     new PresentationStableId { Value = i + 1 });
             }
@@ -185,8 +185,8 @@ namespace Ludots.Tests.Presentation
                 new FacingDirection { AngleRad = 0f },
                 VisualTransform.Default,
                 new CullState { IsVisible = false, LOD = LODLevel.Culled },
-                default(AttributeBuffer),
-                default(GameplayTagContainer),
+                AttributeBuffer.CreateAttached(),
+                GameplayTagContainer.CreateAttached(),
                 default(TagCountContainer),
                 default(PresentationStableId));
 
@@ -244,8 +244,8 @@ namespace Ludots.Tests.Presentation
                 new FacingDirection { AngleRad = 0f },
                 VisualTransform.Default,
                 new CullState { IsVisible = false, LOD = LODLevel.Culled },
-                default(AttributeBuffer),
-                default(GameplayTagContainer),
+                AttributeBuffer.CreateAttached(),
+                GameplayTagContainer.CreateAttached(),
                 default(TagCountContainer),
                 new PresentationStableId { Value = index + 1 });
         }

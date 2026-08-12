@@ -252,7 +252,7 @@ namespace Ludots.Tests.GAS
 
         private static AbilityFormSetRegistry CreateFormSets(int meleeTagId)
         {
-            var requiredAll = default(GameplayTagContainer);
+            var requiredAll = default(GameplayTagBitSet);
             requiredAll.AddTag(meleeTagId);
 
             var formSets = new AbilityFormSetRegistry();

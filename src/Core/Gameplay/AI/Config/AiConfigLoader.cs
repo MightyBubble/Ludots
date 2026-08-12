@@ -519,7 +519,7 @@ namespace Ludots.Core.Gameplay.AI.Config
 
         private UtilityAiTargetFilterOpDefinition CompileTargetFilterOp(string kind, JsonObject obj, string path)
         {
-            GameplayTagContainer tags = default;
+            GameplayTagBitSet tags = default;
             if (string.Equals(kind, "SourceSelf", StringComparison.OrdinalIgnoreCase))
             {
                 return new UtilityAiTargetFilterOpDefinition(UtilityAiTargetFilterOpKind.SourceSelf, 0, 0, RelationshipFilter.All, in tags);
@@ -1245,9 +1245,9 @@ namespace Ludots.Core.Gameplay.AI.Config
             return RequireString(obj, "id", path);
         }
 
-        private static GameplayTagContainer ReadTagMask(JsonObject obj, string key, string path)
+        private static GameplayTagBitSet ReadTagMask(JsonObject obj, string key, string path)
         {
-            var tags = new GameplayTagContainer();
+            var tags = default(GameplayTagBitSet);
             if (!obj.TryGetPropertyValue(key, out var node) || node is not JsonArray arr)
             {
                 throw Fail($"{path}.{key}", "Tag array is required.");

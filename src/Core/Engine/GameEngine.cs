@@ -1261,9 +1261,7 @@ namespace Ludots.Core.Engine
             var graphEdgeCostOverlay = new GraphEdgeCostOverlay();
             var cameraBehaviorInput = new CameraBehaviorInputState();
             var cameraImpulseRuntime = new CameraImpulseRuntime();
-            // RFC-0066 P1 interim: bind legacy-sized world attribute columns until a post-registration freeze hook lands.
-            Ludots.Core.Gameplay.GAS.Capacity.GasLoadTimeCapacitySession.EnsureLegacyPlanAndStore();
-            World.Create(AttributeBuffer.CreateAttached(), new DirtyFlags(), new CameraBehaviorInputTarget());
+            // Camera entity is created after FreezeEnsureStoreAndSealFromRegistries (post-registration).
             var attributeSinks = new AttributeSinkRegistry();
             GasAttributeSinks.RegisterBuiltins(attributeSinks, cameraBehaviorInput);
             GraphAttributeSinks.RegisterBuiltins(attributeSinks, graphEdgeCostOverlay);
@@ -1619,6 +1617,11 @@ namespace Ludots.Core.Engine
             var narrativeDirector = new NarrativeDirector(this, narrativeDefinitions, questRuntime);
             SetService(CoreServiceKeys.NarrativeDefinitions, narrativeDefinitions);
             SetService(CoreServiceKeys.NarrativeDirector, narrativeDirector);
+
+            // RFC-0066: close registration window after ConfigPipeline loaders, before gameplay entities.
+            Ludots.Core.Gameplay.GAS.Capacity.GasLoadTimeCapacitySession.FreezeEnsureStoreAndSealFromRegistries();
+            World.Create(AttributeBuffer.CreateAttached(), new DirtyFlags(), new CameraBehaviorInputTarget());
+
             var cameraRuntimeSystem = new CameraRuntimeSystem(World, GameSession.Camera, GlobalContext, virtualCameraRegistry);
             RegisterSystem(new GasBudgetResetSystem(gasBudget, orderTerminalResults, orderAdmissionResults), SystemGroup.SchemaUpdate);
             RegisterSystem(schemaUpdateSystem, SystemGroup.SchemaUpdate);

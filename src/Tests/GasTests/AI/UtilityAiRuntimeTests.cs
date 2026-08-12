@@ -40,7 +40,7 @@ namespace Ludots.Tests.GAS
 
             TeamManager.Clear();
             TeamManager.SetRelationshipSymmetric(1, 2, TeamRelationship.Hostile);
-            GameplayTagContainer noTags = default;
+            GameplayTagBitSet noTags = default;
 
             var runtime = new UtilityAiCompiledRuntime(
                 new[]
@@ -153,7 +153,7 @@ namespace Ludots.Tests.GAS
             TeamManager.Clear();
             TeamManager.SetRelationshipSymmetric(1, 2, TeamRelationship.Hostile);
             TeamManager.SetRelationshipSymmetric(1, 3, TeamRelationship.Friendly);
-            GameplayTagContainer noTags = default;
+            GameplayTagBitSet noTags = default;
 
             var runtime = new UtilityAiCompiledRuntime(
                 new[] { new UtilityAiProfileDefinition(0, 1, 1, 16, -1) },
@@ -221,7 +221,7 @@ namespace Ludots.Tests.GAS
 
             TeamManager.Clear();
             TeamManager.SetRelationshipSymmetric(1, 2, TeamRelationship.Hostile);
-            GameplayTagContainer noTags = default;
+            GameplayTagBitSet noTags = default;
 
             var runtime = new UtilityAiCompiledRuntime(
                 new[] { new UtilityAiProfileDefinition(0, 1, 1, 16, -1) },
@@ -318,7 +318,7 @@ namespace Ludots.Tests.GAS
 
             TeamManager.Clear();
             TeamManager.SetRelationshipSymmetric(1, 2, TeamRelationship.Hostile);
-            GameplayTagContainer noTags = default;
+            GameplayTagBitSet noTags = default;
 
             var runtime = new UtilityAiCompiledRuntime(
                 new[] { new UtilityAiProfileDefinition(0, 1, 1, 16, -1) },
@@ -387,7 +387,7 @@ namespace Ludots.Tests.GAS
 
             TeamManager.Clear();
             TeamManager.SetRelationshipSymmetric(1, 2, TeamRelationship.Hostile);
-            GameplayTagContainer noTags = default;
+            GameplayTagBitSet noTags = default;
 
             var runtime = new UtilityAiCompiledRuntime(
                 new[] { new UtilityAiProfileDefinition(0, 1, 1, 16, -1) },
@@ -776,7 +776,7 @@ namespace Ludots.Tests.GAS
                 int sharedCooldownTagId = 0,
                 int maxResults = 64)
             {
-                GameplayTagContainer noTags = default;
+                GameplayTagBitSet noTags = default;
                 return new UtilityAiCompiledRuntime(
                     new[] { new UtilityAiProfileDefinition(0, 1, 1, maxResults, -1) },
                     new[] { new UtilityAiDecisionMakerDefinition(0, 1, UtilityAiSelectionMode.FixedPriority, 0f) },
@@ -806,7 +806,7 @@ namespace Ludots.Tests.GAS
                 int firstCooldownSteps,
                 int secondCooldownSteps)
             {
-                GameplayTagContainer noTags = default;
+                GameplayTagBitSet noTags = default;
                 return new UtilityAiCompiledRuntime(
                     new[] { new UtilityAiProfileDefinition(0, 1, 1, 64, -1) },
                     new[] { new UtilityAiDecisionMakerDefinition(0, 2, UtilityAiSelectionMode.FixedPriority, 0f) },

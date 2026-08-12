@@ -307,7 +307,9 @@ namespace Ludots.Core.Config
 
                     if (descriptor.HasGameplayTagContainer)
                     {
-                        gameplayTags[componentIndex] = descriptor.GameplayTags;
+                        gameplayTags[componentIndex] = descriptor.HasAttributeBuffer
+                            ? GameplayTagContainer.CreateAttachedShared(attributes[componentIndex].RowId)
+                            : GameplayTagContainer.CreateAttached();
                     }
 
                     if (descriptor.HasTagCountContainer)

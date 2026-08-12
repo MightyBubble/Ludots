@@ -268,14 +268,14 @@ namespace Ludots.Core.Gameplay.AI.Utility
         public readonly int IntA;
         public readonly int IntB;
         public readonly RelationshipFilter Relationship;
-        public readonly GameplayTagContainer Tags;
+        public readonly GameplayTagBitSet Tags;
 
         public UtilityAiTargetFilterOpDefinition(
             UtilityAiTargetFilterOpKind kind,
             int intA,
             int intB,
             RelationshipFilter relationship,
-            in GameplayTagContainer tags)
+            in GameplayTagBitSet tags)
         {
             Kind = kind;
             IntA = intA;

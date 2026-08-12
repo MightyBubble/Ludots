@@ -156,7 +156,7 @@ namespace Ludots.Core.Gameplay.GAS
         /// Pure classification data for semantic routing (e.g. CommandIntentProfile
         /// <c>hasAbilityWithTag</c> / <c>byAbilityTag</c>); Core never interprets tag names.
         /// </summary>
-        public GameplayTagContainer CatalogTags;
+        public GameplayTagBitSet CatalogTags;
         public bool HasCatalogTags;
 
         // ── Interaction context binding (RFC-0065 CTX-6) ──
@@ -259,7 +259,7 @@ namespace Ludots.Core.Gameplay.GAS
         /// and <paramref name="mask"/>; 0 when the ability is unknown, has no catalog tags, or none match.
         /// In-place probe (no definition copy); hot path for panel aggregation (RFC-0065 DEC-10).
         /// </summary>
-        public int FirstCatalogTagIntersection(int abilityId, in GameplayTagContainer mask)
+        public int FirstCatalogTagIntersection(int abilityId, in GameplayTagBitSet mask)
         {
             if (abilityId <= 0 || abilityId >= _items.Length || !_has[abilityId])
             {
