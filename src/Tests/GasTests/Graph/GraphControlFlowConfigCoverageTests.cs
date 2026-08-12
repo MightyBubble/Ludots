@@ -182,6 +182,184 @@ namespace Ludots.Tests.GAS
             Assert.That(ex.Message, Does.Contain("numeric graph ids are internal only"));
         }
 
+        [Test]
+        public void SpatialQueryCompiler_RejectsMissingCapacityPolicy()
+        {
+            var (package, _, diagnostics) = CompileFrontDoor("""
+{
+  "id": "tests.graph.radius-capacity",
+  "kind": "Query",
+  "entry": "query",
+  "nodes": [
+    { "id": "query", "op": "QueryRadius", "radiusCm": 100 }
+  ],
+  "controlEdges": [],
+  "valueEdges": []
+}
+""");
+
+            Assert.That(package.HasValue, Is.False);
+            Assert.That(diagnostics, Has.Some.Matches<GraphDiagnostic>(d =>
+                d.Severity == GraphDiagnosticSeverity.Error &&
+                d.Message.Contains("queryCapacityPolicy", StringComparison.Ordinal)));
+        }
+
+        [Test]
+        public void SpatialQueryCompiler_RejectsAllowTruncatedWithoutDroppedOutput()
+        {
+            var (package, _, diagnostics) = CompileFrontDoor("""
+{
+  "id": "tests.graph.radius-capacity",
+  "kind": "Query",
+  "entry": "query",
+  "nodes": [
+    { "id": "query", "op": "QueryRadius", "radiusCm": 100, "queryCapacityPolicy": "AllowTruncated" }
+  ],
+  "controlEdges": [],
+  "valueEdges": []
+}
+""");
+
+            Assert.That(package.HasValue, Is.False);
+            Assert.That(diagnostics, Has.Some.Matches<GraphDiagnostic>(d =>
+                d.Severity == GraphDiagnosticSeverity.Error &&
+                d.Message.Contains("droppedOutput", StringComparison.Ordinal)));
+        }
+
+        [Test]
+        public void SpatialQuery_RequireComplete_ThrowsWhenRuntimeDropsTargets()
+        {
+            using var world = World.Create();
+            var api = new RecordingGraphApi(world)
+            {
+                QueryRadiusResponse = new SpatialQueryResult(count: 0, dropped: 3)
+            };
+            var program = new[]
+            {
+                new GraphInstruction { Op = (ushort)GraphNodeOp.QueryRadius, Flags = 0, ImmF = 100f },
+            };
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+                Ludots.Core.NodeLibraries.GASGraph.GraphExecutor.Execute(
+                    world,
+                    Entity.Null,
+                    Entity.Null,
+                    default,
+                    program,
+                    api))!;
+
+            Assert.That(ex.Message, Does.Contain("GAS.GRAPH.ERR.SpatialQueryIncomplete"));
+        }
+
+        [Test]
+        public void SpatialQuery_AllowTruncated_PublishesDroppedCount()
+        {
+            using var world = World.Create();
+            Entity caster = world.Create();
+            var api = new RecordingGraphApi(world)
+            {
+                QueryRadiusResponse = new SpatialQueryResult(count: 0, dropped: 7)
+            };
+            int droppedKey = ConfigKeyRegistry.Register("tests.bb.dropped");
+            var program = new[]
+            {
+                new GraphInstruction { Op = (ushort)GraphNodeOp.LoadCaster, Dst = 0 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.QueryRadius, Flags = 1, Dst = 0, ImmF = 100f },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.WriteBlackboardInt, A = 0, B = 0, Imm = droppedKey },
+            };
+
+            Ludots.Core.NodeLibraries.GASGraph.GraphExecutor.Execute(
+                world,
+                caster,
+                Entity.Null,
+                default,
+                program,
+                api);
+
+            Assert.That(api.IntBlackboard[(caster, droppedKey)], Is.EqualTo(7));
+        }
+
+        [Test]
+        public void SnapWithoutValidOutput_DoesNotOverwriteValidationResult()
+        {
+            using var world = World.Create();
+            var api = new RecordingGraphApi(world);
+            var (package, _, diagnostics) = CompileFrontDoor("""
+{
+  "id": "tests.graph.snap-valid",
+  "kind": "Validation",
+  "entry": "self",
+  "nodes": [
+    { "id": "self", "op": "LoadCaster" },
+    { "id": "distance", "op": "ConstFloat", "floatValue": 100 },
+    { "id": "snap", "op": "SnapToNearestInCollection", "collectionKey": "tests.collection.snap" }
+  ],
+  "controlEdges": [
+    { "from": "self", "fromPort": "next", "to": "distance" },
+    { "from": "distance", "fromPort": "next", "to": "snap" }
+  ],
+  "valueEdges": [
+    { "from": "self", "fromPort": "value", "to": "snap", "toPort": "source" },
+    { "from": "distance", "fromPort": "value", "to": "snap", "toPort": "value" }
+  ]
+}
+""");
+
+            Assert.That(package.HasValue, Is.True, string.Join(Environment.NewLine, diagnostics));
+            GraphInstruction snap = Array.Find(package!.Value.Program, ins => ins.Op == (ushort)GraphNodeOp.SnapToNearestInCollection);
+            Assert.That(snap.Flags, Is.EqualTo(byte.MaxValue));
+
+            bool valid = Ludots.Core.NodeLibraries.GASGraph.GraphExecutor.ExecuteValidation(
+                world,
+                Entity.Null,
+                Entity.Null,
+                default,
+                package.Value.Program,
+                api);
+
+            Assert.That(valid, Is.False, "Validation graphs fail closed when B[0] is never written.");
+        }
+
+        [Test]
+        public void SnapWithValidOutput_AllocatesDedicatedBoolRegister()
+        {
+            var (package, _, diagnostics) = CompileFrontDoor("""
+{
+  "id": "tests.graph.snap-valid",
+  "kind": "Validation",
+  "entry": "self",
+  "nodes": [
+    { "id": "self", "op": "LoadCaster" },
+    { "id": "distance", "op": "ConstFloat", "floatValue": 100 },
+    { "id": "snap", "op": "SnapToNearestInCollection", "collectionKey": "tests.collection.snap", "validOutput": "snapValid" }
+  ],
+  "controlEdges": [
+    { "from": "self", "fromPort": "next", "to": "distance" },
+    { "from": "distance", "fromPort": "next", "to": "snap" }
+  ],
+  "valueEdges": [
+    { "from": "self", "fromPort": "value", "to": "snap", "toPort": "source" },
+    { "from": "distance", "fromPort": "value", "to": "snap", "toPort": "value" }
+  ]
+}
+""");
+
+            Assert.That(package.HasValue, Is.True, string.Join(Environment.NewLine, diagnostics));
+            GraphInstruction snap = Array.Find(package!.Value.Program, ins => ins.Op == (ushort)GraphNodeOp.SnapToNearestInCollection);
+            Assert.That(snap.Flags, Is.Not.EqualTo(byte.MaxValue));
+            Assert.That(snap.Flags, Is.Not.EqualTo(0), "B[0] is reserved for the validation result contract.");
+        }
+
+        private static (GraphProgramPackage? Package, GraphOutputSchema OutputSchema, List<GraphDiagnostic> Diagnostics) CompileFrontDoor(string graphJson)
+        {
+            JsonObject graph = JsonNode.Parse(graphJson)!.AsObject();
+            string graphId = graph["id"]!.GetValue<string>();
+            return GraphProgramAuthoringFrontDoor.CompileJsonObject(
+                graph,
+                graphId,
+                StrictJsonOptions.CreateCamelCase(includeFields: true));
+        }
+
         private GraphProgramRegistry LoadPrograms(string graphJson)
         {
             _tempRoot = Path.Combine(Path.GetTempPath(), "Ludots_GraphControlFlowConfigCoverageTests", Guid.NewGuid().ToString("N"));
