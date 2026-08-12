@@ -37,6 +37,7 @@ namespace Ludots.Core.GraphRuntime
         public string? CollectionKey { get; set; }
         public string? EffectTemplate { get; set; }
         public string? BuiltinHandler { get; set; }
+        public string? PayloadPreset { get; set; }
         public string? BlackboardKey { get; set; }
         public string? ConfigKey { get; set; }
         public string? RelationshipType { get; set; }
@@ -44,6 +45,8 @@ namespace Ludots.Core.GraphRuntime
         public string? Metric { get; set; }
         public string? Flag { get; set; }
         public string? QueryCapacityPolicy { get; set; }
+        public string? DroppedOutput { get; set; }
+        public string? ValidOutput { get; set; }
         public float RadiusCm { get; set; }
         public float RangeCm { get; set; }
         public int DirectionDeg { get; set; }

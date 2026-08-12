@@ -268,31 +268,55 @@
     },
     {
       "op": "HasTag",
-      "authorableKinds": null,
-      "unitTestFilter": null,
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Query",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectTagAndDisplayOps_CompileAndEmit",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "CompareEqEntity",
-      "authorableKinds": null,
-      "unitTestFilter": null,
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Query",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectTagAndDisplayOps_CompileAndEmit",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "SelectTagInMask",
-      "authorableKinds": null,
-      "unitTestFilter": null,
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Query",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectTagAndDisplayOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryTagDisplayOps_CompileAndEmit",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "LookupTagDisplayToken",
-      "authorableKinds": null,
-      "unitTestFilter": null,
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Query",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectTagAndDisplayOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryTagDisplayOps_CompileAndEmit",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "SelectEntity",

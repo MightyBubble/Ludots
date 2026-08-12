@@ -33,7 +33,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                       GraphNodeOp.ModifyAttributeAdd or
                       GraphNodeOp.WriteSelfAttribute or
                       GraphNodeOp.ApplyEffectTemplate or
+                      GraphNodeOp.FanOutApplyEffect or
+                      GraphNodeOp.ApplyEffectDynamic or
+                      GraphNodeOp.FanOutApplyEffectDynamic or
                       GraphNodeOp.RemoveEffectTemplate or
+                      GraphNodeOp.FanOutDispatchEffect or
+                      GraphNodeOp.FanOutDispatchEffectDynamic or
                       GraphNodeOp.BeginLifecycleTransaction or
                       GraphNodeOp.InvokeBuiltin or
                       GraphNodeOp.WriteBlackboardInt or
@@ -55,7 +60,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                       GraphNodeOp.QueryFilterNotEntity or
                       GraphNodeOp.QueryFilterRelationship or
                       GraphNodeOp.AggCount or
+                      GraphNodeOp.AggMinByDistance or
                       GraphNodeOp.TargetListGet or
+                      GraphNodeOp.RelationshipGetMetric or
+                      GraphNodeOp.SnapToNearestInCollection or
                       GraphNodeOp.InvokeScript;
 
         private static GraphValueType GetLinearOutputType(GraphNodeOp op)
@@ -79,6 +87,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.ConstInt or
                     GraphNodeOp.AddInt or
                     GraphNodeOp.AggCount or
+                    GraphNodeOp.RelationshipGetMetric or
                     GraphNodeOp.ReadBlackboardInt or
                     GraphNodeOp.LoadConfigInt or
                     GraphNodeOp.LoadConfigEffectId or
@@ -91,7 +100,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     GraphNodeOp.LoadExplicitTarget or
                     GraphNodeOp.LoadContextTarget or
                     GraphNodeOp.SelectEntity or
+                    GraphNodeOp.AggMinByDistance or
                     GraphNodeOp.ReadBlackboardEntity or
+                    GraphNodeOp.SnapToNearestInCollection or
                     GraphNodeOp.TargetListGet => GraphValueType.Entity,
                 _ => GraphValueType.Void
             };
@@ -119,7 +130,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.WriteSelfAttribute => port == GraphControlFlowPorts.Value,
                 GraphNodeOp.ApplyEffectTemplate
                     => port is GraphControlFlowPorts.Target or GraphControlFlowPorts.A or GraphControlFlowPorts.B,
+                GraphNodeOp.ApplyEffectDynamic => port is GraphControlFlowPorts.Target or GraphControlFlowPorts.Value,
+                GraphNodeOp.FanOutApplyEffectDynamic or GraphNodeOp.FanOutDispatchEffectDynamic
+                    => port == GraphControlFlowPorts.Value,
                 GraphNodeOp.RemoveEffectTemplate => port == GraphControlFlowPorts.Target,
+                GraphNodeOp.RelationshipGetMetric => port is GraphControlFlowPorts.Source or GraphControlFlowPorts.Target,
+                GraphNodeOp.SnapToNearestInCollection => port is GraphControlFlowPorts.Source or GraphControlFlowPorts.Value,
                 GraphNodeOp.WriteBlackboardInt or GraphNodeOp.WriteBlackboardFloat or GraphNodeOp.WriteBlackboardEntity
                     => port is GraphControlFlowPorts.Source or GraphControlFlowPorts.Value,
                 GraphNodeOp.ReadBlackboardInt or GraphNodeOp.ReadBlackboardFloat or GraphNodeOp.ReadBlackboardEntity

@@ -11,6 +11,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                       GraphNodeOp.LoadCaster or
                       GraphNodeOp.QueryAllMapEntities or
                       GraphNodeOp.QueryFromCollection or
+                      GraphNodeOp.QueryRadius or
                       GraphNodeOp.QueryFilterTeam or
                       GraphNodeOp.QueryFilterTemplate or
                       GraphNodeOp.QueryFilterTagAny or
@@ -44,6 +45,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.LoadCaster => GraphValueType.Entity,
                 GraphNodeOp.QueryAllMapEntities or
                     GraphNodeOp.QueryFromCollection or
+                    GraphNodeOp.QueryRadius or
                     GraphNodeOp.QueryFilterTeam or
                     GraphNodeOp.QueryFilterTemplate or
                     GraphNodeOp.QueryFilterTagAny or
@@ -136,6 +138,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.ConstFloat:
                 case GraphNodeOp.LoadCaster:
                 case GraphNodeOp.QueryAllMapEntities:
+                    break;
+                case GraphNodeOp.QueryRadius:
+                    RequireSpatialCapacityPolicy(node, graphId, diagnostics);
                     break;
                 case GraphNodeOp.QueryFromCollection:
                     RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
@@ -315,6 +320,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     break;
                 case GraphNodeOp.LoadCaster:
                 case GraphNodeOp.QueryAllMapEntities:
+                    break;
+                case GraphNodeOp.QueryRadius:
+                    instruction.Flags = 0;
+                    instruction.ImmF = node.RadiusCm;
                     break;
                 case GraphNodeOp.QueryFromCollection:
                     instruction.A = ResolveValueInput(
