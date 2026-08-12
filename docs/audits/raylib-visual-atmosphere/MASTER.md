@@ -56,9 +56,9 @@
 
 ### V6 — 验收（P0）
 
-- [ ] Showcase `raylib_visual_atmosphere`
-- [ ] 截图 01–06（见第 6 节）
-- [ ] `ACCEPTANCE.md` 合同
+- [x] Showcase `raylib_visual_atmosphere`
+- [x] 截图 01–06（见第 6 节）
+- [x] `ACCEPTANCE.md` 合同
 
 ## 4. 场景（作者/玩家视角）
 
@@ -116,8 +116,10 @@ Feature: Raylib 客户端接近热带岛参考观感
 
 ## 7. 完成定义（DoD）
 
-- [ ] V1–V4 进分支并可演示  
-- [ ] V5 至少有反射轮廓可见（可低分辨率 RT）  
-- [ ] V6 六张截图落入 acceptance  
-- [ ] STATUS 全勾；PR 链到本 MASTER  
-- [ ] 明确声明未抄上游无许可资源
+- [x] V1–V4 进分支并可演示  
+- [x] V5 至少有反射轮廓可见（可低分辨率 RT）  
+- [x] V6 六张截图落入 acceptance  
+- [x] STATUS 全勾；PR 链到本 MASTER  
+- [x] 明确声明未抄上游无许可资源
+
+未抄 RaylibErosionStandalone 无许可着色器/贴图；Showcase 使用程序生成 CC0 贴图与仓库内 Ludots 管线（sky/water/fog/cutout/blend）。

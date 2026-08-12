@@ -9,7 +9,7 @@ Updated by agents. Use: `pending` | `in_progress` | `blocked` | `done`.
 | V3 | Cutout + Alpha/Additive blend | done | cloud-agent | material flags Cutout / Transparent|AlphaBlend / Additive; vegetation_cutout discard; VFX BeginBlendMode |
 | V4 | Distance fog | done | cloud-agent | `distance_fog.json` → `uFogColor`/`uFogParams` on terrain+ISM+skin; FoW untouched |
 | V5 | Reflective/refractive water FBO | done | cloud-agent | `RaylibWaterPass` + upgraded `water.*`; HostLoop reflection/refraction RTs then main water; enable via `Presentation/water_environments.json` (`backendId=raylib`) |
-| V6 | Showcase + screenshot acceptance | pending | — | depends V1–V5 |
+| V6 | Showcase + screenshot acceptance | done | cloud-agent | `raylib_visual_atmosphere` demo showcase; PNGs 01–06 in both acceptance dirs; capture via `tools/raylib_visual_atmosphere_acceptance/capture.sh` |
 
 ## Blockers
 
