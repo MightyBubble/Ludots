@@ -2,8 +2,6 @@ using System.Threading.Tasks;
 using CapabilityStandardGraphBehaviorCommon;
 using CapabilityStandardLiveSkillWorkbenchShowcaseMod.Runtime;
 using Ludots.Core.Engine;
-using Ludots.Core.Gameplay.GAS.LiveSkillWorkbench;
-using Ludots.Core.GraphRuntime;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.DebugDraw;
 using Ludots.Core.Scripting;
@@ -24,12 +22,7 @@ public sealed class CapabilityStandardLiveSkillWorkbenchShowcaseModEntry : IMod
             GameEngine? engine = ctx.GetEngine();
             if (engine == null) return Task.CompletedTask;
 
-            // Use GraphProgramRegistry from the host, but construct Pipeline/Tracer locally.
-            // Crossing ALC/type-identity for newly added Core services can native-crash the Raylib host.
-            GraphProgramRegistry programs = engine.GetService(CoreServiceKeys.GraphProgramRegistry);
-            var pipeline = new LiveGasEditPipeline(programs);
-            var tracer = new LiveEffectChainTracer(capacity: 128);
-            runtime.Bind(programs, pipeline, tracer);
+            runtime.Bind();
             engine.SetService(MetricsKey, runtime.Metrics);
 
             var debugDraw = new DebugDrawCommandBuffer();
