@@ -15,6 +15,7 @@
 * [最近提交审计与端到端交互验收](recent_commit_audit_and_e2e_showcase.md)
 * [版本收敛处置矩阵](convergence_disposition_matrix.md)
 * [PR895 图基建 + LSW 审计交接（会话全量）](pr895_graph_infra_and_lsw_audit_handoff.md)
+* [PR895 图基建 + LSW 架构审计（交叉审计 / 禁止合入）](pr895_graph_infra_and_lsw_architecture_audit.md)
 
 ## 2 使用边界
 
