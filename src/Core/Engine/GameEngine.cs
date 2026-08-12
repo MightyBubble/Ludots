@@ -1036,7 +1036,7 @@ namespace Ludots.Core.Engine
             var performerCommandBuffer = new PerformerCommandBuffer(presentationConfig.PerformerCommandCapacity);
             var presentationPrefabs = new PrefabRegistry();
             var meshAssets = new MeshAssetRegistry();
-            var particleEffects = new ParticleEffectRegistry();
+            var particleVfx = new ParticleVfxRegistry();
             var materialAssets = new PresentationMaterialRegistry();
             var instancedBatchAssets = new InstancedBatchAssetRegistry();
             var instancedBatchRequests = new InstancedBatchRequestBuffer(presentationConfig.PresentationRequestCapacity);
@@ -1101,8 +1101,8 @@ namespace Ludots.Core.Engine
                 };
             }
 
-            new ParticleEffectConfigLoader(ConfigPipeline, particleEffects).Load(ConfigCatalog, ConfigConflictReport);
-            new MeshAssetConfigLoader(ConfigPipeline, meshAssets, presentationPrefabs, particleEffects).Load(ConfigCatalog, ConfigConflictReport);
+            new ParticleVfxConfigLoader(ConfigPipeline, particleVfx).Load(ConfigCatalog, ConfigConflictReport);
+            new MeshAssetConfigLoader(ConfigPipeline, meshAssets, presentationPrefabs, particleVfx).Load(ConfigCatalog, ConfigConflictReport);
             new PresentationMaterialConfigLoader(ConfigPipeline, materialAssets).Load(ConfigCatalog, ConfigConflictReport);
             new InstancedBatchAssetConfigLoader(
                 ConfigPipeline,
@@ -1210,7 +1210,7 @@ namespace Ludots.Core.Engine
                     AssetKind.Mesh => meshAssets.GetId(key),
                     AssetKind.SkinnedMesh => meshAssets.GetId(key),
                     AssetKind.Decal => meshAssets.GetId(key),
-                    AssetKind.VFX => ResolveVfxEffectAssetId(key),
+                    AssetKind.VFX => ResolveVfxAssetId(key),
                     AssetKind.Spline => meshAssets.GetId(key),
                     AssetKind.Surface => meshAssets.GetId(key),
                     AssetKind.Sound => meshAssets.GetId(key),
@@ -1221,7 +1221,7 @@ namespace Ludots.Core.Engine
                 instancedBatchAssets.GetId,
                 entityCollectionKeyRegistry.Register).Load(ConfigCatalog, ConfigConflictReport);
 
-            int ResolveVfxEffectAssetId(string key)
+            int ResolveVfxAssetId(string key)
             {
                 int assetId = meshAssets.GetId(key);
                 if (assetId <= 0)
@@ -1230,7 +1230,7 @@ namespace Ludots.Core.Engine
                 }
 
                 if (!meshAssets.TryGetDescriptor(assetId, out MeshAssetDescriptor descriptor) ||
-                    !descriptor.VfxEffectData.IsValid)
+                    !descriptor.VfxData.IsValid)
                 {
                     throw new InvalidOperationException(
                         $"Performer behavior VFX asset '{key}' must declare VFX particle data.");
@@ -1562,7 +1562,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.PerformerCommandBuffer, performerCommandBuffer);
             SetService(CoreServiceKeys.PresentationPrefabRegistry, presentationPrefabs);
             SetService(CoreServiceKeys.PresentationMeshAssetRegistry, meshAssets);
-            SetService(CoreServiceKeys.PresentationParticleEffectRegistry, particleEffects);
+            SetService(CoreServiceKeys.PresentationParticleVfxRegistry, particleVfx);
             SetService(CoreServiceKeys.PresentationMaterialRegistry, materialAssets);
             SetService(CoreServiceKeys.InstancedBatchAssetRegistry, instancedBatchAssets);
             SetService(CoreServiceKeys.InstancedBatchRequestBuffer, instancedBatchRequests);

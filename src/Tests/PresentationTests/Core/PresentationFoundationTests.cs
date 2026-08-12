@@ -1626,8 +1626,8 @@ namespace Ludots.Tests.Presentation
 
             int cubeId = meshes.GetId(WellKnownMeshKeys.Cube);
             MeshAssetDescriptor effectDescriptor = MeshAssetDescriptor.Primitive(0, PrimitiveMeshKind.Sphere);
-            effectDescriptor.VfxEffectData = new VfxEffectAssetData(CreateTestParticleEffect(),
-                particleEffectAssetId: 1);
+            effectDescriptor.VfxData = new VfxAssetData(CreateTestParticleVfx(),
+                particleVfxAssetId: 1);
             int effectId = meshes.Register("test.prefab.typed_root.effect", in effectDescriptor);
             int typedPrefabMeshId = meshes.Register(
                 "test.prefab.typed_root",
@@ -1688,9 +1688,9 @@ namespace Ludots.Tests.Presentation
             Assert.That(snapshot.Scale, Is.EqualTo(new Vector3(1.25f, 1.25f, 1.25f)));
         }
 
-        private static ParticleEffectAssetData CreateTestParticleEffect()
+        private static ParticleVfxAssetData CreateTestParticleVfx()
         {
-            return new ParticleEffectAssetData(
+            return new ParticleVfxAssetData(
                 PrefabVfxSpawnMode.Loop,
                 ParticleEmitterShapeKind.Cone,
                 ParticleRenderMode.Primitive,

@@ -28,7 +28,7 @@
     "type": "Primitive",
     "primitiveKind": "Sphere",
     "vfx": {
-      "particleEffectId": "blacksmith.smoke"
+      "particleVfxId": "blacksmith.smoke"
     }
   },
   {

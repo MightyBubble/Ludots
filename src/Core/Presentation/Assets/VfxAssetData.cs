@@ -3,11 +3,11 @@ using Ludots.Core.Presentation.Particles;
 
 namespace Ludots.Core.Presentation.Assets
 {
-    public readonly struct VfxEffectAssetData
+    public readonly struct VfxAssetData
     {
-        public VfxEffectAssetData(
-            ParticleEffectAssetData particleSystem,
-            int particleEffectAssetId)
+        public VfxAssetData(
+            ParticleVfxAssetData particleSystem,
+            int particleVfxAssetId)
         {
             if (particleSystem == null)
             {
@@ -19,27 +19,27 @@ namespace Ludots.Core.Presentation.Assets
                 throw new ArgumentException("Quarks particle VFX assets require valid particle data.", nameof(particleSystem));
             }
 
-            if (particleEffectAssetId <= 0)
+            if (particleVfxAssetId <= 0)
             {
                 throw new ArgumentOutOfRangeException(
-                    nameof(particleEffectAssetId),
-                    "VFX assets must reference a registered particle effect asset id.");
+                    nameof(particleVfxAssetId),
+                    "VFX assets must reference a registered particle VFX asset id.");
             }
 
             ParticleSystem = particleSystem;
-            ParticleEffectAssetId = particleEffectAssetId;
+            ParticleVfxAssetId = particleVfxAssetId;
         }
 
         public PrefabVfxSpawnMode SpawnMode =>
             ParticleSystem?.SpawnMode
-            ?? throw new InvalidOperationException("VFX effect data requires a registered Quarks particle effect.");
+            ?? throw new InvalidOperationException("VFX effect data requires a registered Quarks particle VFX.");
 
-        public ParticleEffectAssetData? ParticleSystem { get; }
+        public ParticleVfxAssetData? ParticleSystem { get; }
 
-        public int ParticleEffectAssetId { get; }
+        public int ParticleVfxAssetId { get; }
 
         public bool IsValid =>
-            ParticleEffectAssetId > 0 &&
+            ParticleVfxAssetId > 0 &&
             ParticleSystem != null &&
             ParticleSystem.IsValid;
     }

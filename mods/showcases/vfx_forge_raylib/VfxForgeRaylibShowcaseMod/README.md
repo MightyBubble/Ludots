@@ -4,11 +4,11 @@
 
 这个 showcase 用一个小型锻造台场景展示 raylib 后端的 Quarks 粒子能力。玩家进入后会直接看到九组不同效果：火花柱、能量环、尾迹弧线、余烬雨、护盾半球、引力井、火焰序列帧、烟雾序列帧和拉伸火星。
 
-目标不是展示配置字段，而是证明一件事：粒子效果由跨平台 `Presentation/particle_effects.json` 定义，raylib 只负责把正式资产渲染出来。
+目标不是展示配置字段，而是证明一件事：粒子 VFX由跨平台 `Presentation/particle_vfx.json` 定义，raylib 只负责把正式资产渲染出来。
 
 ## 2. 结构
 
-- `assets/Presentation/particle_effects.json`：九组 Quarks 粒子资产，全部显式声明混合模式。
+- `assets/Presentation/particle_vfx.json`：九组 Quarks 粒子资产，全部显式声明混合模式。
 - `assets/Presentation/mesh_assets.json`：九个 VFX 资产和三个 Billboard 纹理资产。
 - `assets/Presentation/host_assets.json`：raylib 后端的三张序列帧图集路径。
 - `assets/Presentation/textures/`：火焰、烟雾、火星三张透明 PNG 图集。
@@ -45,8 +45,8 @@
 
 ## 5. 边界
 
-- 只允许 `mesh_assets.json` 通过 `particleEffectId` 引用粒子资产。
-- 粒子资产只来自 `Presentation/particle_effects.json`。
+- 只允许 `mesh_assets.json` 通过 `particleVfxId` 引用粒子资产。
+- 粒子资产只来自 `Presentation/particle_vfx.json`。
 - raylib 后端支持 Primitive、Trail、Billboard 和 StretchedBillboard 粒子。
 - Billboard 和 StretchedBillboard 必须声明 `textureSheet`，贴图路径必须通过 `host_assets.json` 提供。
 - 每个粒子资产必须显式声明 `blendMode`，不允许后端自行猜默认混合方式。
@@ -58,7 +58,7 @@
 Feature: Raylib Quarks VFX Forge
   新玩家可以进入一个正式场景，直接看到 raylib 后端渲染跨平台粒子资产。
 
-  Scenario: 玩家进入 VFX Forge 后看到九组粒子效果
+  Scenario: 玩家进入 VFX Forge 后看到九组粒子 VFX
     Given 玩家从 showcase 列表启动 "Raylib VFX Forge"
     When 地图 "vfx_forge_raylib_showcase" 加载完成
     Then 画面中央有九座锻造底座
@@ -75,7 +75,7 @@ Feature: Raylib Quarks VFX Forge
   Scenario: 粒子资产走统一 Quarks 数据源
     Given showcase 已加载
     When 引擎读取 VFX 资产
-    Then 每个 VFX 资产都通过 particleEffectId 引用粒子定义
+    Then 每个 VFX 资产都通过 particleVfxId 引用粒子定义
     And mesh 资产中没有内嵌 particleSystem
     And mesh 资产中没有 legacy emitter 和 Quarks 粒子混写
 
@@ -89,6 +89,6 @@ Feature: Raylib Quarks VFX Forge
   Scenario: raylib 后端只承担渲染
     Given showcase 已加载
     When raylib 渲染 VFX performer
-    Then raylib 从 Core 的 VfxEffectAssetData 获取粒子运行时数据
+    Then raylib 从 Core 的 VfxAssetData 获取粒子运行时数据
     And raylib 不读取私有粒子 JSON
 ```

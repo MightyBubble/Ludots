@@ -48,14 +48,14 @@ public sealed class RaylibVfxRendererTests
     }
 
     [Test]
-    public void ComposeEffectKey_UsesFullStableAndEffectIdentity()
+    public void ComposeVfxKey_UsesFullStableAndEffectIdentity()
     {
-        RaylibVfxEffectKey first = RaylibVfxRenderer.ComposeEffectKey(17, 42);
-        RaylibVfxEffectKey same = RaylibVfxRenderer.ComposeEffectKey(17, 42);
-        RaylibVfxEffectKey differentEffect = RaylibVfxRenderer.ComposeEffectKey(17, 43);
+        RaylibVfxKey first = RaylibVfxRenderer.ComposeVfxKey(17, 42);
+        RaylibVfxKey same = RaylibVfxRenderer.ComposeVfxKey(17, 42);
+        RaylibVfxKey differentVfx = RaylibVfxRenderer.ComposeVfxKey(17, 43);
 
         Assert.That(first, Is.EqualTo(same));
-        Assert.That(first, Is.Not.EqualTo(differentEffect));
+        Assert.That(first, Is.Not.EqualTo(differentVfx));
     }
 
     [Test]
@@ -70,7 +70,7 @@ public sealed class RaylibVfxRendererTests
 
         Assert.That(
             () => renderer.Draw(in visual, meshes, CreateCamera(), timeSeconds: 0d),
-            Throws.InvalidOperationException.With.Message.Contains("registered Quarks particle effect"));
+            Throws.InvalidOperationException.With.Message.Contains("registered Quarks particle VFX"));
     }
 
     [Test]
@@ -146,17 +146,17 @@ public sealed class RaylibVfxRendererTests
     private static MeshAssetDescriptor CreateSphereEffectDescriptor(PrefabVfxSpawnMode spawnMode)
     {
         MeshAssetDescriptor descriptor = MeshAssetDescriptor.Primitive(0, PrimitiveMeshKind.Sphere);
-        descriptor.VfxEffectData = new VfxEffectAssetData(
-                CreateParticleEffect(ParticleRenderMode.Primitive, spawnMode),
-                particleEffectAssetId: 12);
+        descriptor.VfxData = new VfxAssetData(
+                CreateParticleVfx(ParticleRenderMode.Primitive, spawnMode),
+                particleVfxAssetId: 12);
         return descriptor;
     }
 
-    private static ParticleEffectAssetData CreateParticleEffect(
+    private static ParticleVfxAssetData CreateParticleVfx(
         ParticleRenderMode renderMode,
         PrefabVfxSpawnMode spawnMode = PrefabVfxSpawnMode.Loop)
     {
-        return new ParticleEffectAssetData(
+        return new ParticleVfxAssetData(
             spawnMode,
             ParticleEmitterShapeKind.Cone,
             renderMode,

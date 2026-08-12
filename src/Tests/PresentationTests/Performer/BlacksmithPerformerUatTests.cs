@@ -423,9 +423,9 @@ namespace Ludots.Tests.Presentation
 
                 var meshAssets = new MeshAssetRegistry();
                 var presentationPrefabs = new PrefabRegistry();
-                var particleEffects = new ParticleEffectRegistry();
-                new ParticleEffectConfigLoader(pipeline, particleEffects).Load(catalog);
-                new MeshAssetConfigLoader(pipeline, meshAssets, presentationPrefabs, particleEffects).Load(catalog);
+                var particleVfx = new ParticleVfxRegistry();
+                new ParticleVfxConfigLoader(pipeline, particleVfx).Load(catalog);
+                new MeshAssetConfigLoader(pipeline, meshAssets, presentationPrefabs, particleVfx).Load(catalog);
                 var materialAssets = new PresentationMaterialRegistry();
                 RegisterFixtureAssets(meshAssets, materialAssets);
 
@@ -606,7 +606,7 @@ namespace Ludots.Tests.Presentation
                     }
 
                     if (!meshAssets.TryGetDescriptor(assetId, out MeshAssetDescriptor descriptor) ||
-                        !descriptor.VfxEffectData.IsValid)
+                        !descriptor.VfxData.IsValid)
                     {
                         throw new InvalidOperationException(
                             $"Blacksmith performer UAT VFX fixture asset '{key}' must declare VFX particle data.");
@@ -635,7 +635,7 @@ namespace Ludots.Tests.Presentation
                 RegisterPrimitiveMesh(meshAssets, WorkshopDamagedAssetKey);
                 RegisterPrimitiveMesh(meshAssets, WorkshopRuinedAssetKey);
                 RegisterPrimitiveMesh(meshAssets, FurnaceAssetKey);
-                RegisterVfxEffect(meshAssets, SmokeAssetKey);
+                RegisterVfxAsset(meshAssets, SmokeAssetKey);
                 RegisterPrimitiveMesh(meshAssets, WorkerAssetKey);
                 materialAssets.Register(
                     BrickNorthMaterialKey,
@@ -655,17 +655,17 @@ namespace Ludots.Tests.Presentation
                 meshAssets.Register(key, in descriptor);
             }
 
-            private static void RegisterVfxEffect(MeshAssetRegistry meshAssets, string key)
+            private static void RegisterVfxAsset(MeshAssetRegistry meshAssets, string key)
             {
                 MeshAssetDescriptor descriptor = MeshAssetDescriptor.Primitive(0, PrimitiveMeshKind.Sphere);
-                descriptor.VfxEffectData = new VfxEffectAssetData(CreateSmokeParticleEffect(),
-                    particleEffectAssetId: 1);
+                descriptor.VfxData = new VfxAssetData(CreateSmokeParticleVfx(),
+                    particleVfxAssetId: 1);
                 meshAssets.Register(key, in descriptor);
             }
 
-            private static ParticleEffectAssetData CreateSmokeParticleEffect()
+            private static ParticleVfxAssetData CreateSmokeParticleVfx()
             {
-                return new ParticleEffectAssetData(
+                return new ParticleVfxAssetData(
                     PrefabVfxSpawnMode.Loop,
                     ParticleEmitterShapeKind.Cone,
                     ParticleRenderMode.Primitive,

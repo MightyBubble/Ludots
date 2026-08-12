@@ -60,17 +60,17 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
-        public void MeshAssetConfigLoader_PrefabVfxEffectAssetId_ResolvesMeshAssetKey()
+        public void MeshAssetConfigLoader_PrefabVfxAssetId_ResolvesMeshAssetKey()
         {
             string root = Path.Combine(Path.GetTempPath(), "Ludots_PresentationVfxConfigContracts", Guid.NewGuid().ToString("N"));
             string core = Path.Combine(root, "Core");
             Directory.CreateDirectory(Path.Combine(core, "Configs", "Presentation"));
             WriteCatalog(
                 core,
-                "Presentation/particle_effects.json", "ArrayById", "id",
+                "Presentation/particle_vfx.json", "ArrayById", "id",
                 "Presentation/mesh_assets.json", "ArrayById", "id",
                 "Presentation/prefabs.json", "ArrayById", "id");
-            File.WriteAllText(Path.Combine(core, "Configs", "Presentation", "particle_effects.json"), ValidParticleEffectsJson());
+            File.WriteAllText(Path.Combine(core, "Configs", "Presentation", "particle_vfx.json"), ValidParticleVfxJson());
             File.WriteAllText(Path.Combine(core, "Configs", "Presentation", "mesh_assets.json"), """
 [
   { "id": "cube", "type": "Primitive", "primitiveKind": "Cube" },
@@ -79,7 +79,7 @@ namespace Ludots.Tests.Architecture
     "type": "Primitive",
     "primitiveKind": "Sphere",
     "vfx": {
-            "particleEffectId": "effect.spark.particles"
+            "particleVfxId": "effect.spark.particles"
     }
   }
 ]
@@ -105,10 +105,10 @@ namespace Ludots.Tests.Architecture
             var catalog = ConfigCatalogLoader.Load(pipeline);
             var meshes = new MeshAssetRegistry();
             var prefabs = new PrefabRegistry();
-            var particleEffects = new ParticleEffectRegistry();
+            var particleVfx = new ParticleVfxRegistry();
 
-            new ParticleEffectConfigLoader(pipeline, particleEffects).Load(catalog);
-            new MeshAssetConfigLoader(pipeline, meshes, prefabs, particleEffects).Load(catalog);
+            new ParticleVfxConfigLoader(pipeline, particleVfx).Load(catalog);
+            new MeshAssetConfigLoader(pipeline, meshes, prefabs, particleVfx).Load(catalog);
 
             int prefabMeshId = meshes.GetId("prefab.vfx");
             Assert.That(meshes.TryGetDescriptor(prefabMeshId, out MeshAssetDescriptor descriptor), Is.True);
@@ -117,7 +117,7 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
-        public void MeshAssetConfigLoader_PrefabVfxEffectAssetId_RejectsRawNumber()
+        public void MeshAssetConfigLoader_PrefabVfxAssetId_RejectsRawNumber()
         {
             string root = Path.Combine(Path.GetTempPath(), "Ludots_PresentationVfxConfigContracts", Guid.NewGuid().ToString("N"));
             string core = Path.Combine(root, "Core");
@@ -155,7 +155,7 @@ namespace Ludots.Tests.Architecture
         }
 
         [Test]
-        public void MeshAssetConfigLoader_PrefabVfxEffectAssetId_RejectsAssetWithoutVfxParticleData()
+        public void MeshAssetConfigLoader_PrefabVfxAssetId_RejectsAssetWithoutVfxParticleData()
         {
             string root = Path.Combine(Path.GetTempPath(), "Ludots_PresentationVfxConfigContracts", Guid.NewGuid().ToString("N"));
             string core = Path.Combine(root, "Core");
@@ -236,7 +236,7 @@ namespace Ludots.Tests.Architecture
             var ex = Assert.Throws<InvalidOperationException>(() =>
                 new MeshAssetConfigLoader(pipeline, meshes).Load(catalog));
             Assert.That(ex!.Message, Does.Contain("not supported"));
-            Assert.That(ex.Message, Does.Contain("Presentation/particle_effects.json"));
+            Assert.That(ex.Message, Does.Contain("Presentation/particle_vfx.json"));
         }
 
         [Test]
@@ -247,10 +247,10 @@ namespace Ludots.Tests.Architecture
             Directory.CreateDirectory(Path.Combine(core, "Configs", "Presentation"));
             WriteCatalog(
                 core,
-                "Presentation/particle_effects.json", "ArrayById", "id",
+                "Presentation/particle_vfx.json", "ArrayById", "id",
                 "Presentation/mesh_assets.json", "ArrayById", "id",
                 "Presentation/prefabs.json", "ArrayById", "id");
-            File.WriteAllText(Path.Combine(core, "Configs", "Presentation", "particle_effects.json"), ValidParticleEffectsJson());
+            File.WriteAllText(Path.Combine(core, "Configs", "Presentation", "particle_vfx.json"), ValidParticleVfxJson());
             File.WriteAllText(Path.Combine(core, "Configs", "Presentation", "mesh_assets.json"), """
 [
   {
@@ -258,7 +258,7 @@ namespace Ludots.Tests.Architecture
     "type": "Primitive",
     "primitiveKind": "Sphere",
     "vfx": {
-            "particleEffectId": "effect.spark.particles"
+            "particleVfxId": "effect.spark.particles"
     }
   }
 ]
@@ -284,12 +284,12 @@ namespace Ludots.Tests.Architecture
             var catalog = ConfigCatalogLoader.Load(pipeline);
             var meshes = new MeshAssetRegistry();
             var prefabs = new PrefabRegistry();
-            var particleEffects = new ParticleEffectRegistry();
+            var particleVfx = new ParticleVfxRegistry();
 
             var ex = Assert.Throws<InvalidOperationException>(() =>
             {
-                new ParticleEffectConfigLoader(pipeline, particleEffects).Load(catalog);
-                new MeshAssetConfigLoader(pipeline, meshes, prefabs, particleEffects).Load(catalog);
+                new ParticleVfxConfigLoader(pipeline, particleVfx).Load(catalog);
+                new MeshAssetConfigLoader(pipeline, meshes, prefabs, particleVfx).Load(catalog);
             });
             Assert.That(ex!.Message, Does.Contain("spawnMode"));
             Assert.That(ex.Message, Does.Contain("not a numeric string"));
@@ -1524,23 +1524,23 @@ namespace Ludots.Tests.Architecture
 
             Assert.That(meshAsset["type"]?.GetValue<string>(), Is.EqualTo("Primitive"));
             Assert.That(meshAsset["primitiveKind"]?.GetValue<string>(), Is.EqualTo("Sphere"));
-            Assert.That(vfx.ContainsKey("spawnMode"), Is.False, "Mesh VFX handles must not dual-write spawnMode; particle_effects owns it.");
+            Assert.That(vfx.ContainsKey("spawnMode"), Is.False, "Mesh VFX handles must not dual-write spawnMode; particle_vfx owns it.");
             Assert.That(vfx.ContainsKey("emitter"), Is.False, "Formal mesh VFX assets must not carry legacy emitter payloads.");
             Assert.That(vfx.ContainsKey("coreColor"), Is.False, "Formal mesh VFX assets must not carry legacy color payloads.");
             Assert.That(vfx.ContainsKey("shellColor"), Is.False, "Formal mesh VFX assets must not carry legacy color payloads.");
             Assert.That(vfx.ContainsKey("particleColor"), Is.False, "Formal mesh VFX assets must not carry legacy color payloads.");
             Assert.That(vfx.ContainsKey("particleSystem"), Is.False, "Formal mesh VFX assets must not embed Quarks particle data.");
-            string particleEffectId = vfx["particleEffectId"]?.GetValue<string>()
-                ?? throw new InvalidOperationException($"Smoke asset '{smokeAssetId}' must reference particleEffectId.");
-            Assert.That(vfx.Count, Is.EqualTo(1), "Mesh VFX handles may only declare particleEffectId.");
-            JsonObject particleEffect = RequireJsonObjectById(
-                Path.Combine(presentationDirectory, "particle_effects.json"),
-                particleEffectId);
-            Assert.That(particleEffect["version"]?.GetValue<string>(), Is.EqualTo("quarks.ludots.v1"));
-            Assert.That(particleEffect["spawnMode"]?.GetValue<string>(), Is.EqualTo("Loop"));
-            Assert.That(particleEffect.ContainsKey("overflowPolicy"), Is.False, "Quarks particle assets must not author unread overflowPolicy.");
-            Assert.That(particleEffect["maxParticles"]?.GetValue<int>(), Is.GreaterThan(0));
-            Assert.That(particleEffect["seed"]?.GetValue<uint>(), Is.GreaterThan(0u));
+            string particleVfxId = vfx["particleVfxId"]?.GetValue<string>()
+                ?? throw new InvalidOperationException($"Smoke asset '{smokeAssetId}' must reference particleVfxId.");
+            Assert.That(vfx.Count, Is.EqualTo(1), "Mesh VFX handles may only declare particleVfxId.");
+            JsonObject particleVfx = RequireJsonObjectById(
+                Path.Combine(presentationDirectory, "particle_vfx.json"),
+                particleVfxId);
+            Assert.That(particleVfx["version"]?.GetValue<string>(), Is.EqualTo("quarks.ludots.v1"));
+            Assert.That(particleVfx["spawnMode"]?.GetValue<string>(), Is.EqualTo("Loop"));
+            Assert.That(particleVfx.ContainsKey("overflowPolicy"), Is.False, "Quarks particle assets must not author unread overflowPolicy.");
+            Assert.That(particleVfx["maxParticles"]?.GetValue<int>(), Is.GreaterThan(0));
+            Assert.That(particleVfx["seed"]?.GetValue<uint>(), Is.GreaterThan(0u));
 
             JsonArray hostAssets = ReadJsonArray(Path.Combine(presentationDirectory, "host_assets.json"));
             foreach (JsonNode? node in hostAssets)
@@ -1572,7 +1572,7 @@ namespace Ludots.Tests.Architecture
                 ?? throw new InvalidOperationException($"Config file '{path}' must contain a JSON array.");
         }
 
-        private static string ValidParticleEffectsJson()
+        private static string ValidParticleVfxJson()
         {
             return """
 [

@@ -7,11 +7,11 @@ using Ludots.Core.Presentation.Particles;
 
 namespace Ludots.Core.Presentation.Config
 {
-    public static class ParticleEffectConfigParser
+    public static class ParticleVfxConfigParser
     {
         public const string CurrentVersion = "quarks.ludots.v1";
 
-        public static ParticleEffectAssetData ParseCatalogEntry(JsonNode? node, string key, string sourceLabel)
+        public static ParticleVfxAssetData ParseCatalogEntry(JsonNode? node, string key, string sourceLabel)
         {
             if (node is not JsonObject obj)
             {
@@ -62,7 +62,7 @@ namespace Ludots.Core.Presentation.Config
             return ParseObject(obj, $"{sourceLabel} asset '{key}'", spawnMode);
         }
 
-        private static ParticleEffectAssetData ParseObject(JsonObject obj, string label, PrefabVfxSpawnMode spawnMode)
+        private static ParticleVfxAssetData ParseObject(JsonObject obj, string label, PrefabVfxSpawnMode spawnMode)
         {
             ParticleRenderMode renderMode = ReadRequiredEnum<ParticleRenderMode>(obj["renderMode"], $"{label}.renderMode");
             ParticleValueRange startLife = ReadRequiredParticleRange(obj["startLife"], $"{label}.startLife");
@@ -71,7 +71,7 @@ namespace Ludots.Core.Presentation.Config
                 throw new InvalidOperationException($"{label}.startLife requires min > 0.");
             }
 
-            return new ParticleEffectAssetData(
+            return new ParticleVfxAssetData(
                 spawnMode,
                 ReadRequiredEnum<ParticleEmitterShapeKind>(obj["shape"], $"{label}.shape"),
                 renderMode,

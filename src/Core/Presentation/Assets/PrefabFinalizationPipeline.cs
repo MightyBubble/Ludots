@@ -322,17 +322,17 @@ namespace Ludots.Core.Presentation.Assets
                             $"Prefab VFX part stableId={stableId} references unknown effectAssetId={part.EffectAssetId}.");
                     }
 
-                    if (!effectDescriptor.VfxEffectData.IsValid)
+                    if (!effectDescriptor.VfxData.IsValid)
                     {
                         throw new InvalidOperationException(
                             $"Prefab VFX part stableId={stableId} references effectAssetId={part.EffectAssetId} without valid VFX effect data.");
                     }
 
                     if (part.VfxSpawnModeAuthored &&
-                        part.VfxSpawnMode != effectDescriptor.VfxEffectData.SpawnMode)
+                        part.VfxSpawnMode != effectDescriptor.VfxData.SpawnMode)
                     {
                         throw new InvalidOperationException(
-                            $"Prefab VFX part stableId={stableId} declares spawnMode={part.VfxSpawnMode}, but effectAssetId={part.EffectAssetId} declares spawnMode={effectDescriptor.VfxEffectData.SpawnMode}. VFX spawn mode must be authored on the effect asset only.");
+                            $"Prefab VFX part stableId={stableId} declares spawnMode={part.VfxSpawnMode}, but effectAssetId={part.EffectAssetId} declares spawnMode={effectDescriptor.VfxData.SpawnMode}. VFX spawn mode must be authored on the effect asset only.");
                     }
 
                     output.Add(PrefabFinalizedVisual.Vfx(
@@ -342,7 +342,7 @@ namespace Ludots.Core.Presentation.Assets
                         scale,
                         color,
                         part.EffectAssetId,
-                        effectDescriptor.VfxEffectData.SpawnMode));
+                        effectDescriptor.VfxData.SpawnMode));
                     return;
 
                 case PrefabVisualPartKind.Surface:

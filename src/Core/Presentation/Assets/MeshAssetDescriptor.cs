@@ -8,7 +8,7 @@ namespace Ludots.Core.Presentation.Assets
         public string[] SourceUris;
         public PrefabPart[] PrefabParts;
         public ProceduralMeshAssetData ProceduralMeshData;
-        public VfxEffectAssetData VfxEffectData;
+        public VfxAssetData VfxData;
 
         public static MeshAssetDescriptor Primitive(int id, PrimitiveMeshKind kind)
         {

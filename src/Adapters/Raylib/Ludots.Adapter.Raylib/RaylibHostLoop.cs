@@ -602,7 +602,7 @@ namespace Ludots.Adapter.Raylib
                             AppendRaylibDiagnostic(diagnosticPath, BuildTimingDiagnostic(engine, presentationTiming, overlayScene));
                             AppendRaylibDiagnostic(diagnosticPath, primitiveRenderer.BuildVisualKindDiagnosticSummary());
                             if (ReadEnvBoolOrDefault(RequireVfxVisualsEnvKey, defaultValue: false) &&
-                                primitiveRenderer.TotalDrawnVfxEffectCount <= 0)
+                                primitiveRenderer.TotalDrawnVfxCount <= 0)
                             {
                                 throw new InvalidOperationException(
                                     $"Raylib smoke required VFX visuals via {RequireVfxVisualsEnvKey}, but no VFX effect was drawn before auto-exit frame {frameIndex}.");

@@ -1439,14 +1439,14 @@ namespace Ludots.Tests.Presentation
         private static MeshAssetDescriptor CreateEffectDescriptor()
         {
             MeshAssetDescriptor descriptor = MeshAssetDescriptor.Primitive(0, PrimitiveMeshKind.Sphere);
-            descriptor.VfxEffectData = new VfxEffectAssetData(CreateTestParticleEffect(),
-                particleEffectAssetId: 1);
+            descriptor.VfxData = new VfxAssetData(CreateTestParticleVfx(),
+                particleVfxAssetId: 1);
             return descriptor;
         }
 
-        private static ParticleEffectAssetData CreateTestParticleEffect()
+        private static ParticleVfxAssetData CreateTestParticleVfx()
         {
-            return new ParticleEffectAssetData(
+            return new ParticleVfxAssetData(
                 PrefabVfxSpawnMode.Loop,
                 ParticleEmitterShapeKind.Cone,
                 ParticleRenderMode.Primitive,

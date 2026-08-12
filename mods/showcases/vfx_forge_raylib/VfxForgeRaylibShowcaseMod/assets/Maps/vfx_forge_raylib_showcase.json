@@ -5,7 +5,7 @@
     "vfxForge": {
       "effectCount": 9,
       "entry": "raylib",
-      "assetSource": "Presentation/particle_effects.json"
+      "assetSource": "Presentation/particle_vfx.json"
     }
   },
   "Boards": [

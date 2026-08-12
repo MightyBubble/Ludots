@@ -3,12 +3,12 @@ using Ludots.Core.Registry;
 
 namespace Ludots.Core.Presentation.Particles
 {
-    public sealed class ParticleEffectRegistry
+    public sealed class ParticleVfxRegistry
     {
         private readonly StringIntRegistry _ids;
-        private ParticleEffectAssetData?[] _data;
+        private ParticleVfxAssetData?[] _data;
 
-        public ParticleEffectRegistry(int capacity = 1024)
+        public ParticleVfxRegistry(int capacity = 1024)
         {
             if (capacity <= 0)
             {
@@ -16,10 +16,10 @@ namespace Ludots.Core.Presentation.Particles
             }
 
             _ids = new StringIntRegistry(capacity, startId: 1, invalidId: 0, StringComparer.Ordinal);
-            _data = new ParticleEffectAssetData?[capacity];
+            _data = new ParticleVfxAssetData?[capacity];
         }
 
-        public int Register(string key, ParticleEffectAssetData effect)
+        public int Register(string key, ParticleVfxAssetData effect)
         {
             if (effect == null)
             {
@@ -28,7 +28,7 @@ namespace Ludots.Core.Presentation.Particles
 
             if (!effect.IsValid)
             {
-                throw new InvalidOperationException($"Particle effect asset '{key}' is not valid.");
+                throw new InvalidOperationException($"Particle VFX asset '{key}' is not valid.");
             }
 
             int id = _ids.Register(key);
@@ -47,7 +47,7 @@ namespace Ludots.Core.Presentation.Particles
             return _ids.GetName(id);
         }
 
-        public bool TryGet(int id, out ParticleEffectAssetData effect)
+        public bool TryGet(int id, out ParticleVfxAssetData effect)
         {
             if ((uint)id >= (uint)_data.Length || _data[id] == null)
             {

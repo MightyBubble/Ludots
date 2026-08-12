@@ -361,9 +361,9 @@ namespace Ludots.Core.Presentation.Particles
         }
     }
 
-    public sealed class ParticleEffectAssetData
+    public sealed class ParticleVfxAssetData
     {
-        public ParticleEffectAssetData(
+        public ParticleVfxAssetData(
             PrefabVfxSpawnMode spawnMode,
             ParticleEmitterShapeKind emitterShape,
             ParticleRenderMode renderMode,
@@ -422,7 +422,7 @@ namespace Ludots.Core.Presentation.Particles
 
             if (seed == 0)
             {
-                throw new ArgumentOutOfRangeException(nameof(seed), "Particle effects require a non-zero deterministic seed.");
+                throw new ArgumentOutOfRangeException(nameof(seed), "Particle VFX require a non-zero deterministic seed.");
             }
 
             ValidatePositive(durationSeconds, nameof(durationSeconds));

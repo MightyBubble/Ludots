@@ -12,7 +12,7 @@ public sealed class ParticleSystemRuntimeTests
     [Test]
     public void Runtime_IsDeterministicForSameAssetAndTimeSteps()
     {
-        ParticleEffectAssetData effect = CreateEffect(
+        ParticleVfxAssetData effect = CreateEffect(
             maxParticles: 32,
             seed: 1234u,
             emissionRatePerSecond: 8f,
@@ -42,7 +42,7 @@ public sealed class ParticleSystemRuntimeTests
     [Test]
     public void Runtime_AppliesGravityAndRemovesExpiredParticles()
     {
-        ParticleEffectAssetData effect = CreateEffect(
+        ParticleVfxAssetData effect = CreateEffect(
             maxParticles: 8,
             seed: 7u,
             emissionRatePerSecond: 0f,
@@ -68,7 +68,7 @@ public sealed class ParticleSystemRuntimeTests
     [Test]
     public void Runtime_ReportsCapacityRejectionExplicitly()
     {
-        ParticleEffectAssetData effect = CreateEffect(
+        ParticleVfxAssetData effect = CreateEffect(
             maxParticles: 2,
             seed: 99u,
             emissionRatePerSecond: 0f,
@@ -89,7 +89,7 @@ public sealed class ParticleSystemRuntimeTests
             () => new ParticleSystemRuntime(capacity: 8, seed: 0),
             Throws.TypeOf<ArgumentOutOfRangeException>().With.Message.Contains("non-zero"));
 
-        ParticleEffectAssetData effect = CreateEffect(
+        ParticleVfxAssetData effect = CreateEffect(
             maxParticles: 8,
             seed: 11u,
             emissionRatePerSecond: 0f,
@@ -120,7 +120,7 @@ public sealed class ParticleSystemRuntimeTests
             framesPerSecond: 10f,
             new ParticleIntRange(0, 0),
             ParticleTextureSheetPlaybackMode.Loop);
-        ParticleEffectAssetData effect = CreateEffect(
+        ParticleVfxAssetData effect = CreateEffect(
             maxParticles: 4,
             seed: 123u,
             emissionRatePerSecond: 0f,
@@ -151,7 +151,7 @@ public sealed class ParticleSystemRuntimeTests
             framesPerSecond: 8f,
             new ParticleIntRange(2, 4),
             ParticleTextureSheetPlaybackMode.Loop);
-        ParticleEffectAssetData effect = CreateEffect(
+        ParticleVfxAssetData effect = CreateEffect(
             maxParticles: 12,
             seed: 222u,
             emissionRatePerSecond: 0f,
@@ -206,7 +206,7 @@ public sealed class ParticleSystemRuntimeTests
         Assert.That(gradient.Evaluate(0.5f), Is.EqualTo(new Vector4(0.5f, 0f, 0.5f, 0.5f)));
     }
 
-    private static ParticleEffectAssetData CreateEffect(
+    private static ParticleVfxAssetData CreateEffect(
         int maxParticles,
         uint seed,
         float emissionRatePerSecond,
@@ -218,7 +218,7 @@ public sealed class ParticleSystemRuntimeTests
         ParticleTextureSheetAsset? textureSheet = null,
         float stretchedLengthScale = 0f)
     {
-        return new ParticleEffectAssetData(
+        return new ParticleVfxAssetData(
             PrefabVfxSpawnMode.Once,
             ParticleEmitterShapeKind.Cone,
             renderMode,

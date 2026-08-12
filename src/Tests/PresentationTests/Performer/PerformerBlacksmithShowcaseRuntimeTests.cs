@@ -269,7 +269,7 @@ namespace Ludots.Tests.Presentation
             var meshes = engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry)
                 ?? throw new InvalidOperationException("MeshAssetRegistry missing.");
             Assert.That(meshes.TryGetDescriptor(smokeMeshId, out MeshAssetDescriptor smokeDescriptor), Is.True);
-            Assert.That(smokeDescriptor.VfxEffectData.IsValid, Is.True, "Blacksmith smoke must be an authored VFX effect asset, not a plain billboard fallback.");
+            Assert.That(smokeDescriptor.VfxData.IsValid, Is.True, "Blacksmith smoke must be an authored VFX effect asset, not a plain billboard fallback.");
             int smokeDefId = ResolvePerformerDefId(engine, PerformerBlacksmithShowcaseIds.SmokeDefinitionId);
             int workerDefId = ResolvePerformerDefId(engine, PerformerBlacksmithShowcaseIds.WorkerDefinitionId);
             var sounds = engine.GetService(CoreServiceKeys.SoundRequestBuffer)

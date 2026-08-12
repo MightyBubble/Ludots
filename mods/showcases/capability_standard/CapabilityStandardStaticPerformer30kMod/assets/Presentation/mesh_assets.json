@@ -28,7 +28,7 @@
     "type": "Primitive",
     "primitiveKind": "Sphere",
     "vfx": {
-      "particleEffectId": "capability_static_performer.smoke"
+      "particleVfxId": "capability_static_performer.smoke"
     }
   },
   {

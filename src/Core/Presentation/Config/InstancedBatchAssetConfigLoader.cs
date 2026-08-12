@@ -604,7 +604,7 @@ namespace Ludots.Core.Presentation.Config
                     $"Instanced batch '{batchKey}' behavior '{behaviorKey}' references unknown effect asset '{effectKey}'.");
             }
 
-            if (!descriptor.VfxEffectData.IsValid)
+            if (!descriptor.VfxData.IsValid)
             {
                 throw new InvalidOperationException(
                     $"Instanced batch '{batchKey}' behavior '{behaviorKey}' references effect asset '{effectKey}' without VFX particle data.");

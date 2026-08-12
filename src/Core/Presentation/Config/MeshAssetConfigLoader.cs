@@ -12,25 +12,25 @@ namespace Ludots.Core.Presentation.Config
     {
         private readonly ConfigPipeline _configs;
         private readonly MeshAssetRegistry _meshRegistry;
-        private readonly ParticleEffectRegistry? _particleEffectRegistry;
+        private readonly ParticleVfxRegistry? _particleVfxRegistry;
         private readonly PrefabRegistry? _prefabRegistry;
         private readonly bool _loadPrefabs;
 
         public MeshAssetConfigLoader(ConfigPipeline configs, MeshAssetRegistry meshRegistry)
-            : this(configs, meshRegistry, prefabRegistry: null, particleEffectRegistry: null, loadPrefabs: false)
+            : this(configs, meshRegistry, prefabRegistry: null, particleVfxRegistry: null, loadPrefabs: false)
         {
         }
 
         public MeshAssetConfigLoader(
             ConfigPipeline configs,
             MeshAssetRegistry meshRegistry,
-            ParticleEffectRegistry particleEffectRegistry)
-            : this(configs, meshRegistry, prefabRegistry: null, particleEffectRegistry, loadPrefabs: false)
+            ParticleVfxRegistry particleVfxRegistry)
+            : this(configs, meshRegistry, prefabRegistry: null, particleVfxRegistry, loadPrefabs: false)
         {
         }
 
         public MeshAssetConfigLoader(ConfigPipeline configs, MeshAssetRegistry meshRegistry, PrefabRegistry prefabRegistry)
-            : this(configs, meshRegistry, prefabRegistry, particleEffectRegistry: null, loadPrefabs: true)
+            : this(configs, meshRegistry, prefabRegistry, particleVfxRegistry: null, loadPrefabs: true)
         {
         }
 
@@ -38,8 +38,8 @@ namespace Ludots.Core.Presentation.Config
             ConfigPipeline configs,
             MeshAssetRegistry meshRegistry,
             PrefabRegistry prefabRegistry,
-            ParticleEffectRegistry particleEffectRegistry)
-            : this(configs, meshRegistry, prefabRegistry, particleEffectRegistry, loadPrefabs: true)
+            ParticleVfxRegistry particleVfxRegistry)
+            : this(configs, meshRegistry, prefabRegistry, particleVfxRegistry, loadPrefabs: true)
         {
         }
 
@@ -47,13 +47,13 @@ namespace Ludots.Core.Presentation.Config
             ConfigPipeline configs,
             MeshAssetRegistry meshRegistry,
             PrefabRegistry? prefabRegistry,
-            ParticleEffectRegistry? particleEffectRegistry,
+            ParticleVfxRegistry? particleVfxRegistry,
             bool loadPrefabs)
         {
             _configs = configs ?? throw new ArgumentNullException(nameof(configs));
             _meshRegistry = meshRegistry ?? throw new ArgumentNullException(nameof(meshRegistry));
             _prefabRegistry = prefabRegistry;
-            _particleEffectRegistry = particleEffectRegistry;
+            _particleVfxRegistry = particleVfxRegistry;
             _loadPrefabs = loadPrefabs;
             if (_loadPrefabs && _prefabRegistry == null)
             {
@@ -157,7 +157,7 @@ namespace Ludots.Core.Presentation.Config
                     }
 
                     var descriptor = MeshAssetDescriptor.Primitive(0, kind);
-                    descriptor.VfxEffectData = ParseVfxEffectData(node["vfx"], key);
+                    descriptor.VfxData = ParseVfxData(node["vfx"], key);
                     return descriptor;
                 }
                 case MeshAssetType.Model:
@@ -172,14 +172,14 @@ namespace Ludots.Core.Presentation.Config
                     var descriptor = type == MeshAssetType.Billboard
                         ? MeshAssetDescriptor.Billboard(0, Array.Empty<string>())
                         : MeshAssetDescriptor.Model(0, Array.Empty<string>());
-                    descriptor.VfxEffectData = ParseVfxEffectData(node["vfx"], key);
+                    descriptor.VfxData = ParseVfxData(node["vfx"], key);
                     return descriptor;
                 }
                 case MeshAssetType.Prefab:
                 {
                     var parts = ParseParts(node["parts"]);
                     var descriptor = MeshAssetDescriptor.Prefab(0, parts);
-                    descriptor.VfxEffectData = ParseVfxEffectData(node["vfx"], key);
+                    descriptor.VfxData = ParseVfxData(node["vfx"], key);
                     return descriptor;
                 }
                 default:
@@ -246,14 +246,14 @@ namespace Ludots.Core.Presentation.Config
             string partLabel = $"Prefab part at index {partIndex}";
             int effectAssetId = ResolveEffectAssetId(node?["effectAssetId"], partLabel);
             if (!_meshRegistry.TryGetDescriptor(effectAssetId, out MeshAssetDescriptor descriptor) ||
-                !descriptor.VfxEffectData.IsValid ||
-                descriptor.VfxEffectData.ParticleSystem is null)
+                !descriptor.VfxData.IsValid ||
+                descriptor.VfxData.ParticleSystem is null)
             {
                 throw new InvalidOperationException(
                     $"{partLabel} references VFX effect asset id {effectAssetId} without Quarks particle data.");
             }
 
-            PrefabVfxSpawnMode spawnMode = descriptor.VfxEffectData.SpawnMode;
+            PrefabVfxSpawnMode spawnMode = descriptor.VfxData.SpawnMode;
             bool authored = node?["spawnMode"] != null;
             if (authored)
             {
@@ -263,7 +263,7 @@ namespace Ludots.Core.Presentation.Config
                 if (authoredSpawnMode != spawnMode)
                 {
                     throw new InvalidOperationException(
-                        $"{partLabel} declares spawnMode '{authoredSpawnMode}', but effect asset spawnMode is '{spawnMode}'. Author spawnMode only on Presentation/particle_effects.json.");
+                        $"{partLabel} declares spawnMode '{authoredSpawnMode}', but effect asset spawnMode is '{spawnMode}'. Author spawnMode only on Presentation/particle_vfx.json.");
                 }
             }
 
@@ -282,7 +282,7 @@ namespace Ludots.Core.Presentation.Config
                     $"{partLabel} references unknown VFX effect asset '{effectKey}'.");
             }
 
-            if (!descriptor.VfxEffectData.IsValid)
+            if (!descriptor.VfxData.IsValid)
             {
                 throw new InvalidOperationException(
                     $"{partLabel} references VFX effect asset '{effectKey}' without VFX particle data.");
@@ -291,7 +291,7 @@ namespace Ludots.Core.Presentation.Config
             return effectAssetId;
         }
 
-        private VfxEffectAssetData ParseVfxEffectData(JsonNode? node, string key)
+        private VfxAssetData ParseVfxData(JsonNode? node, string key)
         {
             if (node == null)
             {
@@ -307,7 +307,7 @@ namespace Ludots.Core.Presentation.Config
             string assetLabel = $"Presentation/mesh_assets.json asset '{key}' vfx";
             foreach (var property in obj)
             {
-                if (string.Equals(property.Key, "particleEffectId", StringComparison.Ordinal))
+                if (string.Equals(property.Key, "particleVfxId", StringComparison.Ordinal))
                 {
                     continue;
                 }
@@ -320,41 +320,41 @@ namespace Ludots.Core.Presentation.Config
                     string.Equals(property.Key, "particleSystem", StringComparison.Ordinal))
                 {
                     throw new InvalidOperationException(
-                        $"{assetLabel} field '{property.Key}' is not supported. Author only particleEffectId here; spawnMode and Quarks particle data live in Presentation/particle_effects.json.");
+                        $"{assetLabel} field '{property.Key}' is not supported. Author only particleVfxId here; spawnMode and Quarks particle data live in Presentation/particle_vfx.json.");
                 }
 
                 throw new InvalidOperationException($"{assetLabel} uses unsupported field '{property.Key}'.");
             }
 
-            if (!obj.ContainsKey("particleEffectId"))
+            if (!obj.ContainsKey("particleVfxId"))
             {
-                throw new InvalidOperationException($"{assetLabel} must declare particleEffectId.");
+                throw new InvalidOperationException($"{assetLabel} must declare particleVfxId.");
             }
 
-            ParticleEffectAssetData particleSystem = ResolveParticleEffectAsset(
-                obj["particleEffectId"],
+            ParticleVfxAssetData particleSystem = ResolveParticleVfxAsset(
+                obj["particleVfxId"],
                 assetLabel,
-                out int particleEffectAssetId);
-            return new VfxEffectAssetData(particleSystem, particleEffectAssetId);
+                out int particleVfxAssetId);
+            return new VfxAssetData(particleSystem, particleVfxAssetId);
         }
 
-        private ParticleEffectAssetData ResolveParticleEffectAsset(
+        private ParticleVfxAssetData ResolveParticleVfxAsset(
             JsonNode? node,
             string assetLabel,
-            out int particleEffectAssetId)
+            out int particleVfxAssetId)
         {
-            if (_particleEffectRegistry == null)
+            if (_particleVfxRegistry == null)
             {
                 throw new InvalidOperationException(
-                    $"{assetLabel}.particleEffectId requires the Presentation particle effect registry. Load Presentation/particle_effects.json before mesh assets.");
+                    $"{assetLabel}.particleVfxId requires the Presentation particle VFX registry. Load Presentation/particle_vfx.json before mesh assets.");
             }
 
-            string particleEffectKey = ReadRequiredString(node, $"{assetLabel}.particleEffectId");
-            particleEffectAssetId = _particleEffectRegistry.GetId(particleEffectKey);
-            if (particleEffectAssetId <= 0 || !_particleEffectRegistry.TryGet(particleEffectAssetId, out ParticleEffectAssetData effect))
+            string particleVfxKey = ReadRequiredString(node, $"{assetLabel}.particleVfxId");
+            particleVfxAssetId = _particleVfxRegistry.GetId(particleVfxKey);
+            if (particleVfxAssetId <= 0 || !_particleVfxRegistry.TryGet(particleVfxAssetId, out ParticleVfxAssetData effect))
             {
                 throw new InvalidOperationException(
-                    $"{assetLabel} references unknown particle effect asset '{particleEffectKey}'.");
+                    $"{assetLabel} references unknown particle VFX asset '{particleVfxKey}'.");
             }
 
             return effect;

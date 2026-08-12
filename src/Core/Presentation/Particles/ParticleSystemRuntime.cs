@@ -111,7 +111,7 @@ namespace Ludots.Core.Presentation.Particles
         }
 
         public void Update(
-            ParticleEffectAssetData effect,
+            ParticleVfxAssetData effect,
             float deltaSeconds,
             in Vector3 emitterPosition,
             in Quaternion emitterRotation)
@@ -123,7 +123,7 @@ namespace Ludots.Core.Presentation.Particles
 
             if (!effect.IsValid)
             {
-                throw new InvalidOperationException("Particle runtime requires a valid particle effect asset.");
+                throw new InvalidOperationException("Particle runtime requires a valid particle VFX asset.");
             }
 
             if (!float.IsFinite(deltaSeconds) || deltaSeconds < 0f)
@@ -191,7 +191,7 @@ namespace Ludots.Core.Presentation.Particles
         }
 
         private void Spawn(
-            ParticleEffectAssetData effect,
+            ParticleVfxAssetData effect,
             int count,
             in Vector3 emitterPosition,
             in Quaternion emitterRotation)
@@ -245,7 +245,7 @@ namespace Ludots.Core.Presentation.Particles
             }
         }
 
-        private void Simulate(ParticleEffectAssetData effect, float deltaSeconds)
+        private void Simulate(ParticleVfxAssetData effect, float deltaSeconds)
         {
             int index = 0;
             while (index < _particleCount)
@@ -289,7 +289,7 @@ namespace Ludots.Core.Presentation.Particles
         }
 
         private void BuildEmitterSample(
-            ParticleEffectAssetData effect,
+            ParticleVfxAssetData effect,
             out Vector3 position,
             out Vector3 direction)
         {

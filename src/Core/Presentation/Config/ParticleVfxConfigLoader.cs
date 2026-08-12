@@ -4,14 +4,14 @@ using Ludots.Core.Presentation.Particles;
 
 namespace Ludots.Core.Presentation.Config
 {
-    public sealed class ParticleEffectConfigLoader
+    public sealed class ParticleVfxConfigLoader
     {
-        public const string RelativePath = "Presentation/particle_effects.json";
+        public const string RelativePath = "Presentation/particle_vfx.json";
 
         private readonly ConfigPipeline _configs;
-        private readonly ParticleEffectRegistry _registry;
+        private readonly ParticleVfxRegistry _registry;
 
-        public ParticleEffectConfigLoader(ConfigPipeline configs, ParticleEffectRegistry registry)
+        public ParticleVfxConfigLoader(ConfigPipeline configs, ParticleVfxRegistry registry)
         {
             _configs = configs ?? throw new ArgumentNullException(nameof(configs));
             _registry = registry ?? throw new ArgumentNullException(nameof(registry));
@@ -35,7 +35,7 @@ namespace Ludots.Core.Presentation.Config
                     throw new InvalidOperationException($"{RelativePath} entry at index {i} is missing required 'id'.");
                 }
 
-                ParticleEffectAssetData effect = ParticleEffectConfigParser.ParseCatalogEntry(
+                ParticleVfxAssetData effect = ParticleVfxConfigParser.ParseCatalogEntry(
                     node,
                     key,
                     RelativePath);

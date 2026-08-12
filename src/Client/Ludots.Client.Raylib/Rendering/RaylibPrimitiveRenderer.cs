@@ -86,8 +86,8 @@ namespace Ludots.Client.Raylib.Rendering
         public int TotalDecalVisualCount { get; private set; }
         public int TotalVfxVisualCount { get; private set; }
         public int TotalSurfaceVisualCount { get; private set; }
-        public int LastDrawnVfxEffectCount => _vfxRenderer.LastDrawnEffectCount;
-        public int TotalDrawnVfxEffectCount => _vfxRenderer.TotalDrawnEffectCount;
+        public int LastDrawnVfxCount => _vfxRenderer.LastDrawnVfxCount;
+        public int TotalDrawnVfxCount => _vfxRenderer.TotalDrawnVfxCount;
 
         public RaylibIsmRenderBridge IsmBridge => _ismBridge;
 
@@ -463,7 +463,7 @@ namespace Ludots.Client.Raylib.Rendering
                     $"VFX primitive stableId={item.StableId} references unknown effect asset id {item.MeshAssetId}.");
             }
 
-            if (!descriptor.VfxEffectData.IsValid)
+            if (!descriptor.VfxData.IsValid)
             {
                 throw new InvalidOperationException(
                     $"VFX primitive stableId={item.StableId} effectAssetId={item.MeshAssetId} must declare vfx effect data.");
@@ -476,7 +476,7 @@ namespace Ludots.Client.Raylib.Rendering
                 item.Scale * scaleMul,
                 item.Color,
                 item.MeshAssetId,
-                descriptor.VfxEffectData.SpawnMode);
+                descriptor.VfxData.SpawnMode);
             return true;
         }
 
@@ -779,7 +779,7 @@ namespace Ludots.Client.Raylib.Rendering
 
         public string BuildVisualKindDiagnosticSummary()
         {
-            return $"prefab-visual-counts lastFrame(mesh={LastMeshVisualCount},decal={LastDecalVisualCount},vfx={LastVfxVisualCount},surface={LastSurfaceVisualCount}) total(mesh={TotalMeshVisualCount},decal={TotalDecalVisualCount},vfx={TotalVfxVisualCount},surface={TotalSurfaceVisualCount}) vfx-draws(last={_vfxRenderer.LastDrawnEffectCount},total={_vfxRenderer.TotalDrawnEffectCount})";
+            return $"prefab-visual-counts lastFrame(mesh={LastMeshVisualCount},decal={LastDecalVisualCount},vfx={LastVfxVisualCount},surface={LastSurfaceVisualCount}) total(mesh={TotalMeshVisualCount},decal={TotalDecalVisualCount},vfx={TotalVfxVisualCount},surface={TotalSurfaceVisualCount}) vfx-draws(last={_vfxRenderer.LastDrawnVfxCount},total={_vfxRenderer.TotalDrawnVfxCount})";
         }
 
         public string BuildPrimitiveLaneDiagnosticSummary(MeshAssetRegistry meshes)

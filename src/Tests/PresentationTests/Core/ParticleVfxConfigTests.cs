@@ -14,19 +14,19 @@ using NUnit.Framework;
 namespace Ludots.Tests.Presentation;
 
 [TestFixture]
-public sealed class ParticleEffectConfigTests
+public sealed class ParticleVfxConfigTests
 {
     private static readonly UTF8Encoding Utf8NoBom = new(encoderShouldEmitUTF8Identifier: false);
 
     [Test]
-    public void ParticleEffectConfigLoader_LoadsCatalogEntryAndMeshAssetReferencesParticleEffectId()
+    public void ParticleVfxConfigLoader_LoadsCatalogEntryAndMeshAssetReferencesParticleVfxId()
     {
-        string core = CreateCoreRoot("Ludots_ParticleEffectConfig_LoadsReference");
+        string core = CreateCoreRoot("Ludots_ParticleVfxConfig_LoadsReference");
         WriteCatalog(
             core,
-            "Presentation/particle_effects.json", "ArrayById", "id",
+            "Presentation/particle_vfx.json", "ArrayById", "id",
             "Presentation/mesh_assets.json", "ArrayById", "id");
-        WriteParticleEffects(core, ValidParticleEffectsJson());
+        WriteParticleVfx(core, ValidParticleVfxJson());
         WriteMeshAssets(
             core,
             """
@@ -36,7 +36,7 @@ public sealed class ParticleEffectConfigTests
                 "type": "Primitive",
                 "primitiveKind": "Sphere",
                 "vfx": {
-                  "particleEffectId": "quarks.spark.trail"
+                  "particleVfxId": "quarks.spark.trail"
                 }
               }
             ]
@@ -44,28 +44,28 @@ public sealed class ParticleEffectConfigTests
 
         var pipeline = CreatePipeline(core);
         ConfigCatalog catalog = ConfigCatalogLoader.Load(pipeline);
-        var particleEffects = new ParticleEffectRegistry();
-        new ParticleEffectConfigLoader(pipeline, particleEffects).Load(catalog);
+        var particleVfx = new ParticleVfxRegistry();
+        new ParticleVfxConfigLoader(pipeline, particleVfx).Load(catalog);
 
         var meshes = new MeshAssetRegistry();
-        new MeshAssetConfigLoader(pipeline, meshes, particleEffects).Load(catalog);
+        new MeshAssetConfigLoader(pipeline, meshes, particleVfx).Load(catalog);
 
         int meshAssetId = meshes.GetId("effect.quarks.spark");
         Assert.That(meshAssetId, Is.GreaterThan(0));
         Assert.That(meshes.TryGetDescriptor(meshAssetId, out MeshAssetDescriptor descriptor), Is.True);
-        Assert.That(descriptor.VfxEffectData.IsValid, Is.True);
-        Assert.That(descriptor.VfxEffectData.ParticleSystem, Is.Not.Null);
-        Assert.That(descriptor.VfxEffectData.ParticleEffectAssetId, Is.EqualTo(particleEffects.GetId("quarks.spark.trail")));
-        Assert.That(descriptor.VfxEffectData.ParticleSystem!.RenderMode, Is.EqualTo(ParticleRenderMode.Primitive));
-        Assert.That(descriptor.VfxEffectData.ParticleSystem!.BlendMode, Is.EqualTo(ParticleBlendMode.Alpha));
+        Assert.That(descriptor.VfxData.IsValid, Is.True);
+        Assert.That(descriptor.VfxData.ParticleSystem, Is.Not.Null);
+        Assert.That(descriptor.VfxData.ParticleVfxAssetId, Is.EqualTo(particleVfx.GetId("quarks.spark.trail")));
+        Assert.That(descriptor.VfxData.ParticleSystem!.RenderMode, Is.EqualTo(ParticleRenderMode.Primitive));
+        Assert.That(descriptor.VfxData.ParticleSystem!.BlendMode, Is.EqualTo(ParticleBlendMode.Alpha));
     }
 
     [Test]
-    public void MeshAssetConfigLoader_VfxParticleEffectId_RequiresParticleRegistry()
+    public void MeshAssetConfigLoader_ParticleVfxId_RequiresParticleRegistry()
     {
-        string core = CreateCoreRoot("Ludots_ParticleEffectConfig_RequiresRegistry");
+        string core = CreateCoreRoot("Ludots_ParticleVfxConfig_RequiresRegistry");
         WriteCatalog(core, "Presentation/mesh_assets.json", "ArrayById", "id");
-        WriteMeshAssets(core, MeshAssetReferencingParticleEffectJson());
+        WriteMeshAssets(core, MeshAssetReferencingParticleVfxJson());
 
         var pipeline = CreatePipeline(core);
         ConfigCatalog catalog = ConfigCatalogLoader.Load(pipeline);
@@ -73,13 +73,13 @@ public sealed class ParticleEffectConfigTests
 
         Exception ex = Assert.Throws<InvalidOperationException>(
             () => new MeshAssetConfigLoader(pipeline, meshes).Load(catalog))!;
-        Assert.That(ex.Message, Does.Contain("requires the Presentation particle effect registry"));
+        Assert.That(ex.Message, Does.Contain("requires the Presentation particle VFX registry"));
     }
 
     [Test]
     public void MeshAssetConfigLoader_VfxParticleSystem_RejectsEmbeddedParticlePayload()
     {
-        string core = CreateCoreRoot("Ludots_ParticleEffectConfig_RejectsEmbedded");
+        string core = CreateCoreRoot("Ludots_ParticleVfxConfig_RejectsEmbedded");
         WriteCatalog(core, "Presentation/mesh_assets.json", "ArrayById", "id");
         WriteMeshAssets(
             core,
@@ -103,15 +103,15 @@ public sealed class ParticleEffectConfigTests
         var meshes = new MeshAssetRegistry();
 
         Exception ex = Assert.Throws<InvalidOperationException>(
-            () => new MeshAssetConfigLoader(pipeline, meshes, new ParticleEffectRegistry()).Load(catalog))!;
+            () => new MeshAssetConfigLoader(pipeline, meshes, new ParticleVfxRegistry()).Load(catalog))!;
         Assert.That(ex.Message, Does.Contain("not supported"));
-        Assert.That(ex.Message, Does.Contain("Presentation/particle_effects.json"));
+        Assert.That(ex.Message, Does.Contain("Presentation/particle_vfx.json"));
     }
 
     [Test]
     public void MeshAssetConfigLoader_VfxParticleSystem_RejectsEmbeddedParticlePayloadEvenWhenNull()
     {
-        string core = CreateCoreRoot("Ludots_ParticleEffectConfig_RejectsEmbeddedNull");
+        string core = CreateCoreRoot("Ludots_ParticleVfxConfig_RejectsEmbeddedNull");
         WriteCatalog(core, "Presentation/mesh_assets.json", "ArrayById", "id");
         WriteMeshAssets(
             core,
@@ -122,7 +122,7 @@ public sealed class ParticleEffectConfigTests
                 "type": "Primitive",
                 "primitiveKind": "Sphere",
                 "vfx": {
-                  "particleEffectId": "quarks.spark.trail",
+                  "particleVfxId": "quarks.spark.trail",
                   "particleSystem": null
                 }
               }
@@ -134,15 +134,15 @@ public sealed class ParticleEffectConfigTests
         var meshes = new MeshAssetRegistry();
 
         Exception ex = Assert.Throws<InvalidOperationException>(
-            () => new MeshAssetConfigLoader(pipeline, meshes, new ParticleEffectRegistry()).Load(catalog))!;
+            () => new MeshAssetConfigLoader(pipeline, meshes, new ParticleVfxRegistry()).Load(catalog))!;
         Assert.That(ex.Message, Does.Contain("not supported"));
-        Assert.That(ex.Message, Does.Contain("Presentation/particle_effects.json"));
+        Assert.That(ex.Message, Does.Contain("Presentation/particle_vfx.json"));
     }
 
     [Test]
-    public void MeshAssetConfigLoader_VfxParticleEffectId_RejectsLegacyEmitterFields()
+    public void MeshAssetConfigLoader_ParticleVfxId_RejectsLegacyEmitterFields()
     {
-        string core = CreateCoreRoot("Ludots_ParticleEffectConfig_RejectsMixedSources");
+        string core = CreateCoreRoot("Ludots_ParticleVfxConfig_RejectsMixedSources");
         WriteCatalog(core, "Presentation/mesh_assets.json", "ArrayById", "id");
         WriteMeshAssets(
             core,
@@ -153,7 +153,7 @@ public sealed class ParticleEffectConfigTests
                 "type": "Primitive",
                 "primitiveKind": "Sphere",
                 "vfx": {
-                  "particleEffectId": "quarks.spark.trail",
+                  "particleVfxId": "quarks.spark.trail",
                   "emitter": {
                     "shape": "PrimitiveSphere",
                     "particleCount": 4,
@@ -177,14 +177,14 @@ public sealed class ParticleEffectConfigTests
         var meshes = new MeshAssetRegistry();
 
         Exception ex = Assert.Throws<InvalidOperationException>(
-            () => new MeshAssetConfigLoader(pipeline, meshes, new ParticleEffectRegistry()).Load(catalog))!;
+            () => new MeshAssetConfigLoader(pipeline, meshes, new ParticleVfxRegistry()).Load(catalog))!;
         Assert.That(ex.Message, Does.Contain("not supported"));
     }
 
     [Test]
-    public void MeshAssetConfigLoader_VfxParticleEffectId_RejectsLegacyEmitterFieldsEvenWhenNull()
+    public void MeshAssetConfigLoader_ParticleVfxId_RejectsLegacyEmitterFieldsEvenWhenNull()
     {
-        string core = CreateCoreRoot("Ludots_ParticleEffectConfig_RejectsNullLegacyEmitter");
+        string core = CreateCoreRoot("Ludots_ParticleVfxConfig_RejectsNullLegacyEmitter");
         WriteCatalog(core, "Presentation/mesh_assets.json", "ArrayById", "id");
         WriteMeshAssets(
             core,
@@ -195,7 +195,7 @@ public sealed class ParticleEffectConfigTests
                 "type": "Primitive",
                 "primitiveKind": "Sphere",
                 "vfx": {
-                  "particleEffectId": "quarks.spark.trail",
+                  "particleVfxId": "quarks.spark.trail",
                   "emitter": null
                 }
               }
@@ -207,14 +207,14 @@ public sealed class ParticleEffectConfigTests
         var meshes = new MeshAssetRegistry();
 
         Exception ex = Assert.Throws<InvalidOperationException>(
-            () => new MeshAssetConfigLoader(pipeline, meshes, new ParticleEffectRegistry()).Load(catalog))!;
+            () => new MeshAssetConfigLoader(pipeline, meshes, new ParticleVfxRegistry()).Load(catalog))!;
         Assert.That(ex.Message, Does.Contain("not supported"));
     }
 
     [Test]
-    public void MeshAssetConfigLoader_VfxParticleEffectId_RejectsLegacyColorFields()
+    public void MeshAssetConfigLoader_ParticleVfxId_RejectsLegacyColorFields()
     {
-        string core = CreateCoreRoot("Ludots_ParticleEffectConfig_RejectsLegacyColors");
+        string core = CreateCoreRoot("Ludots_ParticleVfxConfig_RejectsLegacyColors");
         WriteCatalog(core, "Presentation/mesh_assets.json", "ArrayById", "id");
         WriteMeshAssets(
             core,
@@ -225,7 +225,7 @@ public sealed class ParticleEffectConfigTests
                 "type": "Primitive",
                 "primitiveKind": "Sphere",
                 "vfx": {
-                  "particleEffectId": "quarks.spark.trail",
+                  "particleVfxId": "quarks.spark.trail",
                   "coreColor": [1, 1, 1, 1]
                 }
               }
@@ -237,35 +237,35 @@ public sealed class ParticleEffectConfigTests
         var meshes = new MeshAssetRegistry();
 
         Exception ex = Assert.Throws<InvalidOperationException>(
-            () => new MeshAssetConfigLoader(pipeline, meshes, new ParticleEffectRegistry()).Load(catalog))!;
+            () => new MeshAssetConfigLoader(pipeline, meshes, new ParticleVfxRegistry()).Load(catalog))!;
         Assert.That(ex.Message, Does.Contain("not supported"));
     }
 
     [Test]
-    public void MeshAssetConfigLoader_VfxParticleEffectId_RejectsUnknownParticleAsset()
+    public void MeshAssetConfigLoader_ParticleVfxId_RejectsUnknownParticleAsset()
     {
-        string core = CreateCoreRoot("Ludots_ParticleEffectConfig_RejectsUnknownParticle");
+        string core = CreateCoreRoot("Ludots_ParticleVfxConfig_RejectsUnknownParticle");
         WriteCatalog(core, "Presentation/mesh_assets.json", "ArrayById", "id");
-        WriteMeshAssets(core, MeshAssetReferencingParticleEffectJson());
+        WriteMeshAssets(core, MeshAssetReferencingParticleVfxJson());
 
         var pipeline = CreatePipeline(core);
         ConfigCatalog catalog = ConfigCatalogLoader.Load(pipeline);
         var meshes = new MeshAssetRegistry();
 
         Exception ex = Assert.Throws<InvalidOperationException>(
-            () => new MeshAssetConfigLoader(pipeline, meshes, new ParticleEffectRegistry()).Load(catalog))!;
-        Assert.That(ex.Message, Does.Contain("unknown particle effect asset"));
+            () => new MeshAssetConfigLoader(pipeline, meshes, new ParticleVfxRegistry()).Load(catalog))!;
+        Assert.That(ex.Message, Does.Contain("unknown particle VFX asset"));
     }
 
     [Test]
-    public void MeshAssetConfigLoader_VfxParticleEffectId_RejectsMeshSpawnMode()
+    public void MeshAssetConfigLoader_ParticleVfxId_RejectsMeshSpawnMode()
     {
-        string core = CreateCoreRoot("Ludots_ParticleEffectConfig_RejectsMeshSpawnMode");
+        string core = CreateCoreRoot("Ludots_ParticleVfxConfig_RejectsMeshSpawnMode");
         WriteCatalog(
             core,
-            "Presentation/particle_effects.json", "ArrayById", "id",
+            "Presentation/particle_vfx.json", "ArrayById", "id",
             "Presentation/mesh_assets.json", "ArrayById", "id");
-        WriteParticleEffects(core, ValidParticleEffectsJson());
+        WriteParticleVfx(core, ValidParticleVfxJson());
         WriteMeshAssets(
             core,
             """
@@ -276,7 +276,7 @@ public sealed class ParticleEffectConfigTests
                 "primitiveKind": "Sphere",
                 "vfx": {
                   "spawnMode": "Loop",
-                  "particleEffectId": "quarks.spark.trail"
+                  "particleVfxId": "quarks.spark.trail"
                 }
               }
             ]
@@ -284,87 +284,87 @@ public sealed class ParticleEffectConfigTests
 
         var pipeline = CreatePipeline(core);
         ConfigCatalog catalog = ConfigCatalogLoader.Load(pipeline);
-        var particleEffects = new ParticleEffectRegistry();
-        new ParticleEffectConfigLoader(pipeline, particleEffects).Load(catalog);
+        var particleVfx = new ParticleVfxRegistry();
+        new ParticleVfxConfigLoader(pipeline, particleVfx).Load(catalog);
         var meshes = new MeshAssetRegistry();
 
         Exception ex = Assert.Throws<InvalidOperationException>(
-            () => new MeshAssetConfigLoader(pipeline, meshes, particleEffects).Load(catalog))!;
+            () => new MeshAssetConfigLoader(pipeline, meshes, particleVfx).Load(catalog))!;
         Assert.That(ex.Message, Does.Contain("spawnMode"));
         Assert.That(ex.Message, Does.Contain("not supported"));
     }
 
     [Test]
-    public void ParticleEffectConfigLoader_RejectsOverflowPolicyField()
+    public void ParticleVfxConfigLoader_RejectsOverflowPolicyField()
     {
-        JsonObject effect = ValidParticleEffectObject();
+        JsonObject effect = ValidParticleVfxObject();
         effect["overflowPolicy"] = "DropNewest";
-        Exception ex = AssertParticleEffectLoadFails(JsonArrayString(effect));
+        Exception ex = AssertParticleVfxLoadFails(JsonArrayString(effect));
         Assert.That(ex.Message, Does.Contain("overflowPolicy"));
         Assert.That(ex.Message, Does.Contain("unsupported field"));
     }
 
     [Test]
-    public void ParticleEffectConfigLoader_RejectsNonPositiveStartLife()
+    public void ParticleVfxConfigLoader_RejectsNonPositiveStartLife()
     {
-        JsonObject effect = ValidParticleEffectObject();
+        JsonObject effect = ValidParticleVfxObject();
         effect["startLife"] = new JsonArray(0, 1);
-        Exception ex = AssertParticleEffectLoadFails(JsonArrayString(effect));
+        Exception ex = AssertParticleVfxLoadFails(JsonArrayString(effect));
         Assert.That(ex.Message, Does.Contain("startLife"));
         Assert.That(ex.Message, Does.Contain("min > 0"));
     }
 
     [Test]
-    public void ParticleEffectConfigLoader_RejectsZeroSeed()
+    public void ParticleVfxConfigLoader_RejectsZeroSeed()
     {
-        JsonObject effect = ValidParticleEffectObject();
+        JsonObject effect = ValidParticleVfxObject();
         effect["seed"] = 0;
 
-        Exception ex = AssertParticleEffectLoadFails(JsonArrayString(effect));
+        Exception ex = AssertParticleVfxLoadFails(JsonArrayString(effect));
         Assert.That(ex.Message, Does.Contain("seed"));
         Assert.That(ex.Message, Does.Contain("non-zero"));
     }
 
     [Test]
-    public void ParticleEffectConfigLoader_RejectsWrongCaseEnum()
+    public void ParticleVfxConfigLoader_RejectsWrongCaseEnum()
     {
-        JsonObject effect = ValidParticleEffectObject();
+        JsonObject effect = ValidParticleVfxObject();
         effect["renderMode"] = "primitive";
 
-        Exception ex = AssertParticleEffectLoadFails(JsonArrayString(effect));
+        Exception ex = AssertParticleVfxLoadFails(JsonArrayString(effect));
         Assert.That(ex.Message, Does.Contain("renderMode"));
         Assert.That(ex.Message, Does.Contain("invalid value"));
     }
 
     [Test]
-    public void ParticleEffectConfigLoader_RejectsMissingBlendMode()
+    public void ParticleVfxConfigLoader_RejectsMissingBlendMode()
     {
-        JsonObject effect = ValidParticleEffectObject();
+        JsonObject effect = ValidParticleVfxObject();
         effect.Remove("blendMode");
 
-        Exception ex = AssertParticleEffectLoadFails(JsonArrayString(effect));
+        Exception ex = AssertParticleVfxLoadFails(JsonArrayString(effect));
         Assert.That(ex.Message, Does.Contain("blendMode"));
     }
 
     [Test]
-    public void ParticleEffectConfigLoader_LoadsBillboardTextureSheetAndBlendMode()
+    public void ParticleVfxConfigLoader_LoadsBillboardTextureSheetAndBlendMode()
     {
-        JsonObject effect = ValidParticleEffectObject();
+        JsonObject effect = ValidParticleVfxObject();
         effect["renderMode"] = "Billboard";
         effect["blendMode"] = "Additive";
         effect["textureSheet"] = ValidTextureSheetObject();
 
-        string core = CreateCoreRoot("Ludots_ParticleEffectConfig_LoadsTextureSheet");
-        WriteCatalog(core, "Presentation/particle_effects.json", "ArrayById", "id");
-        WriteParticleEffects(core, JsonArrayString(effect));
+        string core = CreateCoreRoot("Ludots_ParticleVfxConfig_LoadsTextureSheet");
+        WriteCatalog(core, "Presentation/particle_vfx.json", "ArrayById", "id");
+        WriteParticleVfx(core, JsonArrayString(effect));
 
         var pipeline = CreatePipeline(core);
         ConfigCatalog catalog = ConfigCatalogLoader.Load(pipeline);
-        var particleEffects = new ParticleEffectRegistry();
-        new ParticleEffectConfigLoader(pipeline, particleEffects).Load(catalog);
+        var particleVfx = new ParticleVfxRegistry();
+        new ParticleVfxConfigLoader(pipeline, particleVfx).Load(catalog);
 
-        int effectId = particleEffects.GetId("quarks.spark.trail");
-        Assert.That(particleEffects.TryGet(effectId, out ParticleEffectAssetData loaded), Is.True);
+        int effectId = particleVfx.GetId("quarks.spark.trail");
+        Assert.That(particleVfx.TryGet(effectId, out ParticleVfxAssetData loaded), Is.True);
         Assert.That(loaded.RenderMode, Is.EqualTo(ParticleRenderMode.Billboard));
         Assert.That(loaded.BlendMode, Is.EqualTo(ParticleBlendMode.Additive));
         Assert.That(loaded.TextureSheet, Is.Not.Null);
@@ -375,149 +375,149 @@ public sealed class ParticleEffectConfigTests
     }
 
     [Test]
-    public void ParticleEffectConfigLoader_RejectsBillboardWithoutTextureSheet()
+    public void ParticleVfxConfigLoader_RejectsBillboardWithoutTextureSheet()
     {
-        JsonObject effect = ValidParticleEffectObject();
+        JsonObject effect = ValidParticleVfxObject();
         effect["renderMode"] = "Billboard";
 
-        Exception ex = AssertParticleEffectLoadFails(JsonArrayString(effect));
+        Exception ex = AssertParticleVfxLoadFails(JsonArrayString(effect));
         Assert.That(ex.Message, Does.Contain("textureSheet"));
         Assert.That(ex.Message, Does.Contain("required"));
     }
 
     [Test]
-    public void ParticleEffectConfigLoader_RejectsTextureSheetOnMeshParticles()
+    public void ParticleVfxConfigLoader_RejectsTextureSheetOnMeshParticles()
     {
-        JsonObject effect = ValidParticleEffectObject();
+        JsonObject effect = ValidParticleVfxObject();
         effect["textureSheet"] = ValidTextureSheetObject();
 
-        Exception ex = AssertParticleEffectLoadFails(JsonArrayString(effect));
+        Exception ex = AssertParticleVfxLoadFails(JsonArrayString(effect));
         Assert.That(ex.Message, Does.Contain("textureSheet"));
         Assert.That(ex.Message, Does.Contain("only valid"));
     }
 
     [Test]
-    public void ParticleEffectConfigLoader_RejectsTextureSheetStartFrameOutsideFrameCount()
+    public void ParticleVfxConfigLoader_RejectsTextureSheetStartFrameOutsideFrameCount()
     {
-        JsonObject effect = ValidParticleEffectObject();
+        JsonObject effect = ValidParticleVfxObject();
         effect["renderMode"] = "Billboard";
         JsonObject sheet = ValidTextureSheetObject();
         sheet["startFrame"] = new JsonArray(0, 8);
         effect["textureSheet"] = sheet;
 
-        Exception ex = AssertParticleEffectLoadFails(JsonArrayString(effect));
+        Exception ex = AssertParticleVfxLoadFails(JsonArrayString(effect));
         Assert.That(ex.Message, Does.Contain("startFrame"));
     }
 
     [Test]
-    public void ParticleEffectConfigLoader_RejectsStretchedBillboardWithoutLengthScale()
+    public void ParticleVfxConfigLoader_RejectsStretchedBillboardWithoutLengthScale()
     {
-        JsonObject effect = ValidParticleEffectObject();
+        JsonObject effect = ValidParticleVfxObject();
         effect["renderMode"] = "StretchedBillboard";
         effect["textureSheet"] = ValidTextureSheetObject();
 
-        Exception ex = AssertParticleEffectLoadFails(JsonArrayString(effect));
+        Exception ex = AssertParticleVfxLoadFails(JsonArrayString(effect));
         Assert.That(ex.Message, Does.Contain("stretchedLengthScale"));
     }
 
     [Test]
-    public void ParticleEffectConfigLoader_RejectsLengthScaleOnNonStretchedParticles()
+    public void ParticleVfxConfigLoader_RejectsLengthScaleOnNonStretchedParticles()
     {
-        JsonObject effect = ValidParticleEffectObject();
+        JsonObject effect = ValidParticleVfxObject();
         effect["stretchedLengthScale"] = 1.2;
 
-        Exception ex = AssertParticleEffectLoadFails(JsonArrayString(effect));
+        Exception ex = AssertParticleVfxLoadFails(JsonArrayString(effect));
         Assert.That(ex.Message, Does.Contain("stretchedLengthScale"));
         Assert.That(ex.Message, Does.Contain("only valid"));
     }
 
     [Test]
-    public void ParticleEffectConfigLoader_RejectsNumericEnumString()
+    public void ParticleVfxConfigLoader_RejectsNumericEnumString()
     {
-        JsonObject effect = ValidParticleEffectObject();
+        JsonObject effect = ValidParticleVfxObject();
         effect["renderMode"] = "2";
 
-        Exception ex = AssertParticleEffectLoadFails(JsonArrayString(effect));
+        Exception ex = AssertParticleVfxLoadFails(JsonArrayString(effect));
         Assert.That(ex.Message, Does.Contain("renderMode"));
         Assert.That(ex.Message, Does.Contain("enum name"));
     }
 
     [Test]
-    public void ParticleEffectConfigLoader_RejectsInvalidRange()
+    public void ParticleVfxConfigLoader_RejectsInvalidRange()
     {
-        JsonObject effect = ValidParticleEffectObject();
+        JsonObject effect = ValidParticleVfxObject();
         effect["startSpeed"] = new JsonArray(2.0, 1.0);
 
-        Exception ex = AssertParticleEffectLoadFails(JsonArrayString(effect));
+        Exception ex = AssertParticleVfxLoadFails(JsonArrayString(effect));
         Assert.That(ex.Message, Does.Contain("Particle value ranges"));
     }
 
     [Test]
-    public void ParticleEffectConfigLoader_RejectsNonFiniteNumber()
+    public void ParticleVfxConfigLoader_RejectsNonFiniteNumber()
     {
-        string json = ValidParticleEffectsJson().Replace("\"durationSeconds\": 1.5", "\"durationSeconds\": 1e39", StringComparison.Ordinal);
+        string json = ValidParticleVfxJson().Replace("\"durationSeconds\": 1.5", "\"durationSeconds\": 1e39", StringComparison.Ordinal);
 
-        Exception ex = AssertParticleEffectLoadFails(json);
+        Exception ex = AssertParticleVfxLoadFails(json);
         Assert.That(ex.Message, Does.Contain("durationSeconds"));
     }
 
     [Test]
-    public void ParticleEffectConfigLoader_RejectsUnsortedCurveKeys()
+    public void ParticleVfxConfigLoader_RejectsUnsortedCurveKeys()
     {
-        JsonObject effect = ValidParticleEffectObject();
+        JsonObject effect = ValidParticleVfxObject();
         effect["sizeOverLife"] = new JsonArray(
             new JsonObject { ["position"] = 1.0, ["value"] = 1.0 },
             new JsonObject { ["position"] = 0.0, ["value"] = 0.2 });
 
-        Exception ex = AssertParticleEffectLoadFails(JsonArrayString(effect));
+        Exception ex = AssertParticleVfxLoadFails(JsonArrayString(effect));
         Assert.That(ex.Message, Does.Contain("sorted"));
     }
 
     [Test]
-    public void ParticleEffectConfigLoader_RejectsUnsortedGradientKeys()
+    public void ParticleVfxConfigLoader_RejectsUnsortedGradientKeys()
     {
-        JsonObject effect = ValidParticleEffectObject();
+        JsonObject effect = ValidParticleVfxObject();
         effect["colorOverLife"] = new JsonArray(
             new JsonObject { ["position"] = 1.0, ["color"] = new JsonArray(1.0, 1.0, 1.0, 0.0) },
             new JsonObject { ["position"] = 0.0, ["color"] = new JsonArray(1.0, 0.4, 0.1, 1.0) });
 
-        Exception ex = AssertParticleEffectLoadFails(JsonArrayString(effect));
+        Exception ex = AssertParticleVfxLoadFails(JsonArrayString(effect));
         Assert.That(ex.Message, Does.Contain("sorted"));
     }
 
     [Test]
-    public void ParticleEffectConfigLoader_RejectsUnknownCurveKeyField()
+    public void ParticleVfxConfigLoader_RejectsUnknownCurveKeyField()
     {
-        JsonObject effect = ValidParticleEffectObject();
+        JsonObject effect = ValidParticleVfxObject();
         JsonObject firstKey = effect["sizeOverLife"]!.AsArray()[0]!.AsObject();
         firstKey["tangent"] = 0.5;
 
-        Exception ex = AssertParticleEffectLoadFails(JsonArrayString(effect));
+        Exception ex = AssertParticleVfxLoadFails(JsonArrayString(effect));
         Assert.That(ex.Message, Does.Contain("unsupported field 'tangent'"));
     }
 
     [Test]
-    public void ParticleEffectConfigLoader_RejectsUnknownGradientKeyField()
+    public void ParticleVfxConfigLoader_RejectsUnknownGradientKeyField()
     {
-        JsonObject effect = ValidParticleEffectObject();
+        JsonObject effect = ValidParticleVfxObject();
         JsonObject firstKey = effect["colorOverLife"]!.AsArray()[0]!.AsObject();
         firstKey["blendMode"] = "Soft";
 
-        Exception ex = AssertParticleEffectLoadFails(JsonArrayString(effect));
+        Exception ex = AssertParticleVfxLoadFails(JsonArrayString(effect));
         Assert.That(ex.Message, Does.Contain("unsupported field 'blendMode'"));
     }
 
-    private static Exception AssertParticleEffectLoadFails(string particleEffectsJson)
+    private static Exception AssertParticleVfxLoadFails(string particleVfxJson)
     {
-        string core = CreateCoreRoot("Ludots_ParticleEffectConfig_Invalid");
-        WriteCatalog(core, "Presentation/particle_effects.json", "ArrayById", "id");
-        WriteParticleEffects(core, particleEffectsJson);
+        string core = CreateCoreRoot("Ludots_ParticleVfxConfig_Invalid");
+        WriteCatalog(core, "Presentation/particle_vfx.json", "ArrayById", "id");
+        WriteParticleVfx(core, particleVfxJson);
 
         var pipeline = CreatePipeline(core);
         ConfigCatalog catalog = ConfigCatalogLoader.Load(pipeline);
-        var particleEffects = new ParticleEffectRegistry();
+        var particleVfx = new ParticleVfxRegistry();
         return Assert.Catch<Exception>(
-            () => new ParticleEffectConfigLoader(pipeline, particleEffects).Load(catalog))!;
+            () => new ParticleVfxConfigLoader(pipeline, particleVfx).Load(catalog))!;
     }
 
     private static ConfigPipeline CreatePipeline(string core)
@@ -566,9 +566,9 @@ public sealed class ParticleEffectConfigTests
         File.WriteAllText(Path.Combine(coreRoot, "Configs", "config_catalog.json"), writer.ToString(), Utf8NoBom);
     }
 
-    private static void WriteParticleEffects(string coreRoot, string json)
+    private static void WriteParticleVfx(string coreRoot, string json)
     {
-        File.WriteAllText(Path.Combine(coreRoot, "Configs", "Presentation", "particle_effects.json"), json, Utf8NoBom);
+        File.WriteAllText(Path.Combine(coreRoot, "Configs", "Presentation", "particle_vfx.json"), json, Utf8NoBom);
     }
 
     private static void WriteMeshAssets(string coreRoot, string json)
@@ -576,7 +576,7 @@ public sealed class ParticleEffectConfigTests
         File.WriteAllText(Path.Combine(coreRoot, "Configs", "Presentation", "mesh_assets.json"), json, Utf8NoBom);
     }
 
-    private static string MeshAssetReferencingParticleEffectJson()
+    private static string MeshAssetReferencingParticleVfxJson()
     {
         return """
         [
@@ -585,16 +585,16 @@ public sealed class ParticleEffectConfigTests
             "type": "Primitive",
             "primitiveKind": "Sphere",
             "vfx": {
-              "particleEffectId": "quarks.spark.trail"
+              "particleVfxId": "quarks.spark.trail"
             }
           }
         ]
         """;
     }
 
-    private static JsonObject ValidParticleEffectObject()
+    private static JsonObject ValidParticleVfxObject()
     {
-        return JsonNode.Parse(ValidParticleEffectsJson())!.AsArray()[0]!.AsObject();
+        return JsonNode.Parse(ValidParticleVfxJson())!.AsArray()[0]!.AsObject();
     }
 
     private static string JsonArrayString(JsonObject obj)
@@ -603,7 +603,7 @@ public sealed class ParticleEffectConfigTests
         return array.ToJsonString();
     }
 
-    private static string ValidParticleEffectsJson()
+    private static string ValidParticleVfxJson()
     {
         return """
         [

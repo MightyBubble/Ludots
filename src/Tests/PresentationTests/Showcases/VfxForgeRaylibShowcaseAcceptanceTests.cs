@@ -22,7 +22,7 @@ public sealed class VfxForgeRaylibShowcaseAcceptanceTests
     private const string MapId = "vfx_forge_raylib_showcase";
     private const string ShowcaseId = "vfx_forge_raylib";
 
-    private static readonly string[] ParticleEffectKeys =
+    private static readonly string[] ParticleVfxKeys =
     [
         "vfx_forge.spark_column",
         "vfx_forge.energy_orbit",
@@ -97,14 +97,14 @@ public sealed class VfxForgeRaylibShowcaseAcceptanceTests
 
         Assert.That(
             map["Metadata"]?["vfxForge"]?["effectCount"]?.GetValue<int>(),
-            Is.EqualTo(ParticleEffectKeys.Length));
+            Is.EqualTo(ParticleVfxKeys.Length));
 
         using var engine = new GameEngine();
         engine.InitializeWithConfigPipeline(modPaths, Path.Combine(repoRoot, "assets"));
         HeadlessPresentationTestHost.Install(engine);
 
-        ParticleEffectRegistry particleEffects = engine.GetService(CoreServiceKeys.PresentationParticleEffectRegistry)
-            ?? throw new InvalidOperationException("PresentationParticleEffectRegistry missing.");
+        ParticleVfxRegistry particleVfxRegistry = engine.GetService(CoreServiceKeys.PresentationParticleVfxRegistry)
+            ?? throw new InvalidOperationException("PresentationParticleVfxRegistry missing.");
         MeshAssetRegistry meshes = engine.GetService(CoreServiceKeys.PresentationMeshAssetRegistry)
             ?? throw new InvalidOperationException("PresentationMeshAssetRegistry missing.");
         PerformerDefinitionRegistry definitions = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry)
@@ -118,37 +118,37 @@ public sealed class VfxForgeRaylibShowcaseAcceptanceTests
             "VfxForgeRaylibShowcaseMod",
             "assets",
             "Presentation");
-        JsonArray authoredParticles = ReadJsonArray(Path.Combine(presentationDir, "particle_effects.json"));
+        JsonArray authoredParticles = ReadJsonArray(Path.Combine(presentationDir, "particle_vfx.json"));
         JsonArray authoredMeshAssets = ReadJsonArray(Path.Combine(presentationDir, "mesh_assets.json"));
         Assert.That(
             authoredParticles.Select(node => node?["id"]?.GetValue<string>()).Where(id => id != null).ToArray(),
-            Is.EquivalentTo(ParticleEffectKeys));
+            Is.EquivalentTo(ParticleVfxKeys));
 
-        for (int i = 0; i < ParticleEffectKeys.Length; i++)
+        for (int i = 0; i < ParticleVfxKeys.Length; i++)
         {
-            JsonObject authoredParticle = RequireObjectById(authoredParticles, ParticleEffectKeys[i]);
+            JsonObject authoredParticle = RequireObjectById(authoredParticles, ParticleVfxKeys[i]);
             Assert.That(authoredParticle.ContainsKey("overflowPolicy"), Is.False);
             Assert.That(authoredParticle["spawnMode"]?.GetValue<string>(), Is.Not.Null.And.Not.Empty);
 
-            int particleId = particleEffects.GetId(ParticleEffectKeys[i]);
-            Assert.That(particleId, Is.GreaterThan(0), $"Particle effect '{ParticleEffectKeys[i]}' should be registered.");
-            Assert.That(particleEffects.TryGet(particleId, out ParticleEffectAssetData particleEffect), Is.True);
-            Assert.That(particleEffect.IsValid, Is.True);
+            int particleId = particleVfxRegistry.GetId(ParticleVfxKeys[i]);
+            Assert.That(particleId, Is.GreaterThan(0), $"Particle VFX '{ParticleVfxKeys[i]}' should be registered.");
+            Assert.That(particleVfxRegistry.TryGet(particleId, out ParticleVfxAssetData particleAsset), Is.True);
+            Assert.That(particleAsset.IsValid, Is.True);
             Assert.That(
-                particleEffect.BlendMode.ToString(),
+                particleAsset.BlendMode.ToString(),
                 Is.EqualTo(authoredParticle["blendMode"]?.GetValue<string>()));
             Assert.That(
-                particleEffect.RenderMode.ToString(),
+                particleAsset.RenderMode.ToString(),
                 Is.EqualTo(authoredParticle["renderMode"]?.GetValue<string>()));
             Assert.That(
-                particleEffect.SpawnMode.ToString(),
+                particleAsset.SpawnMode.ToString(),
                 Is.EqualTo(authoredParticle["spawnMode"]?.GetValue<string>()));
 
             JsonObject authoredMesh = RequireObjectById(authoredMeshAssets, VfxAssetKeys[i]);
             JsonObject authoredVfx = authoredMesh["vfx"] as JsonObject
                 ?? throw new InvalidOperationException($"Mesh asset '{VfxAssetKeys[i]}' must declare vfx.");
             Assert.That(authoredVfx.Count, Is.EqualTo(1));
-            Assert.That(authoredVfx["particleEffectId"]?.GetValue<string>(), Is.EqualTo(ParticleEffectKeys[i]));
+            Assert.That(authoredVfx["particleVfxId"]?.GetValue<string>(), Is.EqualTo(ParticleVfxKeys[i]));
             Assert.That(authoredVfx.ContainsKey("emitter"), Is.False);
             Assert.That(authoredVfx.ContainsKey("particleSystem"), Is.False);
             Assert.That(authoredVfx.ContainsKey("spawnMode"), Is.False);
@@ -156,10 +156,10 @@ public sealed class VfxForgeRaylibShowcaseAcceptanceTests
             int vfxAssetId = meshes.GetId(VfxAssetKeys[i]);
             Assert.That(vfxAssetId, Is.GreaterThan(0), $"VFX asset '{VfxAssetKeys[i]}' should be registered.");
             Assert.That(meshes.TryGetDescriptor(vfxAssetId, out MeshAssetDescriptor descriptor), Is.True);
-            Assert.That(descriptor.VfxEffectData.IsValid, Is.True);
-            Assert.That(descriptor.VfxEffectData.ParticleEffectAssetId, Is.EqualTo(particleId));
-            Assert.That(descriptor.VfxEffectData.ParticleSystem, Is.SameAs(particleEffect));
-            Assert.That(descriptor.VfxEffectData.SpawnMode, Is.EqualTo(particleEffect.SpawnMode));
+            Assert.That(descriptor.VfxData.IsValid, Is.True);
+            Assert.That(descriptor.VfxData.ParticleVfxAssetId, Is.EqualTo(particleId));
+            Assert.That(descriptor.VfxData.ParticleSystem, Is.SameAs(particleAsset));
+            Assert.That(descriptor.VfxData.SpawnMode, Is.EqualTo(particleAsset.SpawnMode));
         }
 
         foreach (string textureAssetKey in TextureAssetKeys)
@@ -170,9 +170,9 @@ public sealed class VfxForgeRaylibShowcaseAcceptanceTests
             Assert.That(textureDescriptor.Type, Is.EqualTo(MeshAssetType.Billboard));
         }
 
-        AssertTextureParticleFromJson(particleEffects, authoredParticles, "vfx_forge.flame_flipbook");
-        AssertTextureParticleFromJson(particleEffects, authoredParticles, "vfx_forge.smoke_flipbook");
-        AssertTextureParticleFromJson(particleEffects, authoredParticles, "vfx_forge.stretched_sparks");
+        AssertTextureParticleVfxFromJson(particleVfxRegistry, authoredParticles, "vfx_forge.flame_flipbook");
+        AssertTextureParticleVfxFromJson(particleVfxRegistry, authoredParticles, "vfx_forge.smoke_flipbook");
+        AssertTextureParticleVfxFromJson(particleVfxRegistry, authoredParticles, "vfx_forge.stretched_sparks");
         AssertRaylibHostTextureRows(repoRoot);
 
         foreach (string definitionKey in PerformerDefinitionKeys)
@@ -209,7 +209,7 @@ public sealed class VfxForgeRaylibShowcaseAcceptanceTests
             }
         }
 
-        Assert.That(visibleVfxCount, Is.GreaterThanOrEqualTo(ParticleEffectKeys.Length), "The player-facing scene should emit all nine VFX performer visuals.");
+        Assert.That(visibleVfxCount, Is.GreaterThanOrEqualTo(ParticleVfxKeys.Length), "The player-facing scene should emit all nine VFX performer visuals.");
     }
 
     [Test]
@@ -253,33 +253,33 @@ public sealed class VfxForgeRaylibShowcaseAcceptanceTests
         return count;
     }
 
-    private static void AssertTextureParticleFromJson(
-        ParticleEffectRegistry particleEffects,
+    private static void AssertTextureParticleVfxFromJson(
+        ParticleVfxRegistry particleVfxRegistry,
         JsonArray authoredParticles,
         string key)
     {
         JsonObject authored = RequireObjectById(authoredParticles, key);
         JsonObject textureSheet = authored["textureSheet"] as JsonObject
             ?? throw new InvalidOperationException($"Particle '{key}' must author textureSheet.");
-        int id = particleEffects.GetId(key);
-        Assert.That(particleEffects.TryGet(id, out ParticleEffectAssetData particleEffect), Is.True);
-        Assert.That(particleEffect.RenderMode.ToString(), Is.EqualTo(authored["renderMode"]?.GetValue<string>()));
-        Assert.That(particleEffect.BlendMode.ToString(), Is.EqualTo(authored["blendMode"]?.GetValue<string>()));
-        Assert.That(particleEffect.TextureSheet, Is.Not.Null);
+        int id = particleVfxRegistry.GetId(key);
+        Assert.That(particleVfxRegistry.TryGet(id, out ParticleVfxAssetData particleAsset), Is.True);
+        Assert.That(particleAsset.RenderMode.ToString(), Is.EqualTo(authored["renderMode"]?.GetValue<string>()));
+        Assert.That(particleAsset.BlendMode.ToString(), Is.EqualTo(authored["blendMode"]?.GetValue<string>()));
+        Assert.That(particleAsset.TextureSheet, Is.Not.Null);
         Assert.That(
-            particleEffect.TextureSheet!.TextureAssetId,
+            particleAsset.TextureSheet!.TextureAssetId,
             Is.EqualTo(textureSheet["textureAssetId"]?.GetValue<string>()));
         Assert.That(
-            particleEffect.TextureSheet.PlaybackMode.ToString(),
+            particleAsset.TextureSheet.PlaybackMode.ToString(),
             Is.EqualTo(textureSheet["playbackMode"]?.GetValue<string>()));
-        Assert.That(particleEffect.TextureSheet.Columns, Is.EqualTo(textureSheet["columns"]?.GetValue<int>()));
-        Assert.That(particleEffect.TextureSheet.Rows, Is.EqualTo(textureSheet["rows"]?.GetValue<int>()));
-        Assert.That(particleEffect.TextureSheet.FrameCount, Is.EqualTo(textureSheet["frameCount"]?.GetValue<int>()));
-        if (particleEffect.RenderMode == ParticleRenderMode.StretchedBillboard)
+        Assert.That(particleAsset.TextureSheet.Columns, Is.EqualTo(textureSheet["columns"]?.GetValue<int>()));
+        Assert.That(particleAsset.TextureSheet.Rows, Is.EqualTo(textureSheet["rows"]?.GetValue<int>()));
+        Assert.That(particleAsset.TextureSheet.FrameCount, Is.EqualTo(textureSheet["frameCount"]?.GetValue<int>()));
+        if (particleAsset.RenderMode == ParticleRenderMode.StretchedBillboard)
         {
-            Assert.That(particleEffect.StretchedLengthScale, Is.GreaterThan(0f));
+            Assert.That(particleAsset.StretchedLengthScale, Is.GreaterThan(0f));
             Assert.That(
-                particleEffect.StretchedLengthScale,
+                particleAsset.StretchedLengthScale,
                 Is.EqualTo(authored["stretchedLengthScale"]?.GetValue<float>()).Within(0.0001f));
         }
     }

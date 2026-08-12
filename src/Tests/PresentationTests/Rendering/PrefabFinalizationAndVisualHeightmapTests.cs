@@ -232,7 +232,7 @@ namespace Ludots.Tests.Presentation
         {
             var meshes = new MeshAssetRegistry();
             int cubeId = meshes.GetId(WellKnownMeshKeys.Cube);
-            int effectId = RegisterVfxEffect(meshes, "prefab.mixed_visuals.effect", PrefabVfxSpawnMode.Loop);
+            int effectId = RegisterVfxAsset(meshes, "prefab.mixed_visuals.effect", PrefabVfxSpawnMode.Loop);
             int prefabId = meshes.Register(
                 "prefab.mixed_visuals",
                 MeshAssetDescriptor.Prefab(
@@ -280,7 +280,7 @@ namespace Ludots.Tests.Presentation
         public void PrefabFinalizationPipeline_WhenAuthoredPrefabVfxSpawnModeConflictsWithEffectAsset_ThrowsExplicitly()
         {
             var meshes = new MeshAssetRegistry();
-            int effectId = RegisterVfxEffect(meshes, "prefab.conflicting_vfx.effect", PrefabVfxSpawnMode.Loop);
+            int effectId = RegisterVfxAsset(meshes, "prefab.conflicting_vfx.effect", PrefabVfxSpawnMode.Loop);
             PrefabPart vfxPart = PrefabPart.Vfx(effectAssetId: effectId, spawnMode: PrefabVfxSpawnMode.Once);
             vfxPart.VfxSpawnModeAuthored = true;
             int prefabId = meshes.Register(
@@ -1155,18 +1155,18 @@ namespace Ludots.Tests.Presentation
             return new ChunkedVisualHeightmapRuntime(descriptor, store);
         }
 
-        private static int RegisterVfxEffect(MeshAssetRegistry meshes, string key, PrefabVfxSpawnMode spawnMode)
+        private static int RegisterVfxAsset(MeshAssetRegistry meshes, string key, PrefabVfxSpawnMode spawnMode)
         {
             MeshAssetDescriptor descriptor = MeshAssetDescriptor.Primitive(0, PrimitiveMeshKind.Sphere);
-            descriptor.VfxEffectData = new VfxEffectAssetData(
-                CreateTestParticleEffect(spawnMode),
-                particleEffectAssetId: 1);
+            descriptor.VfxData = new VfxAssetData(
+                CreateTestParticleVfx(spawnMode),
+                particleVfxAssetId: 1);
             return meshes.Register(key, in descriptor);
         }
 
-        private static ParticleEffectAssetData CreateTestParticleEffect(PrefabVfxSpawnMode spawnMode)
+        private static ParticleVfxAssetData CreateTestParticleVfx(PrefabVfxSpawnMode spawnMode)
         {
-            return new ParticleEffectAssetData(
+            return new ParticleVfxAssetData(
                 spawnMode,
                 ParticleEmitterShapeKind.Cone,
                 ParticleRenderMode.Primitive,

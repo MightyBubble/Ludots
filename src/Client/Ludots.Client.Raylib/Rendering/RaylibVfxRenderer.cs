@@ -12,14 +12,14 @@ using Rl = Raylib_cs.Raylib;
 
 namespace Ludots.Client.Raylib.Rendering
 {
-    internal readonly record struct RaylibVfxEffectKey(int StableId, int EffectAssetId);
+    internal readonly record struct RaylibVfxKey(int StableId, int EffectAssetId);
 
     public sealed class RaylibVfxRenderer : IDisposable
     {
         private readonly IVirtualFileSystem? _vfs;
-        private readonly Dictionary<RaylibVfxEffectKey, RaylibParticleEffectInstance> _particleEffects = new();
-        private readonly HashSet<RaylibVfxEffectKey> _activeKeys = new();
-        private readonly List<RaylibVfxEffectKey> _inactiveKeys = new();
+        private readonly Dictionary<RaylibVfxKey, RaylibParticleVfxInstance> _particleVfx = new();
+        private readonly HashSet<RaylibVfxKey> _activeKeys = new();
+        private readonly List<RaylibVfxKey> _inactiveKeys = new();
         private readonly Dictionary<int, Texture2D> _textureCache = new();
 
         public RaylibVfxRenderer(IVirtualFileSystem? vfs = null)
@@ -27,14 +27,14 @@ namespace Ludots.Client.Raylib.Rendering
             _vfs = vfs;
         }
 
-        public int LastDrawnEffectCount { get; private set; }
+        public int LastDrawnVfxCount { get; private set; }
 
-        public int TotalDrawnEffectCount { get; private set; }
+        public int TotalDrawnVfxCount { get; private set; }
 
         public void BeginFrame()
         {
             _activeKeys.Clear();
-            LastDrawnEffectCount = 0;
+            LastDrawnVfxCount = 0;
         }
 
         public void Draw(in PrefabFinalizedVisual visual, MeshAssetRegistry effectAssets, Camera3D camera, double timeSeconds)
@@ -62,31 +62,31 @@ namespace Ludots.Client.Raylib.Rendering
                     $"VFX visual stableId={visual.StableId} references unknown effect asset id {visual.EffectAssetId}.");
             }
 
-            RaylibVfxEffectKey key = ComposeEffectKey(visual.StableId, visual.EffectAssetId);
+            RaylibVfxKey key = ComposeVfxKey(visual.StableId, visual.EffectAssetId);
             _activeKeys.Add(key);
-            VfxEffectAssetData effect = descriptor.VfxEffectData;
+            VfxAssetData effect = descriptor.VfxData;
             if (!effect.IsValid || effect.ParticleSystem is null)
             {
                 throw new InvalidOperationException(
-                    $"VFX effect asset id {visual.EffectAssetId} must reference a registered Quarks particle effect.");
+                    $"VFX effect asset id {visual.EffectAssetId} must reference a registered Quarks particle VFX.");
             }
 
-            RaylibParticleEffectInstance particleEffect = GetOrCreateParticleEffect(key, effect.ParticleSystem);
-            particleEffect.Update(effect.ParticleSystem, timeSeconds, visual.Position, visual.Rotation);
-            DrawParticleEffect(in visual, effect.ParticleSystem, particleEffect, effectAssets, camera);
-            LastDrawnEffectCount++;
-            TotalDrawnEffectCount++;
+            RaylibParticleVfxInstance particleVfx = GetOrCreateParticleVfxInstance(key, effect.ParticleSystem);
+            particleVfx.Update(effect.ParticleSystem, timeSeconds, visual.Position, visual.Rotation);
+            DrawParticleVfx(in visual, effect.ParticleSystem, particleVfx, effectAssets, camera);
+            LastDrawnVfxCount++;
+            TotalDrawnVfxCount++;
         }
 
         public void EndFrame()
         {
-            if (_particleEffects.Count == _activeKeys.Count)
+            if (_particleVfx.Count == _activeKeys.Count)
             {
                 return;
             }
 
             _inactiveKeys.Clear();
-            foreach (RaylibVfxEffectKey key in _particleEffects.Keys)
+            foreach (RaylibVfxKey key in _particleVfx.Keys)
             {
                 if (!_activeKeys.Contains(key))
                 {
@@ -96,32 +96,32 @@ namespace Ludots.Client.Raylib.Rendering
 
             for (int i = 0; i < _inactiveKeys.Count; i++)
             {
-                _particleEffects.Remove(_inactiveKeys[i]);
+                _particleVfx.Remove(_inactiveKeys[i]);
             }
         }
 
-        private RaylibParticleEffectInstance GetOrCreateParticleEffect(
-            in RaylibVfxEffectKey key,
-            ParticleEffectAssetData effect)
+        private RaylibParticleVfxInstance GetOrCreateParticleVfxInstance(
+            in RaylibVfxKey key,
+            ParticleVfxAssetData effect)
         {
-            if (_particleEffects.TryGetValue(key, out RaylibParticleEffectInstance? existing))
+            if (_particleVfx.TryGetValue(key, out RaylibParticleVfxInstance? existing))
             {
                 return existing;
             }
 
-            var created = new RaylibParticleEffectInstance(effect);
-            _particleEffects.Add(key, created);
+            var created = new RaylibParticleVfxInstance(effect);
+            _particleVfx.Add(key, created);
             return created;
         }
 
-        private void DrawParticleEffect(
+        private void DrawParticleVfx(
             in PrefabFinalizedVisual visual,
-            ParticleEffectAssetData effect,
-            RaylibParticleEffectInstance particleEffect,
+            ParticleVfxAssetData effect,
+            RaylibParticleVfxInstance particleVfx,
             MeshAssetRegistry effectAssets,
             Camera3D camera)
         {
-            ParticleSystemSnapshot snapshot = particleEffect.Runtime.GetSnapshot();
+            ParticleSystemSnapshot snapshot = particleVfx.Runtime.GetSnapshot();
             float visualScale = MathF.Max(
                 MathF.Abs(visual.Scale.X),
                 MathF.Max(MathF.Abs(visual.Scale.Y), MathF.Abs(visual.Scale.Z)));
@@ -150,7 +150,7 @@ namespace Ludots.Client.Raylib.Rendering
                     if (size <= 0f)
                     {
                         throw new InvalidOperationException(
-                            $"Particle effect requires a positive drawn size; sampled size={snapshot.Sizes[i]} visualScale={visualScale}.");
+                            $"Particle VFX requires a positive drawn size; sampled size={snapshot.Sizes[i]} visualScale={visualScale}.");
                     }
 
                     Color raylibColor = ToRaylibColor(color);
@@ -185,7 +185,7 @@ namespace Ludots.Client.Raylib.Rendering
         }
 
         private void DrawTexturedBillboard(
-            ParticleEffectAssetData effect,
+            ParticleVfxAssetData effect,
             MeshAssetRegistry effectAssets,
             Camera3D camera,
             Vector3 position,
@@ -220,7 +220,7 @@ namespace Ludots.Client.Raylib.Rendering
             Rl.DrawBillboardRec(camera, texture, source, position, new Vector2(width, height), tint);
         }
 
-        private Texture2D RequireTexture(ParticleEffectAssetData effect, MeshAssetRegistry effectAssets)
+        private Texture2D RequireTexture(ParticleVfxAssetData effect, MeshAssetRegistry effectAssets)
         {
             ParticleTextureSheetAsset textureSheet = effect.TextureSheet
                 ?? throw new InvalidOperationException("Billboard particle render modes require a texture sheet.");
@@ -364,9 +364,9 @@ namespace Ludots.Client.Raylib.Rendering
             _textureCache.Clear();
         }
 
-        internal static RaylibVfxEffectKey ComposeEffectKey(int stableId, int effectAssetId)
+        internal static RaylibVfxKey ComposeVfxKey(int stableId, int effectAssetId)
         {
-            return new RaylibVfxEffectKey(stableId, effectAssetId);
+            return new RaylibVfxKey(stableId, effectAssetId);
         }
 
         private static Vector4 ModulateColor(Vector4 authored, Vector4 tint)
@@ -383,12 +383,12 @@ namespace Ludots.Client.Raylib.Rendering
             return RaylibColorUtil.ToRaylibColor(in color);
         }
 
-        private sealed class RaylibParticleEffectInstance
+        private sealed class RaylibParticleVfxInstance
         {
             private bool _hasLastTime;
             private double _lastTimeSeconds;
 
-            public RaylibParticleEffectInstance(ParticleEffectAssetData effect)
+            public RaylibParticleVfxInstance(ParticleVfxAssetData effect)
             {
                 Runtime = new ParticleSystemRuntime(effect.MaxParticles, effect.Seed);
             }
@@ -396,7 +396,7 @@ namespace Ludots.Client.Raylib.Rendering
             public ParticleSystemRuntime Runtime { get; }
 
             public void Update(
-                ParticleEffectAssetData effect,
+                ParticleVfxAssetData effect,
                 double timeSeconds,
                 in Vector3 position,
                 in Quaternion rotation)
@@ -412,7 +412,7 @@ namespace Ludots.Client.Raylib.Rendering
                 if (deltaSeconds < 0f)
                 {
                     throw new InvalidOperationException(
-                        "Raylib particle effect time must be monotonic for a stable effect identity.");
+                        "Raylib particle VFX time must be monotonic for a stable effect identity.");
                 }
 
                 Runtime.Update(effect, deltaSeconds, in position, in rotation);

@@ -16,10 +16,10 @@
 
 ## VFX 资产
 
-VFX effect 是 Presentation 资产，不是 Raylib 私有配置。当前 SSOT：
+VFX 是 Presentation 资产，不是 Raylib 私有配置。当前 SSOT：
 
-- 粒子定义：`Presentation/particle_effects.json`（Quarks schema，见 [Quarks Particle Schema](quarks-particle-schema.md)）
-- Mesh 句柄：`mesh_assets.json` 的 `vfx.particleEffectId`
+- 粒子定义：`Presentation/particle_vfx.json`（Quarks schema，见 [Quarks Particle Schema](quarks-particle-schema.md)）
+- Mesh 句柄：`mesh_assets.json` 的 `vfx.particleVfxId`
 - Prefab / performer / instanced batch 通过 effect asset key 引用上述句柄
 
 最小示例：
@@ -30,7 +30,7 @@ VFX effect 是 Presentation 资产，不是 Raylib 私有配置。当前 SSOT：
   "type": "Primitive",
   "primitiveKind": "Sphere",
   "vfx": {
-    "particleEffectId": "camera.projection_cue.particles"
+    "particleVfxId": "camera.projection_cue.particles"
   }
 }
 ```

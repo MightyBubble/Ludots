@@ -4,15 +4,15 @@
 
 ## 概述
 
-- 粒子效果资产放在 `Presentation/particle_effects.json`。
-- Mesh 侧 VFX 只保留句柄：`mesh_assets.json` 的 `vfx` 只能写 `particleEffectId`。
+- 粒子 VFX资产放在 `Presentation/particle_vfx.json`。
+- Mesh 侧 VFX 只保留句柄：`mesh_assets.json` 的 `vfx` 只能写 `particleVfxId`。
 - Raylib 只消费 finalization 后的 VFX leaf 与粒子快照，不拥有效果 key 解析，不创建第二套粒子 schema。
 
 ## 结构
 
 ```text
-particle_effects.json
-  └─ effect
+particle_vfx.json
+  └─ particle VFX
       ├─ version = quarks.ludots.v1
       ├─ spawnMode / shape / renderMode / blendMode / primitive
       ├─ capacity + emission（maxParticles、seed、duration、rate、burst）
@@ -21,7 +21,7 @@ particle_effects.json
 
 mesh_assets.json
   └─ VFX asset
-      └─ vfx.particleEffectId → particle_effects.id
+      └─ vfx.particleVfxId → particle_vfx.id
 
 host_assets.json
   └─ Billboard texture rows（billboard / stretched billboard 必填）
@@ -55,7 +55,7 @@ host_assets.json
   "type": "Primitive",
   "primitiveKind": "Sphere",
   "vfx": {
-    "particleEffectId": "camera.projection_cue.particles"
+    "particleVfxId": "camera.projection_cue.particles"
   }
 }
 ```
@@ -74,7 +74,7 @@ Raylib 加载贴图失败必须立刻抛错（带上 URI 与失败原因），�
 
 ## 场景
 
-玩家打开 Raylib VFX Forge：九个粒子效果按 `particle_effects.json` 注册，mesh VFX 只挂 `particleEffectId`，三张 flipbook PNG 必须真实落盘；缺任何一张贴图时客户端启动后绘制路径 fail-loud，而不是静默空画。
+玩家打开 Raylib VFX Forge：九个粒子 VFX按 `particle_vfx.json` 注册，mesh VFX 只挂 `particleVfxId`，三张 flipbook PNG 必须真实落盘；缺任何一张贴图时客户端启动后绘制路径 fail-loud，而不是静默空画。
 
 ## 边界
 
@@ -88,16 +88,16 @@ Raylib 加载贴图失败必须立刻抛错（带上 URI 与失败原因），�
 ```gherkin
 Feature: Quarks particle authoring contract
   Scenario: Mesh VFX is a particle handle
-    Given a mesh asset declares vfx.particleEffectId
-    And the referenced particle effect exists in particle_effects.json
+    Given a mesh asset declares vfx.particleVfxId
+    And the referenced particle VFX exists in particle_vfx.json
     When Presentation config loads
-    Then the mesh VFX spawnMode equals the particle effect spawnMode
+    Then the mesh VFX spawnMode equals the particle VFX spawnMode
     And mesh vfx contains no spawnMode, emitter, or particleSystem fields
 
   Scenario: Missing flipbook texture fails loud
-    Given a Billboard particle effect references a texture asset
+    Given a Billboard particle VFX references a texture asset
     And host_assets sourceUri points to a missing PNG
-    When Raylib draws that particle effect
+    When Raylib draws that particle VFX
     Then the renderer throws with the failed URI
     And it does not cache a unloaded texture
 ```
