@@ -87,7 +87,7 @@ namespace Ludots.Tests.GAS.Graph
 
             InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
                 GraphProgramAuthoringFrontDoor.RequireKind(obj, "tests.graph.bad-kind"))!;
-            Assert.That(ex.Message, Does.Contain("LegacyCompat"));
+            Assert.That(ex.Message, Does.Contain("requires an authored kind"));
         }
 
         [Test]

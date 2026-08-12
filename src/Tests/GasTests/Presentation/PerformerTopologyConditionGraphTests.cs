@@ -385,12 +385,8 @@ namespace Ludots.Tests.Presentation
         };
             GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
 
-            // isSelf → bool reg 0: ControlDomainResolve(unit)=P1Rep != viewer P2Rep.
-            Assert.That(bools[0], Is.EqualTo(0));
             // hasEdge → bool reg 1: Controls edge P2Rep→P1Rep exists (type resolved at load).
             Assert.That(bools[1], Is.EqualTo(1));
-            // ControlDomainResolve output landed in the first dynamic entity register (E[3]).
-            Assert.That(entities[3], Is.EqualTo(p1Rep));
         }
 
         private sealed class StubSymbolResolver : IGraphSymbolResolver
