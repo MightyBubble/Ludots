@@ -40,7 +40,20 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             }
 
             var entry = ConfigPipeline.RequireEntry(catalog, relativePath, ConfigMergePolicy.ArrayById, "name");
-            var merged = _pipeline.MergeArrayByIdFromCatalog(in entry, report);
+            var fragments = _pipeline.CollectFragmentsWithSources(entry.RelativePath);
+            if (fragments.Count == 0)
+            {
+                throw new InvalidOperationException(
+                    $"[GraphActionCatalogLoader] '{entry.RelativePath}' is declared in catalog but no file was found.");
+            }
+
+            var merged = ConfigMerger.MergeArrayByIdToEntries(fragments, in entry, report);
+            if (merged.Count == 0)
+            {
+                throw new InvalidOperationException(
+                    $"[GraphActionCatalogLoader] '{entry.RelativePath}' merged to an empty catalog.");
+            }
+
             var errors = new List<string>();
 
             for (int i = 0; i < merged.Count; i++)
