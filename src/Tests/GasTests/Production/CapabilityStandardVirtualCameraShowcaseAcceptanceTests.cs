@@ -110,12 +110,12 @@ namespace Ludots.Tests.GAS.Production
                 engine,
                 CapabilityStandardVirtualCameraShowcaseIds.AvatarMoveActionId,
                 CapabilityStandardVirtualCameraShowcaseIds.AvatarMoveXAttribute,
-                InputActionAttributeTargetKind.LocalPlayerEntity);
+                InputActionAttributeTargetKind.SolePossessedRep);
             AssertActionAttributeBinding(
                 engine,
                 CapabilityStandardVirtualCameraShowcaseIds.AvatarMoveActionId,
                 CapabilityStandardVirtualCameraShowcaseIds.AvatarMoveYAttribute,
-                InputActionAttributeTargetKind.LocalPlayerEntity);
+                InputActionAttributeTargetKind.SolePossessedRep);
             AssertCameraActionPreservesUntilSnapshot(engine, CapabilityStandardVirtualCameraShowcaseIds.ZoomActionId, CameraBehaviorAttributes.Zoom);
             Assert.That(shot.AllowUserInput, Is.False);
             Assert.That(shot.EnableZoom, Is.False);

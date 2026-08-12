@@ -110,7 +110,6 @@ namespace Ludots.Core.Persistence
                 return new JsonObject
                 {
                     ["currentTick"] = snapshot.CurrentTick,
-                    ["localPlayerId"] = snapshot.LocalPlayerId,
                     ["players"] = players,
                     ["globals"] = globals,
                     ["camera"] = WriteCamera(snapshot.Camera)
@@ -122,6 +121,12 @@ namespace Ludots.Core.Persistence
                 if (state == null) throw new ArgumentNullException(nameof(state));
 
                 JsonObject root = state.AsObject();
+                if (root.ContainsKey("localPlayerId"))
+                {
+                    throw new SaveContextException(
+                        "GameSession save domain no longer accepts 'localPlayerId'. Local possession is ClientLocalSeatRegistry / launchContext.localSeats[].");
+                }
+
                 var players = new List<PlayerSnapshot>();
                 JsonArray playerArray = RequireArray(root, "players");
                 for (int i = 0; i < playerArray.Count; i++)
@@ -142,7 +147,6 @@ namespace Ludots.Core.Persistence
 
                 var snapshot = new GameSessionSnapshot(
                     RequireInt(root, "currentTick"),
-                    RequireInt(root, "localPlayerId"),
                     players,
                     globals,
                     ReadCamera(RequireObject(root["camera"], "camera")));

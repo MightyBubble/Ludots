@@ -77,7 +77,7 @@ namespace Ludots.Core.Input.Systems
             entity = Entity.Null;
             switch (target)
             {
-                case InputActionAttributeTargetKind.LocalPlayerEntity:
+                case InputActionAttributeTargetKind.SolePossessedRep:
                     if (ClientLocalSeatAccess.TryGetSolePossessedRep(_globals, out Entity local) &&
                         local != Entity.Null &&
                         World.IsAlive(local))

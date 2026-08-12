@@ -110,9 +110,12 @@ Possession 转移只改箭头；Participant、LogicView、collection 不搬家�
 ### 3.6 删除清单
 
 - `CoreServiceKeys.LocalPlayerId` / `LocalPlayerEntity`
+- `GameSession.LocalPlayerId` / `SelectLocalPlayer` / 存档 GameSession 域 `localPlayerId`
 - `GameConfig.StartupLocalPlayerId` / `startupLocalPlayerId`
 - `LoadMapCommand.LocalPlayerId`（改为 `LocalSeats`）
 - 存档 `launchContext.localPlayerId`（改为 `launchContext.localSeats[]`）
+- 命令 contextKey `"LocalPlayerEntity"` 兼容别名（仅 `solePossessedRep` / 座位表键）
+- `InputActionAttributeTargetKind.LocalPlayerEntity`（改为 `SolePossessedRep`）
 - `TryKeepExplicitLocalPlayerBinding` 及一切手写旁路
 - 扫描 `PlayerOwner` 猜本地
 - `Player.Camera` 与 session 单例相机双真相（收敛到 LogicView）

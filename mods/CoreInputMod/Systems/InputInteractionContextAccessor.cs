@@ -97,7 +97,7 @@ namespace CoreInputMod.Systems
             return AuthoritativeGroundPointerHelper.TryRead(input, out worldCm);
         }
 
-        public bool TryGetLocalPlayerId(out int playerId)
+        public bool TryGetSolePossessedPlayerId(out int playerId)
         {
             playerId = 0;
             Ludots.Core.Client.ClientLocalSeatRegistry seats = Ludots.Core.Client.ClientLocalSeatAccess.RequireRegistry(_globals);
@@ -147,7 +147,7 @@ namespace CoreInputMod.Systems
             return default;
         }
 
-        public Entity GetLocalPlayerEntityOrNull()
+        public Entity GetSolePossessedRepOrNull()
         {
             return ClientLocalSeatAccess.TryGetSolePossessedRep(_globals, out Entity local) &&
                    _world.IsAlive(local)

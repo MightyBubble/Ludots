@@ -687,7 +687,7 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
     private bool TryBindActiveInputMapping(Entity target)
     {
         InputOrderMappingSystem? mapping = _engine.GetService(CoreServiceKeys.ActiveInputOrderMapping);
-        if (mapping == null || !TryGetLocalPlayerId(out int playerId) || !CanLocalPlayerCommand(target))
+        if (mapping == null || !TryGetSolePossessedPlayerId(out int playerId) || !CanLocalPlayerCommand(target))
         {
             return false;
         }
@@ -813,7 +813,7 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
 
     private bool CanLocalPlayerCommand(Entity entity)
     {
-        if (entity == Entity.Null || !_engine.World.IsAlive(entity) || !TryGetLocalPlayerId(out int localPlayerId))
+        if (entity == Entity.Null || !_engine.World.IsAlive(entity) || !TryGetSolePossessedPlayerId(out int localPlayerId))
         {
             return false;
         }
@@ -822,7 +822,7 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
                owner.PlayerId == localPlayerId;
     }
 
-    private bool TryGetLocalPlayerId(out int playerId)
+    private bool TryGetSolePossessedPlayerId(out int playerId)
     {
         playerId = 0;
         ClientLocalSeatRegistry seats = ClientLocalSeatAccess.RequireRegistry(_engine.GlobalContext);

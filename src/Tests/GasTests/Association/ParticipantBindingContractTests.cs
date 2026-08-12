@@ -227,7 +227,7 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void SeatPossessionSyncSystem_LocalPlayerIdChangeReplacesExistingLocalPlayerEntity()
+        public void SeatPossessionSyncSystem_PlayerIdChangeRebindsPossessedRep()
         {
             using var world = World.Create();
             Entity playerSeven = world.Create(new PlayerIdentity { PlayerId = 7 });
@@ -246,6 +246,42 @@ namespace Ludots.Tests.GAS
 
             Assert.That(ClientLocalSeatAccess.TryGetSolePossessedRep(globals, out Entity synced), Is.True);
             Assert.That(synced, Is.EqualTo(playerSeven));
+        }
+
+        [Test]
+        public void ParticipantBindingResolver_PublishFocused_DualSeats_PublishesBothAndRejectsSoleAssert()
+        {
+            using var world = World.Create();
+            Entity playerSeven = world.Create(new PlayerIdentity { PlayerId = 7 }, new PlayerOwner { PlayerId = 7 });
+            Entity playerEight = world.Create(new PlayerIdentity { PlayerId = 8 }, new PlayerOwner { PlayerId = 8 });
+            var players = new PlayerEntityLookup();
+            players.Register(7, playerSeven);
+            players.Register(8, playerEight);
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.TeamEntityLookup.Name] = new TeamEntityLookup(),
+                [CoreServiceKeys.PlayerEntityLookup.Name] = players,
+                [CoreServiceKeys.ClientLocalSeatRegistry.Name] = new ClientLocalSeatRegistry(),
+                [CoreServiceKeys.LogicViewRegistry.Name] = new LogicViewRegistry(),
+            };
+            var result = new ParticipantBindingResult(
+                new TeamEntityLookup(),
+                players,
+                localSeats: new[]
+                {
+                    new ResolvedLocalSeatPossession("seat.0", 7, playerSeven, ControlSchemeId: null),
+                    new ResolvedLocalSeatPossession("seat.1", 8, playerEight, ControlSchemeId: null),
+                });
+
+            ParticipantBindingResolver.PublishFocused(globals, result);
+
+            ClientLocalSeatRegistry seats = ClientLocalSeatAccess.RequireRegistry(globals);
+            Assert.That(seats.Count, Is.EqualTo(2));
+            Assert.That(seats.Require("seat.0").PossessedRep, Is.EqualTo(playerSeven));
+            Assert.That(seats.Require("seat.1").PossessedRep, Is.EqualTo(playerEight));
+            Assert.That(ClientLocalSeatAccess.RequireLogicViews(globals).Count, Is.EqualTo(2));
+            Assert.That(ClientLocalSeatAccess.TryGetSolePossessedRep(globals, out _), Is.False);
+            Assert.Throws<InvalidOperationException>(() => seats.RequireSolePossessedRep());
         }
 
         [Test]

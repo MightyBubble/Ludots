@@ -434,10 +434,6 @@ namespace Ludots.Core.Engine
             session.PlayerEntityLookup = participants.Players;
             session.LocalSeats = participants.LocalSeats;
             session.TeamRelationships = participants.TeamRelationships;
-            if (participants.LocalSeats.Count == 1)
-            {
-                GameSession.SelectLocalPlayer(participants.LocalSeats[0].PlayerId);
-            }
 
             if (CurrentMapSession == session)
             {
@@ -494,10 +490,6 @@ namespace Ludots.Core.Engine
             }
 
             session.LocalSeats = snapshot;
-            if (snapshot.Count == 1)
-            {
-                GameSession.SelectLocalPlayer(snapshot[0].PlayerId);
-            }
         }
 
         private void CompleteMapResume(MapSession session, MapLoadStatus loadStatus)

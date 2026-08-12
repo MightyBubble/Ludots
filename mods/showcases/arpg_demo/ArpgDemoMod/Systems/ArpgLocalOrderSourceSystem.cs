@@ -54,7 +54,7 @@ namespace ArpgDemoMod.Systems
 
             if (ClientLocalSeatAccess.TryGetSolePossessedRep(_globals, out Entity local) && _world.IsAlive(local))
             {
-                if (!_helper.TrySetLocalPlayer(_mapping, local))
+                if (!_helper.TryBindSoleSeatActor(_mapping, local))
                 {
                     return;
                 }

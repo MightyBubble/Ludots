@@ -41,7 +41,7 @@ namespace CoreInputMod.Systems
             }
 
             if (!TryGetActiveAiming(out InputOrderMappingSystem mappingSystem, out InputOrderMapping aimingMapping) ||
-                !_context.TryGetLocalPlayerId(out int playerId))
+                !_context.TryGetSolePossessedPlayerId(out int playerId))
             {
                 ClearLastActor();
                 return;
@@ -69,7 +69,7 @@ namespace CoreInputMod.Systems
             bool hasCursor = _context.TryGetGroundWorldCm(out var groundCm);
             Entity viewer = _context.TryGetCommandSourceOwner(out Entity owner)
                 ? owner
-                : _context.GetLocalPlayerEntityOrNull();
+                : _context.GetSolePossessedRepOrNull();
             Entity hovered = Entity.Null;
             if (viewer != Entity.Null)
             {
@@ -101,7 +101,7 @@ namespace CoreInputMod.Systems
             mappingSystem = default!;
             aimingMapping = default!;
             if (_runtime == null ||
-                !_context.TryGetLocalPlayerId(out int playerId) ||
+                !_context.TryGetSolePossessedPlayerId(out int playerId) ||
                 !_globals.TryGetValue(CoreServiceKeys.ActiveInputOrderMapping.Name, out object? mappingObj) ||
                 mappingObj is not InputOrderMappingSystem activeMapping ||
                 !_world.IsAlive(_context.GetControlledActor(playerId)) ||
@@ -137,7 +137,7 @@ namespace CoreInputMod.Systems
                 hasOriginWorldCm: mappingSystem.VectorAimSlot != VectorAimInputSlot.Origin,
                 origin,
                 Entity.Null,
-                _context.TryGetCommandSourceOwner(out Entity viewer) ? viewer : _context.GetLocalPlayerEntityOrNull());
+                _context.TryGetCommandSourceOwner(out Entity viewer) ? viewer : _context.GetSolePossessedRepOrNull());
             _runtime!.UpdateAiming(actor, aimingMapping, in input);
         }
 

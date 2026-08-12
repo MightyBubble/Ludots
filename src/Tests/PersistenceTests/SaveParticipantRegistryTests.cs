@@ -130,7 +130,6 @@ public sealed class SaveParticipantRegistryTests
     {
         var source = new GameSession();
         source.AddPlayer(new Player(1, NullInputSource.Instance) { TeamId = 2 });
-        source.SelectLocalPlayer(1);
         source.Globals["score"] = 12;
         source.Globals["label"] = "alpha";
         source.Camera.State.TargetCm = new(1200, 3400);
@@ -144,16 +143,47 @@ public sealed class SaveParticipantRegistryTests
         ISaveParticipant participant = CoreSaveParticipants.CreateGameSessionParticipant(source);
         ISaveParticipant targetParticipant = CoreSaveParticipants.CreateGameSessionParticipant(target);
 
-        targetParticipant.RestoreState(participant.CaptureState());
+        JsonNode captured = participant.CaptureState();
+        Assert.That(captured.AsObject().ContainsKey("localPlayerId"), Is.False);
+
+        targetParticipant.RestoreState(captured);
 
         Assert.That(target.CurrentTick, Is.EqualTo(2));
-        Assert.That(target.LocalPlayerId, Is.EqualTo(1));
         Assert.That(target.Players.Select(player => player.Id).ToArray(), Is.EqualTo(new[] { 1 }));
         Assert.That(target.Players[0].TeamId, Is.EqualTo(2));
         Assert.That(target.Globals["score"], Is.EqualTo(12));
         Assert.That(target.Globals["label"], Is.EqualTo("alpha"));
         Assert.That(target.Camera.State.TargetCm, Is.EqualTo(source.Camera.State.TargetCm));
         Assert.That(target.Camera.State.Yaw, Is.EqualTo(77));
+    }
+
+    [Test]
+    public void GameSessionParticipant_RejectsLegacyLocalPlayerIdField()
+    {
+        var target = new GameSession();
+        ISaveParticipant targetParticipant = CoreSaveParticipants.CreateGameSessionParticipant(target);
+        var legacy = new JsonObject
+        {
+            ["currentTick"] = 0,
+            ["localPlayerId"] = 1,
+            ["players"] = new JsonArray(),
+            ["globals"] = new JsonObject(),
+            ["camera"] = new JsonObject
+            {
+                ["targetX"] = 0,
+                ["targetY"] = 0,
+                ["targetHeightCm"] = 0,
+                ["yaw"] = 0,
+                ["pitch"] = 0,
+                ["distanceCm"] = 1000,
+                ["fovYDeg"] = 60,
+                ["rigKind"] = "Orbit",
+                ["zoomLevel"] = 0,
+                ["isFollowing"] = false,
+            },
+        };
+
+        Assert.Throws<SaveContextException>(() => targetParticipant.RestoreState(legacy));
     }
 
     [Test]

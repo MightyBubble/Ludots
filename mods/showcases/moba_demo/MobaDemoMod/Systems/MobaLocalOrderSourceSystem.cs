@@ -145,7 +145,7 @@ namespace MobaDemoMod.Systems
             // Entity collection providers
             _inputOrderMapping.SetActorProvider((out Entity entity) =>
             {
-                entity = TryGetLocalPlayerId(out int playerId)
+                entity = TryGetSolePossessedPlayerId(out int playerId)
                     ? GetControlledActor(playerId)
                     : default;
                 return _world.IsAlive(entity);
@@ -198,7 +198,7 @@ namespace MobaDemoMod.Systems
                             CommandKind = PerformerCommandKind.CreatePerformer,
                             PerformerDefinitionId = rangeCircleDefId,
                             ScopeTag = scopeId,
-                            Source = TryGetLocalPlayerId(out int playerId)
+                            Source = TryGetSolePossessedPlayerId(out int playerId)
                                 ? GetControlledActor(playerId)
                                 : default
                         });
@@ -231,7 +231,7 @@ namespace MobaDemoMod.Systems
                 if (ClientLocalSeatAccess.TryGetSolePossessedRep(_globals, out Entity localPlayer) &&
                     _world.IsAlive(localPlayer))
                 {
-                    if (!TryGetLocalPlayerId(out int playerId))
+                    if (!TryGetSolePossessedPlayerId(out int playerId))
                     {
                         return;
                     }
@@ -250,7 +250,7 @@ namespace MobaDemoMod.Systems
             RenderModeHud();
         }
 
-        private bool TryGetLocalPlayerId(out int playerId)
+        private bool TryGetSolePossessedPlayerId(out int playerId)
         {
             playerId = 0;
             ClientLocalSeatRegistry seats = ClientLocalSeatAccess.RequireRegistry(_globals);
