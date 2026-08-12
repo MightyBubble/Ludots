@@ -94,6 +94,14 @@ P1：`TableReadEntity` / `TableReadBool`。
 ]
 ```
 
+装载合同（fail-closed）：
+
+- `keyKind` **必填**；P0 仅 `Int`（缺省不默许）
+- 表 id / 字段 id **禁止**含 `/`（字段符号 = `tableId/fieldId`，必须单射）
+- 行 key **禁止** `int.MinValue`（开放寻址空槽哨兵）
+- 表 id / 字段 id 大小写与图符号池一致：`OrdinalIgnoreCase`
+- 按字段类型拆读节点（`TableReadInt` / `TableReadFloat`…），**禁止**一个读节点靠动态引脚变类型（集合同理，后续按类型加节点）
+
 作者若要做「状态标签 → 文案」，再建一张自己的表即可，例如 `mod.example.state_display`，key 用 tag id——**仍是同一套通用 ops**。
 
 ### 3.3 废止清单（不得继续建设）

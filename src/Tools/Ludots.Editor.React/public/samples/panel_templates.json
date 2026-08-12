@@ -9,8 +9,8 @@
       "defaultGraphId": "graph.entity_info",
       "variables": [
         { "variableId": "hp", "label": "血量", "valueKind": "Float" },
-        { "variableId": "lastKill", "label": "上一次击杀", "valueKind": "Text" },
-        { "variableId": "curState", "label": "当前状态", "valueKind": "Text" }
+        { "variableId": "lastKill", "label": "上一次击杀", "valueKind": "Int" },
+        { "variableId": "curState", "label": "当前状态", "valueKind": "Int" }
       ],
       "bindings": [
         {
@@ -35,13 +35,13 @@
         { "id": "hp", "type": "Float", "key": "panel.entity_info.hp", "source": "hpAttr" },
         {
           "id": "lastKill",
-          "type": "TextToken",
+          "type": "Int",
           "key": "panel.entity_info.lastKill",
           "source": "bbKill"
         },
         {
           "id": "curState",
-          "type": "TextToken",
+          "type": "Int",
           "key": "panel.entity_info.curState",
           "source": "readToken"
         }

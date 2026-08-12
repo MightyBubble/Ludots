@@ -117,7 +117,9 @@ export function ShaderGraphCanvas({
               style={{ left: n.x, top: n.y, width: w, minHeight: h }}
             >
               <div className="upa-gnode-h">
-                <span className="upa-gnode-kind">{isPanel ? 'PANEL SINK' : n.kind}</span>
+                <span className="upa-gnode-kind">
+                  {isPanel ? 'PANEL SINK' : n.kind === 'intent' ? 'INTENT (UNPAID)' : n.kind}
+                </span>
                 <span className="upa-gnode-title">{n.title}</span>
                 <span className="upa-gnode-detail">{n.detail}</span>
               </div>

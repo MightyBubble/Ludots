@@ -384,16 +384,14 @@ export function UiPanelAuthoringPage() {
                     </dl>
                     {activeVar === 'lastKill' ? (
                       <p className="upa-debt">
-                        作者意图：实体 BB 读上次击杀文案。现有 L0 仅有 Float/Int/Entity
-                        黑板读；Text BB 仍欠（勿用 Attribute 假装）。也可改为 BB Entity +
-                        表面解析显示名。
+                        图出口是 Int（文案 token id）。Text 黑板读仍欠；表面再把 token 收成可见字。勿导出
+                        TextToken 类型。
                       </p>
                     ) : null}
                     {activeVar === 'curState' ? (
                       <p className="upa-debt">
-                        作者意图：状态 tag id → ResolveTableRow → TableReadInt(displayToken)。
-                        查表走用户/Mod 自建通用表（#876/#881）；禁止 TagDisplay 专线。通用表装载已交付；仍欠玩法纯读
-                        Effective tag id 原子能力，以及表面 token→文案接线。
+                        真链路：状态 tag id → ResolveTableRow → TableReadInt(displayToken) → Int。灰态节点只是「还欠玩法纯读
+                        tag id」的意图标注，不是可编译 op。表面 token→文案另接。
                       </p>
                     ) : null}
                   </div>

@@ -46,7 +46,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 throw new InvalidOperationException("Lookup table is missing required 'id'.");
             }
 
-            string keyKind = node["keyKind"]?.GetValue<string>() ?? "Int";
+            if (node["keyKind"] == null)
+            {
+                throw new InvalidOperationException(
+                    $"Lookup table '{tableId}' is missing required 'keyKind' (P0 only allows Int).");
+            }
+
+            string keyKind = node["keyKind"]!.GetValue<string>() ?? string.Empty;
             if (!string.Equals(keyKind, "Int", StringComparison.Ordinal))
             {
                 throw new InvalidOperationException(

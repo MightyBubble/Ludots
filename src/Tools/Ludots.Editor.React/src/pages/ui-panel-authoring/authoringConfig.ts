@@ -11,7 +11,7 @@ export type PanelAuthoringBinding = {
   sourceKind: string;
   graphOutputKey?: string;
   attributeId?: string;
-  /** presentationToken when valueKind is Text from tag/table lookup */
+  /** presentationToken when Int carries a text token id (surface Format later) */
   semantic?: string;
 };
 
@@ -135,7 +135,7 @@ export function toAuthoringTemplate(tpl: PanelTemplate): PanelAuthoringTemplate 
       const b = tpl.bindings[v.id];
       const sourceKind = b?.sourceKind ?? 'graphOutput';
       const semantic =
-        v.valueKind === 'Text' && (v.id === 'curState' || v.id === 'lastKill')
+        v.valueKind === 'Int' && (v.id === 'curState' || v.id === 'lastKill')
           ? 'presentationToken'
           : undefined;
       return toAuthoringBinding(v.id, sourceKind, b?.attributeId, b?.graphOutputKey, semantic);
@@ -144,7 +144,8 @@ export function toAuthoringTemplate(tpl: PanelTemplate): PanelAuthoringTemplate 
       const b = tpl.bindings[v.id];
       return {
         id: v.id,
-        type: v.valueKind === 'Text' ? 'TextToken' : v.valueKind,
+        // GraphOutputValueKind: Bool/Int/Float/Entity/TargetList only — no Text/TextToken.
+        type: toGraphOutputType(v.valueKind),
         key: b?.graphOutputKey ?? `panel.${v.id}`,
         source: b?.fromNodeId ?? v.id,
       };
@@ -162,6 +163,22 @@ export function toAuthoringConfig(templates: PanelTemplate[]): PanelAuthoringCon
 
 export function authoringConfigJson(templates: PanelTemplate[], space = 2): string {
   return JSON.stringify(toAuthoringConfig(templates), null, space);
+}
+
+/** Runtime GraphOutputValueKind names only — TextToken/Text are not legal. */
+export function toGraphOutputType(valueKind: string): string {
+  switch (valueKind) {
+    case 'Float':
+    case 'Int':
+    case 'Bool':
+      return valueKind;
+    case 'Text':
+      throw new Error(
+        "Panel variable valueKind 'Text' cannot export as GraphOutput; use Int token id until surface Format lands.",
+      );
+    default:
+      throw new Error(`Unsupported panel valueKind '${valueKind}' for GraphOutput export.`);
+  }
 }
 
 /** Validate a already-shaped ludots.ui.panel_template/v1 document (samples / pasted JSON). */

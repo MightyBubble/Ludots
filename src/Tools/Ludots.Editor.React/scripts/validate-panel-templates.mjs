@@ -9,6 +9,7 @@ import { fileURLToPath } from 'node:url';
 
 const ATTRIBUTE_KINDS = new Set(['singleAttribute', 'derivedAttribute']);
 const GRAPH_KINDS = new Set(['aggregateProjection', 'graphOutput']);
+const GRAPH_OUTPUT_TYPES = new Set(['Bool', 'Int', 'Float', 'Entity', 'TargetList']);
 
 function nonEmpty(value) {
   return typeof value === 'string' && value.trim().length > 0;
@@ -60,6 +61,15 @@ if (config.schema !== 'ludots.ui.panel_template/v1') {
 for (const [ti, template] of (config.templates ?? []).entries()) {
   for (const [bi, binding] of (template.bindings ?? []).entries()) {
     assertBinding(binding, `templates[${ti}].bindings[${bi}] (${binding?.variableId ?? '?'})`);
+  }
+  for (const [oi, output] of (template.outputs ?? []).entries()) {
+    const type = output?.type?.trim();
+    if (!GRAPH_OUTPUT_TYPES.has(type)) {
+      throw new Error(
+        `templates[${ti}].outputs[${oi}] (${output?.id ?? '?'}): type '${type}' is not a GraphOutputValueKind ` +
+          `(Bool/Int/Float/Entity/TargetList). TextToken/Text are forbidden.`,
+      );
+    }
   }
 }
 

@@ -36,6 +36,24 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         public const string FieldKindMismatchError = "GAS.GRAPH_LOOKUP.ERR.FieldKindMismatch";
         public const string InvalidRowHandleError = "GAS.GRAPH_LOOKUP.ERR.InvalidRowHandle";
         public const string FrozenError = "GAS.GRAPH_LOOKUP.ERR.Frozen";
+        public const string ReservedKeyError = "GAS.GRAPH_LOOKUP.ERR.ReservedKey";
+        public const string InvalidIdError = "GAS.GRAPH_LOOKUP.ERR.InvalidId";
+        public const string TableIdLimitError = "GAS.GRAPH_LOOKUP.ERR.TableIdLimit";
+
+        /// <summary>
+        /// Field symbols are `tableId + "/" + fieldId`. Slash is forbidden inside either id so encoding stays injective.
+        /// </summary>
+        public const char FieldSymbolSeparator = '/';
+
+        /// <summary>
+        /// Open-address empty sentinel; not a legal row key (rejected at register).
+        /// </summary>
+        public const int EmptyOpenKeySentinel = int.MinValue;
+
+        /// <summary>
+        /// Packed rowHandle is a signed int; tableId must stay in [1, 0x7FFF] so handles stay &gt; 0.
+        /// </summary>
+        public const int MaxTableId = 0x7FFF;
 
         private readonly StringIntRegistry _tableIds;
         private readonly StringIntRegistry _fieldIds;
@@ -46,16 +64,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         public GraphLookupTableRegistry(int initialTableCapacity = 8)
         {
             int capacity = Math.Max(4, initialTableCapacity);
+            // Match GraphCompiler / GraphControlFlowCompiler symbol pools (OrdinalIgnoreCase).
             _tableIds = new StringIntRegistry(
                 capacity: capacity,
                 startId: 1,
                 invalidId: 0,
-                comparer: StringComparer.Ordinal);
+                comparer: StringComparer.OrdinalIgnoreCase);
             _fieldIds = new StringIntRegistry(
                 capacity: capacity * 4,
                 startId: 1,
                 invalidId: 0,
-                comparer: StringComparer.Ordinal);
+                comparer: StringComparer.OrdinalIgnoreCase);
             _fields = new GraphLookupFieldInfo[Math.Max(8, capacity * 4)];
             _tables = new TableSlot[capacity];
         }
@@ -76,10 +95,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 throw new InvalidOperationException(FrozenError);
             }
 
-            if (string.IsNullOrWhiteSpace(tableId))
-            {
-                throw new ArgumentException("tableId is required.", nameof(tableId));
-            }
+            ValidateLookupPartId(tableId, "tableId");
 
             if (_tableIds.TryGetId(tableId, out _))
             {
@@ -103,10 +119,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             for (int c = 0; c < columns.Length; c++)
             {
                 string fieldId = columns[c].FieldId;
-                if (string.IsNullOrWhiteSpace(fieldId))
-                {
-                    throw new ArgumentException($"Lookup table '{tableId}' has an empty field id.");
-                }
+                ValidateLookupPartId(fieldId, $"Lookup table '{tableId}' field id");
 
                 GraphLookupColumnKind kind = columns[c].Kind;
                 columnKinds[c] = kind;
@@ -141,6 +154,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             }
 
             int id = _tableIds.Register(tableId);
+            if (id > MaxTableId)
+            {
+                throw new InvalidOperationException(
+                    $"{TableIdLimitError}: registered tableId={id} exceeds MaxTableId={MaxTableId}.");
+            }
+
             EnsureTableSlot(id);
 
             var intColumns = new int[intColumnCount][];
@@ -301,7 +320,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             return table.FloatColumns[storage][rowIndex];
         }
 
-        public static string EncodeFieldSymbol(string tableId, string fieldId) => tableId + "/" + fieldId;
+        public static string EncodeFieldSymbol(string tableId, string fieldId)
+        {
+            ValidateLookupPartId(tableId, "tableId");
+            ValidateLookupPartId(fieldId, "fieldId");
+            return tableId + FieldSymbolSeparator + fieldId;
+        }
 
         public static bool TrySplitFieldSymbol(string fieldSymbol, out string tableId, out string fieldId)
         {
@@ -312,8 +336,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 return false;
             }
 
-            int slash = fieldSymbol.IndexOf('/');
+            int slash = fieldSymbol.IndexOf(FieldSymbolSeparator);
             if (slash <= 0 || slash >= fieldSymbol.Length - 1)
+            {
+                return false;
+            }
+
+            // Ids cannot contain '/', so the first separator is unambiguous.
+            if (fieldSymbol.IndexOf(FieldSymbolSeparator, slash + 1) >= 0)
             {
                 return false;
             }
@@ -323,9 +353,24 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             return !string.IsNullOrWhiteSpace(tableId) && !string.IsNullOrWhiteSpace(fieldId);
         }
 
+        public static void ValidateLookupPartId(string value, string partName)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                throw new ArgumentException($"{InvalidIdError}: {partName} is required.", nameof(value));
+            }
+
+            if (value.IndexOf(FieldSymbolSeparator) >= 0)
+            {
+                throw new ArgumentException(
+                    $"{InvalidIdError}: {partName} '{value}' must not contain '{FieldSymbolSeparator}'.",
+                    nameof(value));
+            }
+        }
+
         private static int PackRowHandle(int tableId, int rowIndex)
         {
-            if ((uint)tableId > 0xFFFF || (uint)rowIndex >= 0xFFFF)
+            if (tableId <= 0 || tableId > MaxTableId || (uint)rowIndex >= 0xFFFF)
             {
                 throw new InvalidOperationException(
                     $"{InvalidRowHandleError}: tableId={tableId} rowIndex={rowIndex} exceeds pack limits.");
@@ -371,7 +416,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             for (int i = 0; i < openKeys.Length; i++)
             {
                 int stored = openKeys[probe];
-                if (stored == int.MinValue)
+                if (stored == EmptyOpenKeySentinel)
                 {
                     return -1;
                 }
@@ -398,6 +443,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             denseMin = 0;
             openKeys = null;
             openRows = null;
+
+            for (int i = 0; i < keys.Length; i++)
+            {
+                if (keys[i] == EmptyOpenKeySentinel)
+                {
+                    throw new InvalidOperationException(
+                        $"{ReservedKeyError}: lookup key {EmptyOpenKeySentinel} is reserved as the open-address empty sentinel.");
+                }
+            }
 
             int min = keys[0];
             int max = keys[0];
@@ -438,7 +492,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
 
             openKeys = new int[capacity];
             openRows = new int[capacity];
-            Array.Fill(openKeys, int.MinValue);
+            Array.Fill(openKeys, EmptyOpenKeySentinel);
             int mask = capacity - 1;
             for (int i = 0; i < keys.Length; i++)
             {
@@ -446,7 +500,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 int probe = Mix(key) & mask;
                 for (int n = 0; n < capacity; n++)
                 {
-                    if (openKeys[probe] == int.MinValue)
+                    if (openKeys[probe] == EmptyOpenKeySentinel)
                     {
                         openKeys[probe] = key;
                         openRows[probe] = i;

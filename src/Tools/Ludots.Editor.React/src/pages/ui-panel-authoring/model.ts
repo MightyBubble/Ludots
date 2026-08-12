@@ -19,7 +19,8 @@ export type CanvasNode = {
   id: string;
   title: string;
   detail: string;
-  kind: 'source' | 'op' | 'const' | 'panel';
+  /** intent = unpaid capability marker; never treated as a compilable op */
+  kind: 'source' | 'op' | 'const' | 'panel' | 'intent';
   x: number;
   y: number;
   /** output port ids on this node (default: ["out"]) */
@@ -92,8 +93,8 @@ export const TEMPLATES: PanelTemplate[] = [
     surfaceKind: 'reactive',
     variables: [
       { id: 'hp', label: '血量', valueKind: 'Float' },
-      { id: 'lastKill', label: '上一次击杀', valueKind: 'Text' },
-      { id: 'curState', label: '当前状态', valueKind: 'Text' },
+      { id: 'lastKill', label: '上一次击杀', valueKind: 'Int' },
+      { id: 'curState', label: '当前状态', valueKind: 'Int' },
     ],
     nodes: [
       {
@@ -147,18 +148,18 @@ export const TEMPLATES: PanelTemplate[] = [
       {
         id: 'bbKill',
         title: 'ReadBlackboard',
-        detail: 'BB key · combat.last_kill',
+        detail: 'BB key · combat.last_kill → Int token id（Text BB 另单）',
         kind: 'op',
         x: 620,
         y: 140,
         ins: ['entity'],
-        outs: ['text'],
+        outs: ['token'],
       },
       {
         id: 'stateTag',
-        title: 'EffectiveStateTagId',
-        detail: 'Int · 当前状态 tag id（玩法纯读另单；非 TagDisplay）',
-        kind: 'op',
+        title: '（意图）当前状态 tag id',
+        detail: '玩法纯读未交付 · 灰态占位，非可编译 op',
+        kind: 'intent',
         x: 620,
         y: 260,
         ins: ['entity'],
@@ -177,7 +178,7 @@ export const TEMPLATES: PanelTemplate[] = [
       {
         id: 'readToken',
         title: 'TableReadInt',
-        detail: 'lookupField · displayToken',
+        detail: 'lookupField · displayToken → Int',
         kind: 'op',
         x: 800,
         y: 300,
@@ -212,10 +213,10 @@ export const TEMPLATES: PanelTemplate[] = [
       {
         id: 'e8',
         from: 'bbKill',
-        fromPort: 'text',
+        fromPort: 'token',
         to: 'panel',
         toPort: 'lastKill',
-        valueKind: 'Text',
+        valueKind: 'Int',
       },
       {
         id: 'e9',
@@ -239,7 +240,7 @@ export const TEMPLATES: PanelTemplate[] = [
         fromPort: 'token',
         to: 'panel',
         toPort: 'curState',
-        valueKind: 'Text',
+        valueKind: 'Int',
       },
     ],
     bindings: {

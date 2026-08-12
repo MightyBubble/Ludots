@@ -25,7 +25,7 @@
 3. 资源条 MVP 已在 main；本 PR 收债不重做玩法主路径  
 4. UIP-0 仅合同文档，无 Template 运行时
 
-## 审计阻塞项处置（本轮）
+## 审计阻塞项处置
 
 | 阻塞 | 处置 |
 |------|------|
@@ -33,6 +33,13 @@
 | 编辑器示范 `LookupTagDisplayText` | 已改为 `ResolveTableRow` + `TableReadInt` |
 | `RefreshProducerMarkers` 静默 online + `0.01f` | 缺 buffer fail-closed；`offlineStockEpsilon` 进配置 |
 | Attribute OnLoad vs ConfigPipeline 双路径 | Runtime 校验 pipeline 属性名必须等于 bootstrap，否则炸 |
+| `keyKind` 缺省默许 Int | 必填，缺则炸 |
+| 空槽哨兵 = 合法 key `int.MinValue` | 装载期拒绝该 key |
+| 表 id 大小写与编译器符号池不一致 | Registry 改为 `OrdinalIgnoreCase` |
+| `tableId/fieldId` 编码可歧义 | 禁止 id 含 `/` |
+| rowHandle 打包与 `<=0` 拒收矛盾 | 表 id 上限 `0x7FFF` |
+| 假 op `EffectiveStateTagId` | 降级为画布 `intent` 灰态 |
+| 边/导出把 Int token 标成 Text/TextToken | 统一 Int；禁止 TextToken 导出 |
 | 交接过宣称 | 本文件已按实际完成度改写 |
 
 ## GAS Composition Gate
@@ -50,7 +57,7 @@ dotnet test src/Tests/GasTests/GasTests.csproj -c Release \
 
 - UIP-0 Template/Instance/Router **运行时**（#880 合同后的实现）
 - #874 正式热应用（等实时技能工作台正式管线，勿用 ReloadConfigs 捷径冒充）
-- 玩法纯读 Effective tag → tag id 原子能力（作者样板节点 `EffectiveStateTagId` 仅为意图占位）
+- 玩法纯读 Effective tag → tag id 原子能力（作者画布仅灰态意图标注）
 - Text BB；表面 token→文案接线
 - 人手关闭过时 issue：#870 / #871 / #878
 - #880 issue 正文粘贴 ADR（token 无 issue 写权限时）
