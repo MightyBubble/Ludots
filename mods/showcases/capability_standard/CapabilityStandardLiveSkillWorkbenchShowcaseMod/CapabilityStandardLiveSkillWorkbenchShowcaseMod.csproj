@@ -10,4 +10,7 @@
     <ProjectReference Include="..\..\champion_skill_sandbox\ChampionSkillSandboxMod\ChampionSkillSandboxMod.csproj" />
     <ProjectReference Include="..\..\..\..\src\Core\Ludots.Core.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="assets\**\*.*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

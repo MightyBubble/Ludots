@@ -1,0 +1,357 @@
+[
+  {
+    "id": "lsw.unit_combat_hud_bootstrap",
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "champion_skill_sandbox_ezreal"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "lsw.unit_combat_hud",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "champion_skill_sandbox_ezreal"
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "champion_skill_sandbox_garen"
+        },
+        "condition": {
+          "inline": "SourceHasVisualTransform"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "lsw.unit_combat_hud",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "champion_skill_sandbox_garen"
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "lsw.unit_combat_hud",
+    "children": [
+      {
+        "definitionId": "lsw.unit_health_bar",
+        "scopeTag": "hud"
+      },
+      {
+        "definitionId": "lsw.unit_health_text",
+        "scopeTag": "hud"
+      },
+      {
+        "definitionId": "lsw.unit_chill_bar",
+        "scopeTag": "hud"
+      },
+      {
+        "definitionId": "lsw.unit_chill_countdown",
+        "scopeTag": "hud"
+      }
+    ]
+  },
+  {
+    "id": "lsw.unit_health_bar",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "WorldHud",
+          "materialParamKey": "lsw.health.ratio",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [
+            96,
+            12,
+            1
+          ]
+        },
+        "style": {
+          "color": [
+            0.12,
+            0.9,
+            0.28,
+            0.98
+          ]
+        }
+      },
+      {
+        "slot": "attachment",
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "offset": [
+            0,
+            2.05,
+            0
+          ],
+          "rotationOffset": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "inheritScale": false
+        }
+      },
+      {
+        "slot": "attributeRatio",
+        "kind": "AttributeBinding",
+        "activeByDefault": true,
+        "attributeBinding": {
+          "attributeId": "Health",
+          "targetParamKey": "lsw.health.ratio",
+          "mode": "AttributeRatio"
+        }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "lsw.health.ratio",
+        "lane": "Float",
+        "floatValue": 1
+      }
+    ]
+  },
+  {
+    "id": "lsw.unit_health_text",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "WorldText",
+        "activeByDefault": true,
+        "worldText": {
+          "textToken": "hud.attribute.current_over_base",
+          "mode": "AttributeCurrentOverBase",
+          "fontSize": 18,
+          "valueParamKey": "lsw.health.current",
+          "secondaryValueParamKey": "lsw.health.base"
+        },
+        "style": {
+          "color": [
+            1,
+            0.98,
+            0.94,
+            1
+          ]
+        }
+      },
+      {
+        "slot": "attachment",
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "offset": [
+            0,
+            2.28,
+            0
+          ],
+          "rotationOffset": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "inheritScale": false
+        }
+      },
+      {
+        "slot": "attributeCurrent",
+        "kind": "AttributeBinding",
+        "activeByDefault": true,
+        "attributeBinding": {
+          "attributeId": "Health",
+          "targetParamKey": "lsw.health.current",
+          "mode": "Attribute"
+        }
+      },
+      {
+        "slot": "attributeBase",
+        "kind": "AttributeBinding",
+        "activeByDefault": true,
+        "attributeBinding": {
+          "attributeId": "Health",
+          "targetParamKey": "lsw.health.base",
+          "mode": "AttributeBase"
+        }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "lsw.health.current",
+        "lane": "Float",
+        "floatValue": 200
+      },
+      {
+        "paramKey": "lsw.health.base",
+        "lane": "Float",
+        "floatValue": 200
+      }
+    ]
+  },
+  {
+    "id": "lsw.unit_chill_bar",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "WorldHud",
+          "materialParamKey": "lsw.chill.ratio",
+          "visibilityParamKey": "lsw.chill.visible",
+          "renderPath": "None",
+          "mobility": "Movable",
+          "localScale": [
+            72,
+            8,
+            1
+          ]
+        },
+        "style": {
+          "color": [
+            0.35,
+            0.82,
+            1,
+            0.98
+          ]
+        }
+      },
+      {
+        "slot": "attachment",
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "offset": [
+            0,
+            2.52,
+            0
+          ],
+          "rotationOffset": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "inheritScale": false
+        }
+      },
+      {
+        "slot": "chillTag",
+        "kind": "TagBinding",
+        "activeByDefault": true,
+        "tagBinding": {
+          "tagId": "State.LSW.Chilled",
+          "targetParamKey": "lsw.chill.visible",
+          "invertLogic": false
+        }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "lsw.chill.ratio",
+        "lane": "Float",
+        "floatValue": 0
+      },
+      {
+        "paramKey": "lsw.chill.visible",
+        "lane": "Int",
+        "intValue": 0
+      }
+    ]
+  },
+  {
+    "id": "lsw.unit_chill_countdown",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "WorldText",
+        "activeByDefault": false,
+        "worldText": {
+          "textToken": "hud.attribute.current",
+          "mode": "AttributeCurrent",
+          "fontSize": 16,
+          "valueParamKey": "lsw.chill.remainingSeconds"
+        },
+        "style": {
+          "color": [
+            0.55,
+            0.94,
+            1,
+            1
+          ]
+        }
+      },
+      {
+        "slot": "attachment",
+        "kind": "Attachment",
+        "activeByDefault": true,
+        "attachment": {
+          "target": "Parent",
+          "offset": [
+            0,
+            2.72,
+            0
+          ],
+          "rotationOffset": [
+            0,
+            0,
+            0,
+            1
+          ],
+          "inheritScale": false
+        }
+      },
+      {
+        "slot": "chillTag",
+        "kind": "TagBinding",
+        "activeByDefault": true,
+        "tagBinding": {
+          "tagId": "State.LSW.Chilled",
+          "targetParamKey": "lsw.chill.active",
+          "invertLogic": false
+        }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "lsw.chill.remainingSeconds",
+        "lane": "Float",
+        "floatValue": 0
+      },
+      {
+        "paramKey": "lsw.chill.active",
+        "lane": "Int",
+        "intValue": 0
+      }
+    ]
+  }
+]

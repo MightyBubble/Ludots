@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
 using Arch.System;
@@ -15,6 +16,7 @@ using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Presentation.DebugDraw;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Scripting;
 
 namespace CapabilityStandardLiveSkillWorkbenchShowcaseMod.Runtime;
@@ -31,6 +33,11 @@ internal sealed class LswChampionHotApplyDemoSystem : ISystem<float>
     private const string IceHitEffectId = "Effect.LSW.IceballHit";
     private const string IcePresentationEffectId = "Effect.Champion.Ezreal.EssenceFlux";
     private const string ChillTag = "State.LSW.Chilled";
+    private const string ChillBarDefinitionId = "lsw.unit_chill_bar";
+    private const string ChillCountdownDefinitionId = "lsw.unit_chill_countdown";
+    private const string ChillRatioParamKey = "lsw.chill.ratio";
+    private const string ChillSecondsParamKey = "lsw.chill.remainingSeconds";
+    private const int ChillCountdownBodySlot = 0;
 
     private static readonly QueryDescription UnitQuery = new QueryDescription()
         .WithAll<Name, Team, MapEntity, AbilityStateBuffer, WorldPositionCm, AttributeBuffer, OrderBuffer>();
@@ -42,17 +49,27 @@ internal sealed class LswChampionHotApplyDemoSystem : ISystem<float>
     private readonly LiveGasEditPipeline _pipeline;
     private readonly DebugDrawCommandBuffer _debugDraw;
     private readonly ScreenOverlayBuffer? _overlay;
+    private readonly PerformerEntityRuntime? _performerRuntime;
+    private readonly PerformerDefinitionRegistry? _performerDefinitions;
     private readonly int _castAbilityOrderTypeId;
     private readonly int _healthAttrId;
     private readonly int _chillTagId;
+    private readonly int _iceHitEffectId;
     private readonly int _icePresentationEffectId;
+    private int _chillBarDefId;
+    private int _chillCountdownDefId;
+    private int _chillRatioParamId;
+    private int _chillSecondsParamId;
     private float _elapsed;
     private int _phase;
     private bool _hotApplied;
     private string _status = "Boot";
     private float _lastTargetHp = -1f;
+    private float _lastTargetHpBase = 200f;
     private int _castCount;
     private bool _targetChilled;
+    private float _chillRemainingSeconds;
+    private float _chillRemainingRatio;
     private int _liveProjectileCount;
     private string _lastLoggedStatus = string.Empty;
 
@@ -64,13 +81,53 @@ internal sealed class LswChampionHotApplyDemoSystem : ISystem<float>
         _debugDraw = engine.GetService(CoreServiceKeys.DebugDrawCommandBuffer)
             ?? throw new InvalidOperationException("DebugDrawCommandBuffer required.");
         _overlay = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer);
+        _performerRuntime = engine.GetService(CoreServiceKeys.PerformerEntityRuntime);
+        _performerDefinitions = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry);
 
         GameConfig config = engine.GetService(CoreServiceKeys.GameConfig)
             ?? throw new InvalidOperationException("GameConfig required.");
         _castAbilityOrderTypeId = config.Constants.OrderTypeIds["castAbility"];
         _healthAttrId = AttributeRegistry.GetId("Health");
         _chillTagId = TagRegistry.GetId(ChillTag);
+        _iceHitEffectId = EffectTemplateIdRegistry.GetId(IceHitEffectId);
         _icePresentationEffectId = EffectTemplateIdRegistry.GetId(IcePresentationEffectId);
+        _chillBarDefId = 0;
+        _chillCountdownDefId = 0;
+        _chillRatioParamId = 0;
+        _chillSecondsParamId = 0;
+    }
+
+    private bool TryResolveHudBindings()
+    {
+        if (_performerRuntime == null || _performerDefinitions == null)
+        {
+            return false;
+        }
+
+        if (_chillBarDefId <= 0)
+        {
+            _chillBarDefId = _performerDefinitions.GetId(ChillBarDefinitionId);
+        }
+
+        if (_chillCountdownDefId <= 0)
+        {
+            _chillCountdownDefId = _performerDefinitions.GetId(ChillCountdownDefinitionId);
+        }
+
+        if (_chillRatioParamId == 0)
+        {
+            PerformerParamKeyRegistry.TryGetId(ChillRatioParamKey, out _chillRatioParamId);
+        }
+
+        if (_chillSecondsParamId == 0)
+        {
+            PerformerParamKeyRegistry.TryGetId(ChillSecondsParamKey, out _chillSecondsParamId);
+        }
+
+        return _chillBarDefId > 0 &&
+               _chillCountdownDefId > 0 &&
+               _chillRatioParamId != 0 &&
+               _chillSecondsParamId != 0;
     }
 
     public void Initialize() { }
@@ -92,6 +149,7 @@ internal sealed class LswChampionHotApplyDemoSystem : ISystem<float>
         {
             TickDemo();
             ProbeTargetState();
+            DriveChillHudPerformers();
         }
         catch (Exception ex)
         {
@@ -267,6 +325,7 @@ internal sealed class LswChampionHotApplyDemoSystem : ISystem<float>
                     if (_healthAttrId != AttributeRegistry.InvalidId)
                     {
                         foundHp = attrs.GetCurrent(_healthAttrId);
+                        _lastTargetHpBase = attrs.GetBase(_healthAttrId);
                     }
                 }
             });
@@ -286,6 +345,8 @@ internal sealed class LswChampionHotApplyDemoSystem : ISystem<float>
 
         _lastTargetHp = targetHp;
         _targetChilled = false;
+        _chillRemainingSeconds = 0f;
+        _chillRemainingRatio = 0f;
         if (_chillTagId == TagRegistry.InvalidId ||
             !_engine.World.IsAlive(target) ||
             !_engine.World.TryGet(target, out GameplayTagContainer tags))
@@ -294,12 +355,107 @@ internal sealed class LswChampionHotApplyDemoSystem : ISystem<float>
         }
 
         _targetChilled = tags.HasTag(_chillTagId);
+        if (!_targetChilled ||
+            !_engine.World.TryGet(target, out ActiveEffectContainer effects))
+        {
+            return;
+        }
+
+        float fixedDt = Time.FixedDeltaTime > 0f ? Time.FixedDeltaTime : 0.05f;
+        for (int i = 0; i < effects.Count; i++)
+        {
+            Entity effectEntity = effects.GetEntity(i);
+            if (!_engine.World.IsAlive(effectEntity) ||
+                !_engine.World.TryGet(effectEntity, out GameplayEffect effect) ||
+                !_engine.World.TryGet(effectEntity, out EffectTemplateRef templateRef))
+            {
+                continue;
+            }
+
+            if (_iceHitEffectId != EffectTemplateIdRegistry.InvalidId &&
+                templateRef.TemplateId != _iceHitEffectId)
+            {
+                continue;
+            }
+
+            if (effect.RemainingTicks <= 0 || effect.TotalTicks <= 0)
+            {
+                continue;
+            }
+
+            _chillRemainingSeconds = effect.RemainingTicks * fixedDt;
+            _chillRemainingRatio = Math.Clamp(effect.RemainingTicks / (float)effect.TotalTicks, 0f, 1f);
+            return;
+        }
+    }
+
+    private void DriveChillHudPerformers()
+    {
+        EnsureWorldHudVisible();
+        if (!TryResolveHudBindings())
+        {
+            return;
+        }
+
+        if (!TryFindCasterAndTarget(out _, out Entity target, out _))
+        {
+            return;
+        }
+
+        float displaySeconds = _targetChilled
+            ? MathF.Ceiling(_chillRemainingSeconds)
+            : 0f;
+        SyncChillBar(target, _chillRemainingRatio);
+        SyncChillCountdown(target, displaySeconds, _targetChilled && displaySeconds > 0f);
+    }
+
+    private void EnsureWorldHudVisible()
+    {
+        RenderDebugState? renderDebug = _engine.GetService(CoreServiceKeys.RenderDebugState);
+        if (renderDebug == null)
+        {
+            return;
+        }
+
+        renderDebug.DrawWorldHudBars = true;
+        renderDebug.DrawWorldHudText = true;
+    }
+
+    private void SyncChillBar(Entity owner, float ratio)
+    {
+        IReadOnlyList<Entity> bars = _performerRuntime!.GetActiveByOwnerDefinition(_chillBarDefId, owner);
+        for (int i = 0; i < bars.Count; i++)
+        {
+            _performerRuntime.SetParam(bars[i], _chillRatioParamId, ParamLane.Float, ratio, 0, Vector4.Zero);
+        }
+    }
+
+    private void SyncChillCountdown(Entity owner, float displaySeconds, bool active)
+    {
+        if (!_performerDefinitions!.TryGet(_chillCountdownDefId, out PerformerDefinition definition))
+        {
+            return;
+        }
+
+        IReadOnlyList<Entity> texts = _performerRuntime!.GetActiveByOwnerDefinition(_chillCountdownDefId, owner);
+        for (int i = 0; i < texts.Count; i++)
+        {
+            Entity performer = texts[i];
+            _performerRuntime.SetParam(
+                performer,
+                _chillSecondsParamId,
+                ParamLane.Float,
+                displaySeconds,
+                0,
+                Vector4.Zero);
+            _performerRuntime.SetBehaviorActive(performer, definition, ChillCountdownBodySlot, active);
+        }
     }
 
     private void LogStatusIfChanged()
     {
         string line =
-            $"t={_elapsed:F1}s phase={_phase} casts={_castCount} hotApplied={_hotApplied} targetHP={_lastTargetHp:F0} chilled={_targetChilled} projectiles={_liveProjectileCount} | {_status}";
+            $"t={_elapsed:F1}s phase={_phase} casts={_castCount} hotApplied={_hotApplied} targetHP={_lastTargetHp:F0}/{_lastTargetHpBase:F0} chilled={_targetChilled} chillLeft={_chillRemainingSeconds:F1}s projectiles={_liveProjectileCount} | {_status}";
         if (string.Equals(line, _lastLoggedStatus, StringComparison.Ordinal))
         {
             return;
@@ -398,11 +554,22 @@ internal sealed class LswChampionHotApplyDemoSystem : ISystem<float>
         _overlay.AddText(
             20,
             98,
-            $"phase={_phase} casts={_castCount} hotApplied={_hotApplied} targetHP={_lastTargetHp:F0} chilled={_targetChilled} projectiles={_liveProjectileCount}",
-            14,
+            $"Dummy HP {_lastTargetHp:F0}/{_lastTargetHpBase:F0}  |  chill {(_targetChilled ? $"{_chillRemainingSeconds:F1}s" : "off")}  |  casts={_castCount} hotApplied={_hotApplied} proj={_liveProjectileCount}",
+            16,
             white,
             71004,
-            Hash(_status + _phase + _castCount + _targetChilled + _liveProjectileCount));
+            Hash(_status + _phase + _castCount + _targetChilled + _liveProjectileCount + (int)_lastTargetHp + (int)(_chillRemainingSeconds * 10f)));
+        if (_targetChilled)
+        {
+            _overlay.AddText(
+                20,
+                126,
+                $"BUFF  CHILL  {_chillRemainingSeconds:F1}s  ({_chillRemainingRatio * 100f:F0}%)",
+                22,
+                cyan,
+                71005,
+                Hash("chill" + (int)(_chillRemainingSeconds * 10f)));
+        }
     }
 
     private static int Hash(string s)
