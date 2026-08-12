@@ -108,9 +108,9 @@ internal sealed class LiveSkillWorkbenchVignettePresentationSystem : ISystem<flo
         }
 
         _overlay.Clear();
-        _overlay.AddText(24, 20, "Live Skill Workbench - what you do / what you see", 22, TitleColor, 61001, 1);
-        _overlay.AddText(24, 54, $"PLAYER ACTION: {_runtime.PlayerAction}", 18, ActionColor, 61002, StringHash(_runtime.PlayerAction));
-        _overlay.AddText(24, 82, $"FEEDBACK: {_runtime.PlayerFeedback}", 18, FeedbackColor, 61003, StringHash(_runtime.PlayerFeedback));
+        _overlay.AddText(24, 20, "Hot-edit / Hot-apply acceptance (editor -> runtime)", 22, TitleColor, 61001, 1);
+        _overlay.AddText(24, 54, $"EDITOR: {_runtime.EditorAction}", 17, ActionColor, 61002, StringHash(_runtime.EditorAction));
+        _overlay.AddText(24, 82, $"RUNTIME: {_runtime.RuntimeResult}", 17, FeedbackColor, 61003, StringHash(_runtime.RuntimeResult));
         _overlay.AddText(
             24,
             112,
@@ -122,7 +122,7 @@ internal sealed class LiveSkillWorkbenchVignettePresentationSystem : ISystem<flo
         _overlay.AddText(
             24,
             140,
-            "Yellow=Mage  Red=Dummy  Shot line=projectile  Bottom dots=effect chain",
+            "Proof target: LiveGasEditPipeline Stage/Classify/Commit — NOT player controls",
             14,
             HintColor,
             61005,

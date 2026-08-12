@@ -51,31 +51,35 @@ public sealed class LiveSkillWorkbenchVignetteRuntime
     public string Banner => _banner;
     public Beat CurrentBeat => _beat;
 
-    /// <summary>What the player/mod author just did (workbench or cast).</summary>
-    public string PlayerAction => _beat switch
+    /// <summary>Editor/workbench action under test (hot-edit / hot-apply).</summary>
+    public string EditorAction => _beat switch
     {
-        Beat.WeakCast => "Cast fireball (old damage)",
-        Beat.HotApplyBanner => "Workbench: raise damage + Apply Next Cast",
-        Beat.StrongCast => "Cast fireball again (new damage)",
-        Beat.HealMage => "Workbench: set selected mage HP = full (Immediate)",
-        Beat.EffectChain => "Open effect-chain timeline after a cast",
-        Beat.FrostDraft => "AI draft 'frost nova' -> Bind playtest -> Cast",
-        Beat.LoopHold => "Save accepted draft to Mod (optional)",
-        _ => "Watch"
+        Beat.WeakCast => "Baseline: runtime still on OLD authored damage",
+        Beat.HotApplyBanner => "EDITOR: stage damage↑ → Precheck → Apply NextCast",
+        Beat.StrongCast => "Hot-apply committed; runtime loads NEW damage definition",
+        Beat.HealMage => "EDITOR: ImmediateCommand set selected unit HP=full",
+        Beat.EffectChain => "EDITOR: inspect live effect-chain after hot-applied cast",
+        Beat.FrostDraft => "EDITOR: AI draft → same Pipeline classify/commit → bind slot",
+        Beat.LoopHold => "EDITOR: SaveToMod persists accepted patch (not ReloadConfigs)",
+        _ => "Editor idle"
     };
 
-    /// <summary>What the player should see in the world / workbench.</summary>
-    public string PlayerFeedback => _beat switch
+    /// <summary>Runtime observation that proves hot-apply took effect.</summary>
+    public string RuntimeResult => _beat switch
     {
-        Beat.WeakCast => $"Dummy HP drops a little (now {_dummyHp:P0})",
-        Beat.HotApplyBanner => "Status: NextCastLiveApply (not restart)",
-        Beat.StrongCast => $"Dummy HP drops a lot (now {_dummyHp:P0})",
-        Beat.HealMage => $"Mage HP fills immediately (now {_mageHp:P0})",
-        Beat.EffectChain => $"Timeline lights CAST/EFFECT/ATTR/RESP ({_chainLit}/4)",
-        Beat.FrostDraft => "Cyan frost shot plays from temporary skill",
-        Beat.LoopHold => "Config files written; reload keeps the skill",
+        Beat.WeakCast => $"Runtime OLD: dummy HP after cast = {_dummyHp:P0}",
+        Beat.HotApplyBanner => "Classify=NextCastLiveApply; live registry not cleared",
+        Beat.StrongCast => $"Runtime NEW: dummy HP after cast = {_dummyHp:P0} (harder hit)",
+        Beat.HealMage => $"Runtime IMMEDIATE: mage HP = {_mageHp:P0} (AttributeMutationOps)",
+        Beat.EffectChain => $"Runtime trace lit {_chainLit}/4 (cast/effect/attr/resp)",
+        Beat.FrostDraft => "Runtime plays cyan frost shot from hot-bound draft graph",
+        Beat.LoopHold => "Persisted graphs/patches readable on next load",
         _ => ""
     };
+
+    // Keep old names as aliases so storyboard/HUD call sites compile during transition.
+    public string PlayerAction => EditorAction;
+    public string PlayerFeedback => RuntimeResult;
     public GraphShowcaseMetrics Metrics { get; } = new()
     {
         ShowcaseId = "capability_standard_live_skill_workbench"
@@ -227,7 +231,6 @@ public sealed class LiveSkillWorkbenchVignetteRuntime
         _dummyHp = 1f;
         _mageHp = 0.35f;
         _chainLit = 0;
-        _hotApplied = false;
         _weakFired = false;
         _strongFired = false;
         _frostFired = false;
