@@ -138,6 +138,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     GraphNodeOp.KnowledgeHasProjection or
                     GraphNodeOp.ClampTargetToRange or
                     GraphNodeOp.IsPointInCircle or
+                    GraphNodeOp.RelationshipHasFlag or
                     GraphNodeOp.RelationshipHasLink or
                     GraphNodeOp.SnapToNearestGraphEdge => GraphValueType.Bool,
                 GraphNodeOp.LoadCaster or
