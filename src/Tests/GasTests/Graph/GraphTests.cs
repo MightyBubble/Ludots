@@ -6,6 +6,7 @@ using Ludots.Core.EntityQueries;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Relationships;
+using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using GraphInstruction = Ludots.Core.GraphRuntime.GraphInstruction;
