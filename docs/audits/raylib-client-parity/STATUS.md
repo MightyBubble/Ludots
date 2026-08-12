@@ -7,7 +7,7 @@ Updated by agents. Use: `pending` | `in_progress` | `blocked` | `done`.
 | W1 | GPU skinned production + playback API | done | subagent-w1 | production GpuSkinnedInstance: skinning_instanced + playback + boneMatrices upload |
 | W2 | Host material binding | done | subagent-w2 | albedo baseline via RaylibMaterialHostBinder; see materials-notes.md |
 | W3 | Effect shader baseline | done | subagent-w3 | vfx_unlit_tint + RaylibEffectShaderRegistry; Prefab VFX → billboard mesh + tint/time shader |
-| W4 | Showcase + screenshot acceptance | done | subagent-w4 | showcase+registry+ACCEPTANCE; PNGs via tools/raylib_client_parity_acceptance; launcher smoke OK with Skia underlay env |
+| W4 | Showcase + screenshot acceptance | done | subagent-w4 | formal 01–04 via acceptance tool; launcher smoke `gpuSkinned=16/6` after host-loop fix (benchmark no longer skips performer draw) |
 
 ## Blockers
 

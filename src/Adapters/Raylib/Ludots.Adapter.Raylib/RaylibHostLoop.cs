@@ -433,7 +433,11 @@ namespace Ludots.Adapter.Raylib
                         float cameraAlpha = presentationFrameSetup?.GetInterpolationAlpha() ?? 1f;
                         cameraPresenter.Update(engine.GameSession.Camera, cameraAlpha, renderCameraDebug);
                         hudProjection?.Update(dt);
-                        benchmarkRenderer?.PrepareFrame(presentationTiming, lastW, lastH);
+                        benchmarkRenderer?.PrepareFrame(
+                            presentationTiming,
+                            lastW,
+                            lastH,
+                            suppressControlPanel: hostDiagnosticUiSuppressed);
                         if (globalFieldVisualBuffer != null)
                         {
                             globalFieldVisualBuffer.BeginFrame();
@@ -528,14 +532,14 @@ namespace Ludots.Adapter.Raylib
                             presentationTiming?.ObserveGlobalFieldRender(0d, 0, 0, 0, 0);
                         }
 
-                        bool benchmarkDrew = false;
+                        // Benchmark ISM bridge and performer primitive/skinned lanes are independent.
+                        // Drawing the benchmark scene must not skip GpuSkinnedInstance / host material / VFX.
                         if (benchmarkRenderer != null)
                         {
-                            benchmarkDrew = benchmarkRenderer.Draw(activeCamera);
+                            _ = benchmarkRenderer.Draw(activeCamera);
                         }
 
-                        if (!benchmarkDrew &&
-                            drawPrimitives &&
+                        if (drawPrimitives &&
                             engine.TryGetService(CoreServiceKeys.PresentationPrimitiveDrawBuffer, out PrimitiveDrawBuffer draw) &&
                             engine.TryGetService(CoreServiceKeys.PresentationMeshAssetRegistry, out MeshAssetRegistry meshes))
                         {

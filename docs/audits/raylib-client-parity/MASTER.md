@@ -34,23 +34,23 @@
 
 ### W1 — GPU 蒙皮 + 播放面（P0）
 
-- [ ] 生产加载 `skinning_instanced.vs/fs`，GpuSkinned 车道禁止再用静态 `instancing` 冒充  
-- [ ] Model 缓存旁路：`LoadModelAnimations`；缺动画 **fail-loud**（GpuSkinned 车道）  
-- [ ] 客户端播放面（不依赖重做 Core）：  
+- [x] 生产加载 `skinning_instanced.vs/fs`，GpuSkinned 车道禁止再用静态 `instancing` 冒充  
+- [x] Model 缓存旁路：`LoadModelAnimations`；缺动画 **fail-loud**（GpuSkinned 车道）  
+- [x] 客户端播放面（不依赖重做 Core）：  
   - `RaylibSkinnedPlayback`：`Play(clipIndex|name)` / `SeekNormalized(t)` / `Stop`  
   - 从 `AnimatorPackedState` 读 primary state + normalized time → clip/frame（映射表 data-driven，可先 identity：stateIndex=clipIndex）  
-- [ ] 分桶键：`(mesh, material, clip, frame, color)`；每桶一次 `UpdateModelAnimationBones` + `rlSetUniformMatrices` + `DrawMeshInstanced`  
-- [ ] 实例增删改：复用现有 skinned batch / snapshot 生命周期；换 clip = 换桶  
-- [ ] 禁止静默降级为静态 ISM  
+- [x] 分桶键：`(mesh, material, clip, frame, color)`；每桶一次 `UpdateModelAnimationBones` + `rlSetUniformMatrices` + `DrawMeshInstanced`  
+- [x] 实例增删改：复用现有 skinned batch / snapshot 生命周期；换 clip = 换桶  
+- [x] 禁止静默降级为静态 ISM  
 
 复用：`GpuSkinnedInstance` 车道、`tools/gpu_skinned_instance_probe` 已验证路径、离线 `tools/animation_retarget`。
 
 ### W2 — Host 材质绑定（P0）
 
-- [ ] Host `assetKind=Material` + `sourceUris` → Raylib 加载纹理并应用到对应 materialId  
-- [ ] 模型绘制：若 host 覆盖 albedo，则覆盖导入材质槽（fail-loud：URI 无法解析）  
-- [ ] Tint 仍来自 performer color（已有）  
-- [ ] 不宣称完整 PBR；合同写清「albedo 绑定基线」  
+- [x] Host `assetKind=Material` + `sourceUris` → Raylib 加载纹理并应用到对应 materialId  
+- [x] 模型绘制：若 host 覆盖 albedo，则覆盖导入材质槽（fail-loud：URI 无法解析）  
+- [x] Tint 仍来自 performer color（已有）  
+- [x] 不宣称完整 PBR；合同写清「albedo 绑定基线」  
 
 复用：`PresentationMaterialRegistry`、`PresentationHostAssetConfigLoader`、Mod/Host 分离。
 
@@ -123,7 +123,8 @@ Feature: Raylib 客户端配表即可显示与播动画
 - [x] W1–W3 代码合并进本分支并推送  
 - [x] W4 四张（或至少 01–03）截图落入 acceptance 目录  
 - [x] `STATUS.md` 全部勾选  
-- [ ] PR 描述链接本 MASTER 与截图  
+- [x] PR 描述链接本 MASTER 与截图  
+- [x] 生产 launcher 烟测：`gpuSkinned` 实例数 > 0（benchmark ISM 不再短路 performer 车道）  
 
 
 > Tracked SSOT: `docs/audits/raylib-client-parity/`. Acceptance screenshots land in `artifacts/raylib-client-parity/acceptance/` and `/opt/cursor/artifacts/raylib-client-parity/acceptance/`.

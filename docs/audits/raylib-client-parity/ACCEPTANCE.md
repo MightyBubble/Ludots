@@ -38,7 +38,9 @@ dotnet exec src/Tools/Ludots.Launcher.Cli/bin/Release/net8.0/Ludots.Launcher.Cli
   launch raylib_client_parity --adapter raylib --build auto
 ```
 
-Formal UAT PNGs (`01`–`04`) are produced by `tools/raylib_client_parity_acceptance` using the same production shaders (`instancing` / `skinning_instanced` / `vfx_unlit_tint`) and showcase assets. Launcher smoke confirms the mod loads, static ISM buildings draw, and map-authored crowd/albedo/vfx performers activate.
+Formal UAT PNGs (`01`–`04`) are produced by `tools/raylib_client_parity_acceptance` using the same production shaders (`instancing` / `skinning_instanced` / `vfx_unlit_tint`) and showcase assets.
+
+Launcher smoke (`00_launcher_showcase.png` + `.diag.txt`) must show `gpuSkinned` instances &gt; 0 with the crowd performers active. Benchmark ISM and performer primitive/skinned lanes draw independently (host loop must not short-circuit performer draw when the benchmark scene is enabled).
 
 ## Recapture
 

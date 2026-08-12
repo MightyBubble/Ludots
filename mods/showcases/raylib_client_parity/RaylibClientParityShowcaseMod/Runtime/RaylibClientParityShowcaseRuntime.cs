@@ -13,8 +13,6 @@ namespace RaylibClientParityShowcaseMod.Runtime;
 internal sealed class RaylibClientParityShowcaseRuntime : IBenchmarkSceneController
 {
     private const int VisibleBuildingInstances = 48;
-    // RaylibBenchmarkRenderService clamps active count into [3000, Length]; keep Length >= 3000.
-    private const int BenchmarkInstanceCapacity = 3000;
     private const int GridWidth = 8;
     private const float BuildingSpacing = 6.5f;
 
@@ -116,19 +114,13 @@ internal sealed class RaylibClientParityShowcaseRuntime : IBenchmarkSceneControl
             renderer.SetScene(new RaylibBenchmarkScene(
                 enabled: true,
                 instances: _buildingInstances,
-                initialActiveInstanceCount: BenchmarkInstanceCapacity,
+                initialActiveInstanceCount: VisibleBuildingInstances,
                 palette: new RaylibBenchmarkMaterialPalette(new Vector4(1f, 1f, 1f, 1f), _palette),
                 camera: new RaylibBenchmarkCamera(
                     position: new Vector3(0f, 28f, 42f),
                     target: new Vector3(0f, 1.5f, 0f),
                     fovY: 50f),
                 label: "Raylib client parity: static ISM + GpuSkinned crowd + host albedo + vfx_unlit_tint"));
-            if (!renderer.SetActiveInstanceCount(VisibleBuildingInstances))
-            {
-                throw new InvalidOperationException(
-                    $"Raylib client parity showcase failed to set active ISM count={VisibleBuildingInstances}.");
-            }
-
             _sceneInstalled = true;
         }
     }
@@ -177,26 +169,23 @@ internal sealed class RaylibClientParityShowcaseRuntime : IBenchmarkSceneControl
 
     private static RaylibBenchmarkInstance[] BuildBuildingInstances(int[] meshAssetIds)
     {
-        var items = new RaylibBenchmarkInstance[BenchmarkInstanceCapacity];
+        var items = new RaylibBenchmarkInstance[VisibleBuildingInstances];
         int rows = (int)MathF.Ceiling(VisibleBuildingInstances / (float)GridWidth);
         float xOrigin = -((GridWidth - 1) * BuildingSpacing) * 0.5f;
         float zOrigin = -((rows - 1) * BuildingSpacing) * 0.5f - 8f;
 
         for (int i = 0; i < items.Length; i++)
         {
-            int visibleIndex = i % VisibleBuildingInstances;
-            int row = visibleIndex / GridWidth;
-            int col = visibleIndex % GridWidth;
-            int meshIndex = visibleIndex % meshAssetIds.Length;
+            int row = i / GridWidth;
+            int col = i % GridWidth;
+            int meshIndex = i % meshAssetIds.Length;
             // materialId=0: imported model maps only (no host albedo lookup; W2 binder fail-louds on unknown ids).
-            float yaw = (visibleIndex % 8) * (MathF.PI / 4f);
-            // Off-camera duplicates fill capacity required by RaylibBenchmarkRenderService min clamp.
-            float park = i < VisibleBuildingInstances ? 0f : 400f + ((i / VisibleBuildingInstances) * 20f);
+            float yaw = (i % 8) * (MathF.PI / 4f);
             items[i] = new RaylibBenchmarkInstance(
                 meshAssetId: meshAssetIds[meshIndex],
                 materialId: 0,
                 position: new Vector3(
-                    xOrigin + (col * BuildingSpacing) + park,
+                    xOrigin + (col * BuildingSpacing),
                     0f,
                     zOrigin + (row * BuildingSpacing)),
                 rotation: Quaternion.CreateFromAxisAngle(Vector3.UnitY, yaw),
