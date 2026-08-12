@@ -10,6 +10,7 @@
 - [Mod 架构](mod-architecture.md)
 - [GAS 分层架构](gas-layered-architecture.md)
 - [图分层：Flow / Script 与行为调度](graph-layering-flow-and-behavior.md)
+- [图复用库合同：FuncLib / ActionLib](graph-funclib-actionlib-contract.md) — **纯函数库 vs 可挂起动作库；Effect 时间轴与阶段表达力补丁**
 - [Tag → 展示 Token 查表（面板 curState）](tag-display-lookup.md)
 - [通用图查表（ResolveTableRow + TableRead）](graph-table-lookup.md)
 - [GAS、订单与输入运行时合同](gas-order-input-runtime-contract.md)
