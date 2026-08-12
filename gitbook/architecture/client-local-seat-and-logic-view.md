@@ -94,13 +94,17 @@ Possession 转移只改箭头；Participant、LogicView、collection 不搬家�
 
 - 挂在 Participant（或其显式 view 资产）上，**不**挂在 Seat
 - 可选能力：无 Seat 的 Participant 也可以持有 LogicView（需显式创建；非启动默认）
+- 管镜头权威：姿态 / Follow / VCam / 逻辑投影参数
 - 逻辑宽高比 / 投影参数由数据声明，不从窗口反推为真相
+- **LogicView ≠ viewport**：有 LogicView 不等于启用呈现面，也不自动触发画面剔除
 
-### 3.5 PresentBinding（呈现）
+### 3.5 PresentBinding（呈现面 / viewport）
 
-- 仅 ClientLocalSeat 可选字段
+- 仅 ClientLocalSeat 可选字段；**启用呈现面才有**
 - Presentation：对每个 binding，读 LogicView 权威态 → 插值 → adapter 画到 rect
 - 拾取：有 binding 时用呈现度量 + 该 LogicView；无 binding 的逻辑 Cast 只用 LogicView 逻辑度量
+- 画面剔除 / 视觉 LOD / 跳过绘制：仅对 PresentBinding 计算；姿态取自绑定 LogicView，矩形与分辨率取自 PresentBinding
+- 禁止：仅因存在 LogicView 就跑呈现剔除
 - Adapter 仍不拥有镜头权威（沿用 camera/presentation 纪律）
 
 ### 3.6 删除清单
@@ -130,6 +134,7 @@ Possession 转移只改箭头；Participant、LogicView、collection 不搬家�
 - 不把 InteractionContextStack 的 ownerToken 当成座位表  
 - 本页不定义 Cast→Query→WriteCollection 业务图（见交互/蓝图合同）  
 - 分屏布局是 PresentBinding.rect 配置，不另起视觉子系统  
+- 画面剔除挂 PresentBinding，不挂裸 LogicView；LogicView 只提供镜头权威  
 
 ## 6. UAT
 
@@ -140,6 +145,13 @@ Feature: 本机座位与逻辑视觉
     When 脚本推动其逻辑相机
     Then 可用该 LogicView 做逻辑域查询
     And 无需 ClientLocalSeat
+    And 不因其存在而计算呈现剔除
+
+  Scenario: 有呈现绑定才做画面剔除
+    Given seat.0 的 PresentBinding 绑定甲的 LogicView 且全屏
+    When 呈现帧更新
+    Then 画面剔除使用该 PresentBinding 的矩形与呈现分辨率
+    And 镜头姿态取自甲的 LogicView
 
   Scenario: 换机不搬家
     Given 甲的 LogicView 与指挥集已存在
