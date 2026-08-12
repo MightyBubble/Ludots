@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Threading.Tasks;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS.LiveSkillWorkbench;
@@ -44,24 +45,62 @@ public sealed class LiveSkillWorkbenchModEntry : IMod
 		// Publish before DataPlane so other Mods can resolve the host (#618+ extension point).
 		engine.SetService(LiveSkillWorkbenchServiceKeys.Runtime, runtime);
 
-		if (engine.TryGetService(CoreServiceKeys.LiveGasEditPipeline, out LiveGasEditPipeline pipeline) &&
-			pipeline != null)
+		if (!engine.TryGetService(CoreServiceKeys.LiveGasEditPipeline, out LiveGasEditPipeline pipeline) ||
+			pipeline == null)
 		{
-			runtime.BindPipeline(pipeline);
-			modContext.Log("[LiveSkillWorkbenchMod] Bound Core LiveGasEditPipeline for Precheck/Apply.");
-		}
-		else
-		{
-			modContext.Log("[LiveSkillWorkbenchMod] LiveGasEditPipeline service missing; Precheck/Apply stay unavailable.");
+			throw new InvalidOperationException(
+				"LiveGasEditPipeline service is required for LiveSkillWorkbenchMod Precheck/Apply.");
 		}
 
-		engine.TryGetService(CoreServiceKeys.LiveAttributeCommandExecutor, out LiveAttributeCommandExecutor? attrExec);
-		engine.TryGetService(CoreServiceKeys.LiveEffectChainTracer, out LiveEffectChainTracer? tracer);
-		engine.TryGetService(CoreServiceKeys.AiSkillDraftGenerator, out IAiSkillDraftGenerator? ai);
-		engine.TryGetService(CoreServiceKeys.LiveAiDraftBinder, out LiveAiDraftBinder? binder);
-		engine.TryGetService(CoreServiceKeys.LiveEditModSaveService, out LiveEditModSaveService? save);
-		runtime.BindEpicServices(attrExec, tracer, ai, binder, save);
-		modContext.Log("[LiveSkillWorkbenchMod] Bound #620/#621/#623/#624 epic services when available.");
+		runtime.BindPipeline(pipeline);
+		modContext.Log("[LiveSkillWorkbenchMod] Bound Core LiveGasEditPipeline for Precheck/Apply.");
+
+		if (!engine.TryGetService(CoreServiceKeys.LiveAttributeCommandExecutor, out LiveAttributeCommandExecutor? attrExec) ||
+			attrExec == null)
+		{
+			throw new InvalidOperationException("LiveAttributeCommandExecutor service is required (#620).");
+		}
+
+		if (!engine.TryGetService(CoreServiceKeys.LiveEffectChainTracer, out LiveEffectChainTracer? tracer) ||
+			tracer == null)
+		{
+			throw new InvalidOperationException("LiveEffectChainTracer service is required (#621).");
+		}
+
+		if (!engine.TryGetService(CoreServiceKeys.AiSkillDraftGenerator, out IAiSkillDraftGenerator? ai) ||
+			ai == null)
+		{
+			throw new InvalidOperationException("AiSkillDraftGenerator service is required (#623).");
+		}
+
+		if (!engine.TryGetService(CoreServiceKeys.LiveAiDraftBinder, out LiveAiDraftBinder? binder) ||
+			binder == null)
+		{
+			throw new InvalidOperationException("LiveAiDraftBinder service is required (#623).");
+		}
+
+		if (!engine.TryGetService(CoreServiceKeys.LiveEditModSaveService, out LiveEditModSaveService? save) ||
+			save == null)
+		{
+			throw new InvalidOperationException("LiveEditModSaveService service is required (#624).");
+		}
+
+		string saveModId = LiveSkillWorkbenchIds.DefaultSaveTargetModId;
+		string? saveModRoot = null;
+		if (engine.VFS.TryResolveFullPath($"{saveModId}:mod.json", out string modJsonPath))
+		{
+			saveModRoot = Path.GetDirectoryName(modJsonPath);
+			if (string.IsNullOrWhiteSpace(saveModRoot) || !Directory.Exists(saveModRoot))
+			{
+				throw new DirectoryNotFoundException(
+					$"Save target Mod root for '{saveModId}' does not exist (resolved from {modJsonPath}).");
+			}
+		}
+
+		runtime.BindEpicServices(attrExec, tracer, ai, binder, save, saveModId, saveModRoot);
+		modContext.Log(saveModRoot == null
+			? $"[LiveSkillWorkbenchMod] Bound epic services; save root unset until Mod '{saveModId}' is mounted (save commands fail closed)."
+			: $"[LiveSkillWorkbenchMod] Bound #620/#621/#623/#624 epic services; save root={saveModRoot}");
 
 		if (engine.TryGetService(
 				LiveSkillWorkbenchServiceKeys.DocumentSource,

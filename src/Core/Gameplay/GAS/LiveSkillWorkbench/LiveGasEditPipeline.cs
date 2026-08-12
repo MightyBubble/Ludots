@@ -170,6 +170,7 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
 
         /// <summary>
         /// Commits NextCast candidates into live registries. Requires an open safe frame.
+        /// Atomic: any candidate failure rolls every successful mutation back to the pre-commit snapshot.
         /// Does not Clear registries.
         /// </summary>
         public LiveApplyCommitResult CommitNextCastSafeFrame()
@@ -188,165 +189,194 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
                     });
             }
 
+            var rollbacks = new List<Action>(
+                _stagedGraphs.Count
+                + _stagedEffects.Count
+                + _stagedTagRules.Count
+                + _stagedAttrConstraints.Count
+                + _stagedEffectRefs.Count
+                + _stagedGrantedTags.Count);
             var diagnostics = new List<LiveEditDiagnostic>(2);
             int applied = 0;
 
-            for (int i = 0; i < _stagedGraphs.Count; i++)
+            try
             {
-                StagedGraphCandidate c = _stagedGraphs[i];
-                try
+                for (int i = 0; i < _stagedGraphs.Count; i++)
                 {
+                    StagedGraphCandidate c = _stagedGraphs[i];
+                    if (!_graphs.TryGetProgram(c.GraphId, out ReadOnlySpan<GraphInstruction> liveProgram)
+                        || !_graphs.TryGetKind(c.GraphId, out GraphKind liveKind))
+                    {
+                        throw new InvalidOperationException(
+                            $"Graph '{c.GraphKey}' (id {c.GraphId}) is not registered for ReplaceProgram.");
+                    }
+
+                    GraphInstruction[] previousProgram = liveProgram.ToArray();
+                    _graphs.TryGetSourceMap(c.GraphId, out GraphInstructionSourceMap previousSourceMap);
                     _graphs.ReplaceProgram(c.GraphId, c.Program, c.Kind, c.SourceMap);
+                    GraphKind kind = liveKind;
+                    GraphInstructionSourceMap sourceMap = previousSourceMap;
+                    rollbacks.Add(() => _graphs.ReplaceProgram(c.GraphId, previousProgram, kind, sourceMap));
                     applied++;
                 }
-                catch (Exception ex)
-                {
-                    diagnostics.Add(new LiveEditDiagnostic(
-                        LiveEditDiagnosticSeverity.Error,
-                        LiveEditDiagnosticCodes.GraphCompileFailed,
-                        ex.Message,
-                        c.GraphKey));
-                }
-            }
 
-            for (int i = 0; i < _stagedEffects.Count; i++)
-            {
-                StagedEffectNumericCandidate c = _stagedEffects[i];
-                if (_effects == null)
+                for (int i = 0; i < _stagedEffects.Count; i++)
                 {
-                    diagnostics.Add(new LiveEditDiagnostic(
-                        LiveEditDiagnosticSeverity.Error,
-                        LiveEditDiagnosticCodes.EffectTemplateMissing,
-                        "EffectTemplateRegistry was not provided to LiveGasEditPipeline.",
-                        c.DefinitionId));
-                    continue;
-                }
+                    StagedEffectNumericCandidate c = _stagedEffects[i];
+                    if (_effects == null)
+                    {
+                        throw new InvalidOperationException(
+                            "EffectTemplateRegistry was not provided to LiveGasEditPipeline.");
+                    }
 
-                if (!_effects.TryReplaceHotNumericField(c.TemplateId, c.FieldPath, c.NumericValue, out string? reason))
-                {
-                    diagnostics.Add(new LiveEditDiagnostic(
-                        LiveEditDiagnosticSeverity.Error,
-                        LiveEditDiagnosticCodes.EffectFieldNotHotEditable,
-                        reason ?? "Effect numeric replace failed.",
-                        c.DefinitionId));
-                    continue;
+                    if (!_effects.TryGet(c.TemplateId, out EffectTemplateData previous))
+                    {
+                        throw new InvalidOperationException(
+                            $"Effect '{c.DefinitionId}' (id {c.TemplateId}) is not registered.");
+                    }
+
+                    if (!_effects.TryReplaceHotNumericField(c.TemplateId, c.FieldPath, c.NumericValue, out string? reason))
+                    {
+                        throw new InvalidOperationException(reason ?? "Effect numeric replace failed.");
+                    }
+
+                    EffectTemplateRegistry effects = _effects;
+                    int templateId = c.TemplateId;
+                    EffectTemplateData snapshot = previous;
+                    rollbacks.Add(() => effects.RestoreHotTemplate(templateId, in snapshot));
+                    applied++;
                 }
 
-                applied++;
-            }
-
-            for (int i = 0; i < _stagedTagRules.Count; i++)
-            {
-                StagedTagRuleCandidate c = _stagedTagRules[i];
-                if (_tagOps == null)
+                for (int i = 0; i < _stagedTagRules.Count; i++)
                 {
-                    diagnostics.Add(new LiveEditDiagnostic(
-                        LiveEditDiagnosticSeverity.Error,
-                        LiveEditDiagnosticCodes.TagRuleMissing,
-                        "TagOps was not provided to LiveGasEditPipeline.",
-                        c.TagKey));
-                    continue;
-                }
+                    StagedTagRuleCandidate c = _stagedTagRules[i];
+                    if (_tagOps == null)
+                    {
+                        throw new InvalidOperationException(
+                            "TagOps was not provided to LiveGasEditPipeline.");
+                    }
 
-                try
-                {
+                    if (!_tagOps.TryGetAuthoredRuleSet(c.TagId, out TagRuleSet previousRuleSet))
+                    {
+                        throw new InvalidOperationException(
+                            $"Tag rule '{c.TagKey}' (id {c.TagId}) has no authored snapshot for rollback.");
+                    }
+
                     _tagOps.ReplaceTagRuleSet(c.TagId, c.RuleSet);
+                    TagOps tagOps = _tagOps;
+                    int tagId = c.TagId;
+                    TagRuleSet snapshot = previousRuleSet;
+                    rollbacks.Add(() => tagOps.ReplaceTagRuleSet(tagId, snapshot));
                     applied++;
                 }
-                catch (Exception ex)
-                {
-                    diagnostics.Add(new LiveEditDiagnostic(
-                        LiveEditDiagnosticSeverity.Error,
-                        LiveEditDiagnosticCodes.TagRuleCompileFailed,
-                        ex.Message,
-                        c.TagKey));
-                }
-            }
 
-            for (int i = 0; i < _stagedAttrConstraints.Count; i++)
-            {
-                StagedAttrConstraintCandidate c = _stagedAttrConstraints[i];
-                try
+                for (int i = 0; i < _stagedAttrConstraints.Count; i++)
                 {
+                    StagedAttrConstraintCandidate c = _stagedAttrConstraints[i];
+                    if (!AttributeRegistry.TryGetConstraints(c.AttributeId, out AttributeRegistry.AttributeConstraints previous))
+                    {
+                        throw new InvalidOperationException(
+                            $"Attribute '{c.AttributeName}' (id {c.AttributeId}) has no constraints to replace.");
+                    }
+
                     AttributeRegistry.ReplaceConstraints(c.AttributeId, c.Constraints);
+                    int attributeId = c.AttributeId;
+                    AttributeRegistry.AttributeConstraints snapshot = previous;
+                    rollbacks.Add(() => AttributeRegistry.ReplaceConstraints(attributeId, in snapshot));
                     applied++;
                 }
-                catch (Exception ex)
+
+                for (int i = 0; i < _stagedEffectRefs.Count; i++)
                 {
-                    diagnostics.Add(new LiveEditDiagnostic(
-                        LiveEditDiagnosticSeverity.Error,
-                        LiveEditDiagnosticCodes.AttrConstraintMissing,
-                        ex.Message,
-                        c.AttributeName));
+                    StagedEffectRefCandidate c = _stagedEffectRefs[i];
+                    if (_effects == null)
+                    {
+                        throw new InvalidOperationException("EffectTemplateRegistry was not provided.");
+                    }
+
+                    if (!_effects.TryGet(c.TemplateId, out EffectTemplateData previous))
+                    {
+                        throw new InvalidOperationException(
+                            $"Effect '{c.DefinitionId}' (id {c.TemplateId}) is not registered.");
+                    }
+
+                    if (!_effects.TryReplaceHotProjectileEffectRef(
+                            c.TemplateId, c.FieldPath, c.TargetEffectTemplateId, out string? reason))
+                    {
+                        throw new InvalidOperationException(reason ?? "Effect ref replace failed.");
+                    }
+
+                    EffectTemplateRegistry effects = _effects;
+                    int templateId = c.TemplateId;
+                    EffectTemplateData snapshot = previous;
+                    rollbacks.Add(() => effects.RestoreHotTemplate(templateId, in snapshot));
+                    applied++;
+                }
+
+                for (int i = 0; i < _stagedGrantedTags.Count; i++)
+                {
+                    StagedEffectGrantedTagCandidate c = _stagedGrantedTags[i];
+                    if (_effects == null)
+                    {
+                        throw new InvalidOperationException("EffectTemplateRegistry was not provided.");
+                    }
+
+                    if (!_effects.TryGet(c.TemplateId, out EffectTemplateData previous))
+                    {
+                        throw new InvalidOperationException(
+                            $"Effect '{c.DefinitionId}' (id {c.TemplateId}) is not registered.");
+                    }
+
+                    if (!_effects.TryReplaceHotGrantedTagFixed(c.TemplateId, c.TagId, c.Amount, out string? reason))
+                    {
+                        throw new InvalidOperationException(reason ?? "Granted tag replace failed.");
+                    }
+
+                    EffectTemplateRegistry effects = _effects;
+                    int templateId = c.TemplateId;
+                    EffectTemplateData snapshot = previous;
+                    rollbacks.Add(() => effects.RestoreHotTemplate(templateId, in snapshot));
+                    applied++;
                 }
             }
-
-            for (int i = 0; i < _stagedEffectRefs.Count; i++)
+            catch (Exception ex)
             {
-                StagedEffectRefCandidate c = _stagedEffectRefs[i];
-                if (_effects == null)
+                diagnostics.Add(new LiveEditDiagnostic(
+                    LiveEditDiagnosticSeverity.Error,
+                    LiveEditDiagnosticCodes.CommitRolledBack,
+                    ex.Message));
+
+                for (int r = rollbacks.Count - 1; r >= 0; r--)
                 {
-                    diagnostics.Add(new LiveEditDiagnostic(
-                        LiveEditDiagnosticSeverity.Error,
-                        LiveEditDiagnosticCodes.EffectTemplateMissing,
-                        "EffectTemplateRegistry was not provided.",
-                        c.DefinitionId));
-                    continue;
+                    try
+                    {
+                        rollbacks[r]();
+                    }
+                    catch (Exception rollbackEx)
+                    {
+                        diagnostics.Add(new LiveEditDiagnostic(
+                            LiveEditDiagnosticSeverity.Error,
+                            LiveEditDiagnosticCodes.CommitRollbackFailed,
+                            rollbackEx.Message));
+                    }
                 }
 
-                if (!_effects.TryReplaceHotProjectileEffectRef(
-                        c.TemplateId, c.FieldPath, c.TargetEffectTemplateId, out string? reason))
-                {
-                    diagnostics.Add(new LiveEditDiagnostic(
-                        LiveEditDiagnosticSeverity.Error,
-                        LiveEditDiagnosticCodes.EffectFieldNotHotEditable,
-                        reason ?? "Effect ref replace failed.",
-                        c.DefinitionId));
-                    continue;
-                }
-
-                applied++;
+                ClearNextCastStaging();
+                return new LiveApplyCommitResult(false, 0, diagnostics);
             }
 
-            for (int i = 0; i < _stagedGrantedTags.Count; i++)
-            {
-                StagedEffectGrantedTagCandidate c = _stagedGrantedTags[i];
-                if (_effects == null)
-                {
-                    diagnostics.Add(new LiveEditDiagnostic(
-                        LiveEditDiagnosticSeverity.Error,
-                        LiveEditDiagnosticCodes.EffectTemplateMissing,
-                        "EffectTemplateRegistry was not provided.",
-                        c.DefinitionId));
-                    continue;
-                }
+            ClearNextCastStaging();
+            return new LiveApplyCommitResult(true, applied, Array.Empty<LiveEditDiagnostic>());
+        }
 
-                if (!_effects.TryReplaceHotGrantedTagFixed(c.TemplateId, c.TagId, c.Amount, out string? reason))
-                {
-                    diagnostics.Add(new LiveEditDiagnostic(
-                        LiveEditDiagnosticSeverity.Error,
-                        LiveEditDiagnosticCodes.EffectFieldNotHotEditable,
-                        reason ?? "Granted tag replace failed.",
-                        c.DefinitionId));
-                    continue;
-                }
-
-                applied++;
-            }
-
+        private void ClearNextCastStaging()
+        {
             _stagedGraphs.Clear();
             _stagedEffects.Clear();
             _stagedTagRules.Clear();
             _stagedAttrConstraints.Clear();
             _stagedEffectRefs.Clear();
             _stagedGrantedTags.Clear();
-
-            if (diagnostics.Count > 0)
-            {
-                return new LiveApplyCommitResult(false, applied, diagnostics);
-            }
-
-            return new LiveApplyCommitResult(true, applied, Array.Empty<LiveEditDiagnostic>());
         }
 
         private void ClassifyEffectNumeric(
@@ -905,6 +935,23 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
                 return;
             }
 
+            if (!IsHotEditableProjectileRefField(fieldPath))
+            {
+                mapReload = true;
+                items.Add(new LiveApplyClassificationItem(
+                    op.Kind, definitionId, LiveApplyMode.MapReloadRequired,
+                    $"Field path '{fieldPath}' is not a NextCast-hot-editable projectile effect ref.",
+                    new[]
+                    {
+                        new LiveEditDiagnostic(
+                            LiveEditDiagnosticSeverity.Error,
+                            LiveEditDiagnosticCodes.EffectFieldNotHotEditable,
+                            $"Field path '{fieldPath}' is not a hot-editable projectile effect ref.",
+                            definitionId)
+                    }));
+                return;
+            }
+
             _stagedEffectRefs.Add(new StagedEffectRefCandidate
             {
                 DefinitionId = definitionId,
@@ -952,20 +999,19 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
 
             if (tagId == TagRegistry.InvalidId)
             {
-                // Allow Register only if not frozen; otherwise EngineRestart.
-                if (!TagRegistry.IsFrozen)
-                {
-                    tagId = TagRegistry.Register(tagName);
-                }
-                else
-                {
-                    engineRestart = true;
-                    items.Add(new LiveApplyClassificationItem(
-                        op.Kind, definitionId, LiveApplyMode.EngineRestartRequired,
-                        $"Unknown tag '{tagName}' while TagRegistry is frozen.",
-                        Array.Empty<LiveEditDiagnostic>()));
-                    return;
-                }
+                engineRestart = true;
+                items.Add(new LiveApplyClassificationItem(
+                    op.Kind, definitionId, LiveApplyMode.EngineRestartRequired,
+                    $"Unknown tag '{tagName}' cannot be hot-registered; EngineRestartRequired.",
+                    new[]
+                    {
+                        new LiveEditDiagnostic(
+                            LiveEditDiagnosticSeverity.Error,
+                            LiveEditDiagnosticCodes.TagRuleMissing,
+                            $"Unknown tag '{tagName}' cannot be hot-registered.",
+                            definitionId)
+                    }));
+                return;
             }
 
             _stagedGrantedTags.Add(new StagedEffectGrantedTagCandidate
@@ -992,6 +1038,15 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
                 || path.Equals("PeriodTicks", StringComparison.OrdinalIgnoreCase)
                 || path.Equals("modifiers.0.value", StringComparison.OrdinalIgnoreCase)
                 || path.Equals("modifiers[0].value", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool IsHotEditableProjectileRefField(string fieldPath)
+        {
+            if (string.IsNullOrWhiteSpace(fieldPath)) return false;
+            string path = fieldPath.Trim();
+            return path.Equals("projectile.impactEffect", StringComparison.OrdinalIgnoreCase)
+                || path.Equals("projectile.hitEffect", StringComparison.OrdinalIgnoreCase)
+                || path.Equals("projectile.presentationEffect", StringComparison.OrdinalIgnoreCase);
         }
     }
 }

@@ -1438,7 +1438,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.LiveGasEditPipeline, liveGasEditPipeline);
             SetService(CoreServiceKeys.LiveAttributeCommandExecutor, liveAttributeCommandExecutor);
             SetService(CoreServiceKeys.LiveEffectChainTracer, liveEffectChainTracer);
-            SetService(CoreServiceKeys.AiSkillDraftGenerator, (IAiSkillDraftGenerator)new DeterministicFakeAiSkillDraftGenerator());
+            SetService(CoreServiceKeys.AiSkillDraftGenerator, (IAiSkillDraftGenerator)new UnconfiguredAiSkillDraftGenerator());
             SetService(CoreServiceKeys.LiveAiDraftBinder, liveAiDraftBinder);
             SetService(CoreServiceKeys.LiveEditModSaveService, liveEditModSaveService);
             SetService(CoreServiceKeys.GasGraphRuntimeProductionServices, gasGraphProductionServices);

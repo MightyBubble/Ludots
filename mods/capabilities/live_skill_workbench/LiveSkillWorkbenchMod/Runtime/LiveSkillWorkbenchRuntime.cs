@@ -29,7 +29,7 @@ public sealed class LiveSkillWorkbenchRuntime
 	private LiveAiSkillDraft? _lastDraft;
 	private LiveEditSavePreview? _lastSavePreview;
 	private string? _saveModRoot;
-	private string _saveModId = "LiveSkillWorkbenchShowcaseMod";
+	private string _saveModId = LiveSkillWorkbenchIds.DefaultSaveTargetModId;
 	private LiveApplyClassificationReport? _lastClassification;
 	private string _applyMode = LiveSkillWorkbenchIds.ApplyModeNotClassified;
 	private bool _applySupported;
@@ -91,7 +91,8 @@ public sealed class LiveSkillWorkbenchRuntime
 		{
 			if (_tracer == null)
 			{
-				return;
+				throw new InvalidOperationException(
+					"LiveEffectChainTracer is not bound; RefreshEffectChain cannot silently no-op.");
 			}
 
 			IReadOnlyList<LiveEffectChainEvent> recent = _tracer.SnapshotRecent(max);

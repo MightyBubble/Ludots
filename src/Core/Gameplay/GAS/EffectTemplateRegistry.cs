@@ -560,10 +560,16 @@ namespace Ludots.Core.Gameplay.GAS
             }
 
             string path = (fieldPath ?? string.Empty).Trim();
-            if (path.Equals("projectile.impactEffect", StringComparison.OrdinalIgnoreCase)
-                || path.Equals("projectile.hitEffect", StringComparison.OrdinalIgnoreCase))
+            if (path.Equals("projectile.impactEffect", StringComparison.OrdinalIgnoreCase))
             {
                 data.Projectile.ImpactEffectTemplateId = targetEffectTemplateId;
+                _templates[templateId] = data;
+                failureReason = null;
+                return true;
+            }
+
+            if (path.Equals("projectile.hitEffect", StringComparison.OrdinalIgnoreCase))
+            {
                 data.Projectile.HitEffectTemplateId = targetEffectTemplateId;
                 _templates[templateId] = data;
                 failureReason = null;
@@ -580,6 +586,21 @@ namespace Ludots.Core.Gameplay.GAS
 
             failureReason = $"Field path '{fieldPath}' is not a hot-editable projectile effect ref.";
             return false;
+        }
+
+        /// <summary>
+        /// Restores a previously snapshotted template body for atomic NextCast commit rollback.
+        /// Identity must already be registered; does not Clear/re-Register.
+        /// </summary>
+        public void RestoreHotTemplate(int templateId, in EffectTemplateData snapshot)
+        {
+            if (!TryGetRef(templateId, out _))
+            {
+                throw new InvalidOperationException(
+                    $"Effect template id {templateId} is not registered; cannot restore hot snapshot.");
+            }
+
+            _templates[templateId] = snapshot;
         }
 
         /// <summary>

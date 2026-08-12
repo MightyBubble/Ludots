@@ -237,6 +237,55 @@ export function useWorkbenchSession() {
     [runUnsupportedCommand]
   );
 
+  const generateAiDraft = useCallback(
+    async () => {
+      if (boot.mode === 'preview') {
+        setLocalError('预览模式：AI 草稿不会调用生产生成器。');
+        return;
+      }
+      const client = clientRef.current;
+      if (!client) {
+        setLocalError('DataPlane client is not connected.');
+        return;
+      }
+      try {
+        await client.command(
+          LSW_COMMANDS.generateAiDraft,
+          { prompt: 'draft from workbench' },
+          { topic: LSW_TOPIC }
+        );
+        setLocalError('');
+      } catch (error) {
+        setLocalError(error instanceof Error ? error.message : String(error));
+      }
+    },
+    [boot.mode]
+  );
+
+  const previewSave = useCallback(
+    () => runUnsupportedCommand(
+      LSW_COMMANDS.previewSave,
+      '预览模式：保存预览不会写盘。'
+    ),
+    [runUnsupportedCommand]
+  );
+
+  const saveToMod = useCallback(
+    () => runUnsupportedCommand(
+      LSW_COMMANDS.saveToMod,
+      '预览模式：保存不会写盘。'
+    ),
+    [runUnsupportedCommand]
+  );
+
+  const refreshEffectChain = useCallback(
+    () => runUnsupportedCommand(
+      LSW_COMMANDS.refreshEffectChain,
+      '预览模式：效果链不会刷新真实 Tracer。'
+    ),
+    [runUnsupportedCommand]
+  );
+
   return {
     boot,
     snapshot,
@@ -248,6 +297,10 @@ export function useWorkbenchSession() {
     selectCatalogItem,
     precheck,
     applyNextCast,
+    generateAiDraft,
+    previewSave,
+    saveToMod,
+    refreshEffectChain,
     activeTab,
     setActiveTab,
     catalogQuery,

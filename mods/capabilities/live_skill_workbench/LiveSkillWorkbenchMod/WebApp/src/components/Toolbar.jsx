@@ -12,6 +12,10 @@ export function Toolbar({
   snapshot,
   onPrecheck,
   onApply,
+  onGenerateAiDraft,
+  onPreviewSave,
+  onSaveToMod,
+  onRefreshEffectChain,
   localError
 }) {
   const connectionLabel = preview
@@ -54,6 +58,18 @@ export function Toolbar({
         >
           <CheckCircle2 size={14} />
           应用到下一次释放
+        </button>
+        <button type="button" className="lsw-btn" onClick={onGenerateAiDraft} title="生成 AI 草稿（#623）">
+          AI 草稿
+        </button>
+        <button type="button" className="lsw-btn" onClick={onPreviewSave} title="预览落盘（#624）">
+          预览保存
+        </button>
+        <button type="button" className="lsw-btn" onClick={onSaveToMod} title="写入 Mod（#624）">
+          保存到 Mod
+        </button>
+        <button type="button" className="lsw-btn" onClick={onRefreshEffectChain} title="刷新效果链（#621）">
+          刷新效果链
         </button>
       </div>
       {localError || connection.error ? (

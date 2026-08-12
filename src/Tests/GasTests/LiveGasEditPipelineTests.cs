@@ -330,6 +330,119 @@ namespace Ludots.Tests.GAS
             That(AttributeRegistry.GetId("Attr.DoesNotExist"), Is.EqualTo(AttributeRegistry.InvalidId));
         }
 
+        [Test]
+        [Category("ci-gate")]
+        public void CommitNextCast_PartialFailure_RollsBackAllCandidates()
+        {
+            string okEffect = "Effect.Live.AtomicOk";
+            string badEffect = "Effect.Live.AtomicBad";
+            int okId = EffectTemplateIdRegistry.Register(okEffect);
+            int badId = EffectTemplateIdRegistry.Register(badEffect);
+            var effects = new EffectTemplateRegistry();
+            effects.Register(okId, new EffectTemplateData { DurationTicks = 10, PeriodTicks = 0 });
+            effects.Register(badId, new EffectTemplateData { DurationTicks = 3, PeriodTicks = 0 });
+
+            var pipeline = new LiveGasEditPipeline(new GraphProgramRegistry(), effects);
+            LiveEditSession session = LiveEditSession.Start(LiveEditSource.ManualWorkbench);
+            var provenance = new LiveEditProvenance(LiveEditSource.ManualWorkbench, "workbench://atomic");
+            That(session.TryStage(LiveDebugPatchOperation.SkillEffectNumeric(
+                okEffect, "duration.durationTicks", 99d, provenance)).Succeeded, Is.True);
+            // Unknown field → Classify as MapReload, so force-stage a NextCast candidate then break at commit
+            // by classifying only the ok path, then manually... instead: second op is valid classify path
+            // but second template will fail replace via unsupported field after we use a staged path that
+            // Classify accepts: use EffectTemplateRef with bad field to get MapReload. For atomic commit,
+            // stage two duration ops then replace second template's field path by committing a mix where
+            // the second TryReplace fails: use modifiers.0.value on template with zero modifiers.
+            That(session.TryStage(LiveDebugPatchOperation.SkillEffectNumeric(
+                badEffect, "modifiers.0.value", 1d, provenance)).Succeeded, Is.True);
+
+            LiveApplyClassificationReport report = pipeline.Classify(session);
+            That(report.CanCommitNextCast, Is.True);
+
+            pipeline.BeginSafeFrame();
+            LiveApplyCommitResult committed = pipeline.CommitNextCastSafeFrame();
+            pipeline.EndSafeFrame();
+
+            That(committed.Succeeded, Is.False);
+            That(committed.AppliedCount, Is.EqualTo(0));
+            That(committed.Diagnostics[0].Code, Is.EqualTo(LiveEditDiagnosticCodes.CommitRolledBack));
+            That(effects.TryGet(okId, out EffectTemplateData okData), Is.True);
+            That(okData.DurationTicks, Is.EqualTo(10));
+            That(effects.TryGet(badId, out EffectTemplateData badData), Is.True);
+            That(badData.DurationTicks, Is.EqualTo(3));
+        }
+
+        [Test]
+        [Category("ci-gate")]
+        public void Classify_UnknownGrantedTag_RequiresEngineRestart_DoesNotRegister()
+        {
+            string effectName = "Effect.Live.GrantedTag";
+            int templateId = EffectTemplateIdRegistry.Register(effectName);
+            var effects = new EffectTemplateRegistry();
+            effects.Register(templateId, new EffectTemplateData { DurationTicks = 1 });
+
+            var pipeline = new LiveGasEditPipeline(new GraphProgramRegistry(), effects);
+            LiveEditSession session = LiveEditSession.Start(LiveEditSource.ManualWorkbench);
+            That(session.TryStage(LiveDebugPatchOperation.EffectGrantedTag(
+                effectName,
+                "State.NeverSeenInRegistry",
+                1,
+                new LiveEditProvenance(LiveEditSource.ManualWorkbench, "workbench://granted"))).Succeeded,
+                Is.True);
+
+            LiveApplyClassificationReport report = pipeline.Classify(session);
+            That(report.RequiresEngineRestart, Is.True);
+            That(report.CanCommitNextCast, Is.False);
+            That(TagRegistry.GetId("State.NeverSeenInRegistry"), Is.EqualTo(TagRegistry.InvalidId));
+        }
+
+        [Test]
+        [Category("ci-gate")]
+        public void Commit_EffectTemplateRef_ImpactDoesNotMutateHit()
+        {
+            string launch = "Effect.Live.Launch";
+            string impact = "Effect.Live.Impact";
+            string hit = "Effect.Live.Hit";
+            string ice = "Effect.Live.Ice";
+            int launchId = EffectTemplateIdRegistry.Register(launch);
+            int impactId = EffectTemplateIdRegistry.Register(impact);
+            int hitId = EffectTemplateIdRegistry.Register(hit);
+            int iceId = EffectTemplateIdRegistry.Register(ice);
+            var effects = new EffectTemplateRegistry();
+            effects.Register(impactId, new EffectTemplateData { DurationTicks = 1 });
+            effects.Register(hitId, new EffectTemplateData { DurationTicks = 1 });
+            effects.Register(iceId, new EffectTemplateData { DurationTicks = 1 });
+            var launchData = new EffectTemplateData
+            {
+                PresetType = EffectPresetType.LaunchProjectile,
+                DurationTicks = 1,
+                Projectile = new ProjectileDescriptor
+                {
+                    ImpactEffectTemplateId = impactId,
+                    HitEffectTemplateId = hitId
+                }
+            };
+            effects.Register(launchId, in launchData);
+
+            var pipeline = new LiveGasEditPipeline(new GraphProgramRegistry(), effects);
+            LiveEditSession session = LiveEditSession.Start(LiveEditSource.ManualWorkbench);
+            That(session.TryStage(LiveDebugPatchOperation.EffectTemplateRef(
+                launch,
+                "projectile.impactEffect",
+                ice,
+                new LiveEditProvenance(LiveEditSource.ManualWorkbench, "workbench://impact"))).Succeeded,
+                Is.True);
+
+            That(pipeline.Classify(session).CanCommitNextCast, Is.True);
+            pipeline.BeginSafeFrame();
+            LiveApplyCommitResult committed = pipeline.CommitNextCastSafeFrame();
+            pipeline.EndSafeFrame();
+            That(committed.Succeeded, Is.True);
+            That(effects.TryGet(launchId, out EffectTemplateData after), Is.True);
+            That(after.Projectile.ImpactEffectTemplateId, Is.EqualTo(iceId));
+            That(after.Projectile.HitEffectTemplateId, Is.EqualTo(hitId));
+        }
+
         private sealed class RecordingSink : ILiveAttributeCommandSink
         {
             public string? LastAttribute;

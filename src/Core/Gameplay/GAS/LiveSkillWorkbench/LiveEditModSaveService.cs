@@ -115,22 +115,29 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
                 {
                     case LiveDebugPatchOperationKind.GraphBodyReplace:
                         files.Add(new LiveEditSaveFilePlan(
-                            "assets/Configs/GAS/graphs.json",
+                            ResolveGraphsRelativePath(modRootPath),
                             $"Upsert graph '{op.DefinitionId}'",
-                            isNewFile: !File.Exists(Path.Combine(modRootPath, "assets/Configs/GAS/graphs.json"))));
+                            isNewFile: !File.Exists(Path.Combine(modRootPath, ResolveGraphsRelativePath(modRootPath)))));
                         break;
                     case LiveDebugPatchOperationKind.SkillEffectNumeric:
+                    case LiveDebugPatchOperationKind.EffectTemplateRef:
+                    case LiveDebugPatchOperationKind.EffectGrantedTag:
+                        files.Add(new LiveEditSaveFilePlan(
+                            ResolveEffectsRelativePath(modRootPath),
+                            $"Upsert effect field '{op.DefinitionId}.{op.FieldPath ?? op.Kind.ToString()}'",
+                            isNewFile: !File.Exists(Path.Combine(modRootPath, ResolveEffectsRelativePath(modRootPath)))));
+                        break;
                     case LiveDebugPatchOperationKind.AttrConstraintNumeric:
                         files.Add(new LiveEditSaveFilePlan(
-                            "assets/Configs/GAS/lsw_accepted_patches.json",
-                            $"Record numeric patch '{op.DefinitionId}.{op.FieldPath}'",
-                            isNewFile: !File.Exists(Path.Combine(modRootPath, "assets/Configs/GAS/lsw_accepted_patches.json"))));
+                            ResolveAttributesRelativePath(modRootPath),
+                            $"Upsert attribute constraint '{op.DefinitionId}.{op.FieldPath}'",
+                            isNewFile: !File.Exists(Path.Combine(modRootPath, ResolveAttributesRelativePath(modRootPath)))));
                         break;
                     case LiveDebugPatchOperationKind.TagRuleBodyReplace:
                         files.Add(new LiveEditSaveFilePlan(
-                            "assets/Configs/GAS/tag_rules.json",
+                            ResolveTagRulesRelativePath(modRootPath),
                             $"Upsert tag rule '{op.DefinitionId}'",
-                            isNewFile: !File.Exists(Path.Combine(modRootPath, "assets/Configs/GAS/tag_rules.json"))));
+                            isNewFile: !File.Exists(Path.Combine(modRootPath, ResolveTagRulesRelativePath(modRootPath)))));
                         break;
                     default:
                         diags.Add(new LiveEditDiagnostic(
@@ -193,24 +200,37 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
                 {
                     if (op.Kind == LiveDebugPatchOperationKind.GraphBodyReplace)
                     {
-                        string rel = "assets/Configs/GAS/graphs.json";
+                        string rel = ResolveGraphsRelativePath(preview.ModRootPath);
                         string path = Path.Combine(preview.ModRootPath, rel);
                         UpsertGraphDocument(path, op.DefinitionId!, op.DocumentJson!);
                         if (!written.Contains(rel)) written.Add(rel);
                     }
                     else if (op.Kind == LiveDebugPatchOperationKind.TagRuleBodyReplace)
                     {
-                        string rel = "assets/Configs/GAS/tag_rules.json";
+                        string rel = ResolveTagRulesRelativePath(preview.ModRootPath);
                         string path = Path.Combine(preview.ModRootPath, rel);
                         UpsertTagRule(path, op.DefinitionId!, op.DocumentJson!);
                         if (!written.Contains(rel)) written.Add(rel);
                     }
+                    else if (op.Kind == LiveDebugPatchOperationKind.SkillEffectNumeric
+                             || op.Kind == LiveDebugPatchOperationKind.EffectTemplateRef
+                             || op.Kind == LiveDebugPatchOperationKind.EffectGrantedTag)
+                    {
+                        string rel = ResolveEffectsRelativePath(preview.ModRootPath);
+                        string path = Path.Combine(preview.ModRootPath, rel);
+                        UpsertEffectPatch(path, in op);
+                        if (!written.Contains(rel)) written.Add(rel);
+                    }
+                    else if (op.Kind == LiveDebugPatchOperationKind.AttrConstraintNumeric)
+                    {
+                        string rel = ResolveAttributesRelativePath(preview.ModRootPath);
+                        string path = Path.Combine(preview.ModRootPath, rel);
+                        UpsertAttributeConstraint(path, in op);
+                        if (!written.Contains(rel)) written.Add(rel);
+                    }
                     else
                     {
-                        string rel = "assets/Configs/GAS/lsw_accepted_patches.json";
-                        string path = Path.Combine(preview.ModRootPath, rel);
-                        AppendNumericPatch(path, in op);
-                        if (!written.Contains(rel)) written.Add(rel);
+                        throw new InvalidOperationException($"Operation '{op.Kind}' has no save mapping.");
                     }
                 }
                 catch (Exception ex)
@@ -229,6 +249,42 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
             }
 
             return new LiveEditSaveResult(true, written, Array.Empty<LiveEditDiagnostic>());
+        }
+
+        private static string ResolveEffectsRelativePath(string modRootPath)
+        {
+            const string configs = "assets/Configs/GAS/effects.json";
+            const string shortPath = "assets/GAS/effects.json";
+            if (File.Exists(Path.Combine(modRootPath, configs))) return configs;
+            if (File.Exists(Path.Combine(modRootPath, shortPath))) return shortPath;
+            return configs;
+        }
+
+        private static string ResolveGraphsRelativePath(string modRootPath)
+        {
+            const string configs = "assets/Configs/GAS/graphs.json";
+            const string shortPath = "assets/GAS/graphs.json";
+            if (File.Exists(Path.Combine(modRootPath, configs))) return configs;
+            if (File.Exists(Path.Combine(modRootPath, shortPath))) return shortPath;
+            return configs;
+        }
+
+        private static string ResolveTagRulesRelativePath(string modRootPath)
+        {
+            const string configs = "assets/Configs/GAS/tag_rules.json";
+            const string shortPath = "assets/GAS/tag_rules.json";
+            if (File.Exists(Path.Combine(modRootPath, configs))) return configs;
+            if (File.Exists(Path.Combine(modRootPath, shortPath))) return shortPath;
+            return configs;
+        }
+
+        private static string ResolveAttributesRelativePath(string modRootPath)
+        {
+            const string configs = "assets/Configs/GAS/attributes.json";
+            const string shortPath = "assets/GAS/attributes.json";
+            if (File.Exists(Path.Combine(modRootPath, configs))) return configs;
+            if (File.Exists(Path.Combine(modRootPath, shortPath))) return shortPath;
+            return configs;
         }
 
         private void UpsertGraphDocument(string path, string graphId, string documentJson)
@@ -305,30 +361,186 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
             File.WriteAllText(path, array.ToJsonString(_jsonOptions), Encoding.UTF8);
         }
 
-        private void AppendNumericPatch(string path, in LiveDebugPatchOperation op)
+        private void UpsertEffectPatch(string path, in LiveDebugPatchOperation op)
         {
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-            JsonArray array;
-            if (File.Exists(path))
+            JsonArray array = LoadOrCreateArray(path);
+            JsonObject effect = FindOrCreateObjectById(array, op.DefinitionId!);
+
+            if (op.Kind == LiveDebugPatchOperationKind.SkillEffectNumeric)
             {
-                array = JsonNode.Parse(File.ReadAllText(path)) as JsonArray
-                    ?? new JsonArray();
+                ApplyNumericFieldPath(effect, op.FieldPath!, op.NumericValue);
+            }
+            else if (op.Kind == LiveDebugPatchOperationKind.EffectTemplateRef)
+            {
+                ApplyStringFieldPath(effect, op.FieldPath!, op.DocumentJson!);
+            }
+            else if (op.Kind == LiveDebugPatchOperationKind.EffectGrantedTag)
+            {
+                ApplyGrantedTag(effect, op.DocumentJson!, (int)Math.Round(op.NumericValue));
             }
             else
             {
-                array = new JsonArray();
+                throw new InvalidOperationException($"Effect save mapping does not support '{op.Kind}'.");
             }
 
-            array.Add(new JsonObject
-            {
-                ["kind"] = op.Kind.ToString(),
-                ["definitionId"] = op.DefinitionId,
-                ["fieldPath"] = op.FieldPath,
-                ["numericValue"] = op.NumericValue,
-                ["sourceUri"] = op.Provenance.SourceUri,
-                ["savedUtc"] = DateTime.UtcNow.ToString("O")
-            });
             File.WriteAllText(path, array.ToJsonString(_jsonOptions), Encoding.UTF8);
+        }
+
+        private void UpsertAttributeConstraint(string path, in LiveDebugPatchOperation op)
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            JsonArray array = LoadOrCreateArray(path);
+            JsonObject attr = FindOrCreateObjectById(array, op.DefinitionId!);
+            ApplyNumericFieldPath(attr, op.FieldPath!, op.NumericValue);
+            File.WriteAllText(path, array.ToJsonString(_jsonOptions), Encoding.UTF8);
+        }
+
+        private static JsonArray LoadOrCreateArray(string path)
+        {
+            if (!File.Exists(path))
+            {
+                return new JsonArray();
+            }
+
+            return JsonNode.Parse(File.ReadAllText(path)) as JsonArray
+                ?? throw new InvalidOperationException($"Existing '{path}' is not a JSON array.");
+        }
+
+        private static JsonObject FindOrCreateObjectById(JsonArray array, string id)
+        {
+            for (int i = 0; i < array.Count; i++)
+            {
+                if (array[i] is JsonObject obj &&
+                    string.Equals(obj["id"]?.GetValue<string>(), id, StringComparison.OrdinalIgnoreCase))
+                {
+                    return obj;
+                }
+            }
+
+            var created = new JsonObject { ["id"] = id };
+            array.Add(created);
+            return created;
+        }
+
+        private static void ApplyNumericFieldPath(JsonObject root, string fieldPath, double value)
+        {
+            string path = fieldPath.Trim();
+            if (path.Equals("duration.durationTicks", StringComparison.OrdinalIgnoreCase)
+                || path.Equals("DurationTicks", StringComparison.OrdinalIgnoreCase))
+            {
+                EnsureObject(root, "duration")["durationTicks"] = (int)Math.Round(value);
+                return;
+            }
+
+            if (path.Equals("duration.periodTicks", StringComparison.OrdinalIgnoreCase)
+                || path.Equals("PeriodTicks", StringComparison.OrdinalIgnoreCase))
+            {
+                EnsureObject(root, "duration")["periodTicks"] = (int)Math.Round(value);
+                return;
+            }
+
+            if (path.Equals("modifiers.0.value", StringComparison.OrdinalIgnoreCase)
+                || path.Equals("modifiers[0].value", StringComparison.OrdinalIgnoreCase))
+            {
+                JsonArray modifiers = EnsureArray(root, "modifiers");
+                if (modifiers.Count == 0)
+                {
+                    modifiers.Add(new JsonObject());
+                }
+
+                if (modifiers[0] is not JsonObject mod0)
+                {
+                    throw new InvalidOperationException("modifiers[0] must be a JSON object.");
+                }
+
+                mod0["value"] = value;
+                return;
+            }
+
+            if (path.Equals("constraints.min", StringComparison.OrdinalIgnoreCase))
+            {
+                EnsureObject(root, "constraints")["min"] = value;
+                return;
+            }
+
+            if (path.Equals("constraints.max", StringComparison.OrdinalIgnoreCase))
+            {
+                EnsureObject(root, "constraints")["max"] = value;
+                return;
+            }
+
+            throw new InvalidOperationException($"Unsupported numeric save field path '{fieldPath}'.");
+        }
+
+        private static void ApplyStringFieldPath(JsonObject root, string fieldPath, string value)
+        {
+            string path = fieldPath.Trim();
+            if (path.Equals("projectile.impactEffect", StringComparison.OrdinalIgnoreCase))
+            {
+                EnsureObject(root, "projectile")["impactEffect"] = value;
+                return;
+            }
+
+            if (path.Equals("projectile.hitEffect", StringComparison.OrdinalIgnoreCase))
+            {
+                EnsureObject(root, "projectile")["hitEffect"] = value;
+                return;
+            }
+
+            if (path.Equals("projectile.presentationEffect", StringComparison.OrdinalIgnoreCase))
+            {
+                EnsureObject(root, "projectile")["presentationEffect"] = value;
+                return;
+            }
+
+            throw new InvalidOperationException($"Unsupported string save field path '{fieldPath}'.");
+        }
+
+        private static void ApplyGrantedTag(JsonObject root, string tagName, int amount)
+        {
+            JsonArray granted = EnsureArray(root, "grantedTags");
+            for (int i = 0; i < granted.Count; i++)
+            {
+                if (granted[i] is JsonObject obj &&
+                    string.Equals(obj["tag"]?.GetValue<string>(), tagName, StringComparison.OrdinalIgnoreCase))
+                {
+                    obj["formula"] = "Fixed";
+                    obj["amount"] = Math.Clamp(amount, 1, 32);
+                    return;
+                }
+            }
+
+            granted.Add(new JsonObject
+            {
+                ["tag"] = tagName,
+                ["formula"] = "Fixed",
+                ["amount"] = Math.Clamp(amount, 1, 32)
+            });
+        }
+
+        private static JsonObject EnsureObject(JsonObject root, string property)
+        {
+            if (root[property] is JsonObject existing)
+            {
+                return existing;
+            }
+
+            var created = new JsonObject();
+            root[property] = created;
+            return created;
+        }
+
+        private static JsonArray EnsureArray(JsonObject root, string property)
+        {
+            if (root[property] is JsonArray existing)
+            {
+                return existing;
+            }
+
+            var created = new JsonArray();
+            root[property] = created;
+            return created;
         }
     }
 }

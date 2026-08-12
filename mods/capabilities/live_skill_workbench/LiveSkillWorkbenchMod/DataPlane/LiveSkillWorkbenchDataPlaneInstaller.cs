@@ -51,6 +51,12 @@ public static class LiveSkillWorkbenchDataPlaneInstaller
 		router.Register(LiveSkillWorkbenchIds.SelectCatalogItemCommand, handler);
 		router.Register(LiveSkillWorkbenchIds.PrecheckCommand, handler);
 		router.Register(LiveSkillWorkbenchIds.ApplyNextCastCommand, handler);
+		router.Register(LiveSkillWorkbenchIds.ApplyImmediateAttributeCommand, handler);
+		router.Register(LiveSkillWorkbenchIds.GenerateAiDraftCommand, handler);
+		router.Register(LiveSkillWorkbenchIds.BindAiDraftCommand, handler);
+		router.Register(LiveSkillWorkbenchIds.PreviewSaveCommand, handler);
+		router.Register(LiveSkillWorkbenchIds.SaveToModCommand, handler);
+		router.Register(LiveSkillWorkbenchIds.RefreshEffectChainCommand, handler);
 
 		var dispatcher = new WebUiQueuedCommandDispatcher(router);
 		var dataPlaneRuntime = new WebUiDataPlaneRuntime(dispatcher);
