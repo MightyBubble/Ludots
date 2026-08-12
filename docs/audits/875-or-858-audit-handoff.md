@@ -78,19 +78,18 @@
 
 验收产物目录：`artifacts/acceptance/ui-player-aggregate-graph-mvp/`（gitignore，CI/本地生成）。
 
-### 4. SSOT 互指 / TagDisplay 正线残留 — **FAIL（文档债，已挂单）**
+### 4. SSOT 互指 / TagDisplay 正线残留 — **已由 #893 收口（见 #886 handoff）**
 
-| 源 | main @ #875 后状态 | 裁定 |
-|----|-------------------|------|
+| 源 | #893 后状态 | 裁定 |
+|----|------------|------|
 | Issue ADR [#876](https://github.com/MightyBubble/Ludots/issues/876) | 通用表唯一路径；TagDisplay **废止** | 计划 SSOT |
 | 全景 [#886](https://github.com/MightyBubble/Ludots/issues/886) | 写明废止与禁止接入生产 | 债地图 |
-| `gitbook/.../graph-table-lookup.md` | 仍写「与 Tag 快捷路径分离」、实现跟踪指向过时 #870 | **正线残留** |
-| `gitbook/.../tag-display-lookup.md` | 仍是完整专线设计长文（SUMMARY 仍作正链） | **正线残留** |
-| `gitbook/.../ui-panel-authoring-form.md` | curState 仍写 `LookupTagDisplayText` / #868 | **正线残留** |
-| 编辑器 `/ui-panel-authoring` 文案 | 仍提 LookupTagDisplayText | 样品债（#884 相关） |
-| 开放 PR [#879](https://github.com/MightyBubble/Ludots/pull/879) | 已改写废止页 + 唯一路径正本 | **文档纠偏在途** |
+| `gitbook/.../graph-table-lookup.md` | 唯一查表正本 | **已纠偏** |
+| `gitbook/.../tag-display-lookup.md` | SUPERSEDED 短页 | **已纠偏** |
+| `gitbook/.../ui-panel-authoring-form.md` | curState 走通用表；装载已交付 | **已纠偏** |
+| 编辑器 `/ui-panel-authoring` | 示范 `ResolveTableRow` / `TableReadInt` | **已纠偏** |
 
-审计合同口径（对本单交付生效）：
+审计合同口径：
 
 > **TagDisplay 专线废止，不是待接线。**  
 > 不得再把 `TagDisplayTableRegistry` / `LookupTagDisplayToken` 接入 `GameEngine` / `CreateProduction`。  

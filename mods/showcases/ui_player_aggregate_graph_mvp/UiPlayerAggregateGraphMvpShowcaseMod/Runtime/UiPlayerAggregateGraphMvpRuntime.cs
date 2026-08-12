@@ -38,6 +38,8 @@ public readonly struct UiPlayerAggregateProducerMarker
 public sealed class UiPlayerAggregateGraphMvpRuntime
 {
     private readonly UiPlayerAggregateGraphMvpPanelController _panelController;
+    private readonly string _bootstrapOreAttribute;
+    private readonly string _bootstrapCrystalAttribute;
     private UiPlayerAggregateGraphMvpConfig? _config;
     private Entity _owner = Entity.Null;
     private Entity _shutDownBuilding = Entity.Null;
@@ -54,8 +56,15 @@ public sealed class UiPlayerAggregateGraphMvpRuntime
     private uint _randomSeed = 1u;
     private IGraphRuntimeApi? _graphApi;
 
-    public UiPlayerAggregateGraphMvpRuntime()
+    public UiPlayerAggregateGraphMvpRuntime(string bootstrapOreAttribute, string bootstrapCrystalAttribute)
     {
+        if (string.IsNullOrWhiteSpace(bootstrapOreAttribute) || string.IsNullOrWhiteSpace(bootstrapCrystalAttribute))
+        {
+            throw new ArgumentException("Bootstrap resource attribute names are required for graph symbol patch ordering.");
+        }
+
+        _bootstrapOreAttribute = bootstrapOreAttribute.Trim();
+        _bootstrapCrystalAttribute = bootstrapCrystalAttribute.Trim();
         _panelController = new UiPlayerAggregateGraphMvpPanelController(this);
     }
 
@@ -277,7 +286,21 @@ public sealed class UiPlayerAggregateGraphMvpRuntime
                 ?? throw new InvalidOperationException("Player aggregate graph MVP requires ConfigCatalog."),
             engine.ConfigConflictReport
                 ?? throw new InvalidOperationException("Player aggregate graph MVP requires ConfigConflictReport."));
+        RequireBootstrapAttributesMatchPipeline(_config);
         return _config;
+    }
+
+    private void RequireBootstrapAttributesMatchPipeline(UiPlayerAggregateGraphMvpConfig config)
+    {
+        if (!string.Equals(config.Attributes.Ore, _bootstrapOreAttribute, StringComparison.Ordinal) ||
+            !string.Equals(config.Attributes.Crystal, _bootstrapCrystalAttribute, StringComparison.Ordinal))
+        {
+            throw new InvalidOperationException(
+                "Player aggregate graph MVP attributes from ConfigPipeline must match OnLoad bootstrap registration " +
+                $"(bootstrap ore='{_bootstrapOreAttribute}' crystal='{_bootstrapCrystalAttribute}', " +
+                $"pipeline ore='{config.Attributes.Ore}' crystal='{config.Attributes.Crystal}'). " +
+                "AttributeRegistry is frozen before graph patch; diverging Replace merges are fail-closed.");
+        }
     }
 
     private void EnsureScenario(GameEngine engine, UiPlayerAggregateGraphMvpConfig config)
@@ -346,14 +369,16 @@ public sealed class UiPlayerAggregateGraphMvpRuntime
 
             ref WorldPositionCm pos = ref world.Get<WorldPositionCm>(entity);
             System.Numerics.Vector3 meters = WorldUnits.WorldCmToVisualMeters(in pos.Value);
-            bool offline = false;
-            if (world.Has<AttributeBuffer>(entity))
+            if (!world.Has<AttributeBuffer>(entity))
             {
-                ref AttributeBuffer attrs = ref world.Get<AttributeBuffer>(entity);
-                float stock = attrs.GetCurrent(_oreAttributeId) + attrs.GetCurrent(_crystalAttributeId);
-                offline = stock <= 0.01f;
+                throw new InvalidOperationException(
+                    $"Producer building '{_config.Buildings[i].Name}' is missing AttributeBuffer for marker stock.");
             }
 
+            ref AttributeBuffer attrs = ref world.Get<AttributeBuffer>(entity);
+            float stock = attrs.GetCurrent(_oreAttributeId) + attrs.GetCurrent(_crystalAttributeId);
+            float offlineEpsilon = _config.Presentation.Markers.OfflineStockEpsilon;
+            bool offline = stock <= offlineEpsilon;
             _producerMarkers[i] = new UiPlayerAggregateProducerMarker(meters.X, meters.Z, offline);
         }
     }

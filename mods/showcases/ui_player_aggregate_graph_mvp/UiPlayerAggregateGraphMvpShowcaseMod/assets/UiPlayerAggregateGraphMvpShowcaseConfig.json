@@ -71,7 +71,8 @@
       "innerThickness": 0.08,
       "onlineDotRadius": 0.42,
       "offlineDotRadius": 0.28,
-      "dotThickness": 0.08
+      "dotThickness": 0.08,
+      "offlineStockEpsilon": 0.01
     }
   }
 }

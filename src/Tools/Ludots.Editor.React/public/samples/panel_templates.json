@@ -43,7 +43,7 @@
           "id": "curState",
           "type": "TextToken",
           "key": "panel.entity_info.curState",
-          "source": "tagLookup"
+          "source": "readToken"
         }
       ],
       "copyTemplate": "血量: {hp}\n上一次击杀的对象: {lastKill}\n当前状态: {curState}"

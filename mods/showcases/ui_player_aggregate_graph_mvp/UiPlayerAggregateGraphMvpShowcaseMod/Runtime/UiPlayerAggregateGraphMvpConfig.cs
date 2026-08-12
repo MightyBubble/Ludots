@@ -149,6 +149,7 @@ public sealed class UiPlayerAggregateGraphMvpConfig
         RequireProperty(markers, "onlineDotRadius");
         RequireProperty(markers, "offlineDotRadius");
         RequireProperty(markers, "dotThickness");
+        RequireProperty(markers, "offlineStockEpsilon");
     }
 
     private void Validate()
@@ -341,6 +342,7 @@ public sealed class UiPlayerAggregateMarkerStyle
     public float OnlineDotRadius { get; set; }
     public float OfflineDotRadius { get; set; }
     public float DotThickness { get; set; }
+    public float OfflineStockEpsilon { get; set; }
 
     public void Validate()
     {
@@ -350,9 +352,11 @@ public sealed class UiPlayerAggregateMarkerStyle
             InnerThickness <= 0f ||
             OnlineDotRadius <= 0f ||
             OfflineDotRadius <= 0f ||
-            DotThickness <= 0f)
+            DotThickness <= 0f ||
+            OfflineStockEpsilon < 0f)
         {
-            throw new InvalidOperationException("Player aggregate graph MVP presentation.markers requires positive sizes.");
+            throw new InvalidOperationException(
+                "Player aggregate graph MVP presentation.markers requires positive sizes and non-negative offlineStockEpsilon.");
         }
 
         OnlineColor.Validate("onlineColor");

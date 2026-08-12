@@ -116,7 +116,7 @@ Instance = templateId + scope（多开；Router 另册）
 ## 4. 场景
 
 1. **实体信息卡**：变量 `hp` / `lastKill` / `curState`；选中实体后 — `LoadAttribute`(血量)、`ReadBlackboard`(上次击杀)、读当前状态 tagId → **作者自建通用表** `ResolveTableRow` + `TableReadInt(displayToken)`（状态文案）；Reactive `TState` 三字段同构。  
-   > 查表唯一路径见 [`graph-table-lookup.md`](graph-table-lookup.md)。**禁止** `TagDisplay*` 专表/专 op。仍欠：通用表装载实现、Text BB、表面 token→文案。禁止 Attribute 假冒。  
+   > 查表唯一路径见 [`graph-table-lookup.md`](graph-table-lookup.md)。**禁止** `TagDisplay*` 专表/专 op。通用表装载已交付（`GraphLookupTableLoader` + `GraphTables/lookup_tables.json` + ControlFlow/`GameEngine` 注入）。仍欠：Text BB、表面 token→文案。禁止 Attribute 假冒。  
 2. **资源总览条**：变量 `oreTotal` / `crystalTotal`；Query 聚合 → Summary；WebUI `aggregateProjection`。  
 3. **切换表面**：同一模板把 `surfaceKind` 从 Reactive 换成 WebUI，变量与图不变，仅右侧投影形态变。  
 4. **试玩 / 配置**：编辑器工作区含「试玩」（玩家情景）与「配置」（导出 `ludots.ui.panel_template/v1` JSON，样例见 `Ludots.Editor.React/public/samples/panel_templates.json`）。

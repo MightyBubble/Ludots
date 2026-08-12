@@ -17,7 +17,11 @@ public sealed class UiPlayerAggregateGraphMvpShowcaseModEntry : IMod
         AttributeRegistry.Register(bootstrapConfig.Attributes.Ore);
         AttributeRegistry.Register(bootstrapConfig.Attributes.Crystal);
 
-        var runtime = new UiPlayerAggregateGraphMvpRuntime();
+        // AttributeRegistry must be populated before graph symbol patch; ConfigPipeline is not
+        // available on IModContext. Runtime fail-closes if pipeline attributes diverge from bootstrap.
+        var runtime = new UiPlayerAggregateGraphMvpRuntime(
+            bootstrapConfig.Attributes.Ore,
+            bootstrapConfig.Attributes.Crystal);
 
         context.OnEvent(GameEvents.GameStart, ctx =>
         {

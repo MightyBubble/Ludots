@@ -391,8 +391,9 @@ export function UiPanelAuthoringPage() {
                     ) : null}
                     {activeVar === 'curState' ? (
                       <p className="upa-debt">
-                        作者意图：ReadGameplayTag → LookupTagDisplayText。L0 快捷 op 已在运行时线
-                        #868 落地；本编辑器仍是作者糖。仍欠表资产装载与表面 token→文案接线。
+                        作者意图：状态 tag id → ResolveTableRow → TableReadInt(displayToken)。
+                        查表走用户/Mod 自建通用表（#876/#881）；禁止 TagDisplay 专线。通用表装载已交付；仍欠玩法纯读
+                        Effective tag id 原子能力，以及表面 token→文案接线。
                       </p>
                     ) : null}
                   </div>
