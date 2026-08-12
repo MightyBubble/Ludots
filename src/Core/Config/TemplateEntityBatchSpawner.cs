@@ -587,7 +587,7 @@ namespace Ludots.Core.Config
 
             public AttributeBuffer CreateAttributeBuffer()
             {
-                var buffer = default(AttributeBuffer);
+                var buffer = AttributeBuffer.CreateAttached();
                 for (int i = 0; i < _attributeSeeds.Length; i++)
                 {
                     if (_attributeSeeds[i].HasBase)

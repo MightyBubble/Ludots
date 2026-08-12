@@ -126,7 +126,7 @@ namespace Ludots.Core.Gameplay.Relationships
                     TypeId = validatedTypeId,
                     Revision = 1
                 },
-                default(AttributeBuffer),
+                AttributeBuffer.CreateAttached(),
                 new GameplayTagContainer(),
                 new TagCountContainer(),
                 new DirtyFlags(),

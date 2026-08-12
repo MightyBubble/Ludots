@@ -137,7 +137,7 @@ namespace Ludots.Core.Gameplay.Quests
 
         public AttributeBuffer CreateAttributeBuffer(QuestDefinition definition)
         {
-            var buffer = default(AttributeBuffer);
+            var buffer = AttributeBuffer.CreateAttached();
             for (int i = 0; i < definition.Attributes.Count; i++)
             {
                 QuestAttributeDefinition attribute = definition.Attributes[i];

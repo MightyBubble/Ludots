@@ -22,7 +22,7 @@ namespace Ludots.Core.Gameplay.Relationships
                 new Name { Value = name },
                 new GameplayTagContainer(),
                 new TagCountContainer(),
-                default(AttributeBuffer),
+                AttributeBuffer.CreateAttached(),
                 new DirtyFlags(),
                 new ActiveEffectContainer());
             lookup.Register(teamId, entity);
