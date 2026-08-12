@@ -345,7 +345,7 @@ namespace Ludots.Tests.Presentation
                 new() { Op = (ushort)GraphNodeOp.LoadViewer, Dst = 2 },
                 new() { Op = (ushort)GraphNodeOp.ControlDomainResolve, A = 0, Dst = 3 },
                 new() { Op = (ushort)GraphNodeOp.CompareEqEntity, A = 3, B = 2, Dst = 0 },
-                new() { Op = (ushort)GraphNodeOp.RelationshipHasLink, A = 2, B = 1, Flags = 0 },
+                new() { Op = (ushort)GraphNodeOp.RelationshipHasLink, A = 2, B = 1, Dst = 1, Flags = 0 },
             };
 
             GraphProgramSymbolPatcher.Patch(symbols, program, new StubSymbolResolver(_controlsTypeId));
