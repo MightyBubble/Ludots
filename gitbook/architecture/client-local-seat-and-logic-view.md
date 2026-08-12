@@ -1,6 +1,6 @@
 # ClientLocalSeat · Possession · LogicView · PresentBinding
 
-Epic: [#896](https://github.com/MightyBubble/Ludots/issues/896)
+总看板：[#902](https://github.com/MightyBubble/Ludots/issues/902) · 原里程碑：[#896](https://github.com/MightyBubble/Ludots/issues/896)
 
 本页是本机座位与逻辑视觉的正式合同。取代全局 `LocalPlayerId` / `LocalPlayerEntity` 与「唯一 `GameSession.Camera` = 唯一本地视觉」的旧模型。禁止兼容桥、禁止镜像旧键。
 

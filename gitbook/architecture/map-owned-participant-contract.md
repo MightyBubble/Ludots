@@ -91,7 +91,7 @@ focused map 切换时，lookup object identity 必须稳定；系统拿到的是
 
 ## 5. Local Seats & Possession
 
-本机驾驶权不再使用全局 `LocalPlayerId` / `LocalPlayerEntity`。正式合同见 [ClientLocalSeat · Possession · LogicView · PresentBinding](client-local-seat-and-logic-view.md)（Epic #896）。
+本机驾驶权不再使用全局 `LocalPlayerId` / `LocalPlayerEntity`。正式合同见 [ClientLocalSeat · Possession · LogicView · PresentBinding](client-local-seat-and-logic-view.md)（总看板 #902 / 原 #896）。
 
 ### 5.1 配置分层（SSOT）
 
