@@ -2,12 +2,13 @@
   "Id": "raylib_visual_atmosphere_showcase",
   "Tags": ["showcase", "raylib", "atmosphere", "Raylib.DebugGuides:Off"],
   "DefaultCamera": {
-    "TargetXCm": 70500,
-    "TargetYCm": 60100,
-    "Yaw": 205,
-    "Pitch": 26,
-    "DistanceCm": 22000,
-    "FovYDeg": 55
+    "VirtualCameraId": "raylib_visual_atmosphere.camera.composition",
+    "TargetXCm": 96857,
+    "TargetYCm": 72600,
+    "Yaw": 215,
+    "Pitch": 22,
+    "DistanceCm": 8500,
+    "FovYDeg": 50
   },
   "Boards": [
     {
@@ -21,61 +22,61 @@
     {
       "Template": "raylib_visual_atmosphere_tree",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 100625, "Y": 62809 } }
+        "WorldPositionCm": { "Value": { "X": 99971, "Y": 65365 } }
       }
     },
     {
       "Template": "raylib_visual_atmosphere_tree",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 96857, "Y": 72600 } }
+        "WorldPositionCm": { "Value": { "X": 98253, "Y": 70279 } }
       }
     },
     {
       "Template": "raylib_visual_atmosphere_tree",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 88778, "Y": 80581 } }
+        "WorldPositionCm": { "Value": { "X": 94887, "Y": 74807 } }
       }
     },
     {
       "Template": "raylib_visual_atmosphere_tree",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 78359, "Y": 85791 } }
+        "WorldPositionCm": { "Value": { "X": 91352, "Y": 78813 } }
       }
     },
     {
       "Template": "raylib_visual_atmosphere_tree",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 33959, "Y": 47339 } }
+        "WorldPositionCm": { "Value": { "X": 97000, "Y": 71000 } }
       }
     },
     {
       "Template": "raylib_visual_atmosphere_tree",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 40321, "Y": 38316 } }
+        "WorldPositionCm": { "Value": { "X": 99000, "Y": 68000 } }
       }
     },
     {
       "Template": "raylib_visual_atmosphere_tree",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 55009, "Y": 29409 } }
+        "WorldPositionCm": { "Value": { "X": 93500, "Y": 76000 } }
       }
     },
     {
       "Template": "raylib_visual_atmosphere_tree",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 92000, "Y": 56000 } }
+        "WorldPositionCm": { "Value": { "X": 96000, "Y": 73500 } }
       }
     },
     {
       "Template": "raylib_visual_atmosphere_vfx_blend",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 98000, "Y": 64000 } }
+        "WorldPositionCm": { "Value": { "X": 97500, "Y": 72000 } }
       }
     },
     {
       "Template": "raylib_visual_atmosphere_vfx_additive",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 101000, "Y": 67000 } }
+        "WorldPositionCm": { "Value": { "X": 98800, "Y": 69500 } }
       }
     }
   ]

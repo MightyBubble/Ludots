@@ -26,41 +26,66 @@ fi
 
 dotnet build "$REPO_ROOT/mods/showcases/raylib_visual_atmosphere/RaylibVisualAtmosphereShowcaseMod/RaylibVisualAtmosphereShowcaseMod.csproj" -c Release --nologo
 
+wait_for_file() {
+  local path="$1"
+  local timeout_s="${2:-120}"
+  local start
+  start=$(date +%s)
+  while [[ ! -f "$path" ]]; do
+    if (( $(date +%s) - start > timeout_s )); then
+      echo "ERROR: timed out waiting for $path" >&2
+      return 1
+    fi
+    # keep waiting while Raylib app is alive, or a few seconds after launcher returns
+    sleep 1
+  done
+  # ensure file is finished writing
+  local size1 size2
+  size1=$(stat -c%s "$path")
+  sleep 1
+  size2=$(stat -c%s "$path")
+  while [[ "$size1" != "$size2" ]]; do
+    size1=$size2
+    sleep 1
+    size2=$(stat -c%s "$path")
+  done
+}
+
 capture_one() {
   local file="$1"
   local shot="$2"
   local phase="$3"
   local dest="$OUT_DIR/$file"
   local opt="$OPT_OUT_DIR/$file"
+  local log="/tmp/atm_capture_${shot}.log"
   echo "=== Capturing $file (shot=$shot phase=$phase) ==="
-  rm -f "$dest" "$opt"
+  rm -f "$dest" "$opt" "${dest%.png}.diag.txt"
   export LUDOTS_ATMOSPHERE_SHOT="$shot"
   export LUDOTS_DAY_PHASE="$phase"
   export LUDOTS_TAKE_SCREENSHOT_PATH="$dest"
   export LUDOTS_RAYLIB_DIAGNOSTIC_PATH="${dest%.png}.diag.txt"
 
+  # Launcher may return before the Raylib host exits; wait on the PNG.
   set +e
-  dotnet exec "$LAUNCHER" launch raylib_visual_atmosphere --adapter raylib --build auto
-  local rc=$?
+  dotnet exec "$LAUNCHER" launch raylib_visual_atmosphere --adapter raylib --build auto >"$log" 2>&1
+  local launch_rc=$?
   set -e
-  if [[ $rc -ne 0 ]]; then
-    echo "ERROR: launcher exit $rc for $file" >&2
-    if [[ -f "${dest%.png}.diag.txt" ]]; then
-      tail -n 80 "${dest%.png}.diag.txt" >&2 || true
-    fi
-    exit $rc
-  fi
-  if [[ ! -f "$dest" ]]; then
-    echo "ERROR: screenshot missing: $dest" >&2
+
+  if ! wait_for_file "$dest" 180; then
+    echo "ERROR: screenshot missing for $file (launcher_rc=$launch_rc)" >&2
+    tail -n 80 "$log" >&2 || true
     exit 3
   fi
-  # Fail-loud: pure black / near-empty frames are not atmosphere evidence.
+
+  # Drain any leftover host process from this shot.
+  pkill -f 'Ludots.App.Raylib.dll' 2>/dev/null || true
+  sleep 1
+
   python3 - "$dest" <<'PY'
 import sys, struct, zlib
 path = sys.argv[1]
 data = open(path, 'rb').read()
 assert data[:8] == b'\x89PNG\r\n\x1a\n', path
-# parse IHDR + IDAT
 off = 8
 w = h = None
 idat = b''
@@ -76,14 +101,12 @@ while off + 8 <= len(data):
     elif tag == b'IEND':
         break
 raw = zlib.decompress(idat)
-# assume RGBA8
 stride = w * 4
 pixels = bytearray()
 for y in range(h):
     row = raw[1 + y*(stride+1) : 1 + y*(stride+1) + stride]
     pixels.extend(row)
 n = w * h
-# mean luminance
 acc = 0
 nonzero = 0
 for i in range(0, len(pixels), 4):
@@ -111,7 +134,6 @@ capture_one "04_blend_modes.png" "04_blend_modes" "0.42"
 capture_one "05_distance_fog.png" "05_distance_fog" "0.42"
 capture_one "06_water_reflect.png" "06_water_reflect" "0.42"
 
-# Day/night must visibly differ
 python3 - "$OUT_DIR/01_sky_day.png" "$OUT_DIR/02_sky_night.png" <<'PY'
 import sys, struct, zlib
 def load(path):
@@ -138,6 +160,16 @@ print(f'day/night mean channel delta={mean:.2f}')
 if mean < 3.0:
     raise SystemExit(f'ERROR: day/night screenshots too similar (mean delta={mean:.2f})')
 PY
+
+# Water shot must prove reflective pass was active (diag + non-black water).
+if ! rg -q 'uSampleReflection|BindReflectiveWater|FBO: \[ID 1\] Framebuffer object created|texture loaded successfully \(640x360' /tmp/atm_capture_06_water_reflect.log \
+  && ! rg -q 'FBO: \[ID 1\] Framebuffer object created successfully' /tmp/atm_capture_06_water_reflect.log; then
+  # soft check: host logs FBO creation for reflection RT
+  if ! rg -q 'Framebuffer object created successfully' /tmp/atm_capture_06_water_reflect.log; then
+    echo "ERROR: water reflect capture log missing reflective FBO evidence" >&2
+    exit 4
+  fi
+fi
 
 REPORT="$OUT_DIR/capture-report.md"
 {

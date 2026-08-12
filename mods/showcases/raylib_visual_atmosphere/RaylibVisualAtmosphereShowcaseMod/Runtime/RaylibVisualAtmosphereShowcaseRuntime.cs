@@ -1,6 +1,7 @@
 using System;
 using System.Numerics;
 using System.Threading.Tasks;
+using Arch.Core;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Presentation;
@@ -94,8 +95,42 @@ internal sealed class RaylibVisualAtmosphereShowcaseRuntime : IBenchmarkSceneCon
     private void ApplyCaptureCamera(GameEngine engine)
     {
         CaptureShot shot = ResolveCaptureShot();
-        CameraPoseRequest pose = ResolvePose(shot);
-        engine.GameSession.Camera.ApplyPose(pose);
+        string cameraId = ResolveCameraId(shot);
+        var registry = engine.GetService(CoreServiceKeys.VirtualCameraRegistry)
+            ?? throw new InvalidOperationException(
+                "Raylib visual atmosphere showcase requires VirtualCameraRegistry.");
+
+        if (!registry.TryGet(cameraId, out VirtualCameraDefinition? definition) || definition == null)
+        {
+            throw new InvalidOperationException(
+                $"Raylib visual atmosphere showcase requires virtual camera '{cameraId}'.");
+        }
+
+        engine.GameSession.Camera.ResetVirtualCameras();
+        engine.GameSession.Camera.ActivateVirtualCamera(
+            cameraId,
+            blendDurationSeconds: 0f,
+            followTarget: CameraFollowTargetFactory.Build(
+                engine.World,
+                engine.GlobalContext,
+                definition.FollowTargetKind,
+                Entity.Null,
+                definition.FollowCollectionKey),
+            snapToFollowTargetWhenAvailable: definition.SnapToFollowTargetWhenAvailable,
+            resetRuntimeState: true);
+
+        Vector2? targetCm = definition.TargetSource == VirtualCameraTargetSource.Fixed
+            ? definition.FixedTargetCm
+            : null;
+        engine.GameSession.Camera.ApplyPose(new CameraPoseRequest
+        {
+            VirtualCameraId = cameraId,
+            TargetCm = targetCm,
+            Yaw = definition.Yaw,
+            Pitch = definition.Pitch,
+            DistanceCm = definition.DistanceCm,
+            FovYDeg = definition.FovYDeg,
+        });
         engine.GameSession.Camera.SynchronizeActiveVirtualCameraBoundsAndHeight();
     }
 
@@ -121,58 +156,16 @@ internal sealed class RaylibVisualAtmosphereShowcaseRuntime : IBenchmarkSceneCon
         };
     }
 
-    private static CameraPoseRequest ResolvePose(CaptureShot shot)
+    private static string ResolveCameraId(CaptureShot shot)
     {
-        float cx = RaylibVisualAtmosphereShowcaseIds.IslandCenterXCm;
-        float cy = RaylibVisualAtmosphereShowcaseIds.IslandCenterYCm;
-
         return shot switch
         {
-            CaptureShot.SkyDay or CaptureShot.SkyNight or CaptureShot.Composition => new CameraPoseRequest
-            {
-                TargetCm = new Vector2(cx + 4_000f, cy + 2_500f),
-                TargetHeightCm = 900f,
-                Yaw = 205f,
-                Pitch = 26f,
-                DistanceCm = 22_000f,
-                FovYDeg = 55f,
-            },
-            CaptureShot.CutoutVegetation => new CameraPoseRequest
-            {
-                TargetCm = new Vector2(100_625f, 62_809f),
-                TargetHeightCm = 350f,
-                Yaw = 200f,
-                Pitch = 8f,
-                DistanceCm = 4_200f,
-                FovYDeg = 40f,
-            },
-            CaptureShot.BlendModes => new CameraPoseRequest
-            {
-                TargetCm = new Vector2(99_500f, 65_500f),
-                TargetHeightCm = 280f,
-                Yaw = 210f,
-                Pitch = 6f,
-                DistanceCm = 3_800f,
-                FovYDeg = 38f,
-            },
-            CaptureShot.DistanceFog => new CameraPoseRequest
-            {
-                TargetCm = new Vector2(cx - 12_000f, cy - 8_000f),
-                TargetHeightCm = 1_400f,
-                Yaw = 40f,
-                Pitch = 12f,
-                DistanceCm = 36_000f,
-                FovYDeg = 58f,
-            },
-            CaptureShot.WaterReflect => new CameraPoseRequest
-            {
-                TargetCm = new Vector2(104_600f, 57_600f),
-                TargetHeightCm = 120f,
-                Yaw = 250f,
-                Pitch = 6f,
-                DistanceCm = 8_500f,
-                FovYDeg = 48f,
-            },
+            CaptureShot.SkyDay or CaptureShot.SkyNight or CaptureShot.Composition =>
+                "raylib_visual_atmosphere.camera.composition",
+            CaptureShot.CutoutVegetation => "raylib_visual_atmosphere.camera.cutout",
+            CaptureShot.BlendModes => "raylib_visual_atmosphere.camera.blend",
+            CaptureShot.DistanceFog => "raylib_visual_atmosphere.camera.fog",
+            CaptureShot.WaterReflect => "raylib_visual_atmosphere.camera.water",
             _ => throw new InvalidOperationException($"Unhandled capture shot '{shot}'."),
         };
     }
