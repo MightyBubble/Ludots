@@ -11,18 +11,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private readonly ConfigPipeline _pipeline;
         private readonly GraphActionCatalog _catalog;
         private readonly GraphProgramRegistry _programs;
-        private readonly GraphFunctionCatalog? _functions;
+        private readonly GraphFunctionCatalog _functions;
 
         public GraphActionCatalogLoader(
             ConfigPipeline pipeline,
             GraphActionCatalog catalog,
             GraphProgramRegistry programs,
-            GraphFunctionCatalog? functions = null)
+            GraphFunctionCatalog functions)
         {
             _pipeline = pipeline ?? throw new ArgumentNullException(nameof(pipeline));
             _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
             _programs = programs ?? throw new ArgumentNullException(nameof(programs));
-            _functions = functions;
+            _functions = functions ?? throw new ArgumentNullException(nameof(functions));
         }
 
         public void Load(
@@ -49,7 +49,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 JsonObject obj = merged[i].Node;
                 try
                 {
-                    if (_functions != null && _functions.TryGet(name, out _))
+                    if (_functions.TryGet(name, out _))
                     {
                         throw new InvalidOperationException($"ActionLib '{name}' duplicates FuncLib name.");
                     }

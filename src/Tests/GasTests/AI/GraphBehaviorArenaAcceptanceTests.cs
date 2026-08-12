@@ -20,7 +20,7 @@ namespace Ludots.Tests.Gas.AI
             const int agents = 10_000;
             const int waves = 25; // 5s / 0.2s
             // Showcase default topology N=8; N=16 remains BT-only stress (see BehaviorTreeRuntimeTests).
-            _ = Ludots.Tests.Gas.Graph.GraphRegistryTestBootstrap.LoadCoreScriptsAndFuncLib(out _, out GraphActionCatalog actions);
+            _ = Ludots.Tests.Gas.Graph.GraphRegistryTestBootstrap.LoadCoreScriptsFuncLibAndActionLib(out _, out GraphActionCatalog actions);
             BehaviorTreeDefinition bt = BehaviorTreeFactory.CreateAlwaysSuccessSequence("arena.bt", leafCount: 7);
             HfsmDefinition hfsm = HfsmFactory.CreateSentryHierarchy("arena.hfsm");
             LevelDirector level = LevelBlueprintFactory.CreateTwoPhaseTrial(
@@ -90,9 +90,9 @@ namespace Ludots.Tests.Gas.AI
             double p95 = samples[(int)(waves * 0.95)];
             TestContext.WriteLine(
                 $"waves={waves} A={agents} N_topo={bt.NodeCount} avg={avgMs:F3} p95={p95:F3} max={maxMs:F3} over5ms={over} phase={level.Phase}");
-            // Topology-only combined wave; allow CI noise after Registry + ActionLib bootstrap.
-            Assert.That(avgMs, Is.LessThan(20.0), $"Combined think avg exceeded 20ms: {avgMs:F3}");
-            Assert.That(p95, Is.LessThan(40.0), $"Combined think p95 exceeded 40ms: {p95:F3}");
+            Assert.That(over, Is.EqualTo(0), $"Combined think wave exceeded 5ms in {over} of {waves} samples");
+            Assert.That(avgMs, Is.LessThan(15.0), $"Combined think avg exceeded 15ms: {avgMs:F3}");
+            Assert.That(p95, Is.LessThan(15.0), $"Combined think p95 exceeded 15ms: {p95:F3}");
             Assert.That(level.Phase, Is.EqualTo(2));
         }
     }

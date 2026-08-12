@@ -4,59 +4,50 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.Modding;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
+using Ludots.Core.Scripting;
 
 namespace Ludots.Tests.Gas.Graph
 {
-    /// <summary>Loads core GAS Script graphs (+ func_lib / action_lib) into Registry for headless tests.</summary>
+    /// <summary>Loads core GAS Script graphs plus func_lib / action_lib via production catalog loaders.</summary>
     internal static class GraphRegistryTestBootstrap
     {
-        public static GraphProgramRegistry LoadCoreScriptsAndFuncLib(out GraphFunctionCatalog catalog)
-            => LoadCoreScriptsAndFuncLib(out catalog, out _);
+        public static GraphProgramRegistry LoadCoreScriptsFuncLibAndActionLib(out GraphFunctionCatalog catalog)
+            => LoadCoreScriptsFuncLibAndActionLib(out catalog, out _);
 
-        public static GraphProgramRegistry LoadCoreScriptsAndFuncLib(
+        public static GraphProgramRegistry LoadCoreScriptsFuncLibAndActionLib(
             out GraphFunctionCatalog catalog,
             out GraphActionCatalog actions)
-        {
-            GraphProgramRegistry programs = LoadProgramsAndFuncLib(out catalog);
-            actions = new GraphActionCatalog();
-            string actionPath = Path.Combine(FindRepoRoot(), "assets", "Configs", "GAS", "action_lib.json");
-            using var actionDoc = JsonDocument.Parse(File.ReadAllText(actionPath));
-            foreach (JsonElement el in actionDoc.RootElement.EnumerateArray())
-            {
-                string name = el.GetProperty("name").GetString()!;
-                string graphKey = el.GetProperty("graph").GetString()!;
-                string kindText = el.GetProperty("kind").GetString()!;
-                if (!GraphKindParser.TryParse(kindText, out GraphKind kind))
-                {
-                    throw new InvalidOperationException($"Bad action_lib kind {kindText}");
-                }
-
-                if (catalog.TryGet(name, out _))
-                {
-                    throw new InvalidOperationException($"action_lib '{name}' duplicates func_lib.");
-                }
-
-                int id = GraphIdRegistry.GetId(graphKey);
-                if (id <= 0)
-                {
-                    throw new InvalidOperationException($"action_lib '{name}' graph '{graphKey}' missing.");
-                }
-
-                actions.Register(name, id, kind);
-            }
-
-            return programs;
-        }
-
-        private static GraphProgramRegistry LoadProgramsAndFuncLib(out GraphFunctionCatalog catalog)
         {
             GraphIdRegistry.Clear();
             var programs = new GraphProgramRegistry();
             catalog = new GraphFunctionCatalog();
+            actions = new GraphActionCatalog();
 
-            string graphsPath = Path.Combine(FindRepoRoot(), "assets", "Configs", "GAS", "graphs.json");
+            string repoRoot = FindRepoRoot();
+            string assetsRoot = Path.Combine(repoRoot, "assets");
+
+            var vfs = new VirtualFileSystem();
+            vfs.Mount("Core", assetsRoot);
+            var modLoader = new ModLoader(vfs, new FunctionRegistry(), new TriggerManager());
+            var pipeline = new ConfigPipeline(vfs, modLoader);
+            var configCatalog = new ConfigCatalog();
+            configCatalog.Add(new ConfigCatalogEntry("GAS/func_lib.json", ConfigMergePolicy.ArrayById, "name"));
+            configCatalog.Add(new ConfigCatalogEntry("GAS/action_lib.json", ConfigMergePolicy.ArrayById, "name"));
+
+            LoadScriptGraphs(programs, repoRoot);
+
+            new GraphFunctionCatalogLoader(pipeline, catalog, programs).Load(configCatalog);
+            new GraphActionCatalogLoader(pipeline, actions, programs, catalog).Load(configCatalog);
+
+            return programs;
+        }
+
+        private static void LoadScriptGraphs(GraphProgramRegistry programs, string repoRoot)
+        {
+            string graphsPath = Path.Combine(repoRoot, "assets", "Configs", "GAS", "graphs.json");
             JsonSerializerOptions options = StrictJsonOptions.CreateCamelCase(includeFields: true);
             using var doc = JsonDocument.Parse(File.ReadAllText(graphsPath));
             foreach (JsonElement el in doc.RootElement.EnumerateArray())
@@ -87,29 +78,6 @@ namespace Ludots.Tests.Gas.Graph
                 int graphId = GraphIdRegistry.Register(id);
                 programs.Register(graphId, pkg.Value.Program, GraphKind.Script);
             }
-
-            string funcPath = Path.Combine(FindRepoRoot(), "assets", "Configs", "GAS", "func_lib.json");
-            using var funcDoc = JsonDocument.Parse(File.ReadAllText(funcPath));
-            foreach (JsonElement el in funcDoc.RootElement.EnumerateArray())
-            {
-                string name = el.GetProperty("name").GetString()!;
-                string graphKey = el.GetProperty("graph").GetString()!;
-                string kindText = el.GetProperty("kind").GetString()!;
-                if (!GraphKindParser.TryParse(kindText, out GraphKind kind))
-                {
-                    throw new InvalidOperationException($"Bad func_lib kind {kindText}");
-                }
-
-                int id = GraphIdRegistry.GetId(graphKey);
-                if (id <= 0)
-                {
-                    throw new InvalidOperationException($"func_lib '{name}' graph '{graphKey}' missing.");
-                }
-
-                catalog.Register(name, id, kind);
-            }
-
-            return programs;
         }
 
         private static string FindRepoRoot()

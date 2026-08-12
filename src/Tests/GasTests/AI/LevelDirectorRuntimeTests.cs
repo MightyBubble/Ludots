@@ -14,7 +14,7 @@ namespace Ludots.Tests.Gas.AI
         [Test]
         public void TwoPhaseTrial_AdvancesOnWavesAndCounter()
         {
-            GraphProgramRegistry programs = GraphRegistryTestBootstrap.LoadCoreScriptsAndFuncLib(out _, out GraphActionCatalog actions);
+            GraphProgramRegistry programs = GraphRegistryTestBootstrap.LoadCoreScriptsFuncLibAndActionLib(out _, out GraphActionCatalog actions);
             int phaseScript = GraphRegistryScriptResolver.RequireActionId(actions, LevelScriptKeys.PhaseAdvance);
             LevelDirector director = LevelBlueprintFactory.CreateTwoPhaseTrial(
                 "level.trial",

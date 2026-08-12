@@ -85,7 +85,7 @@ namespace Ludots.Tests.Gas.Graph
         [Test]
         public void CoreCatalogs_MoveL2ActionsToActionLib()
         {
-            _ = GraphRegistryTestBootstrap.LoadCoreScriptsAndFuncLib(
+            _ = GraphRegistryTestBootstrap.LoadCoreScriptsFuncLibAndActionLib(
                 out GraphFunctionCatalog functions,
                 out GraphActionCatalog actions);
 
