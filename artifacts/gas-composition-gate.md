@@ -1,4 +1,57 @@
-﻿## GAS Composition Gate - Current Task Self Review
+﻿## GAS Composition Gate — Self Review
+
+- **Task / Issue**: P1-E restore FrontDoor authoring for orphaned relationship mutation/query ops
+- **Date**: 2026-08-12
+- **Agent / Author**: Cursor Cloud GPT-5.5
+
+### 1. Core judgment
+
+新变体主要交付物是（A/B/C/D）: A
+
+结论: PASS
+
+一句话理由: 本次恢复现有 relationship graph ops 的 FrontDoor authoring 入口与 fail-closed 字段校验，不新增 profile enum、preset 开关或平行运行时管线。
+
+### 2. Layer assignment
+
+| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
+|-----------|-----------------|----------|
+| Relationship mutation/query FrontDoor authoring | Layer 2 | `Query.cs` FrontDoor matrices to existing GAS graph op symbols |
+| Relationship runtime execution | Layer 0 | Existing GAS graph op handlers and relationship runtime services |
+| Required field validation | Layer 2 | Existing FrontDoor compile/validation path |
+
+### 3. Reuse list
+
+- Handlers: Existing relationship graph op handlers in `GasGraphOpHandlerTable`
+- Queues / Systems: Existing GAS graph compile/runtime execution path
+- Resolvers / Registries: Existing relationship catalog/runtime and graph op symbol registration
+- Existing presets / graphs: Existing authored graph op matrix conventions in `Query.cs`
+
+### 4. New Layer 0 ops (if any)
+
+N/A
+
+### 5. Transaction boundary
+
+N/A — no new transaction executor or rollback boundary is introduced; existing relationship op runtime behavior is reused.
+
+### 6. Config SSOT
+
+行为配置落在: existing graph op authoring metadata and authored GAS graphs.
+
+是否新增 JSON schema: NO — required authoring fields are expressed through existing FrontDoor matrix metadata.
+
+### 7. Red flag scan
+
+- [x] 未新增 profile inherit/placement enum
+- [x] 未新建与 spawn 平行的物化管线
+- [x] 未把 placement 校验塞进 lifecycle op
+- [x] 未添加「说不清的」默认 fallback
+
+### 8. Next variant test
+
+「下一个 Mod 变体」将修改: graph 连线 / effect 步骤
+## GAS Composition Gate - Current Task Self Review
 
 - **Task / Issue**: Ludots Epic #915 P1 restore deleted graph authoring guard tests
 - **Date**: 2026-08-12
@@ -360,6 +413,20 @@ N/A
 - **Agent / Author**: Cursor cloud agent
 
 结论: PASS — 既有 L0 tag/display opcode 补回 ControlFlow 作者白名单、校验与 emit；无新 profile enum / fallback。
+
+## GAS Composition Gate — P1-G
+
+- **Task**: Restore FrontDoor authoring for event/control-domain/knowledge orphaned ops
+- **Date**: 2026-08-12
+
+结论: PASS — 恢复既有 graph opcode 的 Linear ControlFlow 作者白名单、字段校验与 emit；无新 profile enum、preset 开关或平行管线。
+
+| 步骤/能力 | Layer | 实现载体 |
+|-----------|-------|----------|
+| SendEvent / LoadEventPayload* / ControlDomain* / Knowledge* / LoadContext* FrontDoor | 2 | `GraphControlFlowCompiler.Linear` |
+| Runtime opcode execution | 0 | Existing `GasGraphOpHandlerTable` handlers |
+
+复用: 既有 VM handlers、symbol patcher（SendEvent tag）、coverage registry、FrontDoor 测试框架。
 | 类型 | 项 |
 |------|-----|
 | 复用 | Existing FrontDoor graph authoring registry, graph compiler, effect op handlers, symbol patcher, coverage registry |
