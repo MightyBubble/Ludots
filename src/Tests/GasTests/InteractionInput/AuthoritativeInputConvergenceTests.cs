@@ -682,8 +682,8 @@ namespace Ludots.Tests.GAS
             Assert.That(pointerSnapshot.TryGetState("Confirm", out var selectState), Is.True);
             Assert.That(selectState.PressedThisFrame, Is.False, "Pointer buttons snapshot must not leak minimap clicks into gameplay selection.");
 
-            Assert.That(engine.GameSession.Camera.State.TargetCm.X, Is.EqualTo(expectedTarget.X).Within(1f));
-            Assert.That(engine.GameSession.Camera.State.TargetCm.Y, Is.EqualTo(expectedTarget.Y).Within(1f));
+            Assert.That(engine.AuthorityCamera().State.TargetCm.X, Is.EqualTo(expectedTarget.X).Within(1f));
+            Assert.That(engine.AuthorityCamera().State.TargetCm.Y, Is.EqualTo(expectedTarget.Y).Within(1f));
         }
 
         [Test]
@@ -818,7 +818,7 @@ namespace Ludots.Tests.GAS
             engine.SetService(CoreServiceKeys.MinimapRuntime, minimap);
             minimap.Visible = true;
             minimap.UseRtsFullMapPreset();
-            engine.GameSession.Camera.ApplyPose(new CameraPoseRequest { Yaw = 90f });
+            engine.AuthorityCamera().ApplyPose(new CameraPoseRequest { Yaw = 90f });
             minimap.Refresh(engine, markerBuffer, screenMarkers);
 
             engine.SetService(CoreServiceKeys.InputHandler, handler);
@@ -868,14 +868,14 @@ namespace Ludots.Tests.GAS
             backend.Buttons["<Mouse>/LeftButton"] = true;
             Assert.That(minimap.TryScreenToWorld(firstDrag, out Vector2 expectedFirstTarget), Is.True);
             system.Update(1f / 60f);
-            Assert.That(engine.GameSession.Camera.State.TargetCm.X, Is.EqualTo(expectedFirstTarget.X).Within(1f));
-            Assert.That(engine.GameSession.Camera.State.TargetCm.Y, Is.EqualTo(expectedFirstTarget.Y).Within(1f));
+            Assert.That(engine.AuthorityCamera().State.TargetCm.X, Is.EqualTo(expectedFirstTarget.X).Within(1f));
+            Assert.That(engine.AuthorityCamera().State.TargetCm.Y, Is.EqualTo(expectedFirstTarget.Y).Within(1f));
 
             backend.MousePosition = secondDrag;
             Assert.That(minimap.TryScreenToWorld(secondDrag, out Vector2 expectedSecondTarget), Is.True);
             system.Update(1f / 60f);
-            Assert.That(engine.GameSession.Camera.State.TargetCm.X, Is.EqualTo(expectedSecondTarget.X).Within(1f));
-            Assert.That(engine.GameSession.Camera.State.TargetCm.Y, Is.EqualTo(expectedSecondTarget.Y).Within(1f));
+            Assert.That(engine.AuthorityCamera().State.TargetCm.X, Is.EqualTo(expectedSecondTarget.X).Within(1f));
+            Assert.That(engine.AuthorityCamera().State.TargetCm.Y, Is.EqualTo(expectedSecondTarget.Y).Within(1f));
             Assert.That(handler.IsDown("Confirm"), Is.False, "Held minimap drag must keep suppressing gameplay confirm.");
 
             backend.Buttons["<Mouse>/LeftButton"] = false;

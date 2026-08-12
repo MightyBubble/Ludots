@@ -187,5 +187,34 @@ namespace Ludots.Core.Client
 
         public static PresentBindingSurface RequireSolePresentSurface(GameEngine engine, float fovYDeg) =>
             RequireSolePresentSurface(engine.GlobalContext, fovYDeg);
+
+        /// <summary>
+        /// Sole LogicView camera when present; otherwise session boot camera before any LogicView exists.
+        /// </summary>
+        public static CameraManager ResolveAuthorityCamera(GameEngine engine)
+        {
+            ArgumentNullException.ThrowIfNull(engine);
+            if (TryResolveSolePresentCamera(engine, out CameraManager presentCamera, out _))
+            {
+                return presentCamera;
+            }
+
+            if (engine.TryGetService(CoreServiceKeys.LogicViewRegistry, out LogicViewRegistry? views) &&
+                views != null &&
+                views.Count > 0)
+            {
+                if (views.Count != 1)
+                {
+                    throw new InvalidOperationException(
+                        "ResolveAuthorityCamera requires a sole LogicView when PresentBinding is absent (multi-view is P3).");
+                }
+
+                var cameras = new List<CameraManager>(1);
+                views.CopyCameras(cameras);
+                return cameras[0];
+            }
+
+            return engine.GameSession.Camera;
+        }
     }
 }

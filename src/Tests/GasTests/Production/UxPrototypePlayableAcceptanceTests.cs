@@ -33,6 +33,7 @@ using Ludots.UI;
 using Ludots.UI.Runtime;
 using Ludots.UI.Skia;
 using NUnit.Framework;
+using Ludots.Tests.TestCommon;
 
 namespace Ludots.Tests.GAS.Production
 {
@@ -146,7 +147,7 @@ namespace Ludots.Tests.GAS.Production
             LoadMap(engine, "ux_prototype_battle", frameTimesMs);
             Assert.That(engine.TriggerManager.Errors.Count, Is.EqualTo(0));
             var backend = GetInputBackend(engine);
-            Vector2 cameraTarget = engine.GameSession.Camera.State.TargetCm;
+            Vector2 cameraTarget = engine.AuthorityCamera().State.TargetCm;
             Assert.That(cameraTarget.X, Is.InRange(3200f, 4000f), "UX prototype battle camera should frame the battlefield instead of drifting back toward the world origin.");
             Assert.That(cameraTarget.Y, Is.InRange(2200f, 2900f), "UX prototype battle camera should frame the battlefield instead of drifting back toward the world origin.");
 
@@ -786,8 +787,8 @@ namespace Ludots.Tests.GAS.Production
             var cameraAdapter = new StubCameraAdapter();
             var timingDiagnostics = engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics);
             var cameraPresenter = new CameraPresenter(engine.SpatialCoords, cameraAdapter, timingDiagnostics);
-            var screenProjector = new CoreScreenProjector(engine.GameSession.Camera, view);
-            var screenRayProvider = new CoreScreenRayProvider(engine.GameSession.Camera, view);
+            var screenProjector = new CoreScreenProjector(engine.AuthorityCamera(), view);
+            var screenRayProvider = new CoreScreenRayProvider(engine.AuthorityCamera(), view);
             screenProjector.BindPresenter(cameraPresenter);
             screenRayProvider.BindPresenter(cameraPresenter);
             engine.SetService(CoreServiceKeys.ScreenProjector, screenProjector);
@@ -795,7 +796,7 @@ namespace Ludots.Tests.GAS.Production
 
             var culling = new CameraCullingSystem(
                 engine.World,
-                engine.GameSession.Camera,
+                engine.AuthorityCamera(),
                 engine.SpatialQueries,
                 view,
                 cullingConfig: engine.MergedConfig.Presentation.CameraCulling,
@@ -866,7 +867,7 @@ namespace Ludots.Tests.GAS.Production
             }
 
             float alpha = runtime.PresentationFrameSetup?.GetInterpolationAlpha() ?? 1f;
-            runtime.CameraPresenter.Update(engine.GameSession.Camera, alpha);
+            runtime.CameraPresenter.Update(engine.AuthorityCamera(), alpha);
         }
 
         private static List<string> ExtractUiText(UIRoot root)

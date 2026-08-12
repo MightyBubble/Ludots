@@ -2416,38 +2416,65 @@ namespace Ludots.Core.Engine
                 virtualCameraId = definition.Id;
             }
 
-            GameSession.Camera.ResetVirtualCameras();
-            GameSession.Camera.ActivateVirtualCamera(
-                virtualCameraId,
-                blendDurationSeconds: 0f,
-                followTarget: CameraFollowTargetFactory.Build(
-                    World,
-                    GlobalContext,
-                    definition.FollowTargetKind,
-                    ResolveDefaultCameraFollowCollectionOwner(definition.FollowTargetKind),
-                    definition.FollowCollectionKey),
-                snapToFollowTargetWhenAvailable: definition.SnapToFollowTargetWhenAvailable);
-
-            if (cam != null)
-            {
-                GameSession.Camera.ApplyPose(new CameraPoseRequest
-                {
-                    VirtualCameraId = virtualCameraId,
-                    TargetCm = (cam.TargetXCm.HasValue || cam.TargetYCm.HasValue)
-                        ? new System.Numerics.Vector2(cam.TargetXCm ?? 0f, cam.TargetYCm ?? 0f)
-                        : null,
-                    Yaw = cam.Yaw,
-                    Pitch = cam.Pitch,
-                    DistanceCm = cam.DistanceCm,
-                    FovYDeg = cam.FovYDeg
-                });
-            }
+            var followTarget = CameraFollowTargetFactory.Build(
+                World,
+                GlobalContext,
+                definition.FollowTargetKind,
+                ResolveDefaultCameraFollowCollectionOwner(definition.FollowTargetKind),
+                definition.FollowCollectionKey);
 
             EnsureCameraRuntimeConfigured();
-            GameSession.Camera.SynchronizeActiveVirtualCameraBoundsAndHeight();
+            var targets = new System.Collections.Generic.List<Ludots.Core.Gameplay.Camera.CameraManager>(4);
+            CollectDefaultCameraTargets(targets);
+            Ludots.Core.Gameplay.Camera.CameraManager? logged = null;
+            for (int i = 0; i < targets.Count; i++)
+            {
+                Ludots.Core.Gameplay.Camera.CameraManager camera = targets[i];
+                camera.ResetVirtualCameras();
+                camera.ActivateVirtualCamera(
+                    virtualCameraId,
+                    blendDurationSeconds: 0f,
+                    followTarget: followTarget,
+                    snapToFollowTargetWhenAvailable: definition.SnapToFollowTargetWhenAvailable);
 
-            var state = GameSession.Camera.State;
-            Diagnostics.Log.Info(in LogChannels.Engine, $"Applied DefaultCamera: yaw={state.Yaw} pitch={state.Pitch} dist={state.DistanceCm}cm fov={state.FovYDeg}");
+                if (cam != null)
+                {
+                    camera.ApplyPose(new CameraPoseRequest
+                    {
+                        VirtualCameraId = virtualCameraId,
+                        TargetCm = (cam.TargetXCm.HasValue || cam.TargetYCm.HasValue)
+                            ? new System.Numerics.Vector2(cam.TargetXCm ?? 0f, cam.TargetYCm ?? 0f)
+                            : null,
+                        Yaw = cam.Yaw,
+                        Pitch = cam.Pitch,
+                        DistanceCm = cam.DistanceCm,
+                        FovYDeg = cam.FovYDeg
+                    });
+                }
+
+                camera.SynchronizeActiveVirtualCameraBoundsAndHeight();
+                logged ??= camera;
+            }
+
+            if (logged != null)
+            {
+                var state = logged.State;
+                Diagnostics.Log.Info(in LogChannels.Engine, $"Applied DefaultCamera: yaw={state.Yaw} pitch={state.Pitch} dist={state.DistanceCm}cm fov={state.FovYDeg}");
+            }
+        }
+
+        private void CollectDefaultCameraTargets(System.Collections.Generic.List<Ludots.Core.Gameplay.Camera.CameraManager> targets)
+        {
+            targets.Clear();
+            if (TryGetService(CoreServiceKeys.LogicViewRegistry, out Client.LogicViewRegistry? views) &&
+                views != null &&
+                views.Count > 0)
+            {
+                views.CopyCameras(targets);
+                return;
+            }
+
+            targets.Add(GameSession.Camera);
         }
 
         private Entity ResolveDefaultCameraFollowCollectionOwner(CameraFollowTargetKind followTargetKind)

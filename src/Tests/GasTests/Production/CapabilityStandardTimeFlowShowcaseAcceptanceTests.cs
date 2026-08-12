@@ -13,6 +13,7 @@ using Ludots.UI;
 using Ludots.UI.Input;
 using Ludots.UI.Runtime;
 using NUnit.Framework;
+using Ludots.Tests.TestCommon;
 
 namespace Ludots.Tests.GAS.Production;
 
@@ -82,7 +83,7 @@ public sealed class CapabilityStandardTimeFlowShowcaseAcceptanceTests
         Assert.That(uiRoot.Scene.FindByElementId("capability-standard-timeflow-menu-toggle"), Is.Not.Null);
         Assert.That(uiRoot.Scene.FindByElementId("capability-standard-timeflow-skill-button"), Is.Not.Null);
 
-        engine.GameSession.Camera.ApplyPose(new CameraPoseRequest
+        engine.AuthorityCamera().ApplyPose(new CameraPoseRequest
         {
             VirtualCameraId = "Camera.Profile.Tactical",
             TargetCm = new Vector2(-50000f, -50000f),
@@ -92,7 +93,7 @@ public sealed class CapabilityStandardTimeFlowShowcaseAcceptanceTests
             FovYDeg = 35f
         });
         runtime.ResetCamera();
-        var camera = engine.GameSession.Camera.State;
+        var camera = engine.AuthorityCamera().State;
         Assert.Multiple(() =>
         {
             Assert.That(camera.TargetCm.X, Is.EqualTo(1800f).Within(0.01f));

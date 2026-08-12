@@ -437,7 +437,7 @@ namespace Ludots.Core.Engine
 
             if (CurrentMapSession == session)
             {
-                ParticipantBindingResolver.PublishFocused(GlobalContext, participants, GameSession.Camera);
+                ParticipantBindingResolver.PublishFocused(GlobalContext, participants);
             }
         }
 
@@ -455,8 +455,7 @@ namespace Ludots.Core.Engine
                     session.TeamEntityLookup,
                     session.PlayerEntityLookup,
                     session.LocalSeats,
-                    session.TeamRelationships),
-                GameSession.Camera);
+                    session.TeamRelationships));
         }
 
         private void CaptureFocusedParticipantOverrides(MapSession session)

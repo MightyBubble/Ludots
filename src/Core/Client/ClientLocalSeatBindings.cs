@@ -71,7 +71,7 @@ namespace Ludots.Core.Client
                 ?? throw new InvalidOperationException("LogicViewRegistry missing.");
             seats.Clear();
             views.Clear();
-            string viewId = views.EnsureDefaultView(possessedRep, camera: engine.GameSession.Camera);
+            string viewId = views.EnsureDefaultView(possessedRep);
             Vector2 presentResolution = ResolvePresentResolution(engine, presentResolutionPx);
             seats.Add(new ClientLocalSeat(seatId)
             {

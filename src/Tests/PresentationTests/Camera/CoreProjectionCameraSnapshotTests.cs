@@ -113,6 +113,35 @@ namespace Ludots.Tests.Presentation
             Assert.That(ray.Origin, Is.Not.EqualTo(default(Vector3)));
         }
 
+        [Test]
+        public void PresentBinding_RefreshesResolutionFromHostViewController()
+        {
+            using var world = World.Create();
+            Entity owner = world.Create();
+            var logicCamera = new CameraManager();
+            var globals = new Dictionary<string, object>();
+            ClientLocalSeatBindings.BindSoleSeat(
+                globals,
+                owner,
+                playerId: 1,
+                primaryCamera: logicCamera,
+                presentResolutionPx: new Vector2(800f, 600f));
+
+            var seats = (ClientLocalSeatRegistry)globals[CoreServiceKeys.ClientLocalSeatRegistry.Name];
+            Assert.That(seats.TryGetSoleSeat(out ClientLocalSeat seat), Is.True);
+            Assert.That(seat.PresentBinding!.Value.PresentResolutionPx, Is.EqualTo(new Vector2(800f, 600f)));
+
+            var resized = new PresentBinding(
+                seat.PresentBinding.Value.LogicViewId,
+                seat.PresentBinding.Value.NormalizedScreenRect,
+                new Vector2(1920f, 1080f));
+            seats.SetPresentBinding(seat.SeatId, resized);
+            Assert.That(ClientLocalSeatAccess.RequireSolePresentBinding(globals).PresentResolutionPx, Is.EqualTo(new Vector2(1920f, 1080f)));
+            Assert.That(
+                ClientLocalSeatAccess.RequireSolePresentSurface(globals, fovYDeg: 60f).AspectRatio,
+                Is.EqualTo(1920f / 1080f).Within(0.0001f));
+        }
+
         private static void BeginPresentationFrame(object service)
         {
             InvokePresentationScope(service, "BeginPresentationFrame");

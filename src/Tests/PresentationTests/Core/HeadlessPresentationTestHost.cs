@@ -1,4 +1,6 @@
+using System;
 using System.Numerics;
+using Ludots.Core.Client;
 using Ludots.Core.Engine;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Components;
@@ -44,10 +46,15 @@ namespace Ludots.Tests.Presentation
                 performers: engine.GetService(CoreServiceKeys.PerformerEntityRuntime),
                 timingDiagnostics: timings,
                 cullingConfig: engine.MergedConfig.Presentation.CameraCulling);
+            culling.DisarmPresentBindingCulling();
             engine.InsertPresentationSystemBefore<PresentationEntityLifecycleSystem>(culling);
             engine.SetService(CoreServiceKeys.CameraCullingDebugState, culling.DebugState);
             engine.GlobalContext["Tests.HeadlessPresentation.Camera"] = new HeadlessCameraRuntime(
                 cameraPresenter,
+                screenProjector,
+                screenRayProvider,
+                view,
+                culling,
                 presentationFrameSetup);
         }
 
@@ -60,7 +67,26 @@ namespace Ludots.Tests.Presentation
             }
 
             float alpha = runtime.PresentationFrameSetup?.GetInterpolationAlpha() ?? 1f;
-            runtime.CameraPresenter.Update(engine.GameSession.Camera, alpha);
+            if (!PresentBindingPresentation.TrySyncSolePresentPipeline(
+                    engine,
+                    runtime.CameraPresenter,
+                    runtime.ScreenProjector,
+                    runtime.ScreenRayProvider,
+                    alpha,
+                    runtime.View.Fov,
+                    hostView: runtime.View,
+                    culling: runtime.Culling))
+            {
+                if (engine.TryGetService(CoreServiceKeys.ClientLocalSeatRegistry, out ClientLocalSeatRegistry? seats) &&
+                    seats != null &&
+                    seats.Count > 0)
+                {
+                    throw new InvalidOperationException(
+                        "ClientLocalSeatRegistry is published but headless PresentBinding pipeline failed to sync.");
+                }
+
+                runtime.CameraPresenter.Update(engine.GameSession.Camera, alpha);
+            }
         }
 
         internal static CameraPresenter? GetCameraPresenter(GameEngine engine)
@@ -87,14 +113,27 @@ namespace Ludots.Tests.Presentation
 
         private sealed class HeadlessCameraRuntime
         {
-            public HeadlessCameraRuntime(CameraPresenter cameraPresenter, PresentationFrameSetupSystem? presentationFrameSetup)
+            public HeadlessCameraRuntime(
+                CameraPresenter cameraPresenter,
+                CoreScreenProjector screenProjector,
+                CoreScreenRayProvider screenRayProvider,
+                IViewController view,
+                CameraCullingSystem culling,
+                PresentationFrameSetupSystem? presentationFrameSetup)
             {
                 CameraPresenter = cameraPresenter;
+                ScreenProjector = screenProjector;
+                ScreenRayProvider = screenRayProvider;
+                View = view;
+                Culling = culling;
                 PresentationFrameSetup = presentationFrameSetup;
             }
 
             public CameraPresenter CameraPresenter { get; }
-
+            public CoreScreenProjector ScreenProjector { get; }
+            public CoreScreenRayProvider ScreenRayProvider { get; }
+            public IViewController View { get; }
+            public CameraCullingSystem Culling { get; }
             public PresentationFrameSetupSystem? PresentationFrameSetup { get; }
         }
     }

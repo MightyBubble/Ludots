@@ -19,6 +19,7 @@ using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
+using Ludots.Tests.TestCommon;
 
 namespace Ludots.Tests.GAS.Production
 {
@@ -120,20 +121,20 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(shot.AllowUserInput, Is.False);
             Assert.That(shot.EnableZoom, Is.False);
 
-            var brain = engine.GameSession.Camera.VirtualCameraBrain;
+            var brain = engine.AuthorityCamera().VirtualCameraBrain;
             Assert.That(brain, Is.Not.Null);
             Assert.That(brain!.ActiveCameraId, Is.EqualTo(CapabilityStandardVirtualCameraShowcaseIds.RevealShotCameraId));
             Assert.That(brain.IsActive(CapabilityStandardVirtualCameraShowcaseIds.TacticalCameraId), Is.True);
-            Assert.That(engine.GameSession.Camera.State.RigKind, Is.EqualTo(CameraRigKind.TopDown));
-            Assert.That(engine.GameSession.Camera.State.TargetCm, Is.EqualTo(new Vector2(4200f, 2600f)));
-            Assert.That(engine.GameSession.Camera.State.DistanceCm, Is.EqualTo(9180f).Within(0.001f));
+            Assert.That(engine.AuthorityCamera().State.RigKind, Is.EqualTo(CameraRigKind.TopDown));
+            Assert.That(engine.AuthorityCamera().State.TargetCm, Is.EqualTo(new Vector2(4200f, 2600f)));
+            Assert.That(engine.AuthorityCamera().State.DistanceCm, Is.EqualTo(9180f).Within(0.001f));
 
             engine.SetService(CoreServiceKeys.VirtualCameraRequest, new VirtualCameraRequest { Clear = true });
-            TickUntil(engine, () => engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId == CapabilityStandardVirtualCameraShowcaseIds.TacticalCameraId);
+            TickUntil(engine, () => engine.AuthorityCamera().VirtualCameraBrain?.ActiveCameraId == CapabilityStandardVirtualCameraShowcaseIds.TacticalCameraId);
             Tick(engine, BlendSettleFrames);
 
-            Assert.That(engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId, Is.EqualTo(CapabilityStandardVirtualCameraShowcaseIds.TacticalCameraId));
-            Assert.That(engine.GameSession.Camera.VirtualCameraBrain?.AllowsInput, Is.True);
+            Assert.That(engine.AuthorityCamera().VirtualCameraBrain?.ActiveCameraId, Is.EqualTo(CapabilityStandardVirtualCameraShowcaseIds.TacticalCameraId));
+            Assert.That(engine.AuthorityCamera().VirtualCameraBrain?.AllowsInput, Is.True);
         }
 
         [Test]
@@ -151,14 +152,14 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(manager.SwitchTo(CapabilityStandardVirtualCameraShowcaseIds.BehaviorOrbitModeId), Is.True);
             Tick(engine, BlendSettleFrames);
 
-            var brain = engine.GameSession.Camera.VirtualCameraBrain;
+            var brain = engine.AuthorityCamera().VirtualCameraBrain;
             Assert.That(brain?.ActiveCameraId, Is.EqualTo(CapabilityStandardVirtualCameraShowcaseIds.BehaviorOrbitCameraId));
             Assert.That(brain?.AllowsInput, Is.True);
             AssertCameraActionBinding(engine, CapabilityStandardVirtualCameraShowcaseIds.RotateHoldActionId, CameraBehaviorAttributes.RotateHold);
             AssertCameraActionBinding(engine, CapabilityStandardVirtualCameraShowcaseIds.LookActionId, CameraBehaviorAttributes.LookX);
             AssertCameraActionBinding(engine, CapabilityStandardVirtualCameraShowcaseIds.LookActionId, CameraBehaviorAttributes.LookY);
             AssertCameraActionPreservesUntilSnapshot(engine, CapabilityStandardVirtualCameraShowcaseIds.LookActionId, CameraBehaviorAttributes.LookX);
-            Assert.That(engine.GameSession.Camera.State.DistanceCm, Is.EqualTo(5600f).Within(0.001f));
+            Assert.That(engine.AuthorityCamera().State.DistanceCm, Is.EqualTo(5600f).Within(0.001f));
 
             var input = engine.GetService(CoreServiceKeys.InputHandler)
                 ?? throw new InvalidOperationException("InputHandler is required.");
@@ -180,7 +181,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(authoritativeInput.ReadAction<float>(CapabilityStandardVirtualCameraShowcaseIds.ZoomActionId), Is.EqualTo(1f).Within(0.001f));
             Assert.That(behaviorInput.Zoom, Is.EqualTo(1f).Within(0.001f));
 
-            Assert.That(engine.GameSession.Camera.State.DistanceCm, Is.EqualTo(4700f).Within(0.001f));
+            Assert.That(engine.AuthorityCamera().State.DistanceCm, Is.EqualTo(4700f).Within(0.001f));
         }
 
         [Test]
@@ -217,13 +218,13 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(manager.SwitchTo(CapabilityStandardVirtualCameraShowcaseIds.HeightmapOrbitModeId), Is.True);
             Tick(engine, BlendSettleFrames);
 
-            var brain = engine.GameSession.Camera.VirtualCameraBrain
+            var brain = engine.AuthorityCamera().VirtualCameraBrain
                 ?? throw new InvalidOperationException("VirtualCameraBrain is required.");
             Assert.That(brain.ActiveCameraId, Is.EqualTo(CapabilityStandardVirtualCameraShowcaseIds.HeightmapOrbitCameraId));
             Assert.That(brain.ActiveDefinition?.TargetHeightMode, Is.EqualTo(VirtualCameraTargetHeightMode.VisualHeightmap));
             Assert.That(heightmap.TrySampleHeightCm(5000f, 5000f, out float terrainHeightCm, layerIndex: 0), Is.True);
             Assert.That(
-                engine.GameSession.Camera.State.TargetHeightCm,
+                engine.AuthorityCamera().State.TargetHeightCm,
                 Is.EqualTo(terrainHeightCm + brain.ActiveDefinition!.TargetHeightOffsetCm).Within(0.01f));
 
             Assert.That(manager.SwitchTo(CapabilityStandardVirtualCameraShowcaseIds.TpsModeId), Is.True);
@@ -233,12 +234,12 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(brain.ActiveDefinition?.RigKind, Is.EqualTo(CameraRigKind.ThirdPerson));
             Assert.That(brain.ActiveDefinition?.FollowTargetKind, Is.EqualTo(CameraFollowTargetKind.SolePossessedRep));
             Assert.That(brain.ActiveFollowTargetPositionCm, Is.EqualTo(localPlayerPositionCm));
-            Assert.That(engine.GameSession.Camera.State.TargetCm, Is.EqualTo(localPlayerPositionCm));
-            float tpsYawBeforeLook = engine.GameSession.Camera.State.Yaw;
+            Assert.That(engine.AuthorityCamera().State.TargetCm, Is.EqualTo(localPlayerPositionCm));
+            float tpsYawBeforeLook = engine.AuthorityCamera().State.Yaw;
             int tickBeforeTpsLook = engine.GameSession.CurrentTick;
             backend.SetMousePosition(new Vector2(20f, 0f));
             TickUntil(engine, () => engine.GameSession.CurrentTick > tickBeforeTpsLook, maxFrames: 8);
-            Assert.That(MathF.Abs(engine.GameSession.Camera.State.Yaw - tpsYawBeforeLook), Is.GreaterThan(0.001f));
+            Assert.That(MathF.Abs(engine.AuthorityCamera().State.Yaw - tpsYawBeforeLook), Is.GreaterThan(0.001f));
 
             int tickBeforeMove = engine.GameSession.CurrentTick;
             backend.SetButton("<Keyboard>/w", true);
@@ -264,12 +265,12 @@ namespace Ludots.Tests.GAS.Production
             Vector2 movedLocalPlayerPositionCm = engine.World.Get<WorldPositionCm>(localPlayer).Value.ToVector2();
             Assert.That(Vector2.DistanceSquared(movedLocalPlayerPositionCm, localPlayerPositionCm), Is.GreaterThan(1f));
             Assert.That(brain.ActiveFollowTargetPositionCm, Is.EqualTo(movedLocalPlayerPositionCm));
-            Assert.That(engine.GameSession.Camera.State.TargetCm, Is.EqualTo(movedLocalPlayerPositionCm));
+            Assert.That(engine.AuthorityCamera().State.TargetCm, Is.EqualTo(movedLocalPlayerPositionCm));
             Assert.That(
                 heightmap.TrySampleHeightCm(movedLocalPlayerPositionCm.X, movedLocalPlayerPositionCm.Y, out float localTerrainHeightCm, layerIndex: 0),
                 Is.True);
             Assert.That(
-                engine.GameSession.Camera.State.TargetHeightCm,
+                engine.AuthorityCamera().State.TargetHeightCm,
                 Is.EqualTo(localTerrainHeightCm + brain.ActiveDefinition!.TargetHeightOffsetCm).Within(0.01f));
 
             Assert.That(manager.SwitchTo(CapabilityStandardVirtualCameraShowcaseIds.FpsModeId), Is.True);
@@ -279,15 +280,15 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(brain.ActiveDefinition?.RigKind, Is.EqualTo(CameraRigKind.FirstPerson));
             Assert.That(brain.ActiveDefinition?.FollowTargetKind, Is.EqualTo(CameraFollowTargetKind.SolePossessedRep));
             Assert.That(brain.ActiveFollowTargetPositionCm, Is.EqualTo(movedLocalPlayerPositionCm));
-            Assert.That(engine.GameSession.Camera.State.DistanceCm, Is.EqualTo(0f).Within(0.001f));
+            Assert.That(engine.AuthorityCamera().State.DistanceCm, Is.EqualTo(0f).Within(0.001f));
             Assert.That(
-                engine.GameSession.Camera.State.TargetHeightCm,
+                engine.AuthorityCamera().State.TargetHeightCm,
                 Is.EqualTo(localTerrainHeightCm + brain.ActiveDefinition!.TargetHeightOffsetCm).Within(0.01f));
-            float fpsYawBeforeLook = engine.GameSession.Camera.State.Yaw;
+            float fpsYawBeforeLook = engine.AuthorityCamera().State.Yaw;
             int tickBeforeFpsLook = engine.GameSession.CurrentTick;
             backend.SetMousePosition(new Vector2(40f, 0f));
             TickUntil(engine, () => engine.GameSession.CurrentTick > tickBeforeFpsLook, maxFrames: 8);
-            Assert.That(MathF.Abs(engine.GameSession.Camera.State.Yaw - fpsYawBeforeLook), Is.GreaterThan(0.001f));
+            Assert.That(MathF.Abs(engine.AuthorityCamera().State.Yaw - fpsYawBeforeLook), Is.GreaterThan(0.001f));
 
             int tickBeforeFpsMove = engine.GameSession.CurrentTick;
             backend.SetButton("<Keyboard>/w", true);
@@ -297,12 +298,12 @@ namespace Ludots.Tests.GAS.Production
             Vector2 movedFpsLocalPlayerPositionCm = engine.World.Get<WorldPositionCm>(localPlayer).Value.ToVector2();
             Assert.That(Vector2.DistanceSquared(movedFpsLocalPlayerPositionCm, movedLocalPlayerPositionCm), Is.GreaterThan(1f));
             Assert.That(brain.ActiveFollowTargetPositionCm, Is.EqualTo(movedFpsLocalPlayerPositionCm));
-            Assert.That(engine.GameSession.Camera.State.TargetCm, Is.EqualTo(movedFpsLocalPlayerPositionCm));
+            Assert.That(engine.AuthorityCamera().State.TargetCm, Is.EqualTo(movedFpsLocalPlayerPositionCm));
             Assert.That(
                 heightmap.TrySampleHeightCm(movedFpsLocalPlayerPositionCm.X, movedFpsLocalPlayerPositionCm.Y, out float fpsTerrainHeightCm, layerIndex: 0),
                 Is.True);
             Assert.That(
-                engine.GameSession.Camera.State.TargetHeightCm,
+                engine.AuthorityCamera().State.TargetHeightCm,
                 Is.EqualTo(fpsTerrainHeightCm + brain.ActiveDefinition!.TargetHeightOffsetCm).Within(0.01f));
         }
 
@@ -314,7 +315,7 @@ namespace Ludots.Tests.GAS.Production
             Tick(engine, BlendSettleFrames);
 
             var backend = (TestInputBackend)engine.GlobalContext[TestInputBackendKey];
-            var brain = engine.GameSession.Camera.VirtualCameraBrain
+            var brain = engine.AuthorityCamera().VirtualCameraBrain
                 ?? throw new InvalidOperationException("VirtualCameraBrain is required.");
 
             PressKeyUntil(
@@ -424,7 +425,7 @@ namespace Ludots.Tests.GAS.Production
             engine.Start();
             var behaviorInput = engine.GetService(CoreServiceKeys.CameraBehaviorInputState)
                 ?? throw new InvalidOperationException("CameraBehaviorInputState is required.");
-            engine.GameSession.Camera.ConfigureRuntime(
+            engine.AuthorityCamera().ConfigureRuntime(
                 behaviorInput,
                 new StubViewController(),
                 () => engine.WorldSizeSpec.Bounds,

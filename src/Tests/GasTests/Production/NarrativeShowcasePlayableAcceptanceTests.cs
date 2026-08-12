@@ -31,6 +31,7 @@ using Ludots.Platform.Abstractions;
 using Ludots.UI;
 using Ludots.UI.Skia;
 using NUnit.Framework;
+using Ludots.Tests.TestCommon;
 
 namespace Ludots.Tests.GAS.Production
 {
@@ -191,14 +192,14 @@ namespace Ludots.Tests.GAS.Production
             var cameraAdapter = new StubCameraAdapter();
             var timingDiagnostics = engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics);
             var cameraPresenter = new CameraPresenter(engine.SpatialCoords, cameraAdapter, timingDiagnostics);
-            var screenProjector = new CoreScreenProjector(engine.GameSession.Camera, view);
-            var screenRayProvider = new CoreScreenRayProvider(engine.GameSession.Camera, view);
+            var screenProjector = new CoreScreenProjector(engine.AuthorityCamera(), view);
+            var screenRayProvider = new CoreScreenRayProvider(engine.AuthorityCamera(), view);
             screenProjector.BindPresenter(cameraPresenter);
             screenRayProvider.BindPresenter(cameraPresenter);
             engine.SetService(CoreServiceKeys.ScreenProjector, screenProjector);
             engine.SetService(CoreServiceKeys.ScreenRayProvider, screenRayProvider);
 
-            var culling = new CameraCullingSystem(engine.World, engine.GameSession.Camera, engine.SpatialQueries, view, cullingConfig: engine.MergedConfig.Presentation.CameraCulling);
+            var culling = new CameraCullingSystem(engine.World, engine.AuthorityCamera(), engine.SpatialQueries, view, cullingConfig: engine.MergedConfig.Presentation.CameraCulling);
             engine.RegisterPresentationSystem(culling);
             engine.SetService(CoreServiceKeys.CameraCullingDebugState, culling.DebugState);
             engine.GlobalContext[HeadlessCameraKey] = new HeadlessCameraRuntime(
@@ -422,7 +423,7 @@ namespace Ludots.Tests.GAS.Production
             TickUntil(
                 engine,
                 frameTimesMs,
-                () => engine.GameSession.Camera.VirtualCameraBrain?.IsBlending != true,
+                () => engine.AuthorityCamera().VirtualCameraBrain?.IsBlending != true,
                 60);
 
             Tick(engine, 1, frameTimesMs);
@@ -436,7 +437,7 @@ namespace Ludots.Tests.GAS.Production
                 return;
             }
 
-            runtime.CameraPresenter.Update(engine.GameSession.Camera, interpolationAlpha: 1f);
+            runtime.CameraPresenter.Update(engine.AuthorityCamera(), interpolationAlpha: 1f);
         }
 
         private static int GetSelectionCount(GameEngine engine)

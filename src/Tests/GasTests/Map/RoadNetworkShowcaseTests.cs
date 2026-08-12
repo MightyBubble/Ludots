@@ -2124,10 +2124,10 @@ namespace Ludots.Tests.GAS
 
             var view = new StubViewController(1920f, 1080f);
             engine.SetService(CoreServiceKeys.ViewController, view);
-            engine.SetService(CoreServiceKeys.ScreenRayProvider, new CoreScreenRayProvider(engine.GameSession.Camera, view));
-            engine.SetService(CoreServiceKeys.ScreenProjector, new CoreScreenProjector(engine.GameSession.Camera, view));
+            engine.SetService(CoreServiceKeys.ScreenRayProvider, new CoreScreenRayProvider(engine.AuthorityCamera(), view));
+            engine.SetService(CoreServiceKeys.ScreenProjector, new CoreScreenProjector(engine.AuthorityCamera(), view));
 
-            var culling = new CameraCullingSystem(engine.World, engine.GameSession.Camera, engine.SpatialQueries, view, cullingConfig: engine.MergedConfig.Presentation.CameraCulling);
+            var culling = new CameraCullingSystem(engine.World, engine.AuthorityCamera(), engine.SpatialQueries, view, cullingConfig: engine.MergedConfig.Presentation.CameraCulling);
             engine.RegisterPresentationSystem(culling);
             engine.SetService(CoreServiceKeys.CameraCullingDebugState, culling.DebugState);
             return engine;
@@ -2490,7 +2490,7 @@ namespace Ludots.Tests.GAS
         {
             var sb = new StringBuilder();
             sb.Append("cameraTarget=");
-            Vector2 target = engine.GameSession.Camera.State.TargetCm;
+            Vector2 target = engine.AuthorityCamera().State.TargetCm;
             sb.Append('(');
             sb.Append(target.X.ToString("0.##"));
             sb.Append(',');

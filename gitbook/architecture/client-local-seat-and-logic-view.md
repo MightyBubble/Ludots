@@ -183,6 +183,6 @@ Feature: 本机座位与逻辑视觉
 
 - P0 合同（本页 + participant 合同修订 + RFC 修订）— #897  
 - P1 SeatRegistry + Possession + 删除全局 LocalPlayer* — #898  
-- P2 LogicView 多实例 + PresentBinding 呈现/拾取 — #899（Sole PresentBinding → Presenter / ScreenRay / ScreenProjector 已接线；多座分屏 rect / UI per-seat 仍属 P3）  
+- P2 LogicView 多实例 + PresentBinding 呈现/拾取 — #899（Sole PresentBinding → Presenter / ScreenRay / ScreenProjector / 呈现剔除；LogicView 自有相机权威，禁止 `GameSession.Camera` 当 seat0 影子；多座分屏 rect / UI per-seat 仍属 P3）  
 
 - P3 分屏布局与 UI per-seat owner（同模型，另开子单）

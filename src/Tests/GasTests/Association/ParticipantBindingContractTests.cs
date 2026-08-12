@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
+using System.Numerics;
 using Arch.Core;
 using Ludots.Tests.TestCommon;
 using Ludots.Core.Association;
 using Ludots.Core.Client;
 using Ludots.Core.Config;
 using Ludots.Core.Components;
+using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
@@ -14,6 +16,7 @@ using Ludots.Core.Gameplay.Relationships.Config;
 using Ludots.Core.Gameplay.Teams;
 using Ludots.Core.Input.Systems;
 using Ludots.Core.Map;
+using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
 using NUnit.Framework;
@@ -282,6 +285,46 @@ namespace Ludots.Tests.GAS
             Assert.That(ClientLocalSeatAccess.RequireLogicViews(globals).Count, Is.EqualTo(2));
             Assert.That(ClientLocalSeatAccess.TryGetSolePossessedRep(globals, out _), Is.False);
             Assert.Throws<InvalidOperationException>(() => seats.RequireSolePossessedRep());
+        }
+
+        [Test]
+        public void ParticipantBindingResolver_PublishFocused_CreatesIndependentLogicViewCameraAndPresentBindingFromHostSurface()
+        {
+            using var world = World.Create();
+            Entity player = world.Create(new PlayerIdentity { PlayerId = 7 }, new PlayerOwner { PlayerId = 7 });
+            var players = new PlayerEntityLookup();
+            players.Register(7, player);
+            var sessionCamera = new CameraManager();
+            sessionCamera.State.Yaw = 12f;
+            var globals = new Dictionary<string, object>
+            {
+                [CoreServiceKeys.TeamEntityLookup.Name] = new TeamEntityLookup(),
+                [CoreServiceKeys.PlayerEntityLookup.Name] = players,
+                [CoreServiceKeys.ClientLocalSeatRegistry.Name] = new ClientLocalSeatRegistry(),
+                [CoreServiceKeys.LogicViewRegistry.Name] = new LogicViewRegistry(),
+                [CoreServiceKeys.ViewController.Name] = new StubHostViewController(new Vector2(1600f, 900f)),
+                [CoreServiceKeys.CameraBehaviorInputState.Name] = new CameraBehaviorInputState(),
+            };
+            var result = new ParticipantBindingResult(
+                new TeamEntityLookup(),
+                players,
+                localSeats: new[]
+                {
+                    new ResolvedLocalSeatPossession("seat.0", 7, player, ControlSchemeId: null),
+                });
+
+            ParticipantBindingResolver.PublishFocused(globals, result);
+
+            ClientLocalSeatRegistry seats = ClientLocalSeatAccess.RequireRegistry(globals);
+            Assert.That(seats.TryGetSoleSeat(out ClientLocalSeat seat), Is.True);
+            Assert.That(seat.PresentBinding, Is.Not.Null);
+            PresentBinding binding = seat.PresentBinding!.Value;
+            Assert.That(binding.PresentResolutionPx, Is.EqualTo(new Vector2(1600f, 900f)));
+            Assert.That(binding.NormalizedScreenRect, Is.EqualTo(new Vector4(0f, 0f, 1f, 1f)));
+
+            CameraManager logicCamera = ClientLocalSeatAccess.RequireSolePresentCamera(globals);
+            Assert.That(logicCamera, Is.Not.SameAs(sessionCamera));
+            Assert.That(logicCamera.State.Yaw, Is.Not.EqualTo(12f));
         }
 
         [Test]
@@ -669,6 +712,18 @@ namespace Ludots.Tests.GAS
                 default:
                     throw new ArgumentOutOfRangeException(nameof(scenario), scenario, null);
             }
+        }
+
+        private sealed class StubHostViewController : IViewController
+        {
+            public StubHostViewController(Vector2 resolution)
+            {
+                Resolution = resolution;
+            }
+
+            public Vector2 Resolution { get; }
+            public float Fov => 60f;
+            public float AspectRatio => Resolution.X / Resolution.Y;
         }
     }
 }

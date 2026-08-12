@@ -162,8 +162,7 @@ namespace Ludots.Core.Gameplay.Teams
 
         public static void PublishFocused(
             IDictionary<string, object> globals,
-            ParticipantBindingResult participants,
-            Gameplay.Camera.CameraManager? primaryLogicCamera = null)
+            ParticipantBindingResult participants)
         {
             ArgumentNullException.ThrowIfNull(globals);
             ArgumentNullException.ThrowIfNull(participants);
@@ -175,7 +174,7 @@ namespace Ludots.Core.Gameplay.Teams
                 TeamManager.RestoreSnapshot(participants.TeamRelationships);
             }
 
-            PublishLocalSeats(globals, participants.LocalSeats, primaryLogicCamera);
+            PublishLocalSeats(globals, participants.LocalSeats);
         }
 
         public static void ClearFocused(IDictionary<string, object> globals)
@@ -242,8 +241,7 @@ namespace Ludots.Core.Gameplay.Teams
 
         private static void PublishLocalSeats(
             IDictionary<string, object> globals,
-            IReadOnlyList<ResolvedLocalSeatPossession> localSeats,
-            Gameplay.Camera.CameraManager? primaryLogicCamera)
+            IReadOnlyList<ResolvedLocalSeatPossession> localSeats)
         {
             if (!globals.TryGetValue(CoreServiceKeys.ClientLocalSeatRegistry.Name, out object? seatsObj) ||
                 seatsObj is not ClientLocalSeatRegistry seats)
@@ -270,8 +268,8 @@ namespace Ludots.Core.Gameplay.Teams
                     PossessedPlayerId = possession.PlayerId,
                     PossessedRep = possession.RepEntity,
                 };
-                Gameplay.Camera.CameraManager? camera = i == 0 ? primaryLogicCamera : null;
-                string viewId = views.EnsureDefaultView(possession.RepEntity, camera: camera);
+                // LogicView owns a dedicated CameraManager — never alias GameSession.Camera as seat0 shadow.
+                string viewId = views.EnsureDefaultView(possession.RepEntity);
                 if (TryResolvePresentResolutionPx(globals, out System.Numerics.Vector2 presentResolutionPx))
                 {
                     seat.PresentBinding = PresentBinding.FullScreen(viewId, presentResolutionPx);
@@ -322,6 +320,20 @@ namespace Ludots.Core.Gameplay.Teams
                 virtualCameras = registry;
             }
 
+            Gameplay.Camera.CameraImpulseRuntime? impulseRuntime = null;
+            if (globals.TryGetValue(CoreServiceKeys.CameraImpulseRuntime.Name, out object? impulseObj) &&
+                impulseObj is Gameplay.Camera.CameraImpulseRuntime impulse)
+            {
+                impulseRuntime = impulse;
+            }
+
+            Gameplay.Camera.PlatformManagedCameraDriverRegistry? platformDrivers = null;
+            if (globals.TryGetValue(CoreServiceKeys.PlatformManagedCameraDriverRegistry.Name, out object? driversObj) &&
+                driversObj is Gameplay.Camera.PlatformManagedCameraDriverRegistry drivers)
+            {
+                platformDrivers = drivers;
+            }
+
             var cameras = new System.Collections.Generic.List<Gameplay.Camera.CameraManager>(views.Count);
             views.CopyCameras(cameras);
             for (int i = 0; i < cameras.Count; i++)
@@ -330,6 +342,16 @@ namespace Ludots.Core.Gameplay.Teams
                 if (virtualCameras != null && camera.VirtualCameraBrain == null)
                 {
                     camera.SetVirtualCameraRegistry(virtualCameras);
+                }
+
+                if (impulseRuntime != null)
+                {
+                    camera.SetImpulseRuntime(impulseRuntime);
+                }
+
+                if (platformDrivers != null)
+                {
+                    camera.SetPlatformManagedCameraDriverRegistry(platformDrivers);
                 }
 
                 if (camera.IsRuntimeConfigured)
