@@ -219,5 +219,32 @@
     "enableZoom": false,
     "followMode": "None",
     "allowUserInput": false
+  },
+  {
+    "id": "raylib_visual_atmosphere.camera.beach_decals",
+    "displayName": "Island Beach Textured Decals",
+    "priority": 10,
+    "rigKind": "Orbit",
+    "distanceCm": 9000,
+    "pitch": 42,
+    "fovYDeg": 48,
+    "yaw": 195,
+    "targetSource": "Fixed",
+    "fixedTargetCm": {
+      "x": -15500,
+      "y": -5200
+    },
+    "targetHeightMode": "Flat",
+    "targetHeightOffsetCm": 120,
+    "minDistanceCm": 1200,
+    "maxDistanceCm": 20000,
+    "minPitchDeg": 8,
+    "maxPitchDeg": 70,
+    "panMode": "None",
+    "enableGrabDrag": false,
+    "rotateMode": "None",
+    "enableZoom": false,
+    "followMode": "None",
+    "allowUserInput": false
   }
 ]

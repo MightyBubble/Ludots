@@ -182,6 +182,8 @@ internal sealed class RaylibVisualAtmosphereShowcaseRuntime : IBenchmarkSceneCon
             "05" or "05_distance_fog" or "fog" => CaptureShot.DistanceFog,
             "06" or "06_water_reflect" or "water" or "cam_water__tod_midday"
                 => CaptureShot.WaterReflect,
+            "07" or "07_beach_decals" or "beach_decals" or "decals"
+                => CaptureShot.BeachDecals,
             "cam_aerial__tod_dawn" or "cam_aerial__tod_afternoon" or "cam_aerial__tod_dusk"
                 => CaptureShot.AerialTimed,
             "cam_orbit_ne__tod_morning" or "cam_orbit_ne__tod_midday"
@@ -199,7 +201,7 @@ internal sealed class RaylibVisualAtmosphereShowcaseRuntime : IBenchmarkSceneCon
                 => CaptureShot.WaterReflect,
             "composition" or "playable" => CaptureShot.Composition,
             _ => throw new InvalidOperationException(
-                $"Unknown LUDOTS_ATMOSPHERE_SHOT '{raw}'. Expected 01..06, cam_* matrix ids, or composition."),
+                $"Unknown LUDOTS_ATMOSPHERE_SHOT '{raw}'. Expected 01..07, cam_* matrix ids, or composition."),
         };
     }
 
@@ -217,6 +219,7 @@ internal sealed class RaylibVisualAtmosphereShowcaseRuntime : IBenchmarkSceneCon
             CaptureShot.BlendModes => "raylib_visual_atmosphere.camera.blend",
             CaptureShot.DistanceFog => "raylib_visual_atmosphere.camera.fog",
             CaptureShot.WaterReflect => "raylib_visual_atmosphere.camera.water",
+            CaptureShot.BeachDecals => "raylib_visual_atmosphere.camera.beach_decals",
             _ => throw new InvalidOperationException($"Unhandled capture shot '{shot}'."),
         };
     }
@@ -234,5 +237,6 @@ internal sealed class RaylibVisualAtmosphereShowcaseRuntime : IBenchmarkSceneCon
         BlendModes,
         DistanceFog,
         WaterReflect,
+        BeachDecals,
     }
 }

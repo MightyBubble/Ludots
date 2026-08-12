@@ -137,6 +137,7 @@ capture_one "03_cutout_vegetation.png" "03_cutout_vegetation" "0.50"
 capture_one "04_blend_modes.png" "04_blend_modes" "0.50"
 capture_one "05_distance_fog.png" "05_distance_fog" "0.50"
 capture_one "06_water_reflect.png" "06_water_reflect" "0.50"
+capture_one "07_beach_decals.png" "07_beach_decals" "0.50"
 
 python3 - "$OUT_DIR/01_sky_day.png" "$OUT_DIR/02_sky_night.png" <<'PY'
 import sys, struct, zlib
@@ -181,13 +182,20 @@ if ! rg -q 'Framebuffer object created successfully' /tmp/atm_capture_06_water_r
   exit 4
 fi
 
+# Beach decals must draw textured Decal visuals (not GroundOverlay wire rings).
+if ! rg -q 'decal=[1-9]' "$OUT_DIR/07_beach_decals.diag.txt"; then
+  echo "ERROR: 07_beach_decals.diag.txt missing textured Decal draw evidence (prefab-visual-counts decal>0)" >&2
+  cat "$OUT_DIR/07_beach_decals.diag.txt" >&2 || true
+  exit 6
+fi
+
 REPORT="$OUT_DIR/capture-report.md"
 {
   echo "# Raylib visual atmosphere acceptance capture"
   echo
   echo "Host: playable showcase \`raylib_visual_atmosphere\` (env-driven screenshots)."
   echo
-  for f in 01_sky_day.png 02_sky_night.png 03_cutout_vegetation.png 04_blend_modes.png 05_distance_fog.png 06_water_reflect.png; do
+  for f in 01_sky_day.png 02_sky_night.png 03_cutout_vegetation.png 04_blend_modes.png 05_distance_fog.png 06_water_reflect.png 07_beach_decals.png; do
     echo "- \`$f\` → \`$OUT_DIR/$f\` and \`$OPT_OUT_DIR/$f\`"
   done
 } > "$REPORT"
