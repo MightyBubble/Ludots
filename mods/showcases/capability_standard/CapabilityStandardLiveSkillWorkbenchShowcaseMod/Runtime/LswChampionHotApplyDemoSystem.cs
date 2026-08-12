@@ -51,6 +51,7 @@ internal sealed class LswChampionHotApplyDemoSystem : ISystem<float>
     private readonly ScreenOverlayBuffer? _overlay;
     private readonly PerformerEntityRuntime? _performerRuntime;
     private readonly PerformerDefinitionRegistry? _performerDefinitions;
+    private readonly GasClocks? _gasClocks;
     private readonly int _castAbilityOrderTypeId;
     private readonly int _healthAttrId;
     private readonly int _chillTagId;
@@ -83,6 +84,7 @@ internal sealed class LswChampionHotApplyDemoSystem : ISystem<float>
         _overlay = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer);
         _performerRuntime = engine.GetService(CoreServiceKeys.PerformerEntityRuntime);
         _performerDefinitions = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry);
+        _gasClocks = engine.GetService(CoreServiceKeys.GasClocks);
 
         GameConfig config = engine.GetService(CoreServiceKeys.GameConfig)
             ?? throw new InvalidOperationException("GameConfig required.");
@@ -362,6 +364,7 @@ internal sealed class LswChampionHotApplyDemoSystem : ISystem<float>
         }
 
         float fixedDt = Time.FixedDeltaTime > 0f ? Time.FixedDeltaTime : 0.05f;
+        int now = _gasClocks?.FixedFrameNow ?? 0;
         for (int i = 0; i < effects.Count; i++)
         {
             Entity effectEntity = effects.GetEntity(i);
@@ -378,13 +381,28 @@ internal sealed class LswChampionHotApplyDemoSystem : ISystem<float>
                 continue;
             }
 
-            if (effect.RemainingTicks <= 0 || effect.TotalTicks <= 0)
+            if (effect.TotalTicks <= 0)
             {
                 continue;
             }
 
-            _chillRemainingSeconds = effect.RemainingTicks * fixedDt;
-            _chillRemainingRatio = Math.Clamp(effect.RemainingTicks / (float)effect.TotalTicks, 0f, 1f);
+            int remainingTicks;
+            if (effect.ExpiresAtTick > 0 && now > 0)
+            {
+                remainingTicks = Math.Max(0, effect.ExpiresAtTick - now);
+            }
+            else
+            {
+                remainingTicks = Math.Max(0, effect.RemainingTicks);
+            }
+
+            if (remainingTicks <= 0)
+            {
+                continue;
+            }
+
+            _chillRemainingSeconds = remainingTicks * fixedDt;
+            _chillRemainingRatio = Math.Clamp(remainingTicks / (float)effect.TotalTicks, 0f, 1f);
             return;
         }
     }
