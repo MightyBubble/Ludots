@@ -343,10 +343,10 @@ namespace Ludots.Client.Raylib.Rendering
             Vector3 shallowShelf = new(72f, 186f, 168f);
             Vector3 wetSand = new(210f, 188f, 128f);
             Vector3 sand = new(236f, 208f, 142f);
-            Vector3 grass = new(52f, 128f, 48f);
-            Vector3 dirt = new(128f, 92f, 54f);
-            Vector3 rock = new(110f, 108f, 112f);
-            Vector3 peak = new(178f, 176f, 172f);
+            Vector3 grass = new(68f, 142f, 58f);
+            Vector3 dirt = new(148f, 108f, 64f);
+            Vector3 rock = new(132f, 118f, 102f);
+            Vector3 peak = new(188f, 182f, 172f);
             Vector3 color;
             if (heightBand <= 0f)
             {

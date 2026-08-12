@@ -1235,10 +1235,17 @@ namespace Ludots.Client.Raylib.Rendering
             var billboardPosition = new Vector3(position.X, position.Y + height * 0.5f, position.Z);
             var source = new Rectangle(0f, 0f, cached.Texture.width, cached.Texture.height);
 
-            // Billboard art ships pre-colored, so preserve only caller alpha.
+            // Billboard art ships pre-colored; multiply once by frame lighting so night/dusk dims vegetation.
             byte alpha = Clamp01ToByte(color.W);
-            var tint = new Color(255, 255, 255, alpha);
+            Vector3 litRgb = ResolveBillboardLitTintRgb();
             MaterialBlendMode blendMode = ResolveMaterialBlendMode(materialId, MaterialBlendMode.Opaque);
+            Color tint = blendMode == MaterialBlendMode.Cutout
+                ? new Color(255, 255, 255, alpha)
+                : new Color(
+                    Clamp01ToByte(litRgb.X),
+                    Clamp01ToByte(litRgb.Y),
+                    Clamp01ToByte(litRgb.Z),
+                    alpha);
             bool doubleSided = IsMaterialDoubleSided(materialId);
             LogBillboardDrawDiagnostic(
                 meshAssetId,
@@ -1257,7 +1264,7 @@ namespace Ludots.Client.Raylib.Rendering
                 {
                     EnsureVegetationCutoutShader();
                     float cutoff = DefaultVegetationAlphaCutoff;
-                    Vector4 colDiffuse = Vector4.One;
+                    Vector4 colDiffuse = new(litRgb.X, litRgb.Y, litRgb.Z, 1f);
                     Rl.SetShaderValue(
                         _vegetationCutoutShader,
                         _locVegetationCutoutColDiffuse,
@@ -2620,6 +2627,23 @@ namespace Ludots.Client.Raylib.Rendering
         }
 
         private static Color ToRaylibColor(in Vector4 c) => RaylibColorUtil.ToRaylibColor(in c);
+
+        private Vector3 ResolveBillboardLitTintRgb()
+        {
+            if (_frameLighting == null)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} billboard draw requires {nameof(ApplyFrameLighting)} first.");
+            }
+
+            Vector4 ambient = _frameLighting.AmbientRgba;
+            float key = _frameLighting.LightIntensity * 0.55f;
+            float exposure = Math.Clamp((ambient.W * 3.2f) + key, 0.08f, 1.35f);
+            return new Vector3(
+                Math.Clamp(ambient.X * exposure + (_frameLighting.LightColor.X * key * 0.35f), 0f, 1.5f),
+                Math.Clamp(ambient.Y * exposure + (_frameLighting.LightColor.Y * key * 0.35f), 0f, 1.5f),
+                Math.Clamp(ambient.Z * exposure + (_frameLighting.LightColor.Z * key * 0.35f), 0f, 1.5f));
+        }
 
         private static byte Clamp01ToByte(float v) => RaylibColorUtil.Clamp01ToByte(v);
 
