@@ -598,10 +598,15 @@
     },
     {
       "op": "SendEvent",
-      "authorableKinds": null,
-      "unitTestFilter": null,
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectSendEvent_RequiresEventTag",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "ReadBlackboardFloat",
@@ -713,10 +718,15 @@
     },
     {
       "op": "LoadContextSource",
-      "authorableKinds": null,
-      "unitTestFilter": null,
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "LoadContextTarget",
@@ -732,10 +742,15 @@
     },
     {
       "op": "LoadContextTargetContext",
-      "authorableKinds": null,
-      "unitTestFilter": null,
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "LoadSelfAttribute",
@@ -1084,45 +1099,75 @@
     },
     {
       "op": "LoadTargetPosX",
-      "authorableKinds": null,
-      "unitTestFilter": null,
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "LoadTargetPosY",
-      "authorableKinds": null,
-      "unitTestFilter": null,
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "ClampTargetToRange",
-      "authorableKinds": null,
-      "unitTestFilter": null,
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationClampTargetToRange_RequiresOriginAndRangeInputs",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "IsPointInCircle",
-      "authorableKinds": null,
-      "unitTestFilter": null,
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "SnapToNearestInCollection",
-      "authorableKinds": null,
-      "unitTestFilter": null,
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationSnapToNearestInCollection_RequiresCollectionKey;GraphControlFlowConfigCoverageTests.SnapWithoutValidOutput_DoesNotOverwriteValidationResult;GraphControlFlowConfigCoverageTests.SnapWithValidOutput_AllocatesDedicatedBoolRegister",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "SnapToNearestGraphEdge",
-      "authorableKinds": null,
-      "unitTestFilter": null,
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "LoadViewer",
@@ -1133,38 +1178,63 @@
     },
     {
       "op": "LoadEventPayloadInt",
-      "authorableKinds": null,
-      "unitTestFilter": null,
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "LoadEventPayloadFloat",
-      "authorableKinds": null,
-      "unitTestFilter": null,
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "ControlDomainResolve",
-      "authorableKinds": null,
-      "unitTestFilter": null,
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "ControlDomainControls",
-      "authorableKinds": null,
-      "unitTestFilter": null,
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "KnowledgeHasProjection",
-      "authorableKinds": null,
-      "unitTestFilter": null,
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "Call",

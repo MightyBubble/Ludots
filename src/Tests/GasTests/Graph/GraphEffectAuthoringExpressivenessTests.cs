@@ -510,6 +510,128 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
+        public void FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit()
+        {
+            GraphControlFlowCompileResult compiled = CompileFrontDoor(
+                """
+                {
+                  "kind": "Effect",
+                  "entry": "source",
+                  "nodes": [
+                    { "id": "source", "op": "LoadContextSource" },
+                    { "id": "targetCtx", "op": "LoadContextTargetContext" },
+                    { "id": "payloadInt", "op": "LoadEventPayloadInt", "slot": 0 },
+                    { "id": "payloadFloat", "op": "LoadEventPayloadFloat", "slot": 3 },
+                    { "id": "domain", "op": "ControlDomainResolve" },
+                    { "id": "controls", "op": "ControlDomainControls" },
+                    { "id": "projection", "op": "KnowledgeHasProjection" },
+                    { "id": "magnitude", "op": "ConstFloat", "floatValue": 1.5 },
+                    { "id": "send", "op": "SendEvent", "tag": "Event.DamageDealt" }
+                  ],
+                  "controlEdges": [
+                    { "from": "source", "fromPort": "next", "to": "targetCtx" },
+                    { "from": "targetCtx", "fromPort": "next", "to": "payloadInt" },
+                    { "from": "payloadInt", "fromPort": "next", "to": "payloadFloat" },
+                    { "from": "payloadFloat", "fromPort": "next", "to": "domain" },
+                    { "from": "domain", "fromPort": "next", "to": "controls" },
+                    { "from": "controls", "fromPort": "next", "to": "projection" },
+                    { "from": "projection", "fromPort": "next", "to": "magnitude" },
+                    { "from": "magnitude", "fromPort": "next", "to": "send" }
+                  ],
+                  "valueEdges": [
+                    { "from": "source", "fromPort": "value", "to": "domain", "toPort": "source" },
+                    { "from": "source", "fromPort": "value", "to": "controls", "toPort": "a" },
+                    { "from": "targetCtx", "fromPort": "value", "to": "controls", "toPort": "b" },
+                    { "from": "source", "fromPort": "value", "to": "projection", "toPort": "a" },
+                    { "from": "targetCtx", "fromPort": "value", "to": "projection", "toPort": "b" },
+                    { "from": "targetCtx", "fromPort": "value", "to": "send", "toPort": "target" },
+                    { "from": "magnitude", "fromPort": "value", "to": "send", "toPort": "value" }
+                  ]
+                }
+                """,
+                "tests.effect.event-control-knowledge-ops");
+
+            Assert.That(compiled.Succeeded, Is.True, GraphScriptTestGraphs.FormatDiagnostics(compiled.Diagnostics));
+            Assert.That(compiled.Package.HasValue, Is.True);
+
+            GraphInstruction[] program = compiled.Package!.Value.Program;
+            Assert.Multiple(() =>
+            {
+                Assert.That(program.Select(i => (GraphNodeOp)i.Op), Does.Contain(GraphNodeOp.LoadContextSource));
+                Assert.That(program.Select(i => (GraphNodeOp)i.Op), Does.Contain(GraphNodeOp.LoadContextTargetContext));
+                Assert.That(program.Select(i => (GraphNodeOp)i.Op), Does.Contain(GraphNodeOp.LoadEventPayloadInt));
+                Assert.That(program.Select(i => (GraphNodeOp)i.Op), Does.Contain(GraphNodeOp.LoadEventPayloadFloat));
+                Assert.That(program.Select(i => (GraphNodeOp)i.Op), Does.Contain(GraphNodeOp.ControlDomainResolve));
+                Assert.That(program.Select(i => (GraphNodeOp)i.Op), Does.Contain(GraphNodeOp.ControlDomainControls));
+                Assert.That(program.Select(i => (GraphNodeOp)i.Op), Does.Contain(GraphNodeOp.KnowledgeHasProjection));
+                Assert.That(program.Select(i => (GraphNodeOp)i.Op), Does.Contain(GraphNodeOp.SendEvent));
+            });
+
+            GraphInstruction payloadInt = program.Single(i => i.Op == (ushort)GraphNodeOp.LoadEventPayloadInt);
+            GraphInstruction payloadFloat = program.Single(i => i.Op == (ushort)GraphNodeOp.LoadEventPayloadFloat);
+            GraphInstruction domain = program.Single(i => i.Op == (ushort)GraphNodeOp.ControlDomainResolve);
+            GraphInstruction controls = program.Single(i => i.Op == (ushort)GraphNodeOp.ControlDomainControls);
+            GraphInstruction projection = program.Single(i => i.Op == (ushort)GraphNodeOp.KnowledgeHasProjection);
+            GraphInstruction send = program.Single(i => i.Op == (ushort)GraphNodeOp.SendEvent);
+            GraphInstruction source = program.Single(i => i.Op == (ushort)GraphNodeOp.LoadContextSource);
+            GraphInstruction targetCtx = program.Single(i => i.Op == (ushort)GraphNodeOp.LoadContextTargetContext);
+            GraphInstruction magnitude = program.Single(i => i.Op == (ushort)GraphNodeOp.ConstFloat);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(payloadInt.Imm, Is.EqualTo(0));
+                Assert.That(payloadFloat.Imm, Is.EqualTo(3));
+                Assert.That(domain.A, Is.EqualTo(source.Dst));
+                Assert.That(controls.A, Is.EqualTo(source.Dst));
+                Assert.That(controls.B, Is.EqualTo(targetCtx.Dst));
+                Assert.That(projection.A, Is.EqualTo(source.Dst));
+                Assert.That(projection.B, Is.EqualTo(targetCtx.Dst));
+                Assert.That(send.A, Is.EqualTo(targetCtx.Dst));
+                Assert.That(send.B, Is.EqualTo(magnitude.Dst));
+                Assert.That(compiled.Package.Value.Symbols[send.Imm], Is.EqualTo("Event.DamageDealt"));
+            });
+
+            Assert.DoesNotThrow(() =>
+                GraphKindOperationPolicy.RequireAllowed(
+                    GraphKind.Effect,
+                    program,
+                    GasGraphOpHandlerTable.Instance));
+        }
+
+        [Test]
+        public void FrontDoor_EffectSendEvent_RequiresEventTag()
+        {
+            GraphControlFlowCompileResult compiled = CompileFrontDoor(
+                """
+                {
+                  "kind": "Effect",
+                  "entry": "target",
+                  "nodes": [
+                    { "id": "target", "op": "LoadExplicitTarget" },
+                    { "id": "magnitude", "op": "ConstFloat", "floatValue": 1 },
+                    { "id": "send", "op": "SendEvent" }
+                  ],
+                  "controlEdges": [
+                    { "from": "target", "fromPort": "next", "to": "magnitude" },
+                    { "from": "magnitude", "fromPort": "next", "to": "send" }
+                  ],
+                  "valueEdges": [
+                    { "from": "target", "fromPort": "value", "to": "send", "toPort": "target" },
+                    { "from": "magnitude", "fromPort": "value", "to": "send", "toPort": "value" }
+                  ]
+                }
+                """,
+                "tests.effect.send-event-missing-tag");
+
+            Assert.That(compiled.Succeeded, Is.False);
+            Assert.That(compiled.Package.HasValue, Is.False);
+            Assert.That(compiled.Diagnostics, Has.Some.Matches<GraphDiagnostic>(d =>
+                d.Code == GraphDiagnosticCodes.MissingNodeRef &&
+                d.NodeId == "send" &&
+                d.Message.Contains("tag", StringComparison.Ordinal)));
+        }
+
+        [Test]
         public void FrontDoor_QueryTagDisplayOps_CompileAndEmit()
         {
             GraphControlFlowCompileResult compiled = CompileFrontDoor(
@@ -826,6 +948,135 @@ namespace Ludots.Tests.Gas.Graph
                 d.Severity == GraphDiagnosticSeverity.Error &&
                 d.Code == GraphDiagnosticCodes.UnknownNodeOp &&
                 d.NodeId == "bad"));
+        }
+
+        [Test]
+        public void FrontDoor_ValidationPlacementOps_CompileAndEmit()
+        {
+            GraphControlFlowCompileResult compiled = CompileFrontDoor(
+                """
+                {
+                  "kind": "Validation",
+                  "entry": "loadX",
+                  "nodes": [
+                    { "id": "loadX", "op": "LoadTargetPosX" },
+                    { "id": "loadY", "op": "LoadTargetPosY" },
+                    { "id": "caster", "op": "LoadCaster" },
+                    { "id": "range", "op": "ConstFloat", "floatValue": 500 },
+                    { "id": "clamp", "op": "ClampTargetToRange" },
+                    { "id": "circle", "op": "IsPointInCircle" },
+                    { "id": "snapRadius", "op": "ConstFloat", "floatValue": 100 },
+                    { "id": "snapColl", "op": "SnapToNearestInCollection", "collectionKey": "tests.collection.snap" },
+                    { "id": "snapEdge", "op": "SnapToNearestGraphEdge" }
+                  ],
+                  "controlEdges": [
+                    { "from": "loadX", "fromPort": "next", "to": "loadY" },
+                    { "from": "loadY", "fromPort": "next", "to": "caster" },
+                    { "from": "caster", "fromPort": "next", "to": "range" },
+                    { "from": "range", "fromPort": "next", "to": "clamp" },
+                    { "from": "clamp", "fromPort": "next", "to": "circle" },
+                    { "from": "circle", "fromPort": "next", "to": "snapRadius" },
+                    { "from": "snapRadius", "fromPort": "next", "to": "snapColl" },
+                    { "from": "snapColl", "fromPort": "next", "to": "snapEdge" }
+                  ],
+                  "valueEdges": [
+                    { "from": "caster", "fromPort": "value", "to": "clamp", "toPort": "a" },
+                    { "from": "range", "fromPort": "value", "to": "clamp", "toPort": "b" },
+                    { "from": "caster", "fromPort": "value", "to": "circle", "toPort": "a" },
+                    { "from": "range", "fromPort": "value", "to": "circle", "toPort": "b" },
+                    { "from": "caster", "fromPort": "value", "to": "snapColl", "toPort": "source" },
+                    { "from": "snapRadius", "fromPort": "value", "to": "snapColl", "toPort": "value" },
+                    { "from": "snapRadius", "fromPort": "value", "to": "snapEdge", "toPort": "value" }
+                  ]
+                }
+                """,
+                "tests.validation.placement-ops");
+
+            Assert.That(compiled.Succeeded, Is.True, GraphScriptTestGraphs.FormatDiagnostics(compiled.Diagnostics));
+            Assert.That(compiled.Package.HasValue, Is.True);
+
+            GraphInstruction[] program = compiled.Package!.Value.Program;
+            Assert.Multiple(() =>
+            {
+                Assert.That(program.Select(i => (GraphNodeOp)i.Op), Does.Contain(GraphNodeOp.LoadTargetPosX));
+                Assert.That(program.Select(i => (GraphNodeOp)i.Op), Does.Contain(GraphNodeOp.LoadTargetPosY));
+                Assert.That(program.Select(i => (GraphNodeOp)i.Op), Does.Contain(GraphNodeOp.ClampTargetToRange));
+                Assert.That(program.Select(i => (GraphNodeOp)i.Op), Does.Contain(GraphNodeOp.IsPointInCircle));
+                Assert.That(program.Select(i => (GraphNodeOp)i.Op), Does.Contain(GraphNodeOp.SnapToNearestInCollection));
+                Assert.That(program.Select(i => (GraphNodeOp)i.Op), Does.Contain(GraphNodeOp.SnapToNearestGraphEdge));
+            });
+
+            GraphInstruction snapColl = SingleInstruction(program, GraphNodeOp.SnapToNearestInCollection);
+            Assert.That(snapColl.Flags, Is.EqualTo(byte.MaxValue));
+            Assert.That(snapColl.Imm, Is.GreaterThanOrEqualTo(0));
+
+            Assert.DoesNotThrow(() =>
+                GraphKindOperationPolicy.RequireAllowed(
+                    GraphKind.Validation,
+                    program,
+                    GasGraphOpHandlerTable.Instance));
+        }
+
+        [Test]
+        public void FrontDoor_ValidationClampTargetToRange_RequiresOriginAndRangeInputs()
+        {
+            GraphControlFlowCompileResult compiled = CompileFrontDoor(
+                """
+                {
+                  "kind": "Validation",
+                  "entry": "clamp",
+                  "nodes": [
+                    { "id": "clamp", "op": "ClampTargetToRange" }
+                  ],
+                  "controlEdges": [],
+                  "valueEdges": []
+                }
+                """,
+                "tests.validation.clamp-missing-inputs");
+
+            Assert.That(compiled.Succeeded, Is.False);
+            Assert.That(compiled.Package.HasValue, Is.False);
+            Assert.That(compiled.Diagnostics, Has.Some.Matches<GraphDiagnostic>(d =>
+                d.Code == GraphDiagnosticCodes.MissingValueInput &&
+                d.NodeId == "clamp" &&
+                d.Message.Contains("'a'", StringComparison.Ordinal)));
+            Assert.That(compiled.Diagnostics, Has.Some.Matches<GraphDiagnostic>(d =>
+                d.Code == GraphDiagnosticCodes.MissingValueInput &&
+                d.NodeId == "clamp" &&
+                d.Message.Contains("'b'", StringComparison.Ordinal)));
+        }
+
+        [Test]
+        public void FrontDoor_ValidationSnapToNearestInCollection_RequiresCollectionKey()
+        {
+            GraphControlFlowCompileResult compiled = CompileFrontDoor(
+                """
+                {
+                  "kind": "Validation",
+                  "entry": "caster",
+                  "nodes": [
+                    { "id": "caster", "op": "LoadCaster" },
+                    { "id": "distance", "op": "ConstFloat", "floatValue": 100 },
+                    { "id": "snap", "op": "SnapToNearestInCollection" }
+                  ],
+                  "controlEdges": [
+                    { "from": "caster", "fromPort": "next", "to": "distance" },
+                    { "from": "distance", "fromPort": "next", "to": "snap" }
+                  ],
+                  "valueEdges": [
+                    { "from": "caster", "fromPort": "value", "to": "snap", "toPort": "source" },
+                    { "from": "distance", "fromPort": "value", "to": "snap", "toPort": "value" }
+                  ]
+                }
+                """,
+                "tests.validation.snap-missing-collection");
+
+            Assert.That(compiled.Succeeded, Is.False);
+            Assert.That(compiled.Package.HasValue, Is.False);
+            Assert.That(compiled.Diagnostics, Has.Some.Matches<GraphDiagnostic>(d =>
+                d.Code == GraphDiagnosticCodes.MissingNodeRef &&
+                d.NodeId == "snap" &&
+                d.Message.Contains("collectionKey", StringComparison.Ordinal)));
         }
 
         private static GraphControlFlowCompileResult CompileFrontDoor(string json, string graphId)

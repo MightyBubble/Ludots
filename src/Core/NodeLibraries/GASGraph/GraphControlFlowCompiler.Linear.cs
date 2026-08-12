@@ -31,7 +31,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                       GraphNodeOp.SelectEntity or
                       GraphNodeOp.LoadCaster or
                       GraphNodeOp.LoadExplicitTarget or
+                      GraphNodeOp.LoadContextSource or
                       GraphNodeOp.LoadContextTarget or
+                      GraphNodeOp.LoadContextTargetContext or
+                      GraphNodeOp.LoadEventPayloadInt or
+                      GraphNodeOp.LoadEventPayloadFloat or
+                      GraphNodeOp.ControlDomainResolve or
+                      GraphNodeOp.ControlDomainControls or
+                      GraphNodeOp.KnowledgeHasProjection or
+                      GraphNodeOp.SendEvent or
                       GraphNodeOp.LoadAttribute or
                       GraphNodeOp.LoadSelfAttribute or
                       GraphNodeOp.RandomFloat01 or
@@ -70,8 +78,20 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                       GraphNodeOp.AggCount or
                       GraphNodeOp.AggMinByDistance or
                       GraphNodeOp.TargetListGet or
+                      GraphNodeOp.RelationshipEnsureLink or
+                      GraphNodeOp.RelationshipRemoveLink or
+                      GraphNodeOp.RelationshipSetMetric or
+                      GraphNodeOp.RelationshipAddMetric or
                       GraphNodeOp.RelationshipGetMetric or
+                      GraphNodeOp.RelationshipHasFlag or
+                      GraphNodeOp.RelationshipSetFlag or
+                      GraphNodeOp.RelationshipHasLink or
+                      GraphNodeOp.LoadTargetPosX or
+                      GraphNodeOp.LoadTargetPosY or
+                      GraphNodeOp.ClampTargetToRange or
+                      GraphNodeOp.IsPointInCircle or
                       GraphNodeOp.SnapToNearestInCollection or
+                      GraphNodeOp.SnapToNearestGraphEdge or
                       GraphNodeOp.InvokeScript;
 
         private static GraphValueType GetLinearOutputType(GraphNodeOp op)
@@ -89,6 +109,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     GraphNodeOp.NegFloat or
                     GraphNodeOp.LoadAttribute or
                     GraphNodeOp.LoadSelfAttribute or
+                    GraphNodeOp.LoadEventPayloadFloat or
                     GraphNodeOp.RandomFloat01 or
                     GraphNodeOp.ReadBlackboardFloat or
                     GraphNodeOp.LoadConfigFloat => GraphValueType.Float,
@@ -96,6 +117,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     GraphNodeOp.AddInt or
                     GraphNodeOp.AggCount or
                     GraphNodeOp.RelationshipGetMetric or
+                    GraphNodeOp.LoadTargetPosX or
+                    GraphNodeOp.LoadTargetPosY or
+                    GraphNodeOp.LoadEventPayloadInt or
                     GraphNodeOp.SelectTagInMask or
                     GraphNodeOp.LookupTagDisplayToken or
                     GraphNodeOp.ReadBlackboardInt or
@@ -107,10 +131,20 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     GraphNodeOp.CompareLtInt or
                     GraphNodeOp.CompareEqInt or
                     GraphNodeOp.HasTag or
-                    GraphNodeOp.CompareEqEntity => GraphValueType.Bool,
+                    GraphNodeOp.CompareEqEntity or
+                    GraphNodeOp.ControlDomainControls or
+                    GraphNodeOp.KnowledgeHasProjection or
+                    GraphNodeOp.ClampTargetToRange or
+                    GraphNodeOp.IsPointInCircle or
+                    GraphNodeOp.RelationshipHasFlag or
+                    GraphNodeOp.RelationshipHasLink or
+                    GraphNodeOp.SnapToNearestGraphEdge => GraphValueType.Bool,
                 GraphNodeOp.LoadCaster or
                     GraphNodeOp.LoadExplicitTarget or
+                    GraphNodeOp.LoadContextSource or
                     GraphNodeOp.LoadContextTarget or
+                    GraphNodeOp.LoadContextTargetContext or
+                    GraphNodeOp.ControlDomainResolve or
                     GraphNodeOp.SelectEntity or
                     GraphNodeOp.AggMinByDistance or
                     GraphNodeOp.ReadBlackboardEntity or
@@ -138,8 +172,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     => port is GraphControlFlowPorts.Condition or GraphControlFlowPorts.A or GraphControlFlowPorts.B,
                 GraphNodeOp.HasTag or GraphNodeOp.SelectTagInMask
                     => port == GraphControlFlowPorts.Source,
-                GraphNodeOp.CompareEqEntity
+                GraphNodeOp.CompareEqEntity or GraphNodeOp.ControlDomainControls or GraphNodeOp.KnowledgeHasProjection
                     => port is GraphControlFlowPorts.A or GraphControlFlowPorts.B,
+                GraphNodeOp.ControlDomainResolve
+                    => port == GraphControlFlowPorts.Source,
+                GraphNodeOp.SendEvent
+                    => port is GraphControlFlowPorts.Target or GraphControlFlowPorts.Value,
                 GraphNodeOp.LookupTagDisplayToken
                     => port == GraphControlFlowPorts.A,
                 GraphNodeOp.LoadAttribute => port == GraphControlFlowPorts.Source,
@@ -153,8 +191,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.FanOutApplyEffectDynamic or GraphNodeOp.FanOutDispatchEffectDynamic
                     => port == GraphControlFlowPorts.Value,
                 GraphNodeOp.RemoveEffectTemplate => port == GraphControlFlowPorts.Target,
-                GraphNodeOp.RelationshipGetMetric => port is GraphControlFlowPorts.Source or GraphControlFlowPorts.Target,
+                GraphNodeOp.RelationshipEnsureLink or
+                    GraphNodeOp.RelationshipRemoveLink or
+                    GraphNodeOp.RelationshipGetMetric or
+                    GraphNodeOp.RelationshipHasFlag or
+                    GraphNodeOp.RelationshipHasLink => port is GraphControlFlowPorts.Source or GraphControlFlowPorts.Target,
+                GraphNodeOp.RelationshipSetMetric or
+                    GraphNodeOp.RelationshipAddMetric => port is GraphControlFlowPorts.Source or GraphControlFlowPorts.Target or GraphControlFlowPorts.Value,
+                GraphNodeOp.RelationshipSetFlag => port is GraphControlFlowPorts.Source or GraphControlFlowPorts.Target or GraphControlFlowPorts.Value,
+                GraphNodeOp.ClampTargetToRange or GraphNodeOp.IsPointInCircle
+                    => port is GraphControlFlowPorts.A or GraphControlFlowPorts.B,
                 GraphNodeOp.SnapToNearestInCollection => port is GraphControlFlowPorts.Source or GraphControlFlowPorts.Value,
+                GraphNodeOp.SnapToNearestGraphEdge => port == GraphControlFlowPorts.Value,
                 GraphNodeOp.WriteBlackboardInt or GraphNodeOp.WriteBlackboardFloat or GraphNodeOp.WriteBlackboardEntity
                     => port is GraphControlFlowPorts.Source or GraphControlFlowPorts.Value,
                 GraphNodeOp.ReadBlackboardInt or GraphNodeOp.ReadBlackboardFloat or GraphNodeOp.ReadBlackboardEntity
@@ -187,11 +235,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.ConstInt:
                 case GraphNodeOp.LoadCaster:
                 case GraphNodeOp.LoadExplicitTarget:
+                case GraphNodeOp.LoadContextSource:
                 case GraphNodeOp.LoadContextTarget:
+                case GraphNodeOp.LoadContextTargetContext:
                 case GraphNodeOp.RandomFloat01:
                 case GraphNodeOp.BeginLifecycleTransaction:
                 case GraphNodeOp.AggCount:
                 case GraphNodeOp.QueryFilterLayer:
+                case GraphNodeOp.LoadTargetPosX:
+                case GraphNodeOp.LoadTargetPosY:
                     break;
 
                 case GraphNodeOp.InvokeScript:
@@ -411,6 +463,23 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     break;
 
+                case GraphNodeOp.RelationshipEnsureLink:
+                case GraphNodeOp.RelationshipRemoveLink:
+                case GraphNodeOp.RelationshipHasLink:
+                    RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.Target, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireNonEmpty(node.RelationshipType, "relationshipType", node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.RelationshipSetMetric:
+                case GraphNodeOp.RelationshipAddMetric:
+                    RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.Target, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireNonEmpty(node.RelationshipType, "relationshipType", node, graphId, diagnostics);
+                    RequireNonEmpty(node.Metric, "metric", node, graphId, diagnostics);
+                    break;
+
                 case GraphNodeOp.RelationshipGetMetric:
                     RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.Target, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
@@ -418,10 +487,71 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     RequireNonEmpty(node.Metric, "metric", node, graphId, diagnostics);
                     break;
 
+                case GraphNodeOp.RelationshipHasFlag:
+                    RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.Target, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireNonEmpty(node.RelationshipType, "relationshipType", node, graphId, diagnostics);
+                    RequireNonEmpty(node.Flag, "flag", node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.RelationshipSetFlag:
+                    RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.Target, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Bool, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireNonEmpty(node.RelationshipType, "relationshipType", node, graphId, diagnostics);
+                    RequireNonEmpty(node.Flag, "flag", node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.ClampTargetToRange:
+                case GraphNodeOp.IsPointInCircle:
+                    RequireValueInput(node, GraphControlFlowPorts.A, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.B, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
+
                 case GraphNodeOp.SnapToNearestInCollection:
                     RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireNonEmpty(node.CollectionKey, "collectionKey", node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.SnapToNearestGraphEdge:
+                    RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.LoadEventPayloadInt:
+                    if (node.Slot is < 0 or > 1)
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
+                            $"Node '{node.Id}' LoadEventPayloadInt slot must be 0 (PayloadA) or 1 (PayloadB).",
+                            node.Id));
+                    }
+
+                    break;
+
+                case GraphNodeOp.LoadEventPayloadFloat:
+                    if (node.Slot is < 0 or > 3)
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
+                            $"Node '{node.Id}' LoadEventPayloadFloat slot must be 0..3 (FloatA..FloatD).",
+                            node.Id));
+                    }
+
+                    break;
+
+                case GraphNodeOp.ControlDomainResolve:
+                    RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.ControlDomainControls:
+                case GraphNodeOp.KnowledgeHasProjection:
+                    RequireValueInput(node, GraphControlFlowPorts.A, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.B, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.SendEvent:
+                    RequireValueInput(node, GraphControlFlowPorts.Target, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireNonEmpty(node.Tag, "tag", node, graphId, diagnostics);
                     break;
 
                 default:
@@ -519,10 +649,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
 
                 case GraphNodeOp.LoadCaster:
                 case GraphNodeOp.LoadExplicitTarget:
+                case GraphNodeOp.LoadContextSource:
                 case GraphNodeOp.LoadContextTarget:
+                case GraphNodeOp.LoadContextTargetContext:
                 case GraphNodeOp.RandomFloat01:
                 case GraphNodeOp.BeginLifecycleTransaction:
                 case GraphNodeOp.AggCount:
+                case GraphNodeOp.LoadTargetPosX:
+                case GraphNodeOp.LoadTargetPosY:
                     break;
 
                 case GraphNodeOp.QueryHexNeighbors:
@@ -838,6 +972,33 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     instruction.Flags = (byte)(GraphVmLimits.MaxBoolRegisters - 1);
                     break;
 
+                case GraphNodeOp.RelationshipEnsureLink:
+                case GraphNodeOp.RelationshipRemoveLink:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.B = ResolveValueInput(
+                        node, GraphControlFlowPorts.Target, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Dst = RequireRelationshipTypeSymbol(node.RelationshipType, symbolToIndex, symbols, graphId, node.Id, diagnostics);
+                    break;
+
+                case GraphNodeOp.RelationshipSetMetric:
+                case GraphNodeOp.RelationshipAddMetric:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.B = ResolveValueInput(
+                        node, GraphControlFlowPorts.Target, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.C = ResolveValueInput(
+                        node, GraphControlFlowPorts.Value, GraphValueType.Int,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Imm = RequireSymbol(node.Metric, "metric", node, symbolToIndex, symbols, graphId, diagnostics);
+                    instruction.Dst = byte.MaxValue;
+                    instruction.Flags = RequireRelationshipTypeSymbol(node.RelationshipType, symbolToIndex, symbols, graphId, node.Id, diagnostics);
+                    break;
+
                 case GraphNodeOp.RelationshipGetMetric:
                     instruction.A = ResolveValueInput(
                         node, GraphControlFlowPorts.Source, GraphValueType.Entity,
@@ -847,6 +1008,52 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                         valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
                     instruction.Imm = RequireSymbol(node.Metric, "metric", node, symbolToIndex, symbols, graphId, diagnostics);
                     instruction.Flags = RequireRelationshipTypeSymbol(node.RelationshipType, symbolToIndex, symbols, graphId, node.Id, diagnostics);
+                    break;
+
+                case GraphNodeOp.RelationshipHasFlag:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.B = ResolveValueInput(
+                        node, GraphControlFlowPorts.Target, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Imm = RequireSymbol(node.Flag, "flag", node, symbolToIndex, symbols, graphId, diagnostics);
+                    instruction.Flags = RequireRelationshipTypeSymbol(node.RelationshipType, symbolToIndex, symbols, graphId, node.Id, diagnostics);
+                    break;
+
+                case GraphNodeOp.RelationshipSetFlag:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.B = ResolveValueInput(
+                        node, GraphControlFlowPorts.Target, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.C = ResolveValueInput(
+                        node, GraphControlFlowPorts.Value, GraphValueType.Bool,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Imm = RequireSymbol(node.Flag, "flag", node, symbolToIndex, symbols, graphId, diagnostics);
+                    instruction.Dst = byte.MaxValue;
+                    instruction.Flags = RequireRelationshipTypeSymbol(node.RelationshipType, symbolToIndex, symbols, graphId, node.Id, diagnostics);
+                    break;
+
+                case GraphNodeOp.RelationshipHasLink:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.B = ResolveValueInput(
+                        node, GraphControlFlowPorts.Target, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Flags = RequireRelationshipTypeSymbol(node.RelationshipType, symbolToIndex, symbols, graphId, node.Id, diagnostics);
+                    break;
+
+                case GraphNodeOp.ClampTargetToRange:
+                case GraphNodeOp.IsPointInCircle:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.A, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.B = ResolveValueInput(
+                        node, GraphControlFlowPorts.B, GraphValueType.Float,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
                     break;
 
                 case GraphNodeOp.SnapToNearestInCollection:
@@ -860,6 +1067,43 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     instruction.Flags = string.IsNullOrWhiteSpace(node.ValidOutput)
                         ? byte.MaxValue
                         : (byte)(GraphVmLimits.MaxBoolRegisters - 1);
+                    break;
+
+                case GraphNodeOp.SnapToNearestGraphEdge:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Value, GraphValueType.Float,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.LoadEventPayloadInt:
+                case GraphNodeOp.LoadEventPayloadFloat:
+                    instruction.Imm = node.Slot;
+                    break;
+
+                case GraphNodeOp.ControlDomainResolve:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.ControlDomainControls:
+                case GraphNodeOp.KnowledgeHasProjection:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.A, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.B = ResolveValueInput(
+                        node, GraphControlFlowPorts.B, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.SendEvent:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Target, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.B = ResolveValueInput(
+                        node, GraphControlFlowPorts.Value, GraphValueType.Float,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Imm = RequireSymbol(node.Tag, "tag", node, symbolToIndex, symbols, graphId, diagnostics);
                     break;
 
                 case GraphNodeOp.InvokeScript:
