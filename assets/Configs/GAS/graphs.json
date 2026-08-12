@@ -72,5 +72,67 @@
       }
     ],
     "valueEdges": []
+  },
+  {
+    "id": "Graph.FuncLib.Demo.ConstSeven",
+    "kind": "Script",
+    "entry": "c",
+    "nodes": [
+      {
+        "id": "c",
+        "op": "ConstInt",
+        "intValue": 7
+      },
+      {
+        "id": "h",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "c",
+        "fromPort": "next",
+        "to": "h"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "c",
+        "fromPort": "value",
+        "to": "h",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "Graph.FuncLib.Demo.InvokeConstSeven",
+    "kind": "Script",
+    "entry": "invoke",
+    "nodes": [
+      {
+        "id": "invoke",
+        "op": "InvokeScript",
+        "functionName": "demo.const.seven"
+      },
+      {
+        "id": "done",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "invoke",
+        "fromPort": "next",
+        "to": "done"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "invoke",
+        "fromPort": "value",
+        "to": "done",
+        "toPort": "value"
+      }
+    ]
   }
 ]

@@ -167,6 +167,34 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             }
         }
 
+        /// <summary>
+        /// Resolves InvokeScript instructions that carry Func Lib names (Flags=<see cref="GraphInstructionFlags.FuncLibName"/>).
+        /// </summary>
+        public static void PatchFuncLib(string[] symbols, GraphInstruction[] program, GraphFunctionCatalog catalog)
+        {
+            if (program == null || program.Length == 0) return;
+            if (catalog == null) throw new ArgumentNullException(nameof(catalog));
+
+            for (int i = 0; i < program.Length; i++)
+            {
+                ref var ins = ref program[i];
+                if (ins.Op != (ushort)GraphNodeOp.InvokeScript)
+                {
+                    continue;
+                }
+
+                if ((ins.Flags & GraphInstructionFlags.FuncLibName) == 0)
+                {
+                    continue;
+                }
+
+                string functionName = ResolveSymbol(symbols, ins.Imm);
+                GraphFunctionEntry entry = catalog.Require(functionName);
+                ins.Imm = entry.GraphId;
+                ins.Flags = (byte)(ins.Flags & ~GraphInstructionFlags.FuncLibName);
+            }
+        }
+
         private static string ResolveSymbol(string[] symbols, int symbolIndex)
         {
             if ((uint)symbolIndex >= (uint)symbols.Length)

@@ -129,6 +129,21 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             GraphIdRegistry.Freeze();
         }
 
+        /// <summary>
+        /// After <see cref="PatchAndRegister"/> and Func Lib load, resolve InvokeScript functionName symbols.
+        /// </summary>
+        public void ResolveFuncLibInvokes(IReadOnlyList<GraphProgramPackage> packages, GraphFunctionCatalog catalog)
+        {
+            if (packages == null) throw new ArgumentNullException(nameof(packages));
+            if (catalog == null) throw new ArgumentNullException(nameof(catalog));
+
+            for (int i = 0; i < packages.Count; i++)
+            {
+                var (_, symbols, program, _) = packages[i];
+                GraphProgramSymbolPatcher.PatchFuncLib(symbols, program, catalog);
+            }
+        }
+
         private GraphOutputSchema ResolveOutputValueKeys(GraphOutputSchema schema)
         {
             if (!schema.HasBindings)

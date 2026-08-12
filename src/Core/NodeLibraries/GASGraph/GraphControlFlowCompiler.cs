@@ -1282,16 +1282,48 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     break;
 
                 case GraphNodeOp.InvokeScript:
+                {
+                    bool hasName = !string.IsNullOrWhiteSpace(node.FunctionName);
+                    bool hasId = node.GraphId > 0;
+                    if (hasName && hasId)
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
+                            $"InvokeScript node '{node.Id}' cannot set both functionName and graphId.", node.Id));
+                        break;
+                    }
+
+                    if (!hasName && !hasId)
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingNodeRef,
+                            $"InvokeScript node '{node.Id}' requires functionName (Func Lib) or graphId.", node.Id));
+                        break;
+                    }
+
+                    int imm;
+                    byte flags;
+                    if (hasName)
+                    {
+                        imm = Intern(symbolToIndex, symbols, node.FunctionName!.Trim());
+                        flags = GraphInstructionFlags.FuncLibName;
+                    }
+                    else
+                    {
+                        imm = node.GraphId;
+                        flags = 0;
+                    }
+
                     program[bodyIndex] = new GraphInstruction
                     {
                         Op = (ushort)GraphNodeOp.InvokeScript,
                         Dst = outputRegisters[nodeIndex],
-                        Imm = node.GraphId
+                        Imm = imm,
+                        Flags = flags
                     };
                     definedInts[outputRegisters[nodeIndex]] = true;
                     SetSource(sources, bodyIndex, graphId, node, nameof(GraphNodeOp.InvokeScript), GraphControlFlowPorts.Enter);
                     EmitRelativeJump(document, node, GraphControlFlowPorts.Next, bodyIndex + 1, controlEdges, nodeIndices, layouts, program, sources, graphId);
                     break;
+                }
 
                 default:
                     diagnostics.Add(Error(graphId, GraphDiagnosticCodes.UnknownNodeOp,

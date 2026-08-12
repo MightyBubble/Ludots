@@ -27,8 +27,10 @@ namespace Ludots.Core.GraphRuntime
         public int IntValue { get; set; }
         public float FloatValue { get; set; }
         public bool BoolValue { get; set; }
-        /// <summary>Optional target Script graph id for InvokeScript (patched or literal).</summary>
+        /// <summary>Optional target Script graph id for InvokeScript (literal; mutually exclusive with FunctionName).</summary>
         public int GraphId { get; set; }
+        /// <summary>Func Lib name for InvokeScript; resolved to GraphId at patch time.</summary>
+        public string? FunctionName { get; set; }
         public string? Attribute { get; set; }
         public string? Tag { get; set; }
         public string? Template { get; set; }

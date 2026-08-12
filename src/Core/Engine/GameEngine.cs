@@ -904,6 +904,10 @@ namespace Ludots.Core.Engine
                 tagOps.RegisterTagRuleSet(tagRules[i].TagId, tagRules[i].RuleSet);
             }
             graphConfigLoader.PatchAndRegister(graphPackages);
+            var graphFunctionCatalog = new GraphFunctionCatalog();
+            new GraphFunctionCatalogLoader(ConfigPipeline, graphFunctionCatalog, graphProgramRegistry)
+                .Load(ConfigCatalog, ConfigConflictReport);
+            graphConfigLoader.ResolveFuncLibInvokes(graphPackages, graphFunctionCatalog);
             EffectExecutionPlanCompiler.FinalizeAll(
                 effectTemplateRegistry,
                 presetTypes,
@@ -1424,6 +1428,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.EffectTemplateRegistry, effectTemplateRegistry);
             SetService(CoreServiceKeys.TargetDispatchPresetRegistry, targetDispatchPresetRegistry);
             SetService(CoreServiceKeys.GraphProgramRegistry, graphProgramRegistry);
+            SetService(CoreServiceKeys.GraphFunctionCatalog, graphFunctionCatalog);
             SetService(CoreServiceKeys.GasGraphRuntimeProductionServices, gasGraphProductionServices);
             SetService(CoreServiceKeys.GasGraphRuntimeApi, gasGraphApi);
             SetService(CoreServiceKeys.GraphOutputSchemaRegistry, graphOutputSchemas);

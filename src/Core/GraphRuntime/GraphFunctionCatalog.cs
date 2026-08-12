@@ -5,13 +5,14 @@ namespace Ludots.Core.GraphRuntime
 {
     /// <summary>
     /// Named reusable L1 Script/Validation/Score entries ("func lib").
-    /// Macros (compile-time textual expand) are intentionally NOT supported — reuse via
-    /// catalog name → graph id + InvokeScript/Call instead (SSOT programs in the registry).
+    /// Macros are not supported — reuse via name → graph id + InvokeScript/Call.
     /// </summary>
     public sealed class GraphFunctionCatalog
     {
         private readonly Dictionary<string, GraphFunctionEntry> _byName =
             new(StringComparer.Ordinal);
+
+        public void Clear() => _byName.Clear();
 
         public void Register(string name, int graphId, GraphKind kind)
         {
