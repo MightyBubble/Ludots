@@ -335,28 +335,19 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void TopologyOps_CompileFromGraphConfig_AndResolveRelationshipTypeAtLoad()
+        public void TopologyOps_ResolveRelationshipTypeAtLoad()
         {
-            var cfg = new GraphConfig
+            string[] symbols = { "Controls" };
+            var program = new GraphInstruction[]
             {
-                Id = "graph.cond.topology_ops",
-                Kind = "Effect",
-                Entry = "src",
-                Nodes = new List<GraphNodeConfig>
-                {
-                    new() { Id = "src", Op = "LoadCaster", Next = "tgt" },
-                    new() { Id = "tgt", Op = "LoadExplicitTarget", Next = "vwr" },
-                    new() { Id = "vwr", Op = "LoadViewer", Next = "domain" },
-                    new() { Id = "domain", Op = "ControlDomainResolve", Inputs = { "src" }, Next = "isSelf" },
-                    new() { Id = "isSelf", Op = "CompareEqEntity", Inputs = { "domain", "vwr" }, Next = "hasEdge" },
-                    new() { Id = "hasEdge", Op = "RelationshipHasLink", Inputs = { "vwr", "tgt" }, RelationshipType = "Controls" },
-                },
+                new() { Op = (ushort)GraphNodeOp.LoadCaster, Dst = 0 },
+                new() { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 1 },
+                new() { Op = (ushort)GraphNodeOp.LoadViewer, Dst = 2 },
+                new() { Op = (ushort)GraphNodeOp.ControlDomainResolve, A = 0, Dst = 3 },
+                new() { Op = (ushort)GraphNodeOp.CompareEqEntity, A = 3, B = 2, Dst = 0 },
+                new() { Op = (ushort)GraphNodeOp.RelationshipHasLink, A = 2, B = 1, Flags = 0 },
             };
 
-            var (package, diagnostics) = GraphCompiler.Compile(cfg);
-            Assert.That(package.HasValue, Is.True, string.Join("; ", diagnostics.ConvertAll(d => d.Message)));
-
-            var (_, symbols, program, _) = package!.Value;
             GraphProgramSymbolPatcher.Patch(symbols, program, new StubSymbolResolver(_controlsTypeId));
 
             var (p1Rep, p2Rep, _, unit) = BuildTopology();

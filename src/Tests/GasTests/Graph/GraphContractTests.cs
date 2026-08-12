@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text.Json.Nodes;
 using Arch.Core;
 using Ludots.Core.Config;
 using Ludots.Core.GraphRuntime;
@@ -54,47 +55,43 @@ namespace Ludots.Tests.GAS.Graph
         }
 
         [Test]
-        public void GraphCompiler_RejectsNumericKindToken()
+        public void GraphProgramAuthoringFrontDoor_RejectsNumericKindToken()
         {
-            var cfg = new GraphConfig
-            {
-                Id = "tests.graph.numeric-kind",
-                Kind = "1",
-                Entry = "n0",
-                Nodes = new List<GraphNodeConfig>
-                {
-                    new GraphNodeConfig { Id = "n0", Op = "ConstBool", BoolValue = true }
-                }
-            };
+            var obj = JsonNode.Parse("""
+{
+  "kind": "1",
+  "entry": "n0",
+  "nodes": [ { "id": "n0", "op": "ConstBool", "boolValue": true } ],
+  "controlEdges": [],
+  "valueEdges": []
+}
+""")!.AsObject();
 
-            var (package, diagnostics) = GraphCompiler.Compile(cfg);
-            Assert.That(package, Is.Null);
-            Assert.That(diagnostics.Exists(d => d.Code == GraphDiagnosticCodes.UnsupportedGraphKind), Is.True);
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+                GraphProgramAuthoringFrontDoor.RequireKind(obj, "tests.graph.numeric-kind"))!;
+            Assert.That(ex.Message, Does.Contain("tests.graph.numeric-kind"));
         }
 
         [Test]
-        public void GraphCompiler_RejectsUnsupportedKind()
+        public void GraphProgramAuthoringFrontDoor_RejectsUnsupportedKind()
         {
-            var cfg = new GraphConfig
-            {
-                Id = "tests.graph.bad-kind",
-                Kind = "LegacyCompat",
-                Entry = "n0",
-                Nodes = new List<GraphNodeConfig>
-                {
-                    new GraphNodeConfig { Id = "n0", Op = "ConstBool", BoolValue = true }
-                }
-            };
+            var obj = JsonNode.Parse("""
+{
+  "kind": "LegacyCompat",
+  "entry": "n0",
+  "nodes": [ { "id": "n0", "op": "ConstBool", "boolValue": true } ],
+  "controlEdges": [],
+  "valueEdges": []
+}
+""")!.AsObject();
 
-            var (package, diagnostics) = GraphCompiler.Compile(cfg);
-            Assert.That(package, Is.Null);
-            Assert.That(diagnostics.Exists(d =>
-                d.Code == GraphDiagnosticCodes.UnsupportedGraphKind &&
-                d.Message.Contains("LegacyCompat", StringComparison.Ordinal)), Is.True);
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+                GraphProgramAuthoringFrontDoor.RequireKind(obj, "tests.graph.bad-kind"))!;
+            Assert.That(ex.Message, Does.Contain("LegacyCompat"));
         }
 
         [Test]
-        public void GraphCompiler_PersistsAuthoredKind_AndRegistryRejectsDuplicates()
+        public void GraphProgramConfigLoader_PersistsAuthoredKind_AndRegistryRejectsDuplicates()
         {
             const string json = """
 [
@@ -119,12 +116,12 @@ namespace Ludots.Tests.GAS.Graph
         }
 
         [Test]
-        public void GraphProgramConfigLoader_RejectsQueryGraphOnNextChainPath()
+        public void GraphProgramConfigLoader_RejectsQueryGraphWithoutControlFlowEdges()
         {
             const string json = """
 [
   {
-    "id": "tests.graph.query-next-chain",
+    "id": "tests.graph.query-legacy-shape",
     "kind": "Query",
     "entry": "allMap",
     "nodes": [
@@ -141,12 +138,12 @@ namespace Ludots.Tests.GAS.Graph
         }
 
         [Test]
-        public void GraphProgramConfigLoader_RejectsEffectGraphOnNextChainPath()
+        public void GraphProgramConfigLoader_RejectsEffectGraphWithNodesNext()
         {
             const string json = """
 [
   {
-    "id": "tests.graph.effect-next-chain",
+    "id": "tests.graph.effect-legacy-next",
     "kind": "Effect",
     "entry": "c0",
     "nodes": [

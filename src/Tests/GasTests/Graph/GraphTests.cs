@@ -18,25 +18,35 @@ using static NUnit.Framework.Assert;
 namespace Ludots.Tests.GAS
 {
     [TestFixture]
-    public class GraphCompilerTests
+    public class GraphControlFlowCompilerTests
     {
         [Test]
         public void Compile_BuildsSymbolTable_AndInstructions()
         {
-            var cfg = new GraphConfig
+            var cfg = new GraphControlFlowDocument
             {
                 Id = "Test.Graph",
                 Kind = "Effect",
                 Entry = "t1",
-                Nodes = new List<GraphNodeConfig>
+                Nodes = new List<GraphControlFlowNode>
                 {
-                    new GraphNodeConfig { Id = "t1", Op = "LoadExplicitTarget", Next = "c1" },
-                    new GraphNodeConfig { Id = "c1", Op = "ConstFloat", FloatValue = 5.0f, Next = "m1" },
-                    new GraphNodeConfig { Id = "m1", Op = "ModifyAttributeAdd", Attribute = "Health", Inputs = new List<string> { "t1", "c1" } }
-                }
+                    new GraphControlFlowNode { Id = "t1", Op = "LoadExplicitTarget" },
+                    new GraphControlFlowNode { Id = "c1", Op = "ConstFloat", FloatValue = 5.0f },
+                    new GraphControlFlowNode { Id = "m1", Op = "ModifyAttributeAdd", Attribute = "Health" }
+                },
+                ControlEdges = new List<GraphControlFlowEdge>
+                {
+                    new("t1", GraphControlFlowPorts.Next, "c1"),
+                    new("c1", GraphControlFlowPorts.Next, "m1")
+                },
+                ValueEdges = new List<GraphControlFlowValueEdge>
+                {
+                    new("t1", GraphControlFlowPorts.Value, "m1", GraphControlFlowPorts.Target),
+                    new("c1", GraphControlFlowPorts.Value, "m1", GraphControlFlowPorts.Value)
+                },
             };
 
-            var (pkg, diags) = GraphCompiler.Compile(cfg);
+            var (pkg, _, diags) = GraphControlFlowCompiler.CompileWithOutputs(cfg);
             That(pkg.HasValue, Is.True);
             for (int i = 0; i < diags.Count; i++)
             {

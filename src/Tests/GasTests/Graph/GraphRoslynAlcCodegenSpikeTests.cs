@@ -43,7 +43,7 @@ namespace Ludots.Tests.Gas.Graph
         [Category("ci-gate")]
         public void Codegen_FromInstructionArray_MatchesInterpretVm()
         {
-            // Spike boundary: consume lowered GraphInstruction[] only (not GraphConfig Score/next-chain authoring).
+            // Spike boundary: consume lowered GraphInstruction[] only, not authoring JSON.
             GraphInstruction[] program = BuildLinearIntChainProgram();
 
             using var host = new GraphRoslynAlcCompilerHost();

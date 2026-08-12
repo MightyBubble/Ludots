@@ -1,5 +1,7 @@
+using System;
 using Arch.Core;
 using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using GraphInstruction = Ludots.Core.GraphRuntime.GraphInstruction;
@@ -19,28 +21,40 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void GraphCompiler_ApplyEffectTemplate_WithTwoFloatArgs_EncodesFlagsAndRegs()
+        public void GraphControlFlowCompiler_ApplyEffectTemplate_WithTwoFloatArgs_EncodesFlagsAndRegs()
         {
-            var cfg = new GraphConfig
+            var cfg = new GraphControlFlowDocument
             {
                 Id = "Test.ApplyEffectTemplate.Args",
                 Kind = "Effect",
                 Entry = "t1",
                 Nodes =
                 {
-                    new GraphNodeConfig { Id = "t1", Op = "LoadExplicitTarget", Next = "fx" },
-                    new GraphNodeConfig { Id = "fx", Op = "ConstFloat", FloatValue = 12.5f, Next = "fy" },
-                    new GraphNodeConfig { Id = "fy", Op = "ConstFloat", FloatValue = -7.0f, Next = "a1" },
-                    new GraphNodeConfig { Id = "a1", Op = "ApplyEffectTemplate", EffectTemplate = "Effect.Preset.ApplyForce2D", Inputs = { "t1", "fx", "fy" } }
-                }
+                    new GraphControlFlowNode { Id = "t1", Op = "LoadExplicitTarget" },
+                    new GraphControlFlowNode { Id = "fx", Op = "ConstFloat", FloatValue = 12.5f },
+                    new GraphControlFlowNode { Id = "fy", Op = "ConstFloat", FloatValue = -7.0f },
+                    new GraphControlFlowNode { Id = "a1", Op = "ApplyEffectTemplate", EffectTemplate = "Effect.Preset.ApplyForce2D" }
+                },
+                ControlEdges =
+                {
+                    new("t1", GraphControlFlowPorts.Next, "fx"),
+                    new("fx", GraphControlFlowPorts.Next, "fy"),
+                    new("fy", GraphControlFlowPorts.Next, "a1"),
+                },
+                ValueEdges =
+                {
+                    new("t1", GraphControlFlowPorts.Value, "a1", GraphControlFlowPorts.Target),
+                    new("fx", GraphControlFlowPorts.Value, "a1", GraphControlFlowPorts.A),
+                    new("fy", GraphControlFlowPorts.Value, "a1", GraphControlFlowPorts.B),
+                },
             };
 
-            var (pkg, diags) = GraphCompiler.Compile(cfg);
+            var (pkg, _, diags) = GraphControlFlowCompiler.CompileWithOutputs(cfg);
             That(pkg.HasValue, Is.True);
             That(diags.Count, Is.EqualTo(0));
 
             var program = pkg.Value.Program;
-            ref readonly var ins = ref program[program.Length - 1];
+            var ins = Array.Find(program, instruction => instruction.Op == (ushort)GraphNodeOp.ApplyEffectTemplate);
             That((GraphNodeOp)ins.Op, Is.EqualTo(GraphNodeOp.ApplyEffectTemplate));
             That(ins.A, Is.EqualTo(1));
             That(ins.B, Is.EqualTo(0));

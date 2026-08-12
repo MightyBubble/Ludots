@@ -3,7 +3,7 @@ using System;
 namespace Ludots.Core.GraphRuntime
 {
     /// <summary>
-    /// Authored graph execution contract. Parsed from GraphConfig.Kind and enforced
+    /// Authored graph execution contract. Parsed from authored graph kind and enforced
     /// at compile/load and at execution entrypoints that require a specific kind.
     /// L1 flow dialects today: Effect, Query, Score, Validation, Derived, Script.
     /// L2 behavior schedulers (BehaviorTree / Fsm / LevelTrigger) are not GraphKind

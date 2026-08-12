@@ -1,34 +1,8 @@
-﻿# GAS Composition Gate — LiveGasEditPipeline (#615 / #618–#622)
-
-## Scope
-Real Stage → Classify → Commit hot-apply for GAS Graph body + Tag rule body + Attr constraints + effect numeric + actor attribute commands (#622 complete).
-Not ReloadConfigs. Not Clear+Register-all. #874 shortcut superseded.
-
-## Reuse
-- `LiveEditSession` / `LiveDebugPatch` (#637)
-- `GraphProgramAuthoringFrontDoor` + `GraphControlFlowCompiler`
-- `GraphProgramRegistry.ReplaceProgram`
-- `TagOps.ReplaceTagRuleSet` + `TagRuleSetLoader.CompileRuleSetForHotApply`
-- `AttributeRegistry.ReplaceConstraints`
-- `EffectTemplateRegistry.TryReplaceHotNumericField`
-- `AttributeMutationOps` for Immediate attribute commands
-- `CoreServiceKeys.LiveGasEditPipeline`
-
-## Op vs enum
-No new EffectPresetType / BuiltinHandler. Apply-mode enum is LSW classification only.
-
-## Fail-closed
-- Stage never clears live registries
-- Graph/Tag/Attr identity change → EngineRestartRequired
-- Unknown effect/constraint field → MapReloadRequired
-- Hot tag compile never Register()s new tag names
-- NextCast commit only inside SafeFrame
-
 ## GAS Composition Gate — Self Review
 
-- **Task / Issue**: Effect-phase authoring expressiveness for FuncLib InvokeScript and BranchBool
+- **Task / Issue**: Retire legacy next-chain `GraphCompiler` per #861 / FuncLib-ActionLib contract
 - **Date**: 2026-08-12
-- **Agent / Author**: Cursor Cloud Agent
+- **Agent / Author**: Cursor Cloud agent
 
 ### 1. Core judgment
 
@@ -36,23 +10,21 @@ No new EffectPresetType / BuiltinHandler. Apply-mode enum is LSW classification 
 
 结论: PASS
 
-一句话理由: 本任务扩展既有 graph 作者前门与 kind policy，让 Effect/Score/Validation/Derived 复用已有 FuncLib 调用，并让 Effect 使用现有 BranchBool 糖，不新增 profile enum、preset 开关或平行管线。
+一句话理由: 本次删除旧 next-chain 编译路径并迁移测试到已有 ControlFlow authoring，不新增 profile enum、preset 开关或平行加载器。
 
 ### 2. Layer assignment
 
 | 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
 |-----------|-----------------|----------|
-| Effect 允许 InvokeScript FuncLib 调用 | 2 | `GraphControlFlowCompiler` 线性 kind 白名单与 ParseOps |
-| Effect 允许 BranchBool 作者糖 | 2 | `GraphControlFlowCompiler` lowering 到现有 jump ops |
-| Wait/Yield 失败关闭 | 2 | 既有 linear kind validation / `GraphKindOperationPolicy` |
-| 覆盖测试 | 2 | GAS graph front door tests |
+| Graph authoring compile SSOT | Layer 2 | `GraphProgramAuthoringFrontDoor` + `GraphControlFlowCompiler` |
+| Runtime opcode execution | Layer 0 | `GasGraphOpHandlerTable` / `GraphExecutor` |
 
 ### 3. Reuse list
 
-- Handlers: existing graph op handlers, `InvokeScript` VM path
-- Queues / Systems: existing GAS graph compilation and execution front door
-- Resolvers / Registries: existing FuncLib registration/patching and graph registry
-- Existing presets / graphs: existing graph asset model and control-flow lowering
+- Handlers: Existing `GasGraphOpHandlerTable` handlers.
+- Queues / Systems: Existing graph execution entrypoints and GAS loaders.
+- Resolvers / Registries: Existing `GraphProgramRegistry`, `GraphIdRegistry`, `GraphProgramSymbolPatcher`, `IGraphSymbolResolver`.
+- Existing presets / graphs: Existing `GAS/graphs.json` ControlFlow documents and test ControlFlow documents.
 
 ### 4. New Layer 0 ops (if any)
 
@@ -60,13 +32,13 @@ N/A
 
 ### 5. Transaction boundary
 
-必须原子 rollback 的步骤: N/A；本任务只调整单次 Effect 阶段图的作者表达力，事务边界仍由现有 Effect 阶段执行负责。
+N/A — no lifecycle transaction behavior is added or changed.
 
 ### 6. Config SSOT
 
-行为配置落在: graph / catalog（`assets/Configs/GAS/graphs.json`, `assets/Configs/GAS/func_lib.json` 及测试夹具）
+行为配置落在: graph authoring assets (`GAS/graphs.json`) through `controlEdges` / `valueEdges`.
 
-是否新增 JSON schema: NO — 使用既有 `InvokeScript.functionName` 与 `BranchBool` 作者节点。
+是否新增 JSON schema: NO.
 
 ### 7. Red flag scan
 

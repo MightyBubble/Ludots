@@ -96,33 +96,6 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
-        public void GraphCompiler_RejectsQueryKind_OnNextChainPath()
-        {
-            var cfg = new GraphConfig
-            {
-                Id = "bad.query.next",
-                Kind = "Query",
-                Entry = "allMap",
-                Nodes =
-                {
-                    new GraphNodeConfig
-                    {
-                        Id = "allMap",
-                        Op = nameof(GraphNodeOp.QueryAllMapEntities)
-                    }
-                }
-            };
-
-            var (package, _, diagnostics) = GraphCompiler.CompileWithOutputs(cfg);
-
-            Assert.That(package.HasValue, Is.False);
-            Assert.That(diagnostics, Has.Some.Matches<GraphDiagnostic>(d =>
-                d.Severity == GraphDiagnosticSeverity.Error &&
-                d.Code == GraphDiagnosticCodes.UnsupportedGraphKind &&
-                d.Message.Contains("GraphControlFlowCompiler", StringComparison.Ordinal)));
-        }
-
-        [Test]
         public void CompileWithOutputs_CityEconomyControlFlowQuery_CompilesFullOpSurface()
         {
             var doc = new GraphControlFlowDocument

@@ -86,26 +86,34 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
-        public void GraphCompiler_LoadContextTarget_ThenRemoveEffectTemplate_Compiles()
+        public void GraphControlFlowCompiler_LoadContextTarget_ThenRemoveEffectTemplate_Compiles()
         {
-            var cfg = new GraphConfig
+            var cfg = new GraphControlFlowDocument
             {
                 Id = "Test.RemoveEffectTemplate",
                 Kind = "Effect",
                 Entry = "target",
                 Nodes =
                 {
-                    new GraphNodeConfig { Id = "target", Op = "LoadContextTarget", Next = "remove" },
-                    new GraphNodeConfig { Id = "remove", Op = "RemoveEffectTemplate", EffectTemplate = "Effect.Test.Mark", Inputs = { "target" } },
-                }
+                    new GraphControlFlowNode { Id = "target", Op = "LoadContextTarget" },
+                    new GraphControlFlowNode { Id = "remove", Op = "RemoveEffectTemplate", EffectTemplate = "Effect.Test.Mark" },
+                },
+                ControlEdges =
+                {
+                    new("target", GraphControlFlowPorts.Next, "remove"),
+                },
+                ValueEdges =
+                {
+                    new("target", GraphControlFlowPorts.Value, "remove", GraphControlFlowPorts.Target),
+                },
             };
 
-            var (pkg, diags) = GraphCompiler.Compile(cfg);
+            var (pkg, _, diags) = GraphControlFlowCompiler.CompileWithOutputs(cfg);
 
             That(diags, Is.Empty);
             That(pkg.HasValue, Is.True);
-            That((GraphNodeOp)pkg!.Value.Program[0].Op, Is.EqualTo(GraphNodeOp.LoadContextTarget));
-            That((GraphNodeOp)pkg.Value.Program[1].Op, Is.EqualTo(GraphNodeOp.RemoveEffectTemplate));
+            That(Array.Exists(pkg!.Value.Program, instruction => instruction.Op == (ushort)GraphNodeOp.LoadContextTarget), Is.True);
+            That(Array.Exists(pkg.Value.Program, instruction => instruction.Op == (ushort)GraphNodeOp.RemoveEffectTemplate), Is.True);
         }
 
         // ════════════════════════════════════════════════════════════════════
@@ -576,74 +584,6 @@ namespace Ludots.Tests.GAS
             That(requests[1].Source, Is.EqualTo(anchor));
             That(requests[1].Target, Is.EqualTo(allyB));
             That(requests[1].TargetContext, Is.EqualTo(caster));
-        }
-
-        [Test]
-        public void GraphCompiler_ApplyEffectDynamicAndFanOutDispatchEffectDynamic_Compile()
-        {
-            var cfg = new GraphConfig
-            {
-                Id = "Test.DynamicDispatch",
-                Kind = "Effect",
-                Entry = "target",
-                Nodes =
-                {
-                    new GraphNodeConfig { Id = "target", Op = "LoadExplicitTarget", Next = "effectId" },
-                    new GraphNodeConfig { Id = "effectId", Op = "ConstInt", IntValue = 77, Next = "apply" },
-                    new GraphNodeConfig { Id = "apply", Op = "ApplyEffectDynamic", Inputs = { "target", "effectId" }, Next = "fanout" },
-                    new GraphNodeConfig { Id = "fanout", Op = "FanOutDispatchEffectDynamic", PayloadPreset = "SourceToResolved", Inputs = { "effectId" } },
-                }
-            };
-
-            var (pkg, diags) = GraphCompiler.Compile(cfg);
-
-            That(diags, Is.Empty);
-            That(pkg.HasValue, Is.True);
-            That((GraphNodeOp)pkg!.Value.Program[2].Op, Is.EqualTo(GraphNodeOp.ApplyEffectDynamic));
-            That((GraphNodeOp)pkg.Value.Program[3].Op, Is.EqualTo(GraphNodeOp.FanOutDispatchEffectDynamic));
-        }
-
-        [Test]
-        public void GraphCompiler_FanOutDispatchEffectDynamic_RequiresPayloadPreset()
-        {
-            var cfg = new GraphConfig
-            {
-                Id = "Test.FanOutDispatchMissingPreset",
-                Kind = "Effect",
-                Entry = "effectId",
-                Nodes =
-                {
-                    new GraphNodeConfig { Id = "effectId", Op = "ConstInt", IntValue = 77, Next = "fanout" },
-                    new GraphNodeConfig { Id = "fanout", Op = "FanOutDispatchEffectDynamic", Inputs = { "effectId" } },
-                }
-            };
-
-            var (pkg, diags) = GraphCompiler.Compile(cfg);
-
-            That(pkg, Is.Null);
-            That(diags.Exists(d => d.Severity == GraphDiagnosticSeverity.Error && d.Message.Contains("payloadPreset", StringComparison.Ordinal)), Is.True);
-        }
-
-        [Test]
-        public void GraphCompiler_RelationshipMetricOpsRequireExplicitRelationshipType()
-        {
-            var cfg = new GraphConfig
-            {
-                Id = "Test.RelationshipMissingType",
-                Kind = "Effect",
-                Entry = "source",
-                Nodes =
-                {
-                    new GraphNodeConfig { Id = "source", Op = "LoadCaster", Next = "target" },
-                    new GraphNodeConfig { Id = "target", Op = "LoadExplicitTarget", Next = "metric" },
-                    new GraphNodeConfig { Id = "metric", Op = "RelationshipGetMetric", Metric = "Loyalty", Inputs = { "source", "target" } },
-                }
-            };
-
-            var (pkg, diags) = GraphCompiler.Compile(cfg);
-
-            That(pkg, Is.Null);
-            That(diags.Exists(d => d.Severity == GraphDiagnosticSeverity.Error && d.Message.Contains("relationshipType", StringComparison.Ordinal)), Is.True);
         }
 
         [Test]

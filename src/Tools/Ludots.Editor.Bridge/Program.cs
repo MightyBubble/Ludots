@@ -1591,7 +1591,7 @@ app.MapPut("/api/mods/{modId}/gas/graphs/{graphId}", async (string modId, string
     }
 
     if (bodyNode is not JsonObject bodyObj)
-        return Results.BadRequest(new { ok = false, error = "Body must be a GraphConfig JSON object." });
+        return Results.BadRequest(new { ok = false, error = "Body must be a graph JSON object." });
 
     if (!TryNormalizeGasGraphBody(bodyObj, graphId, out var normalizedId, out var normalizeError))
         return Results.BadRequest(new { ok = false, error = normalizeError });
@@ -1647,7 +1647,7 @@ app.MapPost("/api/mods/{modId}/gas/graphs/{graphId}/validate", async (string mod
             }
 
             if (bodyNode is not JsonObject bodyObj)
-                return Results.BadRequest(new { ok = false, error = "Body must be a GraphConfig JSON object." });
+                return Results.BadRequest(new { ok = false, error = "Body must be a graph JSON object." });
 
             graphObj = bodyObj;
         }
@@ -1664,7 +1664,7 @@ app.MapPost("/api/mods/{modId}/gas/graphs/{graphId}/validate", async (string mod
     }
     catch (JsonException ex)
     {
-        return Results.BadRequest(new { ok = false, error = $"Failed to deserialize GraphConfig: {ex.Message}" });
+        return Results.BadRequest(new { ok = false, error = $"Failed to read graph JSON: {ex.Message}" });
     }
 
     if (!TryCompileGasGraph(graphObj, graphId, out var package, out var diagnostics, out var compileError))

@@ -116,21 +116,33 @@ namespace Ludots.Tests.GAS
                 var bindingLoader = new AttributeBindingLoader(pipeline, sinks, bindings);
                 bindingLoader.Load(catalog, relativePath: "GAS/attribute_bindings.json");
 
-                var graphCfg = new GraphConfig
+                var graphCfg = new GraphControlFlowDocument
                 {
                     Id = "Test.ApplyForce2D",
                     Kind = "Effect",
                     Entry = "t1",
                     Nodes =
                     {
-                        new GraphNodeConfig { Id = "t1", Op = "LoadExplicitTarget", Next = "fx" },
-                        new GraphNodeConfig { Id = "fx", Op = "ConstFloat", FloatValue = 12.5f, Next = "fy" },
-                        new GraphNodeConfig { Id = "fy", Op = "ConstFloat", FloatValue = -7.0f, Next = "a1" },
-                        new GraphNodeConfig { Id = "a1", Op = "ApplyEffectTemplate", EffectTemplate = "Effect.Preset.ApplyForce2D", Inputs = { "t1", "fx", "fy" } }
-                    }
+                        new GraphControlFlowNode { Id = "t1", Op = "LoadExplicitTarget" },
+                        new GraphControlFlowNode { Id = "fx", Op = "ConstFloat", FloatValue = 12.5f },
+                        new GraphControlFlowNode { Id = "fy", Op = "ConstFloat", FloatValue = -7.0f },
+                        new GraphControlFlowNode { Id = "a1", Op = "ApplyEffectTemplate", EffectTemplate = "Effect.Preset.ApplyForce2D" }
+                    },
+                    ControlEdges =
+                    {
+                        new("t1", GraphControlFlowPorts.Next, "fx"),
+                        new("fx", GraphControlFlowPorts.Next, "fy"),
+                        new("fy", GraphControlFlowPorts.Next, "a1"),
+                    },
+                    ValueEdges =
+                    {
+                        new("t1", GraphControlFlowPorts.Value, "a1", GraphControlFlowPorts.Target),
+                        new("fx", GraphControlFlowPorts.Value, "a1", GraphControlFlowPorts.A),
+                        new("fy", GraphControlFlowPorts.Value, "a1", GraphControlFlowPorts.B),
+                    },
                 };
 
-                var (pkg, diags) = GraphCompiler.Compile(graphCfg);
+                var (pkg, _, diags) = GraphControlFlowCompiler.CompileWithOutputs(graphCfg);
                 That(pkg.HasValue, Is.True);
                 That(diags.Count, Is.EqualTo(0));
 
