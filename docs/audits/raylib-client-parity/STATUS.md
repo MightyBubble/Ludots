@@ -6,7 +6,7 @@ Updated by agents. Use: `pending` | `in_progress` | `blocked` | `done`.
 |----|---------|--------|-------|-------|
 | W1 | GPU skinned production + playback API | in_progress | subagent-w1 | |
 | W2 | Host material binding | in_progress | subagent-w2 | |
-| W3 | Effect shader baseline | in_progress | subagent-w3 | |
+| W3 | Effect shader baseline | done | subagent-w3 | vfx_unlit_tint + RaylibEffectShaderRegistry; Prefab VFX → billboard mesh + tint/time shader |
 | W4 | Showcase + screenshot acceptance | pending | subagent-w4 | waits W1+W2 (+W3 if ready) |
 
 ## Blockers

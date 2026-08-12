@@ -54,6 +54,22 @@
       <Link>water.fs</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="..\..\..\Platforms\Desktop\skinning_instanced.vs">
+      <Link>skinning_instanced.vs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\..\Platforms\Desktop\skinning_instanced.fs">
+      <Link>skinning_instanced.fs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\..\Platforms\Desktop\vfx_unlit_tint.vs">
+      <Link>vfx_unlit_tint.vs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\..\Platforms\Desktop\vfx_unlit_tint.fs">
+      <Link>vfx_unlit_tint.fs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Include="launcher.runtime.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

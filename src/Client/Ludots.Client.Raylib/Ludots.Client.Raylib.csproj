@@ -21,6 +21,14 @@
 
   <ItemGroup>
     <None Include="..\..\Libraries\SkiaSharp\runtimes\**\*.*" Link="runtimes\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="..\..\Platforms\Desktop\skinning_instanced.vs">
+      <Link>skinning_instanced.vs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\Platforms\Desktop\skinning_instanced.fs">
+      <Link>skinning_instanced.fs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
   <ItemGroup Condition="'$(SkiaNativeRid)' != ''">

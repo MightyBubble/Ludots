@@ -28,6 +28,7 @@ namespace Ludots.Client.Raylib.Rendering
         private readonly RaylibPrimitiveRenderMode _mode;
         private readonly IVirtualFileSystem? _vfs;
         private readonly PresentationMaterialRegistry? _materials;
+        private readonly RaylibMaterialHostBinder? _materialHostBinder;
         private readonly string? _diagnosticPath;
         private readonly PrefabFinalizedVisualBuffer _prefabVisuals = new PrefabFinalizedVisualBuffer();
         private const int DefaultMaxModelInstancesPerDraw = 32768;
@@ -36,10 +37,19 @@ namespace Ludots.Client.Raylib.Rendering
         private bool _initialized;
         private Mesh _cubeMesh;
         private Mesh _sphereMesh;
+        private Mesh _vfxBillboardMesh;
         private Shader _shader;
+        private Shader _skinningShader;
         private Material _material;
+        private Material _vfxMaterial;
+        private bool _vfxMaterialLoaded;
+        private readonly RaylibEffectShaderRegistry _effectShaders = new RaylibEffectShaderRegistry();
         private int _locColDiffuse;
         private int _locTint;
+        private int _locSkinningColDiffuse;
+        private int _locSkinningTint;
+        private int _locBoneMatrices;
+        private bool _skinningShaderReady;
 
         private readonly List<Batch> _cubeBatches = new List<Batch>(16);
         private readonly List<Batch> _sphereBatches = new List<Batch>(16);
@@ -48,6 +58,7 @@ namespace Ludots.Client.Raylib.Rendering
         private readonly Dictionary<GpuSkinnedInstanceBatchKey, GpuSkinnedInstanceBatch> _gpuSkinnedInstanceBatches = new();
         private readonly List<GpuSkinnedInstanceBatch> _activeGpuSkinnedInstanceBatches = new(64);
         private readonly RaylibIsmRenderBridge _ismBridge = new RaylibIsmRenderBridge();
+        private readonly RaylibGpuSkinnedModelCache _gpuSkinnedModelCache;
 
         private readonly Dictionary<int, CachedModel> _modelCache = new Dictionary<int, CachedModel>();
         private readonly Dictionary<int, CachedProceduralMesh> _proceduralMeshCache = new Dictionary<int, CachedProceduralMesh>();
@@ -96,8 +107,12 @@ namespace Ludots.Client.Raylib.Rendering
             _mode = mode;
             _vfs = vfs;
             _materials = materials;
+            _materialHostBinder = vfs != null && materials != null
+                ? new RaylibMaterialHostBinder(vfs, materials)
+                : null;
             _diagnosticPath = Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_DIAGNOSTIC_PATH");
             _maxModelInstancesPerDraw = ResolveMaxModelInstancesPerDraw();
+            _gpuSkinnedModelCache = new RaylibGpuSkinnedModelCache(vfs);
         }
 
         public void Draw(PrimitiveDrawBuffer draw, Camera3D camera, MeshAssetRegistry meshes, float scaleMul = 1f, IVisualHeightmap? visualHeightmap = null)
@@ -367,7 +382,7 @@ namespace Ludots.Client.Raylib.Rendering
                     DrawDecalVisual(in visual);
                     break;
                 case PrefabVisualPartKind.Vfx:
-                    DrawVfxVisual(in visual);
+                    DrawVfxVisual(in visual, camera);
                     break;
                 case PrefabVisualPartKind.Surface:
                     DrawSurfaceVisual(in visual, camera);
@@ -486,11 +501,15 @@ namespace Ludots.Client.Raylib.Rendering
                 return false;
             }
 
-            if (!TryGetOrLoadModel(item.MeshAssetId, in descriptor, out CachedModel cached))
-            {
-                WarnMissingModelSkipped(item.MeshAssetId, item.StableId, "gpu-skinned instanced draw");
-                return true;
-            }
+            RaylibGpuSkinnedModelCache.Entry entry = _gpuSkinnedModelCache.GetOrLoad(item.MeshAssetId, in descriptor);
+            AnimatorPackedState animator = item.Animator;
+            RaylibSkinnedPlayback.ResolveFromAnimator(
+                in animator,
+                entry.Animations,
+                entry.AnimCount,
+                stateToClipMap: null,
+                out int clipIndex,
+                out int frameIndex);
 
             long start = Stopwatch.GetTimestamp();
             uint colorKey = PackRgba(item.Color);
@@ -498,8 +517,8 @@ namespace Ludots.Client.Raylib.Rendering
                 item.MeshAssetId,
                 item.MaterialId,
                 colorKey,
-                item.Animator.GetPrimaryStateIndex(),
-                item.Animator.GetSecondaryStateIndex());
+                clipIndex,
+                frameIndex);
             if (!_gpuSkinnedInstanceBatches.TryGetValue(key, out GpuSkinnedInstanceBatch? batch))
             {
                 batch = new GpuSkinnedInstanceBatch(key);
@@ -508,7 +527,9 @@ namespace Ludots.Client.Raylib.Rendering
 
             if (batch.Count == 0)
             {
-                batch.Model = cached.Model;
+                batch.Model = entry.Model;
+                batch.Animations = entry.Animations;
+                batch.AnimCount = entry.AnimCount;
                 _activeGpuSkinnedInstanceBatches.Add(batch);
             }
 
@@ -528,6 +549,7 @@ namespace Ludots.Client.Raylib.Rendering
             }
 
             EnsureInitialized();
+            EnsureSkinningShaderInitialized();
             long drawStart = Stopwatch.GetTimestamp();
             for (int i = 0; i < _activeGpuSkinnedInstanceBatches.Count; i++)
             {
@@ -538,7 +560,7 @@ namespace Ludots.Client.Raylib.Rendering
                 }
 
                 LastGpuSkinnedInstances += batch.Count;
-                LastGpuSkinnedBatches += DrawModelInstanceBatch(batch.Model, batch, batch.Key.ColorKey);
+                LastGpuSkinnedBatches += DrawGpuSkinnedInstanceBatch(batch);
             }
 
             LastGpuSkinnedMeshDrawMs += (Stopwatch.GetTimestamp() - drawStart) * 1000d / Stopwatch.Frequency;
@@ -635,7 +657,7 @@ namespace Ludots.Client.Raylib.Rendering
                     DrawDecalVisual(in visual);
                     break;
                 case PrefabVisualPartKind.Vfx:
-                    DrawVfxVisual(in visual);
+                    DrawVfxVisual(in visual, camera);
                     break;
                 case PrefabVisualPartKind.Surface:
                     DrawSurfaceVisual(in visual, camera);
@@ -683,7 +705,7 @@ namespace Ludots.Client.Raylib.Rendering
                     SubmitPrimitive(visual.MeshDescriptor.PrimitiveKind, visual.Position, visual.Rotation, visual.Scale, visual.Color);
                     break;
                 case MeshAssetType.Model:
-                    DrawModel(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Rotation, visual.Scale, visual.Color);
+                    DrawModel(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Rotation, visual.Scale, visual.Color, visual.MaterialId);
                     break;
                 case MeshAssetType.Billboard:
                     DrawBillboard(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Scale, visual.Color, camera);
@@ -705,7 +727,7 @@ namespace Ludots.Client.Raylib.Rendering
                     DrawPrimitive(visual.MeshDescriptor.PrimitiveKind, visual.Position, visual.Rotation, visual.Scale, visual.Color);
                     break;
                 case MeshAssetType.Model:
-                    DrawModel(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Rotation, visual.Scale, visual.Color);
+                    DrawModel(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Rotation, visual.Scale, visual.Color, visual.MaterialId);
                     break;
                 case MeshAssetType.Billboard:
                     DrawBillboard(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Scale, visual.Color, camera);
@@ -752,27 +774,56 @@ namespace Ludots.Client.Raylib.Rendering
             Rl.DrawLine3D(center, markerTop, edge);
         }
 
-        private void DrawVfxVisual(in PrefabFinalizedVisual visual)
+        private void DrawVfxVisual(in PrefabFinalizedVisual visual, Camera3D camera)
         {
-            Quaternion rotation = WorldPlane2D.NormalizeOrIdentity(visual.Rotation);
-            float baseExtent = MathF.Max(0.12f, MathF.Max(MathF.Abs(visual.Scale.X), MathF.Max(MathF.Abs(visual.Scale.Y), MathF.Abs(visual.Scale.Z))) * 0.45f);
-            float radius = visual.VfxSpawnMode == PrefabVfxSpawnMode.Loop
-                ? baseExtent * 1.15f
-                : baseExtent * 0.9f;
-            Vector4 pulseColor = BlendSemanticColor(visual.Color, visual.EffectAssetId, 0.6f);
-            Vector4 shellColor = LerpColor(pulseColor, new Vector4(1f, 1f, 1f, pulseColor.W), 0.35f);
+            EnsureInitialized();
 
-            DrawPrototypeSphere(visual.Position, radius * 0.28f, pulseColor);
-            DrawRotatedRing(visual.Position, rotation, radius, 12, MultiplyColor(shellColor, 1f, 1f, 1f, 0.72f));
-            DrawRotatedRing(visual.Position, rotation * Quaternion.CreateFromAxisAngle(Vector3.UnitX, MathF.PI * 0.5f), radius * 0.82f, 10, MultiplyColor(shellColor, 0.92f, 1f, 1.1f, 0.64f));
+            float baseExtent = MathF.Max(
+                0.18f,
+                MathF.Max(MathF.Abs(visual.Scale.X), MathF.Max(MathF.Abs(visual.Scale.Y), MathF.Abs(visual.Scale.Z))) * 0.9f);
+            float size = visual.VfxSpawnMode == PrefabVfxSpawnMode.Loop
+                ? baseExtent * 1.25f
+                : baseExtent;
+            Vector4 effectColor = BlendSemanticColor(visual.Color, visual.EffectAssetId, 0.6f);
+            effectColor.W = Math.Clamp(MathF.Max(effectColor.W, 0.55f), 0.55f, 1f);
 
-            Vector3 right = Vector3.Normalize(Vector3.Transform(Vector3.UnitX, rotation));
-            Vector3 up = Vector3.Normalize(Vector3.Transform(Vector3.UnitY, rotation));
-            Vector3 forward = Vector3.Normalize(Vector3.Transform(-Vector3.UnitZ, rotation));
-            Color beamColor = ToRaylibColor(MultiplyColor(pulseColor, 1.1f, 1.08f, 1.18f, 0.88f));
-            Rl.DrawLine3D(visual.Position - (right * radius), visual.Position + (right * radius), beamColor);
-            Rl.DrawLine3D(visual.Position - (up * radius * 0.8f), visual.Position + (up * radius * 0.8f), beamColor);
-            Rl.DrawLine3D(visual.Position - (forward * radius * 0.9f), visual.Position + (forward * radius * 0.9f), beamColor);
+            RaylibEffectShader effect = _effectShaders.GetOrLoad(RaylibEffectShaderRegistry.DefaultUnlitTintKey);
+            _vfxMaterial.shader = effect.Shader;
+
+            Vector4 colDiffuse = Vector4.One;
+            Vector4 tint = effectColor;
+            float time = (float)Rl.GetTime();
+            Rl.SetShaderValue(effect.Shader, effect.LocColDiffuse, &colDiffuse, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC4);
+            Rl.SetShaderValue(effect.Shader, effect.LocTint, &tint, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC4);
+            Rl.SetShaderValue(effect.Shader, effect.LocTime, &time, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+
+            Vector3 cameraForward = camera.target - camera.position;
+            if (cameraForward.LengthSquared() <= 1e-8f)
+            {
+                cameraForward = -Vector3.UnitZ;
+            }
+            else
+            {
+                cameraForward = Vector3.Normalize(cameraForward);
+            }
+
+            Matrix4x4 billboard = Matrix4x4.CreateBillboard(
+                visual.Position,
+                camera.position,
+                camera.up,
+                cameraForward);
+            Matrix4x4 transform =
+                Matrix4x4.CreateScale(size, size, MathF.Max(0.04f, size * 0.08f)) *
+                billboard;
+            Rl.BeginBlendMode(BlendMode.BLEND_ALPHA);
+            try
+            {
+                Rl.DrawMesh(_vfxBillboardMesh, _vfxMaterial, RaylibMatrix.FromSystemNumerics(transform));
+            }
+            finally
+            {
+                Rl.EndBlendMode();
+            }
         }
 
         private void DrawSurfaceVisual(in PrefabFinalizedVisual visual, Camera3D camera)
@@ -786,7 +837,7 @@ namespace Ludots.Client.Raylib.Rendering
                     DrawPrimitive(visual.MeshDescriptor.PrimitiveKind, visual.Position, visual.Rotation, visual.Scale, surfaceColor);
                     break;
                 case MeshAssetType.Model:
-                    DrawModel(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Rotation, visual.Scale, surfaceColor);
+                    DrawModel(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Rotation, visual.Scale, surfaceColor, visual.MaterialId);
                     break;
                 case MeshAssetType.Billboard:
                     DrawBillboard(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Scale, surfaceColor, camera);
@@ -1107,7 +1158,7 @@ namespace Ludots.Client.Raylib.Rendering
                 from.W + (to.W - from.W) * t);
         }
 
-        private void DrawModel(int meshAssetId, in MeshAssetDescriptor desc, Vector3 position, Quaternion rotation, Vector3 scale, Vector4 color)
+        private void DrawModel(int meshAssetId, in MeshAssetDescriptor desc, Vector3 position, Quaternion rotation, Vector3 scale, Vector4 color, int materialId)
         {
             if (!TryGetOrLoadModel(meshAssetId, desc, out var cached))
             {
@@ -1117,6 +1168,7 @@ namespace Ludots.Client.Raylib.Rendering
 
             var tint = ToRaylibColor(color);
             var model = cached.Model;
+            ApplyHostAlbedoToModel(ref model, materialId);
             ToAxisAngleDegrees(rotation, out Vector3 axis, out float angleDegrees);
             RestoreOpaqueModelState();
             Rl.DrawModelEx(model, position, axis, angleDegrees, scale, tint);
@@ -1159,19 +1211,29 @@ namespace Ludots.Client.Raylib.Rendering
                 Matrix4x4.CreateFromQuaternion(WorldPlane2D.NormalizeOrIdentity(visual.Rotation)) *
                 Matrix4x4.CreateTranslation(visual.Position));
 
+            PrefabMaterialBinding[] bindings = visual.MaterialBindings!;
             Rl.rlDisableBackfaceCulling();
             if (cached.SubmeshMeshes == null || cached.SubmeshMeshes.Length == 0)
             {
-                Rl.DrawMesh(cached.Mesh, _proceduralMeshMaterial, transform);
+                Material material = ResolveProceduralDrawMaterial(bindings[0].MaterialAssetId);
+                Rl.DrawMesh(cached.Mesh, material, transform);
             }
             else
             {
                 for (int i = 0; i < cached.SubmeshMeshes.Length; i++)
                 {
-                    Rl.DrawMesh(cached.SubmeshMeshes[i], _proceduralMeshMaterial, transform);
+                    Material material = ResolveProceduralDrawMaterial(bindings[i].MaterialAssetId);
+                    Rl.DrawMesh(cached.SubmeshMeshes[i], material, transform);
                 }
             }
             Rl.rlEnableBackfaceCulling();
+        }
+
+        private Material ResolveProceduralDrawMaterial(int materialAssetId)
+        {
+            Material material = _proceduralMeshMaterial;
+            ApplyHostMaterialAlbedo(ref material, materialAssetId);
+            return material;
         }
 
         private void ValidateProceduralMaterialContract(in PrefabFinalizedVisual visual, int cachedSubmeshCount)
@@ -1777,7 +1839,7 @@ namespace Ludots.Client.Raylib.Rendering
                 _modelInstanceBatches[batchKey] = batch;
             }
 
-            int drawCalls = DrawModelInstanceBatch(cached.Model, batch, colorKey);
+            int drawCalls = DrawModelInstanceBatch(cached.Model, batch, colorKey, first.MaterialId);
             LastInstancedInstances += batch.Count;
             LastInstancedBatches += drawCalls;
             return true;
@@ -1828,7 +1890,7 @@ namespace Ludots.Client.Raylib.Rendering
             return ((long)meshAssetId << 32) | colorKey;
         }
 
-        private int DrawModelInstanceBatch(Model model, ModelInstanceBatch batch, uint colorKey)
+        private int DrawModelInstanceBatch(Model model, ModelInstanceBatch batch, uint colorKey, int materialId)
         {
             if (model.meshCount <= 0 || batch.Count <= 0)
             {
@@ -1843,7 +1905,7 @@ namespace Ludots.Client.Raylib.Rendering
                 for (int meshIndex = 0; meshIndex < model.meshCount; meshIndex++)
                 {
                     Mesh mesh = model.meshes[meshIndex];
-                    if (!TryResolveInstancedModelMaterial(model, meshIndex, out Material material))
+                    if (!TryResolveInstancedModelMaterial(model, meshIndex, materialId, out Material material))
                     {
                         continue;
                     }
@@ -1861,25 +1923,59 @@ namespace Ludots.Client.Raylib.Rendering
             return drawCalls;
         }
 
-        private int DrawModelInstanceBatch(Model model, GpuSkinnedInstanceBatch batch, uint colorKey)
+        private int DrawGpuSkinnedInstanceBatch(GpuSkinnedInstanceBatch batch)
         {
+            Model model = batch.Model;
             if (model.meshCount <= 0 || batch.Count <= 0)
             {
                 return 0;
             }
 
+            if (batch.Animations == null || batch.AnimCount <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} GpuSkinned batch meshAssetId={batch.Key.MeshAssetId} has no animations; silent static draw is forbidden.");
+            }
+
+            int clipIndex = batch.Key.ClipIndex;
+            int frameIndex = batch.Key.FrameIndex;
+            if ((uint)clipIndex >= (uint)batch.AnimCount)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} GpuSkinned batch clipIndex={clipIndex} outside animCount={batch.AnimCount}.");
+            }
+
+            ModelAnimation anim = batch.Animations[clipIndex];
+            Rl.UpdateModelAnimationBones(model, anim, frameIndex);
+
             int drawCalls = 0;
+            uint colorKey = batch.Key.ColorKey;
+            int materialId = batch.Key.MaterialId;
             RestoreOpaqueModelState();
             fixed (RaylibMatrix* transforms = batch.Transforms)
             {
                 for (int meshIndex = 0; meshIndex < model.meshCount; meshIndex++)
                 {
                     Mesh mesh = model.meshes[meshIndex];
-                    if (!TryResolveInstancedModelMaterial(model, meshIndex, out Material material))
+                    if (mesh.vertexCount <= 0)
                     {
                         continue;
                     }
-                    ApplyInstancedMaterialTint(ref material, colorKey);
+
+                    if (!TryResolveInstancedModelMaterial(model, meshIndex, materialId, out Material material))
+                    {
+                        continue;
+                    }
+
+                    material.shader = _skinningShader;
+                    ApplyGpuSkinnedMaterialTint(ref material, colorKey);
+
+                    if (mesh.boneMatrices != null && mesh.boneCount > 0)
+                    {
+                        Rl.rlEnableShader(_skinningShader.id);
+                        Rl.rlSetUniformMatrices(_locBoneMatrices, mesh.boneMatrices, mesh.boneCount);
+                    }
+
                     for (int offset = 0; offset < batch.Count; offset += _maxModelInstancesPerDraw)
                     {
                         int chunkCount = Math.Min(_maxModelInstancesPerDraw, batch.Count - offset);
@@ -1899,7 +1995,7 @@ namespace Ludots.Client.Raylib.Rendering
             Rl.rlEnableBackfaceCulling();
         }
 
-        private bool TryResolveInstancedModelMaterial(Model model, int meshIndex, out Material material)
+        private bool TryResolveInstancedModelMaterial(Model model, int meshIndex, int materialId, out Material material)
         {
             if (model.materialCount <= 0 || model.materials == null)
             {
@@ -1937,7 +2033,27 @@ namespace Ludots.Client.Raylib.Rendering
 
             material = model.materials[materialIndex];
             material.shader = _shader;
+            ApplyHostMaterialAlbedo(ref material, materialId);
             return true;
+        }
+
+        private void ApplyHostMaterialAlbedo(ref Material material, int materialId)
+        {
+            _materialHostBinder?.TryApplyAlbedo(ref material, materialId);
+        }
+
+        private void ApplyHostAlbedoToModel(ref Model model, int materialId)
+        {
+            if (_materialHostBinder == null || materialId <= 0 || model.materialCount <= 0 || model.materials == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < model.materialCount; i++)
+            {
+                ref Material material = ref model.materials[i];
+                ApplyHostMaterialAlbedo(ref material, materialId);
+            }
         }
 
         private void ApplyInstancedMaterialTint(ref Material material, uint colorKey)
@@ -1949,6 +2065,27 @@ namespace Ludots.Client.Raylib.Rendering
                 Color color = material.maps[albedoIndex].color;
                 Vector4 diffuse = new(color.r / 255f, color.g / 255f, color.b / 255f, color.a / 255f);
                 Rl.SetShaderValue(_shader, _locColDiffuse, &diffuse, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC4);
+            }
+        }
+
+        private void ApplyGpuSkinnedMaterialTint(ref Material material, uint colorKey)
+        {
+            if (_locSkinningTint >= 0)
+            {
+                float r = (colorKey & 0xFF) / 255f;
+                float g = ((colorKey >> 8) & 0xFF) / 255f;
+                float b = ((colorKey >> 16) & 0xFF) / 255f;
+                float a = ((colorKey >> 24) & 0xFF) / 255f;
+                var tint = new Vector4(r, g, b, a);
+                Rl.SetShaderValue(_skinningShader, _locSkinningTint, &tint, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC4);
+            }
+
+            if (_locSkinningColDiffuse >= 0 && material.maps != null)
+            {
+                int albedoIndex = (int)Rl.MaterialMapIndex.MATERIAL_MAP_ALBEDO;
+                Color color = material.maps[albedoIndex].color;
+                Vector4 diffuse = new(color.r / 255f, color.g / 255f, color.b / 255f, color.a / 255f);
+                Rl.SetShaderValue(_skinningShader, _locSkinningColDiffuse, &diffuse, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC4);
             }
         }
 
@@ -2055,6 +2192,20 @@ namespace Ludots.Client.Raylib.Rendering
             }
             Rl.UploadMesh(ref _sphereMesh, false);
 
+            _vfxBillboardMesh = Rl.GenMeshCube(1f, 1f, 1f);
+            if (_vfxBillboardMesh.colors == null)
+            {
+                int bytes = _vfxBillboardMesh.vertexCount * 4;
+                _vfxBillboardMesh.colors = (byte*)Rl.MemAlloc(bytes);
+                for (int i = 0; i < bytes; i++) _vfxBillboardMesh.colors[i] = 255;
+            }
+            Rl.UploadMesh(ref _vfxBillboardMesh, false);
+
+            RaylibEffectShader defaultVfx = _effectShaders.GetOrLoad(RaylibEffectShaderRegistry.DefaultUnlitTintKey);
+            _vfxMaterial = Rl.LoadMaterialDefault();
+            _vfxMaterial.shader = defaultVfx.Shader;
+            _vfxMaterialLoaded = true;
+
             string baseDir = AppContext.BaseDirectory;
             _shader = Rl.LoadShader(Path.Combine(baseDir, "instancing.vs"), Path.Combine(baseDir, "instancing.fs"));
             if (_shader.id == 0) throw new InvalidOperationException("Failed to load instancing shader (shader.id == 0).");
@@ -2108,6 +2259,64 @@ namespace Ludots.Client.Raylib.Rendering
             _initialized = true;
         }
 
+        private void EnsureSkinningShaderInitialized()
+        {
+            if (_skinningShaderReady)
+            {
+                return;
+            }
+
+            string baseDir = AppContext.BaseDirectory;
+            string vsPath = Path.Combine(baseDir, "skinning_instanced.vs");
+            string fsPath = Path.Combine(baseDir, "skinning_instanced.fs");
+            if (!File.Exists(vsPath) || !File.Exists(fsPath))
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} GpuSkinnedInstance requires skinning_instanced.vs/.fs beside the binary (missing under '{baseDir}').");
+            }
+
+            _skinningShader = Rl.LoadShader(vsPath, fsPath);
+            if (_skinningShader.id == 0)
+            {
+                throw new InvalidOperationException("Failed to load skinning_instanced shader (shader.id == 0).");
+            }
+
+            _locBoneMatrices = Rl.GetShaderLocation(_skinningShader, "boneMatrices");
+            _locSkinningTint = Rl.GetShaderLocation(_skinningShader, "tint");
+            _locSkinningColDiffuse = Rl.GetShaderLocation(_skinningShader, "colDiffuse");
+            int locMapAlbedo = Rl.GetShaderLocation(_skinningShader, "texture0");
+            int locMvp = Rl.GetShaderLocation(_skinningShader, "mvp");
+            int locInstance = Rl.GetShaderLocationAttrib(_skinningShader, "instanceTransform");
+            int locVertexPosition = Rl.GetShaderLocationAttrib(_skinningShader, "vertexPosition");
+            int locVertexTexCoord = Rl.GetShaderLocationAttrib(_skinningShader, "vertexTexCoord");
+            int locVertexColor = Rl.GetShaderLocationAttrib(_skinningShader, "vertexColor");
+            int locBoneIds = Rl.GetShaderLocationAttrib(_skinningShader, "vertexBoneIds");
+            int locBoneWeights = Rl.GetShaderLocationAttrib(_skinningShader, "vertexBoneWeights");
+
+            _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_POSITION] = locVertexPosition;
+            _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_TEXCOORD01] = locVertexTexCoord;
+            _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_COLOR] = locVertexColor;
+            _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_BONEIDS] = locBoneIds;
+            _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_BONEWEIGHTS] = locBoneWeights;
+            _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MATRIX_MVP] = locMvp;
+            _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MATRIX_MODEL] = locInstance;
+            _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_COLOR_DIFFUSE] = _locSkinningColDiffuse;
+            _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_ALBEDO] = locMapAlbedo;
+            _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_BONE_MATRICES] = _locBoneMatrices;
+
+            if (_locBoneMatrices < 0) throw new InvalidOperationException("Skinning shader uniform 'boneMatrices' not found.");
+            if (locMvp < 0) throw new InvalidOperationException("Skinning shader uniform 'mvp' not found.");
+            if (locInstance < 0) throw new InvalidOperationException("Skinning shader attrib 'instanceTransform' not found.");
+            if (locVertexPosition < 0) throw new InvalidOperationException("Skinning shader attrib 'vertexPosition' not found.");
+            if (locBoneIds < 0) throw new InvalidOperationException("Skinning shader attrib 'vertexBoneIds' not found.");
+            if (locBoneWeights < 0) throw new InvalidOperationException("Skinning shader attrib 'vertexBoneWeights' not found.");
+            if (_locSkinningColDiffuse < 0) throw new InvalidOperationException("Skinning shader uniform 'colDiffuse' not found.");
+            if (_locSkinningTint < 0) throw new InvalidOperationException("Skinning shader uniform 'tint' not found.");
+            if (locMapAlbedo < 0) throw new InvalidOperationException("Skinning shader uniform 'texture0' not found.");
+
+            _skinningShaderReady = true;
+        }
+
         private static uint PackRgba(in Vector4 c)
         {
             uint r = Clamp01ToByte(c.X);
@@ -2125,8 +2334,14 @@ namespace Ludots.Client.Raylib.Rendering
         {
             foreach (var kvp in _modelCache)
             {
-                if (kvp.Value.Loaded)
-                    Rl.UnloadModel(kvp.Value.Model);
+                if (!kvp.Value.Loaded)
+                {
+                    continue;
+                }
+
+                Model model = kvp.Value.Model;
+                _materialHostBinder?.DetachOwnedAlbedoMaps(model);
+                Rl.UnloadModel(model);
             }
             _modelCache.Clear();
 
@@ -2146,17 +2361,36 @@ namespace Ludots.Client.Raylib.Rendering
 
             if (_proceduralMeshMaterialLoaded)
             {
+                _materialHostBinder?.DetachOwnedAlbedoMap(ref _proceduralMeshMaterial);
                 Rl.UnloadMaterial(_proceduralMeshMaterial);
                 _proceduralMeshMaterialLoaded = false;
             }
+
+            if (_vfxMaterialLoaded)
+            {
+                _vfxMaterial.shader = default;
+                Rl.UnloadMaterial(_vfxMaterial);
+                _vfxMaterialLoaded = false;
+            }
+
+            _gpuSkinnedModelCache.UnloadAll(model => _materialHostBinder?.DetachOwnedAlbedoMaps(model));
+            _gpuSkinnedModelCache.Dispose();
+            _effectShaders.Dispose();
+            _materialHostBinder?.Dispose();
 
             if (!_initialized) return;
 
             if (_cubeMesh.vertexCount > 0) Rl.UnloadMesh(_cubeMesh);
             if (_sphereMesh.vertexCount > 0) Rl.UnloadMesh(_sphereMesh);
+            if (_vfxBillboardMesh.vertexCount > 0) Rl.UnloadMesh(_vfxBillboardMesh);
             _material.shader = default;
             Rl.UnloadMaterial(_material);
             Rl.UnloadShader(_shader);
+            if (_skinningShaderReady)
+            {
+                Rl.UnloadShader(_skinningShader);
+                _skinningShaderReady = false;
+            }
             _initialized = false;
         }
 
@@ -2235,8 +2469,8 @@ namespace Ludots.Client.Raylib.Rendering
             int MeshAssetId,
             int MaterialId,
             uint ColorKey,
-            int PrimaryStateIndex,
-            int SecondaryStateIndex);
+            int ClipIndex,
+            int FrameIndex);
 
         private sealed class GpuSkinnedInstanceBatch
         {
@@ -2244,6 +2478,8 @@ namespace Ludots.Client.Raylib.Rendering
             public RaylibMatrix[] Transforms;
             public int Count;
             public Model Model;
+            public ModelAnimation* Animations;
+            public int AnimCount;
 
             public GpuSkinnedInstanceBatch(GpuSkinnedInstanceBatchKey key, int initialCapacity = 256)
             {
