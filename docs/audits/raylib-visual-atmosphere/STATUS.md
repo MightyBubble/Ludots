@@ -5,7 +5,7 @@ Updated by agents. Use: `pending` | `in_progress` | `blocked` | `done`.
 | ID | Package | Status | Owner | Notes |
 |----|---------|--------|-------|-------|
 | V1 | Skybox + day/night env | pending | — | |
-| V2 | Directional + ambient lighting | pending | — | |
+| V2 | Directional + ambient lighting | done | agent-v2 | RaylibFrameLighting + terrain/ISM/skin N·L+ambient; ambient_day_ramp.json |
 | V3 | Cutout + Alpha/Additive blend | pending | — | |
 | V4 | Distance fog | pending | — | |
 | V5 | Reflective/refractive water FBO | pending | — | |

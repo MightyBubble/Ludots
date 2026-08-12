@@ -33,9 +33,9 @@
 
 ### V2 — 日照（P0）
 
-- [ ] 每帧 `RaylibFrameLighting`：方向光方向 + 环境色/强度（可由昼夜相位查表，表 data-driven）
-- [ ] 接到 `terrain` / `instancing` / `skinning_instanced`（至少 N·L + ambient）
-- [ ] 网格不再永久「贴图×染色无光」冒充成品光照
+- [x] 每帧 `RaylibFrameLighting`：方向光方向 + 环境色/强度（可由昼夜相位查表，表 data-driven）
+- [x] 接到 `terrain` / `instancing` / `skinning_instanced`（至少 N·L + ambient）
+- [x] 网格不再永久「贴图×染色无光」冒充成品光照
 
 ### V3 — 透贴 / 半透明 / Additive（P0）
 

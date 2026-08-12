@@ -49,6 +49,9 @@ namespace Ludots.Client.Raylib.Rendering
         private int _locSkinningColDiffuse;
         private int _locSkinningTint;
         private int _locBoneMatrices;
+        private RaylibFrameLightingLocations _instancingLightingLocs;
+        private RaylibFrameLightingLocations _skinningLightingLocs;
+        private RaylibFrameLighting? _frameLighting;
         private bool _skinningShaderReady;
 
         private readonly List<Batch> _cubeBatches = new List<Batch>(16);
@@ -98,6 +101,20 @@ namespace Ludots.Client.Raylib.Rendering
         public int TotalSurfaceVisualCount { get; private set; }
 
         public RaylibIsmRenderBridge IsmBridge => _ismBridge;
+
+        public void ApplyFrameLighting(RaylibFrameLighting lighting)
+        {
+            _frameLighting = lighting ?? throw new ArgumentNullException(nameof(lighting));
+            if (_initialized)
+            {
+                lighting.Apply(_shader, in _instancingLightingLocs);
+            }
+
+            if (_skinningShaderReady)
+            {
+                lighting.Apply(_skinningShader, in _skinningLightingLocs);
+            }
+        }
 
         public RaylibPrimitiveRenderer(
             RaylibPrimitiveRenderMode mode = RaylibPrimitiveRenderMode.Immediate,
@@ -1897,6 +1914,7 @@ namespace Ludots.Client.Raylib.Rendering
                 return 0;
             }
 
+            EnsureFrameLightingAppliedForInstancing();
             int drawCalls = 0;
             long drawStart = Stopwatch.GetTimestamp();
             RestoreOpaqueModelState();
@@ -1905,6 +1923,7 @@ namespace Ludots.Client.Raylib.Rendering
                 for (int meshIndex = 0; meshIndex < model.meshCount; meshIndex++)
                 {
                     Mesh mesh = model.meshes[meshIndex];
+                    RequireMeshNormals(in mesh, "Instanced ISM");
                     if (!TryResolveInstancedModelMaterial(model, meshIndex, materialId, out Material material))
                     {
                         continue;
@@ -1948,6 +1967,7 @@ namespace Ludots.Client.Raylib.Rendering
             ModelAnimation anim = batch.Animations[clipIndex];
             Rl.UpdateModelAnimationBones(model, anim, frameIndex);
 
+            EnsureFrameLightingAppliedForSkinning();
             int drawCalls = 0;
             uint colorKey = batch.Key.ColorKey;
             int materialId = batch.Key.MaterialId;
@@ -1962,6 +1982,7 @@ namespace Ludots.Client.Raylib.Rendering
                         continue;
                     }
 
+                    RequireMeshNormals(in mesh, "GpuSkinnedInstance");
                     if (!TryResolveInstancedModelMaterial(model, meshIndex, materialId, out Material material))
                     {
                         continue;
@@ -2131,6 +2152,8 @@ namespace Ludots.Client.Raylib.Rendering
 
         private void FlushMeshBatches(List<Batch> batches, ref int totalInstances, ref int batchCount, ref Mesh mesh)
         {
+            EnsureFrameLightingAppliedForInstancing();
+            RequireMeshNormals(in mesh, "Instanced primitive");
             for (int i = 0; i < batches.Count; i++)
             {
                 var b = batches[i];
@@ -2220,11 +2243,13 @@ namespace Ludots.Client.Raylib.Rendering
             int locInstance = Rl.GetShaderLocationAttrib(_shader, "instanceTransform");
             int locVertexPosition = Rl.GetShaderLocationAttrib(_shader, "vertexPosition");
             int locVertexTexCoord = Rl.GetShaderLocationAttrib(_shader, "vertexTexCoord");
+            int locVertexNormal = Rl.GetShaderLocationAttrib(_shader, "vertexNormal");
+            _instancingLightingLocs = RaylibFrameLightingLocations.ResolveOrThrow(_shader, "instancing");
 
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_POSITION] = locVertexPosition;
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_TEXCOORD01] = locVertexTexCoord;
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_TEXCOORD02] = -1;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_NORMAL] = -1;
+            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_NORMAL] = locVertexNormal;
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_TANGENT] = -1;
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_COLOR] = -1;
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MATRIX_MVP] = locMvp;
@@ -2250,6 +2275,7 @@ namespace Ludots.Client.Raylib.Rendering
 
             if (locVertexPosition < 0) throw new InvalidOperationException("Shader attrib 'vertexPosition' not found.");
             if (locVertexTexCoord < 0) throw new InvalidOperationException("Shader attrib 'vertexTexCoord' not found.");
+            if (locVertexNormal < 0) throw new InvalidOperationException("Shader attrib 'vertexNormal' not found.");
             if (locMvp < 0) throw new InvalidOperationException("Shader uniform 'mvp' not found.");
             if (locInstance < 0) throw new InvalidOperationException("Shader attrib 'instanceTransform' not found.");
             if (_locColDiffuse < 0) throw new InvalidOperationException("Shader uniform 'colDiffuse' not found.");
@@ -2257,6 +2283,10 @@ namespace Ludots.Client.Raylib.Rendering
             if (locMapAlbedo < 0) throw new InvalidOperationException("Shader uniform 'texture0' not found.");
 
             _initialized = true;
+            if (_frameLighting != null)
+            {
+                _frameLighting.Apply(_shader, in _instancingLightingLocs);
+            }
         }
 
         private void EnsureSkinningShaderInitialized()
@@ -2289,12 +2319,15 @@ namespace Ludots.Client.Raylib.Rendering
             int locInstance = Rl.GetShaderLocationAttrib(_skinningShader, "instanceTransform");
             int locVertexPosition = Rl.GetShaderLocationAttrib(_skinningShader, "vertexPosition");
             int locVertexTexCoord = Rl.GetShaderLocationAttrib(_skinningShader, "vertexTexCoord");
+            int locVertexNormal = Rl.GetShaderLocationAttrib(_skinningShader, "vertexNormal");
             int locVertexColor = Rl.GetShaderLocationAttrib(_skinningShader, "vertexColor");
             int locBoneIds = Rl.GetShaderLocationAttrib(_skinningShader, "vertexBoneIds");
             int locBoneWeights = Rl.GetShaderLocationAttrib(_skinningShader, "vertexBoneWeights");
+            _skinningLightingLocs = RaylibFrameLightingLocations.ResolveOrThrow(_skinningShader, "skinning_instanced");
 
             _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_POSITION] = locVertexPosition;
             _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_TEXCOORD01] = locVertexTexCoord;
+            _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_NORMAL] = locVertexNormal;
             _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_COLOR] = locVertexColor;
             _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_BONEIDS] = locBoneIds;
             _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_BONEWEIGHTS] = locBoneWeights;
@@ -2308,6 +2341,7 @@ namespace Ludots.Client.Raylib.Rendering
             if (locMvp < 0) throw new InvalidOperationException("Skinning shader uniform 'mvp' not found.");
             if (locInstance < 0) throw new InvalidOperationException("Skinning shader attrib 'instanceTransform' not found.");
             if (locVertexPosition < 0) throw new InvalidOperationException("Skinning shader attrib 'vertexPosition' not found.");
+            if (locVertexNormal < 0) throw new InvalidOperationException("Skinning shader attrib 'vertexNormal' not found.");
             if (locBoneIds < 0) throw new InvalidOperationException("Skinning shader attrib 'vertexBoneIds' not found.");
             if (locBoneWeights < 0) throw new InvalidOperationException("Skinning shader attrib 'vertexBoneWeights' not found.");
             if (_locSkinningColDiffuse < 0) throw new InvalidOperationException("Skinning shader uniform 'colDiffuse' not found.");
@@ -2315,6 +2349,42 @@ namespace Ludots.Client.Raylib.Rendering
             if (locMapAlbedo < 0) throw new InvalidOperationException("Skinning shader uniform 'texture0' not found.");
 
             _skinningShaderReady = true;
+            if (_frameLighting != null)
+            {
+                _frameLighting.Apply(_skinningShader, in _skinningLightingLocs);
+            }
+        }
+
+        private void EnsureFrameLightingAppliedForInstancing()
+        {
+            if (_frameLighting == null)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} lit instancing requires {nameof(ApplyFrameLighting)} before draw.");
+            }
+
+            _frameLighting.Apply(_shader, in _instancingLightingLocs);
+        }
+
+        private void EnsureFrameLightingAppliedForSkinning()
+        {
+            if (_frameLighting == null)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} lit GpuSkinnedInstance requires {nameof(ApplyFrameLighting)} before draw.");
+            }
+
+            EnsureSkinningShaderInitialized();
+            _frameLighting.Apply(_skinningShader, in _skinningLightingLocs);
+        }
+
+        private static void RequireMeshNormals(in Mesh mesh, string lane)
+        {
+            if (mesh.normals == null)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} {lane} lit path requires mesh normals (vertexCount={mesh.vertexCount}); silent flat shading is forbidden.");
+            }
         }
 
         private static uint PackRgba(in Vector4 c)

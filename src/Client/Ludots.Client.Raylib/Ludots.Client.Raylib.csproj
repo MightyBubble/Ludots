@@ -37,6 +37,10 @@
       <Link>vfx_unlit_tint.fs</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="Resources\ambient_day_ramp.json">
+      <Link>ambient_day_ramp.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
   <ItemGroup Condition="'$(SkiaNativeRid)' != ''">

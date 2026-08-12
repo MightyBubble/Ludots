@@ -18,10 +18,9 @@ namespace Ludots.Client.Raylib.Rendering
 
         private Shader _terrainShader;
         private Material _terrainMaterial;
-        private int _locTerrainLightPos;
+        private RaylibFrameLightingLocations _terrainLightingLocs;
         private int _locTerrainViewPos;
-        private int _locTerrainAmbient;
-        private int _locTerrainIntensity;
+        private RaylibFrameLighting? _frameLighting;
         private bool _initialized;
         private int _frameIndex;
 
@@ -39,11 +38,14 @@ namespace Ludots.Client.Raylib.Rendering
 
         public float VisibleRadiusCm { get; set; } = 120_000f;
 
-        public Vector3 LightPosition { get; set; } = new(50f, 200f, 100f);
-
-        public float Ambient { get; set; } = 0.45f;
-
-        public float LightIntensity { get; set; } = 0.55f;
+        public void ApplyFrameLighting(RaylibFrameLighting lighting)
+        {
+            _frameLighting = lighting ?? throw new ArgumentNullException(nameof(lighting));
+            if (_initialized)
+            {
+                lighting.Apply(_terrainShader, in _terrainLightingLocs);
+            }
+        }
 
         public void Render(IVisualHeightmapRenderSource source, in Camera3D camera)
         {
@@ -108,24 +110,29 @@ namespace Ludots.Client.Raylib.Rendering
 
             _terrainMaterial = Rl.LoadMaterialDefault();
             _terrainMaterial.shader = _terrainShader;
-            _locTerrainLightPos = Rl.GetShaderLocation(_terrainShader, "uLightPos");
+            _terrainLightingLocs = RaylibFrameLightingLocations.ResolveOrThrow(_terrainShader, "visual-heightmap terrain");
             _locTerrainViewPos = Rl.GetShaderLocation(_terrainShader, "uViewPos");
-            _locTerrainAmbient = Rl.GetShaderLocation(_terrainShader, "uAmbient");
-            _locTerrainIntensity = Rl.GetShaderLocation(_terrainShader, "uLightIntensity");
             _initialized = true;
+            if (_frameLighting != null)
+            {
+                _frameLighting.Apply(_terrainShader, in _terrainLightingLocs);
+            }
         }
 
         private void UpdateUniforms(in Camera3D camera)
         {
-            Vector3 lightPos = LightPosition;
-            Vector3 viewPos = camera.position;
-            float ambient = Ambient;
-            float intensity = LightIntensity;
+            if (_frameLighting == null)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibVisualHeightmapRenderer)} requires {nameof(ApplyFrameLighting)} before Render.");
+            }
 
-            Rl.SetShaderValue(_terrainShader, _locTerrainLightPos, &lightPos, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
-            Rl.SetShaderValue(_terrainShader, _locTerrainViewPos, &viewPos, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
-            Rl.SetShaderValue(_terrainShader, _locTerrainAmbient, &ambient, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
-            Rl.SetShaderValue(_terrainShader, _locTerrainIntensity, &intensity, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+            _frameLighting.Apply(_terrainShader, in _terrainLightingLocs);
+            Vector3 viewPos = camera.position;
+            if (_locTerrainViewPos >= 0)
+            {
+                Rl.SetShaderValue(_terrainShader, _locTerrainViewPos, &viewPos, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
+            }
         }
 
         private ref ChunkGpu GetOrCreateChunk(in VisualHeightmapRenderChunk chunk)

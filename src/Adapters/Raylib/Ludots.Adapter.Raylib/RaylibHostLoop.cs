@@ -169,17 +169,12 @@ namespace Ludots.Adapter.Raylib
                 HeightScale = 2.0f,
                 VisibleRadius = 900f,
                 SimplifiedCliffRadius = 350f,
-                LightPosition = new Vector3(50f, 200f, 100f),
-                Ambient = 0.8f,
-                LightIntensity = 1.0f
             };
             var visualHeightmapRenderer = new RaylibVisualHeightmapRenderer
             {
                 VisibleRadiusCm = 140_000f,
-                LightPosition = new Vector3(50f, 200f, 100f),
-                Ambient = 0.45f,
-                LightIntensity = 0.55f
             };
+            var frameLighting = RaylibFrameLighting.LoadFromDefaultPath(dayPhase01: ResolveInitialDayPhase01());
 
             try
             {
@@ -476,6 +471,11 @@ namespace Ludots.Adapter.Raylib
                         Restore3DDepthState();
                         BeginCoreMode3D(activeCamera, in activeCameraState);
                         Restore3DDepthState();
+
+                        frameLighting.Evaluate();
+                        terrainRenderer.ApplyFrameLighting(frameLighting);
+                        visualHeightmapRenderer.ApplyFrameLighting(frameLighting);
+                        primitiveRenderer.ApplyFrameLighting(frameLighting);
 
                         if (drawDebugDraw &&
                             !(drawVisualHeightmap && hasVisualHeightmap) &&
@@ -1731,6 +1731,25 @@ namespace Ludots.Adapter.Raylib
 
             entity = found;
             return found != Entity.Null;
+        }
+
+        private static float ResolveInitialDayPhase01()
+        {
+            string? raw = Environment.GetEnvironmentVariable("LUDOTS_DAY_PHASE");
+            if (string.IsNullOrWhiteSpace(raw))
+            {
+                return 0.42f;
+            }
+
+            if (!float.TryParse(raw, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out float phase) ||
+                float.IsNaN(phase) ||
+                float.IsInfinity(phase))
+            {
+                throw new InvalidOperationException(
+                    $"LUDOTS_DAY_PHASE must be a finite float in [0,1] (got '{raw}').");
+            }
+
+            return phase - MathF.Floor(phase);
         }
 
         private static double ElapsedMs(long startTicks)

@@ -70,6 +70,10 @@
       <Link>vfx_unlit_tint.fs</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="..\..\..\Client\Ludots.Client.Raylib\Resources\ambient_day_ramp.json">
+      <Link>ambient_day_ramp.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Include="launcher.runtime.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

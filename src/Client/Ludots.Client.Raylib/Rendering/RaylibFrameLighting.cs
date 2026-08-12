@@ -1,0 +1,285 @@
+using System;
+using System.IO;
+using System.Numerics;
+using System.Text.Json;
+using Raylib_cs;
+using Rl = Raylib_cs.Raylib;
+
+namespace Ludots.Client.Raylib.Rendering
+{
+    public readonly struct RaylibFrameLightingLocations
+    {
+        public readonly int LightDir;
+        public readonly int Ambient;
+        public readonly int LightColor;
+        public readonly int LightIntensity;
+
+        public RaylibFrameLightingLocations(int lightDir, int ambient, int lightColor, int lightIntensity)
+        {
+            LightDir = lightDir;
+            Ambient = ambient;
+            LightColor = lightColor;
+            LightIntensity = lightIntensity;
+        }
+
+        public static RaylibFrameLightingLocations ResolveOrThrow(Shader shader, string shaderLabel)
+        {
+            int lightDir = Rl.GetShaderLocation(shader, "uLightDir");
+            int ambient = Rl.GetShaderLocation(shader, "uAmbient");
+            int lightColor = Rl.GetShaderLocation(shader, "uLightColor");
+            int lightIntensity = Rl.GetShaderLocation(shader, "uLightIntensity");
+            if (lightDir < 0)
+            {
+                throw new InvalidOperationException($"{shaderLabel} uniform 'uLightDir' not found.");
+            }
+
+            if (ambient < 0)
+            {
+                throw new InvalidOperationException($"{shaderLabel} uniform 'uAmbient' not found.");
+            }
+
+            if (lightColor < 0)
+            {
+                throw new InvalidOperationException($"{shaderLabel} uniform 'uLightColor' not found.");
+            }
+
+            if (lightIntensity < 0)
+            {
+                throw new InvalidOperationException($"{shaderLabel} uniform 'uLightIntensity' not found.");
+            }
+
+            return new RaylibFrameLightingLocations(lightDir, ambient, lightColor, lightIntensity);
+        }
+    }
+
+    public sealed class RaylibFrameLighting
+    {
+        private readonly AmbientSample[] _ramp;
+        private readonly Vector3 _lightColor;
+        private readonly float _lightIntensity;
+
+        public float DayPhase01 { get; private set; }
+
+        public Vector3 SunDirectionToward { get; private set; }
+
+        public Vector4 AmbientRgba { get; private set; }
+
+        public Vector3 LightColor => _lightColor;
+
+        public float LightIntensity => _lightIntensity;
+
+        private RaylibFrameLighting(AmbientSample[] ramp, Vector3 lightColor, float lightIntensity, float dayPhase01)
+        {
+            _ramp = ramp;
+            _lightColor = lightColor;
+            _lightIntensity = lightIntensity;
+            SetDayPhase(dayPhase01);
+        }
+
+        public static RaylibFrameLighting LoadFromDefaultPath(float dayPhase01 = 0.42f)
+        {
+            string path = Path.Combine(AppContext.BaseDirectory, "ambient_day_ramp.json");
+            return LoadFromJsonFile(path, dayPhase01);
+        }
+
+        public static RaylibFrameLighting LoadFromJsonFile(string path, float dayPhase01 = 0.42f)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                throw new ArgumentException("Ambient ramp path is required.", nameof(path));
+            }
+
+            if (!File.Exists(path))
+            {
+                throw new FileNotFoundException(
+                    $"{nameof(RaylibFrameLighting)} requires data-driven ambient ramp at '{path}'.",
+                    path);
+            }
+
+            string json = File.ReadAllText(path);
+            using JsonDocument doc = JsonDocument.Parse(json);
+            JsonElement root = doc.RootElement;
+            if (!root.TryGetProperty("samples", out JsonElement samplesElement) ||
+                samplesElement.ValueKind != JsonValueKind.Array ||
+                samplesElement.GetArrayLength() < 2)
+            {
+                throw new InvalidOperationException(
+                    $"Ambient ramp '{path}' must define a 'samples' array with at least two entries.");
+            }
+
+            AmbientSample[] samples = new AmbientSample[samplesElement.GetArrayLength()];
+            for (int i = 0; i < samples.Length; i++)
+            {
+                JsonElement sample = samplesElement[i];
+                samples[i] = new AmbientSample(
+                    ReadRequiredFloat(sample, "phase", path),
+                    ReadRequiredFloat(sample, "r", path),
+                    ReadRequiredFloat(sample, "g", path),
+                    ReadRequiredFloat(sample, "b", path),
+                    ReadRequiredFloat(sample, "intensity", path));
+            }
+
+            for (int i = 1; i < samples.Length; i++)
+            {
+                if (samples[i].Phase < samples[i - 1].Phase)
+                {
+                    throw new InvalidOperationException(
+                        $"Ambient ramp '{path}' samples must be sorted by ascending phase.");
+                }
+            }
+
+            if (samples[0].Phase > 0f || samples[^1].Phase < 1f)
+            {
+                throw new InvalidOperationException(
+                    $"Ambient ramp '{path}' must cover phase range [0, 1].");
+            }
+
+            Vector3 lightColor = new(1f, 0.96f, 0.9f);
+            if (root.TryGetProperty("lightColor", out JsonElement lightColorElement))
+            {
+                if (lightColorElement.ValueKind != JsonValueKind.Array || lightColorElement.GetArrayLength() != 3)
+                {
+                    throw new InvalidOperationException($"Ambient ramp '{path}' lightColor must be [r,g,b].");
+                }
+
+                lightColor = new Vector3(
+                    lightColorElement[0].GetSingle(),
+                    lightColorElement[1].GetSingle(),
+                    lightColorElement[2].GetSingle());
+            }
+
+            float lightIntensity = 1f;
+            if (root.TryGetProperty("lightIntensity", out JsonElement lightIntensityElement))
+            {
+                lightIntensity = lightIntensityElement.GetSingle();
+            }
+
+            if (lightIntensity < 0f)
+            {
+                throw new InvalidOperationException($"Ambient ramp '{path}' lightIntensity must be >= 0.");
+            }
+
+            return new RaylibFrameLighting(samples, lightColor, lightIntensity, dayPhase01);
+        }
+
+        public void SetDayPhase(float dayPhase01)
+        {
+            if (float.IsNaN(dayPhase01) || float.IsInfinity(dayPhase01))
+            {
+                throw new ArgumentOutOfRangeException(nameof(dayPhase01), dayPhase01, "Day phase must be finite.");
+            }
+
+            DayPhase01 = dayPhase01 - MathF.Floor(dayPhase01);
+            Evaluate();
+        }
+
+        public void Evaluate()
+        {
+            SunDirectionToward = DeriveSunDirectionToward(DayPhase01);
+            AmbientRgba = SampleAmbient(DayPhase01);
+        }
+
+        public unsafe void Apply(Shader shader, in RaylibFrameLightingLocations locations)
+        {
+            Vector3 lightDir = SunDirectionToward;
+            Vector4 ambient = AmbientRgba;
+            Vector3 lightColor = _lightColor;
+            float lightIntensity = _lightIntensity;
+            Rl.SetShaderValue(shader, locations.LightDir, &lightDir, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
+            Rl.SetShaderValue(shader, locations.Ambient, &ambient, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC4);
+            Rl.SetShaderValue(shader, locations.LightColor, &lightColor, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
+            Rl.SetShaderValue(shader, locations.LightIntensity, &lightIntensity, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+        }
+
+        public Vector3 FarLightPosition(float distance = 1000f)
+        {
+            if (distance <= 0f)
+            {
+                throw new ArgumentOutOfRangeException(nameof(distance), distance, "Distance must be > 0.");
+            }
+
+            return SunDirectionToward * distance;
+        }
+
+        public static Vector3 DeriveSunDirectionToward(float dayPhase01)
+        {
+            float phase = dayPhase01 - MathF.Floor(dayPhase01);
+            float sunAngle = float.Lerp(-MathF.PI * 0.5f, MathF.PI * 1.5f, phase);
+            float cos = MathF.Cos(sunAngle);
+            float sin = MathF.Sin(sunAngle);
+            float z = MathF.Max(sin * 0.9f, -0.25f);
+            Vector3 dir = new(cos, sin, z);
+            float lenSq = dir.LengthSquared();
+            if (lenSq <= 1e-12f)
+            {
+                throw new InvalidOperationException("Derived sun direction degenerated to zero length.");
+            }
+
+            return dir / MathF.Sqrt(lenSq);
+        }
+
+        private Vector4 SampleAmbient(float phase)
+        {
+            if (phase <= _ramp[0].Phase)
+            {
+                AmbientSample s = _ramp[0];
+                return new Vector4(s.R, s.G, s.B, s.Intensity);
+            }
+
+            AmbientSample last = _ramp[^1];
+            if (phase >= last.Phase)
+            {
+                return new Vector4(last.R, last.G, last.B, last.Intensity);
+            }
+
+            for (int i = 1; i < _ramp.Length; i++)
+            {
+                AmbientSample b = _ramp[i];
+                if (phase > b.Phase)
+                {
+                    continue;
+                }
+
+                AmbientSample a = _ramp[i - 1];
+                float span = b.Phase - a.Phase;
+                float t = span <= 1e-8f ? 0f : (phase - a.Phase) / span;
+                return new Vector4(
+                    float.Lerp(a.R, b.R, t),
+                    float.Lerp(a.G, b.G, t),
+                    float.Lerp(a.B, b.B, t),
+                    float.Lerp(a.Intensity, b.Intensity, t));
+            }
+
+            return new Vector4(last.R, last.G, last.B, last.Intensity);
+        }
+
+        private static float ReadRequiredFloat(JsonElement sample, string name, string path)
+        {
+            if (!sample.TryGetProperty(name, out JsonElement value) || value.ValueKind != JsonValueKind.Number)
+            {
+                throw new InvalidOperationException(
+                    $"Ambient ramp '{path}' sample is missing numeric '{name}'.");
+            }
+
+            return value.GetSingle();
+        }
+
+        private readonly struct AmbientSample
+        {
+            public readonly float Phase;
+            public readonly float R;
+            public readonly float G;
+            public readonly float B;
+            public readonly float Intensity;
+
+            public AmbientSample(float phase, float r, float g, float b, float intensity)
+            {
+                Phase = phase;
+                R = r;
+                G = g;
+                B = b;
+                Intensity = intensity;
+            }
+        }
+    }
+}

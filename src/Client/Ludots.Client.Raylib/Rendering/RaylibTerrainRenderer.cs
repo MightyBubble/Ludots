@@ -21,10 +21,8 @@ namespace Ludots.Client.Raylib.Rendering
 
         private Shader _terrainShader;
         private Material _terrainMaterial;
-        private int _locTerrainLightPos;
+        private RaylibFrameLightingLocations _terrainLightingLocs;
         private int _locTerrainViewPos;
-        private int _locTerrainAmbient;
-        private int _locTerrainIntensity;
 
         private Shader _waterShader;
         private Material _waterMaterial;
@@ -33,6 +31,7 @@ namespace Ludots.Client.Raylib.Rendering
         private int _locWaterAmbient;
         private int _locWaterIntensity;
 
+        private RaylibFrameLighting? _frameLighting;
         private int _frameIndex;
 
         public int DrawnChunkCountLastFrame { get; private set; }
@@ -45,11 +44,16 @@ namespace Ludots.Client.Raylib.Rendering
         public float VisibleRadius { get; set; } = 900f;
         public float SimplifiedCliffRadius { get; set; } = 350f;
 
-        public Vector3 LightPosition { get; set; } = new Vector3(50f, 200f, 100f);
-        public float Ambient { get; set; } = 0.8f;
-        public float LightIntensity { get; set; } = 1.0f;
-
         public float HeightScale { get; set; } = 2.0f;
+
+        public void ApplyFrameLighting(RaylibFrameLighting lighting)
+        {
+            _frameLighting = lighting ?? throw new ArgumentNullException(nameof(lighting));
+            if (_initialized)
+            {
+                lighting.Apply(_terrainShader, in _terrainLightingLocs);
+            }
+        }
 
         public void Render(VertexMap map, in Camera3D camera)
         {
@@ -120,10 +124,8 @@ namespace Ludots.Client.Raylib.Rendering
             _terrainMaterial = Rl.LoadMaterialDefault();
             _terrainMaterial.shader = _terrainShader;
 
-            _locTerrainLightPos = Rl.GetShaderLocation(_terrainShader, "uLightPos");
+            _terrainLightingLocs = RaylibFrameLightingLocations.ResolveOrThrow(_terrainShader, "terrain");
             _locTerrainViewPos = Rl.GetShaderLocation(_terrainShader, "uViewPos");
-            _locTerrainAmbient = Rl.GetShaderLocation(_terrainShader, "uAmbient");
-            _locTerrainIntensity = Rl.GetShaderLocation(_terrainShader, "uLightIntensity");
 
             _waterShader = Rl.LoadShader(Path.Combine(baseDir, "water.vs"), Path.Combine(baseDir, "water.fs"));
             if (_waterShader.id == 0) throw new InvalidOperationException("Failed to load water shader (shader.id == 0).");
@@ -136,20 +138,32 @@ namespace Ludots.Client.Raylib.Rendering
             _locWaterIntensity = Rl.GetShaderLocation(_waterShader, "uLightIntensity");
 
             _initialized = true;
+            if (_frameLighting != null)
+            {
+                _frameLighting.Apply(_terrainShader, in _terrainLightingLocs);
+            }
         }
 
         private void UpdateUniforms(in Camera3D camera)
         {
-            Vector3 lightPos = LightPosition;
+            if (_frameLighting == null)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibTerrainRenderer)} requires {nameof(ApplyFrameLighting)} before Render.");
+            }
+
+            RaylibFrameLighting lighting = _frameLighting;
+            lighting.Apply(_terrainShader, in _terrainLightingLocs);
+
             Vector3 viewPos = camera.position;
-            float ambient = Ambient;
-            float intensity = LightIntensity;
+            if (_locTerrainViewPos >= 0)
+            {
+                Rl.SetShaderValue(_terrainShader, _locTerrainViewPos, &viewPos, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
+            }
 
-            Rl.SetShaderValue(_terrainShader, _locTerrainLightPos, &lightPos, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
-            Rl.SetShaderValue(_terrainShader, _locTerrainViewPos, &viewPos, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
-            Rl.SetShaderValue(_terrainShader, _locTerrainAmbient, &ambient, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
-            Rl.SetShaderValue(_terrainShader, _locTerrainIntensity, &intensity, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
-
+            Vector3 lightPos = lighting.FarLightPosition();
+            float ambient = lighting.AmbientRgba.W;
+            float intensity = lighting.LightIntensity;
             Rl.SetShaderValue(_waterShader, _locWaterLightPos, &lightPos, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
             Rl.SetShaderValue(_waterShader, _locWaterViewPos, &viewPos, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
             Rl.SetShaderValue(_waterShader, _locWaterAmbient, &ambient, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
@@ -259,15 +273,9 @@ namespace Ludots.Client.Raylib.Rendering
             {
                 if (TerrainMesh.vertexCount > 0) Rl.UnloadMesh(TerrainMesh);
                 if (WaterMesh.vertexCount > 0) Rl.UnloadMesh(WaterMesh);
+                TerrainMesh = default;
+                WaterMesh = default;
             }
-        }
-    }
-
-    internal static class DictionaryExtensions
-    {
-        public static ref T GetValueRefOrNullRef<TKey, T>(this Dictionary<TKey, T> dict, TKey key) where TKey : notnull
-        {
-            return ref System.Runtime.InteropServices.CollectionsMarshal.GetValueRefOrNullRef(dict, key);
         }
     }
 }
