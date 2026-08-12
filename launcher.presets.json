@@ -441,6 +441,15 @@
       "buildMode": "auto"
     },
     {
+      "id": "capability_standard_graph_ops_rel_raylib",
+      "name": "Capability Standard Graph Ops Rel Raylib",
+      "selectors": [
+        "$capability_standard_graph_ops_rel"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "capability_standard_graph_ops_blackboard_raylib",
       "name": "Capability Standard Graph Ops Blackboard Raylib",
       "selectors": [

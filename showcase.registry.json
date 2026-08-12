@@ -2982,6 +2982,31 @@
       "notes": "Headless think-wave acceptance first; visual captures follow."
     },
     {
+      "id": "capability_standard_graph_ops_rel",
+      "path": "mods/showcases/capability_standard/CapabilityStandardGraphOpsRelMod",
+      "projectPath": "CapabilityStandardGraphOpsRelMod.csproj",
+      "title": "关系查询/聚合图节点",
+      "summary": "查好友链、按好感排序、拆链：用关系查询/过滤/排序/聚合与拆链图节点完成一轮社交链演示。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "relationship",
+        "graph-ops"
+      ],
+      "binding": "capability_standard_graph_ops_rel",
+      "preset": "capability_standard_graph_ops_rel_raylib",
+      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsRelShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_ops_rel",
+      "screenshot": null,
+      "status": "active",
+      "notes": "Headless think-wave acceptance first; visual captures follow."
+    },
+    {
       "id": "capability_standard_graph_ops_blackboard",
       "path": "mods/showcases/capability_standard/CapabilityStandardGraphOpsBlackboardMod",
       "projectPath": "CapabilityStandardGraphOpsBlackboardMod.csproj",

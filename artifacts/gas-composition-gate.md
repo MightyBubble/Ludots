@@ -1,26 +1,21 @@
-﻿# GAS Composition Gate — Epic #915 P2 ATTR/EFFECT wave
+# GAS Composition Gate — GraphNodeOp Showcase P2 收尾
 
 ## 任务摘要
-
-新增 `CapabilityStandardGraphOpsAttrMod` showcase，用现有 Effect 图节点组合演示读血量/加伤/上效果/卸效果；不新增 preset enum 或 profile 开关。
+为 Epic #915 / PR #919 补齐剩余 GraphNodeOp 的 Showcase + registry `covered`，不新增 opcode / preset / profile DSL。
 
 ## 判断标准结论
-
-**通过** — 新变体为 graph op 组合（LoadAttribute / ModifyAttributeAdd / ApplyEffectTemplate / RemoveEffectTemplate 等），无新 profile DSL。
+**通过。** 新变体 = 已有 graph 节点的玩家可见演示与验收映射，不是新 enum/开关。
 
 ## 自审清单
-
-| 项 | 结论 |
-|----|------|
-| 新变体是 op 组合还是 enum/开关？ | op 组合 |
-| 是否复用现有 Registry/Pipeline？ | GraphProgramRegistry、GraphExecutor、GasGraphRuntimeApi、EffectRequestQueue |
-| 是否新增平行加载器？ | 否；mod `graphs.json` 走标准 ConfigCatalog |
-| 是否新增 BuiltinHandler/preset？ | 否；`Effect.GraphOpsAttr.Mark` 为最小 Buff 模板供 Apply/Remove 演示 |
+- [x] 未新增 BuiltinHandler / EffectPresetType / profile schema
+- [x] 未新增平行加载器或 inherit.mode
+- [x] 复用现有 GraphControlFlow 前门 + CapabilityStandard GraphOps* Mod 模式
+- [x] SSOT：`graph_node_op_coverage.registry.json` + `showcase.registry.json`
+- [x] NO FALLBACK：缺覆盖保持 `runtime-only`，不得假标 covered
 
 ## 复用 / 新增
-
 | 类型 | 项 |
 |------|-----|
-| 复用 | GraphControlFlowCompiler、GraphExecutor、AttributeRegistry、EffectTemplateIdRegistry |
-| 新增 Layer 2 | mod 内 4 张 Effect 图 + showcase runtime |
-| 禁止 | 新 profile DSL、平行 catalog loader |
+| 复用 | GraphControlFlowCompiler FrontDoor、现有 GraphOps*Mod、AbilityGraphSandbox、coverage registry 守卫 |
+| 新增 Layer 0–2 | 无 |
+| 新增 Mod | 仅缺族的 CapabilityStandardGraphOps* Showcase（数据驱动分镜） |

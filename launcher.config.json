@@ -385,6 +385,14 @@
       }
     },
     {
+      "name": "capability_standard_graph_ops_rel",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardGraphOpsRelMod",
+        "projectPath": "CapabilityStandardGraphOpsRelMod.csproj"
+      }
+    },
+    {
       "name": "capability_standard_graph_ops_blackboard",
       "target": {
         "type": "path",
