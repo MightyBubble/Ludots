@@ -15,6 +15,7 @@ internal sealed class RaylibVisualAtmosphereShowcaseRuntime : IBenchmarkSceneCon
 {
     private GameEngine? _activeEngine;
     private bool _vegetationSpawned;
+    private bool _decalsSpawned;
 
     public bool IsActive =>
         _activeEngine != null &&
@@ -83,6 +84,18 @@ internal sealed class RaylibVisualAtmosphereShowcaseRuntime : IBenchmarkSceneCon
             _vegetationSpawned = true;
         }
 
+        if (!_decalsSpawned)
+        {
+            int decals = DecalPlacementBootstrap.SpawnForActiveMap(engine);
+            if (decals <= 0)
+            {
+                throw new InvalidOperationException(
+                    "Raylib visual atmosphere island requires GroundOverlay beach decal placements to spawn.");
+            }
+
+            _decalsSpawned = true;
+        }
+
         ApplyCaptureCamera(engine);
         return Task.CompletedTask;
     }
@@ -103,6 +116,7 @@ internal sealed class RaylibVisualAtmosphereShowcaseRuntime : IBenchmarkSceneCon
         {
             _activeEngine = null;
             _vegetationSpawned = false;
+            _decalsSpawned = false;
         }
     }
 

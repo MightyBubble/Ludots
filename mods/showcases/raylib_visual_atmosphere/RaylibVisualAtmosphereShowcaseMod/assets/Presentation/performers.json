@@ -108,6 +108,60 @@
     ]
   },
   {
+    "id": "raylib_visual_atmosphere_beach_path_mark_bootstrap",
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "raylib_visual_atmosphere_beach_path_mark"
+        },
+        "condition": { "inline": "None" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "raylib_visual_atmosphere_beach_path_mark_actor",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "raylib_visual_atmosphere_beach_path_mark"
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "raylib_visual_atmosphere_sand_scar_bootstrap",
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "raylib_visual_atmosphere_sand_scar"
+        },
+        "condition": { "inline": "None" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "raylib_visual_atmosphere_sand_scar_actor",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "raylib_visual_atmosphere_sand_scar"
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
     "id": "raylib_visual_atmosphere_tree_actor",
     "behaviors": [
       {
@@ -183,6 +237,66 @@
         },
         "style": {
           "color": [1.0, 0.35, 0.05, 1.0]
+        }
+      }
+    ]
+  },
+  {
+    "id": "raylib_visual_atmosphere_beach_path_mark_actor",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Ring",
+          "renderPath": "None",
+          "mobility": "Static",
+          "localScale": [16.0, 10.5, 0.35]
+        },
+        "style": {
+          "color": [0.52, 0.34, 0.18, 0.72]
+        }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "AlignToSurface",
+          "offset": 0.04,
+          "updatePolicy": "Once"
+        }
+      }
+    ]
+  },
+  {
+    "id": "raylib_visual_atmosphere_sand_scar_actor",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "GroundOverlay",
+          "assetId": "Circle",
+          "renderPath": "None",
+          "mobility": "Static",
+          "localScale": [11.0, 11.0, 0.28]
+        },
+        "style": {
+          "color": [0.38, 0.22, 0.11, 0.78]
+        }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "AlignToSurface",
+          "offset": 0.04,
+          "updatePolicy": "Once"
         }
       }
     ]

@@ -94,5 +94,53 @@
       "TagCountContainer": {},
       "VisualHeightmapSampleState": {}
     }
+  },
+  {
+    "id": "raylib_visual_atmosphere_beach_path_mark",
+    "components": {
+      "Name": {
+        "Value": "AtmosphereBeachPathMark"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "VisualHeightmapSampleState": {}
+    }
+  },
+  {
+    "id": "raylib_visual_atmosphere_sand_scar",
+    "components": {
+      "Name": {
+        "Value": "AtmosphereSandScar"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "VisualHeightmapSampleState": {}
+    }
   }
 ]

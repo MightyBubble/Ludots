@@ -1,0 +1,65 @@
+{
+  "mapId": "raylib_visual_atmosphere_showcase",
+  "placements": [
+    {
+      "templateId": "raylib_visual_atmosphere_beach_path_mark",
+      "xCm": -17890.6,
+      "yCm": -10329.1
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_beach_path_mark",
+      "xCm": -15871.8,
+      "yCm": -5157.1
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_beach_path_mark",
+      "xCm": -15220.0,
+      "yCm": -4720.0
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_beach_path_mark",
+      "xCm": -14512.0,
+      "yCm": -11751.6
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_beach_path_mark",
+      "xCm": -6208.5,
+      "yCm": -19107.8
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_beach_path_mark",
+      "xCm": 2011.2,
+      "yCm": -19135.1
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_sand_scar",
+      "xCm": 11809.3,
+      "yCm": -16254.1
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_sand_scar",
+      "xCm": 16417.2,
+      "yCm": -9478.5
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_sand_scar",
+      "xCm": 21508.9,
+      "yCm": 0.0
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_sand_scar",
+      "xCm": -19135.1,
+      "yCm": 2011.2
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_sand_scar",
+      "xCm": -4612.9,
+      "yCm": 17215.5
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_sand_scar",
+      "xCm": -15519.2,
+      "yCm": -8960.0
+    }
+  ]
+}

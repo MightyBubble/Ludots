@@ -2086,7 +2086,7 @@ namespace Ludots.Adapter.Raylib
             if (item.FillColor.W > 0.01f)
             {
                 var fillColor = ToRaylibColor(item.FillColor);
-                const int fillRings = 4;
+                const int fillRings = 7;
                 for (int r = 1; r <= fillRings; r++)
                 {
                     float radius = item.Radius * r / fillRings;
@@ -2101,10 +2101,11 @@ namespace Ludots.Adapter.Raylib
                 }
             }
 
-            // Draw border as line loop (outermost ring, thicker appearance via slight offset)
+            // Dual border loops for readable marks on VH terrain from shore/aerial.
             if (item.BorderColor.W > 0.01f && item.BorderWidth > 0f)
             {
                 var border = ToRaylibColor(item.BorderColor);
+                float borderPad = MathF.Max(item.BorderWidth, 0.04f);
                 for (int s = 0; s < segments; s++)
                 {
                     float a0 = s * step;
@@ -2112,6 +2113,10 @@ namespace Ludots.Adapter.Raylib
                     var p0 = new Vector3(center.X + MathF.Cos(a0) * item.Radius, center.Y, center.Z + MathF.Sin(a0) * item.Radius);
                     var p1 = new Vector3(center.X + MathF.Cos(a1) * item.Radius, center.Y, center.Z + MathF.Sin(a1) * item.Radius);
                     Rl.DrawLine3D(p0, p1, border);
+                    float rOuter = item.Radius + borderPad;
+                    var q0 = new Vector3(center.X + MathF.Cos(a0) * rOuter, center.Y, center.Z + MathF.Sin(a0) * rOuter);
+                    var q1 = new Vector3(center.X + MathF.Cos(a1) * rOuter, center.Y, center.Z + MathF.Sin(a1) * rOuter);
+                    Rl.DrawLine3D(q0, q1, border);
                 }
             }
         }
@@ -2126,7 +2131,7 @@ namespace Ludots.Adapter.Raylib
             if (item.FillColor.W > 0.01f && outerRadius > innerRadius)
             {
                 var fillColor = ToRaylibColor(item.FillColor);
-                const int bands = 6;
+                const int bands = 8;
                 for (int band = 0; band < bands; band++)
                 {
                     float radius = innerRadius + (outerRadius - innerRadius) * (band + 0.5f) / bands;
@@ -2137,10 +2142,14 @@ namespace Ludots.Adapter.Raylib
             if (item.BorderColor.W > 0.01f && item.BorderWidth > 0f)
             {
                 var border = ToRaylibColor(item.BorderColor);
+                float borderPad = MathF.Max(item.BorderWidth, 0.04f);
                 DrawGroundArcLoop(center, outerRadius, 0f, MathF.PI * 2f, segments, border);
+                DrawGroundArcLoop(center, outerRadius + borderPad, 0f, MathF.PI * 2f, segments, border);
                 if (innerRadius > 0.001f)
                 {
                     DrawGroundArcLoop(center, innerRadius, 0f, MathF.PI * 2f, segments, border);
+                    float innerDual = MathF.Max(0.001f, innerRadius - borderPad);
+                    DrawGroundArcLoop(center, innerDual, 0f, MathF.PI * 2f, segments, border);
                 }
             }
         }
