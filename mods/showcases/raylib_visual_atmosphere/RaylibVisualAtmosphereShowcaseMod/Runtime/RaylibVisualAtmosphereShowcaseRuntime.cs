@@ -14,6 +14,7 @@ namespace RaylibVisualAtmosphereShowcaseMod.Runtime;
 internal sealed class RaylibVisualAtmosphereShowcaseRuntime : IBenchmarkSceneController
 {
     private GameEngine? _activeEngine;
+    private bool _vegetationSpawned;
 
     public bool IsActive =>
         _activeEngine != null &&
@@ -70,6 +71,18 @@ internal sealed class RaylibVisualAtmosphereShowcaseRuntime : IBenchmarkSceneCon
             renderDebug.DrawTerrain = true;
         }
 
+        if (!_vegetationSpawned)
+        {
+            int spawned = VegetationPlacementBootstrap.SpawnForActiveMap(engine);
+            if (spawned <= 0)
+            {
+                throw new InvalidOperationException(
+                    "Raylib visual atmosphere island requires vegetation placements to spawn.");
+            }
+
+            _vegetationSpawned = true;
+        }
+
         ApplyCaptureCamera(engine);
         return Task.CompletedTask;
     }
@@ -89,6 +102,7 @@ internal sealed class RaylibVisualAtmosphereShowcaseRuntime : IBenchmarkSceneCon
         if (ReferenceEquals(_activeEngine, engine))
         {
             _activeEngine = null;
+            _vegetationSpawned = false;
         }
     }
 

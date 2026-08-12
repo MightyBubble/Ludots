@@ -7,11 +7,11 @@ namespace RaylibVisualAtmosphereShowcaseMod.Runtime;
 
 internal static class IslandTerrainGenerator
 {
-    private const string FileName = "tropical_island.vtxm";
+    private const string FileName = "tropical_island_v3.vtxm";
     private const int Version = 2;
     private const int ChunkSize = 64;
-    private const int WidthChunks = 3;
-    private const int HeightChunks = 3;
+    private const int WidthChunks = 4;
+    private const int HeightChunks = 4;
 
     public static void EnsureGenerated(IModContext context)
     {
@@ -27,11 +27,7 @@ internal static class IslandTerrainGenerator
             Directory.CreateDirectory(directory);
         }
 
-        if (File.Exists(fullPath) && new FileInfo(fullPath).Length > 0)
-        {
-            return;
-        }
-
+        // Always regenerate so island remakes are not stuck on an old sparse mesh.
         using FileStream stream = File.Create(fullPath);
         using var writer = new BinaryWriter(stream, Encoding.UTF8, leaveOpen: true);
 
@@ -140,42 +136,44 @@ internal static class IslandTerrainGenerator
     {
         float cx = mapW * 0.5f;
         float cy = mapH * 0.5f;
-        float dx = x - cx;
-        float dy = y - cy;
+        float dx = (x - cx) / cx;
+        float dy = (y - cy) / cy;
         float dist = MathF.Sqrt(dx * dx + dy * dy);
 
-        float islandRadius = 48f;
-        float beachRadius = 56f;
-        if (dist > beachRadius)
+        // Soft radial island with irregular coastline.
+        float coast = 0.42f + 0.06f * MathF.Sin(MathF.Atan2(dy, dx) * 5f);
+        if (dist > coast + 0.12f)
         {
             return 1;
         }
 
-        float t = 1f - (dist / islandRadius);
-        if (t < 0f)
-        {
-            return 3;
-        }
+        float n =
+            0.55f * ValueNoise(x * 0.07f, y * 0.07f) +
+            0.30f * ValueNoise(x * 0.15f + 20f, y * 0.15f - 11f) +
+            0.15f * ValueNoise(x * 0.35f - 7f, y * 0.35f + 3f);
 
-        float ridge = 0.55f + 0.45f * MathF.Sin(dx * 0.18f) * MathF.Cos(dy * 0.16f);
-        float peak = 3f + t * t * 9f * ridge;
-        int height = (int)MathF.Round(peak);
-        return (byte)Math.Clamp(height, 3, 12);
+        float inland = Math.Clamp(1f - (dist / coast), 0f, 1f);
+        float beach = Math.Clamp((coast + 0.05f - dist) / 0.08f, 0f, 1f);
+        float peak = inland * inland * (4.5f + n * 7.5f);
+        float height = 2.2f + ((peak - 2.2f) * beach);
+        return (byte)Math.Clamp((int)MathF.Round(height), 1, 12);
     }
 
     private static byte WaterAt(int mapW, int mapH, int x, int y, byte height)
     {
         float cx = mapW * 0.5f;
         float cy = mapH * 0.5f;
-        float dx = x - cx;
-        float dy = y - cy;
+        float dx = (x - cx) / cx;
+        float dy = (y - cy) / cy;
         float dist = MathF.Sqrt(dx * dx + dy * dy);
-        if (dist > 54f)
+        float coast = 0.42f + 0.06f * MathF.Sin(MathF.Atan2(dy, dx) * 5f);
+
+        if (dist > coast + 0.02f)
         {
             return 6;
         }
 
-        if (dist > 48f && height <= 3)
+        if (dist > coast - 0.04f && height <= 3)
         {
             return 4;
         }
@@ -192,20 +190,45 @@ internal static class IslandTerrainGenerator
 
         if (height <= 3)
         {
-            return 1;
+            return 1; // sand
         }
 
         if (height <= 6)
         {
-            return 0;
+            return 0; // grass
         }
 
         if (height <= 9)
         {
-            return 3;
+            return 3; // dirt/rock mix
         }
 
-        return 2;
+        return 2; // rock
+    }
+
+    private static float ValueNoise(float x, float y)
+    {
+        int x0 = (int)MathF.Floor(x);
+        int y0 = (int)MathF.Floor(y);
+        float fx = x - x0;
+        float fy = y - y0;
+        float v00 = Hash01(x0, y0);
+        float v10 = Hash01(x0 + 1, y0);
+        float v01 = Hash01(x0, y0 + 1);
+        float v11 = Hash01(x0 + 1, y0 + 1);
+        float ix0 = v00 + ((v10 - v00) * Smooth(fx));
+        float ix1 = v01 + ((v11 - v01) * Smooth(fx));
+        return ix0 + ((ix1 - ix0) * Smooth(fy));
+    }
+
+    private static float Smooth(float t) => t * t * (3f - 2f * t);
+
+    private static float Hash01(int x, int y)
+    {
+        int n = x * 374761393 + y * 668265263;
+        n = (n ^ (n >> 13)) * 1274126177;
+        n ^= n >> 16;
+        return (n & 0x7FFFFFFF) / (float)int.MaxValue;
     }
 
     private static void SetStraightenBitIfNeeded(

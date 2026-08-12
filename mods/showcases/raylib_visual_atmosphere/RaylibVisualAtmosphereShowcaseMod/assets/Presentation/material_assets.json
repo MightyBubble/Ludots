@@ -5,6 +5,11 @@
     "flags": ["Cutout", "DoubleSided"]
   },
   {
+    "id": "raylib_visual_atmosphere.bush_cutout",
+    "domain": "Surface",
+    "flags": ["Cutout", "DoubleSided"]
+  },
+  {
     "id": "raylib_visual_atmosphere.vfx_alphablend",
     "domain": "Surface",
     "flags": ["AlphaBlend", "Unlit", "DoubleSided"]

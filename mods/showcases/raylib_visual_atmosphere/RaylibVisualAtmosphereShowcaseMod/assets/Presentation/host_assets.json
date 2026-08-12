@@ -9,6 +9,15 @@
     ]
   },
   {
+    "id": "raylib_visual_atmosphere.bush.mesh.raylib",
+    "assetKind": "Mesh",
+    "assetId": "raylib_visual_atmosphere.bush",
+    "backendId": "raylib",
+    "sourceUris": [
+      "RaylibVisualAtmosphereShowcaseMod:assets/Textures/bush_cutout.png"
+    ]
+  },
+  {
     "id": "raylib_visual_atmosphere.vfx_blend.mesh.raylib",
     "assetKind": "Mesh",
     "assetId": "raylib_visual_atmosphere.vfx_blend",
@@ -33,6 +42,15 @@
     "backendId": "raylib",
     "sourceUris": [
       "RaylibVisualAtmosphereShowcaseMod:assets/Textures/palm_cutout.png"
+    ]
+  },
+  {
+    "id": "raylib_visual_atmosphere.bush_cutout.material.raylib",
+    "assetKind": "Material",
+    "assetId": "raylib_visual_atmosphere.bush_cutout",
+    "backendId": "raylib",
+    "sourceUris": [
+      "RaylibVisualAtmosphereShowcaseMod:assets/Textures/bush_cutout.png"
     ]
   },
   {

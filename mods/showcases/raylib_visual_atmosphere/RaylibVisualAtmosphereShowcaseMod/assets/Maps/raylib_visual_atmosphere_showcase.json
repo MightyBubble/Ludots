@@ -3,80 +3,32 @@
   "Tags": ["showcase", "raylib", "atmosphere", "Raylib.DebugGuides:Off"],
   "DefaultCamera": {
     "VirtualCameraId": "raylib_visual_atmosphere.camera.composition",
-    "TargetXCm": 96857,
-    "TargetYCm": 72600,
-    "Yaw": 215,
-    "Pitch": 12,
-    "DistanceCm": 7800,
-    "FovYDeg": 52
+    "TargetXCm": 133022,
+    "TargetYCm": 76800,
+    "Yaw": 205,
+    "Pitch": 16,
+    "DistanceCm": 16000,
+    "FovYDeg": 50
   },
   "Boards": [
     {
       "Name": "default",
       "SpatialType": "HexGrid",
-      "DataFile": "tropical_island.vtxm",
+      "DataFile": "tropical_island_v3.vtxm",
       "NavigationEnabled": false
     }
   ],
   "Entities": [
     {
-      "Template": "raylib_visual_atmosphere_tree",
-      "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 99971, "Y": 65365 } }
-      }
-    },
-    {
-      "Template": "raylib_visual_atmosphere_tree",
-      "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 98253, "Y": 70279 } }
-      }
-    },
-    {
-      "Template": "raylib_visual_atmosphere_tree",
-      "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 94887, "Y": 74807 } }
-      }
-    },
-    {
-      "Template": "raylib_visual_atmosphere_tree",
-      "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 91352, "Y": 78813 } }
-      }
-    },
-    {
-      "Template": "raylib_visual_atmosphere_tree",
-      "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 97000, "Y": 71000 } }
-      }
-    },
-    {
-      "Template": "raylib_visual_atmosphere_tree",
-      "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 99000, "Y": 68000 } }
-      }
-    },
-    {
-      "Template": "raylib_visual_atmosphere_tree",
-      "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 93500, "Y": 76000 } }
-      }
-    },
-    {
-      "Template": "raylib_visual_atmosphere_tree",
-      "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 96000, "Y": 73500 } }
-      }
-    },
-    {
       "Template": "raylib_visual_atmosphere_vfx_blend",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 101200, "Y": 71200 } }
+        "WorldPositionCm": { "Value": { "X": 128500, "Y": 74200 } }
       }
     },
     {
       "Template": "raylib_visual_atmosphere_vfx_additive",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 102400, "Y": 70200 } }
+        "WorldPositionCm": { "Value": { "X": 129800, "Y": 73500 } }
       }
     }
   ]

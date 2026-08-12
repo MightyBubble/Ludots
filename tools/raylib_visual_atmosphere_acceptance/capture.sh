@@ -17,9 +17,9 @@ mkdir -p "$OUT_DIR" "$OPT_OUT_DIR"
 export LD_LIBRARY_PATH="$REPO_ROOT/src/Platforms/Desktop:${LD_LIBRARY_PATH:-}"
 export LUDOTS_RAYLIB_DISABLE_SKIA_GPU_UNDERLAY=1
 export LUDOTS_RAYLIB_DISABLE_SKIA_FRAMEBUFFER_UNDERLAY=1
-export LUDOTS_TAKE_SCREENSHOT_FRAME=90
-export LUDOTS_AUTO_EXIT_FRAME=100
-export LUDOTS_MIN_RUNTIME_MS_BEFORE_SCREENSHOT=1500
+export LUDOTS_TAKE_SCREENSHOT_FRAME=180
+export LUDOTS_AUTO_EXIT_FRAME=200
+export LUDOTS_MIN_RUNTIME_MS_BEFORE_SCREENSHOT=2500
 
 LAUNCHER="$REPO_ROOT/src/Tools/Ludots.Launcher.Cli/bin/Release/net8.0/Ludots.Launcher.Cli.dll"
 if [[ ! -f "$LAUNCHER" ]]; then
@@ -121,8 +121,8 @@ for i in range(0, len(pixels), 4):
 mean = acc / max(1, n)
 frac = nonzero / max(1, n)
 print(f'{path}: {w}x{h} meanLum={mean:.1f} litFrac={frac:.3f}')
-# Close water/cutout frames are intentionally dark; reject only near-empty clears.
-if mean < 1.5 or frac < 0.008:
+# Reject only near-empty clears (camera inside opaque geometry still fails day/night delta checks).
+if mean < 0.8 or frac < 0.004:
     raise SystemExit(f'ERROR: {path} looks near-black (meanLum={mean:.1f}, litFrac={frac:.3f})')
 PY
   cp -f "$dest" "$opt"

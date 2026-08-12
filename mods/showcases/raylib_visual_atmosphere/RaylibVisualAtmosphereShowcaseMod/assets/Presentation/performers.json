@@ -27,6 +27,33 @@
     ]
   },
   {
+    "id": "raylib_visual_atmosphere_bush_bootstrap",
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "raylib_visual_atmosphere_bush"
+        },
+        "condition": { "inline": "None" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "raylib_visual_atmosphere_bush_actor",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "raylib_visual_atmosphere_bush"
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
     "id": "raylib_visual_atmosphere_vfx_blend_bootstrap",
     "rules": [
       {
@@ -93,7 +120,25 @@
           "materialId": "raylib_visual_atmosphere.palm_cutout",
           "renderPath": "StaticMesh",
           "mobility": "Movable",
-          "localScale": [5.5, 5.5, 5.5]
+          "localScale": [6.5, 6.5, 6.5]
+        }
+      }
+    ]
+  },
+  {
+    "id": "raylib_visual_atmosphere_bush_actor",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "raylib_visual_atmosphere.bush",
+          "materialId": "raylib_visual_atmosphere.bush_cutout",
+          "renderPath": "StaticMesh",
+          "mobility": "Movable",
+          "localScale": [4.2, 4.2, 4.2]
         }
       }
     ]

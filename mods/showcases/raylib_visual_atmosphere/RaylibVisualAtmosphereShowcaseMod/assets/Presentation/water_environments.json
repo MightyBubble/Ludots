@@ -5,8 +5,9 @@
     "enabled": true,
     "mapIds": ["raylib_visual_atmosphere_showcase"],
     "waterPlaneY": 12.0,
-    "resolutionScale": 0.5,
-    "waveStrength": 0.035,
-    "moveSpeed": 0.04
+    "resolutionScale": 0.55,
+    "waveStrength": 0.04,
+    "moveSpeed": 0.045,
+    "dudvUri": "RaylibVisualAtmosphereShowcaseMod:assets/Textures/water_dudv.png"
   }
 ]

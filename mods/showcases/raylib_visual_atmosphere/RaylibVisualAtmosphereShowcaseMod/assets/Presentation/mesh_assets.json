@@ -4,6 +4,10 @@
     "type": "Billboard"
   },
   {
+    "id": "raylib_visual_atmosphere.bush",
+    "type": "Billboard"
+  },
+  {
     "id": "raylib_visual_atmosphere.vfx_blend",
     "type": "Billboard"
   },
