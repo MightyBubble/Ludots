@@ -262,19 +262,25 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
                     Span<int> ints = _scriptIntRegs.AsSpan(agent * GraphVmLimits.MaxIntRegisters, GraphVmLimits.MaxIntRegisters);
                     Span<byte> bools = _scriptBoolRegs.AsSpan(agent * GraphVmLimits.MaxBoolRegisters, GraphVmLimits.MaxBoolRegisters);
                     Span<int> callStack = _scriptCallStacks.AsSpan(agent * GraphVmLimits.MaxCallStackDepth, GraphVmLimits.MaxCallStackDepth);
-                    ints.Clear();
-                    bools.Clear();
-                    callStack.Clear();
-                    sensors?.WriteSensors(agent, node.GraphId, ints, bools);
 
                     ref GraphExecutionCursor cursor = ref _scriptCursors[agent];
-                    cursor.Reset();
+                    bool resumeYield = cursor.Status == GraphExecutionStatus.Yielded;
+                    if (!resumeYield)
+                    {
+                        ints.Clear();
+                        bools.Clear();
+                        callStack.Clear();
+                        sensors?.WriteSensors(agent, node.GraphId, ints, bools);
+                        cursor.Reset();
+                    }
+
                     var state = new GraphExecutionState
                     {
                         I = ints,
                         B = bools,
                         CallStack = callStack,
-                        CallStackCount = 0,
+                        CallStackCount = resumeYield ? cursor.CallStackCount : 0,
+                        ReturnInt = resumeYield ? cursor.ReturnInt : 0,
                         Status = GraphExecutionStatus.Running
                     };
                     GraphSliceResult result = GasGraphOpHandlerTable.ExecuteSlice(

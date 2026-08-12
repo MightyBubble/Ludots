@@ -137,18 +137,22 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeSensorFeed
         }
 
         sw.Stop();
+        int yieldingAgents = 0;
         for (int i = 0; i < world.Count; i++)
         {
             int ret = world.LastScriptReturns[i];
             _intent[i] = (byte)ret;
             if (ret == 2) _flash[i] = 10;
+            if (world.Statuses[i] == BehaviorTreeStatus.Running) yieldingAgents++;
         }
 
         Metrics.LastThinkMs = sw.Elapsed.TotalMilliseconds;
         if (Metrics.LastThinkMs > Metrics.MaxThinkMs) Metrics.MaxThinkMs = Metrics.LastThinkMs;
         Metrics.ThinkWaves++;
         Metrics.Detail =
-            $"BT Script vignette slices={stats.ScriptSlices} last={Metrics.LastThinkMs:F3}ms";
+            yieldingAgents > 0
+                ? $"BT Script patrol leaf yielding across think waves ({yieldingAgents} agents) slices={stats.ScriptSlices} last={Metrics.LastThinkMs:F3}ms"
+                : $"BT Script vignette slices={stats.ScriptSlices} last={Metrics.LastThinkMs:F3}ms";
     }
 
     public void WriteSensors(int agentIndex, int graphId, Span<int> ints, Span<byte> bools)

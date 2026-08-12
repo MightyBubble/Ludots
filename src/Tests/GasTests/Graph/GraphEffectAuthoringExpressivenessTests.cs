@@ -1089,6 +1089,44 @@ namespace Ludots.Tests.Gas.Graph
                 d.Message.Contains("'max'", StringComparison.Ordinal)));
         }
 
+        [Test]
+        public void FrontDoor_QueryInvokeScriptFunctionName_CompilesAndPatchesViaFuncLib()
+        {
+            const int calleeId = 4321;
+            var catalog = new GraphFunctionCatalog();
+            catalog.Register("demo.const.seven", calleeId, GraphKind.Script);
+
+            GraphControlFlowCompileResult compiled = CompileFrontDoor(
+                """
+                {
+                  "kind": "Query",
+                  "entry": "invoke",
+                  "nodes": [
+                    { "id": "invoke", "op": "InvokeScript", "functionName": "demo.const.seven" }
+                  ],
+                  "controlEdges": [],
+                  "valueEdges": []
+                }
+                """,
+                "tests.query.invoke-func-lib");
+
+            Assert.That(compiled.Succeeded, Is.True, GraphScriptTestGraphs.FormatDiagnostics(compiled.Diagnostics));
+            Assert.That(compiled.Package.HasValue, Is.True);
+
+            GraphInstruction[] program = compiled.Package!.Value.Program;
+            string[] symbols = compiled.Package.Value.Symbols;
+            GraphProgramSymbolPatcher.PatchFuncLib(symbols, program, catalog);
+
+            GraphInstruction invoke = program.Single(i => i.Op == (ushort)GraphNodeOp.InvokeScript);
+            Assert.That(invoke.Imm, Is.EqualTo(calleeId));
+            Assert.That(invoke.Flags & GraphInstructionFlags.FuncLibName, Is.EqualTo(0));
+            Assert.DoesNotThrow(() =>
+                GraphKindOperationPolicy.RequireAllowed(
+                    GraphKind.Query,
+                    program,
+                    GasGraphOpHandlerTable.Instance));
+        }
+
         [TestCase("Score")]
         [TestCase("Validation")]
         [TestCase("Derived")]

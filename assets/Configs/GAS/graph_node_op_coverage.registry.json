@@ -5,10 +5,7 @@
     {
       "op": "ConstBool",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
       "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectFloatAndBoolRuntimeOps_CompileAndEmit",
       "showcaseId": null,
@@ -17,11 +14,7 @@
     {
       "op": "ConstInt",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Script",
-        "Validation"
+        "Linear"
       ],
       "unitTestFilter": null,
       "showcaseId": null,
@@ -30,11 +23,8 @@
     {
       "op": "ConstFloat",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Query",
-        "Score",
-        "Validation"
+        "Linear",
+        "Query"
       ],
       "unitTestFilter": null,
       "showcaseId": null,
@@ -43,11 +33,8 @@
     {
       "op": "LoadCaster",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Query",
-        "Score",
-        "Validation"
+        "Linear",
+        "Query"
       ],
       "unitTestFilter": null,
       "showcaseId": null,
@@ -56,10 +43,7 @@
     {
       "op": "LoadExplicitTarget",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
       "unitTestFilter": null,
       "showcaseId": null,
@@ -87,10 +71,7 @@
     {
       "op": "LoadAttribute",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
       "unitTestFilter": null,
       "showcaseId": null,
@@ -99,10 +80,7 @@
     {
       "op": "AddFloat",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
       "unitTestFilter": null,
       "showcaseId": null,
@@ -111,10 +89,7 @@
     {
       "op": "MulFloat",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
       "unitTestFilter": null,
       "showcaseId": null,
@@ -123,10 +98,7 @@
     {
       "op": "SubFloat",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
       "unitTestFilter": null,
       "showcaseId": null,
@@ -135,10 +107,7 @@
     {
       "op": "DivFloat",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
       "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectFloatAndBoolRuntimeOps_CompileAndEmit",
       "showcaseId": null,
@@ -147,10 +116,7 @@
     {
       "op": "MinFloat",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
       "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectFloatAndBoolRuntimeOps_CompileAndEmit",
       "showcaseId": null,
@@ -159,10 +125,7 @@
     {
       "op": "MaxFloat",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
       "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectFloatAndBoolRuntimeOps_CompileAndEmit",
       "showcaseId": null,
@@ -171,10 +134,7 @@
     {
       "op": "ClampFloat",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
       "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectFloatAndBoolRuntimeOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectClampFloat_RequiresValueMinAndMaxInputs",
       "showcaseId": null,
@@ -183,10 +143,7 @@
     {
       "op": "AbsFloat",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
       "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectFloatAndBoolRuntimeOps_CompileAndEmit",
       "showcaseId": null,
@@ -195,10 +152,7 @@
     {
       "op": "NegFloat",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
       "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectFloatAndBoolRuntimeOps_CompileAndEmit",
       "showcaseId": null,
@@ -207,23 +161,16 @@
     {
       "op": "RandomFloat01",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
-      "unitTestFilter": null,
+      "unitTestFilter": "FullyQualifiedName~GraphEffectAuthoringExpressivenessTests|FullyQualifiedName~GraphControlFlowConfigCoverageTests",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "AddInt",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Script",
-        "Validation"
+        "Linear"
       ],
       "unitTestFilter": null,
       "showcaseId": null,
@@ -232,10 +179,7 @@
     {
       "op": "CompareGtFloat",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
       "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectFloatAndBoolRuntimeOps_CompileAndEmit",
       "showcaseId": null,
@@ -244,11 +188,7 @@
     {
       "op": "CompareLtInt",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Script",
-        "Validation"
+        "Linear"
       ],
       "unitTestFilter": null,
       "showcaseId": null,
@@ -257,10 +197,7 @@
     {
       "op": "CompareEqInt",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
       "unitTestFilter": null,
       "showcaseId": null,
@@ -269,11 +206,8 @@
     {
       "op": "HasTag",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Query",
-        "Score",
-        "Validation"
+        "Linear",
+        "Query"
       ],
       "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectTagAndDisplayOps_CompileAndEmit",
       "showcaseId": "capability_standard_ability_graph_sandbox",
@@ -282,11 +216,8 @@
     {
       "op": "CompareEqEntity",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Query",
-        "Score",
-        "Validation"
+        "Linear",
+        "Query"
       ],
       "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectTagAndDisplayOps_CompileAndEmit",
       "showcaseId": null,
@@ -295,11 +226,8 @@
     {
       "op": "SelectTagInMask",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Query",
-        "Score",
-        "Validation"
+        "Linear",
+        "Query"
       ],
       "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectTagAndDisplayOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryTagDisplayOps_CompileAndEmit",
       "showcaseId": "capability_standard_ability_graph_sandbox",
@@ -308,11 +236,8 @@
     {
       "op": "LookupTagDisplayToken",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Query",
-        "Score",
-        "Validation"
+        "Linear",
+        "Query"
       ],
       "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectTagAndDisplayOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryTagDisplayOps_CompileAndEmit",
       "showcaseId": "capability_standard_ability_graph_sandbox",
@@ -321,10 +246,7 @@
     {
       "op": "SelectEntity",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
       "unitTestFilter": null,
       "showcaseId": null,
@@ -333,11 +255,8 @@
     {
       "op": "QueryRadius",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Query",
-        "Score",
-        "Validation"
+        "Linear",
+        "Query"
       ],
       "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectQueryListOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryKind_QueryListOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryRadius_RequiresCapacityPolicy",
       "showcaseId": "capability_standard_ability_graph_sandbox",
@@ -346,11 +265,8 @@
     {
       "op": "QuerySortStable",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Query",
-        "Score",
-        "Validation"
+        "Linear",
+        "Query"
       ],
       "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectQueryListOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryKind_QueryListOps_CompileAndEmit",
       "showcaseId": "capability_standard_ability_graph_sandbox",
@@ -359,11 +275,8 @@
     {
       "op": "QueryLimit",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Query",
-        "Score",
-        "Validation"
+        "Linear",
+        "Query"
       ],
       "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectQueryListOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryKind_QueryListOps_CompileAndEmit",
       "showcaseId": "capability_standard_ability_graph_sandbox",
@@ -372,70 +285,52 @@
     {
       "op": "QueryCone",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
-      "unitTestFilter": null,
+      "unitTestFilter": "FullyQualifiedName~GraphEffectAuthoringExpressivenessTests|FullyQualifiedName~GraphControlFlowConfigCoverageTests",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "QueryRectangle",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
-      "unitTestFilter": null,
+      "unitTestFilter": "FullyQualifiedName~GraphEffectAuthoringExpressivenessTests|FullyQualifiedName~GraphControlFlowConfigCoverageTests",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "QueryLine",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
-      "unitTestFilter": null,
+      "unitTestFilter": "FullyQualifiedName~GraphEffectAuthoringExpressivenessTests|FullyQualifiedName~GraphControlFlowConfigCoverageTests",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "QueryFilterNotEntity",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
-      "unitTestFilter": null,
+      "unitTestFilter": "FullyQualifiedName~GraphEffectAuthoringExpressivenessTests|FullyQualifiedName~GraphControlFlowConfigCoverageTests",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "QueryFilterLayer",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
-      "unitTestFilter": null,
+      "unitTestFilter": "FullyQualifiedName~GraphEffectAuthoringExpressivenessTests|FullyQualifiedName~GraphControlFlowConfigCoverageTests",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "QueryFilterRelationship",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
       "unitTestFilter": null,
       "showcaseId": null,
@@ -444,11 +339,8 @@
     {
       "op": "AggCount",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Query",
-        "Score",
-        "Validation"
+        "Linear",
+        "Query"
       ],
       "unitTestFilter": null,
       "showcaseId": null,
@@ -457,11 +349,8 @@
     {
       "op": "AggMinByDistance",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Query",
-        "Score",
-        "Validation"
+        "Linear",
+        "Query"
       ],
       "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectQueryListOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryKind_QueryListOps_CompileAndEmit",
       "showcaseId": null,
@@ -470,10 +359,7 @@
     {
       "op": "TargetListGet",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
       "unitTestFilter": null,
       "showcaseId": null,
@@ -482,46 +368,34 @@
     {
       "op": "QueryHexRange",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
-      "unitTestFilter": null,
+      "unitTestFilter": "FullyQualifiedName~GraphEffectAuthoringExpressivenessTests|FullyQualifiedName~GraphControlFlowConfigCoverageTests",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "QueryHexRing",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
-      "unitTestFilter": null,
+      "unitTestFilter": "FullyQualifiedName~GraphEffectAuthoringExpressivenessTests|FullyQualifiedName~GraphControlFlowConfigCoverageTests",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "QueryHexNeighbors",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
-      "unitTestFilter": null,
+      "unitTestFilter": "FullyQualifiedName~GraphEffectAuthoringExpressivenessTests|FullyQualifiedName~GraphControlFlowConfigCoverageTests",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "ApplyEffectTemplate",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
       "unitTestFilter": null,
       "showcaseId": null,
@@ -530,7 +404,7 @@
     {
       "op": "FanOutApplyEffect",
       "authorableKinds": [
-        "Effect"
+        "Linear"
       ],
       "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectDynamicAndFanOutEffectOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectFanOutApplyEffect_RequiresEffectTemplate",
       "showcaseId": "capability_standard_ability_graph_sandbox",
@@ -539,7 +413,7 @@
     {
       "op": "ApplyEffectDynamic",
       "authorableKinds": [
-        "Effect"
+        "Linear"
       ],
       "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectDynamicAndFanOutEffectOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectApplyEffectDynamic_RequiresTargetAndValueInputs",
       "showcaseId": "capability_standard_ability_graph_sandbox",
@@ -548,7 +422,7 @@
     {
       "op": "FanOutApplyEffectDynamic",
       "authorableKinds": [
-        "Effect"
+        "Linear"
       ],
       "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectDynamicAndFanOutEffectOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectFanOutApplyEffectDynamic_RequiresValueInput",
       "showcaseId": "capability_standard_ability_graph_sandbox",
@@ -557,10 +431,7 @@
     {
       "op": "RemoveEffectTemplate",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
       "unitTestFilter": null,
       "showcaseId": null,
@@ -569,7 +440,7 @@
     {
       "op": "FanOutDispatchEffect",
       "authorableKinds": [
-        "Effect"
+        "Linear"
       ],
       "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectDynamicAndFanOutEffectOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectFanOutDispatchEffect_RequiresEffectTemplateAndPayloadPreset",
       "showcaseId": null,
@@ -578,7 +449,7 @@
     {
       "op": "FanOutDispatchEffectDynamic",
       "authorableKinds": [
-        "Effect"
+        "Linear"
       ],
       "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectDynamicAndFanOutEffectOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectFanOutDispatchEffectDynamic_RequiresPayloadPreset",
       "showcaseId": null,
@@ -587,10 +458,7 @@
     {
       "op": "ModifyAttributeAdd",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
       "unitTestFilter": null,
       "showcaseId": null,
@@ -599,10 +467,7 @@
     {
       "op": "SendEvent",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
       "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectSendEvent_RequiresEventTag",
       "showcaseId": null,
@@ -611,10 +476,7 @@
     {
       "op": "ReadBlackboardFloat",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
       "unitTestFilter": null,
       "showcaseId": null,
@@ -623,10 +485,7 @@
     {
       "op": "ReadBlackboardInt",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
       "unitTestFilter": null,
       "showcaseId": null,
@@ -635,10 +494,7 @@
     {
       "op": "ReadBlackboardEntity",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
       "unitTestFilter": null,
       "showcaseId": null,
@@ -647,10 +503,7 @@
     {
       "op": "WriteBlackboardFloat",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
       "unitTestFilter": null,
       "showcaseId": null,
@@ -659,10 +512,7 @@
     {
       "op": "WriteBlackboardInt",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
       "unitTestFilter": null,
       "showcaseId": null,
@@ -671,10 +521,7 @@
     {
       "op": "WriteBlackboardEntity",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
       "unitTestFilter": null,
       "showcaseId": null,
@@ -683,10 +530,7 @@
     {
       "op": "LoadConfigFloat",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
       "unitTestFilter": null,
       "showcaseId": null,
@@ -695,10 +539,7 @@
     {
       "op": "LoadConfigInt",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
       "unitTestFilter": null,
       "showcaseId": null,
@@ -707,10 +548,7 @@
     {
       "op": "LoadConfigEffectId",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
       "unitTestFilter": null,
       "showcaseId": null,
@@ -719,10 +557,7 @@
     {
       "op": "LoadContextSource",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
       "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit",
       "showcaseId": null,
@@ -731,10 +566,7 @@
     {
       "op": "LoadContextTarget",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
       "unitTestFilter": null,
       "showcaseId": null,
@@ -743,10 +575,7 @@
     {
       "op": "LoadContextTargetContext",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
       "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit",
       "showcaseId": null,
@@ -755,10 +584,7 @@
     {
       "op": "LoadSelfAttribute",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
       "unitTestFilter": null,
       "showcaseId": null,
@@ -767,10 +593,7 @@
     {
       "op": "WriteSelfAttribute",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
       "unitTestFilter": null,
       "showcaseId": null,
@@ -779,7 +602,7 @@
     {
       "op": "RelationshipEnsureLink",
       "authorableKinds": [
-        "Effect"
+        "Linear"
       ],
       "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectRelationshipPairMutationAndReadOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_RelationshipOpsRequireAuthoredSymbols",
       "showcaseId": "capability_standard_ability_graph_sandbox",
@@ -788,7 +611,7 @@
     {
       "op": "RelationshipRemoveLink",
       "authorableKinds": [
-        "Effect"
+        "Linear"
       ],
       "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectRelationshipPairMutationAndReadOps_CompileAndEmit",
       "showcaseId": null,
@@ -797,7 +620,7 @@
     {
       "op": "RelationshipSetMetric",
       "authorableKinds": [
-        "Effect"
+        "Linear"
       ],
       "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectRelationshipPairMutationAndReadOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_RelationshipOpsRequireAuthoredSymbols",
       "showcaseId": "capability_standard_ability_graph_sandbox",
@@ -806,7 +629,7 @@
     {
       "op": "RelationshipAddMetric",
       "authorableKinds": [
-        "Effect"
+        "Linear"
       ],
       "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectRelationshipPairMutationAndReadOps_CompileAndEmit",
       "showcaseId": "capability_standard_ability_graph_sandbox",
@@ -815,10 +638,7 @@
     {
       "op": "RelationshipGetMetric",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
       "unitTestFilter": "NewGraphOpsTests.GraphControlFlowCompiler_RelationshipMetricOpsRequireExplicitRelationshipType",
       "showcaseId": null,
@@ -827,11 +647,8 @@
     {
       "op": "RelationshipHasFlag",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Query",
-        "Score",
-        "Validation"
+        "Linear",
+        "Query"
       ],
       "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectRelationshipPairMutationAndReadOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryRelationshipPairAndPredicateOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_RelationshipOpsRequireAuthoredSymbols",
       "showcaseId": "capability_standard_ability_graph_sandbox",
@@ -840,7 +657,7 @@
     {
       "op": "RelationshipSetFlag",
       "authorableKinds": [
-        "Effect"
+        "Linear"
       ],
       "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectRelationshipPairMutationAndReadOps_CompileAndEmit",
       "showcaseId": null,
@@ -1022,27 +839,27 @@
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": null,
+      "unitTestFilter": "FullyQualifiedName~GraphEffectAuthoringExpressivenessTests|FullyQualifiedName~GraphControlFlowConfigCoverageTests",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "AggMaxAttribute",
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": null,
+      "unitTestFilter": "FullyQualifiedName~GraphEffectAuthoringExpressivenessTests|FullyQualifiedName~GraphControlFlowConfigCoverageTests",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "AggMinAttribute",
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": null,
+      "unitTestFilter": "FullyQualifiedName~GraphEffectAuthoringExpressivenessTests|FullyQualifiedName~GraphControlFlowConfigCoverageTests",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "AggMaxEntityByAttribute",
@@ -1058,45 +875,42 @@
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": null,
+      "unitTestFilter": "FullyQualifiedName~GraphEffectAuthoringExpressivenessTests|FullyQualifiedName~GraphControlFlowConfigCoverageTests",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "RelationshipAggMinMetric",
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": null,
+      "unitTestFilter": "FullyQualifiedName~GraphEffectAuthoringExpressivenessTests|FullyQualifiedName~GraphControlFlowConfigCoverageTests",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "RelationshipAggMaxEntityByMetric",
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": null,
+      "unitTestFilter": "FullyQualifiedName~GraphEffectAuthoringExpressivenessTests|FullyQualifiedName~GraphControlFlowConfigCoverageTests",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "RelationshipAggMinEntityByMetric",
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": null,
+      "unitTestFilter": "FullyQualifiedName~GraphEffectAuthoringExpressivenessTests|FullyQualifiedName~GraphControlFlowConfigCoverageTests",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "RelationshipHasLink",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Query",
-        "Score",
-        "Validation"
+        "Linear",
+        "Query"
       ],
       "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectRelationshipPairMutationAndReadOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryRelationshipPairAndPredicateOps_CompileAndEmit",
       "showcaseId": null,
@@ -1105,10 +919,7 @@
     {
       "op": "BeginLifecycleTransaction",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
       "unitTestFilter": null,
       "showcaseId": null,
@@ -1117,10 +928,7 @@
     {
       "op": "InvokeBuiltin",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
       "unitTestFilter": null,
       "showcaseId": null,
@@ -1129,10 +937,7 @@
     {
       "op": "LoadTargetPosX",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
       "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit",
       "showcaseId": null,
@@ -1141,10 +946,7 @@
     {
       "op": "LoadTargetPosY",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
       "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit",
       "showcaseId": null,
@@ -1153,10 +955,7 @@
     {
       "op": "ClampTargetToRange",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
       "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationClampTargetToRange_RequiresOriginAndRangeInputs",
       "showcaseId": null,
@@ -1165,10 +964,7 @@
     {
       "op": "IsPointInCircle",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
       "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit",
       "showcaseId": null,
@@ -1177,10 +973,7 @@
     {
       "op": "SnapToNearestInCollection",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
       "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationSnapToNearestInCollection_RequiresCollectionKey;GraphControlFlowConfigCoverageTests.SnapWithoutValidOutput_DoesNotOverwriteValidationResult;GraphControlFlowConfigCoverageTests.SnapWithValidOutput_AllocatesDedicatedBoolRegister",
       "showcaseId": null,
@@ -1189,10 +982,7 @@
     {
       "op": "SnapToNearestGraphEdge",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
       "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_ValidationPlacementOps_CompileAndEmit",
       "showcaseId": null,
@@ -1208,10 +998,7 @@
     {
       "op": "LoadEventPayloadInt",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
       "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit",
       "showcaseId": null,
@@ -1220,10 +1007,7 @@
     {
       "op": "LoadEventPayloadFloat",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
       "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit",
       "showcaseId": null,
@@ -1232,10 +1016,7 @@
     {
       "op": "ControlDomainResolve",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
       "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit",
       "showcaseId": null,
@@ -1244,10 +1025,7 @@
     {
       "op": "ControlDomainControls",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
       "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit",
       "showcaseId": null,
@@ -1256,10 +1034,7 @@
     {
       "op": "KnowledgeHasProjection",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Validation"
+        "Linear"
       ],
       "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit",
       "showcaseId": null,
@@ -1304,11 +1079,7 @@
     {
       "op": "InvokeScript",
       "authorableKinds": [
-        "Derived",
-        "Effect",
-        "Score",
-        "Script",
-        "Validation"
+        "Linear"
       ],
       "unitTestFilter": null,
       "showcaseId": null,
