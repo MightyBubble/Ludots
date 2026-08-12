@@ -76,6 +76,38 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
+        public void FrontDoor_EffectInvokeScriptFunctionNameActionLibName_PatchFailsClosed()
+        {
+            GraphControlFlowCompileResult compiled = CompileFrontDoor(
+                """
+                {
+                  "kind": "Effect",
+                  "entry": "invoke",
+                  "nodes": [
+                    { "id": "invoke", "op": "InvokeScript", "functionName": "bt.patrolStep" }
+                  ],
+                  "controlEdges": [],
+                  "valueEdges": []
+                }
+                """,
+                "tests.effect.invoke-action-lib-name");
+
+            Assert.That(compiled.Succeeded, Is.True, GraphScriptTestGraphs.FormatDiagnostics(compiled.Diagnostics));
+            Assert.That(compiled.Package.HasValue, Is.True);
+
+            InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
+                GraphProgramSymbolPatcher.PatchFuncLib(
+                    compiled.Package!.Value.Symbols,
+                    compiled.Package.Value.Program,
+                    new GraphFunctionCatalog()))!;
+
+            Assert.That(ex.Message, Does.Contain("bt.patrolStep"));
+            Assert.That(ex.Message, Does.Contain("FuncLib"));
+            Assert.That(ex.Message, Does.Contain("ActionLib"));
+            Assert.That(ex.Message, Does.Contain("InvokeScript.functionName"));
+        }
+
+        [Test]
         public void FrontDoor_EffectFloatAndBoolRuntimeOps_CompileAndEmit()
         {
             GraphControlFlowCompileResult compiled = CompileFrontDoor(
@@ -1154,6 +1186,33 @@ namespace Ludots.Tests.Gas.Graph
                     ParseKind(kind),
                     compiled.Package!.Value.Program,
                     GasGraphOpHandlerTable.Instance));
+        }
+
+        [TestCase("Score")]
+        [TestCase("Validation")]
+        [TestCase("Derived")]
+        public void FrontDoor_LinearKindsInvokeScriptGraphId_FailClosed(string kind)
+        {
+            GraphControlFlowCompileResult compiled = CompileFrontDoor(
+                $$"""
+                {
+                  "kind": "{{kind}}",
+                  "entry": "invoke",
+                  "nodes": [
+                    { "id": "invoke", "op": "InvokeScript", "functionName": "demo.score", "graphId": 777 }
+                  ],
+                  "controlEdges": [],
+                  "valueEdges": []
+                }
+                """,
+                $"tests.{kind.ToLowerInvariant()}.invoke-graph-id-forbidden");
+
+            Assert.That(compiled.Succeeded, Is.False);
+            Assert.That(compiled.Package.HasValue, Is.False);
+            Assert.That(compiled.Diagnostics, Has.Some.Matches<GraphDiagnostic>(d =>
+                d.Code == GraphDiagnosticCodes.TypeMismatch &&
+                d.NodeId == "invoke" &&
+                d.Message.Contains("cannot use graphId in linear FuncLib authoring", StringComparison.Ordinal)));
         }
 
         [TestCase("Score")]

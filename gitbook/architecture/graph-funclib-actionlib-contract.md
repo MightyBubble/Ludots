@@ -126,7 +126,7 @@ Score / Validation / Query / Derived **接受为纯或准纯**——本补丁确
 ### 3.7 实现切片建议（非本文件编码范围）
 
 1. 合同合入文档门户 + 守卫测试名额。  
-2. `action_lib.json` + catalog + 加载顺序（graphs → func_lib → action_lib → patch）。  
+2. `action_lib.json` + catalog + 加载顺序（graphs 注册 → func_lib 加载 → FuncLib Invoke patch → action_lib 加载）。  
 3. 拆调用 opcode/作者节点：`InvokeFunc` / `InvokeAction`（或等价，禁止模糊重载）。  
 4. Effect 前门白名单补 FuncLib + BranchBool。  
 5. L2/Showcase 零旁路改绑 ActionLib。  

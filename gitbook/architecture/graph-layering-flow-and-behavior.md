@@ -68,7 +68,7 @@ L0 GraphInstruction + handler table + Execute / ExecuteSlice
 ### L2 HFSM 绑定合同
 - **转移上配条件**：`ConditionGraphId`（Script/Validation）+ 可选快速 builtin（如 Stimulus）
 - **状态节点上配动作**：`OnEnterGraphId` / `OnTickGraphId` / `OnExitGraphId`（Script）
-- **Func lib（正式）**：`GAS/func_lib.json`（`name` / `graph` / `kind`）→ `GraphFunctionCatalogLoader` 在图登记后加载；作者节点 `InvokeScript.functionName` 编译期进符号表，`PatchFuncLib` 解析为 GraphId。未登记名字失败关闭。引擎服务键：`CoreServiceKeys.GraphFunctionCatalog`。
+- **Func lib（正式）**：`GAS/func_lib.json`（`name` / `graph` / `kind`）→ `GraphFunctionCatalogLoader` 在图登记后加载；作者节点 `InvokeScript.functionName` 编译期进符号表，`PatchFuncLib` 在 ActionLib 加载前解析为 GraphId。未登记到 FuncLib 的名字失败关闭，ActionLib 名不得通过 `functionName` 进入 Effect / 线性 Kind。引擎服务键：`CoreServiceKeys.GraphFunctionCatalog`。
 - **Macro**：不支持编译期文本宏；复用只走 Func lib + `InvokeScript` / Script 内 `Call`
 - **FuncLib / ActionLib 合同**：纯函数库与可挂起动作库拆分、Effect Duration/Period 与阶段表达力——见 [FuncLib / ActionLib 合同](graph-funclib-actionlib-contract.md)。
 - 拓扑仍不编进 `GraphNodeOp`；禁止平行 VM
