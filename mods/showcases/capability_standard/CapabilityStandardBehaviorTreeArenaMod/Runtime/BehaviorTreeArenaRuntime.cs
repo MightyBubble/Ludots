@@ -25,6 +25,8 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeSensorFeed
     private float[] _ex = Array.Empty<float>();
     private float[] _ey = Array.Empty<float>();
     private bool[] _eAlive = Array.Empty<bool>();
+    private int _seeGraphId;
+    private int _rangeGraphId;
 
     public static readonly Vector2[] PatrolPath =
     {
@@ -89,6 +91,8 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeSensorFeed
             for (int i = 0; i < _config.CrowdBandCount; i++) _crowd.AddAgent();
         }
 
+        _seeGraphId = GraphRegistryScriptResolver.RequireId(BehaviorTreeScriptKeys.SeeEnemy);
+        _rangeGraphId = GraphRegistryScriptResolver.RequireId(BehaviorTreeScriptKeys.InAttackRange);
         Metrics.AgentCount = n;
         Metrics.Detail = "BT Script leaves from GraphProgramRegistry";
     }
@@ -145,10 +149,8 @@ public sealed class BehaviorTreeArenaRuntime : IBehaviorTreeSensorFeed
 
     public void WriteSensors(int agentIndex, int graphId, Span<int> ints, Span<byte> bools)
     {
-        int seeId = GraphRegistryScriptResolver.RequireId(BehaviorTreeScriptKeys.SeeEnemy);
-        int rangeId = GraphRegistryScriptResolver.RequireId(BehaviorTreeScriptKeys.InAttackRange);
-        if (graphId == seeId) ints[0] = _target[agentIndex] >= 0 ? 1 : 0;
-        else if (graphId == rangeId) ints[0] = InAttackRange(agentIndex) ? 1 : 0;
+        if (graphId == _seeGraphId) ints[0] = _target[agentIndex] >= 0 ? 1 : 0;
+        else if (graphId == _rangeGraphId) ints[0] = InAttackRange(agentIndex) ? 1 : 0;
     }
 
     private void UpdateEnemies()

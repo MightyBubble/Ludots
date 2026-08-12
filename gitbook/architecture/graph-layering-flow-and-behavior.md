@@ -14,11 +14,13 @@ Ludots 的图能力分成三层，对标 Paradox **FlowCanvas（细流程）+ No
 
 ```text
 L2 BehaviorTree / HFSM / LevelDirector ← 粗节点拓扑（Core runtime 已落地）
-        │ BT ScriptSlice(GraphId) / HFSM GraphProgramHfsmHost / Level RunScript
+        │ 只引用 GraphProgramRegistry GraphId（禁止旁路 Dictionary/内嵌 Compile）
 L1 全 Kind 作者 SSOT ← GraphControlFlowDocument（controlEdges + valueEdges）
         │ Kind → GraphProgramAuthoringFrontDoor → GraphControlFlowCompiler
+        │ Func Lib：GAS/func_lib.json → GraphFunctionCatalog（InvokeScript.functionName）
 L0 GraphInstruction + handler table + Execute / ExecuteSlice
 ```
+
 
 说明（#861）：`GAS/graphs.json` **唯一加载前门**是 `GraphProgramAuthoringFrontDoor`——按 `kind` 校验作者 schema，再进 `GraphControlFlowCompiler`。正式资产必须写 `controlEdges` / `valueEdges`；`nodes[].next` 在加载路径硬拒（不得再按「有没有 controlEdges」猜编译器）。节点白名单按 Kind 过滤（Script / Query / Effect·Score·Validation·Derived 线性方言）。Query 列表流仍用 `list` 显式连接。旧 `GraphCompiler`（next-chain）仅保留给对照/研究测试，不是生产真相。`Execute`/`ExecuteSlice` 均要求调用方提供 CallStack。BT 条件 Script 前由 `IBehaviorTreeSensorFeed` 写入 I[0]。
 

@@ -2,14 +2,32 @@
   {
     "id": "Graph.Shield.Absorb",
     "kind": "Effect",
-    "entry": "n1",
+    "entry": "target",
     "nodes": [
       {
-        "id": "n1",
+        "id": "target",
         "op": "LoadContextTarget"
+      },
+      {
+        "id": "shield",
+        "op": "LoadAttribute",
+        "attribute": "Shield"
       }
     ],
-    "controlEdges": [],
-    "valueEdges": []
+    "controlEdges": [
+      {
+        "from": "target",
+        "fromPort": "next",
+        "to": "shield"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "target",
+        "fromPort": "value",
+        "to": "shield",
+        "toPort": "target"
+      }
+    ]
   }
 ]
