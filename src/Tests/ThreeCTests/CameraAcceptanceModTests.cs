@@ -578,7 +578,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
             Assert.That(requestObj, Is.TypeOf<VirtualCameraRequest>());
             var request = (VirtualCameraRequest)requestObj!;
             Assert.That(request.Id, Is.EqualTo(CameraAcceptanceIds.TpsCameraId));
-            Assert.That(request.FollowTargetKindOverride, Is.EqualTo(CameraFollowTargetKind.LocalPlayer));
+            Assert.That(request.FollowTargetKindOverride, Is.EqualTo(CameraFollowTargetKind.SolePossessedRep));
             Assert.That(request.ReplaceActiveStack, Is.True,
                 "ViewMode selection must replace the active virtual-camera stack instead of owning and later clearing a mode camera.");
 
@@ -1145,7 +1145,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
             Assert.That(brain.ActiveDefinition, Is.Not.Null);
             Assert.That(brain.ActiveDefinition!.TargetSource, Is.EqualTo(VirtualCameraTargetSource.FollowTarget));
             Assert.That(brain.ActiveDefinition.FollowMode, Is.EqualTo(CameraFollowMode.AlwaysFollow));
-            Assert.That(brain.ActiveDefinition.FollowTargetKind, Is.EqualTo(CameraFollowTargetKind.LocalPlayer));
+            Assert.That(brain.ActiveDefinition.FollowTargetKind, Is.EqualTo(CameraFollowTargetKind.SolePossessedRep));
             Assert.That(brain.ActiveDefinition.AllowUserInput, Is.False);
 
             Entity hero = FindEntityByName(engine.World, CameraAcceptanceIds.HeroName);

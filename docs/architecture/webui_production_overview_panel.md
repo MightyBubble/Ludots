@@ -38,7 +38,7 @@ UI/production_overview_profiles.json
 - Worker 统计只读 entity collection + tag / orderType / attribute / idle 投影；前端不得猜状态。
 - DataPlane payload 固定包含 `ownerEntityId`、`ownerVersion`、`profileId`、`revision`、`rows`、`queueItems`、`workerRows`、`blockedReasons`。
 - Producer 成员解析：
-  - `explicitEntity` / `localPlayerRep`：文档约定的单 owner 行为，解析到的 owner 即唯一 producer。
+  - `explicitEntity` / `solePossessedRep`：文档约定的单 owner 行为，解析到的 owner 即唯一 producer。
   - `entityCollection` / `controlPlaneView`：必须在 `sourceRef`（或 binding instanceKey）上拿到非空 producer collection；缺 store、缺 collection key/view、或空集合一律 fail-fast，错误含 profile id 与 sourceRef，禁止回退到 owner。
 - 缺 command source、queue source、profile、worker match ref、producer collection 时 fail-fast，错误含具体 id。
 

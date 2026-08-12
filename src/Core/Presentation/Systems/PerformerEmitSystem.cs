@@ -1835,8 +1835,8 @@ namespace Ludots.Core.Presentation.Systems
             {
                 return condition.Inline switch
                 {
-                    InlineConditionKind.SourceIsLocalPlayer => IsLocalPlayer(owner),
-                    InlineConditionKind.TargetIsLocalPlayer => IsLocalPlayer(owner),
+                    InlineConditionKind.SourceIsSolePossessedRep => IsSolePossessedRep(owner),
+                    InlineConditionKind.TargetIsSolePossessedRep => IsSolePossessedRep(owner),
                     InlineConditionKind.SourceIsAlive => World.IsAlive(owner),
                     InlineConditionKind.TargetIsAlive => World.IsAlive(owner),
                     InlineConditionKind.OwnerCullVisible => IsOwnerCullVisible(owner),
@@ -1855,7 +1855,7 @@ namespace Ludots.Core.Presentation.Systems
             return true;
         }
 
-        private bool IsLocalPlayer(Entity owner)
+        private bool IsSolePossessedRep(Entity owner)
         {
             return ClientLocalSeatAccess.TryGetSolePossessedRep(_globals, out Entity localPlayer) &&
                    localPlayer == owner;

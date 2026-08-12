@@ -692,7 +692,7 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
             return false;
         }
 
-        mapping.SetLocalPlayer(target, playerId);
+        mapping.SetSolePossessedActor(target, playerId);
         return true;
     }
 

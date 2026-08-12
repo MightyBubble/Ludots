@@ -264,7 +264,7 @@ namespace Ludots.Tests.GAS
             var first = world.Create();
             var second = world.Create();
             var mapping = new InputOrderMappingSystem(input, cfg);
-            mapping.SetLocalPlayer(local, 1);
+            mapping.SetSolePossessedActor(local, 1);
             mapping.SetOrderTypeKeyResolver(key => key == "moveTo" ? 1002 : 0);
             mapping.SetGroundPositionProvider((out Vector3 worldCm) =>
             {
@@ -341,7 +341,7 @@ namespace Ludots.Tests.GAS
             var first = world.Create();
             var second = world.Create();
             var mapping = new InputOrderMappingSystem(input, cfg);
-            mapping.SetLocalPlayer(local, 1);
+            mapping.SetSolePossessedActor(local, 1);
             mapping.SetOrderTypeKeyResolver(key => key == "moveTo" ? 1002 : 0);
             mapping.SetGroundPositionProvider((out Vector3 worldCm) =>
             {
@@ -412,7 +412,7 @@ namespace Ludots.Tests.GAS
             var first = world.Create();
             var second = world.Create();
             var mapping = new InputOrderMappingSystem(input, cfg);
-            mapping.SetLocalPlayer(local, 1);
+            mapping.SetSolePossessedActor(local, 1);
             mapping.SetOrderTypeKeyResolver(key => key == "stop" ? 1003 : 0);
             mapping.SetCollectionEntityListProvider((string collectionKey, List<Entity> entities, int capacity, out OrderSubmitResult rejection) =>
             {
@@ -478,7 +478,7 @@ namespace Ludots.Tests.GAS
             var first = world.Create();
             var second = world.Create();
             var mapping = new InputOrderMappingSystem(input, cfg);
-            mapping.SetLocalPlayer(local, 1);
+            mapping.SetSolePossessedActor(local, 1);
             mapping.SetOrderTypeKeyResolver(key => key == "stop" ? 1003 : 0);
             mapping.SetCollectionEntityListProvider((string collectionKey, List<Entity> entities, int capacity, out OrderSubmitResult rejection) =>
             {
@@ -1120,7 +1120,7 @@ namespace Ludots.Tests.GAS
             });
             mapping.SetInteractionActionBindings(bindings);
 
-            mapping.SetLocalPlayer(actor, 1);
+            mapping.SetSolePossessedActor(actor, 1);
             mapping.SetOrderTypeKeyResolver(key => key == "castAbility" ? 1001 : 0);
             mapping.SetCollectionPrimaryEntityProvider((string _, out Entity entity) =>
             {

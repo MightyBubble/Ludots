@@ -86,13 +86,13 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(heightmapOrbit!.TargetHeightMode, Is.EqualTo(VirtualCameraTargetHeightMode.VisualHeightmap));
             Assert.That(heightmapOrbit.RotateRequiresHold, Is.True);
             Assert.That(tps!.RigKind, Is.EqualTo(CameraRigKind.ThirdPerson));
-            Assert.That(tps.FollowTargetKind, Is.EqualTo(CameraFollowTargetKind.LocalPlayer));
+            Assert.That(tps.FollowTargetKind, Is.EqualTo(CameraFollowTargetKind.SolePossessedRep));
             Assert.That(tps.RigPivotOffsetCm, Is.EqualTo(new Vector3(65f, 35f, 90f)));
             Assert.That(tps.RigCameraOffsetCm, Is.EqualTo(new Vector3(70f, 10f, -20f)));
             Assert.That(tps.RotateRequiresHold, Is.False);
             Assert.That(fps!.RigKind, Is.EqualTo(CameraRigKind.FirstPerson));
             Assert.That(fps.DistanceCm, Is.EqualTo(0f).Within(0.001f));
-            Assert.That(fps.FollowTargetKind, Is.EqualTo(CameraFollowTargetKind.LocalPlayer));
+            Assert.That(fps.FollowTargetKind, Is.EqualTo(CameraFollowTargetKind.SolePossessedRep));
             Assert.That(fps.RotateRequiresHold, Is.False);
             Assert.That(engine.GetService(CoreServiceKeys.CameraImpulseRuntime), Is.Not.Null);
             AssertCameraActionBinding(engine, CapabilityStandardVirtualCameraShowcaseIds.MoveActionId, CameraBehaviorAttributes.MoveX);
@@ -231,7 +231,7 @@ namespace Ludots.Tests.GAS.Production
 
             Assert.That(brain.ActiveCameraId, Is.EqualTo(CapabilityStandardVirtualCameraShowcaseIds.TpsCameraId));
             Assert.That(brain.ActiveDefinition?.RigKind, Is.EqualTo(CameraRigKind.ThirdPerson));
-            Assert.That(brain.ActiveDefinition?.FollowTargetKind, Is.EqualTo(CameraFollowTargetKind.LocalPlayer));
+            Assert.That(brain.ActiveDefinition?.FollowTargetKind, Is.EqualTo(CameraFollowTargetKind.SolePossessedRep));
             Assert.That(brain.ActiveFollowTargetPositionCm, Is.EqualTo(localPlayerPositionCm));
             Assert.That(engine.GameSession.Camera.State.TargetCm, Is.EqualTo(localPlayerPositionCm));
             float tpsYawBeforeLook = engine.GameSession.Camera.State.Yaw;
@@ -277,7 +277,7 @@ namespace Ludots.Tests.GAS.Production
 
             Assert.That(brain.ActiveCameraId, Is.EqualTo(CapabilityStandardVirtualCameraShowcaseIds.FpsCameraId));
             Assert.That(brain.ActiveDefinition?.RigKind, Is.EqualTo(CameraRigKind.FirstPerson));
-            Assert.That(brain.ActiveDefinition?.FollowTargetKind, Is.EqualTo(CameraFollowTargetKind.LocalPlayer));
+            Assert.That(brain.ActiveDefinition?.FollowTargetKind, Is.EqualTo(CameraFollowTargetKind.SolePossessedRep));
             Assert.That(brain.ActiveFollowTargetPositionCm, Is.EqualTo(movedLocalPlayerPositionCm));
             Assert.That(engine.GameSession.Camera.State.DistanceCm, Is.EqualTo(0f).Within(0.001f));
             Assert.That(

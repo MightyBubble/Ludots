@@ -242,7 +242,7 @@ namespace MobaDemoMod.Systems
                         return;
                     }
 
-                    _inputOrderMapping.SetLocalPlayer(actor, playerId);
+                    _inputOrderMapping.SetSolePossessedActor(actor, playerId);
                     _inputOrderMapping.Update(dt);
                 }
             }

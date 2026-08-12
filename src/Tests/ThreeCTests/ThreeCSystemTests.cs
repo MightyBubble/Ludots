@@ -1225,7 +1225,7 @@ namespace Ludots.Tests.ThreeC
 
             using var world = World.Create();
             var player = world.Create();
-            system.SetLocalPlayer(player, 1);
+            system.SetSolePossessedActor(player, 1);
 
             // Frame 1: no press
             handler.Update();

@@ -316,7 +316,7 @@ namespace CoreInputMod.Systems
                 return false;
             }
 
-            mapping.SetLocalPlayer(actor, playerId);
+            mapping.SetSolePossessedActor(actor, playerId);
             return true;
         }
 

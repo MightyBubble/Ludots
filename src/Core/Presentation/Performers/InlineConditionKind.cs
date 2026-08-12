@@ -11,11 +11,11 @@ namespace Ludots.Core.Presentation.Performers
         /// <summary>Always true (no condition).</summary>
         None = 0,
 
-        /// <summary>True when the event Source entity is the local player.</summary>
-        SourceIsLocalPlayer = 1,
+        /// <summary>True when the event Source entity is the sole possessed rep.</summary>
+        SourceIsSolePossessedRep = 1,
 
-        /// <summary>True when the event Target entity is the local player.</summary>
-        TargetIsLocalPlayer = 2,
+        /// <summary>True when the event Target entity is the sole possessed rep.</summary>
+        TargetIsSolePossessedRep = 2,
 
         /// <summary>True when the event Source entity is alive in the ECS world.</summary>
         SourceIsAlive = 3,

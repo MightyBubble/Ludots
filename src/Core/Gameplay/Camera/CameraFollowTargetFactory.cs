@@ -22,7 +22,7 @@ namespace Ludots.Core.Gameplay.Camera
             return kind switch
             {
                 CameraFollowTargetKind.None => null,
-                CameraFollowTargetKind.LocalPlayer => new FollowTargets.SolePossessedRepFollowTarget(world, globals),
+                CameraFollowTargetKind.SolePossessedRep => new FollowTargets.SolePossessedRepFollowTarget(world, globals),
                 CameraFollowTargetKind.EntityCollectionPrimary => BuildEntityCollectionTarget(world, globals, followCollectionOwner, followCollectionKey, group: false),
                 CameraFollowTargetKind.EntityCollectionGroup => BuildEntityCollectionTarget(world, globals, followCollectionOwner, followCollectionKey, group: true),
                 _ => throw new InvalidOperationException($"Unsupported camera follow target kind: {kind}")

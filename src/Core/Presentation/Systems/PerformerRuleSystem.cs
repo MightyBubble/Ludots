@@ -211,11 +211,11 @@ namespace Ludots.Core.Presentation.Systems
                 case InlineConditionKind.None:
                     return true;
 
-                case InlineConditionKind.SourceIsLocalPlayer:
-                    return IsLocalPlayer(evt.Source);
+                case InlineConditionKind.SourceIsSolePossessedRep:
+                    return IsSolePossessedRep(evt.Source);
 
-                case InlineConditionKind.TargetIsLocalPlayer:
-                    return IsLocalPlayer(evt.Target);
+                case InlineConditionKind.TargetIsSolePossessedRep:
+                    return IsSolePossessedRep(evt.Target);
 
                 case InlineConditionKind.SourceIsAlive:
                     return World.IsAlive(evt.Source);
@@ -249,7 +249,7 @@ namespace Ludots.Core.Presentation.Systems
             }
         }
 
-        private bool IsLocalPlayer(Entity entity)
+        private bool IsSolePossessedRep(Entity entity)
         {
             if (!ClientLocalSeatAccess.TryGetSolePossessedRep(_globals, out Entity obj)) return false;
             return obj is Entity lp && lp == entity;

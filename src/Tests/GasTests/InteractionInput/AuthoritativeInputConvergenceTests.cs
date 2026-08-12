@@ -224,7 +224,7 @@ namespace Ludots.Tests.GAS
             system.SetOrderSubmitHandler((in Order order) => { orders.Add(order); return OrderSubmitResult.Queued; });
 
             using var world = World.Create();
-            system.SetLocalPlayer(world.Create(), 1);
+            system.SetSolePossessedActor(world.Create(), 1);
 
             backend.Buttons["<Keyboard>/a"] = true;
             handler.Update();
