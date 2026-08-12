@@ -199,6 +199,7 @@ namespace Ludots.Tests.GAS
                 var b = new byte[GraphVmLimits.MaxBoolRegisters];
                 var e = new Entity[GraphVmLimits.MaxEntityRegisters];
                 var targets = new Entity[GraphVmLimits.MaxTargets];
+                Span<int> callStack = stackalloc int[GraphVmLimits.MaxCallStackDepth];
 
                 e[0] = entity;
                 e[1] = entity;
@@ -213,9 +214,9 @@ namespace Ludots.Tests.GAS
                         TargetPosCm = default, Api = api,
                         F = f, I = iArr, B = b, E = e, Targets = targets,
                         TargetList = new GraphTargetList(targets),
-                    CallStack = new int[Ludots.Core.NodeLibraries.GASGraph.GraphVmLimits.MaxCallStackDepth],
-            CallStackCount = 0,
-        };
+                        CallStack = callStack,
+                        CallStackCount = 0,
+                    };
                     GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
                 }
 
@@ -236,9 +237,9 @@ namespace Ludots.Tests.GAS
                         TargetPosCm = default, Api = api,
                         F = f, I = iArr, B = b, E = e, Targets = targets,
                         TargetList = new GraphTargetList(targets),
-                    CallStack = new int[Ludots.Core.NodeLibraries.GASGraph.GraphVmLimits.MaxCallStackDepth],
-            CallStackCount = 0,
-        };
+                        CallStack = callStack,
+                        CallStackCount = 0,
+                    };
                     GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
                 }
 
