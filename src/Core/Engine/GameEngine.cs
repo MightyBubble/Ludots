@@ -1430,9 +1430,17 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.TargetDispatchPresetRegistry, targetDispatchPresetRegistry);
             SetService(CoreServiceKeys.GraphProgramRegistry, graphProgramRegistry);
             SetService(CoreServiceKeys.GraphFunctionCatalog, graphFunctionCatalog);
-            SetService(
-                CoreServiceKeys.LiveGasEditPipeline,
-                new LiveGasEditPipeline(graphProgramRegistry, effectTemplateRegistry, tagOps));
+            var liveGasEditPipeline = new LiveGasEditPipeline(graphProgramRegistry, effectTemplateRegistry, tagOps);
+            var liveAttributeCommandExecutor = new LiveAttributeCommandExecutor(World, tagOps);
+            var liveEffectChainTracer = new LiveEffectChainTracer(capacity: 256);
+            var liveAiDraftBinder = new LiveAiDraftBinder();
+            var liveEditModSaveService = new LiveEditModSaveService();
+            SetService(CoreServiceKeys.LiveGasEditPipeline, liveGasEditPipeline);
+            SetService(CoreServiceKeys.LiveAttributeCommandExecutor, liveAttributeCommandExecutor);
+            SetService(CoreServiceKeys.LiveEffectChainTracer, liveEffectChainTracer);
+            SetService(CoreServiceKeys.AiSkillDraftGenerator, (IAiSkillDraftGenerator)new DeterministicFakeAiSkillDraftGenerator());
+            SetService(CoreServiceKeys.LiveAiDraftBinder, liveAiDraftBinder);
+            SetService(CoreServiceKeys.LiveEditModSaveService, liveEditModSaveService);
             SetService(CoreServiceKeys.GasGraphRuntimeProductionServices, gasGraphProductionServices);
             SetService(CoreServiceKeys.GasGraphRuntimeApi, gasGraphApi);
             SetService(CoreServiceKeys.GraphOutputSchemaRegistry, graphOutputSchemas);

@@ -10,6 +10,12 @@ public static class LiveSkillWorkbenchIds
 	public const string SelectCatalogItemCommand = "lsw.selectCatalogItem";
 	public const string PrecheckCommand = "lsw.precheck";
 	public const string ApplyNextCastCommand = "lsw.applyNextCast";
+	public const string ApplyImmediateAttributeCommand = "lsw.applyImmediateAttribute";
+	public const string GenerateAiDraftCommand = "lsw.generateAiDraft";
+	public const string BindAiDraftCommand = "lsw.bindAiDraft";
+	public const string PreviewSaveCommand = "lsw.previewSave";
+	public const string SaveToModCommand = "lsw.saveToMod";
+	public const string RefreshEffectChainCommand = "lsw.refreshEffectChain";
 
 	public const string AssetIndexPath = "LiveSkillWorkbenchMod:Assets/live-skill-workbench-app/index.html";
 

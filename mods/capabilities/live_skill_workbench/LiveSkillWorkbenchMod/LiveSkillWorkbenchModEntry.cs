@@ -55,6 +55,14 @@ public sealed class LiveSkillWorkbenchModEntry : IMod
 			modContext.Log("[LiveSkillWorkbenchMod] LiveGasEditPipeline service missing; Precheck/Apply stay unavailable.");
 		}
 
+		engine.TryGetService(CoreServiceKeys.LiveAttributeCommandExecutor, out LiveAttributeCommandExecutor? attrExec);
+		engine.TryGetService(CoreServiceKeys.LiveEffectChainTracer, out LiveEffectChainTracer? tracer);
+		engine.TryGetService(CoreServiceKeys.AiSkillDraftGenerator, out IAiSkillDraftGenerator? ai);
+		engine.TryGetService(CoreServiceKeys.LiveAiDraftBinder, out LiveAiDraftBinder? binder);
+		engine.TryGetService(CoreServiceKeys.LiveEditModSaveService, out LiveEditModSaveService? save);
+		runtime.BindEpicServices(attrExec, tracer, ai, binder, save);
+		modContext.Log("[LiveSkillWorkbenchMod] Bound #620/#621/#623/#624 epic services when available.");
+
 		if (engine.TryGetService(
 				LiveSkillWorkbenchServiceKeys.DocumentSource,
 				out ILiveSkillWorkbenchDocumentSource documentSource) &&

@@ -21,6 +21,15 @@ public sealed class LiveSkillWorkbenchRuntime
 	private readonly List<LiveSkillWorkbenchDiagnosticDto> _sessionDiagnostics = new();
 	private LiveEditSession _session;
 	private LiveGasEditPipeline? _pipeline;
+	private LiveAttributeCommandExecutor? _attributeExecutor;
+	private LiveEffectChainTracer? _tracer;
+	private IAiSkillDraftGenerator? _aiGenerator;
+	private LiveAiDraftBinder? _draftBinder;
+	private LiveEditModSaveService? _saveService;
+	private LiveAiSkillDraft? _lastDraft;
+	private LiveEditSavePreview? _lastSavePreview;
+	private string? _saveModRoot;
+	private string _saveModId = "LiveSkillWorkbenchShowcaseMod";
 	private LiveApplyClassificationReport? _lastClassification;
 	private string _applyMode = LiveSkillWorkbenchIds.ApplyModeNotClassified;
 	private bool _applySupported;
@@ -47,6 +56,277 @@ public sealed class LiveSkillWorkbenchRuntime
 		{
 			_pipeline = pipeline;
 			BumpStateVersionUnlocked();
+		}
+	}
+
+	public void BindEpicServices(
+		LiveAttributeCommandExecutor? attributeExecutor,
+		LiveEffectChainTracer? tracer,
+		IAiSkillDraftGenerator? aiGenerator,
+		LiveAiDraftBinder? draftBinder,
+		LiveEditModSaveService? saveService,
+		string? saveModId = null,
+		string? saveModRoot = null)
+	{
+		lock (_sync)
+		{
+			_attributeExecutor = attributeExecutor;
+			_tracer = tracer;
+			_aiGenerator = aiGenerator;
+			_draftBinder = draftBinder;
+			_saveService = saveService;
+			if (!string.IsNullOrWhiteSpace(saveModId))
+			{
+				_saveModId = saveModId!;
+			}
+
+			_saveModRoot = saveModRoot;
+			BumpStateVersionUnlocked();
+		}
+	}
+
+	public void PublishTracerToEffectChain(int max = 32)
+	{
+		lock (_sync)
+		{
+			if (_tracer == null)
+			{
+				return;
+			}
+
+			IReadOnlyList<LiveEffectChainEvent> recent = _tracer.SnapshotRecent(max);
+			var mapped = new LiveSkillWorkbenchEffectChainEventDto[recent.Count];
+			for (int i = 0; i < recent.Count; i++)
+			{
+				LiveEffectChainEvent e = recent[i];
+				mapped[i] = new LiveSkillWorkbenchEffectChainEventDto(
+					e.TraceId.ToString("N") + ":" + e.Sequence,
+					e.Phase.ToString(),
+					e.Label,
+					e.DefinitionId,
+					e.Detail ?? string.Empty,
+					e.Sequence);
+			}
+
+			_effectChain = mapped;
+			BumpStateVersionUnlocked();
+		}
+	}
+
+	public bool TryApplyImmediateAttribute(
+		string attributeName,
+		ActorAttributeMutationKind mutation,
+		double value,
+		out LiveSkillWorkbenchDiagnosticDto? error)
+	{
+		lock (_sync)
+		{
+			if (_attributeExecutor == null || _pipeline == null)
+			{
+				error = new LiveSkillWorkbenchDiagnosticDto(
+					"Error",
+					LiveSkillWorkbenchIds.DiagnosticPipelineMissing,
+					"Immediate attribute path requires LiveAttributeCommandExecutor.");
+				_sessionDiagnostics.Add(error);
+				BumpStateVersionUnlocked();
+				return false;
+			}
+
+			var provenance = new LiveEditProvenance(
+				LiveEditSource.ManualWorkbench,
+				$"workbench://immediate/{attributeName}");
+			LiveDebugPatchOperation op = LiveDebugPatchOperation.SelectedActorAttribute(
+				ActorTargetSelection.FromDescriptor("workbench-selection"),
+				attributeName,
+				mutation,
+				value,
+				provenance);
+
+			LiveEditStageResult stage = _session.TryStage(op);
+			if (!stage.Succeeded)
+			{
+				error = ToDto(stage.Diagnostics[0]);
+				_sessionDiagnostics.Add(error);
+				BumpStateVersionUnlocked();
+				return false;
+			}
+
+			_ = _pipeline.Classify(_session);
+			try
+			{
+				LiveApplyCommitResult commit = _pipeline.CommitImmediate(_attributeExecutor);
+				if (!commit.Succeeded)
+				{
+					error = commit.Diagnostics.Count > 0
+						? ToDto(commit.Diagnostics[0])
+						: new LiveSkillWorkbenchDiagnosticDto("Error", "LSWIMM0001", "Immediate commit failed.");
+					_sessionDiagnostics.Add(error);
+					BumpStateVersionUnlocked();
+					return false;
+				}
+			}
+			catch (Exception ex)
+			{
+				error = new LiveSkillWorkbenchDiagnosticDto("Error", "LSWIMM0002", ex.Message, attributeName);
+				_sessionDiagnostics.Add(error);
+				BumpStateVersionUnlocked();
+				return false;
+			}
+
+			_applyMode = LiveSkillWorkbenchIds.ApplyModeImmediate;
+			_applyStatusLabel = "立即命令已应用到选中角色（不写入 Mod）";
+			error = null;
+			BumpStateVersionUnlocked();
+			return true;
+		}
+	}
+
+	public bool TryGenerateAiDraft(string prompt, out LiveAiSkillDraft? draft, out LiveSkillWorkbenchDiagnosticDto? error)
+	{
+		lock (_sync)
+		{
+			if (_aiGenerator == null)
+			{
+				draft = null;
+				error = new LiveSkillWorkbenchDiagnosticDto(
+					"Error",
+					"LSWAI0001",
+					"AI draft generator is not bound.");
+				_sessionDiagnostics.Add(error);
+				BumpStateVersionUnlocked();
+				return false;
+			}
+
+			try
+			{
+				var provenance = new LiveEditProvenance(LiveEditSource.AiGeneratedDraft, "ai://prompt");
+				draft = _aiGenerator.Generate(prompt, provenance);
+				_lastDraft = draft;
+				_sessionDiagnostics.Add(new LiveSkillWorkbenchDiagnosticDto(
+					"Warning",
+					"LSWAI0000",
+					$"AI 草稿已生成：{draft.DisplayName}（需预检后试玩）",
+					draft.DraftId));
+				error = null;
+				BumpStateVersionUnlocked();
+				return true;
+			}
+			catch (Exception ex)
+			{
+				draft = null;
+				error = new LiveSkillWorkbenchDiagnosticDto("Error", "LSWAI0002", ex.Message);
+				_sessionDiagnostics.Add(error);
+				BumpStateVersionUnlocked();
+				return false;
+			}
+		}
+	}
+
+	public bool TryBindLastAiDraft(int actorEntityId, out LiveSkillWorkbenchDiagnosticDto? error)
+	{
+		lock (_sync)
+		{
+			if (_draftBinder == null || _lastDraft == null)
+			{
+				error = new LiveSkillWorkbenchDiagnosticDto(
+					"Error",
+					"LSWAI0003",
+					"No AI draft binder/draft available.");
+				_sessionDiagnostics.Add(error);
+				BumpStateVersionUnlocked();
+				return false;
+			}
+
+			try
+			{
+				LiveAiDraftPlaytestBind bind = _draftBinder.Bind(_lastDraft, actorEntityId);
+				_sessionDiagnostics.Add(new LiveSkillWorkbenchDiagnosticDto(
+					"Warning",
+					"LSWAI0004",
+					$"草稿已临时绑定到角色 {bind.ActorEntityId}：{bind.AbilityKey}",
+					bind.DraftId));
+				error = null;
+				BumpStateVersionUnlocked();
+				return true;
+			}
+			catch (Exception ex)
+			{
+				error = new LiveSkillWorkbenchDiagnosticDto("Error", "LSWAI0005", ex.Message);
+				_sessionDiagnostics.Add(error);
+				BumpStateVersionUnlocked();
+				return false;
+			}
+		}
+	}
+
+	public bool TryPreviewSave(out LiveEditSavePreview? preview, out LiveSkillWorkbenchDiagnosticDto? error)
+	{
+		lock (_sync)
+		{
+			if (_saveService == null || string.IsNullOrWhiteSpace(_saveModRoot))
+			{
+				preview = null;
+				error = new LiveSkillWorkbenchDiagnosticDto(
+					"Error",
+					"LSWSAVEUI0001",
+					"Save service or Mod root is not configured.");
+				_sessionDiagnostics.Add(error);
+				BumpStateVersionUnlocked();
+				return false;
+			}
+
+			preview = _saveService.Preview(_session, _saveModId, _saveModRoot!);
+			_lastSavePreview = preview;
+			_sessionDiagnostics.Add(new LiveSkillWorkbenchDiagnosticDto(
+				preview.CanSave ? "Warning" : "Error",
+				"LSWSAVEUI0002",
+				preview.CanSave
+					? $"保存预览：将写入 {preview.Files.Count} 个文件到 {_saveModId}"
+					: (preview.Diagnostics.Count > 0 ? preview.Diagnostics[0].Message : "无法保存"),
+				_saveModId));
+			error = preview.CanSave ? null : new LiveSkillWorkbenchDiagnosticDto(
+				"Error",
+				"LSWSAVEUI0003",
+				preview.Diagnostics.Count > 0 ? preview.Diagnostics[0].Message : "Save preview failed.");
+			BumpStateVersionUnlocked();
+			return preview.CanSave;
+		}
+	}
+
+	public bool TrySaveToMod(out LiveSkillWorkbenchDiagnosticDto? error)
+	{
+		lock (_sync)
+		{
+			if (_saveService == null || _lastSavePreview == null)
+			{
+				error = new LiveSkillWorkbenchDiagnosticDto(
+					"Error",
+					"LSWSAVEUI0004",
+					"Must preview save before writing Mod files.");
+				_sessionDiagnostics.Add(error);
+				BumpStateVersionUnlocked();
+				return false;
+			}
+
+			LiveEditSaveResult result = _saveService.Save(_session, _lastSavePreview);
+			if (!result.Succeeded)
+			{
+				error = result.Diagnostics.Count > 0
+					? ToDto(result.Diagnostics[0])
+					: new LiveSkillWorkbenchDiagnosticDto("Error", "LSWSAVEUI0005", "Save failed.");
+				_sessionDiagnostics.Add(error);
+				BumpStateVersionUnlocked();
+				return false;
+			}
+
+			_sessionDiagnostics.Add(new LiveSkillWorkbenchDiagnosticDto(
+				"Warning",
+				"LSWSAVEUI0006",
+				$"已保存到 Mod：{string.Join(", ", result.WrittenRelativePaths)}",
+				_saveModId));
+			error = null;
+			BumpStateVersionUnlocked();
+			return true;
 		}
 	}
 
@@ -527,8 +807,6 @@ public sealed class LiveSkillWorkbenchRuntime
 		{
 			new("undo", "撤销", "会话撤销栈尚未接入。"),
 			new("redo", "重做", "会话重做栈尚未接入。"),
-			new("aiDraft", "AI 生成", "AI 草稿尚未接入（#623）。"),
-			new("saveMod", "保存 Mod", "草稿落盘尚未接入（#624）。"),
 		};
 
 		if (_pipeline == null)
@@ -537,6 +815,18 @@ public sealed class LiveSkillWorkbenchRuntime
 				"precheck", "预检", "LiveGasEditPipeline 尚未绑定。"));
 			list.Add(new LiveSkillWorkbenchUnavailableActionDto(
 				"applyNextCast", "应用到下一次释放", "LiveGasEditPipeline 尚未绑定。"));
+		}
+
+		if (_aiGenerator == null)
+		{
+			list.Add(new LiveSkillWorkbenchUnavailableActionDto(
+				"aiDraft", "AI 生成", "AI 草稿生成器尚未绑定。"));
+		}
+
+		if (_saveService == null || string.IsNullOrWhiteSpace(_saveModRoot))
+		{
+			list.Add(new LiveSkillWorkbenchUnavailableActionDto(
+				"saveMod", "保存 Mod", "保存目标 Mod 根目录尚未配置。"));
 		}
 
 		return AsReadOnlySnapshot(list);

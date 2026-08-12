@@ -89,6 +89,12 @@ public sealed class LiveSkillWorkbenchCommandHandler : IWebUiCommandHandler
 			LiveSkillWorkbenchIds.SelectCatalogItemCommand => HandleSelect(request.Payload),
 			LiveSkillWorkbenchIds.PrecheckCommand => HandlePrecheck(),
 			LiveSkillWorkbenchIds.ApplyNextCastCommand => HandleApply(),
+			LiveSkillWorkbenchIds.ApplyImmediateAttributeCommand => HandleImmediate(request.Payload),
+			LiveSkillWorkbenchIds.GenerateAiDraftCommand => HandleGenerateAi(request.Payload),
+			LiveSkillWorkbenchIds.BindAiDraftCommand => HandleBindAi(request.Payload),
+			LiveSkillWorkbenchIds.PreviewSaveCommand => HandlePreviewSave(),
+			LiveSkillWorkbenchIds.SaveToModCommand => HandleSave(),
+			LiveSkillWorkbenchIds.RefreshEffectChainCommand => HandleRefreshChain(),
 			_ => WebUiCommandResult.Fail("unknown_command", $"Unknown Live Skill Workbench command '{request.Name}'.")
 		};
 	}
@@ -175,6 +181,72 @@ public sealed class LiveSkillWorkbenchCommandHandler : IWebUiCommandHandler
 		_ = commit;
 		return WebUiCommandResult.Ok();
 	}
+
+	private WebUiCommandResult HandleImmediate(JsonElement payload)
+	{
+		string attributeName = payload.TryGetProperty("attributeName", out JsonElement a) ? a.GetString() ?? "" : "";
+		string mutationText = payload.TryGetProperty("mutation", out JsonElement m) ? m.GetString() ?? "Set" : "Set";
+		double value = payload.TryGetProperty("numericValue", out JsonElement v) && v.TryGetDouble(out double d) ? d : double.NaN;
+		if (!Enum.TryParse(mutationText, ignoreCase: true, out ActorAttributeMutationKind mutation))
+		{
+			mutation = ActorAttributeMutationKind.Set;
+		}
+
+		if (!_runtime.TryApplyImmediateAttribute(attributeName, mutation, value, out LiveSkillWorkbenchDiagnosticDto? error))
+		{
+			return WebUiCommandResult.Fail(error?.Code ?? "immediate_failed", error?.Message ?? "Immediate attribute failed.");
+		}
+
+		return WebUiCommandResult.Ok();
+	}
+
+	private WebUiCommandResult HandleGenerateAi(JsonElement payload)
+	{
+		string prompt = payload.TryGetProperty("prompt", out JsonElement p) ? p.GetString() ?? "" : "";
+		if (!_runtime.TryGenerateAiDraft(prompt, out _, out LiveSkillWorkbenchDiagnosticDto? error))
+		{
+			return WebUiCommandResult.Fail(error?.Code ?? "ai_failed", error?.Message ?? "AI draft failed.");
+		}
+
+		return WebUiCommandResult.Ok();
+	}
+
+	private WebUiCommandResult HandleBindAi(JsonElement payload)
+	{
+		int actorId = payload.TryGetProperty("actorEntityId", out JsonElement a) && a.TryGetInt32(out int id) ? id : 0;
+		if (!_runtime.TryBindLastAiDraft(actorId, out LiveSkillWorkbenchDiagnosticDto? error))
+		{
+			return WebUiCommandResult.Fail(error?.Code ?? "bind_failed", error?.Message ?? "Bind failed.");
+		}
+
+		return WebUiCommandResult.Ok();
+	}
+
+	private WebUiCommandResult HandlePreviewSave()
+	{
+		if (!_runtime.TryPreviewSave(out _, out LiveSkillWorkbenchDiagnosticDto? error))
+		{
+			return WebUiCommandResult.Fail(error?.Code ?? "preview_failed", error?.Message ?? "Preview failed.");
+		}
+
+		return WebUiCommandResult.Ok();
+	}
+
+	private WebUiCommandResult HandleSave()
+	{
+		if (!_runtime.TrySaveToMod(out LiveSkillWorkbenchDiagnosticDto? error))
+		{
+			return WebUiCommandResult.Fail(error?.Code ?? "save_failed", error?.Message ?? "Save failed.");
+		}
+
+		return WebUiCommandResult.Ok();
+	}
+
+	private WebUiCommandResult HandleRefreshChain()
+	{
+		_runtime.PublishTracerToEffectChain();
+		return WebUiCommandResult.Ok();
+	}
 }
 
 internal sealed class LiveSkillWorkbenchGenerationResolver : IWebUiEntityGenerationResolver
@@ -192,6 +264,12 @@ internal sealed class LiveSkillWorkbenchPermissionValidator : IWebUiCommandPermi
 			LiveSkillWorkbenchIds.DiscardEditsCommand or
 			LiveSkillWorkbenchIds.SelectCatalogItemCommand or
 			LiveSkillWorkbenchIds.PrecheckCommand or
-			LiveSkillWorkbenchIds.ApplyNextCastCommand;
+			LiveSkillWorkbenchIds.ApplyNextCastCommand or
+			LiveSkillWorkbenchIds.ApplyImmediateAttributeCommand or
+			LiveSkillWorkbenchIds.GenerateAiDraftCommand or
+			LiveSkillWorkbenchIds.BindAiDraftCommand or
+			LiveSkillWorkbenchIds.PreviewSaveCommand or
+			LiveSkillWorkbenchIds.SaveToModCommand or
+			LiveSkillWorkbenchIds.RefreshEffectChainCommand;
 	}
 }

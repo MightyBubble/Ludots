@@ -191,6 +191,11 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<GraphProgramRegistry> GraphProgramRegistry = new("GraphProgramRegistry");
         public static readonly ServiceKey<GraphFunctionCatalog> GraphFunctionCatalog = new("GraphFunctionCatalog");
         public static readonly ServiceKey<LiveGasEditPipeline> LiveGasEditPipeline = new("LiveGasEditPipeline");
+        public static readonly ServiceKey<LiveAttributeCommandExecutor> LiveAttributeCommandExecutor = new("LiveAttributeCommandExecutor");
+        public static readonly ServiceKey<LiveEffectChainTracer> LiveEffectChainTracer = new("LiveEffectChainTracer");
+        public static readonly ServiceKey<IAiSkillDraftGenerator> AiSkillDraftGenerator = new("AiSkillDraftGenerator");
+        public static readonly ServiceKey<LiveAiDraftBinder> LiveAiDraftBinder = new("LiveAiDraftBinder");
+        public static readonly ServiceKey<LiveEditModSaveService> LiveEditModSaveService = new("LiveEditModSaveService");
         public static readonly ServiceKey<GasGraphRuntimeProductionServices> GasGraphRuntimeProductionServices = new("GasGraphRuntimeProductionServices");
         public static readonly ServiceKey<GasGraphRuntimeApi> GasGraphRuntimeApi = new("GasGraphRuntimeApi");
         public static readonly ServiceKey<GraphOutputSchemaRegistry> GraphOutputSchemaRegistry = new("GraphOutputSchemaRegistry");
