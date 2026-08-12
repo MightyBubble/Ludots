@@ -377,6 +377,30 @@
       }
     },
     {
+      "name": "capability_standard_graph_ops_attr",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardGraphOpsAttrMod",
+        "projectPath": "CapabilityStandardGraphOpsAttrMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_ops_blackboard",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardGraphOpsBlackboardMod",
+        "projectPath": "CapabilityStandardGraphOpsBlackboardMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_ops_event",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardGraphOpsEventMod",
+        "projectPath": "CapabilityStandardGraphOpsEventMod.csproj"
+      }
+    },
+    {
       "name": "capability_standard_script_flow_sandbox",
       "target": {
         "type": "path",

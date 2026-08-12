@@ -432,6 +432,33 @@
       "buildMode": "auto"
     },
     {
+      "id": "capability_standard_graph_ops_attr_raylib",
+      "name": "Capability Standard Graph Ops Attr Raylib",
+      "selectors": [
+        "$capability_standard_graph_ops_attr"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_ops_blackboard_raylib",
+      "name": "Capability Standard Graph Ops Blackboard Raylib",
+      "selectors": [
+        "$capability_standard_graph_ops_blackboard"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_ops_event_raylib",
+      "name": "Capability Standard Graph Ops Event Raylib",
+      "selectors": [
+        "$capability_standard_graph_ops_event"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "capability_standard_script_flow_sandbox_raylib",
       "name": "Capability Standard Script Flow Sandbox Raylib",
       "selectors": [

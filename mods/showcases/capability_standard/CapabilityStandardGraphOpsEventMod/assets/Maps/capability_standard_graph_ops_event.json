@@ -1,0 +1,19 @@
+{
+  "Id": "capability_standard_graph_ops_event",
+  "Tags": [
+    "showcase",
+    "capability-standard",
+    "gas",
+    "graph-ops-event"
+  ],
+  "DefaultCamera": {
+    "VirtualCameraId": "Camera.Profile.Tactical",
+    "TargetXCm": 0,
+    "TargetYCm": 0,
+    "DistanceCm": 2600,
+    "Pitch": 75,
+    "Yaw": 180,
+    "FovYDeg": 50
+  },
+  "Entities": []
+}

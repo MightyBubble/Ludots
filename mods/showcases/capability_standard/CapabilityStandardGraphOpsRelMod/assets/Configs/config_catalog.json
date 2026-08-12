@@ -1,0 +1,5 @@
+[
+  { "Path": "Relationships/catalog.json", "Policy": "DeepObject" },
+  { "Path": "GAS/graphs.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "GAS/func_lib.json", "Policy": "ArrayById", "IdField": "name" }
+]

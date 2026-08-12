@@ -21,6 +21,7 @@ This page is the SSOT for production-grade capability acceptance showcase roots 
 | HFSM Sentry Arena | `capability_standard_hfsm_sentry_arena` | `mods/showcases/capability_standard/CapabilityStandardHfsmSentryArenaMod` | **可读剧本**：门岗线哨兵 Idle→警戒→交战→撤退；入侵者来回走；交战生命周期 Script |
 | Level Blueprint Trial | `capability_standard_level_blueprint_trial` | `mods/showcases/capability_standard/CapabilityStandardLevelBlueprintTrialMod` | **可读剧本**：走进触发圈→刷怪→清完开门→阶段色块推进 |
 | Ability Graph Sandbox | `capability_standard_ability_graph_sandbox` | `mods/showcases/capability_standard/CapabilityStandardAbilityGraphSandboxMod` | **可读剧本**：巡逻查一圈找范围目标，给命中对象挂状态、加好感，并把状态牌读成面板 token |
+| Graph Ops Blackboard | `capability_standard_graph_ops_blackboard` | `mods/showcases/capability_standard/CapabilityStandardGraphOpsBlackboardMod` | **黑板记事/读配置/生命周期事务**：写入来源与情境，从配置读出威力/阶位/连锁并回读，再跑生命周期内置步骤 |
 | Graph Behavior Integration | `capability_standard_graph_behavior_integration` | `mods/showcases/capability_standard/CapabilityStandardGraphBehaviorIntegrationMod` | **单独短剧**：左巡逻 / 右门岗 / 上触发刷敌，串一条故事（不是四套糊在一起） |
 
 压力矩阵与 &lt;5ms 思考波报告：`docs/benchmarks/graph-behavior-pressure/`（Showcase 主镜头是剧本，万人在无头测试与灰点带）。

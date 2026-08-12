@@ -1,0 +1,16 @@
+[
+  {
+    "id": "Effect.GraphOpsAttr.Mark",
+    "tags": [
+      "Effect.GraphOpsAttr.Mark"
+    ],
+    "presetType": "Buff",
+    "lifetime": "After",
+    "participatesInResponse": false,
+    "duration": {
+      "durationTicks": 180,
+      "periodTicks": 0,
+      "clockId": "FixedFrame"
+    }
+  }
+]

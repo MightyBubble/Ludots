@@ -1,0 +1,20 @@
+{
+  "name": "CapabilityStandardGraphOpsFloatMod",
+  "version": "1.0.0",
+  "description": "Standalone GAS float graph-op showcase: damage multiplier, distance decay, and clamp pipeline.",
+  "main": "bin/net8.0/CapabilityStandardGraphOpsFloatMod.dll",
+  "priority": -1895,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0",
+    "CameraProfilesMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": [
+    "showcase",
+    "capability-standard",
+    "gas",
+    "graph-ops",
+    "float-math"
+  ]
+}

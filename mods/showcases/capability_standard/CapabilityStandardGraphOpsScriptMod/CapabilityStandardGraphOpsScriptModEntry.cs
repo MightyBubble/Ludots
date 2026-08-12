@@ -1,0 +1,39 @@
+using System.Threading.Tasks;
+using CapabilityStandardGraphBehaviorCommon;
+using CapabilityStandardGraphOpsScriptMod.Runtime;
+using Ludots.Core.Engine;
+using Ludots.Core.Modding;
+using Ludots.Core.Presentation.DebugDraw;
+using Ludots.Core.Scripting;
+
+namespace CapabilityStandardGraphOpsScriptMod;
+
+public sealed class CapabilityStandardGraphOpsScriptModEntry : IMod
+{
+    public static readonly ServiceKey<GraphShowcaseMetrics> MetricsKey =
+        new("CapabilityStandardGraphOpsScript.Metrics");
+
+    public void OnLoad(IModContext context)
+    {
+        context.Log("[CapabilityStandardGraphOpsScriptMod] Loaded (Script control graph ops)");
+        var runtime = new GraphOpsScriptRuntime();
+        context.OnEvent(GameEvents.GameStart, ctx =>
+        {
+            GameEngine? engine = ctx.GetEngine();
+            if (engine == null) return Task.CompletedTask;
+            runtime.Bind(
+                engine.GetService(CoreServiceKeys.GraphProgramRegistry),
+                engine.GetService(CoreServiceKeys.GraphActionCatalog),
+                engine.GetService(CoreServiceKeys.GraphFunctionCatalog));
+            engine.SetService(MetricsKey, runtime.Metrics);
+            var debugDraw = new DebugDrawCommandBuffer();
+            engine.SetService(CoreServiceKeys.DebugDrawCommandBuffer, debugDraw);
+            engine.RegisterSystem(new GraphOpsScriptSimulationSystem(engine, runtime), SystemGroup.PostMovement);
+            engine.RegisterPresentationSystem(new GraphOpsScriptPresentationSystem(runtime, debugDraw));
+            return Task.CompletedTask;
+        });
+        context.OnEvent(GameEvents.MapLoaded, _ => { runtime.EnsureWorld(); return Task.CompletedTask; });
+    }
+
+    public void OnUnload() { }
+}

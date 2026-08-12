@@ -1,0 +1,21 @@
+{
+  "name": "CapabilityStandardGraphOpsBlackboardMod",
+  "version": "1.0.0",
+  "description": "Standalone GAS blackboard/config/lifecycle graph-op showcase: memo slots, config reads, lifecycle transaction builtins.",
+  "main": "bin/net8.0/CapabilityStandardGraphOpsBlackboardMod.dll",
+  "priority": -1893,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0",
+    "CameraProfilesMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": [
+    "showcase",
+    "capability-standard",
+    "gas",
+    "graph-ops",
+    "blackboard",
+    "lifecycle"
+  ]
+}

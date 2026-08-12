@@ -1,0 +1,38 @@
+[
+  {
+    "name": "spatial.cone",
+    "graph": "Graph.SpatialShowcase.Cone",
+    "kind": "Script",
+    "purity": "pure"
+  },
+  {
+    "name": "spatial.rect",
+    "graph": "Graph.SpatialShowcase.Rectangle",
+    "kind": "Script",
+    "purity": "pure"
+  },
+  {
+    "name": "spatial.line",
+    "graph": "Graph.SpatialShowcase.Line",
+    "kind": "Script",
+    "purity": "pure"
+  },
+  {
+    "name": "spatial.hex.range",
+    "graph": "Graph.SpatialShowcase.HexRange",
+    "kind": "Script",
+    "purity": "pure"
+  },
+  {
+    "name": "spatial.hex.ring",
+    "graph": "Graph.SpatialShowcase.HexRing",
+    "kind": "Script",
+    "purity": "pure"
+  },
+  {
+    "name": "spatial.hex.neighbors",
+    "graph": "Graph.SpatialShowcase.HexNeighbors",
+    "kind": "Script",
+    "purity": "pure"
+  }
+]

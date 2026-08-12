@@ -1,0 +1,19 @@
+{
+  "Id": "capability_standard_graph_ops_rel",
+  "Tags": [
+    "showcase",
+    "capability-standard",
+    "gas",
+    "relationship-graph"
+  ],
+  "DefaultCamera": {
+    "VirtualCameraId": "Camera.Profile.Tactical",
+    "TargetXCm": 0,
+    "TargetYCm": 0,
+    "DistanceCm": 2600,
+    "Pitch": 75,
+    "Yaw": 180,
+    "FovYDeg": 50
+  },
+  "Entities": []
+}

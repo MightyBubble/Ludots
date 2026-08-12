@@ -36,18 +36,18 @@
         "Linear",
         "Query"
       ],
-      "unitTestFilter": null,
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves",
+      "showcaseId": "capability_standard_graph_ops_attr",
+      "status": "covered"
     },
     {
       "op": "LoadExplicitTarget",
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": null,
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves",
+      "showcaseId": "capability_standard_graph_ops_attr",
+      "status": "covered"
     },
     {
       "op": "Jump",
@@ -73,9 +73,9 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": null,
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves",
+      "showcaseId": "capability_standard_graph_ops_attr",
+      "status": "covered"
     },
     {
       "op": "AddFloat",
@@ -172,9 +172,9 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": null,
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves",
+      "showcaseId": "capability_standard_graph_ops_attr",
+      "status": "covered"
     },
     {
       "op": "CompareGtFloat",
@@ -190,18 +190,18 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": null,
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves",
+      "showcaseId": "capability_standard_graph_ops_attr",
+      "status": "covered"
     },
     {
       "op": "CompareEqInt",
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": null,
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves",
+      "showcaseId": "capability_standard_graph_ops_attr",
+      "status": "covered"
     },
     {
       "op": "HasTag",
@@ -219,9 +219,9 @@
         "Linear",
         "Query"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectTagAndDisplayOps_CompileAndEmit",
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves",
+      "showcaseId": "capability_standard_graph_ops_attr",
+      "status": "covered"
     },
     {
       "op": "SelectTagInMask",
@@ -248,9 +248,9 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": null,
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves",
+      "showcaseId": "capability_standard_graph_ops_attr",
+      "status": "covered"
     },
     {
       "op": "QueryRadius",
@@ -397,9 +397,9 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": null,
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves",
+      "showcaseId": "capability_standard_graph_ops_attr",
+      "status": "covered"
     },
     {
       "op": "FanOutApplyEffect",
@@ -433,9 +433,9 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": null,
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves",
+      "showcaseId": "capability_standard_graph_ops_attr",
+      "status": "covered"
     },
     {
       "op": "FanOutDispatchEffect",
@@ -460,9 +460,9 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": null,
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves",
+      "showcaseId": "capability_standard_graph_ops_attr",
+      "status": "covered"
     },
     {
       "op": "SendEvent",
@@ -478,126 +478,126 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": null,
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphOpsBlackboardShowcaseAcceptanceTests.RegistryName_MemoConfigAndLifecycleTransaction_DetailIsPlayerReadable;GraphOpsBlackboardShowcaseAcceptanceTests.FrontDoor_MemoGraph_ContainsAllBlackboardAndConfigOps",
+      "showcaseId": "capability_standard_graph_ops_blackboard",
+      "status": "covered"
     },
     {
       "op": "ReadBlackboardInt",
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": null,
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphOpsBlackboardShowcaseAcceptanceTests.RegistryName_MemoConfigAndLifecycleTransaction_DetailIsPlayerReadable;GraphOpsBlackboardShowcaseAcceptanceTests.FrontDoor_MemoGraph_ContainsAllBlackboardAndConfigOps",
+      "showcaseId": "capability_standard_graph_ops_blackboard",
+      "status": "covered"
     },
     {
       "op": "ReadBlackboardEntity",
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": null,
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphOpsBlackboardShowcaseAcceptanceTests.RegistryName_MemoConfigAndLifecycleTransaction_DetailIsPlayerReadable;GraphOpsBlackboardShowcaseAcceptanceTests.FrontDoor_MemoGraph_ContainsAllBlackboardAndConfigOps",
+      "showcaseId": "capability_standard_graph_ops_blackboard",
+      "status": "covered"
     },
     {
       "op": "WriteBlackboardFloat",
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": null,
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphOpsBlackboardShowcaseAcceptanceTests.RegistryName_MemoConfigAndLifecycleTransaction_DetailIsPlayerReadable;GraphOpsBlackboardShowcaseAcceptanceTests.FrontDoor_MemoGraph_ContainsAllBlackboardAndConfigOps",
+      "showcaseId": "capability_standard_graph_ops_blackboard",
+      "status": "covered"
     },
     {
       "op": "WriteBlackboardInt",
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": null,
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphOpsBlackboardShowcaseAcceptanceTests.RegistryName_MemoConfigAndLifecycleTransaction_DetailIsPlayerReadable;GraphOpsBlackboardShowcaseAcceptanceTests.FrontDoor_MemoGraph_ContainsAllBlackboardAndConfigOps",
+      "showcaseId": "capability_standard_graph_ops_blackboard",
+      "status": "covered"
     },
     {
       "op": "WriteBlackboardEntity",
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": null,
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphOpsBlackboardShowcaseAcceptanceTests.RegistryName_MemoConfigAndLifecycleTransaction_DetailIsPlayerReadable;GraphOpsBlackboardShowcaseAcceptanceTests.FrontDoor_MemoGraph_ContainsAllBlackboardAndConfigOps",
+      "showcaseId": "capability_standard_graph_ops_blackboard",
+      "status": "covered"
     },
     {
       "op": "LoadConfigFloat",
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": null,
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphOpsBlackboardShowcaseAcceptanceTests.RegistryName_MemoConfigAndLifecycleTransaction_DetailIsPlayerReadable;GraphOpsBlackboardShowcaseAcceptanceTests.FrontDoor_MemoGraph_ContainsAllBlackboardAndConfigOps",
+      "showcaseId": "capability_standard_graph_ops_blackboard",
+      "status": "covered"
     },
     {
       "op": "LoadConfigInt",
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": null,
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphOpsBlackboardShowcaseAcceptanceTests.RegistryName_MemoConfigAndLifecycleTransaction_DetailIsPlayerReadable;GraphOpsBlackboardShowcaseAcceptanceTests.FrontDoor_MemoGraph_ContainsAllBlackboardAndConfigOps",
+      "showcaseId": "capability_standard_graph_ops_blackboard",
+      "status": "covered"
     },
     {
       "op": "LoadConfigEffectId",
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": null,
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphOpsBlackboardShowcaseAcceptanceTests.RegistryName_MemoConfigAndLifecycleTransaction_DetailIsPlayerReadable;GraphOpsBlackboardShowcaseAcceptanceTests.FrontDoor_MemoGraph_ContainsAllBlackboardAndConfigOps",
+      "showcaseId": "capability_standard_graph_ops_blackboard",
+      "status": "covered"
     },
     {
       "op": "LoadContextSource",
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit",
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit;GraphOpsBlackboardShowcaseAcceptanceTests.FrontDoor_MemoGraph_ContainsAllBlackboardAndConfigOps",
+      "showcaseId": "capability_standard_graph_ops_blackboard",
+      "status": "covered"
     },
     {
       "op": "LoadContextTarget",
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": null,
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves",
+      "showcaseId": "capability_standard_graph_ops_attr",
+      "status": "covered"
     },
     {
       "op": "LoadContextTargetContext",
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit",
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectEventControlKnowledgeOps_CompileAndEmit;GraphOpsBlackboardShowcaseAcceptanceTests.FrontDoor_MemoGraph_ContainsAllBlackboardAndConfigOps",
+      "showcaseId": "capability_standard_graph_ops_blackboard",
+      "status": "covered"
     },
     {
       "op": "LoadSelfAttribute",
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": null,
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves",
+      "showcaseId": "capability_standard_graph_ops_attr",
+      "status": "covered"
     },
     {
       "op": "WriteSelfAttribute",
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": null,
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_ReadHealthStrikeApplyRemove_CompletesUnderBudget;GraphOpsAttrShowcaseAcceptanceTests.AttrVignette_PlayerFacingPhrases_ArePresentAcrossWaves",
+      "showcaseId": "capability_standard_graph_ops_attr",
+      "status": "covered"
     },
     {
       "op": "RelationshipEnsureLink",
@@ -921,18 +921,18 @@
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": null,
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphOpsBlackboardShowcaseAcceptanceTests.RegistryName_MemoConfigAndLifecycleTransaction_DetailIsPlayerReadable;GraphOpsBlackboardShowcaseAcceptanceTests.FrontDoor_LifecycleGraph_ContainsTransactionAndBuiltinOps",
+      "showcaseId": "capability_standard_graph_ops_blackboard",
+      "status": "covered"
     },
     {
       "op": "InvokeBuiltin",
       "authorableKinds": [
         "Linear"
       ],
-      "unitTestFilter": null,
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "GraphOpsBlackboardShowcaseAcceptanceTests.RegistryName_MemoConfigAndLifecycleTransaction_DetailIsPlayerReadable;GraphOpsBlackboardShowcaseAcceptanceTests.FrontDoor_LifecycleGraph_ContainsTransactionAndBuiltinOps",
+      "showcaseId": "capability_standard_graph_ops_blackboard",
+      "status": "covered"
     },
     {
       "op": "LoadTargetPosX",

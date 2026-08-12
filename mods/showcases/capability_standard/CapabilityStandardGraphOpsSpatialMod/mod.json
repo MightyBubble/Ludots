@@ -1,0 +1,20 @@
+{
+  "name": "CapabilityStandardGraphOpsSpatialMod",
+  "version": "1.0.0",
+  "description": "Spatial graph query showcase: cone, rectangle, line, and hex target selection.",
+  "main": "bin/net8.0/CapabilityStandardGraphOpsSpatialMod.dll",
+  "priority": -1900,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0",
+    "CameraProfilesMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": [
+    "showcase",
+    "capability-standard",
+    "gas",
+    "spatial-query",
+    "graph"
+  ]
+}
