@@ -391,6 +391,14 @@
         "value": "mods/showcases/capability_standard/CapabilityStandardGraphBehaviorIntegrationMod",
         "projectPath": "CapabilityStandardGraphBehaviorIntegrationMod.csproj"
       }
+    },
+    {
+      "name": "raylib_client_parity",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/raylib_client_parity/RaylibClientParityShowcaseMod",
+        "projectPath": "RaylibClientParityShowcaseMod.csproj"
+      }
     }
   ],
   "adapters": {

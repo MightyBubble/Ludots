@@ -4,10 +4,10 @@ Updated by agents. Use: `pending` | `in_progress` | `blocked` | `done`.
 
 | ID | Package | Status | Owner | Notes |
 |----|---------|--------|-------|-------|
-| W1 | GPU skinned production + playback API | in_progress | subagent-w1 | |
+| W1 | GPU skinned production + playback API | done | subagent-w1 | production GpuSkinnedInstance: skinning_instanced + playback + boneMatrices upload |
 | W2 | Host material binding | done | subagent-w2 | albedo baseline via RaylibMaterialHostBinder; see materials-notes.md |
 | W3 | Effect shader baseline | done | subagent-w3 | vfx_unlit_tint + RaylibEffectShaderRegistry; Prefab VFX → billboard mesh + tint/time shader |
-| W4 | Showcase + screenshot acceptance | pending | subagent-w4 | waits W1+W2 (+W3 if ready) |
+| W4 | Showcase + screenshot acceptance | in_progress | subagent-w4 | generating acceptance PNGs |
 
 ## Blockers
 

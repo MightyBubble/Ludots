@@ -448,6 +448,15 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "raylib_client_parity_raylib",
+      "name": "Raylib Client Parity",
+      "selectors": [
+        "$raylib_client_parity"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

@@ -1,0 +1,11 @@
+{
+  "id": "raylib_client_parity_showcase",
+  "name": "Raylib Client Parity Showcase",
+  "width": 64,
+  "height": 64,
+  "tileWidth": 1,
+  "tileHeight": 1,
+  "terrain": {
+    "type": "flat"
+  }
+}

@@ -2511,6 +2511,29 @@
       ]
     },
     {
+      "id": "raylib_client_parity",
+      "path": "mods/showcases/raylib_client_parity/RaylibClientParityShowcaseMod",
+      "projectPath": "RaylibClientParityShowcaseMod.csproj",
+      "title": "Raylib 客户端配表对齐验收",
+      "summary": "静态 ISM 建筑 + GpuSkinnedInstance 动画人群 + Host albedo 材质绑定 + vfx_unlit_tint 特效基线的 Raylib 客户端配表验收场景。",
+      "tier": "T2",
+      "category": "demo",
+      "binding": "raylib_client_parity",
+      "preset": "raylib_client_parity_raylib",
+      "docsPath": "docs/audits/raylib-client-parity/ACCEPTANCE.md",
+      "readmePath": null,
+      "acceptanceTest": null,
+      "artifactDir": "artifacts/raylib-client-parity/acceptance",
+      "screenshot": "artifacts/raylib-client-parity/acceptance/01_static_ism.png",
+      "status": "active",
+      "tags": [
+        "rendering",
+        "raylib",
+        "gpu-skinned",
+        "parity"
+      ]
+    },
+    {
       "id": "terrain_benchmark",
       "path": "mods/TerrainBenchmarkMod",
       "projectPath": "TerrainBenchmarkMod.csproj",

@@ -1,0 +1,167 @@
+[
+  {
+    "id": "raylib_client_parity_crowd_bootstrap",
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "raylib_client_parity_crowd_agent"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "raylib_client_parity_crowd_actor",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "raylib_client_parity_crowd_agent"
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "raylib_client_parity_albedo_bootstrap",
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "raylib_client_parity_albedo_demo"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "raylib_client_parity_albedo_actor",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "raylib_client_parity_albedo_demo"
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "raylib_client_parity_vfx_bootstrap",
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "raylib_client_parity_vfx_demo"
+        },
+        "condition": {
+          "inline": "None"
+        },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "raylib_client_parity_vfx_actor",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "raylib_client_parity_vfx_demo"
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "raylib_client_parity_crowd_actor",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "SkinnedMesh",
+          "assetId": "raylib_client_parity.mannequin",
+          "materialId": "default_surface",
+          "renderPath": "GpuSkinnedInstance",
+          "mobility": "Movable",
+          "localScale": [1.1, 1.1, 1.1]
+        },
+        "style": {
+          "color": [0.85, 0.92, 1.0, 1.0]
+        }
+      },
+      {
+        "slot": "animator",
+        "kind": "Animator",
+        "activeByDefault": true,
+        "animator": {
+          "animatorControllerId": "raylib_client_parity.locomotion",
+          "animationProfileId": "raylib_client_parity.profile",
+          "speedParamKey": "raylib_client_parity.locomotion.speed",
+          "stateParamKey": "none"
+        }
+      }
+    ],
+    "paramDefaults": [
+      {
+        "paramKey": "raylib_client_parity.locomotion.speed",
+        "lane": "Float",
+        "floatValue": 1
+      }
+    ]
+  },
+  {
+    "id": "raylib_client_parity_albedo_actor",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "raylib_client_parity.albedo_building",
+          "materialId": "raylib_client_parity.albedo_demo",
+          "renderPath": "InstancedStaticMesh",
+          "mobility": "Static",
+          "localScale": [1.2, 1.2, 1.2]
+        }
+      }
+    ]
+  },
+  {
+    "id": "raylib_client_parity_vfx_actor",
+    "behaviors": [
+      {
+        "slot": "vfx",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "VFX",
+          "assetId": "raylib_client_parity.vfx_marker",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localOffset": [0, 2.2, 0],
+          "localScale": [2.0, 2.0, 2.0]
+        },
+        "style": {
+          "color": [1.0, 0.45, 0.15, 0.9]
+        }
+      }
+    ]
+  }
+]

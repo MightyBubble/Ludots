@@ -1,0 +1,17 @@
+[
+  {
+    "id": "raylib_client_parity.vfx_prefab",
+    "meshAssetId": "raylib_client_parity.vfx_marker",
+    "baseScale": 1.0,
+    "parts": [
+      {
+        "kind": "Vfx",
+        "effectAssetId": 1,
+        "localPosition": [0, 1.2, 0],
+        "localScale": [1.4, 1.4, 1.4],
+        "colorTint": [1.0, 0.45, 0.15, 0.9],
+        "spawnMode": "Loop"
+      }
+    ]
+  }
+]
