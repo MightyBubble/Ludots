@@ -37,12 +37,20 @@ namespace Ludots.Client.Raylib.Rendering
 
         private int _locUseTerrainAlbedo = -1;
         private int _locTerrainTileScale = -1;
+        private int _locAntiTile = -1;
+        private int _locUseControlMap = -1;
+        private int _locControlBounds = -1;
+        private int _locControlMap = -1;
         private TerrainAlbedoDescriptor? _activeAlbedo;
         private string? _activeAlbedoMapId;
         private readonly Texture2D[] _albedoTextures = new Texture2D[TerrainAlbedoLayerCount];
+        private Texture2D _controlMapTexture;
         private bool _ownsAlbedoTextures;
+        private bool _ownsControlMapTexture;
         private bool _albedoEnabled;
+        private bool _controlMapEnabled;
         private float _terrainTileScale = 0.25f;
+        private Vector4 _controlBoundsMeters;
 
         public int DrawnChunkCountLastFrame { get; private set; }
 
@@ -209,6 +217,7 @@ namespace Ludots.Client.Raylib.Rendering
             }
 
             UnloadOwnedAlbedoTextures();
+            UnloadOwnedControlMapTexture();
             _albedoTextures[0] = sand;
             _albedoTextures[1] = grass;
             _albedoTextures[2] = dirt;
@@ -216,6 +225,8 @@ namespace Ludots.Client.Raylib.Rendering
             _ownsAlbedoTextures = ownsTextures;
             _terrainTileScale = tileScale;
             _albedoEnabled = true;
+            _controlMapEnabled = false;
+            _controlBoundsMeters = default;
             ApplyAlbedoMaterialMaps();
             ApplyAlbedoUniforms();
         }
@@ -223,8 +234,11 @@ namespace Ludots.Client.Raylib.Rendering
         public void ClearTerrainAlbedo()
         {
             UnloadOwnedAlbedoTextures();
+            UnloadOwnedControlMapTexture();
             _activeAlbedo = null;
             _albedoEnabled = false;
+            _controlMapEnabled = false;
+            _controlBoundsMeters = default;
             _terrainTileScale = 0.25f;
             if (_initialized)
             {
@@ -250,6 +264,16 @@ namespace Ludots.Client.Raylib.Rendering
             }
 
             EnsureInitialized();
+            if (_controlMapEnabled)
+            {
+                WorldAabbCm bounds = source.Bounds;
+                _controlBoundsMeters = new Vector4(
+                    bounds.Left * 0.01f,
+                    bounds.Top * 0.01f,
+                    MathF.Max(bounds.Width * 0.01f, 1e-5f),
+                    MathF.Max(bounds.Height * 0.01f, 1e-5f));
+            }
+
             UpdateUniforms(camera);
 
             _frameIndex++;
@@ -309,25 +333,35 @@ namespace Ludots.Client.Raylib.Rendering
 
             _locUseTerrainAlbedo = Rl.GetShaderLocation(_terrainShader, "uUseTerrainAlbedo");
             _locTerrainTileScale = Rl.GetShaderLocation(_terrainShader, "uTerrainTileScale");
+            _locAntiTile = Rl.GetShaderLocation(_terrainShader, "uAntiTile");
+            _locUseControlMap = Rl.GetShaderLocation(_terrainShader, "uUseControlMap");
+            _locControlBounds = Rl.GetShaderLocation(_terrainShader, "uControlBounds");
+            _locControlMap = Rl.GetShaderLocation(_terrainShader, "uControlMap");
             int locSand = Rl.GetShaderLocation(_terrainShader, "texture0");
             int locGrass = Rl.GetShaderLocation(_terrainShader, "texture1");
             int locDirt = Rl.GetShaderLocation(_terrainShader, "texture2");
             int locRock = Rl.GetShaderLocation(_terrainShader, "texture3");
             if (_locUseTerrainAlbedo < 0 ||
                 _locTerrainTileScale < 0 ||
+                _locAntiTile < 0 ||
+                _locUseControlMap < 0 ||
+                _locControlBounds < 0 ||
+                _locControlMap < 0 ||
                 locSand < 0 ||
                 locGrass < 0 ||
                 locDirt < 0 ||
                 locRock < 0)
             {
                 throw new InvalidOperationException(
-                    "Visual heightmap terrain shader is missing albedo uniforms/samplers (uUseTerrainAlbedo/uTerrainTileScale/texture0..texture3).");
+                    "Visual heightmap terrain shader is missing albedo uniforms/samplers (uUseTerrainAlbedo/uTerrainTileScale/uAntiTile/uUseControlMap/uControlBounds/uControlMap/texture0..texture3).");
             }
 
             _terrainShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_ALBEDO] = locSand;
             _terrainShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_METALNESS] = locGrass;
             _terrainShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_NORMAL] = locDirt;
             _terrainShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_ROUGHNESS] = locRock;
+            // DrawMesh binds MATERIAL_MAP_* slots; wire occlusion map slot to explicit uControlMap sampler.
+            _terrainShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_OCCLUSION] = _locControlMap;
 
             _initialized = true;
             ApplyAlbedoUniforms();
@@ -358,7 +392,10 @@ namespace Ludots.Client.Raylib.Rendering
             }
 
             int useAlbedo = _albedoEnabled ? 1 : 0;
+            int antiTile = _albedoEnabled ? 1 : 0;
+            int useControlMap = _controlMapEnabled ? 1 : 0;
             float tileScale = _terrainTileScale;
+            Vector4 controlBounds = _controlBoundsMeters;
             Rl.SetShaderValue(
                 _terrainShader,
                 _locUseTerrainAlbedo,
@@ -369,6 +406,21 @@ namespace Ludots.Client.Raylib.Rendering
                 _locTerrainTileScale,
                 &tileScale,
                 (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+            Rl.SetShaderValue(
+                _terrainShader,
+                _locAntiTile,
+                &antiTile,
+                (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_INT);
+            Rl.SetShaderValue(
+                _terrainShader,
+                _locUseControlMap,
+                &useControlMap,
+                (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_INT);
+            Rl.SetShaderValue(
+                _terrainShader,
+                _locControlBounds,
+                &controlBounds,
+                (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC4);
         }
 
         private void ApplyAlbedoMaterialMaps()
@@ -377,6 +429,17 @@ namespace Ludots.Client.Raylib.Rendering
             Rl.SetMaterialTexture(ref _terrainMaterial, (int)Rl.MaterialMapIndex.MATERIAL_MAP_METALNESS, _albedoTextures[1]);
             Rl.SetMaterialTexture(ref _terrainMaterial, (int)Rl.MaterialMapIndex.MATERIAL_MAP_NORMAL, _albedoTextures[2]);
             Rl.SetMaterialTexture(ref _terrainMaterial, (int)Rl.MaterialMapIndex.MATERIAL_MAP_ROUGHNESS, _albedoTextures[3]);
+            if (_controlMapEnabled && _controlMapTexture.id != 0)
+            {
+                Rl.SetMaterialTexture(
+                    ref _terrainMaterial,
+                    (int)Rl.MaterialMapIndex.MATERIAL_MAP_OCCLUSION,
+                    _controlMapTexture);
+            }
+            else
+            {
+                _terrainMaterial.maps[(int)Rl.MaterialMapIndex.MATERIAL_MAP_OCCLUSION].texture = default;
+            }
         }
 
         private void DetachAlbedoMaterialMaps()
@@ -385,6 +448,7 @@ namespace Ludots.Client.Raylib.Rendering
             _terrainMaterial.maps[(int)Rl.MaterialMapIndex.MATERIAL_MAP_METALNESS].texture = default;
             _terrainMaterial.maps[(int)Rl.MaterialMapIndex.MATERIAL_MAP_NORMAL].texture = default;
             _terrainMaterial.maps[(int)Rl.MaterialMapIndex.MATERIAL_MAP_ROUGHNESS].texture = default;
+            _terrainMaterial.maps[(int)Rl.MaterialMapIndex.MATERIAL_MAP_OCCLUSION].texture = default;
         }
 
         private void ActivateAlbedoDescriptor(TerrainAlbedoDescriptor descriptor)
@@ -397,14 +461,42 @@ namespace Ludots.Client.Raylib.Rendering
 
             EnsureInitialized();
             var loaded = new Texture2D[TerrainAlbedoLayerCount];
+            Texture2D controlMap = default;
             try
             {
                 for (int i = 0; i < TerrainAlbedoLayerCount; i++)
                 {
-                    loaded[i] = LoadAlbedoTextureOrThrow(descriptor.LayerUris[i], descriptor.Id, i);
+                    loaded[i] = LoadTextureUriOrThrow(
+                        descriptor.LayerUris[i],
+                        descriptor.Id,
+                        $"layer[{i}]");
+                }
+
+                bool hasControlMap = !string.IsNullOrEmpty(descriptor.ControlMapUri);
+                if (hasControlMap)
+                {
+                    controlMap = LoadTextureUriOrThrow(
+                        descriptor.ControlMapUri!,
+                        descriptor.Id,
+                        "controlMapUri");
                 }
 
                 BindTerrainAlbedo(loaded[0], loaded[1], loaded[2], loaded[3], descriptor.TileScale, ownsTextures: true);
+                for (int i = 0; i < loaded.Length; i++)
+                {
+                    loaded[i] = default;
+                }
+
+                if (hasControlMap)
+                {
+                    _controlMapTexture = controlMap;
+                    _ownsControlMapTexture = true;
+                    _controlMapEnabled = true;
+                    controlMap = default;
+                    ApplyAlbedoMaterialMaps();
+                    ApplyAlbedoUniforms();
+                }
+
                 _activeAlbedo = descriptor;
             }
             catch
@@ -417,22 +509,27 @@ namespace Ludots.Client.Raylib.Rendering
                     }
                 }
 
+                if (controlMap.id != 0)
+                {
+                    Rl.UnloadTexture(controlMap);
+                }
+
                 throw;
             }
         }
 
-        private Texture2D LoadAlbedoTextureOrThrow(string uri, string descriptorId, int layerIndex)
+        private Texture2D LoadTextureUriOrThrow(string uri, string descriptorId, string fieldLabel)
         {
             if (!_vfs!.TryResolveFullPath(uri, out string fullPath))
             {
                 throw new InvalidOperationException(
-                    $"{nameof(RaylibVisualHeightmapRenderer)} cannot resolve terrain albedo URI '{uri}' for '{descriptorId}' layer[{layerIndex}].");
+                    $"{nameof(RaylibVisualHeightmapRenderer)} cannot resolve terrain albedo URI '{uri}' for '{descriptorId}' {fieldLabel}.");
             }
 
             if (!File.Exists(fullPath))
             {
                 throw new InvalidOperationException(
-                    $"{nameof(RaylibVisualHeightmapRenderer)} terrain albedo file missing: uri='{uri}' fullPath='{fullPath}' (descriptor '{descriptorId}' layer[{layerIndex}]).");
+                    $"{nameof(RaylibVisualHeightmapRenderer)} terrain albedo file missing: uri='{uri}' fullPath='{fullPath}' (descriptor '{descriptorId}' {fieldLabel}).");
             }
 
             Texture2D texture = Rl.LoadTexture(fullPath);
@@ -444,7 +541,7 @@ namespace Ludots.Client.Raylib.Rendering
                 }
 
                 throw new InvalidOperationException(
-                    $"{nameof(RaylibVisualHeightmapRenderer)} LoadTexture failed for terrain albedo uri='{uri}' fullPath='{fullPath}'.");
+                    $"{nameof(RaylibVisualHeightmapRenderer)} LoadTexture failed for terrain albedo uri='{uri}' fullPath='{fullPath}' ({fieldLabel}).");
             }
 
             return texture;
@@ -473,6 +570,18 @@ namespace Ludots.Client.Raylib.Rendering
             }
 
             _ownsAlbedoTextures = false;
+        }
+
+        private void UnloadOwnedControlMapTexture()
+        {
+            if (_ownsControlMapTexture && _controlMapTexture.id != 0)
+            {
+                Rl.UnloadTexture(_controlMapTexture);
+            }
+
+            _controlMapTexture = default;
+            _ownsControlMapTexture = false;
+            _controlMapEnabled = false;
         }
 
         private static void ValidateAlbedoTexture(Texture2D texture, string layerName)
@@ -556,7 +665,20 @@ namespace Ludots.Client.Raylib.Rendering
                 }
             }
 
-            return new TerrainAlbedoDescriptor(id, backendId, enabled, mapIds, tileScale, layerUris);
+            string? controlMapUri = null;
+            if (obj.ContainsKey("controlMapUri"))
+            {
+                string uri = obj["controlMapUri"]?.GetValue<string>()?.Trim() ?? string.Empty;
+                if (uri.Length == 0)
+                {
+                    throw new InvalidOperationException(
+                        $"{DefaultAlbedoRelativePath} entry '{id}' controlMapUri must be a non-empty string when present.");
+                }
+
+                controlMapUri = uri;
+            }
+
+            return new TerrainAlbedoDescriptor(id, backendId, enabled, mapIds, tileScale, layerUris, controlMapUri);
         }
 
         private static string RequireString(JsonNode? node, string rowId, string fieldName)
@@ -895,7 +1017,8 @@ namespace Ludots.Client.Raylib.Rendering
                 bool enabled,
                 List<string> mapIds,
                 float tileScale,
-                string[] layerUris)
+                string[] layerUris,
+                string? controlMapUri)
             {
                 Id = id;
                 BackendId = backendId;
@@ -903,6 +1026,7 @@ namespace Ludots.Client.Raylib.Rendering
                 MapIds = mapIds;
                 TileScale = tileScale;
                 LayerUris = layerUris;
+                ControlMapUri = controlMapUri;
             }
 
             public string Id { get; }
@@ -911,6 +1035,7 @@ namespace Ludots.Client.Raylib.Rendering
             public IReadOnlyList<string> MapIds { get; }
             public float TileScale { get; }
             public IReadOnlyList<string> LayerUris { get; }
+            public string? ControlMapUri { get; }
 
             public bool MatchesMap(string? mapId)
             {

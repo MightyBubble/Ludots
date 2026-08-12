@@ -11,6 +11,7 @@ public sealed class RaylibVisualAtmosphereShowcaseModEntry : IMod
     {
         context.Log("[RaylibVisualAtmosphereShowcaseMod] Loaded");
         IslandTerrainGenerator.EnsureGenerated(context);
+        IslandTerrainControlMapGenerator.EnsureGenerated(context);
 
         var runtime = new RaylibVisualAtmosphereShowcaseRuntime();
         context.OnEvent(GameEvents.MapLoaded, runtime.HandleMapFocusedAsync);

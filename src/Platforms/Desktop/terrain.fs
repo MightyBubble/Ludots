@@ -14,10 +14,14 @@ uniform vec3 uFogColor;
 uniform vec4 uFogParams;
 uniform int uUseTerrainAlbedo;
 uniform float uTerrainTileScale;
+uniform int uAntiTile;
+uniform int uUseControlMap;
+uniform vec4 uControlBounds;
 uniform sampler2D texture0;
 uniform sampler2D texture1;
 uniform sampler2D texture2;
 uniform sampler2D texture3;
+uniform sampler2D uControlMap;
 
 out vec4 finalColor;
 
@@ -42,20 +46,85 @@ float DistanceFogAmount(float dist)
     return clamp(max(linear, expFog), 0.0, 1.0);
 }
 
-vec3 SampleHeightBandAlbedo(float h, vec2 uv)
+float InterleavedGradientNoise(vec2 n)
 {
-    vec3 sand = texture(texture0, uv).rgb;
-    vec3 grass = texture(texture1, uv).rgb;
-    vec3 dirt = texture(texture2, uv).rgb;
-    vec3 rock = texture(texture3, uv).rgb;
+    return fract(52.9829189 * fract(dot(n, vec2(0.06711056, 0.00583715))));
+}
 
+vec2 Hash2(vec2 p)
+{
+    vec3 p3 = fract(vec3(p.xyx) * vec3(0.1031, 0.1030, 0.0973));
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.xx + p3.yz) * p3.zy);
+}
+
+// IQ / Héctor: 2×2 hash-rotated UV samples blended with IGN-softened weights.
+vec3 SampleAlbedoAntiTiled(sampler2D samp, vec2 uv)
+{
+    if (uAntiTile == 0)
+    {
+        return texture(samp, uv).rgb;
+    }
+
+    vec2 iuv = floor(uv);
+    vec2 fuv = fract(uv);
+    vec2 blend = fuv * fuv * (3.0 - 2.0 * fuv);
+
+    vec3 accum = vec3(0.0);
+    float wSum = 0.0;
+    for (int y = 0; y < 2; y++)
+    {
+        for (int x = 0; x < 2; x++)
+        {
+            vec2 cell = iuv + vec2(float(x), float(y));
+            vec2 h = Hash2(cell);
+            float ang = h.x * 6.28318530718;
+            float ca = cos(ang);
+            float sa = sin(ang);
+            mat2 rot = mat2(ca, -sa, sa, ca);
+            vec2 sampleUv = rot * (uv + h * 7.13);
+
+            float wx = (x == 0) ? (1.0 - blend.x) : blend.x;
+            float wy = (y == 0) ? (1.0 - blend.y) : blend.y;
+            float ign = InterleavedGradientNoise(cell + fuv * 17.0);
+            float w = wx * wy * mix(0.85, 1.15, ign);
+            accum += texture(samp, sampleUv).rgb * w;
+            wSum += w;
+        }
+    }
+
+    return accum / max(wSum, 1e-5);
+}
+
+vec3 BlendLayerAlbedos(vec2 uv, vec4 weights)
+{
+    vec3 sand = SampleAlbedoAntiTiled(texture0, uv);
+    vec3 grass = SampleAlbedoAntiTiled(texture1, uv);
+    vec3 dirt = SampleAlbedoAntiTiled(texture2, uv);
+    vec3 rock = SampleAlbedoAntiTiled(texture3, uv);
+    float sum = max(weights.r + weights.g + weights.b + weights.a, 1e-5);
+    vec4 w = weights / sum;
+    return sand * w.r + grass * w.g + dirt * w.b + rock * w.a;
+}
+
+vec4 HeightBandWeights(float h)
+{
     // Bands mirror ResolveAbsoluteIslandTerrainColor land stops (sand→grass→dirt→rock).
     float wSand = 1.0 - smoothstep(0.0, 0.045, h);
     float wGrass = smoothstep(0.0, 0.045, h) * (1.0 - smoothstep(0.045, 0.32, h));
     float wDirt = smoothstep(0.045, 0.32, h) * (1.0 - smoothstep(0.32, 0.58, h));
     float wRock = smoothstep(0.32, 0.58, h);
-    float sum = max(wSand + wGrass + wDirt + wRock, 1e-5);
-    return (sand * wSand + grass * wGrass + dirt * wDirt + rock * wRock) / sum;
+    return vec4(wSand, wGrass, wDirt, wRock);
+}
+
+vec4 SampleControlWeights(vec3 worldPos)
+{
+    vec2 size = max(uControlBounds.zw, vec2(1e-5));
+    vec2 uv = (worldPos.xz - uControlBounds.xy) / size;
+    uv = clamp(uv, vec2(0.0), vec2(1.0));
+    vec4 w = texture(uControlMap, uv);
+    float sum = max(w.r + w.g + w.b + w.a, 1e-5);
+    return w / sum;
 }
 
 void main()
@@ -65,7 +134,10 @@ void main()
     {
         float scale = max(uTerrainTileScale, 1e-5);
         vec2 uv = fragPos.xz * scale;
-        vec3 textured = SampleHeightBandAlbedo(clamp(fragHeightBand, 0.0, 1.0), uv);
+        vec4 weights = (uUseControlMap != 0)
+            ? SampleControlWeights(fragPos)
+            : HeightBandWeights(clamp(fragHeightBand, 0.0, 1.0));
+        vec3 textured = BlendLayerAlbedos(uv, weights);
         // Keep biome tint without crushing tiling detail (dark rock vertex RGB was washing maps flat).
         albedo = textured * (0.55 + 0.45 * fragColor.rgb);
     }
