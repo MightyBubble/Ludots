@@ -1,0 +1,61 @@
+{
+  "Schema": "gas-capacity-benchmark-v1",
+  "Phase": "baseline",
+  "StorageKind": "legacy-embedded",
+  "AttributeSlotCount": 64,
+  "TagIdSpace": 256,
+  "EntityCount": 10000,
+  "Iterations": 100,
+  "CreatedUtc": "2026-08-12T10:14:13.5992271Z",
+  "Metrics": [
+    {
+      "Id": "attr.footprint.per_entity",
+      "Value": 1139.6872,
+      "Unit": "bytes",
+      "AllocatedBytes": 0
+    },
+    {
+      "Id": "attr.struct_sizeof.bundle",
+      "Value": 1080,
+      "Unit": "bytes",
+      "AllocatedBytes": 0
+    },
+    {
+      "Id": "attr.setw.get.hot",
+      "Value": 28783687.70850184,
+      "Unit": "ops_per_sec",
+      "AllocatedBytes": 40
+    },
+    {
+      "Id": "attr.aggregate.tick",
+      "Value": 0.00523,
+      "Unit": "ms_per_tick",
+      "AllocatedBytes": 128
+    },
+    {
+      "Id": "tag.footprint.per_entity",
+      "Value": 263.6448,
+      "Unit": "bytes",
+      "AllocatedBytes": 0
+    },
+    {
+      "Id": "tag.struct_sizeof.container",
+      "Value": 32,
+      "Unit": "bytes",
+      "AllocatedBytes": 0
+    },
+    {
+      "Id": "tag.add.has.hot",
+      "Value": 13615732.706828088,
+      "Unit": "ops_per_sec",
+      "AllocatedBytes": 40
+    },
+    {
+      "Id": "tag.dirty.collect",
+      "Value": 13.5618,
+      "Unit": "ms",
+      "AllocatedBytes": 8919168
+    }
+  ],
+  "Notes": "P0 baseline on current AttributeBuffer(64)+GameplayTagContainer(256) embedded layout. Machine-local ops/s may jitter; sizeof and schema are stable contract anchors."
+}

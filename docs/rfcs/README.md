@@ -31,6 +31,10 @@
 * [RFC-0065 统一交互—集合—施法架构](RFC-0065-unified-interaction-collection-casting-architecture.md)
   * 整合 RFC-0061~0064 为单一 Epic SSOT：Context Stack、Control Plane、Provenance Performer，并补齐 Panel Router / 聚合 catalog / CastFlow / CastDispatch；含 Mod 开发者与玩家双 persona 的 BDD UAT 验收
   * Epic issue 粘贴稿：[RFC-0065-epic-issue-body-draft.md](RFC-0065-epic-issue-body-draft.md)（issue 建立后本稿即可删除）
+* [RFC-0066 GAS 装载期定容世界级存储](RFC-0066-gas-loadtime-capacity-world-store.md)
+  * 属性/标签容量跟内容在装载期定容，对局合同不变；世界级 SoA 列存替换实体内嵌 64/256 硬顶；benchmark 前后对比为合入硬门槛
+  * Epic issue 粘贴稿：[RFC-0066-epic-issue-body-draft.md](RFC-0066-epic-issue-body-draft.md)
+  * Baseline 对比床：`gas-loadtime-capacity/benchmark-baseline.json`
 
 ## 2 使用规则
 

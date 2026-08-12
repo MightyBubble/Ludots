@@ -20,6 +20,9 @@ namespace Ludots.Core.Gameplay.GAS.Registry
 
         public static bool IsFrozen => _frozen;
 
+        /// <summary>Dense registered attribute count (ids <c>0 .. count-1</c>).</summary>
+        public static int RegisteredCount => _nextId;
+
         public static void Clear()
         {
             if (_frozen)

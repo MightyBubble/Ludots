@@ -19,6 +19,9 @@ namespace Ludots.Core.Gameplay.GAS.Registry
 
         public static bool IsFrozen => _frozen;
 
+        /// <summary>Usable registered tag count (ids <c>1 .. count</c>; id 0 reserved).</summary>
+        public static int RegisteredCount => _nextId - 1;
+
         public static void Freeze()
         {
             _frozen = true;
