@@ -70,13 +70,13 @@
     {
       "Template": "raylib_visual_atmosphere_vfx_blend",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 97800, "Y": 70800 } }
+        "WorldPositionCm": { "Value": { "X": 101200, "Y": 71200 } }
       }
     },
     {
       "Template": "raylib_visual_atmosphere_vfx_additive",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 98600, "Y": 70200 } }
+        "WorldPositionCm": { "Value": { "X": 102400, "Y": 70200 } }
       }
     }
   ]
