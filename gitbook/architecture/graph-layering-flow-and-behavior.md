@@ -67,6 +67,7 @@ L0 GraphInstruction + handler table + Execute / ExecuteSlice
 - **状态节点上配动作**：`OnEnterGraphId` / `OnTickGraphId` / `OnExitGraphId`（Script）
 - **Func lib**：`GraphFunctionCatalog` 名字 → 已登记 L1 图 id（Script/Validation/Score）
 - **Macro**：不支持编译期文本宏；复用走 Func lib + `InvokeScript` / Script 内 `Call`
+- **合同补丁（草案）**：纯函数库与可挂起动作库拆分、Effect Duration/Period 与阶段表达力——见 [FuncLib / ActionLib 合同](graph-funclib-actionlib-contract.md)。实现落地前以该页评审为准；本页描述当前已合入行为。
 - 拓扑仍不编进 `GraphNodeOp`；禁止平行 VM
 
 ## 4. 场景
