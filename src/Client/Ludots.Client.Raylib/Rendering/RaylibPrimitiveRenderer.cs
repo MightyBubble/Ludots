@@ -1239,13 +1239,12 @@ namespace Ludots.Client.Raylib.Rendering
             byte alpha = Clamp01ToByte(color.W);
             Vector3 litRgb = ResolveBillboardLitTintRgb();
             MaterialBlendMode blendMode = ResolveMaterialBlendMode(materialId, MaterialBlendMode.Opaque);
-            Color tint = blendMode == MaterialBlendMode.Cutout
-                ? new Color(255, 255, 255, alpha)
-                : new Color(
-                    Clamp01ToByte(litRgb.X),
-                    Clamp01ToByte(litRgb.Y),
-                    Clamp01ToByte(litRgb.Z),
-                    alpha);
+            // DrawBillboardRec multiplies by tint; keep cutout colDiffuse at identity to avoid double-dim.
+            Color tint = new Color(
+                Clamp01ToByte(litRgb.X),
+                Clamp01ToByte(litRgb.Y),
+                Clamp01ToByte(litRgb.Z),
+                alpha);
             bool doubleSided = IsMaterialDoubleSided(materialId);
             LogBillboardDrawDiagnostic(
                 meshAssetId,

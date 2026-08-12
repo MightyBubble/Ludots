@@ -5,11 +5,11 @@ Updated by agents. Use: `pending` | `in_progress` | `blocked` | `done`.
 | ID | Package | Status | Owner | Notes |
 |----|---------|--------|-------|-------|
 | V1 | Skybox + day/night env | done | cloud-agent | `RaylibSkyEnvironment` + skybox shaders; phase from `GlobalDayNight` via latch; `Presentation/sky_environments.json` (`backendId=raylib`) |
-| V2 | Directional + ambient lighting | done | agent-v2 | RaylibFrameLighting + terrain/ISM/skin N·L+ambient; ambient_day_ramp.json |
+| V2 | Directional + ambient lighting | done | agent-v2 | RaylibFrameLighting + terrain/ISM/skin N·L+ambient; ambient_day_ramp.json; light intensity gated by sun elevation; billboards tinted by frame lighting |
 | V3 | Cutout + Alpha/Additive blend | done | cloud-agent | material flags Cutout / Transparent|AlphaBlend / Additive; vegetation_cutout discard; VFX BeginBlendMode |
-| V4 | Distance fog | done | cloud-agent | `distance_fog.json` → `uFogColor`/`uFogParams` on terrain+ISM+skin; FoW untouched |
+| V4 | Distance fog | done | cloud-agent | `distance_fog.json` widened for strategic cameras; fog color dims with day phase |
 | V5 | Reflective/refractive water FBO | done | cloud-agent | `RaylibWaterPass` + upgraded `water.*`; HostLoop fills RTs from **VisualHeightmap** (or VertexMap); ocean plane for VH maps; `Presentation/water_environments.json` |
-| V6 | Showcase + screenshot acceptance | in_progress | cloud-agent | Pivot: continuous `tropical_island.vhtm` (not vtxm); multi-camera×tod matrix vs reference; PNGs pending recapture |
+| V6 | Showcase + screenshot acceptance | done | cloud-agent | Continuous `tropical_island.vhtm`; aerial shows relief/sand/shelf; day/night delta; water shore shot; acceptance PNGs recaptured |
 
 ## Blockers
 
