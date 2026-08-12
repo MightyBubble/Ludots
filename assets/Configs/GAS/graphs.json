@@ -105,6 +105,68 @@
     ]
   },
   {
+    "id": "Graph.LSW.HotDamage",
+    "kind": "Script",
+    "entry": "c",
+    "nodes": [
+      {
+        "id": "c",
+        "op": "ConstInt",
+        "intValue": 35
+      },
+      {
+        "id": "h",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "c",
+        "fromPort": "next",
+        "to": "h"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "c",
+        "fromPort": "value",
+        "to": "h",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
+    "id": "Graph.LSW.FrostDraft",
+    "kind": "Script",
+    "entry": "c",
+    "nodes": [
+      {
+        "id": "c",
+        "op": "ConstInt",
+        "intValue": 20
+      },
+      {
+        "id": "h",
+        "op": "HaltReturnInt"
+      }
+    ],
+    "controlEdges": [
+      {
+        "from": "c",
+        "fromPort": "next",
+        "to": "h"
+      }
+    ],
+    "valueEdges": [
+      {
+        "from": "c",
+        "fromPort": "value",
+        "to": "h",
+        "toPort": "value"
+      }
+    ]
+  },
+  {
     "id": "Graph.FuncLib.Demo.InvokeConstSeven",
     "kind": "Script",
     "entry": "invoke",

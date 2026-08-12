@@ -55,7 +55,9 @@ internal sealed class LiveSkillWorkbenchVignettePresentationSystem : ISystem<flo
         {
             _runtime.GetProjectilePos(out float px, out float py);
             var color = _runtime.ProjectileFrost ? DebugDrawColor.Cyan : DebugDrawColor.Yellow;
-            GraphShowcaseStagePresenter.DrawActor(_debugDraw, px, py, 0.35f, color);
+            // Projectile radius scales with production ExecuteSlice ReturnInt (35 vs 70).
+            float radius = 0.22f + 0.006f * System.Math.Clamp(_runtime.LastReturnInt, 0, 100);
+            GraphShowcaseStagePresenter.DrawActor(_debugDraw, px, py, radius, color);
             GraphShowcaseStagePresenter.DrawAggroLine(
                 _debugDraw, _runtime.MageX, _runtime.MageY, _runtime.DummyX, _runtime.DummyY);
         }

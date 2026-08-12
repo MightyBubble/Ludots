@@ -15,14 +15,14 @@ public sealed class CapabilityStandardLiveSkillWorkbenchShowcaseModEntry : IMod
 
     public void OnLoad(IModContext context)
     {
-        context.Log("[CapabilityStandardLiveSkillWorkbenchShowcaseMod] Loaded — playable LSW vignette");
+        context.Log("[CapabilityStandardLiveSkillWorkbenchShowcaseMod] Loaded — production hot-apply vignette");
         var runtime = new LiveSkillWorkbenchVignetteRuntime();
         context.OnEvent(GameEvents.GameStart, ctx =>
         {
             GameEngine? engine = ctx.GetEngine();
             if (engine == null) return Task.CompletedTask;
 
-            runtime.Bind();
+            runtime.Bind(engine);
             engine.SetService(MetricsKey, runtime.Metrics);
 
             var debugDraw = new DebugDrawCommandBuffer();
