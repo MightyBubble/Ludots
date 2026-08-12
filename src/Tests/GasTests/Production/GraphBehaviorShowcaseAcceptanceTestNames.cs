@@ -71,7 +71,13 @@ namespace Ludots.Tests.Gas.Production
             runtime.Bind(programs, catalog);
             runtime.EnsureWorld();
             for (int i = 0; i < 8; i++) runtime.Tick(0.2f);
-            Assert.That(runtime.Metrics.Detail, Does.Contain("FuncLib"));
+            Assert.Multiple(() =>
+            {
+                Assert.That(runtime.Metrics.Detail, Does.Contain("查一圈"));
+                Assert.That(runtime.Metrics.Detail, Does.Contain("挂状态"));
+                Assert.That(runtime.Metrics.Detail, Does.Contain("加好感"));
+                Assert.That(runtime.Metrics.Detail, Does.Contain("状态牌"));
+            });
         }
     }
 

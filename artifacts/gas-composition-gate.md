@@ -1,5 +1,59 @@
 ﻿## GAS Composition Gate — Self Review
 
+- **Task / Issue**: Epic #915 P2 showcase coverage wave 1
+- **Date**: 2026-08-12
+- **Agent / Author**: Cursor Cloud GPT-5.5
+
+### 1. Core judgment
+
+新变体主要交付物是（A/B/C/D）: A
+
+结论: PASS
+
+一句话理由: 本轮只扩展已有 capability-standard showcase 的图能力呈现与验收映射，复用现有 FuncLib/Graph registry/acceptance harness，不新增 profile enum、preset 开关或平行管线。
+
+### 2. Layer assignment
+
+| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
+|-----------|-----------------|----------|
+| AbilityGraphSandbox 玩家可读场景说明 | 2 | `CapabilityStandardAbilityGraphSandboxMod` runtime detail |
+| Showcase registry 验收映射 | 2 | `showcase.registry.json` |
+| Graph op coverage 标记 | 2 | `graph_node_op_coverage.registry.json` |
+| UAT 场景映射文档 | 2 | `gitbook/acceptance/graph-funclib-actionlib-uat.md` |
+
+### 3. Reuse list
+
+- Handlers: 现有 `GasGraphOpHandlerTable` 与已注册 Graph opcode handlers
+- Queues / Systems: 现有 capability-standard graph showcase simulation/presentation systems
+- Resolvers / Registries: `GraphProgramRegistry`, `GraphFunctionCatalog`, `GraphActionCatalog`, `showcase.registry.json`, `graph_node_op_coverage.registry.json`
+- Existing presets / graphs: `capability_standard_ability_graph_sandbox`, `GraphRegistryTestBootstrap.LoadCoreScriptsFuncLibAndActionLib`
+
+### 4. New Layer 0 ops (if any)
+
+N/A
+
+### 5. Transaction boundary
+
+必须原子 rollback 的步骤: N/A，本轮不新增运行时事务；仅展示/验收现有 graph op 家族。
+
+### 6. Config SSOT
+
+行为配置落在: graph / catalog / showcase registry（`assets/Configs/GAS/graph_node_op_coverage.registry.json`, `showcase.registry.json`）
+
+是否新增 JSON schema: NO
+
+### 7. Red flag scan
+
+- [x] 未新增 profile inherit/placement enum
+- [x] 未新建与 spawn 平行的物化管线
+- [x] 未把 placement 校验塞进 lifecycle op
+- [x] 未添加「说不清的」默认 fallback
+
+### 8. Next variant test
+
+「下一个 Mod 变体」将修改: graph 连线 / effect 步骤
+## GAS Composition Gate — Self Review
+
 - **Task / Issue**: P1-F restore FrontDoor authoring for placement/snap geometry ops
 - **Date**: 2026-08-12
 - **Agent / Author**: Cursor Cloud Agent
