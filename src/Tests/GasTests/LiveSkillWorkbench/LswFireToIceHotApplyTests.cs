@@ -49,7 +49,7 @@ namespace Ludots.Tests.GAS.LiveSkillWorkbench
             effects.Register(iceHit, new EffectTemplateData { PresetType = EffectPresetType.Buff });
             effects.Register(icePresentation, new EffectTemplateData { PresetType = EffectPresetType.LaunchProjectile });
 
-            var pipeline = new LiveGasEditPipeline(new GraphProgramRegistry(), effects);
+            var pipeline = new LiveGasEditPipeline(new GraphProgramRegistry(), new GraphFunctionCatalog(), effects);
             LiveEditSession session = LiveEditSession.Start(LiveEditSource.ManualWorkbench);
             var prov = new LiveEditProvenance(LiveEditSource.ManualWorkbench, "workbench://fire-to-ice");
 

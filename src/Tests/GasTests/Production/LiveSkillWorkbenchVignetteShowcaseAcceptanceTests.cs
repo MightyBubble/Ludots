@@ -35,7 +35,7 @@ namespace Ludots.Tests.Gas.Production
                 new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
             }, GraphKind.Script);
 
-            var pipeline = new LiveGasEditPipeline(graphs);
+            var pipeline = new LiveGasEditPipeline(graphs, new GraphFunctionCatalog());
             var runtime = new LiveSkillWorkbenchVignetteRuntime();
             runtime.Bind(graphs, pipeline, new LiveEffectChainTracer(32));
             runtime.EnsureWorld();

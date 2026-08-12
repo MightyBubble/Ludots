@@ -19,6 +19,7 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
     public sealed class LiveGasEditPipeline
     {
         private readonly GraphProgramRegistry _graphs;
+        private readonly GraphFunctionCatalog _functions;
         private readonly EffectTemplateRegistry? _effects;
         private readonly TagOps? _tagOps;
         private readonly JsonSerializerOptions _jsonOptions;
@@ -33,11 +34,13 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
 
         public LiveGasEditPipeline(
             GraphProgramRegistry graphs,
+            GraphFunctionCatalog functions,
             EffectTemplateRegistry? effects = null,
             TagOps? tagOps = null,
             JsonSerializerOptions? jsonOptions = null)
         {
             _graphs = graphs ?? throw new ArgumentNullException(nameof(graphs));
+            _functions = functions ?? throw new ArgumentNullException(nameof(functions));
             _effects = effects;
             _tagOps = tagOps;
             _jsonOptions = jsonOptions ?? StrictJsonOptions.CreateCamelCase();
@@ -204,19 +207,19 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
                 for (int i = 0; i < _stagedGraphs.Count; i++)
                 {
                     StagedGraphCandidate c = _stagedGraphs[i];
-                    if (!_graphs.TryGetProgram(c.GraphId, out ReadOnlySpan<GraphInstruction> liveProgram)
-                        || !_graphs.TryGetKind(c.GraphId, out GraphKind liveKind))
+                    if (!_graphs.TryGetRegistration(c.GraphId, out GraphProgramRegistration liveRegistration))
                     {
                         throw new InvalidOperationException(
                             $"Graph '{c.GraphKey}' (id {c.GraphId}) is not registered for ReplaceProgram.");
                     }
 
-                    GraphInstruction[] previousProgram = liveProgram.ToArray();
+                    GraphInstruction[] previousProgram = (GraphInstruction[])liveRegistration.Program.Clone();
+                    string[] previousSymbols = (string[])liveRegistration.Symbols.Clone();
                     _graphs.TryGetSourceMap(c.GraphId, out GraphInstructionSourceMap previousSourceMap);
-                    _graphs.ReplaceProgram(c.GraphId, c.Program, c.Kind, c.SourceMap);
-                    GraphKind kind = liveKind;
+                    _graphs.ReplaceProgram(c.GraphId, c.Program, c.Kind, c.SourceMap, c.Symbols);
+                    GraphKind kind = liveRegistration.Kind;
                     GraphInstructionSourceMap sourceMap = previousSourceMap;
-                    rollbacks.Add(() => _graphs.ReplaceProgram(c.GraphId, previousProgram, kind, sourceMap));
+                    rollbacks.Add(() => _graphs.ReplaceProgram(c.GraphId, previousProgram, kind, sourceMap, previousSymbols));
                     applied++;
                 }
 
@@ -604,12 +607,59 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
                 return;
             }
 
+            if (_functions.TryGetByGraphId(graphId, out GraphFunctionEntry functionEntry) &&
+                !GraphYieldPurityValidator.TryValidateNoReachableYield(
+                    _graphs,
+                    graphId,
+                    $"FuncLib '{functionEntry.Name}' graph '{graphKey}'",
+                    TryResolveFuncLibTarget,
+                    out string purityDiagnostic,
+                    package.Program,
+                    package.Symbols))
+            {
+                mapReload = true;
+                diags.Add(new LiveEditDiagnostic(
+                    LiveEditDiagnosticSeverity.Error,
+                    LiveEditDiagnosticCodes.GraphCompileFailed,
+                    $"FuncLib graph '{graphKey}' cannot be hot-replaced with a program that reaches Yield or an invalid pure closure. Path: {purityDiagnostic}",
+                    graphKey));
+                items.Add(new LiveApplyClassificationItem(
+                    op.Kind,
+                    graphKey,
+                    LiveApplyMode.MapReloadRequired,
+                    "FuncLib target graph candidate violates pure no-Yield closure.",
+                    diags));
+                return;
+            }
+
+            try
+            {
+                GraphProgramSymbolPatcher.PatchFuncLib(package.Symbols, package.Program, _functions);
+            }
+            catch (Exception ex)
+            {
+                mapReload = true;
+                diags.Add(new LiveEditDiagnostic(
+                    LiveEditDiagnosticSeverity.Error,
+                    LiveEditDiagnosticCodes.GraphCompileFailed,
+                    ex.Message,
+                    graphKey));
+                items.Add(new LiveApplyClassificationItem(
+                    op.Kind,
+                    graphKey,
+                    LiveApplyMode.MapReloadRequired,
+                    "Graph candidate FuncLib references could not be resolved; live registry untouched.",
+                    diags));
+                return;
+            }
+
             _stagedGraphs.Add(new StagedGraphCandidate
             {
                 GraphKey = graphKey,
                 GraphId = graphId,
                 Kind = package.Kind,
                 Program = package.Program,
+                Symbols = package.Symbols,
                 SourceMap = compile.SourceMap
             });
             canNextCast = true;
@@ -1047,6 +1097,20 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
             return path.Equals("projectile.impactEffect", StringComparison.OrdinalIgnoreCase)
                 || path.Equals("projectile.hitEffect", StringComparison.OrdinalIgnoreCase)
                 || path.Equals("projectile.presentationEffect", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private bool TryResolveFuncLibTarget(string functionName, out GraphYieldPurityTarget target)
+        {
+            if (_functions.TryGet(functionName, out GraphFunctionEntry entry))
+            {
+                target = new GraphYieldPurityTarget(
+                    entry.GraphId,
+                    $"FuncLib '{entry.Name}' graph '{GraphIdRegistry.GetName(entry.GraphId)}'");
+                return true;
+            }
+
+            target = default;
+            return false;
         }
     }
 }

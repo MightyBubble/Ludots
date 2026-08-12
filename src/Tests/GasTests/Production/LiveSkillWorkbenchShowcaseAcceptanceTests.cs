@@ -38,7 +38,7 @@ namespace Ludots.Tests.Gas.Production
             var effects = new EffectTemplateRegistry();
             effects.Register(effectId, new EffectTemplateData { DurationTicks = 10, PeriodTicks = 0 });
 
-            var pipeline = new LiveGasEditPipeline(graphs, effects);
+            var pipeline = new LiveGasEditPipeline(graphs, new GraphFunctionCatalog(), effects);
             var tracer = new LiveEffectChainTracer(64);
             var ai = new DeterministicFakeAiSkillDraftGenerator();
             var binder = new LiveAiDraftBinder();

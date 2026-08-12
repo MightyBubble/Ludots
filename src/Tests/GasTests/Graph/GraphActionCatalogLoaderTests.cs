@@ -145,7 +145,7 @@ namespace Ludots.Tests.Gas.Graph
                 var actionCatalog = new GraphActionCatalog();
                 var programs = new GraphProgramRegistry();
                 var ex = Assert.Throws<InvalidOperationException>(() =>
-                    new GraphActionCatalogLoader(pipeline, actionCatalog, programs).Load(configCatalog));
+                    new GraphActionCatalogLoader(pipeline, actionCatalog, programs, new GraphFunctionCatalog()).Load(configCatalog));
 
                 Assert.That(actionCatalog.Count, Is.EqualTo(0));
                 Assert.That(ex!.Message, Does.Contain("no file was found"));
@@ -172,7 +172,7 @@ namespace Ludots.Tests.Gas.Graph
                 var actionCatalog = new GraphActionCatalog();
                 var programs = new GraphProgramRegistry();
                 var ex = Assert.Throws<InvalidOperationException>(() =>
-                    new GraphActionCatalogLoader(pipeline, actionCatalog, programs).Load(configCatalog));
+                    new GraphActionCatalogLoader(pipeline, actionCatalog, programs, new GraphFunctionCatalog()).Load(configCatalog));
 
                 Assert.That(actionCatalog.Count, Is.EqualTo(0));
                 Assert.That(ex!.Message, Does.Contain("empty catalog"));
@@ -209,7 +209,7 @@ namespace Ludots.Tests.Gas.Graph
                 root = tempRoot;
 
                 var actionCatalog = new GraphActionCatalog();
-                new GraphActionCatalogLoader(pipeline, actionCatalog, programs).Load(configCatalog);
+                new GraphActionCatalogLoader(pipeline, actionCatalog, programs, new GraphFunctionCatalog()).Load(configCatalog);
 
                 Assert.That(actionCatalog.Count, Is.EqualTo(1));
                 Assert.That(actionCatalog.Require("script.validAction"), Is.EqualTo(graphId));

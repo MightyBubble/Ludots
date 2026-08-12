@@ -37,7 +37,7 @@ namespace Ludots.Tests.GAS
             };
             graphs.Register(graphId, original, GraphKind.Script);
 
-            var pipeline = new LiveGasEditPipeline(graphs);
+            var pipeline = new LiveGasEditPipeline(graphs, new GraphFunctionCatalog());
             LiveEditSession session = LiveEditSession.Start(LiveEditSource.ManualWorkbench);
             var provenance = new LiveEditProvenance(
                 LiveEditSource.ManualWorkbench,
@@ -101,7 +101,7 @@ namespace Ludots.Tests.GAS
                 new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, Imm = BitConverter.SingleToInt32Bits(1f) },
             }, GraphKind.Score);
 
-            var pipeline = new LiveGasEditPipeline(graphs);
+            var pipeline = new LiveGasEditPipeline(graphs, new GraphFunctionCatalog());
             LiveEditSession session = LiveEditSession.Start(LiveEditSource.FileChange);
             string documentJson = $$"""
                 {
@@ -135,6 +135,55 @@ namespace Ludots.Tests.GAS
 
         [Test]
         [Category("ci-gate")]
+        public void Classify_FuncLibGraphBodyReplaceThatReachesYield_MapReloadRequired()
+        {
+            const string graphKey = "Graph.Live.FuncLibHotPure";
+            int graphId = GraphIdRegistry.Register(graphKey);
+            var graphs = new GraphProgramRegistry();
+            graphs.Register(graphId, new[]
+            {
+                new GraphInstruction { Op = (ushort)GraphNodeOp.ConstInt, Dst = 0, Imm = 1 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 },
+            }, GraphKind.Script);
+
+            var functions = new GraphFunctionCatalog();
+            functions.Register("script.hotPure", graphId, GraphKind.Script);
+            var pipeline = new LiveGasEditPipeline(graphs, functions);
+            LiveEditSession session = LiveEditSession.Start(LiveEditSource.ManualWorkbench);
+            string documentJson = $$"""
+                {
+                  "id": "{{graphKey}}",
+                  "kind": "Script",
+                  "entry": "wait",
+                  "nodes": [
+                    { "id": "wait", "op": "Yield" },
+                    { "id": "h", "op": "HaltReturnInt" }
+                  ],
+                  "controlEdges": [
+                    { "from": "wait", "fromPort": "next", "to": "h" }
+                  ],
+                  "valueEdges": []
+                }
+                """;
+
+            That(session.TryStage(LiveDebugPatchOperation.GraphBodyReplace(
+                graphKey,
+                documentJson,
+                new LiveEditProvenance(LiveEditSource.ManualWorkbench, "workbench://graph/" + graphKey))).Succeeded,
+                Is.True);
+
+            LiveApplyClassificationReport report = pipeline.Classify(session);
+
+            That(report.CanCommitNextCast, Is.False);
+            That(report.RequiresMapReload, Is.True);
+            That(report.Items[0].Mode, Is.EqualTo(LiveApplyMode.MapReloadRequired));
+            That(report.Items[0].Diagnostics[0].Code, Is.EqualTo(LiveEditDiagnosticCodes.GraphCompileFailed));
+            That(report.Items[0].Diagnostics[0].Message, Does.Contain("FuncLib graph"));
+            That(report.Items[0].Diagnostics[0].Message, Does.Contain("Yield@pc"));
+        }
+
+        [Test]
+        [Category("ci-gate")]
         public void ClassifyAndCommit_EffectDurationTicks_NextCast()
         {
             string effectName = "Effect.Live.HotDuration";
@@ -143,7 +192,7 @@ namespace Ludots.Tests.GAS
             effects.Register(templateId, new EffectTemplateData { DurationTicks = 10, PeriodTicks = 0 });
 
             var graphs = new GraphProgramRegistry();
-            var pipeline = new LiveGasEditPipeline(graphs, effects);
+            var pipeline = new LiveGasEditPipeline(graphs, new GraphFunctionCatalog(), effects);
             LiveEditSession session = LiveEditSession.Start(LiveEditSource.ManualWorkbench);
             That(session.TryStage(LiveDebugPatchOperation.SkillEffectNumeric(
                 effectName,
@@ -173,7 +222,7 @@ namespace Ludots.Tests.GAS
             var effects = new EffectTemplateRegistry();
             effects.Register(templateId, new EffectTemplateData { DurationTicks = 1 });
 
-            var pipeline = new LiveGasEditPipeline(new GraphProgramRegistry(), effects);
+            var pipeline = new LiveGasEditPipeline(new GraphProgramRegistry(), new GraphFunctionCatalog(), effects);
             LiveEditSession session = LiveEditSession.Start(LiveEditSource.ManualWorkbench);
             That(session.TryStage(LiveDebugPatchOperation.SkillEffectNumeric(
                 effectName,
@@ -192,7 +241,7 @@ namespace Ludots.Tests.GAS
         [Category("ci-gate")]
         public void CommitImmediate_Attribute_UsesSink()
         {
-            var pipeline = new LiveGasEditPipeline(new GraphProgramRegistry());
+            var pipeline = new LiveGasEditPipeline(new GraphProgramRegistry(), new GraphFunctionCatalog());
             LiveEditSession session = LiveEditSession.Start(LiveEditSource.ManualWorkbench);
             That(session.TryStage(LiveDebugPatchOperation.SelectedActorAttribute(
                 ActorTargetSelection.FromEntityIdSurrogate(7),
@@ -226,7 +275,7 @@ namespace Ludots.Tests.GAS
             tagOps.RegisterTagRuleSet(slowId, default);
             That(tagOps.HasTagRule(slowId), Is.True);
 
-            var pipeline = new LiveGasEditPipeline(new GraphProgramRegistry(), effects: null, tagOps);
+            var pipeline = new LiveGasEditPipeline(new GraphProgramRegistry(), new GraphFunctionCatalog(), effects: null, tagOps);
             LiveEditSession session = LiveEditSession.Start(LiveEditSource.ManualWorkbench);
             string documentJson = $$"""
                 {
@@ -260,7 +309,7 @@ namespace Ludots.Tests.GAS
         public void Classify_UnknownTagKey_RequiresEngineRestart()
         {
             var tagOps = new TagOps(new DirtyEntityQueue(8), new TagRuleRegistry());
-            var pipeline = new LiveGasEditPipeline(new GraphProgramRegistry(), effects: null, tagOps);
+            var pipeline = new LiveGasEditPipeline(new GraphProgramRegistry(), new GraphFunctionCatalog(), effects: null, tagOps);
             LiveEditSession session = LiveEditSession.Start(LiveEditSource.FileChange);
             That(session.TryStage(LiveDebugPatchOperation.TagRuleBodyReplace(
                 "State.NeverRegistered",
@@ -288,7 +337,7 @@ namespace Ludots.Tests.GAS
                     hasMax: true,
                     max: 100f));
 
-            var pipeline = new LiveGasEditPipeline(new GraphProgramRegistry());
+            var pipeline = new LiveGasEditPipeline(new GraphProgramRegistry(), new GraphFunctionCatalog());
             LiveEditSession session = LiveEditSession.Start(LiveEditSource.ManualWorkbench);
             That(session.TryStage(LiveDebugPatchOperation.AttrConstraintNumeric(
                 "Health",
@@ -315,7 +364,7 @@ namespace Ludots.Tests.GAS
         [Category("ci-gate")]
         public void Classify_UnknownAttribute_RequiresEngineRestart()
         {
-            var pipeline = new LiveGasEditPipeline(new GraphProgramRegistry());
+            var pipeline = new LiveGasEditPipeline(new GraphProgramRegistry(), new GraphFunctionCatalog());
             LiveEditSession session = LiveEditSession.Start(LiveEditSource.ManualWorkbench);
             That(session.TryStage(LiveDebugPatchOperation.AttrConstraintNumeric(
                 "Attr.DoesNotExist",
@@ -342,7 +391,7 @@ namespace Ludots.Tests.GAS
             effects.Register(okId, new EffectTemplateData { DurationTicks = 10, PeriodTicks = 0 });
             effects.Register(badId, new EffectTemplateData { DurationTicks = 3, PeriodTicks = 0 });
 
-            var pipeline = new LiveGasEditPipeline(new GraphProgramRegistry(), effects);
+            var pipeline = new LiveGasEditPipeline(new GraphProgramRegistry(), new GraphFunctionCatalog(), effects);
             LiveEditSession session = LiveEditSession.Start(LiveEditSource.ManualWorkbench);
             var provenance = new LiveEditProvenance(LiveEditSource.ManualWorkbench, "workbench://atomic");
             That(session.TryStage(LiveDebugPatchOperation.SkillEffectNumeric(
@@ -381,7 +430,7 @@ namespace Ludots.Tests.GAS
             var effects = new EffectTemplateRegistry();
             effects.Register(templateId, new EffectTemplateData { DurationTicks = 1 });
 
-            var pipeline = new LiveGasEditPipeline(new GraphProgramRegistry(), effects);
+            var pipeline = new LiveGasEditPipeline(new GraphProgramRegistry(), new GraphFunctionCatalog(), effects);
             LiveEditSession session = LiveEditSession.Start(LiveEditSource.ManualWorkbench);
             That(session.TryStage(LiveDebugPatchOperation.EffectGrantedTag(
                 effectName,
@@ -424,7 +473,7 @@ namespace Ludots.Tests.GAS
             };
             effects.Register(launchId, in launchData);
 
-            var pipeline = new LiveGasEditPipeline(new GraphProgramRegistry(), effects);
+            var pipeline = new LiveGasEditPipeline(new GraphProgramRegistry(), new GraphFunctionCatalog(), effects);
             LiveEditSession session = LiveEditSession.Start(LiveEditSource.ManualWorkbench);
             That(session.TryStage(LiveDebugPatchOperation.EffectTemplateRef(
                 launch,

@@ -147,8 +147,206 @@ namespace Ludots.Tests.Gas.Graph
                     new GraphFunctionCatalogLoader(pipeline, functionCatalog, programs).Load(configCatalog));
 
                 Assert.That(functionCatalog.Count, Is.EqualTo(0));
-                Assert.That(ex!.InnerExceptions[0].Message, Does.Contain("contains Yield"));
+                Assert.That(ex!.InnerExceptions[0].Message, Does.Contain("reaches Yield"));
                 Assert.That(ex.InnerExceptions[0].Message, Does.Contain("ActionLib"));
+            }
+            finally
+            {
+                GraphIdRegistry.Clear();
+                DeleteTempRoot(root);
+            }
+        }
+
+        [Test]
+        public void FuncCatalogLoader_RejectsPureScriptInvokeScriptGraphIdClosureToYield()
+        {
+            GraphIdRegistry.Clear();
+            string root = string.Empty;
+            try
+            {
+                const string rootGraphName = "Graph.Script.PureViaGraphId";
+                const string yieldGraphName = "Graph.Script.YieldLeaf";
+                int rootGraphId = GraphIdRegistry.Register(rootGraphName);
+                int yieldGraphId = GraphIdRegistry.Register(yieldGraphName);
+                var programs = new GraphProgramRegistry();
+                programs.Register(
+                    yieldGraphId,
+                    new[] { new GraphInstruction { Op = (ushort)GraphNodeOp.Yield } },
+                    GraphKind.Script);
+                programs.Register(
+                    rootGraphId,
+                    new[]
+                    {
+                        new GraphInstruction
+                        {
+                            Op = (ushort)GraphNodeOp.InvokeScript,
+                            Dst = 0,
+                            Imm = yieldGraphId
+                        },
+                        new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 }
+                    },
+                    GraphKind.Script);
+
+                var (pipeline, configCatalog, tempRoot) = CreateCatalogPipeline(
+                    "GAS/func_lib.json",
+                    """
+                    [
+                      { "name": "script.pureViaGraphId", "graph": "Graph.Script.PureViaGraphId", "kind": "Script", "purity": "pure" }
+                    ]
+                    """);
+                root = tempRoot;
+
+                var functionCatalog = new GraphFunctionCatalog();
+                var ex = Assert.Throws<AggregateException>(() =>
+                    new GraphFunctionCatalogLoader(pipeline, functionCatalog, programs).Load(configCatalog));
+
+                Assert.That(functionCatalog.Count, Is.EqualTo(0));
+                Assert.That(ex!.InnerExceptions[0].Message, Does.Contain("InvokeScript.graphId"));
+                Assert.That(ex.InnerExceptions[0].Message, Does.Contain(yieldGraphName));
+                Assert.That(ex.InnerExceptions[0].Message, Does.Contain("Yield@pc"));
+                Assert.That(ex.InnerExceptions[0].Message, Does.Contain("ActionLib"));
+            }
+            finally
+            {
+                GraphIdRegistry.Clear();
+                DeleteTempRoot(root);
+            }
+        }
+
+        [Test]
+        public void FuncCatalogLoader_RejectsPureScriptInvokeScriptFunctionNameClosureToYieldBeforePatch()
+        {
+            GraphIdRegistry.Clear();
+            string root = string.Empty;
+            try
+            {
+                const string rootGraphName = "Graph.Script.PureViaFunctionName";
+                const string yieldGraphName = "Graph.Script.NamedYieldLeaf";
+                int rootGraphId = GraphIdRegistry.Register(rootGraphName);
+                int yieldGraphId = GraphIdRegistry.Register(yieldGraphName);
+                var programs = new GraphProgramRegistry();
+                programs.Register(
+                    yieldGraphId,
+                    new[] { new GraphInstruction { Op = (ushort)GraphNodeOp.Yield } },
+                    GraphKind.Script);
+                programs.Register(
+                    rootGraphId,
+                    new[]
+                    {
+                        new GraphInstruction
+                        {
+                            Op = (ushort)GraphNodeOp.InvokeScript,
+                            Dst = 0,
+                            Imm = 0,
+                            Flags = GraphInstructionFlags.FuncLibName
+                        },
+                        new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt, A = 0 }
+                    },
+                    GraphKind.Script,
+                    GraphInstructionSourceMap.Empty,
+                    new[] { "script.namedYieldLeaf" });
+
+                var (pipeline, configCatalog, tempRoot) = CreateCatalogPipeline(
+                    "GAS/func_lib.json",
+                    """
+                    [
+                      { "name": "script.pureViaFunctionName", "graph": "Graph.Script.PureViaFunctionName", "kind": "Script", "purity": "pure" },
+                      { "name": "script.namedYieldLeaf", "graph": "Graph.Script.NamedYieldLeaf", "kind": "Script", "purity": "pure" }
+                    ]
+                    """);
+                root = tempRoot;
+
+                var functionCatalog = new GraphFunctionCatalog();
+                var ex = Assert.Throws<AggregateException>(() =>
+                    new GraphFunctionCatalogLoader(pipeline, functionCatalog, programs).Load(configCatalog));
+
+                Assert.That(functionCatalog.Count, Is.EqualTo(0));
+                Assert.That(ex!.InnerExceptions[0].Message, Does.Contain("InvokeScript.functionName"));
+                Assert.That(ex.InnerExceptions[0].Message, Does.Contain("script.namedYieldLeaf"));
+                Assert.That(ex.InnerExceptions[0].Message, Does.Contain("Yield@pc"));
+            }
+            finally
+            {
+                GraphIdRegistry.Clear();
+                DeleteTempRoot(root);
+            }
+        }
+
+        [Test]
+        public void FuncCatalogLoader_RejectsPureScriptCallTargetClosureToYield()
+        {
+            GraphIdRegistry.Clear();
+            string root = string.Empty;
+            try
+            {
+                const string graphName = "Graph.Script.CallYield";
+                int graphId = GraphIdRegistry.Register(graphName);
+                var programs = new GraphProgramRegistry();
+                programs.Register(
+                    graphId,
+                    new[]
+                    {
+                        new GraphInstruction { Op = (ushort)GraphNodeOp.Call, Imm = 2 },
+                        new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt },
+                        new GraphInstruction { Op = (ushort)GraphNodeOp.Yield }
+                    },
+                    GraphKind.Script);
+
+                var (pipeline, configCatalog, tempRoot) = CreateCatalogPipeline(
+                    "GAS/func_lib.json",
+                    """
+                    [
+                      { "name": "script.callYield", "graph": "Graph.Script.CallYield", "kind": "Script", "purity": "pure" }
+                    ]
+                    """);
+                root = tempRoot;
+
+                var functionCatalog = new GraphFunctionCatalog();
+                var ex = Assert.Throws<AggregateException>(() =>
+                    new GraphFunctionCatalogLoader(pipeline, functionCatalog, programs).Load(configCatalog));
+
+                Assert.That(functionCatalog.Count, Is.EqualTo(0));
+                Assert.That(ex!.InnerExceptions[0].Message, Does.Contain("Call@pc"));
+                Assert.That(ex.InnerExceptions[0].Message, Does.Contain("Yield@pc"));
+            }
+            finally
+            {
+                GraphIdRegistry.Clear();
+                DeleteTempRoot(root);
+            }
+        }
+
+        [Test]
+        public void FuncCatalogLoader_RejectsScoreKind()
+        {
+            GraphIdRegistry.Clear();
+            string root = string.Empty;
+            try
+            {
+                const string graphName = "Graph.Score.DistanceDecay";
+                int graphId = GraphIdRegistry.Register(graphName);
+                var programs = new GraphProgramRegistry();
+                programs.Register(
+                    graphId,
+                    new[] { new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt } },
+                    GraphKind.Score);
+
+                var (pipeline, configCatalog, tempRoot) = CreateCatalogPipeline(
+                    "GAS/func_lib.json",
+                    """
+                    [
+                      { "name": "score.distanceDecay", "graph": "Graph.Score.DistanceDecay", "kind": "Score", "purity": "pure" }
+                    ]
+                    """);
+                root = tempRoot;
+
+                var functionCatalog = new GraphFunctionCatalog();
+                var ex = Assert.Throws<AggregateException>(() =>
+                    new GraphFunctionCatalogLoader(pipeline, functionCatalog, programs).Load(configCatalog));
+
+                Assert.That(functionCatalog.Count, Is.EqualTo(0));
+                Assert.That(ex!.InnerExceptions[0].Message, Does.Contain("must be Script (pure)"));
+                Assert.That(ex.InnerExceptions[0].Message, Does.Contain("Score and Validation are deferred"));
             }
             finally
             {

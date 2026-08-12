@@ -1438,7 +1438,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.GraphProgramRegistry, graphProgramRegistry);
             SetService(CoreServiceKeys.GraphFunctionCatalog, graphFunctionCatalog);
             SetService(CoreServiceKeys.GraphActionCatalog, graphActionCatalog);
-            var liveGasEditPipeline = new LiveGasEditPipeline(graphProgramRegistry, effectTemplateRegistry, tagOps);
+            var liveGasEditPipeline = new LiveGasEditPipeline(graphProgramRegistry, graphFunctionCatalog, effectTemplateRegistry, tagOps);
             var liveAttributeCommandExecutor = new LiveAttributeCommandExecutor(World, tagOps);
             var liveEffectChainTracer = new LiveEffectChainTracer(capacity: 256);
             var liveAiDraftBinder = new LiveAiDraftBinder();

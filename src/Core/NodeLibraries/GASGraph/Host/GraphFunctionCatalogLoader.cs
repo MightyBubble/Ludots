@@ -18,6 +18,22 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         private readonly GraphFunctionCatalog _catalog;
         private readonly GraphProgramRegistry _programs;
 
+        private readonly struct FuncLibDefinition
+        {
+            public FuncLibDefinition(string name, string graphKey, int graphId, GraphKind kind)
+            {
+                Name = name;
+                GraphKey = graphKey;
+                GraphId = graphId;
+                Kind = kind;
+            }
+
+            public string Name { get; }
+            public string GraphKey { get; }
+            public int GraphId { get; }
+            public GraphKind Kind { get; }
+        }
+
         public GraphFunctionCatalogLoader(
             ConfigPipeline pipeline,
             GraphFunctionCatalog catalog,
@@ -56,6 +72,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             }
 
             var errors = new List<string>();
+            var definitions = new List<FuncLibDefinition>(merged.Count);
+            var pendingByName = new Dictionary<string, FuncLibDefinition>(StringComparer.Ordinal);
 
             for (int i = 0; i < merged.Count; i++)
             {
@@ -73,10 +91,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     }
 
                     if (!GraphKindParser.TryParse(kindText, out GraphKind kind) ||
-                        kind is not (GraphKind.Script or GraphKind.Validation or GraphKind.Score))
+                        kind != GraphKind.Script)
                     {
                         throw new InvalidOperationException(
-                            $"FuncLib '{name}' kind '{kindText}' must be Script, Validation, or Score.");
+                            $"FuncLib '{name}' kind '{kindText}' must be Script (pure); Score and Validation are deferred until InvokeScore/InvokeValidation exist.");
                     }
 
                     int graphId = GraphIdRegistry.GetId(graphKey!);
@@ -86,29 +104,44 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                             $"FuncLib '{name}' graph '{graphKey}' is not registered. Load graphs before func_lib.");
                     }
 
-                    if (!_programs.TryGetKind(graphId, out GraphKind registeredKind) || registeredKind != kind)
+                    if (!_programs.TryGetRegistration(graphId, out GraphProgramRegistration registered) ||
+                        registered.Kind != kind)
                     {
                         throw new InvalidOperationException(
-                            $"FuncLib '{name}' kind '{kind}' does not match registered graph '{graphKey}' kind '{registeredKind}'.");
+                            $"FuncLib '{name}' kind '{kind}' does not match registered graph '{graphKey}' kind '{registered.Kind}'.");
                     }
 
-                    if (!_programs.TryGetProgram(graphId, out ReadOnlySpan<GraphInstruction> program))
+                    var definition = new FuncLibDefinition(name, graphKey!, graphId, kind);
+                    if (!pendingByName.TryAdd(name, definition))
                     {
                         throw new InvalidOperationException(
-                            $"FuncLib '{name}' graph '{graphKey}' has no registered program.");
+                            $"FuncLib '{name}' is duplicated after merge.");
                     }
 
-                    if (ContainsYield(program))
-                    {
-                        throw new InvalidOperationException(
-                            $"FuncLib '{name}' graph '{graphKey}' contains Yield and belongs in ActionLib.");
-                    }
-
-                    _catalog.Register(name, graphId, kind);
+                    definitions.Add(definition);
                 }
                 catch (Exception ex)
                 {
                     errors.Add($"FuncLib '{name}' in '{relativePath}': {ex.Message}");
+                }
+            }
+
+            if (errors.Count == 0)
+            {
+                for (int i = 0; i < definitions.Count; i++)
+                {
+                    FuncLibDefinition definition = definitions[i];
+                    string rootLabel = $"FuncLib '{definition.Name}' graph '{definition.GraphKey}'";
+                    if (!GraphYieldPurityValidator.TryValidateNoReachableYield(
+                            _programs,
+                            definition.GraphId,
+                            rootLabel,
+                            ResolvePendingFunction,
+                            out string diagnostic))
+                    {
+                        errors.Add(
+                            $"FuncLib '{definition.Name}' in '{relativePath}': {rootLabel} reaches Yield or an invalid pure closure and belongs in ActionLib. Path: {diagnostic}");
+                    }
                 }
             }
 
@@ -117,6 +150,26 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 throw new AggregateException(
                     $"[GraphFunctionCatalogLoader] {errors.Count} func_lib error(s) in '{relativePath}'.",
                     errors.ConvertAll(e => (Exception)new InvalidOperationException(e)));
+            }
+
+            for (int i = 0; i < definitions.Count; i++)
+            {
+                FuncLibDefinition definition = definitions[i];
+                _catalog.Register(definition.Name, definition.GraphId, definition.Kind);
+            }
+
+            bool ResolvePendingFunction(string functionName, out GraphYieldPurityTarget target)
+            {
+                if (pendingByName.TryGetValue(functionName, out FuncLibDefinition definition))
+                {
+                    target = new GraphYieldPurityTarget(
+                        definition.GraphId,
+                        $"FuncLib '{definition.Name}' graph '{definition.GraphKey}'");
+                    return true;
+                }
+
+                target = default;
+                return false;
             }
         }
 
@@ -152,17 +205,5 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             return string.IsNullOrWhiteSpace(text) ? string.Empty : text.Trim();
         }
 
-        private static bool ContainsYield(ReadOnlySpan<GraphInstruction> program)
-        {
-            for (int i = 0; i < program.Length; i++)
-            {
-                if (program[i].Op == (ushort)GraphNodeOp.Yield)
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
     }
 }

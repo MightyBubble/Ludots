@@ -155,7 +155,7 @@ namespace Ludots.Tests.GAS
             var effects = new EffectTemplateRegistry();
             effects.Register(effectId, new EffectTemplateData { DurationTicks = 10, PeriodTicks = 0 });
 
-            var pipeline = new LiveGasEditPipeline(graphs, effects);
+            var pipeline = new LiveGasEditPipeline(graphs, new GraphFunctionCatalog(), effects);
             var generator = new DeterministicFakeAiSkillDraftGenerator();
             var provenance = new LiveEditProvenance(LiveEditSource.AiGeneratedDraft, "ai://frost");
             LiveAiSkillDraft draft = generator.Generate("做一个小范围冰冻技能", provenance);
@@ -184,7 +184,7 @@ namespace Ludots.Tests.GAS
         [Category("ci-gate")]
         public void Lsw623_AiDraft_RejectPrompt_DoesNotCommitLive()
         {
-            var pipeline = new LiveGasEditPipeline(new GraphProgramRegistry(), new EffectTemplateRegistry());
+            var pipeline = new LiveGasEditPipeline(new GraphProgramRegistry(), new GraphFunctionCatalog(), new EffectTemplateRegistry());
             var generator = new DeterministicFakeAiSkillDraftGenerator();
             LiveAiSkillDraft draft = generator.Generate("REJECT this", new LiveEditProvenance(LiveEditSource.AiGeneratedDraft, "ai://bad"));
             LiveEditSession session = LiveEditSession.Start(LiveEditSource.AiGeneratedDraft);

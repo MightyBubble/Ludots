@@ -6,13 +6,20 @@ namespace Ludots.Core.GraphRuntime
     public readonly struct GraphProgramRegistration
     {
         public GraphProgramRegistration(GraphInstruction[] program, GraphKind kind)
+            : this(program, kind, Array.Empty<string>())
+        {
+        }
+
+        public GraphProgramRegistration(GraphInstruction[] program, GraphKind kind, string[]? symbols)
         {
             Program = program ?? Array.Empty<GraphInstruction>();
             Kind = kind;
+            Symbols = symbols ?? Array.Empty<string>();
         }
 
         public GraphInstruction[] Program { get; }
         public GraphKind Kind { get; }
+        public string[] Symbols { get; }
     }
 
     public sealed class GraphProgramRegistry
@@ -30,6 +37,9 @@ namespace Ludots.Core.GraphRuntime
             => Register(graphId, program, kind, GraphInstructionSourceMap.Empty);
 
         public void Register(int graphId, GraphInstruction[] program, GraphKind kind, GraphInstructionSourceMap sourceMap)
+            => Register(graphId, program, kind, sourceMap, Array.Empty<string>());
+
+        public void Register(int graphId, GraphInstruction[] program, GraphKind kind, GraphInstructionSourceMap sourceMap, string[]? symbols)
         {
             if (graphId <= 0) throw new ArgumentOutOfRangeException(nameof(graphId));
             if (program == null) throw new ArgumentNullException(nameof(program));
@@ -38,7 +48,7 @@ namespace Ludots.Core.GraphRuntime
                 throw new ArgumentOutOfRangeException(nameof(kind), kind, "Graph registration requires an explicit supported kind.");
             }
 
-            if (!_programs.TryAdd(graphId, new GraphProgramRegistration(program, kind)))
+            if (!_programs.TryAdd(graphId, new GraphProgramRegistration(program, kind, symbols)))
             {
                 throw new InvalidOperationException(
                     $"Graph program id {graphId} is already registered; duplicate registration is not allowed.");
@@ -55,6 +65,9 @@ namespace Ludots.Core.GraphRuntime
         /// Kind and id must stay identical; identity remap is forbidden (EngineRestartRequired).
         /// </summary>
         public void ReplaceProgram(int graphId, GraphInstruction[] program, GraphKind kind, GraphInstructionSourceMap sourceMap)
+            => ReplaceProgram(graphId, program, kind, sourceMap, Array.Empty<string>());
+
+        public void ReplaceProgram(int graphId, GraphInstruction[] program, GraphKind kind, GraphInstructionSourceMap sourceMap, string[]? symbols)
         {
             if (graphId <= 0) throw new ArgumentOutOfRangeException(nameof(graphId));
             if (program == null) throw new ArgumentNullException(nameof(program));
@@ -75,7 +88,7 @@ namespace Ludots.Core.GraphRuntime
                     $"Graph program id {graphId} kind is '{existing.Kind}'; cannot replace with '{kind}' (identity change requires EngineRestart).");
             }
 
-            _programs[graphId] = new GraphProgramRegistration(program, kind);
+            _programs[graphId] = new GraphProgramRegistration(program, kind, symbols);
             if (sourceMap.HasSources)
             {
                 _sourceMaps[graphId] = sourceMap;
@@ -109,6 +122,9 @@ namespace Ludots.Core.GraphRuntime
             kind = GraphKind.None;
             return false;
         }
+
+        public bool TryGetRegistration(int graphId, out GraphProgramRegistration registration)
+            => _programs.TryGetValue(graphId, out registration);
 
         public GraphKind RequireKind(int graphId, GraphKind expected)
         {

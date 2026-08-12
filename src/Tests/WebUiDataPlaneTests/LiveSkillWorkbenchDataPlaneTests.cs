@@ -134,7 +134,7 @@ public sealed class LiveSkillWorkbenchDataPlaneTests
 		var effects = new EffectTemplateRegistry();
 		effects.Register(templateId, new EffectTemplateData { DurationTicks = 10, PeriodTicks = 0 });
 
-		var pipeline = new LiveGasEditPipeline(new GraphProgramRegistry(), effects);
+		var pipeline = new LiveGasEditPipeline(new GraphProgramRegistry(), new GraphFunctionCatalog(), effects);
 		var runtime = new LiveSkillWorkbenchRuntime();
 		runtime.BindPipeline(pipeline);
 		runtime.ReplaceDocument(new LiveSkillWorkbenchDocumentDto(

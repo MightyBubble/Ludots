@@ -116,7 +116,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     id,
                     nameof(GraphProgramConfigLoader));
 
-                _registry.Register(id, program, kind);
+                _registry.Register(id, program, kind, GraphInstructionSourceMap.Empty, symbols);
                 if (_outputSchemas != null)
                 {
                     GraphOutputSchema schema = _pendingOutputSchemas.TryGetValue(name, out GraphOutputSchema pendingSchema)
