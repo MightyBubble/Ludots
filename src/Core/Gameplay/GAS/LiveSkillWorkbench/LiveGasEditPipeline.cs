@@ -26,6 +26,8 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
         private readonly List<StagedEffectNumericCandidate> _stagedEffects = new(4);
         private readonly List<StagedTagRuleCandidate> _stagedTagRules = new(4);
         private readonly List<StagedAttrConstraintCandidate> _stagedAttrConstraints = new(4);
+        private readonly List<StagedEffectRefCandidate> _stagedEffectRefs = new(4);
+        private readonly List<StagedEffectGrantedTagCandidate> _stagedGrantedTags = new(4);
         private readonly List<LiveDebugPatchOperation> _stagedImmediate = new(4);
         private bool _safeFrameOpen;
 
@@ -59,6 +61,8 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
             _stagedEffects.Clear();
             _stagedTagRules.Clear();
             _stagedAttrConstraints.Clear();
+            _stagedEffectRefs.Clear();
+            _stagedGrantedTags.Clear();
             _stagedImmediate.Clear();
 
             var items = new List<LiveApplyClassificationItem>(session.Patch.Count);
@@ -102,6 +106,16 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
                     case LiveDebugPatchOperationKind.AttrConstraintNumeric:
                     {
                         ClassifyAttrConstraint(in op, items, ref canNextCast, ref mapReload, ref engineRestart);
+                        break;
+                    }
+                    case LiveDebugPatchOperationKind.EffectTemplateRef:
+                    {
+                        ClassifyEffectRef(in op, items, ref canNextCast, ref mapReload, ref engineRestart);
+                        break;
+                    }
+                    case LiveDebugPatchOperationKind.EffectGrantedTag:
+                    {
+                        ClassifyGrantedTag(in op, items, ref canNextCast, ref mapReload, ref engineRestart);
                         break;
                     }
                     default:
@@ -267,10 +281,65 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
                 }
             }
 
+            for (int i = 0; i < _stagedEffectRefs.Count; i++)
+            {
+                StagedEffectRefCandidate c = _stagedEffectRefs[i];
+                if (_effects == null)
+                {
+                    diagnostics.Add(new LiveEditDiagnostic(
+                        LiveEditDiagnosticSeverity.Error,
+                        LiveEditDiagnosticCodes.EffectTemplateMissing,
+                        "EffectTemplateRegistry was not provided.",
+                        c.DefinitionId));
+                    continue;
+                }
+
+                if (!_effects.TryReplaceHotProjectileEffectRef(
+                        c.TemplateId, c.FieldPath, c.TargetEffectTemplateId, out string? reason))
+                {
+                    diagnostics.Add(new LiveEditDiagnostic(
+                        LiveEditDiagnosticSeverity.Error,
+                        LiveEditDiagnosticCodes.EffectFieldNotHotEditable,
+                        reason ?? "Effect ref replace failed.",
+                        c.DefinitionId));
+                    continue;
+                }
+
+                applied++;
+            }
+
+            for (int i = 0; i < _stagedGrantedTags.Count; i++)
+            {
+                StagedEffectGrantedTagCandidate c = _stagedGrantedTags[i];
+                if (_effects == null)
+                {
+                    diagnostics.Add(new LiveEditDiagnostic(
+                        LiveEditDiagnosticSeverity.Error,
+                        LiveEditDiagnosticCodes.EffectTemplateMissing,
+                        "EffectTemplateRegistry was not provided.",
+                        c.DefinitionId));
+                    continue;
+                }
+
+                if (!_effects.TryReplaceHotGrantedTagFixed(c.TemplateId, c.TagId, c.Amount, out string? reason))
+                {
+                    diagnostics.Add(new LiveEditDiagnostic(
+                        LiveEditDiagnosticSeverity.Error,
+                        LiveEditDiagnosticCodes.EffectFieldNotHotEditable,
+                        reason ?? "Granted tag replace failed.",
+                        c.DefinitionId));
+                    continue;
+                }
+
+                applied++;
+            }
+
             _stagedGraphs.Clear();
             _stagedEffects.Clear();
             _stagedTagRules.Clear();
             _stagedAttrConstraints.Clear();
+            _stagedEffectRefs.Clear();
+            _stagedGrantedTags.Clear();
 
             if (diagnostics.Count > 0)
             {
@@ -804,6 +873,115 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
             return true;
         }
 
+        private void ClassifyEffectRef(
+            in LiveDebugPatchOperation op,
+            List<LiveApplyClassificationItem> items,
+            ref bool canNextCast,
+            ref bool mapReload,
+            ref bool engineRestart)
+        {
+            string definitionId = op.DefinitionId ?? string.Empty;
+            string fieldPath = op.FieldPath ?? string.Empty;
+            string targetName = op.DocumentJson ?? string.Empty;
+            if (_effects == null)
+            {
+                mapReload = true;
+                items.Add(new LiveApplyClassificationItem(
+                    op.Kind, definitionId, LiveApplyMode.MapReloadRequired,
+                    "EffectTemplateRegistry unavailable.",
+                    Array.Empty<LiveEditDiagnostic>()));
+                return;
+            }
+
+            int templateId = EffectTemplateIdRegistry.GetId(definitionId);
+            int targetId = EffectTemplateIdRegistry.GetId(targetName);
+            if (templateId == EffectTemplateIdRegistry.InvalidId || targetId == EffectTemplateIdRegistry.InvalidId)
+            {
+                engineRestart = true;
+                items.Add(new LiveApplyClassificationItem(
+                    op.Kind, definitionId, LiveApplyMode.EngineRestartRequired,
+                    $"Unknown effect id '{definitionId}' or target '{targetName}'.",
+                    Array.Empty<LiveEditDiagnostic>()));
+                return;
+            }
+
+            _stagedEffectRefs.Add(new StagedEffectRefCandidate
+            {
+                DefinitionId = definitionId,
+                TemplateId = templateId,
+                FieldPath = fieldPath,
+                TargetEffectTemplateId = targetId
+            });
+            canNextCast = true;
+            items.Add(new LiveApplyClassificationItem(
+                op.Kind, definitionId, LiveApplyMode.NextCastLiveApply,
+                $"Projectile ref '{fieldPath}' -> '{targetName}' on NextCast.",
+                Array.Empty<LiveEditDiagnostic>()));
+        }
+
+        private void ClassifyGrantedTag(
+            in LiveDebugPatchOperation op,
+            List<LiveApplyClassificationItem> items,
+            ref bool canNextCast,
+            ref bool mapReload,
+            ref bool engineRestart)
+        {
+            string definitionId = op.DefinitionId ?? string.Empty;
+            string tagName = op.DocumentJson ?? string.Empty;
+            if (_effects == null)
+            {
+                mapReload = true;
+                items.Add(new LiveApplyClassificationItem(
+                    op.Kind, definitionId, LiveApplyMode.MapReloadRequired,
+                    "EffectTemplateRegistry unavailable.",
+                    Array.Empty<LiveEditDiagnostic>()));
+                return;
+            }
+
+            int templateId = EffectTemplateIdRegistry.GetId(definitionId);
+            int tagId = TagRegistry.GetId(tagName);
+            if (templateId == EffectTemplateIdRegistry.InvalidId)
+            {
+                engineRestart = true;
+                items.Add(new LiveApplyClassificationItem(
+                    op.Kind, definitionId, LiveApplyMode.EngineRestartRequired,
+                    $"Unknown effect '{definitionId}'.",
+                    Array.Empty<LiveEditDiagnostic>()));
+                return;
+            }
+
+            if (tagId == TagRegistry.InvalidId)
+            {
+                // Allow Register only if not frozen; otherwise EngineRestart.
+                if (!TagRegistry.IsFrozen)
+                {
+                    tagId = TagRegistry.Register(tagName);
+                }
+                else
+                {
+                    engineRestart = true;
+                    items.Add(new LiveApplyClassificationItem(
+                        op.Kind, definitionId, LiveApplyMode.EngineRestartRequired,
+                        $"Unknown tag '{tagName}' while TagRegistry is frozen.",
+                        Array.Empty<LiveEditDiagnostic>()));
+                    return;
+                }
+            }
+
+            _stagedGrantedTags.Add(new StagedEffectGrantedTagCandidate
+            {
+                DefinitionId = definitionId,
+                TemplateId = templateId,
+                TagId = tagId,
+                Amount = (ushort)Math.Clamp((int)Math.Round(op.NumericValue), 1, 32)
+            });
+            canNextCast = true;
+            items.Add(new LiveApplyClassificationItem(
+                op.Kind, definitionId, LiveApplyMode.NextCastLiveApply,
+                $"Granted tag '{tagName}' on NextCast.",
+                Array.Empty<LiveEditDiagnostic>()));
+        }
+
         private static bool IsHotEditableEffectField(string fieldPath)
         {
             if (string.IsNullOrWhiteSpace(fieldPath)) return false;
@@ -811,7 +989,9 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
             return path.Equals("duration.durationTicks", StringComparison.OrdinalIgnoreCase)
                 || path.Equals("DurationTicks", StringComparison.OrdinalIgnoreCase)
                 || path.Equals("duration.periodTicks", StringComparison.OrdinalIgnoreCase)
-                || path.Equals("PeriodTicks", StringComparison.OrdinalIgnoreCase);
+                || path.Equals("PeriodTicks", StringComparison.OrdinalIgnoreCase)
+                || path.Equals("modifiers.0.value", StringComparison.OrdinalIgnoreCase)
+                || path.Equals("modifiers[0].value", StringComparison.OrdinalIgnoreCase);
         }
     }
 }

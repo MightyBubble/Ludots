@@ -95,4 +95,20 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
         public required int AttributeId { get; init; }
         public required AttributeRegistry.AttributeConstraints Constraints { get; init; }
     }
+
+    internal sealed class StagedEffectRefCandidate
+    {
+        public required string DefinitionId { get; init; }
+        public required int TemplateId { get; init; }
+        public required string FieldPath { get; init; }
+        public required int TargetEffectTemplateId { get; init; }
+    }
+
+    internal sealed class StagedEffectGrantedTagCandidate
+    {
+        public required string DefinitionId { get; init; }
+        public required int TemplateId { get; init; }
+        public required int TagId { get; init; }
+        public required ushort Amount { get; init; }
+    }
 }

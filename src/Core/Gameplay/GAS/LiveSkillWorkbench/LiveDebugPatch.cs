@@ -10,7 +10,9 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
         SelectedActorAttribute = 2,
         GraphBodyReplace = 3,
         TagRuleBodyReplace = 4,
-        AttrConstraintNumeric = 5
+        AttrConstraintNumeric = 5,
+        EffectTemplateRef = 6,
+        EffectGrantedTag = 7
     }
 
     public enum ActorAttributeMutationKind : byte
@@ -217,6 +219,42 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
                 attributeName: null,
                 attributeMutation: default,
                 documentJson: null);
+        }
+
+        public static LiveDebugPatchOperation EffectTemplateRef(
+            string definitionId,
+            string fieldPath,
+            string targetEffectId,
+            in LiveEditProvenance provenance)
+        {
+            return new LiveDebugPatchOperation(
+                LiveDebugPatchOperationKind.EffectTemplateRef,
+                provenance,
+                definitionId,
+                fieldPath,
+                numericValue: 0d,
+                default,
+                attributeName: null,
+                attributeMutation: default,
+                documentJson: targetEffectId);
+        }
+
+        public static LiveDebugPatchOperation EffectGrantedTag(
+            string definitionId,
+            string tagName,
+            double amount,
+            in LiveEditProvenance provenance)
+        {
+            return new LiveDebugPatchOperation(
+                LiveDebugPatchOperationKind.EffectGrantedTag,
+                provenance,
+                definitionId,
+                fieldPath: "grantedTags.0",
+                amount,
+                default,
+                attributeName: null,
+                attributeMutation: default,
+                documentJson: tagName);
         }
     }
 

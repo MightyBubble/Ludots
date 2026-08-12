@@ -124,17 +124,45 @@ namespace Ludots.Adapter.Raylib
 
         private static IntPtr ResolveGlProcAddress(string name)
         {
-            IntPtr proc = WglGetProcAddress(name);
-            if (proc != IntPtr.Zero && proc.ToInt64() is not 1 and not 2 and not 3 and not -1)
+            if (OperatingSystem.IsWindows())
             {
-                return proc;
+                IntPtr proc = WglGetProcAddress(name);
+                if (proc != IntPtr.Zero && proc.ToInt64() is not 1 and not 2 and not 3 and not -1)
+                {
+                    return proc;
+                }
+
+                return NativeLibrary.TryLoad("opengl32.dll", out IntPtr module) &&
+                    NativeLibrary.TryGetExport(module, name, out proc)
+                        ? proc
+                        : IntPtr.Zero;
             }
 
-            return NativeLibrary.TryLoad("opengl32.dll", out IntPtr module) &&
-                NativeLibrary.TryGetExport(module, name, out proc)
-                    ? proc
-                    : IntPtr.Zero;
+            // Linux / Unix: resolve via libGL (Raylib already created a GLX/EGL context).
+            if (NativeLibrary.TryLoad("libGL.so.1", out IntPtr gl) ||
+                NativeLibrary.TryLoad("libGL.so", out gl))
+            {
+                if (NativeLibrary.TryGetExport(gl, "glXGetProcAddressARB", out IntPtr getProc) ||
+                    NativeLibrary.TryGetExport(gl, "glXGetProcAddress", out getProc))
+                {
+                    var getter = Marshal.GetDelegateForFunctionPointer<GlXGetProcAddress>(getProc);
+                    IntPtr proc = getter(name);
+                    if (proc != IntPtr.Zero)
+                    {
+                        return proc;
+                    }
+                }
+
+                if (NativeLibrary.TryGetExport(gl, name, out IntPtr direct))
+                {
+                    return direct;
+                }
+            }
+
+            return IntPtr.Zero;
         }
+
+        private delegate IntPtr GlXGetProcAddress(string procName);
 
         [DllImport("opengl32.dll", EntryPoint = "wglGetProcAddress", CharSet = CharSet.Ansi, ExactSpelling = true)]
         private static extern IntPtr WglGetProcAddress(string procName);

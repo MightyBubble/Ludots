@@ -118,6 +118,32 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
                 case LiveDebugPatchOperationKind.AttrConstraintNumeric:
                     ValidateAttrConstraintNumeric(in operation, diagnostics);
                     break;
+                case LiveDebugPatchOperationKind.EffectTemplateRef:
+                    if (string.IsNullOrWhiteSpace(operation.DefinitionId) ||
+                        string.IsNullOrWhiteSpace(operation.FieldPath) ||
+                        string.IsNullOrWhiteSpace(operation.DocumentJson))
+                    {
+                        diagnostics.Add(new LiveEditDiagnostic(
+                            LiveEditDiagnosticSeverity.Error,
+                            LiveEditDiagnosticCodes.MissingDefinitionId,
+                            "EffectTemplateRef requires definitionId, fieldPath, and target effect id.",
+                            operation.DefinitionId));
+                    }
+
+                    break;
+                case LiveDebugPatchOperationKind.EffectGrantedTag:
+                    if (string.IsNullOrWhiteSpace(operation.DefinitionId) ||
+                        string.IsNullOrWhiteSpace(operation.DocumentJson) ||
+                        !IsFinite(operation.NumericValue))
+                    {
+                        diagnostics.Add(new LiveEditDiagnostic(
+                            LiveEditDiagnosticSeverity.Error,
+                            LiveEditDiagnosticCodes.MissingDefinitionId,
+                            "EffectGrantedTag requires definitionId, tag name, and finite amount.",
+                            operation.DefinitionId));
+                    }
+
+                    break;
                 default:
                     diagnostics.Add(new LiveEditDiagnostic(
                         LiveEditDiagnosticSeverity.Error,

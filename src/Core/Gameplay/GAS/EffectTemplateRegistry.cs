@@ -508,9 +508,132 @@ namespace Ludots.Core.Gameplay.GAS
                 return true;
             }
 
+            if (path.Equals("modifiers.0.value", StringComparison.OrdinalIgnoreCase)
+                || path.Equals("modifiers[0].value", StringComparison.OrdinalIgnoreCase))
+            {
+                if (data.Modifiers.Count <= 0)
+                {
+                    failureReason = "modifiers.0.value requires at least one authored modifier.";
+                    return false;
+                }
+
+                unsafe
+                {
+                    data.Modifiers.Values[0] = (float)numericValue;
+                }
+
+                _templates[templateId] = data;
+                failureReason = null;
+                return true;
+            }
+
             failureReason =
                 $"Field path '{fieldPath}' is not NextCast-hot-editable; MapReload or EngineRestart is required.";
             return false;
+        }
+
+        /// <summary>
+        /// NextCast-safe replace of projectile impact/presentation effect refs (stable template id).
+        /// </summary>
+        public bool TryReplaceHotProjectileEffectRef(
+            int templateId,
+            string fieldPath,
+            int targetEffectTemplateId,
+            out string? failureReason)
+        {
+            if (!TryGet(templateId, out EffectTemplateData data))
+            {
+                failureReason = $"Effect template id {templateId} is not registered.";
+                return false;
+            }
+
+            if (targetEffectTemplateId <= 0 || !TryGet(targetEffectTemplateId, out _))
+            {
+                failureReason = $"Target effect template id {targetEffectTemplateId} is not registered.";
+                return false;
+            }
+
+            if (data.PresetType != EffectPresetType.LaunchProjectile)
+            {
+                failureReason = "Projectile effect refs require LaunchProjectile preset.";
+                return false;
+            }
+
+            string path = (fieldPath ?? string.Empty).Trim();
+            if (path.Equals("projectile.impactEffect", StringComparison.OrdinalIgnoreCase)
+                || path.Equals("projectile.hitEffect", StringComparison.OrdinalIgnoreCase))
+            {
+                data.Projectile.ImpactEffectTemplateId = targetEffectTemplateId;
+                data.Projectile.HitEffectTemplateId = targetEffectTemplateId;
+                _templates[templateId] = data;
+                failureReason = null;
+                return true;
+            }
+
+            if (path.Equals("projectile.presentationEffect", StringComparison.OrdinalIgnoreCase))
+            {
+                data.Projectile.PresentationEffectTemplateId = targetEffectTemplateId;
+                _templates[templateId] = data;
+                failureReason = null;
+                return true;
+            }
+
+            failureReason = $"Field path '{fieldPath}' is not a hot-editable projectile effect ref.";
+            return false;
+        }
+
+        /// <summary>
+        /// NextCast-safe grant of one Fixed tag contribution on an existing template (debuff).
+        /// </summary>
+        public bool TryReplaceHotGrantedTagFixed(
+            int templateId,
+            int tagId,
+            ushort amount,
+            out string? failureReason)
+        {
+            if (!TryGet(templateId, out EffectTemplateData data))
+            {
+                failureReason = $"Effect template id {templateId} is not registered.";
+                return false;
+            }
+
+            if (tagId <= 0)
+            {
+                failureReason = "tagId must be > 0.";
+                return false;
+            }
+
+            // Replace slot 0 if present; otherwise append.
+            unsafe
+            {
+                if (data.GrantedTags.Count <= 0)
+                {
+                    if (!data.GrantedTags.Add(new TagContribution
+                    {
+                        TagId = tagId,
+                        Formula = TagContributionFormula.Fixed,
+                        Amount = amount,
+                        Base = 0,
+                        GraphProgramId = 0
+                    }))
+                    {
+                        failureReason = "GrantedTags capacity exceeded.";
+                        return false;
+                    }
+                }
+                else
+                {
+                    data.GrantedTags.TagIds[0] = tagId;
+                    data.GrantedTags.Formulas[0] = (byte)TagContributionFormula.Fixed;
+                    data.GrantedTags.Amounts[0] = amount;
+                    data.GrantedTags.Bases[0] = 0;
+                    data.GrantedTags.GraphProgramIds[0] = 0;
+                }
+            }
+
+            _templates[templateId] = data;
+            failureReason = null;
+            return true;
         }
 
         /// <summary>
