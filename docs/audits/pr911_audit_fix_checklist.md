@@ -75,8 +75,8 @@ P3 Major / UAT / 文档名实
 | 查询扩展 | QueryRadius、QuerySortStable、QueryLimit、AggMinByDistance | **done P1-C** |
 | 动态效果 / FanOut | ApplyEffectDynamic、FanOutApplyEffect*、FanOutDispatchEffect* | **done P1-D** |
 | 关系变更 | Ensure/Remove/Set/Add/Get Metric、Set/Has Flag、HasLink、QueryBetweenPair | pending P1-E |
-| 吸附 / 几何 | Snap*、LoadTargetPos*、ClampTargetToRange、IsPointInCircle | partial（SnapToNearestInCollection 已有）；余下 P1-F |
-| 事件 / 控制域 / 知识 | SendEvent、LoadEventPayload*、ControlDomain*、KnowledgeHasProjection、LoadContextSource、LoadContextTargetContext | pending P1-G |
+| 吸附 / 几何 | Snap*、LoadTargetPos*、ClampTargetToRange、IsPointInCircle | **done P1-F** |
+| 事件 / 控制域 / 知识 | SendEvent、LoadEventPayload*、ControlDomain*、KnowledgeHasProjection、LoadContextSource、LoadContextTargetContext | **done P1-G** |
 
 ### P2 — 全量 GraphNodeOp：测试 + Showcase（硬要求）
 
