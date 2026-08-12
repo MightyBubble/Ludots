@@ -73,6 +73,7 @@ internal sealed class LswChampionHotApplyDemoSystem : ISystem<float>
     private float _chillRemainingRatio;
     private int _liveProjectileCount;
     private string _lastLoggedStatus = string.Empty;
+    private bool _loggedHudProbe;
 
     public LswChampionHotApplyDemoSystem(GameEngine engine)
     {
@@ -415,9 +416,15 @@ internal sealed class LswChampionHotApplyDemoSystem : ISystem<float>
             return;
         }
 
-        if (!TryFindCasterAndTarget(out _, out Entity target, out _))
+        if (!TryFindCasterAndTarget(out Entity caster, out Entity target, out _))
         {
             return;
+        }
+
+        if (!_loggedHudProbe && _elapsed >= 0.8f)
+        {
+            ProbeHudAttachment(caster, target);
+            _loggedHudProbe = true;
         }
 
         float displaySeconds = _targetChilled
@@ -425,6 +432,38 @@ internal sealed class LswChampionHotApplyDemoSystem : ISystem<float>
             : 0f;
         SyncChillBar(target, _chillRemainingRatio);
         SyncChillCountdown(target, displaySeconds, _targetChilled && displaySeconds > 0f);
+    }
+
+    private void ProbeHudAttachment(Entity caster, Entity target)
+    {
+        if (_performerRuntime == null || _performerDefinitions == null)
+        {
+            Log.Info(in LogChannels.GAS, "[LSW HotApply Demo] HUD probe: performer runtime missing");
+            return;
+        }
+
+        int healthBarDef = _performerDefinitions.GetId("lsw.unit_health_bar");
+        int healthTextDef = _performerDefinitions.GetId("lsw.unit_health_text");
+        int chillBarDef = _performerDefinitions.GetId("lsw.unit_chill_bar");
+        int chillTextDef = _performerDefinitions.GetId("lsw.unit_chill_countdown");
+        int bars = CountOwned(healthBarDef, caster) + CountOwned(healthBarDef, target);
+        int texts = CountOwned(healthTextDef, caster) + CountOwned(healthTextDef, target);
+        int chillBars = CountOwned(chillBarDef, caster) + CountOwned(chillBarDef, target);
+        int chillTexts = CountOwned(chillTextDef, caster) + CountOwned(chillTextDef, target);
+        WorldHudBatchBuffer? worldHud = _engine.GetService(CoreServiceKeys.PresentationWorldHudBuffer);
+        Log.Info(
+            in LogChannels.GAS,
+            $"[LSW HotApply Demo] HUD probe defs bar={healthBarDef} text={healthTextDef} chillBar={chillBarDef} chillText={chillTextDef} ownedBars={bars} ownedTexts={texts} ownedChillBars={chillBars} ownedChillTexts={chillTexts} worldHudCount={worldHud?.Count ?? -1}");
+    }
+
+    private int CountOwned(int defId, Entity owner)
+    {
+        if (defId <= 0 || owner == Entity.Null || _performerRuntime == null)
+        {
+            return 0;
+        }
+
+        return _performerRuntime.GetActiveByOwnerDefinition(defId, owner).Count;
     }
 
     private void EnsureWorldHudVisible()

@@ -13,7 +13,8 @@
         "command": {
           "kind": "CreatePerformer",
           "definitionId": "lsw.unit_health_bar",
-          "scopeSource": "EventPayloadA"
+          "scopeSource": "Fixed",
+          "scopeTag": "lsw.hud.health.bar"
         }
       },
       {
@@ -27,7 +28,8 @@
         "command": {
           "kind": "CreatePerformer",
           "definitionId": "lsw.unit_health_text",
-          "scopeSource": "EventPayloadA"
+          "scopeSource": "Fixed",
+          "scopeTag": "lsw.hud.health.text"
         }
       },
       {
@@ -41,7 +43,8 @@
         "command": {
           "kind": "CreatePerformer",
           "definitionId": "lsw.unit_chill_bar",
-          "scopeSource": "EventPayloadA"
+          "scopeSource": "Fixed",
+          "scopeTag": "lsw.hud.chill.bar"
         }
       },
       {
@@ -55,7 +58,8 @@
         "command": {
           "kind": "CreatePerformer",
           "definitionId": "lsw.unit_chill_countdown",
-          "scopeSource": "EventPayloadA"
+          "scopeSource": "Fixed",
+          "scopeTag": "lsw.hud.chill.text"
         }
       },
       {
@@ -79,7 +83,8 @@
         "command": {
           "kind": "CreatePerformer",
           "definitionId": "lsw.unit_health_bar",
-          "scopeSource": "EventPayloadA"
+          "scopeSource": "Fixed",
+          "scopeTag": "lsw.hud.health.bar"
         }
       },
       {
@@ -93,7 +98,8 @@
         "command": {
           "kind": "CreatePerformer",
           "definitionId": "lsw.unit_health_text",
-          "scopeSource": "EventPayloadA"
+          "scopeSource": "Fixed",
+          "scopeTag": "lsw.hud.health.text"
         }
       },
       {
@@ -107,7 +113,8 @@
         "command": {
           "kind": "CreatePerformer",
           "definitionId": "lsw.unit_chill_bar",
-          "scopeSource": "EventPayloadA"
+          "scopeSource": "Fixed",
+          "scopeTag": "lsw.hud.chill.bar"
         }
       },
       {
@@ -121,7 +128,8 @@
         "command": {
           "kind": "CreatePerformer",
           "definitionId": "lsw.unit_chill_countdown",
-          "scopeSource": "EventPayloadA"
+          "scopeSource": "Fixed",
+          "scopeTag": "lsw.hud.chill.text"
         }
       },
       {
