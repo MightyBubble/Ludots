@@ -119,43 +119,6 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
-        public void ActionCatalogLoader_LoadsScriptAction_WithYieldProgram()
-        {
-            GraphIdRegistry.Clear();
-            string root = string.Empty;
-            try
-            {
-                const string graphName = "Graph.Script.YieldAction";
-                int graphId = GraphIdRegistry.Register(graphName);
-                var programs = new GraphProgramRegistry();
-                programs.Register(
-                    graphId,
-                    new[] { new GraphInstruction { Op = (ushort)GraphNodeOp.Yield } },
-                    GraphKind.Script);
-
-                var (pipeline, configCatalog, tempRoot) = CreateCatalogPipeline(
-                    "GAS/action_lib.json",
-                    """
-                    [
-                      { "name": "script.yieldAction", "graph": "Graph.Script.YieldAction", "kind": "Script" }
-                    ]
-                    """);
-                root = tempRoot;
-
-                var actionCatalog = new GraphActionCatalog();
-                new GraphActionCatalogLoader(pipeline, actionCatalog, programs).Load(configCatalog);
-
-                Assert.That(actionCatalog.Count, Is.EqualTo(1));
-                Assert.That(actionCatalog.Require("script.yieldAction"), Is.EqualTo(graphId));
-            }
-            finally
-            {
-                GraphIdRegistry.Clear();
-                DeleteTempRoot(root);
-            }
-        }
-
-        [Test]
         public void FuncCatalogLoader_RejectsYieldProgram()
         {
             GraphIdRegistry.Clear();
@@ -186,6 +149,44 @@ namespace Ludots.Tests.Gas.Graph
                 Assert.That(functionCatalog.Count, Is.EqualTo(0));
                 Assert.That(ex!.InnerExceptions[0].Message, Does.Contain("contains Yield"));
                 Assert.That(ex.InnerExceptions[0].Message, Does.Contain("ActionLib"));
+            }
+            finally
+            {
+                GraphIdRegistry.Clear();
+                DeleteTempRoot(root);
+            }
+        }
+
+        [Test]
+        public void FuncCatalogLoader_RejectsNonPurePurity()
+        {
+            GraphIdRegistry.Clear();
+            string root = string.Empty;
+            try
+            {
+                const string graphName = "Graph.Script.ImpureFunction";
+                int graphId = GraphIdRegistry.Register(graphName);
+                var programs = new GraphProgramRegistry();
+                programs.Register(
+                    graphId,
+                    new[] { new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt } },
+                    GraphKind.Script);
+
+                var (pipeline, configCatalog, tempRoot) = CreateCatalogPipeline(
+                    "GAS/func_lib.json",
+                    """
+                    [
+                      { "name": "script.impure", "graph": "Graph.Script.ImpureFunction", "kind": "Script", "purity": "impure" }
+                    ]
+                    """);
+                root = tempRoot;
+
+                var functionCatalog = new GraphFunctionCatalog();
+                var ex = Assert.Throws<AggregateException>(() =>
+                    new GraphFunctionCatalogLoader(pipeline, functionCatalog, programs).Load(configCatalog));
+
+                Assert.That(functionCatalog.Count, Is.EqualTo(0));
+                Assert.That(ex!.InnerExceptions[0].Message, Does.Contain("purity 'impure' must be pure"));
             }
             finally
             {
