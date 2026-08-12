@@ -587,6 +587,106 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void GraphControlFlowCompiler_ApplyEffectDynamicAndFanOutDispatchEffectDynamic_Compile()
+        {
+            var cfg = new GraphControlFlowDocument
+            {
+                Id = "Test.DynamicDispatch",
+                Kind = "Effect",
+                Entry = "target",
+                Nodes =
+                {
+                    new GraphControlFlowNode { Id = "target", Op = "LoadExplicitTarget" },
+                    new GraphControlFlowNode { Id = "effectId", Op = "ConstInt", IntValue = 77 },
+                    new GraphControlFlowNode { Id = "apply", Op = "ApplyEffectDynamic" },
+                    new GraphControlFlowNode { Id = "fanout", Op = "FanOutDispatchEffectDynamic", PayloadPreset = "SourceToResolved" },
+                },
+                ControlEdges =
+                {
+                    new("target", GraphControlFlowPorts.Next, "effectId"),
+                    new("effectId", GraphControlFlowPorts.Next, "apply"),
+                    new("apply", GraphControlFlowPorts.Next, "fanout"),
+                },
+                ValueEdges =
+                {
+                    new("target", GraphControlFlowPorts.Value, "apply", GraphControlFlowPorts.Target),
+                    new("effectId", GraphControlFlowPorts.Value, "apply", GraphControlFlowPorts.Value),
+                    new("effectId", GraphControlFlowPorts.Value, "fanout", GraphControlFlowPorts.Value),
+                },
+            };
+
+            var (pkg, _, diags) = GraphControlFlowCompiler.CompileWithOutputs(cfg);
+
+            That(diags, Is.Empty);
+            That(pkg.HasValue, Is.True);
+            That(Array.Exists(pkg!.Value.Program, instruction => instruction.Op == (ushort)GraphNodeOp.ApplyEffectDynamic), Is.True);
+            That(Array.Exists(pkg.Value.Program, instruction => instruction.Op == (ushort)GraphNodeOp.FanOutDispatchEffectDynamic), Is.True);
+        }
+
+        [Test]
+        public void GraphControlFlowCompiler_FanOutDispatchEffectDynamic_RequiresPayloadPreset()
+        {
+            var cfg = new GraphControlFlowDocument
+            {
+                Id = "Test.FanOutDispatchMissingPreset",
+                Kind = "Effect",
+                Entry = "effectId",
+                Nodes =
+                {
+                    new GraphControlFlowNode { Id = "effectId", Op = "ConstInt", IntValue = 77 },
+                    new GraphControlFlowNode { Id = "fanout", Op = "FanOutDispatchEffectDynamic" },
+                },
+                ControlEdges =
+                {
+                    new("effectId", GraphControlFlowPorts.Next, "fanout"),
+                },
+                ValueEdges =
+                {
+                    new("effectId", GraphControlFlowPorts.Value, "fanout", GraphControlFlowPorts.Value),
+                },
+            };
+
+            var (pkg, _, diags) = GraphControlFlowCompiler.CompileWithOutputs(cfg);
+
+            That(pkg.HasValue, Is.False);
+            That(diags.Exists(d => d.Severity == GraphDiagnosticSeverity.Error &&
+                                   d.Message.Contains("payloadPreset", StringComparison.Ordinal)), Is.True);
+        }
+
+        [Test]
+        public void GraphControlFlowCompiler_RelationshipMetricOpsRequireExplicitRelationshipType()
+        {
+            var cfg = new GraphControlFlowDocument
+            {
+                Id = "Test.RelationshipMissingType",
+                Kind = "Effect",
+                Entry = "source",
+                Nodes =
+                {
+                    new GraphControlFlowNode { Id = "source", Op = "LoadCaster" },
+                    new GraphControlFlowNode { Id = "target", Op = "LoadExplicitTarget" },
+                    new GraphControlFlowNode { Id = "metric", Op = "RelationshipGetMetric", Metric = "Loyalty" },
+                },
+                ControlEdges =
+                {
+                    new("source", GraphControlFlowPorts.Next, "target"),
+                    new("target", GraphControlFlowPorts.Next, "metric"),
+                },
+                ValueEdges =
+                {
+                    new("source", GraphControlFlowPorts.Value, "metric", GraphControlFlowPorts.Source),
+                    new("target", GraphControlFlowPorts.Value, "metric", GraphControlFlowPorts.Target),
+                },
+            };
+
+            var (pkg, _, diags) = GraphControlFlowCompiler.CompileWithOutputs(cfg);
+
+            That(pkg.HasValue, Is.False);
+            That(diags.Exists(d => d.Severity == GraphDiagnosticSeverity.Error &&
+                                   d.Message.Contains("relationshipType", StringComparison.Ordinal)), Is.True);
+        }
+
+        [Test]
         public void GraphOps_RelationshipVmRejectsImplicitDefaultTypeId()
         {
             using var world = World.Create();

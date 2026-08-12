@@ -1,4 +1,59 @@
-﻿## GAS Composition Gate — Self Review
+﻿## GAS Composition Gate - Current Task Self Review
+
+- **Task / Issue**: Ludots Epic #915 P1 restore deleted graph authoring guard tests
+- **Date**: 2026-08-12
+- **Agent / Author**: Cursor Cloud Agent
+
+### 1. Core judgment
+
+新变体主要交付物是（A/B/C/D）: A
+
+结论: PASS
+
+一句话理由: Restores existing graph authoring/runtime guard coverage and small ControlFlow op exposure for current VM contracts; no profile enum, preset switch, new schema, or parallel pipeline is added.
+
+### 2. Layer assignment
+
+| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
+|-----------|-----------------|----------|
+| Spatial query capacity diagnostics | 2 | `GraphProgramAuthoringFrontDoor` + `GraphControlFlowCompiler` |
+| Spatial query dropped-target runtime contract | 0 | Existing `GasGraphOpHandlerTable` / `GraphExecutor` |
+| Snap valid-output register authoring | 2 | Existing linear ControlFlow compiler |
+| Dynamic effect and relationship metric guards | 2 | Existing graph op authoring matrix |
+
+### 3. Reuse list
+
+- Handlers: Existing `QueryRadius`, `SnapToNearestInCollection`, `ApplyEffectDynamic`, `FanOutDispatchEffectDynamic`, `RelationshipGetMetric` handlers.
+- Queues / Systems: Existing ControlFlow compile path and graph VM execution.
+- Resolvers / Registries: Existing FrontDoor, graph op parser, symbol patcher, config key registry, relationship symbol resolver.
+- Existing presets / graphs: Existing ControlFlow graph documents with `controlEdges` and `valueEdges`.
+
+### 4. New Layer 0 ops (if any)
+
+N/A
+
+### 5. Transaction boundary
+
+必须原子 rollback 的步骤: N/A; this task only restores compile/runtime guard coverage.
+
+### 6. Config SSOT
+
+行为配置落在: graph authoring assets/tests through existing ControlFlow nodes.
+
+是否新增 JSON schema: NO.
+
+### 7. Red flag scan
+
+- [x] 未新增 profile inherit/placement enum
+- [x] 未新建与 spawn 平行的物化管线
+- [x] 未把 placement 校验塞进 lifecycle op
+- [x] 未添加「说不清的」默认 fallback
+
+### 8. Next variant test
+
+「下一个 Mod 变体」将修改: graph 连线 / effect 步骤
+
+## GAS Composition Gate — Self Review
 
 - **Task / Issue**: PR911 audit blockers B2a/B2b — close FuncLib yield purity holes across InvokeScript/Call and Live Skill Workbench ReplaceProgram
 - **Date**: 2026-08-12
