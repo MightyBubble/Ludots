@@ -40,7 +40,9 @@ namespace Ludots.Tests.GAS.Graph
     "kind": "Effect",
     "entry": "n0",
     "notARealField": true,
-    "nodes": [ { "id": "n0", "op": "ConstBool", "boolValue": true } ]
+    "nodes": [ { "id": "n0", "op": "ConstFloat", "floatValue": 1.0 } ],
+    "controlEdges": [],
+    "valueEdges": []
   }
 ]
 """;
@@ -100,7 +102,9 @@ namespace Ludots.Tests.GAS.Graph
     "id": "tests.graph.kind-score",
     "kind": "Score",
     "entry": "n0",
-    "nodes": [ { "id": "n0", "op": "ConstFloat", "floatValue": 1.5 } ]
+    "nodes": [ { "id": "n0", "op": "ConstFloat", "floatValue": 1.5 } ],
+    "controlEdges": [],
+    "valueEdges": []
   }
 ]
 """;
@@ -115,24 +119,100 @@ namespace Ludots.Tests.GAS.Graph
         }
 
         [Test]
-        public void GraphProgramConfigLoader_RejectsQueryGraphWithGameplayWrite()
+        public void GraphProgramConfigLoader_RejectsQueryGraphOnNextChainPath()
         {
             const string json = """
 [
   {
-    "id": "tests.graph.query-write",
+    "id": "tests.graph.query-next-chain",
     "kind": "Query",
-    "entry": "target",
+    "entry": "allMap",
     "nodes": [
-      { "id": "target", "op": "LoadExplicitTarget", "next": "amount" },
-      { "id": "amount", "op": "ConstFloat", "floatValue": 1.0, "next": "write" },
-      { "id": "write", "op": "ModifyAttributeAdd", "attribute": "tests.attr.health", "inputs": [ "target", "amount" ] }
+      { "id": "allMap", "op": "QueryAllMapEntities" }
     ]
   }
 ]
 """;
 
-            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() => LoadPrograms(json))!;
+            AggregateException error = Assert.Throws<AggregateException>(() => LoadPrograms(json))!;
+            Assert.That(error.InnerExceptions, Has.Some.Matches<Exception>(ex =>
+                ex.Message.Contains("must author controlEdges and valueEdges", StringComparison.Ordinal) ||
+                ex.Message.Contains("uses nodes[].next", StringComparison.Ordinal)));
+        }
+
+        [Test]
+        public void GraphProgramConfigLoader_RejectsEffectGraphOnNextChainPath()
+        {
+            const string json = """
+[
+  {
+    "id": "tests.graph.effect-next-chain",
+    "kind": "Effect",
+    "entry": "c0",
+    "nodes": [
+      { "id": "c0", "op": "ConstFloat", "floatValue": 1.0, "next": "c1" },
+      { "id": "c1", "op": "ConstFloat", "floatValue": 2.0 }
+    ]
+  }
+]
+""";
+
+            AggregateException error = Assert.Throws<AggregateException>(() => LoadPrograms(json))!;
+            Assert.That(error.InnerExceptions, Has.Some.Matches<Exception>(ex =>
+                ex.Message.Contains("uses nodes[].next", StringComparison.Ordinal)));
+        }
+
+        [Test]
+        public void GraphProgramConfigLoader_CompilesEffectControlFlowByKind()
+        {
+            const string json = """
+[
+  {
+    "id": "tests.graph.effect-control-flow",
+    "kind": "Effect",
+    "entry": "target",
+    "nodes": [
+      { "id": "target", "op": "LoadExplicitTarget" },
+      { "id": "delta", "op": "ConstFloat", "floatValue": 3.0 },
+      { "id": "modify", "op": "ModifyAttributeAdd", "attribute": "Health" }
+    ],
+    "controlEdges": [
+      { "from": "target", "fromPort": "next", "to": "delta" },
+      { "from": "delta", "fromPort": "next", "to": "modify" }
+    ],
+    "valueEdges": [
+      { "from": "target", "fromPort": "value", "to": "modify", "toPort": "target" },
+      { "from": "delta", "fromPort": "value", "to": "modify", "toPort": "value" }
+    ]
+  }
+]
+""";
+
+            GraphProgramRegistry programs = LoadPrograms(json);
+            int graphId = GraphIdRegistry.GetId("tests.graph.effect-control-flow");
+            Assert.That(programs.TryGetKind(graphId, out GraphKind kind), Is.True);
+            Assert.That(kind, Is.EqualTo(GraphKind.Effect));
+            Assert.That(programs.TryGetProgram(graphId, out ReadOnlySpan<GraphInstruction> program), Is.True);
+            Assert.That(program.Length, Is.GreaterThan(0));
+        }
+
+        [Test]
+        public void GraphKindOperationPolicy_RejectsQueryGraphWithGameplayWrite()
+        {
+            var program = new[]
+            {
+                new GraphInstruction { Op = (ushort)GraphNodeOp.LoadExplicitTarget, Dst = 1 },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.ConstFloat, Dst = 0, ImmF = 1f },
+                new GraphInstruction { Op = (ushort)GraphNodeOp.ModifyAttributeAdd, A = 1, B = 0, Imm = 1 }
+            };
+
+            InvalidOperationException error = Assert.Throws<InvalidOperationException>(() =>
+                GraphKindOperationPolicy.RequireAllowed(
+                    GraphKind.Query,
+                    program,
+                    GasGraphOpHandlerTable.Instance,
+                    graphId: 1,
+                    entrypoint: nameof(GraphContractTests)))!;
 
             Assert.That(error.Message, Does.StartWith(GraphKindOperationPolicy.OperationNotAllowedError));
             Assert.That(error.Message, Does.Contain("kind='Query'"));

@@ -1,0 +1,8 @@
+{
+  "startupMapId": "capability_standard_script_flow_sandbox",
+  "windowTitle": "Ludots - Script Flow Sandbox",
+  "targetFps": 60,
+  "windowWidth": 1600,
+  "windowHeight": 900,
+  "windowResizable": true
+}

@@ -88,6 +88,7 @@ using Ludots.Core.Diagnostics;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Gameplay.Camera.FollowTargets;
 using Ludots.Core.MassNavigation.Runtime;
+using Ludots.Core.Movement;
 using Ludots.Core.Navigation.GraphCore;
 using Ludots.Core.Navigation.GraphSemantics.GAS;
 using Ludots.Core.Navigation.GraphWorld;
@@ -787,6 +788,8 @@ namespace Ludots.Core.Engine
             var physics2dClockConfig = physics2dClockConfigLoader.Load(ConfigCatalog, ConfigConflictReport);
             var physics2dSolverConfigLoader = new Physics2DSolverConfigLoader(ConfigPipeline);
             var physics2dSolverConfig = physics2dSolverConfigLoader.Load(ConfigCatalog, ConfigConflictReport);
+            var physics2dKinematicConfigLoader = new Physics2DKinematicConfigLoader(ConfigPipeline);
+            var physics2dKinematicConfig = physics2dKinematicConfigLoader.Load(ConfigCatalog, ConfigConflictReport);
             var componentAuthoringContext = new ComponentAuthoringContext();
             MapLoader.SetComponentAuthoringContext(componentAuthoringContext);
             new AttributeConstraintsLoader(ConfigPipeline).Load(ConfigCatalog, ConfigConflictReport);
@@ -1696,6 +1699,7 @@ namespace Ludots.Core.Engine
                 clock,
                 physics2dTickPolicy,
                 physics2dSolverConfig,
+                physics2dKinematicConfig,
                 physics2dBroadphasePolicy,
                 componentAuthoringContext);
 
@@ -1793,7 +1797,12 @@ namespace Ludots.Core.Engine
                     throw new InvalidOperationException($"Failed to create runtime navmesh obstacle dirty system '{runtimeNavMeshObstacleSystemTypeName}'.");
                 }
             }
-            RegisterSystem(new DisplacementRuntimeSystem(World), SystemGroup.EffectProcessing);
+            // Pose-authority arbitration: transitions queue during the tick and are
+            // committed at the next fixed-step boundary by PoseAuthorityCommitSystem (SchemaUpdate).
+            var poseAuthorityArbiter = new PoseAuthorityArbiter();
+            SetService(CoreServiceKeys.PoseAuthorityArbiter, poseAuthorityArbiter);
+            RegisterSystem(new PoseAuthorityCommitSystem(World, poseAuthorityArbiter), SystemGroup.SchemaUpdate);
+            RegisterSystem(new DisplacementRuntimeSystem(World, poseAuthorityArbiter), SystemGroup.EffectProcessing);
 
             // Phase 4: AttributeCalculation
             RegisterSystem(aggSystem, SystemGroup.AttributeCalculation);
@@ -1910,6 +1919,7 @@ namespace Ludots.Core.Engine
             IClock clock,
             Physics2DTickPolicy physics2dTickPolicy,
             Physics2DSolverConfig physics2dSolverConfig,
+            Physics2DKinematicConfig physics2dKinematicConfig,
             Physics2DBroadphasePolicy physics2dBroadphasePolicy,
             ComponentAuthoringContext componentAuthoringContext)
         {
@@ -1919,6 +1929,7 @@ namespace Ludots.Core.Engine
             const string worldSyncSystemTypeName = "Ludots.Core.Physics2D.Systems.Physics2DToWorldPositionSyncSystem";
 
             ArgumentNullException.ThrowIfNull(physics2dSolverConfig);
+            ArgumentNullException.ThrowIfNull(physics2dKinematicConfig);
             ArgumentNullException.ThrowIfNull(physics2dBroadphasePolicy);
             ArgumentNullException.ThrowIfNull(componentAuthoringContext);
 
@@ -1942,6 +1953,14 @@ namespace Ludots.Core.Engine
             componentAuthoringContext.Set(ComponentAuthoringServiceKeys.Physics2DShapeStorage, shapeStorage);
             SetService(CoreServiceKeys.Physics2DShapeStorage, shapeStorage);
 
+            var physics2dKinematicPoses = new Ludots.Core.Physics2D.KinematicTargetPoseBuffer2D(
+                physics2dKinematicConfig.KinematicBodyCapacity);
+            var physics2dContactEvents = new Ludots.Core.Physics2D.ContactEventQueue2D(
+                physics2dKinematicConfig.ContactEventQueueCapacity);
+            SetService(CoreServiceKeys.Physics2DKinematicConfig, physics2dKinematicConfig);
+            SetService(CoreServiceKeys.Physics2DKinematicPoseBuffer, physics2dKinematicPoses);
+            SetService(CoreServiceKeys.Physics2DContactEvents, physics2dContactEvents);
+
             object? physics2dSystemObj = Activator.CreateInstance(
                 physics2dSystemType,
                 World,
@@ -1949,7 +1968,10 @@ namespace Ludots.Core.Engine
                 physics2dTickPolicy,
                 physics2dSolverConfig,
                 shapeStorage,
-                physics2dBroadphasePolicy);
+                physics2dBroadphasePolicy,
+                physics2dKinematicPoses,
+                physics2dContactEvents,
+                physics2dKinematicConfig);
             if (physics2dSystemObj is not ISystem<float> physics2dSystem)
             {
                 throw new InvalidOperationException($"Failed to create Physics2D simulation system '{physics2dSystemTypeName}'.");
@@ -1965,6 +1987,32 @@ namespace Ludots.Core.Engine
             RegisterSystem(worldSyncSystem, SystemGroup.PostMovement);
             GlobalContext["Ludots.Core.Physics2D.Ticking.Physics2DSimulationSystem"] = physics2dSystem;
             GlobalContext["Ludots.Core.Physics2D.Systems.Physics2DToWorldPositionSyncSystem"] = worldSyncSystem;
+
+            InstallMovementPhysics2DBridge();
+        }
+
+        /// <summary>
+        /// massnav→kinematic 桥：Physics2D 在场时为必装项。
+        /// 桥装配组合层的位姿喂送与碰撞事件路由；缺装即启动失败，不允许 kinematic
+        /// 参与单位静默失去物理体喂送。
+        /// </summary>
+        private void InstallMovementPhysics2DBridge()
+        {
+            const string bridgeAssemblyName = "Ludots.Movement.Physics2DBridge";
+            const string bridgeInstallerTypeName = "Ludots.Core.Movement.Physics2DBridge.MovementPhysics2DBridgeInstaller";
+
+            Type? installerType = TryResolveOptionalAssemblyType(bridgeAssemblyName, bridgeInstallerTypeName);
+            if (installerType == null)
+            {
+                throw new InvalidOperationException(
+                    $"Physics2D startup requires '{bridgeInstallerTypeName}' from '{bridgeAssemblyName}' (massnav→kinematic bridge) when 'Ludots.Physics2D' is present.");
+            }
+
+            MethodInfo installMethod = installerType.GetMethod("Install", BindingFlags.Public | BindingFlags.Static)
+                ?? throw new InvalidOperationException(
+                    $"'{bridgeInstallerTypeName}' must expose a public static Install(GameEngine) method.");
+            var install = (Action<GameEngine>)Delegate.CreateDelegate(typeof(Action<GameEngine>), installMethod);
+            install(this);
         }
 
         private static Type? TryResolveOptionalAssemblyType(string assemblyName, string typeName)

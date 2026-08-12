@@ -185,7 +185,9 @@ namespace Ludots.Tests.GAS
                 E = e,
                 Targets = targets,
                 TargetList = new GraphTargetList(targets) { Count = 3 },
-            };
+            CallStack = new int[Ludots.Core.NodeLibraries.GASGraph.GraphVmLimits.MaxCallStackDepth],
+            CallStackCount = 0,
+        };
 
             var program = new GraphInstruction[]
             {
@@ -680,7 +682,9 @@ namespace Ludots.Tests.GAS
                 TargetPosCm = default, Api = api,
                 F = f, I = i, B = b, E = e,
                 Targets = targets, TargetList = new GraphTargetList(targets),
-            };
+            CallStack = new int[Ludots.Core.NodeLibraries.GASGraph.GraphVmLimits.MaxCallStackDepth],
+            CallStackCount = 0,
+        };
 
             GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
             return e[entityReg];
@@ -704,7 +708,9 @@ namespace Ludots.Tests.GAS
                 F = f, I = i, B = b, E = e,
                 Targets = targets, TargetList = new GraphTargetList(targets),
                 TargetContext = targetCtx,
-            };
+            CallStack = new int[Ludots.Core.NodeLibraries.GASGraph.GraphVmLimits.MaxCallStackDepth],
+            CallStackCount = 0,
+        };
 
             GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
             return e[entityReg];
@@ -727,7 +733,9 @@ namespace Ludots.Tests.GAS
                 TargetPosCm = default, Api = api,
                 F = f, I = i, B = b, E = e,
                 Targets = targets, TargetList = new GraphTargetList(targets),
-            };
+            CallStack = new int[Ludots.Core.NodeLibraries.GASGraph.GraphVmLimits.MaxCallStackDepth],
+            CallStackCount = 0,
+        };
 
             GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
         }
@@ -755,7 +763,9 @@ namespace Ludots.Tests.GAS
                 E = e,
                 Targets = targets,
                 TargetList = new GraphTargetList(targets),
-            };
+            CallStack = new int[Ludots.Core.NodeLibraries.GASGraph.GraphVmLimits.MaxCallStackDepth],
+            CallStackCount = 0,
+        };
         }
 
         private static RelationshipApiSetup CreateRelationshipApi(

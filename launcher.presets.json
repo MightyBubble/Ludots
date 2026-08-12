@@ -110,6 +110,15 @@
       "buildMode": "auto"
     },
     {
+      "id": "capability_standard_crowd_physics_arena_raylib",
+      "name": "Capability Standard Crowd Physics Arena Raylib",
+      "selectors": [
+        "$capability_standard_crowd_physics_arena"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "formation_capability_showcase_raylib",
       "name": "Formation Capability Showcase Raylib",
       "selectors": [
@@ -205,6 +214,15 @@
         "required": true,
         "provider": "cef"
       }
+    },
+    {
+      "id": "ui_player_aggregate_graph_mvp_raylib",
+      "name": "Player Aggregate Graph MVP Raylib",
+      "selectors": [
+        "$ui_player_aggregate_graph_mvp"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     },
     {
       "id": "utility_autocast_showcase_raylib",
@@ -373,6 +391,60 @@
       "name": "Control Plane Projection Raylib",
       "selectors": [
         "$control_plane_projection_showcase"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_behavior_tree_arena_raylib",
+      "name": "Capability Standard Behavior Tree Arena Raylib",
+      "selectors": [
+        "$capability_standard_behavior_tree_arena"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_hfsm_sentry_arena_raylib",
+      "name": "Capability Standard HFSM Sentry Arena Raylib",
+      "selectors": [
+        "$capability_standard_hfsm_sentry_arena"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_level_blueprint_trial_raylib",
+      "name": "Capability Standard Level Blueprint Trial Raylib",
+      "selectors": [
+        "$capability_standard_level_blueprint_trial"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_ability_graph_sandbox_raylib",
+      "name": "Capability Standard Ability Graph Sandbox Raylib",
+      "selectors": [
+        "$capability_standard_ability_graph_sandbox"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_script_flow_sandbox_raylib",
+      "name": "Capability Standard Script Flow Sandbox Raylib",
+      "selectors": [
+        "$capability_standard_script_flow_sandbox"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_behavior_integration_raylib",
+      "name": "Capability Standard Graph Behavior Integration Raylib",
+      "selectors": [
+        "$capability_standard_graph_behavior_integration"
       ],
       "adapterId": "raylib",
       "buildMode": "auto"

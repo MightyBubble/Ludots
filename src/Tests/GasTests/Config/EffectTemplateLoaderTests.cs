@@ -5,6 +5,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Config;
 using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Core.Layers;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Modding;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
@@ -237,6 +238,101 @@ namespace Ludots.Tests.GAS
                 That(tpl.TargetQuery.Spatial.HalfHeightCm, Is.EqualTo(0));
                 That(tpl.TargetQuery.Spatial.RotationDeg, Is.EqualTo(0));
                 That(tpl.TargetQuery.Spatial.LengthCm, Is.EqualTo(0));
+            }
+            finally
+            {
+                TryDeleteDirectory(root);
+            }
+        }
+
+        [Test]
+        public void Load_TargetFilterLayerMask_ResolvesRegisteredLayerBits()
+        {
+            LayerRegistry.Register("LoaderTests.LayerA");
+            LayerRegistry.Register("LoaderTests.LayerB");
+            uint expectedMask = LayerRegistry.GetCombinedMask("LoaderTests.LayerA", "LoaderTests.LayerB");
+
+            string root = CreateTempRoot();
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
+                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                    """
+                    [
+                      {
+                        "id": "Effect_Search_LayerMasked",
+                        "tags": ["Event.Search"],
+                        "presetType": "Search",
+                        "lifetime": "Instant",
+                        "participatesInResponse": true,
+                        "targetQuery": {
+                          "kind": "BuiltinSpatial",
+                          "shape": "Circle",
+                          "radius": 100
+                        },
+                        "targetFilter": {
+                          "relationFilter": "All",
+                          "excludeSource": true,
+                          "maxTargets": 4,
+                          "layerMask": ["LoaderTests.LayerA", "LoaderTests.LayerB"]
+                        }
+                      }
+                    ]
+                    """);
+
+                var loader = CreateLoader(root, out var registry);
+
+                loader.Load(CreateEffectsCatalog(), relativePath: "GAS/effects.json");
+
+                int tplId = EffectTemplateIdRegistry.GetId("Effect_Search_LayerMasked");
+                That(registry.TryGet(tplId, out var tpl), Is.True);
+                That(tpl.TargetFilter.LayerMask, Is.EqualTo(expectedMask),
+                    "targetFilter.layerMask must resolve every named layer through the LayerRegistry.");
+            }
+            finally
+            {
+                TryDeleteDirectory(root);
+            }
+        }
+
+        [Test]
+        public void Load_TargetFilterLayerMask_UnknownLayer_FailsWithEffectContext()
+        {
+            string root = CreateTempRoot();
+            try
+            {
+                Directory.CreateDirectory(Path.Combine(root, "Configs", "GAS"));
+                File.WriteAllText(Path.Combine(root, "Configs", "GAS", "effects.json"),
+                    """
+                    [
+                      {
+                        "id": "Effect_Search_BadLayer",
+                        "tags": ["Event.Search"],
+                        "presetType": "Search",
+                        "lifetime": "Instant",
+                        "participatesInResponse": true,
+                        "targetQuery": {
+                          "kind": "BuiltinSpatial",
+                          "shape": "Circle",
+                          "radius": 100
+                        },
+                        "targetFilter": {
+                          "relationFilter": "All",
+                          "excludeSource": true,
+                          "maxTargets": 4,
+                          "layerMask": ["LoaderTests.NoSuchLayer"]
+                        }
+                      }
+                    ]
+                    """);
+
+                var loader = CreateLoader(root, out _);
+
+                var ex = Throws<InvalidOperationException>(
+                    () => loader.Load(CreateEffectsCatalog(), relativePath: "GAS/effects.json"));
+                That(ex!.Message, Does.Contain("Effect_Search_BadLayer"),
+                    "Unknown layer names must fail at load time with the owning effect template named.");
+                That(ex.Message, Does.Contain("LoaderTests.NoSuchLayer"));
             }
             finally
             {

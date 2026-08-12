@@ -213,7 +213,9 @@ namespace Ludots.Tests.GAS
                         TargetPosCm = default, Api = api,
                         F = f, I = iArr, B = b, E = e, Targets = targets,
                         TargetList = new GraphTargetList(targets),
-                    };
+                    CallStack = new int[Ludots.Core.NodeLibraries.GASGraph.GraphVmLimits.MaxCallStackDepth],
+            CallStackCount = 0,
+        };
                     GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
                 }
 
@@ -234,7 +236,9 @@ namespace Ludots.Tests.GAS
                         TargetPosCm = default, Api = api,
                         F = f, I = iArr, B = b, E = e, Targets = targets,
                         TargetList = new GraphTargetList(targets),
-                    };
+                    CallStack = new int[Ludots.Core.NodeLibraries.GASGraph.GraphVmLimits.MaxCallStackDepth],
+            CallStackCount = 0,
+        };
                     GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
                 }
 
@@ -310,7 +314,9 @@ namespace Ludots.Tests.GAS
                             TargetPosCm = default, Api = api,
                             F = f, I = iArr, B = b, E = e, Targets = targets,
                             TargetList = new GraphTargetList(targets),
-                        };
+                        CallStack = new int[Ludots.Core.NodeLibraries.GASGraph.GraphVmLimits.MaxCallStackDepth],
+            CallStackCount = 0,
+        };
                         GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
                     }
                 }
@@ -336,7 +342,9 @@ namespace Ludots.Tests.GAS
                             TargetPosCm = default, Api = api,
                             F = f, I = iArr, B = b, E = e, Targets = targets,
                             TargetList = new GraphTargetList(targets),
-                        };
+                        CallStack = new int[Ludots.Core.NodeLibraries.GASGraph.GraphVmLimits.MaxCallStackDepth],
+            CallStackCount = 0,
+        };
                         GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
                     }
                 }

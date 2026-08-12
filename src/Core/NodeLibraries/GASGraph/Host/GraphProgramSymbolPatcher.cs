@@ -31,6 +31,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     case GraphNodeOp.HasTag:
                         ins.Imm = symbolResolver.ResolveTag(ResolveSymbol(symbols, ins.Imm));
                         break;
+                    case GraphNodeOp.SelectTagInMask:
+                    case GraphNodeOp.LookupTagDisplayToken:
+                        ins.Imm = symbolResolver.ResolveTagDisplayTable(ResolveSymbol(symbols, ins.Imm));
+                        break;
                     case GraphNodeOp.LoadAttribute:
                     case GraphNodeOp.ModifyAttributeAdd:
                     case GraphNodeOp.QueryFilterAttributeRange:

@@ -31,6 +31,26 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 return (null, GraphOutputSchema.Empty, diagnostics);
             }
 
+            if (graphKind == GraphKind.Script)
+            {
+                diagnostics.Add(new GraphDiagnostic(
+                    GraphDiagnosticSeverity.Error,
+                    GraphDiagnosticCodes.UnsupportedGraphKind,
+                    "GraphKind.Script cannot be compiled by GraphCompiler (Next-chain). Use GraphControlFlowCompiler for Script documents.",
+                    cfg.Id ?? string.Empty));
+                return (null, GraphOutputSchema.Empty, diagnostics);
+            }
+
+            if (graphKind == GraphKind.Query)
+            {
+                diagnostics.Add(new GraphDiagnostic(
+                    GraphDiagnosticSeverity.Error,
+                    GraphDiagnosticCodes.UnsupportedGraphKind,
+                    "GraphKind.Query cannot be compiled by GraphCompiler (Next-chain). Use GraphControlFlowCompiler for Query documents with controlEdges/valueEdges.",
+                    cfg.Id ?? string.Empty));
+                return (null, GraphOutputSchema.Empty, diagnostics);
+            }
+
             var nodesById = new Dictionary<string, GraphNodeConfig>(StringComparer.OrdinalIgnoreCase);
             for (int i = 0; i < cfg.Nodes.Count; i++)
             {
@@ -308,6 +328,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     case GraphNodeOp.HasTag:
                         ins.A = RequireInput(node, 0, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
                         ins.Imm = RequireSymbol(node.Tag, "tag", node, symbolToIndex, symbols, cfg.Id, diagnostics);
+                        break;
+                    case GraphNodeOp.SelectTagInMask:
+                        ins.A = RequireInput(node, 0, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
+                        ins.Imm = RequireSymbol(node.DisplayTable, "displayTable", node, symbolToIndex, symbols, cfg.Id, diagnostics);
+                        ins.Flags = ParseTagSelectPolicy(node.TagSelectPolicy, cfg.Id, node.Id, diagnostics);
+                        break;
+                    case GraphNodeOp.LookupTagDisplayToken:
+                        ins.A = RequireInput(node, 0, GraphValueType.Int, valueMap, cfg.Id, diagnostics);
+                        ins.Imm = RequireSymbol(node.DisplayTable, "displayTable", node, symbolToIndex, symbols, cfg.Id, diagnostics);
                         break;
                     case GraphNodeOp.ModifyAttributeAdd:
                         ins.A = RequireInput(node, 0, GraphValueType.Entity, valueMap, cfg.Id, diagnostics);
@@ -587,6 +616,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.CompareLtInt => (GraphValueType.Bool, null),
                 GraphNodeOp.CompareEqInt => (GraphValueType.Bool, null),
                 GraphNodeOp.HasTag => (GraphValueType.Bool, null),
+                GraphNodeOp.SelectTagInMask => (GraphValueType.Int, null),
+                GraphNodeOp.LookupTagDisplayToken => (GraphValueType.Int, null),
                 GraphNodeOp.SelectEntity => (GraphValueType.Entity, null),
                 GraphNodeOp.AggCount => (GraphValueType.Int, null),
                 GraphNodeOp.AggMinByDistance => (GraphValueType.Entity, null),
@@ -866,6 +897,32 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 collectionRole: EntityCollectionRoleKind.Display,
                 title: output.Title,
                 summary: output.Summary));
+        }
+
+        private static byte ParseTagSelectPolicy(
+            string? value,
+            string graphId,
+            string nodeId,
+            List<GraphDiagnostic> diagnostics)
+        {
+            if (string.IsNullOrWhiteSpace(value))
+            {
+                return (byte)Ludots.Core.Presentation.TagDisplay.TagSelectPolicy.RequireOne;
+            }
+
+            if (Enum.TryParse(value.Trim(), ignoreCase: true, out Ludots.Core.Presentation.TagDisplay.TagSelectPolicy policy) &&
+                Enum.IsDefined(typeof(Ludots.Core.Presentation.TagDisplay.TagSelectPolicy), policy))
+            {
+                return (byte)policy;
+            }
+
+            diagnostics.Add(new GraphDiagnostic(
+                GraphDiagnosticSeverity.Error,
+                GraphDiagnosticCodes.UnknownNodeOp,
+                $"Graph node '{nodeId}' has unknown tagSelectPolicy '{value}'.",
+                graphId,
+                nodeId));
+            return (byte)Ludots.Core.Presentation.TagDisplay.TagSelectPolicy.RequireOne;
         }
 
         private static bool TryParseOutputDestination(string value, out GraphOutputDestinationKind destination)

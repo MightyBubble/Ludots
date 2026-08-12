@@ -32,7 +32,7 @@
 
 - 正式组件定义
 - 单写真相约束
-- `AvoidanceLane` / `CollisionParticipation` 正式枚举
+- `MovementParticipation` / `PoseAuthority` 正式组件（两轴参与声明 + 位姿写权，issue #643 阶段 0+1 已落地）
 - AOI 服务主语义只依赖 `ILoadedChunks`
 - 现有重复真相清单与禁止项
 
@@ -110,11 +110,11 @@
 
 ### 5.3 交付物
 
-- `AvoidanceLane = MassNavigation` 运行时调度
+- crowd 车道运行时调度（已落地词汇：`MovementParticipation.physicsPresence` + `PoseAuthority = Nav`）
 - crowd SoA 热路径与 ECS 同步链
 - `massNavigationMove` 只接收明确空间目标
 - `MovePlanExecutionIntent` / `MassNavigationMovePlanExecutionSink` 接收上层已解析的逐实体目标
-- crowd entity 的 `BudgetedResident` 运行态
+- crowd entity 的预算化驻留运行态（驻留词汇未落地，由驻留合同单据随消费系统引入）
 - 不依赖 `FullPhysics2D` 承载全量 crowd
 - 不拥有 formation identity、slot layout、facing、rotation 或 follower runtime
 
@@ -143,7 +143,7 @@
 
 ### 6.1 目标
 
-让 `BudgetedResident` entity 真正进入可裁剪、可降频、可休眠的正式运行态，并把 AOI 服务从 hex 偏向收敛到 board-agnostic 语义。
+让预算化驻留的 entity 真正进入可裁剪、可降频、可休眠的正式运行态（驻留词汇随本工作流的消费系统落地），并把 AOI 服务从 hex 偏向收敛到 board-agnostic 语义。
 
 ### 6.2 交付物
 

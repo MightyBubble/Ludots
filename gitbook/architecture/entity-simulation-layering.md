@@ -43,12 +43,6 @@
 
 建议新增以下正式组件：
 
-- `SimulationAuthority`
-  - 表示该 entity 承载战斗、指令、编队或其他后端真相
-- `SimulationResidencyPolicy`
-  - `AlwaysResident`
-  - `BudgetedResident`
-  - `Streamable`
 - `SimulationTickPolicy`
   - `FullRate`
   - `ReducedRate`
@@ -56,28 +50,23 @@
 
 解释如下：
 
-- 控制单位、英雄、后端战斗单元挂 `SimulationAuthority + AlwaysResident`
-- 路人、羊群、业务编队内演员、非关键 crowd 挂 `BudgetedResident`
-- `Streamable` 只用于极大世界中的远距离可重建实体，不用于后端真相
+- 真相与驻留的占位组件已删除（PR #730），正式驻留词汇由后续 workstream 收敛，不预造名字
 
-### 3.2 碰撞与避障参与
+### 3.2 移动参与与位姿写权
 
-建议新增以下正式组件：
+已落地以下正式组件（issue #643 阶段 0+1）：
 
-- `CollisionParticipation`
-  - `None`
-  - `CrowdOnly`
-  - `Physics2D`
-  - `Physics2DAndCrowd`
-- `AvoidanceLane`
-  - `MassNavigation`
+- `MovementParticipation`（authoring，两轴参与声明）
+  - `PhysicsPresence`：`None` / `Kinematic` / `Dynamic`，声明物理如何感知该 entity
+  - `Displacement`：`Allowed` / `HandbackSpeedThresholdCmPerSec` / `MaxDurationMs`，声明 GAS 位移窗口策略
+- `PoseAuthority`（runtime，位姿单写真相）
+  - `Nav` / `Displacement` / `Physics`，初始值由 `PhysicsPresence` 推导：`None`/`Kinematic` → `Nav`，`Dynamic` → `Physics`
 
 解释如下：
 
-- `CollisionParticipation` 决定 entity 参加哪种碰撞配对与求解
-- `AvoidanceLane` 决定 entity 被哪条仿真热路径消费
+- 同一固定步内 `WorldPositionCm` 只允许当前 `PoseAuthority` 持有者写入；写权切换只在固定步边界经 `PoseAuthorityArbiter` + CommandBuffer 结算
+- 没有 `MovementParticipation` 的实体不挂 `PoseAuthority`，行为与存量路径完全一致
 - `EntityLayer + LayerMask` 继续作为统一层级过滤真相，不再新造一套 collision matrix 类型
-- 历史 `FormationPhysics` 枚举与解析入口已删除；当前正式 `AvoidanceLane` 只有 `MassNavigation`
 
 ### 3.3 Showcase-owned Formation 集群转发
 
@@ -158,12 +147,11 @@ Formation 是 Mod 业务聚合，不是 Core 仿真车道。`FormationCapability
 - 可降频
 - 手感与表演优先于完整物理精度
 
-正式口径：
+正式口径（已落地词汇）：
 
-- `AvoidanceLane = MassNavigation`
-- `NavPhysicsMode = NavCrowdResolve`
-- `NavSolverMode = CrowdFlow`
-- 不把全量 crowd 强塞进 `FullPhysics2D`
+- `MovementParticipation.physicsPresence = none | kinematic`
+- `PoseAuthority = Nav`（求解器写位姿；物理经 kinematic 存在看见 crowd）
+- 不把全量 crowd 强塞进完整动态刚体模拟
 - 热路径优先用 SoA crowd sim
 - 上层业务可以持续提交明确逐成员目标，但 MassNavigation 不理解 formation、slot 或 follower 语义
 

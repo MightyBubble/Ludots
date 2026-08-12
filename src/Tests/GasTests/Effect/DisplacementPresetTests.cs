@@ -8,6 +8,7 @@ using Ludots.Core.GraphRuntime;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
+using Ludots.Core.Movement;
 using Ludots.Core.Physics;
 using Ludots.Core.Physics2D.Components;
 using NUnit.Framework;
@@ -50,7 +51,7 @@ namespace Ludots.Tests.GAS
                 OverrideNavigation = true,
             });
 
-            var system = new DisplacementRuntimeSystem(world);
+            var system = new DisplacementRuntimeSystem(world, new PoseAuthorityArbiter());
             for (int i = 0; i < totalTicks; i++)
             {
                 system.Update(0f);
@@ -83,7 +84,7 @@ namespace Ludots.Tests.GAS
                 OverrideNavigation = true,
             });
 
-            var system = new DisplacementRuntimeSystem(world);
+            var system = new DisplacementRuntimeSystem(world, new PoseAuthorityArbiter());
             for (int i = 0; i < totalTicks; i++)
             {
                 system.Update(0f);
@@ -117,7 +118,7 @@ namespace Ludots.Tests.GAS
                 OverrideNavigation = true,
             });
 
-            var system = new DisplacementRuntimeSystem(world);
+            var system = new DisplacementRuntimeSystem(world, new PoseAuthorityArbiter());
             for (int i = 0; i < totalTicks; i++)
             {
                 system.Update(0f);
@@ -150,7 +151,7 @@ namespace Ludots.Tests.GAS
                 OverrideNavigation = false,
             });
 
-            var system = new DisplacementRuntimeSystem(world);
+            var system = new DisplacementRuntimeSystem(world, new PoseAuthorityArbiter());
             for (int i = 0; i < 10; i++)
             {
                 system.Update(0f);
@@ -184,7 +185,7 @@ namespace Ludots.Tests.GAS
                 OverrideNavigation = false,
             });
 
-            var system = new DisplacementRuntimeSystem(world);
+            var system = new DisplacementRuntimeSystem(world, new PoseAuthorityArbiter());
             for (int i = 0; i < 3; i++)
             {
                 system.Update(0f);
@@ -236,6 +237,58 @@ namespace Ludots.Tests.GAS
             });
 
             That(count, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void BuiltinHandler_ApplyDisplacement_StackedOnSameTarget_ReplacesInsteadOfCreatingSecondState()
+        {
+            using var world = World.Create();
+
+            var target = world.Create(new WorldPositionCm { Value = Fix64Vec2.Zero });
+            var firstSource = world.Create(new WorldPositionCm { Value = Fix64Vec2.FromInt(-100, 0) });
+            var secondSource = world.Create(new WorldPositionCm { Value = Fix64Vec2.FromInt(0, -100) });
+            var mergedParams = default(EffectConfigParams);
+
+            var firstContext = new EffectContext { Source = firstSource, Target = target, TargetContext = default };
+            var firstTemplate = new EffectTemplateData
+            {
+                Displacement = new DisplacementDescriptor
+                {
+                    DirectionMode = DisplacementDirectionMode.AwayFromSource,
+                    TotalDistanceCm = 500,
+                    TotalDurationTicks = 10,
+                    OverrideNavigation = true,
+                }
+            };
+            BuiltinHandlers.HandleApplyDisplacement(world, default, ref firstContext, in mergedParams, in firstTemplate);
+
+            // 第二次施加命中同一目标：替换合同——覆写方向与预算，不得出现第二个驱动者。
+            var secondContext = new EffectContext { Source = secondSource, Target = target, TargetContext = default };
+            var secondTemplate = new EffectTemplateData
+            {
+                Displacement = new DisplacementDescriptor
+                {
+                    DirectionMode = DisplacementDirectionMode.AwayFromSource,
+                    TotalDistanceCm = 200,
+                    TotalDurationTicks = 4,
+                    OverrideNavigation = false,
+                }
+            };
+            BuiltinHandlers.HandleApplyDisplacement(world, default, ref secondContext, in mergedParams, in secondTemplate);
+
+            int count = 0;
+            world.Query(in DisplacementQuery, (Entity _, ref DisplacementState state) =>
+            {
+                count++;
+                That(state.SourceEntity, Is.EqualTo(secondSource), "the replacement segment owns the state");
+                That(state.TotalDistanceCm, Is.EqualTo(200));
+                That(state.RemainingDistanceCm.ToFloat(), Is.EqualTo(200f).Within(0.01f), "the budget restarts with the new segment");
+                That(state.TotalDurationTicks, Is.EqualTo(4));
+                That(state.RemainingTicks, Is.EqualTo(4));
+                That(state.OverrideNavigation, Is.False);
+            });
+
+            That(count, Is.EqualTo(1), "stacking a displacement on the same target must replace, never duplicate");
         }
 
         [Test]
@@ -493,7 +546,7 @@ namespace Ludots.Tests.GAS
                 OverrideNavigation = true,
             });
 
-            var system = new DisplacementRuntimeSystem(world);
+            var system = new DisplacementRuntimeSystem(world, new PoseAuthorityArbiter());
             system.Update(0f);
 
             That(world.Has<MovementSuppressed2D>(target), Is.True);
@@ -523,7 +576,7 @@ namespace Ludots.Tests.GAS
                 OverrideNavigation = true,
             });
 
-            var system = new DisplacementRuntimeSystem(world);
+            var system = new DisplacementRuntimeSystem(world, new PoseAuthorityArbiter());
             for (int i = 0; i < 5; i++)
             {
                 system.Update(0f);
@@ -555,7 +608,7 @@ namespace Ludots.Tests.GAS
 
             world.Destroy(target);
 
-            var system = new DisplacementRuntimeSystem(world);
+            var system = new DisplacementRuntimeSystem(world, new PoseAuthorityArbiter());
             system.Update(0f);
 
             That(world.IsAlive(dispEntity), Is.False);

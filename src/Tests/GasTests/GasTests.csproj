@@ -6,11 +6,16 @@
     <Nullable>enable</Nullable>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <IsPackable>false</IsPackable>
+    <SkiaNativeRid Condition="'$(SkiaNativeRid)' == '' and '$(RuntimeIdentifier)' != ''">$(RuntimeIdentifier)</SkiaNativeRid>
+    <SkiaNativeRid Condition="'$(SkiaNativeRid)' == '' and '$(OS)' == 'Windows_NT'">win-x64</SkiaNativeRid>
+    <SkiaNativeRid Condition="'$(SkiaNativeRid)' == '' and '$([MSBuild]::IsOSPlatform(`Linux`))' == 'true'">linux-x64</SkiaNativeRid>
+    <SkiaNativeRid Condition="'$(SkiaNativeRid)' == '' and '$([MSBuild]::IsOSPlatform(`OSX`))' == 'true'">osx</SkiaNativeRid>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="BenchmarkDotNet" Version="0.13.12" />
     <PackageReference Include="coverlet.collector" Version="6.0.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.11.0" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
     <PackageReference Include="NUnit" Version="4.2.2" />
     <PackageReference Include="NUnit.Analyzers" Version="4.3.0" />
@@ -25,6 +30,7 @@
     <ProjectReference Include="..\..\Core\Ludots.Core.csproj" />
     <ProjectReference Include="..\..\Core\Ludots.Physics.Broadphase\Ludots.Physics.Broadphase.csproj" />
     <ProjectReference Include="..\..\Core\Ludots.Physics2D\Ludots.Physics2D.csproj" />
+    <ProjectReference Include="..\..\Core\Ludots.Movement.Physics2DBridge\Ludots.Movement.Physics2DBridge.csproj" />
     <ProjectReference Include="..\..\Tools\Ludots.Launcher.Backend\Ludots.Launcher.Backend.csproj" />
     <ProjectReference Include="..\..\..\mods\LudotsCoreMod\LudotsCoreMod.csproj" />
     <ProjectReference Include="..\..\..\mods\CoreInputMod\CoreInputMod.csproj" />
@@ -86,6 +92,13 @@
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardPhysics2DStressMod\CapabilityStandardPhysics2DStressMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardPhysics2DShowcaseMod\CapabilityStandardPhysics2DShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardTimeFlowShowcaseMod\CapabilityStandardTimeFlowShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardGraphBehaviorCommon\CapabilityStandardGraphBehaviorCommon.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardBehaviorTreeArenaMod\CapabilityStandardBehaviorTreeArenaMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardHfsmSentryArenaMod\CapabilityStandardHfsmSentryArenaMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardLevelBlueprintTrialMod\CapabilityStandardLevelBlueprintTrialMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardAbilityGraphSandboxMod\CapabilityStandardAbilityGraphSandboxMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardScriptFlowSandboxMod\CapabilityStandardScriptFlowSandboxMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardGraphBehaviorIntegrationMod\CapabilityStandardGraphBehaviorIntegrationMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardTransportNetworkMod\CapabilityStandardTransportNetworkMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardVirtualCameraShowcaseMod\CapabilityStandardVirtualCameraShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\progression_scope\ProgressionScopeShowcaseMod\ProgressionScopeShowcaseMod.csproj" />
@@ -106,15 +119,29 @@
     <ProjectReference Include="..\..\..\mods\showcases\fog_of_war\SharedVisionSnapshotShowcaseMod\SharedVisionSnapshotShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\fog_of_war\FogOfWarShowcaseMod\FogOfWarShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\utility_autocast\UtilityAutocastShowcaseMod\UtilityAutocastShowcaseMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\ui_player_aggregate_graph_mvp\UiPlayerAggregateGraphMvpShowcaseMod\UiPlayerAggregateGraphMvpShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\control_plane_projection\ControlPlaneProjectionShowcaseMod\ControlPlaneProjectionShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\combat_stance\CombatStanceShowcaseMod\CombatStanceShowcaseMod.csproj" />
     <ProjectReference Include="..\..\Libraries\Ludots.UI.Skia\Ludots.UI.Skia.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="..\..\Libraries\SkiaSharp\runtimes\win-x64\native\libSkiaSharp.dll"
+    <None Include="..\..\Libraries\SkiaSharp\runtimes\**\*.*" Link="runtimes\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(SkiaNativeRid)' != ''">
+    <None Include="..\..\Libraries\SkiaSharp\runtimes\$(SkiaNativeRid)\native\libSkiaSharp.dll"
           Link="libSkiaSharp.dll"
-          CopyToOutputDirectory="PreserveNewest" />
+          CopyToOutputDirectory="PreserveNewest"
+          Condition="Exists('..\..\Libraries\SkiaSharp\runtimes\$(SkiaNativeRid)\native\libSkiaSharp.dll')" />
+    <None Include="..\..\Libraries\SkiaSharp\runtimes\$(SkiaNativeRid)\native\libSkiaSharp.so"
+          Link="libSkiaSharp.so"
+          CopyToOutputDirectory="PreserveNewest"
+          Condition="Exists('..\..\Libraries\SkiaSharp\runtimes\$(SkiaNativeRid)\native\libSkiaSharp.so')" />
+    <None Include="..\..\Libraries\SkiaSharp\runtimes\$(SkiaNativeRid)\native\libSkiaSharp.dylib"
+          Link="libSkiaSharp.dylib"
+          CopyToOutputDirectory="PreserveNewest"
+          Condition="Exists('..\..\Libraries\SkiaSharp\runtimes\$(SkiaNativeRid)\native\libSkiaSharp.dylib')" />
   </ItemGroup>
 
 </Project>

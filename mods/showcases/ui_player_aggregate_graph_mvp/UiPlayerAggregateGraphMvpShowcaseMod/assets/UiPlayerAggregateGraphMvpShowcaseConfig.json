@@ -1,0 +1,32 @@
+{
+  "mapId": "ui_player_aggregate_graph_mvp",
+  "graphId": "ui.panel.player.resource.aggregate",
+  "playerTeamId": 1,
+  "factionOwnerName": "Player Faction",
+  "shutDownBuildingName": "Crystal Hub Beta",
+  "attributes": {
+    "ore": "Showcase.Resource.Ore",
+    "crystal": "Showcase.Resource.Crystal"
+  },
+  "summaryKeys": {
+    "oreTotal": "ui.panel.player.ore.total",
+    "crystalTotal": "ui.panel.player.crystal.total"
+  },
+  "buildings": [
+    {
+      "name": "Ore Depot Alpha",
+      "ore": 120,
+      "crystal": 30
+    },
+    {
+      "name": "Crystal Hub Beta",
+      "ore": 60,
+      "crystal": 90
+    }
+  ],
+  "presentation": {
+    "title": "Player Resource Overview",
+    "copy": "Ore and Crystal totals come from the tally Query graph projection written into GraphOutputValueStore — the panel never hand-sums buildings.",
+    "controls": "Click Shut down Crystal Hub, or press Space."
+  }
+}

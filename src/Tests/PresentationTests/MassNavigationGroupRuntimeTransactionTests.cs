@@ -43,9 +43,8 @@ public sealed class MassNavigationGroupRuntimeTransactionTests
             new[] { true, true });
 
         int[] originalMembers = { 0, 1 };
-        simulation.NavGroupRuntime.UpsertOrderMoveCommand(
-            simulation.MassNavigationFlow,
-            simulation.AgentState,
+        MassNavigationOrderChainTests.CommitPreparedOrderMove(
+            simulation,
             orderToken: 101,
             originalMembers,
             teamId: 1,
@@ -55,9 +54,8 @@ public sealed class MassNavigationGroupRuntimeTransactionTests
 
         int[] splitMembers = { 0 };
         InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
-            simulation.NavGroupRuntime.UpsertOrderMoveCommand(
-                simulation.MassNavigationFlow,
-                simulation.AgentState,
+            MassNavigationOrderChainTests.CommitPreparedOrderMove(
+                simulation,
                 orderToken: 202,
                 splitMembers,
                 teamId: 1,
@@ -104,9 +102,8 @@ public sealed class MassNavigationGroupRuntimeTransactionTests
             new[] { true, true });
 
         int[] originalMembers = { 0, 1 };
-        simulation.NavGroupRuntime.UpsertOrderMoveCommand(
-            simulation.MassNavigationFlow,
-            simulation.AgentState,
+        MassNavigationOrderChainTests.CommitPreparedOrderMove(
+            simulation,
             orderToken: 101,
             originalMembers,
             teamId: 1,
@@ -116,9 +113,8 @@ public sealed class MassNavigationGroupRuntimeTransactionTests
 
         int[] replacementMembers = { 0, 2 };
         InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
-            simulation.NavGroupRuntime.UpsertOrderMoveCommand(
-                simulation.MassNavigationFlow,
-                simulation.AgentState,
+            MassNavigationOrderChainTests.CommitPreparedOrderMove(
+                simulation,
                 orderToken: 101,
                 replacementMembers,
                 teamId: 1,
@@ -165,9 +161,8 @@ public sealed class MassNavigationGroupRuntimeTransactionTests
             new[] { true, true });
 
         int[] originalMembers = { 0 };
-        simulation.NavGroupRuntime.UpsertOrderMoveCommand(
-            simulation.MassNavigationFlow,
-            simulation.AgentState,
+        MassNavigationOrderChainTests.CommitPreparedOrderMove(
+            simulation,
             orderToken: 101,
             originalMembers,
             teamId: 1,
@@ -176,9 +171,8 @@ public sealed class MassNavigationGroupRuntimeTransactionTests
 
         int[] replacementMembers = { 0, 1 };
         InvalidOperationException ex = Assert.Throws<InvalidOperationException>(() =>
-            simulation.NavGroupRuntime.UpsertOrderMoveCommand(
-                simulation.MassNavigationFlow,
-                simulation.AgentState,
+            MassNavigationOrderChainTests.CommitPreparedOrderMove(
+                simulation,
                 orderToken: 101,
                 replacementMembers,
                 teamId: 1,

@@ -114,6 +114,14 @@
       }
     },
     {
+      "name": "capability_standard_crowd_physics_arena",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardCrowdPhysicsArenaMod",
+        "projectPath": "CapabilityStandardCrowdPhysicsArenaMod.csproj"
+      }
+    },
+    {
       "name": "formation_capability_showcase",
       "target": {
         "type": "path",
@@ -214,6 +222,14 @@
         "type": "path",
         "value": "mods/showcases/browser_minimap_composited_overlay/BrowserMinimapCompositedOverlayShowcaseMod",
         "projectPath": "BrowserMinimapCompositedOverlayShowcaseMod.csproj"
+      }
+    },
+    {
+      "name": "ui_player_aggregate_graph_mvp",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/ui_player_aggregate_graph_mvp/UiPlayerAggregateGraphMvpShowcaseMod",
+        "projectPath": "UiPlayerAggregateGraphMvpShowcaseMod.csproj"
       }
     },
     {
@@ -334,6 +350,54 @@
         "value": "mods/showcases/item_system/WeaponBenchShowcaseMod",
         "projectPath": "WeaponBenchShowcaseMod.csproj"
       }
+    },
+    {
+      "name": "capability_standard_behavior_tree_arena",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardBehaviorTreeArenaMod",
+        "projectPath": "CapabilityStandardBehaviorTreeArenaMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_hfsm_sentry_arena",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardHfsmSentryArenaMod",
+        "projectPath": "CapabilityStandardHfsmSentryArenaMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_level_blueprint_trial",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardLevelBlueprintTrialMod",
+        "projectPath": "CapabilityStandardLevelBlueprintTrialMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_ability_graph_sandbox",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardAbilityGraphSandboxMod",
+        "projectPath": "CapabilityStandardAbilityGraphSandboxMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_script_flow_sandbox",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardScriptFlowSandboxMod",
+        "projectPath": "CapabilityStandardScriptFlowSandboxMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_behavior_integration",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardGraphBehaviorIntegrationMod",
+        "projectPath": "CapabilityStandardGraphBehaviorIntegrationMod.csproj"
+      }
     }
   ],
   "adapters": {
@@ -347,7 +411,9 @@
       "assemblyPath": "BrowserRuntime/cef/Ludots.UI.Browser.Cef.dll",
       "hostTypeName": "Ludots.UI.Browser.Cef.CefBrowserRuntimeHost",
       "useCollectibleLoadContext": false,
-      "processSharedAssemblyNamePrefixes": ["CefSharp"]
+      "processSharedAssemblyNamePrefixes": [
+        "CefSharp"
+      ]
     }
   ],
   "projectHints": []

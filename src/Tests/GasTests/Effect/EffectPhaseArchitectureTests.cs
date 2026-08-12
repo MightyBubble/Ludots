@@ -977,7 +977,9 @@ namespace Ludots.Tests.GAS
                 E = e,
                 Targets = targets,
                 TargetList = new GraphTargetList(targets),
-            };
+            CallStack = new int[Ludots.Core.NodeLibraries.GASGraph.GraphVmLimits.MaxCallStackDepth],
+            CallStackCount = 0,
+        };
 
             GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
             return f[floatReg];
@@ -1008,7 +1010,9 @@ namespace Ludots.Tests.GAS
                 E = e,
                 Targets = targets,
                 TargetList = new GraphTargetList(targets),
-            };
+            CallStack = new int[Ludots.Core.NodeLibraries.GASGraph.GraphVmLimits.MaxCallStackDepth],
+            CallStackCount = 0,
+        };
 
             GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
             return iArr[intReg];
@@ -1039,7 +1043,9 @@ namespace Ludots.Tests.GAS
                 E = e,
                 Targets = targets,
                 TargetList = new GraphTargetList(targets),
-            };
+            CallStack = new int[Ludots.Core.NodeLibraries.GASGraph.GraphVmLimits.MaxCallStackDepth],
+            CallStackCount = 0,
+        };
 
             GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
             return e[entityReg];
@@ -1070,7 +1076,9 @@ namespace Ludots.Tests.GAS
                 E = e,
                 Targets = targets,
                 TargetList = new GraphTargetList(targets),
-            };
+            CallStack = new int[Ludots.Core.NodeLibraries.GASGraph.GraphVmLimits.MaxCallStackDepth],
+            CallStackCount = 0,
+        };
 
             GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
         }

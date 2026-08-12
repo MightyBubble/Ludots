@@ -201,6 +201,115 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
+        public void ParallelStep_WorkerCountDoesNotChangeSimulationResult()
+        {
+            // 数值域文档承诺：相同版本、配置、fixed tick 输入和初始 WorldPositionCm 下，
+            // worker 分片数量不得改变结果。本测试用 worker=1 与 worker=4 跑相同输入，
+            // 断言 positions/velocities/settled 状态逐位一致，锁住并行分片的确定性不变量。
+            World.SharedJobScheduler ??= new JobScheduler(new JobScheduler.Config
+            {
+                ThreadPrefixName = "MassNavWorkerDeterminismTests",
+                ThreadCount = 0,
+                MaxExpectedConcurrentJobs = 64,
+                StrictAllocationMode = false
+            });
+
+            const int agentCount = 16;
+            const int stepCount = 120;
+            var layer = new MassNavigationAgentLayer(categoryMask: 1u, interactionMask: 1u);
+            var seeds = new MassNavigationAgentSeed[agentCount];
+            for (int i = 0; i < agentCount; i++)
+            {
+                // 间距 35cm < 半径和 40cm：初始即重叠，覆盖 separation 与硬解算路径。
+                seeds[i] = new MassNavigationAgentSeed(
+                    teamId: 1,
+                    localPositionXCm: 100f + ((i % 4) * 35f),
+                    localPositionYCm: 100f + ((i / 4) * 35f),
+                    heavy: false,
+                    navMass: 1f,
+                    visualScale: 1f,
+                    bodyRadiusCm: 20f,
+                    speedCmPerSecond: 800f,
+                    layer);
+            }
+
+            TeamManager.LoadConfig(new TeamConfig
+            {
+                DefaultRelationship = "Friendly",
+                Relationships = new List<RelationshipEntry>(),
+            });
+
+            var serialFlow = CreateConfiguredFlow(parallelWorkerCount: 1);
+            var parallelFlow = CreateConfiguredFlow(parallelWorkerCount: 4);
+            serialFlow.Semantics.Solver.ParallelStepMinAgents = 2;
+            parallelFlow.Semantics.Solver.ParallelStepMinAgents = 2;
+            serialFlow.ResetAuthoredAgents(seeds);
+            parallelFlow.ResetAuthoredAgents(seeds);
+            for (int i = 0; i < agentCount; i++)
+            {
+                if (i < 8)
+                {
+                    // 个体目标：unit target 路径。
+                    serialFlow.SetUnitTarget(i, 3_000f, 3_000f, resetRecovery: true);
+                    parallelFlow.SetUnitTarget(i, 3_000f, 3_000f, resetRecovery: true);
+                }
+                // 其余 8 个无个体目标：走 team slot + flow field 路径。
+            }
+
+            using var serialWorld = World.Create();
+            using var parallelWorld = World.Create();
+            var serialGroups = new MassNavigationGroupRuntime(
+                LoadBaseMassNavigationConfig().Semantics.Group,
+                CreateRuntimeCapacity(agentCapacity: agentCount, groupMemberCapacity: agentCount));
+            var parallelGroups = new MassNavigationGroupRuntime(
+                LoadBaseMassNavigationConfig().Semantics.Group,
+                CreateRuntimeCapacity(agentCapacity: agentCount, groupMemberCapacity: agentCount));
+
+            for (int step = 0; step < stepCount; step++)
+            {
+                serialFlow.Step(
+                    dt: 0.016f,
+                    serialWorld,
+                    serialGroups,
+                    runHardResolve: true,
+                    hardResolveCandidateThresholdAgents: 1);
+                parallelFlow.Step(
+                    dt: 0.016f,
+                    parallelWorld,
+                    parallelGroups,
+                    runHardResolve: true,
+                    hardResolveCandidateThresholdAgents: 1);
+
+                Assert.That(parallelFlow.SettledUnitCount, Is.EqualTo(serialFlow.SettledUnitCount),
+                    $"settled unit count diverged at step {step}");
+            }
+
+            Assert.That(parallelFlow.PendingArrivalEventCount, Is.EqualTo(serialFlow.PendingArrivalEventCount));
+            for (int i = 0; i < agentCount; i++)
+            {
+                Assert.That(
+                    BitConverter.SingleToInt32Bits(parallelFlow.GetPositionX(i)),
+                    Is.EqualTo(BitConverter.SingleToInt32Bits(serialFlow.GetPositionX(i))),
+                    $"position.x diverged on agent {i}");
+                Assert.That(
+                    BitConverter.SingleToInt32Bits(parallelFlow.GetPositionY(i)),
+                    Is.EqualTo(BitConverter.SingleToInt32Bits(serialFlow.GetPositionY(i))),
+                    $"position.y diverged on agent {i}");
+
+                var serialVelocity = serialFlow.GetVelocityCmPerSecond(i);
+                var parallelVelocity = parallelFlow.GetVelocityCmPerSecond(i);
+                Assert.That(
+                    BitConverter.SingleToInt32Bits(parallelVelocity.X),
+                    Is.EqualTo(BitConverter.SingleToInt32Bits(serialVelocity.X)),
+                    $"velocity.x diverged on agent {i}");
+                Assert.That(
+                    BitConverter.SingleToInt32Bits(parallelVelocity.Y),
+                    Is.EqualTo(BitConverter.SingleToInt32Bits(serialVelocity.Y)),
+                    $"velocity.y diverged on agent {i}");
+            }
+        }
+
+        [Test]
         public void SpawnJitter_UsesConfiguredSeedDeterministically()
         {
             var first = CreateSpawnedFlow(randomSeed: 1234);
@@ -528,6 +637,7 @@ namespace Ludots.Tests.Presentation
                 RouteWaypointCapacityPerAgent = 64,
                 LoadedChunkCapacity = 16,
                 RelationshipDomainCapacity = 4,
+                DisplacedAgentCapacity = 4,
             };
         }
 

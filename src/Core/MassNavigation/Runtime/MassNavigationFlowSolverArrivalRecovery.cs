@@ -42,7 +42,7 @@ public sealed partial class MassNavigationFlowSolverState
     }
 
     // Runs inside parallel step jobs: must only touch per-agent slots. Arrival events are
-    // enqueued later by the single-threaded post-step scan (EnqueuePendingArrivalEvents).
+    // enqueued later by the single-threaded post-step scan (UpdateSettledUnitCount + EnqueueArrivalEvent).
     private void EnterSettledState(int index, float px, float py)
     {
         int i2 = index << 1;
@@ -99,17 +99,6 @@ public sealed partial class MassNavigationFlowSolverState
 
         _arrivalEventAgentIndices[_arrivalEventCount++] = index;
         _arrivalEventEmittedFlags[index] = 1;
-    }
-
-    private void ResetTeamArrivalState(int teamId)
-    {
-        for (int i = 0; i < UnitCount; i++)
-        {
-            if (_teams[i] == teamId)
-            {
-                ResetUnitArrivalState(i, clearRetryCount: true);
-            }
-        }
     }
 
     private void ResetUnitProgressAnchor(int index, float px, float py)

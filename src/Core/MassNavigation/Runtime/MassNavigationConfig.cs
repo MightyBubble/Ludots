@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.IO;
-using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
@@ -98,7 +98,8 @@ public sealed class MassNavigationConfig
             "routeMaxExpandedPerRequest",
             "routeWaypointCapacityPerAgent",
             "loadedChunkCapacity",
-            "relationshipDomainCapacity");
+            "relationshipDomainCapacity",
+            "displacedAgentCapacity");
 
         JsonElement world = RequireProperty(root, "world");
         RequireProperties(
@@ -292,6 +293,10 @@ public sealed class MassNavigationConfig
             "farSlotBlend",
             "nearSlotBlendDistanceSq");
         RequireProperties(
+            RequireProperty(semantics, "route"),
+            "waypointAdvanceStopThresholdScale",
+            "waypointAdvanceBodyRadiusScale");
+        RequireProperties(
             RequireProperty(semantics, "steering"),
             "separationRadiusCm",
             "goalArrivalRadiusCm",
@@ -466,6 +471,7 @@ public sealed class MassNavigationRuntimeCapacityConfig
     public int RouteWaypointCapacityPerAgent { get; set; }
     public int LoadedChunkCapacity { get; set; }
     public int RelationshipDomainCapacity { get; set; }
+    public int DisplacedAgentCapacity { get; set; }
 
     public void Validate()
     {
@@ -479,6 +485,7 @@ public sealed class MassNavigationRuntimeCapacityConfig
         RequirePositive(RouteWaypointCapacityPerAgent, "routeWaypointCapacityPerAgent");
         RequirePositive(LoadedChunkCapacity, "loadedChunkCapacity");
         RequirePositive(RelationshipDomainCapacity, "relationshipDomainCapacity");
+        RequirePositive(DisplacedAgentCapacity, "displacedAgentCapacity");
 
         if (MovePlanExecutionGroupCapacity < NavigationGroupCapacity)
         {
@@ -591,7 +598,7 @@ public sealed class MassNavigationConfigLoader
     public bool TryLoad(
         ConfigCatalog catalog,
         ConfigConflictReport report,
-        out MassNavigationConfig? config,
+        [NotNullWhen(true)] out MassNavigationConfig? config,
         string relativePath = DefaultRelativePath)
     {
         config = null;

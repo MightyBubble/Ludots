@@ -63,25 +63,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 var (id, obj) = sorted[i];
                 try
                 {
-                    GraphConfig? cfg;
-                    try
-                    {
-                        cfg = obj.Deserialize<GraphConfig>(options);
-                    }
-                    catch (JsonException ex)
-                    {
-                        throw new InvalidOperationException(
-                            $"Strict JSON rejected graph '{id}' in '{relativePath}': {ex.Message}",
-                            ex);
-                    }
-
-                    if (cfg == null) throw new InvalidOperationException("Failed to deserialize graph config.");
-                    if (string.IsNullOrWhiteSpace(cfg.Id)) cfg.Id = id;
-                    if (!string.Equals(cfg.Id, id, StringComparison.OrdinalIgnoreCase))
-                        throw new InvalidOperationException($"Graph id mismatch: '{id}' vs '{cfg.Id}'.");
-
                     GraphIdRegistry.Register(id);
-                    var (pkg, outputSchema, diags) = GraphCompiler.CompileWithOutputs(cfg);
+                    var (pkg, outputSchema, diags) = GraphProgramAuthoringFrontDoor.CompileJsonObject(obj, id, options);
+
                     for (int d = 0; d < diags.Count; d++)
                     {
                         if (diags[d].Severity == GraphDiagnosticSeverity.Error)

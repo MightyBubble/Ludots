@@ -5,6 +5,9 @@ namespace Ludots.Core.GraphRuntime
     /// <summary>
     /// Authored graph execution contract. Parsed from GraphConfig.Kind and enforced
     /// at compile/load and at execution entrypoints that require a specific kind.
+    /// L1 flow dialects today: Effect, Query, Score, Validation, Derived, Script.
+    /// L2 behavior schedulers (BehaviorTree / Fsm / LevelTrigger) are not GraphKind
+    /// values yet — they own separate topology IR and invoke L1 graphs at leaves.
     /// </summary>
     public enum GraphKind : byte
     {
@@ -13,7 +16,9 @@ namespace Ludots.Core.GraphRuntime
         Query = 2,
         Score = 3,
         Validation = 4,
-        Derived = 5
+        Derived = 5,
+        /// <summary>Reusable flow script: Call/Return/Yield and InvokeScript callee.</summary>
+        Script = 6
     }
 
     public static class GraphKindParser
@@ -45,7 +50,7 @@ namespace Ludots.Core.GraphRuntime
             {
                 string shown = string.IsNullOrWhiteSpace(value) ? "<missing>" : value.Trim();
                 throw new InvalidOperationException(
-                    $"Graph '{graphId}' has unsupported or missing kind '{shown}'. Supported kinds: Effect, Query, Score, Validation, Derived.");
+                    $"Graph '{graphId}' has unsupported or missing kind '{shown}'. Supported kinds: Effect, Query, Score, Validation, Derived, Script.");
             }
 
             return kind;

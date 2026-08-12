@@ -40,6 +40,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         CompareEqInt      = 32,   // B[Dst] = I[A] == I[B] ? 1 : 0
         HasTag            = 33,   // B[Dst] = E[A].HasTag(Imm) ? 1 : 0
         CompareEqEntity   = 35,   // B[Dst] = E[A] == E[B] ? 1 : 0
+        /// <summary>I[Dst] = SelectEffectiveTagInMask(E[A], Imm=tableId); Flags=TagSelectPolicy. Authoring alias: ReadGameplayTag.</summary>
+        SelectTagInMask   = 36,
+        /// <summary>I[Dst] = LookupTagDisplayToken(Imm=tableId, I[A]=tagId). Authoring alias: LookupTagDisplayText.</summary>
+        LookupTagDisplayToken = 37,
 
         SelectEntity = 40,
         QueryRadius = 100,
@@ -154,6 +158,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         ControlDomainResolve  = 420, // E[Dst] = control domain rep of E[A], Entity.Null when none
         ControlDomainControls = 421, // B[Dst] = IsControllableBy(controllerRep=E[A], target=E[B])
         KnowledgeHasProjection = 422, // B[Dst] = viewer E[A] has knowledge projection of target E[B]
+
+        // ── Shared control-flow / Script coroutine (430-434) ──
+        Call = 430,            // push return PC; pc = Imm (absolute)
+        Return = 431,          // pop return PC
+        Yield = 432,           // pause; resume at next instruction
+        HaltReturnInt = 433,   // halt with ReturnInt = I[A]
+        InvokeScript = 434,    // run Script graph Imm to halt (callee must not Yield)
+        MoveInt = 435,         // I[Dst] = I[A]
     }
 
     public static class GraphNodeOpParser
@@ -163,9 +175,26 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             parsed = GraphNodeOp.None;
             if (string.IsNullOrWhiteSpace(op)) return false;
 
-            if (Enum.TryParse(op, ignoreCase: true, out GraphNodeOp v))
+            string trimmed = op.Trim();
+            if (Enum.TryParse(trimmed, ignoreCase: false, out GraphNodeOp v) &&
+                v != GraphNodeOp.None &&
+                Enum.IsDefined(typeof(GraphNodeOp), v) &&
+                string.Equals(v.ToString(), trimmed, StringComparison.Ordinal))
             {
                 parsed = v;
+                return true;
+            }
+
+            // L1 authoring sugar → L0 opcodes (see design-tag-display-lookup).
+            if (string.Equals(trimmed, "ReadGameplayTag", StringComparison.Ordinal))
+            {
+                parsed = GraphNodeOp.SelectTagInMask;
+                return true;
+            }
+
+            if (string.Equals(trimmed, "LookupTagDisplayText", StringComparison.Ordinal))
+            {
+                parsed = GraphNodeOp.LookupTagDisplayToken;
                 return true;
             }
 
