@@ -29,6 +29,14 @@
       <Link>skinning_instanced.fs</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="..\..\Platforms\Desktop\vfx_unlit_tint.vs">
+      <Link>vfx_unlit_tint.vs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\Platforms\Desktop\vfx_unlit_tint.fs">
+      <Link>vfx_unlit_tint.fs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
   <ItemGroup Condition="'$(SkiaNativeRid)' != ''">
