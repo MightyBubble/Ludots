@@ -17,6 +17,7 @@
 * [PR895 图基建 + LSW 审计交接（会话全量）](pr895_graph_infra_and_lsw_audit_handoff.md)
 * [PR895 图基建 + LSW 架构审计（交叉审计）](pr895_graph_infra_and_lsw_architecture_audit.md)
 * [PR911 FuncLib/ActionLib 审计需求交接](pr911_funclib_actionlib_audit_handoff.md)
+* [PR911 FuncLib/ActionLib 架构审计（交叉审计）](pr911_funclib_actionlib_architecture_audit.md)
 
 ## 2 使用边界
 
