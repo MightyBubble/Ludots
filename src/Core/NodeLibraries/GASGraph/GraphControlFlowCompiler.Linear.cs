@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.Presentation.TagDisplay;
 
 namespace Ludots.Core.NodeLibraries.GASGraph
 {
@@ -23,6 +24,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                       GraphNodeOp.CompareGtFloat or
                       GraphNodeOp.CompareLtInt or
                       GraphNodeOp.CompareEqInt or
+                      GraphNodeOp.HasTag or
+                      GraphNodeOp.CompareEqEntity or
+                      GraphNodeOp.SelectTagInMask or
+                      GraphNodeOp.LookupTagDisplayToken or
                       GraphNodeOp.SelectEntity or
                       GraphNodeOp.LoadCaster or
                       GraphNodeOp.LoadExplicitTarget or
@@ -50,6 +55,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                       GraphNodeOp.LoadConfigFloat or
                       GraphNodeOp.LoadConfigInt or
                       GraphNodeOp.LoadConfigEffectId or
+                      GraphNodeOp.QueryRadius or
+                      GraphNodeOp.QuerySortStable or
+                      GraphNodeOp.QueryLimit or
                       GraphNodeOp.QueryCone or
                       GraphNodeOp.QueryRectangle or
                       GraphNodeOp.QueryLine or
@@ -88,6 +96,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     GraphNodeOp.AddInt or
                     GraphNodeOp.AggCount or
                     GraphNodeOp.RelationshipGetMetric or
+                    GraphNodeOp.SelectTagInMask or
+                    GraphNodeOp.LookupTagDisplayToken or
                     GraphNodeOp.ReadBlackboardInt or
                     GraphNodeOp.LoadConfigInt or
                     GraphNodeOp.LoadConfigEffectId or
@@ -95,7 +105,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.ConstBool or
                     GraphNodeOp.CompareGtFloat or
                     GraphNodeOp.CompareLtInt or
-                    GraphNodeOp.CompareEqInt => GraphValueType.Bool,
+                    GraphNodeOp.CompareEqInt or
+                    GraphNodeOp.HasTag or
+                    GraphNodeOp.CompareEqEntity => GraphValueType.Bool,
                 GraphNodeOp.LoadCaster or
                     GraphNodeOp.LoadExplicitTarget or
                     GraphNodeOp.LoadContextTarget or
@@ -124,13 +136,20 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     => port == GraphControlFlowPorts.Value,
                 GraphNodeOp.SelectEntity
                     => port is GraphControlFlowPorts.Condition or GraphControlFlowPorts.A or GraphControlFlowPorts.B,
+                GraphNodeOp.HasTag or GraphNodeOp.SelectTagInMask
+                    => port == GraphControlFlowPorts.Source,
+                GraphNodeOp.CompareEqEntity
+                    => port is GraphControlFlowPorts.A or GraphControlFlowPorts.B,
+                GraphNodeOp.LookupTagDisplayToken
+                    => port == GraphControlFlowPorts.A,
                 GraphNodeOp.LoadAttribute => port == GraphControlFlowPorts.Source,
                 GraphNodeOp.ModifyAttributeAdd
                     => port is GraphControlFlowPorts.Target or GraphControlFlowPorts.Value,
                 GraphNodeOp.WriteSelfAttribute => port == GraphControlFlowPorts.Value,
                 GraphNodeOp.ApplyEffectTemplate
                     => port is GraphControlFlowPorts.Target or GraphControlFlowPorts.A or GraphControlFlowPorts.B,
-                GraphNodeOp.ApplyEffectDynamic => port is GraphControlFlowPorts.Target or GraphControlFlowPorts.Value,
+                GraphNodeOp.ApplyEffectDynamic
+                    => port is GraphControlFlowPorts.Target or GraphControlFlowPorts.Value,
                 GraphNodeOp.FanOutApplyEffectDynamic or GraphNodeOp.FanOutDispatchEffectDynamic
                     => port == GraphControlFlowPorts.Value,
                 GraphNodeOp.RemoveEffectTemplate => port == GraphControlFlowPorts.Target,
@@ -194,6 +213,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     RequireSpatialCapacityPolicy(node, graphId, diagnostics);
                     break;
 
+                case GraphNodeOp.QueryRadius:
+                    RequireSpatialCapacityPolicy(node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.QuerySortStable:
+                case GraphNodeOp.QueryLimit:
+                case GraphNodeOp.AggMinByDistance:
+                    break;
+
                 case GraphNodeOp.AddFloat:
                 case GraphNodeOp.MulFloat:
                 case GraphNodeOp.SubFloat:
@@ -227,6 +255,27 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     RequireValueInput(node, GraphControlFlowPorts.Condition, GraphValueType.Bool, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.A, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.B, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.HasTag:
+                    RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireNonEmpty(node.Tag, "tag", node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.CompareEqEntity:
+                    RequireValueInput(node, GraphControlFlowPorts.A, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.B, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.SelectTagInMask:
+                    RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireNonEmpty(node.DisplayTable, "displayTable", node, graphId, diagnostics);
+                    _ = ParseTagSelectPolicy(node.TagSelectPolicy, node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.LookupTagDisplayToken:
+                    RequireValueInput(node, GraphControlFlowPorts.A, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireNonEmpty(node.DisplayTable, "displayTable", node, graphId, diagnostics);
                     break;
 
                 case GraphNodeOp.LoadAttribute:
@@ -480,6 +529,21 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     instruction.Flags = 0;
                     break;
 
+                case GraphNodeOp.QueryRadius:
+                    instruction.Flags = 0;
+                    instruction.ImmF = node.RadiusCm;
+                    break;
+
+                case GraphNodeOp.QuerySortStable:
+                    break;
+
+                case GraphNodeOp.QueryLimit:
+                    instruction.Imm = node.IntValue;
+                    break;
+
+                case GraphNodeOp.AggMinByDistance:
+                    break;
+
                 case GraphNodeOp.AddFloat:
                 case GraphNodeOp.MulFloat:
                 case GraphNodeOp.SubFloat:
@@ -535,6 +599,37 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     instruction.C = ResolveValueInput(
                         node, GraphControlFlowPorts.B, GraphValueType.Entity,
                         valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.HasTag:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Imm = RequireSymbol(node.Tag, "tag", node, symbolToIndex, symbols, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.CompareEqEntity:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.A, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.B = ResolveValueInput(
+                        node, GraphControlFlowPorts.B, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.SelectTagInMask:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Imm = RequireSymbol(node.DisplayTable, "displayTable", node, symbolToIndex, symbols, graphId, diagnostics);
+                    instruction.Flags = ParseTagSelectPolicy(node.TagSelectPolicy, node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.LookupTagDisplayToken:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.A, GraphValueType.Int,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Imm = RequireSymbol(node.DisplayTable, "displayTable", node, symbolToIndex, symbols, graphId, diagnostics);
                     break;
 
                 case GraphNodeOp.LoadAttribute:
@@ -805,6 +900,29 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     sources,
                     graphId);
             }
+        }
+
+        private static byte ParseTagSelectPolicy(
+            string? policy,
+            GraphControlFlowNode node,
+            string graphId,
+            List<GraphDiagnostic> diagnostics)
+        {
+            if (string.IsNullOrWhiteSpace(policy))
+            {
+                return (byte)TagSelectPolicy.RequireOne;
+            }
+
+            if (!Enum.TryParse(policy, ignoreCase: false, out TagSelectPolicy parsed) ||
+                !Enum.IsDefined(typeof(TagSelectPolicy), parsed))
+            {
+                diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
+                    $"Node '{node.Id}' has unsupported tagSelectPolicy '{policy}'. Supported: RequireOne, AllowNone, LowestId.",
+                    node.Id));
+                return (byte)TagSelectPolicy.RequireOne;
+            }
+
+            return (byte)parsed;
         }
 
         private static int ParseLinearRelationshipFilterMode(

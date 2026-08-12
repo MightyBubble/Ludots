@@ -3,9 +3,14 @@ using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
+using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
+using Ludots.Core.Presentation.TagDisplay;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Gas.Graph
@@ -186,6 +191,158 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
+        public void FrontDoor_EffectDynamicAndFanOutEffectOps_CompileAndEmit()
+        {
+            GraphControlFlowCompileResult compiled = CompileFrontDoor(
+                """
+                {
+                  "kind": "Effect",
+                  "entry": "target",
+                  "nodes": [
+                    { "id": "target", "op": "LoadExplicitTarget" },
+                    { "id": "templateId", "op": "ConstInt", "intValue": 77 },
+                    { "id": "fanStatic", "op": "FanOutApplyEffect", "effectTemplate": "effect.fan.static" },
+                    { "id": "applyDynamic", "op": "ApplyEffectDynamic" },
+                    { "id": "fanDynamic", "op": "FanOutApplyEffectDynamic" },
+                    { "id": "dispatchStatic", "op": "FanOutDispatchEffect", "effectTemplate": "effect.dispatch.static", "payloadPreset": "TargetToResolved" },
+                    { "id": "dispatchDynamic", "op": "FanOutDispatchEffectDynamic", "payloadPreset": "TargetToResolved" }
+                  ],
+                  "controlEdges": [
+                    { "from": "target", "fromPort": "next", "to": "templateId" },
+                    { "from": "templateId", "fromPort": "next", "to": "fanStatic" },
+                    { "from": "fanStatic", "fromPort": "next", "to": "applyDynamic" },
+                    { "from": "applyDynamic", "fromPort": "next", "to": "fanDynamic" },
+                    { "from": "fanDynamic", "fromPort": "next", "to": "dispatchStatic" },
+                    { "from": "dispatchStatic", "fromPort": "next", "to": "dispatchDynamic" }
+                  ],
+                  "valueEdges": [
+                    { "from": "target", "fromPort": "value", "to": "applyDynamic", "toPort": "target" },
+                    { "from": "templateId", "fromPort": "value", "to": "applyDynamic", "toPort": "value" },
+                    { "from": "templateId", "fromPort": "value", "to": "fanDynamic", "toPort": "value" },
+                    { "from": "templateId", "fromPort": "value", "to": "dispatchDynamic", "toPort": "value" }
+                  ]
+                }
+                """,
+                "tests.effect.dynamic-fanout-effect-ops");
+
+            Assert.That(compiled.Succeeded, Is.True, GraphScriptTestGraphs.FormatDiagnostics(compiled.Diagnostics));
+            Assert.That(compiled.Package.HasValue, Is.True);
+
+            GraphProgramPackage package = compiled.Package!.Value;
+            GraphInstruction[] program = package.Program;
+            GraphInstruction fanStatic = SingleInstruction(program, GraphNodeOp.FanOutApplyEffect);
+            GraphInstruction applyDynamic = SingleInstruction(program, GraphNodeOp.ApplyEffectDynamic);
+            GraphInstruction fanDynamic = SingleInstruction(program, GraphNodeOp.FanOutApplyEffectDynamic);
+            GraphInstruction dispatchStatic = SingleInstruction(program, GraphNodeOp.FanOutDispatchEffect);
+            GraphInstruction dispatchDynamic = SingleInstruction(program, GraphNodeOp.FanOutDispatchEffectDynamic);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(package.Symbols[fanStatic.Imm], Is.EqualTo("effect.fan.static"));
+                Assert.That(applyDynamic.A, Is.EqualTo(0));
+                Assert.That(applyDynamic.B, Is.EqualTo(0));
+                Assert.That(fanDynamic.A, Is.EqualTo(0));
+                Assert.That(package.Symbols[dispatchStatic.Imm], Is.EqualTo("effect.dispatch.static"));
+                Assert.That(package.Symbols[dispatchStatic.Dst], Is.EqualTo("TargetToResolved"));
+                Assert.That(dispatchDynamic.A, Is.EqualTo(0));
+                Assert.That(package.Symbols[dispatchDynamic.Dst], Is.EqualTo("TargetToResolved"));
+            });
+
+            Assert.DoesNotThrow(() =>
+                GraphKindOperationPolicy.RequireAllowed(
+                    GraphKind.Effect,
+                    program,
+                    GasGraphOpHandlerTable.Instance));
+        }
+
+        [Test]
+        public void FrontDoor_EffectApplyEffectDynamic_RequiresTargetAndValueInputs()
+        {
+            GraphControlFlowCompileResult compiled = CompileFrontDoor(
+                """
+                {
+                  "kind": "Effect",
+                  "entry": "apply",
+                  "nodes": [
+                    { "id": "apply", "op": "ApplyEffectDynamic" }
+                  ],
+                  "controlEdges": [],
+                  "valueEdges": []
+                }
+                """,
+                "tests.effect.apply-effect-dynamic-missing-inputs");
+
+            Assert.That(compiled.Succeeded, Is.False);
+            Assert.That(compiled.Package.HasValue, Is.False);
+            Assert.Multiple(() =>
+            {
+                Assert.That(compiled.Diagnostics, Has.Some.Matches<GraphDiagnostic>(d =>
+                    d.Code == GraphDiagnosticCodes.MissingValueInput &&
+                    d.NodeId == "apply" &&
+                    d.Message.Contains("'target'", StringComparison.Ordinal)));
+                Assert.That(compiled.Diagnostics, Has.Some.Matches<GraphDiagnostic>(d =>
+                    d.Code == GraphDiagnosticCodes.MissingValueInput &&
+                    d.NodeId == "apply" &&
+                    d.Message.Contains("'value'", StringComparison.Ordinal)));
+            });
+        }
+
+        [Test]
+        public void FrontDoor_EffectFanOutApplyEffect_RequiresEffectTemplate()
+        {
+            GraphControlFlowCompileResult compiled = CompileFrontDoor(
+                """
+                {
+                  "kind": "Effect",
+                  "entry": "fan",
+                  "nodes": [
+                    { "id": "fan", "op": "FanOutApplyEffect" }
+                  ],
+                  "controlEdges": [],
+                  "valueEdges": []
+                }
+                """,
+                "tests.effect.fanout-apply-effect-missing-template");
+
+            Assert.That(compiled.Succeeded, Is.False);
+            Assert.That(compiled.Package.HasValue, Is.False);
+            Assert.That(compiled.Diagnostics, Has.Some.Matches<GraphDiagnostic>(d =>
+                d.Code == GraphDiagnosticCodes.MissingNodeRef &&
+                d.NodeId == "fan" &&
+                d.Message.Contains("effectTemplate", StringComparison.Ordinal)));
+        }
+
+        [Test]
+        public void FrontDoor_EffectFanOutDispatchEffectDynamic_RequiresPayloadPreset()
+        {
+            GraphControlFlowCompileResult compiled = CompileFrontDoor(
+                """
+                {
+                  "kind": "Effect",
+                  "entry": "templateId",
+                  "nodes": [
+                    { "id": "templateId", "op": "ConstInt", "intValue": 77 },
+                    { "id": "dispatch", "op": "FanOutDispatchEffectDynamic" }
+                  ],
+                  "controlEdges": [
+                    { "from": "templateId", "fromPort": "next", "to": "dispatch" }
+                  ],
+                  "valueEdges": [
+                    { "from": "templateId", "fromPort": "value", "to": "dispatch", "toPort": "value" }
+                  ]
+                }
+                """,
+                "tests.effect.fanout-dispatch-effect-dynamic-missing-payload-preset");
+
+            Assert.That(compiled.Succeeded, Is.False);
+            Assert.That(compiled.Package.HasValue, Is.False);
+            Assert.That(compiled.Diagnostics, Has.Some.Matches<GraphDiagnostic>(d =>
+                d.Code == GraphDiagnosticCodes.MissingNodeRef &&
+                d.NodeId == "dispatch" &&
+                d.Message.Contains("payloadPreset", StringComparison.Ordinal)));
+        }
+
+        [Test]
         public void FrontDoor_EffectTagAndDisplayOps_CompileAndEmit()
         {
             GraphControlFlowCompileResult compiled = CompileFrontDoor(
@@ -340,6 +497,139 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
+        public void FrontDoor_EffectQueryListOps_CompileAndEmit()
+        {
+            GraphControlFlowCompileResult compiled = CompileFrontDoor(
+                """
+                {
+                  "kind": "Effect",
+                  "entry": "radius",
+                  "nodes": [
+                    { "id": "radius", "op": "QueryRadius", "queryCapacityPolicy": "RequireComplete", "radiusCm": 800 },
+                    { "id": "sort", "op": "QuerySortStable" },
+                    { "id": "limit", "op": "QueryLimit", "intValue": 1 },
+                    { "id": "nearest", "op": "AggMinByDistance" }
+                  ],
+                  "controlEdges": [
+                    { "from": "radius", "fromPort": "next", "to": "sort" },
+                    { "from": "sort", "fromPort": "next", "to": "limit" },
+                    { "from": "limit", "fromPort": "next", "to": "nearest" }
+                  ],
+                  "valueEdges": []
+                }
+                """,
+                "tests.effect.query-list-ops");
+
+            Assert.That(compiled.Succeeded, Is.True, GraphScriptTestGraphs.FormatDiagnostics(compiled.Diagnostics));
+            Assert.That(compiled.Package.HasValue, Is.True);
+
+            GraphInstruction[] program = compiled.Package!.Value.Program;
+            Assert.That(program.Select(i => (GraphNodeOp)i.Op), Does.Contain(GraphNodeOp.QueryRadius));
+            Assert.That(program.Select(i => (GraphNodeOp)i.Op), Does.Contain(GraphNodeOp.QuerySortStable));
+            Assert.That(program.Select(i => (GraphNodeOp)i.Op), Does.Contain(GraphNodeOp.QueryLimit));
+            Assert.That(program.Select(i => (GraphNodeOp)i.Op), Does.Contain(GraphNodeOp.AggMinByDistance));
+
+            GraphInstruction radius = program.Single(i => i.Op == (ushort)GraphNodeOp.QueryRadius);
+            Assert.That(radius.ImmF, Is.EqualTo(800f));
+            Assert.That(radius.Flags, Is.EqualTo((byte)0));
+
+            GraphInstruction limit = program.Single(i => i.Op == (ushort)GraphNodeOp.QueryLimit);
+            Assert.That(limit.Imm, Is.EqualTo(1));
+
+            Assert.DoesNotThrow(() =>
+                GraphKindOperationPolicy.RequireAllowed(
+                    GraphKind.Effect,
+                    program,
+                    GasGraphOpHandlerTable.Instance));
+        }
+
+        [Test]
+        public void FrontDoor_QueryKind_QueryListOps_CompileAndEmit()
+        {
+            GraphControlFlowCompileResult compiled = CompileFrontDoor(
+                """
+                {
+                  "kind": "Query",
+                  "entry": "radius",
+                  "nodes": [
+                    { "id": "radius", "op": "QueryRadius", "queryCapacityPolicy": "RequireComplete", "radiusCm": 500 },
+                    { "id": "sort", "op": "QuerySortStable" },
+                    { "id": "limit", "op": "QueryLimit", "intValue": 3 },
+                    { "id": "nearest", "op": "AggMinByDistance" },
+                    { "id": "count", "op": "AggCount" }
+                  ],
+                  "controlEdges": [
+                    { "from": "radius", "fromPort": "next", "to": "sort" },
+                    { "from": "sort", "fromPort": "next", "to": "limit" },
+                    { "from": "limit", "fromPort": "next", "to": "nearest" },
+                    { "from": "nearest", "fromPort": "next", "to": "count" }
+                  ],
+                  "valueEdges": [
+                    { "from": "radius", "fromPort": "list", "to": "sort", "toPort": "list" },
+                    { "from": "sort", "fromPort": "list", "to": "limit", "toPort": "list" },
+                    { "from": "limit", "fromPort": "list", "to": "nearest", "toPort": "list" },
+                    { "from": "limit", "fromPort": "list", "to": "count", "toPort": "list" }
+                  ],
+                  "outputs": [
+                    {
+                      "id": "nearestEntity",
+                      "destination": "Summary",
+                      "type": "Entity",
+                      "source": "nearest",
+                      "key": "panel.nearest"
+                    },
+                    {
+                      "id": "targetCount",
+                      "destination": "Summary",
+                      "type": "Int",
+                      "source": "count",
+                      "key": "panel.count"
+                    }
+                  ]
+                }
+                """,
+                "tests.query.query-list-ops");
+
+            Assert.That(compiled.Succeeded, Is.True, GraphScriptTestGraphs.FormatDiagnostics(compiled.Diagnostics));
+            Assert.That(compiled.Package.HasValue, Is.True);
+            Assert.That(compiled.OutputSchema.Bindings.Length, Is.EqualTo(2));
+            Assert.That(compiled.Program.Select(i => (GraphNodeOp)i.Op), Does.Contain(GraphNodeOp.QueryRadius));
+            Assert.That(compiled.Program.Select(i => (GraphNodeOp)i.Op), Does.Contain(GraphNodeOp.QuerySortStable));
+            Assert.That(compiled.Program.Select(i => (GraphNodeOp)i.Op), Does.Contain(GraphNodeOp.QueryLimit));
+            Assert.That(compiled.Program.Select(i => (GraphNodeOp)i.Op), Does.Contain(GraphNodeOp.AggMinByDistance));
+
+            Assert.DoesNotThrow(() =>
+                GraphKindOperationPolicy.RequireAllowed(
+                    GraphKind.Query,
+                    compiled.Package!.Value.Program,
+                    GasGraphOpHandlerTable.Instance));
+        }
+
+        [Test]
+        public void FrontDoor_QueryRadius_RequiresCapacityPolicy()
+        {
+            GraphControlFlowCompileResult compiled = CompileFrontDoor(
+                """
+                {
+                  "kind": "Effect",
+                  "entry": "radius",
+                  "nodes": [
+                    { "id": "radius", "op": "QueryRadius", "radiusCm": 250 }
+                  ],
+                  "controlEdges": [],
+                  "valueEdges": []
+                }
+                """,
+                "tests.effect.query-radius-missing-capacity-policy");
+
+            Assert.That(compiled.Succeeded, Is.False);
+            Assert.That(compiled.Diagnostics, Has.Some.Matches<GraphDiagnostic>(d =>
+                d.Code == GraphDiagnosticCodes.TypeMismatch &&
+                d.NodeId == "radius" &&
+                d.Message.Contains("queryCapacityPolicy", StringComparison.Ordinal)));
+        }
+
+        [Test]
         public void FrontDoor_SelectTagInMask_RequiresDisplayTable()
         {
             GraphControlFlowCompileResult compiled = CompileFrontDoor(
@@ -481,6 +771,9 @@ namespace Ludots.Tests.Gas.Graph
             JsonObject obj = JsonNode.Parse(json)!.AsObject();
             return GraphProgramAuthoringFrontDoor.CompileJsonObjectFull(obj, graphId, options);
         }
+
+        private static GraphInstruction SingleInstruction(GraphInstruction[] program, GraphNodeOp op)
+            => program.Single(i => i.Op == (ushort)op);
 
         private static string BranchBoolGraphJson(string kind)
             => $$"""

@@ -33,6 +33,10 @@ namespace Ludots.Core.GraphRuntime
         public string? FunctionName { get; set; }
         public string? Attribute { get; set; }
         public string? Tag { get; set; }
+        /// <summary>TagDisplayTable id for SelectTagInMask / LookupTagDisplayToken.</summary>
+        public string? DisplayTable { get; set; }
+        /// <summary>RequireOne | AllowNone | LowestId for SelectTagInMask (default RequireOne).</summary>
+        public string? TagSelectPolicy { get; set; }
         public string? Template { get; set; }
         public string? CollectionKey { get; set; }
         public string? EffectTemplate { get; set; }
