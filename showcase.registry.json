@@ -2957,6 +2957,30 @@
       "notes": "Headless think-wave acceptance first; visual captures follow."
     },
     {
+      "id": "capability_standard_graph_ops_query",
+      "path": "mods/showcases/capability_standard/CapabilityStandardGraphOpsQueryMod",
+      "projectPath": "CapabilityStandardGraphOpsQueryMod.csproj",
+      "title": "图节点画廊·筛人聚合",
+      "summary": "全图搜人后按阵营与标签筛出活着的敌人，再按生命值排序聚合，并指出最强与最弱；也能从小队花名册按模板筛人。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "query",
+        "gallery"
+      ],
+      "binding": "capability_standard_graph_ops_query",
+      "preset": null,
+      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsQueryShowcaseAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_ops_query",
+      "screenshot": null,
+      "status": "active",
+      "notes": "FrontDoor compile gallery; player-facing Detail."
+    },
+    {
       "id": "capability_standard_graph_behavior_integration",
       "path": "mods/showcases/capability_standard/CapabilityStandardGraphBehaviorIntegrationMod",
       "projectPath": "CapabilityStandardGraphBehaviorIntegrationMod.csproj",

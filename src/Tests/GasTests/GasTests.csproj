@@ -97,6 +97,7 @@
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardHfsmSentryArenaMod\CapabilityStandardHfsmSentryArenaMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardLevelBlueprintTrialMod\CapabilityStandardLevelBlueprintTrialMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardAbilityGraphSandboxMod\CapabilityStandardAbilityGraphSandboxMod.csproj" />
+    <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardGraphOpsQueryMod\CapabilityStandardGraphOpsQueryMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardScriptFlowSandboxMod\CapabilityStandardScriptFlowSandboxMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardLiveSkillWorkbenchShowcaseMod\CapabilityStandardLiveSkillWorkbenchShowcaseMod.csproj" />
     <ProjectReference Include="..\..\..\mods\showcases\capability_standard\CapabilityStandardGraphBehaviorIntegrationMod\CapabilityStandardGraphBehaviorIntegrationMod.csproj" />
