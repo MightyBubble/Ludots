@@ -70,6 +70,154 @@ namespace Ludots.Tests.Gas.Graph
                     GasGraphOpHandlerTable.Instance));
         }
 
+        [Test]
+        public void FrontDoor_EffectFloatAndBoolRuntimeOps_CompileAndEmit()
+        {
+            GraphControlFlowCompileResult compiled = CompileFrontDoor(
+                """
+                {
+                  "kind": "Effect",
+                  "entry": "self",
+                  "nodes": [
+                    { "id": "self", "op": "LoadCaster" },
+                    { "id": "target", "op": "LoadExplicitTarget" },
+                    { "id": "boolTrue", "op": "ConstBool", "boolValue": true },
+                    { "id": "selectBool", "op": "SelectEntity" },
+                    { "id": "ten", "op": "ConstFloat", "floatValue": 10 },
+                    { "id": "two", "op": "ConstFloat", "floatValue": 2 },
+                    { "id": "div", "op": "DivFloat" },
+                    { "id": "three", "op": "ConstFloat", "floatValue": 3 },
+                    { "id": "min", "op": "MinFloat" },
+                    { "id": "max", "op": "MaxFloat" },
+                    { "id": "zero", "op": "ConstFloat", "floatValue": 0 },
+                    { "id": "five", "op": "ConstFloat", "floatValue": 5 },
+                    { "id": "clamp", "op": "ClampFloat" },
+                    { "id": "neg", "op": "NegFloat" },
+                    { "id": "abs", "op": "AbsFloat" },
+                    { "id": "gt", "op": "CompareGtFloat" },
+                    { "id": "selectGt", "op": "SelectEntity" }
+                  ],
+                  "controlEdges": [
+                    { "from": "self", "fromPort": "next", "to": "target" },
+                    { "from": "target", "fromPort": "next", "to": "boolTrue" },
+                    { "from": "boolTrue", "fromPort": "next", "to": "selectBool" },
+                    { "from": "selectBool", "fromPort": "next", "to": "ten" },
+                    { "from": "ten", "fromPort": "next", "to": "two" },
+                    { "from": "two", "fromPort": "next", "to": "div" },
+                    { "from": "div", "fromPort": "next", "to": "three" },
+                    { "from": "three", "fromPort": "next", "to": "min" },
+                    { "from": "min", "fromPort": "next", "to": "max" },
+                    { "from": "max", "fromPort": "next", "to": "zero" },
+                    { "from": "zero", "fromPort": "next", "to": "five" },
+                    { "from": "five", "fromPort": "next", "to": "clamp" },
+                    { "from": "clamp", "fromPort": "next", "to": "neg" },
+                    { "from": "neg", "fromPort": "next", "to": "abs" },
+                    { "from": "abs", "fromPort": "next", "to": "gt" },
+                    { "from": "gt", "fromPort": "next", "to": "selectGt" }
+                  ],
+                  "valueEdges": [
+                    { "from": "boolTrue", "fromPort": "value", "to": "selectBool", "toPort": "condition" },
+                    { "from": "target", "fromPort": "value", "to": "selectBool", "toPort": "a" },
+                    { "from": "self", "fromPort": "value", "to": "selectBool", "toPort": "b" },
+                    { "from": "ten", "fromPort": "value", "to": "div", "toPort": "a" },
+                    { "from": "two", "fromPort": "value", "to": "div", "toPort": "b" },
+                    { "from": "div", "fromPort": "value", "to": "min", "toPort": "a" },
+                    { "from": "three", "fromPort": "value", "to": "min", "toPort": "b" },
+                    { "from": "min", "fromPort": "value", "to": "max", "toPort": "a" },
+                    { "from": "two", "fromPort": "value", "to": "max", "toPort": "b" },
+                    { "from": "max", "fromPort": "value", "to": "clamp", "toPort": "value" },
+                    { "from": "zero", "fromPort": "value", "to": "clamp", "toPort": "min" },
+                    { "from": "five", "fromPort": "value", "to": "clamp", "toPort": "max" },
+                    { "from": "clamp", "fromPort": "value", "to": "neg", "toPort": "value" },
+                    { "from": "neg", "fromPort": "value", "to": "abs", "toPort": "value" },
+                    { "from": "abs", "fromPort": "value", "to": "gt", "toPort": "a" },
+                    { "from": "two", "fromPort": "value", "to": "gt", "toPort": "b" },
+                    { "from": "gt", "fromPort": "value", "to": "selectGt", "toPort": "condition" },
+                    { "from": "target", "fromPort": "value", "to": "selectGt", "toPort": "a" },
+                    { "from": "self", "fromPort": "value", "to": "selectGt", "toPort": "b" }
+                  ]
+                }
+                """,
+                "tests.effect.float-bool-runtime-ops");
+
+            Assert.That(compiled.Succeeded, Is.True, GraphScriptTestGraphs.FormatDiagnostics(compiled.Diagnostics));
+            Assert.That(compiled.Package.HasValue, Is.True);
+
+            GraphInstruction[] program = compiled.Package!.Value.Program;
+            Assert.Multiple(() =>
+            {
+                Assert.That(program.Select(i => (GraphNodeOp)i.Op), Does.Contain(GraphNodeOp.ConstBool));
+                Assert.That(program.Select(i => (GraphNodeOp)i.Op), Does.Contain(GraphNodeOp.DivFloat));
+                Assert.That(program.Select(i => (GraphNodeOp)i.Op), Does.Contain(GraphNodeOp.MinFloat));
+                Assert.That(program.Select(i => (GraphNodeOp)i.Op), Does.Contain(GraphNodeOp.MaxFloat));
+                Assert.That(program.Select(i => (GraphNodeOp)i.Op), Does.Contain(GraphNodeOp.ClampFloat));
+                Assert.That(program.Select(i => (GraphNodeOp)i.Op), Does.Contain(GraphNodeOp.NegFloat));
+                Assert.That(program.Select(i => (GraphNodeOp)i.Op), Does.Contain(GraphNodeOp.AbsFloat));
+                Assert.That(program.Select(i => (GraphNodeOp)i.Op), Does.Contain(GraphNodeOp.CompareGtFloat));
+            });
+
+            GraphInstruction constBool = program.Single(i => i.Op == (ushort)GraphNodeOp.ConstBool);
+            Assert.That(constBool.Imm, Is.EqualTo(1));
+
+            GraphInstruction clamp = program.Single(i => i.Op == (ushort)GraphNodeOp.ClampFloat);
+            Assert.Multiple(() =>
+            {
+                Assert.That(clamp.A, Is.EqualTo(5));
+                Assert.That(clamp.B, Is.EqualTo(6));
+                Assert.That(clamp.C, Is.EqualTo(7));
+            });
+
+            GraphInstruction neg = program.Single(i => i.Op == (ushort)GraphNodeOp.NegFloat);
+            GraphInstruction abs = program.Single(i => i.Op == (ushort)GraphNodeOp.AbsFloat);
+            GraphInstruction compare = program.Single(i => i.Op == (ushort)GraphNodeOp.CompareGtFloat);
+            Assert.Multiple(() =>
+            {
+                Assert.That(neg.A, Is.EqualTo(clamp.Dst));
+                Assert.That(abs.A, Is.EqualTo(neg.Dst));
+                Assert.That(compare.A, Is.EqualTo(abs.Dst));
+                Assert.That(compare.B, Is.EqualTo(1));
+            });
+
+            Assert.DoesNotThrow(() =>
+                GraphKindOperationPolicy.RequireAllowed(
+                    GraphKind.Effect,
+                    program,
+                    GasGraphOpHandlerTable.Instance));
+        }
+
+        [Test]
+        public void FrontDoor_EffectClampFloat_RequiresValueMinAndMaxInputs()
+        {
+            GraphControlFlowCompileResult compiled = CompileFrontDoor(
+                """
+                {
+                  "kind": "Effect",
+                  "entry": "value",
+                  "nodes": [
+                    { "id": "value", "op": "ConstFloat", "floatValue": 10 },
+                    { "id": "min", "op": "ConstFloat", "floatValue": 0 },
+                    { "id": "clamp", "op": "ClampFloat" }
+                  ],
+                  "controlEdges": [
+                    { "from": "value", "fromPort": "next", "to": "min" },
+                    { "from": "min", "fromPort": "next", "to": "clamp" }
+                  ],
+                  "valueEdges": [
+                    { "from": "value", "fromPort": "value", "to": "clamp", "toPort": "value" },
+                    { "from": "min", "fromPort": "value", "to": "clamp", "toPort": "min" }
+                  ]
+                }
+                """,
+                "tests.effect.clamp-float-missing-max");
+
+            Assert.That(compiled.Succeeded, Is.False);
+            Assert.That(compiled.Package.HasValue, Is.False);
+            Assert.That(compiled.Diagnostics, Has.Some.Matches<GraphDiagnostic>(d =>
+                d.Code == GraphDiagnosticCodes.MissingValueInput &&
+                d.NodeId == "clamp" &&
+                d.Message.Contains("'max'", StringComparison.Ordinal)));
+        }
+
         [TestCase("Score")]
         [TestCase("Validation")]
         [TestCase("Derived")]

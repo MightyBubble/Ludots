@@ -4,10 +4,15 @@
   "entries": [
     {
       "op": "ConstBool",
-      "authorableKinds": null,
-      "unitTestFilter": null,
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectFloatAndBoolRuntimeOps_CompileAndEmit",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "ConstInt",
@@ -129,45 +134,75 @@
     },
     {
       "op": "DivFloat",
-      "authorableKinds": null,
-      "unitTestFilter": null,
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectFloatAndBoolRuntimeOps_CompileAndEmit",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "MinFloat",
-      "authorableKinds": null,
-      "unitTestFilter": null,
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectFloatAndBoolRuntimeOps_CompileAndEmit",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "MaxFloat",
-      "authorableKinds": null,
-      "unitTestFilter": null,
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectFloatAndBoolRuntimeOps_CompileAndEmit",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "ClampFloat",
-      "authorableKinds": null,
-      "unitTestFilter": null,
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectFloatAndBoolRuntimeOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectClampFloat_RequiresValueMinAndMaxInputs",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "AbsFloat",
-      "authorableKinds": null,
-      "unitTestFilter": null,
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectFloatAndBoolRuntimeOps_CompileAndEmit",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "NegFloat",
-      "authorableKinds": null,
-      "unitTestFilter": null,
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectFloatAndBoolRuntimeOps_CompileAndEmit",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "RandomFloat01",
@@ -196,10 +231,15 @@
     },
     {
       "op": "CompareGtFloat",
-      "authorableKinds": null,
-      "unitTestFilter": null,
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectFloatAndBoolRuntimeOps_CompileAndEmit",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "CompareLtInt",
