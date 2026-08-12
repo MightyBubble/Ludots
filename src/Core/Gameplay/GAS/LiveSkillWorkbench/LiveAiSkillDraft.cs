@@ -35,7 +35,21 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
     }
 
     /// <summary>
-    /// Deterministic fake generator for tests and Showcase. Replaceable adapter — no cloud LLM.
+    /// Production default: AI drafting is unavailable until a real generator is injected.
+    /// Never invents skill/effect/graph identities.
+    /// </summary>
+    public sealed class UnconfiguredAiSkillDraftGenerator : IAiSkillDraftGenerator
+    {
+        public LiveAiSkillDraft Generate(string prompt, in LiveEditProvenance provenance)
+        {
+            throw new InvalidOperationException(
+                "AiSkillDraftGenerator is not configured. Inject a real IAiSkillDraftGenerator via " +
+                "CoreServiceKeys.AiSkillDraftGenerator. Tests may use DeterministicFakeAiSkillDraftGenerator.");
+        }
+    }
+
+    /// <summary>
+    /// Deterministic fake generator for tests only. Not a production GameEngine default.
     /// </summary>
     public sealed class DeterministicFakeAiSkillDraftGenerator : IAiSkillDraftGenerator
     {

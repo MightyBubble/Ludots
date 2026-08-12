@@ -31,6 +31,8 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
         public const string TagRuleCompileFailed = "LSW0017";
         public const string AttrConstraintMissing = "LSW0018";
         public const string AttrConstraintFieldInvalid = "LSW0019";
+        public const string CommitRolledBack = "LSW0020";
+        public const string CommitRollbackFailed = "LSW0021";
     }
 
     public readonly record struct LiveEditDiagnostic(

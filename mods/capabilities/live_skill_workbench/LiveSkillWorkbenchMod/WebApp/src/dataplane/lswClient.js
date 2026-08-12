@@ -4,7 +4,13 @@ export const LSW_COMMANDS = Object.freeze({
   discardEdits: 'lsw.discardEdits',
   selectCatalogItem: 'lsw.selectCatalogItem',
   precheck: 'lsw.precheck',
-  applyNextCast: 'lsw.applyNextCast'
+  applyNextCast: 'lsw.applyNextCast',
+  applyImmediateAttribute: 'lsw.applyImmediateAttribute',
+  generateAiDraft: 'lsw.generateAiDraft',
+  bindAiDraft: 'lsw.bindAiDraft',
+  previewSave: 'lsw.previewSave',
+  saveToMod: 'lsw.saveToMod',
+  refreshEffectChain: 'lsw.refreshEffectChain'
 });
 
 export function isExplicitPreviewMode(search = globalThis.location?.search ?? '') {

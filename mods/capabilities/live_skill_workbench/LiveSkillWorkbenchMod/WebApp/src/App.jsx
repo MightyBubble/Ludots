@@ -46,6 +46,10 @@ export function App() {
         snapshot={session.snapshot}
         onPrecheck={session.precheck}
         onApply={session.applyNextCast}
+        onGenerateAiDraft={session.generateAiDraft}
+        onPreviewSave={session.previewSave}
+        onSaveToMod={session.saveToMod}
+        onRefreshEffectChain={session.refreshEffectChain}
         localError={session.localError}
       />
       {emptyDocument ? (

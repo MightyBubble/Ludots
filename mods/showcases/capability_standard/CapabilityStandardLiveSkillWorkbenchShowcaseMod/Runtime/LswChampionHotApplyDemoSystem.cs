@@ -68,7 +68,7 @@ internal sealed class LswChampionHotApplyDemoSystem : ISystem<float>
     private bool _hotApplied;
     private string _status = "Boot";
     private float _lastTargetHp = -1f;
-    private float _lastTargetHpBase = 200f;
+    private float _lastTargetHpBase = -1f;
     private int _castCount;
     private bool _targetChilled;
     private float _chillRemainingSeconds;
@@ -151,17 +151,9 @@ internal sealed class LswChampionHotApplyDemoSystem : ISystem<float>
         }
 
         _elapsed += dt;
-        try
-        {
-            TickDemo();
-            ProbeTargetState();
-            DriveChillHudPerformers();
-        }
-        catch (Exception ex)
-        {
-            _status = "FAIL: " + ex.Message;
-        }
-
+        TickDemo();
+        ProbeTargetState();
+        DriveChillHudPerformers();
         LogStatusIfChanged();
         DrawEditorStateMarkers();
         DrawHud();
@@ -630,7 +622,8 @@ internal sealed class LswChampionHotApplyDemoSystem : ISystem<float>
                 0.90f,
                 _targetChilled ? DebugDrawColor.Cyan : DebugDrawColor.Red,
                 0.12f);
-            float fill = _lastTargetHp < 0f ? 1f : Math.Clamp(_lastTargetHp / 200f, 0f, 1f);
+            float maxHp = _lastTargetHpBase > 0f ? _lastTargetHpBase : 1f;
+            float fill = _lastTargetHp < 0f ? 1f : Math.Clamp(_lastTargetHp / maxHp, 0f, 1f);
             GraphShowcaseStagePresenter.DrawActor(
                 _debugDraw,
                 tx,
@@ -649,9 +642,9 @@ internal sealed class LswChampionHotApplyDemoSystem : ISystem<float>
                 projectileCount++;
                 float px = position.Value.X.ToFloat() * 0.01f;
                 float py = position.Value.Y.ToFloat() * 0.01f;
-                bool icePresentation = _hotApplied ||
-                    (_icePresentationEffectId != EffectTemplateIdRegistry.InvalidId &&
-                     projectile.PresentationEffectTemplateId == _icePresentationEffectId);
+                bool icePresentation =
+                    _icePresentationEffectId != EffectTemplateIdRegistry.InvalidId &&
+                    projectile.PresentationEffectTemplateId == _icePresentationEffectId;
                 GraphShowcaseStagePresenter.DrawActor(
                     _debugDraw,
                     px,

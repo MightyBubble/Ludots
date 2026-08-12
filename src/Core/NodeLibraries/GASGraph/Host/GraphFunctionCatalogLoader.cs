@@ -35,10 +35,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         {
             _catalog.Clear();
 
-            if (catalog == null || !catalog.TryGet(relativePath, out _))
+            if (catalog == null)
             {
-                // Optional file: empty catalog is valid until authors add functions.
-                return;
+                throw new ArgumentNullException(nameof(catalog), "FuncLib load requires ConfigCatalog (GAS/func_lib.json is mandatory).");
             }
 
             var entry = ConfigPipeline.RequireEntry(catalog, relativePath, ConfigMergePolicy.ArrayById, "name");

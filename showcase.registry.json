@@ -3006,7 +3006,7 @@
       "path": "mods/showcases/capability_standard/CapabilityStandardLiveSkillWorkbenchShowcaseMod",
       "projectPath": "CapabilityStandardLiveSkillWorkbenchShowcaseMod.csproj",
       "title": "实时技能工作台局内演示",
-      "summary": "可读小场景：弱火球→热应用加伤→强火球→回血→效果链点亮→AI 冰冻草稿试玩。",
+      "summary": "Champion 风格：发火球→LiveGasEditPipeline 热改→再发冰球并冻住靶子。",
       "tier": "T2",
       "category": "capability",
       "tags": [
@@ -3019,11 +3019,11 @@
       "preset": "capability_standard_live_skill_workbench_raylib",
       "docsPath": "gitbook/acceptance/live-skill-workbench-uat.md",
       "readmePath": null,
-      "acceptanceTest": "LiveSkillWorkbenchVignetteShowcaseAcceptanceTests",
+      "acceptanceTest": "LiveSkillWorkbenchShowcaseAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_live_skill_workbench",
       "screenshot": null,
       "status": "active",
-      "notes": "Player-facing vignette for Epic #615; not a workbench panel dump."
+      "notes": "Champion fire→ice via production LiveGasEditPipeline; not a workbench panel dump."
     }
   ]
 }
