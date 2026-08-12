@@ -511,7 +511,7 @@ namespace Ludots.Adapter.Raylib
 
                         terrainRenderer.ApplyFrameLighting(frameLighting);
                         visualHeightmapRenderer.ApplyFrameLighting(frameLighting);
-                        primitiveRenderer.ApplyFrameLighting(frameLighting);
+                        primitiveRenderer.ApplyFrameLighting(frameLighting, activeCamera.position);
 
                         if (drawDebugDraw &&
                             !(drawVisualHeightmap && hasVisualHeightmap) &&

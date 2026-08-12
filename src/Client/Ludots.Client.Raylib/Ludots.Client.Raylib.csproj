@@ -57,6 +57,10 @@
       <Link>ambient_day_ramp.json</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="Resources\distance_fog.json">
+      <Link>distance_fog.json</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
 
   <ItemGroup Condition="'$(SkiaNativeRid)' != ''">
