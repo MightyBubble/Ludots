@@ -62,7 +62,7 @@ P3 Major / UAT / 文档名实
 ### P1 — B4 作者面补回（选定路径：补回，不缩编）
 
 - [x] 恢复被删守卫测试（SpatialQuery / Snap / FanOut / 关系度量；含 `GAS.GRAPH.ERR.SpatialQueryIncomplete`）
-- [ ] 为附录 A.3 的 **44** 个无作者路径 opcode 补 FrontDoor/ControlFlow 作者路径（按族分期，见下表）
+- [x] 为附录 A.3 的 **44** 个无作者路径 opcode 补 FrontDoor/ControlFlow 作者路径（按族分期，见下表）
 - [x] AllowTruncated/droppedOutput/validOutput：前门字段 + 失败关闭守卫已恢复（持续跟文档对齐）
 - [ ] 文档：`graph-layering-flow-and-behavior.md` / `tag-display-lookup.md` 与真实前门一致
 
@@ -74,7 +74,7 @@ P3 Major / UAT / 文档名实
 | Tag / 显示 | HasTag、CompareEqEntity、SelectTagInMask、LookupTagDisplayToken | **done（合入）** |
 | 查询扩展 | QueryRadius、QuerySortStable、QueryLimit、AggMinByDistance | **done P1-C** |
 | 动态效果 / FanOut | ApplyEffectDynamic、FanOutApplyEffect*、FanOutDispatchEffect* | **done P1-D** |
-| 关系变更 | Ensure/Remove/Set/Add/Get Metric、Set/Has Flag、HasLink、QueryBetweenPair | pending P1-E |
+| 关系变更 | Ensure/Remove/Set/Add/Get Metric、Set/Has Flag、HasLink、QueryBetweenPair | **done P1-E** |
 | 吸附 / 几何 | Snap*、LoadTargetPos*、ClampTargetToRange、IsPointInCircle | **done P1-F** |
 | 事件 / 控制域 / 知识 | SendEvent、LoadEventPayload*、ControlDomain*、KnowledgeHasProjection、LoadContextSource、LoadContextTargetContext | **done P1-G** |
 
@@ -83,7 +83,7 @@ P3 Major / UAT / 文档名实
 数据驱动 SSOT（新建，禁止散落硬编码勾选）：
 
 - [x] 新增 `assets/Configs/GAS/graph_node_op_coverage.registry.json`（SSOT）：每个 `GraphNodeOp` 一行：`op` / `authorableKinds` / `unitTestFilter` / `showcaseId` / `status`（初值：`GraphControlFlowCompiler*` 作者矩阵 + 44 无前门 opcode 标 `missing`；守卫见 `GraphNodeOpCoverageRegistryTests`）
-- [ ] CI 守卫：registry 成员集合 == `GraphNodeOp` 枚举（**已落地**）；`status=covered` 要求测试名可解析且 Showcase 在 `showcase.registry.json` 注册（待 P2 全量覆盖）
+- [x] CI 守卫：registry 成员集合 == `GraphNodeOp` 枚举（**已落地**）；`status=covered` 要求测试名可解析且 Showcase 在 `showcase.registry.json` 注册（待 P2 全量覆盖）
 - [ ] **每一个**可执行 opcode：
   - [ ] ≥1 条自动化测试（优先 FrontDoor 作者路径；VM-only 仅过渡期并标 `status=runtime-only`）
   - [ ] ≥1 条 Showcase 可见演示（可共用能力标准图行为沙盘分镜，但画廊文案必须说人话）
@@ -92,9 +92,9 @@ P3 Major / UAT / 文档名实
 
 ### P3 — Major 余项与合同落地
 
-- [ ] **M4** `gitbook/acceptance/graph-funclib-actionlib-uat.md`：合同 §6 逐条映射测试名；Effect→ActionLib 失败关闭测试；合同措辞与实现对齐
-- [ ] **M5** 至少一条 `bt.*` ActionLib 叶子真含 Yield + 续跑验收；加载器内容层策略写清（或合同回写）
-- [ ] Query L1 纳入 FuncLib 调用（#913 Major；#914 合同 §3.3「所有 L1」）
+- [x] **M4** `gitbook/acceptance/graph-funclib-actionlib-uat.md`：合同 §6 逐条映射测试名；Effect→ActionLib 失败关闭测试；合同措辞与实现对齐
+- [x] **M5** 至少一条 `bt.*` ActionLib 叶子真含 Yield + 续跑验收；加载器内容层策略写清（或合同回写）
+- [x] Query L1 纳入 FuncLib 调用（#913 Major；#914 合同 §3.3「所有 L1」）
 - [ ] 线性 `graphId` 拒绝 / Effect→ActionLib 名：补 FrontDoor 测试
 - [ ] Minor：死 API `RequireId`、硬编码 ScriptKeys 数据化、加载顺序文档偏差、旧 GraphCompiler 文档图清理
 - [ ] 合同状态在 P0–P3 完成后才改回「已落地」
