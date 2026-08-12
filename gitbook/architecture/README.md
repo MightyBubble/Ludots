@@ -13,6 +13,7 @@
 - [Tag → 展示 Token 查表（面板 curState）](tag-display-lookup.md)
 - [通用图查表（ResolveTableRow + TableRead）](graph-table-lookup.md)
 - [GAS、订单与输入运行时合同](gas-order-input-runtime-contract.md)
+- [实时技能工作台（LSW）架构契约](live-skill-workbench.md) — **热调试技能数值 / 属性 / 效果链 / AI 草稿与热应用分级的 SSOT**
 - [Input Order Routing 与 Spawn Target 基建](input-order-and-spawn-target.md)
 - [Entity Lifecycle 原子 Op](entity-lifecycle-atomic-ops.md) — **实体结构替换 / deploy consume source 的 SSOT**
 - [时间体系](time-system.md)
