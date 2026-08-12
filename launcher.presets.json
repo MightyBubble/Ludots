@@ -441,6 +441,15 @@
       "buildMode": "auto"
     },
     {
+      "id": "capability_standard_live_skill_workbench_raylib",
+      "name": "Capability Standard Live Skill Workbench Raylib",
+      "selectors": [
+        "$capability_standard_live_skill_workbench"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "capability_standard_graph_behavior_integration_raylib",
       "name": "Capability Standard Graph Behavior Integration Raylib",
       "selectors": [

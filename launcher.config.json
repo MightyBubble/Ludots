@@ -385,6 +385,14 @@
       }
     },
     {
+      "name": "capability_standard_live_skill_workbench",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/CapabilityStandardLiveSkillWorkbenchShowcaseMod",
+        "projectPath": "CapabilityStandardLiveSkillWorkbenchShowcaseMod.csproj"
+      }
+    },
+    {
       "name": "capability_standard_graph_behavior_integration",
       "target": {
         "type": "path",

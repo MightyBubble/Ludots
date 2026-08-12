@@ -1,0 +1,19 @@
+{
+  "name": "CapabilityStandardLiveSkillWorkbenchShowcaseMod",
+  "version": "1.0.0",
+  "description": "Playable Live Skill Workbench vignette: fireball hot-apply, heal, effect-chain pips, AI frost draft.",
+  "main": "bin/net8.0/CapabilityStandardLiveSkillWorkbenchShowcaseMod.dll",
+  "priority": -1900,
+  "dependencies": {
+    "LudotsCoreMod": "^1.0.0",
+    "CoreInputMod": "^1.0.0",
+    "CameraProfilesMod": "^1.0.0"
+  },
+  "author": "Ludots Team",
+  "tags": [
+    "showcase",
+    "capability-standard",
+    "live-skill-workbench",
+    "gas"
+  ]
+}
