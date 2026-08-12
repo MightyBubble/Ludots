@@ -461,6 +461,13 @@ namespace Ludots.Client.Raylib.Rendering
             }
             _chunks.Clear();
 
+            if (_initialized)
+            {
+                // Detach pass-owned RT textures before material teardown (avoids double-free).
+                ClearReflectiveWater();
+                DetachWaterPassTextures();
+            }
+
             if (_oceanPlaneReady)
             {
                 Rl.UnloadMesh(_oceanPlaneMesh);
@@ -470,7 +477,6 @@ namespace Ludots.Client.Raylib.Rendering
 
             if (_initialized)
             {
-                ClearReflectiveWater();
                 _terrainMaterial.shader = default;
                 Rl.UnloadMaterial(_terrainMaterial);
                 Rl.UnloadShader(_terrainShader);

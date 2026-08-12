@@ -7,8 +7,8 @@ using Ludots.Core.Presentation.Terrain;
 namespace RaylibVisualAtmosphereShowcaseMod.Runtime;
 
 /// <summary>
-/// Builds a continuous VisualHeightmap island (.vhtm). VertexMap is intentionally not used —
-/// reflective water and terrain coloring ride the VisualHeightmap host path.
+/// Builds a continuous VisualHeightmap island (.vhtm).
+/// Land must rise above <see cref="SeaLevelCm"/>; water plane + refraction read shallow/deep from the submerged floor.
 /// </summary>
 internal static class IslandTerrainGenerator
 {
@@ -16,7 +16,6 @@ internal static class IslandTerrainGenerator
     public const int SampleColumns = 513;
     public const int SampleRows = 513;
 
-    /// <summary>World AABB in cm, centered at origin (matches Grid board + virtual cameras).</summary>
     public static readonly WorldAabbCm BoundsCm = new(-64000, -64000, 128000, 128000);
 
     /// <summary>Sea plane height in centimeters (Host waterPlaneY = this / 100).</summary>
@@ -73,53 +72,62 @@ internal static class IslandTerrainGenerator
         float angle = MathF.Atan2(dy, dx);
 
         float coast =
-            0.38f +
-            0.05f * MathF.Sin(angle * 5f) +
-            0.03f * MathF.Sin(angle * 9f + 1.2f) +
-            0.025f * MathF.Cos(angle * 3f - 0.7f);
-        if (angle > 0.9f && angle < 1.7f)
+            0.36f +
+            0.045f * MathF.Sin(angle * 5f) +
+            0.028f * MathF.Sin(angle * 9f + 1.2f) +
+            0.022f * MathF.Cos(angle * 3f - 0.7f);
+        // Soft lagoon indentation (north) without swallowing the whole island.
+        if (angle > 1.0f && angle < 1.6f)
         {
-            coast -= 0.05f; // northern lagoon bite
-        }
-
-        // Deep ocean floor far from shore.
-        if (dist > coast + 0.18f)
-        {
-            // Tiny satellite islet SW.
-            float ix = dx + 0.52f;
-            float iy = dy + 0.46f;
-            float id = MathF.Sqrt((ix * ix) + (iy * iy));
-            if (id < 0.07f)
-            {
-                float islet = SeaLevelCm + 80f + ((1f - (id / 0.07f)) * 900f);
-                return (short)Math.Clamp((int)MathF.Round(islet), short.MinValue, short.MaxValue);
-            }
-
-            float abyss = Math.Clamp((dist - coast - 0.18f) / 0.5f, 0f, 1f);
-            float floor = SeaLevelCm - 180f - (abyss * 420f);
-            return (short)Math.Clamp((int)MathF.Round(floor), short.MinValue, short.MaxValue);
+            coast -= 0.03f;
         }
 
         float ridge =
-            0.55f * RidgeNoise(worldXcm * 0.00035f, worldYcm * 0.00035f) +
-            0.30f * RidgeNoise(worldXcm * 0.0009f + 13f, worldYcm * 0.0009f - 9f) +
-            0.15f * ValueNoise(worldXcm * 0.0022f - 4f, worldYcm * 0.0022f + 6f);
+            0.50f * RidgeNoise(worldXcm * 0.00032f, worldYcm * 0.00032f) +
+            0.32f * RidgeNoise(worldXcm * 0.00085f + 13f, worldYcm * 0.00085f - 9f) +
+            0.18f * ValueNoise(worldXcm * 0.0020f - 4f, worldYcm * 0.0020f + 6f);
 
-        float inland = Math.Clamp(1f - (dist / Math.Max(coast, 0.08f)), 0f, 1f);
-        float beach = Math.Clamp((coast + 0.04f - dist) / 0.08f, 0f, 1f);
-
-        // Shelf just under water → sand → grass slopes → rock peaks.
-        float shelf = SeaLevelCm - 40f;
-        float peak = SeaLevelCm + 200f + (inland * inland * (1200f + ridge * 2800f));
-        float height = shelf + ((peak - shelf) * beach);
-
-        if (angle > 0.95f && angle < 1.65f && dist > coast - 0.09f && dist < coast + 0.02f)
+        // Far ocean floor.
+        if (dist > coast + 0.22f)
         {
-            height = Math.Min(height, SeaLevelCm - 20f); // lagoon floor
+            float ix = dx + 0.50f;
+            float iy = dy + 0.44f;
+            float id = MathF.Sqrt((ix * ix) + (iy * iy));
+            if (id < 0.065f)
+            {
+                float islet = SeaLevelCm + 120f + ((1f - (id / 0.065f)) * 1100f);
+                return ClampCm(islet);
+            }
+
+            float abyss = Math.Clamp((dist - coast - 0.22f) / 0.55f, 0f, 1f);
+            return ClampCm(SeaLevelCm - 220f - (abyss * 520f));
         }
 
-        return (short)Math.Clamp((int)MathF.Round(height), short.MinValue, short.MaxValue);
+        // Shallow shelf under water (turquoise via refraction of colored floor).
+        if (dist > coast)
+        {
+            float shelfT = Math.Clamp((dist - coast) / 0.22f, 0f, 1f);
+            return ClampCm(SeaLevelCm - 25f - (shelfT * 160f));
+        }
+
+        float inland = Math.Clamp(1f - (dist / Math.Max(coast, 0.08f)), 0f, 1f);
+        // Beach just above sea → grass slopes → rocky peaks.
+        float beachHeight = SeaLevelCm + 40f + (inland * 180f);
+        float mountain = SeaLevelCm + 280f + (inland * inland * (1600f + ridge * 3200f));
+        float blend = Math.Clamp((inland - 0.12f) / 0.88f, 0f, 1f);
+        float height = beachHeight + ((mountain - beachHeight) * blend);
+
+        // Northern lagoon pocket: keep a shallow submerged floor, not a land ring.
+        if (angle > 1.05f && angle < 1.55f && dist > coast - 0.10f && dist < coast - 0.02f && inland < 0.35f)
+        {
+            height = SeaLevelCm - 35f;
+        }
+
+        return ClampCm(height);
     }
+
+    private static short ClampCm(float value) =>
+        (short)Math.Clamp((int)MathF.Round(value), short.MinValue, short.MaxValue);
 
     private static float RidgeNoise(float x, float y)
     {

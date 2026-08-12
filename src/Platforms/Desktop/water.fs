@@ -58,8 +58,8 @@ void main()
     float fresnel = pow(clamp(dot(V, vec3(0.0, 1.0, 0.0)), 0.0, 1.0), 0.55);
     vec3 mixed = mix(reflectColor, refractColor, fresnel);
     // Keep author vertex depth tint visible under reflection/refraction.
-    mixed = mix(mixed, lit, 0.28);
+    mixed = mix(mixed, lit, 0.18);
     mixed += vec3(spec);
 
-    finalColor = vec4(clamp(mixed, 0.0, 1.0), max(fragColor.a, 0.88));
+    finalColor = vec4(clamp(mixed, 0.0, 1.0), clamp(max(fragColor.a, 0.72), 0.0, 0.92));
 }

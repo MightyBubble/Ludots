@@ -3,2257 +3,5407 @@
   "placements": [
     {
       "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 2485.6,
-      "yCm": -8980.1,
-      "yawRad": 5.087,
-      "scale": 0.9
+      "xCm": -943.7,
+      "yCm": 3737.4,
+      "yawRad": 2.057,
+      "scale": 0.804
     },
     {
       "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 9925.2,
-      "yCm": 3897.3,
-      "yawRad": 2.915,
-      "scale": 0.867
+      "xCm": -314.3,
+      "yCm": 2781.0,
+      "yawRad": 3.577,
+      "scale": 0.824
     },
     {
       "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -4472.1,
-      "yCm": 10285.1,
-      "yawRad": 4.815,
-      "scale": 0.889
+      "xCm": 550.8,
+      "yCm": 1756.1,
+      "yawRad": 2.441,
+      "scale": 0.917
     },
     {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": -16090.0,
-      "yCm": 11628.4,
-      "yawRad": 5.324,
-      "scale": 1.281
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -1142.7,
-      "yCm": 9148.9,
-      "yawRad": 4.763,
-      "scale": 1.38
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 8444.5,
-      "yCm": 7731.7,
-      "yawRad": 5.008,
-      "scale": 0.883
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": 6948.4,
-      "yCm": 14223.7,
-      "yawRad": 4.599,
-      "scale": 0.936
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 11570.0,
-      "yCm": 12471.8,
-      "yawRad": 1.337,
-      "scale": 1.081
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": -6803.1,
-      "yCm": 19219.6,
-      "yawRad": 5.368,
-      "scale": 1.027
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -5782.6,
-      "yCm": 10684.0,
-      "yawRad": 3.661,
-      "scale": 0.9
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": -17961.7,
-      "yCm": -9091.1,
-      "yawRad": 5.708,
-      "scale": 0.919
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 4749.4,
-      "yCm": -10465.7,
-      "yawRad": 5.909,
-      "scale": 1.257
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 1300.1,
-      "yCm": 17816.7,
-      "yawRad": 3.748,
-      "scale": 1.303
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 9958.8,
-      "yCm": -13281.2,
-      "yawRad": 1.282,
-      "scale": 1.355
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -5841.4,
-      "yCm": -15091.1,
-      "yawRad": 0.112,
-      "scale": 0.869
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -14344.2,
-      "yCm": -8203.2,
-      "yawRad": 6.241,
-      "scale": 1.202
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": -15710.2,
-      "yCm": -13763.5,
-      "yawRad": 1.891,
-      "scale": 0.855
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -4728.2,
-      "yCm": -9750.1,
-      "yawRad": 4.147,
-      "scale": 1.348
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -19135.9,
-      "yCm": 7308.9,
-      "yawRad": 1.247,
-      "scale": 1.216
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 11293.9,
-      "yCm": -3669.6,
-      "yawRad": 1.729,
-      "scale": 1.098
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 14243.5,
-      "yCm": -1614.5,
-      "yawRad": 5.484,
-      "scale": 0.867
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -6916.0,
-      "yCm": 17783.7,
-      "yawRad": 2.858,
-      "scale": 0.925
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 19379.1,
-      "yCm": 3035.2,
-      "yawRad": 0.295,
-      "scale": 0.927
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -2345.5,
-      "yCm": -10242.3,
-      "yawRad": 4.381,
-      "scale": 1.04
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -16675.4,
-      "yCm": 3869.8,
-      "yawRad": 5.142,
-      "scale": 1.247
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -11362.0,
-      "yCm": -14021.8,
-      "yawRad": 6.161,
-      "scale": 1.345
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": -17826.3,
-      "yCm": -5829.5,
-      "yawRad": 5.084,
-      "scale": 0.863
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 17664.0,
-      "yCm": 7519.9,
-      "yawRad": 4.951,
-      "scale": 1.034
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -1761.2,
-      "yCm": 14517.8,
-      "yawRad": 5.125,
-      "scale": 1.089
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 11899.5,
-      "yCm": -8582.2,
-      "yawRad": 3.882,
-      "scale": 0.955
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 10607.8,
-      "yCm": 1529.2,
-      "yawRad": 2.024,
-      "scale": 1.228
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -10250.0,
-      "yCm": 13154.9,
-      "yawRad": 0.771,
-      "scale": 1.252
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -11482.9,
-      "yCm": -756.4,
-      "yawRad": 2.744,
-      "scale": 1.142
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": -15268.3,
-      "yCm": -12910.0,
-      "yawRad": 5.093,
-      "scale": 1.183
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 10171.2,
-      "yCm": -7131.5,
-      "yawRad": 1.371,
-      "scale": 1.358
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 20424.5,
-      "yCm": -211.3,
-      "yawRad": 4.565,
-      "scale": 0.982
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -16794.8,
-      "yCm": 9010.2,
-      "yawRad": 4.305,
-      "scale": 1.072
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": 18300.4,
-      "yCm": -11393.5,
-      "yawRad": 4.764,
-      "scale": 1.078
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": -17596.9,
-      "yCm": -308.0,
-      "yawRad": 0.667,
-      "scale": 0.882
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -9128.7,
-      "yCm": -4207.8,
-      "yawRad": 5.279,
-      "scale": 0.962
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 20937.6,
-      "yCm": -1277.5,
-      "yawRad": 5.978,
-      "scale": 0.884
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -18177.4,
-      "yCm": 4415.9,
-      "yawRad": 3.238,
-      "scale": 1.107
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -14854.5,
-      "yCm": 6980.7,
-      "yawRad": 5.305,
-      "scale": 1.236
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -8887.5,
-      "yCm": 6015.3,
-      "yawRad": 0.097,
-      "scale": 1.132
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -15031.7,
-      "yCm": 10112.9,
-      "yawRad": 2.946,
-      "scale": 1.038
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": 1600.8,
-      "yCm": -21662.1,
-      "yawRad": 4.642,
-      "scale": 1.127
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -567.6,
-      "yCm": 13609.9,
-      "yawRad": 2.36,
-      "scale": 0.957
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": 7830.9,
-      "yCm": 12327.8,
-      "yawRad": 3.84,
-      "scale": 1.073
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": -16138.8,
-      "yCm": -2739.2,
-      "yawRad": 4.116,
-      "scale": 0.979
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -2338.1,
-      "yCm": 7855.6,
-      "yawRad": 0.984,
-      "scale": 0.874
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 6693.9,
-      "yCm": -15027.3,
-      "yawRad": 2.863,
-      "scale": 1.193
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": 17522.2,
-      "yCm": -10255.6,
-      "yawRad": 1.702,
-      "scale": 0.877
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -14913.0,
-      "yCm": 7575.8,
-      "yawRad": 0.455,
-      "scale": 1.148
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 4774.8,
-      "yCm": -7677.1,
-      "yawRad": 3.919,
-      "scale": 1.295
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": -980.4,
-      "yCm": 19313.4,
-      "yawRad": 6.215,
-      "scale": 1.144
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 16604.8,
-      "yCm": 11594.9,
-      "yawRad": 3.545,
-      "scale": 0.896
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -17515.0,
-      "yCm": 1671.5,
-      "yawRad": 0.478,
-      "scale": 1.277
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 3951.2,
-      "yCm": 16811.3,
-      "yawRad": 4.555,
-      "scale": 1.017
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -4123.6,
-      "yCm": -11227.5,
-      "yawRad": 4.561,
-      "scale": 1.047
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 8750.1,
-      "yCm": -8124.5,
-      "yawRad": 3.419,
-      "scale": 1.134
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 2173.8,
-      "yCm": -8915.5,
-      "yawRad": 5.649,
-      "scale": 1.255
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 14543.6,
-      "yCm": 8564.1,
-      "yawRad": 4.078,
-      "scale": 1.26
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": -18534.6,
-      "yCm": -2525.6,
-      "yawRad": 6.084,
-      "scale": 1.002
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -12235.8,
-      "yCm": 6566.3,
-      "yawRad": 6.227,
-      "scale": 1.258
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -7340.5,
-      "yCm": 7292.5,
-      "yawRad": 1.835,
-      "scale": 1.084
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 8670.0,
-      "yCm": -1667.4,
-      "yawRad": 4.071,
-      "scale": 0.913
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 1705.4,
-      "yCm": -10372.8,
-      "yawRad": 3.67,
-      "scale": 1.102
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 7164.3,
-      "yCm": -4591.3,
-      "yawRad": 1.366,
-      "scale": 0.951
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 1725.0,
-      "yCm": 10448.4,
-      "yawRad": 4.76,
-      "scale": 0.945
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 14221.8,
-      "yCm": -3936.8,
-      "yawRad": 5.953,
-      "scale": 0.877
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -6215.4,
-      "yCm": -9468.9,
-      "yawRad": 2.335,
-      "scale": 1.11
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 5609.5,
-      "yCm": 8515.1,
-      "yawRad": 5.462,
-      "scale": 0.993
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -1603.3,
-      "yCm": 15400.8,
-      "yawRad": 0.009,
-      "scale": 1.274
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -4647.9,
-      "yCm": 11442.5,
-      "yawRad": 2.936,
-      "scale": 1.018
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 4464.4,
-      "yCm": 16014.3,
-      "yawRad": 3.391,
-      "scale": 1.057
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -5793.7,
-      "yCm": -10038.3,
-      "yawRad": 2.07,
-      "scale": 1.252
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -9609.2,
-      "yCm": 17055.7,
-      "yawRad": 0.593,
-      "scale": 0.927
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -7862.2,
-      "yCm": -16098.8,
-      "yawRad": 5.259,
-      "scale": 1.071
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -7733.1,
-      "yCm": -5096.4,
-      "yawRad": 0.78,
-      "scale": 0.936
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": 2061.6,
-      "yCm": -19386.2,
-      "yawRad": 2.59,
-      "scale": 0.999
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -6410.1,
-      "yCm": -5208.8,
-      "yawRad": 4.089,
-      "scale": 1.038
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -7514.1,
-      "yCm": -7716.5,
-      "yawRad": 3.622,
-      "scale": 0.985
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -9315.3,
-      "yCm": 11089.1,
-      "yawRad": 0.852,
-      "scale": 1.385
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 14022.8,
-      "yCm": 13615.2,
-      "yawRad": 1.513,
-      "scale": 1.343
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": -17569.5,
-      "yCm": -8756.2,
-      "yawRad": 0.479,
-      "scale": 1.097
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": 15986.0,
-      "yCm": -6393.9,
-      "yawRad": 4.635,
-      "scale": 1.152
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": 7047.5,
-      "yCm": 13554.1,
-      "yawRad": 2.087,
-      "scale": 1.106
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 10298.3,
-      "yCm": -7066.6,
-      "yawRad": 5.656,
-      "scale": 1.249
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -5500.3,
-      "yCm": 15352.6,
-      "yawRad": 2.808,
-      "scale": 0.918
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -13552.3,
-      "yCm": -224.4,
-      "yawRad": 3.306,
-      "scale": 1.232
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -16970.8,
-      "yCm": 9135.9,
-      "yawRad": 3.561,
-      "scale": 1.261
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 11415.0,
-      "yCm": 41.4,
-      "yawRad": 0.394,
-      "scale": 1.029
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -10047.3,
-      "yCm": 12704.3,
-      "yawRad": 5.646,
-      "scale": 0.867
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 14468.3,
-      "yCm": -2079.6,
-      "yawRad": 5.797,
-      "scale": 1.012
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -8896.0,
-      "yCm": 11595.5,
-      "yawRad": 6.254,
-      "scale": 1.334
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": 5005.1,
-      "yCm": 16093.2,
-      "yawRad": 0.314,
-      "scale": 1.246
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 14272.6,
-      "yCm": 11229.9,
-      "yawRad": 5.464,
-      "scale": 1.345
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 13159.3,
-      "yCm": -5421.1,
-      "yawRad": 1.93,
-      "scale": 0.973
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -2638.5,
-      "yCm": -10421.7,
-      "yawRad": 4.176,
-      "scale": 0.979
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 12157.9,
-      "yCm": -10794.8,
-      "yawRad": 5.823,
-      "scale": 1.016
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -15188.1,
-      "yCm": -2729.3,
-      "yawRad": 1.788,
-      "scale": 1.18
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -109.2,
-      "yCm": 19244.8,
-      "yawRad": 4.748,
-      "scale": 1.007
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 4344.1,
-      "yCm": -18574.6,
-      "yawRad": 1.39,
-      "scale": 1.119
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -13127.8,
-      "yCm": -7226.8,
-      "yawRad": 4.491,
-      "scale": 1.178
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": -18150.6,
-      "yCm": -8911.7,
-      "yawRad": 0.112,
-      "scale": 0.918
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": -1558.3,
-      "yCm": 19115.9,
-      "yawRad": 3.574,
-      "scale": 1.258
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": -18382.6,
-      "yCm": -5120.7,
-      "yawRad": 1.954,
-      "scale": 0.916
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 16553.3,
-      "yCm": 10284.2,
-      "yawRad": 1.004,
-      "scale": 0.99
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": 4530.9,
-      "yCm": 21106.7,
-      "yawRad": 4.783,
-      "scale": 1.07
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -271.7,
-      "yCm": -8544.8,
-      "yawRad": 0.889,
-      "scale": 1.34
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 1523.1,
-      "yCm": -18213.3,
-      "yawRad": 3.468,
-      "scale": 0.989
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -5193.2,
-      "yCm": -7128.1,
-      "yawRad": 5.431,
-      "scale": 1.232
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": -17186.7,
-      "yCm": -11007.0,
-      "yawRad": 5.297,
-      "scale": 1.027
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": -13897.6,
-      "yCm": 12866.1,
-      "yawRad": 1.154,
-      "scale": 1.006
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -9799.3,
-      "yCm": -3153.4,
-      "yawRad": 2.939,
-      "scale": 0.968
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -8640.5,
-      "yCm": -18123.8,
-      "yawRad": 0.457,
-      "scale": 1.061
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -4711.1,
-      "yCm": -12201.5,
-      "yawRad": 1.144,
-      "scale": 0.86
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 6912.8,
-      "yCm": -4567.6,
-      "yawRad": 0.523,
-      "scale": 1.061
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 629.5,
-      "yCm": 8548.4,
-      "yawRad": 0.2,
-      "scale": 1.177
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 11747.4,
-      "yCm": 13496.0,
-      "yawRad": 4.186,
-      "scale": 1.249
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 6541.8,
-      "yCm": 8677.7,
-      "yawRad": 2.547,
-      "scale": 1.242
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": -15220.3,
-      "yCm": 13164.5,
-      "yawRad": 2.167,
-      "scale": 0.981
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 1829.7,
-      "yCm": 8372.1,
-      "yawRad": 3.556,
-      "scale": 1.197
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": 7816.8,
-      "yCm": -20198.6,
-      "yawRad": 5.775,
-      "scale": 1.152
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 1628.3,
-      "yCm": 16776.4,
-      "yawRad": 2.466,
-      "scale": 1.085
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 12425.0,
-      "yCm": 4929.0,
-      "yawRad": 1.758,
-      "scale": 1.123
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": 7407.0,
-      "yCm": 11446.9,
-      "yawRad": 4.18,
-      "scale": 0.925
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 595.3,
-      "yCm": 9283.6,
-      "yawRad": 0.947,
-      "scale": 1.082
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -12319.1,
-      "yCm": 2435.2,
-      "yawRad": 2.181,
-      "scale": 0.863
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 12378.2,
-      "yCm": -10011.4,
-      "yawRad": 1.169,
-      "scale": 1.217
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -11711.2,
-      "yCm": 7333.8,
-      "yawRad": 5.527,
-      "scale": 1.306
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": -15281.2,
-      "yCm": 14014.6,
-      "yawRad": 3.186,
-      "scale": 0.911
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 6293.8,
-      "yCm": 8646.2,
-      "yawRad": 1.474,
-      "scale": 1.224
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": 10518.5,
-      "yCm": -18824.1,
-      "yawRad": 5.569,
-      "scale": 1.006
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 935.4,
-      "yCm": 11452.1,
-      "yawRad": 3.228,
-      "scale": 0.948
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 6243.3,
-      "yCm": 6322.2,
-      "yawRad": 4.428,
-      "scale": 0.906
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 5981.7,
-      "yCm": -6383.6,
-      "yawRad": 5.004,
-      "scale": 1.129
-    },
-    {
       "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -14050.0,
-      "yCm": 11288.8,
-      "yawRad": 2.054,
+      "xCm": 3224.9,
+      "yCm": -9621.2,
+      "yawRad": 0.657,
       "scale": 1.244
     },
     {
       "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -5451.8,
-      "yCm": -9823.1,
-      "yawRad": 3.679,
-      "scale": 0.858
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 6323.6,
-      "yCm": 5819.0,
-      "yawRad": 6.243,
-      "scale": 1.252
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 9192.3,
-      "yCm": 8647.9,
-      "yawRad": 3.035,
-      "scale": 1.148
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 3117.7,
-      "yCm": -9561.0,
-      "yawRad": 5.866,
-      "scale": 0.909
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -127.9,
-      "yCm": 14835.2,
-      "yawRad": 0.121,
-      "scale": 1.028
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -7740.0,
-      "yCm": 8686.0,
-      "yawRad": 5.609,
-      "scale": 0.885
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -3314.0,
-      "yCm": 8472.8,
-      "yawRad": 6.265,
-      "scale": 1.116
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": 5958.1,
-      "yCm": 19240.1,
-      "yawRad": 5.071,
-      "scale": 1.037
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -9234.9,
-      "yCm": -13941.3,
-      "yawRad": 5.432,
-      "scale": 1.366
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -1638.7,
-      "yCm": -10332.7,
-      "yawRad": 0.746,
-      "scale": 0.943
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -5596.0,
-      "yCm": 14131.8,
-      "yawRad": 6.027,
-      "scale": 0.966
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -14608.2,
-      "yCm": 10299.0,
-      "yawRad": 0.148,
-      "scale": 1.35
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": -3773.4,
-      "yCm": 20324.8,
-      "yawRad": 2.104,
+      "xCm": -50.1,
+      "yCm": -173.8,
+      "yawRad": 0.753,
       "scale": 0.892
     },
     {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": -16788.8,
-      "yCm": -5019.6,
-      "yawRad": 0.898,
-      "scale": 0.898
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 21.6,
+      "yCm": 672.6,
+      "yawRad": 4.431,
+      "scale": 0.745
     },
     {
       "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -8271.0,
-      "yCm": 11333.4,
-      "yawRad": 2.534,
-      "scale": 1.126
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": 5709.4,
-      "yCm": 19508.4,
-      "yawRad": 0.681,
-      "scale": 1.189
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 11841.4,
-      "yCm": -4038.7,
-      "yawRad": 6.217,
-      "scale": 1.046
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": 10085.5,
-      "yCm": 13543.5,
-      "yawRad": 1.334,
-      "scale": 1.14
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -13650.9,
-      "yCm": -6715.4,
-      "yawRad": 2.807,
-      "scale": 1.195
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": 15293.1,
-      "yCm": 15621.3,
-      "yawRad": 5.279,
-      "scale": 0.955
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": -19596.1,
-      "yCm": -4551.2,
-      "yawRad": 4.045,
-      "scale": 0.976
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 15888.9,
-      "yCm": -10697.8,
-      "yawRad": 0.63,
-      "scale": 1.051
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 4850.4,
-      "yCm": -8335.1,
-      "yawRad": 5.336,
-      "scale": 1.064
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": -15293.7,
-      "yCm": -13838.3,
-      "yawRad": 1.299,
-      "scale": 1.295
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": 5667.4,
-      "yCm": 16406.3,
-      "yawRad": 2.134,
-      "scale": 0.857
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -6710.4,
-      "yCm": 15419.0,
-      "yawRad": 4.366,
-      "scale": 1.182
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -9590.5,
-      "yCm": 2051.4,
-      "yawRad": 3.833,
-      "scale": 1.368
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -5070.6,
-      "yCm": 12744.0,
-      "yawRad": 2.669,
-      "scale": 1.197
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -10158.7,
-      "yCm": 14678.1,
-      "yawRad": 1.79,
-      "scale": 1.169
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 456.6,
-      "yCm": 13753.8,
-      "yawRad": 1.581,
-      "scale": 1.342
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 16669.6,
-      "yCm": 12020.0,
-      "yawRad": 2.353,
-      "scale": 1.05
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -2925.2,
-      "yCm": -17120.5,
-      "yawRad": 5.967,
-      "scale": 1.344
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -9369.5,
-      "yCm": 11076.5,
-      "yawRad": 3.805,
-      "scale": 1.219
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": -6650.8,
-      "yCm": -20935.8,
-      "yawRad": 2.521,
-      "scale": 1.058
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 3323.3,
-      "yCm": 12752.8,
-      "yawRad": 4.661,
-      "scale": 1.067
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -13164.9,
-      "yCm": -12838.2,
-      "yawRad": 4.592,
-      "scale": 1.296
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -15079.8,
-      "yCm": -3458.8,
-      "yawRad": 1.895,
-      "scale": 1.284
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -5151.3,
-      "yCm": 18168.5,
-      "yawRad": 0.341,
-      "scale": 1.078
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -19265.4,
-      "yCm": 5026.5,
-      "yawRad": 0.973,
-      "scale": 1.318
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -6972.3,
-      "yCm": 4219.9,
-      "yawRad": 4.615,
-      "scale": 1.3
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 9390.6,
-      "yCm": 1702.1,
-      "yawRad": 4.04,
-      "scale": 1.381
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 10267.9,
-      "yCm": 5507.1,
-      "yawRad": 2.066,
-      "scale": 1.355
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": 15056.3,
-      "yCm": -5266.4,
-      "yawRad": 2.478,
-      "scale": 1.257
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -5599.1,
-      "yCm": 17475.5,
-      "yawRad": 2.697,
-      "scale": 1.052
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -8983.5,
-      "yCm": 6549.3,
-      "yawRad": 1.976,
-      "scale": 1.055
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": -18457.0,
-      "yCm": -1884.1,
-      "yawRad": 1.583,
-      "scale": 0.892
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": -2413.1,
-      "yCm": 18986.3,
-      "yawRad": 2.528,
-      "scale": 1.237
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -3904.3,
-      "yCm": 17077.8,
-      "yawRad": 5.225,
-      "scale": 1.391
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 4049.9,
-      "yCm": -16502.1,
-      "yawRad": 0.301,
-      "scale": 1.27
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 276.8,
-      "yCm": -16115.2,
-      "yawRad": 2.629,
-      "scale": 1.255
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -8902.5,
-      "yCm": 3728.3,
-      "yawRad": 0.449,
-      "scale": 1.254
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -9150.6,
-      "yCm": -2854.0,
-      "yawRad": 5.993,
-      "scale": 1.021
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": -19433.4,
-      "yCm": -7722.9,
-      "yawRad": 3.37,
-      "scale": 1.037
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 3806.7,
-      "yCm": 12270.8,
-      "yawRad": 3.716,
-      "scale": 1.042
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": -21565.2,
-      "yCm": 2658.8,
-      "yawRad": 1.468,
-      "scale": 1.164
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 2171.3,
-      "yCm": 18416.2,
-      "yawRad": 5.325,
-      "scale": 1.019
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -12005.2,
-      "yCm": -4026.6,
-      "yawRad": 4.805,
-      "scale": 1.373
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -1694.7,
-      "yCm": -11582.8,
-      "yawRad": 3.375,
+      "xCm": -271.0,
+      "yCm": 3326.9,
+      "yawRad": 4.621,
       "scale": 0.861
     },
     {
       "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -271.2,
-      "yCm": 12099.5,
-      "yawRad": 3.047,
-      "scale": 0.922
+      "xCm": 33.9,
+      "yCm": -2633.8,
+      "yawRad": 4.125,
+      "scale": 0.902
     },
     {
       "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -1698.2,
-      "yCm": 11869.8,
-      "yawRad": 5.49,
-      "scale": 1.13
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": 16478.9,
-      "yCm": -9158.5,
-      "yawRad": 5.885,
-      "scale": 0.874
+      "xCm": 11298.0,
+      "yCm": 1147.9,
+      "yawRad": 1.075,
+      "scale": 0.947
     },
     {
       "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -12370.2,
-      "yCm": 14450.3,
-      "yawRad": 2.328,
-      "scale": 1.099
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": -2759.9,
-      "yCm": -21030.5,
-      "yawRad": 2.191,
-      "scale": 1.105
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": 2378.8,
-      "yCm": 21164.9,
-      "yawRad": 4.129,
-      "scale": 1.273
+      "xCm": -2711.5,
+      "yCm": 11836.4,
+      "yawRad": 5.521,
+      "scale": 1.241
     },
     {
       "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 18561.4,
-      "yCm": 8990.7,
-      "yawRad": 0.752,
-      "scale": 1.161
+      "xCm": -152.0,
+      "yCm": -170.0,
+      "yawRad": 5.97,
+      "scale": 0.961
     },
     {
       "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 16054.0,
-      "yCm": 6524.0,
-      "yawRad": 3.587,
-      "scale": 0.866
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 3320.1,
-      "yCm": -14932.0,
-      "yawRad": 1.16,
-      "scale": 1.14
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": 5786.9,
-      "yCm": 16907.9,
-      "yawRad": 0.494,
-      "scale": 1.069
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -9160.5,
-      "yCm": -3724.0,
-      "yawRad": 4.411,
-      "scale": 1.035
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": 13303.2,
-      "yCm": -16364.3,
-      "yawRad": 3.711,
-      "scale": 1.07
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 8173.6,
-      "yCm": -2127.4,
-      "yawRad": 6.014,
-      "scale": 1.328
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": 894.5,
-      "yCm": -19288.6,
-      "yawRad": 4.99,
-      "scale": 0.881
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": 19432.9,
-      "yCm": -3027.8,
-      "yawRad": 2.179,
+      "xCm": 1256.1,
+      "yCm": 4967.8,
+      "yawRad": 0.854,
       "scale": 1.001
     },
     {
       "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 18700.0,
-      "yCm": 1761.8,
-      "yawRad": 3.306,
-      "scale": 1.172
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": 1992.8,
-      "yCm": 20248.3,
-      "yawRad": 1.592,
-      "scale": 0.917
+      "xCm": -5933.1,
+      "yCm": 11938.7,
+      "yawRad": 4.556,
+      "scale": 1.386
     },
     {
       "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -18806.3,
-      "yCm": 2496.2,
-      "yawRad": 4.111,
-      "scale": 0.981
+      "xCm": -905.8,
+      "yCm": 549.9,
+      "yawRad": 2.306,
+      "scale": 0.827
     },
     {
       "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -985.3,
-      "yCm": 15286.9,
-      "yawRad": 1.159,
-      "scale": 1.332
+      "xCm": 10725.1,
+      "yCm": -10878.7,
+      "yawRad": 3.853,
+      "scale": 1.275
     },
     {
       "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 1362.7,
-      "yCm": 12144.7,
-      "yawRad": 4.236,
-      "scale": 1.25
+      "xCm": 3696.4,
+      "yCm": -6185.5,
+      "yawRad": 3.704,
+      "scale": 1.059
     },
     {
       "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 3899.9,
-      "yCm": -15064.6,
-      "yawRad": 1.536,
-      "scale": 1.27
+      "xCm": -1762.4,
+      "yCm": 645.4,
+      "yawRad": 3.636,
+      "scale": 0.919
     },
     {
       "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 13396.2,
-      "yCm": -804.5,
-      "yawRad": 4.915,
-      "scale": 1.284
+      "xCm": 3532.6,
+      "yCm": 3465.5,
+      "yawRad": 3.272,
+      "scale": 0.969
     },
     {
       "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -19233.2,
-      "yCm": 2940.5,
-      "yawRad": 2.39,
-      "scale": 1.124
+      "xCm": -13071.8,
+      "yCm": 3970.1,
+      "yawRad": 1.944,
+      "scale": 1.024
     },
     {
       "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 19086.9,
-      "yCm": 8274.8,
-      "yawRad": 5.517,
-      "scale": 0.963
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": -11481.3,
-      "yCm": 17619.6,
-      "yawRad": 5.941,
-      "scale": 1.172
+      "xCm": -3072.8,
+      "yCm": 1765.6,
+      "yawRad": 1.169,
+      "scale": 0.762
     },
     {
       "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -12658.4,
-      "yCm": 3785.7,
-      "yawRad": 5.899,
-      "scale": 1.0
+      "xCm": -500.9,
+      "yCm": 262.1,
+      "yawRad": 0.119,
+      "scale": 0.871
     },
     {
       "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 9532.6,
-      "yCm": 4607.4,
-      "yawRad": 1.929,
-      "scale": 0.877
+      "xCm": 28.7,
+      "yCm": 4687.6,
+      "yawRad": 0.163,
+      "scale": 1.412
     },
     {
       "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 9695.2,
-      "yCm": 5448.3,
-      "yawRad": 4.779,
-      "scale": 1.02
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 13377.4,
-      "yCm": -6902.2,
-      "yawRad": 3.572,
-      "scale": 1.032
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -7077.0,
-      "yCm": 5105.6,
-      "yawRad": 4.627,
-      "scale": 0.945
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 1977.4,
-      "yCm": 8034.8,
-      "yawRad": 3.136,
-      "scale": 1.29
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -8321.8,
-      "yCm": -11888.1,
-      "yawRad": 1.912,
-      "scale": 0.858
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 11984.4,
-      "yCm": -1167.2,
-      "yawRad": 1.477,
-      "scale": 1.248
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 14950.2,
-      "yCm": 154.7,
-      "yawRad": 3.97,
-      "scale": 1.166
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -2671.2,
-      "yCm": 13944.8,
-      "yawRad": 1.473,
-      "scale": 1.29
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 9136.7,
-      "yCm": -16854.1,
-      "yawRad": 3.166,
-      "scale": 1.347
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -14721.0,
-      "yCm": 937.7,
-      "yawRad": 3.161,
-      "scale": 1.313
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -5901.5,
-      "yCm": 8986.2,
-      "yawRad": 5.048,
-      "scale": 1.309
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 15009.2,
-      "yCm": 2170.9,
-      "yawRad": 3.836,
-      "scale": 1.285
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 15936.3,
-      "yCm": 6836.9,
-      "yawRad": 5.475,
-      "scale": 1.39
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 12828.5,
-      "yCm": 12873.3,
-      "yawRad": 4.83,
-      "scale": 1.327
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": 15888.2,
-      "yCm": -5898.3,
-      "yawRad": 2.22,
-      "scale": 1.023
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -5205.7,
-      "yCm": -14303.8,
-      "yawRad": 1.177,
-      "scale": 1.0
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": 18318.9,
-      "yCm": -4391.7,
-      "yawRad": 3.283,
-      "scale": 0.976
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 685.7,
-      "yCm": 12566.3,
-      "yawRad": 2.232,
-      "scale": 0.879
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 6714.2,
-      "yCm": -5665.7,
-      "yawRad": 4.364,
-      "scale": 0.998
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 17189.4,
-      "yCm": 5159.6,
-      "yawRad": 2.976,
-      "scale": 0.88
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": -8721.3,
-      "yCm": 19948.1,
-      "yawRad": 1.388,
-      "scale": 0.987
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": -16429.5,
-      "yCm": 12124.2,
-      "yawRad": 4.449,
-      "scale": 1.206
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": 18791.0,
-      "yCm": -2809.1,
-      "yawRad": 4.655,
-      "scale": 1.152
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -9786.5,
-      "yCm": 15063.5,
-      "yawRad": 4.815,
-      "scale": 1.079
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -986.8,
-      "yCm": 16560.0,
-      "yawRad": 6.243,
-      "scale": 1.069
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": 12385.0,
-      "yCm": 14315.2,
-      "yawRad": 5.971,
-      "scale": 1.177
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 13555.9,
-      "yCm": -10725.5,
-      "yawRad": 2.639,
-      "scale": 1.293
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": 10084.6,
-      "yCm": 13036.5,
-      "yawRad": 6.228,
-      "scale": 1.088
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": -19348.3,
-      "yCm": -9022.6,
-      "yawRad": 0.473,
-      "scale": 1.192
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 6302.7,
-      "yCm": -11737.3,
-      "yawRad": 3.376,
-      "scale": 1.047
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 10508.7,
-      "yCm": -4661.4,
-      "yawRad": 0.539,
-      "scale": 0.915
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 5015.0,
-      "yCm": -17647.2,
-      "yawRad": 4.369,
-      "scale": 1.119
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -10557.7,
-      "yCm": 17336.1,
-      "yawRad": 1.971,
-      "scale": 1.111
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": -16873.3,
-      "yCm": -13831.9,
-      "yawRad": 3.894,
-      "scale": 0.95
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 1927.4,
-      "yCm": 12957.3,
-      "yawRad": 0.296,
-      "scale": 1.245
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -15571.4,
-      "yCm": -4338.2,
-      "yawRad": 2.218,
-      "scale": 0.874
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 8704.9,
-      "yCm": 3615.3,
-      "yawRad": 1.108,
-      "scale": 1.233
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -6390.8,
-      "yCm": 13065.1,
-      "yawRad": 2.236,
-      "scale": 1.159
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -7320.4,
-      "yCm": 8848.8,
-      "yawRad": 0.102,
-      "scale": 0.994
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -6034.6,
-      "yCm": 15129.3,
-      "yawRad": 5.316,
-      "scale": 0.912
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -14879.6,
-      "yCm": 2927.5,
-      "yawRad": 4.738,
-      "scale": 1.338
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 1353.2,
-      "yCm": 8200.1,
-      "yawRad": 5.004,
-      "scale": 0.868
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -8727.1,
-      "yCm": -8232.5,
-      "yawRad": 5.254,
-      "scale": 1.328
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 4623.8,
-      "yCm": -7769.6,
-      "yawRad": 3.415,
-      "scale": 1.384
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": 19483.8,
-      "yCm": 10012.7,
-      "yawRad": 2.447,
-      "scale": 0.917
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -13534.9,
-      "yCm": -8817.1,
-      "yawRad": 5.657,
-      "scale": 1.105
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -5587.7,
-      "yCm": -6069.4,
-      "yawRad": 1.347,
-      "scale": 1.211
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 16748.6,
-      "yCm": 8241.4,
-      "yawRad": 3.511,
-      "scale": 1.377
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 13602.6,
-      "yCm": 10055.2,
-      "yawRad": 4.55,
-      "scale": 1.298
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 461.2,
-      "yCm": -8789.0,
-      "yawRad": 0.883,
-      "scale": 1.289
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 2512.6,
-      "yCm": 8035.2,
-      "yawRad": 6.02,
-      "scale": 1.11
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": -14474.6,
-      "yCm": 13112.9,
-      "yawRad": 1.164,
-      "scale": 1.172
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": -21546.5,
-      "yCm": 663.2,
-      "yawRad": 5.765,
-      "scale": 0.976
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -4077.5,
-      "yCm": -7936.4,
-      "yawRad": 1.822,
-      "scale": 0.98
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -3033.4,
-      "yCm": -14596.7,
-      "yawRad": 2.413,
-      "scale": 1.121
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -8518.7,
-      "yCm": -1678.4,
-      "yawRad": 2.333,
-      "scale": 1.391
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 17732.1,
-      "yCm": 9477.3,
-      "yawRad": 2.939,
-      "scale": 0.954
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 1253.8,
-      "yCm": -18069.9,
-      "yawRad": 0.928,
-      "scale": 1.304
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 4463.0,
-      "yCm": 7264.1,
-      "yawRad": 2.394,
-      "scale": 1.332
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": -16728.0,
-      "yCm": -12409.5,
-      "yawRad": 1.801,
-      "scale": 0.901
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 3466.8,
-      "yCm": 8920.2,
-      "yawRad": 1.056,
-      "scale": 1.202
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": 7581.8,
-      "yCm": 13516.2,
-      "yawRad": 3.57,
-      "scale": 0.917
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 16095.4,
-      "yCm": 4106.3,
-      "yawRad": 0.058,
-      "scale": 1.035
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 11590.3,
-      "yCm": 3042.9,
-      "yawRad": 4.928,
-      "scale": 1.263
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -6539.8,
-      "yCm": -19899.5,
-      "yawRad": 5.359,
-      "scale": 1.066
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": -1202.2,
-      "yCm": -20086.9,
-      "yawRad": 6.024,
-      "scale": 1.122
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 15537.8,
-      "yCm": 6395.7,
-      "yawRad": 3.813,
+      "xCm": -1601.7,
+      "yCm": -349.0,
+      "yawRad": 4.325,
       "scale": 1.028
     },
     {
       "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 5003.9,
-      "yCm": 14980.4,
-      "yawRad": 0.006,
-      "scale": 0.851
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 12594.1,
-      "yCm": 154.8,
-      "yawRad": 4.007,
-      "scale": 1.395
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 16530.7,
-      "yCm": 7184.2,
-      "yawRad": 4.54,
-      "scale": 1.115
+      "xCm": 8862.5,
+      "yCm": 3232.4,
+      "yawRad": 3.071,
+      "scale": 1.252
     },
     {
       "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": 13104.1,
-      "yCm": -16529.9,
-      "yawRad": 2.497,
-      "scale": 0.993
+      "xCm": -211.4,
+      "yCm": 16320.0,
+      "yawRad": 4.923,
+      "scale": 1.292
     },
     {
       "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 8755.8,
-      "yCm": 3356.4,
-      "yawRad": 5.18,
-      "scale": 1.103
+      "xCm": 3156.4,
+      "yCm": 12362.7,
+      "yawRad": 4.95,
+      "scale": 1.446
     },
     {
       "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 11066.3,
-      "yCm": 1795.7,
-      "yawRad": 0.401,
-      "scale": 0.939
+      "xCm": 2200.0,
+      "yCm": 15411.7,
+      "yawRad": 2.408,
+      "scale": 0.992
     },
     {
       "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 5761.9,
-      "yCm": -11454.0,
-      "yawRad": 4.577,
-      "scale": 1.219
+      "xCm": -34.3,
+      "yCm": 4270.2,
+      "yawRad": 2.611,
+      "scale": 1.062
     },
     {
       "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -8803.9,
-      "yCm": -577.0,
-      "yawRad": 4.285,
-      "scale": 1.184
+      "xCm": -8892.0,
+      "yCm": -1537.1,
+      "yawRad": 3.965,
+      "scale": 1.187
     },
     {
       "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 19064.5,
-      "yCm": -1135.4,
-      "yawRad": 3.178,
-      "scale": 1.101
+      "xCm": -4212.4,
+      "yCm": -2755.2,
+      "yawRad": 4.329,
+      "scale": 1.086
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -6797.7,
+      "yCm": -9412.4,
+      "yawRad": 4.219,
+      "scale": 1.388
     },
     {
       "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": -13736.0,
-      "yCm": 17178.4,
-      "yawRad": 0.499,
-      "scale": 1.03
+      "xCm": -11373.1,
+      "yCm": 9641.8,
+      "yawRad": 5.342,
+      "scale": 0.91
     },
     {
       "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -4423.8,
-      "yCm": -9090.0,
-      "yawRad": 3.783,
-      "scale": 1.083
+      "xCm": 1743.1,
+      "yCm": 1192.7,
+      "yawRad": 2.493,
+      "scale": 0.758
     },
     {
       "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 1214.8,
-      "yCm": -14171.0,
-      "yawRad": 5.582,
-      "scale": 1.052
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -9795.4,
-      "yCm": 1054.1,
-      "yawRad": 4.707,
-      "scale": 1.34
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 16041.9,
-      "yCm": 6871.3,
-      "yawRad": 3.802,
-      "scale": 1.095
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 20027.0,
-      "yCm": 6633.6,
-      "yawRad": 4.902,
-      "scale": 0.929
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 4387.7,
-      "yCm": 16429.9,
-      "yawRad": 5.961,
-      "scale": 1.358
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 15717.9,
-      "yCm": -10902.2,
-      "yawRad": 0.879,
-      "scale": 1.127
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 6878.5,
-      "yCm": 6316.8,
-      "yawRad": 3.118,
-      "scale": 1.305
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -12824.7,
-      "yCm": 11154.9,
-      "yawRad": 0.632,
-      "scale": 1.023
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 6269.6,
-      "yCm": -19935.4,
-      "yawRad": 0.735,
-      "scale": 1.058
+      "xCm": -3743.0,
+      "yCm": 405.0,
+      "yawRad": 4.145,
+      "scale": 0.709
     },
     {
       "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": 3062.4,
-      "yCm": 20055.1,
-      "yawRad": 1.267,
+      "xCm": 6861.0,
+      "yCm": 10650.0,
+      "yawRad": 0.802,
+      "scale": 1.268
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 1286.7,
+      "yCm": 4131.3,
+      "yawRad": 4.206,
+      "scale": 1.007
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 7417.4,
+      "yCm": 1622.9,
+      "yawRad": 2.146,
+      "scale": 1.188
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -19603.9,
+      "yCm": 5840.4,
+      "yawRad": 3.677,
+      "scale": 1.191
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 1050.6,
+      "yCm": -3922.3,
+      "yawRad": 6.025,
       "scale": 1.063
     },
     {
       "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -3530.7,
-      "yCm": 13489.2,
-      "yawRad": 0.19,
-      "scale": 1.251
+      "xCm": -6779.7,
+      "yCm": -9284.8,
+      "yawRad": 3.277,
+      "scale": 1.173
     },
     {
       "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -12373.9,
-      "yCm": -14727.7,
-      "yawRad": 0.753,
-      "scale": 0.955
+      "xCm": -125.4,
+      "yCm": -111.4,
+      "yawRad": 5.201,
+      "scale": 0.827
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 1838.6,
+      "yCm": -2357.2,
+      "yawRad": 2.226,
+      "scale": 0.713
     },
     {
       "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": -13093.8,
-      "yCm": 17193.7,
-      "yawRad": 5.454,
+      "xCm": -16001.0,
+      "yCm": -9135.6,
+      "yawRad": 3.479,
+      "scale": 1.146
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -11420.2,
+      "yCm": 4560.1,
+      "yawRad": 0.359,
+      "scale": 1.174
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -16541.4,
+      "yCm": -10648.3,
+      "yawRad": 5.177,
+      "scale": 0.901
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 12507.7,
+      "yCm": -5886.4,
+      "yawRad": 5.449,
+      "scale": 1.192
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -15170.2,
+      "yCm": -15092.8,
+      "yawRad": 3.93,
+      "scale": 1.036
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 2047.9,
+      "yCm": -301.8,
+      "yawRad": 3.355,
+      "scale": 0.826
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -3541.1,
+      "yCm": -15017.0,
+      "yawRad": 2.723,
+      "scale": 0.929
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 5026.8,
+      "yCm": -257.5,
+      "yawRad": 1.122,
+      "scale": 1.197
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 3468.7,
+      "yCm": -11922.8,
+      "yawRad": 4.4,
+      "scale": 1.16
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 534.8,
+      "yCm": 433.5,
+      "yawRad": 3.304,
+      "scale": 1.053
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -3117.4,
+      "yCm": -601.8,
+      "yawRad": 5.277,
+      "scale": 0.893
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 2532.1,
+      "yCm": 4340.3,
+      "yawRad": 2.623,
+      "scale": 1.115
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 16752.5,
+      "yCm": 5851.5,
+      "yawRad": 2.506,
+      "scale": 1.069
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -2664.9,
+      "yCm": -92.3,
+      "yawRad": 4.422,
+      "scale": 0.737
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 17300.1,
+      "yCm": 2567.9,
+      "yawRad": 5.25,
+      "scale": 0.959
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -94.6,
+      "yCm": -3653.1,
+      "yawRad": 1.939,
+      "scale": 1.0
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 7313.6,
+      "yCm": 655.5,
+      "yawRad": 4.285,
+      "scale": 1.269
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 8213.0,
+      "yCm": -16148.9,
+      "yawRad": 5.182,
+      "scale": 0.935
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -3328.9,
+      "yCm": 1569.7,
+      "yawRad": 6.204,
+      "scale": 0.865
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -2732.9,
+      "yCm": 1119.5,
+      "yawRad": 3.644,
+      "scale": 0.865
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 4867.0,
+      "yCm": 6136.6,
+      "yawRad": 3.145,
+      "scale": 1.08
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 887.3,
+      "yCm": -3267.0,
+      "yawRad": 2.463,
+      "scale": 0.753
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -23255.4,
+      "yCm": 4001.8,
+      "yawRad": 1.47,
+      "scale": 1.016
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -10346.0,
+      "yCm": 11178.9,
+      "yawRad": 5.377,
+      "scale": 1.114
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 13044.3,
+      "yCm": 8794.6,
+      "yawRad": 4.499,
+      "scale": 1.196
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -7715.6,
+      "yCm": -483.8,
+      "yawRad": 1.053,
+      "scale": 1.369
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -75.2,
+      "yCm": 43.4,
+      "yawRad": 3.763,
+      "scale": 1.035
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -2064.9,
+      "yCm": 14512.6,
+      "yawRad": 0.379,
+      "scale": 0.947
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -13549.1,
+      "yCm": -3554.1,
+      "yawRad": 1.344,
+      "scale": 1.131
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 17023.2,
+      "yCm": 8268.1,
+      "yawRad": 5.64,
+      "scale": 1.068
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -2065.3,
+      "yCm": -2830.7,
+      "yawRad": 4.358,
+      "scale": 0.808
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 4150.1,
+      "yCm": -2045.8,
+      "yawRad": 0.807,
+      "scale": 0.973
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -11629.1,
+      "yCm": -2129.6,
+      "yawRad": 3.211,
+      "scale": 1.298
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -10204.5,
+      "yCm": -1901.5,
+      "yawRad": 1.114,
+      "scale": 0.947
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 1608.6,
+      "yCm": -7636.4,
+      "yawRad": 0.685,
+      "scale": 1.273
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 7378.1,
+      "yCm": 682.3,
+      "yawRad": 1.891,
+      "scale": 1.035
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 2003.5,
+      "yCm": 3674.6,
+      "yawRad": 3.318,
+      "scale": 1.362
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 2387.9,
+      "yCm": 10598.1,
+      "yawRad": 5.363,
+      "scale": 1.376
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -9474.3,
+      "yCm": 2613.0,
+      "yawRad": 0.997,
+      "scale": 1.358
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -3027.0,
+      "yCm": -542.2,
+      "yawRad": 6.025,
+      "scale": 0.949
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 167.9,
+      "yCm": -213.8,
+      "yawRad": 0.721,
+      "scale": 0.706
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -8816.6,
+      "yCm": 15683.4,
+      "yawRad": 4.372,
+      "scale": 1.205
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 73.4,
+      "yCm": 418.1,
+      "yawRad": 2.662,
+      "scale": 0.992
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 349.4,
+      "yCm": -4195.1,
+      "yawRad": 1.667,
+      "scale": 0.925
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 4135.7,
+      "yCm": -20668.8,
+      "yawRad": 0.013,
+      "scale": 1.116
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 8609.8,
+      "yCm": 3235.7,
+      "yawRad": 1.46,
+      "scale": 1.218
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 2825.2,
+      "yCm": 6696.2,
+      "yawRad": 3.788,
+      "scale": 1.34
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 1390.7,
+      "yCm": 5871.5,
+      "yawRad": 1.546,
+      "scale": 1.154
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -12025.2,
+      "yCm": -2237.8,
+      "yawRad": 1.06,
+      "scale": 1.291
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 13626.7,
+      "yCm": -613.0,
+      "yawRad": 5.792,
+      "scale": 0.982
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 4236.4,
+      "yCm": -16132.6,
+      "yawRad": 6.126,
+      "scale": 0.89
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -4241.4,
+      "yCm": -4275.2,
+      "yawRad": 1.611,
+      "scale": 1.097
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -4913.6,
+      "yCm": 15053.4,
+      "yawRad": 4.039,
+      "scale": 0.931
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 2701.5,
+      "yCm": 1505.3,
+      "yawRad": 0.392,
+      "scale": 0.753
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 2013.9,
+      "yCm": 2008.6,
+      "yawRad": 1.967,
+      "scale": 1.023
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 386.7,
+      "yCm": 19701.1,
+      "yawRad": 3.323,
+      "scale": 1.028
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -10148.4,
+      "yCm": 7872.2,
+      "yawRad": 2.195,
+      "scale": 0.935
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -4180.0,
+      "yCm": -651.0,
+      "yawRad": 6.244,
+      "scale": 0.886
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 3232.5,
+      "yCm": 4961.5,
+      "yawRad": 3.646,
+      "scale": 1.252
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -716.9,
+      "yCm": 82.2,
+      "yawRad": 3.443,
+      "scale": 1.042
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 22213.1,
+      "yCm": -988.9,
+      "yawRad": 3.619,
+      "scale": 1.079
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 9167.1,
+      "yCm": 10996.4,
+      "yawRad": 3.297,
+      "scale": 1.229
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -4982.2,
+      "yCm": -4642.1,
+      "yawRad": 3.911,
+      "scale": 1.071
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -3735.0,
+      "yCm": -16834.0,
+      "yawRad": 1.798,
+      "scale": 1.286
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -18861.7,
+      "yCm": 707.8,
+      "yawRad": 6.047,
+      "scale": 1.013
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -14476.2,
+      "yCm": 7217.1,
+      "yawRad": 0.809,
+      "scale": 0.926
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 8239.3,
+      "yCm": -19015.6,
+      "yawRad": 2.706,
+      "scale": 1.198
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 274.4,
+      "yCm": 719.9,
+      "yawRad": 1.952,
+      "scale": 0.892
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 2638.7,
+      "yCm": -5112.7,
+      "yawRad": 4.886,
+      "scale": 1.072
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -182.5,
+      "yCm": 986.5,
+      "yawRad": 4.992,
+      "scale": 0.872
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 484.3,
+      "yCm": 46.6,
+      "yawRad": 2.65,
+      "scale": 1.006
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -11008.0,
+      "yCm": -19935.0,
+      "yawRad": 3.499,
+      "scale": 1.212
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -16140.2,
+      "yCm": -9119.8,
+      "yawRad": 2.981,
+      "scale": 1.24
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 2032.1,
+      "yCm": -6489.2,
+      "yawRad": 6.058,
+      "scale": 1.122
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 905.7,
+      "yCm": -334.6,
+      "yawRad": 2.694,
+      "scale": 1.016
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -16236.5,
+      "yCm": 5872.0,
+      "yawRad": 2.147,
+      "scale": 1.146
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 1365.7,
+      "yCm": -1782.1,
+      "yawRad": 5.95,
+      "scale": 0.871
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 1366.8,
+      "yCm": -1820.2,
+      "yawRad": 5.26,
+      "scale": 0.9
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -9849.5,
+      "yCm": 789.4,
+      "yawRad": 3.701,
+      "scale": 1.352
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 303.9,
+      "yCm": -5610.0,
+      "yawRad": 3.046,
+      "scale": 0.987
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 4249.1,
+      "yCm": -1159.2,
+      "yawRad": 3.086,
+      "scale": 0.723
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 6532.4,
+      "yCm": -706.1,
+      "yawRad": 1.922,
+      "scale": 0.943
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 18860.1,
+      "yCm": -390.1,
+      "yawRad": 0.992,
+      "scale": 1.157
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -11324.8,
+      "yCm": -15259.2,
+      "yawRad": 3.63,
+      "scale": 1.237
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 18417.7,
+      "yCm": -979.4,
+      "yawRad": 0.774,
+      "scale": 1.094
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 1217.3,
+      "yCm": 2598.8,
+      "yawRad": 0.459,
+      "scale": 0.742
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 987.1,
+      "yCm": 2185.5,
+      "yawRad": 0.554,
+      "scale": 0.752
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -11169.1,
+      "yCm": 10027.2,
+      "yawRad": 3.1,
+      "scale": 1.108
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -176.3,
+      "yCm": -1095.6,
+      "yawRad": 3.918,
+      "scale": 0.86
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -14632.1,
+      "yCm": -3601.7,
+      "yawRad": 5.299,
+      "scale": 1.033
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -18444.9,
+      "yCm": 10650.5,
+      "yawRad": 5.103,
+      "scale": 0.922
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -3000.5,
+      "yCm": -2504.6,
+      "yawRad": 1.238,
+      "scale": 1.052
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 10875.3,
+      "yCm": -7578.7,
+      "yawRad": 1.869,
+      "scale": 0.944
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 9841.7,
+      "yCm": -5740.0,
+      "yawRad": 1.189,
+      "scale": 1.356
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -3740.8,
+      "yCm": -1775.8,
+      "yawRad": 4.103,
+      "scale": 0.931
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 19955.6,
+      "yCm": -1499.1,
+      "yawRad": 0.874,
+      "scale": 1.041
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -2219.2,
+      "yCm": -9343.6,
+      "yawRad": 1.603,
+      "scale": 0.979
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 903.1,
+      "yCm": -5459.0,
+      "yawRad": 3.469,
+      "scale": 1.173
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -4402.1,
+      "yCm": 11269.2,
+      "yawRad": 1.183,
+      "scale": 1.405
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 3187.1,
+      "yCm": -12593.4,
+      "yawRad": 0.68,
+      "scale": 1.245
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -19933.0,
+      "yCm": 8786.3,
+      "yawRad": 2.747,
+      "scale": 0.851
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 7909.9,
+      "yCm": -15228.0,
+      "yawRad": 0.892,
+      "scale": 1.166
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -9127.2,
+      "yCm": 14877.7,
+      "yawRad": 2.599,
+      "scale": 0.921
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -269.8,
+      "yCm": 3896.8,
+      "yawRad": 1.077,
+      "scale": 0.828
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 14917.0,
+      "yCm": -5331.5,
+      "yawRad": 4.219,
+      "scale": 0.922
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 905.3,
+      "yCm": 1336.0,
+      "yawRad": 1.232,
+      "scale": 0.894
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -983.4,
+      "yCm": 1005.2,
+      "yawRad": 0.775,
+      "scale": 0.726
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 3138.9,
+      "yCm": 6108.6,
+      "yawRad": 1.576,
+      "scale": 1.322
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -9679.2,
+      "yCm": -14048.7,
+      "yawRad": 0.87,
+      "scale": 1.104
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 853.3,
+      "yCm": -5494.0,
+      "yawRad": 0.05,
+      "scale": 1.299
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 19479.5,
+      "yCm": -2825.9,
+      "yawRad": 2.136,
+      "scale": 0.909
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 6036.9,
+      "yCm": 6355.7,
+      "yawRad": 4.864,
+      "scale": 1.22
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -1674.5,
+      "yCm": 19834.2,
+      "yawRad": 5.078,
+      "scale": 1.031
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -8415.2,
+      "yCm": 8616.6,
+      "yawRad": 5.05,
+      "scale": 0.912
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 427.5,
+      "yCm": 16119.1,
+      "yawRad": 0.988,
+      "scale": 1.052
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -3217.6,
+      "yCm": 15554.5,
+      "yawRad": 4.296,
+      "scale": 1.082
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -3628.5,
+      "yCm": -16587.7,
+      "yawRad": 5.946,
+      "scale": 0.902
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -3776.2,
+      "yCm": 15149.7,
+      "yawRad": 0.96,
+      "scale": 0.973
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -2970.3,
+      "yCm": -9844.1,
+      "yawRad": 0.669,
+      "scale": 1.315
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 6769.1,
+      "yCm": -9049.5,
+      "yawRad": 5.064,
+      "scale": 1.412
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -21118.8,
+      "yCm": 8694.5,
+      "yawRad": 4.33,
+      "scale": 0.977
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -15522.9,
+      "yCm": 630.4,
+      "yawRad": 0.075,
+      "scale": 1.109
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -4579.2,
+      "yCm": -14864.6,
+      "yawRad": 5.921,
+      "scale": 1.279
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 20268.1,
+      "yCm": 3845.4,
+      "yawRad": 6.014,
+      "scale": 1.137
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 24239.2,
+      "yCm": 4852.9,
+      "yawRad": 0.134,
+      "scale": 1.27
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -11535.1,
+      "yCm": -2653.0,
+      "yawRad": 4.845,
+      "scale": 1.163
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 6891.8,
+      "yCm": 1406.7,
+      "yawRad": 6.272,
+      "scale": 1.099
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 8457.9,
+      "yCm": -4295.7,
+      "yawRad": 2.046,
+      "scale": 1.412
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -3064.0,
+      "yCm": -4044.2,
+      "yawRad": 0.088,
+      "scale": 0.99
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -7038.5,
+      "yCm": 8307.5,
+      "yawRad": 0.604,
+      "scale": 1.31
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -1994.9,
+      "yCm": -11155.3,
+      "yawRad": 1.32,
+      "scale": 0.987
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -12438.4,
+      "yCm": -12633.2,
+      "yawRad": 2.281,
+      "scale": 1.248
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -1311.7,
+      "yCm": -4017.7,
+      "yawRad": 3.249,
+      "scale": 0.871
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -705.1,
+      "yCm": -14028.2,
+      "yawRad": 5.79,
+      "scale": 1.09
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 3255.7,
+      "yCm": -2071.2,
+      "yawRad": 3.094,
+      "scale": 1.0
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -113.4,
+      "yCm": 177.9,
+      "yawRad": 2.346,
+      "scale": 0.747
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 124.5,
+      "yCm": 1120.3,
+      "yawRad": 3.674,
+      "scale": 0.762
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -9422.4,
+      "yCm": -18262.2,
+      "yawRad": 1.329,
+      "scale": 1.06
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 15801.8,
+      "yCm": -12949.0,
+      "yawRad": 1.156,
+      "scale": 1.153
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -4558.7,
+      "yCm": 1488.2,
+      "yawRad": 2.043,
+      "scale": 0.906
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -6187.4,
+      "yCm": 3233.5,
+      "yawRad": 0.737,
+      "scale": 1.337
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -3693.0,
+      "yCm": 2488.5,
+      "yawRad": 2.909,
+      "scale": 0.916
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -1250.2,
+      "yCm": -2213.8,
+      "yawRad": 3.877,
+      "scale": 1.087
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 6689.4,
+      "yCm": 7093.0,
+      "yawRad": 3.499,
+      "scale": 1.016
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -1225.2,
+      "yCm": 1104.8,
+      "yawRad": 5.998,
+      "scale": 1.0
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 9244.2,
+      "yCm": 12193.5,
+      "yawRad": 0.736,
+      "scale": 1.104
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 760.3,
+      "yCm": 1942.3,
+      "yawRad": 4.99,
+      "scale": 0.969
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -2727.9,
+      "yCm": -3352.8,
+      "yawRad": 2.919,
+      "scale": 0.86
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -15089.4,
+      "yCm": 11291.4,
+      "yawRad": 5.351,
+      "scale": 1.148
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 8249.2,
+      "yCm": 7278.6,
+      "yawRad": 3.509,
+      "scale": 1.409
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 212.5,
+      "yCm": 170.3,
+      "yawRad": 4.044,
+      "scale": 1.079
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 340.3,
+      "yCm": 1249.3,
+      "yawRad": 4.912,
+      "scale": 0.918
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 19817.6,
+      "yCm": 4596.7,
+      "yawRad": 3.077,
+      "scale": 0.89
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -2988.1,
+      "yCm": 484.0,
+      "yawRad": 0.246,
+      "scale": 1.058
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -6292.6,
+      "yCm": 3677.9,
+      "yawRad": 5.049,
+      "scale": 1.259
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 8188.7,
+      "yCm": 7744.1,
+      "yawRad": 3.703,
       "scale": 1.265
     },
     {
       "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 13332.6,
-      "yCm": 8480.1,
-      "yawRad": 2.58,
-      "scale": 0.901
+      "xCm": 7444.7,
+      "yCm": 4296.7,
+      "yawRad": 6.252,
+      "scale": 1.393
     },
     {
       "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 3012.8,
-      "yCm": -17107.9,
-      "yawRad": 2.598,
-      "scale": 1.142
+      "xCm": -266.1,
+      "yCm": -131.2,
+      "yawRad": 0.495,
+      "scale": 0.761
     },
     {
       "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 8388.4,
-      "yCm": 5500.6,
-      "yawRad": 6.025,
-      "scale": 0.938
+      "xCm": 6542.1,
+      "yCm": 1864.0,
+      "yawRad": 5.042,
+      "scale": 0.846
     },
     {
       "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 15667.5,
-      "yCm": 112.5,
-      "yawRad": 0.436,
-      "scale": 1.336
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 4188.4,
-      "yCm": 13854.0,
-      "yawRad": 0.671,
-      "scale": 1.222
-    },
-    {
-      "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": 6807.0,
-      "yCm": -11446.5,
-      "yawRad": 6.138,
-      "scale": 1.304
+      "xCm": 953.0,
+      "yCm": 212.9,
+      "yawRad": 3.195,
+      "scale": 0.934
     },
     {
       "templateId": "raylib_visual_atmosphere_bush",
-      "xCm": 8750.1,
-      "yCm": -19223.3,
-      "yawRad": 1.034,
+      "xCm": -2542.5,
+      "yCm": -16261.8,
+      "yawRad": 3.174,
+      "scale": 1.278
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -7789.8,
+      "yCm": 3809.6,
+      "yawRad": 1.534,
+      "scale": 0.907
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 352.9,
+      "yCm": -2877.8,
+      "yawRad": 2.24,
+      "scale": 0.869
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -140.6,
+      "yCm": 153.4,
+      "yawRad": 0.131,
+      "scale": 1.099
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -1056.2,
+      "yCm": 632.8,
+      "yawRad": 4.118,
+      "scale": 1.089
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 11056.1,
+      "yCm": 10439.5,
+      "yawRad": 1.995,
+      "scale": 1.004
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -536.7,
+      "yCm": -492.2,
+      "yawRad": 0.402,
+      "scale": 0.983
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -4253.2,
+      "yCm": -177.3,
+      "yawRad": 3.569,
+      "scale": 1.076
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -180.7,
+      "yCm": -2359.4,
+      "yawRad": 4.463,
+      "scale": 1.009
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 362.8,
+      "yCm": 535.7,
+      "yawRad": 5.786,
+      "scale": 1.021
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 9111.7,
+      "yCm": -17300.4,
+      "yawRad": 3.451,
+      "scale": 0.91
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -2541.7,
+      "yCm": 18954.7,
+      "yawRad": 4.878,
+      "scale": 1.033
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 4659.9,
+      "yCm": 6207.4,
+      "yawRad": 5.778,
+      "scale": 1.05
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 9117.5,
+      "yCm": -13960.5,
+      "yawRad": 2.909,
+      "scale": 1.295
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -20647.4,
+      "yCm": 7965.8,
+      "yawRad": 3.565,
+      "scale": 1.167
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -2472.9,
+      "yCm": -3756.9,
+      "yawRad": 6.05,
+      "scale": 0.725
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 13878.6,
+      "yCm": 12715.1,
+      "yawRad": 5.48,
+      "scale": 1.184
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 16973.2,
+      "yCm": -4492.4,
+      "yawRad": 2.715,
+      "scale": 0.871
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 15803.8,
+      "yCm": 11010.7,
+      "yawRad": 3.924,
+      "scale": 1.119
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -17119.4,
+      "yCm": 10600.9,
+      "yawRad": 3.951,
+      "scale": 1.131
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 5997.7,
+      "yCm": 1224.2,
+      "yawRad": 2.062,
+      "scale": 0.913
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -9378.1,
+      "yCm": -15238.6,
+      "yawRad": 1.271,
+      "scale": 0.925
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 3078.0,
+      "yCm": -173.8,
+      "yawRad": 0.333,
+      "scale": 0.747
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -3115.8,
+      "yCm": 4166.9,
+      "yawRad": 0.567,
+      "scale": 0.948
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -16873.4,
+      "yCm": -8543.3,
+      "yawRad": 0.327,
+      "scale": 1.278
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 8075.0,
+      "yCm": -17715.4,
+      "yawRad": 4.87,
+      "scale": 1.146
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 7124.6,
+      "yCm": -8747.3,
+      "yawRad": 2.762,
+      "scale": 1.339
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 5363.5,
+      "yCm": -2950.2,
+      "yawRad": 3.319,
+      "scale": 1.403
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 350.5,
+      "yCm": -15185.1,
+      "yawRad": 5.433,
+      "scale": 0.872
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 7837.8,
+      "yCm": 7002.0,
+      "yawRad": 3.679,
+      "scale": 1.386
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -1392.8,
+      "yCm": 19573.4,
+      "yawRad": 0.882,
+      "scale": 0.995
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -5681.4,
+      "yCm": -13211.8,
+      "yawRad": 4.802,
+      "scale": 1.002
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 116.1,
+      "yCm": -12.9,
+      "yawRad": 1.416,
+      "scale": 0.765
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -20248.0,
+      "yCm": 1198.3,
+      "yawRad": 2.613,
+      "scale": 1.212
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 9184.3,
+      "yCm": -17560.7,
+      "yawRad": 1.428,
+      "scale": 1.251
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 2975.2,
+      "yCm": -1330.1,
+      "yawRad": 3.816,
+      "scale": 0.796
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 9330.7,
+      "yCm": -4141.9,
+      "yawRad": 1.344,
+      "scale": 0.964
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -10064.8,
+      "yCm": 9502.8,
+      "yawRad": 5.018,
+      "scale": 0.992
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -2206.5,
+      "yCm": -496.4,
+      "yawRad": 2.48,
+      "scale": 1.001
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 577.6,
+      "yCm": -227.3,
+      "yawRad": 0.555,
+      "scale": 0.723
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -14900.1,
+      "yCm": 12186.7,
+      "yawRad": 1.34,
+      "scale": 1.133
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 1785.1,
+      "yCm": 1409.1,
+      "yawRad": 4.503,
+      "scale": 0.774
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 470.6,
+      "yCm": -1767.3,
+      "yawRad": 1.516,
+      "scale": 0.823
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -1008.8,
+      "yCm": -1729.8,
+      "yawRad": 0.154,
+      "scale": 0.843
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 20171.7,
+      "yCm": -1852.2,
+      "yawRad": 3.053,
+      "scale": 0.931
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -5239.9,
+      "yCm": 10038.8,
+      "yawRad": 5.17,
+      "scale": 1.291
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 707.8,
+      "yCm": -12448.7,
+      "yawRad": 1.24,
+      "scale": 1.331
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -1760.9,
+      "yCm": -1580.2,
+      "yawRad": 3.558,
+      "scale": 0.973
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -1863.9,
+      "yCm": -2979.4,
+      "yawRad": 2.774,
+      "scale": 0.963
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 559.7,
+      "yCm": -474.2,
+      "yawRad": 5.285,
+      "scale": 0.902
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 530.1,
+      "yCm": -167.5,
+      "yawRad": 3.927,
+      "scale": 1.017
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 19656.5,
+      "yCm": -2237.3,
+      "yawRad": 0.542,
+      "scale": 0.905
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 343.0,
+      "yCm": -3837.2,
+      "yawRad": 2.313,
+      "scale": 0.762
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -1310.6,
+      "yCm": 7943.7,
+      "yawRad": 5.663,
+      "scale": 1.329
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -348.8,
+      "yCm": -3394.5,
+      "yawRad": 4.57,
+      "scale": 0.733
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -2865.0,
+      "yCm": 19292.6,
+      "yawRad": 0.807,
+      "scale": 1.015
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -455.6,
+      "yCm": 8522.7,
+      "yawRad": 3.408,
+      "scale": 1.181
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -350.9,
+      "yCm": 302.9,
+      "yawRad": 0.959,
+      "scale": 0.835
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -913.2,
+      "yCm": -799.9,
+      "yawRad": 3.164,
+      "scale": 0.994
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 4320.2,
+      "yCm": 8021.3,
+      "yawRad": 2.105,
+      "scale": 1.178
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -11357.8,
+      "yCm": 18807.3,
+      "yawRad": 4.942,
+      "scale": 1.167
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 878.9,
+      "yCm": 769.2,
+      "yawRad": 5.922,
+      "scale": 1.064
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -8108.0,
+      "yCm": 12028.2,
+      "yawRad": 3.745,
+      "scale": 1.301
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -3314.6,
+      "yCm": -3327.7,
+      "yawRad": 0.57,
+      "scale": 0.806
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -3075.3,
+      "yCm": -494.6,
+      "yawRad": 4.897,
+      "scale": 0.911
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -4034.3,
+      "yCm": 19653.2,
+      "yawRad": 2.163,
+      "scale": 1.104
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -183.5,
+      "yCm": -6348.6,
+      "yawRad": 5.303,
+      "scale": 1.264
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -1422.4,
+      "yCm": 4217.6,
+      "yawRad": 0.25,
+      "scale": 1.014
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -152.5,
+      "yCm": -584.7,
+      "yawRad": 3.624,
+      "scale": 0.951
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -17357.2,
+      "yCm": -5820.2,
+      "yawRad": 3.015,
+      "scale": 1.094
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 9428.9,
+      "yCm": 7368.3,
+      "yawRad": 5.72,
+      "scale": 1.04
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 269.7,
+      "yCm": 60.0,
+      "yawRad": 0.586,
+      "scale": 1.073
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 11902.5,
+      "yCm": 12665.1,
+      "yawRad": 2.966,
+      "scale": 1.275
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -14744.7,
+      "yCm": -16934.9,
+      "yawRad": 0.292,
+      "scale": 1.115
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 486.7,
+      "yCm": -1202.6,
+      "yawRad": 3.798,
+      "scale": 0.833
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -13608.1,
+      "yCm": -20131.0,
+      "yawRad": 0.371,
+      "scale": 0.882
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -499.7,
+      "yCm": -10607.4,
+      "yawRad": 1.11,
+      "scale": 1.154
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -7484.6,
+      "yCm": -964.6,
+      "yawRad": 1.366,
+      "scale": 1.357
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 11255.8,
+      "yCm": 10482.3,
+      "yawRad": 5.402,
+      "scale": 1.181
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -5280.3,
+      "yCm": 4230.6,
+      "yawRad": 5.87,
+      "scale": 1.141
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -4707.0,
+      "yCm": 1847.5,
+      "yawRad": 0.733,
+      "scale": 0.741
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -976.4,
+      "yCm": -1213.2,
+      "yawRad": 2.616,
+      "scale": 0.907
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -8066.9,
+      "yCm": 15671.7,
+      "yawRad": 2.535,
+      "scale": 0.941
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 2175.5,
+      "yCm": 3640.4,
+      "yawRad": 6.048,
+      "scale": 1.225
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -5557.7,
+      "yCm": 379.3,
+      "yawRad": 3.114,
+      "scale": 1.001
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 827.6,
+      "yCm": -993.9,
+      "yawRad": 2.063,
+      "scale": 0.763
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -15519.6,
+      "yCm": -2015.0,
+      "yawRad": 3.174,
+      "scale": 1.295
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -2222.6,
+      "yCm": -5296.9,
+      "yawRad": 6.011,
+      "scale": 1.436
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -1508.1,
+      "yCm": -1487.6,
+      "yawRad": 2.283,
+      "scale": 0.905
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -99.7,
+      "yCm": 1799.6,
+      "yawRad": 1.765,
+      "scale": 1.017
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 4221.2,
+      "yCm": 1083.9,
+      "yawRad": 2.783,
+      "scale": 0.959
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -3944.9,
+      "yCm": 14041.5,
+      "yawRad": 3.634,
+      "scale": 1.094
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -881.3,
+      "yCm": -165.9,
+      "yawRad": 5.756,
+      "scale": 0.87
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 2673.5,
+      "yCm": -2645.2,
+      "yawRad": 6.055,
+      "scale": 0.931
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 15586.0,
+      "yCm": -8692.8,
+      "yawRad": 0.144,
+      "scale": 0.865
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 1688.6,
+      "yCm": -870.3,
+      "yawRad": 0.074,
+      "scale": 1.037
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 5632.8,
+      "yCm": -192.0,
+      "yawRad": 1.731,
+      "scale": 0.935
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 17238.8,
+      "yCm": -11875.9,
+      "yawRad": 1.68,
+      "scale": 0.946
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 10067.4,
+      "yCm": -18246.9,
+      "yawRad": 3.796,
+      "scale": 1.196
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -1970.8,
+      "yCm": -6175.3,
+      "yawRad": 1.636,
+      "scale": 1.317
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 8496.6,
+      "yCm": 2509.3,
+      "yawRad": 4.171,
+      "scale": 1.078
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 192.4,
+      "yCm": 137.1,
+      "yawRad": 1.423,
+      "scale": 0.952
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 327.9,
+      "yCm": -286.6,
+      "yawRad": 1.456,
+      "scale": 0.797
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -3464.9,
+      "yCm": -3117.4,
+      "yawRad": 0.106,
+      "scale": 1.323
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -1542.3,
+      "yCm": 1801.0,
+      "yawRad": 5.895,
+      "scale": 0.784
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 36.6,
+      "yCm": 919.4,
+      "yawRad": 1.219,
+      "scale": 0.957
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 13475.1,
+      "yCm": -3136.9,
+      "yawRad": 4.106,
+      "scale": 0.971
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -18243.6,
+      "yCm": 3760.9,
+      "yawRad": 4.95,
+      "scale": 1.215
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 384.7,
+      "yCm": -4500.0,
+      "yawRad": 2.424,
+      "scale": 0.902
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 1387.8,
+      "yCm": 6111.6,
+      "yawRad": 6.159,
+      "scale": 0.994
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 3220.9,
+      "yCm": -640.1,
+      "yawRad": 1.757,
+      "scale": 1.007
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 1298.9,
+      "yCm": 3063.0,
+      "yawRad": 1.758,
+      "scale": 0.932
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -756.0,
+      "yCm": 1763.5,
+      "yawRad": 2.119,
+      "scale": 0.792
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -1048.6,
+      "yCm": -4024.3,
+      "yawRad": 2.336,
+      "scale": 0.733
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 628.9,
+      "yCm": -1132.5,
+      "yawRad": 4.682,
+      "scale": 0.999
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 1302.3,
+      "yCm": -2912.0,
+      "yawRad": 3.391,
+      "scale": 0.967
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -4935.2,
+      "yCm": 10113.6,
+      "yawRad": 0.044,
+      "scale": 1.234
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -2128.5,
+      "yCm": -2027.8,
+      "yawRad": 1.916,
+      "scale": 0.891
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -13601.1,
+      "yCm": 711.8,
+      "yawRad": 4.563,
+      "scale": 1.297
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -7736.9,
+      "yCm": 1471.6,
+      "yawRad": 4.64,
+      "scale": 1.118
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 1390.1,
+      "yCm": -3062.2,
+      "yawRad": 3.867,
+      "scale": 0.948
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 16757.3,
+      "yCm": -13207.7,
+      "yawRad": 0.57,
+      "scale": 1.077
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -1684.9,
+      "yCm": -11978.8,
+      "yawRad": 4.37,
+      "scale": 1.251
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -10573.4,
+      "yCm": 15605.5,
+      "yawRad": 5.588,
+      "scale": 0.994
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 16756.8,
+      "yCm": -2916.0,
+      "yawRad": 5.818,
+      "scale": 0.89
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 15906.7,
+      "yCm": -3730.9,
+      "yawRad": 1.206,
+      "scale": 1.167
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -12087.1,
+      "yCm": -12464.8,
+      "yawRad": 1.343,
+      "scale": 0.973
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -22243.6,
+      "yCm": 6233.3,
+      "yawRad": 5.76,
+      "scale": 1.155
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -423.2,
+      "yCm": -107.0,
+      "yawRad": 1.81,
+      "scale": 0.967
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -2005.0,
+      "yCm": -5327.5,
+      "yawRad": 1.905,
+      "scale": 1.305
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 14087.4,
+      "yCm": -4761.5,
+      "yawRad": 3.106,
+      "scale": 0.852
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -275.8,
+      "yCm": -1422.5,
+      "yawRad": 3.378,
+      "scale": 0.737
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 1950.7,
+      "yCm": -1332.1,
+      "yawRad": 3.63,
+      "scale": 1.099
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 7795.7,
+      "yCm": -790.2,
+      "yawRad": 3.199,
+      "scale": 1.043
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -2274.7,
+      "yCm": -1227.8,
+      "yawRad": 3.138,
+      "scale": 0.877
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -2008.3,
+      "yCm": 2858.9,
+      "yawRad": 2.164,
+      "scale": 0.801
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 7500.3,
+      "yCm": -10942.5,
+      "yawRad": 2.112,
+      "scale": 1.276
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -7036.6,
+      "yCm": -8029.6,
+      "yawRad": 6.174,
+      "scale": 1.278
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -3582.2,
+      "yCm": -2580.6,
+      "yawRad": 2.772,
+      "scale": 0.824
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -16907.5,
+      "yCm": 6320.0,
+      "yawRad": 0.681,
+      "scale": 1.425
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -10186.0,
+      "yCm": 1622.8,
+      "yawRad": 2.686,
+      "scale": 1.061
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -3942.3,
+      "yCm": -13194.8,
+      "yawRad": 5.171,
+      "scale": 1.084
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -3960.5,
+      "yCm": 8033.0,
+      "yawRad": 1.638,
+      "scale": 1.181
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 11766.7,
+      "yCm": 9517.7,
+      "yawRad": 5.262,
+      "scale": 1.327
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -131.9,
+      "yCm": 3015.3,
+      "yawRad": 3.831,
+      "scale": 1.019
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -9137.8,
+      "yCm": -10934.8,
+      "yawRad": 5.766,
+      "scale": 1.105
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -4706.7,
+      "yCm": 1601.1,
+      "yawRad": 3.052,
+      "scale": 1.002
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 5758.3,
+      "yCm": 5002.1,
+      "yawRad": 0.712,
+      "scale": 0.976
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -2446.5,
+      "yCm": -3360.3,
+      "yawRad": 6.176,
+      "scale": 0.769
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 5115.0,
+      "yCm": -2083.9,
+      "yawRad": 3.997,
+      "scale": 1.003
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -13709.7,
+      "yCm": 13946.3,
+      "yawRad": 2.986,
+      "scale": 1.119
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 480.0,
+      "yCm": -307.6,
+      "yawRad": 1.579,
+      "scale": 0.863
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 18619.8,
+      "yCm": 7792.1,
+      "yawRad": 4.634,
+      "scale": 1.185
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -325.9,
+      "yCm": -16179.1,
+      "yawRad": 2.709,
+      "scale": 0.957
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -5407.7,
+      "yCm": -13900.8,
+      "yawRad": 1.155,
+      "scale": 1.059
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 2561.9,
+      "yCm": -15702.7,
+      "yawRad": 0.314,
+      "scale": 1.205
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 6253.0,
+      "yCm": 5634.5,
+      "yawRad": 4.462,
+      "scale": 1.033
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -6767.9,
+      "yCm": 9484.7,
+      "yawRad": 4.436,
+      "scale": 0.932
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 22786.0,
+      "yCm": 7295.3,
+      "yawRad": 1.521,
+      "scale": 0.855
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 12031.9,
+      "yCm": -7470.9,
+      "yawRad": 5.582,
+      "scale": 1.162
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 1850.7,
+      "yCm": -5068.0,
+      "yawRad": 2.183,
+      "scale": 0.799
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -8240.5,
+      "yCm": 4462.8,
+      "yawRad": 2.428,
+      "scale": 1.0
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 12549.7,
+      "yCm": 11566.4,
+      "yawRad": 2.993,
+      "scale": 1.09
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -3614.9,
+      "yCm": 17472.7,
+      "yawRad": 5.225,
+      "scale": 0.944
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 1515.3,
+      "yCm": -1479.0,
+      "yawRad": 6.049,
+      "scale": 0.84
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -12490.0,
+      "yCm": 10489.4,
+      "yawRad": 4.651,
+      "scale": 1.029
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 16156.0,
+      "yCm": -909.0,
+      "yawRad": 3.766,
+      "scale": 1.435
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 44.4,
+      "yCm": 6404.5,
+      "yawRad": 5.11,
+      "scale": 1.133
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 6996.5,
+      "yCm": -1824.0,
+      "yawRad": 5.101,
+      "scale": 1.26
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -7185.8,
+      "yCm": 6098.0,
+      "yawRad": 0.646,
+      "scale": 0.935
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 3056.9,
+      "yCm": 5549.0,
+      "yawRad": 3.34,
+      "scale": 0.968
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 2439.4,
+      "yCm": -8339.2,
+      "yawRad": 4.836,
+      "scale": 1.227
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 15905.7,
+      "yCm": -6357.9,
+      "yawRad": 2.28,
+      "scale": 1.08
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 125.7,
+      "yCm": -153.9,
+      "yawRad": 3.34,
+      "scale": 0.733
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 2035.7,
+      "yCm": -5061.0,
+      "yawRad": 4.403,
+      "scale": 0.754
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -16750.6,
+      "yCm": -1062.2,
+      "yawRad": 3.267,
+      "scale": 1.165
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -491.4,
+      "yCm": 198.3,
+      "yawRad": 6.149,
+      "scale": 0.752
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -16812.2,
+      "yCm": -5172.3,
+      "yawRad": 2.0,
+      "scale": 1.281
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 8778.7,
+      "yCm": -2643.5,
+      "yawRad": 1.622,
+      "scale": 1.306
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 4073.0,
+      "yCm": -6260.9,
+      "yawRad": 4.694,
+      "scale": 0.949
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 10225.6,
+      "yCm": 12592.4,
+      "yawRad": 3.052,
+      "scale": 0.903
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 7086.7,
+      "yCm": -3317.0,
+      "yawRad": 5.873,
+      "scale": 1.376
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 1097.5,
+      "yCm": 3768.8,
+      "yawRad": 2.068,
+      "scale": 1.094
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -9042.8,
+      "yCm": 19594.9,
+      "yawRad": 5.313,
+      "scale": 1.219
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -6349.7,
+      "yCm": 2565.0,
+      "yawRad": 3.897,
+      "scale": 1.071
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 496.3,
+      "yCm": -4519.0,
+      "yawRad": 5.274,
+      "scale": 0.83
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 6376.2,
+      "yCm": 1890.1,
+      "yawRad": 3.656,
+      "scale": 1.076
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 4562.0,
+      "yCm": -12947.3,
+      "yawRad": 0.559,
+      "scale": 1.401
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 1028.1,
+      "yCm": -353.1,
+      "yawRad": 2.18,
+      "scale": 0.949
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 496.4,
+      "yCm": -1452.1,
+      "yawRad": 3.206,
+      "scale": 0.782
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -24382.2,
+      "yCm": 7477.2,
+      "yawRad": 0.359,
+      "scale": 0.898
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -10089.8,
+      "yCm": -2555.2,
+      "yawRad": 5.415,
+      "scale": 1.37
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -66.0,
+      "yCm": -1940.7,
+      "yawRad": 3.538,
+      "scale": 0.897
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 8265.2,
+      "yCm": -10777.9,
+      "yawRad": 2.477,
+      "scale": 1.314
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -2484.7,
+      "yCm": 6010.5,
+      "yawRad": 2.349,
+      "scale": 1.288
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -1081.2,
+      "yCm": -2686.8,
+      "yawRad": 3.457,
+      "scale": 0.76
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -5518.4,
+      "yCm": 17065.7,
+      "yawRad": 2.628,
+      "scale": 1.242
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -5366.3,
+      "yCm": 10152.6,
+      "yawRad": 5.5,
+      "scale": 0.97
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -4562.1,
+      "yCm": -16283.3,
+      "yawRad": 4.21,
+      "scale": 1.083
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 130.9,
+      "yCm": 1854.1,
+      "yawRad": 2.766,
+      "scale": 0.706
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 16828.4,
+      "yCm": -8837.6,
+      "yawRad": 5.341,
+      "scale": 1.093
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -16538.4,
+      "yCm": 624.5,
+      "yawRad": 1.178,
+      "scale": 1.122
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 2981.2,
+      "yCm": 13431.2,
+      "yawRad": 3.029,
+      "scale": 0.91
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -285.9,
+      "yCm": -392.5,
+      "yawRad": 0.291,
+      "scale": 0.933
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -12928.8,
+      "yCm": 16163.5,
+      "yawRad": 2.957,
+      "scale": 0.995
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 12835.2,
+      "yCm": -14703.3,
+      "yawRad": 0.836,
+      "scale": 1.232
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 12571.2,
+      "yCm": -9731.9,
+      "yawRad": 0.314,
+      "scale": 1.203
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 430.0,
+      "yCm": 4214.8,
+      "yawRad": 2.153,
+      "scale": 1.079
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 639.0,
+      "yCm": -4638.5,
+      "yawRad": 2.529,
+      "scale": 0.849
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -5177.0,
+      "yCm": 7902.7,
+      "yawRad": 3.994,
+      "scale": 1.244
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -1360.4,
+      "yCm": 9530.1,
+      "yawRad": 0.02,
+      "scale": 1.208
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -8156.0,
+      "yCm": 7819.8,
+      "yawRad": 2.98,
+      "scale": 1.334
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -542.3,
+      "yCm": -469.2,
+      "yawRad": 1.735,
+      "scale": 0.909
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -3276.4,
+      "yCm": 2956.1,
+      "yawRad": 1.504,
+      "scale": 0.95
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -16303.0,
+      "yCm": 5677.3,
+      "yawRad": 0.518,
+      "scale": 1.168
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -1.7,
+      "yCm": -371.8,
+      "yawRad": 1.188,
+      "scale": 0.713
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 3032.8,
+      "yCm": 1489.3,
+      "yawRad": 1.088,
+      "scale": 1.157
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -4473.7,
+      "yCm": -486.6,
+      "yawRad": 3.054,
+      "scale": 0.851
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 15355.1,
+      "yCm": 11500.9,
+      "yawRad": 0.357,
+      "scale": 0.977
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -22836.7,
+      "yCm": 5324.1,
+      "yawRad": 1.847,
+      "scale": 0.998
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 7912.7,
+      "yCm": 11233.1,
+      "yawRad": 5.289,
+      "scale": 1.224
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 17709.1,
+      "yCm": 12006.8,
+      "yawRad": 4.699,
+      "scale": 1.159
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 16509.0,
+      "yCm": -511.7,
+      "yawRad": 0.868,
+      "scale": 1.195
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 16929.1,
+      "yCm": 10397.9,
+      "yawRad": 2.688,
+      "scale": 1.0
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -874.7,
+      "yCm": -663.3,
+      "yawRad": 4.662,
+      "scale": 1.084
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -4486.4,
+      "yCm": -13202.3,
+      "yawRad": 1.741,
+      "scale": 1.001
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -19940.6,
+      "yCm": 4023.5,
+      "yawRad": 2.623,
+      "scale": 1.131
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 866.1,
+      "yCm": -2524.7,
+      "yawRad": 0.389,
+      "scale": 0.95
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -1807.8,
+      "yCm": -1635.6,
+      "yawRad": 2.904,
+      "scale": 0.965
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 14944.1,
+      "yCm": -9422.1,
+      "yawRad": 4.718,
+      "scale": 1.131
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 613.6,
+      "yCm": 4789.9,
+      "yawRad": 1.551,
+      "scale": 0.824
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -129.1,
+      "yCm": -17606.5,
+      "yawRad": 3.833,
+      "scale": 1.292
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -2513.7,
+      "yCm": 18880.5,
+      "yawRad": 2.399,
+      "scale": 1.202
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -11756.3,
+      "yCm": -3553.8,
+      "yawRad": 4.2,
+      "scale": 0.908
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -597.5,
+      "yCm": -16993.1,
+      "yawRad": 3.643,
+      "scale": 1.244
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -8372.4,
+      "yCm": -20872.9,
+      "yawRad": 4.446,
+      "scale": 1.25
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -17214.5,
+      "yCm": -9912.0,
+      "yawRad": 4.669,
+      "scale": 1.184
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -379.9,
+      "yCm": -2020.3,
+      "yawRad": 5.279,
+      "scale": 1.089
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -10492.3,
+      "yCm": -1706.4,
+      "yawRad": 3.134,
+      "scale": 1.066
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 24679.3,
+      "yCm": 3232.8,
+      "yawRad": 3.782,
+      "scale": 0.996
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 4040.6,
+      "yCm": -4714.8,
+      "yawRad": 5.456,
+      "scale": 0.932
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -5297.2,
+      "yCm": -14396.5,
+      "yawRad": 4.476,
+      "scale": 1.312
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -4206.8,
+      "yCm": 4828.2,
+      "yawRad": 4.216,
+      "scale": 0.954
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 17099.0,
+      "yCm": -10104.2,
+      "yawRad": 3.562,
+      "scale": 1.132
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 4519.3,
+      "yCm": -600.0,
+      "yawRad": 0.356,
+      "scale": 0.988
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 3168.9,
+      "yCm": 4449.8,
+      "yawRad": 1.155,
+      "scale": 1.314
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 5507.7,
+      "yCm": -15275.2,
+      "yawRad": 4.668,
+      "scale": 1.346
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 15449.6,
+      "yCm": 14724.2,
+      "yawRad": 2.501,
+      "scale": 0.884
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 16764.9,
+      "yCm": 4598.0,
+      "yawRad": 4.219,
+      "scale": 1.236
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 188.4,
+      "yCm": 1999.9,
+      "yawRad": 1.643,
+      "scale": 1.079
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 875.9,
+      "yCm": -66.9,
+      "yawRad": 0.188,
+      "scale": 0.709
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 2213.0,
+      "yCm": 2610.3,
+      "yawRad": 0.714,
+      "scale": 0.755
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 13483.1,
+      "yCm": -11422.2,
+      "yawRad": 1.908,
+      "scale": 1.187
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 15965.2,
+      "yCm": 12293.9,
+      "yawRad": 2.027,
+      "scale": 1.173
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -13753.0,
+      "yCm": 13719.0,
+      "yawRad": 3.204,
+      "scale": 1.135
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -708.1,
+      "yCm": -2059.5,
+      "yawRad": 3.651,
+      "scale": 0.759
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 1828.3,
+      "yCm": 4417.1,
+      "yawRad": 1.684,
+      "scale": 1.045
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -19240.6,
+      "yCm": 7212.9,
+      "yawRad": 1.497,
+      "scale": 0.985
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 1221.7,
+      "yCm": -14057.1,
+      "yawRad": 0.17,
+      "scale": 1.367
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -372.5,
+      "yCm": 79.6,
+      "yawRad": 5.722,
+      "scale": 0.925
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 2534.5,
+      "yCm": 494.4,
+      "yawRad": 3.844,
+      "scale": 1.02
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -23157.2,
+      "yCm": 7406.7,
+      "yawRad": 3.927,
+      "scale": 1.014
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -10148.7,
+      "yCm": -19203.8,
+      "yawRad": 6.275,
+      "scale": 0.88
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -354.5,
+      "yCm": 145.8,
+      "yawRad": 3.039,
+      "scale": 0.797
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -9204.4,
+      "yCm": -14459.2,
+      "yawRad": 4.554,
+      "scale": 1.285
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 10188.4,
+      "yCm": -15114.2,
+      "yawRad": 5.355,
+      "scale": 1.18
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 6925.1,
+      "yCm": 4352.9,
+      "yawRad": 5.308,
+      "scale": 0.942
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 14655.7,
+      "yCm": 9247.2,
+      "yawRad": 0.337,
+      "scale": 0.854
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -2077.0,
+      "yCm": 51.0,
+      "yawRad": 5.153,
+      "scale": 0.913
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -13558.4,
+      "yCm": -7160.7,
+      "yawRad": 3.827,
+      "scale": 0.955
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -3050.6,
+      "yCm": -273.8,
+      "yawRad": 2.163,
+      "scale": 0.798
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -2198.0,
+      "yCm": -584.7,
+      "yawRad": 4.391,
+      "scale": 1.018
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -17478.8,
+      "yCm": 764.8,
+      "yawRad": 2.966,
+      "scale": 1.19
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 24675.2,
+      "yCm": 1960.3,
+      "yawRad": 5.971,
+      "scale": 0.956
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -599.5,
+      "yCm": 156.0,
+      "yawRad": 2.539,
+      "scale": 0.817
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 5525.0,
+      "yCm": -3422.8,
+      "yawRad": 5.133,
+      "scale": 1.333
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -249.8,
+      "yCm": -297.6,
+      "yawRad": 2.735,
+      "scale": 0.916
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 10383.7,
+      "yCm": -8180.8,
+      "yawRad": 5.891,
+      "scale": 1.157
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -5440.1,
+      "yCm": -5454.6,
+      "yawRad": 3.515,
+      "scale": 1.026
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 1007.5,
+      "yCm": -5153.8,
+      "yawRad": 3.228,
+      "scale": 0.904
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -18171.7,
+      "yCm": 4500.1,
+      "yawRad": 0.214,
+      "scale": 1.226
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 2294.4,
+      "yCm": 10.6,
+      "yawRad": 4.066,
+      "scale": 0.824
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 22144.5,
+      "yCm": 5620.2,
+      "yawRad": 3.731,
+      "scale": 0.976
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 24501.5,
+      "yCm": 3357.0,
+      "yawRad": 0.651,
+      "scale": 0.951
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -9488.3,
+      "yCm": -17013.9,
+      "yawRad": 0.327,
+      "scale": 1.124
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 13850.2,
+      "yCm": 14113.3,
+      "yawRad": 3.154,
+      "scale": 1.204
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -11882.2,
+      "yCm": 11368.3,
+      "yawRad": 3.854,
+      "scale": 0.99
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 420.7,
+      "yCm": -1651.1,
+      "yawRad": 5.529,
+      "scale": 0.863
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -87.7,
+      "yCm": 1683.5,
+      "yawRad": 1.318,
+      "scale": 0.896
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 3717.9,
+      "yCm": 1333.5,
+      "yawRad": 4.524,
+      "scale": 0.84
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 8832.6,
+      "yCm": 6332.9,
+      "yawRad": 6.217,
+      "scale": 1.327
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 172.0,
+      "yCm": 606.9,
+      "yawRad": 1.024,
+      "scale": 0.914
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -3094.8,
+      "yCm": -3836.5,
+      "yawRad": 2.078,
+      "scale": 0.981
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -2987.1,
+      "yCm": 4997.2,
+      "yawRad": 2.524,
+      "scale": 0.953
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 478.6,
+      "yCm": 745.6,
+      "yawRad": 1.717,
+      "scale": 0.822
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 1726.7,
+      "yCm": -2086.1,
+      "yawRad": 4.654,
+      "scale": 0.816
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 15057.1,
+      "yCm": 5879.3,
+      "yawRad": 4.557,
+      "scale": 1.098
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -248.0,
+      "yCm": -3284.1,
+      "yawRad": 0.856,
+      "scale": 0.739
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 1591.2,
+      "yCm": 1815.0,
+      "yawRad": 1.786,
+      "scale": 1.096
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -4377.8,
+      "yCm": -13436.6,
+      "yawRad": 3.79,
+      "scale": 1.094
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -1769.1,
+      "yCm": 2384.0,
+      "yawRad": 0.522,
+      "scale": 0.707
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 1819.3,
+      "yCm": -1341.4,
+      "yawRad": 0.459,
+      "scale": 0.706
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 18491.8,
+      "yCm": 5333.2,
+      "yawRad": 4.606,
+      "scale": 1.187
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -131.6,
+      "yCm": 359.9,
+      "yawRad": 4.139,
+      "scale": 0.953
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -6234.2,
+      "yCm": -14709.5,
+      "yawRad": 1.454,
+      "scale": 1.447
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -13813.6,
+      "yCm": -19859.7,
+      "yawRad": 2.36,
+      "scale": 0.924
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 11475.1,
+      "yCm": -2134.6,
+      "yawRad": 5.627,
+      "scale": 1.089
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 941.1,
+      "yCm": 15707.2,
+      "yawRad": 5.207,
+      "scale": 1.357
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -1700.6,
+      "yCm": 930.6,
+      "yawRad": 3.338,
+      "scale": 0.888
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -234.0,
+      "yCm": 2560.0,
+      "yawRad": 6.115,
+      "scale": 0.957
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 15865.6,
+      "yCm": 10134.9,
+      "yawRad": 1.611,
+      "scale": 1.153
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 17316.6,
+      "yCm": -13242.5,
+      "yawRad": 3.507,
+      "scale": 1.237
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -9739.0,
+      "yCm": 6508.9,
+      "yawRad": 0.049,
+      "scale": 1.038
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 1235.9,
+      "yCm": 856.3,
+      "yawRad": 3.888,
+      "scale": 0.941
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -5100.3,
+      "yCm": 910.1,
+      "yawRad": 5.918,
+      "scale": 0.752
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -13387.4,
+      "yCm": -8880.2,
+      "yawRad": 2.205,
+      "scale": 0.948
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 16970.8,
+      "yCm": -2418.5,
+      "yawRad": 5.62,
+      "scale": 0.871
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 8207.3,
+      "yCm": -17623.3,
+      "yawRad": 3.811,
+      "scale": 0.889
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 12162.0,
+      "yCm": -8759.1,
+      "yawRad": 3.11,
+      "scale": 1.033
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -4837.9,
+      "yCm": 11635.5,
+      "yawRad": 3.164,
+      "scale": 1.073
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -5524.3,
+      "yCm": 19069.1,
+      "yawRad": 4.351,
+      "scale": 1.056
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -17743.7,
+      "yCm": 965.1,
+      "yawRad": 0.287,
+      "scale": 1.04
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 9115.6,
+      "yCm": -4075.2,
+      "yawRad": 5.241,
+      "scale": 0.928
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 16832.7,
+      "yCm": 3126.0,
+      "yawRad": 1.889,
+      "scale": 1.275
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -937.9,
+      "yCm": 15274.2,
+      "yawRad": 3.574,
+      "scale": 1.285
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 1724.9,
+      "yCm": 3258.8,
+      "yawRad": 3.2,
+      "scale": 0.797
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -16786.8,
+      "yCm": 9213.3,
+      "yawRad": 0.16,
+      "scale": 1.013
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 4081.2,
+      "yCm": 9921.2,
+      "yawRad": 0.028,
+      "scale": 1.087
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -6225.4,
+      "yCm": -17129.4,
+      "yawRad": 1.233,
+      "scale": 1.3
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 1416.0,
+      "yCm": 185.5,
+      "yawRad": 0.687,
+      "scale": 0.967
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 4277.2,
+      "yCm": -8034.5,
+      "yawRad": 0.686,
+      "scale": 1.377
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -317.4,
+      "yCm": -1282.4,
+      "yawRad": 3.662,
+      "scale": 1.019
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -8220.8,
+      "yCm": -19565.3,
+      "yawRad": 2.963,
+      "scale": 1.207
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 9298.6,
+      "yCm": 1722.1,
+      "yawRad": 1.028,
+      "scale": 1.152
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -2329.7,
+      "yCm": 4156.1,
+      "yawRad": 0.36,
+      "scale": 1.044
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -5788.2,
+      "yCm": -20310.9,
+      "yawRad": 5.323,
+      "scale": 1.051
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -7954.8,
+      "yCm": -8776.3,
+      "yawRad": 0.015,
+      "scale": 1.065
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 259.7,
+      "yCm": -533.6,
+      "yawRad": 3.704,
+      "scale": 0.947
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 2518.1,
+      "yCm": -5950.9,
+      "yawRad": 4.893,
+      "scale": 1.225
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 2617.4,
+      "yCm": -17293.9,
+      "yawRad": 1.528,
+      "scale": 1.148
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 10593.4,
+      "yCm": -2988.6,
+      "yawRad": 2.3,
+      "scale": 0.921
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -3181.4,
+      "yCm": 10523.4,
+      "yawRad": 3.66,
+      "scale": 1.171
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 1023.6,
+      "yCm": -363.2,
+      "yawRad": 4.512,
+      "scale": 0.871
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -2142.7,
+      "yCm": 286.8,
+      "yawRad": 0.52,
+      "scale": 0.896
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -5194.7,
+      "yCm": 3725.3,
+      "yawRad": 5.208,
+      "scale": 1.057
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -607.0,
+      "yCm": -0.1,
+      "yawRad": 5.703,
+      "scale": 0.84
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 14210.1,
+      "yCm": -4823.5,
+      "yawRad": 3.602,
+      "scale": 1.052
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 371.2,
+      "yCm": -462.1,
+      "yawRad": 0.76,
+      "scale": 0.954
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -87.4,
+      "yCm": 2494.9,
+      "yawRad": 5.43,
+      "scale": 0.719
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 751.2,
+      "yCm": -1887.2,
+      "yawRad": 1.539,
+      "scale": 0.854
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 80.3,
+      "yCm": -344.5,
+      "yawRad": 6.116,
+      "scale": 1.014
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -761.0,
+      "yCm": -1249.0,
+      "yawRad": 5.677,
+      "scale": 1.014
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 21484.6,
+      "yCm": 2005.9,
+      "yawRad": 2.761,
+      "scale": 1.061
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -4609.7,
+      "yCm": -19470.7,
+      "yawRad": 2.152,
+      "scale": 1.203
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 18049.3,
+      "yCm": 2399.8,
+      "yawRad": 0.926,
+      "scale": 1.369
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 2490.0,
+      "yCm": 6641.0,
+      "yawRad": 0.113,
+      "scale": 1.181
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -12994.0,
+      "yCm": 13497.8,
+      "yawRad": 4.723,
+      "scale": 1.119
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -5370.5,
+      "yCm": 469.6,
+      "yawRad": 0.147,
+      "scale": 1.385
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 10664.0,
+      "yCm": 10837.3,
+      "yawRad": 0.705,
+      "scale": 1.101
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -3644.7,
+      "yCm": -838.8,
+      "yawRad": 4.306,
+      "scale": 1.082
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 9236.7,
+      "yCm": -9454.8,
+      "yawRad": 0.254,
+      "scale": 1.062
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 2244.9,
+      "yCm": 5618.7,
+      "yawRad": 1.216,
+      "scale": 1.102
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -2516.9,
+      "yCm": -306.4,
+      "yawRad": 4.66,
+      "scale": 0.87
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -994.0,
+      "yCm": 14493.7,
+      "yawRad": 2.985,
+      "scale": 1.293
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 14614.8,
+      "yCm": 9762.7,
+      "yawRad": 4.988,
+      "scale": 1.265
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -11113.0,
+      "yCm": -4167.4,
+      "yawRad": 3.993,
+      "scale": 1.021
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 1660.5,
+      "yCm": 5700.1,
+      "yawRad": 3.839,
+      "scale": 1.287
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -7559.5,
+      "yCm": -14773.3,
+      "yawRad": 2.551,
+      "scale": 0.975
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 2827.9,
+      "yCm": -4112.1,
+      "yawRad": 3.52,
+      "scale": 1.079
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -7237.9,
+      "yCm": -2878.0,
+      "yawRad": 3.806,
+      "scale": 1.084
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -354.0,
+      "yCm": -213.7,
+      "yawRad": 4.326,
+      "scale": 0.903
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -546.7,
+      "yCm": 20238.7,
+      "yawRad": 0.523,
+      "scale": 1.036
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 1985.6,
+      "yCm": 4483.4,
+      "yawRad": 5.028,
+      "scale": 1.405
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -587.1,
+      "yCm": 489.6,
+      "yawRad": 0.797,
+      "scale": 1.093
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -17827.5,
+      "yCm": 10286.5,
+      "yawRad": 2.243,
+      "scale": 0.933
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 15636.2,
+      "yCm": -3160.9,
+      "yawRad": 3.514,
+      "scale": 1.054
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 7468.9,
+      "yCm": -4817.1,
+      "yawRad": 3.087,
+      "scale": 1.193
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -7335.8,
+      "yCm": 13551.7,
+      "yawRad": 3.965,
+      "scale": 1.082
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 11112.1,
+      "yCm": -941.6,
+      "yawRad": 4.715,
+      "scale": 1.205
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 6298.4,
+      "yCm": 8142.9,
+      "yawRad": 0.634,
+      "scale": 1.229
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -4333.9,
+      "yCm": -6484.2,
+      "yawRad": 3.452,
+      "scale": 1.346
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -14550.6,
+      "yCm": 8603.3,
+      "yawRad": 0.158,
+      "scale": 1.291
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -2404.8,
+      "yCm": -1135.4,
+      "yawRad": 2.348,
+      "scale": 0.913
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 14922.0,
+      "yCm": -3517.8,
+      "yawRad": 2.848,
+      "scale": 1.21
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 7369.1,
+      "yCm": -1234.8,
+      "yawRad": 3.683,
+      "scale": 1.438
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -7234.3,
+      "yCm": -3424.2,
+      "yawRad": 0.351,
+      "scale": 1.418
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -4635.8,
+      "yCm": 15568.3,
+      "yawRad": 0.29,
+      "scale": 1.248
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 4489.4,
+      "yCm": -7859.9,
+      "yawRad": 4.368,
+      "scale": 1.068
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -1438.8,
+      "yCm": 5501.7,
+      "yawRad": 1.364,
+      "scale": 0.89
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -10890.1,
+      "yCm": 10866.0,
+      "yawRad": 4.146,
+      "scale": 1.147
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 2743.6,
+      "yCm": -6831.9,
+      "yawRad": 2.895,
+      "scale": 1.009
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -6303.5,
+      "yCm": 19775.5,
+      "yawRad": 0.871,
+      "scale": 1.002
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -1161.6,
+      "yCm": -3996.0,
+      "yawRad": 4.575,
+      "scale": 0.961
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -6499.9,
+      "yCm": 1817.8,
+      "yawRad": 4.729,
+      "scale": 0.845
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -110.2,
+      "yCm": -3536.3,
+      "yawRad": 6.141,
+      "scale": 0.717
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 8996.8,
+      "yCm": -769.1,
+      "yawRad": 4.208,
+      "scale": 1.364
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 15027.9,
+      "yCm": -11520.2,
+      "yawRad": 6.03,
+      "scale": 1.258
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 51.3,
+      "yCm": -362.4,
+      "yawRad": 2.893,
+      "scale": 1.018
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -7176.3,
+      "yCm": 10929.4,
+      "yawRad": 5.313,
+      "scale": 1.439
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 12301.9,
+      "yCm": 3615.4,
+      "yawRad": 0.151,
+      "scale": 1.059
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 10201.1,
+      "yCm": -6475.7,
+      "yawRad": 0.789,
+      "scale": 1.411
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 902.8,
+      "yCm": 1577.4,
+      "yawRad": 0.055,
+      "scale": 0.959
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -959.3,
+      "yCm": 9583.7,
+      "yawRad": 2.89,
+      "scale": 1.243
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 7322.3,
+      "yCm": -20151.7,
+      "yawRad": 1.041,
+      "scale": 0.961
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -1669.4,
+      "yCm": -10640.1,
+      "yawRad": 5.101,
+      "scale": 1.208
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 18201.4,
+      "yCm": 7823.5,
+      "yawRad": 5.682,
+      "scale": 0.924
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 133.0,
+      "yCm": 1143.3,
+      "yawRad": 2.057,
+      "scale": 0.901
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -14128.0,
+      "yCm": -21776.6,
+      "yawRad": 3.026,
+      "scale": 1.21
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -14848.2,
+      "yCm": -19749.7,
+      "yawRad": 3.795,
+      "scale": 0.92
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -8488.1,
+      "yCm": -9017.0,
+      "yawRad": 2.918,
+      "scale": 1.45
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 5675.6,
+      "yCm": 5148.4,
+      "yawRad": 0.958,
+      "scale": 1.415
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -4320.3,
+      "yCm": 1988.3,
+      "yawRad": 3.899,
+      "scale": 1.029
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 9098.4,
+      "yCm": 12605.1,
+      "yawRad": 2.148,
+      "scale": 0.987
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 3869.5,
+      "yCm": 4068.5,
+      "yawRad": 3.364,
+      "scale": 1.259
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 1577.5,
+      "yCm": 10935.2,
+      "yawRad": 1.232,
+      "scale": 1.372
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 2417.8,
+      "yCm": 16770.7,
+      "yawRad": 1.507,
+      "scale": 0.851
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -14703.7,
+      "yCm": -6867.3,
+      "yawRad": 1.707,
+      "scale": 1.133
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -1996.6,
+      "yCm": 9999.7,
+      "yawRad": 0.439,
+      "scale": 1.018
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -13698.9,
+      "yCm": -19606.9,
+      "yawRad": 2.251,
+      "scale": 1.281
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 1441.9,
+      "yCm": 657.1,
+      "yawRad": 2.445,
+      "scale": 0.708
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -10110.8,
+      "yCm": -3310.8,
+      "yawRad": 0.735,
+      "scale": 1.294
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -1101.9,
+      "yCm": -1267.3,
+      "yawRad": 0.137,
+      "scale": 1.032
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 238.2,
+      "yCm": 5474.2,
+      "yawRad": 3.504,
+      "scale": 1.434
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -11363.8,
+      "yCm": 437.3,
+      "yawRad": 4.45,
+      "scale": 0.989
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 3651.0,
+      "yCm": -20400.2,
+      "yawRad": 0.208,
+      "scale": 0.874
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -6538.4,
+      "yCm": -16260.3,
+      "yawRad": 1.292,
+      "scale": 1.148
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 1443.9,
+      "yCm": 5726.4,
+      "yawRad": 6.253,
+      "scale": 0.912
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -2365.0,
+      "yCm": -2191.9,
+      "yawRad": 1.236,
+      "scale": 0.946
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -5450.9,
+      "yCm": -19405.7,
+      "yawRad": 0.034,
+      "scale": 1.13
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 8993.1,
+      "yCm": -64.5,
+      "yawRad": 1.408,
+      "scale": 1.021
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -11211.7,
+      "yCm": -6065.6,
+      "yawRad": 3.127,
+      "scale": 1.376
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -10664.2,
+      "yCm": -17931.6,
+      "yawRad": 2.738,
+      "scale": 1.011
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -311.6,
+      "yCm": 2700.3,
+      "yawRad": 0.541,
+      "scale": 0.882
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 10780.3,
+      "yCm": -15297.2,
+      "yawRad": 5.904,
+      "scale": 1.177
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -5661.8,
+      "yCm": 18.3,
+      "yawRad": 2.988,
+      "scale": 1.448
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 5548.6,
+      "yCm": -6516.7,
+      "yawRad": 5.296,
+      "scale": 0.922
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -14808.7,
+      "yCm": 9525.4,
+      "yawRad": 0.905,
+      "scale": 1.048
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -4153.0,
+      "yCm": -1166.7,
+      "yawRad": 0.974,
+      "scale": 0.885
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 6297.7,
+      "yCm": -7787.8,
+      "yawRad": 5.574,
+      "scale": 1.127
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -306.8,
+      "yCm": 5396.2,
+      "yawRad": 3.832,
+      "scale": 0.896
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 9081.5,
+      "yCm": -17100.5,
+      "yawRad": 3.787,
+      "scale": 1.025
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 4578.1,
+      "yCm": -13550.6,
+      "yawRad": 2.357,
+      "scale": 1.306
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -5833.8,
+      "yCm": -12089.4,
+      "yawRad": 3.707,
+      "scale": 1.371
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -17117.5,
+      "yCm": -2602.6,
+      "yawRad": 3.149,
+      "scale": 0.908
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -11970.5,
+      "yCm": -15411.3,
+      "yawRad": 2.757,
+      "scale": 1.219
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 1707.8,
+      "yCm": -291.9,
+      "yawRad": 5.765,
+      "scale": 1.084
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -5683.7,
+      "yCm": -16655.1,
+      "yawRad": 3.198,
+      "scale": 1.012
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -16017.7,
+      "yCm": 9416.3,
+      "yawRad": 2.632,
+      "scale": 1.093
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 14463.0,
+      "yCm": -12516.5,
+      "yawRad": 5.812,
+      "scale": 0.934
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -12247.1,
+      "yCm": -983.7,
+      "yawRad": 3.301,
+      "scale": 1.331
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 2431.4,
+      "yCm": 4474.6,
+      "yawRad": 5.079,
+      "scale": 1.025
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 8127.7,
+      "yCm": 3833.8,
+      "yawRad": 1.837,
+      "scale": 1.33
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -7151.4,
+      "yCm": 18389.9,
+      "yawRad": 0.885,
+      "scale": 1.211
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -6375.6,
+      "yCm": -8224.6,
+      "yawRad": 2.747,
+      "scale": 1.227
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -1032.1,
+      "yCm": 19767.6,
+      "yawRad": 3.728,
+      "scale": 1.052
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -9281.4,
+      "yCm": -14456.1,
+      "yawRad": 2.967,
+      "scale": 1.333
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 3556.6,
+      "yCm": -1840.3,
+      "yawRad": 2.3,
+      "scale": 0.967
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -11273.0,
+      "yCm": 7664.0,
+      "yawRad": 2.728,
+      "scale": 1.444
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 21.7,
+      "yCm": -233.1,
+      "yawRad": 3.716,
+      "scale": 1.053
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -11219.0,
+      "yCm": 1380.1,
+      "yawRad": 3.228,
+      "scale": 1.115
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -340.4,
+      "yCm": 305.0,
+      "yawRad": 5.292,
+      "scale": 0.786
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 341.9,
+      "yCm": 632.0,
+      "yawRad": 0.117,
+      "scale": 0.922
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 253.0,
+      "yCm": 5120.6,
+      "yawRad": 3.032,
+      "scale": 1.061
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -4549.1,
+      "yCm": 6746.4,
+      "yawRad": 3.724,
+      "scale": 1.23
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -5839.4,
+      "yCm": 7806.2,
+      "yawRad": 2.108,
+      "scale": 1.204
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -14772.7,
+      "yCm": 12272.9,
+      "yawRad": 5.484,
+      "scale": 0.922
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -1615.1,
+      "yCm": -453.7,
+      "yawRad": 4.18,
+      "scale": 0.849
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 3606.6,
+      "yCm": 6515.3,
+      "yawRad": 1.738,
+      "scale": 1.069
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 10269.5,
+      "yCm": -4829.7,
+      "yawRad": 5.601,
+      "scale": 1.284
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 2026.1,
+      "yCm": 1120.0,
+      "yawRad": 0.972,
+      "scale": 0.74
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -21758.7,
+      "yCm": 2486.2,
+      "yawRad": 5.688,
+      "scale": 1.203
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -1775.7,
+      "yCm": -13.0,
+      "yawRad": 1.079,
+      "scale": 1.098
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -4729.9,
+      "yCm": -7889.8,
+      "yawRad": 1.531,
+      "scale": 1.446
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 8562.0,
+      "yCm": -3748.6,
+      "yawRad": 5.424,
+      "scale": 1.411
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 5657.8,
+      "yCm": 4163.8,
+      "yawRad": 0.839,
+      "scale": 0.932
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 9636.8,
+      "yCm": -9010.2,
+      "yawRad": 3.365,
+      "scale": 1.081
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -3021.5,
+      "yCm": 81.3,
+      "yawRad": 1.688,
+      "scale": 0.78
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 1648.9,
+      "yCm": -15603.5,
+      "yawRad": 2.991,
+      "scale": 1.053
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -1289.7,
+      "yCm": -15879.1,
+      "yawRad": 2.359,
+      "scale": 0.928
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -3942.2,
+      "yCm": -2479.3,
+      "yawRad": 6.154,
+      "scale": 0.956
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -1227.2,
+      "yCm": -3151.0,
+      "yawRad": 0.25,
+      "scale": 1.006
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 13669.8,
+      "yCm": -14377.9,
+      "yawRad": 3.791,
+      "scale": 1.17
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 18965.3,
+      "yCm": 10674.6,
+      "yawRad": 4.774,
+      "scale": 1.14
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -3838.6,
+      "yCm": 7254.8,
+      "yawRad": 4.898,
+      "scale": 1.315
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 6356.7,
+      "yCm": -10436.6,
+      "yawRad": 3.903,
+      "scale": 1.235
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 494.8,
+      "yCm": -420.5,
+      "yawRad": 6.181,
+      "scale": 0.981
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 212.1,
+      "yCm": -333.7,
+      "yawRad": 1.954,
+      "scale": 1.055
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -13262.7,
+      "yCm": -12928.8,
+      "yawRad": 1.119,
+      "scale": 1.091
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -538.8,
+      "yCm": -976.4,
+      "yawRad": 1.771,
+      "scale": 0.918
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -6458.3,
+      "yCm": -16460.1,
+      "yawRad": 5.72,
+      "scale": 1.078
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -808.4,
+      "yCm": 6542.6,
+      "yawRad": 0.537,
       "scale": 0.904
     },
     {
       "templateId": "raylib_visual_atmosphere_tree",
-      "xCm": -7104.4,
-      "yCm": -16493.0,
-      "yawRad": 0.911,
-      "scale": 1.162
+      "xCm": 5328.9,
+      "yCm": 2444.2,
+      "yawRad": 5.971,
+      "scale": 0.994
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 1505.7,
+      "yCm": 182.5,
+      "yawRad": 0.484,
+      "scale": 0.914
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -4497.8,
+      "yCm": 1976.0,
+      "yawRad": 3.01,
+      "scale": 1.063
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -7323.2,
+      "yCm": 3699.2,
+      "yawRad": 0.331,
+      "scale": 1.178
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -616.0,
+      "yCm": 907.4,
+      "yawRad": 4.739,
+      "scale": 0.975
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -882.0,
+      "yCm": 103.5,
+      "yawRad": 1.037,
+      "scale": 0.807
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 11712.5,
+      "yCm": -9234.5,
+      "yawRad": 1.933,
+      "scale": 1.385
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -1386.1,
+      "yCm": 264.1,
+      "yawRad": 5.156,
+      "scale": 0.907
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -8301.5,
+      "yCm": -2111.9,
+      "yawRad": 0.065,
+      "scale": 1.442
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 13316.0,
+      "yCm": 2366.2,
+      "yawRad": 2.389,
+      "scale": 1.198
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 6629.2,
+      "yCm": 13829.5,
+      "yawRad": 2.463,
+      "scale": 1.028
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 15192.4,
+      "yCm": 5486.5,
+      "yawRad": 2.63,
+      "scale": 1.059
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -9844.7,
+      "yCm": -15951.5,
+      "yawRad": 1.907,
+      "scale": 1.308
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -403.8,
+      "yCm": 1197.6,
+      "yawRad": 1.599,
+      "scale": 0.745
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 1259.7,
+      "yCm": 6565.9,
+      "yawRad": 1.176,
+      "scale": 1.189
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -327.1,
+      "yCm": 1260.6,
+      "yawRad": 1.286,
+      "scale": 0.905
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -3181.3,
+      "yCm": 1418.3,
+      "yawRad": 2.479,
+      "scale": 0.838
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -3542.6,
+      "yCm": 1711.6,
+      "yawRad": 0.388,
+      "scale": 0.99
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -1368.4,
+      "yCm": -15866.0,
+      "yawRad": 0.758,
+      "scale": 1.236
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -539.8,
+      "yCm": -6855.9,
+      "yawRad": 3.34,
+      "scale": 1.217
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 3506.3,
+      "yCm": 13385.8,
+      "yawRad": 1.64,
+      "scale": 1.267
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -5758.5,
+      "yCm": -20007.5,
+      "yawRad": 6.187,
+      "scale": 0.979
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -11861.0,
+      "yCm": 9730.9,
+      "yawRad": 2.187,
+      "scale": 1.215
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 6027.0,
+      "yCm": -12733.6,
+      "yawRad": 3.328,
+      "scale": 1.029
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -4133.1,
+      "yCm": 3008.5,
+      "yawRad": 0.006,
+      "scale": 0.919
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 5542.9,
+      "yCm": -1389.4,
+      "yawRad": 1.947,
+      "scale": 1.005
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -13000.4,
+      "yCm": -15967.2,
+      "yawRad": 4.21,
+      "scale": 1.111
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -14703.0,
+      "yCm": 3333.8,
+      "yawRad": 3.237,
+      "scale": 0.967
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 3209.4,
+      "yCm": -3948.1,
+      "yawRad": 5.014,
+      "scale": 0.873
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 2017.3,
+      "yCm": -4547.9,
+      "yawRad": 4.287,
+      "scale": 0.953
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 1576.7,
+      "yCm": 135.0,
+      "yawRad": 6.116,
+      "scale": 0.796
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -9978.8,
+      "yCm": 4126.2,
+      "yawRad": 3.395,
+      "scale": 1.347
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -3060.9,
+      "yCm": -9960.7,
+      "yawRad": 1.401,
+      "scale": 1.221
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -20571.7,
+      "yCm": 8972.5,
+      "yawRad": 6.245,
+      "scale": 1.037
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 1213.6,
+      "yCm": 2934.0,
+      "yawRad": 3.019,
+      "scale": 0.909
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -459.9,
+      "yCm": 1467.4,
+      "yawRad": 3.904,
+      "scale": 1.003
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 7906.3,
+      "yCm": -2586.0,
+      "yawRad": 4.538,
+      "scale": 0.942
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 16589.7,
+      "yCm": 434.3,
+      "yawRad": 3.259,
+      "scale": 1.043
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -7919.6,
+      "yCm": -5450.5,
+      "yawRad": 4.573,
+      "scale": 1.363
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 1018.9,
+      "yCm": -1361.8,
+      "yawRad": 1.909,
+      "scale": 0.881
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 11907.4,
+      "yCm": -267.8,
+      "yawRad": 2.395,
+      "scale": 1.079
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -8775.2,
+      "yCm": -8954.4,
+      "yawRad": 0.485,
+      "scale": 1.211
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 3772.4,
+      "yCm": 7989.5,
+      "yawRad": 4.863,
+      "scale": 0.983
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 9697.9,
+      "yCm": -10205.9,
+      "yawRad": 2.333,
+      "scale": 1.239
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 14061.4,
+      "yCm": -5564.6,
+      "yawRad": 3.346,
+      "scale": 1.128
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 13623.3,
+      "yCm": 13635.4,
+      "yawRad": 5.083,
+      "scale": 0.874
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 8511.1,
+      "yCm": -4097.5,
+      "yawRad": 4.181,
+      "scale": 1.394
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -5400.2,
+      "yCm": -17974.2,
+      "yawRad": 3.99,
+      "scale": 0.889
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 3037.8,
+      "yCm": 4172.2,
+      "yawRad": 3.717,
+      "scale": 1.414
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 268.4,
+      "yCm": -43.8,
+      "yawRad": 3.257,
+      "scale": 1.068
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -661.4,
+      "yCm": -13491.8,
+      "yawRad": 0.418,
+      "scale": 1.382
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -2855.6,
+      "yCm": 19523.6,
+      "yawRad": 2.535,
+      "scale": 1.058
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -270.0,
+      "yCm": -7472.5,
+      "yawRad": 5.178,
+      "scale": 1.302
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 5760.4,
+      "yCm": 4649.5,
+      "yawRad": 4.546,
+      "scale": 0.935
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 957.3,
+      "yCm": -1480.1,
+      "yawRad": 0.102,
+      "scale": 0.808
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -158.8,
+      "yCm": -202.0,
+      "yawRad": 1.183,
+      "scale": 0.84
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -3551.8,
+      "yCm": 2985.2,
+      "yawRad": 1.153,
+      "scale": 0.789
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 16746.3,
+      "yCm": -9002.9,
+      "yawRad": 4.289,
+      "scale": 1.103
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -662.5,
+      "yCm": 13619.1,
+      "yawRad": 1.579,
+      "scale": 1.128
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 1619.6,
+      "yCm": 13535.9,
+      "yawRad": 5.075,
+      "scale": 1.413
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": -14519.7,
+      "yCm": -1938.3,
+      "yawRad": 5.454,
+      "scale": 1.062
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 15288.0,
+      "yCm": 14324.9,
+      "yawRad": 0.062,
+      "scale": 1.043
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 11023.2,
+      "yCm": -15207.2,
+      "yawRad": 4.734,
+      "scale": 0.927
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -331.7,
+      "yCm": 4457.6,
+      "yawRad": 1.185,
+      "scale": 1.441
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -4602.9,
+      "yCm": -13749.3,
+      "yawRad": 3.302,
+      "scale": 1.384
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 10744.7,
+      "yCm": -11891.2,
+      "yawRad": 2.023,
+      "scale": 1.437
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -290.0,
+      "yCm": -490.3,
+      "yawRad": 0.041,
+      "scale": 0.854
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 16727.3,
+      "yCm": 5559.0,
+      "yawRad": 2.096,
+      "scale": 1.144
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 4023.2,
+      "yCm": 1738.8,
+      "yawRad": 5.671,
+      "scale": 1.313
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -8815.7,
+      "yCm": -7110.4,
+      "yawRad": 0.524,
+      "scale": 1.289
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -420.2,
+      "yCm": 15035.8,
+      "yawRad": 2.413,
+      "scale": 1.173
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -878.6,
+      "yCm": 2182.1,
+      "yawRad": 4.991,
+      "scale": 0.878
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 646.2,
+      "yCm": -633.6,
+      "yawRad": 3.474,
+      "scale": 0.72
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -196.4,
+      "yCm": -918.2,
+      "yawRad": 5.572,
+      "scale": 1.061
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -768.2,
+      "yCm": 1224.0,
+      "yawRad": 5.647,
+      "scale": 0.827
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_bush",
+      "xCm": 15846.1,
+      "yCm": -15084.7,
+      "yawRad": 3.783,
+      "scale": 1.104
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -1201.5,
+      "yCm": 149.3,
+      "yawRad": 2.585,
+      "scale": 0.999
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": -1967.4,
+      "yCm": 5480.6,
+      "yawRad": 1.256,
+      "scale": 0.794
+    },
+    {
+      "templateId": "raylib_visual_atmosphere_tree",
+      "xCm": 243.9,
+      "yCm": 2123.7,
+      "yawRad": 3.273,
+      "scale": 0.861
     }
   ]
 }
