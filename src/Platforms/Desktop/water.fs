@@ -28,8 +28,8 @@ void main()
     vec3 V = normalize(uViewPos - fragPos);
     vec3 H = normalize(L + V);
 
-    float ndl = abs(dot(N, L));
-    float spec = pow(max(dot(N, H), 0.0), 48.0) * 0.08;
+    float ndl = max(dot(N, L), 0.0);
+    float spec = pow(max(dot(N, H), 0.0), 48.0) * 0.08 * step(0.02, ndl);
     vec3 base = fragColor.rgb;
     vec3 lit = base * (uAmbient + uLightIntensity * ndl) + vec3(spec);
 
@@ -55,11 +55,13 @@ void main()
     vec3 refractColor = texture(texture1, refractUv).rgb;
 
     // Lower exponent → stronger sky/terrain reflection at grazing angles (shore / aerial reads).
-    float fresnel = pow(clamp(dot(V, vec3(0.0, 1.0, 0.0)), 0.0, 1.0), 0.55);
-    vec3 mixed = mix(reflectColor, refractColor, fresnel);
-    // Keep author vertex depth tint visible under reflection/refraction.
-    mixed = mix(mixed, lit, 0.18);
+    float fresnel = pow(clamp(dot(V, vec3(0.0, 1.0, 0.0)), 0.0, 1.0), 0.45);
+    // Bias toward refraction so shallow shelf color reads from aerial; reflection still wins near horizon.
+    float refractWeight = clamp(fresnel * 1.15, 0.0, 1.0);
+    vec3 mixed = mix(reflectColor, refractColor, refractWeight);
+    // Light author cyan tint — shelf/abyss comes from the refraction FBO.
+    mixed = mix(mixed, lit, 0.10);
     mixed += vec3(spec);
 
-    finalColor = vec4(clamp(mixed, 0.0, 1.0), clamp(max(fragColor.a, 0.72), 0.0, 0.92));
+    finalColor = vec4(clamp(mixed, 0.0, 1.0), clamp(max(fragColor.a, 0.55), 0.0, 0.88));
 }

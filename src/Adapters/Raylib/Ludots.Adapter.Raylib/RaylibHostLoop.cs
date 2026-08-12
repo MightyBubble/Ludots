@@ -531,7 +531,9 @@ namespace Ludots.Adapter.Raylib
                                 engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap? vhReflect) &&
                                 vhReflect is IVisualHeightmapRenderSource reflectSource)
                             {
+                                // Peak span matches IslandTerrainGenerator.AbsoluteColorPeakSpanCm (showcase SSOT).
                                 visualHeightmapRenderer.AbsoluteColorSeaLevelCm = waterPass.WaterPlaneY * 100f;
+                                visualHeightmapRenderer.AbsoluteColorPeakSpanCm = 14000f;
                                 visualHeightmapRenderer.Render(reflectSource, reflectionCamera);
                             }
                             else
@@ -557,6 +559,7 @@ namespace Ludots.Adapter.Raylib
                                 vhRefract is IVisualHeightmapRenderSource refractSource)
                             {
                                 visualHeightmapRenderer.AbsoluteColorSeaLevelCm = waterPass.WaterPlaneY * 100f;
+                                visualHeightmapRenderer.AbsoluteColorPeakSpanCm = 14000f;
                                 visualHeightmapRenderer.Render(refractSource, activeCamera);
                             }
                             else
@@ -599,6 +602,7 @@ namespace Ludots.Adapter.Raylib
                             if (waterOnVisualHeightmap)
                             {
                                 visualHeightmapRenderer.AbsoluteColorSeaLevelCm = waterPass.WaterPlaneY * 100f;
+                                visualHeightmapRenderer.AbsoluteColorPeakSpanCm = 14000f;
                             }
                             else
                             {

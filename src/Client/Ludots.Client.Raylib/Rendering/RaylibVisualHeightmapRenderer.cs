@@ -252,7 +252,8 @@ namespace Ludots.Client.Raylib.Rendering
                     byte blue;
                     if (absoluteSeaCm is float seaCm)
                     {
-                        float heightBand = Math.Clamp((heightCm - seaCm) / absolutePeakSpanCm, 0f, 1f);
+                        // Keep negative bands for submerged shelf/abyss tint (refraction reads depth).
+                        float heightBand = MathF.Min(1f, (heightCm - seaCm) / absolutePeakSpanCm);
                         ResolveAbsoluteIslandTerrainColor(heightBand, slope, out red, out green, out blue);
                     }
                     else
@@ -337,35 +338,42 @@ namespace Ludots.Client.Raylib.Rendering
 
         private static void ResolveAbsoluteIslandTerrainColor(float heightBand, float slope, out byte red, out byte green, out byte blue)
         {
-            Vector3 seabed = new(28f, 72f, 96f);
-            Vector3 sand = new(232f, 196f, 128f);
-            Vector3 grass = new(62f, 140f, 58f);
-            Vector3 dirt = new(120f, 88f, 52f);
-            Vector3 rock = new(118f, 118f, 122f);
-            Vector3 peak = new(168f, 168f, 172f);
+            // Bands are elevation / peak-span: negative = submerged depth, positive = land.
+            Vector3 deepSeabed = new(16f, 48f, 92f);
+            Vector3 shallowShelf = new(72f, 186f, 168f);
+            Vector3 wetSand = new(210f, 188f, 128f);
+            Vector3 sand = new(236f, 208f, 142f);
+            Vector3 grass = new(52f, 128f, 48f);
+            Vector3 dirt = new(128f, 92f, 54f);
+            Vector3 rock = new(110f, 108f, 112f);
+            Vector3 peak = new(178f, 176f, 172f);
             Vector3 color;
             if (heightBand <= 0f)
             {
-                color = seabed;
+                // ~0 at sea → wet sand/turquoise; ~-0.04 (~560cm with 14km span) → deep blue.
+                float depth = Math.Clamp((-heightBand) / 0.04f, 0f, 1f);
+                color = depth < 0.35f
+                    ? Vector3.Lerp(wetSand, shallowShelf, depth / 0.35f)
+                    : Vector3.Lerp(shallowShelf, deepSeabed, (depth - 0.35f) / 0.65f);
             }
-            else if (heightBand < 0.08f)
+            else if (heightBand < 0.045f)
             {
-                color = Vector3.Lerp(sand, grass, heightBand / 0.08f);
+                color = Vector3.Lerp(sand, grass, heightBand / 0.045f);
             }
-            else if (heightBand < 0.45f)
+            else if (heightBand < 0.32f)
             {
-                color = Vector3.Lerp(grass, dirt, (heightBand - 0.08f) / 0.37f);
+                color = Vector3.Lerp(grass, dirt, (heightBand - 0.045f) / 0.275f);
             }
-            else if (heightBand < 0.72f)
+            else if (heightBand < 0.58f)
             {
-                color = Vector3.Lerp(dirt, rock, (heightBand - 0.45f) / 0.27f);
+                color = Vector3.Lerp(dirt, rock, (heightBand - 0.32f) / 0.26f);
             }
             else
             {
-                color = Vector3.Lerp(rock, peak, (heightBand - 0.72f) / 0.28f);
+                color = Vector3.Lerp(rock, peak, Math.Clamp((heightBand - 0.58f) / 0.42f, 0f, 1f));
             }
 
-            float shade = 1f - Math.Clamp(slope * 0.42f, 0f, 0.42f);
+            float shade = 1f - Math.Clamp(slope * 0.55f, 0f, 0.55f);
             red = ClampToByte(color.X * shade);
             green = ClampToByte(color.Y * shade);
             blue = ClampToByte(color.Z * shade);

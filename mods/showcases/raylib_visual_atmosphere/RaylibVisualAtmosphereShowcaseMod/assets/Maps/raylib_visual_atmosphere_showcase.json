@@ -7,8 +7,8 @@
     "TargetXCm": 0,
     "TargetYCm": 0,
     "Yaw": 205,
-    "Pitch": 58,
-    "DistanceCm": 52000,
+    "Pitch": 52,
+    "DistanceCm": 56000,
     "FovYDeg": 48
   },
   "Boards": [

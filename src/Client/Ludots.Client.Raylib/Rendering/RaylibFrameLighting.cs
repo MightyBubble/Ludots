@@ -105,7 +105,19 @@ namespace Ludots.Client.Raylib.Rendering
 
         public Vector3 LightColor => _lightColor;
 
-        public float LightIntensity => _lightIntensity;
+        /// <summary>
+        /// Authoring peak intensity; night/dusk sun below horizon zeros the directional term.
+        /// </summary>
+        public float LightIntensity
+        {
+            get
+            {
+                float sunElevation = MathF.Max(0f, SunDirectionToward.Y);
+                // Soft shoulder so dusk still carries a little key light before ambient takes over.
+                float elevationGate = sunElevation * sunElevation;
+                return _lightIntensity * elevationGate;
+            }
+        }
 
         public bool FogEnabled => _fog.Enabled;
 
@@ -245,7 +257,7 @@ namespace Ludots.Client.Raylib.Rendering
             Vector3 lightDir = SunDirectionToward;
             Vector4 ambient = AmbientRgba;
             Vector3 lightColor = _lightColor;
-            float lightIntensity = _lightIntensity;
+            float lightIntensity = LightIntensity;
             Vector3 fogColor = _fog.Color;
             Vector4 fogParams = _fog.Params;
             Rl.SetShaderValue(shader, locations.LightDir, &lightDir, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
