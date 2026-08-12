@@ -280,6 +280,8 @@ namespace Ludots.Adapter.Raylib
                 using var primitiveRenderer = new RaylibPrimitiveRenderer(RaylibPrimitiveRenderMode.Instanced, engine.VFS, materials);
                 using var skyEnvironment = new RaylibSkyEnvironment(engine.VFS, engine.ConfigPipeline);
                 skyEnvironment.LoadDescriptors(engine.ConfigCatalog, engine.ConfigConflictReport);
+                using var waterPass = new RaylibWaterPass(engine.VFS, engine.ConfigPipeline);
+                waterPass.LoadDescriptors(engine.ConfigCatalog, engine.ConfigConflictReport);
                 GlobalPresentationEventBuffer? globalPresentationEvents = engine.GetService(CoreServiceKeys.GlobalPresentationEventBuffer);
                 skyEnvironment.BindPhaseSource(globalPresentationEvents, requiredWhenActive: true);
                 skyEnvironment.ApplyDayPhase(frameLighting.DayPhase01);
@@ -476,29 +478,16 @@ namespace Ludots.Adapter.Raylib
                         Restore3DDepthState();
                         string? activeMapId = engine.CurrentMapSession?.MapId.Value;
                         skyEnvironment.EnsureActiveForMap(activeMapId);
-                        if (skyEnvironment.IsActive)
-                        {
-                            Rl.ClearBackground(skyEnvironment.ResolveClearColor());
-                        }
-                        else
-                        {
-                            Rl.ClearBackground(activeMapRequestsDeepBackground
+                        waterPass.EnsureActiveForMap(activeMapId);
+                        Color frameClearColor = skyEnvironment.IsActive
+                            ? skyEnvironment.ResolveClearColor()
+                            : (activeMapRequestsDeepBackground
                                 ? new Raylib_cs.Color(6, 10, 16, 255)
                                 : new Raylib_cs.Color(0, 0, 0, 255));
-                        }
+                        Rl.ClearBackground(frameClearColor);
 
                         var activeCamera = cameraAdapter.Camera;
                         CameraRenderState3D activeCameraState = cameraPresenter.SmoothedRenderState;
-                        long mode3DStart = Stopwatch.GetTimestamp();
-                        Restore3DDepthState();
-                        BeginCoreMode3D(activeCamera, in activeCameraState);
-                        Restore3DDepthState();
-
-                        if (skyEnvironment.IsActive)
-                        {
-                            skyEnvironment.Draw(in activeCamera, in activeCameraState);
-                            Restore3DDepthState();
-                        }
 
                         if (skyEnvironment.HasDayPhase)
                         {
@@ -512,6 +501,56 @@ namespace Ludots.Adapter.Raylib
                         terrainRenderer.ApplyFrameLighting(frameLighting);
                         visualHeightmapRenderer.ApplyFrameLighting(frameLighting);
                         primitiveRenderer.ApplyFrameLighting(frameLighting);
+
+                        bool waterFboEnabled = waterPass.IsActive &&
+                                              drawTerrain &&
+                                              !(drawVisualHeightmap && hasVisualHeightmap) &&
+                                              engine.VertexMap != null;
+                        if (waterFboEnabled)
+                        {
+                            waterPass.EnsureRenderTargets(lastW, lastH);
+                            waterPass.Advance(dt);
+
+                            Camera3D reflectionCamera = waterPass.BuildReflectionCamera(in activeCamera);
+                            waterPass.BeginReflectionPass(frameClearColor);
+                            Restore3DDepthState();
+                            BeginCoreMode3D(reflectionCamera, in activeCameraState);
+                            Restore3DDepthState();
+                            if (skyEnvironment.IsActive)
+                            {
+                                skyEnvironment.Draw(in reflectionCamera, in activeCameraState);
+                                Restore3DDepthState();
+                            }
+
+                            terrainRenderer.RenderTerrainOnly(engine.VertexMap, reflectionCamera);
+                            EndCoreMode3D();
+                            waterPass.EndPass();
+
+                            waterPass.BeginRefractionPass(frameClearColor);
+                            Restore3DDepthState();
+                            BeginCoreMode3D(activeCamera, in activeCameraState);
+                            Restore3DDepthState();
+                            if (skyEnvironment.IsActive)
+                            {
+                                skyEnvironment.Draw(in activeCamera, in activeCameraState);
+                                Restore3DDepthState();
+                            }
+
+                            terrainRenderer.RenderTerrainOnly(engine.VertexMap, activeCamera);
+                            EndCoreMode3D();
+                            waterPass.EndPass();
+                        }
+
+                        long mode3DStart = Stopwatch.GetTimestamp();
+                        Restore3DDepthState();
+                        BeginCoreMode3D(activeCamera, in activeCameraState);
+                        Restore3DDepthState();
+
+                        if (skyEnvironment.IsActive)
+                        {
+                            skyEnvironment.Draw(in activeCamera, in activeCameraState);
+                            Restore3DDepthState();
+                        }
 
                         if (drawDebugDraw &&
                             !(drawVisualHeightmap && hasVisualHeightmap) &&
@@ -530,6 +569,7 @@ namespace Ludots.Adapter.Raylib
                             visualHeightmapForTerrain is IVisualHeightmapRenderSource visualTerrainSource)
                         {
                             long terrainStart = Stopwatch.GetTimestamp();
+                            terrainRenderer.ClearReflectiveWater();
                             visualHeightmapRenderer.Render(visualTerrainSource, activeCamera);
                             presentationTiming?.ObserveTerrain(
                                 ElapsedMs(terrainStart),
@@ -540,6 +580,15 @@ namespace Ludots.Adapter.Raylib
                         else if (drawTerrain)
                         {
                             long terrainStart = Stopwatch.GetTimestamp();
+                            if (waterFboEnabled)
+                            {
+                                terrainRenderer.BindReflectiveWater(waterPass);
+                            }
+                            else
+                            {
+                                terrainRenderer.ClearReflectiveWater();
+                            }
+
                             terrainRenderer.Render(engine.VertexMap, activeCamera);
                             presentationTiming?.ObserveTerrain(
                                 ElapsedMs(terrainStart),

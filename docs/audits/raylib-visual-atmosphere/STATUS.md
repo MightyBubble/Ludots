@@ -8,7 +8,7 @@ Updated by agents. Use: `pending` | `in_progress` | `blocked` | `done`.
 | V2 | Directional + ambient lighting | done | agent-v2 | RaylibFrameLighting + terrain/ISM/skin N·L+ambient; ambient_day_ramp.json |
 | V3 | Cutout + Alpha/Additive blend | done | cloud-agent | material flags Cutout / Transparent|AlphaBlend / Additive; vegetation_cutout discard; VFX BeginBlendMode |
 | V4 | Distance fog | pending | — | |
-| V5 | Reflective/refractive water FBO | pending | — | |
+| V5 | Reflective/refractive water FBO | done | cloud-agent | `RaylibWaterPass` + upgraded `water.*`; HostLoop reflection/refraction RTs then main water; enable via `Presentation/water_environments.json` (`backendId=raylib`) |
 | V6 | Showcase + screenshot acceptance | pending | — | depends V1–V4 (+V5 for 06) |
 
 ## Blockers

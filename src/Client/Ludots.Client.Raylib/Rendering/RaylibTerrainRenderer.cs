@@ -31,6 +31,10 @@ namespace Ludots.Client.Raylib.Rendering
         private int _locWaterViewPos;
         private int _locWaterAmbient;
         private int _locWaterIntensity;
+        private int _locWaterSampleReflection;
+        private int _locWaterUseDudv;
+        private int _locWaterMoveFactor;
+        private int _locWaterWaveStrength;
 
         private RaylibFrameLighting? _frameLighting;
         private int _frameIndex;
@@ -56,19 +60,107 @@ namespace Ludots.Client.Raylib.Rendering
             }
         }
 
+        public void BindReflectiveWater(RaylibWaterPass waterPass)
+        {
+            if (waterPass == null) throw new ArgumentNullException(nameof(waterPass));
+            if (!_initialized)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(BindReflectiveWater)} requires the terrain renderer to be initialized (call {nameof(Render)} or {nameof(RenderTerrainOnly)} first).");
+            }
+
+            if (!waterPass.IsActive)
+            {
+                ClearReflectiveWater();
+                return;
+            }
+
+            Texture2D reflection = waterPass.ReflectionTexture;
+            Texture2D refraction = waterPass.RefractionTexture;
+            Texture2D dudv = waterPass.DudvTexture;
+            if (reflection.id == 0 || refraction.id == 0 || dudv.id == 0)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibTerrainRenderer)} reflective water requires configured reflection/refraction/DUDV textures; refusing flat-alpha fallback.");
+            }
+
+            Rl.SetMaterialTexture(ref _waterMaterial, (int)Rl.MaterialMapIndex.MATERIAL_MAP_ALBEDO, reflection);
+            Rl.SetMaterialTexture(ref _waterMaterial, (int)Rl.MaterialMapIndex.MATERIAL_MAP_METALNESS, refraction);
+            Rl.SetMaterialTexture(ref _waterMaterial, (int)Rl.MaterialMapIndex.MATERIAL_MAP_NORMAL, dudv);
+
+            int sample = 1;
+            int useDudv = waterPass.HasDudvMap ? 1 : 0;
+            float moveFactor = waterPass.MoveFactor;
+            float waveStrength = waterPass.WaveStrength;
+            Rl.SetShaderValue(_waterShader, _locWaterSampleReflection, &sample, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_INT);
+            Rl.SetShaderValue(_waterShader, _locWaterUseDudv, &useDudv, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_INT);
+            Rl.SetShaderValue(_waterShader, _locWaterMoveFactor, &moveFactor, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+            Rl.SetShaderValue(_waterShader, _locWaterWaveStrength, &waveStrength, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+        }
+
+        public void ClearReflectiveWater()
+        {
+            if (!_initialized)
+            {
+                return;
+            }
+
+            int sample = 0;
+            int useDudv = 0;
+            float moveFactor = 0f;
+            float waveStrength = 0f;
+            Rl.SetShaderValue(_waterShader, _locWaterSampleReflection, &sample, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_INT);
+            Rl.SetShaderValue(_waterShader, _locWaterUseDudv, &useDudv, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_INT);
+            Rl.SetShaderValue(_waterShader, _locWaterMoveFactor, &moveFactor, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+            Rl.SetShaderValue(_waterShader, _locWaterWaveStrength, &waveStrength, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+            DetachWaterPassTextures();
+        }
+
+        private void DetachWaterPassTextures()
+        {
+            if (_waterMaterial.maps == null)
+            {
+                return;
+            }
+
+            _waterMaterial.maps[(int)Rl.MaterialMapIndex.MATERIAL_MAP_ALBEDO].texture = default;
+            _waterMaterial.maps[(int)Rl.MaterialMapIndex.MATERIAL_MAP_METALNESS].texture = default;
+            _waterMaterial.maps[(int)Rl.MaterialMapIndex.MATERIAL_MAP_NORMAL].texture = default;
+        }
+
         public void Render(VertexMap map, in Camera3D camera)
+        {
+            RenderInternal(map, in camera, drawTerrain: true, drawWater: true, bumpFrame: true);
+        }
+
+        public void RenderTerrainOnly(VertexMap map, in Camera3D camera)
+        {
+            RenderInternal(map, in camera, drawTerrain: true, drawWater: false, bumpFrame: false);
+        }
+
+        public void RenderWaterOnly(VertexMap map, in Camera3D camera)
+        {
+            RenderInternal(map, in camera, drawTerrain: false, drawWater: true, bumpFrame: false);
+        }
+
+        private void RenderInternal(VertexMap map, in Camera3D camera, bool drawTerrain, bool drawWater, bool bumpFrame)
+
         {
             if (map == null) return;
 
             EnsureInitialized(map);
             UpdateUniforms(camera);
 
-            _frameIndex++;
-            DrawnChunkCountLastFrame = 0;
-            BuiltChunkCountLastFrame = 0;
-            TerrainVertexCountLastFrame = 0;
-            WaterVertexCountLastFrame = 0;
-            ChunkBuildMsLastFrame = 0d;
+            if (bumpFrame)
+            {
+                _frameIndex++;
+                DrawnChunkCountLastFrame = 0;
+                BuiltChunkCountLastFrame = 0;
+                TerrainVertexCountLastFrame = 0;
+                WaterVertexCountLastFrame = 0;
+                ChunkBuildMsLastFrame = 0d;
+            }
+
             float cx = camera.target.X;
             float cz = camera.target.Z;
 
@@ -99,19 +191,33 @@ namespace Ludots.Client.Raylib.Rendering
 
                     RaylibMatrix identity = RaylibMatrix.Identity;
                     Rl.rlDisableBackfaceCulling();
-                    Rl.DrawMesh(chunk.TerrainMesh, _terrainMaterial, identity);
-                    if (chunk.WaterMesh.vertexCount > 0)
+                    if (drawTerrain)
+                    {
+                        Rl.DrawMesh(chunk.TerrainMesh, _terrainMaterial, identity);
+                        if (bumpFrame)
+                        {
+                            DrawnChunkCountLastFrame++;
+                            TerrainVertexCountLastFrame += chunk.TerrainMesh.vertexCount;
+                        }
+                    }
+
+                    if (drawWater && chunk.WaterMesh.vertexCount > 0)
                     {
                         Rl.DrawMesh(chunk.WaterMesh, _waterMaterial, identity);
-                        WaterVertexCountLastFrame += chunk.WaterMesh.vertexCount;
+                        if (bumpFrame)
+                        {
+                            WaterVertexCountLastFrame += chunk.WaterMesh.vertexCount;
+                        }
                     }
+
                     Rl.rlEnableBackfaceCulling();
-                    DrawnChunkCountLastFrame++;
-                    TerrainVertexCountLastFrame += chunk.TerrainMesh.vertexCount;
                 }
             }
 
-            EvictUnusedChunks(240);
+            if (bumpFrame)
+            {
+                EvictUnusedChunks(240);
+            }
         }
 
         private void EnsureInitialized(VertexMap map)
@@ -137,8 +243,31 @@ namespace Ludots.Client.Raylib.Rendering
             _locWaterViewPos = Rl.GetShaderLocation(_waterShader, "uViewPos");
             _locWaterAmbient = Rl.GetShaderLocation(_waterShader, "uAmbient");
             _locWaterIntensity = Rl.GetShaderLocation(_waterShader, "uLightIntensity");
+            _locWaterSampleReflection = Rl.GetShaderLocation(_waterShader, "uSampleReflection");
+            _locWaterUseDudv = Rl.GetShaderLocation(_waterShader, "uUseDudv");
+            _locWaterMoveFactor = Rl.GetShaderLocation(_waterShader, "uMoveFactor");
+            _locWaterWaveStrength = Rl.GetShaderLocation(_waterShader, "uWaveStrength");
+            int locWaterReflection = Rl.GetShaderLocation(_waterShader, "texture0");
+            int locWaterRefraction = Rl.GetShaderLocation(_waterShader, "texture1");
+            int locWaterDudv = Rl.GetShaderLocation(_waterShader, "texture2");
+            if (_locWaterSampleReflection < 0 ||
+                _locWaterUseDudv < 0 ||
+                _locWaterMoveFactor < 0 ||
+                _locWaterWaveStrength < 0 ||
+                locWaterReflection < 0 ||
+                locWaterRefraction < 0 ||
+                locWaterDudv < 0)
+            {
+                throw new InvalidOperationException(
+                    "Water shader is missing reflective uniforms/samplers (uSampleReflection/uUseDudv/uMoveFactor/uWaveStrength/texture0/texture1/texture2).");
+            }
+
+            _waterShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_ALBEDO] = locWaterReflection;
+            _waterShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_METALNESS] = locWaterRefraction;
+            _waterShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_NORMAL] = locWaterDudv;
 
             _initialized = true;
+            ClearReflectiveWater();
             if (_frameLighting != null)
             {
                 _frameLighting.Apply(_terrainShader, in _terrainLightingLocs);
@@ -253,6 +382,7 @@ namespace Ludots.Client.Raylib.Rendering
 
             if (_initialized)
             {
+                ClearReflectiveWater();
                 _terrainMaterial.shader = default;
                 Rl.UnloadMaterial(_terrainMaterial);
                 Rl.UnloadShader(_terrainShader);

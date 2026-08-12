@@ -50,9 +50,9 @@
 
 ### V5 — 水面反射折射（P1）
 
-- [ ] 反射/折射 RenderTexture 双通道（可降分辨率）
-- [ ] 水面 shader 采样两张 RT + 扰动贴图（Host URI）
-- [ ] 无 RT 时 fail-loud，禁止静默退回纯色半透明却宣称「反射水面」
+- [x] 反射/折射 RenderTexture 双通道（可降分辨率）
+- [x] 水面 shader 采样两张 RT + 扰动贴图（Host URI）
+- [x] 无 RT 时 fail-loud，禁止静默退回纯色半透明却宣称「反射水面」
 
 ### V6 — 验收（P0）
 
