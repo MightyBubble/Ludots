@@ -524,7 +524,7 @@ namespace Ludots.Tests.GAS
                     new BlackboardEntityBuffer(),
                     new BlackboardSpatialBuffer(),
                     new AbilityStateBuffer(),
-                    new GameplayTagContainer(),
+                    GameplayTagContainer.CreateAttached(),
                     new TagCountContainer());
 
                 ref var abilities = ref World.Get<AbilityStateBuffer>(actor);

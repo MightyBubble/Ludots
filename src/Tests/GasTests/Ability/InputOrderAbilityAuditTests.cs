@@ -1825,7 +1825,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
             using var world = World.Create();
             var actor = world.Create(
                 OrderBuffer.CreateEmpty(),
-                new GameplayTagContainer(),
+                GameplayTagContainer.CreateAttached(),
                 new BlackboardIntBuffer(),
                 new BlackboardEntityBuffer());
             var target = world.Create();
@@ -1880,7 +1880,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
         public void OrderSubmitter_QueuedMode_UsesBufferWindowExpiry()
         {
             using var world = World.Create();
-            var actor = world.Create(OrderBuffer.CreateEmpty(), new GameplayTagContainer());
+            var actor = world.Create(OrderBuffer.CreateEmpty(), GameplayTagContainer.CreateAttached());
 
             var orderTypes = new OrderTypeRegistry(new OrderTerminalResultBuffer(capacity: OrderTerminalResultBuffer.DefaultCapacity));
             orderTypes.Register(new OrderTypeConfig
@@ -2053,7 +2053,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 new BlackboardIntBuffer(),
                 new BlackboardEntityBuffer(),
                 new AbilityStateBuffer(),
-                new GameplayTagContainer(),
+                GameplayTagContainer.CreateAttached(),
                 new TagCountContainer());
             var target = world.Create();
 
@@ -2129,9 +2129,9 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 new BlackboardIntBuffer(),
                 new BlackboardEntityBuffer(),
                 new AbilityStateBuffer(),
-                new GameplayTagContainer(),
+                GameplayTagContainer.CreateAttached(),
                 new TagCountContainer());
-            var target = world.Create(new GameplayTagContainer(), new TagCountContainer());
+            var target = world.Create(GameplayTagContainer.CreateAttached(), new TagCountContainer());
 
             world.Get<AbilityStateBuffer>(actor).AddAbility(abilityId);
             var order = new Order
@@ -2345,7 +2345,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 new BlackboardIntBuffer(),
                 new BlackboardEntityBuffer(),
                 new AbilityStateBuffer(),
-                new GameplayTagContainer(),
+                GameplayTagContainer.CreateAttached(),
                 new TagCountContainer(),
                 new TimedTagBuffer(),
                 new DirtyFlags());
@@ -2441,7 +2441,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 new BlackboardIntBuffer(),
                 new BlackboardEntityBuffer(),
                 new AbilityStateBuffer(),
-                new GameplayTagContainer(),
+                GameplayTagContainer.CreateAttached(),
                 new TagCountContainer(),
                 new TimedTagBuffer(),
                 new DirtyFlags());
@@ -2515,7 +2515,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 new BlackboardIntBuffer(),
                 new BlackboardEntityBuffer(),
                 new AbilityStateBuffer(),
-                new GameplayTagContainer(),
+                GameplayTagContainer.CreateAttached(),
                 new TagCountContainer(),
                 new TimedTagBuffer(),
                 new DirtyFlags());
@@ -2604,7 +2604,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 new BlackboardIntBuffer(),
                 new BlackboardEntityBuffer(),
                 new AbilityStateBuffer(),
-                new GameplayTagContainer(),
+                GameplayTagContainer.CreateAttached(),
                 new TagCountContainer(),
                 new TimedTagBuffer(),
                 new DirtyFlags());
@@ -2697,7 +2697,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 new BlackboardIntBuffer(),
                 new BlackboardEntityBuffer(),
                 new AbilityStateBuffer(),
-                new GameplayTagContainer());
+                GameplayTagContainer.CreateAttached());
 
             ref var abilities = ref world.Get<AbilityStateBuffer>(actor);
             abilities.AddAbility(abilityId);

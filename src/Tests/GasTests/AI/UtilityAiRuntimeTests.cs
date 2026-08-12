@@ -346,7 +346,7 @@ namespace Ludots.Tests.GAS
             var spatial = new SpatialQueryService(new ChunkedGridSpatialPartitionBackend(partition, spec));
             spatial.SetPositionProvider(entity => world.Get<WorldPositionCm>(entity).ToWorldCmInt2());
 
-            var actorTags = new GameplayTagContainer();
+            var actorTags = GameplayTagContainer.CreateAttached();
             actorTags.AddTag(gcdTagId);
             var actor = world.Create(
                 new UtilityAiAgent { ProfileId = 0 },

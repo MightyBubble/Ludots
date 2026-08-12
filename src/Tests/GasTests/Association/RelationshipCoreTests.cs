@@ -314,7 +314,7 @@ namespace Ludots.Tests.GAS
             var processor = new RelationshipCallbackProcessor(world, tagOps, teamLookup);
             var runtime = new RelationshipCatalogRuntime();
             Entity source = world.Create();
-            Entity target = world.Create(new GameplayTagContainer(), new TagCountContainer());
+            Entity target = world.Create(GameplayTagContainer.CreateAttached(), new TagCountContainer());
             int trustedTagId = TagRegistry.Register("Tests.Relationship.Trusted");
 
             runtime.Callbacks.Add(new RelationshipCallbackRule(

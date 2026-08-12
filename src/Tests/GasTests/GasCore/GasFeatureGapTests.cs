@@ -118,7 +118,7 @@ namespace Ludots.Tests.GAS
             That(cond.TagId, Is.EqualTo(tagA));
 
             // Create entity with tag present
-            var entity = world.Create(new GameplayTagContainer(), new TagCountContainer());
+            var entity = world.Create(GameplayTagContainer.CreateAttached(), new TagCountContainer());
             ref var tags = ref world.Get<GameplayTagContainer>(entity);
             tags.AddTag(tagA);
 
@@ -146,7 +146,7 @@ namespace Ludots.Tests.GAS
             That(cond.Kind, Is.EqualTo(GasConditionKind.TagAbsent));
 
             // Create entity without tag
-            var entity = world.Create(new GameplayTagContainer(), new TagCountContainer());
+            var entity = world.Create(GameplayTagContainer.CreateAttached(), new TagCountContainer());
 
             bool shouldExpire = GasConditionEvaluator.ShouldExpire(world, entity, in cond, tagOps);
             That(shouldExpire, Is.False, "Should NOT expire while tag is absent");
@@ -172,7 +172,7 @@ namespace Ludots.Tests.GAS
 
             That(dirty.IsTagDirty(5), Is.True, "Tag 5 should be marked dirty");
             That(dirty.IsTagDirty(6), Is.False, "Tag 6 should NOT be dirty");
-            That(dirty.IsTagDirty(0), Is.False, "Tag 0 should NOT be dirty");
+            Throws<ArgumentOutOfRangeException>(() => dirty.IsTagDirty(0), "Reserved tag id 0 fails closed");
 
             // Mark multiple tags
             dirty.MarkTagDirty(100);
@@ -487,7 +487,7 @@ namespace Ludots.Tests.GAS
             rule.AttachedCount = 1;
             ops.RegisterTagRuleSet(stunTag, rule);
 
-            var tags = new GameplayTagContainer();
+            var tags = GameplayTagContainer.CreateAttached();
             var counts = new TagCountContainer();
 
             ops.AddTag(ref tags, ref counts, stunTag);
@@ -508,7 +508,7 @@ namespace Ludots.Tests.GAS
             rule.RemovedCount = 1;
             ops.RegisterTagRuleSet(blockedTag, rule);
 
-            var tags = new GameplayTagContainer();
+            var tags = GameplayTagContainer.CreateAttached();
             var counts = new TagCountContainer();
 
             // First add colonizing

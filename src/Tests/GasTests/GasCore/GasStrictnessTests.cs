@@ -49,7 +49,7 @@ namespace Ludots.Tests.GAS
         public void GasConditionEvaluator_RejectsNoneAndUnsupportedKind()
         {
             using var world = World.Create();
-            var target = world.Create(new GameplayTagContainer());
+            var target = world.Create(GameplayTagContainer.CreateAttached());
 
             var none = new GasCondition(GasConditionKind.None, tagId: 1, TagSense.Present);
             Throws<InvalidOperationException>(() =>

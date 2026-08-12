@@ -209,7 +209,7 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
             var budget = new GasBudget();
             var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), budget);
 
-            GameplayTagContainer tags = default;
+            GameplayTagContainer tags = GameplayTagContainer.CreateAttached();
             TagCountContainer counts = default;
 
             for (int tagId = 1; tagId <= TagCountContainer.CAPACITY; tagId++)
@@ -232,7 +232,7 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
             using var world = World.Create();
             var budget = new GasBudget();
             var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), budget);
-            Entity target = world.Create(new GameplayTagContainer(), new TagCountContainer(), new DirtyFlags());
+            Entity target = world.Create(GameplayTagContainer.CreateAttached(), new TagCountContainer(), new DirtyFlags());
             ref var tags = ref world.Get<GameplayTagContainer>(target);
             ref var counts = ref world.Get<TagCountContainer>(target);
             ref var dirty = ref world.Get<DirtyFlags>(target);
@@ -258,7 +258,7 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
             using var world = World.Create();
             var budget = new GasBudget();
             var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), budget);
-            Entity target = world.Create(new GameplayTagContainer(), new TagCountContainer(), new DirtyFlags());
+            Entity target = world.Create(GameplayTagContainer.CreateAttached(), new TagCountContainer(), new DirtyFlags());
             ref var tags = ref world.Get<GameplayTagContainer>(target);
             ref var counts = ref world.Get<TagCountContainer>(target);
             ref var dirty = ref world.Get<DirtyFlags>(target);
@@ -287,7 +287,7 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
             var rule = new TagRuleSet();
             unsafe { rule.AttachedTags[0] = 17; rule.AttachedCount = 1; }
             tagOps.RegisterTagRuleSet(16, rule);
-            Entity target = world.Create(new GameplayTagContainer(), new TagCountContainer(), new DirtyFlags());
+            Entity target = world.Create(GameplayTagContainer.CreateAttached(), new TagCountContainer(), new DirtyFlags());
             ref var tags = ref world.Get<GameplayTagContainer>(target);
             ref var counts = ref world.Get<TagCountContainer>(target);
             ref var dirty = ref world.Get<DirtyFlags>(target);
@@ -310,7 +310,7 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
             using var world = World.Create();
             var grants = new EffectGrantedTags();
             grants.Add(new TagContribution { TagId = 1, Formula = TagContributionFormula.Fixed, Amount = 1 });
-            Entity complete = world.Create(new GameplayTagContainer(), new TagCountContainer(), new DirtyFlags());
+            Entity complete = world.Create(GameplayTagContainer.CreateAttached(), new TagCountContainer(), new DirtyFlags());
             var missingService = Throws<InvalidOperationException>(() => EffectTagContributionHelper.GrantToEntity(world, complete, in grants, 1, null));
             That(missingService.Message, Is.EqualTo(TagOps.MissingTagOpsError));
             That(world.Get<TagCountContainer>(complete).Count, Is.Zero);
@@ -327,7 +327,7 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
         {
             using var world = World.Create();
             var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry(), new GasBudget());
-            Entity target = world.Create(new GameplayTagContainer(), new TagCountContainer(), new DirtyFlags());
+            Entity target = world.Create(GameplayTagContainer.CreateAttached(), new TagCountContainer(), new DirtyFlags());
             var grants = new EffectGrantedTags();
             grants.Add(new TagContribution { TagId = 1, Formula = TagContributionFormula.Fixed, Amount = 1 });
             for (int i = 0; i < 32; i++)
@@ -2364,7 +2364,7 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
         {
             using var world = World.Create();
             Entity target = world.Create(
-                new GameplayTagContainer(),
+                GameplayTagContainer.CreateAttached(),
                 new TagCountContainer(),
                 new DirtyFlags());
             var grantedTags = new EffectGrantedTags();
@@ -2432,7 +2432,7 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
             int tagId = 77;
 
             // Entity has the tag initially
-            var tagContainer = new GameplayTagContainer();
+            var tagContainer = GameplayTagContainer.CreateAttached();
             tagContainer.AddTag(tagId);
             var target = world.Create(tagContainer);
 
@@ -2455,7 +2455,7 @@ namespace Ludots.Tests.GAS.Features.EffectExecution
             using var world = World.Create();
             int tagId = 88;
 
-            var target = world.Create(new GameplayTagContainer());
+            var target = world.Create(GameplayTagContainer.CreateAttached());
 
             var condition = new GasCondition(GasConditionKind.TagAbsent, tagId, TagSense.Present);
 

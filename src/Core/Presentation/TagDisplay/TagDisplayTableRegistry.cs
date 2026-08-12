@@ -1,4 +1,5 @@
 using System;
+using Ludots.Core.Gameplay.GAS.Capacity;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Registry;
 
@@ -7,6 +8,7 @@ namespace Ludots.Core.Presentation.TagDisplay
     /// <summary>
     /// Dense tagId→presentationTokenId tables for panel/state display.
     /// Hot path is O(1) array index; no string work at lookup time.
+    /// P3 bridge: token tables remain sized to 256 until cross-domain bitmaps widen.
     /// </summary>
     public sealed class TagDisplayTableRegistry
     {
@@ -15,8 +17,10 @@ namespace Ludots.Core.Presentation.TagDisplay
         public const string EmptyMaskError = "GAS.TAG_DISPLAY.ERR.EmptyMask";
         public const string FrozenError = "GAS.TAG_DISPLAY.ERR.Frozen";
 
+        private const int BridgeMaxTagId = GasLoadTimeCapacitySession.LegacyEmbeddedTagIdSpaceBridge - 1;
+
         private readonly StringIntRegistry _tableIds;
-        private GameplayTagContainer[] _masks;
+        private GameplayTagBitSet[] _masks;
         private int[][] _tokenByTagId;
         private bool _frozen;
 
@@ -27,13 +31,13 @@ namespace Ludots.Core.Presentation.TagDisplay
                 startId: 1,
                 invalidId: 0,
                 comparer: StringComparer.Ordinal);
-            _masks = new GameplayTagContainer[Math.Max(4, initialTableCapacity)];
+            _masks = new GameplayTagBitSet[Math.Max(4, initialTableCapacity)];
             _tokenByTagId = new int[Math.Max(4, initialTableCapacity)][];
         }
 
         public bool IsFrozen => _frozen;
 
-        public int RegisterTable(string tableId, in GameplayTagContainer mask, ReadOnlySpan<(int TagId, int TokenId)> entries)
+        public int RegisterTable(string tableId, in GameplayTagBitSet mask, ReadOnlySpan<(int TagId, int TokenId)> entries)
         {
             if (_frozen)
             {
@@ -60,14 +64,16 @@ namespace Ludots.Core.Presentation.TagDisplay
             EnsureTableSlot(id);
 
             _masks[id] = mask;
-            int[] tokens = new int[GameplayTagContainer.MAX_TAG_ID + 1];
+            int[] tokens = new int[BridgeMaxTagId + 1];
             for (int i = 0; i < entries.Length; i++)
             {
                 int tagId = entries[i].TagId;
                 int tokenId = entries[i].TokenId;
-                if (tagId <= 0 || tagId > GameplayTagContainer.MAX_TAG_ID)
+                if (tagId <= 0 || tagId > BridgeMaxTagId)
                 {
-                    throw new ArgumentOutOfRangeException(nameof(entries), $"Invalid tagId {tagId} in table '{tableId}'.");
+                    throw new ArgumentOutOfRangeException(
+                        nameof(entries),
+                        $"Invalid tagId {tagId} in table '{tableId}' (P3 TagDisplayTable bridge max {BridgeMaxTagId}).");
                 }
 
                 if (tokenId <= 0)
@@ -108,7 +114,7 @@ namespace Ludots.Core.Presentation.TagDisplay
 
         public bool TryGetTableId(string tableId, out int id) => _tableIds.TryGetId(tableId, out id) && id > 0;
 
-        public GameplayTagContainer GetMask(int tableId)
+        public GameplayTagBitSet GetMask(int tableId)
         {
             RequireTable(tableId);
             return _masks[tableId];
@@ -117,7 +123,7 @@ namespace Ludots.Core.Presentation.TagDisplay
         public int LookupToken(int tableId, int tagId)
         {
             RequireTable(tableId);
-            if (tagId <= 0 || tagId > GameplayTagContainer.MAX_TAG_ID)
+            if (tagId <= 0 || tagId > BridgeMaxTagId)
             {
                 throw new InvalidOperationException(
                     $"{MappingMissingError}: tableId={tableId} tagId={tagId}.");

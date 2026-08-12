@@ -1,16 +1,16 @@
 {
   "Schema": "gas-capacity-benchmark-v1",
-  "Phase": "after-p1",
+  "Phase": "after-p2",
   "StorageKind": "world-column-store",
   "AttributeSlotCount": 64,
   "TagIdSpace": 256,
   "EntityCount": 10000,
   "Iterations": 100,
-  "CreatedUtc": "2026-08-12T10:57:17.1561074Z",
+  "CreatedUtc": "2026-08-12T10:57:41.7348654Z",
   "Metrics": [
     {
       "Id": "attr.footprint.per_entity",
-      "Value": 4841.8264,
+      "Value": 4845.5464,
       "Unit": "bytes",
       "AllocatedBytes": 0
     },
@@ -22,19 +22,19 @@
     },
     {
       "Id": "attr.setw.get.hot",
-      "Value": 21388795.907040015,
+      "Value": 19348347.651110593,
       "Unit": "ops_per_sec",
       "AllocatedBytes": 40
     },
     {
       "Id": "attr.aggregate.tick",
-      "Value": 0.00039600000000000003,
+      "Value": 0.004894,
       "Unit": "ms_per_tick",
-      "AllocatedBytes": 40
+      "AllocatedBytes": 128
     },
     {
       "Id": "tag.footprint.per_entity",
-      "Value": 1326.696,
+      "Value": 1326.7208,
       "Unit": "bytes",
       "AllocatedBytes": 0
     },
@@ -46,15 +46,15 @@
     },
     {
       "Id": "tag.add.has.hot",
-      "Value": 7965794.876799025,
+      "Value": 7814655.135361549,
       "Unit": "ops_per_sec",
       "AllocatedBytes": 40
     },
     {
       "Id": "tag.dirty.collect",
-      "Value": 10.4332,
+      "Value": 15.5085,
       "Unit": "ms",
-      "AllocatedBytes": 14377904
+      "AllocatedBytes": 13917536
     }
   ]
 }

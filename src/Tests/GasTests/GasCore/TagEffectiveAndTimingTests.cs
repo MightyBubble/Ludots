@@ -21,7 +21,7 @@ namespace Ludots.Tests.GAS
                 int tagA = 1;
                 int tagBlock = 2;
 
-                var entity = world.Create(new GameplayTagContainer());
+                var entity = world.Create(GameplayTagContainer.CreateAttached());
                 ref var tags = ref world.Get<GameplayTagContainer>(entity);
 
                 var ruleSet = new Ludots.Core.Gameplay.GAS.Components.TagRuleSet();
@@ -125,7 +125,7 @@ namespace Ludots.Tests.GAS
                 var defs = new AbilityDefinitionRegistry();
                 defs.RegisterFromEntity(world, abilityTemplate, 6001);
 
-                var caster = world.Create(new AbilityStateBuffer(), new GameplayTagContainer());
+                var caster = world.Create(new AbilityStateBuffer(), GameplayTagContainer.CreateAttached());
                 ref var abilityState = ref world.Get<AbilityStateBuffer>(caster);
                 abilityState.AddAbility(6001);
 
@@ -160,7 +160,7 @@ namespace Ludots.Tests.GAS
                 }
                 _tagOps.RegisterTagRuleSet(tagA, ruleSet);
 
-                var entity = world.Create(new GameplayTagContainer(), new DirtyFlags());
+                var entity = world.Create(GameplayTagContainer.CreateAttached(), new DirtyFlags());
                 ref var tags = ref world.Get<GameplayTagContainer>(entity);
                 ref var dirty = ref world.Get<DirtyFlags>(entity);
 

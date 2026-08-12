@@ -160,7 +160,7 @@ namespace Ludots.Tests.GAS
                 };
                 var agg = new AttributeAggregatorSystem(world, tagOps: tagOps);
 
-                var player = world.Create(AttributeBuffer.CreateAttached(), new DirtyFlags(), new AbilityStateBuffer(), new GameplayTagContainer(), new TagCountContainer(), new TimedTagBuffer(), OrderBuffer.CreateEmpty(), new BlackboardSpatialBuffer(), new BlackboardEntityBuffer(), new BlackboardIntBuffer());
+                var player = world.Create(AttributeBuffer.CreateAttached(), new DirtyFlags(), new AbilityStateBuffer(), GameplayTagContainer.CreateAttached(), new TagCountContainer(), new TimedTagBuffer(), OrderBuffer.CreateEmpty(), new BlackboardSpatialBuffer(), new BlackboardEntityBuffer(), new BlackboardIntBuffer());
                 ref var playerAttr = ref world.Get<AttributeBuffer>(player);
                 playerAttr.SetBase(attrHealth, 100f);
                 playerAttr.SetBase(attrEnergy, 75f);
@@ -168,7 +168,7 @@ namespace Ludots.Tests.GAS
                 playerAttr.SetBase(attrMoveSpeed, 1f);
                 playerAttr.SetBase(attrShield, 0f);
 
-                var enemy = world.Create(AttributeBuffer.CreateAttached(), new DirtyFlags(), new AbilityStateBuffer(), new GameplayTagContainer(), new TagCountContainer(), new TimedTagBuffer(), OrderBuffer.CreateEmpty(), new BlackboardSpatialBuffer(), new BlackboardEntityBuffer(), new BlackboardIntBuffer());
+                var enemy = world.Create(AttributeBuffer.CreateAttached(), new DirtyFlags(), new AbilityStateBuffer(), GameplayTagContainer.CreateAttached(), new TagCountContainer(), new TimedTagBuffer(), OrderBuffer.CreateEmpty(), new BlackboardSpatialBuffer(), new BlackboardEntityBuffer(), new BlackboardIntBuffer());
                 ref var enemyAttr = ref world.Get<AttributeBuffer>(enemy);
                 enemyAttr.SetBase(attrHealth, 60f);
                 enemyAttr.SetBase(attrEnergy, 50f);
@@ -176,7 +176,7 @@ namespace Ludots.Tests.GAS
                 enemyAttr.SetBase(attrMoveSpeed, 1f);
                 enemyAttr.SetBase(attrShield, 40f);
 
-                var enemy2 = world.Create(AttributeBuffer.CreateAttached(), new DirtyFlags(), new GameplayTagContainer(), new TagCountContainer());
+                var enemy2 = world.Create(AttributeBuffer.CreateAttached(), new DirtyFlags(), GameplayTagContainer.CreateAttached(), new TagCountContainer());
                 ref var enemy2Attr = ref world.Get<AttributeBuffer>(enemy2);
                 enemy2Attr.SetBase(attrHealth, 60f);
                 enemy2Attr.SetBase(attrEnergy, 50f);
@@ -523,7 +523,7 @@ namespace Ludots.Tests.GAS
                 var clockPolicy = new GasClockStepPolicy(1);
                 var clockSystem = new GasClockSystem(clock, clockPolicy);
 
-                var player = world.Create(new AbilityStateBuffer(), new GameplayTagContainer(), OrderBuffer.CreateEmpty(), new BlackboardSpatialBuffer(), new BlackboardEntityBuffer(), new BlackboardIntBuffer());
+                var player = world.Create(new AbilityStateBuffer(), GameplayTagContainer.CreateAttached(), OrderBuffer.CreateEmpty(), new BlackboardSpatialBuffer(), new BlackboardEntityBuffer(), new BlackboardIntBuffer());
                 var stressEmpExec = default(AbilityExecSpec);
                 stressEmpExec.ClockId = GasClockId.Step;
                 stressEmpExec.SetItem(0, ExecItemKind.EffectSignal, tick: 0, templateId: tplEmp);

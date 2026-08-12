@@ -175,7 +175,7 @@ namespace Ludots.Tests.GAS
             var clock = new DiscreteClock();
             Entity entity = world.Create(
                 new EntityLocalClock(),
-                new GameplayTagContainer(),
+                GameplayTagContainer.CreateAttached(),
                 new TagCountContainer(),
                 new TimedTagBuffer(),
                 new DirtyFlags());

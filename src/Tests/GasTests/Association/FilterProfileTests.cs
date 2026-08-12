@@ -62,7 +62,7 @@ namespace Ludots.Tests.GAS
 
             Entity p1Rep = world.Create(new PlayerIdentity { PlayerId = 1 });
             Entity m01 = world.Create();
-            Entity m02 = world.Create(new GameplayTagContainer());
+            Entity m02 = world.Create(GameplayTagContainer.CreateAttached());
             harness.Ownership.EnsureOwnership(p1Rep, m01);
             harness.Ownership.EnsureOwnership(p1Rep, m02);
             world.Get<GameplayTagContainer>(m02).AddTag(deadTagId);
@@ -87,7 +87,7 @@ namespace Ludots.Tests.GAS
             }));
 
             Entity p1Rep = world.Create(new PlayerIdentity { PlayerId = 1 });
-            Entity tagged = world.Create(new GameplayTagContainer());
+            Entity tagged = world.Create(GameplayTagContainer.CreateAttached());
             Entity untagged = world.Create();
             harness.Ownership.EnsureOwnership(p1Rep, tagged);
             harness.Ownership.EnsureOwnership(p1Rep, untagged);
@@ -115,7 +115,7 @@ namespace Ludots.Tests.GAS
             Entity p1Rep = world.Create(new PlayerIdentity { PlayerId = 1 });
             Entity p2Rep = world.Create(new PlayerIdentity { PlayerId = 2 });
             Entity m99 = world.Create();
-            Entity dead = world.Create(new GameplayTagContainer());
+            Entity dead = world.Create(GameplayTagContainer.CreateAttached());
             harness.Ownership.EnsureOwnership(p2Rep, m99);
             harness.Ownership.EnsureOwnership(p2Rep, dead);
             world.Get<GameplayTagContainer>(dead).AddTag(deadTagId);

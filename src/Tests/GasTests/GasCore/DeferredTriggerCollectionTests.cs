@@ -68,7 +68,7 @@ namespace Ludots.Tests.GAS
             var system = new DeferredTriggerCollectionSystem(world, queue, new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
 
             var e = world.Create();
-            var tags = new GameplayTagContainer();
+            var tags = GameplayTagContainer.CreateAttached();
             tags.AddTag(5);
             world.Add(e, tags);
 

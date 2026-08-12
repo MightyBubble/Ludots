@@ -31,7 +31,7 @@ namespace Ludots.Tests.GAS
 
             var actor = world.Create(
                 CreateAbilities(1000, 1001),
-                new GameplayTagContainer(),
+                GameplayTagContainer.CreateAttached(),
                 new AbilityFormSetRef { FormSetId = 1 },
                 new AbilityFormSlotBuffer());
             ref var tags = ref world.Get<GameplayTagContainer>(actor);
@@ -61,7 +61,7 @@ namespace Ludots.Tests.GAS
 
             var actor = world.Create(
                 CreateAbilities(1000, 1001),
-                new GameplayTagContainer(),
+                GameplayTagContainer.CreateAttached(),
                 new AbilityFormSetRef { FormSetId = 1 },
                 new AbilityFormSlotBuffer());
             ref var tags = ref world.Get<GameplayTagContainer>(actor);

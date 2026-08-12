@@ -974,7 +974,7 @@ namespace Ludots.Tests.GAS
             var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
             Entity city = world.Create(new ProgressionStateBuffer());
             Entity barracks = world.Create();
-            Entity hero = world.Create(new GameplayTagContainer());
+            Entity hero = world.Create(GameplayTagContainer.CreateAttached());
             PrepareScopeHost(world, city);
             PrepareScopeMember(world, barracks);
             PrepareScopeMember(world, hero);
@@ -1018,7 +1018,7 @@ namespace Ludots.Tests.GAS
             var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
             Entity city = world.Create(new ProgressionStateBuffer());
             Entity barracks = world.Create();
-            Entity hero = world.Create(new GameplayTagContainer(), new TagCountContainer(), new DirtyFlags());
+            Entity hero = world.Create(GameplayTagContainer.CreateAttached(), new TagCountContainer(), new DirtyFlags());
             PrepareScopeHost(world, city);
             PrepareScopeMember(world, barracks);
             PrepareScopeMember(world, hero);
@@ -1125,7 +1125,7 @@ namespace Ludots.Tests.GAS
                 requiredTags: in requiredTags));
 
             var evaluator = new ProgressionRequirementEvaluator(world, requirements, scopeKeys, tagOps: new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry()));
-            Entity city = world.Create(new ProgressionStateBuffer(), new GameplayTagContainer(), new TagCountContainer(), new DirtyFlags());
+            Entity city = world.Create(new ProgressionStateBuffer(), GameplayTagContainer.CreateAttached(), new TagCountContainer(), new DirtyFlags());
             Entity barracks = world.Create();
             PrepareScopeHost(world, city);
             PrepareScopeMember(world, barracks);

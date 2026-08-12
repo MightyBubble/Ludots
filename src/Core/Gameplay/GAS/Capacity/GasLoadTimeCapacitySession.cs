@@ -133,15 +133,19 @@ namespace Ludots.Core.Gameplay.GAS.Capacity
             int entityRowCapacity = DefaultEntityRowCapacity,
             GasLoadTimeCapacityRounding rounding = GasLoadTimeCapacityRounding.WordAlignTags)
         {
-            if (_frozen)
+            // Production freezes once here. Tests may pre-bind a plan via EnsureLegacyPlanAndStoreForTests;
+            // do not replace an existing freeze — ClearForTests first when a registry-sized plan is required.
+            if (!_frozen)
             {
-                throw new InvalidOperationException(
-                    "GasLoadTimeCapacityPlan is already frozen. Production freeze runs once after registration.");
+                FreezeFromRegistries(rounding);
             }
 
-            var plan = FreezeFromRegistries(rounding);
-            var store = EnsureStore(plan, entityRowCapacity);
-            store.SealGameplay();
+            var store = EnsureStore(Plan, entityRowCapacity);
+            if (!store.IsGameplaySealed)
+            {
+                store.SealGameplay();
+            }
+
             return store;
         }
 

@@ -223,7 +223,7 @@ namespace Ludots.Tests.GAS
         public void HasTag_ChecksEntityTag()
         {
             var world = World.Create();
-            var entity = world.Create(new GameplayTagContainer(), new TagCountContainer());
+            var entity = world.Create(GameplayTagContainer.CreateAttached(), new TagCountContainer());
             ref var tags = ref world.Get<GameplayTagContainer>(entity);
             ref var counts = ref world.Get<TagCountContainer>(entity);
             int tagId = TagRegistry.Register("Test.HasTagOp");

@@ -148,7 +148,7 @@ namespace Ludots.Tests.GAS
 
             // Simulate checking if toggle tag is active on actor
             using var world = World.Create();
-            var actor = world.Create(new GameplayTagContainer());
+            var actor = world.Create(GameplayTagContainer.CreateAttached());
             ref var tags = ref world.Get<GameplayTagContainer>(actor);
 
             sb.AppendLine($"  激活前: HasToggleTag={tags.HasTag(toggleTagId)}");

@@ -39,7 +39,7 @@ namespace Ludots.Tests.GAS
             var tables = CreateStateTable(idle, moving, tokenIdle: 11, tokenMoving: 12);
 
             using World world = World.Create();
-            Entity entity = world.Create(new GameplayTagContainer(), new TagCountContainer());
+            Entity entity = world.Create(GameplayTagContainer.CreateAttached(), new TagCountContainer());
             ref var tags = ref world.Get<GameplayTagContainer>(entity);
             ref var counts = ref world.Get<TagCountContainer>(entity);
             _tagOps.AddTag(ref tags, ref counts, moving);
@@ -63,7 +63,7 @@ namespace Ludots.Tests.GAS
             var tables = CreateStateTable(idle, moving, tokenIdle: 11, tokenMoving: 12);
 
             using World world = World.Create();
-            Entity entity = world.Create(new GameplayTagContainer(), new TagCountContainer());
+            Entity entity = world.Create(GameplayTagContainer.CreateAttached(), new TagCountContainer());
             ref var tags = ref world.Get<GameplayTagContainer>(entity);
             ref var counts = ref world.Get<TagCountContainer>(entity);
             _tagOps.AddTag(ref tags, ref counts, idle);
@@ -143,7 +143,7 @@ namespace Ludots.Tests.GAS
             var tables = CreateStateTable(idle, moving, tokenIdle: 11, tokenMoving: 12);
 
             using World world = World.Create();
-            Entity entity = world.Create(new GameplayTagContainer(), new TagCountContainer());
+            Entity entity = world.Create(GameplayTagContainer.CreateAttached(), new TagCountContainer());
             ref var tags = ref world.Get<GameplayTagContainer>(entity);
             ref var counts = ref world.Get<TagCountContainer>(entity);
             _tagOps.AddTag(ref tags, ref counts, idle);
@@ -162,7 +162,7 @@ namespace Ludots.Tests.GAS
 
         private static TagDisplayTableRegistry CreateStateTable(int idle, int moving, int tokenIdle, int tokenMoving)
         {
-            var mask = new GameplayTagContainer();
+            var mask = default(GameplayTagBitSet);
             mask.AddTag(idle);
             mask.AddTag(moving);
             var tables = new TagDisplayTableRegistry();

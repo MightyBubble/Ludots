@@ -507,7 +507,7 @@ namespace Ludots.Tests.GAS
 
             public Entity CreateTaggedEntity(Entity ownerRep, params string[] tags)
             {
-                Entity entity = World.Create(new GameplayTagContainer());
+                Entity entity = World.Create(GameplayTagContainer.CreateAttached());
                 ref GameplayTagContainer container = ref World.Get<GameplayTagContainer>(entity);
                 for (int i = 0; i < tags.Length; i++)
                 {

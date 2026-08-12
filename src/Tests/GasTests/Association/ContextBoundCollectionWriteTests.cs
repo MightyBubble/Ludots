@@ -94,7 +94,7 @@ namespace Ludots.Tests.GAS
 
             Entity p1Rep = world.Create(new PlayerIdentity { PlayerId = 1 });
             Entity m01 = world.Create();
-            Entity m02 = world.Create(new GameplayTagContainer());
+            Entity m02 = world.Create(GameplayTagContainer.CreateAttached());
             harness.Ownership.EnsureOwnership(p1Rep, m01);
             harness.Ownership.EnsureOwnership(p1Rep, m02);
             world.Get<GameplayTagContainer>(m02).AddTag(deadTagId);

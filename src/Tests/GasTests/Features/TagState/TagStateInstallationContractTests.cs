@@ -49,7 +49,7 @@ public sealed class TagStateInstallationContractTests
     public void TagStateInstaller_WhenTagsAlreadyExist_RebuildsInitialCounts()
     {
         using var world = World.Create();
-        var tags = new GameplayTagContainer();
+        var tags = GameplayTagContainer.CreateAttached();
         tags.AddTag(7);
         tags.AddTag(11);
         Entity entity = world.Create(tags);

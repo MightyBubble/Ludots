@@ -28,7 +28,7 @@ namespace Ludots.Tests.GAS
             try
             {
                 var entity = world.Create();
-                world.Add(entity, new GameplayTagContainer());
+                world.Add(entity, GameplayTagContainer.CreateAttached());
                 world.Add(entity, new TagCountContainer());
 
                 int tagA = 1;
@@ -84,7 +84,7 @@ namespace Ludots.Tests.GAS
 
                 var source = world.Create();
                 var target = world.Create(new DirtyFlags());
-                world.Add(target, new GameplayTagContainer());
+                world.Add(target, GameplayTagContainer.CreateAttached());
                 world.Add(target, new TagCountContainer());
                 world.Add(target, new ActiveEffectContainer());
 

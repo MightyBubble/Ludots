@@ -27,7 +27,7 @@ namespace Ludots.Tests.GAS
             var clock = new DiscreteClock();
 
             var entity = world.Create(
-                new GameplayTagContainer(),
+                GameplayTagContainer.CreateAttached(),
                 new TagCountContainer(),
                 new TimedTagBuffer(),
                 new DirtyFlags()
@@ -67,7 +67,7 @@ namespace Ludots.Tests.GAS
             var clock = new DiscreteClock();
 
             var entity = world.Create(
-                new GameplayTagContainer(),
+                GameplayTagContainer.CreateAttached(),
                 new TagCountContainer(),
                 new TimedTagBuffer(),
                 new DirtyFlags()
@@ -106,7 +106,7 @@ namespace Ludots.Tests.GAS
             var clock = new DiscreteClock();
 
             var entity = world.Create(
-                new GameplayTagContainer(),
+                GameplayTagContainer.CreateAttached(),
                 new TagCountContainer(),
                 new TimedTagBuffer(),
                 new DirtyFlags()

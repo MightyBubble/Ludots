@@ -865,7 +865,7 @@ namespace Ludots.Tests.GAS
             var tagOps = new TagOps(new DirtyEntityQueue(GasConstants.MAX_EFFECT_REQUESTS_PER_FRAME), new TagRuleRegistry());
             int warpGateTagId = TagRegistry.Register("Progression.Rts.WarpGate");
 
-            Entity gateway = world.Create(new AbilityStateBuffer(), new GameplayTagContainer(), new TagCountContainer());
+            Entity gateway = world.Create(new AbilityStateBuffer(), GameplayTagContainer.CreateAttached(), new TagCountContainer());
             ref AbilityStateBuffer abilities = ref world.Get<AbilityStateBuffer>(gateway);
             int trainAbilityId = AbilityIdRegistry.Register("Ability.Rts.Strategy.Sc2.TrainZealot");
             abilities.AddAbility(AbilityIdRegistry.Register("Ability.Test.Slot0"));

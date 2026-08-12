@@ -589,7 +589,7 @@ namespace Ludots.Tests.GAS
                 new Team { Id = teamId },
                 new EntityTemplateKeyRef { TemplateKeyId = templateKeyId },
                 AttributeBuffer.CreateAttached(),
-                new GameplayTagContainer());
+                GameplayTagContainer.CreateAttached());
             ref AttributeBuffer attributes = ref world.Get<AttributeBuffer>(entity);
             attributes.SetBase(productionId, production);
             attributes.SetBase(goldId, gold);

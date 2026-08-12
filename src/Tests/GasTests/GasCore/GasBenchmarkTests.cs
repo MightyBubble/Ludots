@@ -42,7 +42,7 @@ namespace Ludots.Tests.GAS
             for (int i = 0; i < ENTITY_COUNT; i++)
             {
                 entities[i] = _world.Create();
-                _world.Add(entities[i], new GameplayTagContainer());
+                _world.Add(entities[i], GameplayTagContainer.CreateAttached());
                 _world.Add(entities[i], new TagCountContainer());
             }
             
@@ -105,7 +105,7 @@ namespace Ludots.Tests.GAS
             for (int i = 0; i < ENTITY_COUNT; i++)
             {
                 entities[i] = _world.Create();
-                _world.Add(entities[i], new GameplayTagContainer());
+                _world.Add(entities[i], GameplayTagContainer.CreateAttached());
                 _world.Add(entities[i], new TagCountContainer());
             }
 
@@ -153,10 +153,9 @@ namespace Ludots.Tests.GAS
             _tagOps.ClearRuleRegistry();
 
             const int tagId = 1;
-            var archetype = new ComponentType[] { typeof(GameplayTagContainer), typeof(TagCountContainer) };
             for (int i = 0; i < ENTITY_COUNT; i++)
             {
-                _world.Create(archetype);
+                _world.Create(GameplayTagContainer.CreateAttached(), new TagCountContainer());
             }
 
             var query = new QueryDescription().WithAll<GameplayTagContainer, TagCountContainer>();
@@ -208,10 +207,9 @@ namespace Ludots.Tests.GAS
             _tagOps.RegisterTagRuleSet(1, ruleSetA);
 
             const int tagId = 1;
-            var archetype = new ComponentType[] { typeof(GameplayTagContainer), typeof(TagCountContainer) };
             for (int i = 0; i < ENTITY_COUNT; i++)
             {
-                _world.Create(archetype);
+                _world.Create(GameplayTagContainer.CreateAttached(), new TagCountContainer());
             }
 
             var query = new QueryDescription().WithAll<GameplayTagContainer, TagCountContainer>();
@@ -321,7 +319,7 @@ namespace Ludots.Tests.GAS
             for (int i = 0; i < entityCount; i++)
             {
                 int tagId = (i % 31) + 1;
-                var tags = default(GameplayTagContainer);
+                var tags = GameplayTagContainer.CreateAttached();
                 var counts = default(TagCountContainer);
                 var dirty = default(DirtyFlags);
                 tags.AddTag(tagId);

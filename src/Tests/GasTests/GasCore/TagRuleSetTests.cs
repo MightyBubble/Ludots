@@ -19,7 +19,7 @@ namespace Ludots.Tests.GAS
         {
             _world = World.Create();
             _entity = _world.Create();
-            _world.Add(_entity, new GameplayTagContainer());
+            _world.Add(_entity, GameplayTagContainer.CreateAttached());
             _world.Add(_entity, new TagCountContainer());
             _tagOps.ClearRuleRegistry();
         }

@@ -572,7 +572,7 @@ namespace Ludots.Tests.GAS
             {
                 world.Create(
                     new PlayerIdentity { PlayerId = i + 1 },
-                    new GameplayTagContainer(),
+                    GameplayTagContainer.CreateAttached(),
                     new TagCountContainer());
             }
 
@@ -635,7 +635,7 @@ namespace Ludots.Tests.GAS
             {
                 reps[i] = world.Create(
                     new PlayerIdentity { PlayerId = i + 1 },
-                    new GameplayTagContainer(),
+                    GameplayTagContainer.CreateAttached(),
                     new TagCountContainer());
             }
 
@@ -914,11 +914,11 @@ namespace Ludots.Tests.GAS
 
                 Entity p1Rep = world.Create(
                     new PlayerIdentity { PlayerId = 1 },
-                    new GameplayTagContainer(),
+                    GameplayTagContainer.CreateAttached(),
                     new TagCountContainer());
                 Entity p2Rep = world.Create(
                     new PlayerIdentity { PlayerId = 2 },
-                    new GameplayTagContainer(),
+                    GameplayTagContainer.CreateAttached(),
                     new TagCountContainer());
                 if (linkAllies)
                 {

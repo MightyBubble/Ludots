@@ -47,6 +47,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
     private readonly GameplayEffect[] _gameplayEffectOriginalValues;
     private readonly GameplayEffect[] _gameplayEffectValues;
     private readonly Entity[] _tagEntities;
+    private readonly int[] _tagLiveRowIds;
     private readonly GameplayTagContainer[] _tagOriginalValues;
     private readonly GameplayTagContainer[] _tagValues;
     private readonly TagCountContainer[] _tagCountOriginalValues;
@@ -168,6 +169,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         _gameplayEffectOriginalValues = new GameplayEffect[attributeEntityCapacity];
         _gameplayEffectValues = new GameplayEffect[attributeEntityCapacity];
         _tagEntities = new Entity[attributeEntityCapacity];
+        _tagLiveRowIds = new int[attributeEntityCapacity];
         _tagOriginalValues = new GameplayTagContainer[attributeEntityCapacity];
         _tagValues = new GameplayTagContainer[attributeEntityCapacity];
         _tagCountOriginalValues = new TagCountContainer[attributeEntityCapacity];
@@ -835,7 +837,7 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
             for (int i = 0; i < _tagEntityCount; i++)
             {
                 Entity entity = _tagEntities[i];
-                _world.Get<GameplayTagContainer>(entity) = _tagValues[i];
+                store.CopyTagRow(_tagValues[i].RowId, _tagLiveRowIds[i]);
                 _world.Get<TagCountContainer>(entity) = _tagCountValues[i];
                 _world.Get<DirtyFlags>(entity) = _tagDirtyValues[i];
             }
@@ -1057,8 +1059,21 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
 
         int index = _tagEntityCount++;
         _tagEntities[index] = entity;
-        _tagOriginalValues[index] = _world.Get<GameplayTagContainer>(entity);
-        _tagValues[index] = _tagOriginalValues[index];
+        GameplayTagContainer live = _world.Get<GameplayTagContainer>(entity);
+        if (live.RowId == GameplayTagContainer.InvalidRow)
+        {
+            throw new InvalidOperationException(
+                $"{TagOps.MissingGameplayTagContainerError}: entity={entity.Id} has GameplayTagContainer without world-store row.");
+        }
+
+        var store = GasLoadTimeCapacitySession.ActiveStore;
+        int originalSnapRow = store.AllocateEntityRow();
+        store.CopyTagRow(live.RowId, originalSnapRow);
+        int stagingRow = store.AllocateEntityRow();
+        store.CopyTagRow(live.RowId, stagingRow);
+        _tagLiveRowIds[index] = live.RowId;
+        _tagOriginalValues[index] = new GameplayTagContainer { RowId = originalSnapRow };
+        _tagValues[index] = new GameplayTagContainer { RowId = stagingRow };
         _tagCountOriginalValues[index] = _world.Get<TagCountContainer>(entity);
         _tagCountValues[index] = _tagCountOriginalValues[index];
         _tagDirtyOriginalValues[index] = _world.Get<DirtyFlags>(entity);
@@ -1705,17 +1720,22 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
                 _world.Get<DirtyFlags>(entity) = _dirtyOriginalValues[i];
             }
         }
-        for (int i = 0; i < _tagEntityCount; i++)
+        if (_tagEntityCount > 0 && GasLoadTimeCapacitySession.HasStore)
         {
-            Entity entity = _tagEntities[i];
-            if (_world.IsAlive(entity) &&
-                _world.Has<GameplayTagContainer>(entity) &&
-                _world.Has<TagCountContainer>(entity) &&
-                _world.Has<DirtyFlags>(entity))
+            var tagStore = GasLoadTimeCapacitySession.ActiveStore;
+            for (int i = 0; i < _tagEntityCount; i++)
             {
-                _world.Get<GameplayTagContainer>(entity) = _tagOriginalValues[i];
-                _world.Get<TagCountContainer>(entity) = _tagCountOriginalValues[i];
-                _world.Get<DirtyFlags>(entity) = _tagDirtyOriginalValues[i];
+                Entity entity = _tagEntities[i];
+                if (_world.IsAlive(entity) &&
+                    _world.Has<GameplayTagContainer>(entity) &&
+                    _world.Has<TagCountContainer>(entity) &&
+                    _world.Has<DirtyFlags>(entity) &&
+                    _tagOriginalValues[i].RowId != GameplayTagContainer.InvalidRow)
+                {
+                    tagStore.CopyTagRow(_tagOriginalValues[i].RowId, _tagLiveRowIds[i]);
+                    _world.Get<TagCountContainer>(entity) = _tagCountOriginalValues[i];
+                    _world.Get<DirtyFlags>(entity) = _tagDirtyOriginalValues[i];
+                }
             }
         }
         for (int i = 0; i < _activeEffectCount; i++)
@@ -2083,9 +2103,36 @@ public sealed class EffectPhaseSideEffectTransaction : IDisposable
         }
     }
 
+    private void ReleaseTagStagingRows()
+    {
+        if (!GasLoadTimeCapacitySession.HasStore)
+        {
+            return;
+        }
+
+        var store = GasLoadTimeCapacitySession.ActiveStore;
+        for (int i = 0; i < _tagEntityCount; i++)
+        {
+            if (_tagValues[i].RowId != GameplayTagContainer.InvalidRow)
+            {
+                store.ReleaseEntityRow(_tagValues[i].RowId);
+                _tagValues[i].RowId = GameplayTagContainer.InvalidRow;
+            }
+
+            if (_tagOriginalValues[i].RowId != GameplayTagContainer.InvalidRow)
+            {
+                store.ReleaseEntityRow(_tagOriginalValues[i].RowId);
+                _tagOriginalValues[i].RowId = GameplayTagContainer.InvalidRow;
+            }
+
+            _tagLiveRowIds[i] = GameplayTagContainer.InvalidRow;
+        }
+    }
+
     private void End()
     {
         ReleaseAttributeStagingRows();
+        ReleaseTagStagingRows();
         _attributeCount = 0;
         _dirtyEntityCount = 0;
         _effectRequestCount = 0;

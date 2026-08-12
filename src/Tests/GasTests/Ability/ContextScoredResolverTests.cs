@@ -42,11 +42,11 @@ namespace Ludots.Tests.GAS
 
             var targetNormal = world.Create();
             world.Add(targetNormal, WorldPositionCm.FromCm(90, 0));
-            world.Add(targetNormal, new GameplayTagContainer());
+            world.Add(targetNormal, GameplayTagContainer.CreateAttached());
 
             var targetDowned = world.Create();
             world.Add(targetDowned, WorldPositionCm.FromCm(180, 10));
-            world.Add(targetDowned, new GameplayTagContainer());
+            world.Add(targetDowned, GameplayTagContainer.CreateAttached());
             ref var downedTags = ref world.Get<GameplayTagContainer>(targetDowned);
             downedTags.AddTag(downedTagId);
 
@@ -161,7 +161,7 @@ namespace Ludots.Tests.GAS
 
             var target = world.Create();
             world.Add(target, WorldPositionCm.FromCm(120, 0));
-            world.Add(target, new GameplayTagContainer());
+            world.Add(target, GameplayTagContainer.CreateAttached());
 
             var contextGroups = new ContextGroupRegistry();
             contextGroups.Register(
@@ -223,11 +223,11 @@ namespace Ludots.Tests.GAS
 
             var lowerEntityIdTarget = world.Create();
             world.Add(lowerEntityIdTarget, WorldPositionCm.FromCm(100, 0));
-            world.Add(lowerEntityIdTarget, new GameplayTagContainer());
+            world.Add(lowerEntityIdTarget, GameplayTagContainer.CreateAttached());
 
             var higherEntityIdTarget = world.Create();
             world.Add(higherEntityIdTarget, WorldPositionCm.FromCm(100, 0));
-            world.Add(higherEntityIdTarget, new GameplayTagContainer());
+            world.Add(higherEntityIdTarget, GameplayTagContainer.CreateAttached());
 
             var contextGroups = new ContextGroupRegistry();
             contextGroups.Register(
@@ -300,11 +300,11 @@ namespace Ludots.Tests.GAS
             // (see ContextScoredResolver_TiesBreakByEntityIdThenSlot).
             var deniedTarget = world.Create();
             world.Add(deniedTarget, WorldPositionCm.FromCm(100, 0));
-            world.Add(deniedTarget, new GameplayTagContainer());
+            world.Add(deniedTarget, GameplayTagContainer.CreateAttached());
 
             var allowedTarget = world.Create();
             world.Add(allowedTarget, WorldPositionCm.FromCm(100, 0));
-            world.Add(allowedTarget, new GameplayTagContainer());
+            world.Add(allowedTarget, GameplayTagContainer.CreateAttached());
 
             var contextGroups = new ContextGroupRegistry();
             contextGroups.Register(

@@ -343,7 +343,7 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
                     State = AbilityExecRunState.Running,
                     ActiveClockId = GasClockId.Step,
                 },
-                new GameplayTagContainer(),
+                GameplayTagContainer.CreateAttached(),
                 new TagCountContainer(),
                 new DirtyFlags(),
                 timed);
@@ -404,7 +404,7 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
                     State = AbilityExecRunState.Running,
                     ActiveClockId = GasClockId.Step,
                 },
-                new GameplayTagContainer(),
+                GameplayTagContainer.CreateAttached(),
                 new TagCountContainer(),
                 new DirtyFlags(),
                 timed);
@@ -535,7 +535,7 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
             Entity source = world.Create();
             Entity target = world.Create(
                 new ActiveEffectContainer(),
-                new GameplayTagContainer(),
+                GameplayTagContainer.CreateAttached(),
                 new TagCountContainer(),
                 new DirtyFlags());
             Assert.That(tagOps.AddTag(world, target, grantedTagId), Is.True);
@@ -605,7 +605,7 @@ namespace Ludots.Tests.GAS.Features.RuntimeBudget
             Entity source = world.Create();
             Entity target = world.Create(
                 new ActiveEffectContainer(),
-                new GameplayTagContainer(),
+                GameplayTagContainer.CreateAttached(),
                 new TagCountContainer(),
                 new DirtyFlags());
             Assert.That(tagOps.AddTag(world, target, grantedTagId), Is.True);

@@ -334,7 +334,7 @@ namespace Ludots.Tests.GAS
                 WorldPositionCm.FromCm(330, 170),
                 OrderBuffer.CreateEmpty(),
                 AttributeBuffer.CreateAttached(),
-                new GameplayTagContainer(),
+                GameplayTagContainer.CreateAttached(),
                 new OrderSpatialPayloadBuffer());
             MassNavigationSimulationRuntime simulation = CreateRoadMassRuntime(world, actor);
 
@@ -546,7 +546,7 @@ namespace Ludots.Tests.GAS
                 WorldPositionCm.FromCm(40, 340),
                 OrderBuffer.CreateEmpty(),
                 AttributeBuffer.CreateAttached(),
-                new GameplayTagContainer(),
+                GameplayTagContainer.CreateAttached(),
                 new OrderSpatialPayloadBuffer());
 
             Order eastbound = CreateRouteOrder(world, actor, roadMoveFollowOrderTypeId: 171, (-600, -120), (-300, 80), (0, 300), (300, 620), (600, 900));
@@ -1992,7 +1992,7 @@ namespace Ludots.Tests.GAS
                 WorldPositionCm.FromCm(xcm, ycm),
                 OrderBuffer.CreateEmpty(),
                 AttributeBuffer.CreateAttached(),
-                new GameplayTagContainer(),
+                GameplayTagContainer.CreateAttached(),
                 new OrderSpatialPayloadBuffer());
         }
 

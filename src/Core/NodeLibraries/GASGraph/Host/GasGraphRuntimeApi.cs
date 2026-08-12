@@ -6,6 +6,7 @@ using Ludots.Core.EntityCollections;
 using Ludots.Core.EntityQueries;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Gameplay.GAS.Capacity;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Components;
@@ -607,12 +608,15 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 throw new InvalidOperationException(TagOps.MissingGameplayTagContainerError);
             }
 
-            GameplayTagContainer mask = tables.GetMask(tableId);
+            GameplayTagBitSet mask = tables.GetMask(tableId);
 
-            // 0Alloc: scan dense tag id space (≤255). Uses HasTag so staged side-effects stay in sync.
+            // P3 bridge: TagDisplayTable token space remains 256 until cross-domain widen.
             int matchCount = 0;
             int firstTagId = 0;
-            for (int tagId = 1; tagId <= GameplayTagContainer.MAX_TAG_ID; tagId++)
+            int maxTagId = Math.Min(
+                GasLoadTimeCapacitySession.LegacyEmbeddedTagIdSpaceBridge - 1,
+                GasLoadTimeCapacitySession.Plan.MaxUsableTagId);
+            for (int tagId = 1; tagId <= maxTagId; tagId++)
             {
                 if (!mask.HasTag(tagId) || !HasTag(entity, tagId))
                 {

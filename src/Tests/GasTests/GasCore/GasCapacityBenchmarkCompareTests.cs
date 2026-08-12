@@ -58,7 +58,7 @@ namespace Ludots.Tests.GAS
 
             That(report.Metrics.Count, Is.GreaterThanOrEqualTo(6));
             That(report.AttributeSlotCount, Is.EqualTo(AttributeBuffer.MAX_ATTRS));
-            That(report.TagIdSpace, Is.EqualTo(GameplayTagContainer.MAX_TAG_ID + 1));
+            That(report.TagIdSpace, Is.EqualTo(GasLoadTimeCapacityPlan.CreateLegacyEmbeddedBaseline().TagIdSpace));
         }
 
         [Test]
@@ -112,6 +112,7 @@ namespace Ludots.Tests.GAS
             That(File.Exists(notesPath), Is.True, "P2 must document benchmark overrides in benchmark-regression-notes.md");
             AssertNoUndocumentedHotPathAllocGrowth(result);
             AssertAttrSetGetOpsWithinOverride(result, maxOpsRegression: 0.40);
+            AssertTagAddHasOpsWithinOverride(result, maxOpsRegression: 0.50);
         }
 
         [Test]
@@ -361,17 +362,13 @@ namespace Ludots.Tests.GAS
             long before = GC.GetTotalMemory(true);
 
             var entities = new Entity[EntityCount];
-            var archetype = new ComponentType[]
-            {
-                typeof(GameplayTagContainer),
-                typeof(TagCountContainer),
-                typeof(DirtyFlags),
-                typeof(GameplayTagEffectiveCache),
-            };
             for (int i = 0; i < EntityCount; i++)
             {
-                var tags = GameplayTagContainer.CreateAttached();
-                entities[i] = _world.Create(tags, new TagCountContainer(), new DirtyFlags(), new GameplayTagEffectiveCache());
+                entities[i] = _world.Create(
+                    GameplayTagContainer.CreateAttached(),
+                    new TagCountContainer(),
+                    new DirtyFlags(),
+                    new GameplayTagEffectiveCache());
             }
 
             long after = GC.GetTotalMemory(true);

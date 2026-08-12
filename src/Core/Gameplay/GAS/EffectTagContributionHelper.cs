@@ -1,3 +1,4 @@
+using System;
 using Arch.Core;
 using Ludots.Core.Gameplay.GAS.Components;
 
@@ -38,7 +39,9 @@ namespace Ludots.Core.Gameplay.GAS
             ref var tags = ref world.Get<GameplayTagContainer>(target);
             ref var counts = ref world.Get<TagCountContainer>(target);
             ref var dirtyFlags = ref world.Get<DirtyFlags>(target);
-            GameplayTagContainer tagsBefore = tags;
+            int words = tags.WordCount;
+            Span<ulong> tagsBefore = stackalloc ulong[GameplayTagBitSet.MaxWords];
+            tags.CopyWordsTo(tagsBefore.Slice(0, words));
             TagCountContainer countsBefore = counts;
             DirtyFlags dirtyBefore = dirtyFlags;
             try
@@ -57,7 +60,7 @@ namespace Ludots.Core.Gameplay.GAS
             }
             catch
             {
-                tags = tagsBefore;
+                tags.CopyWordsFrom(tagsBefore.Slice(0, words));
                 counts = countsBefore;
                 dirtyFlags = dirtyBefore;
                 throw;
@@ -75,7 +78,9 @@ namespace Ludots.Core.Gameplay.GAS
             ref var tags = ref world.Get<GameplayTagContainer>(target);
             ref var counts = ref world.Get<TagCountContainer>(target);
             ref var dirtyFlags = ref world.Get<DirtyFlags>(target);
-            GameplayTagContainer tagsBefore = tags;
+            int words = tags.WordCount;
+            Span<ulong> tagsBefore = stackalloc ulong[GameplayTagBitSet.MaxWords];
+            tags.CopyWordsTo(tagsBefore.Slice(0, words));
             TagCountContainer countsBefore = counts;
             DirtyFlags dirtyBefore = dirtyFlags;
             try
@@ -91,7 +96,7 @@ namespace Ludots.Core.Gameplay.GAS
             }
             catch
             {
-                tags = tagsBefore;
+                tags.CopyWordsFrom(tagsBefore.Slice(0, words));
                 counts = countsBefore;
                 dirtyFlags = dirtyBefore;
                 throw;
@@ -109,7 +114,9 @@ namespace Ludots.Core.Gameplay.GAS
             ref var tags = ref world.Get<GameplayTagContainer>(target);
             ref var counts = ref world.Get<TagCountContainer>(target);
             ref var dirtyFlags = ref world.Get<DirtyFlags>(target);
-            GameplayTagContainer tagsBefore = tags;
+            int words = tags.WordCount;
+            Span<ulong> tagsBefore = stackalloc ulong[GameplayTagBitSet.MaxWords];
+            tags.CopyWordsTo(tagsBefore.Slice(0, words));
             TagCountContainer countsBefore = counts;
             DirtyFlags dirtyBefore = dirtyFlags;
             try
@@ -134,7 +141,7 @@ namespace Ludots.Core.Gameplay.GAS
             }
             catch
             {
-                tags = tagsBefore;
+                tags.CopyWordsFrom(tagsBefore.Slice(0, words));
                 counts = countsBefore;
                 dirtyFlags = dirtyBefore;
                 throw;

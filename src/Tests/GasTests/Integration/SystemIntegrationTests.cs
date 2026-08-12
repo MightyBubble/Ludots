@@ -161,7 +161,7 @@ namespace Ludots.Tests.GAS
         {
             // Arrange
             var entity = _world.Create();
-            _world.Add(entity, new GameplayTagContainer());
+            _world.Add(entity, GameplayTagContainer.CreateAttached());
             _world.Add(entity, new TagCountContainer());
             
             int tagA = 1;

@@ -564,7 +564,7 @@ namespace Ludots.Tests.GAS
 
         private static GameplayTagContainer CreateTags(int tagId)
         {
-            var tags = new GameplayTagContainer();
+            var tags = GameplayTagContainer.CreateAttached();
             tags.AddTag(tagId);
             return tags;
         }

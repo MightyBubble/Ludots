@@ -76,7 +76,7 @@ namespace Ludots.Tests.GAS
                     new AIPlanningState(),
                     new AIPlan32(),
                     OrderBuffer.CreateEmpty(),
-                    new GameplayTagContainer(),
+                    GameplayTagContainer.CreateAttached(),
                     new BlackboardIntBuffer(),
                     new BlackboardEntityBuffer()
                 );
@@ -157,7 +157,7 @@ namespace Ludots.Tests.GAS
                 new AIAgent(),
                 plan,
                 OrderBuffer.CreateEmpty(),
-                new GameplayTagContainer(),
+                GameplayTagContainer.CreateAttached(),
                 new BlackboardIntBuffer(),
                 new BlackboardEntityBuffer()
             );
