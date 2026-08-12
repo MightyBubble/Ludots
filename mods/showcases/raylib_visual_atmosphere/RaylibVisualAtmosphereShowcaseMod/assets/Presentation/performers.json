@@ -253,10 +253,10 @@
           "assetId": "Ring",
           "renderPath": "None",
           "mobility": "Static",
-          "localScale": [16.0, 10.5, 0.35]
+          "localScale": [4.2, 3.1, 0.08]
         },
         "style": {
-          "color": [0.52, 0.34, 0.18, 0.72]
+          "color": [0.62, 0.42, 0.22, 0.45]
         }
       },
       {
@@ -280,13 +280,13 @@
         "activeByDefault": true,
         "assetBinding": {
           "assetKind": "GroundOverlay",
-          "assetId": "Circle",
+          "assetId": "Ring",
           "renderPath": "None",
           "mobility": "Static",
-          "localScale": [11.0, 11.0, 0.28]
+          "localScale": [3.4, 2.4, 0.08]
         },
         "style": {
-          "color": [0.38, 0.22, 0.11, 0.78]
+          "color": [0.48, 0.30, 0.14, 0.50]
         }
       },
       {

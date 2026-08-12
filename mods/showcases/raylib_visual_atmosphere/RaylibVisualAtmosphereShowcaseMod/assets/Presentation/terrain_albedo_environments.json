@@ -6,7 +6,7 @@
     "mapIds": [
       "raylib_visual_atmosphere_showcase"
     ],
-    "tileScale": 0.06,
+    "tileScale": 0.045,
     "controlMapUri": "RaylibVisualAtmosphereShowcaseMod:assets/Textures/terrain_control_weights.png",
     "layerUris": [
       "RaylibVisualAtmosphereShowcaseMod:assets/Textures/terrain_sand.png",

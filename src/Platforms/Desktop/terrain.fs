@@ -82,7 +82,9 @@ vec3 SampleAlbedoAntiTiled(sampler2D samp, vec2 uv)
             float ca = cos(ang);
             float sa = sin(ang);
             mat2 rot = mat2(ca, -sa, sa, ca);
-            vec2 sampleUv = rot * (uv + h * 7.13);
+            // Larger per-cell translate + mild scale break repeating lattice from aerial.
+            float cellScale = mix(0.82, 1.28, h.y);
+            vec2 sampleUv = rot * ((uv + h * 19.7) * cellScale);
 
             float wx = (x == 0) ? (1.0 - blend.x) : blend.x;
             float wy = (y == 0) ? (1.0 - blend.y) : blend.y;
