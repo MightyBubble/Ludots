@@ -39,7 +39,7 @@ namespace Ludots.Tests.Gas.Graph
                 root = tempRoot;
 
                 var actionCatalog = new GraphActionCatalog();
-                new GraphActionCatalogLoader(pipeline, actionCatalog, programs).Load(configCatalog);
+                new GraphActionCatalogLoader(pipeline, actionCatalog, programs, new GraphFunctionCatalog()).Load(configCatalog);
 
                 Assert.That(actionCatalog.Count, Is.EqualTo(1));
                 Assert.That(actionCatalog.Require("script.yieldAction"), Is.EqualTo(graphId));
@@ -118,7 +118,7 @@ namespace Ludots.Tests.Gas.Graph
 
                 var actionCatalog = new GraphActionCatalog();
                 var ex = Assert.Throws<AggregateException>(() =>
-                    new GraphActionCatalogLoader(pipeline, actionCatalog, programs).Load(configCatalog));
+                    new GraphActionCatalogLoader(pipeline, actionCatalog, programs, new GraphFunctionCatalog()).Load(configCatalog));
 
                 Assert.That(actionCatalog.Count, Is.EqualTo(0));
                 Assert.That(ex!.InnerExceptions[0].Message, Does.Contain("must be Script"));

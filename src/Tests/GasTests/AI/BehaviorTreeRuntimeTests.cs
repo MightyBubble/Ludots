@@ -14,7 +14,7 @@ namespace Ludots.Tests.Gas.AI
         private GraphActionCatalog? _actions;
 
         private GraphProgramRegistry Programs
-            => _programs ??= GraphRegistryTestBootstrap.LoadCoreScriptsAndFuncLib(out _, out _actions);
+            => _programs ??= GraphRegistryTestBootstrap.LoadCoreScriptsFuncLibAndActionLib(out _, out _actions);
 
         private GraphActionCatalog Actions
         {

@@ -20,7 +20,7 @@ namespace Ludots.Tests.Gas.AI
             const int agents = 10_000;
             const int waves = 25; // 5s / 0.2s
             // Showcase default topology N=8; N=16 remains BT-only stress (see BehaviorTreeRuntimeTests).
-            _ = Ludots.Tests.Gas.Graph.GraphRegistryTestBootstrap.LoadCoreScriptsAndFuncLib(out _, out GraphActionCatalog actions);
+            _ = Ludots.Tests.Gas.Graph.GraphRegistryTestBootstrap.LoadCoreScriptsFuncLibAndActionLib(out _, out GraphActionCatalog actions);
             BehaviorTreeDefinition bt = BehaviorTreeFactory.CreateAlwaysSuccessSequence("arena.bt", leafCount: 7);
             HfsmDefinition hfsm = HfsmFactory.CreateSentryHierarchy("arena.hfsm");
             LevelDirector level = LevelBlueprintFactory.CreateTwoPhaseTrial(

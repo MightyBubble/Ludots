@@ -21,7 +21,7 @@ namespace Ludots.Tests.Gas.Production
         [SetUp]
         public void SetUp()
         {
-            _programs = GraphRegistryTestBootstrap.LoadCoreScriptsAndFuncLib(out _catalog, out _actions);
+            _programs = GraphRegistryTestBootstrap.LoadCoreScriptsFuncLibAndActionLib(out _catalog, out _actions);
         }
 
         [Test]

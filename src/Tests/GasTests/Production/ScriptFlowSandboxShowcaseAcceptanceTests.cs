@@ -11,7 +11,7 @@ namespace Ludots.Tests.Gas.Production
         [Test]
         public void DrinkUntilFull_YieldsThenHaltsAtLimit()
         {
-            var programs = GraphRegistryTestBootstrap.LoadCoreScriptsAndFuncLib(out _, out var actions);
+            var programs = GraphRegistryTestBootstrap.LoadCoreScriptsFuncLibAndActionLib(out _, out var actions);
             var runtime = new ScriptFlowSandboxRuntime();
             runtime.Bind(programs, actions);
             runtime.EnsureWorld();
