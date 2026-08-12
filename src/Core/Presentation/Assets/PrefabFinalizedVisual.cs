@@ -145,7 +145,8 @@ namespace Ludots.Core.Presentation.Assets
             in Vector3 scale,
             in Vector4 color,
             int effectAssetId,
-            PrefabVfxSpawnMode spawnMode)
+            PrefabVfxSpawnMode spawnMode,
+            int materialId = 0)
         {
             return new PrefabFinalizedVisual(
                 PrefabVisualPartKind.Vfx,
@@ -156,7 +157,7 @@ namespace Ludots.Core.Presentation.Assets
                 color,
                 meshAssetId: 0,
                 meshDescriptor: default,
-                materialId: 0,
+                materialId,
                 materialBindings: null,
                 localBounds: default,
                 effectAssetId,

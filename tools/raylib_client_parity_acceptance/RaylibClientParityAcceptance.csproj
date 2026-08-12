@@ -19,6 +19,8 @@
     <None Include="..\..\src\Platforms\Desktop\instancing.fs" CopyToOutputDirectory="PreserveNewest" Link="instancing.fs" />
     <None Include="..\..\src\Platforms\Desktop\vfx_unlit_tint.vs" CopyToOutputDirectory="PreserveNewest" Link="vfx_unlit_tint.vs" />
     <None Include="..\..\src\Platforms\Desktop\vfx_unlit_tint.fs" CopyToOutputDirectory="PreserveNewest" Link="vfx_unlit_tint.fs" />
+    <None Include="..\..\src\Platforms\Desktop\vegetation_cutout.vs" CopyToOutputDirectory="PreserveNewest" Link="vegetation_cutout.vs" />
+    <None Include="..\..\src\Platforms\Desktop\vegetation_cutout.fs" CopyToOutputDirectory="PreserveNewest" Link="vegetation_cutout.fs" />
   </ItemGroup>
 
 </Project>

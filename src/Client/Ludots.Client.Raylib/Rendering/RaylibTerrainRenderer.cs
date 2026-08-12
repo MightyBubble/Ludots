@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Numerics;
+using System.Runtime.InteropServices;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Presentation.Rendering;
 using Raylib_cs;
@@ -183,7 +184,7 @@ namespace Ludots.Client.Raylib.Rendering
                 else
                 {
                     _chunks[key] = existing;
-                    return ref _chunks.GetValueRefOrNullRef(key);
+                    return ref CollectionsMarshal.GetValueRefOrNullRef(_chunks, key);
                 }
             }
 
@@ -197,7 +198,7 @@ namespace Ludots.Client.Raylib.Rendering
             BuiltChunkCountLastFrame++;
             ChunkBuildMsLastFrame += (Stopwatch.GetTimestamp() - buildStart) * 1000.0 / Stopwatch.Frequency;
             _chunks[key] = gpu;
-            return ref _chunks.GetValueRefOrNullRef(key);
+            return ref CollectionsMarshal.GetValueRefOrNullRef(_chunks, key);
         }
 
         private static Mesh CreateMesh(ChunkMeshWriteBuffer src)

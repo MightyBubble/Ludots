@@ -39,9 +39,9 @@
 
 ### V3 — 透贴 / 半透明 / Additive（P0）
 
-- [ ] Billboard/植被：alpha **cutout**（`discard` 阈值，默认 data-driven）
-- [ ] VFX/材质：至少支持 `Opaque` / `Cutout` / `AlphaBlend` / `Additive` 四种混合语义之一组合同
-- [ ] 无静默占位；未知混合模式 fail-loud
+- [x] Billboard/植被：alpha **cutout**（`discard` 阈值，默认 data-driven）
+- [x] VFX/材质：至少支持 `Opaque` / `Cutout` / `AlphaBlend` / `Additive` 四种混合语义之一组合同
+- [x] 无静默占位；未知混合模式 fail-loud
 
 ### V4 — 距离雾（P1，本轨要有最小可见）
 

@@ -108,7 +108,8 @@ namespace Ludots.Core.Presentation.Assets
             in Vector3 scale,
             in Vector4 color,
             PrefabFinalizedVisualBuffer output,
-            int maxDepth = DefaultMaxDepth)
+            int maxDepth = DefaultMaxDepth,
+            int instanceMaterialOverrideId = 0)
         {
             FinalizeVisuals(
                 meshes,
@@ -120,7 +121,8 @@ namespace Ludots.Core.Presentation.Assets
                 color,
                 PrefabFinalizationContext.Empty,
                 output,
-                maxDepth);
+                maxDepth,
+                instanceMaterialOverrideId);
         }
 
         public static void FinalizeVisuals(
@@ -133,7 +135,8 @@ namespace Ludots.Core.Presentation.Assets
             in Vector4 color,
             in PrefabFinalizationContext context,
             PrefabFinalizedVisualBuffer output,
-            int maxDepth = DefaultMaxDepth)
+            int maxDepth = DefaultMaxDepth,
+            int instanceMaterialOverrideId = 0)
         {
             if (meshes == null)
             {
@@ -161,7 +164,8 @@ namespace Ludots.Core.Presentation.Assets
                 groundingBatchContext,
                 output,
                 depth: 0,
-                maxDepth);
+                maxDepth,
+                instanceMaterialOverrideId);
         }
 
         private static void FinalizeVisualsRecursive(
@@ -177,7 +181,8 @@ namespace Ludots.Core.Presentation.Assets
             PrefabGroundingBatchContext groundingBatchContext,
             PrefabFinalizedVisualBuffer output,
             int depth,
-            int maxDepth)
+            int maxDepth,
+            int instanceMaterialOverrideId)
         {
             if (depth > maxDepth)
             {
@@ -266,7 +271,8 @@ namespace Ludots.Core.Presentation.Assets
                         groundingBatchContext,
                         output,
                         depth + 1,
-                        maxDepth);
+                        maxDepth,
+                        instanceMaterialOverrideId);
                 }
 
                 return;
@@ -280,7 +286,8 @@ namespace Ludots.Core.Presentation.Assets
                 rotation,
                 scale,
                 color,
-                output);
+                output,
+                instanceMaterialOverrideId);
         }
 
         private static void EmitOrRecursePart(
@@ -297,7 +304,8 @@ namespace Ludots.Core.Presentation.Assets
             PrefabGroundingBatchContext groundingBatchContext,
             PrefabFinalizedVisualBuffer output,
             int depth,
-            int maxDepth)
+            int maxDepth,
+            int instanceMaterialOverrideId)
         {
             switch (part.Kind)
             {
@@ -316,6 +324,7 @@ namespace Ludots.Core.Presentation.Assets
 
                 case PrefabVisualPartKind.Vfx:
                     ValidatePartContract(part, stableId);
+                    int vfxMaterialId = part.MaterialId > 0 ? part.MaterialId : instanceMaterialOverrideId;
                     output.Add(PrefabFinalizedVisual.Vfx(
                         stableId,
                         position,
@@ -323,7 +332,8 @@ namespace Ludots.Core.Presentation.Assets
                         scale,
                         color,
                         part.EffectAssetId,
-                        part.VfxSpawnMode));
+                        part.VfxSpawnMode,
+                        vfxMaterialId));
                     return;
 
                 case PrefabVisualPartKind.Surface:
@@ -356,6 +366,7 @@ namespace Ludots.Core.Presentation.Assets
                             $"Prefab procedural mesh part stableId={stableId} references unknown meshAssetId={part.MeshAssetId}.");
                     }
 
+                    int proceduralMaterialId = part.MaterialId > 0 ? part.MaterialId : instanceMaterialOverrideId;
                     EmitFinalizedMeshVisual(
                         part.MeshAssetId,
                         proceduralDescriptor,
@@ -365,11 +376,12 @@ namespace Ludots.Core.Presentation.Assets
                         scale,
                         color,
                         output,
-                        part.MaterialId);
+                        proceduralMaterialId);
                     return;
 
                 case PrefabVisualPartKind.Mesh:
                 default:
+                    int childMaterialOverrideId = part.MaterialId > 0 ? part.MaterialId : instanceMaterialOverrideId;
                     FinalizeVisualsRecursive(
                         meshes,
                         part.MeshAssetId,
@@ -383,7 +395,8 @@ namespace Ludots.Core.Presentation.Assets
                         groundingBatchContext,
                         output,
                         depth,
-                        maxDepth);
+                        maxDepth,
+                        childMaterialOverrideId);
                     return;
             }
         }

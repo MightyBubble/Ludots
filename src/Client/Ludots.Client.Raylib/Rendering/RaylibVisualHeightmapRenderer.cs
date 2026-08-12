@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Numerics;
+using System.Runtime.InteropServices;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Navigation.GraphWorld;
 using Ludots.Core.Presentation.Terrain;
@@ -143,7 +144,7 @@ namespace Ludots.Client.Raylib.Rendering
                 if (existing.Revision == chunk.Revision)
                 {
                     _chunks[key] = existing;
-                    return ref _chunks.GetValueRefOrNullRef(key);
+                    return ref CollectionsMarshal.GetValueRefOrNullRef(_chunks, key);
                 }
 
                 existing.Dispose();
@@ -160,7 +161,7 @@ namespace Ludots.Client.Raylib.Rendering
             BuiltChunkCountLastFrame++;
             ChunkBuildMsLastFrame += (Stopwatch.GetTimestamp() - buildStart) * 1000d / Stopwatch.Frequency;
             _chunks[key] = gpu;
-            return ref _chunks.GetValueRefOrNullRef(key);
+            return ref CollectionsMarshal.GetValueRefOrNullRef(_chunks, key);
         }
 
         private static Mesh CreateChunkMesh(in VisualHeightmapRenderChunk chunk)
