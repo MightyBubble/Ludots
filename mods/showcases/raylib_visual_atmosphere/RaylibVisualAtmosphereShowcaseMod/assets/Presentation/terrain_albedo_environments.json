@@ -3,8 +3,10 @@
     "id": "raylib_visual_atmosphere.terrain_albedo",
     "backendId": "raylib",
     "enabled": true,
-    "mapIds": ["raylib_visual_atmosphere_showcase"],
-    "tileScale": 0.28,
+    "mapIds": [
+      "raylib_visual_atmosphere_showcase"
+    ],
+    "tileScale": 0.06,
     "layerUris": [
       "RaylibVisualAtmosphereShowcaseMod:assets/Textures/terrain_sand.png",
       "RaylibVisualAtmosphereShowcaseMod:assets/Textures/terrain_grass.png",

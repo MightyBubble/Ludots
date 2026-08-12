@@ -66,7 +66,8 @@ void main()
         float scale = max(uTerrainTileScale, 1e-5);
         vec2 uv = fragPos.xz * scale;
         vec3 textured = SampleHeightBandAlbedo(clamp(fragHeightBand, 0.0, 1.0), uv);
-        albedo = textured * fragColor.rgb;
+        // Keep biome tint without crushing tiling detail (dark rock vertex RGB was washing maps flat).
+        albedo = textured * (0.55 + 0.45 * fragColor.rgb);
     }
 
     vec3 N = normalize(fragNormal);
