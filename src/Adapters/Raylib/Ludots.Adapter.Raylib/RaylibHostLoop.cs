@@ -280,7 +280,8 @@ namespace Ludots.Adapter.Raylib
                 var fogFieldProjector = new FogGlobalFieldVisualProjector();
                 using var fieldRenderPerformer = new RaylibFieldRenderPerformer();
                 PresentationMaterialRegistry? materials = engine.GetService(CoreServiceKeys.PresentationMaterialRegistry);
-                using var primitiveRenderer = new RaylibPrimitiveRenderer(RaylibPrimitiveRenderMode.Instanced, engine.VFS, materials);
+                RaylibPrimitiveRenderMode primitiveMode = ResolvePrimitiveRenderMode();
+                using var primitiveRenderer = new RaylibPrimitiveRenderer(primitiveMode, engine.VFS, materials);
                 RaylibBenchmarkRenderService? benchmarkRenderer = null;
                 if (engine.TryGetService(CoreServiceKeys.PresentationMeshAssetRegistry, out MeshAssetRegistry benchmarkMeshes))
                 {
@@ -856,6 +857,55 @@ namespace Ludots.Adapter.Raylib
                    raw.Equals("true", StringComparison.OrdinalIgnoreCase) ||
                    raw.Equals("yes", StringComparison.OrdinalIgnoreCase) ||
                    raw.Equals("on", StringComparison.OrdinalIgnoreCase);
+        }
+
+        /// <summary>
+        /// Instanced DrawMeshInstanced segfaults on some software GL stacks (llvmpipe) when Material.maps is null.
+        /// Prefer explicit env; otherwise auto-select Immediate when the host declares software GL.
+        /// </summary>
+        private static RaylibPrimitiveRenderMode ResolvePrimitiveRenderMode()
+        {
+            string? configured = Environment.GetEnvironmentVariable("LUDOTS_RAYLIB_PRIMITIVE_RENDER_MODE");
+            if (!string.IsNullOrWhiteSpace(configured))
+            {
+                if (configured.Equals("immediate", StringComparison.OrdinalIgnoreCase) ||
+                    configured.Equals("0", StringComparison.Ordinal))
+                {
+                    Log.Warn(in LogChannels.Presentation, "Primitive render mode forced Immediate by LUDOTS_RAYLIB_PRIMITIVE_RENDER_MODE.");
+                    return RaylibPrimitiveRenderMode.Immediate;
+                }
+
+                if (configured.Equals("instanced", StringComparison.OrdinalIgnoreCase) ||
+                    configured.Equals("1", StringComparison.Ordinal))
+                {
+                    return RaylibPrimitiveRenderMode.Instanced;
+                }
+
+                throw new InvalidOperationException(
+                    "LUDOTS_RAYLIB_PRIMITIVE_RENDER_MODE must be 'immediate' or 'instanced'.");
+            }
+
+            if (ReadEnvBoolOrDefault("LUDOTS_RAYLIB_FORCE_IMMEDIATE_PRIMITIVES", defaultValue: false))
+            {
+                Log.Warn(in LogChannels.Presentation, "Primitive render mode forced Immediate by LUDOTS_RAYLIB_FORCE_IMMEDIATE_PRIMITIVES.");
+                return RaylibPrimitiveRenderMode.Immediate;
+            }
+
+            string? galliumDriver = Environment.GetEnvironmentVariable("GALLIUM_DRIVER");
+            bool softwareGl =
+                ReadEnvBoolOrDefault("LIBGL_ALWAYS_SOFTWARE", defaultValue: false) ||
+                string.Equals(galliumDriver, "llvmpipe", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(galliumDriver, "softpipe", StringComparison.OrdinalIgnoreCase);
+
+            if (softwareGl)
+            {
+                Log.Warn(
+                    in LogChannels.Presentation,
+                    "Primitive render mode auto Immediate (software GL). DrawMeshInstanced is unsafe on this host.");
+                return RaylibPrimitiveRenderMode.Immediate;
+            }
+
+            return RaylibPrimitiveRenderMode.Instanced;
         }
 
         private static int[] ReadEnvFrameList(string key)

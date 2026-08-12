@@ -2,6 +2,7 @@ using System.Threading.Tasks;
 using CapabilityStandardLiveSkillWorkbenchShowcaseMod.Runtime;
 using Ludots.Core.Engine;
 using Ludots.Core.Modding;
+using Ludots.Core.Presentation.DebugDraw;
 using Ludots.Core.Scripting;
 
 namespace CapabilityStandardLiveSkillWorkbenchShowcaseMod;
@@ -18,6 +19,9 @@ public sealed class CapabilityStandardLiveSkillWorkbenchShowcaseModEntry : IMod
         {
             GameEngine? engine = ctx.GetEngine();
             if (engine == null) return Task.CompletedTask;
+            DebugDrawCommandBuffer debugDraw =
+                engine.GetService(CoreServiceKeys.DebugDrawCommandBuffer) ?? new DebugDrawCommandBuffer();
+            engine.SetService(CoreServiceKeys.DebugDrawCommandBuffer, debugDraw);
             engine.RegisterSystem(new LswChampionHotApplyDemoSystem(engine), SystemGroup.InputCollection);
             context.Log("[CapabilityStandardLiveSkillWorkbenchShowcaseMod] LswChampionHotApplyDemoSystem registered.");
             return Task.CompletedTask;

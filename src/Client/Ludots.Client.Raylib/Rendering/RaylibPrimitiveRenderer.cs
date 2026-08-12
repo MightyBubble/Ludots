@@ -146,7 +146,9 @@ namespace Ludots.Client.Raylib.Rendering
             var finalizationContext = new PrefabFinalizationContext(visualHeightmap);
 
             var span = draw.GetSpan();
-            bool usePersistentStaticLanes = snapshot != null;
+            // Immediate mode must not enter ISM/DrawMeshInstanced paths — those segfault on some
+            // software GL hosts when Material.maps is null (observed under llvmpipe).
+            bool usePersistentStaticLanes = snapshot != null && _mode == RaylibPrimitiveRenderMode.Instanced;
             if (usePersistentStaticLanes)
             {
                 _ismBridge.SyncPersistentLanes(snapshot);
@@ -176,7 +178,19 @@ namespace Ludots.Client.Raylib.Rendering
             }
 
             long immediateDrawStart = Stopwatch.GetTimestamp();
-            DrawImmediateWithDescriptors(span, camera, meshes, scaleMul, persistentStaticLanesActive: false, skinnedBatchActive: false, in finalizationContext);
+            if (skinnedBatch != null)
+            {
+                DrawSkinnedImmediate(skinnedBatch, camera, meshes, scaleMul, in finalizationContext);
+            }
+
+            DrawImmediateWithDescriptors(
+                span,
+                camera,
+                meshes,
+                scaleMul,
+                persistentStaticLanesActive: false,
+                skinnedBatchActive: skinnedBatch != null,
+                in finalizationContext);
             LastImmediateDrawMs = (Stopwatch.GetTimestamp() - immediateDrawStart) * 1000d / Stopwatch.Frequency;
         }
 
@@ -465,6 +479,34 @@ namespace Ludots.Client.Raylib.Rendering
             }
 
             FlushGpuSkinnedInstanceBatches();
+        }
+
+        private void DrawSkinnedImmediate(SkinnedVisualBatchBuffer skinnedBatch, Camera3D camera, MeshAssetRegistry meshes, float scaleMul, in PrefabFinalizationContext finalizationContext)
+        {
+            var span = skinnedBatch.GetSpan();
+            for (int i = 0; i < span.Length; i++)
+            {
+                ref readonly var item = ref span[i];
+                if (item.Visibility != VisualVisibility.Visible)
+                {
+                    continue;
+                }
+
+                if (TryDrawPrototypeSkinned(item, meshes, scaleMul))
+                {
+                    continue;
+                }
+
+                DrawAssetRecursive(
+                    item.MeshAssetId,
+                    item.Position,
+                    item.Rotation,
+                    item.Scale * scaleMul,
+                    item.Color,
+                    camera,
+                    meshes,
+                    in finalizationContext);
+            }
         }
 
         private void PrepareGpuSkinnedInstanceBatches()
@@ -1994,6 +2036,18 @@ namespace Ludots.Client.Raylib.Rendering
 
         private void FlushMeshBatches(List<Batch> batches, ref int totalInstances, ref int batchCount, ref Mesh mesh)
         {
+            if (_material.maps == null)
+            {
+                // Fail closed on the unsafe native path; rebuild default material once.
+                _material = Rl.LoadMaterialDefault();
+                _material.shader = _shader;
+                if (_material.maps == null)
+                {
+                    throw new InvalidOperationException(
+                        "Raylib LoadMaterialDefault returned Material.maps=null; DrawMeshInstanced cannot run.");
+                }
+            }
+
             for (int i = 0; i < batches.Count; i++)
             {
                 var b = batches[i];
