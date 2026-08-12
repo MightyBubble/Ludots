@@ -758,126 +758,126 @@
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": null,
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "FullyQualifiedName~GraphOpsQueryShowcaseAcceptanceTests",
+      "showcaseId": "capability_standard_graph_ops_query",
+      "status": "covered"
     },
     {
       "op": "QueryFromCollection",
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": null,
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "FullyQualifiedName~GraphOpsQueryShowcaseAcceptanceTests",
+      "showcaseId": "capability_standard_graph_ops_query",
+      "status": "covered"
     },
     {
       "op": "QueryFilterTeam",
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": null,
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "FullyQualifiedName~GraphOpsQueryShowcaseAcceptanceTests",
+      "showcaseId": "capability_standard_graph_ops_query",
+      "status": "covered"
     },
     {
       "op": "QueryFilterTemplate",
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": null,
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "FullyQualifiedName~GraphOpsQueryShowcaseAcceptanceTests",
+      "showcaseId": "capability_standard_graph_ops_query",
+      "status": "covered"
     },
     {
       "op": "QueryFilterAttributeRange",
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": null,
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "FullyQualifiedName~GraphOpsQueryShowcaseAcceptanceTests",
+      "showcaseId": "capability_standard_graph_ops_query",
+      "status": "covered"
     },
     {
       "op": "QueryFilterTagAny",
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": null,
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "FullyQualifiedName~GraphOpsQueryShowcaseAcceptanceTests",
+      "showcaseId": "capability_standard_graph_ops_query",
+      "status": "covered"
     },
     {
       "op": "QueryFilterTagNone",
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": null,
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "FullyQualifiedName~GraphOpsQueryShowcaseAcceptanceTests",
+      "showcaseId": "capability_standard_graph_ops_query",
+      "status": "covered"
     },
     {
       "op": "QuerySortByAttribute",
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": null,
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "FullyQualifiedName~GraphOpsQueryShowcaseAcceptanceTests",
+      "showcaseId": "capability_standard_graph_ops_query",
+      "status": "covered"
     },
     {
       "op": "AggSumAttribute",
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": null,
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "FullyQualifiedName~GraphOpsQueryShowcaseAcceptanceTests",
+      "showcaseId": "capability_standard_graph_ops_query",
+      "status": "covered"
     },
     {
       "op": "AggAverageAttribute",
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "FullyQualifiedName~GraphEffectAuthoringExpressivenessTests|FullyQualifiedName~GraphControlFlowConfigCoverageTests",
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "FullyQualifiedName~GraphOpsQueryShowcaseAcceptanceTests",
+      "showcaseId": "capability_standard_graph_ops_query",
+      "status": "covered"
     },
     {
       "op": "AggMaxAttribute",
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "FullyQualifiedName~GraphEffectAuthoringExpressivenessTests|FullyQualifiedName~GraphControlFlowConfigCoverageTests",
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "FullyQualifiedName~GraphOpsQueryShowcaseAcceptanceTests",
+      "showcaseId": "capability_standard_graph_ops_query",
+      "status": "covered"
     },
     {
       "op": "AggMinAttribute",
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "FullyQualifiedName~GraphEffectAuthoringExpressivenessTests|FullyQualifiedName~GraphControlFlowConfigCoverageTests",
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "FullyQualifiedName~GraphOpsQueryShowcaseAcceptanceTests",
+      "showcaseId": "capability_standard_graph_ops_query",
+      "status": "covered"
     },
     {
       "op": "AggMaxEntityByAttribute",
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": null,
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "FullyQualifiedName~GraphOpsQueryShowcaseAcceptanceTests",
+      "showcaseId": "capability_standard_graph_ops_query",
+      "status": "covered"
     },
     {
       "op": "AggMinEntityByAttribute",
       "authorableKinds": [
         "Query"
       ],
-      "unitTestFilter": "FullyQualifiedName~GraphEffectAuthoringExpressivenessTests|FullyQualifiedName~GraphControlFlowConfigCoverageTests",
-      "showcaseId": null,
-      "status": "runtime-only"
+      "unitTestFilter": "FullyQualifiedName~GraphOpsQueryShowcaseAcceptanceTests",
+      "showcaseId": "capability_standard_graph_ops_query",
+      "status": "covered"
     },
     {
       "op": "RelationshipAggMinMetric",
