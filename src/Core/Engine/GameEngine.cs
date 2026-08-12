@@ -1432,7 +1432,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.GraphFunctionCatalog, graphFunctionCatalog);
             SetService(
                 CoreServiceKeys.LiveGasEditPipeline,
-                new LiveGasEditPipeline(graphProgramRegistry, effectTemplateRegistry));
+                new LiveGasEditPipeline(graphProgramRegistry, effectTemplateRegistry, tagOps));
             SetService(CoreServiceKeys.GasGraphRuntimeProductionServices, gasGraphProductionServices);
             SetService(CoreServiceKeys.GasGraphRuntimeApi, gasGraphApi);
             SetService(CoreServiceKeys.GraphOutputSchemaRegistry, graphOutputSchemas);

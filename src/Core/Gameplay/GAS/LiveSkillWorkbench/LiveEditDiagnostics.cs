@@ -27,6 +27,10 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
         public const string EffectFieldNotHotEditable = "LSW0013";
         public const string AttributeCommandSinkMissing = "LSW0014";
         public const string SafeFrameRequired = "LSW0015";
+        public const string TagRuleMissing = "LSW0016";
+        public const string TagRuleCompileFailed = "LSW0017";
+        public const string AttrConstraintMissing = "LSW0018";
+        public const string AttrConstraintFieldInvalid = "LSW0019";
     }
 
     public readonly record struct LiveEditDiagnostic(

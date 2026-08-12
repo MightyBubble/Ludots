@@ -90,6 +90,38 @@ namespace Ludots.Core.Gameplay.GAS.Registry
             _constraints[attributeId] = constraints;
         }
 
+        /// <summary>
+        /// NextCast-safe replace for an already-registered attribute with existing constraints.
+        /// New attribute identities are forbidden on the hot path (EngineRestartRequired).
+        /// </summary>
+        public static void ReplaceConstraints(int attributeId, in AttributeConstraints constraints)
+        {
+            if (attributeId == InvalidId || (uint)attributeId >= (uint)MaxAttributes)
+            {
+                throw new ArgumentOutOfRangeException(nameof(attributeId), attributeId, "Attribute id is invalid.");
+            }
+
+            if (!_idToName.ContainsKey(attributeId))
+            {
+                throw new InvalidOperationException(
+                    $"Attribute id {attributeId} is not registered; cannot ReplaceConstraints (new identities require EngineRestart).");
+            }
+
+            if (!_constraints[attributeId].HasAny)
+            {
+                throw new InvalidOperationException(
+                    $"Attribute id {attributeId} has no authored constraints; hot-apply cannot introduce a new constraint schema.");
+            }
+
+            if (!constraints.HasAny)
+            {
+                throw new InvalidOperationException(
+                    $"Attribute id {attributeId} replacement constraints are empty; deleting constraints requires MapReload/EngineRestart.");
+            }
+
+            _constraints[attributeId] = constraints;
+        }
+
         public static void SetConstraints(string attributeName, in AttributeConstraints constraints)
         {
             if (string.IsNullOrEmpty(attributeName)) return;

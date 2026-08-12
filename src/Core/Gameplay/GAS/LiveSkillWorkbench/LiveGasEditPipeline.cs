@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using Ludots.Core.Config;
+using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Config;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
@@ -18,19 +20,24 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
     {
         private readonly GraphProgramRegistry _graphs;
         private readonly EffectTemplateRegistry? _effects;
+        private readonly TagOps? _tagOps;
         private readonly JsonSerializerOptions _jsonOptions;
         private readonly List<StagedGraphCandidate> _stagedGraphs = new(4);
         private readonly List<StagedEffectNumericCandidate> _stagedEffects = new(4);
+        private readonly List<StagedTagRuleCandidate> _stagedTagRules = new(4);
+        private readonly List<StagedAttrConstraintCandidate> _stagedAttrConstraints = new(4);
         private readonly List<LiveDebugPatchOperation> _stagedImmediate = new(4);
         private bool _safeFrameOpen;
 
         public LiveGasEditPipeline(
             GraphProgramRegistry graphs,
             EffectTemplateRegistry? effects = null,
+            TagOps? tagOps = null,
             JsonSerializerOptions? jsonOptions = null)
         {
             _graphs = graphs ?? throw new ArgumentNullException(nameof(graphs));
             _effects = effects;
+            _tagOps = tagOps;
             _jsonOptions = jsonOptions ?? StrictJsonOptions.CreateCamelCase();
         }
 
@@ -50,6 +57,8 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
 
             _stagedGraphs.Clear();
             _stagedEffects.Clear();
+            _stagedTagRules.Clear();
+            _stagedAttrConstraints.Clear();
             _stagedImmediate.Clear();
 
             var items = new List<LiveApplyClassificationItem>(session.Patch.Count);
@@ -83,6 +92,16 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
                     case LiveDebugPatchOperationKind.GraphBodyReplace:
                     {
                         ClassifyGraphBody(in op, items, ref canNextCast, ref mapReload, ref engineRestart);
+                        break;
+                    }
+                    case LiveDebugPatchOperationKind.TagRuleBodyReplace:
+                    {
+                        ClassifyTagRuleBody(in op, items, ref canNextCast, ref mapReload, ref engineRestart);
+                        break;
+                    }
+                    case LiveDebugPatchOperationKind.AttrConstraintNumeric:
+                    {
+                        ClassifyAttrConstraint(in op, items, ref canNextCast, ref mapReload, ref engineRestart);
                         break;
                     }
                     default:
@@ -202,8 +221,56 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
                 applied++;
             }
 
+            for (int i = 0; i < _stagedTagRules.Count; i++)
+            {
+                StagedTagRuleCandidate c = _stagedTagRules[i];
+                if (_tagOps == null)
+                {
+                    diagnostics.Add(new LiveEditDiagnostic(
+                        LiveEditDiagnosticSeverity.Error,
+                        LiveEditDiagnosticCodes.TagRuleMissing,
+                        "TagOps was not provided to LiveGasEditPipeline.",
+                        c.TagKey));
+                    continue;
+                }
+
+                try
+                {
+                    _tagOps.ReplaceTagRuleSet(c.TagId, c.RuleSet);
+                    applied++;
+                }
+                catch (Exception ex)
+                {
+                    diagnostics.Add(new LiveEditDiagnostic(
+                        LiveEditDiagnosticSeverity.Error,
+                        LiveEditDiagnosticCodes.TagRuleCompileFailed,
+                        ex.Message,
+                        c.TagKey));
+                }
+            }
+
+            for (int i = 0; i < _stagedAttrConstraints.Count; i++)
+            {
+                StagedAttrConstraintCandidate c = _stagedAttrConstraints[i];
+                try
+                {
+                    AttributeRegistry.ReplaceConstraints(c.AttributeId, c.Constraints);
+                    applied++;
+                }
+                catch (Exception ex)
+                {
+                    diagnostics.Add(new LiveEditDiagnostic(
+                        LiveEditDiagnosticSeverity.Error,
+                        LiveEditDiagnosticCodes.AttrConstraintMissing,
+                        ex.Message,
+                        c.AttributeName));
+                }
+            }
+
             _stagedGraphs.Clear();
             _stagedEffects.Clear();
+            _stagedTagRules.Clear();
+            _stagedAttrConstraints.Clear();
 
             if (diagnostics.Count > 0)
             {
@@ -453,6 +520,288 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
                 LiveApplyMode.NextCastLiveApply,
                 "Graph body candidate compiled; will ReplaceProgram on safe frame (NextCast).",
                 Array.Empty<LiveEditDiagnostic>()));
+        }
+
+        private void ClassifyTagRuleBody(
+            in LiveDebugPatchOperation op,
+            List<LiveApplyClassificationItem> items,
+            ref bool canNextCast,
+            ref bool mapReload,
+            ref bool engineRestart)
+        {
+            string tagKey = op.DefinitionId ?? string.Empty;
+            var diags = new List<LiveEditDiagnostic>(2);
+
+            if (_tagOps == null)
+            {
+                mapReload = true;
+                items.Add(new LiveApplyClassificationItem(
+                    op.Kind,
+                    tagKey,
+                    LiveApplyMode.MapReloadRequired,
+                    "TagOps is unavailable in this host; map reload is required.",
+                    new[]
+                    {
+                        new LiveEditDiagnostic(
+                            LiveEditDiagnosticSeverity.Error,
+                            LiveEditDiagnosticCodes.TagRuleMissing,
+                            "TagOps is null.",
+                            tagKey)
+                    }));
+                return;
+            }
+
+            JsonObject? obj;
+            try
+            {
+                obj = JsonNode.Parse(op.DocumentJson!) as JsonObject;
+            }
+            catch (Exception ex)
+            {
+                mapReload = true;
+                diags.Add(new LiveEditDiagnostic(
+                    LiveEditDiagnosticSeverity.Error,
+                    LiveEditDiagnosticCodes.TagRuleCompileFailed,
+                    $"Invalid tag rule JSON: {ex.Message}",
+                    tagKey));
+                items.Add(new LiveApplyClassificationItem(
+                    op.Kind,
+                    tagKey,
+                    LiveApplyMode.MapReloadRequired,
+                    "Tag rule JSON failed to parse; live registry untouched.",
+                    diags));
+                return;
+            }
+
+            if (obj == null)
+            {
+                mapReload = true;
+                diags.Add(new LiveEditDiagnostic(
+                    LiveEditDiagnosticSeverity.Error,
+                    LiveEditDiagnosticCodes.TagRuleCompileFailed,
+                    "Tag rule document must be a JSON object.",
+                    tagKey));
+                items.Add(new LiveApplyClassificationItem(
+                    op.Kind,
+                    tagKey,
+                    LiveApplyMode.MapReloadRequired,
+                    "Tag rule document missing.",
+                    diags));
+                return;
+            }
+
+            int tagId = TagRegistry.GetId(tagKey);
+            if (tagId == TagRegistry.InvalidId)
+            {
+                engineRestart = true;
+                diags.Add(new LiveEditDiagnostic(
+                    LiveEditDiagnosticSeverity.Error,
+                    LiveEditDiagnosticCodes.TagRuleMissing,
+                    $"Tag key '{tagKey}' is not registered; new tag identities require EngineRestart.",
+                    tagKey));
+                items.Add(new LiveApplyClassificationItem(
+                    op.Kind,
+                    tagKey,
+                    LiveApplyMode.EngineRestartRequired,
+                    "New tag identity cannot be hot-applied.",
+                    diags));
+                return;
+            }
+
+            if (!_tagOps.HasTagRule(tagId))
+            {
+                engineRestart = true;
+                diags.Add(new LiveEditDiagnostic(
+                    LiveEditDiagnosticSeverity.Error,
+                    LiveEditDiagnosticCodes.TagRuleMissing,
+                    $"Tag '{tagKey}' has no live rule set; EngineRestart required.",
+                    tagKey));
+                items.Add(new LiveApplyClassificationItem(
+                    op.Kind,
+                    tagKey,
+                    LiveApplyMode.EngineRestartRequired,
+                    "Missing live tag rule for tag id.",
+                    diags));
+                return;
+            }
+
+            TagRuleSet ruleSet;
+            try
+            {
+                ruleSet = TagRuleSetLoader.CompileRuleSetForHotApply(obj, tagKey, "live-edit://tag_rules");
+            }
+            catch (Exception ex)
+            {
+                // Unknown referenced tag names expand identity → EngineRestart.
+                engineRestart = true;
+                diags.Add(new LiveEditDiagnostic(
+                    LiveEditDiagnosticSeverity.Error,
+                    LiveEditDiagnosticCodes.TagRuleCompileFailed,
+                    ex.Message,
+                    tagKey));
+                items.Add(new LiveApplyClassificationItem(
+                    op.Kind,
+                    tagKey,
+                    LiveApplyMode.EngineRestartRequired,
+                    "Tag rule candidate compile failed (identity or reference invalid).",
+                    diags));
+                return;
+            }
+
+            _stagedTagRules.Add(new StagedTagRuleCandidate
+            {
+                TagKey = tagKey,
+                TagId = tagId,
+                RuleSet = ruleSet
+            });
+            canNextCast = true;
+            items.Add(new LiveApplyClassificationItem(
+                op.Kind,
+                tagKey,
+                LiveApplyMode.NextCastLiveApply,
+                "Tag rule body candidate compiled; will ReplaceTagRuleSet on safe frame (NextCast).",
+                Array.Empty<LiveEditDiagnostic>()));
+        }
+
+        private void ClassifyAttrConstraint(
+            in LiveDebugPatchOperation op,
+            List<LiveApplyClassificationItem> items,
+            ref bool canNextCast,
+            ref bool mapReload,
+            ref bool engineRestart)
+        {
+            string attributeName = op.DefinitionId ?? string.Empty;
+            string fieldPath = op.FieldPath ?? string.Empty;
+            var diags = new List<LiveEditDiagnostic>(2);
+
+            int attributeId = AttributeRegistry.GetId(attributeName);
+            if (attributeId == AttributeRegistry.InvalidId)
+            {
+                engineRestart = true;
+                diags.Add(new LiveEditDiagnostic(
+                    LiveEditDiagnosticSeverity.Error,
+                    LiveEditDiagnosticCodes.AttrConstraintMissing,
+                    $"Attribute '{attributeName}' is not registered; new attribute identities require EngineRestart.",
+                    attributeName));
+                items.Add(new LiveApplyClassificationItem(
+                    op.Kind,
+                    attributeName,
+                    LiveApplyMode.EngineRestartRequired,
+                    "New attribute identity cannot be hot-applied.",
+                    diags));
+                return;
+            }
+
+            if (!AttributeRegistry.TryGetConstraints(attributeId, out AttributeRegistry.AttributeConstraints existing) ||
+                !existing.HasAny)
+            {
+                engineRestart = true;
+                diags.Add(new LiveEditDiagnostic(
+                    LiveEditDiagnosticSeverity.Error,
+                    LiveEditDiagnosticCodes.AttrConstraintMissing,
+                    $"Attribute '{attributeName}' has no authored constraints; introducing constraints requires EngineRestart.",
+                    attributeName));
+                items.Add(new LiveApplyClassificationItem(
+                    op.Kind,
+                    attributeName,
+                    LiveApplyMode.EngineRestartRequired,
+                    "Attribute constraint schema missing.",
+                    diags));
+                return;
+            }
+
+            if (!TryBuildReplacedConstraints(in existing, fieldPath, op.NumericValue, out AttributeRegistry.AttributeConstraints next, out string? failReason))
+            {
+                mapReload = true;
+                diags.Add(new LiveEditDiagnostic(
+                    LiveEditDiagnosticSeverity.Error,
+                    LiveEditDiagnosticCodes.AttrConstraintFieldInvalid,
+                    failReason ?? "Attr constraint field is not hot-editable.",
+                    attributeName));
+                items.Add(new LiveApplyClassificationItem(
+                    op.Kind,
+                    attributeName,
+                    LiveApplyMode.MapReloadRequired,
+                    $"Field '{fieldPath}' is not NextCast-hot-editable for constraints.",
+                    diags));
+                return;
+            }
+
+            _stagedAttrConstraints.Add(new StagedAttrConstraintCandidate
+            {
+                AttributeName = attributeName,
+                AttributeId = attributeId,
+                Constraints = next
+            });
+            canNextCast = true;
+            items.Add(new LiveApplyClassificationItem(
+                op.Kind,
+                attributeName,
+                LiveApplyMode.NextCastLiveApply,
+                $"Attribute constraint '{fieldPath}' will apply on the next safe frame (NextCast).",
+                Array.Empty<LiveEditDiagnostic>()));
+        }
+
+        private static bool TryBuildReplacedConstraints(
+            in AttributeRegistry.AttributeConstraints existing,
+            string fieldPath,
+            double numericValue,
+            out AttributeRegistry.AttributeConstraints next,
+            out string? failureReason)
+        {
+            next = default;
+            failureReason = null;
+            if (string.IsNullOrWhiteSpace(fieldPath))
+            {
+                failureReason = "fieldPath is required.";
+                return false;
+            }
+
+            string path = fieldPath.Trim();
+            float value = (float)numericValue;
+            bool clamp = existing.ClampCurrentToBase;
+            bool hasMin = existing.HasMin;
+            float min = existing.Min;
+            bool hasMax = existing.HasMax;
+            float max = existing.Max;
+
+            if (path.Equals("constraints.min", StringComparison.OrdinalIgnoreCase)
+                || path.Equals("min", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!hasMin)
+                {
+                    failureReason = "Attribute has no min constraint to replace.";
+                    return false;
+                }
+
+                min = value;
+            }
+            else if (path.Equals("constraints.max", StringComparison.OrdinalIgnoreCase)
+                     || path.Equals("max", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!hasMax)
+                {
+                    failureReason = "Attribute has no max constraint to replace.";
+                    return false;
+                }
+
+                max = value;
+            }
+            else
+            {
+                failureReason =
+                    $"Field path '{fieldPath}' is not NextCast-hot-editable; use constraints.min or constraints.max.";
+                return false;
+            }
+
+            if (hasMin && hasMax && min > max)
+            {
+                failureReason = $"Constraint min ({min}) cannot exceed max ({max}).";
+                return false;
+            }
+
+            next = AttributeRegistry.AttributeConstraints.Create(clamp, hasMin, min, hasMax, max);
+            return true;
         }
 
         private static bool IsHotEditableEffectField(string fieldPath)

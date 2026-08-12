@@ -20,6 +20,8 @@ namespace Ludots.Tests.GAS
         {
             GraphIdRegistry.Clear();
             EffectTemplateIdRegistry.Clear();
+            TagRegistry.Clear();
+            AttributeRegistry.Clear();
         }
 
         [Test]
@@ -210,6 +212,122 @@ namespace Ludots.Tests.GAS
             That(result.AppliedCount, Is.EqualTo(1));
             That(sink.LastAttribute, Is.EqualTo("Health"));
             That(sink.LastValue, Is.EqualTo(100d));
+        }
+
+        [Test]
+        [Category("ci-gate")]
+        public void ClassifyAndCommit_TagRuleBody_NextCast_ReplacesWithoutNewIdentity()
+        {
+            int slowId = TagRegistry.Register("State.Slowed");
+            int immuneId = TagRegistry.Register("State.SlowImmune");
+            var rules = new TagRuleRegistry();
+            var tagOps = new TagOps(new DirtyEntityQueue(8), rules);
+            // Initial rule: empty disabledIf
+            tagOps.RegisterTagRuleSet(slowId, default);
+            That(tagOps.HasTagRule(slowId), Is.True);
+
+            var pipeline = new LiveGasEditPipeline(new GraphProgramRegistry(), effects: null, tagOps);
+            LiveEditSession session = LiveEditSession.Start(LiveEditSource.ManualWorkbench);
+            string documentJson = $$"""
+                {
+                  "disabledIfAny": [ "State.SlowImmune" ]
+                }
+                """;
+
+            That(session.TryStage(LiveDebugPatchOperation.TagRuleBodyReplace(
+                "State.Slowed",
+                documentJson,
+                new LiveEditProvenance(LiveEditSource.ManualWorkbench, "workbench://tag/State.Slowed"))).Succeeded,
+                Is.True);
+
+            LiveApplyClassificationReport report = pipeline.Classify(session);
+            That(report.CanCommitNextCast, Is.True);
+            That(report.RequiresEngineRestart, Is.False);
+            That(report.Items[0].Mode, Is.EqualTo(LiveApplyMode.NextCastLiveApply));
+
+            pipeline.BeginSafeFrame();
+            LiveApplyCommitResult committed = pipeline.CommitNextCastSafeFrame();
+            pipeline.EndSafeFrame();
+            That(committed.Succeeded, Is.True);
+
+            ref readonly TagRuleCompiled compiled = ref rules.Get(slowId);
+            That(compiled.DisabledIfAny, Is.Not.EqualTo(0uL));
+            That(TagRegistry.GetId("State.SlowImmune"), Is.EqualTo(immuneId));
+        }
+
+        [Test]
+        [Category("ci-gate")]
+        public void Classify_UnknownTagKey_RequiresEngineRestart()
+        {
+            var tagOps = new TagOps(new DirtyEntityQueue(8), new TagRuleRegistry());
+            var pipeline = new LiveGasEditPipeline(new GraphProgramRegistry(), effects: null, tagOps);
+            LiveEditSession session = LiveEditSession.Start(LiveEditSource.FileChange);
+            That(session.TryStage(LiveDebugPatchOperation.TagRuleBodyReplace(
+                "State.NeverRegistered",
+                """{ "attached": [] }""",
+                new LiveEditProvenance(LiveEditSource.FileChange, "file://tag_rules.json"))).Succeeded,
+                Is.True);
+
+            LiveApplyClassificationReport report = pipeline.Classify(session);
+            That(report.RequiresEngineRestart, Is.True);
+            That(report.CanCommitNextCast, Is.False);
+            That(TagRegistry.GetId("State.NeverRegistered"), Is.EqualTo(TagRegistry.InvalidId));
+        }
+
+        [Test]
+        [Category("ci-gate")]
+        public void ClassifyAndCommit_AttrConstraintMax_NextCast()
+        {
+            int healthId = AttributeRegistry.Register("Health");
+            AttributeRegistry.SetConstraints(
+                healthId,
+                AttributeRegistry.AttributeConstraints.Create(
+                    clampToBase: false,
+                    hasMin: true,
+                    min: 0f,
+                    hasMax: true,
+                    max: 100f));
+
+            var pipeline = new LiveGasEditPipeline(new GraphProgramRegistry());
+            LiveEditSession session = LiveEditSession.Start(LiveEditSource.ManualWorkbench);
+            That(session.TryStage(LiveDebugPatchOperation.AttrConstraintNumeric(
+                "Health",
+                "constraints.max",
+                200d,
+                new LiveEditProvenance(LiveEditSource.ManualWorkbench, "workbench://attr/Health/max"))).Succeeded,
+                Is.True);
+
+            LiveApplyClassificationReport report = pipeline.Classify(session);
+            That(report.CanCommitNextCast, Is.True);
+            That(report.Items[0].Mode, Is.EqualTo(LiveApplyMode.NextCastLiveApply));
+
+            pipeline.BeginSafeFrame();
+            LiveApplyCommitResult committed = pipeline.CommitNextCastSafeFrame();
+            pipeline.EndSafeFrame();
+            That(committed.Succeeded, Is.True);
+            That(AttributeRegistry.TryGetConstraints(healthId, out var constraints), Is.True);
+            That(constraints.Max, Is.EqualTo(200f));
+            That(constraints.HasMin, Is.True);
+            That(constraints.Min, Is.EqualTo(0f));
+        }
+
+        [Test]
+        [Category("ci-gate")]
+        public void Classify_UnknownAttribute_RequiresEngineRestart()
+        {
+            var pipeline = new LiveGasEditPipeline(new GraphProgramRegistry());
+            LiveEditSession session = LiveEditSession.Start(LiveEditSource.ManualWorkbench);
+            That(session.TryStage(LiveDebugPatchOperation.AttrConstraintNumeric(
+                "Attr.DoesNotExist",
+                "constraints.max",
+                10d,
+                new LiveEditProvenance(LiveEditSource.ManualWorkbench, "workbench://attr/missing"))).Succeeded,
+                Is.True);
+
+            LiveApplyClassificationReport report = pipeline.Classify(session);
+            That(report.RequiresEngineRestart, Is.True);
+            That(report.CanCommitNextCast, Is.False);
+            That(AttributeRegistry.GetId("Attr.DoesNotExist"), Is.EqualTo(AttributeRegistry.InvalidId));
         }
 
         private sealed class RecordingSink : ILiveAttributeCommandSink

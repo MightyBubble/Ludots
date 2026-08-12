@@ -108,6 +108,23 @@ namespace Ludots.Core.Gameplay.GAS
             _rules.Register(tagId, ruleSet);
         }
 
+        /// <summary>
+        /// NextCast-safe replace for an already-registered tag rule identity.
+        /// New tag ids (no live rule) require EngineRestart — not hot-applied.
+        /// </summary>
+        public void ReplaceTagRuleSet(int tagId, TagRuleSet ruleSet)
+        {
+            if (!_rules.HasRule(tagId))
+            {
+                throw new InvalidOperationException(
+                    $"Tag rule id {tagId} is not registered; cannot ReplaceTagRuleSet (new tag identities require EngineRestart).");
+            }
+
+            _rules.Register(tagId, ruleSet);
+        }
+
+        public bool HasTagRule(int tagId) => _rules.HasRule(tagId);
+
         public bool HasTag(ref GameplayTagContainer tagContainer, int tagId, TagSense sense)
         {
             if (sense == TagSense.Present)

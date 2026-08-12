@@ -112,6 +112,12 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
                 case LiveDebugPatchOperationKind.GraphBodyReplace:
                     ValidateGraphBodyReplace(in operation, diagnostics);
                     break;
+                case LiveDebugPatchOperationKind.TagRuleBodyReplace:
+                    ValidateTagRuleBodyReplace(in operation, diagnostics);
+                    break;
+                case LiveDebugPatchOperationKind.AttrConstraintNumeric:
+                    ValidateAttrConstraintNumeric(in operation, diagnostics);
+                    break;
                 default:
                     diagnostics.Add(new LiveEditDiagnostic(
                         LiveEditDiagnosticSeverity.Error,
@@ -140,6 +146,61 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
                     LiveEditDiagnosticSeverity.Error,
                     LiveEditDiagnosticCodes.MissingGraphDocument,
                     "Graph body replace requires a ControlFlow JSON document.",
+                    operation.DefinitionId));
+            }
+        }
+
+        private static void ValidateTagRuleBodyReplace(
+            in LiveDebugPatchOperation operation,
+            List<LiveEditDiagnostic> diagnostics)
+        {
+            if (string.IsNullOrWhiteSpace(operation.DefinitionId))
+            {
+                diagnostics.Add(new LiveEditDiagnostic(
+                    LiveEditDiagnosticSeverity.Error,
+                    LiveEditDiagnosticCodes.MissingDefinitionId,
+                    "Tag rule body replace requires a stable tag key/id.",
+                    operation.DefinitionId));
+            }
+
+            if (string.IsNullOrWhiteSpace(operation.DocumentJson))
+            {
+                diagnostics.Add(new LiveEditDiagnostic(
+                    LiveEditDiagnosticSeverity.Error,
+                    LiveEditDiagnosticCodes.MissingGraphDocument,
+                    "Tag rule body replace requires a tag_rules JSON object.",
+                    operation.DefinitionId));
+            }
+        }
+
+        private static void ValidateAttrConstraintNumeric(
+            in LiveDebugPatchOperation operation,
+            List<LiveEditDiagnostic> diagnostics)
+        {
+            if (string.IsNullOrWhiteSpace(operation.DefinitionId))
+            {
+                diagnostics.Add(new LiveEditDiagnostic(
+                    LiveEditDiagnosticSeverity.Error,
+                    LiveEditDiagnosticCodes.MissingDefinitionId,
+                    "Attr constraint edits require a stable attribute name/id.",
+                    operation.DefinitionId));
+            }
+
+            if (string.IsNullOrWhiteSpace(operation.FieldPath))
+            {
+                diagnostics.Add(new LiveEditDiagnostic(
+                    LiveEditDiagnosticSeverity.Error,
+                    LiveEditDiagnosticCodes.MissingFieldPath,
+                    "Attr constraint edits require a field path (constraints.min / constraints.max).",
+                    operation.DefinitionId));
+            }
+
+            if (!IsFinite(operation.NumericValue))
+            {
+                diagnostics.Add(new LiveEditDiagnostic(
+                    LiveEditDiagnosticSeverity.Error,
+                    LiveEditDiagnosticCodes.NonFiniteNumericValue,
+                    "Attr constraint edits require a finite numeric value.",
                     operation.DefinitionId));
             }
         }

@@ -137,14 +137,17 @@ AI 生成草稿
 
 当前不少 loader 是 `Clear + Register all`，不适合运行期热应用。正式热应用入口是 `LiveGasEditPipeline`（`CoreServiceKeys.LiveGasEditPipeline`），不是 `GameEngine.ReloadConfigs`。
 
-已落地的稳定 id 替换：
+已落地的稳定 id 替换（#622 首批全量）：
 
 - `GraphProgramRegistry.ReplaceProgram`：同 id、同 kind 替换 Graph body（`NextCastLiveApply`，安全帧提交）。
 - `EffectTemplateRegistry.TryReplaceHotNumericField`：`duration.durationTicks` / `duration.periodTicks`（`NextCastLiveApply`）。
+- `TagOps.ReplaceTagRuleSet`：同 tagId 覆盖规则体；候选编译走 `TagRuleSetLoader.CompileRuleSetForHotApply`（**禁止** Register 新 tag 名）。
+- `AttributeRegistry.ReplaceConstraints`：同 attributeId 替换已有 `constraints.min` / `constraints.max`（禁止热路径自动注册新属性）。
 - 选中角色属性：`ImmediateCommand` → `ILiveAttributeCommandSink` → `AttributeMutationOps`。
-- Graph kind / 新 id → `EngineRestartRequired`；未知 effect 字段 → `MapReloadRequired`。
+- Graph/Tag/Attr 身份变更或新 id → `EngineRestartRequired`；未知 effect / constraint 字段 → `MapReloadRequired`。
+- `#874` 的 `ReloadConfigs(GAS)` 演示捷径**不是**正式路径；正式入口仅 `LiveGasEditPipeline`。
 
-仍须遵守：
+硬约束：
 
 - 编译候选时不得清空 live registry。
 - id / name 映射在会话内必须稳定。

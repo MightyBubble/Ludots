@@ -1,22 +1,25 @@
 ﻿# GAS Composition Gate — LiveGasEditPipeline (#615 / #618–#622)
 
 ## Scope
-Real Stage → Classify → Commit hot-apply for GAS Graph body + effect numeric + actor attribute commands.
-Not ReloadConfigs. Not Clear+Register-all.
+Real Stage → Classify → Commit hot-apply for GAS Graph body + Tag rule body + Attr constraints + effect numeric + actor attribute commands (#622 complete).
+Not ReloadConfigs. Not Clear+Register-all. #874 shortcut superseded.
 
 ## Reuse
 - `LiveEditSession` / `LiveDebugPatch` (#637)
 - `GraphProgramAuthoringFrontDoor` + `GraphControlFlowCompiler`
-- `GraphProgramRegistry` (add ReplaceProgram, same id/kind)
-- `EffectTemplateRegistry` (add hot numeric field replace after finalization)
+- `GraphProgramRegistry.ReplaceProgram`
+- `TagOps.ReplaceTagRuleSet` + `TagRuleSetLoader.CompileRuleSetForHotApply`
+- `AttributeRegistry.ReplaceConstraints`
+- `EffectTemplateRegistry.TryReplaceHotNumericField`
 - `AttributeMutationOps` for Immediate attribute commands
-- `CoreServiceKeys` typed service publish
+- `CoreServiceKeys.LiveGasEditPipeline`
 
 ## Op vs enum
-No new EffectPresetType / BuiltinHandler. New apply-mode enum is the LSW contract classification axis (Immediate / NextCast / MapReload / EngineRestart), not a gameplay preset switch.
+No new EffectPresetType / BuiltinHandler. Apply-mode enum is LSW classification only.
 
 ## Fail-closed
 - Stage never clears live registries
-- Graph id / kind change → EngineRestartRequired
-- Unknown effect field path → MapReloadRequired (explicit, no silent skip)
-- Commit of NextCast only via SafeFrame queue
+- Graph/Tag/Attr identity change → EngineRestartRequired
+- Unknown effect/constraint field → MapReloadRequired
+- Hot tag compile never Register()s new tag names
+- NextCast commit only inside SafeFrame

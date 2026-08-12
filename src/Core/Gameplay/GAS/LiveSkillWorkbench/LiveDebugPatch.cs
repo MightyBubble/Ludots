@@ -8,7 +8,9 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
     {
         SkillEffectNumeric = 1,
         SelectedActorAttribute = 2,
-        GraphBodyReplace = 3
+        GraphBodyReplace = 3,
+        TagRuleBodyReplace = 4,
+        AttrConstraintNumeric = 5
     }
 
     public enum ActorAttributeMutationKind : byte
@@ -124,8 +126,7 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
         public ActorAttributeMutationKind AttributeMutation { get; }
 
         /// <summary>
-        /// Full graph ControlFlow JSON for <see cref="LiveDebugPatchOperationKind.GraphBodyReplace"/>.
-        /// Id/kind in the document must match the live graph identity.
+        /// Authored JSON body for Graph / Tag rule replace ops. Identity (id/key) must stay stable.
         /// </summary>
         public string? DocumentJson { get; }
 
@@ -181,6 +182,41 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
                 attributeName: null,
                 attributeMutation: default,
                 documentJson);
+        }
+
+        public static LiveDebugPatchOperation TagRuleBodyReplace(
+            string tagKey,
+            string documentJson,
+            in LiveEditProvenance provenance)
+        {
+            return new LiveDebugPatchOperation(
+                LiveDebugPatchOperationKind.TagRuleBodyReplace,
+                provenance,
+                definitionId: tagKey,
+                fieldPath: null,
+                numericValue: 0d,
+                default,
+                attributeName: null,
+                attributeMutation: default,
+                documentJson);
+        }
+
+        public static LiveDebugPatchOperation AttrConstraintNumeric(
+            string attributeName,
+            string fieldPath,
+            double numericValue,
+            in LiveEditProvenance provenance)
+        {
+            return new LiveDebugPatchOperation(
+                LiveDebugPatchOperationKind.AttrConstraintNumeric,
+                provenance,
+                definitionId: attributeName,
+                fieldPath,
+                numericValue,
+                default,
+                attributeName: null,
+                attributeMutation: default,
+                documentJson: null);
         }
     }
 

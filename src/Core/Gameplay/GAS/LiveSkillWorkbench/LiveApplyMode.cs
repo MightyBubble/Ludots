@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.GraphRuntime;
 
 namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
@@ -78,5 +80,19 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
         public required int TemplateId { get; init; }
         public required string FieldPath { get; init; }
         public required double NumericValue { get; init; }
+    }
+
+    internal sealed class StagedTagRuleCandidate
+    {
+        public required string TagKey { get; init; }
+        public required int TagId { get; init; }
+        public required TagRuleSet RuleSet { get; init; }
+    }
+
+    internal sealed class StagedAttrConstraintCandidate
+    {
+        public required string AttributeName { get; init; }
+        public required int AttributeId { get; init; }
+        public required AttributeRegistry.AttributeConstraints Constraints { get; init; }
     }
 }
