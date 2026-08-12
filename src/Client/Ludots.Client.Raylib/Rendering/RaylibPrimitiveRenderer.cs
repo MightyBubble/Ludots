@@ -868,9 +868,12 @@ namespace Ludots.Client.Raylib.Rendering
             }
 
             Vector2 resolvedSize = ResolveDecalSize(size, scale);
-            Quaternion normalized = WorldPlane2D.NormalizeOrIdentity(rotation);
-            float lift = MathF.Max(0.02f, MathF.Max(MathF.Abs(scale.Y), 0.05f) * 0.05f);
-            Vector3 center = position + Vector3.Transform(Vector3.UnitY * lift, normalized);
+            // Textured Decals are world-up stamps (not mesh-projected clips). Keep yaw, drop
+            // pitch/roll from AlignToSurface so slopes do not tip quads into vertical slivers.
+            float yaw = ExtractYawRad(rotation);
+            Quaternion flat = Quaternion.CreateFromAxisAngle(Vector3.UnitY, yaw);
+            float lift = MathF.Max(0.04f, MathF.Max(MathF.Abs(scale.Y), 0.05f) * 0.06f);
+            Vector3 center = position + (Vector3.UnitY * lift);
             MaterialBlendMode blendMode = ResolveMaterialBlendMode(materialId, MaterialBlendMode.AlphaBlend);
             if (blendMode == MaterialBlendMode.Opaque)
             {
@@ -889,7 +892,7 @@ namespace Ludots.Client.Raylib.Rendering
 
             Matrix4x4 transform =
                 Matrix4x4.CreateScale(resolvedSize.X, 1f, resolvedSize.Y) *
-                Matrix4x4.CreateFromQuaternion(normalized) *
+                Matrix4x4.CreateFromQuaternion(flat) *
                 Matrix4x4.CreateTranslation(center);
 
             bool doubleSided = IsMaterialDoubleSided(materialId);

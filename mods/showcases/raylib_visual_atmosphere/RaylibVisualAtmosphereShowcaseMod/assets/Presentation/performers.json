@@ -265,7 +265,7 @@
         "kind": "Grounding",
         "activeByDefault": true,
         "grounding": {
-          "mode": "AlignToSurface",
+          "mode": "SnapToGround",
           "offset": 0.08,
           "updatePolicy": "Once"
         }
@@ -296,7 +296,7 @@
         "kind": "Grounding",
         "activeByDefault": true,
         "grounding": {
-          "mode": "AlignToSurface",
+          "mode": "SnapToGround",
           "offset": 0.08,
           "updatePolicy": "Once"
         }

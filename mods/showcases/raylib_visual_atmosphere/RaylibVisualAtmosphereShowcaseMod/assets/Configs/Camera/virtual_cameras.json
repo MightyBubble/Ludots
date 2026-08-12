@@ -225,17 +225,17 @@
     "displayName": "Island Beach Textured Decals",
     "priority": 10,
     "rigKind": "Orbit",
-    "distanceCm": 9000,
-    "pitch": 42,
+    "distanceCm": 11000,
+    "pitch": 52,
     "fovYDeg": 48,
-    "yaw": 195,
+    "yaw": 200,
     "targetSource": "Fixed",
     "fixedTargetCm": {
-      "x": -15500,
-      "y": -5200
+      "x": -16500,
+      "y": -10500
     },
     "targetHeightMode": "Flat",
-    "targetHeightOffsetCm": 120,
+    "targetHeightOffsetCm": 80,
     "minDistanceCm": 1200,
     "maxDistanceCm": 20000,
     "minPitchDeg": 8,
