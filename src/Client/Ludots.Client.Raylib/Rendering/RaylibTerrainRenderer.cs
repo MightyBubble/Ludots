@@ -317,6 +317,17 @@ namespace Ludots.Client.Raylib.Rendering
             _terrainMaterial.shader = _terrainShader;
 
             _terrainLightingLocs = RaylibFrameLightingLocations.ResolveOrThrow(_terrainShader, "terrain");
+            // Shared terrain.fs supports optional VH height-band albedos; VertexMap path stays vertex tint only.
+            int locUseTerrainAlbedo = Rl.GetShaderLocation(_terrainShader, "uUseTerrainAlbedo");
+            if (locUseTerrainAlbedo >= 0)
+            {
+                int useAlbedo = 0;
+                Rl.SetShaderValue(
+                    _terrainShader,
+                    locUseTerrainAlbedo,
+                    &useAlbedo,
+                    (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_INT);
+            }
 
             _waterShader = Rl.LoadShader(Path.Combine(baseDir, "water.vs"), Path.Combine(baseDir, "water.fs"));
             if (_waterShader.id == 0) throw new InvalidOperationException("Failed to load water shader (shader.id == 0).");

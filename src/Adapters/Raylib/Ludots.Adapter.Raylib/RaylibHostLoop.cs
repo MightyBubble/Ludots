@@ -172,7 +172,7 @@ namespace Ludots.Adapter.Raylib
                 VisibleRadius = 900f,
                 SimplifiedCliffRadius = 350f,
             };
-            var visualHeightmapRenderer = new RaylibVisualHeightmapRenderer
+            var visualHeightmapRenderer = new RaylibVisualHeightmapRenderer(engine.VFS, engine.ConfigPipeline)
             {
                 VisibleRadiusCm = 140_000f,
             };
@@ -282,6 +282,7 @@ namespace Ludots.Adapter.Raylib
                 skyEnvironment.LoadDescriptors(engine.ConfigCatalog, engine.ConfigConflictReport);
                 using var waterPass = new RaylibWaterPass(engine.VFS, engine.ConfigPipeline);
                 waterPass.LoadDescriptors(engine.ConfigCatalog, engine.ConfigConflictReport);
+                visualHeightmapRenderer.LoadAlbedoDescriptors(engine.ConfigCatalog, engine.ConfigConflictReport);
                 GlobalPresentationEventBuffer? globalPresentationEvents = engine.GetService(CoreServiceKeys.GlobalPresentationEventBuffer);
                 skyEnvironment.BindPhaseSource(globalPresentationEvents, requiredWhenActive: true);
                 skyEnvironment.ApplyDayPhase(frameLighting.DayPhase01);
@@ -479,6 +480,7 @@ namespace Ludots.Adapter.Raylib
                         string? activeMapId = engine.CurrentMapSession?.MapId.Value;
                         skyEnvironment.EnsureActiveForMap(activeMapId);
                         waterPass.EnsureActiveForMap(activeMapId);
+                        visualHeightmapRenderer.EnsureAlbedoActiveForMap(activeMapId);
                         Color frameClearColor = skyEnvironment.IsActive
                             ? skyEnvironment.ResolveClearColor()
                             : (activeMapRequestsDeepBackground
