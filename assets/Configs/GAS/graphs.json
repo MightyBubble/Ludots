@@ -288,31 +288,215 @@
   {
     "id": "Graph.BT.Leaf.Patrol",
     "kind": "Script",
-    "entry": "c",
+    "entry": "patrolIntent",
     "nodes": [
       {
-        "id": "c",
+        "id": "patrolIntent",
         "op": "ConstInt",
-        "intValue": 0
+        "intValue": 0,
+        "pinRegister": 3
       },
       {
-        "id": "h",
+        "id": "zeroSteps",
+        "op": "ConstInt",
+        "intValue": 0,
+        "pinRegister": 0
+      },
+      {
+        "id": "limitSteps",
+        "op": "ConstInt",
+        "intValue": 2,
+        "pinRegister": 1
+      },
+      {
+        "id": "oneValue",
+        "op": "ConstInt",
+        "intValue": 1,
+        "pinRegister": 2
+      },
+      {
+        "id": "readStep",
+        "op": "MoveInt"
+      },
+      {
+        "id": "readLimit",
+        "op": "MoveInt"
+      },
+      {
+        "id": "stepBelowLimit",
+        "op": "CompareLtInt"
+      },
+      {
+        "id": "branchNeedStep",
+        "op": "BranchBool"
+      },
+      {
+        "id": "callStep",
+        "op": "Call"
+      },
+      {
+        "id": "done",
         "op": "HaltReturnInt"
+      },
+      {
+        "id": "stepReadStep",
+        "op": "MoveInt"
+      },
+      {
+        "id": "stepReadOne",
+        "op": "MoveInt"
+      },
+      {
+        "id": "stepAdd",
+        "op": "AddInt",
+        "pinRegister": 0
+      },
+      {
+        "id": "stepYield",
+        "op": "Yield"
+      },
+      {
+        "id": "stepReturn",
+        "op": "Return"
       }
     ],
     "controlEdges": [
       {
-        "from": "c",
+        "from": "patrolIntent",
         "fromPort": "next",
-        "to": "h"
+        "to": "zeroSteps"
+      },
+      {
+        "from": "zeroSteps",
+        "fromPort": "next",
+        "to": "limitSteps"
+      },
+      {
+        "from": "limitSteps",
+        "fromPort": "next",
+        "to": "oneValue"
+      },
+      {
+        "from": "oneValue",
+        "fromPort": "next",
+        "to": "readStep"
+      },
+      {
+        "from": "readStep",
+        "fromPort": "next",
+        "to": "readLimit"
+      },
+      {
+        "from": "readLimit",
+        "fromPort": "next",
+        "to": "stepBelowLimit"
+      },
+      {
+        "from": "stepBelowLimit",
+        "fromPort": "next",
+        "to": "branchNeedStep"
+      },
+      {
+        "from": "branchNeedStep",
+        "fromPort": "true",
+        "to": "callStep"
+      },
+      {
+        "from": "branchNeedStep",
+        "fromPort": "false",
+        "to": "done"
+      },
+      {
+        "from": "callStep",
+        "fromPort": "call",
+        "to": "stepReadStep"
+      },
+      {
+        "from": "callStep",
+        "fromPort": "next",
+        "to": "readStep"
+      },
+      {
+        "from": "stepReadStep",
+        "fromPort": "next",
+        "to": "stepReadOne"
+      },
+      {
+        "from": "stepReadOne",
+        "fromPort": "next",
+        "to": "stepAdd"
+      },
+      {
+        "from": "stepAdd",
+        "fromPort": "next",
+        "to": "stepYield"
+      },
+      {
+        "from": "stepYield",
+        "fromPort": "next",
+        "to": "stepReturn"
       }
     ],
     "valueEdges": [
       {
-        "from": "c",
+        "from": "zeroSteps",
         "fromPort": "value",
-        "to": "h",
+        "to": "readStep",
         "toPort": "value"
+      },
+      {
+        "from": "limitSteps",
+        "fromPort": "value",
+        "to": "readLimit",
+        "toPort": "value"
+      },
+      {
+        "from": "readStep",
+        "fromPort": "value",
+        "to": "stepBelowLimit",
+        "toPort": "a"
+      },
+      {
+        "from": "readLimit",
+        "fromPort": "value",
+        "to": "stepBelowLimit",
+        "toPort": "b"
+      },
+      {
+        "from": "stepBelowLimit",
+        "fromPort": "value",
+        "to": "branchNeedStep",
+        "toPort": "condition"
+      },
+      {
+        "from": "patrolIntent",
+        "fromPort": "value",
+        "to": "done",
+        "toPort": "value"
+      },
+      {
+        "from": "zeroSteps",
+        "fromPort": "value",
+        "to": "stepReadStep",
+        "toPort": "value"
+      },
+      {
+        "from": "oneValue",
+        "fromPort": "value",
+        "to": "stepReadOne",
+        "toPort": "value"
+      },
+      {
+        "from": "stepReadStep",
+        "fromPort": "value",
+        "to": "stepAdd",
+        "toPort": "a"
+      },
+      {
+        "from": "stepReadOne",
+        "fromPort": "value",
+        "to": "stepAdd",
+        "toPort": "b"
       }
     ]
   },

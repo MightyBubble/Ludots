@@ -101,20 +101,70 @@ namespace Ludots.Tests.Gas.AI
             world.AddAgent();
 
             sensors.See = false;
-            world.RestartThinking(0);
-            world.TickAll(Programs, 32, sensors);
+            TickUntilPatrolCompletes(world, sensors);
             Assert.That(world.LastScriptReturns[0], Is.EqualTo(0));
 
+            world.ResetAgent(0);
             sensors.See = true;
             sensors.InRange = false;
-            world.RestartThinking(0);
-            world.TickAll(Programs, 32, sensors);
-            Assert.That(world.LastScriptReturns[0], Is.EqualTo(1));
+            TickUntilScriptReturn(world, sensors, 1);
 
+            world.ResetAgent(0);
             sensors.InRange = true;
+            TickUntilScriptReturn(world, sensors, 2);
+        }
+
+        [Test]
+        public void PatrolYield_ResumesAcrossThinkWaves_ThenReturnsPatrolIntent()
+        {
+            int patrolId = Actions.Require(BehaviorTreeScriptKeys.Patrol);
+            var nodes = new[]
+            {
+                new BehaviorTreeNode(
+                    BehaviorTreeNodeKind.Action,
+                    0,
+                    0,
+                    BehaviorTreeLeafBinding.ScriptSlice,
+                    patrolId),
+            };
+            var tree = new BehaviorTreeDefinition("bt.patrol-yield", nodes, rootIndex: 0);
+            var world = new BehaviorTreeWorld(tree, 1);
+            world.AddAgent();
+
             world.RestartThinking(0);
-            world.TickAll(Programs, 32, sensors);
-            Assert.That(world.LastScriptReturns[0], Is.EqualTo(2));
+            world.TickAll(Programs, 32, sensors: null);
+            Assert.That(world.Statuses[0], Is.EqualTo(BehaviorTreeStatus.Running));
+
+            world.RestartThinking(0);
+            world.TickAll(Programs, 32, sensors: null);
+            Assert.That(world.Statuses[0], Is.EqualTo(BehaviorTreeStatus.Running));
+
+            world.RestartThinking(0);
+            world.TickAll(Programs, 32, sensors: null);
+            Assert.That(world.Statuses[0], Is.EqualTo(BehaviorTreeStatus.Success));
+            Assert.That(world.LastScriptReturns[0], Is.EqualTo(0));
+        }
+
+        private void TickUntilPatrolCompletes(BehaviorTreeWorld world, ScriptedSensors sensors)
+            => TickUntilScriptReturn(world, sensors, 0);
+
+        private void TickUntilScriptReturn(BehaviorTreeWorld world, ScriptedSensors sensors, int expectedReturn)
+        {
+            for (int i = 0; i < 12; i++)
+            {
+                world.RestartThinking(0);
+                world.TickAll(Programs, 32, sensors);
+                if (world.LastScriptReturns[0] == expectedReturn &&
+                    world.Statuses[0] is BehaviorTreeStatus.Success)
+                {
+                    return;
+                }
+            }
+
+            Assert.That(
+                world.LastScriptReturns[0],
+                Is.EqualTo(expectedReturn),
+                $"BT script return after {12} think waves: status={world.Statuses[0]}");
         }
 
         private sealed class ScriptedSensors : IBehaviorTreeSensorFeed

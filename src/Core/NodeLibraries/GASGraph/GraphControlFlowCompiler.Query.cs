@@ -10,6 +10,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
         private static bool IsQueryControlFlowAuthorable(GraphNodeOp op)
             => op is GraphNodeOp.ConstFloat or
                       GraphNodeOp.LoadCaster or
+                      GraphNodeOp.InvokeScript or
                       GraphNodeOp.QueryAllMapEntities or
                       GraphNodeOp.QueryFromCollection or
                       GraphNodeOp.QueryRadius or
@@ -74,7 +75,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     GraphNodeOp.RelationshipSortByMetric => GraphValueType.TargetList,
                 GraphNodeOp.AggCount or
                     GraphNodeOp.SelectTagInMask or
-                    GraphNodeOp.LookupTagDisplayToken => GraphValueType.Int,
+                    GraphNodeOp.LookupTagDisplayToken or
+                    GraphNodeOp.InvokeScript => GraphValueType.Int,
                 GraphNodeOp.AggSumAttribute or
                     GraphNodeOp.AggAverageAttribute or
                     GraphNodeOp.AggMaxAttribute or
@@ -278,6 +280,23 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.AggCount:
                     RequireValueInput(node, GraphControlFlowPorts.List, GraphValueType.TargetList, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     break;
+                case GraphNodeOp.InvokeScript:
+                {
+                    bool hasName = !string.IsNullOrWhiteSpace(node.FunctionName);
+                    bool hasId = node.GraphId > 0;
+                    if (hasName && hasId)
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
+                            $"InvokeScript node '{node.Id}' cannot set both functionName and graphId.", node.Id));
+                    }
+                    else if (!hasName && !hasId)
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingNodeRef,
+                            $"InvokeScript node '{node.Id}' requires functionName (Func Lib) or graphId.", node.Id));
+                    }
+
+                    break;
+                }
                 case GraphNodeOp.AggSumAttribute:
                 case GraphNodeOp.AggAverageAttribute:
                 case GraphNodeOp.AggMaxAttribute:
@@ -487,6 +506,22 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     break;
                 case GraphNodeOp.AggCount:
                     break;
+                case GraphNodeOp.InvokeScript:
+                {
+                    bool hasName = !string.IsNullOrWhiteSpace(node.FunctionName);
+                    if (hasName)
+                    {
+                        instruction.Imm = RequireSymbol(node.FunctionName!.Trim(), "functionName", node, symbolToIndex, symbols, graphId, diagnostics);
+                        instruction.Flags = GraphInstructionFlags.FuncLibName;
+                    }
+                    else
+                    {
+                        instruction.Imm = node.GraphId;
+                        instruction.Flags = 0;
+                    }
+
+                    break;
+                }
                 case GraphNodeOp.AggSumAttribute:
                 case GraphNodeOp.AggAverageAttribute:
                 case GraphNodeOp.AggMaxAttribute:

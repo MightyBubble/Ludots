@@ -38,6 +38,26 @@ namespace Ludots.Tests.Gas.Production
         }
 
         [Test]
+        public void BehaviorTreeArena_PatrolLeaf_YieldsAcrossThinkWaves()
+        {
+            var runtime = new BehaviorTreeArenaRuntime();
+            runtime.Bind(_programs, _actions);
+            runtime.EnsureWorld();
+            bool sawYield = false;
+            for (int i = 0; i < 12; i++)
+            {
+                runtime.Tick(0.2f);
+                if (runtime.Metrics.Detail.Contains("patrol leaf yielding", StringComparison.Ordinal))
+                {
+                    sawYield = true;
+                    break;
+                }
+            }
+
+            Assert.That(sawYield, Is.True, "Expected patrol ActionLib leaf to yield and resume across think waves.");
+        }
+
+        [Test]
         public void HfsmSentryArena_GateVignette_ThinkWavesUnderBudget()
         {
             var runtime = new HfsmSentryArenaRuntime();
