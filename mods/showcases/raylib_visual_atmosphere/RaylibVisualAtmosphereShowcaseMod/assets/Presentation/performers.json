@@ -111,11 +111,11 @@
           "materialId": "raylib_visual_atmosphere.vfx_alphablend",
           "renderPath": "StaticMesh",
           "mobility": "Movable",
-          "localOffset": [0, 2.2, 0],
-          "localScale": [2.8, 2.8, 2.8]
+          "localOffset": [0, 2.6, 0],
+          "localScale": [4.2, 4.2, 4.2]
         },
         "style": {
-          "color": [0.55, 0.78, 1.0, 0.75]
+          "color": [0.45, 0.82, 1.0, 0.82]
         }
       }
     ]
@@ -133,11 +133,11 @@
           "materialId": "raylib_visual_atmosphere.vfx_additive",
           "renderPath": "StaticMesh",
           "mobility": "Movable",
-          "localOffset": [0, 2.4, 0],
-          "localScale": [3.2, 3.2, 3.2]
+          "localOffset": [0, 2.8, 0],
+          "localScale": [4.8, 4.8, 4.8]
         },
         "style": {
-          "color": [1.0, 0.55, 0.12, 0.95]
+          "color": [1.0, 0.42, 0.08, 1.0]
         }
       }
     ]

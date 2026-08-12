@@ -1,6 +1,6 @@
 [
   {
-    "id": "raylib_visual_atmosphere.palm.raylib",
+    "id": "raylib_visual_atmosphere.palm.mesh.raylib",
     "assetKind": "Mesh",
     "assetId": "raylib_visual_atmosphere.palm",
     "backendId": "raylib",
@@ -9,7 +9,7 @@
     ]
   },
   {
-    "id": "raylib_visual_atmosphere.vfx_blend.raylib",
+    "id": "raylib_visual_atmosphere.vfx_blend.mesh.raylib",
     "assetKind": "Mesh",
     "assetId": "raylib_visual_atmosphere.vfx_blend",
     "backendId": "raylib",
@@ -18,7 +18,7 @@
     ]
   },
   {
-    "id": "raylib_visual_atmosphere.vfx_additive.raylib",
+    "id": "raylib_visual_atmosphere.vfx_additive.mesh.raylib",
     "assetKind": "Mesh",
     "assetId": "raylib_visual_atmosphere.vfx_additive",
     "backendId": "raylib",
@@ -27,7 +27,7 @@
     ]
   },
   {
-    "id": "raylib_visual_atmosphere.palm_cutout.raylib",
+    "id": "raylib_visual_atmosphere.palm_cutout.material.raylib",
     "assetKind": "Material",
     "assetId": "raylib_visual_atmosphere.palm_cutout",
     "backendId": "raylib",
@@ -36,7 +36,7 @@
     ]
   },
   {
-    "id": "raylib_visual_atmosphere.vfx_alphablend.raylib",
+    "id": "raylib_visual_atmosphere.vfx_alphablend.material.raylib",
     "assetKind": "Material",
     "assetId": "raylib_visual_atmosphere.vfx_alphablend",
     "backendId": "raylib",
@@ -45,7 +45,7 @@
     ]
   },
   {
-    "id": "raylib_visual_atmosphere.vfx_additive.raylib",
+    "id": "raylib_visual_atmosphere.vfx_additive.material.raylib",
     "assetKind": "Material",
     "assetId": "raylib_visual_atmosphere.vfx_additive",
     "backendId": "raylib",

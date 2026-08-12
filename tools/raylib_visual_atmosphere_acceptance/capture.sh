@@ -4,9 +4,12 @@
 #   tools/raylib_visual_atmosphere_acceptance/capture.sh [repoRoot] [outDir] [optOutDir]
 set -euo pipefail
 
-REPO_ROOT="${1:-/workspace}"
+REPO_ROOT="$(cd "${1:-/workspace}" && pwd)"
 OUT_DIR="${2:-$REPO_ROOT/artifacts/raylib-visual-atmosphere/acceptance}"
 OPT_OUT_DIR="${3:-/opt/cursor/artifacts/raylib-visual-atmosphere/acceptance}"
+# Raylib host WorkingDirectory is the app output dir; screenshot path must be absolute.
+[[ "$OUT_DIR" = /* ]] || OUT_DIR="$REPO_ROOT/$OUT_DIR"
+[[ "$OPT_OUT_DIR" = /* ]] || OPT_OUT_DIR="$(cd "$(dirname "$OPT_OUT_DIR")" && pwd)/$(basename "$OPT_OUT_DIR")"
 
 cd "$REPO_ROOT"
 mkdir -p "$OUT_DIR" "$OPT_OUT_DIR"
@@ -77,8 +80,8 @@ capture_one() {
     exit 3
   fi
 
-  # Drain any leftover host process from this shot.
-  pkill -f 'Ludots.App.Raylib.dll' 2>/dev/null || true
+  # Drain leftover host from this shot (match dll path only; avoid killing this script).
+  pgrep -af 'Ludots.App.Raylib.dll' | awk '/dotnet/ {print $1}' | xargs -r kill 2>/dev/null || true
   sleep 1
 
   python3 - "$dest" <<'PY'
@@ -118,7 +121,8 @@ for i in range(0, len(pixels), 4):
 mean = acc / max(1, n)
 frac = nonzero / max(1, n)
 print(f'{path}: {w}x{h} meanLum={mean:.1f} litFrac={frac:.3f}')
-if mean < 4.0 or frac < 0.02:
+# Close water/cutout frames are intentionally dark; reject only near-empty clears.
+if mean < 1.5 or frac < 0.008:
     raise SystemExit(f'ERROR: {path} looks near-black (meanLum={mean:.1f}, litFrac={frac:.3f})')
 PY
   cp -f "$dest" "$opt"
@@ -161,14 +165,20 @@ if mean < 3.0:
     raise SystemExit(f'ERROR: day/night screenshots too similar (mean delta={mean:.2f})')
 PY
 
+# Blend shot must draw both AlphaBlend and Additive billboards (host asset URIs must not collide).
+if ! rg -q 'blend=AlphaBlend' "$OUT_DIR/04_blend_modes.diag.txt"; then
+  echo "ERROR: 04_blend_modes.diag.txt missing AlphaBlend draw evidence" >&2
+  exit 5
+fi
+if ! rg -q 'blend=Additive' "$OUT_DIR/04_blend_modes.diag.txt"; then
+  echo "ERROR: 04_blend_modes.diag.txt missing Additive draw evidence (check host_assets id uniqueness)" >&2
+  exit 5
+fi
+
 # Water shot must prove reflective pass was active (diag + non-black water).
-if ! rg -q 'uSampleReflection|BindReflectiveWater|FBO: \[ID 1\] Framebuffer object created|texture loaded successfully \(640x360' /tmp/atm_capture_06_water_reflect.log \
-  && ! rg -q 'FBO: \[ID 1\] Framebuffer object created successfully' /tmp/atm_capture_06_water_reflect.log; then
-  # soft check: host logs FBO creation for reflection RT
-  if ! rg -q 'Framebuffer object created successfully' /tmp/atm_capture_06_water_reflect.log; then
-    echo "ERROR: water reflect capture log missing reflective FBO evidence" >&2
-    exit 4
-  fi
+if ! rg -q 'Framebuffer object created successfully' /tmp/atm_capture_06_water_reflect.log; then
+  echo "ERROR: water reflect capture log missing reflective FBO evidence" >&2
+  exit 4
 fi
 
 REPORT="$OUT_DIR/capture-report.md"

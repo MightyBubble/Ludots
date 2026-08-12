@@ -6,9 +6,9 @@
     "TargetXCm": 96857,
     "TargetYCm": 72600,
     "Yaw": 215,
-    "Pitch": 22,
-    "DistanceCm": 8500,
-    "FovYDeg": 50
+    "Pitch": 12,
+    "DistanceCm": 7800,
+    "FovYDeg": 52
   },
   "Boards": [
     {
@@ -70,13 +70,13 @@
     {
       "Template": "raylib_visual_atmosphere_vfx_blend",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 97500, "Y": 72000 } }
+        "WorldPositionCm": { "Value": { "X": 97800, "Y": 70800 } }
       }
     },
     {
       "Template": "raylib_visual_atmosphere_vfx_additive",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 98800, "Y": 69500 } }
+        "WorldPositionCm": { "Value": { "X": 98600, "Y": 70200 } }
       }
     }
   ]
