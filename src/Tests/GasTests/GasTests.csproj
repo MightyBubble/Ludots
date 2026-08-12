@@ -10,6 +10,8 @@
     <SkiaNativeRid Condition="'$(SkiaNativeRid)' == '' and '$(OS)' == 'Windows_NT'">win-x64</SkiaNativeRid>
     <SkiaNativeRid Condition="'$(SkiaNativeRid)' == '' and '$([MSBuild]::IsOSPlatform(`Linux`))' == 'true'">linux-x64</SkiaNativeRid>
     <SkiaNativeRid Condition="'$(SkiaNativeRid)' == '' and '$([MSBuild]::IsOSPlatform(`OSX`))' == 'true'">osx</SkiaNativeRid>
+    <!-- Tests resolve mod assets from repo mods/ via RepoModPaths; referenced mods share assets/* TargetPaths and race under -m. -->
+    <GasTestsReferencedModAssetPathRegex>[/\\]mods[/\\]</GasTestsReferencedModAssetPathRegex>
   </PropertyGroup>
 
   <ItemGroup>
@@ -127,7 +129,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Include="..\..\Libraries\SkiaSharp\runtimes\**\*.*" Link="runtimes\%(RecursiveDir)%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
+  <!-- Exclude RID-native blobs from the glob; they are linked to output root for loader probes. -->
+    <None Include="..\..\Libraries\SkiaSharp\runtimes\**\*.*"
+          Exclude="..\..\Libraries\SkiaSharp\runtimes\*\native\libSkiaSharp.*"
+          Link="runtimes\%(RecursiveDir)%(Filename)%(Extension)"
+          CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(SkiaNativeRid)' != ''">
@@ -144,5 +150,20 @@
           CopyToOutputDirectory="PreserveNewest"
           Condition="Exists('..\..\Libraries\SkiaSharp\runtimes\$(SkiaNativeRid)\native\libSkiaSharp.dylib')" />
   </ItemGroup>
+
+  <Target Name="GasTests_ExcludeReferencedModAssetsFromOutputCopy"
+          AfterTargets="GetCopyToOutputDirectoryItems"
+          BeforeTargets="_CopyOutOfDateSourceItemsToOutputDirectory;_CopyOutOfDateSourceItemsToOutputDirectoryAlways;_CopyDifferingSourceItemsToOutputDirectory">
+    <ItemGroup>
+      <_SourceItemsToCopyToOutputDirectory Remove="@(_SourceItemsToCopyToOutputDirectory)"
+          Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('%(Identity)', '$(GasTestsReferencedModAssetPathRegex)'))" />
+      <_SourceItemsToCopyToOutputDirectoryAlways Remove="@(_SourceItemsToCopyToOutputDirectoryAlways)"
+          Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('%(Identity)', '$(GasTestsReferencedModAssetPathRegex)'))" />
+      <_SourceItemsToCopyToOutputDirectoryIfDifferent Remove="@(_SourceItemsToCopyToOutputDirectoryIfDifferent)"
+          Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('%(Identity)', '$(GasTestsReferencedModAssetPathRegex)'))" />
+      <AllItemsFullPathWithTargetPath Remove="@(AllItemsFullPathWithTargetPath)"
+          Condition="$([System.Text.RegularExpressions.Regex]::IsMatch('%(Identity)', '$(GasTestsReferencedModAssetPathRegex)'))" />
+    </ItemGroup>
+  </Target>
 
 </Project>
