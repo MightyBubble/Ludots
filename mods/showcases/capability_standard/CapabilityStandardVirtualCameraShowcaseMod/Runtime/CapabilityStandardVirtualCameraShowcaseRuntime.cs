@@ -4,6 +4,7 @@ using CoreInputMod.ViewMode;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Scripting;
+using Ludots.Core.Client;
 
 namespace CapabilityStandardVirtualCameraShowcaseMod.Runtime;
 
@@ -33,7 +34,7 @@ internal sealed class CapabilityStandardVirtualCameraShowcaseRuntime
         RequireVirtualCamera(registry, CapabilityStandardVirtualCameraShowcaseIds.FpsCameraId);
         RequireVirtualCamera(registry, CapabilityStandardVirtualCameraShowcaseIds.RevealShotCameraId);
 
-        if (engine.GameSession.Camera.VirtualCameraBrain == null)
+        if (ClientLocalSeatAccess.ResolveAuthorityCamera(engine).VirtualCameraBrain == null)
         {
             throw new InvalidOperationException("CapabilityStandardVirtualCameraShowcaseMod requires VirtualCameraBrain.");
         }

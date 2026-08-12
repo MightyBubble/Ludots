@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
 using Ludots.Tests.TestCommon;
+using Ludots.Core.Client;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay;
 using Ludots.Core.Gameplay.Camera;
@@ -334,9 +335,10 @@ namespace Ludots.Tests.GAS
                 EnableZoom = false,
                 AllowUserInput = true
             });
-            session.Camera.SetVirtualCameraRegistry(registry);
-            session.Camera.ConfigureRuntime(behaviorInput, new StubViewController());
-            session.Camera.ActivateVirtualCamera("EdgePan", blendDurationSeconds: 0f);
+            var camera = new CameraManager();
+            camera.SetVirtualCameraRegistry(registry);
+            camera.ConfigureRuntime(behaviorInput, new StubViewController());
+            camera.ActivateVirtualCamera("EdgePan", blendDurationSeconds: 0f);
 
             var globals = new Dictionary<string, object>
             {
@@ -345,7 +347,12 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.GameSession.Name] = session,
                 [CoreServiceKeys.UiCaptured.Name] = true,
             };
-            ClientLocalSeatTestBindings.BindSoleSeat(globals, localPlayer, 1);
+            ClientLocalSeatBindings.BindSoleSeat(
+                globals,
+                localPlayer,
+                playerId: 1,
+                primaryCamera: camera,
+                presentResolutionPx: ClientLocalSeatTestBindings.DefaultPresentResolutionPx);
             var actionBindings = new InputActionAttributeBindingRegistry();
             actionBindings.Set(new[]
             {
@@ -421,18 +428,18 @@ namespace Ludots.Tests.GAS
             system.Update(1f);
             actionBindingSystem.Update(1f);
             attributeBindingSystem.Update(1f);
-            session.Camera.Update(1f);
+            camera.Update(1f);
 
-            Assert.That(session.Camera.State.TargetCm.X, Is.EqualTo(0f).Within(0.01f));
-            Assert.That(session.Camera.State.TargetCm.Y, Is.EqualTo(0f).Within(0.01f));
+            Assert.That(camera.State.TargetCm.X, Is.EqualTo(0f).Within(0.01f));
+            Assert.That(camera.State.TargetCm.Y, Is.EqualTo(0f).Within(0.01f));
 
             globals[CoreServiceKeys.UiCaptured.Name] = false;
             system.Update(1f);
             actionBindingSystem.Update(1f);
             attributeBindingSystem.Update(1f);
-            session.Camera.Update(1f);
+            camera.Update(1f);
 
-            Assert.That(session.Camera.State.TargetCm.Length(), Is.GreaterThan(0.01f));
+            Assert.That(camera.State.TargetCm.Length(), Is.GreaterThan(0.01f));
         }
 
         [Test]

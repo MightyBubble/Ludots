@@ -60,7 +60,7 @@ internal sealed class CapabilityStandardVirtualCameraAvatarMoveSystem : ISystem<
         }
 
         moveIntent = WorldPlane2D.NormalizeOrDefault(moveIntent, Vector2.Zero);
-        Vector2 move = OrbitCameraDirectionUtil.MoveInputToDirection(_engine.GameSession.Camera.State.Yaw, moveIntent);
+        Vector2 move = OrbitCameraDirectionUtil.MoveInputToDirection(ClientLocalSeatAccess.ResolveAuthorityCamera(_engine).State.Yaw, moveIntent);
         if (move.LengthSquared() <= 0.000001f)
         {
             return;

@@ -124,7 +124,7 @@ namespace RoadNetworkShowcaseMod.Runtime
                 LastSubmitStatus = status;
             }
 
-            var target = engine.GameSession.Camera.State.TargetCm;
+            var target = ClientLocalSeatAccess.ResolveAuthorityCamera(engine).State.TargetCm;
             ActiveBoard.LoadedChunksSource.Update(
                 (int)target.X,
                 (int)target.Y,

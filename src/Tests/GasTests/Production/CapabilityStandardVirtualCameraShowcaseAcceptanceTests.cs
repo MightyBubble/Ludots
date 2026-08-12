@@ -427,7 +427,7 @@ namespace Ludots.Tests.GAS.Production
             engine.Start();
             var behaviorInput = engine.GetService(CoreServiceKeys.CameraBehaviorInputState)
                 ?? throw new InvalidOperationException("CameraBehaviorInputState is required.");
-            engine.GameSession.Camera.ConfigureRuntime(
+            ClientLocalSeatAccess.ResolveAuthorityCamera(engine).ConfigureRuntime(
                 behaviorInput,
                 view,
                 () => engine.WorldSizeSpec.Bounds,

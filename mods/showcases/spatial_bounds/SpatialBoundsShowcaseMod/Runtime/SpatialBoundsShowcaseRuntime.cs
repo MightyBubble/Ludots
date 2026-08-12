@@ -300,8 +300,8 @@ namespace SpatialBoundsShowcaseMod.Runtime
                 return false;
             }
 
-            engine.GameSession.Camera.ResetVirtualCameras();
-            engine.GameSession.Camera.ActivateVirtualCamera(
+            ClientLocalSeatAccess.ResolveAuthorityCamera(engine).ResetVirtualCameras();
+            ClientLocalSeatAccess.ResolveAuthorityCamera(engine).ActivateVirtualCamera(
                 virtualCameraId,
                 blendDurationSeconds: 0f,
                 followTarget: CameraFollowTargetFactory.Build(
@@ -312,7 +312,7 @@ namespace SpatialBoundsShowcaseMod.Runtime
                     definition.FollowCollectionKey),
                 snapToFollowTargetWhenAvailable: definition.SnapToFollowTargetWhenAvailable);
 
-            engine.GameSession.Camera.ApplyPose(new CameraPoseRequest
+            ClientLocalSeatAccess.ResolveAuthorityCamera(engine).ApplyPose(new CameraPoseRequest
             {
                 VirtualCameraId = virtualCameraId,
                 TargetCm = (cameraConfig.TargetXCm.HasValue || cameraConfig.TargetYCm.HasValue)
@@ -340,10 +340,10 @@ namespace SpatialBoundsShowcaseMod.Runtime
 
         private static SpatialBoundsShowcasePanelState BuildPanelState(GameEngine engine)
         {
-            Vector2 target = engine.GameSession.Camera.State.TargetCm;
+            Vector2 target = ClientLocalSeatAccess.ResolveAuthorityCamera(engine).State.TargetCm;
             return new SpatialBoundsShowcasePanelState(
                 "Spatial Bounds",
-                $"Camera ({target.X:0},{target.Y:0})  Dist {engine.GameSession.Camera.State.DistanceCm:0}",
+                $"Camera ({target.X:0},{target.Y:0})  Dist {ClientLocalSeatAccess.ResolveAuthorityCamera(engine).State.DistanceCm:0}",
                 "Use the button to recenter the showcase camera if you pan away.");
         }
 

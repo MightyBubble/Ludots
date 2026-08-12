@@ -169,6 +169,40 @@ namespace Ludots.Core.Client
 
             return written;
         }
+
+        /// <summary>
+        /// Multi-split foundation: every seat that currently has a PresentBinding, in seat order.
+        /// </summary>
+        public void CopyPresentBindings(List<(string SeatId, PresentBinding Binding)> destination)
+        {
+            ArgumentNullException.ThrowIfNull(destination);
+            destination.Clear();
+            for (int i = 0; i < _order.Count; i++)
+            {
+                ClientLocalSeat seat = _seats[_order[i]];
+                if (seat.PresentBinding is PresentBinding binding)
+                {
+                    destination.Add((seat.SeatId, binding));
+                }
+            }
+        }
+
+        public int PresentBindingCount
+        {
+            get
+            {
+                int count = 0;
+                for (int i = 0; i < _order.Count; i++)
+                {
+                    if (_seats[_order[i]].PresentBinding.HasValue)
+                    {
+                        count++;
+                    }
+                }
+
+                return count;
+            }
+        }
     }
 
     public sealed class ClientLocalSeat

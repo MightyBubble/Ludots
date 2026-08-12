@@ -1604,13 +1604,10 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.SurfaceSourceRuntimeRegistry, surfaceRuntime);
             var platformManagedCameraDrivers = new PlatformManagedCameraDriverRegistry();
             SetService(CoreServiceKeys.PlatformManagedCameraDriverRegistry, platformManagedCameraDrivers);
-            GameSession.Camera.SetPlatformManagedCameraDriverRegistry(platformManagedCameraDrivers);
             var virtualCameraRegistry = new VirtualCameraRegistry();
             new VirtualCameraDefinitionLoader(ConfigPipeline, virtualCameraRegistry).Load(ConfigCatalog, ConfigConflictReport);
             SetService(CoreServiceKeys.VirtualCameraRegistry, virtualCameraRegistry);
             SetService(CoreServiceKeys.CameraImpulseRuntime, cameraImpulseRuntime);
-            GameSession.Camera.SetVirtualCameraRegistry(virtualCameraRegistry);
-            GameSession.Camera.SetImpulseRuntime(cameraImpulseRuntime);
             var questDefinitions = new QuestDefinitionRegistry();
             new QuestConfigLoader(ConfigPipeline, questDefinitions).Load(ConfigCatalog, ConfigConflictReport);
             var questRuntime = new QuestRuntimeService(World, questDefinitions);
@@ -1621,7 +1618,7 @@ namespace Ludots.Core.Engine
             var narrativeDirector = new NarrativeDirector(this, narrativeDefinitions, questRuntime);
             SetService(CoreServiceKeys.NarrativeDefinitions, narrativeDefinitions);
             SetService(CoreServiceKeys.NarrativeDirector, narrativeDirector);
-            var cameraRuntimeSystem = new CameraRuntimeSystem(World, GameSession.Camera, GlobalContext, virtualCameraRegistry);
+            var cameraRuntimeSystem = new CameraRuntimeSystem(World, GlobalContext, virtualCameraRegistry);
             RegisterSystem(new GasBudgetResetSystem(gasBudget, orderTerminalResults, orderAdmissionResults), SystemGroup.SchemaUpdate);
             RegisterSystem(schemaUpdateSystem, SystemGroup.SchemaUpdate);
             RegisterSystem(new AssociationControlProfileSystem(World, associationControlProfileRuntime), SystemGroup.SchemaUpdate);
@@ -2467,15 +2464,15 @@ namespace Ludots.Core.Engine
         private void CollectDefaultCameraTargets(System.Collections.Generic.List<Ludots.Core.Gameplay.Camera.CameraManager> targets)
         {
             targets.Clear();
-            if (TryGetService(CoreServiceKeys.LogicViewRegistry, out Client.LogicViewRegistry? views) &&
-                views != null &&
-                views.Count > 0)
+            Client.LogicViewRegistry views = GetService(CoreServiceKeys.LogicViewRegistry)
+                ?? throw new InvalidOperationException(
+                    "LogicViewRegistry is required before applying DefaultCamera.");
+            if (views.Count == 0)
             {
-                views.CopyCameras(targets);
-                return;
+                views.EnsureClientPresentView();
             }
 
-            targets.Add(GameSession.Camera);
+            views.CopyCameras(targets);
         }
 
         private void EnsureAuthorityCameraServices(Ludots.Core.Gameplay.Camera.CameraManager camera)
@@ -3563,21 +3560,23 @@ namespace Ludots.Core.Engine
                     () => GetService(CoreServiceKeys.VisualHeightmap));
             }
 
-            if (TryGetService(CoreServiceKeys.LogicViewRegistry, out Client.LogicViewRegistry? views) &&
-                views != null &&
-                views.Count > 0)
+            if (!TryGetService(CoreServiceKeys.LogicViewRegistry, out Client.LogicViewRegistry? views) ||
+                views == null)
             {
-                var cameras = new System.Collections.Generic.List<Ludots.Core.Gameplay.Camera.CameraManager>(views.Count);
-                views.CopyCameras(cameras);
-                for (int i = 0; i < cameras.Count; i++)
-                {
-                    Configure(cameras[i]);
-                }
-
                 return;
             }
 
-            Configure(GameSession.Camera);
+            if (views.Count == 0)
+            {
+                return;
+            }
+
+            var cameras = new System.Collections.Generic.List<Ludots.Core.Gameplay.Camera.CameraManager>(views.Count);
+            views.CopyCameras(cameras);
+            for (int i = 0; i < cameras.Count; i++)
+            {
+                Configure(cameras[i]);
+            }
         }
 
     }

@@ -226,8 +226,8 @@ namespace Ludots.Adapter.Raylib
                 engine.SetService(CoreServiceKeys.ViewController, (IViewController)viewController);
                 var presentationFrameSetup = engine.GetService(CoreServiceKeys.PresentationFrameSetup);
 
-                var screenProjector = new CoreScreenProjector(engine.GameSession.Camera, viewController);
-                var screenRayProvider = new CoreScreenRayProvider(engine.GameSession.Camera, viewController);
+                var screenProjector = new CoreScreenProjector(ClientLocalSeatAccess.ResolveAuthorityCamera(engine), viewController);
+                var screenRayProvider = new CoreScreenRayProvider(ClientLocalSeatAccess.ResolveAuthorityCamera(engine), viewController);
                 screenProjector.BindPresenter(cameraPresenter);
                 screenRayProvider.BindPresenter(cameraPresenter);
                 screenProjector.BindPresentationAlphaProvider(() => presentationFrameSetup?.GetInterpolationAlpha() ?? 1f);
@@ -240,7 +240,7 @@ namespace Ludots.Adapter.Raylib
                 var performerInstances = engine.GetService(CoreServiceKeys.PerformerEntityRuntime);
                 var cullingSystem = new CameraCullingSystem(
                     engine.World,
-                    engine.GameSession.Camera,
+                    ClientLocalSeatAccess.ResolveAuthorityCamera(engine),
                     engine.SpatialQueries,
                     viewController,
                     loadedChunks: null,
@@ -468,7 +468,7 @@ namespace Ludots.Adapter.Raylib
                                     "ClientLocalSeatRegistry is published but PresentBinding pipeline failed to sync.");
                             }
 
-                            cameraPresenter.Update(engine.GameSession.Camera, cameraAlpha, renderCameraDebug);
+                            cameraPresenter.Update(ClientLocalSeatAccess.ResolveAuthorityCamera(engine), cameraAlpha, renderCameraDebug);
                         }
                         hudProjection?.Update(dt);
                         benchmarkRenderer?.PrepareFrame(presentationTiming, lastW, lastH);

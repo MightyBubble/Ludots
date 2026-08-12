@@ -92,7 +92,12 @@ namespace Ludots.Core.Engine
             CurrentMapSession = session;
             if (session == null)
             {
-                GameSession.Camera.ResetVirtualCameras();
+                if (TryGetService(CoreServiceKeys.LogicViewRegistry, out Client.LogicViewRegistry? views) &&
+                    views != null)
+                {
+                    views.ResetAllVirtualCameras();
+                }
+
                 RemoveService(CoreServiceKeys.MapId);
                 RemoveService(CoreServiceKeys.MapSession);
                 RemoveService(CoreServiceKeys.MapFeatureFlags);

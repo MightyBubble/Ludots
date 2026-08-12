@@ -25,8 +25,8 @@ namespace Ludots.Tests.Presentation
             var cameraAdapter = new NullCameraAdapter();
             var timings = engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics);
             var cameraPresenter = new CameraPresenter(engine.SpatialCoords, cameraAdapter, timings);
-            var screenProjector = new CoreScreenProjector(engine.GameSession.Camera, view);
-            var screenRayProvider = new CoreScreenRayProvider(engine.GameSession.Camera, view);
+            var screenProjector = new CoreScreenProjector(ClientLocalSeatAccess.ResolveAuthorityCamera(engine), view);
+            var screenRayProvider = new CoreScreenRayProvider(ClientLocalSeatAccess.ResolveAuthorityCamera(engine), view);
             screenProjector.BindPresenter(cameraPresenter);
             screenRayProvider.BindPresenter(cameraPresenter);
             var presentationFrameSetup = engine.GetService(CoreServiceKeys.PresentationFrameSetup);
@@ -38,7 +38,7 @@ namespace Ludots.Tests.Presentation
 
             var culling = new CameraCullingSystem(
                 engine.World,
-                engine.GameSession.Camera,
+                ClientLocalSeatAccess.ResolveAuthorityCamera(engine),
                 engine.SpatialQueries,
                 view,
                 loadedChunks: null,
@@ -85,7 +85,7 @@ namespace Ludots.Tests.Presentation
                         "ClientLocalSeatRegistry is published but headless PresentBinding pipeline failed to sync.");
                 }
 
-                runtime.CameraPresenter.Update(engine.GameSession.Camera, alpha);
+                runtime.CameraPresenter.Update(ClientLocalSeatAccess.ResolveAuthorityCamera(engine), alpha);
             }
         }
 

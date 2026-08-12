@@ -268,7 +268,6 @@ namespace Ludots.Core.Gameplay.Teams
                     PossessedPlayerId = possession.PlayerId,
                     PossessedRep = possession.RepEntity,
                 };
-                // LogicView owns a dedicated CameraManager — never alias GameSession.Camera as seat0 shadow.
                 string viewId = views.EnsureDefaultView(possession.RepEntity);
                 if (TryResolvePresentResolutionPx(globals, out System.Numerics.Vector2 presentResolutionPx))
                 {

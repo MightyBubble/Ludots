@@ -1304,8 +1304,8 @@ namespace Ludots.Tests.ThreeC.Acceptance
             var cameraAdapter = new StubCameraAdapter();
             var timingDiagnostics = engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics);
             var cameraPresenter = new CameraPresenter(engine.SpatialCoords, cameraAdapter, timingDiagnostics);
-            var screenProjector = new CoreScreenProjector(engine.GameSession.Camera, view);
-            var screenRayProvider = new CoreScreenRayProvider(engine.GameSession.Camera, view);
+            var screenProjector = new CoreScreenProjector(ClientLocalSeatAccess.ResolveAuthorityCamera(engine), view);
+            var screenRayProvider = new CoreScreenRayProvider(ClientLocalSeatAccess.ResolveAuthorityCamera(engine), view);
             screenProjector.BindPresenter(cameraPresenter);
             screenRayProvider.BindPresenter(cameraPresenter);
             var presentationFrameSetup = engine.GetService(CoreServiceKeys.PresentationFrameSetup);
@@ -1313,7 +1313,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
             screenRayProvider.BindPresentationAlphaProvider(() => presentationFrameSetup?.GetInterpolationAlpha() ?? 1f);
             engine.SetService(CoreServiceKeys.ScreenProjector, screenProjector);
             engine.SetService(CoreServiceKeys.ScreenRayProvider, screenRayProvider);
-            var culling = new CameraCullingSystem(engine.World, engine.GameSession.Camera, engine.SpatialQueries, view, cullingConfig: engine.MergedConfig.Presentation.CameraCulling, timingDiagnostics: timingDiagnostics);
+            var culling = new CameraCullingSystem(engine.World, ClientLocalSeatAccess.ResolveAuthorityCamera(engine), engine.SpatialQueries, view, cullingConfig: engine.MergedConfig.Presentation.CameraCulling, timingDiagnostics: timingDiagnostics);
             culling.DisarmPresentBindingCulling();
             engine.RegisterPresentationSystem(culling);
             engine.SetService(CoreServiceKeys.CameraCullingDebugState, culling.DebugState);
@@ -1848,7 +1848,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
                     alpha,
                     runtime.View.Fov))
             {
-                runtime.CameraPresenter.Update(engine.GameSession.Camera, alpha);
+                runtime.CameraPresenter.Update(ClientLocalSeatAccess.ResolveAuthorityCamera(engine), alpha);
             }
         }
 

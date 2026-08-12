@@ -6,11 +6,13 @@ using Ludots.Core.Gameplay.Camera;
 namespace Ludots.Core.Client
 {
     /// <summary>
-    /// Pure logical vision registry (Epic #896). A LogicView is owned by a participant rep and does not
-    /// require a display. Presentation optionally binds a seat to a view via <see cref="PresentBinding"/>.
+    /// Pure logical vision registry (Epic #896 / #902).
+    /// Participant-owned views and optional client-present view; presentation binds via <see cref="PresentBinding"/>.
     /// </summary>
     public sealed class LogicViewRegistry
     {
+        public const string ClientPresentViewId = "logicview.client.present";
+
         private readonly Dictionary<string, LogicViewEntry> _byId = new(StringComparer.Ordinal);
         private readonly Dictionary<Entity, string> _defaultViewByOwner = new();
 
@@ -43,6 +45,33 @@ namespace Ludots.Core.Client
             _byId.Add(id, entry);
             _defaultViewByOwner.Add(ownerRep, id);
             return id;
+        }
+
+        /// <summary>
+        /// Seatless / bootstrap present eye. Not participant-owned; PresentBinding may still target it.
+        /// </summary>
+        public string EnsureClientPresentView(CameraManager? camera = null)
+        {
+            if (_byId.TryGetValue(ClientPresentViewId, out LogicViewEntry? existing))
+            {
+                return existing.Id;
+            }
+
+            var entry = new LogicViewEntry(ClientPresentViewId, Entity.Null, camera ?? new CameraManager());
+            _byId.Add(ClientPresentViewId, entry);
+            return ClientPresentViewId;
+        }
+
+        public bool TryGetClientPresentCamera(out CameraManager camera)
+        {
+            camera = null!;
+            if (!_byId.TryGetValue(ClientPresentViewId, out LogicViewEntry? entry))
+            {
+                return false;
+            }
+
+            camera = entry.Camera;
+            return true;
         }
 
         public void CopyCameras(List<CameraManager> destination)
@@ -81,6 +110,14 @@ namespace Ludots.Core.Client
 
         public CameraManager RequireCamera(string logicViewId) => Require(logicViewId).Camera;
 
+        public void ResetAllVirtualCameras()
+        {
+            foreach (LogicViewEntry entry in _byId.Values)
+            {
+                entry.Camera.ResetVirtualCameras();
+            }
+        }
+
         public void Clear()
         {
             _byId.Clear();
@@ -116,6 +153,8 @@ namespace Ludots.Core.Client
         public string Id { get; }
         public Entity OwnerRep { get; }
         public CameraManager Camera { get; }
+
+        public bool IsClientPresent => OwnerRep == Entity.Null;
 
         /// <summary>Authoring/logical aspect for cast projection; not host window aspect.</summary>
         public float LogicalAspect { get; set; }

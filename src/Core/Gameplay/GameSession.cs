@@ -7,8 +7,7 @@ namespace Ludots.Core.Gameplay
     public sealed record GameSessionSnapshot(
         int CurrentTick,
         IReadOnlyList<PlayerSnapshot> Players,
-        IReadOnlyDictionary<string, object> Globals,
-        CameraStateSnapshot Camera);
+        IReadOnlyDictionary<string, object> Globals);
 
     public sealed record PlayerSnapshot(int Id, int TeamId, CameraStateSnapshot Camera);
 
@@ -20,8 +19,6 @@ namespace Ludots.Core.Gameplay
         public Dictionary<string, object> Globals { get; } = new Dictionary<string, object>();
 
         public int CurrentTick { get; private set; } = 0;
-
-        public CameraManager Camera { get; } = new CameraManager();
 
         public void AddPlayer(Player player)
         {
@@ -67,8 +64,7 @@ namespace Ludots.Core.Gameplay
             return new GameSessionSnapshot(
                 CurrentTick,
                 players,
-                globals,
-                CameraStateSnapshot.FromState(Camera.State));
+                globals);
         }
 
         public void RestoreSnapshot(GameSessionSnapshot snapshot)
@@ -104,8 +100,6 @@ namespace Ludots.Core.Gameplay
             }
 
             CurrentTick = snapshot.CurrentTick;
-            snapshot.Camera.ApplyTo(Camera.State);
-            snapshot.Camera.ApplyTo(Camera.PreviousState);
         }
 
         public void Update(float dt)

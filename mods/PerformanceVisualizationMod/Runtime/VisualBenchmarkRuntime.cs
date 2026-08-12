@@ -287,13 +287,13 @@ namespace PerformanceVisualizationMod.Runtime
 
         internal VisualBenchmarkPanelState BuildPanelState(GameEngine engine)
         {
-            Vector2 cameraTarget = engine.GameSession.Camera.State.TargetCm;
+            Vector2 cameraTarget = ClientLocalSeatAccess.ResolveAuthorityCamera(engine).State.TargetCm;
             return new VisualBenchmarkPanelState(
                 Title: "Visual Benchmark Showcase",
                 Status: _status,
                 Scenario: $"Scenario: {_scenario.Label} | Spawned: {_spawnedCount:N0}",
                 Metrics: $"Entities: {_spawnedCount:N0} | Visible: {_lastVisibleCount:N0} | WorldHUD Bars: {_lastHudCount:N0} | ScreenHUD Items: {_screenHudCount:N0} | Drops W:{_lastHudDropped:N0}/S:{_screenHudDropped:N0}",
-                Camera: $"Camera target ({cameraTarget.X:0},{cameraTarget.Y:0}) | Distance {engine.GameSession.Camera.State.DistanceCm:0}",
+                Camera: $"Camera target ({cameraTarget.X:0},{cameraTarget.Y:0}) | Distance {ClientLocalSeatAccess.ResolveAuthorityCamera(engine).State.DistanceCm:0}",
                 Hint: $"Pipeline: {_pipelinePhase} | Run 2K/8K to validate performer HUD, 32K for pure visual stress, HUD100K/SkiaHotpath for direct screen-HUD overlay throughput.",
                 Actions: new[]
                 {

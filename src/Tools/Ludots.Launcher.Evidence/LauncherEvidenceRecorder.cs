@@ -251,8 +251,8 @@ public static class LauncherEvidenceRecorder
         var cameraAdapter = new RaylibCameraAdapter(initialCamera);
         var viewController = new RaylibViewController(cameraAdapter, DefaultWidth, DefaultHeight);
         var cameraPresenter = new CameraPresenter(engine.SpatialCoords, cameraAdapter);
-        var screenProjector = new CoreScreenProjector(engine.GameSession.Camera, viewController);
-        var screenRayProvider = new CoreScreenRayProvider(engine.GameSession.Camera, viewController);
+        var screenProjector = new CoreScreenProjector(ClientLocalSeatAccess.ResolveAuthorityCamera(engine), viewController);
+        var screenRayProvider = new CoreScreenRayProvider(ClientLocalSeatAccess.ResolveAuthorityCamera(engine), viewController);
         var presentationFrameSetup = engine.GetService(CoreServiceKeys.PresentationFrameSetup);
         screenProjector.BindPresenter(cameraPresenter);
         screenRayProvider.BindPresenter(cameraPresenter);
@@ -265,7 +265,7 @@ public static class LauncherEvidenceRecorder
 
         var cullingSystem = new CameraCullingSystem(
             engine.World,
-            engine.GameSession.Camera,
+            ClientLocalSeatAccess.ResolveAuthorityCamera(engine),
             engine.SpatialQueries,
             viewController,
             performers: engine.GetService(CoreServiceKeys.PerformerEntityRuntime),
@@ -346,8 +346,8 @@ public static class LauncherEvidenceRecorder
         var viewController = new WebViewController();
         viewController.SetResolution(DefaultWidth, DefaultHeight);
         var cameraAdapter = new WebCameraAdapter();
-        var screenProjector = new CoreScreenProjector(engine.GameSession.Camera, viewController);
-        var screenRayProvider = new CoreScreenRayProvider(engine.GameSession.Camera, viewController);
+        var screenProjector = new CoreScreenProjector(ClientLocalSeatAccess.ResolveAuthorityCamera(engine), viewController);
+        var screenRayProvider = new CoreScreenRayProvider(ClientLocalSeatAccess.ResolveAuthorityCamera(engine), viewController);
         var cameraPresenter = new CameraPresenter(engine.SpatialCoords, cameraAdapter);
         var presentationFrameSetup = engine.GetService(CoreServiceKeys.PresentationFrameSetup);
         screenProjector.BindPresenter(cameraPresenter);
@@ -361,7 +361,7 @@ public static class LauncherEvidenceRecorder
 
         var cullingSystem = new CameraCullingSystem(
             engine.World,
-            engine.GameSession.Camera,
+            ClientLocalSeatAccess.ResolveAuthorityCamera(engine),
             engine.SpatialQueries,
             viewController,
             performers: engine.GetService(CoreServiceKeys.PerformerEntityRuntime),
@@ -777,7 +777,7 @@ public static class LauncherEvidenceRecorder
             runtime.Engine.SetService(CoreServiceKeys.UiCaptured, false);
             runtime.Engine.Tick(DeltaTime);
             float alpha = runtime.PresentationFrameSetup?.GetInterpolationAlpha() ?? 1f;
-            runtime.CameraPresenter.Update(runtime.Engine.GameSession.Camera, alpha, runtime.RenderCameraDebug);
+            runtime.CameraPresenter.Update(ClientLocalSeatAccess.ResolveAuthorityCamera(runtime.Engine), alpha, runtime.RenderCameraDebug);
             runtime.HudProjection?.Update(DeltaTime);
             frameTimesMs.Add((Stopwatch.GetTimestamp() - t0) * 1000d / Stopwatch.Frequency);
         }
@@ -805,7 +805,7 @@ public static class LauncherEvidenceRecorder
 
     private static void ApplyCameraTarget(RecordingRuntime runtime, Vector2 targetCm, List<double> frameTimesMs, int settleTicks)
     {
-        runtime.Engine.GameSession.Camera.ApplyPose(new CameraPoseRequest
+        ClientLocalSeatAccess.ResolveAuthorityCamera(runtime.Engine).ApplyPose(new CameraPoseRequest
         {
             TargetCm = targetCm
         });
@@ -968,8 +968,8 @@ public static class LauncherEvidenceRecorder
         }
 
         var overlayLines = ExtractOverlayText(runtime.Engine.GetService(CoreServiceKeys.ScreenOverlayBuffer));
-        Vector2 cameraTarget = runtime.Engine.GameSession.Camera.State.TargetCm;
-        string activeCameraId = runtime.Engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId ?? "(none)";
+        Vector2 cameraTarget = ClientLocalSeatAccess.ResolveAuthorityCamera(runtime.Engine).State.TargetCm;
+        string activeCameraId = ClientLocalSeatAccess.ResolveAuthorityCamera(runtime.Engine).VirtualCameraBrain?.ActiveCameraId ?? "(none)";
 
         return new CameraSnapshot(
             Tick: runtime.Engine.GameSession.CurrentTick,
@@ -978,8 +978,8 @@ public static class LauncherEvidenceRecorder
             ActiveMapId: runtime.Engine.CurrentMapSession?.MapId.ToString() ?? runtime.Config.StartupMapId,
             ActiveCameraId: activeCameraId,
             CameraTargetCm: cameraTarget,
-            CameraDistanceCm: runtime.Engine.GameSession.Camera.State.DistanceCm,
-            CameraIsFollowing: runtime.Engine.GameSession.Camera.State.IsFollowing,
+            CameraDistanceCm: ClientLocalSeatAccess.ResolveAuthorityCamera(runtime.Engine).State.DistanceCm,
+            CameraIsFollowing: ClientLocalSeatAccess.ResolveAuthorityCamera(runtime.Engine).State.IsFollowing,
             ClickTargetWorldCm: clickTargetWorldCm,
             NamedEntities: namedEntities,
             DummyPositions: dummyPositions,
@@ -1451,7 +1451,7 @@ public static class LauncherEvidenceRecorder
             Step: step,
             TickMs: tickMs,
             ActiveMapId: runtime.Engine.CurrentMapSession?.MapId.ToString() ?? runtime.Config.StartupMapId,
-            CameraTargetCm: runtime.Engine.GameSession.Camera.State.TargetCm,
+            CameraTargetCm: ClientLocalSeatAccess.ResolveAuthorityCamera(runtime.Engine).State.TargetCm,
             LoadedChunkCount: loadedChunkCount,
             LoadedNodeCount: loadedNodeCount,
             ChunkSizeCm: chunkSizeCm,
@@ -2084,7 +2084,7 @@ public static class LauncherEvidenceRecorder
             Step: step,
             TickMs: tickMs,
             ActiveMapId: runtime.Engine.CurrentMapSession?.MapId.ToString() ?? runtime.Config.StartupMapId,
-            CameraTargetCm: runtime.Engine.GameSession.Camera.State.TargetCm,
+            CameraTargetCm: ClientLocalSeatAccess.ResolveAuthorityCamera(runtime.Engine).State.TargetCm,
             LoadedChunkCount: loadedChunkCount,
             LoadedNodeCount: loadedNodeCount,
             ChunkSizeCm: chunkSizeCm,
@@ -2421,7 +2421,7 @@ public static class LauncherEvidenceRecorder
         CaptureMassNavigationSnapshot(runtime, simulation, screensDir, frameTimesMs, timeline, captureFrames, frameTimesMs.Count, "003_crossing_order", captureImage: true);
         WriteMassNavigationAvoidanceMetrics(Path.Combine(request.OutputDirectory, "avoidance-metrics.jsonl"), avoidanceMetrics);
 
-        Vector2 originalCameraTarget = runtime.Engine.GameSession.Camera.State.TargetCm;
+        Vector2 originalCameraTarget = ClientLocalSeatAccess.ResolveAuthorityCamera(runtime.Engine).State.TargetCm;
         MassNavigationHotZoneConfig remoteZone = ResolveRemoteHotZone(simulation);
         MinimapRuntime minimap = runtime.Engine.GetService(CoreServiceKeys.MinimapRuntime)
             ?? throw new InvalidOperationException("MassNavigation UAT requires core MinimapRuntime.");
@@ -3153,7 +3153,7 @@ public static class LauncherEvidenceRecorder
             Step: step,
             TickMs: tickMs,
             ActiveMapId: engine.CurrentMapSession?.MapId.Value ?? string.Empty,
-            CameraTargetCm: engine.GameSession.Camera.State.TargetCm,
+            CameraTargetCm: ClientLocalSeatAccess.ResolveAuthorityCamera(engine).State.TargetCm,
             WorldWidthCm: simulation.WorldWidthCm,
             WorldHeightCm: simulation.WorldHeightCm,
             SolverWindowCenterCm: new Vector2(simulation.SolverWindowCenterXCm, simulation.SolverWindowCenterYCm),

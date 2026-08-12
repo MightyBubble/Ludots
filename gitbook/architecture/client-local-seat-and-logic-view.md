@@ -111,6 +111,7 @@ Possession 转移只改箭头；Participant、LogicView、collection 不搬家�
 
 - `CoreServiceKeys.LocalPlayerId` / `LocalPlayerEntity`
 - `GameSession.LocalPlayerId` / `SelectLocalPlayer` / 存档 GameSession 域 `localPlayerId`
+- `GameSession.Camera` 会话单例与存档 GameSession 域根 `camera`（权威改挂 LogicView；无座引导用 `logicview.client.present`）
 - `GameConfig.StartupLocalPlayerId` / `startupLocalPlayerId`
 - `LoadMapCommand.LocalPlayerId`（改为 `LocalSeats`）
 - 存档 `launchContext.localPlayerId`（改为 `launchContext.localSeats[]`）
@@ -118,7 +119,7 @@ Possession 转移只改箭头；Participant、LogicView、collection 不搬家�
 - `InputActionAttributeTargetKind.LocalPlayerEntity`（改为 `SolePossessedRep`）
 - `TryKeepExplicitLocalPlayerBinding` 及一切手写旁路
 - 扫描 `PlayerOwner` 猜本地
-- `Player.Camera` 与 session 单例相机双真相（收敛到 LogicView）
+- `Player.Camera` 与 LogicView 相机双真相（后续收敛；今日权威已是 LogicView）
 - 「有画面才有 viewport」
 - RFC-0065「不做同进程多 viewport」非目标（改为本页合同）
 
@@ -176,6 +177,18 @@ Feature: 本机座位与逻辑视觉
     When 引擎 LoadStartupMap
     Then MapLaunchContext.LocalSeats 与该配方一致
     And 运行时 ClientLocalSeatRegistry 发布对应占有
+
+  Scenario: 会话不再持有全局相机
+    Given 引擎已启动
+    When 任何系统需要镜头权威
+    Then 只从 LogicView（或 seat 的 PresentBinding 指向的 LogicView）读取
+    And 不存在 GameSession.Camera
+
+  Scenario: 双人分屏矩形可声明
+    Given 两 Seat 各有 PresentBinding
+    When 用水平对半分屏布局写入各自 rect
+    Then 两个 PresentBinding 的矩形不重叠且并集覆盖全屏
+    And 各自镜头权威仍来自绑定的 LogicView
 ```
 
 
@@ -183,6 +196,6 @@ Feature: 本机座位与逻辑视觉
 
 - P0 合同（本页 + participant 合同修订 + RFC 修订）— #897  
 - P1 SeatRegistry + Possession + 删除全局 LocalPlayer* — #898  
-- P2 LogicView 多实例 + PresentBinding 呈现/拾取 — #899（Sole PresentBinding → Presenter / ScreenRay / ScreenProjector / 呈现剔除；LogicView 自有相机权威，禁止 `GameSession.Camera` 当 seat0 影子；多座分屏 rect / UI per-seat 仍属 P3）  
-
-- P3 分屏布局与 UI per-seat owner（同模型，另开子单）
+- P2 LogicView 多实例 + PresentBinding 呈现/拾取 — #899（Sole PresentBinding → Presenter / ScreenRay / ScreenProjector / 呈现剔除；LogicView 自有相机权威；已删除 `GameSession.Camera` 会话单例；无座图可用 `logicview.client.present`）  
+- P2.5 多分屏基建底座 — PresentBinding.rect 布局工厂 + `CopyPresentBindings` / per-seat 解析；Sole 消费路径仍是今日默认  
+- P3 分屏布局产品化与 UI per-seat owner（同模型，另开子单）

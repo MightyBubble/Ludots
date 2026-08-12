@@ -111,8 +111,7 @@ namespace Ludots.Core.Persistence
                 {
                     ["currentTick"] = snapshot.CurrentTick,
                     ["players"] = players,
-                    ["globals"] = globals,
-                    ["camera"] = WriteCamera(snapshot.Camera)
+                    ["globals"] = globals
                 };
             }
 
@@ -125,6 +124,12 @@ namespace Ludots.Core.Persistence
                 {
                     throw new SaveContextException(
                         "GameSession save domain no longer accepts 'localPlayerId'. Local possession is ClientLocalSeatRegistry / launchContext.localSeats[].");
+                }
+
+                if (root.ContainsKey("camera"))
+                {
+                    throw new SaveContextException(
+                        "GameSession save domain no longer accepts root 'camera'. Camera authority is LogicViewRegistry / PresentBinding.");
                 }
 
                 var players = new List<PlayerSnapshot>();
@@ -148,8 +153,7 @@ namespace Ludots.Core.Persistence
                 var snapshot = new GameSessionSnapshot(
                     RequireInt(root, "currentTick"),
                     players,
-                    globals,
-                    ReadCamera(RequireObject(root["camera"], "camera")));
+                    globals);
                 _session.RestoreSnapshot(snapshot);
             }
         }

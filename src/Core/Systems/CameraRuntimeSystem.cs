@@ -10,25 +10,21 @@ namespace Ludots.Core.Systems
 {
     /// <summary>
     /// Fixed-step authoritative camera system.
-    /// Applies pending camera requests to every registered LogicView camera (Epic #896).
-    /// Session camera is used only before any LogicView exists (pre-map boot).
+    /// Drives every registered LogicView camera (participant + client-present). No session camera fallback.
     /// </summary>
     public sealed class CameraRuntimeSystem : ISystem<float>
     {
         private readonly World _world;
-        private readonly CameraManager _fallbackCameraManager;
         private readonly Dictionary<string, object> _globals;
         private readonly VirtualCameraRegistry _virtualCameraRegistry;
         private readonly List<CameraManager> _cameraScratch = new(4);
 
         public CameraRuntimeSystem(
             World world,
-            CameraManager fallbackCameraManager,
             Dictionary<string, object> globals,
             VirtualCameraRegistry virtualCameraRegistry)
         {
             _world = world ?? throw new ArgumentNullException(nameof(world));
-            _fallbackCameraManager = fallbackCameraManager ?? throw new ArgumentNullException(nameof(fallbackCameraManager));
             _globals = globals ?? throw new ArgumentNullException(nameof(globals));
             _virtualCameraRegistry = virtualCameraRegistry ?? throw new ArgumentNullException(nameof(virtualCameraRegistry));
         }
@@ -40,6 +36,20 @@ namespace Ludots.Core.Systems
         public void Update(in float dt)
         {
             CollectCameras();
+            bool hasPoseRequest = _globals.ContainsKey(CoreServiceKeys.CameraPoseRequest.Name);
+            bool hasVirtualCameraRequest = _globals.ContainsKey(CoreServiceKeys.VirtualCameraRequest.Name);
+            if (_cameraScratch.Count == 0)
+            {
+                if (hasPoseRequest || hasVirtualCameraRequest)
+                {
+                    throw new InvalidOperationException(
+                        "CameraPoseRequest / VirtualCameraRequest requires at least one LogicView " +
+                        "(participant view or logicview.client.present). GameSession.Camera is removed.");
+                }
+
+                return;
+            }
+
             for (int i = 0; i < _cameraScratch.Count; i++)
             {
                 ApplyVirtualCameraRequest(_cameraScratch[i]);
@@ -58,25 +68,25 @@ namespace Ludots.Core.Systems
         private void CollectCameras()
         {
             _cameraScratch.Clear();
-            if (_globals.TryGetValue(CoreServiceKeys.LogicViewRegistry.Name, out object? viewsObj) &&
-                viewsObj is LogicViewRegistry views)
+            if (!_globals.TryGetValue(CoreServiceKeys.LogicViewRegistry.Name, out object? viewsObj) ||
+                viewsObj is not LogicViewRegistry views)
             {
-                if (views.Count > 0)
-                {
-                    views.CopyCameras(_cameraScratch);
-                    return;
-                }
-
-                if (_globals.TryGetValue(CoreServiceKeys.ClientLocalSeatRegistry.Name, out object? seatsObj) &&
-                    seatsObj is ClientLocalSeatRegistry seats &&
-                    seats.Count > 0)
-                {
-                    throw new InvalidOperationException(
-                        "ClientLocalSeatRegistry has seats but LogicViewRegistry is empty — PresentBinding/LogicView publish is required.");
-                }
+                return;
             }
 
-            _cameraScratch.Add(_fallbackCameraManager);
+            if (views.Count > 0)
+            {
+                views.CopyCameras(_cameraScratch);
+                return;
+            }
+
+            if (_globals.TryGetValue(CoreServiceKeys.ClientLocalSeatRegistry.Name, out object? seatsObj) &&
+                seatsObj is ClientLocalSeatRegistry seats &&
+                seats.Count > 0)
+            {
+                throw new InvalidOperationException(
+                    "ClientLocalSeatRegistry has seats but LogicViewRegistry is empty — PresentBinding/LogicView publish is required.");
+            }
         }
 
         private void ApplyCameraPoseRequest(CameraManager cameraManager)

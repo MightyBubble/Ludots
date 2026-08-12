@@ -20,6 +20,7 @@ using Ludots.Core.Scripting;
 using Ludots.UI;
 using Ludots.UI.Runtime;
 using VisualTerrainEditorMod.UI;
+using Ludots.Core.Client;
 
 namespace VisualTerrainEditorMod.Runtime;
 
@@ -408,7 +409,7 @@ internal sealed class VisualTerrainEditorRuntime
         }
 
         float distanceCm = GetPreferredCameraDistanceCm();
-        engine.GameSession.Camera.ApplyPose(new CameraPoseRequest
+        ClientLocalSeatAccess.ResolveAuthorityCamera(engine).ApplyPose(new CameraPoseRequest
         {
             TargetCm = Vector2.Zero,
             DistanceCm = distanceCm,
@@ -424,14 +425,14 @@ internal sealed class VisualTerrainEditorRuntime
     {
         float maxDistanceCm = GetMaxCameraDistanceCm();
         float minDistanceCm = Math.Max(8_000f, maxDistanceCm * 0.2f);
-        var state = engine.GameSession.Camera.State;
+        var state = ClientLocalSeatAccess.ResolveAuthorityCamera(engine).State;
         float clampedDistanceCm = Math.Clamp(state.DistanceCm, minDistanceCm, maxDistanceCm);
         if (MathF.Abs(clampedDistanceCm - state.DistanceCm) <= 1f)
         {
             return;
         }
 
-        engine.GameSession.Camera.ApplyPose(new CameraPoseRequest
+        ClientLocalSeatAccess.ResolveAuthorityCamera(engine).ApplyPose(new CameraPoseRequest
         {
             TargetCm = state.TargetCm,
             DistanceCm = clampedDistanceCm,
@@ -833,7 +834,7 @@ internal sealed class VisualTerrainEditorRuntime
         out int maxChunkY)
     {
         VisualTerrainAssetDescriptor asset = _document.Asset;
-        Vector2 targetCm = engine.GameSession.Camera.State.TargetCm;
+        Vector2 targetCm = ClientLocalSeatAccess.ResolveAuthorityCamera(engine).State.TargetCm;
         centerChunkX = WorldToChunkX(asset, (int)MathF.Round(targetCm.X));
         centerChunkY = WorldToChunkY(asset, (int)MathF.Round(targetCm.Y));
         minChunkX = Math.Max(0, centerChunkX - radius);
@@ -846,7 +847,7 @@ internal sealed class VisualTerrainEditorRuntime
     {
         VisualTerrainAssetDescriptor asset = _document.Asset;
         float chunkSpanCm = MathF.Max(asset.ChunkWorldWidthCm, asset.ChunkWorldHeightCm);
-        float distanceCm = MathF.Max(engine.GameSession.Camera.State.DistanceCm, chunkSpanCm);
+        float distanceCm = MathF.Max(ClientLocalSeatAccess.ResolveAuthorityCamera(engine).State.DistanceCm, chunkSpanCm);
         int radiusFromDistance = (int)MathF.Ceiling(distanceCm / chunkSpanCm) + 1;
         int maxRadiusForMap = Math.Max(asset.ChunkColumns, asset.ChunkRows) - 1;
         return Math.Clamp(radiusFromDistance, MinVisibleChunkRadius, Math.Min(MaxVisibleChunkRadius, maxRadiusForMap));

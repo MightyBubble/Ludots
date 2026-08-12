@@ -15,6 +15,7 @@ using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
 using Ludots.Platform.Abstractions;
+using Ludots.Core.Client;
 
 namespace Ludots.Adapter.Web
 {
@@ -34,8 +35,8 @@ namespace Ludots.Adapter.Web
             var cameraAdapter = setup.CameraAdapter;
             var presentationFrameSetup = engine.GetService(CoreServiceKeys.PresentationFrameSetup);
 
-            var screenProjector = new CoreScreenProjector(engine.GameSession.Camera, viewController);
-            var screenRayProvider = new CoreScreenRayProvider(engine.GameSession.Camera, viewController);
+            var screenProjector = new CoreScreenProjector(ClientLocalSeatAccess.ResolveAuthorityCamera(engine), viewController);
+            var screenRayProvider = new CoreScreenRayProvider(ClientLocalSeatAccess.ResolveAuthorityCamera(engine), viewController);
             engine.SetService(CoreServiceKeys.ViewController, (IViewController)viewController);
             engine.SetService(CoreServiceKeys.ScreenProjector, (IScreenProjector)screenProjector);
             engine.SetService(CoreServiceKeys.ScreenRayProvider, (IScreenRayProvider)screenRayProvider);
@@ -48,7 +49,7 @@ namespace Ludots.Adapter.Web
 
             var cullingSystem = new CameraCullingSystem(
                 engine.World,
-                engine.GameSession.Camera,
+                ClientLocalSeatAccess.ResolveAuthorityCamera(engine),
                 engine.SpatialQueries,
                 viewController,
                 cullingConfig: engine.MergedConfig.Presentation.CameraCulling);
@@ -56,7 +57,7 @@ namespace Ludots.Adapter.Web
             {
                 cullingSystem = new CameraCullingSystem(
                     engine.World,
-                    engine.GameSession.Camera,
+                    ClientLocalSeatAccess.ResolveAuthorityCamera(engine),
                     engine.SpatialQueries,
                     viewController,
                     performers: performerInstances,
@@ -164,7 +165,10 @@ namespace Ludots.Adapter.Web
                                     "ClientLocalSeatRegistry is published but PresentBinding pipeline failed to sync.");
                             }
 
-                            cameraPresenter.Update(engine.GameSession!.Camera, cameraAlpha, renderCameraDebug);
+                            cameraPresenter.Update(
+                                ClientLocalSeatAccess.ResolveAuthorityCamera(engine),
+                                cameraAlpha,
+                                renderCameraDebug);
                         }
                         hudProjection?.Update(dt);
 

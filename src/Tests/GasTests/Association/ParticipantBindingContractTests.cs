@@ -294,8 +294,8 @@ namespace Ludots.Tests.GAS
             Entity player = world.Create(new PlayerIdentity { PlayerId = 7 }, new PlayerOwner { PlayerId = 7 });
             var players = new PlayerEntityLookup();
             players.Register(7, player);
-            var sessionCamera = new CameraManager();
-            sessionCamera.State.Yaw = 12f;
+            var orphanCamera = new CameraManager();
+            orphanCamera.State.Yaw = 12f;
             var globals = new Dictionary<string, object>
             {
                 [CoreServiceKeys.TeamEntityLookup.Name] = new TeamEntityLookup(),
@@ -323,8 +323,41 @@ namespace Ludots.Tests.GAS
             Assert.That(binding.NormalizedScreenRect, Is.EqualTo(new Vector4(0f, 0f, 1f, 1f)));
 
             CameraManager logicCamera = ClientLocalSeatAccess.RequireSolePresentCamera(globals);
-            Assert.That(logicCamera, Is.Not.SameAs(sessionCamera));
+            Assert.That(logicCamera, Is.Not.SameAs(orphanCamera));
             Assert.That(logicCamera.State.Yaw, Is.Not.EqualTo(12f));
+        }
+
+        [Test]
+        public void PresentBinding_HorizontalEqualSplit_AndCopyPresentBindings_SupportMultiSplitFoundation()
+        {
+            using var world = World.Create();
+            Entity playerA = world.Create(new PlayerIdentity { PlayerId = 1 }, new PlayerOwner { PlayerId = 1 });
+            Entity playerB = world.Create(new PlayerIdentity { PlayerId = 2 }, new PlayerOwner { PlayerId = 2 });
+            var views = new LogicViewRegistry();
+            string viewA = views.EnsureDefaultView(playerA);
+            string viewB = views.EnsureDefaultView(playerB);
+            Vector2 resolution = new(1920f, 1080f);
+            var seats = new ClientLocalSeatRegistry();
+            seats.Add(new ClientLocalSeat("seat.0")
+            {
+                PossessedPlayerId = 1,
+                PossessedRep = playerA,
+                PresentBinding = PresentBinding.HorizontalEqualSplit(viewA, index: 0, count: 2, resolution),
+            });
+            seats.Add(new ClientLocalSeat("seat.1")
+            {
+                PossessedPlayerId = 2,
+                PossessedRep = playerB,
+                PresentBinding = PresentBinding.HorizontalEqualSplit(viewB, index: 1, count: 2, resolution),
+            });
+
+            Assert.That(seats.PresentBindingCount, Is.EqualTo(2));
+            var copied = new List<(string SeatId, PresentBinding Binding)>();
+            seats.CopyPresentBindings(copied);
+            Assert.That(copied.Count, Is.EqualTo(2));
+            Assert.That(copied[0].Binding.NormalizedScreenRect, Is.EqualTo(new Vector4(0f, 0f, 0.5f, 1f)));
+            Assert.That(copied[1].Binding.NormalizedScreenRect, Is.EqualTo(new Vector4(0.5f, 0f, 0.5f, 1f)));
+            Assert.That(views.RequireCamera(copied[0].Binding.LogicViewId), Is.Not.SameAs(views.RequireCamera(copied[1].Binding.LogicViewId)));
         }
 
         [Test]

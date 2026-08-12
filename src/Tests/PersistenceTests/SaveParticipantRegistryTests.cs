@@ -126,14 +126,15 @@ public sealed class SaveParticipantRegistryTests
     }
 
     [Test]
-    public void GameSessionParticipantRestoresTickGlobalsPlayersAndCameraState()
+    public void GameSessionParticipantRestoresTickGlobalsAndPlayers()
     {
         var source = new GameSession();
-        source.AddPlayer(new Player(1, NullInputSource.Instance) { TeamId = 2 });
+        var sourcePlayer = new Player(1, NullInputSource.Instance) { TeamId = 2 };
+        sourcePlayer.Camera.TargetCm = new(1200, 3400);
+        sourcePlayer.Camera.Yaw = 77;
+        source.AddPlayer(sourcePlayer);
         source.Globals["score"] = 12;
         source.Globals["label"] = "alpha";
-        source.Camera.State.TargetCm = new(1200, 3400);
-        source.Camera.State.Yaw = 77;
         source.FixedUpdate();
         source.FixedUpdate();
 
@@ -145,6 +146,7 @@ public sealed class SaveParticipantRegistryTests
 
         JsonNode captured = participant.CaptureState();
         Assert.That(captured.AsObject().ContainsKey("localPlayerId"), Is.False);
+        Assert.That(captured.AsObject().ContainsKey("camera"), Is.False);
 
         targetParticipant.RestoreState(captured);
 
@@ -153,8 +155,8 @@ public sealed class SaveParticipantRegistryTests
         Assert.That(target.Players[0].TeamId, Is.EqualTo(2));
         Assert.That(target.Globals["score"], Is.EqualTo(12));
         Assert.That(target.Globals["label"], Is.EqualTo("alpha"));
-        Assert.That(target.Camera.State.TargetCm, Is.EqualTo(source.Camera.State.TargetCm));
-        Assert.That(target.Camera.State.Yaw, Is.EqualTo(77));
+        Assert.That(target.Players[0].Camera.TargetCm, Is.EqualTo(sourcePlayer.Camera.TargetCm));
+        Assert.That(target.Players[0].Camera.Yaw, Is.EqualTo(77));
     }
 
     [Test]
@@ -166,6 +168,21 @@ public sealed class SaveParticipantRegistryTests
         {
             ["currentTick"] = 0,
             ["localPlayerId"] = 1,
+            ["players"] = new JsonArray(),
+            ["globals"] = new JsonObject(),
+        };
+
+        Assert.Throws<SaveContextException>(() => targetParticipant.RestoreState(legacy));
+    }
+
+    [Test]
+    public void GameSessionParticipant_RejectsLegacyRootCameraField()
+    {
+        var target = new GameSession();
+        ISaveParticipant targetParticipant = CoreSaveParticipants.CreateGameSessionParticipant(target);
+        var legacy = new JsonObject
+        {
+            ["currentTick"] = 0,
             ["players"] = new JsonArray(),
             ["globals"] = new JsonObject(),
             ["camera"] = new JsonObject

@@ -554,7 +554,7 @@ namespace ChampionSkillSandboxMod.Runtime
             }
 
             engine.GlobalContext[ChampionSkillSandboxIds.CameraFollowModeKey] = ChampionSkillSandboxIds.FreeCameraToolbarButtonId;
-            engine.GameSession.Camera.ActivateVirtualCamera(
+            ClientLocalSeatAccess.ResolveAuthorityCamera(engine).ActivateVirtualCamera(
                 virtualCameraId,
                 blendDurationSeconds: 0f,
                 followTarget: null,
@@ -566,7 +566,7 @@ namespace ChampionSkillSandboxMod.Runtime
                 return;
             }
 
-            engine.GameSession.Camera.ApplyPose(new CameraPoseRequest
+            ClientLocalSeatAccess.ResolveAuthorityCamera(engine).ApplyPose(new CameraPoseRequest
             {
                 VirtualCameraId = virtualCameraId,
                 TargetCm = (cameraConfig.TargetXCm.HasValue || cameraConfig.TargetYCm.HasValue)
@@ -577,13 +577,13 @@ namespace ChampionSkillSandboxMod.Runtime
                 DistanceCm = cameraConfig.DistanceCm,
                 FovYDeg = cameraConfig.FovYDeg,
             });
-            engine.GameSession.Camera.SynchronizeActiveVirtualCameraBoundsAndHeight();
+            ClientLocalSeatAccess.ResolveAuthorityCamera(engine).SynchronizeActiveVirtualCameraBoundsAndHeight();
         }
 
         private static void SyncCameraFollow(GameEngine engine)
         {
             string followModeId = ResolveCameraFollowMode(engine);
-            string activeCameraId = engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId ?? string.Empty;
+            string activeCameraId = ClientLocalSeatAccess.ResolveAuthorityCamera(engine).VirtualCameraBrain?.ActiveCameraId ?? string.Empty;
             if (string.IsNullOrWhiteSpace(activeCameraId))
             {
                 return;
@@ -596,7 +596,7 @@ namespace ChampionSkillSandboxMod.Runtime
                 commandSourceOwner = RequireSolePossessedRep(engine);
                 if (commandSourceOwner == Entity.Null || !engine.World.IsAlive(commandSourceOwner))
                 {
-                    engine.GameSession.Camera.SetFollowTarget(activeCameraId, null, snapToFollowTargetWhenAvailable: false);
+                    ClientLocalSeatAccess.ResolveAuthorityCamera(engine).SetFollowTarget(activeCameraId, null, snapToFollowTargetWhenAvailable: false);
                     return;
                 }
             }
@@ -610,7 +610,7 @@ namespace ChampionSkillSandboxMod.Runtime
                 _ => null
             };
 
-            engine.GameSession.Camera.SetFollowTarget(activeCameraId, followTarget, snapToFollowTargetWhenAvailable: false);
+            ClientLocalSeatAccess.ResolveAuthorityCamera(engine).SetFollowTarget(activeCameraId, followTarget, snapToFollowTargetWhenAvailable: false);
         }
 
         private static string ResolveCameraFollowMode(GameEngine engine)

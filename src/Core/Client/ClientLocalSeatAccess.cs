@@ -189,7 +189,9 @@ namespace Ludots.Core.Client
             RequireSolePresentSurface(engine.GlobalContext, fovYDeg);
 
         /// <summary>
-        /// Sole LogicView camera when present; otherwise session boot camera before any LogicView exists.
+        /// Authority camera for tools/single-viewport consumers:
+        /// sole PresentBinding → sole LogicView → client-present LogicView (created if needed).
+        /// Multi-PresentBinding consumers must enumerate seats via <see cref="CopyPresentBindings"/>.
         /// </summary>
         public static CameraManager ResolveAuthorityCamera(GameEngine engine)
         {
@@ -199,22 +201,88 @@ namespace Ludots.Core.Client
                 return presentCamera;
             }
 
-            if (engine.TryGetService(CoreServiceKeys.LogicViewRegistry, out LogicViewRegistry? views) &&
-                views != null &&
-                views.Count > 0)
+            ClientLocalSeatRegistry seats = RequireRegistry(engine);
+            if (seats.PresentBindingCount > 1)
             {
-                if (views.Count != 1)
-                {
-                    throw new InvalidOperationException(
-                        "ResolveAuthorityCamera requires a sole LogicView when PresentBinding is absent (multi-view is P3).");
-                }
+                throw new InvalidOperationException(
+                    "ResolveAuthorityCamera requires a sole PresentBinding when multiple present bindings exist; enumerate CopyPresentBindings for split-screen.");
+            }
 
+            LogicViewRegistry views = RequireLogicViews(engine);
+            if (views.Count == 1)
+            {
                 var cameras = new List<CameraManager>(1);
                 views.CopyCameras(cameras);
                 return cameras[0];
             }
 
-            return engine.GameSession.Camera;
+            if (views.TryGetClientPresentCamera(out CameraManager clientPresent))
+            {
+                return clientPresent;
+            }
+
+            if (views.Count == 0)
+            {
+                string id = views.EnsureClientPresentView();
+                CameraManager camera = views.RequireCamera(id);
+                WireAuthorityCameraServices(engine, camera);
+                return camera;
+            }
+
+            throw new InvalidOperationException(
+                "ResolveAuthorityCamera requires PresentBinding when multiple LogicViews exist (split-screen present is PresentBinding-driven).");
+        }
+
+        public static void CopyPresentBindings(
+            GameEngine engine,
+            List<(string SeatId, PresentBinding Binding)> destination)
+        {
+            ArgumentNullException.ThrowIfNull(engine);
+            RequireRegistry(engine).CopyPresentBindings(destination);
+        }
+
+        public static bool TryResolvePresentCamera(
+            GameEngine engine,
+            string seatId,
+            out CameraManager camera,
+            out PresentBinding binding)
+        {
+            ArgumentNullException.ThrowIfNull(engine);
+            camera = null!;
+            binding = default;
+            ClientLocalSeat seat = RequireRegistry(engine).Require(seatId);
+            if (seat.PresentBinding is not PresentBinding present)
+            {
+                return false;
+            }
+
+            binding = present;
+            camera = RequireLogicViews(engine).RequireCamera(present.LogicViewId);
+            return true;
+        }
+
+        private static void WireAuthorityCameraServices(GameEngine engine, CameraManager camera)
+        {
+            if (camera.VirtualCameraBrain == null &&
+                engine.TryGetService(CoreServiceKeys.VirtualCameraRegistry, out VirtualCameraRegistry? registry) &&
+                registry != null)
+            {
+                camera.SetVirtualCameraRegistry(registry);
+            }
+
+            if (engine.TryGetService(CoreServiceKeys.CameraImpulseRuntime, out CameraImpulseRuntime? impulse) &&
+                impulse != null)
+            {
+                camera.SetImpulseRuntime(impulse);
+            }
+
+            if (engine.TryGetService(
+                    CoreServiceKeys.PlatformManagedCameraDriverRegistry,
+                    out PlatformManagedCameraDriverRegistry? drivers) &&
+                drivers != null)
+            {
+                camera.SetPlatformManagedCameraDriverRegistry(drivers);
+            }
         }
     }
 }
