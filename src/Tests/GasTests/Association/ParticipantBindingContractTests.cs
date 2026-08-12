@@ -141,6 +141,28 @@ namespace Ludots.Tests.GAS
         }
 
         [Test]
+        public void GameConfig_CreateStartupLaunchContext_MapsStartupLocalSeats()
+        {
+            var config = new GameConfig
+            {
+                StartupLocalSeats =
+                {
+                    new StartupLocalSeatConfig { SeatId = "seat.0", PlayerId = 7 },
+                    new StartupLocalSeatConfig { SeatId = "seat.1", PlayerId = 8, ControlSchemeId = "pad" },
+                },
+            };
+
+            MapLaunchContext? launch = config.CreateStartupLaunchContext();
+            Assert.That(launch, Is.Not.Null);
+            Assert.That(launch!.LocalSeats.Count, Is.EqualTo(2));
+            Assert.That(launch.LocalSeats[0].SeatId, Is.EqualTo("seat.0"));
+            Assert.That(launch.LocalSeats[0].PlayerId, Is.EqualTo(7));
+            Assert.That(launch.LocalSeats[1].SeatId, Is.EqualTo("seat.1"));
+            Assert.That(launch.LocalSeats[1].PlayerId, Is.EqualTo(8));
+            Assert.That(launch.LocalSeats[1].ControlSchemeId, Is.EqualTo("pad"));
+        }
+
+        [Test]
         public void SeatPossessionSyncSystem_UsesLookupAndDoesNotScanPlayerOwner()
         {
             using var world = World.Create();

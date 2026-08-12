@@ -93,29 +93,45 @@ focused map 切换时，lookup object identity 必须稳定；系统拿到的是
 
 本机驾驶权不再使用全局 `LocalPlayerId` / `LocalPlayerEntity`。正式合同见 [ClientLocalSeat · Possession · LogicView · PresentBinding](client-local-seat-and-logic-view.md)（Epic #896）。
 
-最小链路：
+### 5.1 配置分层（SSOT）
+
+| 层 | 配置 | 角色 |
+|---|---|---|
+| 地图身份 | `MapConfig.Entities` → `Players` / `Teams` | Participant 真相（**先刷实体，再绑定身份**） |
+| 冷启动默认 | `GameConfig.startupLocalSeats[]` | 默认座位配方；经 `CreateStartupLaunchContext()` 注入 |
+| 本次进图 | `MapLaunchContext.LocalSeats[]` | **进图座位表 SSOT** |
+| 运行时 | `ClientLocalSeatRegistry` | 开局后占有 / PresentBinding |
+
+`LocalSeats` 属于 map load launch context，不属于 map identity。  
+Mod 自定义 launch payload 只能走 `MapLaunchContext.Metadata`；座位表本身是 Core 顶层合同字段。
+
+### 5.2 最小链路
 
 ```text
-MapLaunchContext.LocalSeats[]
+GameConfig.startupLocalSeats | LoadMapCommand.LocalSeats | save localSeats | lobby
+  -> MapLaunchContext.LocalSeats[]
   -> PlayerEntityLookup（解析每个 seat.playerId）
   -> ClientLocalSeatRegistry（Possession + 可选 PresentBinding）
   -> 输入 / Cast / 下令显式按 seat（或 RequireSolePossessedRep）
 ```
 
-`LocalSeats` 属于 map load launch context，不属于 map identity。  
-Mod 自定义 launch payload 只能走 `MapLaunchContext.Metadata`；座位表本身是 Core 顶层合同字段。
+进图顺序：`LoadEntitiesAndIndex` → `ParticipantBindingResolver.Resolve` → `PublishFocused` / `PublishLocalSeats`。  
+LogicView **不是**每个 Participant 的必有字段；当前实现对有本机占有的 seat 自动 `EnsureDefaultView`。
 
 正式路径禁止：
 
 - 全局 `LocalPlayerId` / `LocalPlayerEntity` 服务槽
+- `GameConfig.startupLocalPlayerId` / 存档 `launchContext.localPlayerId`
 - 扫描 `PlayerOwner` 猜本地
 - 手写旁路 / 镜像旧键
 - 在 `MapConfig.Players` 里声明静态 local player 标记
 
 相关源码：
 
+- `src/Core/Config/GameConfig.cs` / `StartupLocalSeatConfig.cs`
 - `src/Core/Client/ClientLocalSeatRegistry.cs`
 - `src/Core/Map/MapLaunchContext.cs`
+- `src/Core/Commands/LoadMapCommand.cs`
 - `src/Core/Gameplay/Teams/ParticipantBindingResolver.cs`
 - `mods/CoreInputMod/Triggers/InstallCoreInputOnGameStartTrigger.cs`
 

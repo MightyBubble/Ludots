@@ -1,14 +1,23 @@
 {
   "startupMapId": "capability_standard_participant_views",
-  "startupLocalPlayerId": 1,
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ],
   "windowTitle": "Ludots Engine - Capability Standard Participant Views",
   "targetFps": 0,
   "windowWidth": 1440,
   "windowHeight": 900,
   "windowResizable": true,
   "commandSource": {
-    "targetFilter": { "relationFilter": "All" },
-    "movePathPreviewOrderTypeKeys": [ "massNavigationMove" ]
+    "targetFilter": {
+      "relationFilter": "All"
+    },
+    "movePathPreviewOrderTypeKeys": [
+      "massNavigationMove"
+    ]
   },
   "presentation": {
     "cameraCulling": {

@@ -822,7 +822,8 @@ namespace Ludots.Tests.Presentation
         private static void StartStartupMap(GameEngine engine)
         {
             Assert.That(engine.MergedConfig.StartupMapId, Is.EqualTo("crowd_physics_arena"));
-            Assert.That(engine.MergedConfig.StartupLocalPlayerId, Is.GreaterThan(0));
+            Assert.That(engine.MergedConfig.HasStartupLocalSeats, Is.True);
+            Assert.That(engine.MergedConfig.StartupLocalSeats[0].PlayerId, Is.GreaterThan(0));
 
             engine.Start();
             engine.LoadStartupMap();

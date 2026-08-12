@@ -43,40 +43,72 @@ Possession 转移只改箭头；Participant、LogicView、collection 不搬家�
 
 ## 3. 详情
 
-### 3.1 启动
+### 3.1 配置分层（SSOT）
 
-`MapLaunchContext.LocalSeats`：
+| 层 | 字段 | 角色 |
+|---|---|---|
+| 地图身份 | `MapConfig.Entities` + `Players` / `Teams` | 世界上有哪些 Participant（先实体，再绑定身份） |
+| 冷启动默认 | `GameConfig.startupLocalSeats[]` | 默认怎么坐；只注入 launch，不是运行时真相 |
+| 本次进图 | `MapLaunchContext.LocalSeats[]` | **进图座位表 SSOT**（来自 game 默认 / 命令 / 大厅 / 存档） |
+| 运行时 | `ClientLocalSeatRegistry` | 开局后可变的占有 / PresentBinding |
 
-- `seatId`（非空、同次启动唯一）
+禁止：
+
+- `GameConfig.startupLocalPlayerId`（已删除；用 `startupLocalSeats`）
+- 把座位表写进 `MapConfig`（地图身份）
+- 全局 `LocalPlayerId` / `LocalPlayerEntity` 服务槽
+
+`startupLocalSeats` / `LocalSeats` 每项：
+
+- `seatId`（非空、同次唯一）
 - `playerId`（必须已在 map Players 绑定）
 - 可选 `controlSchemeId`
 
-单人 = 一个 seat。禁止再提供全局 `LocalPlayerId` 槽。  
-`GameConfig.StartupLocalSeats`（或等价）注入启动 context；非法 seat / 未绑定 player → map load fail-fast。
+### 3.2 启动与进图链路
 
-### 3.2 消费规则
+```text
+1. 引擎注册空 ClientLocalSeatRegistry / LogicViewRegistry
+2. Host Start → GameStart
+3. 组装 MapLaunchContext.LocalSeats
+   - LoadStartupMap：GameConfig.CreateStartupLaunchContext()
+   - LoadMapCommand：命令携带 LocalSeats
+   - 读档：launchContext.localSeats[]
+   - 大厅/其它：显式 MapLoadRequest.LaunchContext
+4. 加载地图内容（板面等）
+5. MapConfig.Entities → 刷实体（先）
+6. MapConfig.Players/Teams → 绑定 Participant（后）
+7. PublishLocalSeats：座位占有 →（仅对有占有的 seat）EnsureDefaultView → 可选 PresentBinding
+8. MapLoaded；快照 session.LocalSeats
+```
+
+非法 seat / 未绑定 player → map load fail-fast。  
+**不是每个 Participant 都有 LogicView**：今天只对「本机座位占有」自动建；AI/其它玩家代表可只有身份。
+
+### 3.3 消费规则
 
 - 输入 / Cast owner / 下令 / Follow 锚：**显式 seat 或 seat 的 possessed rep**
 - 禁止隐式「本机唯一玩家」全局服务键
 - 恰有一个 seat 时，可用 `RequireSolePossessedRep()`（座位数量 ≠ 1 则失败）——这是基数断言，不是 Active 槽
 
-### 3.3 LogicView（纯逻辑视觉）
+### 3.4 LogicView（纯逻辑视觉）
 
 - 挂在 Participant（或其显式 view 资产）上，**不**挂在 Seat
-- AI 无 Seat 也可有 LogicView
+- 可选能力：无 Seat 的 Participant 也可以持有 LogicView（需显式创建；非启动默认）
 - 逻辑宽高比 / 投影参数由数据声明，不从窗口反推为真相
-- 与 Knowledge/Fog viewer **分离**：雾仍按 viewer 实体
 
-### 3.4 PresentBinding（呈现）
+### 3.5 PresentBinding（呈现）
 
 - 仅 ClientLocalSeat 可选字段
 - Presentation：对每个 binding，读 LogicView 权威态 → 插值 → adapter 画到 rect
 - 拾取：有 binding 时用呈现度量 + 该 LogicView；无 binding 的逻辑 Cast 只用 LogicView 逻辑度量
 - Adapter 仍不拥有镜头权威（沿用 camera/presentation 纪律）
 
-### 3.5 删除清单
+### 3.6 删除清单
 
 - `CoreServiceKeys.LocalPlayerId` / `LocalPlayerEntity`
+- `GameConfig.StartupLocalPlayerId` / `startupLocalPlayerId`
+- `LoadMapCommand.LocalPlayerId`（改为 `LocalSeats`）
+- 存档 `launchContext.localPlayerId`（改为 `launchContext.localSeats[]`）
 - `TryKeepExplicitLocalPlayerBinding` 及一切手写旁路
 - 扫描 `PlayerOwner` 猜本地
 - `Player.Camera` 与 session 单例相机双真相（收敛到 LogicView）
@@ -85,15 +117,16 @@ Possession 转移只改箭头；Participant、LogicView、collection 不搬家�
 
 ## 4. 场景
 
-- 单机单人：1 Seat possess 甲，PresentBinding 全屏 → 甲的 LogicView  
-- 同屏双人：2 Seat 同时输入，各 possess、各 PresentBinding  
-- AI bot：有 LogicView，无 Seat  
+- 单机单人：`startupLocalSeats: [{ seat.0, playerId: 1 }]` → 占有甲 → PresentBinding 全屏  
+- 同屏双人：两条 seat 写入 launch / game 默认  
+- AI bot：地图 Players 有代表，无 seat → 无自动 LogicView  
 - 换 client：改 Possession / PresentBinding；甲的集合与 LogicView 不动  
 - 旁观：Seat 可 PresentBinding 盯乙的 LogicView，而不 possess 乙  
 
 ## 5. 边界
 
 - Seat ≠ 「玩家属于 client」  
+- `GameConfig.startupLocalSeats` 不是运行时座位真相；进图后以 `ClientLocalSeatRegistry` 为准  
 - 不把 InteractionContextStack 的 ownerToken 当成座位表  
 - 本页不定义 Cast→Query→WriteCollection 业务图（见交互/蓝图合同）  
 - 分屏布局是 PresentBinding.rect 配置，不另起视觉子系统  
@@ -122,7 +155,14 @@ Feature: 本机座位与逻辑视觉
     Given 本机已按 LocalSeats 启动
     Then 不存在 LocalPlayerEntity 服务槽
     And 输入锚点来自 Seat 的 Possession
+
+  Scenario: 冷启动座位来自游戏全局配置
+    Given game.json 声明 startupLocalSeats 含 seat.0 → playerId 1
+    When 引擎 LoadStartupMap
+    Then MapLaunchContext.LocalSeats 与该配方一致
+    And 运行时 ClientLocalSeatRegistry 发布对应占有
 ```
+
 
 ## 7. 分期
 

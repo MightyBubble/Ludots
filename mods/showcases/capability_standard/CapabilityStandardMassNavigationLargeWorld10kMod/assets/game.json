@@ -1,6 +1,11 @@
 {
   "startupMapId": "mass_navigation",
-  "startupLocalPlayerId": 1,
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ],
   "windowTitle": "Ludots Engine - Capability Standard Mass Navigation Large World 10K",
   "targetFps": 0,
   "worldWidthInMacroTiles": 250,
@@ -12,8 +17,12 @@
     "orderTerminalResultCapacity": 16384
   },
   "commandSource": {
-    "targetFilter": { "relationFilter": "Friendly" },
-    "movePathPreviewOrderTypeKeys": [ "massNavigationMove" ]
+    "targetFilter": {
+      "relationFilter": "Friendly"
+    },
+    "movePathPreviewOrderTypeKeys": [
+      "massNavigationMove"
+    ]
   },
   "presentation": {
     "performerInstanceCapacity": 131072,

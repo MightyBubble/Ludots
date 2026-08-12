@@ -122,7 +122,7 @@ public sealed class FormationCapabilityLifecycleTests
     {
         engine.LoadMap(MapLoadRequest.FromMapId(
             "formation_capability_showcase",
-            MapLaunchContext.Create(engine.MergedConfig.StartupLocalPlayerId)));
+            engine.MergedConfig.CreateStartupLaunchContext()));
     }
 
     private static void TickUntil(GameEngine engine, Func<bool> condition, int maxFrames)

@@ -290,7 +290,8 @@ namespace Ludots.Tests.Presentation
         private static void StartStartupMap(GameEngine engine)
         {
             Assert.That(engine.MergedConfig.StartupMapId, Is.Not.Empty);
-            Assert.That(engine.MergedConfig.StartupLocalPlayerId, Is.GreaterThan(0));
+            Assert.That(engine.MergedConfig.HasStartupLocalSeats, Is.True);
+            Assert.That(engine.MergedConfig.StartupLocalSeats[0].PlayerId, Is.GreaterThan(0));
 
             engine.Start();
             engine.LoadStartupMap();
@@ -325,7 +326,7 @@ namespace Ludots.Tests.Presentation
 
         private static void AssertStartupParticipantBindings(GameEngine engine)
         {
-            int playerId = engine.MergedConfig.StartupLocalPlayerId;
+            int playerId = engine.MergedConfig.StartupLocalSeats[0].PlayerId;
             Entity localPlayer = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             Assert.That(localPlayer, Is.Not.EqualTo(Entity.Null));
             Assert.That(engine.World.IsAlive(localPlayer), Is.True);

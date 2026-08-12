@@ -2141,9 +2141,7 @@ namespace Ludots.Tests.GAS
             }
             else
             {
-                MapLaunchContext? launchContext = engine.MergedConfig.StartupLocalPlayerId > 0
-                    ? MapLaunchContext.Create(engine.MergedConfig.StartupLocalPlayerId)
-                    : null;
+                MapLaunchContext? launchContext = engine.MergedConfig.CreateStartupLaunchContext();
                 engine.LoadMap(MapLoadRequest.FromMapId(mapId, launchContext));
             }
             Assert.That(engine.CurrentMapSession, Is.Not.Null, $"{mapId} should create a live map session.");

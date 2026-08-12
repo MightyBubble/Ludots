@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Ludots.Core.Client;
 using Ludots.Core.Engine;
 using Ludots.Core.Engine.TimeFlow;
 using Ludots.Core.Gameplay;
@@ -883,7 +884,24 @@ namespace Ludots.Core.Persistence
             var root = new JsonObject();
             if (launchContext.HasLocalSeats)
             {
-                root["localPlayerId"] = launchContext.LocalSeats[0].PlayerId;
+                var seats = new JsonArray();
+                for (int i = 0; i < launchContext.LocalSeats.Count; i++)
+                {
+                    LocalSeatLaunchBinding seat = launchContext.LocalSeats[i];
+                    var seatObj = new JsonObject
+                    {
+                        ["seatId"] = seat.SeatId,
+                        ["playerId"] = seat.PlayerId,
+                    };
+                    if (!string.IsNullOrWhiteSpace(seat.ControlSchemeId))
+                    {
+                        seatObj["controlSchemeId"] = seat.ControlSchemeId;
+                    }
+
+                    seats.Add(seatObj);
+                }
+
+                root["localSeats"] = seats;
             }
 
             if (launchContext.Metadata != null && launchContext.Metadata.Count > 0)
@@ -910,7 +928,29 @@ namespace Ludots.Core.Persistence
             JsonObject root = node as JsonObject ??
                 throw new SaveContextException("Map session launchContext must be an object.");
 
-            int localPlayerId = root["localPlayerId"]?.GetValue<int>() ?? 0;
+            if (root.ContainsKey("localPlayerId"))
+            {
+                throw new SaveContextException(
+                    "Map session launchContext.localPlayerId is removed; use launchContext.localSeats[].");
+            }
+
+            LocalSeatLaunchBinding[] seats = Array.Empty<LocalSeatLaunchBinding>();
+            if (root["localSeats"] is JsonArray seatArray)
+            {
+                seats = new LocalSeatLaunchBinding[seatArray.Count];
+                for (int i = 0; i < seatArray.Count; i++)
+                {
+                    JsonObject seatObj = seatArray[i] as JsonObject ??
+                        throw new SaveContextException($"launchContext.localSeats[{i}] must be an object.");
+                    string seatId = seatObj["seatId"]?.GetValue<string>()
+                        ?? throw new SaveContextException($"launchContext.localSeats[{i}].seatId is required.");
+                    int playerId = seatObj["playerId"]?.GetValue<int>()
+                        ?? throw new SaveContextException($"launchContext.localSeats[{i}].playerId is required.");
+                    string? controlSchemeId = seatObj["controlSchemeId"]?.GetValue<string>();
+                    seats[i] = new LocalSeatLaunchBinding(seatId, playerId, controlSchemeId);
+                }
+            }
+
             IReadOnlyDictionary<string, object>? metadata = null;
             if (root["metadata"] is JsonObject metadataObject)
             {
@@ -923,7 +963,7 @@ namespace Ludots.Core.Persistence
                 metadata = values;
             }
 
-            return MapLaunchContext.Create(localPlayerId, metadata);
+            return MapLaunchContext.Create(seats, metadata);
         }
     }
 }

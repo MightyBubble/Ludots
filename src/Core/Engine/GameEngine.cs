@@ -3244,9 +3244,7 @@ namespace Ludots.Core.Engine
                 throw new InvalidOperationException("StartupMapId is required.");
             }
 
-            MapLaunchContext? launchContext = MergedConfig!.StartupLocalPlayerId > 0
-                ? MapLaunchContext.Create(MergedConfig.StartupLocalPlayerId)
-                : null;
+            MapLaunchContext? launchContext = MergedConfig!.CreateStartupLaunchContext();
             LoadMap(new MapLoadRequest(new MapId(mapId), launchContext));
         }
 

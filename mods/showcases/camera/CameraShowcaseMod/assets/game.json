@@ -1,4 +1,9 @@
-﻿{
-    "startupMapId":  "camera_showcase_hub",
-    "startupLocalPlayerId":  1
+{
+  "startupMapId": "camera_showcase_hub",
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ]
 }

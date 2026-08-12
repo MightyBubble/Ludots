@@ -1,14 +1,23 @@
 {
   "startupMapId": "formation_capability_showcase",
-  "startupLocalPlayerId": 1,
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ],
   "windowTitle": "Ludots Engine - Formation Capability Showcase Movement",
   "targetFps": 0,
   "windowWidth": 1600,
   "windowHeight": 900,
   "windowResizable": true,
   "commandSource": {
-    "targetFilter": { "relationFilter": "Friendly" },
-    "movePathPreviewOrderTypeKeys": [ "massNavigationMove" ]
+    "targetFilter": {
+      "relationFilter": "Friendly"
+    },
+    "movePathPreviewOrderTypeKeys": [
+      "massNavigationMove"
+    ]
   },
   "presentation": {
     "cameraCulling": {

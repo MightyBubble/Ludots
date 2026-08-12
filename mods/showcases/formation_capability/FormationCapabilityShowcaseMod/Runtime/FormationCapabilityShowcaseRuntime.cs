@@ -1363,7 +1363,13 @@ internal sealed class FormationCapabilityShowcaseRuntime
             return seat.PossessedPlayerId;
         }
 
-        return engine.MergedConfig?.StartupLocalPlayerId ?? 0;
+        if (engine.MergedConfig is { HasStartupLocalSeats: true } config &&
+            config.StartupLocalSeats.Count == 1)
+        {
+            return config.StartupLocalSeats[0].PlayerId;
+        }
+
+        return 0;
     }
 
     private readonly struct FormationCapabilityShowcaseFormationPlan
