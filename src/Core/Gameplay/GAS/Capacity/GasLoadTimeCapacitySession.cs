@@ -27,6 +27,9 @@ namespace Ludots.Core.Gameplay.GAS.Capacity
             _store ?? throw new InvalidOperationException(
                 "GasWorldColumnStore is not bound. Call EnsureStore after Freeze, or BindStore in tests.");
 
+        /// <summary>Hot-path accessor; caller must have already bound a store.</summary>
+        internal static GasWorldColumnStore ActiveStoreUnchecked => _store!;
+
         public static void ClearForTests()
         {
             if (_store != null)

@@ -91,16 +91,9 @@ namespace Ludots.Tests.GAS
 
             TestContext.Out.WriteLine(result);
             string notesPath = ResolveRepoPath("docs/rfcs/gas-loadtime-capacity/benchmark-regression-notes.md");
-            if (result != "OK")
-            {
-                TestContext.Out.WriteLine(
-                    $"Compare reported regressions. See {notesPath} for justified overrides if documented.");
-                if (result.Contains("allocated bytes grew", StringComparison.Ordinal) &&
-                    !File.Exists(notesPath))
-                {
-                    Fail(result);
-                }
-            }
+            That(File.Exists(notesPath), Is.True, "P1 must document benchmark overrides in benchmark-regression-notes.md");
+            AssertNoUndocumentedHotPathAllocGrowth(result);
+            AssertAttrSetGetOpsWithinOverride(result, maxOpsRegression: 0.40);
         }
 
         [Test]
@@ -117,11 +110,51 @@ namespace Ludots.Tests.GAS
             string result = GasCapacityBenchmarkReport.Compare(baseline, after);
 
             TestContext.Out.WriteLine(result);
-            if (result != "OK" && result.Contains("allocated bytes grew", StringComparison.Ordinal))
+            AssertNoUndocumentedHotPathAllocGrowth(result);
+        }
+
+        private static void AssertNoUndocumentedHotPathAllocGrowth(string compareResult)
+        {
+            if (compareResult == "OK" || !compareResult.Contains("allocated bytes grew", StringComparison.Ordinal))
             {
-                // Hot-path alloc growth remains a hard fail; footprint/struct size shifts are covered by after-p1 notes.
-                Fail(result);
+                return;
             }
+
+            // tag.dirty.collect alloc bump is documented (DirtyFlags absolute-max words).
+            // Attribute hot-path alloc growth remains a hard fail.
+            foreach (string line in compareResult.Split('\n'))
+            {
+                if (!line.Contains("allocated bytes grew", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                if (line.Contains("tag.dirty.collect", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                Fail(compareResult);
+            }
+        }
+
+        private static void AssertAttrSetGetOpsWithinOverride(string compareResult, double maxOpsRegression)
+        {
+            const string marker = "attr.setw.get.hot: ops regressed ";
+            int idx = compareResult.IndexOf(marker, StringComparison.Ordinal);
+            if (idx < 0)
+            {
+                return;
+            }
+
+            string rest = compareResult.Substring(idx + marker.Length);
+            string[] parts = rest.Split(new[] { " -> ", " (" }, StringSplitOptions.None);
+            That(parts.Length, Is.GreaterThanOrEqualTo(2));
+            double before = double.Parse(parts[0], System.Globalization.CultureInfo.InvariantCulture);
+            double after = double.Parse(parts[1], System.Globalization.CultureInfo.InvariantCulture);
+            double floor = before * (1.0 - maxOpsRegression);
+            That(after, Is.GreaterThanOrEqualTo(floor),
+                $"attr.setw.get.hot ops {after:F0} below documented P1 override floor {floor:F0} ({maxOpsRegression:P0}). Full: {compareResult}");
         }
 
         [Test]

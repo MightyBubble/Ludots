@@ -155,6 +155,24 @@ namespace Ludots.Core.Gameplay.GAS.Capacity
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal float GetCurrentHot(int rowId, int attributeId)
+        {
+            int slots = Plan.AttributeSlotCount;
+            if ((uint)attributeId >= (uint)slots)
+            {
+                ThrowAttributeOob(attributeId, slots);
+            }
+
+            return AttributeCurrentValues![rowId * slots + attributeId];
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal void SetCurrentHot(int rowId, int attributeId, float value)
+        {
+            SetCurrentInternal(rowId, attributeId, value, clampToCapacity: true);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public float GetBase(int rowId, int attributeId)
         {
             ThrowIfDisposed();
@@ -385,13 +403,20 @@ namespace Ludots.Core.Gameplay.GAS.Capacity
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void ValidateAttributeId(int attributeId)
         {
-            if ((uint)attributeId >= (uint)Plan.AttributeSlotCount)
+            int slots = Plan.AttributeSlotCount;
+            if ((uint)attributeId >= (uint)slots)
             {
-                throw new ArgumentOutOfRangeException(
-                    nameof(attributeId),
-                    attributeId,
-                    $"attributeId must be in [0, {Plan.AttributeSlotCount - 1}] for frozen plan.");
+                ThrowAttributeOob(attributeId, slots);
             }
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void ThrowAttributeOob(int attributeId, int slots)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(attributeId),
+                attributeId,
+                $"attributeId must be in [0, {slots - 1}] for frozen plan.");
         }
 
         private void ThrowIfDisposed()

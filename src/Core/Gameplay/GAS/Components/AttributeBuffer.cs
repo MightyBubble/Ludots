@@ -42,66 +42,114 @@ namespace Ludots.Core.Gameplay.GAS.Components
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public float GetCurrent(int attributeId)
         {
-            return Store().GetCurrent(RequireRow(), attributeId);
+            var store = GasLoadTimeCapacitySession.ActiveStoreUnchecked;
+            int row = RowId;
+            if (row == InvalidRow)
+            {
+                ThrowDetached();
+            }
+
+            return store.GetCurrentHot(row, attributeId);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public float GetBase(int attributeId)
         {
-            return Store().GetBase(RequireRow(), attributeId);
+            var store = GasLoadTimeCapacitySession.ActiveStoreUnchecked;
+            int row = RowId;
+            if (row == InvalidRow)
+            {
+                ThrowDetached();
+            }
+
+            return store.GetBase(row, attributeId);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool HasAttribute(int attributeId)
         {
-            return Store().HasAttribute(RequireRow(), attributeId);
+            var store = GasLoadTimeCapacitySession.ActiveStoreUnchecked;
+            int row = RowId;
+            if (row == InvalidRow)
+            {
+                ThrowDetached();
+            }
+
+            return store.HasAttribute(row, attributeId);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void SetBase(int attributeId, float value)
         {
-            Store().SetBase(RequireRow(), attributeId, value);
+            var store = GasLoadTimeCapacitySession.ActiveStoreUnchecked;
+            int row = RowId;
+            if (row == InvalidRow)
+            {
+                ThrowDetached();
+            }
+
+            store.SetBase(row, attributeId, value);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void SetCurrent(int attributeId, float value)
         {
-            Store().SetCurrent(RequireRow(), attributeId, value);
+            var store = GasLoadTimeCapacitySession.ActiveStoreUnchecked;
+            int row = RowId;
+            if (row == InvalidRow)
+            {
+                ThrowDetached();
+            }
+
+            store.SetCurrentHot(row, attributeId, value);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void SetAggregatedCurrent(int attributeId, float value)
         {
-            Store().SetAggregatedCurrent(RequireRow(), attributeId, value);
+            var store = GasLoadTimeCapacitySession.ActiveStoreUnchecked;
+            int row = RowId;
+            if (row == InvalidRow)
+            {
+                ThrowDetached();
+            }
+
+            store.SetAggregatedCurrent(row, attributeId, value);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal float GetRawBase(int attributeId) => Store().GetRawBase(RequireRow(), attributeId);
+        internal float GetRawBase(int attributeId) =>
+            GasLoadTimeCapacitySession.ActiveStoreUnchecked.GetRawBase(RequireRow(), attributeId);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal float GetRawCap(int attributeId) => Store().GetRawCap(RequireRow(), attributeId);
+        internal float GetRawCap(int attributeId) =>
+            GasLoadTimeCapacitySession.ActiveStoreUnchecked.GetRawCap(RequireRow(), attributeId);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void SetRawCap(int attributeId, float value) => Store().SetRawCap(RequireRow(), attributeId, value);
+        internal void SetRawCap(int attributeId, float value) =>
+            GasLoadTimeCapacitySession.ActiveStoreUnchecked.SetRawCap(RequireRow(), attributeId, value);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void SetRawCurrentUnconstrained(int attributeId, float value) =>
-            Store().SetRawCurrentUnconstrained(RequireRow(), attributeId, value);
+            GasLoadTimeCapacitySession.ActiveStoreUnchecked.SetRawCurrentUnconstrained(RequireRow(), attributeId, value);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private int RequireRow()
         {
-            if (RowId == InvalidRow || RowId < 0)
+            if (RowId == InvalidRow)
             {
-                throw new InvalidOperationException(
-                    "AttributeBuffer has no world-store row. Use AttributeBuffer.CreateAttached() or GasAttributeRows.Attach.");
+                ThrowDetached();
             }
 
             return RowId;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static GasWorldColumnStore Store() => GasLoadTimeCapacitySession.ActiveStore;
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void ThrowDetached()
+        {
+            throw new InvalidOperationException(
+                "AttributeBuffer has no world-store row. Use AttributeBuffer.CreateAttached() or GasAttributeRows.Attach.");
+        }
     }
 
     public static class GasAttributeRows
