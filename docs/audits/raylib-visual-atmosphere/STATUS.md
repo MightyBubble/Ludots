@@ -11,13 +11,13 @@ Updated by agents. Use: `pending` | `in_progress` | `blocked` | `done`.
 | V5 | Reflective/refractive water FBO | done | cloud-agent | VH ocean plane + water FBO |
 | V6 | Showcase + screenshot acceptance | done | cloud-agent | VH island; acceptance recapture loop |
 | V7 | Height-band terrain albedo | done | cloud-agent | `terrain_albedo_environments.json` + 4 tiled albedos; not splat/PBR |
-| V8 | Full PBR material spheres | blocked | — | No Core MR schema / Raylib BRDF; declared P2 in MASTER — do not invent parallel engine |
+| V8 | Minimal directional MR (no IBL) | done | cloud-agent | Host `sourceUris[0..3]` + Cook-Torrance in `instancing.fs` / `skinning_instanced.fs`; normals skipped without TBN; full IBL/cascades remain P2 |
 
 ## Blockers
 
 | Item | Why |
 |------|-----|
-| Full PBR | materials-notes + MASTER: host albedo-only; no metallic/roughness/normal BRDF. Needs dedicated materials track. |
+| Full IBL / cascaded shadows | Explicitly out of this track (MASTER P2). Minimal directional MR landed in V8. |
 
 ## Evidence
 

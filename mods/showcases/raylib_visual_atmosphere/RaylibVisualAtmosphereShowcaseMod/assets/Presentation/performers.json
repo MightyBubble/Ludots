@@ -300,5 +300,51 @@
         }
       }
     ]
+  },
+  {
+    "id": "raylib_visual_atmosphere_rock_bootstrap",
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "raylib_visual_atmosphere_rock"
+        },
+        "condition": { "inline": "None" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "raylib_visual_atmosphere_rock_actor",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "raylib_visual_atmosphere_rock"
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "raylib_visual_atmosphere_rock_actor",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "raylib_visual_atmosphere.rock",
+          "materialId": "raylib_visual_atmosphere.rock",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localOffset": [0, 0.6, 0],
+          "localScale": [2.8, 1.35, 2.2]
+        }
+      }
+    ]
   }
 ]

@@ -14,5 +14,10 @@
   {
     "id": "raylib_visual_atmosphere.vfx_additive",
     "type": "Billboard"
+  },
+  {
+    "id": "raylib_visual_atmosphere.rock",
+    "type": "Primitive",
+    "primitiveKind": "Cube"
   }
 ]

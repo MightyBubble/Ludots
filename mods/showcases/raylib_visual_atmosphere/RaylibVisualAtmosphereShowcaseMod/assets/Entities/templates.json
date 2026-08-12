@@ -142,5 +142,29 @@
       "TagCountContainer": {},
       "VisualHeightmapSampleState": {}
     }
+  },
+  {
+    "id": "raylib_visual_atmosphere_rock",
+    "components": {
+      "Name": {
+        "Value": "AtmosphereBeachRock"
+      },
+      "WorldPositionCm": {
+        "Value": {
+          "X": 0,
+          "Y": 0
+        }
+      },
+      "PresentationStaticTransform": {},
+      "FacingDirection": {
+        "AngleRad": 0.0
+      },
+      "AttributeBuffer": {
+        "base": {}
+      },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {},
+      "VisualHeightmapSampleState": {}
+    }
   }
 ]

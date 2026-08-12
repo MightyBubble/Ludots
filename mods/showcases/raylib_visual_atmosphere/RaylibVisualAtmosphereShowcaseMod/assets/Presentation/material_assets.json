@@ -18,5 +18,9 @@
     "id": "raylib_visual_atmosphere.vfx_additive",
     "domain": "Surface",
     "flags": ["Additive", "Unlit", "DoubleSided"]
+  },
+  {
+    "id": "raylib_visual_atmosphere.rock",
+    "domain": "Surface"
   }
 ]

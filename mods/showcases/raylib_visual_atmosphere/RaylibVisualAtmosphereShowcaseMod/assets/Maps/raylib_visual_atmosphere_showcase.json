@@ -35,6 +35,12 @@
       "Overrides": {
         "WorldPositionCm": { "Value": { "X": -3200, "Y": -3500 } }
       }
+    },
+    {
+      "Template": "raylib_visual_atmosphere_rock",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": -1800, "Y": -2200 } }
+      }
     }
   ]
 }

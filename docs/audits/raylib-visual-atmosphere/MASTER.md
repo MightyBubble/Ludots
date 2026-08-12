@@ -73,7 +73,8 @@
 
 - **不做**上游侵蚀模拟移植与交互热键  
 - **不抄**上游无许可着色器/贴图原文；技法自研 + CC0/自有资产  
-- **不做**级联阴影 / 多光源完整 PBR / 金属度-粗糙度材质球（P2 债务；本轨仅有单光源 Lambert+Blinn 与高度分层 albedo 平铺）  
+- **不做** IBL / BRDF LUT / cubemap / 级联阴影 / 多光源完整 PBR（仍为 P2）  
+- **做** 最小方向光 MR：host `sourceUris[0..3]` = albedo / roughness / metallic / normal（可选槽用标量默认，无假贴图）；`instancing.fs` Cook-Torrance GGX + 既有 ambient/fog；法线贴图在无切线时跳过（见 `materials-notes.md`）  
 - **做** VisualHeightmap 高度分层地形贴图（`Presentation/terrain_albedo_environments.json`，非 splatmap）  
 - **做** 同光源月光重映射 + 夜环境光可读剪影（非第二套灯光系统）  
 

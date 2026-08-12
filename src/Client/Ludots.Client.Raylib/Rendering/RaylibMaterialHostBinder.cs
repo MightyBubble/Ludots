@@ -10,9 +10,12 @@ namespace Ludots.Client.Raylib.Rendering
 {
     public sealed unsafe class RaylibMaterialHostBinder : IDisposable
     {
+        public const float DefaultRoughness = 0.85f;
+        public const float DefaultMetallic = 0f;
+
         private readonly IVirtualFileSystem _vfs;
         private readonly PresentationMaterialRegistry _materials;
-        private readonly Dictionary<int, Texture2D> _albedoByMaterialId = new();
+        private readonly Dictionary<int, HostMaterialBinding> _bindingsByMaterialId = new();
         private readonly HashSet<uint> _ownedTextureIds = new();
         private bool _disposed;
 
@@ -24,18 +27,95 @@ namespace Ludots.Client.Raylib.Rendering
 
         public bool TryApplyAlbedo(ref Material material, int materialAssetId)
         {
+            return TryApplyHostMaps(ref material, materialAssetId);
+        }
+
+        public bool TryApplyHostMaps(ref Material material, int materialAssetId)
+        {
             ThrowIfDisposed();
             if (materialAssetId <= 0)
             {
                 return false;
             }
 
-            if (!TryResolveHostAlbedo(materialAssetId, out Texture2D albedo))
+            if (!TryResolveHostBinding(materialAssetId, out HostMaterialBinding binding))
             {
                 return false;
             }
 
-            Rl.SetMaterialTexture(ref material, (int)Rl.MaterialMapIndex.MATERIAL_MAP_ALBEDO, albedo);
+            Rl.SetMaterialTexture(ref material, (int)Rl.MaterialMapIndex.MATERIAL_MAP_ALBEDO, binding.Albedo);
+
+            int roughnessIndex = (int)Rl.MaterialMapIndex.MATERIAL_MAP_ROUGHNESS;
+            int metalnessIndex = (int)Rl.MaterialMapIndex.MATERIAL_MAP_METALNESS;
+            int normalIndex = (int)Rl.MaterialMapIndex.MATERIAL_MAP_NORMAL;
+
+            if (material.maps != null)
+            {
+                if (binding.HasRoughnessMap)
+                {
+                    Rl.SetMaterialTexture(ref material, roughnessIndex, binding.Roughness);
+                }
+                else
+                {
+                    ClearMapIfOwned(ref material, roughnessIndex);
+                }
+
+                material.maps[roughnessIndex].value = binding.RoughnessScalar;
+
+                if (binding.HasMetallicMap)
+                {
+                    Rl.SetMaterialTexture(ref material, metalnessIndex, binding.Metallic);
+                }
+                else
+                {
+                    ClearMapIfOwned(ref material, metalnessIndex);
+                }
+
+                material.maps[metalnessIndex].value = binding.MetallicScalar;
+
+                if (binding.HasNormalMap)
+                {
+                    Rl.SetMaterialTexture(ref material, normalIndex, binding.Normal);
+                }
+                else
+                {
+                    ClearMapIfOwned(ref material, normalIndex);
+                }
+            }
+
+            return true;
+        }
+
+        public bool TryGetHostPbrParams(
+            int materialAssetId,
+            out float roughnessScalar,
+            out float metallicScalar,
+            out bool hasRoughnessMap,
+            out bool hasMetallicMap,
+            out bool hasNormalMap)
+        {
+            ThrowIfDisposed();
+            roughnessScalar = DefaultRoughness;
+            metallicScalar = DefaultMetallic;
+            hasRoughnessMap = false;
+            hasMetallicMap = false;
+            hasNormalMap = false;
+
+            if (materialAssetId <= 0)
+            {
+                return false;
+            }
+
+            if (!TryResolveHostBinding(materialAssetId, out HostMaterialBinding binding))
+            {
+                return false;
+            }
+
+            roughnessScalar = binding.RoughnessScalar;
+            metallicScalar = binding.MetallicScalar;
+            hasRoughnessMap = binding.HasRoughnessMap;
+            hasMetallicMap = binding.HasMetallicMap;
+            hasNormalMap = binding.HasNormalMap;
             return true;
         }
 
@@ -43,12 +123,92 @@ namespace Ludots.Client.Raylib.Rendering
         {
             ThrowIfDisposed();
             albedo = default;
+            if (!TryResolveHostBinding(materialAssetId, out HostMaterialBinding binding))
+            {
+                return false;
+            }
+
+            albedo = binding.Albedo;
+            return true;
+        }
+
+        public void DetachOwnedAlbedoMaps(Model model)
+        {
+            DetachOwnedMaps(model);
+        }
+
+        public void DetachOwnedMaps(Model model)
+        {
+            if (_disposed || model.materialCount <= 0 || model.materials == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < model.materialCount; i++)
+            {
+                ref Material material = ref model.materials[i];
+                DetachOwnedMaps(ref material);
+            }
+        }
+
+        public void DetachOwnedAlbedoMap(ref Material material)
+        {
+            DetachOwnedMaps(ref material);
+        }
+
+        public void DetachOwnedMaps(ref Material material)
+        {
+            if (_disposed || material.maps == null)
+            {
+                return;
+            }
+
+            ClearMapIfOwned(ref material, (int)Rl.MaterialMapIndex.MATERIAL_MAP_ALBEDO);
+            ClearMapIfOwned(ref material, (int)Rl.MaterialMapIndex.MATERIAL_MAP_ROUGHNESS);
+            ClearMapIfOwned(ref material, (int)Rl.MaterialMapIndex.MATERIAL_MAP_METALNESS);
+            ClearMapIfOwned(ref material, (int)Rl.MaterialMapIndex.MATERIAL_MAP_NORMAL);
+        }
+
+        public void Dispose()
+        {
+            if (_disposed)
+            {
+                return;
+            }
+
+            foreach (KeyValuePair<int, HostMaterialBinding> entry in _bindingsByMaterialId)
+            {
+                UnloadOwned(entry.Value.Albedo);
+                if (entry.Value.HasRoughnessMap)
+                {
+                    UnloadOwned(entry.Value.Roughness);
+                }
+
+                if (entry.Value.HasMetallicMap)
+                {
+                    UnloadOwned(entry.Value.Metallic);
+                }
+
+                if (entry.Value.HasNormalMap)
+                {
+                    UnloadOwned(entry.Value.Normal);
+                }
+            }
+
+            _bindingsByMaterialId.Clear();
+            _ownedTextureIds.Clear();
+            _disposed = true;
+        }
+
+        private bool TryResolveHostBinding(int materialAssetId, out HostMaterialBinding binding)
+        {
+            binding = default;
             if (materialAssetId <= 0)
             {
                 return false;
             }
 
-            if (_albedoByMaterialId.TryGetValue(materialAssetId, out albedo))
+            if (_bindingsByMaterialId.TryGetValue(materialAssetId, out binding))
             {
                 return true;
             }
@@ -64,23 +224,80 @@ namespace Ludots.Client.Raylib.Rendering
                 return false;
             }
 
-            string albedoUri = descriptor.SourceUris[0];
-            if (string.IsNullOrWhiteSpace(albedoUri))
+            string materialName = _materials.GetName(materialAssetId);
+            Texture2D albedo = LoadRequiredMap(materialAssetId, materialName, descriptor.SourceUris, slotIndex: 0, slotName: "albedo");
+            Texture2D roughness = default;
+            Texture2D metallic = default;
+            Texture2D normal = default;
+            bool hasRoughness = TryLoadOptionalMap(materialAssetId, materialName, descriptor.SourceUris, slotIndex: 1, slotName: "roughness", out roughness);
+            bool hasMetallic = TryLoadOptionalMap(materialAssetId, materialName, descriptor.SourceUris, slotIndex: 2, slotName: "metallic", out metallic);
+            bool hasNormal = TryLoadOptionalMap(materialAssetId, materialName, descriptor.SourceUris, slotIndex: 3, slotName: "normal", out normal);
+
+            binding = new HostMaterialBinding(
+                albedo,
+                roughness,
+                metallic,
+                normal,
+                DefaultRoughness,
+                DefaultMetallic,
+                hasRoughness,
+                hasMetallic,
+                hasNormal);
+            _bindingsByMaterialId[materialAssetId] = binding;
+            return true;
+        }
+
+        private Texture2D LoadRequiredMap(
+            int materialAssetId,
+            string materialName,
+            string[] sourceUris,
+            int slotIndex,
+            string slotName)
+        {
+            if (slotIndex >= sourceUris.Length || string.IsNullOrWhiteSpace(sourceUris[slotIndex]))
             {
                 throw new InvalidOperationException(
-                    $"{nameof(RaylibMaterialHostBinder)} materialId={materialAssetId} ({_materials.GetName(materialAssetId)}) has an empty albedo sourceUris[0].");
+                    $"{nameof(RaylibMaterialHostBinder)} materialId={materialAssetId} ({materialName}) has an empty {slotName} sourceUris[{slotIndex}].");
             }
 
-            if (!_vfs.TryResolveFullPath(albedoUri, out string fullPath))
+            return LoadMapOrThrow(materialAssetId, materialName, sourceUris[slotIndex], slotName, slotIndex);
+        }
+
+        private bool TryLoadOptionalMap(
+            int materialAssetId,
+            string materialName,
+            string[] sourceUris,
+            int slotIndex,
+            string slotName,
+            out Texture2D texture)
+        {
+            texture = default;
+            if (slotIndex >= sourceUris.Length || string.IsNullOrWhiteSpace(sourceUris[slotIndex]))
+            {
+                return false;
+            }
+
+            texture = LoadMapOrThrow(materialAssetId, materialName, sourceUris[slotIndex], slotName, slotIndex);
+            return true;
+        }
+
+        private Texture2D LoadMapOrThrow(
+            int materialAssetId,
+            string materialName,
+            string uri,
+            string slotName,
+            int slotIndex)
+        {
+            if (!_vfs.TryResolveFullPath(uri, out string fullPath))
             {
                 throw new InvalidOperationException(
-                    $"{nameof(RaylibMaterialHostBinder)} cannot resolve albedo URI '{albedoUri}' for materialId={materialAssetId} ({_materials.GetName(materialAssetId)}).");
+                    $"{nameof(RaylibMaterialHostBinder)} cannot resolve {slotName} URI '{uri}' (sourceUris[{slotIndex}]) for materialId={materialAssetId} ({materialName}).");
             }
 
             if (!File.Exists(fullPath))
             {
                 throw new InvalidOperationException(
-                    $"{nameof(RaylibMaterialHostBinder)} albedo file missing for materialId={materialAssetId} ({_materials.GetName(materialAssetId)}): uri='{albedoUri}' fullPath='{fullPath}'.");
+                    $"{nameof(RaylibMaterialHostBinder)} {slotName} file missing for materialId={materialAssetId} ({materialName}): uri='{uri}' fullPath='{fullPath}'.");
             }
 
             Texture2D texture = Rl.LoadTexture(fullPath);
@@ -92,74 +309,35 @@ namespace Ludots.Client.Raylib.Rendering
                 }
 
                 throw new InvalidOperationException(
-                    $"{nameof(RaylibMaterialHostBinder)} LoadTexture failed for materialId={materialAssetId} ({_materials.GetName(materialAssetId)}): uri='{albedoUri}' fullPath='{fullPath}'.");
+                    $"{nameof(RaylibMaterialHostBinder)} LoadTexture failed for {slotName} materialId={materialAssetId} ({materialName}): uri='{uri}' fullPath='{fullPath}'.");
             }
 
-            _albedoByMaterialId[materialAssetId] = texture;
             _ownedTextureIds.Add(texture.id);
-            albedo = texture;
-            return true;
+            return texture;
         }
 
-        public void DetachOwnedAlbedoMaps(Model model)
-        {
-            if (_disposed || model.materialCount <= 0 || model.materials == null)
-            {
-                return;
-            }
-
-            int albedoIndex = (int)Rl.MaterialMapIndex.MATERIAL_MAP_ALBEDO;
-            for (int i = 0; i < model.materialCount; i++)
-            {
-                ref Material material = ref model.materials[i];
-                DetachOwnedAlbedoMap(ref material, albedoIndex);
-            }
-        }
-
-        public void DetachOwnedAlbedoMap(ref Material material)
-        {
-            if (_disposed)
-            {
-                return;
-            }
-
-            DetachOwnedAlbedoMap(ref material, (int)Rl.MaterialMapIndex.MATERIAL_MAP_ALBEDO);
-        }
-
-        private void DetachOwnedAlbedoMap(ref Material material, int albedoIndex)
+        private void ClearMapIfOwned(ref Material material, int mapIndex)
         {
             if (material.maps == null)
             {
                 return;
             }
 
-            uint textureId = material.maps[albedoIndex].texture.id;
+            uint textureId = material.maps[mapIndex].texture.id;
             if (textureId == 0 || !_ownedTextureIds.Contains(textureId))
             {
                 return;
             }
 
-            material.maps[albedoIndex].texture = default;
+            material.maps[mapIndex].texture = default;
         }
 
-        public void Dispose()
+        private void UnloadOwned(Texture2D texture)
         {
-            if (_disposed)
+            if (texture.id != 0)
             {
-                return;
+                Rl.UnloadTexture(texture);
             }
-
-            foreach (KeyValuePair<int, Texture2D> entry in _albedoByMaterialId)
-            {
-                if (entry.Value.id != 0)
-                {
-                    Rl.UnloadTexture(entry.Value);
-                }
-            }
-
-            _albedoByMaterialId.Clear();
-            _ownedTextureIds.Clear();
-            _disposed = true;
         }
 
         private void ThrowIfDisposed()
@@ -168,6 +346,41 @@ namespace Ludots.Client.Raylib.Rendering
             {
                 throw new ObjectDisposedException(nameof(RaylibMaterialHostBinder));
             }
+        }
+
+        private readonly struct HostMaterialBinding
+        {
+            public HostMaterialBinding(
+                Texture2D albedo,
+                Texture2D roughness,
+                Texture2D metallic,
+                Texture2D normal,
+                float roughnessScalar,
+                float metallicScalar,
+                bool hasRoughnessMap,
+                bool hasMetallicMap,
+                bool hasNormalMap)
+            {
+                Albedo = albedo;
+                Roughness = roughness;
+                Metallic = metallic;
+                Normal = normal;
+                RoughnessScalar = roughnessScalar;
+                MetallicScalar = metallicScalar;
+                HasRoughnessMap = hasRoughnessMap;
+                HasMetallicMap = hasMetallicMap;
+                HasNormalMap = hasNormalMap;
+            }
+
+            public Texture2D Albedo { get; }
+            public Texture2D Roughness { get; }
+            public Texture2D Metallic { get; }
+            public Texture2D Normal { get; }
+            public float RoughnessScalar { get; }
+            public float MetallicScalar { get; }
+            public bool HasRoughnessMap { get; }
+            public bool HasMetallicMap { get; }
+            public bool HasNormalMap { get; }
         }
     }
 }

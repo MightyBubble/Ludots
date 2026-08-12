@@ -70,5 +70,15 @@
     "sourceUris": [
       "RaylibVisualAtmosphereShowcaseMod:assets/Textures/vfx_additive_glow.png"
     ]
+  },
+  {
+    "id": "raylib_visual_atmosphere.rock.material.raylib",
+    "assetKind": "Material",
+    "assetId": "raylib_visual_atmosphere.rock",
+    "backendId": "raylib",
+    "sourceUris": [
+      "RaylibVisualAtmosphereShowcaseMod:assets/Textures/rock_albedo.png",
+      "RaylibVisualAtmosphereShowcaseMod:assets/Textures/rock_roughness.png"
+    ]
   }
 ]

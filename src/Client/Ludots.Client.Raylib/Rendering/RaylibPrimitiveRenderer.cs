@@ -50,10 +50,18 @@ namespace Ludots.Client.Raylib.Rendering
         private readonly RaylibEffectShaderRegistry _effectShaders = new RaylibEffectShaderRegistry();
         private int _locColDiffuse;
         private int _locTint;
+        private int _locRoughness;
+        private int _locMetallic;
+        private int _locHasRoughnessMap;
+        private int _locHasMetallicMap;
         private int _locVegetationCutoutColDiffuse;
         private int _locVegetationCutoutAlphaCutoff;
         private int _locSkinningColDiffuse;
         private int _locSkinningTint;
+        private int _locSkinningRoughness;
+        private int _locSkinningMetallic;
+        private int _locSkinningHasRoughnessMap;
+        private int _locSkinningHasMetallicMap;
         private int _locBoneMatrices;
         private RaylibFrameLightingLocations _instancingLightingLocs;
         private RaylibFrameLightingLocations _skinningLightingLocs;
@@ -429,7 +437,7 @@ namespace Ludots.Client.Raylib.Rendering
             }
         }
 
-        private void SubmitPrimitive(PrimitiveMeshKind kind, Vector3 position, Quaternion rotation, Vector3 scale, Vector4 color)
+        private void SubmitPrimitive(PrimitiveMeshKind kind, Vector3 position, Quaternion rotation, Vector3 scale, Vector4 color, int materialId = 0)
         {
             uint key = PackRgba(color);
             var matrix = RaylibMatrix.FromSystemNumerics(
@@ -439,13 +447,13 @@ namespace Ludots.Client.Raylib.Rendering
 
             if (kind == PrimitiveMeshKind.Cube)
             {
-                AddInstance(_cubeBatches, key, matrix);
+                AddInstance(_cubeBatches, key, materialId, matrix);
                 return;
             }
 
             if (kind == PrimitiveMeshKind.Sphere)
             {
-                AddInstance(_sphereBatches, key, matrix);
+                AddInstance(_sphereBatches, key, materialId, matrix);
                 return;
             }
 
@@ -740,7 +748,7 @@ namespace Ludots.Client.Raylib.Rendering
             switch (visual.MeshDescriptor.Type)
             {
                 case MeshAssetType.Primitive:
-                    SubmitPrimitive(visual.MeshDescriptor.PrimitiveKind, visual.Position, visual.Rotation, visual.Scale, visual.Color);
+                    SubmitPrimitive(visual.MeshDescriptor.PrimitiveKind, visual.Position, visual.Rotation, visual.Scale, visual.Color, visual.MaterialId);
                     break;
                 case MeshAssetType.Model:
                     DrawModel(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Rotation, visual.Scale, visual.Color, visual.MaterialId);
@@ -1217,7 +1225,7 @@ namespace Ludots.Client.Raylib.Rendering
 
             var tint = ToRaylibColor(color);
             var model = cached.Model;
-            ApplyHostAlbedoToModel(ref model, materialId);
+            ApplyHostMapsToModel(ref model, materialId);
             ToAxisAngleDegrees(rotation, out Vector3 axis, out float angleDegrees);
             RestoreOpaqueModelState();
             Rl.DrawModelEx(model, position, axis, angleDegrees, scale, tint);
@@ -1336,7 +1344,7 @@ namespace Ludots.Client.Raylib.Rendering
         private Material ResolveProceduralDrawMaterial(int materialAssetId)
         {
             Material material = _proceduralMeshMaterial;
-            ApplyHostMaterialAlbedo(ref material, materialAssetId);
+            ApplyHostMaterialMaps(ref material, materialAssetId, _proceduralMeshMaterial.shader);
             return material;
         }
 
@@ -1951,7 +1959,7 @@ namespace Ludots.Client.Raylib.Rendering
                 ref readonly var item = ref span[i];
                 if (!meshes.TryGetPrimitiveKind(item.MeshAssetId, out var kind)) continue;
 
-                SubmitPrimitive(kind, item.Position, item.Rotation, item.Scale, item.Color);
+                SubmitPrimitive(kind, item.Position, item.Rotation, item.Scale, item.Color, item.MaterialId);
             }
 
             FlushInstancedBatches();
@@ -2000,7 +2008,7 @@ namespace Ludots.Client.Raylib.Rendering
                 switch (descriptor.Type)
                 {
                     case MeshAssetType.Primitive when descriptor.PrimitiveKind is PrimitiveMeshKind.Cube or PrimitiveMeshKind.Sphere:
-                        SubmitPrimitive(descriptor.PrimitiveKind, item.Position, item.Rotation, item.Scale * scaleMul, item.Color);
+                        SubmitPrimitive(descriptor.PrimitiveKind, item.Position, item.Rotation, item.Scale * scaleMul, item.Color, item.MaterialId);
                         break;
                     case MeshAssetType.Model:
                     case MeshAssetType.Billboard:
@@ -2196,6 +2204,7 @@ namespace Ludots.Client.Raylib.Rendering
                     }
 
                     material.shader = _skinningShader;
+                    ApplyHostMaterialMaps(ref material, materialId, _skinningShader);
                     ApplyGpuSkinnedMaterialTint(ref material, colorKey);
 
                     if (mesh.boneMatrices != null && mesh.boneCount > 0)
@@ -2261,16 +2270,29 @@ namespace Ludots.Client.Raylib.Rendering
 
             material = model.materials[materialIndex];
             material.shader = _shader;
-            ApplyHostMaterialAlbedo(ref material, materialId);
+            ApplyHostMaterialMaps(ref material, materialId, _shader);
             return true;
         }
 
-        private void ApplyHostMaterialAlbedo(ref Material material, int materialId)
+        private void ApplyHostMaterialMaps(ref Material material, int materialId, Shader shader)
         {
-            _materialHostBinder?.TryApplyAlbedo(ref material, materialId);
+            if (_materialHostBinder == null || materialId <= 0)
+            {
+                _materialHostBinder?.DetachOwnedMaps(ref material);
+                ApplyPbrUniforms(shader, materialId: 0, hostBound: false);
+                return;
+            }
+
+            bool hostBound = _materialHostBinder.TryApplyHostMaps(ref material, materialId);
+            if (!hostBound)
+            {
+                _materialHostBinder.DetachOwnedMaps(ref material);
+            }
+
+            ApplyPbrUniforms(shader, materialId, hostBound);
         }
 
-        private void ApplyHostAlbedoToModel(ref Model model, int materialId)
+        private void ApplyHostMapsToModel(ref Model model, int materialId)
         {
             if (_materialHostBinder == null || materialId <= 0 || model.materialCount <= 0 || model.materials == null)
             {
@@ -2280,7 +2302,55 @@ namespace Ludots.Client.Raylib.Rendering
             for (int i = 0; i < model.materialCount; i++)
             {
                 ref Material material = ref model.materials[i];
-                ApplyHostMaterialAlbedo(ref material, materialId);
+                ApplyHostMaterialMaps(ref material, materialId, material.shader.id != 0 ? material.shader : _shader);
+            }
+        }
+
+        private void ApplyPbrUniforms(Shader shader, int materialId, bool hostBound)
+        {
+            float roughness = RaylibMaterialHostBinder.DefaultRoughness;
+            float metallic = RaylibMaterialHostBinder.DefaultMetallic;
+            int hasRoughnessMap = 0;
+            int hasMetallicMap = 0;
+
+            if (hostBound &&
+                _materialHostBinder != null &&
+                _materialHostBinder.TryGetHostPbrParams(
+                    materialId,
+                    out roughness,
+                    out metallic,
+                    out bool hasRoughness,
+                    out bool hasMetallic,
+                    out _))
+            {
+                hasRoughnessMap = hasRoughness ? 1 : 0;
+                hasMetallicMap = hasMetallic ? 1 : 0;
+            }
+
+            bool isSkinning = _skinningShaderReady && shader.id == _skinningShader.id;
+            int locRoughness = isSkinning ? _locSkinningRoughness : _locRoughness;
+            int locMetallic = isSkinning ? _locSkinningMetallic : _locMetallic;
+            int locHasRoughness = isSkinning ? _locSkinningHasRoughnessMap : _locHasRoughnessMap;
+            int locHasMetallic = isSkinning ? _locSkinningHasMetallicMap : _locHasMetallicMap;
+
+            if (locRoughness >= 0)
+            {
+                Rl.SetShaderValue(shader, locRoughness, &roughness, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+            }
+
+            if (locMetallic >= 0)
+            {
+                Rl.SetShaderValue(shader, locMetallic, &metallic, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+            }
+
+            if (locHasRoughness >= 0)
+            {
+                Rl.SetShaderValue(shader, locHasRoughness, &hasRoughnessMap, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_INT);
+            }
+
+            if (locHasMetallic >= 0)
+            {
+                Rl.SetShaderValue(shader, locHasMetallic, &hasMetallicMap, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_INT);
             }
         }
 
@@ -2328,19 +2398,19 @@ namespace Ludots.Client.Raylib.Rendering
             return DefaultMaxModelInstancesPerDraw;
         }
 
-        private void AddInstance(List<Batch> batches, uint colorKey, in RaylibMatrix matrix)
+        private void AddInstance(List<Batch> batches, uint colorKey, int materialId, in RaylibMatrix matrix)
         {
             for (int i = 0; i < batches.Count; i++)
             {
                 var b = batches[i];
-                if (b.ColorKey != colorKey) continue;
+                if (b.ColorKey != colorKey || b.MaterialId != materialId) continue;
 
                 b.Add(matrix);
                 batches[i] = b;
                 return;
             }
 
-            var nb = new Batch(colorKey);
+            var nb = new Batch(colorKey, materialId);
             nb.Add(matrix);
             batches.Add(nb);
         }
@@ -2368,6 +2438,7 @@ namespace Ludots.Client.Raylib.Rendering
 
                 SetTintUniform(b.ColorKey);
                 SetColDiffuseUniform(Vector4.One);
+                ApplyHostMaterialMaps(ref _material, b.MaterialId, _shader);
 
                 fixed (RaylibMatrix* p = b.Transforms)
                 {
@@ -2445,7 +2516,13 @@ namespace Ludots.Client.Raylib.Rendering
 
             _locColDiffuse = Rl.GetShaderLocation(_shader, "colDiffuse");
             _locTint = Rl.GetShaderLocation(_shader, "tint");
+            _locRoughness = Rl.GetShaderLocation(_shader, "uRoughness");
+            _locMetallic = Rl.GetShaderLocation(_shader, "uMetallic");
+            _locHasRoughnessMap = Rl.GetShaderLocation(_shader, "uHasRoughnessMap");
+            _locHasMetallicMap = Rl.GetShaderLocation(_shader, "uHasMetallicMap");
             int locMapAlbedo = Rl.GetShaderLocation(_shader, "texture0");
+            int locMapMetalness = Rl.GetShaderLocation(_shader, "texture1");
+            int locMapRoughness = Rl.GetShaderLocation(_shader, "texture3");
             int locMvp = Rl.GetShaderLocation(_shader, "mvp");
             int locInstance = Rl.GetShaderLocationAttrib(_shader, "instanceTransform");
             int locVertexPosition = Rl.GetShaderLocationAttrib(_shader, "vertexPosition");
@@ -2469,9 +2546,9 @@ namespace Ludots.Client.Raylib.Rendering
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_COLOR_SPECULAR] = -1;
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_COLOR_AMBIENT] = -1;
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_ALBEDO] = locMapAlbedo;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_METALNESS] = -1;
+            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_METALNESS] = locMapMetalness;
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_NORMAL] = -1;
-            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_ROUGHNESS] = -1;
+            _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_ROUGHNESS] = locMapRoughness;
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_OCCLUSION] = -1;
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_EMISSION] = -1;
             _shader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_HEIGHT] = -1;
@@ -2488,6 +2565,14 @@ namespace Ludots.Client.Raylib.Rendering
             if (_locColDiffuse < 0) throw new InvalidOperationException("Shader uniform 'colDiffuse' not found.");
             if (_locTint < 0) throw new InvalidOperationException("Shader uniform 'tint' not found.");
             if (locMapAlbedo < 0) throw new InvalidOperationException("Shader uniform 'texture0' not found.");
+            if (_locRoughness < 0) throw new InvalidOperationException("Shader uniform 'uRoughness' not found.");
+            if (_locMetallic < 0) throw new InvalidOperationException("Shader uniform 'uMetallic' not found.");
+            if (_locHasRoughnessMap < 0) throw new InvalidOperationException("Shader uniform 'uHasRoughnessMap' not found.");
+            if (_locHasMetallicMap < 0) throw new InvalidOperationException("Shader uniform 'uHasMetallicMap' not found.");
+            if (locMapMetalness < 0) throw new InvalidOperationException("Shader uniform 'texture1' not found.");
+            if (locMapRoughness < 0) throw new InvalidOperationException("Shader uniform 'texture3' not found.");
+
+            ApplyPbrUniforms(_shader, materialId: 0, hostBound: false);
 
             _initialized = true;
             if (_frameLighting != null)
@@ -2525,7 +2610,13 @@ namespace Ludots.Client.Raylib.Rendering
             _locBoneMatrices = Rl.GetShaderLocation(_skinningShader, "boneMatrices");
             _locSkinningTint = Rl.GetShaderLocation(_skinningShader, "tint");
             _locSkinningColDiffuse = Rl.GetShaderLocation(_skinningShader, "colDiffuse");
+            _locSkinningRoughness = Rl.GetShaderLocation(_skinningShader, "uRoughness");
+            _locSkinningMetallic = Rl.GetShaderLocation(_skinningShader, "uMetallic");
+            _locSkinningHasRoughnessMap = Rl.GetShaderLocation(_skinningShader, "uHasRoughnessMap");
+            _locSkinningHasMetallicMap = Rl.GetShaderLocation(_skinningShader, "uHasMetallicMap");
             int locMapAlbedo = Rl.GetShaderLocation(_skinningShader, "texture0");
+            int locMapMetalness = Rl.GetShaderLocation(_skinningShader, "texture1");
+            int locMapRoughness = Rl.GetShaderLocation(_skinningShader, "texture3");
             int locMvp = Rl.GetShaderLocation(_skinningShader, "mvp");
             int locInstance = Rl.GetShaderLocationAttrib(_skinningShader, "instanceTransform");
             int locVertexPosition = Rl.GetShaderLocationAttrib(_skinningShader, "vertexPosition");
@@ -2546,6 +2637,9 @@ namespace Ludots.Client.Raylib.Rendering
             _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MATRIX_MODEL] = locInstance;
             _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_COLOR_DIFFUSE] = _locSkinningColDiffuse;
             _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_ALBEDO] = locMapAlbedo;
+            _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_METALNESS] = locMapMetalness;
+            _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_NORMAL] = -1;
+            _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_ROUGHNESS] = locMapRoughness;
             _skinningShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_BONE_MATRICES] = _locBoneMatrices;
 
             if (_locBoneMatrices < 0) throw new InvalidOperationException("Skinning shader uniform 'boneMatrices' not found.");
@@ -2558,6 +2652,14 @@ namespace Ludots.Client.Raylib.Rendering
             if (_locSkinningColDiffuse < 0) throw new InvalidOperationException("Skinning shader uniform 'colDiffuse' not found.");
             if (_locSkinningTint < 0) throw new InvalidOperationException("Skinning shader uniform 'tint' not found.");
             if (locMapAlbedo < 0) throw new InvalidOperationException("Skinning shader uniform 'texture0' not found.");
+            if (_locSkinningRoughness < 0) throw new InvalidOperationException("Skinning shader uniform 'uRoughness' not found.");
+            if (_locSkinningMetallic < 0) throw new InvalidOperationException("Skinning shader uniform 'uMetallic' not found.");
+            if (_locSkinningHasRoughnessMap < 0) throw new InvalidOperationException("Skinning shader uniform 'uHasRoughnessMap' not found.");
+            if (_locSkinningHasMetallicMap < 0) throw new InvalidOperationException("Skinning shader uniform 'uHasMetallicMap' not found.");
+            if (locMapMetalness < 0) throw new InvalidOperationException("Skinning shader uniform 'texture1' not found.");
+            if (locMapRoughness < 0) throw new InvalidOperationException("Skinning shader uniform 'texture3' not found.");
+
+            ApplyPbrUniforms(_skinningShader, materialId: 0, hostBound: false);
 
             _skinningShaderReady = true;
             if (_frameLighting != null)
@@ -2658,7 +2760,7 @@ namespace Ludots.Client.Raylib.Rendering
                 }
 
                 Model model = kvp.Value.Model;
-                _materialHostBinder?.DetachOwnedAlbedoMaps(model);
+                _materialHostBinder?.DetachOwnedMaps(model);
                 Rl.UnloadModel(model);
             }
             _modelCache.Clear();
@@ -2679,7 +2781,7 @@ namespace Ludots.Client.Raylib.Rendering
 
             if (_proceduralMeshMaterialLoaded)
             {
-                _materialHostBinder?.DetachOwnedAlbedoMap(ref _proceduralMeshMaterial);
+                _materialHostBinder?.DetachOwnedMaps(ref _proceduralMeshMaterial);
                 Rl.UnloadMaterial(_proceduralMeshMaterial);
                 _proceduralMeshMaterialLoaded = false;
             }
@@ -2691,7 +2793,7 @@ namespace Ludots.Client.Raylib.Rendering
                 _vfxMaterialLoaded = false;
             }
 
-            _gpuSkinnedModelCache.UnloadAll(model => _materialHostBinder?.DetachOwnedAlbedoMaps(model));
+            _gpuSkinnedModelCache.UnloadAll(model => _materialHostBinder?.DetachOwnedMaps(model));
             _gpuSkinnedModelCache.Dispose();
             _effectShaders.Dispose();
             _materialHostBinder?.Dispose();
@@ -2742,12 +2844,14 @@ namespace Ludots.Client.Raylib.Rendering
         private struct Batch
         {
             public readonly uint ColorKey;
+            public readonly int MaterialId;
             public RaylibMatrix[] Transforms;
             public int Count;
 
-            public Batch(uint colorKey, int initialCapacity = 256)
+            public Batch(uint colorKey, int materialId = 0, int initialCapacity = 256)
             {
                 ColorKey = colorKey;
+                MaterialId = materialId;
                 Transforms = new RaylibMatrix[Math.Max(4, initialCapacity)];
                 Count = 0;
             }
