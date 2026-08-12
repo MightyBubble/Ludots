@@ -1,7 +1,7 @@
 {
   "enabled": true,
-  "density": 0.006,
-  "start": 90.0,
-  "end": 520.0,
+  "density": 0.0014,
+  "start": 220.0,
+  "end": 1600.0,
   "color": [0.58, 0.74, 0.9]
 }

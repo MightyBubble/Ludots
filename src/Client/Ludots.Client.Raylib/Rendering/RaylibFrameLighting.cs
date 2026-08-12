@@ -258,7 +258,9 @@ namespace Ludots.Client.Raylib.Rendering
             Vector4 ambient = AmbientRgba;
             Vector3 lightColor = _lightColor;
             float lightIntensity = LightIntensity;
-            Vector3 fogColor = _fog.Color;
+            // Daytime fog stays author cyan; night/dusk dims with ambient so aerial water is not a noon wash.
+            float fogDim = Math.Clamp(ambient.W / 0.28f, 0.06f, 1f);
+            Vector3 fogColor = _fog.Color * fogDim;
             Vector4 fogParams = _fog.Params;
             Rl.SetShaderValue(shader, locations.LightDir, &lightDir, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
             Rl.SetShaderValue(shader, locations.Ambient, &ambient, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC4);

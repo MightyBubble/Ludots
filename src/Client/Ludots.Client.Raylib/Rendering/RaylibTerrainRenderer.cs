@@ -88,9 +88,14 @@ namespace Ludots.Client.Raylib.Rendering
             UpdateUniforms(in camera);
             RaylibMatrix transform = RaylibMatrix.FromSystemNumerics(
                 Matrix4x4.CreateTranslation(camera.target.X, planeYMeters, camera.target.Z));
+            Rl.rlEnableDepthTest();
+            Rl.rlDisableDepthMask();
+            Rl.BeginBlendMode(BlendMode.BLEND_ALPHA);
             Rl.rlDisableBackfaceCulling();
             Rl.DrawMesh(_oceanPlaneMesh, _waterMaterial, transform);
             Rl.rlEnableBackfaceCulling();
+            Rl.EndBlendMode();
+            Rl.rlEnableDepthMask();
         }
 
         private static Mesh CreateOceanPlaneMesh(float halfExtentMeters)
