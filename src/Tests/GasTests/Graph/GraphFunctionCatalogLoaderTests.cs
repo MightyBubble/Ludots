@@ -147,7 +147,7 @@ namespace Ludots.Tests.Gas.Graph
                     new GraphFunctionCatalogLoader(pipeline, functionCatalog, programs).Load(configCatalog));
 
                 Assert.That(functionCatalog.Count, Is.EqualTo(0));
-                Assert.That(ex!.InnerExceptions[0].Message, Does.Contain("contains Yield"));
+                Assert.That(ex!.InnerExceptions[0].Message, Does.Contain("reaches Yield"));
                 Assert.That(ex.InnerExceptions[0].Message, Does.Contain("ActionLib"));
             }
             finally
