@@ -43,7 +43,7 @@ ConfigPipeline
         +--> GraphLookupTableRegistry         (新增，只读 SoA 表索引)
         |
         v
-GraphProgramConfigLoader / GraphCompiler / SymbolPatcher
+GraphProgramConfigLoader / GraphProgramAuthoringFrontDoor / GraphControlFlowCompiler / GraphProgramSymbolPatcher
         |
         v
 L0 Graph VM (GraphKind.Query | Derived)
@@ -320,7 +320,7 @@ Projection：
 - 如需“BB 存文案”，应另开 `BlackboardTextToken` 语义能力：仍存 token id，但 key registry 声明 value kind，GraphOutput/Panel binding 能验证类型。
 - EntityInfoCard 的 `lastKill` Text 更推荐存 `BlackboardEntity`，再由 projection 查实体显示名/insight token；不要把最终字符串写进 ECS 热路径。
 
-### 3.9 编译 / Patch / Runtime 接线
+### 3.9 FrontDoor / ControlFlow / Patch / Runtime 接线
 
 必须改动的基建点（实现期）：
 
@@ -341,9 +341,9 @@ Projection：
    - 注入 `GraphLookupTableRegistry`。
    - `ReadGameplayTag` 与现有 `HasTag` 同源。
 
-5. `GraphCompiler`
-   - 新字段：`table`、`field`、`tagDomain` 或复用 table mask。
-   - 输出 type 映射：tag/token/rowHandle 都是 Int；float field 是 Float。
+5. `GraphProgramAuthoringFrontDoor` / `GraphControlFlowCompiler`
+   - 作者字段：`table`、`field`、`tagDomain` 或复用 table mask。
+   - ControlFlow 输出 type 映射：tag/token/rowHandle 都是 Int；float field 是 Float。
 
 6. `GraphProgramSymbolPatcher` / `IGraphSymbolResolver`
    - 新增 `ResolveGraphLookupTable`、`ResolveGraphLookupField` 或 combined field symbol。
@@ -553,7 +553,7 @@ Feature: 跨实体聚合仍复用 Query/Agg
 
 - `GraphKind.Query` / `GraphKind.Derived`
 - `GraphNodeOp` / `GasGraphOpHandlerTable`
-- `GraphCompiler` / `GraphProgramConfigLoader` / `GraphProgramSymbolPatcher`
+- `GraphProgramAuthoringFrontDoor` / `GraphControlFlowCompiler` / `GraphProgramConfigLoader` / `GraphProgramSymbolPatcher`
 - `IGraphRuntimeApi` / `GasGraphRuntimeApi`
 - `TagRegistry` / `GameplayTagContainer` / `TagOps`
 - `ReadBlackboardFloat/Int/Entity`

@@ -8,7 +8,11 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
     /// <summary>Resolves authored graph keys to Registry ids. Fail-closed.</summary>
     public static class GraphRegistryScriptResolver
     {
+        [Obsolete("String graph keys are not a behavior entrypoint; use ActionLib names or registered graph ids.")]
         public static int RequireId(string graphKey)
+            => ResolveId(graphKey);
+
+        private static int ResolveId(string graphKey)
         {
             if (string.IsNullOrWhiteSpace(graphKey))
             {
@@ -37,7 +41,7 @@ namespace Ludots.Core.Gameplay.AI.BehaviorTree
         }
 
         public static ReadOnlySpan<GraphInstruction> RequireProgram(GraphProgramRegistry registry, string graphKey)
-            => RequireProgram(registry, RequireId(graphKey));
+            => RequireProgram(registry, ResolveId(graphKey));
 
         public static int RequireActionId(GraphActionCatalog catalog, string actionName)
         {

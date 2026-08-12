@@ -64,7 +64,8 @@ namespace Ludots.Core.GraphRuntime
         {
             if (!TryGet(name, out GraphFunctionEntry entry))
             {
-                throw new InvalidOperationException($"Graph function '{name}' is not registered.");
+                throw new InvalidOperationException(
+                    $"Graph function '{name}' is not registered in FuncLib. ActionLib entries cannot be called through InvokeScript.functionName.");
             }
 
             return entry;
