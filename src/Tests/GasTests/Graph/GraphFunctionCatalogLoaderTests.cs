@@ -195,18 +195,114 @@ namespace Ludots.Tests.Gas.Graph
             }
         }
 
+        [Test]
+        public void FuncCatalogLoader_RejectsMissingFile()
+        {
+            GraphIdRegistry.Clear();
+            string root = string.Empty;
+            try
+            {
+                var (pipeline, configCatalog, tempRoot) = CreateCatalogPipeline(
+                    "GAS/func_lib.json",
+                    writeJson: false);
+                root = tempRoot;
+
+                var functionCatalog = new GraphFunctionCatalog();
+                var programs = new GraphProgramRegistry();
+                var ex = Assert.Throws<InvalidOperationException>(() =>
+                    new GraphFunctionCatalogLoader(pipeline, functionCatalog, programs).Load(configCatalog));
+
+                Assert.That(functionCatalog.Count, Is.EqualTo(0));
+                Assert.That(ex!.Message, Does.Contain("no file was found"));
+            }
+            finally
+            {
+                GraphIdRegistry.Clear();
+                DeleteTempRoot(root);
+            }
+        }
+
+        [Test]
+        public void FuncCatalogLoader_RejectsEmptyArray()
+        {
+            GraphIdRegistry.Clear();
+            string root = string.Empty;
+            try
+            {
+                var (pipeline, configCatalog, tempRoot) = CreateCatalogPipeline(
+                    "GAS/func_lib.json",
+                    "[]");
+                root = tempRoot;
+
+                var functionCatalog = new GraphFunctionCatalog();
+                var programs = new GraphProgramRegistry();
+                var ex = Assert.Throws<InvalidOperationException>(() =>
+                    new GraphFunctionCatalogLoader(pipeline, functionCatalog, programs).Load(configCatalog));
+
+                Assert.That(functionCatalog.Count, Is.EqualTo(0));
+                Assert.That(ex!.Message, Does.Contain("empty catalog"));
+            }
+            finally
+            {
+                GraphIdRegistry.Clear();
+                DeleteTempRoot(root);
+            }
+        }
+
+        [Test]
+        public void FuncCatalogLoader_LoadsValidEntry()
+        {
+            GraphIdRegistry.Clear();
+            string root = string.Empty;
+            try
+            {
+                const string graphName = "Graph.Script.ValidFunction";
+                int graphId = GraphIdRegistry.Register(graphName);
+                var programs = new GraphProgramRegistry();
+                programs.Register(
+                    graphId,
+                    new[] { new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt } },
+                    GraphKind.Script);
+
+                var (pipeline, configCatalog, tempRoot) = CreateCatalogPipeline(
+                    "GAS/func_lib.json",
+                    """
+                    [
+                      { "name": "script.valid", "graph": "Graph.Script.ValidFunction", "kind": "Script", "purity": "pure" }
+                    ]
+                    """);
+                root = tempRoot;
+
+                var functionCatalog = new GraphFunctionCatalog();
+                new GraphFunctionCatalogLoader(pipeline, functionCatalog, programs).Load(configCatalog);
+
+                Assert.That(functionCatalog.Count, Is.EqualTo(1));
+                Assert.That(functionCatalog.Require("script.valid").GraphId, Is.EqualTo(graphId));
+            }
+            finally
+            {
+                GraphIdRegistry.Clear();
+                DeleteTempRoot(root);
+            }
+        }
+
         private static (ConfigPipeline Pipeline, ConfigCatalog Catalog, string TempRoot) CreateCatalogPipeline(
             string relativePath,
-            string json)
+            string? json = null,
+            bool writeJson = true)
         {
             string root = Path.Combine(
                 Path.GetTempPath(),
                 "Ludots_GraphFunctionCatalogLoaderTests",
                 Guid.NewGuid().ToString("N"));
             string coreRoot = Path.Combine(root, "Core");
-            string fullPath = Path.Combine(coreRoot, "Configs", relativePath.Replace('/', Path.DirectorySeparatorChar));
-            Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
-            File.WriteAllText(fullPath, json);
+            Directory.CreateDirectory(coreRoot);
+            if (writeJson)
+            {
+                string fullPath = Path.Combine(coreRoot, "Configs", relativePath.Replace('/', Path.DirectorySeparatorChar));
+                Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+                File.WriteAllText(fullPath, json!);
+            }
 
             var vfs = new VirtualFileSystem();
             vfs.Mount("Core", coreRoot);
