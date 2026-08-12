@@ -33,7 +33,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                       GraphNodeOp.ModifyAttributeAdd or
                       GraphNodeOp.WriteSelfAttribute or
                       GraphNodeOp.ApplyEffectTemplate or
+                      GraphNodeOp.FanOutApplyEffect or
+                      GraphNodeOp.ApplyEffectDynamic or
+                      GraphNodeOp.FanOutApplyEffectDynamic or
                       GraphNodeOp.RemoveEffectTemplate or
+                      GraphNodeOp.FanOutDispatchEffect or
+                      GraphNodeOp.FanOutDispatchEffectDynamic or
                       GraphNodeOp.BeginLifecycleTransaction or
                       GraphNodeOp.InvokeBuiltin or
                       GraphNodeOp.WriteBlackboardInt or
@@ -119,6 +124,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.WriteSelfAttribute => port == GraphControlFlowPorts.Value,
                 GraphNodeOp.ApplyEffectTemplate
                     => port is GraphControlFlowPorts.Target or GraphControlFlowPorts.A or GraphControlFlowPorts.B,
+                GraphNodeOp.ApplyEffectDynamic
+                    => port is GraphControlFlowPorts.Target or GraphControlFlowPorts.Value,
+                GraphNodeOp.FanOutApplyEffectDynamic or GraphNodeOp.FanOutDispatchEffectDynamic
+                    => port == GraphControlFlowPorts.Value,
                 GraphNodeOp.RemoveEffectTemplate => port == GraphControlFlowPorts.Target,
                 GraphNodeOp.WriteBlackboardInt or GraphNodeOp.WriteBlackboardFloat or GraphNodeOp.WriteBlackboardEntity
                     => port is GraphControlFlowPorts.Source or GraphControlFlowPorts.Value,
@@ -256,9 +265,32 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     RequireNonEmpty(node.EffectTemplate, "effectTemplate", node, graphId, diagnostics);
                     break;
 
+                case GraphNodeOp.FanOutApplyEffect:
+                    RequireNonEmpty(node.EffectTemplate, "effectTemplate", node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.ApplyEffectDynamic:
+                    RequireValueInput(node, GraphControlFlowPorts.Target, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.FanOutApplyEffectDynamic:
+                    RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
+
                 case GraphNodeOp.RemoveEffectTemplate:
                     RequireValueInput(node, GraphControlFlowPorts.Target, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireNonEmpty(node.EffectTemplate, "effectTemplate", node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.FanOutDispatchEffect:
+                    RequireNonEmpty(node.EffectTemplate, "effectTemplate", node, graphId, diagnostics);
+                    RequireNonEmpty(node.PayloadPreset, "payloadPreset", node, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.FanOutDispatchEffectDynamic:
+                    RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireNonEmpty(node.PayloadPreset, "payloadPreset", node, graphId, diagnostics);
                     break;
 
                 case GraphNodeOp.InvokeBuiltin:
@@ -532,11 +564,42 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     break;
                 }
 
+                case GraphNodeOp.FanOutApplyEffect:
+                    instruction.Imm = RequireSymbol(node.EffectTemplate, "effectTemplate", node, symbolToIndex, symbols, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.ApplyEffectDynamic:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Target, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.B = ResolveValueInput(
+                        node, GraphControlFlowPorts.Value, GraphValueType.Int,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.FanOutApplyEffectDynamic:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Value, GraphValueType.Int,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                    break;
+
                 case GraphNodeOp.RemoveEffectTemplate:
                     instruction.A = ResolveValueInput(
                         node, GraphControlFlowPorts.Target, GraphValueType.Entity,
                         valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
                     instruction.Imm = RequireSymbol(node.EffectTemplate, "effectTemplate", node, symbolToIndex, symbols, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.FanOutDispatchEffect:
+                    instruction.Imm = RequireSymbol(node.EffectTemplate, "effectTemplate", node, symbolToIndex, symbols, graphId, diagnostics);
+                    instruction.Dst = RequirePayloadPresetSymbol(node.PayloadPreset, symbolToIndex, symbols, graphId, node.Id, diagnostics);
+                    break;
+
+                case GraphNodeOp.FanOutDispatchEffectDynamic:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Value, GraphValueType.Int,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Dst = RequirePayloadPresetSymbol(node.PayloadPreset, symbolToIndex, symbols, graphId, node.Id, diagnostics);
                     break;
 
                 case GraphNodeOp.InvokeBuiltin:
@@ -726,6 +789,24 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 $"Node '{node.Id}' has unsupported relationshipMode '{mode}'. Supported: Hostile, Friendly, Neutral, NotFriendly, NotHostile.",
                 node.Id));
             return 0;
+        }
+
+        private static byte RequirePayloadPresetSymbol(
+            string? symbol,
+            Dictionary<string, int> symbolToIndex,
+            List<string> symbols,
+            string graphId,
+            string nodeId,
+            List<GraphDiagnostic> diagnostics)
+        {
+            if (string.IsNullOrWhiteSpace(symbol))
+            {
+                diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingNodeRef,
+                    $"Node '{nodeId}' requires a non-empty payloadPreset.", nodeId));
+                return byte.MaxValue;
+            }
+
+            return EncodeByteSymbol(symbol, symbolToIndex, symbols, graphId, nodeId, diagnostics);
         }
     }
 }

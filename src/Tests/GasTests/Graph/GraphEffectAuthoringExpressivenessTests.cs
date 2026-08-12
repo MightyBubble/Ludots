@@ -186,6 +186,215 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
+        public void FrontDoor_EffectDynamicAndFanOutEffectOps_CompileAndEmit()
+        {
+            GraphControlFlowCompileResult compiled = CompileFrontDoor(
+                """
+                {
+                  "kind": "Effect",
+                  "entry": "target",
+                  "nodes": [
+                    { "id": "target", "op": "LoadExplicitTarget" },
+                    { "id": "templateId", "op": "ConstInt", "intValue": 77 },
+                    { "id": "fanStatic", "op": "FanOutApplyEffect", "effectTemplate": "effect.fan.static" },
+                    { "id": "applyDynamic", "op": "ApplyEffectDynamic" },
+                    { "id": "fanDynamic", "op": "FanOutApplyEffectDynamic" },
+                    { "id": "dispatchStatic", "op": "FanOutDispatchEffect", "effectTemplate": "effect.dispatch.static", "payloadPreset": "TargetToResolved" },
+                    { "id": "dispatchDynamic", "op": "FanOutDispatchEffectDynamic", "payloadPreset": "TargetToResolved" }
+                  ],
+                  "controlEdges": [
+                    { "from": "target", "fromPort": "next", "to": "templateId" },
+                    { "from": "templateId", "fromPort": "next", "to": "fanStatic" },
+                    { "from": "fanStatic", "fromPort": "next", "to": "applyDynamic" },
+                    { "from": "applyDynamic", "fromPort": "next", "to": "fanDynamic" },
+                    { "from": "fanDynamic", "fromPort": "next", "to": "dispatchStatic" },
+                    { "from": "dispatchStatic", "fromPort": "next", "to": "dispatchDynamic" }
+                  ],
+                  "valueEdges": [
+                    { "from": "target", "fromPort": "value", "to": "applyDynamic", "toPort": "target" },
+                    { "from": "templateId", "fromPort": "value", "to": "applyDynamic", "toPort": "value" },
+                    { "from": "templateId", "fromPort": "value", "to": "fanDynamic", "toPort": "value" },
+                    { "from": "templateId", "fromPort": "value", "to": "dispatchDynamic", "toPort": "value" }
+                  ]
+                }
+                """,
+                "tests.effect.dynamic-fanout-effect-ops");
+
+            Assert.That(compiled.Succeeded, Is.True, GraphScriptTestGraphs.FormatDiagnostics(compiled.Diagnostics));
+            Assert.That(compiled.Package.HasValue, Is.True);
+
+            GraphProgramPackage package = compiled.Package!.Value;
+            GraphInstruction[] program = package.Program;
+            GraphInstruction fanStatic = SingleInstruction(program, GraphNodeOp.FanOutApplyEffect);
+            GraphInstruction applyDynamic = SingleInstruction(program, GraphNodeOp.ApplyEffectDynamic);
+            GraphInstruction fanDynamic = SingleInstruction(program, GraphNodeOp.FanOutApplyEffectDynamic);
+            GraphInstruction dispatchStatic = SingleInstruction(program, GraphNodeOp.FanOutDispatchEffect);
+            GraphInstruction dispatchDynamic = SingleInstruction(program, GraphNodeOp.FanOutDispatchEffectDynamic);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(package.Symbols[fanStatic.Imm], Is.EqualTo("effect.fan.static"));
+                Assert.That(applyDynamic.A, Is.EqualTo(0));
+                Assert.That(applyDynamic.B, Is.EqualTo(0));
+                Assert.That(fanDynamic.A, Is.EqualTo(0));
+                Assert.That(package.Symbols[dispatchStatic.Imm], Is.EqualTo("effect.dispatch.static"));
+                Assert.That(package.Symbols[dispatchStatic.Dst], Is.EqualTo("TargetToResolved"));
+                Assert.That(dispatchDynamic.A, Is.EqualTo(0));
+                Assert.That(package.Symbols[dispatchDynamic.Dst], Is.EqualTo("TargetToResolved"));
+            });
+
+            Assert.DoesNotThrow(() =>
+                GraphKindOperationPolicy.RequireAllowed(
+                    GraphKind.Effect,
+                    program,
+                    GasGraphOpHandlerTable.Instance));
+        }
+
+        [Test]
+        public void FrontDoor_EffectApplyEffectDynamic_RequiresTargetAndValueInputs()
+        {
+            GraphControlFlowCompileResult compiled = CompileFrontDoor(
+                """
+                {
+                  "kind": "Effect",
+                  "entry": "apply",
+                  "nodes": [
+                    { "id": "apply", "op": "ApplyEffectDynamic" }
+                  ],
+                  "controlEdges": [],
+                  "valueEdges": []
+                }
+                """,
+                "tests.effect.apply-effect-dynamic-missing-inputs");
+
+            Assert.That(compiled.Succeeded, Is.False);
+            Assert.That(compiled.Package.HasValue, Is.False);
+            Assert.Multiple(() =>
+            {
+                Assert.That(compiled.Diagnostics, Has.Some.Matches<GraphDiagnostic>(d =>
+                    d.Code == GraphDiagnosticCodes.MissingValueInput &&
+                    d.NodeId == "apply" &&
+                    d.Message.Contains("'target'", StringComparison.Ordinal)));
+                Assert.That(compiled.Diagnostics, Has.Some.Matches<GraphDiagnostic>(d =>
+                    d.Code == GraphDiagnosticCodes.MissingValueInput &&
+                    d.NodeId == "apply" &&
+                    d.Message.Contains("'value'", StringComparison.Ordinal)));
+            });
+        }
+
+        [Test]
+        public void FrontDoor_EffectFanOutApplyEffect_RequiresEffectTemplate()
+        {
+            GraphControlFlowCompileResult compiled = CompileFrontDoor(
+                """
+                {
+                  "kind": "Effect",
+                  "entry": "fan",
+                  "nodes": [
+                    { "id": "fan", "op": "FanOutApplyEffect" }
+                  ],
+                  "controlEdges": [],
+                  "valueEdges": []
+                }
+                """,
+                "tests.effect.fanout-apply-effect-missing-template");
+
+            Assert.That(compiled.Succeeded, Is.False);
+            Assert.That(compiled.Package.HasValue, Is.False);
+            Assert.That(compiled.Diagnostics, Has.Some.Matches<GraphDiagnostic>(d =>
+                d.Code == GraphDiagnosticCodes.MissingNodeRef &&
+                d.NodeId == "fan" &&
+                d.Message.Contains("effectTemplate", StringComparison.Ordinal)));
+        }
+
+        [Test]
+        public void FrontDoor_EffectFanOutApplyEffectDynamic_RequiresValueInput()
+        {
+            GraphControlFlowCompileResult compiled = CompileFrontDoor(
+                """
+                {
+                  "kind": "Effect",
+                  "entry": "fan",
+                  "nodes": [
+                    { "id": "fan", "op": "FanOutApplyEffectDynamic" }
+                  ],
+                  "controlEdges": [],
+                  "valueEdges": []
+                }
+                """,
+                "tests.effect.fanout-apply-effect-dynamic-missing-value");
+
+            Assert.That(compiled.Succeeded, Is.False);
+            Assert.That(compiled.Package.HasValue, Is.False);
+            Assert.That(compiled.Diagnostics, Has.Some.Matches<GraphDiagnostic>(d =>
+                d.Code == GraphDiagnosticCodes.MissingValueInput &&
+                d.NodeId == "fan" &&
+                d.Message.Contains("'value'", StringComparison.Ordinal)));
+        }
+
+        [Test]
+        public void FrontDoor_EffectFanOutDispatchEffect_RequiresEffectTemplateAndPayloadPreset()
+        {
+            GraphControlFlowCompileResult compiled = CompileFrontDoor(
+                """
+                {
+                  "kind": "Effect",
+                  "entry": "dispatch",
+                  "nodes": [
+                    { "id": "dispatch", "op": "FanOutDispatchEffect" }
+                  ],
+                  "controlEdges": [],
+                  "valueEdges": []
+                }
+                """,
+                "tests.effect.fanout-dispatch-effect-missing-fields");
+
+            Assert.That(compiled.Succeeded, Is.False);
+            Assert.That(compiled.Package.HasValue, Is.False);
+            Assert.Multiple(() =>
+            {
+                Assert.That(compiled.Diagnostics, Has.Some.Matches<GraphDiagnostic>(d =>
+                    d.Code == GraphDiagnosticCodes.MissingNodeRef &&
+                    d.NodeId == "dispatch" &&
+                    d.Message.Contains("effectTemplate", StringComparison.Ordinal)));
+                Assert.That(compiled.Diagnostics, Has.Some.Matches<GraphDiagnostic>(d =>
+                    d.Code == GraphDiagnosticCodes.MissingNodeRef &&
+                    d.NodeId == "dispatch" &&
+                    d.Message.Contains("payloadPreset", StringComparison.Ordinal)));
+            });
+        }
+
+        [Test]
+        public void FrontDoor_EffectFanOutDispatchEffectDynamic_RequiresPayloadPreset()
+        {
+            GraphControlFlowCompileResult compiled = CompileFrontDoor(
+                """
+                {
+                  "kind": "Effect",
+                  "entry": "templateId",
+                  "nodes": [
+                    { "id": "templateId", "op": "ConstInt", "intValue": 77 },
+                    { "id": "dispatch", "op": "FanOutDispatchEffectDynamic" }
+                  ],
+                  "controlEdges": [
+                    { "from": "templateId", "fromPort": "next", "to": "dispatch" }
+                  ],
+                  "valueEdges": [
+                    { "from": "templateId", "fromPort": "value", "to": "dispatch", "toPort": "value" }
+                  ]
+                }
+                """,
+                "tests.effect.fanout-dispatch-effect-dynamic-missing-payload-preset");
+
+            Assert.That(compiled.Succeeded, Is.False);
+            Assert.That(compiled.Package.HasValue, Is.False);
+            Assert.That(compiled.Diagnostics, Has.Some.Matches<GraphDiagnostic>(d =>
+                d.Code == GraphDiagnosticCodes.MissingNodeRef &&
+                d.NodeId == "dispatch" &&
+                d.Message.Contains("payloadPreset", StringComparison.Ordinal)));
+        }
+
+        [Test]
         public void FrontDoor_EffectClampFloat_RequiresValueMinAndMaxInputs()
         {
             GraphControlFlowCompileResult compiled = CompileFrontDoor(
@@ -298,6 +507,9 @@ namespace Ludots.Tests.Gas.Graph
             JsonObject obj = JsonNode.Parse(json)!.AsObject();
             return GraphProgramAuthoringFrontDoor.CompileJsonObjectFull(obj, graphId, options);
         }
+
+        private static GraphInstruction SingleInstruction(GraphInstruction[] program, GraphNodeOp op)
+            => program.Single(i => i.Op == (ushort)op);
 
         private static string BranchBoolGraphJson(string kind)
             => $$"""
