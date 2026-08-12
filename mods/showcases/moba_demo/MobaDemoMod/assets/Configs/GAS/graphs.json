@@ -26,7 +26,7 @@
         "from": "target",
         "fromPort": "value",
         "to": "shield",
-        "toPort": "target"
+        "toPort": "source"
       }
     ]
   }
