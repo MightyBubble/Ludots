@@ -18,6 +18,7 @@ using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 using MobaDemoMod.Triggers;
@@ -227,8 +228,7 @@ namespace MobaDemoMod.Systems
             {
                 CheckModeSwitchKeys(input, _inputOrderMapping);
 
-                if (_globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var actorObj) &&
-                    actorObj is Entity localPlayer &&
+                if (ClientLocalSeatAccess.TryGetSolePossessedRep(_globals, out Entity localPlayer) &&
                     _world.IsAlive(localPlayer))
                 {
                     if (!TryGetLocalPlayerId(out int playerId))
@@ -253,14 +253,13 @@ namespace MobaDemoMod.Systems
         private bool TryGetLocalPlayerId(out int playerId)
         {
             playerId = 0;
-            if (!_globals.TryGetValue(CoreServiceKeys.LocalPlayerId.Name, out object? value) ||
-                value is not int candidate ||
-                candidate <= 0)
+            ClientLocalSeatRegistry seats = ClientLocalSeatAccess.RequireRegistry(_globals);
+            if (!seats.TryGetSoleSeat(out ClientLocalSeat seat) || !seat.HasPossession)
             {
                 return false;
             }
 
-            playerId = candidate;
+            playerId = seat.PossessedPlayerId;
             return true;
         }
 
@@ -271,7 +270,7 @@ namespace MobaDemoMod.Systems
                 return default;
             }
 
-            if (!_globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var actorObj) || actorObj is not Entity localPlayer)
+            if (!ClientLocalSeatAccess.TryGetSolePossessedRep(_globals, out Entity actorObj) || actorObj is not Entity localPlayer)
                 return default;
             if (!_world.IsAlive(localPlayer)) return default;
 
@@ -369,8 +368,7 @@ namespace MobaDemoMod.Systems
         private bool TryGetLocalCollectionOwner(out Entity owner)
         {
             owner = default;
-            return _globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var localObj) &&
-                   localObj is Entity local &&
+            return ClientLocalSeatAccess.TryGetSolePossessedRep(_globals, out Entity local) &&
                    _world.IsAlive(local) &&
                    (owner = local) != Entity.Null;
         }

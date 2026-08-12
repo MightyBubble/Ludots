@@ -8,6 +8,7 @@ using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.Modding;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using FormationCapabilityShowcaseMod.Runtime;
 
@@ -134,8 +135,7 @@ internal sealed class FormationCapabilityLocalOrderSourceSystem : ISystem<float>
     private bool TryResolveLocalPlayerEntity(out Entity localPlayer)
     {
         localPlayer = Entity.Null;
-        return _globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) &&
-               localObj is Entity local &&
+        return ClientLocalSeatAccess.TryGetSolePossessedRep(_globals, out Entity local) &&
                _world.IsAlive(local) &&
                (localPlayer = local) != Entity.Null;
     }

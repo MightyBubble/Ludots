@@ -11,6 +11,7 @@ using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Map;
 using Ludots.Core.Presentation.Minimap;
 using Ludots.Core.Scripting;
+using Ludots.Tests.TestCommon;
 
 namespace MinimapShowcaseMod.Triggers;
 
@@ -119,10 +120,9 @@ internal sealed class ConfigureMinimapShowcaseOnMapFocusTrigger : Trigger
             return;
         }
 
-        engine.GlobalContext[CoreServiceKeys.LocalPlayerEntity.Name] = playerCapital;
+        engine.ClientLocalSeatTestBindings.BindSoleSeat(GlobalContext, playerCapital);
         if (engine.World.TryGet(playerCapital, out PlayerOwner playerOwner) && playerOwner.PlayerId > 0)
         {
-            engine.GlobalContext[CoreServiceKeys.LocalPlayerId.Name] = playerOwner.PlayerId;
         }
 
         var descriptor = EntityCollectionDescriptor.Create(

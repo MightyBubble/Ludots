@@ -199,7 +199,7 @@ ability 定义增加 catalog 字段（`castFamily`、`aggregationAliasId` 等）
 | 1 | graph condition 求值只注入 `E[0]=Source, E[1]=Target`，无 viewer、无 event payload 寄存器（`PerformerRuleSystem.EvaluateGraph`） | 拓扑谓词条件（viewer 是否为 row 域本人 / controls 可达 / 仅 knowledge grant）需要 **viewer 实体寄存器 + relationship/knowledge graph ops + payload 寄存器** | PROV-4b |
 | 2 | `PerformerDefinition.VisibilityCondition` 的 graphProgramId 在 Emit 侧未接线（`PerformerEmitSystem` throw） | per-viewer 可见性（裁判 vs 普通玩家）依赖它 | PROV-4c |
 | 3 | `TeamColorResolver` 硬编码 Team1/Team2 色并直读 `Team`/`PlayerOwner`；`PerformAudienceContext` 直读 `Team`/`PlayerOwner` 组件 | palette/相位改 palette catalog + graph 取值（§5.9）；audience 上下文改拓扑求值 | PROV-6b（并入 CTRL-3b 消费者清单） |
-| 4 | `InlineConditionKind.SourceIsLocalPlayer` 写死 GlobalContext LocalPlayerEntity；WorldHud audience 只取单一 local viewer | 多 viewer（裁判为独立 client anchor 时可行；同进程多 viewport 明确列为非目标） | PROV-5 备注 |
+| 4 | `InlineConditionKind.SourceIsLocalPlayer` 写死 GlobalContext LocalPlayerEntity；WorldHud audience 只取单一 local viewer | 多 viewer / 多 Seat（#896 ClientLocalSeat；同进程 PresentBinding 分屏在范围内） | PROV-5 → #896/#898 |
 
 **明确不在本 Epic 修的封闭点**（记录为已知边界，避免范围膨胀）：`PresentationEventKind` / `PerformerCommandKind` / `BehaviorKind` / `AssetKind` 封闭 enum、`InlineConditionKind` 不可 mod 注册（复杂条件一律走 graph）、event payload 固定槽。这些不阻塞本 Epic 的全部 UAT。
 
@@ -1163,7 +1163,7 @@ PROV-1..PROV-8 按原文；修订：
 - 不在本 Epic 实现联机传输层；只保证确定性契约（M10）。
 - 不为裁判实现 gameplay order 路径。
 - 不在本 Epic 开放 Performer 执行侧封闭 enum 的 mod 注册（`PresentationEventKind` / `PerformerCommandKind` / `BehaviorKind` / `AssetKind` / `InlineConditionKind`）：已核查不阻塞本 Epic UAT（DEC-12），列为已知边界，若后续需要另立 RFC。
-- 不做同进程多 viewport 渲染（裁判作为独立 client anchor 已满足 M5/P8）。
+- ~~不做同进程多 viewport 渲染~~ → **已修订（#896）**：ClientLocalSeat + LogicView + PresentBinding 为一等公民；分屏是 PresentBinding.rect，逻辑视觉与画面解耦。裁判独立 client 仍有效，但不再禁止同进程多 Seat 呈现。
 
 ## 10. 与现有 Issue/PR 的关系
 

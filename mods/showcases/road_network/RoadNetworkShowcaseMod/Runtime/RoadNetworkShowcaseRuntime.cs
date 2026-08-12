@@ -10,12 +10,14 @@ using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Map.Board;
 using Ludots.Core.Navigation.GraphWorld;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using CoreInputMod.ViewMode;
 using RoadNetworkShowcaseMod.Gameplay;
 using RoadNetworkShowcaseMod.UI;
 using Ludots.UI;
 using Ludots.Core.Gameplay.GAS.Orders;
+using Ludots.Tests.TestCommon;
 
 namespace RoadNetworkShowcaseMod.Runtime
 {
@@ -257,10 +259,9 @@ namespace RoadNetworkShowcaseMod.Runtime
                 return;
             }
 
-            engine.GlobalContext[CoreServiceKeys.LocalPlayerEntity.Name] = owner;
+            engine.ClientLocalSeatTestBindings.BindSoleSeat(GlobalContext, owner);
             if (engine.World.TryGet(owner, out PlayerOwner playerOwner) && playerOwner.PlayerId > 0)
             {
-                engine.GlobalContext[CoreServiceKeys.LocalPlayerId.Name] = playerOwner.PlayerId;
             }
 
             if (engine.GetService(CoreServiceKeys.EntityCollectionStore) is EntityCollectionStore collections)
@@ -331,7 +332,7 @@ namespace RoadNetworkShowcaseMod.Runtime
         private void PublishSelectableKnowledge(GameEngine engine)
         {
             if (string.IsNullOrWhiteSpace(_activeMapId) ||
-                !engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? viewerObj) ||
+                !engine.ClientLocalSeatAccess.TryGetSolePossessedRep(GlobalContext, out Entity viewerObj) ||
                 viewerObj is not Entity viewer ||
                 !engine.World.IsAlive(viewer))
             {
@@ -563,8 +564,7 @@ namespace RoadNetworkShowcaseMod.Runtime
                 return selected;
             }
 
-            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? actorObj) &&
-                actorObj is Entity actor &&
+            if (engine.ClientLocalSeatAccess.TryGetSolePossessedRep(GlobalContext, out Entity actor) &&
                 engine.World.IsAlive(actor))
             {
                 return actor;
@@ -576,7 +576,7 @@ namespace RoadNetworkShowcaseMod.Runtime
         private static bool TryResolveLocalCommandSourceOwner(GameEngine engine, out Entity owner)
         {
             owner = Entity.Null;
-            Entity local = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            Entity local = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             if (local == Entity.Null || !engine.World.IsAlive(local))
             {
                 return false;

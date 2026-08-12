@@ -16,6 +16,7 @@ using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Terrain;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
 
@@ -200,7 +201,7 @@ namespace Ludots.Tests.GAS.Production
                 ?? throw new InvalidOperationException("VisualHeightmap is required.");
             var input = engine.GetService(CoreServiceKeys.InputHandler)
                 ?? throw new InvalidOperationException("InputHandler is required.");
-            var localPlayer = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            var localPlayer = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             Assert.That(engine.World.IsAlive(localPlayer), Is.True);
             Assert.That(engine.World.Has<WorldPositionCm>(localPlayer), Is.True);
             Assert.That(engine.World.Has<FacingDirection>(localPlayer), Is.True);

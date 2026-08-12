@@ -35,6 +35,7 @@ using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Physics2D;
 using Ludots.Core.Physics2D.Components;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
 using Ludots.Core.UI.EntityCommandPanels;
@@ -42,6 +43,7 @@ using Ludots.Platform.Abstractions;
 using Ludots.UI;
 using Ludots.UI.Skia;
 using NUnit.Framework;
+using Ludots.Tests.TestCommon;
 
 namespace Ludots.Tests.GAS.Production
 {
@@ -389,7 +391,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(command!.OrderTypeKey, Is.EqualTo("moveTo"));
             Assert.That(command.TargetType, Is.EqualTo(OrderTargetType.Position));
 
-            Entity localPlayer = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            Entity localPlayer = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             Entity ezrealCooldown = FindEntityByName(engine.World, "Ezreal Cooldown");
             Entity garenAlpha = FindEntityByName(engine.World, "Garen Alpha");
             ReplaceCommandSource(engine, localPlayer, ezreal, garenAlpha);
@@ -620,7 +622,7 @@ namespace Ludots.Tests.GAS.Production
                 return counts.TeamA >= 48 && counts.TeamB >= 48;
             }, maxFrames: 360);
 
-            Entity localPlayer = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            Entity localPlayer = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             Entity[] teamASelection =
             {
                 FindEntityByName(engine.World, "StressFireMageA"),
@@ -1702,7 +1704,7 @@ namespace Ludots.Tests.GAS.Production
                 title: "Champion command source",
                 summary: "Test-owned command-source collection.");
             collections.Replace(owner, in descriptor, entities, owner);
-            engine.GlobalContext[CoreServiceKeys.LocalPlayerEntity.Name] = owner;
+            engine.ClientLocalSeatTestBindings.BindSoleSeat(GlobalContext, owner);
         }
 
         private static string[] ReadViewedSelectionNames(GameEngine engine)
@@ -1721,7 +1723,7 @@ namespace Ludots.Tests.GAS.Production
                            ownerObj is Entity activeOwner &&
                            engine.World.IsAlive(activeOwner)
                 ? activeOwner
-                : engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+                : ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             string key = engine.GlobalContext.TryGetValue(ActiveCollectionKey, out object? keyObj) &&
                          keyObj is string activeKey &&
                          !string.IsNullOrWhiteSpace(activeKey)

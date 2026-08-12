@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
+using Ludots.Tests.TestCommon;
 using Ludots.Core.Components;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
@@ -755,9 +756,9 @@ namespace Ludots.Tests.Presentation
             UpsertPerformerKnowledge(projectionStore, viewer, owner);
             var globals = new Dictionary<string, object>
             {
-                [CoreServiceKeys.LocalPlayerEntity.Name] = viewer,
                 [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
             };
+            ClientLocalSeatTestBindings.BindSoleSeat(globals, viewer, 1);
 
             int parentDefId = definitions.Register("behavior.attachment.hud.parent", new PerformerDefinition
             {

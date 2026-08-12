@@ -8,6 +8,7 @@ using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Mathematics;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 
 namespace CapabilityStandardVirtualCameraShowcaseMod.Systems;
@@ -80,7 +81,7 @@ internal sealed class CapabilityStandardVirtualCameraAvatarMoveSystem : ISystem<
 
     private Entity ResolveLocalPlayer()
     {
-        if (!_engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) ||
+        if (!_engine.ClientLocalSeatAccess.TryGetSolePossessedRep(GlobalContext, out Entity localObj) ||
             localObj is not Entity localPlayer ||
             localPlayer == Entity.Null ||
             !_engine.World.IsAlive(localPlayer))

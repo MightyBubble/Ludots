@@ -23,6 +23,7 @@ using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Systems;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 using Ludots.Core.Systems;
@@ -464,7 +465,7 @@ namespace Ludots.Tests.GAS.Production
         private static bool TryGetHoveredEntity(GameEngine engine, out Entity hovered)
         {
             hovered = Entity.Null;
-            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) ||
+            if (!engine.ClientLocalSeatAccess.TryGetSolePossessedRep(GlobalContext, out Entity localObj) ||
                 localObj is not Entity local ||
                 !engine.World.IsAlive(local))
             {
@@ -494,8 +495,7 @@ namespace Ludots.Tests.GAS.Production
                 details.Add("hovered=<none>");
             }
 
-            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) &&
-                localObj is Entity localPlayer &&
+            if (engine.ClientLocalSeatAccess.TryGetSolePossessedRep(GlobalContext, out Entity localPlayer) &&
                 engine.World.IsAlive(localPlayer) &&
                 engine.World.TryGet(localPlayer, out Name localName))
             {

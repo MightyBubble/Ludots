@@ -18,11 +18,13 @@ using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Modding;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using NarrativeFrontendMod;
 using NarrativeFrontendMod.Runtime;
 using NarrativeShowcaseMod.Input;
 using NarrativeShowcaseMod.Systems;
+using Ludots.Tests.TestCommon;
 
 namespace NarrativeShowcaseMod.Runtime
 {
@@ -710,7 +712,7 @@ namespace NarrativeShowcaseMod.Runtime
         private static bool TryResolveExistingLocalPlayer(GameEngine engine, string activeMapId, out Entity localPlayer)
         {
             localPlayer = Entity.Null;
-            if (!engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out Entity existing) ||
+            if (!ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity existing) ||
                 !engine.World.IsAlive(existing) ||
                 !engine.World.TryGet(existing, out PlayerOwner owner) ||
                 !engine.World.TryGet(existing, out MapEntity mapEntity) ||
@@ -744,8 +746,7 @@ namespace NarrativeShowcaseMod.Runtime
                 lookup.Register(playerId, localPlayer);
             }
 
-            engine.SetService(CoreServiceKeys.LocalPlayerEntity, localPlayer);
-            engine.SetService(CoreServiceKeys.LocalPlayerId, playerId);
+            ClientLocalSeatTestBindings.BindSoleSeat(engine, localPlayer, playerId);
         }
 
         private static bool IsLocalPlayerCandidate(string activeMapId, in PlayerOwner owner, in MapEntity mapEntity)
@@ -756,7 +757,7 @@ namespace NarrativeShowcaseMod.Runtime
 
         private static void PublishShowcaseKnowledge(GameEngine engine, string activeMapId)
         {
-            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? viewerObj) ||
+            if (!engine.ClientLocalSeatAccess.TryGetSolePossessedRep(GlobalContext, out Entity viewerObj) ||
                 viewerObj is not Entity viewer ||
                 !engine.World.IsAlive(viewer))
             {

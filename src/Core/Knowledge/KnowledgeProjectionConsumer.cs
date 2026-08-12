@@ -135,7 +135,8 @@ namespace Ludots.Core.Knowledge
             Entity fallbackViewer,
             out Entity viewer)
         {
-            if (TryResolveViewerFromKey(world, globals, CoreServiceKeys.LocalPlayerEntity.Name, out viewer))
+            if (Ludots.Core.Client.ClientLocalSeatAccess.TryGetSolePossessedRep(globals, out viewer) &&
+                world.IsAlive(viewer))
             {
                 return true;
             }

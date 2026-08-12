@@ -10,6 +10,7 @@ using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Utils;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 
 namespace CameraAcceptanceMod.Systems
@@ -38,7 +39,7 @@ namespace CameraAcceptanceMod.Systems
                 !CameraAcceptanceIds.IsAcceptanceMap(_engine.CurrentMapSession?.MapId.Value) ||
                 !_engine.GlobalContext.TryGetValue(CoreServiceKeys.AuthoritativeInput.Name, out object? inputObj) ||
                 inputObj is not IInputActionReader input ||
-                !_engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) ||
+                !_engine.ClientLocalSeatAccess.TryGetSolePossessedRep(GlobalContext, out Entity localObj) ||
                 localObj is not Entity local ||
                 !_engine.World.IsAlive(local) ||
                 !_engine.World.Has<WorldPositionCm>(local))

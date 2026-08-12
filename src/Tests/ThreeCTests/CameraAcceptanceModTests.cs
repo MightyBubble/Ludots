@@ -27,6 +27,7 @@ using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Presentation.Utils;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
 using Ludots.Launcher.Backend;
@@ -1646,8 +1647,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
 
         private static Entity GetLocalPlayer(GameEngine engine)
         {
-            return engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var localObj) &&
-                   localObj is Entity local &&
+            return engine.ClientLocalSeatAccess.TryGetSolePossessedRep(GlobalContext, out Entity local) &&
                    engine.World.IsAlive(local)
                 ? local
                 : throw new InvalidOperationException("LocalPlayerEntity is missing.");

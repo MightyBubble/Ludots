@@ -13,6 +13,7 @@ using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Registry;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using SuperweaponContextShowcaseMod.UI;
 
@@ -437,7 +438,7 @@ namespace SuperweaponContextShowcaseMod.Runtime
 
         private static Entity ResolveLocalPlayer(GameEngine engine)
         {
-            return engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out Entity localPlayer)
+            return ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity localPlayer)
                 ? localPlayer
                 : Entity.Null;
         }

@@ -21,8 +21,10 @@ using Ludots.Core.Input.Orders;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Knowledge;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.EntityCommandPanels;
+using Ludots.Tests.TestCommon;
 
 namespace ChampionSkillSandboxMod.Runtime
 {
@@ -486,11 +488,10 @@ namespace ChampionSkillSandboxMod.Runtime
 
         private static int ResolveLocalPlayerId(GameEngine engine, Entity preferredLocalPlayer)
         {
-            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerId.Name, out object? localPlayerIdObj) &&
-                localPlayerIdObj is int localPlayerId &&
-                localPlayerId > 0)
+            ClientLocalSeatRegistry seats = ClientLocalSeatAccess.RequireRegistry(engine.GlobalContext);
+            if (seats.TryGetSoleSeat(out ClientLocalSeat seat) && seat.HasPossession)
             {
-                return localPlayerId;
+                return seat.PossessedPlayerId;
             }
 
             if (preferredLocalPlayer != Entity.Null &&
@@ -534,8 +535,7 @@ namespace ChampionSkillSandboxMod.Runtime
                     "Declare the player in the map Players binding instead of using a controllable champion as the representative.");
             }
 
-            engine.SetService(CoreServiceKeys.LocalPlayerEntity, localPlayer);
-            engine.SetService(CoreServiceKeys.LocalPlayerId, playerId);
+            ClientLocalSeatTestBindings.BindSoleSeat(engine, localPlayer, playerId);
             if (engine.CurrentMapSession != null)
             {
                 engine.CurrentMapSession.LocalPlayerEntity = localPlayer;
@@ -764,7 +764,7 @@ namespace ChampionSkillSandboxMod.Runtime
                 return commandSourcePrimary;
             }
 
-            Entity local = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            Entity local = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             if (IsControllableChampion(engine, local))
             {
                 return local;
@@ -776,7 +776,7 @@ namespace ChampionSkillSandboxMod.Runtime
         private static bool TryResolveLocalCommandSourceOwner(GameEngine engine, out Entity owner)
         {
             owner = Entity.Null;
-            Entity local = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            Entity local = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             if (local == Entity.Null || !engine.World.IsAlive(local))
             {
                 return false;

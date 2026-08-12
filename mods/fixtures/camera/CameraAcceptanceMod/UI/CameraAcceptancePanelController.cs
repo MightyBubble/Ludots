@@ -19,6 +19,7 @@ using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Utils;
 using Ludots.Core.Systems;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.UI;
 using Ludots.UI.Compose;
@@ -1246,8 +1247,7 @@ namespace CameraAcceptanceMod.UI
 
         private static bool TryResolveLocalPlayerEntity(GameEngine engine, out Entity localPlayer)
         {
-            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) &&
-                localObj is Entity local &&
+            if (engine.ClientLocalSeatAccess.TryGetSolePossessedRep(GlobalContext, out Entity local) &&
                 engine.World.IsAlive(local))
             {
                 localPlayer = local;

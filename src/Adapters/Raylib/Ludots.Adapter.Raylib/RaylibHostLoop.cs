@@ -25,6 +25,7 @@ using Ludots.Core.Presentation.Minimap;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
 using Ludots.Core.Vision;
@@ -1615,7 +1616,7 @@ namespace Ludots.Adapter.Raylib
                 captured;
 
             string dragSummary = "drag=inactive";
-            if (engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out Entity localPlayer) &&
+            if (ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity localPlayer) &&
                 engine.World.IsAlive(localPlayer) &&
                 engine.World.Has<CommandSourceDragState>(localPlayer))
             {
@@ -1635,7 +1636,7 @@ namespace Ludots.Adapter.Raylib
             out EntityCollectionStore collections)
         {
             collections = default!;
-            return engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out owner) &&
+            return ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out owner) &&
                    engine.World.IsAlive(owner) &&
                    engine.TryGetService(CoreServiceKeys.EntityCollectionStore, out collections) &&
                    collections != null;

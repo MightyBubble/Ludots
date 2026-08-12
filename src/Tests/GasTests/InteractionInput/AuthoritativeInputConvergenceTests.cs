@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
+using Ludots.Tests.TestCommon;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay;
 using Ludots.Core.Gameplay.Camera;
@@ -176,9 +177,9 @@ namespace Ludots.Tests.GAS
             var globals = new Dictionary<string, object>
             {
                 [CoreServiceKeys.AuthoritativeInput.Name] = authoritativeInput,
-                [CoreServiceKeys.LocalPlayerEntity.Name] = localPlayerIdentity,
                 [CoreServiceKeys.UiCaptured.Name] = false,
             };
+            ClientLocalSeatTestBindings.BindSoleSeat(globals, localPlayerIdentity, 1);
             var system = new InputActionAttributeBindingSystem(world, globals, registry);
 
             system.Update(0f);
@@ -276,11 +277,11 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.AuthoritativePointerButtons.Name] = new AuthoritativePointerButtonSnapshot(),
                 [CoreServiceKeys.AbilityInputRequestQueue.Name] = new InputRequestQueue(),
                 [CoreServiceKeys.InputResponseBuffer.Name] = new InputResponseBuffer(),
-                [CoreServiceKeys.LocalPlayerEntity.Name] = local,
                 [CoreServiceKeys.EntityCollectionStore.Name] = collections,
                 [CoreServiceKeys.EntityCollectionKeyRegistry.Name] = collectionKeys,
                 [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings { ConfirmActionId = "Confirm" },
             };
+            ClientLocalSeatTestBindings.BindSoleSeat(globals, local, 1);
             ((AuthoritativePointerButtonSnapshot)globals[CoreServiceKeys.AuthoritativePointerButtons.Name]).SetState(
                 "Confirm",
                 new PointerButtonState(
@@ -342,9 +343,9 @@ namespace Ludots.Tests.GAS
                 [CoreServiceKeys.InputHandler.Name] = handler,
                 [CoreServiceKeys.AuthoritativeInput.Name] = handler,
                 [CoreServiceKeys.GameSession.Name] = session,
-                [CoreServiceKeys.LocalPlayerEntity.Name] = localPlayer,
                 [CoreServiceKeys.UiCaptured.Name] = true,
             };
+            ClientLocalSeatTestBindings.BindSoleSeat(globals, localPlayer, 1);
             var actionBindings = new InputActionAttributeBindingRegistry();
             actionBindings.Set(new[]
             {

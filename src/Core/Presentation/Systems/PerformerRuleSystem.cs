@@ -10,6 +10,7 @@ using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 
 namespace Ludots.Core.Presentation.Systems
@@ -250,7 +251,7 @@ namespace Ludots.Core.Presentation.Systems
 
         private bool IsLocalPlayer(Entity entity)
         {
-            if (!_globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var obj)) return false;
+            if (!ClientLocalSeatAccess.TryGetSolePossessedRep(_globals, out Entity obj)) return false;
             return obj is Entity lp && lp == entity;
         }
 

@@ -37,6 +37,7 @@ using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Presentation.Utils;
 using Ludots.Core.Physics2D.Components;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
 using Ludots.Core.UI.EntityCommandPanels;
@@ -44,6 +45,7 @@ using Ludots.Platform.Abstractions;
 using Ludots.UI;
 using Ludots.UI.Skia;
 using NUnit.Framework;
+using Ludots.Tests.TestCommon;
 
 namespace Ludots.Tests.GAS.Production
 {
@@ -686,7 +688,7 @@ namespace Ludots.Tests.GAS.Production
             CaptureStressSnapshot(engine, primitives, worldHud, toolbar, snapshots, "formations_saturated");
             timeline.Add($"[T+002] Formations saturated | A={saturated.TeamA} (W/F/L/P {saturated.TeamAWarriors}/{saturated.TeamAFireMages}/{saturated.TeamALaserMages}/{saturated.TeamAPriests}) | B={saturated.TeamB} (W/F/L/P {saturated.TeamBWarriors}/{saturated.TeamBFireMages}/{saturated.TeamBLaserMages}/{saturated.TeamBPriests})");
 
-            Entity localPlayer = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            Entity localPlayer = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             Entity[] playerSelection =
             {
                 FindEntityByName(engine.World, "StressFireMageA"),
@@ -1010,11 +1012,11 @@ namespace Ludots.Tests.GAS.Production
         private static void SelectNamedEntity(GameEngine engine, TestInputBackend backend, string name, List<double> frameTimesMs)
         {
             Entity target = FindEntityByName(engine.World, name);
-            Entity owner = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            Entity owner = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             if (!engine.World.IsAlive(owner))
             {
                 owner = target;
-                engine.GlobalContext[CoreServiceKeys.LocalPlayerEntity.Name] = owner;
+                engine.ClientLocalSeatTestBindings.BindSoleSeat(GlobalContext, owner);
             }
 
             Span<Entity> next = stackalloc Entity[1];
@@ -1046,7 +1048,7 @@ namespace Ludots.Tests.GAS.Production
                 title: "Champion command source",
                 summary: "Test-owned command-source collection.");
             collections.Replace(owner, in descriptor, entities, owner);
-            engine.GlobalContext[CoreServiceKeys.LocalPlayerEntity.Name] = owner;
+            engine.ClientLocalSeatTestBindings.BindSoleSeat(GlobalContext, owner);
         }
 
         private static void PressButton(GameEngine engine, TestInputBackend backend, string path, List<double> frameTimesMs)

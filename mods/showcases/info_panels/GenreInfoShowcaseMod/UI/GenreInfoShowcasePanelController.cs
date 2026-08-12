@@ -10,6 +10,7 @@ using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.UI;
 using Ludots.UI.Compose;
@@ -661,7 +662,7 @@ namespace GenreInfoShowcaseMod.UI
 
         private static SelectionGroupSummary ResolveControlGroupSummary(GameEngine engine, int groupIndex)
         {
-            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? viewerObj) ||
+            if (!engine.ClientLocalSeatAccess.TryGetSolePossessedRep(GlobalContext, out Entity viewerObj) ||
                 viewerObj is not Entity viewer ||
                 !engine.World.IsAlive(viewer) ||
                 engine.GetService(CoreServiceKeys.EntityCollectionStore) is not EntityCollectionStore collections ||
@@ -694,7 +695,7 @@ namespace GenreInfoShowcaseMod.UI
             collections = default!;
             handle = EntityCollectionHandle.Invalid;
             view = default;
-            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? viewerObj) ||
+            if (!engine.ClientLocalSeatAccess.TryGetSolePossessedRep(GlobalContext, out Entity viewerObj) ||
                 viewerObj is not Entity viewer ||
                 !engine.World.IsAlive(viewer) ||
                 engine.GetService(CoreServiceKeys.EntityCollectionStore) is not EntityCollectionStore store)

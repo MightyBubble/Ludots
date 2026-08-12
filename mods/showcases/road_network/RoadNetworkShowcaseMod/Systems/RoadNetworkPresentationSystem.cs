@@ -19,6 +19,7 @@ using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Surfaces;
 using Ludots.Core.Physics;
 using Ludots.Core.Physics2D.Components;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using RoadNetworkShowcaseMod.Gameplay;
 using CoreInputMod.Systems;
@@ -376,8 +377,7 @@ namespace RoadNetworkShowcaseMod.Systems
                 return true;
             }
 
-            if (_engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? actorObj) &&
-                actorObj is Entity local &&
+            if (_engine.ClientLocalSeatAccess.TryGetSolePossessedRep(GlobalContext, out Entity local) &&
                 _world.IsAlive(local))
             {
                 actor = local;
@@ -420,7 +420,7 @@ namespace RoadNetworkShowcaseMod.Systems
         private bool TryResolveLocalCommandSourceOwner(out Entity owner)
         {
             owner = Entity.Null;
-            Entity local = _engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            Entity local = ClientLocalSeatAccess.RequireSolePossessedRep(_engine);
             if (local == Entity.Null || !_world.IsAlive(local))
             {
                 return false;

@@ -14,8 +14,10 @@ using Ludots.Core.Knowledge;
 using Ludots.Core.Map;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using UxPrototypeMod.UI;
+using Ludots.Tests.TestCommon;
 
 namespace UxPrototypeMod.Runtime;
 
@@ -220,7 +222,7 @@ internal sealed class UxPrototypeScenarioState
     private static bool TryResolveExistingLocalPlayer(GameEngine engine, string activeMapId, out Entity localPlayer)
     {
         localPlayer = Entity.Null;
-        if (!engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out Entity existing) ||
+        if (!ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity existing) ||
             !engine.World.IsAlive(existing) ||
             !engine.World.TryGet(existing, out PlayerOwner owner) ||
             !engine.World.TryGet(existing, out MapEntity mapEntity) ||
@@ -260,8 +262,7 @@ internal sealed class UxPrototypeScenarioState
             lookup.Register(playerId, localPlayer);
         }
 
-        engine.SetService(CoreServiceKeys.LocalPlayerEntity, localPlayer);
-        engine.SetService(CoreServiceKeys.LocalPlayerId, playerId);
+        ClientLocalSeatTestBindings.BindSoleSeat(engine, localPlayer, playerId);
         if (engine.CurrentMapSession != null)
         {
             engine.CurrentMapSession.LocalPlayerEntity = localPlayer;
@@ -822,7 +823,7 @@ internal sealed class UxPrototypeScenarioState
     private static bool TryResolveLocalCommandSourceOwner(GameEngine engine, out Entity owner)
     {
         owner = Entity.Null;
-        Entity local = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+        Entity local = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
         if (local == Entity.Null || !engine.World.IsAlive(local))
         {
             return false;

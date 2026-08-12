@@ -14,6 +14,7 @@ using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Surfaces;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 
 namespace Ludots.Core.Presentation.Systems
@@ -1856,8 +1857,7 @@ namespace Ludots.Core.Presentation.Systems
 
         private bool IsLocalPlayer(Entity owner)
         {
-            return _globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? candidate) &&
-                   candidate is Entity localPlayer &&
+            return ClientLocalSeatAccess.TryGetSolePossessedRep(_globals, out Entity localPlayer) &&
                    localPlayer == owner;
         }
 

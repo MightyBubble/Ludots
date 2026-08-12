@@ -5,6 +5,7 @@ using CoreInputMod.Systems;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Input.Orders;
 using Ludots.Core.Modding;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 
 namespace ArpgDemoMod.Systems
@@ -51,7 +52,7 @@ namespace ArpgDemoMod.Systems
                 return;
             }
 
-            if (_globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var localObj) && localObj is Entity local && _world.IsAlive(local))
+            if (ClientLocalSeatAccess.TryGetSolePossessedRep(_globals, out Entity local) && _world.IsAlive(local))
             {
                 if (!_helper.TrySetLocalPlayer(_mapping, local))
                 {

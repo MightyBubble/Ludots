@@ -17,6 +17,7 @@ using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Platform.Abstractions;
 using NUnit.Framework;
+using Ludots.Tests.TestCommon;
 
 namespace Ludots.Tests.ThreeC
 {
@@ -256,7 +257,7 @@ namespace Ludots.Tests.ThreeC
             var collections = new EntityCollectionStore(new StringIntRegistry(capacity: 8, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal));
 
             Entity selector = world.Create();
-            globals[CoreServiceKeys.LocalPlayerEntity.Name] = selector;
+            ClientLocalSeatTestBindings.BindSoleSeat(globals, selector);
             globals[CoreServiceKeys.EntityCollectionStore.Name] = collections;
 
             Entity light = world.Create(new WorldPositionCm { Value = new Ludots.Core.Mathematics.FixedPoint.Fix64Vec2(1000, 2000) });

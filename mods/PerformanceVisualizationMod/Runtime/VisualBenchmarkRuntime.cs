@@ -16,9 +16,11 @@ using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.UI;
 using PerformanceVisualizationMod.UI;
+using Ludots.Tests.TestCommon;
 
 namespace PerformanceVisualizationMod.Runtime
 {
@@ -559,7 +561,7 @@ namespace PerformanceVisualizationMod.Runtime
         private static bool TryResolveLiveLocalPlayer(GameEngine engine, out Entity viewer)
         {
             viewer = Entity.Null;
-            if (engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out Entity serviceViewer) &&
+            if (ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity serviceViewer) &&
                 serviceViewer != Entity.Null &&
                 engine.World.IsAlive(serviceViewer))
             {
@@ -584,20 +586,17 @@ namespace PerformanceVisualizationMod.Runtime
                 throw new InvalidOperationException("PerformanceVisualizationMod requires a live local audience before publishing benchmark HUD knowledge.");
             }
 
-            engine.SetService(CoreServiceKeys.LocalPlayerEntity, viewer);
+            ClientLocalSeatTestBindings.BindSoleSeat(engine, viewer);
 
             if (engine.CurrentMapSession != null)
             {
                 engine.CurrentMapSession.LocalPlayerEntity = viewer;
             }
 
-            if (engine.World.TryGet(viewer, out PlayerOwner owner) && owner.PlayerId > 0)
+            if (engine.World.TryGet(viewer, out PlayerOwner owner) && owner.PlayerId > 0 &&
+                engine.CurrentMapSession != null)
             {
-                engine.SetService(CoreServiceKeys.LocalPlayerId, owner.PlayerId);
-                if (engine.CurrentMapSession != null)
-                {
-                    engine.CurrentMapSession.LocalPlayerId = owner.PlayerId;
-                }
+                engine.CurrentMapSession.LocalPlayerId = owner.PlayerId;
             }
         }
 
@@ -634,11 +633,10 @@ namespace PerformanceVisualizationMod.Runtime
                 knowledge.ClearViewer(viewer);
             }
 
-            if (engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out Entity serviceViewer) &&
+            if (ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity serviceViewer) &&
                 serviceViewer == viewer)
             {
-                engine.RemoveService(CoreServiceKeys.LocalPlayerEntity);
-                engine.RemoveService(CoreServiceKeys.LocalPlayerId);
+                ClientLocalSeatAccess.RequireRegistry(engine).Clear();
             }
 
             if (engine.World.IsAlive(viewer))

@@ -26,6 +26,7 @@ using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Scripting;
 using NUnit.Framework;
+using Ludots.Tests.TestCommon;
 
 namespace Ludots.Tests.Presentation
 {
@@ -85,7 +86,7 @@ namespace Ludots.Tests.Presentation
             _healthAttrId = AttributeRegistry.Register("Health");
             _viewer = _world.Create();
             _knowledge = new KnowledgeProjectionStore();
-            _globals[CoreServiceKeys.LocalPlayerEntity.Name] = _viewer;
+            ClientLocalSeatTestBindings.BindSoleSeat(_globals, _viewer);
             _globals[CoreServiceKeys.KnowledgeProjectionResolver.Name] = new KnowledgeProjectionResolver(_knowledge);
 
             LoadCorePerformerDefinitions(_defs, _healthAttrId);

@@ -31,6 +31,7 @@ using Ludots.Core.Map.Board;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Rendering;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 using Ludots.Core.Systems;
@@ -43,6 +44,7 @@ using RoadNetworkShowcaseMod.Gameplay;
 using RoadNetworkShowcaseMod.Runtime;
 using RoadNetworkShowcaseMod.Systems;
 using RoadNetworkShowcaseMod.UI;
+using Ludots.Tests.TestCommon;
 
 namespace Ludots.Tests.GAS
 {
@@ -871,9 +873,9 @@ namespace Ludots.Tests.GAS
             Assert.That(owner, Is.Not.EqualTo(Entity.Null));
             Assert.That(runtime.LoadedChunkCount, Is.GreaterThan(0), "Initial showcase focus should prime the first chunk window so the first move command does not depend on a later streaming tick.");
             Assert.That(runtime.LoadedNodeCount, Is.GreaterThan(0), "Chunk priming should populate the graph store before the player issues the first road move.");
-            Assert.That(engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj), Is.True);
+            Assert.That(engine.ClientLocalSeatAccess.TryGetSolePossessedRep(GlobalContext, out Entity localObj), Is.True);
             Assert.That(localObj, Is.EqualTo(owner));
-            Assert.That(engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? viewOwnerObj), Is.True);
+            Assert.That(engine.ClientLocalSeatAccess.TryGetSolePossessedRep(GlobalContext, out Entity viewOwnerObj), Is.True);
             Assert.That(viewOwnerObj, Is.EqualTo(owner));
             Assert.That(engine.World.Has<CommandSourceDragState>(owner), Is.True);
             EntityCollectionStore collections = GetEntityCollectionStore(engine);
@@ -900,11 +902,11 @@ namespace Ludots.Tests.GAS
             Assert.That(owner, Is.Not.EqualTo(Entity.Null));
 
             ReplaceCommandSource(engine, owner, ReadOnlySpan<Entity>.Empty);
-            engine.GlobalContext.Remove(CoreServiceKeys.LocalPlayerEntity.Name);
+            ClientLocalSeatAccess.RequireRegistry(engine).Clear();
 
             runtime.UpdateLoadedChunks(engine);
 
-            Assert.That(engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj), Is.True);
+            Assert.That(engine.ClientLocalSeatAccess.TryGetSolePossessedRep(GlobalContext, out Entity localObj), Is.True);
             Assert.That(localObj, Is.EqualTo(owner));
             Assert.That(TryGetCommandSourcePrimary(engine, owner, out Entity repairedPrimary), Is.True);
             Assert.That(repairedPrimary, Is.EqualTo(owner));
@@ -929,11 +931,11 @@ namespace Ludots.Tests.GAS
             Span<Entity> selectedUnits = stackalloc Entity[1];
             selectedUnits[0] = selected;
             ReplaceCommandSource(engine, owner, selectedUnits);
-            engine.GlobalContext.Remove(CoreServiceKeys.LocalPlayerEntity.Name);
+            ClientLocalSeatAccess.RequireRegistry(engine).Clear();
 
             runtime.UpdateLoadedChunks(engine);
 
-            Assert.That(engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj), Is.True);
+            Assert.That(engine.ClientLocalSeatAccess.TryGetSolePossessedRep(GlobalContext, out Entity localObj), Is.True);
             Assert.That(localObj, Is.EqualTo(owner));
             Assert.That(TryGetCommandSourcePrimary(engine, owner, out Entity preservedPrimary), Is.True);
             Assert.That(preservedPrimary, Is.EqualTo(selected));
@@ -2334,7 +2336,7 @@ namespace Ludots.Tests.GAS
 
         private static Entity GetLocalPlayer(GameEngine engine)
         {
-            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) ||
+            if (!engine.ClientLocalSeatAccess.TryGetSolePossessedRep(GlobalContext, out Entity localObj) ||
                 localObj is not Entity local ||
                 !engine.World.IsAlive(local))
             {
@@ -2362,7 +2364,7 @@ namespace Ludots.Tests.GAS
                 title: "Road network command source",
                 summary: "Test-owned command-source collection.");
             Assert.That(collections.Replace(owner, in descriptor, entities, owner).IsValid, Is.True);
-            engine.GlobalContext[CoreServiceKeys.LocalPlayerEntity.Name] = owner;
+            engine.ClientLocalSeatTestBindings.BindSoleSeat(GlobalContext, owner);
         }
 
         private static bool TryGetCommandSourcePrimary(GameEngine engine, Entity owner, out Entity primary)

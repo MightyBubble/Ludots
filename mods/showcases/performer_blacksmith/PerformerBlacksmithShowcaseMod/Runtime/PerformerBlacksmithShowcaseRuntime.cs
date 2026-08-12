@@ -21,9 +21,11 @@ using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Terrain;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.UI;
 using PerformerBlacksmithShowcaseMod.UI;
+using Ludots.Tests.TestCommon;
 
 namespace PerformerBlacksmithShowcaseMod.Runtime
 {
@@ -900,7 +902,7 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
 
         private Entity ResolveOrCreateShowcaseViewer(GameEngine engine)
         {
-            Entity current = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            Entity current = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             if (current != Entity.Null && engine.World.IsAlive(current))
             {
                 BindShowcaseViewer(engine, current, publishPlayerId: engine.World.Has<PlayerOwner>(current));
@@ -929,21 +931,24 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
 
         private static void BindShowcaseViewer(GameEngine engine, Entity viewer, bool publishPlayerId)
         {
-            engine.SetService(CoreServiceKeys.LocalPlayerEntity, viewer);
-            if (engine.CurrentMapSession != null)
+            if (publishPlayerId &&
+                engine.World.TryGet(viewer, out PlayerOwner owner) &&
+                owner.PlayerId > 0)
             {
-                engine.CurrentMapSession.LocalPlayerEntity = viewer;
-            }
+                ClientLocalSeatTestBindings.BindSoleSeat(engine, viewer, owner.PlayerId);
+                if (engine.CurrentMapSession != null)
+                {
+                    engine.CurrentMapSession.LocalPlayerEntity = viewer;
+                    engine.CurrentMapSession.LocalPlayerId = owner.PlayerId;
+                }
 
-            if (!publishPlayerId || !engine.World.TryGet(viewer, out PlayerOwner owner) || owner.PlayerId <= 0)
-            {
                 return;
             }
 
-            engine.SetService(CoreServiceKeys.LocalPlayerId, owner.PlayerId);
+            ClientLocalSeatTestBindings.BindSoleSeat(engine, viewer);
             if (engine.CurrentMapSession != null)
             {
-                engine.CurrentMapSession.LocalPlayerId = owner.PlayerId;
+                engine.CurrentMapSession.LocalPlayerEntity = viewer;
             }
         }
 
@@ -1000,11 +1005,10 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
                 return;
             }
 
-            Entity serviceLocal = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
-            if (serviceLocal == _showcaseViewerEntity || serviceLocal == Entity.Null)
+            if (ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity serviceLocal) &&
+                (serviceLocal == _showcaseViewerEntity || serviceLocal == Entity.Null))
             {
-                engine.RemoveService(CoreServiceKeys.LocalPlayerEntity);
-                engine.RemoveService(CoreServiceKeys.LocalPlayerId);
+                ClientLocalSeatAccess.RequireRegistry(engine).Clear();
             }
 
             if (engine.CurrentMapSession != null && engine.CurrentMapSession.LocalPlayerEntity == _showcaseViewerEntity)

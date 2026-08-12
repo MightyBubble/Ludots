@@ -13,6 +13,7 @@ using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Presentation.Systems;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 
 namespace CoreInputMod.Triggers
@@ -97,8 +98,9 @@ namespace CoreInputMod.Triggers
         private static bool TryResolveLocalCommandSourceOwner(GameEngine engine, out Entity owner)
         {
             owner = Entity.Null;
-            Entity local = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
-            if (local == Entity.Null || !engine.World.IsAlive(local))
+            if (!ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity local) ||
+                local == Entity.Null ||
+                !engine.World.IsAlive(local))
             {
                 return false;
             }

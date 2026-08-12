@@ -6,6 +6,7 @@ using System.Numerics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Arch.Core;
+using Ludots.Tests.TestCommon;
 using Ludots.Core.Association;
 using Ludots.Core.Config;
 using Ludots.Core.Components;
@@ -332,8 +333,6 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                 var globals = new Dictionary<string, object>
                 {
                     [CoreServiceKeys.AuthoritativeInput.Name] = input,
-                    [CoreServiceKeys.LocalPlayerEntity.Name] = localPlayer,
-                    [CoreServiceKeys.LocalPlayerId.Name] = 1,
                     [CoreServiceKeys.EntityCollectionStore.Name] = collections,
                     [CoreServiceKeys.EntityCollectionKeyRegistry.Name] = collectionKeys,
                     [CoreServiceKeys.PlayerEntityLookup.Name] = players,
@@ -356,6 +355,7 @@ namespace Ludots.Tests.GAS.Features.InputRouting
                     },
                     [CoreServiceKeys.InteractionActionBindings.Name] = new InteractionActionBindings(),
                 };
+                ClientLocalSeatTestBindings.BindSoleSeat(globals, localPlayer, 1);
 
                 var vfs = new VirtualFileSystem();
                 vfs.Mount("TestMobaMappingMod", root);

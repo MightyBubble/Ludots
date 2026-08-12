@@ -12,8 +12,10 @@ using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using RtsDemoMod.Runtime;
+using Ludots.Tests.TestCommon;
 
 namespace RtsDemoMod.Triggers
 {
@@ -75,20 +77,19 @@ namespace RtsDemoMod.Triggers
 
         private static void EnsureLocalCommandSourceOwner(GameEngine engine, World world)
         {
-            Entity owner = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            Entity owner = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             if (world.IsAlive(owner))
             {
                 return;
             }
 
             owner = world.Create(new PlayerOwner { PlayerId = 1 });
-            engine.SetService(CoreServiceKeys.LocalPlayerEntity, owner);
-            engine.SetService(CoreServiceKeys.LocalPlayerId, 1);
+            ClientLocalSeatTestBindings.BindSoleSeat(engine, owner, 1);
         }
 
         private static void EnsureDefaultCommandSource(GameEngine engine, World world)
         {
-            Entity owner = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            Entity owner = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             if (!world.IsAlive(owner) || RtsShowcaseCommandSourceHelper.GetCommandSourceCount(engine) > 0)
             {
                 return;

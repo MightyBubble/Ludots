@@ -27,9 +27,11 @@ using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Systems;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 using FormationCapabilityShowcaseMod.Systems;
+using Ludots.Tests.TestCommon;
 
 namespace FormationCapabilityShowcaseMod.Runtime;
 
@@ -592,7 +594,7 @@ internal sealed class FormationCapabilityShowcaseRuntime
 
     private void PublishLocalFormationKnowledge(GameEngine engine)
     {
-        if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? viewerObj) ||
+        if (!engine.ClientLocalSeatAccess.TryGetSolePossessedRep(GlobalContext, out Entity viewerObj) ||
             viewerObj is not Entity viewer ||
             !engine.World.IsAlive(viewer))
         {
@@ -1333,7 +1335,7 @@ internal sealed class FormationCapabilityShowcaseRuntime
 
     private static bool TryResolveLocalCommandSourceOwner(GameEngine engine, out Entity owner)
     {
-        if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localPlayerObj) ||
+        if (!engine.ClientLocalSeatAccess.TryGetSolePossessedRep(GlobalContext, out Entity localPlayerObj) ||
             localPlayerObj is not Entity local ||
             !engine.World.IsAlive(local))
         {
@@ -1349,7 +1351,7 @@ internal sealed class FormationCapabilityShowcaseRuntime
                 return false;
             }
 
-            engine.SetService(CoreServiceKeys.LocalPlayerEntity, local);
+            ClientLocalSeatTestBindings.BindSoleSeat(engine, local);
         }
 
         owner = local;
@@ -1358,11 +1360,10 @@ internal sealed class FormationCapabilityShowcaseRuntime
 
     private static int ResolveLocalPlayerId(GameEngine engine)
     {
-        if (engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerId.Name, out object? playerIdObj) &&
-            playerIdObj is int playerId &&
-            playerId > 0)
+        ClientLocalSeatRegistry seats = ClientLocalSeatAccess.RequireRegistry(engine.GlobalContext);
+        if (seats.TryGetSoleSeat(out ClientLocalSeat seat) && seat.HasPossession)
         {
-            return playerId;
+            return seat.PossessedPlayerId;
         }
 
         return engine.MergedConfig?.StartupLocalPlayerId ?? 0;

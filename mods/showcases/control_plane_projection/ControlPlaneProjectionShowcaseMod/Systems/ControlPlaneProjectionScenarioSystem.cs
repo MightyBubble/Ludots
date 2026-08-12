@@ -12,6 +12,7 @@ using Ludots.Core.Input.Runtime;
 using Ludots.Core.Map;
 using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
+using Ludots.Tests.TestCommon;
 using ControlPlaneProjectionShowcaseMod.Runtime;
 
 namespace ControlPlaneProjectionShowcaseMod.Systems
@@ -254,8 +255,7 @@ namespace ControlPlaneProjectionShowcaseMod.Systems
 
         private void BindLocalPlayer()
         {
-            _engine.SetService(CoreServiceKeys.LocalPlayerEntity, _state.P1Rep);
-            _engine.SetService(CoreServiceKeys.LocalPlayerId, 1);
+            ClientLocalSeatTestBindings.BindSoleSeat(_engine, _state.P1Rep, 1);
         }
 
         private static void ResolveUnits(MapSession session, string[] instanceIds, Entity[] destination)

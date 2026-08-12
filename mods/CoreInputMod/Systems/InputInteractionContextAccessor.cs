@@ -15,6 +15,7 @@ using Ludots.Core.Mathematics;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Utils;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 
@@ -79,8 +80,7 @@ namespace CoreInputMod.Systems
         public bool TryResolveLocalCommandSourceOwner(out Entity owner)
         {
             owner = default;
-            return _globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var localObj) &&
-                   localObj is Entity local &&
+            return ClientLocalSeatAccess.TryGetSolePossessedRep(_globals, out Entity local) &&
                    _world.IsAlive(local) &&
                    (owner = local) != Entity.Null;
         }
@@ -100,14 +100,13 @@ namespace CoreInputMod.Systems
         public bool TryGetLocalPlayerId(out int playerId)
         {
             playerId = 0;
-            if (!_globals.TryGetValue(CoreServiceKeys.LocalPlayerId.Name, out object? value) ||
-                value is not int candidate ||
-                candidate <= 0)
+            Ludots.Core.Client.ClientLocalSeatRegistry seats = Ludots.Core.Client.ClientLocalSeatAccess.RequireRegistry(_globals);
+            if (!seats.TryGetSoleSeat(out Ludots.Core.Client.ClientLocalSeat seat) || !seat.HasPossession)
             {
                 return false;
             }
 
-            playerId = candidate;
+            playerId = seat.PossessedPlayerId;
             return true;
         }
 
@@ -139,8 +138,7 @@ namespace CoreInputMod.Systems
                 return collectionPrimary;
             }
 
-            if (_globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var localObj) &&
-                localObj is Entity local &&
+            if (ClientLocalSeatAccess.TryGetSolePossessedRep(_globals, out Entity local) &&
                 _world.IsAlive(local))
             {
                 return local;
@@ -151,8 +149,7 @@ namespace CoreInputMod.Systems
 
         public Entity GetLocalPlayerEntityOrNull()
         {
-            return _globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var localObj) &&
-                   localObj is Entity local &&
+            return ClientLocalSeatAccess.TryGetSolePossessedRep(_globals, out Entity local) &&
                    _world.IsAlive(local)
                 ? local
                 : Entity.Null;

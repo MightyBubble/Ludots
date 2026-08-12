@@ -6,6 +6,7 @@ using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Presentation.Components;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 
 namespace CoreInputMod.Systems
@@ -46,7 +47,7 @@ namespace CoreInputMod.Systems
                 return;
             }
 
-            if (!_globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var localObj) || localObj is not Entity local)
+            if (!ClientLocalSeatAccess.TryGetSolePossessedRep(_globals, out Entity localObj) || localObj is not Entity local)
             {
                 return;
             }

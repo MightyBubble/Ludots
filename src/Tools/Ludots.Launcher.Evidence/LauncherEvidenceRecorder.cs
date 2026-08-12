@@ -36,6 +36,7 @@ using Ludots.Core.Presentation.Minimap;
 using Ludots.Core.Presentation.Performers;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Systems;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Core.Systems;
 using Ludots.Launcher.Backend;
@@ -1856,7 +1857,7 @@ public static class LauncherEvidenceRecorder
     private static bool TryResolveLocalCommandSourceOwner(GameEngine engine, out Entity owner)
     {
         owner = Entity.Null;
-        Entity local = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+        Entity local = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
         if (local == Entity.Null || !engine.World.IsAlive(local))
         {
             return false;
@@ -1932,8 +1933,7 @@ public static class LauncherEvidenceRecorder
 
     private static string ResolveControlledActorName(GameEngine engine, IReadOnlyDictionary<string, Vector2> namedEntities)
     {
-        if (engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) &&
-            localObj is Entity local &&
+        if (engine.ClientLocalSeatAccess.TryGetSolePossessedRep(GlobalContext, out Entity local) &&
             engine.World.IsAlive(local) &&
             engine.World.Has<Name>(local))
         {
@@ -2500,7 +2500,7 @@ public static class LauncherEvidenceRecorder
         EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
             ?? throw new InvalidOperationException("MassNavigation UAT requires EntityCollectionStore.");
 
-        Entity owner = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+        Entity owner = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
         if (owner == Entity.Null || !engine.World.IsAlive(owner))
         {
             throw new InvalidOperationException("MassNavigation UAT requires a live LocalPlayerEntity.");
@@ -3263,7 +3263,7 @@ public static class LauncherEvidenceRecorder
     {
         EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)
             ?? throw new InvalidOperationException("MassNavigation UAT requires EntityCollectionStore.");
-        Entity owner = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+        Entity owner = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
         return owner != Entity.Null && collections.TryGetView(owner, EntityCollectionKeys.CommandSource, out EntityCollectionView view)
             ? view.Count
             : 0;

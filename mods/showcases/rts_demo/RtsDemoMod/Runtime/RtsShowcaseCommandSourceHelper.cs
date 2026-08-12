@@ -7,7 +7,9 @@ using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Components;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
+using Ludots.Tests.TestCommon;
 
 namespace RtsDemoMod.Runtime
 {
@@ -125,7 +127,7 @@ namespace RtsDemoMod.Runtime
         private static bool TryResolveLocalCommandSourceOwner(GameEngine engine, out Entity owner)
         {
             owner = Entity.Null;
-            Entity local = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            Entity local = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             if (local == Entity.Null || !engine.World.IsAlive(local))
             {
                 return false;
@@ -137,15 +139,14 @@ namespace RtsDemoMod.Runtime
 
         private static Entity ResolveCommandSourceOwner(GameEngine engine)
         {
-            Entity owner = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            Entity owner = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             if (engine.World.IsAlive(owner))
             {
                 return owner;
             }
 
             owner = engine.World.Create(new PlayerOwner { PlayerId = 1 });
-            engine.SetService(CoreServiceKeys.LocalPlayerEntity, owner);
-            engine.SetService(CoreServiceKeys.LocalPlayerId, 1);
+            ClientLocalSeatTestBindings.BindSoleSeat(engine, owner, 1);
             return owner;
         }
     }

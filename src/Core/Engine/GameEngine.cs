@@ -1460,6 +1460,10 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.CommandSourceAcquisitionConfig, commandSourceConfig);
             SetService(CoreServiceKeys.EntityCollectionStore, entityCollectionStore);
             SetService(CoreServiceKeys.EntityCollectionKeyRegistry, entityCollectionKeyRegistry);
+            var clientLocalSeatRegistry = new Client.ClientLocalSeatRegistry();
+            var logicViewRegistry = new Client.LogicViewRegistry();
+            SetService(CoreServiceKeys.ClientLocalSeatRegistry, clientLocalSeatRegistry);
+            SetService(CoreServiceKeys.LogicViewRegistry, logicViewRegistry);
             SetService(CoreServiceKeys.DomainRoutedCollectionWriter, domainRoutedCollectionWriter);
             SetService(CoreServiceKeys.ControlPlaneView, controlPlaneView);
             SetService(CoreServiceKeys.KnowledgeProjectionStore, knowledgeProjectionStore);
@@ -1629,7 +1633,7 @@ namespace Ludots.Core.Engine
             RegisterSystem(sessionSystem, SystemGroup.InputCollection); // Session handles input gathering
             RegisterSystem(new AuthoritativeInputSnapshotSystem(authoritativeInput, authoritativeInputAccumulator), SystemGroup.InputCollection);
             RegisterSystem(new AuthoritativePointerButtonSnapshotSystem(authoritativePointerButtons, authoritativePointerButtonsAccumulator), SystemGroup.InputCollection);
-            RegisterSystem(new LocalPlayerEntityResolverSystem(World, GlobalContext), SystemGroup.InputCollection);
+            RegisterSystem(new SeatPossessionSyncSystem(World, GlobalContext), SystemGroup.InputCollection);
             // WASD axis intent -> throttled move orders through the OrderQueue (RFC-0065 INT-6,
             // DEC-15); enablement and parameters come from the active control scheme's axisMove
             // declaration (single source of truth, hot-switch aware).
@@ -2452,14 +2456,20 @@ namespace Ludots.Core.Engine
                 return Entity.Null;
             }
 
-            Entity sessionLocal = CurrentMapSession?.LocalPlayerEntity ?? Entity.Null;
-            if (sessionLocal != Entity.Null && World.IsAlive(sessionLocal))
+            if (CurrentMapSession?.LocalSeats is { Count: > 0 } seats)
             {
-                return sessionLocal;
+                for (int i = 0; i < seats.Count; i++)
+                {
+                    Entity sessionLocal = seats[i].RepEntity;
+                    if (sessionLocal != Entity.Null && World.IsAlive(sessionLocal))
+                    {
+                        return sessionLocal;
+                    }
+                }
             }
 
-            Entity serviceLocal = GetService(CoreServiceKeys.LocalPlayerEntity);
-            return serviceLocal != Entity.Null && World.IsAlive(serviceLocal)
+            return Client.ClientLocalSeatAccess.TryGetSolePossessedRep(this, out Entity serviceLocal) &&
+                   World.IsAlive(serviceLocal)
                 ? serviceLocal
                 : Entity.Null;
         }

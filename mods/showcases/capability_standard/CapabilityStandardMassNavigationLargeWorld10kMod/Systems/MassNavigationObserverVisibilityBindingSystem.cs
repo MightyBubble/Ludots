@@ -9,6 +9,7 @@ using Ludots.Core.MassNavigation;
 using Ludots.Core.MassNavigation.Runtime;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Performers;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 
 namespace CapabilityStandardMassNavigationLargeWorld10kMod.Systems;
@@ -88,7 +89,7 @@ internal sealed class MassNavigationObserverVisibilityBindingSystem : BaseSystem
 
     private bool TryResolveViewer(out Entity viewer)
     {
-        Entity candidate = _engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+        Entity candidate = ClientLocalSeatAccess.RequireSolePossessedRep(_engine);
         viewer = candidate;
         return candidate != Entity.Null &&
                World.IsAlive(candidate) &&

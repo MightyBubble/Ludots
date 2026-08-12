@@ -11,11 +11,13 @@ using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 using Ludots.Platform.Abstractions;
 using Ludots.UI;
 using SpatialBoundsShowcaseMod.UI;
+using Ludots.Tests.TestCommon;
 
 namespace SpatialBoundsShowcaseMod.Runtime
 {
@@ -111,10 +113,9 @@ namespace SpatialBoundsShowcaseMod.Runtime
                 engine.World.Add(_selectionOwner, default(CommandSourceDragState));
             }
 
-            engine.GlobalContext[CoreServiceKeys.LocalPlayerEntity.Name] = _selectionOwner;
+            engine.ClientLocalSeatTestBindings.BindSoleSeat(GlobalContext, _selectionOwner);
             if (engine.World.TryGet(_selectionOwner, out PlayerOwner playerOwner) && playerOwner.PlayerId > 0)
             {
-                engine.GlobalContext[CoreServiceKeys.LocalPlayerId.Name] = playerOwner.PlayerId;
             }
         }
 
@@ -395,8 +396,7 @@ namespace SpatialBoundsShowcaseMod.Runtime
 
         private static Entity ResolveExistingLocalPlayer(GameEngine engine)
         {
-            return engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var localObj) &&
-                   localObj is Entity local &&
+            return engine.ClientLocalSeatAccess.TryGetSolePossessedRep(GlobalContext, out Entity local) &&
                    engine.World.IsAlive(local)
                 ? local
                 : Entity.Null;
@@ -470,11 +470,10 @@ namespace SpatialBoundsShowcaseMod.Runtime
                 engine.World.Destroy(_selectionOwner);
             }
 
-            if (engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out var localObj) &&
-                localObj is Entity local &&
+            if (engine.ClientLocalSeatAccess.TryGetSolePossessedRep(GlobalContext, out Entity local) &&
                 local == _selectionOwner)
             {
-                engine.GlobalContext.Remove(CoreServiceKeys.LocalPlayerEntity.Name);
+                ClientLocalSeatAccess.RequireRegistry(engine).Clear();
             }
 
             _selectionOwner = Entity.Null;

@@ -7,6 +7,7 @@ using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Input.Attributes;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 
 namespace Ludots.Core.Input.Systems
@@ -77,8 +78,7 @@ namespace Ludots.Core.Input.Systems
             switch (target)
             {
                 case InputActionAttributeTargetKind.LocalPlayerEntity:
-                    if (_globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? entityObj) &&
-                        entityObj is Entity local &&
+                    if (ClientLocalSeatAccess.TryGetSolePossessedRep(_globals, out Entity local) &&
                         local != Entity.Null &&
                         World.IsAlive(local))
                     {

@@ -24,6 +24,7 @@ using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Scripting;
 using EntityQueryTacticsShowcaseMod.Runtime;
+using Ludots.Tests.TestCommon;
 
 namespace EntityQueryTacticsShowcaseMod.Systems
 {
@@ -644,11 +645,13 @@ namespace EntityQueryTacticsShowcaseMod.Systems
 
         private void BindCommandSourceOwner(Entity owner)
         {
-            _engine.SetService(CoreServiceKeys.LocalPlayerEntity, owner);
             if (_world.TryGet(owner, out PlayerOwner playerOwner) && playerOwner.PlayerId > 0)
             {
-                _engine.SetService(CoreServiceKeys.LocalPlayerId, playerOwner.PlayerId);
+                ClientLocalSeatTestBindings.BindSoleSeat(_engine, owner, playerOwner.PlayerId);
+                return;
             }
+
+            ClientLocalSeatTestBindings.BindSoleSeat(_engine, owner);
         }
 
         private void HandlePlayerInput(IInputActionReader input)

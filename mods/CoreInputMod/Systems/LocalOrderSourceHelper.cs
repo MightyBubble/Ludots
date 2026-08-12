@@ -24,6 +24,7 @@ using Ludots.Core.Modding;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Utils;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 using Ludots.Platform.Abstractions;
@@ -354,8 +355,7 @@ namespace CoreInputMod.Systems
                 return true;
             }
 
-            if (_globals.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? localObj) &&
-                localObj is Entity local &&
+            if (ClientLocalSeatAccess.TryGetSolePossessedRep(_globals, out Entity local) &&
                 local != Entity.Null &&
                 _world.IsAlive(local))
             {

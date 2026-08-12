@@ -881,9 +881,9 @@ namespace Ludots.Core.Persistence
             }
 
             var root = new JsonObject();
-            if (launchContext.HasLocalPlayer)
+            if (launchContext.HasLocalSeats)
             {
-                root["localPlayerId"] = launchContext.LocalPlayerId;
+                root["localPlayerId"] = launchContext.LocalSeats[0].PlayerId;
             }
 
             if (launchContext.Metadata != null && launchContext.Metadata.Count > 0)

@@ -6,8 +6,10 @@ using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Modding;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.EntityCommandPanels;
+using Ludots.Tests.TestCommon;
 
 namespace ProgressionScopeShowcaseMod
 {
@@ -91,14 +93,14 @@ namespace ProgressionScopeShowcaseMod
 
         private static Entity ResolveLocalPlayer(GameEngine engine)
         {
-            Entity owner = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            Entity owner = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             if (engine.World.IsAlive(owner))
             {
                 return owner;
             }
 
             owner = engine.World.Create(new PlayerOwner { PlayerId = 1 });
-            engine.SetService(CoreServiceKeys.LocalPlayerEntity, owner);
+            ClientLocalSeatTestBindings.BindSoleSeat(engine, owner);
             return owner;
         }
 

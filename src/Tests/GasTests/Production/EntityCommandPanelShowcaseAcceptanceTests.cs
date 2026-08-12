@@ -13,6 +13,7 @@ using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.EntityCommandPanels;
 using Ludots.UI.Surface;
@@ -112,7 +113,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(registry.TryGet(CollectionGasEntityCommandPanelSource.SourceId, out IEntityCommandPanelSource source), Is.True);
             Assert.That(source, Is.TypeOf<CollectionGasEntityCommandPanelSource>());
 
-            Entity owner = engine.GetService(CoreServiceKeys.LocalPlayerEntity);
+            Entity owner = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
             Assert.That(owner, Is.Not.EqualTo(Entity.Null), "interaction showcase should publish a local player command owner.");
 
             var context = new EntityCommandPanelSourceContext(

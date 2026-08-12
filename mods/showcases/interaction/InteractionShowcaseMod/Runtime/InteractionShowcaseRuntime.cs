@@ -18,8 +18,10 @@ using Ludots.Core.Input.CommandSources;
 using Ludots.Core.Input.Interaction;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Knowledge;
+using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.UI;
+using Ludots.Tests.TestCommon;
 
 namespace InteractionShowcaseMod.Runtime
 {
@@ -342,7 +344,7 @@ namespace InteractionShowcaseMod.Runtime
                 return false;
             }
 
-            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? viewerObj) ||
+            if (!engine.ClientLocalSeatAccess.TryGetSolePossessedRep(GlobalContext, out Entity viewerObj) ||
                 viewerObj is not Entity localViewer ||
                 !engine.World.IsAlive(localViewer))
             {
@@ -512,7 +514,7 @@ namespace InteractionShowcaseMod.Runtime
         private static bool TryResolveCommandSourceOwner(GameEngine engine, out Arch.Core.Entity owner)
         {
             owner = Arch.Core.Entity.Null;
-            return engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out owner) &&
+            return ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out owner) &&
                    owner != Arch.Core.Entity.Null &&
                    engine.World.IsAlive(owner);
         }
@@ -705,7 +707,7 @@ namespace InteractionShowcaseMod.Runtime
         private static bool TryResolveExistingLocalPlayer(GameEngine engine, string activeMapId, out Entity localPlayer)
         {
             localPlayer = Entity.Null;
-            if (!engine.TryGetService(CoreServiceKeys.LocalPlayerEntity, out Entity existing) ||
+            if (!ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity existing) ||
                 !engine.World.IsAlive(existing) ||
                 !engine.World.TryGet(existing, out PlayerOwner owner) ||
                 !engine.World.TryGet(existing, out MapEntity mapEntity) ||
@@ -756,13 +758,12 @@ namespace InteractionShowcaseMod.Runtime
                 lookup.Register(playerId, localPlayer);
             }
 
-            engine.SetService(CoreServiceKeys.LocalPlayerEntity, localPlayer);
-            engine.SetService(CoreServiceKeys.LocalPlayerId, playerId);
+            ClientLocalSeatTestBindings.BindSoleSeat(engine, localPlayer, playerId);
         }
 
         private static void PublishShowcaseKnowledge(GameEngine engine, string activeMapId)
         {
-            if (!engine.GlobalContext.TryGetValue(CoreServiceKeys.LocalPlayerEntity.Name, out object? viewerObj) ||
+            if (!engine.ClientLocalSeatAccess.TryGetSolePossessedRep(GlobalContext, out Entity viewerObj) ||
                 viewerObj is not Entity viewer ||
                 !engine.World.IsAlive(viewer))
             {
