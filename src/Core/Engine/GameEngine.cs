@@ -909,6 +909,13 @@ namespace Ludots.Core.Engine
             new GraphFunctionCatalogLoader(ConfigPipeline, graphFunctionCatalog, graphProgramRegistry)
                 .Load(ConfigCatalog, ConfigConflictReport);
             graphConfigLoader.ResolveFuncLibInvokes(graphPackages, graphFunctionCatalog);
+            var graphActionCatalog = new GraphActionCatalog();
+            new GraphActionCatalogLoader(
+                    ConfigPipeline,
+                    graphActionCatalog,
+                    graphProgramRegistry,
+                    graphFunctionCatalog)
+                .Load(ConfigCatalog, ConfigConflictReport);
             EffectExecutionPlanCompiler.FinalizeAll(
                 effectTemplateRegistry,
                 presetTypes,
@@ -1430,6 +1437,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.TargetDispatchPresetRegistry, targetDispatchPresetRegistry);
             SetService(CoreServiceKeys.GraphProgramRegistry, graphProgramRegistry);
             SetService(CoreServiceKeys.GraphFunctionCatalog, graphFunctionCatalog);
+            SetService(CoreServiceKeys.GraphActionCatalog, graphActionCatalog);
             var liveGasEditPipeline = new LiveGasEditPipeline(graphProgramRegistry, effectTemplateRegistry, tagOps);
             var liveAttributeCommandExecutor = new LiveAttributeCommandExecutor(World, tagOps);
             var liveEffectChainTracer = new LiveEffectChainTracer(capacity: 256);

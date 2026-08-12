@@ -1,0 +1,57 @@
+[
+  {
+    "name": "bt.seeEnemy",
+    "graph": "Graph.BT.Leaf.SeeEnemy",
+    "kind": "Script"
+  },
+  {
+    "name": "bt.inAttackRange",
+    "graph": "Graph.BT.Leaf.InAttackRange",
+    "kind": "Script"
+  },
+  {
+    "name": "bt.chase",
+    "graph": "Graph.BT.Leaf.Chase",
+    "kind": "Script"
+  },
+  {
+    "name": "bt.attack",
+    "graph": "Graph.BT.Leaf.Attack",
+    "kind": "Script"
+  },
+  {
+    "name": "bt.patrol",
+    "graph": "Graph.BT.Leaf.Patrol",
+    "kind": "Script"
+  },
+  {
+    "name": "hfsm.cond.alwaysTrue",
+    "graph": "Graph.HFSM.Cond.AlwaysTrue",
+    "kind": "Script"
+  },
+  {
+    "name": "hfsm.combat.onEnter",
+    "graph": "Graph.HFSM.Combat.OnEnter",
+    "kind": "Script"
+  },
+  {
+    "name": "hfsm.combat.onTick",
+    "graph": "Graph.HFSM.Combat.OnTick",
+    "kind": "Script"
+  },
+  {
+    "name": "hfsm.combat.onExit",
+    "graph": "Graph.HFSM.Combat.OnExit",
+    "kind": "Script"
+  },
+  {
+    "name": "level.phaseAdvance",
+    "graph": "Graph.Level.PhaseAdvance",
+    "kind": "Script"
+  },
+  {
+    "name": "script.drinkUntilFull",
+    "graph": "Graph.Script.DrinkUntilFull",
+    "kind": "Script"
+  }
+]

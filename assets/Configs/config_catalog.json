@@ -12,6 +12,7 @@
   { "Path": "GAS/attribute_bindings.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "GAS/graphs.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "GAS/func_lib.json", "Policy": "ArrayById", "IdField": "name" },
+  { "Path": "GAS/action_lib.json", "Policy": "ArrayById", "IdField": "name" },
   { "Path": "GAS/preset_types.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "GAS/target_dispatch_presets.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "GAS/ability_form_sets.json", "Policy": "ArrayById", "IdField": "id" },

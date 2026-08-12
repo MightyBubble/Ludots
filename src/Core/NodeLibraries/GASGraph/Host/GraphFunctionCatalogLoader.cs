@@ -52,6 +52,13 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 {
                     string? graphKey = ReadRequiredString(obj, "graph", name);
                     string? kindText = ReadRequiredString(obj, "kind", name);
+                    string purity = ReadOptionalString(obj, "purity") ?? "pure";
+                    if (!string.Equals(purity, "pure", StringComparison.Ordinal))
+                    {
+                        throw new InvalidOperationException(
+                            $"FuncLib '{name}' purity '{purity}' must be pure.");
+                    }
+
                     if (!GraphKindParser.TryParse(kindText, out GraphKind kind) ||
                         kind is not (GraphKind.Script or GraphKind.Validation or GraphKind.Score))
                     {
@@ -70,6 +77,18 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                     {
                         throw new InvalidOperationException(
                             $"FuncLib '{name}' kind '{kind}' does not match registered graph '{graphKey}' kind '{registeredKind}'.");
+                    }
+
+                    if (!_programs.TryGetProgram(graphId, out ReadOnlySpan<GraphInstruction> program))
+                    {
+                        throw new InvalidOperationException(
+                            $"FuncLib '{name}' graph '{graphKey}' has no registered program.");
+                    }
+
+                    if (ContainsYield(program))
+                    {
+                        throw new InvalidOperationException(
+                            $"FuncLib '{name}' graph '{graphKey}' contains Yield and belongs in ActionLib.");
                     }
 
                     _catalog.Register(name, graphId, kind);
@@ -102,6 +121,35 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             }
 
             return text.Trim();
+        }
+
+        private static string? ReadOptionalString(JsonObject obj, string property)
+        {
+            if (!obj.TryGetPropertyValue(property, out JsonNode? node) || node == null)
+            {
+                return null;
+            }
+
+            if (node is not JsonValue value)
+            {
+                throw new InvalidOperationException($"FuncLib property '{property}' must be a string.");
+            }
+
+            string? text = value.GetValue<string>();
+            return string.IsNullOrWhiteSpace(text) ? string.Empty : text.Trim();
+        }
+
+        private static bool ContainsYield(ReadOnlySpan<GraphInstruction> program)
+        {
+            for (int i = 0; i < program.Length; i++)
+            {
+                if (program[i].Op == (ushort)GraphNodeOp.Yield)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 }

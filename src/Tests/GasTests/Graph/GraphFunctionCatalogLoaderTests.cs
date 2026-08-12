@@ -1,9 +1,14 @@
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Ludots.Core.Config;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.Modding;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
+using Ludots.Core.Scripting;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Gas.Graph
@@ -93,6 +98,112 @@ namespace Ludots.Tests.Gas.Graph
             var ex = Assert.Throws<InvalidOperationException>(() =>
                 GraphProgramAuthoringFrontDoor.RequireControlFlowAuthoringShape(obj, "bad.next", GraphKind.Effect));
             Assert.That(ex!.Message, Does.Contain("nodes[].next"));
+        }
+
+        [Test]
+        public void ActionCatalogLoader_LoadsScriptAction_WithYieldProgram()
+        {
+            GraphIdRegistry.Clear();
+            string root = string.Empty;
+            try
+            {
+                const string graphName = "Graph.Script.YieldAction";
+                int graphId = GraphIdRegistry.Register(graphName);
+                var programs = new GraphProgramRegistry();
+                programs.Register(
+                    graphId,
+                    new[] { new GraphInstruction { Op = (ushort)GraphNodeOp.Yield } },
+                    GraphKind.Script);
+
+                var (pipeline, configCatalog, tempRoot) = CreateCatalogPipeline(
+                    "GAS/action_lib.json",
+                    """
+                    [
+                      { "name": "script.yieldAction", "graph": "Graph.Script.YieldAction", "kind": "Script" }
+                    ]
+                    """);
+                root = tempRoot;
+
+                var actionCatalog = new GraphActionCatalog();
+                new GraphActionCatalogLoader(pipeline, actionCatalog, programs).Load(configCatalog);
+
+                Assert.That(actionCatalog.Count, Is.EqualTo(1));
+                Assert.That(actionCatalog.Require("script.yieldAction"), Is.EqualTo(graphId));
+            }
+            finally
+            {
+                GraphIdRegistry.Clear();
+                DeleteTempRoot(root);
+            }
+        }
+
+        [Test]
+        public void FuncCatalogLoader_RejectsYieldProgram()
+        {
+            GraphIdRegistry.Clear();
+            string root = string.Empty;
+            try
+            {
+                const string graphName = "Graph.Script.YieldFunction";
+                int graphId = GraphIdRegistry.Register(graphName);
+                var programs = new GraphProgramRegistry();
+                programs.Register(
+                    graphId,
+                    new[] { new GraphInstruction { Op = (ushort)GraphNodeOp.Yield } },
+                    GraphKind.Script);
+
+                var (pipeline, configCatalog, tempRoot) = CreateCatalogPipeline(
+                    "GAS/func_lib.json",
+                    """
+                    [
+                      { "name": "script.yieldFunction", "graph": "Graph.Script.YieldFunction", "kind": "Script", "purity": "pure" }
+                    ]
+                    """);
+                root = tempRoot;
+
+                var functionCatalog = new GraphFunctionCatalog();
+                var ex = Assert.Throws<AggregateException>(() =>
+                    new GraphFunctionCatalogLoader(pipeline, functionCatalog, programs).Load(configCatalog));
+
+                Assert.That(functionCatalog.Count, Is.EqualTo(0));
+                Assert.That(ex!.InnerExceptions[0].Message, Does.Contain("contains Yield"));
+                Assert.That(ex.InnerExceptions[0].Message, Does.Contain("ActionLib"));
+            }
+            finally
+            {
+                GraphIdRegistry.Clear();
+                DeleteTempRoot(root);
+            }
+        }
+
+        private static (ConfigPipeline Pipeline, ConfigCatalog Catalog, string TempRoot) CreateCatalogPipeline(
+            string relativePath,
+            string json)
+        {
+            string root = Path.Combine(
+                Path.GetTempPath(),
+                "Ludots_GraphFunctionCatalogLoaderTests",
+                Guid.NewGuid().ToString("N"));
+            string coreRoot = Path.Combine(root, "Core");
+            string fullPath = Path.Combine(coreRoot, "Configs", relativePath.Replace('/', Path.DirectorySeparatorChar));
+            Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+            File.WriteAllText(fullPath, json);
+
+            var vfs = new VirtualFileSystem();
+            vfs.Mount("Core", coreRoot);
+            var modLoader = new ModLoader(vfs, new FunctionRegistry(), new TriggerManager());
+            var pipeline = new ConfigPipeline(vfs, modLoader);
+            var catalog = new ConfigCatalog();
+            catalog.Add(new ConfigCatalogEntry(relativePath, ConfigMergePolicy.ArrayById, "name"));
+            return (pipeline, catalog, root);
+        }
+
+        private static void DeleteTempRoot(string root)
+        {
+            if (!string.IsNullOrWhiteSpace(root) && Directory.Exists(root))
+            {
+                Directory.Delete(root, recursive: true);
+            }
         }
     }
 }
