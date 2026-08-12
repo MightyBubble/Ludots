@@ -38,6 +38,45 @@ namespace Ludots.Client.Raylib.Rendering
 
         public float VisibleRadiusCm { get; set; } = 120_000f;
 
+        private float? _absoluteColorSeaLevelCm;
+        private float _absoluteColorPeakSpanCm = 3600f;
+
+        /// <summary>
+        /// When set, terrain vertex colors use absolute elevation relative to this sea level (cm)
+        /// instead of per-chunk min/max remapping. Required for readable island biomes across chunks.
+        /// </summary>
+        public float? AbsoluteColorSeaLevelCm
+        {
+            get => _absoluteColorSeaLevelCm;
+            set
+            {
+                if (_absoluteColorSeaLevelCm == value)
+                {
+                    return;
+                }
+
+                _absoluteColorSeaLevelCm = value;
+                ClearChunkGpuCache();
+            }
+        }
+
+        /// <summary>Peak elevation span above sea level used when <see cref="AbsoluteColorSeaLevelCm"/> is set.</summary>
+        public float AbsoluteColorPeakSpanCm
+        {
+            get => _absoluteColorPeakSpanCm;
+            set
+            {
+                float clamped = MathF.Max(1f, value);
+                if (MathF.Abs(_absoluteColorPeakSpanCm - clamped) <= 0.01f)
+                {
+                    return;
+                }
+
+                _absoluteColorPeakSpanCm = clamped;
+                ClearChunkGpuCache();
+            }
+        }
+
         public void ApplyFrameLighting(RaylibFrameLighting lighting)
         {
             _frameLighting = lighting ?? throw new ArgumentNullException(nameof(lighting));
@@ -158,7 +197,7 @@ namespace Ludots.Client.Raylib.Rendering
             return ref CollectionsMarshal.GetValueRefOrNullRef(_chunks, key);
         }
 
-        private static Mesh CreateChunkMesh(in VisualHeightmapRenderChunk chunk)
+        private Mesh CreateChunkMesh(in VisualHeightmapRenderChunk chunk)
         {
             int columns = chunk.SampleColumns;
             int rows = chunk.SampleRows;
@@ -187,6 +226,8 @@ namespace Ludots.Client.Raylib.Rendering
             float stepYCm = chunk.SampleStepYCm;
             ResolveChunkHeightRange(in chunk, out float minHeightCm, out float maxHeightCm);
             float heightRangeCm = MathF.Max(1f, maxHeightCm - minHeightCm);
+            float? absoluteSeaCm = _absoluteColorSeaLevelCm;
+            float absolutePeakSpanCm = MathF.Max(1f, _absoluteColorPeakSpanCm);
             for (int y = 0; y < rows; y++)
             {
                 for (int x = 0; x < columns; x++)
@@ -205,9 +246,21 @@ namespace Ludots.Client.Raylib.Rendering
                     mesh.normals[f + 2] = normal.Z;
 
                     int c = vertex * 4;
-                    float heightBand = Math.Clamp((heightCm - minHeightCm) / heightRangeCm, 0f, 1f);
                     float slope = Math.Clamp(1f - normal.Y, 0f, 1f);
-                    ResolveTerrainColor(heightBand, slope, out byte red, out byte green, out byte blue);
+                    byte red;
+                    byte green;
+                    byte blue;
+                    if (absoluteSeaCm is float seaCm)
+                    {
+                        float heightBand = Math.Clamp((heightCm - seaCm) / absolutePeakSpanCm, 0f, 1f);
+                        ResolveAbsoluteIslandTerrainColor(heightBand, slope, out red, out green, out blue);
+                    }
+                    else
+                    {
+                        float heightBand = Math.Clamp((heightCm - minHeightCm) / heightRangeCm, 0f, 1f);
+                        ResolveTerrainColor(heightBand, slope, out red, out green, out blue);
+                    }
+
                     mesh.colors[c + 0] = red;
                     mesh.colors[c + 1] = green;
                     mesh.colors[c + 2] = blue;
@@ -282,6 +335,42 @@ namespace Ludots.Client.Raylib.Rendering
             blue = ClampToByte(color.Z * shade);
         }
 
+        private static void ResolveAbsoluteIslandTerrainColor(float heightBand, float slope, out byte red, out byte green, out byte blue)
+        {
+            Vector3 seabed = new(28f, 72f, 96f);
+            Vector3 sand = new(232f, 196f, 128f);
+            Vector3 grass = new(62f, 140f, 58f);
+            Vector3 dirt = new(120f, 88f, 52f);
+            Vector3 rock = new(118f, 118f, 122f);
+            Vector3 peak = new(168f, 168f, 172f);
+            Vector3 color;
+            if (heightBand <= 0f)
+            {
+                color = seabed;
+            }
+            else if (heightBand < 0.08f)
+            {
+                color = Vector3.Lerp(sand, grass, heightBand / 0.08f);
+            }
+            else if (heightBand < 0.45f)
+            {
+                color = Vector3.Lerp(grass, dirt, (heightBand - 0.08f) / 0.37f);
+            }
+            else if (heightBand < 0.72f)
+            {
+                color = Vector3.Lerp(dirt, rock, (heightBand - 0.45f) / 0.27f);
+            }
+            else
+            {
+                color = Vector3.Lerp(rock, peak, (heightBand - 0.72f) / 0.28f);
+            }
+
+            float shade = 1f - Math.Clamp(slope * 0.42f, 0f, 0.42f);
+            red = ClampToByte(color.X * shade);
+            green = ClampToByte(color.Y * shade);
+            blue = ClampToByte(color.Z * shade);
+        }
+
         private static Vector3 ComputeNormal(in VisualHeightmapRenderChunk chunk, int x, int y, float stepXCm, float stepYCm)
         {
             int left = Math.Max(0, x - 1);
@@ -299,6 +388,16 @@ namespace Ludots.Client.Raylib.Rendering
             return float.IsFinite(normal.X) && float.IsFinite(normal.Y) && float.IsFinite(normal.Z)
                 ? normal
                 : Vector3.UnitY;
+        }
+
+        private void ClearChunkGpuCache()
+        {
+            foreach (var kvp in _chunks)
+            {
+                kvp.Value.Dispose();
+            }
+
+            _chunks.Clear();
         }
 
         private void EvictUnusedChunks(int maxAgeFrames)

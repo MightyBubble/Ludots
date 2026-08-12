@@ -4,9 +4,9 @@
     "backendId": "raylib",
     "enabled": true,
     "mapIds": ["raylib_visual_atmosphere_showcase"],
-    "initialPhase": 0.40,
-    "clearSampleV": 0.82,
-    "clearRgb": [0.55, 0.72, 0.92],
+    "initialPhase": 0.42,
+    "clearSampleV": 0.72,
+    "clearRgb": [0.28, 0.48, 0.78],
     "gradientUri": "RaylibVisualAtmosphereShowcaseMod:assets/Textures/sky_day_night_gradient.png"
   }
 ]

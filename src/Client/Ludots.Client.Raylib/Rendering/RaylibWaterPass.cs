@@ -10,7 +10,8 @@ using Rl = Raylib_cs.Raylib;
 namespace Ludots.Client.Raylib.Rendering
 {
     /// <summary>
-    /// Planar reflection + refraction RenderTexture pass for VertexMap water.
+    /// Planar reflection + refraction RenderTexture pass for VertexMap water meshes
+    /// or VisualHeightmap + ocean plane.
     /// Frame-graph intent mirrors tropical-island demos: reflection (camera flipped about waterPlaneY)
     /// then refraction, then main water sampling both RTs. Baseline omits GPU clip planes on terrain;
     /// submerged geometry may contribute to the mirrored RT until a future cullHeight lands.

@@ -158,15 +158,34 @@ internal sealed class RaylibVisualAtmosphereShowcaseRuntime : IBenchmarkSceneCon
 
         return raw.Trim().ToLowerInvariant() switch
         {
-            "01" or "01_sky_day" or "sky_day" => CaptureShot.SkyDay,
-            "02" or "02_sky_night" or "sky_night" => CaptureShot.SkyNight,
-            "03" or "03_cutout_vegetation" or "cutout" => CaptureShot.CutoutVegetation,
+            "01" or "01_sky_day" or "sky_day" or "cam_aerial__tod_morning" or "cam_aerial__tod_midday"
+                => CaptureShot.SkyDay,
+            "02" or "02_sky_night" or "sky_night" or "cam_aerial__tod_night"
+                => CaptureShot.SkyNight,
+            "03" or "03_cutout_vegetation" or "cutout" or "cam_veg__tod_midday"
+                => CaptureShot.CutoutVegetation,
             "04" or "04_blend_modes" or "blend" => CaptureShot.BlendModes,
             "05" or "05_distance_fog" or "fog" => CaptureShot.DistanceFog,
-            "06" or "06_water_reflect" or "water" => CaptureShot.WaterReflect,
+            "06" or "06_water_reflect" or "water" or "cam_water__tod_midday"
+                => CaptureShot.WaterReflect,
+            "cam_aerial__tod_dawn" or "cam_aerial__tod_afternoon" or "cam_aerial__tod_dusk"
+                => CaptureShot.AerialTimed,
+            "cam_orbit_ne__tod_morning" or "cam_orbit_ne__tod_midday"
+            or "cam_orbit_ne__tod_dusk" or "cam_orbit_ne__tod_night"
+                => CaptureShot.OrbitNe,
+            "cam_orbit_sw__tod_morning" or "cam_orbit_sw__tod_midday"
+            or "cam_orbit_sw__tod_dusk" or "cam_orbit_sw__tod_night"
+                => CaptureShot.OrbitSw,
+            "cam_shore__tod_morning" or "cam_shore__tod_midday"
+            or "cam_shore__tod_dusk" or "cam_shore__tod_night"
+                => CaptureShot.Shore,
+            "cam_veg__tod_morning" or "cam_veg__tod_dusk" or "cam_veg__tod_night"
+                => CaptureShot.CutoutVegetation,
+            "cam_water__tod_morning" or "cam_water__tod_dusk" or "cam_water__tod_night"
+                => CaptureShot.WaterReflect,
             "composition" or "playable" => CaptureShot.Composition,
             _ => throw new InvalidOperationException(
-                $"Unknown LUDOTS_ATMOSPHERE_SHOT '{raw}'. Expected 01..06 or composition."),
+                $"Unknown LUDOTS_ATMOSPHERE_SHOT '{raw}'. Expected 01..06, cam_* matrix ids, or composition."),
         };
     }
 
@@ -174,8 +193,12 @@ internal sealed class RaylibVisualAtmosphereShowcaseRuntime : IBenchmarkSceneCon
     {
         return shot switch
         {
-            CaptureShot.SkyDay or CaptureShot.SkyNight or CaptureShot.Composition =>
+            CaptureShot.SkyDay or CaptureShot.SkyNight or CaptureShot.Composition
+            or CaptureShot.AerialTimed =>
                 "raylib_visual_atmosphere.camera.composition",
+            CaptureShot.OrbitNe => "raylib_visual_atmosphere.camera.orbit_ne",
+            CaptureShot.OrbitSw => "raylib_visual_atmosphere.camera.orbit_sw",
+            CaptureShot.Shore => "raylib_visual_atmosphere.camera.shore",
             CaptureShot.CutoutVegetation => "raylib_visual_atmosphere.camera.cutout",
             CaptureShot.BlendModes => "raylib_visual_atmosphere.camera.blend",
             CaptureShot.DistanceFog => "raylib_visual_atmosphere.camera.fog",
@@ -189,6 +212,10 @@ internal sealed class RaylibVisualAtmosphereShowcaseRuntime : IBenchmarkSceneCon
         Composition,
         SkyDay,
         SkyNight,
+        AerialTimed,
+        OrbitNe,
+        OrbitSw,
+        Shore,
         CutoutVegetation,
         BlendModes,
         DistanceFog,

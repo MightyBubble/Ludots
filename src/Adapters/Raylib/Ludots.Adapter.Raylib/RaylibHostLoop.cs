@@ -502,10 +502,15 @@ namespace Ludots.Adapter.Raylib
                         visualHeightmapRenderer.ApplyFrameLighting(frameLighting);
                         primitiveRenderer.ApplyFrameLighting(frameLighting, activeCamera.position);
 
-                        bool waterFboEnabled = waterPass.IsActive &&
-                                              drawTerrain &&
-                                              !(drawVisualHeightmap && hasVisualHeightmap) &&
-                                              engine.VertexMap != null;
+                        bool waterOnVisualHeightmap = waterPass.IsActive &&
+                                                      drawTerrain &&
+                                                      drawVisualHeightmap &&
+                                                      hasVisualHeightmap;
+                        bool waterOnVertexMap = waterPass.IsActive &&
+                                                drawTerrain &&
+                                                !waterOnVisualHeightmap &&
+                                                engine.VertexMap != null;
+                        bool waterFboEnabled = waterOnVisualHeightmap || waterOnVertexMap;
                         if (waterFboEnabled)
                         {
                             waterPass.EnsureRenderTargets(lastW, lastH);
@@ -522,7 +527,18 @@ namespace Ludots.Adapter.Raylib
                                 Restore3DDepthState();
                             }
 
-                            terrainRenderer.RenderTerrainOnly(engine.VertexMap, reflectionCamera);
+                            if (waterOnVisualHeightmap &&
+                                engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap? vhReflect) &&
+                                vhReflect is IVisualHeightmapRenderSource reflectSource)
+                            {
+                                visualHeightmapRenderer.AbsoluteColorSeaLevelCm = waterPass.WaterPlaneY * 100f;
+                                visualHeightmapRenderer.Render(reflectSource, reflectionCamera);
+                            }
+                            else
+                            {
+                                terrainRenderer.RenderTerrainOnly(engine.VertexMap!, reflectionCamera);
+                            }
+
                             EndCoreMode3D();
                             waterPass.EndPass();
 
@@ -536,7 +552,18 @@ namespace Ludots.Adapter.Raylib
                                 Restore3DDepthState();
                             }
 
-                            terrainRenderer.RenderTerrainOnly(engine.VertexMap, activeCamera);
+                            if (waterOnVisualHeightmap &&
+                                engine.TryGetService(CoreServiceKeys.VisualHeightmap, out IVisualHeightmap? vhRefract) &&
+                                vhRefract is IVisualHeightmapRenderSource refractSource)
+                            {
+                                visualHeightmapRenderer.AbsoluteColorSeaLevelCm = waterPass.WaterPlaneY * 100f;
+                                visualHeightmapRenderer.Render(refractSource, activeCamera);
+                            }
+                            else
+                            {
+                                terrainRenderer.RenderTerrainOnly(engine.VertexMap!, activeCamera);
+                            }
+
                             EndCoreMode3D();
                             waterPass.EndPass();
                         }
@@ -569,8 +596,32 @@ namespace Ludots.Adapter.Raylib
                             visualHeightmapForTerrain is IVisualHeightmapRenderSource visualTerrainSource)
                         {
                             long terrainStart = Stopwatch.GetTimestamp();
-                            terrainRenderer.ClearReflectiveWater();
+                            if (waterOnVisualHeightmap)
+                            {
+                                visualHeightmapRenderer.AbsoluteColorSeaLevelCm = waterPass.WaterPlaneY * 100f;
+                            }
+                            else
+                            {
+                                visualHeightmapRenderer.AbsoluteColorSeaLevelCm = null;
+                            }
+
                             visualHeightmapRenderer.Render(visualTerrainSource, activeCamera);
+
+                            if (waterOnVisualHeightmap)
+                            {
+                                terrainRenderer.EnsureWaterShadersReady();
+                                terrainRenderer.BindReflectiveWater(waterPass);
+                                // Half-extent covers the island board (~1.28km); plane follows camera target XZ.
+                                terrainRenderer.DrawReflectiveOceanPlane(
+                                    waterPass.WaterPlaneY,
+                                    halfExtentMeters: 900f,
+                                    in activeCamera);
+                            }
+                            else
+                            {
+                                terrainRenderer.ClearReflectiveWater();
+                            }
+
                             presentationTiming?.ObserveTerrain(
                                 ElapsedMs(terrainStart),
                                 visualHeightmapRenderer.ChunkBuildMsLastFrame,
@@ -580,7 +631,7 @@ namespace Ludots.Adapter.Raylib
                         else if (drawTerrain)
                         {
                             long terrainStart = Stopwatch.GetTimestamp();
-                            if (waterFboEnabled)
+                            if (waterOnVertexMap)
                             {
                                 terrainRenderer.BindReflectiveWater(waterPass);
                             }

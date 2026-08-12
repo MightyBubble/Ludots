@@ -1,20 +1,25 @@
 {
   "Id": "raylib_visual_atmosphere_showcase",
+  "VisualHeightmapAsset": "assets/terrain/tropical_island.vhtm",
   "Tags": ["showcase", "raylib", "atmosphere", "Raylib.DebugGuides:Off"],
   "DefaultCamera": {
     "VirtualCameraId": "raylib_visual_atmosphere.camera.composition",
-    "TargetXCm": 133022,
-    "TargetYCm": 76800,
+    "TargetXCm": 0,
+    "TargetYCm": 0,
     "Yaw": 205,
-    "Pitch": 16,
-    "DistanceCm": 16000,
-    "FovYDeg": 50
+    "Pitch": 58,
+    "DistanceCm": 52000,
+    "FovYDeg": 48
   },
   "Boards": [
     {
       "Name": "default",
-      "SpatialType": "HexGrid",
-      "DataFile": "tropical_island_v3.vtxm",
+      "SpatialType": "Grid",
+      "WidthInMacroTiles": 128,
+      "HeightInMacroTiles": 128,
+      "GridCellSizeCm": 100,
+      "ChunkSizeCells": 64,
+      "LoadedChunkCapacity": 512,
       "NavigationEnabled": false
     }
   ],
@@ -22,13 +27,13 @@
     {
       "Template": "raylib_visual_atmosphere_vfx_blend",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 128500, "Y": 74200 } }
+        "WorldPositionCm": { "Value": { "X": -4500, "Y": -2800 } }
       }
     },
     {
       "Template": "raylib_visual_atmosphere_vfx_additive",
       "Overrides": {
-        "WorldPositionCm": { "Value": { "X": 129800, "Y": 73500 } }
+        "WorldPositionCm": { "Value": { "X": -3200, "Y": -3500 } }
       }
     }
   ]

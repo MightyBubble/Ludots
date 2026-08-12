@@ -17,7 +17,7 @@ namespace Ludots.Client.Raylib.Rendering
         private readonly VertexMapChunkMeshData _meshData = new VertexMapChunkMeshData();
         private readonly List<long> _evictKeys = new List<long>(256);
 
-        private VertexMapChunkMeshBuilder _builder;
+        private VertexMapChunkMeshBuilder? _builder;
         private bool _initialized;
 
         private Shader _terrainShader;
@@ -37,6 +37,8 @@ namespace Ludots.Client.Raylib.Rendering
 
         private RaylibFrameLighting? _frameLighting;
         private int _frameIndex;
+        private Mesh _oceanPlaneMesh;
+        private bool _oceanPlaneReady;
 
         public int DrawnChunkCountLastFrame { get; private set; }
         public int BuiltChunkCountLastFrame { get; private set; }
@@ -59,14 +61,85 @@ namespace Ludots.Client.Raylib.Rendering
             }
         }
 
+        public void EnsureWaterShadersReady()
+        {
+            EnsureShadersInitialized();
+        }
+
+        /// <summary>
+        /// Draws a single reflective ocean plane for VisualHeightmap maps (no VertexMap water mesh).
+        /// Requires <see cref="BindReflectiveWater"/> first.
+        /// </summary>
+        public void DrawReflectiveOceanPlane(float planeYMeters, float halfExtentMeters, in Camera3D camera)
+        {
+            EnsureShadersInitialized();
+            if (_frameLighting == null)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(DrawReflectiveOceanPlane)} requires {nameof(ApplyFrameLighting)} first.");
+            }
+
+            if (!_oceanPlaneReady)
+            {
+                _oceanPlaneMesh = CreateOceanPlaneMesh(halfExtentMeters);
+                _oceanPlaneReady = true;
+            }
+
+            UpdateUniforms(in camera);
+            RaylibMatrix transform = RaylibMatrix.FromSystemNumerics(
+                Matrix4x4.CreateTranslation(camera.target.X, planeYMeters, camera.target.Z));
+            Rl.rlDisableBackfaceCulling();
+            Rl.DrawMesh(_oceanPlaneMesh, _waterMaterial, transform);
+            Rl.rlEnableBackfaceCulling();
+        }
+
+        private static Mesh CreateOceanPlaneMesh(float halfExtentMeters)
+        {
+            // Two triangles on XZ, Y=0 local; tinted tropical cyan — depth cue comes from refraction.
+            float e = MathF.Max(1f, halfExtentMeters);
+            float[] vertices =
+            {
+                -e, 0f, -e,
+                 e, 0f, -e,
+                 e, 0f,  e,
+                -e, 0f, -e,
+                 e, 0f,  e,
+                -e, 0f,  e,
+            };
+            float[] normals =
+            {
+                0f, 1f, 0f, 0f, 1f, 0f, 0f, 1f, 0f,
+                0f, 1f, 0f, 0f, 1f, 0f, 0f, 1f, 0f,
+            };
+            byte[] colors =
+            {
+                0x4F, 0xC3, 0xF7, 0xB0,
+                0x4F, 0xC3, 0xF7, 0xB0,
+                0x4F, 0xC3, 0xF7, 0xB0,
+                0x4F, 0xC3, 0xF7, 0xB0,
+                0x4F, 0xC3, 0xF7, 0xB0,
+                0x4F, 0xC3, 0xF7, 0xB0,
+            };
+
+            Mesh mesh = new Mesh
+            {
+                vertexCount = 6,
+                triangleCount = 2,
+            };
+            mesh.vertices = (float*)Rl.MemAlloc(sizeof(float) * vertices.Length);
+            mesh.normals = (float*)Rl.MemAlloc(sizeof(float) * normals.Length);
+            mesh.colors = (byte*)Rl.MemAlloc(sizeof(byte) * colors.Length);
+            vertices.AsSpan().CopyTo(new Span<float>(mesh.vertices, vertices.Length));
+            normals.AsSpan().CopyTo(new Span<float>(mesh.normals, normals.Length));
+            colors.AsSpan().CopyTo(new Span<byte>(mesh.colors, colors.Length));
+            Rl.UploadMesh(ref mesh, false);
+            return mesh;
+        }
+
         public void BindReflectiveWater(RaylibWaterPass waterPass)
         {
             if (waterPass == null) throw new ArgumentNullException(nameof(waterPass));
-            if (!_initialized)
-            {
-                throw new InvalidOperationException(
-                    $"{nameof(BindReflectiveWater)} requires the terrain renderer to be initialized (call {nameof(Render)} or {nameof(RenderTerrainOnly)} first).");
-            }
+            EnsureShadersInitialized();
 
             if (!waterPass.IsActive)
             {
@@ -221,9 +294,17 @@ namespace Ludots.Client.Raylib.Rendering
 
         private void EnsureInitialized(VertexMap map)
         {
-            if (_initialized) return;
+            EnsureShadersInitialized();
+            _builder ??= new VertexMapChunkMeshBuilder(map);
+        }
 
-            _builder = new VertexMapChunkMeshBuilder(map);
+        private void EnsureShadersInitialized()
+        {
+            if (_initialized)
+            {
+                return;
+            }
+
             string baseDir = AppContext.BaseDirectory;
             _terrainShader = Rl.LoadShader(Path.Combine(baseDir, "terrain.vs"), Path.Combine(baseDir, "terrain.fs"));
             if (_terrainShader.id == 0) throw new InvalidOperationException("Failed to load terrain shader (shader.id == 0).");
@@ -312,6 +393,12 @@ namespace Ludots.Client.Raylib.Rendering
             }
 
             long buildStart = Stopwatch.GetTimestamp();
+            if (_builder == null)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibTerrainRenderer)} chunk build requires {nameof(EnsureInitialized)}.");
+            }
+
             _builder.BuildChunk(chunkX, chunkY, 0f, 0f, HeightScale, simplifiedCliffs, _meshData);
             ChunkGpu gpu = new ChunkGpu();
             gpu.SimplifiedCliffs = simplifiedCliffs;
@@ -373,6 +460,13 @@ namespace Ludots.Client.Raylib.Rendering
                 kvp.Value.Dispose();
             }
             _chunks.Clear();
+
+            if (_oceanPlaneReady)
+            {
+                Rl.UnloadMesh(_oceanPlaneMesh);
+                _oceanPlaneMesh = default;
+                _oceanPlaneReady = false;
+            }
 
             if (_initialized)
             {

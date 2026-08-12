@@ -4,10 +4,10 @@
     "backendId": "raylib",
     "enabled": true,
     "mapIds": ["raylib_visual_atmosphere_showcase"],
-    "waterPlaneY": 12.0,
-    "resolutionScale": 0.55,
-    "waveStrength": 0.04,
-    "moveSpeed": 0.045,
+    "waterPlaneY": 2.0,
+    "resolutionScale": 0.7,
+    "waveStrength": 0.028,
+    "moveSpeed": 0.04,
     "dudvUri": "RaylibVisualAtmosphereShowcaseMod:assets/Textures/water_dudv.png"
   }
 ]

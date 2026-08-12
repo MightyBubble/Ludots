@@ -54,10 +54,12 @@ void main()
     vec3 reflectColor = texture(texture0, reflectUv).rgb;
     vec3 refractColor = texture(texture1, refractUv).rgb;
 
-    float fresnel = pow(clamp(dot(V, vec3(0.0, 1.0, 0.0)), 0.0, 1.0), 0.35);
+    // Lower exponent → stronger sky/terrain reflection at grazing angles (shore / aerial reads).
+    float fresnel = pow(clamp(dot(V, vec3(0.0, 1.0, 0.0)), 0.0, 1.0), 0.55);
     vec3 mixed = mix(reflectColor, refractColor, fresnel);
-    mixed = mix(mixed, lit, 0.12);
+    // Keep author vertex depth tint visible under reflection/refraction.
+    mixed = mix(mixed, lit, 0.28);
     mixed += vec3(spec);
 
-    finalColor = vec4(clamp(mixed, 0.0, 1.0), max(fragColor.a, 0.85));
+    finalColor = vec4(clamp(mixed, 0.0, 1.0), max(fragColor.a, 0.88));
 }

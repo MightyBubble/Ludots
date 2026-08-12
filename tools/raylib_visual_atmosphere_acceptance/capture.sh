@@ -131,12 +131,12 @@ PY
   fi
 }
 
-capture_one "01_sky_day.png" "01_sky_day" "0.42"
+capture_one "01_sky_day.png" "01_sky_day" "0.50"
 capture_one "02_sky_night.png" "02_sky_night" "0.92"
-capture_one "03_cutout_vegetation.png" "03_cutout_vegetation" "0.42"
-capture_one "04_blend_modes.png" "04_blend_modes" "0.42"
-capture_one "05_distance_fog.png" "05_distance_fog" "0.42"
-capture_one "06_water_reflect.png" "06_water_reflect" "0.42"
+capture_one "03_cutout_vegetation.png" "03_cutout_vegetation" "0.50"
+capture_one "04_blend_modes.png" "04_blend_modes" "0.50"
+capture_one "05_distance_fog.png" "05_distance_fog" "0.50"
+capture_one "06_water_reflect.png" "06_water_reflect" "0.50"
 
 python3 - "$OUT_DIR/01_sky_day.png" "$OUT_DIR/02_sky_night.png" <<'PY'
 import sys, struct, zlib

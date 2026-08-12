@@ -58,5 +58,5 @@ The script:
 ## Notes
 
 - Linux cloud: keep Skia GPU + framebuffer underlays disabled (same as Raylib parity showcase).
-- Reflective water requires VertexMap water (this showcase uses `tropical_island.vtxm`); do not capture `06` if the water FBO pass is inactive.
+- Reflective water uses VisualHeightmap terrain into reflection/refraction FBOs plus a Host ocean plane (`tropical_island.vhtm`); do not capture `06` if the water FBO pass is inactive.
 - Assets are procedural CC0 / in-repo Ludots content — no copy from `/tmp/RaylibErosionStandalone`.
