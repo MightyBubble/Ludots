@@ -29,10 +29,10 @@ Last Updated: 2026-04-16
 
 产出：
 
-- `docs/rfcs/perform-architecture-unification/00_overview.md`
-- `docs/rfcs/perform-architecture-unification/01_execution_plan.md`
-- `docs/rfcs/perform-architecture-unification/02_cross_review.md`
-- `docs/rfcs/perform-architecture-unification/03_phase_system_design.md`
+- `docs/rfcs/presenter-architecture-unification/00_overview.md`
+- `docs/rfcs/presenter-architecture-unification/01_execution_plan.md`
+- `docs/rfcs/presenter-architecture-unification/02_cross_review.md`
+- `docs/rfcs/presenter-architecture-unification/03_phase_system_design.md`
 
 完成标准：
 
@@ -55,10 +55,10 @@ Last Updated: 2026-04-16
 - `PerformCommand`
 - `PerformBehaviorDefinition`
 - `PerformBehaviorInstance`
-- `PerformAudienceContext`
-- `PerformPhaseInput`
-- `PerformPhaseResult`
-- `PerformPhaseResolver`
+- `PresentAudienceContext`
+- `PresentPhaseInput`
+- `PresentPhaseResult`
+- `PresentPhaseResolver`
 
 策略：
 
@@ -110,7 +110,7 @@ Last Updated: 2026-04-16
 
 - `ModelPerformBehavior`
 - `AnimatorPerformBehavior`
-- `WorldHudPerformBehavior`
+- `WorldHudPresentBehavior`
 - `IndicatorPerformBehavior`
 - `SoundPerformBehavior`
 - `VfxPerformBehavior`
@@ -118,7 +118,7 @@ Last Updated: 2026-04-16
 
 优先顺序：
 
-1. `WorldHudPerformBehavior`
+1. `WorldHudPresentBehavior`
 2. `IndicatorPerformBehavior`
 3. `SplinePerformBehavior`
 4. `VfxPerformBehavior`
@@ -191,10 +191,10 @@ Last Updated: 2026-04-16
 建议契约：
 
 - entity / phase 层 visibility snapshot
-- `PerformAudienceContext`
-- `PerformPhaseInput`
-- `PerformPhaseResult`
-- `PerformPhaseResolver`
+- `PresentAudienceContext`
+- `PresentPhaseInput`
+- `PresentPhaseResult`
+- `PresentPhaseResolver`
 - 现有 `CullState` / `LOD` 的标准化消费接口
 
 第一批支持能力：
@@ -248,10 +248,10 @@ src/Core/Presentation/Perform/Runtime/
 - `src/Core/Presentation/Perform/PerformCommand.cs`
 - `src/Core/Presentation/Perform/PerformBehaviorDefinition.cs`
 - `src/Core/Presentation/Perform/PerformBehaviorInstance.cs`
-- `src/Core/Presentation/Perform/PerformAudienceContext.cs`
-- `src/Core/Presentation/Perform/PerformPhaseInput.cs`
-- `src/Core/Presentation/Perform/PerformPhaseResult.cs`
-- `src/Core/Presentation/Perform/PerformPhaseResolver.cs`
+- `src/Core/Presentation/Perform/PresentAudienceContext.cs`
+- `src/Core/Presentation/Perform/PresentPhaseInput.cs`
+- `src/Core/Presentation/Perform/PresentPhaseResult.cs`
+- `src/Core/Presentation/Perform/PresentPhaseResolver.cs`
 
 ## 4. 测试策略
 

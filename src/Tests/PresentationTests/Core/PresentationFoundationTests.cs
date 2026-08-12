@@ -871,7 +871,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void WorldHudPerformBehavior_ProjectsKnownAudienceFromKnowledgeNotTeamRelationship()
+        public void WorldHudPresentBehavior_ProjectsKnownAudienceFromKnowledgeNotTeamRelationship()
         {
             using var world = World.Create();
             TeamManager.Clear();
@@ -896,7 +896,7 @@ namespace Ludots.Tests.Presentation
                 UpsertPresenterKnowledge(projectionStore, ownerAudience, owner, KnowledgePresence.LiveVisible, KnowledgePositionAccess.Live);
                 UpsertPresenterKnowledge(projectionStore, hostileAudience, owner, KnowledgePresence.LiveVisible, KnowledgePositionAccess.Live);
 
-                var behavior = new WorldHudPerformBehavior();
+                var behavior = new WorldHudPresentBehavior();
                 var ownerGlobals = new Dictionary<string, object>
                 {
                     [CoreServiceKeys.LocalPlayerEntity.Name] = ownerAudience,
@@ -908,8 +908,8 @@ namespace Ludots.Tests.Presentation
                     [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
                 };
 
-                bool ownerVisible = behavior.TryResolveProjection(world, ownerGlobals, owner, LODLevel.High, out PerformPhaseResult ownerPhase);
-                bool hostileVisible = behavior.TryResolveProjection(world, hostileGlobals, owner, LODLevel.High, out PerformPhaseResult hostilePhase);
+                bool ownerVisible = behavior.TryResolveProjection(world, ownerGlobals, owner, LODLevel.High, out PresentPhaseResult ownerPhase);
+                bool hostileVisible = behavior.TryResolveProjection(world, hostileGlobals, owner, LODLevel.High, out PresentPhaseResult hostilePhase);
 
                 Assert.That(ownerVisible, Is.True);
                 Assert.That(ownerPhase.IsOwnedByAudience, Is.True);
@@ -928,7 +928,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void WorldHudPerformBehavior_ProjectsVisibleTransientWorldTextForHostileAudience()
+        public void WorldHudPresentBehavior_ProjectsVisibleTransientWorldTextForHostileAudience()
         {
             using var world = World.Create();
             TeamManager.Clear();
@@ -949,7 +949,7 @@ namespace Ludots.Tests.Presentation
                 var projectionResolver = new KnowledgeProjectionResolver(projectionStore);
                 UpsertPresenterKnowledge(projectionStore, hostileAudience, target, KnowledgePresence.LiveVisible, KnowledgePositionAccess.Live);
 
-                var behavior = new WorldHudPerformBehavior();
+                var behavior = new WorldHudPresentBehavior();
                 var globals = new Dictionary<string, object>
                 {
                     [CoreServiceKeys.LocalPlayerEntity.Name] = hostileAudience,
@@ -963,7 +963,7 @@ namespace Ludots.Tests.Presentation
                     LODLevel.High,
                     WorldHudItemKind.Text,
                     ReadOnlySpan<int>.Empty,
-                    out PerformPhaseResult transientTextPhase);
+                    out PresentPhaseResult transientTextPhase);
                 ReadOnlySpan<int> requiredAttributes = stackalloc int[1] { 7 };
                 bool attributeTextProjected = behavior.TryResolveProjection(
                     world,
@@ -972,7 +972,7 @@ namespace Ludots.Tests.Presentation
                     LODLevel.High,
                     WorldHudItemKind.Text,
                     requiredAttributes,
-                    out PerformPhaseResult attributeTextPhase);
+                    out PresentPhaseResult attributeTextPhase);
 
                 Assert.That(transientTextProjected, Is.True);
                 Assert.That(transientTextPhase.IsHostile, Is.True);
@@ -990,7 +990,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void WorldHudPerformBehavior_UsesConfiguredViewerForKnowledgeProjection()
+        public void WorldHudPresentBehavior_UsesConfiguredViewerForKnowledgeProjection()
         {
             using var world = World.Create();
 
@@ -1005,14 +1005,14 @@ namespace Ludots.Tests.Presentation
                 target,
                 KnowledgePresence.LiveVisible,
                 KnowledgePositionAccess.Live);
-            var behavior = new WorldHudPerformBehavior();
+            var behavior = new WorldHudPresentBehavior();
             var globals = new Dictionary<string, object>
             {
                 [CoreServiceKeys.LocalPlayerEntity.Name] = configuredViewer,
                 [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
             };
 
-            bool projected = behavior.TryResolveProjection(world, globals, target, LODLevel.High, out PerformPhaseResult phase);
+            bool projected = behavior.TryResolveProjection(world, globals, target, LODLevel.High, out PresentPhaseResult phase);
 
             Assert.That(projected, Is.True);
             Assert.That(phase.HasKnowledgeProjection, Is.True);
@@ -1020,7 +1020,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void WorldHudPerformBehavior_ProjectsAllyAudienceFromProjectionAndTeamRelationship()
+        public void WorldHudPresentBehavior_ProjectsAllyAudienceFromProjectionAndTeamRelationship()
         {
             using var world = World.Create();
             TeamManager.Clear();
@@ -1040,14 +1040,14 @@ namespace Ludots.Tests.Presentation
                 var projectionResolver = new KnowledgeProjectionResolver(projectionStore);
                 UpsertPresenterKnowledge(projectionStore, allyAudience, owner, KnowledgePresence.LiveVisible, KnowledgePositionAccess.Live);
 
-                var behavior = new WorldHudPerformBehavior();
+                var behavior = new WorldHudPresentBehavior();
                 var globals = new Dictionary<string, object>
                 {
                     [CoreServiceKeys.LocalPlayerEntity.Name] = allyAudience,
                     [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
                 };
 
-                bool projected = behavior.TryResolveProjection(world, globals, owner, LODLevel.High, out PerformPhaseResult phase);
+                bool projected = behavior.TryResolveProjection(world, globals, owner, LODLevel.High, out PresentPhaseResult phase);
 
                 Assert.That(projected, Is.True);
                 Assert.That(phase.IsFriendly, Is.True);
@@ -1062,7 +1062,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void WorldHudPerformBehavior_SuppressesKnownAudienceWithoutRequiredAttributeProjection()
+        public void WorldHudPresentBehavior_SuppressesKnownAudienceWithoutRequiredAttributeProjection()
         {
             using var world = World.Create();
 
@@ -1084,7 +1084,7 @@ namespace Ludots.Tests.Presentation
                 KnowledgePresence.LiveVisible,
                 KnowledgePositionAccess.Live,
                 KnowledgeIdMask256.Empty);
-            var behavior = new WorldHudPerformBehavior();
+            var behavior = new WorldHudPresentBehavior();
             var globals = new Dictionary<string, object>
             {
                 [CoreServiceKeys.LocalPlayerEntity.Name] = audience,
@@ -1092,7 +1092,7 @@ namespace Ludots.Tests.Presentation
             };
             ReadOnlySpan<int> requiredAttributes = stackalloc int[1] { healthAttributeId };
 
-            bool projected = behavior.TryResolveProjection(world, globals, owner, LODLevel.High, requiredAttributes, out PerformPhaseResult phase);
+            bool projected = behavior.TryResolveProjection(world, globals, owner, LODLevel.High, requiredAttributes, out PresentPhaseResult phase);
 
             Assert.That(projected, Is.False);
             Assert.That(phase.HasKnowledgeProjection, Is.True);
@@ -1103,7 +1103,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void WorldHudPerformBehavior_SuppressesUnknownAudienceWithoutKnowledgeProjection()
+        public void WorldHudPresentBehavior_SuppressesUnknownAudienceWithoutKnowledgeProjection()
         {
             using var world = World.Create();
 
@@ -1117,14 +1117,14 @@ namespace Ludots.Tests.Presentation
 
             var projectionStore = new KnowledgeProjectionStore();
             var projectionResolver = new KnowledgeProjectionResolver(projectionStore);
-            var behavior = new WorldHudPerformBehavior();
+            var behavior = new WorldHudPresentBehavior();
             var globals = new Dictionary<string, object>
             {
                 [CoreServiceKeys.LocalPlayerEntity.Name] = audience,
                 [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
             };
 
-            bool projected = behavior.TryResolveProjection(world, globals, owner, LODLevel.High, out PerformPhaseResult phase);
+            bool projected = behavior.TryResolveProjection(world, globals, owner, LODLevel.High, out PresentPhaseResult phase);
 
             Assert.That(projected, Is.False);
             Assert.That(phase.ShouldPresent, Is.False);
@@ -1133,7 +1133,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void WorldHudPerformBehavior_DefaultAudienceSuppressesWorldHudWithoutKnowledgeViewer()
+        public void WorldHudPresentBehavior_DefaultAudienceSuppressesWorldHudWithoutKnowledgeViewer()
         {
             using var world = World.Create();
 
@@ -1144,7 +1144,7 @@ namespace Ludots.Tests.Presentation
             ref AttributeBuffer attributes = ref world.Get<AttributeBuffer>(ownerWithAttributes);
             attributes.SetCurrent(healthAttributeId, 100f);
 
-            var behavior = new WorldHudPerformBehavior();
+            var behavior = new WorldHudPresentBehavior();
             var globals = new Dictionary<string, object>();
             ReadOnlySpan<int> requiredAttributes = stackalloc int[1] { healthAttributeId };
 
@@ -1155,7 +1155,7 @@ namespace Ludots.Tests.Presentation
                 LODLevel.High,
                 WorldHudItemKind.Text,
                 ReadOnlySpan<int>.Empty,
-                out PerformPhaseResult noAttributePhase);
+                out PresentPhaseResult noAttributePhase);
             bool projectedWithAttributes = behavior.TryResolveProjection(
                 world,
                 globals,
@@ -1163,7 +1163,7 @@ namespace Ludots.Tests.Presentation
                 LODLevel.High,
                 WorldHudItemKind.Bar,
                 requiredAttributes,
-                out PerformPhaseResult attributePhase);
+                out PresentPhaseResult attributePhase);
 
             Assert.That(projectedWithoutAttributes, Is.False);
             Assert.That(noAttributePhase.ShouldPresent, Is.False);
@@ -1177,7 +1177,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void WorldHudPerformBehavior_ProjectionChecksAllocateZeroAfterWarmup()
+        public void WorldHudPresentBehavior_ProjectionChecksAllocateZeroAfterWarmup()
         {
             using var world = World.Create();
 
@@ -1199,7 +1199,7 @@ namespace Ludots.Tests.Presentation
                 KnowledgePresence.LiveVisible,
                 KnowledgePositionAccess.Live,
                 KnowledgeIdMask256.Empty.WithId(healthAttributeId));
-            var behavior = new WorldHudPerformBehavior();
+            var behavior = new WorldHudPresentBehavior();
             var globals = new Dictionary<string, object>
             {
                 [CoreServiceKeys.LocalPlayerEntity.Name] = audience,
@@ -1229,7 +1229,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void PresenterEmitSystem_WorldBar_UsesWorldHudPerformBehaviorProjection()
+        public void PresenterEmitSystem_WorldBar_UsesWorldHudPresentBehaviorProjection()
         {
             using var world = World.Create();
             TeamManager.Clear();
@@ -1477,7 +1477,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void WorldHudPerformBehavior_ProjectsAttributeHudFromRelationGrantedKnowledge()
+        public void WorldHudPresentBehavior_ProjectsAttributeHudFromRelationGrantedKnowledge()
         {
             using var world = World.Create();
             TeamManager.Clear();
@@ -1516,7 +1516,7 @@ namespace Ludots.Tests.Presentation
                     [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
                 };
 
-                var behavior = new WorldHudPerformBehavior();
+                var behavior = new WorldHudPresentBehavior();
                 ReadOnlySpan<int> requiredAttributes = stackalloc int[1] { durabilityAttributeId };
 
                 bool projected = behavior.TryResolveProjection(
@@ -1526,7 +1526,7 @@ namespace Ludots.Tests.Presentation
                     LODLevel.High,
                     WorldHudItemKind.Bar,
                     requiredAttributes,
-                    out PerformPhaseResult phase);
+                    out PresentPhaseResult phase);
 
                 Assert.That(projected, Is.True);
                 Assert.That(phase.IsHostile, Is.True, "Team hostility remains a styling fact.");
@@ -1542,7 +1542,7 @@ namespace Ludots.Tests.Presentation
         }
 
         [Test]
-        public void WorldHudPerformBehavior_RelationGrantCompletesExistingProjectionAttributeMask()
+        public void WorldHudPresentBehavior_RelationGrantCompletesExistingProjectionAttributeMask()
         {
             using var world = World.Create();
             TeamManager.Clear();
@@ -1588,7 +1588,7 @@ namespace Ludots.Tests.Presentation
                     [CoreServiceKeys.KnowledgeProjectionResolver.Name] = projectionResolver,
                 };
 
-                var behavior = new WorldHudPerformBehavior();
+                var behavior = new WorldHudPresentBehavior();
                 ReadOnlySpan<int> requiredAttributes = stackalloc int[1] { durabilityAttributeId };
 
                 bool projected = behavior.TryResolveProjection(
@@ -1598,7 +1598,7 @@ namespace Ludots.Tests.Presentation
                     LODLevel.High,
                     WorldHudItemKind.Bar,
                     requiredAttributes,
-                    out PerformPhaseResult phase);
+                    out PresentPhaseResult phase);
 
                 Assert.That(projected, Is.True);
                 Assert.That(phase.HasKnowledgeProjection, Is.True);

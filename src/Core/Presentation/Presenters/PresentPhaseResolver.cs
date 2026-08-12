@@ -6,18 +6,18 @@ using Ludots.Core.Presentation.Components;
 namespace Ludots.Core.Presentation.Presenters
 {
     /// <summary>
-    /// Sole translator from visibility/cull and knowledge projection facts into perform phase contracts.
+    /// Sole translator from visibility/cull and knowledge projection facts into present phase contracts.
     /// Team/ownership facts remain available for styling; they do not gate world HUD projection.
     /// </summary>
-    public sealed class PerformPhaseResolver
+    public sealed class PresentPhaseResolver
     {
-        public PerformAudienceContext CreateAudienceContext(
+        public PresentAudienceContext CreateAudienceContext(
             Entity viewer,
             Team? viewerTeam = null,
             PlayerOwner? viewerOwner = null,
             bool revealHidden = false)
         {
-            return new PerformAudienceContext
+            return new PresentAudienceContext
             {
                 Viewer = viewer,
                 ViewerTeam = viewerTeam ?? default,
@@ -28,7 +28,7 @@ namespace Ludots.Core.Presentation.Presenters
             };
         }
 
-        public PerformAudienceContext CreateAudienceContext(World world, Entity viewer, bool revealHidden = false)
+        public PresentAudienceContext CreateAudienceContext(World world, Entity viewer, bool revealHidden = false)
         {
             Team? viewerTeam = null;
             PlayerOwner? viewerOwner = null;
@@ -46,8 +46,8 @@ namespace Ludots.Core.Presentation.Presenters
             return CreateAudienceContext(viewer, viewerTeam, viewerOwner, revealHidden);
         }
 
-        public PerformPhaseInput CreateInput(
-            in PerformAudienceContext audience,
+        public PresentPhaseInput CreateInput(
+            in PresentAudienceContext audience,
             Entity owner,
             in CullState cullState,
             bool hasVision,
@@ -67,11 +67,11 @@ namespace Ludots.Core.Presentation.Presenters
                 hasRelationshipLink);
         }
 
-        public PerformPhaseInput CreateInput(
-            in PerformAudienceContext audience,
+        public PresentPhaseInput CreateInput(
+            in PresentAudienceContext audience,
             Entity owner,
             in CullState cullState,
-            in PerformProjectionFacts projection,
+            in PresentProjectionFacts projection,
             ReadOnlySpan<int> requiredAttributeIds,
             Team? ownerTeam = null,
             PlayerOwner? ownerOwner = null,
@@ -89,12 +89,12 @@ namespace Ludots.Core.Presentation.Presenters
                 hasRelationshipLink);
         }
 
-        private PerformPhaseInput CreateInput(
-            in PerformAudienceContext audience,
+        private PresentPhaseInput CreateInput(
+            in PresentAudienceContext audience,
             Entity owner,
             in CullState cullState,
             bool hasVision,
-            in PerformProjectionFacts projection,
+            in PresentProjectionFacts projection,
             ReadOnlySpan<int> requiredAttributeIds,
             Team? ownerTeam = null,
             PlayerOwner? ownerOwner = null,
@@ -112,7 +112,7 @@ namespace Ludots.Core.Presentation.Presenters
             bool requiresAttributeProjection = !requiredAttributeIds.IsEmpty;
             bool hasAttributeProjection = !requiresAttributeProjection || projection.CanReadAttributes(requiredAttributeIds);
 
-            return new PerformPhaseInput
+            return new PresentPhaseInput
             {
                 Audience = audience,
                 Owner = owner,
@@ -134,10 +134,10 @@ namespace Ludots.Core.Presentation.Presenters
             };
         }
 
-        public PerformPhaseInput CreateInput(
+        public PresentPhaseInput CreateInput(
             World world,
             Entity owner,
-            in PerformAudienceContext audience,
+            in PresentAudienceContext audience,
             bool hasRelationshipLink = false,
             bool hasVision = true)
         {
@@ -168,11 +168,11 @@ namespace Ludots.Core.Presentation.Presenters
             return CreateInput(audience, owner, in cullState, hasVision, ownerTeam, ownerOwner, hasRelationshipLink);
         }
 
-        public PerformPhaseInput CreateInput(
+        public PresentPhaseInput CreateInput(
             World world,
             Entity owner,
-            in PerformAudienceContext audience,
-            in PerformProjectionFacts projection,
+            in PresentAudienceContext audience,
+            in PresentProjectionFacts projection,
             ReadOnlySpan<int> requiredAttributeIds,
             bool hasRelationshipLink = false)
         {
@@ -203,7 +203,7 @@ namespace Ludots.Core.Presentation.Presenters
             return CreateInput(audience, owner, in cullState, in projection, requiredAttributeIds, ownerTeam, ownerOwner, hasRelationshipLink);
         }
 
-        public PerformPhaseResult Resolve(in PerformPhaseInput input)
+        public PresentPhaseResult Resolve(in PresentPhaseInput input)
         {
             bool revealHidden = input.Audience.RevealHidden;
             bool hasVision = revealHidden || input.HasVision ||
@@ -222,7 +222,7 @@ namespace Ludots.Core.Presentation.Presenters
             // Team/ownership remain styling facts only (see IsFriendly/IsHostile/IsOwnedByAudience).
             bool allowWorldHudProjection = shouldPresent && input.HasAttributeProjection;
 
-            return new PerformPhaseResult
+            return new PresentPhaseResult
             {
                 ShouldPresent = shouldPresent,
                 AllowWorldHudProjection = allowWorldHudProjection,

@@ -198,7 +198,7 @@ ability 定义增加 catalog 字段（`castFamily`、`aggregationAliasId` 等）
 |---|---------------------|--------------|------|
 | 1 | graph condition 求值只注入 `E[0]=Source, E[1]=Target`，无 viewer、无 event payload 寄存器（`PresenterRuleSystem.EvaluateGraph`） | 拓扑谓词条件（viewer 是否为 row 域本人 / controls 可达 / 仅 knowledge grant）需要 **viewer 实体寄存器 + relationship/knowledge graph ops + payload 寄存器** | PROV-4b |
 | 2 | `PresenterDefinition.VisibilityCondition` 的 graphProgramId 在 Emit 侧未接线（`PresenterEmitSystem` throw） | per-viewer 可见性（裁判 vs 普通玩家）依赖它 | PROV-4c |
-| 3 | `TeamColorResolver` 硬编码 Team1/Team2 色并直读 `Team`/`PlayerOwner`；`PerformAudienceContext` 直读 `Team`/`PlayerOwner` 组件 | palette/相位改 palette catalog + graph 取值（§5.9）；audience 上下文改拓扑求值 | PROV-6b（并入 CTRL-3b 消费者清单） |
+| 3 | `TeamColorResolver` 硬编码 Team1/Team2 色并直读 `Team`/`PlayerOwner`；`PresentAudienceContext` 直读 `Team`/`PlayerOwner` 组件 | palette/相位改 palette catalog + graph 取值（§5.9）；audience 上下文改拓扑求值 | PROV-6b（并入 CTRL-3b 消费者清单） |
 | 4 | `InlineConditionKind.SourceIsLocalPlayer` 写死 GlobalContext LocalPlayerEntity；WorldHud audience 只取单一 local viewer | 多 viewer（裁判为独立 client anchor 时可行；同进程多 viewport 明确列为非目标） | PROV-5 备注 |
 
 **明确不在本 Epic 修的封闭点**（记录为已知边界，避免范围膨胀）：`PresentationEventKind` / `PresenterCommandKind` / `BehaviorKind` / `AssetKind` 封闭 enum、`InlineConditionKind` 不可 mod 注册（复杂条件一律走 graph）、event payload 固定槽。这些不阻塞本 Epic 的全部 UAT。
@@ -1072,7 +1072,7 @@ CTRL-1..CTRL-10 按原文；修订：
 | ID | 修订 |
 |----|------|
 | CTRL-1b | `controls` 为查询期视图（DEC-1） |
-| CTRL-3b | 依赖 PRE-2；列全消费者迁移清单（GAS targeting / TeamColorResolver / PerformPhaseResolver / lifecycle snapshot / #499 publisher / `SelectionEligibility.CanAcquire` 的 `Team`+`RelationshipFilter` 直读 / CoreInputMod `LocalOrderSourceHelper` 的 NearestEnemyInRange resolver） |
+| CTRL-3b | 依赖 PRE-2；列全消费者迁移清单（GAS targeting / TeamColorResolver / PresentPhaseResolver / lifecycle snapshot / #499 publisher / `SelectionEligibility.CanAcquire` 的 `Team`+`RelationshipFilter` 直读 / CoreInputMod `LocalOrderSourceHelper` 的 NearestEnemyInRange resolver） |
 | CTRL-4b | AssociationControlProfile = 通用「谓词 → 边增删」规则引擎，复用 condition DSL，schema 零业务词汇（DEC-4；无 handback/policy 字段） |
 | CTRL-4c | CollectionWrite 域路由：写入按被指挥单位所属域落到对应 rep，row 记 writerDomain（DEC-4） |
 | CTRL-4d | ControlPlaneView：EntityView domainScope 扩展，controls 可达域组合只读视图；Order fan-out / HUD / PanelRouter 改消费该视图（DEC-4，衔接 ORD-4） |
@@ -1087,7 +1087,7 @@ PROV-1..PROV-8 按原文；修订：
 | PROV-2b | relationship revision → ControlPlaneView / Presenter 重算钩子；viewer 相对语义拓扑现算（DEC-5，取代"失效/驱逐"方案） |
 | PROV-4b | Presenter graph condition 求值上下文扩展：注入 viewer 实体寄存器 + event payload 寄存器 + relationship/knowledge 拓扑谓词 graph ops（DEC-12 #1；现状只有 E[0]=Source, E[1]=Target） |
 | PROV-4c | 接线 `PresenterDefinition.VisibilityCondition` 的 graphProgramId Emit 路径（DEC-12 #2；现状 `PresenterEmitSystem` 直接 throw） |
-| PROV-6b | 退役 `TeamColorResolver` 硬编码 Team1/Team2 色与 `PerformAudienceContext` 的 `Team`/`PlayerOwner` 直读，改 palette catalog + 拓扑求值（DEC-12 #3，并入 CTRL-3b 消费者清单） |
+| PROV-6b | 退役 `TeamColorResolver` 硬编码 Team1/Team2 色与 `PresentAudienceContext` 的 `Team`/`PlayerOwner` 直读，改 palette catalog + 拓扑求值（DEC-12 #3，并入 CTRL-3b 消费者清单） |
 
 ### Phase 5 — Panel Router & 聚合（新增 PNL）
 

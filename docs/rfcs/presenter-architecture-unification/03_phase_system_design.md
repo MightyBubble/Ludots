@@ -29,7 +29,7 @@ Last Updated: 2026-04-16
 - `Presenter` 不是相位真相
 - `Presenter` 也不是 visibility truth
 - `selection` 更不是相位系统
-- `PerformPhaseResult` 也不应变成第二套 presenter 参数黑板
+- `PresentPhaseResult` 也不应变成第二套 presenter 参数黑板
 
 更准确的职责划分应该是：
 
@@ -38,7 +38,7 @@ Last Updated: 2026-04-16
 
 2. 相位系统
 - 负责把这些上游输入折叠成表现层可消费的 phase result
-- 建议由 `PerformPhaseResolver` 统一承担 raw facts -> `PerformPhaseInput` -> `PerformPhaseResult` 的折叠责任
+- 建议由 `PresentPhaseResolver` 统一承担 raw facts -> `PresentPhaseInput` -> `PresentPhaseResult` 的折叠责任
 
 3. `Presenter`
 - 负责根据 phase result 决定哪些 behavior active、哪些 behavior suspended、哪些 output variant 生效
@@ -317,7 +317,7 @@ flowchart LR
 - `Ghosted` -> 幽灵态模型
 - `Hidden` -> 不输出
 
-### `WorldHudPerformBehavior`
+### `WorldHudPresentBehavior`
 
 - `VisibleFull` -> 完整血条/名字/状态
 - `VisibleReduced` -> 简化条
@@ -476,13 +476,13 @@ presenter 只消费结果。
 ## 14. 相关文档
 
 - 主 RFC：
-  - `docs/rfcs/perform-architecture-unification/00_overview.md`
+  - `docs/rfcs/presenter-architecture-unification/00_overview.md`
 - 执行计划：
-  - `docs/rfcs/perform-architecture-unification/01_execution_plan.md`
+  - `docs/rfcs/presenter-architecture-unification/01_execution_plan.md`
 - 交叉复核：
-  - `docs/rfcs/perform-architecture-unification/02_cross_review.md`
+  - `docs/rfcs/presenter-architecture-unification/02_cross_review.md`
 - 开发计划：
-  - `docs/rfcs/perform-architecture-unification/04_development_plan.md`
+  - `docs/rfcs/presenter-architecture-unification/04_development_plan.md`
 - 当前 presenter 架构：
   - `gitbook/architecture/presentation-presenter-current-architecture.md`
 - 选择架构：

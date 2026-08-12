@@ -45,7 +45,7 @@ namespace Ludots.Core.Presentation.Systems
         private readonly PresentationTimingDiagnostics? _timingDiagnostics;
         private readonly List<Entity> _pendingDestroy = new(256);
         private readonly Dictionary<Entity, PresentationRequest> _singleRequestReplayCache = new();
-        private readonly WorldHudPerformBehavior _worldHudBehavior = new();
+        private readonly WorldHudPresentBehavior _worldHudBehavior = new();
 
         public PresenterEmitSystem(
             World world,
@@ -421,7 +421,7 @@ namespace Ludots.Core.Presentation.Systems
                 cull.LOD,
                 kind,
                 definition.RequiredAttributeIds,
-                out PerformPhaseResult phaseResult);
+                out PresentPhaseResult phaseResult);
             bool visible = cull.OwnerCullVisible &&
                            hasProjection &&
                            EvaluateVisibility(definition, state.OwnerEntity) &&

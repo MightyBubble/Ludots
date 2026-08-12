@@ -40,9 +40,9 @@ Last Updated: 2026-04-16
 
 1. 定义 phase contract 草案
 - 建议文件：
-  - `src/Core/Presentation/Perform/PerformAudienceContext.cs`
-  - `src/Core/Presentation/Perform/PerformPhaseInput.cs`
-  - `src/Core/Presentation/Perform/PerformPhaseResult.cs`
+  - `src/Core/Presentation/Perform/PresentAudienceContext.cs`
+  - `src/Core/Presentation/Perform/PresentPhaseInput.cs`
+  - `src/Core/Presentation/Perform/PresentPhaseResult.cs`
 - 要求：
   - 只表达 presenter 需要消费的输入与结果
   - 不直接嵌入 selection 概念
@@ -87,19 +87,19 @@ Last Updated: 2026-04-16
 
 1. 新建 phase resolver
 - 建议文件：
-  - `src/Core/Presentation/Perform/PerformPhaseResolver.cs`
+  - `src/Core/Presentation/Perform/PresentPhaseResolver.cs`
 - 职责：
   - 输入 owner entity
   - 输入 viewer / audience context
   - 读取 team / relationship / cull / vision / debug inputs
-  - 输出 `PerformPhaseResult`
+  - 输出 `PresentPhaseResult`
 
 2. 定义 audience 输入入口
 - 注意：
   - 不要直接拍死成 `PlayerId + TeamId`
   - 应允许至少从 entity 或上游 projection context 进入
 - 可先留为中性上下文类型，例如：
-  - `PerformAudienceContext`
+  - `PresentAudienceContext`
 
 3. 建立最小 phase matrix
 - 第一批只覆盖：
@@ -169,7 +169,7 @@ Last Updated: 2026-04-16
 
 推荐顺序：
 
-1. `WorldHudPerformBehavior`
+1. `WorldHudPresentBehavior`
 2. `IndicatorPerformBehavior`
 3. `SplinePerformBehavior`
 4. `VfxPerformBehavior`
@@ -265,8 +265,8 @@ Last Updated: 2026-04-16
 
 产出：
 
-- `PerformPhaseInput`
-- `PerformPhaseResult`
+- `PresentPhaseInput`
+- `PresentPhaseResult`
 - 文档注释
 - 架构测试
 
@@ -280,7 +280,7 @@ Last Updated: 2026-04-16
 
 产出：
 
-- `PerformPhaseResolver`
+- `PresentPhaseResolver`
 - 最小 audience context
 - 最小 phase matrix
 
@@ -409,10 +409,10 @@ Last Updated: 2026-04-16
 
 交给后续开发者时，建议附上以下阅读顺序：
 
-1. `docs/rfcs/perform-architecture-unification/00_overview.md`
-2. `docs/rfcs/perform-architecture-unification/03_phase_system_design.md`
-3. `docs/rfcs/perform-architecture-unification/04_development_plan.md`
-4. `docs/rfcs/perform-architecture-unification/03_phase_system_design.md` 中的 UAT 验收标准
+1. `docs/rfcs/presenter-architecture-unification/00_overview.md`
+2. `docs/rfcs/presenter-architecture-unification/03_phase_system_design.md`
+3. `docs/rfcs/presenter-architecture-unification/04_development_plan.md`
+4. `docs/rfcs/presenter-architecture-unification/03_phase_system_design.md` 中的 UAT 验收标准
 5. `src/Core/Gameplay/Components/IdentityComponents.cs`
 6. `src/Core/Gameplay/Teams/TeamManager.cs`
 7. `src/Core/Gameplay/Relationships/RelationshipRuntime.cs`
@@ -420,9 +420,9 @@ Last Updated: 2026-04-16
 
 ## 12. 相关文档
 
-- `docs/rfcs/perform-architecture-unification/00_overview.md`
-- `docs/rfcs/perform-architecture-unification/01_execution_plan.md`
-- `docs/rfcs/perform-architecture-unification/03_phase_system_design.md`
+- `docs/rfcs/presenter-architecture-unification/00_overview.md`
+- `docs/rfcs/presenter-architecture-unification/01_execution_plan.md`
+- `docs/rfcs/presenter-architecture-unification/03_phase_system_design.md`
 # 第一性优先级附录
 
 ## 1. 主问题

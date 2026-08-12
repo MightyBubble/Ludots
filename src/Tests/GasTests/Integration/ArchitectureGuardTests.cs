@@ -304,14 +304,14 @@ namespace Ludots.Tests.Architecture.Governance
                 "Core",
                 "Presentation",
                 "Presenters",
-                "WorldHudPerformBehavior.cs");
+                "WorldHudPresentBehavior.cs");
             string phaseResolverPath = Path.Combine(
                 repoRoot,
                 "src",
                 "Core",
                 "Presentation",
                 "Presenters",
-                "PerformPhaseResolver.cs");
+                "PresentPhaseResolver.cs");
 
             string hudSource = File.ReadAllText(hudPath);
             string phaseResolverSource = File.ReadAllText(phaseResolverPath);

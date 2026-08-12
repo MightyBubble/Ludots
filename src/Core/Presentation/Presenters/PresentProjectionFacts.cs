@@ -6,7 +6,7 @@ namespace Ludots.Core.Presentation.Presenters
     /// <summary>
     /// Presenter-facing knowledge facts. Producers resolve knowledge; presenters only consume facts.
     /// </summary>
-    public readonly struct PerformProjectionFacts
+    public readonly struct PresentProjectionFacts
     {
         public readonly bool HasProjection;
         public readonly Entity Source;
@@ -20,7 +20,7 @@ namespace Ludots.Core.Presentation.Presenters
         public readonly int ConfidencePermille;
         public readonly uint Revision;
 
-        public PerformProjectionFacts(in KnowledgeProjection projection)
+        public PresentProjectionFacts(in KnowledgeProjection projection)
         {
             HasProjection = projection.CanKnowEntity;
             Source = projection.Source;

@@ -59,7 +59,7 @@ namespace Ludots.Core.Presentation.Systems
         private readonly SoundRequestBuffer _soundRequests;
         private readonly Func<IVisualHeightmap?> _heightmapProvider;
         private readonly IBoneTransformProvider? _boneTransformProvider;
-        private readonly PerformPhaseResolver _phaseResolver = new();
+        private readonly PresentPhaseResolver _phaseResolver = new();
         private readonly Dictionary<int, SoundTrackingState> _soundTracking = new();
         private Dictionary<int, OwnerAttributeWorkTarget[]> _ownerAttributeWorkIndex;
         private Dictionary<int, OwnerTagWorkTarget[]> _ownerTagWorkIndex;
@@ -2396,19 +2396,19 @@ namespace Ludots.Core.Presentation.Systems
                 return false;
             }
 
-            PerformAudienceContext audience = _phaseResolver.CreateAudienceContext(World, viewer);
+            PresentAudienceContext audience = _phaseResolver.CreateAudienceContext(World, viewer);
             if (!audience.HasViewerTeam && !audience.HasViewerOwner)
             {
                 return false;
             }
 
-            PerformPhaseInput input = _phaseResolver.CreateInput(World, owner, in audience, hasRelationshipLink: true);
+            PresentPhaseInput input = _phaseResolver.CreateInput(World, owner, in audience, hasRelationshipLink: true);
             if (!input.HasTeamRelationship && !input.IsOwnedByAudience)
             {
                 return false;
             }
 
-            PerformPhaseResult result = _phaseResolver.Resolve(in input);
+            PresentPhaseResult result = _phaseResolver.Resolve(in input);
             color = result.IsOwnedByAudience
                 ? TeamColorResolver.Team1Color
                 : result.TeamRelationship switch

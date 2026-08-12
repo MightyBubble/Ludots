@@ -126,7 +126,7 @@ Last Updated: 2026-04-16
 - 建议分类：
   - `ModelPerformBehavior`
   - `AnimatorPerformBehavior`
-  - `WorldHudPerformBehavior`
+  - `WorldHudPresentBehavior`
   - `IndicatorPerformBehavior`
   - `SoundPerformBehavior`
   - `VfxPerformBehavior`

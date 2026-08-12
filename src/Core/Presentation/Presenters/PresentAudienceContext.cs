@@ -4,10 +4,10 @@ using Ludots.Core.Gameplay.Components;
 namespace Ludots.Core.Presentation.Presenters
 {
     /// <summary>
-    /// Normalized audience/viewer context consumed by perform phase resolution.
+    /// Normalized audience/viewer context consumed by present phase resolution.
     /// Raw Team/PlayerOwner components are folded into this contract upstream.
     /// </summary>
-    public struct PerformAudienceContext
+    public struct PresentAudienceContext
     {
         public Entity Viewer;
         public Team ViewerTeam;
@@ -18,7 +18,7 @@ namespace Ludots.Core.Presentation.Presenters
 
         public readonly bool HasViewer => Viewer != Entity.Null;
 
-        public static readonly PerformAudienceContext Default = new()
+        public static readonly PresentAudienceContext Default = new()
         {
             Viewer = Entity.Null,
         };

@@ -7,11 +7,11 @@ namespace Ludots.Core.Presentation.Presenters
 {
     /// <summary>
     /// Minimal upstream phase input contract for presenter-facing projection decisions.
-    /// This struct contains normalized facts only; raw world state translation belongs in PerformPhaseResolver.
+    /// This struct contains normalized facts only; raw world state translation belongs in PresentPhaseResolver.
     /// </summary>
-    public struct PerformPhaseInput
+    public struct PresentPhaseInput
     {
-        public PerformAudienceContext Audience;
+        public PresentAudienceContext Audience;
         public Entity Owner;
         public Team OwnerTeam;
         public PlayerOwner OwnerOwner;
@@ -27,7 +27,7 @@ namespace Ludots.Core.Presentation.Presenters
         public bool HasTeamRelationship;
         public bool IsOwnedByAudience;
         public TeamRelationship TeamRelationship;
-        public PerformProjectionFacts Projection;
+        public PresentProjectionFacts Projection;
         public LODLevel LOD;
     }
 }

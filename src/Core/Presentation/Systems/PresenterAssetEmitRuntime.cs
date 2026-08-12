@@ -21,7 +21,7 @@ namespace Ludots.Core.Presentation.Systems
         private readonly PresenterAnimatorStateBuffer _animatorStates;
         private readonly SoundRequestBuffer _soundRequests;
         private readonly PresenterVisualStableIdTable? _visualStableIds;
-        private readonly WorldHudPerformBehavior _worldHudBehavior = new();
+        private readonly WorldHudPresentBehavior _worldHudBehavior = new();
 
         public PresenterAssetEmitRuntime(
             World world,
@@ -468,7 +468,7 @@ namespace Ludots.Core.Presentation.Systems
                     lod,
                     WorldHudItemKind.Bar,
                     definition.RequiredAttributeIds,
-                    out PerformPhaseResult phaseResult))
+                    out PresentPhaseResult phaseResult))
             {
                 return;
             }
@@ -510,7 +510,7 @@ namespace Ludots.Core.Presentation.Systems
                     lod,
                     WorldHudItemKind.Text,
                     definition.RequiredAttributeIds,
-                    out PerformPhaseResult phaseResult))
+                    out PresentPhaseResult phaseResult))
             {
                 return;
             }

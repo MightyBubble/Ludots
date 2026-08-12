@@ -345,10 +345,10 @@ flowchart LR
 - `src/Core/Presentation/Systems/PresenterRuleSystem.cs`
 - `src/Core/Presentation/Systems/PresenterRuntimeSystem.cs`
 - `src/Core/Presentation/Systems/PresenterEmitSystem.cs`
-- `src/Core/Presentation/Perform/PerformAudienceContext.cs`
-- `src/Core/Presentation/Perform/PerformPhaseInput.cs`
-- `src/Core/Presentation/Perform/PerformPhaseResult.cs`
-- `src/Core/Presentation/Perform/PerformPhaseResolver.cs`
+- `src/Core/Presentation/Perform/PresentAudienceContext.cs`
+- `src/Core/Presentation/Perform/PresentPhaseInput.cs`
+- `src/Core/Presentation/Perform/PresentPhaseResult.cs`
+- `src/Core/Presentation/Perform/PresentPhaseResolver.cs`
 
 这些部分说明：
 
@@ -614,27 +614,27 @@ flowchart LR
 
 ## 11. 相关证据
 
-- `docs/rfcs/perform-architecture-unification/01_execution_plan.md`
-- `docs/rfcs/perform-architecture-unification/02_cross_review.md`
-- `docs/rfcs/perform-architecture-unification/03_phase_system_design.md`
-- `docs/rfcs/perform-architecture-unification/04_development_plan.md`
+- `docs/rfcs/presenter-architecture-unification/01_execution_plan.md`
+- `docs/rfcs/presenter-architecture-unification/02_cross_review.md`
+- `docs/rfcs/presenter-architecture-unification/03_phase_system_design.md`
+- `docs/rfcs/presenter-architecture-unification/04_development_plan.md`
 - `src/Core/Presentation/Systems/PresenterRuleSystem.cs`
 - `src/Core/Presentation/Systems/PresenterRuntimeSystem.cs`
 - `src/Core/Presentation/Systems/PresenterEmitSystem.cs`
 - `src/Core/Presentation/Presenters/PresenterDefinition.cs`
 - `src/Core/Presentation/Presenters/PresenterParamBinding.cs`
 - `src/Core/Presentation/Presenters/PresenterInstanceBuffer.cs`
-- `src/Core/Presentation/Perform/PerformAudienceContext.cs`
-- `src/Core/Presentation/Perform/PerformPhaseInput.cs`
-- `src/Core/Presentation/Perform/PerformPhaseResult.cs`
-- `src/Core/Presentation/Perform/PerformPhaseResolver.cs`
+- `src/Core/Presentation/Perform/PresentAudienceContext.cs`
+- `src/Core/Presentation/Perform/PresentPhaseInput.cs`
+- `src/Core/Presentation/Perform/PresentPhaseResult.cs`
+- `src/Core/Presentation/Perform/PresentPhaseResolver.cs`
 - `src/Core/Presentation/Assets/PresentationBehaviorResolver.cs`
 - `src/Core/Presentation/Assets/PrefabPart.cs`
 - `src/Core/Presentation/Assets/PrefabFinalizationPipeline.cs`
 
 ## 12. 后续文档
 
-- 执行落地方案：`docs/rfcs/perform-architecture-unification/01_execution_plan.md`
-- Subagent 交叉复核摘要：`docs/rfcs/perform-architecture-unification/02_cross_review.md`
-- 相位系统设计稿：`docs/rfcs/perform-architecture-unification/03_phase_system_design.md`
-- 开发计划：`docs/rfcs/perform-architecture-unification/04_development_plan.md`
+- 执行落地方案：`docs/rfcs/presenter-architecture-unification/01_execution_plan.md`
+- Subagent 交叉复核摘要：`docs/rfcs/presenter-architecture-unification/02_cross_review.md`
+- 相位系统设计稿：`docs/rfcs/presenter-architecture-unification/03_phase_system_design.md`
+- 开发计划：`docs/rfcs/presenter-architecture-unification/04_development_plan.md`

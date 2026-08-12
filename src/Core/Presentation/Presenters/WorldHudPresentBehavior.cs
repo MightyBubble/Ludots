@@ -10,11 +10,11 @@ namespace Ludots.Core.Presentation.Presenters
     /// <summary>
     /// World HUD projection consumer.
     /// Knowledge readability is resolved upstream via <see cref="KnowledgeProjectionConsumer"/>;
-    /// this helper only translates presentation/cull facts into the perform phase contract.
+    /// this helper only translates presentation/cull facts into the present phase contract.
     /// </summary>
-    public sealed class WorldHudPerformBehavior
+    public sealed class WorldHudPresentBehavior
     {
-        private readonly PerformPhaseResolver _phaseResolver = new();
+        private readonly PresentPhaseResolver _phaseResolver = new();
 
         public bool TryResolveProjection(
             World world,
@@ -23,12 +23,12 @@ namespace Ludots.Core.Presentation.Presenters
             LODLevel defaultLod,
             WorldHudItemKind itemKind,
             ReadOnlySpan<int> requiredAttributeIds,
-            out PerformPhaseResult phaseResult)
+            out PresentPhaseResult phaseResult)
         {
-            PerformAudienceContext audience = ResolveAudienceContext(world, globals);
+            PresentAudienceContext audience = ResolveAudienceContext(world, globals);
             if (!audience.HasViewer)
             {
-                phaseResult = new PerformPhaseResult
+                phaseResult = new PresentPhaseResult
                 {
                     LOD = defaultLod,
                 };
@@ -36,8 +36,8 @@ namespace Ludots.Core.Presentation.Presenters
                 return false;
             }
 
-            PerformProjectionFacts projection = ResolveProjectionFacts(world, globals, audience.Viewer, owner, requiredAttributeIds);
-            PerformPhaseInput input = _phaseResolver.CreateInput(
+            PresentProjectionFacts projection = ResolveProjectionFacts(world, globals, audience.Viewer, owner, requiredAttributeIds);
+            PresentPhaseInput input = _phaseResolver.CreateInput(
                 world,
                 owner,
                 audience,
@@ -55,7 +55,7 @@ namespace Ludots.Core.Presentation.Presenters
             Entity owner,
             LODLevel defaultLod,
             ReadOnlySpan<int> requiredAttributeIds,
-            out PerformPhaseResult phaseResult)
+            out PresentPhaseResult phaseResult)
         {
             return TryResolveProjection(
                 world,
@@ -72,7 +72,7 @@ namespace Ludots.Core.Presentation.Presenters
             Dictionary<string, object> globals,
             Entity owner,
             LODLevel defaultLod,
-            out PerformPhaseResult phaseResult)
+            out PresentPhaseResult phaseResult)
         {
             return TryResolveProjection(
                 world,
@@ -84,7 +84,7 @@ namespace Ludots.Core.Presentation.Presenters
                 out phaseResult);
         }
 
-        private PerformAudienceContext ResolveAudienceContext(World world, Dictionary<string, object> globals)
+        private PresentAudienceContext ResolveAudienceContext(World world, Dictionary<string, object> globals)
         {
             if (globals != null &&
                 KnowledgeProjectionConsumer.TryResolveViewer(world, globals, Entity.Null, out Entity viewer))
@@ -92,7 +92,7 @@ namespace Ludots.Core.Presentation.Presenters
                 return _phaseResolver.CreateAudienceContext(world, viewer, ResolveRevealHidden(globals));
             }
 
-            return PerformAudienceContext.Default;
+            return PresentAudienceContext.Default;
         }
 
         private static bool ResolveRevealHidden(Dictionary<string, object> globals)
@@ -103,7 +103,7 @@ namespace Ludots.Core.Presentation.Presenters
                    revealHidden;
         }
 
-        private static PerformProjectionFacts ResolveProjectionFacts(
+        private static PresentProjectionFacts ResolveProjectionFacts(
             World world,
             Dictionary<string, object> globals,
             Entity viewer,
@@ -119,7 +119,7 @@ namespace Ludots.Core.Presentation.Presenters
                     requiredAttributeIds,
                     out KnowledgeProjection projection))
             {
-                return new PerformProjectionFacts(in projection);
+                return new PresentProjectionFacts(in projection);
             }
 
             return default;
