@@ -5,6 +5,7 @@ using Arch.Core;
 using Ludots.Adapter.Raylib.Services;
 using Ludots.Client.Raylib.Rendering;
 using Ludots.Core.Components;
+using Ludots.Core.Config;
 using Ludots.Core.Diagnostics;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
@@ -15,6 +16,7 @@ using Ludots.Core.Map;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Camera;
+using Ludots.Core.Presentation.Events;
 using Ludots.Core.Presentation.Systems;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Components;
@@ -276,6 +278,17 @@ namespace Ludots.Adapter.Raylib
                 using var fieldRenderPerformer = new RaylibFieldRenderPerformer();
                 PresentationMaterialRegistry? materials = engine.GetService(CoreServiceKeys.PresentationMaterialRegistry);
                 using var primitiveRenderer = new RaylibPrimitiveRenderer(RaylibPrimitiveRenderMode.Instanced, engine.VFS, materials);
+                using var skyEnvironment = new RaylibSkyEnvironment(engine.VFS, engine.ConfigPipeline);
+                skyEnvironment.LoadDescriptors(engine.ConfigCatalog, engine.ConfigConflictReport);
+                GlobalPresentationEventBuffer? globalPresentationEvents = engine.GetService(CoreServiceKeys.GlobalPresentationEventBuffer);
+                skyEnvironment.BindPhaseSource(globalPresentationEvents, requiredWhenActive: true);
+                skyEnvironment.ApplyDayPhase(frameLighting.DayPhase01);
+                if (globalPresentationEvents != null)
+                {
+                    engine.InsertPresentationSystemBefore<GlobalPresentationEventProjectionSystem>(
+                        new RaylibSkyDayNightLatchSystem(engine.World, globalPresentationEvents, skyEnvironment));
+                }
+
                 RaylibBenchmarkRenderService? benchmarkRenderer = null;
                 if (engine.TryGetService(CoreServiceKeys.PresentationMeshAssetRegistry, out MeshAssetRegistry benchmarkMeshes))
                 {
@@ -461,9 +474,18 @@ namespace Ludots.Adapter.Raylib
                         Rl.BeginDrawing();
                         presentationTiming?.ObserveBeginDrawing(ElapsedMs(beginDrawingStart));
                         Restore3DDepthState();
-                        Rl.ClearBackground(activeMapRequestsDeepBackground
-                            ? new Raylib_cs.Color(6, 10, 16, 255)
-                            : new Raylib_cs.Color(0, 0, 0, 255));
+                        string? activeMapId = engine.CurrentMapSession?.MapId.Value;
+                        skyEnvironment.EnsureActiveForMap(activeMapId);
+                        if (skyEnvironment.IsActive)
+                        {
+                            Rl.ClearBackground(skyEnvironment.ResolveClearColor());
+                        }
+                        else
+                        {
+                            Rl.ClearBackground(activeMapRequestsDeepBackground
+                                ? new Raylib_cs.Color(6, 10, 16, 255)
+                                : new Raylib_cs.Color(0, 0, 0, 255));
+                        }
 
                         var activeCamera = cameraAdapter.Camera;
                         CameraRenderState3D activeCameraState = cameraPresenter.SmoothedRenderState;
@@ -472,7 +494,21 @@ namespace Ludots.Adapter.Raylib
                         BeginCoreMode3D(activeCamera, in activeCameraState);
                         Restore3DDepthState();
 
-                        frameLighting.Evaluate();
+                        if (skyEnvironment.IsActive)
+                        {
+                            skyEnvironment.Draw(in activeCamera, in activeCameraState);
+                            Restore3DDepthState();
+                        }
+
+                        if (skyEnvironment.HasDayPhase)
+                        {
+                            frameLighting.SetDayPhase(skyEnvironment.DayPhase01);
+                        }
+                        else
+                        {
+                            frameLighting.Evaluate();
+                        }
+
                         terrainRenderer.ApplyFrameLighting(frameLighting);
                         visualHeightmapRenderer.ApplyFrameLighting(frameLighting);
                         primitiveRenderer.ApplyFrameLighting(frameLighting);

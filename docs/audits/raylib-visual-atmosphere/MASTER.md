@@ -26,10 +26,10 @@
 
 ### V1 — 天空（P0）
 
-- [ ] 主帧在 `BeginMode3D` 后、不透明物体前绘制天空（立方体/穹顶 + 渐变或 cubemap）
-- [ ] Host 可挂天空资源 URI（渐变条或 HDR→cubemap）；缺资源 **fail-loud**
-- [ ] 消费 `GlobalDayNight` phase（已有事件）驱动白天/夜晚着色；禁止只靠硬编码时刻
-- [ ] 禁止再把「全黑 ClearBackground」当成最终天空
+- [x] 主帧在 `BeginMode3D` 后、不透明物体前绘制天空（立方体/穹顶 + 渐变或 cubemap）
+- [x] Host 可挂天空资源 URI（渐变条或 HDR→cubemap）；缺资源 **fail-loud**
+- [x] 消费 `GlobalDayNight` phase（已有事件）驱动白天/夜晚着色；禁止只靠硬编码时刻
+- [x] 禁止再把「全黑 ClearBackground」当成最终天空
 
 ### V2 — 日照（P0）
 

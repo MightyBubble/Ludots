@@ -78,6 +78,14 @@
       <Link>vegetation_cutout.fs</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="..\..\..\Platforms\Desktop\skybox.vs">
+      <Link>skybox.vs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\..\Platforms\Desktop\skybox.fs">
+      <Link>skybox.fs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Include="..\..\..\Client\Ludots.Client.Raylib\Resources\ambient_day_ramp.json">
       <Link>ambient_day_ramp.json</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
