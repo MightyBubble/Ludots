@@ -80,5 +80,23 @@
       "RaylibVisualAtmosphereShowcaseMod:assets/Textures/rock_albedo.png",
       "RaylibVisualAtmosphereShowcaseMod:assets/Textures/rock_roughness.png"
     ]
+  },
+  {
+    "id": "raylib_visual_atmosphere.beach_path_decal.material.raylib",
+    "assetKind": "Material",
+    "assetId": "raylib_visual_atmosphere.beach_path_decal",
+    "backendId": "raylib",
+    "sourceUris": [
+      "RaylibVisualAtmosphereShowcaseMod:assets/Textures/decal_beach_path.png"
+    ]
+  },
+  {
+    "id": "raylib_visual_atmosphere.sand_scar_decal.material.raylib",
+    "assetKind": "Material",
+    "assetId": "raylib_visual_atmosphere.sand_scar_decal",
+    "backendId": "raylib",
+    "sourceUris": [
+      "RaylibVisualAtmosphereShowcaseMod:assets/Textures/decal_sand_scar.png"
+    ]
   }
 ]

@@ -23,6 +23,7 @@ namespace Ludots.Core.Presentation.AdapterSync
 
         public static bool Supports(in PrimitiveDrawItem item) =>
             item.AssetKind != AssetKind.Surface &&
+            item.AssetKind != AssetKind.Decal &&
             item.Mobility == VisualMobility.Static &&
             Supports(item.RenderPath);
 

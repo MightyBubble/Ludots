@@ -40,12 +40,15 @@ namespace Ludots.Client.Raylib.Rendering
         private Mesh _cubeMesh;
         private Mesh _sphereMesh;
         private Mesh _vfxBillboardMesh;
+        private Mesh _decalQuadMesh;
         private Shader _shader;
         private Shader _skinningShader;
         private Shader _vegetationCutoutShader;
         private Material _material;
         private Material _vfxMaterial;
+        private Material _decalMaterial;
         private bool _vfxMaterialLoaded;
+        private bool _decalMaterialLoaded;
         private bool _vegetationCutoutShaderReady;
         private readonly RaylibEffectShaderRegistry _effectShaders = new RaylibEffectShaderRegistry();
         private int _locColDiffuse;
@@ -261,6 +264,11 @@ namespace Ludots.Client.Raylib.Rendering
                     continue;
                 }
 
+                if (TryDrawDecalItem(in item, scaleMul))
+                {
+                    continue;
+                }
+
                 if (skinnedBatchActive && item.RenderPath.IsSkinnedLane())
                 {
                     LastImmediateSkippedCount++;
@@ -305,6 +313,11 @@ namespace Ludots.Client.Raylib.Rendering
                 if (IsHostSurfaceLane(in item))
                 {
                     LastImmediateSkippedCount++;
+                    continue;
+                }
+
+                if (TryDrawDecalItem(in item, scaleMul))
+                {
                     continue;
                 }
 
@@ -364,6 +377,11 @@ namespace Ludots.Client.Raylib.Rendering
                     continue;
                 }
 
+                if (TryDrawDecalItem(in item, scaleMul))
+                {
+                    continue;
+                }
+
                 if (TryDrawPrototypeSkinned(item, meshes, scaleMul))
                 {
                     continue;
@@ -382,6 +400,27 @@ namespace Ludots.Client.Raylib.Rendering
             }
 
             FlushInstancedBatches();
+        }
+
+        private bool TryDrawDecalItem(in PrimitiveDrawItem item, float scaleMul)
+        {
+            if (item.AssetKind != AssetKind.Decal)
+            {
+                return false;
+            }
+
+            EnsureInitialized();
+            LastDecalVisualCount++;
+            TotalDecalVisualCount++;
+            DrawTexturedDecal(
+                item.Position,
+                item.Rotation,
+                item.Scale * scaleMul,
+                item.Color,
+                item.MaterialId,
+                size: Vector2.One,
+                stableId: item.StableId);
+            return true;
         }
 
         private void SubmitAssetRecursive(int meshAssetId, Vector3 position, Quaternion rotation, Vector3 scale, Vector4 color, Camera3D camera, MeshAssetRegistry meshes, in PrefabFinalizationContext finalizationContext, int materialId = 0)
@@ -789,35 +828,177 @@ namespace Ludots.Client.Raylib.Rendering
 
         private void DrawDecalVisual(in PrefabFinalizedVisual visual)
         {
-            Vector2 size = ResolveDecalSize(in visual);
-            Quaternion rotation = WorldPlane2D.NormalizeOrIdentity(visual.Rotation);
-            Vector4 materialAccent = BlendSemanticColor(visual.Color, visual.MaterialId, 0.45f);
-            Vector4 edgeColor = MultiplyColor(materialAccent, 1.18f, 1.18f, 0.92f, 0.92f);
-            Vector4 crossColor = MultiplyColor(materialAccent, 0.86f, 1.05f, 1.18f, 0.78f);
-            float lift = MathF.Max(0.01f, MathF.Max(MathF.Abs(visual.Scale.Y), 0.05f) * 0.04f);
-            Vector3 center = visual.Position + Vector3.Transform(Vector3.UnitY * lift, rotation);
-            float halfWidth = MathF.Max(0.05f, size.X * 0.5f);
-            float halfDepth = MathF.Max(0.05f, size.Y * 0.5f);
+            DrawTexturedDecal(
+                visual.Position,
+                visual.Rotation,
+                visual.Scale,
+                visual.Color,
+                visual.MaterialId,
+                visual.Size,
+                visual.StableId);
+        }
 
-            Span<Vector3> corners = stackalloc Vector3[4];
-            corners[0] = TransformLocal(center, rotation, new Vector3(-halfWidth, 0f, -halfDepth));
-            corners[1] = TransformLocal(center, rotation, new Vector3(halfWidth, 0f, -halfDepth));
-            corners[2] = TransformLocal(center, rotation, new Vector3(halfWidth, 0f, halfDepth));
-            corners[3] = TransformLocal(center, rotation, new Vector3(-halfWidth, 0f, halfDepth));
+        private void DrawTexturedDecal(
+            in Vector3 position,
+            in Quaternion rotation,
+            in Vector3 scale,
+            in Vector4 color,
+            int materialId,
+            in Vector2 size,
+            int stableId)
+        {
+            EnsureInitialized();
+            if (materialId <= 0)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} Decal stableId={stableId} requires a positive materialId with host albedo.");
+            }
 
-            Color edge = ToRaylibColor(edgeColor);
-            Rl.DrawLine3D(corners[0], corners[1], edge);
-            Rl.DrawLine3D(corners[1], corners[2], edge);
-            Rl.DrawLine3D(corners[2], corners[3], edge);
-            Rl.DrawLine3D(corners[3], corners[0], edge);
+            if (_materialHostBinder == null)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} Decal stableId={stableId} materialId={materialId} requires {nameof(RaylibMaterialHostBinder)}.");
+            }
 
-            Color cross = ToRaylibColor(crossColor);
-            Rl.DrawLine3D(corners[0], corners[2], cross);
-            Rl.DrawLine3D(corners[1], corners[3], cross);
+            EnsureDecalResources();
+            if (!_materialHostBinder.TryApplyHostMaps(ref _decalMaterial, materialId))
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} Decal stableId={stableId} materialId={materialId} has no host albedo binding in Presentation/host_assets.json.");
+            }
 
-            Vector3 up = Vector3.Normalize(Vector3.Transform(Vector3.UnitY, rotation));
-            Vector3 markerTop = center + (up * MathF.Max(0.04f, MathF.Min(size.X, size.Y) * 0.08f));
-            Rl.DrawLine3D(center, markerTop, edge);
+            Vector2 resolvedSize = ResolveDecalSize(size, scale);
+            Quaternion normalized = WorldPlane2D.NormalizeOrIdentity(rotation);
+            float lift = MathF.Max(0.02f, MathF.Max(MathF.Abs(scale.Y), 0.05f) * 0.05f);
+            Vector3 center = position + Vector3.Transform(Vector3.UnitY * lift, normalized);
+            MaterialBlendMode blendMode = ResolveMaterialBlendMode(materialId, MaterialBlendMode.AlphaBlend);
+            if (blendMode == MaterialBlendMode.Opaque)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} Decal stableId={stableId} materialId={materialId} must use AlphaBlend or Cutout, not Opaque.");
+            }
+
+            int albedoIndex = (int)Rl.MaterialMapIndex.MATERIAL_MAP_ALBEDO;
+            _decalMaterial.maps[albedoIndex].color = ToRaylibColor(color);
+
+            Matrix4x4 transform =
+                Matrix4x4.CreateScale(resolvedSize.X, 1f, resolvedSize.Y) *
+                Matrix4x4.CreateFromQuaternion(normalized) *
+                Matrix4x4.CreateTranslation(center);
+
+            bool doubleSided = IsMaterialDoubleSided(materialId);
+            if (doubleSided)
+            {
+                Rl.rlDisableBackfaceCulling();
+            }
+
+            bool blending = TryBeginAuthorBlendMode(blendMode);
+            bool cutoutShader = false;
+            try
+            {
+                if (blendMode == MaterialBlendMode.Cutout)
+                {
+                    EnsureVegetationCutoutShader();
+                    float cutoff = DefaultVegetationAlphaCutoff;
+                    Vector4 colDiffuse = Vector4.One;
+                    Rl.SetShaderValue(
+                        _vegetationCutoutShader,
+                        _locVegetationCutoutColDiffuse,
+                        &colDiffuse,
+                        (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC4);
+                    Rl.SetShaderValue(
+                        _vegetationCutoutShader,
+                        _locVegetationCutoutAlphaCutoff,
+                        &cutoff,
+                        (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+                    _decalMaterial.shader = _vegetationCutoutShader;
+                    cutoutShader = true;
+                }
+                else
+                {
+                    _decalMaterial.shader = default;
+                }
+
+                Rl.DrawMesh(_decalQuadMesh, _decalMaterial, RaylibMatrix.FromSystemNumerics(transform));
+            }
+            finally
+            {
+                if (cutoutShader)
+                {
+                    _decalMaterial.shader = default;
+                }
+
+                if (blending)
+                {
+                    Rl.EndBlendMode();
+                }
+
+                if (doubleSided)
+                {
+                    Rl.rlEnableBackfaceCulling();
+                }
+
+                _materialHostBinder.DetachOwnedMaps(ref _decalMaterial);
+            }
+        }
+
+        private void EnsureDecalResources()
+        {
+            if (_decalQuadMesh.vertexCount == 0)
+            {
+                _decalQuadMesh = CreateCenteredDecalQuadMesh();
+            }
+
+            if (!_decalMaterialLoaded)
+            {
+                _decalMaterial = Rl.LoadMaterialDefault();
+                _decalMaterialLoaded = true;
+            }
+        }
+
+        private static Mesh CreateCenteredDecalQuadMesh()
+        {
+            Mesh mesh = new Mesh
+            {
+                vertexCount = 4,
+                triangleCount = 2,
+            };
+
+            mesh.vertices = (float*)Rl.MemAlloc(sizeof(float) * 12);
+            mesh.normals = (float*)Rl.MemAlloc(sizeof(float) * 12);
+            mesh.texcoords = (float*)Rl.MemAlloc(sizeof(float) * 8);
+            mesh.indices = (ushort*)Rl.MemAlloc(sizeof(ushort) * 6);
+
+            Span<float> vertices = new(mesh.vertices, 12);
+            vertices[0] = -0.5f; vertices[1] = 0f; vertices[2] = -0.5f;
+            vertices[3] = 0.5f; vertices[4] = 0f; vertices[5] = -0.5f;
+            vertices[6] = 0.5f; vertices[7] = 0f; vertices[8] = 0.5f;
+            vertices[9] = -0.5f; vertices[10] = 0f; vertices[11] = 0.5f;
+
+            Span<float> normals = new(mesh.normals, 12);
+            for (int i = 0; i < 4; i++)
+            {
+                int offset = i * 3;
+                normals[offset] = 0f;
+                normals[offset + 1] = 1f;
+                normals[offset + 2] = 0f;
+            }
+
+            Span<float> uvs = new(mesh.texcoords, 8);
+            uvs[0] = 0f; uvs[1] = 0f;
+            uvs[2] = 1f; uvs[3] = 0f;
+            uvs[4] = 1f; uvs[5] = 1f;
+            uvs[6] = 0f; uvs[7] = 1f;
+
+            mesh.indices[0] = 0;
+            mesh.indices[1] = 1;
+            mesh.indices[2] = 2;
+            mesh.indices[3] = 0;
+            mesh.indices[4] = 2;
+            mesh.indices[5] = 3;
+
+            Rl.UploadMesh(ref mesh, false);
+            return mesh;
         }
 
         private void DrawVfxVisual(in PrefabFinalizedVisual visual, Camera3D camera)
@@ -1753,10 +1934,15 @@ namespace Ludots.Client.Raylib.Rendering
 
         private static Vector2 ResolveDecalSize(in PrefabFinalizedVisual visual)
         {
-            float width = MathF.Max(0.1f, MathF.Abs(visual.Size.X));
-            float depth = MathF.Max(0.1f, MathF.Abs(visual.Size.Y));
-            float scaleX = MathF.Max(0.1f, MathF.Abs(visual.Scale.X));
-            float scaleZ = MathF.Max(0.1f, MathF.Abs(visual.Scale.Z));
+            return ResolveDecalSize(visual.Size, visual.Scale);
+        }
+
+        private static Vector2 ResolveDecalSize(in Vector2 size, in Vector3 scale)
+        {
+            float width = MathF.Max(0.1f, MathF.Abs(size.X));
+            float depth = MathF.Max(0.1f, MathF.Abs(size.Y));
+            float scaleX = MathF.Max(0.1f, MathF.Abs(scale.X));
+            float scaleZ = MathF.Max(0.1f, MathF.Abs(scale.Z));
             return new Vector2(width * scaleX, depth * scaleZ);
         }
 
@@ -2793,6 +2979,14 @@ namespace Ludots.Client.Raylib.Rendering
                 _vfxMaterialLoaded = false;
             }
 
+            if (_decalMaterialLoaded)
+            {
+                _materialHostBinder?.DetachOwnedMaps(ref _decalMaterial);
+                _decalMaterial.shader = default;
+                Rl.UnloadMaterial(_decalMaterial);
+                _decalMaterialLoaded = false;
+            }
+
             _gpuSkinnedModelCache.UnloadAll(model => _materialHostBinder?.DetachOwnedMaps(model));
             _gpuSkinnedModelCache.Dispose();
             _effectShaders.Dispose();
@@ -2803,6 +2997,7 @@ namespace Ludots.Client.Raylib.Rendering
             if (_cubeMesh.vertexCount > 0) Rl.UnloadMesh(_cubeMesh);
             if (_sphereMesh.vertexCount > 0) Rl.UnloadMesh(_sphereMesh);
             if (_vfxBillboardMesh.vertexCount > 0) Rl.UnloadMesh(_vfxBillboardMesh);
+            if (_decalQuadMesh.vertexCount > 0) Rl.UnloadMesh(_decalQuadMesh);
             _material.shader = default;
             Rl.UnloadMaterial(_material);
             Rl.UnloadShader(_shader);

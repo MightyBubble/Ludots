@@ -249,14 +249,15 @@
         "kind": "AssetBinding",
         "activeByDefault": true,
         "assetBinding": {
-          "assetKind": "GroundOverlay",
-          "assetId": "Ring",
-          "renderPath": "None",
+          "assetKind": "Decal",
+          "assetId": "raylib_visual_atmosphere.beach_path_decal",
+          "materialId": "raylib_visual_atmosphere.beach_path_decal",
+          "renderPath": "StaticMesh",
           "mobility": "Static",
-          "localScale": [4.2, 3.1, 0.08]
+          "localScale": [4.8, 1.0, 2.6]
         },
         "style": {
-          "color": [0.62, 0.42, 0.22, 0.45]
+          "color": [1.0, 0.96, 0.88, 0.92]
         }
       },
       {
@@ -265,7 +266,7 @@
         "activeByDefault": true,
         "grounding": {
           "mode": "AlignToSurface",
-          "offset": 0.04,
+          "offset": 0.05,
           "updatePolicy": "Once"
         }
       }
@@ -279,14 +280,15 @@
         "kind": "AssetBinding",
         "activeByDefault": true,
         "assetBinding": {
-          "assetKind": "GroundOverlay",
-          "assetId": "Ring",
-          "renderPath": "None",
+          "assetKind": "Decal",
+          "assetId": "raylib_visual_atmosphere.sand_scar_decal",
+          "materialId": "raylib_visual_atmosphere.sand_scar_decal",
+          "renderPath": "StaticMesh",
           "mobility": "Static",
-          "localScale": [3.4, 2.4, 0.08]
+          "localScale": [3.6, 1.0, 2.4]
         },
         "style": {
-          "color": [0.48, 0.30, 0.14, 0.50]
+          "color": [0.95, 0.88, 0.78, 0.95]
         }
       },
       {
@@ -295,7 +297,7 @@
         "activeByDefault": true,
         "grounding": {
           "mode": "AlignToSurface",
-          "offset": 0.04,
+          "offset": 0.05,
           "updatePolicy": "Once"
         }
       }

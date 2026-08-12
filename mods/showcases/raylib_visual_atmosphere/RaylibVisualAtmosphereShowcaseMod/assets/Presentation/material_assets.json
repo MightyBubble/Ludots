@@ -22,5 +22,15 @@
   {
     "id": "raylib_visual_atmosphere.rock",
     "domain": "Surface"
+  },
+  {
+    "id": "raylib_visual_atmosphere.beach_path_decal",
+    "domain": "Surface",
+    "flags": ["AlphaBlend", "DoubleSided"]
+  },
+  {
+    "id": "raylib_visual_atmosphere.sand_scar_decal",
+    "domain": "Surface",
+    "flags": ["AlphaBlend", "DoubleSided"]
   }
 ]

@@ -14,13 +14,14 @@ Updated by agents. Use: `pending` | `in_progress` | `blocked` | `done`.
 | V8 | Minimal directional MR (no IBL) | done | cloud-agent | Host `sourceUris[0..3]`; GGX in instancing/skinning; normals need TBN (skipped) |
 | V9 | Anti-tiling | done | cloud-agent | hash-rotated UV + IGN in `terrain.fs` |
 | V10 | Real weight layers | done | cloud-agent | baked RGBA control map (R sand/G grass/B dirt/A rock); not height-band fake when URI set |
-| V11 | Decals (GroundOverlay) | done | cloud-agent | beach Ring marks via blacksmith pattern; 12 placements |
+| V11 | Textured Decals | done | cloud-agent | performer `AssetKind.Decal` XZ textured quads + host albedo; 12 beach placements |
 
 ## Blockers
 
 | Item | Why |
 |------|-----|
-| Full IBL / cascaded shadows / projection decals | MASTER P2 / performer-raylib-uat: no native projected decals; GroundOverlay is the reused low-fi channel |
+| Full IBL / cascaded shadows | MASTER P2; heavy host work beyond current directional MR |
+| Mesh-projected decals (clip volumes) | Not shipped; current lane is world-aligned textured quads on AlignToSurface |
 | Normal-mapped PBR | Meshes lack tangents; binder loads normal URI but shader skips without TBN |
 
 ## Evidence

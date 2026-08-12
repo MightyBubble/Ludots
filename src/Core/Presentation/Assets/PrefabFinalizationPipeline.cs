@@ -310,17 +310,25 @@ namespace Ludots.Core.Presentation.Assets
             switch (part.Kind)
             {
                 case PrefabVisualPartKind.Decal:
-                    ValidatePartContract(part, stableId);
+                {
+                    int decalMaterialId = part.MaterialId > 0 ? part.MaterialId : instanceMaterialOverrideId;
+                    if (decalMaterialId <= 0)
+                    {
+                        throw new InvalidOperationException(
+                            $"Prefab decal part stableId={stableId} must declare a positive materialId or receive a performer material override.");
+                    }
+
                     output.Add(PrefabFinalizedVisual.Decal(
                         stableId,
                         position,
                         rotation,
                         scale,
                         color,
-                        part.MaterialId,
+                        decalMaterialId,
                         part.Size,
                         part.AlignToSurface));
                     return;
+                }
 
                 case PrefabVisualPartKind.Vfx:
                     ValidatePartContract(part, stableId);

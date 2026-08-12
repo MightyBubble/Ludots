@@ -90,7 +90,7 @@ internal sealed class RaylibVisualAtmosphereShowcaseRuntime : IBenchmarkSceneCon
             if (decals <= 0)
             {
                 throw new InvalidOperationException(
-                    "Raylib visual atmosphere island requires GroundOverlay beach decal placements to spawn.");
+                    "Raylib visual atmosphere island requires textured Decal beach placements to spawn.");
             }
 
             _decalsSpawned = true;

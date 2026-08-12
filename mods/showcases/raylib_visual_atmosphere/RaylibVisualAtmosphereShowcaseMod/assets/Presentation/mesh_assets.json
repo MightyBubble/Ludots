@@ -19,5 +19,27 @@
     "id": "raylib_visual_atmosphere.rock",
     "type": "Primitive",
     "primitiveKind": "Cube"
+  },
+  {
+    "id": "raylib_visual_atmosphere.beach_path_decal",
+    "type": "Prefab",
+    "parts": [
+      {
+        "kind": "Decal",
+        "size": [1, 1],
+        "alignToSurface": true
+      }
+    ]
+  },
+  {
+    "id": "raylib_visual_atmosphere.sand_scar_decal",
+    "type": "Prefab",
+    "parts": [
+      {
+        "kind": "Decal",
+        "size": [1, 1],
+        "alignToSurface": true
+      }
+    ]
   }
 ]
