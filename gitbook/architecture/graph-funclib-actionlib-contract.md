@@ -1,6 +1,6 @@
 # 图复用库合同补丁：FuncLib / ActionLib 与 Kind 表达力
 
-状态：合同草案（实现未落地；落地前以本页 + [图分层](graph-layering-flow-and-behavior.md) 对照评审）。  
+状态：已落地（`GAS/action_lib.json` + `GraphActionCatalog`；FuncLib `purity`/禁 Yield；Effect `BranchBool` + 线性 `InvokeScript`；L2 Showcase 走 ActionLib；next-chain `GraphCompiler` 已移除）。对照评审仍以本页 + [图分层](graph-layering-flow-and-behavior.md) 为准。  
 关联：#861 作者 SSOT / FuncLib；L0/L1/L2 分层；效果生命周期（Duration/Period）。
 
 ---

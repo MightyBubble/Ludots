@@ -14,10 +14,11 @@ Ludots 的图能力分成三层，对标 Paradox **FlowCanvas（细流程）+ No
 
 ```text
 L2 BehaviorTree / HFSM / LevelDirector ← 粗节点拓扑（Core runtime 已落地）
-        │ 只引用 GraphProgramRegistry GraphId（禁止旁路 Dictionary/内嵌 Compile）
+        │ ActionLib：GAS/action_lib.json → GraphActionCatalog（叶子/切片宿主解析）
+        │ 只引用 ActionLib / GraphProgramRegistry GraphId（禁止旁路 Dictionary/内嵌 Compile）
 L1 全 Kind 作者 SSOT ← GraphControlFlowDocument（controlEdges + valueEdges）
         │ Kind → GraphProgramAuthoringFrontDoor → GraphControlFlowCompiler
-        │ Func Lib：GAS/func_lib.json → GraphFunctionCatalog（InvokeScript.functionName）
+        │ Func Lib：GAS/func_lib.json → GraphFunctionCatalog（InvokeScript.functionName，pure）
 L0 GraphInstruction + handler table + Execute / ExecuteSlice
 ```
 
