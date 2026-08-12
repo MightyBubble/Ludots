@@ -1,0 +1,1130 @@
+{
+  "schemaVersion": 1,
+  "description": "P2 GraphNodeOp coverage SSOT for Epic #915. Each executable opcode must eventually reach status=covered with unitTestFilter and showcaseId.",
+  "entries": [
+    {
+      "op": "ConstBool",
+      "authorableKinds": null,
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "ConstInt",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Script",
+        "Validation"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "ConstFloat",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Query",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "LoadCaster",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Query",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "LoadExplicitTarget",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "Jump",
+      "authorableKinds": [
+        "Script"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "JumpIfFalse",
+      "authorableKinds": [
+        "Effect",
+        "Script"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "LoadAttribute",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "AddFloat",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "MulFloat",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "SubFloat",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "DivFloat",
+      "authorableKinds": null,
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "MinFloat",
+      "authorableKinds": null,
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "MaxFloat",
+      "authorableKinds": null,
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "ClampFloat",
+      "authorableKinds": null,
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "AbsFloat",
+      "authorableKinds": null,
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "NegFloat",
+      "authorableKinds": null,
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "RandomFloat01",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "AddInt",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Script",
+        "Validation"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "CompareGtFloat",
+      "authorableKinds": null,
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "CompareLtInt",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Script",
+        "Validation"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "CompareEqInt",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "HasTag",
+      "authorableKinds": null,
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "CompareEqEntity",
+      "authorableKinds": null,
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "SelectTagInMask",
+      "authorableKinds": null,
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "LookupTagDisplayToken",
+      "authorableKinds": null,
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "SelectEntity",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "QueryRadius",
+      "authorableKinds": null,
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "QuerySortStable",
+      "authorableKinds": null,
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "QueryLimit",
+      "authorableKinds": null,
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "QueryCone",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "QueryRectangle",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "QueryLine",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "QueryFilterNotEntity",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "QueryFilterLayer",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "QueryFilterRelationship",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "AggCount",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Query",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "AggMinByDistance",
+      "authorableKinds": null,
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "TargetListGet",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "QueryHexRange",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "QueryHexRing",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "QueryHexNeighbors",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "ApplyEffectTemplate",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "FanOutApplyEffect",
+      "authorableKinds": null,
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "ApplyEffectDynamic",
+      "authorableKinds": null,
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "FanOutApplyEffectDynamic",
+      "authorableKinds": null,
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "RemoveEffectTemplate",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "FanOutDispatchEffect",
+      "authorableKinds": null,
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "FanOutDispatchEffectDynamic",
+      "authorableKinds": null,
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "ModifyAttributeAdd",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "SendEvent",
+      "authorableKinds": null,
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "ReadBlackboardFloat",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "ReadBlackboardInt",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "ReadBlackboardEntity",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "WriteBlackboardFloat",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "WriteBlackboardInt",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "WriteBlackboardEntity",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "LoadConfigFloat",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "LoadConfigInt",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "LoadConfigEffectId",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "LoadContextSource",
+      "authorableKinds": null,
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "LoadContextTarget",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "LoadContextTargetContext",
+      "authorableKinds": null,
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "LoadSelfAttribute",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "WriteSelfAttribute",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "RelationshipEnsureLink",
+      "authorableKinds": null,
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "RelationshipRemoveLink",
+      "authorableKinds": null,
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "RelationshipSetMetric",
+      "authorableKinds": null,
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "RelationshipAddMetric",
+      "authorableKinds": null,
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "RelationshipGetMetric",
+      "authorableKinds": null,
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "RelationshipHasFlag",
+      "authorableKinds": null,
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "RelationshipSetFlag",
+      "authorableKinds": null,
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "RelationshipQueryOutgoing",
+      "authorableKinds": [
+        "Query"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "RelationshipQueryIncoming",
+      "authorableKinds": [
+        "Query"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "RelationshipQueryMutual",
+      "authorableKinds": [
+        "Query"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "RelationshipQueryBetweenPair",
+      "authorableKinds": null,
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "RelationshipFilterMetricRange",
+      "authorableKinds": [
+        "Query"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "RelationshipFilterFlag",
+      "authorableKinds": [
+        "Query"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "RelationshipSortByMetric",
+      "authorableKinds": [
+        "Query"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "RelationshipAggSumMetric",
+      "authorableKinds": [
+        "Query"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "RelationshipAggMaxMetric",
+      "authorableKinds": [
+        "Query"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "RelationshipAggAverageMetric",
+      "authorableKinds": [
+        "Query"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "QueryAllMapEntities",
+      "authorableKinds": [
+        "Query"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "QueryFromCollection",
+      "authorableKinds": [
+        "Query"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "QueryFilterTeam",
+      "authorableKinds": [
+        "Query"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "QueryFilterTemplate",
+      "authorableKinds": [
+        "Query"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "QueryFilterAttributeRange",
+      "authorableKinds": [
+        "Query"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "QueryFilterTagAny",
+      "authorableKinds": [
+        "Query"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "QueryFilterTagNone",
+      "authorableKinds": [
+        "Query"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "QuerySortByAttribute",
+      "authorableKinds": [
+        "Query"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "AggSumAttribute",
+      "authorableKinds": [
+        "Query"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "AggAverageAttribute",
+      "authorableKinds": [
+        "Query"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "AggMaxAttribute",
+      "authorableKinds": [
+        "Query"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "AggMinAttribute",
+      "authorableKinds": [
+        "Query"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "AggMaxEntityByAttribute",
+      "authorableKinds": [
+        "Query"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "AggMinEntityByAttribute",
+      "authorableKinds": [
+        "Query"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "RelationshipAggMinMetric",
+      "authorableKinds": [
+        "Query"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "RelationshipAggMaxEntityByMetric",
+      "authorableKinds": [
+        "Query"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "RelationshipAggMinEntityByMetric",
+      "authorableKinds": [
+        "Query"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "RelationshipHasLink",
+      "authorableKinds": null,
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "BeginLifecycleTransaction",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "InvokeBuiltin",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "LoadTargetPosX",
+      "authorableKinds": null,
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "LoadTargetPosY",
+      "authorableKinds": null,
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "ClampTargetToRange",
+      "authorableKinds": null,
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "IsPointInCircle",
+      "authorableKinds": null,
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "SnapToNearestInCollection",
+      "authorableKinds": null,
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "SnapToNearestGraphEdge",
+      "authorableKinds": null,
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "LoadViewer",
+      "authorableKinds": null,
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "LoadEventPayloadInt",
+      "authorableKinds": null,
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "LoadEventPayloadFloat",
+      "authorableKinds": null,
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "ControlDomainResolve",
+      "authorableKinds": null,
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "ControlDomainControls",
+      "authorableKinds": null,
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "KnowledgeHasProjection",
+      "authorableKinds": null,
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "missing"
+    },
+    {
+      "op": "Call",
+      "authorableKinds": [
+        "Script"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "Return",
+      "authorableKinds": [
+        "Script"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "Yield",
+      "authorableKinds": [
+        "Script"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "HaltReturnInt",
+      "authorableKinds": [
+        "Script"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "InvokeScript",
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Score",
+        "Script",
+        "Validation"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    },
+    {
+      "op": "MoveInt",
+      "authorableKinds": [
+        "Script"
+      ],
+      "unitTestFilter": null,
+      "showcaseId": null,
+      "status": "runtime-only"
+    }
+  ]
+}
