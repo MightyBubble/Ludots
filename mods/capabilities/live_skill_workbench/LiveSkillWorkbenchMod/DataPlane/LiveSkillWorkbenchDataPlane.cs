@@ -154,16 +154,26 @@ public sealed class LiveSkillWorkbenchCommandHandler : IWebUiCommandHandler
 
 	private WebUiCommandResult HandlePrecheck()
 	{
-		LiveSkillWorkbenchDiagnosticDto diagnostic = _runtime.CreatePrecheckNotSupportedDiagnostic();
-		_runtime.RecordDiagnostic(diagnostic);
-		return WebUiCommandResult.Fail(diagnostic.Code, diagnostic.Message);
+		if (!_runtime.TryPrecheck(out LiveApplyClassificationReport? report, out LiveSkillWorkbenchDiagnosticDto? error))
+		{
+			LiveSkillWorkbenchDiagnosticDto diagnostic = error ?? _runtime.CreatePrecheckNotSupportedDiagnostic();
+			return WebUiCommandResult.Fail(diagnostic.Code, diagnostic.Message);
+		}
+
+		_ = report;
+		return WebUiCommandResult.Ok();
 	}
 
 	private WebUiCommandResult HandleApply()
 	{
-		LiveSkillWorkbenchDiagnosticDto diagnostic = _runtime.CreateApplyNotSupportedDiagnostic();
-		_runtime.RecordDiagnostic(diagnostic);
-		return WebUiCommandResult.Fail(diagnostic.Code, diagnostic.Message);
+		if (!_runtime.TryApplyNextCast(out LiveApplyCommitResult commit, out LiveSkillWorkbenchDiagnosticDto? error))
+		{
+			LiveSkillWorkbenchDiagnosticDto diagnostic = error ?? _runtime.CreateApplyNotSupportedDiagnostic();
+			return WebUiCommandResult.Fail(diagnostic.Code, diagnostic.Message);
+		}
+
+		_ = commit;
+		return WebUiCommandResult.Ok();
 	}
 }
 

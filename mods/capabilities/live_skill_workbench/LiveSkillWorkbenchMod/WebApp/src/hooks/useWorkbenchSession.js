@@ -222,14 +222,17 @@ export function useWorkbenchSession() {
   }, [boot.mode]);
 
   const precheck = useCallback(
-    () => runUnsupportedCommand(LSW_COMMANDS.precheck, '预检（候选 GAS 编译）尚未接入（#618）。'),
+    () => runUnsupportedCommand(
+      LSW_COMMANDS.precheck,
+      '预览模式：预检不会写真实运行时；宿主连接后走 LiveGasEditPipeline。'
+    ),
     [runUnsupportedCommand]
   );
 
   const applyNextCast = useCallback(
     () => runUnsupportedCommand(
       LSW_COMMANDS.applyNextCast,
-      '尚未预检；不会应用。应用到下一次释放尚未接入（#618/#619）。'
+      '预览模式：应用不会写真实运行时；宿主连接后走安全帧 NextCast。'
     ),
     [runUnsupportedCommand]
   );

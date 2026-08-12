@@ -1,7 +1,11 @@
 /** Visible Chinese labels for Data Plane apply-mode codes. Codes stay unchanged in payloads. */
 const APPLY_MODE_LABELS = Object.freeze({
   NotClassified: '尚未分类',
-  NotSupportedYet: '暂不支持'
+  NotSupportedYet: '暂不支持',
+  ImmediateCommand: '立即生效（调试命令）',
+  NextCastLiveApply: '下次释放生效',
+  MapReloadRequired: '需要重进地图',
+  EngineRestartRequired: '需要重启游戏'
 });
 
 /**

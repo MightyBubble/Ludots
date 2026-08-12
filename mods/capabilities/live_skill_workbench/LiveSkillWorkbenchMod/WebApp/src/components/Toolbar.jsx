@@ -41,7 +41,7 @@ export function Toolbar({
         <button type="button" className="lsw-icon-btn" title="重做（尚未接入）" disabled>
           <Redo2 size={16} />
         </button>
-        <button type="button" className="lsw-btn" onClick={onPrecheck} title="预检尚未接入">
+        <button type="button" className="lsw-btn" onClick={onPrecheck} title="候选编译与热应用分级（LiveGasEditPipeline）">
           <ShieldAlert size={14} />
           预检
         </button>

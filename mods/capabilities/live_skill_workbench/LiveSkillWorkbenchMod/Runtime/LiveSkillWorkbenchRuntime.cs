@@ -14,23 +14,17 @@ namespace LiveSkillWorkbenchMod.Runtime;
 /// </summary>
 public sealed class LiveSkillWorkbenchRuntime
 {
-	private static readonly IReadOnlyList<LiveSkillWorkbenchUnavailableActionDto> UnavailableActionsSnapshot =
-		AsReadOnlySnapshot(new[]
-		{
-			new LiveSkillWorkbenchUnavailableActionDto("undo", "撤销", "会话撤销栈尚未接入。"),
-			new LiveSkillWorkbenchUnavailableActionDto("redo", "重做", "会话重做栈尚未接入。"),
-			new LiveSkillWorkbenchUnavailableActionDto("precheck", "预检", "候选 GAS 编译尚未接入（#618）。"),
-			new LiveSkillWorkbenchUnavailableActionDto("applyNextCast", "应用到下一次释放", "安全帧热应用尚未接入（#618/#619）。"),
-			new LiveSkillWorkbenchUnavailableActionDto("aiDraft", "AI 生成", "AI 草稿尚未接入（#623）。"),
-			new LiveSkillWorkbenchUnavailableActionDto("saveMod", "保存 Mod", "草稿落盘尚未接入（#624）。"),
-		});
-
 	private readonly object _sync = new();
 	private readonly Dictionary<string, CatalogEntry> _catalog = new(StringComparer.Ordinal);
 	private readonly Dictionary<string, List<FieldState>> _fieldsByDefinition = new(StringComparer.Ordinal);
 	private readonly Dictionary<string, LiveSkillWorkbenchGraphDto> _graphs = new(StringComparer.Ordinal);
 	private readonly List<LiveSkillWorkbenchDiagnosticDto> _sessionDiagnostics = new();
 	private LiveEditSession _session;
+	private LiveGasEditPipeline? _pipeline;
+	private LiveApplyClassificationReport? _lastClassification;
+	private string _applyMode = LiveSkillWorkbenchIds.ApplyModeNotClassified;
+	private bool _applySupported;
+	private string _applyStatusLabel = LiveSkillWorkbenchIds.ApplyStatusNotPrechecked;
 	private string? _selectedCatalogId;
 	private IReadOnlyList<LiveSkillWorkbenchEffectChainEventDto> _effectChain =
 		Array.Empty<LiveSkillWorkbenchEffectChainEventDto>();
@@ -41,6 +35,19 @@ public sealed class LiveSkillWorkbenchRuntime
 	public LiveSkillWorkbenchRuntime(LiveEditSession? session = null)
 	{
 		_session = session ?? LiveEditSession.Start(LiveEditSource.ManualWorkbench);
+	}
+
+	/// <summary>
+	/// Binds the formal LiveGasEditPipeline (from CoreServiceKeys). Required for Precheck/Apply.
+	/// </summary>
+	public void BindPipeline(LiveGasEditPipeline pipeline)
+	{
+		ArgumentNullException.ThrowIfNull(pipeline);
+		lock (_sync)
+		{
+			_pipeline = pipeline;
+			BumpStateVersionUnlocked();
+		}
 	}
 
 	public Guid SessionId
@@ -201,16 +208,16 @@ public sealed class LiveSkillWorkbenchRuntime
 				DocumentSourceUri: _documentSourceUri,
 				SelectedCatalogId: selectedId,
 				SelectedCatalogKind: selectedKind,
-				ApplyMode: LiveSkillWorkbenchIds.ApplyModeNotClassified,
-				ApplySupported: false,
-				ApplyStatusLabel: LiveSkillWorkbenchIds.ApplyStatusNotPrechecked,
+				ApplyMode: _applyMode,
+				ApplySupported: _applySupported,
+				ApplyStatusLabel: _applyStatusLabel,
 				Catalog: catalog,
 				Fields: fields,
 				Changes: changes,
 				Diagnostics: diagnostics,
 				Graph: graph,
 				EffectChain: effectChain,
-				UnavailableActions: UnavailableActionsSnapshot,
+				UnavailableActions: BuildUnavailableActionsUnlocked(),
 				Error: error);
 		}
 	}
@@ -284,6 +291,10 @@ public sealed class LiveSkillWorkbenchRuntime
 			if (result.Succeeded)
 			{
 				field.CurrentValue = request.NumericValue;
+				_lastClassification = null;
+				_applyMode = LiveSkillWorkbenchIds.ApplyModeNotClassified;
+				_applySupported = false;
+				_applyStatusLabel = LiveSkillWorkbenchIds.ApplyStatusNotPrechecked;
 				_sessionDiagnostics.RemoveAll(static d =>
 					string.Equals(d.Code, LiveEditDiagnosticCodes.MissingDefinitionId, StringComparison.Ordinal) ||
 					string.Equals(d.Code, LiveEditDiagnosticCodes.MissingFieldPath, StringComparison.Ordinal) ||
@@ -319,6 +330,10 @@ public sealed class LiveSkillWorkbenchRuntime
 			}
 
 			_sessionDiagnostics.Clear();
+			_lastClassification = null;
+			_applyMode = LiveSkillWorkbenchIds.ApplyModeNotClassified;
+			_applySupported = false;
+			_applyStatusLabel = LiveSkillWorkbenchIds.ApplyStatusNotPrechecked;
 			LiveEditStageResult result = _session.Discard();
 			BumpStateVersionUnlocked();
 			return result;
@@ -350,7 +365,7 @@ public sealed class LiveSkillWorkbenchRuntime
 		return new LiveSkillWorkbenchDiagnosticDto(
 			"Warning",
 			LiveSkillWorkbenchIds.DiagnosticApplyNotSupported,
-			"应用到下一次释放尚未接入（#618/#619）。改动仅暂存在编辑会话中，不会写入运行中的 GAS。");
+			"应用到下一次释放需要绑定 LiveGasEditPipeline（GameStart 注入）。改动仅暂存在编辑会话中。");
 	}
 
 	public LiveSkillWorkbenchDiagnosticDto CreatePrecheckNotSupportedDiagnostic()
@@ -358,7 +373,173 @@ public sealed class LiveSkillWorkbenchRuntime
 		return new LiveSkillWorkbenchDiagnosticDto(
 			"Warning",
 			LiveSkillWorkbenchIds.DiagnosticPrecheckNotSupported,
-			"预检（候选 GAS 编译）尚未接入（#618）。");
+			"预检需要绑定 LiveGasEditPipeline（GameStart 注入）。");
+	}
+
+	public bool TryPrecheck(out LiveApplyClassificationReport? report, out LiveSkillWorkbenchDiagnosticDto? error)
+	{
+		lock (_sync)
+		{
+			if (_pipeline == null)
+			{
+				report = null;
+				error = CreatePrecheckNotSupportedDiagnostic();
+				_sessionDiagnostics.Add(error);
+				BumpStateVersionUnlocked();
+				return false;
+			}
+
+			report = _pipeline.Classify(_session);
+			_lastClassification = report;
+			ApplyClassificationToUiUnlocked(report);
+			for (int i = 0; i < report.Items.Count; i++)
+			{
+				LiveApplyClassificationItem item = report.Items[i];
+				for (int d = 0; d < item.Diagnostics.Count; d++)
+				{
+					_sessionDiagnostics.Add(ToDto(item.Diagnostics[d]));
+				}
+			}
+
+			error = null;
+			BumpStateVersionUnlocked();
+			return true;
+		}
+	}
+
+	public bool TryApplyNextCast(out LiveApplyCommitResult commit, out LiveSkillWorkbenchDiagnosticDto? error)
+	{
+		lock (_sync)
+		{
+			if (_pipeline == null)
+			{
+				commit = default;
+				error = CreateApplyNotSupportedDiagnostic();
+				_sessionDiagnostics.Add(error);
+				BumpStateVersionUnlocked();
+				return false;
+			}
+
+			if (_lastClassification == null)
+			{
+				commit = default;
+				error = new LiveSkillWorkbenchDiagnosticDto(
+					"Error",
+					LiveSkillWorkbenchIds.DiagnosticPrecheckRequired,
+					"必须先预检（Classify）再提交安全帧应用。");
+				_sessionDiagnostics.Add(error);
+				BumpStateVersionUnlocked();
+				return false;
+			}
+
+			if (!_lastClassification.CanCommitNextCast)
+			{
+				commit = default;
+				string mode = _lastClassification.RequiresEngineRestart
+					? LiveSkillWorkbenchIds.ApplyModeEngineRestart
+					: LiveSkillWorkbenchIds.ApplyModeMapReload;
+				error = new LiveSkillWorkbenchDiagnosticDto(
+					"Error",
+					LiveEditDiagnosticCodes.EffectFieldNotHotEditable,
+					$"当前会话没有可 NextCast 提交的候选（结论：{mode}）。");
+				_sessionDiagnostics.Add(error);
+				BumpStateVersionUnlocked();
+				return false;
+			}
+
+			_pipeline.BeginSafeFrame();
+			try
+			{
+				commit = _pipeline.CommitNextCastSafeFrame();
+			}
+			finally
+			{
+				_pipeline.EndSafeFrame();
+			}
+
+			if (!commit.Succeeded)
+			{
+				for (int i = 0; i < commit.Diagnostics.Count; i++)
+				{
+					_sessionDiagnostics.Add(ToDto(commit.Diagnostics[i]));
+				}
+
+				error = commit.Diagnostics.Count > 0
+					? ToDto(commit.Diagnostics[0])
+					: new LiveSkillWorkbenchDiagnosticDto(
+						"Error",
+						LiveEditDiagnosticCodes.SafeFrameRequired,
+						"NextCast 提交失败。");
+				BumpStateVersionUnlocked();
+				return false;
+			}
+
+			_applyStatusLabel = LiveSkillWorkbenchIds.ApplyStatusApplied;
+			_applySupported = false;
+			error = null;
+			BumpStateVersionUnlocked();
+			return true;
+		}
+	}
+
+	private void ApplyClassificationToUiUnlocked(LiveApplyClassificationReport report)
+	{
+		if (report.RequiresEngineRestart)
+		{
+			_applyMode = LiveSkillWorkbenchIds.ApplyModeEngineRestart;
+			_applySupported = false;
+			_applyStatusLabel = LiveSkillWorkbenchIds.ApplyStatusEngineRestart;
+			return;
+		}
+
+		if (report.RequiresMapReload && !report.CanCommitNextCast)
+		{
+			_applyMode = LiveSkillWorkbenchIds.ApplyModeMapReload;
+			_applySupported = false;
+			_applyStatusLabel = LiveSkillWorkbenchIds.ApplyStatusMapReload;
+			return;
+		}
+
+		if (report.CanCommitNextCast)
+		{
+			_applyMode = LiveSkillWorkbenchIds.ApplyModeNextCast;
+			_applySupported = true;
+			_applyStatusLabel = LiveSkillWorkbenchIds.ApplyStatusReadyNextCast;
+			return;
+		}
+
+		if (report.CanCommitImmediate)
+		{
+			_applyMode = LiveSkillWorkbenchIds.ApplyModeImmediate;
+			_applySupported = false;
+			_applyStatusLabel = "预检结论：立即命令（属性）请走 Immediate 路径";
+			return;
+		}
+
+		_applyMode = LiveSkillWorkbenchIds.ApplyModeNotClassified;
+		_applySupported = false;
+		_applyStatusLabel = LiveSkillWorkbenchIds.ApplyStatusNotPrechecked;
+	}
+
+	private IReadOnlyList<LiveSkillWorkbenchUnavailableActionDto> BuildUnavailableActionsUnlocked()
+	{
+		var list = new List<LiveSkillWorkbenchUnavailableActionDto>(6)
+		{
+			new("undo", "撤销", "会话撤销栈尚未接入。"),
+			new("redo", "重做", "会话重做栈尚未接入。"),
+			new("aiDraft", "AI 生成", "AI 草稿尚未接入（#623）。"),
+			new("saveMod", "保存 Mod", "草稿落盘尚未接入（#624）。"),
+		};
+
+		if (_pipeline == null)
+		{
+			list.Add(new LiveSkillWorkbenchUnavailableActionDto(
+				"precheck", "预检", "LiveGasEditPipeline 尚未绑定。"));
+			list.Add(new LiveSkillWorkbenchUnavailableActionDto(
+				"applyNextCast", "应用到下一次释放", "LiveGasEditPipeline 尚未绑定。"));
+		}
+
+		return AsReadOnlySnapshot(list);
 	}
 
 	public void RecordDiagnostic(LiveSkillWorkbenchDiagnosticDto diagnostic)
@@ -466,12 +647,27 @@ public sealed class LiveSkillWorkbenchRuntime
 				before = field?.BaselineValue;
 			}
 
+			string applyMode = LiveSkillWorkbenchIds.ApplyModeNotClassified;
+			if (_lastClassification != null)
+			{
+				for (int i = 0; i < _lastClassification.Items.Count; i++)
+				{
+					LiveApplyClassificationItem item = _lastClassification.Items[i];
+					if (string.Equals(item.TargetId, operation.DefinitionId, StringComparison.Ordinal) &&
+						item.OperationKind == operation.Kind)
+					{
+						applyMode = item.Mode.ToString();
+						break;
+					}
+				}
+			}
+
 			changes.Add(new LiveSkillWorkbenchChangeDto(
 				operation.DefinitionId ?? string.Empty,
 				operation.FieldPath ?? string.Empty,
 				before,
 				operation.NumericValue,
-				LiveSkillWorkbenchIds.ApplyModeNotClassified));
+				applyMode));
 		}
 
 		return changes;

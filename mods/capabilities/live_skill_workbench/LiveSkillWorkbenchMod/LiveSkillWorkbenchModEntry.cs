@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.GAS.LiveSkillWorkbench;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
 using LiveSkillWorkbenchMod.Contracts;
@@ -42,6 +43,17 @@ public sealed class LiveSkillWorkbenchModEntry : IMod
 
 		// Publish before DataPlane so other Mods can resolve the host (#618+ extension point).
 		engine.SetService(LiveSkillWorkbenchServiceKeys.Runtime, runtime);
+
+		if (engine.TryGetService(CoreServiceKeys.LiveGasEditPipeline, out LiveGasEditPipeline pipeline) &&
+			pipeline != null)
+		{
+			runtime.BindPipeline(pipeline);
+			modContext.Log("[LiveSkillWorkbenchMod] Bound Core LiveGasEditPipeline for Precheck/Apply.");
+		}
+		else
+		{
+			modContext.Log("[LiveSkillWorkbenchMod] LiveGasEditPipeline service missing; Precheck/Apply stay unavailable.");
+		}
 
 		if (engine.TryGetService(
 				LiveSkillWorkbenchServiceKeys.DocumentSource,

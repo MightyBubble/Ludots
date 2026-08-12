@@ -110,8 +110,6 @@ export function createFireballPreviewSnapshot() {
     unavailableActions: [
       { actionId: 'undo', label: '撤销', reason: '会话撤销栈尚未接入。' },
       { actionId: 'redo', label: '重做', reason: '会话重做栈尚未接入。' },
-      { actionId: 'precheck', label: '预检', reason: '候选 GAS 编译尚未接入（#618）。' },
-      { actionId: 'applyNextCast', label: '应用到下一次释放', reason: '安全帧热应用尚未接入（#618/#619）。' },
       { actionId: 'aiDraft', label: 'AI 生成', reason: 'AI 草稿尚未接入（#623）。' },
       { actionId: 'saveMod', label: '保存 Mod', reason: '草稿落盘尚未接入（#624）。' }
     ],

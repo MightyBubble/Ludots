@@ -13,16 +13,27 @@ public static class LiveSkillWorkbenchIds
 
 	public const string AssetIndexPath = "LiveSkillWorkbenchMod:Assets/live-skill-workbench-app/index.html";
 
-	/// <summary>Staged edits are not classified for next-cast until #618 precheck exists.</summary>
+	/// <summary>Staged edits are not classified until precheck runs.</summary>
 	public const string ApplyModeNotClassified = "NotClassified";
 
-	/// <summary>Apply path is explicitly unavailable.</summary>
+	/// <summary>Apply path is explicitly unavailable (pipeline not bound).</summary>
 	public const string ApplyModeNotSupported = "NotSupportedYet";
 
+	public const string ApplyModeImmediate = "ImmediateCommand";
+	public const string ApplyModeNextCast = "NextCastLiveApply";
+	public const string ApplyModeMapReload = "MapReloadRequired";
+	public const string ApplyModeEngineRestart = "EngineRestartRequired";
+
 	public const string ApplyStatusNotPrechecked = "尚未预检；不会应用";
+	public const string ApplyStatusReadyNextCast = "预检通过：可在安全帧应用到下一次释放";
+	public const string ApplyStatusMapReload = "预检结论：需要重进地图";
+	public const string ApplyStatusEngineRestart = "预检结论：需要重启游戏";
+	public const string ApplyStatusApplied = "已在安全帧提交到运行时定义";
 
 	public const string DiagnosticApplyNotSupported = "LSWUI0001";
 	public const string DiagnosticPrecheckNotSupported = "LSWUI0002";
+	public const string DiagnosticPipelineMissing = "LSWUI0008";
+	public const string DiagnosticPrecheckRequired = "LSWUI0009";
 	public const string DiagnosticUndoNotSupported = "LSWUI0003";
 	public const string DiagnosticRedoNotSupported = "LSWUI0004";
 

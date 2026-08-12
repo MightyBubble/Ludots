@@ -5,7 +5,10 @@ using LiveSkillWorkbenchMod;
 using LiveSkillWorkbenchMod.Contracts;
 using LiveSkillWorkbenchMod.DataPlane;
 using LiveSkillWorkbenchMod.Runtime;
+using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.LiveSkillWorkbench;
+using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.GraphRuntime;
 using Ludots.Core.Scripting;
 using Ludots.WebUI.DataPlane;
 using NUnit.Framework;
@@ -105,7 +108,7 @@ public sealed class LiveSkillWorkbenchDataPlaneTests
 	}
 
 	[Test]
-	public void ApplyNextCast_Returns_Explicit_Not_Supported_Diagnostic()
+	public void ApplyNextCast_WithoutPipeline_Returns_Explicit_Not_Supported_Diagnostic()
 	{
 		var runtime = new LiveSkillWorkbenchRuntime();
 		runtime.ReplaceDocument(CreateFireballTestDocument());
@@ -115,11 +118,70 @@ public sealed class LiveSkillWorkbenchDataPlaneTests
 
 		Assert.That(result.Success, Is.False);
 		Assert.That(result.ErrorCode, Is.EqualTo(LiveSkillWorkbenchIds.DiagnosticApplyNotSupported));
-		Assert.That(result.Message, Does.Contain("尚未接入"));
+		Assert.That(result.Message, Does.Contain("LiveGasEditPipeline"));
 
 		LiveSkillWorkbenchSessionSnapshotDto snapshot = runtime.BuildSnapshot("connected");
 		Assert.That(snapshot.Diagnostics, Has.Some.Matches<LiveSkillWorkbenchDiagnosticDto>(
 			d => d.Code == LiveSkillWorkbenchIds.DiagnosticApplyNotSupported));
+	}
+
+	[Test]
+	public void PrecheckAndApply_WithPipeline_CommitsHotDurationTicks()
+	{
+		EffectTemplateIdRegistry.Clear();
+		string effectName = "effect.FireballHotDuration";
+		int templateId = EffectTemplateIdRegistry.Register(effectName);
+		var effects = new EffectTemplateRegistry();
+		effects.Register(templateId, new EffectTemplateData { DurationTicks = 10, PeriodTicks = 0 });
+
+		var pipeline = new LiveGasEditPipeline(new GraphProgramRegistry(), effects);
+		var runtime = new LiveSkillWorkbenchRuntime();
+		runtime.BindPipeline(pipeline);
+		runtime.ReplaceDocument(new LiveSkillWorkbenchDocumentDto(
+			Catalog: new[]
+			{
+				new LiveSkillWorkbenchCatalogItemDto(effectName, "effect", "火球持续", null, new[] { "效果" }),
+			},
+			FieldBindings: new[]
+			{
+				new LiveSkillWorkbenchFieldBindingDto(
+					effectName,
+					new LiveSkillWorkbenchFieldDescriptorDto(
+						"duration.durationTicks",
+						"持续 Tick",
+						"number",
+						10d,
+						10d,
+						"tick",
+						"时间",
+						ReadOnly: false,
+						Min: 0d,
+						Max: 600d,
+						Step: 1d,
+						Description: "hot duration",
+						SourceUri: "test://effect/duration")),
+			},
+			Graphs: Array.Empty<LiveSkillWorkbenchGraphDto>(),
+			EffectChain: Array.Empty<LiveSkillWorkbenchEffectChainEventDto>(),
+			SelectedCatalogId: effectName,
+			SourceUri: "test://effect"));
+
+		var handler = new LiveSkillWorkbenchCommandHandler(runtime);
+		Assert.That(handler.Handle(CreateCommand(
+			LiveSkillWorkbenchIds.StageEditCommand,
+			new LiveSkillWorkbenchStageEditRequestDto(effectName, "duration.durationTicks", 33d))).Success, Is.True);
+
+		Assert.That(handler.Handle(CreateCommand(LiveSkillWorkbenchIds.PrecheckCommand, new { })).Success, Is.True);
+		LiveSkillWorkbenchSessionSnapshotDto afterPrecheck = runtime.BuildSnapshot("connected");
+		Assert.That(afterPrecheck.ApplyMode, Is.EqualTo(LiveSkillWorkbenchIds.ApplyModeNextCast));
+		Assert.That(afterPrecheck.ApplySupported, Is.True);
+
+		Assert.That(handler.Handle(CreateCommand(LiveSkillWorkbenchIds.ApplyNextCastCommand, new { })).Success, Is.True);
+		Assert.That(effects.TryGet(templateId, out EffectTemplateData data), Is.True);
+		Assert.That(data.DurationTicks, Is.EqualTo(33));
+
+		LiveSkillWorkbenchSessionSnapshotDto afterApply = runtime.BuildSnapshot("connected");
+		Assert.That(afterApply.ApplyStatusLabel, Is.EqualTo(LiveSkillWorkbenchIds.ApplyStatusApplied));
 	}
 
 	[Test]
