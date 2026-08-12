@@ -2,27 +2,58 @@ using System;
 using System.Numerics;
 using System.Threading.Tasks;
 using Ludots.Core.Engine;
-using Ludots.Core.Gameplay.Spawning;
-using Ludots.Core.Map;
-using Ludots.Core.Mathematics.FixedPoint;
+using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Assets;
+using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Scripting;
 using Ludots.Platform.Abstractions;
 
 namespace RaylibClientParityShowcaseMod.Runtime;
 
-internal sealed class RaylibClientParityShowcaseRuntime
+internal sealed class RaylibClientParityShowcaseRuntime : IBenchmarkSceneController
 {
-    private const int BuildingInstances = 48;
-    private const int CrowdAgents = 24;
+    private const int VisibleBuildingInstances = 48;
+    // RaylibBenchmarkRenderService clamps active count into [3000, Length]; keep Length >= 3000.
+    private const int BenchmarkInstanceCapacity = 3000;
     private const int GridWidth = 8;
     private const float BuildingSpacing = 6.5f;
-    private const float CrowdSpacingCm = 180f;
 
     private RaylibBenchmarkInstance[]? _buildingInstances;
     private RaylibBenchmarkMaterialColor[]? _palette;
     private bool _sceneInstalled;
-    private bool _crowdQueued;
+    private GameEngine? _activeEngine;
+
+    public bool IsActive =>
+        _activeEngine != null &&
+        RaylibClientParityShowcaseIds.IsShowcaseMap(_activeEngine.CurrentMapSession?.MapId.Value);
+
+    public bool SupportsScatterControl => false;
+
+    public bool IsCleanPerformanceScene => false;
+
+    public bool SuppressHostDiagnosticUi => IsActive;
+
+    public bool SuppressHostDebugGuides => IsActive;
+
+    public int ScatterMin => 0;
+
+    public int ScatterMax => 0;
+
+    public int ScatterTarget => 0;
+
+    public int ScatterAppliedTotal => 0;
+
+    public void SetScatterTargetFromRatio(float ratio)
+    {
+    }
+
+    public void ApplyScatterTarget()
+    {
+    }
+
+    public void ApplyScatterLayout(int total)
+    {
+    }
 
     public Task HandleMapFocusedAsync(ScriptContext context)
     {
@@ -38,8 +69,16 @@ internal sealed class RaylibClientParityShowcaseRuntime
             return Task.CompletedTask;
         }
 
+        _activeEngine = engine;
+        engine.SetService(CoreServiceKeys.BenchmarkSceneController, (IBenchmarkSceneController)this);
+        if (engine.GetService(CoreServiceKeys.RenderDebugState) is RenderDebugState renderDebug)
+        {
+            // Linux Raylib host Skia overlay currently resolves WGL/opengl32; keep parity scene GPU-only.
+            renderDebug.DrawSkiaUi = false;
+            renderDebug.DrawPrimitives = true;
+        }
+
         EnsureScene(engine);
-        EnsureDemoEntities(engine);
         return Task.CompletedTask;
     }
 
@@ -77,75 +116,20 @@ internal sealed class RaylibClientParityShowcaseRuntime
             renderer.SetScene(new RaylibBenchmarkScene(
                 enabled: true,
                 instances: _buildingInstances,
-                initialActiveInstanceCount: BuildingInstances,
+                initialActiveInstanceCount: BenchmarkInstanceCapacity,
                 palette: new RaylibBenchmarkMaterialPalette(new Vector4(1f, 1f, 1f, 1f), _palette),
                 camera: new RaylibBenchmarkCamera(
                     position: new Vector3(0f, 28f, 42f),
                     target: new Vector3(0f, 1.5f, 0f),
                     fovY: 50f),
                 label: "Raylib client parity: static ISM + GpuSkinned crowd + host albedo + vfx_unlit_tint"));
+            if (!renderer.SetActiveInstanceCount(VisibleBuildingInstances))
+            {
+                throw new InvalidOperationException(
+                    $"Raylib client parity showcase failed to set active ISM count={VisibleBuildingInstances}.");
+            }
+
             _sceneInstalled = true;
-        }
-    }
-
-    private void EnsureDemoEntities(GameEngine engine)
-    {
-        if (_crowdQueued)
-        {
-            return;
-        }
-
-        if (engine.GetService(CoreServiceKeys.RuntimeEntitySpawnQueue) is not RuntimeEntitySpawnQueue spawnQueue)
-        {
-            throw new InvalidOperationException(
-                "Raylib client parity showcase requires RuntimeEntitySpawnQueue for demo entity spawn.");
-        }
-
-        MapId mapId = engine.CurrentMapSession?.MapId
-            ?? throw new InvalidOperationException("Raylib client parity showcase requires an active map session.");
-
-        EnqueueTemplate(spawnQueue, mapId, "raylib_client_parity_albedo_demo", 650f, 0f);
-        EnqueueTemplate(spawnQueue, mapId, "raylib_client_parity_vfx_demo", -650f, 0f);
-
-        int cols = 8;
-        float originX = -((cols - 1) * CrowdSpacingCm) * 0.5f;
-        float originY = 900f;
-        for (int i = 0; i < CrowdAgents; i++)
-        {
-            int row = i / cols;
-            int col = i % cols;
-            EnqueueTemplate(
-                spawnQueue,
-                mapId,
-                RaylibClientParityShowcaseIds.CrowdTemplateId,
-                originX + (col * CrowdSpacingCm),
-                originY + (row * CrowdSpacingCm));
-        }
-
-        _crowdQueued = true;
-    }
-
-    private static void EnqueueTemplate(
-        RuntimeEntitySpawnQueue spawnQueue,
-        MapId mapId,
-        string templateId,
-        float xCm,
-        float yCm)
-    {
-        var request = new RuntimeEntitySpawnRequest
-        {
-            Kind = RuntimeEntitySpawnKind.Template,
-            TemplateId = templateId,
-            MapId = mapId,
-            HasWorldPosition = 1,
-            WorldPositionCm = Fix64Vec2.FromFloat(xCm, yCm),
-            HasFacing = 1,
-            FacingAngleRad = 0f
-        };
-        if (!spawnQueue.TryEnqueue(in request))
-        {
-            throw new InvalidOperationException(
-                $"Raylib client parity showcase failed to enqueue template '{templateId}'.");
         }
     }
 
@@ -154,7 +138,10 @@ internal sealed class RaylibClientParityShowcaseRuntime
         IRaylibBenchmarkRenderer? renderer = ResolveRenderer(engine);
         renderer?.SetScene(default);
         _sceneInstalled = false;
-        _crowdQueued = false;
+        if (ReferenceEquals(_activeEngine, engine))
+        {
+            _activeEngine = null;
+        }
     }
 
     private static IRaylibBenchmarkRenderer? ResolveRenderer(GameEngine engine)
@@ -190,22 +177,28 @@ internal sealed class RaylibClientParityShowcaseRuntime
 
     private static RaylibBenchmarkInstance[] BuildBuildingInstances(int[] meshAssetIds)
     {
-        var items = new RaylibBenchmarkInstance[BuildingInstances];
-        int rows = (int)MathF.Ceiling(BuildingInstances / (float)GridWidth);
+        var items = new RaylibBenchmarkInstance[BenchmarkInstanceCapacity];
+        int rows = (int)MathF.Ceiling(VisibleBuildingInstances / (float)GridWidth);
         float xOrigin = -((GridWidth - 1) * BuildingSpacing) * 0.5f;
         float zOrigin = -((rows - 1) * BuildingSpacing) * 0.5f - 8f;
 
         for (int i = 0; i < items.Length; i++)
         {
-            int row = i / GridWidth;
-            int col = i % GridWidth;
-            int meshIndex = i % meshAssetIds.Length;
-            int materialId = 7100 + meshIndex;
-            float yaw = (i % 8) * (MathF.PI / 4f);
+            int visibleIndex = i % VisibleBuildingInstances;
+            int row = visibleIndex / GridWidth;
+            int col = visibleIndex % GridWidth;
+            int meshIndex = visibleIndex % meshAssetIds.Length;
+            // materialId=0: imported model maps only (no host albedo lookup; W2 binder fail-louds on unknown ids).
+            float yaw = (visibleIndex % 8) * (MathF.PI / 4f);
+            // Off-camera duplicates fill capacity required by RaylibBenchmarkRenderService min clamp.
+            float park = i < VisibleBuildingInstances ? 0f : 400f + ((i / VisibleBuildingInstances) * 20f);
             items[i] = new RaylibBenchmarkInstance(
                 meshAssetId: meshAssetIds[meshIndex],
-                materialId: materialId,
-                position: new Vector3(xOrigin + (col * BuildingSpacing), 0f, zOrigin + (row * BuildingSpacing)),
+                materialId: 0,
+                position: new Vector3(
+                    xOrigin + (col * BuildingSpacing) + park,
+                    0f,
+                    zOrigin + (row * BuildingSpacing)),
                 rotation: Quaternion.CreateFromAxisAngle(Vector3.UnitY, yaw),
                 scale: new Vector3(0.85f, 0.85f, 0.85f),
                 color: Vector4.One);
@@ -218,11 +211,7 @@ internal sealed class RaylibClientParityShowcaseRuntime
     {
         return
         [
-            new RaylibBenchmarkMaterialColor(7100, new Vector4(1f, 1f, 1f, 1f)),
-            new RaylibBenchmarkMaterialColor(7101, new Vector4(1f, 1f, 1f, 1f)),
-            new RaylibBenchmarkMaterialColor(7102, new Vector4(1f, 1f, 1f, 1f)),
-            new RaylibBenchmarkMaterialColor(7103, new Vector4(1f, 1f, 1f, 1f)),
-            new RaylibBenchmarkMaterialColor(7104, new Vector4(1f, 1f, 1f, 1f)),
+            new RaylibBenchmarkMaterialColor(0, new Vector4(1f, 1f, 1f, 1f)),
         ];
     }
 }

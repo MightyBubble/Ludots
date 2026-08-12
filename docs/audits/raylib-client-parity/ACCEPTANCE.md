@@ -28,12 +28,17 @@ Evidence lands in both:
 3. Host Material bind demo entity (`raylib_client_parity.albedo_demo` → albedo URI).
 4. VFX performer (`assetKind=VFX`) + `prefabs.json` VFX part for `vfx_unlit_tint` path.
 
-Launcher:
+Launcher (playable showcase; Linux cloud agents may need Skia underlay disabled):
 
 ```bash
-# PowerShell / scripts/run-mod-launcher
-cli launch raylib_client_parity --adapter raylib
+export LD_LIBRARY_PATH=src/Platforms/Desktop:$LD_LIBRARY_PATH
+export LUDOTS_RAYLIB_DISABLE_SKIA_GPU_UNDERLAY=1
+export LUDOTS_RAYLIB_DISABLE_SKIA_FRAMEBUFFER_UNDERLAY=1
+dotnet exec src/Tools/Ludots.Launcher.Cli/bin/Release/net8.0/Ludots.Launcher.Cli.dll \
+  launch raylib_client_parity --adapter raylib --build auto
 ```
+
+Formal UAT PNGs (`01`–`04`) are produced by `tools/raylib_client_parity_acceptance` using the same production shaders (`instancing` / `skinning_instanced` / `vfx_unlit_tint`) and showcase assets. Launcher smoke confirms the mod loads, static ISM buildings draw, and map-authored crowd/albedo/vfx performers activate.
 
 ## Recapture
 

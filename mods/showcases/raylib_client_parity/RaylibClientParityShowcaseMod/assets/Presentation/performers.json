@@ -147,7 +147,7 @@
     "id": "raylib_client_parity_vfx_actor",
     "behaviors": [
       {
-        "slot": "vfx",
+        "slot": "body",
         "kind": "AssetBinding",
         "activeByDefault": true,
         "assetBinding": {
