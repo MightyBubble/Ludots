@@ -20,7 +20,6 @@ namespace Ludots.Client.Raylib.Rendering
         private Shader _terrainShader;
         private Material _terrainMaterial;
         private RaylibFrameLightingLocations _terrainLightingLocs;
-        private int _locTerrainViewPos;
         private RaylibFrameLighting? _frameLighting;
         private bool _initialized;
         private int _frameIndex;
@@ -112,7 +111,6 @@ namespace Ludots.Client.Raylib.Rendering
             _terrainMaterial = Rl.LoadMaterialDefault();
             _terrainMaterial.shader = _terrainShader;
             _terrainLightingLocs = RaylibFrameLightingLocations.ResolveOrThrow(_terrainShader, "visual-heightmap terrain");
-            _locTerrainViewPos = Rl.GetShaderLocation(_terrainShader, "uViewPos");
             _initialized = true;
             if (_frameLighting != null)
             {
@@ -129,11 +127,7 @@ namespace Ludots.Client.Raylib.Rendering
             }
 
             _frameLighting.Apply(_terrainShader, in _terrainLightingLocs);
-            Vector3 viewPos = camera.position;
-            if (_locTerrainViewPos >= 0)
-            {
-                Rl.SetShaderValue(_terrainShader, _locTerrainViewPos, &viewPos, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
-            }
+            _frameLighting.ApplyViewPosition(_terrainShader, in _terrainLightingLocs, camera.position);
         }
 
         private ref ChunkGpu GetOrCreateChunk(in VisualHeightmapRenderChunk chunk)

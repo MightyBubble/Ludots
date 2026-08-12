@@ -17,6 +17,7 @@ uniform mat4 boneMatrices[MAX_BONE_NUM];
 out vec2 fragTexCoord;
 out vec4 fragColor;
 out vec3 fragNormal;
+out vec3 fragPos;
 
 void main()
 {
@@ -33,8 +34,10 @@ void main()
 
     vec4 skinnedPosition = skin * vec4(vertexPosition, 1.0);
     vec3 skinnedNormal = mat3(skin) * vertexNormal;
+    vec4 worldPos = instanceTransform * skinnedPosition;
     fragTexCoord = vertexTexCoord;
     fragColor = vertexColor;
     fragNormal = normalize(mat3(instanceTransform) * skinnedNormal);
-    gl_Position = mvp * instanceTransform * skinnedPosition;
+    fragPos = worldPos.xyz;
+    gl_Position = mvp * worldPos;
 }

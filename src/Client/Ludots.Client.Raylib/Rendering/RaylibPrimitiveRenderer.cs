@@ -58,6 +58,8 @@ namespace Ludots.Client.Raylib.Rendering
         private RaylibFrameLightingLocations _instancingLightingLocs;
         private RaylibFrameLightingLocations _skinningLightingLocs;
         private RaylibFrameLighting? _frameLighting;
+        private Vector3 _frameViewPos;
+        private bool _hasFrameViewPos;
         private bool _skinningShaderReady;
 
         private readonly List<Batch> _cubeBatches = new List<Batch>(16);
@@ -108,17 +110,21 @@ namespace Ludots.Client.Raylib.Rendering
 
         public RaylibIsmRenderBridge IsmBridge => _ismBridge;
 
-        public void ApplyFrameLighting(RaylibFrameLighting lighting)
+        public void ApplyFrameLighting(RaylibFrameLighting lighting, Vector3 viewPos)
         {
             _frameLighting = lighting ?? throw new ArgumentNullException(nameof(lighting));
+            _frameViewPos = viewPos;
+            _hasFrameViewPos = true;
             if (_initialized)
             {
                 lighting.Apply(_shader, in _instancingLightingLocs);
+                lighting.ApplyViewPosition(_shader, in _instancingLightingLocs, viewPos);
             }
 
             if (_skinningShaderReady)
             {
                 lighting.Apply(_skinningShader, in _skinningLightingLocs);
+                lighting.ApplyViewPosition(_skinningShader, in _skinningLightingLocs, viewPos);
             }
         }
 
@@ -159,6 +165,9 @@ namespace Ludots.Client.Raylib.Rendering
         {
             if (draw == null) throw new ArgumentNullException(nameof(draw));
             if (meshes == null) throw new ArgumentNullException(nameof(meshes));
+
+            _frameViewPos = camera.position;
+            _hasFrameViewPos = true;
 
             LastInstancedInstances = 0;
             LastInstancedBatches = 0;
@@ -2478,6 +2487,10 @@ namespace Ludots.Client.Raylib.Rendering
             if (_frameLighting != null)
             {
                 _frameLighting.Apply(_shader, in _instancingLightingLocs);
+                if (_hasFrameViewPos)
+                {
+                    _frameLighting.ApplyViewPosition(_shader, in _instancingLightingLocs, _frameViewPos);
+                }
             }
         }
 
@@ -2544,6 +2557,10 @@ namespace Ludots.Client.Raylib.Rendering
             if (_frameLighting != null)
             {
                 _frameLighting.Apply(_skinningShader, in _skinningLightingLocs);
+                if (_hasFrameViewPos)
+                {
+                    _frameLighting.ApplyViewPosition(_skinningShader, in _skinningLightingLocs, _frameViewPos);
+                }
             }
         }
 
@@ -2555,7 +2572,14 @@ namespace Ludots.Client.Raylib.Rendering
                     $"{nameof(RaylibPrimitiveRenderer)} lit instancing requires {nameof(ApplyFrameLighting)} before draw.");
             }
 
+            if (!_hasFrameViewPos)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} lit instancing requires camera view position before draw.");
+            }
+
             _frameLighting.Apply(_shader, in _instancingLightingLocs);
+            _frameLighting.ApplyViewPosition(_shader, in _instancingLightingLocs, _frameViewPos);
         }
 
         private void EnsureFrameLightingAppliedForSkinning()
@@ -2566,8 +2590,15 @@ namespace Ludots.Client.Raylib.Rendering
                     $"{nameof(RaylibPrimitiveRenderer)} lit GpuSkinnedInstance requires {nameof(ApplyFrameLighting)} before draw.");
             }
 
+            if (!_hasFrameViewPos)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} lit GpuSkinnedInstance requires camera view position before draw.");
+            }
+
             EnsureSkinningShaderInitialized();
             _frameLighting.Apply(_skinningShader, in _skinningLightingLocs);
+            _frameLighting.ApplyViewPosition(_skinningShader, in _skinningLightingLocs, _frameViewPos);
         }
 
         private static void RequireMeshNormals(in Mesh mesh, string lane)

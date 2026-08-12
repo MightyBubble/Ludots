@@ -7,7 +7,7 @@ Updated by agents. Use: `pending` | `in_progress` | `blocked` | `done`.
 | V1 | Skybox + day/night env | done | cloud-agent | `RaylibSkyEnvironment` + skybox shaders; phase from `GlobalDayNight` via latch; `Presentation/sky_environments.json` (`backendId=raylib`) |
 | V2 | Directional + ambient lighting | done | agent-v2 | RaylibFrameLighting + terrain/ISM/skin N·L+ambient; ambient_day_ramp.json |
 | V3 | Cutout + Alpha/Additive blend | done | cloud-agent | material flags Cutout / Transparent|AlphaBlend / Additive; vegetation_cutout discard; VFX BeginBlendMode |
-| V4 | Distance fog | pending | — | |
+| V4 | Distance fog | done | cloud-agent | `distance_fog.json` → `uFogColor`/`uFogParams` on terrain+ISM+skin; FoW untouched |
 | V5 | Reflective/refractive water FBO | pending | — | |
 | V6 | Showcase + screenshot acceptance | pending | — | depends V1–V4 (+V5 for 06) |
 

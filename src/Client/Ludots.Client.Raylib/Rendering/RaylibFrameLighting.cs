@@ -13,13 +13,26 @@ namespace Ludots.Client.Raylib.Rendering
         public readonly int Ambient;
         public readonly int LightColor;
         public readonly int LightIntensity;
+        public readonly int FogColor;
+        public readonly int FogParams;
+        public readonly int ViewPos;
 
-        public RaylibFrameLightingLocations(int lightDir, int ambient, int lightColor, int lightIntensity)
+        public RaylibFrameLightingLocations(
+            int lightDir,
+            int ambient,
+            int lightColor,
+            int lightIntensity,
+            int fogColor,
+            int fogParams,
+            int viewPos)
         {
             LightDir = lightDir;
             Ambient = ambient;
             LightColor = lightColor;
             LightIntensity = lightIntensity;
+            FogColor = fogColor;
+            FogParams = fogParams;
+            ViewPos = viewPos;
         }
 
         public static RaylibFrameLightingLocations ResolveOrThrow(Shader shader, string shaderLabel)
@@ -28,6 +41,9 @@ namespace Ludots.Client.Raylib.Rendering
             int ambient = Rl.GetShaderLocation(shader, "uAmbient");
             int lightColor = Rl.GetShaderLocation(shader, "uLightColor");
             int lightIntensity = Rl.GetShaderLocation(shader, "uLightIntensity");
+            int fogColor = Rl.GetShaderLocation(shader, "uFogColor");
+            int fogParams = Rl.GetShaderLocation(shader, "uFogParams");
+            int viewPos = Rl.GetShaderLocation(shader, "uViewPos");
             if (lightDir < 0)
             {
                 throw new InvalidOperationException($"{shaderLabel} uniform 'uLightDir' not found.");
@@ -48,7 +64,29 @@ namespace Ludots.Client.Raylib.Rendering
                 throw new InvalidOperationException($"{shaderLabel} uniform 'uLightIntensity' not found.");
             }
 
-            return new RaylibFrameLightingLocations(lightDir, ambient, lightColor, lightIntensity);
+            if (fogColor < 0)
+            {
+                throw new InvalidOperationException($"{shaderLabel} uniform 'uFogColor' not found.");
+            }
+
+            if (fogParams < 0)
+            {
+                throw new InvalidOperationException($"{shaderLabel} uniform 'uFogParams' not found.");
+            }
+
+            if (viewPos < 0)
+            {
+                throw new InvalidOperationException($"{shaderLabel} uniform 'uViewPos' not found.");
+            }
+
+            return new RaylibFrameLightingLocations(
+                lightDir,
+                ambient,
+                lightColor,
+                lightIntensity,
+                fogColor,
+                fogParams,
+                viewPos);
         }
     }
 
@@ -57,6 +95,7 @@ namespace Ludots.Client.Raylib.Rendering
         private readonly AmbientSample[] _ramp;
         private readonly Vector3 _lightColor;
         private readonly float _lightIntensity;
+        private readonly DistanceFogSettings _fog;
 
         public float DayPhase01 { get; private set; }
 
@@ -68,35 +107,56 @@ namespace Ludots.Client.Raylib.Rendering
 
         public float LightIntensity => _lightIntensity;
 
-        private RaylibFrameLighting(AmbientSample[] ramp, Vector3 lightColor, float lightIntensity, float dayPhase01)
+        public bool FogEnabled => _fog.Enabled;
+
+        public Vector3 FogColor => _fog.Color;
+
+        public Vector4 FogParams => _fog.Params;
+
+        private RaylibFrameLighting(
+            AmbientSample[] ramp,
+            Vector3 lightColor,
+            float lightIntensity,
+            DistanceFogSettings fog,
+            float dayPhase01)
         {
             _ramp = ramp;
             _lightColor = lightColor;
             _lightIntensity = lightIntensity;
+            _fog = fog;
             SetDayPhase(dayPhase01);
         }
 
         public static RaylibFrameLighting LoadFromDefaultPath(float dayPhase01 = 0.42f)
         {
-            string path = Path.Combine(AppContext.BaseDirectory, "ambient_day_ramp.json");
-            return LoadFromJsonFile(path, dayPhase01);
+            string ambientPath = Path.Combine(AppContext.BaseDirectory, "ambient_day_ramp.json");
+            string fogPath = Path.Combine(AppContext.BaseDirectory, "distance_fog.json");
+            return LoadFromJsonFile(ambientPath, fogPath, dayPhase01);
         }
 
         public static RaylibFrameLighting LoadFromJsonFile(string path, float dayPhase01 = 0.42f)
         {
-            if (string.IsNullOrWhiteSpace(path))
+            string fogPath = Path.Combine(
+                Path.GetDirectoryName(Path.GetFullPath(path)) ?? AppContext.BaseDirectory,
+                "distance_fog.json");
+            return LoadFromJsonFile(path, fogPath, dayPhase01);
+        }
+
+        public static RaylibFrameLighting LoadFromJsonFile(string ambientPath, string fogPath, float dayPhase01 = 0.42f)
+        {
+            if (string.IsNullOrWhiteSpace(ambientPath))
             {
-                throw new ArgumentException("Ambient ramp path is required.", nameof(path));
+                throw new ArgumentException("Ambient ramp path is required.", nameof(ambientPath));
             }
 
-            if (!File.Exists(path))
+            if (!File.Exists(ambientPath))
             {
                 throw new FileNotFoundException(
-                    $"{nameof(RaylibFrameLighting)} requires data-driven ambient ramp at '{path}'.",
-                    path);
+                    $"{nameof(RaylibFrameLighting)} requires data-driven ambient ramp at '{ambientPath}'.",
+                    ambientPath);
             }
 
-            string json = File.ReadAllText(path);
+            string json = File.ReadAllText(ambientPath);
             using JsonDocument doc = JsonDocument.Parse(json);
             JsonElement root = doc.RootElement;
             if (!root.TryGetProperty("samples", out JsonElement samplesElement) ||
@@ -104,7 +164,7 @@ namespace Ludots.Client.Raylib.Rendering
                 samplesElement.GetArrayLength() < 2)
             {
                 throw new InvalidOperationException(
-                    $"Ambient ramp '{path}' must define a 'samples' array with at least two entries.");
+                    $"Ambient ramp '{ambientPath}' must define a 'samples' array with at least two entries.");
             }
 
             AmbientSample[] samples = new AmbientSample[samplesElement.GetArrayLength()];
@@ -112,11 +172,11 @@ namespace Ludots.Client.Raylib.Rendering
             {
                 JsonElement sample = samplesElement[i];
                 samples[i] = new AmbientSample(
-                    ReadRequiredFloat(sample, "phase", path),
-                    ReadRequiredFloat(sample, "r", path),
-                    ReadRequiredFloat(sample, "g", path),
-                    ReadRequiredFloat(sample, "b", path),
-                    ReadRequiredFloat(sample, "intensity", path));
+                    ReadRequiredFloat(sample, "phase", ambientPath),
+                    ReadRequiredFloat(sample, "r", ambientPath),
+                    ReadRequiredFloat(sample, "g", ambientPath),
+                    ReadRequiredFloat(sample, "b", ambientPath),
+                    ReadRequiredFloat(sample, "intensity", ambientPath));
             }
 
             for (int i = 1; i < samples.Length; i++)
@@ -124,14 +184,14 @@ namespace Ludots.Client.Raylib.Rendering
                 if (samples[i].Phase < samples[i - 1].Phase)
                 {
                     throw new InvalidOperationException(
-                        $"Ambient ramp '{path}' samples must be sorted by ascending phase.");
+                        $"Ambient ramp '{ambientPath}' samples must be sorted by ascending phase.");
                 }
             }
 
             if (samples[0].Phase > 0f || samples[^1].Phase < 1f)
             {
                 throw new InvalidOperationException(
-                    $"Ambient ramp '{path}' must cover phase range [0, 1].");
+                    $"Ambient ramp '{ambientPath}' must cover phase range [0, 1].");
             }
 
             Vector3 lightColor = new(1f, 0.96f, 0.9f);
@@ -139,7 +199,7 @@ namespace Ludots.Client.Raylib.Rendering
             {
                 if (lightColorElement.ValueKind != JsonValueKind.Array || lightColorElement.GetArrayLength() != 3)
                 {
-                    throw new InvalidOperationException($"Ambient ramp '{path}' lightColor must be [r,g,b].");
+                    throw new InvalidOperationException($"Ambient ramp '{ambientPath}' lightColor must be [r,g,b].");
                 }
 
                 lightColor = new Vector3(
@@ -156,10 +216,11 @@ namespace Ludots.Client.Raylib.Rendering
 
             if (lightIntensity < 0f)
             {
-                throw new InvalidOperationException($"Ambient ramp '{path}' lightIntensity must be >= 0.");
+                throw new InvalidOperationException($"Ambient ramp '{ambientPath}' lightIntensity must be >= 0.");
             }
 
-            return new RaylibFrameLighting(samples, lightColor, lightIntensity, dayPhase01);
+            DistanceFogSettings fog = DistanceFogSettings.LoadOrThrow(fogPath, requiredWhenEnabled: true);
+            return new RaylibFrameLighting(samples, lightColor, lightIntensity, fog, dayPhase01);
         }
 
         public void SetDayPhase(float dayPhase01)
@@ -185,10 +246,19 @@ namespace Ludots.Client.Raylib.Rendering
             Vector4 ambient = AmbientRgba;
             Vector3 lightColor = _lightColor;
             float lightIntensity = _lightIntensity;
+            Vector3 fogColor = _fog.Color;
+            Vector4 fogParams = _fog.Params;
             Rl.SetShaderValue(shader, locations.LightDir, &lightDir, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
             Rl.SetShaderValue(shader, locations.Ambient, &ambient, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC4);
             Rl.SetShaderValue(shader, locations.LightColor, &lightColor, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
             Rl.SetShaderValue(shader, locations.LightIntensity, &lightIntensity, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+            Rl.SetShaderValue(shader, locations.FogColor, &fogColor, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
+            Rl.SetShaderValue(shader, locations.FogParams, &fogParams, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC4);
+        }
+
+        public unsafe void ApplyViewPosition(Shader shader, in RaylibFrameLightingLocations locations, Vector3 viewPos)
+        {
+            Rl.SetShaderValue(shader, locations.ViewPos, &viewPos, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
         }
 
         public Vector3 FarLightPosition(float distance = 1000f)
@@ -279,6 +349,108 @@ namespace Ludots.Client.Raylib.Rendering
                 G = g;
                 B = b;
                 Intensity = intensity;
+            }
+        }
+
+        private readonly struct DistanceFogSettings
+        {
+            public readonly bool Enabled;
+            public readonly Vector3 Color;
+            public readonly Vector4 Params;
+
+            private DistanceFogSettings(bool enabled, Vector3 color, Vector4 parameters)
+            {
+                Enabled = enabled;
+                Color = color;
+                Params = parameters;
+            }
+
+            public static DistanceFogSettings LoadOrThrow(string path, bool requiredWhenEnabled)
+            {
+                if (string.IsNullOrWhiteSpace(path))
+                {
+                    throw new ArgumentException("Distance fog path is required.", nameof(path));
+                }
+
+                if (!File.Exists(path))
+                {
+                    throw new FileNotFoundException(
+                        $"{nameof(RaylibFrameLighting)} distance fog is enabled for lit terrain/mesh channels but config is missing at '{path}'.",
+                        path);
+                }
+
+                string json = File.ReadAllText(path);
+                using JsonDocument doc = JsonDocument.Parse(json);
+                JsonElement root = doc.RootElement;
+
+                bool enabled = true;
+                if (root.TryGetProperty("enabled", out JsonElement enabledElement))
+                {
+                    if (enabledElement.ValueKind is not (JsonValueKind.True or JsonValueKind.False))
+                    {
+                        throw new InvalidOperationException($"Distance fog '{path}' 'enabled' must be a boolean.");
+                    }
+
+                    enabled = enabledElement.GetBoolean();
+                }
+
+                if (!enabled)
+                {
+                    return new DistanceFogSettings(
+                        enabled: false,
+                        color: new Vector3(0.62f, 0.72f, 0.85f),
+                        parameters: Vector4.Zero);
+                }
+
+                if (requiredWhenEnabled &&
+                    (!root.TryGetProperty("density", out _) ||
+                     !root.TryGetProperty("start", out _) ||
+                     !root.TryGetProperty("end", out _) ||
+                     !root.TryGetProperty("color", out _)))
+                {
+                    throw new InvalidOperationException(
+                        $"Distance fog '{path}' is enabled but missing required fields density/start/end/color.");
+                }
+
+                float density = ReadRequiredFogFloat(root, "density", path);
+                float start = ReadRequiredFogFloat(root, "start", path);
+                float end = ReadRequiredFogFloat(root, "end", path);
+                if (density < 0f)
+                {
+                    throw new InvalidOperationException($"Distance fog '{path}' density must be >= 0.");
+                }
+
+                if (end <= start)
+                {
+                    throw new InvalidOperationException($"Distance fog '{path}' end must be > start.");
+                }
+
+                if (!root.TryGetProperty("color", out JsonElement colorElement) ||
+                    colorElement.ValueKind != JsonValueKind.Array ||
+                    colorElement.GetArrayLength() != 3)
+                {
+                    throw new InvalidOperationException($"Distance fog '{path}' color must be [r,g,b].");
+                }
+
+                Vector3 color = new(
+                    colorElement[0].GetSingle(),
+                    colorElement[1].GetSingle(),
+                    colorElement[2].GetSingle());
+                return new DistanceFogSettings(
+                    enabled: true,
+                    color,
+                    parameters: new Vector4(density, start, end, 1f));
+            }
+
+            private static float ReadRequiredFogFloat(JsonElement root, string name, string path)
+            {
+                if (!root.TryGetProperty(name, out JsonElement value) || value.ValueKind != JsonValueKind.Number)
+                {
+                    throw new InvalidOperationException(
+                        $"Distance fog '{path}' is missing numeric '{name}'.");
+                }
+
+                return value.GetSingle();
             }
         }
     }

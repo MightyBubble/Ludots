@@ -9,10 +9,13 @@ uniform mat4 mvp;
 
 out vec2 fragTexCoord;
 out vec3 fragNormal;
+out vec3 fragPos;
 
 void main()
 {
+    vec4 worldPos = instanceTransform * vec4(vertexPosition, 1.0);
     fragTexCoord = vertexTexCoord;
     fragNormal = normalize(mat3(instanceTransform) * vertexNormal);
-    gl_Position = mvp * instanceTransform * vec4(vertexPosition, 1.0);
+    fragPos = worldPos.xyz;
+    gl_Position = mvp * worldPos;
 }
