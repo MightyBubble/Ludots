@@ -111,6 +111,61 @@ N/A — no lifecycle transaction behavior is added or changed.
 
 ## GAS Composition Gate — Self Review
 
+- **Task / Issue**: Epic #915 P1-A restore FrontDoor authoring for orphaned float/bool opcodes
+- **Date**: 2026-08-12
+- **Agent / Author**: Cursor Cloud Agent
+
+### 1. Core judgment
+
+新变体主要交付物是（A/B/C/D）: A
+
+结论: PASS
+
+一句话理由: 本任务只把已有 runtime `GraphNodeOp` 扩展进既有 ControlFlow authoring matrix 与测试，不新增 profile enum、preset 开关、JSON schema 或平行编译管线。
+
+### 2. Layer assignment
+
+| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
+|-----------|-----------------|----------|
+| Float/bool op FrontDoor authoring | 2 | `GraphControlFlowCompiler` linear authoring matrix |
+| Runtime opcode execution | 0 | Existing `GasGraphOpHandlerTable` handlers |
+| Coverage tracking | 2 | `graph_node_op_coverage.registry.json` |
+| FrontDoor tests | 2 | GAS graph authoring tests |
+
+### 3. Reuse list
+
+- Handlers: existing `ConstBool`, `DivFloat`, `MinFloat`, `MaxFloat`, `ClampFloat`, `AbsFloat`, `NegFloat`, `CompareGtFloat` handlers in `GasGraphOpHandlerTable`.
+- Queues / Systems: existing ControlFlow compiler, FrontDoor compile path, graph execution and GAS kind policy.
+- Resolvers / Registries: existing graph op parser, graph program package, source map, coverage registry.
+- Existing presets / graphs: existing ControlFlow graph JSON model with `controlEdges` and `valueEdges`.
+
+### 4. New Layer 0 ops (if any)
+
+N/A
+
+### 5. Transaction boundary
+
+必须原子 rollback 的步骤: N/A；本任务不改变 effect transaction execution.
+
+### 6. Config SSOT
+
+行为配置落在: graph authoring assets / tests through existing ControlFlow nodes (`GAS/graphs.json` shape).
+
+是否新增 JSON schema: NO.
+
+### 7. Red flag scan
+
+- [x] 未新增 profile inherit/placement enum
+- [x] 未新建与 spawn 平行的物化管线
+- [x] 未把 placement 校验塞进 lifecycle op
+- [x] 未添加「说不清的」默认 fallback
+
+### 8. Next variant test
+
+「下一个 Mod 变体」将修改: graph 连线 / effect 步骤
+
+## GAS Composition Gate — Self Review
+
 - **Task / Issue**: Effect-phase authoring expressiveness for FuncLib InvokeScript and BranchBool
 - **Date**: 2026-08-12
 - **Agent / Author**: Cursor Cloud Agent

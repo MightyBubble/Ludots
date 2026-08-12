@@ -8,11 +8,19 @@ namespace Ludots.Core.NodeLibraries.GASGraph
     {
         private static bool IsLinearControlFlowAuthorable(GraphNodeOp op)
             => op is GraphNodeOp.ConstFloat or
+                      GraphNodeOp.ConstBool or
                       GraphNodeOp.ConstInt or
                       GraphNodeOp.AddFloat or
                       GraphNodeOp.MulFloat or
                       GraphNodeOp.SubFloat or
+                      GraphNodeOp.DivFloat or
+                      GraphNodeOp.MinFloat or
+                      GraphNodeOp.MaxFloat or
+                      GraphNodeOp.ClampFloat or
+                      GraphNodeOp.AbsFloat or
+                      GraphNodeOp.NegFloat or
                       GraphNodeOp.AddInt or
+                      GraphNodeOp.CompareGtFloat or
                       GraphNodeOp.CompareLtInt or
                       GraphNodeOp.CompareEqInt or
                       GraphNodeOp.SelectEntity or
@@ -57,6 +65,12 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     GraphNodeOp.AddFloat or
                     GraphNodeOp.MulFloat or
                     GraphNodeOp.SubFloat or
+                    GraphNodeOp.DivFloat or
+                    GraphNodeOp.MinFloat or
+                    GraphNodeOp.MaxFloat or
+                    GraphNodeOp.ClampFloat or
+                    GraphNodeOp.AbsFloat or
+                    GraphNodeOp.NegFloat or
                     GraphNodeOp.LoadAttribute or
                     GraphNodeOp.LoadSelfAttribute or
                     GraphNodeOp.RandomFloat01 or
@@ -69,7 +83,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     GraphNodeOp.LoadConfigInt or
                     GraphNodeOp.LoadConfigEffectId or
                     GraphNodeOp.InvokeScript => GraphValueType.Int,
-                GraphNodeOp.CompareLtInt or
+                GraphNodeOp.ConstBool or
+                    GraphNodeOp.CompareGtFloat or
+                    GraphNodeOp.CompareLtInt or
                     GraphNodeOp.CompareEqInt => GraphValueType.Bool,
                 GraphNodeOp.LoadCaster or
                     GraphNodeOp.LoadExplicitTarget or
@@ -87,8 +103,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             => op switch
             {
                 GraphNodeOp.AddFloat or GraphNodeOp.MulFloat or GraphNodeOp.SubFloat or
-                    GraphNodeOp.AddInt or GraphNodeOp.CompareLtInt or GraphNodeOp.CompareEqInt
+                    GraphNodeOp.DivFloat or GraphNodeOp.MinFloat or GraphNodeOp.MaxFloat or
+                    GraphNodeOp.CompareGtFloat or GraphNodeOp.AddInt or
+                    GraphNodeOp.CompareLtInt or GraphNodeOp.CompareEqInt
                     => port is GraphControlFlowPorts.A or GraphControlFlowPorts.B,
+                GraphNodeOp.ClampFloat
+                    => port is GraphControlFlowPorts.Value or GraphControlFlowPorts.Min or GraphControlFlowPorts.Max,
+                GraphNodeOp.AbsFloat or GraphNodeOp.NegFloat
+                    => port == GraphControlFlowPorts.Value,
                 GraphNodeOp.SelectEntity
                     => port is GraphControlFlowPorts.Condition or GraphControlFlowPorts.A or GraphControlFlowPorts.B,
                 GraphNodeOp.LoadAttribute => port == GraphControlFlowPorts.Source,
@@ -126,6 +148,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             switch (op.NodeOp)
             {
                 case GraphNodeOp.ConstFloat:
+                case GraphNodeOp.ConstBool:
                 case GraphNodeOp.ConstInt:
                 case GraphNodeOp.LoadCaster:
                 case GraphNodeOp.LoadExplicitTarget:
@@ -158,8 +181,23 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.AddFloat:
                 case GraphNodeOp.MulFloat:
                 case GraphNodeOp.SubFloat:
+                case GraphNodeOp.DivFloat:
+                case GraphNodeOp.MinFloat:
+                case GraphNodeOp.MaxFloat:
+                case GraphNodeOp.CompareGtFloat:
                     RequireValueInput(node, GraphControlFlowPorts.A, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     RequireValueInput(node, GraphControlFlowPorts.B, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.ClampFloat:
+                    RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.Min, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.Max, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.AbsFloat:
+                case GraphNodeOp.NegFloat:
+                    RequireValueInput(node, GraphControlFlowPorts.Value, GraphValueType.Float, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     break;
 
                 case GraphNodeOp.AddInt:
@@ -362,6 +400,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     instruction.ImmF = node.FloatValue;
                     break;
 
+                case GraphNodeOp.ConstBool:
+                    instruction.Imm = node.BoolValue ? 1 : 0;
+                    break;
+
                 case GraphNodeOp.ConstInt:
                     instruction.Imm = node.IntValue;
                     break;
@@ -381,11 +423,34 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.AddFloat:
                 case GraphNodeOp.MulFloat:
                 case GraphNodeOp.SubFloat:
+                case GraphNodeOp.DivFloat:
+                case GraphNodeOp.MinFloat:
+                case GraphNodeOp.MaxFloat:
+                case GraphNodeOp.CompareGtFloat:
                     instruction.A = ResolveValueInput(
                         node, GraphControlFlowPorts.A, GraphValueType.Float,
                         valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
                     instruction.B = ResolveValueInput(
                         node, GraphControlFlowPorts.B, GraphValueType.Float,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.ClampFloat:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Value, GraphValueType.Float,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.B = ResolveValueInput(
+                        node, GraphControlFlowPorts.Min, GraphValueType.Float,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.C = ResolveValueInput(
+                        node, GraphControlFlowPorts.Max, GraphValueType.Float,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                    break;
+
+                case GraphNodeOp.AbsFloat:
+                case GraphNodeOp.NegFloat:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Value, GraphValueType.Float,
                         valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
                     break;
 
