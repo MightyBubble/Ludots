@@ -17,7 +17,6 @@ using RoadNetworkShowcaseMod.Gameplay;
 using RoadNetworkShowcaseMod.UI;
 using Ludots.UI;
 using Ludots.Core.Gameplay.GAS.Orders;
-using Ludots.Tests.TestCommon;
 
 namespace RoadNetworkShowcaseMod.Runtime
 {
@@ -259,7 +258,7 @@ namespace RoadNetworkShowcaseMod.Runtime
                 return;
             }
 
-            engine.ClientLocalSeatTestBindings.BindSoleSeat(GlobalContext, owner);
+            ClientLocalSeatBindings.BindSoleSeat(engine.GlobalContext, owner);
             if (engine.World.TryGet(owner, out PlayerOwner playerOwner) && playerOwner.PlayerId > 0)
             {
             }
@@ -332,8 +331,7 @@ namespace RoadNetworkShowcaseMod.Runtime
         private void PublishSelectableKnowledge(GameEngine engine)
         {
             if (string.IsNullOrWhiteSpace(_activeMapId) ||
-                !engine.ClientLocalSeatAccess.TryGetSolePossessedRep(GlobalContext, out Entity viewerObj) ||
-                viewerObj is not Entity viewer ||
+                !ClientLocalSeatAccess.TryGetSolePossessedRep(engine.GlobalContext, out var viewer) ||
                 !engine.World.IsAlive(viewer))
             {
                 return;
@@ -564,7 +562,7 @@ namespace RoadNetworkShowcaseMod.Runtime
                 return selected;
             }
 
-            if (engine.ClientLocalSeatAccess.TryGetSolePossessedRep(GlobalContext, out Entity actor) &&
+            if (ClientLocalSeatAccess.TryGetSolePossessedRep(engine.GlobalContext, out Entity actor) &&
                 engine.World.IsAlive(actor))
             {
                 return actor;

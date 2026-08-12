@@ -25,7 +25,6 @@ using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.UI;
 using PerformerBlacksmithShowcaseMod.UI;
-using Ludots.Tests.TestCommon;
 
 namespace PerformerBlacksmithShowcaseMod.Runtime
 {
@@ -935,21 +934,12 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
                 engine.World.TryGet(viewer, out PlayerOwner owner) &&
                 owner.PlayerId > 0)
             {
-                ClientLocalSeatTestBindings.BindSoleSeat(engine, viewer, owner.PlayerId);
-                if (engine.CurrentMapSession != null)
-                {
-                    engine.CurrentMapSession.LocalPlayerEntity = viewer;
-                    engine.CurrentMapSession.LocalPlayerId = owner.PlayerId;
-                }
+                ClientLocalSeatBindings.BindSoleSeat(engine, viewer, owner.PlayerId);
 
                 return;
             }
 
-            ClientLocalSeatTestBindings.BindSoleSeat(engine, viewer);
-            if (engine.CurrentMapSession != null)
-            {
-                engine.CurrentMapSession.LocalPlayerEntity = viewer;
-            }
+            ClientLocalSeatBindings.BindSoleSeat(engine, viewer);
         }
 
         private static void UpsertDurabilityKnowledgeIfNeeded(
@@ -1011,11 +1001,6 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
                 ClientLocalSeatAccess.RequireRegistry(engine).Clear();
             }
 
-            if (engine.CurrentMapSession != null && engine.CurrentMapSession.LocalPlayerEntity == _showcaseViewerEntity)
-            {
-                engine.CurrentMapSession.LocalPlayerEntity = Entity.Null;
-                engine.CurrentMapSession.LocalPlayerId = 0;
-            }
 
             if (engine.World.IsAlive(_showcaseViewerEntity))
             {

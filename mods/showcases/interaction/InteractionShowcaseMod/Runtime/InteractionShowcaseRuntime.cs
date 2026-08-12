@@ -21,7 +21,6 @@ using Ludots.Core.Knowledge;
 using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.UI;
-using Ludots.Tests.TestCommon;
 
 namespace InteractionShowcaseMod.Runtime
 {
@@ -344,8 +343,7 @@ namespace InteractionShowcaseMod.Runtime
                 return false;
             }
 
-            if (!engine.ClientLocalSeatAccess.TryGetSolePossessedRep(GlobalContext, out Entity viewerObj) ||
-                viewerObj is not Entity localViewer ||
+            if (!ClientLocalSeatAccess.TryGetSolePossessedRep(engine.GlobalContext, out var localViewer) ||
                 !engine.World.IsAlive(localViewer))
             {
                 return false;
@@ -758,13 +756,12 @@ namespace InteractionShowcaseMod.Runtime
                 lookup.Register(playerId, localPlayer);
             }
 
-            ClientLocalSeatTestBindings.BindSoleSeat(engine, localPlayer, playerId);
+            ClientLocalSeatBindings.BindSoleSeat(engine, localPlayer, playerId);
         }
 
         private static void PublishShowcaseKnowledge(GameEngine engine, string activeMapId)
         {
-            if (!engine.ClientLocalSeatAccess.TryGetSolePossessedRep(GlobalContext, out Entity viewerObj) ||
-                viewerObj is not Entity viewer ||
+            if (!ClientLocalSeatAccess.TryGetSolePossessedRep(engine.GlobalContext, out var viewer) ||
                 !engine.World.IsAlive(viewer))
             {
                 return;

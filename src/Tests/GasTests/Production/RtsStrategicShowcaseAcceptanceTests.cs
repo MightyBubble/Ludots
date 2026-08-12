@@ -1282,7 +1282,7 @@ namespace Ludots.Tests.GAS.Production
                 title: "RTS strategic command source",
                 summary: "1 actor");
             collections.Replace(owner, in descriptor, next, owner);
-            engine.ClientLocalSeatTestBindings.BindSoleSeat(GlobalContext, owner);
+            ClientLocalSeatTestBindings.BindSoleSeat(engine.GlobalContext, owner);
         }
 
         private static string ReadName(World world, Entity entity)

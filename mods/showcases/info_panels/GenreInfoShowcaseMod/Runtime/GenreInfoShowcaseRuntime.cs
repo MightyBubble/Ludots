@@ -17,7 +17,6 @@ using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.UI;
-using Ludots.Tests.TestCommon;
 
 namespace GenreInfoShowcaseMod.Runtime
 {
@@ -419,14 +418,14 @@ namespace GenreInfoShowcaseMod.Runtime
 
         private static Entity EnsureCollectionViewer(GameEngine engine)
         {
-            if (engine.ClientLocalSeatAccess.TryGetSolePossessedRep(GlobalContext, out Entity localViewer) &&
+            if (ClientLocalSeatAccess.TryGetSolePossessedRep(engine.GlobalContext, out Entity localViewer) &&
                 engine.World.IsAlive(localViewer))
             {
                 return localViewer;
             }
 
             Entity viewer = engine.World.Create(new Name { Value = "GenreInfo Showcase Viewer" });
-            engine.ClientLocalSeatTestBindings.BindSoleSeat(GlobalContext, viewer);
+            ClientLocalSeatBindings.BindSoleSeat(engine.GlobalContext, viewer);
             return viewer;
         }
 

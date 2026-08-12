@@ -48,7 +48,7 @@ namespace Ludots.Tests.GAS.Production
             var presentationNames = GetPresentationSystemNames(engine);
 
             Assert.That(inputNames, Does.Contain("AuthoritativeInputSnapshotSystem"));
-            Assert.That(inputNames, Does.Contain("LocalPlayerEntityResolverSystem"));
+            Assert.That(inputNames, Does.Contain("SeatPossessionSyncSystem"));
             Assert.That(inputNames, Does.Contain("AbilityFormRoutingSystem"));
             Assert.That(inputNames, Does.Contain("CommandSourceAcquisitionSystem"));
             Assert.That(inputNames, Does.Contain("GasInputResponseSystem"));
@@ -60,7 +60,7 @@ namespace Ludots.Tests.GAS.Production
             Assert.That(inputNames.IndexOf("AbilityFormRoutingSystem"), Is.LessThan(inputNames.IndexOf("MobaLocalOrderSourceSystem")));
             Assert.That(inputNames.IndexOf("AuthoritativeInputSnapshotSystem"), Is.LessThan(inputNames.IndexOf("MobaLocalOrderSourceSystem")));
 
-            Assert.That(presentationNames, Does.Not.Contain("LocalPlayerEntityResolverSystem"));
+            Assert.That(presentationNames, Does.Not.Contain("SeatPossessionSyncSystem"));
             Assert.That(presentationNames, Does.Not.Contain("CommandSourceAcquisitionSystem"));
             Assert.That(presentationNames, Does.Not.Contain("GasInputResponseSystem"));
             Assert.That(presentationNames, Does.Not.Contain("TabTargetCycleSystem"));

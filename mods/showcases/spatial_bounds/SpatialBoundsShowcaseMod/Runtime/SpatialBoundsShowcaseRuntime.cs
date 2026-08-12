@@ -17,7 +17,6 @@ using Ludots.Core.Spatial;
 using Ludots.Platform.Abstractions;
 using Ludots.UI;
 using SpatialBoundsShowcaseMod.UI;
-using Ludots.Tests.TestCommon;
 
 namespace SpatialBoundsShowcaseMod.Runtime
 {
@@ -113,10 +112,10 @@ namespace SpatialBoundsShowcaseMod.Runtime
                 engine.World.Add(_selectionOwner, default(CommandSourceDragState));
             }
 
-            engine.ClientLocalSeatTestBindings.BindSoleSeat(GlobalContext, _selectionOwner);
-            if (engine.World.TryGet(_selectionOwner, out PlayerOwner playerOwner) && playerOwner.PlayerId > 0)
-            {
-            }
+            int playerId = engine.World.TryGet(_selectionOwner, out PlayerOwner playerOwner) && playerOwner.PlayerId > 0
+                ? playerOwner.PlayerId
+                : 1;
+            ClientLocalSeatBindings.BindSoleSeat(engine, _selectionOwner, playerId);
         }
 
         private void DrawOverlay(GameEngine engine)
@@ -396,7 +395,7 @@ namespace SpatialBoundsShowcaseMod.Runtime
 
         private static Entity ResolveExistingLocalPlayer(GameEngine engine)
         {
-            return engine.ClientLocalSeatAccess.TryGetSolePossessedRep(GlobalContext, out Entity local) &&
+            return ClientLocalSeatAccess.TryGetSolePossessedRep(engine.GlobalContext, out Entity local) &&
                    engine.World.IsAlive(local)
                 ? local
                 : Entity.Null;
@@ -470,7 +469,7 @@ namespace SpatialBoundsShowcaseMod.Runtime
                 engine.World.Destroy(_selectionOwner);
             }
 
-            if (engine.ClientLocalSeatAccess.TryGetSolePossessedRep(GlobalContext, out Entity local) &&
+            if (ClientLocalSeatAccess.TryGetSolePossessedRep(engine.GlobalContext, out Entity local) &&
                 local == _selectionOwner)
             {
                 ClientLocalSeatAccess.RequireRegistry(engine).Clear();

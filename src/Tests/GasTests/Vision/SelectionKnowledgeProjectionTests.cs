@@ -109,7 +109,10 @@ public sealed class SelectionKnowledgeProjectionTests
         store.Upsert(viewer, identityOnly, CreateRecord(KnowledgePresence.Known, KnowledgePositionAccess.None, viewer));
         store.Upsert(viewer, lastKnown, CreateRecord(KnowledgePresence.Known, KnowledgePositionAccess.LastKnown, viewer));
         store.Upsert(viewer, live, CreateRecord(KnowledgePresence.LiveVisible, KnowledgePositionAccess.Live, viewer));
-        globals[CoreServiceKeys.KnowledgeProjectionResolver.Name] = new KnowledgeProjectionResolver(store);
+        var globals = new Dictionary<string, object>
+        {
+            [CoreServiceKeys.KnowledgeProjectionResolver.Name] = new KnowledgeProjectionResolver(store),
+        };
 
         Assert.That(CommandSourceEligibility.CanTargetCommand(world, globals, viewer, identityOnly, KnowledgePositionAccess.None), Is.True);
         Assert.That(CommandSourceEligibility.CanTargetCommand(world, globals, viewer, identityOnly, KnowledgePositionAccess.LastKnown), Is.False);

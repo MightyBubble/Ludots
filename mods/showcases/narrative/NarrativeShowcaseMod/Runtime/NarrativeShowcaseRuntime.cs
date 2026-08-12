@@ -24,7 +24,6 @@ using NarrativeFrontendMod;
 using NarrativeFrontendMod.Runtime;
 using NarrativeShowcaseMod.Input;
 using NarrativeShowcaseMod.Systems;
-using Ludots.Tests.TestCommon;
 
 namespace NarrativeShowcaseMod.Runtime
 {
@@ -746,7 +745,7 @@ namespace NarrativeShowcaseMod.Runtime
                 lookup.Register(playerId, localPlayer);
             }
 
-            ClientLocalSeatTestBindings.BindSoleSeat(engine, localPlayer, playerId);
+            ClientLocalSeatBindings.BindSoleSeat(engine, localPlayer, playerId);
         }
 
         private static bool IsLocalPlayerCandidate(string activeMapId, in PlayerOwner owner, in MapEntity mapEntity)
@@ -757,8 +756,7 @@ namespace NarrativeShowcaseMod.Runtime
 
         private static void PublishShowcaseKnowledge(GameEngine engine, string activeMapId)
         {
-            if (!engine.ClientLocalSeatAccess.TryGetSolePossessedRep(GlobalContext, out Entity viewerObj) ||
-                viewerObj is not Entity viewer ||
+            if (!ClientLocalSeatAccess.TryGetSolePossessedRep(engine.GlobalContext, out var viewer) ||
                 !engine.World.IsAlive(viewer))
             {
                 return;

@@ -6,6 +6,7 @@ using CameraShowcaseMod.UI;
 using CoreInputMod;
 using CoreInputMod.ViewMode;
 using Ludots.Core.Components;
+using Ludots.Core.Client;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Components;
@@ -15,7 +16,6 @@ using Ludots.Core.Knowledge;
 using Ludots.Core.Scripting;
 using Ludots.Core.Modding;
 using Ludots.UI.Surface;
-using Ludots.Tests.TestCommon;
 
 namespace CameraShowcaseMod.Runtime
 {
@@ -105,20 +105,11 @@ namespace CameraShowcaseMod.Runtime
             owner = hero;
             if (TryResolvePlayerId(engine.World, owner, out int playerId))
             {
-                ClientLocalSeatTestBindings.BindSoleSeat(engine, owner, playerId);
-                if (engine.CurrentMapSession != null)
-                {
-                    engine.CurrentMapSession.LocalPlayerEntity = owner;
-                    engine.CurrentMapSession.LocalPlayerId = playerId;
-                }
+                ClientLocalSeatBindings.BindSoleSeat(engine, owner, playerId);
             }
             else
             {
-                ClientLocalSeatTestBindings.BindSoleSeat(engine, owner);
-                if (engine.CurrentMapSession != null)
-                {
-                    engine.CurrentMapSession.LocalPlayerEntity = owner;
-                }
+                ClientLocalSeatBindings.BindSoleSeat(engine, owner);
             }
 
             PublishEmptyCommandSourceCollection(engine, owner);

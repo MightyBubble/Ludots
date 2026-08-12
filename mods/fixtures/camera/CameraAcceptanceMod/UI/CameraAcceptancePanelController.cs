@@ -1247,7 +1247,7 @@ namespace CameraAcceptanceMod.UI
 
         private static bool TryResolveLocalPlayerEntity(GameEngine engine, out Entity localPlayer)
         {
-            if (engine.ClientLocalSeatAccess.TryGetSolePossessedRep(GlobalContext, out Entity local) &&
+            if (ClientLocalSeatAccess.TryGetSolePossessedRep(engine.GlobalContext, out Entity local) &&
                 engine.World.IsAlive(local))
             {
                 localPlayer = local;

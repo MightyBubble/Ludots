@@ -81,8 +81,7 @@ internal sealed class CapabilityStandardVirtualCameraAvatarMoveSystem : ISystem<
 
     private Entity ResolveLocalPlayer()
     {
-        if (!_engine.ClientLocalSeatAccess.TryGetSolePossessedRep(GlobalContext, out Entity localObj) ||
-            localObj is not Entity localPlayer ||
+        if (!ClientLocalSeatAccess.TryGetSolePossessedRep(_engine, out var localPlayer) ||
             localPlayer == Entity.Null ||
             !_engine.World.IsAlive(localPlayer))
         {

@@ -2,12 +2,12 @@ using System;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Components;
+using Ludots.Core.Client;
 using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Map;
 using Ludots.Core.Scripting;
 using EntityQueryTacticsShowcaseMod.Runtime;
-using Ludots.Tests.TestCommon;
 
 namespace EntityQueryTacticsShowcaseMod.Systems
 {
@@ -80,11 +80,11 @@ namespace EntityQueryTacticsShowcaseMod.Systems
         {
             if (_world.TryGet(owner, out PlayerOwner playerOwner) && playerOwner.PlayerId > 0)
             {
-                ClientLocalSeatTestBindings.BindSoleSeat(_engine, owner, playerOwner.PlayerId);
+                ClientLocalSeatBindings.BindSoleSeat(_engine, owner, playerOwner.PlayerId);
                 return;
             }
 
-            ClientLocalSeatTestBindings.BindSoleSeat(_engine, owner);
+            ClientLocalSeatBindings.BindSoleSeat(_engine, owner);
         }
     }
 }

@@ -36,8 +36,7 @@ internal sealed class RtsRedAlertKnowledgeProjectionSystem : ISystem<float>
     public void Update(in float dt)
     {
         if (!IsRedAlertMapActive() ||
-            !_engine.ClientLocalSeatAccess.TryGetSolePossessedRep(GlobalContext, out Entity viewerObj) ||
-            viewerObj is not Entity viewer ||
+            !ClientLocalSeatAccess.TryGetSolePossessedRep(_engine, out var viewer) ||
             !_engine.World.IsAlive(viewer))
         {
             return;

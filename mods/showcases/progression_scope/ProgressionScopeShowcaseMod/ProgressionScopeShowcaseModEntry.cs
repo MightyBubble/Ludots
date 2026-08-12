@@ -9,7 +9,6 @@ using Ludots.Core.Modding;
 using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.EntityCommandPanels;
-using Ludots.Tests.TestCommon;
 
 namespace ProgressionScopeShowcaseMod
 {
@@ -100,7 +99,7 @@ namespace ProgressionScopeShowcaseMod
             }
 
             owner = engine.World.Create(new PlayerOwner { PlayerId = 1 });
-            ClientLocalSeatTestBindings.BindSoleSeat(engine, owner);
+            ClientLocalSeatBindings.BindSoleSeat(engine, owner);
             return owner;
         }
 

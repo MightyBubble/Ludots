@@ -31,7 +31,6 @@ using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 using FormationCapabilityShowcaseMod.Systems;
-using Ludots.Tests.TestCommon;
 
 namespace FormationCapabilityShowcaseMod.Runtime;
 
@@ -594,8 +593,7 @@ internal sealed class FormationCapabilityShowcaseRuntime
 
     private void PublishLocalFormationKnowledge(GameEngine engine)
     {
-        if (!engine.ClientLocalSeatAccess.TryGetSolePossessedRep(GlobalContext, out Entity viewerObj) ||
-            viewerObj is not Entity viewer ||
+        if (!ClientLocalSeatAccess.TryGetSolePossessedRep(engine.GlobalContext, out var viewer) ||
             !engine.World.IsAlive(viewer))
         {
             return;
@@ -1335,8 +1333,7 @@ internal sealed class FormationCapabilityShowcaseRuntime
 
     private static bool TryResolveLocalCommandSourceOwner(GameEngine engine, out Entity owner)
     {
-        if (!engine.ClientLocalSeatAccess.TryGetSolePossessedRep(GlobalContext, out Entity localPlayerObj) ||
-            localPlayerObj is not Entity local ||
+        if (!ClientLocalSeatAccess.TryGetSolePossessedRep(engine.GlobalContext, out var local) ||
             !engine.World.IsAlive(local))
         {
             int playerId = ResolveLocalPlayerId(engine);
@@ -1351,7 +1348,7 @@ internal sealed class FormationCapabilityShowcaseRuntime
                 return false;
             }
 
-            ClientLocalSeatTestBindings.BindSoleSeat(engine, local);
+            ClientLocalSeatBindings.BindSoleSeat(engine, local);
         }
 
         owner = local;

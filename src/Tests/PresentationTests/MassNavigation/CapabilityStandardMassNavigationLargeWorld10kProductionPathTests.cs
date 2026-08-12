@@ -785,7 +785,7 @@ namespace Ludots.Tests.Presentation
         {
             var projector = RequireService(engine, CoreServiceKeys.ScreenProjector);
             var commandSourceConfig = RequireService(engine, CoreServiceKeys.CommandSourceAcquisitionConfig);
-            Entity localPlayer = engine.ClientLocalSeatAccess.TryGetSolePossessedRep(GlobalContext, out Entity local) &&
+            Entity localPlayer = ClientLocalSeatAccess.TryGetSolePossessedRep(engine.GlobalContext, out Entity local) &&
                 engine.World.IsAlive(local)
                     ? local
                     : default;

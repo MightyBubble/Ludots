@@ -17,7 +17,6 @@ using Ludots.Core.Mathematics.FixedPoint;
 using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using UxPrototypeMod.UI;
-using Ludots.Tests.TestCommon;
 
 namespace UxPrototypeMod.Runtime;
 
@@ -262,12 +261,7 @@ internal sealed class UxPrototypeScenarioState
             lookup.Register(playerId, localPlayer);
         }
 
-        ClientLocalSeatTestBindings.BindSoleSeat(engine, localPlayer, playerId);
-        if (engine.CurrentMapSession != null)
-        {
-            engine.CurrentMapSession.LocalPlayerEntity = localPlayer;
-            engine.CurrentMapSession.LocalPlayerId = playerId;
-        }
+        ClientLocalSeatBindings.BindSoleSeat(engine, localPlayer, playerId);
     }
 
     private static void PublishSelectableKnowledge(GameEngine engine, string activeMapId, Entity viewer)

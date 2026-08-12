@@ -24,7 +24,6 @@ using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.Core.UI.EntityCommandPanels;
-using Ludots.Tests.TestCommon;
 
 namespace ChampionSkillSandboxMod.Runtime
 {
@@ -535,12 +534,7 @@ namespace ChampionSkillSandboxMod.Runtime
                     "Declare the player in the map Players binding instead of using a controllable champion as the representative.");
             }
 
-            ClientLocalSeatTestBindings.BindSoleSeat(engine, localPlayer, playerId);
-            if (engine.CurrentMapSession != null)
-            {
-                engine.CurrentMapSession.LocalPlayerEntity = localPlayer;
-                engine.CurrentMapSession.LocalPlayerId = playerId;
-            }
+            ClientLocalSeatBindings.BindSoleSeat(engine, localPlayer, playerId);
 
             return localPlayer;
         }

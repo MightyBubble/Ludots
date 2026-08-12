@@ -47,7 +47,7 @@ namespace CoreInputMod.Systems
                 return;
             }
 
-            if (!ClientLocalSeatAccess.TryGetSolePossessedRep(_globals, out Entity localObj) || localObj is not Entity local)
+            if (!ClientLocalSeatAccess.TryGetSolePossessedRep(_globals, out var local))
             {
                 return;
             }

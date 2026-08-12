@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using Arch.Core;
 using Ludots.Core.Components;
+using Ludots.Core.Client;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.Components;
@@ -11,7 +12,6 @@ using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Map;
 using Ludots.Core.Presentation.Minimap;
 using Ludots.Core.Scripting;
-using Ludots.Tests.TestCommon;
 
 namespace MinimapShowcaseMod.Triggers;
 
@@ -120,10 +120,10 @@ internal sealed class ConfigureMinimapShowcaseOnMapFocusTrigger : Trigger
             return;
         }
 
-        engine.ClientLocalSeatTestBindings.BindSoleSeat(GlobalContext, playerCapital);
-        if (engine.World.TryGet(playerCapital, out PlayerOwner playerOwner) && playerOwner.PlayerId > 0)
-        {
-        }
+        int playerId = engine.World.TryGet(playerCapital, out PlayerOwner playerOwner) && playerOwner.PlayerId > 0
+            ? playerOwner.PlayerId
+            : 1;
+        ClientLocalSeatBindings.BindSoleSeat(engine, playerCapital, playerId);
 
         var descriptor = EntityCollectionDescriptor.Create(
             EntityCollectionKeys.CommandSource,

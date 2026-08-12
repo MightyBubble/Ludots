@@ -20,7 +20,6 @@ using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using Ludots.UI;
 using PerformanceVisualizationMod.UI;
-using Ludots.Tests.TestCommon;
 
 namespace PerformanceVisualizationMod.Runtime
 {
@@ -561,22 +560,15 @@ namespace PerformanceVisualizationMod.Runtime
         private static bool TryResolveLiveLocalPlayer(GameEngine engine, out Entity viewer)
         {
             viewer = Entity.Null;
-            if (ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity serviceViewer) &&
-                serviceViewer != Entity.Null &&
-                engine.World.IsAlive(serviceViewer))
+            if (!ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity serviceViewer) ||
+                serviceViewer == Entity.Null ||
+                !engine.World.IsAlive(serviceViewer))
             {
-                viewer = serviceViewer;
-                return true;
+                return false;
             }
 
-            Entity sessionViewer = engine.CurrentMapSession?.LocalPlayerEntity ?? Entity.Null;
-            if (sessionViewer != Entity.Null && engine.World.IsAlive(sessionViewer))
-            {
-                viewer = sessionViewer;
-                return true;
-            }
-
-            return false;
+            viewer = serviceViewer;
+            return true;
         }
 
         private static void PublishBenchmarkAudience(GameEngine engine, Entity viewer)
@@ -586,18 +578,10 @@ namespace PerformanceVisualizationMod.Runtime
                 throw new InvalidOperationException("PerformanceVisualizationMod requires a live local audience before publishing benchmark HUD knowledge.");
             }
 
-            ClientLocalSeatTestBindings.BindSoleSeat(engine, viewer);
-
-            if (engine.CurrentMapSession != null)
-            {
-                engine.CurrentMapSession.LocalPlayerEntity = viewer;
-            }
-
-            if (engine.World.TryGet(viewer, out PlayerOwner owner) && owner.PlayerId > 0 &&
-                engine.CurrentMapSession != null)
-            {
-                engine.CurrentMapSession.LocalPlayerId = owner.PlayerId;
-            }
+            int playerId = engine.World.TryGet(viewer, out PlayerOwner owner) && owner.PlayerId > 0
+                ? owner.PlayerId
+                : 1;
+            ClientLocalSeatBindings.BindSoleSeat(engine, viewer, playerId);
         }
 
         private static KnowledgeProjectionStore RequireKnowledgeStore(GameEngine engine)

@@ -662,8 +662,7 @@ namespace GenreInfoShowcaseMod.UI
 
         private static SelectionGroupSummary ResolveControlGroupSummary(GameEngine engine, int groupIndex)
         {
-            if (!engine.ClientLocalSeatAccess.TryGetSolePossessedRep(GlobalContext, out Entity viewerObj) ||
-                viewerObj is not Entity viewer ||
+            if (!ClientLocalSeatAccess.TryGetSolePossessedRep(engine.GlobalContext, out var viewer) ||
                 !engine.World.IsAlive(viewer) ||
                 engine.GetService(CoreServiceKeys.EntityCollectionStore) is not EntityCollectionStore collections ||
                 !collections.TryGet(viewer, ControlGroupCollectionKey(groupIndex), out EntityCollectionHandle handle) ||
@@ -695,8 +694,7 @@ namespace GenreInfoShowcaseMod.UI
             collections = default!;
             handle = EntityCollectionHandle.Invalid;
             view = default;
-            if (!engine.ClientLocalSeatAccess.TryGetSolePossessedRep(GlobalContext, out Entity viewerObj) ||
-                viewerObj is not Entity viewer ||
+            if (!ClientLocalSeatAccess.TryGetSolePossessedRep(engine.GlobalContext, out var viewer) ||
                 !engine.World.IsAlive(viewer) ||
                 engine.GetService(CoreServiceKeys.EntityCollectionStore) is not EntityCollectionStore store)
             {

@@ -2,6 +2,7 @@ using System;
 using Arch.Core;
 using Arch.System;
 using Ludots.Core.Components;
+using Ludots.Core.Client;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS;
@@ -12,7 +13,6 @@ using Ludots.Core.Input.Runtime;
 using Ludots.Core.Map;
 using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
-using Ludots.Tests.TestCommon;
 using ControlPlaneProjectionShowcaseMod.Runtime;
 
 namespace ControlPlaneProjectionShowcaseMod.Systems
@@ -255,7 +255,7 @@ namespace ControlPlaneProjectionShowcaseMod.Systems
 
         private void BindLocalPlayer()
         {
-            ClientLocalSeatTestBindings.BindSoleSeat(_engine, _state.P1Rep, 1);
+            ClientLocalSeatBindings.BindSoleSeat(_engine, _state.P1Rep, 1);
         }
 
         private static void ResolveUnits(MapSession session, string[] instanceIds, Entity[] destination)

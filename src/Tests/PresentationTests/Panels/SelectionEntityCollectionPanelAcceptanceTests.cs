@@ -53,7 +53,7 @@ public sealed class CommandSourceEntityCollectionPanelAcceptanceTests
 
         LoadMap(engine, InteractionShowcaseHubMapId);
 
-        Entity local = engine.ClientLocalSeatAccess.TryGetSolePossessedRep(GlobalContext, out Entity entity)
+        Entity local = ClientLocalSeatAccess.TryGetSolePossessedRep(engine.GlobalContext, out Entity entity)
             ? entity
             : throw new InvalidOperationException("Local player entity is missing.");
         EntityCollectionStore collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)

@@ -377,7 +377,7 @@ namespace RoadNetworkShowcaseMod.Systems
                 return true;
             }
 
-            if (_engine.ClientLocalSeatAccess.TryGetSolePossessedRep(GlobalContext, out Entity local) &&
+            if (ClientLocalSeatAccess.TryGetSolePossessedRep(_engine, out Entity local) &&
                 _world.IsAlive(local))
             {
                 actor = local;

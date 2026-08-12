@@ -1933,7 +1933,7 @@ public static class LauncherEvidenceRecorder
 
     private static string ResolveControlledActorName(GameEngine engine, IReadOnlyDictionary<string, Vector2> namedEntities)
     {
-        if (engine.ClientLocalSeatAccess.TryGetSolePossessedRep(GlobalContext, out Entity local) &&
+        if (ClientLocalSeatAccess.TryGetSolePossessedRep(engine.GlobalContext, out Entity local) &&
             engine.World.IsAlive(local) &&
             engine.World.Has<Name>(local))
         {

@@ -270,7 +270,7 @@ namespace MobaDemoMod.Systems
                 return default;
             }
 
-            if (!ClientLocalSeatAccess.TryGetSolePossessedRep(_globals, out Entity actorObj) || actorObj is not Entity localPlayer)
+            if (!ClientLocalSeatAccess.TryGetSolePossessedRep(_globals, out var localPlayer))
                 return default;
             if (!_world.IsAlive(localPlayer)) return default;
 

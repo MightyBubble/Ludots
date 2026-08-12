@@ -9,7 +9,6 @@ using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Client;
 using Ludots.Core.Scripting;
-using Ludots.Tests.TestCommon;
 
 namespace RtsDemoMod.Runtime
 {
@@ -146,7 +145,7 @@ namespace RtsDemoMod.Runtime
             }
 
             owner = engine.World.Create(new PlayerOwner { PlayerId = 1 });
-            ClientLocalSeatTestBindings.BindSoleSeat(engine, owner, 1);
+            ClientLocalSeatBindings.BindSoleSeat(engine, owner, 1);
             return owner;
         }
     }

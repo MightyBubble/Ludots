@@ -165,8 +165,7 @@ internal sealed class ParticipantViewCapabilityRuntime
             return;
         }
 
-        if (!engine.ClientLocalSeatAccess.TryGetSolePossessedRep(GlobalContext, out Entity localObj) ||
-            localObj is not Entity commandSourceOwner ||
+        if (!ClientLocalSeatAccess.TryGetSolePossessedRep(engine.GlobalContext, out var commandSourceOwner) ||
             commandSourceOwner == Entity.Null ||
             !engine.World.IsAlive(commandSourceOwner))
         {

@@ -39,8 +39,7 @@ namespace CameraAcceptanceMod.Systems
                 !CameraAcceptanceIds.IsAcceptanceMap(_engine.CurrentMapSession?.MapId.Value) ||
                 !_engine.GlobalContext.TryGetValue(CoreServiceKeys.AuthoritativeInput.Name, out object? inputObj) ||
                 inputObj is not IInputActionReader input ||
-                !_engine.ClientLocalSeatAccess.TryGetSolePossessedRep(GlobalContext, out Entity localObj) ||
-                localObj is not Entity local ||
+                !ClientLocalSeatAccess.TryGetSolePossessedRep(_engine, out var local) ||
                 !_engine.World.IsAlive(local) ||
                 !_engine.World.Has<WorldPositionCm>(local))
             {

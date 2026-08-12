@@ -15,7 +15,6 @@ using Ludots.Core.Presentation.Components;
 using Ludots.Core.Client;
 using Ludots.Core.Scripting;
 using RtsDemoMod.Runtime;
-using Ludots.Tests.TestCommon;
 
 namespace RtsDemoMod.Triggers
 {
@@ -84,7 +83,7 @@ namespace RtsDemoMod.Triggers
             }
 
             owner = world.Create(new PlayerOwner { PlayerId = 1 });
-            ClientLocalSeatTestBindings.BindSoleSeat(engine, owner, 1);
+            ClientLocalSeatBindings.BindSoleSeat(engine, owner, 1);
         }
 
         private static void EnsureDefaultCommandSource(GameEngine engine, World world)

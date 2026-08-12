@@ -46,7 +46,7 @@ namespace Ludots.Tests.GAS
             var map = CreateMap();
             var session = new MapSession(new MapId(map.Id), map)
             {
-                LaunchContext = MapLaunchContext.Create(localPlayerId: 7),
+                LaunchContext = MapLaunchContext.Create(playerId: 7),
             };
             var index = CreateEntityIndex(map.Id, world, out Entity teamOne, out Entity teamTwo, out Entity playerOne, out Entity playerTwo);
             var types = new RelationshipTypeRegistry();
@@ -120,7 +120,7 @@ namespace Ludots.Tests.GAS
             var map = CreateMap();
             var session = new MapSession(new MapId(map.Id), map)
             {
-                LaunchContext = MapLaunchContext.Create(localPlayerId: 7),
+                LaunchContext = MapLaunchContext.Create(playerId: 7),
             };
             var index = CreateEntityIndex(map.Id, world, out _, out _, out _, out _);
             var types = new RelationshipTypeRegistry();
@@ -230,7 +230,7 @@ namespace Ludots.Tests.GAS
             var map = CreateMap();
             var session = new MapSession(new MapId(map.Id), map)
             {
-                LaunchContext = MapLaunchContext.Create(localPlayerId: 7),
+                LaunchContext = MapLaunchContext.Create(playerId: 7),
             };
             var index = CreateEntityIndex(map.Id, world, out Entity teamOne, out Entity teamTwo, out Entity playerOne, out Entity playerTwo);
             var types = new RelationshipTypeRegistry();
@@ -413,7 +413,7 @@ namespace Ludots.Tests.GAS
             var map = CreateMap();
             var session = new MapSession(new MapId(map.Id), map)
             {
-                LaunchContext = MapLaunchContext.Create(localPlayerId: 8),
+                LaunchContext = MapLaunchContext.Create(playerId: 8),
             };
             var index = CreateEntityIndex(map.Id, world, out _, out _, out _, out Entity playerTwo);
             var types = new RelationshipTypeRegistry();
@@ -456,7 +456,7 @@ namespace Ludots.Tests.GAS
             var map = CreateMap();
             var session = new MapSession(new MapId(map.Id), map)
             {
-                LaunchContext = MapLaunchContext.Create(localPlayerId: 99),
+                LaunchContext = MapLaunchContext.Create(playerId: 99),
             };
             var index = CreateEntityIndex(map.Id, world, out _, out _, out _, out _);
             var types = new RelationshipTypeRegistry();

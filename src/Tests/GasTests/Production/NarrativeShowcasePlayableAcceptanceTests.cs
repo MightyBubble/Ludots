@@ -465,8 +465,7 @@ namespace Ludots.Tests.GAS.Production
         private static bool TryGetHoveredEntity(GameEngine engine, out Entity hovered)
         {
             hovered = Entity.Null;
-            if (!engine.ClientLocalSeatAccess.TryGetSolePossessedRep(GlobalContext, out Entity localObj) ||
-                localObj is not Entity local ||
+            if (!ClientLocalSeatAccess.TryGetSolePossessedRep(engine.GlobalContext, out var local) ||
                 !engine.World.IsAlive(local))
             {
                 return false;
@@ -495,7 +494,7 @@ namespace Ludots.Tests.GAS.Production
                 details.Add("hovered=<none>");
             }
 
-            if (engine.ClientLocalSeatAccess.TryGetSolePossessedRep(GlobalContext, out Entity localPlayer) &&
+            if (ClientLocalSeatAccess.TryGetSolePossessedRep(engine.GlobalContext, out Entity localPlayer) &&
                 engine.World.IsAlive(localPlayer) &&
                 engine.World.TryGet(localPlayer, out Name localName))
             {

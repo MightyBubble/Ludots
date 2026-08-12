@@ -350,7 +350,7 @@ namespace RoadNetworkShowcaseMod.Runtime
 
         private Entity ResolveLocalOwner()
         {
-            return _engine.ClientLocalSeatAccess.TryGetSolePossessedRep(GlobalContext, out Entity owner) &&
+            return ClientLocalSeatAccess.TryGetSolePossessedRep(_engine, out Entity owner) &&
                    _world.IsAlive(owner)
                 ? owner
                 : Entity.Null;

@@ -53,8 +53,7 @@ namespace CameraAcceptanceMod.Systems
 
         private void ApplySweepAvatarTarget(Vector2 targetCm)
         {
-            if (!_engine.ClientLocalSeatAccess.TryGetSolePossessedRep(GlobalContext, out Entity localObj) ||
-                localObj is not Entity localPlayer ||
+            if (!ClientLocalSeatAccess.TryGetSolePossessedRep(_engine, out var localPlayer) ||
                 !_engine.World.IsAlive(localPlayer) ||
                 !_engine.World.Has<WorldPositionCm>(localPlayer))
             {

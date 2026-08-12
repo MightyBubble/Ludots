@@ -723,7 +723,7 @@ namespace Ludots.Tests.GAS.Production
 
         private static Entity GetLocalPlayer(GameEngine engine)
         {
-            return engine.ClientLocalSeatAccess.TryGetSolePossessedRep(GlobalContext, out Entity entity) &&
+            return ClientLocalSeatAccess.TryGetSolePossessedRep(engine.GlobalContext, out Entity entity) &&
                    engine.World.IsAlive(entity)
                 ? entity
                 : throw new InvalidOperationException("LocalPlayerEntity missing.");
