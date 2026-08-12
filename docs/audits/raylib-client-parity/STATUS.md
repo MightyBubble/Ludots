@@ -1,0 +1,21 @@
+# STATUS — Raylib Client Parity
+
+Updated by agents. Use: `pending` | `in_progress` | `blocked` | `done`.
+
+| ID | Package | Status | Owner | Notes |
+|----|---------|--------|-------|-------|
+| W1 | GPU skinned production + playback API | in_progress | subagent-w1 | |
+| W2 | Host material binding | in_progress | subagent-w2 | |
+| W3 | Effect shader baseline | in_progress | subagent-w3 | |
+| W4 | Showcase + screenshot acceptance | pending | subagent-w4 | waits W1+W2 (+W3 if ready) |
+
+## Blockers
+
+_None yet._
+
+## Evidence
+
+| Artifact | Path |
+|----------|------|
+| Master list | `docs/audits/raylib-client-parity/MASTER.md` |
+| Acceptance shots | `artifacts/raylib-client-parity/acceptance/` |
