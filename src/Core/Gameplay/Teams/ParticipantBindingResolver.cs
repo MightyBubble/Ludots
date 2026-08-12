@@ -305,14 +305,6 @@ namespace Ludots.Core.Gameplay.Teams
 
         private static void ConfigureLogicViewCameras(IDictionary<string, object> globals, LogicViewRegistry views)
         {
-            if (!globals.TryGetValue(CoreServiceKeys.CameraBehaviorInputState.Name, out object? inputObj) ||
-                inputObj is not Gameplay.Camera.CameraBehaviorInputState behaviorInput ||
-                !globals.TryGetValue(CoreServiceKeys.ViewController.Name, out object? viewObj) ||
-                viewObj is not Presentation.Camera.IViewController viewport)
-            {
-                return;
-            }
-
             Gameplay.Camera.VirtualCameraRegistry? virtualCameras = null;
             if (globals.TryGetValue(CoreServiceKeys.VirtualCameraRegistry.Name, out object? vcamObj) &&
                 vcamObj is Gameplay.Camera.VirtualCameraRegistry registry)
@@ -354,13 +346,7 @@ namespace Ludots.Core.Gameplay.Teams
                     camera.SetPlatformManagedCameraDriverRegistry(platformDrivers);
                 }
 
-                if (camera.IsRuntimeConfigured)
-                {
-                    continue;
-                }
-
-                // World bounds / heightmap are completed by GameEngine.EnsureCameraRuntimeConfigured.
-                camera.ConfigureRuntime(behaviorInput, viewport);
+                // Runtime (bounds / heightmap / view) is completed by GameEngine.EnsureCameraRuntimeConfigured.
             }
         }
 

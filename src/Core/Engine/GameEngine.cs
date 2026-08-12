@@ -2430,6 +2430,7 @@ namespace Ludots.Core.Engine
             for (int i = 0; i < targets.Count; i++)
             {
                 Ludots.Core.Gameplay.Camera.CameraManager camera = targets[i];
+                EnsureAuthorityCameraServices(camera);
                 camera.ResetVirtualCameras();
                 camera.ActivateVirtualCamera(
                     virtualCameraId,
@@ -2475,6 +2476,28 @@ namespace Ludots.Core.Engine
             }
 
             targets.Add(GameSession.Camera);
+        }
+
+        private void EnsureAuthorityCameraServices(Ludots.Core.Gameplay.Camera.CameraManager camera)
+        {
+            ArgumentNullException.ThrowIfNull(camera);
+            if (camera.VirtualCameraBrain == null)
+            {
+                var virtualCameras = GetService(CoreServiceKeys.VirtualCameraRegistry)
+                    ?? throw new InvalidOperationException(
+                        "VirtualCameraRegistry is required before activating LogicView / authority cameras.");
+                camera.SetVirtualCameraRegistry(virtualCameras);
+            }
+
+            if (GetService(CoreServiceKeys.CameraImpulseRuntime) is Ludots.Core.Gameplay.Camera.CameraImpulseRuntime impulse)
+            {
+                camera.SetImpulseRuntime(impulse);
+            }
+
+            if (GetService(CoreServiceKeys.PlatformManagedCameraDriverRegistry) is Ludots.Core.Gameplay.Camera.PlatformManagedCameraDriverRegistry drivers)
+            {
+                camera.SetPlatformManagedCameraDriverRegistry(drivers);
+            }
         }
 
         private Entity ResolveDefaultCameraFollowCollectionOwner(CameraFollowTargetKind followTargetKind)
@@ -3532,19 +3555,13 @@ namespace Ludots.Core.Engine
 
             void Configure(Ludots.Core.Gameplay.Camera.CameraManager camera)
             {
-                if (camera.IsRuntimeConfigured)
-                {
-                    return;
-                }
-
+                // Always (re)bind providers so LogicView cameras get world bounds / heightmap after publish.
                 camera.ConfigureRuntime(
                     behaviorInput,
                     viewport,
                     () => WorldSizeSpec.Bounds,
                     () => GetService(CoreServiceKeys.VisualHeightmap));
             }
-
-            Configure(GameSession.Camera);
 
             if (TryGetService(CoreServiceKeys.LogicViewRegistry, out Client.LogicViewRegistry? views) &&
                 views != null &&
@@ -3556,7 +3573,11 @@ namespace Ludots.Core.Engine
                 {
                     Configure(cameras[i]);
                 }
+
+                return;
             }
+
+            Configure(GameSession.Camera);
         }
 
     }

@@ -12,7 +12,10 @@ using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Client;
+using Ludots.Core.Map;
+using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Scripting;
+using Ludots.Platform.Abstractions;
 using NUnit.Framework;
 using Ludots.Tests.TestCommon;
 
@@ -234,7 +237,22 @@ namespace Ludots.Tests.ThreeC.Acceptance
 
         private static void LoadMap(GameEngine engine, string mapId, int frames = 5)
         {
-            engine.LoadMap(mapId);
+            // Bootstrap map has no Players; pass an explicit empty launch so cold-start seats are not injected.
+            if (string.Equals(mapId, CameraShowcaseIds.BootstrapMapId, StringComparison.Ordinal))
+            {
+                engine.LoadMap(MapLoadRequest.FromMapId(mapId, new MapLaunchContext()));
+            }
+            else
+            {
+                // Seat maps need a present surface so LogicView cameras get ConfigureRuntime + PresentBinding metrics.
+                if (engine.GetService(CoreServiceKeys.ViewController) == null)
+                {
+                    engine.SetService(CoreServiceKeys.ViewController, new StubViewController());
+                }
+
+                engine.LoadMap(mapId);
+            }
+
             Tick(engine, frames);
         }
 
@@ -382,6 +400,13 @@ namespace Ludots.Tests.ThreeC.Acceptance
             public void EnableIME(bool enable) { }
             public void SetIMECandidatePosition(int x, int y) { }
             public string GetCharBuffer() => string.Empty;
+        }
+
+        private sealed class StubViewController : IViewController
+        {
+            public Vector2 Resolution => new(1920f, 1080f);
+            public float Fov => 60f;
+            public float AspectRatio => 16f / 9f;
         }
     }
 }

@@ -91,8 +91,11 @@ namespace CameraShowcaseMod.Runtime
         private static bool EnsureLocalCommandSourceOwner(GameEngine engine, string? mapId, out Entity owner)
         {
             owner = Entity.Null;
-            if (engine == null || !CameraShowcaseIds.IsShowcaseMap(mapId))
+            if (engine == null ||
+                !CameraShowcaseIds.IsShowcaseMap(mapId) ||
+                string.Equals(mapId, CameraShowcaseIds.BootstrapMapId, StringComparison.OrdinalIgnoreCase))
             {
+                // Bootstrap map has no Players / seats; it only validates shared camera centering.
                 return false;
             }
 

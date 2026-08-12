@@ -685,12 +685,12 @@ namespace CameraAcceptanceMod.UI
                 mapId,
                 CameraAcceptanceIds.DescribeMap(mapId),
                 CameraAcceptanceIds.DescribeControls(mapId),
-                engine.GameSession.Camera.VirtualCameraBrain?.ActiveCameraId ?? "none",
+                ClientLocalSeatAccess.ResolveAuthorityCamera(engine).VirtualCameraBrain?.ActiveCameraId ?? "none",
                 ResolveActiveModeId(engine),
                 ResolveSelectedEntityName(engine) ?? "none",
                 SummarizeSelectedIds(selectedIds),
                 selectedIds,
-                FormatVector(engine.GameSession.Camera.FollowTargetPositionCm),
+                FormatVector(ClientLocalSeatAccess.ResolveAuthorityCamera(engine).FollowTargetPositionCm),
                 ResolveActiveBlendCameraId(engine),
                 CameraAcceptanceRuntime.ResolveProjectionSpawnCount(engine),
                 BuildVisibleEntitySummary(visibleEntityRows),
@@ -1306,7 +1306,7 @@ namespace CameraAcceptanceMod.UI
                 throw new InvalidOperationException("Camera acceptance hotpath panel requires IViewController.");
             }
 
-            var camera = CameraViewportUtil.StateToRenderState(engine.GameSession.Camera.State);
+            var camera = CameraViewportUtil.StateToRenderState(ClientLocalSeatAccess.ResolveAuthorityCamera(engine).State);
             Vector2 resolution = view.Resolution;
             if (camera.FovYDeg <= 0f || view.Fov <= 0f || resolution.X <= 0f || resolution.Y <= 0f)
             {

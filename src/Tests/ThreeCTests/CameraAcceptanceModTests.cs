@@ -1304,8 +1304,8 @@ namespace Ludots.Tests.ThreeC.Acceptance
             var cameraAdapter = new StubCameraAdapter();
             var timingDiagnostics = engine.GetService(CoreServiceKeys.PresentationTimingDiagnostics);
             var cameraPresenter = new CameraPresenter(engine.SpatialCoords, cameraAdapter, timingDiagnostics);
-            var screenProjector = new CoreScreenProjector(engine.AuthorityCamera(), view);
-            var screenRayProvider = new CoreScreenRayProvider(engine.AuthorityCamera(), view);
+            var screenProjector = new CoreScreenProjector(engine.GameSession.Camera, view);
+            var screenRayProvider = new CoreScreenRayProvider(engine.GameSession.Camera, view);
             screenProjector.BindPresenter(cameraPresenter);
             screenRayProvider.BindPresenter(cameraPresenter);
             var presentationFrameSetup = engine.GetService(CoreServiceKeys.PresentationFrameSetup);
@@ -1313,11 +1313,16 @@ namespace Ludots.Tests.ThreeC.Acceptance
             screenRayProvider.BindPresentationAlphaProvider(() => presentationFrameSetup?.GetInterpolationAlpha() ?? 1f);
             engine.SetService(CoreServiceKeys.ScreenProjector, screenProjector);
             engine.SetService(CoreServiceKeys.ScreenRayProvider, screenRayProvider);
-            var culling = new CameraCullingSystem(engine.World, engine.AuthorityCamera(), engine.SpatialQueries, view, cullingConfig: engine.MergedConfig.Presentation.CameraCulling, timingDiagnostics: timingDiagnostics);
+            var culling = new CameraCullingSystem(engine.World, engine.GameSession.Camera, engine.SpatialQueries, view, cullingConfig: engine.MergedConfig.Presentation.CameraCulling, timingDiagnostics: timingDiagnostics);
+            culling.DisarmPresentBindingCulling();
             engine.RegisterPresentationSystem(culling);
             engine.SetService(CoreServiceKeys.CameraCullingDebugState, culling.DebugState);
             engine.GlobalContext["Tests.CameraAcceptanceMod.HeadlessCamera"] = new HeadlessCameraRuntime(
                 cameraPresenter,
+                screenProjector,
+                screenRayProvider,
+                view,
+                culling,
                 presentationFrameSetup);
             engine.Start();
             return engine;
@@ -1327,6 +1332,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
         {
             engine.LoadMap(mapId);
             Assert.That(engine.CurrentMapSession?.PrimaryBoard, Is.Not.Null, $"{mapId} must declare a primary board.");
+            SyncHeadlessPresentBindingPipeline(engine);
             Tick(engine, frames);
         }
 
@@ -1352,6 +1358,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
             {
                 beforeFrame?.Invoke(engine);
                 engine.SetService(CoreServiceKeys.UiCaptured, false);
+                SyncHeadlessPresentBindingPipeline(engine);
                 engine.Tick(1f / 60f);
                 UpdateHeadlessCamera(engine);
             }
@@ -1361,6 +1368,7 @@ namespace Ludots.Tests.ThreeC.Acceptance
         {
             for (int i = 0; i < frames; i++)
             {
+                SyncHeadlessPresentBindingPipeline(engine);
                 engine.AuthorityCamera().Update(1f / 60f);
                 UpdateHeadlessCamera(engine);
             }
@@ -1807,6 +1815,23 @@ namespace Ludots.Tests.ThreeC.Acceptance
             visual.Position = visualPosition;
         }
 
+        private static void SyncHeadlessPresentBindingPipeline(GameEngine engine)
+        {
+            if (!engine.GlobalContext.TryGetValue("Tests.CameraAcceptanceMod.HeadlessCamera", out var runtimeObj) ||
+                runtimeObj is not HeadlessCameraRuntime runtime)
+            {
+                return;
+            }
+
+            PresentBindingPresentation.TryEnsureSolePresentBindingPipeline(
+                engine,
+                runtime.ScreenProjector,
+                runtime.ScreenRayProvider,
+                runtime.View.Fov,
+                runtime.View,
+                runtime.Culling);
+        }
+
         private static void UpdateHeadlessCamera(GameEngine engine)
         {
             if (!engine.GlobalContext.TryGetValue("Tests.CameraAcceptanceMod.HeadlessCamera", out var runtimeObj) ||
@@ -1816,7 +1841,15 @@ namespace Ludots.Tests.ThreeC.Acceptance
             }
 
             float alpha = runtime.PresentationFrameSetup?.GetInterpolationAlpha() ?? 1f;
-            runtime.CameraPresenter.Update(engine.AuthorityCamera(), alpha);
+            SyncHeadlessPresentBindingPipeline(engine);
+            if (!PresentBindingPresentation.TryUpdateSolePresenter(
+                    engine,
+                    runtime.CameraPresenter,
+                    alpha,
+                    runtime.View.Fov))
+            {
+                runtime.CameraPresenter.Update(engine.GameSession.Camera, alpha);
+            }
         }
 
         private static HotpathHarnessSnapshot CaptureHotpathSnapshot(
@@ -2741,13 +2774,27 @@ namespace Ludots.Tests.ThreeC.Acceptance
 
         private sealed class HeadlessCameraRuntime
         {
-            public HeadlessCameraRuntime(CameraPresenter cameraPresenter, PresentationFrameSetupSystem? presentationFrameSetup)
+            public HeadlessCameraRuntime(
+                CameraPresenter cameraPresenter,
+                CoreScreenProjector screenProjector,
+                CoreScreenRayProvider screenRayProvider,
+                IViewController view,
+                CameraCullingSystem culling,
+                PresentationFrameSetupSystem? presentationFrameSetup)
             {
                 CameraPresenter = cameraPresenter;
+                ScreenProjector = screenProjector;
+                ScreenRayProvider = screenRayProvider;
+                View = view;
+                Culling = culling;
                 PresentationFrameSetup = presentationFrameSetup;
             }
 
             public CameraPresenter CameraPresenter { get; }
+            public CoreScreenProjector ScreenProjector { get; }
+            public CoreScreenRayProvider ScreenRayProvider { get; }
+            public IViewController View { get; }
+            public CameraCullingSystem Culling { get; }
             public PresentationFrameSetupSystem? PresentationFrameSetup { get; }
         }
 

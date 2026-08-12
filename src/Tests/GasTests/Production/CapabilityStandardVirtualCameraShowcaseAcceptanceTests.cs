@@ -422,12 +422,14 @@ namespace Ludots.Tests.GAS.Production
             var engine = new GameEngine();
             engine.InitializeWithConfigPipeline(modPaths, assetsRoot);
             InstallInput(engine);
+            var view = new StubViewController();
+            engine.SetService(CoreServiceKeys.ViewController, (IViewController)view);
             engine.Start();
             var behaviorInput = engine.GetService(CoreServiceKeys.CameraBehaviorInputState)
                 ?? throw new InvalidOperationException("CameraBehaviorInputState is required.");
-            engine.AuthorityCamera().ConfigureRuntime(
+            engine.GameSession.Camera.ConfigureRuntime(
                 behaviorInput,
-                new StubViewController(),
+                view,
                 () => engine.WorldSizeSpec.Bounds,
                 () => engine.GetService(CoreServiceKeys.VisualHeightmap));
             return engine;
