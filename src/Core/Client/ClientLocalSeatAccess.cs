@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Arch.Core;
 using Ludots.Core.Engine;
+using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Scripting;
 
 namespace Ludots.Core.Client
@@ -90,5 +91,101 @@ namespace Ludots.Core.Client
 
             return registry.TryGetSolePossessedRep(out rep);
         }
+
+        public static bool TryGetSolePresentBinding(
+            IReadOnlyDictionary<string, object> globals,
+            out PresentBinding binding)
+        {
+            binding = default;
+            if (globals == null ||
+                !globals.TryGetValue(CoreServiceKeys.ClientLocalSeatRegistry.Name, out object? seatsObj) ||
+                seatsObj is not ClientLocalSeatRegistry seats ||
+                !seats.TryGetSoleSeat(out ClientLocalSeat seat) ||
+                seat.PresentBinding is not PresentBinding present)
+            {
+                return false;
+            }
+
+            binding = present;
+            return true;
+        }
+
+        public static bool TryGetSolePresentBinding(GameEngine engine, out PresentBinding binding)
+        {
+            binding = default;
+            ArgumentNullException.ThrowIfNull(engine);
+            return TryGetSolePresentBinding(engine.GlobalContext, out binding);
+        }
+
+        public static PresentBinding RequireSolePresentBinding(IReadOnlyDictionary<string, object> globals)
+        {
+            if (!TryGetSolePresentBinding(globals, out PresentBinding binding))
+            {
+                throw new InvalidOperationException(
+                    "Sole ClientLocalSeat PresentBinding is required for presentation/picking.");
+            }
+
+            return binding;
+        }
+
+        public static PresentBinding RequireSolePresentBinding(GameEngine engine) =>
+            RequireSolePresentBinding(engine.GlobalContext);
+
+        public static bool TryResolveSolePresentCamera(
+            IReadOnlyDictionary<string, object> globals,
+            out CameraManager camera,
+            out PresentBinding binding)
+        {
+            camera = null!;
+            binding = default;
+            if (!TryGetSolePresentBinding(globals, out binding))
+            {
+                return false;
+            }
+
+            if (!globals.TryGetValue(CoreServiceKeys.LogicViewRegistry.Name, out object? viewsObj) ||
+                viewsObj is not LogicViewRegistry views)
+            {
+                throw new InvalidOperationException(
+                    $"{CoreServiceKeys.LogicViewRegistry.Name} must be registered when PresentBinding exists.");
+            }
+
+            camera = views.RequireCamera(binding.LogicViewId);
+            return true;
+        }
+
+        public static bool TryResolveSolePresentCamera(
+            GameEngine engine,
+            out CameraManager camera,
+            out PresentBinding binding)
+        {
+            ArgumentNullException.ThrowIfNull(engine);
+            return TryResolveSolePresentCamera(engine.GlobalContext, out camera, out binding);
+        }
+
+        public static CameraManager RequireSolePresentCamera(IReadOnlyDictionary<string, object> globals)
+        {
+            if (!TryResolveSolePresentCamera(globals, out CameraManager camera, out _))
+            {
+                throw new InvalidOperationException(
+                    "Sole PresentBinding LogicView camera is required for presentation/picking.");
+            }
+
+            return camera;
+        }
+
+        public static CameraManager RequireSolePresentCamera(GameEngine engine) =>
+            RequireSolePresentCamera(engine.GlobalContext);
+
+        public static PresentBindingSurface RequireSolePresentSurface(
+            IReadOnlyDictionary<string, object> globals,
+            float fovYDeg)
+        {
+            PresentBinding binding = RequireSolePresentBinding(globals);
+            return new PresentBindingSurface(binding, fovYDeg);
+        }
+
+        public static PresentBindingSurface RequireSolePresentSurface(GameEngine engine, float fovYDeg) =>
+            RequireSolePresentSurface(engine.GlobalContext, fovYDeg);
     }
 }

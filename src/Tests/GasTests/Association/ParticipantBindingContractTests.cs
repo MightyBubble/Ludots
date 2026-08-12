@@ -89,6 +89,9 @@ namespace Ludots.Tests.GAS
             Assert.That(soleSeat.PossessedRep, Is.EqualTo(playerOne));
             Assert.That(ClientLocalSeatAccess.TryGetSolePossessedRep(globals, out Entity publishedRep), Is.True);
             Assert.That(publishedRep, Is.EqualTo(playerOne));
+            Assert.That(ClientLocalSeatAccess.RequireLogicViews(globals).Count, Is.EqualTo(1));
+            // ViewController absent in this harness → PresentBinding deferred until present surface is known.
+            Assert.That(soleSeat.PresentBinding, Is.Null);
             Assert.That(globals[CoreServiceKeys.TeamEntityLookup.Name], Is.SameAs(focusedTeamLookup));
             Assert.That(globals[CoreServiceKeys.PlayerEntityLookup.Name], Is.SameAs(focusedPlayerLookup));
             Assert.That(focusedTeamLookup.Get(10), Is.EqualTo(teamOne));

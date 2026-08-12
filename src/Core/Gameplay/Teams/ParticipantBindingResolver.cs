@@ -272,11 +272,74 @@ namespace Ludots.Core.Gameplay.Teams
                 };
                 Gameplay.Camera.CameraManager? camera = i == 0 ? primaryLogicCamera : null;
                 string viewId = views.EnsureDefaultView(possession.RepEntity, camera: camera);
-                seat.PresentBinding = PresentBinding.FullScreen(viewId, new System.Numerics.Vector2(1280f, 720f));
+                if (TryResolvePresentResolutionPx(globals, out System.Numerics.Vector2 presentResolutionPx))
+                {
+                    seat.PresentBinding = PresentBinding.FullScreen(viewId, presentResolutionPx);
+                }
+
                 built[i] = seat;
             }
 
             seats.ReplaceAll(built);
+            ConfigureLogicViewCameras(globals, views);
+        }
+
+        private static bool TryResolvePresentResolutionPx(
+            IDictionary<string, object> globals,
+            out System.Numerics.Vector2 presentResolutionPx)
+        {
+            presentResolutionPx = default;
+            if (!globals.TryGetValue(CoreServiceKeys.ViewController.Name, out object? viewObj) ||
+                viewObj is not Presentation.Camera.IViewController view)
+            {
+                return false;
+            }
+
+            if (view.Resolution.X <= 0f || view.Resolution.Y <= 0f)
+            {
+                throw new InvalidOperationException(
+                    "ViewController.Resolution must be positive before publishing PresentBinding.");
+            }
+
+            presentResolutionPx = view.Resolution;
+            return true;
+        }
+
+        private static void ConfigureLogicViewCameras(IDictionary<string, object> globals, LogicViewRegistry views)
+        {
+            if (!globals.TryGetValue(CoreServiceKeys.CameraBehaviorInputState.Name, out object? inputObj) ||
+                inputObj is not Gameplay.Camera.CameraBehaviorInputState behaviorInput ||
+                !globals.TryGetValue(CoreServiceKeys.ViewController.Name, out object? viewObj) ||
+                viewObj is not Presentation.Camera.IViewController viewport)
+            {
+                return;
+            }
+
+            Gameplay.Camera.VirtualCameraRegistry? virtualCameras = null;
+            if (globals.TryGetValue(CoreServiceKeys.VirtualCameraRegistry.Name, out object? vcamObj) &&
+                vcamObj is Gameplay.Camera.VirtualCameraRegistry registry)
+            {
+                virtualCameras = registry;
+            }
+
+            var cameras = new System.Collections.Generic.List<Gameplay.Camera.CameraManager>(views.Count);
+            views.CopyCameras(cameras);
+            for (int i = 0; i < cameras.Count; i++)
+            {
+                Gameplay.Camera.CameraManager camera = cameras[i];
+                if (virtualCameras != null && camera.VirtualCameraBrain == null)
+                {
+                    camera.SetVirtualCameraRegistry(virtualCameras);
+                }
+
+                if (camera.IsRuntimeConfigured)
+                {
+                    continue;
+                }
+
+                // World bounds / heightmap are completed by GameEngine.EnsureCameraRuntimeConfigured.
+                camera.ConfigureRuntime(behaviorInput, viewport);
+            }
         }
 
         private static void PublishTeamLookup(IDictionary<string, object> globals, TeamEntityLookup source)

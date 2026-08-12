@@ -51,7 +51,8 @@ namespace Ludots.Core.Client
             GameEngine engine,
             Entity possessedRep,
             int playerId = 1,
-            string seatId = "seat.0")
+            string seatId = "seat.0",
+            Vector2? presentResolutionPx = null)
         {
             ArgumentNullException.ThrowIfNull(engine);
             if (possessedRep == Entity.Null)
@@ -71,11 +72,12 @@ namespace Ludots.Core.Client
             seats.Clear();
             views.Clear();
             string viewId = views.EnsureDefaultView(possessedRep, camera: engine.GameSession.Camera);
+            Vector2 presentResolution = ResolvePresentResolution(engine, presentResolutionPx);
             seats.Add(new ClientLocalSeat(seatId)
             {
                 PossessedPlayerId = playerId,
                 PossessedRep = possessedRep,
-                PresentBinding = PresentBinding.FullScreen(viewId, new Vector2(1280f, 720f)),
+                PresentBinding = PresentBinding.FullScreen(viewId, presentResolution),
             });
 
             if (engine.CurrentMapSession != null)
@@ -85,6 +87,29 @@ namespace Ludots.Core.Client
                     new ResolvedLocalSeatPossession(seatId, playerId, possessedRep, ControlSchemeId: null),
                 };
             }
+        }
+
+        private static Vector2 ResolvePresentResolution(GameEngine engine, Vector2? presentResolutionPx)
+        {
+            if (presentResolutionPx is Vector2 explicitResolution)
+            {
+                if (explicitResolution.X <= 0f || explicitResolution.Y <= 0f)
+                {
+                    throw new ArgumentOutOfRangeException(nameof(presentResolutionPx));
+                }
+
+                return explicitResolution;
+            }
+
+            if (engine.GetService(CoreServiceKeys.ViewController) is Presentation.Camera.IViewController view &&
+                view.Resolution.X > 0f &&
+                view.Resolution.Y > 0f)
+            {
+                return view.Resolution;
+            }
+
+            throw new InvalidOperationException(
+                "BindSoleSeat requires ViewController.Resolution or an explicit presentResolutionPx.");
         }
     }
 }

@@ -10,8 +10,8 @@ namespace Ludots.Core.Systems
 {
     /// <summary>
     /// Fixed-step authoritative camera system.
-    /// Applies pending camera requests to every registered LogicView camera (Epic #896),
-    /// falling back to the session camera when no LogicViews are registered yet.
+    /// Applies pending camera requests to every registered LogicView camera (Epic #896).
+    /// Session camera is used only before any LogicView exists (pre-map boot).
     /// </summary>
     public sealed class CameraRuntimeSystem : ISystem<float>
     {
@@ -59,11 +59,21 @@ namespace Ludots.Core.Systems
         {
             _cameraScratch.Clear();
             if (_globals.TryGetValue(CoreServiceKeys.LogicViewRegistry.Name, out object? viewsObj) &&
-                viewsObj is LogicViewRegistry views &&
-                views.Count > 0)
+                viewsObj is LogicViewRegistry views)
             {
-                views.CopyCameras(_cameraScratch);
-                return;
+                if (views.Count > 0)
+                {
+                    views.CopyCameras(_cameraScratch);
+                    return;
+                }
+
+                if (_globals.TryGetValue(CoreServiceKeys.ClientLocalSeatRegistry.Name, out object? seatsObj) &&
+                    seatsObj is ClientLocalSeatRegistry seats &&
+                    seats.Count > 0)
+                {
+                    throw new InvalidOperationException(
+                        "ClientLocalSeatRegistry has seats but LogicViewRegistry is empty — PresentBinding/LogicView publish is required.");
+                }
             }
 
             _cameraScratch.Add(_fallbackCameraManager);

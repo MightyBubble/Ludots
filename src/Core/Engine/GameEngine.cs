@@ -3504,13 +3504,32 @@ namespace Ludots.Core.Engine
                 return;
             }
 
-            if (!GameSession.Camera.IsRuntimeConfigured)
+            void Configure(Ludots.Core.Gameplay.Camera.CameraManager camera)
             {
-                GameSession.Camera.ConfigureRuntime(
+                if (camera.IsRuntimeConfigured)
+                {
+                    return;
+                }
+
+                camera.ConfigureRuntime(
                     behaviorInput,
                     viewport,
                     () => WorldSizeSpec.Bounds,
                     () => GetService(CoreServiceKeys.VisualHeightmap));
+            }
+
+            Configure(GameSession.Camera);
+
+            if (TryGetService(CoreServiceKeys.LogicViewRegistry, out Client.LogicViewRegistry? views) &&
+                views != null &&
+                views.Count > 0)
+            {
+                var cameras = new System.Collections.Generic.List<Ludots.Core.Gameplay.Camera.CameraManager>(views.Count);
+                views.CopyCameras(cameras);
+                for (int i = 0; i < cameras.Count; i++)
+                {
+                    Configure(cameras[i]);
+                }
             }
         }
 

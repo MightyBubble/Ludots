@@ -432,7 +432,17 @@ namespace Ludots.Adapter.Raylib
                         }
 
                         float cameraAlpha = presentationFrameSetup?.GetInterpolationAlpha() ?? 1f;
-                        cameraPresenter.Update(engine.GameSession.Camera, cameraAlpha, renderCameraDebug);
+                        if (!Ludots.Core.Client.PresentBindingPresentation.TrySyncSolePresentPipeline(
+                                engine,
+                                cameraPresenter,
+                                screenProjector,
+                                screenRayProvider,
+                                cameraAlpha,
+                                viewController.Fov,
+                                renderCameraDebug))
+                        {
+                            cameraPresenter.Update(engine.GameSession.Camera, cameraAlpha, renderCameraDebug);
+                        }
                         hudProjection?.Update(dt);
                         benchmarkRenderer?.PrepareFrame(presentationTiming, lastW, lastH);
                         if (globalFieldVisualBuffer != null)

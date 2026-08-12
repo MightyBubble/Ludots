@@ -1,10 +1,14 @@
+using System.Collections.Generic;
 using System.Numerics;
+using Arch.Core;
+using Ludots.Core.Client;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Map.Hex;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Presentation.Camera;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Presentation.Utils;
+using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 using Ludots.Platform.Abstractions;
 using NUnit.Framework;
@@ -69,6 +73,44 @@ namespace Ludots.Tests.Presentation
                 EndPresentationFrame(projector);
                 EndPresentationFrame(rayProvider);
             }
+        }
+
+        [Test]
+        public void ScreenServices_RebindToPresentBindingSurfaceMetricsAndLogicViewCamera()
+        {
+            using var world = World.Create();
+            Entity owner = world.Create();
+            var logicCamera = new CameraManager();
+            logicCamera.State.Yaw = 10f;
+            logicCamera.State.Pitch = 50f;
+            logicCamera.State.DistanceCm = 3000f;
+            logicCamera.State.FovYDeg = 60f;
+            logicCamera.State.TargetCm = Vector2.Zero;
+
+            var globals = new Dictionary<string, object>();
+            ClientLocalSeatBindings.BindSoleSeat(
+                globals,
+                owner,
+                playerId: 1,
+                primaryCamera: logicCamera,
+                presentResolutionPx: new Vector2(800f, 600f));
+
+            Assert.That(ClientLocalSeatAccess.TryResolveSolePresentCamera(globals, out CameraManager boundCamera, out PresentBinding binding), Is.True);
+            Assert.That(boundCamera, Is.SameAs(logicCamera));
+            Assert.That(binding.PresentResolutionPx, Is.EqualTo(new Vector2(800f, 600f)));
+
+            var hostView = new StubViewController();
+            var projector = new CoreScreenProjector(new CameraManager(), hostView);
+            var rayProvider = new CoreScreenRayProvider(new CameraManager(), hostView);
+            var surface = ClientLocalSeatAccess.RequireSolePresentSurface(globals, fovYDeg: 60f);
+            projector.Rebind(boundCamera, surface);
+            rayProvider.Rebind(boundCamera, surface);
+
+            Assert.That(surface.Resolution, Is.EqualTo(new Vector2(800f, 600f)));
+            Assert.That(surface.AspectRatio, Is.EqualTo(800f / 600f).Within(0.0001f));
+
+            ScreenRay ray = rayProvider.GetRay(new Vector2(400f, 300f));
+            Assert.That(ray.Origin, Is.Not.EqualTo(default(Vector3)));
         }
 
         private static void BeginPresentationFrame(object service)
