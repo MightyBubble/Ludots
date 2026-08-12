@@ -241,12 +241,8 @@ namespace Ludots.Tests.Gas.Graph
             Assert.Multiple(() =>
             {
                 Assert.That(package.Symbols[fanStatic.Imm], Is.EqualTo("effect.fan.static"));
-                Assert.That(applyDynamic.A, Is.EqualTo(0));
-                Assert.That(applyDynamic.B, Is.EqualTo(0));
-                Assert.That(fanDynamic.A, Is.EqualTo(0));
                 Assert.That(package.Symbols[dispatchStatic.Imm], Is.EqualTo("effect.dispatch.static"));
                 Assert.That(package.Symbols[dispatchStatic.Dst], Is.EqualTo("TargetToResolved"));
-                Assert.That(dispatchDynamic.A, Is.EqualTo(0));
                 Assert.That(applyDynamic.A, Is.EqualTo(target.Dst));
                 Assert.That(applyDynamic.B, Is.EqualTo(templateId.Dst));
                 Assert.That(fanDynamic.A, Is.EqualTo(templateId.Dst));
@@ -669,6 +665,223 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
+        public void FrontDoor_EffectRelationshipPairMutationAndReadOps_CompileAndEmit()
+        {
+            GraphControlFlowCompileResult compiled = CompileFrontDoor(
+                """
+                {
+                  "kind": "Effect",
+                  "entry": "source",
+                  "nodes": [
+                    { "id": "source", "op": "LoadCaster" },
+                    { "id": "target", "op": "LoadExplicitTarget" },
+                    { "id": "delta", "op": "ConstInt", "intValue": 7 },
+                    { "id": "trusted", "op": "ConstBool", "boolValue": true },
+                    { "id": "ensure", "op": "RelationshipEnsureLink", "relationshipType": "SocialBond" },
+                    { "id": "setMetric", "op": "RelationshipSetMetric", "relationshipType": "SocialBond", "metric": "Loyalty" },
+                    { "id": "addMetric", "op": "RelationshipAddMetric", "relationshipType": "SocialBond", "metric": "Loyalty" },
+                    { "id": "setFlag", "op": "RelationshipSetFlag", "relationshipType": "SocialBond", "flag": "Trusted" },
+                    { "id": "hasFlag", "op": "RelationshipHasFlag", "relationshipType": "SocialBond", "flag": "Trusted" },
+                    { "id": "hasLink", "op": "RelationshipHasLink", "relationshipType": "SocialBond" },
+                    { "id": "remove", "op": "RelationshipRemoveLink", "relationshipType": "SocialBond" }
+                  ],
+                  "controlEdges": [
+                    { "from": "source", "fromPort": "next", "to": "target" },
+                    { "from": "target", "fromPort": "next", "to": "delta" },
+                    { "from": "delta", "fromPort": "next", "to": "trusted" },
+                    { "from": "trusted", "fromPort": "next", "to": "ensure" },
+                    { "from": "ensure", "fromPort": "next", "to": "setMetric" },
+                    { "from": "setMetric", "fromPort": "next", "to": "addMetric" },
+                    { "from": "addMetric", "fromPort": "next", "to": "setFlag" },
+                    { "from": "setFlag", "fromPort": "next", "to": "hasFlag" },
+                    { "from": "hasFlag", "fromPort": "next", "to": "hasLink" },
+                    { "from": "hasLink", "fromPort": "next", "to": "remove" }
+                  ],
+                  "valueEdges": [
+                    { "from": "source", "fromPort": "value", "to": "ensure", "toPort": "source" },
+                    { "from": "target", "fromPort": "value", "to": "ensure", "toPort": "target" },
+                    { "from": "source", "fromPort": "value", "to": "setMetric", "toPort": "source" },
+                    { "from": "target", "fromPort": "value", "to": "setMetric", "toPort": "target" },
+                    { "from": "delta", "fromPort": "value", "to": "setMetric", "toPort": "value" },
+                    { "from": "source", "fromPort": "value", "to": "addMetric", "toPort": "source" },
+                    { "from": "target", "fromPort": "value", "to": "addMetric", "toPort": "target" },
+                    { "from": "delta", "fromPort": "value", "to": "addMetric", "toPort": "value" },
+                    { "from": "source", "fromPort": "value", "to": "setFlag", "toPort": "source" },
+                    { "from": "target", "fromPort": "value", "to": "setFlag", "toPort": "target" },
+                    { "from": "trusted", "fromPort": "value", "to": "setFlag", "toPort": "value" },
+                    { "from": "source", "fromPort": "value", "to": "hasFlag", "toPort": "source" },
+                    { "from": "target", "fromPort": "value", "to": "hasFlag", "toPort": "target" },
+                    { "from": "source", "fromPort": "value", "to": "hasLink", "toPort": "source" },
+                    { "from": "target", "fromPort": "value", "to": "hasLink", "toPort": "target" },
+                    { "from": "source", "fromPort": "value", "to": "remove", "toPort": "source" },
+                    { "from": "target", "fromPort": "value", "to": "remove", "toPort": "target" }
+                  ]
+                }
+                """,
+                "tests.effect.relationship-pair-mutation-read-ops");
+
+            Assert.That(compiled.Succeeded, Is.True, GraphScriptTestGraphs.FormatDiagnostics(compiled.Diagnostics));
+            Assert.That(compiled.Package.HasValue, Is.True);
+
+            GraphProgramPackage package = compiled.Package!.Value;
+            GraphInstruction ensure = SingleInstruction(package.Program, GraphNodeOp.RelationshipEnsureLink);
+            GraphInstruction remove = SingleInstruction(package.Program, GraphNodeOp.RelationshipRemoveLink);
+            GraphInstruction setMetric = SingleInstruction(package.Program, GraphNodeOp.RelationshipSetMetric);
+            GraphInstruction addMetric = SingleInstruction(package.Program, GraphNodeOp.RelationshipAddMetric);
+            GraphInstruction setFlag = SingleInstruction(package.Program, GraphNodeOp.RelationshipSetFlag);
+            GraphInstruction hasFlag = SingleInstruction(package.Program, GraphNodeOp.RelationshipHasFlag);
+            GraphInstruction hasLink = SingleInstruction(package.Program, GraphNodeOp.RelationshipHasLink);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(package.Symbols[ensure.Dst], Is.EqualTo("SocialBond"));
+                Assert.That(package.Symbols[remove.Dst], Is.EqualTo("SocialBond"));
+                Assert.That(package.Symbols[setMetric.Flags], Is.EqualTo("SocialBond"));
+                Assert.That(package.Symbols[setMetric.Imm], Is.EqualTo("Loyalty"));
+                Assert.That(setMetric.Dst, Is.EqualTo(byte.MaxValue));
+                Assert.That(package.Symbols[addMetric.Flags], Is.EqualTo("SocialBond"));
+                Assert.That(package.Symbols[addMetric.Imm], Is.EqualTo("Loyalty"));
+                Assert.That(addMetric.Dst, Is.EqualTo(byte.MaxValue));
+                Assert.That(package.Symbols[setFlag.Flags], Is.EqualTo("SocialBond"));
+                Assert.That(package.Symbols[setFlag.Imm], Is.EqualTo("Trusted"));
+                Assert.That(setFlag.Dst, Is.EqualTo(byte.MaxValue));
+                Assert.That(package.Symbols[hasFlag.Flags], Is.EqualTo("SocialBond"));
+                Assert.That(package.Symbols[hasFlag.Imm], Is.EqualTo("Trusted"));
+                Assert.That(package.Symbols[hasLink.Flags], Is.EqualTo("SocialBond"));
+            });
+
+            Assert.DoesNotThrow(() =>
+                GraphKindOperationPolicy.RequireAllowed(
+                    GraphKind.Effect,
+                    package.Program,
+                    GasGraphOpHandlerTable.Instance));
+        }
+
+        [Test]
+        public void FrontDoor_QueryRelationshipPairAndPredicateOps_CompileAndEmit()
+        {
+            GraphControlFlowCompileResult compiled = CompileFrontDoor(
+                """
+                {
+                  "kind": "Query",
+                  "entry": "source",
+                  "nodes": [
+                    { "id": "source", "op": "LoadCaster" },
+                    { "id": "between", "op": "RelationshipQueryBetweenPair", "relationshipType": "SocialBond" },
+                    { "id": "count", "op": "AggCount" },
+                    { "id": "hasFlag", "op": "RelationshipHasFlag", "relationshipType": "SocialBond", "flag": "Trusted" },
+                    { "id": "hasLink", "op": "RelationshipHasLink", "relationshipType": "SocialBond" }
+                  ],
+                  "controlEdges": [
+                    { "from": "source", "fromPort": "next", "to": "between" },
+                    { "from": "between", "fromPort": "next", "to": "count" },
+                    { "from": "count", "fromPort": "next", "to": "hasFlag" },
+                    { "from": "hasFlag", "fromPort": "next", "to": "hasLink" }
+                  ],
+                  "valueEdges": [
+                    { "from": "source", "fromPort": "value", "to": "between", "toPort": "source" },
+                    { "from": "source", "fromPort": "value", "to": "between", "toPort": "b" },
+                    { "from": "between", "fromPort": "list", "to": "count", "toPort": "list" },
+                    { "from": "source", "fromPort": "value", "to": "hasFlag", "toPort": "source" },
+                    { "from": "source", "fromPort": "value", "to": "hasFlag", "toPort": "target" },
+                    { "from": "source", "fromPort": "value", "to": "hasLink", "toPort": "source" },
+                    { "from": "source", "fromPort": "value", "to": "hasLink", "toPort": "target" }
+                  ],
+                  "outputs": [
+                    { "id": "pairCount", "destination": "Summary", "type": "Int", "source": "count", "key": "panel.relationship.pair_count" },
+                    { "id": "trusted", "destination": "Summary", "type": "Bool", "source": "hasFlag", "key": "panel.relationship.trusted" },
+                    { "id": "linked", "destination": "Summary", "type": "Bool", "source": "hasLink", "key": "panel.relationship.linked" }
+                  ]
+                }
+                """,
+                "tests.query.relationship-pair-predicate-ops");
+
+            Assert.That(compiled.Succeeded, Is.True, GraphScriptTestGraphs.FormatDiagnostics(compiled.Diagnostics));
+            Assert.That(compiled.Package.HasValue, Is.True);
+            Assert.That(compiled.OutputSchema.Bindings.Length, Is.EqualTo(3));
+
+            GraphProgramPackage package = compiled.Package!.Value;
+            GraphInstruction between = SingleInstruction(package.Program, GraphNodeOp.RelationshipQueryBetweenPair);
+            GraphInstruction hasFlag = SingleInstruction(package.Program, GraphNodeOp.RelationshipHasFlag);
+            GraphInstruction hasLink = SingleInstruction(package.Program, GraphNodeOp.RelationshipHasLink);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(package.Symbols[between.Dst], Is.EqualTo("SocialBond"));
+                Assert.That(package.Symbols[hasFlag.Flags], Is.EqualTo("SocialBond"));
+                Assert.That(package.Symbols[hasFlag.Imm], Is.EqualTo("Trusted"));
+                Assert.That(package.Symbols[hasLink.Flags], Is.EqualTo("SocialBond"));
+            });
+
+            Assert.DoesNotThrow(() =>
+                GraphKindOperationPolicy.RequireAllowed(
+                    GraphKind.Query,
+                    package.Program,
+                    GasGraphOpHandlerTable.Instance));
+        }
+
+        [Test]
+        public void FrontDoor_RelationshipOpsRequireAuthoredSymbols()
+        {
+            AssertMissingField(
+                RelationshipEffectGraphJson(
+                    """{ "id": "ensure", "op": "RelationshipEnsureLink" }""",
+                    valueEdges: PairValueEdges("ensure")),
+                "tests.effect.relationship-ensure-missing-type",
+                "ensure",
+                "relationshipType");
+
+            AssertMissingField(
+                RelationshipEffectGraphJson(
+                    """{ "id": "setMetric", "op": "RelationshipSetMetric", "relationshipType": "SocialBond" }""",
+                    valueEdges: PairValueEdges("setMetric")),
+                "tests.effect.relationship-set-metric-missing-metric",
+                "setMetric",
+                "metric");
+
+            AssertMissingField(
+                RelationshipEffectGraphJson(
+                    """{ "id": "hasFlag", "op": "RelationshipHasFlag", "relationshipType": "SocialBond" }""",
+                    valueEdges: PairValueEdges("hasFlag")),
+                "tests.effect.relationship-has-flag-missing-flag",
+                "hasFlag",
+                "flag");
+
+            AssertMissingField(
+                """
+                {
+                  "kind": "Query",
+                  "entry": "source",
+                  "nodes": [
+                    { "id": "source", "op": "LoadCaster" },
+                    { "id": "between", "op": "RelationshipQueryBetweenPair" }
+                  ],
+                  "controlEdges": [
+                    { "from": "source", "fromPort": "next", "to": "between" }
+                  ],
+                  "valueEdges": [
+                    { "from": "source", "fromPort": "value", "to": "between", "toPort": "source" },
+                    { "from": "source", "fromPort": "value", "to": "between", "toPort": "b" }
+                  ]
+                }
+                """,
+                "tests.query.relationship-between-missing-type",
+                "between",
+                "relationshipType");
+
+            static void AssertMissingField(string json, string graphId, string nodeId, string field)
+            {
+                GraphControlFlowCompileResult compiled = CompileFrontDoor(json, graphId);
+                Assert.That(compiled.Succeeded, Is.False);
+                Assert.That(compiled.Package.HasValue, Is.False);
+                Assert.That(compiled.Diagnostics, Has.Some.Matches<GraphDiagnostic>(d =>
+                    d.Code == GraphDiagnosticCodes.MissingNodeRef &&
+                    d.NodeId == nodeId &&
+                    d.Message.Contains(field, StringComparison.Ordinal)));
+            }
+        }
+
+        [Test]
         public void FrontDoor_QueryRadius_RequiresCapacityPolicy()
         {
             GraphControlFlowCompileResult compiled = CompileFrontDoor(
@@ -837,6 +1050,38 @@ namespace Ludots.Tests.Gas.Graph
 
         private static GraphInstruction SingleInstruction(GraphInstruction[] program, GraphNodeOp op)
             => program.Single(i => i.Op == (ushort)op);
+
+        private static string RelationshipEffectGraphJson(string relationshipNode, string valueEdges, string extraNode = "")
+            => $$"""
+               {
+                 "kind": "Effect",
+                 "entry": "source",
+                 "nodes": [
+                   { "id": "source", "op": "LoadCaster" },
+                   { "id": "target", "op": "LoadExplicitTarget" }{{extraNode}},
+                   {{relationshipNode}}
+                 ],
+                 "controlEdges": [
+                   { "from": "source", "fromPort": "next", "to": "target" },
+                   { "from": "target", "fromPort": "next", "to": "{{RelationshipNodeId(relationshipNode)}}" }
+                 ],
+                 "valueEdges": [
+                   {{valueEdges}}
+                 ]
+               }
+               """;
+
+        private static string PairValueEdges(string to)
+            => $$"""
+                    { "from": "source", "fromPort": "value", "to": "{{to}}", "toPort": "source" },
+                    { "from": "target", "fromPort": "value", "to": "{{to}}", "toPort": "target" }
+               """;
+
+        private static string RelationshipNodeId(string nodeJson)
+        {
+            using JsonDocument document = JsonDocument.Parse(nodeJson);
+            return document.RootElement.GetProperty("id").GetString()!;
+        }
 
         private static string BranchBoolGraphJson(string kind)
             => $$"""
