@@ -399,6 +399,14 @@
         "value": "mods/showcases/raylib_client_parity/RaylibClientParityShowcaseMod",
         "projectPath": "RaylibClientParityShowcaseMod.csproj"
       }
+    },
+    {
+      "name": "raylib_visual_atmosphere",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/raylib_visual_atmosphere/RaylibVisualAtmosphereShowcaseMod",
+        "projectPath": "RaylibVisualAtmosphereShowcaseMod.csproj"
+      }
     }
   ],
   "adapters": {

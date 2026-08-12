@@ -1,0 +1,14 @@
+[
+  {
+    "id": "raylib_visual_atmosphere.palm",
+    "type": "Billboard"
+  },
+  {
+    "id": "raylib_visual_atmosphere.vfx_blend",
+    "type": "Billboard"
+  },
+  {
+    "id": "raylib_visual_atmosphere.vfx_additive",
+    "type": "Billboard"
+  }
+]

@@ -1,0 +1,38 @@
+[
+  {
+    "id": "raylib_visual_atmosphere_tree",
+    "components": {
+      "Name": { "Value": "AtmospherePalm" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": { "base": {} },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "raylib_visual_atmosphere_vfx_blend",
+    "components": {
+      "Name": { "Value": "AtmosphereVfxAlphaBlend" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": { "base": {} },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  },
+  {
+    "id": "raylib_visual_atmosphere_vfx_additive",
+    "components": {
+      "Name": { "Value": "AtmosphereVfxAdditive" },
+      "WorldPositionCm": { "Value": { "X": 0, "Y": 0 } },
+      "PresentationStaticTransform": {},
+      "FacingDirection": { "AngleRad": 0.0 },
+      "AttributeBuffer": { "base": {} },
+      "GameplayTagContainer": {},
+      "TagCountContainer": {}
+    }
+  }
+]

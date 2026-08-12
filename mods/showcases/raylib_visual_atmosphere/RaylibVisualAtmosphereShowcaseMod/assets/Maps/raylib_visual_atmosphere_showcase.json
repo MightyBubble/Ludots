@@ -1,0 +1,82 @@
+{
+  "Id": "raylib_visual_atmosphere_showcase",
+  "Tags": ["showcase", "raylib", "atmosphere", "Raylib.DebugGuides:Off"],
+  "DefaultCamera": {
+    "TargetXCm": 70500,
+    "TargetYCm": 60100,
+    "Yaw": 205,
+    "Pitch": 26,
+    "DistanceCm": 22000,
+    "FovYDeg": 55
+  },
+  "Boards": [
+    {
+      "Name": "default",
+      "SpatialType": "HexGrid",
+      "DataFile": "tropical_island.vtxm",
+      "NavigationEnabled": false
+    }
+  ],
+  "Entities": [
+    {
+      "Template": "raylib_visual_atmosphere_tree",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 100625, "Y": 62809 } }
+      }
+    },
+    {
+      "Template": "raylib_visual_atmosphere_tree",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 96857, "Y": 72600 } }
+      }
+    },
+    {
+      "Template": "raylib_visual_atmosphere_tree",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 88778, "Y": 80581 } }
+      }
+    },
+    {
+      "Template": "raylib_visual_atmosphere_tree",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 78359, "Y": 85791 } }
+      }
+    },
+    {
+      "Template": "raylib_visual_atmosphere_tree",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 33959, "Y": 47339 } }
+      }
+    },
+    {
+      "Template": "raylib_visual_atmosphere_tree",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 40321, "Y": 38316 } }
+      }
+    },
+    {
+      "Template": "raylib_visual_atmosphere_tree",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 55009, "Y": 29409 } }
+      }
+    },
+    {
+      "Template": "raylib_visual_atmosphere_tree",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 92000, "Y": 56000 } }
+      }
+    },
+    {
+      "Template": "raylib_visual_atmosphere_vfx_blend",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 98000, "Y": 64000 } }
+      }
+    },
+    {
+      "Template": "raylib_visual_atmosphere_vfx_additive",
+      "Overrides": {
+        "WorldPositionCm": { "Value": { "X": 101000, "Y": 67000 } }
+      }
+    }
+  ]
+}

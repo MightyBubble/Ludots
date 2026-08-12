@@ -1,0 +1,35 @@
+namespace RaylibVisualAtmosphereShowcaseMod;
+
+internal static class RaylibVisualAtmosphereShowcaseIds
+{
+    public const string MapId = "raylib_visual_atmosphere_showcase";
+    public const string InstalledKey = "RaylibVisualAtmosphereShowcaseMod.Installed";
+
+    public const string TreeTemplateId = "raylib_visual_atmosphere_tree";
+    public const string VfxBlendTemplateId = "raylib_visual_atmosphere_vfx_blend";
+    public const string VfxAdditiveTemplateId = "raylib_visual_atmosphere_vfx_additive";
+
+    public const string TreePerformerId = "raylib_visual_atmosphere_tree_actor";
+    public const string VfxBlendPerformerId = "raylib_visual_atmosphere_vfx_blend_actor";
+    public const string VfxAdditivePerformerId = "raylib_visual_atmosphere_vfx_additive_actor";
+
+    public const string TreeMeshKey = "raylib_visual_atmosphere.palm";
+    public const string VfxBlendMeshKey = "raylib_visual_atmosphere.vfx_blend";
+    public const string VfxAdditiveMeshKey = "raylib_visual_atmosphere.vfx_additive";
+
+    public const string TreeMaterialKey = "raylib_visual_atmosphere.palm_cutout";
+    public const string VfxBlendMaterialKey = "raylib_visual_atmosphere.vfx_alphablend";
+    public const string VfxAdditiveMaterialKey = "raylib_visual_atmosphere.vfx_additive";
+
+    public const string SkyEnvironmentId = "raylib_visual_atmosphere.sky";
+    public const string WaterEnvironmentId = "raylib_visual_atmosphere.water";
+
+    public const float IslandCenterXCm = 66_500f;
+    public const float IslandCenterYCm = 57_600f;
+    public const float WaterPlaneYMeters = 12f;
+
+    public static bool IsShowcaseMap(string? mapId)
+    {
+        return string.Equals(mapId, MapId, System.StringComparison.OrdinalIgnoreCase);
+    }
+}

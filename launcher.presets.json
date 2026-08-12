@@ -457,6 +457,15 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "raylib_visual_atmosphere_raylib",
+      "name": "Raylib Visual Atmosphere",
+      "selectors": [
+        "$raylib_visual_atmosphere"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

@@ -2534,6 +2534,31 @@
       ]
     },
     {
+      "id": "raylib_visual_atmosphere",
+      "path": "mods/showcases/raylib_visual_atmosphere/RaylibVisualAtmosphereShowcaseMod",
+      "projectPath": "RaylibVisualAtmosphereShowcaseMod.csproj",
+      "title": "Raylib 热带岛观感 Showcase",
+      "summary": "天空昼夜、日照地形、透贴植被、半透明/Additive 特效、距离雾与反射水面的玩家向热带岛观感验收场景。",
+      "tier": "T2",
+      "category": "demo",
+      "binding": "raylib_visual_atmosphere",
+      "preset": "raylib_visual_atmosphere_raylib",
+      "docsPath": "docs/audits/raylib-visual-atmosphere/ACCEPTANCE.md",
+      "readmePath": null,
+      "acceptanceTest": null,
+      "artifactDir": "artifacts/raylib-visual-atmosphere/acceptance",
+      "screenshot": "artifacts/raylib-visual-atmosphere/acceptance/01_sky_day.png",
+      "status": "active",
+      "tags": [
+        "rendering",
+        "raylib",
+        "atmosphere",
+        "sky",
+        "water",
+        "fog"
+      ]
+    },
+    {
       "id": "terrain_benchmark",
       "path": "mods/TerrainBenchmarkMod",
       "projectPath": "TerrainBenchmarkMod.csproj",

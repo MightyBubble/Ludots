@@ -1,0 +1,44 @@
+[
+  {
+    "id": "raylib_visual_atmosphere.sky",
+    "backendId": "raylib",
+    "enabled": true,
+    "mapIds": ["raylib_visual_atmosphere_showcase"],
+    "initialPhase": 0.42,
+    "clearSampleV": 0.85,
+    "gradientWidth": 256,
+    "gradientHeight": 64,
+    "gradientStops": [
+      {
+        "phase": 0.0,
+        "zenith": [0.02, 0.03, 0.08],
+        "horizon": [0.05, 0.06, 0.12]
+      },
+      {
+        "phase": 0.22,
+        "zenith": [0.12, 0.14, 0.28],
+        "horizon": [0.55, 0.28, 0.18]
+      },
+      {
+        "phase": 0.42,
+        "zenith": [0.22, 0.48, 0.92],
+        "horizon": [0.62, 0.78, 0.95]
+      },
+      {
+        "phase": 0.55,
+        "zenith": [0.18, 0.42, 0.88],
+        "horizon": [0.55, 0.72, 0.92]
+      },
+      {
+        "phase": 0.78,
+        "zenith": [0.18, 0.12, 0.32],
+        "horizon": [0.72, 0.32, 0.18]
+      },
+      {
+        "phase": 1.0,
+        "zenith": [0.02, 0.03, 0.08],
+        "horizon": [0.05, 0.06, 0.12]
+      }
+    ]
+  }
+]

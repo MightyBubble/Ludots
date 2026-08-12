@@ -1,0 +1,56 @@
+[
+  {
+    "id": "raylib_visual_atmosphere.palm.raylib",
+    "assetKind": "Mesh",
+    "assetId": "raylib_visual_atmosphere.palm",
+    "backendId": "raylib",
+    "sourceUris": [
+      "RaylibVisualAtmosphereShowcaseMod:assets/Textures/palm_cutout.png"
+    ]
+  },
+  {
+    "id": "raylib_visual_atmosphere.vfx_blend.raylib",
+    "assetKind": "Mesh",
+    "assetId": "raylib_visual_atmosphere.vfx_blend",
+    "backendId": "raylib",
+    "sourceUris": [
+      "RaylibVisualAtmosphereShowcaseMod:assets/Textures/vfx_soft_puff.png"
+    ]
+  },
+  {
+    "id": "raylib_visual_atmosphere.vfx_additive.raylib",
+    "assetKind": "Mesh",
+    "assetId": "raylib_visual_atmosphere.vfx_additive",
+    "backendId": "raylib",
+    "sourceUris": [
+      "RaylibVisualAtmosphereShowcaseMod:assets/Textures/vfx_additive_glow.png"
+    ]
+  },
+  {
+    "id": "raylib_visual_atmosphere.palm_cutout.raylib",
+    "assetKind": "Material",
+    "assetId": "raylib_visual_atmosphere.palm_cutout",
+    "backendId": "raylib",
+    "sourceUris": [
+      "RaylibVisualAtmosphereShowcaseMod:assets/Textures/palm_cutout.png"
+    ]
+  },
+  {
+    "id": "raylib_visual_atmosphere.vfx_alphablend.raylib",
+    "assetKind": "Material",
+    "assetId": "raylib_visual_atmosphere.vfx_alphablend",
+    "backendId": "raylib",
+    "sourceUris": [
+      "RaylibVisualAtmosphereShowcaseMod:assets/Textures/vfx_soft_puff.png"
+    ]
+  },
+  {
+    "id": "raylib_visual_atmosphere.vfx_additive.raylib",
+    "assetKind": "Material",
+    "assetId": "raylib_visual_atmosphere.vfx_additive",
+    "backendId": "raylib",
+    "sourceUris": [
+      "RaylibVisualAtmosphereShowcaseMod:assets/Textures/vfx_additive_glow.png"
+    ]
+  }
+]

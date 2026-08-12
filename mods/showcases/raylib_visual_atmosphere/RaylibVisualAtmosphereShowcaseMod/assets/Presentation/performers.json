@@ -1,0 +1,145 @@
+[
+  {
+    "id": "raylib_visual_atmosphere_tree_bootstrap",
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "raylib_visual_atmosphere_tree"
+        },
+        "condition": { "inline": "None" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "raylib_visual_atmosphere_tree_actor",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "raylib_visual_atmosphere_tree"
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "raylib_visual_atmosphere_vfx_blend_bootstrap",
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "raylib_visual_atmosphere_vfx_blend"
+        },
+        "condition": { "inline": "None" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "raylib_visual_atmosphere_vfx_blend_actor",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "raylib_visual_atmosphere_vfx_blend"
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "raylib_visual_atmosphere_vfx_additive_bootstrap",
+    "rules": [
+      {
+        "event": {
+          "kind": "EntitySpawned",
+          "key": "raylib_visual_atmosphere_vfx_additive"
+        },
+        "condition": { "inline": "None" },
+        "command": {
+          "kind": "CreatePerformer",
+          "definitionId": "raylib_visual_atmosphere_vfx_additive_actor",
+          "scopeSource": "EventPayloadA"
+        }
+      },
+      {
+        "event": {
+          "kind": "EntityDestroyed",
+          "key": "raylib_visual_atmosphere_vfx_additive"
+        },
+        "command": {
+          "kind": "DestroyPerformerScope",
+          "scopeSource": "EventPayloadA"
+        }
+      }
+    ]
+  },
+  {
+    "id": "raylib_visual_atmosphere_tree_actor",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "Mesh",
+          "assetId": "raylib_visual_atmosphere.palm",
+          "materialId": "raylib_visual_atmosphere.palm_cutout",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localScale": [6.5, 6.5, 6.5]
+        }
+      }
+    ]
+  },
+  {
+    "id": "raylib_visual_atmosphere_vfx_blend_actor",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "VFX",
+          "assetId": "raylib_visual_atmosphere.vfx_blend",
+          "materialId": "raylib_visual_atmosphere.vfx_alphablend",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localOffset": [0, 2.4, 0],
+          "localScale": [3.2, 3.2, 3.2]
+        },
+        "style": {
+          "color": [0.55, 0.78, 1.0, 0.75]
+        }
+      }
+    ]
+  },
+  {
+    "id": "raylib_visual_atmosphere_vfx_additive_actor",
+    "behaviors": [
+      {
+        "slot": "body",
+        "kind": "AssetBinding",
+        "activeByDefault": true,
+        "assetBinding": {
+          "assetKind": "VFX",
+          "assetId": "raylib_visual_atmosphere.vfx_additive",
+          "materialId": "raylib_visual_atmosphere.vfx_additive",
+          "renderPath": "StaticMesh",
+          "mobility": "Static",
+          "localOffset": [0, 2.6, 0],
+          "localScale": [3.6, 3.6, 3.6]
+        },
+        "style": {
+          "color": [1.0, 0.55, 0.12, 0.95]
+        }
+      }
+    ]
+  }
+]

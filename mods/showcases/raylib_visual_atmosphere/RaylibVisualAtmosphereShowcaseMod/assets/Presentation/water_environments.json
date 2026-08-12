@@ -1,0 +1,12 @@
+[
+  {
+    "id": "raylib_visual_atmosphere.water",
+    "backendId": "raylib",
+    "enabled": true,
+    "mapIds": ["raylib_visual_atmosphere_showcase"],
+    "waterPlaneY": 12.0,
+    "resolutionScale": 0.5,
+    "waveStrength": 0.035,
+    "moveSpeed": 0.04
+  }
+]
