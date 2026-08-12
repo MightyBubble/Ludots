@@ -36,7 +36,6 @@ public sealed class LiveSkillWorkbenchVignetteRuntime
     private float _damagePerHit = 0.35f;
     private int _chainLit;
     private int _flashFrames;
-    private bool _hotApplied;
     private string _banner = "1) Weak fireball";
 
     public float MageX => -5.5f;
@@ -51,6 +50,32 @@ public sealed class LiveSkillWorkbenchVignetteRuntime
     public int FlashFrames => _flashFrames;
     public string Banner => _banner;
     public Beat CurrentBeat => _beat;
+
+    /// <summary>What the player/mod author just did (workbench or cast).</summary>
+    public string PlayerAction => _beat switch
+    {
+        Beat.WeakCast => "Cast fireball (old damage)",
+        Beat.HotApplyBanner => "Workbench: raise damage + Apply Next Cast",
+        Beat.StrongCast => "Cast fireball again (new damage)",
+        Beat.HealMage => "Workbench: set selected mage HP = full (Immediate)",
+        Beat.EffectChain => "Open effect-chain timeline after a cast",
+        Beat.FrostDraft => "AI draft 'frost nova' -> Bind playtest -> Cast",
+        Beat.LoopHold => "Save accepted draft to Mod (optional)",
+        _ => "Watch"
+    };
+
+    /// <summary>What the player should see in the world / workbench.</summary>
+    public string PlayerFeedback => _beat switch
+    {
+        Beat.WeakCast => $"Dummy HP drops a little (now {_dummyHp:P0})",
+        Beat.HotApplyBanner => "Status: NextCastLiveApply (not restart)",
+        Beat.StrongCast => $"Dummy HP drops a lot (now {_dummyHp:P0})",
+        Beat.HealMage => $"Mage HP fills immediately (now {_mageHp:P0})",
+        Beat.EffectChain => $"Timeline lights CAST/EFFECT/ATTR/RESP ({_chainLit}/4)",
+        Beat.FrostDraft => "Cyan frost shot plays from temporary skill",
+        Beat.LoopHold => "Config files written; reload keeps the skill",
+        _ => ""
+    };
     public GraphShowcaseMetrics Metrics { get; } = new()
     {
         ShowcaseId = "capability_standard_live_skill_workbench"
@@ -121,7 +146,6 @@ public sealed class LiveSkillWorkbenchVignetteRuntime
                 _banner = "2) Hot-apply - next cast hits harder";
                 if (_beatTime > 2.0f)
                 {
-                    _hotApplied = true;
                     _damagePerHit = 0.55f;
                     _flashFrames = 24;
                     _beatTime = 0f;

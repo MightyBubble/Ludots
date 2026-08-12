@@ -28,7 +28,7 @@ public sealed class CapabilityStandardLiveSkillWorkbenchShowcaseModEntry : IMod
             var debugDraw = new DebugDrawCommandBuffer();
             engine.SetService(CoreServiceKeys.DebugDrawCommandBuffer, debugDraw);
             engine.RegisterSystem(new LiveSkillWorkbenchVignetteSimulationSystem(runtime), SystemGroup.PostMovement);
-            engine.RegisterPresentationSystem(new LiveSkillWorkbenchVignettePresentationSystem(runtime, debugDraw));
+            engine.RegisterPresentationSystem(new LiveSkillWorkbenchVignettePresentationSystem(engine, runtime, debugDraw));
             return Task.CompletedTask;
         });
         context.OnEvent(GameEvents.MapLoaded, _ =>

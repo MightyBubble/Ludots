@@ -75,9 +75,12 @@ static void DrawFrame(LiveSkillWorkbenchVignetteRuntime rt, string path, string 
 
     using var title = new SKPaint { Color = SKColors.White, TextSize = 30, IsAntialias = true, Typeface = SKTypeface.Default };
     using var sub = new SKPaint { Color = new SKColor(170, 195, 215), TextSize = 20, IsAntialias = true, Typeface = SKTypeface.Default };
-    c.DrawText("Live Skill Workbench - Playable Vignette (in-world)", 36, 46, title);
-    c.DrawText(ToAsciiBanner(rt.Banner), 36, 78, sub);
-    c.DrawText($"beat={rt.CurrentBeat}  mageHP={rt.MageHp01:P0}  dummyHP={rt.DummyHp01:P0}  chain={rt.ChainLit}/4", 36, 108, sub);
+    c.DrawText("Live Skill Workbench - Player I/O vignette", 36, 46, title);
+    using var actionPaint = new SKPaint { Color = new SKColor(255, 210, 90), TextSize = 22, IsAntialias = true, Typeface = SKTypeface.Default };
+    using var feedbackPaint = new SKPaint { Color = new SKColor(120, 230, 160), TextSize = 22, IsAntialias = true, Typeface = SKTypeface.Default };
+    c.DrawText($"PLAYER ACTION: {rt.PlayerAction}", 36, 82, actionPaint);
+    c.DrawText($"FEEDBACK: {rt.PlayerFeedback}", 36, 112, feedbackPaint);
+    c.DrawText($"beat={rt.CurrentBeat}  mageHP={rt.MageHp01:P0}  dummyHP={rt.DummyHp01:P0}  chain={rt.ChainLit}/4", 36, 140, sub);
 
     float WX(float x) => 640 + x * 55f;
     float WY(float y) => 390 - y * 45f;
