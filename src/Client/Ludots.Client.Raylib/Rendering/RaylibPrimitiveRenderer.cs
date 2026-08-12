@@ -878,6 +878,12 @@ namespace Ludots.Client.Raylib.Rendering
                     $"{nameof(RaylibPrimitiveRenderer)} Decal stableId={stableId} materialId={materialId} must use AlphaBlend or Cutout, not Opaque.");
             }
 
+            if (_decalMaterial.maps == null)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} Decal stableId={stableId} material maps were not allocated by LoadMaterialDefault.");
+            }
+
             int albedoIndex = (int)Rl.MaterialMapIndex.MATERIAL_MAP_ALBEDO;
             _decalMaterial.maps[albedoIndex].color = ToRaylibColor(color);
 
@@ -893,7 +899,7 @@ namespace Ludots.Client.Raylib.Rendering
             }
 
             bool blending = TryBeginAuthorBlendMode(blendMode);
-            bool cutoutShader = false;
+            Shader previousShader = _decalMaterial.shader;
             try
             {
                 if (blendMode == MaterialBlendMode.Cutout)
@@ -912,21 +918,13 @@ namespace Ludots.Client.Raylib.Rendering
                         &cutoff,
                         (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
                     _decalMaterial.shader = _vegetationCutoutShader;
-                    cutoutShader = true;
-                }
-                else
-                {
-                    _decalMaterial.shader = default;
                 }
 
                 Rl.DrawMesh(_decalQuadMesh, _decalMaterial, RaylibMatrix.FromSystemNumerics(transform));
             }
             finally
             {
-                if (cutoutShader)
-                {
-                    _decalMaterial.shader = default;
-                }
+                _decalMaterial.shader = previousShader;
 
                 if (blending)
                 {
