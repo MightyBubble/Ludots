@@ -39,6 +39,7 @@
   { "Path": "Presentation/material_assets.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "Presentation/host_assets.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "Presentation/sky_environments.json", "Policy": "ArrayById", "IdField": "id" },
+  { "Path": "Presentation/water_environments.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "Presentation/prefabs.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "Presentation/instanced_batches.json", "Policy": "ArrayById", "IdField": "id" },
   { "Path": "Presentation/presentation_behaviors.json", "Policy": "ArrayById", "IdField": "id" },
