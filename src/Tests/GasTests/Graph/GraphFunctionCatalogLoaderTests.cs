@@ -158,6 +158,45 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
+        public void FuncCatalogLoader_RejectsScoreKind()
+        {
+            GraphIdRegistry.Clear();
+            string root = string.Empty;
+            try
+            {
+                const string graphName = "Graph.Score.DistanceDecay";
+                int graphId = GraphIdRegistry.Register(graphName);
+                var programs = new GraphProgramRegistry();
+                programs.Register(
+                    graphId,
+                    new[] { new GraphInstruction { Op = (ushort)GraphNodeOp.HaltReturnInt } },
+                    GraphKind.Score);
+
+                var (pipeline, configCatalog, tempRoot) = CreateCatalogPipeline(
+                    "GAS/func_lib.json",
+                    """
+                    [
+                      { "name": "score.distanceDecay", "graph": "Graph.Score.DistanceDecay", "kind": "Score", "purity": "pure" }
+                    ]
+                    """);
+                root = tempRoot;
+
+                var functionCatalog = new GraphFunctionCatalog();
+                var ex = Assert.Throws<AggregateException>(() =>
+                    new GraphFunctionCatalogLoader(pipeline, functionCatalog, programs).Load(configCatalog));
+
+                Assert.That(functionCatalog.Count, Is.EqualTo(0));
+                Assert.That(ex!.InnerExceptions[0].Message, Does.Contain("must be Script (pure)"));
+                Assert.That(ex.InnerExceptions[0].Message, Does.Contain("Score and Validation are deferred"));
+            }
+            finally
+            {
+                GraphIdRegistry.Clear();
+                DeleteTempRoot(root);
+            }
+        }
+
+        [Test]
         public void FuncCatalogLoader_RejectsNonPurePurity()
         {
             GraphIdRegistry.Clear();

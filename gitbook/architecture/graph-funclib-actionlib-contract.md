@@ -1,6 +1,6 @@
 # 图复用库合同补丁：FuncLib / ActionLib 与 Kind 表达力
 
-状态：已落地（`GAS/action_lib.json` + `GraphActionCatalog`；FuncLib `purity`/禁 Yield；Effect `BranchBool` + 线性 `InvokeScript`；L2 Showcase 走 ActionLib；next-chain `GraphCompiler` 已移除）。对照评审仍以本页 + [图分层](graph-layering-flow-and-behavior.md) 为准。  
+状态：修复中（Epic #915）（`GAS/action_lib.json` + `GraphActionCatalog`；FuncLib 仅 `Script`（pure）/禁 Yield；`Score`/`Validation` FuncLib 延后；Effect `BranchBool` + 线性 `InvokeScript`；L2 Showcase 走 ActionLib；next-chain `GraphCompiler` 已移除）。对照评审仍以本页 + [图分层](graph-layering-flow-and-behavior.md) 为准。  
 关联：#861 作者 SSOT / FuncLib；L0/L1/L2 分层；效果生命周期（Duration/Period）。
 
 ---
@@ -76,7 +76,7 @@ Score / Validation / Query / Derived **接受为纯或准纯**——本补丁确
 **登记**
 
 - 资产：`GAS/func_lib.json`：`name` / `graph` / `kind` / （新增）`purity`（默认 `pure`，非 pure 拒绝进 FuncLib）。  
-- 允许 kind：`Script`（pure）、`Score`、`Validation`。（Derived 若暴露为库函数须另开评审；默认不进 FuncLib。）  
+- 允许 kind：仅 `Script`（`purity=pure`）。`Score` / `Validation` 延后至 `InvokeScore` / `InvokeValidation` 真实调用路径落地后再开放。（Derived 若暴露为库函数须另开评审；默认不进 FuncLib。）  
 - 加载后校验：目标图无 `Yield`/`Wait`；`GraphKindOperationPolicy` 与 purity 一致；未登记名失败关闭。
 
 **调用**
