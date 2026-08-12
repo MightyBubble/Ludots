@@ -62,13 +62,14 @@
 
 ### W4 — 验收产物（P0）
 
-- [ ] Showcase Mod：`raylib_client_parity`（静态实例 + GPU 蒙皮人群 + 材质 tint/albedo）  
-- [ ] `showcase.registry.json` 登记  
-- [ ] 截图目录：`artifacts/raylib-client-parity/acceptance/`  
+- [x] Showcase Mod：`raylib_client_parity`（静态实例 + GPU 蒙皮人群 + 材质 tint/albedo）  
+- [x] `showcase.registry.json` 登记  
+- [x] 截图目录：`artifacts/raylib-client-parity/acceptance/`（及 `/opt/cursor/artifacts/...`）  
   - `01_static_ism.png`  
-  - `02_gpu_skinned_walk.png`（两帧差分证明在动）  
+  - `02_gpu_skinned_walk_a/b.png`（两帧差分证明在动）  
   - `03_material_bind.png`  
-  - `04_vfx_shader.png`（若 W3 完成）  
+  - `04_vfx_shader.png`  
+- [x] `ACCEPTANCE.md` 合同说明各截图证明点
 
 ## 4. 场景（作者视角）
 

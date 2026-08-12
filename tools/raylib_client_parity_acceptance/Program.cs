@@ -135,10 +135,25 @@ internal static class Program
             projection = CameraProjection.CAMERA_PERSPECTIVE
         };
 
+        int tintLoc = GetShaderLocation(shader, "tint");
+        int colLoc = GetShaderLocation(shader, "colDiffuse");
+        Vector4 tint = Vector4.One;
+        Vector4 col = Vector4.One;
+
         BeginDrawing();
-        ClearBackground(new Color(28, 34, 44, 255));
+        ClearBackground(new Color(48, 56, 68, 255));
         BeginMode3D(camera);
         DrawGrid(60, 1f);
+        if (tintLoc >= 0)
+        {
+            SetShaderValue(shader, tintLoc, &tint, (int)ShaderUniformDataType.SHADER_UNIFORM_VEC4);
+        }
+
+        if (colLoc >= 0)
+        {
+            SetShaderValue(shader, colLoc, &col, (int)ShaderUniformDataType.SHADER_UNIFORM_VEC4);
+        }
+
         for (int meshIndex = 0; meshIndex < model.meshCount; meshIndex++)
         {
             Mesh mesh = model.meshes[meshIndex];
@@ -150,6 +165,11 @@ internal static class Program
 
             Material material = model.materials[materialIndex];
             material.shader = shader;
+            if (material.maps != null)
+            {
+                material.maps[(int)MaterialMapIndex.MATERIAL_MAP_ALBEDO].color = Color.WHITE;
+            }
+
             fixed (RaylibMatrix* p = transforms)
             {
                 DrawMeshInstanced(mesh, material, p, instanceCount);
@@ -448,6 +468,8 @@ internal static class Program
 
         SaveShot("04_vfx_shader.png", outDir, optOutDir);
         report.AppendLine("- `04_vfx_shader.png`: billboard mesh drawn with production `vfx_unlit_tint` vs/fs (tint + uTime pulse).");
+        // Material owns a shader pointer; clear before unload to avoid double-free.
+        material.shader = default;
         UnloadMesh(billboard);
         UnloadMaterial(material);
         UnloadShader(shader);
