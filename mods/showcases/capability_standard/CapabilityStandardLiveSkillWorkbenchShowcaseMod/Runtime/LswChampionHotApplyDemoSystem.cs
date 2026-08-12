@@ -14,6 +14,7 @@ using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.LiveSkillWorkbench;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Knowledge;
 using Ludots.Core.Presentation.DebugDraw;
 using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Presentation.Performers;
@@ -51,6 +52,7 @@ internal sealed class LswChampionHotApplyDemoSystem : ISystem<float>
     private readonly ScreenOverlayBuffer? _overlay;
     private readonly PerformerEntityRuntime? _performerRuntime;
     private readonly PerformerDefinitionRegistry? _performerDefinitions;
+    private readonly KnowledgeProjectionStore? _knowledge;
     private readonly GasClocks? _gasClocks;
     private readonly int _castAbilityOrderTypeId;
     private readonly int _healthAttrId;
@@ -85,6 +87,7 @@ internal sealed class LswChampionHotApplyDemoSystem : ISystem<float>
         _overlay = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer);
         _performerRuntime = engine.GetService(CoreServiceKeys.PerformerEntityRuntime);
         _performerDefinitions = engine.GetService(CoreServiceKeys.PerformerDefinitionRegistry);
+        _knowledge = engine.GetService(CoreServiceKeys.KnowledgeProjectionStore);
         _gasClocks = engine.GetService(CoreServiceKeys.GasClocks);
 
         GameConfig config = engine.GetService(CoreServiceKeys.GameConfig)
@@ -421,6 +424,8 @@ internal sealed class LswChampionHotApplyDemoSystem : ISystem<float>
             return;
         }
 
+        EnsureHudAudience(caster, target);
+
         if (!_loggedHudProbe && _elapsed >= 0.8f)
         {
             ProbeHudAttachment(caster, target);
@@ -432,6 +437,70 @@ internal sealed class LswChampionHotApplyDemoSystem : ISystem<float>
             : 0f;
         SyncChillBar(target, _chillRemainingRatio);
         SyncChillCountdown(target, displaySeconds, _targetChilled && displaySeconds > 0f);
+    }
+
+    private void EnsureHudAudience(Entity caster, Entity target)
+    {
+        if (caster == Entity.Null || !_engine.World.IsAlive(caster))
+        {
+            return;
+        }
+
+        // WorldHud projection requires a local viewer in GlobalContext + attribute knowledge disclosure.
+        _engine.GlobalContext[CoreServiceKeys.LocalPlayerEntity.Name] = caster;
+        _engine.GlobalContext[CoreServiceKeys.LocalPlayerId.Name] = 1;
+        _engine.SetService(CoreServiceKeys.LocalPlayerEntity, caster);
+        _engine.SetService(CoreServiceKeys.LocalPlayerId, 1);
+        if (_engine.CurrentMapSession != null)
+        {
+            _engine.CurrentMapSession.LocalPlayerEntity = caster;
+            _engine.CurrentMapSession.LocalPlayerId = 1;
+        }
+
+        _engine.GlobalContext[CoreServiceKeys.PresentationAudienceRevealHidden.Name] = true;
+
+        if (_knowledge == null || _healthAttrId == AttributeRegistry.InvalidId)
+        {
+            return;
+        }
+
+        KnowledgeIdMask256 attributeMask = KnowledgeIdMask256.Empty.WithId(_healthAttrId);
+        KnowledgeIdMask256 empty = KnowledgeIdMask256.Empty;
+        int observedTick = KnowledgeProjectionConsumer.ResolveCurrentTick(_engine.GlobalContext);
+        UpsertHudKnowledge(caster, caster, in attributeMask, in empty, observedTick);
+        UpsertHudKnowledge(caster, target, in attributeMask, in empty, observedTick);
+    }
+
+    private void UpsertHudKnowledge(
+        Entity viewer,
+        Entity subject,
+        in KnowledgeIdMask256 attributeMask,
+        in KnowledgeIdMask256 empty,
+        int observedTick)
+    {
+        if (_knowledge == null ||
+            viewer == Entity.Null ||
+            subject == Entity.Null ||
+            !_engine.World.IsAlive(viewer) ||
+            !_engine.World.IsAlive(subject))
+        {
+            return;
+        }
+
+        _knowledge.Upsert(
+            viewer,
+            subject,
+            new KnowledgeDisclosureRecord(
+                KnowledgePresence.LiveVisible,
+                KnowledgePositionAccess.Live,
+                in attributeMask,
+                in empty,
+                in empty,
+                viewer,
+                observedTick,
+                expiryTick: 0,
+                confidencePermille: 1000,
+                revision: 0));
     }
 
     private void ProbeHudAttachment(Entity caster, Entity target)
