@@ -64,7 +64,7 @@ P3 Major / UAT / 文档名实
 - [x] 恢复被删守卫测试（SpatialQuery / Snap / FanOut / 关系度量；含 `GAS.GRAPH.ERR.SpatialQueryIncomplete`）
 - [x] 为附录 A.3 的 **44** 个无作者路径 opcode 补 FrontDoor/ControlFlow 作者路径（按族分期，见下表）
 - [x] AllowTruncated/droppedOutput/validOutput：前门字段 + 失败关闭守卫已恢复（持续跟文档对齐）
-- [ ] 文档：`graph-layering-flow-and-behavior.md` / `tag-display-lookup.md` 与真实前门一致
+- [x] 文档：`graph-layering-flow-and-behavior.md` / `tag-display-lookup.md` 与真实前门一致
 
 #### 44 opcode 分族（P1 交付切片）
 

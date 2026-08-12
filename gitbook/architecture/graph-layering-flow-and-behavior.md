@@ -43,13 +43,13 @@ L0 GraphInstruction + handler table + Execute / ExecuteSlice
 
 跨图复用：`InvokeScript`（本切片只允许目标 Script **不含 Yield**）。
 
-### Script 作者糖（编译期降级）
+### 作者糖（编译期降级）
 
-作者节点名 SSOT：`GraphAuthoringSugar`（非 `GraphNodeOp`）。仅 **Script** ControlFlow 文档可用；Query / Effect / Score / Validation / Derived 使用必须失败关闭。运行时仍是同一套 L0 handler 表，不新增 While/Switch opcode。
+作者节点名 SSOT：`GraphAuthoringSugar`（非 `GraphNodeOp`）。`BranchBool` 可用于 **Script / Effect**（`IsBranchBoolAuthorable`）；`SwitchInt` / `Wait` / `While` / `Until` 仅 **Script**。Query / Score / Validation / Derived 使用上述糖名必须失败关闭。运行时仍是同一套 L0 handler 表，不新增 While/Switch opcode。
 
 | 节点 | 端口 | 降级为 L0 | Kind |
 |------|------|-----------|------|
-| `BranchBool` | `condition`（bool 值边）；`true` / `false`（控制边） | `JumpIfFalse` + `Jump` | Script only |
+| `BranchBool` | `condition`（bool 值边）；`true` / `false`（控制边） | `JumpIfFalse` + `Jump` | Script, Effect |
 | `SwitchInt` | `selector`（int 值边）；`case:{N}` / `default`（控制边） | 每臂 `ConstInt` + `CompareEqInt` + `JumpIfFalse` + `Jump`，再 `Jump(default)` | Script only |
 | `Wait` | `next`（控制边） | 作者别名 → `Yield` | Script only |
 | `While` | `condition`（bool）；`body` / `next`（控制边） | `JumpIfFalse(cond)→next` + `Jump→body`（回边由作者边闭合） | Script only |
@@ -57,19 +57,28 @@ L0 GraphInstruction + handler table + Execute / ExecuteSlice
 
 步数硬顶：`GraphVmLimits.MaxInstructionsPerExecution`（失控循环失败关闭，禁止静默截断当成功）。
 
-与 [#861](https://github.com/MightyBubble/Ludots/issues/861) / PR #863（`GraphAuthoringKindPolicy` Kind 矩阵）的合并约定：糖必须保持 **Script-only**；扩展线性 Kind 前门时不得把上述糖名放进 Effect/Score 白名单；两线改 `GraphControlFlowCompiler.ParseOps` 时以本表 + `GraphAuthoringSugar` 为名册 SSOT。
+与 [#861](https://github.com/MightyBubble/Ludots/issues/861) / PR #863（`GraphAuthoringKindPolicy` Kind 矩阵）的合并约定：`SwitchInt` / `Wait` / `While` / `Until` 保持 **Script-only**；`BranchBool` 另允许 Effect。扩展 Score / Validation / Derived 前门时不得把糖名放进白名单；两线改 `GraphControlFlowCompiler.ParseOps` 时以本表 + `GraphAuthoringSugar` 为名册 SSOT。
 
 ### Query ControlFlow
 
 - 列表流（`Query*` / `Relationship*` 过滤与聚合）必须用 `valueEdges` 的 `list` 显式连接；控制边 `next` 不隐含 TargetList。
 - 实体输入用 `source`；区间过滤用 `min` / `max`；`QueryFilterTeam` 的队伍来源必须二选一：节点字段 `teamId`，或 `teamId` int value pin。
 - 标量 / 实体结果绑 Summary；当前 TargetList 结果绑 EntityCollection（`collectionKey` 必填）。
+- 空间查询容量：节点字段 `queryCapacityPolicy` 为 `RequireComplete` 或 `AllowTruncated`；后者必须同时声明 `droppedOutput`（未声明则失败关闭）。
+
+### FrontDoor 作者面（已恢复）
+
+- Kind 白名单：`GraphControlFlowCompiler` 的 `IsQueryControlFlowAuthorable` / `IsLinearControlFlowAuthorable`（Effect·Score·Validation·Derived 共用线性矩阵）。覆盖登记 SSOT：`assets/Configs/GAS/graph_node_op_coverage.registry.json`。
+- Tag / 显示作者糖（`GraphNodeOpParser`）：`ReadGameplayTag` → `SelectTagInMask`，`LookupTagDisplayText` → `LookupTagDisplayToken`（亦可直接写 L0 名）。字段：`displayTable`（必填）、`tagSelectPolicy`（`RequireOne` \| `AllowNone` \| `LowestId`，默认 `RequireOne`，仅 Select）。值边：`HasTag` / `SelectTagInMask` 用 `source`；`CompareEqEntity` 用 `a` / `b`；`LookupTagDisplayToken` 用 `a`（tagId）。登记与 Runtime：`TagDisplayTableRegistry`、`IGraphRuntimeApi.SelectEffectiveTagInMask` / `LookupTagDisplayToken`。详见 [Tag 显示查表](tag-display-lookup.md)。
+- Effect 线性复用：`InvokeScript.functionName` 只解析 FuncLib（禁 `graphId`、禁 ActionLib 名）。证据：`GraphEffectAuthoringExpressivenessTests`。
 
 ### L2 HFSM 绑定合同
 - **转移上配条件**：`ConditionGraphId`（Script/Validation）+ 可选快速 builtin（如 Stimulus）
 - **状态节点上配动作**：`OnEnterGraphId` / `OnTickGraphId` / `OnExitGraphId`（Script）
 - **Func lib（正式）**：`GAS/func_lib.json`（`name` / `graph` / `kind`）→ `GraphFunctionCatalogLoader` 在图登记后加载；作者节点 `InvokeScript.functionName` 编译期进符号表，`PatchFuncLib` 在 ActionLib 加载前解析为 GraphId。未登记到 FuncLib 的名字失败关闭，ActionLib 名不得通过 `functionName` 进入 Effect / 线性 Kind。引擎服务键：`CoreServiceKeys.GraphFunctionCatalog`。
+- **加载顺序**：graphs 注册 → func_lib 加载 → FuncLib Invoke patch → action_lib 加载（详见 [FuncLib / ActionLib 合同](graph-funclib-actionlib-contract.md)）。
 - **Macro**：不支持编译期文本宏；复用只走 Func lib + `InvokeScript` / Script 内 `Call`
+- **行为入口**：L2 叶子 / 切片宿主解析 ActionLib 名或已登记 GraphId；勿使用已标 obsolete 的 `GraphRegistryScriptResolver.RequireId(string)` 字符串旁路。
 - **FuncLib / ActionLib 合同**：纯函数库与可挂起动作库拆分、Effect Duration/Period 与阶段表达力——见 [FuncLib / ActionLib 合同](graph-funclib-actionlib-contract.md)。
 - 拓扑仍不编进 `GraphNodeOp`；禁止平行 VM
 
