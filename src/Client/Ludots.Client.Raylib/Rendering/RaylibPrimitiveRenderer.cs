@@ -35,17 +35,23 @@ namespace Ludots.Client.Raylib.Rendering
         private const int HardMaxModelInstancesPerDraw = 131072;
 
         private bool _initialized;
+        private const float DefaultVegetationAlphaCutoff = 0.9f;
+
         private Mesh _cubeMesh;
         private Mesh _sphereMesh;
         private Mesh _vfxBillboardMesh;
         private Shader _shader;
         private Shader _skinningShader;
+        private Shader _vegetationCutoutShader;
         private Material _material;
         private Material _vfxMaterial;
         private bool _vfxMaterialLoaded;
+        private bool _vegetationCutoutShaderReady;
         private readonly RaylibEffectShaderRegistry _effectShaders = new RaylibEffectShaderRegistry();
         private int _locColDiffuse;
         private int _locTint;
+        private int _locVegetationCutoutColDiffuse;
+        private int _locVegetationCutoutAlphaCutoff;
         private int _locSkinningColDiffuse;
         private int _locSkinningTint;
         private int _locBoneMatrices;
@@ -261,7 +267,8 @@ namespace Ludots.Client.Raylib.Rendering
                     item.Scale * scaleMul, item.Color,
                     camera,
                     meshes,
-                    in finalizationContext);
+                    in finalizationContext,
+                    item.MaterialId);
             }
         }
 
@@ -309,7 +316,8 @@ namespace Ludots.Client.Raylib.Rendering
                     item.Color,
                     camera,
                     meshes,
-                    in finalizationContext);
+                    in finalizationContext,
+                    item.MaterialId);
             }
 
             FlushInstancedBatches();
@@ -352,13 +360,14 @@ namespace Ludots.Client.Raylib.Rendering
                     item.Color,
                     camera,
                     meshes,
-                    in finalizationContext);
+                    in finalizationContext,
+                    item.MaterialId);
             }
 
             FlushInstancedBatches();
         }
 
-        private void SubmitAssetRecursive(int meshAssetId, Vector3 position, Quaternion rotation, Vector3 scale, Vector4 color, Camera3D camera, MeshAssetRegistry meshes, in PrefabFinalizationContext finalizationContext)
+        private void SubmitAssetRecursive(int meshAssetId, Vector3 position, Quaternion rotation, Vector3 scale, Vector4 color, Camera3D camera, MeshAssetRegistry meshes, in PrefabFinalizationContext finalizationContext, int materialId = 0)
         {
             _prefabVisuals.Clear();
             PrefabFinalizationPipeline.FinalizeVisuals(
@@ -370,7 +379,8 @@ namespace Ludots.Client.Raylib.Rendering
                 scale,
                 color,
                 finalizationContext,
-                _prefabVisuals);
+                _prefabVisuals,
+                instanceMaterialOverrideId: materialId);
 
             foreach (ref readonly var visual in _prefabVisuals.GetSpan())
             {
@@ -493,7 +503,8 @@ namespace Ludots.Client.Raylib.Rendering
                     item.Color,
                     camera,
                     meshes,
-                    in finalizationContext);
+                    in finalizationContext,
+                    item.MaterialId);
             }
 
             FlushGpuSkinnedInstanceBatches();
@@ -638,7 +649,7 @@ namespace Ludots.Client.Raylib.Rendering
             };
         }
 
-        private void DrawAssetRecursive(int meshAssetId, Vector3 position, Quaternion rotation, Vector3 scale, Vector4 color, Camera3D camera, MeshAssetRegistry meshes, in PrefabFinalizationContext finalizationContext)
+        private void DrawAssetRecursive(int meshAssetId, Vector3 position, Quaternion rotation, Vector3 scale, Vector4 color, Camera3D camera, MeshAssetRegistry meshes, in PrefabFinalizationContext finalizationContext, int materialId = 0)
         {
             _prefabVisuals.Clear();
             PrefabFinalizationPipeline.FinalizeVisuals(
@@ -650,7 +661,8 @@ namespace Ludots.Client.Raylib.Rendering
                 scale,
                 color,
                 finalizationContext,
-                _prefabVisuals);
+                _prefabVisuals,
+                instanceMaterialOverrideId: materialId);
 
             foreach (ref readonly var visual in _prefabVisuals.GetSpan())
             {
@@ -725,7 +737,7 @@ namespace Ludots.Client.Raylib.Rendering
                     DrawModel(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Rotation, visual.Scale, visual.Color, visual.MaterialId);
                     break;
                 case MeshAssetType.Billboard:
-                    DrawBillboard(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Scale, visual.Color, camera);
+                    DrawBillboard(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Scale, visual.Color, camera, visual.MaterialId);
                     break;
                 case MeshAssetType.ProceduralMesh:
                     DrawProceduralMesh(in visual);
@@ -747,7 +759,7 @@ namespace Ludots.Client.Raylib.Rendering
                     DrawModel(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Rotation, visual.Scale, visual.Color, visual.MaterialId);
                     break;
                 case MeshAssetType.Billboard:
-                    DrawBillboard(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Scale, visual.Color, camera);
+                    DrawBillboard(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Scale, visual.Color, camera, visual.MaterialId);
                     break;
                 case MeshAssetType.ProceduralMesh:
                     DrawProceduralMesh(in visual);
@@ -804,6 +816,13 @@ namespace Ludots.Client.Raylib.Rendering
             Vector4 effectColor = BlendSemanticColor(visual.Color, visual.EffectAssetId, 0.6f);
             effectColor.W = Math.Clamp(MathF.Max(effectColor.W, 0.55f), 0.55f, 1f);
 
+            MaterialBlendMode blendMode = ResolveMaterialBlendMode(visual.MaterialId, MaterialBlendMode.AlphaBlend);
+            if (blendMode == MaterialBlendMode.Cutout)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} VFX stableId={visual.StableId} materialId={visual.MaterialId} requested Cutout; VFX uses AlphaBlend/Additive/Opaque only.");
+            }
+
             RaylibEffectShader effect = _effectShaders.GetOrLoad(RaylibEffectShaderRegistry.DefaultUnlitTintKey);
             _vfxMaterial.shader = effect.Shader;
 
@@ -832,14 +851,18 @@ namespace Ludots.Client.Raylib.Rendering
             Matrix4x4 transform =
                 Matrix4x4.CreateScale(size, size, MathF.Max(0.04f, size * 0.08f)) *
                 billboard;
-            Rl.BeginBlendMode(BlendMode.BLEND_ALPHA);
+
+            bool blending = TryBeginAuthorBlendMode(blendMode);
             try
             {
                 Rl.DrawMesh(_vfxBillboardMesh, _vfxMaterial, RaylibMatrix.FromSystemNumerics(transform));
             }
             finally
             {
-                Rl.EndBlendMode();
+                if (blending)
+                {
+                    Rl.EndBlendMode();
+                }
             }
         }
 
@@ -857,7 +880,7 @@ namespace Ludots.Client.Raylib.Rendering
                     DrawModel(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Rotation, visual.Scale, surfaceColor, visual.MaterialId);
                     break;
                 case MeshAssetType.Billboard:
-                    DrawBillboard(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Scale, surfaceColor, camera);
+                    DrawBillboard(visual.MeshAssetId, visual.MeshDescriptor, visual.Position, visual.Scale, surfaceColor, camera, visual.MaterialId);
                     break;
                 case MeshAssetType.ProceduralMesh:
                     DrawProceduralMesh(in visual);
@@ -1191,7 +1214,7 @@ namespace Ludots.Client.Raylib.Rendering
             Rl.DrawModelEx(model, position, axis, angleDegrees, scale, tint);
         }
 
-        private void DrawBillboard(int meshAssetId, in MeshAssetDescriptor desc, Vector3 position, Vector3 scale, Vector4 color, Camera3D camera)
+        private void DrawBillboard(int meshAssetId, in MeshAssetDescriptor desc, Vector3 position, Vector3 scale, Vector4 color, Camera3D camera, int materialId)
         {
             if (!TryGetOrLoadTexture(meshAssetId, desc, out var cached))
             {
@@ -1206,10 +1229,59 @@ namespace Ludots.Client.Raylib.Rendering
             // Billboard art ships pre-colored, so preserve only caller alpha.
             byte alpha = Clamp01ToByte(color.W);
             var tint = new Color(255, 255, 255, alpha);
+            MaterialBlendMode blendMode = ResolveMaterialBlendMode(materialId, MaterialBlendMode.Opaque);
+            bool doubleSided = IsMaterialDoubleSided(materialId);
             LogBillboardDrawDiagnostic(
                 meshAssetId,
-                $"billboard-draw pos=({billboardPosition.X:F2},{billboardPosition.Y:F2},{billboardPosition.Z:F2}) scale=({scale.X:F2},{scale.Y:F2},{scale.Z:F2}) size=({width:F2}x{height:F2}) alpha={alpha} cameraPos=({camera.position.X:F2},{camera.position.Y:F2},{camera.position.Z:F2}) cameraTarget=({camera.target.X:F2},{camera.target.Y:F2},{camera.target.Z:F2})");
-            Rl.DrawBillboardRec(camera, cached.Texture, source, billboardPosition, new Vector2(width, height), tint);
+                $"billboard-draw pos=({billboardPosition.X:F2},{billboardPosition.Y:F2},{billboardPosition.Z:F2}) scale=({scale.X:F2},{scale.Y:F2},{scale.Z:F2}) size=({width:F2}x{height:F2}) alpha={alpha} blend={blendMode} materialId={materialId} cameraPos=({camera.position.X:F2},{camera.position.Y:F2},{camera.position.Z:F2}) cameraTarget=({camera.target.X:F2},{camera.target.Y:F2},{camera.target.Z:F2})");
+
+            if (doubleSided)
+            {
+                Rl.rlDisableBackfaceCulling();
+            }
+
+            bool blending = TryBeginAuthorBlendMode(blendMode);
+            bool cutoutShader = false;
+            try
+            {
+                if (blendMode == MaterialBlendMode.Cutout)
+                {
+                    EnsureVegetationCutoutShader();
+                    float cutoff = DefaultVegetationAlphaCutoff;
+                    Vector4 colDiffuse = Vector4.One;
+                    Rl.SetShaderValue(
+                        _vegetationCutoutShader,
+                        _locVegetationCutoutColDiffuse,
+                        &colDiffuse,
+                        (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC4);
+                    Rl.SetShaderValue(
+                        _vegetationCutoutShader,
+                        _locVegetationCutoutAlphaCutoff,
+                        &cutoff,
+                        (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_FLOAT);
+                    Rl.BeginShaderMode(_vegetationCutoutShader);
+                    cutoutShader = true;
+                }
+
+                Rl.DrawBillboardRec(camera, cached.Texture, source, billboardPosition, new Vector2(width, height), tint);
+            }
+            finally
+            {
+                if (cutoutShader)
+                {
+                    Rl.EndShaderMode();
+                }
+
+                if (blending)
+                {
+                    Rl.EndBlendMode();
+                }
+
+                if (doubleSided)
+                {
+                    Rl.rlEnableBackfaceCulling();
+                }
+            }
         }
 
         private void DrawProceduralMesh(in PrefabFinalizedVisual visual)
@@ -1678,6 +1750,125 @@ namespace Ludots.Client.Raylib.Rendering
             return new Vector3(x, y, z);
         }
 
+
+        private MaterialBlendMode ResolveMaterialBlendMode(int materialId, MaterialBlendMode defaultWhenMissing)
+        {
+            if (materialId <= 0)
+            {
+                return defaultWhenMissing;
+            }
+
+            if (_materials == null)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} received materialId={materialId} but no {nameof(PresentationMaterialRegistry)} was provided.");
+            }
+
+            if (!_materials.TryGet(materialId, out MaterialAssetDescriptor descriptor))
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} cannot resolve blend mode for unknown materialId={materialId}.");
+            }
+
+            return MaterialBlendModeResolver.Resolve(descriptor.Flags);
+        }
+
+        private bool IsMaterialDoubleSided(int materialId)
+        {
+            if (materialId <= 0 || _materials == null)
+            {
+                return false;
+            }
+
+            if (!_materials.TryGet(materialId, out MaterialAssetDescriptor descriptor))
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} cannot resolve DoubleSided for unknown materialId={materialId}.");
+            }
+
+            return (descriptor.Flags & MaterialAssetFlags.DoubleSided) != 0;
+        }
+
+        private static bool TryBeginAuthorBlendMode(MaterialBlendMode blendMode)
+        {
+            switch (blendMode)
+            {
+                case MaterialBlendMode.Opaque:
+                case MaterialBlendMode.Cutout:
+                    return false;
+                case MaterialBlendMode.AlphaBlend:
+                    Rl.BeginBlendMode(BlendMode.BLEND_ALPHA);
+                    return true;
+                case MaterialBlendMode.Additive:
+                    Rl.BeginBlendMode(BlendMode.BLEND_ADDITIVE);
+                    return true;
+                default:
+                    throw new InvalidOperationException(
+                        $"{nameof(RaylibPrimitiveRenderer)} does not recognize material blend mode '{blendMode}'.");
+            }
+        }
+
+        private void EnsureVegetationCutoutShader()
+        {
+            if (_vegetationCutoutShaderReady)
+            {
+                return;
+            }
+
+            string baseDir = AppContext.BaseDirectory;
+            string vsPath = Path.Combine(baseDir, "vegetation_cutout.vs");
+            string fsPath = Path.Combine(baseDir, "vegetation_cutout.fs");
+            if (!File.Exists(vsPath))
+            {
+                throw new FileNotFoundException(
+                    $"{nameof(RaylibPrimitiveRenderer)} vegetation cutout vertex shader missing under BaseDirectory '{baseDir}'. Expected '{vsPath}'.",
+                    vsPath);
+            }
+
+            if (!File.Exists(fsPath))
+            {
+                throw new FileNotFoundException(
+                    $"{nameof(RaylibPrimitiveRenderer)} vegetation cutout fragment shader missing under BaseDirectory '{baseDir}'. Expected '{fsPath}'.",
+                    fsPath);
+            }
+
+            _vegetationCutoutShader = Rl.LoadShader(vsPath, fsPath);
+            if (_vegetationCutoutShader.id == 0)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} failed to compile vegetation_cutout from '{vsPath}' + '{fsPath}' (shader.id == 0).");
+            }
+
+            int locVertexPosition = Rl.GetShaderLocationAttrib(_vegetationCutoutShader, "vertexPosition");
+            int locVertexTexCoord = Rl.GetShaderLocationAttrib(_vegetationCutoutShader, "vertexTexCoord");
+            int locVertexColor = Rl.GetShaderLocationAttrib(_vegetationCutoutShader, "vertexColor");
+            int locMvp = Rl.GetShaderLocation(_vegetationCutoutShader, "mvp");
+            int locMapDiffuse = Rl.GetShaderLocation(_vegetationCutoutShader, "texture0");
+            _locVegetationCutoutColDiffuse = Rl.GetShaderLocation(_vegetationCutoutShader, "colDiffuse");
+            _locVegetationCutoutAlphaCutoff = Rl.GetShaderLocation(_vegetationCutoutShader, "alphaCutoff");
+
+            if (locVertexPosition < 0 || locMvp < 0 || locMapDiffuse < 0 ||
+                _locVegetationCutoutColDiffuse < 0 || _locVegetationCutoutAlphaCutoff < 0)
+            {
+                Rl.UnloadShader(_vegetationCutoutShader);
+                _vegetationCutoutShader = default;
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} vegetation_cutout is missing required attribs/uniforms (vertexPosition/mvp/texture0/colDiffuse/alphaCutoff).");
+            }
+
+            if (_vegetationCutoutShader.locs != null)
+            {
+                _vegetationCutoutShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_POSITION] = locVertexPosition;
+                _vegetationCutoutShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_TEXCOORD01] = locVertexTexCoord;
+                _vegetationCutoutShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_VERTEX_COLOR] = locVertexColor;
+                _vegetationCutoutShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MATRIX_MVP] = locMvp;
+                _vegetationCutoutShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_MAP_ALBEDO] = locMapDiffuse;
+                _vegetationCutoutShader.locs[(int)Rl.ShaderLocationIndex.SHADER_LOC_COLOR_DIFFUSE] = _locVegetationCutoutColDiffuse;
+            }
+
+            _vegetationCutoutShaderReady = true;
+        }
+
         private static Vector4 BlendSemanticColor(Vector4 baseColor, int semanticId, float semanticWeight)
         {
             Vector4 semanticColor = ResolveSemanticColor(semanticId, baseColor.W);
@@ -1807,7 +1998,8 @@ namespace Ludots.Client.Raylib.Rendering
                             item.Color,
                             default,
                             meshes,
-                            new PrefabFinalizationContext(null));
+                            new PrefabFinalizationContext(null),
+                            item.MaterialId);
                         break;
                 }
             }
@@ -2456,6 +2648,11 @@ namespace Ludots.Client.Raylib.Rendering
             _material.shader = default;
             Rl.UnloadMaterial(_material);
             Rl.UnloadShader(_shader);
+            if (_vegetationCutoutShaderReady)
+            {
+                Rl.UnloadShader(_vegetationCutoutShader);
+                _vegetationCutoutShaderReady = false;
+            }
             if (_skinningShaderReady)
             {
                 Rl.UnloadShader(_skinningShader);

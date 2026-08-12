@@ -670,6 +670,12 @@ namespace Raylib_cs
         public static extern void EndBlendMode();
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void BeginShaderMode(Shader shader);
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
+        public static extern void EndShaderMode();
+
+        [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]
         public static extern void DrawBillboardRec(Camera3D camera, Texture2D texture, Rectangle source, Vector3 position, Vector2 size, Color tint);
 
         [DllImport(NativeLib, CallingConvention = CallingConvention.Cdecl)]

@@ -37,6 +37,14 @@
       <Link>vfx_unlit_tint.fs</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="..\..\Platforms\Desktop\vegetation_cutout.vs">
+      <Link>vegetation_cutout.vs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\..\Platforms\Desktop\vegetation_cutout.fs">
+      <Link>vegetation_cutout.fs</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Include="Resources\ambient_day_ramp.json">
       <Link>ambient_day_ramp.json</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
