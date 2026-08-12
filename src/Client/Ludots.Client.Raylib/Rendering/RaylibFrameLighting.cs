@@ -92,10 +92,18 @@ namespace Ludots.Client.Raylib.Rendering
 
     public sealed class RaylibFrameLighting
     {
+        /// <summary>
+        /// When the sun is below the horizon, the same directional slot becomes moonlight at this
+        /// fraction of author <c>lightIntensity</c> (elevated moon dir; never a downward N·L=0 key).
+        /// </summary>
+        private const float MoonlightKeyScale = 0.16f;
+
         private readonly AmbientSample[] _ramp;
         private readonly Vector3 _lightColor;
         private readonly float _lightIntensity;
         private readonly DistanceFogSettings _fog;
+        private bool _moonlightKeyActive;
+        private float _solarElevationY;
 
         public float DayPhase01 { get; private set; }
 
@@ -103,15 +111,27 @@ namespace Ludots.Client.Raylib.Rendering
 
         public Vector4 AmbientRgba { get; private set; }
 
-        public Vector3 LightColor => _lightColor;
+        public Vector3 LightColor =>
+            _moonlightKeyActive
+                ? new Vector3(
+                    Math.Clamp(_lightColor.X * 0.55f, 0f, 1f),
+                    Math.Clamp(_lightColor.Y * 0.68f, 0f, 1f),
+                    Math.Clamp(MathF.Max(_lightColor.Z, 0.92f), 0f, 1f))
+                : _lightColor;
 
         /// <summary>
-        /// Authoring peak intensity; night/dusk sun below horizon zeros the directional term.
+        /// Authoring peak intensity gated by solar elevation; below-horizon remaps to a modest moonlight key.
         /// </summary>
         public float LightIntensity
         {
             get
             {
+                if (_moonlightKeyActive)
+                {
+                    // Direction is already remapped to an elevated moon; keep a flat modest key in author-units.
+                    return _lightIntensity * MoonlightKeyScale;
+                }
+
                 float sunElevation = MathF.Max(0f, SunDirectionToward.Y);
                 // Soft shoulder so dusk still carries a little key light before ambient takes over.
                 float elevationGate = sunElevation * sunElevation;
@@ -248,7 +268,28 @@ namespace Ludots.Client.Raylib.Rendering
 
         public void Evaluate()
         {
-            SunDirectionToward = DeriveSunDirectionToward(DayPhase01);
+            Vector3 solarToward = DeriveSunDirectionToward(DayPhase01);
+            _solarElevationY = solarToward.Y;
+            if (solarToward.Y <= 0f)
+            {
+                // Same directional light slot: opposite-phase elevated moon (never leave key pointing down).
+                Vector3 moonToward = DeriveSunDirectionToward(DayPhase01 + 0.5f);
+                if (moonToward.Y <= 0f)
+                {
+                    throw new InvalidOperationException(
+                        $"Moonlight remap at phase {DayPhase01:0.###} produced non-elevated direction " +
+                        $"(Y={moonToward.Y:0.####}); solar Y was {_solarElevationY:0.####}.");
+                }
+
+                SunDirectionToward = moonToward;
+                _moonlightKeyActive = true;
+            }
+            else
+            {
+                SunDirectionToward = solarToward;
+                _moonlightKeyActive = false;
+            }
+
             AmbientRgba = SampleAmbient(DayPhase01);
         }
 
@@ -256,11 +297,32 @@ namespace Ludots.Client.Raylib.Rendering
         {
             Vector3 lightDir = SunDirectionToward;
             Vector4 ambient = AmbientRgba;
-            Vector3 lightColor = _lightColor;
+            Vector3 lightColor = LightColor;
             float lightIntensity = LightIntensity;
-            // Daytime fog stays author cyan; night/dusk dims with ambient so aerial water is not a noon wash.
-            float fogDim = Math.Clamp(ambient.W / 0.28f, 0.06f, 1f);
-            Vector3 fogColor = _fog.Color * fogDim;
+            if (lightIntensity > 0f && lightDir.Y <= 0f)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibFrameLighting)} refuses LightIntensity={lightIntensity:0.####} with " +
+                    $"non-elevated light direction Y={lightDir.Y:0.####} (N·L would stay 0).");
+            }
+
+            // Daytime fog stays author cyan; night/dusk dims so aerial water is not a noon wash.
+            // Moonlight ambient intensity is raised for terrain readability — fog dim follows solar elevation, not ambient.W.
+            float fogDim;
+            Vector3 fogColor;
+            if (_moonlightKeyActive)
+            {
+                float nightLift = Math.Clamp((-_solarElevationY) * 1.25f, 0f, 1f);
+                fogDim = Math.Clamp(0.34f - (nightLift * 0.18f), 0.10f, 0.34f);
+                Vector3 coolFog = new(0.42f, 0.52f, 0.78f);
+                fogColor = Vector3.Lerp(_fog.Color, coolFog, 0.55f) * fogDim;
+            }
+            else
+            {
+                fogDim = Math.Clamp(ambient.W / 0.28f, 0.06f, 1f);
+                fogColor = _fog.Color * fogDim;
+            }
+
             Vector4 fogParams = _fog.Params;
             Rl.SetShaderValue(shader, locations.LightDir, &lightDir, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC3);
             Rl.SetShaderValue(shader, locations.Ambient, &ambient, (int)Rl.ShaderUniformDataType.SHADER_UNIFORM_VEC4);

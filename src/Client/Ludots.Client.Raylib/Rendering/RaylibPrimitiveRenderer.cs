@@ -1263,7 +1263,7 @@ namespace Ludots.Client.Raylib.Rendering
                 {
                     EnsureVegetationCutoutShader();
                     float cutoff = DefaultVegetationAlphaCutoff;
-                    Vector4 colDiffuse = new(litRgb.X, litRgb.Y, litRgb.Z, 1f);
+                    Vector4 colDiffuse = Vector4.One;
                     Rl.SetShaderValue(
                         _vegetationCutoutShader,
                         _locVegetationCutoutColDiffuse,
@@ -2636,12 +2636,14 @@ namespace Ludots.Client.Raylib.Rendering
             }
 
             Vector4 ambient = _frameLighting.AmbientRgba;
-            float key = _frameLighting.LightIntensity * 0.55f;
-            float exposure = Math.Clamp((ambient.W * 3.2f) + key, 0.08f, 1.35f);
+            float key = _frameLighting.LightIntensity * 0.65f;
+            // Midday lands near 1.0; raised night ambient must stay a faint multiply (not neon veg).
+            float exposure = Math.Clamp((ambient.W * 1.55f) + key, 0.04f, 1.2f);
+            const float albedoFloor = 0.10f;
             return new Vector3(
-                Math.Clamp(ambient.X * exposure + (_frameLighting.LightColor.X * key * 0.35f), 0f, 1.5f),
-                Math.Clamp(ambient.Y * exposure + (_frameLighting.LightColor.Y * key * 0.35f), 0f, 1.5f),
-                Math.Clamp(ambient.Z * exposure + (_frameLighting.LightColor.Z * key * 0.35f), 0f, 1.5f));
+                Math.Clamp((albedoFloor + ambient.X * 0.72f) * exposure + (_frameLighting.LightColor.X * key * 0.22f), 0f, 1.4f),
+                Math.Clamp((albedoFloor + ambient.Y * 0.72f) * exposure + (_frameLighting.LightColor.Y * key * 0.22f), 0f, 1.4f),
+                Math.Clamp((albedoFloor + ambient.Z * 0.72f) * exposure + (_frameLighting.LightColor.Z * key * 0.22f), 0f, 1.4f));
         }
 
         private static byte Clamp01ToByte(float v) => RaylibColorUtil.Clamp01ToByte(v);
