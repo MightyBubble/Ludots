@@ -22,8 +22,9 @@ public sealed class GraphOpsRelRuntime
     public const string EffectBreakLinkGraph = "Graph.GraphOpsRel.EffectBreakLink";
 
     private readonly GraphShowcaseConfig _config = new();
+    private GraphOpsRelShowcaseBundle? _bundle;
     private GraphProgramRegistry? _programs;
-    private GraphFunctionCatalog? _catalog;
+    private GraphOpsRelFunctionIndex? _functions;
     private World? _world;
     private GasGraphRuntimeApi? _api;
     private RelationshipRuntime? _relationships;
@@ -62,35 +63,54 @@ public sealed class GraphOpsRelRuntime
     public string Phase => _phase;
     public GraphShowcaseMetrics Metrics { get; } = new() { ShowcaseId = "capability_standard_graph_ops_rel" };
 
-    public void Bind(GraphProgramRegistry programs, GraphFunctionCatalog catalog)
+    public void BindStandaloneFromModAssets()
+    {
+        _bundle = GraphOpsRelShowcaseBootstrap.LoadStandalone();
+        _programs = _bundle.Programs;
+        _functions = _bundle.Functions;
+    }
+
+    public void Bind(GraphProgramRegistry programs, GraphOpsRelFunctionIndex functions)
     {
         _programs = programs ?? throw new ArgumentNullException(nameof(programs));
-        _catalog = catalog ?? throw new ArgumentNullException(nameof(catalog));
+        _functions = functions ?? throw new ArgumentNullException(nameof(functions));
     }
 
     public void EnsureWorld()
     {
         if (_world != null) return;
-        if (_programs == null)
+        if (_programs == null || _functions == null)
         {
-            throw new InvalidOperationException("GraphOpsRelRuntime.Bind(Registry, Catalog) required before EnsureWorld.");
+            throw new InvalidOperationException(
+                "GraphOpsRelRuntime.Bind(Registry, Functions) or BindStandaloneFromModAssets() required before EnsureWorld.");
         }
 
-        RequireGraph(QueryFriendRankGraph);
-        RequireGraph(QueryChainProbeGraph);
-        RequireGraph(EffectBreakLinkGraph);
+        _ = _functions.Require(QueryFriendRankName);
+        _ = _functions.Require(QueryChainProbeName);
+        _ = _functions.Require(EffectBreakLinkName);
 
         _world = World.Create();
-        var typeRegistry = new RelationshipTypeRegistry();
-        var metricRegistry = new RelationshipMetricRegistry();
-        var flagRegistry = new RelationshipFlagRegistry();
+        var typeRegistry = _bundle?.Types ?? new RelationshipTypeRegistry();
+        var metricRegistry = _bundle?.Metrics ?? new RelationshipMetricRegistry();
+        var flagRegistry = _bundle?.Flags ?? new RelationshipFlagRegistry();
+        var reasonRegistry = _bundle?.Reasons ?? new RelationshipReasonRegistry();
         var bandRegistry = new RelationshipBandRegistry();
         var changeBuffer = new RelationshipChangeBuffer();
-        _socialBondTypeId = typeRegistry.Register("SocialBond");
-        _loyaltyMetricId = metricRegistry.Register("Loyalty", -100, 100, 0);
-        _trustedFlagId = flagRegistry.Register("Trusted");
-        _ = flagRegistry.Register("Estranged");
-        PatchPrograms(new GraphOpsRelSymbolResolver(typeRegistry, metricRegistry, flagRegistry));
+
+        if (_bundle == null)
+        {
+            _socialBondTypeId = typeRegistry.Register("SocialBond");
+            _loyaltyMetricId = metricRegistry.Register("Loyalty", -100, 100, 0);
+            _trustedFlagId = flagRegistry.Register("Trusted");
+            _ = flagRegistry.Register("Estranged");
+            PatchPrograms(new GraphOpsRelSymbolResolver(typeRegistry, metricRegistry, flagRegistry));
+        }
+        else
+        {
+            _socialBondTypeId = typeRegistry.GetId("SocialBond");
+            _loyaltyMetricId = metricRegistry.GetId("Loyalty");
+            _trustedFlagId = flagRegistry.GetId("Trusted");
+        }
         _relationships = new RelationshipRuntime(
             _world,
             typeRegistry,
@@ -108,7 +128,7 @@ public sealed class GraphOpsRelRuntime
             typeRegistry: typeRegistry,
             metricRegistry: metricRegistry,
             flagRegistry: flagRegistry,
-            reasonRegistry: new RelationshipReasonRegistry(),
+            reasonRegistry: reasonRegistry,
             entityQueries: entityQueries);
 
         _player = _world.Create();
@@ -168,17 +188,34 @@ public sealed class GraphOpsRelRuntime
     private void RunUnlinkWave()
     {
         _phase = "拆链";
-        Entity weakest = FindWeakestLinkedFriend();
-        if (weakest != Entity.Null)
+        if (CountLinkedFriends() > 2)
         {
-            ExecuteEffect(EffectBreakLinkName, _player, weakest);
-            _brokenLinks++;
+            Entity weakest = FindWeakestLinkedFriend();
+            if (weakest != Entity.Null)
+            {
+                ExecuteEffect(EffectBreakLinkName, _player, weakest);
+                _brokenLinks++;
+            }
         }
 
         ExecuteQuery(QueryFriendRankName, _player, _friends[0]);
         Metrics.Detail =
             $"拆链：对{_topFriendLabel}执行拆链后剩{_friendCount}位；好感排序均值{_loyaltyAverage}；" +
             $"查好友链入链{_incomingCount}、互链{_mutualCount}";
+    }
+
+    private int CountLinkedFriends()
+    {
+        int count = 0;
+        for (int i = 0; i < _friends.Length; i++)
+        {
+            if (_relationships!.HasLink(_player, _friends[i], _socialBondTypeId))
+            {
+                count++;
+            }
+        }
+
+        return count;
     }
 
     private Entity FindWeakestLinkedFriend()
@@ -206,16 +243,10 @@ public sealed class GraphOpsRelRuntime
 
     private void ExecuteQuery(string funcName, Entity caster, Entity explicitTarget)
     {
-        string graphKey = funcName switch
+        GraphFunctionEntry fn = _functions!.Require(funcName);
+        if (!_programs!.TryGetProgram(fn.GraphId, out ReadOnlySpan<GraphInstruction> program) || program.Length == 0)
         {
-            QueryFriendRankName => QueryFriendRankGraph,
-            QueryChainProbeName => QueryChainProbeGraph,
-            _ => throw new InvalidOperationException($"Unknown rel query '{funcName}'.")
-        };
-        if (!_programs!.TryGetProgram(GraphIdRegistry.GetId(graphKey), out ReadOnlySpan<GraphInstruction> program) ||
-            program.Length == 0)
-        {
-            throw new InvalidOperationException($"Rel graph '{graphKey}' missing from Registry.");
+            throw new InvalidOperationException($"FuncLib '{funcName}' graph id {fn.GraphId} missing from Registry.");
         }
 
         var state = CreateState(caster, explicitTarget);
@@ -233,15 +264,10 @@ public sealed class GraphOpsRelRuntime
 
     private void ExecuteEffect(string funcName, Entity caster, Entity target)
     {
-        if (!string.Equals(funcName, EffectBreakLinkName, StringComparison.Ordinal))
+        GraphFunctionEntry fn = _functions!.Require(funcName);
+        if (!_programs!.TryGetProgram(fn.GraphId, out ReadOnlySpan<GraphInstruction> program) || program.Length == 0)
         {
-            throw new InvalidOperationException($"Unknown rel effect '{funcName}'.");
-        }
-
-        if (!_programs!.TryGetProgram(GraphIdRegistry.GetId(EffectBreakLinkGraph), out ReadOnlySpan<GraphInstruction> program) ||
-            program.Length == 0)
-        {
-            throw new InvalidOperationException($"Rel graph '{EffectBreakLinkGraph}' missing from Registry.");
+            throw new InvalidOperationException($"FuncLib '{funcName}' graph id {fn.GraphId} missing from Registry.");
         }
 
         var state = CreateState(caster, target);
@@ -249,17 +275,11 @@ public sealed class GraphOpsRelRuntime
         _topFriendLabel = EntityLabel(target);
     }
 
-    private void RequireGraph(string graphKey)
-    {
-        int graphId = GraphIdRegistry.GetId(graphKey);
-        if (graphId <= 0 || !_programs!.TryGetProgram(graphId, out _))
-        {
-            throw new InvalidOperationException($"Required rel graph '{graphKey}' is missing.");
-        }
-    }
-
     private GraphExecutionState CreateState(Entity caster, Entity explicitTarget)
-        => new()
+    {
+        _entities[0] = caster;
+        _entities[1] = explicitTarget;
+        return new()
         {
             World = _world,
             Caster = caster,
@@ -275,6 +295,7 @@ public sealed class GraphOpsRelRuntime
             CallStack = _callStack,
             CallStackCount = 0,
         };
+    }
 
     private void RefreshFriendRankFromRuntime(int queriedCount)
     {
@@ -344,12 +365,16 @@ public sealed class GraphOpsRelRuntime
 
     private void PatchPrograms(IGraphSymbolResolver resolver)
     {
-        foreach (string graphKey in new[] { QueryFriendRankGraph, QueryChainProbeGraph, EffectBreakLinkGraph })
+        foreach (GraphFunctionEntry fn in new[]
+                 {
+                     _functions!.Require(QueryFriendRankName),
+                     _functions.Require(QueryChainProbeName),
+                     _functions.Require(EffectBreakLinkName),
+                 })
         {
-            int graphId = GraphIdRegistry.GetId(graphKey);
-            if (!_programs!.TryGetRegistration(graphId, out GraphProgramRegistration registration))
+            if (!_programs!.TryGetRegistration(fn.GraphId, out GraphProgramRegistration registration))
             {
-                throw new InvalidOperationException($"Rel graph '{graphKey}' registration missing for symbol patch.");
+                throw new InvalidOperationException($"Rel graph '{fn.Name}' registration missing for symbol patch.");
             }
 
             GraphProgramSymbolPatcher.Patch(registration.Symbols, registration.Program, resolver);

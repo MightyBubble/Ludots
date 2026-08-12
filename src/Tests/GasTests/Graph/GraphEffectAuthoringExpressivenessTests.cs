@@ -975,6 +975,110 @@ namespace Ludots.Tests.Gas.Graph
         }
 
         [Test]
+        public void FrontDoor_QueryRelationshipChainFilterSortAggregateOps_CompileAndEmit()
+        {
+            GraphControlFlowCompileResult compiled = CompileFrontDoor(
+                """
+                {
+                  "kind": "Query",
+                  "entry": "source",
+                  "nodes": [
+                    { "id": "source", "op": "LoadCaster" },
+                    { "id": "minLoyalty", "op": "ConstFloat", "floatValue": 30 },
+                    { "id": "maxLoyalty", "op": "ConstFloat", "floatValue": 100 },
+                    { "id": "outgoing", "op": "RelationshipQueryOutgoing", "relationshipType": "SocialBond" },
+                    { "id": "trustedOnly", "op": "RelationshipFilterFlag", "relationshipType": "SocialBond", "flag": "Trusted" },
+                    { "id": "loyaltyRange", "op": "RelationshipFilterMetricRange", "relationshipType": "SocialBond", "metric": "Loyalty" },
+                    { "id": "sortLoyalty", "op": "RelationshipSortByMetric", "relationshipType": "SocialBond", "metric": "Loyalty", "descending": true },
+                    { "id": "friendCount", "op": "AggCount" },
+                    { "id": "loyaltySum", "op": "RelationshipAggSumMetric", "relationshipType": "SocialBond", "metric": "Loyalty" },
+                    { "id": "loyaltyMax", "op": "RelationshipAggMaxMetric", "relationshipType": "SocialBond", "metric": "Loyalty" },
+                    { "id": "loyaltyAverage", "op": "RelationshipAggAverageMetric", "relationshipType": "SocialBond", "metric": "Loyalty" },
+                    { "id": "loyaltyMin", "op": "RelationshipAggMinMetric", "relationshipType": "SocialBond", "metric": "Loyalty" },
+                    { "id": "bestFriend", "op": "RelationshipAggMaxEntityByMetric", "relationshipType": "SocialBond", "metric": "Loyalty" },
+                    { "id": "weakestFriend", "op": "RelationshipAggMinEntityByMetric", "relationshipType": "SocialBond", "metric": "Loyalty" }
+                  ],
+                  "controlEdges": [
+                    { "from": "source", "fromPort": "next", "to": "minLoyalty" },
+                    { "from": "minLoyalty", "fromPort": "next", "to": "maxLoyalty" },
+                    { "from": "maxLoyalty", "fromPort": "next", "to": "outgoing" },
+                    { "from": "outgoing", "fromPort": "next", "to": "trustedOnly" },
+                    { "from": "trustedOnly", "fromPort": "next", "to": "loyaltyRange" },
+                    { "from": "loyaltyRange", "fromPort": "next", "to": "sortLoyalty" },
+                    { "from": "sortLoyalty", "fromPort": "next", "to": "friendCount" },
+                    { "from": "friendCount", "fromPort": "next", "to": "loyaltySum" },
+                    { "from": "loyaltySum", "fromPort": "next", "to": "loyaltyMax" },
+                    { "from": "loyaltyMax", "fromPort": "next", "to": "loyaltyAverage" },
+                    { "from": "loyaltyAverage", "fromPort": "next", "to": "loyaltyMin" },
+                    { "from": "loyaltyMin", "fromPort": "next", "to": "bestFriend" },
+                    { "from": "bestFriend", "fromPort": "next", "to": "weakestFriend" }
+                  ],
+                  "valueEdges": [
+                    { "from": "source", "fromPort": "value", "to": "outgoing", "toPort": "source" },
+                    { "from": "outgoing", "fromPort": "list", "to": "trustedOnly", "toPort": "list" },
+                    { "from": "source", "fromPort": "value", "to": "trustedOnly", "toPort": "source" },
+                    { "from": "trustedOnly", "fromPort": "list", "to": "loyaltyRange", "toPort": "list" },
+                    { "from": "source", "fromPort": "value", "to": "loyaltyRange", "toPort": "source" },
+                    { "from": "minLoyalty", "fromPort": "value", "to": "loyaltyRange", "toPort": "min" },
+                    { "from": "maxLoyalty", "fromPort": "value", "to": "loyaltyRange", "toPort": "max" },
+                    { "from": "loyaltyRange", "fromPort": "list", "to": "sortLoyalty", "toPort": "list" },
+                    { "from": "source", "fromPort": "value", "to": "sortLoyalty", "toPort": "source" },
+                    { "from": "sortLoyalty", "fromPort": "list", "to": "friendCount", "toPort": "list" },
+                    { "from": "sortLoyalty", "fromPort": "list", "to": "loyaltySum", "toPort": "list" },
+                    { "from": "source", "fromPort": "value", "to": "loyaltySum", "toPort": "source" },
+                    { "from": "sortLoyalty", "fromPort": "list", "to": "loyaltyMax", "toPort": "list" },
+                    { "from": "source", "fromPort": "value", "to": "loyaltyMax", "toPort": "source" },
+                    { "from": "sortLoyalty", "fromPort": "list", "to": "loyaltyAverage", "toPort": "list" },
+                    { "from": "source", "fromPort": "value", "to": "loyaltyAverage", "toPort": "source" },
+                    { "from": "sortLoyalty", "fromPort": "list", "to": "loyaltyMin", "toPort": "list" },
+                    { "from": "source", "fromPort": "value", "to": "loyaltyMin", "toPort": "source" },
+                    { "from": "sortLoyalty", "fromPort": "list", "to": "bestFriend", "toPort": "list" },
+                    { "from": "source", "fromPort": "value", "to": "bestFriend", "toPort": "source" },
+                    { "from": "sortLoyalty", "fromPort": "list", "to": "weakestFriend", "toPort": "list" },
+                    { "from": "source", "fromPort": "value", "to": "weakestFriend", "toPort": "source" }
+                  ],
+                  "outputs": [
+                    { "id": "friendCount", "destination": "Summary", "type": "Int", "source": "friendCount", "key": "rel.summary.friendCount" },
+                    { "id": "loyaltySum", "destination": "Summary", "type": "Int", "source": "loyaltySum", "key": "rel.summary.loyaltySum" },
+                    { "id": "loyaltyMax", "destination": "Summary", "type": "Int", "source": "loyaltyMax", "key": "rel.summary.loyaltyMax" },
+                    { "id": "loyaltyAverage", "destination": "Summary", "type": "Int", "source": "loyaltyAverage", "key": "rel.summary.loyaltyAverage" },
+                    { "id": "loyaltyMin", "destination": "Summary", "type": "Int", "source": "loyaltyMin", "key": "rel.summary.loyaltyMin" },
+                    { "id": "bestFriend", "destination": "Summary", "type": "Entity", "source": "bestFriend", "key": "rel.summary.bestFriend" },
+                    { "id": "weakestFriend", "destination": "Summary", "type": "Entity", "source": "weakestFriend", "key": "rel.summary.weakestFriend" }
+                  ]
+                }
+                """,
+                "tests.query.relationship-chain-filter-sort-aggregate-ops");
+
+            Assert.That(compiled.Succeeded, Is.True, GraphScriptTestGraphs.FormatDiagnostics(compiled.Diagnostics));
+            Assert.That(compiled.Package.HasValue, Is.True);
+            Assert.That(compiled.OutputSchema.Bindings.Length, Is.EqualTo(7));
+
+            GraphProgramPackage package = compiled.Package!.Value;
+            GraphInstruction outgoing = SingleInstruction(package.Program, GraphNodeOp.RelationshipQueryOutgoing);
+            GraphInstruction filterFlag = SingleInstruction(package.Program, GraphNodeOp.RelationshipFilterFlag);
+            GraphInstruction sort = SingleInstruction(package.Program, GraphNodeOp.RelationshipSortByMetric);
+            GraphInstruction aggMax = SingleInstruction(package.Program, GraphNodeOp.RelationshipAggMaxMetric);
+
+            Assert.Multiple(() =>
+            {
+                Assert.That(package.Symbols[outgoing.Dst], Is.EqualTo("SocialBond"));
+                Assert.That(package.Symbols[filterFlag.Imm], Is.EqualTo("Trusted"));
+                Assert.That(package.Symbols[filterFlag.Dst], Is.EqualTo("SocialBond"));
+                Assert.That(package.Symbols[sort.Dst], Is.EqualTo("SocialBond"));
+                Assert.That(package.Symbols[sort.Imm], Is.EqualTo("Loyalty"));
+                Assert.That(package.Symbols[aggMax.Flags], Is.EqualTo("SocialBond"));
+                Assert.That(package.Symbols[aggMax.Imm], Is.EqualTo("Loyalty"));
+            });
+
+            Assert.DoesNotThrow(() =>
+                GraphKindOperationPolicy.RequireAllowed(
+                    GraphKind.Query,
+                    package.Program,
+                    GasGraphOpHandlerTable.Instance));
+        }
+
+        [Test]
         public void FrontDoor_RelationshipOpsRequireAuthoredSymbols()
         {
             AssertMissingField(

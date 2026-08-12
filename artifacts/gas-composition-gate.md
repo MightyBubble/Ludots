@@ -1,21 +1,55 @@
-# GAS Composition Gate — GraphNodeOp Showcase P2 收尾
+﻿## GAS Composition Gate — Self Review
 
-## 任务摘要
-为 Epic #915 / PR #919 补齐剩余 GraphNodeOp 的 Showcase + registry `covered`，不新增 opcode / preset / profile DSL。
+- **Task / Issue**: Epic #915 P2 — RELATIONSHIP QUERY/AGG wave (`capability_standard_graph_ops_rel`)
+- **Date**: 2026-08-12
+- **Agent / Author**: Cloud Agent
 
-## 判断标准结论
-**通过。** 新变体 = 已有 graph 节点的玩家可见演示与验收映射，不是新 enum/开关。
+### 1. Core judgment
 
-## 自审清单
-- [x] 未新增 BuiltinHandler / EffectPresetType / profile schema
-- [x] 未新增平行加载器或 inherit.mode
-- [x] 复用现有 GraphControlFlow 前门 + CapabilityStandard GraphOps* Mod 模式
-- [x] SSOT：`graph_node_op_coverage.registry.json` + `showcase.registry.json`
-- [x] NO FALLBACK：缺覆盖保持 `runtime-only`，不得假标 covered
+新变体主要交付物是（A/B/C/D）: A — graph op 组合（Query 链 + Effect 拆链）
 
-## 复用 / 新增
-| 类型 | 项 |
-|------|-----|
-| 复用 | GraphControlFlowCompiler FrontDoor、现有 GraphOps*Mod、AbilityGraphSandbox、coverage registry 守卫 |
-| 新增 Layer 0–2 | 无 |
-| 新增 Mod | 仅缺族的 CapabilityStandardGraphOps* Showcase（数据驱动分镜） |
+结论: PASS
+
+一句话理由: 关系查询/过滤/排序/聚合与拆链均通过既有 Relationship* graph op 与 FuncLib 图组合表达，无新 enum 或 preset 开关。
+
+### 2. Layer assignment
+
+| 步骤/能力 | Layer (0/1/2/3) | 实现载体 |
+|-----------|-----------------|----------|
+| 出链/入链/互链/成对查询 | 0 | RelationshipQuery* ops |
+| 好感过滤与排序 | 0 | RelationshipFilter* / RelationshipSortByMetric |
+| 聚合统计 | 0 | RelationshipAgg* / AggCount |
+| 拆链效果 | 0 | RelationshipHasLink / GetMetric / SetFlag / RemoveLink |
+| 玩家剧本 | 2 | CapabilityStandardGraphOpsRelMod graphs + runtime |
+
+### 3. Reuse list
+
+- Handlers: GasGraphOpHandlerTable Relationship* handlers
+- Queues / Systems: GraphOpsRelSimulationSystem / PresentationSystem
+- Resolvers / Registries: RelationshipRuntime, GasGraphSymbolResolver, GraphProgramSymbolPatcher
+- Existing presets / graphs: SocialBond catalog from Relationships/catalog.json
+
+### 4. New Layer 0 ops (if any)
+
+N/A — 仅覆盖既有 P2 rel ops，未新增 BuiltinHandler。
+
+### 5. Transaction boundary
+
+拆链图顺序：HasLink → GetMetric → SetFlag(Estranged) → RemoveLink；展示用 headless runtime 逐波执行，无跨帧事务要求。
+
+### 6. Config SSOT
+
+行为配置落在: `mods/showcases/capability_standard/CapabilityStandardGraphOpsRelMod/assets/GAS/graphs.json` + `func_lib.json` + `Relationships/catalog.json`
+
+是否新增 JSON schema: NO
+
+### 7. Red flag scan
+
+- [x] 未新增 profile inherit/placement enum
+- [x] 未新建与 spawn 平行的物化管线
+- [x] 未把 placement 校验塞进 lifecycle op
+- [x] 未添加「说不清的」默认 fallback
+
+### 8. Next variant test
+
+「下一个 Mod 变体」将修改: graph 连线 / effect 步骤
