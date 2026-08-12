@@ -179,7 +179,21 @@ namespace Ludots.Tests.GAS
 
         private static void AssertAttrSetGetOpsWithinOverride(string compareResult, double maxOpsRegression)
         {
-            const string marker = "attr.setw.get.hot: ops regressed ";
+            AssertHotOpsWithinOverride(compareResult, "attr.setw.get.hot", maxOpsRegression, "P1");
+        }
+
+        private static void AssertTagAddHasOpsWithinOverride(string compareResult, double maxOpsRegression)
+        {
+            AssertHotOpsWithinOverride(compareResult, "tag.add.has.hot", maxOpsRegression, "P2");
+        }
+
+        private static void AssertHotOpsWithinOverride(
+            string compareResult,
+            string metricId,
+            double maxOpsRegression,
+            string phaseLabel)
+        {
+            string marker = $"{metricId}: ops regressed ";
             int idx = compareResult.IndexOf(marker, StringComparison.Ordinal);
             if (idx < 0)
             {
@@ -193,7 +207,7 @@ namespace Ludots.Tests.GAS
             double after = double.Parse(parts[1], System.Globalization.CultureInfo.InvariantCulture);
             double floor = before * (1.0 - maxOpsRegression);
             That(after, Is.GreaterThanOrEqualTo(floor),
-                $"attr.setw.get.hot ops {after:F0} below documented P1 override floor {floor:F0} ({maxOpsRegression:P0}). Full: {compareResult}");
+                $"{metricId} ops {after:F0} below documented {phaseLabel} override floor {floor:F0} ({maxOpsRegression:P0}). Full: {compareResult}");
         }
 
         [Test]
