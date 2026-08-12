@@ -33,10 +33,15 @@ namespace Ludots.Core.GraphRuntime
         public string? FunctionName { get; set; }
         public string? Attribute { get; set; }
         public string? Tag { get; set; }
+        /// <summary>TagDisplayTable id for SelectTagInMask / LookupTagDisplayToken.</summary>
+        public string? DisplayTable { get; set; }
+        /// <summary>RequireOne | AllowNone | LowestId for SelectTagInMask (default RequireOne).</summary>
+        public string? TagSelectPolicy { get; set; }
         public string? Template { get; set; }
         public string? CollectionKey { get; set; }
         public string? EffectTemplate { get; set; }
         public string? BuiltinHandler { get; set; }
+        public string? PayloadPreset { get; set; }
         public string? BlackboardKey { get; set; }
         public string? ConfigKey { get; set; }
         public string? RelationshipType { get; set; }
@@ -44,6 +49,8 @@ namespace Ludots.Core.GraphRuntime
         public string? Metric { get; set; }
         public string? Flag { get; set; }
         public string? QueryCapacityPolicy { get; set; }
+        public string? DroppedOutput { get; set; }
+        public string? ValidOutput { get; set; }
         public float RadiusCm { get; set; }
         public float RangeCm { get; set; }
         public int DirectionDeg { get; set; }

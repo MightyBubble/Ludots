@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Ludots.Core.GraphRuntime;
+using Ludots.Core.Presentation.TagDisplay;
 
 namespace Ludots.Core.NodeLibraries.GASGraph
 {
@@ -11,13 +12,21 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                       GraphNodeOp.LoadCaster or
                       GraphNodeOp.QueryAllMapEntities or
                       GraphNodeOp.QueryFromCollection or
+                      GraphNodeOp.QueryRadius or
+                      GraphNodeOp.QuerySortStable or
+                      GraphNodeOp.QueryLimit or
                       GraphNodeOp.QueryFilterTeam or
                       GraphNodeOp.QueryFilterTemplate or
                       GraphNodeOp.QueryFilterTagAny or
                       GraphNodeOp.QueryFilterTagNone or
+                      GraphNodeOp.HasTag or
+                      GraphNodeOp.CompareEqEntity or
+                      GraphNodeOp.SelectTagInMask or
+                      GraphNodeOp.LookupTagDisplayToken or
                       GraphNodeOp.QueryFilterAttributeRange or
                       GraphNodeOp.QuerySortByAttribute or
                       GraphNodeOp.AggCount or
+                      GraphNodeOp.AggMinByDistance or
                       GraphNodeOp.AggSumAttribute or
                       GraphNodeOp.AggAverageAttribute or
                       GraphNodeOp.AggMaxAttribute or
@@ -44,6 +53,9 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 GraphNodeOp.LoadCaster => GraphValueType.Entity,
                 GraphNodeOp.QueryAllMapEntities or
                     GraphNodeOp.QueryFromCollection or
+                    GraphNodeOp.QueryRadius or
+                    GraphNodeOp.QuerySortStable or
+                    GraphNodeOp.QueryLimit or
                     GraphNodeOp.QueryFilterTeam or
                     GraphNodeOp.QueryFilterTemplate or
                     GraphNodeOp.QueryFilterTagAny or
@@ -56,19 +68,24 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     GraphNodeOp.RelationshipFilterMetricRange or
                     GraphNodeOp.RelationshipFilterFlag or
                     GraphNodeOp.RelationshipSortByMetric => GraphValueType.TargetList,
-                GraphNodeOp.AggCount => GraphValueType.Int,
+                GraphNodeOp.AggCount or
+                    GraphNodeOp.SelectTagInMask or
+                    GraphNodeOp.LookupTagDisplayToken => GraphValueType.Int,
                 GraphNodeOp.AggSumAttribute or
                     GraphNodeOp.AggAverageAttribute or
                     GraphNodeOp.AggMaxAttribute or
                     GraphNodeOp.AggMinAttribute => GraphValueType.Float,
                 GraphNodeOp.AggMaxEntityByAttribute or
                     GraphNodeOp.AggMinEntityByAttribute or
+                    GraphNodeOp.AggMinByDistance or
                     GraphNodeOp.RelationshipAggMaxEntityByMetric or
                     GraphNodeOp.RelationshipAggMinEntityByMetric => GraphValueType.Entity,
                 GraphNodeOp.RelationshipAggSumMetric or
                     GraphNodeOp.RelationshipAggMaxMetric or
                     GraphNodeOp.RelationshipAggAverageMetric or
                     GraphNodeOp.RelationshipAggMinMetric => GraphValueType.Int,
+                GraphNodeOp.HasTag or
+                    GraphNodeOp.CompareEqEntity => GraphValueType.Bool,
                 _ => GraphValueType.Void
             };
 
@@ -79,11 +96,14 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             => op switch
             {
                 GraphNodeOp.QueryFilterTeam => port is GraphControlFlowPorts.List or GraphControlFlowPorts.TeamId,
-                GraphNodeOp.QueryFilterTemplate or
+                GraphNodeOp.QuerySortStable or
+                    GraphNodeOp.QueryLimit or
+                    GraphNodeOp.QueryFilterTemplate or
                     GraphNodeOp.QueryFilterTagAny or
                     GraphNodeOp.QueryFilterTagNone or
                     GraphNodeOp.QuerySortByAttribute or
                     GraphNodeOp.AggCount or
+                    GraphNodeOp.AggMinByDistance or
                     GraphNodeOp.AggSumAttribute or
                     GraphNodeOp.AggAverageAttribute or
                     GraphNodeOp.AggMaxAttribute or
@@ -104,6 +124,10 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     GraphNodeOp.RelationshipAggMinMetric or
                     GraphNodeOp.RelationshipAggMaxEntityByMetric or
                     GraphNodeOp.RelationshipAggMinEntityByMetric => port is GraphControlFlowPorts.List or GraphControlFlowPorts.Source,
+                GraphNodeOp.HasTag or
+                    GraphNodeOp.SelectTagInMask => port == GraphControlFlowPorts.Source,
+                GraphNodeOp.CompareEqEntity => port is GraphControlFlowPorts.A or GraphControlFlowPorts.B,
+                GraphNodeOp.LookupTagDisplayToken => port == GraphControlFlowPorts.A,
                 _ => false
             };
 
@@ -136,6 +160,16 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.ConstFloat:
                 case GraphNodeOp.LoadCaster:
                 case GraphNodeOp.QueryAllMapEntities:
+                    break;
+                case GraphNodeOp.QueryRadius:
+                    RequireSpatialCapacityPolicy(node, graphId, diagnostics);
+                    break;
+                case GraphNodeOp.QuerySortStable:
+                case GraphNodeOp.QueryLimit:
+                    RequireValueInput(node, GraphControlFlowPorts.List, GraphValueType.TargetList, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
+                case GraphNodeOp.AggMinByDistance:
+                    RequireValueInput(node, GraphControlFlowPorts.List, GraphValueType.TargetList, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
                     break;
                 case GraphNodeOp.QueryFromCollection:
                     RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
@@ -177,6 +211,38 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                     {
                         diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingNodeRef,
                             $"Node '{node.Id}' requires a non-empty tag.", node.Id));
+                    }
+
+                    break;
+                case GraphNodeOp.HasTag:
+                    RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    if (string.IsNullOrWhiteSpace(node.Tag))
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingNodeRef,
+                            $"Node '{node.Id}' requires a non-empty tag.", node.Id));
+                    }
+
+                    break;
+                case GraphNodeOp.CompareEqEntity:
+                    RequireValueInput(node, GraphControlFlowPorts.A, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    RequireValueInput(node, GraphControlFlowPorts.B, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    break;
+                case GraphNodeOp.SelectTagInMask:
+                    RequireValueInput(node, GraphControlFlowPorts.Source, GraphValueType.Entity, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    if (string.IsNullOrWhiteSpace(node.DisplayTable))
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingNodeRef,
+                            $"Node '{node.Id}' requires a non-empty displayTable.", node.Id));
+                    }
+
+                    _ = ParseQueryTagSelectPolicy(node.TagSelectPolicy, node, graphId, diagnostics);
+                    break;
+                case GraphNodeOp.LookupTagDisplayToken:
+                    RequireValueInput(node, GraphControlFlowPorts.A, GraphValueType.Int, valueEdges, nodeIndices, outputTypes, graphId, diagnostics);
+                    if (string.IsNullOrWhiteSpace(node.DisplayTable))
+                    {
+                        diagnostics.Add(Error(graphId, GraphDiagnosticCodes.MissingNodeRef,
+                            $"Node '{node.Id}' requires a non-empty displayTable.", node.Id));
                     }
 
                     break;
@@ -316,6 +382,17 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.LoadCaster:
                 case GraphNodeOp.QueryAllMapEntities:
                     break;
+                case GraphNodeOp.QueryRadius:
+                    instruction.Flags = 0;
+                    instruction.ImmF = node.RadiusCm;
+                    break;
+                case GraphNodeOp.QuerySortStable:
+                    break;
+                case GraphNodeOp.QueryLimit:
+                    instruction.Imm = node.IntValue;
+                    break;
+                case GraphNodeOp.AggMinByDistance:
+                    break;
                 case GraphNodeOp.QueryFromCollection:
                     instruction.A = ResolveValueInput(
                         node, GraphControlFlowPorts.Source, GraphValueType.Entity,
@@ -343,6 +420,33 @@ namespace Ludots.Core.NodeLibraries.GASGraph
                 case GraphNodeOp.QueryFilterTagAny:
                 case GraphNodeOp.QueryFilterTagNone:
                     instruction.Imm = RequireSymbol(node.Tag, "tag", node, symbolToIndex, symbols, graphId, diagnostics);
+                    break;
+                case GraphNodeOp.HasTag:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Imm = RequireSymbol(node.Tag, "tag", node, symbolToIndex, symbols, graphId, diagnostics);
+                    break;
+                case GraphNodeOp.CompareEqEntity:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.A, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.B = ResolveValueInput(
+                        node, GraphControlFlowPorts.B, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                    break;
+                case GraphNodeOp.SelectTagInMask:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.Source, GraphValueType.Entity,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Imm = RequireSymbol(node.DisplayTable, "displayTable", node, symbolToIndex, symbols, graphId, diagnostics);
+                    instruction.Flags = ParseQueryTagSelectPolicy(node.TagSelectPolicy, node, graphId, diagnostics);
+                    break;
+                case GraphNodeOp.LookupTagDisplayToken:
+                    instruction.A = ResolveValueInput(
+                        node, GraphControlFlowPorts.A, GraphValueType.Int,
+                        valueEdges, nodeIndices, outputTypes, outputRegisters, definedInts, definedBools, graphId, diagnostics);
+                    instruction.Imm = RequireSymbol(node.DisplayTable, "displayTable", node, symbolToIndex, symbols, graphId, diagnostics);
                     break;
                 case GraphNodeOp.QueryFilterAttributeRange:
                     instruction.B = ResolveValueInput(
@@ -510,6 +614,29 @@ namespace Ludots.Core.NodeLibraries.GASGraph
             }
 
             return EncodeByteSymbol(symbol, symbolToIndex, symbols, graphId, nodeId, diagnostics);
+        }
+
+        private static byte ParseQueryTagSelectPolicy(
+            string? policy,
+            GraphControlFlowNode node,
+            string graphId,
+            List<GraphDiagnostic> diagnostics)
+        {
+            if (string.IsNullOrWhiteSpace(policy))
+            {
+                return (byte)TagSelectPolicy.RequireOne;
+            }
+
+            if (!Enum.TryParse(policy, ignoreCase: false, out TagSelectPolicy parsed) ||
+                !Enum.IsDefined(typeof(TagSelectPolicy), parsed))
+            {
+                diagnostics.Add(Error(graphId, GraphDiagnosticCodes.TypeMismatch,
+                    $"Node '{node.Id}' has unsupported tagSelectPolicy '{policy}'. Supported: RequireOne, AllowNone, LowestId.",
+                    node.Id));
+                return (byte)TagSelectPolicy.RequireOne;
+            }
+
+            return (byte)parsed;
         }
     }
 }

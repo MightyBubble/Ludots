@@ -268,31 +268,55 @@
     },
     {
       "op": "HasTag",
-      "authorableKinds": null,
-      "unitTestFilter": null,
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Query",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectTagAndDisplayOps_CompileAndEmit",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "CompareEqEntity",
-      "authorableKinds": null,
-      "unitTestFilter": null,
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Query",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectTagAndDisplayOps_CompileAndEmit",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "SelectTagInMask",
-      "authorableKinds": null,
-      "unitTestFilter": null,
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Query",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectTagAndDisplayOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryTagDisplayOps_CompileAndEmit",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "LookupTagDisplayToken",
-      "authorableKinds": null,
-      "unitTestFilter": null,
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Query",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectTagAndDisplayOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryTagDisplayOps_CompileAndEmit",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "SelectEntity",
@@ -308,24 +332,42 @@
     },
     {
       "op": "QueryRadius",
-      "authorableKinds": null,
-      "unitTestFilter": null,
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Query",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectQueryListOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryKind_QueryListOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryRadius_RequiresCapacityPolicy",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "QuerySortStable",
-      "authorableKinds": null,
-      "unitTestFilter": null,
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Query",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectQueryListOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryKind_QueryListOps_CompileAndEmit",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "QueryLimit",
-      "authorableKinds": null,
-      "unitTestFilter": null,
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Query",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectQueryListOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryKind_QueryListOps_CompileAndEmit",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "QueryCone",
@@ -414,10 +456,16 @@
     },
     {
       "op": "AggMinByDistance",
-      "authorableKinds": null,
-      "unitTestFilter": null,
+      "authorableKinds": [
+        "Derived",
+        "Effect",
+        "Query",
+        "Score",
+        "Validation"
+      ],
+      "unitTestFilter": "GraphEffectAuthoringExpressivenessTests.FrontDoor_EffectQueryListOps_CompileAndEmit;GraphEffectAuthoringExpressivenessTests.FrontDoor_QueryKind_QueryListOps_CompileAndEmit",
       "showcaseId": null,
-      "status": "missing"
+      "status": "runtime-only"
     },
     {
       "op": "TargetListGet",
