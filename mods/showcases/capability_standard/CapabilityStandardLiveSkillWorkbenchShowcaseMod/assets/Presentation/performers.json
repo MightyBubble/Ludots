@@ -265,7 +265,7 @@
         }
       },
       {
-        "slot": "chillTag",
+        "slot": "tag",
         "kind": "TagBinding",
         "activeByDefault": true,
         "tagBinding": {
@@ -331,7 +331,7 @@
         }
       },
       {
-        "slot": "chillTag",
+        "slot": "tag",
         "kind": "TagBinding",
         "activeByDefault": true,
         "tagBinding": {
