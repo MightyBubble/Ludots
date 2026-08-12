@@ -241,12 +241,8 @@ namespace Ludots.Tests.Gas.Graph
             Assert.Multiple(() =>
             {
                 Assert.That(package.Symbols[fanStatic.Imm], Is.EqualTo("effect.fan.static"));
-                Assert.That(applyDynamic.A, Is.EqualTo(0));
-                Assert.That(applyDynamic.B, Is.EqualTo(0));
-                Assert.That(fanDynamic.A, Is.EqualTo(0));
                 Assert.That(package.Symbols[dispatchStatic.Imm], Is.EqualTo("effect.dispatch.static"));
                 Assert.That(package.Symbols[dispatchStatic.Dst], Is.EqualTo("TargetToResolved"));
-                Assert.That(dispatchDynamic.A, Is.EqualTo(0));
                 Assert.That(applyDynamic.A, Is.EqualTo(target.Dst));
                 Assert.That(applyDynamic.B, Is.EqualTo(templateId.Dst));
                 Assert.That(fanDynamic.A, Is.EqualTo(templateId.Dst));
