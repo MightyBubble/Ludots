@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Numerics;
 using Arch.Core;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Knowledge;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
@@ -15,6 +16,7 @@ using Ludots.Core.Presentation.Systems;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
+using Ludots.Core.Scripting;
 using NUnit.Framework;
 
 namespace Ludots.Tests.Presentation
@@ -888,7 +890,7 @@ namespace Ludots.Tests.Presentation
                 instances,
                 definitions,
                 requests,
-                new Dictionary<string, object>(),
+                CreateWorldHudProjectionGlobals(world, owner),
                 animatorStates,
                 soundRequests);
 
@@ -931,6 +933,32 @@ namespace Ludots.Tests.Presentation
             Assert.That(splineCount, Is.EqualTo(1));
             Assert.That(hudCount, Is.EqualTo(1));
             Assert.That(textCount, Is.EqualTo(1));
+        }
+
+        private static Dictionary<string, object> CreateWorldHudProjectionGlobals(World world, Entity owner)
+        {
+            Entity viewer = world.Create();
+            var projectionStore = new KnowledgeProjectionStore(initialCapacity: 4);
+            projectionStore.Upsert(
+                viewer,
+                owner,
+                new KnowledgeDisclosureRecord(
+                    KnowledgePresence.LiveVisible,
+                    KnowledgePositionAccess.Live,
+                    KnowledgeIdMask256.Empty,
+                    KnowledgeIdMask256.Empty,
+                    KnowledgeIdMask256.Empty,
+                    viewer,
+                    observedTick: 1,
+                    expiryTick: 0,
+                    confidencePermille: 1000,
+                    revision: 1));
+
+            return new Dictionary<string, object>
+            {
+                [CoreServiceKeys.LocalPlayerEntity.Name] = viewer,
+                [CoreServiceKeys.KnowledgeProjectionResolver.Name] = new KnowledgeProjectionResolver(projectionStore),
+            };
         }
 
         [Test]
