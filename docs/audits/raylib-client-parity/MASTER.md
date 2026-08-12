@@ -56,9 +56,9 @@
 
 ### W3 — 特效 shader 基线（P1，本长任务内要有最小可见）
 
-- [ ] Host 或 Mod 可登记 effect shader 键 → 加载 vs/fs  
-- [ ] VFX 视觉从纯占位几何改为「billboard/mesh + 可挂 shader」至少一种可见效果  
-- [ ] 失败 fail-loud，禁止静默白模装特效  
+- [x] Host 或 Mod 可登记 effect shader 键 → 加载 vs/fs  
+- [x] VFX 视觉从纯占位几何改为「billboard/mesh + 可挂 shader」至少一种可见效果  
+- [x] 失败 fail-loud，禁止静默白模装特效  
 
 ### W4 — 验收产物（P0）
 
