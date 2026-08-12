@@ -47,19 +47,17 @@ P3 Major / UAT / 文档名实
 
 ### P0 — 阻断与合入硬门槛
 
-- [ ] **B1** FuncLib/ActionLib：catalog 已声明时，缺文件 **或** 合并结果 `[]` → 加载失败关闭（两 Loader）
+- [x] **B1** FuncLib/ActionLib：catalog 已声明时，缺文件 **或** 合并结果 `[]` → 加载失败关闭（两 Loader）
   - 测试：缺文件、空数组、正常有条目
   - 证据源：#914 探针 P1/P1b；#906 修复清单 #7
-- [ ] **B2a** FuncLib 登记做可达性：沿 `InvokeScript`（含 `graphId`）/`Call` 递归，间接含 Yield → 拒绝
-  - 同步裁决：Script 方言 `graphId` 直绑 — 删除旁路 **或** 写入合同并仍做可达性检查（推荐删旁路或限死）
-  - 测试：#914 P2 形态必须由绿变红（登记失败）
-- [ ] **B2b** LSW `ReplaceProgram` / Commit：若图被 FuncLib 登记，新程序不得含 Yield（分类或提交期失败关闭）
-- [ ] **B3** Arena 门槛还原（不高于基线 15ms；推荐按实测收紧并断言 `over5ms==0`）；方法名与断言一致；禁止用计时器外 bootstrap 当放宽理由
-  - 证据：#914 同机 avg 3.55 vs 基线 3.70
-- [ ] **合同状态** `graph-funclib-actionlib-contract.md` 去掉虚假「已落地」，改「修复中 / 对照中」直至 P0+P1+P3 完成
-- [ ] **M1** FuncLib：要么加载拒非 Script，要么提供可调用 Score/Validation 的作者节点（禁止登记成功、调用炸）
-- [ ] **M2** `GraphActionCatalogLoader` 的 FuncLib 参数改为**必填**；测试覆盖同名冲突
-- [ ] **M3** `GraphRegistryTestBootstrap` 改走生产 Loader；删第二套手写加载；方法名反映 ActionLib
+- [x] **B2a** FuncLib 登记做可达性：沿 `InvokeScript`（含 `graphId`）/`Call` 递归，间接含 Yield → 拒绝（`GraphYieldPurityValidator`）
+  - Script `graphId` 保留但加载期闭合；P2 形态登记失败
+- [x] **B2b** LSW：FuncLib 目标图热替换含 Yield → 拒绝（传入真实 `GraphFunctionCatalog`）
+- [x] **B3** Arena 门槛还原 avg/p95&lt;15 + `over5ms==0`；去掉 bootstrap 假理由
+- [x] **合同状态** 改为「修复中（Epic #915）」；Score/Validation FuncLib 延后写明
+- [x] **M1** 加载期拒绝非 Script FuncLib kind
+- [x] **M2** `GraphActionCatalogLoader` 的 FuncLib 参数改为**必填**；测试覆盖同名冲突
+- [x] **M3** `GraphRegistryTestBootstrap` 改走生产 Loader；方法名 `LoadCoreScriptsFuncLibAndActionLib`
 
 ### P1 — B4 作者面补回（选定路径：补回，不缩编）
 
