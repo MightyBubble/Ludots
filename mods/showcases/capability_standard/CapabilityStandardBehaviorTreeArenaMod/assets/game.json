@@ -1,5 +1,11 @@
 {
   "startupMapId": "capability_standard_behavior_tree_arena",
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ],
   "windowTitle": "Ludots - Behavior Tree Arena",
   "targetFps": 60,
   "windowWidth": 1600,

@@ -2088,7 +2088,8 @@ namespace Ludots.Core.Engine
 
                 // Create new session with boards (additive — old sessions stay)
                 var session = MapSessions.CreateSession(mid, mapConfig, null);
-                session.LaunchContext = request.LaunchContext;
+                // Bare LoadMap(mapId) has no launch seats; inject cold-start defaults (NO invent-local bypass).
+                session.LaunchContext = request.LaunchContext ?? MergedConfig?.CreateStartupLaunchContext();
                 session.VisualHeightmap = visualHeightmap;
                 BindStructureCollisionSession(session, visualHeightmap, structureCollision);
                 CreateBoardsForSession(session, mapConfig);

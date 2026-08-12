@@ -1,3 +1,9 @@
 {
-  "startupMapId": "item_system_showcase_forge_socket_lab"
+  "startupMapId": "item_system_showcase_forge_socket_lab",
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ]
 }

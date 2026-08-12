@@ -1,4 +1,11 @@
 {
+  "startupMapId": "control_plane_projection",
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ],
   "windowTitle": "Ludots - Control Plane Projection Showcase",
   "windowWidth": 1600,
   "windowHeight": 900,
@@ -8,8 +15,10 @@
     "required": true,
     "provider": "cef"
   },
-  "startupMapId": "control_plane_projection",
-  "startupInputContexts": ["Default_Gameplay", "ControlPlaneProjection.Controls"],
+  "startupInputContexts": [
+    "Default_Gameplay",
+    "ControlPlaneProjection.Controls"
+  ],
   "commandSource": {
     "targetFilter": {
       "relationFilter": "All"

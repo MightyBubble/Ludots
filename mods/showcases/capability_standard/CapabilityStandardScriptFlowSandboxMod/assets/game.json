@@ -1,5 +1,11 @@
 {
   "startupMapId": "capability_standard_script_flow_sandbox",
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ],
   "windowTitle": "Ludots - Script Flow Sandbox",
   "targetFps": 60,
   "windowWidth": 1600,

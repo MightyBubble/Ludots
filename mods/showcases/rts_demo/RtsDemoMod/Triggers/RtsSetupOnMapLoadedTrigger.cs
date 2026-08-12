@@ -77,13 +77,11 @@ namespace RtsDemoMod.Triggers
         private static void EnsureLocalCommandSourceOwner(GameEngine engine, World world)
         {
             Entity owner = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
-            if (world.IsAlive(owner))
+            if (!world.IsAlive(owner))
             {
-                return;
+                throw new InvalidOperationException(
+                    "RTS showcase requires a live sole ClientLocalSeat possession from launchContext.localSeats / startupLocalSeats.");
             }
-
-            owner = world.Create(new PlayerOwner { PlayerId = 1 });
-            ClientLocalSeatBindings.BindSoleSeat(engine, owner, 1);
         }
 
         private static void EnsureDefaultCommandSource(GameEngine engine, World world)

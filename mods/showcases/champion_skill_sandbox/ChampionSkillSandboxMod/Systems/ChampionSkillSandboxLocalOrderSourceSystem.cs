@@ -57,11 +57,11 @@ namespace ChampionSkillSandboxMod.Systems
 
             if (!_helper.TryBindSoleSeatActor(_mapping, actor))
             {
-                _globals[LastUpdateDebugKey] = $"actor={actor.Id}:{actor.WorldId}:{actor.Version} setLocalPlayer=false commandPressed={IsCommandPressed()}";
+                _globals[LastUpdateDebugKey] = $"actor={actor.Id}:{actor.WorldId}:{actor.Version} bindSoleSeatActor=false commandPressed={IsCommandPressed()}";
                 return;
             }
 
-            _globals[LastUpdateDebugKey] = $"actor={actor.Id}:{actor.WorldId}:{actor.Version} setLocalPlayer=true commandPressed={IsCommandPressed()}";
+            _globals[LastUpdateDebugKey] = $"actor={actor.Id}:{actor.WorldId}:{actor.Version} bindSoleSeatActor=true commandPressed={IsCommandPressed()}";
             _mapping.Update(dt);
         }
 

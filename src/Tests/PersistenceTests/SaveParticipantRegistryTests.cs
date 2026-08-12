@@ -264,6 +264,32 @@ public sealed class SaveParticipantRegistryTests
     }
 
     [Test]
+    public void MapSessionParticipant_RejectsLegacyLaunchContextLocalPlayerId()
+    {
+        var target = new MapSessionManager();
+        target.CreateSession(new MapId("outer"), new Ludots.Core.Config.MapConfig());
+        ISaveParticipant targetParticipant = CoreSaveParticipants.CreateMapSessionsParticipant(target);
+        var legacy = new JsonObject
+        {
+            ["sessions"] = new JsonArray
+            {
+                new JsonObject
+                {
+                    ["mapId"] = "outer",
+                    ["state"] = MapSessionState.Active.ToString(),
+                    ["launchContext"] = new JsonObject
+                    {
+                        ["localPlayerId"] = 1,
+                    },
+                },
+            },
+            ["focusStack"] = new JsonArray { "outer" },
+        };
+
+        Assert.Throws<SaveContextException>(() => targetParticipant.RestoreState(legacy));
+    }
+
+    [Test]
     public void NarrativeParticipantRestoresVariablesAndActiveDialogue()
     {
         using GameEngine engine = CreateInitializedEngine();

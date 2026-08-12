@@ -55,7 +55,7 @@ namespace ProgressionScopeShowcaseMod
                 return;
             }
 
-            Entity owner = ResolveLocalPlayer(engine);
+            Entity owner = RequireSolePossessedRep(engine);
             Span<Entity> selected = stackalloc Entity[1];
             selected[0] = target;
             var descriptor = EntityCollectionDescriptor.Create(
@@ -90,16 +90,15 @@ namespace ProgressionScopeShowcaseMod
             });
         }
 
-        private static Entity ResolveLocalPlayer(GameEngine engine)
+        private static Entity RequireSolePossessedRep(GameEngine engine)
         {
             Entity owner = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
-            if (engine.World.IsAlive(owner))
+            if (!engine.World.IsAlive(owner))
             {
-                return owner;
+                throw new InvalidOperationException(
+                    "ProgressionScope showcase requires a live sole ClientLocalSeat possession from map launch / startupLocalSeats.");
             }
 
-            owner = engine.World.Create(new PlayerOwner { PlayerId = 1 });
-            ClientLocalSeatBindings.BindSoleSeat(engine, owner);
             return owner;
         }
 

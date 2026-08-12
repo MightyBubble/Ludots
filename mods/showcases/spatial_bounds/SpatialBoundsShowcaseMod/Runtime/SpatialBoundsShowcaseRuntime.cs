@@ -37,7 +37,6 @@ namespace SpatialBoundsShowcaseMod.Runtime
         private static readonly Vector4 FootprintStroke = new(0.94f, 0.54f, 0.28f, 0.92f);
         private static readonly Vector4 FootprintVertex = new(1f, 0.84f, 0.42f, 0.98f);
         private Entity _selectionOwner = Entity.Null;
-        private bool _ownsSelectionOwner;
         private readonly SpatialBoundsShowcasePanelController _panelController;
 
         public SpatialBoundsShowcaseRuntime()
@@ -92,30 +91,17 @@ namespace SpatialBoundsShowcaseMod.Runtime
 
         private void EnsureSelectionContext(GameEngine engine)
         {
-            if (_selectionOwner == Entity.Null || !engine.World.IsAlive(_selectionOwner))
+            _selectionOwner = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
+            if (!engine.World.IsAlive(_selectionOwner))
             {
-                _selectionOwner = ResolveExistingLocalPlayer(engine);
-                _ownsSelectionOwner = false;
-            }
-
-            if (_selectionOwner == Entity.Null || !engine.World.IsAlive(_selectionOwner))
-            {
-                _selectionOwner = engine.World.Create(
-                    new Name { Value = "SpatialBoundsViewer" },
-                    new PlayerOwner { PlayerId = 1 },
-                    default(CommandSourceDragState));
-                _ownsSelectionOwner = true;
+                throw new InvalidOperationException(
+                    "SpatialBounds showcase requires a live sole ClientLocalSeat possession from launchContext.localSeats / startupLocalSeats.");
             }
 
             if (!engine.World.Has<CommandSourceDragState>(_selectionOwner))
             {
                 engine.World.Add(_selectionOwner, default(CommandSourceDragState));
             }
-
-            int playerId = engine.World.TryGet(_selectionOwner, out PlayerOwner playerOwner) && playerOwner.PlayerId > 0
-                ? playerOwner.PlayerId
-                : 1;
-            ClientLocalSeatBindings.BindSoleSeat(engine, _selectionOwner, playerId);
         }
 
         private void DrawOverlay(GameEngine engine)
@@ -393,18 +379,22 @@ namespace SpatialBoundsShowcaseMod.Runtime
             return string.Join(", ", names);
         }
 
-        private static Entity ResolveExistingLocalPlayer(GameEngine engine)
+        private static bool TryResolveSolePossessedRep(GameEngine engine, out Entity solePossessedRep)
         {
-            return ClientLocalSeatAccess.TryGetSolePossessedRep(engine.GlobalContext, out Entity local) &&
-                   engine.World.IsAlive(local)
-                ? local
-                : Entity.Null;
+            if (ClientLocalSeatAccess.TryGetSolePossessedRep(engine.GlobalContext, out Entity local) &&
+                engine.World.IsAlive(local))
+            {
+                solePossessedRep = local;
+                return true;
+            }
+
+            solePossessedRep = Entity.Null;
+            return false;
         }
 
         private static Entity ResolvePrimary(GameEngine engine)
         {
-            Entity owner = ResolveExistingLocalPlayer(engine);
-            return owner != Entity.Null &&
+            return TryResolveSolePossessedRep(engine, out Entity owner) &&
                    EntityCollectionContextRuntime.TryGetPrimary(
                        engine.World,
                        engine.GlobalContext,
@@ -417,24 +407,21 @@ namespace SpatialBoundsShowcaseMod.Runtime
 
         private static int GetCommandSourceCount(GameEngine engine)
         {
-            Entity owner = ResolveExistingLocalPlayer(engine);
-            return owner != Entity.Null
+            return TryResolveSolePossessedRep(engine, out Entity owner)
                 ? EntityCollectionContextRuntime.GetCount(engine.GlobalContext, owner, EntityCollectionKeys.CommandSource)
                 : 0;
         }
 
         private static int CopyCommandSource(GameEngine engine, Span<Entity> destination)
         {
-            Entity owner = ResolveExistingLocalPlayer(engine);
-            return owner != Entity.Null
+            return TryResolveSolePossessedRep(engine, out Entity owner)
                 ? EntityCollectionContextRuntime.Copy(engine.GlobalContext, owner, EntityCollectionKeys.CommandSource, destination)
                 : 0;
         }
 
         private static Entity ResolveHoveredEntity(GameEngine engine)
         {
-            Entity owner = ResolveExistingLocalPlayer(engine);
-            return owner != Entity.Null &&
+            return TryResolveSolePossessedRep(engine, out Entity owner) &&
                    EntityCollectionContextRuntime.TryGetPrimary(
                        engine.World,
                        engine.GlobalContext,
@@ -464,19 +451,6 @@ namespace SpatialBoundsShowcaseMod.Runtime
                 _panelController.ClearIfOwned(root);
             }
 
-            if (_ownsSelectionOwner && engine.World.IsAlive(_selectionOwner))
-            {
-                engine.World.Destroy(_selectionOwner);
-            }
-
-            if (ClientLocalSeatAccess.TryGetSolePossessedRep(engine.GlobalContext, out Entity local) &&
-                local == _selectionOwner)
-            {
-                ClientLocalSeatAccess.RequireRegistry(engine).Clear();
-            }
-
             _selectionOwner = Entity.Null;
-            _ownsSelectionOwner = false;
-        }
-    }
+        }    }
 }

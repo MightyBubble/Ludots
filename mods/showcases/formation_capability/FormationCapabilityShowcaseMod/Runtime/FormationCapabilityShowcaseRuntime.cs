@@ -974,10 +974,10 @@ internal sealed class FormationCapabilityShowcaseRuntime
         }
 
         playerDomain = Entity.Null;
-        if (playerId == ResolveLocalPlayerId(engine))
+        if (playerId == RequireSolePossessedPlayerId(engine))
         {
             throw new InvalidOperationException(
-                $"Formation Capability showcase requires a live relationship representative for local player {playerId}.");
+                $"Formation Capability showcase requires a live relationship representative for sole ClientLocalSeat possession player {playerId}.");
         }
 
         return false;
@@ -1328,7 +1328,8 @@ internal sealed class FormationCapabilityShowcaseRuntime
     {
         return TryResolveLocalCommandSourceOwner(engine, out Entity owner)
             ? owner
-            : throw new InvalidOperationException("Formation Capability showcase requires LocalPlayerEntity before mutating command source.");
+            : throw new InvalidOperationException(
+                "Formation Capability showcase requires sole ClientLocalSeat possession from launchContext.localSeats / startupLocalSeats.");
     }
 
     private static bool TryResolveLocalCommandSourceOwner(GameEngine engine, out Entity owner)
@@ -1336,40 +1337,24 @@ internal sealed class FormationCapabilityShowcaseRuntime
         if (!ClientLocalSeatAccess.TryGetSolePossessedRep(engine.GlobalContext, out var local) ||
             !engine.World.IsAlive(local))
         {
-            int playerId = ResolveLocalPlayerId(engine);
-            PlayerEntityLookup lookup = engine.GetService(CoreServiceKeys.PlayerEntityLookup)
-                ?? throw new InvalidOperationException("Formation Capability showcase requires PlayerEntityLookup before resolving command source owner.");
-            if (playerId <= 0 ||
-                !lookup.TryGet(playerId, out local) ||
-                local == Entity.Null ||
-                !engine.World.IsAlive(local))
-            {
-                owner = Entity.Null;
-                return false;
-            }
-
-            ClientLocalSeatBindings.BindSoleSeat(engine, local);
+            owner = Entity.Null;
+            return false;
         }
 
         owner = local;
         return true;
     }
 
-    private static int ResolveLocalPlayerId(GameEngine engine)
+    private static int RequireSolePossessedPlayerId(GameEngine engine)
     {
         ClientLocalSeatRegistry seats = ClientLocalSeatAccess.RequireRegistry(engine.GlobalContext);
-        if (seats.TryGetSoleSeat(out ClientLocalSeat seat) && seat.HasPossession)
+        if (!seats.TryGetSoleSeat(out ClientLocalSeat seat) || !seat.HasPossession)
         {
-            return seat.PossessedPlayerId;
+            throw new InvalidOperationException(
+                "Formation Capability showcase requires sole ClientLocalSeat possession from launchContext.localSeats / startupLocalSeats.");
         }
 
-        if (engine.MergedConfig is { HasStartupLocalSeats: true } config &&
-            config.StartupLocalSeats.Count == 1)
-        {
-            return config.StartupLocalSeats[0].PlayerId;
-        }
-
-        return 0;
+        return seat.PossessedPlayerId;
     }
 
     private readonly struct FormationCapabilityShowcaseFormationPlan

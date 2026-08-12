@@ -1,3 +1,9 @@
 {
-  "startupMapId": "raylib_ism_benchmark_showcase"
+  "startupMapId": "raylib_ism_benchmark_showcase",
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ]
 }

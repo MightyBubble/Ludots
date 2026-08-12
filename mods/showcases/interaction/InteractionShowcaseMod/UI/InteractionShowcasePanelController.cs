@@ -642,8 +642,9 @@ namespace InteractionShowcaseMod.UI
         private static bool TryResolveCommandSourceOwner(GameEngine engine, out Entity owner)
         {
             owner = Entity.Null;
-            Entity local = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
-            if (local == Entity.Null || !engine.World.IsAlive(local))
+            if (!ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity local) ||
+                local == Entity.Null ||
+                !engine.World.IsAlive(local))
             {
                 return false;
             }

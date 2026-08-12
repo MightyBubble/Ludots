@@ -1,5 +1,11 @@
 {
   "startupMapId": "capability_standard_static_performer_30k_showcase",
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ],
   "targetFps": 0,
   "gasRuntimeCapacity": {
     "effectLifetimeSnapshotCapacity": 32768,

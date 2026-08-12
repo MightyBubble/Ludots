@@ -86,19 +86,19 @@ internal sealed class FormationCapabilityLocalOrderSourceSystem : ISystem<float>
         _mapping = _helper.TryCreateMapping(_context);
         if (_mapping != null)
         {
-            _helper.BeforeOrderSubmit = CanLocalPlayerSubmitOrder;
+            _helper.BeforeOrderSubmit = CanSolePossessedSubmitOrder;
             _mapping.SetCommandActorExpander(_commandActorExpander);
         }
     }
 
-    private bool CanLocalPlayerSubmitOrder(in Order order)
+    private bool CanSolePossessedSubmitOrder(in Order order)
     {
         if (!IsMoveOrder(in order))
         {
             return true;
         }
 
-        if (!TryResolveLocalPlayerEntity(out Entity localPlayer))
+        if (!TryResolveSolePossessedRep(out Entity solePossessedRep))
         {
             return false;
         }
@@ -109,7 +109,7 @@ internal sealed class FormationCapabilityLocalOrderSourceSystem : ISystem<float>
                 : throw new InvalidOperationException("Formation Capability order source requires ControlDomainQuery.");
         if (!_world.IsAlive(order.Actor) ||
             !_controlDomains.TryResolveControlDomain(order.Actor, out Entity domain) ||
-            domain != localPlayer)
+            domain != solePossessedRep)
         {
             return false;
         }
@@ -132,12 +132,12 @@ internal sealed class FormationCapabilityLocalOrderSourceSystem : ISystem<float>
         return order.OrderTypeId == _moveOrderTypeId;
     }
 
-    private bool TryResolveLocalPlayerEntity(out Entity localPlayer)
+    private bool TryResolveSolePossessedRep(out Entity solePossessedRep)
     {
-        localPlayer = Entity.Null;
+        solePossessedRep = Entity.Null;
         return ClientLocalSeatAccess.TryGetSolePossessedRep(_globals, out Entity local) &&
                _world.IsAlive(local) &&
-               (localPlayer = local) != Entity.Null;
+               (solePossessedRep = local) != Entity.Null;
     }
 
 }

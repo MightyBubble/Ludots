@@ -1,3 +1,9 @@
 {
-  "startupMapId": "chunk_streaming_showcase"
+  "startupMapId": "chunk_streaming_showcase",
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ]
 }

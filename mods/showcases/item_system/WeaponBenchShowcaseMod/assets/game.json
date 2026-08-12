@@ -1,3 +1,9 @@
 {
-  "startupMapId": "item_system_showcase_weapon_bench"
+  "startupMapId": "item_system_showcase_weapon_bench",
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ]
 }

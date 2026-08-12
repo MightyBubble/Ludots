@@ -1,3 +1,9 @@
 {
-  "startupMapId": "item_system_showcase_raid_loop"
+  "startupMapId": "item_system_showcase_raid_loop",
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ]
 }

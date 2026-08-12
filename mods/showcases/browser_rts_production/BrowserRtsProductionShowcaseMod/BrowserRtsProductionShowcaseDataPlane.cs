@@ -246,7 +246,7 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
             return BrowserRtsProductionCommandPanelView.Empty("No selected entity.");
         }
 
-        if (!CanLocalPlayerCommand(target))
+        if (!CanSolePossessedCommand(target))
         {
             return BrowserRtsProductionCommandPanelView.Empty("Selected entity is not controlled by the local player.");
         }
@@ -452,7 +452,7 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
         Entity owner = ClientLocalSeatAccess.RequireSolePossessedRep(_engine);
         if (collections == null || !_engine.World.IsAlive(owner))
         {
-            return WebUiCommandResult.Fail("command_source_missing", "EntityCollectionStore or LocalPlayerEntity is missing.");
+            return WebUiCommandResult.Fail("command_source_missing", "EntityCollectionStore or sole ClientLocalSeat possession is missing.");
         }
 
         Span<Entity> next = stackalloc Entity[1];
@@ -477,7 +477,7 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
             return WebUiCommandResult.Fail("target_missing", "activateAbilitySlot needs a selected entity or payload.entityKey.");
         }
 
-        if (!CanLocalPlayerCommand(target))
+        if (!CanSolePossessedCommand(target))
         {
             return WebUiCommandResult.Fail("target_not_controllable", "The selected entity is not controlled by the local player.");
         }
@@ -591,7 +591,7 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
             return false;
         }
 
-        if (!CanLocalPlayerCommand(entity))
+        if (!CanSolePossessedCommand(entity))
         {
             return false;
         }
@@ -687,7 +687,7 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
     private bool TryBindActiveInputMapping(Entity target)
     {
         InputOrderMappingSystem? mapping = _engine.GetService(CoreServiceKeys.ActiveInputOrderMapping);
-        if (mapping == null || !TryGetSolePossessedPlayerId(out int playerId) || !CanLocalPlayerCommand(target))
+        if (mapping == null || !TryGetSolePossessedPlayerId(out int playerId) || !CanSolePossessedCommand(target))
         {
             return false;
         }
@@ -768,7 +768,7 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
 
     private string[] BuildEntityAbilityNames(Entity entity)
     {
-        if (!CanLocalPlayerCommand(entity))
+        if (!CanSolePossessedCommand(entity))
         {
             return Array.Empty<string>();
         }
@@ -811,7 +811,7 @@ internal sealed class BrowserRtsProductionShowcaseTopicProducer : IWebUiTopicPro
             .ToArray();
     }
 
-    private bool CanLocalPlayerCommand(Entity entity)
+    private bool CanSolePossessedCommand(Entity entity)
     {
         if (entity == Entity.Null || !_engine.World.IsAlive(entity) || !TryGetSolePossessedPlayerId(out int localPlayerId))
         {

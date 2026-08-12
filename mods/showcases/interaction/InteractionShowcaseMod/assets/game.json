@@ -1,10 +1,18 @@
 {
   "startupMapId": "interaction_showcase_hub",
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ],
   "gasRuntimeCapacity": {
     "orderAdmissionResultCapacity": 8192,
     "orderAdmissionRejectionCapacity": 4096
   },
   "commandSource": {
-    "targetFilter": { "relationFilter": "Friendly" }
+    "targetFilter": {
+      "relationFilter": "Friendly"
+    }
   }
 }

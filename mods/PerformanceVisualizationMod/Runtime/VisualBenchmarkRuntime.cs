@@ -36,7 +36,6 @@ namespace PerformanceVisualizationMod.Runtime
 
         private const int SpawnBatchSize = 2048;
         private const int DestroyBatchSize = 2048;
-        private const int ShowcaseLocalPlayerId = 1;
         private const int LiveKnowledgeConfidencePermille = 1000;
 
         private static readonly QueryDescription ScenarioEntitiesQuery = new QueryDescription()
@@ -64,7 +63,6 @@ namespace PerformanceVisualizationMod.Runtime
         private int _healthAttributeId;
         private int _benchmarkCubeDefinitionId;
         private Entity _audienceViewer = Entity.Null;
-        private bool _ownsAudienceViewer;
         private uint _directHudRandomState = 0x5EED_1000u;
 
         public VisualBenchmarkRuntime(IModContext context)
@@ -537,51 +535,18 @@ namespace PerformanceVisualizationMod.Runtime
         {
             if (_audienceViewer != Entity.Null && engine.World.IsAlive(_audienceViewer))
             {
-                PublishBenchmarkAudience(engine, _audienceViewer);
                 return _audienceViewer;
             }
 
-            if (TryResolveLiveLocalPlayer(engine, out Entity existingViewer))
+            Entity viewer = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
+            if (!engine.World.IsAlive(viewer))
             {
-                _audienceViewer = existingViewer;
-                _ownsAudienceViewer = false;
-                return existingViewer;
+                throw new InvalidOperationException(
+                    "PerformanceVisualizationMod requires a live sole ClientLocalSeat possession from launchContext.localSeats / startupLocalSeats.");
             }
 
-            Entity viewer = engine.World.Create(
-                new Name { Value = "Performance Visualization Viewer" },
-                new PlayerOwner { PlayerId = ShowcaseLocalPlayerId });
             _audienceViewer = viewer;
-            _ownsAudienceViewer = true;
-            PublishBenchmarkAudience(engine, viewer);
             return viewer;
-        }
-
-        private static bool TryResolveLiveLocalPlayer(GameEngine engine, out Entity viewer)
-        {
-            viewer = Entity.Null;
-            if (!ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity serviceViewer) ||
-                serviceViewer == Entity.Null ||
-                !engine.World.IsAlive(serviceViewer))
-            {
-                return false;
-            }
-
-            viewer = serviceViewer;
-            return true;
-        }
-
-        private static void PublishBenchmarkAudience(GameEngine engine, Entity viewer)
-        {
-            if (viewer == Entity.Null || !engine.World.IsAlive(viewer))
-            {
-                throw new InvalidOperationException("PerformanceVisualizationMod requires a live local audience before publishing benchmark HUD knowledge.");
-            }
-
-            int playerId = engine.World.TryGet(viewer, out PlayerOwner owner) && owner.PlayerId > 0
-                ? owner.PlayerId
-                : 1;
-            ClientLocalSeatBindings.BindSoleSeat(engine, viewer, playerId);
         }
 
         private static KnowledgeProjectionStore RequireKnowledgeStore(GameEngine engine)
@@ -604,32 +569,8 @@ namespace PerformanceVisualizationMod.Runtime
 
         private void ClearOwnedBenchmarkAudience(GameEngine engine)
         {
-            if (!_ownsAudienceViewer || _audienceViewer == Entity.Null)
-            {
-                _audienceViewer = Entity.Null;
-                _ownsAudienceViewer = false;
-                return;
-            }
-
-            Entity viewer = _audienceViewer;
-            if (engine.GetService(CoreServiceKeys.KnowledgeProjectionStore) is KnowledgeProjectionStore knowledge)
-            {
-                knowledge.ClearViewer(viewer);
-            }
-
-            if (ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity serviceViewer) &&
-                serviceViewer == viewer)
-            {
-                ClientLocalSeatAccess.RequireRegistry(engine).Clear();
-            }
-
-            if (engine.World.IsAlive(viewer))
-            {
-                engine.World.Destroy(viewer);
-            }
-
+            _ = engine;
             _audienceViewer = Entity.Null;
-            _ownsAudienceViewer = false;
         }
 
         private static bool MatchesScenarioEntity(in MapEntity mapEntity, in Name name, in MapId currentMapId)

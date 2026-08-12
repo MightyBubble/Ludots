@@ -1,3 +1,9 @@
 {
-  "startupMapId": "performer_blacksmith_mesh_ism_benchmark"
+  "startupMapId": "performer_blacksmith_mesh_ism_benchmark",
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ]
 }

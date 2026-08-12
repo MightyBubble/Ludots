@@ -1057,8 +1057,8 @@ namespace CameraAcceptanceMod.UI
         private void ApplyHotpathAvatarTarget(Vector2 targetCm)
         {
             GameEngine engine = RequireEngine();
-            if (!TryResolveLocalPlayerEntity(engine, out Entity localPlayer) ||
-                !engine.World.Has<WorldPositionCm>(localPlayer))
+            if (!TryResolveSolePossessedRep(engine, out Entity solePossessedRep) ||
+                !engine.World.Has<WorldPositionCm>(solePossessedRep))
             {
                 return;
             }
@@ -1068,16 +1068,16 @@ namespace CameraAcceptanceMod.UI
                 engine.CurrentMapSession?.PrimaryBoard?.WorldSize.Bounds ?? engine.WorldSizeSpec.Bounds,
                 out _);
 
-            ref var position = ref engine.World.Get<WorldPositionCm>(localPlayer);
+            ref var position = ref engine.World.Get<WorldPositionCm>(solePossessedRep);
             position = WorldPositionCm.FromCm(clamped.X, clamped.Y);
-            if (engine.World.Has<FacingDirection>(localPlayer))
+            if (engine.World.Has<FacingDirection>(solePossessedRep))
             {
-                ref var facing = ref engine.World.Get<FacingDirection>(localPlayer);
+                ref var facing = ref engine.World.Get<FacingDirection>(solePossessedRep);
                 facing.AngleRad = 0f;
             }
             else
             {
-                engine.World.Add(localPlayer, new FacingDirection { AngleRad = 0f });
+                engine.World.Add(solePossessedRep, new FacingDirection { AngleRad = 0f });
             }
 
             SyncMountedRoot();
@@ -1245,16 +1245,16 @@ namespace CameraAcceptanceMod.UI
                 : CameraAcceptanceIds.BlendSmoothCameraId;
         }
 
-        private static bool TryResolveLocalPlayerEntity(GameEngine engine, out Entity localPlayer)
+        private static bool TryResolveSolePossessedRep(GameEngine engine, out Entity solePossessedRep)
         {
             if (ClientLocalSeatAccess.TryGetSolePossessedRep(engine.GlobalContext, out Entity local) &&
                 engine.World.IsAlive(local))
             {
-                localPlayer = local;
+                solePossessedRep = local;
                 return true;
             }
 
-            localPlayer = Entity.Null;
+            solePossessedRep = Entity.Null;
             return false;
         }
 
@@ -1273,7 +1273,7 @@ namespace CameraAcceptanceMod.UI
         private static bool TryResolveCommandSourcePrimary(GameEngine engine, out Entity entity)
         {
             entity = Entity.Null;
-            return TryResolveLocalPlayerEntity(engine, out Entity owner) &&
+            return TryResolveSolePossessedRep(engine, out Entity owner) &&
                    EntityCollectionContextRuntime.TryGetPrimary(
                        engine.World,
                        engine.GlobalContext,

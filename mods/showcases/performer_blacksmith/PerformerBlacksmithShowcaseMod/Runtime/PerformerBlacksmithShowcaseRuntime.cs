@@ -46,7 +46,6 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
         private const int RoadSplineCountPerBlacksmith = 1;
         private const int GroundOverlayCountPerBlacksmith = 1;
         private const int SkinnedCountPerBlacksmith = 1;
-        private const int ShowcaseLocalPlayerId = 1;
         private const int LiveKnowledgeConfidencePermille = 1000;
         private const string AutoScatterTotalEnvKey = "LUDOTS_BLACKSMITH_AUTO_SCATTER_TOTAL";
         private const string AutoMeshBenchmarkTotalEnvKey = "LUDOTS_BLACKSMITH_MESH_BENCHMARK_TOTAL";
@@ -92,7 +91,6 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
         private int _durabilityDamagedEffectId;
         private int _durabilityRuinedEffectId;
         private Entity _buildingEntity = Entity.Null;
-        private Entity _showcaseViewerEntity = Entity.Null;
         private bool _isWorking;
         private bool _isNight;
         private int _regionIndex;
@@ -180,7 +178,6 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             if (context.GetEngine() is GameEngine engine)
             {
                 Disable(engine);
-                ReleaseShowcaseViewer(engine);
             }
 
             _activeEngine = null;
@@ -877,7 +874,7 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
 
             KnowledgeProjectionStore knowledge = engine.GetService(CoreServiceKeys.KnowledgeProjectionStore)
                 ?? throw new InvalidOperationException("Blacksmith showcase requires KnowledgeProjectionStore before publishing HUD knowledge.");
-            Entity viewer = ResolveOrCreateShowcaseViewer(engine);
+            Entity viewer = RequireShowcaseSolePossessedRep(engine);
             var durabilityMask = KnowledgeIdMask256.Empty.WithId(_durabilityAttributeId);
             int observedTick = KnowledgeProjectionConsumer.ResolveCurrentTick(engine.GlobalContext);
             var mapId = engine.CurrentMapSession.MapId;
@@ -899,47 +896,16 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
             });
         }
 
-        private Entity ResolveOrCreateShowcaseViewer(GameEngine engine)
+        private static Entity RequireShowcaseSolePossessedRep(GameEngine engine)
         {
-            Entity current = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
-            if (current != Entity.Null && engine.World.IsAlive(current))
+            Entity possessed = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
+            if (!engine.World.IsAlive(possessed))
             {
-                BindShowcaseViewer(engine, current, publishPlayerId: engine.World.Has<PlayerOwner>(current));
-                return current;
+                throw new InvalidOperationException(
+                    "Blacksmith showcase requires a live sole ClientLocalSeat possession from launchContext.localSeats / startupLocalSeats.");
             }
 
-            if (_showcaseViewerEntity != Entity.Null && engine.World.IsAlive(_showcaseViewerEntity))
-            {
-                BindShowcaseViewer(engine, _showcaseViewerEntity, publishPlayerId: true);
-                return _showcaseViewerEntity;
-            }
-
-            if (engine.CurrentMapSession == null)
-            {
-                throw new InvalidOperationException("Blacksmith showcase requires an active map session before creating a local viewer.");
-            }
-
-            _showcaseViewerEntity = engine.World.Create(
-                new Name { Value = "Blacksmith Showcase Viewer" },
-                new PlayerIdentity { PlayerId = ShowcaseLocalPlayerId },
-                new PlayerOwner { PlayerId = ShowcaseLocalPlayerId },
-                new MapEntity { MapId = engine.CurrentMapSession.MapId });
-            BindShowcaseViewer(engine, _showcaseViewerEntity, publishPlayerId: true);
-            return _showcaseViewerEntity;
-        }
-
-        private static void BindShowcaseViewer(GameEngine engine, Entity viewer, bool publishPlayerId)
-        {
-            if (publishPlayerId &&
-                engine.World.TryGet(viewer, out PlayerOwner owner) &&
-                owner.PlayerId > 0)
-            {
-                ClientLocalSeatBindings.BindSoleSeat(engine, viewer, owner.PlayerId);
-
-                return;
-            }
-
-            ClientLocalSeatBindings.BindSoleSeat(engine, viewer);
+            return possessed;
         }
 
         private static void UpsertDurabilityKnowledgeIfNeeded(
@@ -986,28 +952,6 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
                    string.Equals(name, PerformerBlacksmithShowcaseIds.MeshHudBarBenchmarkEntityName, StringComparison.Ordinal) ||
                    string.Equals(name, PerformerBlacksmithShowcaseIds.MeshHudTextBenchmarkEntityName, StringComparison.Ordinal) ||
                    string.Equals(name, PerformerBlacksmithShowcaseIds.MinimapMarkerBallEntityName, StringComparison.Ordinal);
-        }
-
-        private void ReleaseShowcaseViewer(GameEngine engine)
-        {
-            if (_showcaseViewerEntity == Entity.Null)
-            {
-                return;
-            }
-
-            if (ClientLocalSeatAccess.TryGetSolePossessedRep(engine, out Entity serviceLocal) &&
-                (serviceLocal == _showcaseViewerEntity || serviceLocal == Entity.Null))
-            {
-                ClientLocalSeatAccess.RequireRegistry(engine).Clear();
-            }
-
-
-            if (engine.World.IsAlive(_showcaseViewerEntity))
-            {
-                engine.World.Destroy(_showcaseViewerEntity);
-            }
-
-            _showcaseViewerEntity = Entity.Null;
         }
 
         private void QueueRootRespawn(GameEngine engine)
@@ -1919,8 +1863,6 @@ namespace PerformerBlacksmithShowcaseMod.Runtime
 
         private void Disable(GameEngine engine)
         {
-            ReleaseShowcaseViewer(engine);
-
             if (IsInteractiveMode(engine) &&
                 engine.GetService(CoreServiceKeys.UIRoot) is UIRoot root)
             {

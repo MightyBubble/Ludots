@@ -1,5 +1,11 @@
 {
   "startupMapId": "capability_standard_level_blueprint_trial",
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ],
   "windowTitle": "Ludots - Level Blueprint Trial",
   "targetFps": 60,
   "windowWidth": 1600,

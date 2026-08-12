@@ -1,5 +1,11 @@
 {
   "startupMapId": "fog_vision_decay_showcase",
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ],
   "worldWidthInMacroTiles": 360,
   "worldHeightInMacroTiles": 180,
   "presentation": {

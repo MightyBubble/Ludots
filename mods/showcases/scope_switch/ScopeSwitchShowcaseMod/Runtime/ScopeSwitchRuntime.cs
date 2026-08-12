@@ -186,18 +186,14 @@ public sealed class ScopeSwitchRuntime
             engine.World.Add(entity, new MapEntity { MapId = ScopeSwitchIds.ShowcaseMap });
             engine.World.Add(entity, new ScopeRefBuffer());
             _entities.Add(new EntityRuntimeEntry(cfg, entity));
-            if (string.Equals(cfg.Id, _config.ViewerEntity, StringComparison.Ordinal))
-            {
-                _viewer = entity;
-            }
         }
 
-        if (_viewer == Entity.Null)
+        _viewer = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
+        if (!engine.World.IsAlive(_viewer))
         {
-            throw new InvalidOperationException($"Scope switch viewer entity '{_config.ViewerEntity}' was not found.");
+            throw new InvalidOperationException(
+                "Scope switch showcase requires a live sole ClientLocalSeat possession from launchContext.localSeats / startupLocalSeats.");
         }
-
-        ClientLocalSeatBindings.BindSoleSeat(engine, _viewer);
     }
 
     private void BuildScopes(GameEngine engine)

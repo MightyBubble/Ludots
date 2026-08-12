@@ -1,3 +1,9 @@
 {
-  "startupMapId": "performer_blacksmith_scatter_hudbar_benchmark"
+  "startupMapId": "performer_blacksmith_scatter_hudbar_benchmark",
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ]
 }

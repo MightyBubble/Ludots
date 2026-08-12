@@ -1,4 +1,13 @@
 {
   "startupMapId": "association_stress_showcase",
-  "startupInputContexts": ["Default_Gameplay", "AssociationStressShowcase.Controls"]
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ],
+  "startupInputContexts": [
+    "Default_Gameplay",
+    "AssociationStressShowcase.Controls"
+  ]
 }

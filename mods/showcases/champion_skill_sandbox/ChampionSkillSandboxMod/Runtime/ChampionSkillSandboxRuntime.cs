@@ -140,7 +140,7 @@ namespace ChampionSkillSandboxMod.Runtime
                 return;
             }
 
-            Entity playerViewer = ResolveOrAssignLocalPlayer(engine, ResolveFirstControllableChampion(engine));
+            Entity playerViewer = RequireSolePossessedRep(engine);
             Entity[] snapshot = SnapshotCollection(collections, playerViewer, EntityCollectionKeys.CommandSource);
             ReplaceCollection(collections, _debugViewer, CommandPreviewCollectionKey, EntityCollectionRoleKind.CommandPreview, snapshot, "Command preview");
         }
@@ -189,7 +189,7 @@ namespace ChampionSkillSandboxMod.Runtime
         private void SyncSelectionViews(GameEngine engine, bool drawOverlay)
         {
             EntityCollectionStore? collections = engine.GetService(CoreServiceKeys.EntityCollectionStore);
-            Entity playerViewer = ResolveOrAssignLocalPlayer(engine, ResolveFirstControllableChampion(engine));
+            Entity playerViewer = RequireSolePossessedRep(engine);
             if (collections == null || playerViewer == Entity.Null || !engine.World.IsAlive(playerViewer))
             {
                 return;
@@ -440,7 +440,7 @@ namespace ChampionSkillSandboxMod.Runtime
         {
             EntityCollectionStore? collections = engine.GetService(CoreServiceKeys.EntityCollectionStore);
             Entity initialCommandActor = ResolveChampionEntity(engine, ChampionSkillSandboxIds.EzrealAlphaName);
-            Entity owner = ResolveOrAssignLocalPlayer(engine, initialCommandActor);
+            Entity owner = RequireSolePossessedRep(engine);
             if (collections == null || owner == Entity.Null || !engine.World.IsAlive(owner))
             {
                 return false;
@@ -474,69 +474,16 @@ namespace ChampionSkillSandboxMod.Runtime
             return true;
         }
 
-        private static Entity ResolveOrAssignLocalPlayer(GameEngine engine, Entity preferredLocalPlayer)
+        private static Entity RequireSolePossessedRep(GameEngine engine)
         {
-            int playerId = ResolveLocalPlayerId(engine, preferredLocalPlayer);
-            if (playerId <= 0)
-            {
-                return Entity.Null;
-            }
-
-            return PublishLocalPlayerBinding(engine, playerId);
-        }
-
-        private static int ResolveLocalPlayerId(GameEngine engine, Entity preferredLocalPlayer)
-        {
-            ClientLocalSeatRegistry seats = ClientLocalSeatAccess.RequireRegistry(engine.GlobalContext);
-            if (seats.TryGetSoleSeat(out ClientLocalSeat seat) && seat.HasPossession)
-            {
-                return seat.PossessedPlayerId;
-            }
-
-            if (preferredLocalPlayer != Entity.Null &&
-                engine.World.IsAlive(preferredLocalPlayer) &&
-                engine.World.TryGet(preferredLocalPlayer, out PlayerOwner preferredOwner) &&
-                preferredOwner.PlayerId > 0)
-            {
-                return preferredOwner.PlayerId;
-            }
-
-            Entity firstControllable = ResolveFirstControllableChampion(engine);
-            if (firstControllable != Entity.Null &&
-                engine.World.TryGet(firstControllable, out PlayerOwner firstOwner) &&
-                firstOwner.PlayerId > 0)
-            {
-                return firstOwner.PlayerId;
-            }
-
-            return ShowcaseLocalPlayerId;
-        }
-
-        private static Entity PublishLocalPlayerBinding(GameEngine engine, int playerId)
-        {
-            if (playerId <= 0)
-            {
-                return Entity.Null;
-            }
-
-            if (!engine.TryGetService(CoreServiceKeys.PlayerEntityLookup, out PlayerEntityLookup lookup) ||
-                lookup == null)
-            {
-                throw new InvalidOperationException("ChampionSkillSandbox requires PlayerEntityLookup from map participant bindings.");
-            }
-
-            if (!lookup.TryGet(playerId, out Entity localPlayer) ||
-                localPlayer == Entity.Null ||
-                !engine.World.IsAlive(localPlayer))
+            Entity possessed = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
+            if (!engine.World.IsAlive(possessed))
             {
                 throw new InvalidOperationException(
-                    $"ChampionSkillSandbox requires a live player representative for PlayerId {playerId}. " +
-                    "Declare the player in the map Players binding instead of using a controllable champion as the representative.");
+                    "ChampionSkillSandbox requires a live sole ClientLocalSeat possession from launchContext.localSeats / startupLocalSeats.");
             }
 
-            ClientLocalSeatBindings.BindSoleSeat(engine, localPlayer, playerId);
-
-            return localPlayer;
+            return possessed;
         }
 
         private static void ApplyInitialTag(GameEngine engine, string entityName, string tagName)
@@ -646,7 +593,7 @@ namespace ChampionSkillSandboxMod.Runtime
             if (string.Equals(followModeId, ChampionSkillSandboxIds.FollowSelectionToolbarButtonId, StringComparison.Ordinal) ||
                 string.Equals(followModeId, ChampionSkillSandboxIds.FollowSelectionGroupToolbarButtonId, StringComparison.Ordinal))
             {
-                commandSourceOwner = ResolveOrAssignLocalPlayer(engine, ResolveFirstControllableChampion(engine));
+                commandSourceOwner = RequireSolePossessedRep(engine);
                 if (commandSourceOwner == Entity.Null || !engine.World.IsAlive(commandSourceOwner))
                 {
                     engine.GameSession.Camera.SetFollowTarget(activeCameraId, null, snapToFollowTargetWhenAvailable: false);
@@ -908,7 +855,7 @@ namespace ChampionSkillSandboxMod.Runtime
             }
             else
             {
-                owner = ResolveOrAssignLocalPlayer(engine, ResolveFirstControllableChampion(engine));
+                owner = RequireSolePossessedRep(engine);
             }
 
             string key = engine.GlobalContext.TryGetValue(ChampionSkillSandboxIds.ActiveCollectionKey, out object? keyObj) &&

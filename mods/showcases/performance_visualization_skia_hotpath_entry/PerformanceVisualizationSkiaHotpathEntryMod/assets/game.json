@@ -1,3 +1,9 @@
 {
-  "startupMapId": "visual_benchmark_skia_hotpath"
+  "startupMapId": "visual_benchmark_skia_hotpath",
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ]
 }

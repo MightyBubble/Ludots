@@ -9,7 +9,6 @@ using Ludots.Core.Components;
 using Ludots.Core.Client;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
-using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.Camera;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Input.Runtime;
@@ -147,36 +146,16 @@ namespace CameraAcceptanceMod.Runtime
                 return false;
             }
 
-            if (!TryFindEntityByName(engine.World, CameraAcceptanceIds.HeroName, out Entity hero))
+            owner = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
+            if (!engine.World.IsAlive(owner))
             {
-                return false;
-            }
-
-            owner = hero;
-            if (TryResolvePlayerId(engine.World, owner, out int playerId))
-            {
-                ClientLocalSeatBindings.BindSoleSeat(engine, owner, playerId);
-            }
-            else
-            {
-                ClientLocalSeatBindings.BindSoleSeat(engine, owner);
+                throw new System.InvalidOperationException(
+                    "Camera acceptance requires a live sole ClientLocalSeat possession from launchContext.localSeats / startupLocalSeats.");
             }
 
             PublishEmptyCommandSourceCollection(engine, owner);
             PublishLocalKnowledge(engine, owner);
             return true;
-        }
-
-        private static bool TryResolvePlayerId(World world, Entity owner, out int playerId)
-        {
-            playerId = 0;
-            if (owner == Entity.Null || !world.IsAlive(owner) || !world.Has<PlayerOwner>(owner))
-            {
-                return false;
-            }
-
-            playerId = world.Get<PlayerOwner>(owner).PlayerId;
-            return playerId > 0;
         }
 
         private static void PublishEmptyCommandSourceCollection(GameEngine engine, Entity owner)

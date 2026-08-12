@@ -1,5 +1,11 @@
 {
   "startupMapId": "capability_standard_physics2d",
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ],
   "windowTitle": "Ludots Engine - Capability Standard Physics2D",
   "targetFps": 0,
   "windowWidth": 1440,

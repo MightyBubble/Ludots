@@ -412,20 +412,19 @@ namespace GenreInfoShowcaseMod.Runtime
         private static bool TryResolveCollectionContext(GameEngine engine, out EntityCollectionStore collections, out Entity viewer)
         {
             collections = engine.GetService(CoreServiceKeys.EntityCollectionStore)!;
-            viewer = EnsureCollectionViewer(engine);
-            return collections != null && viewer != Entity.Null && engine.World.IsAlive(viewer);
+            viewer = RequireCollectionViewer(engine);
+            return collections != null;
         }
 
-        private static Entity EnsureCollectionViewer(GameEngine engine)
+        private static Entity RequireCollectionViewer(GameEngine engine)
         {
-            if (ClientLocalSeatAccess.TryGetSolePossessedRep(engine.GlobalContext, out Entity localViewer) &&
-                engine.World.IsAlive(localViewer))
+            Entity viewer = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
+            if (!engine.World.IsAlive(viewer))
             {
-                return localViewer;
+                throw new InvalidOperationException(
+                    "GenreInfo showcase requires a live sole ClientLocalSeat possession from launchContext.localSeats / startupLocalSeats.");
             }
 
-            Entity viewer = engine.World.Create(new Name { Value = "GenreInfo Showcase Viewer" });
-            ClientLocalSeatBindings.BindSoleSeat(engine.GlobalContext, viewer);
             return viewer;
         }
 

@@ -1,5 +1,11 @@
 {
   "startupMapId": "performer_blacksmith_scatter_hudtext_benchmark",
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ],
   "presentation": {
     "performerInstanceCapacity": 1048576,
     "gasPresentationEventCapacity": 2097152,

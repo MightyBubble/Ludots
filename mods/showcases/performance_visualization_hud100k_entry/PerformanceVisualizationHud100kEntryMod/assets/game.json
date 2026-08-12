@@ -1,3 +1,9 @@
 {
-  "startupMapId": "visual_benchmark_hud_100k"
+  "startupMapId": "visual_benchmark_hud_100k",
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ]
 }

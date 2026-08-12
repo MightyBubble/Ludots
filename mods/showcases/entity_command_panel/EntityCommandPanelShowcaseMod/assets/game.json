@@ -1,4 +1,11 @@
 {
+  "startupMapId": "interaction_showcase_hub",
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ],
   "windowTitle": "Ludots - Entity Command Panel WebUI Showcase",
   "windowWidth": 1600,
   "windowHeight": 900,
@@ -7,6 +14,5 @@
     "enabled": true,
     "required": true,
     "provider": "cef"
-  },
-  "startupMapId": "interaction_showcase_hub"
+  }
 }

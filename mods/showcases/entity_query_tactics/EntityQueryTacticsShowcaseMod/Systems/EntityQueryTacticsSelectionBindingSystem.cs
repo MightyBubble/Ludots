@@ -4,7 +4,6 @@ using Arch.System;
 using Ludots.Core.Components;
 using Ludots.Core.Client;
 using Ludots.Core.Engine;
-using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Map;
 using Ludots.Core.Scripting;
 using EntityQueryTacticsShowcaseMod.Runtime;
@@ -46,7 +45,12 @@ namespace EntityQueryTacticsShowcaseMod.Systems
                 return;
             }
 
-            BindCommandSourceOwner(owner);
+            Entity possessed = ClientLocalSeatAccess.RequireSolePossessedRep(_engine);
+            if (!_world.IsAlive(possessed) || possessed != owner)
+            {
+                throw new InvalidOperationException(
+                    "Entity query tactics showcase requires sole ClientLocalSeat possession of the player commander from launchContext.localSeats / startupLocalSeats.");
+            }
         }
 
         public void AfterUpdate(in float dt)
@@ -74,17 +78,6 @@ namespace EntityQueryTacticsShowcaseMod.Systems
 
             owner = foundOwner;
             return owner != Entity.Null;
-        }
-
-        private void BindCommandSourceOwner(Entity owner)
-        {
-            if (_world.TryGet(owner, out PlayerOwner playerOwner) && playerOwner.PlayerId > 0)
-            {
-                ClientLocalSeatBindings.BindSoleSeat(_engine, owner, playerOwner.PlayerId);
-                return;
-            }
-
-            ClientLocalSeatBindings.BindSoleSeat(_engine, owner);
         }
     }
 }

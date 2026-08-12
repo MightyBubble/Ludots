@@ -1,3 +1,9 @@
 {
-  "startupMapId": "spline_surface_uat"
+  "startupMapId": "spline_surface_uat",
+  "startupLocalSeats": [
+    {
+      "seatId": "seat.0",
+      "playerId": 1
+    }
+  ]
 }

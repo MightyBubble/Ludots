@@ -5,7 +5,6 @@ using Ludots.Core.Components;
 using Ludots.Core.Client;
 using Ludots.Core.Engine;
 using Ludots.Core.EntityCollections;
-using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
@@ -85,7 +84,6 @@ internal sealed class ConfigureMinimapShowcaseOnMapFocusTrigger : Trigger
             return;
         }
 
-        Entity playerCapital = Entity.Null;
         foreach (ref var chunk in engine.World.Query(in NamedEntityQuery))
         {
             var names = chunk.GetSpan<Name>();
@@ -107,33 +105,25 @@ internal sealed class ConfigureMinimapShowcaseOnMapFocusTrigger : Trigger
                 if (string.Equals(name, "Void Rift", StringComparison.Ordinal) || string.Equals(name, "Ember Storm", StringComparison.Ordinal)) tagOps.AddTag(engine.World, entity, _hazardTagId);
                 if (name.Contains("Frontier", StringComparison.OrdinalIgnoreCase) || name.Contains("Carrier", StringComparison.OrdinalIgnoreCase) || name.Contains("Warpack", StringComparison.OrdinalIgnoreCase) || name.Contains("Wing", StringComparison.OrdinalIgnoreCase)) tagOps.AddTag(engine.World, entity, _alertTagId);
                 if (name.Contains("Frontier", StringComparison.OrdinalIgnoreCase) || name.Contains("Border", StringComparison.OrdinalIgnoreCase)) tagOps.AddTag(engine.World, entity, _frontierTagId);
-
-                if (playerCapital == Entity.Null && string.Equals(name, "Imperial Capital", StringComparison.Ordinal))
-                {
-                    playerCapital = entity;
-                }
             }
         }
 
-        if (playerCapital == Entity.Null)
+        Entity owner = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
+        if (!engine.World.IsAlive(owner))
         {
-            return;
+            throw new InvalidOperationException(
+                "Minimap showcase requires a live sole ClientLocalSeat possession from launchContext.localSeats / startupLocalSeats.");
         }
-
-        int playerId = engine.World.TryGet(playerCapital, out PlayerOwner playerOwner) && playerOwner.PlayerId > 0
-            ? playerOwner.PlayerId
-            : 1;
-        ClientLocalSeatBindings.BindSoleSeat(engine, playerCapital, playerId);
 
         var descriptor = EntityCollectionDescriptor.Create(
             EntityCollectionKeys.CommandSource,
             EntityCollectionSourceKind.Explicit,
             EntityCollectionRoleKind.CommandSource,
-            playerCapital,
-            playerCapital,
+            owner,
+            owner,
             "Minimap command source",
-            "Imperial Capital is the default minimap showcase command actor.");
-        collections.Replace(playerCapital, descriptor, stackalloc[] { playerCapital }, playerCapital);
+            "Sole possessed rep is the default minimap showcase command actor.");
+        collections.Replace(owner, descriptor, stackalloc[] { owner }, owner);
     }
 
     private static void EnsureTagComponents(World world, Entity entity)

@@ -1,3 +1,4 @@
+using System;
 using Arch.Core;
 using Ludots.Core.Components;
 using System.Threading.Tasks;
@@ -252,15 +253,11 @@ namespace RoadNetworkShowcaseMod.Runtime
 
         private void EnsurePrimaryPlayerControl(GameEngine engine)
         {
-            Entity owner = ResolveNamedEntity(engine, PrimaryPlayerColumnName);
-            if (owner == Entity.Null)
+            Entity owner = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
+            if (!engine.World.IsAlive(owner))
             {
-                return;
-            }
-
-            ClientLocalSeatBindings.BindSoleSeat(engine.GlobalContext, owner);
-            if (engine.World.TryGet(owner, out PlayerOwner playerOwner) && playerOwner.PlayerId > 0)
-            {
+                throw new InvalidOperationException(
+                    "Road network showcase requires a live sole ClientLocalSeat possession from launchContext.localSeats / startupLocalSeats.");
             }
 
             if (engine.GetService(CoreServiceKeys.EntityCollectionStore) is EntityCollectionStore collections)
@@ -550,8 +547,14 @@ namespace RoadNetworkShowcaseMod.Runtime
 
         private Entity ResolveCurrentActor(GameEngine engine)
         {
-            if (TryResolveLocalCommandSourceOwner(engine, out Entity owner) &&
-                EntityCollectionContextRuntime.TryGetPrimary(
+            Entity owner = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
+            if (!engine.World.IsAlive(owner))
+            {
+                throw new InvalidOperationException(
+                    "Road network showcase requires a live sole ClientLocalSeat possession from launchContext.localSeats / startupLocalSeats.");
+            }
+
+            if (EntityCollectionContextRuntime.TryGetPrimary(
                     engine.World,
                     engine.GlobalContext,
                     owner,
@@ -562,26 +565,7 @@ namespace RoadNetworkShowcaseMod.Runtime
                 return selected;
             }
 
-            if (ClientLocalSeatAccess.TryGetSolePossessedRep(engine.GlobalContext, out Entity actor) &&
-                engine.World.IsAlive(actor))
-            {
-                return actor;
-            }
-
-            return ResolveNamedEntity(engine, PrimaryPlayerColumnName);
-        }
-
-        private static bool TryResolveLocalCommandSourceOwner(GameEngine engine, out Entity owner)
-        {
-            owner = Entity.Null;
-            Entity local = ClientLocalSeatAccess.RequireSolePossessedRep(engine);
-            if (local == Entity.Null || !engine.World.IsAlive(local))
-            {
-                return false;
-            }
-
-            owner = local;
-            return true;
+            return owner;
         }
 
         private static string DescribeActor(GameEngine engine, Entity actor)
