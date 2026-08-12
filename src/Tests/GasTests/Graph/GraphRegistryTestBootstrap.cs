@@ -76,7 +76,7 @@ namespace Ludots.Tests.Gas.Graph
                 }
 
                 int graphId = GraphIdRegistry.Register(id);
-                programs.Register(graphId, pkg.Value.Program, GraphKind.Script);
+                programs.Register(graphId, pkg.Value.Program, GraphKind.Script, GraphInstructionSourceMap.Empty, pkg.Value.Symbols);
             }
         }
 

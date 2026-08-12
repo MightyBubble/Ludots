@@ -71,6 +71,7 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
         public required int GraphId { get; init; }
         public required GraphKind Kind { get; init; }
         public required GraphInstruction[] Program { get; init; }
+        public required string[] Symbols { get; init; }
         public required GraphInstructionSourceMap SourceMap { get; init; }
     }
 
