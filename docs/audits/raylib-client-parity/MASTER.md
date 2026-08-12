@@ -120,9 +120,9 @@ Feature: Raylib 客户端配表即可显示与播动画
 
 ## 7. 完成定义（DoD）
 
-- [ ] W1–W3 代码合并进本分支并推送  
-- [ ] W4 四张（或至少 01–03）截图落入 acceptance 目录  
-- [ ] `STATUS.md` 全部勾选  
+- [x] W1–W3 代码合并进本分支并推送  
+- [x] W4 四张（或至少 01–03）截图落入 acceptance 目录  
+- [x] `STATUS.md` 全部勾选  
 - [ ] PR 描述链接本 MASTER 与截图  
 
 
