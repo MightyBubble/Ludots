@@ -356,6 +356,7 @@ namespace Ludots.Tests.Gas.Graph
             Span<byte> b = stackalloc byte[GraphVmLimits.MaxBoolRegisters];
             Span<Entity> e = stackalloc Entity[GraphVmLimits.MaxEntityRegisters];
             Span<Entity> targets = stackalloc Entity[GraphVmLimits.MaxTargets];
+            Span<int> callStack = stackalloc int[GraphVmLimits.MaxCallStackDepth];
             var state = new GraphExecutionState
             {
                 F = f,
@@ -363,6 +364,8 @@ namespace Ludots.Tests.Gas.Graph
                 B = b,
                 E = e,
                 Targets = targets,
+                CallStack = callStack,
+                CallStackCount = 0,
             };
             GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
             return state.I[register];
@@ -380,6 +383,7 @@ namespace Ludots.Tests.Gas.Graph
             Span<byte> b = stackalloc byte[GraphVmLimits.MaxBoolRegisters];
             Span<Entity> e = stackalloc Entity[GraphVmLimits.MaxEntityRegisters];
             Span<Entity> targets = stackalloc Entity[GraphVmLimits.MaxTargets];
+            Span<int> callStack = stackalloc int[GraphVmLimits.MaxCallStackDepth];
             var state = new GraphExecutionState
             {
                 F = f,
@@ -387,6 +391,8 @@ namespace Ludots.Tests.Gas.Graph
                 B = b,
                 E = e,
                 Targets = targets,
+                CallStack = callStack,
+                CallStackCount = 0,
             };
             execute(ref state);
             return state.I[register];

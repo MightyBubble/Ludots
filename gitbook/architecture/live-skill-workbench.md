@@ -135,7 +135,16 @@ AI 生成草稿
 
 ### 3.4 运行时定义仓库约束
 
-当前不少 loader 是 `Clear + Register all`，不适合运行期热应用。后续切片必须补“候选构建”和“稳定 id 替换”：
+当前不少 loader 是 `Clear + Register all`，不适合运行期热应用。正式热应用入口是 `LiveGasEditPipeline`（`CoreServiceKeys.LiveGasEditPipeline`），不是 `GameEngine.ReloadConfigs`。
+
+已落地的稳定 id 替换：
+
+- `GraphProgramRegistry.ReplaceProgram`：同 id、同 kind 替换 Graph body（`NextCastLiveApply`，安全帧提交）。
+- `EffectTemplateRegistry.TryReplaceHotNumericField`：`duration.durationTicks` / `duration.periodTicks`（`NextCastLiveApply`）。
+- 选中角色属性：`ImmediateCommand` → `ILiveAttributeCommandSink` → `AttributeMutationOps`。
+- Graph kind / 新 id → `EngineRestartRequired`；未知 effect 字段 → `MapReloadRequired`。
+
+仍须遵守：
 
 - 编译候选时不得清空 live registry。
 - id / name 映射在会话内必须稳定。

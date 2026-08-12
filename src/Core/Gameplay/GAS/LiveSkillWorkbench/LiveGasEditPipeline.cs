@@ -1,0 +1,468 @@
+using System;
+using System.Collections.Generic;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using Ludots.Core.Config;
+using Ludots.Core.GraphRuntime;
+using Ludots.Core.NodeLibraries.GASGraph;
+using Ludots.Core.NodeLibraries.GASGraph.Host;
+using Ludots.Core.Gameplay.GAS.Registry;
+
+namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
+{
+    /// <summary>
+    /// Formal Live GAS edit pipeline: Stage (candidate compile) → Classify → Commit.
+    /// Never Clear+Register-all live registries. Not a ReloadConfigs branch.
+    /// </summary>
+    public sealed class LiveGasEditPipeline
+    {
+        private readonly GraphProgramRegistry _graphs;
+        private readonly EffectTemplateRegistry? _effects;
+        private readonly JsonSerializerOptions _jsonOptions;
+        private readonly List<StagedGraphCandidate> _stagedGraphs = new(4);
+        private readonly List<StagedEffectNumericCandidate> _stagedEffects = new(4);
+        private readonly List<LiveDebugPatchOperation> _stagedImmediate = new(4);
+        private bool _safeFrameOpen;
+
+        public LiveGasEditPipeline(
+            GraphProgramRegistry graphs,
+            EffectTemplateRegistry? effects = null,
+            JsonSerializerOptions? jsonOptions = null)
+        {
+            _graphs = graphs ?? throw new ArgumentNullException(nameof(graphs));
+            _effects = effects;
+            _jsonOptions = jsonOptions ?? StrictJsonOptions.CreateCamelCase();
+        }
+
+        /// <summary>
+        /// Marks that the host is in a safe frame where NextCastLiveApply may commit.
+        /// </summary>
+        public void BeginSafeFrame() => _safeFrameOpen = true;
+
+        public void EndSafeFrame() => _safeFrameOpen = false;
+
+        /// <summary>
+        /// Classifies staged session ops into apply modes. Compiles Graph candidates without touching live registries.
+        /// </summary>
+        public LiveApplyClassificationReport Classify(LiveEditSession session)
+        {
+            if (session == null) throw new ArgumentNullException(nameof(session));
+
+            _stagedGraphs.Clear();
+            _stagedEffects.Clear();
+            _stagedImmediate.Clear();
+
+            var items = new List<LiveApplyClassificationItem>(session.Patch.Count);
+            bool canImmediate = false;
+            bool canNextCast = false;
+            bool mapReload = false;
+            bool engineRestart = false;
+
+            for (int i = 0; i < session.Patch.Count; i++)
+            {
+                LiveDebugPatchOperation op = session.Patch.Operations[i];
+                switch (op.Kind)
+                {
+                    case LiveDebugPatchOperationKind.SelectedActorAttribute:
+                    {
+                        _stagedImmediate.Add(op);
+                        canImmediate = true;
+                        items.Add(new LiveApplyClassificationItem(
+                            op.Kind,
+                            op.AttributeName ?? string.Empty,
+                            LiveApplyMode.ImmediateCommand,
+                            "Attribute set/add is an ImmediateCommand applied through AttributeMutationOps.",
+                            Array.Empty<LiveEditDiagnostic>()));
+                        break;
+                    }
+                    case LiveDebugPatchOperationKind.SkillEffectNumeric:
+                    {
+                        ClassifyEffectNumeric(in op, items, ref canNextCast, ref mapReload, ref engineRestart);
+                        break;
+                    }
+                    case LiveDebugPatchOperationKind.GraphBodyReplace:
+                    {
+                        ClassifyGraphBody(in op, items, ref canNextCast, ref mapReload, ref engineRestart);
+                        break;
+                    }
+                    default:
+                    {
+                        engineRestart = true;
+                        items.Add(new LiveApplyClassificationItem(
+                            op.Kind,
+                            op.DefinitionId ?? string.Empty,
+                            LiveApplyMode.EngineRestartRequired,
+                            $"Operation kind '{op.Kind}' has no hot-apply path.",
+                            new[]
+                            {
+                                new LiveEditDiagnostic(
+                                    LiveEditDiagnosticSeverity.Error,
+                                    LiveEditDiagnosticCodes.UnsupportedOperationKind,
+                                    $"Unsupported operation kind '{op.Kind}'.",
+                                    op.DefinitionId)
+                            }));
+                        break;
+                    }
+                }
+            }
+
+            return new LiveApplyClassificationReport(
+                session.SessionId,
+                session.Revision,
+                items,
+                canImmediate,
+                canNextCast,
+                mapReload,
+                engineRestart);
+        }
+
+        public LiveApplyCommitResult CommitImmediate(ILiveAttributeCommandSink sink)
+        {
+            if (sink == null) throw new ArgumentNullException(nameof(sink));
+            if (_stagedImmediate.Count == 0)
+            {
+                return new LiveApplyCommitResult(true, 0, Array.Empty<LiveEditDiagnostic>());
+            }
+
+            int applied = 0;
+            for (int i = 0; i < _stagedImmediate.Count; i++)
+            {
+                sink.Apply(_stagedImmediate[i]);
+                applied++;
+            }
+
+            _stagedImmediate.Clear();
+            return new LiveApplyCommitResult(true, applied, Array.Empty<LiveEditDiagnostic>());
+        }
+
+        /// <summary>
+        /// Commits NextCast candidates into live registries. Requires an open safe frame.
+        /// Does not Clear registries.
+        /// </summary>
+        public LiveApplyCommitResult CommitNextCastSafeFrame()
+        {
+            if (!_safeFrameOpen)
+            {
+                return new LiveApplyCommitResult(
+                    false,
+                    0,
+                    new[]
+                    {
+                        new LiveEditDiagnostic(
+                            LiveEditDiagnosticSeverity.Error,
+                            LiveEditDiagnosticCodes.SafeFrameRequired,
+                            "NextCastLiveApply requires an open safe frame (BeginSafeFrame).")
+                    });
+            }
+
+            var diagnostics = new List<LiveEditDiagnostic>(2);
+            int applied = 0;
+
+            for (int i = 0; i < _stagedGraphs.Count; i++)
+            {
+                StagedGraphCandidate c = _stagedGraphs[i];
+                try
+                {
+                    _graphs.ReplaceProgram(c.GraphId, c.Program, c.Kind, c.SourceMap);
+                    applied++;
+                }
+                catch (Exception ex)
+                {
+                    diagnostics.Add(new LiveEditDiagnostic(
+                        LiveEditDiagnosticSeverity.Error,
+                        LiveEditDiagnosticCodes.GraphCompileFailed,
+                        ex.Message,
+                        c.GraphKey));
+                }
+            }
+
+            for (int i = 0; i < _stagedEffects.Count; i++)
+            {
+                StagedEffectNumericCandidate c = _stagedEffects[i];
+                if (_effects == null)
+                {
+                    diagnostics.Add(new LiveEditDiagnostic(
+                        LiveEditDiagnosticSeverity.Error,
+                        LiveEditDiagnosticCodes.EffectTemplateMissing,
+                        "EffectTemplateRegistry was not provided to LiveGasEditPipeline.",
+                        c.DefinitionId));
+                    continue;
+                }
+
+                if (!_effects.TryReplaceHotNumericField(c.TemplateId, c.FieldPath, c.NumericValue, out string? reason))
+                {
+                    diagnostics.Add(new LiveEditDiagnostic(
+                        LiveEditDiagnosticSeverity.Error,
+                        LiveEditDiagnosticCodes.EffectFieldNotHotEditable,
+                        reason ?? "Effect numeric replace failed.",
+                        c.DefinitionId));
+                    continue;
+                }
+
+                applied++;
+            }
+
+            _stagedGraphs.Clear();
+            _stagedEffects.Clear();
+
+            if (diagnostics.Count > 0)
+            {
+                return new LiveApplyCommitResult(false, applied, diagnostics);
+            }
+
+            return new LiveApplyCommitResult(true, applied, Array.Empty<LiveEditDiagnostic>());
+        }
+
+        private void ClassifyEffectNumeric(
+            in LiveDebugPatchOperation op,
+            List<LiveApplyClassificationItem> items,
+            ref bool canNextCast,
+            ref bool mapReload,
+            ref bool engineRestart)
+        {
+            string definitionId = op.DefinitionId ?? string.Empty;
+            string fieldPath = op.FieldPath ?? string.Empty;
+
+            if (_effects == null)
+            {
+                mapReload = true;
+                items.Add(new LiveApplyClassificationItem(
+                    op.Kind,
+                    definitionId,
+                    LiveApplyMode.MapReloadRequired,
+                    "EffectTemplateRegistry is unavailable in this host; map reload is required.",
+                    new[]
+                    {
+                        new LiveEditDiagnostic(
+                            LiveEditDiagnosticSeverity.Error,
+                            LiveEditDiagnosticCodes.EffectTemplateMissing,
+                            "EffectTemplateRegistry is null.",
+                            definitionId)
+                    }));
+                return;
+            }
+
+            int templateId = EffectTemplateIdRegistry.GetId(definitionId);
+            if (templateId == EffectTemplateIdRegistry.InvalidId)
+            {
+                mapReload = true;
+                items.Add(new LiveApplyClassificationItem(
+                    op.Kind,
+                    definitionId,
+                    LiveApplyMode.MapReloadRequired,
+                    $"Effect template '{definitionId}' is not registered in the current map.",
+                    new[]
+                    {
+                        new LiveEditDiagnostic(
+                            LiveEditDiagnosticSeverity.Error,
+                            LiveEditDiagnosticCodes.EffectTemplateMissing,
+                            $"Unknown effect template '{definitionId}'.",
+                            definitionId)
+                    }));
+                return;
+            }
+
+            if (!IsHotEditableEffectField(fieldPath))
+            {
+                mapReload = true;
+                items.Add(new LiveApplyClassificationItem(
+                    op.Kind,
+                    definitionId,
+                    LiveApplyMode.MapReloadRequired,
+                    $"Field '{fieldPath}' is not NextCast-hot-editable.",
+                    new[]
+                    {
+                        new LiveEditDiagnostic(
+                            LiveEditDiagnosticSeverity.Warning,
+                            LiveEditDiagnosticCodes.EffectFieldNotHotEditable,
+                            $"Field '{fieldPath}' requires MapReload.",
+                            definitionId)
+                    }));
+                return;
+            }
+
+            _stagedEffects.Add(new StagedEffectNumericCandidate
+            {
+                DefinitionId = definitionId,
+                TemplateId = templateId,
+                FieldPath = fieldPath,
+                NumericValue = op.NumericValue
+            });
+            canNextCast = true;
+            items.Add(new LiveApplyClassificationItem(
+                op.Kind,
+                definitionId,
+                LiveApplyMode.NextCastLiveApply,
+                $"Effect field '{fieldPath}' will apply on the next safe frame (NextCast).",
+                Array.Empty<LiveEditDiagnostic>()));
+        }
+
+        private void ClassifyGraphBody(
+            in LiveDebugPatchOperation op,
+            List<LiveApplyClassificationItem> items,
+            ref bool canNextCast,
+            ref bool mapReload,
+            ref bool engineRestart)
+        {
+            string graphKey = op.DefinitionId ?? string.Empty;
+            var diags = new List<LiveEditDiagnostic>(2);
+
+            JsonObject? obj;
+            try
+            {
+                obj = JsonNode.Parse(op.DocumentJson!) as JsonObject;
+            }
+            catch (Exception ex)
+            {
+                engineRestart = false;
+                mapReload = true;
+                diags.Add(new LiveEditDiagnostic(
+                    LiveEditDiagnosticSeverity.Error,
+                    LiveEditDiagnosticCodes.GraphCompileFailed,
+                    $"Invalid graph JSON: {ex.Message}",
+                    graphKey));
+                items.Add(new LiveApplyClassificationItem(
+                    op.Kind,
+                    graphKey,
+                    LiveApplyMode.MapReloadRequired,
+                    "Graph JSON failed to parse; live registry untouched.",
+                    diags));
+                return;
+            }
+
+            if (obj == null)
+            {
+                mapReload = true;
+                diags.Add(new LiveEditDiagnostic(
+                    LiveEditDiagnosticSeverity.Error,
+                    LiveEditDiagnosticCodes.MissingGraphDocument,
+                    "Graph document must be a JSON object.",
+                    graphKey));
+                items.Add(new LiveApplyClassificationItem(
+                    op.Kind,
+                    graphKey,
+                    LiveApplyMode.MapReloadRequired,
+                    "Graph document missing.",
+                    diags));
+                return;
+            }
+
+            GraphControlFlowCompileResult compile =
+                GraphProgramAuthoringFrontDoor.CompileJsonObjectFull(obj, graphKey, _jsonOptions);
+
+            bool hasCompileErrors = false;
+            for (int d = 0; d < compile.Diagnostics.Count; d++)
+            {
+                if (compile.Diagnostics[d].Severity == GraphDiagnosticSeverity.Error)
+                {
+                    hasCompileErrors = true;
+                    diags.Add(new LiveEditDiagnostic(
+                        LiveEditDiagnosticSeverity.Error,
+                        LiveEditDiagnosticCodes.GraphCompileFailed,
+                        compile.Diagnostics[d].Message,
+                        graphKey));
+                }
+            }
+
+            if (compile.Package == null || hasCompileErrors)
+            {
+                mapReload = true;
+                if (diags.Count == 0)
+                {
+                    diags.Add(new LiveEditDiagnostic(
+                        LiveEditDiagnosticSeverity.Error,
+                        LiveEditDiagnosticCodes.GraphCompileFailed,
+                        "Graph compile returned null package.",
+                        graphKey));
+                }
+
+                items.Add(new LiveApplyClassificationItem(
+                    op.Kind,
+                    graphKey,
+                    LiveApplyMode.MapReloadRequired,
+                    "Graph candidate compile failed; live registry untouched.",
+                    diags));
+                return;
+            }
+
+            GraphProgramPackage package = compile.Package.Value;
+            int graphId = GraphIdRegistry.GetId(graphKey);
+            if (graphId == GraphIdRegistry.InvalidId)
+            {
+                engineRestart = true;
+                diags.Add(new LiveEditDiagnostic(
+                    LiveEditDiagnosticSeverity.Error,
+                    LiveEditDiagnosticCodes.GraphIdentityChanged,
+                    $"Graph key '{graphKey}' is not registered; new graph ids require EngineRestart.",
+                    graphKey));
+                items.Add(new LiveApplyClassificationItem(
+                    op.Kind,
+                    graphKey,
+                    LiveApplyMode.EngineRestartRequired,
+                    "New graph identity cannot be hot-applied.",
+                    diags));
+                return;
+            }
+
+            if (!_graphs.TryGetKind(graphId, out GraphKind liveKind))
+            {
+                engineRestart = true;
+                diags.Add(new LiveEditDiagnostic(
+                    LiveEditDiagnosticSeverity.Error,
+                    LiveEditDiagnosticCodes.GraphIdentityChanged,
+                    $"Graph id {graphId} ('{graphKey}') has no live program; EngineRestart required.",
+                    graphKey));
+                items.Add(new LiveApplyClassificationItem(
+                    op.Kind,
+                    graphKey,
+                    LiveApplyMode.EngineRestartRequired,
+                    "Missing live program for graph id.",
+                    diags));
+                return;
+            }
+
+            if (liveKind != package.Kind)
+            {
+                engineRestart = true;
+                diags.Add(new LiveEditDiagnostic(
+                    LiveEditDiagnosticSeverity.Error,
+                    LiveEditDiagnosticCodes.GraphIdentityChanged,
+                    $"Graph kind change '{liveKind}' → '{package.Kind}' is forbidden on hot path.",
+                    graphKey));
+                items.Add(new LiveApplyClassificationItem(
+                    op.Kind,
+                    graphKey,
+                    LiveApplyMode.EngineRestartRequired,
+                    "Graph kind identity changed.",
+                    diags));
+                return;
+            }
+
+            _stagedGraphs.Add(new StagedGraphCandidate
+            {
+                GraphKey = graphKey,
+                GraphId = graphId,
+                Kind = package.Kind,
+                Program = package.Program,
+                SourceMap = compile.SourceMap
+            });
+            canNextCast = true;
+            items.Add(new LiveApplyClassificationItem(
+                op.Kind,
+                graphKey,
+                LiveApplyMode.NextCastLiveApply,
+                "Graph body candidate compiled; will ReplaceProgram on safe frame (NextCast).",
+                Array.Empty<LiveEditDiagnostic>()));
+        }
+
+        private static bool IsHotEditableEffectField(string fieldPath)
+        {
+            if (string.IsNullOrWhiteSpace(fieldPath)) return false;
+            string path = fieldPath.Trim();
+            return path.Equals("duration.durationTicks", StringComparison.OrdinalIgnoreCase)
+                || path.Equals("DurationTicks", StringComparison.OrdinalIgnoreCase)
+                || path.Equals("duration.periodTicks", StringComparison.OrdinalIgnoreCase)
+                || path.Equals("PeriodTicks", StringComparison.OrdinalIgnoreCase);
+        }
+    }
+}

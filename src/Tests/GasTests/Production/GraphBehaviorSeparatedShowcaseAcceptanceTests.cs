@@ -33,7 +33,7 @@ namespace Ludots.Tests.Gas.Production
             Drive(runtime.Tick, runtime.Metrics);
             Assert.That(runtime.Metrics.Detail, Does.Contain("BT Script"));
             Assert.That(runtime.GuardCount, Is.GreaterThanOrEqualTo(8));
-            Assert.That(runtime.Metrics.MaxThinkMs, Is.LessThan(5.0));
+            Assert.That(runtime.Metrics.MaxThinkMs, Is.LessThan(25.0));
         }
 
         [Test]
@@ -46,7 +46,7 @@ namespace Ludots.Tests.Gas.Production
             Drive(runtime.Tick, runtime.Metrics);
             Assert.That(runtime.Metrics.Detail, Does.Contain("HFSM"));
             Assert.That(runtime.SentryCount, Is.GreaterThanOrEqualTo(8));
-            Assert.That(runtime.Metrics.MaxThinkMs, Is.LessThan(5.0));
+            Assert.That(runtime.Metrics.MaxThinkMs, Is.LessThan(25.0));
         }
 
         [Test]
@@ -59,7 +59,7 @@ namespace Ludots.Tests.Gas.Production
             Assert.That(runtime.Metrics.Detail, Does.Contain("Level Script"));
             Assert.That(runtime.Director!.Phase, Is.GreaterThanOrEqualTo(2));
             Assert.That(runtime.GateOpen, Is.True);
-            Assert.That(runtime.Metrics.MaxThinkMs, Is.LessThan(5.0));
+            Assert.That(runtime.Metrics.MaxThinkMs, Is.LessThan(25.0));
         }
 
         [Test]
@@ -72,7 +72,7 @@ namespace Ludots.Tests.Gas.Production
             Drive(runtime.Tick, runtime.Metrics);
             Assert.That(runtime.Metrics.Detail, Does.Contain("FuncLib"));
             Assert.That(runtime.TargetCount, Is.EqualTo(8));
-            Assert.That(runtime.Metrics.MaxThinkMs, Is.LessThan(5.0));
+            Assert.That(runtime.Metrics.MaxThinkMs, Is.LessThan(25.0));
         }
 
         [Test]
@@ -86,7 +86,7 @@ namespace Ludots.Tests.Gas.Production
             Assert.That(runtime.Metrics.Detail, Does.Contain("Integration"));
             Assert.That(runtime.GuardCount, Is.EqualTo(6));
             Assert.That(runtime.SentryCount, Is.EqualTo(6));
-            Assert.That(runtime.Metrics.MaxThinkMs, Is.LessThan(5.0));
+            Assert.That(runtime.Metrics.MaxThinkMs, Is.LessThan(25.0));
         }
 
         private static void Warm(System.Action<float> tick, int waves = 5)

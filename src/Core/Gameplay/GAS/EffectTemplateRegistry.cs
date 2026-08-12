@@ -457,6 +457,63 @@ namespace Ludots.Core.Gameplay.GAS
         }
 
         /// <summary>
+        /// NextCast-safe numeric field replace for already-registered templates.
+        /// Does not Clear/re-Register; identity (templateId) stays fixed.
+        /// Supported paths: duration.durationTicks, duration.periodTicks.
+        /// </summary>
+        public bool TryReplaceHotNumericField(int templateId, string fieldPath, double numericValue, out string? failureReason)
+        {
+            if (!TryGet(templateId, out EffectTemplateData data))
+            {
+                failureReason = $"Effect template id {templateId} is not registered.";
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(fieldPath))
+            {
+                failureReason = "fieldPath is required.";
+                return false;
+            }
+
+            string path = fieldPath.Trim();
+            if (path.Equals("duration.durationTicks", StringComparison.OrdinalIgnoreCase)
+                || path.Equals("DurationTicks", StringComparison.OrdinalIgnoreCase))
+            {
+                int ticks = checked((int)Math.Round(numericValue));
+                if (ticks < 0)
+                {
+                    failureReason = "duration.durationTicks must be >= 0.";
+                    return false;
+                }
+
+                data.DurationTicks = ticks;
+                _templates[templateId] = data;
+                failureReason = null;
+                return true;
+            }
+
+            if (path.Equals("duration.periodTicks", StringComparison.OrdinalIgnoreCase)
+                || path.Equals("PeriodTicks", StringComparison.OrdinalIgnoreCase))
+            {
+                int ticks = checked((int)Math.Round(numericValue));
+                if (ticks < 0)
+                {
+                    failureReason = "duration.periodTicks must be >= 0.";
+                    return false;
+                }
+
+                data.PeriodTicks = ticks;
+                _templates[templateId] = data;
+                failureReason = null;
+                return true;
+            }
+
+            failureReason =
+                $"Field path '{fieldPath}' is not NextCast-hot-editable; MapReload or EngineRestart is required.";
+            return false;
+        }
+
+        /// <summary>
         /// Check whether a template exists and return its array index (same as templateId).
         /// Use with <see cref="GetRef"/> to avoid copying the large EffectTemplateData struct.
         /// </summary>

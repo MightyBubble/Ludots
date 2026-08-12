@@ -33,6 +33,7 @@ using Ludots.Core.Systems;
 using Ludots.Core.Engine.Pacemaker;
 using Ludots.Core.Physics;
 using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Gameplay.GAS.LiveSkillWorkbench;
 using Ludots.Core.Gameplay.GAS.Config;
 using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.GraphRuntime;
@@ -1429,6 +1430,9 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.TargetDispatchPresetRegistry, targetDispatchPresetRegistry);
             SetService(CoreServiceKeys.GraphProgramRegistry, graphProgramRegistry);
             SetService(CoreServiceKeys.GraphFunctionCatalog, graphFunctionCatalog);
+            SetService(
+                CoreServiceKeys.LiveGasEditPipeline,
+                new LiveGasEditPipeline(graphProgramRegistry, effectTemplateRegistry));
             SetService(CoreServiceKeys.GasGraphRuntimeProductionServices, gasGraphProductionServices);
             SetService(CoreServiceKeys.GasGraphRuntimeApi, gasGraphApi);
             SetService(CoreServiceKeys.GraphOutputSchemaRegistry, graphOutputSchemas);

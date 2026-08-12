@@ -20,6 +20,13 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
         public const string UnsupportedAttributeMutation = "LSW0006";
         public const string UnsupportedOperationKind = "LSW0007";
         public const string MissingProvenanceSourceUri = "LSW0008";
+        public const string MissingGraphDocument = "LSW0009";
+        public const string GraphCompileFailed = "LSW0010";
+        public const string GraphIdentityChanged = "LSW0011";
+        public const string EffectTemplateMissing = "LSW0012";
+        public const string EffectFieldNotHotEditable = "LSW0013";
+        public const string AttributeCommandSinkMissing = "LSW0014";
+        public const string SafeFrameRequired = "LSW0015";
     }
 
     public readonly record struct LiveEditDiagnostic(

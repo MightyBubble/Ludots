@@ -7,7 +7,8 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
     public enum LiveDebugPatchOperationKind : byte
     {
         SkillEffectNumeric = 1,
-        SelectedActorAttribute = 2
+        SelectedActorAttribute = 2,
+        GraphBodyReplace = 3
     }
 
     public enum ActorAttributeMutationKind : byte
@@ -92,7 +93,8 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
             double numericValue,
             ActorTargetSelection actorTarget,
             string? attributeName,
-            ActorAttributeMutationKind attributeMutation)
+            ActorAttributeMutationKind attributeMutation,
+            string? documentJson)
         {
             Kind = kind;
             Provenance = provenance;
@@ -102,6 +104,7 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
             ActorTarget = actorTarget;
             AttributeName = attributeName;
             AttributeMutation = attributeMutation;
+            DocumentJson = documentJson;
         }
 
         public LiveDebugPatchOperationKind Kind { get; }
@@ -120,6 +123,12 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
 
         public ActorAttributeMutationKind AttributeMutation { get; }
 
+        /// <summary>
+        /// Full graph ControlFlow JSON for <see cref="LiveDebugPatchOperationKind.GraphBodyReplace"/>.
+        /// Id/kind in the document must match the live graph identity.
+        /// </summary>
+        public string? DocumentJson { get; }
+
         public static LiveDebugPatchOperation SkillEffectNumeric(
             string definitionId,
             string fieldPath,
@@ -134,7 +143,8 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
                 numericValue,
                 default,
                 attributeName: null,
-                attributeMutation: default);
+                attributeMutation: default,
+                documentJson: null);
         }
 
         public static LiveDebugPatchOperation SelectedActorAttribute(
@@ -152,7 +162,25 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
                 numericValue,
                 actorTarget,
                 attributeName,
-                mutation);
+                mutation,
+                documentJson: null);
+        }
+
+        public static LiveDebugPatchOperation GraphBodyReplace(
+            string graphKey,
+            string documentJson,
+            in LiveEditProvenance provenance)
+        {
+            return new LiveDebugPatchOperation(
+                LiveDebugPatchOperationKind.GraphBodyReplace,
+                provenance,
+                definitionId: graphKey,
+                fieldPath: null,
+                numericValue: 0d,
+                default,
+                attributeName: null,
+                attributeMutation: default,
+                documentJson);
         }
     }
 

@@ -18,6 +18,7 @@ using Ludots.Core.Gameplay.Narrative;
 using Ludots.Core.Gameplay.Quests;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Bindings;
+using Ludots.Core.Gameplay.GAS.LiveSkillWorkbench;
 using Ludots.Core.Gameplay.GAS.Input;
 using Ludots.Core.Gameplay.GAS.Orders;
 using Ludots.Core.Gameplay.GAS.Presentation;
@@ -189,6 +190,7 @@ namespace Ludots.Core.Scripting
         public static readonly ServiceKey<ContextGroupRegistry> ContextGroupRegistry = new("ContextGroupRegistry");
         public static readonly ServiceKey<GraphProgramRegistry> GraphProgramRegistry = new("GraphProgramRegistry");
         public static readonly ServiceKey<GraphFunctionCatalog> GraphFunctionCatalog = new("GraphFunctionCatalog");
+        public static readonly ServiceKey<LiveGasEditPipeline> LiveGasEditPipeline = new("LiveGasEditPipeline");
         public static readonly ServiceKey<GasGraphRuntimeProductionServices> GasGraphRuntimeProductionServices = new("GasGraphRuntimeProductionServices");
         public static readonly ServiceKey<GasGraphRuntimeApi> GasGraphRuntimeApi = new("GasGraphRuntimeApi");
         public static readonly ServiceKey<GraphOutputSchemaRegistry> GraphOutputSchemaRegistry = new("GraphOutputSchemaRegistry");

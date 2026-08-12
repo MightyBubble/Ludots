@@ -109,12 +109,38 @@ namespace Ludots.Core.Gameplay.GAS.LiveSkillWorkbench
                 case LiveDebugPatchOperationKind.SelectedActorAttribute:
                     ValidateSelectedActorAttribute(in operation, diagnostics);
                     break;
+                case LiveDebugPatchOperationKind.GraphBodyReplace:
+                    ValidateGraphBodyReplace(in operation, diagnostics);
+                    break;
                 default:
                     diagnostics.Add(new LiveEditDiagnostic(
                         LiveEditDiagnosticSeverity.Error,
                         LiveEditDiagnosticCodes.UnsupportedOperationKind,
                         $"Unsupported debug patch operation kind '{operation.Kind}'."));
                     break;
+            }
+        }
+
+        private static void ValidateGraphBodyReplace(
+            in LiveDebugPatchOperation operation,
+            List<LiveEditDiagnostic> diagnostics)
+        {
+            if (string.IsNullOrWhiteSpace(operation.DefinitionId))
+            {
+                diagnostics.Add(new LiveEditDiagnostic(
+                    LiveEditDiagnosticSeverity.Error,
+                    LiveEditDiagnosticCodes.MissingDefinitionId,
+                    "Graph body replace requires a stable graph key/id.",
+                    operation.DefinitionId));
+            }
+
+            if (string.IsNullOrWhiteSpace(operation.DocumentJson))
+            {
+                diagnostics.Add(new LiveEditDiagnostic(
+                    LiveEditDiagnosticSeverity.Error,
+                    LiveEditDiagnosticCodes.MissingGraphDocument,
+                    "Graph body replace requires a ControlFlow JSON document.",
+                    operation.DefinitionId));
             }
         }
 

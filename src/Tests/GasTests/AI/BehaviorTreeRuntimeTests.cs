@@ -10,13 +10,10 @@ namespace Ludots.Tests.Gas.AI
     [Category("ci-gate")]
     public sealed class BehaviorTreeRuntimeTests
     {
-        private GraphProgramRegistry _programs = null!;
+        private GraphProgramRegistry? _programs;
 
-        [SetUp]
-        public void SetUp()
-        {
-            _programs = GraphRegistryTestBootstrap.LoadCoreScriptsAndFuncLib(out _);
-        }
+        private GraphProgramRegistry Programs
+            => _programs ??= GraphRegistryTestBootstrap.LoadCoreScriptsAndFuncLib(out _);
 
         [Test]
         public void TickAll_AlwaysSuccessSequence_ReachesSuccess()
@@ -52,8 +49,7 @@ namespace Ludots.Tests.Gas.AI
             var sw = Stopwatch.StartNew();
             BehaviorTreeThinkStats stats = world.TickAll();
             sw.Stop();
-            // Allow small CI noise after registry bootstrap in SetUp.
-            Assert.That(sw.Elapsed.TotalMilliseconds, Is.LessThan(8.0));
+            Assert.That(sw.Elapsed.TotalMilliseconds, Is.LessThan(5.0));
             Assert.That(stats.Agents, Is.EqualTo(agents));
         }
 
@@ -84,6 +80,7 @@ namespace Ludots.Tests.Gas.AI
         [Test]
         public void PatrolChaseAttack_ScriptLeaves_FromRegistry()
         {
+            _ = Programs; // ensure GraphIdRegistry is populated before sensor key resolve
             BehaviorTreeDefinition tree = BehaviorTreeFactory.CreatePatrolChaseAttackTree(
                 "bt.pca", GraphRegistryScriptResolver.RequireId);
             var sensors = new ScriptedSensors();
@@ -92,18 +89,18 @@ namespace Ludots.Tests.Gas.AI
 
             sensors.See = false;
             world.RestartThinking(0);
-            world.TickAll(_programs, 32, sensors);
+            world.TickAll(Programs, 32, sensors);
             Assert.That(world.LastScriptReturns[0], Is.EqualTo(0));
 
             sensors.See = true;
             sensors.InRange = false;
             world.RestartThinking(0);
-            world.TickAll(_programs, 32, sensors);
+            world.TickAll(Programs, 32, sensors);
             Assert.That(world.LastScriptReturns[0], Is.EqualTo(1));
 
             sensors.InRange = true;
             world.RestartThinking(0);
-            world.TickAll(_programs, 32, sensors);
+            world.TickAll(Programs, 32, sensors);
             Assert.That(world.LastScriptReturns[0], Is.EqualTo(2));
         }
 
