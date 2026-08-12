@@ -61,25 +61,22 @@ P3 Major / UAT / 文档名实
 
 ### P1 — B4 作者面补回（选定路径：补回，不缩编）
 
-- [ ] 恢复被删守卫测试（至少）：
-  - SpatialQuery capacity / AllowTruncated+dropped / RequireComplete 截断失败关闭（`GAS.GRAPH.ERR.SpatialQueryIncomplete`）
-  - Snap validOutput 寄存器语义
-  - FanOutDispatchEffectDynamic 需 `payloadPreset`；关系度量需显式 `relationshipType`；动态施加可编译
+- [x] 恢复被删守卫测试（SpatialQuery / Snap / FanOut / 关系度量；含 `GAS.GRAPH.ERR.SpatialQueryIncomplete`）
 - [ ] 为附录 A.3 的 **44** 个无作者路径 opcode 补 FrontDoor/ControlFlow 作者路径（按族分期，见下表）
-- [ ] 去掉「not yet authorable」死胡同：要么落地 AllowTruncated/droppedOutput/validOutput，要么正式跟踪单 + 文档标明（不得只留代码注释）
+- [x] AllowTruncated/droppedOutput/validOutput：前门字段 + 失败关闭守卫已恢复（持续跟文档对齐）
 - [ ] 文档：`graph-layering-flow-and-behavior.md` / `tag-display-lookup.md` 与真实前门一致
 
 #### 44 opcode 分族（P1 交付切片）
 
-| 族 | 成员 | 负责人切片 |
-|----|------|------------|
-| 浮点算术/比较 | Div/Min/Max/Clamp/Abs/Neg/CompareGtFloat、ConstBool | P1-A |
-| Tag / 显示 | HasTag、CompareEqEntity、SelectTagInMask、LookupTagDisplayToken | P1-B |
-| 查询扩展 | QueryRadius、QuerySortStable、QueryLimit、AggMinByDistance | P1-C |
-| 动态效果 / FanOut | ApplyEffectDynamic、FanOutApplyEffect*、FanOutDispatchEffect* | P1-D |
-| 关系变更 | Ensure/Remove/Set/Add/Get Metric、Set/Has Flag、HasLink、QueryBetweenPair | P1-E |
-| 吸附 / 几何 | Snap*、LoadTargetPos*、ClampTargetToRange、IsPointInCircle | P1-F |
-| 事件 / 控制域 / 知识 | SendEvent、LoadEventPayload*、ControlDomain*、KnowledgeHasProjection、LoadContextSource、LoadContextTargetContext | P1-G |
+| 族 | 成员 | 状态 |
+|----|------|------|
+| 浮点算术/比较 | Div/Min/Max/Clamp/Abs/Neg/CompareGtFloat、ConstBool | **done P1-A** |
+| Tag / 显示 | HasTag、CompareEqEntity、SelectTagInMask、LookupTagDisplayToken | **done（合入）** |
+| 查询扩展 | QueryRadius、QuerySortStable、QueryLimit、AggMinByDistance | **done P1-C** |
+| 动态效果 / FanOut | ApplyEffectDynamic、FanOutApplyEffect*、FanOutDispatchEffect* | **done P1-D** |
+| 关系变更 | Ensure/Remove/Set/Add/Get Metric、Set/Has Flag、HasLink、QueryBetweenPair | pending P1-E |
+| 吸附 / 几何 | Snap*、LoadTargetPos*、ClampTargetToRange、IsPointInCircle | partial（SnapToNearestInCollection 已有）；余下 P1-F |
+| 事件 / 控制域 / 知识 | SendEvent、LoadEventPayload*、ControlDomain*、KnowledgeHasProjection、LoadContextSource、LoadContextTargetContext | pending P1-G |
 
 ### P2 — 全量 GraphNodeOp：测试 + Showcase（硬要求）
 
