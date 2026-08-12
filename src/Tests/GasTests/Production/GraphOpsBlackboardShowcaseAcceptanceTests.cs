@@ -54,4 +54,18 @@ public sealed class GraphOpsBlackboardShowcaseAcceptanceTests
             Assert.That(emitted, Does.Contain(op), $"Memo graph missing {op}");
         }
     }
+
+    [Test]
+    public void FrontDoor_LifecycleGraph_ContainsTransactionAndBuiltinOps()
+    {
+        GraphControlFlowCompileResult compiled = GraphOpsBlackboardGraphAuthoring.CompileLifecycleGraph();
+        Assert.That(compiled.Succeeded, Is.True);
+
+        var emitted = compiled.Program.Select(i => (GraphNodeOp)i.Op).ToHashSet();
+        Assert.Multiple(() =>
+        {
+            Assert.That(emitted, Does.Contain(GraphNodeOp.BeginLifecycleTransaction));
+            Assert.That(emitted, Does.Contain(GraphNodeOp.InvokeBuiltin));
+        });
+    }
 }
