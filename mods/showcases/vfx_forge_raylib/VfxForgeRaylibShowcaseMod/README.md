@@ -19,15 +19,15 @@
 
 ## 3. 详情
 
-后排左侧火花柱使用 Cone 形状和 Mesh 球粒子，强调上升、爆发和衰减。
+后排左侧火花柱使用 Cone 形状和 Primitive 球粒子，强调上升、爆发和衰减。
 
-后排中间能量环使用 Sphere 形状和 Mesh 方块粒子，强调环绕、漂浮和颜色渐变。
+后排中间能量环使用 Sphere 形状和 Primitive 方块粒子，强调环绕、漂浮和颜色渐变。
 
 后排右侧尾迹弧线使用 Circle 形状和 Trail 渲染，强调射线式粒子轨迹。
 
-前排左侧余烬雨使用 Point 形状和 Mesh 球粒子，强调持续下落与热量衰减。
+前排左侧余烬雨使用 Point 形状和 Primitive 球粒子，强调持续下落与热量衰减。
 
-前排中间护盾半球使用 Hemisphere 形状和 Mesh 球粒子，强调包裹感和稳定边缘。
+前排中间护盾半球使用 Hemisphere 形状和 Primitive 球粒子，强调包裹感和稳定边缘。
 
 前排右侧引力井使用 Sphere 形状和 Trail 渲染，强调向心轨迹和深色收束。
 
@@ -47,7 +47,7 @@
 
 - 只允许 `mesh_assets.json` 通过 `particleEffectId` 引用粒子资产。
 - 粒子资产只来自 `Presentation/particle_effects.json`。
-- raylib 后端支持 Mesh、Trail、Billboard 和 StretchedBillboard 粒子。
+- raylib 后端支持 Primitive、Trail、Billboard 和 StretchedBillboard 粒子。
 - Billboard 和 StretchedBillboard 必须声明 `textureSheet`，贴图路径必须通过 `host_assets.json` 提供。
 - 每个粒子资产必须显式声明 `blendMode`，不允许后端自行猜默认混合方式。
 - 这个 showcase 不承担粒子编辑器职责，只验证 raylib runtime 展示链路。

@@ -1,6 +1,6 @@
 # Raylib Render Productization
 
-本页记录 Raylib 客户端产品化的第一条正式口径：Raylib host 负责窗口、输入、生命周期和诊断；画面组织由 renderer 模块接管；VFX 必须从 Presentation 资产数据进入渲染，不允许在 adapter 里临时硬编码效果。
+本页记录 Raylib 客户端产品化的正式口径：Raylib host 负责窗口、输入、生命周期和诊断；画面组织由 renderer 模块接管；VFX 必须从 Presentation 资产数据进入渲染，不允许在 adapter 里临时硬编码效果。
 
 ## 渲染入口
 
@@ -16,12 +16,11 @@
 
 ## VFX 资产
 
-VFX effect 是 Presentation 资产，不是 Raylib 私有配置。当前 SSOT 是 `MeshAssetRegistry`：
+VFX effect 是 Presentation 资产，不是 Raylib 私有配置。当前 SSOT：
 
-- `prefabs.json` 的 VFX part 使用 `effectAssetId` 引用资产 key；
-- `instanced_batches.json` 的 effect 操作也使用同一类资产 key；
-- 被引用的 effect asset 必须在 `mesh_assets.json` 中声明 `vfx.emitter`；
-- 裸数字、未知 key、缺少 emitter 数据都会直接报错。
+- 粒子定义：`Presentation/particle_effects.json`（Quarks schema，见 [Quarks Particle Schema](quarks-particle-schema.md)）
+- Mesh 句柄：`mesh_assets.json` 的 `vfx.particleEffectId`
+- Prefab / performer / instanced batch 通过 effect asset key 引用上述句柄
 
 最小示例：
 
@@ -31,23 +30,17 @@ VFX effect 是 Presentation 资产，不是 Raylib 私有配置。当前 SSOT �
   "type": "Primitive",
   "primitiveKind": "Sphere",
   "vfx": {
-    "emitter": {
-      "shape": "PrimitiveSphere",
-      "particleCount": 24,
-      "ringSegments": 20,
-      "radiusScale": 1.15,
-      "coreRadiusScale": 0.28,
-      "particleRadiusScale": 0.085,
-      "lifetimeSeconds": 0.75,
-      "pulseSpeedRadPerSecond": 5.2,
-      "orbitSpeedRadPerSecond": 1.7
-    }
+    "particleEffectId": "camera.projection_cue.particles"
   }
 }
 ```
 
-Raylib 只消费 finalization 后的 VFX leaf 与 effect asset 数据，生成本帧 emitter plan 并绘制。它不拥有 effect key 解析，不创建平行 registry，也不替 prefab 或 performer 决定语义。
+Raylib 只消费 finalization 后的 VFX leaf 与粒子 runtime snapshot。它不拥有效果 key 解析，不创建平行 registry，也不替 prefab 或 performer 决定语义。贴图、trail 长度、spawnMode 等观感字段全部由粒子资产驱动；缺失或无法解析时 fail-loud。
+
+## 地形环境
+
+正式 Showcase 地形路径包含天空、光照/雾、水面、后处理与大地图远景 LOD。地图可通过 `VisualHeightmapRenderProfile` 声明海平面、水体开关、高度夸张和颜色对比度。超大 chunk 必须降采样，避免索引上限；截图证据必须做完整 PNG 校验，不允许“有文件就算过”。
 
 ## 演进方向
 
-下一阶段如果要做接近 Quarks 的粒子框架，应继续扩展这份 Presentation-owned effect asset contract，例如多 emitter、curve、burst、shape module、material binding 和 GPU buffer plan。Raylib adapter 只增加执行能力；Core 仍然负责配置合同、校验和平台无关的 runtime leaf。
+继续扩展 Presentation-owned Quarks 合同（curve、burst、shape module、material binding、GPU buffer plan）。Raylib adapter 只增加执行能力；Core 仍然负责配置合同、校验和平台无关的 runtime leaf。禁止回到 `vfx.emitter` 内嵌合同或在 mesh 资产上双写 spawnMode。

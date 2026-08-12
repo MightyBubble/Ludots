@@ -216,9 +216,7 @@ namespace Ludots.Core.Presentation.Config
                     PrefabVisualPartKind.Decal => PrefabPart.Decal(
                         p?["materialId"]?.GetValue<int>() ?? 0,
                         ParseVector2WithDefault(p?["size"], Vector2.One)),
-                    PrefabVisualPartKind.Vfx => PrefabPart.Vfx(
-                        ResolveEffectAssetId(p?["effectAssetId"], $"Prefab part at index {j}"),
-                        ParseSpawnMode(p?["spawnMode"]?.GetValue<string>())),
+                    PrefabVisualPartKind.Vfx => CreateVfxPart(p, j),
                     PrefabVisualPartKind.Surface => PrefabPart.Surface(
                         meshId,
                         p?["materialId"]?.GetValue<int>() ?? 0,
@@ -237,11 +235,41 @@ namespace Ludots.Core.Presentation.Config
                 part.Tiling = ParseVector2WithDefault(p?["tiling"], part.Tiling == Vector2.Zero ? Vector2.One : part.Tiling);
                 part.AlignToSurface = p?["alignToSurface"]?.GetValue<bool>() ?? part.AlignToSurface;
                 part.TerrainFacing = p?["terrainFacing"]?.GetValue<bool>() ?? part.TerrainFacing;
-                part.VfxSpawnModeAuthored = kind == PrefabVisualPartKind.Vfx && p?["spawnMode"] != null;
 
                 parts[j] = part;
             }
             return parts;
+        }
+
+        private PrefabPart CreateVfxPart(JsonNode? node, int partIndex)
+        {
+            string partLabel = $"Prefab part at index {partIndex}";
+            int effectAssetId = ResolveEffectAssetId(node?["effectAssetId"], partLabel);
+            if (!_meshRegistry.TryGetDescriptor(effectAssetId, out MeshAssetDescriptor descriptor) ||
+                !descriptor.VfxEffectData.IsValid ||
+                descriptor.VfxEffectData.ParticleSystem is null)
+            {
+                throw new InvalidOperationException(
+                    $"{partLabel} references VFX effect asset id {effectAssetId} without Quarks particle data.");
+            }
+
+            PrefabVfxSpawnMode spawnMode = descriptor.VfxEffectData.SpawnMode;
+            bool authored = node?["spawnMode"] != null;
+            if (authored)
+            {
+                PrefabVfxSpawnMode authoredSpawnMode = ReadRequiredEnum<PrefabVfxSpawnMode>(
+                    node["spawnMode"],
+                    $"{partLabel} spawnMode");
+                if (authoredSpawnMode != spawnMode)
+                {
+                    throw new InvalidOperationException(
+                        $"{partLabel} declares spawnMode '{authoredSpawnMode}', but effect asset spawnMode is '{spawnMode}'. Author spawnMode only on Presentation/particle_effects.json.");
+                }
+            }
+
+            PrefabPart part = PrefabPart.Vfx(effectAssetId, spawnMode);
+            part.VfxSpawnModeAuthored = authored;
+            return part;
         }
 
         private int ResolveEffectAssetId(JsonNode? node, string partLabel)
@@ -276,55 +304,43 @@ namespace Ludots.Core.Presentation.Config
                     $"Presentation/mesh_assets.json asset '{key}' vfx must be an object.");
             }
 
-            ValidateObjectFields(
-                obj,
-                $"Presentation/mesh_assets.json asset '{key}' vfx",
-                "emitter",
-                "spawnMode",
-                "coreColor",
-                "shellColor",
-                "particleColor",
-                "particleSystem",
-                "particleEffectId");
-
-            bool hasLegacyEmitter = obj.ContainsKey("emitter");
-            bool hasEmbeddedParticleSystem = obj.ContainsKey("particleSystem");
-            bool hasParticleEffectId = obj.ContainsKey("particleEffectId");
-            bool hasLegacyColors =
-                obj.ContainsKey("coreColor") ||
-                obj.ContainsKey("shellColor") ||
-                obj.ContainsKey("particleColor");
-            if (hasEmbeddedParticleSystem)
-            {
-                throw new InvalidOperationException(
-                    $"Presentation/mesh_assets.json asset '{key}' vfx must reference particleEffectId. Author Quarks particle data in Presentation/particle_effects.json.");
-            }
-
             string assetLabel = $"Presentation/mesh_assets.json asset '{key}' vfx";
-            if (hasLegacyEmitter || hasLegacyColors)
+            foreach (var property in obj)
             {
-                throw new InvalidOperationException(
-                    $"{assetLabel} legacy emitter/color fields are no longer supported. Author particleEffectId in mesh_assets.json and Quarks particle data in Presentation/particle_effects.json.");
+                if (string.Equals(property.Key, "particleEffectId", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                if (string.Equals(property.Key, "spawnMode", StringComparison.Ordinal) ||
+                    string.Equals(property.Key, "emitter", StringComparison.Ordinal) ||
+                    string.Equals(property.Key, "coreColor", StringComparison.Ordinal) ||
+                    string.Equals(property.Key, "shellColor", StringComparison.Ordinal) ||
+                    string.Equals(property.Key, "particleColor", StringComparison.Ordinal) ||
+                    string.Equals(property.Key, "particleSystem", StringComparison.Ordinal))
+                {
+                    throw new InvalidOperationException(
+                        $"{assetLabel} field '{property.Key}' is not supported. Author only particleEffectId here; spawnMode and Quarks particle data live in Presentation/particle_effects.json.");
+                }
+
+                throw new InvalidOperationException($"{assetLabel} uses unsupported field '{property.Key}'.");
             }
 
-            if (!hasParticleEffectId)
+            if (!obj.ContainsKey("particleEffectId"))
             {
                 throw new InvalidOperationException($"{assetLabel} must declare particleEffectId.");
             }
 
-            PrefabVfxSpawnMode spawnMode = ReadRequiredEnum<PrefabVfxSpawnMode>(obj["spawnMode"], $"{assetLabel}.spawnMode");
             ParticleEffectAssetData particleSystem = ResolveParticleEffectAsset(
                 obj["particleEffectId"],
                 assetLabel,
-                spawnMode,
                 out int particleEffectAssetId);
-            return new VfxEffectAssetData(spawnMode, particleSystem, particleEffectAssetId);
+            return new VfxEffectAssetData(particleSystem, particleEffectAssetId);
         }
 
         private ParticleEffectAssetData ResolveParticleEffectAsset(
             JsonNode? node,
             string assetLabel,
-            PrefabVfxSpawnMode spawnMode,
             out int particleEffectAssetId)
         {
             if (_particleEffectRegistry == null)
@@ -341,23 +357,7 @@ namespace Ludots.Core.Presentation.Config
                     $"{assetLabel} references unknown particle effect asset '{particleEffectKey}'.");
             }
 
-            if (effect.SpawnMode != spawnMode)
-            {
-                throw new InvalidOperationException(
-                    $"{assetLabel}.spawnMode '{spawnMode}' must match particle effect '{particleEffectKey}' spawnMode '{effect.SpawnMode}'.");
-            }
-
             return effect;
-        }
-
-        private static PrefabVfxSpawnMode ParseSpawnMode(string? spawnModeText)
-        {
-            string resolved = string.IsNullOrWhiteSpace(spawnModeText)
-                ? nameof(PrefabVfxSpawnMode.Once)
-                : spawnModeText;
-            return ParseRequiredEnumText<PrefabVfxSpawnMode>(
-                resolved,
-                "Prefab part VFX spawnMode");
         }
 
         private static PrefabPartGrounding ParseGrounding(JsonNode node)
@@ -432,118 +432,6 @@ namespace Ludots.Core.Presentation.Config
             }
 
             return parsed;
-        }
-
-        private static int ReadRequiredPositiveInt(JsonNode? node, string label)
-        {
-            return ReadRequiredMinInt(node, 1, label);
-        }
-
-        private static int ReadRequiredMinInt(JsonNode? node, int min, string label)
-        {
-            if (node is not JsonValue valueNode || !valueNode.TryGetValue(out int value))
-            {
-                throw new InvalidOperationException($"{label} must be an integer greater than or equal to {min}.");
-            }
-
-            if (value < min)
-            {
-                throw new InvalidOperationException($"{label} must be greater than or equal to {min}.");
-            }
-
-            return value;
-        }
-
-        private static float ReadRequiredPositiveFloat(JsonNode? node, string label)
-        {
-            if (node is not JsonValue valueNode || !valueNode.TryGetValue(out float value))
-            {
-                throw new InvalidOperationException($"{label} must be a finite number greater than 0.");
-            }
-
-            if (!float.IsFinite(value) || value <= 0f)
-            {
-                throw new InvalidOperationException($"{label} must be a finite number greater than 0.");
-            }
-
-            return value;
-        }
-
-        private static float ReadRequiredNonNegativeFloat(JsonNode? node, string label)
-        {
-            if (node is not JsonValue valueNode || !valueNode.TryGetValue(out float value))
-            {
-                throw new InvalidOperationException($"{label} must be a finite number greater than or equal to 0.");
-            }
-
-            if (!float.IsFinite(value) || value < 0f)
-            {
-                throw new InvalidOperationException($"{label} must be a finite number greater than or equal to 0.");
-            }
-
-            return value;
-        }
-
-        private static int ReadRequiredIntRange(JsonNode? node, int min, int max, string label)
-        {
-            int value = ReadRequiredMinInt(node, min, label);
-            if (value > max)
-            {
-                throw new InvalidOperationException($"{label} must be less than or equal to {max}.");
-            }
-
-            return value;
-        }
-
-        private static Vector4 ReadRequiredColor(JsonNode? node, string label)
-        {
-            if (node is not JsonArray arr || arr.Count != 4)
-            {
-                throw new InvalidOperationException($"{label} must be an array of exactly four normalized numbers.");
-            }
-
-            return new Vector4(
-                ReadColorChannel(arr[0], $"{label}[0]"),
-                ReadColorChannel(arr[1], $"{label}[1]"),
-                ReadColorChannel(arr[2], $"{label}[2]"),
-                ReadColorChannel(arr[3], $"{label}[3]"));
-        }
-
-        private static float ReadColorChannel(JsonNode? node, string label)
-        {
-            if (node is not JsonValue valueNode || !valueNode.TryGetValue(out float value))
-            {
-                throw new InvalidOperationException($"{label} must be a finite number between 0 and 1.");
-            }
-
-            if (!float.IsFinite(value) || value < 0f || value > 1f)
-            {
-                throw new InvalidOperationException($"{label} must be between 0 and 1.");
-            }
-
-            return value;
-        }
-
-        private static void ValidateObjectFields(JsonObject obj, string context, params string[] allowedFields)
-        {
-            foreach (var property in obj)
-            {
-                bool allowed = false;
-                for (int i = 0; i < allowedFields.Length; i++)
-                {
-                    if (string.Equals(property.Key, allowedFields[i], StringComparison.Ordinal))
-                    {
-                        allowed = true;
-                        break;
-                    }
-                }
-
-                if (!allowed)
-                {
-                    throw new InvalidOperationException(
-                        $"{context} uses unsupported field '{property.Key}'.");
-                }
-            }
         }
 
         private static Vector3 ParseVector3(JsonNode node)

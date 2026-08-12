@@ -28,7 +28,6 @@ namespace Ludots.Core.Presentation.Config
                 "renderMode",
                 "blendMode",
                 "primitive",
-                "overflowPolicy",
                 "maxParticles",
                 "seed",
                 "durationSeconds",
@@ -47,7 +46,8 @@ namespace Ludots.Core.Presentation.Config
                 "drag",
                 "worldSpace",
                 "textureSheet",
-                "stretchedLengthScale");
+                "stretchedLengthScale",
+                "trailLengthSeconds");
 
             string version = ReadRequiredString(obj["version"], $"{sourceLabel} asset '{key}'.version");
             if (!string.Equals(version, CurrentVersion, StringComparison.Ordinal))
@@ -65,13 +65,18 @@ namespace Ludots.Core.Presentation.Config
         private static ParticleEffectAssetData ParseObject(JsonObject obj, string label, PrefabVfxSpawnMode spawnMode)
         {
             ParticleRenderMode renderMode = ReadRequiredEnum<ParticleRenderMode>(obj["renderMode"], $"{label}.renderMode");
+            ParticleValueRange startLife = ReadRequiredParticleRange(obj["startLife"], $"{label}.startLife");
+            if (startLife.Min <= 0f)
+            {
+                throw new InvalidOperationException($"{label}.startLife requires min > 0.");
+            }
+
             return new ParticleEffectAssetData(
                 spawnMode,
                 ReadRequiredEnum<ParticleEmitterShapeKind>(obj["shape"], $"{label}.shape"),
                 renderMode,
                 ReadRequiredEnum<ParticleBlendMode>(obj["blendMode"], $"{label}.blendMode"),
                 ReadRequiredEnum<ParticlePrimitiveKind>(obj["primitive"], $"{label}.primitive"),
-                ReadRequiredEnum<ParticleOverflowPolicy>(obj["overflowPolicy"], $"{label}.overflowPolicy"),
                 ReadRequiredPositiveInt(obj["maxParticles"], $"{label}.maxParticles"),
                 ReadRequiredSeed(obj["seed"], $"{label}.seed"),
                 ReadRequiredPositiveFloat(obj["durationSeconds"], $"{label}.durationSeconds"),
@@ -80,7 +85,7 @@ namespace Ludots.Core.Presentation.Config
                 ReadRequiredNonNegativeFloat(obj["shapeRadius"], $"{label}.shapeRadius"),
                 ReadRequiredAngle(obj["shapeAngleRadians"], $"{label}.shapeAngleRadians"),
                 ReadRequiredNormalizedFloat(obj["shapeThickness"], $"{label}.shapeThickness"),
-                ReadRequiredParticleRange(obj["startLife"], $"{label}.startLife"),
+                startLife,
                 ReadRequiredParticleRange(obj["startSpeed"], $"{label}.startSpeed"),
                 ReadRequiredParticleRange(obj["startSize"], $"{label}.startSize"),
                 ReadRequiredColor(obj["startColor"], $"{label}.startColor"),
@@ -90,7 +95,8 @@ namespace Ludots.Core.Presentation.Config
                 ReadRequiredNonNegativeFloat(obj["drag"], $"{label}.drag"),
                 ReadRequiredBool(obj["worldSpace"], $"{label}.worldSpace"),
                 ReadTextureSheet(obj["textureSheet"], $"{label}.textureSheet", renderMode),
-                ReadStretchedLengthScale(obj["stretchedLengthScale"], $"{label}.stretchedLengthScale", renderMode));
+                ReadStretchedLengthScale(obj["stretchedLengthScale"], $"{label}.stretchedLengthScale", renderMode),
+                ReadTrailLengthSeconds(obj["trailLengthSeconds"], $"{label}.trailLengthSeconds", renderMode));
         }
 
         private static string ReadRequiredString(JsonNode? node, string label)
@@ -414,6 +420,24 @@ namespace Ludots.Core.Presentation.Config
             if (node != null)
             {
                 throw new InvalidOperationException($"{label} is only valid for StretchedBillboard particle render mode.");
+            }
+
+            return 0f;
+        }
+
+        private static float ReadTrailLengthSeconds(
+            JsonNode? node,
+            string label,
+            ParticleRenderMode renderMode)
+        {
+            if (renderMode == ParticleRenderMode.Trail)
+            {
+                return ReadRequiredPositiveFloat(node, label);
+            }
+
+            if (node != null)
+            {
+                throw new InvalidOperationException($"{label} is only valid for Trail particle render mode.");
             }
 
             return 0f;

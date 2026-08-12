@@ -36,7 +36,6 @@ public sealed class ParticleEffectConfigTests
                 "type": "Primitive",
                 "primitiveKind": "Sphere",
                 "vfx": {
-                  "spawnMode": "Loop",
                   "particleEffectId": "quarks.spark.trail"
                 }
               }
@@ -57,7 +56,7 @@ public sealed class ParticleEffectConfigTests
         Assert.That(descriptor.VfxEffectData.IsValid, Is.True);
         Assert.That(descriptor.VfxEffectData.ParticleSystem, Is.Not.Null);
         Assert.That(descriptor.VfxEffectData.ParticleEffectAssetId, Is.EqualTo(particleEffects.GetId("quarks.spark.trail")));
-        Assert.That(descriptor.VfxEffectData.ParticleSystem!.RenderMode, Is.EqualTo(ParticleRenderMode.Mesh));
+        Assert.That(descriptor.VfxEffectData.ParticleSystem!.RenderMode, Is.EqualTo(ParticleRenderMode.Primitive));
         Assert.That(descriptor.VfxEffectData.ParticleSystem!.BlendMode, Is.EqualTo(ParticleBlendMode.Alpha));
     }
 
@@ -91,7 +90,6 @@ public sealed class ParticleEffectConfigTests
                 "type": "Primitive",
                 "primitiveKind": "Sphere",
                 "vfx": {
-                  "spawnMode": "Loop",
                   "particleSystem": {
                     "shape": "Cone"
                   }
@@ -106,7 +104,7 @@ public sealed class ParticleEffectConfigTests
 
         Exception ex = Assert.Throws<InvalidOperationException>(
             () => new MeshAssetConfigLoader(pipeline, meshes, new ParticleEffectRegistry()).Load(catalog))!;
-        Assert.That(ex.Message, Does.Contain("must reference particleEffectId"));
+        Assert.That(ex.Message, Does.Contain("not supported"));
         Assert.That(ex.Message, Does.Contain("Presentation/particle_effects.json"));
     }
 
@@ -124,7 +122,6 @@ public sealed class ParticleEffectConfigTests
                 "type": "Primitive",
                 "primitiveKind": "Sphere",
                 "vfx": {
-                  "spawnMode": "Loop",
                   "particleEffectId": "quarks.spark.trail",
                   "particleSystem": null
                 }
@@ -138,7 +135,7 @@ public sealed class ParticleEffectConfigTests
 
         Exception ex = Assert.Throws<InvalidOperationException>(
             () => new MeshAssetConfigLoader(pipeline, meshes, new ParticleEffectRegistry()).Load(catalog))!;
-        Assert.That(ex.Message, Does.Contain("must reference particleEffectId"));
+        Assert.That(ex.Message, Does.Contain("not supported"));
         Assert.That(ex.Message, Does.Contain("Presentation/particle_effects.json"));
     }
 
@@ -156,7 +153,6 @@ public sealed class ParticleEffectConfigTests
                 "type": "Primitive",
                 "primitiveKind": "Sphere",
                 "vfx": {
-                  "spawnMode": "Loop",
                   "particleEffectId": "quarks.spark.trail",
                   "emitter": {
                     "shape": "PrimitiveSphere",
@@ -182,7 +178,7 @@ public sealed class ParticleEffectConfigTests
 
         Exception ex = Assert.Throws<InvalidOperationException>(
             () => new MeshAssetConfigLoader(pipeline, meshes, new ParticleEffectRegistry()).Load(catalog))!;
-        Assert.That(ex.Message, Does.Contain("legacy emitter/color"));
+        Assert.That(ex.Message, Does.Contain("not supported"));
     }
 
     [Test]
@@ -199,7 +195,6 @@ public sealed class ParticleEffectConfigTests
                 "type": "Primitive",
                 "primitiveKind": "Sphere",
                 "vfx": {
-                  "spawnMode": "Loop",
                   "particleEffectId": "quarks.spark.trail",
                   "emitter": null
                 }
@@ -213,7 +208,7 @@ public sealed class ParticleEffectConfigTests
 
         Exception ex = Assert.Throws<InvalidOperationException>(
             () => new MeshAssetConfigLoader(pipeline, meshes, new ParticleEffectRegistry()).Load(catalog))!;
-        Assert.That(ex.Message, Does.Contain("legacy emitter/color"));
+        Assert.That(ex.Message, Does.Contain("not supported"));
     }
 
     [Test]
@@ -230,7 +225,6 @@ public sealed class ParticleEffectConfigTests
                 "type": "Primitive",
                 "primitiveKind": "Sphere",
                 "vfx": {
-                  "spawnMode": "Loop",
                   "particleEffectId": "quarks.spark.trail",
                   "coreColor": [1, 1, 1, 1]
                 }
@@ -244,7 +238,7 @@ public sealed class ParticleEffectConfigTests
 
         Exception ex = Assert.Throws<InvalidOperationException>(
             () => new MeshAssetConfigLoader(pipeline, meshes, new ParticleEffectRegistry()).Load(catalog))!;
-        Assert.That(ex.Message, Does.Contain("legacy emitter/color"));
+        Assert.That(ex.Message, Does.Contain("not supported"));
     }
 
     [Test]
@@ -264,17 +258,29 @@ public sealed class ParticleEffectConfigTests
     }
 
     [Test]
-    public void MeshAssetConfigLoader_VfxParticleEffectId_RequiresMatchingSpawnMode()
+    public void MeshAssetConfigLoader_VfxParticleEffectId_RejectsMeshSpawnMode()
     {
-        string core = CreateCoreRoot("Ludots_ParticleEffectConfig_RequiresMatchingSpawnMode");
+        string core = CreateCoreRoot("Ludots_ParticleEffectConfig_RejectsMeshSpawnMode");
         WriteCatalog(
             core,
             "Presentation/particle_effects.json", "ArrayById", "id",
             "Presentation/mesh_assets.json", "ArrayById", "id");
-        JsonObject effect = ValidParticleEffectObject();
-        effect["spawnMode"] = "Once";
-        WriteParticleEffects(core, JsonArrayString(effect));
-        WriteMeshAssets(core, MeshAssetReferencingParticleEffectJson());
+        WriteParticleEffects(core, ValidParticleEffectsJson());
+        WriteMeshAssets(
+            core,
+            """
+            [
+              {
+                "id": "effect.quarks.spark",
+                "type": "Primitive",
+                "primitiveKind": "Sphere",
+                "vfx": {
+                  "spawnMode": "Loop",
+                  "particleEffectId": "quarks.spark.trail"
+                }
+              }
+            ]
+            """);
 
         var pipeline = CreatePipeline(core);
         ConfigCatalog catalog = ConfigCatalogLoader.Load(pipeline);
@@ -284,7 +290,28 @@ public sealed class ParticleEffectConfigTests
 
         Exception ex = Assert.Throws<InvalidOperationException>(
             () => new MeshAssetConfigLoader(pipeline, meshes, particleEffects).Load(catalog))!;
-        Assert.That(ex.Message, Does.Contain("must match particle effect"));
+        Assert.That(ex.Message, Does.Contain("spawnMode"));
+        Assert.That(ex.Message, Does.Contain("not supported"));
+    }
+
+    [Test]
+    public void ParticleEffectConfigLoader_RejectsOverflowPolicyField()
+    {
+        JsonObject effect = ValidParticleEffectObject();
+        effect["overflowPolicy"] = "DropNewest";
+        Exception ex = AssertParticleEffectLoadFails(JsonArrayString(effect));
+        Assert.That(ex.Message, Does.Contain("overflowPolicy"));
+        Assert.That(ex.Message, Does.Contain("unsupported field"));
+    }
+
+    [Test]
+    public void ParticleEffectConfigLoader_RejectsNonPositiveStartLife()
+    {
+        JsonObject effect = ValidParticleEffectObject();
+        effect["startLife"] = new JsonArray(0, 1);
+        Exception ex = AssertParticleEffectLoadFails(JsonArrayString(effect));
+        Assert.That(ex.Message, Does.Contain("startLife"));
+        Assert.That(ex.Message, Does.Contain("min > 0"));
     }
 
     [Test]
@@ -302,7 +329,7 @@ public sealed class ParticleEffectConfigTests
     public void ParticleEffectConfigLoader_RejectsWrongCaseEnum()
     {
         JsonObject effect = ValidParticleEffectObject();
-        effect["renderMode"] = "mesh";
+        effect["renderMode"] = "primitive";
 
         Exception ex = AssertParticleEffectLoadFails(JsonArrayString(effect));
         Assert.That(ex.Message, Does.Contain("renderMode"));
@@ -558,7 +585,6 @@ public sealed class ParticleEffectConfigTests
             "type": "Primitive",
             "primitiveKind": "Sphere",
             "vfx": {
-              "spawnMode": "Loop",
               "particleEffectId": "quarks.spark.trail"
             }
           }
@@ -586,10 +612,9 @@ public sealed class ParticleEffectConfigTests
             "version": "quarks.ludots.v1",
             "spawnMode": "Loop",
             "shape": "Cone",
-            "renderMode": "Mesh",
+            "renderMode": "Primitive",
             "blendMode": "Alpha",
             "primitive": "Sphere",
-            "overflowPolicy": "DropNewest",
             "maxParticles": 96,
             "seed": 12345,
             "durationSeconds": 1.5,

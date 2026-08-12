@@ -658,9 +658,7 @@ namespace Ludots.Tests.Presentation
             private static void RegisterVfxEffect(MeshAssetRegistry meshAssets, string key)
             {
                 MeshAssetDescriptor descriptor = MeshAssetDescriptor.Primitive(0, PrimitiveMeshKind.Sphere);
-                descriptor.VfxEffectData = new VfxEffectAssetData(
-                    PrefabVfxSpawnMode.Loop,
-                    CreateSmokeParticleEffect(),
+                descriptor.VfxEffectData = new VfxEffectAssetData(CreateSmokeParticleEffect(),
                     particleEffectAssetId: 1);
                 meshAssets.Register(key, in descriptor);
             }
@@ -670,11 +668,10 @@ namespace Ludots.Tests.Presentation
                 return new ParticleEffectAssetData(
                     PrefabVfxSpawnMode.Loop,
                     ParticleEmitterShapeKind.Cone,
-                    ParticleRenderMode.Mesh,
+                    ParticleRenderMode.Primitive,
                     ParticleBlendMode.Alpha,
                     ParticlePrimitiveKind.Sphere,
-                    ParticleOverflowPolicy.DropNewest,
-                    maxParticles: 32,
+                maxParticles: 32,
                     seed: 345678u,
                     durationSeconds: 1.2f,
                     emissionRatePerSecond: 16f,
@@ -702,7 +699,8 @@ namespace Ludots.Tests.Presentation
                     drag: 0.08f,
                     worldSpace: true,
                     textureSheet: null,
-                    stretchedLengthScale: 0f);
+                    stretchedLengthScale: 0f,
+                trailLengthSeconds: 0f);
             }
 
             public Entity SpawnBlacksmith()

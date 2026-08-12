@@ -147,22 +147,22 @@ public sealed class RaylibVfxRendererTests
     {
         MeshAssetDescriptor descriptor = MeshAssetDescriptor.Primitive(0, PrimitiveMeshKind.Sphere);
         descriptor.VfxEffectData = new VfxEffectAssetData(
-            spawnMode,
-            CreateParticleEffect(ParticleRenderMode.Mesh),
-            particleEffectAssetId: 12);
+                CreateParticleEffect(ParticleRenderMode.Primitive, spawnMode),
+                particleEffectAssetId: 12);
         return descriptor;
     }
 
-    private static ParticleEffectAssetData CreateParticleEffect(ParticleRenderMode renderMode)
+    private static ParticleEffectAssetData CreateParticleEffect(
+        ParticleRenderMode renderMode,
+        PrefabVfxSpawnMode spawnMode = PrefabVfxSpawnMode.Loop)
     {
         return new ParticleEffectAssetData(
-            PrefabVfxSpawnMode.Loop,
+            spawnMode,
             ParticleEmitterShapeKind.Cone,
             renderMode,
             ParticleBlendMode.Alpha,
             ParticlePrimitiveKind.Sphere,
-            ParticleOverflowPolicy.DropNewest,
-            maxParticles: 16,
+                maxParticles: 16,
             seed: 9876u,
             durationSeconds: 1f,
             emissionRatePerSecond: 12f,
@@ -190,7 +190,8 @@ public sealed class RaylibVfxRendererTests
             drag: 0.05f,
             worldSpace: true,
             textureSheet: null,
-            stretchedLengthScale: 0f);
+            stretchedLengthScale: 0f,
+                trailLengthSeconds: 0f);
     }
 
     private static Camera3D CreateCamera()

@@ -28,7 +28,6 @@
     "type": "Primitive",
     "primitiveKind": "Sphere",
     "vfx": {
-      "spawnMode": "Loop",
       "particleEffectId": "blacksmith.smoke"
     }
   },

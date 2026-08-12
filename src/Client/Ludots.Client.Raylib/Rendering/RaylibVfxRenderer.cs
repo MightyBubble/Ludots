@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Numerics;
+using System.Text;
 using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.Assets;
@@ -19,7 +20,7 @@ namespace Ludots.Client.Raylib.Rendering
         private readonly Dictionary<RaylibVfxEffectKey, RaylibParticleEffectInstance> _particleEffects = new();
         private readonly HashSet<RaylibVfxEffectKey> _activeKeys = new();
         private readonly List<RaylibVfxEffectKey> _inactiveKeys = new();
-        private readonly Dictionary<int, CachedTexture> _textureCache = new();
+        private readonly Dictionary<int, Texture2D> _textureCache = new();
 
         public RaylibVfxRenderer(IVirtualFileSystem? vfs = null)
         {
@@ -122,8 +123,14 @@ namespace Ludots.Client.Raylib.Rendering
         {
             ParticleSystemSnapshot snapshot = particleEffect.Runtime.GetSnapshot();
             float visualScale = MathF.Max(
-                0.01f,
-                MathF.Max(MathF.Abs(visual.Scale.X), MathF.Max(MathF.Abs(visual.Scale.Y), MathF.Abs(visual.Scale.Z))));
+                MathF.Abs(visual.Scale.X),
+                MathF.Max(MathF.Abs(visual.Scale.Y), MathF.Abs(visual.Scale.Z)));
+            if (visualScale <= 0f)
+            {
+                throw new InvalidOperationException(
+                    $"VFX visual stableId={visual.StableId} requires a positive scale for particle sizing.");
+            }
+
             Quaternion rotation = WorldPlane2D.NormalizeOrIdentity(visual.Rotation);
             Rl.BeginBlendMode(ToRaylibBlendMode(effect.BlendMode));
             try
@@ -139,11 +146,17 @@ namespace Ludots.Client.Raylib.Rendering
                     }
 
                     Vector4 color = ModulateColor(snapshot.Colors[i], visual.Color);
-                    float size = MathF.Max(0.0025f, snapshot.Sizes[i] * visualScale);
+                    float size = snapshot.Sizes[i] * visualScale;
+                    if (size <= 0f)
+                    {
+                        throw new InvalidOperationException(
+                            $"Particle effect requires a positive drawn size; sampled size={snapshot.Sizes[i]} visualScale={visualScale}.");
+                    }
+
                     Color raylibColor = ToRaylibColor(color);
                     if (effect.RenderMode == ParticleRenderMode.Trail)
                     {
-                        Vector3 previous = position - (velocity * 0.08f);
+                        Vector3 previous = position - (velocity * effect.TrailLengthSeconds);
                         Rl.DrawLine3D(previous, position, raylibColor);
                         continue;
                     }
@@ -181,22 +194,33 @@ namespace Ludots.Client.Raylib.Rendering
             int frameIndex,
             Color tint)
         {
-            CachedTexture cached = RequireTexture(effect, effectAssets);
+            Texture2D texture = RequireTexture(effect, effectAssets);
             ParticleTextureSheetAsset textureSheet = effect.TextureSheet
                 ?? throw new InvalidOperationException("Billboard particle render modes require a texture sheet.");
-            Rectangle source = BuildTextureSourceRectangle(cached.Texture, textureSheet, frameIndex);
-            float aspect = source.height > 0f ? source.width / source.height : 1f;
+            Rectangle source = BuildTextureSourceRectangle(texture, textureSheet, frameIndex);
+            if (source.height <= 0f)
+            {
+                throw new InvalidOperationException(
+                    $"Particle texture sheet '{textureSheet.TextureAssetId}' produced a non-positive frame height.");
+            }
+
+            float aspect = source.width / source.height;
             float width = size * aspect;
             float height = size;
             if (effect.RenderMode == ParticleRenderMode.StretchedBillboard)
             {
-                height *= MathF.Max(1f, velocity.Length() * effect.StretchedLengthScale);
+                height *= velocity.Length() * effect.StretchedLengthScale;
+                if (height <= 0f)
+                {
+                    throw new InvalidOperationException(
+                        "StretchedBillboard particles require a positive velocity * stretchedLengthScale product for drawn height.");
+                }
             }
 
-            Rl.DrawBillboardRec(camera, cached.Texture, source, position, new Vector2(width, height), tint);
+            Rl.DrawBillboardRec(camera, texture, source, position, new Vector2(width, height), tint);
         }
 
-        private CachedTexture RequireTexture(ParticleEffectAssetData effect, MeshAssetRegistry effectAssets)
+        private Texture2D RequireTexture(ParticleEffectAssetData effect, MeshAssetRegistry effectAssets)
         {
             ParticleTextureSheetAsset textureSheet = effect.TextureSheet
                 ?? throw new InvalidOperationException("Billboard particle render modes require a texture sheet.");
@@ -213,23 +237,17 @@ namespace Ludots.Client.Raylib.Rendering
                     $"Particle texture sheet asset '{textureSheet.TextureAssetId}' must be a Billboard mesh asset, but was '{textureDescriptor.Type}'.");
             }
 
-            if (_textureCache.TryGetValue(textureAssetId, out CachedTexture cached))
+            if (_textureCache.TryGetValue(textureAssetId, out Texture2D cached))
             {
-                if (!cached.Loaded)
-                {
-                    throw new InvalidOperationException(
-                        $"Particle texture sheet asset '{textureSheet.TextureAssetId}' could not be loaded by raylib.");
-                }
-
                 return cached;
             }
 
-            cached = LoadTexture(textureSheet.TextureAssetId, textureDescriptor);
-            _textureCache.Add(textureAssetId, cached);
-            return cached;
+            Texture2D loaded = LoadTexture(textureSheet.TextureAssetId, textureDescriptor);
+            _textureCache.Add(textureAssetId, loaded);
+            return loaded;
         }
 
-        private CachedTexture LoadTexture(string textureAssetKey, in MeshAssetDescriptor textureDescriptor)
+        private Texture2D LoadTexture(string textureAssetKey, in MeshAssetDescriptor textureDescriptor)
         {
             if (_vfs == null)
             {
@@ -243,37 +261,44 @@ namespace Ludots.Client.Raylib.Rendering
                     $"Particle texture sheet asset '{textureAssetKey}' requires raylib sourceUris from Presentation/host_assets.json.");
             }
 
+            var failures = new StringBuilder();
             for (int i = 0; i < textureDescriptor.SourceUris.Length; i++)
             {
                 string uri = textureDescriptor.SourceUris[i];
                 if (string.IsNullOrWhiteSpace(uri))
                 {
+                    failures.Append($"[{i}] blank uri; ");
                     continue;
                 }
 
                 if (!_vfs.TryResolveFullPath(uri, out string fullPath))
                 {
+                    failures.Append($"[{i}] unresolved uri '{uri}'; ");
                     continue;
                 }
 
                 if (!File.Exists(fullPath))
                 {
+                    failures.Append($"[{i}] missing file '{uri}' -> '{fullPath}'; ");
                     continue;
                 }
 
                 Texture2D texture = Rl.LoadTexture(fullPath);
                 if (texture.id != 0 && texture.width > 0 && texture.height > 0)
                 {
-                    return new CachedTexture(texture, Loaded: true);
+                    return texture;
                 }
 
                 if (texture.id != 0)
                 {
                     Rl.UnloadTexture(texture);
                 }
+
+                failures.Append($"[{i}] raylib rejected '{uri}' ({fullPath}); ");
             }
 
-            return new CachedTexture(default, Loaded: false);
+            throw new InvalidOperationException(
+                $"Particle texture sheet asset '{textureAssetKey}' could not load any sourceUri. Attempts: {failures}");
         }
 
         internal static Rectangle BuildTextureSourceRectangle(
@@ -328,11 +353,11 @@ namespace Ludots.Client.Raylib.Rendering
 
         public void Dispose()
         {
-            foreach (CachedTexture cached in _textureCache.Values)
+            foreach (Texture2D texture in _textureCache.Values)
             {
-                if (cached.Loaded)
+                if (texture.id != 0)
                 {
-                    Rl.UnloadTexture(cached.Texture);
+                    Rl.UnloadTexture(texture);
                 }
             }
 
@@ -395,7 +420,5 @@ namespace Ludots.Client.Raylib.Rendering
                 _hasLastTime = true;
             }
         }
-
-        private readonly record struct CachedTexture(Texture2D Texture, bool Loaded);
     }
 }

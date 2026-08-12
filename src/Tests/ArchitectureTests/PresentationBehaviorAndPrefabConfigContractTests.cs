@@ -79,8 +79,7 @@ namespace Ludots.Tests.Architecture
     "type": "Primitive",
     "primitiveKind": "Sphere",
     "vfx": {
-      "spawnMode": "Loop",
-      "particleEffectId": "effect.spark.particles"
+            "particleEffectId": "effect.spark.particles"
     }
   }
 ]
@@ -236,7 +235,7 @@ namespace Ludots.Tests.Architecture
 
             var ex = Assert.Throws<InvalidOperationException>(() =>
                 new MeshAssetConfigLoader(pipeline, meshes).Load(catalog));
-            Assert.That(ex!.Message, Does.Contain("legacy emitter/color"));
+            Assert.That(ex!.Message, Does.Contain("not supported"));
             Assert.That(ex.Message, Does.Contain("Presentation/particle_effects.json"));
         }
 
@@ -259,8 +258,7 @@ namespace Ludots.Tests.Architecture
     "type": "Primitive",
     "primitiveKind": "Sphere",
     "vfx": {
-      "spawnMode": "Loop",
-      "particleEffectId": "effect.spark.particles"
+            "particleEffectId": "effect.spark.particles"
     }
   }
 ]
@@ -293,7 +291,7 @@ namespace Ludots.Tests.Architecture
                 new ParticleEffectConfigLoader(pipeline, particleEffects).Load(catalog);
                 new MeshAssetConfigLoader(pipeline, meshes, prefabs, particleEffects).Load(catalog);
             });
-            Assert.That(ex!.Message, Does.Contain("VFX spawnMode"));
+            Assert.That(ex!.Message, Does.Contain("spawnMode"));
             Assert.That(ex.Message, Does.Contain("not a numeric string"));
         }
 
@@ -1526,7 +1524,7 @@ namespace Ludots.Tests.Architecture
 
             Assert.That(meshAsset["type"]?.GetValue<string>(), Is.EqualTo("Primitive"));
             Assert.That(meshAsset["primitiveKind"]?.GetValue<string>(), Is.EqualTo("Sphere"));
-            Assert.That(vfx["spawnMode"]?.GetValue<string>(), Is.EqualTo("Loop"));
+            Assert.That(vfx.ContainsKey("spawnMode"), Is.False, "Mesh VFX handles must not dual-write spawnMode; particle_effects owns it.");
             Assert.That(vfx.ContainsKey("emitter"), Is.False, "Formal mesh VFX assets must not carry legacy emitter payloads.");
             Assert.That(vfx.ContainsKey("coreColor"), Is.False, "Formal mesh VFX assets must not carry legacy color payloads.");
             Assert.That(vfx.ContainsKey("shellColor"), Is.False, "Formal mesh VFX assets must not carry legacy color payloads.");
@@ -1534,10 +1532,13 @@ namespace Ludots.Tests.Architecture
             Assert.That(vfx.ContainsKey("particleSystem"), Is.False, "Formal mesh VFX assets must not embed Quarks particle data.");
             string particleEffectId = vfx["particleEffectId"]?.GetValue<string>()
                 ?? throw new InvalidOperationException($"Smoke asset '{smokeAssetId}' must reference particleEffectId.");
+            Assert.That(vfx.Count, Is.EqualTo(1), "Mesh VFX handles may only declare particleEffectId.");
             JsonObject particleEffect = RequireJsonObjectById(
                 Path.Combine(presentationDirectory, "particle_effects.json"),
                 particleEffectId);
             Assert.That(particleEffect["version"]?.GetValue<string>(), Is.EqualTo("quarks.ludots.v1"));
+            Assert.That(particleEffect["spawnMode"]?.GetValue<string>(), Is.EqualTo("Loop"));
+            Assert.That(particleEffect.ContainsKey("overflowPolicy"), Is.False, "Quarks particle assets must not author unread overflowPolicy.");
             Assert.That(particleEffect["maxParticles"]?.GetValue<int>(), Is.GreaterThan(0));
             Assert.That(particleEffect["seed"]?.GetValue<uint>(), Is.GreaterThan(0u));
 
@@ -1580,10 +1581,9 @@ namespace Ludots.Tests.Architecture
     "version": "quarks.ludots.v1",
     "spawnMode": "Loop",
     "shape": "Cone",
-    "renderMode": "Mesh",
+    "renderMode": "Primitive",
     "blendMode": "Alpha",
     "primitive": "Sphere",
-    "overflowPolicy": "DropNewest",
     "maxParticles": 32,
     "seed": 2026080691,
     "durationSeconds": 1.2,

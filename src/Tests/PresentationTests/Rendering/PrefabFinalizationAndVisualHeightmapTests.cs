@@ -1159,7 +1159,6 @@ namespace Ludots.Tests.Presentation
         {
             MeshAssetDescriptor descriptor = MeshAssetDescriptor.Primitive(0, PrimitiveMeshKind.Sphere);
             descriptor.VfxEffectData = new VfxEffectAssetData(
-                spawnMode,
                 CreateTestParticleEffect(spawnMode),
                 particleEffectAssetId: 1);
             return meshes.Register(key, in descriptor);
@@ -1170,10 +1169,9 @@ namespace Ludots.Tests.Presentation
             return new ParticleEffectAssetData(
                 spawnMode,
                 ParticleEmitterShapeKind.Cone,
-                ParticleRenderMode.Mesh,
+                ParticleRenderMode.Primitive,
                 ParticleBlendMode.Alpha,
                 ParticlePrimitiveKind.Sphere,
-                ParticleOverflowPolicy.DropNewest,
                 maxParticles: 16,
                 seed: 123456u,
                 durationSeconds: 1.2f,
@@ -1202,7 +1200,8 @@ namespace Ludots.Tests.Presentation
                 drag: 0.05f,
                 worldSpace: true,
                 textureSheet: null,
-                stretchedLengthScale: 0f);
+                stretchedLengthScale: 0f,
+                trailLengthSeconds: 0f);
         }
 
         private sealed class CountingGroundProjector : IVisualGroundProjector

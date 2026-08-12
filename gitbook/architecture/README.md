@@ -31,6 +31,7 @@
 - [Core Field2D](core-field2d.md)
 - [Global Field Rendering](global-field-rendering.md)
 - [Raylib Render Productization](raylib-render-productization.md)
+- [Quarks Particle Schema](quarks-particle-schema.md)
 - [Map-Owned Participant Contract](map-owned-participant-contract.md)
 - [Transport Network SSOT](transport-network-ssot.md)
 - [Placement Validation SSOT](placement-validation-ssot.md)

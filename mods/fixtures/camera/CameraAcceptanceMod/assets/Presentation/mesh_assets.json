@@ -4,7 +4,6 @@
     "type": "Primitive",
     "primitiveKind": "Sphere",
     "vfx": {
-      "spawnMode": "Loop",
       "particleEffectId": "camera.projection_cue"
     }
   }

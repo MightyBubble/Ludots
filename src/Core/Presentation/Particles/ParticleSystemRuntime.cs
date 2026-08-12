@@ -208,7 +208,12 @@ namespace Ludots.Core.Presentation.Particles
                 Vector3 localDirection;
                 BuildEmitterSample(effect, out localPosition, out localDirection);
 
-                float life = MathF.Max(0.0001f, effect.StartLife.Sample(ref _random));
+                float life = effect.StartLife.Sample(ref _random);
+                if (life <= 0f)
+                {
+                    throw new InvalidOperationException(
+                        "Particle startLife samples must stay positive; reject non-positive authored ranges at asset load.");
+                }
                 float size = effect.StartSize.Sample(ref _random);
                 float speed = effect.StartSpeed.Sample(ref _random);
                 Vector3 position = localPosition;

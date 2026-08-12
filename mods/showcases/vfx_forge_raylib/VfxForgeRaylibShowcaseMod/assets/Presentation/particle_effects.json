@@ -4,10 +4,9 @@
     "version": "quarks.ludots.v1",
     "spawnMode": "Loop",
     "shape": "Cone",
-    "renderMode": "Mesh",
+    "renderMode": "Primitive",
     "blendMode": "Additive",
     "primitive": "Sphere",
-    "overflowPolicy": "DropNewest",
     "maxParticles": 192,
     "seed": 2026080601,
     "durationSeconds": 1.8,
@@ -16,21 +15,72 @@
     "shapeRadius": 0.42,
     "shapeAngleRadians": 0.38,
     "shapeThickness": 0.75,
-    "startLife": [0.55, 1.15],
-    "startSpeed": [1.4, 3.6],
-    "startSize": [0.055, 0.16],
-    "startColor": [1.0, 0.62, 0.18, 1.0],
+    "startLife": [
+      0.55,
+      1.15
+    ],
+    "startSpeed": [
+      1.4,
+      3.6
+    ],
+    "startSize": [
+      0.055,
+      0.16
+    ],
+    "startColor": [
+      1.0,
+      0.62,
+      0.18,
+      1.0
+    ],
     "sizeOverLife": [
-      { "position": 0.0, "value": 0.25 },
-      { "position": 0.22, "value": 1.0 },
-      { "position": 1.0, "value": 0.0 }
+      {
+        "position": 0.0,
+        "value": 0.25
+      },
+      {
+        "position": 0.22,
+        "value": 1.0
+      },
+      {
+        "position": 1.0,
+        "value": 0.0
+      }
     ],
     "colorOverLife": [
-      { "position": 0.0, "color": [1.0, 0.72, 0.18, 1.0] },
-      { "position": 0.55, "color": [1.0, 0.28, 0.12, 0.72] },
-      { "position": 1.0, "color": [0.1, 0.08, 0.04, 0.0] }
+      {
+        "position": 0.0,
+        "color": [
+          1.0,
+          0.72,
+          0.18,
+          1.0
+        ]
+      },
+      {
+        "position": 0.55,
+        "color": [
+          1.0,
+          0.28,
+          0.12,
+          0.72
+        ]
+      },
+      {
+        "position": 1.0,
+        "color": [
+          0.1,
+          0.08,
+          0.04,
+          0.0
+        ]
+      }
     ],
-    "gravity": [0.0, 0.9, 0.0],
+    "gravity": [
+      0.0,
+      0.9,
+      0.0
+    ],
     "drag": 0.18,
     "worldSpace": true
   },
@@ -39,10 +89,9 @@
     "version": "quarks.ludots.v1",
     "spawnMode": "Loop",
     "shape": "Sphere",
-    "renderMode": "Mesh",
+    "renderMode": "Primitive",
     "blendMode": "Additive",
     "primitive": "Cube",
-    "overflowPolicy": "DropNewest",
     "maxParticles": 128,
     "seed": 2026080602,
     "durationSeconds": 2.4,
@@ -51,21 +100,72 @@
     "shapeRadius": 1.05,
     "shapeAngleRadians": 0.0,
     "shapeThickness": 0.35,
-    "startLife": [1.2, 2.0],
-    "startSpeed": [0.12, 0.38],
-    "startSize": [0.08, 0.14],
-    "startColor": [0.16, 0.78, 1.0, 0.92],
+    "startLife": [
+      1.2,
+      2.0
+    ],
+    "startSpeed": [
+      0.12,
+      0.38
+    ],
+    "startSize": [
+      0.08,
+      0.14
+    ],
+    "startColor": [
+      0.16,
+      0.78,
+      1.0,
+      0.92
+    ],
     "sizeOverLife": [
-      { "position": 0.0, "value": 0.45 },
-      { "position": 0.35, "value": 1.0 },
-      { "position": 1.0, "value": 0.18 }
+      {
+        "position": 0.0,
+        "value": 0.45
+      },
+      {
+        "position": 0.35,
+        "value": 1.0
+      },
+      {
+        "position": 1.0,
+        "value": 0.18
+      }
     ],
     "colorOverLife": [
-      { "position": 0.0, "color": [0.2, 0.9, 1.0, 0.95] },
-      { "position": 0.6, "color": [0.28, 1.0, 0.52, 0.62] },
-      { "position": 1.0, "color": [0.02, 0.12, 0.18, 0.0] }
+      {
+        "position": 0.0,
+        "color": [
+          0.2,
+          0.9,
+          1.0,
+          0.95
+        ]
+      },
+      {
+        "position": 0.6,
+        "color": [
+          0.28,
+          1.0,
+          0.52,
+          0.62
+        ]
+      },
+      {
+        "position": 1.0,
+        "color": [
+          0.02,
+          0.12,
+          0.18,
+          0.0
+        ]
+      }
     ],
-    "gravity": [0.0, 0.0, 0.0],
+    "gravity": [
+      0.0,
+      0.0,
+      0.0
+    ],
     "drag": 0.04,
     "worldSpace": true
   },
@@ -77,7 +177,6 @@
     "renderMode": "Trail",
     "blendMode": "Additive",
     "primitive": "Sphere",
-    "overflowPolicy": "DropNewest",
     "maxParticles": 144,
     "seed": 2026080603,
     "durationSeconds": 1.6,
@@ -86,32 +185,80 @@
     "shapeRadius": 1.0,
     "shapeAngleRadians": 0.0,
     "shapeThickness": 1.0,
-    "startLife": [0.8, 1.35],
-    "startSpeed": [1.1, 2.1],
-    "startSize": [0.04, 0.08],
-    "startColor": [0.92, 0.96, 1.0, 0.85],
+    "startLife": [
+      0.8,
+      1.35
+    ],
+    "startSpeed": [
+      1.1,
+      2.1
+    ],
+    "startSize": [
+      0.04,
+      0.08
+    ],
+    "startColor": [
+      0.92,
+      0.96,
+      1.0,
+      0.85
+    ],
     "sizeOverLife": [
-      { "position": 0.0, "value": 1.0 },
-      { "position": 1.0, "value": 0.35 }
+      {
+        "position": 0.0,
+        "value": 1.0
+      },
+      {
+        "position": 1.0,
+        "value": 0.35
+      }
     ],
     "colorOverLife": [
-      { "position": 0.0, "color": [0.96, 1.0, 1.0, 0.85] },
-      { "position": 0.5, "color": [0.36, 0.66, 1.0, 0.55] },
-      { "position": 1.0, "color": [0.02, 0.08, 0.18, 0.0] }
+      {
+        "position": 0.0,
+        "color": [
+          0.96,
+          1.0,
+          1.0,
+          0.85
+        ]
+      },
+      {
+        "position": 0.5,
+        "color": [
+          0.36,
+          0.66,
+          1.0,
+          0.55
+        ]
+      },
+      {
+        "position": 1.0,
+        "color": [
+          0.02,
+          0.08,
+          0.18,
+          0.0
+        ]
+      }
     ],
-    "gravity": [0.0, 0.35, 0.0],
+    "gravity": [
+      0.0,
+      0.35,
+      0.0
+    ],
     "drag": 0.08,
-    "worldSpace": true
+    "worldSpace": true,
+    "trailLengthSeconds": 0.08
   },
   {
     "id": "vfx_forge.ember_rain",
     "version": "quarks.ludots.v1",
     "spawnMode": "Loop",
     "shape": "Point",
-    "renderMode": "Mesh",
+    "renderMode": "Primitive",
     "blendMode": "Additive",
     "primitive": "Sphere",
-    "overflowPolicy": "DropNewest",
     "maxParticles": 168,
     "seed": 2026080604,
     "durationSeconds": 2.2,
@@ -120,21 +267,72 @@
     "shapeRadius": 0.0,
     "shapeAngleRadians": 0.0,
     "shapeThickness": 1.0,
-    "startLife": [1.0, 1.8],
-    "startSpeed": [0.15, 0.55],
-    "startSize": [0.04, 0.09],
-    "startColor": [1.0, 0.48, 0.12, 0.9],
+    "startLife": [
+      1.0,
+      1.8
+    ],
+    "startSpeed": [
+      0.15,
+      0.55
+    ],
+    "startSize": [
+      0.04,
+      0.09
+    ],
+    "startColor": [
+      1.0,
+      0.48,
+      0.12,
+      0.9
+    ],
     "sizeOverLife": [
-      { "position": 0.0, "value": 0.4 },
-      { "position": 0.28, "value": 1.0 },
-      { "position": 1.0, "value": 0.12 }
+      {
+        "position": 0.0,
+        "value": 0.4
+      },
+      {
+        "position": 0.28,
+        "value": 1.0
+      },
+      {
+        "position": 1.0,
+        "value": 0.12
+      }
     ],
     "colorOverLife": [
-      { "position": 0.0, "color": [1.0, 0.62, 0.18, 0.9] },
-      { "position": 0.62, "color": [1.0, 0.24, 0.08, 0.56] },
-      { "position": 1.0, "color": [0.14, 0.06, 0.02, 0.0] }
+      {
+        "position": 0.0,
+        "color": [
+          1.0,
+          0.62,
+          0.18,
+          0.9
+        ]
+      },
+      {
+        "position": 0.62,
+        "color": [
+          1.0,
+          0.24,
+          0.08,
+          0.56
+        ]
+      },
+      {
+        "position": 1.0,
+        "color": [
+          0.14,
+          0.06,
+          0.02,
+          0.0
+        ]
+      }
     ],
-    "gravity": [0.0, -0.85, 0.0],
+    "gravity": [
+      0.0,
+      -0.85,
+      0.0
+    ],
     "drag": 0.03,
     "worldSpace": true
   },
@@ -143,10 +341,9 @@
     "version": "quarks.ludots.v1",
     "spawnMode": "Loop",
     "shape": "Hemisphere",
-    "renderMode": "Mesh",
+    "renderMode": "Primitive",
     "blendMode": "Alpha",
     "primitive": "Sphere",
-    "overflowPolicy": "DropNewest",
     "maxParticles": 160,
     "seed": 2026080605,
     "durationSeconds": 2.0,
@@ -155,21 +352,72 @@
     "shapeRadius": 1.0,
     "shapeAngleRadians": 0.0,
     "shapeThickness": 0.08,
-    "startLife": [1.3, 2.0],
-    "startSpeed": [0.0, 0.12],
-    "startSize": [0.045, 0.085],
-    "startColor": [0.35, 0.76, 1.0, 0.86],
+    "startLife": [
+      1.3,
+      2.0
+    ],
+    "startSpeed": [
+      0.0,
+      0.12
+    ],
+    "startSize": [
+      0.045,
+      0.085
+    ],
+    "startColor": [
+      0.35,
+      0.76,
+      1.0,
+      0.86
+    ],
     "sizeOverLife": [
-      { "position": 0.0, "value": 0.55 },
-      { "position": 0.35, "value": 1.0 },
-      { "position": 1.0, "value": 0.24 }
+      {
+        "position": 0.0,
+        "value": 0.55
+      },
+      {
+        "position": 0.35,
+        "value": 1.0
+      },
+      {
+        "position": 1.0,
+        "value": 0.24
+      }
     ],
     "colorOverLife": [
-      { "position": 0.0, "color": [0.42, 0.86, 1.0, 0.86] },
-      { "position": 0.55, "color": [0.24, 0.56, 1.0, 0.52] },
-      { "position": 1.0, "color": [0.02, 0.08, 0.18, 0.0] }
+      {
+        "position": 0.0,
+        "color": [
+          0.42,
+          0.86,
+          1.0,
+          0.86
+        ]
+      },
+      {
+        "position": 0.55,
+        "color": [
+          0.24,
+          0.56,
+          1.0,
+          0.52
+        ]
+      },
+      {
+        "position": 1.0,
+        "color": [
+          0.02,
+          0.08,
+          0.18,
+          0.0
+        ]
+      }
     ],
-    "gravity": [0.0, 0.0, 0.0],
+    "gravity": [
+      0.0,
+      0.0,
+      0.0
+    ],
     "drag": 0.02,
     "worldSpace": true
   },
@@ -181,7 +429,6 @@
     "renderMode": "Trail",
     "blendMode": "Multiply",
     "primitive": "Sphere",
-    "overflowPolicy": "DropNewest",
     "maxParticles": 192,
     "seed": 2026080606,
     "durationSeconds": 1.9,
@@ -190,22 +437,71 @@
     "shapeRadius": 0.95,
     "shapeAngleRadians": 0.0,
     "shapeThickness": 0.22,
-    "startLife": [0.7, 1.25],
-    "startSpeed": [0.8, 1.8],
-    "startSize": [0.03, 0.06],
-    "startColor": [0.72, 0.64, 1.0, 0.82],
+    "startLife": [
+      0.7,
+      1.25
+    ],
+    "startSpeed": [
+      0.8,
+      1.8
+    ],
+    "startSize": [
+      0.03,
+      0.06
+    ],
+    "startColor": [
+      0.72,
+      0.64,
+      1.0,
+      0.82
+    ],
     "sizeOverLife": [
-      { "position": 0.0, "value": 0.9 },
-      { "position": 1.0, "value": 0.18 }
+      {
+        "position": 0.0,
+        "value": 0.9
+      },
+      {
+        "position": 1.0,
+        "value": 0.18
+      }
     ],
     "colorOverLife": [
-      { "position": 0.0, "color": [0.72, 0.82, 1.0, 0.82] },
-      { "position": 0.52, "color": [0.42, 0.44, 1.0, 0.5] },
-      { "position": 1.0, "color": [0.05, 0.04, 0.12, 0.0] }
+      {
+        "position": 0.0,
+        "color": [
+          0.72,
+          0.82,
+          1.0,
+          0.82
+        ]
+      },
+      {
+        "position": 0.52,
+        "color": [
+          0.42,
+          0.44,
+          1.0,
+          0.5
+        ]
+      },
+      {
+        "position": 1.0,
+        "color": [
+          0.05,
+          0.04,
+          0.12,
+          0.0
+        ]
+      }
     ],
-    "gravity": [0.0, 0.0, 0.0],
+    "gravity": [
+      0.0,
+      0.0,
+      0.0
+    ],
     "drag": 0.16,
-    "worldSpace": true
+    "worldSpace": true,
+    "trailLengthSeconds": 0.08
   },
   {
     "id": "vfx_forge.flame_flipbook",
@@ -215,7 +511,6 @@
     "renderMode": "Billboard",
     "blendMode": "Additive",
     "primitive": "Sphere",
-    "overflowPolicy": "DropNewest",
     "maxParticles": 156,
     "seed": 2026080607,
     "durationSeconds": 1.4,
@@ -224,30 +519,84 @@
     "shapeRadius": 0.36,
     "shapeAngleRadians": 0.42,
     "shapeThickness": 0.55,
-    "startLife": [0.55, 0.95],
-    "startSpeed": [0.7, 1.7],
-    "startSize": [0.34, 0.62],
-    "startColor": [1.0, 0.82, 0.32, 0.9],
+    "startLife": [
+      0.55,
+      0.95
+    ],
+    "startSpeed": [
+      0.7,
+      1.7
+    ],
+    "startSize": [
+      0.34,
+      0.62
+    ],
+    "startColor": [
+      1.0,
+      0.82,
+      0.32,
+      0.9
+    ],
     "textureSheet": {
       "textureAssetId": "vfx_forge.texture.flame_flipbook",
       "columns": 4,
       "rows": 2,
       "frameCount": 8,
       "framesPerSecond": 18,
-      "startFrame": [0, 2],
+      "startFrame": [
+        0,
+        2
+      ],
       "playbackMode": "Loop"
     },
     "sizeOverLife": [
-      { "position": 0.0, "value": 0.4 },
-      { "position": 0.22, "value": 1.0 },
-      { "position": 1.0, "value": 0.12 }
+      {
+        "position": 0.0,
+        "value": 0.4
+      },
+      {
+        "position": 0.22,
+        "value": 1.0
+      },
+      {
+        "position": 1.0,
+        "value": 0.12
+      }
     ],
     "colorOverLife": [
-      { "position": 0.0, "color": [1.0, 0.92, 0.45, 0.9] },
-      { "position": 0.55, "color": [1.0, 0.28, 0.08, 0.58] },
-      { "position": 1.0, "color": [0.12, 0.05, 0.02, 0.0] }
+      {
+        "position": 0.0,
+        "color": [
+          1.0,
+          0.92,
+          0.45,
+          0.9
+        ]
+      },
+      {
+        "position": 0.55,
+        "color": [
+          1.0,
+          0.28,
+          0.08,
+          0.58
+        ]
+      },
+      {
+        "position": 1.0,
+        "color": [
+          0.12,
+          0.05,
+          0.02,
+          0.0
+        ]
+      }
     ],
-    "gravity": [0.0, 0.55, 0.0],
+    "gravity": [
+      0.0,
+      0.55,
+      0.0
+    ],
     "drag": 0.1,
     "worldSpace": true
   },
@@ -259,7 +608,6 @@
     "renderMode": "Billboard",
     "blendMode": "PremultipliedAlpha",
     "primitive": "Sphere",
-    "overflowPolicy": "DropNewest",
     "maxParticles": 128,
     "seed": 2026080608,
     "durationSeconds": 2.1,
@@ -268,30 +616,84 @@
     "shapeRadius": 0.42,
     "shapeAngleRadians": 0.5,
     "shapeThickness": 0.7,
-    "startLife": [1.1, 1.9],
-    "startSpeed": [0.25, 0.8],
-    "startSize": [0.55, 0.95],
-    "startColor": [0.72, 0.74, 0.72, 0.46],
+    "startLife": [
+      1.1,
+      1.9
+    ],
+    "startSpeed": [
+      0.25,
+      0.8
+    ],
+    "startSize": [
+      0.55,
+      0.95
+    ],
+    "startColor": [
+      0.72,
+      0.74,
+      0.72,
+      0.46
+    ],
     "textureSheet": {
       "textureAssetId": "vfx_forge.texture.smoke_flipbook",
       "columns": 4,
       "rows": 2,
       "frameCount": 8,
       "framesPerSecond": 9,
-      "startFrame": [0, 1],
+      "startFrame": [
+        0,
+        1
+      ],
       "playbackMode": "Clamp"
     },
     "sizeOverLife": [
-      { "position": 0.0, "value": 0.45 },
-      { "position": 0.45, "value": 1.0 },
-      { "position": 1.0, "value": 1.55 }
+      {
+        "position": 0.0,
+        "value": 0.45
+      },
+      {
+        "position": 0.45,
+        "value": 1.0
+      },
+      {
+        "position": 1.0,
+        "value": 1.55
+      }
     ],
     "colorOverLife": [
-      { "position": 0.0, "color": [0.78, 0.79, 0.76, 0.42] },
-      { "position": 0.62, "color": [0.55, 0.58, 0.58, 0.25] },
-      { "position": 1.0, "color": [0.22, 0.24, 0.24, 0.0] }
+      {
+        "position": 0.0,
+        "color": [
+          0.78,
+          0.79,
+          0.76,
+          0.42
+        ]
+      },
+      {
+        "position": 0.62,
+        "color": [
+          0.55,
+          0.58,
+          0.58,
+          0.25
+        ]
+      },
+      {
+        "position": 1.0,
+        "color": [
+          0.22,
+          0.24,
+          0.24,
+          0.0
+        ]
+      }
     ],
-    "gravity": [0.0, 0.32, 0.0],
+    "gravity": [
+      0.0,
+      0.32,
+      0.0
+    ],
     "drag": 0.22,
     "worldSpace": true
   },
@@ -303,7 +705,6 @@
     "renderMode": "StretchedBillboard",
     "blendMode": "Additive",
     "primitive": "Sphere",
-    "overflowPolicy": "DropNewest",
     "maxParticles": 144,
     "seed": 2026080609,
     "durationSeconds": 1.1,
@@ -312,31 +713,85 @@
     "shapeRadius": 0.2,
     "shapeAngleRadians": 0.62,
     "shapeThickness": 0.35,
-    "startLife": [0.38, 0.82],
-    "startSpeed": [2.2, 4.6],
-    "startSize": [0.16, 0.28],
-    "startColor": [1.0, 0.88, 0.42, 0.95],
+    "startLife": [
+      0.38,
+      0.82
+    ],
+    "startSpeed": [
+      2.2,
+      4.6
+    ],
+    "startSize": [
+      0.16,
+      0.28
+    ],
+    "startColor": [
+      1.0,
+      0.88,
+      0.42,
+      0.95
+    ],
     "textureSheet": {
       "textureAssetId": "vfx_forge.texture.spark_streak_flipbook",
       "columns": 4,
       "rows": 1,
       "frameCount": 4,
       "framesPerSecond": 20,
-      "startFrame": [0, 1],
+      "startFrame": [
+        0,
+        1
+      ],
       "playbackMode": "Loop"
     },
     "stretchedLengthScale": 0.32,
     "sizeOverLife": [
-      { "position": 0.0, "value": 1.0 },
-      { "position": 0.6, "value": 0.7 },
-      { "position": 1.0, "value": 0.0 }
+      {
+        "position": 0.0,
+        "value": 1.0
+      },
+      {
+        "position": 0.6,
+        "value": 0.7
+      },
+      {
+        "position": 1.0,
+        "value": 0.0
+      }
     ],
     "colorOverLife": [
-      { "position": 0.0, "color": [1.0, 0.9, 0.36, 0.95] },
-      { "position": 0.45, "color": [1.0, 0.42, 0.12, 0.62] },
-      { "position": 1.0, "color": [0.18, 0.05, 0.02, 0.0] }
+      {
+        "position": 0.0,
+        "color": [
+          1.0,
+          0.9,
+          0.36,
+          0.95
+        ]
+      },
+      {
+        "position": 0.45,
+        "color": [
+          1.0,
+          0.42,
+          0.12,
+          0.62
+        ]
+      },
+      {
+        "position": 1.0,
+        "color": [
+          0.18,
+          0.05,
+          0.02,
+          0.0
+        ]
+      }
     ],
-    "gravity": [0.0, -0.55, 0.0],
+    "gravity": [
+      0.0,
+      -0.55,
+      0.0
+    ],
     "drag": 0.06,
     "worldSpace": true
   }

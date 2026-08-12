@@ -2499,7 +2499,7 @@
       "category": "showcase",
       "binding": "vfx_forge_raylib",
       "preset": "vfx_forge_raylib",
-      "docsPath": null,
+      "docsPath": "gitbook/architecture/quarks-particle-schema.md",
       "readmePath": "mods/showcases/vfx_forge_raylib/VfxForgeRaylibShowcaseMod/README.md",
       "acceptanceTest": "VfxForgeRaylibShowcaseAcceptanceTests",
       "artifactDir": null,

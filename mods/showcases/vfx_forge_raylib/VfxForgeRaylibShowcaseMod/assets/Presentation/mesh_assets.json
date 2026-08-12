@@ -16,7 +16,6 @@
     "type": "Primitive",
     "primitiveKind": "Sphere",
     "vfx": {
-      "spawnMode": "Loop",
       "particleEffectId": "vfx_forge.spark_column"
     }
   },
@@ -25,7 +24,6 @@
     "type": "Primitive",
     "primitiveKind": "Cube",
     "vfx": {
-      "spawnMode": "Loop",
       "particleEffectId": "vfx_forge.energy_orbit"
     }
   },
@@ -34,7 +32,6 @@
     "type": "Primitive",
     "primitiveKind": "Sphere",
     "vfx": {
-      "spawnMode": "Loop",
       "particleEffectId": "vfx_forge.trail_arc"
     }
   },
@@ -43,7 +40,6 @@
     "type": "Primitive",
     "primitiveKind": "Sphere",
     "vfx": {
-      "spawnMode": "Loop",
       "particleEffectId": "vfx_forge.ember_rain"
     }
   },
@@ -52,7 +48,6 @@
     "type": "Primitive",
     "primitiveKind": "Sphere",
     "vfx": {
-      "spawnMode": "Loop",
       "particleEffectId": "vfx_forge.shield_dome"
     }
   },
@@ -61,7 +56,6 @@
     "type": "Primitive",
     "primitiveKind": "Sphere",
     "vfx": {
-      "spawnMode": "Loop",
       "particleEffectId": "vfx_forge.gravity_well"
     }
   },
@@ -70,7 +64,6 @@
     "type": "Primitive",
     "primitiveKind": "Sphere",
     "vfx": {
-      "spawnMode": "Loop",
       "particleEffectId": "vfx_forge.flame_flipbook"
     }
   },
@@ -79,7 +72,6 @@
     "type": "Primitive",
     "primitiveKind": "Sphere",
     "vfx": {
-      "spawnMode": "Loop",
       "particleEffectId": "vfx_forge.smoke_flipbook"
     }
   },
@@ -88,7 +80,6 @@
     "type": "Primitive",
     "primitiveKind": "Sphere",
     "vfx": {
-      "spawnMode": "Loop",
       "particleEffectId": "vfx_forge.stretched_sparks"
     }
   }

@@ -214,7 +214,7 @@ public sealed class ParticleSystemRuntimeTests
         ParticleValueRange? startLife = null,
         ParticleValueRange? startSpeed = null,
         in Vector3 gravity = default,
-        ParticleRenderMode renderMode = ParticleRenderMode.Mesh,
+        ParticleRenderMode renderMode = ParticleRenderMode.Primitive,
         ParticleTextureSheetAsset? textureSheet = null,
         float stretchedLengthScale = 0f)
     {
@@ -224,7 +224,6 @@ public sealed class ParticleSystemRuntimeTests
             renderMode,
             ParticleBlendMode.Alpha,
             ParticlePrimitiveKind.Sphere,
-            ParticleOverflowPolicy.DropNewest,
             maxParticles,
             seed,
             durationSeconds: 1f,
@@ -253,6 +252,7 @@ public sealed class ParticleSystemRuntimeTests
             drag: 0f,
             worldSpace: true,
             textureSheet,
-            stretchedLengthScale);
+            stretchedLengthScale,
+            trailLengthSeconds: 0f);
     }
 }

@@ -1439,9 +1439,7 @@ namespace Ludots.Tests.Presentation
         private static MeshAssetDescriptor CreateEffectDescriptor()
         {
             MeshAssetDescriptor descriptor = MeshAssetDescriptor.Primitive(0, PrimitiveMeshKind.Sphere);
-            descriptor.VfxEffectData = new VfxEffectAssetData(
-                PrefabVfxSpawnMode.Loop,
-                CreateTestParticleEffect(),
+            descriptor.VfxEffectData = new VfxEffectAssetData(CreateTestParticleEffect(),
                 particleEffectAssetId: 1);
             return descriptor;
         }
@@ -1451,10 +1449,9 @@ namespace Ludots.Tests.Presentation
             return new ParticleEffectAssetData(
                 PrefabVfxSpawnMode.Loop,
                 ParticleEmitterShapeKind.Cone,
-                ParticleRenderMode.Mesh,
+                ParticleRenderMode.Primitive,
                 ParticleBlendMode.Alpha,
                 ParticlePrimitiveKind.Sphere,
-                ParticleOverflowPolicy.DropNewest,
                 maxParticles: 32,
                 seed: 234567u,
                 durationSeconds: 1.2f,
@@ -1483,7 +1480,8 @@ namespace Ludots.Tests.Presentation
                 drag: 0.08f,
                 worldSpace: true,
                 textureSheet: null,
-                stretchedLengthScale: 0f);
+                stretchedLengthScale: 0f,
+                trailLengthSeconds: 0f);
         }
 
         private static int ResolvePresentationEventKey(PresentationEventKind eventKind, string key)

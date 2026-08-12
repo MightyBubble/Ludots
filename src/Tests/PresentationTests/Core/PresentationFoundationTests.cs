@@ -1626,9 +1626,7 @@ namespace Ludots.Tests.Presentation
 
             int cubeId = meshes.GetId(WellKnownMeshKeys.Cube);
             MeshAssetDescriptor effectDescriptor = MeshAssetDescriptor.Primitive(0, PrimitiveMeshKind.Sphere);
-            effectDescriptor.VfxEffectData = new VfxEffectAssetData(
-                PrefabVfxSpawnMode.Loop,
-                CreateTestParticleEffect(),
+            effectDescriptor.VfxEffectData = new VfxEffectAssetData(CreateTestParticleEffect(),
                 particleEffectAssetId: 1);
             int effectId = meshes.Register("test.prefab.typed_root.effect", in effectDescriptor);
             int typedPrefabMeshId = meshes.Register(
@@ -1695,10 +1693,9 @@ namespace Ludots.Tests.Presentation
             return new ParticleEffectAssetData(
                 PrefabVfxSpawnMode.Loop,
                 ParticleEmitterShapeKind.Cone,
-                ParticleRenderMode.Mesh,
+                ParticleRenderMode.Primitive,
                 ParticleBlendMode.Alpha,
                 ParticlePrimitiveKind.Sphere,
-                ParticleOverflowPolicy.DropNewest,
                 maxParticles: 16,
                 seed: 456789u,
                 durationSeconds: 1.2f,
@@ -1727,7 +1724,8 @@ namespace Ludots.Tests.Presentation
                 drag: 0.05f,
                 worldSpace: true,
                 textureSheet: null,
-                stretchedLengthScale: 0f);
+                stretchedLengthScale: 0f,
+                trailLengthSeconds: 0f);
         }
 
         private static string FindRepoRoot()

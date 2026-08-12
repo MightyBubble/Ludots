@@ -17,7 +17,7 @@ namespace Ludots.Core.Presentation.Particles
     {
         Billboard = 0,
         StretchedBillboard = 1,
-        Mesh = 2,
+        Primitive = 2,
         Trail = 3,
     }
 
@@ -33,11 +33,6 @@ namespace Ludots.Core.Presentation.Particles
     {
         Sphere = 0,
         Cube = 1,
-    }
-
-    public enum ParticleOverflowPolicy : byte
-    {
-        DropNewest = 0,
     }
 
     public enum ParticleTextureSheetPlaybackMode : byte
@@ -374,7 +369,6 @@ namespace Ludots.Core.Presentation.Particles
             ParticleRenderMode renderMode,
             ParticleBlendMode blendMode,
             ParticlePrimitiveKind primitiveKind,
-            ParticleOverflowPolicy overflowPolicy,
             int maxParticles,
             uint seed,
             float durationSeconds,
@@ -393,7 +387,8 @@ namespace Ludots.Core.Presentation.Particles
             float drag,
             bool worldSpace,
             ParticleTextureSheetAsset? textureSheet,
-            float stretchedLengthScale)
+            float stretchedLengthScale,
+            float trailLengthSeconds)
         {
             if (!Enum.IsDefined(spawnMode))
             {
@@ -418,11 +413,6 @@ namespace Ludots.Core.Presentation.Particles
             if (!Enum.IsDefined(primitiveKind))
             {
                 throw new ArgumentOutOfRangeException(nameof(primitiveKind));
-            }
-
-            if (!Enum.IsDefined(overflowPolicy))
-            {
-                throw new ArgumentOutOfRangeException(nameof(overflowPolicy));
             }
 
             if (maxParticles <= 0)
@@ -460,6 +450,11 @@ namespace Ludots.Core.Presentation.Particles
             }
 
             ValidateNonNegative(drag, nameof(drag));
+            if (startLife.Min <= 0f)
+            {
+                throw new ArgumentOutOfRangeException(nameof(startLife), "Particle startLife requires min > 0.");
+            }
+
             bool texturedRenderMode =
                 renderMode == ParticleRenderMode.Billboard ||
                 renderMode == ParticleRenderMode.StretchedBillboard;
@@ -484,6 +479,15 @@ namespace Ludots.Core.Presentation.Particles
                 throw new ArgumentOutOfRangeException(nameof(stretchedLengthScale), "stretchedLengthScale is only valid for StretchedBillboard particles.");
             }
 
+            if (renderMode == ParticleRenderMode.Trail)
+            {
+                ValidatePositive(trailLengthSeconds, nameof(trailLengthSeconds));
+            }
+            else if (trailLengthSeconds != 0f)
+            {
+                throw new ArgumentOutOfRangeException(nameof(trailLengthSeconds), "trailLengthSeconds is only valid for Trail particles.");
+            }
+
             SizeOverLife = sizeOverLife ?? throw new ArgumentNullException(nameof(sizeOverLife));
             ColorOverLife = colorOverLife ?? throw new ArgumentNullException(nameof(colorOverLife));
 
@@ -492,7 +496,6 @@ namespace Ludots.Core.Presentation.Particles
             RenderMode = renderMode;
             BlendMode = blendMode;
             PrimitiveKind = primitiveKind;
-            OverflowPolicy = overflowPolicy;
             MaxParticles = maxParticles;
             Seed = seed;
             DurationSeconds = durationSeconds;
@@ -510,6 +513,7 @@ namespace Ludots.Core.Presentation.Particles
             WorldSpace = worldSpace;
             TextureSheet = textureSheet;
             StretchedLengthScale = stretchedLengthScale;
+            TrailLengthSeconds = trailLengthSeconds;
         }
 
         public PrefabVfxSpawnMode SpawnMode { get; }
@@ -521,8 +525,6 @@ namespace Ludots.Core.Presentation.Particles
         public ParticleBlendMode BlendMode { get; }
 
         public ParticlePrimitiveKind PrimitiveKind { get; }
-
-        public ParticleOverflowPolicy OverflowPolicy { get; }
 
         public int MaxParticles { get; }
 
@@ -562,16 +564,20 @@ namespace Ludots.Core.Presentation.Particles
 
         public float StretchedLengthScale { get; }
 
+        public float TrailLengthSeconds { get; }
+
         public bool IsValid =>
             MaxParticles > 0 &&
             Seed != 0 &&
             DurationSeconds > 0f &&
             EmissionRatePerSecond >= 0f &&
             BurstCount >= 0 &&
+            StartLife.Min > 0f &&
             SizeOverLife != null &&
             ColorOverLife != null &&
             Enum.IsDefined(typeof(ParticleBlendMode), BlendMode) &&
-            IsTextureContractValid();
+            IsTextureContractValid() &&
+            IsTrailContractValid();
 
         private bool IsTextureContractValid()
         {
@@ -585,6 +591,16 @@ namespace Ludots.Core.Presentation.Particles
             }
 
             return TextureSheet == null && StretchedLengthScale == 0f;
+        }
+
+        private bool IsTrailContractValid()
+        {
+            if (RenderMode == ParticleRenderMode.Trail)
+            {
+                return TrailLengthSeconds > 0f;
+            }
+
+            return TrailLengthSeconds == 0f;
         }
 
         private static void ValidatePositive(float value, string name)
