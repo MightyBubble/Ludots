@@ -838,13 +838,7 @@ namespace Ludots.Tests.Gas.Graph
             AssertMissingField(
                 RelationshipEffectGraphJson(
                     """{ "id": "setMetric", "op": "RelationshipSetMetric", "relationshipType": "SocialBond" }""",
-                    valueEdges: PairValueEdges("setMetric") + """
-                    ,
-                        { "from": "value", "fromPort": "value", "to": "setMetric", "toPort": "value" }
-                    """,
-                    extraNode: """,
-                    { "id": "value", "op": "ConstInt", "intValue": 1 }
-                    """),
+                    valueEdges: PairValueEdges("setMetric")),
                 "tests.effect.relationship-set-metric-missing-metric",
                 "setMetric",
                 "metric");
