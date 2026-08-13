@@ -44,7 +44,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             EntitySetQueryRuntime entityQueries,
             ControlDomainQuery controlDomains,
             KnowledgeProjectionResolver knowledgeProjections,
-            IClock clock)
+            IClock clock,
+            Ludots.Core.Presentation.TagDisplay.TagDisplayTableRegistry? tagDisplayTables = null)
         {
             World = world ?? throw new ArgumentNullException(nameof(world));
             SpatialQueries = spatialQueries ?? throw new ArgumentNullException(nameof(spatialQueries));
@@ -63,6 +64,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
             ControlDomains = controlDomains ?? throw new ArgumentNullException(nameof(controlDomains));
             KnowledgeProjections = knowledgeProjections ?? throw new ArgumentNullException(nameof(knowledgeProjections));
             Clock = clock ?? throw new ArgumentNullException(nameof(clock));
+            TagDisplayTables = tagDisplayTables;
         }
 
         public World World { get; }
@@ -82,6 +84,7 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
         public ControlDomainQuery ControlDomains { get; }
         public KnowledgeProjectionResolver KnowledgeProjections { get; }
         public IClock Clock { get; }
+        public Ludots.Core.Presentation.TagDisplay.TagDisplayTableRegistry? TagDisplayTables { get; }
     }
 
     public sealed class GasGraphRuntimeApi : IDerivedAttributeGraphRuntimeApi
@@ -177,7 +180,8 @@ namespace Ludots.Core.NodeLibraries.GASGraph.Host
                 services.ReasonRegistry,
                 services.TargetDispatchPresets,
                 services.EntityCollections,
-                services.EntityQueries);
+                services.EntityQueries,
+                services.TagDisplayTables);
             api.BindTopologyServices(
                 services.ControlDomains,
                 services.KnowledgeProjections,

@@ -24,8 +24,6 @@ public sealed class BlackboardNodeDriver : IGraphOpsNodeDriver
     public const float StrikeDamage = 18f;
     public const float MarkHealth = 40f;
 
-    private BlackboardLifecycleGraphApi? _lifecycleApi;
-    private Entity _markEffect;
     private int _powerKey;
     private int _stacksKey;
     private int _namedKey;
@@ -46,7 +44,6 @@ public sealed class BlackboardNodeDriver : IGraphOpsNodeDriver
             _stacksKey = ConfigKeyRegistry.Register(StacksKey);
             _namedKey = ConfigKeyRegistry.Register(NamedKey);
             SeedBlackboard(ctx);
-            SeedLifecycle(ctx);
             _seeded = true;
         }
 
@@ -55,8 +52,6 @@ public sealed class BlackboardNodeDriver : IGraphOpsNodeDriver
 
     public void Tick(GraphOpsNodeDriverContext ctx)
     {
-        _lifecycleApi?.ResetWave();
-
         int targetIndex = GraphOpsNodeActorBinding.FindRole(ctx.Vignette, "target");
         float healthBefore = targetIndex >= 0 ? ctx.ActorHealth[targetIndex] : 0f;
         GraphOpsNodeExecuteResult result = ctx.ExecuteFeaturedGraph();
@@ -104,43 +99,8 @@ public sealed class BlackboardNodeDriver : IGraphOpsNodeDriver
         }
         else if (ctx.Vignette.Op is "ReadBlackboardEntity")
         {
-            if (ctx.Target == Entity.Null)
-            {
-                throw new InvalidOperationException("ReadBlackboardEntity requires a target actor to seed onto the board.");
-            }
-
+            ctx.Target = GraphOpsNodeActorBinding.RequireRole(ctx, "target");
             entities.Set(_namedKey, ctx.Target);
-        }
-    }
-
-    private void SeedLifecycle(GraphOpsNodeDriverContext ctx)
-    {
-        if (ctx.Vignette.Op is not ("BeginLifecycleTransaction" or "InvokeBuiltin"))
-        {
-            return;
-        }
-
-        Entity cleanup = ctx.Target != Entity.Null ? ctx.Target : ctx.Caster;
-        _lifecycleApi = new BlackboardLifecycleGraphApi(ctx.SimWorld, cleanup);
-        ctx.RuntimeApiOverride = _lifecycleApi;
-
-        if (ctx.Vignette.Op is not "InvokeBuiltin")
-        {
-            return;
-        }
-
-        if (!ctx.SimWorld.Has<ActiveEffectContainer>(cleanup))
-        {
-            ctx.SimWorld.Add(cleanup, new ActiveEffectContainer());
-        }
-
-        _markEffect = ctx.SimWorld.Create(
-            new GameplayEffect(),
-            new EffectTemplateRef { TemplateId = EffectTemplateIdRegistry.Register("Effect.GraphOps.Mark") });
-        ref ActiveEffectContainer container = ref ctx.SimWorld.Get<ActiveEffectContainer>(cleanup);
-        if (!container.Add(_markEffect))
-        {
-            throw new InvalidOperationException("InvokeBuiltin seed failed to attach the mark effect.");
         }
     }
 
@@ -220,27 +180,29 @@ public sealed class BlackboardNodeDriver : IGraphOpsNodeDriver
 
                 break;
             case "BeginLifecycleTransaction":
-                if (_lifecycleApi == null || !_lifecycleApi.TransactionOpen)
+                if (ctx.BuiltinRuntime?.LifecycleTransaction != null)
                 {
-                    throw new InvalidOperationException("BeginLifecycleTransaction did not open a transaction.");
+                    throw new InvalidOperationException(
+                        "BeginLifecycleTransaction left a transaction open after production EndBuiltinInvocation.");
                 }
 
                 break;
             case "InvokeBuiltin":
-                if (_lifecycleApi == null || !_lifecycleApi.TransactionOpen || _lifecycleApi.BuiltinInvocations <= 0)
+                if (ctx.LastMaterializedTarget == Entity.Null || !ctx.SimWorld.IsAlive(ctx.LastMaterializedTarget))
                 {
-                    throw new InvalidOperationException("InvokeBuiltin did not run inside an open lifecycle transaction.");
-                }
-
-                if (ctx.SimWorld.IsAlive(_markEffect))
-                {
-                    throw new InvalidOperationException("InvokeBuiltin ClearActiveEffects left the mark effect alive.");
+                    throw new InvalidOperationException(
+                        "InvokeBuiltin gallery expected production MaterializeTemplate to leave a new body in the world.");
                 }
 
                 int markIndex = GraphOpsNodeActorBinding.FindRole(ctx.Vignette, "mark");
                 if (markIndex >= 0)
                 {
                     ctx.ActorHealth[markIndex] = 0f;
+                    GraphOpsNodeActorBinding.WriteHealth(
+                        ctx.SimWorld,
+                        ctx.SimActors[markIndex],
+                        0f,
+                        ctx.Vignette.Actors[markIndex].HealthMax);
                 }
 
                 break;
@@ -340,178 +302,5 @@ public sealed class BlackboardNodeDriver : IGraphOpsNodeDriver
         {
             throw new InvalidOperationException($"{ctx.Vignette.Op} returned 0 for {label}; missing config or unpatched blackboard key.");
         }
-    }
-}
-
-internal sealed class BlackboardLifecycleGraphApi : IGraphRuntimeApi
-{
-    private readonly World _world;
-    private readonly Entity _cleanupTarget;
-
-    public BlackboardLifecycleGraphApi(World world, Entity cleanupTarget)
-    {
-        _world = world;
-        _cleanupTarget = cleanupTarget;
-    }
-
-    public bool TransactionOpen { get; private set; }
-    public int TransactionStarts { get; private set; }
-    public int BuiltinInvocations { get; private set; }
-    public int LastBuiltinHandlerId { get; private set; }
-
-    public void ResetWave()
-    {
-        TransactionOpen = false;
-    }
-
-    public void BeginLifecycleTransaction()
-    {
-        TransactionOpen = true;
-        TransactionStarts++;
-    }
-
-    public void InvokeBuiltin(int builtinHandlerId)
-    {
-        if (!TransactionOpen)
-        {
-            throw new InvalidOperationException("InvokeBuiltin requires an open lifecycle transaction.");
-        }
-
-        BuiltinInvocations++;
-        LastBuiltinHandlerId = builtinHandlerId;
-        if (builtinHandlerId == (int)BuiltinHandlerId.ClearActiveEffects)
-        {
-            EntityLifecycleAtomicOps.ClearActiveEffects(_world, _cleanupTarget);
-            return;
-        }
-
-        if (builtinHandlerId == (int)BuiltinHandlerId.TransferStableId)
-        {
-            return;
-        }
-
-        throw new InvalidOperationException($"Blackboard gallery InvokeBuiltin does not handle handler id {builtinHandlerId}.");
-    }
-
-    public bool TryGetGridPos(Entity entity, out IntVector2 gridPos)
-    {
-        gridPos = default;
-        throw new InvalidOperationException("Lifecycle gallery adapter does not answer grid queries.");
-    }
-
-    public bool HasTag(Entity entity, int tagId)
-        => throw new InvalidOperationException("Lifecycle gallery adapter does not answer tags.");
-
-    public bool TryGetAttributeCurrent(Entity entity, int attributeId, out float value)
-    {
-        value = 0f;
-        throw new InvalidOperationException("Lifecycle gallery adapter does not read attributes.");
-    }
-
-    public SpatialQueryResult QueryRadius(IntVector2 centerCm, float radiusCm, Span<Entity> buffer)
-        => throw new InvalidOperationException("Lifecycle gallery adapter does not run spatial queries.");
-
-    public SpatialQueryResult QueryCone(IntVector2 originCm, int directionDeg, int halfAngleDeg, float rangeCm, Span<Entity> buffer)
-        => throw new InvalidOperationException("Lifecycle gallery adapter does not run spatial queries.");
-
-    public SpatialQueryResult QueryRectangle(IntVector2 centerCm, int halfWidthCm, int halfHeightCm, int rotationDeg, Span<Entity> buffer)
-        => throw new InvalidOperationException("Lifecycle gallery adapter does not run spatial queries.");
-
-    public SpatialQueryResult QueryLine(IntVector2 originCm, int directionDeg, int lengthCm, int halfWidthCm, Span<Entity> buffer)
-        => throw new InvalidOperationException("Lifecycle gallery adapter does not run spatial queries.");
-
-    public SpatialQueryResult QueryHexRange(IntVector2 centerCm, int hexRadius, Span<Entity> buffer)
-        => throw new InvalidOperationException("Lifecycle gallery adapter does not run spatial queries.");
-
-    public SpatialQueryResult QueryHexRing(IntVector2 centerCm, int hexRadius, Span<Entity> buffer)
-        => throw new InvalidOperationException("Lifecycle gallery adapter does not run spatial queries.");
-
-    public SpatialQueryResult QueryHexNeighbors(IntVector2 centerCm, Span<Entity> buffer)
-        => throw new InvalidOperationException("Lifecycle gallery adapter does not run spatial queries.");
-
-    public int GetTeamId(Entity entity)
-        => throw new InvalidOperationException("Lifecycle gallery adapter does not answer teams.");
-
-    public uint GetEntityLayerCategory(Entity entity)
-        => throw new InvalidOperationException("Lifecycle gallery adapter does not answer layers.");
-
-    public int GetRelationship(int teamA, int teamB)
-        => throw new InvalidOperationException("Lifecycle gallery adapter does not answer team relationships.");
-
-    public void ApplyEffectTemplate(Entity caster, Entity target, int templateId)
-        => throw new InvalidOperationException("Lifecycle gallery adapter does not apply effects.");
-
-    public void ApplyEffectTemplate(Entity caster, Entity target, int templateId, in EffectArgs args)
-        => throw new InvalidOperationException("Lifecycle gallery adapter does not apply effects.");
-
-    public void RemoveEffectTemplate(Entity target, int templateId)
-        => throw new InvalidOperationException("Lifecycle gallery adapter does not remove effects.");
-
-    public void ModifyAttributeAdd(Entity caster, Entity target, int attributeId, float delta)
-        => throw new InvalidOperationException("Lifecycle gallery adapter does not modify attributes.");
-
-    public void ModifyAttributeSet(Entity caster, Entity target, int attributeId, float value)
-        => throw new InvalidOperationException("Lifecycle gallery adapter does not modify attributes.");
-
-    public void SendEvent(Entity caster, Entity target, int eventTagId, float magnitude)
-        => throw new InvalidOperationException("Lifecycle gallery adapter does not send events.");
-
-    public bool TryReadBlackboardFloat(Entity entity, int keyId, out float value)
-    {
-        value = 0f;
-        throw new InvalidOperationException("Lifecycle gallery adapter does not read blackboard.");
-    }
-
-    public bool TryReadBlackboardInt(Entity entity, int keyId, out int value)
-    {
-        value = 0;
-        throw new InvalidOperationException("Lifecycle gallery adapter does not read blackboard.");
-    }
-
-    public bool TryReadBlackboardEntity(Entity entity, int keyId, out Entity value)
-    {
-        value = default;
-        throw new InvalidOperationException("Lifecycle gallery adapter does not read blackboard.");
-    }
-
-    public void WriteBlackboardFloat(Entity entity, int keyId, float value)
-        => throw new InvalidOperationException("Lifecycle gallery adapter does not write blackboard.");
-
-    public void WriteBlackboardInt(Entity entity, int keyId, int value)
-        => throw new InvalidOperationException("Lifecycle gallery adapter does not write blackboard.");
-
-    public void WriteBlackboardEntity(Entity entity, int keyId, Entity value)
-        => throw new InvalidOperationException("Lifecycle gallery adapter does not write blackboard.");
-
-    public bool TryLoadConfigFloat(int keyId, out float value)
-    {
-        value = 0f;
-        throw new InvalidOperationException("Lifecycle gallery adapter does not load config.");
-    }
-
-    public bool TryLoadConfigInt(int keyId, out int value)
-    {
-        value = 0;
-        throw new InvalidOperationException("Lifecycle gallery adapter does not load config.");
-    }
-
-    public bool TrySnapTargetToNearestInCollection(
-        Entity owner,
-        int collectionKeyId,
-        ref IntVector2 targetPosCm,
-        float maxDistanceCm,
-        out Entity snappedEntity)
-    {
-        snappedEntity = Entity.Null;
-        throw new InvalidOperationException("Lifecycle gallery adapter does not snap.");
-    }
-
-    public bool TrySnapTargetToNearestGraphEdge(
-        ref IntVector2 targetPosCm,
-        float searchRadiusCm,
-        out GraphEdgeProjection projection)
-    {
-        projection = default;
-        throw new InvalidOperationException("Lifecycle gallery adapter does not snap.");
     }
 }

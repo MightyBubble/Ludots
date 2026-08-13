@@ -6,6 +6,7 @@ using Ludots.Core.EntityCollections;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
+using Ludots.Core.Registry;
 
 namespace CapabilityStandardGraphOpsNodeGalleryMod.Runtime;
 
@@ -48,14 +49,12 @@ public static class GraphOpsNodeGraphCompiler
         }
 
         GraphProgramPackage package = compiled.Package.Value;
-        IGraphSymbolResolver resolver = symbolResolver ?? GraphOpsNodeGallerySymbolResolver.CreateStandalone();
+        IGraphSymbolResolver resolver = symbolResolver ?? GraphOpsNodeGallerySymbolResolver.CreateStandalone(assetsRoot);
         GraphProgramSymbolPatcher.Patch(
             package.Symbols,
             package.Program,
             resolver,
-            collections);
-
-        GraphKindOperationPolicy.RequireAllowed(kind, compiled.Program, GasGraphOpHandlerTable.Instance);
+            collections ?? CreateCompileTimeCollections());
 
         GraphKindOperationPolicy.RequireAllowed(kind, compiled.Program, GasGraphOpHandlerTable.Instance);
         _ = RequireFeaturedDest(compiled, vignette);
@@ -87,5 +86,14 @@ public static class GraphOpsNodeGraphCompiler
 
         throw new InvalidOperationException(
             $"Compiled graph for {vignette.Op} is missing featured node '{vignette.FeaturedNodeId}' emitting {featuredOp}.");
+    }
+
+    private static EntityCollectionStore CreateCompileTimeCollections()
+    {
+        var keys = new StringIntRegistry(capacity: 16, startId: 1, invalidId: 0, comparer: StringComparer.Ordinal);
+        var store = new EntityCollectionStore(keys);
+        _ = store.KeyRegistry.Register(GraphOpsNodeGalleryHost.SquadCollectionKey);
+        _ = store.KeyRegistry.Register(GraphOpsNodeGalleryHost.SnapCollectionKey);
+        return store;
     }
 }

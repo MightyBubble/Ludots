@@ -35,6 +35,18 @@
     }
   },
   {
+    "id": "Effect.GraphOps.Lifecycle",
+    "tags": ["Effect.GraphOps.Lifecycle"],
+    "presetType": "DeployConsumeSource",
+    "lifetime": "Instant",
+    "participatesInResponse": false,
+    "configParams": {
+      "_ep.targetEntityTemplate": { "type": "EntityTemplate", "value": "GraphOps.Ally" },
+      "_ep.lifecycleAttributeValueSource": { "type": "LifecycleAttributeValueSource", "value": "Current" },
+      "_ep.lifecycleAttribute0": { "type": "Attribute", "value": "Health" }
+    }
+  },
+  {
     "id": "Effect.GraphOps.Mark",
     "tags": ["Effect.GraphOps.Mark"],
     "presetType": "Buff",

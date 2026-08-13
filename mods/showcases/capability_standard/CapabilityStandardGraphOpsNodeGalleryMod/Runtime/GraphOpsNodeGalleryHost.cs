@@ -1,6 +1,5 @@
 using System.IO;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using Arch.Core;
 using CapabilityStandardGraphBehaviorCommon;
 using Ludots.Core.Association;
@@ -12,7 +11,9 @@ using Ludots.Core.EntityQueries;
 using Ludots.Core.Gameplay.Components;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Gameplay.GAS.Components;
+using Ludots.Core.Gameplay.GAS.Config;
 using Ludots.Core.Gameplay.GAS.Registry;
+using Ludots.Core.Gameplay.Lifecycle;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Spawning;
 using Ludots.Core.Gameplay.Teams;
@@ -23,6 +24,7 @@ using Ludots.Core.Mathematics;
 using Ludots.Core.Modding;
 using Ludots.Core.NodeLibraries.GASGraph;
 using Ludots.Core.NodeLibraries.GASGraph.Host;
+using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.TagDisplay;
 using Ludots.Core.Registry;
 using Ludots.Core.Scripting;
@@ -44,11 +46,17 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
     private bool _ownsWorld;
     private SpatialPartitionUpdateSystem? _spatialPartition;
     private ConfigPipeline? _pipeline;
+    private DataRegistry<EntityTemplate>? _templateRegistry;
+    private EffectTemplateRegistry _effectTemplates = null!;
+    private BuiltinHandlerRegistry _builtinHandlers = null!;
+    private BuiltinHandlerExecutionContext _builtinRuntime = null!;
+    private int _configEffectTemplateId;
 
     public World World => _world ?? throw new InvalidOperationException("Gallery host is not bootstrapped.");
     public GasGraphRuntimeApi Api { get; private set; } = null!;
     public MapLoadEntityIndex EntityIndex { get; private set; } = null!;
     public EntityTemplateKeyRegistry Templates { get; private set; } = null!;
+    public bool OwnsSimulationWorld => _ownsWorld;
     public RelationshipRuntime Relationships { get; private set; } = null!;
     public RelationshipTypeRegistry RelationshipTypes { get; private set; } = null!;
     public RelationshipMetricRegistry RelationshipMetrics { get; private set; } = null!;
@@ -99,7 +107,7 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
         ApplyVignetteState(vignette, actors);
         ApplyCollections(vignette, actors);
         ApplyLinks(vignette, actors);
-        BindConfigContext(assetsRoot, vignette);
+        ResolveConfigEffect(vignette);
 
         var ctx = new GraphOpsNodeDriverContext
         {
@@ -123,7 +131,12 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
             Coords = Coords,
             RelationshipTypes = RelationshipTypes,
             RelationshipMetrics = RelationshipMetrics,
-            RelationshipFlags = RelationshipFlags
+            RelationshipFlags = RelationshipFlags,
+            BuiltinHandlers = _builtinHandlers,
+            EffectTemplates = _effectTemplates,
+            BuiltinRuntime = _builtinRuntime,
+            ConfigEffectTemplateId = _configEffectTemplateId,
+            OwnsSimulationWorld = _ownsWorld
         };
         ctx.SimActors = actors;
         ctx.ActorHealth = new float[actors.Length];
@@ -135,25 +148,9 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
                 vignette.Actors[i].Health,
                 vignette.Actors[i].HealthMax);
             ctx.ActorHealth[i] = GraphOpsNodeActorBinding.ReadHealth(World, actors[i]);
-            if (string.Equals(vignette.Actors[i].Role, "caster", StringComparison.Ordinal))
-            {
-                ctx.Caster = actors[i];
-            }
-            else if (string.Equals(vignette.Actors[i].Role, "target", StringComparison.Ordinal) && ctx.Target == Entity.Null)
-            {
-                ctx.Target = actors[i];
-            }
-            else if (string.Equals(vignette.Actors[i].Role, "context", StringComparison.Ordinal))
-            {
-                ctx.TargetContext = actors[i];
-            }
         }
 
-        if (ctx.Caster == Entity.Null)
-        {
-            throw new InvalidOperationException($"Gallery '{vignette.Op}' requires a caster actor on the map.");
-        }
-
+        GraphOpsNodeActorBinding.BindRolesFromMap(ctx);
         ctx.Metrics.AgentCount = actors.Length;
         ctx.Metrics.Detail = vignette.Beat;
         return ctx;
@@ -188,35 +185,18 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
         RelationshipReasons = RequireEngineService(engine, CoreServiceKeys.RelationshipReasonRegistry);
         DispatchPresets = RequireEngineService(engine, CoreServiceKeys.TargetDispatchPresetRegistry);
         Collections = RequireEngineService(engine, CoreServiceKeys.EntityCollectionStore);
-        EntitySetQueryRuntime entityQueries = RequireEngineService(engine, CoreServiceKeys.EntitySetQueryRuntime);
-        ControlDomainQuery controlDomains = RequireEngineService(engine, CoreServiceKeys.ControlDomainQuery);
         Knowledge = RequireEngineService(engine, CoreServiceKeys.KnowledgeProjectionStore);
-        KnowledgeProjectionResolver knowledge = RequireEngineService(engine, CoreServiceKeys.KnowledgeProjectionResolver);
-        IClock clock = RequireEngineService(engine, CoreServiceKeys.Clock);
         Templates = RequireEngineService(engine, CoreServiceKeys.EntityTemplateKeyRegistry);
-        TagDisplay = engine.GetService(CoreServiceKeys.TagDisplayTableRegistry) ?? new TagDisplayTableRegistry();
+        _templateRegistry = engine.MapLoader.TemplateRegistry;
+        TagDisplay = RequireEngineService(engine, CoreServiceKeys.TagDisplayTableRegistry);
+        _effectTemplates = RequireEngineService(engine, CoreServiceKeys.EffectTemplateRegistry);
+        Api = RequireEngineService(engine, CoreServiceKeys.GasGraphRuntimeApi);
         EnsureGalleryRelationshipCatalog();
         EnsureDispatchPreset();
         RegisterCollectionKeys();
         int ownsType = RelationshipTypes.Register("Owns");
         Ownership = new OwnershipResolver(Relationships, ownsType);
-        Api = new GasGraphRuntimeApi(
-            World,
-            SpatialQueries,
-            Coords,
-            EventBus,
-            EffectRequests,
-            TagOps,
-            Relationships,
-            RelationshipTypes,
-            RelationshipMetrics,
-            RelationshipFlags,
-            RelationshipReasons,
-            DispatchPresets,
-            Collections,
-            entityQueries,
-            TagDisplay);
-        Api.BindTopologyServices(controlDomains, knowledge, clock);
+        BindLifecycleServices(RequireEngineService(engine, CoreServiceKeys.PresentationStableIdAllocator));
     }
 
     private void BootstrapHeadless(string assetsRoot, string mapId)
@@ -231,6 +211,7 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
         var mapLoader = new MapLoader(World, new WorldMap(), _pipeline);
         mapLoader.LoadTemplates(catalog);
         Templates = mapLoader.EntityTemplateKeys;
+        _templateRegistry = mapLoader.TemplateRegistry;
 
         MapConfig map = LoadMapConfig(assetsRoot, mapId);
         EntityIndex = mapLoader.LoadEntitiesAndIndex(map);
@@ -291,7 +272,17 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
         Knowledge = new KnowledgeProjectionStore();
         var knowledge = new KnowledgeProjectionResolver(Knowledge);
         var clock = new DiscreteClock();
-        Api = new GasGraphRuntimeApi(
+        EffectParamKeys.Initialize();
+        _effectTemplates = new EffectTemplateRegistry();
+        var effectLoader = new EffectTemplateLoader(
+            _pipeline,
+            _effectTemplates,
+            targetDispatchPresets: DispatchPresets,
+            entityTemplateKeys: Templates,
+            relationshipTypes: RelationshipTypes);
+        effectLoader.Load(catalog);
+        BindLifecycleServices(new PresentationStableIdAllocator());
+        Api = GasGraphRuntimeApi.CreateProduction(new GasGraphRuntimeProductionServices(
             World,
             SpatialQueries,
             Coords,
@@ -306,8 +297,10 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
             DispatchPresets,
             Collections,
             entityQueries,
-            TagDisplay);
-        Api.BindTopologyServices(controlDomains, knowledge, clock);
+            controlDomains,
+            knowledge,
+            clock,
+            TagDisplay));
         FinishResolver();
         TeamManager.SetRelationship(1, 2, TeamRelationship.Hostile);
         TeamManager.SetRelationship(2, 1, TeamRelationship.Hostile);
@@ -355,6 +348,7 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
             EnsureComponent(entity, new BlackboardIntBuffer());
             EnsureComponent(entity, new BlackboardEntityBuffer());
             EnsureComponent(entity, new DirtyFlags());
+            TagStateInstaller.EnsureInstalled(World, entity);
             if (string.Equals(actor.Role, "target", StringComparison.Ordinal) ||
                 string.Equals(actor.Role, "caster", StringComparison.Ordinal))
             {
@@ -471,107 +465,54 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
         }
     }
 
-    private void BindConfigContext(string assetsRoot, GraphOpsNodeVignette vignette)
+    private void ResolveConfigEffect(GraphOpsNodeVignette vignette)
     {
         string effectId = string.IsNullOrWhiteSpace(vignette.ConfigEffectId)
             ? DefaultConfigEffectId
             : vignette.ConfigEffectId;
-        string path = Path.Combine(assetsRoot, "GAS", "effects.json");
-        if (!File.Exists(path))
-        {
-            throw new FileNotFoundException("Gallery requires assets/GAS/effects.json for config-context ops.", path);
-        }
-
-        JsonArray root = JsonNode.Parse(File.ReadAllText(path))!.AsArray();
-        JsonObject? found = null;
-        for (int i = 0; i < root.Count; i++)
-        {
-            if (root[i] is JsonObject obj &&
-                obj.TryGetPropertyValue("id", out JsonNode? idNode) &&
-                string.Equals(idNode?.GetValue<string>(), effectId, StringComparison.Ordinal))
-            {
-                found = obj;
-                break;
-            }
-        }
-
-        if (found == null)
+        int templateId = EffectTemplateIdRegistry.GetId(effectId);
+        if (templateId <= 0 || !_effectTemplates.TryGet(templateId, out EffectTemplateData data))
         {
             throw new InvalidOperationException(
-                $"Gallery effect '{effectId}' is missing from assets/GAS/effects.json.");
+                $"Gallery effect '{effectId}' is not loaded. Headless hosts must run EffectTemplateLoader; playable hosts must use the engine registry.");
         }
 
-        if (!found.TryGetPropertyValue("configParams", out JsonNode? paramsNode) || paramsNode is not JsonObject paramObj)
+        if (data.ConfigParams.Count <= 0)
         {
             throw new InvalidOperationException($"Effect '{effectId}' requires configParams.");
         }
 
-        var config = new EffectConfigParams();
-        foreach (KeyValuePair<string, JsonNode?> pair in paramObj)
-        {
-            if (pair.Value is not JsonObject entry)
-            {
-                throw new InvalidOperationException($"Effect '{effectId}' configParams.{pair.Key} must be an object.");
-            }
+        _configEffectTemplateId = templateId;
+    }
 
-            string type = entry["type"]?.GetValue<string>()
-                ?? throw new InvalidOperationException($"Effect '{effectId}' configParams.{pair.Key}.type is required.");
-            JsonNode value = entry["value"]
-                ?? throw new InvalidOperationException($"Effect '{effectId}' configParams.{pair.Key}.value is required.");
-            int keyId = ConfigKeyRegistry.Register(pair.Key);
-            bool added = type switch
-            {
-                "Float" => config.TryAddFloat(keyId, value.GetValue<float>()),
-                "Int" => config.TryAddInt(keyId, value.GetValue<int>()),
-                "EffectTemplate" => config.TryAddEffectTemplateId(
-                    keyId,
-                    EffectTemplateIdRegistry.Register(value.GetValue<string>())),
-                _ => throw new InvalidOperationException(
-                    $"Effect '{effectId}' configParams.{pair.Key} has unsupported type '{type}'.")
-            };
-            if (!added)
-            {
-                throw new InvalidOperationException($"Effect '{effectId}' configParams exceeded capacity.");
-            }
-        }
-
-        if (config.Count > 0)
+    private void BindLifecycleServices(PresentationStableIdAllocator stableIds)
+    {
+        DataRegistry<EntityTemplate> templates = _templateRegistry
+            ?? throw new InvalidOperationException("Gallery host requires MapLoader entity templates before lifecycle services.");
+        _builtinHandlers = new BuiltinHandlerRegistry();
+        BuiltinHandlers.RegisterAll(_builtinHandlers);
+        var lifecycleServices = new EntityLifecycleRuntimeServices(
+            World,
+            templates,
+            Templates,
+            stableIds,
+            TagOps);
+        _builtinRuntime = new BuiltinHandlerExecutionContext
         {
-            Api.SetConfigContext(in config);
-        }
+            LifecycleServices = lifecycleServices,
+            TagOps = TagOps,
+            Relationships = Relationships,
+            SpatialQueries = SpatialQueries
+        };
     }
 
     private void LoadSandboxDisplayTable(string assetsRoot)
     {
-        string path = Path.Combine(assetsRoot, "GAS", "sandbox", "catalog.json");
-        if (!File.Exists(path) || TagDisplay.IsFrozen)
+        GraphOpsNodeGallerySymbolResolver.BindSandboxDisplayTable(TagDisplay, assetsRoot);
+        if (_ownsWorld && !TagDisplay.IsFrozen)
         {
-            return;
+            TagDisplay.Freeze();
         }
-
-        JsonSerializerOptions options = StrictJsonOptions.CreateCamelCase(includeFields: true);
-        SandboxDisplayCatalog? catalog = JsonSerializer.Deserialize<SandboxDisplayCatalog>(
-            File.ReadAllText(path),
-            options);
-        if (catalog == null)
-        {
-            throw new InvalidOperationException($"Sandbox catalog '{path}' deserialized to null.");
-        }
-
-        int burning = TagRegistry.Register(catalog.BurningTag);
-        int marked = TagRegistry.Register(catalog.MarkedTag);
-        var mask = new GameplayTagContainer();
-        mask.AddTag(burning);
-        mask.AddTag(marked);
-        TagDisplay.RegisterTable(
-            catalog.DisplayTable,
-            in mask,
-            new (int, int)[]
-            {
-                (burning, catalog.BurningTokenId),
-                (marked, catalog.MarkedTokenId)
-            });
-        TagDisplay.Freeze();
     }
 
     private void EnsureGalleryRelationshipCatalog()
@@ -671,14 +612,5 @@ internal sealed class GraphOpsNodeGalleryHost : IDisposable
         }
 
         return map;
-    }
-
-    private sealed class SandboxDisplayCatalog
-    {
-        public string DisplayTable { get; set; } = "";
-        public string BurningTag { get; set; } = "";
-        public string MarkedTag { get; set; } = "";
-        public int BurningTokenId { get; set; }
-        public int MarkedTokenId { get; set; }
     }
 }

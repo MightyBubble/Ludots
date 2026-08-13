@@ -2,13 +2,14 @@
   "op": "InvokeBuiltin",
   "driver": "blackboard",
   "title": "跑一个内置步骤",
-  "beat": "事务里调用内置步骤，玩家看到一次生成清理的可见变化。",
-  "detailTemplate": "内置步骤清掉了印记。",
+  "beat": "事务里先生成新身体，再清掉新身体上的残留效果。",
+  "detailTemplate": "内置步骤清掉了新身体上的印记。",
   "assertDetailContains": [
     "内置"
   ],
   "featuredNodeId": "invoke",
   "graphKind": "Effect",
+  "configEffectId": "Effect.GraphOps.Lifecycle",
   "actors": [
     {
       "id": "caster",

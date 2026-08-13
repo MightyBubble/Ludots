@@ -9,6 +9,7 @@
   ],
   "featuredNodeId": "beginTx",
   "graphKind": "Effect",
+  "configEffectId": "Effect.GraphOps.Lifecycle",
   "actors": [
     {
       "id": "caster",

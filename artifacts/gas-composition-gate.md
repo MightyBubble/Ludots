@@ -1,6 +1,6 @@
 ﻿## GAS Composition Gate — Self Review
 
-- **Task / Issue**: GraphOps per-op galleries — retire dual-world / C# spawn / fake config; people and graphs go through the production map + GAS graph path
+- **Task / Issue**: GraphOps per-op galleries — retire dual-world / C# spawn / fake config / fake lifecycle API; people, effects, and graphs go through MapLoader + EffectTemplateLoader + production GasGraphRuntimeApi
 - **Date**: 2026-08-13
 - **Agent / Author**: Cloud Agent
 
@@ -25,9 +25,9 @@
 ### 3. Reuse list
 
 - Handlers: `GasGraphOpHandlerTable`（已有 120 op）
-- Queues / Systems: `MapLoader`, `SpatialPartitionUpdateSystem`, `EffectRequestQueue`, `GameplayEventBus`
-- Resolvers / Registries: `EntityTemplateKeyRegistry`, `Relationship*Registry`, `TargetDispatchPresetRegistry`, `EntityCollectionStore`, `EffectTemplateRegistry`
-- Existing presets / graphs: per-op FrontDoor graphs unchanged
+- Queues / Systems: `MapLoader`, `SpatialPartitionUpdateSystem`, `EffectRequestQueue`, `GameplayEventBus`, `EffectTemplateLoader`, `BuiltinHandlers.RegisterAll`
+- Resolvers / Registries: `EntityTemplateKeyRegistry`, `Relationship*Registry`, `TargetDispatchPresetRegistry`, `EntityCollectionStore`, `EffectTemplateRegistry`, `TagDisplayTableRegistry`
+- Existing presets / graphs: per-op FrontDoor graphs; lifecycle galleries use `Effect.GraphOps.Lifecycle` DeployConsumeSource + `BeginBuiltinInvocation`
 
 ### 4. New Layer 0 ops (if any)
 
@@ -49,6 +49,9 @@ N/A
 - [x] 未新建与 spawn 平行的物化管线（删掉 `World.Create` 演员；HUD 不再当出生点）
 - [x] 未把 placement 校验塞进 lifecycle op
 - [x] 未添加「说不清的」默认 fallback
+- [x] 角色绑定用地图活人，不把 Arch `default(Entity)` 当成 `Entity.Null` 而漏绑目标
+- [x] 卸标记走 `GameplayEffectFactory` + 已加载的 effect 模板，不再 `World.Create` 半成品效果实体
+- [x] 图执行只用生产 `GasGraphRuntimeApi`，去掉 `RuntimeApiOverride`
 
 ### 8. Next variant test
 

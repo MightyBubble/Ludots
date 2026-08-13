@@ -47,8 +47,17 @@ public sealed class EventNodeDriver : IGraphOpsNodeDriver
         }
 
         TagRegistry.Register(DamageDealtTag);
-        _dispatchTemplateId = EffectTemplateIdRegistry.Register(DispatchStubEffect);
-        ctx.Api.BindLoadedGraphRuntime(BuildNavGraph());
+        _dispatchTemplateId = EffectTemplateIdRegistry.GetId(DispatchStubEffect);
+        if (_dispatchTemplateId <= 0)
+        {
+            throw new InvalidOperationException(
+                $"Event gallery requires '{DispatchStubEffect}' loaded through EffectTemplateLoader.");
+        }
+
+        if (ctx.OwnsSimulationWorld)
+        {
+            ctx.Api.BindLoadedGraphRuntime(BuildNavGraph());
+        }
         BindViewer(ctx);
         SeedOwnershipAndKnowledge(ctx);
         ctx.TargetPosCm = SeedTargetPos(ctx);

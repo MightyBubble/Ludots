@@ -61,6 +61,7 @@ using Ludots.Core.Presentation.Requests;
 using Ludots.Core.Presentation.Terrain;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Hud;
+using Ludots.Core.Presentation.TagDisplay;
 using Ludots.Core.Presentation.Instancing;
 using Ludots.Core.Presentation.Minimap;
 using Ludots.Core.Gameplay.GAS.Presentation;
@@ -936,6 +937,7 @@ namespace Ludots.Core.Engine
             var graphOutputValueStore = new GraphOutputValueStore(
                 graphOutputValueKeyRegistry,
                 gasRuntimeCapacity.GraphOutputValueCapacity);
+            var tagDisplayTables = new TagDisplayTableRegistry();
             var gasGraphProductionServices = new GasGraphRuntimeProductionServices(
                 World,
                 SpatialQueries,
@@ -953,7 +955,8 @@ namespace Ludots.Core.Engine
                 entitySetQueryRuntime,
                 controlDomainQuery,
                 knowledgeProjectionResolver,
-                clock);
+                clock,
+                tagDisplayTables);
             var gasGraphApi = GasGraphRuntimeApi.CreateProduction(gasGraphProductionServices);
             _gasGraphRuntimeApi = gasGraphApi;
             var graphReturnWriter = new GraphReturnWriter(
@@ -1451,6 +1454,7 @@ namespace Ludots.Core.Engine
             SetService(CoreServiceKeys.LiveEditModSaveService, liveEditModSaveService);
             SetService(CoreServiceKeys.GasGraphRuntimeProductionServices, gasGraphProductionServices);
             SetService(CoreServiceKeys.GasGraphRuntimeApi, gasGraphApi);
+            SetService(CoreServiceKeys.TagDisplayTableRegistry, tagDisplayTables);
             SetService(CoreServiceKeys.GraphOutputSchemaRegistry, graphOutputSchemas);
             SetService(CoreServiceKeys.GraphOutputValueKeyRegistry, graphOutputValueKeyRegistry);
             SetService(CoreServiceKeys.GraphOutputValueStore, graphOutputValueStore);

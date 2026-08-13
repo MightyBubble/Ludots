@@ -19,7 +19,7 @@ public sealed class SandboxNodeDriver : IGraphOpsNodeDriver
     private const float QueryRadiusMeters = 8f;
 
     private bool _seeded;
-    private SandboxGalleryCatalog _catalog = new();
+    private GraphOpsNodeGallerySandboxCatalog _catalog = new();
     private int _burningTagId;
     private int _markedTagId;
     private int _burningTokenId;
@@ -42,9 +42,12 @@ public sealed class SandboxNodeDriver : IGraphOpsNodeDriver
         WorldCmInt2 origin = ctx.SimWorld.Get<WorldPositionCm>(ctx.Caster).ToWorldCmInt2();
         ctx.TargetPosCm = new IntVector2(origin.X, origin.Y);
         ctx.HasTargetPosCm = true;
-        _queryRadiusMeters = ReadQueryRadiusMeters(ctx.Compiled.Program);
         _inRange = new bool[ctx.SimActors.Length];
-        ProbeRadiusOrFail(ctx);
+        if (ProgramHasQueryRadius(ctx.Compiled.Program))
+        {
+            _queryRadiusMeters = ReadQueryRadiusMeters(ctx.Compiled.Program);
+            ProbeRadiusOrFail(ctx);
+        }
         ctx.Metrics.AgentCount = ctx.SimActors.Length;
         ctx.Metrics.Detail = ctx.Vignette.Beat;
         _seeded = true;
@@ -120,7 +123,7 @@ public sealed class SandboxNodeDriver : IGraphOpsNodeDriver
         }
 
         JsonSerializerOptions options = StrictJsonOptions.CreateCamelCase(includeFields: true);
-        SandboxGalleryCatalog? catalog = JsonSerializer.Deserialize<SandboxGalleryCatalog>(
+        GraphOpsNodeGallerySandboxCatalog? catalog = JsonSerializer.Deserialize<GraphOpsNodeGallerySandboxCatalog>(
             File.ReadAllText(path),
             options);
         if (catalog == null)
@@ -158,12 +161,22 @@ public sealed class SandboxNodeDriver : IGraphOpsNodeDriver
         _markedTagId = TagRegistry.Register(_catalog.MarkedTag);
         _burningTokenId = _catalog.BurningTokenId;
         _markedTokenId = _catalog.MarkedTokenId;
-        _buffTemplateId = EffectTemplateIdRegistry.Register(_catalog.BuffEffect);
+        _buffTemplateId = EffectTemplateIdRegistry.GetId(_catalog.BuffEffect);
+        if (_buffTemplateId <= 0)
+        {
+            throw new InvalidOperationException(
+                $"Sandbox gallery requires effect '{_catalog.BuffEffect}' loaded through EffectTemplateLoader.");
+        }
+
         _buffKeyId = ConfigKeyRegistry.Register(_catalog.BuffBlackboardKey);
         _socialBondTypeId = ctx.RelationshipTypes.Register(_catalog.RelationshipType);
         _loyaltyMetricId = ctx.RelationshipMetrics.Register(_catalog.LoyaltyMetric, -100, 100, 0);
         _ = ctx.RelationshipFlags.Register(_catalog.TrustedFlag);
-        _ = EffectTemplateIdRegistry.Register(_catalog.MarkEffect);
+        if (EffectTemplateIdRegistry.GetId(_catalog.MarkEffect) <= 0)
+        {
+            throw new InvalidOperationException(
+                $"Sandbox gallery requires effect '{_catalog.MarkEffect}' loaded through EffectTemplateLoader.");
+        }
     }
 
     private void SeedTags(GraphOpsNodeDriverContext ctx)
@@ -179,7 +192,11 @@ public sealed class SandboxNodeDriver : IGraphOpsNodeDriver
             return;
         }
 
-        Entity tagged = ctx.Target != Entity.Null ? ctx.Target : ctx.Caster;
+        int targetIndex = GraphOpsNodeActorBinding.FindRole(ctx.Vignette, "target");
+        Entity tagged = targetIndex >= 0
+            ? GraphOpsNodeActorBinding.RequireRole(ctx, "target")
+            : ctx.Caster;
+        TagStateInstaller.EnsureInstalled(ctx.SimWorld, tagged);
         if (!ctx.TagOps!.AddTag(ctx.SimWorld, tagged, tagId))
         {
             throw new InvalidOperationException($"Sandbox {ctx.Vignette.Op} failed to seed status tag {tagId}.");
@@ -348,8 +365,9 @@ public sealed class SandboxNodeDriver : IGraphOpsNodeDriver
 
     private void RequireLink(GraphOpsNodeDriverContext ctx)
     {
-        if (ctx.Target == Entity.Null ||
-            !ctx.Relationships!.HasLink(ctx.Caster, ctx.Target, _socialBondTypeId))
+        Entity ally = GraphOpsNodeActorBinding.RequireRole(ctx, "target");
+        ctx.Target = ally;
+        if (!ctx.Relationships!.HasLink(ctx.Caster, ally, _socialBondTypeId))
         {
             throw new InvalidOperationException($"Sandbox {ctx.Vignette.Op} did not ensure a SocialBond link.");
         }
@@ -422,7 +440,7 @@ public sealed class SandboxNodeDriver : IGraphOpsNodeDriver
             }
         }
 
-        return QueryRadiusMeters;
+        throw new InvalidOperationException("Sandbox QueryRadius radius is missing from the compiled program.");
     }
 
     private static void RequireText(string? value, string field, string path)
@@ -431,22 +449,5 @@ public sealed class SandboxNodeDriver : IGraphOpsNodeDriver
         {
             throw new InvalidOperationException($"Sandbox catalog '{path}' missing {field}.");
         }
-    }
-
-    private sealed class SandboxGalleryCatalog
-    {
-        public string DisplayTable { get; set; } = "";
-        public string BurningTag { get; set; } = "";
-        public string MarkedTag { get; set; } = "";
-        public int BurningTokenId { get; set; }
-        public int MarkedTokenId { get; set; }
-        public string BurningCaption { get; set; } = "";
-        public string MarkedCaption { get; set; } = "";
-        public string MarkEffect { get; set; } = "";
-        public string BuffEffect { get; set; } = "";
-        public string BuffBlackboardKey { get; set; } = "";
-        public string RelationshipType { get; set; } = "";
-        public string LoyaltyMetric { get; set; } = "";
-        public string TrustedFlag { get; set; } = "";
     }
 }

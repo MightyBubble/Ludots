@@ -33,10 +33,68 @@ internal static class GraphOpsNodeActorBinding
             }
         }
 
+        BindRolesFromMap(ctx);
+    }
+
+    public static void BindRolesFromMap(GraphOpsNodeDriverContext ctx)
+    {
+        ctx.Caster = Entity.Null;
+        ctx.Target = Entity.Null;
+        ctx.TargetContext = Entity.Null;
+        ctx.Viewer = Entity.Null;
+        GraphOpsNodeActor[] actors = ctx.Vignette.Actors;
+        for (int i = 0; i < actors.Length; i++)
+        {
+            string role = actors[i].Role;
+            Entity entity = ctx.SimActors[i];
+            if (string.Equals(role, "caster", StringComparison.Ordinal))
+            {
+                ctx.Caster = entity;
+            }
+            else if (string.Equals(role, "target", StringComparison.Ordinal) && ctx.Target == Entity.Null)
+            {
+                ctx.Target = entity;
+            }
+            else if (string.Equals(role, "context", StringComparison.Ordinal))
+            {
+                ctx.TargetContext = entity;
+            }
+            else if (string.Equals(role, "viewer", StringComparison.Ordinal))
+            {
+                ctx.Viewer = entity;
+            }
+        }
+
         if (ctx.Caster == Entity.Null)
         {
             throw new InvalidOperationException($"Gallery '{ctx.Vignette.Op}' requires a caster actor on the map.");
         }
+
+        int targetIndex = FindRole(ctx.Vignette, "target");
+        if (targetIndex >= 0 &&
+            (ctx.Target == Entity.Null || !ctx.SimWorld.IsAlive(ctx.Target) || !ctx.Target.Equals(ctx.SimActors[targetIndex])))
+        {
+            throw new InvalidOperationException(
+                $"Gallery '{ctx.Vignette.Op}' target role is not bound to live map actor '{actors[targetIndex].Id}'.");
+        }
+    }
+
+    public static Entity RequireRole(GraphOpsNodeDriverContext ctx, string role)
+    {
+        int index = FindRole(ctx.Vignette, role);
+        if (index < 0)
+        {
+            throw new InvalidOperationException($"Gallery '{ctx.Vignette.Op}' requires a '{role}' actor on the map.");
+        }
+
+        Entity entity = ctx.SimActors[index];
+        if (!ctx.SimWorld.IsAlive(entity))
+        {
+            throw new InvalidOperationException(
+                $"Gallery '{ctx.Vignette.Op}' map actor '{ctx.Vignette.Actors[index].Id}' is not alive.");
+        }
+
+        return entity;
     }
 
     public static int FindRole(GraphOpsNodeVignette vignette, string role)

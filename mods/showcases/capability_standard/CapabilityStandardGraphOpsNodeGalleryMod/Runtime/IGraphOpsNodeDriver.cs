@@ -3,6 +3,7 @@ using CapabilityStandardGraphBehaviorCommon;
 using Ludots.Core.Association;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.GraphRuntime;
 using Ludots.Core.Knowledge;
@@ -45,11 +46,16 @@ public sealed class GraphOpsNodeDriverContext
     public OwnershipResolver? Ownership { get; set; }
     public KnowledgeProjectionStore? Knowledge { get; set; }
     public ISpatialCoordinateConverter? Coords { get; set; }
-    public Entity Caster { get; set; }
-    public Entity Target { get; set; }
-    public Entity TargetContext { get; set; }
-    public Entity Viewer { get; set; }
-    public IGraphRuntimeApi? RuntimeApiOverride { get; set; }
+    public BuiltinHandlerRegistry? BuiltinHandlers { get; set; }
+    public EffectTemplateRegistry? EffectTemplates { get; set; }
+    public BuiltinHandlerExecutionContext? BuiltinRuntime { get; set; }
+    public int ConfigEffectTemplateId { get; set; }
+    public bool OwnsSimulationWorld { get; set; }
+    public Entity LastMaterializedTarget { get; set; } = Entity.Null;
+    public Entity Caster { get; set; } = Entity.Null;
+    public Entity Target { get; set; } = Entity.Null;
+    public Entity TargetContext { get; set; } = Entity.Null;
+    public Entity Viewer { get; set; } = Entity.Null;
     public GraphProgramRegistry? Programs { get; set; }
     public GraphEventPayload EventPayload { get; set; }
     public IntVector2 TargetPosCm { get; set; }
@@ -66,6 +72,49 @@ public sealed class GraphOpsNodeDriverContext
     public Dictionary<string, string> CaptionValues { get; } = new(StringComparer.Ordinal);
 
     public GraphOpsNodeExecuteResult ExecuteFeaturedGraph()
+    {
+        if (BuiltinHandlers == null || EffectTemplates == null || BuiltinRuntime == null || ConfigEffectTemplateId <= 0)
+        {
+            throw new InvalidOperationException(
+                $"Gallery '{Vignette.Op}' requires production builtin invocation (handlers, templates, config effect).");
+        }
+
+        if (!EffectTemplates.TryGet(ConfigEffectTemplateId, out EffectTemplateData template))
+        {
+            throw new InvalidOperationException(
+                $"Gallery '{Vignette.Op}' config effect id {ConfigEffectTemplateId} is not registered.");
+        }
+
+        var effectContext = new EffectContext
+        {
+            Source = Caster,
+            Target = Target,
+            TargetContext = TargetContext != Entity.Null ? TargetContext : Target
+        };
+        Api.BeginBuiltinInvocation(
+            BuiltinHandlers,
+            EffectTemplates,
+            BuiltinRuntime,
+            ConfigEffectTemplateId,
+            in effectContext,
+            in template.ConfigParams);
+        try
+        {
+            GraphOpsNodeExecuteResult result = ExecuteFeaturedGraphBody();
+            if (BuiltinRuntime.LifecycleTransaction is { HasMaterializedTarget: true } transaction)
+            {
+                LastMaterializedTarget = transaction.Target;
+            }
+
+            return result;
+        }
+        finally
+        {
+            Api.EndBuiltinInvocation();
+        }
+    }
+
+    private GraphOpsNodeExecuteResult ExecuteFeaturedGraphBody()
     {
         Span<float> floats = stackalloc float[GraphVmLimits.MaxFloatRegisters];
         Span<int> ints = stackalloc int[GraphVmLimits.MaxIntRegisters];
@@ -102,7 +151,7 @@ public sealed class GraphOpsNodeDriverContext
             Viewer = Viewer,
             EventPayload = EventPayload,
             TargetPosCm = HasTargetPosCm ? TargetPosCm : default,
-            Api = RuntimeApiOverride ?? Api,
+            Api = Api,
             Programs = Programs,
             F = floats,
             I = ints,
@@ -135,11 +184,12 @@ public sealed class GraphOpsNodeDriverContext
         }
 
         TargetPosCm = state.TargetPosCm;
+        byte dest = FeaturedDest == byte.MaxValue ? (byte)0 : FeaturedDest;
         return new GraphOpsNodeExecuteResult(
-            floats[FeaturedDest],
-            ints[FeaturedDest],
-            bools[FeaturedDest] != 0,
-            entities[FeaturedDest],
+            dest < floats.Length ? floats[dest] : 0f,
+            dest < ints.Length ? ints[dest] : 0,
+            dest < bools.Length && bools[dest] != 0,
+            dest < entities.Length ? entities[dest] : Entity.Null,
             state.ReturnInt,
             state.TargetList.Count);
     }

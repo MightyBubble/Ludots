@@ -1,6 +1,10 @@
+using System.IO;
+using System.Text.Json;
 using CapabilityStandardGraphBehaviorCommon;
+using Ludots.Core.Config;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS;
+using Ludots.Core.Gameplay.GAS.Components;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.Gameplay.Relationships;
 using Ludots.Core.Gameplay.Spawning;
@@ -41,7 +45,7 @@ internal sealed class GraphOpsNodeGallerySymbolResolver : IGraphSymbolResolver
         _tagDisplay = tagDisplay;
     }
 
-    public static GraphOpsNodeGallerySymbolResolver CreateStandalone()
+    public static GraphOpsNodeGallerySymbolResolver CreateStandalone(string assetsRoot)
     {
         var templates = new EntityTemplateKeyRegistry();
         _ = templates.Register(GraphOpsVisualTemplates.Soldier);
@@ -70,7 +74,60 @@ internal sealed class GraphOpsNodeGallerySymbolResolver : IGraphSymbolResolver
                 PayloadTarget = ContextSlot.ResolvedEntity,
                 PayloadTargetContext = ContextSlot.OriginalSource
             });
-        return new GraphOpsNodeGallerySymbolResolver(templates, types, metrics, flags, reasons, presets);
+        var tagDisplay = new TagDisplayTableRegistry();
+        BindSandboxDisplayTable(tagDisplay, assetsRoot);
+        return new GraphOpsNodeGallerySymbolResolver(templates, types, metrics, flags, reasons, presets, tagDisplay);
+    }
+
+    internal static void BindSandboxDisplayTable(TagDisplayTableRegistry tagDisplay, string assetsRoot)
+    {
+        string path = Path.Combine(assetsRoot, "GAS", "sandbox", "catalog.json");
+        if (!File.Exists(path))
+        {
+            throw new FileNotFoundException("Gallery requires assets/GAS/sandbox/catalog.json.", path);
+        }
+
+        JsonSerializerOptions options = StrictJsonOptions.CreateCamelCase(includeFields: true);
+        GraphOpsNodeGallerySandboxCatalog? catalog = JsonSerializer.Deserialize<GraphOpsNodeGallerySandboxCatalog>(
+            File.ReadAllText(path),
+            options);
+        if (catalog == null || string.IsNullOrWhiteSpace(catalog.DisplayTable))
+        {
+            throw new InvalidOperationException($"Sandbox catalog '{path}' deserialized to null.");
+        }
+
+        if (tagDisplay.TryGetTableId(catalog.DisplayTable, out _))
+        {
+            return;
+        }
+
+        if (tagDisplay.IsFrozen)
+        {
+            throw new InvalidOperationException(
+                $"Tag display registry is frozen without table '{catalog.DisplayTable}'.");
+        }
+
+        if (string.IsNullOrWhiteSpace(catalog.BurningTag) ||
+            string.IsNullOrWhiteSpace(catalog.MarkedTag) ||
+            catalog.BurningTokenId <= 0 ||
+            catalog.MarkedTokenId <= 0)
+        {
+            throw new InvalidOperationException($"Sandbox catalog '{path}' is missing display table fields.");
+        }
+
+        int burning = TagRegistry.Register(catalog.BurningTag);
+        int marked = TagRegistry.Register(catalog.MarkedTag);
+        var mask = new GameplayTagContainer();
+        mask.AddTag(burning);
+        mask.AddTag(marked);
+        tagDisplay.RegisterTable(
+            catalog.DisplayTable,
+            in mask,
+            new (int, int)[]
+            {
+                (burning, catalog.BurningTokenId),
+                (marked, catalog.MarkedTokenId)
+            });
     }
 
     public int ResolveTag(string name) => TagRegistry.Register(name);

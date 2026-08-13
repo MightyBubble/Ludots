@@ -12,7 +12,7 @@ public sealed class AttrNodeDriver : IGraphOpsNodeDriver
     public const string MarkEffectId = "Effect.GraphOpsAttr.Mark";
 
     private int _markTemplateId;
-    private Entity _seededMark;
+    private Entity _seededMark = Entity.Null;
 
     public int PendingEffectRequests => ctxRequests?.Count ?? 0;
     private EffectRequestQueue? ctxRequests;
@@ -20,7 +20,12 @@ public sealed class AttrNodeDriver : IGraphOpsNodeDriver
     public void Seed(GraphOpsNodeDriverContext ctx)
     {
         GraphOpsNodeActorBinding.RequireMapActors(ctx);
-        _markTemplateId = EffectTemplateIdRegistry.Register(MarkEffectId);
+        _markTemplateId = EffectTemplateIdRegistry.GetId(MarkEffectId);
+        if (_markTemplateId <= 0)
+        {
+            throw new InvalidOperationException(
+                $"Attr gallery requires '{MarkEffectId}' loaded through EffectTemplateLoader.");
+        }
         ctxRequests = ctx.EffectRequests
             ?? throw new InvalidOperationException($"Attr gallery '{ctx.Vignette.Op}' requires EffectRequestQueue.");
         if (string.Equals(ctx.Vignette.Op, "RemoveEffectTemplate", StringComparison.Ordinal))
@@ -80,11 +85,8 @@ public sealed class AttrNodeDriver : IGraphOpsNodeDriver
 
     private void EnsureMarkOnTarget(GraphOpsNodeDriverContext ctx)
     {
-        if (ctx.Target == Entity.Null)
-        {
-            throw new InvalidOperationException("RemoveEffectTemplate requires a target actor.");
-        }
-
+        Entity target = GraphOpsNodeActorBinding.RequireRole(ctx, "target");
+        ctx.Target = target;
         if (_seededMark != Entity.Null &&
             ctx.SimWorld.IsAlive(_seededMark) &&
             ctx.SimWorld.Has<GameplayEffect>(_seededMark) &&
@@ -93,20 +95,37 @@ public sealed class AttrNodeDriver : IGraphOpsNodeDriver
             return;
         }
 
-        _seededMark = ctx.SimWorld.Create(
-            new GameplayEffect
-            {
-                LifetimeKind = EffectLifetimeKind.After,
-                ClockId = GasClockId.FixedFrame,
-                AggregatesModifiers = true
-            },
-            new EffectTemplateRef { TemplateId = _markTemplateId });
-        if (!ctx.SimWorld.Has<ActiveEffectContainer>(ctx.Target))
+        if (ctx.EffectTemplates == null || !ctx.EffectTemplates.TryGet(_markTemplateId, out EffectTemplateData mark))
         {
-            ctx.SimWorld.Add(ctx.Target, new ActiveEffectContainer());
+            throw new InvalidOperationException(
+                $"Attr gallery requires '{MarkEffectId}' in the production EffectTemplateRegistry.");
         }
 
-        ref ActiveEffectContainer container = ref ctx.SimWorld.Get<ActiveEffectContainer>(ctx.Target);
+        if (mark.LifetimeKind == EffectLifetimeKind.Instant)
+        {
+            throw new InvalidOperationException(
+                $"'{MarkEffectId}' cannot seed a lasting mark with Instant lifetime.");
+        }
+
+        _seededMark = GameplayEffectFactory.CreateEffect(
+            ctx.SimWorld,
+            ctx.Caster,
+            target,
+            mark.DurationTicks,
+            mark.LifetimeKind,
+            mark.PeriodTicks,
+            ctx.TargetContext,
+            mark.ClockId,
+            mark.ExpireCondition);
+        ctx.SimWorld.Add(_seededMark, new EffectTemplateRef { TemplateId = _markTemplateId });
+        ref GameplayEffect gameplayEffect = ref ctx.SimWorld.Get<GameplayEffect>(_seededMark);
+        gameplayEffect.AggregatesModifiers = mark.PresetType == EffectPresetType.Buff;
+        if (!ctx.SimWorld.Has<ActiveEffectContainer>(target))
+        {
+            ctx.SimWorld.Add(target, new ActiveEffectContainer());
+        }
+
+        ref ActiveEffectContainer container = ref ctx.SimWorld.Get<ActiveEffectContainer>(target);
         if (!container.Add(_seededMark))
         {
             throw new InvalidOperationException("Failed to attach gallery mark effect for RemoveEffectTemplate.");
@@ -155,16 +174,13 @@ public sealed class AttrNodeDriver : IGraphOpsNodeDriver
             throw new InvalidOperationException("LoadCaster gallery did not resolve the caster.");
         }
 
-        if (string.Equals(op, "LoadExplicitTarget", StringComparison.Ordinal) &&
-            (result.EntityValue != ctx.Target || targetAfter >= targetBefore))
+        if (string.Equals(op, "LoadExplicitTarget", StringComparison.Ordinal) ||
+            string.Equals(op, "LoadContextTarget", StringComparison.Ordinal))
         {
-            throw new InvalidOperationException("LoadExplicitTarget gallery must point at 木桩 and drop its health.");
-        }
-
-        if (string.Equals(op, "LoadContextTarget", StringComparison.Ordinal) &&
-            (result.EntityValue != ctx.Target || targetAfter >= targetBefore))
-        {
-            throw new InvalidOperationException("LoadContextTarget gallery must take 木桩 from the strike context and drop health.");
+            if (result.EntityValue != ctx.Target)
+            {
+                throw new InvalidOperationException($"{op} gallery must resolve 木桩.");
+            }
         }
 
         if (string.Equals(op, "LoadAttribute", StringComparison.Ordinal) && result.FloatValue <= 0f)
