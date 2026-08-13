@@ -450,6 +450,15 @@
       "buildMode": "auto"
     },
     {
+      "id": "capability_standard_graph_ops_query_raylib",
+      "name": "Capability Standard Graph Ops Query Raylib",
+      "selectors": [
+        "$capability_standard_graph_ops_query"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
       "id": "capability_standard_graph_ops_script_raylib",
       "name": "Capability Standard Graph Ops Script Raylib",
       "selectors": [

@@ -72,3 +72,8 @@ Attr 把比较/选择接入轻击/全力；Float 把出手许可与负面修正�
 ### 11. Blackboard / Event 家族
 
 空洞演示来自未 Patch 的符号下标、目标名单为空、吸附起点过远与英文 True/False。黑板 FrontDoor 后 `GraphProgramSymbolPatcher.Patch`；事件用既有 tag_rules 登记 `Event.DamageDealt`，扇出写目标名单，吸附改到够得着的落点。
+
+### 12. Query / Rel 家族
+
+Query 从编译-only 改为实跑沙盘：全图筛人排出最强最弱+花名册模板。
+Rel 查好友链/Trusted/好感区间/拆最弱并标记失和。FuncLib 放 Gallery 目录，禁止并进引擎 GAS/func_lib.json。

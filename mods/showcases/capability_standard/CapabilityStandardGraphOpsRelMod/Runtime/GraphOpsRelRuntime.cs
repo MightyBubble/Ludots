@@ -31,8 +31,10 @@ public sealed class GraphOpsRelRuntime
     private int _socialBondTypeId;
     private int _loyaltyMetricId;
     private int _trustedFlagId;
+    private int _estrangedFlagId;
     private Entity _player;
     private Entity[] _friends = Array.Empty<Entity>();
+    private byte[] _linked = Array.Empty<byte>();
     private readonly float[] _floats = new float[GraphVmLimits.MaxFloatRegisters];
     private readonly int[] _ints = new int[GraphVmLimits.MaxIntRegisters];
     private readonly byte[] _bools = new byte[GraphVmLimits.MaxBoolRegisters];
@@ -44,10 +46,14 @@ public sealed class GraphOpsRelRuntime
     private int _friendCount;
     private int _loyaltyTop;
     private int _loyaltyAverage;
+    private int _loyaltySum;
+    private int _loyaltyMin;
     private int _incomingCount;
     private int _mutualCount;
+    private int _betweenCount;
     private int _brokenLinks;
     private string _topFriendLabel = "-";
+    private string _weakFriendLabel = "-";
     private string _phase = "查好友链";
 
     public float PlayerX => 0f;
@@ -56,11 +62,16 @@ public sealed class GraphOpsRelRuntime
     public int FriendCount => _friendCount;
     public int LoyaltyTop => _loyaltyTop;
     public int LoyaltyAverage => _loyaltyAverage;
+    public int LoyaltySum => _loyaltySum;
+    public int LoyaltyMin => _loyaltyMin;
     public int IncomingCount => _incomingCount;
     public int MutualCount => _mutualCount;
+    public int BetweenCount => _betweenCount;
     public int BrokenLinks => _brokenLinks;
     public string TopFriendLabel => _topFriendLabel;
+    public string WeakFriendLabel => _weakFriendLabel;
     public string Phase => _phase;
+    public bool IsFriendLinked(int index) => (uint)index < (uint)_linked.Length && _linked[index] != 0;
     public GraphShowcaseMetrics Metrics { get; } = new() { ShowcaseId = "capability_standard_graph_ops_rel" };
 
     public void BindStandaloneFromModAssets()
@@ -102,7 +113,7 @@ public sealed class GraphOpsRelRuntime
             _socialBondTypeId = typeRegistry.Register("SocialBond");
             _loyaltyMetricId = metricRegistry.Register("Loyalty", -100, 100, 0);
             _trustedFlagId = flagRegistry.Register("Trusted");
-            _ = flagRegistry.Register("Estranged");
+            _estrangedFlagId = flagRegistry.Register("Estranged");
             PatchPrograms(new GraphOpsRelSymbolResolver(typeRegistry, metricRegistry, flagRegistry));
         }
         else
@@ -110,6 +121,7 @@ public sealed class GraphOpsRelRuntime
             _socialBondTypeId = typeRegistry.GetId("SocialBond");
             _loyaltyMetricId = metricRegistry.GetId("Loyalty");
             _trustedFlagId = flagRegistry.GetId("Trusted");
+            _estrangedFlagId = flagRegistry.GetId("Estranged");
         }
         _relationships = new RelationshipRuntime(
             _world,
@@ -133,11 +145,13 @@ public sealed class GraphOpsRelRuntime
 
         _player = _world.Create();
         _friends = new Entity[4];
+        _linked = new byte[4];
         int[] loyalty = [85, 62, 48, 35];
         for (int i = 0; i < _friends.Length; i++)
         {
             _friends[i] = _world.Create();
             _relationships.SetMetric(_player, _friends[i], _socialBondTypeId, _loyaltyMetricId, loyalty[i], reasonId: 0);
+            _linked[i] = 1;
             if (loyalty[i] >= 50)
             {
                 _relationships.SetFlag(_player, _friends[i], _socialBondTypeId, _trustedFlagId, true);
@@ -146,6 +160,10 @@ public sealed class GraphOpsRelRuntime
 
         _relationships.SetMetric(_friends[1], _player, _socialBondTypeId, _loyaltyMetricId, 70, reasonId: 0);
         _relationships.SetMetric(_friends[2], _player, _socialBondTypeId, _loyaltyMetricId, 55, reasonId: 0);
+        if (_trustedFlagId <= 0 || _estrangedFlagId <= 0)
+        {
+            throw new InvalidOperationException("Rel gallery requires Trusted and Estranged flags.");
+        }
 
         Metrics.AgentCount = _friends.Length;
         Metrics.Detail = "好友链就位：查好友链、按好感排序、必要时拆链。";
@@ -180,28 +198,44 @@ public sealed class GraphOpsRelRuntime
         _phase = "查好友链";
         ExecuteQuery(QueryFriendRankName, _player, _friends[0]);
         ExecuteQuery(QueryChainProbeName, _player, _friends[1]);
+        RefreshLinkedFlags();
         Metrics.Detail =
-            $"查好友链：{_friendCount}位好友；好感排序最高{_loyaltyTop}（{_topFriendLabel}），均值{_loyaltyAverage}；" +
-            $"入链{_incomingCount}、互链{_mutualCount}；已拆链{_brokenLinks}次";
+            $"查好友链：Trusted筛选后按好感排序，好感区间剩{_friendCount}人；" +
+            $"总和{_loyaltySum}、最高{_loyaltyTop}、最低{_loyaltyMin}、均值{_loyaltyAverage}；" +
+            $"最强{_topFriendLabel}、最弱好友{_weakFriendLabel}；入链{_incomingCount}、互链{_mutualCount}、双人链{_betweenCount}";
     }
 
     private void RunUnlinkWave()
     {
         _phase = "拆链";
+        string unlinked = "-";
         if (CountLinkedFriends() > 2)
         {
             Entity weakest = FindWeakestLinkedFriend();
             if (weakest != Entity.Null)
             {
+                bool hasLink = _relationships!.HasLink(_player, weakest, _socialBondTypeId);
+                int loyalty = _relationships.GetMetric(_player, weakest, _socialBondTypeId, _loyaltyMetricId);
+                if (!hasLink)
+                {
+                    throw new InvalidOperationException(
+                        $"Unlink wave selected {EntityLabel(weakest)} without a live SocialBond (loyalty={loyalty}).");
+                }
+
+                unlinked = EntityLabel(weakest);
                 ExecuteEffect(EffectBreakLinkName, _player, weakest);
                 _brokenLinks++;
             }
         }
 
         ExecuteQuery(QueryFriendRankName, _player, _friends[0]);
+        ExecuteQuery(QueryChainProbeName, _player, _friends[1]);
+        RefreshLinkedFlags();
+        string unlinkBeat = unlinked != "-"
+            ? $"确认仍有链后拆掉好感最低的{unlinked}并标记失和"
+            : $"确认仍有链，已标记失和{_brokenLinks}次";
         Metrics.Detail =
-            $"拆链：对{_topFriendLabel}执行拆链后剩{_friendCount}位；好感排序均值{_loyaltyAverage}；" +
-            $"查好友链入链{_incomingCount}、互链{_mutualCount}";
+            $"拆链：{unlinkBeat}；查好友链 Trusted筛选后按好感排序，好感区间剩{_friendCount}人，总和{_loyaltySum}、最低{_loyaltyMin}，最弱好友{_weakFriendLabel}；双人链{_betweenCount}";
     }
 
     private int CountLinkedFriends()
@@ -272,7 +306,6 @@ public sealed class GraphOpsRelRuntime
 
         var state = CreateState(caster, target);
         GasGraphOpHandlerTable.Execute(ref state, program, GasGraphOpHandlerTable.Instance);
-        _topFriendLabel = EntityLabel(target);
     }
 
     private GraphExecutionState CreateState(Entity caster, Entity explicitTarget)
@@ -303,7 +336,9 @@ public sealed class GraphOpsRelRuntime
         int sum = 0;
         int count = 0;
         int top = int.MinValue;
+        int min = int.MaxValue;
         Entity best = Entity.Null;
+        Entity weakest = Entity.Null;
         for (int i = 0; i < _friends.Length; i++)
         {
             Entity friend = _friends[i];
@@ -312,7 +347,17 @@ public sealed class GraphOpsRelRuntime
                 continue;
             }
 
+            if (!_relationships.HasFlag(_player, friend, _socialBondTypeId, _trustedFlagId))
+            {
+                continue;
+            }
+
             int loyalty = _relationships.GetMetric(_player, friend, _socialBondTypeId, _loyaltyMetricId);
+            if (loyalty < 30 || loyalty > 100)
+            {
+                continue;
+            }
+
             sum += loyalty;
             count++;
             if (loyalty > top)
@@ -320,11 +365,20 @@ public sealed class GraphOpsRelRuntime
                 top = loyalty;
                 best = friend;
             }
+
+            if (loyalty < min)
+            {
+                min = loyalty;
+                weakest = friend;
+            }
         }
 
+        _loyaltySum = sum;
         _loyaltyTop = count > 0 ? top : 0;
+        _loyaltyMin = count > 0 ? min : 0;
         _loyaltyAverage = count > 0 ? sum / count : 0;
         _topFriendLabel = EntityLabel(best);
+        _weakFriendLabel = EntityLabel(weakest);
     }
 
     private void RefreshChainProbeFromRuntime()
@@ -346,8 +400,18 @@ public sealed class GraphOpsRelRuntime
             }
         }
 
+        Span<Entity> between = stackalloc Entity[4];
         _incomingCount = incoming;
         _mutualCount = mutual;
+        _betweenCount = _relationships!.CollectBetweenPair(_player, _friends[1], _socialBondTypeId, between);
+    }
+
+    private void RefreshLinkedFlags()
+    {
+        for (int i = 0; i < _friends.Length; i++)
+        {
+            _linked[i] = _relationships!.HasLink(_player, _friends[i], _socialBondTypeId) ? (byte)1 : (byte)0;
+        }
     }
 
     private string EntityLabel(Entity entity)

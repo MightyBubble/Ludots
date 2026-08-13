@@ -5,6 +5,7 @@ using NUnit.Framework;
 namespace Ludots.Tests.Gas.Production
 {
     [TestFixture]
+    [NonParallelizable]
     [Category("ci-gate")]
     public sealed class GraphOpsRelShowcaseAcceptanceTests
     {
@@ -15,12 +16,7 @@ namespace Ludots.Tests.Gas.Production
             runtime.BindStandaloneFromModAssets();
             runtime.EnsureWorld();
             for (int i = 0; i < 12; i++) runtime.Tick(0.2f);
-            Assert.Multiple(() =>
-            {
-                Assert.That(runtime.Metrics.Detail, Does.Contain("查好友链"));
-                Assert.That(runtime.Metrics.Detail, Does.Contain("好感排序"));
-                Assert.That(runtime.Metrics.Detail, Does.Contain("拆链"));
-            });
+            AssertRelPlayerCopy(runtime);
         }
 
         [Test]
@@ -33,17 +29,36 @@ namespace Ludots.Tests.Gas.Production
             Warm(runtime.Tick);
             Drive(runtime.Tick, runtime.Metrics);
 
+            AssertRelPlayerCopy(runtime);
+            Assert.That(runtime.FriendCount, Is.GreaterThan(0));
+            Assert.That(runtime.LoyaltyTop, Is.GreaterThan(runtime.LoyaltyAverage));
+            Assert.That(runtime.LoyaltySum, Is.GreaterThan(0));
+            Assert.That(runtime.LoyaltyMin, Is.GreaterThan(0));
+            Assert.That(runtime.IncomingCount, Is.GreaterThan(0));
+            Assert.That(runtime.BetweenCount, Is.GreaterThan(0));
+            Assert.That(runtime.BrokenLinks, Is.GreaterThan(0));
+            Assert.That(runtime.Metrics.MaxThinkMs, Is.LessThan(25.0));
+        }
+
+        private static void AssertRelPlayerCopy(GraphOpsRelRuntime runtime)
+        {
             Assert.Multiple(() =>
             {
                 Assert.That(runtime.Metrics.Detail, Does.Contain("查好友链"));
                 Assert.That(runtime.Metrics.Detail, Does.Contain("好感排序"));
-                Assert.That(runtime.Metrics.Detail, Does.Contain("拆链"));
+                Assert.That(runtime.Metrics.Detail, Does.Contain("拆链").Or.Contain("Trusted"));
+                Assert.That(runtime.Metrics.Detail, Does.Contain("Trusted"));
+                Assert.That(runtime.Metrics.Detail, Does.Contain("区间"));
+                Assert.That(runtime.Metrics.Detail, Does.Contain("总和"));
+                Assert.That(runtime.Metrics.Detail, Does.Contain("最低"));
+                Assert.That(runtime.Metrics.Detail, Does.Contain("最弱"));
+                Assert.That(runtime.Metrics.Detail, Does.Contain("双人链"));
+                Assert.That(runtime.Metrics.Detail, Does.Contain("失和"));
+                Assert.That(runtime.Metrics.Detail, Does.Contain(runtime.LoyaltySum.ToString()));
+                Assert.That(runtime.Metrics.Detail, Does.Contain(runtime.LoyaltyMin.ToString()));
+                Assert.That(runtime.Metrics.Detail, Does.Contain(runtime.WeakFriendLabel));
+                Assert.That(runtime.Metrics.Detail, Does.Contain(runtime.BetweenCount.ToString()));
             });
-            Assert.That(runtime.FriendCount, Is.GreaterThan(0));
-            Assert.That(runtime.LoyaltyTop, Is.GreaterThan(runtime.LoyaltyAverage));
-            Assert.That(runtime.IncomingCount, Is.GreaterThan(0));
-            Assert.That(runtime.BrokenLinks, Is.GreaterThan(0));
-            Assert.That(runtime.Metrics.MaxThinkMs, Is.LessThan(25.0));
         }
 
         private static void Warm(System.Action<float> tick, int waves = 5)

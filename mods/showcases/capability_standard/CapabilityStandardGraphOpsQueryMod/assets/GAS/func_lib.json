@@ -1,0 +1,14 @@
+[
+  {
+    "name": "query.filter.pipeline",
+    "graph": "Graph.GraphOpsQuery.FilterPipeline",
+    "kind": "Query",
+    "purity": "pure"
+  },
+  {
+    "name": "query.from.collection",
+    "graph": "Graph.GraphOpsQuery.FromCollection",
+    "kind": "Query",
+    "purity": "pure"
+  }
+]

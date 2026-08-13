@@ -3071,14 +3071,14 @@
         "gallery"
       ],
       "binding": "capability_standard_graph_ops_query",
-      "preset": null,
+      "preset": "capability_standard_graph_ops_query_raylib",
       "docsPath": "gitbook/architecture/capability-standard-showcases.md",
       "readmePath": null,
       "acceptanceTest": "GraphOpsQueryShowcaseAcceptanceTests",
       "artifactDir": "artifacts/evidence/capability_standard_graph_ops_query",
       "screenshot": null,
       "status": "active",
-      "notes": "FrontDoor compile gallery; player-facing Detail."
+      "notes": "Playable query gallery: seed world, tick graphs, live Chinese Detail."
     },
     {
       "id": "capability_standard_graph_ops_rel",

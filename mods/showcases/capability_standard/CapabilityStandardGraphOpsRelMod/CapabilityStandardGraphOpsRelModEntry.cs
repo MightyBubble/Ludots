@@ -4,6 +4,7 @@ using CapabilityStandardGraphOpsRelMod.Runtime;
 using Ludots.Core.Engine;
 using Ludots.Core.Modding;
 using Ludots.Core.Presentation.DebugDraw;
+using Ludots.Core.Presentation.Hud;
 using Ludots.Core.Scripting;
 
 namespace CapabilityStandardGraphOpsRelMod;
@@ -25,8 +26,10 @@ public sealed class CapabilityStandardGraphOpsRelModEntry : IMod
             engine.SetService(MetricsKey, runtime.Metrics);
             var debugDraw = new DebugDrawCommandBuffer();
             engine.SetService(CoreServiceKeys.DebugDrawCommandBuffer, debugDraw);
+            ScreenOverlayBuffer overlay = engine.GetService(CoreServiceKeys.ScreenOverlayBuffer)
+                ?? throw new InvalidOperationException("Rel gallery requires ScreenOverlayBuffer.");
             engine.RegisterSystem(new GraphOpsRelSimulationSystem(engine, runtime), SystemGroup.PostMovement);
-            engine.RegisterPresentationSystem(new GraphOpsRelPresentationSystem(runtime, debugDraw));
+            engine.RegisterPresentationSystem(new GraphOpsRelPresentationSystem(runtime, debugDraw, overlay));
             return Task.CompletedTask;
         });
         context.OnEvent(GameEvents.MapLoaded, _ => { runtime.EnsureWorld(); return Task.CompletedTask; });
