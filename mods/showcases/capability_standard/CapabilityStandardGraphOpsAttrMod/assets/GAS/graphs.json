@@ -51,7 +51,8 @@
       { "id": "fullPower", "op": "ConstFloat", "floatValue": 13 },
       { "id": "writeFull", "op": "WriteSelfAttribute", "attribute": "LastHitPower" },
       { "id": "tallyFull", "op": "ConstFloat", "floatValue": 1 },
-      { "id": "countFull", "op": "ModifyAttributeAdd", "attribute": "StrikeTally" }
+      { "id": "countFull", "op": "ModifyAttributeAdd", "attribute": "StrikeTally" },
+      { "id": "done", "op": "LoadCaster" }
     ],
     "controlEdges": [
       { "from": "ctx", "fromPort": "next", "to": "caster" },
@@ -72,12 +73,14 @@
       { "from": "glancePower", "fromPort": "next", "to": "writeGlance" },
       { "from": "writeGlance", "fromPort": "next", "to": "tallyGlance" },
       { "from": "tallyGlance", "fromPort": "next", "to": "countGlance" },
+      { "from": "countGlance", "fromPort": "next", "to": "done" },
       { "from": "branch", "fromPort": "false", "to": "fullDmg" },
       { "from": "fullDmg", "fromPort": "next", "to": "applyFull" },
       { "from": "applyFull", "fromPort": "next", "to": "fullPower" },
       { "from": "fullPower", "fromPort": "next", "to": "writeFull" },
       { "from": "writeFull", "fromPort": "next", "to": "tallyFull" },
-      { "from": "tallyFull", "fromPort": "next", "to": "countFull" }
+      { "from": "tallyFull", "fromPort": "next", "to": "countFull" },
+      { "from": "countFull", "fromPort": "next", "to": "done" }
     ],
     "valueEdges": [
       { "from": "healthNow", "fromPort": "value", "to": "lowHp", "toPort": "a" },
