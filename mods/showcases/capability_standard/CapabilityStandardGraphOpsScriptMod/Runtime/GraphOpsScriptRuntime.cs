@@ -164,8 +164,8 @@ public sealed class GraphOpsScriptRuntime
                 ResetSlice();
                 break;
             case Phase.Patrol:
-                CompletedPatrolSteps = returnInt;
-                Metrics.Detail = $"巡逻完成：走完 {returnInt}/{PatrolLimit} 站。";
+                CompletedPatrolSteps = PatrolStep;
+                Metrics.Detail = $"巡逻完成：走完 {CompletedPatrolSteps}/{PatrolLimit} 站。";
                 _phase = Phase.ConstPipeline;
                 ResetSlice();
                 break;
