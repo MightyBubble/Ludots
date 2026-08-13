@@ -1,0 +1,55 @@
+{
+  "id": "showcase.graph_op.RelationshipSortByMetric",
+  "kind": "Query",
+  "entry": "source",
+  "nodes": [
+    {
+      "id": "source",
+      "op": "LoadCaster"
+    },
+    {
+      "id": "outgoing",
+      "op": "RelationshipQueryOutgoing",
+      "relationshipType": "SocialBond"
+    },
+    {
+      "id": "sort",
+      "op": "RelationshipSortByMetric",
+      "relationshipType": "SocialBond",
+      "metric": "Loyalty",
+      "descending": true
+    }
+  ],
+  "controlEdges": [
+    {
+      "from": "source",
+      "fromPort": "next",
+      "to": "outgoing"
+    },
+    {
+      "from": "outgoing",
+      "fromPort": "next",
+      "to": "sort"
+    }
+  ],
+  "valueEdges": [
+    {
+      "from": "source",
+      "fromPort": "value",
+      "to": "outgoing",
+      "toPort": "source"
+    },
+    {
+      "from": "outgoing",
+      "fromPort": "list",
+      "to": "sort",
+      "toPort": "list"
+    },
+    {
+      "from": "source",
+      "fromPort": "value",
+      "to": "sort",
+      "toPort": "source"
+    }
+  ]
+}

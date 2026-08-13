@@ -1,0 +1,64 @@
+{
+  "op": "RelationshipHasLink",
+  "driver": "rel",
+  "title": "我们有没有连着",
+  "beat": "有链显示连着，无链显示没连。",
+  "detailTemplate": "我们{status}。",
+  "assertDetailContains": [
+    "连着"
+  ],
+  "featuredNodeId": "has",
+  "graphKind": "Effect",
+  "actors": [
+    {
+      "id": "self",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "自己",
+      "x": 0,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "friend1",
+      "role": "friend",
+      "template": "GraphOps.Ally",
+      "name": "好友1",
+      "x": -4.3,
+      "y": 3.9,
+      "health": 85,
+      "healthMax": 100
+    },
+    {
+      "id": "friend2",
+      "role": "friend",
+      "template": "GraphOps.Ally",
+      "name": "好友2",
+      "x": -1.9,
+      "y": 4.1,
+      "health": 62,
+      "healthMax": 100
+    },
+    {
+      "id": "friend3",
+      "role": "friend",
+      "template": "GraphOps.Ally",
+      "name": "好友3",
+      "x": 1.1,
+      "y": 4.1,
+      "health": 48,
+      "healthMax": 100
+    },
+    {
+      "id": "friend4",
+      "role": "friend",
+      "template": "GraphOps.Ally",
+      "name": "好友4",
+      "x": 3.8,
+      "y": 3.9,
+      "health": 35,
+      "healthMax": 100
+    }
+  ]
+}

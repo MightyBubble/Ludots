@@ -1204,6 +1204,159 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_RelationshipAggAverageMetric_raylib",
+      "name": "Graph Op RelationshipAggAverageMetric Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_RelationshipAggAverageMetric"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_RelationshipAggMaxEntityByMetric_raylib",
+      "name": "Graph Op RelationshipAggMaxEntityByMetric Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_RelationshipAggMaxEntityByMetric"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_RelationshipAggMaxMetric_raylib",
+      "name": "Graph Op RelationshipAggMaxMetric Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_RelationshipAggMaxMetric"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_RelationshipAggMinEntityByMetric_raylib",
+      "name": "Graph Op RelationshipAggMinEntityByMetric Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_RelationshipAggMinEntityByMetric"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_RelationshipAggMinMetric_raylib",
+      "name": "Graph Op RelationshipAggMinMetric Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_RelationshipAggMinMetric"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_RelationshipAggSumMetric_raylib",
+      "name": "Graph Op RelationshipAggSumMetric Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_RelationshipAggSumMetric"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_RelationshipFilterFlag_raylib",
+      "name": "Graph Op RelationshipFilterFlag Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_RelationshipFilterFlag"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_RelationshipFilterMetricRange_raylib",
+      "name": "Graph Op RelationshipFilterMetricRange Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_RelationshipFilterMetricRange"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_RelationshipGetMetric_raylib",
+      "name": "Graph Op RelationshipGetMetric Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_RelationshipGetMetric"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_RelationshipHasLink_raylib",
+      "name": "Graph Op RelationshipHasLink Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_RelationshipHasLink"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_RelationshipQueryBetweenPair_raylib",
+      "name": "Graph Op RelationshipQueryBetweenPair Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_RelationshipQueryBetweenPair"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_RelationshipQueryIncoming_raylib",
+      "name": "Graph Op RelationshipQueryIncoming Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_RelationshipQueryIncoming"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_RelationshipQueryMutual_raylib",
+      "name": "Graph Op RelationshipQueryMutual Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_RelationshipQueryMutual"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_RelationshipQueryOutgoing_raylib",
+      "name": "Graph Op RelationshipQueryOutgoing Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_RelationshipQueryOutgoing"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_RelationshipRemoveLink_raylib",
+      "name": "Graph Op RelationshipRemoveLink Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_RelationshipRemoveLink"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_RelationshipSetFlag_raylib",
+      "name": "Graph Op RelationshipSetFlag Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_RelationshipSetFlag"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_RelationshipSortByMetric_raylib",
+      "name": "Graph Op RelationshipSortByMetric Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_RelationshipSortByMetric"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }

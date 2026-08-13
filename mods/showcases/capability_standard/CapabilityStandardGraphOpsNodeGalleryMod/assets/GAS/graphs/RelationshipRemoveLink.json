@@ -1,0 +1,46 @@
+{
+  "id": "showcase.graph_op.RelationshipRemoveLink",
+  "kind": "Effect",
+  "entry": "source",
+  "nodes": [
+    {
+      "id": "source",
+      "op": "LoadCaster"
+    },
+    {
+      "id": "target",
+      "op": "LoadExplicitTarget"
+    },
+    {
+      "id": "break",
+      "op": "RelationshipRemoveLink",
+      "relationshipType": "SocialBond"
+    }
+  ],
+  "controlEdges": [
+    {
+      "from": "source",
+      "fromPort": "next",
+      "to": "target"
+    },
+    {
+      "from": "target",
+      "fromPort": "next",
+      "to": "break"
+    }
+  ],
+  "valueEdges": [
+    {
+      "from": "source",
+      "fromPort": "value",
+      "to": "break",
+      "toPort": "source"
+    },
+    {
+      "from": "target",
+      "fromPort": "value",
+      "to": "break",
+      "toPort": "target"
+    }
+  ]
+}

@@ -1063,6 +1063,142 @@
         "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpTargetListGetEntryMod",
         "projectPath": "CapabilityStandardGraphOpTargetListGetEntryMod.csproj"
       }
+    },
+    {
+      "name": "capability_standard_graph_op_RelationshipAggAverageMetric",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpRelationshipAggAverageMetricEntryMod",
+        "projectPath": "CapabilityStandardGraphOpRelationshipAggAverageMetricEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_RelationshipAggMaxEntityByMetric",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpRelationshipAggMaxEntityByMetricEntryMod",
+        "projectPath": "CapabilityStandardGraphOpRelationshipAggMaxEntityByMetricEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_RelationshipAggMaxMetric",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpRelationshipAggMaxMetricEntryMod",
+        "projectPath": "CapabilityStandardGraphOpRelationshipAggMaxMetricEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_RelationshipAggMinEntityByMetric",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpRelationshipAggMinEntityByMetricEntryMod",
+        "projectPath": "CapabilityStandardGraphOpRelationshipAggMinEntityByMetricEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_RelationshipAggMinMetric",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpRelationshipAggMinMetricEntryMod",
+        "projectPath": "CapabilityStandardGraphOpRelationshipAggMinMetricEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_RelationshipAggSumMetric",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpRelationshipAggSumMetricEntryMod",
+        "projectPath": "CapabilityStandardGraphOpRelationshipAggSumMetricEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_RelationshipFilterFlag",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpRelationshipFilterFlagEntryMod",
+        "projectPath": "CapabilityStandardGraphOpRelationshipFilterFlagEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_RelationshipFilterMetricRange",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpRelationshipFilterMetricRangeEntryMod",
+        "projectPath": "CapabilityStandardGraphOpRelationshipFilterMetricRangeEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_RelationshipGetMetric",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpRelationshipGetMetricEntryMod",
+        "projectPath": "CapabilityStandardGraphOpRelationshipGetMetricEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_RelationshipHasLink",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpRelationshipHasLinkEntryMod",
+        "projectPath": "CapabilityStandardGraphOpRelationshipHasLinkEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_RelationshipQueryBetweenPair",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpRelationshipQueryBetweenPairEntryMod",
+        "projectPath": "CapabilityStandardGraphOpRelationshipQueryBetweenPairEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_RelationshipQueryIncoming",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpRelationshipQueryIncomingEntryMod",
+        "projectPath": "CapabilityStandardGraphOpRelationshipQueryIncomingEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_RelationshipQueryMutual",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpRelationshipQueryMutualEntryMod",
+        "projectPath": "CapabilityStandardGraphOpRelationshipQueryMutualEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_RelationshipQueryOutgoing",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpRelationshipQueryOutgoingEntryMod",
+        "projectPath": "CapabilityStandardGraphOpRelationshipQueryOutgoingEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_RelationshipRemoveLink",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpRelationshipRemoveLinkEntryMod",
+        "projectPath": "CapabilityStandardGraphOpRelationshipRemoveLinkEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_RelationshipSetFlag",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpRelationshipSetFlagEntryMod",
+        "projectPath": "CapabilityStandardGraphOpRelationshipSetFlagEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_RelationshipSortByMetric",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpRelationshipSortByMetricEntryMod",
+        "projectPath": "CapabilityStandardGraphOpRelationshipSortByMetricEntryMod.csproj"
+      }
     }
   ],
   "adapters": {

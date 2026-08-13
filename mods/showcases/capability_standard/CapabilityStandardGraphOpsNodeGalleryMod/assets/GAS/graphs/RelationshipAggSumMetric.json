@@ -1,0 +1,54 @@
+{
+  "id": "showcase.graph_op.RelationshipAggSumMetric",
+  "kind": "Query",
+  "entry": "source",
+  "nodes": [
+    {
+      "id": "source",
+      "op": "LoadCaster"
+    },
+    {
+      "id": "outgoing",
+      "op": "RelationshipQueryOutgoing",
+      "relationshipType": "SocialBond"
+    },
+    {
+      "id": "sum",
+      "op": "RelationshipAggSumMetric",
+      "relationshipType": "SocialBond",
+      "metric": "Loyalty"
+    }
+  ],
+  "controlEdges": [
+    {
+      "from": "source",
+      "fromPort": "next",
+      "to": "outgoing"
+    },
+    {
+      "from": "outgoing",
+      "fromPort": "next",
+      "to": "sum"
+    }
+  ],
+  "valueEdges": [
+    {
+      "from": "source",
+      "fromPort": "value",
+      "to": "outgoing",
+      "toPort": "source"
+    },
+    {
+      "from": "outgoing",
+      "fromPort": "list",
+      "to": "sum",
+      "toPort": "list"
+    },
+    {
+      "from": "source",
+      "fromPort": "value",
+      "to": "sum",
+      "toPort": "source"
+    }
+  ]
+}
