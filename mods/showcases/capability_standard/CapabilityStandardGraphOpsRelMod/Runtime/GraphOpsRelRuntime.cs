@@ -209,6 +209,7 @@ public sealed class GraphOpsRelRuntime
     {
         _phase = "拆链";
         string unlinked = "-";
+        int unlinkedLoyalty = 0;
         if (CountLinkedFriends() > 2)
         {
             Entity weakest = FindWeakestLinkedFriend();
@@ -223,6 +224,7 @@ public sealed class GraphOpsRelRuntime
                 }
 
                 unlinked = EntityLabel(weakest);
+                unlinkedLoyalty = loyalty;
                 ExecuteEffect(EffectBreakLinkName, _player, weakest);
                 _brokenLinks++;
             }
@@ -232,7 +234,7 @@ public sealed class GraphOpsRelRuntime
         ExecuteQuery(QueryChainProbeName, _player, _friends[1]);
         RefreshLinkedFlags();
         string unlinkBeat = unlinked != "-"
-            ? $"确认仍有链后拆掉好感最低的{unlinked}并标记失和"
+            ? $"确认仍有链（好感{unlinkedLoyalty}）后拆掉好感最低的{unlinked}并标记失和"
             : $"确认仍有链，已标记失和{_brokenLinks}次";
         Metrics.Detail =
             $"拆链：{unlinkBeat}；查好友链 Trusted筛选后按好感排序，好感区间剩{_friendCount}人，总和{_loyaltySum}、好感最低{_loyaltyMin}，最弱{_weakFriendLabel}；双人链{_betweenCount}";
