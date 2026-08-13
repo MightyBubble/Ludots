@@ -1122,6 +1122,19 @@ namespace PresenterBlacksmithShowcaseMod.Runtime
                 return;
             }
 
+            bool playerControlsOnly = IsInteractiveMode(engine) && !forcePanel;
+            if (playerControlsOnly)
+            {
+                if (_panelDirty)
+                {
+                    _cachedPanelState = BuildPanelState(engine, root);
+                    _panelDirty = false;
+                }
+
+                _panelController.MountOrSync(root, engine, _cachedPanelState);
+                return;
+            }
+
             float refreshInterval = largeCrowd
                 ? LargeCrowdPanelRefreshIntervalSeconds
                 : PanelRefreshIntervalSeconds;
@@ -1142,6 +1155,41 @@ namespace PresenterBlacksmithShowcaseMod.Runtime
             float viewportHeight = root.Height > 0f ? root.Height : 720f;
             float availableWidth = MathF.Max(220f, viewportWidth - 24f);
             float availableHeight = MathF.Max(220f, viewportHeight - 24f);
+            string lastChange = _changeFlashTimer > 0f && !string.IsNullOrWhiteSpace(_lastChangedField)
+                ? $"Last change: {_lastChangedField}"
+                : string.Empty;
+            bool playerControlsOnly = IsInteractiveMode(engine) && !ReadStrictBoolEnv(ForcePanelEnvKey);
+            if (playerControlsOnly)
+            {
+                return new PresenterBlacksmithShowcasePanelState(
+                    PanelLeft: 12f,
+                    PanelTop: 12f,
+                    PanelWidth: MathF.Min(280f, availableWidth),
+                    PanelHeight: 0f,
+                    ScrollHeight: 0f,
+                    Title: "Blacksmith Shop",
+                    Subtitle: "Watch the blacksmith work. Use the buttons to start or stop, switch day and night, or tear the shop down.",
+                    ViewportLabel: $"{(int)viewportWidth} x {(int)viewportHeight}",
+                    SceneSummary: string.Empty,
+                    ScatterSummary: string.Empty,
+                    LastChange: lastChange,
+                    WorkingActive: _isWorking,
+                    NightActive: _isNight,
+                    RootDestroyed: _destroyed,
+                    RegionIndex: _regionIndex,
+                    DurabilityPreset: 0,
+                    ScatterTarget: _scatterTargetTotal,
+                    ScatterAppliedTotal: _scatterRequestedTotal,
+                    ScatterMin: ScatterMinTotal,
+                    ScatterMax: ResolveScatterUiMax(engine),
+                    BenchmarkSummary: string.Empty,
+                    CapacitySummary: string.Empty,
+                    ChecklistLines: Array.Empty<string>(),
+                    DiagnosticLines: Array.Empty<string>(),
+                    PresenterLines: Array.Empty<string>(),
+                    PlayerControlsOnly: true);
+            }
+
             float panelWidth = viewportWidth < 960f
                 ? availableWidth
                 : MathF.Min(480f, MathF.Max(360f, viewportWidth * 0.31f));
@@ -1177,9 +1225,6 @@ namespace PresenterBlacksmithShowcaseMod.Runtime
                 : $"Scatter total {totalBlacksmiths} (target {_scatterRequestedTotal}, extras {scatterExtras}, queued {_lastQueuedScatterExtras}, seed {_lastScatterSeed})";
             string benchmarkSummary = BuildBenchmarkSummary(engine, totalBlacksmiths, renderMetrics);
             string capacitySummary = BuildCapacitySummary(capacityMetrics, totalBlacksmiths);
-            string lastChange = _changeFlashTimer > 0f && !string.IsNullOrWhiteSpace(_lastChangedField)
-                ? $"Last change: {_lastChangedField}"
-                : string.Empty;
 
             string[] checklistLines =
             {
@@ -1261,7 +1306,8 @@ namespace PresenterBlacksmithShowcaseMod.Runtime
                 CapacitySummary: capacitySummary,
                 ChecklistLines: checklistLines,
                 DiagnosticLines: diagnosticLines,
-                PresenterLines: presenterMetrics.Lines);
+                PresenterLines: presenterMetrics.Lines,
+                PlayerControlsOnly: false);
         }
 
         private PresenterMetrics CapturePresenterMetrics(GameEngine engine)

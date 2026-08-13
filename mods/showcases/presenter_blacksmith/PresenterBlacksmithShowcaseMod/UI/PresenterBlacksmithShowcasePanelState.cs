@@ -25,7 +25,8 @@ namespace PresenterBlacksmithShowcaseMod.UI
         string CapacitySummary,
         string[] ChecklistLines,
         string[] DiagnosticLines,
-        string[] PresenterLines)
+        string[] PresenterLines,
+        bool PlayerControlsOnly)
     {
         public static readonly PresenterBlacksmithShowcasePanelState Empty = new(
             PanelLeft: 12f,
@@ -52,6 +53,7 @@ namespace PresenterBlacksmithShowcaseMod.UI
             CapacitySummary: "Capacity: unavailable",
             ChecklistLines: new[] { "WAIT base tree: showcase map is not active." },
             DiagnosticLines: new[] { "Root entity: (missing)" },
-            PresenterLines: new[] { "(no presenter instances)" });
+            PresenterLines: new[] { "(no presenter instances)" },
+            PlayerControlsOnly: false);
     }
 }

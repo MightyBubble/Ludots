@@ -68,6 +68,8 @@ public sealed class UiSurfaceHost : IUiSurfaceHost
 		entry.Subscription?.Dispose();
 		entry.Contribution = contribution;
 		entry.Subscription = contribution.SubscribeInvalidated(RequestRebuild);
+		// Mount / replace the contribution tree. Content ticks use Invalidate + SetState;
+		// calling Publish every frame forces a full retained-scene rebuild.
 		RebuildNow();
 	}
 

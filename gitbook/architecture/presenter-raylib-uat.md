@@ -363,7 +363,36 @@ blacksmith_root
 
 ## 13 铁匠铺完整 UAT
 
+可玩地图默认只给玩家一条左侧操作条：开工/停工、白天/夜晚、拆铺/重建。FPS、散点、诊断树是工程师验收材料，不进默认画面；需要完整面板时设 `LUDOTS_BLACKSMITH_FORCE_PANEL=true`。
+
 ### 13.1 玩家体验 UAT
+
+```gherkin
+Feature: 铁匠铺左侧操作条
+  新玩家走进铁匠铺，左边只有开工、昼夜、拆铺三个操作，没有一堆数字和诊断。
+
+  Scenario: 默认只看到玩家按钮
+    Given 玩家打开铁匠铺演示地图
+    Then 左侧出现「Start work」「Make it night」「Tear down shop」「Rebuild shop」
+    And 看不到「Scatter Benchmark」「Diagnostics」「Presenter Tree」
+
+  Scenario: 点开工，铁匠开始干活
+    Given 铺子还在、白天、没人干活
+    When 玩家点「Start work」
+    Then 烟囱冒烟，工人进入工作态
+    And 按钮变成「Stop work」
+
+  Scenario: 点拆铺，整座铺子消失
+    Given 铺子还在
+    When 玩家点「Tear down shop」
+    Then 工房、烟、工人全部从画面消失
+    And 按钮变成可点的「Rebuild shop」
+
+  Scenario: 工程师要看完整诊断
+    Given 环境变量 LUDOTS_BLACKSMITH_FORCE_PANEL 设为 true
+    When 玩家打开铁匠铺演示地图
+    Then 左侧出现完整验收面板，包含散点、诊断和 Presenter 树
+```
 
 | 用例 | 操作 | 预期画面 | 验收标准 |
 |------|------|---------|---------|
