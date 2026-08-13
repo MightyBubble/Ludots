@@ -688,6 +688,15 @@ namespace Ludots.Core.Presentation.Systems
 
         private Vector3 ResolveScale(Entity entity, in AssetBindingConfig asset, Vector3 presenterWorldScale)
         {
+            if (asset.AssetKind == AssetKind.Decal)
+            {
+                Vector3 decalScale = presenterWorldScale * asset.LocalScale;
+                if (asset.ScaleParamKey >= 0)
+                    decalScale *= RequireFloatParam(entity, asset.ScaleParamKey, "AssetBinding.scaleParamKey");
+                _ = ProjectedDecalVolume.FromVisualScale(decalScale);
+                return decalScale;
+            }
+
             Vector3 scale = presenterWorldScale;
             scale = scale == Vector3.Zero ? Vector3.One : scale;
             scale *= asset.LocalScale == Vector3.Zero ? Vector3.One : asset.LocalScale;

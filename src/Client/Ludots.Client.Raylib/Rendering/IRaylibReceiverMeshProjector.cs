@@ -3,10 +3,10 @@ using Raylib_cs;
 namespace Ludots.Client.Raylib.Rendering
 {
     /// <summary>
-    /// Re-draws cached terrain GPU meshes that overlap a world-space AABB.
-    /// Used by clip-volume projected Decals (same triangles as the opaque heightfield pass).
+    /// Re-draws GPU meshes that overlap a world-space AABB so a projected Decal can paint them.
+    /// Visual-heightmap chunks are the first implementation; VertexMap and prop receivers bind the same contract.
     /// </summary>
-    public interface IRaylibTerrainMeshProjector
+    public interface IRaylibReceiverMeshProjector
     {
         int DrawMeshesOverlappingAabbMeters(
             float minX,

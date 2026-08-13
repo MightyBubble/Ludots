@@ -278,7 +278,7 @@ namespace Ludots.Adapter.Raylib
                 using var fieldRenderPresenter = new RaylibFieldRenderPresenter();
                 PresentationMaterialRegistry? materials = engine.GetService(CoreServiceKeys.PresentationMaterialRegistry);
                 using var primitiveRenderer = new RaylibPrimitiveRenderer(RaylibPrimitiveRenderMode.Instanced, engine.VFS, materials);
-                primitiveRenderer.BindTerrainMeshProjector(visualHeightmapRenderer);
+                primitiveRenderer.BindReceiverMeshProjector(visualHeightmapRenderer);
                 using var skyEnvironment = new RaylibSkyEnvironment(engine.VFS, engine.ConfigPipeline);
                 skyEnvironment.LoadDescriptors(engine.ConfigCatalog, engine.ConfigConflictReport);
                 using var waterPass = new RaylibWaterPass(engine.VFS, engine.ConfigPipeline);

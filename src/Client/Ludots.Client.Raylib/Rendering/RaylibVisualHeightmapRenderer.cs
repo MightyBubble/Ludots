@@ -15,7 +15,7 @@ using Rl = Raylib_cs.Raylib;
 
 namespace Ludots.Client.Raylib.Rendering
 {
-    public sealed unsafe class RaylibVisualHeightmapRenderer : IDisposable, IRaylibTerrainMeshProjector
+    public sealed unsafe class RaylibVisualHeightmapRenderer : IDisposable, IRaylibReceiverMeshProjector
     {
         public const string DefaultAlbedoRelativePath = "Presentation/terrain_albedo_environments.json";
         public const string BackendIdRaylib = "raylib";

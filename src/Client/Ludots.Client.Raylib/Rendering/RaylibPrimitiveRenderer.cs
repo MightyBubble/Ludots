@@ -40,7 +40,7 @@ namespace Ludots.Client.Raylib.Rendering
         private Mesh _cubeMesh;
         private Mesh _sphereMesh;
         private Mesh _vfxBillboardMesh;
-        private IRaylibTerrainMeshProjector? _terrainMeshProjector;
+        private IRaylibReceiverMeshProjector? _receiverMeshProjector;
         private IVisualHeightmap? _frameVisualHeightmap;
         private Shader _shader;
         private Shader _skinningShader;
@@ -58,9 +58,6 @@ namespace Ludots.Client.Raylib.Rendering
         private int _locDecalProjectWorldToDecal;
         private int _locDecalProjectAlphaCutoff;
         private int _locDecalProjectMinReceiverNDotUp;
-        private const float DecalProjectionThicknessMinMeters = 8f;
-        private const float DecalProjectionThicknessSizeFactor = 1.25f;
-        private const float DecalProjectionHeightPaddingMeters = 3f;
         private const int DecalProjectionHeightSampleSegments = 6;
         private const float DecalMinReceiverNDotUp = 0.05f;
         private readonly RaylibEffectShaderRegistry _effectShaders = new RaylibEffectShaderRegistry();
@@ -152,9 +149,22 @@ namespace Ludots.Client.Raylib.Rendering
             }
         }
 
-        public void BindTerrainMeshProjector(IRaylibTerrainMeshProjector? projector)
+        public void BindReceiverMeshProjector(IRaylibReceiverMeshProjector projector)
         {
-            _terrainMeshProjector = projector;
+            _receiverMeshProjector = projector ?? throw new ArgumentNullException(nameof(projector));
+        }
+
+        internal static IRaylibReceiverMeshProjector RequireBoundReceiverMeshProjector(
+            IRaylibReceiverMeshProjector? projector,
+            int stableId)
+        {
+            if (projector == null)
+            {
+                throw new InvalidOperationException(
+                    $"{nameof(RaylibPrimitiveRenderer)} Decal stableId={stableId} requires {nameof(BindReceiverMeshProjector)} before projected Decals can paint receiver meshes.");
+            }
+
+            return projector;
         }
 
         public RaylibPrimitiveRenderer(
@@ -435,17 +445,22 @@ namespace Ludots.Client.Raylib.Rendering
                 return false;
             }
 
+            IRaylibReceiverMeshProjector projector = RequireBoundReceiverMeshProjector(
+                _receiverMeshProjector,
+                item.StableId);
+            Vector3 scaled = item.Scale * scaleMul;
+            ProjectedDecalVolume volume = ProjectedDecalVolume.FromVisualScale(scaled);
             EnsureInitialized();
             LastDecalVisualCount++;
             TotalDecalVisualCount++;
             DrawTexturedDecal(
                 item.Position,
                 item.Rotation,
-                item.Scale * scaleMul,
+                volume,
                 item.Color,
                 item.MaterialId,
-                size: Vector2.One,
-                stableId: item.StableId);
+                item.StableId,
+                projector);
             return true;
         }
 
@@ -854,24 +869,28 @@ namespace Ludots.Client.Raylib.Rendering
 
         private void DrawDecalVisual(in PrefabFinalizedVisual visual)
         {
+            Vector3 foldedScale = new Vector3(
+                MathF.Abs(visual.Size.X) * visual.Scale.X,
+                visual.Scale.Y,
+                MathF.Abs(visual.Size.Y) * visual.Scale.Z);
             DrawTexturedDecal(
                 visual.Position,
                 visual.Rotation,
-                visual.Scale,
+                ProjectedDecalVolume.FromVisualScale(foldedScale),
                 visual.Color,
                 visual.MaterialId,
-                visual.Size,
-                visual.StableId);
+                visual.StableId,
+                RequireBoundReceiverMeshProjector(_receiverMeshProjector, visual.StableId));
         }
 
         private void DrawTexturedDecal(
             in Vector3 position,
             in Quaternion rotation,
-            in Vector3 scale,
+            in ProjectedDecalVolume volume,
             in Vector4 color,
             int materialId,
-            in Vector2 size,
-            int stableId)
+            int stableId,
+            IRaylibReceiverMeshProjector projector)
         {
             EnsureInitialized();
             if (materialId <= 0)
@@ -886,12 +905,6 @@ namespace Ludots.Client.Raylib.Rendering
                     $"{nameof(RaylibPrimitiveRenderer)} Decal stableId={stableId} materialId={materialId} requires {nameof(RaylibMaterialHostBinder)}.");
             }
 
-            if (_terrainMeshProjector == null)
-            {
-                throw new InvalidOperationException(
-                    $"{nameof(RaylibPrimitiveRenderer)} Decal stableId={stableId} requires {nameof(BindTerrainMeshProjector)} before projected Decals can paint terrain meshes.");
-            }
-
             EnsureDecalResources();
             if (!_materialHostBinder.TryApplyHostMaps(ref _decalMaterial, materialId))
             {
@@ -899,21 +912,16 @@ namespace Ludots.Client.Raylib.Rendering
                     $"{nameof(RaylibPrimitiveRenderer)} Decal stableId={stableId} materialId={materialId} has no host albedo binding in Presentation/host_assets.json.");
             }
 
-            Vector2 resolvedSize = ResolveDecalSize(size, scale);
             float yaw = ExtractYawRad(rotation);
             FitDecalProjectorVolume(
                 position,
                 yaw,
-                resolvedSize,
+                volume,
                 stableId,
-                out Vector3 projectorCenter,
-                out float thickness);
-            if (!TryBuildDecalWorldToLocal(
+                out Vector3 projectorCenter);
+            if (!volume.TryBuildWorldToLocal(
                     projectorCenter,
                     yaw,
-                    resolvedSize.X,
-                    thickness,
-                    resolvedSize.Y,
                     out Matrix4x4 worldToDecal,
                     out float minX,
                     out float minY,
@@ -983,7 +991,7 @@ namespace Ludots.Client.Raylib.Rendering
             try
             {
                 _decalMaterial.shader = _decalProjectShader;
-                int drawn = _terrainMeshProjector.DrawMeshesOverlappingAabbMeters(
+                int drawn = projector.DrawMeshesOverlappingAabbMeters(
                     minX,
                     minY,
                     minZ,
@@ -995,7 +1003,7 @@ namespace Ludots.Client.Raylib.Rendering
                 {
                     throw new InvalidOperationException(
                         $"{nameof(RaylibPrimitiveRenderer)} Decal stableId={stableId} projector AABB " +
-                        $"({minX:F1},{minY:F1},{minZ:F1})-({maxX:F1},{maxY:F1},{maxZ:F1}) overlaps no cached terrain meshes.");
+                        $"({minX:F1},{minY:F1},{minZ:F1})-({maxX:F1},{maxY:F1},{maxZ:F1}) overlaps no receiver meshes.");
                 }
             }
             finally
@@ -1070,78 +1078,20 @@ namespace Ludots.Client.Raylib.Rendering
             _decalProjectShaderReady = true;
         }
 
-        private static bool TryBuildDecalWorldToLocal(
-            in Vector3 position,
-            float yawRad,
-            float sizeX,
-            float sizeY,
-            float sizeZ,
-            out Matrix4x4 worldToDecal,
-            out float minX,
-            out float minY,
-            out float minZ,
-            out float maxX,
-            out float maxY,
-            out float maxZ)
-        {
-            Matrix4x4 decalToWorld =
-                Matrix4x4.CreateScale(sizeX, sizeY, sizeZ) *
-                Matrix4x4.CreateFromAxisAngle(Vector3.UnitY, yawRad) *
-                Matrix4x4.CreateTranslation(position);
-            if (!Matrix4x4.Invert(decalToWorld, out worldToDecal))
-            {
-                minX = minY = minZ = maxX = maxY = maxZ = 0f;
-                return false;
-            }
-
-            minX = float.PositiveInfinity;
-            minY = float.PositiveInfinity;
-            minZ = float.PositiveInfinity;
-            maxX = float.NegativeInfinity;
-            maxY = float.NegativeInfinity;
-            maxZ = float.NegativeInfinity;
-            Span<float> signs = stackalloc float[2] { -0.5f, 0.5f };
-            for (int ix = 0; ix < 2; ix++)
-            {
-                for (int iy = 0; iy < 2; iy++)
-                {
-                    for (int iz = 0; iz < 2; iz++)
-                    {
-                        Vector3 corner = Vector3.Transform(
-                            new Vector3(signs[ix], signs[iy], signs[iz]),
-                            decalToWorld);
-                        minX = MathF.Min(minX, corner.X);
-                        minY = MathF.Min(minY, corner.Y);
-                        minZ = MathF.Min(minZ, corner.Z);
-                        maxX = MathF.Max(maxX, corner.X);
-                        maxY = MathF.Max(maxY, corner.Y);
-                        maxZ = MathF.Max(maxZ, corner.Z);
-                    }
-                }
-            }
-
-            return true;
-        }
-
         private void FitDecalProjectorVolume(
             in Vector3 position,
             float yawRad,
-            in Vector2 sizeMeters,
+            in ProjectedDecalVolume volume,
             int stableId,
-            out Vector3 projectorCenter,
-            out float thicknessMeters)
+            out Vector3 projectorCenter)
         {
-            float fallbackThickness = MathF.Max(
-                DecalProjectionThicknessMinMeters,
-                MathF.Max(sizeMeters.X, sizeMeters.Y) * DecalProjectionThicknessSizeFactor);
             projectorCenter = position;
-            thicknessMeters = fallbackThickness;
-
             if (_frameVisualHeightmap == null)
             {
                 return;
             }
 
+            Vector2 stamp = volume.StampSizeMeters;
             float cos = MathF.Cos(yawRad);
             float sin = MathF.Sin(yawRad);
             float minHeightM = float.PositiveInfinity;
@@ -1150,11 +1100,11 @@ namespace Ludots.Client.Raylib.Rendering
             for (int y = 0; y <= samples; y++)
             {
                 float v = (y / (float)samples) - 0.5f;
-                float localZ = v * sizeMeters.Y;
+                float localZ = v * stamp.Y;
                 for (int x = 0; x <= samples; x++)
                 {
                     float u = (x / (float)samples) - 0.5f;
-                    float localX = u * sizeMeters.X;
+                    float localX = u * stamp.X;
                     float worldX = position.X + (localX * cos) - (localZ * sin);
                     float worldZ = position.Z + (localX * sin) + (localZ * cos);
                     float worldXCm = worldX * WorldUnits.CmPerMeter;
@@ -1172,9 +1122,6 @@ namespace Ludots.Client.Raylib.Rendering
             }
 
             projectorCenter = new Vector3(position.X, (minHeightM + maxHeightM) * 0.5f, position.Z);
-            thicknessMeters = MathF.Max(
-                fallbackThickness,
-                (maxHeightM - minHeightM) + (DecalProjectionHeightPaddingMeters * 2f));
         }
 
         private void DrawVfxVisual(in PrefabFinalizedVisual visual, Camera3D camera)
@@ -2106,20 +2053,6 @@ namespace Ludots.Client.Raylib.Rendering
                 Rl.DrawLine3D(previous, current, ringColor);
                 previous = current;
             }
-        }
-
-        private static Vector2 ResolveDecalSize(in PrefabFinalizedVisual visual)
-        {
-            return ResolveDecalSize(visual.Size, visual.Scale);
-        }
-
-        private static Vector2 ResolveDecalSize(in Vector2 size, in Vector3 scale)
-        {
-            float width = MathF.Max(0.1f, MathF.Abs(size.X));
-            float depth = MathF.Max(0.1f, MathF.Abs(size.Y));
-            float scaleX = MathF.Max(0.1f, MathF.Abs(scale.X));
-            float scaleZ = MathF.Max(0.1f, MathF.Abs(scale.Z));
-            return new Vector2(width * scaleX, depth * scaleZ);
         }
 
         private static Vector3 ResolveSurfaceOverlaySize(in PrefabFinalizedVisual visual)
