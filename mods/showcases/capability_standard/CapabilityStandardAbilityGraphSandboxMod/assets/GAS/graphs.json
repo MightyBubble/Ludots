@@ -1,0 +1,134 @@
+[
+  {
+    "id": "Graph.AbilityGraphSandbox.Scout",
+    "kind": "Effect",
+    "entry": "caster",
+    "nodes": [
+      { "id": "caster", "op": "LoadCaster" },
+      { "id": "radius", "op": "QueryRadius", "queryCapacityPolicy": "RequireComplete", "radiusCm": 800 },
+      { "id": "notSelf", "op": "QueryFilterNotEntity" },
+      { "id": "sort", "op": "QuerySortStable" },
+      { "id": "limit", "op": "QueryLimit", "intValue": 5 },
+      { "id": "count", "op": "AggCount" },
+      { "id": "nearest", "op": "AggMinByDistance" },
+      { "id": "hasInspired", "op": "HasTag", "tag": "State.Sandbox.Inspired" },
+      { "id": "readTag", "op": "ReadGameplayTag", "displayTable": "sandbox.status.display", "tagSelectPolicy": "RequireOne" },
+      { "id": "lookup", "op": "LookupTagDisplayText", "displayTable": "sandbox.status.display" },
+      { "id": "writeCount", "op": "WriteBlackboardInt", "blackboardKey": "sandbox.scout.nearbyCount" },
+      { "id": "writeNearest", "op": "WriteBlackboardEntity", "blackboardKey": "sandbox.scout.nearest" },
+      { "id": "writeToken", "op": "WriteBlackboardInt", "blackboardKey": "sandbox.scout.statusToken" }
+    ],
+    "controlEdges": [
+      { "from": "caster", "fromPort": "next", "to": "radius" },
+      { "from": "radius", "fromPort": "next", "to": "notSelf" },
+      { "from": "notSelf", "fromPort": "next", "to": "sort" },
+      { "from": "sort", "fromPort": "next", "to": "limit" },
+      { "from": "limit", "fromPort": "next", "to": "count" },
+      { "from": "count", "fromPort": "next", "to": "nearest" },
+      { "from": "nearest", "fromPort": "next", "to": "hasInspired" },
+      { "from": "hasInspired", "fromPort": "next", "to": "readTag" },
+      { "from": "readTag", "fromPort": "next", "to": "lookup" },
+      { "from": "lookup", "fromPort": "next", "to": "writeCount" },
+      { "from": "writeCount", "fromPort": "next", "to": "writeNearest" },
+      { "from": "writeNearest", "fromPort": "next", "to": "writeToken" }
+    ],
+    "valueEdges": [
+      { "from": "caster", "fromPort": "value", "to": "notSelf", "toPort": "source" },
+      { "from": "nearest", "fromPort": "value", "to": "hasInspired", "toPort": "source" },
+      { "from": "nearest", "fromPort": "value", "to": "readTag", "toPort": "source" },
+      { "from": "readTag", "fromPort": "value", "to": "lookup", "toPort": "a" },
+      { "from": "caster", "fromPort": "value", "to": "writeCount", "toPort": "source" },
+      { "from": "count", "fromPort": "value", "to": "writeCount", "toPort": "value" },
+      { "from": "caster", "fromPort": "value", "to": "writeNearest", "toPort": "source" },
+      { "from": "nearest", "fromPort": "value", "to": "writeNearest", "toPort": "value" },
+      { "from": "caster", "fromPort": "value", "to": "writeToken", "toPort": "source" },
+      { "from": "lookup", "fromPort": "value", "to": "writeToken", "toPort": "value" }
+    ]
+  },
+  {
+    "id": "Graph.AbilityGraphSandbox.Apply",
+    "kind": "Effect",
+    "entry": "caster",
+    "nodes": [
+      { "id": "caster", "op": "LoadCaster" },
+      { "id": "radius", "op": "QueryRadius", "queryCapacityPolicy": "RequireComplete", "radiusCm": 800 },
+      { "id": "notSelf", "op": "QueryFilterNotEntity" },
+      { "id": "sort", "op": "QuerySortStable" },
+      { "id": "limit", "op": "QueryLimit", "intValue": 5 },
+      { "id": "nearest", "op": "AggMinByDistance" },
+      { "id": "fanStatic", "op": "FanOutApplyEffect", "effectTemplate": "Effect.AbilityGraphSandbox.Mark" },
+      { "id": "buffId", "op": "ReadBlackboardInt", "blackboardKey": "sandbox.apply.buffTemplate" },
+      { "id": "applyDynamic", "op": "ApplyEffectDynamic" },
+      { "id": "fanDynamic", "op": "FanOutApplyEffectDynamic" }
+    ],
+    "controlEdges": [
+      { "from": "caster", "fromPort": "next", "to": "radius" },
+      { "from": "radius", "fromPort": "next", "to": "notSelf" },
+      { "from": "notSelf", "fromPort": "next", "to": "sort" },
+      { "from": "sort", "fromPort": "next", "to": "limit" },
+      { "from": "limit", "fromPort": "next", "to": "nearest" },
+      { "from": "nearest", "fromPort": "next", "to": "fanStatic" },
+      { "from": "fanStatic", "fromPort": "next", "to": "buffId" },
+      { "from": "buffId", "fromPort": "next", "to": "applyDynamic" },
+      { "from": "applyDynamic", "fromPort": "next", "to": "fanDynamic" }
+    ],
+    "valueEdges": [
+      { "from": "caster", "fromPort": "value", "to": "notSelf", "toPort": "source" },
+      { "from": "caster", "fromPort": "value", "to": "buffId", "toPort": "source" },
+      { "from": "nearest", "fromPort": "value", "to": "applyDynamic", "toPort": "target" },
+      { "from": "buffId", "fromPort": "value", "to": "applyDynamic", "toPort": "value" },
+      { "from": "buffId", "fromPort": "value", "to": "fanDynamic", "toPort": "value" }
+    ]
+  },
+  {
+    "id": "Graph.AbilityGraphSandbox.Bond",
+    "kind": "Effect",
+    "entry": "caster",
+    "nodes": [
+      { "id": "caster", "op": "LoadCaster" },
+      { "id": "target", "op": "LoadExplicitTarget" },
+      { "id": "baseLoyalty", "op": "ConstInt", "intValue": 10 },
+      { "id": "delta", "op": "ConstInt", "intValue": 3 },
+      { "id": "trusted", "op": "ConstBool", "boolValue": true },
+      { "id": "ensure", "op": "RelationshipEnsureLink", "relationshipType": "SocialBond" },
+      { "id": "setMetric", "op": "RelationshipSetMetric", "relationshipType": "SocialBond", "metric": "Loyalty" },
+      { "id": "addMetric", "op": "RelationshipAddMetric", "relationshipType": "SocialBond", "metric": "Loyalty" },
+      { "id": "setFlag", "op": "RelationshipSetFlag", "relationshipType": "SocialBond", "flag": "Trusted" },
+      { "id": "hasFlag", "op": "RelationshipHasFlag", "relationshipType": "SocialBond", "flag": "Trusted" },
+      { "id": "loyalty", "op": "RelationshipGetMetric", "relationshipType": "SocialBond", "metric": "Loyalty" },
+      { "id": "writeLoyalty", "op": "WriteBlackboardInt", "blackboardKey": "sandbox.bond.loyalty" }
+    ],
+    "controlEdges": [
+      { "from": "caster", "fromPort": "next", "to": "target" },
+      { "from": "target", "fromPort": "next", "to": "baseLoyalty" },
+      { "from": "baseLoyalty", "fromPort": "next", "to": "delta" },
+      { "from": "delta", "fromPort": "next", "to": "trusted" },
+      { "from": "trusted", "fromPort": "next", "to": "ensure" },
+      { "from": "ensure", "fromPort": "next", "to": "setMetric" },
+      { "from": "setMetric", "fromPort": "next", "to": "addMetric" },
+      { "from": "addMetric", "fromPort": "next", "to": "setFlag" },
+      { "from": "setFlag", "fromPort": "next", "to": "hasFlag" },
+      { "from": "hasFlag", "fromPort": "next", "to": "loyalty" },
+      { "from": "loyalty", "fromPort": "next", "to": "writeLoyalty" }
+    ],
+    "valueEdges": [
+      { "from": "caster", "fromPort": "value", "to": "ensure", "toPort": "source" },
+      { "from": "target", "fromPort": "value", "to": "ensure", "toPort": "target" },
+      { "from": "caster", "fromPort": "value", "to": "setMetric", "toPort": "source" },
+      { "from": "target", "fromPort": "value", "to": "setMetric", "toPort": "target" },
+      { "from": "baseLoyalty", "fromPort": "value", "to": "setMetric", "toPort": "value" },
+      { "from": "caster", "fromPort": "value", "to": "addMetric", "toPort": "source" },
+      { "from": "target", "fromPort": "value", "to": "addMetric", "toPort": "target" },
+      { "from": "delta", "fromPort": "value", "to": "addMetric", "toPort": "value" },
+      { "from": "caster", "fromPort": "value", "to": "setFlag", "toPort": "source" },
+      { "from": "target", "fromPort": "value", "to": "setFlag", "toPort": "target" },
+      { "from": "trusted", "fromPort": "value", "to": "setFlag", "toPort": "value" },
+      { "from": "caster", "fromPort": "value", "to": "hasFlag", "toPort": "source" },
+      { "from": "target", "fromPort": "value", "to": "hasFlag", "toPort": "target" },
+      { "from": "caster", "fromPort": "value", "to": "loyalty", "toPort": "source" },
+      { "from": "target", "fromPort": "value", "to": "loyalty", "toPort": "target" },
+      { "from": "caster", "fromPort": "value", "to": "writeLoyalty", "toPort": "source" },
+      { "from": "loyalty", "fromPort": "value", "to": "writeLoyalty", "toPort": "value" }
+    ]
+  }
+]

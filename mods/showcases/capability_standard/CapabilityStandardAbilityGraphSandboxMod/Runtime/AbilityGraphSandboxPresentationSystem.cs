@@ -1,6 +1,7 @@
 using Arch.System;
 using CapabilityStandardGraphBehaviorCommon;
 using Ludots.Core.Presentation.DebugDraw;
+using Ludots.Core.Presentation.Hud;
 
 namespace CapabilityStandardAbilityGraphSandboxMod.Runtime;
 
@@ -8,12 +9,17 @@ internal sealed class AbilityGraphSandboxPresentationSystem : ISystem<float>
 {
     private readonly AbilityGraphSandboxRuntime _runtime;
     private readonly DebugDrawCommandBuffer _debugDraw;
+    private readonly ScreenOverlayBuffer? _overlay;
     private readonly GraphShowcaseConfig _config = new();
 
-    public AbilityGraphSandboxPresentationSystem(AbilityGraphSandboxRuntime runtime, DebugDrawCommandBuffer debugDraw)
+    public AbilityGraphSandboxPresentationSystem(
+        AbilityGraphSandboxRuntime runtime,
+        DebugDrawCommandBuffer debugDraw,
+        ScreenOverlayBuffer? overlay = null)
     {
         _runtime = runtime;
         _debugDraw = debugDraw;
+        _overlay = overlay;
     }
 
     public void Initialize() { }
@@ -24,6 +30,7 @@ internal sealed class AbilityGraphSandboxPresentationSystem : ISystem<float>
     public void Update(in float dt)
     {
         GraphShowcaseStagePresenter.Clear(_debugDraw);
+        GraphShowcaseStagePresenter.DrawTriggerRing(_debugDraw, _runtime.CasterX, _runtime.CasterY, 8f, armed: true);
         GraphShowcaseStagePresenter.DrawActor(
             _debugDraw, _runtime.CasterX, _runtime.CasterY, 0.7f, GraphShowcaseStagePresenter.CasterColor, 0.2f);
 
@@ -50,5 +57,9 @@ internal sealed class AbilityGraphSandboxPresentationSystem : ISystem<float>
         }
 
         GraphShowcaseStagePresenter.DrawBudgetBar(_debugDraw, _runtime.Metrics.LastThinkMs, _config.ThinkBudgetMs);
+        if (_overlay != null)
+        {
+            GraphShowcaseStagePresenter.DrawPlayerCaption(_overlay, "能力图沙盘", _runtime.Metrics.Detail);
+        }
     }
 }

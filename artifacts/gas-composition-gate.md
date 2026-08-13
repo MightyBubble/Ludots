@@ -77,3 +77,9 @@ Attr 把比较/选择接入轻击/全力；Float 把出手许可与负面修正�
 
 Query 从编译-only 改为实跑沙盘：全图筛人排出最强最弱+花名册模板。
 Rel 查好友链/Trusted/好感区间/拆最弱并标记失和。FuncLib 放 Gallery 目录，禁止并进引擎 GAS/func_lib.json。
+
+### 13. Ability Graph Sandbox
+
+13 个覆盖 op 改走沙盘自有 Scout/Apply/Bond Effect 图（`sandbox_graphs.json`），不走 ConfigPipeline 的 `graphs.json`，也不改纯 Script FuncLib 的 slash/bash。
+巡逻查圈、挂状态、加好感、读状态牌均从图执行结果写 Detail；图必须在 registry freeze 前绑定。
+
