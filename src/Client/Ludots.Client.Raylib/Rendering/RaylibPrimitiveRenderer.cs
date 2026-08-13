@@ -41,6 +41,7 @@ namespace Ludots.Client.Raylib.Rendering
         private Mesh _sphereMesh;
         private Mesh _vfxBillboardMesh;
         private IRaylibTerrainMeshProjector? _terrainMeshProjector;
+        private IVisualHeightmap? _frameVisualHeightmap;
         private Shader _shader;
         private Shader _skinningShader;
         private Shader _vegetationCutoutShader;
@@ -57,9 +58,11 @@ namespace Ludots.Client.Raylib.Rendering
         private int _locDecalProjectWorldToDecal;
         private int _locDecalProjectAlphaCutoff;
         private int _locDecalProjectMinReceiverNDotUp;
-        private const float DecalProjectionThicknessMinMeters = 2f;
-        private const float DecalProjectionThicknessSizeFactor = 0.5f;
-        private const float DecalMinReceiverNDotUp = 0.15f;
+        private const float DecalProjectionThicknessMinMeters = 8f;
+        private const float DecalProjectionThicknessSizeFactor = 1.25f;
+        private const float DecalProjectionHeightPaddingMeters = 3f;
+        private const int DecalProjectionHeightSampleSegments = 6;
+        private const float DecalMinReceiverNDotUp = 0.05f;
         private readonly RaylibEffectShaderRegistry _effectShaders = new RaylibEffectShaderRegistry();
         private int _locColDiffuse;
         private int _locTint;
@@ -216,41 +219,49 @@ namespace Ludots.Client.Raylib.Rendering
             LastDecalVisualCount = 0;
             LastVfxVisualCount = 0;
             LastSurfaceVisualCount = 0;
+            _frameVisualHeightmap = visualHeightmap;
             var finalizationContext = new PrefabFinalizationContext(visualHeightmap);
 
-            var span = draw.GetSpan();
-            bool usePersistentStaticLanes = snapshot != null;
-            if (usePersistentStaticLanes)
+            try
             {
-                _ismBridge.SyncPersistentLanes(snapshot);
-                LastPersistentSyncMs = _ismBridge.LastPersistentSyncMs;
-                LastPersistentCreates = _ismBridge.Planner.LastCreateCount;
-                LastPersistentUpdates = _ismBridge.Planner.LastUpdateCount;
-                LastPersistentRemoves = _ismBridge.Planner.LastRemoveCount;
-                long bucketStart = Stopwatch.GetTimestamp();
-                DrawPersistentStaticLanes(camera, meshes, scaleMul, in finalizationContext);
-                LastPersistentBucketDrawMs = (Stopwatch.GetTimestamp() - bucketStart) * 1000d / Stopwatch.Frequency;
-                if (skinnedBatch != null)
+                var span = draw.GetSpan();
+                bool usePersistentStaticLanes = snapshot != null;
+                if (usePersistentStaticLanes)
                 {
-                    DrawSkinnedBatch(skinnedBatch, camera, meshes, scaleMul, in finalizationContext);
+                    _ismBridge.SyncPersistentLanes(snapshot);
+                    LastPersistentSyncMs = _ismBridge.LastPersistentSyncMs;
+                    LastPersistentCreates = _ismBridge.Planner.LastCreateCount;
+                    LastPersistentUpdates = _ismBridge.Planner.LastUpdateCount;
+                    LastPersistentRemoves = _ismBridge.Planner.LastRemoveCount;
+                    long bucketStart = Stopwatch.GetTimestamp();
+                    DrawPersistentStaticLanes(camera, meshes, scaleMul, in finalizationContext);
+                    LastPersistentBucketDrawMs = (Stopwatch.GetTimestamp() - bucketStart) * 1000d / Stopwatch.Frequency;
+                    if (skinnedBatch != null)
+                    {
+                        DrawSkinnedBatch(skinnedBatch, camera, meshes, scaleMul, in finalizationContext);
+                    }
+
+                    long dynamicLaneStart = Stopwatch.GetTimestamp();
+                    DrawSnapshotDynamicLanes(span, camera, meshes, scaleMul, skinnedBatchActive: skinnedBatch != null, in finalizationContext);
+                    LastImmediateDrawMs = (Stopwatch.GetTimestamp() - dynamicLaneStart) * 1000d / Stopwatch.Frequency;
+
+                    return;
                 }
 
-                long dynamicLaneStart = Stopwatch.GetTimestamp();
-                DrawSnapshotDynamicLanes(span, camera, meshes, scaleMul, skinnedBatchActive: skinnedBatch != null, in finalizationContext);
-                LastImmediateDrawMs = (Stopwatch.GetTimestamp() - dynamicLaneStart) * 1000d / Stopwatch.Frequency;
+                if (_mode == RaylibPrimitiveRenderMode.Instanced)
+                {
+                    DrawHybridInstanced(span, camera, meshes, scaleMul, in finalizationContext);
+                    return;
+                }
 
-                return;
+                long immediateDrawStart = Stopwatch.GetTimestamp();
+                DrawImmediateWithDescriptors(span, camera, meshes, scaleMul, persistentStaticLanesActive: false, skinnedBatchActive: false, in finalizationContext);
+                LastImmediateDrawMs = (Stopwatch.GetTimestamp() - immediateDrawStart) * 1000d / Stopwatch.Frequency;
             }
-
-            if (_mode == RaylibPrimitiveRenderMode.Instanced)
+            finally
             {
-                DrawHybridInstanced(span, camera, meshes, scaleMul, in finalizationContext);
-                return;
+                _frameVisualHeightmap = null;
             }
-
-            long immediateDrawStart = Stopwatch.GetTimestamp();
-            DrawImmediateWithDescriptors(span, camera, meshes, scaleMul, persistentStaticLanesActive: false, skinnedBatchActive: false, in finalizationContext);
-            LastImmediateDrawMs = (Stopwatch.GetTimestamp() - immediateDrawStart) * 1000d / Stopwatch.Frequency;
         }
 
         private void DrawPersistentStaticLanes(Camera3D camera, MeshAssetRegistry meshes, float scaleMul, in PrefabFinalizationContext finalizationContext)
@@ -890,11 +901,15 @@ namespace Ludots.Client.Raylib.Rendering
 
             Vector2 resolvedSize = ResolveDecalSize(size, scale);
             float yaw = ExtractYawRad(rotation);
-            float thickness = MathF.Max(
-                DecalProjectionThicknessMinMeters,
-                MathF.Max(resolvedSize.X, resolvedSize.Y) * DecalProjectionThicknessSizeFactor);
+            FitDecalProjectorVolume(
+                position,
+                yaw,
+                resolvedSize,
+                stableId,
+                out Vector3 projectorCenter,
+                out float thickness);
             if (!TryBuildDecalWorldToLocal(
-                    position,
+                    projectorCenter,
                     yaw,
                     resolvedSize.X,
                     thickness,
@@ -1106,6 +1121,60 @@ namespace Ludots.Client.Raylib.Rendering
             }
 
             return true;
+        }
+
+        private void FitDecalProjectorVolume(
+            in Vector3 position,
+            float yawRad,
+            in Vector2 sizeMeters,
+            int stableId,
+            out Vector3 projectorCenter,
+            out float thicknessMeters)
+        {
+            float fallbackThickness = MathF.Max(
+                DecalProjectionThicknessMinMeters,
+                MathF.Max(sizeMeters.X, sizeMeters.Y) * DecalProjectionThicknessSizeFactor);
+            projectorCenter = position;
+            thicknessMeters = fallbackThickness;
+
+            if (_frameVisualHeightmap == null)
+            {
+                return;
+            }
+
+            float cos = MathF.Cos(yawRad);
+            float sin = MathF.Sin(yawRad);
+            float minHeightM = float.PositiveInfinity;
+            float maxHeightM = float.NegativeInfinity;
+            int samples = DecalProjectionHeightSampleSegments;
+            for (int y = 0; y <= samples; y++)
+            {
+                float v = (y / (float)samples) - 0.5f;
+                float localZ = v * sizeMeters.Y;
+                for (int x = 0; x <= samples; x++)
+                {
+                    float u = (x / (float)samples) - 0.5f;
+                    float localX = u * sizeMeters.X;
+                    float worldX = position.X + (localX * cos) - (localZ * sin);
+                    float worldZ = position.Z + (localX * sin) + (localZ * cos);
+                    float worldXCm = worldX * WorldUnits.CmPerMeter;
+                    float worldYCm = worldZ * WorldUnits.CmPerMeter;
+                    if (!_frameVisualHeightmap.TrySampleHeightCm(worldXCm, worldYCm, out float heightCm))
+                    {
+                        throw new InvalidOperationException(
+                            $"{nameof(RaylibPrimitiveRenderer)} Decal stableId={stableId} cannot sample VisualHeightmap at ({worldXCm:F1},{worldYCm:F1}) while fitting projector volume.");
+                    }
+
+                    float heightM = WorldUnits.CmToM(heightCm);
+                    minHeightM = MathF.Min(minHeightM, heightM);
+                    maxHeightM = MathF.Max(maxHeightM, heightM);
+                }
+            }
+
+            projectorCenter = new Vector3(position.X, (minHeightM + maxHeightM) * 0.5f, position.Z);
+            thicknessMeters = MathF.Max(
+                fallbackThickness,
+                (maxHeightM - minHeightM) + (DecalProjectionHeightPaddingMeters * 2f));
         }
 
         private void DrawVfxVisual(in PrefabFinalizedVisual visual, Camera3D camera)
