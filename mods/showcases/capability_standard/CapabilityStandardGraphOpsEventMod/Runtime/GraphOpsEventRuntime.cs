@@ -214,7 +214,7 @@ public sealed class GraphOpsEventRuntime : IDisposable
             $"发事件×{_eventCount}；读载荷 int {_payloadInt} / float {_payloadFloat:F1}；" +
             $"控制域{Established(_controlsOk)}、知识投影{Established(_projectionOk)}；" +
             $"扇出派发×{_dispatchCount}；" +
-            $"落点({_aimX},{_aimY})钳制{Established(_clampOk)}；是否在圆内{Established(_inCircleOk)}；" +
+            $"落点钳制{Established(_clampOk)}({_aimX},{_aimY})；是否在圆内{Established(_inCircleOk)}；" +
             $"集合{SnapPhrase(_snapCollectionOk)}、路网边{SnapPhrase(_snapEdgeOk)}→({_snappedX},{_snappedY})";
     }
 
