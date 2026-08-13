@@ -21,14 +21,8 @@ This page is the SSOT for production-grade capability acceptance showcase roots 
 | HFSM Sentry Arena | `capability_standard_hfsm_sentry_arena` | `mods/showcases/capability_standard/CapabilityStandardHfsmSentryArenaMod` | **可读剧本**：门岗线哨兵 Idle→警戒→交战→撤退；入侵者来回走；交战生命周期 Script |
 | Level Blueprint Trial | `capability_standard_level_blueprint_trial` | `mods/showcases/capability_standard/CapabilityStandardLevelBlueprintTrialMod` | **可读剧本**：走进触发圈→刷怪→清完开门→阶段色块推进 |
 | Ability Graph Sandbox | `capability_standard_ability_graph_sandbox` | `mods/showcases/capability_standard/CapabilityStandardAbilityGraphSandboxMod` | **可读剧本**：巡逻查一圈找范围目标，给命中对象挂状态、加好感，并把状态牌读成面板 token |
-| Graph Ops Attr | `capability_standard_graph_ops_attr` | `mods/showcases/capability_standard/CapabilityStandardGraphOpsAttrMod` | **可读剧本**：读血量、加伤、上效果、卸效果 |
-| Graph Ops Float | `capability_standard_graph_ops_float` | `mods/showcases/capability_standard/CapabilityStandardGraphOpsFloatMod` | **可读剧本**：距离衰减、倍率、抖动再钳制，算出最终伤害 |
-| Graph Ops Script | `capability_standard_graph_ops_script` | `mods/showcases/capability_standard/CapabilityStandardGraphOpsScriptMod` | **可读剧本**：喝茶续杯 → 巡逻两站 → 常量管线算出 7 |
-| Graph Ops Spatial | `capability_standard_graph_ops_spatial` | `mods/showcases/capability_standard/CapabilityStandardGraphOpsSpatialMod` | **可读剧本**：扇形/矩形/直线/六角圈人，排除自己、只打敌对，标最近目标与名单上第一个命中 |
-| Graph Ops Query | `capability_standard_graph_ops_query` | `mods/showcases/capability_standard/CapabilityStandardGraphOpsQueryMod` | **可读剧本**：全图搜人后按阵营标签筛人，再按生命排序聚合 |
-| Graph Ops Rel | `capability_standard_graph_ops_rel` | `mods/showcases/capability_standard/CapabilityStandardGraphOpsRelMod` | **可读剧本**：查好友链、按好感排序、拆链（关系查询/过滤/排序/聚合 + 拆链） |
-| Graph Ops Blackboard | `capability_standard_graph_ops_blackboard` | `mods/showcases/capability_standard/CapabilityStandardGraphOpsBlackboardMod` | **黑板记事/读配置/生命周期事务**：写入来源与情境，从配置读出威力/阶位/连锁并回读，再跑生命周期内置步骤 |
-| Graph Ops Event | `capability_standard_graph_ops_event` | `mods/showcases/capability_standard/CapabilityStandardGraphOpsEventMod` | **可读剧本**：发事件、读载荷、控制域/知识投影、扇出派发与落点吸附 |
+| Graph Op 单节点画廊 | `capability_standard_graph_op_{Op}` | `graph_op_entries/CapabilityStandardGraphOp{Op}EntryMod` | **玩家入口**：每个可执行图节点单独一场短剧 + 单独录像。共用宿主 `CapabilityStandardGraphOpsNodeGalleryMod`。启动器条目由 `scripts/generate-graph-op-node-galleries.py` 从 vignette 生成。 |
+| Graph Ops 家族参考（非玩家入口） | `capability_standard_graph_ops_*` | 各 `CapabilityStandardGraphOps*Mod` | 实现参考与既有无头测试；玩家不再从家族聚合场进入 |
 | Graph Behavior Integration | `capability_standard_graph_behavior_integration` | `mods/showcases/capability_standard/CapabilityStandardGraphBehaviorIntegrationMod` | **单独短剧**：左巡逻 / 右门岗 / 上触发刷敌，串一条故事（不是四套糊在一起） |
 
 压力矩阵与 &lt;5ms 思考波报告：`docs/benchmarks/graph-behavior-pressure/`（Showcase 主镜头是剧本，万人在无头测试与灰点带）。
@@ -51,7 +45,7 @@ Standard launch commands:
 .\scripts\run-mod-launcher.cmd cli launch '$capability_standard_hfsm_sentry_arena' --adapter raylib
 .\scripts\run-mod-launcher.cmd cli launch '$capability_standard_level_blueprint_trial' --adapter raylib
 .\scripts\run-mod-launcher.cmd cli launch '$capability_standard_ability_graph_sandbox' --adapter raylib
-.\scripts\run-mod-launcher.cmd cli launch '$capability_standard_graph_ops_rel' --adapter raylib
+.\scripts\run-mod-launcher.cmd cli launch '$capability_standard_graph_op_AddFloat' --adapter raylib
 .\scripts\run-mod-launcher.cmd cli launch '$capability_standard_graph_behavior_integration' --adapter raylib
 ```
 
@@ -73,7 +67,7 @@ Preset launch commands:
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_hfsm_sentry_arena_raylib'
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_level_blueprint_trial_raylib'
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_ability_graph_sandbox_raylib'
-.\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_graph_ops_rel_raylib'
+.\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_graph_op_AddFloat_raylib'
 .\scripts\run-mod-launcher.cmd cli launch 'preset:capability_standard_graph_behavior_integration_raylib'
 ```
 
@@ -97,3 +91,32 @@ Adapter authors should verify:
 - HUD bars, HUD text, minimap, selection, and path preview use formal platform rendering paths;
 - asset references resolve through `ModId:assets/...`;
 - adapters do not hardcode private paths or business names for these showcases.
+
+## GraphNodeOp 单节点画廊
+
+玩家入口是「一场短剧只讲一个节点」，不是把十几个节点塞进同一场。
+
+- 启动绑定：`capability_standard_graph_op_{Op}`
+- 剧本：`CapabilityStandardGraphOpsNodeGalleryMod/assets/Vignettes/{Op}.json`
+- 作者图：`assets/GAS/graphs/{Op}.json`（FrontDoor，禁止 C# 演戏填字幕）
+- 薄入口：`graph_op_entries/CapabilityStandardGraphOp{Op}EntryMod`（只覆盖 `startupMapId`）
+- 录像：`artifacts/evidence/capability_standard_graph_op_{Op}/play.mp4`
+- 生成器：`scripts/generate-graph-op-node-galleries.py`（launcher / registry / coverage / 地图 / 薄入口）
+
+```gherkin
+Feature: 每个图节点单独一场可看懂的短剧
+
+  Scenario: 新玩家点开「两段伤害叠在一起」
+    Given 玩家从画廊进入 capability_standard_graph_op_AddFloat
+    And 舞台上能看见施法者和木桩，头顶有血条
+    When 短剧开始演算
+    Then 字幕只讲这一刀怎么把两段伤害叠在一起
+    And 木桩血条按总和往下掉
+    And 这场录像里看不到其它节点的完整剧情
+
+  Scenario: 覆盖表里的每个可执行节点都能单独进
+    Given 覆盖表里有一个可执行图节点
+    Then 画廊里有且仅有一场以它为主角的短剧
+    And 启动器能单独打开这一场
+    And 这一场有自己的录像目录
+```

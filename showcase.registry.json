@@ -10,6 +10,11 @@
       "kind": "csproj",
       "value": "mods/showcases/capability_standard/CapabilityStandardGraphBehaviorCommon",
       "reason": "shared library for graph-behavior capability showcases; not a standalone showcase entry"
+    },
+    {
+      "kind": "csproj",
+      "value": "mods/showcases/capability_standard/CapabilityStandardGraphOpsNodeGalleryMod",
+      "reason": "shared per-op GraphNodeOp gallery host; player entries are thin mods under graph_op_entries/"
     }
   ],
   "showcases": [
@@ -3225,6 +3230,58 @@
       "screenshot": null,
       "status": "active",
       "notes": "Editor hot-apply via production LiveGasEditPipeline on Champion cast pipeline; WorldHud HP + chill countdown."
+    },
+    {
+      "id": "capability_standard_graph_op_AddFloat",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpAddFloatEntryMod",
+      "projectPath": "CapabilityStandardGraphOpAddFloatEntryMod.csproj",
+      "title": "两段伤害叠在一起",
+      "summary": "左边先打出一刀基础伤害，右边再叠上一截额外伤害，血条按总和往下掉。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "AddFloat"
+      ],
+      "binding": "capability_standard_graph_op_AddFloat",
+      "preset": "capability_standard_graph_op_AddFloat_raylib",
+      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_AddFloat",
+      "screenshot": null,
+      "status": "active",
+      "notes": "Per-op player gallery. Recording follows vignette landing."
+    },
+    {
+      "id": "capability_standard_graph_op_ConstFloat",
+      "path": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpConstFloatEntryMod",
+      "projectPath": "CapabilityStandardGraphOpConstFloatEntryMod.csproj",
+      "title": "写死的一刀",
+      "summary": "这一刀不读装备、不算距离，伤害就是写死的 42。目标血条直接变成这个数。",
+      "tier": "T2",
+      "category": "capability",
+      "tags": [
+        "graph",
+        "capability-standard",
+        "gas",
+        "graph-ops",
+        "per-op",
+        "ConstFloat"
+      ],
+      "binding": "capability_standard_graph_op_ConstFloat",
+      "preset": "capability_standard_graph_op_ConstFloat_raylib",
+      "docsPath": "gitbook/architecture/capability-standard-showcases.md",
+      "readmePath": null,
+      "acceptanceTest": "GraphOpsNodeGalleryAcceptanceTests",
+      "artifactDir": "artifacts/evidence/capability_standard_graph_op_ConstFloat",
+      "screenshot": null,
+      "status": "active",
+      "notes": "Per-op player gallery. Recording follows vignette landing."
     }
   ]
 }

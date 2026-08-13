@@ -15,6 +15,23 @@ namespace Ludots.Tests.GAS
         private const string RegistryRelativePath = "assets/Configs/GAS/graph_node_op_coverage.registry.json";
 
         [Test]
+        public void Registry_ShowcaseId_MustBeUniquePerOp()
+        {
+            string repoRoot = FindRepoRoot();
+            string registryPath = Path.Combine(repoRoot, RegistryRelativePath);
+            using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(registryPath));
+            var seen = new HashSet<string>(StringComparer.Ordinal);
+            foreach (JsonElement entry in doc.RootElement.GetProperty("entries").EnumerateArray())
+            {
+                string op = entry.GetProperty("op").GetString() ?? string.Empty;
+                string showcaseId = entry.GetProperty("showcaseId").GetString() ?? string.Empty;
+                Assert.That(showcaseId, Is.EqualTo("capability_standard_graph_op_" + op),
+                    $"Coverage showcaseId for {op} must be the per-op gallery, not a family aggregate.");
+                Assert.That(seen.Add(showcaseId), Is.True, $"Duplicate coverage showcaseId '{showcaseId}'.");
+            }
+        }
+
+        [Test]
         public void Registry_Entries_MustMatch_GraphNodeOpEnum_ExcludingNone()
         {
             string repoRoot = FindRepoRoot();

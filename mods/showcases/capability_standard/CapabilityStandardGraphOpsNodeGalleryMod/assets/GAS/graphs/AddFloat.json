@@ -1,0 +1,18 @@
+{
+  "id": "showcase.graph_op.AddFloat",
+  "kind": "Effect",
+  "entry": "base",
+  "nodes": [
+    { "id": "base", "op": "ConstFloat", "floatValue": 30 },
+    { "id": "bonus", "op": "ConstFloat", "floatValue": 12 },
+    { "id": "sum", "op": "AddFloat" }
+  ],
+  "controlEdges": [
+    { "from": "base", "fromPort": "next", "to": "bonus" },
+    { "from": "bonus", "fromPort": "next", "to": "sum" }
+  ],
+  "valueEdges": [
+    { "from": "base", "fromPort": "value", "to": "sum", "toPort": "a" },
+    { "from": "bonus", "fromPort": "value", "to": "sum", "toPort": "b" }
+  ]
+}

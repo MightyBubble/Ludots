@@ -1,0 +1,36 @@
+{
+  "op": "AddFloat",
+  "driver": "linear",
+  "title": "两段伤害叠在一起",
+  "beat": "左边先打出一刀基础伤害，右边再叠上一截额外伤害，血条按总和往下掉。",
+  "detailTemplate": "基础伤害加上额外伤害，这一刀一共 {result}；血条从 {healthBefore} 掉到 {healthAfter}。",
+  "assertDetailContains": ["加上", "一共"],
+  "featuredNodeId": "sum",
+  "graphKind": "Effect",
+  "actors": [
+    {
+      "id": "caster",
+      "role": "caster",
+      "template": "GraphOps.Caster",
+      "name": "施法者",
+      "x": -2,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    },
+    {
+      "id": "target",
+      "role": "target",
+      "template": "GraphOps.Target",
+      "name": "木桩",
+      "x": 4,
+      "y": 0,
+      "health": 100,
+      "healthMax": 100
+    }
+  ],
+  "linear": {
+    "resultKind": "float",
+    "applyTo": "targetHealthSubtract"
+  }
+}

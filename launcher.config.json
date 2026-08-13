@@ -463,6 +463,22 @@
         "value": "mods/showcases/capability_standard/CapabilityStandardGraphBehaviorIntegrationMod",
         "projectPath": "CapabilityStandardGraphBehaviorIntegrationMod.csproj"
       }
+    },
+    {
+      "name": "capability_standard_graph_op_AddFloat",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpAddFloatEntryMod",
+        "projectPath": "CapabilityStandardGraphOpAddFloatEntryMod.csproj"
+      }
+    },
+    {
+      "name": "capability_standard_graph_op_ConstFloat",
+      "target": {
+        "type": "path",
+        "value": "mods/showcases/capability_standard/graph_op_entries/CapabilityStandardGraphOpConstFloatEntryMod",
+        "projectPath": "CapabilityStandardGraphOpConstFloatEntryMod.csproj"
+      }
     }
   ],
   "adapters": {

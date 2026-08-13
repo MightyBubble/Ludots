@@ -529,6 +529,24 @@
       ],
       "adapterId": "raylib",
       "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_AddFloat_raylib",
+      "name": "Graph Op AddFloat Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_AddFloat"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
+    },
+    {
+      "id": "capability_standard_graph_op_ConstFloat_raylib",
+      "name": "Graph Op ConstFloat Raylib",
+      "selectors": [
+        "$capability_standard_graph_op_ConstFloat"
+      ],
+      "adapterId": "raylib",
+      "buildMode": "auto"
     }
   ]
 }
