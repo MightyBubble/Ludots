@@ -89,18 +89,18 @@ namespace Ludots.Tests.Architecture.Governance
         [Test]
         public void PresentationRequestKind_AllowlistMatchesEpicInventory()
         {
-            // RoadSpline / RemoveRoadSpline are doomed: P4 (#929) renames them to the generic spline ribbon contract.
             // Prefab was deleted from this allowlist; do not reintroduce it.
+            // Spline ribbon kinds land as P4 (#929) already merged into atmosphere.
             string[] expected =
             {
                 nameof(PresentationRequestKind.VisualProxy),
                 nameof(PresentationRequestKind.GroundOverlay),
                 nameof(PresentationRequestKind.WorldHud),
-                nameof(PresentationRequestKind.RoadSpline),
+                nameof(PresentationRequestKind.SplineRibbon),
                 nameof(PresentationRequestKind.SurfaceSource),
                 nameof(PresentationRequestKind.RemoveGroundOverlay),
                 nameof(PresentationRequestKind.RemoveWorldHud),
-                nameof(PresentationRequestKind.RemoveRoadSpline),
+                nameof(PresentationRequestKind.RemoveSplineRibbon),
                 nameof(PresentationRequestKind.RemoveSurfaceSource),
                 nameof(PresentationRequestKind.ClearTransientVisualProjection),
             };
@@ -112,11 +112,11 @@ namespace Ludots.Tests.Architecture.Governance
             Assert.That((byte)PresentationRequestKind.VisualProxy, Is.EqualTo(1));
             Assert.That((byte)PresentationRequestKind.GroundOverlay, Is.EqualTo(3));
             Assert.That((byte)PresentationRequestKind.WorldHud, Is.EqualTo(4));
-            Assert.That((byte)PresentationRequestKind.RoadSpline, Is.EqualTo(5));
+            Assert.That((byte)PresentationRequestKind.SplineRibbon, Is.EqualTo(5));
             Assert.That((byte)PresentationRequestKind.SurfaceSource, Is.EqualTo(6));
             Assert.That((byte)PresentationRequestKind.RemoveGroundOverlay, Is.EqualTo(7));
             Assert.That((byte)PresentationRequestKind.RemoveWorldHud, Is.EqualTo(8));
-            Assert.That((byte)PresentationRequestKind.RemoveRoadSpline, Is.EqualTo(9));
+            Assert.That((byte)PresentationRequestKind.RemoveSplineRibbon, Is.EqualTo(9));
             Assert.That((byte)PresentationRequestKind.RemoveSurfaceSource, Is.EqualTo(10));
             Assert.That((byte)PresentationRequestKind.ClearTransientVisualProjection, Is.EqualTo(11));
         }

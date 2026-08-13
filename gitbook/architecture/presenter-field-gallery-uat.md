@@ -36,7 +36,7 @@
 
 - 编排仍是 Presenter `AssetBinding`。禁止再写 Prefab 零件。
 - 印记尺寸必须进 `VisualProxy.Scale`。适配器侧投影盒子如何消费该缩放是 P3 合同。
-- 带子走 `AssetKind.Spline` 绘制请求。类型名仍可能是 `RoadSplineRequest`，去路名是 P4。
+- 带子走 `AssetKind.Spline` 绘制请求，类型是 `SplineRibbonRequest`。
 - 击中闪光用叶子网格 `cue_marker`（`mesh_assets.json` 唯一注册），缩放与寿命来自 Core presenter `cue_marker`，与应答链同一条瞬态网格路。
 - 规则命令是 `CreatePresenter`，不是已删除的 Performer 词。
 

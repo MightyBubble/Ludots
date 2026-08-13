@@ -108,9 +108,9 @@ namespace Ludots.Tests.Presentation
         {
             using var fixture = AtmosphereFieldFixture.Create(_repoRoot, _coreRoot);
 
-            RoadSplineRequest narrow = fixture.EmitSpline("raylib_visual_atmosphere_ribbon_narrow_actor");
-            RoadSplineRequest wide = fixture.EmitSpline("raylib_visual_atmosphere_ribbon_wide_actor");
-            RoadSplineRequest bordered = fixture.EmitSpline("raylib_visual_atmosphere_ribbon_bordered_actor");
+            SplineRibbonRequest narrow = fixture.EmitSpline("raylib_visual_atmosphere_ribbon_narrow_actor");
+            SplineRibbonRequest wide = fixture.EmitSpline("raylib_visual_atmosphere_ribbon_wide_actor");
+            SplineRibbonRequest bordered = fixture.EmitSpline("raylib_visual_atmosphere_ribbon_bordered_actor");
 
             Assert.That(narrow.Width, Is.EqualTo(0.48f).Within(0.001f));
             Assert.That(wide.Width, Is.EqualTo(3.15f).Within(0.001f));
@@ -325,14 +325,14 @@ namespace Ludots.Tests.Presentation
                 return last.Value.VisualProxy;
             }
 
-            public RoadSplineRequest EmitSpline(string definitionId)
+            public SplineRibbonRequest EmitSpline(string definitionId)
             {
                 _ = Emit(definitionId);
                 PresentationRequest? last = null;
                 for (int i = 0; i < _requests.Count; i++)
                 {
                     PresentationRequest request = _requests.GetSpan()[i];
-                    if (request.Kind == PresentationRequestKind.RoadSpline)
+                    if (request.Kind == PresentationRequestKind.SplineRibbon)
                     {
                         last = request;
                     }
@@ -343,7 +343,7 @@ namespace Ludots.Tests.Presentation
                     throw new InvalidOperationException($"{definitionId} did not emit a spline ribbon request.");
                 }
 
-                return last.Value.RoadSpline;
+                return last.Value.SplineRibbon;
             }
 
             private PresentationRequest Emit(string definitionId)
