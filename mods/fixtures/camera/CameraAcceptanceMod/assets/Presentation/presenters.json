@@ -36,6 +36,16 @@
             1
           ]
         }
+      },
+      {
+        "slot": "grounding",
+        "kind": "Grounding",
+        "activeByDefault": true,
+        "grounding": {
+          "mode": "SnapToGround",
+          "offset": 0.15,
+          "updatePolicy": "EveryFrame"
+        }
       }
     ],
     "children": [
@@ -65,7 +75,8 @@
         "activeByDefault": true,
         "assetBinding": {
           "assetKind": "Decal",
-          "assetId": "cube",
+          "assetId": "camera.acceptance.cue.decal",
+          "materialId": "camera.acceptance.cue.decal",
           "renderPath": "StaticMesh",
           "mobility": "Movable",
           "localOffset": [
@@ -102,7 +113,7 @@
         "activeByDefault": true,
         "assetBinding": {
           "assetKind": "VFX",
-          "assetId": "cube",
+          "assetId": "effect.camera.projection_cue",
           "renderPath": "StaticMesh",
           "mobility": "Movable",
           "localOffset": [

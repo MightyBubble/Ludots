@@ -515,7 +515,7 @@ namespace CameraAcceptanceMod.Runtime
                 PresenterDefinitionId = defId,
                 Source = Entity.Null,
                 AnchorKind = PresentationAnchorKind.WorldPosition,
-                Position = WorldUnits.WorldCmToVisualMeters(worldCm, yMeters: 0.15f),
+                Position = WorldUnits.WorldCmToVisualMeters(worldCm),
             }))
             {
                 throw new System.InvalidOperationException(

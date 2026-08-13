@@ -98,8 +98,11 @@ namespace Ludots.Tests.ThreeC.Acceptance
             Assert.That(CountPresentersWithDefinition(engine.World, decalDefId), Is.EqualTo(1));
             Assert.That(CountPresentersWithDefinition(engine.World, vfxDefId), Is.EqualTo(1));
             Assert.That(CountPresentersWithDefinition(engine.World, surfaceDefId), Is.EqualTo(1));
-
-            var cueMarkerPosition = WorldUnits.WorldCmToVisualMeters(new WorldCmInt2(3200, 2000), yMeters: 0.15f);
+            Assert.That(
+                TryGetAuthoredCueGroundingOffsetMeters(definitions, fixtureDefId, out float cueLiftMeters),
+                Is.True,
+                "Projection cue fixture must author SnapToGround offset; click spawn must not invent a lift.");
+            var cueMarkerPosition = WorldUnits.WorldCmToVisualMeters(new WorldCmInt2(3200, 2000), yMeters: cueLiftMeters);
             Assert.That(
                 TryGetSinglePresenterWorldPosition(engine.World, fixtureDefId, out Vector3 fixtureWorldPosition),
                 Is.True,
@@ -1524,6 +1527,41 @@ namespace Ludots.Tests.ThreeC.Acceptance
                 }
             });
             return count;
+        }
+
+        private static bool TryGetAuthoredCueGroundingOffsetMeters(
+            PresenterDefinitionRegistry definitions,
+            int fixtureDefId,
+            out float offsetMeters)
+        {
+            if (!definitions.TryGet(fixtureDefId, out PresenterDefinition definition))
+            {
+                offsetMeters = 0f;
+                return false;
+            }
+
+            for (int i = 0; i < definition.Behaviors.Length; i++)
+            {
+                BehaviorSlot slot = definition.Behaviors[i];
+                if (slot.Kind != BehaviorKind.Grounding)
+                {
+                    continue;
+                }
+
+                if (slot.Grounding.Mode != GroundingMode.SnapToGround ||
+                    !float.IsFinite(slot.Grounding.Offset) ||
+                    slot.Grounding.Offset <= 0f)
+                {
+                    offsetMeters = 0f;
+                    return false;
+                }
+
+                offsetMeters = slot.Grounding.Offset;
+                return true;
+            }
+
+            offsetMeters = 0f;
+            return false;
         }
 
         private static bool TryGetSinglePresenterWorldPosition(World world, int definitionId, out Vector3 position)

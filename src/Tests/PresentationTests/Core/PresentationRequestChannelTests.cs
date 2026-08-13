@@ -2,6 +2,7 @@ using System;
 using System.Numerics;
 using System.Runtime.CompilerServices;
 using Arch.Core;
+using Ludots.Core.Presentation;
 using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Hud;
@@ -31,14 +32,15 @@ namespace Ludots.Tests.Presentation
         [Test]
         public void BlacksmithScaleTypedChannels_UseLessResidentMemoryThanFatRequestArray()
         {
-            var capacities = new PresentationRequestChannelCapacities(
-                visualProxy: 1_048_576,
-                groundOverlay: 65_536,
-                worldHud: 1_048_576,
-                splineRibbon: 65_536,
-                surfaceSource: 1_048_576,
-                removal: 1_048_576 + 65_536 + 65_536 + 1_048_576,
-                clearTransient: 1_048_576);
+            var presentationConfig = new PresentationRuntimeConfig
+            {
+                VisualProxyBufferCapacity = 1_048_576,
+                GroundOverlayCapacity = 65_536,
+                WorldHudCapacity = 1_048_576,
+                SplineRibbonCapacity = 65_536,
+                PresenterInstanceCapacity = 1_048_576,
+            };
+            var capacities = PresentationRequestChannelCapacities.From(presentationConfig);
 
             long typedBytes =
                 (long)Unsafe.SizeOf<VisualProxyChannelItem>() * capacities.VisualProxy

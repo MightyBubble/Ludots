@@ -6,5 +6,9 @@
     "vfx": {
       "particleVfxId": "camera.projection_cue"
     }
+  },
+  {
+    "id": "camera.acceptance.cue.decal",
+    "type": "Billboard"
   }
 ]

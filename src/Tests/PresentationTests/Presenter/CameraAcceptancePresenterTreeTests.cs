@@ -10,6 +10,7 @@ using Ludots.Core.Presentation.Assets;
 using Ludots.Core.Presentation.Commands;
 using Ludots.Core.Presentation.Components;
 using Ludots.Core.Presentation.Config;
+using Ludots.Core.Presentation.Particles;
 using Ludots.Core.Presentation.Presenters;
 using Ludots.Core.Presentation.Rendering;
 using Ludots.Core.Presentation.Requests;
@@ -39,18 +40,21 @@ namespace Ludots.Tests.Presentation
             File.WriteAllText(
                 Path.Combine(_coreRoot, "Configs", "config_catalog.json"),
                 File.ReadAllText(Path.Combine(_repoRoot, "assets", "Configs", "config_catalog.json")));
-            File.Copy(
-                Path.Combine(
-                    _repoRoot,
-                    "mods",
-                    "fixtures",
-                    "camera",
-                    "CameraAcceptanceMod",
-                    "assets",
-                    "Presentation",
-                    "presenters.json"),
-                Path.Combine(_coreRoot, "Configs", "Presentation", "presenters.json"),
-                overwrite: true);
+            string cameraPresentation = Path.Combine(
+                _repoRoot,
+                "mods",
+                "fixtures",
+                "camera",
+                "CameraAcceptanceMod",
+                "assets",
+                "Presentation");
+            foreach (string fileName in new[] { "presenters.json", "mesh_assets.json", "material_assets.json", "particle_vfx.json" })
+            {
+                File.Copy(
+                    Path.Combine(cameraPresentation, fileName),
+                    Path.Combine(_coreRoot, "Configs", "Presentation", fileName),
+                    overwrite: true);
+            }
             TagRegistry.Clear();
             PresenterScopeTagRegistry.Clear();
             AttributeRegistry.Clear();
@@ -90,7 +94,9 @@ namespace Ludots.Tests.Presentation
             mapLoader.LoadTemplates(catalog);
 
             var meshAssets = new MeshAssetRegistry();
-            new MeshAssetConfigLoader(pipeline, meshAssets).Load(catalog);
+            var particleVfx = new ParticleVfxRegistry();
+            new ParticleVfxConfigLoader(pipeline, particleVfx).Load(catalog);
+            new MeshAssetConfigLoader(pipeline, meshAssets, particleVfx).Load(catalog);
             var materialAssets = new PresentationMaterialRegistry();
             new PresentationMaterialConfigLoader(pipeline, materialAssets).Load(catalog);
             var textCatalog = new PresentationTextCatalogLoader(pipeline).Load(catalog);
@@ -177,6 +183,11 @@ namespace Ludots.Tests.Presentation
             Assert.That(kinds, Does.Contain(AssetKind.Decal));
             Assert.That(kinds, Does.Contain(AssetKind.VFX));
             Assert.That(kinds, Does.Contain(AssetKind.Surface));
+            Assert.That(
+                TryGetGroundingOffsetMeters(definition, out float groundingOffsetMeters),
+                Is.True,
+                "Projection cue fixture must author SnapToGround offset instead of a runtime lift.");
+            Assert.That(groundingOffsetMeters, Is.GreaterThan(0f));
 
             string runtimePath = Path.Combine(
                 _repoRoot,
@@ -189,6 +200,7 @@ namespace Ludots.Tests.Presentation
             string runtime = File.ReadAllText(runtimePath);
             Assert.That(runtime, Does.Not.Contain("TryAddMesh("));
             Assert.That(runtime, Does.Not.Contain("new Vector3(0.45f)"));
+            Assert.That(runtime, Does.Not.Contain("yMeters: 0.15f"));
             Assert.That(runtime, Does.Contain("CreatePresenter"));
             Assert.That(runtime, Does.Contain("ProjectionCueFixturePresenterId"));
 
@@ -211,6 +223,32 @@ namespace Ludots.Tests.Presentation
             }
 
             throw new DirectoryNotFoundException("Repository root not found from test work directory.");
+        }
+
+        private static bool TryGetGroundingOffsetMeters(PresenterDefinition definition, out float offsetMeters)
+        {
+            for (int i = 0; i < definition.Behaviors.Length; i++)
+            {
+                BehaviorSlot slot = definition.Behaviors[i];
+                if (slot.Kind != BehaviorKind.Grounding)
+                {
+                    continue;
+                }
+
+                if (slot.Grounding.Mode != GroundingMode.SnapToGround ||
+                    !float.IsFinite(slot.Grounding.Offset) ||
+                    slot.Grounding.Offset <= 0f)
+                {
+                    offsetMeters = 0f;
+                    return false;
+                }
+
+                offsetMeters = slot.Grounding.Offset;
+                return true;
+            }
+
+            offsetMeters = 0f;
+            return false;
         }
     }
 }

@@ -253,7 +253,8 @@ Core 仓库只保留 shared contract 和平台无关测试；UE5 render bridge �
 
 - `docs/architecture/presentation_snapshot_contract.md`
 - `docs/architecture/persistent_static_adapter_sync.md`
-- `src/Core/Presentation/Assets/PrefabFinalizationPipeline.cs`
+- `src/Core/Presentation/Presenters/PresenterGroundingUtility.cs`
+- `src/Core/Presentation/Systems/PresenterBehaviorSystem.cs`
 - 开发者仓库中的商业引擎 adapter render bridge
-- `src/Tests/PresentationTests/Rendering/PrefabFinalizationAndVisualHeightmapTests.cs`
+- `src/Tests/PresentationTests/Rendering/VisualHeightmapRuntimeTruthTests.cs`
 - `src/Tests/PresentationTests/Core/PresentationFoundationTests.cs`

@@ -1054,18 +1054,8 @@ namespace Ludots.Core.Engine
             var skinnedVisualBatchBuffer = new SkinnedVisualBatchBuffer(presentationConfig.SkinnedVisualBatchCapacity);
             var stableDrawCache = new StableDrawCache(presentationConfig.VisualSnapshotBufferCapacity);
             var presentationTargetGeneration = new PresentationTargetGeneration();
-            var presentationRequestBuffer = new PresentationRequestBuffer(new PresentationRequestChannelCapacities(
-                visualProxy: presentationConfig.VisualProxyBufferCapacity,
-                groundOverlay: presentationConfig.GroundOverlayCapacity,
-                worldHud: presentationConfig.WorldHudCapacity,
-                splineRibbon: presentationConfig.SplineRibbonCapacity,
-                surfaceSource: presentationConfig.PresenterInstanceCapacity,
-                removal: checked(
-                    presentationConfig.GroundOverlayCapacity
-                    + presentationConfig.WorldHudCapacity
-                    + presentationConfig.SplineRibbonCapacity
-                    + presentationConfig.PresenterInstanceCapacity),
-                clearTransient: presentationConfig.PresenterInstanceCapacity));
+            var presentationRequestBuffer = new PresentationRequestBuffer(
+                PresentationRequestChannelCapacities.From(presentationConfig));
             var globalFieldVisualBuffer = new GlobalFieldVisualBuffer(
                 presentationConfig.GlobalFieldVisualRecordCapacity,
                 presentationConfig.GlobalFieldVisualCellCapacity,

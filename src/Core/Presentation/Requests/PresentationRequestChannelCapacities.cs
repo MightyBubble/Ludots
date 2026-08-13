@@ -33,6 +33,23 @@ namespace Ludots.Core.Presentation.Requests
         public int TotalOperationCapacity =>
             checked(VisualProxy + GroundOverlay + WorldHud + SplineRibbon + SurfaceSource + Removal + ClearTransient);
 
+        public static PresentationRequestChannelCapacities From(Ludots.Core.Presentation.PresentationRuntimeConfig config)
+        {
+            ArgumentNullException.ThrowIfNull(config);
+            int overlay = config.GroundOverlayCapacity;
+            int hud = config.WorldHudCapacity;
+            int ribbon = config.SplineRibbonCapacity;
+            int instances = config.PresenterInstanceCapacity;
+            return new PresentationRequestChannelCapacities(
+                visualProxy: config.VisualProxyBufferCapacity,
+                groundOverlay: overlay,
+                worldHud: hud,
+                splineRibbon: ribbon,
+                surfaceSource: instances,
+                removal: checked(overlay + hud + ribbon + instances),
+                clearTransient: instances);
+        }
+
         public static PresentationRequestChannelCapacities Uniform(int capacityPerChannel)
         {
             return new PresentationRequestChannelCapacities(
