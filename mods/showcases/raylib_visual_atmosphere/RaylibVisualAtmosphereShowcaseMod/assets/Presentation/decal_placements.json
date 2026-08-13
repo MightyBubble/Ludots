@@ -3,50 +3,50 @@
   "placements": [
     {
       "templateId": "raylib_visual_atmosphere_decal_footprints",
-      "xCm": 15200,
-      "yCm": -13600,
+      "xCm": 15800,
+      "yCm": -13400,
       "yawDeg": 55
     },
     {
       "templateId": "raylib_visual_atmosphere_decal_footprints",
-      "xCm": 15650,
-      "yCm": -13250,
+      "xCm": 16150,
+      "yCm": -13150,
       "yawDeg": 52
     },
     {
       "templateId": "raylib_visual_atmosphere_decal_footprints",
-      "xCm": 16100,
+      "xCm": 16500,
       "yCm": -12900,
       "yawDeg": 50
     },
     {
       "templateId": "raylib_visual_atmosphere_decal_footprints",
-      "xCm": 16550,
-      "yCm": -12550,
+      "xCm": 16850,
+      "yCm": -12650,
       "yawDeg": 48
     },
     {
       "templateId": "raylib_visual_atmosphere_decal_footprints",
-      "xCm": 17000,
-      "yCm": -12200,
+      "xCm": 17200,
+      "yCm": -12400,
       "yawDeg": 46
     },
     {
       "templateId": "raylib_visual_atmosphere_decal_scorch",
-      "xCm": 17400,
-      "yCm": -13200,
+      "xCm": 17650,
+      "yCm": -13100,
       "yawDeg": 15
     },
     {
       "templateId": "raylib_visual_atmosphere_decal_blood",
-      "xCm": 17000,
-      "yCm": -12800,
+      "xCm": 17400,
+      "yCm": -12650,
       "yawDeg": -30
     },
     {
       "templateId": "raylib_visual_atmosphere_decal_cracks",
-      "xCm": 16800,
-      "yCm": -11800,
+      "xCm": 16900,
+      "yCm": -12100,
       "yawDeg": 80
     }
   ]
