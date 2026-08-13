@@ -24,7 +24,13 @@ public sealed class CapabilityStandardGraphOpsNodeGalleryModEntry : IMod
                 ?? throw new InvalidOperationException(
                     "CapabilityStandardGraphOpsNodeGalleryMod GameStart requires GameEngine.");
 
-            runtime.BindFromStartupMapId(engine.MergedConfig?.StartupMapId);
+            string? startupMapId = engine.MergedConfig?.StartupMapId;
+            if (!GraphOpsNodeIds.TryParseOpFromMapId(startupMapId, out _))
+            {
+                return Task.CompletedTask;
+            }
+
+            runtime.BindFromStartupMapId(startupMapId);
             runtime.AttachEngine(engine);
             engine.SetService(MetricsKey, runtime.Metrics);
             runtime.BindStageVisuals(GraphOpsStageVisuals.FromEngine(engine));

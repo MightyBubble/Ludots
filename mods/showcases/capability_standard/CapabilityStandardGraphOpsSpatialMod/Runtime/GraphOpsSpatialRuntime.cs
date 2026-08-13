@@ -56,6 +56,7 @@ public sealed class GraphOpsSpatialRuntime : IDisposable
     private int _firstKeyId;
     private SpatialQueryService? _spatial;
     private ISpatialCoordinateConverter? _coords;
+    private GridSpatialPartitionWorld? _grid;
     private GasGraphRuntimeApi? _api;
     private EntitySetQueryRuntime? _entityQueries;
     private TagOps? _tagOps;
@@ -136,15 +137,27 @@ public sealed class GraphOpsSpatialRuntime : IDisposable
 
         _session = GraphOpsEngineWorld.AttachOrCreate(_engine, AppContext.BaseDirectory);
         _world = _session.World;
-        _coords = _session.Engine.SpatialCoords
-            ?? throw new InvalidOperationException("Spatial family runtime requires engine SpatialCoords.");
-        if (_session.Engine.SpatialQueries is not SpatialQueryService spatial)
+        if (_session.Engine != null)
         {
-            throw new InvalidOperationException("Spatial family runtime requires engine SpatialQueryService.");
+            _coords = _session.Engine.SpatialCoords
+                ?? throw new InvalidOperationException("Spatial family runtime requires engine SpatialCoords.");
+            if (_session.Engine.SpatialQueries is not SpatialQueryService engineSpatial)
+            {
+                throw new InvalidOperationException("Spatial family runtime requires engine SpatialQueryService.");
+            }
+
+            _spatial = engineSpatial;
+            engineSpatial.SetCoordinateConverter(_coords);
+        }
+        else
+        {
+            var coords = new SpatialCoordinateConverter(gridCellSizeCm: 100);
+            _coords = coords;
+            _grid = new GridSpatialPartitionWorld(cellSize: 4);
+            _spatial = new SpatialQueryService(new GridSpatialPartitionBackend(_grid, coords));
+            _spatial.SetCoordinateConverter(coords);
         }
 
-        _spatial = spatial;
-        spatial.SetCoordinateConverter(_coords);
         _spatial.SetPositionProvider(entity =>
         {
             ref WorldPositionCm pos = ref _world!.Get<WorldPositionCm>(entity);
@@ -397,6 +410,12 @@ public sealed class GraphOpsSpatialRuntime : IDisposable
             new EntityLayer(category: layerCategory, mask: uint.MaxValue),
             new BlackboardIntBuffer(),
             new BlackboardEntityBuffer());
+        if (_grid != null)
+        {
+            IntVector2 grid = _coords!.WorldToGrid(new WorldCmInt2(xCm, yCm));
+            _grid.Add(entity, grid.X, grid.Y);
+        }
+
         return entity;
     }
 

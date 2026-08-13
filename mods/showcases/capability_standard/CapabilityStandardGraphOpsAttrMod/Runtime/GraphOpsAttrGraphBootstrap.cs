@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using CapabilityStandardGraphBehaviorCommon;
 using Ludots.Core.Config;
 using Ludots.Core.Gameplay.GAS.Registry;
 using Ludots.Core.GraphRuntime;
@@ -22,15 +23,15 @@ public static class GraphOpsAttrGraphKeys
 
 internal sealed class GraphOpsAttrSymbolResolver : IGraphSymbolResolver
 {
-    public int ResolveTag(string name) => TagRegistry.Register(name);
-    public int ResolveAttribute(string name) => AttributeRegistry.Register(name);
-    public int ResolveEffectTemplate(string name) => EffectTemplateIdRegistry.Register(name);
-    public int ResolveRelationshipType(string name) => ConfigKeyRegistry.Register($"relationship.type.{name}");
-    public int ResolveRelationshipMetric(string name) => ConfigKeyRegistry.Register($"relationship.metric.{name}");
-    public int ResolveRelationshipFlag(string name) => ConfigKeyRegistry.Register($"relationship.flag.{name}");
-    public int ResolveRelationshipReason(string name) => ConfigKeyRegistry.Register($"relationship.reason.{name}");
-    public int ResolveTargetDispatchPreset(string name) => ConfigKeyRegistry.Register($"targetDispatch.{name}");
-    public int ResolveEntityTemplate(string name) => ConfigKeyRegistry.Register($"entityTemplate.{name}");
+    public int ResolveTag(string name) => GraphOpsMutableRegistry.Tag(name);
+    public int ResolveAttribute(string name) => GraphOpsMutableRegistry.Attribute(name);
+    public int ResolveEffectTemplate(string name) => GraphOpsMutableRegistry.EffectTemplate(name);
+    public int ResolveRelationshipType(string name) => GraphOpsMutableRegistry.ConfigKey($"relationship.type.{name}");
+    public int ResolveRelationshipMetric(string name) => GraphOpsMutableRegistry.ConfigKey($"relationship.metric.{name}");
+    public int ResolveRelationshipFlag(string name) => GraphOpsMutableRegistry.ConfigKey($"relationship.flag.{name}");
+    public int ResolveRelationshipReason(string name) => GraphOpsMutableRegistry.ConfigKey($"relationship.reason.{name}");
+    public int ResolveTargetDispatchPreset(string name) => GraphOpsMutableRegistry.ConfigKey($"targetDispatch.{name}");
+    public int ResolveEntityTemplate(string name) => GraphOpsMutableRegistry.ConfigKey($"entityTemplate.{name}");
 }
 
 public static class GraphOpsAttrGraphBootstrap
@@ -48,7 +49,8 @@ public static class GraphOpsAttrGraphBootstrap
             throw new FileNotFoundException($"Missing attr showcase graphs: {graphsPath}");
         }
 
-        EffectTemplateIdRegistry.Register(GraphOpsAttrGraphKeys.MarkEffect);
+        GraphIdRegistry.Clear();
+        _ = GraphOpsMutableRegistry.EffectTemplate(GraphOpsAttrGraphKeys.MarkEffect);
 
         var programs = new GraphProgramRegistry();
         var resolver = new GraphOpsAttrSymbolResolver();

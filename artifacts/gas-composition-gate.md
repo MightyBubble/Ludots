@@ -19,7 +19,7 @@
 | 无头画廊开图 | 2 | GameEngine.LoadMap + MapLoader.LoadEntitiesAndIndex |
 | 符号解析 | 0 | 已有 Tag/Attribute/Effect/Relationship registries GetId |
 | 空间圈人描边 | 2 | 已编译 graph 的 Imm / ConstInt |
-| 家族演示世界 | 2 | GameEngine.World + BindMapEntity |
+| 家族演示世界 | 2 | 可玩路径 GameEngine.World + BindMapEntity；无头验收用一次性 World，禁止再启第二台 GameEngine |
 
 ### 3. Reuse list
 
@@ -34,7 +34,7 @@ N/A
 
 ### 5. Transaction boundary
 
-无 lifecycle spawn/morph 事务；地图加载失败必须抛，禁止平行 World。
+无 lifecycle spawn/morph 事务；画廊无头开图失败必须抛。家族无头验收用一次性 World，禁止再启第二台 GameEngine 去清 GraphIdRegistry。
 
 ### 6. Config SSOT
 

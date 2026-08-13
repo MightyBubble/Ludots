@@ -541,13 +541,13 @@ internal sealed class GraphOpsRelSymbolResolver : IGraphSymbolResolver
         _flags = flags;
     }
 
-    public int ResolveTag(string name) => TagRegistry.Register(name);
-    public int ResolveAttribute(string name) => AttributeRegistry.Register(name);
-    public int ResolveEffectTemplate(string name) => EffectTemplateIdRegistry.Register(name);
+    public int ResolveTag(string name) => GraphOpsMutableRegistry.Tag(name);
+    public int ResolveAttribute(string name) => GraphOpsMutableRegistry.Attribute(name);
+    public int ResolveEffectTemplate(string name) => GraphOpsMutableRegistry.EffectTemplate(name);
     public int ResolveRelationshipType(string name) => _types.Register(name);
     public int ResolveRelationshipMetric(string name) => _metrics.Register(name, -100, 100, 0);
     public int ResolveRelationshipFlag(string name) => _flags.Register(name);
-    public int ResolveRelationshipReason(string name) => ConfigKeyRegistry.Register($"relationship.reason.{name}");
-    public int ResolveTargetDispatchPreset(string name) => ConfigKeyRegistry.Register($"targetDispatch.{name}");
-    public int ResolveEntityTemplate(string name) => ConfigKeyRegistry.Register($"entityTemplate.{name}");
+    public int ResolveRelationshipReason(string name) => GraphOpsMutableRegistry.ConfigKey($"relationship.reason.{name}");
+    public int ResolveTargetDispatchPreset(string name) => GraphOpsMutableRegistry.ConfigKey($"targetDispatch.{name}");
+    public int ResolveEntityTemplate(string name) => GraphOpsMutableRegistry.ConfigKey($"entityTemplate.{name}");
 }

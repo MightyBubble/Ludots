@@ -24,7 +24,12 @@ public sealed class CapabilityStandardGraphOpsSpatialModEntry : IMod
             GameEngine engine = ctx.GetEngine()
                 ?? throw new InvalidOperationException(
                     "CapabilityStandardGraphOpsSpatialMod GameStart requires GameEngine.");
-            GraphProgramRegistry programs = GraphOpsSpatialCatalogBootstrap.Load(out GraphFunctionCatalog catalog);
+            GraphProgramRegistry programs = engine.GetService(CoreServiceKeys.GraphProgramRegistry)
+                ?? throw new InvalidOperationException(
+                    "GraphProgramRegistry is required for spatial player graphs.");
+            GraphFunctionCatalog catalog = engine.GetService(CoreServiceKeys.GraphFunctionCatalog)
+                ?? throw new InvalidOperationException(
+                    "GraphFunctionCatalog is required for spatial player graphs.");
             runtime.AttachEngine(engine);
             runtime.Bind(programs, catalog);
             runtime.BindStageVisuals(GraphOpsStageVisuals.FromEngine(engine));

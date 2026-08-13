@@ -1,11 +1,14 @@
 using System.Numerics;
 using Arch.Core;
+using Ludots.Core.Components;
 using Ludots.Core.Config;
 using Ludots.Core.Engine;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
 using Ludots.Core.Modding;
 using Ludots.Core.Scripting;
+using Ludots.Core.Spatial;
+using Ludots.Core.Systems;
 
 namespace CapabilityStandardGraphBehaviorCommon;
 
@@ -71,6 +74,7 @@ public static class GraphOpsHeadlessGameEngine
 
             _galleryEngine = Create(repoRoot, GalleryModId);
             _galleryRepoRoot = repoRoot;
+            _galleryEngine.Start();
             return _galleryEngine;
         }
     }
@@ -89,6 +93,61 @@ public static class GraphOpsHeadlessGameEngine
         {
             throw new InvalidOperationException($"GameEngine.LoadMap('{mapId}') left CurrentMapSession null.");
         }
+
+        AdvanceUntilMapActorsAreSpatiallyIndexed(engine, mapId);
+    }
+
+    private static void AdvanceUntilMapActorsAreSpatiallyIndexed(GameEngine engine, string mapId)
+    {
+        float step = Time.FixedDeltaTime;
+        if (step <= 0f)
+        {
+            throw new InvalidOperationException("Time.FixedDeltaTime must be positive before indexing map actors.");
+        }
+
+        World world = engine.World
+            ?? throw new InvalidOperationException("GameEngine.World is required after LoadMap.");
+        MapLoadEntityIndex index = engine.CurrentMapSession?.EntityIndex
+            ?? throw new InvalidOperationException($"Map '{mapId}' has no EntityIndex after LoadMap.");
+        if (index.Count == 0)
+        {
+            throw new InvalidOperationException($"Map '{mapId}' loaded with zero instance-indexed actors.");
+        }
+
+        for (int i = 0; i < 8; i++)
+        {
+            engine.Tick(step);
+            if (MapActorsAreSpatiallyIndexed(world, index))
+            {
+                return;
+            }
+        }
+
+        throw new InvalidOperationException(
+            $"GameEngine.Tick did not index map '{mapId}' actors into the spatial partition. " +
+            "Headless gallery must Start() the engine and advance at least one fixed simulation step after LoadMap.");
+    }
+
+    private static bool MapActorsAreSpatiallyIndexed(World world, MapLoadEntityIndex index)
+    {
+        int positioned = 0;
+        foreach (Entity entity in index.ByInstanceId.Values)
+        {
+            if (!world.IsAlive(entity) ||
+                !world.Has<WorldPositionCm>(entity) ||
+                world.Has<SpatialPartitionExcluded>(entity))
+            {
+                continue;
+            }
+
+            positioned++;
+            if (!world.Has<SpatialCellRef>(entity))
+            {
+                return false;
+            }
+        }
+
+        return positioned > 0;
     }
 
     public static string FindRepoRoot(string startPath)
@@ -174,44 +233,37 @@ public static class GraphOpsHeadlessGameEngine
 
 public sealed class GraphOpsEngineWorld : IDisposable
 {
-    public GameEngine Engine { get; }
-    public World World => Engine.World;
-    public bool OwnsEngine { get; }
+    public GameEngine? Engine { get; }
+    public World World { get; }
+    public bool OwnsWorld { get; }
 
-    private GraphOpsEngineWorld(GameEngine engine, bool ownsEngine)
+    private GraphOpsEngineWorld(World world, GameEngine? engine, bool ownsWorld)
     {
-        Engine = engine ?? throw new ArgumentNullException(nameof(engine));
-        OwnsEngine = ownsEngine;
+        World = world ?? throw new ArgumentNullException(nameof(world));
+        Engine = engine;
+        OwnsWorld = ownsWorld;
     }
 
     public static GraphOpsEngineWorld AttachOrCreate(GameEngine? boundEngine, string startPath)
     {
         if (boundEngine != null)
         {
-            return new GraphOpsEngineWorld(boundEngine, ownsEngine: false);
+            return new GraphOpsEngineWorld(boundEngine.World, boundEngine, ownsWorld: false);
         }
 
-        string repoRoot = GraphOpsHeadlessGameEngine.FindRepoRoot(startPath);
-        GameEngine engine = GraphOpsHeadlessGameEngine.Create(repoRoot);
-        return new GraphOpsEngineWorld(engine, ownsEngine: true);
+        _ = startPath;
+        return new GraphOpsEngineWorld(World.Create(), engine: null, ownsWorld: true);
     }
 
     public void StartOwnedAndTick()
     {
-        if (!OwnsEngine)
-        {
-            return;
-        }
-
-        Engine.Start();
-        Engine.Tick(1f / 60f);
     }
 
     public void Dispose()
     {
-        if (OwnsEngine)
+        if (OwnsWorld)
         {
-            Engine.Dispose();
+            World.Dispose();
         }
     }
 }

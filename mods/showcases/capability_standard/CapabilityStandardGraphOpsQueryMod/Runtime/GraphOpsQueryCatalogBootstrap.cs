@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using CapabilityStandardGraphBehaviorCommon;
 using Ludots.Core.Config;
 using Ludots.Core.EntityCollections;
 using Ludots.Core.Gameplay.GAS;
@@ -48,19 +49,19 @@ internal static class GraphOpsQueryCatalogBootstrap
         int healthId = AttributeRegistry.GetId("Health");
         if (healthId < 0)
         {
-            healthId = AttributeRegistry.Register("Health");
+            healthId = GraphOpsMutableRegistry.Attribute("Health");
         }
 
         int enemyTagId = TagRegistry.GetId("Enemy");
         if (enemyTagId <= 0)
         {
-            enemyTagId = TagRegistry.Register("Enemy");
+            enemyTagId = GraphOpsMutableRegistry.Tag("Enemy");
         }
 
         int deadTagId = TagRegistry.GetId("Dead");
         if (deadTagId <= 0)
         {
-            deadTagId = TagRegistry.Register("Dead");
+            deadTagId = GraphOpsMutableRegistry.Tag("Dead");
         }
 
         var collections = new EntityCollectionStore(
