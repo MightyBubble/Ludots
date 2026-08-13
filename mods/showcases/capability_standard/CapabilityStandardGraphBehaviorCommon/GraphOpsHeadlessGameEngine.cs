@@ -6,8 +6,8 @@ using Ludots.Core.Engine;
 using Ludots.Core.Gameplay.GAS;
 using Ludots.Core.Input.Config;
 using Ludots.Core.Input.Runtime;
-using Ludots.Core.Map.Board;
 using Ludots.Core.Modding;
+using Ludots.Core.Presentation.Components;
 using Ludots.Core.Scripting;
 using Ludots.Core.Spatial;
 using Ludots.Core.Systems;
@@ -91,13 +91,14 @@ public static class GraphOpsHeadlessGameEngine
         }
 
         ClearQueuedEffects(engine);
+        DestroyPendingPresentationActors(engine.World);
         engine.LoadMap(mapId);
         if (engine.CurrentMapSession == null)
         {
             throw new InvalidOperationException($"GameEngine.LoadMap('{mapId}') left CurrentMapSession null.");
         }
 
-        ClearSpatialPartition(engine);
+        ResetSpatialIndex(engine);
         AdvanceUntilMapActorsAreSpatiallyIndexed(engine, mapId);
     }
 
@@ -107,15 +108,43 @@ public static class GraphOpsHeadlessGameEngine
         queue?.Clear();
     }
 
-    private static void ClearSpatialPartition(GameEngine engine)
+    private static void DestroyPendingPresentationActors(World world)
     {
-        IBoard? board = engine.CurrentMapSession?.PrimaryBoard;
-        if (board == null)
+        var pending = new QueryDescription().WithAll<PresentationDestroyPending>();
+        var entities = new List<Entity>();
+        world.Query(in pending, (Entity entity) => entities.Add(entity));
+        for (int i = 0; i < entities.Count; i++)
         {
-            throw new InvalidOperationException("LoadMap left CurrentMapSession.PrimaryBoard null.");
+            Entity entity = entities[i];
+            if (world.IsAlive(entity))
+            {
+                world.Destroy(entity);
+            }
+        }
+    }
+
+    private static void ResetSpatialIndex(GameEngine engine)
+    {
+        if (engine.SpatialQueries is not SpatialQueryService spatial)
+        {
+            throw new InvalidOperationException(
+                $"Headless gallery requires {nameof(SpatialQueryService)} so exclusive map loads can reset the spatial index.");
         }
 
-        board.SpatialPartition.Clear();
+        spatial.ClearPartition();
+        World world = engine.World
+            ?? throw new InvalidOperationException("GameEngine.World is required after LoadMap.");
+        var indexed = new QueryDescription().WithAll<SpatialCellRef>();
+        var entities = new List<Entity>();
+        world.Query(in indexed, (Entity entity) => entities.Add(entity));
+        for (int i = 0; i < entities.Count; i++)
+        {
+            Entity entity = entities[i];
+            if (world.IsAlive(entity) && world.Has<SpatialCellRef>(entity))
+            {
+                world.Remove<SpatialCellRef>(entity);
+            }
+        }
     }
 
     private static void AdvanceUntilMapActorsAreSpatiallyIndexed(GameEngine engine, string mapId)
